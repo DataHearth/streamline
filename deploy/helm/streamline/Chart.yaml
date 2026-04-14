@@ -1,0 +1,18 @@
+apiVersion: v2
+name: streamline
+description: Unified media management platform (arr stack replacement).
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+kubeVersion: ">=1.27.0-0"
+home: https://github.com/DataHearth/streamline
+sources:
+  - https://github.com/DataHearth/streamline
+maintainers:
+  - name: DataHearth
+    url: https://github.com/DataHearth
+dependencies:
+  - name: observability
+    version: 0.1.0
+    condition: observability.enabled
+    repository: ""

@@ -1,0 +1,181 @@
+enabled: false
+
+# Namespace for observability stack (created by templates/namespace.yaml).
+namespace: observability
+
+# grafana/alloy — receives OTLP from streamline, forwards to VM/VL/VT.
+alloy:
+  enabled: true
+  fullnameOverride: alloy
+  namespaceOverride: observability
+  alloy:
+    configMap:
+      content: |-
+        otelcol.receiver.otlp "default" {
+          http {}
+          grpc {}
+          output {
+            metrics = [otelcol.processor.batch.default.input]
+            logs    = [otelcol.processor.batch.default.input]
+            traces  = [otelcol.processor.batch.default.input]
+          }
+        }
+
+        otelcol.processor.batch "default" {
+          output {
+            metrics = [otelcol.exporter.prometheus.vm.input]
+            logs    = [otelcol.processor.transform.log_severity.input]
+            traces  = [otelcol.exporter.otlphttp.vt.input]
+          }
+        }
+
+        otelcol.exporter.prometheus "vm" {
+          forward_to = [prometheus.remote_write.vm.receiver]
+        }
+
+        prometheus.remote_write "vm" {
+          endpoint {
+            url = "http://victoriametrics:8428/api/v1/write"
+          }
+        }
+
+        otelcol.processor.transform "log_severity" {
+          error_mode = "ignore"
+          log_statements {
+            context = "log"
+            statements = [
+              "set(severity_text, \"TRACE\") where severity_number >= 1 and severity_number <= 4",
+              "set(severity_text, \"DEBUG\") where severity_number >= 5 and severity_number <= 8",
+              "set(severity_text, \"INFO\") where severity_number >= 9 and severity_number <= 12",
+              "set(severity_text, \"WARN\") where severity_number >= 13 and severity_number <= 16",
+              "set(severity_text, \"ERROR\") where severity_number >= 17 and severity_number <= 20",
+              "set(severity_text, \"CRITICAL\") where severity_number >= 21 and severity_number <= 24",
+            ]
+          }
+          output {
+            logs = [otelcol.exporter.otlphttp.vl.input]
+          }
+        }
+
+        otelcol.exporter.otlphttp "vl" {
+          client { endpoint = "http://victorialogs:9428/insert/opentelemetry" }
+        }
+
+        otelcol.exporter.otlphttp "vt" {
+          client { endpoint = "http://victoriatraces:10428/insert/opentelemetry" }
+        }
+  controller:
+    type: deployment
+    replicas: 1
+
+# vm/victoria-metrics-single
+# podLabels.app: server — chart selector expects `app: server` but template labels omit it
+# by default, causing StatefulSet invalid. Re-adding via podLabels keeps selector and
+# template in sync.
+victoriametrics:
+  enabled: true
+  fullnameOverride: victoriametrics
+  namespaceOverride: observability
+  server:
+    # Metrics cardinality barely scales with user count; 30d at 3Gi is generous.
+    retentionPeriod: 30d
+    persistentVolume:
+      enabled: true
+      size: 3Gi
+    podLabels:
+      app: server
+
+# vm/victoria-logs-single
+victorialogs:
+  enabled: true
+  fullnameOverride: victorialogs
+  namespaceOverride: observability
+  vector:
+    enabled: false
+  server:
+    # Logs scale roughly with user activity; 14d at 5Gi fits ~3 users.
+    retentionPeriod: 14d
+    persistentVolume:
+      enabled: true
+      size: 5Gi
+    podLabels:
+      app: server
+
+# vm/victoria-traces-single
+victoriatraces:
+  enabled: true
+  fullnameOverride: victoriatraces
+  namespaceOverride: observability
+  server:
+    # Traces bulkiest per event; 7d at 5Gi covers recent debugging for ~3 users.
+    retentionPeriod: 7d
+    persistentVolume:
+      enabled: true
+      size: 5Gi
+    podLabels:
+      app: server
+
+# grafana/grafana — read-only, anonymous viewer by default.
+grafana:
+  enabled: true
+  fullnameOverride: grafana
+  namespaceOverride: observability
+  admin:
+    existingSecret: ""
+  grafana.ini:
+    auth:
+      disable_login_form: true
+    auth.anonymous:
+      enabled: true
+      org_role: Viewer
+    auth.basic:
+      enabled: false
+    users:
+      allow_sign_up: false
+      viewers_can_edit: false
+    security:
+      disable_gravatar: true
+    dashboards:
+      default_home_dashboard_path: /var/lib/grafana/dashboards/streamline/streamline.json
+  plugins:
+    - victoriametrics-logs-datasource
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        - name: VictoriaMetrics
+          type: prometheus
+          access: proxy
+          uid: victoriametrics
+          url: http://victoriametrics:8428
+          isDefault: true
+        - name: VictoriaTraces
+          type: jaeger
+          access: proxy
+          uid: victoriatraces
+          url: http://victoriatraces:10428/select/jaeger
+        - name: VictoriaLogs
+          type: victoriametrics-logs-datasource
+          access: proxy
+          uid: victorialogs
+          url: http://victorialogs:9428
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: streamline
+          orgId: 1
+          folder: Streamline
+          type: file
+          disableDeletion: true
+          allowUiUpdates: false
+          options:
+            path: /var/lib/grafana/dashboards/streamline
+  # dashboards mounted from a ConfigMap created by this subchart (dashboard-streamline.yaml).
+  dashboardsConfigMaps:
+    streamline: streamline-dashboard
+  ingress:
+    enabled: false
+    ingressClassName: ""
+    hosts: []
+    tls: []

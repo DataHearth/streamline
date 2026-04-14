@@ -1,0 +1,63 @@
+{
+	"$schema": "https://json.schemastore.org/claude-code-settings.json",
+	"hooks": {
+		"PreToolUse": [
+			{
+				"matcher": "Write|Edit",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "\"${CLAUDE_PROJECT_DIR}/.claude/hooks/pre-edit.sh\" \"${CLAUDE_PROJECT_DIR}\"",
+						"timeout": 5,
+						"statusMessage": "Checking generated files..."
+					}
+				]
+			}
+		],
+		"PostToolUse": [
+			{
+				"matcher": "Write|Edit",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "\"${CLAUDE_PROJECT_DIR}/.claude/hooks/post-edit.sh\" \"${CLAUDE_PROJECT_DIR}\"",
+						"timeout": 60,
+						"statusMessage": "Formatting + linting..."
+					}
+				]
+			}
+		]
+	},
+	"enabledPlugins": {
+		"superpowers@superpowers-marketplace": true,
+		"gopls-lsp@claude-plugins-official": true,
+		"ui-ux-pro-max@ui-ux-pro-max-skill": true,
+		"static-analysis@trailofbits": true,
+		"differential-review@trailofbits": true,
+		"insecure-defaults@trailofbits": true,
+		"supply-chain-risk-auditor@trailofbits": true,
+		"sharp-edges@trailofbits": true,
+		"variant-analysis@trailofbits": true,
+		"semgrep-rule-creator@trailofbits": true
+	},
+	"extraKnownMarketplaces": {
+		"obra/superpowers-marketplace": {
+			"source": {
+				"source": "github",
+				"repo": "obra/superpowers-marketplace"
+			}
+		},
+		"trailofbits/skills": {
+			"source": {
+				"source": "github",
+				"repo": "trailofbits/skills"
+			}
+		},
+		"nextlevelbuilder/ui-ux-pro-max-skill": {
+			"source": {
+				"source": "github",
+				"repo": "nextlevelbuilder/ui-ux-pro-max-skill"
+			}
+		}
+	}
+}

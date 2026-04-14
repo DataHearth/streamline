@@ -1,0 +1,58 @@
+{{- if .Values.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "streamline.fullname" . }}-data
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "streamline.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.persistence.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.size }}
+  {{- if .Values.persistence.storageClass }}
+  storageClassName: {{ .Values.persistence.storageClass }}
+  {{- end }}
+{{- end }}
+{{- if and .Values.library.shared.enabled (not .Values.library.shared.existingClaim) }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "streamline.fullname" . }}-shared
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "streamline.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.library.shared.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.library.shared.size }}
+  {{- if .Values.library.shared.storageClass }}
+  storageClassName: {{ .Values.library.shared.storageClass }}
+  {{- end }}
+{{- end }}
+{{- range $name, $cfg := dict "media" .Values.library.media "downloads" .Values.library.downloads }}
+{{- if and $cfg.enabled (not $cfg.existingClaim) }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "streamline.fullname" $ }}-{{ $name }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "streamline.labels" $ | nindent 4 }}
+spec:
+  accessModes:
+    - {{ $cfg.accessMode }}
+  resources:
+    requests:
+      storage: {{ $cfg.size }}
+  {{- if $cfg.storageClass }}
+  storageClassName: {{ $cfg.storageClass }}
+  {{- end }}
+{{- end }}
+{{- end }}

@@ -1,0 +1,108 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: Helm E2E
+
+on:
+  pull_request:
+    paths:
+      - "deploy/helm/**"
+      - "deploy/Dockerfile"
+      - "deploy/grafana/dashboards/**"
+  workflow_dispatch:
+
+concurrency:
+  group: helm-e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install Task
+        uses: arduino/setup-task@v2
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.19.1
+
+      - name: Install frontend deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: streamline-dev
+
+      - name: Build image
+        run: |
+          task build:js
+          task build:css
+          task build:oci TAG=dev
+
+      - name: Load image into kind
+        run: kind load docker-image datahearth/streamline:dev --name streamline-dev
+
+      - name: Helm prep + install
+        run: |
+          mkdir -p /tmp/streamline
+          task helm:prep
+          task helm:install
+
+      - name: Helm test
+        run: task helm:test
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Helm E2E" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ Kind cluster + helm install + tests passed" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "❌ Helm E2E failed" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Pods:**" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          kubectl get pods -A --no-headers 2>/dev/null || echo "(unavailable)" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Dump pod logs on failure
+        if: failure()
+        run: |
+          kubectl get pods -A
+          kubectl describe pods --all-namespaces | tee /tmp/streamline/pods-describe.log
+          kubectl logs -l app.kubernetes.io/instance=streamline --all-containers --tail=200 | tee /tmp/streamline/streamline-logs.log
+
+      - name: Upload failure logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: helm-e2e-failure-logs
+          path: |
+            /tmp/streamline/pods-describe.log
+            /tmp/streamline/streamline-logs.log
+          if-no-files-found: ignore
+          retention-days: 7

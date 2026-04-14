@@ -1,0 +1,317 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+vars:
+  BINARY: streamline
+  LABEL_FILTER: '{{.LABEL_FILTER}}'
+
+tasks:
+  default:
+    desc: Build everything
+    deps: [build:app]
+
+  # build:go pulls build:js + build:css via its own deps, so this alias
+  # just forwards. Kept for workflow clarity and back-compat with CI.
+  build:app:
+    desc: Build Go binary with frontend assets
+    deps: [build:go]
+
+  build:go:
+    desc: Build Go binary
+    # Frontend assets are embedded via //go:embed — must exist at compile time.
+    deps: [build:js, build:css]
+    cmd: go build -o {{.BINARY}} ./cmd
+    sources:
+      - "**/*.go"
+      - exclude: "**/*_test.go"
+      - exclude: "**/mocks/**"
+      # Embedded assets — keep in sync with web/embed.go.
+      - web/static/css/style.css
+      - web/static/css/docs.min.css
+      - web/static/js/docs.min.js
+      - web/static/dist/spa.min.js
+      - web/static/images/**
+      - web/static/fonts/**
+      - web/app/index.html
+      - web/api_docs.html
+    generates:
+      - "{{.BINARY}}"
+
+  build:js:
+    desc: Bundle JS — docs bundle (scalar), SPA bundle (svelte)
+    cmds:
+      - mkdir -p /tmp/streamline/bundle web/static/dist
+      - pnpm exec esbuild web/static/js/docs.js --bundle --minify
+        --outdir=/tmp/streamline/bundle --entry-names=[name].min
+      - mv /tmp/streamline/bundle/docs.min.js web/static/js/docs.min.js
+      - mv /tmp/streamline/bundle/docs.min.css web/static/css/docs.min.css
+      - pnpm exec routify build
+      - node web/app/esbuild.config.mjs
+    sources:
+      - web/static/js/docs.js
+      - web/app/**/*.ts
+      - web/app/**/*.svelte
+      - exclude: web/app/.routify/**
+      - web/app/esbuild.config.mjs
+      - web/app/tsconfig.json
+      - routify.config.js
+      - package.json
+      - pnpm-lock.yaml
+    generates:
+      - web/static/js/docs.min.js
+      - web/static/css/docs.min.css
+      - web/static/dist/spa.min.js
+
+  build:css:
+    desc: Build TailwindCSS
+    cmd: pnpm exec tailwindcss -i web/static/css/input.css -o
+      web/static/css/style.css --minify
+    sources:
+      - web/static/css/input.css
+      - web/app/**/*.svelte
+    generates:
+      - web/static/css/style.css
+
+  dev:
+    desc: Run with live reload via air
+    cmd: go tool air
+    interactive: true
+
+  test:unit:
+    desc: Run unit tests only
+    cmd: go tool ginkgo run -r --label-filter="unit{{with .LABEL_FILTER}} &&
+      {{.}}{{end}}" {{.CLI_ARGS}}
+
+  test:integration:
+    desc: Run integration tests
+    cmd: go tool ginkgo run -r --label-filter="integration{{with .LABEL_FILTER}} &&
+      {{.}}{{end}}" {{.CLI_ARGS}}
+
+  test:e2e:
+    desc: Run e2e browser tests
+    cmd: go tool ginkgo run -r --label-filter="e2e{{with .LABEL_FILTER}} &&
+      {{.}}{{end}}" --timeout=1m15s {{.CLI_ARGS}}
+
+  test:coverage:
+    desc: Run unit + integration tests with coverage report (e2e excluded, generated code filtered)
+    cmds:
+      - mkdir -p /tmp/streamline
+      - go tool ginkgo run -r --label-filter="!e2e"
+        --coverprofile=coverage.raw.out --output-dir=/tmp/streamline
+        --coverpkg=github.com/datahearth/streamline/...
+        {{.CLI_ARGS}}
+      - head -n 1 /tmp/streamline/coverage.raw.out > /tmp/streamline/coverage.out
+      - tail -n +2 /tmp/streamline/coverage.raw.out | grep -Ev -e '/ent/' -e '/mocks/' -e 'internal/server/restapi/gen\.go' >> /tmp/streamline/coverage.out
+      - go tool cover -func=/tmp/streamline/coverage.out
+      - go tool cover -html=/tmp/streamline/coverage.out
+        -o coverage.html
+
+  test:
+    desc: Run entire test suite
+    cmd: go tool ginkgo run -r {{.CLI_ARGS}}
+
+  lint:
+    desc: Run all linters
+    cmds:
+      - task: lint:go
+      - task: lint:frontend
+
+  lint:go:
+    desc: Lint Go code
+    # Frontend assets must exist before the Go typechecker resolves the
+    # //go:embed paths in web/embed.go.
+    deps: [build:js, build:css]
+    cmd: go tool golangci-lint run ./...
+
+  lint:frontend:
+    desc: Lint JS/CSS (biome)
+    cmds:
+      - biome lint web/static/js web/static/css
+
+  fmt:
+    desc: Format all code
+    cmds:
+      - go tool golangci-lint fmt ./...
+      - biome format --write web/static/js web/static/css
+
+  fmt:check:
+    desc: Check formatting without writing
+    cmds:
+      - biome format web/static/js web/static/css
+
+  migrate:diff:
+    desc: Generate a new versioned migration from the ent schema (usage - task migrate:diff -- NAME)
+    cmd: go run -mod=mod ./ent/migrate/main.go {{.CLI_ARGS}}
+
+  generate:
+    desc: Regenerate all generated code
+    cmds:
+      - go tool oapi-codegen --config api/oapi-codegen.yaml api/openapi.yaml
+      - go generate ./ent
+      - go tool mockery
+    sources:
+      - api/openapi.yaml
+      - api/oapi-codegen.yaml
+      - ent/schema/*.go
+      - .mockery.yaml
+      - internal/**/*.go
+      - exclude: "**/*_test.go"
+      - exclude: "**/mocks/**"
+    generates:
+      - internal/api/gen.go
+      - ent/**/*.go
+      - exclude: ent/schema/*.go
+
+  clean:
+    desc: Remove build artifacts
+    cmds:
+      - rm -f {{.BINARY}}
+      - rm -f web/static/js/docs.min.js
+      - rm -f web/static/css/style.css
+      - rm -f web/static/css/docs.min.css
+      - rm -rf web/static/dist
+
+  build:oci:
+    desc: Build the streamline OCI image (datahearth/streamline:{{.TAG}})
+    vars:
+      TAG: '{{.TAG | default "dev"}}'
+    cmds:
+      - docker build -t ghcr.io/datahearth/streamline:{{.TAG}} -f
+        deploy/Dockerfile .
+      - docker tag ghcr.io/datahearth/streamline:{{.TAG}}
+        ghcr.io/datahearth/streamline:latest
+
+  helm:deps:
+    desc: Fetch upstream subchart dependencies into charts/observability/charts/
+    cmd: helm dependency update deploy/helm/streamline/charts/observability
+    sources:
+      - deploy/helm/streamline/charts/observability/Chart.yaml
+    generates:
+      - deploy/helm/streamline/charts/observability/Chart.lock
+
+  helm:prep:
+    desc: Copy dashboard JSON into observability subchart
+    deps: [helm:deps]
+    cmds:
+      - mkdir -p deploy/helm/streamline/charts/observability/dashboards
+      - cp deploy/grafana/dashboards/streamline.json
+        deploy/helm/streamline/charts/observability/dashboards/streamline.json
+    sources:
+      - deploy/grafana/dashboards/streamline.json
+    generates:
+      - deploy/helm/streamline/charts/observability/dashboards/streamline.json
+
+  helm:lint:
+    desc: Lint the Helm chart
+    deps: [helm:prep]
+    cmd: helm lint deploy/helm/streamline
+
+  helm:template:
+    desc: Render Helm chart (defaults and observability-enabled)
+    deps: [helm:prep]
+    cmds:
+      - mkdir -p /tmp/streamline
+      - helm template streamline deploy/helm/streamline >
+        /tmp/streamline/helm-default.yaml
+      - helm template streamline deploy/helm/streamline --set
+        observability.enabled=true > /tmp/streamline/helm-obs.yaml
+
+  helm:kind:up:
+    desc: Create kind cluster for e2e
+    cmds:
+      - kind create cluster --name streamline-dev --wait 2m
+      - kind export kubeconfig --name streamline-dev --kubeconfig
+        deploy/helm/streamline/kubeconfig.yaml
+
+  helm:kind:down:
+    desc: Destroy kind cluster
+    cmds:
+      - kind delete cluster --name streamline-dev
+      - rm deploy/helm/streamline/kubeconfig.yaml
+
+  helm:kind:load:
+    desc: Load streamline image into kind
+    deps: [build:oci]
+    cmd: kind load docker-image datahearth/streamline:dev --name streamline-dev
+
+  helm:install:
+    desc: Install chart into current kube context
+    deps: [helm:prep]
+    cmd: |
+      helm upgrade --install streamline deploy/helm/streamline \
+        --namespace streamline --create-namespace \
+        --set image.repository=datahearth/streamline \
+        --set image.tag=dev \
+        --set image.pullPolicy=IfNotPresent \
+        --set observability.enabled=true \
+        --wait --timeout 5m
+
+  helm:test:
+    desc: Run helm test hooks
+    cmd: helm test streamline --logs
+
+  helm:e2e:
+    desc: Full kind-based e2e (build, load, install, test, teardown)
+    cmds:
+      - task: helm:kind:up
+      - defer: {task: helm:kind:down}
+      - task: helm:kind:load
+      - task: helm:install
+      - task: helm:test
+
+  helm:package:
+    desc: Package chart tarball (used by CI release job)
+    deps: [helm:prep]
+    cmds:
+      - mkdir -p /tmp/streamline/helm
+      - helm package deploy/helm/streamline -d /tmp/streamline/helm
+
+  # --- Local release ------------------------------------------------------
+  # The full pipeline normally runs in CI on a v*.*.* tag push (see
+  # .github/workflows/{image,release}.yaml). These targets cut a release from
+  # a workstation instead — e.g. an alpha to smoke-test in a real cluster.
+  # Requires `docker login ghcr.io` and `helm registry login ghcr.io`.
+
+  release:image:
+    desc: Build + push multi-arch OCI image to GHCR (usage - task release:image VERSION=v0.1.0-alpha.1)
+    requires:
+      vars: [VERSION]
+    vars:
+      # ponytail: covers typical clusters; override PLATFORMS=linux/amd64 to narrow.
+      PLATFORMS: '{{.PLATFORMS | default "linux/amd64,linux/arm64"}}'
+    cmd: |
+      docker buildx build --push \
+        --platform {{.PLATFORMS}} \
+        -f deploy/Dockerfile \
+        -t ghcr.io/datahearth/streamline:{{.VERSION}} \
+        --build-arg VERSION={{.VERSION}} \
+        --build-arg COMMIT="$(git rev-parse --short HEAD)" \
+        --build-arg BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+        .
+
+  release:helm:
+    desc: Package + push helm chart to GHCR OCI, stamped to VERSION (usage - task release:helm VERSION=v0.1.0-alpha.1)
+    deps: [helm:prep]
+    requires:
+      vars: [VERSION]
+    cmds:
+      - mkdir -p /tmp/streamline/helm
+      - helm package deploy/helm/streamline
+        --version {{trimPrefix "v" .VERSION}} --app-version {{.VERSION}}
+        -d /tmp/streamline/helm
+      - helm push /tmp/streamline/helm/streamline-{{trimPrefix "v" .VERSION}}.tgz
+        oci://ghcr.io/datahearth/charts
+
+  release:gh:
+    desc: Cut the GitHub release from the current git tag via goreleaser (needs a pushed v*.*.* tag + GITHUB_TOKEN; goreleaser/cosign/syft on PATH)
+    cmd: goreleaser release --clean
+
+  release:
+    desc: Local k8s-deployable release - image + helm chart, both stamped to VERSION (run release:gh separately for the GitHub binary release). Usage - task release VERSION=v0.1.0-alpha.1
+    requires:
+      vars: [VERSION]
+    cmds:
+      - task: release:image
+        vars: {VERSION: "{{.VERSION}}"}
+      - task: release:helm
+        vars: {VERSION: "{{.VERSION}}"}

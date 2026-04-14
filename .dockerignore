@@ -1,0 +1,27 @@
+# Ignore everything
+*
+
+# Go source
+!go.mod
+!go.sum
+!cmd/
+!internal/
+!ent/
+!api/
+
+# Frontend
+!package.json
+!pnpm-lock.yaml
+!routify.config.js
+!web/
+
+# Embedded templates need web/ but not built assets
+web/static/js/bundle.min.js
+web/static/js/docs.min.js
+web/static/css/docs.min.css
+web/static/css/style.css
+
+# Tests + generated mocks (not needed for runtime binary)
+**/*_test.go
+**/mocks/
+**/mock_*.go

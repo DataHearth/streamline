@@ -1,0 +1,150 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/main/schema/compose-spec.json
+#
+# Full test stack: streamline + gluetun (WireGuard VPN) + qbittorrent + prowlarr.
+# State lives under ../tmp/ (repo-root sandbox, gitignored).
+# Copy .env.example to .env and fill in VPN_SERVICE_PROVIDER / WIREGUARD_PRIVATE_KEY
+# / LAN_NETWORK / TZ before `docker compose up` (plus a PLEX_CLAIM for first boot).
+# gluetun runs the VPN tunnel + killswitch (no iptables, no
+# privileged); qbittorrent shares its netns. See the gluetun wiki for your
+# provider's WireGuard settings.
+services:
+  streamline:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    container_name: streamline
+    restart: unless-stopped
+    user: "1000:100"
+    networks:
+      - streamline
+    ports:
+      - "8080:8080"
+    volumes:
+      - ../tmp/data:/data
+      - ../tmp/media:/media
+      - ../tmp/qbittorrent/downloads:/downloads
+      - ../tmp/config.docker.yaml:/etc/streamline/config.yaml
+    environment:
+      - STREAMLINE_LOG__APP__LEVEL=info
+      - OTEL_EXPORTER_OTLP_INSECURE=true
+    depends_on:
+      - qbittorrent
+      - prowlarr
+      - plex
+
+  # VPN tunnel + killswitch. No iptables management, no privileged: just
+  # NET_ADMIN + /dev/net/tun. qbittorrent shares this container's network
+  # namespace, so the torrent webui/listen ports are published HERE.
+  gluetun:
+    image: qmcgaw/gluetun:latest
+    container_name: gluetun
+    restart: unless-stopped
+    # qbittorrent shares this namespace, so gluetun carries the streamline
+    # network membership for both — streamline reaches the webui as gluetun:8090.
+    networks:
+      - streamline
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    ports:
+      # qbittorrent webui — remapped to 8090 on host (8080 is streamline).
+      # Reachable from other compose services as `gluetun:8090`.
+      - "8090:8090"
+      - "58946:58946"
+      - "58946:58946/udp"
+    volumes:
+      - ../tmp/gluetun:/gluetun
+    environment:
+      - VPN_SERVICE_PROVIDER=${VPN_SERVICE_PROVIDER}
+      - VPN_TYPE=${VPN_TYPE}
+      # The PrivateKey from your provider's generated WireGuard config. Built-in
+      # providers (e.g. protonvpn) auto-supply the address — only set
+      # WIREGUARD_ADDRESSES yourself for the `custom` provider.
+      - WIREGUARD_PRIVATE_KEY=${WIREGUARD_PRIVATE_KEY}
+      # Optional: restrict gluetun's server pick (e.g. SERVER_COUNTRIES=Switzerland).
+      - SERVER_COUNTRIES=${SERVER_COUNTRIES:-}
+      # Only pick servers that support port forwarding, then enable it.
+      - PORT_FORWARD_ONLY=${PORT_FORWARD_ONLY}
+      - VPN_PORT_FORWARDING=${VPN_PORT_FORWARDING}
+      # Push gluetun's dynamic forwarded port into qBittorrent on tunnel up/down.
+      # qBittorrent is gated behind `depends_on: gluetun healthy`, so its webui
+      # starts ~30s AFTER gluetun has already port-forwarded — and gluetun runs
+      # this command only once. wget --retry-connrefused burns its tries in ms
+      # without backoff, so the up command polls for the webui itself before the
+      # POST. Still needs qBittorrent "Bypass authentication for clients on
+      # localhost" ON (Options > Web UI), else setPreferences returns 403.
+      # https://github.com/qdm12/gluetun-wiki/blob/main/setup/advanced/vpn-port-forwarding.md#qbittorrent-example
+      - VPN_PORT_FORWARDING_UP_COMMAND=/bin/sh -c 'i=0; until wget -q -O /dev/null http://127.0.0.1:8090/ || [ "$$i" -ge 60 ]; do i=$$((i+1)); sleep 2; done; wget -O- -nv --post-data "json={\"listen_port\":{{PORT}},\"current_network_interface\":\"{{VPN_INTERFACE}}\",\"random_port\":false,\"upnp\":false}" http://127.0.0.1:8090/api/v2/app/setPreferences'
+      - VPN_PORT_FORWARDING_DOWN_COMMAND=/bin/sh -c 'wget -O- -nv --retry-connrefused --post-data "json={\"listen_port\":0,\"current_network_interface\":\"lo\"}" http://127.0.0.1:8090/api/v2/app/setPreferences'
+      # Allow the LAN to reach the webui without tripping the killswitch.
+      - FIREWALL_OUTBOUND_SUBNETS=${LAN_NETWORK:-192.168.0.0/16}
+      - TZ=${TZ:-Etc/UTC}
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    restart: unless-stopped
+    # Route all traffic through gluetun's tunnel + killswitch. Sharing gluetun's
+    # netns means NO own `networks:` here — gluetun owns the network identity.
+    network_mode: "service:gluetun"
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    volumes:
+      - ../tmp/qbittorrent/config:/config
+      # Set qBittorrent's Session\DefaultSavePath to /downloads in its
+      # qBittorrent.conf — streamline reads finished torrents from the same
+      # ../tmp/qbittorrent/downloads tree at /downloads.
+      - ../tmp/qbittorrent/downloads:/downloads
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-100}
+      - UMASK=022
+      - TZ=${TZ:-Etc/UTC}
+      - WEBUI_PORT=8090
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    networks:
+      - streamline
+    restart: unless-stopped
+    ports:
+      - "9696:9696"
+    volumes:
+      - ../tmp/prowlarr/config:/config
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-100}
+      - TZ=${TZ:-Etc/UTC}
+
+  # Plex Pass test server. Set PLEX_CLAIM in .env to a fresh token from
+  # https://www.plex.tv/claim/ (4-min expiry) for the first boot — afterwards
+  # the server is bound to your account and the claim is no longer needed.
+  # Reachable from other compose services as `plex:32400`; from the host as
+  # http://localhost:32400/web.
+  plex:
+    image: plexinc/pms-docker:plexpass
+    container_name: plex
+    restart: unless-stopped
+    hostname: plex
+    networks:
+      - streamline
+    ports:
+      - "32400:32400"
+    volumes:
+      - ../tmp/plex/config:/config
+      - ../tmp/plex/transcode:/transcode
+      # Same host media tree streamline imports into — Plex reads the
+      # hardlinked files at /media/movies (mirror of streamline's view).
+      - ../tmp/media:/media
+    environment:
+      - PLEX_CLAIM=${PLEX_CLAIM:-}
+      - PLEX_UID=${PUID:-1000}
+      - PLEX_GID=${PGID:-100}
+      - TZ=${TZ:-Etc/UTC}
+      - ADVERTISE_IP=http://localhost:32400/
+
+networks:
+  streamline:

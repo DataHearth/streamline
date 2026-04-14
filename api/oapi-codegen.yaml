@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/oapi-codegen/oapi-codegen/HEAD/configuration-schema.json
+package: restapi
+generate:
+  chi-server: true
+  models: true
+  strict-server: true
+output: internal/server/restapi/gen.go
+compatibility:
+  # Prefix enum constants with their type name (e.g.
+  # ImportScanFileDecisionRequestDecisionPending, not bare Pending). Keeps
+  # generation deterministic against the committed gen.go and avoids
+  # package-level collisions with ginkgo's dot-imported Pending/Skip in
+  # restapi test files.
+  always-prefix-enum-values: true

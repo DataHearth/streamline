@@ -1,0 +1,197 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  lint-go:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v5
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install Task
+        uses: arduino/setup-task@v2
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install frontend deps
+        run: pnpm install --frozen-lockfile
+      - name: Lint Go
+        run: task lint:go
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Go Lint" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ golangci-lint passed" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "❌ golangci-lint found issues" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  lint-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Install Task
+        uses: arduino/setup-task@v2
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Setup Biome
+        uses: biomejs/setup-biome@v2
+        with:
+          version: latest
+      - name: Lint frontend
+        run: task lint:frontend
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Frontend Lint" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ Biome passed" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "❌ Lint issues — run \`task fmt\`" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v5
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install Task
+        uses: arduino/setup-task@v2
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install frontend deps
+        run: pnpm install --frozen-lockfile
+      - name: Build frontend assets
+        run: task build:js build:css
+      - name: Run tests
+        run: task test -- --keep-going
+          --junit-report=/tmp/streamline/junit-report.xml
+      - name: Publish test report
+        if: success() || failure()
+        uses: mikepenz/action-junit-report@v6
+        with:
+          report_paths: /tmp/streamline/junit-report.xml
+          check_name: Test Results
+          detailed_summary: true
+          fail_on_failure: false
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v5
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install Task
+        uses: arduino/setup-task@v2
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install frontend deps
+        run: pnpm install --frozen-lockfile
+      - name: Build binary + assets
+        run: task build:app
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Build" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ Binary + frontend assets compiled" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "❌ Build failed" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  lint-helm:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Detect helm changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            helm:
+              - 'deploy/helm/**'
+              - 'deploy/grafana/dashboards/**'
+
+      - name: Install Task
+        if: steps.filter.outputs.helm == 'true'
+        uses: arduino/setup-task@v2
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Helm
+        if: steps.filter.outputs.helm == 'true'
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.19.1
+
+      - name: Helm prep + lint
+        if: steps.filter.outputs.helm == 'true'
+        run: |
+          mkdir -p /tmp/streamline
+          task helm:lint
+
+      - name: Helm template (default + observability)
+        if: steps.filter.outputs.helm == 'true'
+        run: task helm:template
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Helm" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ steps.filter.outputs.helm }}" != "true" ]; then
+            echo "⏭️ No helm changes — skipped" >> "$GITHUB_STEP_SUMMARY"
+          elif [ "${{ job.status }}" = "success" ]; then
+            echo "✅ Helm lint + template passed" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "❌ Helm validation failed" >> "$GITHUB_STEP_SUMMARY"
+          fi
