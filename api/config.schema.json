@@ -1,0 +1,366 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema",
+  "$id": "https://github.com/datahearth/streamline/deploy/config/config.schema.json",
+  "title": "Streamline configuration",
+  "description": "Schema for a Streamline config file. Mirrors internal/config Config struct, validator tags and defaults(). All keys are optional — unset keys fall back to built-in defaults; `streamline config init` emits every key with its default.",
+  "type": "object",
+  "additionalProperties": false,
+  "definitions": {
+    "duration": {
+      "type": "string",
+      "description": "Go duration string, e.g. \"30s\", \"15m\", \"168h\".",
+      "minLength": 1
+    },
+    "role": {
+      "type": "string",
+      "enum": ["admin", "member", "request_only"]
+    },
+    "resolution": {
+      "type": "string",
+      "enum": ["720p", "1080p", "2160p"]
+    },
+    "logRotate": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Size/age based log rotation (applies when output is a file path).",
+      "properties": {
+        "max_size_mb": { "type": "integer", "minimum": 0 },
+        "max_backups": { "type": "integer", "minimum": 0 },
+        "max_age_days": { "type": "integer", "minimum": 0 },
+        "compress": { "type": "boolean" }
+      }
+    },
+    "mediaServerEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "server_type", "host"],
+      "properties": {
+        "name": { "type": "string" },
+        "server_type": {
+          "type": "string",
+          "enum": ["plex", "jellyfin", "emby"]
+        },
+        "host": { "type": "string" },
+        "api_key": { "type": "string" },
+        "api_key_file": { "type": "string" },
+        "enabled": { "type": "boolean" },
+        "library_section": { "type": ["string", "null"] },
+        "library_section_tv": { "type": ["string", "null"] }
+      }
+    },
+    "downloadClientEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "client_type", "host", "port", "auth_method"],
+      "properties": {
+        "name": { "type": "string" },
+        "client_type": {
+          "type": "string",
+          "enum": ["qbittorrent", "transmission", "deluge"]
+        },
+        "host": { "type": "string" },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "auth_method": {
+          "type": "string",
+          "enum": ["password", "api_key"]
+        },
+        "username": { "type": "string" },
+        "password": { "type": "string" },
+        "password_file": { "type": "string" },
+        "api_key": { "type": "string" },
+        "api_key_file": { "type": "string" },
+        "use_ssl": { "type": "boolean" },
+        "priority": { "type": "integer", "minimum": 0, "maximum": 255 },
+        "enabled": { "type": "boolean" }
+      }
+    },
+    "indexerEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "host", "port", "protocol"],
+      "properties": {
+        "name": { "type": "string" },
+        "host": { "type": "string" },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "path": { "type": "string" },
+        "use_ssl": { "type": "boolean" },
+        "api_key": { "type": "string" },
+        "api_key_file": { "type": "string" },
+        "protocol": {
+          "type": "string",
+          "enum": ["torznab", "prowlarr"]
+        },
+        "priority": { "type": "integer", "minimum": 0, "maximum": 255 },
+        "enabled": { "type": "boolean" }
+      }
+    },
+    "qualityProfileEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "preferred_resolution", "min_resolution"],
+      "properties": {
+        "name": { "type": "string" },
+        "preferred_resolution": { "$ref": "#/definitions/resolution" },
+        "min_resolution": { "$ref": "#/definitions/resolution" },
+        "upgrade_allowed": { "type": "boolean" }
+      }
+    }
+  },
+  "properties": {
+    "data_dir": {
+      "type": "string",
+      "description": "Directory holding runtime data. Must exist on disk."
+    },
+    "read_only": {
+      "type": "boolean",
+      "description": "Reject all runtime config write-backs (config.Update). For declarative/GitOps deploys where config is mounted read-only; changes flow through git, not the UI."
+    },
+    "server": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "host": {
+          "type": "string",
+          "description": "Bind address (IP or hostname)."
+        },
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        }
+      }
+    },
+    "auth": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["full", "trusted-network", "disabled"]
+        },
+        "trusted_networks": {
+          "type": "array",
+          "description": "CIDR ranges trusted when mode=trusted-network.",
+          "items": { "type": "string" }
+        },
+        "trusted_role": { "$ref": "#/definitions/role" },
+        "session_secret": {
+          "type": "string",
+          "description": "JWT HMAC signing secret. Auto-generated and persisted on first boot when empty."
+        },
+        "session_secret_file": {
+          "type": "string",
+          "description": "Path to a file holding session_secret. Mutually exclusive with session_secret."
+        },
+        "session_ttl": { "$ref": "#/definitions/duration" },
+        "registration_mode": {
+          "type": "string",
+          "enum": ["disabled", "open", "invite"]
+        },
+        "oidc_default_role": { "$ref": "#/definitions/role" },
+        "seed_admin": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Optional bootstrap admin. No-op if email empty or users already exist.",
+          "properties": {
+            "email": { "type": "string" },
+            "password": { "type": "string" },
+            "password_file": { "type": "string" }
+          }
+        },
+        "oidc": {
+          "type": "array",
+          "description": "OIDC providers discovered at startup.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "issuer", "client_id"],
+            "properties": {
+              "name": { "type": "string" },
+              "issuer": { "type": "string", "format": "uri" },
+              "client_id": { "type": "string" },
+              "client_secret": { "type": "string" },
+              "client_secret_file": { "type": "string" },
+              "role_claim": {
+                "type": "string",
+                "description": "ID-token claim (e.g. \"groups\") used for role mapping."
+              },
+              "role_mapping": {
+                "type": "object",
+                "description": "Maps a role_claim value to a Streamline role. Highest-privilege match wins; authoritative when set.",
+                "additionalProperties": { "$ref": "#/definitions/role" }
+              }
+            }
+          }
+        },
+        "lockout": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "threshold": { "type": "integer", "minimum": 1, "maximum": 255 },
+            "window": { "$ref": "#/definitions/duration" },
+            "duration": { "$ref": "#/definitions/duration" }
+          }
+        }
+      }
+    },
+    "library": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "movie_path": { "type": "string" },
+        "movie_naming": { "type": "string" },
+        "series_path": { "type": "string" },
+        "series_naming": { "type": "string" },
+        "download_path": {
+          "type": "string",
+          "description": "Host-side directory streamline reads completed torrents from. Combined with the torrent name to locate content (<download_path>/<torrent.Name>)."
+        },
+        "import_mode": {
+          "type": "string",
+          "enum": ["hardlink", "copy", "move"]
+        },
+        "no_match_cooldown": { "$ref": "#/definitions/duration" },
+        "max_grab_failures": { "type": "integer", "minimum": 1 },
+        "keep_torrent_seeding": { "type": "boolean" },
+        "import_max_attempts": { "type": "integer", "minimum": 1 },
+        "allowed_download_roots": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "drift_grace_ticks": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20,
+          "description": "Consecutive drift_check ticks a MediaFile may be missing before its row is deleted."
+        }
+      }
+    },
+    "schedules": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Cron-like job intervals (Go duration strings).",
+      "properties": {
+        "rss_sync": { "$ref": "#/definitions/duration" },
+        "metadata_refresh": { "$ref": "#/definitions/duration" },
+        "download_monitor": { "$ref": "#/definitions/duration" },
+        "missing_search": { "$ref": "#/definitions/duration" },
+        "cleanup": { "$ref": "#/definitions/duration" },
+        "import_scan": { "$ref": "#/definitions/duration" },
+        "orphan_scan": { "$ref": "#/definitions/duration" },
+        "drift_check": { "$ref": "#/definitions/duration" }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "tmdb_api_key": { "type": "string" },
+        "tmdb_api_key_file": { "type": "string" },
+        "tvdb_api_key": { "type": "string" },
+        "tvdb_api_key_file": { "type": "string" },
+        "language": {
+          "type": "string",
+          "description": "BCP-47 language tag, e.g. \"en\", \"fr\"."
+        },
+        "tmdb_region": {
+          "type": "string",
+          "description": "ISO 3166-1 alpha-2 uppercase region code, e.g. \"FR\"."
+        }
+      }
+    },
+    "events": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "retention": { "$ref": "#/definitions/duration" }
+      }
+    },
+    "log": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "app": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "level": {
+              "type": "string",
+              "enum": ["debug", "info", "warn", "error"]
+            },
+            "format": {
+              "type": "string",
+              "enum": ["text", "json"]
+            },
+            "output": {
+              "type": "string",
+              "description": "\"stderr\", an absolute file path, or a path relative to data_dir."
+            },
+            "rotate": { "$ref": "#/definitions/logRotate" }
+          }
+        },
+        "http": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "output": {
+              "type": "string",
+              "description": "\"stderr\", an absolute file path, or a path relative to data_dir."
+            },
+            "format": {
+              "type": "string",
+              "enum": ["json", "combined"]
+            },
+            "rotate": { "$ref": "#/definitions/logRotate" }
+          }
+        }
+      }
+    },
+    "otel": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "endpoint": {
+          "type": "string",
+          "description": "OTLP endpoint. Empty disables OTel export."
+        }
+      }
+    },
+    "media_server": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "plex_client_id": {
+          "type": "string",
+          "description": "X-Plex-Client-Identifier. Auto-generated on first boot when empty."
+        },
+        "servers": {
+          "type": "array",
+          "description": "Media-server integrations (Plex/Jellyfin/Emby).",
+          "items": { "$ref": "#/definitions/mediaServerEntry" }
+        }
+      }
+    },
+    "download_clients": {
+      "type": "array",
+      "description": "Torrent download clients.",
+      "items": { "$ref": "#/definitions/downloadClientEntry" }
+    },
+    "indexers": {
+      "type": "array",
+      "description": "Torznab indexers.",
+      "items": { "$ref": "#/definitions/indexerEntry" }
+    },
+    "quality_profiles": {
+      "type": "array",
+      "description": "Named quality profiles.",
+      "items": { "$ref": "#/definitions/qualityProfileEntry" }
+    },
+    "quality_default_profile": {
+      "type": "string",
+      "description": "Name of the quality profile used when a movie names none."
+    }
+  }
+}

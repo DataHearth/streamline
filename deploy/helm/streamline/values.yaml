@@ -1,0 +1,141 @@
+# Container image for streamline.
+image:
+  repository: ghcr.io/datahearth/streamline
+  tag: "" # defaults to .Chart.AppVersion when empty
+  pullPolicy: IfNotPresent
+imagePullSecrets: []
+
+# SQLite is a single writer. Multiple replicas are not supported.
+replicaCount: 1
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+podAnnotations: {}
+podLabels: {}
+# Image runs as non-root uid/gid 1000. fsGroup makes a root-owned RWO PVC
+# (e.g. ceph-block) group-writable so SQLite can open /data — without it the
+# pod crashloops on "unable to open database file (14)".
+podSecurityContext:
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  runAsNonRoot: true
+securityContext: {}
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+persistence:
+  enabled: true
+  size: 5Gi
+  storageClass: "" # empty = cluster default
+  accessMode: ReadWriteOnce
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts: [] # [{ host: streamline.example.com, paths: [{ path: /, pathType: Prefix }] }]
+  tls: [] # [{ secretName: streamline-tls, hosts: [streamline.example.com] }]
+
+gateway:
+  enabled: false
+  parentRefs: [] # [{ name: my-gateway, namespace: gateway-system }]
+  hostnames: [] # [streamline.example.com]
+
+# Rendered into /etc/streamline/config.yaml (koanf file source). Only keys that
+# DEVIATE from the binary's built-in defaults belong here — the binary owns the
+# rest, so this can't silently drift from them. Override any other key by adding
+# it; koanf merges this file over defaults. See `streamline config validate`.
+config:
+  data_dir: /data # binary default ./data is relative; MUST pin to the PVC mount
+  # Declarative deploy: the app never writes config back (config.Update returns
+  # ErrReadOnly). Change config through git, not the UI. Runtime-only values
+  # (session_secret, plex_client_id) must be supplied here or via secretFiles.
+  read_only: true # binary default false
+  server:
+    port: 8080 # MUST match service.port — probes + containerPort target it
+  log:
+    app:
+      format: json # binary default text; deploy wants structured logs
+  otel:
+    endpoint: "" # auto-set to the subchart alloy service when observability.enabled=true
+
+# Rendered into a Secret, mounted via envFrom with STREAMLINE_ prefix preserved
+# (koanf STREAMLINE_* env overrides file config). Good for scalar secrets;
+# array-nested secrets (oidc/indexers/download_clients) need secretFiles below.
+secrets: {}
+# Example keys (uppercase = env var):
+#   STREAMLINE_METADATA__TMDB_API_KEY: "..."
+#   STREAMLINE_AUTH__SESSION_SECRET: "..."
+
+# Mount an existing (SOPS-managed) k8s Secret as files. Each Secret key becomes
+# a file under mountPath; reference it from config via a *_file path, e.g.
+#   config.indexers[].api_key_file: /etc/streamline/secrets/prowlarr-key
+# Keeps secret values out of the ConfigMap while config stays declarative.
+secretFiles:
+  enabled: false
+  existingSecret: "" # name of a pre-created Secret (its keys become files)
+  mountPath: /etc/streamline/secrets
+
+# OIDC redirect_uri is derived per-request from the host you connect on, so
+# multi-domain SSO works without config — just register each domain's
+# /auth/oidc/<name>/callback at the IdP. STREAMLINE_PUBLIC_URL only sets the
+# canonical base for invite links (cosmetic); otherwise they fall back to
+# http://<host>:<port>. Set it here when you want absolute invite URLs:
+#   extraEnv:
+#     - name: STREAMLINE_PUBLIC_URL
+#       value: https://streamline.example.com
+extraEnv: []
+
+library:
+  # Default: ONE volume mounted once. Hardlink-safe (single filesystem), so
+  # config.library.import_mode "hardlink" works out of the box. The chart points
+  # config.library at conventional subdirs of this mount:
+  #   movie_path=<mountPath>/media/movies, series_path=<mountPath>/media/series,
+  #   download_path=<mountPath>/downloads.
+  # Want a different layout? Set config.library.{movie,series,download}_path
+  # explicitly above and the chart leaves it as-is.
+  shared:
+    enabled: true
+    existingClaim: "" # empty = create the PVC below
+    mountPath: /srv
+    size: 50Gi
+    storageClass: "" # empty = cluster default
+    accessMode: ReadWriteOnce
+  # Alternative: separate media + downloads volumes. Two filesystems can't
+  # hardlink across each other, so set config.library.import_mode to "copy"/"move"
+  # when using these. Disable shared above before enabling either.
+  media:
+    enabled: false
+    mountPath: /media
+    existingClaim: ""
+    size: 50Gi
+    storageClass: ""
+    accessMode: ReadWriteOnce
+  downloads:
+    enabled: false
+    mountPath: /downloads
+    existingClaim: ""
+    size: 20Gi
+    storageClass: ""
+    accessMode: ReadWriteOnce
+
+# Optional local subchart: Alloy + VictoriaMetrics/Logs/Traces + Grafana.
+observability:
+  enabled: false

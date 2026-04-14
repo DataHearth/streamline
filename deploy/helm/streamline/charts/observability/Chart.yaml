@@ -1,0 +1,31 @@
+apiVersion: v2
+name: observability
+description: Optional Alloy + VictoriaMetrics/Logs/Traces + Grafana subchart (upstream charts).
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+
+dependencies:
+  - name: alloy
+    version: 1.7.0
+    repository: https://grafana.github.io/helm-charts
+    condition: alloy.enabled
+  - name: victoria-metrics-single
+    alias: victoriametrics
+    version: 0.35.0
+    repository: https://victoriametrics.github.io/helm-charts/
+    condition: victoriametrics.enabled
+  - name: victoria-logs-single
+    alias: victorialogs
+    version: 0.12.0
+    repository: https://victoriametrics.github.io/helm-charts/
+    condition: victorialogs.enabled
+  - name: victoria-traces-single
+    alias: victoriatraces
+    version: 0.0.7
+    repository: https://victoriametrics.github.io/helm-charts/
+    condition: victoriatraces.enabled
+  - name: grafana
+    version: 10.5.15
+    repository: https://grafana.github.io/helm-charts
+    condition: grafana.enabled

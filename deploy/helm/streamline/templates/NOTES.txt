@@ -1,0 +1,36 @@
+Streamline has been installed as release {{ .Release.Name }}.
+
+Service (ClusterIP) is available at:
+  {{ include "streamline.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.service.port }}
+
+Port-forward locally:
+  kubectl --namespace {{ .Release.Namespace }} port-forward svc/{{ include "streamline.fullname" . }} 8080:{{ .Values.service.port }}
+
+First-boot admin: seed_admin is applied ONCE, against an empty DB on first
+boot — setting or changing it later is ignored (the existing admin keeps its
+password; you'd have to wipe /data to re-seed). Unless you set
+config.auth.seed_admin, a default admin (admin@streamline.local) is created
+with a random password printed once to the pod logs (it can't be saved back to
+the read-only config):
+  kubectl --namespace {{ .Release.Namespace }} logs deploy/{{ include "streamline.fullname" . }} | grep -i "default admin"
+{{- if .Values.config.auth }}
+{{- if and .Values.config.auth.oidc (not (or (eq (.Values.config.auth.registration_mode | default "disabled") "open") (eq (.Values.config.auth.registration_mode | default "disabled") "invite"))) }}
+
+OIDC is configured but registration_mode is "{{ .Values.config.auth.registration_mode | default "disabled" }}", which rejects
+new SSO users ("registration disabled"). Set config.auth.registration_mode to
+"open" (or "invite" with pre-issued invites) to allow SSO auto-provisioning.
+{{- end }}
+{{- end }}
+{{- if (.Values.config.read_only | default false) }}
+
+Read-only mode is ON (config.read_only=true): config changes via the UI/API are
+disabled — edit your values/Secret and redeploy. Supply config.auth.session_secret
+(and any *_file secrets via secretFiles) so sessions and credentials survive
+restarts.
+{{- end }}
+
+{{- if .Values.observability.enabled }}
+
+Grafana (observability subchart):
+  kubectl --namespace {{ .Release.Namespace }} port-forward svc/{{ include "streamline.fullname" . }}-grafana 3000:3000
+{{- end }}

@@ -1,0 +1,140 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "streamline.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "streamline.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "streamline.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "streamline.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- if .Values.secrets }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        {{- end }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "streamline.serviceAccountName" . }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: streamline
+          image: {{ include "streamline.imageRef" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: ["--config", "/etc/streamline/config.yaml"]
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+          env:
+            {{- if .Values.observability.enabled }}
+            - name: OTEL_EXPORTER_OTLP_INSECURE
+              value: "true"
+            {{- end }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- if .Values.secrets }}
+          envFrom:
+            - secretRef:
+                name: {{ include "streamline.fullname" . }}-secrets
+          {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/streamline
+              readOnly: true
+            {{- if .Values.secretFiles.enabled }}
+            - name: secret-files
+              mountPath: {{ .Values.secretFiles.mountPath }}
+              readOnly: true
+            {{- end }}
+            {{- if .Values.persistence.enabled }}
+            - name: data
+              mountPath: /data
+            {{- end }}
+            {{- if .Values.library.shared.enabled }}
+            - name: shared
+              mountPath: {{ .Values.library.shared.mountPath }}
+            {{- end }}
+            {{- range $name, $cfg := dict "media" .Values.library.media "downloads" .Values.library.downloads }}
+            {{- if $cfg.enabled }}
+            - name: {{ $name }}
+              mountPath: {{ $cfg.mountPath }}
+            {{- end }}
+            {{- end }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "streamline.fullname" . }}-config
+        {{- if .Values.secretFiles.enabled }}
+        - name: secret-files
+          secret:
+            secretName: {{ required "secretFiles.existingSecret is required when secretFiles.enabled" .Values.secretFiles.existingSecret }}
+        {{- end }}
+        {{- if .Values.persistence.enabled }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "streamline.fullname" . }}-data
+        {{- end }}
+        {{- if .Values.library.shared.enabled }}
+        - name: shared
+          persistentVolumeClaim:
+            claimName: {{ .Values.library.shared.existingClaim | default (printf "%s-shared" (include "streamline.fullname" $)) }}
+        {{- end }}
+        {{- range $name, $cfg := dict "media" .Values.library.media "downloads" .Values.library.downloads }}
+        {{- if $cfg.enabled }}
+        - name: {{ $name }}
+          persistentVolumeClaim:
+            claimName: {{ $cfg.existingClaim | default (printf "%s-%s" (include "streamline.fullname" $) $name) }}
+        {{- end }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

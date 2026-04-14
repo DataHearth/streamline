@@ -1,0 +1,759 @@
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------ */
+/* Self-hosted fonts                                                  */
+/* ------------------------------------------------------------------ */
+@font-face {
+	font-family: "Inter";
+	src: url("/static/fonts/Inter-Regular.woff2") format("woff2");
+	font-weight: 400;
+	font-style: normal;
+	font-display: swap;
+}
+@font-face {
+	font-family: "Inter";
+	src: url("/static/fonts/Inter-Medium.woff2") format("woff2");
+	font-weight: 500;
+	font-style: normal;
+	font-display: swap;
+}
+@font-face {
+	font-family: "Inter";
+	src: url("/static/fonts/Inter-SemiBold.woff2") format("woff2");
+	font-weight: 600;
+	font-style: normal;
+	font-display: swap;
+}
+@font-face {
+	font-family: "Inter";
+	src: url("/static/fonts/Inter-Bold.woff2") format("woff2");
+	font-weight: 700;
+	font-style: normal;
+	font-display: swap;
+}
+/* JetBrains Mono latin subset is a variable file covering 400-500; one file serves both. */
+@font-face {
+	font-family: "JetBrains Mono";
+	src: url("/static/fonts/JetBrainsMono-Regular.woff2") format("woff2");
+	font-weight: 400 500;
+	font-style: normal;
+	font-display: swap;
+}
+
+/* ------------------------------------------------------------------ */
+/* Design tokens — see design-system/MASTER.md                        */
+/* ------------------------------------------------------------------ */
+:root {
+	color-scheme: dark;
+
+	/* Surfaces — canonical names + bundle aliases */
+	--bg-deep: #0b0b10;
+	--bg-base: #111118;
+	--bg-elevated: #15151f;
+	--bg-overlay: rgb(11 11 16 / 0.7);
+	--bg-player: #000000;
+	--bg-card: #1c1c28;
+	--bg-hover: #232333;
+	--bg-0: var(--bg-deep);
+	--bg-1: var(--bg-base);
+	--bg-2: var(--bg-elevated);
+	--bg-3: var(--bg-card);
+	--bg-4: var(--bg-hover);
+	--surface: rgb(255 255 255 / 0.04);
+	--surface-2: rgb(255 255 255 / 0.06);
+	--border: rgb(255 255 255 / 0.08);
+	--border-strong: rgb(255 255 255 / 0.14);
+
+	/* Accent (cooler indigo per design bundle) */
+	--accent: #7c8cff;
+	--accent-hover: #8b9aff;
+	--accent-pressed: #6573e6;
+	--accent-glow: rgb(124 140 255 / 0.25);
+	--accent-ring: rgb(124 140 255 / 0.4);
+	--accent-soft: rgb(124 140 255 / 0.14);
+	--accent-line: rgb(124 140 255 / 0.4);
+	--accent-text: #b8c2ff;
+	--fg-on-accent: #0b0b10;
+
+	/* Text */
+	--fg: #f5f5f7;
+	--fg-muted: #c8c8d2;
+	--fg-subtle: #8a8a99;
+	--fg-faint: #5a5a68;
+
+	/* Status (ops palette — preserved verbatim) */
+	--status-downloading: #3b82f6;
+	--status-grabbing: #a78bfa;
+	--status-available: #22c55e;
+	--status-wanted: #f59e0b;
+	--status-missing: #64748b;
+	--status-failed: #ef4444;
+	--status-paused: #71717a;
+	--status-warning: #f59e0b;
+
+	/* Generic aliases mapping onto the ops palette */
+	--ok: var(--status-available);
+	--ok-soft: rgb(34 197 94 / 0.12);
+	--warn: var(--status-wanted);
+	--warn-soft: rgb(245 158 11 / 0.12);
+	--err: var(--status-failed);
+	--err-soft: rgb(239 68 68 / 0.12);
+	--info: var(--status-downloading);
+	--info-soft: rgb(59 130 246 / 0.12);
+
+	/* Shadows */
+	--shadow-1: 0 1px 2px rgb(0 0 0 / 0.4);
+	--shadow-2: 0 4px 12px rgb(0 0 0 / 0.35);
+	--shadow-3: 0 16px 32px rgb(0 0 0 / 0.45);
+	--shadow-4: 0 24px 64px rgb(0 0 0 / 0.55);
+	--shadow-glow: 0 0 24px var(--accent-glow);
+
+	/* Radii */
+	--radius-sm: 6px;
+	--radius-md: 10px;
+	--radius-lg: 16px;
+	--radius-xl: 20px;
+
+	/* Motion */
+	--dur-fast: 150ms;
+	--dur-base: 200ms;
+	--dur-slow: 300ms;
+	--dur-exit: 200ms;
+	--ease: cubic-bezier(0.16, 1, 0.3, 1);
+	--ease-in: cubic-bezier(0.4, 0, 1, 1);
+
+	/* Card aspects */
+	--card-aspect-poster: 2 / 3;
+	--card-aspect-album: 1 / 1;
+	--card-aspect-book: 2 / 3;
+	--card-aspect-backdrop: 16 / 9;
+
+	/* Progress */
+	--progress-track: rgb(255 255 255 / 0.08);
+	--progress-fill: var(--accent);
+	--progress-buffer: rgb(255 255 255 / 0.16);
+}
+
+/* ------------------------------------------------------------------ */
+/* Tailwind v4 theme mapping                                           */
+/* Tokens exposed as utilities: bg-bg-deep, text-fg-muted, border-border, etc. */
+/* ------------------------------------------------------------------ */
+@theme {
+	--font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+	--font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+
+	--color-bg: var(--bg-card);
+	--color-bg-deep: var(--bg-deep);
+	--color-bg-base: var(--bg-base);
+	--color-bg-elevated: var(--bg-elevated);
+	--color-bg-overlay: var(--bg-overlay);
+	--color-bg-player: var(--bg-player);
+	--color-bg-card: var(--bg-card);
+	--color-bg-hover: var(--bg-hover);
+	--color-bg-0: var(--bg-0);
+	--color-bg-1: var(--bg-1);
+	--color-bg-2: var(--bg-2);
+	--color-bg-3: var(--bg-3);
+	--color-bg-4: var(--bg-4);
+	--color-surface: var(--surface);
+	--color-surface-2: var(--surface-2);
+	--color-border: var(--border);
+	--color-border-strong: var(--border-strong);
+
+	--color-accent: var(--accent);
+	--color-accent-hover: var(--accent-hover);
+	--color-accent-pressed: var(--accent-pressed);
+	--color-accent-glow: var(--accent-glow);
+	--color-accent-ring: var(--accent-ring);
+	--color-accent-soft: var(--accent-soft);
+	--color-accent-text: var(--accent-text);
+	--color-fg-on-accent: var(--fg-on-accent);
+
+	--color-fg: var(--fg);
+	--color-fg-muted: var(--fg-muted);
+	--color-fg-subtle: var(--fg-subtle);
+	--color-fg-faint: var(--fg-faint);
+
+	--color-status-downloading: var(--status-downloading);
+	--color-status-grabbing: var(--status-grabbing);
+	--color-status-available: var(--status-available);
+	--color-status-wanted: var(--status-wanted);
+	--color-status-missing: var(--status-missing);
+	--color-status-failed: var(--status-failed);
+	--color-status-paused: var(--status-paused);
+
+	--color-ok: var(--ok);
+	--color-warn: var(--warn);
+	--color-err: var(--err);
+	--color-info: var(--info);
+
+	--radius-sm: var(--radius-sm);
+	--radius-md: var(--radius-md);
+	--radius-lg: var(--radius-lg);
+	--radius-xl: var(--radius-xl);
+}
+
+/* ------------------------------------------------------------------ */
+/* Base resets                                                         */
+/* ------------------------------------------------------------------ */
+html {
+	background: var(--bg-deep);
+	color: var(--fg);
+	font-family: var(--font-sans);
+}
+
+body {
+	background: var(--bg-deep);
+	color: var(--fg);
+	min-height: 100dvh;
+}
+
+/* Tabular figures for stat numerals */
+.tabular {
+	font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------------ */
+/* Cursor pointer on interactive buttons. Tailwind v4 Preflight sets   */
+/* button cursor to `default`; restore pointer for non-disabled        */
+/* buttons and explicit role="button" elements. Utilities like         */
+/* `disabled:cursor-wait` still override per-element.                  */
+/* ------------------------------------------------------------------ */
+@layer base {
+	button:not(:disabled),
+	[role="button"]:not([aria-disabled="true"]) {
+		cursor: pointer;
+	}
+}
+
+/* ------------------------------------------------------------------ */
+/* Number input — strip the up/down spinner UA chrome.                */
+/* ------------------------------------------------------------------ */
+@layer base {
+	input[type="number"]::-webkit-inner-spin-button,
+	input[type="number"]::-webkit-outer-spin-button {
+		appearance: none;
+		margin: 0;
+	}
+	input[type="number"] {
+		appearance: textfield;
+	}
+}
+
+/* ------------------------------------------------------------------ */
+/* Scrollbar (WebKit)                                                  */
+/* ------------------------------------------------------------------ */
+::-webkit-scrollbar {
+	width: 10px;
+	height: 10px;
+}
+::-webkit-scrollbar-track {
+	background: transparent;
+}
+::-webkit-scrollbar-thumb {
+	background: rgb(255 255 255 / 0.06);
+	border-radius: 5px;
+}
+::-webkit-scrollbar-thumb:hover {
+	background: rgb(255 255 255 / 0.12);
+}
+
+/* ------------------------------------------------------------------ */
+/* Custom checkbox — applied to every checkbox app-wide unless the     */
+/* element carries `.native` (escape hatch for date pickers etc) or    */
+/* `.sr-only` (visually-hidden form input driving a custom surrogate). */
+/* ------------------------------------------------------------------ */
+input[type="checkbox"]:not(.native):not(.sr-only) {
+	appearance: none !important;
+	-webkit-appearance: none !important;
+	width: 16px !important;
+	height: 16px !important;
+	min-width: 16px;
+	border: 1.5px solid rgb(255 255 255 / 0.25);
+	border-radius: 4px;
+	background: var(--bg-card);
+	cursor: pointer;
+	position: relative;
+	margin: 0;
+	padding: 0;
+	box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.2);
+	transition:
+		background var(--dur-fast) var(--ease),
+		border-color var(--dur-fast) var(--ease);
+	vertical-align: middle;
+	flex-shrink: 0;
+}
+input[type="checkbox"]:not(.native):hover {
+	border-color: var(--accent);
+}
+input[type="checkbox"]:not(.native):checked {
+	background: var(--accent);
+	border-color: var(--accent);
+	box-shadow: none;
+}
+input[type="checkbox"]:not(.native):checked::after {
+	content: "";
+	position: absolute;
+	left: 4px;
+	top: 0;
+	width: 4px;
+	height: 9px;
+	border: solid var(--fg-on-accent);
+	border-width: 0 2.4px 2.4px 0;
+	transform: rotate(45deg);
+}
+input[type="checkbox"]:not(.native):focus-visible {
+	outline: 2px solid var(--accent-ring);
+	outline-offset: 2px;
+}
+input[type="checkbox"]:not(.native):disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+
+/* ------------------------------------------------------------------ */
+/* Dialog reset (Tailwind Preflight wipes UA margin: auto)             */
+/* ------------------------------------------------------------------ */
+@layer base {
+	dialog {
+		margin: auto;
+		padding: 0;
+		border: 0;
+		background: transparent;
+		color: inherit;
+		max-width: 92vw;
+		max-height: 85dvh;
+		overflow: visible;
+	}
+	dialog::backdrop {
+		background: var(--bg-overlay);
+		backdrop-filter: blur(8px);
+	}
+}
+
+/* ------------------------------------------------------------------ */
+/* Modal                                                               */
+/* Centered <dialog> with fade + scale(.95→1) entrance via             */
+/* @starting-style, reverse on exit via [data-closing] attribute set    */
+/* by app.js before .close(). Backdrop fades in/out alongside.         */
+/* ------------------------------------------------------------------ */
+@layer base {
+	dialog.modal {
+		opacity: 0;
+		transform: scale(0.95);
+		transition:
+			opacity var(--dur-base) var(--ease),
+			transform var(--dur-base) var(--ease);
+	}
+	dialog.modal[open] {
+		opacity: 1;
+		transform: scale(1);
+	}
+	dialog.modal[data-closing] {
+		opacity: 0;
+		transform: scale(0.95);
+	}
+	/* Without @starting-style the browser skips the entrance transition —
+	   <dialog> goes from display:none to display:block when .showModal()
+	   is called, and CSS transitions don't run across display changes.
+	   This declares the "from" values to transition out of on first paint. */
+	@starting-style {
+		dialog.modal[open] {
+			opacity: 0;
+			transform: scale(0.95);
+		}
+	}
+
+	dialog.modal::backdrop {
+		background: rgb(2 2 3 / 0.6);
+		backdrop-filter: blur(6px);
+		opacity: 0;
+		transition: opacity var(--dur-base) var(--ease);
+	}
+	dialog.modal[open]::backdrop {
+		opacity: 1;
+	}
+	dialog.modal[data-closing]::backdrop {
+		opacity: 0;
+	}
+	@starting-style {
+		dialog.modal[open]::backdrop {
+			opacity: 0;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		dialog.modal,
+		dialog.modal::backdrop {
+			transition: none;
+		}
+	}
+}
+
+/* ------------------------------------------------------------------ */
+/* Status pill variants — pair bg/15, text/full, border/25 per MASTER §7. */
+/* ------------------------------------------------------------------ */
+.pill-downloading {
+	--pill-color: var(--status-downloading);
+	color: var(--status-downloading);
+	background: rgb(59 130 246 / 0.15);
+	border: 1px solid rgb(59 130 246 / 0.25);
+}
+.pill-grabbing {
+	--pill-color: var(--status-grabbing);
+	color: var(--status-grabbing);
+	background: rgb(167 139 250 / 0.15);
+	border: 1px solid rgb(167 139 250 / 0.25);
+}
+.pill-available {
+	--pill-color: var(--status-available);
+	color: var(--status-available);
+	background: rgb(34 197 94 / 0.15);
+	border: 1px solid rgb(34 197 94 / 0.25);
+}
+.pill-wanted {
+	--pill-color: var(--status-wanted);
+	color: var(--status-wanted);
+	background: rgb(245 158 11 / 0.15);
+	border: 1px solid rgb(245 158 11 / 0.25);
+}
+.pill-missing {
+	--pill-color: var(--status-missing);
+	color: var(--status-missing);
+	background: rgb(100 116 139 / 0.15);
+	border: 1px solid rgb(100 116 139 / 0.25);
+}
+.pill-failed {
+	--pill-color: var(--status-failed);
+	color: var(--status-failed);
+	background: rgb(239 68 68 / 0.15);
+	border: 1px solid rgb(239 68 68 / 0.25);
+}
+.pill-paused {
+	--pill-color: var(--status-paused);
+	color: var(--status-paused);
+	background: rgb(113 113 122 / 0.15);
+	border: 1px solid rgb(113 113 122 / 0.25);
+}
+.pill-ok {
+	--pill-color: var(--ok);
+	color: var(--ok);
+	background: rgb(34 197 94 / 0.15);
+	border: 1px solid rgb(34 197 94 / 0.25);
+}
+.pill-warn {
+	--pill-color: var(--warn);
+	color: var(--warn);
+	background: rgb(245 158 11 / 0.15);
+	border: 1px solid rgb(245 158 11 / 0.25);
+}
+.pill-err {
+	--pill-color: var(--err);
+	color: var(--err);
+	background: rgb(239 68 68 / 0.15);
+	border: 1px solid rgb(239 68 68 / 0.25);
+}
+.pill-info {
+	--pill-color: var(--info);
+	color: var(--info);
+	background: rgb(59 130 246 / 0.15);
+	border: 1px solid rgb(59 130 246 / 0.25);
+}
+.pill-muted {
+	--pill-color: var(--fg-muted);
+	color: var(--fg-muted);
+	background: var(--surface);
+	border: 1px solid var(--border);
+}
+
+/* ------------------------------------------------------------------ */
+/* Global focus-visible                                                */
+/* ------------------------------------------------------------------ */
+:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+	border-radius: 4px;
+}
+
+/* Screen-reader-only + focus reveal (skip link) */
+.sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
+}
+.focus\:not-sr-only:focus,
+.focus-visible\:not-sr-only:focus-visible {
+	position: static;
+	width: auto;
+	height: auto;
+	padding: inherit;
+	margin: inherit;
+	overflow: visible;
+	clip: auto;
+	white-space: inherit;
+}
+
+/* Skip-link: when focused, pin to the top-left so it can't be hidden by */
+/* the sticky topbar / sidebar grid; Tailwind utilities alone can't beat */
+/* `.focus\:not-sr-only:focus { position: static }`. */
+.skip-link:focus {
+	position: fixed;
+	top: 1rem;
+	left: 1rem;
+	z-index: 1000;
+}
+
+/* ------------------------------------------------------------------ */
+/* Toast enter / exit                                                  */
+/* ------------------------------------------------------------------ */
+@keyframes toast-in {
+	from {
+		opacity: 0;
+		transform: translateX(16px) translateY(4px);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+@keyframes toast-out {
+	from {
+		opacity: 1;
+		transform: none;
+	}
+	to {
+		opacity: 0;
+		transform: translateX(16px);
+	}
+}
+
+[data-toast] {
+	animation: toast-in var(--dur-base) cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+[data-toast][data-toast-leaving] {
+	animation: toast-out var(--dur-exit) ease-in both;
+}
+
+/* ------------------------------------------------------------------ */
+/* Skeleton shimmer — used for poster placeholders + loading rows.    */
+/* ------------------------------------------------------------------ */
+@keyframes shimmer {
+	0% {
+		background-position: 200% 0;
+	}
+	100% {
+		background-position: -200% 0;
+	}
+}
+
+[data-shimmer] {
+	background-color: var(--bg-card);
+	background-image: linear-gradient(
+		90deg,
+		transparent 0%,
+		rgb(255 255 255 / 0.05) 50%,
+		transparent 100%
+	);
+	background-size: 200% 100%;
+	animation: shimmer 1.6s linear infinite;
+}
+
+/* ------------------------------------------------------------------ */
+/* Indeterminate progress bar (downloading poster overlay).            */
+/* ------------------------------------------------------------------ */
+@keyframes progress-indeterminate {
+	0% {
+		transform: translateX(-100%);
+	}
+	100% {
+		transform: translateX(250%);
+	}
+}
+
+[data-progress-indeterminate] {
+	position: relative;
+	overflow: hidden;
+	background-color: rgb(59 130 246 / 0.18);
+}
+
+[data-progress-indeterminate]::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	width: 40%;
+	background-color: var(--status-downloading);
+	animation: progress-indeterminate 1.6s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+/* ------------------------------------------------------------------ */
+/* Poster card stagger entry — only on initial paint. Suppressed       */
+/* during htmx swaps (which add htmx-request to body) and respected by */
+/* prefers-reduced-motion. View Transitions API handles cross-mode     */
+/* visual continuity, so layering both produces a flicker.             */
+/* ------------------------------------------------------------------ */
+@keyframes card-enter {
+	from {
+		opacity: 0;
+		transform: translateY(8px);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+[data-poster-card]:not([data-no-stagger]) {
+	animation: card-enter 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+	animation-delay: calc(min(var(--card-i, 0), 20) * 35ms);
+}
+
+/* ------------------------------------------------------------------ */
+/* Status dot (poster cards). Driven by data-status on the card root.  */
+/* Inline `style="background-color: {{var}}"` in templates would get   */
+/* contextually scrubbed to ZgotmplZ by html/template; CSS rules keyed */
+/* off data-status are immune.                                         */
+/* ------------------------------------------------------------------ */
+[data-poster-card] [data-status-dot] {
+	background-color: var(--status-missing);
+	box-shadow:
+		0 0 0 2px var(--status-missing),
+		0 0 8px var(--status-missing);
+}
+
+[data-poster-card][data-status="available"] [data-status-dot] {
+	background-color: var(--status-available);
+	box-shadow:
+		0 0 0 2px var(--status-available),
+		0 0 8px var(--status-available);
+}
+
+[data-poster-card][data-status="wanted"] [data-status-dot] {
+	background-color: var(--status-wanted);
+	box-shadow:
+		0 0 0 2px var(--status-wanted),
+		0 0 8px var(--status-wanted);
+}
+
+[data-poster-card][data-status="downloading"] [data-status-dot] {
+	background-color: var(--status-downloading);
+	box-shadow:
+		0 0 0 2px var(--status-downloading),
+		0 0 8px var(--status-downloading);
+}
+
+[data-poster-card][data-status="failed"] [data-status-dot] {
+	background-color: var(--status-failed);
+	box-shadow:
+		0 0 0 2px var(--status-failed),
+		0 0 8px var(--status-failed);
+}
+
+/* ------------------------------------------------------------------ */
+/* Status pill (list-mode rows). Same data-status -> CSS rule pattern. */
+/* ------------------------------------------------------------------ */
+[data-poster-card] [data-status-pill] {
+	background-color: rgb(255 255 255 / 0.05);
+	color: var(--fg-subtle);
+}
+
+[data-poster-card][data-status="available"] [data-status-pill] {
+	background-color: rgb(34 197 94 / 0.15);
+	color: var(--status-available);
+}
+
+[data-poster-card][data-status="wanted"] [data-status-pill] {
+	background-color: rgb(245 158 11 / 0.15);
+	color: var(--status-wanted);
+}
+
+[data-poster-card][data-status="downloading"] [data-status-pill] {
+	background-color: rgb(59 130 246 / 0.15);
+	color: var(--status-downloading);
+}
+
+[data-poster-card][data-status="failed"] [data-status-pill] {
+	background-color: rgb(239 68 68 / 0.15);
+	color: var(--status-failed);
+}
+
+/* ------------------------------------------------------------------ */
+/* Card action menu (<details data-card-menu>): animate the dropdown   */
+/* panel on open / close. Override the UA default that hides closed    */
+/* <details> content so we can fade + translate instead of snap-hide.  */
+/* Origin from `top` so the panel feels anchored to the summary.       */
+/* ------------------------------------------------------------------ */
+[data-card-menu] > div {
+	display: block;
+	opacity: 0;
+	pointer-events: none;
+	transform: translateY(-4px) scale(0.96);
+	transform-origin: top;
+	transition:
+		opacity 160ms cubic-bezier(0.16, 1, 0.3, 1),
+		transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-card-menu][open] > div {
+	opacity: 1;
+	pointer-events: auto;
+	transform: translateY(0) scale(1);
+}
+
+/* ------------------------------------------------------------------ */
+/* Sticky shadow — paired with a [data-sticky-sentinel] sibling above. */
+/* JS toggles `is-stuck` when the sentinel leaves the viewport top.    */
+/* ------------------------------------------------------------------ */
+[data-sticky-shadow].is-stuck {
+	backdrop-filter: blur(16px);
+	-webkit-backdrop-filter: blur(16px);
+	background-color: rgb(21 21 31 / 0.85);
+	border-bottom: 1px solid rgb(255 255 255 / 0.06);
+	box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
+}
+
+/* ------------------------------------------------------------------ */
+/* Reduced motion                                                      */
+/* ------------------------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
+	}
+}
+
+/* ------------------------------------------------------------------ */
+/* htmx request indicator                                              */
+/* Show children with `.htmx-indicator:inline-block` only while the    */
+/* nearest htmx-request-scoped element has a request in flight.        */
+/* ------------------------------------------------------------------ */
+.htmx-indicator\:inline-block {
+	display: none;
+}
+.htmx-request .htmx-indicator\:inline-block,
+.htmx-request.htmx-indicator\:inline-block {
+	display: inline-block;
+}
+
+/* ------------------------------------------------------------------ */
+/* Download-client modal: auth_method pane toggle                      */
+/* The radio group above each pair of panes drives visibility via      */
+/* :has(). Inactive pane hides; active pane stays in normal flow.      */
+/* ------------------------------------------------------------------ */
+.auth-mode-wrap:has(input[name="auth_method"][value="password"]:checked) [data-auth="api_key"] {
+	display: none;
+}
+.auth-mode-wrap:has(input[name="auth_method"][value="api_key"]:checked) [data-auth="password"] {
+	display: none;
+}

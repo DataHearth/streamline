@@ -1,0 +1,95 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/main/schema/compose-spec.json
+#
+# Reference observability stack: VictoriaMetrics + VictoriaLogs + VictoriaTraces + Grafana Alloy + Grafana.
+# Usage: docker compose -f deploy/compose.observability.yaml up -d
+
+services:
+  streamline:
+    image: ghcr.io/datahearth/streamline:latest
+    container_name: streamline
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/data
+      - ./config:/etc/streamline:ro
+    environment:
+      - STREAMLINE_LOG__APP__LEVEL=info
+      - STREAMLINE_OTEL__ENDPOINT=alloy:4318
+    depends_on:
+      - alloy
+
+  alloy:
+    image: grafana/alloy:latest
+    container_name: alloy
+    restart: unless-stopped
+    volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
+    command: ["run", "/etc/alloy/config.alloy"]
+    ports:
+      - "12345:12345" # Alloy UI
+
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:latest
+    container_name: victoriametrics
+    restart: unless-stopped
+    command:
+      - "-storageDataPath=/victoria-metrics-data"
+      - "-retentionPeriod=30d"
+    volumes:
+      - vm-data:/victoria-metrics-data
+    ports:
+      - "8428:8428"
+
+  victorialogs:
+    image: victoriametrics/victoria-logs:latest
+    container_name: victorialogs
+    restart: unless-stopped
+    command:
+      - "-storageDataPath=/victoria-logs-data"
+      - "-retentionPeriod=14d"
+    volumes:
+      - vl-data:/victoria-logs-data
+    ports:
+      - "9428:9428"
+
+  victoriatraces:
+    image: victoriametrics/victoria-traces:latest
+    container_name: victoriatraces
+    restart: unless-stopped
+    command:
+      - "-storageDataPath=/victoria-traces-data"
+      - "-retentionPeriod=7d"
+    volumes:
+      - vt-data:/victoria-traces-data
+    ports:
+      - "10428:10428"
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    volumes:
+      - ./grafana/datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml:ro
+      - ./grafana/dashboards.yaml:/etc/grafana/provisioning/dashboards/dashboards.yaml:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    environment:
+      - GF_INSTALL_PLUGINS=victoriametrics-logs-datasource
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+      - GF_AUTH_BASIC_ENABLED=false
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_USERS_VIEWERS_CAN_EDIT=false
+      - GF_SECURITY_DISABLE_GRAVATAR=true
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/var/lib/grafana/dashboards/streamline.json
+    ports:
+      - "3000:3000"
+    depends_on:
+      - victoriametrics
+      - victorialogs
+      - victoriatraces
+
+volumes:
+  vm-data:
+  vl-data:
+  vt-data:

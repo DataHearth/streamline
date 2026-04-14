@@ -1,0 +1,68 @@
+root = "."
+testdata_dir = "testdata"
+tmp_dir = "tmp"
+
+[build]
+args_bin = ["--config ./tmp/config.yaml"]
+bin = "streamline"
+cmd = "task build:app"
+entrypoint = ["streamline"]
+exclude_dir = [
+  "docs",
+  ".jj",
+  ".git",
+  ".direnv",
+  ".claude",
+  "tmp",
+  "deploy",
+  "node_modules",
+  "migrations",
+]
+exclude_file = [
+  "web/static/js/bundle.min.js",
+  "web/static/js/docs.min.js",
+  "web/static/css/style.css",
+  "web/static/css/docs.min.css",
+]
+exclude_regex = ["_test\\.go$", "mocks/mock_.*\\.go$", "\\.test$"]
+include_dir = ["web", "internal", "ent", "cmd", "api"]
+include_ext = [
+  "go",
+  "tpl",
+  "tmpl",
+  "html",
+  "js",
+  "ts",
+  "svelte",
+  "css",
+  "png",
+  "woff2",
+]
+include_file = []
+kill_delay = "0s"
+log = "build-errors.log"
+
+[color]
+app = ""
+build = "yellow"
+main = "magenta"
+runner = "green"
+watcher = "cyan"
+
+[log]
+main_only = false
+silent = false
+time = false
+
+[misc]
+clean_on_exit = false
+
+[proxy]
+app_port = 0
+app_start_timeout = 0
+enabled = false
+proxy_port = 0
+
+[screen]
+clear_on_rebuild = false
+keep_scroll = true

@@ -1,0 +1,86 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+version: 2
+
+project_name: streamline
+
+before:
+  hooks:
+    - pnpm install --frozen-lockfile
+    - task generate
+    - task build:js
+    - task build:css
+    - go run ./cmd config init -o config.example.yaml
+
+builds:
+  - id: streamline
+    main: ./cmd
+    binary: streamline
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.ShortCommit}}
+      - -X main.date={{.Date}}
+
+archives:
+  - id: streamline
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - LICENSE
+      - README.md
+      - config.example.yaml
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+sboms:
+  - id: archive
+    artifacts: archive
+    cmd: syft
+    documents:
+      - "{{ .ArtifactName }}.sbom.spdx.json"
+
+signs:
+  - id: checksums
+    cmd: cosign
+    artifacts: checksum
+    args:
+      - sign-blob
+      - "--yes"
+      - "--output-signature=${signature}"
+      - "--output-certificate=${certificate}"
+      - "${artifact}"
+    output: true
+
+changelog:
+  use: github
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "^ci:"
+
+release:
+  github:
+    owner: datahearth
+    name: streamline
+  draft: false
+  prerelease: auto
+  header: |
+    ## Streamline {{ .Version }}
+  footer: |
+    ---
+    Image: `ghcr.io/datahearth/streamline:{{ .Version }}`
+    Verify: `cosign verify ghcr.io/datahearth/streamline:{{ .Version }} --certificate-identity-regexp="https://github.com/datahearth/streamline/.github/workflows/image.yaml@.*" --certificate-oidc-issuer=https://token.actions.githubusercontent.com`

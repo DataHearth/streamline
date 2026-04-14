@@ -1,0 +1,5302 @@
+# yaml-language-server: $schema=https://spec.openapis.org/oas/3.0/schema/2024-10-18
+openapi: "3.0.4"
+info:
+  title: Streamline API
+  version: 0.1.0
+  description: |
+    REST API for Streamline, a unified media management platform that replaces
+    the *arr stack (Radarr, Sonarr, Lidarr, Readarr) and Overseerr. Provides
+    endpoints for managing movies, TV shows, indexers, download clients, media
+    servers, quality profiles, user authentication, and media requests.
+
+tags:
+  - name: auth
+    description: Authentication and user management
+  - name: movies
+    description: Movie library management and TMDB search
+  - name: quality-profiles
+    description: Quality profile configuration for media downloads
+  - name: indexers
+    description: Torznab indexer management and testing
+  - name: download-clients
+    description: Download client management and testing
+  - name: media-servers
+    description: Plex / Jellyfin / Emby server management and testing
+  - name: library
+    description: Bulk-file import wizard (scan → review → commit)
+  - name: system
+    description: Read-only runtime/build metadata
+  - name: requests
+    description: Media request workflow (request → approve/deny)
+
+servers:
+  - url: /api/v1
+
+paths:
+
+  # ── Movies ──────────────────────────────────────────────
+  /movies:
+    get:
+      operationId: listMovies
+      summary: List all movies
+      description: Returns a paginated list of movies in the library.
+      tags: [movies]
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+            x-go-type: uint32
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            x-go-type: uint16
+      responses:
+        "200":
+          description: Paginated movie list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedMovies"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      operationId: addMovie
+      summary: Add a movie to the library
+      description: |
+        Fetches metadata from TMDB by ID and adds the movie to the library
+        with the specified quality profile. The movie starts in "wanted" status.
+      tags: [movies]
+      requestBody:
+        $ref: "#/components/requestBodies/AddMovie"
+      responses:
+        "201":
+          description: Movie added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Movie"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /movies/counts:
+    get:
+      operationId: getMovieCounts
+      summary: Movie status counts
+      description: Returns total, wanted, downloading, and available counts for the library.
+      tags: [movies]
+      responses:
+        "200":
+          $ref: "#/components/responses/MovieCountsResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /movies/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    get:
+      operationId: getMovie
+      summary: Get movie details
+      description: Returns full details for a single movie including status and metadata.
+      tags: [movies]
+      responses:
+        "200":
+          description: Movie details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Movie"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    patch:
+      operationId: patchMovie
+      summary: Patch a movie
+      description: Partially updates movie properties such as quality profile or monitored status.
+      tags: [movies]
+      requestBody:
+        $ref: "#/components/requestBodies/UpdateMovie"
+      responses:
+        "200":
+          description: Movie updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Movie"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      operationId: deleteMovie
+      summary: Remove a movie from the library
+      description: |
+        Deletes the movie record. When delete_files=true, also removes
+        attached media files from disk.
+      tags: [movies]
+      parameters:
+        - $ref: "#/components/parameters/DeleteMovieFiles"
+      responses:
+        "204":
+          description: Movie deleted
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /movies/{id}/search:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: searchMovie
+      summary: Search indexers for a movie
+      description: |
+        Triggers an interactive search across all enabled indexers for the
+        specified movie. Returns ranked results sorted by seeders.
+      tags: [movies]
+      responses:
+        "200":
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SearchResult"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /movies/{id}/search-now:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: searchMovieNow
+      summary: Dispatch an indexer search and grab for a single movie
+      description: |
+        Runs one indexer search-and-grab pass against the movie. On a
+        matching release the download manager is invoked; otherwise the
+        movie's cooldown timer is bumped.
+      tags: [movies]
+      responses:
+        "202":
+          $ref: "#/components/responses/MovieSearchAccepted"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /movies/{id}/recommendations:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    get:
+      operationId: getMovieRecommendations
+      summary: TMDB recommendations for a movie
+      description: |
+        Returns TMDB's "recommended" movies for this title, in the order
+        TMDB returns them. Used by the "More like this" rail on the movie
+        detail view.
+      tags: [movies]
+      responses:
+        "200":
+          $ref: "#/components/responses/MovieRecommendations"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /movies/{id}/play-on:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    get:
+      operationId: getMoviePlayOnLinks
+      summary: Resolve per-server deep links for the movie
+      description: |
+        For each enabled media server, attempts to find the movie and
+        returns either a deep link URL (status=resolved), the server's
+        web home URL (status=fallback) when the movie isn't found, or no
+        URL (status=unavailable) when the server itself can't be reached.
+      tags: [movies]
+      responses:
+        "200":
+          $ref: "#/components/responses/MoviePlayOnLinks"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /movies/{id}/grab:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: grabMovieRelease
+      summary: Grab a specific release for this movie
+      description: |
+        Dispatches the chosen release to the highest-priority download
+        client. Body is the SearchResult chosen from a browse-releases call.
+      tags: [movies]
+      requestBody:
+        $ref: "#/components/requestBodies/GrabMovieRelease"
+      responses:
+        "202":
+          $ref: "#/components/responses/MovieSearchAccepted"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /movies/{id}/refresh-metadata:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: refreshMovieMetadata
+      summary: Re-fetch TMDB metadata for one movie
+      tags: [movies]
+      responses:
+        "200":
+          $ref: "#/components/responses/MovieRefreshed"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /movies/{id}/rename:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: renameMovieFiles
+      summary: Rename movie files to match the library naming pattern
+      tags: [movies]
+      parameters:
+        - $ref: "#/components/parameters/RenamePreview"
+      responses:
+        "200":
+          $ref: "#/components/responses/MovieRenamePlan"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /movies/{id}/files/{fileId}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+      - $ref: "#/components/parameters/FileID"
+    delete:
+      operationId: deleteMovieFile
+      summary: Delete a movie media file
+      description: |
+        Removes one media file from disk and DB and reverts the movie to
+        "wanted" so the next monitored search re-grabs it. When
+        remove_torrent=true, also removes the source torrent from its
+        download client (best-effort).
+      tags: [movies]
+      requestBody:
+        $ref: "#/components/requestBodies/DeleteFile"
+      responses:
+        "204":
+          $ref: "#/components/responses/FileDeleted"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /search/movie:
+    get:
+      operationId: searchTMDBMovie
+      summary: Search TMDB for movies
+      description: |
+        Searches The Movie Database for movies matching the query. Used
+        to find TMDB IDs before adding movies to the library.
+      tags: [movies]
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: year
+          in: query
+          schema:
+            type: integer
+            x-go-type: uint16
+      responses:
+        "200":
+          description: TMDB search results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TMDBMovieResult"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ── Series (TV) ─────────────────────────────────────────
+  /series:
+    get:
+      operationId: listSeries
+      summary: List all series
+      description: Returns a paginated list of series in the library.
+      tags: [series]
+      parameters:
+        - $ref: "#/components/parameters/SeriesPage"
+        - $ref: "#/components/parameters/SeriesLimit"
+        - $ref: "#/components/parameters/SeriesStatus"
+        - $ref: "#/components/parameters/SeriesType"
+        - $ref: "#/components/parameters/SeriesQuery"
+        - $ref: "#/components/parameters/SeriesSort"
+      responses:
+        "200":
+          $ref: "#/components/responses/SeriesList"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      operationId: addSeries
+      summary: Add a series by TVDB id
+      description: |
+        Fetches metadata from TVDB by ID and adds the series to the library
+        with the specified quality profile and an optional monitoring preset.
+      tags: [series]
+      requestBody:
+        $ref: "#/components/requestBodies/AddSeries"
+      responses:
+        "201":
+          $ref: "#/components/responses/SeriesCreated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /series/counts:
+    get:
+      operationId: getSeriesCounts
+      summary: Series status counts
+      description: Returns total, continuing, ended, and wanted-episode counts.
+      tags: [series]
+      responses:
+        "200":
+          $ref: "#/components/responses/SeriesCountsResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /series/lookup:
+    get:
+      operationId: lookupSeries
+      summary: Search TVDB for series to add
+      description: |
+        Searches TheTVDB for series matching the query. Used to find TVDB
+        IDs before adding series to the library.
+      tags: [series]
+      parameters:
+        - $ref: "#/components/parameters/SeriesLookupQuery"
+      responses:
+        "200":
+          $ref: "#/components/responses/SeriesLookupResults"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /series/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    get:
+      operationId: getSeries
+      summary: Get series details
+      description: Returns full details for a single series including seasons and episodes.
+      tags: [series]
+      responses:
+        "200":
+          $ref: "#/components/responses/SeriesDetail"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    patch:
+      operationId: patchSeries
+      summary: Patch a series
+      description: |
+        Partially updates series properties (monitored, quality profile) and
+        optionally applies a one-shot monitoring preset to its episodes.
+      tags: [series]
+      requestBody:
+        $ref: "#/components/requestBodies/PatchSeries"
+      responses:
+        "200":
+          $ref: "#/components/responses/SeriesDetail"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      operationId: deleteSeries
+      summary: Remove a series from the library
+      description: |
+        Deletes the series record. When delete_files=true, also removes
+        attached media files from disk.
+      tags: [series]
+      parameters:
+        - $ref: "#/components/parameters/DeleteSeriesFiles"
+      responses:
+        "204":
+          $ref: "#/components/responses/SeriesDeleted"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /series/{id}/seasons/{number}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+      - $ref: "#/components/parameters/SeasonNumber"
+    patch:
+      operationId: patchSeason
+      summary: Toggle season monitoring
+      tags: [series]
+      requestBody:
+        $ref: "#/components/requestBodies/MonitorToggle"
+      responses:
+        "204":
+          $ref: "#/components/responses/SeasonUpdated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /series/{id}/seasons/{number}/search:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+      - $ref: "#/components/parameters/SeasonNumber"
+    post:
+      operationId: browseSeasonReleases
+      summary: Search indexers for a season's releases
+      description: |
+        Interactive search across enabled indexers for a season pack
+        (tvsearch keyed by tvdbid + season). Returns ranked results to choose
+        from; POST the chosen release to .../grab to download it.
+
+        Whole-series (integral / complete) and multi-season packs (e.g.
+        S01-S05) are filtered out of these results: grabbing one would
+        import every season it contains, not only this one. Use the
+        whole-series browse (POST /series/{id}/browse) to grab those.
+      tags: [series]
+      responses:
+        "200":
+          $ref: "#/components/responses/SearchResults"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /series/{id}/seasons/{number}/grab:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+      - $ref: "#/components/parameters/SeasonNumber"
+    post:
+      operationId: grabSeasonRelease
+      summary: Grab a season-pack release
+      description: |
+        Dispatches the chosen season-pack release to the highest-priority
+        download client and marks every episode in the season downloading.
+        Body is the SearchResult chosen from a browse call.
+      tags: [series]
+      requestBody:
+        $ref: "#/components/requestBodies/GrabSeriesRelease"
+      responses:
+        "202":
+          $ref: "#/components/responses/SeriesGrabAccepted"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /series/{id}/episodes/{episodeId}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+      - $ref: "#/components/parameters/EpisodeID"
+    patch:
+      operationId: patchEpisode
+      summary: Toggle episode monitoring
+      tags: [series]
+      requestBody:
+        $ref: "#/components/requestBodies/MonitorToggle"
+      responses:
+        "204":
+          $ref: "#/components/responses/EpisodeUpdated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /series/{id}/search:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: searchSeries
+      summary: Auto-search all wanted episodes for this series
+      description: |
+        Dispatches one indexer search-and-grab pass over the series' wanted
+        episodes, preferring season packs when a whole season is wanted.
+      tags: [series]
+      responses:
+        "202":
+          $ref: "#/components/responses/SeriesSearchAccepted"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /series/{id}/browse:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: browseSeriesReleases
+      summary: Search indexers for whole-series releases
+      description: |
+        Interactive search across enabled indexers for the entire series
+        (tvsearch keyed by tvdbid, no season). Returns ranked results to choose
+        from; POST the chosen release to .../grab to download it.
+      tags: [series]
+      responses:
+        "200":
+          $ref: "#/components/responses/SearchResults"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /series/{id}/grab:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: grabSeriesRelease
+      summary: Grab a whole-series release
+      description: |
+        Dispatches the chosen (integral / multi-season) release to the
+        highest-priority download client and marks every episode in the series
+        downloading. Body is the SearchResult chosen from a browse call.
+      tags: [series]
+      requestBody:
+        $ref: "#/components/requestBodies/GrabSeriesRelease"
+      responses:
+        "202":
+          $ref: "#/components/responses/SeriesGrabAccepted"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /series/{id}/episodes/{episodeId}/grab:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+      - $ref: "#/components/parameters/EpisodeID"
+    post:
+      operationId: grabEpisodeRelease
+      summary: Grab a specific release for this episode
+      description: |
+        Dispatches the chosen release to the highest-priority download
+        client. Body is the SearchResult chosen from a browse-releases call.
+      tags: [series]
+      requestBody:
+        $ref: "#/components/requestBodies/GrabSeriesRelease"
+      responses:
+        "202":
+          $ref: "#/components/responses/SeriesGrabAccepted"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /series/{id}/episodes/{episodeId}/file:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+      - $ref: "#/components/parameters/EpisodeID"
+    delete:
+      operationId: deleteEpisodeFile
+      summary: Delete an episode media file
+      description: |
+        Removes the episode's media file from disk and DB and reverts the
+        episode to "wanted" so the next monitored search re-grabs it. When
+        remove_torrent=true, also removes the source torrent from its
+        download client (best-effort).
+      tags: [series]
+      requestBody:
+        $ref: "#/components/requestBodies/DeleteFile"
+      responses:
+        "204":
+          $ref: "#/components/responses/FileDeleted"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /series/{id}/episodes/{episodeId}/search:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+      - $ref: "#/components/parameters/EpisodeID"
+    post:
+      operationId: browseEpisodeReleases
+      summary: Search indexers for one episode's releases
+      description: |
+        Interactive search across enabled indexers for a single episode
+        (tvsearch keyed by tvdbid + season + episode). Returns ranked results
+        to choose from; POST the chosen release to .../grab to download it.
+      tags: [series]
+      responses:
+        "200":
+          $ref: "#/components/responses/SearchResults"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /series/{id}/refresh-metadata:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: refreshSeriesMetadata
+      summary: Re-fetch TVDB metadata for one series
+      tags: [series]
+      responses:
+        "200":
+          $ref: "#/components/responses/SeriesDetail"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /series/{id}/rename:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: renameSeriesFiles
+      summary: Rename series episode files to match the library naming pattern
+      tags: [series]
+      parameters:
+        - $ref: "#/components/parameters/RenamePreview"
+      responses:
+        "200":
+          $ref: "#/components/responses/SeriesRenamePlan"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /series/{id}/play-on:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    get:
+      operationId: getSeriesPlayOnLinks
+      summary: Resolve per-server deep links for the series
+      description: |
+        For each enabled media server, attempts to find the series and
+        returns either a deep link URL (status=resolved), the server's web
+        home URL (status=fallback) when the series isn't found, or no URL
+        (status=unavailable) when the server itself can't be reached.
+      tags: [series]
+      responses:
+        "200":
+          $ref: "#/components/responses/SeriesPlayOnLinks"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ── Quality Profiles ────────────────────────────────────
+  /quality-profiles:
+    get:
+      operationId: listQualityProfiles
+      summary: List quality profiles
+      description: Returns all configured quality profiles.
+      tags: [quality-profiles]
+      responses:
+        "200":
+          description: Quality profile list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/QualityProfile"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      operationId: createQualityProfile
+      summary: Create a quality profile
+      description: Creates a new quality profile with resolution preferences.
+      tags: [quality-profiles]
+      requestBody:
+        $ref: "#/components/requestBodies/CreateQualityProfile"
+      responses:
+        "201":
+          description: Profile created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QualityProfile"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /quality-profiles/{name}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceName"
+    put:
+      operationId: updateQualityProfile
+      summary: Update a quality profile
+      tags: [quality-profiles]
+      requestBody:
+        $ref: "#/components/requestBodies/CreateQualityProfile"
+      responses:
+        "200":
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QualityProfile"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      operationId: deleteQualityProfile
+      summary: Delete a quality profile
+      tags: [quality-profiles]
+      responses:
+        "204":
+          description: Profile deleted
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ── Indexers ────────────────────────────────────────────
+  /indexers:
+    get:
+      operationId: listIndexers
+      summary: List configured indexers
+      description: Returns all configured Torznab indexers.
+      tags: [indexers]
+      responses:
+        "200":
+          description: Indexer list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Indexer"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      operationId: createIndexer
+      summary: Add an indexer
+      description: Adds a new Torznab-compatible indexer.
+      tags: [indexers]
+      requestBody:
+        $ref: "#/components/requestBodies/CreateIndexer"
+      responses:
+        "201":
+          description: Indexer created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Indexer"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /indexers/{name}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceName"
+    put:
+      operationId: updateIndexer
+      summary: Update an indexer
+      tags: [indexers]
+      requestBody:
+        $ref: "#/components/requestBodies/CreateIndexer"
+      responses:
+        "200":
+          description: Indexer updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Indexer"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      operationId: deleteIndexer
+      summary: Delete an indexer
+      tags: [indexers]
+      responses:
+        "204":
+          description: Indexer deleted
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /indexers/{name}/test:
+    parameters:
+      - $ref: "#/components/parameters/ResourceName"
+    post:
+      operationId: testIndexer
+      summary: Test indexer connection
+      description: Attempts to connect to the indexer and verify its capabilities.
+      tags: [indexers]
+      responses:
+        "200":
+          $ref: "#/components/responses/ConnectionTestOK"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /indexers/test:
+    post:
+      operationId: testDraftIndexer
+      summary: Test a draft indexer connection
+      description: |
+        Validates reachability and capabilities for an unsaved indexer. Used by
+        the create form before the row exists.
+      tags: [indexers]
+      requestBody:
+        $ref: "#/components/requestBodies/CreateIndexer"
+      responses:
+        "200":
+          $ref: "#/components/responses/ConnectionTestOK"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ── Download Clients ────────────────────────────────────
+  /download-clients:
+    get:
+      operationId: listDownloadClients
+      summary: List download clients
+      description: Returns all configured download clients.
+      tags: [download-clients]
+      responses:
+        "200":
+          description: Download client list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DownloadClient"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      operationId: createDownloadClient
+      summary: Add a download client
+      description: Adds a new download client (qBittorrent, Transmission, or Deluge).
+      tags: [download-clients]
+      requestBody:
+        $ref: "#/components/requestBodies/CreateDownloadClient"
+      responses:
+        "201":
+          description: Download client created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DownloadClient"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /download-clients/{name}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceName"
+    put:
+      operationId: updateDownloadClient
+      summary: Update a download client
+      tags: [download-clients]
+      requestBody:
+        $ref: "#/components/requestBodies/CreateDownloadClient"
+      responses:
+        "200":
+          description: Download client updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DownloadClient"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      operationId: deleteDownloadClient
+      summary: Delete a download client
+      tags: [download-clients]
+      responses:
+        "204":
+          description: Download client deleted
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /download-clients/{name}/test:
+    parameters:
+      - $ref: "#/components/parameters/ResourceName"
+    post:
+      operationId: testDownloadClient
+      summary: Test download client connection
+      description: Attempts to authenticate and connect to the download client.
+      tags: [download-clients]
+      responses:
+        "200":
+          $ref: "#/components/responses/ConnectionTestOK"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /download-clients/test:
+    post:
+      operationId: testDraftDownloadClient
+      summary: Test a draft download client connection
+      description: |
+        Attempts to authenticate and connect to an unsaved download client.
+        Used by the create form before the row exists.
+      tags: [download-clients]
+      requestBody:
+        $ref: "#/components/requestBodies/CreateDownloadClient"
+      responses:
+        "200":
+          $ref: "#/components/responses/ConnectionTestOK"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ── Media Servers ──────────────────────────────────────
+  /media-servers:
+    get:
+      operationId: listMediaServers
+      summary: List configured media servers
+      description: Returns all configured Plex / Jellyfin / Emby servers.
+      tags: [media-servers]
+      responses:
+        "200":
+          $ref: "#/components/responses/MediaServerList"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      operationId: createMediaServer
+      summary: Add a media server
+      tags: [media-servers]
+      requestBody:
+        $ref: "#/components/requestBodies/CreateMediaServer"
+      responses:
+        "201":
+          $ref: "#/components/responses/MediaServerCreated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /media-servers/{name}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceName"
+    get:
+      operationId: getMediaServer
+      summary: Get a media server
+      tags: [media-servers]
+      responses:
+        "200":
+          $ref: "#/components/responses/MediaServerOK"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    patch:
+      operationId: updateMediaServer
+      summary: Update a media server
+      tags: [media-servers]
+      requestBody:
+        $ref: "#/components/requestBodies/UpdateMediaServer"
+      responses:
+        "200":
+          $ref: "#/components/responses/MediaServerOK"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      operationId: deleteMediaServer
+      summary: Delete a media server
+      tags: [media-servers]
+      responses:
+        "204":
+          $ref: "#/components/responses/MediaServerDeleted"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /media-servers/{name}/test:
+    parameters:
+      - $ref: "#/components/parameters/ResourceName"
+    post:
+      operationId: testMediaServer
+      summary: Run a connection test against a saved media server
+      tags: [media-servers]
+      responses:
+        "200":
+          $ref: "#/components/responses/MediaServerTestOK"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /media-servers/discover:
+    post:
+      operationId: discoverMediaServerSections
+      summary: Discover library sections for a draft server
+      description: |
+        Validates reachability and returns library sections (Plex). Used by
+        the create form before the row exists. Jellyfin / Emby return an
+        empty list.
+      tags: [media-servers]
+      requestBody:
+        $ref: "#/components/requestBodies/DiscoverMediaServer"
+      responses:
+        "200":
+          $ref: "#/components/responses/MediaServerDiscovered"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /media-servers/test:
+    post:
+      operationId: testDraftMediaServer
+      summary: Test a draft media server connection
+      description: |
+        Runs a connection test against an unsaved media server. Used by the
+        create form before the row exists.
+      tags: [media-servers]
+      requestBody:
+        $ref: "#/components/requestBodies/DiscoverMediaServer"
+      responses:
+        "200":
+          $ref: "#/components/responses/MediaServerTestOK"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ── Auth ────────────────────────────────────────────────
+  /auth/me:
+    get:
+      operationId: authMe
+      summary: Current authenticated user
+      tags: [auth]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        "200":
+          description: User
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    patch:
+      operationId: updateMe
+      summary: Update current user profile
+      tags: [auth]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      requestBody:
+        $ref: "#/components/requestBodies/UpdateMe"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/password:
+    post:
+      operationId: changePassword
+      summary: Change current user's password; revokes all other sessions
+      tags: [auth]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      requestBody:
+        $ref: "#/components/requestBodies/ChangePassword"
+      responses:
+        "204":
+          description: Password changed; other sessions revoked
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /auth/me/api-keys:
+    get:
+      operationId: listMyApiKeys
+      summary: List current user's API keys
+      tags: [auth]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        "200":
+          description: API keys
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ApiKey" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: createMyApiKey
+      summary: Create a new API key for current user; raw_token shown once
+      tags: [auth]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      requestBody:
+        $ref: "#/components/requestBodies/CreateApiKey"
+      responses:
+        "201":
+          description: API key created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiKeyCreated" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/me/api-keys/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    delete:
+      operationId: deleteMyApiKey
+      summary: Revoke an API key owned by current user
+      tags: [auth]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        "204":
+          description: Revoked
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /auth/me/sessions:
+    get:
+      operationId: listMySessions
+      summary: List current user's active sessions
+      tags: [auth]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        "200":
+          description: Sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Session" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/me/sessions/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    delete:
+      operationId: deleteMySession
+      summary: Revoke a session owned by current user
+      tags: [auth]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        "204":
+          description: Revoked
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /auth/jwt/rotate:
+    post:
+      operationId: rotateJWTSecret
+      summary: Rotate the JWT signing secret (admin)
+      description: |
+        Generates a fresh HMAC signing secret, persists it to the config file,
+        atomically swaps the in-memory secret, truncates all sessions, and
+        re-issues a fresh bearer token for the caller. Every other active
+        session is invalidated immediately.
+      tags: [auth, admin]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        "200":
+          $ref: "#/components/responses/JWTRotated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /auth/invites:
+    get:
+      operationId: listInvites
+      summary: List pending invites (admin)
+      tags: [auth]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        "200":
+          description: Invites
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Invite" }
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      operationId: createInvite
+      summary: Create an invite (admin)
+      tags: [auth]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      requestBody:
+        $ref: "#/components/requestBodies/CreateInvite"
+      responses:
+        "201":
+          description: Invite created; raw_token shown once
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InviteCreated" }
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /auth/invites/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    delete:
+      operationId: revokeInvite
+      summary: Revoke an invite (admin)
+      tags: [auth]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        "204":
+          description: Revoked
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /config/auth:
+    get:
+      operationId: getConfigAuth
+      summary: Get auth configuration (admin)
+      description: |
+        Returns the current runtime-safe auth configuration. Changes made via
+        PATCH take effect immediately — no restart required.
+      tags: [config, admin]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        "200":
+          $ref: "#/components/responses/AuthConfig"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    patch:
+      operationId: updateConfigAuth
+      summary: Patch auth configuration (admin)
+      tags: [config, admin]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      requestBody:
+        $ref: "#/components/requestBodies/UpdateAuthConfig"
+      responses:
+        "200":
+          $ref: "#/components/responses/AuthConfig"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /config/oidc:
+    get:
+      operationId: listOIDCProviders
+      summary: List OIDC providers (admin)
+      description: |
+        Returns all configured OIDC providers plus a flag indicating whether
+        recent OIDC mutations still require a process restart to take effect.
+      tags: [config, admin]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        "200":
+          $ref: "#/components/responses/OIDCProviderList"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      operationId: createOIDCProvider
+      summary: Add an OIDC provider (admin)
+      description: |
+        Validates the issuer by fetching its discovery document, then persists
+        the provider. Takes effect after the process restarts.
+      tags: [config, admin]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      requestBody:
+        $ref: "#/components/requestBodies/CreateOIDCProvider"
+      responses:
+        "201":
+          $ref: "#/components/responses/OIDCProviderCreated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /config/oidc/{name}:
+    parameters:
+      - $ref: "#/components/parameters/OIDCProviderName"
+    get:
+      operationId: getOIDCProvider
+      summary: Get an OIDC provider (admin)
+      tags: [config, admin]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        "200":
+          $ref: "#/components/responses/OIDCProvider"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      operationId: updateOIDCProvider
+      summary: Update an OIDC provider (admin)
+      description: |
+        Updates issuer/client_id/client_secret on an existing provider.
+        Leaving client_secret blank preserves the current secret. Takes effect
+        after the process restarts.
+      tags: [config, admin]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      requestBody:
+        $ref: "#/components/requestBodies/UpdateOIDCProvider"
+      responses:
+        "200":
+          $ref: "#/components/responses/OIDCProvider"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+    delete:
+      operationId: deleteOIDCProvider
+      summary: Delete an OIDC provider (admin)
+      tags: [config, admin]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        "204":
+          description: Provider deleted (restart required to take effect)
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /users:
+    get:
+      operationId: listUsers
+      summary: List users (admin)
+      description: |
+        Returns a paginated list of users filtered by optional search term and role.
+        Requires admin role. Search matches email or display name (case-insensitive).
+      tags: [users, admin]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      parameters:
+        - in: query
+          name: q
+          description: Case-insensitive substring match on email or display_name.
+          schema: { type: string }
+        - in: query
+          name: role
+          description: Filter by exact role.
+          schema:
+            type: string
+            enum: [admin, member, request_only]
+        - in: query
+          name: limit
+          description: Max items per page (1..100).
+          schema: { type: integer, default: 25, maximum: 100, x-go-type: uint16 }
+        - in: query
+          name: offset
+          description: Zero-based offset for pagination.
+          schema: { type: integer, default: 0, x-go-type: uint32 }
+        - $ref: "#/components/parameters/UsersSort"
+        - $ref: "#/components/parameters/UsersOrder"
+      responses:
+        "200":
+          $ref: "#/components/responses/UsersList"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      operationId: createUser
+      summary: Create user (admin)
+      description: |
+        Directly creates a user with the supplied password. Intended for admin
+        onboarding flows that bypass the invite workflow. Email must be unique.
+      tags: [users, admin]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateUserRequest" }
+      responses:
+        "201":
+          $ref: "#/components/responses/UserCreated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /users/{uid}:
+    parameters:
+      - $ref: "#/components/parameters/UserID"
+    get:
+      operationId: getUser
+      summary: Get user detail (admin)
+      description: |
+        Returns the target user along with their API keys and active sessions.
+        Admin only.
+      tags: [users, admin]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        "200":
+          $ref: "#/components/responses/UserDetail"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      operationId: updateUser
+      summary: Patch user (admin)
+      description: |
+        Updates a target user's role, display_name, or auth_method. Demoting
+        the last remaining admin is rejected with 409 last_admin.
+      tags: [users, admin]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UpdateUserRequest" }
+      responses:
+        "200":
+          $ref: "#/components/responses/UserUpdated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+    delete:
+      operationId: deleteUser
+      summary: Delete user (admin)
+      description: |
+        Permanently deletes a user. Rejected with 409 if the caller is the
+        target (self_delete_forbidden), the target is the sole admin
+        (last_admin), or the target owns media requests (user_has_requests).
+      tags: [users, admin]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        "204":
+          $ref: "#/components/responses/UserDeleted"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /users/{uid}/password-reset:
+    parameters:
+      - $ref: "#/components/parameters/UserID"
+    post:
+      operationId: resetUserPassword
+      summary: Reset user password (admin)
+      description: |
+        Sets a new password for the target user without requiring the old one
+        and revokes all of the target's active sessions. Admin only.
+      tags: [users, admin]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ResetPasswordRequest" }
+      responses:
+        "204":
+          $ref: "#/components/responses/PasswordReset"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /users/{uid}/unlock:
+    parameters:
+      - $ref: "#/components/parameters/UserID"
+    post:
+      operationId: unlockUser
+      summary: Clear lockout state on a user (admin)
+      description: |
+        Resets failed_login_count and clears locked_until on the target user.
+        Returns 204 even when the user wasn't locked. Admin only.
+      tags: [users, admin]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        "204":
+          $ref: "#/components/responses/UserUnlocked"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /users/{uid}/api-keys/{kid}:
+    parameters:
+      - $ref: "#/components/parameters/UserID"
+      - $ref: "#/components/parameters/ApiKeyID"
+    delete:
+      operationId: revokeUserApiKey
+      summary: Revoke user's API key (admin)
+      description: |
+        Revokes the specified API key belonging to the target user. Admin only.
+        Returns 404 if the key does not exist or does not belong to the user.
+      tags: [users, admin]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        "204":
+          $ref: "#/components/responses/UserApiKeyRevoked"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /users/{uid}/sessions/{sid}:
+    parameters:
+      - $ref: "#/components/parameters/UserID"
+      - $ref: "#/components/parameters/SessionID"
+    delete:
+      operationId: revokeUserSession
+      summary: Revoke user's session (admin)
+      description: |
+        Revokes the specified session belonging to the target user, forcing
+        logout on that device. Admin only. Returns 404 if the session does not
+        exist or does not belong to the user.
+      tags: [users, admin]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        "204":
+          $ref: "#/components/responses/UserSessionRevoked"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ── Schedules ───────────────────────────────────────────
+  /schedules:
+    get:
+      operationId: listSchedules
+      summary: List all scheduled jobs with current state.
+      tags: [schedules]
+      responses:
+        "200":
+          $ref: "#/components/responses/ScheduleList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /schedules/{name}:
+    parameters:
+      - $ref: "#/components/parameters/ScheduleName"
+    get:
+      operationId: getSchedule
+      summary: Get a single scheduled job by name.
+      tags: [schedules]
+      responses:
+        "200":
+          $ref: "#/components/responses/Schedule"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      operationId: updateSchedule
+      summary: Edit the interval of a scheduled job.
+      tags: [schedules]
+      requestBody:
+        $ref: "#/components/requestBodies/ScheduleUpdate"
+      responses:
+        "200":
+          $ref: "#/components/responses/Schedule"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /schedules/{name}/pause:
+    parameters:
+      - $ref: "#/components/parameters/ScheduleName"
+    post:
+      operationId: pauseSchedule
+      summary: Pause a scheduled job.
+      tags: [schedules]
+      responses:
+        "200":
+          $ref: "#/components/responses/Schedule"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /schedules/{name}/resume:
+    parameters:
+      - $ref: "#/components/parameters/ScheduleName"
+    post:
+      operationId: resumeSchedule
+      summary: Resume a paused job.
+      tags: [schedules]
+      responses:
+        "200":
+          $ref: "#/components/responses/Schedule"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /schedules/{name}/run:
+    parameters:
+      - $ref: "#/components/parameters/ScheduleName"
+    post:
+      operationId: runSchedule
+      summary: Trigger a one-off run of a job.
+      tags: [schedules]
+      responses:
+        "200":
+          $ref: "#/components/responses/Schedule"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /library/imports:
+    get:
+      operationId: ListImports
+      tags: [library]
+      parameters:
+        - $ref: "#/components/parameters/ImportPage"
+        - $ref: "#/components/parameters/ImportLimit"
+      responses:
+        "200":
+          $ref: "#/components/responses/ImportScanList"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      operationId: StartImport
+      tags: [library]
+      requestBody:
+        $ref: "#/components/requestBodies/StartImport"
+      responses:
+        "201":
+          $ref: "#/components/responses/ImportScan"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /library/imports/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    get:
+      operationId: GetImport
+      tags: [library]
+      responses:
+        "200":
+          $ref: "#/components/responses/ImportScan"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: DeleteImport
+      tags: [library]
+      responses:
+        "204":
+          $ref: "#/components/responses/ImportDeleted"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /library/imports/{id}/cancel:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: CancelImport
+      tags: [library]
+      responses:
+        "204":
+          $ref: "#/components/responses/ImportCancelled"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /library/imports/{id}/commit:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: CommitImport
+      tags: [library]
+      responses:
+        "202":
+          $ref: "#/components/responses/ImportScan"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /library/imports/{id}/files:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    get:
+      operationId: ListImportFiles
+      tags: [library]
+      parameters:
+        - $ref: "#/components/parameters/ImportClassification"
+        - $ref: "#/components/parameters/ImportQuery"
+        - $ref: "#/components/parameters/ImportPage"
+        - $ref: "#/components/parameters/ImportFileLimit"
+      responses:
+        "200":
+          $ref: "#/components/responses/ImportScanFileList"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /library/imports/{id}/files/{fileId}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+      - $ref: "#/components/parameters/ImportScanFileID"
+    patch:
+      operationId: UpdateImportFileDecision
+      tags: [library]
+      requestBody:
+        $ref: "#/components/requestBodies/UpdateImportFileDecision"
+      responses:
+        "200":
+          $ref: "#/components/responses/ImportScanFile"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /library/imports/{id}/shows:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    get:
+      operationId: ListImportShows
+      tags: [library]
+      parameters:
+        - $ref: "#/components/parameters/ImportClassification"
+        - $ref: "#/components/parameters/ImportPage"
+        - $ref: "#/components/parameters/ImportFileLimit"
+      responses:
+        "200":
+          $ref: "#/components/responses/ImportScanShowList"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /library/imports/{id}/shows/{showId}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+      - $ref: "#/components/parameters/ImportScanShowID"
+    patch:
+      operationId: UpdateImportShowDecision
+      tags: [library]
+      requestBody:
+        $ref: "#/components/requestBodies/UpdateImportShowDecision"
+      responses:
+        "200":
+          $ref: "#/components/responses/ImportScanShow"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /activity:
+    get:
+      operationId: listActivity
+      summary: Library activity events.
+      description: |
+        Reverse-chronological feed of MovieEvent rows. Supports cursor
+        pagination and optional filtering by event type, movie id, and a
+        time window.
+      parameters:
+        - $ref: "#/components/parameters/ActivityType"
+        - $ref: "#/components/parameters/ActivityMovieID"
+        - $ref: "#/components/parameters/ActivitySince"
+        - $ref: "#/components/parameters/ActivityBefore"
+        - $ref: "#/components/parameters/ActivityLimit"
+        - $ref: "#/components/parameters/ActivityCursor"
+      responses:
+        "200":
+          $ref: "#/components/responses/ActivityList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /activity/queue:
+    get:
+      operationId: getDownloadQueue
+      summary: Live download queue snapshot.
+      description: |
+        In-flight DownloadRecords (downloading or importing) enriched with
+        live progress / speed / ETA polled from the download client. Served
+        from a short-TTL cached snapshot; unreachable clients degrade to the
+        stored record without telemetry.
+      tags: [activity]
+      responses:
+        "200":
+          $ref: "#/components/responses/DownloadQueue"
+
+  /activity/queue/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    delete:
+      operationId: cancelQueueItem
+      summary: Cancel an in-flight download.
+      description: |
+        Removes the torrent (and its partial files) from the client, deletes
+        the record, and reverts the movie to "wanted" when it has no file.
+      tags: [activity]
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /activity/queue/{id}/pause:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: pauseQueueItem
+      summary: Pause an in-flight download.
+      tags: [activity]
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /activity/queue/{id}/resume:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: resumeQueueItem
+      summary: Resume a paused download.
+      tags: [activity]
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /activity/history:
+    get:
+      operationId: listDownloadHistory
+      summary: Terminal download history (completed/failed), paginated.
+      tags: [activity]
+      parameters:
+        - $ref: "#/components/parameters/ActivityLimit"
+        - $ref: "#/components/parameters/ActivityCursor"
+      responses:
+        "200":
+          $ref: "#/components/responses/DownloadHistory"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /activity/history/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    delete:
+      operationId: deleteHistoryItem
+      summary: Delete one history record.
+      tags: [activity]
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /activity/history/clear-completed:
+    post:
+      operationId: clearCompletedHistory
+      summary: Delete all completed history records.
+      tags: [activity]
+      responses:
+        "200":
+          $ref: "#/components/responses/ClearCompletedResult"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /activity/pending:
+    get:
+      operationId: listPending
+      summary: Adopted-torrent proposals awaiting a decision.
+      description: |
+        Manually-added managed-category torrents streamline could not safely
+        auto-import (resolution too low, file already exists, ambiguous or
+        season-pack match). Each is a status=pending DownloadRecord.
+      tags: [activity]
+      responses:
+        "200":
+          $ref: "#/components/responses/PendingList"
+
+  /activity/pending/{id}/import:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: importPending
+      summary: Accept a proposal and import it as-is.
+      tags: [activity]
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /activity/pending/{id}/replace:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: replacePending
+      summary: Delete the existing file, then import the proposal.
+      tags: [activity]
+      requestBody:
+        $ref: "#/components/requestBodies/ReplacePending"
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /activity/pending/{id}/ignore:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: ignorePending
+      summary: Dismiss a proposal (optionally removing its torrent).
+      tags: [activity]
+      requestBody:
+        $ref: "#/components/requestBodies/IgnorePending"
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /calendar/upcoming:
+    get:
+      operationId: listUpcomingReleases
+      summary: Upcoming wanted-movie digital releases in [from, to).
+      parameters:
+        - $ref: "#/components/parameters/CalendarFrom"
+        - $ref: "#/components/parameters/CalendarTo"
+      responses:
+        "200":
+          $ref: "#/components/responses/UpcomingList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  # ── System ──────────────────────────────────────────────
+  /system/info:
+    get:
+      operationId: getSystemInfo
+      summary: Read-only environment summary (admin)
+      description: |
+        Returns the values shown on the Settings → General page: app name,
+        public URL, auth mode, data/database paths and disk usage, build
+        info, and the running Go version. All values are derived from
+        runtime state and the loaded config; nothing is editable through
+        this endpoint (the config file remains the source of truth).
+      tags: [system, admin]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        "200":
+          $ref: "#/components/responses/SystemInfo"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  # ── Requests ────────────────────────────────────────────
+  /requests:
+    get:
+      operationId: listRequests
+      summary: List media requests
+      description: |
+        Reviewers (admin/member) see all requests; request_only users see
+        only their own (scoped server-side). Filterable by status and
+        media_type.
+      tags: [requests]
+      parameters:
+        - $ref: "#/components/parameters/RequestStatus"
+        - $ref: "#/components/parameters/RequestMediaType"
+        - $ref: "#/components/parameters/RequestPage"
+        - $ref: "#/components/parameters/RequestLimit"
+      responses:
+        "200":
+          $ref: "#/components/responses/RequestsList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      operationId: createRequest
+      summary: Request a movie or show
+      tags: [requests]
+      requestBody:
+        $ref: "#/components/requestBodies/CreateRequest"
+      responses:
+        "201":
+          $ref: "#/components/responses/RequestCreated"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /requests/counts:
+    get:
+      operationId: getRequestCounts
+      summary: Request counts by status
+      tags: [requests]
+      responses:
+        "200":
+          $ref: "#/components/responses/RequestCountsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /requests/{id}/approve:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: approveRequest
+      summary: Approve a request (admin/member) — creates the library item
+      description: |
+        Creates the library item with the chosen quality profile. Omitting
+        quality_profile (or sending it empty) uses the server default.
+      tags: [requests]
+      requestBody:
+        $ref: "#/components/requestBodies/ApproveRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/RequestDetail"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /requests/{id}/metadata:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    get:
+      operationId: getRequestMetadata
+      summary: Cover and synopsis for a requested item
+      description: |
+        Fetches poster, overview and basic metadata for the requested movie
+        (TMDB) or show (TVDB) so reviewers can judge the request. Visible to
+        reviewers (admin/member) and to the requester for their own request.
+      tags: [requests]
+      responses:
+        "200":
+          $ref: "#/components/responses/RequestMediaDetailResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /requests/{id}/deny:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: denyRequest
+      summary: Deny a request (admin)
+      tags: [requests]
+      requestBody:
+        $ref: "#/components/requestBodies/DenyRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/RequestDetail"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /requests/{id}/reopen:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: reopenRequest
+      summary: Reopen a denied request (admin)
+      tags: [requests]
+      responses:
+        "200":
+          $ref: "#/components/responses/RequestDetail"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+security:
+  - BearerAuth: []
+  - ApiKeyAuth: []
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from /auth/login or /auth/register
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key created via /users/me/api-keys
+
+  parameters:
+    ResourceID:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        x-go-type: uint32
+    ResourceName:
+      name: name
+      in: path
+      required: true
+      description: Stable resource name (identity for config-backed resources).
+      schema:
+        type: string
+    RequestStatus:
+      name: status
+      in: query
+      required: false
+      description: Filter by request status.
+      schema:
+        type: string
+        enum: [pending, approved, denied, available]
+    RequestMediaType:
+      name: media_type
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [movie, tvshow]
+    RequestPage:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        x-go-type: uint32
+        default: 1
+    RequestLimit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        x-go-type: uint32
+        default: 50
+    UserID:
+      name: uid
+      in: path
+      required: true
+      description: Target user ID.
+      schema:
+        type: integer
+        x-go-type: uint32
+    ApiKeyID:
+      name: kid
+      in: path
+      required: true
+      description: Target API key ID scoped to the user.
+      schema:
+        type: integer
+        x-go-type: uint32
+    SessionID:
+      name: sid
+      in: path
+      required: true
+      description: Target session ID scoped to the user.
+      schema:
+        type: integer
+        x-go-type: uint32
+    OIDCProviderName:
+      name: name
+      in: path
+      required: true
+      description: Target OIDC provider name.
+      schema:
+        type: string
+
+    ScheduleName:
+      name: name
+      in: path
+      required: true
+      description: Registered scheduled-job name (e.g. "rss-sync").
+      schema:
+        type: string
+        minLength: 1
+
+    ImportScanFileID:
+      name: fileId
+      in: path
+      required: true
+      description: Target ImportScanFile ID scoped to the parent scan.
+      schema:
+        type: integer
+        x-go-type: uint32
+    ImportScanShowID:
+      name: showId
+      in: path
+      required: true
+      description: Target ImportScanShow ID scoped to the parent scan.
+      schema:
+        type: integer
+        x-go-type: uint32
+    ImportPage:
+      name: page
+      in: query
+      schema:
+        type: integer
+        x-go-type: uint16
+        minimum: 1
+        default: 1
+    ImportLimit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        x-go-type: uint16
+        minimum: 1
+        maximum: 100
+        default: 20
+    ImportFileLimit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        x-go-type: uint16
+        minimum: 1
+        maximum: 100
+        default: 50
+    ImportClassification:
+      name: classification
+      in: query
+      schema:
+        type: string
+        enum: [confirmed, ambiguous, unmatched, existing]
+    ImportQuery:
+      name: q
+      in: query
+      schema:
+        type: string
+
+    DeleteMovieFiles:
+      name: delete_files
+      in: query
+      description: When true, delete the attached media_files from disk too.
+      schema:
+        type: boolean
+
+    RenamePreview:
+      name: preview
+      in: query
+      description: When true, returns the rename plan without applying it.
+      schema:
+        type: boolean
+
+    ActivityType:
+      name: type
+      in: query
+      required: false
+      schema:
+        type: array
+        items:
+          type: string
+          enum:
+            [
+              grabbed,
+              download_completed,
+              download_failed,
+              imported,
+              import_failed,
+              drift_detected,
+              drift_confirmed,
+            ]
+      style: form
+      explode: true
+    ActivityMovieID:
+      name: movie_id
+      in: query
+      required: false
+      schema:
+        type: integer
+        x-go-type: uint32
+    ActivitySince:
+      name: since
+      in: query
+      required: false
+      schema: { type: string, format: date-time }
+    ActivityBefore:
+      name: before
+      in: query
+      required: false
+      schema: { type: string, format: date-time }
+    ActivityLimit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+    ActivityCursor:
+      name: cursor
+      in: query
+      required: false
+      schema: { type: string }
+    CalendarFrom:
+      name: from
+      in: query
+      required: true
+      schema: { type: string, format: date-time }
+    CalendarTo:
+      name: to
+      in: query
+      required: true
+      schema: { type: string, format: date-time }
+    UsersSort:
+      name: sort
+      in: query
+      required: false
+      description: Column to sort by. Defaults to created.
+      schema:
+        type: string
+        enum: [name, role, auth, created]
+        default: created
+    UsersOrder:
+      name: order
+      in: query
+      required: false
+      description: Sort direction. Defaults to desc.
+      schema:
+        type: string
+        enum: [asc, desc]
+        default: desc
+
+    SeriesPage:
+      name: page
+      in: query
+      schema:
+        type: integer
+        default: 1
+        x-go-type: uint32
+
+    SeriesLimit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        default: 20
+        x-go-type: uint16
+
+    SeriesStatus:
+      name: status
+      in: query
+      description: Filter by series_status (continuing/ended/upcoming) or "missing".
+      schema:
+        type: string
+
+    SeriesType:
+      name: type
+      in: query
+      description: Filter by series type (standard/anime/daily).
+      schema:
+        type: string
+
+    SeriesQuery:
+      name: query
+      in: query
+      description: Case-insensitive title substring filter.
+      schema:
+        type: string
+
+    SeriesSort:
+      name: sort
+      in: query
+      description: Sort key (recent/title/year/rating/episodes).
+      schema:
+        type: string
+
+    SeriesLookupQuery:
+      name: query
+      in: query
+      required: true
+      description: TVDB search query.
+      schema:
+        type: string
+
+    SeasonNumber:
+      name: number
+      in: path
+      required: true
+      description: Season number within the series.
+      schema:
+        type: integer
+        x-go-type: uint16
+
+    EpisodeID:
+      name: episodeId
+      in: path
+      required: true
+      description: Episode resource id.
+      schema:
+        type: integer
+        x-go-type: uint32
+
+    DeleteSeriesFiles:
+      name: delete_files
+      in: query
+      description: When true, also delete attached media files from disk.
+      schema:
+        type: boolean
+
+    FileID:
+      name: fileId
+      in: path
+      required: true
+      description: Media file resource id.
+      schema:
+        type: integer
+        x-go-type: uint32
+
+  requestBodies:
+    AddMovie:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/AddMovieRequest"
+
+    UpdateMovie:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/UpdateMovieRequest"
+
+    DeleteFile:
+      required: false
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/DeleteFileRequest"
+
+    ReplacePending:
+      required: false
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ReplacePendingRequest"
+
+    IgnorePending:
+      required: false
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/IgnorePendingRequest"
+
+    CreateQualityProfile:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/QualityProfileCreate"
+
+    CreateIndexer:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/IndexerCreate"
+
+    CreateDownloadClient:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/DownloadClientCreate"
+
+    CreateInvite:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/CreateInviteRequest"
+
+    UpdateMe:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/UpdateMeRequest"
+
+    ChangePassword:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ChangePasswordRequest"
+
+    CreateApiKey:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/CreateApiKeyRequest"
+
+    UpdateAuthConfig:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/AuthConfigPatch"
+
+    CreateOIDCProvider:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/OIDCProviderCreate"
+
+    UpdateOIDCProvider:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/OIDCProviderPatch"
+
+    CreateMediaServer:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/MediaServerCreate"
+
+    UpdateMediaServer:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/MediaServerUpdate"
+
+    DiscoverMediaServer:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/MediaServerDiscoveryRequest"
+
+    ScheduleUpdate:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ScheduleUpdate"
+
+    StartImport:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ImportScanCreateRequest"
+
+    UpdateImportFileDecision:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ImportScanFileDecisionRequest"
+
+    UpdateImportShowDecision:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ImportScanShowDecisionRequest"
+
+    GrabMovieRelease:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/SearchResult"
+
+    AddSeries:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/AddSeriesRequest"
+
+    CreateRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/CreateRequestRequest"
+
+    DenyRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/DenyRequestRequest"
+
+    ApproveRequest:
+      required: false
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApproveRequestRequest"
+
+    PatchSeries:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/PatchSeriesRequest"
+
+    MonitorToggle:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/MonitorToggleRequest"
+
+    GrabSeriesRelease:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/SearchResult"
+
+  responses:
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+    Conflict:
+      description: Resource already exists
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+    UnprocessableEntity:
+      description: Validation or connection test failed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+    UsersList:
+      description: Paginated list of users.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/UserList"
+
+    UserCreated:
+      description: User created successfully.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/User"
+
+    UserDetail:
+      description: User detail including API keys and sessions.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/UserDetail"
+
+    UserUpdated:
+      description: User patched successfully.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/User"
+
+    UserDeleted:
+      description: User deleted.
+
+    PasswordReset:
+      description: Password reset; all of the target's sessions revoked.
+
+    UserApiKeyRevoked:
+      description: API key revoked.
+
+    UserSessionRevoked:
+      description: Session revoked.
+
+    UserUnlocked:
+      description: Lockout state cleared.
+
+    MovieSearchAccepted:
+      description: Indexer search dispatched for the movie.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/MovieSearchAccepted"
+
+    MoviePlayOnLinks:
+      description: Per-server deep link results.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/PlayOnLinkList"
+
+    SeriesPlayOnLinks:
+      description: Per-server deep link results for the series.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/PlayOnLinkList"
+
+    MovieRecommendations:
+      description: TMDB recommendations for the movie.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/MovieRecommendations"
+
+    MovieRefreshed:
+      description: Movie metadata refreshed.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Movie"
+
+    MovieRenamePlan:
+      description: Rename plan (preview or applied).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/RenamePlan"
+
+    SeriesRenamePlan:
+      description: Series rename plan (preview or applied).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/SeriesRenamePlan"
+
+    SeriesList:
+      description: Paginated series list.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/PaginatedTVShows"
+
+    SeriesDetail:
+      description: Series detail including seasons and episodes.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/TVShow"
+
+    SeriesCreated:
+      description: Series added.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/TVShow"
+
+    SeriesCountsResponse:
+      description: Series status counts.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/TVShowCounts"
+
+    RequestsList:
+      description: Paginated request list.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/PaginatedRequests"
+
+    RequestDetail:
+      description: A single request.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Request"
+
+    RequestCreated:
+      description: Request created.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Request"
+
+    RequestCountsResponse:
+      description: Request counts by status.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/RequestCounts"
+
+    RequestMediaDetailResponse:
+      description: Cover and synopsis for a requested item.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/RequestMediaDetails"
+
+    SeriesLookupResults:
+      description: TVDB search results.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/SeriesLookupResultList"
+
+    SeriesDeleted:
+      description: Series deleted.
+
+    SeasonUpdated:
+      description: Season monitoring updated.
+
+    EpisodeUpdated:
+      description: Episode monitoring updated.
+
+    FileDeleted:
+      description: Media file deleted.
+
+    PendingList:
+      description: Pending adoption proposals.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/PendingList"
+
+    SeriesSearchAccepted:
+      description: Indexer search dispatched for the series.
+
+    SeriesGrabAccepted:
+      description: Release grab dispatched for the episode.
+
+    SearchResults:
+      description: Ranked indexer search results.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/SearchResultList"
+
+    JWTRotated:
+      description: JWT signing secret rotated; caller token re-issued.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/JWTRotated"
+
+    AuthConfig:
+      description: Current runtime-safe auth configuration.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/AuthConfigView"
+
+    OIDCProvider:
+      description: OIDC provider detail.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/OIDCProviderView"
+
+    OIDCProviderCreated:
+      description: OIDC provider created (restart required to activate).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/OIDCProviderView"
+
+    OIDCProviderList:
+      description: List of configured OIDC providers plus restart flag.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/OIDCProviderListView"
+
+    MediaServerList:
+      description: List of configured media servers.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/MediaServerListView"
+
+    MediaServerOK:
+      description: Media server detail.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/MediaServer"
+
+    MediaServerCreated:
+      description: Media server created.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/MediaServer"
+
+    MediaServerDeleted:
+      description: Media server deleted.
+
+    ConnectionTestOK:
+      description: Connection successful.
+
+    MediaServerTestOK:
+      description: Connection successful.
+
+    MediaServerDiscovered:
+      description: Discovery result with available library sections.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/MediaServerDiscovery"
+
+    Schedule:
+      description: A scheduled job.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Schedule"
+
+    ScheduleList:
+      description: List of scheduled jobs.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ScheduleList"
+
+    ImportScan:
+      description: A single import scan.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ImportScan"
+
+    ImportScanList:
+      description: Paginated list of import scans.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ImportScanList"
+
+    ImportScanFile:
+      description: A single import scan file row.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ImportScanFile"
+
+    ImportScanFileList:
+      description: Paginated list of import scan files.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ImportScanFileList"
+
+    ImportScanShow:
+      description: A single import scan show row.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ImportScanShow"
+
+    ImportScanShowList:
+      description: Paginated list of import scan shows.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ImportScanShowList"
+
+    ImportDeleted:
+      description: Import scan deleted.
+
+    ImportCancelled:
+      description: Import scan cancelled.
+
+    BadRequest:
+      description: Request validation failed.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+    ActivityList:
+      description: Library activity events.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ActivityList"
+
+    NoContent:
+      description: Success, no response body.
+
+    DownloadQueue:
+      description: Live download queue snapshot.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/DownloadQueue"
+
+    DownloadHistory:
+      description: Paginated terminal download history.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/DownloadHistory"
+
+    ClearCompletedResult:
+      description: Count of cleared completed records.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ClearCompletedResult"
+
+    MovieCountsResponse:
+      description: Movie status counts.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/MovieCounts"
+
+    UpcomingList:
+      description: Upcoming wanted-movie releases.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/UpcomingList"
+
+    SystemInfo:
+      description: Read-only environment summary.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/SystemInfo"
+
+  schemas:
+    Error:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+          description: Human-readable, safe-to-display error message.
+        code:
+          type: string
+          description: |
+            Stable machine-readable error code (e.g. last_admin,
+            self_delete_forbidden, email_exists). Present for domain errors
+            where the caller needs to branch on the specific reason; absent
+            for generic errors where the message is sufficient.
+
+    DeleteFileRequest:
+      type: object
+      properties:
+        remove_torrent:
+          type: boolean
+          default: false
+          description: |
+            When true, also remove the source torrent from its download
+            client (best-effort).
+
+    PendingMedia:
+      type: object
+      required: [type, id, title]
+      properties:
+        type:
+          type: string
+          enum: [movie, episode]
+        id:
+          type: integer
+          x-go-type: uint32
+        title:
+          type: string
+        year:
+          type: integer
+          x-go-type: uint16
+        season:
+          type: integer
+          x-go-type: uint16
+        episode:
+          type: integer
+          x-go-type: uint16
+
+    PendingItem:
+      type: object
+      required: [id, title, quality, reason, has_file]
+      properties:
+        id:
+          type: integer
+          x-go-type: uint32
+        title:
+          type: string
+        quality:
+          type: string
+        reason:
+          type: string
+        has_file:
+          type: boolean
+          description: |
+            Whether the matched movie/episode currently has a file. The UI
+            shows Replace (swap) when true and Import (accept into the empty
+            slot) when false.
+        media:
+          $ref: "#/components/schemas/PendingMedia"
+
+    PendingList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PendingItem"
+
+    ReplacePendingRequest:
+      type: object
+      properties:
+        remove_old_torrent:
+          type: boolean
+          default: false
+          description: |
+            When true, also remove the existing file's source torrent from
+            its download client (best-effort).
+
+    IgnorePendingRequest:
+      type: object
+      properties:
+        remove_torrent:
+          type: boolean
+          default: false
+          description: |
+            When true, also remove the proposed torrent from its download
+            client.
+
+    Movie:
+      type: object
+      required: [id, title, original_title, year, status, monitored, tmdb_id]
+      properties:
+        id:
+          type: integer
+          x-go-type: uint32
+        title:
+          type: string
+        original_title:
+          type: string
+          description: |
+            TMDB original_title. Equals title when the localized title
+            matches the original; UI hides it in that case.
+        year:
+          type: integer
+          x-go-type: uint16
+        overview:
+          type: string
+        runtime:
+          type: integer
+          description: Runtime in minutes. Zero when unknown.
+          x-go-type: uint16
+        status:
+          type: string
+          enum: [wanted, downloading, available]
+        monitored:
+          type: boolean
+          description: Whether Streamline auto-searches and upgrades this title.
+        tmdb_id:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 4294967295
+          x-go-type: uint32
+        quality_profile:
+          type: string
+          description: Name of the quality profile (empty resolves to the default).
+        media_files:
+          type: array
+          nullable: true
+          description: |
+            Files attached to this movie. Only populated by GET /movies/{id};
+            absent in list responses.
+          items:
+            $ref: "#/components/schemas/MediaFile"
+        cast:
+          type: array
+          nullable: true
+          description: |
+            Top-billed cast from TMDB. Only populated by GET /movies/{id};
+            absent in list responses.
+          items:
+            $ref: "#/components/schemas/CastMember"
+        genres:
+          type: array
+          nullable: true
+          description: |
+            TMDB genres. Only populated by GET /movies/{id}; absent in
+            list responses.
+          items:
+            type: string
+        rating:
+          type: number
+          format: float
+          nullable: true
+          description: |
+            TMDB vote average (0–10). Only populated by GET /movies/{id}
+            and omitted when TMDB has no votes.
+
+    CastMember:
+      type: object
+      required: [name]
+      properties:
+        tmdb_id:
+          type: integer
+          x-go-type: uint32
+          description: TMDB person id; links to themoviedb.org/person/{id}.
+        name:
+          type: string
+        character:
+          type: string
+        profile_url:
+          type: string
+          description: Absolute profile image URL, when available.
+        person_url:
+          type: string
+          description: |
+            Link to the person's page on the source provider (TMDB for movies,
+            TVDB for series). Absent when the provider has no id for them.
+
+    MediaFile:
+      type: object
+      required: [id, path, size]
+      properties:
+        id:
+          type: integer
+          x-go-type: uint32
+        path:
+          type: string
+        size:
+          type: integer
+          format: int64
+        quality:
+          type: string
+        format:
+          type: string
+        release_group:
+          type: string
+        parsed_source:
+          type: string
+          description: Source tag (BluRay/Remux/WEB-DL/…) parsed from the file's basename at response time.
+        parsed_resolution:
+          type: string
+          description: Resolution (720p/1080p/2160p) parsed from the file's basename at response time.
+        parsed_codec:
+          type: string
+          description: Video codec (x264/HEVC/AV1/…) parsed from the file's basename at response time.
+
+    AddMovieRequest:
+      type: object
+      required: [tmdb_id]
+      properties:
+        tmdb_id:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 4294967295
+          x-go-type: uint32
+        quality_profile:
+          type: string
+          description: Name of the quality profile (empty resolves to the default).
+
+    UpdateMovieRequest:
+      type: object
+      properties:
+        quality_profile:
+          type: string
+          description: Name of the quality profile (empty resolves to the default).
+        status:
+          type: string
+          enum: [wanted, downloading, available]
+        monitored:
+          type: boolean
+
+    PaginatedMovies:
+      type: object
+      required: [items, total, page, limit]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Movie"
+        total:
+          type: integer
+          x-go-type: uint32
+        page:
+          type: integer
+          x-go-type: uint32
+        limit:
+          type: integer
+          x-go-type: uint16
+
+    MovieCounts:
+      type: object
+      required: [total, wanted, downloading, available, trend]
+      properties:
+        total:
+          type: integer
+          x-go-type: uint32
+        wanted:
+          type: integer
+          x-go-type: uint32
+        downloading:
+          type: integer
+          x-go-type: uint32
+        available:
+          type: integer
+          x-go-type: uint32
+        trend:
+          type: array
+          description: |
+            Cumulative library size at the end of each day over the last 30
+            days, oldest first. The final element equals `total`. All zeros
+            when the library is empty.
+          items:
+            type: integer
+            x-go-type: uint32
+
+    TVShow:
+      type: object
+      required: [id, title, year, series_status, type, monitored, tvdb_id]
+      properties:
+        id:
+          type: integer
+          x-go-type: uint32
+        title:
+          type: string
+        original_title:
+          type: string
+          description: |
+            Untranslated TVDB name. Equals title when the localized title
+            matches the original; UI hides it in that case.
+        year:
+          type: integer
+          x-go-type: uint16
+        overview:
+          type: string
+        series_status:
+          type: string
+          enum: [continuing, ended, upcoming]
+        type:
+          type: string
+          enum: [standard, anime, daily]
+        monitored:
+          type: boolean
+        tvdb_id:
+          type: integer
+          x-go-type: uint32
+        network:
+          type: string
+        creator:
+          type: string
+        runtime:
+          type: integer
+          description: Episode runtime in minutes. Zero when unknown.
+          x-go-type: uint16
+        rating:
+          type: number
+          format: float
+          nullable: true
+        genres:
+          type: array
+          nullable: true
+          items:
+            type: string
+        quality_profile:
+          type: string
+          description: Name of the quality profile (empty resolves to the default).
+        have_episodes:
+          type: integer
+          description: Episodes with a media file. Rolled up across seasons.
+          x-go-type: uint32
+        total_episodes:
+          type: integer
+          x-go-type: uint32
+        wanted_episodes:
+          type: integer
+          description: Aired/undated episodes without a file (the "missing" count).
+          x-go-type: uint32
+        seasons:
+          type: array
+          nullable: true
+          description: |
+            Seasons with their episodes. Only populated by GET /series/{id};
+            absent in list responses.
+          items:
+            $ref: "#/components/schemas/Season"
+        cast:
+          type: array
+          nullable: true
+          description: |
+            Top-billed cast from TVDB. Only populated by GET /series/{id};
+            absent in list responses.
+          items:
+            $ref: "#/components/schemas/CastMember"
+
+    Season:
+      type: object
+      required: [id, number, monitored]
+      properties:
+        id:
+          type: integer
+          x-go-type: uint32
+        number:
+          type: integer
+          x-go-type: uint16
+        name:
+          type: string
+        monitored:
+          type: boolean
+        available:
+          type: integer
+          description: Episodes in this season that have a media file.
+        missing:
+          type: integer
+          description: Aired/undated episodes without a file.
+        unaired:
+          type: integer
+          description: Episodes whose air_date is in the future.
+        total:
+          type: integer
+        episodes:
+          type: array
+          nullable: true
+          items:
+            $ref: "#/components/schemas/Episode"
+
+    Episode:
+      type: object
+      required: [id, number, status, monitored]
+      properties:
+        id:
+          type: integer
+          x-go-type: uint32
+        number:
+          type: integer
+          x-go-type: uint16
+        absolute_number:
+          type: integer
+          x-go-type: uint16
+        title:
+          type: string
+        air_date:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          type: string
+          enum: [wanted, downloading, paused, available, unaired, skipped]
+        monitored:
+          type: boolean
+        quality:
+          type: string
+        size:
+          type: integer
+          format: int64
+          nullable: true
+
+    PaginatedTVShows:
+      type: object
+      required: [items, total, page, limit]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/TVShow"
+        total:
+          type: integer
+          x-go-type: uint32
+        page:
+          type: integer
+          x-go-type: uint32
+        limit:
+          type: integer
+          x-go-type: uint16
+
+    TVShowCounts:
+      type: object
+      required: [total, continuing, ended, wanted_episodes]
+      properties:
+        total:
+          type: integer
+        continuing:
+          type: integer
+        ended:
+          type: integer
+        wanted_episodes:
+          type: integer
+
+    AddSeriesRequest:
+      type: object
+      required: [tvdb_id]
+      properties:
+        tvdb_id:
+          type: integer
+          x-go-type: uint32
+        quality_profile:
+          type: string
+          description: Name of the quality profile (empty resolves to the default).
+        preset:
+          type: string
+          enum: [all, future, missing, existing, pilot, none]
+          description: One-shot monitoring preset applied to seasons/episodes.
+
+    PatchSeriesRequest:
+      type: object
+      properties:
+        monitored:
+          type: boolean
+        quality_profile:
+          type: string
+        preset:
+          type: string
+          enum: [all, future, missing, existing, pilot, none]
+
+    MonitorToggleRequest:
+      type: object
+      required: [monitored]
+      properties:
+        monitored:
+          type: boolean
+
+    SeriesLookupResultList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SeriesLookupResult"
+
+    SeriesLookupResult:
+      type: object
+      required: [tvdb_id, title, year]
+      properties:
+        tvdb_id:
+          type: integer
+          x-go-type: uint32
+        title:
+          type: string
+        year:
+          type: integer
+          x-go-type: uint16
+        network:
+          type: string
+        overview:
+          type: string
+        already_added:
+          type: boolean
+          description: True when a series with this tvdb_id is already in the library.
+        poster_url:
+          type: string
+          description: |
+            Series poster image URL from TVDB. Empty when the entry has
+            no artwork.
+
+    TMDBMovieResult:
+      type: object
+      required: [tmdb_id, title, original_title, year]
+      properties:
+        tmdb_id:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 4294967295
+          x-go-type: uint32
+        title:
+          type: string
+        original_title:
+          type: string
+          description: |
+            TMDB original_title. Equals title when the localized title
+            matches the original.
+        year:
+          type: integer
+          x-go-type: uint16
+        overview:
+          type: string
+        poster_url:
+          type: string
+          description: |
+            Pre-built TMDB image CDN URL (size w185). Empty when the
+            entry has no poster on TMDB.
+
+    SearchResultList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SearchResult"
+
+    SearchResult:
+      type: object
+      required: [title, download_url, size, seeders]
+      properties:
+        title:
+          type: string
+        info_url:
+          type: string
+        download_url:
+          type: string
+        size:
+          type: integer
+          format: int64
+        seeders:
+          type: integer
+          x-go-type: uint32
+        leechers:
+          type: integer
+          x-go-type: uint32
+        release_group:
+          type: string
+        resolution:
+          type: string
+        source:
+          type: string
+        codec:
+          type: string
+        indexer:
+          type: string
+        published_at:
+          type: string
+          format: date-time
+        replace_existing:
+          type: boolean
+          description: >-
+            Grab requests only: delete already-present file(s) for the
+            covered media before importing (manual overwrite). Unset/false
+            keeps existing files. Ignored in search-result responses.
+
+    PlayOnLinkList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlayOnLink"
+
+    MovieRecommendations:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/TMDBMovieResult"
+
+    PlayOnLink:
+      type: object
+      required: [server_id, name, server_type, status, fallback]
+      properties:
+        server_id:
+          type: integer
+          x-go-type: uint32
+        name:
+          type: string
+        server_type:
+          type: string
+          enum: [plex, jellyfin, emby]
+        url:
+          type: string
+        fallback:
+          type: boolean
+          description: True when url points to the server home, not the movie page.
+        status:
+          type: string
+          enum: [resolved, fallback, unavailable]
+
+    RenameOperation:
+      type: object
+      required: [media_file_id, from, to]
+      properties:
+        media_file_id:
+          type: integer
+          x-go-type: uint32
+        from:
+          type: string
+        to:
+          type: string
+
+    RenamePlan:
+      type: object
+      required: [movie_id, operations]
+      properties:
+        movie_id:
+          type: integer
+          x-go-type: uint32
+        operations:
+          type: array
+          items:
+            $ref: "#/components/schemas/RenameOperation"
+
+    SeriesRenamePlan:
+      type: object
+      required: [series_id, operations]
+      properties:
+        series_id:
+          type: integer
+          x-go-type: uint32
+        operations:
+          type: array
+          items:
+            $ref: "#/components/schemas/RenameOperation"
+
+    MovieSearchAccepted:
+      type: object
+      required: [movie_id, dispatched_at]
+      properties:
+        movie_id:
+          type: integer
+          x-go-type: uint32
+        dispatched_at:
+          type: string
+          format: date-time
+
+    QualityProfile:
+      type: object
+      required: [name, preferred_resolution, min_resolution, upgrade_allowed]
+      properties:
+        name:
+          type: string
+        preferred_resolution:
+          type: string
+          enum: ["720p", "1080p", "2160p"]
+        min_resolution:
+          type: string
+          enum: ["720p", "1080p", "2160p"]
+        upgrade_allowed:
+          type: boolean
+
+    QualityProfileCreate:
+      type: object
+      required: [name, preferred_resolution]
+      properties:
+        name:
+          type: string
+        preferred_resolution:
+          type: string
+          enum: ["720p", "1080p", "2160p"]
+        min_resolution:
+          type: string
+          enum: ["720p", "1080p", "2160p"]
+        upgrade_allowed:
+          type: boolean
+
+    Indexer:
+      type: object
+      required: [name, host, port, protocol, enabled, api_key_set]
+      properties:
+        name:
+          type: string
+        host:
+          type: string
+        port:
+          type: integer
+          x-go-type: uint16
+        path:
+          type: string
+        use_ssl:
+          type: boolean
+        api_key_set:
+          type: boolean
+          description: True when an API key is stored. The key itself is never returned.
+        protocol:
+          type: string
+          enum: [torznab, prowlarr]
+        priority:
+          type: integer
+          x-go-type: uint8
+        enabled:
+          type: boolean
+
+    IndexerCreate:
+      type: object
+      required: [name, host, port, api_key]
+      properties:
+        name:
+          type: string
+        host:
+          type: string
+        port:
+          type: integer
+          x-go-type: uint16
+        path:
+          type: string
+        use_ssl:
+          type: boolean
+        api_key:
+          type: string
+        protocol:
+          type: string
+          enum: [torznab, prowlarr]
+        priority:
+          type: integer
+          x-go-type: uint8
+        enabled:
+          type: boolean
+
+    DownloadClient:
+      type: object
+      required: [name, client_type, host, port, auth_method, enabled, api_key_set, password_set]
+      properties:
+        name:
+          type: string
+        client_type:
+          type: string
+          enum: [qbittorrent, transmission, deluge]
+        host:
+          type: string
+        port:
+          type: integer
+          x-go-type: uint16
+        auth_method:
+          type: string
+          enum: [password, api_key]
+        username:
+          type: string
+        use_ssl:
+          type: boolean
+        priority:
+          type: integer
+          x-go-type: uint8
+        enabled:
+          type: boolean
+        api_key_set:
+          type: boolean
+          description: True when an API key is stored. The key itself is never returned.
+        password_set:
+          type: boolean
+          description: True when a password is stored. The password itself is never returned.
+
+    DownloadClientCreate:
+      type: object
+      required: [name, client_type, host, port]
+      properties:
+        name:
+          type: string
+        client_type:
+          type: string
+          enum: [qbittorrent, transmission, deluge]
+        host:
+          type: string
+        port:
+          type: integer
+          x-go-type: uint16
+        auth_method:
+          type: string
+          enum: [password, api_key]
+        username:
+          type: string
+        password:
+          type: string
+        api_key:
+          type: string
+        use_ssl:
+          type: boolean
+        priority:
+          type: integer
+          x-go-type: uint8
+        enabled:
+          type: boolean
+
+    User:
+      type: object
+      required: [id, email, role, auth_method, created_at]
+      properties:
+        id:
+          type: integer
+          x-go-type: uint32
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [admin, member, request_only]
+        auth_method:
+          type: string
+          enum: [local, oidc, both]
+        display_name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        failed_login_count:
+          type: integer
+          x-go-type: uint8
+        locked_until:
+          type: string
+          format: date-time
+          nullable: true
+
+    JWTRotated:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+          description: New bearer token signed with the rotated secret.
+
+    Invite:
+      type: object
+      required: [id, role, expires_at, created_at]
+      properties:
+        id:
+          type: integer
+          x-go-type: uint32
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [admin, member, request_only]
+        expires_at:
+          type: string
+          format: date-time
+        used_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    CreateInviteRequest:
+      type: object
+      required: [email, role]
+      properties:
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [admin, member, request_only]
+        ttl:
+          type: string
+          default: "168h"
+          description: "Go duration string (e.g. 168h, 30m, 1h30m)"
+          pattern: '^(\d+(\.\d+)?(ns|us|µs|ms|s|m|h))+$'
+
+    InviteCreated:
+      allOf:
+        - $ref: "#/components/schemas/Invite"
+        - type: object
+          required: [raw_token, url]
+          properties:
+            raw_token:
+              type: string
+            url:
+              type: string
+              format: uri
+
+    ApiKey:
+      type: object
+      required: [id, name, created_at]
+      properties:
+        id:
+          type: integer
+          x-go-type: uint32
+        name:
+          type: string
+        last_used_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    ApiKeyCreated:
+      allOf:
+        - $ref: "#/components/schemas/ApiKey"
+        - type: object
+          required: [raw_token]
+          properties:
+            raw_token:
+              type: string
+
+    Session:
+      type: object
+      required: [id, created_at, expires_at, is_current]
+      properties:
+        id:
+          type: integer
+          x-go-type: uint32
+        ip:
+          type: string
+        user_agent:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        last_seen_at:
+          type: string
+          format: date-time
+          nullable: true
+        expires_at:
+          type: string
+          format: date-time
+        is_current:
+          type: boolean
+
+    UpdateMeRequest:
+      type: object
+      properties:
+        display_name:
+          type: string
+
+    ChangePasswordRequest:
+      type: object
+      required: [current_password, new_password]
+      properties:
+        current_password:
+          type: string
+          minLength: 8
+        new_password:
+          type: string
+          minLength: 8
+
+    CreateApiKeyRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+
+    UserList:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/User"
+        total:
+          type: integer
+          description: Total number of users matching the filter.
+          x-go-type: uint32
+
+    UserDetail:
+      type: object
+      required: [user, api_keys, sessions]
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        api_keys:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiKey"
+        sessions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Session"
+
+    CreateUserRequest:
+      type: object
+      required: [email, password, role]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+          description: Initial password. Must meet the local password policy.
+        role:
+          type: string
+          enum: [admin, member, request_only]
+        display_name:
+          type: string
+
+    UpdateUserRequest:
+      type: object
+      description: Only provided fields are applied.
+      properties:
+        email:
+          type: string
+          format: email
+          description: New email address. Must be unique across users.
+        role:
+          type: string
+          enum: [admin, member, request_only]
+        display_name:
+          type: string
+        auth_method:
+          type: string
+          enum: [local, oidc, both]
+
+    ResetPasswordRequest:
+      type: object
+      required: [new_password]
+      properties:
+        new_password:
+          type: string
+          minLength: 8
+          description: Replacement password. Must meet the local password policy.
+
+    AuthConfigView:
+      type: object
+      required: [registration_mode, session_ttl, oidc_default_role]
+      properties:
+        registration_mode:
+          type: string
+          enum: [disabled, open, invite]
+        session_ttl:
+          type: string
+          description: Go duration string (e.g. "168h", "30m").
+        oidc_default_role:
+          type: string
+          enum: [admin, member, request_only]
+
+    AuthConfigPatch:
+      type: object
+      description: Only provided fields are applied.
+      properties:
+        registration_mode:
+          type: string
+          enum: [disabled, open, invite]
+        session_ttl:
+          type: string
+          description: Go duration string (e.g. "168h", "30m").
+        oidc_default_role:
+          type: string
+          enum: [admin, member, request_only]
+
+    OIDCProviderView:
+      type: object
+      required: [name, issuer, client_id, client_secret_set]
+      properties:
+        name:
+          type: string
+        issuer:
+          type: string
+        client_id:
+          type: string
+        client_secret_set:
+          type: boolean
+          description: True when a client secret is configured. Raw secret is never returned.
+
+    OIDCProviderCreate:
+      type: object
+      required: [name, issuer, client_id, client_secret]
+      properties:
+        name:
+          type: string
+        issuer:
+          type: string
+          format: uri
+        client_id:
+          type: string
+        client_secret:
+          type: string
+
+    OIDCProviderPatch:
+      type: object
+      description: |
+        Only provided fields are applied. A blank/omitted client_secret
+        preserves the existing secret.
+      properties:
+        issuer:
+          type: string
+          format: uri
+        client_id:
+          type: string
+        client_secret:
+          type: string
+
+    OIDCProviderListView:
+      type: object
+      required: [providers, restart_required]
+      properties:
+        providers:
+          type: array
+          items:
+            $ref: "#/components/schemas/OIDCProviderView"
+        restart_required:
+          type: boolean
+          description: True when OIDC mutations are pending a process restart.
+
+    MediaServerListView:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/MediaServer"
+
+    MediaServer:
+      type: object
+      required: [name, server_type, host, enabled, api_key_set]
+      properties:
+        name:
+          type: string
+        server_type:
+          type: string
+          enum: [plex, jellyfin, emby]
+        host:
+          type: string
+        library_section:
+          type: string
+          nullable: true
+          description: Plex section key. Null on Jellyfin / Emby.
+        enabled:
+          type: boolean
+        api_key_set:
+          type: boolean
+          description: True when an API key/token is stored. The value itself is never returned.
+
+    MediaServerCreate:
+      type: object
+      required: [name, server_type, host, api_key]
+      properties:
+        name:
+          type: string
+        server_type:
+          type: string
+          enum: [plex, jellyfin, emby]
+        host:
+          type: string
+        api_key:
+          type: string
+        library_section:
+          type: string
+          nullable: true
+        enabled:
+          type: boolean
+
+    MediaServerUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        server_type:
+          type: string
+          enum: [plex, jellyfin, emby]
+        host:
+          type: string
+        api_key:
+          type: string
+        library_section:
+          type: string
+          nullable: true
+        enabled:
+          type: boolean
+
+    MediaServerDiscoveryRequest:
+      type: object
+      required: [server_type, host, api_key]
+      properties:
+        server_type:
+          type: string
+          enum: [plex, jellyfin, emby]
+        host:
+          type: string
+        api_key:
+          type: string
+
+    MediaServerDiscovery:
+      type: object
+      required: [sections]
+      properties:
+        sections:
+          type: array
+          items:
+            $ref: "#/components/schemas/MediaServerSection"
+
+    MediaServerSection:
+      type: object
+      required: [key, name, locations, type]
+      properties:
+        key:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+        locations:
+          type: array
+          items:
+            type: string
+
+    Schedule:
+      type: object
+      required:
+        - name
+        - interval
+        - paused
+        - system
+        - running
+        - status
+        - last_duration_ms
+      properties:
+        name:
+          type: string
+          description: Job identifier (e.g. "rss-sync").
+        interval:
+          type: string
+          description: Go duration string (e.g. "15m").
+          example: 15m
+        paused:
+          type: boolean
+        system:
+          type: boolean
+          description: Read-only system job. PATCH/pause/resume/run rejected.
+        running:
+          type: boolean
+          description: Whether the job is currently executing.
+        status:
+          type: string
+          enum: [never, success, error, skipped]
+        last_started_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_finished_at:
+          type: string
+          format: date-time
+          nullable: true
+        next_run_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_duration_ms:
+          type: integer
+          format: int32
+          minimum: 0
+        last_error:
+          type: string
+          nullable: true
+
+    ScheduleList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Schedule"
+
+    ScheduleUpdate:
+      type: object
+      required: [interval]
+      properties:
+        interval:
+          type: string
+          description: Go duration string. Minimum 10s.
+          example: 30m
+
+    ImportScan:
+      type: object
+      required:
+        [
+          id,
+          source_path,
+          kind,
+          mode,
+          status,
+          total_count,
+          processed_count,
+          commit_success_count,
+          commit_failed_count,
+          created_at,
+        ]
+      properties:
+        id:
+          type: integer
+          x-go-type: uint32
+        source_path:
+          type: string
+        kind:
+          type: string
+          enum: [movie, series]
+          description: Whether this scan reviews movie files or series folders.
+        mode:
+          type: string
+          enum: [in_place, rename]
+        import_mode:
+          type: string
+          enum: [hardlink, copy, move]
+          description: Per-scan transfer-mode override (rename mode only). Empty when using the global default.
+        status:
+          type: string
+          enum: [running, awaiting_review, committing, completed, cancelled, failed]
+        total_count:
+          type: integer
+          x-go-type: uint32
+        processed_count:
+          type: integer
+          x-go-type: uint32
+        commit_success_count:
+          type: integer
+          x-go-type: uint32
+        commit_failed_count:
+          type: integer
+          x-go-type: uint32
+        failure_reason:
+          type: string
+          nullable: true
+        scanned_at:
+          type: string
+          format: date-time
+          nullable: true
+        committed_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ImportScanCandidate:
+      type: object
+      required: [tmdb_id, title, year]
+      properties:
+        tmdb_id:
+          type: integer
+          x-go-type: uint32
+        title:
+          type: string
+        year:
+          type: integer
+          x-go-type: uint16
+
+    ImportScanFile:
+      type: object
+      required: [id, source_path, size, classification, decision, outcome]
+      properties:
+        id:
+          type: integer
+          x-go-type: uint32
+        source_path:
+          type: string
+        size:
+          type: integer
+          format: int64
+        parsed_title:
+          type: string
+        parsed_year:
+          type: integer
+          x-go-type: uint16
+          nullable: true
+        parsed_quality:
+          type: string
+        parsed_release_group:
+          type: string
+        classification:
+          type: string
+          enum: [confirmed, ambiguous, unmatched, existing]
+        candidates:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImportScanCandidate"
+        tmdb_id:
+          type: integer
+          x-go-type: uint32
+        existing_movie_id:
+          type: integer
+          x-go-type: uint32
+        decision:
+          type: string
+          enum: [pending, accept, skip]
+        decision_tmdb_id:
+          type: integer
+          x-go-type: uint32
+        outcome:
+          type: string
+          enum: [pending, created, attached, skipped, failed]
+        outcome_message:
+          type: string
+        created_movie_id:
+          type: integer
+          x-go-type: uint32
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ImportScanCreateRequest:
+      type: object
+      required: [source_path, mode]
+      properties:
+        source_path:
+          type: string
+        mode:
+          type: string
+          enum: [in_place, rename]
+        import_mode:
+          type: string
+          enum: [hardlink, copy, move]
+          description: |
+            Per-scan override of `library.import_mode`. Only meaningful when `mode=rename`.
+            Omit (or empty) to use the global default.
+
+    ImportScanFileDecisionRequest:
+      type: object
+      required: [decision]
+      properties:
+        decision:
+          type: string
+          enum: [pending, accept, skip]
+        tmdb_id:
+          type: integer
+          x-go-type: uint32
+
+    ImportScanList:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImportScan"
+        total:
+          type: integer
+          x-go-type: uint32
+
+    ImportScanFileList:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImportScanFile"
+        total:
+          type: integer
+          x-go-type: uint32
+
+    ImportScanShowCandidate:
+      type: object
+      required: [tvdb_id, title]
+      properties:
+        tvdb_id:
+          type: integer
+          x-go-type: uint32
+        title:
+          type: string
+        year:
+          type: integer
+          x-go-type: uint16
+
+    ImportScanShow:
+      type: object
+      required: [id, folder_path, classification, file_count, decision, outcome]
+      properties:
+        id:
+          type: integer
+          x-go-type: uint32
+        folder_path:
+          type: string
+        parsed_title:
+          type: string
+        parsed_year:
+          type: integer
+          x-go-type: uint16
+          nullable: true
+        classification:
+          type: string
+          enum: [confirmed, ambiguous, unmatched, existing]
+        tvdb_id:
+          type: integer
+          x-go-type: uint32
+          nullable: true
+        candidates:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImportScanShowCandidate"
+        existing_tvshow_id:
+          type: integer
+          x-go-type: uint32
+          nullable: true
+        file_count:
+          type: integer
+          x-go-type: uint16
+        decision:
+          type: string
+          enum: [pending, accept, skip]
+        decision_tvdb_id:
+          type: integer
+          x-go-type: uint32
+          nullable: true
+        outcome:
+          type: string
+          enum: [pending, created, failed]
+        outcome_message:
+          type: string
+        created_tvshow_id:
+          type: integer
+          x-go-type: uint32
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ImportScanShowList:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImportScanShow"
+        total:
+          type: integer
+          x-go-type: uint32
+
+    ImportScanShowDecisionRequest:
+      type: object
+      required: [decision]
+      properties:
+        decision:
+          type: string
+          enum: [pending, accept, skip]
+        tvdb_id:
+          type: integer
+          x-go-type: uint32
+
+    ActivityEvent:
+      type: object
+      required: [id, type, created_at, movie]
+      properties:
+        id:
+          type: integer
+          x-go-type: uint32
+        type:
+          type: string
+          enum:
+            [
+              grabbed,
+              download_completed,
+              download_failed,
+              imported,
+              import_failed,
+              drift_detected,
+              drift_confirmed,
+            ]
+        created_at:
+          type: string
+          format: date-time
+        payload:
+          type: object
+          additionalProperties: true
+        movie:
+          $ref: "#/components/schemas/Movie"
+
+    ActivityList:
+      type: object
+      required: [events]
+      properties:
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActivityEvent"
+        next_cursor:
+          type: string
+          nullable: true
+
+    EpisodeRef:
+      type: object
+      required: [show_title, season, episode]
+      description: |
+        Show + S/E context for a TV download record (queue/history rows render
+        "<show> · SxxExx" from it). Absent on movie records.
+      properties:
+        show_title: { type: string }
+        season: { type: integer, x-go-type: uint16 }
+        episode: { type: integer, x-go-type: uint16 }
+
+    QueueEntry:
+      type: object
+      required: [id, status, title, size, progress, created_at, movie]
+      properties:
+        id: { type: integer, x-go-type: uint32 }
+        status:
+          type: string
+          enum: [downloading, importing, paused, error]
+        title: { type: string }
+        quality: { type: string }
+        release_group: { type: string }
+        movie: { $ref: "#/components/schemas/Movie" }
+        episode: { $ref: "#/components/schemas/EpisodeRef" }
+        indexer: { type: string }
+        download_client: { type: string }
+        size: { type: integer, format: int64 }
+        progress: { type: number, format: double }
+        download_speed: { type: integer, format: int64 }
+        eta: { type: integer, format: int64 }
+        failure_reason: { type: string }
+        created_at: { type: string, format: date-time }
+
+    DownloadQueue:
+      type: object
+      required: [items, refreshed_at]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/QueueEntry" }
+        refreshed_at: { type: string, format: date-time }
+
+    HistoryEntry:
+      type: object
+      required: [id, status, title, size, created_at, updated_at, movie]
+      properties:
+        id: { type: integer, x-go-type: uint32 }
+        status:
+          type: string
+          enum: [completed, failed]
+        title: { type: string }
+        quality: { type: string }
+        release_group: { type: string }
+        movie: { $ref: "#/components/schemas/Movie" }
+        episode: { $ref: "#/components/schemas/EpisodeRef" }
+        indexer: { type: string }
+        download_client: { type: string }
+        size: { type: integer, format: int64 }
+        failure_reason: { type: string }
+        imported_at: { type: string, format: date-time, nullable: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    DownloadHistory:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/HistoryEntry" }
+        next_cursor: { type: string, nullable: true }
+
+    ClearCompletedResult:
+      type: object
+      required: [deleted]
+      properties:
+        deleted: { type: integer }
+
+    UpcomingMovie:
+      type: object
+      required: [id, title, year, tmdb_id, digital_release_date]
+      properties:
+        id:
+          type: integer
+          x-go-type: uint32
+        title:
+          type: string
+        year:
+          type: integer
+          x-go-type: uint16
+        tmdb_id:
+          type: integer
+          x-go-type: uint32
+        digital_release_date:
+          type: string
+          format: date-time
+
+    UpcomingEpisode:
+      type: object
+      required: [series_id, series_title, season, episode, air_date]
+      properties:
+        series_id:
+          type: integer
+          x-go-type: uint32
+        series_title:
+          type: string
+        season:
+          type: integer
+          x-go-type: uint16
+        episode:
+          type: integer
+          x-go-type: uint16
+        title:
+          type: string
+        air_date:
+          type: string
+          format: date-time
+        monitored:
+          type: boolean
+
+    UpcomingList:
+      type: object
+      required: [movies, episodes]
+      properties:
+        movies:
+          type: array
+          items:
+            $ref: "#/components/schemas/UpcomingMovie"
+        episodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/UpcomingEpisode"
+
+    SystemInfo:
+      type: object
+      required:
+        - app_name
+        - public_url
+        - https_warn
+        - auth_mode
+        - data_dir
+        - db_path
+        - version
+        - go_version
+        - go_os_arch
+      properties:
+        app_name:
+          type: string
+        public_url:
+          type: string
+        https_warn:
+          type: boolean
+          description: True when public_url is plain http://.
+        auth_mode:
+          type: string
+        data_dir:
+          type: string
+        data_usage:
+          $ref: "#/components/schemas/DiskUsage"
+        db_path:
+          type: string
+        db_size:
+          type: string
+          description: Human-readable file size, empty when stat fails.
+        db_usage:
+          $ref: "#/components/schemas/DiskUsage"
+        version:
+          type: string
+        commit:
+          type: string
+        built_at:
+          type: string
+        go_version:
+          type: string
+        go_os_arch:
+          type: string
+
+    DiskUsage:
+      type: object
+      required: [used, total, free, pct, kind]
+      properties:
+        used:
+          type: string
+        total:
+          type: string
+        free:
+          type: string
+        pct:
+          type: integer
+          x-go-type: uint8
+          description: 0–100, rounded down.
+        kind:
+          type: string
+          enum: [ok, warn, err]
+
+    RequestUser:
+      type: object
+      required: [id, email]
+      properties:
+        id:
+          type: integer
+          x-go-type: uint32
+        email:
+          type: string
+        display_name:
+          type: string
+
+    Request:
+      type: object
+      required: [id, media_type, media_id, title, status, requester, created_at, updated_at]
+      properties:
+        id:
+          type: integer
+          x-go-type: uint32
+        media_type:
+          type: string
+          enum: [movie, tvshow]
+        media_id:
+          type: integer
+          x-go-type: uint32
+          description: TMDB id for movies, TVDB id for shows.
+        title:
+          type: string
+        status:
+          type: string
+          enum: [pending, approved, denied, available]
+        reason:
+          type: string
+        requester:
+          $ref: "#/components/schemas/RequestUser"
+        approved_by:
+          $ref: "#/components/schemas/RequestUser"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    PaginatedRequests:
+      type: object
+      required: [items, total, page, limit]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Request"
+        total:
+          type: integer
+          x-go-type: uint32
+        page:
+          type: integer
+          x-go-type: uint32
+        limit:
+          type: integer
+          x-go-type: uint32
+
+    RequestCounts:
+      type: object
+      required: [pending, approved, denied, available]
+      properties:
+        pending:
+          type: integer
+        approved:
+          type: integer
+        denied:
+          type: integer
+        available:
+          type: integer
+
+    CreateRequestRequest:
+      type: object
+      required: [media_type, media_id, title]
+      properties:
+        media_type:
+          type: string
+          enum: [movie, tvshow]
+        media_id:
+          type: integer
+          x-go-type: uint32
+        title:
+          type: string
+
+    DenyRequestRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+
+    ApproveRequestRequest:
+      type: object
+      properties:
+        quality_profile:
+          type: string
+          description: Profile name; empty or omitted uses the server default.
+
+    RequestMediaDetails:
+      type: object
+      required: [overview]
+      properties:
+        poster_url:
+          type: string
+        overview:
+          type: string
+        year:
+          type: integer
+          x-go-type: uint16
+        rating:
+          type: number
+          format: float
+          x-go-type: float32
+        runtime:
+          type: integer
+          x-go-type: uint16
+        genres:
+          type: array
+          items:
+            type: string

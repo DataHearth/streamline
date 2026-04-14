@@ -1,0 +1,72 @@
+version: "2"
+
+formatters:
+  enable:
+    - gofumpt
+    - golines
+
+  exclusions:
+    generated: lax
+
+  settings:
+    golines:
+      max-len: 85
+
+linters:
+  default: standard
+
+  enable:
+    - unparam
+    - unconvert
+    - modernize
+    - prealloc
+    - ginkgolinter
+    - sloglint
+    - spancheck
+    - errorlint
+    - bodyclose
+
+  settings:
+    unparam:
+      check-exported: true
+    sloglint:
+      no-mixed-args: true
+      kv-only: true
+      context: all
+
+  exclusions:
+    generated: lax
+    rules:
+      - linters:
+          - errcheck
+        source: .*\.Close\(\)
+      - linters:
+          - errcheck
+        source: os\.Remove\(.*\)
+        path: .*_test.go$
+      - linters:
+          - errcheck
+        source: os\.(Setenv|Unsetenv)\(.*\)
+        path: .*_test.go$
+      # otelx.RecordSpanError returns the wrapped error for inline use
+      # (return ..., otelx.RecordSpanError(span, err)). Discard is fine
+      # when the caller logs and continues instead of returning.
+      - linters:
+          - errcheck
+        source: otelx\.RecordSpanError\(.*\)
+      # tx.Rollback() inside db.Tx helper: the outer fn error is the one
+      # we care about; a rollback error is not actionable and would shadow it.
+      - linters:
+          - errcheck
+        source: tx\.Rollback\(\)
+      # testutil package is test-only infrastructure; dot imports of
+      # ginkgo/gomega are idiomatic for Ginkgo test helpers.
+      - linters:
+          - staticcheck
+        text: "ST1001"
+        path: internal/testutil/
+      # slog.LogAttrs only accepts slog.Attr by API design; it's the documented
+      # way to log at observability.LevelCritical, so kv-only can't apply.
+      - linters:
+          - sloglint
+        source: slog\.LogAttrs

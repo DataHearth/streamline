@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "streamline.fullname" . }}-test-health"
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "streamline.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+    "helm.sh/hook-delete-policy": hook-succeeded
+spec:
+  restartPolicy: Never
+  containers:
+    - name: curl
+      image: curlimages/curl:8.10.1
+      command: ["sh", "-c"]
+      args:
+        - |
+          set -eu
+          for i in $(seq 1 30); do
+            if curl -fsS "http://{{ include "streamline.fullname" . }}:{{ .Values.service.port }}/health"; then
+              exit 0
+            fi
+            echo "health not ready, retry $i"; sleep 2
+          done
+          exit 1
