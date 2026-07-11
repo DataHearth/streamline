@@ -11,14 +11,13 @@ import (
 	"runtime"
 	"runtime/debug"
 	"strings"
-	"syscall"
 
 	"github.com/datahearth/streamline/internal/buildinfo"
 	"github.com/datahearth/streamline/internal/config"
 )
 
 // Snapshot is the read-only environment view. Pointer fields are nil when
-// the underlying probe fails (non-Linux statfs, missing DB file, etc.).
+// the underlying probe fails (statfs error, missing DB file, etc.).
 type Snapshot struct {
 	AppName   string
 	PublicURL string
@@ -107,19 +106,10 @@ func HumanBytes(n int64) string {
 	return fmt.Sprintf("%.1f %ciB", float64(n)/float64(div), "KMGTPE"[exp])
 }
 
-// DiskUsageFor reports volume-level usage for the directory at path. Returns
-// nil when statfs fails (non-Linux, missing dir, permission errors).
-func DiskUsageFor(path string) *DiskUsage {
-	if path == "" {
-		return nil
-	}
-	var st syscall.Statfs_t
-	if err := syscall.Statfs(path, &st); err != nil {
-		return nil
-	}
-	bsize := st.Bsize
-	total := int64(st.Blocks) * bsize
-	free := int64(st.Bavail) * bsize
+// diskUsage builds a DiskUsage from raw volume byte totals. free is the space
+// available to the current (unprivileged) user. Returns nil for a bogus total.
+// DiskUsageFor is provided per-platform (diskusage_{unix,windows}.go).
+func diskUsage(total, free int64) *DiskUsage {
 	if total <= 0 {
 		return nil
 	}
