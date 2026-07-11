@@ -266,10 +266,25 @@ tasks:
       - mkdir -p /tmp/streamline/helm
       - helm package deploy/helm/streamline -d /tmp/streamline/helm
 
+  release:tag:
+    desc: Cut a release — tag HEAD v*.*.* and push it, triggering the full CI pipeline (changelog, gh release, OCI, helm). Usage - task release:tag VERSION=v0.1.0
+    requires:
+      vars: [VERSION]
+    preconditions:
+      # A bad tag pushes fine but matches no CI glob — nothing releases. Fail first.
+      - sh: 'echo "{{.VERSION}}" | grep -qE "^v[0-9]+\.[0-9]+\.[0-9]+"'
+        msg: "VERSION must look like v0.1.0 or v0.1.0-alpha.1"
+    cmds:
+      # git, not jj: jj can't create or push tags. The tag push is the trigger —
+      # it fans out to .github/workflows/{image,release}.yaml.
+      - git tag -a {{.VERSION}} -m "{{.VERSION}}"
+      - git push origin {{.VERSION}}
+
   # --- Local release ------------------------------------------------------
-  # The full pipeline normally runs in CI on a v*.*.* tag push (see
-  # .github/workflows/{image,release}.yaml). These targets cut a release from
-  # a workstation instead — e.g. an alpha to smoke-test in a real cluster.
+  # release:tag above is the real path — CI does everything on the tag push.
+  # The targets below cut a release from a workstation instead (e.g. an alpha
+  # to smoke-test in a real cluster), reusing the same steps CI runs. See
+  # .github/workflows/{image,release}.yaml.
   # Requires `docker login ghcr.io` and `helm registry login ghcr.io`.
 
   release:image:
@@ -302,12 +317,8 @@ tasks:
       - helm push /tmp/streamline/helm/streamline-{{trimPrefix "v" .VERSION}}.tgz
         oci://ghcr.io/datahearth/charts
 
-  release:gh:
-    desc: Cut the GitHub release from the current git tag via goreleaser (needs a pushed v*.*.* tag + GITHUB_TOKEN; goreleaser/cosign/syft on PATH)
-    cmd: goreleaser release --clean
-
   release:
-    desc: Local k8s-deployable release - image + helm chart, both stamped to VERSION (run release:gh separately for the GitHub binary release). Usage - task release VERSION=v0.1.0-alpha.1
+    desc: Local k8s-deployable release - image + helm chart, both stamped to VERSION. Usage - task release VERSION=v0.1.0-alpha.1
     requires:
       vars: [VERSION]
     cmds:
