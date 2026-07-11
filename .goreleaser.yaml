@@ -66,11 +66,12 @@ changelog:
   use: github
   sort: asc
   filters:
+    # Optional (scope) — matches both `docs:` and `docs(readme):`.
     exclude:
-      - "^docs:"
-      - "^test:"
-      - "^chore:"
-      - "^ci:"
+      - '^docs(\(.+\))?:'
+      - '^test(\(.+\))?:'
+      - '^chore(\(.+\))?:'
+      - '^ci(\(.+\))?:'
 
 release:
   github:

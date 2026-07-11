@@ -101,7 +101,7 @@ Unified media management platform replacing the *arr stack (Radarr, Sonarr, Lida
 - Don't re-run `jj describe` on a commit you're already working in — message is set once per task.
 - If working copy holds unrelated leftover edits (e.g. settings.json), describe them into their own commit *before* `jj new` for feature work.
 - Abandon empty working-copy commits after no-artifact steps (smoke tests, manual verification): `jj abandon @`.
-- Commit messages: Conventional Commits TYPE ONLY — no `(scope)`. Bundle related changes; avoid single-file revisions.
+- Commit messages: Conventional Commits `type(scope): msg` — add a `(scope)` where it clarifies, omit it when it doesn't. Bundle related changes; avoid single-file revisions.
 
 ## Project Structure
 - `api/openapi.yaml` — OpenAPI spec (source of truth for REST API)
