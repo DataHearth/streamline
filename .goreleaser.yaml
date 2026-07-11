@@ -54,11 +54,12 @@ signs:
   - id: checksums
     cmd: cosign
     artifacts: checksum
+    # cosign v3 sign-blob only emits the new bundle format (cert + sig in one file).
+    signature: "${artifact}.bundle"
     args:
       - sign-blob
       - "--yes"
-      - "--output-signature=${signature}"
-      - "--output-certificate=${certificate}"
+      - "--bundle=${signature}"
       - "${artifact}"
     output: true
 
