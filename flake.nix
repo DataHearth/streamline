@@ -72,6 +72,7 @@
             ];
             packages = with pkgs; [
               act
+              git-cliff
               go
               gopls
               nodejs

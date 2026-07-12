@@ -266,18 +266,32 @@ tasks:
       - mkdir -p /tmp/streamline/helm
       - helm package deploy/helm/streamline -d /tmp/streamline/helm
 
+  release:changelog:
+    desc: Regenerate CHANGELOG.md through VERSION from the conventional commits. Usage - task release:changelog VERSION=v0.1.0
+    requires:
+      vars: [VERSION]
+    cmd: git-cliff --tag {{.VERSION}} -o CHANGELOG.md
+
   release:tag:
-    desc: Cut a release — tag HEAD v*.*.* and push it, triggering the full CI pipeline (changelog, gh release, OCI, helm). Usage - task release:tag VERSION=v0.1.0
+    desc: Cut a release — tag main v*.*.* and push it, triggering the full CI pipeline (changelog, gh release, OCI, helm). Usage - task release:tag VERSION=v0.1.0
     requires:
       vars: [VERSION]
     preconditions:
       # A bad tag pushes fine but matches no CI glob — nothing releases. Fail first.
       - sh: 'echo "{{.VERSION}}" | grep -qE "^v[0-9]+\.[0-9]+\.[0-9]+"'
         msg: "VERSION must look like v0.1.0 or v0.1.0-alpha.1"
+      # Read the tag target, not the working copy: CHANGELOG.md is only in the
+      # release once it is committed, and an uncommitted one must not pass.
+      - sh: 'V="{{.VERSION}}"; git show main:CHANGELOG.md 2>/dev/null | grep -q "^## \[${V#v}\]"'
+        msg: "main has no CHANGELOG.md section for {{.VERSION}} — run: task release:changelog VERSION={{.VERSION}}, then commit it"
     cmds:
       # git, not jj: jj can't create or push tags. The tag push is the trigger —
       # it fans out to .github/workflows/{image,release}.yaml.
-      - git tag -a {{.VERSION}} -m "{{.VERSION}}"
+      #
+      # main, not HEAD: jj parks git HEAD on @- while @ is the working-copy
+      # commit, so HEAD is one commit behind the bookmark whenever the working
+      # copy holds anything. Tag the bookmark that is actually being released.
+      - git tag -a {{.VERSION}} main -m "{{.VERSION}}"
       - git push origin {{.VERSION}}
 
   # --- Local release ------------------------------------------------------
