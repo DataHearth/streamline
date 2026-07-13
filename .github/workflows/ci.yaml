@@ -163,6 +163,52 @@ jobs:
               - 'deploy/helm/**'
               - 'deploy/grafana/dashboards/**'
 
+      # A published chart version is immutable in practice — re-pushing it
+      # silently swaps the artifact under everyone who pinned it. Touch the
+      # chart, bump the chart.
+      - name: Chart version must be bumped
+        if: steps.filter.outputs.helm == 'true' && github.event_name == 'pull_request'
+        run: |
+          git fetch --depth=1 origin "${GITHUB_BASE_REF}"
+          chart=deploy/helm/streamline/Chart.yaml
+          read_version() { sed -n 's/^version: *//p'; }
+          head_v=$(read_version < "$chart")
+          base_v=$(git show "origin/${GITHUB_BASE_REF}:${chart}" | read_version)
+
+          if [ "$head_v" = "$base_v" ]; then
+            echo "::error file=${chart}::chart changed but version is still ${head_v} — bump it"
+            exit 1
+          fi
+          # sort -V so 0.10.0 > 0.9.0; a backwards bump is as broken as none.
+          newest=$(printf '%s\n%s\n' "$base_v" "$head_v" | sort -V | tail -1)
+          if [ "$newest" != "$head_v" ]; then
+            echo "::error file=${chart}::version went backwards: ${base_v} -> ${head_v}"
+            exit 1
+          fi
+          echo "chart version ${base_v} -> ${head_v}"
+
+      # imageRef defaults image.tag to .Chart.AppVersion, so a typo'd or
+      # v-prefixed appVersion ships a chart that ImagePullBackOffs on install.
+      - name: appVersion must reference a real image
+        if: steps.filter.outputs.helm == 'true'
+        run: |
+          chart=deploy/helm/streamline/Chart.yaml
+          app_version=$(sed -n 's/^appVersion: *//p' "$chart" | tr -d '"')
+          repo=$(sed -n 's|^  repository: *||p' deploy/helm/streamline/values.yaml | head -1)
+          path=${repo#ghcr.io/}
+
+          token=$(curl -fsSL "https://ghcr.io/token?scope=repository:${path}:pull&service=ghcr.io" | jq -r .token)
+          code=$(curl -sSL -o /dev/null -w '%{http_code}' \
+            -H "Authorization: Bearer ${token}" \
+            -H 'Accept: application/vnd.oci.image.index.v1+json,application/vnd.docker.distribution.manifest.list.v2+json' \
+            "https://ghcr.io/v2/${path}/manifests/${app_version}")
+
+          if [ "$code" != "200" ]; then
+            echo "::error file=${chart}::appVersion ${app_version} has no image at ${repo} (HTTP ${code}) — the chart would not install"
+            exit 1
+          fi
+          echo "${repo}:${app_version} exists"
+
       - name: Install Task
         if: steps.filter.outputs.helm == 'true'
         uses: arduino/setup-task@v2

@@ -67,39 +67,5 @@ jobs:
             echo "❌ GoReleaser failed" >> "$GITHUB_STEP_SUMMARY"
           fi
 
-  publish-chart:
-    needs: goreleaser
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Install Task
-        uses: arduino/setup-task@v2
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Install Helm
-        uses: azure/setup-helm@v4
-        with:
-          version: v3.19.1
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Package + push chart
-        run: task release:helm VERSION=${{ github.ref_name }}
-
-      - name: Summary
-        if: always()
-        run: |
-          echo "### Helm Chart" >> "$GITHUB_STEP_SUMMARY"
-          if [ "${{ job.status }}" = "success" ]; then
-            echo "✅ Chart published — \`${{ github.ref_name }}\` → \`oci://ghcr.io/datahearth/charts\`" >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "❌ Chart publish failed" >> "$GITHUB_STEP_SUMMARY"
-          fi
+# The chart is not published here — it versions independently of the app and
+# ships on its own chart-v* tag. See .github/workflows/chart.yaml.

@@ -2,8 +2,10 @@ apiVersion: v2
 name: streamline
 description: Unified media management platform (arr stack replacement).
 type: application
-version: 0.1.0
-appVersion: "0.1.0"
+# Chart version is independent of the app: bump it for any chart change.
+# appVersion is the app release the chart deploys — it is the image tag.
+version: 1.0.1
+appVersion: "1.0.0"
 kubeVersion: ">=1.27.0-0"
 home: https://github.com/DataHearth/streamline
 sources:

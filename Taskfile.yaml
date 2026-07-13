@@ -273,7 +273,7 @@ tasks:
     cmd: git-cliff --tag {{.VERSION}} -o CHANGELOG.md
 
   release:tag:
-    desc: Cut a release — tag main v*.*.* and push it, triggering the full CI pipeline (changelog, gh release, OCI, helm). Usage - task release:tag VERSION=v0.1.0
+    desc: Cut an app release — tag main v*.*.* and push it, triggering changelog, gh release and OCI image. Usage - task release:tag VERSION=v0.1.0
     requires:
       vars: [VERSION]
     preconditions:
@@ -293,6 +293,29 @@ tasks:
       # copy holds anything. Tag the bookmark that is actually being released.
       - git tag -a {{.VERSION}} main -m "{{.VERSION}}"
       - git push origin {{.VERSION}}
+      # The chart is NOT released here — it versions independently. Point it at
+      # this image by bumping appVersion + version in Chart.yaml, then: task chart:tag
+
+  # --- Chart release ------------------------------------------------------
+  # The chart has its own semver, independent of the app: a values/template fix
+  # ships without an app release, and an app release ships without a chart bump.
+  # Chart.yaml is the source of truth for both numbers — chart:tag reads them,
+  # nothing stamps them at package time.
+
+  chart:tag:
+    desc: Cut a chart release — tag main chart-v<Chart.yaml version> and push it, triggering .github/workflows/chart.yaml
+    vars:
+      CHART_VERSION:
+        sh: "sed -n 's/^version: *//p' deploy/helm/streamline/Chart.yaml"
+    preconditions:
+      # Tag the committed chart, not the working copy — CI packages from the tag.
+      - sh: 'git show main:deploy/helm/streamline/Chart.yaml | grep -q "^version: {{.CHART_VERSION}}$"'
+        msg: "main's Chart.yaml is not at version {{.CHART_VERSION}} — commit the bump first"
+      - sh: '! git rev-parse -q --verify refs/tags/chart-v{{.CHART_VERSION}} >/dev/null'
+        msg: "chart-v{{.CHART_VERSION}} already exists — bump version in deploy/helm/streamline/Chart.yaml"
+    cmds:
+      - git tag -a chart-v{{.CHART_VERSION}} main -m "chart-v{{.CHART_VERSION}}"
+      - git push origin chart-v{{.CHART_VERSION}}
 
   # --- Local release ------------------------------------------------------
   # release:tag above is the real path — CI does everything on the tag push.
@@ -308,35 +331,36 @@ tasks:
     vars:
       # ponytail: covers typical clusters; override PLATFORMS=linux/amd64 to narrow.
       PLATFORMS: '{{.PLATFORMS | default "linux/amd64,linux/arm64"}}'
+      # CI's docker/metadata-action strips the leading v from semver tags. Match it,
+      # or a locally-cut release lands on tags no chart ever references.
+      VER: '{{trimPrefix "v" .VERSION}}'
     cmd: |
       docker buildx build --push \
         --platform {{.PLATFORMS}} \
         -f deploy/Dockerfile \
-        -t ghcr.io/datahearth/streamline:{{.VERSION}} \
-        --build-arg VERSION={{.VERSION}} \
+        -t ghcr.io/datahearth/streamline:{{.VER}} \
+        --build-arg VERSION={{.VER}} \
         --build-arg COMMIT="$(git rev-parse --short HEAD)" \
         --build-arg BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
         .
 
   release:helm:
-    desc: Package + push helm chart to GHCR OCI, stamped to VERSION (usage - task release:helm VERSION=v0.1.0-alpha.1)
+    desc: Package + push the helm chart to GHCR OCI at the version in Chart.yaml (usage - task release:helm)
     deps: [helm:prep]
-    requires:
-      vars: [VERSION]
+    vars:
+      CHART_VERSION:
+        sh: "sed -n 's/^version: *//p' deploy/helm/streamline/Chart.yaml"
     cmds:
       - mkdir -p /tmp/streamline/helm
-      - helm package deploy/helm/streamline
-        --version {{trimPrefix "v" .VERSION}} --app-version {{.VERSION}}
-        -d /tmp/streamline/helm
-      - helm push /tmp/streamline/helm/streamline-{{trimPrefix "v" .VERSION}}.tgz
+      - helm package deploy/helm/streamline -d /tmp/streamline/helm
+      - helm push /tmp/streamline/helm/streamline-{{.CHART_VERSION}}.tgz
         oci://ghcr.io/datahearth/charts
 
   release:
-    desc: Local k8s-deployable release - image + helm chart, both stamped to VERSION. Usage - task release VERSION=v0.1.0-alpha.1
+    desc: Local k8s-deployable release - image at VERSION + chart at its own Chart.yaml version. Usage - task release VERSION=v0.1.0-alpha.1
     requires:
       vars: [VERSION]
     cmds:
       - task: release:image
         vars: {VERSION: "{{.VERSION}}"}
       - task: release:helm
-        vars: {VERSION: "{{.VERSION}}"}

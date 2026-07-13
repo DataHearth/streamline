@@ -73,6 +73,8 @@ helm install streamline oci://ghcr.io/datahearth/charts/streamline \
 
 Pin a version with `--version X.Y.Z`; omit it to pull the latest release.
 
+The chart is versioned independently of Streamline itself — a chart fix ships without an app release, and an app release ships without a chart bump. `--version` selects the *chart*; the app version it deploys is the chart's `appVersion` (override with `--set image.tag=X.Y.Z`). App releases are tagged `vX.Y.Z`, chart releases `chart-vX.Y.Z`.
+
 ### Binary (from GitHub releases)
 
 Download from [Releases](https://github.com/datahearth/streamline/releases/latest). Binaries available for:
