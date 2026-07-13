@@ -2,7 +2,7 @@
 openapi: "3.0.4"
 info:
   title: Streamline API
-  version: 0.1.0
+  version: 1.0.0
   description: |
     REST API for Streamline, a unified media management platform that replaces
     the *arr stack (Radarr, Sonarr, Lidarr, Readarr) and Seerr. Provides
