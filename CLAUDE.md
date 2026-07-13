@@ -1,6 +1,6 @@
 # Streamline
 
-Unified media management platform replacing the *arr stack (Radarr, Sonarr, Lidarr, Readarr) and Seerr. Single self-hosted binary with a slick web UI, REST API for mobile developers, multi-user support with SSO, built-in request system, and automatic media organization. Supports Torznab indexers, torrent download clients (qBittorrent, Transmission, Deluge), and media server notifications (Plex, Jellyfin, Emby).
+Unified media management platform replacing the *arr stack (Radarr, Sonarr, Lidarr, Readarr) and Seerr. Single self-hosted binary with a slick web UI, REST API for mobile developers, multi-user support with SSO, built-in request system, and automatic media organization. Supports Torznab and Prowlarr indexers, torrent download clients (qBittorrent, Transmission, Deluge), and media server notifications (Plex, Jellyfin, Emby). Shipped v1.0.0; music, books, a built-in torrent client and a player are planned (`docs/ROADMAP.md`).
 
 ## Stack
 - Go monolith: chi + oapi-codegen (OpenAPI → server) + ent ORM + modernc.org/sqlite (CGO-free)
@@ -96,6 +96,11 @@ Unified media management platform replacing the *arr stack (Radarr, Sonarr, Lida
 - Lint: `task lint` (`lint:go` golangci-lint + `lint:frontend` biome). Format: `task fmt` (`golangci-lint fmt` + `biome format --write`) — Biome, not prettier.
 - Clean: `task clean`.
 
+## Release
+- App and chart version independently. App release: `task release:changelog VERSION=vX.Y.Z` → commit the CHANGELOG → `task release:tag VERSION=vX.Y.Z` (tags `main`, push fans out to `.github/workflows/{release,image}.yaml`). Chart release: bump `version` in `deploy/helm/streamline/Chart.yaml` → commit → `task chart:tag` (tags `chart-vX.Y.Z`, triggers `.github/workflows/chart.yaml`).
+- Artifacts come from goreleaser (`.goreleaser.yaml`): CGO-free binaries for linux/darwin/windows × amd64/arm64, archives carry `config.example.yaml`, `checksums.txt` is cosign-signed (bundle format), one SPDX SBOM per archive. Images are cosign-signed keyless + SBOM-attested + grype-scanned in `image.yaml`.
+- `release:tag` / `chart:tag` / `release:image` / `release:helm` publish for real and have no dry-run. Never run one to "test" it — only exercise a precondition's failure path.
+
 ## Version Control
 - Repository uses jj (Jujutsu) with a git backend. Commit a task with `jj new -m "msg"` (creates empty child, auto-snapshots subsequent work). Seal a task by starting the next with `jj new -m "..."`.
 - Don't re-run `jj describe` on a commit you're already working in — message is set once per task.
@@ -109,7 +114,9 @@ Unified media management platform replacing the *arr stack (Radarr, Sonarr, Lida
 - `ent/schema/` — ent ORM schemas
 - `web/app/` — Svelte 5 SPA (`routes/`, `components/`, `lib/`); `web/static/` — CSS/JS/fonts/images; `web/embed.go` `//go:embed`s the built assets + SPA shell
 - `docs/plans/` — design docs and plans (gitignored, local only)
-- `deploy/` — Dockerfile + Helm charts
+- `docs/ROADMAP.md` — public, user-facing feature status (Shipped / In progress / Planned). Not an internal phase list; update it when a feature ships or starts.
+- `CHANGELOG.md` — generated from conventional commits by git-cliff (`task release:changelog VERSION=vX.Y.Z`); don't hand-write entries.
+- `deploy/` — Dockerfile + Helm charts + `compose.yaml` (local test stack: gluetun VPN + qBittorrent + Prowlarr + Plex, builds from source — *not* a user deployment template)
 - `deploy/helm/streamline/` — streamline chart (installs to `streamline` ns). Optional subchart `charts/observability/` installs upstream alloy/VM/VL/VT/grafana into `observability` ns via `namespaceOverride`.
 - `deploy/helm/streamline/kubeconfig.yaml` — kind cluster kubeconfig (auto-exported by `task helm:kind:up`; flake devshell sets `KUBECONFIG` to this path).
 
