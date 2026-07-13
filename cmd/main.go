@@ -44,7 +44,7 @@ func main() {
 	cmd := &cli.Command{
 		Name:        "streamline",
 		Usage:       "unified media management platform",
-		Description: "Self-hosted unified media manager. Replaces the *arr stack (Radarr, Sonarr, Lidarr, Readarr) and Overseerr with a single binary.",
+		Description: "Self-hosted unified media manager. Replaces the *arr stack (Radarr, Sonarr, Lidarr, Readarr) and Seerr with a single binary.",
 		Version:     versionString(),
 		Flags: []cli.Flag{
 			&cli.StringFlag{

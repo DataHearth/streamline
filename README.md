@@ -6,7 +6,7 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/datahearth/streamline)](go.mod)
 
-Self-hosted unified media manager. Replaces the \*arr stack (Radarr, Sonarr, Lidarr, Readarr) and Overseerr with a single binary.
+Self-hosted unified media manager. Replaces the \*arr stack (Radarr, Sonarr, Lidarr, Readarr) and Seerr with a single binary.
 
 <!-- ![Screenshot](docs/screenshot.png) -->
 
@@ -14,7 +14,7 @@ Self-hosted unified media manager. Replaces the \*arr stack (Radarr, Sonarr, Lid
 
 - Unified movie & TV library (music & books planned)
 - Multi-user with SSO
-- Built-in request system (Overseerr replacement)
+- Built-in request system (Seerr replacement)
 - Torznab indexer support
 - Torrent download clients: qBittorrent (Transmission & Deluge planned)
 - Media server notifications: Plex, Jellyfin, Emby

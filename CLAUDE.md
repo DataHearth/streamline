@@ -1,6 +1,6 @@
 # Streamline
 
-Unified media management platform replacing the *arr stack (Radarr, Sonarr, Lidarr, Readarr) and Overseerr. Single self-hosted binary with a slick web UI, REST API for mobile developers, multi-user support with SSO, built-in request system, and automatic media organization. Supports Torznab indexers, torrent download clients (qBittorrent, Transmission, Deluge), and media server notifications (Plex, Jellyfin, Emby).
+Unified media management platform replacing the *arr stack (Radarr, Sonarr, Lidarr, Readarr) and Seerr. Single self-hosted binary with a slick web UI, REST API for mobile developers, multi-user support with SSO, built-in request system, and automatic media organization. Supports Torznab indexers, torrent download clients (qBittorrent, Transmission, Deluge), and media server notifications (Plex, Jellyfin, Emby).
 
 ## Stack
 - Go monolith: chi + oapi-codegen (OpenAPI → server) + ent ORM + modernc.org/sqlite (CGO-free)
