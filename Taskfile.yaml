@@ -25,13 +25,11 @@ tasks:
       - "**/*.go"
       - exclude: "**/*_test.go"
       - exclude: "**/mocks/**"
-      # Embedded assets — keep in sync with web/embed.go.
-      - web/static/css/style.css
-      - web/static/css/docs.min.css
-      - web/static/js/docs.min.js
-      - web/static/dist/spa.min.js
-      - web/static/images/**
-      - web/static/fonts/**
+      # Embedded assets (web/embed.go). Globbed, not enumerated: a hand-listed
+      # subset drifts silently — it once missed spa.min.css and embedded a stale
+      # bundle. The only non-embedded files here (input.css, docs.js) are bundle
+      # inputs, so they never trigger a rebuild that wasn't already due.
+      - web/static/**
       - web/app/index.html
       - web/api_docs.html
     generates:
@@ -61,6 +59,7 @@ tasks:
       - web/static/js/docs.min.js
       - web/static/css/docs.min.css
       - web/static/dist/spa.min.js
+      - web/static/dist/spa.min.css
 
   build:css:
     desc: Build TailwindCSS
