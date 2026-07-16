@@ -94,7 +94,7 @@ var _ = Describe("Manager.Grab", Label("integration", "downloads"), func() {
 			SetStatus(movie.StatusWanted).Save(ctx)
 		Expect(err).NotTo(HaveOccurred())
 
-		mgr = New(db.New(dbClient))
+		mgr = New(db.New(dbClient), nil)
 	})
 
 	It("returns add_torrent_failed when qBittorrent rejects the magnet", func() {
@@ -217,7 +217,7 @@ var _ = Describe("Manager.CheckStatus", Label("integration", "downloads"), func(
 			Save(ctx)
 		Expect(err).NotTo(HaveOccurred())
 
-		mgr = New(db.New(dbClient))
+		mgr = New(db.New(dbClient), nil)
 	})
 
 	It("returns completed downloads and flips record status to importing", func() {
@@ -281,7 +281,7 @@ var _ = Describe("Manager.CheckStatus orphan reconciliation",
 				SetCreateTime(time.Now().Add(-age)).Save(ctx)
 			Expect(err).NotTo(HaveOccurred())
 
-			return dbClient, New(db.New(dbClient)), rec.ID, m.ID
+			return dbClient, New(db.New(dbClient), nil), rec.ID, m.ID
 		}
 
 		It(
@@ -355,7 +355,7 @@ var _ = Describe("Manager.RemoveTorrent", Label("integration", "downloads"), fun
 		host, port := splitHostPort(ts.URL)
 		qbitClientConfig("qbit-rm", host, port)
 
-		mgr := New(db.New(dbClient))
+		mgr := New(db.New(dbClient), nil)
 		Expect(mgr.RemoveTorrent(ctx, "qbit-rm", "abc123")).To(Succeed())
 		Expect(gotHashes).To(Equal("abc123"))
 		Expect(gotDeleteFiles).To(Equal("false"))
@@ -408,7 +408,7 @@ var _ = Describe("Manager.CheckStatus logging",
 				SetMovieID(m.ID).SetDownloadClientName("qbit-test").Save(ctx)
 			Expect(err).NotTo(HaveOccurred())
 
-			mgr = New(db.New(dbClient))
+			mgr = New(db.New(dbClient), nil)
 		})
 
 		It("warns when the record's torrent is not found in the client", func() {
@@ -478,7 +478,7 @@ var _ = Describe("Manager.PurgeOrphanedTorrents",
 			Expect(err).NotTo(HaveOccurred())
 			recID = rec.ID
 
-			mgr = New(db.New(dbClient))
+			mgr = New(db.New(dbClient), nil)
 		}
 
 		It(

@@ -179,15 +179,18 @@ type Adopter interface {
 // download coordinates sending torrents to download clients and tracking
 // their progress in the database.
 type download struct {
-	db db.Store
+	db      db.Store
+	builtin Client // engine for client_type "builtin"; nil when not configured
 
 	qmu   sync.Mutex
 	qSnap []QueueEntry
 	qAt   time.Time
 }
 
-func New(store db.Store) Downloader {
-	return &download{db: store}
+// New builds the download manager. builtin may be nil (no engine configured);
+// callers must pass an untyped nil, not a typed-nil concrete pointer.
+func New(store db.Store, builtin Client) Downloader {
+	return &download{db: store, builtin: builtin}
 }
 
 const queueRefreshTTL = 2 * time.Second
@@ -892,6 +895,14 @@ func (d *download) buildClient(dc config.DownloadClientEntry) (Client, error) {
 			baseURL,
 			config.SecretValue(dc.Password, dc.PasswordFile),
 		), nil
+	case "builtin":
+		if d.builtin == nil {
+			return nil, fmt.Errorf(
+				"%w: builtin engine not running (restart required)",
+				ErrUnsupportedClient,
+			)
+		}
+		return d.builtin, nil
 	default:
 		return nil, fmt.Errorf("%w: %s", ErrUnsupportedClient, dc.ClientType)
 	}

@@ -157,7 +157,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		return nil, fmt.Errorf("create posters service: %w", err)
 	}
 	indexerSvc := indexer.New()
-	dlManager := download.New(store)
+	dlManager := download.New(store, nil)
 	movieSvc := movie.NewService(store, tmdb, postersSvc, dlManager)
 	tvSvc := tvshow.NewService(store, tvdb, postersSvc, dlManager)
 	mediaServerSvc := mediaserver.New()

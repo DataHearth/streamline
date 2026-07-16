@@ -83,7 +83,7 @@ var _ = Describe(
 
 			store := db.New(dbClient)
 			srv := New(Deps{
-				Downloads: download.New(store),
+				Downloads: download.New(store, nil),
 			})
 			r := chi.NewRouter()
 			// Inject an admin identity so requireAdmin-gated CRUD handlers run.

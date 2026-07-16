@@ -12,6 +12,7 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/internal/config"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
@@ -27,7 +28,7 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 		store = dbmocks.NewMockStore(GinkgoT())
-		mgr = New(store)
+		mgr = New(store, nil)
 	})
 
 	Describe("Grab", func() {
@@ -246,5 +247,48 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 				Return(nil, &ent.NotFoundError{}).Once()
 			Expect(ent.IsNotFound(mgr.PauseQueueItem(ctx, 1))).To(BeTrue())
 		})
+	})
+})
+
+// stubClient is a no-op Client used to assert buildClient returns the injected
+// builtin engine by pointer identity. A local stub (rather than
+// download/mocks) keeps this internal test package free of the import cycle
+// download/mocks → download.
+type stubClient struct{}
+
+func (stubClient) AddTorrent(context.Context, TorrentSource) (string, error) {
+	return "", nil
+}
+
+func (stubClient) GetTorrent(context.Context, string) (*Torrent, error) {
+	return nil, nil
+}
+
+func (stubClient) ListTorrents(context.Context) ([]Torrent, error) {
+	return nil, nil
+}
+func (stubClient) RemoveTorrent(context.Context, string, bool) error { return nil }
+func (stubClient) PauseTorrent(context.Context, string) error        { return nil }
+func (stubClient) ResumeTorrent(context.Context, string) error       { return nil }
+func (stubClient) TestConnection(context.Context) error              { return nil }
+
+var _ = Describe("buildClient builtin", Label("unit", "downloads"), func() {
+	It("returns the injected engine", func() {
+		engine := &stubClient{}
+		d := New(nil, engine).(*download)
+		c, err := d.buildClient(config.DownloadClientEntry{
+			ClientType: "builtin", Name: "embedded",
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(c).To(BeIdenticalTo(engine))
+	})
+
+	It("errors when no engine is running", func() {
+		d := New(nil, nil).(*download)
+		_, err := d.buildClient(config.DownloadClientEntry{
+			ClientType: "builtin", Name: "embedded",
+		})
+		Expect(err).To(MatchError(ErrUnsupportedClient))
+		Expect(err.Error()).To(ContainSubstring("restart"))
 	})
 })

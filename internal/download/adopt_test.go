@@ -186,7 +186,7 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 		BeforeEach(func() {
 			ctx = context.Background()
 			store = dbmocks.NewMockStore(GinkgoT())
-			mgr = New(store).(Adopter)
+			mgr = New(store, nil).(Adopter)
 		})
 
 		It("returns the error when listing known hashes fails", func() {

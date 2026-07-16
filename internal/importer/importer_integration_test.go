@@ -160,7 +160,7 @@ var _ = Describe("Import pipeline", Label("integration", "importer"), func() {
 				Save(ctx)
 			Expect(err).NotTo(HaveOccurred())
 
-			dlManager := download.New(store)
+			dlManager := download.New(store, nil)
 			libSvc := library.NewImportService(&config.Get().Library)
 			dispatcher := mediaserver.NewDispatcher()
 			w := importer.NewWorker(importer.Deps{
@@ -263,7 +263,7 @@ var _ = Describe("Import pipeline", Label("integration", "importer"), func() {
 			Save(ctx)
 		Expect(err).NotTo(HaveOccurred())
 
-		dlManager := download.New(store)
+		dlManager := download.New(store, nil)
 		libSvc := library.NewImportService(&config.Get().Library)
 		dispatcher := mediaserver.NewDispatcher()
 		w := importer.NewWorker(importer.Deps{
@@ -350,7 +350,7 @@ var _ = Describe("Import pipeline", Label("integration", "importer"), func() {
 				Save(ctx)
 			Expect(err).NotTo(HaveOccurred())
 
-			dlManager := download.New(store)
+			dlManager := download.New(store, nil)
 			libSvc := library.NewImportService(&config.Get().Library)
 			dispatcher := mediaserver.NewDispatcher()
 			w := importer.NewWorker(importer.Deps{
