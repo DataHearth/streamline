@@ -75,3 +75,6 @@ packages:
       Manager:
       MovieAdder:
       ShowAdder:
+  github.com/datahearth/streamline/internal/bittorrent:
+    interfaces:
+      Manager:

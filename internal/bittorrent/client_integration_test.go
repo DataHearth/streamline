@@ -233,4 +233,38 @@ var _ = Describe("Engine download flow", Label("integration", "bittorrent"), fun
 		}).WithTimeout(30 * time.Second).WithPolling(200 * time.Millisecond).
 			Should(Equal(download.StatusSeeding))
 	})
+
+	It("exposes files, trackers, and peers via Details", func() {
+		hash, err := engine.AddTorrent(ctx, download.TorrentSource{
+			Bytes: torrentBytes,
+		})
+		Expect(err).NotTo(HaveOccurred())
+		connectToSeeder(engine, hash, seederPort)
+
+		Eventually(func() int {
+			d, derr := engine.Details(ctx, hash)
+			Expect(derr).NotTo(HaveOccurred())
+			return len(d.Files)
+		}).WithTimeout(30 * time.Second).WithPolling(200 * time.Millisecond).
+			Should(Equal(1))
+
+		d, err := engine.Details(ctx, hash)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(d.Files[0].Path).To(Equal("payload.bin"))
+		// anacrolix files default to PiecePriorityNone at the file-priority
+		// layer; DownloadAll() drives downloads via piece priorities, not
+		// File.SetPriority, so a freshly added file reports "skip" here.
+		Expect(d.Files[0].Priority).To(Equal("skip"))
+
+		Expect(engine.SetFilePriorities(ctx, hash, []FilePriority{
+			{Index: 0, Priority: "high"},
+		})).To(Succeed())
+		d, err = engine.Details(ctx, hash)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(d.Files[0].Priority).To(Equal("high"))
+
+		views := engine.ListViews(ctx)
+		Expect(views).To(HaveLen(1))
+		Expect(views[0].Hash).To(Equal(hash))
+	})
 })
