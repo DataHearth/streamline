@@ -1488,6 +1488,65 @@ func (_c *MockStore_CreateTVShow_Call) RunAndReturn(run func(context.Context, db
 	return _c
 }
 
+// CreateTorrentSession provides a mock function with given fields: ctx, p
+func (_m *MockStore) CreateTorrentSession(ctx context.Context, p db.CreateTorrentSessionParams) (*ent.TorrentSession, error) {
+	ret := _m.Called(ctx, p)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateTorrentSession")
+	}
+
+	var r0 *ent.TorrentSession
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, db.CreateTorrentSessionParams) (*ent.TorrentSession, error)); ok {
+		return rf(ctx, p)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, db.CreateTorrentSessionParams) *ent.TorrentSession); ok {
+		r0 = rf(ctx, p)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ent.TorrentSession)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, db.CreateTorrentSessionParams) error); ok {
+		r1 = rf(ctx, p)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockStore_CreateTorrentSession_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateTorrentSession'
+type MockStore_CreateTorrentSession_Call struct {
+	*mock.Call
+}
+
+// CreateTorrentSession is a helper method to define mock.On call
+//   - ctx context.Context
+//   - p db.CreateTorrentSessionParams
+func (_e *MockStore_Expecter) CreateTorrentSession(ctx interface{}, p interface{}) *MockStore_CreateTorrentSession_Call {
+	return &MockStore_CreateTorrentSession_Call{Call: _e.mock.On("CreateTorrentSession", ctx, p)}
+}
+
+func (_c *MockStore_CreateTorrentSession_Call) Run(run func(ctx context.Context, p db.CreateTorrentSessionParams)) *MockStore_CreateTorrentSession_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(db.CreateTorrentSessionParams))
+	})
+	return _c
+}
+
+func (_c *MockStore_CreateTorrentSession_Call) Return(_a0 *ent.TorrentSession, _a1 error) *MockStore_CreateTorrentSession_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockStore_CreateTorrentSession_Call) RunAndReturn(run func(context.Context, db.CreateTorrentSessionParams) (*ent.TorrentSession, error)) *MockStore_CreateTorrentSession_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // CreateUser provides a mock function with given fields: ctx, p
 func (_m *MockStore) CreateUser(ctx context.Context, p db.CreateUserParams) (*ent.User, error) {
 	ret := _m.Called(ctx, p)
@@ -2113,6 +2172,53 @@ func (_c *MockStore_DeleteTVShow_Call) Return(_a0 error) *MockStore_DeleteTVShow
 }
 
 func (_c *MockStore_DeleteTVShow_Call) RunAndReturn(run func(context.Context, uint32) error) *MockStore_DeleteTVShow_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// DeleteTorrentSessionByHash provides a mock function with given fields: ctx, infoHash
+func (_m *MockStore) DeleteTorrentSessionByHash(ctx context.Context, infoHash string) error {
+	ret := _m.Called(ctx, infoHash)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteTorrentSessionByHash")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) error); ok {
+		r0 = rf(ctx, infoHash)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockStore_DeleteTorrentSessionByHash_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteTorrentSessionByHash'
+type MockStore_DeleteTorrentSessionByHash_Call struct {
+	*mock.Call
+}
+
+// DeleteTorrentSessionByHash is a helper method to define mock.On call
+//   - ctx context.Context
+//   - infoHash string
+func (_e *MockStore_Expecter) DeleteTorrentSessionByHash(ctx interface{}, infoHash interface{}) *MockStore_DeleteTorrentSessionByHash_Call {
+	return &MockStore_DeleteTorrentSessionByHash_Call{Call: _e.mock.On("DeleteTorrentSessionByHash", ctx, infoHash)}
+}
+
+func (_c *MockStore_DeleteTorrentSessionByHash_Call) Run(run func(ctx context.Context, infoHash string)) *MockStore_DeleteTorrentSessionByHash_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *MockStore_DeleteTorrentSessionByHash_Call) Return(_a0 error) *MockStore_DeleteTorrentSessionByHash_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockStore_DeleteTorrentSessionByHash_Call) RunAndReturn(run func(context.Context, string) error) *MockStore_DeleteTorrentSessionByHash_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -5339,6 +5445,64 @@ func (_c *MockStore_ListTVShows_Call) RunAndReturn(run func(context.Context, uin
 	return _c
 }
 
+// ListTorrentSessions provides a mock function with given fields: ctx
+func (_m *MockStore) ListTorrentSessions(ctx context.Context) ([]*ent.TorrentSession, error) {
+	ret := _m.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListTorrentSessions")
+	}
+
+	var r0 []*ent.TorrentSession
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context) ([]*ent.TorrentSession, error)); ok {
+		return rf(ctx)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context) []*ent.TorrentSession); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ent.TorrentSession)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockStore_ListTorrentSessions_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListTorrentSessions'
+type MockStore_ListTorrentSessions_Call struct {
+	*mock.Call
+}
+
+// ListTorrentSessions is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockStore_Expecter) ListTorrentSessions(ctx interface{}) *MockStore_ListTorrentSessions_Call {
+	return &MockStore_ListTorrentSessions_Call{Call: _e.mock.On("ListTorrentSessions", ctx)}
+}
+
+func (_c *MockStore_ListTorrentSessions_Call) Run(run func(ctx context.Context)) *MockStore_ListTorrentSessions_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context))
+	})
+	return _c
+}
+
+func (_c *MockStore_ListTorrentSessions_Call) Return(_a0 []*ent.TorrentSession, _a1 error) *MockStore_ListTorrentSessions_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockStore_ListTorrentSessions_Call) RunAndReturn(run func(context.Context) ([]*ent.TorrentSession, error)) *MockStore_ListTorrentSessions_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListTvShowsForAdoption provides a mock function with given fields: ctx
 func (_m *MockStore) ListTvShowsForAdoption(ctx context.Context) ([]*ent.TVShow, error) {
 	ret := _m.Called(ctx)
@@ -7223,6 +7387,197 @@ func (_c *MockStore_SetTVShowRefreshedAt_Call) Return(_a0 error) *MockStore_SetT
 }
 
 func (_c *MockStore_SetTVShowRefreshedAt_Call) RunAndReturn(run func(context.Context, uint32, time.Time) error) *MockStore_SetTVShowRefreshedAt_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetTorrentSessionCompleted provides a mock function with given fields: ctx, infoHash, at
+func (_m *MockStore) SetTorrentSessionCompleted(ctx context.Context, infoHash string, at time.Time) error {
+	ret := _m.Called(ctx, infoHash, at)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetTorrentSessionCompleted")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, time.Time) error); ok {
+		r0 = rf(ctx, infoHash, at)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockStore_SetTorrentSessionCompleted_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetTorrentSessionCompleted'
+type MockStore_SetTorrentSessionCompleted_Call struct {
+	*mock.Call
+}
+
+// SetTorrentSessionCompleted is a helper method to define mock.On call
+//   - ctx context.Context
+//   - infoHash string
+//   - at time.Time
+func (_e *MockStore_Expecter) SetTorrentSessionCompleted(ctx interface{}, infoHash interface{}, at interface{}) *MockStore_SetTorrentSessionCompleted_Call {
+	return &MockStore_SetTorrentSessionCompleted_Call{Call: _e.mock.On("SetTorrentSessionCompleted", ctx, infoHash, at)}
+}
+
+func (_c *MockStore_SetTorrentSessionCompleted_Call) Run(run func(ctx context.Context, infoHash string, at time.Time)) *MockStore_SetTorrentSessionCompleted_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(time.Time))
+	})
+	return _c
+}
+
+func (_c *MockStore_SetTorrentSessionCompleted_Call) Return(_a0 error) *MockStore_SetTorrentSessionCompleted_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockStore_SetTorrentSessionCompleted_Call) RunAndReturn(run func(context.Context, string, time.Time) error) *MockStore_SetTorrentSessionCompleted_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetTorrentSessionName provides a mock function with given fields: ctx, infoHash, name
+func (_m *MockStore) SetTorrentSessionName(ctx context.Context, infoHash string, name string) error {
+	ret := _m.Called(ctx, infoHash, name)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetTorrentSessionName")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) error); ok {
+		r0 = rf(ctx, infoHash, name)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockStore_SetTorrentSessionName_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetTorrentSessionName'
+type MockStore_SetTorrentSessionName_Call struct {
+	*mock.Call
+}
+
+// SetTorrentSessionName is a helper method to define mock.On call
+//   - ctx context.Context
+//   - infoHash string
+//   - name string
+func (_e *MockStore_Expecter) SetTorrentSessionName(ctx interface{}, infoHash interface{}, name interface{}) *MockStore_SetTorrentSessionName_Call {
+	return &MockStore_SetTorrentSessionName_Call{Call: _e.mock.On("SetTorrentSessionName", ctx, infoHash, name)}
+}
+
+func (_c *MockStore_SetTorrentSessionName_Call) Run(run func(ctx context.Context, infoHash string, name string)) *MockStore_SetTorrentSessionName_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(string))
+	})
+	return _c
+}
+
+func (_c *MockStore_SetTorrentSessionName_Call) Return(_a0 error) *MockStore_SetTorrentSessionName_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockStore_SetTorrentSessionName_Call) RunAndReturn(run func(context.Context, string, string) error) *MockStore_SetTorrentSessionName_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetTorrentSessionPaused provides a mock function with given fields: ctx, infoHash, paused
+func (_m *MockStore) SetTorrentSessionPaused(ctx context.Context, infoHash string, paused bool) error {
+	ret := _m.Called(ctx, infoHash, paused)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetTorrentSessionPaused")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, bool) error); ok {
+		r0 = rf(ctx, infoHash, paused)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockStore_SetTorrentSessionPaused_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetTorrentSessionPaused'
+type MockStore_SetTorrentSessionPaused_Call struct {
+	*mock.Call
+}
+
+// SetTorrentSessionPaused is a helper method to define mock.On call
+//   - ctx context.Context
+//   - infoHash string
+//   - paused bool
+func (_e *MockStore_Expecter) SetTorrentSessionPaused(ctx interface{}, infoHash interface{}, paused interface{}) *MockStore_SetTorrentSessionPaused_Call {
+	return &MockStore_SetTorrentSessionPaused_Call{Call: _e.mock.On("SetTorrentSessionPaused", ctx, infoHash, paused)}
+}
+
+func (_c *MockStore_SetTorrentSessionPaused_Call) Run(run func(ctx context.Context, infoHash string, paused bool)) *MockStore_SetTorrentSessionPaused_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(bool))
+	})
+	return _c
+}
+
+func (_c *MockStore_SetTorrentSessionPaused_Call) Return(_a0 error) *MockStore_SetTorrentSessionPaused_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockStore_SetTorrentSessionPaused_Call) RunAndReturn(run func(context.Context, string, bool) error) *MockStore_SetTorrentSessionPaused_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetTorrentSessionSeedStopped provides a mock function with given fields: ctx, infoHash
+func (_m *MockStore) SetTorrentSessionSeedStopped(ctx context.Context, infoHash string) error {
+	ret := _m.Called(ctx, infoHash)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetTorrentSessionSeedStopped")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) error); ok {
+		r0 = rf(ctx, infoHash)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockStore_SetTorrentSessionSeedStopped_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetTorrentSessionSeedStopped'
+type MockStore_SetTorrentSessionSeedStopped_Call struct {
+	*mock.Call
+}
+
+// SetTorrentSessionSeedStopped is a helper method to define mock.On call
+//   - ctx context.Context
+//   - infoHash string
+func (_e *MockStore_Expecter) SetTorrentSessionSeedStopped(ctx interface{}, infoHash interface{}) *MockStore_SetTorrentSessionSeedStopped_Call {
+	return &MockStore_SetTorrentSessionSeedStopped_Call{Call: _e.mock.On("SetTorrentSessionSeedStopped", ctx, infoHash)}
+}
+
+func (_c *MockStore_SetTorrentSessionSeedStopped_Call) Run(run func(ctx context.Context, infoHash string)) *MockStore_SetTorrentSessionSeedStopped_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *MockStore_SetTorrentSessionSeedStopped_Call) Return(_a0 error) *MockStore_SetTorrentSessionSeedStopped_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockStore_SetTorrentSessionSeedStopped_Call) RunAndReturn(run func(context.Context, string) error) *MockStore_SetTorrentSessionSeedStopped_Call {
 	_c.Call.Return(run)
 	return _c
 }

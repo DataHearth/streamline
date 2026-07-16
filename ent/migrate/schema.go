@@ -532,6 +532,26 @@ var (
 		Columns:    TvShowsColumns,
 		PrimaryKey: []*schema.Column{TvShowsColumns[0]},
 	}
+	// TorrentSessionsColumns holds the columns for the "torrent_sessions" table.
+	TorrentSessionsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUint32, Increment: true},
+		{Name: "create_time", Type: field.TypeTime},
+		{Name: "update_time", Type: field.TypeTime},
+		{Name: "info_hash", Type: field.TypeString, Unique: true},
+		{Name: "name", Type: field.TypeString, Nullable: true},
+		{Name: "save_path", Type: field.TypeString},
+		{Name: "source_magnet", Type: field.TypeString, Nullable: true},
+		{Name: "source_torrent", Type: field.TypeBytes, Nullable: true},
+		{Name: "paused", Type: field.TypeBool, Default: false},
+		{Name: "completed_at", Type: field.TypeTime, Nullable: true},
+		{Name: "seed_stopped", Type: field.TypeBool, Default: false},
+	}
+	// TorrentSessionsTable holds the schema information for the "torrent_sessions" table.
+	TorrentSessionsTable = &schema.Table{
+		Name:       "torrent_sessions",
+		Columns:    TorrentSessionsColumns,
+		PrimaryKey: []*schema.Column{TorrentSessionsColumns[0]},
+	}
 	// UsersColumns holds the columns for the "users" table.
 	UsersColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUint32, Increment: true},
@@ -570,6 +590,7 @@ var (
 		SeasonsTable,
 		SessionsTable,
 		TvShowsTable,
+		TorrentSessionsTable,
 		UsersTable,
 	}
 )

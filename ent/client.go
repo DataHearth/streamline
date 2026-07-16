@@ -30,6 +30,7 @@ import (
 	"github.com/datahearth/streamline/ent/scheduledjob"
 	"github.com/datahearth/streamline/ent/season"
 	"github.com/datahearth/streamline/ent/session"
+	"github.com/datahearth/streamline/ent/torrentsession"
 	"github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/ent/user"
 )
@@ -71,6 +72,8 @@ type Client struct {
 	Session *SessionClient
 	// TVShow is the client for interacting with the TVShow builders.
 	TVShow *TVShowClient
+	// TorrentSession is the client for interacting with the TorrentSession builders.
+	TorrentSession *TorrentSessionClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
 }
@@ -100,6 +103,7 @@ func (c *Client) init() {
 	c.Season = NewSeasonClient(c.config)
 	c.Session = NewSessionClient(c.config)
 	c.TVShow = NewTVShowClient(c.config)
+	c.TorrentSession = NewTorrentSessionClient(c.config)
 	c.User = NewUserClient(c.config)
 }
 
@@ -209,6 +213,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		Season:         NewSeasonClient(cfg),
 		Session:        NewSessionClient(cfg),
 		TVShow:         NewTVShowClient(cfg),
+		TorrentSession: NewTorrentSessionClient(cfg),
 		User:           NewUserClient(cfg),
 	}, nil
 }
@@ -245,6 +250,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		Season:         NewSeasonClient(cfg),
 		Session:        NewSessionClient(cfg),
 		TVShow:         NewTVShowClient(cfg),
+		TorrentSession: NewTorrentSessionClient(cfg),
 		User:           NewUserClient(cfg),
 	}, nil
 }
@@ -277,7 +283,8 @@ func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.ApiKey, c.DownloadRecord, c.Episode, c.ImportScan, c.ImportScanFile,
 		c.ImportScanShow, c.Invite, c.MediaFile, c.Movie, c.MovieEvent, c.OIDCIdentity,
-		c.Request, c.ScheduledJob, c.Season, c.Session, c.TVShow, c.User,
+		c.Request, c.ScheduledJob, c.Season, c.Session, c.TVShow, c.TorrentSession,
+		c.User,
 	} {
 		n.Use(hooks...)
 	}
@@ -289,7 +296,8 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.ApiKey, c.DownloadRecord, c.Episode, c.ImportScan, c.ImportScanFile,
 		c.ImportScanShow, c.Invite, c.MediaFile, c.Movie, c.MovieEvent, c.OIDCIdentity,
-		c.Request, c.ScheduledJob, c.Season, c.Session, c.TVShow, c.User,
+		c.Request, c.ScheduledJob, c.Season, c.Session, c.TVShow, c.TorrentSession,
+		c.User,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -330,6 +338,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Session.mutate(ctx, m)
 	case *TVShowMutation:
 		return c.TVShow.mutate(ctx, m)
+	case *TorrentSessionMutation:
+		return c.TorrentSession.mutate(ctx, m)
 	case *UserMutation:
 		return c.User.mutate(ctx, m)
 	default:
@@ -2865,6 +2875,139 @@ func (c *TVShowClient) mutate(ctx context.Context, m *TVShowMutation) (Value, er
 	}
 }
 
+// TorrentSessionClient is a client for the TorrentSession schema.
+type TorrentSessionClient struct {
+	config
+}
+
+// NewTorrentSessionClient returns a client for the TorrentSession from the given config.
+func NewTorrentSessionClient(c config) *TorrentSessionClient {
+	return &TorrentSessionClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `torrentsession.Hooks(f(g(h())))`.
+func (c *TorrentSessionClient) Use(hooks ...Hook) {
+	c.hooks.TorrentSession = append(c.hooks.TorrentSession, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `torrentsession.Intercept(f(g(h())))`.
+func (c *TorrentSessionClient) Intercept(interceptors ...Interceptor) {
+	c.inters.TorrentSession = append(c.inters.TorrentSession, interceptors...)
+}
+
+// Create returns a builder for creating a TorrentSession entity.
+func (c *TorrentSessionClient) Create() *TorrentSessionCreate {
+	mutation := newTorrentSessionMutation(c.config, OpCreate)
+	return &TorrentSessionCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of TorrentSession entities.
+func (c *TorrentSessionClient) CreateBulk(builders ...*TorrentSessionCreate) *TorrentSessionCreateBulk {
+	return &TorrentSessionCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *TorrentSessionClient) MapCreateBulk(slice any, setFunc func(*TorrentSessionCreate, int)) *TorrentSessionCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &TorrentSessionCreateBulk{err: fmt.Errorf("calling to TorrentSessionClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*TorrentSessionCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &TorrentSessionCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for TorrentSession.
+func (c *TorrentSessionClient) Update() *TorrentSessionUpdate {
+	mutation := newTorrentSessionMutation(c.config, OpUpdate)
+	return &TorrentSessionUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *TorrentSessionClient) UpdateOne(_m *TorrentSession) *TorrentSessionUpdateOne {
+	mutation := newTorrentSessionMutation(c.config, OpUpdateOne, withTorrentSession(_m))
+	return &TorrentSessionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *TorrentSessionClient) UpdateOneID(id uint32) *TorrentSessionUpdateOne {
+	mutation := newTorrentSessionMutation(c.config, OpUpdateOne, withTorrentSessionID(id))
+	return &TorrentSessionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for TorrentSession.
+func (c *TorrentSessionClient) Delete() *TorrentSessionDelete {
+	mutation := newTorrentSessionMutation(c.config, OpDelete)
+	return &TorrentSessionDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *TorrentSessionClient) DeleteOne(_m *TorrentSession) *TorrentSessionDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *TorrentSessionClient) DeleteOneID(id uint32) *TorrentSessionDeleteOne {
+	builder := c.Delete().Where(torrentsession.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &TorrentSessionDeleteOne{builder}
+}
+
+// Query returns a query builder for TorrentSession.
+func (c *TorrentSessionClient) Query() *TorrentSessionQuery {
+	return &TorrentSessionQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeTorrentSession},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a TorrentSession entity by its id.
+func (c *TorrentSessionClient) Get(ctx context.Context, id uint32) (*TorrentSession, error) {
+	return c.Query().Where(torrentsession.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *TorrentSessionClient) GetX(ctx context.Context, id uint32) *TorrentSession {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *TorrentSessionClient) Hooks() []Hook {
+	return c.hooks.TorrentSession
+}
+
+// Interceptors returns the client interceptors.
+func (c *TorrentSessionClient) Interceptors() []Interceptor {
+	return c.inters.TorrentSession
+}
+
+func (c *TorrentSessionClient) mutate(ctx context.Context, m *TorrentSessionMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&TorrentSessionCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&TorrentSessionUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&TorrentSessionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&TorrentSessionDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown TorrentSession mutation op: %q", m.Op())
+	}
+}
+
 // UserClient is a client for the User schema.
 type UserClient struct {
 	config
@@ -3067,11 +3210,11 @@ type (
 	hooks struct {
 		ApiKey, DownloadRecord, Episode, ImportScan, ImportScanFile, ImportScanShow,
 		Invite, MediaFile, Movie, MovieEvent, OIDCIdentity, Request, ScheduledJob,
-		Season, Session, TVShow, User []ent.Hook
+		Season, Session, TVShow, TorrentSession, User []ent.Hook
 	}
 	inters struct {
 		ApiKey, DownloadRecord, Episode, ImportScan, ImportScanFile, ImportScanShow,
 		Invite, MediaFile, Movie, MovieEvent, OIDCIdentity, Request, ScheduledJob,
-		Season, Session, TVShow, User []ent.Interceptor
+		Season, Session, TVShow, TorrentSession, User []ent.Interceptor
 	}
 )

@@ -54,5 +54,8 @@ type Session func(*sql.Selector)
 // TVShow is the predicate function for tvshow builders.
 type TVShow func(*sql.Selector)
 
+// TorrentSession is the predicate function for torrentsession builders.
+type TorrentSession func(*sql.Selector)
+
 // User is the predicate function for user builders.
 type User func(*sql.Selector)

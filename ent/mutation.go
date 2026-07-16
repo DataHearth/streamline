@@ -28,6 +28,7 @@ import (
 	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/ent/season"
 	"github.com/datahearth/streamline/ent/session"
+	"github.com/datahearth/streamline/ent/torrentsession"
 	"github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/ent/user"
 )
@@ -57,6 +58,7 @@ const (
 	TypeSeason         = "Season"
 	TypeSession        = "Session"
 	TypeTVShow         = "TVShow"
+	TypeTorrentSession = "TorrentSession"
 	TypeUser           = "User"
 )
 
@@ -17568,6 +17570,903 @@ func (m *TVShowMutation) ResetEdge(name string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown TVShow edge %s", name)
+}
+
+// TorrentSessionMutation represents an operation that mutates the TorrentSession nodes in the graph.
+type TorrentSessionMutation struct {
+	config
+	op             Op
+	typ            string
+	id             *uint32
+	create_time    *time.Time
+	update_time    *time.Time
+	info_hash      *string
+	name           *string
+	save_path      *string
+	source_magnet  *string
+	source_torrent *[]byte
+	paused         *bool
+	completed_at   *time.Time
+	seed_stopped   *bool
+	clearedFields  map[string]struct{}
+	done           bool
+	oldValue       func(context.Context) (*TorrentSession, error)
+	predicates     []predicate.TorrentSession
+}
+
+var _ ent.Mutation = (*TorrentSessionMutation)(nil)
+
+// torrentsessionOption allows management of the mutation configuration using functional options.
+type torrentsessionOption func(*TorrentSessionMutation)
+
+// newTorrentSessionMutation creates new mutation for the TorrentSession entity.
+func newTorrentSessionMutation(c config, op Op, opts ...torrentsessionOption) *TorrentSessionMutation {
+	m := &TorrentSessionMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeTorrentSession,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withTorrentSessionID sets the ID field of the mutation.
+func withTorrentSessionID(id uint32) torrentsessionOption {
+	return func(m *TorrentSessionMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *TorrentSession
+		)
+		m.oldValue = func(ctx context.Context) (*TorrentSession, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().TorrentSession.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withTorrentSession sets the old TorrentSession of the mutation.
+func withTorrentSession(node *TorrentSession) torrentsessionOption {
+	return func(m *TorrentSessionMutation) {
+		m.oldValue = func(context.Context) (*TorrentSession, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m TorrentSessionMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m TorrentSessionMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of TorrentSession entities.
+func (m *TorrentSessionMutation) SetID(id uint32) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *TorrentSessionMutation) ID() (id uint32, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *TorrentSessionMutation) IDs(ctx context.Context) ([]uint32, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uint32{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().TorrentSession.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreateTime sets the "create_time" field.
+func (m *TorrentSessionMutation) SetCreateTime(t time.Time) {
+	m.create_time = &t
+}
+
+// CreateTime returns the value of the "create_time" field in the mutation.
+func (m *TorrentSessionMutation) CreateTime() (r time.Time, exists bool) {
+	v := m.create_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreateTime returns the old "create_time" field's value of the TorrentSession entity.
+// If the TorrentSession object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TorrentSessionMutation) OldCreateTime(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreateTime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreateTime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreateTime: %w", err)
+	}
+	return oldValue.CreateTime, nil
+}
+
+// ResetCreateTime resets all changes to the "create_time" field.
+func (m *TorrentSessionMutation) ResetCreateTime() {
+	m.create_time = nil
+}
+
+// SetUpdateTime sets the "update_time" field.
+func (m *TorrentSessionMutation) SetUpdateTime(t time.Time) {
+	m.update_time = &t
+}
+
+// UpdateTime returns the value of the "update_time" field in the mutation.
+func (m *TorrentSessionMutation) UpdateTime() (r time.Time, exists bool) {
+	v := m.update_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdateTime returns the old "update_time" field's value of the TorrentSession entity.
+// If the TorrentSession object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TorrentSessionMutation) OldUpdateTime(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdateTime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdateTime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdateTime: %w", err)
+	}
+	return oldValue.UpdateTime, nil
+}
+
+// ResetUpdateTime resets all changes to the "update_time" field.
+func (m *TorrentSessionMutation) ResetUpdateTime() {
+	m.update_time = nil
+}
+
+// SetInfoHash sets the "info_hash" field.
+func (m *TorrentSessionMutation) SetInfoHash(s string) {
+	m.info_hash = &s
+}
+
+// InfoHash returns the value of the "info_hash" field in the mutation.
+func (m *TorrentSessionMutation) InfoHash() (r string, exists bool) {
+	v := m.info_hash
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldInfoHash returns the old "info_hash" field's value of the TorrentSession entity.
+// If the TorrentSession object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TorrentSessionMutation) OldInfoHash(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldInfoHash is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldInfoHash requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldInfoHash: %w", err)
+	}
+	return oldValue.InfoHash, nil
+}
+
+// ResetInfoHash resets all changes to the "info_hash" field.
+func (m *TorrentSessionMutation) ResetInfoHash() {
+	m.info_hash = nil
+}
+
+// SetName sets the "name" field.
+func (m *TorrentSessionMutation) SetName(s string) {
+	m.name = &s
+}
+
+// Name returns the value of the "name" field in the mutation.
+func (m *TorrentSessionMutation) Name() (r string, exists bool) {
+	v := m.name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldName returns the old "name" field's value of the TorrentSession entity.
+// If the TorrentSession object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TorrentSessionMutation) OldName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldName: %w", err)
+	}
+	return oldValue.Name, nil
+}
+
+// ClearName clears the value of the "name" field.
+func (m *TorrentSessionMutation) ClearName() {
+	m.name = nil
+	m.clearedFields[torrentsession.FieldName] = struct{}{}
+}
+
+// NameCleared returns if the "name" field was cleared in this mutation.
+func (m *TorrentSessionMutation) NameCleared() bool {
+	_, ok := m.clearedFields[torrentsession.FieldName]
+	return ok
+}
+
+// ResetName resets all changes to the "name" field.
+func (m *TorrentSessionMutation) ResetName() {
+	m.name = nil
+	delete(m.clearedFields, torrentsession.FieldName)
+}
+
+// SetSavePath sets the "save_path" field.
+func (m *TorrentSessionMutation) SetSavePath(s string) {
+	m.save_path = &s
+}
+
+// SavePath returns the value of the "save_path" field in the mutation.
+func (m *TorrentSessionMutation) SavePath() (r string, exists bool) {
+	v := m.save_path
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSavePath returns the old "save_path" field's value of the TorrentSession entity.
+// If the TorrentSession object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TorrentSessionMutation) OldSavePath(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSavePath is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSavePath requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSavePath: %w", err)
+	}
+	return oldValue.SavePath, nil
+}
+
+// ResetSavePath resets all changes to the "save_path" field.
+func (m *TorrentSessionMutation) ResetSavePath() {
+	m.save_path = nil
+}
+
+// SetSourceMagnet sets the "source_magnet" field.
+func (m *TorrentSessionMutation) SetSourceMagnet(s string) {
+	m.source_magnet = &s
+}
+
+// SourceMagnet returns the value of the "source_magnet" field in the mutation.
+func (m *TorrentSessionMutation) SourceMagnet() (r string, exists bool) {
+	v := m.source_magnet
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSourceMagnet returns the old "source_magnet" field's value of the TorrentSession entity.
+// If the TorrentSession object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TorrentSessionMutation) OldSourceMagnet(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSourceMagnet is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSourceMagnet requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSourceMagnet: %w", err)
+	}
+	return oldValue.SourceMagnet, nil
+}
+
+// ClearSourceMagnet clears the value of the "source_magnet" field.
+func (m *TorrentSessionMutation) ClearSourceMagnet() {
+	m.source_magnet = nil
+	m.clearedFields[torrentsession.FieldSourceMagnet] = struct{}{}
+}
+
+// SourceMagnetCleared returns if the "source_magnet" field was cleared in this mutation.
+func (m *TorrentSessionMutation) SourceMagnetCleared() bool {
+	_, ok := m.clearedFields[torrentsession.FieldSourceMagnet]
+	return ok
+}
+
+// ResetSourceMagnet resets all changes to the "source_magnet" field.
+func (m *TorrentSessionMutation) ResetSourceMagnet() {
+	m.source_magnet = nil
+	delete(m.clearedFields, torrentsession.FieldSourceMagnet)
+}
+
+// SetSourceTorrent sets the "source_torrent" field.
+func (m *TorrentSessionMutation) SetSourceTorrent(b []byte) {
+	m.source_torrent = &b
+}
+
+// SourceTorrent returns the value of the "source_torrent" field in the mutation.
+func (m *TorrentSessionMutation) SourceTorrent() (r []byte, exists bool) {
+	v := m.source_torrent
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSourceTorrent returns the old "source_torrent" field's value of the TorrentSession entity.
+// If the TorrentSession object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TorrentSessionMutation) OldSourceTorrent(ctx context.Context) (v []byte, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSourceTorrent is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSourceTorrent requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSourceTorrent: %w", err)
+	}
+	return oldValue.SourceTorrent, nil
+}
+
+// ClearSourceTorrent clears the value of the "source_torrent" field.
+func (m *TorrentSessionMutation) ClearSourceTorrent() {
+	m.source_torrent = nil
+	m.clearedFields[torrentsession.FieldSourceTorrent] = struct{}{}
+}
+
+// SourceTorrentCleared returns if the "source_torrent" field was cleared in this mutation.
+func (m *TorrentSessionMutation) SourceTorrentCleared() bool {
+	_, ok := m.clearedFields[torrentsession.FieldSourceTorrent]
+	return ok
+}
+
+// ResetSourceTorrent resets all changes to the "source_torrent" field.
+func (m *TorrentSessionMutation) ResetSourceTorrent() {
+	m.source_torrent = nil
+	delete(m.clearedFields, torrentsession.FieldSourceTorrent)
+}
+
+// SetPaused sets the "paused" field.
+func (m *TorrentSessionMutation) SetPaused(b bool) {
+	m.paused = &b
+}
+
+// Paused returns the value of the "paused" field in the mutation.
+func (m *TorrentSessionMutation) Paused() (r bool, exists bool) {
+	v := m.paused
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPaused returns the old "paused" field's value of the TorrentSession entity.
+// If the TorrentSession object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TorrentSessionMutation) OldPaused(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPaused is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPaused requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPaused: %w", err)
+	}
+	return oldValue.Paused, nil
+}
+
+// ResetPaused resets all changes to the "paused" field.
+func (m *TorrentSessionMutation) ResetPaused() {
+	m.paused = nil
+}
+
+// SetCompletedAt sets the "completed_at" field.
+func (m *TorrentSessionMutation) SetCompletedAt(t time.Time) {
+	m.completed_at = &t
+}
+
+// CompletedAt returns the value of the "completed_at" field in the mutation.
+func (m *TorrentSessionMutation) CompletedAt() (r time.Time, exists bool) {
+	v := m.completed_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCompletedAt returns the old "completed_at" field's value of the TorrentSession entity.
+// If the TorrentSession object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TorrentSessionMutation) OldCompletedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCompletedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCompletedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCompletedAt: %w", err)
+	}
+	return oldValue.CompletedAt, nil
+}
+
+// ClearCompletedAt clears the value of the "completed_at" field.
+func (m *TorrentSessionMutation) ClearCompletedAt() {
+	m.completed_at = nil
+	m.clearedFields[torrentsession.FieldCompletedAt] = struct{}{}
+}
+
+// CompletedAtCleared returns if the "completed_at" field was cleared in this mutation.
+func (m *TorrentSessionMutation) CompletedAtCleared() bool {
+	_, ok := m.clearedFields[torrentsession.FieldCompletedAt]
+	return ok
+}
+
+// ResetCompletedAt resets all changes to the "completed_at" field.
+func (m *TorrentSessionMutation) ResetCompletedAt() {
+	m.completed_at = nil
+	delete(m.clearedFields, torrentsession.FieldCompletedAt)
+}
+
+// SetSeedStopped sets the "seed_stopped" field.
+func (m *TorrentSessionMutation) SetSeedStopped(b bool) {
+	m.seed_stopped = &b
+}
+
+// SeedStopped returns the value of the "seed_stopped" field in the mutation.
+func (m *TorrentSessionMutation) SeedStopped() (r bool, exists bool) {
+	v := m.seed_stopped
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSeedStopped returns the old "seed_stopped" field's value of the TorrentSession entity.
+// If the TorrentSession object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TorrentSessionMutation) OldSeedStopped(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSeedStopped is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSeedStopped requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSeedStopped: %w", err)
+	}
+	return oldValue.SeedStopped, nil
+}
+
+// ResetSeedStopped resets all changes to the "seed_stopped" field.
+func (m *TorrentSessionMutation) ResetSeedStopped() {
+	m.seed_stopped = nil
+}
+
+// Where appends a list predicates to the TorrentSessionMutation builder.
+func (m *TorrentSessionMutation) Where(ps ...predicate.TorrentSession) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the TorrentSessionMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *TorrentSessionMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.TorrentSession, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *TorrentSessionMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *TorrentSessionMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (TorrentSession).
+func (m *TorrentSessionMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *TorrentSessionMutation) Fields() []string {
+	fields := make([]string, 0, 10)
+	if m.create_time != nil {
+		fields = append(fields, torrentsession.FieldCreateTime)
+	}
+	if m.update_time != nil {
+		fields = append(fields, torrentsession.FieldUpdateTime)
+	}
+	if m.info_hash != nil {
+		fields = append(fields, torrentsession.FieldInfoHash)
+	}
+	if m.name != nil {
+		fields = append(fields, torrentsession.FieldName)
+	}
+	if m.save_path != nil {
+		fields = append(fields, torrentsession.FieldSavePath)
+	}
+	if m.source_magnet != nil {
+		fields = append(fields, torrentsession.FieldSourceMagnet)
+	}
+	if m.source_torrent != nil {
+		fields = append(fields, torrentsession.FieldSourceTorrent)
+	}
+	if m.paused != nil {
+		fields = append(fields, torrentsession.FieldPaused)
+	}
+	if m.completed_at != nil {
+		fields = append(fields, torrentsession.FieldCompletedAt)
+	}
+	if m.seed_stopped != nil {
+		fields = append(fields, torrentsession.FieldSeedStopped)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *TorrentSessionMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case torrentsession.FieldCreateTime:
+		return m.CreateTime()
+	case torrentsession.FieldUpdateTime:
+		return m.UpdateTime()
+	case torrentsession.FieldInfoHash:
+		return m.InfoHash()
+	case torrentsession.FieldName:
+		return m.Name()
+	case torrentsession.FieldSavePath:
+		return m.SavePath()
+	case torrentsession.FieldSourceMagnet:
+		return m.SourceMagnet()
+	case torrentsession.FieldSourceTorrent:
+		return m.SourceTorrent()
+	case torrentsession.FieldPaused:
+		return m.Paused()
+	case torrentsession.FieldCompletedAt:
+		return m.CompletedAt()
+	case torrentsession.FieldSeedStopped:
+		return m.SeedStopped()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *TorrentSessionMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case torrentsession.FieldCreateTime:
+		return m.OldCreateTime(ctx)
+	case torrentsession.FieldUpdateTime:
+		return m.OldUpdateTime(ctx)
+	case torrentsession.FieldInfoHash:
+		return m.OldInfoHash(ctx)
+	case torrentsession.FieldName:
+		return m.OldName(ctx)
+	case torrentsession.FieldSavePath:
+		return m.OldSavePath(ctx)
+	case torrentsession.FieldSourceMagnet:
+		return m.OldSourceMagnet(ctx)
+	case torrentsession.FieldSourceTorrent:
+		return m.OldSourceTorrent(ctx)
+	case torrentsession.FieldPaused:
+		return m.OldPaused(ctx)
+	case torrentsession.FieldCompletedAt:
+		return m.OldCompletedAt(ctx)
+	case torrentsession.FieldSeedStopped:
+		return m.OldSeedStopped(ctx)
+	}
+	return nil, fmt.Errorf("unknown TorrentSession field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *TorrentSessionMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case torrentsession.FieldCreateTime:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreateTime(v)
+		return nil
+	case torrentsession.FieldUpdateTime:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdateTime(v)
+		return nil
+	case torrentsession.FieldInfoHash:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetInfoHash(v)
+		return nil
+	case torrentsession.FieldName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetName(v)
+		return nil
+	case torrentsession.FieldSavePath:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSavePath(v)
+		return nil
+	case torrentsession.FieldSourceMagnet:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSourceMagnet(v)
+		return nil
+	case torrentsession.FieldSourceTorrent:
+		v, ok := value.([]byte)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSourceTorrent(v)
+		return nil
+	case torrentsession.FieldPaused:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPaused(v)
+		return nil
+	case torrentsession.FieldCompletedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCompletedAt(v)
+		return nil
+	case torrentsession.FieldSeedStopped:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSeedStopped(v)
+		return nil
+	}
+	return fmt.Errorf("unknown TorrentSession field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *TorrentSessionMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *TorrentSessionMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *TorrentSessionMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown TorrentSession numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *TorrentSessionMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(torrentsession.FieldName) {
+		fields = append(fields, torrentsession.FieldName)
+	}
+	if m.FieldCleared(torrentsession.FieldSourceMagnet) {
+		fields = append(fields, torrentsession.FieldSourceMagnet)
+	}
+	if m.FieldCleared(torrentsession.FieldSourceTorrent) {
+		fields = append(fields, torrentsession.FieldSourceTorrent)
+	}
+	if m.FieldCleared(torrentsession.FieldCompletedAt) {
+		fields = append(fields, torrentsession.FieldCompletedAt)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *TorrentSessionMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *TorrentSessionMutation) ClearField(name string) error {
+	switch name {
+	case torrentsession.FieldName:
+		m.ClearName()
+		return nil
+	case torrentsession.FieldSourceMagnet:
+		m.ClearSourceMagnet()
+		return nil
+	case torrentsession.FieldSourceTorrent:
+		m.ClearSourceTorrent()
+		return nil
+	case torrentsession.FieldCompletedAt:
+		m.ClearCompletedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown TorrentSession nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *TorrentSessionMutation) ResetField(name string) error {
+	switch name {
+	case torrentsession.FieldCreateTime:
+		m.ResetCreateTime()
+		return nil
+	case torrentsession.FieldUpdateTime:
+		m.ResetUpdateTime()
+		return nil
+	case torrentsession.FieldInfoHash:
+		m.ResetInfoHash()
+		return nil
+	case torrentsession.FieldName:
+		m.ResetName()
+		return nil
+	case torrentsession.FieldSavePath:
+		m.ResetSavePath()
+		return nil
+	case torrentsession.FieldSourceMagnet:
+		m.ResetSourceMagnet()
+		return nil
+	case torrentsession.FieldSourceTorrent:
+		m.ResetSourceTorrent()
+		return nil
+	case torrentsession.FieldPaused:
+		m.ResetPaused()
+		return nil
+	case torrentsession.FieldCompletedAt:
+		m.ResetCompletedAt()
+		return nil
+	case torrentsession.FieldSeedStopped:
+		m.ResetSeedStopped()
+		return nil
+	}
+	return fmt.Errorf("unknown TorrentSession field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *TorrentSessionMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *TorrentSessionMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *TorrentSessionMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *TorrentSessionMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *TorrentSessionMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *TorrentSessionMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *TorrentSessionMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown TorrentSession unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *TorrentSessionMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown TorrentSession edge %s", name)
 }
 
 // UserMutation represents an operation that mutates the User nodes in the graph.

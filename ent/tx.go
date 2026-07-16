@@ -44,6 +44,8 @@ type Tx struct {
 	Session *SessionClient
 	// TVShow is the client for interacting with the TVShow builders.
 	TVShow *TVShowClient
+	// TorrentSession is the client for interacting with the TorrentSession builders.
+	TorrentSession *TorrentSessionClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
 
@@ -193,6 +195,7 @@ func (tx *Tx) init() {
 	tx.Season = NewSeasonClient(tx.config)
 	tx.Session = NewSessionClient(tx.config)
 	tx.TVShow = NewTVShowClient(tx.config)
+	tx.TorrentSession = NewTorrentSessionClient(tx.config)
 	tx.User = NewUserClient(tx.config)
 }
 

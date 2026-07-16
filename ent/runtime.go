@@ -21,6 +21,7 @@ import (
 	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/ent/season"
 	"github.com/datahearth/streamline/ent/session"
+	"github.com/datahearth/streamline/ent/torrentsession"
 	"github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/ent/user"
 )
@@ -404,6 +405,37 @@ func init() {
 	tvshowDescRating := tvshowFields[12].Descriptor()
 	// tvshow.DefaultRating holds the default value on creation for the rating field.
 	tvshow.DefaultRating = tvshowDescRating.Default.(float64)
+	torrentsessionMixin := schema.TorrentSession{}.Mixin()
+	torrentsessionMixinFields1 := torrentsessionMixin[1].Fields()
+	_ = torrentsessionMixinFields1
+	torrentsessionFields := schema.TorrentSession{}.Fields()
+	_ = torrentsessionFields
+	// torrentsessionDescCreateTime is the schema descriptor for create_time field.
+	torrentsessionDescCreateTime := torrentsessionMixinFields1[0].Descriptor()
+	// torrentsession.DefaultCreateTime holds the default value on creation for the create_time field.
+	torrentsession.DefaultCreateTime = torrentsessionDescCreateTime.Default.(func() time.Time)
+	// torrentsessionDescUpdateTime is the schema descriptor for update_time field.
+	torrentsessionDescUpdateTime := torrentsessionMixinFields1[1].Descriptor()
+	// torrentsession.DefaultUpdateTime holds the default value on creation for the update_time field.
+	torrentsession.DefaultUpdateTime = torrentsessionDescUpdateTime.Default.(func() time.Time)
+	// torrentsession.UpdateDefaultUpdateTime holds the default value on update for the update_time field.
+	torrentsession.UpdateDefaultUpdateTime = torrentsessionDescUpdateTime.UpdateDefault.(func() time.Time)
+	// torrentsessionDescInfoHash is the schema descriptor for info_hash field.
+	torrentsessionDescInfoHash := torrentsessionFields[0].Descriptor()
+	// torrentsession.InfoHashValidator is a validator for the "info_hash" field. It is called by the builders before save.
+	torrentsession.InfoHashValidator = torrentsessionDescInfoHash.Validators[0].(func(string) error)
+	// torrentsessionDescSavePath is the schema descriptor for save_path field.
+	torrentsessionDescSavePath := torrentsessionFields[2].Descriptor()
+	// torrentsession.SavePathValidator is a validator for the "save_path" field. It is called by the builders before save.
+	torrentsession.SavePathValidator = torrentsessionDescSavePath.Validators[0].(func(string) error)
+	// torrentsessionDescPaused is the schema descriptor for paused field.
+	torrentsessionDescPaused := torrentsessionFields[5].Descriptor()
+	// torrentsession.DefaultPaused holds the default value on creation for the paused field.
+	torrentsession.DefaultPaused = torrentsessionDescPaused.Default.(bool)
+	// torrentsessionDescSeedStopped is the schema descriptor for seed_stopped field.
+	torrentsessionDescSeedStopped := torrentsessionFields[7].Descriptor()
+	// torrentsession.DefaultSeedStopped holds the default value on creation for the seed_stopped field.
+	torrentsession.DefaultSeedStopped = torrentsessionDescSeedStopped.Default.(bool)
 	userMixin := schema.User{}.Mixin()
 	userMixinFields1 := userMixin[1].Fields()
 	_ = userMixinFields1

@@ -81,6 +81,26 @@ type Store interface {
 	ListAPIKeysByUser(ctx context.Context, userID uint32) ([]*ent.ApiKey, error)
 	DeleteAPIKeyByID(ctx context.Context, userID, keyID uint32) (int, error)
 
+	// torrent sessions (builtin BitTorrent engine persistence)
+	CreateTorrentSession(
+		ctx context.Context,
+		p CreateTorrentSessionParams,
+	) (*ent.TorrentSession, error)
+	ListTorrentSessions(ctx context.Context) ([]*ent.TorrentSession, error)
+	DeleteTorrentSessionByHash(ctx context.Context, infoHash string) error
+	SetTorrentSessionPaused(
+		ctx context.Context,
+		infoHash string,
+		paused bool,
+	) error
+	SetTorrentSessionName(ctx context.Context, infoHash, name string) error
+	SetTorrentSessionCompleted(
+		ctx context.Context,
+		infoHash string,
+		at time.Time,
+	) error
+	SetTorrentSessionSeedStopped(ctx context.Context, infoHash string) error
+
 	// invites
 	CreateInvite(ctx context.Context, p CreateInviteParams) (*ent.Invite, error)
 	FindInviteByTokenHash(ctx context.Context, hash string) (*ent.Invite, error)

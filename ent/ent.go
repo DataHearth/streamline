@@ -27,6 +27,7 @@ import (
 	"github.com/datahearth/streamline/ent/scheduledjob"
 	"github.com/datahearth/streamline/ent/season"
 	"github.com/datahearth/streamline/ent/session"
+	"github.com/datahearth/streamline/ent/torrentsession"
 	"github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/ent/user"
 )
@@ -105,6 +106,7 @@ func checkColumn(t, c string) error {
 			season.Table:         season.ValidColumn,
 			session.Table:        session.ValidColumn,
 			tvshow.Table:         tvshow.ValidColumn,
+			torrentsession.Table: torrentsession.ValidColumn,
 			user.Table:           user.ValidColumn,
 		})
 	})
