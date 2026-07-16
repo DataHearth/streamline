@@ -8,6 +8,7 @@ import (
 	oasspec "github.com/datahearth/streamline/api"
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/auth"
+	"github.com/datahearth/streamline/internal/bittorrent"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
@@ -64,6 +65,7 @@ type Config struct {
 	TVSearcher      *rss.EpisodeMissingSearcher
 	MetadataTV      metadata.TVProvider
 	Posters         posters.Manager
+	Torrents        bittorrent.Manager
 	AuthMiddleware  func(http.Handler) http.Handler
 	HTTPLog         func(http.Handler) http.Handler
 }
@@ -94,6 +96,7 @@ func New(cfg Config) *Server {
 		Requests:        cfg.Requests,
 		TVSearcher:      cfg.TVSearcher,
 		MetadataTV:      cfg.MetadataTV,
+		Torrents:        cfg.Torrents,
 		Store:           cfg.DB,
 		Ent:             cfg.Ent,
 		PublicURL:       config.PublicURL(),

@@ -6,6 +6,7 @@ package restapi
 import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/auth"
+	"github.com/datahearth/streamline/internal/bittorrent"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/indexer"
@@ -40,6 +41,7 @@ type Server struct {
 	renamer         library.Renamer
 	seriesRenamer   library.Renamer
 	requests        request.Manager
+	torrents        bittorrent.Manager
 	store           db.Store
 	ent             *ent.Client
 	publicURL       string
@@ -63,6 +65,7 @@ type Deps struct {
 	Renamer         library.Renamer
 	SeriesRenamer   library.Renamer
 	Requests        request.Manager
+	Torrents        bittorrent.Manager
 	Store           db.Store
 	Ent             *ent.Client
 	PublicURL       string
@@ -86,6 +89,7 @@ func New(d Deps) *Server {
 		deepLinker:      d.DeepLinker,
 		renamer:         d.Renamer,
 		requests:        d.Requests,
+		torrents:        d.Torrents,
 		store:           d.Store,
 		ent:             d.Ent,
 		publicURL:       d.PublicURL,

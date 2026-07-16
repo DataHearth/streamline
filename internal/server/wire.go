@@ -13,6 +13,7 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/auth"
+	"github.com/datahearth/streamline/internal/bittorrent"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
@@ -49,6 +50,7 @@ type App struct {
 	Downloads  download.Downloader
 	Importer   *importer.Worker
 	HTTPLogger *observability.HTTPLogger
+	Torrents   *bittorrent.Engine
 }
 
 // httpAccessSkip filters which requests bypass the HTTP access log.
@@ -157,7 +159,17 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		return nil, fmt.Errorf("create posters service: %w", err)
 	}
 	indexerSvc := indexer.New()
-	dlManager := download.New(store, nil)
+	var torrentEngine *bittorrent.Engine
+	var builtinClient download.Client
+	if _, ok := config.BuiltinDownloadClient(); ok {
+		var err error
+		torrentEngine, err = bittorrent.New(ctx, store)
+		if err != nil {
+			return nil, fmt.Errorf("builtin torrent engine: %w", err)
+		}
+		builtinClient = torrentEngine
+	}
+	dlManager := download.New(store, builtinClient)
 	movieSvc := movie.NewService(store, tmdb, postersSvc, dlManager)
 	tvSvc := tvshow.NewService(store, tvdb, postersSvc, dlManager)
 	mediaServerSvc := mediaserver.New()
@@ -367,6 +379,11 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		return nil, fmt.Errorf("http access logger: %w", err)
 	}
 
+	var torrentsAPI bittorrent.Manager
+	if torrentEngine != nil {
+		torrentsAPI = torrentEngine
+	}
+
 	// 11. HTTP server
 	srv := New(Config{
 		DB:              store,
@@ -390,6 +407,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		TVSearcher:      tvMissing,
 		MetadataTV:      tvdb,
 		Posters:         postersSvc,
+		Torrents:        torrentsAPI,
 		AuthMiddleware:  authMW,
 		HTTPLog:         httpLogger.Middleware(httpAccessSkip),
 	})
@@ -403,6 +421,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		Downloads:  dlManager,
 		Importer:   imp,
 		HTTPLogger: httpLogger,
+		Torrents:   torrentEngine,
 	}, nil
 }
 

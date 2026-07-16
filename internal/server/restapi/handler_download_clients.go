@@ -6,6 +6,7 @@ import (
 
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/restart"
 )
 
 func (s *Server) ListDownloadClients(
@@ -72,6 +73,9 @@ func (s *Server) CreateDownloadClient(
 			UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
 		}, nil
 	}
+	if e.ClientType == "builtin" {
+		restart.Mark()
+	}
 	return CreateDownloadClient201JSONResponse(downloadClientToAPI(e)), nil
 }
 
@@ -101,6 +105,8 @@ func (s *Server) UpdateDownloadClient(
 		patch.AuthMethod = &am
 	}
 
+	prev, _ := config.FindDownloadClient(request.Name)
+
 	switch err := config.UpdateDownloadClient(ctx, request.Name, patch); {
 	case errors.Is(err, config.ErrDownloadClientNotFound):
 		return UpdateDownloadClient404JSONResponse{
@@ -115,6 +121,9 @@ func (s *Server) UpdateDownloadClient(
 			UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
 		}, nil
 	}
+	if prev.ClientType == "builtin" || string(request.Body.ClientType) == "builtin" {
+		restart.Mark()
+	}
 	e, _ := config.FindDownloadClient(request.Name)
 	return UpdateDownloadClient200JSONResponse(downloadClientToAPI(e)), nil
 }
@@ -128,6 +137,8 @@ func (s *Server) DeleteDownloadClient(
 			ForbiddenJSONResponse: notAdminResp,
 		}, nil
 	}
+	prev, _ := config.FindDownloadClient(request.Name)
+
 	switch err := config.DeleteDownloadClient(ctx, request.Name); {
 	case errors.Is(err, config.ErrDownloadClientNotFound):
 		return DeleteDownloadClient404JSONResponse{
@@ -141,6 +152,9 @@ func (s *Server) DeleteDownloadClient(
 		return DeleteDownloadClient500JSONResponse{
 			InternalErrorJSONResponse: errInternal(err.Error()),
 		}, nil
+	}
+	if prev.ClientType == "builtin" {
+		restart.Mark()
 	}
 	return DeleteDownloadClient204Response{}, nil
 }

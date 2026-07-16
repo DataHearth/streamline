@@ -235,6 +235,16 @@ func run(ctx context.Context, cmd *cli.Command) error {
 	if err := app.Auth.Shutdown(shutdownCtx); err != nil {
 		logger.ErrorContext(shutdownCtx, "auth shutdown error", "error", err)
 	}
+	if app.Torrents != nil {
+		if err := app.Torrents.Close(); err != nil {
+			logger.ErrorContext(
+				shutdownCtx,
+				"torrent engine shutdown failed",
+				"error",
+				err,
+			)
+		}
+	}
 	if err := app.HTTPLogger.Close(); err != nil {
 		logger.ErrorContext(shutdownCtx, "http access log close error", "error", err)
 	}

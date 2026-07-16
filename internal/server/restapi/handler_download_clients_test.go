@@ -12,6 +12,7 @@ import (
 
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/restart"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
 
@@ -250,6 +251,39 @@ var _ = Describe(
 				resp := app.do(req)
 				defer resp.Body.Close()
 				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+			})
+		})
+
+		Describe("builtin restart marking", func() {
+			BeforeEach(restart.ResetForTest)
+
+			It("marks restart-pending when a builtin client is created", func() {
+				// Depends on Task 8's create-schema change (download_dir field +
+				// optional host/port). Remove this Skip once that lands.
+				Skip("requires Task 8 create-schema download_dir support")
+				body := `{"name": "embedded", "client_type": "builtin",
+					"download_dir": "/downloads", "enabled": true}`
+				resp, err := http.Post(
+					app.srv.URL+"/api/v1/download-clients",
+					"application/json", strings.NewReader(body),
+				)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+				Expect(restart.Pending()).To(BeTrue())
+			})
+
+			It("does not mark restart for external clients", func() {
+				body := `{"name": "qbt", "client_type": "qbittorrent",
+					"host": "localhost", "port": 8080}`
+				resp, err := http.Post(
+					app.srv.URL+"/api/v1/download-clients",
+					"application/json", strings.NewReader(body),
+				)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+				Expect(restart.Pending()).To(BeFalse())
 			})
 		})
 	},
