@@ -161,4 +161,76 @@ var _ = Describe("Engine download flow", Label("integration", "bittorrent"), fun
 	It("is a functioning download.Client for TestConnection", func() {
 		Expect(engine.TestConnection(ctx)).To(Succeed())
 	})
+
+	It("pauses and resumes with persisted state", func() {
+		hash, err := engine.AddTorrent(ctx, download.TorrentSource{
+			Bytes: torrentBytes,
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(engine.PauseTorrent(ctx, hash)).To(Succeed())
+		t, err := engine.GetTorrent(ctx, hash)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(t.Status).To(Equal(download.StatusPaused))
+		sessions, err := store.ListTorrentSessions(ctx)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(sessions[0].Paused).To(BeTrue())
+
+		Expect(engine.ResumeTorrent(ctx, hash)).To(Succeed())
+		connectToSeeder(engine, hash, seederPort)
+		Eventually(func() download.TorrentStatus {
+			t, terr := engine.GetTorrent(ctx, hash)
+			Expect(terr).NotTo(HaveOccurred())
+			return t.Status
+		}).WithTimeout(60 * time.Second).WithPolling(200 * time.Millisecond).
+			Should(Equal(download.StatusSeeding))
+	})
+
+	It("removes a torrent and deletes its data on request", func() {
+		hash, err := engine.AddTorrent(ctx, download.TorrentSource{
+			Bytes: torrentBytes,
+		})
+		Expect(err).NotTo(HaveOccurred())
+		connectToSeeder(engine, hash, seederPort)
+		Eventually(func() download.TorrentStatus {
+			t, terr := engine.GetTorrent(ctx, hash)
+			Expect(terr).NotTo(HaveOccurred())
+			return t.Status
+		}).WithTimeout(60 * time.Second).WithPolling(200 * time.Millisecond).
+			Should(Equal(download.StatusSeeding))
+
+		Expect(engine.RemoveTorrent(ctx, hash, true)).To(Succeed())
+		_, err = engine.GetTorrent(ctx, hash)
+		Expect(err).To(MatchError(download.ErrTorrentNotFound))
+		_, err = os.Stat(filepath.Join(dlDir, "payload.bin"))
+		Expect(os.IsNotExist(err)).To(BeTrue())
+		sessions, err := store.ListTorrentSessions(ctx)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(sessions).To(BeEmpty())
+	})
+
+	It("restores completed torrents across restarts without redownload", func() {
+		hash, err := engine.AddTorrent(ctx, download.TorrentSource{
+			Bytes: torrentBytes,
+		})
+		Expect(err).NotTo(HaveOccurred())
+		connectToSeeder(engine, hash, seederPort)
+		Eventually(func() download.TorrentStatus {
+			t, terr := engine.GetTorrent(ctx, hash)
+			Expect(terr).NotTo(HaveOccurred())
+			return t.Status
+		}).WithTimeout(60 * time.Second).WithPolling(200 * time.Millisecond).
+			Should(Equal(download.StatusSeeding))
+		Expect(engine.Close()).To(Succeed())
+
+		// Second engine boots from the same store + download dir; the seeder
+		// is gone from its peer list, so completion must come from disk.
+		engine = newEngine(ctx, dlDir, store)
+		Eventually(func() download.TorrentStatus {
+			t, terr := engine.GetTorrent(ctx, hash)
+			Expect(terr).NotTo(HaveOccurred())
+			return t.Status
+		}).WithTimeout(30 * time.Second).WithPolling(200 * time.Millisecond).
+			Should(Equal(download.StatusSeeding))
+	})
 })
