@@ -17,10 +17,10 @@ type MediaServerEntry struct {
 
 type DownloadClientEntry struct {
 	Name         string `koanf:"name"          validate:"required"`
-	ClientType   string `koanf:"client_type"   validate:"required,oneof=qbittorrent transmission deluge"`
-	Host         string `koanf:"host"          validate:"required"`
-	Port         uint16 `koanf:"port"          validate:"required,port"`
-	AuthMethod   string `koanf:"auth_method"   validate:"required,oneof=password api_key"`
+	ClientType   string `koanf:"client_type"   validate:"required,oneof=qbittorrent transmission deluge builtin"`
+	Host         string `koanf:"host"          validate:"required_unless=ClientType builtin"`
+	Port         uint16 `koanf:"port"          validate:"required_unless=ClientType builtin,omitempty,port"`
+	AuthMethod   string `koanf:"auth_method"   validate:"required_unless=ClientType builtin,omitempty,oneof=password api_key"`
 	Username     string `koanf:"username"`
 	Password     string `koanf:"password"      validate:"excluded_with=PasswordFile"`
 	PasswordFile string `koanf:"password_file" validate:"omitempty,excluded_with=Password,filepath"`
@@ -29,6 +29,20 @@ type DownloadClientEntry struct {
 	UseSSL       bool   `koanf:"use_ssl"`
 	Priority     uint8  `koanf:"priority"`
 	Enabled      bool   `koanf:"enabled"`
+
+	// builtin-only knobs (client_type "builtin"); ignored for external clients.
+	DownloadDir     string `koanf:"download_dir"      validate:"required_if=ClientType builtin"`
+	ListenPort      uint16 `koanf:"listen_port"       validate:"omitempty,port"`
+	MaxUploadKbps   int    `koanf:"max_upload_kbps"   validate:"min=0"`
+	MaxDownloadKbps int    `koanf:"max_download_kbps" validate:"min=0"`
+	// SeedRatio/SeedTime stop seeding when either is reached; zero = unlimited.
+	SeedRatio  float64 `koanf:"seed_ratio"  validate:"min=0"`
+	SeedTime   string  `koanf:"seed_time"`
+	DisableDHT bool    `koanf:"disable_dht"`
+	// BindInterface pins the engine to one interface (name like wg0 or a
+	// literal IP); empty binds all interfaces. Existence is verified at engine
+	// boot, not config load — Validate only checks the value shape.
+	BindInterface string `koanf:"bind_interface"`
 }
 
 type IndexerEntry struct {
@@ -122,6 +136,21 @@ func FindDownloadClient(name string) (DownloadClientEntry, bool) {
 	}
 	for _, dc := range c.DownloadClients {
 		if dc.Name == name {
+			return dc, true
+		}
+	}
+	return DownloadClientEntry{}, false
+}
+
+// BuiltinDownloadClient returns the enabled builtin download-client entry,
+// if one is configured. Config validation guarantees at most one exists.
+func BuiltinDownloadClient() (DownloadClientEntry, bool) {
+	c := Get()
+	if c == nil {
+		return DownloadClientEntry{}, false
+	}
+	for _, dc := range c.DownloadClients {
+		if dc.ClientType == "builtin" && dc.Enabled {
 			return dc, true
 		}
 	}

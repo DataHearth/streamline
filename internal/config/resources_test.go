@@ -1,6 +1,8 @@
 package config_test
 
 import (
+	"context"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -192,6 +194,66 @@ var _ = Describe("Resource pick helpers", Label("unit", "config"), func() {
 		Expect(ok).To(BeTrue())
 		Expect(dc.Host).To(Equal("a"))
 		_, ok = config.FindDownloadClient("ghost")
+		Expect(ok).To(BeFalse())
+	})
+})
+
+var _ = Describe("builtin download client", Label("unit", "config"), func() {
+	var ctx context.Context
+
+	BeforeEach(func() {
+		ctx = context.Background()
+		configtest.SetupFile()
+	})
+
+	It("accepts a builtin entry without host/port/auth", func() {
+		err := config.AddDownloadClient(ctx, config.DownloadClientEntry{
+			Name: "embedded", ClientType: "builtin",
+			DownloadDir: "/downloads", Enabled: true,
+		})
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("rejects a builtin entry without download_dir", func() {
+		err := config.AddDownloadClient(ctx, config.DownloadClientEntry{
+			Name: "embedded", ClientType: "builtin", Enabled: true,
+		})
+		Expect(err).To(HaveOccurred())
+	})
+
+	It("still rejects an external entry without host", func() {
+		err := config.AddDownloadClient(ctx, config.DownloadClientEntry{
+			Name: "qbt", ClientType: "qbittorrent", Port: 8080,
+			AuthMethod: "password", Enabled: true,
+		})
+		Expect(err).To(HaveOccurred())
+	})
+
+	It("rejects a second builtin entry", func() {
+		Expect(config.AddDownloadClient(ctx, config.DownloadClientEntry{
+			Name: "one", ClientType: "builtin", DownloadDir: "/d1",
+		})).To(Succeed())
+		err := config.AddDownloadClient(ctx, config.DownloadClientEntry{
+			Name: "two", ClientType: "builtin", DownloadDir: "/d2",
+		})
+		Expect(err).To(MatchError(ContainSubstring("builtin")))
+	})
+
+	It("finds the enabled builtin entry", func() {
+		Expect(config.AddDownloadClient(ctx, config.DownloadClientEntry{
+			Name: "embedded", ClientType: "builtin",
+			DownloadDir: "/downloads", Enabled: true,
+		})).To(Succeed())
+		e, ok := config.BuiltinDownloadClient()
+		Expect(ok).To(BeTrue())
+		Expect(e.Name).To(Equal("embedded"))
+	})
+
+	It("reports no builtin entry when the only one is disabled", func() {
+		Expect(config.AddDownloadClient(ctx, config.DownloadClientEntry{
+			Name: "embedded", ClientType: "builtin", DownloadDir: "/downloads",
+		})).To(Succeed())
+		_, ok := config.BuiltinDownloadClient()
 		Expect(ok).To(BeFalse())
 	})
 })

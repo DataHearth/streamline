@@ -24,6 +24,16 @@ type DownloadClientPatch struct {
 	UseSSL     *bool
 	Priority   *uint8
 	Enabled    *bool
+
+	// builtin-only knobs (client_type "builtin").
+	DownloadDir     *string
+	ListenPort      *uint16
+	MaxUploadKbps   *int
+	MaxDownloadKbps *int
+	SeedRatio       *float64
+	SeedTime        *string
+	DisableDHT      *bool
+	BindInterface   *string
 }
 
 func AddDownloadClient(ctx context.Context, e DownloadClientEntry) error {
@@ -91,6 +101,30 @@ func UpdateDownloadClient(
 		}
 		if p.Enabled != nil {
 			e.Enabled = *p.Enabled
+		}
+		if p.DownloadDir != nil {
+			e.DownloadDir = *p.DownloadDir
+		}
+		if p.ListenPort != nil {
+			e.ListenPort = *p.ListenPort
+		}
+		if p.MaxUploadKbps != nil {
+			e.MaxUploadKbps = *p.MaxUploadKbps
+		}
+		if p.MaxDownloadKbps != nil {
+			e.MaxDownloadKbps = *p.MaxDownloadKbps
+		}
+		if p.SeedRatio != nil {
+			e.SeedRatio = *p.SeedRatio
+		}
+		if p.SeedTime != nil {
+			e.SeedTime = *p.SeedTime
+		}
+		if p.DisableDHT != nil {
+			e.DisableDHT = *p.DisableDHT
+		}
+		if p.BindInterface != nil {
+			e.BindInterface = *p.BindInterface
 		}
 		c.DownloadClients[idx] = e
 		slog.InfoContext(ctx, "download client updated", "name", name)

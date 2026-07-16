@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync/atomic"
 
@@ -189,6 +190,11 @@ type MediaServerConfig struct {
 	Servers      []MediaServerEntry `koanf:"servers"        validate:"unique=Name,dive"`
 }
 
+// bindInterfacePattern constrains a builtin download client's bind_interface to
+// an interface-name or literal-IP shape. Existence is checked at engine boot,
+// not config load.
+var bindInterfacePattern = regexp.MustCompile(`^[A-Za-z0-9._:-]+$`)
+
 func (c *Config) Validate() error {
 	if err := validator.New().Struct(c); err != nil {
 		return err
@@ -207,6 +213,24 @@ func (c *Config) Validate() error {
 				c.QualityDefaultProfile,
 			)
 		}
+	}
+	builtin := 0
+	for _, dc := range c.DownloadClients {
+		if dc.ClientType == "builtin" {
+			builtin++
+		}
+		if dc.BindInterface != "" &&
+			!bindInterfacePattern.MatchString(dc.BindInterface) {
+			return fmt.Errorf(
+				"download client %q: invalid bind_interface %q",
+				dc.Name, dc.BindInterface,
+			)
+		}
+	}
+	if builtin > 1 {
+		return fmt.Errorf(
+			"at most one builtin download client is allowed, found %d", builtin,
+		)
 	}
 	return nil
 }

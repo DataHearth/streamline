@@ -46,4 +46,27 @@ var _ = Describe("Download client CRUD", Label("unit", "config"), func() {
 		Expect(config.DeleteDownloadClient(ctx, "qbit")).
 			To(MatchError(config.ErrDownloadClientNotFound))
 	})
+
+	It("patches builtin knobs", func() {
+		ctx := context.Background()
+		Expect(config.AddDownloadClient(ctx, config.DownloadClientEntry{
+			Name: "embedded", ClientType: "builtin", DownloadDir: "/downloads",
+		})).To(Succeed())
+		dir := "/data/torrents"
+		ratio := 2.0
+		seedTime := "72h"
+		iface := "wg0"
+		Expect(
+			config.UpdateDownloadClient(ctx, "embedded", config.DownloadClientPatch{
+				DownloadDir: &dir, SeedRatio: &ratio, SeedTime: &seedTime,
+				BindInterface: &iface,
+			}),
+		).To(Succeed())
+		e, ok := config.FindDownloadClient("embedded")
+		Expect(ok).To(BeTrue())
+		Expect(e.DownloadDir).To(Equal("/data/torrents"))
+		Expect(e.SeedRatio).To(Equal(2.0))
+		Expect(e.SeedTime).To(Equal("72h"))
+		Expect(e.BindInterface).To(Equal("wg0"))
+	})
 })
