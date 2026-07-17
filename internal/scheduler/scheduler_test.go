@@ -434,6 +434,14 @@ var _ = Describe("Scheduler", Label("unit", "scheduler"), func() {
 				calls.Load,
 			).WithTimeout(time.Second).
 				Should(BeNumerically(">=", 1))
+			// calls>=1 only means fn returned; running stays true through
+			// executeJob's tail, so wait for it to clear or RunNow races
+			// to ErrJobBusy.
+			Eventually(func() bool {
+				info, err := s.Get("once")
+				Expect(err).NotTo(HaveOccurred())
+				return info.Running
+			}).WithTimeout(time.Second).Should(BeFalse())
 			before := calls.Load()
 
 			Expect(s.RunNow("once")).To(Succeed())
@@ -491,6 +499,12 @@ var _ = Describe("Scheduler", Label("unit", "scheduler"), func() {
 			).WithTimeout(time.Second).
 				Should(BeNumerically(">=", 1))
 			Expect(s.Pause("paused")).To(Succeed())
+			// Wait for the initial run to clear running before RunNow.
+			Eventually(func() bool {
+				info, err := s.Get("paused")
+				Expect(err).NotTo(HaveOccurred())
+				return info.Running
+			}).WithTimeout(time.Second).Should(BeFalse())
 			before := calls.Load()
 			Expect(s.RunNow("paused")).To(Succeed())
 			Eventually(calls.Load).WithTimeout(time.Second).Should(Equal(before + 1))
