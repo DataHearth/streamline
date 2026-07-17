@@ -126,10 +126,16 @@ func (e *Engine) RemoveTorrent(
 	}
 	t.Drop()
 	if deleteFiles && contentPath != "" {
-		if err := os.RemoveAll(contentPath); err != nil {
-			return otelx.RecordSpanError(
-				span, fmt.Errorf("delete torrent data: %w", err),
-			)
+		// An incomplete single-file torrent stores its partial data at
+		// "<name>.part" (anacrolix UsePartFiles), a sibling of contentPath that
+		// os.RemoveAll(contentPath) would miss. Remove both; the .part path is a
+		// harmless no-op for a completed or multi-file torrent.
+		for _, p := range []string{contentPath, contentPath + ".part"} {
+			if err := os.RemoveAll(p); err != nil {
+				return otelx.RecordSpanError(
+					span, fmt.Errorf("delete torrent data: %w", err),
+				)
+			}
 		}
 	}
 	if err := e.store.DeleteTorrentSessionByHash(ctx, hash); err != nil {
@@ -213,13 +219,18 @@ func (e *Engine) status(
 		return download.StatusPaused
 	}
 	if t.Info() == nil {
-		return download.StatusDownloading
+		return download.StatusFetching
 	}
 	if t.BytesMissing() == 0 {
 		if st.seedStopped {
 			return download.StatusCompleted
 		}
 		return download.StatusSeeding
+	}
+	// Downloading but with nothing to download from: no data can move, so
+	// surface it as stalled rather than a healthy-looking "downloading".
+	if t.Stats().ActivePeers == 0 {
+		return download.StatusStalled
 	}
 	return download.StatusDownloading
 }

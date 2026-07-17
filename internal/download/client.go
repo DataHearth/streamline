@@ -9,7 +9,13 @@ const (
 	StatusSeeding     TorrentStatus = "seeding"
 	StatusPaused      TorrentStatus = "paused"
 	StatusCompleted   TorrentStatus = "completed"
-	StatusError       TorrentStatus = "error"
+	// StatusFetching (magnet metadata not yet resolved) and StatusStalled
+	// (downloading with no connected peers) are only emitted by the builtin
+	// bittorrent engine; external clients map their equivalents to
+	// StatusDownloading.
+	StatusFetching TorrentStatus = "fetching"
+	StatusStalled  TorrentStatus = "stalled"
+	StatusError    TorrentStatus = "error"
 )
 
 type Torrent struct {

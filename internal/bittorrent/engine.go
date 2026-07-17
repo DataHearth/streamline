@@ -133,6 +133,17 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 		} else {
 			cc.DisableIPv4 = true
 		}
+		// Peer sockets are pinned above, but tracker announces (HTTP + UDP) and
+		// webseed/metainfo HTTP egress dial through anacrolix's own dialers,
+		// which are unbound by default and would leave via the host default
+		// route — leaking the real IP to trackers and webseeds. Source-bind them
+		// to the same interface so the binding is fail-closed.
+		srcDialer := &net.Dialer{LocalAddr: &net.TCPAddr{IP: bindIP}}
+		cc.TrackerDialContext = srcDialer.DialContext
+		cc.HTTPDialContext = srcDialer.DialContext
+		cc.TrackerListenPacket = func(network, _ string) (net.PacketConn, error) {
+			return net.ListenUDP(network, &net.UDPAddr{IP: bindIP})
+		}
 	}
 
 	client, err := antorrent.NewClient(cc)
@@ -279,8 +290,11 @@ func (e *Engine) restore(ctx context.Context) error {
 		if s.Paused {
 			t.DisallowDataDownload()
 			t.DisallowDataUpload()
-			continue
 		}
+		// Arm the metadata watcher even for paused sessions: a magnet re-adds
+		// with Info()==nil, and DownloadAll must fire once metadata resolves so
+		// a subsequent resume isn't stuck with no prioritized pieces. Data stays
+		// gated by the Disallow calls above until the torrent is resumed.
 		e.startWhenReady(t, s.SeedStopped)
 	}
 	return nil

@@ -186,6 +186,47 @@ var _ = Describe("Engine download flow", Label("integration", "bittorrent"), fun
 			Should(Equal(download.StatusSeeding))
 	})
 
+	It("reports fetching while a magnet's metadata is unresolved", func() {
+		hash, err := engine.AddTorrent(ctx, download.TorrentSource{
+			Magnet: "magnet:?xt=urn:btih:" +
+				"aabbccddeeff00112233445566778899aabbccdd&dn=test",
+		})
+		Expect(err).NotTo(HaveOccurred())
+		t, err := engine.GetTorrent(ctx, hash)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(t.Status).To(Equal(download.StatusFetching))
+	})
+
+	It("reports stalled while downloading with no connected peers", func() {
+		hash, err := engine.AddTorrent(ctx, download.TorrentSource{
+			Bytes: torrentBytes,
+		})
+		Expect(err).NotTo(HaveOccurred())
+		// Metadata is known immediately (.torrent source) but no seeder is
+		// connected, so there is data missing and zero active peers.
+		Eventually(func() download.TorrentStatus {
+			t, terr := engine.GetTorrent(ctx, hash)
+			Expect(terr).NotTo(HaveOccurred())
+			return t.Status
+		}).WithTimeout(10 * time.Second).WithPolling(200 * time.Millisecond).
+			Should(Equal(download.StatusStalled))
+	})
+
+	It("deletes the incomplete .part file for single-file torrents", func() {
+		hash, err := engine.AddTorrent(ctx, download.TorrentSource{
+			Bytes: torrentBytes,
+		})
+		Expect(err).NotTo(HaveOccurred())
+		// Mirror anacrolix's on-disk layout for an in-progress single-file
+		// torrent, whose partial data lives at "<name>.part".
+		partPath := filepath.Join(dlDir, "payload.bin.part")
+		Expect(os.WriteFile(partPath, []byte("partial"), 0o644)).To(Succeed())
+
+		Expect(engine.RemoveTorrent(ctx, hash, true)).To(Succeed())
+		_, err = os.Stat(partPath)
+		Expect(os.IsNotExist(err)).To(BeTrue())
+	})
+
 	It("removes a torrent and deletes its data on request", func() {
 		hash, err := engine.AddTorrent(ctx, download.TorrentSource{
 			Bytes: torrentBytes,
