@@ -73,7 +73,7 @@
         "priority": { "type": "integer", "minimum": 0, "maximum": 255 },
         "enabled": { "type": "boolean" },
         "download_dir": { "type": "string" },
-        "listen_port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "listen_port": { "type": "integer", "minimum": 0, "maximum": 65535 },
         "max_upload_kbps": { "type": "integer", "minimum": 0 },
         "max_download_kbps": { "type": "integer", "minimum": 0 },
         "seed_ratio": { "type": "number", "minimum": 0 },

@@ -226,11 +226,14 @@
 		builtinForm.reset({
 			download_dir: builtinCfg.download_dir ?? "",
 			bind_interface: builtinCfg.bind_interface ?? "",
-			listen_port: builtinCfg.listen_port ?? 6881,
+			// The read view omits zero-values; fall back to the semantic zeros
+			// (0 = auto port, 0 = unlimited ratio, "" = unlimited time) — never
+			// the create defaults, or saving an untouched form silently pins them.
+			listen_port: builtinCfg.listen_port ?? 0,
 			max_download_kbps: builtinCfg.max_download_kbps ?? 0,
 			max_upload_kbps: builtinCfg.max_upload_kbps ?? 0,
-			seed_ratio: builtinCfg.seed_ratio ?? 2.0,
-			seed_time: builtinCfg.seed_time ?? "72h",
+			seed_ratio: builtinCfg.seed_ratio ?? 0,
+			seed_time: builtinCfg.seed_time ?? "",
 			disable_dht: builtinCfg.disable_dht ?? false,
 			enabled: builtinCfg.enabled,
 		});
