@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from "svelte";
+	import { Check } from "@lucide/svelte";
 	import { cn } from "../../lib/cn";
 
 	type Props = {
@@ -11,6 +12,8 @@
 		disabled?: boolean;
 		name?: string;
 		class?: string;
+		// Destructive confirms use the danger tone (red box when checked).
+		tone?: "accent" | "danger";
 		// Rich label content (e.g. text with inline expressions); wins over label.
 		children?: Snippet;
 	};
@@ -23,13 +26,14 @@
 		disabled = false,
 		name,
 		class: className,
+		tone = "accent",
 		children,
 	}: Props = $props();
 </script>
 
 <label
 	class={cn(
-		"flex items-start gap-2.5",
+		"flex cursor-pointer items-start gap-2.5",
 		disabled && "cursor-not-allowed opacity-60",
 		className,
 	)}
@@ -40,8 +44,27 @@
 		{checked}
 		{disabled}
 		onchange={(e) => onChange((e.currentTarget as HTMLInputElement).checked)}
-		class="mt-0.5 h-4 w-4 shrink-0 rounded border-border bg-bg accent-accent"
+		class="peer sr-only"
 	/>
+	<!-- Custom box: the native accent-color glyph renders off-center at 16px,
+	     so draw the check ourselves (same visual as the toolbar filter menu). -->
+	<span
+		aria-hidden="true"
+		class={cn(
+			"mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded border transition",
+			"peer-focus-visible:ring-2 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-bg-card",
+			checked
+				? tone === "danger"
+					? "border-status-failed bg-status-failed text-bg-deep"
+					: "border-accent bg-accent text-fg-on-accent"
+				: "border-border-strong bg-bg",
+			tone === "danger"
+				? "peer-focus-visible:ring-status-failed/50"
+				: "peer-focus-visible:ring-accent-ring",
+		)}
+	>
+		{#if checked}<Check size={11} strokeWidth={3} />{/if}
+	</span>
 	{#if children}
 		{@render children()}
 	{:else if description}

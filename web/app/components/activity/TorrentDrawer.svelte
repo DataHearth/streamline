@@ -16,6 +16,7 @@
 	import StatusPill from "../shared/StatusPill.svelte";
 	import ProgressBar from "../shared/ProgressBar.svelte";
 	import Dialog from "../modals/Dialog.svelte";
+	import Checkbox from "../forms/Checkbox.svelte";
 	import TorrentFilesTab from "./TorrentFilesTab.svelte";
 	import TorrentPeersTab from "./TorrentPeersTab.svelte";
 	import TorrentTrackersTab from "./TorrentTrackersTab.svelte";
@@ -338,18 +339,15 @@
 		<span class="font-medium text-fg">{torrent?.name || "this torrent"}</span>
 		from the built-in engine.
 	</p>
-	<label
-		class="mt-4 flex cursor-pointer items-start gap-2.5 rounded-md border border-border bg-bg-card p-3"
+	<Checkbox
+		checked={deleteFiles}
+		onChange={(v) => (deleteFiles = v)}
+		tone="danger"
+		class="mt-4 rounded-md border border-border bg-bg-card p-3"
 	>
-		<input
-			type="checkbox"
-			checked={deleteFiles}
-			onchange={(e) => (deleteFiles = e.currentTarget.checked)}
-			class="mt-0.5 h-4 w-4 shrink-0 accent-status-failed"
-		/>
 		<span class="text-sm text-fg-muted">
 			<span class="font-medium text-fg">Also delete downloaded files</span>
 			from disk. This can’t be undone.
 		</span>
-	</label>
+	</Checkbox>
 </Dialog>
