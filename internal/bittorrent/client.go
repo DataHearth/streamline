@@ -171,9 +171,8 @@ func (e *Engine) ResumeTorrent(ctx context.Context, hash string) error {
 	if !st.seedStopped {
 		t.AllowDataUpload()
 	}
-	if t.Info() != nil {
-		t.DownloadAll()
-	}
+	// No priority work here: file priorities (the single demand source, set
+	// by startWhenReady's default or the user) survive a pause untouched.
 	e.setState(hash, func(st *torrentState) { st.paused = false })
 	return e.store.SetTorrentSessionPaused(ctx, hash, false)
 }

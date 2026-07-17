@@ -20,6 +20,7 @@ import (
 	antorrent "github.com/anacrolix/torrent"
 	"github.com/anacrolix/torrent/metainfo"
 	"github.com/anacrolix/torrent/storage"
+	"github.com/anacrolix/torrent/types"
 	"go.opentelemetry.io/otel"
 	"golang.org/x/time/rate"
 
@@ -292,9 +293,9 @@ func (e *Engine) restore(ctx context.Context) error {
 			t.DisallowDataUpload()
 		}
 		// Arm the metadata watcher even for paused sessions: a magnet re-adds
-		// with Info()==nil, and DownloadAll must fire once metadata resolves so
-		// a subsequent resume isn't stuck with no prioritized pieces. Data stays
-		// gated by the Disallow calls above until the torrent is resumed.
+		// with Info()==nil, and the default file prioritization must fire once
+		// metadata resolves so a subsequent resume isn't stuck with no wanted
+		// pieces. Data stays gated by the Disallow calls above until resumed.
 		e.startWhenReady(t, s.SeedStopped)
 	}
 	return nil
@@ -314,7 +315,7 @@ func (e *Engine) startWhenReady(t *antorrent.Torrent, seedStopped bool) {
 		if seedStopped {
 			t.DisallowDataUpload()
 		}
-		t.DownloadAll()
+		wantFilesByDefault(t)
 		hash := t.InfoHash().HexString()
 		if err := e.store.SetTorrentSessionName(
 			context.Background(), hash, t.Name(),
@@ -324,6 +325,20 @@ func (e *Engine) startWhenReady(t *antorrent.Torrent, seedStopped bool) {
 				"info_hash", hash, "error", err)
 		}
 	})
+}
+
+// wantFilesByDefault bumps every still-unprioritized file from anacrolix's
+// None default to Normal. File priorities are the engine's single demand
+// source — never DownloadAll, whose piece-level demand is max()-merged and
+// can't be retracted by a later per-file skip — so fresh files must be
+// bumped or nothing downloads. Files the user already prioritized are left
+// untouched.
+func wantFilesByDefault(t *antorrent.Torrent) {
+	for _, f := range t.Files() {
+		if f.Priority() == types.PiecePriorityNone {
+			f.SetPriority(types.PiecePriorityNormal)
+		}
+	}
 }
 
 func (e *Engine) setState(hash string, mut func(*torrentState)) {
