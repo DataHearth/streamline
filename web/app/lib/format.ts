@@ -32,6 +32,12 @@ export function formatEta(seconds: number | undefined | null): string {
 	return `${h}h ${String(m % 60).padStart(2, "0")}m`;
 }
 
+// formatRatio renders a torrent share ratio ("1.84"). Em dash when unknown.
+export function formatRatio(ratio: number | undefined | null): string {
+	if (ratio == null || ratio < 0) return "—";
+	return ratio.toFixed(2);
+}
+
 // pillStatus maps a download lifecycle status onto an existing StatusPill
 // kind/token (no shared-component change): importing reuses the "grabbing"
 // in-progress token, error/failed share "failed", completed → "available".

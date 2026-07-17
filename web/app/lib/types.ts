@@ -512,7 +512,11 @@ export type Indexer = {
 	enabled: boolean;
 };
 
-export type DownloadClientType = "qbittorrent" | "transmission" | "deluge";
+export type DownloadClientType =
+	| "qbittorrent"
+	| "transmission"
+	| "deluge"
+	| "builtin";
 export type DownloadClientAuth = "password" | "api_key";
 
 export type DownloadClient = {
@@ -527,7 +531,88 @@ export type DownloadClient = {
 	enabled: boolean;
 	api_key_set: boolean;
 	password_set: boolean;
+	// builtin-only knobs (client_type "builtin"); absent for external clients.
+	download_dir?: string;
+	listen_port?: number;
+	max_upload_kbps?: number;
+	max_download_kbps?: number;
+	seed_ratio?: number;
+	seed_time?: string;
+	disable_dht?: boolean;
+	// Interface name (e.g. wg0) or IP the engine binds to. Empty = all interfaces.
+	bind_interface?: string;
+	// Runtime state, populated only for the builtin entry from the live engine.
+	running?: boolean;
+	port_bound?: number;
+	interface_bound?: string;
 };
+
+// ── Built-in torrent engine (anacrolix "builtin" download client) ─────────
+// The builtin engine's config lives on its DownloadClient entry (client_type
+// "builtin"); there is no dedicated /download-clients/builtin endpoint. These
+// torrent types mirror the backend TorrentInfo / TorrentDetails schemas.
+export type TorrentStatus =
+	| "downloading"
+	| "seeding"
+	| "completed"
+	| "paused"
+	| "fetching"
+	| "stalled";
+
+export type TorrentFilePriority = "skip" | "normal" | "high";
+
+// GET /torrents list item. Light by design — no files/peers/trackers (those
+// come from the per-torrent detail query). The engine reports a single
+// peer_count (connected peers), not a seed/peer split, and no upload rate.
+export type Torrent = {
+	hash: string;
+	// Empty while a magnet resolves metadata.
+	name: string;
+	status: TorrentStatus;
+	// Fraction complete, 0..1.
+	progress: number;
+	// 0 while metadata is unknown.
+	size: number;
+	// Bytes per second.
+	download_speed: number;
+	// Total bytes uploaded so far.
+	uploaded: number;
+	ratio: number;
+	peer_count: number;
+};
+
+export type TorrentFile = {
+	index: number;
+	path: string;
+	size: number;
+	// Bytes downloaded for this file; progress = downloaded / size.
+	downloaded: number;
+	priority: TorrentFilePriority;
+};
+
+export type TorrentPeer = {
+	addr: string;
+	client?: string;
+	// Bytes per second.
+	download_rate?: number;
+};
+
+// GET /torrents/{hash} — the list item plus its file/tracker/peer breakdown.
+export type TorrentDetails = Torrent & {
+	files: TorrentFile[];
+	trackers: string[];
+	peers: TorrentPeer[];
+};
+
+export type TorrentList = { items: Torrent[]; refreshed_at: string };
+
+// POST /torrents — exactly one of magnet / torrent (base64 .torrent) is set.
+export type AddTorrentRequest = {
+	magnet?: string;
+	torrent?: string;
+};
+
+export type TorrentAddResult = { hash: string };
 
 export type MediaServerType = "plex" | "jellyfin" | "emby";
 

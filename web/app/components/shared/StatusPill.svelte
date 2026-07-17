@@ -6,7 +6,11 @@
 		| "wanted"
 		| "missing"
 		| "failed"
-		| "paused";
+		| "paused"
+		| "seeding"
+		| "completed"
+		| "fetching"
+		| "stalled";
 
 	const LABELS: Record<StatusKind, string> = {
 		downloading: "Downloading",
@@ -16,6 +20,10 @@
 		missing: "Missing",
 		failed: "Failed",
 		paused: "Paused",
+		seeding: "Seeding",
+		completed: "Completed",
+		fetching: "Fetching metadata",
+		stalled: "Stalled",
 	};
 </script>
 

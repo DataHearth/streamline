@@ -1,8 +1,10 @@
 <script lang="ts">
-	import { Search, Rows3, Rows2, X, Trash2 } from "@lucide/svelte";
+	import { Search, Rows3, Rows2, X, Trash2, Plus, ListFilter, Check } from "@lucide/svelte";
+	import { fly } from "svelte/transition";
+	import { cubicOut } from "svelte/easing";
 	import { cn } from "../../lib/cn";
 
-	type View = "queue" | "history";
+	type View = "queue" | "history" | "torrents";
 	type Density = "comfortable" | "compact";
 
 	let {
@@ -16,6 +18,8 @@
 		onDensityToggle,
 		onClearCompleted,
 		clearableCount = 0,
+		onAddTorrent,
+		canAddTorrent = false,
 	}: {
 		view: View;
 		statusFilter: string[];
@@ -27,22 +31,35 @@
 		onDensityToggle: () => void;
 		onClearCompleted?: () => void;
 		clearableCount?: number;
+		onAddTorrent?: () => void;
+		canAddTorrent?: boolean;
 	} = $props();
 
-	const CHIPS: Record<View, { key: string; label: string }[]> = {
+	// `dot` maps each filter to a real --status-* token (some chip keys like
+	// "importing"/"error" have no token of their own — mirror lib/format.pillStatus).
+	const CHIPS: Record<View, { key: string; label: string; dot: string }[]> = {
 		queue: [
-			{ key: "downloading", label: "Downloading" },
-			{ key: "importing", label: "Importing" },
-			{ key: "paused", label: "Paused" },
-			{ key: "error", label: "Error" },
+			{ key: "downloading", label: "Downloading", dot: "downloading" },
+			{ key: "importing", label: "Importing", dot: "grabbing" },
+			{ key: "paused", label: "Paused", dot: "paused" },
+			{ key: "error", label: "Error", dot: "failed" },
 		],
 		history: [
-			{ key: "completed", label: "Completed" },
-			{ key: "failed", label: "Failed" },
+			{ key: "completed", label: "Completed", dot: "available" },
+			{ key: "failed", label: "Failed", dot: "failed" },
+		],
+		torrents: [
+			{ key: "downloading", label: "Downloading", dot: "downloading" },
+			{ key: "stalled", label: "Stalled", dot: "stalled" },
+			{ key: "seeding", label: "Seeding", dot: "seeding" },
+			{ key: "completed", label: "Completed", dot: "completed" },
+			{ key: "paused", label: "Paused", dot: "paused" },
 		],
 	};
 
 	let chips = $derived(CHIPS[view]);
+	let filterOpen = $state(false);
+	let activeChips = $derived(chips.filter((c) => statusFilter.includes(c.key)));
 
 	function toggleChip(key: string) {
 		onStatusFilterChange(
@@ -50,6 +67,24 @@
 				? statusFilter.filter((s) => s !== key)
 				: [...statusFilter, key],
 		);
+	}
+
+	// Close the popover on outside click / Escape.
+	function filterPopover(node: HTMLElement) {
+		const onDoc = (e: MouseEvent) => {
+			if (!node.contains(e.target as Node)) filterOpen = false;
+		};
+		const onKey = (e: KeyboardEvent) => {
+			if (e.key === "Escape") filterOpen = false;
+		};
+		document.addEventListener("mousedown", onDoc);
+		document.addEventListener("keydown", onKey);
+		return {
+			destroy() {
+				document.removeEventListener("mousedown", onDoc);
+				document.removeEventListener("keydown", onKey);
+			},
+		};
 	}
 </script>
 
@@ -61,7 +96,7 @@
 		role="tablist"
 		aria-label="Activity view"
 	>
-		{#each [{ k: "queue", l: "Queue" }, { k: "history", l: "History" }] as t (t.k)}
+		{#each [{ k: "queue", l: "Queue" }, { k: "history", l: "History" }, { k: "torrents", l: "Torrents" }] as t (t.k)}
 			{@const active = view === t.k}
 			<button
 				type="button"
@@ -80,28 +115,90 @@
 		{/each}
 	</div>
 
-	<div class="flex flex-wrap items-center gap-1.5">
-		{#each chips as c (c.key)}
-			<button
-				type="button"
-				aria-pressed={statusFilter.includes(c.key)}
-				onclick={() => toggleChip(c.key)}
-				class={cn(
-					"inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition",
-					statusFilter.includes(c.key)
-						? "border-accent bg-accent/15 text-accent"
-						: "border-border text-fg-muted hover:border-fg-faint hover:text-fg",
-				)}
+	<div class="relative" use:filterPopover>
+		<button
+			type="button"
+			onclick={() => (filterOpen = !filterOpen)}
+			aria-haspopup="true"
+			aria-expanded={filterOpen}
+			class={cn(
+				"inline-flex h-9 items-center gap-1.5 rounded-md border px-3 text-sm font-medium transition",
+				activeChips.length > 0
+					? "border-accent/60 bg-accent/10 text-accent"
+					: "border-border bg-bg-elevated text-fg-muted hover:border-border-strong hover:text-fg",
+			)}
+		>
+			<ListFilter size={15} aria-hidden="true" />
+			<span>Status</span>
+			{#if activeChips.length > 0}
+				<span
+					class="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold text-fg-on-accent"
+				>
+					{activeChips.length}
+				</span>
+			{/if}
+		</button>
+
+		{#if filterOpen}
+			<div
+				transition:fly={{ duration: 140, y: -4, easing: cubicOut }}
+				class="absolute left-0 top-full z-30 mt-1.5 w-52 origin-top overflow-hidden rounded-md border border-border-strong bg-bg-elevated p-1 shadow-4"
+				role="menu"
 			>
-				{c.label}
-				{#if statusFilter.includes(c.key)}
-					<X size={12} aria-hidden="true" />
+				{#each chips as c (c.key)}
+					{@const on = statusFilter.includes(c.key)}
+					<button
+						type="button"
+						role="menuitemcheckbox"
+						aria-checked={on}
+						onclick={() => toggleChip(c.key)}
+						class="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm text-fg-muted transition hover:bg-surface hover:text-fg"
+					>
+						<span
+							class={cn(
+								"grid h-4 w-4 shrink-0 place-items-center rounded border transition",
+							on
+								? "border-accent bg-accent text-fg-on-accent"
+								: "border-border-strong",
+							)}
+						>
+							{#if on}<Check size={11} aria-hidden="true" />{/if}
+						</span>
+						<span class="flex items-center gap-1.5">
+							<span
+								class="h-1.5 w-1.5 shrink-0 rounded-full"
+								style:background-color="var(--status-{c.dot})"
+							></span>
+							{c.label}
+						</span>
+					</button>
+				{/each}
+				{#if activeChips.length > 0}
+					<div class="my-1 border-t border-border"></div>
+					<button
+						type="button"
+						onclick={() => onStatusFilterChange([])}
+						class="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-xs font-medium text-fg-subtle transition hover:bg-surface hover:text-fg"
+					>
+						<X size={12} aria-hidden="true" />
+						Clear filters
+					</button>
 				{/if}
-			</button>
-		{/each}
+			</div>
+		{/if}
 	</div>
 
 	<div class="ml-auto flex items-center gap-2">
+		{#if view === "torrents" && onAddTorrent && canAddTorrent}
+			<button
+				type="button"
+				onclick={() => onAddTorrent?.()}
+				class="inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-3.5 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover"
+			>
+				<Plus size={15} aria-hidden="true" />
+				Add torrent
+			</button>
+		{/if}
 		{#if view === "history" && onClearCompleted}
 			<button
 				type="button"
@@ -123,7 +220,9 @@
 				type="search"
 				value={search}
 				oninput={(e) => onSearchChange(e.currentTarget.value)}
-				placeholder="Filter title or movie…"
+				placeholder={view === "torrents"
+					? "Filter name or hash…"
+					: "Filter title or movie…"}
 				aria-label="Filter activity"
 				class="h-9 w-48 rounded-md border border-border bg-bg-elevated pl-8 pr-3 text-sm text-fg placeholder:text-fg-faint focus:border-accent focus:outline-none"
 			/>

@@ -90,6 +90,10 @@
 	--status-failed: #ef4444;
 	--status-paused: #71717a;
 	--status-warning: #f59e0b;
+	--status-seeding: #2dd4bf;
+	--status-completed: #94a3b8;
+	--status-fetching: #a78bfa;
+	--status-stalled: #d9a441;
 
 	/* Generic aliases mapping onto the ops palette */
 	--ok: var(--status-available);
@@ -181,6 +185,10 @@
 	--color-status-missing: var(--status-missing);
 	--color-status-failed: var(--status-failed);
 	--color-status-paused: var(--status-paused);
+	--color-status-seeding: var(--status-seeding);
+	--color-status-completed: var(--status-completed);
+	--color-status-fetching: var(--status-fetching);
+	--color-status-stalled: var(--status-stalled);
 
 	--color-ok: var(--ok);
 	--color-warn: var(--warn);

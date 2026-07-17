@@ -118,6 +118,48 @@ export const downloadClientForm = v.object({
 	enabled: v.boolean(),
 });
 
+// Built-in torrent engine (anacrolix) config. No host/port/auth/priority —
+// a constructed engine runs in-process. listen_port 0 = auto; kbps 0 =
+// unlimited; seed_ratio 0 = unlimited; seed_time empty = unlimited.
+const kbps = v.pipe(
+	v.number("Enter a number"),
+	v.integer(),
+	v.minValue(0, "0 = unlimited"),
+);
+
+export const builtinClientForm = v.object({
+	download_dir: v.pipe(
+		v.string(),
+		v.minLength(1, "Required"),
+		v.regex(/^\//, "Must be an absolute path"),
+	),
+	bind_interface: v.pipe(
+		v.string(),
+		v.regex(
+			/^$|^[A-Za-z0-9._:-]+$/,
+			"Interface name (e.g. wg0) or IP — empty = all interfaces",
+		),
+	),
+	listen_port: v.pipe(
+		v.number("Enter a port"),
+		v.integer(),
+		v.minValue(0, "0 (auto) – 65535"),
+		v.maxValue(65535, "0 (auto) – 65535"),
+	),
+	max_download_kbps: kbps,
+	max_upload_kbps: kbps,
+	seed_ratio: v.pipe(v.number("Enter a ratio"), v.minValue(0, "0 = unlimited")),
+	seed_time: v.pipe(
+		v.string(),
+		v.regex(
+			/^$|^([0-9]+(\.[0-9]+)?(ns|us|µs|ms|s|m|h))+$/,
+			"Empty = unlimited, or a Go duration (e.g. 72h)",
+		),
+	),
+	disable_dht: v.boolean(),
+	enabled: v.boolean(),
+});
+
 export const mediaServerType = v.picklist(
 	["plex", "jellyfin", "emby"] as const,
 	"Pick a server type",
