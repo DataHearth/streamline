@@ -329,6 +329,51 @@ func (_c *MockManager_ResumeTorrent_Call) RunAndReturn(run func(context.Context,
 	return _c
 }
 
+// Runtime provides a mock function with no fields
+func (_m *MockManager) Runtime() bittorrent.RuntimeStatus {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for Runtime")
+	}
+
+	var r0 bittorrent.RuntimeStatus
+	if rf, ok := ret.Get(0).(func() bittorrent.RuntimeStatus); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(bittorrent.RuntimeStatus)
+	}
+
+	return r0
+}
+
+// MockManager_Runtime_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Runtime'
+type MockManager_Runtime_Call struct {
+	*mock.Call
+}
+
+// Runtime is a helper method to define mock.On call
+func (_e *MockManager_Expecter) Runtime() *MockManager_Runtime_Call {
+	return &MockManager_Runtime_Call{Call: _e.mock.On("Runtime")}
+}
+
+func (_c *MockManager_Runtime_Call) Run(run func()) *MockManager_Runtime_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *MockManager_Runtime_Call) Return(_a0 bittorrent.RuntimeStatus) *MockManager_Runtime_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockManager_Runtime_Call) RunAndReturn(run func() bittorrent.RuntimeStatus) *MockManager_Runtime_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SetFilePriorities provides a mock function with given fields: ctx, hash, prios
 func (_m *MockManager) SetFilePriorities(ctx context.Context, hash string, prios []bittorrent.FilePriority) error {
 	ret := _m.Called(ctx, hash, prios)

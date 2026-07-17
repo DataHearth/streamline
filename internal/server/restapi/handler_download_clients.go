@@ -16,9 +16,32 @@ func (s *Server) ListDownloadClients(
 	c := config.Get()
 	items := make([]DownloadClient, 0, len(c.DownloadClients))
 	for _, e := range c.DownloadClients {
-		items = append(items, downloadClientToAPI(e))
+		d := downloadClientToAPI(e)
+		if e.ClientType == "builtin" {
+			s.applyBuiltinRuntime(&d)
+		}
+		items = append(items, d)
 	}
 	return ListDownloadClients200JSONResponse(items), nil
+}
+
+// applyBuiltinRuntime fills the read-only runtime fields (running / bound port /
+// bound interface) on the builtin download-client view from the live engine.
+// The engine is absent (nil) when the builtin entry is disabled or failed to
+// start, which reads as running=false.
+func (s *Server) applyBuiltinRuntime(d *DownloadClient) {
+	running := s.torrents != nil
+	d.Running = &running
+	if s.torrents == nil {
+		return
+	}
+	rt := s.torrents.Runtime()
+	port := rt.PortBound
+	d.PortBound = &port
+	if rt.InterfaceBound != "" {
+		iface := rt.InterfaceBound
+		d.InterfaceBound = &iface
+	}
 }
 
 func (s *Server) CreateDownloadClient(
@@ -33,9 +56,13 @@ func (s *Server) CreateDownloadClient(
 	e := config.DownloadClientEntry{
 		Name:       request.Body.Name,
 		ClientType: string(request.Body.ClientType),
-		Host:       request.Body.Host,
-		Port:       request.Body.Port,
 		AuthMethod: "password",
+	}
+	if request.Body.Host != nil {
+		e.Host = *request.Body.Host
+	}
+	if request.Body.Port != nil {
+		e.Port = *request.Body.Port
 	}
 	if request.Body.AuthMethod != nil {
 		e.AuthMethod = string(*request.Body.AuthMethod)
@@ -57,6 +84,30 @@ func (s *Server) CreateDownloadClient(
 	}
 	if request.Body.Enabled != nil {
 		e.Enabled = *request.Body.Enabled
+	}
+	if request.Body.DownloadDir != nil {
+		e.DownloadDir = *request.Body.DownloadDir
+	}
+	if request.Body.ListenPort != nil {
+		e.ListenPort = *request.Body.ListenPort
+	}
+	if request.Body.MaxUploadKbps != nil {
+		e.MaxUploadKbps = *request.Body.MaxUploadKbps
+	}
+	if request.Body.MaxDownloadKbps != nil {
+		e.MaxDownloadKbps = *request.Body.MaxDownloadKbps
+	}
+	if request.Body.SeedRatio != nil {
+		e.SeedRatio = *request.Body.SeedRatio
+	}
+	if request.Body.SeedTime != nil {
+		e.SeedTime = *request.Body.SeedTime
+	}
+	if request.Body.DisableDht != nil {
+		e.DisableDHT = *request.Body.DisableDht
+	}
+	if request.Body.BindInterface != nil {
+		e.BindInterface = *request.Body.BindInterface
 	}
 
 	switch err := config.AddDownloadClient(ctx, e); {
@@ -90,15 +141,23 @@ func (s *Server) UpdateDownloadClient(
 	}
 	ct := string(request.Body.ClientType)
 	patch := config.DownloadClientPatch{
-		ClientType: &ct,
-		Host:       &request.Body.Host,
-		Port:       &request.Body.Port,
-		Username:   request.Body.Username,
-		Password:   request.Body.Password,
-		APIKey:     request.Body.ApiKey,
-		UseSSL:     request.Body.UseSsl,
-		Priority:   request.Body.Priority,
-		Enabled:    request.Body.Enabled,
+		ClientType:      &ct,
+		Host:            request.Body.Host,
+		Port:            request.Body.Port,
+		Username:        request.Body.Username,
+		Password:        request.Body.Password,
+		APIKey:          request.Body.ApiKey,
+		UseSSL:          request.Body.UseSsl,
+		Priority:        request.Body.Priority,
+		Enabled:         request.Body.Enabled,
+		DownloadDir:     request.Body.DownloadDir,
+		ListenPort:      request.Body.ListenPort,
+		MaxUploadKbps:   request.Body.MaxUploadKbps,
+		MaxDownloadKbps: request.Body.MaxDownloadKbps,
+		SeedRatio:       request.Body.SeedRatio,
+		SeedTime:        request.Body.SeedTime,
+		DisableDHT:      request.Body.DisableDht,
+		BindInterface:   request.Body.BindInterface,
 	}
 	if request.Body.AuthMethod != nil {
 		am := string(*request.Body.AuthMethod)
@@ -203,9 +262,13 @@ func (s *Server) TestDraftDownloadClient(
 	b := request.Body
 	p := download.TestParams{
 		ClientType: string(b.ClientType),
-		Host:       b.Host,
-		Port:       b.Port,
 		AuthMethod: "password",
+	}
+	if b.Host != nil {
+		p.Host = *b.Host
+	}
+	if b.Port != nil {
+		p.Port = *b.Port
 	}
 	if b.AuthMethod != nil {
 		p.AuthMethod = string(*b.AuthMethod)

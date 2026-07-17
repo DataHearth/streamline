@@ -271,6 +271,7 @@ func (e DownloadClientAuthMethod) Valid() bool {
 
 // Defines values for DownloadClientClientType.
 const (
+	DownloadClientClientTypeBuiltin      DownloadClientClientType = "builtin"
 	DownloadClientClientTypeDeluge       DownloadClientClientType = "deluge"
 	DownloadClientClientTypeQbittorrent  DownloadClientClientType = "qbittorrent"
 	DownloadClientClientTypeTransmission DownloadClientClientType = "transmission"
@@ -279,6 +280,8 @@ const (
 // Valid indicates whether the value is a known member of the DownloadClientClientType enum.
 func (e DownloadClientClientType) Valid() bool {
 	switch e {
+	case DownloadClientClientTypeBuiltin:
+		return true
 	case DownloadClientClientTypeDeluge:
 		return true
 	case DownloadClientClientTypeQbittorrent:
@@ -310,6 +313,7 @@ func (e DownloadClientCreateAuthMethod) Valid() bool {
 
 // Defines values for DownloadClientCreateClientType.
 const (
+	DownloadClientCreateClientTypeBuiltin      DownloadClientCreateClientType = "builtin"
 	DownloadClientCreateClientTypeDeluge       DownloadClientCreateClientType = "deluge"
 	DownloadClientCreateClientTypeQbittorrent  DownloadClientCreateClientType = "qbittorrent"
 	DownloadClientCreateClientTypeTransmission DownloadClientCreateClientType = "transmission"
@@ -318,6 +322,8 @@ const (
 // Valid indicates whether the value is a known member of the DownloadClientCreateClientType enum.
 func (e DownloadClientCreateClientType) Valid() bool {
 	switch e {
+	case DownloadClientCreateClientTypeBuiltin:
+		return true
 	case DownloadClientCreateClientTypeDeluge:
 		return true
 	case DownloadClientCreateClientTypeQbittorrent:
@@ -1172,6 +1178,108 @@ func (e TVShowType) Valid() bool {
 	}
 }
 
+// Defines values for TorrentDetailsStatus.
+const (
+	TorrentDetailsStatusCompleted   TorrentDetailsStatus = "completed"
+	TorrentDetailsStatusDownloading TorrentDetailsStatus = "downloading"
+	TorrentDetailsStatusFetching    TorrentDetailsStatus = "fetching"
+	TorrentDetailsStatusPaused      TorrentDetailsStatus = "paused"
+	TorrentDetailsStatusSeeding     TorrentDetailsStatus = "seeding"
+	TorrentDetailsStatusStalled     TorrentDetailsStatus = "stalled"
+)
+
+// Valid indicates whether the value is a known member of the TorrentDetailsStatus enum.
+func (e TorrentDetailsStatus) Valid() bool {
+	switch e {
+	case TorrentDetailsStatusCompleted:
+		return true
+	case TorrentDetailsStatusDownloading:
+		return true
+	case TorrentDetailsStatusFetching:
+		return true
+	case TorrentDetailsStatusPaused:
+		return true
+	case TorrentDetailsStatusSeeding:
+		return true
+	case TorrentDetailsStatusStalled:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TorrentFilePriority.
+const (
+	TorrentFilePriorityHigh   TorrentFilePriority = "high"
+	TorrentFilePriorityNormal TorrentFilePriority = "normal"
+	TorrentFilePrioritySkip   TorrentFilePriority = "skip"
+)
+
+// Valid indicates whether the value is a known member of the TorrentFilePriority enum.
+func (e TorrentFilePriority) Valid() bool {
+	switch e {
+	case TorrentFilePriorityHigh:
+		return true
+	case TorrentFilePriorityNormal:
+		return true
+	case TorrentFilePrioritySkip:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TorrentFilePriorityUpdatePriority.
+const (
+	TorrentFilePriorityUpdatePriorityHigh   TorrentFilePriorityUpdatePriority = "high"
+	TorrentFilePriorityUpdatePriorityNormal TorrentFilePriorityUpdatePriority = "normal"
+	TorrentFilePriorityUpdatePrioritySkip   TorrentFilePriorityUpdatePriority = "skip"
+)
+
+// Valid indicates whether the value is a known member of the TorrentFilePriorityUpdatePriority enum.
+func (e TorrentFilePriorityUpdatePriority) Valid() bool {
+	switch e {
+	case TorrentFilePriorityUpdatePriorityHigh:
+		return true
+	case TorrentFilePriorityUpdatePriorityNormal:
+		return true
+	case TorrentFilePriorityUpdatePrioritySkip:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TorrentInfoStatus.
+const (
+	TorrentInfoStatusCompleted   TorrentInfoStatus = "completed"
+	TorrentInfoStatusDownloading TorrentInfoStatus = "downloading"
+	TorrentInfoStatusFetching    TorrentInfoStatus = "fetching"
+	TorrentInfoStatusPaused      TorrentInfoStatus = "paused"
+	TorrentInfoStatusSeeding     TorrentInfoStatus = "seeding"
+	TorrentInfoStatusStalled     TorrentInfoStatus = "stalled"
+)
+
+// Valid indicates whether the value is a known member of the TorrentInfoStatus enum.
+func (e TorrentInfoStatus) Valid() bool {
+	switch e {
+	case TorrentInfoStatusCompleted:
+		return true
+	case TorrentInfoStatusDownloading:
+		return true
+	case TorrentInfoStatusFetching:
+		return true
+	case TorrentInfoStatusPaused:
+		return true
+	case TorrentInfoStatusSeeding:
+		return true
+	case TorrentInfoStatusStalled:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UpdateMovieRequestStatus.
 const (
 	UpdateMovieRequestStatusAvailable   UpdateMovieRequestStatus = "available"
@@ -1567,6 +1675,14 @@ type AddSeriesRequest struct {
 // AddSeriesRequestPreset One-shot monitoring preset applied to seasons/episodes.
 type AddSeriesRequestPreset string
 
+// AddTorrentRequest Exactly one of magnet or torrent must be set.
+type AddTorrentRequest struct {
+	Magnet *string `json:"magnet,omitempty"`
+
+	// Torrent Base64-encoded .torrent file.
+	Torrent *[]byte `json:"torrent,omitempty"`
+}
+
 // ApiKey defines model for ApiKey.
 type ApiKey struct {
 	CreatedAt  time.Time  `json:"created_at"`
@@ -1718,17 +1834,32 @@ type DownloadClient struct {
 	// ApiKeySet True when an API key is stored. The key itself is never returned.
 	ApiKeySet  bool                     `json:"api_key_set"`
 	AuthMethod DownloadClientAuthMethod `json:"auth_method"`
-	ClientType DownloadClientClientType `json:"client_type"`
-	Enabled    bool                     `json:"enabled"`
-	Host       string                   `json:"host"`
-	Name       string                   `json:"name"`
+
+	// BindInterface Interface name (e.g. wg0) or IP the engine binds to. Empty = all interfaces.
+	BindInterface   *string                  `json:"bind_interface,omitempty"`
+	ClientType      DownloadClientClientType `json:"client_type"`
+	DisableDht      *bool                    `json:"disable_dht,omitempty"`
+	DownloadDir     *string                  `json:"download_dir,omitempty"`
+	Enabled         bool                     `json:"enabled"`
+	Host            string                   `json:"host"`
+	InterfaceBound  *string                  `json:"interface_bound,omitempty"`
+	ListenPort      *uint16                  `json:"listen_port,omitempty"`
+	MaxDownloadKbps *int                     `json:"max_download_kbps,omitempty"`
+	MaxUploadKbps   *int                     `json:"max_upload_kbps,omitempty"`
+	Name            string                   `json:"name"`
 
 	// PasswordSet True when a password is stored. The password itself is never returned.
-	PasswordSet bool    `json:"password_set"`
-	Port        uint16  `json:"port"`
-	Priority    *uint8  `json:"priority,omitempty"`
-	UseSsl      *bool   `json:"use_ssl,omitempty"`
-	Username    *string `json:"username,omitempty"`
+	PasswordSet bool     `json:"password_set"`
+	Port        uint16   `json:"port"`
+	PortBound   *uint16  `json:"port_bound,omitempty"`
+	Priority    *uint8   `json:"priority,omitempty"`
+	Running     *bool    `json:"running,omitempty"`
+	SeedRatio   *float64 `json:"seed_ratio,omitempty"`
+
+	// SeedTime Go duration string, e.g. "72h". Empty = unlimited.
+	SeedTime *string `json:"seed_time,omitempty"`
+	UseSsl   *bool   `json:"use_ssl,omitempty"`
+	Username *string `json:"username,omitempty"`
 }
 
 // DownloadClientAuthMethod defines model for DownloadClient.AuthMethod.
@@ -1741,15 +1872,27 @@ type DownloadClientClientType string
 type DownloadClientCreate struct {
 	ApiKey     *string                         `json:"api_key,omitempty"`
 	AuthMethod *DownloadClientCreateAuthMethod `json:"auth_method,omitempty"`
-	ClientType DownloadClientCreateClientType  `json:"client_type"`
-	Enabled    *bool                           `json:"enabled,omitempty"`
-	Host       string                          `json:"host"`
-	Name       string                          `json:"name"`
-	Password   *string                         `json:"password,omitempty"`
-	Port       uint16                          `json:"port"`
-	Priority   *uint8                          `json:"priority,omitempty"`
-	UseSsl     *bool                           `json:"use_ssl,omitempty"`
-	Username   *string                         `json:"username,omitempty"`
+
+	// BindInterface Interface name (e.g. wg0) or IP the engine binds to. Empty = all interfaces.
+	BindInterface   *string                        `json:"bind_interface,omitempty"`
+	ClientType      DownloadClientCreateClientType `json:"client_type"`
+	DisableDht      *bool                          `json:"disable_dht,omitempty"`
+	DownloadDir     *string                        `json:"download_dir,omitempty"`
+	Enabled         *bool                          `json:"enabled,omitempty"`
+	Host            *string                        `json:"host,omitempty"`
+	ListenPort      *uint16                        `json:"listen_port,omitempty"`
+	MaxDownloadKbps *int                           `json:"max_download_kbps,omitempty"`
+	MaxUploadKbps   *int                           `json:"max_upload_kbps,omitempty"`
+	Name            string                         `json:"name"`
+	Password        *string                        `json:"password,omitempty"`
+	Port            *uint16                        `json:"port,omitempty"`
+	Priority        *uint8                         `json:"priority,omitempty"`
+	SeedRatio       *float64                       `json:"seed_ratio,omitempty"`
+
+	// SeedTime Go duration string, e.g. "72h". Empty = unlimited.
+	SeedTime *string `json:"seed_time,omitempty"`
+	UseSsl   *bool   `json:"use_ssl,omitempty"`
+	Username *string `json:"username,omitempty"`
 }
 
 // DownloadClientCreateAuthMethod defines model for DownloadClientCreate.AuthMethod.
@@ -2677,6 +2820,85 @@ type TVShowCounts struct {
 	WantedEpisodes int `json:"wanted_episodes"`
 }
 
+// TorrentAddResult defines model for TorrentAddResult.
+type TorrentAddResult struct {
+	Hash string `json:"hash"`
+}
+
+// TorrentDetails defines model for TorrentDetails.
+type TorrentDetails struct {
+	// DownloadSpeed Bytes per second.
+	DownloadSpeed int64         `json:"download_speed"`
+	Files         []TorrentFile `json:"files"`
+	Hash          string        `json:"hash"`
+	Name          string        `json:"name"`
+	PeerCount     int           `json:"peer_count"`
+	Peers         []TorrentPeer `json:"peers"`
+
+	// Progress Fraction complete, 0..1.
+	Progress float64              `json:"progress"`
+	Ratio    float64              `json:"ratio"`
+	Size     int64                `json:"size"`
+	Status   TorrentDetailsStatus `json:"status"`
+	Trackers []string             `json:"trackers"`
+	Uploaded int64                `json:"uploaded"`
+}
+
+// TorrentDetailsStatus defines model for TorrentDetails.Status.
+type TorrentDetailsStatus string
+
+// TorrentFile defines model for TorrentFile.
+type TorrentFile struct {
+	Downloaded int64               `json:"downloaded"`
+	Index      int                 `json:"index"`
+	Path       string              `json:"path"`
+	Priority   TorrentFilePriority `json:"priority"`
+	Size       int64               `json:"size"`
+}
+
+// TorrentFilePriority defines model for TorrentFile.Priority.
+type TorrentFilePriority string
+
+// TorrentFilePriorityUpdate defines model for TorrentFilePriorityUpdate.
+type TorrentFilePriorityUpdate struct {
+	Priority TorrentFilePriorityUpdatePriority `json:"priority"`
+}
+
+// TorrentFilePriorityUpdatePriority defines model for TorrentFilePriorityUpdate.Priority.
+type TorrentFilePriorityUpdatePriority string
+
+// TorrentInfo defines model for TorrentInfo.
+type TorrentInfo struct {
+	// DownloadSpeed Bytes per second.
+	DownloadSpeed int64  `json:"download_speed"`
+	Hash          string `json:"hash"`
+	Name          string `json:"name"`
+	PeerCount     int    `json:"peer_count"`
+
+	// Progress Fraction complete, 0..1.
+	Progress float64           `json:"progress"`
+	Ratio    float64           `json:"ratio"`
+	Size     int64             `json:"size"`
+	Status   TorrentInfoStatus `json:"status"`
+	Uploaded int64             `json:"uploaded"`
+}
+
+// TorrentInfoStatus defines model for TorrentInfo.Status.
+type TorrentInfoStatus string
+
+// TorrentList defines model for TorrentList.
+type TorrentList struct {
+	Items       []TorrentInfo `json:"items"`
+	RefreshedAt time.Time     `json:"refreshed_at"`
+}
+
+// TorrentPeer defines model for TorrentPeer.
+type TorrentPeer struct {
+	Addr         string   `json:"addr"`
+	Client       *string  `json:"client,omitempty"`
+	DownloadRate *float64 `json:"download_rate,omitempty"`
+}
+
 // UpcomingEpisode defines model for UpcomingEpisode.
 type UpcomingEpisode struct {
 	AirDate     time.Time `json:"air_date"`
@@ -2796,6 +3018,9 @@ type CalendarFrom = time.Time
 // CalendarTo defines model for CalendarTo.
 type CalendarTo = time.Time
 
+// DeleteFiles defines model for DeleteFiles.
+type DeleteFiles = bool
+
 // DeleteMovieFiles defines model for DeleteMovieFiles.
 type DeleteMovieFiles = bool
 
@@ -2876,6 +3101,12 @@ type SeriesType = string
 
 // SessionID defines model for SessionID.
 type SessionID = uint32
+
+// TorrentFileIndex defines model for TorrentFileIndex.
+type TorrentFileIndex = int
+
+// TorrentHash defines model for TorrentHash.
+type TorrentHash = string
 
 // UserID defines model for UserID.
 type UserID = uint32
@@ -2994,6 +3225,9 @@ type AddMovie = AddMovieRequest
 // AddSeries defines model for AddSeries.
 type AddSeries = AddSeriesRequest
 
+// AddTorrent Exactly one of magnet or torrent must be set.
+type AddTorrent = AddTorrentRequest
+
 // ApproveRequest defines model for ApproveRequest.
 type ApproveRequest = ApproveRequestRequest
 
@@ -3050,6 +3284,9 @@ type PatchSeries = PatchSeriesRequest
 
 // ReplacePending defines model for ReplacePending.
 type ReplacePending = ReplacePendingRequest
+
+// SetTorrentFilePriority defines model for SetTorrentFilePriority.
+type SetTorrentFilePriority = TorrentFilePriorityUpdate
 
 // StartImport defines model for StartImport.
 type StartImport = ImportScanCreateRequest
@@ -3203,6 +3440,11 @@ type RenameSeriesFilesParams struct {
 	Preview *RenamePreview `form:"preview,omitempty" json:"preview,omitempty"`
 }
 
+// DeleteTorrentParams defines parameters for DeleteTorrent.
+type DeleteTorrentParams struct {
+	DeleteFiles *DeleteFiles `form:"delete_files,omitempty" json:"delete_files,omitempty"`
+}
+
 // ListUsersParams defines parameters for ListUsers.
 type ListUsersParams struct {
 	// Q Case-insensitive substring match on email or display_name.
@@ -3352,6 +3594,12 @@ type PatchSeasonJSONRequestBody = MonitorToggleRequest
 
 // GrabSeasonReleaseJSONRequestBody defines body for GrabSeasonRelease for application/json ContentType.
 type GrabSeasonReleaseJSONRequestBody = SearchResult
+
+// AddTorrentJSONRequestBody defines body for AddTorrent for application/json ContentType.
+type AddTorrentJSONRequestBody = AddTorrentRequest
+
+// SetTorrentFilePriorityJSONRequestBody defines body for SetTorrentFilePriority for application/json ContentType.
+type SetTorrentFilePriorityJSONRequestBody = TorrentFilePriorityUpdate
 
 // CreateUserJSONRequestBody defines body for CreateUser for application/json ContentType.
 type CreateUserJSONRequestBody = CreateUserRequest
@@ -3709,6 +3957,27 @@ type ServerInterface interface {
 	// Read-only environment summary (admin)
 	// (GET /system/info)
 	GetSystemInfo(w http.ResponseWriter, r *http.Request)
+	// List torrents held by the builtin download client
+	// (GET /torrents)
+	ListTorrents(w http.ResponseWriter, r *http.Request)
+	// Add a torrent by magnet link or .torrent file
+	// (POST /torrents)
+	AddTorrent(w http.ResponseWriter, r *http.Request)
+	// Remove a torrent, optionally deleting its data
+	// (DELETE /torrents/{hash})
+	DeleteTorrent(w http.ResponseWriter, r *http.Request, hash TorrentHash, params DeleteTorrentParams)
+	// Torrent details (files, trackers, peers)
+	// (GET /torrents/{hash})
+	GetTorrent(w http.ResponseWriter, r *http.Request, hash TorrentHash)
+	// Set a torrent file's download priority
+	// (PATCH /torrents/{hash}/files/{index})
+	SetTorrentFilePriority(w http.ResponseWriter, r *http.Request, hash TorrentHash, index TorrentFileIndex)
+	// Pause a torrent
+	// (POST /torrents/{hash}/pause)
+	PauseTorrent(w http.ResponseWriter, r *http.Request, hash TorrentHash)
+	// Resume a torrent
+	// (POST /torrents/{hash}/resume)
+	ResumeTorrent(w http.ResponseWriter, r *http.Request, hash TorrentHash)
 	// List users (admin)
 	// (GET /users)
 	ListUsers(w http.ResponseWriter, r *http.Request, params ListUsersParams)
@@ -4419,6 +4688,48 @@ func (_ Unimplemented) BrowseSeasonReleases(w http.ResponseWriter, r *http.Reque
 // Read-only environment summary (admin)
 // (GET /system/info)
 func (_ Unimplemented) GetSystemInfo(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List torrents held by the builtin download client
+// (GET /torrents)
+func (_ Unimplemented) ListTorrents(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Add a torrent by magnet link or .torrent file
+// (POST /torrents)
+func (_ Unimplemented) AddTorrent(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Remove a torrent, optionally deleting its data
+// (DELETE /torrents/{hash})
+func (_ Unimplemented) DeleteTorrent(w http.ResponseWriter, r *http.Request, hash TorrentHash, params DeleteTorrentParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Torrent details (files, trackers, peers)
+// (GET /torrents/{hash})
+func (_ Unimplemented) GetTorrent(w http.ResponseWriter, r *http.Request, hash TorrentHash) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Set a torrent file's download priority
+// (PATCH /torrents/{hash}/files/{index})
+func (_ Unimplemented) SetTorrentFilePriority(w http.ResponseWriter, r *http.Request, hash TorrentHash, index TorrentFileIndex) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Pause a torrent
+// (POST /torrents/{hash}/pause)
+func (_ Unimplemented) PauseTorrent(w http.ResponseWriter, r *http.Request, hash TorrentHash) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Resume a torrent
+// (POST /torrents/{hash}/resume)
+func (_ Unimplemented) ResumeTorrent(w http.ResponseWriter, r *http.Request, hash TorrentHash) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -8259,6 +8570,235 @@ func (siw *ServerInterfaceWrapper) GetSystemInfo(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// ListTorrents operation middleware
+func (siw *ServerInterfaceWrapper) ListTorrents(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, ApiKeyAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListTorrents(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AddTorrent operation middleware
+func (siw *ServerInterfaceWrapper) AddTorrent(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, ApiKeyAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AddTorrent(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteTorrent operation middleware
+func (siw *ServerInterfaceWrapper) DeleteTorrent(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "hash" -------------
+	var hash TorrentHash
+
+	err = runtime.BindStyledParameterWithOptions("simple", "hash", chi.URLParam(r, "hash"), &hash, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "hash", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, ApiKeyAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DeleteTorrentParams
+
+	// ------------- Optional query parameter "delete_files" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "delete_files", r.URL.Query(), &params.DeleteFiles, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "delete_files", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteTorrent(w, r, hash, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetTorrent operation middleware
+func (siw *ServerInterfaceWrapper) GetTorrent(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "hash" -------------
+	var hash TorrentHash
+
+	err = runtime.BindStyledParameterWithOptions("simple", "hash", chi.URLParam(r, "hash"), &hash, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "hash", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, ApiKeyAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetTorrent(w, r, hash)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetTorrentFilePriority operation middleware
+func (siw *ServerInterfaceWrapper) SetTorrentFilePriority(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "hash" -------------
+	var hash TorrentHash
+
+	err = runtime.BindStyledParameterWithOptions("simple", "hash", chi.URLParam(r, "hash"), &hash, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "hash", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "index" -------------
+	var index TorrentFileIndex
+
+	err = runtime.BindStyledParameterWithOptions("simple", "index", chi.URLParam(r, "index"), &index, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "index", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, ApiKeyAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetTorrentFilePriority(w, r, hash, index)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PauseTorrent operation middleware
+func (siw *ServerInterfaceWrapper) PauseTorrent(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "hash" -------------
+	var hash TorrentHash
+
+	err = runtime.BindStyledParameterWithOptions("simple", "hash", chi.URLParam(r, "hash"), &hash, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "hash", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, ApiKeyAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PauseTorrent(w, r, hash)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ResumeTorrent operation middleware
+func (siw *ServerInterfaceWrapper) ResumeTorrent(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "hash" -------------
+	var hash TorrentHash
+
+	err = runtime.BindStyledParameterWithOptions("simple", "hash", chi.URLParam(r, "hash"), &hash, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "hash", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, ApiKeyAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ResumeTorrent(w, r, hash)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListUsers operation middleware
 func (siw *ServerInterfaceWrapper) ListUsers(w http.ResponseWriter, r *http.Request) {
 
@@ -9064,6 +9604,27 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/system/info", wrapper.GetSystemInfo)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/torrents", wrapper.ListTorrents)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/torrents", wrapper.AddTorrent)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/torrents/{hash}", wrapper.DeleteTorrent)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/torrents/{hash}", wrapper.GetTorrent)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/torrents/{hash}/files/{index}", wrapper.SetTorrentFilePriority)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/torrents/{hash}/pause", wrapper.PauseTorrent)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/torrents/{hash}/resume", wrapper.ResumeTorrent)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/users", wrapper.ListUsers)
 	})
 	r.Group(func(r chi.Router) {
@@ -9226,6 +9787,12 @@ type SeriesSearchAcceptedResponse struct {
 }
 
 type SystemInfoJSONResponse SystemInfo
+
+type TorrentAddResultJSONResponse TorrentAddResult
+
+type TorrentDetailsJSONResponse TorrentDetails
+
+type TorrentListJSONResponse TorrentList
 
 type UnauthorizedJSONResponse Error
 
@@ -13640,6 +14207,271 @@ func (response GetSystemInfo403JSONResponse) VisitGetSystemInfoResponse(w http.R
 	return json.NewEncoder(w).Encode(response)
 }
 
+type ListTorrentsRequestObject struct {
+}
+
+type ListTorrentsResponseObject interface {
+	VisitListTorrentsResponse(w http.ResponseWriter) error
+}
+
+type ListTorrents200JSONResponse struct{ TorrentListJSONResponse }
+
+func (response ListTorrents200JSONResponse) VisitListTorrentsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListTorrents404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ListTorrents404JSONResponse) VisitListTorrentsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type AddTorrentRequestObject struct {
+	Body *AddTorrentJSONRequestBody
+}
+
+type AddTorrentResponseObject interface {
+	VisitAddTorrentResponse(w http.ResponseWriter) error
+}
+
+type AddTorrent201JSONResponse struct{ TorrentAddResultJSONResponse }
+
+func (response AddTorrent201JSONResponse) VisitAddTorrentResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type AddTorrent403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response AddTorrent403JSONResponse) VisitAddTorrentResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type AddTorrent404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response AddTorrent404JSONResponse) VisitAddTorrentResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type AddTorrent422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response AddTorrent422JSONResponse) VisitAddTorrentResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteTorrentRequestObject struct {
+	Hash   TorrentHash `json:"hash"`
+	Params DeleteTorrentParams
+}
+
+type DeleteTorrentResponseObject interface {
+	VisitDeleteTorrentResponse(w http.ResponseWriter) error
+}
+
+type DeleteTorrent204Response = NoContentResponse
+
+func (response DeleteTorrent204Response) VisitDeleteTorrentResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteTorrent403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DeleteTorrent403JSONResponse) VisitDeleteTorrentResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteTorrent404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response DeleteTorrent404JSONResponse) VisitDeleteTorrentResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetTorrentRequestObject struct {
+	Hash TorrentHash `json:"hash"`
+}
+
+type GetTorrentResponseObject interface {
+	VisitGetTorrentResponse(w http.ResponseWriter) error
+}
+
+type GetTorrent200JSONResponse struct{ TorrentDetailsJSONResponse }
+
+func (response GetTorrent200JSONResponse) VisitGetTorrentResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetTorrent404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetTorrent404JSONResponse) VisitGetTorrentResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SetTorrentFilePriorityRequestObject struct {
+	Hash  TorrentHash      `json:"hash"`
+	Index TorrentFileIndex `json:"index"`
+	Body  *SetTorrentFilePriorityJSONRequestBody
+}
+
+type SetTorrentFilePriorityResponseObject interface {
+	VisitSetTorrentFilePriorityResponse(w http.ResponseWriter) error
+}
+
+type SetTorrentFilePriority204Response = NoContentResponse
+
+func (response SetTorrentFilePriority204Response) VisitSetTorrentFilePriorityResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type SetTorrentFilePriority403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response SetTorrentFilePriority403JSONResponse) VisitSetTorrentFilePriorityResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SetTorrentFilePriority404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response SetTorrentFilePriority404JSONResponse) VisitSetTorrentFilePriorityResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SetTorrentFilePriority422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response SetTorrentFilePriority422JSONResponse) VisitSetTorrentFilePriorityResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PauseTorrentRequestObject struct {
+	Hash TorrentHash `json:"hash"`
+}
+
+type PauseTorrentResponseObject interface {
+	VisitPauseTorrentResponse(w http.ResponseWriter) error
+}
+
+type PauseTorrent204Response = NoContentResponse
+
+func (response PauseTorrent204Response) VisitPauseTorrentResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type PauseTorrent403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response PauseTorrent403JSONResponse) VisitPauseTorrentResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PauseTorrent404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response PauseTorrent404JSONResponse) VisitPauseTorrentResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PauseTorrent422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response PauseTorrent422JSONResponse) VisitPauseTorrentResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ResumeTorrentRequestObject struct {
+	Hash TorrentHash `json:"hash"`
+}
+
+type ResumeTorrentResponseObject interface {
+	VisitResumeTorrentResponse(w http.ResponseWriter) error
+}
+
+type ResumeTorrent204Response = NoContentResponse
+
+func (response ResumeTorrent204Response) VisitResumeTorrentResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type ResumeTorrent403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ResumeTorrent403JSONResponse) VisitResumeTorrentResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ResumeTorrent404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ResumeTorrent404JSONResponse) VisitResumeTorrentResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ResumeTorrent422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response ResumeTorrent422JSONResponse) VisitResumeTorrentResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type ListUsersRequestObject struct {
 	Params ListUsersParams
 }
@@ -14327,6 +15159,27 @@ type StrictServerInterface interface {
 	// Read-only environment summary (admin)
 	// (GET /system/info)
 	GetSystemInfo(ctx context.Context, request GetSystemInfoRequestObject) (GetSystemInfoResponseObject, error)
+	// List torrents held by the builtin download client
+	// (GET /torrents)
+	ListTorrents(ctx context.Context, request ListTorrentsRequestObject) (ListTorrentsResponseObject, error)
+	// Add a torrent by magnet link or .torrent file
+	// (POST /torrents)
+	AddTorrent(ctx context.Context, request AddTorrentRequestObject) (AddTorrentResponseObject, error)
+	// Remove a torrent, optionally deleting its data
+	// (DELETE /torrents/{hash})
+	DeleteTorrent(ctx context.Context, request DeleteTorrentRequestObject) (DeleteTorrentResponseObject, error)
+	// Torrent details (files, trackers, peers)
+	// (GET /torrents/{hash})
+	GetTorrent(ctx context.Context, request GetTorrentRequestObject) (GetTorrentResponseObject, error)
+	// Set a torrent file's download priority
+	// (PATCH /torrents/{hash}/files/{index})
+	SetTorrentFilePriority(ctx context.Context, request SetTorrentFilePriorityRequestObject) (SetTorrentFilePriorityResponseObject, error)
+	// Pause a torrent
+	// (POST /torrents/{hash}/pause)
+	PauseTorrent(ctx context.Context, request PauseTorrentRequestObject) (PauseTorrentResponseObject, error)
+	// Resume a torrent
+	// (POST /torrents/{hash}/resume)
+	ResumeTorrent(ctx context.Context, request ResumeTorrentRequestObject) (ResumeTorrentResponseObject, error)
 	// List users (admin)
 	// (GET /users)
 	ListUsers(ctx context.Context, request ListUsersRequestObject) (ListUsersResponseObject, error)
@@ -17605,6 +18458,200 @@ func (sh *strictHandler) GetSystemInfo(w http.ResponseWriter, r *http.Request) {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetSystemInfoResponseObject); ok {
 		if err := validResponse.VisitGetSystemInfoResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListTorrents operation middleware
+func (sh *strictHandler) ListTorrents(w http.ResponseWriter, r *http.Request) {
+	var request ListTorrentsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListTorrents(ctx, request.(ListTorrentsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListTorrents")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListTorrentsResponseObject); ok {
+		if err := validResponse.VisitListTorrentsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AddTorrent operation middleware
+func (sh *strictHandler) AddTorrent(w http.ResponseWriter, r *http.Request) {
+	var request AddTorrentRequestObject
+
+	var body AddTorrentJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AddTorrent(ctx, request.(AddTorrentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AddTorrent")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AddTorrentResponseObject); ok {
+		if err := validResponse.VisitAddTorrentResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteTorrent operation middleware
+func (sh *strictHandler) DeleteTorrent(w http.ResponseWriter, r *http.Request, hash TorrentHash, params DeleteTorrentParams) {
+	var request DeleteTorrentRequestObject
+
+	request.Hash = hash
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteTorrent(ctx, request.(DeleteTorrentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteTorrent")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteTorrentResponseObject); ok {
+		if err := validResponse.VisitDeleteTorrentResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetTorrent operation middleware
+func (sh *strictHandler) GetTorrent(w http.ResponseWriter, r *http.Request, hash TorrentHash) {
+	var request GetTorrentRequestObject
+
+	request.Hash = hash
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetTorrent(ctx, request.(GetTorrentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetTorrent")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetTorrentResponseObject); ok {
+		if err := validResponse.VisitGetTorrentResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SetTorrentFilePriority operation middleware
+func (sh *strictHandler) SetTorrentFilePriority(w http.ResponseWriter, r *http.Request, hash TorrentHash, index TorrentFileIndex) {
+	var request SetTorrentFilePriorityRequestObject
+
+	request.Hash = hash
+	request.Index = index
+
+	var body SetTorrentFilePriorityJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SetTorrentFilePriority(ctx, request.(SetTorrentFilePriorityRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SetTorrentFilePriority")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SetTorrentFilePriorityResponseObject); ok {
+		if err := validResponse.VisitSetTorrentFilePriorityResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PauseTorrent operation middleware
+func (sh *strictHandler) PauseTorrent(w http.ResponseWriter, r *http.Request, hash TorrentHash) {
+	var request PauseTorrentRequestObject
+
+	request.Hash = hash
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PauseTorrent(ctx, request.(PauseTorrentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PauseTorrent")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PauseTorrentResponseObject); ok {
+		if err := validResponse.VisitPauseTorrentResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ResumeTorrent operation middleware
+func (sh *strictHandler) ResumeTorrent(w http.ResponseWriter, r *http.Request, hash TorrentHash) {
+	var request ResumeTorrentRequestObject
+
+	request.Hash = hash
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ResumeTorrent(ctx, request.(ResumeTorrentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ResumeTorrent")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ResumeTorrentResponseObject); ok {
+		if err := validResponse.VisitResumeTorrentResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

@@ -258,9 +258,6 @@ var _ = Describe(
 			BeforeEach(restart.ResetForTest)
 
 			It("marks restart-pending when a builtin client is created", func() {
-				// Depends on Task 8's create-schema change (download_dir field +
-				// optional host/port). Remove this Skip once that lands.
-				Skip("requires Task 8 create-schema download_dir support")
 				body := `{"name": "embedded", "client_type": "builtin",
 					"download_dir": "/downloads", "enabled": true}`
 				resp, err := http.Post(

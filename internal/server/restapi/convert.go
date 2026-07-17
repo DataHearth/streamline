@@ -154,6 +154,43 @@ func downloadClientToAPI(e config.DownloadClientEntry) DownloadClient {
 		username := e.Username
 		d.Username = &username
 	}
+	// builtin entries carry no auth; the read schema still requires a valid
+	// enum value, so default it.
+	if e.AuthMethod == "" {
+		d.AuthMethod = DownloadClientAuthMethod("password")
+	}
+	if e.DownloadDir != "" {
+		v := e.DownloadDir
+		d.DownloadDir = &v
+	}
+	if e.ListenPort != 0 {
+		v := e.ListenPort
+		d.ListenPort = &v
+	}
+	if e.MaxUploadKbps != 0 {
+		v := e.MaxUploadKbps
+		d.MaxUploadKbps = &v
+	}
+	if e.MaxDownloadKbps != 0 {
+		v := e.MaxDownloadKbps
+		d.MaxDownloadKbps = &v
+	}
+	if e.SeedRatio != 0 {
+		v := e.SeedRatio
+		d.SeedRatio = &v
+	}
+	if e.SeedTime != "" {
+		v := e.SeedTime
+		d.SeedTime = &v
+	}
+	if e.DisableDHT {
+		v := true
+		d.DisableDht = &v
+	}
+	if e.BindInterface != "" {
+		v := e.BindInterface
+		d.BindInterface = &v
+	}
 	return d
 }
 

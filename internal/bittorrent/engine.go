@@ -56,6 +56,9 @@ type Engine struct {
 	downloadDir string
 	seedRatio   float64
 	seedTime    time.Duration
+	// bindAddr is the resolved interface/IP the engine actually bound to
+	// (empty = all interfaces); surfaced in the download-client read view.
+	bindAddr string
 
 	mu     sync.Mutex
 	state  map[string]*torrentState
@@ -149,6 +152,10 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 			Dialer:  &net.Dialer{LocalAddr: &net.TCPAddr{IP: bindIP}},
 		})
 	}
+	var bindAddr string
+	if bindIP != nil {
+		bindAddr = bindIP.String()
+	}
 	e := &Engine{
 		client:      client,
 		storageImpl: st,
@@ -156,6 +163,7 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 		downloadDir: entry.DownloadDir,
 		seedRatio:   entry.SeedRatio,
 		seedTime:    seedTime,
+		bindAddr:    bindAddr,
 		state:       map[string]*torrentState{},
 		sample:      map[string]speedSample{},
 		stop:        make(chan struct{}),

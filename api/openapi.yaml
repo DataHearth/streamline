@@ -28,6 +28,8 @@ tags:
     description: Read-only runtime/build metadata
   - name: requests
     description: Media request workflow (request → approve/deny)
+  - name: torrents
+    description: Torrents held by the builtin download client
 
 servers:
   - url: /api/v1
@@ -1037,6 +1039,113 @@ paths:
           $ref: "#/components/responses/UnprocessableEntity"
         "500":
           $ref: "#/components/responses/InternalError"
+
+  # ── Torrents (builtin download client) ─────────────────
+  /torrents:
+    get:
+      operationId: listTorrents
+      summary: List torrents held by the builtin download client
+      tags: [torrents]
+      responses:
+        "200":
+          $ref: "#/components/responses/TorrentList"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      operationId: addTorrent
+      summary: Add a torrent by magnet link or .torrent file
+      tags: [torrents]
+      requestBody:
+        $ref: "#/components/requestBodies/AddTorrent"
+      responses:
+        "201":
+          $ref: "#/components/responses/TorrentAddResult"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /torrents/{hash}:
+    parameters:
+      - $ref: "#/components/parameters/TorrentHash"
+    get:
+      operationId: getTorrent
+      summary: Torrent details (files, trackers, peers)
+      tags: [torrents]
+      responses:
+        "200":
+          $ref: "#/components/responses/TorrentDetails"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deleteTorrent
+      summary: Remove a torrent, optionally deleting its data
+      tags: [torrents]
+      parameters:
+        - $ref: "#/components/parameters/DeleteFiles"
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /torrents/{hash}/pause:
+    parameters:
+      - $ref: "#/components/parameters/TorrentHash"
+    post:
+      operationId: pauseTorrent
+      summary: Pause a torrent
+      tags: [torrents]
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /torrents/{hash}/resume:
+    parameters:
+      - $ref: "#/components/parameters/TorrentHash"
+    post:
+      operationId: resumeTorrent
+      summary: Resume a torrent
+      tags: [torrents]
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /torrents/{hash}/files/{index}:
+    parameters:
+      - $ref: "#/components/parameters/TorrentHash"
+      - $ref: "#/components/parameters/TorrentFileIndex"
+    patch:
+      operationId: setTorrentFilePriority
+      summary: Set a torrent file's download priority
+      tags: [torrents]
+      requestBody:
+        $ref: "#/components/requestBodies/SetTorrentFilePriority"
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
 
   # ── Media Servers ──────────────────────────────────────
   /media-servers:
@@ -2396,6 +2505,26 @@ components:
       description: Stable resource name (identity for config-backed resources).
       schema:
         type: string
+    TorrentHash:
+      name: hash
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: "^[0-9a-fA-F]{40}$"
+    TorrentFileIndex:
+      name: index
+      in: path
+      required: true
+      schema:
+        type: integer
+    DeleteFiles:
+      name: delete_files
+      in: query
+      required: false
+      schema:
+        type: boolean
+        default: false
     RequestStatus:
       name: status
       in: query
@@ -2757,6 +2886,20 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/DownloadClientCreate"
+
+    AddTorrent:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/AddTorrentRequest"
+
+    SetTorrentFilePriority:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/TorrentFilePriorityUpdate"
 
     CreateInvite:
       required: true
@@ -3306,6 +3449,27 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/DownloadQueue"
+
+    TorrentList:
+      description: Torrents held by the builtin download client.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/TorrentList"
+
+    TorrentDetails:
+      description: Torrent details (files, trackers, peers).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/TorrentDetails"
+
+    TorrentAddResult:
+      description: Torrent added.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/TorrentAddResult"
 
     DownloadHistory:
       description: Paginated terminal download history.
@@ -4121,7 +4285,7 @@ components:
           type: string
         client_type:
           type: string
-          enum: [qbittorrent, transmission, deluge]
+          enum: [qbittorrent, transmission, deluge, builtin]
         host:
           type: string
         port:
@@ -4145,16 +4309,45 @@ components:
         password_set:
           type: boolean
           description: True when a password is stored. The password itself is never returned.
+        # builtin-only knobs (client_type "builtin"); absent for external clients.
+        download_dir:
+          type: string
+        listen_port:
+          type: integer
+          x-go-type: uint16
+        max_upload_kbps:
+          type: integer
+        max_download_kbps:
+          type: integer
+        seed_ratio:
+          type: number
+          format: double
+        seed_time:
+          type: string
+          description: Go duration string, e.g. "72h". Empty = unlimited.
+        disable_dht:
+          type: boolean
+        bind_interface:
+          type: string
+          description: Interface name (e.g. wg0) or IP the engine binds to. Empty = all interfaces.
+        # runtime state, populated only for the builtin entry from the live engine.
+        running:
+          type: boolean
+        port_bound:
+          type: integer
+          x-go-type: uint16
+        interface_bound:
+          type: string
 
     DownloadClientCreate:
       type: object
-      required: [name, client_type, host, port]
+      required: [name, client_type]
       properties:
         name:
           type: string
         client_type:
           type: string
-          enum: [qbittorrent, transmission, deluge]
+          enum: [qbittorrent, transmission, deluge, builtin]
         host:
           type: string
         port:
@@ -4176,6 +4369,146 @@ components:
           x-go-type: uint8
         enabled:
           type: boolean
+        # builtin-only knobs (client_type "builtin"); ignored for external clients.
+        download_dir:
+          type: string
+        listen_port:
+          type: integer
+          x-go-type: uint16
+        max_upload_kbps:
+          type: integer
+        max_download_kbps:
+          type: integer
+        seed_ratio:
+          type: number
+          format: double
+        seed_time:
+          type: string
+          description: Go duration string, e.g. "72h". Empty = unlimited.
+        disable_dht:
+          type: boolean
+        bind_interface:
+          type: string
+          description: Interface name (e.g. wg0) or IP the engine binds to. Empty = all interfaces.
+
+    TorrentInfo:
+      type: object
+      required:
+        [hash, name, status, progress, size, download_speed, uploaded, ratio, peer_count]
+      properties:
+        hash:
+          type: string
+        name:
+          type: string
+        status:
+          type: string
+          enum: [downloading, seeding, completed, paused, fetching, stalled]
+        progress:
+          type: number
+          format: double
+          description: Fraction complete, 0..1.
+        size:
+          type: integer
+          format: int64
+        download_speed:
+          type: integer
+          format: int64
+          description: Bytes per second.
+        uploaded:
+          type: integer
+          format: int64
+        ratio:
+          type: number
+          format: double
+        peer_count:
+          type: integer
+
+    TorrentFile:
+      type: object
+      required: [index, path, size, downloaded, priority]
+      properties:
+        index:
+          type: integer
+        path:
+          type: string
+        size:
+          type: integer
+          format: int64
+        downloaded:
+          type: integer
+          format: int64
+        priority:
+          type: string
+          enum: [skip, normal, high]
+
+    TorrentPeer:
+      type: object
+      required: [addr]
+      properties:
+        addr:
+          type: string
+        client:
+          type: string
+        download_rate:
+          type: number
+          format: double
+
+    TorrentDetails:
+      allOf:
+        - $ref: "#/components/schemas/TorrentInfo"
+        - type: object
+          required: [files, trackers, peers]
+          properties:
+            files:
+              type: array
+              items:
+                $ref: "#/components/schemas/TorrentFile"
+            trackers:
+              type: array
+              items:
+                type: string
+            peers:
+              type: array
+              items:
+                $ref: "#/components/schemas/TorrentPeer"
+
+    TorrentAddResult:
+      type: object
+      required: [hash]
+      properties:
+        hash:
+          type: string
+
+    TorrentList:
+      type: object
+      required: [items, refreshed_at]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/TorrentInfo"
+        refreshed_at:
+          type: string
+          format: date-time
+
+    AddTorrentRequest:
+      type: object
+      description: Exactly one of magnet or torrent must be set.
+      properties:
+        magnet:
+          type: string
+        torrent:
+          type: string
+          format: byte
+          description: Base64-encoded .torrent file.
+
+    TorrentFilePriorityUpdate:
+      type: object
+      required: [priority]
+      properties:
+        priority:
+          type: string
+          enum: [skip, normal, high]
 
     User:
       type: object

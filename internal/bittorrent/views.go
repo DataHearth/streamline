@@ -20,9 +20,26 @@ type Manager interface {
 	ListViews(ctx context.Context) []TorrentView
 	Details(ctx context.Context, hash string) (TorrentDetails, error)
 	SetFilePriorities(ctx context.Context, hash string, prios []FilePriority) error
+	Runtime() RuntimeStatus
 }
 
 var _ Manager = (*Engine)(nil)
+
+// RuntimeStatus reports the live engine's bind state for the builtin
+// download-client read view: the actually bound listen port and interface.
+type RuntimeStatus struct {
+	Running        bool
+	PortBound      uint16
+	InterfaceBound string
+}
+
+func (e *Engine) Runtime() RuntimeStatus {
+	return RuntimeStatus{
+		Running:        true,
+		PortBound:      uint16(e.client.LocalPort()),
+		InterfaceBound: e.bindAddr,
+	}
+}
 
 // TorrentView is one torrent with live transfer stats.
 type TorrentView struct {
