@@ -32,7 +32,8 @@
 			<tr class="border-b border-border">
 				<th scope="col" class="py-2 pr-2 font-medium">Address</th>
 				<th scope="col" class="px-2 py-2 font-medium">Client</th>
-				<th scope="col" class="py-2 pl-2 text-right font-medium">Down</th>
+				<th scope="col" class="px-2 py-2 text-right font-medium">Down</th>
+				<th scope="col" class="py-2 pl-2 text-right font-medium">Up</th>
 			</tr>
 		</thead>
 		<tbody>
@@ -43,10 +44,17 @@
 					</td>
 					<td class="px-2 py-2 text-xs text-fg-subtle">{p.client || "—"}</td>
 					<td
-						class="py-2 pl-2 text-right font-mono tabular-nums text-xs"
+						class="px-2 py-2 text-right font-mono tabular-nums text-xs"
 					>
 						<span class={(p.download_rate ?? 0) > 0 ? "text-status-downloading" : "text-fg-faint"}>
 							{formatSpeed(p.download_rate) || "—"}
+						</span>
+					</td>
+					<td
+						class="py-2 pl-2 text-right font-mono tabular-nums text-xs"
+					>
+						<span class={(p.upload_rate ?? 0) > 0 ? "text-status-seeding" : "text-fg-faint"}>
+							{formatSpeed(p.upload_rate) || "—"}
 						</span>
 					</td>
 				</tr>

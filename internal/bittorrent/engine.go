@@ -41,11 +41,13 @@ type torrentState struct {
 	paused      bool
 	seedStopped bool
 	completedAt time.Time
+	addedAt     time.Time
 }
 
 type speedSample struct {
-	bytes int64
-	at    time.Time
+	down int64
+	up   int64
+	at   time.Time
 }
 
 // Engine wraps one anacrolix torrent client. It implements download.Client
@@ -281,7 +283,11 @@ func (e *Engine) restore(ctx context.Context) error {
 				"info_hash", s.InfoHash, "error", err)
 			continue
 		}
-		st := &torrentState{paused: s.Paused, seedStopped: s.SeedStopped}
+		st := &torrentState{
+			paused:      s.Paused,
+			seedStopped: s.SeedStopped,
+			addedAt:     s.CreateTime,
+		}
 		if s.CompletedAt != nil {
 			st.completedAt = *s.CompletedAt
 		}

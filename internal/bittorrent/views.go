@@ -4,7 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
+	"time"
 
+	antorrent "github.com/anacrolix/torrent"
 	"github.com/anacrolix/torrent/types"
 
 	"github.com/datahearth/streamline/internal/download"
@@ -49,9 +52,18 @@ type TorrentView struct {
 	Progress      float64 // 0..1
 	Size          int64
 	DownloadSpeed int64 // bytes/sec
+	UploadSpeed   int64 // bytes/sec
 	Uploaded      int64
 	Ratio         float64
+	ETA           int64 // seconds; 0 = unknown
+	Seeds         int
 	PeerCount     int
+	SavePath      string
+	AddedAt       time.Time
+	// SeedingStopped is set once the ratio/time limit stopped seeding.
+	SeedingStopped bool
+	// Tracked is false for arbitrary adds with no download_record.
+	Tracked bool
 }
 
 type FileView struct {
@@ -66,6 +78,7 @@ type PeerView struct {
 	Addr         string
 	Client       string
 	DownloadRate float64
+	UploadRate   float64
 }
 
 type TorrentDetails struct {
@@ -82,25 +95,52 @@ type FilePriority struct {
 }
 
 func (e *Engine) ListViews(ctx context.Context) []TorrentView {
+	tracked := e.trackedHashes(ctx)
 	live := e.client.Torrents()
 	out := make([]TorrentView, 0, len(live))
 	for _, t := range live {
-		base := e.view(t)
-		stats := t.Stats()
-		uploaded := stats.BytesWrittenData.Int64()
-		out = append(out, TorrentView{
-			Hash:          base.Hash,
-			Name:          base.Name,
-			Status:        base.Status,
-			Progress:      base.Progress,
-			Size:          base.Size,
-			DownloadSpeed: base.DownloadSpeed,
-			Uploaded:      uploaded,
-			Ratio:         ratio(uploaded, base.Size),
-			PeerCount:     stats.ActivePeers,
-		})
+		out = append(out, e.torrentView(t, tracked))
 	}
 	return out
+}
+
+// torrentView maps one live snapshot onto the management view.
+func (e *Engine) torrentView(
+	t *antorrent.Torrent,
+	tracked map[string]struct{},
+) TorrentView {
+	l := e.live(t)
+	_, isTracked := tracked[l.hash]
+	return TorrentView{
+		Hash:           l.hash,
+		Name:           l.name,
+		Status:         l.status,
+		Progress:       l.progress,
+		Size:           l.size,
+		DownloadSpeed:  l.downloadSpeed,
+		UploadSpeed:    l.uploadSpeed,
+		Uploaded:       l.uploaded,
+		Ratio:          ratio(l.uploaded, l.size),
+		ETA:            l.eta,
+		Seeds:          l.seeds,
+		PeerCount:      l.activePeers,
+		SavePath:       e.downloadDir,
+		AddedAt:        l.addedAt,
+		SeedingStopped: l.seedingStopped,
+		Tracked:        isTracked,
+	}
+}
+
+// trackedHashes is the set of torrent hashes some download_record owns.
+// A lookup failure degrades to "nothing tracked" (badge-only data, and the
+// list refreshes every poll) rather than failing the view.
+func (e *Engine) trackedHashes(ctx context.Context) map[string]struct{} {
+	set, err := e.store.AllDownloadRecordHashes(ctx)
+	if err != nil {
+		slog.WarnContext(ctx, "listing tracked torrent hashes failed", "error", err)
+		return map[string]struct{}{}
+	}
+	return set
 }
 
 func (e *Engine) Details(
@@ -111,24 +151,11 @@ func (e *Engine) Details(
 	if err != nil {
 		return TorrentDetails{}, err
 	}
-	base := e.view(t)
-	stats := t.Stats()
-	uploaded := stats.BytesWrittenData.Int64()
 	d := TorrentDetails{
-		TorrentView: TorrentView{
-			Hash:          base.Hash,
-			Name:          base.Name,
-			Status:        base.Status,
-			Progress:      base.Progress,
-			Size:          base.Size,
-			DownloadSpeed: base.DownloadSpeed,
-			Uploaded:      uploaded,
-			Ratio:         ratio(uploaded, base.Size),
-			PeerCount:     stats.ActivePeers,
-		},
-		Files:    []FileView{},
-		Trackers: []string{},
-		Peers:    []PeerView{},
+		TorrentView: e.torrentView(t, e.trackedHashes(ctx)),
+		Files:       []FileView{},
+		Trackers:    []string{},
+		Peers:       []PeerView{},
 	}
 	if t.Info() != nil {
 		for i, f := range t.Files() {
@@ -147,10 +174,12 @@ func (e *Engine) Details(
 	}
 	for _, pc := range t.PeerConns() {
 		name, _ := pc.PeerClientName.Load().(string)
+		stats := pc.Stats()
 		d.Peers = append(d.Peers, PeerView{
 			Addr:         fmt.Sprint(pc.RemoteAddr),
 			Client:       name,
-			DownloadRate: pc.Stats().DownloadRate,
+			DownloadRate: stats.DownloadRate,
+			UploadRate:   stats.LastWriteUploadRate,
 		})
 	}
 	return d, nil

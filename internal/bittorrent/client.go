@@ -78,7 +78,11 @@ func (e *Engine) AddTorrent(
 	if err != nil {
 		return "", otelx.RecordSpanError(span, fmt.Errorf("add torrent: %w", err))
 	}
-	e.setState(hash, func(*torrentState) {})
+	e.setState(hash, func(st *torrentState) {
+		if st.addedAt.IsZero() {
+			st.addedAt = time.Now()
+		}
+	})
 	e.startWhenReady(t, false)
 	return hash, nil
 }
@@ -180,8 +184,26 @@ func (e *Engine) ResumeTorrent(ctx context.Context, hash string) error {
 // TestConnection is a no-op: a constructed engine is by definition running.
 func (e *Engine) TestConnection(ctx context.Context) error { return nil }
 
-// view builds the download.Client-facing snapshot of one torrent.
-func (e *Engine) view(t *antorrent.Torrent) download.Torrent {
+// liveStats is one consistent snapshot of a torrent's transfer state,
+// shared by the download.Client view and the /torrents management views so
+// the rate sampler is hit exactly once per observation.
+type liveStats struct {
+	hash           string
+	name           string
+	status         download.TorrentStatus
+	progress       float64
+	size           int64
+	downloadSpeed  int64
+	uploadSpeed    int64
+	uploaded       int64
+	eta            int64
+	seeds          int
+	activePeers    int
+	addedAt        time.Time
+	seedingStopped bool
+}
+
+func (e *Engine) live(t *antorrent.Torrent) liveStats {
 	hash := t.InfoHash().HexString()
 	var size, completed int64
 	if t.Info() != nil {
@@ -192,20 +214,43 @@ func (e *Engine) view(t *antorrent.Torrent) download.Torrent {
 	if size > 0 {
 		progress = float64(completed) / float64(size)
 	}
-	speed := e.speed(hash, completed)
+	stats := t.Stats()
+	uploaded := stats.BytesWrittenData.Int64()
+	down, up := e.rates(hash, completed, uploaded)
 	var eta int64
-	if speed > 0 && size > completed {
-		eta = (size - completed) / speed
+	if down > 0 && size > completed {
+		eta = (size - completed) / down
 	}
+	st := e.getState(hash)
+	return liveStats{
+		hash:           hash,
+		name:           t.Name(),
+		status:         e.status(t, hash),
+		progress:       progress,
+		size:           size,
+		downloadSpeed:  down,
+		uploadSpeed:    up,
+		uploaded:       uploaded,
+		eta:            eta,
+		seeds:          stats.ConnectedSeeders,
+		activePeers:    stats.ActivePeers,
+		addedAt:        st.addedAt,
+		seedingStopped: st.seedStopped,
+	}
+}
+
+// view builds the download.Client-facing snapshot of one torrent.
+func (e *Engine) view(t *antorrent.Torrent) download.Torrent {
+	l := e.live(t)
 	return download.Torrent{
-		Hash:          hash,
-		Name:          t.Name(),
-		Status:        e.status(t, hash),
-		Progress:      progress,
-		Size:          size,
+		Hash:          l.hash,
+		Name:          l.name,
+		Status:        l.status,
+		Progress:      l.progress,
+		Size:          l.size,
 		SavePath:      e.downloadDir,
-		DownloadSpeed: speed,
-		ETA:           eta,
+		DownloadSpeed: l.downloadSpeed,
+		ETA:           l.eta,
 	}
 }
 
@@ -234,18 +279,25 @@ func (e *Engine) status(
 	return download.StatusDownloading
 }
 
-// speed derives bytes/sec from the delta since the previous observation of
-// this torrent. First observation (or byte regression after a failed piece
-// check) reports 0.
-func (e *Engine) speed(hash string, completed int64) int64 {
+// rates derives download/upload bytes/sec from the deltas since the
+// previous observation of this torrent. First observation (or byte
+// regression after a failed piece check) reports 0.
+func (e *Engine) rates(hash string, completed, uploaded int64) (int64, int64) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	prev, ok := e.sample[hash]
 	now := time.Now()
-	e.sample[hash] = speedSample{bytes: completed, at: now}
+	e.sample[hash] = speedSample{down: completed, up: uploaded, at: now}
 	elapsed := now.Sub(prev.at).Seconds()
-	if !ok || elapsed <= 0 || completed < prev.bytes {
-		return 0
+	if !ok || elapsed <= 0 {
+		return 0, 0
 	}
-	return int64(float64(completed-prev.bytes) / elapsed)
+	var down, up int64
+	if completed >= prev.down {
+		down = int64(float64(completed-prev.down) / elapsed)
+	}
+	if uploaded >= prev.up {
+		up = int64(float64(uploaded-prev.up) / elapsed)
+	}
+	return down, up
 }

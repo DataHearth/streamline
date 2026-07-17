@@ -562,8 +562,7 @@ export type TorrentStatus =
 export type TorrentFilePriority = "skip" | "normal" | "high";
 
 // GET /torrents list item. Light by design — no files/peers/trackers (those
-// come from the per-torrent detail query). The engine reports a single
-// peer_count (connected peers), not a seed/peer split, and no upload rate.
+// come from the per-torrent detail query).
 export type Torrent = {
 	hash: string;
 	// Empty while a magnet resolves metadata.
@@ -575,10 +574,21 @@ export type Torrent = {
 	size: number;
 	// Bytes per second.
 	download_speed: number;
+	upload_speed: number;
 	// Total bytes uploaded so far.
 	uploaded: number;
 	ratio: number;
+	// Seconds to completion; 0 = unknown.
+	eta: number;
+	// Connected peers holding the complete torrent.
+	seeds: number;
 	peer_count: number;
+	save_path: string;
+	added_at: string;
+	// True once the ratio/seed-time limit stopped seeding.
+	seeding_stopped: boolean;
+	// False for arbitrary adds not tied to a library item.
+	tracked: boolean;
 };
 
 export type TorrentFile = {
@@ -595,6 +605,7 @@ export type TorrentPeer = {
 	client?: string;
 	// Bytes per second.
 	download_rate?: number;
+	upload_rate?: number;
 };
 
 // GET /torrents/{hash} — the list item plus its file/tracker/peer breakdown.

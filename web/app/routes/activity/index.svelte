@@ -29,7 +29,7 @@
 	import TorrentTable from "../../components/activity/TorrentTable.svelte";
 	import TorrentDrawer from "../../components/activity/TorrentDrawer.svelte";
 	import AddTorrentModal from "../../components/activity/AddTorrentModal.svelte";
-	import { formatSpeed, formatBytes } from "../../lib/format";
+	import { formatSpeed } from "../../lib/format";
 
 	type View = "queue" | "history" | "torrents";
 
@@ -315,9 +315,8 @@
 	let torrentAggDown = $derived(
 		torrentItems.reduce((s, t) => s + (t.download_speed ?? 0), 0),
 	);
-	// The engine reports no upload rate — total uploaded is the closest datum.
-	let torrentTotalUp = $derived(
-		torrentItems.reduce((s, t) => s + (t.uploaded ?? 0), 0),
+	let torrentAggUp = $derived(
+		torrentItems.reduce((s, t) => s + (t.upload_speed ?? 0), 0),
 	);
 
 	let queueItems = $derived<QueueEntry[]>(queue.data?.items ?? []);
@@ -457,10 +456,10 @@
 				</div>
 				<div>
 					<div class="text-2xl font-bold tabular-nums text-status-seeding">
-						{formatBytes(torrentTotalUp)}
+						{formatSpeed(torrentAggUp) || "—"}
 					</div>
 					<div class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-fg-faint">
-						Uploaded
+						Aggregate ↑
 					</div>
 				</div>
 			</div>

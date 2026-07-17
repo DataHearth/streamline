@@ -197,15 +197,22 @@ func (s *Server) DeleteTorrent(
 
 func torrentInfoToAPI(v bittorrent.TorrentView) TorrentInfo {
 	return TorrentInfo{
-		Hash:          v.Hash,
-		Name:          v.Name,
-		Status:        TorrentInfoStatus(v.Status),
-		Progress:      v.Progress,
-		Size:          v.Size,
-		DownloadSpeed: v.DownloadSpeed,
-		Uploaded:      v.Uploaded,
-		Ratio:         v.Ratio,
-		PeerCount:     v.PeerCount,
+		Hash:           v.Hash,
+		Name:           v.Name,
+		Status:         TorrentInfoStatus(v.Status),
+		Progress:       v.Progress,
+		Size:           v.Size,
+		DownloadSpeed:  v.DownloadSpeed,
+		UploadSpeed:    v.UploadSpeed,
+		Uploaded:       v.Uploaded,
+		Ratio:          v.Ratio,
+		Eta:            v.ETA,
+		Seeds:          v.Seeds,
+		PeerCount:      v.PeerCount,
+		SavePath:       v.SavePath,
+		AddedAt:        v.AddedAt,
+		SeedingStopped: v.SeedingStopped,
+		Tracked:        v.Tracked,
 	}
 }
 
@@ -231,20 +238,31 @@ func torrentDetailsToAPI(d bittorrent.TorrentDetails) TorrentDetails {
 			r := p.DownloadRate
 			peer.DownloadRate = &r
 		}
+		if p.UploadRate != 0 {
+			r := p.UploadRate
+			peer.UploadRate = &r
+		}
 		peers = append(peers, peer)
 	}
 	return TorrentDetails{
-		Hash:          d.Hash,
-		Name:          d.Name,
-		Status:        TorrentDetailsStatus(d.Status),
-		Progress:      d.Progress,
-		Size:          d.Size,
-		DownloadSpeed: d.DownloadSpeed,
-		Uploaded:      d.Uploaded,
-		Ratio:         d.Ratio,
-		PeerCount:     d.PeerCount,
-		Files:         files,
-		Trackers:      d.Trackers,
-		Peers:         peers,
+		Hash:           d.Hash,
+		Name:           d.Name,
+		Status:         TorrentDetailsStatus(d.Status),
+		Progress:       d.Progress,
+		Size:           d.Size,
+		DownloadSpeed:  d.DownloadSpeed,
+		UploadSpeed:    d.UploadSpeed,
+		Uploaded:       d.Uploaded,
+		Ratio:          d.Ratio,
+		Eta:            d.ETA,
+		Seeds:          d.Seeds,
+		PeerCount:      d.PeerCount,
+		SavePath:       d.SavePath,
+		AddedAt:        d.AddedAt,
+		SeedingStopped: d.SeedingStopped,
+		Tracked:        d.Tracked,
+		Files:          files,
+		Trackers:       d.Trackers,
+		Peers:          peers,
 	}
 }

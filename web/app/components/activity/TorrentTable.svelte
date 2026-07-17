@@ -31,8 +31,9 @@
 		"Progress",
 		"Size",
 		"Down",
+		"Up",
 		"Ratio",
-		"Peers",
+		"Seeds / Peers",
 		"",
 	];
 </script>

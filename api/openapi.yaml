@@ -4394,7 +4394,24 @@ components:
     TorrentInfo:
       type: object
       required:
-        [hash, name, status, progress, size, download_speed, uploaded, ratio, peer_count]
+        [
+          hash,
+          name,
+          status,
+          progress,
+          size,
+          download_speed,
+          upload_speed,
+          uploaded,
+          ratio,
+          eta,
+          seeds,
+          peer_count,
+          save_path,
+          added_at,
+          seeding_stopped,
+          tracked,
+        ]
       properties:
         hash:
           type: string
@@ -4414,14 +4431,36 @@ components:
           type: integer
           format: int64
           description: Bytes per second.
+        upload_speed:
+          type: integer
+          format: int64
+          description: Bytes per second.
         uploaded:
           type: integer
           format: int64
         ratio:
           type: number
           format: double
+        eta:
+          type: integer
+          format: int64
+          description: Seconds to completion; 0 = unknown.
+        seeds:
+          type: integer
+          description: Connected peers holding the complete torrent.
         peer_count:
           type: integer
+        save_path:
+          type: string
+        added_at:
+          type: string
+          format: date-time
+        seeding_stopped:
+          type: boolean
+          description: True once the ratio/seed-time limit stopped seeding.
+        tracked:
+          type: boolean
+          description: False for arbitrary adds not tied to a library item.
 
     TorrentFile:
       type: object
@@ -4450,6 +4489,9 @@ components:
         client:
           type: string
         download_rate:
+          type: number
+          format: double
+        upload_rate:
           type: number
           format: double
 

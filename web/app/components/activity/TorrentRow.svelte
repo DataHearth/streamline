@@ -3,7 +3,12 @@
 	import StatusPill from "../shared/StatusPill.svelte";
 	import ProgressBar from "../shared/ProgressBar.svelte";
 	import { cn } from "../../lib/cn";
-	import { formatBytes, formatSpeed, formatRatio } from "../../lib/format";
+	import {
+		formatBytes,
+		formatSpeed,
+		formatEta,
+		formatRatio,
+	} from "../../lib/format";
 	import type { Torrent } from "../../lib/types";
 
 	let {
@@ -50,6 +55,14 @@
 		{:else}
 			<div class="flex items-center gap-1.5">
 				<span class="truncate font-medium text-fg">{torrent.name}</span>
+				{#if !torrent.tracked}
+					<span
+						class="shrink-0 rounded-full border border-border px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-fg-subtle"
+						title="Not linked to a library item"
+					>
+						untracked
+					</span>
+				{/if}
 			</div>
 			<div class="truncate font-mono text-[11px] text-fg-subtle">
 				{torrent.hash.slice(0, 24)}…
@@ -71,6 +84,11 @@
 				<span class="font-mono tabular-nums text-xs text-fg-muted">
 					{fetching ? "—" : `${Math.round(torrent.progress * 100)}%`}
 				</span>
+				{#if torrent.status === "downloading" && torrent.eta > 0}
+					<span class="font-mono tabular-nums text-[10px] text-fg-faint">
+						{formatEta(torrent.eta)}
+					</span>
+				{/if}
 			</div>
 		</div>
 	</td>
@@ -83,14 +101,20 @@
 			{formatSpeed(torrent.download_speed) || "—"}
 		</span>
 	</td>
+	<td class={cn("px-2", num, pad)}>
+		<span class={torrent.upload_speed > 0 ? "text-status-seeding" : "text-fg-faint"}>
+			{formatSpeed(torrent.upload_speed) || "—"}
+		</span>
+	</td>
 	<td class={cn("px-2 text-fg-muted", num, pad)}>
 		{fetching ? "—" : formatRatio(torrent.ratio)}
 	</td>
 	<td class={cn("px-2 text-fg-muted", num, pad)}>
-		{#if torrent.peer_count === 0}
+		{#if torrent.peer_count === 0 && torrent.seeds === 0}
 			—
 		{:else}
-			<span class="text-fg-muted">{torrent.peer_count}</span>
+			<span class="text-fg-muted">{torrent.seeds}</span>
+			<span class="text-fg-faint"> / {torrent.peer_count}</span>
 		{/if}
 	</td>
 

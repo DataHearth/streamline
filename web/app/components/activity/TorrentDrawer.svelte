@@ -21,7 +21,13 @@
 	import TorrentPeersTab from "./TorrentPeersTab.svelte";
 	import TorrentTrackersTab from "./TorrentTrackersTab.svelte";
 	import { cn } from "../../lib/cn";
-	import { formatBytes, formatSpeed, formatRatio } from "../../lib/format";
+	import {
+		formatBytes,
+		formatSpeed,
+		formatEta,
+		formatRatio,
+	} from "../../lib/format";
+	import { formatRelative, formatDateTime } from "../../lib/dates";
 	import type {
 		Torrent,
 		TorrentDetails,
@@ -137,6 +143,21 @@
 				<div class="flex items-start justify-between gap-3">
 					<div class="flex flex-wrap items-center gap-2">
 						<StatusPill status={torrent.status} live={active} />
+						{#if torrent.seeding_stopped}
+							<span
+								class="inline-flex items-center gap-1 rounded-full border border-status-completed/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-status-completed"
+								title="Ratio / seed-time limit reached"
+							>
+								Seeding stopped
+							</span>
+						{/if}
+						{#if !torrent.tracked}
+							<span
+								class="inline-flex items-center rounded-full border border-border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fg-subtle"
+							>
+								untracked
+							</span>
+						{/if}
 					</div>
 					<button
 						type="button"
@@ -186,7 +207,9 @@
 							{fetching ? "—" : `${Math.round(torrent.progress * 100)}%`}
 						</span>
 						<span class="font-mono tabular-nums text-fg-faint">
-							{#if torrent.status === "seeding"}
+							{#if torrent.status === "downloading" && torrent.eta > 0}
+								{formatEta(torrent.eta)} left
+							{:else if torrent.status === "seeding"}
 								seeding
 							{:else if torrent.status === "completed"}
 								complete
@@ -199,15 +222,21 @@
 				<div class="mt-4 grid grid-cols-4 gap-px overflow-hidden rounded-md border border-border bg-border">
 					{@render stat("Ratio", fetching ? "—" : formatRatio(torrent.ratio))}
 					{@render stat("↓ Down", formatSpeed(torrent.download_speed) || "—")}
-					{@render stat("Uploaded", formatBytes(torrent.uploaded))}
+					{@render stat("↑ Up", formatSpeed(torrent.upload_speed) || "—")}
 					{@render stat("Size", formatBytes(torrent.size))}
 				</div>
 
 				<!-- meta -->
 				<dl class="mt-4 grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1.5 text-xs">
+					<dt class="font-medium uppercase tracking-[0.1em] text-fg-faint">Save path</dt>
+					<dd class="min-w-0 break-all font-mono text-fg-muted">{torrent.save_path}</dd>
 					<dt class="font-medium uppercase tracking-[0.1em] text-fg-faint">Swarm</dt>
 					<dd class="font-mono tabular-nums text-fg-muted">
-						{torrent.peer_count} peers
+						{torrent.seeds} seeds · {torrent.peer_count} peers
+					</dd>
+					<dt class="font-medium uppercase tracking-[0.1em] text-fg-faint">Added</dt>
+					<dd class="text-fg-muted" title={formatDateTime(torrent.added_at)}>
+						{formatRelative(torrent.added_at)}
 					</dd>
 				</dl>
 			</header>

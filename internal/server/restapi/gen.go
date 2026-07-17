@@ -2827,21 +2827,39 @@ type TorrentAddResult struct {
 
 // TorrentDetails defines model for TorrentDetails.
 type TorrentDetails struct {
+	AddedAt time.Time `json:"added_at"`
+
 	// DownloadSpeed Bytes per second.
-	DownloadSpeed int64         `json:"download_speed"`
-	Files         []TorrentFile `json:"files"`
-	Hash          string        `json:"hash"`
-	Name          string        `json:"name"`
-	PeerCount     int           `json:"peer_count"`
-	Peers         []TorrentPeer `json:"peers"`
+	DownloadSpeed int64 `json:"download_speed"`
+
+	// Eta Seconds to completion; 0 = unknown.
+	Eta       int64         `json:"eta"`
+	Files     []TorrentFile `json:"files"`
+	Hash      string        `json:"hash"`
+	Name      string        `json:"name"`
+	PeerCount int           `json:"peer_count"`
+	Peers     []TorrentPeer `json:"peers"`
 
 	// Progress Fraction complete, 0..1.
-	Progress float64              `json:"progress"`
-	Ratio    float64              `json:"ratio"`
-	Size     int64                `json:"size"`
-	Status   TorrentDetailsStatus `json:"status"`
-	Trackers []string             `json:"trackers"`
-	Uploaded int64                `json:"uploaded"`
+	Progress float64 `json:"progress"`
+	Ratio    float64 `json:"ratio"`
+	SavePath string  `json:"save_path"`
+
+	// SeedingStopped True once the ratio/seed-time limit stopped seeding.
+	SeedingStopped bool `json:"seeding_stopped"`
+
+	// Seeds Connected peers holding the complete torrent.
+	Seeds  int                  `json:"seeds"`
+	Size   int64                `json:"size"`
+	Status TorrentDetailsStatus `json:"status"`
+
+	// Tracked False for arbitrary adds not tied to a library item.
+	Tracked  bool     `json:"tracked"`
+	Trackers []string `json:"trackers"`
+
+	// UploadSpeed Bytes per second.
+	UploadSpeed int64 `json:"upload_speed"`
+	Uploaded    int64 `json:"uploaded"`
 }
 
 // TorrentDetailsStatus defines model for TorrentDetails.Status.
@@ -2869,18 +2887,36 @@ type TorrentFilePriorityUpdatePriority string
 
 // TorrentInfo defines model for TorrentInfo.
 type TorrentInfo struct {
+	AddedAt time.Time `json:"added_at"`
+
 	// DownloadSpeed Bytes per second.
-	DownloadSpeed int64  `json:"download_speed"`
-	Hash          string `json:"hash"`
-	Name          string `json:"name"`
-	PeerCount     int    `json:"peer_count"`
+	DownloadSpeed int64 `json:"download_speed"`
+
+	// Eta Seconds to completion; 0 = unknown.
+	Eta       int64  `json:"eta"`
+	Hash      string `json:"hash"`
+	Name      string `json:"name"`
+	PeerCount int    `json:"peer_count"`
 
 	// Progress Fraction complete, 0..1.
-	Progress float64           `json:"progress"`
-	Ratio    float64           `json:"ratio"`
-	Size     int64             `json:"size"`
-	Status   TorrentInfoStatus `json:"status"`
-	Uploaded int64             `json:"uploaded"`
+	Progress float64 `json:"progress"`
+	Ratio    float64 `json:"ratio"`
+	SavePath string  `json:"save_path"`
+
+	// SeedingStopped True once the ratio/seed-time limit stopped seeding.
+	SeedingStopped bool `json:"seeding_stopped"`
+
+	// Seeds Connected peers holding the complete torrent.
+	Seeds  int               `json:"seeds"`
+	Size   int64             `json:"size"`
+	Status TorrentInfoStatus `json:"status"`
+
+	// Tracked False for arbitrary adds not tied to a library item.
+	Tracked bool `json:"tracked"`
+
+	// UploadSpeed Bytes per second.
+	UploadSpeed int64 `json:"upload_speed"`
+	Uploaded    int64 `json:"uploaded"`
 }
 
 // TorrentInfoStatus defines model for TorrentInfo.Status.
@@ -2897,6 +2933,7 @@ type TorrentPeer struct {
 	Addr         string   `json:"addr"`
 	Client       *string  `json:"client,omitempty"`
 	DownloadRate *float64 `json:"download_rate,omitempty"`
+	UploadRate   *float64 `json:"upload_rate,omitempty"`
 }
 
 // UpcomingEpisode defines model for UpcomingEpisode.
