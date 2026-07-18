@@ -39,7 +39,7 @@
 	></div>
 
 	<div
-		class="relative flex flex-col gap-6 p-6 md:flex-row md:items-center md:justify-between md:p-7"
+		class="relative flex flex-col gap-6 p-6 md:flex-row md:items-center md:p-7"
 	>
 		<div class="flex items-center gap-4">
 			<Avatar email={user.email} name={user.display_name} size={56} />
@@ -86,7 +86,7 @@
 		</div>
 
 		<dl
-			class="grid grid-cols-3 gap-px overflow-hidden rounded-lg border border-border bg-border md:max-w-md md:flex-1"
+			class="grid grid-cols-3 gap-px overflow-hidden rounded-lg border border-border bg-border md:max-w-md"
 		>
 			{@render stat(Monitor, "Sessions", String(sessions.length))}
 			{@render stat(KeyRound, "API keys", String(apiKeys.length))}

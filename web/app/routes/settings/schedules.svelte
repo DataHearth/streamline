@@ -105,7 +105,7 @@
 		<p class="mt-6 text-sm text-fg-muted">No schedules registered.</p>
 	{:else}
 		<div
-			class="mt-6 overflow-hidden rounded-lg border border-border bg-bg-elevated"
+			class="mt-6 overflow-x-auto rounded-lg border border-border bg-bg-elevated"
 		>
 			<table class="w-full text-sm">
 				<thead
@@ -151,7 +151,7 @@
 			</div>
 
 			<div
-				class="overflow-hidden rounded-lg border border-border bg-bg-elevated/60"
+				class="overflow-x-auto rounded-lg border border-border bg-bg-elevated/60"
 			>
 				<table class="w-full text-sm">
 					<thead

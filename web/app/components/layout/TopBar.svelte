@@ -9,8 +9,6 @@
 		Plus,
 		Film,
 		Tv,
-		Music,
-		BookOpen,
 		FolderInput,
 	} from "@lucide/svelte";
 	import { api } from "../../lib/api";
@@ -59,7 +57,7 @@
 				? []
 				: [{ label: root.label }];
 		}
-		return [{ label: root.label, href: root.prefix }, { label: "Detail" }];
+		return [{ label: root.label, href: root.prefix }, { label: "Details" }];
 	});
 
 	const systemQuery = createQuery<SystemInfo>(() => ({
@@ -93,7 +91,7 @@
 	// Series, which the modals route to a request) under a "Request a title"
 	// heading. admins/members get the full "Add to library" menu.
 	type AddItem = {
-		id: "movie" | "import" | "series" | "music" | "book";
+		id: "movie" | "import" | "series";
 		label: string;
 		desc: string;
 		icon: typeof Film;
@@ -122,20 +120,6 @@
 			desc: "Adopt media already on disk",
 			icon: FolderInput,
 			divider: true,
-		},
-		{
-			id: "music",
-			label: "Album",
-			desc: "Discography, albums, EPs",
-			icon: Music,
-			soon: true,
-		},
-		{
-			id: "book",
-			label: "Book",
-			desc: "Author, series, single titles",
-			icon: BookOpen,
-			soon: true,
 		},
 	];
 
@@ -284,7 +268,7 @@
 		type="button"
 		onclick={openPalette}
 		aria-label="Open command palette"
-		class="flex h-10 w-full max-w-[540px] flex-1 shrink-0 items-center gap-2.5 rounded-md border border-border bg-surface px-3.5 text-left text-[13px] text-fg-subtle transition hover:border-border-strong hover:bg-surface-2 hover:text-fg-muted"
+		class="hidden h-10 w-full max-w-[540px] flex-1 shrink-0 items-center gap-2.5 rounded-md border border-border bg-surface px-3.5 text-left text-[13px] text-fg-subtle transition hover:border-border-strong hover:bg-surface-2 hover:text-fg-muted lg:flex"
 	>
 		<Search size={14} aria-hidden="true" />
 		<span class="flex-1 truncate">Find a movie, release, indexer…</span>
@@ -296,6 +280,14 @@
 	</button>
 
 	<div class="flex flex-1 items-center justify-end gap-2">
+		<button
+			type="button"
+			onclick={openPalette}
+			aria-label="Search"
+			class="grid h-10 w-10 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg lg:hidden"
+		>
+			<Search size={18} aria-hidden="true" />
+		</button>
 		<button
 			bind:this={addTrigger}
 			type="button"

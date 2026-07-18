@@ -239,7 +239,7 @@
 			</div>
 		</div>
 
-		<div class="w-full px-4 pb-12 md:px-6">
+		<div class="w-full px-4 pb-6 md:px-6">
 			{#if visibleSeries.length === 0}
 				<SeriesEmpty
 					variant={libraryEmpty ? "library" : "filter"}

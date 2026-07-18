@@ -34,7 +34,7 @@
 
 <label
 	class={cn(
-		"inline-flex h-10 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-border bg-bg-base px-3 text-xs font-medium transition hover:border-border-strong has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent",
+		"inline-flex h-10 w-fit cursor-pointer items-center justify-center gap-1.5 rounded-md border border-border bg-bg-base px-3 text-xs font-medium transition hover:border-border-strong has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent",
 		TONE[tone],
 		disabled && "cursor-not-allowed opacity-50",
 	)}

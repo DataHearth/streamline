@@ -69,7 +69,7 @@
 {/snippet}
 
 {#snippet identitySection()}
-	<div class="grid items-start gap-4 md:grid-cols-2">
+	<div class="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
 		<ProfileCard />
 		<PasswordCard />
 	</div>

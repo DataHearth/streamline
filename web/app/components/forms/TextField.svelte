@@ -63,3 +63,16 @@
 		<p class="mt-1 text-xs text-status-failed">{msg}</p>
 	{/each}
 </label>
+
+<style>
+	/* Number fields: drop the native spin-button arrows. */
+	input[type="number"]::-webkit-inner-spin-button,
+	input[type="number"]::-webkit-outer-spin-button {
+		-webkit-appearance: none;
+		margin: 0;
+	}
+	input[type="number"] {
+		-moz-appearance: textfield;
+		appearance: textfield;
+	}
+</style>

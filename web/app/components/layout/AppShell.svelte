@@ -32,7 +32,7 @@
 		Skip to main content
 	</a>
 	<Sidebar />
-	<main id="main" class="min-w-0 flex-1 overflow-y-auto pb-24 lg:pb-0">
+	<main id="main" class="min-w-0 flex-1 overflow-y-auto pb-16 lg:pb-0">
 		<TopBar />
 		{@render children?.()}
 	</main>

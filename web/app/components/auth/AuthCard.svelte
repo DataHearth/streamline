@@ -13,7 +13,7 @@
 </script>
 
 <div
-	class="relative isolate grid min-h-dvh place-items-center overflow-hidden bg-bg-deep px-4 py-10"
+	class="relative isolate grid grid-cols-1 min-h-dvh place-items-center overflow-hidden bg-bg-deep px-4 py-10"
 >
 	<div
 		aria-hidden="true"

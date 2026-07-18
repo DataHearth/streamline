@@ -37,17 +37,17 @@
 </script>
 
 <ol
-	class="flex items-stretch gap-0 rounded-lg border border-border bg-bg-elevated px-4 py-4 md:px-6"
+	class="flex items-stretch gap-0 rounded-lg border border-border bg-bg-elevated px-3 py-4 md:px-6"
 	aria-label="Import progress"
 >
 	{#each STEPS as step, i (step.label)}
 		{@const state = states[i]}
 		<li
-			class="flex flex-1 items-center gap-2.5 last:flex-none"
+			class="flex flex-1 items-center gap-1.5 last:flex-none md:gap-2.5"
 			aria-current={state === "current" ? "step" : undefined}
 		>
 			<span
-				class="grid h-6 w-6 shrink-0 place-items-center rounded-full text-[11px] font-semibold transition-colors {state ===
+				class="grid h-5 w-5 shrink-0 place-items-center rounded-full text-[11px] font-semibold transition-colors md:h-6 md:w-6 {state ===
 				'done'
 					? 'bg-status-available text-bg-deep'
 					: state === 'current'
@@ -85,7 +85,7 @@
 
 			{#if i < STEPS.length - 1}
 				<span
-					class="mx-1 h-px flex-1 {state === 'done'
+					class="mx-0.5 h-px flex-1 md:mx-1 {state === 'done'
 						? 'bg-status-available/40'
 						: 'bg-border'}"
 					aria-hidden="true"

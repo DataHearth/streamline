@@ -16,6 +16,7 @@
 	import { auth } from "../../lib/auth.svelte";
 	import { api } from "../../lib/api";
 	import { cn } from "../../lib/cn";
+	import Select from "../forms/Select.svelte";
 	import type { DownloadClient, Indexer, MediaServer } from "../../lib/types";
 
 	type IsActiveFn = (path: string) => boolean;
@@ -139,6 +140,16 @@
 		return base;
 	});
 
+	// Flat option list for the mobile Select jumper (forms/Select has no groups).
+	let sectionOptions = $derived(
+		groups.flatMap((g) =>
+			g.items.map((it) => ({
+				value: it.path,
+				label: it.count !== undefined ? `${it.label} (${it.count})` : it.label,
+			})),
+		),
+	);
+
 	// Flat option list for the mobile <select> jumper.
 	let activePath = $derived.by(() => {
 		for (const g of groups) {
@@ -148,33 +159,17 @@
 		}
 		return groups[0]?.items[0]?.path ?? "/settings/general";
 	});
-
-	function onSelectChange(e: Event) {
-		const v = (e.currentTarget as HTMLSelectElement).value;
-		if (v) gotoFn(v);
-	}
 </script>
 
-<!-- Mobile: select jumper. Keeps the section list reachable in one tap. -->
-<label class="block md:hidden">
-	<span class="sr-only">Settings section</span>
-	<select
-		aria-label="Settings section"
+<!-- Mobile: Select jumper. Keeps the section list reachable in one tap. -->
+<div class="block md:hidden">
+	<Select
 		value={activePath}
-		onchange={onSelectChange}
-		class="h-11 w-full appearance-none rounded-md border border-border bg-bg-elevated px-3 text-sm text-fg focus-visible:outline-2 focus-visible:outline-accent"
-	>
-		{#each groups as g (g.name)}
-			<optgroup label={g.name}>
-				{#each g.items as it (it.path)}
-					<option value={it.path}>
-						{it.label}{it.count !== undefined ? ` (${it.count})` : ""}
-					</option>
-				{/each}
-			</optgroup>
-		{/each}
-	</select>
-</label>
+		options={sectionOptions}
+		onChange={(v) => gotoFn(v)}
+		ariaLabel="Settings section"
+	/>
+</div>
 
 <aside
 	class="hidden shrink-0 self-start md:sticky md:top-20 md:block md:w-56"

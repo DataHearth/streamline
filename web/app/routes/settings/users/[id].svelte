@@ -81,7 +81,7 @@
 			"Devices & access",
 			"Where this user is signed in and which tools can talk to their account.",
 		)}
-		<div class="grid items-start gap-5 md:grid-cols-2">
+		<div class="grid grid-cols-1 items-start gap-5 md:grid-cols-2">
 			<UserAPIKeysCard
 				userId={target.id}
 				apiKeys={detail.data.api_keys}

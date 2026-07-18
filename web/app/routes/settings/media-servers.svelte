@@ -307,7 +307,7 @@
 	</form>
 
 	{#snippet footer()}
-		<div class="mr-auto">
+		<div class="sm:mr-auto">
 			{#if editing}
 				<TestConnectionButton
 					endpoint="/media-servers/{encodeURIComponent(editing.name)}/test"

@@ -188,59 +188,57 @@
 		{/if}
 	</div>
 
-	<div class="ml-auto flex items-center gap-2">
-		{#if view === "torrents" && onAddTorrent && canAddTorrent}
-			<button
-				type="button"
-				onclick={() => onAddTorrent?.()}
-				class="inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-3.5 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover"
-			>
-				<Plus size={15} aria-hidden="true" />
-				Add torrent
-			</button>
-		{/if}
-		{#if view === "history" && onClearCompleted}
-			<button
-				type="button"
-				onclick={() => onClearCompleted?.()}
-				disabled={clearableCount === 0}
-				class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-3 text-sm font-medium text-fg-muted transition hover:border-border-strong hover:text-fg disabled:cursor-not-allowed disabled:opacity-50"
-			>
-				<Trash2 size={14} aria-hidden="true" />
-				Clear completed{clearableCount > 0 ? ` (${clearableCount})` : ""}
-			</button>
-		{/if}
-		<div class="relative">
-			<Search
-				size={15}
-				class="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-fg-faint"
-				aria-hidden="true"
-			/>
-			<input
-				type="search"
-				value={search}
-				oninput={(e) => onSearchChange(e.currentTarget.value)}
-				placeholder={view === "torrents"
-					? "Filter name or hash…"
-					: "Filter title or movie…"}
-				aria-label="Filter activity"
-				class="h-9 w-48 rounded-md border border-border bg-bg-elevated pl-8 pr-3 text-sm text-fg placeholder:text-fg-faint focus:border-accent focus:outline-none"
-			/>
-		</div>
+	{#if view === "torrents" && onAddTorrent && canAddTorrent}
 		<button
 			type="button"
-			onclick={onDensityToggle}
-			aria-label={density === "comfortable"
-				? "Switch to compact rows"
-				: "Switch to comfortable rows"}
-			title="Row density"
-			class="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-bg-elevated text-fg-muted transition hover:text-fg"
+			onclick={() => onAddTorrent?.()}
+			class="inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md bg-accent px-3.5 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover sm:ml-auto"
 		>
-			{#if density === "comfortable"}
-				<Rows2 size={16} aria-hidden="true" />
-			{:else}
-				<Rows3 size={16} aria-hidden="true" />
-			{/if}
+			<Plus size={15} aria-hidden="true" />
+			Add torrent
 		</button>
+	{/if}
+	{#if view === "history" && onClearCompleted}
+		<button
+			type="button"
+			onclick={() => onClearCompleted?.()}
+			disabled={clearableCount === 0}
+			class="inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border border-border bg-bg-elevated px-3 text-sm font-medium text-fg-muted transition hover:border-border-strong hover:text-fg disabled:cursor-not-allowed disabled:opacity-50 sm:ml-auto"
+		>
+			<Trash2 size={14} aria-hidden="true" />
+			Clear completed{clearableCount > 0 ? ` (${clearableCount})` : ""}
+		</button>
+	{/if}
+	<div class="relative w-full sm:ml-auto sm:w-auto sm:flex-none">
+		<Search
+			size={15}
+			class="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-fg-faint"
+			aria-hidden="true"
+		/>
+		<input
+			type="search"
+			value={search}
+			oninput={(e) => onSearchChange(e.currentTarget.value)}
+			placeholder={view === "torrents"
+				? "Filter name or hash…"
+				: "Filter title or movie…"}
+			aria-label="Filter activity"
+			class="h-9 w-full min-w-0 rounded-md border border-border bg-bg-elevated pl-8 pr-3 text-sm text-fg placeholder:text-fg-faint focus:border-accent focus:outline-none sm:w-48"
+		/>
 	</div>
+	<button
+		type="button"
+		onclick={onDensityToggle}
+		aria-label={density === "comfortable"
+			? "Switch to compact rows"
+			: "Switch to comfortable rows"}
+		title="Row density"
+		class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border bg-bg-elevated text-fg-muted transition hover:text-fg"
+	>
+		{#if density === "comfortable"}
+			<Rows2 size={16} aria-hidden="true" />
+		{:else}
+			<Rows3 size={16} aria-hidden="true" />
+		{/if}
+	</button>
 </div>

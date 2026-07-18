@@ -47,7 +47,7 @@
 			class="relative mx-auto grid w-full max-w-7xl items-end gap-6 px-4 py-12 md:grid-cols-[340px_1fr] md:gap-12 md:px-8 md:py-20"
 		>
 			<div
-				class="relative aspect-[2/3] w-48 overflow-hidden rounded-lg shadow-[0_20px_60px_rgb(0_0_0_/0.55)] md:w-auto"
+				class="relative mx-auto aspect-[2/3] w-48 overflow-hidden rounded-lg shadow-[0_20px_60px_rgb(0_0_0_/0.55)] md:mx-0 md:w-auto"
 			>
 				<div class="absolute inset-0 bg-bg-card"></div>
 				<div class="absolute inset-0 grid place-items-center text-fg-faint">

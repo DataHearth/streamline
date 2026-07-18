@@ -71,7 +71,7 @@
 	</header>
 
 	<form
-		class="grid gap-3 md:grid-cols-2"
+		class="grid grid-cols-1 gap-3 md:grid-cols-2"
 		onsubmit={(e) => {
 			e.preventDefault();
 			form.handleSubmit();

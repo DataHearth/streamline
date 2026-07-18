@@ -237,8 +237,8 @@
 				</p>
 			</div>
 		{:else}
-			<div class="overflow-hidden rounded-md border border-border">
-				<table class="w-full text-sm">
+			<div class="overflow-x-auto rounded-md border border-border">
+				<table class="w-full min-w-[560px] text-sm">
 					<thead
 						class="bg-surface text-left text-xs uppercase tracking-wider text-fg-muted"
 					>

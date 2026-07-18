@@ -133,7 +133,7 @@
 	let upcoming = $derived(upcomingQuery.data?.movies ?? []);
 </script>
 
-<div class="flex flex-col gap-9 pb-12">
+<div class="flex flex-col gap-9 pb-6">
 	<Hero
 		item={featured}
 		loading={moviesQuery.isLoading || seriesQuery.isLoading}

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { slide } from "svelte/transition";
+	import { ChevronDown } from "@lucide/svelte";
 	import {
 		createQuery,
 		createInfiniteQuery,
@@ -128,6 +130,11 @@
 		refetchInterval: 30000,
 	}));
 	let pendingItems = $derived<PendingItem[]>(pendingQuery.data?.items ?? []);
+	// Collapsed by default on phones so it doesn't bury the queue/history table.
+	let attnOpen = $state(
+		typeof window === "undefined" ||
+			!window.matchMedia("(max-width: 767px)").matches,
+	);
 
 	function invalidatePending() {
 		qc.invalidateQueries({ queryKey: ["activity", "pending"] });
@@ -369,7 +376,12 @@
 		<section
 			class="mb-4 rounded-xl border border-status-wanted/30 bg-status-wanted/[0.04] p-4"
 		>
-			<div class="mb-3 flex items-center gap-2">
+			<button
+				type="button"
+				onclick={() => (attnOpen = !attnOpen)}
+				aria-expanded={attnOpen}
+				class="flex w-full items-center gap-2 text-left {attnOpen ? 'mb-3' : ''}"
+			>
 				<h2 class="text-sm font-semibold text-fg">Needs attention</h2>
 				{#if pendingItems.length > 0}
 					<span
@@ -378,52 +390,39 @@
 						{pendingItems.length}
 					</span>
 				{/if}
-			</div>
-			{#if pendingQuery.isError}
-				<p class="text-sm text-status-failed">Failed to load proposals.</p>
-			{:else}
-				<div class="flex flex-col gap-2">
-					{#each pendingItems as item (item.id)}
-						<PendingRow
-							{item}
-							busy={pendingBusyId === item.id}
-							onImport={() => importPending.mutate(item.id)}
-							onReplace={(removeOld) =>
-								replacePending.mutate({ id: item.id, removeOld })}
-							onIgnore={(removeTorrent) =>
-								ignorePending.mutate({ id: item.id, removeTorrent })}
-						/>
-					{/each}
+				<ChevronDown
+					size={16}
+					class="ml-auto shrink-0 text-fg-muted transition-transform {attnOpen
+						? 'rotate-180'
+						: ''}"
+					aria-hidden="true"
+				/>
+			</button>
+			{#if attnOpen}
+				<div transition:slide={{ duration: 180 }}>
+					{#if pendingQuery.isError}
+						<p class="text-sm text-status-failed">
+							Failed to load proposals.
+						</p>
+					{:else}
+						<div class="flex flex-col gap-2">
+							{#each pendingItems as item (item.id)}
+								<PendingRow
+									{item}
+									busy={pendingBusyId === item.id}
+									onImport={() => importPending.mutate(item.id)}
+									onReplace={(removeOld) =>
+										replacePending.mutate({ id: item.id, removeOld })}
+									onIgnore={(removeTorrent) =>
+										ignorePending.mutate({ id: item.id, removeTorrent })}
+								/>
+							{/each}
+						</div>
+					{/if}
 				</div>
 			{/if}
 		</section>
 	{/if}
-
-	{#if view !== "torrents"}
-		<LiveStrip items={queueItems} />
-	{/if}
-
-	<ActivityToolbar
-		{view}
-		{statusFilter}
-		{search}
-		{density}
-		clearableCount={historyItems.filter((h) => h.status === "completed").length}
-		onViewChange={(v) => {
-			view = v;
-			statusFilter = [];
-			if (v !== "torrents") selectedHash = null;
-		}}
-		onStatusFilterChange={(s) => (statusFilter = s)}
-		onSearchChange={(q) => (search = q)}
-		onDensityToggle={() =>
-			(density = density === "comfortable" ? "compact" : "comfortable")}
-		onClearCompleted={auth.isAdmin
-			? () => clearCompleted.mutate()
-			: undefined}
-		onAddTorrent={() => (addOpen = true)}
-		canAddTorrent={auth.isAdmin && !torrentsNotConfigured}
-	/>
 
 	{#if view === "torrents"}
 		{#if !torrentsNotConfigured}
@@ -464,6 +463,33 @@
 				</div>
 			</div>
 		{/if}
+	{:else}
+		<LiveStrip items={queueItems} />
+	{/if}
+
+	<ActivityToolbar
+		{view}
+		{statusFilter}
+		{search}
+		{density}
+		clearableCount={historyItems.filter((h) => h.status === "completed").length}
+		onViewChange={(v) => {
+			view = v;
+			statusFilter = [];
+			if (v !== "torrents") selectedHash = null;
+		}}
+		onStatusFilterChange={(s) => (statusFilter = s)}
+		onSearchChange={(q) => (search = q)}
+		onDensityToggle={() =>
+			(density = density === "comfortable" ? "compact" : "comfortable")}
+		onClearCompleted={auth.isAdmin
+			? () => clearCompleted.mutate()
+			: undefined}
+		onAddTorrent={() => (addOpen = true)}
+		canAddTorrent={auth.isAdmin && !torrentsNotConfigured}
+	/>
+
+	{#if view === "torrents"}
 		<TorrentTable
 			rows={torrentRows}
 			{density}

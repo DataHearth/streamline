@@ -273,7 +273,7 @@
 		{/if}
 	</div>
 
-	<div class="w-full px-4 pb-12 md:px-8">
+	<div class="w-full px-4 pb-6 md:px-8">
 		<MovieDetailSimilar movieId={movie.id} />
 	</div>
 
