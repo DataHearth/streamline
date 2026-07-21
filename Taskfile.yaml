@@ -266,10 +266,22 @@ tasks:
       - helm package deploy/helm/streamline -d /tmp/streamline/helm
 
   release:changelog:
-    desc: Regenerate CHANGELOG.md through VERSION from the conventional commits. Usage - task release:changelog VERSION=v0.1.0
+    desc: Regenerate CHANGELOG.md through VERSION, commit it, and advance main. Usage - task release:changelog VERSION=v0.1.0
     requires:
       vars: [VERSION]
-    cmd: git-cliff --tag {{.VERSION}} -o CHANGELOG.md
+    # Commit the changelog on its own revision — release:tag reads main:CHANGELOG.md,
+    # so the section must be committed and on the bookmark/branch. jj if present
+    # (advance main to the new revision), plain git commit otherwise.
+    cmd: |
+      if command -v jj >/dev/null 2>&1; then
+        jj new -m "docs(changelog): {{.VERSION}}"
+        git-cliff --tag {{.VERSION}} -o CHANGELOG.md
+        jj bookmark set main -r @
+      else
+        git-cliff --tag {{.VERSION}} -o CHANGELOG.md
+        git add CHANGELOG.md
+        git commit -m "docs(changelog): {{.VERSION}}"
+      fi
 
   release:tag:
     desc: Cut an app release — tag main v*.*.* and push it, triggering changelog, gh release and OCI image. Usage - task release:tag VERSION=v0.1.0
