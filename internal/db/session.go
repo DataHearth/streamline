@@ -129,12 +129,18 @@ func (db *DB) RevokeOtherUserSessions(
 	return err
 }
 
+// ListUserSessions returns the user's live sessions — revoked and expired rows
+// are excluded, so a revoked session disappears from the caller's list.
 func (db *DB) ListUserSessions(
 	ctx context.Context,
 	userID uint32,
 ) ([]*ent.Session, error) {
 	return db.client.Session.Query().
-		Where(session.HasUserWith(user.IDEQ(userID))).
+		Where(
+			session.HasUserWith(user.IDEQ(userID)),
+			session.RevokedAtIsNil(),
+			session.ExpiresAtGT(time.Now()),
+		).
 		// id is the tiebreak so two sessions sharing a last_seen_at (e.g. both
 		// just created) still sort newest-first deterministically.
 		Order(ent.Desc(session.FieldLastSeenAt), ent.Desc(session.FieldID)).

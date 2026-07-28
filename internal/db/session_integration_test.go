@@ -111,9 +111,9 @@ var _ = Describe("Session store", Label("integration", "db"), func() {
 			Expect(
 				store.RevokeAllUserSessions(ctx, userID, time.Now()),
 			).To(Succeed())
-			items, _ := store.ListUserSessions(ctx, userID)
-			for _, s := range items {
-				Expect(s.RevokedAt).NotTo(BeNil())
+			for _, jti := range []string{"j1", "j2"} {
+				got, _ := store.FindSessionByJTI(ctx, jti)
+				Expect(got.RevokedAt).NotTo(BeNil())
 			}
 		})
 	})
@@ -143,6 +143,24 @@ var _ = Describe("Session store", Label("integration", "db"), func() {
 			Expect(items).To(HaveLen(2))
 			Expect(items[0].ID).To(Equal(b.ID))
 			Expect(items[1].ID).To(Equal(a.ID))
+		})
+
+		It("omits revoked and expired sessions", func() {
+			live := create("live")
+			create("revoked")
+			Expect(
+				store.RevokeSessionByJTI(ctx, "revoked", time.Now()),
+			).To(Succeed())
+			_, err := store.CreateSession(ctx, CreateSessionParams{
+				JTI: "expired", UserID: userID,
+				ExpiresAt: time.Now().Add(-time.Hour),
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			items, err := store.ListUserSessions(ctx, userID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(items).To(HaveLen(1))
+			Expect(items[0].ID).To(Equal(live.ID))
 		})
 	})
 

@@ -252,9 +252,8 @@ func (s *auth) RevokeOtherSessions(
 	return nil
 }
 
-// ListUserSessions returns every session row for the user, newest first, so
-// the caller can render the Rev 2 "active sessions" UI. Includes revoked and
-// expired rows — the UI filters/flags them.
+// ListUserSessions returns the user's live sessions, newest first, for the
+// "active sessions" UI. Revoked and expired rows are excluded.
 func (s *auth) ListUserSessions(
 	ctx context.Context,
 	userID uint32,
