@@ -495,6 +495,11 @@ func (q *QBittorrent) testAPIKey(ctx context.Context) error {
 	return nil
 }
 
+// mapQBState maps a qBittorrent state string to a TorrentStatus. The `UP`
+// suffix means the torrent already finished downloading and is in its
+// upload phase, so idle `UP` states report Completed (not Paused) and the
+// monitor still imports them — matching transmission/deluge. Only the `DL`
+// side is genuinely mid-transfer and therefore Paused.
 func mapQBState(state string) TorrentStatus {
 	switch state {
 	case "downloading",
@@ -507,12 +512,12 @@ func mapQBState(state string) TorrentStatus {
 		return StatusDownloading
 	case "uploading", "forcedUP", "stalledUP", "checkingUP":
 		return StatusSeeding
-	case "pausedDL", "pausedUP", "stoppedDL", "stoppedUP", "queuedDL", "queuedUP":
+	case "pausedDL", "stoppedDL", "queuedDL":
 		return StatusPaused
+	case "pausedUP", "stoppedUP", "queuedUP", "moving":
+		return StatusCompleted
 	case "error", "missingFiles", "unknown":
 		return StatusError
-	case "moving":
-		return StatusCompleted
 	default:
 		return StatusError
 	}

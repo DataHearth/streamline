@@ -25,19 +25,21 @@ var _ = Describe("mapQBState", Label("unit", "downloads"), func() {
 		Entry("stalledUP", "stalledUP", StatusSeeding),
 		Entry("checkingUP", "checkingUP", StatusSeeding),
 
-		// Paused bucket
+		// Paused bucket — only the incomplete (DL) side
 		Entry("pausedDL", "pausedDL", StatusPaused),
-		Entry("pausedUP", "pausedUP", StatusPaused),
+		Entry("stoppedDL", "stoppedDL", StatusPaused),
 		Entry("queuedDL", "queuedDL", StatusPaused),
-		Entry("queuedUP", "queuedUP", StatusPaused),
 
 		// Error bucket
 		Entry("error", "error", StatusError),
 		Entry("missingFiles", "missingFiles", StatusError),
 		Entry("unknown literal", "unknown", StatusError),
 
-		// Completed
+		// Completed — idle UP states are finished downloads awaiting import
 		Entry("moving", "moving", StatusCompleted),
+		Entry("pausedUP", "pausedUP", StatusCompleted),
+		Entry("stoppedUP", "stoppedUP", StatusCompleted),
+		Entry("queuedUP", "queuedUP", StatusCompleted),
 
 		// Fallthrough / unrecognized states -> error
 		Entry("unknown state string", "not-a-qb-state", StatusError),

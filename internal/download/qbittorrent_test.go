@@ -587,9 +587,38 @@ var _ = Describe("qBittorrent Client", Label("unit", "downloads"), func() {
 })
 
 var _ = Describe("qBittorrent pause/resume", Label("unit", "downloads"), func() {
-	It("maps qB 5.x stopped states to paused", func() {
+	It("reports a stopped-but-complete torrent as completed, not paused", func() {
+		mux := http.NewServeMux()
+		mux.HandleFunc("/api/v2/auth/login",
+			func(w http.ResponseWriter, _ *http.Request) {
+				http.SetCookie(w, &http.Cookie{Name: "SID", Value: "s"})
+				w.WriteHeader(http.StatusOK)
+			})
+		mux.HandleFunc("/api/v2/torrents/info",
+			func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write(jsonBytes([]map[string]any{
+					{
+						"hash":      "abc123",
+						"name":      "Arrival.2016.1080p.BluRay",
+						"state":     "stoppedUP",
+						"progress":  1.0,
+						"size":      4294967296,
+						"save_path": "/downloads/",
+					},
+				}))
+			})
+		srv := httptest.NewServer(mux)
+		DeferCleanup(srv.Close)
+
+		torrent, err := NewQBittorrentPassword(srv.URL, "u", "p").
+			GetTorrent(context.Background(), "abc123")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(torrent.Status).To(Equal(StatusCompleted))
+	})
+
+	It("keeps a stopped mid-download torrent paused", func() {
 		Expect(mapQBState("stoppedDL")).To(Equal(StatusPaused))
-		Expect(mapQBState("stoppedUP")).To(Equal(StatusPaused))
 	})
 
 	It("PauseTorrent uses qB 5.x /stop and falls back to 4.x /pause on 404", func() {
