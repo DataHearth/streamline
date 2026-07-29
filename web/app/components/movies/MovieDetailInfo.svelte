@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { ExternalLink } from "@lucide/svelte";
+	import { formatBytes } from "../../lib/format";
 	import type { Movie, MediaFile } from "../../lib/types";
 
 	let {
@@ -18,12 +19,7 @@
 	}
 
 	function totalSize(files: MediaFile[] | undefined): string {
-		if (!files || files.length === 0) return "—";
-		const bytes = files.reduce((s, f) => s + f.size, 0);
-		const gb = bytes / 1_073_741_824;
-		if (gb >= 1) return `${gb.toFixed(1)} GB`;
-		const mb = bytes / 1_048_576;
-		return `${mb.toFixed(0)} MB`;
+		return formatBytes((files ?? []).reduce((s, f) => s + f.size, 0));
 	}
 
 	let primary = $derived(pickPrimary(movie.media_files));

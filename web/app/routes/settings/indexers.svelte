@@ -5,7 +5,7 @@
 		useQueryClient,
 	} from "@tanstack/svelte-query";
 	import { createForm } from "@tanstack/svelte-form";
-	import { Plus, Trash2, Search, Pencil, Eye, Lock } from "@lucide/svelte";
+	import { Plus, Trash2, Search, Pencil, Eye } from "@lucide/svelte";
 	import { api } from "../../lib/api";
 	import { config, READONLY_HINT } from "../../lib/config.svelte";
 	import { toast } from "../../lib/toast";
@@ -16,6 +16,8 @@
 	import IndexerForm from "../../components/settings/forms/IndexerForm.svelte";
 	import BrandLogo from "../../components/settings/BrandLogo.svelte";
 	import TestConnectionButton from "../../components/settings/TestConnectionButton.svelte";
+	import ReadOnlyFieldset from "../../components/settings/ReadOnlyFieldset.svelte";
+	import ConfigModalFooter from "../../components/settings/ConfigModalFooter.svelte";
 
 	type Values = {
 		name: string;
@@ -300,57 +302,39 @@
 			form.handleSubmit();
 		}}
 	>
-		{#if config.readOnly}
-			<div
-				class="mb-4 flex items-center gap-2 rounded-md border border-border bg-bg-card px-3 py-2 text-xs text-fg-muted"
-			>
-				<Lock size={14} aria-hidden="true" />
-				<span>{READONLY_HINT}</span>
-			</div>
-		{/if}
-		<fieldset disabled={config.readOnly} class="min-w-0">
+		<ReadOnlyFieldset>
 			<IndexerForm {form} isEdit={editing !== null} />
-		</fieldset>
+		</ReadOnlyFieldset>
 	</form>
 
 	{#snippet footer()}
-		<div class="sm:mr-auto">
-			{#if editing}
-				<TestConnectionButton
-					endpoint="/indexers/{encodeURIComponent(editing.name)}/test"
-					size="md"
-				/>
-			{:else}
-				<TestConnectionButton
-					endpoint="/indexers/test"
-					body={() => form.state.values}
-					size="md"
-				/>
-			{/if}
-		</div>
-		<button
-			type="button"
-			onclick={() => (modalOpen = false)}
-			class="inline-flex h-9 items-center rounded-md border border-border px-3 text-sm text-fg-muted hover:text-fg"
+		<ConfigModalFooter
+			formId="indexer-form"
+			submitLabel={form.state.isSubmitting
+				? "Saving…"
+				: editing
+					? "Save changes"
+					: "Add indexer"}
+			submitDisabled={!form.state.canSubmit || form.state.isSubmitting}
+			onCancel={() => (modalOpen = false)}
 		>
-			{config.readOnly ? "Close" : "Cancel"}
-		</button>
-		{#if !config.readOnly}
-			<button
-				type="submit"
-				form="indexer-form"
-				disabled={!form.state.canSubmit || form.state.isSubmitting}
-				class="inline-flex h-9 items-center rounded-md bg-accent px-4 text-sm font-semibold text-fg-on-accent hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
-			>
-				{#if form.state.isSubmitting}
-					Saving…
-				{:else if editing}
-					Save changes
-				{:else}
-					Add indexer
-				{/if}
-			</button>
-		{/if}
+			{#snippet left()}
+				<div class="sm:mr-auto">
+					{#if editing}
+						<TestConnectionButton
+							endpoint="/indexers/{encodeURIComponent(editing.name)}/test"
+							size="md"
+						/>
+					{:else}
+						<TestConnectionButton
+							endpoint="/indexers/test"
+							body={() => form.state.values}
+							size="md"
+						/>
+					{/if}
+				</div>
+			{/snippet}
+		</ConfigModalFooter>
 	{/snippet}
 </Modal>
 

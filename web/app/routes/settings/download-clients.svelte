@@ -5,7 +5,7 @@
 		useQueryClient,
 	} from "@tanstack/svelte-query";
 	import { createForm } from "@tanstack/svelte-form";
-	import { Plus, Trash2, Download, Pencil, Eye, Lock, Zap, Info } from "@lucide/svelte";
+	import { Plus, Trash2, Download, Pencil, Eye, Zap, Info } from "@lucide/svelte";
 	import { api } from "../../lib/api";
 	import { config, READONLY_HINT } from "../../lib/config.svelte";
 	import { toast } from "../../lib/toast";
@@ -21,6 +21,8 @@
 	import BuiltinClientForm from "../../components/settings/forms/BuiltinClientForm.svelte";
 	import TestConnectionButton from "../../components/settings/TestConnectionButton.svelte";
 	import BrandLogo from "../../components/settings/BrandLogo.svelte";
+	import ReadOnlyFieldset from "../../components/settings/ReadOnlyFieldset.svelte";
+	import ConfigModalFooter from "../../components/settings/ConfigModalFooter.svelte";
 
 	type Values = {
 		name: string;
@@ -544,57 +546,39 @@
 			form.handleSubmit();
 		}}
 	>
-		{#if config.readOnly}
-			<div
-				class="mb-4 flex items-center gap-2 rounded-md border border-border bg-bg-card px-3 py-2 text-xs text-fg-muted"
-			>
-				<Lock size={14} aria-hidden="true" />
-				<span>{READONLY_HINT}</span>
-			</div>
-		{/if}
-		<fieldset disabled={config.readOnly} class="min-w-0">
+		<ReadOnlyFieldset>
 			<DownloadClientForm {form} isEdit={editing !== null} />
-		</fieldset>
+		</ReadOnlyFieldset>
 	</form>
 
 	{#snippet footer()}
-		<div class="sm:mr-auto">
-			{#if editing}
-				<TestConnectionButton
-					endpoint="/download-clients/{encodeURIComponent(editing.name)}/test"
-					size="md"
-				/>
-			{:else}
-				<TestConnectionButton
-					endpoint="/download-clients/test"
-					body={() => form.state.values}
-					size="md"
-				/>
-			{/if}
-		</div>
-		<button
-			type="button"
-			onclick={() => (modalOpen = false)}
-			class="inline-flex h-9 items-center rounded-md border border-border px-3 text-sm text-fg-muted hover:text-fg"
+		<ConfigModalFooter
+			formId="download-client-form"
+			submitLabel={form.state.isSubmitting
+				? "Saving…"
+				: editing
+					? "Save changes"
+					: "Add client"}
+			submitDisabled={!form.state.canSubmit || form.state.isSubmitting}
+			onCancel={() => (modalOpen = false)}
 		>
-			{config.readOnly ? "Close" : "Cancel"}
-		</button>
-		{#if !config.readOnly}
-			<button
-				type="submit"
-				form="download-client-form"
-				disabled={!form.state.canSubmit || form.state.isSubmitting}
-				class="inline-flex h-9 items-center rounded-md bg-accent px-4 text-sm font-semibold text-fg-on-accent hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
-			>
-				{#if form.state.isSubmitting}
-					Saving…
-				{:else if editing}
-					Save changes
-				{:else}
-					Add client
-				{/if}
-			</button>
-		{/if}
+			{#snippet left()}
+				<div class="sm:mr-auto">
+					{#if editing}
+						<TestConnectionButton
+							endpoint="/download-clients/{encodeURIComponent(editing.name)}/test"
+							size="md"
+						/>
+					{:else}
+						<TestConnectionButton
+							endpoint="/download-clients/test"
+							body={() => form.state.values}
+							size="md"
+						/>
+					{/if}
+				</div>
+			{/snippet}
+		</ConfigModalFooter>
 	{/snippet}
 </Modal>
 
@@ -616,47 +600,30 @@
 			builtinForm.handleSubmit();
 		}}
 	>
-		{#if config.readOnly}
-			<div
-				class="mb-4 flex items-center gap-2 rounded-md border border-border bg-bg-card px-3 py-2 text-xs text-fg-muted"
-			>
-				<Lock size={14} aria-hidden="true" />
-				<span>{READONLY_HINT}</span>
-			</div>
-		{/if}
-		<fieldset disabled={config.readOnly} class="min-w-0">
+		<ReadOnlyFieldset>
 			<BuiltinClientForm form={builtinForm} isEdit={builtinIsEdit} />
-		</fieldset>
+		</ReadOnlyFieldset>
 	</form>
 
 	{#snippet footer()}
-		<div class="mr-auto flex items-center gap-1.5 text-xs text-fg-subtle">
-			<Info size={13} aria-hidden="true" />
-			<span>Changes apply after restart.</span>
-		</div>
-		<button
-			type="button"
-			onclick={() => (builtinModalOpen = false)}
-			class="inline-flex h-9 items-center rounded-md border border-border px-3 text-sm text-fg-muted hover:text-fg"
+		<ConfigModalFooter
+			formId="builtin-client-form"
+			submitLabel={builtinForm.state.isSubmitting
+				? "Saving…"
+				: builtinIsEdit
+					? "Save changes"
+					: "Enable client"}
+			submitDisabled={!builtinForm.state.canSubmit ||
+				builtinForm.state.isSubmitting}
+			onCancel={() => (builtinModalOpen = false)}
 		>
-			{config.readOnly ? "Close" : "Cancel"}
-		</button>
-		{#if !config.readOnly}
-			<button
-				type="submit"
-				form="builtin-client-form"
-				disabled={!builtinForm.state.canSubmit || builtinForm.state.isSubmitting}
-				class="inline-flex h-9 items-center rounded-md bg-accent px-4 text-sm font-semibold text-fg-on-accent hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
-			>
-				{#if builtinForm.state.isSubmitting}
-					Saving…
-				{:else if builtinIsEdit}
-					Save changes
-				{:else}
-					Enable client
-				{/if}
-			</button>
-		{/if}
+			{#snippet left()}
+				<div class="mr-auto flex items-center gap-1.5 text-xs text-fg-subtle">
+					<Info size={13} aria-hidden="true" />
+					<span>Changes apply after restart.</span>
+				</div>
+			{/snippet}
+		</ConfigModalFooter>
 	{/snippet}
 </Modal>
 

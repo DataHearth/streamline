@@ -15,6 +15,8 @@
 	import Dialog from "../../components/modals/Dialog.svelte";
 	import OIDCProviderForm from "../../components/settings/forms/OIDCProviderForm.svelte";
 	import BrandLogo from "../../components/settings/BrandLogo.svelte";
+	import ReadOnlyFieldset from "../../components/settings/ReadOnlyFieldset.svelte";
+	import ConfigModalFooter from "../../components/settings/ConfigModalFooter.svelte";
 
 	const qc = useQueryClient();
 
@@ -199,25 +201,18 @@
 			form.handleSubmit();
 		}}
 	>
-		<OIDCProviderForm {form} />
+		<ReadOnlyFieldset>
+			<OIDCProviderForm {form} />
+		</ReadOnlyFieldset>
 	</form>
 
 	{#snippet footer()}
-		<button
-			type="button"
-			onclick={() => (modalOpen = false)}
-			class="inline-flex h-9 items-center rounded-md border border-border px-3 text-sm text-fg-muted hover:text-fg"
-		>
-			Cancel
-		</button>
-		<button
-			type="submit"
-			form="oidc-provider-form"
-			disabled={config.readOnly || !form.state.canSubmit || form.state.isSubmitting}
-			class="inline-flex h-9 items-center justify-center rounded-md bg-accent px-4 text-sm font-semibold text-fg-on-accent hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
-		>
-			{form.state.isSubmitting ? "Adding…" : "Add provider"}
-		</button>
+		<ConfigModalFooter
+			formId="oidc-provider-form"
+			submitLabel={form.state.isSubmitting ? "Adding…" : "Add provider"}
+			submitDisabled={!form.state.canSubmit || form.state.isSubmitting}
+			onCancel={() => (modalOpen = false)}
+		/>
 	{/snippet}
 </Modal>
 

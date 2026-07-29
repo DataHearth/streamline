@@ -20,6 +20,7 @@
 	import { Bookmark, Search, Trash2 } from "@lucide/svelte";
 	import { cn } from "../../lib/cn";
 	import { formatDateShort, formatRelative } from "../../lib/dates";
+	import { formatBytes } from "../../lib/format";
 	import type { Episode, SeriesType } from "../../lib/types";
 
 	let {
@@ -46,12 +47,6 @@
 	function epCode(ep: Episode): string {
 		if (seriesType === "daily") return `#${ep.number}`;
 		return `S${pad(seasonNumber)}E${pad(ep.number)}`;
-	}
-	function formatBytes(bytes: number | null | undefined): string {
-		if (!bytes || bytes <= 0) return "—";
-		const gb = bytes / 1_073_741_824;
-		if (gb >= 1) return `${gb.toFixed(1)} GB`;
-		return `${(bytes / 1_048_576).toFixed(0)} MB`;
 	}
 </script>
 

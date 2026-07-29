@@ -1,9 +1,14 @@
 import type { StatusKind } from "../components/shared/StatusPill.svelte";
 
 // formatBytes renders a byte count as a compact human string ("4.1 GB").
-// Returns an em dash when unknown so columns stay aligned.
-export function formatBytes(n: number | undefined | null): string {
-	if (!n || n <= 0) return "—";
+// Defaults to an em dash when unknown so table columns stay aligned; callers
+// that concatenate the result into a sentence or a "·"-joined meta line pass
+// their own fallback instead.
+export function formatBytes(
+	n: number | undefined | null,
+	fallback = "—",
+): string {
+	if (!n || n <= 0) return fallback;
 	const units = ["B", "KB", "MB", "GB", "TB"];
 	let v = n;
 	let i = 0;

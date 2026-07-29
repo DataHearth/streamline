@@ -4,6 +4,7 @@
 	import { auth } from "../../lib/auth.svelte";
 	import { api } from "../../lib/api";
 	import { toast } from "../../lib/toast";
+	import { formatBytes } from "../../lib/format";
 	import EmptyCard from "./EmptyCard.svelte";
 	import Dialog from "../modals/Dialog.svelte";
 	import Checkbox from "../forms/Checkbox.svelte";
@@ -36,16 +37,6 @@
 		removeTorrent = false;
 	}
 
-	function fmtSize(bytes: number): string {
-		const units = ["B", "KB", "MB", "GB", "TB"];
-		let n = bytes;
-		let u = 0;
-		while (n >= 1024 && u < units.length - 1) {
-			n /= 1024;
-			u++;
-		}
-		return `${n.toFixed(n < 10 ? 1 : 0)} ${units[u]}`;
-	}
 </script>
 
 {#snippet startImport()}
@@ -78,7 +69,7 @@
 						<span
 							class="text-xs font-mono tabular-nums text-fg-muted"
 						>
-							{fmtSize(f.size)}
+							{formatBytes(f.size)}
 						</span>
 						{#if auth.canAddDirectly}
 							<button

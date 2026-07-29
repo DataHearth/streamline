@@ -10,6 +10,7 @@
 	import { cn } from "../../lib/cn";
 	import { api } from "../../lib/api";
 	import { toast } from "../../lib/toast";
+	import { formatBytes } from "../../lib/format";
 	import type { SearchResult } from "../../lib/types";
 	import Select from "../forms/Select.svelte";
 
@@ -139,17 +140,6 @@
 			toast.err(errMsg);
 		},
 	}));
-
-	function fmtSize(n: number): string {
-		const u = ["B", "KB", "MB", "GB", "TB"];
-		let i = 0;
-		let v = n;
-		while (v >= 1024 && i < u.length - 1) {
-			v /= 1024;
-			i++;
-		}
-		return `${v.toFixed(v < 10 ? 1 : 0)} ${u[i]}`;
-	}
 
 	// Relative age, e.g. "3h", "5d", "2mo" — the at-a-glance recency signal that
 	// matters when picking a release. Absolute timestamp lives in the cell title.
@@ -440,7 +430,7 @@
 							<td
 								class="whitespace-nowrap px-3 py-2.5 text-right font-mono text-[11.5px] tabular text-fg-muted"
 							>
-								{fmtSize(r.size)}
+								{formatBytes(r.size)}
 							</td>
 							<td
 								class={cn(

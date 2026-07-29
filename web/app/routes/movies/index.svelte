@@ -2,6 +2,7 @@
 	import { createQuery } from "@tanstack/svelte-query";
 	import { api } from "../../lib/api";
 	import { formatRelative } from "../../lib/dates";
+	import { formatBytes } from "../../lib/format";
 	import MoviesToolbar from "../../components/movies/MoviesToolbar.svelte";
 	import MovieGrid from "../../components/movies/MovieGrid.svelte";
 	import MovieList from "../../components/movies/MovieList.svelte";
@@ -128,16 +129,6 @@
 		tab === "all" && !query && allMovies.length === 0,
 	);
 
-	function formatBytes(bytes: number): string {
-		if (bytes <= 0) return "0 B";
-		const TB = 1_099_511_627_776;
-		const GB = 1_073_741_824;
-		const MB = 1_048_576;
-		if (bytes >= TB) return `${(bytes / TB).toFixed(1)} TB`;
-		if (bytes >= GB) return `${(bytes / GB).toFixed(1)} GB`;
-		return `${(bytes / MB).toFixed(0)} MB`;
-	}
-
 	let monitoredSize = $derived.by(() => {
 		let total = 0;
 		for (const m of allMovies)
@@ -220,7 +211,7 @@
 				{/if}
 			</div>
 			<div class="flex flex-wrap items-center gap-2">
-				<span>{formatBytes(monitoredSize)} monitored</span>
+				<span>{formatBytes(monitoredSize, "0 B")} monitored</span>
 				{#if lastScan}
 					<span class="text-fg-faint">·</span>
 					<span>last scan {formatRelative(lastScan)}</span>

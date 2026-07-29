@@ -2,6 +2,7 @@
 	import { createQuery } from "@tanstack/svelte-query";
 	import { api } from "../../lib/api";
 	import { posterUrl, tvPosterUrl } from "../../lib/posters";
+	import { formatBytes } from "../../lib/format";
 	import type {
 		ActivityList,
 		MovieCounts,
@@ -73,12 +74,6 @@
 		if (!files || files.length === 0) return undefined;
 		return [...files].sort((a, b) => b.size - a.size)[0];
 	}
-	function formatSize(bytes?: number): string {
-		if (!bytes || bytes <= 0) return "";
-		const gb = bytes / 1_073_741_824;
-		if (gb >= 1) return `${gb.toFixed(1)} GB`;
-		return `${(bytes / 1_048_576).toFixed(0)} MB`;
-	}
 	function movieToHero(m: Movie): HeroItem {
 		const f = pickPrimary(m.media_files);
 		return {
@@ -90,7 +85,7 @@
 			status: m.status,
 			resolution: f?.parsed_resolution,
 			codec: f?.parsed_codec,
-			fileMeta: [formatSize(f?.size), f?.parsed_resolution, f?.parsed_source]
+			fileMeta: [formatBytes(f?.size, ""), f?.parsed_resolution, f?.parsed_source]
 				.filter(Boolean)
 				.join(" · "),
 			posterSrc: posterUrl(m),

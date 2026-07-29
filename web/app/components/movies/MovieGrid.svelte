@@ -2,6 +2,7 @@
 	import { createMutation, useQueryClient } from "@tanstack/svelte-query";
 	import { api } from "../../lib/api";
 	import { toast } from "../../lib/toast";
+	import { formatBytes } from "../../lib/format";
 	import PosterCard from "../shared/PosterCard.svelte";
 	import MovieActionsMenu from "./MovieActionsMenu.svelte";
 	import type { Movie, MediaFile } from "../../lib/types";
@@ -30,13 +31,6 @@
 		if (!files || files.length === 0) return undefined;
 		return [...files].sort((a, b) => b.size - a.size)[0];
 	}
-	function formatSize(bytes: number | undefined): string | undefined {
-		if (!bytes || bytes <= 0) return undefined;
-		const gb = bytes / 1_073_741_824;
-		if (gb >= 1) return `${gb.toFixed(1)} GB`;
-		const mb = bytes / 1_048_576;
-		return `${mb.toFixed(0)} MB`;
-	}
 	function enrich(m: Movie) {
 		const f = pickPrimary(m.media_files);
 		return {
@@ -48,7 +42,7 @@
 			monitored: m.monitored,
 			rating: m.rating,
 			resolution: f?.parsed_resolution,
-			size_text: formatSize(f?.size),
+			size_text: formatBytes(f?.size, ""),
 		};
 	}
 </script>

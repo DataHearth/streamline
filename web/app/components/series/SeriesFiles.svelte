@@ -7,6 +7,7 @@
 	import { auth } from "../../lib/auth.svelte";
 	import { api } from "../../lib/api";
 	import { toast } from "../../lib/toast";
+	import { formatBytes } from "../../lib/format";
 	import Dialog from "../modals/Dialog.svelte";
 	import Checkbox from "../forms/Checkbox.svelte";
 	import type { Episode, Season } from "../../lib/types";
@@ -58,11 +59,6 @@
 	}
 	function pad(n: number): string {
 		return String(n).padStart(2, "0");
-	}
-	function formatBytes(bytes: number): string {
-		const gb = bytes / 1_073_741_824;
-		if (gb >= 1) return `${gb.toFixed(1)} GB`;
-		return `${(bytes / 1_048_576).toFixed(0)} MB`;
 	}
 	function seasonLabel(s: Season): string {
 		return s.number === 0 ? "Specials" : `Season ${pad(s.number)}`;
@@ -194,7 +190,7 @@
 											</div>
 										</div>
 										<span class="shrink-0 font-mono text-xs tabular text-fg-muted">
-											{formatBytes(ep.size ?? 0)}
+											{formatBytes(ep.size)}
 										</span>
 										{#if auth.canAddDirectly}
 											<button

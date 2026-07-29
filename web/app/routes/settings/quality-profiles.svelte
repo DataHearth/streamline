@@ -5,7 +5,7 @@
 		useQueryClient,
 	} from "@tanstack/svelte-query";
 	import { createForm } from "@tanstack/svelte-form";
-	import { Plus, Trash2, Gauge, Pencil } from "@lucide/svelte";
+	import { Plus, Trash2, Gauge, Pencil, Eye } from "@lucide/svelte";
 	import { api } from "../../lib/api";
 	import { config, READONLY_HINT } from "../../lib/config.svelte";
 	import { toast } from "../../lib/toast";
@@ -14,6 +14,8 @@
 	import Modal from "../../components/modals/Modal.svelte";
 	import Dialog from "../../components/modals/Dialog.svelte";
 	import QualityProfileForm from "../../components/settings/forms/QualityProfileForm.svelte";
+	import ReadOnlyFieldset from "../../components/settings/ReadOnlyFieldset.svelte";
+	import ConfigModalFooter from "../../components/settings/ConfigModalFooter.svelte";
 
 	type Values = {
 		name: string;
@@ -152,7 +154,7 @@
 						type="button"
 						onclick={() => openEdit(p)}
 						class="flex min-w-0 flex-1 items-center gap-4 text-left"
-						aria-label="Edit {p.name}"
+						aria-label="{config.readOnly ? 'View' : 'Edit'} {p.name}"
 					>
 						<div
 							class="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-bg-card text-fg-muted"
@@ -188,24 +190,33 @@
 						</div>
 					</button>
 					<div class="flex shrink-0 items-center gap-1">
-						<button
-							type="button"
-							onclick={() => openEdit(p)}
-							class="rounded-md p-1.5 text-fg-muted transition hover:bg-surface hover:text-fg"
-							aria-label="Edit profile"
-						>
-							<Pencil size={16} aria-hidden="true" />
-						</button>
-						<button
-							type="button"
-							onclick={() => onDelete(p)}
-							disabled={config.readOnly}
-							title={config.readOnly ? READONLY_HINT : null}
-							class="rounded-md p-1.5 text-fg-muted transition hover:bg-status-failed/10 hover:text-status-failed disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-fg-muted"
-							aria-label="Delete profile"
-						>
-							<Trash2 size={16} aria-hidden="true" />
-						</button>
+						{#if config.readOnly}
+							<button
+								type="button"
+								onclick={() => openEdit(p)}
+								class="rounded-md p-1.5 text-fg-muted transition hover:bg-surface hover:text-fg"
+								aria-label="View profile"
+							>
+								<Eye size={16} aria-hidden="true" />
+							</button>
+						{:else}
+							<button
+								type="button"
+								onclick={() => openEdit(p)}
+								class="rounded-md p-1.5 text-fg-muted transition hover:bg-surface hover:text-fg"
+								aria-label="Edit profile"
+							>
+								<Pencil size={16} aria-hidden="true" />
+							</button>
+							<button
+								type="button"
+								onclick={() => onDelete(p)}
+								class="rounded-md p-1.5 text-fg-muted transition hover:bg-status-failed/10 hover:text-status-failed"
+								aria-label="Delete profile"
+							>
+								<Trash2 size={16} aria-hidden="true" />
+							</button>
+						{/if}
 					</div>
 				</div>
 			{/each}
@@ -215,7 +226,11 @@
 
 <Modal
 	open={modalOpen}
-	title={editing ? "Edit quality profile" : "Add quality profile"}
+	title={config.readOnly
+		? "View quality profile"
+		: editing
+			? "Edit quality profile"
+			: "Add quality profile"}
 	size="md"
 	onClose={() => (modalOpen = false)}
 >
@@ -226,31 +241,22 @@
 			form.handleSubmit();
 		}}
 	>
-		<QualityProfileForm {form} />
+		<ReadOnlyFieldset>
+			<QualityProfileForm {form} />
+		</ReadOnlyFieldset>
 	</form>
 
 	{#snippet footer()}
-		<button
-			type="button"
-			onclick={() => (modalOpen = false)}
-			class="inline-flex h-9 items-center rounded-md border border-border px-3 text-sm text-fg-muted hover:text-fg"
-		>
-			Cancel
-		</button>
-		<button
-			type="submit"
-			form="quality-profile-form"
-			disabled={config.readOnly || !form.state.canSubmit || form.state.isSubmitting}
-			class="inline-flex h-9 items-center rounded-md bg-accent px-4 text-sm font-semibold text-fg-on-accent hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
-		>
-			{#if form.state.isSubmitting}
-				Saving…
-			{:else if editing}
-				Save changes
-			{:else}
-				Add profile
-			{/if}
-		</button>
+		<ConfigModalFooter
+			formId="quality-profile-form"
+			submitLabel={form.state.isSubmitting
+				? "Saving…"
+				: editing
+					? "Save changes"
+					: "Add profile"}
+			submitDisabled={!form.state.canSubmit || form.state.isSubmitting}
+			onCancel={() => (modalOpen = false)}
+		/>
 	{/snippet}
 </Modal>
 
