@@ -40,7 +40,7 @@
 			type="button"
 			disabled={saving || selected === current}
 			onclick={() => onSave(selected)}
-			class="rounded-md bg-accent px-3 py-1.5 text-sm font-semibold text-on-accent hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-60"
+			class="rounded-md bg-accent px-3 py-1.5 text-sm font-semibold text-fg-on-accent hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
 		>
 			{saving ? "Saving…" : "Save"}
 		</button>

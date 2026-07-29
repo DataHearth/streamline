@@ -118,6 +118,21 @@
 		onError: (e: Error) => toast.err(e.message ?? "Update failed"),
 	}));
 
+	const saveProfile = createMutation<Movie, Error, string>(() => ({
+		mutationFn: (profile) =>
+			api<Movie>(`/movies/${movieId}`, {
+				method: "PATCH",
+				body: { quality_profile: profile },
+			}),
+		onSuccess: () => {
+			qc.invalidateQueries({ queryKey: ["movie", movieId] });
+			qc.invalidateQueries({ queryKey: ["movies"] });
+			toast.ok("Quality profile updated");
+			qpOpen = false;
+		},
+		onError: (e: Error) => toast.err(e.message ?? "Update failed"),
+	}));
+
 	const del = createMutation<unknown, Error, boolean>(() => ({
 		mutationFn: (withFiles) =>
 			api(`/movies/${movieId}?delete_files=${withFiles}`, {
@@ -284,9 +299,11 @@
 	/>
 	<QualityProfileModal
 		open={qpOpen}
-		{movie}
+		current={movie.quality_profile}
 		profiles={qpQuery.data ?? []}
+		saving={saveProfile.isPending}
 		onClose={() => (qpOpen = false)}
+		onSave={(p) => saveProfile.mutate(p)}
 	/>
 	<RenameMoviePreviewModal
 		open={renameOpen}

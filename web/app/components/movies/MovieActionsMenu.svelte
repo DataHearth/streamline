@@ -41,7 +41,7 @@
 	const saveProfile = createMutation<Movie, Error, string>(() => ({
 		mutationFn: (profile) =>
 			api<Movie>(`/movies/${movie.id}`, {
-				method: "PUT",
+				method: "PATCH",
 				body: { quality_profile: profile },
 			}),
 		onSuccess: () => {

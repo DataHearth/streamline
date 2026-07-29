@@ -81,6 +81,8 @@
 		if (!open) {
 			query = "";
 			debounced = "";
+			qualityProfileName = "";
+			preset = "all";
 			sessionAdds = new Map();
 			failedPosters = new Set();
 			return;

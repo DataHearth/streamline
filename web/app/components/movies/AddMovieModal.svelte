@@ -74,6 +74,7 @@
 		if (!open) {
 			query = "";
 			debounced = "";
+			qualityProfileName = "";
 			sessionAdds = new Map();
 			failedPosters = new Set();
 			return;
