@@ -21,6 +21,7 @@
 	import TorrentPeersTab from "./TorrentPeersTab.svelte";
 	import TorrentTrackersTab from "./TorrentTrackersTab.svelte";
 	import { cn } from "../../lib/cn";
+	import { lockScroll, unlockScroll } from "../../lib/scrollLock";
 	import {
 		formatBytes,
 		formatSpeed,
@@ -77,12 +78,9 @@
 	});
 
 	$effect(() => {
-		if (open) {
-			document.body.style.overflow = "hidden";
-			return () => {
-				document.body.style.overflow = "";
-			};
-		}
+		if (!open) return;
+		lockScroll();
+		return unlockScroll;
 	});
 
 	function portal(node: HTMLElement) {

@@ -1,5 +1,11 @@
 <script lang="ts">
-	import { Play, ChevronDown, ExternalLink, ServerOff } from "@lucide/svelte";
+	import {
+		Play,
+		ChevronDown,
+		ExternalLink,
+		ServerOff,
+		TriangleAlert,
+	} from "@lucide/svelte";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { fly } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
@@ -92,6 +98,27 @@
 		>
 			{#if q.isLoading}
 				<p class="px-3 py-3 text-xs text-fg-muted">Resolving…</p>
+			{:else if q.isError}
+				<div
+					role="alert"
+					title={q.error?.message}
+					class="flex flex-col gap-1.5 px-3 py-3 text-xs text-status-failed"
+				>
+					<span class="flex items-start gap-2">
+						<TriangleAlert
+							class="mt-px h-3.5 w-3.5 shrink-0"
+							aria-hidden="true"
+						/>
+						Couldn't load playback links.
+					</span>
+					<button
+						type="button"
+						onclick={() => q.refetch()}
+						class="self-start rounded font-medium underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
+					>
+						Retry
+					</button>
+				</div>
 			{:else if links.length === 0}
 				<div class="grid place-items-center gap-1 px-3 py-4">
 					<ServerOff

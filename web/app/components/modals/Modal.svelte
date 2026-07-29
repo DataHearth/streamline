@@ -4,6 +4,7 @@
 	import { fade } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { X } from "@lucide/svelte";
+	import { lockScroll, unlockScroll } from "../../lib/scrollLock";
 
 	type Props = {
 		open: boolean;
@@ -78,14 +79,12 @@
 			return;
 		}
 		lastFocused = document.activeElement as HTMLElement | null;
-		document.body.style.overflow = "hidden";
+		lockScroll();
 		tick().then(() => {
 			if (!modalRoot) return;
 			initialFocusTarget(modalRoot)?.focus();
 		});
-		return () => {
-			document.body.style.overflow = "";
-		};
+		return unlockScroll;
 	});
 
 	function onRootKeydown(e: KeyboardEvent) {

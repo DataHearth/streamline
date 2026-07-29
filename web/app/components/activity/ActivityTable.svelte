@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { onMount } from "svelte";
 	import { Activity, LoaderCircle } from "@lucide/svelte";
 	import ActivityRow from "./ActivityRow.svelte";
 	import ExpandedRowDetail from "./ExpandedRowDetail.svelte";
@@ -51,8 +50,12 @@
 		expanded = next;
 	}
 
-	let sentinel = $state<HTMLDivElement>();
-	onMount(() => {
+	// The sentinel only exists in the history view, so it mounts long after the
+	// component does and re-mounts on every queue↔history switch. Keying the
+	// effect on the binding re-attaches the observer each time; reading hasMore /
+	// loadingMore inside the async callback keeps them out of the dependencies.
+	let sentinel = $state<HTMLDivElement | null>(null);
+	$effect(() => {
 		const el = sentinel;
 		if (!el) return;
 		const io = new IntersectionObserver((entries) => {
