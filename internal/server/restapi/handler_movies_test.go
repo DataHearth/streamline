@@ -70,11 +70,12 @@ var _ = Describe(
 					List(mock.Anything, uint16(1), uint16(10)).
 					Return([]*ent.Movie{
 						{
-							ID:     3,
-							Title:  "Broken Import",
-							Year:   2019,
-							TmdbID: 102,
-							Status: movie.StatusFailed,
+							ID:             3,
+							Title:          "Broken Import",
+							Year:           2019,
+							TmdbID:         102,
+							Status:         movie.StatusFailed,
+							QualityProfile: "uhd",
 						},
 					}, uint32(1), nil).
 					Once()
@@ -91,6 +92,7 @@ var _ = Describe(
 				Expect(body.Items).To(HaveLen(1))
 				Expect(body.Items[0].Status).To(Equal(MovieStatusFailed))
 				Expect(body.Items[0].Status.Valid()).To(BeTrue())
+				Expect(body.Items[0].QualityProfile).To(HaveValue(Equal("uhd")))
 			})
 
 			It("returns empty page when no movies exist", func() {

@@ -16,16 +16,18 @@
 		$props();
 
 	// One-time initialisation: `selected` is then driven by bind:value.
-	let selected = $state<string>(
-		untrack(() => current ?? profiles[0]?.name ?? ""),
-	);
+	// "" is a real choice (server default), not a missing value.
+	let selected = $state<string>(untrack(() => current ?? ""));
 </script>
 
 <Modal {open} title="Change quality profile" size="md" {onClose}>
 	<Select
 		label="Quality profile"
 		value={selected}
-		options={profiles.map((p) => ({ value: p.name, label: p.name }))}
+		options={[
+			{ value: "", label: "Server default" },
+			...profiles.map((p) => ({ value: p.name, label: p.name })),
+		]}
 		onChange={(v) => (selected = v)}
 	/>
 	{#snippet footer()}
@@ -38,7 +40,7 @@
 		</button>
 		<button
 			type="button"
-			disabled={saving || selected === current}
+			disabled={saving || selected === (current ?? "")}
 			onclick={() => onSave(selected)}
 			class="rounded-md bg-accent px-3 py-1.5 text-sm font-semibold text-fg-on-accent hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
 		>

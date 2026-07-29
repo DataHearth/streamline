@@ -67,6 +67,9 @@ func movieToAPI(m *ent.Movie) Movie {
 	if m.Overview != "" {
 		mov.Overview = &m.Overview
 	}
+	if m.QualityProfile != "" {
+		mov.QualityProfile = &m.QualityProfile
+	}
 	if m.Runtime != 0 {
 		rt := m.Runtime
 		mov.Runtime = &rt
