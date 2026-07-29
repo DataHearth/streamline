@@ -7,7 +7,6 @@ import (
 	"time"
 
 	entmovie "github.com/datahearth/streamline/ent/movie"
-	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
 	moviesvc "github.com/datahearth/streamline/internal/media/movie"
 	"github.com/datahearth/streamline/internal/metadata"
@@ -323,26 +322,13 @@ func (s *Server) GrabMovieRelease(
 			NotFoundJSONResponse: errNotFound(err.Error()),
 		}, nil
 	}
-	if request.Body == nil ||
-		request.Body.DownloadUrl == "" ||
-		request.Body.Title == "" {
+	sr, ok := toIndexerResult(request.Body)
+	if !ok {
 		return GrabMovieRelease422JSONResponse{
 			UnprocessableEntityJSONResponse: unprocessableResp(
 				"release title and download_url are required",
 			),
 		}, nil
-	}
-	sr := indexer.SearchResult{
-		Title:    request.Body.Title,
-		Download: request.Body.DownloadUrl,
-		Size:     request.Body.Size,
-		Seeders:  request.Body.Seeders,
-	}
-	if request.Body.InfoUrl != nil {
-		sr.InfoURL = *request.Body.InfoUrl
-	}
-	if request.Body.Leechers != nil {
-		sr.Leechers = *request.Body.Leechers
 	}
 	rec, err := s.downloads.Grab(ctx, sr, m.ID)
 	if err != nil {

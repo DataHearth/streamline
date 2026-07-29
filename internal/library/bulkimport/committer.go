@@ -66,55 +66,13 @@ func (s *Service) runCommit(ctx context.Context, scan *ent.ImportScan) {
 
 	defer func() {
 		if r := recover(); r != nil {
-			reason := fmt.Sprintf("panic: %v", r)
-			now := time.Now()
-			if err := s.store.UpdateImportScanStatus(
-				ctx,
-				scan.ID,
-				entimportscan.StatusFailed,
-				db.UpdateScanStatusOpts{
-					FailureReason: &reason,
-					CommittedAt:   &now,
-				},
-			); err != nil {
-				slog.ErrorContext(
-					ctx,
-					"bulk import commit: failed to mark scan failed after panic",
-					"scan.id",
-					scan.ID,
-					"panic",
-					r,
-					"error",
-					err,
-				)
-			}
+			s.markScanFailed(ctx, scan.ID, fmt.Sprintf("panic: %v", r))
 		}
 	}()
 
 	files, err := s.store.ListImportScanFilesForCommit(ctx, scan.ID)
 	if err != nil {
-		reason := err.Error()
-		now := time.Now()
-		if uerr := s.store.UpdateImportScanStatus(
-			ctx,
-			scan.ID,
-			entimportscan.StatusFailed,
-			db.UpdateScanStatusOpts{
-				FailureReason: &reason,
-				CommittedAt:   &now,
-			},
-		); uerr != nil {
-			slog.ErrorContext(
-				ctx,
-				"bulk import commit: failed to mark scan failed after list error",
-				"scan.id",
-				scan.ID,
-				"list.error",
-				err,
-				"update.error",
-				uerr,
-			)
-		}
+		s.markScanFailed(ctx, scan.ID, err.Error())
 		return
 	}
 
@@ -221,6 +179,22 @@ func (s *Service) commitOne(
 	}
 }
 
+func (s *Service) markScanFailed(ctx context.Context, scanID uint32, reason string) {
+	now := time.Now()
+	if err := s.store.UpdateImportScanStatus(
+		ctx,
+		scanID,
+		entimportscan.StatusFailed,
+		db.UpdateScanStatusOpts{
+			FailureReason: &reason,
+			CommittedAt:   &now,
+		},
+	); err != nil {
+		slog.ErrorContext(ctx, "bulk import commit: failed to mark scan failed",
+			"scan.id", scanID, "error", err)
+	}
+}
+
 // commitFail wraps an error as a failed-outcome triple. movieID is 0 when the
 // failure happens before a movie row is materialised.
 func commitFail(
@@ -235,28 +209,44 @@ func commitFail(
 	), movieID
 }
 
+// linkAndMarkAvailable records the committed file against params.MovieID and
+// flips that movie to available, returning the commit-outcome triple: success
+// on the happy path, otherwise the commitFail triple.
+//
+// failMovieID is what the failure triple reports as the created-movie id, which
+// is not always params.MovieID: attaching to an already-known movie creates no
+// movie row, so a half-applied attach must report 0.
+func (s *Service) linkAndMarkAvailable(
+	ctx context.Context,
+	params db.CreateMediaFileParams,
+	success entimportscanfile.Outcome,
+	failMovieID uint32,
+) (entimportscanfile.Outcome, string, uint32) {
+	if _, err := s.store.CreateMediaFile(ctx, params); err != nil {
+		return commitFail("create media file", err, failMovieID)
+	}
+	if err := s.store.UpdateMovieStatus(
+		ctx,
+		params.MovieID,
+		entmovie.StatusAvailable,
+	); err != nil {
+		return commitFail("update movie status", err, failMovieID)
+	}
+	return success, "", params.MovieID
+}
+
 func (s *Service) commitAttach(
 	ctx context.Context,
 	f *ent.ImportScanFile,
 ) (entimportscanfile.Outcome, string, uint32) {
-	if _, err := s.store.CreateMediaFile(ctx, db.CreateMediaFileParams{
+	return s.linkAndMarkAvailable(ctx, db.CreateMediaFileParams{
 		MovieID:      f.ExistingMovieID,
 		Path:         f.SourcePath,
 		Size:         f.Size,
 		Quality:      f.ParsedQuality,
 		ReleaseGroup: f.ParsedReleaseGroup,
 		Source:       entmediafile.SourceWizard,
-	}); err != nil {
-		return commitFail("create media file", err, 0)
-	}
-	if err := s.store.UpdateMovieStatus(
-		ctx,
-		f.ExistingMovieID,
-		entmovie.StatusAvailable,
-	); err != nil {
-		return commitFail("update movie status", err, 0)
-	}
-	return entimportscanfile.OutcomeAttached, "", f.ExistingMovieID
+	}, entimportscanfile.OutcomeAttached, 0)
 }
 
 func (s *Service) commitAdoptInPlace(
@@ -268,24 +258,14 @@ func (s *Service) commitAdoptInPlace(
 	if err != nil {
 		return commitFail("add movie", err, 0)
 	}
-	if _, err := s.store.CreateMediaFile(ctx, db.CreateMediaFileParams{
+	return s.linkAndMarkAvailable(ctx, db.CreateMediaFileParams{
 		MovieID:      m.ID,
 		Path:         f.SourcePath,
 		Size:         f.Size,
 		Quality:      f.ParsedQuality,
 		ReleaseGroup: f.ParsedReleaseGroup,
 		Source:       entmediafile.SourceWizard,
-	}); err != nil {
-		return commitFail("create media file", err, m.ID)
-	}
-	if err := s.store.UpdateMovieStatus(
-		ctx,
-		m.ID,
-		entmovie.StatusAvailable,
-	); err != nil {
-		return commitFail("update movie status", err, m.ID)
-	}
-	return entimportscanfile.OutcomeCreated, "", m.ID
+	}, entimportscanfile.OutcomeCreated, m.ID)
 }
 
 func (s *Service) commitRename(
@@ -308,22 +288,12 @@ func (s *Service) commitRename(
 	if err != nil {
 		return commitFail("import movie", err, m.ID)
 	}
-	if _, err := s.store.CreateMediaFile(ctx, db.CreateMediaFileParams{
+	return s.linkAndMarkAvailable(ctx, db.CreateMediaFileParams{
 		MovieID:      m.ID,
 		Path:         imported.Path,
 		Size:         imported.Size,
 		Quality:      imported.Parsed.Resolution,
 		ReleaseGroup: imported.Parsed.Group,
 		Source:       entmediafile.SourceWizard,
-	}); err != nil {
-		return commitFail("create media file", err, m.ID)
-	}
-	if err := s.store.UpdateMovieStatus(
-		ctx,
-		m.ID,
-		entmovie.StatusAvailable,
-	); err != nil {
-		return commitFail("update movie status", err, m.ID)
-	}
-	return entimportscanfile.OutcomeCreated, "", m.ID
+	}, entimportscanfile.OutcomeCreated, m.ID)
 }

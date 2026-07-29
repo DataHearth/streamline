@@ -815,3 +815,31 @@ func toSearchResult(r indexer.SearchResult) SearchResult {
 	}
 	return item
 }
+
+// toIndexerResult validates a grab request body (title + download_url required)
+// and maps it to an indexer.SearchResult. The bool reports whether the body was
+// acceptable; the caller emits the operation-specific 422 on false.
+func toIndexerResult(body *SearchResult) (indexer.SearchResult, bool) {
+	if body == nil || body.DownloadUrl == "" || body.Title == "" {
+		return indexer.SearchResult{}, false
+	}
+	sr := indexer.SearchResult{
+		Title:    body.Title,
+		Download: body.DownloadUrl,
+		Size:     body.Size,
+		Seeders:  body.Seeders,
+	}
+	if body.InfoUrl != nil {
+		sr.InfoURL = *body.InfoUrl
+	}
+	if body.Leechers != nil {
+		sr.Leechers = *body.Leechers
+	}
+	return sr, true
+}
+
+// replaceExisting reports whether a manual-grab body asked to overwrite
+// already-present file(s) for the covered media.
+func replaceExisting(body *SearchResult) bool {
+	return body != nil && body.ReplaceExisting != nil && *body.ReplaceExisting
+}

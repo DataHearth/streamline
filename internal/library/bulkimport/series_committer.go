@@ -234,19 +234,3 @@ func commitShowFail(
 		err,
 	), tvshowID
 }
-
-func (s *Service) markScanFailed(ctx context.Context, scanID uint32, reason string) {
-	now := time.Now()
-	if err := s.store.UpdateImportScanStatus(
-		ctx,
-		scanID,
-		entimportscan.StatusFailed,
-		db.UpdateScanStatusOpts{
-			FailureReason: &reason,
-			CommittedAt:   &now,
-		},
-	); err != nil {
-		slog.ErrorContext(ctx, "series commit: failed to mark scan failed",
-			"scan.id", scanID, "error", err)
-	}
-}
