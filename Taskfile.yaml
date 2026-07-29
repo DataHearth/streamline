@@ -90,6 +90,7 @@ tasks:
 
   test:e2e:
     desc: Run e2e browser tests
+    deps: [build:js, build:css]
     cmd: go tool ginkgo run -r --label-filter="e2e{{with .LABEL_FILTER}} &&
       {{.}}{{end}}" --timeout=1m15s {{.CLI_ARGS}}
 
