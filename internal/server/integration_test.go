@@ -16,6 +16,7 @@ import (
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/internal/auth"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
+	moviesvc "github.com/datahearth/streamline/internal/media/movie"
 	moviemocks "github.com/datahearth/streamline/internal/media/movie/mocks"
 	"github.com/datahearth/streamline/internal/metadata"
 	metadatamocks "github.com/datahearth/streamline/internal/metadata/mocks"
@@ -82,15 +83,20 @@ var _ = Describe("Full Vertical Slice", Label("unit", "server", "movies"), func(
 			GetMovie(mock.Anything, uint32(550)).
 			Return(&metadata.MovieDetails{}, nil).
 			Once()
+		searchHit := metadata.MovieResult{
+			TMDBID:   550,
+			Title:    "Fight Club",
+			Year:     1999,
+			Overview: "An insomniac office worker...",
+		}
 		md.EXPECT().
 			SearchMovie(mock.Anything, "Fight Club", uint16(0)).
-			Return([]metadata.MovieResult{
-				{
-					TMDBID:   550,
-					Title:    "Fight Club",
-					Year:     1999,
-					Overview: "An insomniac office worker...",
-				},
+			Return([]metadata.MovieResult{searchHit}, nil).
+			Once()
+		movies.EXPECT().
+			AnnotateTMDBResults(mock.Anything, []metadata.MovieResult{searchHit}).
+			Return([]moviesvc.AnnotatedTMDBResult{
+				{MovieResult: searchHit, AlreadyAdded: true},
 			}, nil).
 			Once()
 
@@ -136,6 +142,7 @@ var _ = Describe("Full Vertical Slice", Label("unit", "server", "movies"), func(
 
 		Expect(searchResults).To(HaveLen(1))
 		Expect(searchResults[0]["title"]).To(Equal("Fight Club"))
+		Expect(searchResults[0]["already_added"]).To(BeTrue())
 	})
 
 	It("should return 409 when adding a duplicate movie", func() {

@@ -248,6 +248,68 @@ var _ = Describe(
 			})
 		})
 
+		Describe("SearchTMDBMovie", func() {
+			It("flags results already in the library", func() {
+				results := []metadata.MovieResult{
+					{
+						TMDBID:        550,
+						Title:         "Fight Club",
+						OriginalTitle: "Fight Club",
+						Year:          1999,
+					},
+					{
+						TMDBID:        807,
+						Title:         "Se7en",
+						OriginalTitle: "Se7en",
+						Year:          1995,
+					},
+				}
+				app.metadata.EXPECT().
+					SearchMovie(mock.Anything, "fincher", uint16(0)).
+					Return(results, nil).
+					Once()
+				app.movies.EXPECT().
+					AnnotateTMDBResults(mock.Anything, results).
+					Return([]moviesvc.AnnotatedTMDBResult{
+						{MovieResult: results[0], AlreadyAdded: true},
+						{MovieResult: results[1]},
+					}, nil).
+					Once()
+
+				resp, err := http.Get(app.srv.URL + "/api/v1/search/movie?q=fincher")
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				var items []struct {
+					TmdbID       uint32 `json:"tmdb_id"`
+					AlreadyAdded bool   `json:"already_added"`
+				}
+				Expect(json.NewDecoder(resp.Body).Decode(&items)).To(Succeed())
+				Expect(items).To(HaveLen(2))
+				Expect(items[0].TmdbID).To(Equal(uint32(550)))
+				Expect(items[0].AlreadyAdded).To(BeTrue())
+				Expect(items[1].TmdbID).To(Equal(uint32(807)))
+				Expect(items[1].AlreadyAdded).To(BeFalse())
+			})
+
+			It("returns 500 when the library lookup fails", func() {
+				app.metadata.EXPECT().
+					SearchMovie(mock.Anything, "fincher", uint16(0)).
+					Return([]metadata.MovieResult{{TMDBID: 550, Title: "Fight Club"}}, nil).
+					Once()
+				app.movies.EXPECT().
+					AnnotateTMDBResults(mock.Anything, mock.Anything).
+					Return(nil, errors.New("db down")).
+					Once()
+
+				resp, err := http.Get(app.srv.URL + "/api/v1/search/movie?q=fincher")
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusInternalServerError))
+			})
+		})
+
 		Describe("GetMovie", func() {
 			It("returns media_files for the movie", func() {
 				const movieID uint32 = 42

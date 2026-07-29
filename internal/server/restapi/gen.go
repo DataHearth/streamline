@@ -2760,6 +2760,9 @@ type SystemInfo struct {
 
 // TMDBMovieResult defines model for TMDBMovieResult.
 type TMDBMovieResult struct {
+	// AlreadyAdded True when a movie with this tmdb_id is already in the library.
+	AlreadyAdded *bool `json:"already_added,omitempty"`
+
 	// OriginalTitle TMDB original_title. Equals title when the localized title
 	// matches the original.
 	OriginalTitle string  `json:"original_title"`

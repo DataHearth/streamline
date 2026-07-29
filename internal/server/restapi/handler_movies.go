@@ -483,8 +483,15 @@ func (s *Server) SearchTMDBMovie(
 		}, nil
 	}
 
-	items := make([]TMDBMovieResult, 0, len(results))
-	for _, r := range results {
+	annotated, err := s.movies.AnnotateTMDBResults(ctx, results)
+	if err != nil {
+		return SearchTMDBMovie500JSONResponse{
+			InternalErrorJSONResponse: errInternal(err.Error()),
+		}, nil
+	}
+
+	items := make([]TMDBMovieResult, 0, len(annotated))
+	for _, r := range annotated {
 		item := TMDBMovieResult{
 			TmdbId:        r.TMDBID,
 			Title:         r.Title,
@@ -496,6 +503,10 @@ func (s *Server) SearchTMDBMovie(
 		}
 		if url := metadata.PosterURL(r.PosterPath, "w185"); url != "" {
 			item.PosterUrl = &url
+		}
+		if r.AlreadyAdded {
+			added := true
+			item.AlreadyAdded = &added
 		}
 		items = append(items, item)
 	}

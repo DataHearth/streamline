@@ -4057,6 +4057,9 @@ components:
           x-go-type: uint16
         overview:
           type: string
+        already_added:
+          type: boolean
+          description: True when a movie with this tmdb_id is already in the library.
         poster_url:
           type: string
           description: |
