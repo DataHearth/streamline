@@ -95,17 +95,28 @@
 	});
 
 	let q = $state("");
+	let debouncedQ = $state("");
 	let classification = $state<ImportFileClassification | "">("");
 	const FILE_LIMIT = 200;
 
+	// q feeds the query key, so every keystroke would otherwise be its own cache
+	// entry — a fresh request plus a drop back to the loading state per letter.
+	let debounceTimer: ReturnType<typeof setTimeout> | undefined;
+	$effect(() => {
+		const raw = q;
+		clearTimeout(debounceTimer);
+		debounceTimer = setTimeout(() => (debouncedQ = raw.trim()), 300);
+		return () => clearTimeout(debounceTimer);
+	});
+
 	const filesQuery = createQuery<ImportScanFileList>(() => ({
-		queryKey: ["import", importId, "files", { q, classification }],
+		queryKey: ["import", importId, "files", { q: debouncedQ, classification }],
 		queryFn: () => {
 			const sp = new URLSearchParams({
 				page: "1",
 				limit: String(FILE_LIMIT),
 			});
-			if (q.trim()) sp.set("q", q.trim());
+			if (debouncedQ) sp.set("q", debouncedQ);
 			if (classification) sp.set("classification", classification);
 			return api<ImportScanFileList>(
 				`/library/imports/${importId}/files?${sp}`,

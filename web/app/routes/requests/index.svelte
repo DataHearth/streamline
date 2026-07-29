@@ -93,6 +93,15 @@
 		qc.invalidateQueries({ queryKey: ["requests"] });
 	}
 
+	// Approving is the only decision that writes to the library — it adds the
+	// movie/show — so the grids and the sidebar counts go stale with it. Deny
+	// and reopen only move the request's own status.
+	function invalidateLibrary(mediaType: MediaRequest["media_type"]) {
+		const root = mediaType === "tvshow" ? "series" : "movies";
+		qc.invalidateQueries({ queryKey: [root] });
+		qc.invalidateQueries({ queryKey: [root, "counts"] });
+	}
+
 	const approve = createMutation<
 		unknown,
 		Error,
@@ -105,6 +114,7 @@
 			}),
 		onSuccess: (_d, { r }) => {
 			invalidate();
+			invalidateLibrary(r.media_type);
 			toast.ok(`Approved "${r.title}" — added to library`);
 			expandedId = null;
 		},

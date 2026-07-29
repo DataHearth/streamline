@@ -31,6 +31,9 @@
 			api<AuthConfig>("/config/auth", { method: "PATCH", body }),
 		onSuccess: (resp) => {
 			qc.setQueryData(["config", "auth"], resp);
+			// Re-seed from the response so the form goes clean again; otherwise it
+			// stays dirty and seedFrom would never accept a later refetch.
+			seedFrom(resp);
 			toast.ok("Auth settings saved");
 		},
 		onError: (err) => toast.err(err.message),
@@ -57,15 +60,22 @@
 		onSubmit: ({ value }) => save.mutate(value),
 	}));
 
-	// Reset form defaults when data lands
+	function seedFrom(data: AuthConfig) {
+		form.reset({
+			registration_mode: data.registration_mode,
+			session_ttl: data.session_ttl,
+			oidc_default_role: data.oidc_default_role,
+		});
+	}
+
+	// The query refetches on window focus, so this effect fires again every time
+	// the tab regains focus — re-seed only while the form is clean, or a refetch
+	// silently throws away whatever the user was typing. Reading form.state adds
+	// no dependency here (it is a TanStack store, not a rune), so the effect
+	// still keys off cfg.data alone.
 	$effect(() => {
-		if (cfg.data) {
-			form.reset({
-				registration_mode: cfg.data.registration_mode,
-				session_ttl: cfg.data.session_ttl,
-				oidc_default_role: cfg.data.oidc_default_role,
-			});
-		}
+		if (!cfg.data || form.state.isDirty) return;
+		seedFrom(cfg.data);
 	});
 
 	const modes = [

@@ -49,7 +49,14 @@
 		value={field.state.value ?? ""}
 		oninput={(e) => {
 			const raw = (e.currentTarget as HTMLInputElement).value;
-			field.handleChange(type === "number" ? Number(raw) : raw);
+			if (type !== "number") {
+				field.handleChange(raw);
+				return;
+			}
+			// Number("") is 0, which would re-render a cleared field as "0" and make
+			// it impossible to clear-and-retype. undefined keeps the input empty and
+			// lets the schema report the field as missing instead of saving a 0.
+			field.handleChange(raw === "" ? undefined : Number(raw));
 		}}
 		onblur={() => field.handleBlur()}
 		class="w-full rounded-md border bg-bg px-3 py-2 text-sm text-fg placeholder:text-fg-faint focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60 read-only:opacity-70 read-only:cursor-not-allowed"
