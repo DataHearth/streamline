@@ -67,6 +67,24 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 		})
 	})
 
+	Describe("AddSeries", func() {
+		It("409s when no quality profile resolves", func() {
+			app.tvshows.EXPECT().Add(mock.Anything, uint32(9), "gone").
+				Return(nil, tvshow.ErrNoQualityProfile).Once()
+
+			req := app.req(
+				http.MethodPost,
+				"/api/v1/series",
+				app.adminKey,
+				strings.NewReader(`{"tvdb_id":9,"quality_profile":"gone"}`),
+			)
+			req.Header.Set("Content-Type", "application/json")
+			resp := app.do(req)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusConflict))
+		})
+	})
+
 	Describe("GetSeries", func() {
 		It("404s when the series is missing", func() {
 			app.tvshows.EXPECT().Get(mock.Anything, uint32(42)).

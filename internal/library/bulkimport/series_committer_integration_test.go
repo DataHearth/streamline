@@ -18,6 +18,7 @@ import (
 	"github.com/datahearth/streamline/internal/media/tvshow"
 	"github.com/datahearth/streamline/internal/metadata"
 	metamocks "github.com/datahearth/streamline/internal/metadata/mocks"
+	"github.com/datahearth/streamline/internal/testutil/configtest"
 	"github.com/datahearth/streamline/internal/testutil/dbtest"
 )
 
@@ -35,6 +36,9 @@ var _ = Describe(
 
 		BeforeEach(func() {
 			ctx = context.Background()
+			// Adoption goes through tvshow.Add, which rejects a show when no
+			// quality profile resolves.
+			configtest.Setup(map[string]any{})
 			tmpDir = GinkgoT().TempDir()
 			client := dbtest.SetupTestDB(ctx)
 			DeferCleanup(client.Close)
@@ -181,6 +185,7 @@ var _ = Describe(
 			"transfers episodes into the series library with the scan's mode",
 			func() {
 				ctx := context.Background()
+				configtest.Setup(map[string]any{})
 				root := GinkgoT().TempDir()
 				srcDir := filepath.Join(root, "downloads")
 				libDir := filepath.Join(root, "tv")

@@ -437,6 +437,17 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 			Expect(err).To(MatchError(ContainSubstring("movie 99 not found")))
 		})
 
+		It("rejects a profile change when none resolves", func() {
+			configtest.Setup(map[string]any{
+				"quality_profiles":        []any{},
+				"quality_default_profile": "",
+			})
+			qp := "gone"
+
+			_, err := svc.Update(ctx, 7, UpdateParams{QualityProfile: &qp})
+			Expect(err).To(MatchError(ErrNoQualityProfile))
+		})
+
 		It("wraps generic update errors", func() {
 			updateErr := errors.New("update blew up")
 			storeMock.UpdateMovie(mock.Anything, uint32(1),

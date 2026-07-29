@@ -462,6 +462,12 @@ func (s *Service) Update(
 	)
 	defer span.End()
 
+	if p.QualityProfile != nil {
+		if _, ok := config.ResolveQualityProfile(*p.QualityProfile); !ok {
+			return nil, otelx.RecordSpanError(span, ErrNoQualityProfile)
+		}
+	}
+
 	m, err := s.db.UpdateMovie(ctx, id, db.UpdateMovieParams{
 		Status:         p.Status,
 		QualityProfile: p.QualityProfile,

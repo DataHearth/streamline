@@ -82,6 +82,27 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 		Eventually(done).Should(BeClosed())
 	})
 
+	It("Add rejects the show when no quality profile resolves", func() {
+		configtest.Setup(map[string]any{
+			"quality_profiles":        []any{},
+			"quality_default_profile": "",
+		})
+
+		_, err := svc.Add(ctx, 123, "")
+		Expect(err).To(MatchError(ErrNoQualityProfile))
+	})
+
+	It("Update rejects a profile change when none resolves", func() {
+		configtest.Setup(map[string]any{
+			"quality_profiles":        []any{},
+			"quality_default_profile": "",
+		})
+		qp := "gone"
+
+		_, err := svc.Update(ctx, 7, UpdateParams{QualityProfile: &qp})
+		Expect(err).To(MatchError(ErrNoQualityProfile))
+	})
+
 	It("List returns total and a page", func() {
 		storeMk.CountTVShows(mock.Anything).Return(3, nil).Once()
 		storeMk.ListTVShows(mock.Anything, uint32(0), uint32(20)).
@@ -137,6 +158,32 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
+	It("Update's 'pilot' preset monitors S01E01, not the first special", func() {
+		show := &ent.TVShow{ID: 1, Edges: ent.TVShowEdges{Seasons: []*ent.Season{
+			{ID: 10, Number: 0, Edges: ent.SeasonEdges{Episodes: []*ent.Episode{
+				{ID: 100, Number: 1},
+			}}},
+			{ID: 11, Number: 1, Edges: ent.SeasonEdges{Episodes: []*ent.Episode{
+				{ID: 101, Number: 1},
+				{ID: 102, Number: 2},
+			}}},
+		}}}
+		storeMk.FindTVShowByID(mock.Anything, uint32(1)).Return(show, nil).Twice()
+		storeMk.SetEpisodeMonitored(mock.Anything, uint32(100), false).
+			Return(nil).Once()
+		storeMk.SetEpisodeMonitored(mock.Anything, uint32(101), true).
+			Return(nil).Once()
+		storeMk.SetEpisodeMonitored(mock.Anything, uint32(102), false).
+			Return(nil).Once()
+		storeMk.SetSeasonMonitored(mock.Anything, uint32(10), false).
+			Return(nil).Once()
+		storeMk.SetSeasonMonitored(mock.Anything, uint32(11), true).
+			Return(nil).Once()
+
+		_, err := svc.Update(ctx, 1, UpdateParams{Preset: "pilot"})
+		Expect(err).NotTo(HaveOccurred())
+	})
+
 	It("SetSeasonMonitored cascades to the season's episodes", func() {
 		storeMk.CascadeSeasonMonitored(mock.Anything, uint32(3), false).
 			Return(nil).
@@ -166,6 +213,82 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 			Once()
 		_, err := svc.RefreshOne(ctx, 7)
 		Expect(err).NotTo(HaveOccurred())
+	})
+
+	Describe("DeriveSeasonViews", func() {
+		now := time.Now()
+		aired := now.Add(-24 * time.Hour)
+
+		It("counts a monitored, aired, file-less episode as missing", func() {
+			show := &ent.TVShow{Edges: ent.TVShowEdges{Seasons: []*ent.Season{
+				{Number: 1, Edges: ent.SeasonEdges{Episodes: []*ent.Episode{
+					{ID: 1, Number: 1, AirDate: aired, Monitored: true},
+				}}},
+			}}}
+
+			v := DeriveSeasonViews(show, now)[0]
+			Expect(v.Missing).To(Equal(1))
+			Expect(v.Total).To(Equal(1))
+		})
+
+		It("never counts an unmonitored episode as missing", func() {
+			show := &ent.TVShow{Edges: ent.TVShowEdges{Seasons: []*ent.Season{
+				{Number: 0, Edges: ent.SeasonEdges{Episodes: []*ent.Episode{
+					{ID: 1, Number: 1, AirDate: aired},
+					{ID: 2, Number: 2},
+				}}},
+			}}}
+
+			v := DeriveSeasonViews(show, now)[0]
+			Expect(v.Missing).To(BeZero())
+			Expect(v.Available).To(BeZero())
+			Expect(v.Unaired).To(BeZero())
+			Expect(v.Total).To(Equal(2))
+		})
+
+		It("still counts an unmonitored episode's file and air date", func() {
+			show := &ent.TVShow{Edges: ent.TVShowEdges{Seasons: []*ent.Season{
+				{Number: 0, Edges: ent.SeasonEdges{Episodes: []*ent.Episode{
+					{ID: 1, Number: 1, AirDate: aired, Edges: ent.EpisodeEdges{
+						MediaFiles: []*ent.MediaFile{{ID: 1}},
+					}},
+					{ID: 2, Number: 2, AirDate: now.Add(24 * time.Hour)},
+				}}},
+			}}}
+
+			v := DeriveSeasonViews(show, now)[0]
+			Expect(v.Available).To(Equal(1))
+			Expect(v.Unaired).To(Equal(1))
+			Expect(v.Missing).To(BeZero())
+		})
+	})
+
+	Describe("FilterList status=missing", func() {
+		aired := time.Now().Add(-24 * time.Hour)
+
+		It("keeps a show with a monitored, file-less aired episode", func() {
+			storeMk.ListTVShows(mock.Anything, uint32(0), uint32(10000)).
+				Return([]*ent.TVShow{showWithEpisode(&ent.Episode{
+					ID: 1, Number: 1, AirDate: aired, Monitored: true,
+				})}, nil).Once()
+
+			items, total, err := svc.FilterList(ctx, FilterParams{Status: "missing"})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(total).To(Equal(uint32(1)))
+			Expect(items).To(HaveLen(1))
+		})
+
+		It("drops a show whose file-less episodes are all unmonitored", func() {
+			storeMk.ListTVShows(mock.Anything, uint32(0), uint32(10000)).
+				Return([]*ent.TVShow{showWithEpisode(&ent.Episode{
+					ID: 1, Number: 1, AirDate: aired,
+				})}, nil).Once()
+
+			items, total, err := svc.FilterList(ctx, FilterParams{Status: "missing"})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(total).To(BeZero())
+			Expect(items).To(BeEmpty())
+		})
 	})
 
 	Describe("DeleteEpisodeFile", func() {
@@ -349,6 +472,14 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 		)
 	})
 })
+
+// showWithEpisode builds a one-season show carrying the given episode.
+func showWithEpisode(e *ent.Episode) *ent.TVShow {
+	GinkgoHelper()
+	return &ent.TVShow{ID: 1, Edges: ent.TVShowEdges{Seasons: []*ent.Season{
+		{ID: 1, Number: 1, Edges: ent.SeasonEdges{Episodes: []*ent.Episode{e}}},
+	}}}
+}
 
 // withWantedEpisodes builds a show with a single season carrying n episodes.
 func withWantedEpisodes(n int) *ent.TVShow {

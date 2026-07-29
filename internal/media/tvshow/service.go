@@ -2,6 +2,7 @@ package tvshow
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/episode"
 	enttvshow "github.com/datahearth/streamline/ent/tvshow"
+	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/indexer"
@@ -29,17 +31,33 @@ var (
 	meter  = otel.Meter("github.com/datahearth/streamline/internal/media/tvshow")
 )
 
-var showsAdded metric.Int64Counter
+var (
+	showsAdded   metric.Int64Counter
+	showsUpdated metric.Int64Counter
+	showsDeleted metric.Int64Counter
+)
 
 func init() {
 	showsAdded = otelx.Must(meter.Int64Counter(
 		"streamline.tvshows.added",
 		metric.WithDescription("TV shows added"),
 	))
+	showsUpdated = otelx.Must(meter.Int64Counter(
+		"streamline.tvshows.updated",
+		metric.WithDescription("TV shows updated"),
+	))
+	showsDeleted = otelx.Must(meter.Int64Counter(
+		"streamline.tvshows.deleted",
+		metric.WithDescription("TV shows deleted"),
+	))
 
 	ctx := context.Background()
 	showsAdded.Add(ctx, 0)
+	showsUpdated.Add(ctx, 0)
+	showsDeleted.Add(ctx, 0)
 }
+
+var ErrNoQualityProfile = errors.New("no quality profile configured")
 
 type Service struct {
 	db       db.Store
@@ -90,9 +108,18 @@ func (s *Service) Add(
 	ctx, span := tracer.Start(
 		ctx,
 		"tvshow.add",
-		trace.WithAttributes(attribute.Int("tvdb.id", int(tvdbID))),
+		trace.WithAttributes(
+			attribute.Int("tvdb.id", int(tvdbID)),
+			attribute.String("quality_profile", qualityProfile),
+		),
 	)
 	defer span.End()
+
+	// An empty name resolves to quality_default_profile at read time; reject
+	// only when the named profile (or default) resolves to nothing at all.
+	if _, ok := config.ResolveQualityProfile(qualityProfile); !ok {
+		return nil, otelx.RecordSpanError(span, ErrNoQualityProfile)
+	}
 
 	d, err := s.metadata.GetSeries(ctx, tvdbID)
 	if err != nil {
@@ -302,7 +329,10 @@ type SeasonView struct {
 
 // DeriveSeasonViews computes per-season counts from an eager-loaded show.
 // available = episode has a media_file; unaired = air_date in the future;
-// missing = everything else (aired/undated without a file).
+// missing = aired/undated *monitored* episode without a file. An unmonitored
+// episode the user opted out of counts toward Total only, so specials and
+// skipped episodes never inflate the missing rollups — Available + Missing +
+// Unaired is therefore <= Total.
 func DeriveSeasonViews(show *ent.TVShow, now time.Time) []SeasonView {
 	views := make([]SeasonView, 0, len(show.Edges.Seasons))
 	for _, se := range show.Edges.Seasons {
@@ -313,7 +343,7 @@ func DeriveSeasonViews(show *ent.TVShow, now time.Time) []SeasonView {
 				v.Available++
 			case !e.AirDate.IsZero() && e.AirDate.After(now):
 				v.Unaired++
-			default:
+			case e.Monitored:
 				v.Missing++
 			}
 		}
@@ -379,13 +409,23 @@ func (s *Service) Update(
 	)
 	defer span.End()
 
+	if p.QualityProfile != nil {
+		if _, ok := config.ResolveQualityProfile(*p.QualityProfile); !ok {
+			return nil, otelx.RecordSpanError(span, ErrNoQualityProfile)
+		}
+	}
 	if p.Preset != "" {
 		if err := s.applyPreset(ctx, id, p.Preset); err != nil {
 			return nil, otelx.RecordSpanError(span, err)
 		}
 	}
 	if p.Monitored == nil && p.QualityProfile == nil {
-		return s.db.FindTVShowByID(ctx, id)
+		show, err := s.db.FindTVShowByID(ctx, id)
+		if err != nil {
+			return nil, otelx.RecordSpanError(span, err)
+		}
+		showsUpdated.Add(ctx, 1)
+		return show, nil
 	}
 	// A series monitor toggle is a master switch: cascade it to every season and
 	// episode so an unmonitored show leaves nothing for the fetcher to grab.
@@ -394,7 +434,7 @@ func (s *Service) Update(
 			return nil, otelx.RecordSpanError(span, err)
 		}
 	}
-	return s.db.UpdateTVShow(
+	show, err := s.db.UpdateTVShow(
 		ctx,
 		id,
 		db.UpdateTVShowParams{
@@ -402,6 +442,11 @@ func (s *Service) Update(
 			QualityProfile: p.QualityProfile,
 		},
 	)
+	if err != nil {
+		return nil, otelx.RecordSpanError(span, err)
+	}
+	showsUpdated.Add(ctx, 1)
+	return show, nil
 }
 
 // applyPreset bulk-sets season/episode monitored flags as a one-shot preset.
@@ -412,12 +457,11 @@ func (s *Service) applyPreset(ctx context.Context, id uint32, preset string) err
 		return err
 	}
 	now := time.Now()
-	first := true
+	pilot := pilotEpisode(show)
 	for _, se := range show.Edges.Seasons {
 		seasonMon := false
 		for _, e := range se.Edges.Episodes {
-			want := presetWants(preset, e, now, first)
-			first = false
+			want := presetWants(preset, e, now, e == pilot)
 			if err := s.db.SetEpisodeMonitored(ctx, e.ID, want); err != nil {
 				return err
 			}
@@ -430,11 +474,27 @@ func (s *Service) applyPreset(ctx context.Context, id uint32, preset string) err
 	return nil
 }
 
+// pilotEpisode returns the show's series premiere: the first episode of the
+// lowest-numbered regular season. Season 0 carries specials, which providers
+// emit alongside regular seasons and which sort first — so the pilot is never
+// simply "the first episode of the first season". Relies on FindTVShowByID
+// loading seasons and episodes in ascending number order. nil when the show
+// has no regular-season episode.
+func pilotEpisode(show *ent.TVShow) *ent.Episode {
+	for _, se := range show.Edges.Seasons {
+		if se.Number == 0 || len(se.Edges.Episodes) == 0 {
+			continue
+		}
+		return se.Edges.Episodes[0]
+	}
+	return nil
+}
+
 func presetWants(
 	preset string,
 	e *ent.Episode,
 	now time.Time,
-	isFirstEpisodeOfShow bool,
+	isPilot bool,
 ) bool {
 	aired := !e.AirDate.IsZero() && !e.AirDate.After(now)
 	hasFile := len(e.Edges.MediaFiles) > 0
@@ -450,7 +510,7 @@ func presetWants(
 	case "existing":
 		return hasFile
 	case "pilot":
-		return isFirstEpisodeOfShow
+		return isPilot
 	default:
 		return e.Monitored
 	}
@@ -513,6 +573,7 @@ func (s *Service) Delete(ctx context.Context, id uint32, opts DeleteOptions) err
 		}
 		return otelx.RecordSpanError(span, err)
 	}
+	showsDeleted.Add(ctx, 1)
 	slog.InfoContext(
 		ctx,
 		"tv show deleted",
