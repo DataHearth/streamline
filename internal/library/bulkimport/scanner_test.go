@@ -43,7 +43,7 @@ var _ = Describe(
 			metaProv = metadatamocks.NewMockProvider(GinkgoT())
 			tmpDir = GinkgoT().TempDir()
 			libRoot = tmpDir
-			svc = NewService(store, metaProv, nil, nil, nil, nil, libRoot)
+			svc = NewService(store, metaProv, nil, nil, nil, libRoot)
 		})
 
 		It("rejects relative path", func() {

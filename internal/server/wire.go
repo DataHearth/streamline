@@ -181,7 +181,6 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		libSvc,
 		movieSvc,
 		tvSvc,
-		postersSvc,
 		cfg.Library.MoviePath,
 	)
 	hygieneSvc := hygiene.New(store, tmdb, tvdb, libSvc, &cfg.Library)

@@ -192,16 +192,6 @@ func (db *DB) ListTvShowsForAdoption(ctx context.Context) ([]*ent.TVShow, error)
 		All(ctx)
 }
 
-// ListDownloadingRecords returns every download_record whose status is
-// "downloading". Used by the download manager's status-poll loop.
-func (db *DB) ListDownloadingRecords(
-	ctx context.Context,
-) ([]*ent.DownloadRecord, error) {
-	return db.client.DownloadRecord.Query().
-		Where(downloadrecord.StatusEQ(downloadrecord.StatusDownloading)).
-		All(ctx)
-}
-
 // ListDownloadingRecordsWithMovie returns every "downloading"
 // download_record with its Movie edge preloaded. Used by the orphan-torrent
 // reconciliation pass.

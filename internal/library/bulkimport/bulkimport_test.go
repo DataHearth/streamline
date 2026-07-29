@@ -14,7 +14,7 @@ import (
 
 var _ = Describe("Service skeleton", Label("unit", "bulkimport"), func() {
 	It("constructs without panic", func() {
-		s := NewService(nil, nil, nil, nil, nil, nil, "/library")
+		s := NewService(nil, nil, nil, nil, nil, "/library")
 		Expect(s).ToNot(BeNil())
 	})
 })
@@ -29,7 +29,7 @@ var _ = Describe("Service file decisions", Label("unit", "bulkimport"), func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 		store = dbmocks.NewMockStore(GinkgoT())
-		svc = NewService(store, nil, nil, nil, nil, nil, "/library")
+		svc = NewService(store, nil, nil, nil, nil, "/library")
 	})
 
 	Describe("UpdateFileDecision", func() {

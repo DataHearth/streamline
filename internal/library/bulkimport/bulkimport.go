@@ -10,7 +10,6 @@ import (
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/media/movie"
 	"github.com/datahearth/streamline/internal/metadata"
-	"github.com/datahearth/streamline/internal/posters"
 )
 
 // Manager is the consumer-facing interface for the bulk-import service.
@@ -58,7 +57,6 @@ type Service struct {
 	importSvc   *library.ImportService
 	movieSvc    *movie.Service
 	seriesAdder SeriesAdder
-	posters     posters.Manager
 	libraryDir  string
 }
 
@@ -69,7 +67,6 @@ func NewService(
 	importSvc *library.ImportService,
 	movieSvc *movie.Service,
 	seriesAdder SeriesAdder,
-	posters posters.Manager,
 	libraryDir string,
 ) *Service {
 	return &Service{
@@ -78,7 +75,6 @@ func NewService(
 		importSvc:   importSvc,
 		movieSvc:    movieSvc,
 		seriesAdder: seriesAdder,
-		posters:     posters,
 		libraryDir:  libraryDir,
 	}
 }

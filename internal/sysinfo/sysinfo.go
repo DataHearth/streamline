@@ -68,7 +68,7 @@ func Collect() Snapshot {
 		snap.Version = "dev"
 	}
 	if st, err := os.Stat(cfg.DatabasePath()); err == nil {
-		snap.DBSize = HumanBytes(st.Size())
+		snap.DBSize = humanBytes(st.Size())
 	}
 	snap.DBUsage = DiskUsageFor(filepath.Dir(cfg.DatabasePath()))
 	if info, ok := debug.ReadBuildInfo(); ok {
@@ -91,9 +91,9 @@ func Collect() Snapshot {
 	return snap
 }
 
-// HumanBytes formats a byte count with binary units (KiB / MiB / GiB).
+// humanBytes formats a byte count with binary units (KiB / MiB / GiB).
 // Sub-kibibyte values render with the literal byte count.
-func HumanBytes(n int64) string {
+func humanBytes(n int64) string {
 	const unit = 1024
 	if n < unit {
 		return fmt.Sprintf("%d B", n)
@@ -123,9 +123,9 @@ func diskUsage(total, free int64) *DiskUsage {
 		kind = "warn"
 	}
 	return &DiskUsage{
-		Used:  HumanBytes(used),
-		Total: HumanBytes(total),
-		Free:  HumanBytes(free),
+		Used:  humanBytes(used),
+		Total: humanBytes(total),
+		Free:  humanBytes(free),
 		Pct:   pct,
 		Kind:  kind,
 	}

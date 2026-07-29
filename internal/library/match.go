@@ -12,10 +12,10 @@ var (
 	titleArticleHead = regexp.MustCompile(`^(the|a|an)`)
 )
 
-// NormalizeTitle lowercases, strips non-alphanumerics, and strips a leading
+// normalizeTitle lowercases, strips non-alphanumerics, and strips a leading
 // article ("the"/"a"/"an") for tolerant title comparison (e.g. "The Batman" vs
 // "the.batman" vs "Batman").
-func NormalizeTitle(s string) string {
+func normalizeTitle(s string) string {
 	s = strings.ToLower(s)
 	s = titleNonAlnum.ReplaceAllString(s, "")
 	s = titleArticleHead.ReplaceAllString(s, "")
@@ -23,7 +23,7 @@ func NormalizeTitle(s string) string {
 }
 
 // TitleMatches reports whether two titles are equal after normalization.
-func TitleMatches(a, b string) bool { return NormalizeTitle(a) == NormalizeTitle(b) }
+func TitleMatches(a, b string) bool { return normalizeTitle(a) == normalizeTitle(b) }
 
 // MatchEpisode resolves a parsed release to an episode within the show's
 // seasons. Anime packs match on absolute number; everything else on

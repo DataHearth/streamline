@@ -1,7 +1,6 @@
 package observability
 
 import (
-	"bytes"
 	"context"
 	"log/slog"
 	"net"
@@ -97,18 +96,4 @@ func remoteIP(r *http.Request) string {
 		return r.RemoteAddr
 	}
 	return host
-}
-
-// swapHTTPLoggerWriter rebuilds the underlying sink against buf for tests so
-// middleware assertions can inspect emitted lines without going through file
-// I/O or stderr.
-func swapHTTPLoggerWriter(l *HTTPLogger, buf *bytes.Buffer, format string) {
-	var sink slog.Handler
-	switch format {
-	case "json":
-		sink = slog.NewJSONHandler(buf, &slog.HandlerOptions{Level: slog.LevelInfo})
-	case "combined":
-		sink = &combinedHandler{w: buf}
-	}
-	l.slog = slog.New(multiHandler{sink})
 }

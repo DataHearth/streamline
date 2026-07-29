@@ -14,10 +14,9 @@ import (
 // Defined here (rather than in the bulkimport package) so ent code-gen can
 // reference it without an import cycle.
 type ScannedCandidate struct {
-	TMDBID     uint32  `json:"tmdb_id"`
-	Title      string  `json:"title"`
-	Year       uint16  `json:"year"`
-	Popularity float64 `json:"popularity"`
+	TMDBID uint32 `json:"tmdb_id"`
+	Title  string `json:"title"`
+	Year   uint16 `json:"year"`
 }
 
 type ImportScanFile struct{ ent.Schema }

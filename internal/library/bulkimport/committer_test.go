@@ -26,7 +26,7 @@ var _ = Describe("Service.Commit validation", Label("unit", "bulkimport"), func(
 	BeforeEach(func() {
 		ctx = context.Background()
 		store = dbmocks.NewMockStore(GinkgoT())
-		svc = NewService(store, nil, nil, nil, nil, nil, "/lib")
+		svc = NewService(store, nil, nil, nil, nil, "/lib")
 	})
 
 	It("rejects when scan is not in awaiting_review status", func() {
@@ -76,7 +76,7 @@ var _ = Describe("Service.commitAttach", Label("unit", "bulkimport"), func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 		store = dbmocks.NewMockStore(GinkgoT())
-		svc = NewService(store, nil, nil, nil, nil, nil, "/lib")
+		svc = NewService(store, nil, nil, nil, nil, "/lib")
 	})
 
 	It(

@@ -218,16 +218,11 @@ type plexMetadataResponse struct {
 }
 
 type plexMetadataItem struct {
-	RatingKey string         `json:"ratingKey"`
-	Type      string         `json:"type"`
-	Title     string         `json:"title"`
-	Year      uint16         `json:"year"`
-	Guid      string         `json:"guid"`
-	Guids     []plexGuidItem `json:"Guid"`
-}
-
-type plexGuidItem struct {
-	ID string `json:"id"`
+	RatingKey string `json:"ratingKey"`
+	Type      string `json:"type"`
+	Title     string `json:"title"`
+	Year      uint16 `json:"year"`
+	Guid      string `json:"guid"`
 }
 
 func (p *Plex) identity(ctx context.Context) (string, error) {

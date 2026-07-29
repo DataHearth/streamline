@@ -22,7 +22,12 @@ var _ = Describe("HTTPLogger.Middleware", Label("unit", "observability"), func()
 	}
 
 	newLoggerWithBuf := func(format string) (*HTTPLogger, *bytes.Buffer) {
+		GinkgoHelper()
 		buf := &bytes.Buffer{}
+		prev := StderrSink
+		StderrSink = buf
+		DeferCleanup(func() { StderrSink = prev })
+
 		l, err := NewHTTPLogger(
 			config.HTTPLog{
 				Enabled: true,
@@ -32,7 +37,6 @@ var _ = Describe("HTTPLogger.Middleware", Label("unit", "observability"), func()
 			},
 		)
 		Expect(err).NotTo(HaveOccurred())
-		swapHTTPLoggerWriter(l, buf, format)
 		return l, buf
 	}
 

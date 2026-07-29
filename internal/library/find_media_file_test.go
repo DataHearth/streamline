@@ -18,11 +18,11 @@ func writeSizedFile(dir, name string, size int64) string {
 	return p
 }
 
-var _ = Describe("FindMediaFile", Label("unit", "library"), func() {
+var _ = Describe("findMediaFile", Label("unit", "library"), func() {
 	It("skips files below 50MB", func() {
 		dir := GinkgoT().TempDir()
 		writeSizedFile(dir, "small.mkv", 1024)
-		_, err := FindMediaFile(dir)
+		_, err := findMediaFile(dir)
 		Expect(err).To(MatchError(ErrNoMedia))
 	})
 
@@ -30,7 +30,7 @@ var _ = Describe("FindMediaFile", Label("unit", "library"), func() {
 		dir := GinkgoT().TempDir()
 		writeSizedFile(dir, "sample.mkv", 60<<20)
 		writeSizedFile(dir, "movie.Sample.mkv", 60<<20)
-		_, err := FindMediaFile(dir)
+		_, err := findMediaFile(dir)
 		Expect(err).To(MatchError(ErrSampleOnly))
 	})
 
@@ -38,7 +38,7 @@ var _ = Describe("FindMediaFile", Label("unit", "library"), func() {
 		dir := GinkgoT().TempDir()
 		writeSizedFile(dir, "a.mkv", 60<<20)
 		writeSizedFile(dir, "b.mkv", 60<<20)
-		_, err := FindMediaFile(dir)
+		_, err := findMediaFile(dir)
 		Expect(err).To(MatchError(ErrMultipleMedia))
 	})
 
@@ -47,20 +47,20 @@ var _ = Describe("FindMediaFile", Label("unit", "library"), func() {
 		writeSizedFile(dir, "sample.mkv", 60<<20)
 		writeSizedFile(dir, "movie.mkv", 60<<20)
 		writeSizedFile(dir, "subs.srt", 60<<20)
-		p, err := FindMediaFile(dir)
+		p, err := findMediaFile(dir)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(p).To(Equal(filepath.Join(dir, "movie.mkv")))
 	})
 
 	It("returns ErrNoMedia on empty dir", func() {
-		_, err := FindMediaFile(GinkgoT().TempDir())
+		_, err := findMediaFile(GinkgoT().TempDir())
 		Expect(err).To(MatchError(ErrNoMedia))
 	})
 
 	It("accepts a single file path that passes filters", func() {
 		dir := GinkgoT().TempDir()
 		p := writeSizedFile(dir, "Movie.2024.1080p.mkv", 60<<20)
-		got, err := FindMediaFile(p)
+		got, err := findMediaFile(p)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(got).To(Equal(p))
 	})
@@ -68,7 +68,7 @@ var _ = Describe("FindMediaFile", Label("unit", "library"), func() {
 	It("rejects a single-file path below the size threshold", func() {
 		dir := GinkgoT().TempDir()
 		p := writeSizedFile(dir, "tiny.mkv", 1024)
-		_, err := FindMediaFile(p)
+		_, err := findMediaFile(p)
 		Expect(err).To(MatchError(ErrNoMedia))
 	})
 })

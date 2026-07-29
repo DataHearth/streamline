@@ -190,8 +190,6 @@ func (q *QBittorrent) ensureCategory(ctx context.Context) error {
 type qbAddEnvelope struct {
 	AddedTorrentIDs []string `json:"added_torrent_ids"`
 	SuccessCount    int      `json:"success_count"`
-	FailureCount    int      `json:"failure_count"`
-	PendingCount    int      `json:"pending_count"`
 }
 
 // AddTorrent uploads the source to qBittorrent and returns the infohash.

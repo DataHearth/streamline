@@ -11,8 +11,6 @@ import (
 	"github.com/datahearth/streamline/ent/movieevent"
 )
 
-var ErrInvalidType = errors.New("events: invalid type")
-
 // Record writes a MovieEvent row. When client is nil the package
 // default (set by Register at db-client construction) is used. Pass
 // the bound client from a mutation (m.Client()) or transaction
@@ -26,7 +24,7 @@ func Record(
 	payload map[string]any,
 ) error {
 	if !t.Valid() {
-		return fmt.Errorf("%w: %q", ErrInvalidType, t)
+		return fmt.Errorf("events: invalid type: %q", t)
 	}
 	c := client
 	if c == nil {

@@ -90,21 +90,6 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 		})
 	})
 
-	Describe("ListDownloadingRecords", func() {
-		It(
-			"returns only status=downloading rows with download_client preloaded",
-			func() {
-				createRec("abc", downloadrecord.StatusDownloading)
-				createRec("def", downloadrecord.StatusCompleted)
-
-				items, err := store.ListDownloadingRecords(ctx)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(items).To(HaveLen(1))
-				Expect(items[0].DownloadClientName).To(Equal(clientName))
-			},
-		)
-	})
-
 	Describe("ListDownloadingRecordsWithMovie", func() {
 		It("preloads client and movie", func() {
 			createRec("abc", downloadrecord.StatusDownloading)

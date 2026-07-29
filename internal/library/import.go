@@ -61,13 +61,13 @@ type ImportedFile struct {
 	Parsed ParseResult
 }
 
-// FindMediaFile scans dir for video files above 50MB, skipping any whose
+// findMediaFile scans dir for video files above 50MB, skipping any whose
 // basename matches \bsample\b. Returns the absolute path to the sole
 // candidate. Errors: ErrNoMedia (none found, none filtered), ErrSampleOnly
 // (all candidates were samples), ErrMultipleMedia (>1 candidate after
 // filtering). When dir is a single file, it is returned directly provided it
 // passes the same filters.
-func FindMediaFile(dir string) (string, error) {
+func findMediaFile(dir string) (string, error) {
 	info, err := os.Stat(dir)
 	if err != nil {
 		return "", err
@@ -118,7 +118,7 @@ func FindMediaFile(dir string) (string, error) {
 }
 
 // ListVideoFiles returns every video file directly under dir that passes the
-// size + sample filters (same rules as FindMediaFile). Used by the importer to
+// size + sample filters (same rules as findMediaFile). Used by the importer to
 // enumerate a season pack's individual episode files.
 func ListVideoFiles(dir string) ([]string, error) {
 	entries, err := os.ReadDir(dir)
@@ -182,7 +182,7 @@ func ListVideoFilesRecursive(dir string) ([]string, error) {
 // ImportMovie finds the media file under srcDir (or uses srcDir if it is
 // already a file), renders the destination path from the naming template,
 // transfers the file with the configured mode, and returns ImportedFile.
-// Does not touch the DB. Errors from FindMediaFile pass through as-is so the
+// Does not touch the DB. Errors from findMediaFile pass through as-is so the
 // worker can classify them.
 func (s *ImportService) ImportMovie(
 	ctx context.Context,
@@ -321,7 +321,7 @@ func placeFile(
 		imports.Add(ctx, 1, attrs)
 	}()
 
-	srcFile, err := FindMediaFile(p.src)
+	srcFile, err := findMediaFile(p.src)
 	if err != nil {
 		outcome = "no_media"
 		return ImportedFile{}, otelx.RecordSpanError(span, err)

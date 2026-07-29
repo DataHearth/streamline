@@ -195,7 +195,6 @@ type Store interface {
 	// ListTvShowsForAdoption returns all shows with seasons → episodes → media
 	// files eager-loaded, for episode adoption matching.
 	ListTvShowsForAdoption(ctx context.Context) ([]*ent.TVShow, error)
-	ListDownloadingRecords(ctx context.Context) ([]*ent.DownloadRecord, error)
 	ListDownloadingRecordsWithMovie(
 		ctx context.Context,
 	) ([]*ent.DownloadRecord, error)
