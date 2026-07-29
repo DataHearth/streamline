@@ -27,6 +27,7 @@
 	type SortDir = "asc" | "desc";
 
 	let q = $state("");
+	let debouncedQ = $state("");
 	let role = $state<UserRole | "">("");
 	let offset = $state(0);
 	let sort = $state<SortKey>("created");
@@ -40,15 +41,34 @@
 
 	$effect(() => {
 		// reset to first page on filter or sort change
-		void q;
 		void role;
 		void sort;
 		void order;
 		offset = 0;
 	});
 
+	// q feeds the query key, so every keystroke would otherwise be its own cache
+	// entry — a fresh request plus a drop back to the loading state per letter.
+	// The page reset rides along inside the timer so the search term and offset
+	// land in the same update, leaving the query key one transition to make.
+	let debounceTimer: ReturnType<typeof setTimeout> | undefined;
+	$effect(() => {
+		const raw = q;
+		clearTimeout(debounceTimer);
+		debounceTimer = setTimeout(() => {
+			const next = raw.trim();
+			if (next === debouncedQ) return;
+			debouncedQ = next;
+			offset = 0;
+		}, 300);
+		return () => clearTimeout(debounceTimer);
+	});
+
 	const users = createQuery<UserList>(() => ({
-		queryKey: ["users", { q, role, sort, order, offset, limit: LIMIT }],
+		queryKey: [
+			"users",
+			{ q: debouncedQ, role, sort, order, offset, limit: LIMIT },
+		],
 		queryFn: () => {
 			const params = new URLSearchParams({
 				limit: String(LIMIT),
@@ -56,7 +76,7 @@
 				sort,
 				order,
 			});
-			if (q.trim()) params.set("q", q.trim());
+			if (debouncedQ) params.set("q", debouncedQ);
 			if (role) params.set("role", role);
 			return api<UserList>(`/users?${params.toString()}`);
 		},
@@ -138,7 +158,7 @@
 
 	let items = $derived(users.data?.items ?? []);
 	let total = $derived(users.data?.total ?? 0);
-	let hasFilter = $derived(q.trim().length > 0 || role !== "");
+	let hasFilter = $derived(debouncedQ.length > 0 || role !== "");
 	let from = $derived(items.length ? offset + 1 : 0);
 	let to = $derived(offset + items.length);
 	let hasPrev = $derived(offset > 0);

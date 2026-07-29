@@ -70,7 +70,7 @@ const port = v.pipe(
 );
 
 const priority = v.pipe(
-	v.number(),
+	v.number("Priority required"),
 	v.integer(),
 	v.minValue(0, "0–255"),
 	v.maxValue(255, "0–255"),

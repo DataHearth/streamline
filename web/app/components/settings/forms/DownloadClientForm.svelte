@@ -3,6 +3,7 @@
 	import type { FormApi } from "@tanstack/svelte-form";
 	import { Lock } from "@lucide/svelte";
 	import TextField from "../../forms/TextField.svelte";
+	import { fieldErrorMessages } from "../../../lib/fieldErrors";
 	import TogglePill from "../../forms/TogglePill.svelte";
 	import TypePicker from "../../forms/TypePicker.svelte";
 	import BrandLogo from "../BrandLogo.svelte";
@@ -222,22 +223,36 @@
 
 		<form.Field name="priority">
 			{#snippet children(field)}
-				<label class="flex items-center gap-1.5 text-xs font-medium text-fg-muted">
-					Priority
-					<input
-						type="number"
-						inputmode="numeric"
-						min="0"
-						max="255"
-						name={field.name}
-						value={field.state.value}
-						oninput={(e) =>
-							field.handleChange(
-								Number((e.currentTarget as HTMLInputElement).value),
-							)}
-						class="h-9 w-16 rounded-md border border-border bg-bg-elevated px-2 text-center text-sm text-fg focus-visible:outline-2 focus-visible:outline-accent"
-					/>
-				</label>
+				{@const errors = fieldErrorMessages(field)}
+				<div>
+					<label
+						class="flex items-center gap-1.5 text-xs font-medium text-fg-muted"
+					>
+						Priority
+						<input
+							type="number"
+							inputmode="numeric"
+							min="0"
+							max="255"
+							name={field.name}
+							value={field.state.value ?? ""}
+							oninput={(e) => {
+								const raw = (e.currentTarget as HTMLInputElement).value;
+								// Number("") is 0 — a priority the schema accepts, so a
+								// cleared field would save silently. undefined keeps the
+								// input empty and lets validation report it as missing.
+								field.handleChange(raw === "" ? undefined : Number(raw));
+							}}
+							onblur={() => field.handleBlur()}
+							class="h-9 w-16 rounded-md border bg-bg-elevated px-2 text-center text-sm text-fg focus-visible:outline-2 focus-visible:outline-accent"
+							class:border-status-failed={errors.length > 0}
+							class:border-border={errors.length === 0}
+						/>
+					</label>
+					{#each errors as msg}
+						<p class="mt-1 text-xs text-status-failed">{msg}</p>
+					{/each}
+				</div>
 			{/snippet}
 		</form.Field>
 	</div>

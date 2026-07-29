@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { AnyFieldApi } from "@tanstack/form-core";
+	import { fieldErrorMessages } from "../../lib/fieldErrors";
 
 	type Props = {
 		field: AnyFieldApi;
@@ -26,13 +27,7 @@
 		max,
 	}: Props = $props();
 
-	let errorMessages = $derived(
-		field.state.meta.errors.map((e: unknown) => {
-			if (e && typeof e === "object" && "message" in e)
-				return String((e as { message: unknown }).message);
-			return String(e);
-		}),
-	);
+	let errorMessages = $derived(fieldErrorMessages(field));
 </script>
 
 <label class="block">
