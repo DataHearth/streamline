@@ -65,7 +65,16 @@
 	let routeParams = $state<Record<string, string>>({});
 	let navigate = $state<(path: string) => void>(() => {});
 	onMount(() => {
-		const u1 = params.subscribe((p) => (routeParams = p));
+		// Routify reuses this component instance across /series/[id] param
+		// changes, so per-series UI state has to be cleared by hand. The first
+		// emission only records the id — resetting on it would clobber a
+		// deep-linked ?tab= before the user has navigated anywhere.
+		let currentId: string | undefined;
+		const u1 = params.subscribe((p) => {
+			if (currentId !== undefined && p.id !== currentId) resetSeriesState();
+			currentId = p.id;
+			routeParams = p;
+		});
 		const u2 = goto.subscribe((fn) => (navigate = fn));
 		return () => {
 			u1();
@@ -104,14 +113,17 @@
 
 	let selectedSeason = $state<number | null>(null);
 	$effect(() => {
-		if (selectedSeason === null && seasons.length > 0) {
-			// Default to the latest non-special season, falling back to whatever
-			// the last entry is (e.g. a specials-only show).
-			const regular = seasons.filter((s) => s.number > 0);
-			const pool = regular.length > 0 ? regular : seasons;
-			const last = pool[pool.length - 1];
-			if (last) selectedSeason = last.number;
-		}
+		if (seasons.length === 0) return;
+		// Re-pick whenever the selection is not a season this show actually has
+		// — covers both the initial default and a carry-over from the previously
+		// viewed series, which would otherwise render an empty season strip.
+		if (seasons.some((s) => s.number === selectedSeason)) return;
+		// Default to the latest non-special season, falling back to whatever
+		// the last entry is (e.g. a specials-only show).
+		const regular = seasons.filter((s) => s.number > 0);
+		const pool = regular.length > 0 ? regular : seasons;
+		const last = pool[pool.length - 1];
+		if (last) selectedSeason = last.number;
 	});
 	let currentSeason = $derived(
 		seasons.find((s) => s.number === selectedSeason) ?? null,
@@ -173,6 +185,22 @@
 	// a label for the confirm copy plus the episodes whose files get removed.
 	let deleteFiles = $state<{ label: string; episodes: Episode[] } | null>(null);
 	let removeFilesTorrent = $state(false);
+
+	// Clears everything scoped to the show being navigated away from. `tab` is
+	// re-read from the URL rather than reset to a constant so browser
+	// back/forward onto /series/x?tab=files lands on the tab it was left on.
+	function resetSeriesState() {
+		tab = readTab();
+		selectedSeason = null;
+		presetValue = "all";
+		deleteOpen = false;
+		deleteWithFilesOpen = false;
+		manualOpen = false;
+		manualEpisode = null;
+		packSearchOpen = false;
+		deleteFiles = null;
+		removeFilesTorrent = false;
+	}
 
 	function pad2(n: number): string {
 		return String(n).padStart(2, "0");

@@ -45,6 +45,26 @@
 		{ prefix: "/settings", label: "Settings" },
 	];
 
+	// Sub-page segments name themselves — "media-servers" becomes "Media
+	// servers", matching the h1 that page renders. Only slugs whose page title
+	// isn't a transform of the slug need an entry here.
+	const SEGMENT_LABELS: Record<string, string> = {
+		auth: "Authentication",
+		oidc: "Single Sign-On",
+	};
+
+	function segmentLabel(segment: string): string {
+		// Every dynamic route under these sections keys off a numeric id, which
+		// carries no name until its record loads.
+		if (/^\d+$/.test(segment)) return "Details";
+		const known = SEGMENT_LABELS[segment];
+		if (known) return known;
+		return segment
+			.split("-")
+			.map((w, i) => (i === 0 ? w.charAt(0).toUpperCase() + w.slice(1) : w))
+			.join(" ");
+	}
+
 	let crumbs = $derived.by<Crumb[]>(() => {
 		const root = SECTIONS.find(
 			(s) =>
@@ -57,7 +77,15 @@
 				? []
 				: [{ label: root.label }];
 		}
-		return [{ label: root.label, href: root.prefix }, { label: "Details" }];
+		const segments = rest.split("/").filter(Boolean);
+		const trail: Crumb[] = [{ label: root.label, href: root.prefix }];
+		let href = root.prefix;
+		segments.forEach((seg, i) => {
+			href += `/${seg}`;
+			const label = segmentLabel(seg);
+			trail.push(i === segments.length - 1 ? { label } : { label, href });
+		});
+		return trail;
 	});
 
 	const systemQuery = createQuery<SystemInfo>(() => ({
@@ -254,7 +282,7 @@
 							{c.label}
 						</a>
 					{:else}
-						<span class="text-fg">{c.label}</span>
+						<span aria-current="page" class="text-fg">{c.label}</span>
 					{/if}
 					{#if i < crumbs.length - 1}
 						<span class="text-fg-faint" aria-hidden="true">/</span>
