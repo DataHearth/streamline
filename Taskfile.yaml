@@ -25,6 +25,8 @@ tasks:
       - "**/*.go"
       - exclude: "**/*_test.go"
       - exclude: "**/mocks/**"
+      - go.mod
+      - go.sum
       # Embedded assets (web/embed.go). Globbed, not enumerated: a hand-listed
       # subset drifts silently — it once missed spa.min.css and embedded a stale
       # bundle. The only non-embedded files here (input.css, docs.js) are bundle

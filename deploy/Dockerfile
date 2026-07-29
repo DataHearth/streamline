@@ -1,5 +1,10 @@
 # syntax=docker/dockerfile:1.7
 
+# Pinned, not floating `1.26-alpine`: a moving tag made grype's stdlib findings
+# drift between builds independently of our code. The cost is that stdlib CVE
+# fixes now require bumping this by hand — grype failing on `stdlib` is the signal.
+ARG GO_VERSION=1.26.5
+
 # --- Frontend assets (esbuild + TailwindCSS) ---
 FROM node:24-alpine AS frontend
 WORKDIR /app
@@ -29,7 +34,7 @@ RUN pnpm exec tailwindcss \
     --minify
 
 # --- Go codegen (oapi-codegen + ent via `go tool`) ---
-FROM golang:1.26-alpine AS codegen
+FROM golang:${GO_VERSION}-alpine AS codegen
 WORKDIR /app
 
 COPY go.mod go.sum ./
@@ -47,7 +52,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     go generate ./ent
 
 # --- Go binary ---
-FROM golang:1.26-alpine AS builder
+FROM golang:${GO_VERSION}-alpine AS builder
 WORKDIR /app
 
 COPY --from=codegen /app /app
