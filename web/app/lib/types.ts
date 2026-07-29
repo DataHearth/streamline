@@ -1,4 +1,4 @@
-export type MovieStatus = "wanted" | "downloading" | "available";
+export type MovieStatus = "wanted" | "downloading" | "available" | "failed";
 
 export type SeriesStatus = "continuing" | "ended" | "upcoming";
 export type SeriesType = "standard" | "anime" | "daily";
@@ -205,6 +205,7 @@ export type TMDBMovieResult = {
 	original_title: string;
 	year: number;
 	overview?: string;
+	already_added?: boolean;
 	poster_url?: string;
 };
 
@@ -278,6 +279,7 @@ export type MovieCounts = {
 	wanted: number;
 	downloading: number;
 	available: number;
+	failed: number;
 	// Cumulative library size per day over the last 30 days, oldest first;
 	// the final element equals `total`. All zeros when the library is empty.
 	trend: number[];

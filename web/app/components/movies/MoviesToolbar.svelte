@@ -97,7 +97,7 @@
 			case "available":
 				return counts.available;
 			case "failed":
-				return 0;
+				return counts.failed;
 			default:
 				return 0;
 		}

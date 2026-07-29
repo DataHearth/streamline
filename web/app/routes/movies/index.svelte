@@ -86,18 +86,19 @@
 			wanted: 0,
 			downloading: 0,
 			available: 0,
+			failed: 0,
 		};
 		for (const m of allMovies) {
 			if (m.status === "wanted") c.wanted++;
 			else if (m.status === "downloading") c.downloading++;
 			else if (m.status === "available") c.available++;
+			else if (m.status === "failed") c.failed++;
 		}
 		return c;
 	});
 
 	function passesTab(m: Movie): boolean {
 		if (tab === "all") return true;
-		if (tab === "failed") return false;
 		return m.status === tab;
 	}
 

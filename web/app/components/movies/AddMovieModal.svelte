@@ -343,7 +343,7 @@
 				>
 					{#each results as r (r.tmdb_id)}
 						{@const localId = resolveLocalId(r.tmdb_id)}
-						{@const inLibrary = localId !== undefined}
+						{@const inLibrary = localId !== undefined || r.already_added}
 						{@const pending = pendingTmdbId === r.tmdb_id}
 						{@const showPoster =
 							r.poster_url && !failedPosters.has(r.tmdb_id)}
@@ -414,7 +414,7 @@
 										<Check size={14} aria-hidden="true" />
 										Use match
 									</button>
-								{:else if inLibrary}
+								{:else if inLibrary && localId !== undefined}
 									<a
 										in:scale={{
 											duration: 220,
@@ -430,6 +430,12 @@
 											aria-hidden="true"
 										/>
 									</a>
+								{:else if inLibrary}
+									<span
+										class="inline-flex h-8 items-center rounded-md border border-border bg-bg-elevated px-3 text-xs font-medium text-fg-muted"
+									>
+										In library
+									</span>
 								{:else}
 									<button
 										type="button"

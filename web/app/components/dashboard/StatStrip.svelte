@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { TriangleAlert } from "@lucide/svelte";
 	import ProgressBar from "../shared/ProgressBar.svelte";
 	import type { MovieCounts, QueueItem, DiskUsage } from "../../lib/types";
 
@@ -48,6 +49,7 @@
 	}
 
 	let sparkPath = $derived(buildSparkline(counts?.trend));
+	let failedCount = $derived(counts?.failed ?? 0);
 </script>
 
 <section
@@ -104,6 +106,10 @@
 		</div>
 	</div>
 
+	<!-- Failed titles ride along on the Wanted tile — both are unfulfilled work,
+	     and the strip is a fixed four across (2×2 on mobile); a fifth tile would
+	     orphan onto a second row at every breakpoint. Hidden at zero so a healthy
+	     library carries no noise. -->
 	<div
 		class="relative overflow-hidden rounded-lg border border-border bg-bg-elevated px-5 py-[18px]"
 	>
@@ -115,6 +121,17 @@
 		>
 			Wanted
 		</div>
+		{#if failedCount > 0}
+			<div class="mt-1.5">
+				<a
+					href="/movies?status=failed"
+					class="inline-flex items-center gap-1 font-mono text-[11.5px] text-status-failed underline-offset-2 transition hover:underline"
+				>
+					<TriangleAlert size={12} aria-hidden="true" />
+					{failedCount} failed
+				</a>
+			</div>
+		{/if}
 	</div>
 
 	<div
