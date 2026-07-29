@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/datahearth/streamline/internal/config"
@@ -32,6 +33,9 @@ type TVDB struct {
 	// language.
 	language string
 
+	// One TVDB instance is shared by the TV service, the hygiene service and
+	// the REST handlers, so every access to the cached token goes through mu.
+	mu    sync.Mutex
 	token string // cached bearer token from /login
 }
 
@@ -57,13 +61,18 @@ func iso639_3(bcp47 string) string {
 	return base.ISO3()
 }
 
-func (t *TVDB) login(ctx context.Context) error {
+// login returns the cached bearer token, fetching a fresh one when the cache
+// is empty. mu is held across the HTTP round-trip so that a token expiring
+// under concurrent load produces a single /login rather than one per caller.
+func (t *TVDB) login(ctx context.Context) (string, error) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
 	if t.token != "" {
-		return nil
+		return t.token, nil
 	}
 	body, err := json.Marshal(map[string]string{"apikey": t.apiKey})
 	if err != nil {
-		return err
+		return "", err
 	}
 	req, err := http.NewRequestWithContext(
 		ctx,
@@ -72,16 +81,16 @@ func (t *TVDB) login(ctx context.Context) error {
 		bytes.NewReader(body),
 	)
 	if err != nil {
-		return err
+		return "", err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := t.client.Do(req)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("tvdb login: unexpected status %d", resp.StatusCode)
+		return "", fmt.Errorf("tvdb login: unexpected status %d", resp.StatusCode)
 	}
 	var out struct {
 		Data struct {
@@ -89,32 +98,48 @@ func (t *TVDB) login(ctx context.Context) error {
 		} `json:"data"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
-		return err
+		return "", err
 	}
 	t.token = out.Data.Token
-	return nil
+	return t.token, nil
+}
+
+// invalidate drops a token TVDB rejected. The stale check keeps a slow caller
+// from wiping a token another goroutine already refreshed.
+func (t *TVDB) invalidate(stale string) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if t.token == stale {
+		t.token = ""
+	}
 }
 
 func (t *TVDB) get(ctx context.Context, path string, out any) error {
-	if err := t.login(ctx); err != nil {
-		return err
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, t.BaseURL+path, nil)
+	token, err := t.login(ctx)
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Authorization", "Bearer "+t.token)
-	resp, err := t.client.Do(req)
+	resp, err := t.do(ctx, path, token)
 	if err != nil {
-		slog.WarnContext(
+		return err
+	}
+	// TVDB tokens expire after ~1 month; a 401 means this one aged out, so
+	// drop it, log in again and replay the request once.
+	if resp.StatusCode == http.StatusUnauthorized {
+		resp.Body.Close()
+		slog.InfoContext(
 			ctx,
-			"tvdb request transport error",
+			"tvdb token rejected, logging in again",
 			"tvdb.endpoint",
 			path,
-			"error",
-			err,
 		)
-		return err
+		t.invalidate(token)
+		if token, err = t.login(ctx); err != nil {
+			return err
+		}
+		if resp, err = t.do(ctx, path, token); err != nil {
+			return err
+		}
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
@@ -129,6 +154,30 @@ func (t *TVDB) get(ctx context.Context, path string, out any) error {
 		return fmt.Errorf("tvdb: unexpected status %d", resp.StatusCode)
 	}
 	return json.NewDecoder(resp.Body).Decode(out)
+}
+
+func (t *TVDB) do(
+	ctx context.Context,
+	path, token string,
+) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, t.BaseURL+path, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	resp, err := t.client.Do(req)
+	if err != nil {
+		slog.WarnContext(
+			ctx,
+			"tvdb request transport error",
+			"tvdb.endpoint",
+			path,
+			"error",
+			err,
+		)
+		return nil, err
+	}
+	return resp, nil
 }
 
 // atou16/atou32 parse TVDB's string-encoded numerics; return 0 on any failure.
