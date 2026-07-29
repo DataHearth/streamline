@@ -1,9 +1,11 @@
-package e2e
+package web
 
 import (
 	"github.com/go-rod/rod"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	"github.com/datahearth/streamline/internal/testutil/apptest"
 )
 
 // auth.Limiter allows 5 /auth/login attempts per 15 minutes per IP and all
@@ -25,7 +27,7 @@ var _ = Describe("Auth flows", Label("e2e"), func() {
 
 	It("shows an error on a wrong password", func() {
 		page := newPage("/login")
-		page.MustElement(`input[type=email]`).MustInput(adminEmail)
+		page.MustElement(`input[type=email]`).MustInput(apptest.AdminEmail)
 		page.MustElement(`input[type=password]`).MustInput("definitely-wrong")
 		page.MustElementR("button", "Sign in").MustClick()
 		Expect(
@@ -44,7 +46,7 @@ var _ = Describe("Auth flows", Label("e2e"), func() {
 
 func loginAsAdmin(page *rod.Page) {
 	GinkgoHelper()
-	page.MustElement(`input[type=email]`).MustInput(adminEmail)
-	page.MustElement(`input[type=password]`).MustInput(adminPassword)
+	page.MustElement(`input[type=email]`).MustInput(apptest.AdminEmail)
+	page.MustElement(`input[type=password]`).MustInput(apptest.AdminPassword)
 	page.MustElementR("button", "Sign in").MustClick()
 }

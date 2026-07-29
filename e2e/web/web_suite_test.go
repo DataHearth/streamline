@@ -1,9 +1,6 @@
-package e2e
+package web
 
 import (
-	"context"
-	"errors"
-	"net/http/httptest"
 	"os"
 	"testing"
 	"time"
@@ -13,15 +10,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/datahearth/streamline/internal/observability"
-	"github.com/datahearth/streamline/internal/server"
 	"github.com/datahearth/streamline/internal/testutil"
-	"github.com/datahearth/streamline/internal/testutil/configtest"
-)
-
-const (
-	adminEmail    = "e2e-admin@streamline.local"
-	adminPassword = "e2e-Admin-Passw0rd!"
+	"github.com/datahearth/streamline/internal/testutil/apptest"
 )
 
 var (
@@ -29,9 +19,9 @@ var (
 	browser *rod.Browser
 )
 
-func TestE2E(t *testing.T) {
+func TestWeb(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "E2E Suite")
+	RunSpecs(t, "E2E Web Suite", Label("web"))
 }
 
 var _ = BeforeSuite(func() {
@@ -41,38 +31,7 @@ var _ = BeforeSuite(func() {
 	}
 
 	DeferCleanup(testutil.InstallSlog())
-	// Same seam as the server suite: the HTTP access logger writes to
-	// stderr with no injection point; repoint it at GinkgoWriter.
-	prev := observability.StderrSink
-	observability.StderrSink = GinkgoWriter
-	DeferCleanup(func() { observability.StderrSink = prev })
-
-	configtest.Setup(map[string]any{
-		"auth": map[string]any{
-			"session_secret": "e2e-session-secret",
-			"seed_admin": map[string]any{
-				"email":    adminEmail,
-				"password": adminPassword,
-			},
-		},
-	})
-
-	app, err := server.NewFromConfig(context.Background())
-	Expect(err).NotTo(HaveOccurred())
-	srv := httptest.NewServer(app.Server.Router())
-	baseURL = srv.URL
-	DeferCleanup(func() {
-		srv.Close()
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		Expect(
-			errors.Join(
-				app.Auth.Shutdown(ctx),
-				app.HTTPLogger.Close(),
-				app.DB.Close(),
-			),
-		).To(Succeed())
-	})
+	baseURL = apptest.Start()
 
 	// CHROME_PATH comes from the nix devshell; rod's auto-download
 	// fallback produces a chromium that cannot run on NixOS.
