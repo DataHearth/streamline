@@ -1,20 +1,40 @@
 package rss
 
 import (
-	"time"
+	"context"
+	"log/slog"
 
+	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/library"
 )
 
-// QualityConfig drives result filtering in MissingSearcher.
-// Built from config.QualityConfig (string fields) or from a per-movie
-// DB QualityProfile.
+// QualityConfig drives release filtering. It is resolved per item at search
+// time from the movie's or show's quality_profile, so a run picks up profile
+// edits and per-item overrides without a restart.
 type QualityConfig struct {
 	PreferredResolution string
 	MinResolution       string
 	UpgradeAllowed      bool
-	NoMatchCooldown     time.Duration
-	MaxGrabFailures     uint8
+}
+
+// qualityFor resolves a quality_profile name into a filter, falling back to
+// the configured default when the name is empty or unknown. With no profiles
+// configured at all it returns the zero value, which rejects every release —
+// grabbing at an unknown quality bar is worse than grabbing nothing.
+func qualityFor(ctx context.Context, name string) QualityConfig {
+	p, ok := config.ResolveQualityProfile(name)
+	if !ok {
+		slog.WarnContext(ctx,
+			"no quality profile configured, rejecting every release",
+			"quality_profile", name,
+		)
+		return QualityConfig{}
+	}
+	return QualityConfig{
+		PreferredResolution: p.PreferredResolution,
+		MinResolution:       p.MinResolution,
+		UpgradeAllowed:      p.UpgradeAllowed,
+	}
 }
 
 // Accepts reports whether a release title meets the quality bar.

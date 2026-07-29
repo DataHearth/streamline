@@ -6,7 +6,9 @@ import (
 	"time"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
+	"github.com/datahearth/streamline/ent/predicate"
 	"github.com/datahearth/streamline/ent/season"
 	"github.com/datahearth/streamline/ent/tvshow"
 )
@@ -471,8 +473,8 @@ func (db *DB) ResetEpisodeGrabFailures(ctx context.Context, id uint32) error {
 
 // ListWantedEpisodes returns shows (with seasons+episodes eager-loaded) that
 // have at least one monitored, wanted episode. The episode edges are filtered
-// to only those wanted+monitored rows; the caller (rss/missing searcher)
-// applies the aired-date cutoff.
+// to only those wanted+monitored rows. This is the raw backlog view (counts,
+// dashboards) — the searcher wants ListEligibleEpisodesForSync.
 func (db *DB) ListWantedEpisodes(ctx context.Context) ([]*ent.TVShow, error) {
 	return db.client.TVShow.Query().
 		Where(tvshow.HasSeasonsWith(
@@ -486,6 +488,48 @@ func (db *DB) ListWantedEpisodes(ctx context.Context) ([]*ent.TVShow, error) {
 				eq.Where(episode.MonitoredEQ(true), episode.StatusEQ(episode.StatusWanted)).
 					WithMediaFiles()
 			})
+		}).
+		All(ctx)
+}
+
+// ListEligibleEpisodesForSync is the TV twin of ListEligibleMoviesForSync:
+// shows whose episode edges are narrowed to the rows a missing-search pass
+// may act on — wanted, monitored, under the failure cap, past their cooldown
+// window (or never searched), already aired, and with no in-flight
+// download_record. Episodes without an air date are kept: an unknown air date
+// is not evidence the episode is unreleased.
+func (db *DB) ListEligibleEpisodesForSync(
+	ctx context.Context,
+	maxGrabFailures uint8,
+	notSearchedSince time.Time,
+	airedBefore time.Time,
+) ([]*ent.TVShow, error) {
+	eligible := []predicate.Episode{
+		episode.MonitoredEQ(true),
+		episode.StatusEQ(episode.StatusWanted),
+		episode.GrabFailuresLT(maxGrabFailures),
+		episode.Or(
+			episode.LastSearchAtIsNil(),
+			episode.LastSearchAtLT(notSearchedSince),
+		),
+		episode.Or(
+			episode.AirDateIsNil(),
+			episode.AirDateLTE(airedBefore),
+		),
+		episode.Not(episode.HasDownloadRecordsWith(
+			downloadrecord.StatusIn(
+				downloadrecord.StatusDownloading,
+				downloadrecord.StatusImporting,
+			),
+		)),
+	}
+	return db.client.TVShow.Query().
+		Where(tvshow.HasSeasonsWith(season.HasEpisodesWith(eligible...))).
+		WithSeasons(func(q *ent.SeasonQuery) {
+			q.Order(ent.Asc(season.FieldNumber)).
+				WithEpisodes(func(eq *ent.EpisodeQuery) {
+					eq.Where(eligible...).Order(ent.Asc(episode.FieldNumber))
+				})
 		}).
 		All(ctx)
 }

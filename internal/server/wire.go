@@ -253,23 +253,11 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 	// 9. Scheduler
 	sched := scheduler.New(scheduler.WithStateHook(jobsstate.NewHook(dbClient)))
 
-	missingSearcher, err := rss.NewMissingSearcher(store, indexerSvc, dlManager)
-	if err != nil {
-		dbClient.Close()
-		return nil, fmt.Errorf("create missing searcher: %w", err)
-	}
-	feedScanner, err := rss.NewFeedScanner(store, indexerSvc, dlManager)
-	if err != nil {
-		dbClient.Close()
-		return nil, fmt.Errorf("create rss feed scanner: %w", err)
-	}
+	missingSearcher := rss.NewMissingSearcher(store, indexerSvc, dlManager)
+	feedScanner := rss.NewFeedScanner(store, indexerSvc, dlManager)
 
 	reqSvc := request.NewService(store, movieSvc, tvSvc)
-	tvMissing, err := rss.NewEpisodeMissingSearcher(store, indexerSvc, dlManager)
-	if err != nil {
-		dbClient.Close()
-		return nil, fmt.Errorf("create tv missing searcher: %w", err)
-	}
+	tvMissing := rss.NewEpisodeMissingSearcher(store, indexerSvc, dlManager)
 
 	jobsToRegister := []struct {
 		name     string

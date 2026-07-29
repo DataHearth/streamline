@@ -2,8 +2,10 @@ package db
 
 import (
 	"context"
+	"time"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -11,13 +13,15 @@ import (
 
 var _ = Describe("TVShow store", Label("unit", "db"), func() {
 	var (
-		store Store
-		ctx   context.Context
+		store  Store
+		client *ent.Client
+		ctx    context.Context
 	)
 
 	BeforeEach(func() {
 		ctx = context.Background()
-		client, err := Open(ctx, ":memory:")
+		var err error
+		client, err = Open(ctx, ":memory:")
 		Expect(err).NotTo(HaveOccurred())
 		DeferCleanup(func() { Expect(client.Close()).To(Succeed()) })
 		store = New(client)
@@ -292,6 +296,121 @@ var _ = Describe("TVShow store", Label("unit", "db"), func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(shows2).To(HaveLen(1))
 		Expect(shows2[0].Edges.Seasons[0].Edges.Episodes).To(HaveLen(1))
+	})
+
+	Describe("ListEligibleEpisodesForSync", func() {
+		var (
+			show *ent.TVShow
+			eps  map[uint16]*ent.Episode
+		)
+
+		// One show, season 1, episodes 1 and 2 — both wanted, monitored,
+		// never searched, no air date. Every spec below makes exactly one of
+		// them ineligible and asserts the other survives.
+		BeforeEach(func() {
+			var err error
+			show, err = store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "X", Year: 2020, TvdbID: 42,
+				Seasons: []SeasonSeed{
+					{Number: 1, Episodes: []EpisodeSeed{{Number: 1}, {Number: 2}}},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			eps = map[uint16]*ent.Episode{}
+			for _, e := range show.Edges.Seasons[0].Edges.Episodes {
+				eps[e.Number] = e
+			}
+		})
+
+		// eligible runs the query with generous defaults and returns the
+		// episode numbers that survived.
+		eligible := func() []uint16 {
+			GinkgoHelper()
+			shows, err := store.ListEligibleEpisodesForSync(
+				ctx, 5, time.Now(), time.Now(),
+			)
+			Expect(err).NotTo(HaveOccurred())
+			var nums []uint16
+			for _, sh := range shows {
+				for _, se := range sh.Edges.Seasons {
+					for _, e := range se.Edges.Episodes {
+						nums = append(nums, e.Number)
+					}
+				}
+			}
+			return nums
+		}
+
+		It("returns wanted, monitored, never-searched episodes", func() {
+			Expect(eligible()).To(ConsistOf(uint16(1), uint16(2)))
+		})
+
+		It("excludes episodes at or above the grab-failure cap", func() {
+			Expect(client.Episode.UpdateOneID(eps[1].ID).
+				SetGrabFailures(5).Exec(ctx)).To(Succeed())
+			Expect(eligible()).To(ConsistOf(uint16(2)))
+		})
+
+		It("excludes episodes searched inside the cooldown window", func() {
+			Expect(store.SetEpisodeLastSearchAt(
+				ctx, eps[1].ID, time.Now().Add(-time.Minute),
+			)).To(Succeed())
+			shows, err := store.ListEligibleEpisodesForSync(
+				ctx, 5, time.Now().Add(-time.Hour), time.Now(),
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(shows[0].Edges.Seasons[0].Edges.Episodes).To(HaveLen(1))
+			Expect(
+				shows[0].Edges.Seasons[0].Edges.Episodes[0].Number,
+			).To(Equal(uint16(2)))
+		})
+
+		It("excludes episodes that have not aired yet", func() {
+			Expect(client.Episode.UpdateOneID(eps[1].ID).
+				SetAirDate(time.Now().Add(48 * time.Hour)).Exec(ctx)).To(Succeed())
+			Expect(eligible()).To(ConsistOf(uint16(2)))
+		})
+
+		It("keeps episodes that aired before the cutoff", func() {
+			Expect(client.Episode.UpdateOneID(eps[1].ID).
+				SetAirDate(time.Now().Add(-48 * time.Hour)).Exec(ctx)).To(Succeed())
+			Expect(eligible()).To(ConsistOf(uint16(1), uint16(2)))
+		})
+
+		It("excludes episodes with an in-flight download record", func() {
+			for _, status := range []downloadrecord.Status{
+				downloadrecord.StatusDownloading,
+				downloadrecord.StatusImporting,
+			} {
+				rec, err := store.CreateDownloadRecord(
+					ctx,
+					CreateDownloadRecordParams{
+						Title: "rel", Status: status, EpisodeID: eps[1].ID,
+					},
+				)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(eligible()).To(ConsistOf(uint16(2)))
+				Expect(
+					client.DownloadRecord.DeleteOneID(rec.ID).Exec(ctx),
+				).To(Succeed())
+			}
+		})
+
+		It("includes an episode whose only record failed", func() {
+			_, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "rel", Status: "failed", EpisodeID: eps[1].ID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(eligible()).To(ConsistOf(uint16(1), uint16(2)))
+		})
+
+		It("excludes unmonitored and non-wanted episodes", func() {
+			Expect(store.SetEpisodeMonitored(ctx, eps[1].ID, false)).To(Succeed())
+			Expect(store.SetEpisodeStatus(
+				ctx, eps[2].ID, episode.StatusAvailable,
+			)).To(Succeed())
+			Expect(eligible()).To(BeEmpty())
+		})
 	})
 
 	It("cascade-deletes seasons, episodes, and episode-linked records", func() {

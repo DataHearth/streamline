@@ -62,10 +62,15 @@ type EpisodeGrabber interface {
 	) (*ent.DownloadRecord, error)
 }
 
-// WantedEpisodeLister is the subset of db.Store that
+// EligibleEpisodeLister is the subset of db.Store that
 // rss.EpisodeMissingSearcher needs.
-type WantedEpisodeLister interface {
-	ListWantedEpisodes(ctx context.Context) ([]*ent.TVShow, error)
+type EligibleEpisodeLister interface {
+	ListEligibleEpisodesForSync(
+		ctx context.Context,
+		maxGrabFailures uint8,
+		notSearchedSince time.Time,
+		airedBefore time.Time,
+	) ([]*ent.TVShow, error)
 	SetEpisodeStatus(ctx context.Context, id uint32, status episode.Status) error
 	SetEpisodeLastSearchAt(ctx context.Context, id uint32, when time.Time) error
 	IncrementEpisodeGrabFailures(ctx context.Context, id uint32) error

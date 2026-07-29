@@ -463,6 +463,12 @@ type Store interface {
 	IncrementEpisodeGrabFailures(ctx context.Context, id uint32) error
 	ResetEpisodeGrabFailures(ctx context.Context, id uint32) error
 	ListWantedEpisodes(ctx context.Context) ([]*ent.TVShow, error)
+	ListEligibleEpisodesForSync(
+		ctx context.Context,
+		maxGrabFailures uint8,
+		notSearchedSince time.Time,
+		airedBefore time.Time,
+	) ([]*ent.TVShow, error)
 
 	// requests
 	CreateRequest(ctx context.Context, p CreateRequestParams) (*ent.Request, error)

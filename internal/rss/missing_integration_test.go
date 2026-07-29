@@ -96,7 +96,8 @@ var _ = Describe("MissingSearcher.Run", Label("integration", "rss"), func() {
 
 			// Raise the min-resolution bar so the only test result gets filtered out.
 			overlay := defaultRSSConfig()
-			overlay["library"].(map[string]any)["default_quality"].(map[string]any)["min_resolution"] = "1080p"
+			profiles := overlay["quality_profiles"].([]map[string]any)
+			profiles[0]["min_resolution"] = "1080p"
 			configtest.Setup(overlay)
 			syncer = newTestSearcher(dbClient, indexerM, dlM)
 

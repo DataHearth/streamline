@@ -15,6 +15,7 @@ import (
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/rss/mocks"
+	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
 
 var _ = Describe("MissingSearcher.Run", Label("unit", "rss"), func() {
@@ -34,9 +35,7 @@ var _ = Describe("MissingSearcher.Run", Label("unit", "rss"), func() {
 		indexerM = mocks.NewMockIndexerSearcher(GinkgoT())
 		dlM = mocks.NewMockDownloader(GinkgoT())
 
-		s, err := NewMissingSearcher(store, indexerM, dlM)
-		Expect(err).NotTo(HaveOccurred())
-		syncer = s
+		syncer = NewMissingSearcher(store, indexerM, dlM)
 	})
 
 	When("no movies are eligible", func() {
@@ -60,6 +59,36 @@ var _ = Describe("MissingSearcher.Run", Label("unit", "rss"), func() {
 				Return(nil, boom).Once()
 
 			Expect(syncer.Run(ctx)).To(MatchError(boom))
+		})
+	})
+
+	When("the library knobs change after construction", func() {
+		It("queries with the edited cap and cooldown", func() {
+			overlay := defaultRSSConfig()
+			library := overlay["library"].(map[string]any)
+			library["max_grab_failures"] = 7
+			library["no_match_cooldown"] = "1h"
+			configtest.Setup(overlay)
+
+			var cutoff time.Time
+			store.EXPECT().
+				ListEligibleMoviesForSync(
+					mock.Anything,
+					uint8(7),
+					mock.AnythingOfType("time.Time"),
+				).
+				Run(func(_ context.Context, _ uint8, notSearchedSince time.Time) {
+					cutoff = notSearchedSince
+				}).
+				Return(nil, nil).Once()
+			store.EXPECT().
+				CountMoviesByStatus(mock.Anything, entmovie.StatusWanted).
+				Return(0, nil).Once()
+
+			Expect(syncer.Run(ctx)).To(Succeed())
+			Expect(cutoff).To(
+				BeTemporally("~", time.Now().Add(-time.Hour), time.Minute),
+			)
 		})
 	})
 
@@ -245,9 +274,7 @@ var _ = Describe("MissingSearcher.SearchOne", Label("unit", "rss"), func() {
 		indexerM = mocks.NewMockIndexerSearcher(GinkgoT())
 		dlM = mocks.NewMockDownloader(GinkgoT())
 
-		s, err := NewMissingSearcher(store, indexerM, dlM)
-		Expect(err).NotTo(HaveOccurred())
-		syncer = s
+		syncer = NewMissingSearcher(store, indexerM, dlM)
 
 		movie = &ent.Movie{ID: 7, Title: "Fight Club", TmdbID: 550}
 	})
@@ -315,5 +342,52 @@ var _ = Describe("MissingSearcher.SearchOne", Label("unit", "rss"), func() {
 
 		Expect(syncer.SearchOne(ctx, movie)).
 			To(MatchError(ContainSubstring("qbit down")))
+	})
+
+	Context("when the movie pins a quality profile", func() {
+		BeforeEach(func() { movie.QualityProfile = uhdProfile })
+
+		It("rejects a release that only clears the default profile", func() {
+			indexerM.EXPECT().
+				SearchMovie(mock.AnythingOfType(ctxType), []string{"Fight Club", ""}, uint32(550)).
+				Return([]indexer.SearchResult{
+					{
+						Title:   "Fight.Club.1999.1080p.BluRay.x264-GROUP",
+						Seeders: 50,
+					},
+				}, nil).Once()
+			store.EXPECT().
+				SetMovieLastSearchAt(mock.AnythingOfType(ctxType), uint32(7), mock.AnythingOfType("time.Time")).
+				Return(nil).Once()
+
+			Expect(syncer.SearchOne(ctx, movie)).To(MatchError(ErrNoEligibleRelease))
+		})
+
+		It("grabs the first release clearing the pinned floor", func() {
+			uhd := indexer.SearchResult{
+				Title:   "Fight.Club.1999.2160p.BluRay.x265-GROUP",
+				Seeders: 5,
+			}
+			indexerM.EXPECT().
+				SearchMovie(mock.AnythingOfType(ctxType), []string{"Fight Club", ""}, uint32(550)).
+				Return([]indexer.SearchResult{
+					{
+						Title:   "Fight.Club.1999.1080p.BluRay.x264-GROUP",
+						Seeders: 50,
+					},
+					uhd,
+				}, nil).Once()
+			store.EXPECT().
+				SetMovieLastSearchAt(mock.AnythingOfType(ctxType), uint32(7), mock.AnythingOfType("time.Time")).
+				Return(nil).Once()
+			dlM.EXPECT().
+				Grab(mock.AnythingOfType(ctxType), uhd, uint32(7)).
+				Return(&ent.DownloadRecord{}, nil).Once()
+			store.EXPECT().
+				ResetMovieGrabFailures(mock.AnythingOfType(ctxType), uint32(7)).
+				Return(nil).Once()
+
+			Expect(syncer.SearchOne(ctx, movie)).To(Succeed())
+		})
 	})
 })

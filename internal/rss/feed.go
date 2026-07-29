@@ -30,26 +30,18 @@ type FeedScanner struct {
 	store    db.Store
 	indexers IndexerFeeder
 	grabber  Downloader
-	quality  QualityConfig
 }
 
-// NewFeedScanner builds a FeedScanner using library.default_quality from the
-// config singleton. Returns an error if the cooldown duration fails to parse.
 func NewFeedScanner(
 	store db.Store,
 	indexers IndexerFeeder,
 	grabber Downloader,
-) (*FeedScanner, error) {
-	q, err := loadQualityConfig()
-	if err != nil {
-		return nil, err
-	}
+) *FeedScanner {
 	return &FeedScanner{
 		store:    store,
 		indexers: indexers,
 		grabber:  grabber,
-		quality:  q,
-	}, nil
+	}
 }
 
 func (s *FeedScanner) Run(ctx context.Context) error {
@@ -108,7 +100,7 @@ func (s *FeedScanner) processItems(
 		if _, already := grabbed[m.ID]; already {
 			continue
 		}
-		if !s.quality.Accepts(item.Title) {
+		if !qualityFor(ctx, m.QualityProfile).Accepts(item.Title) {
 			slog.DebugContext(ctx, "feed-scan: quality rejected",
 				"movie", m.Title, "release", item.Title)
 			continue

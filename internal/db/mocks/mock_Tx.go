@@ -4527,6 +4527,67 @@ func (_c *MockTx_ListDownloadingRecordsWithMovie_Call) RunAndReturn(run func(con
 	return _c
 }
 
+// ListEligibleEpisodesForSync provides a mock function with given fields: ctx, maxGrabFailures, notSearchedSince, airedBefore
+func (_m *MockTx) ListEligibleEpisodesForSync(ctx context.Context, maxGrabFailures uint8, notSearchedSince time.Time, airedBefore time.Time) ([]*ent.TVShow, error) {
+	ret := _m.Called(ctx, maxGrabFailures, notSearchedSince, airedBefore)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListEligibleEpisodesForSync")
+	}
+
+	var r0 []*ent.TVShow
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uint8, time.Time, time.Time) ([]*ent.TVShow, error)); ok {
+		return rf(ctx, maxGrabFailures, notSearchedSince, airedBefore)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uint8, time.Time, time.Time) []*ent.TVShow); ok {
+		r0 = rf(ctx, maxGrabFailures, notSearchedSince, airedBefore)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ent.TVShow)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uint8, time.Time, time.Time) error); ok {
+		r1 = rf(ctx, maxGrabFailures, notSearchedSince, airedBefore)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockTx_ListEligibleEpisodesForSync_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListEligibleEpisodesForSync'
+type MockTx_ListEligibleEpisodesForSync_Call struct {
+	*mock.Call
+}
+
+// ListEligibleEpisodesForSync is a helper method to define mock.On call
+//   - ctx context.Context
+//   - maxGrabFailures uint8
+//   - notSearchedSince time.Time
+//   - airedBefore time.Time
+func (_e *MockTx_Expecter) ListEligibleEpisodesForSync(ctx interface{}, maxGrabFailures interface{}, notSearchedSince interface{}, airedBefore interface{}) *MockTx_ListEligibleEpisodesForSync_Call {
+	return &MockTx_ListEligibleEpisodesForSync_Call{Call: _e.mock.On("ListEligibleEpisodesForSync", ctx, maxGrabFailures, notSearchedSince, airedBefore)}
+}
+
+func (_c *MockTx_ListEligibleEpisodesForSync_Call) Run(run func(ctx context.Context, maxGrabFailures uint8, notSearchedSince time.Time, airedBefore time.Time)) *MockTx_ListEligibleEpisodesForSync_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(uint8), args[2].(time.Time), args[3].(time.Time))
+	})
+	return _c
+}
+
+func (_c *MockTx_ListEligibleEpisodesForSync_Call) Return(_a0 []*ent.TVShow, _a1 error) *MockTx_ListEligibleEpisodesForSync_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockTx_ListEligibleEpisodesForSync_Call) RunAndReturn(run func(context.Context, uint8, time.Time, time.Time) ([]*ent.TVShow, error)) *MockTx_ListEligibleEpisodesForSync_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListEligibleMoviesForSync provides a mock function with given fields: ctx, maxGrabFailures, notSearchedSince
 func (_m *MockTx) ListEligibleMoviesForSync(ctx context.Context, maxGrabFailures uint8, notSearchedSince time.Time) ([]*ent.Movie, error) {
 	ret := _m.Called(ctx, maxGrabFailures, notSearchedSince)

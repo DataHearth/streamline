@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -75,53 +76,52 @@ type MissingSearcher struct {
 	db        db.Store
 	indexers  IndexerSearcher
 	downloads Downloader
-	quality   QualityConfig
 	workers   uint8
 }
 
-// NewMissingSearcher builds a MissingSearcher using library.default_quality
-// from the config singleton. Returns an error if the NoMatchCooldown duration
-// fails to parse.
 func NewMissingSearcher(
 	store db.Store,
 	indexers IndexerSearcher,
 	downloads Downloader,
-) (*MissingSearcher, error) {
-	q, err := loadQualityConfig()
-	if err != nil {
-		return nil, err
-	}
+) *MissingSearcher {
 	return &MissingSearcher{
 		db:        store,
 		indexers:  indexers,
 		downloads: downloads,
-		quality:   q,
 		workers:   defaultRSSWorkers,
-	}, nil
+	}
 }
 
-// loadQualityConfig builds a QualityConfig from the default quality profile
-// plus the global library knobs, parsing the cooldown duration string.
-func loadQualityConfig() (QualityConfig, error) {
+// searchWindow holds the library knobs that gate which rows a search pass may
+// touch. Read fresh at the start of every pass: config is hot-editable, so a
+// snapshot taken at construction would pin the operator to boot-time values.
+type searchWindow struct {
+	MaxGrabFailures  uint8
+	NotSearchedSince time.Time
+}
+
+func currentSearchWindow() (searchWindow, error) {
 	c := config.Get()
-	p, ok := config.ResolveQualityProfile("")
-	if !ok {
-		return QualityConfig{}, fmt.Errorf("no quality profile configured")
-	}
 	cooldown, err := time.ParseDuration(c.Library.NoMatchCooldown)
 	if err != nil {
-		return QualityConfig{}, fmt.Errorf(
+		return searchWindow{}, fmt.Errorf(
 			"parse library.no_match_cooldown: %w",
 			err,
 		)
 	}
-	return QualityConfig{
-		PreferredResolution: p.PreferredResolution,
-		MinResolution:       p.MinResolution,
-		UpgradeAllowed:      p.UpgradeAllowed,
-		NoMatchCooldown:     cooldown,
-		MaxGrabFailures:     c.Library.MaxGrabFailures,
+	return searchWindow{
+		MaxGrabFailures:  c.Library.MaxGrabFailures,
+		NotSearchedSince: time.Now().Add(-cooldown),
 	}, nil
+}
+
+// unthrottledWindow waives both throttles for user-triggered searches: a cap
+// no counter reaches and a cutoff every past search predates.
+func unthrottledWindow() searchWindow {
+	return searchWindow{
+		MaxGrabFailures:  math.MaxUint8,
+		NotSearchedSince: time.Now(),
+	}
 }
 
 // Run performs one sync pass over all eligible wanted movies.
@@ -139,7 +139,16 @@ func (s *MissingSearcher) Run(ctx context.Context) error {
 		syncRuns.Add(ctx, 1, attrs)
 	}()
 
-	movies, err := s.eligibleMovies(ctx)
+	window, err := currentSearchWindow()
+	if err != nil {
+		outcome = "config_invalid"
+		return otelx.RecordSpanError(span, err)
+	}
+	movies, err := s.db.ListEligibleMoviesForSync(
+		ctx,
+		window.MaxGrabFailures,
+		window.NotSearchedSince,
+	)
 	if err != nil {
 		outcome = "query_failed"
 		return otelx.RecordSpanError(span, err)
@@ -154,8 +163,8 @@ func (s *MissingSearcher) Run(ctx context.Context) error {
 		}
 		slog.InfoContext(ctx, "missing-search: no eligible movies",
 			"wanted_total", wanted,
-			"max_grab_failures", s.quality.MaxGrabFailures,
-			"no_match_cooldown", s.quality.NoMatchCooldown.String(),
+			"max_grab_failures", window.MaxGrabFailures,
+			"not_searched_since", window.NotSearchedSince,
 		)
 		outcome = "no_eligible"
 		return nil
@@ -212,16 +221,6 @@ func (s *MissingSearcher) Run(ctx context.Context) error {
 	return nil
 }
 
-// eligibleMovies returns wanted movies that are not over the grab-failure
-// cap and whose cooldown has expired (or has never run).
-func (s *MissingSearcher) eligibleMovies(ctx context.Context) ([]*ent.Movie, error) {
-	return s.db.ListEligibleMoviesForSync(
-		ctx,
-		s.quality.MaxGrabFailures,
-		time.Now().Add(-s.quality.NoMatchCooldown),
-	)
-}
-
 // SearchOne runs one indexer query for movie m, applies the quality filter,
 // and dispatches a grab on the first acceptable result.
 //
@@ -258,7 +257,7 @@ func (s *MissingSearcher) SearchOne(ctx context.Context, m *ent.Movie) error {
 		)
 	}
 
-	match, ok := s.pickBest(results)
+	match, ok := pickBest(qualityFor(ctx, m.QualityProfile), results)
 	if e := s.db.SetMovieLastSearchAt(ctx, m.ID, time.Now()); e != nil {
 		slog.WarnContext(ctx,
 			"missing-search: failed to update last_search_at",
@@ -311,11 +310,12 @@ func (s *MissingSearcher) SearchOne(ctx context.Context, m *ent.Movie) error {
 // pickBest returns the first result that passes the quality filter.
 // Results are assumed to be sorted by seeders desc by the caller
 // (indexer.Service already does this).
-func (s *MissingSearcher) pickBest(
+func pickBest(
+	quality QualityConfig,
 	results []indexer.SearchResult,
 ) (indexer.SearchResult, bool) {
 	for _, r := range results {
-		if s.quality.Accepts(r.Title) {
+		if quality.Accepts(r.Title) {
 			return r, true
 		}
 	}

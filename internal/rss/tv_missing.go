@@ -7,6 +7,7 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/episode"
+	"github.com/datahearth/streamline/internal/otelx"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -15,42 +16,37 @@ import (
 // the best matching release per season. When a whole season is wanted it
 // prefers a single season pack over per-episode grabs.
 type EpisodeMissingSearcher struct {
-	store     WantedEpisodeLister
+	store     EligibleEpisodeLister
 	indexers  TVIndexerSearcher
 	downloads EpisodeGrabber
-	quality   QualityConfig
 }
 
-// NewEpisodeMissingSearcher builds the searcher from the default quality
-// profile plus the global library knobs. Returns an error when the cooldown
-// duration fails to parse.
 func NewEpisodeMissingSearcher(
-	store WantedEpisodeLister,
+	store EligibleEpisodeLister,
 	indexers TVIndexerSearcher,
 	downloads EpisodeGrabber,
-) (*EpisodeMissingSearcher, error) {
-	q, err := loadQualityConfig()
-	if err != nil {
-		return nil, err
-	}
+) *EpisodeMissingSearcher {
 	return &EpisodeMissingSearcher{
 		store:     store,
 		indexers:  indexers,
 		downloads: downloads,
-		quality:   q,
-	}, nil
+	}
 }
 
-// Run performs one pass over every show with wanted episodes. Per-season
-// errors are logged and never abort the pass; only a failure to list wanted
+// Run performs one pass over every show with searchable episodes. Per-season
+// errors are logged and never abort the pass; only a failure to list eligible
 // shows is returned. Satisfies the MissingSearchRunner contract used by jobs.
 func (s *EpisodeMissingSearcher) Run(ctx context.Context) error {
 	ctx, span := tracer.Start(ctx, "rss.tv_missing_search")
 	defer span.End()
 
-	shows, err := s.store.ListWantedEpisodes(ctx)
+	window, err := currentSearchWindow()
 	if err != nil {
-		return err
+		return otelx.RecordSpanError(span, err)
+	}
+	shows, err := s.eligibleShows(ctx, window)
+	if err != nil {
+		return otelx.RecordSpanError(span, err)
 	}
 	span.SetAttributes(attribute.Int("shows.count", len(shows)))
 	for _, show := range shows {
@@ -62,9 +58,11 @@ func (s *EpisodeMissingSearcher) Run(ctx context.Context) error {
 	return nil
 }
 
-// SearchShow runs one search-and-grab pass scoped to a single series. It
-// reuses the wanted-episode query and processes only the matching show, so a
-// show with no wanted episodes is a no-op. Powers POST /series/{id}/search.
+// SearchShow runs one search-and-grab pass scoped to a single series, so a
+// show with nothing searchable is a no-op. Powers POST /series/{id}/search.
+// A user asked for this pass, so the operator throttles are waived — matching
+// the movie twin, where SearchMovieNow calls SearchOne directly instead of
+// going through the eligibility query. The hard guards still apply.
 func (s *EpisodeMissingSearcher) SearchShow(
 	ctx context.Context,
 	showID uint32,
@@ -74,9 +72,9 @@ func (s *EpisodeMissingSearcher) SearchShow(
 	)
 	defer span.End()
 
-	shows, err := s.store.ListWantedEpisodes(ctx)
+	shows, err := s.eligibleShows(ctx, unthrottledWindow())
 	if err != nil {
-		return err
+		return otelx.RecordSpanError(span, err)
 	}
 	for _, show := range shows {
 		if show.ID != showID {
@@ -90,10 +88,23 @@ func (s *EpisodeMissingSearcher) SearchShow(
 	return nil
 }
 
+func (s *EpisodeMissingSearcher) eligibleShows(
+	ctx context.Context,
+	window searchWindow,
+) ([]*ent.TVShow, error) {
+	return s.store.ListEligibleEpisodesForSync(
+		ctx,
+		window.MaxGrabFailures,
+		window.NotSearchedSince,
+		time.Now(),
+	)
+}
+
 // processSeason searches and grabs for one season's wanted episodes. The
-// season's episode edge is already filtered to monitored+wanted rows by
-// ListWantedEpisodes. With two or more wanted episodes it tries a season pack
-// first; otherwise (or on no acceptable pack) it falls back to per-episode.
+// season's episode edge is already filtered to searchable rows by
+// ListEligibleEpisodesForSync. With two or more wanted episodes it tries a
+// season pack first; otherwise (or on no acceptable pack) it falls back to
+// per-episode.
 func (s *EpisodeMissingSearcher) processSeason(
 	ctx context.Context,
 	show *ent.TVShow,
@@ -104,14 +115,16 @@ func (s *EpisodeMissingSearcher) processSeason(
 	if len(wanted) == 0 {
 		return
 	}
+	quality := qualityFor(ctx, show.QualityProfile)
 
 	// Prefer a season pack when the whole season (2+ episodes) is wanted.
-	if len(wanted) >= 2 && s.grabSeasonPack(ctx, show, se, titles, wanted) {
+	if len(wanted) >= 2 &&
+		s.grabSeasonPack(ctx, show, se, titles, wanted, quality) {
 		return
 	}
 
 	for _, e := range wanted {
-		s.grabEpisode(ctx, show, se, e, titles)
+		s.grabEpisode(ctx, show, se, e, titles, quality)
 	}
 }
 
@@ -124,6 +137,7 @@ func (s *EpisodeMissingSearcher) grabSeasonPack(
 	se *ent.Season,
 	titles []string,
 	wanted []*ent.Episode,
+	quality QualityConfig,
 ) bool {
 	ctx, span := tracer.Start(ctx, "rss.tv_season_pack",
 		trace.WithAttributes(
@@ -140,7 +154,7 @@ func (s *EpisodeMissingSearcher) grabSeasonPack(
 		return false
 	}
 	for _, r := range packs {
-		if !s.quality.Accepts(r.Title) {
+		if !quality.Accepts(r.Title) {
 			continue
 		}
 		if _, err := s.downloads.GrabEpisode(ctx, r, wanted[0].ID); err != nil {
@@ -171,6 +185,7 @@ func (s *EpisodeMissingSearcher) grabEpisode(
 	se *ent.Season,
 	e *ent.Episode,
 	titles []string,
+	quality QualityConfig,
 ) {
 	results, err := s.indexers.SearchEpisode(
 		ctx, titles, show.TvdbID, se.Number, e.Number,
@@ -183,7 +198,7 @@ func (s *EpisodeMissingSearcher) grabEpisode(
 	}
 
 	for _, r := range results {
-		if !s.quality.Accepts(r.Title) {
+		if !quality.Accepts(r.Title) {
 			continue
 		}
 		if _, err := s.downloads.GrabEpisode(ctx, r, e.ID); err != nil {

@@ -37,9 +37,7 @@ var _ = Describe("FeedScanner.Run", Label("unit", "rss"), func() {
 	)
 
 	newScanner := func() {
-		var err error
-		scanner, err = NewFeedScanner(store, feeder, grabber)
-		Expect(err).NotTo(HaveOccurred())
+		scanner = NewFeedScanner(store, feeder, grabber)
 	}
 
 	BeforeEach(func() {
@@ -96,6 +94,23 @@ var _ = Describe("FeedScanner.Run", Label("unit", "rss"), func() {
 				{Title: "Dune.2021.480p.CAM.XViD-LOL"},
 			}, nil).Once()
 		// No grabber/store EXPECTs — quality reject means no further calls.
+		Expect(scanner.Run(ctx)).To(Succeed())
+	})
+
+	It("filters against the movie's own profile, not the default", func() {
+		configtest.Setup(defaultRSSConfig(), indexerConfig("a"))
+		newScanner()
+		wanted := &ent.Movie{
+			ID: 7, TmdbID: 42, Title: "Dune", Year: 2021,
+			QualityProfile: uhdProfile,
+		}
+		store.EXPECT().ListWantedMovies(mock.Anything).
+			Return([]*ent.Movie{wanted}, nil).Once()
+		// 1080p clears the default profile but not the movie's 2160p floor.
+		feeder.EXPECT().Feed(mock.Anything, "a").
+			Return([]indexer.SearchResult{
+				{Title: "Dune.2021.1080p.BluRay.x264-GROUP"},
+			}, nil).Once()
 		Expect(scanner.Run(ctx)).To(Succeed())
 	})
 

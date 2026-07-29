@@ -21,39 +21,46 @@ var _ = BeforeSuite(func() {
 	DeferCleanup(testutil.InstallSlog())
 })
 
-// Seed the config singleton with default quality settings for every spec.
-// Specs that need a different MinResolution / cooldown / max_grab_failures
-// call configtest.Setup again inside their own BeforeEach with overrides.
+// Seed the config singleton with the quality/library knobs every spec runs
+// against. Specs that need different values call configtest.Setup again
+// inside their own BeforeEach with overrides.
 var _ = BeforeEach(func() {
 	configtest.Setup(defaultRSSConfig())
 })
 
-// defaultRSSConfig returns the minimum library.default_quality overlay the
-// rss.New constructor needs. Helpers merge their own values on top.
+const uhdProfile = "uhd"
+
+// defaultRSSConfig returns the quality + library overlay the rss specs run
+// against: a 720p-floor default profile plus a 2160p-floor "uhd" profile so
+// per-item profile resolution is exercised against a real second profile.
 func defaultRSSConfig() map[string]any {
 	return map[string]any{
 		"library": map[string]any{
-			"default_quality": map[string]any{
+			"no_match_cooldown": "6h",
+			"max_grab_failures": 3,
+		},
+		"quality_default_profile": "default",
+		"quality_profiles": []map[string]any{
+			{
+				"name":                 "default",
 				"preferred_resolution": "1080p",
 				"min_resolution":       "720p",
 				"upgrade_allowed":      true,
-				"no_match_cooldown":    "6h",
-				"max_grab_failures":    3,
+			},
+			{
+				"name":                 uhdProfile,
+				"preferred_resolution": "2160p",
+				"min_resolution":       "2160p",
+				"upgrade_allowed":      true,
 			},
 		},
 	}
 }
 
-// newTestSearcher builds a MissingSearcher under test, failing the spec on
-// construction errors. Used in place of direct rss.NewMissingSearcher calls
-// so tests don't need to handle construction errors inline.
 func newTestSearcher(
 	client *ent.Client,
 	indexers IndexerSearcher,
 	downloads Downloader,
 ) *MissingSearcher {
-	GinkgoHelper()
-	s, err := NewMissingSearcher(db.New(client), indexers, downloads)
-	Expect(err).NotTo(HaveOccurred())
-	return s
+	return NewMissingSearcher(db.New(client), indexers, downloads)
 }

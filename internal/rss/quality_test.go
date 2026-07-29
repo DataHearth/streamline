@@ -1,8 +1,6 @@
 package rss
 
 import (
-	"time"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -13,8 +11,6 @@ var _ = Describe("QualityConfig.Accepts", Label("unit", "rss"), func() {
 			PreferredResolution: "1080p",
 			MinResolution:       "720p",
 			UpgradeAllowed:      true,
-			NoMatchCooldown:     6 * time.Hour,
-			MaxGrabFailures:     3,
 		}
 	}
 
