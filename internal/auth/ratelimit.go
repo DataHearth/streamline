@@ -19,38 +19,32 @@ type limiter struct {
 	windows map[string][]time.Time
 	limit   uint8
 	window  time.Duration
-	now     func() time.Time
 }
 
 // NewLimiter returns a Limiter allowing `limit` hits per key within `window`.
 func NewLimiter(limit uint8, window time.Duration) Limiter {
-	return NewLimiterWithClock(limit, window, time.Now)
-}
-
-// NewLimiterWithClock is NewLimiter with a pluggable clock for deterministic
-// tests.
-func NewLimiterWithClock(
-	limit uint8,
-	window time.Duration,
-	now func() time.Time,
-) Limiter {
 	return &limiter{
 		windows: make(map[string][]time.Time),
 		limit:   limit,
 		window:  window,
-		now:     now,
 	}
 }
 
-// pruneLocked drops timestamps older than the window. Caller must hold mu.
+// pruneLocked drops timestamps older than the window, deleting the key
+// outright once nothing remains — otherwise every client IP ever seen would
+// leave a permanent map entry. Caller must hold mu.
 func (l *limiter) pruneLocked(key string) []time.Time {
-	cutoff := l.now().Add(-l.window)
+	cutoff := time.Now().Add(-l.window)
 	w := l.windows[key]
 	kept := make([]time.Time, 0, len(w))
 	for _, t := range w {
 		if t.After(cutoff) {
 			kept = append(kept, t)
 		}
+	}
+	if len(kept) == 0 {
+		delete(l.windows, key)
+		return nil
 	}
 	l.windows[key] = kept
 	return kept
@@ -65,7 +59,7 @@ func (l *limiter) Allow(key string) bool {
 	if len(w) >= int(l.limit) {
 		return false
 	}
-	l.windows[key] = append(w, l.now())
+	l.windows[key] = append(w, time.Now())
 	return true
 }
 
@@ -80,5 +74,5 @@ func (l *limiter) RetryAfter(key string) time.Duration {
 		return 0
 	}
 	oldest := w[0]
-	return l.window - l.now().Sub(oldest)
+	return l.window - time.Since(oldest)
 }

@@ -194,10 +194,10 @@ func (db *DB) UpdateUser(
 }
 
 // DeleteUser permanently removes the user and all dependent data (api keys,
-// oidc identities, requests, sessions) via ON DELETE CASCADE at the schema
-// level. Requests the user approved for others are preserved with
-// approved_by set to NULL (ON DELETE SET NULL) so the request history of
-// other users is not corrupted.
+// oidc identities, requests, sessions, invites they created) via ON DELETE
+// CASCADE at the schema level. Requests the user approved for others are
+// preserved with approved_by set to NULL, as are invites they consumed
+// (ON DELETE SET NULL), so the history of other users is not corrupted.
 //
 // GDPR-compliant: every row that belongs to the user is erased atomically.
 func (db *DB) DeleteUser(ctx context.Context, id uint32) error {

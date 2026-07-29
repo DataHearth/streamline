@@ -80,6 +80,15 @@ var _ = Describe("LoginOIDC unit", Label("unit", "auth"), func() {
 		})
 	})
 
+	// newUserTx wires the transaction the new-user provisioning path opens
+	// around user creation, identity creation and invite consumption.
+	newUserTx := func() *dbmocks.MockTx {
+		GinkgoHelper()
+		tx := dbmocks.NewMockTx(GinkgoT())
+		storeMock.Tx(mock.AnythingOfType(ctxType)).Return(tx, nil).Once()
+		return tx
+	}
+
 	When("an OIDC identity already exists", func() {
 		It("logs in the linked user without re-syncing when claims match", func() {
 			owner := &ent.User{
@@ -375,15 +384,19 @@ var _ = Describe("LoginOIDC unit", Label("unit", "auth"), func() {
 				Once()
 			storeMock.FindUserByEmail(mock.AnythingOfType(ctxType), "u@x.com").
 				Return(nil, &ent.NotFoundError{}).Once()
-			storeMock.CreateUser(mock.AnythingOfType(ctxType), mock.MatchedBy(func(p db.CreateUserParams) bool {
-				return p.Email == "u@x.com" && p.Role == entuser.RoleMember &&
-					p.AuthMethod == entuser.AuthMethodOidc
-			})).
+			tx := newUserTx()
+			tx.EXPECT().
+				CreateUser(mock.AnythingOfType(ctxType), mock.MatchedBy(func(p db.CreateUserParams) bool {
+					return p.Email == "u@x.com" && p.Role == entuser.RoleMember &&
+						p.AuthMethod == entuser.AuthMethodOidc
+				})).
 				Return(&ent.User{ID: 1, Email: "u@x.com"}, nil).
 				Once()
-			storeMock.CreateOIDCIdentity(mock.AnythingOfType(ctxType), mock.AnythingOfType("db.CreateOIDCIdentityParams")).
+			tx.EXPECT().
+				CreateOIDCIdentity(mock.AnythingOfType(ctxType), mock.AnythingOfType("db.CreateOIDCIdentityParams")).
 				Return(&ent.OIDCIdentity{ID: 1}, nil).
 				Once()
+			tx.EXPECT().Commit().Return(nil).Once()
 			storeMock.CreateSession(mock.AnythingOfType(ctxType), mock.AnythingOfType("db.CreateSessionParams")).
 				Return(&ent.Session{ID: 1}, nil).
 				Once()
@@ -476,17 +489,22 @@ var _ = Describe("LoginOIDC unit", Label("unit", "auth"), func() {
 			storeMock.FindUnusedInviteForEmail(mock.AnythingOfType(ctxType), "u@x.com", mock.AnythingOfType("time.Time")).
 				Return(&ent.Invite{ID: 9, Role: invite.RoleAdmin, ExpiresAt: time.Now().Add(time.Hour)}, nil).
 				Once()
-			storeMock.MarkInviteUsed(mock.AnythingOfType(ctxType), uint32(9), mock.AnythingOfType("time.Time")).
-				Return(&ent.Invite{ID: 9}, nil).
-				Once()
-			storeMock.CreateUser(mock.AnythingOfType(ctxType), mock.MatchedBy(func(p db.CreateUserParams) bool {
-				return p.Role == entuser.RoleAdmin
-			})).
+			tx := newUserTx()
+			tx.EXPECT().
+				CreateUser(mock.AnythingOfType(ctxType), mock.MatchedBy(func(p db.CreateUserParams) bool {
+					return p.Role == entuser.RoleAdmin
+				})).
 				Return(&ent.User{ID: 1, Role: entuser.RoleAdmin}, nil).
 				Once()
-			storeMock.CreateOIDCIdentity(mock.AnythingOfType(ctxType), mock.AnythingOfType("db.CreateOIDCIdentityParams")).
+			tx.EXPECT().
+				CreateOIDCIdentity(mock.AnythingOfType(ctxType), mock.AnythingOfType("db.CreateOIDCIdentityParams")).
 				Return(&ent.OIDCIdentity{ID: 1}, nil).
 				Once()
+			tx.EXPECT().
+				ConsumeInvite(mock.AnythingOfType(ctxType), uint32(9), uint32(1), mock.AnythingOfType("time.Time")).
+				Return(nil).
+				Once()
+			tx.EXPECT().Commit().Return(nil).Once()
 			storeMock.CreateSession(mock.AnythingOfType(ctxType), mock.AnythingOfType("db.CreateSessionParams")).
 				Return(&ent.Session{ID: 1}, nil).
 				Once()
@@ -505,7 +523,7 @@ var _ = Describe("LoginOIDC unit", Label("unit", "auth"), func() {
 			Expect(u.Role).To(Equal(entuser.RoleAdmin))
 		})
 
-		It("wraps MarkInviteUsed errors", func() {
+		It("leaves the invite unconsumed when user creation fails", func() {
 			storeMock.FindOIDCIdentity(mock.AnythingOfType(ctxType), "google", "sub-1").
 				Return(nil, &ent.NotFoundError{}).
 				Once()
@@ -514,9 +532,12 @@ var _ = Describe("LoginOIDC unit", Label("unit", "auth"), func() {
 			storeMock.FindUnusedInviteForEmail(mock.AnythingOfType(ctxType), "u@x.com", mock.AnythingOfType("time.Time")).
 				Return(&ent.Invite{ID: 9, Role: invite.RoleMember, ExpiresAt: time.Now().Add(time.Hour)}, nil).
 				Once()
-			storeMock.MarkInviteUsed(mock.AnythingOfType(ctxType), uint32(9), mock.AnythingOfType("time.Time")).
-				Return(nil, errors.New("mark fail")).
+			tx := newUserTx()
+			tx.EXPECT().
+				CreateUser(mock.AnythingOfType(ctxType), mock.AnythingOfType("db.CreateUserParams")).
+				Return(nil, errors.New("create fail")).
 				Once()
+			tx.EXPECT().Rollback().Return(nil).Once()
 
 			_, _, err := svc.LoginOIDC(
 				ctx,
@@ -528,8 +549,85 @@ var _ = Describe("LoginOIDC unit", Label("unit", "auth"), func() {
 				nil,
 				SessionMeta{},
 			)
-			Expect(err).To(MatchError(ContainSubstring("mark invite used")))
+			Expect(err).To(MatchError(ContainSubstring("create user")))
 		})
+
+		It("wraps ConsumeInvite errors and rolls back", func() {
+			storeMock.FindOIDCIdentity(mock.AnythingOfType(ctxType), "google", "sub-1").
+				Return(nil, &ent.NotFoundError{}).
+				Once()
+			storeMock.FindUserByEmail(mock.AnythingOfType(ctxType), "u@x.com").
+				Return(nil, &ent.NotFoundError{}).Once()
+			storeMock.FindUnusedInviteForEmail(mock.AnythingOfType(ctxType), "u@x.com", mock.AnythingOfType("time.Time")).
+				Return(&ent.Invite{ID: 9, Role: invite.RoleMember, ExpiresAt: time.Now().Add(time.Hour)}, nil).
+				Once()
+			tx := newUserTx()
+			tx.EXPECT().
+				CreateUser(mock.AnythingOfType(ctxType), mock.AnythingOfType("db.CreateUserParams")).
+				Return(&ent.User{ID: 1}, nil).
+				Once()
+			tx.EXPECT().
+				CreateOIDCIdentity(mock.AnythingOfType(ctxType), mock.AnythingOfType("db.CreateOIDCIdentityParams")).
+				Return(&ent.OIDCIdentity{ID: 1}, nil).
+				Once()
+			tx.EXPECT().
+				ConsumeInvite(mock.AnythingOfType(ctxType), uint32(9), uint32(1), mock.AnythingOfType("time.Time")).
+				Return(errors.New("consume fail")).
+				Once()
+			tx.EXPECT().Rollback().Return(nil).Once()
+
+			_, _, err := svc.LoginOIDC(
+				ctx,
+				"google",
+				"sub-1",
+				"u@x.com",
+				"U",
+				true,
+				nil,
+				SessionMeta{},
+			)
+			Expect(err).To(MatchError(ContainSubstring("consume invite")))
+		})
+
+		It(
+			"rejects with ErrOIDCNoInvite when the invite was consumed concurrently",
+			func() {
+				storeMock.FindOIDCIdentity(mock.AnythingOfType(ctxType), "google", "sub-1").
+					Return(nil, &ent.NotFoundError{}).
+					Once()
+				storeMock.FindUserByEmail(mock.AnythingOfType(ctxType), "u@x.com").
+					Return(nil, &ent.NotFoundError{}).Once()
+				storeMock.FindUnusedInviteForEmail(mock.AnythingOfType(ctxType), "u@x.com", mock.AnythingOfType("time.Time")).
+					Return(&ent.Invite{ID: 9, Role: invite.RoleMember, ExpiresAt: time.Now().Add(time.Hour)}, nil).
+					Once()
+				tx := newUserTx()
+				tx.EXPECT().
+					CreateUser(mock.AnythingOfType(ctxType), mock.AnythingOfType("db.CreateUserParams")).
+					Return(&ent.User{ID: 1}, nil).
+					Once()
+				tx.EXPECT().
+					CreateOIDCIdentity(mock.AnythingOfType(ctxType), mock.AnythingOfType("db.CreateOIDCIdentityParams")).
+					Return(&ent.OIDCIdentity{ID: 1}, nil).
+					Once()
+				tx.EXPECT().
+					ConsumeInvite(mock.AnythingOfType(ctxType), uint32(9), uint32(1), mock.AnythingOfType("time.Time")).
+					Return(db.ErrInviteUsed).
+					Once()
+				tx.EXPECT().Rollback().Return(nil).Once()
+
+				_, _, err := svc.LoginOIDC(
+					ctx,
+					"google",
+					"sub-1",
+					"u@x.com",
+					"U",
+					true,
+					nil,
+					SessionMeta{},
+				)
+				Expect(err).To(MatchError(ErrOIDCNoInvite))
+			},
+		)
 	})
 
 	When("CreateUser fails for the new-user path", func() {
@@ -539,9 +637,12 @@ var _ = Describe("LoginOIDC unit", Label("unit", "auth"), func() {
 				Once()
 			storeMock.FindUserByEmail(mock.AnythingOfType(ctxType), "u@x.com").
 				Return(nil, &ent.NotFoundError{}).Once()
-			storeMock.CreateUser(mock.AnythingOfType(ctxType), mock.AnythingOfType("db.CreateUserParams")).
+			tx := newUserTx()
+			tx.EXPECT().
+				CreateUser(mock.AnythingOfType(ctxType), mock.AnythingOfType("db.CreateUserParams")).
 				Return(nil, errors.New("create fail")).
 				Once()
+			tx.EXPECT().Rollback().Return(nil).Once()
 
 			_, _, err := svc.LoginOIDC(
 				ctx,
@@ -679,12 +780,16 @@ var _ = Describe("LoginOIDC unit", Label("unit", "auth"), func() {
 				Once()
 			storeMock.FindUserByEmail(mock.AnythingOfType(ctxType), "u@x.com").
 				Return(nil, &ent.NotFoundError{}).Once()
-			storeMock.CreateUser(mock.AnythingOfType(ctxType), mock.AnythingOfType("db.CreateUserParams")).
+			tx := newUserTx()
+			tx.EXPECT().
+				CreateUser(mock.AnythingOfType(ctxType), mock.AnythingOfType("db.CreateUserParams")).
 				Return(&ent.User{ID: 1}, nil).
 				Once()
-			storeMock.CreateOIDCIdentity(mock.AnythingOfType(ctxType), mock.AnythingOfType("db.CreateOIDCIdentityParams")).
+			tx.EXPECT().
+				CreateOIDCIdentity(mock.AnythingOfType(ctxType), mock.AnythingOfType("db.CreateOIDCIdentityParams")).
 				Return(nil, errors.New("create id fail")).
 				Once()
+			tx.EXPECT().Rollback().Return(nil).Once()
 
 			_, _, err := svc.LoginOIDC(
 				ctx,
@@ -708,12 +813,16 @@ var _ = Describe("LoginOIDC unit", Label("unit", "auth"), func() {
 			storeMock.FindUserByEmail(mock.AnythingOfType(ctxType), "u@x.com").
 				Return(nil, &ent.NotFoundError{}).Once()
 			created := &ent.User{ID: 1, Email: "u@x.com"}
-			storeMock.CreateUser(mock.AnythingOfType(ctxType), mock.AnythingOfType("db.CreateUserParams")).
+			tx := newUserTx()
+			tx.EXPECT().
+				CreateUser(mock.AnythingOfType(ctxType), mock.AnythingOfType("db.CreateUserParams")).
 				Return(created, nil).
 				Once()
-			storeMock.CreateOIDCIdentity(mock.AnythingOfType(ctxType), mock.AnythingOfType("db.CreateOIDCIdentityParams")).
+			tx.EXPECT().
+				CreateOIDCIdentity(mock.AnythingOfType(ctxType), mock.AnythingOfType("db.CreateOIDCIdentityParams")).
 				Return(&ent.OIDCIdentity{ID: 1}, nil).
 				Once()
+			tx.EXPECT().Commit().Return(nil).Once()
 			storeMock.CreateSession(mock.AnythingOfType(ctxType), mock.AnythingOfType("db.CreateSessionParams")).
 				Return(nil, errors.New("session fail")).
 				Once()

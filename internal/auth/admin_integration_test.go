@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -52,19 +53,69 @@ var _ = Describe("Admin end-to-end", Label("integration", "auth"), func() {
 		},
 	)
 
-	It("DeleteUser cascades to api keys, sessions, and oidc identities", func() {
-		u := seedUser("cascade@x.com", entuser.RoleMember)
-		_, _, err := svc.CreateAPIKey(ctx, u.ID, "k1")
-		Expect(err).NotTo(HaveOccurred())
-		_, err = svc.Login(ctx, u.Email, "password123", SessionMeta{})
+	It(
+		"DeleteUser cascades to api keys, sessions, oidc identities, and invites",
+		func() {
+			u := seedUser("cascade@x.com", entuser.RoleAdmin)
+			_, _, err := svc.CreateAPIKey(ctx, u.ID, "k1")
+			Expect(err).NotTo(HaveOccurred())
+			_, err = svc.Login(ctx, u.Email, "password123", SessionMeta{})
+			Expect(err).NotTo(HaveOccurred())
+			_, inv, err := svc.CreateInvite(
+				ctx,
+				u.ID,
+				"invited@x.com",
+				"member",
+				time.Hour,
+			)
+			Expect(err).NotTo(HaveOccurred())
+
+			other := seedUser("requester@x.com", entuser.RoleAdmin)
+			Expect(svc.DeleteUser(ctx, u.ID, other.ID)).To(Succeed())
+
+			keys, err := svc.ListAPIKeys(ctx, u.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(keys).To(BeEmpty())
+
+			_, err = dbClient.Invite.Get(ctx, inv.ID)
+			Expect(ent.IsNotFound(err)).To(
+				BeTrue(),
+				"invites created by the user must be gone",
+			)
+
+			sessions, err := dbClient.Session.Query().All(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(sessions).To(BeEmpty())
+		},
+	)
+
+	It("DeleteUser keeps invites the user consumed, with used_by nulled", func() {
+		admin := seedUser("inviter@x.com", entuser.RoleAdmin)
+		raw, inv, err := svc.CreateInvite(
+			ctx,
+			admin.ID,
+			"guest@x.com",
+			"member",
+			time.Hour,
+		)
 		Expect(err).NotTo(HaveOccurred())
 
-		other := seedUser("requester@x.com", entuser.RoleAdmin)
-		Expect(svc.DeleteUser(ctx, u.ID, other.ID)).To(Succeed())
-
-		keys, err := svc.ListAPIKeys(ctx, u.ID)
+		guest, _, err := svc.RegisterWithInvite(
+			ctx,
+			raw,
+			"guest@x.com",
+			"password123",
+			"",
+			SessionMeta{},
+		)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(keys).To(BeEmpty())
+
+		Expect(svc.DeleteUser(ctx, guest.ID, admin.ID)).To(Succeed())
+
+		kept, err := dbClient.Invite.Get(ctx, inv.ID)
+		Expect(err).NotTo(HaveOccurred())
+		_, err = kept.QueryUsedBy().Only(ctx)
+		Expect(ent.IsNotFound(err)).To(BeTrue())
 	})
 
 	It("AdminResetPassword end-to-end revokes existing sessions", func() {

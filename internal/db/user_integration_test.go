@@ -2,11 +2,14 @@ package db
 
 import (
 	"context"
+	"path/filepath"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/invite"
 	"github.com/datahearth/streamline/ent/user"
 )
 
@@ -145,6 +148,37 @@ var _ = Describe("User store CRUD", Label("integration", "db"), func() {
 			u := create("a@example.com", "admin")
 			Expect(store.DeleteUser(ctx, u.ID)).To(Succeed())
 			_, err := store.FindUserByID(ctx, u.ID)
+			Expect(ent.IsNotFound(err)).To(BeTrue())
+		})
+
+		// Runs against a file-backed DB so the versioned migrations — not
+		// ent's auto-migrate — define the invites FK under test.
+		It("cascades to invites the user created, on the migrated schema", func() {
+			migrated, err := Open(
+				ctx,
+				filepath.Join(GinkgoT().TempDir(), "streamline.db"),
+			)
+			Expect(err).NotTo(HaveOccurred())
+			DeferCleanup(func() { migrated.Close() })
+			migratedStore := New(migrated)
+
+			creator, err := migratedStore.CreateUser(ctx, CreateUserParams{
+				Email:      "creator@example.com",
+				Role:       user.RoleAdmin,
+				AuthMethod: user.AuthMethodLocal,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			inv, err := migratedStore.CreateInvite(ctx, CreateInviteParams{
+				TokenHash:   "h1",
+				Role:        invite.RoleMember,
+				ExpiresAt:   time.Now().Add(time.Hour),
+				CreatedByID: creator.ID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(migratedStore.DeleteUser(ctx, creator.ID)).To(Succeed())
+
+			_, err = migrated.Invite.Get(ctx, inv.ID)
 			Expect(ent.IsNotFound(err)).To(BeTrue())
 		})
 	})

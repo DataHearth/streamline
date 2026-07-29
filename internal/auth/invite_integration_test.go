@@ -8,6 +8,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/datahearth/streamline/ent"
+	entuser "github.com/datahearth/streamline/ent/user"
 	"github.com/datahearth/streamline/internal/db"
 )
 
@@ -65,6 +66,46 @@ var _ = Describe("Invite end-to-end", Label("integration", "auth"), func() {
 			inv2, err := dbClient.Invite.Get(ctx, inv.ID)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(inv2.UsedAt).ToNot(BeNil())
+		},
+	)
+
+	It(
+		"RegisterWithInvite rejects a second use of an unbound invite",
+		func() {
+			raw, inv, err := svc.CreateInvite(ctx, adminID, "", "member", time.Hour)
+			Expect(err).ToNot(HaveOccurred())
+
+			_, _, err = svc.RegisterWithInvite(
+				ctx,
+				raw,
+				"first@x.com",
+				"password",
+				"",
+				SessionMeta{},
+			)
+			Expect(err).ToNot(HaveOccurred())
+
+			_, _, err = svc.RegisterWithInvite(
+				ctx,
+				raw,
+				"second@x.com",
+				"password",
+				"",
+				SessionMeta{},
+			)
+			Expect(err).To(MatchError(ErrInviteInvalid))
+
+			_, err = dbClient.User.Query().
+				Where(entuser.EmailEQ("second@x.com")).
+				Only(ctx)
+			Expect(ent.IsNotFound(err)).To(
+				BeTrue(),
+				"the losing registration must not create a user",
+			)
+
+			used, err := dbClient.Invite.Get(ctx, inv.ID)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(used.UsedAt).ToNot(BeNil())
 		},
 	)
 

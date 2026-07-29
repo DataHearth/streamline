@@ -160,8 +160,8 @@ var _ = Describe("Invite service unit", Label("unit", "auth"), func() {
 				Return(&ent.User{ID: 1, Email: "g@x.com"}, nil).
 				Once()
 			tx.EXPECT().
-				MarkInviteUsedWithUser(ctx, uint32(5), uint32(1), mock.AnythingOfType("time.Time")).
-				Return(&ent.Invite{ID: 5}, nil).
+				ConsumeInvite(ctx, uint32(5), uint32(1), mock.AnythingOfType("time.Time")).
+				Return(nil).
 				Once()
 			tx.EXPECT().Commit().Return(nil).Once()
 			storeMock.CreateSession(mock.AnythingOfType(ctxType), mock.AnythingOfType("db.CreateSessionParams")).
@@ -243,7 +243,7 @@ var _ = Describe("Invite service unit", Label("unit", "auth"), func() {
 			Expect(err).To(MatchError(ContainSubstring("create user")))
 		})
 
-		It("rolls back on MarkInviteUsedWithUser failure", func() {
+		It("rolls back on ConsumeInvite failure", func() {
 			tx := dbmocks.NewMockTx(GinkgoT())
 			storeMock.FindInviteByTokenHash(ctx, mock.AnythingOfType("string")).
 				Return(validInvite(), nil).Once()
@@ -251,8 +251,8 @@ var _ = Describe("Invite service unit", Label("unit", "auth"), func() {
 			tx.EXPECT().CreateUser(ctx, mock.AnythingOfType("db.CreateUserParams")).
 				Return(&ent.User{ID: 1}, nil).Once()
 			tx.EXPECT().
-				MarkInviteUsedWithUser(ctx, uint32(5), uint32(1), mock.AnythingOfType("time.Time")).
-				Return(nil, errors.New("mark fail")).
+				ConsumeInvite(ctx, uint32(5), uint32(1), mock.AnythingOfType("time.Time")).
+				Return(errors.New("consume fail")).
 				Once()
 			tx.EXPECT().Rollback().Return(nil).Once()
 			_, _, err := svc.RegisterWithInvite(
@@ -263,7 +263,30 @@ var _ = Describe("Invite service unit", Label("unit", "auth"), func() {
 				"",
 				SessionMeta{},
 			)
-			Expect(err).To(MatchError(ContainSubstring("mark invite used")))
+			Expect(err).To(MatchError(ContainSubstring("consume invite")))
+		})
+
+		It("maps a lost consumption race to ErrInviteInvalid", func() {
+			tx := dbmocks.NewMockTx(GinkgoT())
+			storeMock.FindInviteByTokenHash(ctx, mock.AnythingOfType("string")).
+				Return(validInvite(), nil).Once()
+			storeMock.Tx(ctx).Return(tx, nil).Once()
+			tx.EXPECT().CreateUser(ctx, mock.AnythingOfType("db.CreateUserParams")).
+				Return(&ent.User{ID: 1}, nil).Once()
+			tx.EXPECT().
+				ConsumeInvite(ctx, uint32(5), uint32(1), mock.AnythingOfType("time.Time")).
+				Return(db.ErrInviteUsed).
+				Once()
+			tx.EXPECT().Rollback().Return(nil).Once()
+			_, _, err := svc.RegisterWithInvite(
+				ctx,
+				"raw",
+				"g@x.com",
+				"password",
+				"",
+				SessionMeta{},
+			)
+			Expect(err).To(MatchError(ErrInviteInvalid))
 		})
 
 		It("wraps Commit failures", func() {
@@ -274,8 +297,8 @@ var _ = Describe("Invite service unit", Label("unit", "auth"), func() {
 			tx.EXPECT().CreateUser(ctx, mock.AnythingOfType("db.CreateUserParams")).
 				Return(&ent.User{ID: 1}, nil).Once()
 			tx.EXPECT().
-				MarkInviteUsedWithUser(ctx, uint32(5), uint32(1), mock.AnythingOfType("time.Time")).
-				Return(&ent.Invite{ID: 5}, nil).
+				ConsumeInvite(ctx, uint32(5), uint32(1), mock.AnythingOfType("time.Time")).
+				Return(nil).
 				Once()
 			tx.EXPECT().Commit().Return(errors.New("commit fail")).Once()
 			_, _, err := svc.RegisterWithInvite(

@@ -110,16 +110,11 @@ type Store interface {
 		now time.Time,
 	) (*ent.Invite, error)
 	ListInvites(ctx context.Context) ([]*ent.Invite, error)
-	MarkInviteUsed(
-		ctx context.Context,
-		id uint32,
-		when time.Time,
-	) (*ent.Invite, error)
-	MarkInviteUsedWithUser(
+	ConsumeInvite(
 		ctx context.Context,
 		id, userID uint32,
 		when time.Time,
-	) (*ent.Invite, error)
+	) error
 	RevokeInvite(ctx context.Context, id uint32, now time.Time) error
 
 	// oidc identities

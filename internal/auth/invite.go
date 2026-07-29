@@ -49,7 +49,8 @@ func (s *auth) CreateInvite(
 }
 
 // validateInvite performs all invite validity checks but does not mutate the
-// row. The caller (RegisterWithInvite) performs the marking.
+// row. It is a fail-fast pre-check only — single-use enforcement lives in the
+// guarded UPDATE behind db.ConsumeInvite.
 func (s *auth) validateInvite(
 	ctx context.Context,
 	rawToken, submittedEmail string,
@@ -131,14 +132,12 @@ func (s *auth) RegisterWithInvite(
 		return nil, "", fmt.Errorf("create user: %w", err)
 	}
 
-	if _, err := tx.MarkInviteUsedWithUser(
-		ctx,
-		inv.ID,
-		u.ID,
-		time.Now(),
-	); err != nil {
+	if err := tx.ConsumeInvite(ctx, inv.ID, u.ID, time.Now()); err != nil {
 		tx.Rollback()
-		return nil, "", fmt.Errorf("mark invite used: %w", err)
+		if errors.Is(err, db.ErrInviteUsed) {
+			return nil, "", ErrInviteInvalid
+		}
+		return nil, "", fmt.Errorf("consume invite: %w", err)
 	}
 
 	if err := tx.Commit(); err != nil {

@@ -252,8 +252,8 @@ func (s *auth) UpdateUser(
 // DeleteUser permanently removes the user. The caller-provided requesterID
 // is the admin performing the action; self-delete is rejected with
 // ErrSelfDeleteForbidden. The last admin cannot be deleted (ErrLastAdmin).
-// All rows owned by the user (api keys, oidc identities, sessions, requests)
-// cascade at the schema level for GDPR compliance.
+// All rows owned by the user (api keys, oidc identities, sessions, requests,
+// invites they created) cascade at the schema level for GDPR compliance.
 func (s *auth) DeleteUser(
 	ctx context.Context,
 	id, requesterID uint32,

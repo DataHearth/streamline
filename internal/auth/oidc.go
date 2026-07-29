@@ -111,7 +111,9 @@ func (m *oidcManager) Get(name string) (*OIDCProvider, bool) {
 //  2. Reject if email is unverified by the provider.
 //  3. Existing user by email → link identity, promote auth_method local → both, log in.
 //  4. New user → respect registration_mode (disabled rejects; invite needs a
-//     matching invite; open uses oidc_default_role).
+//     matching invite; open uses oidc_default_role). User, identity and invite
+//     consumption commit as one transaction, so a failed provisioning never
+//     burns the invite.
 func (s *auth) LoginOIDC(
 	ctx context.Context,
 	provider, subject, email, displayName string,
@@ -233,12 +235,13 @@ func (s *auth) LoginOIDC(
 
 	// 4. new user — apply onboarding policy
 	role := cfg.Auth.OIDCDefaultRole
+	var inv *ent.Invite
 	switch cfg.Auth.RegistrationMode {
 	case "disabled":
 		outcome = "reg_disabled"
 		return nil, "", otelx.RecordSpanError(span, ErrOIDCRegDisabled)
 	case "invite":
-		inv, err := s.db.FindUnusedInviteForEmail(
+		found, err := s.db.FindUnusedInviteForEmail(
 			ctx,
 			strings.ToLower(email),
 			time.Now(),
@@ -247,17 +250,8 @@ func (s *auth) LoginOIDC(
 			outcome = "no_invite"
 			return nil, "", otelx.RecordSpanError(span, ErrOIDCNoInvite)
 		}
+		inv = found
 		role = inv.Role.String()
-		if _, err := s.db.MarkInviteUsed(
-			ctx,
-			inv.ID,
-			time.Now(),
-		); err != nil {
-			return nil, "", otelx.RecordSpanError(
-				span,
-				fmt.Errorf("mark invite used: %w", err),
-			)
-		}
 	}
 	if roleMatched {
 		role = mappedRole
@@ -267,28 +261,51 @@ func (s *auth) LoginOIDC(
 		semconv.UserRoles(role),
 	)
 
-	u, err := s.db.CreateUser(ctx, db.CreateUserParams{
+	tx, err := s.db.Tx(ctx)
+	if err != nil {
+		return nil, "", otelx.RecordSpanError(span, fmt.Errorf("begin tx: %w", err))
+	}
+
+	u, err := tx.CreateUser(ctx, db.CreateUserParams{
 		Email:       strings.ToLower(email),
 		DisplayName: displayName,
 		Role:        entuser.Role(role),
 		AuthMethod:  entuser.AuthMethodOidc,
 	})
 	if err != nil {
+		tx.Rollback()
 		return nil, "", otelx.RecordSpanError(
 			span,
 			fmt.Errorf("create user: %w", err),
 		)
 	}
-	if _, err := s.db.CreateOIDCIdentity(ctx, db.CreateOIDCIdentityParams{
+	if _, err := tx.CreateOIDCIdentity(ctx, db.CreateOIDCIdentityParams{
 		Provider: provider,
 		Subject:  subject,
 		Email:    strings.ToLower(email),
 		OwnerID:  u.ID,
 	}); err != nil {
+		tx.Rollback()
 		return nil, "", otelx.RecordSpanError(
 			span,
 			fmt.Errorf("create identity: %w", err),
 		)
+	}
+	if inv != nil {
+		if err := tx.ConsumeInvite(ctx, inv.ID, u.ID, time.Now()); err != nil {
+			tx.Rollback()
+			if errors.Is(err, db.ErrInviteUsed) {
+				outcome = "no_invite"
+				return nil, "", otelx.RecordSpanError(span, ErrOIDCNoInvite)
+			}
+			return nil, "", otelx.RecordSpanError(
+				span,
+				fmt.Errorf("consume invite: %w", err),
+			)
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, "", otelx.RecordSpanError(span, fmt.Errorf("commit tx: %w", err))
 	}
 	tok, err := s.issueToken(ctx, u, meta)
 	if err != nil {

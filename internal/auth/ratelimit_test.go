@@ -23,17 +23,29 @@ var _ = Describe("Limiter", Label("unit", "auth"), func() {
 		Expect(l.Allow("1.1.1.1")).To(BeFalse())
 	})
 
-	It("resets after window via clock override", func() {
-		now := time.Unix(1000, 0)
-		l := NewLimiterWithClock(
-			1,
-			time.Minute,
-			func() time.Time { return now },
-		)
+	It("allows again once every recorded hit has aged out", func() {
+		l := NewLimiter(1, time.Minute).(*limiter)
+		l.windows["1.1.1.1"] = []time.Time{time.Now().Add(-2 * time.Minute)}
 		Expect(l.Allow("1.1.1.1")).To(BeTrue())
 		Expect(l.Allow("1.1.1.1")).To(BeFalse())
-		now = now.Add(time.Minute + time.Second)
+	})
+
+	It("keeps hits that are still inside the window", func() {
+		l := NewLimiter(2, time.Minute).(*limiter)
+		l.windows["1.1.1.1"] = []time.Time{
+			time.Now().Add(-2 * time.Minute),
+			time.Now().Add(-time.Second),
+		}
 		Expect(l.Allow("1.1.1.1")).To(BeTrue())
+		Expect(l.windows["1.1.1.1"]).To(HaveLen(2))
+	})
+
+	It("deletes the key once no timestamps remain in the window", func() {
+		l := NewLimiter(1, time.Minute).(*limiter)
+		l.windows["1.1.1.1"] = []time.Time{time.Now().Add(-2 * time.Minute)}
+
+		Expect(l.RetryAfter("1.1.1.1")).To(Equal(time.Duration(0)))
+		Expect(l.windows).NotTo(HaveKey("1.1.1.1"))
 	})
 
 	It("RetryAfter is zero when under limit", func() {

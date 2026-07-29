@@ -446,6 +446,55 @@ func (_c *MockStore_CascadeShowMonitored_Call) RunAndReturn(run func(context.Con
 	return _c
 }
 
+// ConsumeInvite provides a mock function with given fields: ctx, id, userID, when
+func (_m *MockStore) ConsumeInvite(ctx context.Context, id uint32, userID uint32, when time.Time) error {
+	ret := _m.Called(ctx, id, userID, when)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ConsumeInvite")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, uint32, uint32, time.Time) error); ok {
+		r0 = rf(ctx, id, userID, when)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockStore_ConsumeInvite_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ConsumeInvite'
+type MockStore_ConsumeInvite_Call struct {
+	*mock.Call
+}
+
+// ConsumeInvite is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - userID uint32
+//   - when time.Time
+func (_e *MockStore_Expecter) ConsumeInvite(ctx interface{}, id interface{}, userID interface{}, when interface{}) *MockStore_ConsumeInvite_Call {
+	return &MockStore_ConsumeInvite_Call{Call: _e.mock.On("ConsumeInvite", ctx, id, userID, when)}
+}
+
+func (_c *MockStore_ConsumeInvite_Call) Run(run func(ctx context.Context, id uint32, userID uint32, when time.Time)) *MockStore_ConsumeInvite_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(uint32), args[2].(uint32), args[3].(time.Time))
+	})
+	return _c
+}
+
+func (_c *MockStore_ConsumeInvite_Call) Return(_a0 error) *MockStore_ConsumeInvite_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockStore_ConsumeInvite_Call) RunAndReturn(run func(context.Context, uint32, uint32, time.Time) error) *MockStore_ConsumeInvite_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // CountActiveImportScans provides a mock function with given fields: ctx
 func (_m *MockStore) CountActiveImportScans(ctx context.Context) (uint32, error) {
 	ret := _m.Called(ctx)
@@ -6013,127 +6062,6 @@ func (_c *MockStore_MarkDownloadRecordReplaceExisting_Call) Return(_a0 error) *M
 }
 
 func (_c *MockStore_MarkDownloadRecordReplaceExisting_Call) RunAndReturn(run func(context.Context, uint32) error) *MockStore_MarkDownloadRecordReplaceExisting_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// MarkInviteUsed provides a mock function with given fields: ctx, id, when
-func (_m *MockStore) MarkInviteUsed(ctx context.Context, id uint32, when time.Time) (*ent.Invite, error) {
-	ret := _m.Called(ctx, id, when)
-
-	if len(ret) == 0 {
-		panic("no return value specified for MarkInviteUsed")
-	}
-
-	var r0 *ent.Invite
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uint32, time.Time) (*ent.Invite, error)); ok {
-		return rf(ctx, id, when)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, uint32, time.Time) *ent.Invite); ok {
-		r0 = rf(ctx, id, when)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*ent.Invite)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, uint32, time.Time) error); ok {
-		r1 = rf(ctx, id, when)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// MockStore_MarkInviteUsed_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'MarkInviteUsed'
-type MockStore_MarkInviteUsed_Call struct {
-	*mock.Call
-}
-
-// MarkInviteUsed is a helper method to define mock.On call
-//   - ctx context.Context
-//   - id uint32
-//   - when time.Time
-func (_e *MockStore_Expecter) MarkInviteUsed(ctx interface{}, id interface{}, when interface{}) *MockStore_MarkInviteUsed_Call {
-	return &MockStore_MarkInviteUsed_Call{Call: _e.mock.On("MarkInviteUsed", ctx, id, when)}
-}
-
-func (_c *MockStore_MarkInviteUsed_Call) Run(run func(ctx context.Context, id uint32, when time.Time)) *MockStore_MarkInviteUsed_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(uint32), args[2].(time.Time))
-	})
-	return _c
-}
-
-func (_c *MockStore_MarkInviteUsed_Call) Return(_a0 *ent.Invite, _a1 error) *MockStore_MarkInviteUsed_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *MockStore_MarkInviteUsed_Call) RunAndReturn(run func(context.Context, uint32, time.Time) (*ent.Invite, error)) *MockStore_MarkInviteUsed_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// MarkInviteUsedWithUser provides a mock function with given fields: ctx, id, userID, when
-func (_m *MockStore) MarkInviteUsedWithUser(ctx context.Context, id uint32, userID uint32, when time.Time) (*ent.Invite, error) {
-	ret := _m.Called(ctx, id, userID, when)
-
-	if len(ret) == 0 {
-		panic("no return value specified for MarkInviteUsedWithUser")
-	}
-
-	var r0 *ent.Invite
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uint32, uint32, time.Time) (*ent.Invite, error)); ok {
-		return rf(ctx, id, userID, when)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, uint32, uint32, time.Time) *ent.Invite); ok {
-		r0 = rf(ctx, id, userID, when)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*ent.Invite)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, uint32, uint32, time.Time) error); ok {
-		r1 = rf(ctx, id, userID, when)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// MockStore_MarkInviteUsedWithUser_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'MarkInviteUsedWithUser'
-type MockStore_MarkInviteUsedWithUser_Call struct {
-	*mock.Call
-}
-
-// MarkInviteUsedWithUser is a helper method to define mock.On call
-//   - ctx context.Context
-//   - id uint32
-//   - userID uint32
-//   - when time.Time
-func (_e *MockStore_Expecter) MarkInviteUsedWithUser(ctx interface{}, id interface{}, userID interface{}, when interface{}) *MockStore_MarkInviteUsedWithUser_Call {
-	return &MockStore_MarkInviteUsedWithUser_Call{Call: _e.mock.On("MarkInviteUsedWithUser", ctx, id, userID, when)}
-}
-
-func (_c *MockStore_MarkInviteUsedWithUser_Call) Run(run func(ctx context.Context, id uint32, userID uint32, when time.Time)) *MockStore_MarkInviteUsedWithUser_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(uint32), args[2].(uint32), args[3].(time.Time))
-	})
-	return _c
-}
-
-func (_c *MockStore_MarkInviteUsedWithUser_Call) Return(_a0 *ent.Invite, _a1 error) *MockStore_MarkInviteUsedWithUser_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *MockStore_MarkInviteUsedWithUser_Call) RunAndReturn(run func(context.Context, uint32, uint32, time.Time) (*ent.Invite, error)) *MockStore_MarkInviteUsedWithUser_Call {
 	_c.Call.Return(run)
 	return _c
 }

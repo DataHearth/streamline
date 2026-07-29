@@ -255,7 +255,7 @@ var (
 				Symbol:     "invites_users_created_by",
 				Columns:    []*schema.Column{InvitesColumns[8]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
-				OnDelete:   schema.NoAction,
+				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "invites_users_used_by",

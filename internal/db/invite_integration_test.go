@@ -91,36 +91,58 @@ var _ = Describe("Invite store", Label("integration", "db"), func() {
 		})
 	})
 
-	Describe("MarkInviteUsed", func() {
-		It("sets used_at", func() {
-			inv := create("h1", "g@example.com", time.Now().Add(time.Hour))
-			when := time.Now()
-			updated, err := store.MarkInviteUsed(ctx, inv.ID, when)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(updated.UsedAt).NotTo(BeNil())
-		})
-	})
+	Describe("ConsumeInvite", func() {
+		var consumerID uint32
 
-	Describe("MarkInviteUsedWithUser", func() {
-		It("sets used_at and used_by", func() {
-			inv := create("h1", "g@example.com", time.Now().Add(time.Hour))
-			user, err := store.CreateUser(ctx, CreateUserParams{
+		BeforeEach(func() {
+			consumer, err := store.CreateUser(ctx, CreateUserParams{
 				Email: "g@example.com", Role: "member", AuthMethod: "local",
 			})
 			Expect(err).NotTo(HaveOccurred())
+			consumerID = consumer.ID
+		})
 
-			updated, err := store.MarkInviteUsedWithUser(
-				ctx,
-				inv.ID,
-				user.ID,
-				time.Now(),
-			)
+		It("sets used_at and used_by", func() {
+			inv := create("h1", "g@example.com", time.Now().Add(time.Hour))
+
+			Expect(store.ConsumeInvite(ctx, inv.ID, consumerID, time.Now())).
+				To(Succeed())
+
+			updated, err := client.Invite.Get(ctx, inv.ID)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(updated.UsedAt).NotTo(BeNil())
 
 			usedBy, err := updated.QueryUsedBy().Only(ctx)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(usedBy.ID).To(Equal(user.ID))
+			Expect(usedBy.ID).To(Equal(consumerID))
+		})
+
+		It("returns ErrInviteUsed on a second consumption", func() {
+			inv := create("h1", "g@example.com", time.Now().Add(time.Hour))
+			Expect(store.ConsumeInvite(ctx, inv.ID, consumerID, time.Now())).
+				To(Succeed())
+
+			other, err := store.CreateUser(ctx, CreateUserParams{
+				Email: "other@example.com", Role: "member", AuthMethod: "local",
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(store.ConsumeInvite(ctx, inv.ID, other.ID, time.Now())).
+				To(MatchError(ErrInviteUsed))
+
+			updated, err := client.Invite.Get(ctx, inv.ID)
+			Expect(err).NotTo(HaveOccurred())
+			usedBy, err := updated.QueryUsedBy().Only(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(usedBy.ID).To(
+				Equal(consumerID),
+				"first consumer keeps the invite",
+			)
+		})
+
+		It("returns ErrInviteUsed for an unknown invite id", func() {
+			Expect(store.ConsumeInvite(ctx, 4242, consumerID, time.Now())).
+				To(MatchError(ErrInviteUsed))
 		})
 	})
 
