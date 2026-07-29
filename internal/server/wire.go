@@ -165,6 +165,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		var err error
 		torrentEngine, err = bittorrent.New(ctx, store)
 		if err != nil {
+			dbClient.Close()
 			return nil, fmt.Errorf("builtin torrent engine: %w", err)
 		}
 		builtinClient = torrentEngine

@@ -72,6 +72,7 @@ var (
 	ErrJobAlreadyPaused = errors.New("scheduler: job already paused")
 	ErrJobNotPaused     = errors.New("scheduler: job not paused")
 	ErrJobBusy          = errors.New("scheduler: job currently running")
+	ErrNotStarted       = errors.New("scheduler: not started")
 )
 
 // Option mutates a registered job at registration time.
@@ -207,38 +208,52 @@ func (s *Scheduler) Start(ctx context.Context) {
 		paused := j.paused
 		j.mu.Unlock()
 		if !paused {
-			s.startJob(j)
+			s.startJob(ctx, j)
 		}
 	}
 	<-ctx.Done()
 }
 
+// root returns the context Start was called with, and whether Start has run.
+// Before Start the returned context is context.Background(), so it is always
+// safe to log with. Call it before taking a registeredJob lock: List holds
+// s.mu while locking job.mu, so the reverse order can deadlock.
+func (s *Scheduler) root() (context.Context, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.rootCtx == nil {
+		return context.Background(), false
+	}
+	return s.rootCtx, true
+}
+
 // startJob assigns a fresh stopCh to job and launches the goroutine.
-func (s *Scheduler) startJob(job *registeredJob) {
+func (s *Scheduler) startJob(ctx context.Context, job *registeredJob) {
 	stop := make(chan struct{})
 	job.mu.Lock()
 	job.stopCh = stop
 	interval := job.interval
 	job.mu.Unlock()
-	go s.runJob(stop, interval, job)
+	go s.runJob(ctx, stop, interval, job)
 }
 
 func (s *Scheduler) runJob(
+	ctx context.Context,
 	stopCh <-chan struct{},
 	interval time.Duration,
 	job *registeredJob,
 ) {
-	go s.executeJob(s.rootCtx, job)
+	go s.executeJob(ctx, job)
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 	for {
 		select {
-		case <-s.rootCtx.Done():
+		case <-ctx.Done():
 			return
 		case <-stopCh:
 			return
 		case <-ticker.C:
-			go s.executeJob(s.rootCtx, job)
+			go s.executeJob(ctx, job)
 		}
 	}
 }
@@ -312,6 +327,7 @@ func (s *Scheduler) Pause(name string) error {
 	if job.system {
 		return ErrJobSystem
 	}
+	rootCtx, _ := s.root()
 	job.mu.Lock()
 	defer job.mu.Unlock()
 	if job.paused {
@@ -322,7 +338,7 @@ func (s *Scheduler) Pause(name string) error {
 		close(job.stopCh)
 		job.stopCh = nil
 	}
-	slog.InfoContext(s.rootCtx, "scheduler job paused", "job", name)
+	slog.InfoContext(rootCtx, "scheduler job paused", "job", name)
 	return nil
 }
 
@@ -337,18 +353,19 @@ func (s *Scheduler) Resume(name string) error {
 	if job.system {
 		return ErrJobSystem
 	}
+	rootCtx, started := s.root()
 	job.mu.Lock()
 	defer job.mu.Unlock()
 	if !job.paused {
 		return ErrJobNotPaused
 	}
 	job.paused = false
-	if s.rootCtx != nil {
+	if started {
 		stop := make(chan struct{})
 		job.stopCh = stop
-		go s.runJob(stop, job.interval, job)
+		go s.runJob(rootCtx, stop, job.interval, job)
 	}
-	slog.InfoContext(s.rootCtx, "scheduler job resumed", "job", name)
+	slog.InfoContext(rootCtx, "scheduler job resumed", "job", name)
 	return nil
 }
 
@@ -363,6 +380,7 @@ func (s *Scheduler) Reschedule(name string, interval time.Duration) error {
 	if job.system {
 		return ErrJobSystem
 	}
+	rootCtx, _ := s.root()
 	job.mu.Lock()
 	defer job.mu.Unlock()
 	job.interval = interval
@@ -370,10 +388,10 @@ func (s *Scheduler) Reschedule(name string, interval time.Duration) error {
 		close(job.stopCh)
 		stop := make(chan struct{})
 		job.stopCh = stop
-		go s.runJob(stop, interval, job)
+		go s.runJob(rootCtx, stop, interval, job)
 	}
 	slog.InfoContext(
-		s.rootCtx,
+		rootCtx,
 		"scheduler job rescheduled",
 		"job",
 		name,
@@ -384,8 +402,9 @@ func (s *Scheduler) Reschedule(name string, interval time.Duration) error {
 }
 
 // RunNow triggers a one-off execution. Returns ErrJobBusy if the job is
-// already running, ErrJobSystem on system jobs, ErrJobUnknown otherwise.
-// Allowed while the job is paused — manual override is the whole point.
+// already running, ErrJobSystem on system jobs, ErrNotStarted before Start
+// has run, ErrJobUnknown otherwise. Allowed while the job is paused — manual
+// override is the whole point.
 //
 // The job runs on a context derived from the scheduler's root context with
 // the caller's cancel signal detached, so a short HTTP request timeout
@@ -398,10 +417,14 @@ func (s *Scheduler) RunNow(name string) error {
 	if job.system {
 		return ErrJobSystem
 	}
+	rootCtx, started := s.root()
+	if !started {
+		return ErrNotStarted
+	}
 	if job.running.Load() {
 		return ErrJobBusy
 	}
-	runCtx := context.WithoutCancel(s.rootCtx)
+	runCtx := context.WithoutCancel(rootCtx)
 	slog.InfoContext(runCtx, "scheduler job run-now triggered", "job", name)
 	go s.executeJob(runCtx, job)
 	return nil

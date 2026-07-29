@@ -214,6 +214,27 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 		Expect(w.ch).To(BeEmpty())
 	})
 
+	It("Start returns once ctx is canceled", func() {
+		ctx, cancel := context.WithCancel(context.Background())
+		done := make(chan struct{})
+		go func() { w.Start(ctx); close(done) }()
+
+		cancel()
+		Eventually(done).WithTimeout(time.Second).Should(BeClosed())
+	})
+
+	It("Enqueue after shutdown is a no-op, not a panic", func() {
+		ctx, cancel := context.WithCancel(context.Background())
+		done := make(chan struct{})
+		go func() { w.Start(ctx); close(done) }()
+
+		cancel()
+		Eventually(done).WithTimeout(time.Second).Should(BeClosed())
+
+		Expect(func() { w.Enqueue(99) }).NotTo(Panic())
+		Expect(w.ch).To(BeEmpty())
+	})
+
 	It("Scan picks up importing rows and calls Enqueue for each", func() {
 		storeMk.EXPECT().ListImportingDownloadRecords(mock.Anything).
 			Return([]*ent.DownloadRecord{{ID: 42}, {ID: 43}}, nil).Once()

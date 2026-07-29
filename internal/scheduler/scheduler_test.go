@@ -298,6 +298,41 @@ var _ = Describe("Scheduler", Label("unit", "scheduler"), func() {
 			<-done
 		})
 
+		It("Pause before Start leaves the job dormant", func() {
+			s := New()
+			s.Register(
+				"early",
+				time.Hour,
+				func(context.Context) error { return nil },
+			)
+
+			Expect(s.Pause("early")).To(Succeed())
+			info, err := s.Get("early")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(info.Paused).To(BeTrue())
+		})
+
+		It("Resume before Start only clears the paused flag", func() {
+			s := New()
+			s.Register(
+				"early",
+				time.Hour,
+				func(context.Context) error { return nil },
+			)
+			Expect(s.Pause("early")).To(Succeed())
+
+			Expect(s.Resume("early")).To(Succeed())
+			info, err := s.Get("early")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(info.Paused).To(BeFalse())
+
+			j, err := s.job("early")
+			Expect(err).NotTo(HaveOccurred())
+			j.mu.Lock()
+			defer j.mu.Unlock()
+			Expect(j.stopCh).To(BeNil())
+		})
+
 		It("rejects Pause/Resume on system jobs", func() {
 			s := New()
 			s.Register(
@@ -469,6 +504,16 @@ var _ = Describe("Scheduler", Label("unit", "scheduler"), func() {
 			close(release)
 			cancel()
 			<-done
+		})
+
+		It("returns ErrNotStarted before Start has run", func() {
+			s := New()
+			s.Register(
+				"early",
+				time.Hour,
+				func(context.Context) error { return nil },
+			)
+			Expect(s.RunNow("early")).To(MatchError(ErrNotStarted))
 		})
 
 		It("rejects RunNow on system jobs and unknown names", func() {

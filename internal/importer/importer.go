@@ -59,7 +59,9 @@ type Worker struct {
 	dl  download.Downloader
 	ms  MediaServerDispatcher
 
-	ch       chan uint32
+	ch   chan uint32
+	stop chan struct{}
+
 	mu       sync.Mutex
 	inFlight map[uint32]struct{}
 }
@@ -71,26 +73,45 @@ func NewWorker(d Deps) *Worker {
 		dl:       d.Download,
 		ms:       d.MediaServer,
 		ch:       make(chan uint32, channelCap),
+		stop:     make(chan struct{}),
 		inFlight: make(map[uint32]struct{}),
 	}
 }
 
 // Start spawns consumer goroutines reading from the queue. Blocks until ctx
-// is canceled. Safe to call once per app lifetime.
+// is canceled and every consumer has finished its current import. Safe to
+// call once per app lifetime.
+//
+// w.ch is deliberately never closed: scheduler jobs holding this worker as an
+// importer.Enqueuer keep calling Enqueue after ctx is canceled, and a send on
+// a closed channel would panic them. Consumers terminate on ctx.Done instead;
+// w.stop turns those late enqueues into no-ops.
 func (w *Worker) Start(ctx context.Context) {
 	var wg sync.WaitGroup
 	for range consumers {
 		wg.Go(func() { w.consume(ctx) })
 	}
 	<-ctx.Done()
-	close(w.ch)
+	close(w.stop)
 	wg.Wait()
 }
 
 // Enqueue pushes a record ID into the import queue. Non-blocking: when the
 // queue is full the ID is dropped (import_scan will pick it up on the next
-// tick). Dedupe: IDs already in-flight are dropped.
+// tick). Dedupe: IDs already in-flight are dropped. After shutdown every
+// enqueue is dropped — nothing is left to consume the queue.
 func (w *Worker) Enqueue(recordID uint32) {
+	select {
+	case <-w.stop:
+		slog.DebugContext(
+			context.Background(),
+			"importer stopped, dropping enqueue",
+			"record.id", recordID,
+		)
+		return
+	default:
+	}
+
 	w.mu.Lock()
 	_, inFlight := w.inFlight[recordID]
 	w.mu.Unlock()
@@ -126,10 +147,7 @@ func (w *Worker) consume(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
-		case id, ok := <-w.ch:
-			if !ok {
-				return
-			}
+		case id := <-w.ch:
 			w.mu.Lock()
 			if _, dup := w.inFlight[id]; dup {
 				w.mu.Unlock()
