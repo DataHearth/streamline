@@ -104,6 +104,7 @@ type Counts struct {
 	Wanted      int
 	Downloading int
 	Available   int
+	Failed      int
 	// Trend holds the cumulative library size at the end of each of the last
 	// trendDays days, oldest first; the final element equals Total.
 	Trend []int
@@ -401,11 +402,18 @@ func (s *Service) Counts(ctx context.Context) (Counts, error) {
 	if err != nil {
 		return Counts{}, err
 	}
+	failed, err := count("failed", func() (int, error) {
+		return s.db.CountMoviesByStatus(ctx, entmovie.StatusFailed)
+	})
+	if err != nil {
+		return Counts{}, err
+	}
 	span.SetAttributes(
 		attribute.Int("counts.total", total),
 		attribute.Int("counts.wanted", wanted),
 		attribute.Int("counts.downloading", downloading),
 		attribute.Int("counts.available", available),
+		attribute.Int("counts.failed", failed),
 	)
 	trend, err := s.movieTrend(ctx, total)
 	if err != nil {
@@ -417,6 +425,7 @@ func (s *Service) Counts(ctx context.Context) (Counts, error) {
 		Wanted:      wanted,
 		Downloading: downloading,
 		Available:   available,
+		Failed:      failed,
 		Trend:       trend,
 	}, nil
 }

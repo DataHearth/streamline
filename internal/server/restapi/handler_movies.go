@@ -60,6 +60,7 @@ func (s *Server) GetMovieCounts(
 			Wanted:      uint32(counts.Wanted),
 			Downloading: uint32(counts.Downloading),
 			Available:   uint32(counts.Available),
+			Failed:      uint32(counts.Failed),
 			Trend:       trend,
 		},
 	}, nil

@@ -248,16 +248,25 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 				QualityProfile: profileName,
 			})
 			Expect(err).NotTo(HaveOccurred())
+			_, err = store.CreateMovie(ctx, db.CreateMovieParams{
+				Title:          "D",
+				OriginalTitle:  "D",
+				TmdbID:         4,
+				Status:         entmovie.StatusFailed,
+				QualityProfile: profileName,
+			})
+			Expect(err).NotTo(HaveOccurred())
 
 			c, err := svc.Counts(ctx)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(c.Total).To(Equal(3))
+			Expect(c.Total).To(Equal(4))
 			Expect(c.Wanted).To(Equal(1))
 			Expect(c.Downloading).To(Equal(1))
 			Expect(c.Available).To(Equal(1))
-			// All three were just created → the trend rises to the total today.
+			Expect(c.Failed).To(Equal(1))
+			// All four were just created → the trend rises to the total today.
 			Expect(c.Trend).To(HaveLen(trendDays))
-			Expect(c.Trend[trendDays-1]).To(Equal(3))
+			Expect(c.Trend[trendDays-1]).To(Equal(4))
 			Expect(sort.IntsAreSorted(c.Trend)).To(BeTrue())
 		})
 	})

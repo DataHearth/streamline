@@ -92,7 +92,7 @@ paths:
     get:
       operationId: getMovieCounts
       summary: Movie status counts
-      description: Returns total, wanted, downloading, and available counts for the library.
+      description: Returns total, wanted, downloading, available and failed counts for the library.
       tags: [movies]
       responses:
         "200":
@@ -3630,7 +3630,7 @@ components:
           x-go-type: uint16
         status:
           type: string
-          enum: [wanted, downloading, available]
+          enum: [wanted, downloading, available, failed]
         monitored:
           type: boolean
           description: Whether Streamline auto-searches and upgrades this title.
@@ -3746,7 +3746,7 @@ components:
           description: Name of the quality profile (empty resolves to the default).
         status:
           type: string
-          enum: [wanted, downloading, available]
+          enum: [wanted, downloading, available, failed]
         monitored:
           type: boolean
 
@@ -3770,7 +3770,7 @@ components:
 
     MovieCounts:
       type: object
-      required: [total, wanted, downloading, available, trend]
+      required: [total, wanted, downloading, available, failed, trend]
       properties:
         total:
           type: integer
@@ -3782,6 +3782,9 @@ components:
           type: integer
           x-go-type: uint32
         available:
+          type: integer
+          x-go-type: uint32
+        failed:
           type: integer
           x-go-type: uint32
         trend:

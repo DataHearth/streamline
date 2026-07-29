@@ -65,6 +65,34 @@ var _ = Describe(
 				Expect(body.Total).To(Equal(2))
 			})
 
+			It("round-trips a failed movie's status", func() {
+				app.movies.EXPECT().
+					List(mock.Anything, uint16(1), uint16(10)).
+					Return([]*ent.Movie{
+						{
+							ID:     3,
+							Title:  "Broken Import",
+							Year:   2019,
+							TmdbID: 102,
+							Status: movie.StatusFailed,
+						},
+					}, uint32(1), nil).
+					Once()
+
+				resp, err := http.Get(app.srv.URL + "/api/v1/movies?page=1&limit=10")
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				var body struct {
+					Items []Movie `json:"items"`
+				}
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				Expect(body.Items).To(HaveLen(1))
+				Expect(body.Items[0].Status).To(Equal(MovieStatusFailed))
+				Expect(body.Items[0].Status.Valid()).To(BeTrue())
+			})
+
 			It("returns empty page when no movies exist", func() {
 				app.movies.EXPECT().
 					List(mock.Anything, uint16(1), uint16(10)).
@@ -83,6 +111,35 @@ var _ = Describe(
 				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
 				Expect(body.Items).To(BeEmpty())
 				Expect(body.Total).To(Equal(0))
+			})
+		})
+
+		Describe("GetMovieCounts", func() {
+			It("exposes the per-status counts including failed", func() {
+				app.movies.EXPECT().Counts(mock.Anything).
+					Return(moviesvc.Counts{
+						Total:       10,
+						Wanted:      4,
+						Downloading: 2,
+						Available:   3,
+						Failed:      1,
+						Trend:       []int{9, 10},
+					}, nil).
+					Once()
+
+				resp, err := http.Get(app.srv.URL + "/api/v1/movies/counts")
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				var body MovieCounts
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				Expect(body.Total).To(Equal(uint32(10)))
+				Expect(body.Wanted).To(Equal(uint32(4)))
+				Expect(body.Downloading).To(Equal(uint32(2)))
+				Expect(body.Available).To(Equal(uint32(3)))
+				Expect(body.Failed).To(Equal(uint32(1)))
+				Expect(body.Trend).To(Equal([]uint32{9, 10}))
 			})
 		})
 
@@ -436,6 +493,40 @@ var _ = Describe(
 				var updated Movie
 				Expect(json.NewDecoder(resp.Body).Decode(&updated)).To(Succeed())
 				Expect(string(updated.Status)).To(Equal("available"))
+			})
+
+			It("accepts the failed status", func() {
+				const movieID uint32 = 11
+				app.movies.EXPECT().
+					Update(mock.Anything, movieID,
+						mock.MatchedBy(func(p moviesvc.UpdateParams) bool {
+							return p.Status != nil && *p.Status == movie.StatusFailed
+						})).
+					Return(&ent.Movie{
+						ID:     movieID,
+						Title:  "Broken Import",
+						Year:   2019,
+						TmdbID: 102,
+						Status: movie.StatusFailed,
+					}, nil).
+					Once()
+
+				req, err := http.NewRequest(
+					http.MethodPatch,
+					fmt.Sprintf("%s/api/v1/movies/%d", app.srv.URL, movieID),
+					strings.NewReader(`{"status": "failed"}`),
+				)
+				Expect(err).NotTo(HaveOccurred())
+				req.Header.Set("Content-Type", "application/json")
+
+				resp, err := http.DefaultClient.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				var updated Movie
+				Expect(json.NewDecoder(resp.Body).Decode(&updated)).To(Succeed())
+				Expect(updated.Status).To(Equal(MovieStatusFailed))
 			})
 
 			It("returns 404 for nonexistent movie", func() {

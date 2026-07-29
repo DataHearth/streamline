@@ -335,6 +335,8 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 				Return(2, nil).Once()
 			storeMock.CountMoviesByStatus(mock.Anything, entmovie.StatusAvailable).
 				Return(3, nil).Once()
+			storeMock.CountMoviesByStatus(mock.Anything, entmovie.StatusFailed).
+				Return(1, nil).Once()
 			storeMock.MovieCreateTimesSince(mock.Anything, mock.Anything).
 				Return([]time.Time{}, nil).Once()
 
@@ -344,6 +346,7 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 			Expect(c.Wanted).To(Equal(4))
 			Expect(c.Downloading).To(Equal(2))
 			Expect(c.Available).To(Equal(3))
+			Expect(c.Failed).To(Equal(1))
 			// No recent additions → the whole window is the flat baseline (= total).
 			Expect(c.Trend).To(HaveLen(trendDays))
 			Expect(c.Trend).To(HaveEach(10))
@@ -353,7 +356,7 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 		It("buckets recent additions into a rising trend ending at total", func() {
 			storeMock.CountMovies(mock.Anything).Return(3, nil).Once()
 			storeMock.CountMoviesByStatus(mock.Anything, mock.Anything).
-				Return(1, nil).Times(3)
+				Return(1, nil).Times(4)
 			// Two added today, one yesterday; no prior baseline.
 			now := time.Now().UTC()
 			storeMock.MovieCreateTimesSince(mock.Anything, mock.Anything).
@@ -412,6 +415,20 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 				Return(0, errors.New("boom")).Once()
 			_, err := svc.Counts(ctx)
 			Expect(err).To(MatchError(ContainSubstring("count available")))
+		})
+
+		It("wraps failed count errors", func() {
+			storeMock.CountMovies(mock.Anything).Return(1, nil).Once()
+			storeMock.CountMoviesByStatus(mock.Anything, entmovie.StatusWanted).
+				Return(0, nil).Once()
+			storeMock.CountMoviesByStatus(mock.Anything, entmovie.StatusDownloading).
+				Return(0, nil).Once()
+			storeMock.CountMoviesByStatus(mock.Anything, entmovie.StatusAvailable).
+				Return(0, nil).Once()
+			storeMock.CountMoviesByStatus(mock.Anything, entmovie.StatusFailed).
+				Return(0, errors.New("boom")).Once()
+			_, err := svc.Counts(ctx)
+			Expect(err).To(MatchError(ContainSubstring("count failed")))
 		})
 	})
 

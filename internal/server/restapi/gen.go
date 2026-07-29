@@ -855,6 +855,7 @@ func (e MediaServerUpdateServerType) Valid() bool {
 const (
 	MovieStatusAvailable   MovieStatus = "available"
 	MovieStatusDownloading MovieStatus = "downloading"
+	MovieStatusFailed      MovieStatus = "failed"
 	MovieStatusWanted      MovieStatus = "wanted"
 )
 
@@ -864,6 +865,8 @@ func (e MovieStatus) Valid() bool {
 	case MovieStatusAvailable:
 		return true
 	case MovieStatusDownloading:
+		return true
+	case MovieStatusFailed:
 		return true
 	case MovieStatusWanted:
 		return true
@@ -1284,6 +1287,7 @@ func (e TorrentInfoStatus) Valid() bool {
 const (
 	UpdateMovieRequestStatusAvailable   UpdateMovieRequestStatus = "available"
 	UpdateMovieRequestStatusDownloading UpdateMovieRequestStatus = "downloading"
+	UpdateMovieRequestStatusFailed      UpdateMovieRequestStatus = "failed"
 	UpdateMovieRequestStatusWanted      UpdateMovieRequestStatus = "wanted"
 )
 
@@ -1293,6 +1297,8 @@ func (e UpdateMovieRequestStatus) Valid() bool {
 	case UpdateMovieRequestStatusAvailable:
 		return true
 	case UpdateMovieRequestStatusDownloading:
+		return true
+	case UpdateMovieRequestStatusFailed:
 		return true
 	case UpdateMovieRequestStatusWanted:
 		return true
@@ -2347,6 +2353,7 @@ type MovieStatus string
 type MovieCounts struct {
 	Available   uint32 `json:"available"`
 	Downloading uint32 `json:"downloading"`
+	Failed      uint32 `json:"failed"`
 	Total       uint32 `json:"total"`
 
 	// Trend Cumulative library size at the end of each day over the last 30
