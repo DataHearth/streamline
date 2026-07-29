@@ -51,14 +51,8 @@
 	--bg-base: #111118;
 	--bg-elevated: #15151f;
 	--bg-overlay: rgb(11 11 16 / 0.7);
-	--bg-player: #000000;
 	--bg-card: #1c1c28;
 	--bg-hover: #232333;
-	--bg-0: var(--bg-deep);
-	--bg-1: var(--bg-base);
-	--bg-2: var(--bg-elevated);
-	--bg-3: var(--bg-card);
-	--bg-4: var(--bg-hover);
 	--surface: rgb(255 255 255 / 0.04);
 	--surface-2: rgb(255 255 255 / 0.06);
 	--border: rgb(255 255 255 / 0.08);
@@ -67,7 +61,6 @@
 	/* Accent (cooler indigo per design bundle) */
 	--accent: #7c8cff;
 	--accent-hover: #8b9aff;
-	--accent-pressed: #6573e6;
 	--accent-glow: rgb(124 140 255 / 0.25);
 	--accent-ring: rgb(124 140 255 / 0.4);
 	--accent-soft: rgb(124 140 255 / 0.14);
@@ -92,18 +85,6 @@
 	--status-warning: #f59e0b;
 	--status-seeding: #2dd4bf;
 	--status-completed: #94a3b8;
-	--status-fetching: #a78bfa;
-	--status-stalled: #d9a441;
-
-	/* Generic aliases mapping onto the ops palette */
-	--ok: var(--status-available);
-	--ok-soft: rgb(34 197 94 / 0.12);
-	--warn: var(--status-wanted);
-	--warn-soft: rgb(245 158 11 / 0.12);
-	--err: var(--status-failed);
-	--err-soft: rgb(239 68 68 / 0.12);
-	--info: var(--status-downloading);
-	--info-soft: rgb(59 130 246 / 0.12);
 
 	/* Shadows */
 	--shadow-1: 0 1px 2px rgb(0 0 0 / 0.4);
@@ -151,14 +132,8 @@
 	--color-bg-base: var(--bg-base);
 	--color-bg-elevated: var(--bg-elevated);
 	--color-bg-overlay: var(--bg-overlay);
-	--color-bg-player: var(--bg-player);
 	--color-bg-card: var(--bg-card);
 	--color-bg-hover: var(--bg-hover);
-	--color-bg-0: var(--bg-0);
-	--color-bg-1: var(--bg-1);
-	--color-bg-2: var(--bg-2);
-	--color-bg-3: var(--bg-3);
-	--color-bg-4: var(--bg-4);
 	--color-surface: var(--surface);
 	--color-surface-2: var(--surface-2);
 	--color-border: var(--border);
@@ -166,8 +141,6 @@
 
 	--color-accent: var(--accent);
 	--color-accent-hover: var(--accent-hover);
-	--color-accent-pressed: var(--accent-pressed);
-	--color-accent-glow: var(--accent-glow);
 	--color-accent-ring: var(--accent-ring);
 	--color-accent-soft: var(--accent-soft);
 	--color-accent-text: var(--accent-text);
@@ -187,13 +160,6 @@
 	--color-status-paused: var(--status-paused);
 	--color-status-seeding: var(--status-seeding);
 	--color-status-completed: var(--status-completed);
-	--color-status-fetching: var(--status-fetching);
-	--color-status-stalled: var(--status-stalled);
-
-	--color-ok: var(--ok);
-	--color-warn: var(--warn);
-	--color-err: var(--err);
-	--color-info: var(--info);
 
 	--radius-sm: var(--radius-sm);
 	--radius-md: var(--radius-md);
@@ -399,82 +365,6 @@ input[type="checkbox"]:not(.native):disabled {
 }
 
 /* ------------------------------------------------------------------ */
-/* Status pill variants — pair bg/15, text/full, border/25 per MASTER §7. */
-/* ------------------------------------------------------------------ */
-.pill-downloading {
-	--pill-color: var(--status-downloading);
-	color: var(--status-downloading);
-	background: rgb(59 130 246 / 0.15);
-	border: 1px solid rgb(59 130 246 / 0.25);
-}
-.pill-grabbing {
-	--pill-color: var(--status-grabbing);
-	color: var(--status-grabbing);
-	background: rgb(167 139 250 / 0.15);
-	border: 1px solid rgb(167 139 250 / 0.25);
-}
-.pill-available {
-	--pill-color: var(--status-available);
-	color: var(--status-available);
-	background: rgb(34 197 94 / 0.15);
-	border: 1px solid rgb(34 197 94 / 0.25);
-}
-.pill-wanted {
-	--pill-color: var(--status-wanted);
-	color: var(--status-wanted);
-	background: rgb(245 158 11 / 0.15);
-	border: 1px solid rgb(245 158 11 / 0.25);
-}
-.pill-missing {
-	--pill-color: var(--status-missing);
-	color: var(--status-missing);
-	background: rgb(100 116 139 / 0.15);
-	border: 1px solid rgb(100 116 139 / 0.25);
-}
-.pill-failed {
-	--pill-color: var(--status-failed);
-	color: var(--status-failed);
-	background: rgb(239 68 68 / 0.15);
-	border: 1px solid rgb(239 68 68 / 0.25);
-}
-.pill-paused {
-	--pill-color: var(--status-paused);
-	color: var(--status-paused);
-	background: rgb(113 113 122 / 0.15);
-	border: 1px solid rgb(113 113 122 / 0.25);
-}
-.pill-ok {
-	--pill-color: var(--ok);
-	color: var(--ok);
-	background: rgb(34 197 94 / 0.15);
-	border: 1px solid rgb(34 197 94 / 0.25);
-}
-.pill-warn {
-	--pill-color: var(--warn);
-	color: var(--warn);
-	background: rgb(245 158 11 / 0.15);
-	border: 1px solid rgb(245 158 11 / 0.25);
-}
-.pill-err {
-	--pill-color: var(--err);
-	color: var(--err);
-	background: rgb(239 68 68 / 0.15);
-	border: 1px solid rgb(239 68 68 / 0.25);
-}
-.pill-info {
-	--pill-color: var(--info);
-	color: var(--info);
-	background: rgb(59 130 246 / 0.15);
-	border: 1px solid rgb(59 130 246 / 0.25);
-}
-.pill-muted {
-	--pill-color: var(--fg-muted);
-	color: var(--fg-muted);
-	background: var(--surface);
-	border: 1px solid var(--border);
-}
-
-/* ------------------------------------------------------------------ */
 /* Global focus-visible                                                */
 /* ------------------------------------------------------------------ */
 :focus-visible {
@@ -602,10 +492,7 @@ input[type="checkbox"]:not(.native):disabled {
 }
 
 /* ------------------------------------------------------------------ */
-/* Poster card stagger entry — only on initial paint. Suppressed       */
-/* during htmx swaps (which add htmx-request to body) and respected by */
-/* prefers-reduced-motion. View Transitions API handles cross-mode     */
-/* visual continuity, so layering both produces a flicker.             */
+/* Poster card stagger entry — opt out per-card with [data-no-stagger]. */
 /* ------------------------------------------------------------------ */
 @keyframes card-enter {
 	from {
@@ -739,29 +626,4 @@ input[type="checkbox"]:not(.native):disabled {
 		transition-duration: 0.01ms !important;
 		scroll-behavior: auto !important;
 	}
-}
-
-/* ------------------------------------------------------------------ */
-/* htmx request indicator                                              */
-/* Show children with `.htmx-indicator:inline-block` only while the    */
-/* nearest htmx-request-scoped element has a request in flight.        */
-/* ------------------------------------------------------------------ */
-.htmx-indicator\:inline-block {
-	display: none;
-}
-.htmx-request .htmx-indicator\:inline-block,
-.htmx-request.htmx-indicator\:inline-block {
-	display: inline-block;
-}
-
-/* ------------------------------------------------------------------ */
-/* Download-client modal: auth_method pane toggle                      */
-/* The radio group above each pair of panes drives visibility via      */
-/* :has(). Inactive pane hides; active pane stays in normal flow.      */
-/* ------------------------------------------------------------------ */
-.auth-mode-wrap:has(input[name="auth_method"][value="password"]:checked) [data-auth="api_key"] {
-	display: none;
-}
-.auth-mode-wrap:has(input[name="auth_method"][value="api_key"]:checked) [data-auth="password"] {
-	display: none;
 }

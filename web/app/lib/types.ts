@@ -102,12 +102,6 @@ export type AddSeriesRequest = {
 	preset?: MonitoringPreset;
 };
 
-export type PatchSeriesRequest = {
-	monitored?: boolean;
-	quality_profile?: string;
-	preset?: MonitoringPreset;
-};
-
 export type CastMember = {
 	tmdb_id?: number;
 	name: string;
@@ -266,12 +260,6 @@ export type RequestMediaDetails = {
 	rating?: number;
 	runtime?: number;
 	genres?: string[];
-};
-
-export type CreateRequestBody = {
-	media_type: "movie" | "tvshow";
-	media_id: number;
-	title: string;
 };
 
 export type MovieCounts = {

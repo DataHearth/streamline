@@ -9,13 +9,9 @@
 	let {
 		movie,
 		actions,
-		backHref = "/movies",
-		backLabel = "Movies",
 	}: {
 		movie: Movie;
 		actions?: Snippet;
-		backHref?: string;
-		backLabel?: string;
 	} = $props();
 
 	function pickPrimary(
@@ -59,11 +55,11 @@
 
 	<div class="relative w-full px-4 pt-6 md:px-8">
 		<a
-			href={backHref}
+			href="/movies"
 			class="inline-flex items-center gap-1.5 rounded-full border border-border bg-black/40 px-3 py-1.5 text-[11.5px] font-medium text-fg-muted backdrop-blur-sm transition hover:bg-black/60 hover:text-fg"
 		>
 			<ArrowLeft size={13} aria-hidden="true" />
-			{backLabel}
+			Movies
 		</a>
 	</div>
 
