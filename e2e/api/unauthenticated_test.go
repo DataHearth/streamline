@@ -1,0 +1,165 @@
+package api
+
+import (
+	"fmt"
+	"net/http"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+)
+
+// unauthenticatedRoutes mirrors every path+method in api/openapi.yaml, sorted
+// by path then method. Path parameters carry throwaway values: the auth
+// middleware runs before chi resolves the route, so nothing downstream ever
+// sees them.
+var unauthenticatedRoutes = []struct {
+	method string
+	path   string
+}{
+	{http.MethodGet, "/activity"},
+	{http.MethodGet, "/activity/history"},
+	{http.MethodDelete, "/activity/history/1"},
+	{http.MethodPost, "/activity/history/clear-completed"},
+	{http.MethodGet, "/activity/pending"},
+	{http.MethodPost, "/activity/pending/1/ignore"},
+	{http.MethodPost, "/activity/pending/1/import"},
+	{http.MethodPost, "/activity/pending/1/replace"},
+	{http.MethodGet, "/activity/queue"},
+	{http.MethodDelete, "/activity/queue/1"},
+	{http.MethodPost, "/activity/queue/1/pause"},
+	{http.MethodPost, "/activity/queue/1/resume"},
+	{http.MethodGet, "/auth/invites"},
+	{http.MethodPost, "/auth/invites"},
+	{http.MethodDelete, "/auth/invites/1"},
+	{http.MethodPost, "/auth/jwt/rotate"},
+	{http.MethodGet, "/auth/me"},
+	{http.MethodPatch, "/auth/me"},
+	{http.MethodGet, "/auth/me/api-keys"},
+	{http.MethodPost, "/auth/me/api-keys"},
+	{http.MethodDelete, "/auth/me/api-keys/1"},
+	{http.MethodGet, "/auth/me/sessions"},
+	{http.MethodDelete, "/auth/me/sessions/1"},
+	{http.MethodPost, "/auth/password"},
+	{http.MethodGet, "/calendar/upcoming"},
+	{http.MethodGet, "/config/auth"},
+	{http.MethodPatch, "/config/auth"},
+	{http.MethodGet, "/config/oidc"},
+	{http.MethodPost, "/config/oidc"},
+	{http.MethodDelete, "/config/oidc/e2e"},
+	{http.MethodGet, "/config/oidc/e2e"},
+	{http.MethodPatch, "/config/oidc/e2e"},
+	{http.MethodGet, "/download-clients"},
+	{http.MethodPost, "/download-clients"},
+	{http.MethodDelete, "/download-clients/e2e"},
+	{http.MethodPut, "/download-clients/e2e"},
+	{http.MethodPost, "/download-clients/e2e/test"},
+	{http.MethodPost, "/download-clients/test"},
+	{http.MethodGet, "/indexers"},
+	{http.MethodPost, "/indexers"},
+	{http.MethodDelete, "/indexers/e2e"},
+	{http.MethodPut, "/indexers/e2e"},
+	{http.MethodPost, "/indexers/e2e/test"},
+	{http.MethodPost, "/indexers/test"},
+	{http.MethodGet, "/library/imports"},
+	{http.MethodPost, "/library/imports"},
+	{http.MethodDelete, "/library/imports/1"},
+	{http.MethodGet, "/library/imports/1"},
+	{http.MethodPost, "/library/imports/1/cancel"},
+	{http.MethodPost, "/library/imports/1/commit"},
+	{http.MethodGet, "/library/imports/1/files"},
+	{http.MethodPatch, "/library/imports/1/files/1"},
+	{http.MethodGet, "/library/imports/1/shows"},
+	{http.MethodPatch, "/library/imports/1/shows/1"},
+	{http.MethodGet, "/media-servers"},
+	{http.MethodPost, "/media-servers"},
+	{http.MethodPost, "/media-servers/discover"},
+	{http.MethodDelete, "/media-servers/e2e"},
+	{http.MethodGet, "/media-servers/e2e"},
+	{http.MethodPatch, "/media-servers/e2e"},
+	{http.MethodPost, "/media-servers/e2e/test"},
+	{http.MethodPost, "/media-servers/test"},
+	{http.MethodGet, "/movies"},
+	{http.MethodPost, "/movies"},
+	{http.MethodDelete, "/movies/1"},
+	{http.MethodGet, "/movies/1"},
+	{http.MethodPatch, "/movies/1"},
+	{http.MethodDelete, "/movies/1/files/1"},
+	{http.MethodPost, "/movies/1/grab"},
+	{http.MethodGet, "/movies/1/play-on"},
+	{http.MethodGet, "/movies/1/recommendations"},
+	{http.MethodPost, "/movies/1/refresh-metadata"},
+	{http.MethodPost, "/movies/1/rename"},
+	{http.MethodPost, "/movies/1/search"},
+	{http.MethodPost, "/movies/1/search-now"},
+	{http.MethodGet, "/movies/counts"},
+	{http.MethodGet, "/quality-profiles"},
+	{http.MethodPost, "/quality-profiles"},
+	{http.MethodDelete, "/quality-profiles/e2e"},
+	{http.MethodPut, "/quality-profiles/e2e"},
+	{http.MethodGet, "/requests"},
+	{http.MethodPost, "/requests"},
+	{http.MethodPost, "/requests/1/approve"},
+	{http.MethodPost, "/requests/1/deny"},
+	{http.MethodGet, "/requests/1/metadata"},
+	{http.MethodPost, "/requests/1/reopen"},
+	{http.MethodGet, "/requests/counts"},
+	{http.MethodGet, "/schedules"},
+	{http.MethodGet, "/schedules/e2e"},
+	{http.MethodPatch, "/schedules/e2e"},
+	{http.MethodPost, "/schedules/e2e/pause"},
+	{http.MethodPost, "/schedules/e2e/resume"},
+	{http.MethodPost, "/schedules/e2e/run"},
+	{http.MethodGet, "/search/movie"},
+	{http.MethodGet, "/series"},
+	{http.MethodPost, "/series"},
+	{http.MethodDelete, "/series/1"},
+	{http.MethodGet, "/series/1"},
+	{http.MethodPatch, "/series/1"},
+	{http.MethodPost, "/series/1/browse"},
+	{http.MethodPatch, "/series/1/episodes/1"},
+	{http.MethodDelete, "/series/1/episodes/1/file"},
+	{http.MethodPost, "/series/1/episodes/1/grab"},
+	{http.MethodPost, "/series/1/episodes/1/search"},
+	{http.MethodPost, "/series/1/grab"},
+	{http.MethodGet, "/series/1/play-on"},
+	{http.MethodPost, "/series/1/refresh-metadata"},
+	{http.MethodPost, "/series/1/rename"},
+	{http.MethodPost, "/series/1/search"},
+	{http.MethodPatch, "/series/1/seasons/1"},
+	{http.MethodPost, "/series/1/seasons/1/grab"},
+	{http.MethodPost, "/series/1/seasons/1/search"},
+	{http.MethodGet, "/series/counts"},
+	{http.MethodGet, "/series/lookup"},
+	{http.MethodGet, "/system/info"},
+	{http.MethodGet, "/torrents"},
+	{http.MethodPost, "/torrents"},
+	{http.MethodDelete, "/torrents/" + hash40},
+	{http.MethodGet, "/torrents/" + hash40},
+	{http.MethodPatch, "/torrents/" + hash40 + "/files/0"},
+	{http.MethodPost, "/torrents/" + hash40 + "/pause"},
+	{http.MethodPost, "/torrents/" + hash40 + "/resume"},
+	{http.MethodGet, "/users"},
+	{http.MethodPost, "/users"},
+	{http.MethodDelete, "/users/1"},
+	{http.MethodGet, "/users/1"},
+	{http.MethodPatch, "/users/1"},
+	{http.MethodDelete, "/users/1/api-keys/1"},
+	{http.MethodPost, "/users/1/password-reset"},
+	{http.MethodDelete, "/users/1/sessions/1"},
+	{http.MethodPost, "/users/1/unlock"},
+}
+
+var _ = Describe("REST API authentication sweep", Label("e2e"), func() {
+	It("401s every route without credentials", func() {
+		Expect(unauthenticatedRoutes).To(HaveLen(131))
+		for _, route := range unauthenticatedRoutes {
+			By(fmt.Sprintf("%s %s", route.method, route.path))
+			resp := do(route.method, "/api/v1"+route.path, anon, nil)
+			Expect(resp.StatusCode).To(
+				Equal(http.StatusUnauthorized),
+				"%s %s", route.method, route.path,
+			)
+			Expect(resp.Body.Close()).To(Succeed())
+		}
+	})
+})

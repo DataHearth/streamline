@@ -31,7 +31,10 @@ func Start() string {
 	observability.StderrSink = GinkgoWriter
 	DeferCleanup(func() { observability.StderrSink = prev })
 
-	configtest.Setup(map[string]any{
+	// SetupFile, not Setup: config-backed resource CRUD (quality profiles,
+	// indexers, download clients, media servers, schedules) goes through
+	// config.Update, which needs a backing file to write to.
+	configtest.SetupFile(map[string]any{
 		"auth": map[string]any{
 			"session_secret": "e2e-session-secret",
 			"seed_admin": map[string]any{

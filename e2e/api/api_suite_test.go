@@ -20,4 +20,5 @@ func TestAPI(t *testing.T) {
 var _ = BeforeSuite(func() {
 	DeferCleanup(testutil.InstallSlog())
 	baseURL = apptest.Start()
+	bootstrapIdentities()
 })

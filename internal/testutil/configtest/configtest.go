@@ -45,8 +45,9 @@ func Setup(overrides ...map[string]any) *config.Config {
 
 // SetupFile mirrors Setup but writes a YAML file to a temp dir and calls
 // config.Load(path), so config.Update has a backing file to write back to.
-// Use only when the test exercises mutation paths (Update / AddOIDCProvider);
-// prefer Setup otherwise.
+// Required whenever anything under test can reach config.Update — a single
+// mutating endpoint anywhere in a wired-app suite is enough, since Update
+// returns ErrNoPath without a file. Setup suffices for read-only tests.
 func SetupFile(overrides ...map[string]any) *config.Config {
 	GinkgoHelper()
 	dir := GinkgoT().TempDir()
