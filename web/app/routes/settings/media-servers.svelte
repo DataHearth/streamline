@@ -50,7 +50,8 @@
 			if (body.library_section) {
 				payload.library_section = body.library_section;
 			} else if (editing) {
-				payload.library_section = null;
+				// "" is the clear-the-field signal; null means "unchanged" server-side.
+				payload.library_section = "";
 			}
 			if (editing) {
 				return api<MediaServer>(
