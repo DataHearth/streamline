@@ -11,6 +11,10 @@ import (
 var (
 	ErrMediaServerExists   = errors.New("media server name already exists")
 	ErrMediaServerNotFound = errors.New("media server not found")
+
+	ErrLibrarySectionNotPlex = errors.New(
+		"library_section is only valid for Plex servers",
+	)
 )
 
 // generatePlexClientID returns a 32-char hex string used as the
@@ -70,7 +74,28 @@ type MediaServerPatch struct {
 	LibrarySection *string
 }
 
+// validateMediaServer enforces cross-field invariants on the resulting entry.
+// Update calls it after merging the patch so it sees the resulting
+// server_type, not the one the patch happened to carry.
+//
+// A blank library_section is normalized away instead of rejected: a JSON null
+// decodes to "field unchanged", so an empty string is the only way for a
+// client to clear the section — which is what a Plex → Jellyfin/Emby type
+// switch needs to stay valid.
+func validateMediaServer(e *MediaServerEntry) error {
+	if e.LibrarySection != nil && *e.LibrarySection == "" {
+		e.LibrarySection = nil
+	}
+	if e.LibrarySection != nil && e.ServerType != "plex" {
+		return ErrLibrarySectionNotPlex
+	}
+	return nil
+}
+
 func AddMediaServer(ctx context.Context, e MediaServerEntry) error {
+	if err := validateMediaServer(&e); err != nil {
+		return err
+	}
 	return Update(ctx, func(c *Config) error {
 		for _, x := range c.MediaServer.Servers {
 			if x.Name == e.Name {
@@ -116,6 +141,9 @@ func UpdateMediaServer(ctx context.Context, name string, p MediaServerPatch) err
 		}
 		if p.LibrarySection != nil {
 			e.LibrarySection = p.LibrarySection
+		}
+		if err := validateMediaServer(&e); err != nil {
+			return err
 		}
 		c.MediaServer.Servers[idx] = e
 		if err := ensurePlexClientID(c); err != nil {

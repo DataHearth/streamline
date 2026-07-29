@@ -58,12 +58,6 @@ func (s *Server) CreateMediaServer(
 	if request.Body.Enabled != nil {
 		e.Enabled = *request.Body.Enabled
 	}
-	if e.LibrarySection != nil && e.ServerType != "plex" {
-		return CreateMediaServer422JSONResponse{
-			UnprocessableEntityJSONResponse: errUnprocessable(
-				"library_section is only valid for Plex servers"),
-		}, nil
-	}
 
 	switch err := config.AddMediaServer(ctx, e); {
 	case errors.Is(err, config.ErrMediaServerExists):
@@ -80,9 +74,10 @@ func (s *Server) CreateMediaServer(
 		}, nil
 	}
 
+	stored, _ := config.FindMediaServer(e.Name)
 	return CreateMediaServer201JSONResponse{
 		MediaServerCreatedJSONResponse: MediaServerCreatedJSONResponse(
-			mediaServerToAPI(e),
+			mediaServerToAPI(stored),
 		),
 	}, nil
 }

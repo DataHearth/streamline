@@ -186,6 +186,72 @@ var _ = Describe(
 				Expect(detail.ApiKeys).NotTo(BeEmpty())
 			})
 
+			It("flags the caller's own live session as current", func() {
+				app.auth.EXPECT().
+					GetUserDetail(mock.Anything, app.adminID).
+					Return(
+						&ent.User{
+							ID:    app.adminID,
+							Email: "admin@test.com",
+							Role:  "admin",
+						},
+						nil,
+						[]*ent.Session{
+							{ID: 1, Jti: "admin-jti", CreateTime: time.Now()},
+							{ID: 2, Jti: "other-device", CreateTime: time.Now()},
+						},
+						nil,
+					).
+					Once()
+
+				req := app.req(http.MethodGet,
+					fmt.Sprintf("/api/v1/users/%d", app.adminID),
+					app.adminKey, nil)
+				resp := app.do(req)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				var detail UserDetail
+				Expect(json.NewDecoder(resp.Body).Decode(&detail)).To(Succeed())
+				Expect(detail.Sessions).To(HaveLen(2))
+				Expect(detail.Sessions[0].IsCurrent).To(BeTrue())
+				Expect(detail.Sessions[1].IsCurrent).To(BeFalse())
+			})
+
+			It("flags no session as current on another user's detail", func() {
+				app.addMember("sessions@test.com")
+				app.auth.EXPECT().
+					GetUserDetail(mock.Anything, app.memberID).
+					Return(
+						&ent.User{
+							ID:    app.memberID,
+							Email: "sessions@test.com",
+							Role:  "member",
+						},
+						nil,
+						[]*ent.Session{
+							{ID: 3, Jti: "member-jti", CreateTime: time.Now()},
+							{ID: 4, Jti: "member-laptop", CreateTime: time.Now()},
+						},
+						nil,
+					).
+					Once()
+
+				req := app.req(http.MethodGet,
+					fmt.Sprintf("/api/v1/users/%d", app.memberID),
+					app.adminKey, nil)
+				resp := app.do(req)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				var detail UserDetail
+				Expect(json.NewDecoder(resp.Body).Decode(&detail)).To(Succeed())
+				Expect(detail.Sessions).To(HaveLen(2))
+				for _, s := range detail.Sessions {
+					Expect(s.IsCurrent).To(BeFalse())
+				}
+			})
+
 			It("returns 404 on unknown id", func() {
 				app.auth.EXPECT().
 					GetUserDetail(mock.Anything, uint32(99999)).

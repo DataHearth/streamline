@@ -106,7 +106,9 @@ func (s *Server) CreateUser(
 }
 
 // GetUser returns the user's detail block (user + api keys + sessions).
-// Admin-only. Sessions are rendered with is_current=false in the admin view.
+// Admin-only. A session is flagged is_current when its JTI matches the
+// caller's own — true only when an admin opens their own detail page, false
+// for every session of every other user.
 func (s *Server) GetUser(
 	ctx context.Context,
 	req GetUserRequestObject,
@@ -129,11 +131,10 @@ func (s *Server) GetUser(
 	for _, k := range keys {
 		apiKeys = append(apiKeys, toAPIApiKey(k))
 	}
+	claims := auth.ClaimsFromContext(ctx)
 	apiSessions := make([]Session, 0, len(sessions))
 	for _, sess := range sessions {
-		// No "current" concept when an admin views another user; pass empty
-		// jti so is_current is always false.
-		apiSessions = append(apiSessions, toAPISession(sess, ""))
+		apiSessions = append(apiSessions, toAPISession(sess, claims.JTI))
 	}
 	return GetUser200JSONResponse{
 		UserDetailJSONResponse: UserDetailJSONResponse{

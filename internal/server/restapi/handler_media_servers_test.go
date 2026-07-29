@@ -159,6 +159,53 @@ var _ = Describe(
 				Expect(got.APIKey).To(Equal("keep"))
 			})
 
+			It("rejects library_section on non-Plex types with 422", func() {
+				configtest.SetupFile(mediaServerOverride(map[string]any{
+					"name": "jf", "server_type": "jellyfin",
+					"host": "http://jf", "api_key": "tok", "enabled": true,
+				}))
+
+				body := `{"library_section": "1"}`
+				req := app.req(http.MethodPatch, "/api/v1/media-servers/jf", "",
+					strings.NewReader(body))
+				req.Header.Set("Content-Type", "application/json")
+				resp := app.do(req)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+
+				got, _ := config.FindMediaServer("jf")
+				Expect(got.LibrarySection).To(BeNil())
+			})
+
+			It(
+				"rejects a type switch that strands library_section with 422",
+				func() {
+					configtest.SetupFile(mediaServerOverride(map[string]any{
+						"name":            "home",
+						"server_type":     "plex",
+						"host":            "http://plex",
+						"api_key":         "tok",
+						"library_section": "Movies",
+						"enabled":         true,
+					}))
+
+					body := `{"server_type": "jellyfin"}`
+					req := app.req(
+						http.MethodPatch,
+						"/api/v1/media-servers/home",
+						"",
+						strings.NewReader(body),
+					)
+					req.Header.Set("Content-Type", "application/json")
+					resp := app.do(req)
+					defer resp.Body.Close()
+					Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+
+					got, _ := config.FindMediaServer("home")
+					Expect(got.ServerType).To(Equal("plex"))
+				},
+			)
+
 			It("returns 404 for nonexistent server", func() {
 				body := `{"name": "x", "server_type": "plex", "host": "http://x"}`
 				req := app.req(http.MethodPatch, "/api/v1/media-servers/ghost", "",
