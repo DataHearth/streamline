@@ -16,15 +16,15 @@ import (
 
 // RunDriftCheck verifies every tracked MediaFile is still present on disk.
 // Missing files start (or advance) a grace clock keyed off last_seen_at; once
-// the file has been gone for at least cfg.DriftGraceTicks intervals the row
-// is deleted and the owning movie reverts to "wanted".
+// the file has been gone for at least cfg.DriftGraceTicks intervals the row is
+// deleted and its owning movie or episode reverts to "wanted".
 func (s *Service) RunDriftCheck(ctx context.Context, interval time.Duration) error {
 	graceWindow := interval * time.Duration(s.cfg.DriftGraceTicks)
 
 	ctx, span := tracer.Start(ctx, "hygiene.drift_check")
 	defer span.End()
 
-	rows, err := s.store.ListAllMediaFilesWithMovie(ctx)
+	rows, err := s.store.ListAllMediaFilesWithOwners(ctx)
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
 	}
@@ -83,28 +83,58 @@ func (s *Service) handleMissing(
 		return
 	}
 
-	movieID := uint32(0)
-	if row.Edges.Movie != nil {
-		movieID = row.Edges.Movie.ID
+	switch {
+	case row.Edges.Movie != nil:
+		s.revertMovie(ctx, row.ID, row.Edges.Movie.ID)
+	case row.Edges.Episode != nil:
+		s.revertEpisode(ctx, row.ID, row.Edges.Episode.ID)
+	default:
+		s.deleteOrphan(ctx, row)
 	}
-	if movieID == 0 {
-		slog.WarnContext(ctx, "drift revert: media_file has no movie edge",
-			"media_file_id", row.ID)
-		return
-	}
+}
 
+func (s *Service) revertMovie(ctx context.Context, mediaFileID, movieID uint32) {
 	if err := s.store.DeleteMediaFileAndRevertMovie(
 		ctx,
-		row.ID,
+		mediaFileID,
 		movieID,
 	); err != nil {
 		slog.ErrorContext(ctx, "drift revert failed",
-			"media_file_id", row.ID, "movie_id", movieID, "error", err)
+			"media_file.id", mediaFileID, "movie.id", movieID, "error", err)
 		return
 	}
 	driftReverted.Add(ctx, 1, metric.WithAttributes(
 		attribute.Int64("movie.id", int64(movieID)),
 	))
+}
+
+func (s *Service) revertEpisode(ctx context.Context, mediaFileID, episodeID uint32) {
+	if err := s.store.DeleteMediaFileAndRevertEpisode(
+		ctx,
+		mediaFileID,
+		episodeID,
+	); err != nil {
+		slog.ErrorContext(ctx, "drift revert failed",
+			"media_file.id", mediaFileID, "episode.id", episodeID, "error", err)
+		return
+	}
+	driftReverted.Add(ctx, 1, metric.WithAttributes(
+		attribute.Int64("episode.id", int64(episodeID)),
+	))
+}
+
+// deleteOrphan reaps a row whose owner is gone. Movie deletes predating the
+// cascading FKs left media_files rows behind with a NULL owner; without this
+// they would be re-examined, and warned about, on every tick forever.
+func (s *Service) deleteOrphan(ctx context.Context, row *ent.MediaFile) {
+	if err := s.store.DeleteMediaFile(ctx, row.ID); err != nil {
+		slog.ErrorContext(ctx, "drift orphan delete failed",
+			"media_file.id", row.ID, "error", err)
+		return
+	}
+	driftOrphansDeleted.Add(ctx, 1)
+	slog.InfoContext(ctx, "drift deleted an ownerless media file",
+		"media_file.id", row.ID, "media_file.path", row.Path)
 }
 
 func classifyStatErr(err error) string {

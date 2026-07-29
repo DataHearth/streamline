@@ -3,6 +3,8 @@ package movie
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"sort"
 	"sync"
 	"time"
@@ -12,6 +14,7 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/datahearth/streamline/ent"
+	entdownloadrecord "github.com/datahearth/streamline/ent/downloadrecord"
 	entmovie "github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/metadata"
@@ -342,6 +345,38 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 				Expect(refreshed.DigitalReleaseDate).To(BeNil())
 			},
 		)
+	})
+
+	Describe("Delete against real schema", func() {
+		It("cascades to the movie's media files and download records", func() {
+			m, err := store.CreateMovie(ctx, db.CreateMovieParams{
+				Title: "Doomed", OriginalTitle: "Doomed", Year: 2019,
+				TmdbID: 4242, Status: entmovie.StatusAvailable,
+				QualityProfile: profileName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			file := filepath.Join(GinkgoT().TempDir(), "Doomed.mkv")
+			Expect(os.WriteFile(file, []byte("payload"), 0o644)).To(Succeed())
+			_, err = store.CreateMediaFile(ctx, db.CreateMediaFileParams{
+				MovieID: m.ID, Path: file, Size: 7,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			_, err = store.CreateDownloadRecord(ctx, db.CreateDownloadRecordParams{
+				Title: "Doomed.2019.1080p", MovieID: m.ID, Size: 7,
+				Status: entdownloadrecord.StatusCompleted,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(svc.Delete(ctx, m.ID, DeleteOptions{DeleteFiles: true})).
+				To(Succeed())
+
+			_, err = store.FindMovieByID(ctx, m.ID)
+			Expect(ent.IsNotFound(err)).To(BeTrue())
+			Expect(file).NotTo(BeAnExistingFile())
+			Expect(client.MediaFile.Query().Count(ctx)).To(Equal(0))
+			Expect(client.DownloadRecord.Query().Count(ctx)).To(Equal(0))
+		})
 	})
 
 	Describe("AnnotateTMDBResults against real schema", func() {

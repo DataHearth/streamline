@@ -139,7 +139,7 @@ type queuedOrphan struct {
 }
 
 func (s *Service) trackedPathSet(ctx context.Context) (map[string]struct{}, error) {
-	rows, err := s.store.ListAllMediaFilesWithMovie(ctx)
+	rows, err := s.store.ListAllMediaFilesWithOwners(ctx)
 	if err != nil {
 		return nil, err
 	}

@@ -321,7 +321,7 @@ func (w *Worker) importEpisodeRecord(
 	// Single file (or a dir resolving to exactly one file) → import directly to
 	// the record's own episode. Otherwise treat it as a season pack.
 	if !info.IsDir() {
-		return w.importSingleEpisode(ctx, span, rec, show, season.Number, ep)
+		return w.importSingleEpisode(ctx, span, rec, show, season.Number, ep, libCfg)
 	}
 	files, err := library.ListVideoFiles(rec.SavePath)
 	if err != nil {
@@ -331,19 +331,22 @@ func (w *Worker) importEpisodeRecord(
 		)
 	}
 	if len(files) <= 1 {
-		return w.importSingleEpisode(ctx, span, rec, show, season.Number, ep)
+		return w.importSingleEpisode(ctx, span, rec, show, season.Number, ep, libCfg)
 	}
 
 	matched := 0
 	for _, f := range files {
 		parsed := library.Parse(filepath.Base(f))
-		target := library.MatchEpisode(parsed, show.Edges.Seasons, anime)
+		tSeason, target := library.MatchEpisodeInSeason(
+			parsed,
+			show.Edges.Seasons,
+			anime,
+		)
 		if target == nil {
 			slog.WarnContext(ctx, "season pack file matched no episode",
 				"file", filepath.Base(f), "tvshow.id", show.ID)
 			continue
 		}
-		tSeason := episodeSeasonNumber(show.Edges.Seasons, target)
 		imported, err := w.lib.ImportEpisode(ctx, f, show, tSeason, target)
 		if errors.Is(err, library.ErrDestExists) && rec.ReplaceExisting {
 			if rErr := w.replaceEpisodeFile(ctx, target.ID); rErr != nil {
@@ -401,6 +404,7 @@ func (w *Worker) importSingleEpisode(
 	show *ent.TVShow,
 	seasonNumber uint16,
 	ep *ent.Episode,
+	libCfg config.LibraryConfig,
 ) error {
 	imported, err := w.lib.ImportEpisode(ctx, rec.SavePath, show, seasonNumber, ep)
 	if errors.Is(err, library.ErrDestExists) && rec.ReplaceExisting {
@@ -442,7 +446,6 @@ func (w *Worker) importSingleEpisode(
 		"tvshow.id", show.ID, "episode.id", ep.ID)
 
 	w.markRequestsAvailable(ctx, "tvshow", show.TvdbID)
-	libCfg := config.Get().Library
 	w.refreshMediaServers(ctx, libCfg.SeriesPath)
 	w.cleanupTorrent(ctx, rec, libCfg)
 	return nil
@@ -486,19 +489,6 @@ func (w *Worker) cleanupTorrent(
 		slog.WarnContext(ctx, "remove torrent failed",
 			"hash", rec.TorrentHash, "error", err)
 	}
-}
-
-// episodeSeasonNumber finds which season an episode belongs to within the
-// eager-loaded season set (episodes don't carry the season number directly).
-func episodeSeasonNumber(seasons []*ent.Season, ep *ent.Episode) uint16 {
-	for _, se := range seasons {
-		for _, e := range se.Edges.Episodes {
-			if e.ID == ep.ID {
-				return se.Number
-			}
-		}
-	}
-	return 0
 }
 
 func (w *Worker) handleOutcome(ctx context.Context, recordID uint32, runErr error) {

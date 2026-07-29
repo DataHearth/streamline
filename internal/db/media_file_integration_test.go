@@ -56,6 +56,56 @@ var _ = Describe("MediaFile store", Label("integration", "db"), func() {
 		})
 	})
 
+	Describe("ListAllMediaFilesWithOwners", func() {
+		It("eager-loads both the movie and the episode edge", func() {
+			m, err := store.CreateMovie(ctx, CreateMovieParams{
+				Title: "Dune", OriginalTitle: "Dune", Year: 2021, TmdbID: 999,
+				Status: entmovie.StatusWanted, QualityProfile: "HD",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			_, err = store.CreateMediaFile(ctx, CreateMediaFileParams{
+				Path: "/lib/dune.mkv", Size: 1, MovieID: m.ID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			ad := time.Now()
+			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "The Bear", Year: 2022, TvdbID: 7777,
+				Seasons: []SeasonSeed{
+					{
+						Number: 1,
+						Episodes: []EpisodeSeed{
+							{Number: 1, Title: "System", AirDate: &ad},
+						},
+					},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			ep := show.Edges.Seasons[0].Edges.Episodes[0]
+			_, err = store.CreateMediaFile(ctx, CreateMediaFileParams{
+				Path: "/lib/bear.mkv", Size: 1, EpisodeID: ep.ID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			rows, err := store.ListAllMediaFilesWithOwners(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rows).To(HaveLen(2))
+
+			owners := map[string]uint32{}
+			for _, r := range rows {
+				switch {
+				case r.Edges.Movie != nil:
+					owners["movie"] = r.Edges.Movie.ID
+				case r.Edges.Episode != nil:
+					owners["episode"] = r.Edges.Episode.ID
+				}
+			}
+			Expect(owners).To(Equal(map[string]uint32{
+				"movie": m.ID, "episode": ep.ID,
+			}))
+		})
+	})
+
 	Describe("DeleteMediaFileAndRevertEpisode", func() {
 		It("deletes the media_file row and reverts the episode to wanted", func() {
 			ad := time.Now()

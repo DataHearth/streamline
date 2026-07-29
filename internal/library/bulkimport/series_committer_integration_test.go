@@ -12,7 +12,9 @@ import (
 	"github.com/datahearth/streamline/ent"
 	entimportscan "github.com/datahearth/streamline/ent/importscan"
 	entimportscanshow "github.com/datahearth/streamline/ent/importscanshow"
+	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/media/tvshow"
 	"github.com/datahearth/streamline/internal/metadata"
 	metamocks "github.com/datahearth/streamline/internal/metadata/mocks"
@@ -166,6 +168,103 @@ var _ = Describe(
 				Expect(err).NotTo(HaveOccurred())
 				Expect(string(refreshed.Status)).To(Equal("completed"))
 				Expect(refreshed.CommitSuccessCount).To(Equal(uint32(1)))
+			},
+		)
+	},
+)
+
+var _ = Describe(
+	"Series commit (rename mode)",
+	Label("integration", "bulkimport"),
+	func() {
+		It(
+			"transfers episodes into the series library with the scan's mode",
+			func() {
+				ctx := context.Background()
+				root := GinkgoT().TempDir()
+				srcDir := filepath.Join(root, "downloads")
+				libDir := filepath.Join(root, "tv")
+				showFolder := filepath.Join(srcDir, "Breaking Bad")
+				Expect(os.MkdirAll(showFolder, 0o755)).To(Succeed())
+				srcFile := filepath.Join(showFolder, "Breaking Bad S01E01.mkv")
+				Expect(
+					os.WriteFile(srcFile, make([]byte, 60*1024*1024), 0o644),
+				).To(Succeed())
+
+				client := dbtest.SetupTestDB(ctx)
+				DeferCleanup(client.Close)
+				store := db.New(client)
+				tvmeta := metamocks.NewMockTVProvider(GinkgoT())
+				importSvc := library.NewImportService(&config.LibraryConfig{
+					SeriesPath: libDir,
+					SeriesNaming: "{title}/Season {season:02}/" +
+						"{title} - S{season:02}E{episode:02}.{ext}",
+					ImportMode: "hardlink",
+				})
+				svc := NewService(
+					store, nil, importSvc, nil,
+					tvshow.NewService(store, tvmeta, nil, nil), nil, libDir,
+				)
+
+				const tvdbID = uint32(81189)
+				tvmeta.EXPECT().GetSeries(mock.Anything, tvdbID).
+					Return(&metadata.TVDetails{
+						TVResult: metadata.TVResult{
+							TVDBID: tvdbID, Title: "Breaking Bad", Year: 2008,
+						},
+						Status: "ended",
+						Type:   metadata.SeriesStandard,
+						Seasons: []metadata.SeasonInfo{
+							{Number: 1, Name: "Season 1"},
+						},
+						Episodes: []metadata.EpisodeInfo{
+							{SeasonNumber: 1, Number: 1, Title: "Pilot"},
+						},
+					}, nil).Once()
+
+				scan, err := store.CreateImportScan(ctx, db.CreateImportScanParams{
+					SourcePath: srcDir,
+					Kind:       entimportscan.KindSeries,
+					Mode:       entimportscan.ModeRename,
+					ImportMode: entimportscan.ImportModeCopy,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(store.UpdateImportScanStatus(
+					ctx, scan.ID, entimportscan.StatusAwaitingReview,
+					db.UpdateScanStatusOpts{},
+				)).To(Succeed())
+				id := tvdbID
+				Expect(store.BulkCreateImportScanShows(
+					ctx, scan.ID, []db.CreateImportScanShowParams{{
+						FolderPath:     showFolder,
+						ParsedTitle:    "Breaking Bad",
+						Classification: entimportscanshow.ClassificationConfirmed,
+						TVDBID:         &id,
+						FileCount:      1,
+					}},
+				)).To(Succeed())
+
+				svc.runCommitSeries(ctx, scan)
+
+				show, err := store.FindTVShowByTVDBID(ctx, tvdbID)
+				Expect(err).NotTo(HaveOccurred())
+				full, err := store.FindTVShowByID(ctx, show.ID)
+				Expect(err).NotTo(HaveOccurred())
+
+				mf, err := store.FindMediaFileByEpisodeID(ctx, episodeID(full, 1))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(mf.Path).To(Equal(filepath.Join(
+					libDir, "Breaking Bad", "Season 01",
+					"Breaking Bad - S01E01.mkv",
+				)))
+				Expect(mf.Path).To(BeAnExistingFile())
+
+				// scan.import_mode=copy overrides the service's hardlink default.
+				srcInfo, err := os.Stat(srcFile)
+				Expect(err).NotTo(HaveOccurred())
+				dstInfo, err := os.Stat(mf.Path)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(os.SameFile(srcInfo, dstInfo)).To(BeFalse())
 			},
 		)
 	},

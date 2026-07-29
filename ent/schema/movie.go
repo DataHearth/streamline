@@ -41,8 +41,10 @@ func (Movie) Fields() []ent.Field {
 
 func (Movie) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.To("download_records", DownloadRecord.Type),
-		edge.To("media_files", MediaFile.Type),
+		edge.To("download_records", DownloadRecord.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
+		edge.To("media_files", MediaFile.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("events", MovieEvent.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),
 	}

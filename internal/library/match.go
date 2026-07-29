@@ -33,18 +33,30 @@ func MatchEpisode(
 	seasons []*ent.Season,
 	anime bool,
 ) *ent.Episode {
+	_, ep := MatchEpisodeInSeason(parsed, seasons, anime)
+	return ep
+}
+
+// MatchEpisodeInSeason is MatchEpisode plus the number of the season the match
+// lives in — episodes don't carry it, and callers rendering a destination path
+// need it. Returns (0, nil) when nothing matches.
+func MatchEpisodeInSeason(
+	parsed ParseResult,
+	seasons []*ent.Season,
+	anime bool,
+) (uint16, *ent.Episode) {
 	for _, se := range seasons {
 		for _, e := range se.Edges.Episodes {
 			if anime && parsed.AbsoluteNumber > 0 {
 				if e.AbsoluteNumber == parsed.AbsoluteNumber {
-					return e
+					return se.Number, e
 				}
 				continue
 			}
 			if se.Number == parsed.Season && e.Number == parsed.Episode {
-				return e
+				return se.Number, e
 			}
 		}
 	}
-	return nil
+	return 0, nil
 }

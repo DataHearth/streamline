@@ -69,7 +69,7 @@ var (
 				Symbol:     "download_records_movies_download_records",
 				Columns:    []*schema.Column{DownloadRecordsColumns[17]},
 				RefColumns: []*schema.Column{MoviesColumns[0]},
-				OnDelete:   schema.SetNull,
+				OnDelete:   schema.Cascade,
 			},
 		},
 	}
@@ -296,7 +296,7 @@ var (
 				Symbol:     "media_files_movies_media_files",
 				Columns:    []*schema.Column{MediaFilesColumns[11]},
 				RefColumns: []*schema.Column{MoviesColumns[0]},
-				OnDelete:   schema.SetNull,
+				OnDelete:   schema.Cascade,
 			},
 		},
 	}

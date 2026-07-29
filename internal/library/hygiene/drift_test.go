@@ -55,7 +55,7 @@ var _ = Describe("Service.RunDriftCheck", Label("unit", "hygiene"), func() {
 			Path:       path,
 			LastSeenAt: &seen,
 		}}
-		store.EXPECT().ListAllMediaFilesWithMovie(mock.Anything).
+		store.EXPECT().ListAllMediaFilesWithOwners(mock.Anything).
 			Return(rows, nil).Once()
 		store.EXPECT().BumpMediaFileLastSeen(mock.Anything, uint32(42)).
 			Return(nil).Once()
@@ -71,7 +71,7 @@ var _ = Describe("Service.RunDriftCheck", Label("unit", "hygiene"), func() {
 				Path: filepath.Join(tmpDir, "Gone.mkv"),
 			}}
 			store.EXPECT().
-				ListAllMediaFilesWithMovie(mock.Anything).
+				ListAllMediaFilesWithOwners(mock.Anything).
 				Return(rows, nil).
 				Once()
 			store.EXPECT().
@@ -91,7 +91,7 @@ var _ = Describe("Service.RunDriftCheck", Label("unit", "hygiene"), func() {
 			LastSeenAt: &seen,
 		}}
 		store.EXPECT().
-			ListAllMediaFilesWithMovie(mock.Anything).
+			ListAllMediaFilesWithOwners(mock.Anything).
 			Return(rows, nil).
 			Once()
 
@@ -109,11 +109,52 @@ var _ = Describe("Service.RunDriftCheck", Label("unit", "hygiene"), func() {
 			},
 		}}
 		store.EXPECT().
-			ListAllMediaFilesWithMovie(mock.Anything).
+			ListAllMediaFilesWithOwners(mock.Anything).
 			Return(rows, nil).
 			Once()
 		store.EXPECT().
 			DeleteMediaFileAndRevertMovie(mock.Anything, uint32(99), uint32(88)).
+			Return(nil).
+			Once()
+
+		Expect(svc.RunDriftCheck(ctx, 15*time.Minute)).To(Succeed())
+	})
+
+	It("reverts the episode when grace expires and the file is missing", func() {
+		seen := time.Now().Add(-2 * time.Hour)
+		rows := []*ent.MediaFile{{
+			ID:         21,
+			Path:       filepath.Join(tmpDir, "S01E01.mkv"),
+			LastSeenAt: &seen,
+			Edges: ent.MediaFileEdges{
+				Episode: &ent.Episode{ID: 33, Number: 1},
+			},
+		}}
+		store.EXPECT().
+			ListAllMediaFilesWithOwners(mock.Anything).
+			Return(rows, nil).
+			Once()
+		store.EXPECT().
+			DeleteMediaFileAndRevertEpisode(mock.Anything, uint32(21), uint32(33)).
+			Return(nil).
+			Once()
+
+		Expect(svc.RunDriftCheck(ctx, 15*time.Minute)).To(Succeed())
+	})
+
+	It("deletes an ownerless row instead of warning about it forever", func() {
+		seen := time.Now().Add(-2 * time.Hour)
+		rows := []*ent.MediaFile{{
+			ID:         64,
+			Path:       filepath.Join(tmpDir, "Orphan.mkv"),
+			LastSeenAt: &seen,
+		}}
+		store.EXPECT().
+			ListAllMediaFilesWithOwners(mock.Anything).
+			Return(rows, nil).
+			Once()
+		store.EXPECT().
+			DeleteMediaFile(mock.Anything, uint32(64)).
 			Return(nil).
 			Once()
 
@@ -136,7 +177,7 @@ var _ = Describe("Service.RunDriftCheck", Label("unit", "hygiene"), func() {
 			ID: 5, Path: file, LastSeenAt: &seen,
 		}}
 		store.EXPECT().
-			ListAllMediaFilesWithMovie(mock.Anything).
+			ListAllMediaFilesWithOwners(mock.Anything).
 			Return(rows, nil).
 			Once()
 

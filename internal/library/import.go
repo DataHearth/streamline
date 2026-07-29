@@ -31,11 +31,11 @@ var (
 func init() {
 	imports = otelx.Must(meter.Int64Counter(
 		"streamline.library.imports",
-		metric.WithDescription("Movie import attempts by outcome"),
+		metric.WithDescription("Media import attempts by kind and outcome"),
 	))
 	importDuration = otelx.Must(meter.Float64Histogram(
 		"streamline.library.import.duration",
-		metric.WithDescription("Movie import duration"),
+		metric.WithDescription("Media import duration"),
 		metric.WithUnit("s"),
 	))
 
@@ -215,34 +215,126 @@ func (s *ImportService) ImportMovieWithMode(
 	)
 	defer span.End()
 
+	return placeFile(ctx, span, placement{
+		kind:   "movie",
+		src:    srcDir,
+		root:   s.config.MoviePath,
+		naming: s.config.MovieNaming,
+		mode:   mode,
+		buildVars: func(parsed ParseResult) map[string]string {
+			return BuildMovieVars(m.Title, m.Year, m.TmdbID, imdbID, parsed)
+		},
+		owner: []any{"movie.id", m.ID},
+	})
+}
+
+// ImportEpisode places a single episode file into the series library. srcFile
+// is a concrete file path (resolved by the caller — for a season pack the
+// caller matches each file to its episode before calling this). The dest path
+// is rendered from SeriesNaming + SeriesPath. Does not touch the DB.
+func (s *ImportService) ImportEpisode(
+	ctx context.Context,
+	srcFile string,
+	show *ent.TVShow,
+	season uint16,
+	ep *ent.Episode,
+) (ImportedFile, error) {
+	return s.ImportEpisodeWithMode(ctx, srcFile, show, season, ep, "")
+}
+
+// ImportEpisodeWithMode is ImportEpisode with an explicit transfer-mode
+// override. Empty mode falls back to s.config.ImportMode. Valid values:
+// hardlink, copy, move.
+func (s *ImportService) ImportEpisodeWithMode(
+	ctx context.Context,
+	srcFile string,
+	show *ent.TVShow,
+	season uint16,
+	ep *ent.Episode,
+	modeOverride string,
+) (ImportedFile, error) {
+	mode := modeOverride
+	if mode == "" {
+		mode = s.config.ImportMode
+	}
+	ctx, span := tracer.Start(ctx, "library.import_episode",
+		trace.WithAttributes(
+			attribute.Int64("tvshow.id", int64(show.ID)),
+			attribute.Int("season", int(season)),
+			attribute.Int("episode", int(ep.Number)),
+			attribute.String("import.mode", mode),
+		),
+	)
+	defer span.End()
+
+	return placeFile(ctx, span, placement{
+		kind:   "episode",
+		src:    srcFile,
+		root:   s.config.SeriesPath,
+		naming: s.config.SeriesNaming,
+		mode:   mode,
+		buildVars: func(parsed ParseResult) map[string]string {
+			return BuildEpisodeVars(
+				show.Title,
+				show.Year,
+				season,
+				ep.Number,
+				ep.Title,
+				parsed,
+			)
+		},
+		owner: []any{"tvshow.id", show.ID, "episode.id", ep.ID},
+	})
+}
+
+// placement describes one file placement: where to look for the source, how to
+// render the destination, and how to move the bytes there.
+type placement struct {
+	kind      string // movie | episode — metric dimension
+	src       string // a file, or a directory holding exactly one media file
+	root      string // library root the destination must stay inside
+	naming    string
+	mode      string
+	buildVars func(ParseResult) map[string]string
+	// owner identifies the movie/episode as slog key/value pairs.
+	owner []any
+}
+
+// placeFile resolves the media file under p.src, renders its destination from
+// the naming template, transfers it, and records the import metrics. Shared by
+// the movie and episode paths so both report identically — the only real
+// difference between them is which template vars get built.
+func placeFile(
+	ctx context.Context,
+	span trace.Span,
+	p placement,
+) (ImportedFile, error) {
 	start := time.Now()
 	outcome := "success"
 	defer func() {
 		attrs := metric.WithAttributes(
-			attribute.String("import.mode", mode),
+			attribute.String("media.kind", p.kind),
+			attribute.String("import.mode", p.mode),
 			attribute.String("outcome", outcome),
 		)
 		importDuration.Record(ctx, time.Since(start).Seconds(), attrs)
 		imports.Add(ctx, 1, attrs)
 	}()
 
-	srcFile, err := FindMediaFile(srcDir)
+	srcFile, err := FindMediaFile(p.src)
 	if err != nil {
 		outcome = "no_media"
 		return ImportedFile{}, otelx.RecordSpanError(span, err)
 	}
 	parsed := Parse(filepath.Base(srcFile))
-	vars := BuildMovieVars(m.Title, m.Year, m.TmdbID, imdbID, parsed)
-	relPath := ApplyTemplate(s.config.MovieNaming, vars)
 
-	segments := strings.Split(relPath, "/")
+	segments := strings.Split(ApplyTemplate(p.naming, p.buildVars(parsed)), "/")
 	for i, seg := range segments {
 		segments[i] = SanitizePath(seg)
 	}
-	relJoined := filepath.Join(segments...)
-	destPath := filepath.Join(s.config.MoviePath, relJoined)
+	destPath := filepath.Join(p.root, filepath.Join(segments...))
 
-	absRoot, _ := filepath.Abs(s.config.MoviePath)
+	absRoot, _ := filepath.Abs(p.root)
 	absDest, _ := filepath.Abs(destPath)
 	if !strings.HasPrefix(absDest, absRoot+string(filepath.Separator)) &&
 		absDest != absRoot {
@@ -272,7 +364,7 @@ func (s *ImportService) ImportMovieWithMode(
 		return ImportedFile{}, otelx.RecordSpanError(span, ErrDestExists)
 	}
 
-	if err := transferFile(srcFile, destPath, mode); err != nil {
+	if err := transferFile(srcFile, destPath, p.mode); err != nil {
 		outcome = "transfer_failed"
 		return ImportedFile{}, otelx.RecordSpanError(
 			span,
@@ -289,108 +381,12 @@ func (s *ImportService) ImportMovieWithMode(
 		)
 	}
 	span.SetAttributes(attribute.Int64("file.size", info.Size()))
-	slog.InfoContext(ctx, "media file transferred",
+	slog.InfoContext(ctx, "media file transferred", append([]any{
 		"media_file.src", srcFile,
 		"media_file.dst", destPath,
-		"import.mode", mode,
-		"movie.id", m.ID,
-	)
+		"import.mode", p.mode,
+	}, p.owner...)...)
 
-	return ImportedFile{Path: destPath, Size: info.Size(), Parsed: parsed}, nil
-}
-
-// ImportEpisode places a single episode file into the series library. srcFile
-// is a concrete file path (resolved by the caller — for a season pack the
-// caller matches each file to its episode before calling this). The dest path
-// is rendered from SeriesNaming + SeriesPath. Mirrors ImportMovieWithMode; does
-// not touch the DB.
-func (s *ImportService) ImportEpisode(
-	ctx context.Context,
-	srcFile string,
-	show *ent.TVShow,
-	season uint16,
-	ep *ent.Episode,
-) (ImportedFile, error) {
-	mode := s.config.ImportMode
-	ctx, span := tracer.Start(ctx, "library.import_episode",
-		trace.WithAttributes(
-			attribute.Int64("tvshow.id", int64(show.ID)),
-			attribute.Int("season", int(season)),
-			attribute.Int("episode", int(ep.Number)),
-			attribute.String("import.mode", mode),
-		),
-	)
-	defer span.End()
-
-	file, err := FindMediaFile(srcFile)
-	if err != nil {
-		return ImportedFile{}, otelx.RecordSpanError(span, err)
-	}
-	parsed := Parse(filepath.Base(file))
-	vars := BuildEpisodeVars(
-		show.Title,
-		show.Year,
-		season,
-		ep.Number,
-		ep.Title,
-		parsed,
-	)
-	relPath := ApplyTemplate(s.config.SeriesNaming, vars)
-
-	segments := strings.Split(relPath, "/")
-	for i, seg := range segments {
-		segments[i] = SanitizePath(seg)
-	}
-	destPath := filepath.Join(s.config.SeriesPath, filepath.Join(segments...))
-
-	absRoot, _ := filepath.Abs(s.config.SeriesPath)
-	absDest, _ := filepath.Abs(destPath)
-	if !strings.HasPrefix(absDest, absRoot+string(filepath.Separator)) &&
-		absDest != absRoot {
-		return ImportedFile{}, otelx.RecordSpanError(span, ErrUnsafePath)
-	}
-	span.SetAttributes(attribute.String("dest.path", destPath))
-
-	if err := os.MkdirAll(filepath.Dir(destPath), 0o755); err != nil {
-		return ImportedFile{}, otelx.RecordSpanError(
-			span,
-			fmt.Errorf("create library dir: %w", err),
-		)
-	}
-
-	if existing, err := os.Stat(destPath); err == nil {
-		srcInfo, statErr := os.Stat(file)
-		if statErr == nil && os.SameFile(existing, srcInfo) {
-			return ImportedFile{
-				Path:   destPath,
-				Size:   existing.Size(),
-				Parsed: parsed,
-			}, nil
-		}
-		return ImportedFile{}, otelx.RecordSpanError(span, ErrDestExists)
-	}
-
-	if err := transferFile(file, destPath, mode); err != nil {
-		return ImportedFile{}, otelx.RecordSpanError(
-			span,
-			fmt.Errorf("transfer file: %w", err),
-		)
-	}
-
-	info, err := os.Stat(destPath)
-	if err != nil {
-		return ImportedFile{}, otelx.RecordSpanError(
-			span,
-			fmt.Errorf("stat imported file: %w", err),
-		)
-	}
-	span.SetAttributes(attribute.Int64("file.size", info.Size()))
-	slog.InfoContext(ctx, "episode file transferred",
-		"media_file.src", file,
-		"media_file.dst", destPath,
-		"import.mode", mode,
-		"tvshow.id", show.ID,
-	)
 	return ImportedFile{Path: destPath, Size: info.Size(), Parsed: parsed}, nil
 }
 

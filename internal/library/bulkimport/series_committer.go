@@ -43,7 +43,7 @@ func (s *Service) runCommitSeries(ctx context.Context, scan *ent.ImportScan) {
 
 	var success, failed uint32
 	for _, sh := range shows {
-		outcome, msg, createdID := s.commitShow(ctx, sh)
+		outcome, msg, createdID := s.commitShow(ctx, scan, sh)
 		if uerr := s.store.UpdateImportScanShowOutcome(
 			ctx,
 			sh.ID,
@@ -91,9 +91,11 @@ func (s *Service) runCommitSeries(ctx context.Context, scan *ent.ImportScan) {
 }
 
 // commitShow adopts one show folder: resolve/create the show, then link each
-// on-disk file to its episode in place. Missing episodes stay wanted.
+// on-disk file to its episode. An in-place scan records the file where it lies;
+// a rename scan transfers it into the series library first. Missing episodes
+// stay wanted.
 func (s *Service) commitShow(
-	ctx context.Context, sc *ent.ImportScanShow,
+	ctx context.Context, scan *ent.ImportScan, sc *ent.ImportScanShow,
 ) (entimportscanshow.Outcome, string, uint32) {
 	ctx, span := tracer.Start(ctx, "bulkimport.commit_show",
 		trace.WithAttributes(
@@ -114,7 +116,11 @@ func (s *Service) commitShow(
 	matched := 0
 	for _, f := range files {
 		parsed := library.Parse(filepath.Base(f))
-		target := library.MatchEpisode(parsed, show.Edges.Seasons, anime)
+		season, target := library.MatchEpisodeInSeason(
+			parsed,
+			show.Edges.Seasons,
+			anime,
+		)
 		if target == nil {
 			slog.WarnContext(ctx, "series adopt: file matched no episode",
 				"file", filepath.Base(f), "tvshow.id", show.ID)
@@ -140,10 +146,22 @@ func (s *Service) commitShow(
 			)
 			continue
 		}
+		path, size := f, info.Size()
+		if scan.Mode == entimportscan.ModeRename {
+			imported, err := s.importSvc.ImportEpisodeWithMode(
+				ctx, f, show, season, target, string(scan.ImportMode),
+			)
+			if err != nil {
+				slog.WarnContext(ctx, "series adopt: import episode failed",
+					"file", f, "episode.id", target.ID, "error", err)
+				continue
+			}
+			path, size, parsed = imported.Path, imported.Size, imported.Parsed
+		}
 		if _, err := s.store.CreateMediaFile(ctx, db.CreateMediaFileParams{
 			EpisodeID:    target.ID,
-			Path:         f,
-			Size:         info.Size(),
+			Path:         path,
+			Size:         size,
 			Quality:      parsed.Resolution,
 			Format:       parsed.Extension,
 			ReleaseGroup: parsed.Group,

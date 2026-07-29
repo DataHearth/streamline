@@ -73,14 +73,15 @@ func (db *DB) MovieHasMediaFile(ctx context.Context, tmdbID uint32) (bool, error
 	return n > 0, nil
 }
 
-func (db *DB) ListAllMediaFilesWithMovie(
+func (db *DB) ListAllMediaFilesWithOwners(
 	ctx context.Context,
 ) ([]*ent.MediaFile, error) {
 	rows, err := db.client.MediaFile.Query().
 		WithMovie().
+		WithEpisode().
 		All(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("list media_files with movie: %w", err)
+		return nil, fmt.Errorf("list media_files with owners: %w", err)
 	}
 	return rows, nil
 }
@@ -116,6 +117,16 @@ func (db *DB) BumpMediaFileLastSeen(ctx context.Context, id uint32) error {
 		SetLastSeenAt(time.Now()).
 		Exec(ctx); err != nil {
 		return fmt.Errorf("bump last_seen_at for media_file %d: %w", id, err)
+	}
+	return nil
+}
+
+// DeleteMediaFile removes a MediaFile row without touching any owner. Used by
+// drift_check to reap rows whose owner is gone (legacy orphans left behind by
+// the pre-cascade movie delete).
+func (db *DB) DeleteMediaFile(ctx context.Context, id uint32) error {
+	if err := db.client.MediaFile.DeleteOneID(id).Exec(ctx); err != nil {
+		return fmt.Errorf("delete media_file %d: %w", id, err)
 	}
 	return nil
 }

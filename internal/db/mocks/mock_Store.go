@@ -1928,6 +1928,53 @@ func (_c *MockStore_DeleteImportScan_Call) RunAndReturn(run func(context.Context
 	return _c
 }
 
+// DeleteMediaFile provides a mock function with given fields: ctx, id
+func (_m *MockStore) DeleteMediaFile(ctx context.Context, id uint32) error {
+	ret := _m.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteMediaFile")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, uint32) error); ok {
+		r0 = rf(ctx, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockStore_DeleteMediaFile_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteMediaFile'
+type MockStore_DeleteMediaFile_Call struct {
+	*mock.Call
+}
+
+// DeleteMediaFile is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+func (_e *MockStore_Expecter) DeleteMediaFile(ctx interface{}, id interface{}) *MockStore_DeleteMediaFile_Call {
+	return &MockStore_DeleteMediaFile_Call{Call: _e.mock.On("DeleteMediaFile", ctx, id)}
+}
+
+func (_c *MockStore_DeleteMediaFile_Call) Run(run func(ctx context.Context, id uint32)) *MockStore_DeleteMediaFile_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(uint32))
+	})
+	return _c
+}
+
+func (_c *MockStore_DeleteMediaFile_Call) Return(_a0 error) *MockStore_DeleteMediaFile_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockStore_DeleteMediaFile_Call) RunAndReturn(run func(context.Context, uint32) error) *MockStore_DeleteMediaFile_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // DeleteMediaFileAndRevertEpisode provides a mock function with given fields: ctx, mediaFileID, episodeID
 func (_m *MockStore) DeleteMediaFileAndRevertEpisode(ctx context.Context, mediaFileID uint32, episodeID uint32) error {
 	ret := _m.Called(ctx, mediaFileID, episodeID)
@@ -4248,12 +4295,12 @@ func (_c *MockStore_ListAllEpisodeMediaFilePaths_Call) RunAndReturn(run func(con
 	return _c
 }
 
-// ListAllMediaFilesWithMovie provides a mock function with given fields: ctx
-func (_m *MockStore) ListAllMediaFilesWithMovie(ctx context.Context) ([]*ent.MediaFile, error) {
+// ListAllMediaFilesWithOwners provides a mock function with given fields: ctx
+func (_m *MockStore) ListAllMediaFilesWithOwners(ctx context.Context) ([]*ent.MediaFile, error) {
 	ret := _m.Called(ctx)
 
 	if len(ret) == 0 {
-		panic("no return value specified for ListAllMediaFilesWithMovie")
+		panic("no return value specified for ListAllMediaFilesWithOwners")
 	}
 
 	var r0 []*ent.MediaFile
@@ -4278,30 +4325,30 @@ func (_m *MockStore) ListAllMediaFilesWithMovie(ctx context.Context) ([]*ent.Med
 	return r0, r1
 }
 
-// MockStore_ListAllMediaFilesWithMovie_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListAllMediaFilesWithMovie'
-type MockStore_ListAllMediaFilesWithMovie_Call struct {
+// MockStore_ListAllMediaFilesWithOwners_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListAllMediaFilesWithOwners'
+type MockStore_ListAllMediaFilesWithOwners_Call struct {
 	*mock.Call
 }
 
-// ListAllMediaFilesWithMovie is a helper method to define mock.On call
+// ListAllMediaFilesWithOwners is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *MockStore_Expecter) ListAllMediaFilesWithMovie(ctx interface{}) *MockStore_ListAllMediaFilesWithMovie_Call {
-	return &MockStore_ListAllMediaFilesWithMovie_Call{Call: _e.mock.On("ListAllMediaFilesWithMovie", ctx)}
+func (_e *MockStore_Expecter) ListAllMediaFilesWithOwners(ctx interface{}) *MockStore_ListAllMediaFilesWithOwners_Call {
+	return &MockStore_ListAllMediaFilesWithOwners_Call{Call: _e.mock.On("ListAllMediaFilesWithOwners", ctx)}
 }
 
-func (_c *MockStore_ListAllMediaFilesWithMovie_Call) Run(run func(ctx context.Context)) *MockStore_ListAllMediaFilesWithMovie_Call {
+func (_c *MockStore_ListAllMediaFilesWithOwners_Call) Run(run func(ctx context.Context)) *MockStore_ListAllMediaFilesWithOwners_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(context.Context))
 	})
 	return _c
 }
 
-func (_c *MockStore_ListAllMediaFilesWithMovie_Call) Return(_a0 []*ent.MediaFile, _a1 error) *MockStore_ListAllMediaFilesWithMovie_Call {
+func (_c *MockStore_ListAllMediaFilesWithOwners_Call) Return(_a0 []*ent.MediaFile, _a1 error) *MockStore_ListAllMediaFilesWithOwners_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockStore_ListAllMediaFilesWithMovie_Call) RunAndReturn(run func(context.Context) ([]*ent.MediaFile, error)) *MockStore_ListAllMediaFilesWithMovie_Call {
+func (_c *MockStore_ListAllMediaFilesWithOwners_Call) RunAndReturn(run func(context.Context) ([]*ent.MediaFile, error)) *MockStore_ListAllMediaFilesWithOwners_Call {
 	_c.Call.Return(run)
 	return _c
 }

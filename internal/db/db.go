@@ -296,9 +296,10 @@ type Store interface {
 	// least one MediaFile row. Returns (false, nil) when the movie row itself
 	// is absent.
 	MovieHasMediaFile(ctx context.Context, tmdbID uint32) (bool, error)
-	// ListAllMediaFilesWithMovie returns every MediaFile row joined to its
-	// owning movie. Used by drift_check; loads edges eagerly via WithMovie().
-	ListAllMediaFilesWithMovie(ctx context.Context) ([]*ent.MediaFile, error)
+	// ListAllMediaFilesWithOwners returns every MediaFile row with its owning
+	// movie and episode eagerly loaded. Used by drift_check, which needs to
+	// tell movie-owned, episode-owned and orphaned rows apart.
+	ListAllMediaFilesWithOwners(ctx context.Context) ([]*ent.MediaFile, error)
 	// ListMediaFilesByMovieID returns every MediaFile attached to the given
 	// movie. Empty slice (no error) when the movie has no files.
 	ListMediaFilesByMovieID(
@@ -309,6 +310,8 @@ type Store interface {
 	BumpMediaFileLastSeen(ctx context.Context, id uint32) error
 	// UpdateMediaFilePath rewrites a MediaFile's path (used by rename).
 	UpdateMediaFilePath(ctx context.Context, id uint32, path string) error
+	// DeleteMediaFile removes a MediaFile row and leaves owners untouched.
+	DeleteMediaFile(ctx context.Context, id uint32) error
 	// DeleteMediaFileAndRevertMovie removes the MediaFile row and sets the
 	// owning movie's status back to "wanted" in a single transaction.
 	DeleteMediaFileAndRevertMovie(

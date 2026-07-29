@@ -74,7 +74,7 @@ var _ = Describe("Service.RunOrphanScan", Label("unit", "hygiene"), func() {
 	It("auto-imports a high-confidence orphan into an existing movie row", func() {
 		path := placeOrphan("Inception.2010.1080p.BluRay.x264-GROUP.mkv")
 
-		store.EXPECT().ListAllMediaFilesWithMovie(mock.Anything).
+		store.EXPECT().ListAllMediaFilesWithOwners(mock.Anything).
 			Return(nil, nil).Once()
 		store.EXPECT().ListPendingImportScanFilePaths(mock.Anything).
 			Return(nil, nil).Once()
@@ -107,7 +107,7 @@ var _ = Describe("Service.RunOrphanScan", Label("unit", "hygiene"), func() {
 	It("queues a confirmed orphan for review when no movie row exists yet", func() {
 		placeOrphan("Inception.2010.1080p.BluRay.x264-GROUP.mkv")
 
-		store.EXPECT().ListAllMediaFilesWithMovie(mock.Anything).
+		store.EXPECT().ListAllMediaFilesWithOwners(mock.Anything).
 			Return(nil, nil).Once()
 		store.EXPECT().ListPendingImportScanFilePaths(mock.Anything).
 			Return(nil, nil).Once()
@@ -127,7 +127,7 @@ var _ = Describe("Service.RunOrphanScan", Label("unit", "hygiene"), func() {
 	It("queues an ambiguous orphan into ImportScan instead of importing", func() {
 		placeOrphan("Some Movie 2010.1080p.x264.mkv")
 		store.EXPECT().
-			ListAllMediaFilesWithMovie(mock.Anything).
+			ListAllMediaFilesWithOwners(mock.Anything).
 			Return(nil, nil).
 			Once()
 		store.EXPECT().
@@ -147,7 +147,7 @@ var _ = Describe("Service.RunOrphanScan", Label("unit", "hygiene"), func() {
 	It("queues an unmatched orphan", func() {
 		placeOrphan("garbled.unknown.file.mkv")
 		store.EXPECT().
-			ListAllMediaFilesWithMovie(mock.Anything).
+			ListAllMediaFilesWithOwners(mock.Anything).
 			Return(nil, nil).
 			Once()
 		store.EXPECT().
@@ -164,7 +164,7 @@ var _ = Describe("Service.RunOrphanScan", Label("unit", "hygiene"), func() {
 	It("skips orphans whose path is already in a pending ImportScanFile", func() {
 		p := placeOrphan("Some Movie 2010.1080p.x264.mkv")
 		store.EXPECT().
-			ListAllMediaFilesWithMovie(mock.Anything).
+			ListAllMediaFilesWithOwners(mock.Anything).
 			Return(nil, nil).
 			Once()
 		store.EXPECT().ListPendingImportScanFilePaths(mock.Anything).
@@ -193,7 +193,7 @@ var _ = Describe("Service.RunOrphanScan", Label("unit", "hygiene"), func() {
 	It("falls through to queue when auto-import fails on a confirmed match", func() {
 		placeOrphan("Inception.2010.1080p.BluRay.x264-GROUP.mkv")
 		store.EXPECT().
-			ListAllMediaFilesWithMovie(mock.Anything).
+			ListAllMediaFilesWithOwners(mock.Anything).
 			Return(nil, nil).
 			Once()
 		store.EXPECT().

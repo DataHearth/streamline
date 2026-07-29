@@ -4,7 +4,8 @@
 //     against the movies table, auto-importing high-confidence matches and
 //     queueing ambiguous ones into the bulk-import review surface.
 //   - drift_check confirms every tracked MediaFile is still present on disk
-//     and reverts the owning movie to "wanted" once a grace window elapses.
+//     and reverts its owning movie or episode to "wanted" once a grace window
+//     elapses.
 package hygiene
 
 import (
@@ -30,10 +31,11 @@ var (
 	orphanMatchErrors  metric.Int64Counter
 	orphanImportFailed metric.Int64Counter
 
-	driftVerified   metric.Int64Counter
-	driftDrifted    metric.Int64Counter
-	driftReverted   metric.Int64Counter
-	driftStatErrors metric.Int64Counter
+	driftVerified       metric.Int64Counter
+	driftDrifted        metric.Int64Counter
+	driftReverted       metric.Int64Counter
+	driftOrphansDeleted metric.Int64Counter
+	driftStatErrors     metric.Int64Counter
 )
 
 func init() {
@@ -65,6 +67,9 @@ func init() {
 	driftReverted = otelx.Must(
 		meter.Int64Counter("streamline.hygiene.drift_check.reverted"),
 	)
+	driftOrphansDeleted = otelx.Must(
+		meter.Int64Counter("streamline.hygiene.drift_check.orphans_deleted"),
+	)
 	driftStatErrors = otelx.Must(
 		meter.Int64Counter("streamline.hygiene.drift_check.stat_errors"),
 	)
@@ -73,7 +78,8 @@ func init() {
 	for _, c := range []metric.Int64Counter{
 		orphanAutoImported, orphanQueued, orphanSkipped,
 		orphanWalkErrors, orphanMatchErrors, orphanImportFailed,
-		driftVerified, driftDrifted, driftReverted, driftStatErrors,
+		driftVerified, driftDrifted, driftReverted, driftOrphansDeleted,
+		driftStatErrors,
 	} {
 		c.Add(ctx, 0)
 	}

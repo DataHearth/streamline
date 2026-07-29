@@ -7,6 +7,10 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/config"
@@ -170,4 +174,163 @@ var _ = Describe("ImportService", Label("unit", "library"), func() {
 			Expect(err).To(MatchError(ErrUnsafePath))
 		})
 	})
+
+	Describe("ImportEpisode", func() {
+		var (
+			ctx         context.Context
+			seriesDir   string
+			downloadDir string
+			show        *ent.TVShow
+			ep          *ent.Episode
+		)
+
+		BeforeEach(func() {
+			ctx = context.Background()
+			tmpDir := GinkgoT().TempDir()
+			seriesDir = filepath.Join(tmpDir, "library", "tv")
+			downloadDir = filepath.Join(tmpDir, "downloads")
+			Expect(os.MkdirAll(downloadDir, 0o755)).To(Succeed())
+			show = &ent.TVShow{ID: 3, Title: "Breaking Bad", Year: 2008}
+			ep = &ent.Episode{ID: 9, Number: 1, Title: "Pilot"}
+		})
+
+		newSvc := func(mode string) *ImportService {
+			return NewImportService(&config.LibraryConfig{
+				SeriesPath: seriesDir,
+				SeriesNaming: "{title}/Season {season:02}/" +
+					"{title} - S{season:02}E{episode:02}.{ext}",
+				ImportMode: mode,
+			})
+		}
+
+		It("renders the destination from SeriesNaming", func() {
+			src := writeSizedFile(
+				downloadDir,
+				"Breaking.Bad.S01E01.1080p.WEB-DL.mkv",
+				60<<20,
+			)
+
+			got, err := newSvc("hardlink").ImportEpisode(ctx, src, show, 1, ep)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.Path).To(Equal(filepath.Join(
+				seriesDir,
+				"Breaking Bad",
+				"Season 01",
+				"Breaking Bad - S01E01.mkv",
+			)))
+			Expect(got.Path).To(BeAnExistingFile())
+		})
+
+		It("honours an explicit transfer-mode override", func() {
+			src := writeSizedFile(
+				downloadDir,
+				"Breaking.Bad.S01E01.1080p.WEB-DL.mkv",
+				60<<20,
+			)
+
+			got, err := newSvc("hardlink").
+				ImportEpisodeWithMode(ctx, src, show, 1, ep, "copy")
+			Expect(err).NotTo(HaveOccurred())
+
+			srcInfo, err := os.Stat(src)
+			Expect(err).NotTo(HaveOccurred())
+			dstInfo, err := os.Stat(got.Path)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(os.SameFile(srcInfo, dstInfo)).To(BeFalse())
+		})
+
+		It("falls back to the configured mode when no override is given", func() {
+			src := writeSizedFile(
+				downloadDir,
+				"Breaking.Bad.S01E01.1080p.WEB-DL.mkv",
+				60<<20,
+			)
+
+			got, err := newSvc("hardlink").
+				ImportEpisodeWithMode(ctx, src, show, 1, ep, "")
+			Expect(err).NotTo(HaveOccurred())
+
+			srcInfo, err := os.Stat(src)
+			Expect(err).NotTo(HaveOccurred())
+			dstInfo, err := os.Stat(got.Path)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(os.SameFile(srcInfo, dstInfo)).To(BeTrue())
+		})
+
+		It("returns ErrUnsafePath when template output escapes SeriesPath", func() {
+			src := writeSizedFile(downloadDir, "Show.S01E01.mkv", 60<<20)
+			svc := NewImportService(&config.LibraryConfig{
+				SeriesPath:   seriesDir,
+				SeriesNaming: "../escape/{title}.{ext}",
+				ImportMode:   "copy",
+			})
+
+			_, err := svc.ImportEpisode(ctx, src, show, 1, ep)
+			Expect(err).To(MatchError(ErrUnsafePath))
+		})
+	})
+
+	Describe("import metrics", func() {
+		It("counts episode imports, not just movie ones", func() {
+			ctx := context.Background()
+			reader := sdkmetric.NewManualReader()
+			otel.SetMeterProvider(
+				sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader)),
+			)
+
+			tmpDir := GinkgoT().TempDir()
+			downloadDir := filepath.Join(tmpDir, "downloads")
+			Expect(os.MkdirAll(downloadDir, 0o755)).To(Succeed())
+			src := writeSizedFile(downloadDir, "Show.S01E01.1080p.mkv", 60<<20)
+
+			svc := NewImportService(&config.LibraryConfig{
+				SeriesPath:   filepath.Join(tmpDir, "tv"),
+				SeriesNaming: "{title}/S{season:02}E{episode:02}.{ext}",
+				ImportMode:   "copy",
+			})
+			_, err := svc.ImportEpisode(
+				ctx,
+				src,
+				&ent.TVShow{ID: 1, Title: "Show"},
+				1,
+				&ent.Episode{ID: 1, Number: 1},
+			)
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = svc.ImportEpisode(
+				ctx,
+				filepath.Join(tmpDir, "nothing-here"),
+				&ent.TVShow{ID: 1, Title: "Show"},
+				1,
+				&ent.Episode{ID: 2, Number: 2},
+			)
+			Expect(err).To(HaveOccurred())
+
+			var rm metricdata.ResourceMetrics
+			Expect(reader.Collect(ctx, &rm)).To(Succeed())
+			Expect(importCount(rm, "episode", "success")).To(Equal(int64(1)))
+			Expect(importCount(rm, "episode", "no_media")).To(Equal(int64(1)))
+		})
+	})
 })
+
+func importCount(rm metricdata.ResourceMetrics, kind, outcome string) int64 {
+	GinkgoHelper()
+	for _, sm := range rm.ScopeMetrics {
+		for _, m := range sm.Metrics {
+			if m.Name != "streamline.library.imports" {
+				continue
+			}
+			sum, ok := m.Data.(metricdata.Sum[int64])
+			Expect(ok).To(BeTrue(), "imports counter is not an int64 sum")
+			for _, dp := range sum.DataPoints {
+				k, _ := dp.Attributes.Value(attribute.Key("media.kind"))
+				o, _ := dp.Attributes.Value(attribute.Key("outcome"))
+				if k.AsString() == kind && o.AsString() == outcome {
+					return dp.Value
+				}
+			}
+		}
+	}
+	return 0
+}

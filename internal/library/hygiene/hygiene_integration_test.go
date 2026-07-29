@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/datahearth/streamline/ent"
+	entepisode "github.com/datahearth/streamline/ent/episode"
 	entmovie "github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/library"
@@ -212,6 +213,64 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 		refreshed, err := store.FindMovieByID(ctx, m.ID)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(refreshed.Status)).To(Equal("wanted"))
+	})
+
+	It("reverts an Episode when its file disappears past the grace window", func() {
+		path := filepath.Join(tmpDir, "episode.mkv")
+		Expect(os.WriteFile(path, []byte("data"), 0o644)).To(Succeed())
+
+		air := time.Now()
+		show, err := store.CreateTVShow(ctx, db.CreateTVShowParams{
+			Title: "Gone Show", Year: 2024, TvdbID: 4321,
+			Seasons: []db.SeasonSeed{
+				{
+					Number: 1,
+					Episodes: []db.EpisodeSeed{
+						{Number: 1, Title: "Pilot", AirDate: &air},
+					},
+				},
+			},
+		})
+		Expect(err).NotTo(HaveOccurred())
+		ep := show.Edges.Seasons[0].Edges.Episodes[0]
+		Expect(store.SetEpisodeStatus(ctx, ep.ID, entepisode.StatusAvailable)).
+			To(Succeed())
+
+		mf, err := store.CreateMediaFile(ctx, db.CreateMediaFileParams{
+			EpisodeID: ep.ID, Path: path, Size: 4,
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(entClient.MediaFile.UpdateOneID(mf.ID).
+			SetLastSeenAt(time.Now().Add(-2 * time.Hour)).
+			Exec(ctx)).To(Succeed())
+
+		Expect(os.Remove(path)).To(Succeed())
+
+		Expect(svc.RunDriftCheck(ctx, time.Millisecond)).To(Succeed())
+
+		_, err = store.FindMediaFileByID(ctx, mf.ID)
+		Expect(ent.IsNotFound(err)).To(BeTrue())
+		refreshed, err := entClient.Episode.Get(ctx, ep.ID)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(string(refreshed.Status)).To(Equal("wanted"))
+	})
+
+	It("deletes a media_file row whose owner is gone", func() {
+		path := filepath.Join(tmpDir, "orphan.mkv")
+		Expect(os.WriteFile(path, []byte("data"), 0o644)).To(Succeed())
+
+		mf, err := entClient.MediaFile.Create().
+			SetPath(path).
+			SetSize(4).
+			SetLastSeenAt(time.Now().Add(-2 * time.Hour)).
+			Save(ctx)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(os.Remove(path)).To(Succeed())
+
+		Expect(svc.RunDriftCheck(ctx, time.Millisecond)).To(Succeed())
+
+		_, err = store.FindMediaFileByID(ctx, mf.ID)
+		Expect(ent.IsNotFound(err)).To(BeTrue())
 	})
 })
 
