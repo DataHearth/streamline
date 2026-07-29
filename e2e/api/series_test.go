@@ -162,10 +162,13 @@ var _ = Describe("REST API series", Label("e2e"), func() {
 			Expect(playOn.StatusCode).To(Equal(http.StatusNotFound))
 		})
 
-		// restapi.New never copies Deps.SeriesRenamer onto the server, so the
-		// series renamer is always nil and this route can only ever answer
-		// "renamer not configured".
-		It("500s rename", func() {
+		// RenameSeriesFiles never resolves the series before calling the
+		// renamer, so buildPlan's "series not found" error falls through
+		// the handler's single `err != nil` branch to 500 instead of the
+		// 404 api/openapi.yaml documents for this route. Same shape as
+		// the sibling RenameMovieFiles handler; tracked as a separate
+		// not-found-mapping bug, not fixed here.
+		It("500s rename with a not-found error, not renamer-not-configured", func() {
 			resp := post("/api/v1/series/999999/rename?preview=true", adminAuth, nil)
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusInternalServerError))
@@ -173,7 +176,7 @@ var _ = Describe("REST API series", Label("e2e"), func() {
 				Message string `json:"message"`
 			}
 			decode(resp, &body)
-			Expect(body.Message).To(ContainSubstring("renamer not configured"))
+			Expect(body.Message).To(ContainSubstring("series 999999 not found"))
 		})
 	})
 })

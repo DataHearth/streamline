@@ -88,6 +88,7 @@ func New(d Deps) *Server {
 		metadataTV:      d.MetadataTV,
 		deepLinker:      d.DeepLinker,
 		renamer:         d.Renamer,
+		seriesRenamer:   d.SeriesRenamer,
 		requests:        d.Requests,
 		torrents:        d.Torrents,
 		store:           d.Store,
