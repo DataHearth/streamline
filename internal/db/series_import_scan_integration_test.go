@@ -72,6 +72,28 @@ var _ = Describe("Series import scan store", Label("integration", "db"), func() 
 		Expect(shows[0].FileCount).To(Equal(uint16(62)))
 	})
 
+	It("reports an ent not-found when deciding an unknown show id", func() {
+		err := store.UpdateImportScanShowDecision(
+			ctx, 999999, entimportscanshow.DecisionSkip, nil,
+		)
+		Expect(ent.IsNotFound(err)).To(BeTrue())
+	})
+
+	// The REST 404 for a (scan, show) pair that does not exist rides on
+	// ent.IsNotFound seeing through this method's error wrapping, so a
+	// %w → %v slip here would silently turn that answer into a 500.
+	It("reports an ent not-found through FindImportScanShow's wrapping", func() {
+		scan, err := store.CreateImportScan(ctx, CreateImportScanParams{
+			SourcePath: "/tv",
+			Mode:       entimportscan.ModeInPlace,
+			Kind:       entimportscan.KindSeries,
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = store.FindImportScanShow(ctx, scan.ID, 999999)
+		Expect(ent.IsNotFound(err)).To(BeTrue())
+	})
+
 	It("defaults kind to movie when unset", func() {
 		scan, err := store.CreateImportScan(ctx, CreateImportScanParams{
 			SourcePath: "/movies", Mode: entimportscan.ModeInPlace,

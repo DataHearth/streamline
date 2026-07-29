@@ -228,7 +228,7 @@ func (s *Server) UpdateImportFileDecision(
 		tmdbID,
 	)
 	if err != nil {
-		if errors.Is(err, bulkimport.ErrScanNotFound) {
+		if errors.Is(err, bulkimport.ErrScanFileNotFound) {
 			return UpdateImportFileDecision404JSONResponse{
 				NotFoundJSONResponse: errNotFound(err.Error()),
 			}, nil
@@ -300,13 +300,18 @@ func (s *Server) UpdateImportShowDecision(
 		entimportscanshow.Decision(req.Body.Decision),
 		tvdbID,
 	); err != nil {
+		if ent.IsNotFound(err) {
+			return UpdateImportShowDecision404JSONResponse{
+				NotFoundJSONResponse: errNotFound("import scan show not found"),
+			}, nil
+		}
 		return nil, err
 	}
 	row, err := s.store.FindImportScanShow(ctx, req.Id, req.ShowId)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			return UpdateImportShowDecision404JSONResponse{
-				NotFoundJSONResponse: errNotFound(err.Error()),
+				NotFoundJSONResponse: errNotFound("import scan show not found"),
 			}, nil
 		}
 		return nil, err

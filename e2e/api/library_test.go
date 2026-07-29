@@ -93,6 +93,24 @@ var _ = Describe("REST API library imports", Label("e2e"), func() {
 		Expect(showList.Total).To(BeZero())
 	})
 
+	It("404s the decision routes for unknown ids", func() {
+		fileDecision := patch(
+			"/api/v1/library/imports/999999/files/999999",
+			adminAuth,
+			map[string]any{"decision": "skip"},
+		)
+		defer fileDecision.Body.Close()
+		Expect(fileDecision.StatusCode).To(Equal(http.StatusNotFound))
+
+		showDecision := patch(
+			"/api/v1/library/imports/999999/shows/999999",
+			adminAuth,
+			map[string]any{"decision": "skip"},
+		)
+		defer showDecision.Body.Close()
+		Expect(showDecision.StatusCode).To(Equal(http.StatusNotFound))
+	})
+
 	It("403s every import route for a non-admin", func() {
 		list := get("/api/v1/library/imports", viewerAuth)
 		defer list.Body.Close()
@@ -125,9 +143,6 @@ var _ = Describe("REST API library imports", Label("e2e"), func() {
 		defer files.Body.Close()
 		Expect(files.StatusCode).To(Equal(http.StatusForbidden))
 
-		// Both decision routes write before they check existence, so an
-		// unknown row answers 500 rather than the documented 404; the RBAC
-		// guard is the only hermetic assertion available for them.
 		fileDecision := patch(
 			"/api/v1/library/imports/1/files/1",
 			viewerAuth,

@@ -129,7 +129,7 @@ func (s *Service) GetFile(
 	row, err := s.store.FindImportScanFile(ctx, scanID, fileID)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return nil, ErrScanNotFound
+			return nil, ErrScanFileNotFound
 		}
 		return nil, err
 	}
@@ -142,12 +142,19 @@ func (s *Service) UpdateFileDecision(
 	decision entimportscanfile.Decision,
 	tmdbID *uint32,
 ) (*ent.ImportScanFile, error) {
+	// The write is keyed on fileID alone, so a fileID belonging to a different
+	// scan is mutated before the scan-scoped GetFile below answers 404. Fixing
+	// that needs a scan-scoped update predicate (scanID threaded into the store
+	// method, affected-rows check instead of UpdateOneID); deferred.
 	if err := s.store.UpdateImportScanFileDecision(
 		ctx,
 		fileID,
 		decision,
 		tmdbID,
 	); err != nil {
+		if ent.IsNotFound(err) {
+			return nil, ErrScanFileNotFound
+		}
 		return nil, err
 	}
 	return s.GetFile(ctx, scanID, fileID)

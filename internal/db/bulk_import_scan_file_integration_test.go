@@ -102,6 +102,25 @@ var _ = Describe("ImportScanFile store", Label("integration", "db"), func() {
 		})
 	})
 
+	Describe("UpdateImportScanFileDecision", func() {
+		It("reports an ent not-found for an unknown file id", func() {
+			err := store.UpdateImportScanFileDecision(
+				ctx, 999999, entimportscanfile.DecisionSkip, nil,
+			)
+			Expect(ent.IsNotFound(err)).To(BeTrue())
+		})
+	})
+
+	Describe("FindImportScanFile", func() {
+		// The REST 404 for a (scan, file) pair that does not exist rides on
+		// ent.IsNotFound seeing through this method's error wrapping, so a
+		// %w → %v slip here would silently turn that answer into a 500.
+		It("reports an ent not-found through its error wrapping", func() {
+			_, err := store.FindImportScanFile(ctx, scanID, 999999)
+			Expect(ent.IsNotFound(err)).To(BeTrue())
+		})
+	})
+
 	Describe("ListImportScanFilesForCommit", func() {
 		It("commits accepted + auto-matched files, never skipped ones", func() {
 			Expect(

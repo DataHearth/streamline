@@ -10,8 +10,10 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/datahearth/streamline/ent"
+	entimportscanfile "github.com/datahearth/streamline/ent/importscanfile"
 	entimportscanshow "github.com/datahearth/streamline/ent/importscanshow"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/library/bulkimport"
 )
 
 var _ = Describe("Handler: Import scan shows",
@@ -72,6 +74,21 @@ var _ = Describe("Handler: Import scan shows",
 			},
 		)
 
+		It(
+			"404s PATCH /library/imports/{id}/shows/{showId} for an unknown show",
+			func() {
+				app.store.EXPECT().UpdateImportScanShowDecision(mock.Anything,
+					uint32(999), entimportscanshow.DecisionSkip, (*uint32)(nil)).
+					Return(&ent.NotFoundError{}).Once()
+
+				resp := app.do(app.req(http.MethodPatch,
+					"/api/v1/library/imports/5/shows/999", app.adminKey,
+					strings.NewReader(`{"decision":"skip"}`)))
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+			},
+		)
+
 		It("forbids non-admins", func() {
 			app.addMember("")
 			resp := app.do(app.req(http.MethodGet,
@@ -79,4 +96,26 @@ var _ = Describe("Handler: Import scan shows",
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
 		})
+	})
+
+var _ = Describe("Handler: Import scan files",
+	Label("unit", "server", "imports"), func() {
+		var app *apiKeyApp
+		BeforeEach(func() { app = newAPIKeyApp() })
+
+		It(
+			"404s PATCH /library/imports/{id}/files/{fileId} for an unknown file",
+			func() {
+				app.bulkImports.EXPECT().UpdateFileDecision(mock.Anything,
+					uint32(5), uint32(999), entimportscanfile.DecisionSkip,
+					(*uint32)(nil)).
+					Return(nil, bulkimport.ErrScanFileNotFound).Once()
+
+				resp := app.do(app.req(http.MethodPatch,
+					"/api/v1/library/imports/5/files/999", app.adminKey,
+					strings.NewReader(`{"decision":"skip"}`)))
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+			},
+		)
 	})

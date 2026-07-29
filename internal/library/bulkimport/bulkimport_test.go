@@ -59,6 +59,38 @@ var _ = Describe("Service file decisions", Label("unit", "bulkimport"), func() {
 			Expect(f.DecisionTmdbID).To(Equal(tmdbID))
 		})
 
+		It("maps an unknown file id to ErrScanFileNotFound", func() {
+			store.EXPECT().
+				UpdateImportScanFileDecision(
+					mock.Anything, uint32(99), entimportscanfile.DecisionSkip, (*uint32)(nil),
+				).
+				Return(&ent.NotFoundError{}).
+				Once()
+
+			_, err := svc.UpdateFileDecision(
+				ctx, 3, 99, entimportscanfile.DecisionSkip, nil,
+			)
+			Expect(err).To(MatchError(ErrScanFileNotFound))
+		})
+
+		It("maps an unknown scan id to ErrScanFileNotFound", func() {
+			store.EXPECT().
+				UpdateImportScanFileDecision(
+					mock.Anything, uint32(12), entimportscanfile.DecisionSkip, (*uint32)(nil),
+				).
+				Return(nil).
+				Once()
+			store.EXPECT().
+				FindImportScanFile(mock.Anything, uint32(999), uint32(12)).
+				Return(nil, &ent.NotFoundError{}).
+				Once()
+
+			_, err := svc.UpdateFileDecision(
+				ctx, 999, 12, entimportscanfile.DecisionSkip, nil,
+			)
+			Expect(err).To(MatchError(ErrScanFileNotFound))
+		})
+
 		It("propagates the store write error without looking up the file", func() {
 			store.EXPECT().
 				UpdateImportScanFileDecision(
@@ -75,14 +107,14 @@ var _ = Describe("Service file decisions", Label("unit", "bulkimport"), func() {
 	})
 
 	Describe("GetFile", func() {
-		It("maps an ent not-found to ErrScanNotFound", func() {
+		It("maps an ent not-found to ErrScanFileNotFound", func() {
 			store.EXPECT().
 				FindImportScanFile(mock.Anything, uint32(3), uint32(99)).
 				Return(nil, &ent.NotFoundError{}).
 				Once()
 
 			_, err := svc.GetFile(ctx, 3, 99)
-			Expect(err).To(MatchError(ErrScanNotFound))
+			Expect(err).To(MatchError(ErrScanFileNotFound))
 		})
 	})
 })

@@ -17,6 +17,7 @@ import (
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	downloadmocks "github.com/datahearth/streamline/internal/download/mocks"
 	indexermocks "github.com/datahearth/streamline/internal/indexer/mocks"
+	bulkimportmocks "github.com/datahearth/streamline/internal/library/bulkimport/mocks"
 	moviemocks "github.com/datahearth/streamline/internal/media/movie/mocks"
 	tvshowmocks "github.com/datahearth/streamline/internal/media/tvshow/mocks"
 	mediaservermocks "github.com/datahearth/streamline/internal/mediaserver/mocks"
@@ -72,6 +73,7 @@ type apiKeyApp struct {
 	metadataTV   *metadatamocks.MockTVProvider
 	requests     *reqmocks.MockManager
 	torrents     *bittorrentmocks.MockManager
+	bulkImports  *bulkimportmocks.MockManager
 	store        *dbmocks.MockStore
 
 	// Identity tokens consumed by the synthetic auth middleware.
@@ -100,6 +102,7 @@ func newAPIKeyApp() *apiKeyApp {
 		metadataTV:     metadatamocks.NewMockTVProvider(t),
 		requests:       reqmocks.NewMockManager(t),
 		torrents:       bittorrentmocks.NewMockManager(t),
+		bulkImports:    bulkimportmocks.NewMockManager(t),
 		store:          dbmocks.NewMockStore(t),
 		adminKey:       "test-admin-token",
 		adminID:        1,
@@ -118,6 +121,7 @@ func newAPIKeyApp() *apiKeyApp {
 		MetadataTV:   a.metadataTV,
 		Requests:     a.requests,
 		Torrents:     a.torrents,
+		BulkImports:  a.bulkImports,
 		Store:        a.store,
 	})
 

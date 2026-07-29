@@ -11,6 +11,7 @@ var (
 	)
 	ErrScanRunning        = errors.New("another scan is already active")
 	ErrScanNotFound       = errors.New("scan not found")
+	ErrScanFileNotFound   = errors.New("scan file not found")
 	ErrScanNotReviewable  = errors.New("scan is not in awaiting_review state")
 	ErrScanNotCancellable = errors.New("scan is not in a cancellable state")
 	ErrScanNotDeletable   = errors.New("scan must be cancelled before delete")
