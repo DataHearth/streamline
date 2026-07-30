@@ -1,21 +1,18 @@
 <script lang="ts">
-	import { Search, Rows3, Rows2, X, Trash2, Plus, ListFilter, Check } from "@lucide/svelte";
+	import { Search, X, Trash2, Magnet, ListFilter, Check } from "@lucide/svelte";
 	import { fly } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { cn } from "../../lib/cn";
 
 	type View = "queue" | "history" | "torrents";
-	type Density = "comfortable" | "compact";
 
 	let {
 		view,
 		statusFilter,
 		search,
-		density,
 		onViewChange,
 		onStatusFilterChange,
 		onSearchChange,
-		onDensityToggle,
 		onClearCompleted,
 		clearableCount = 0,
 		onAddTorrent,
@@ -24,11 +21,9 @@
 		view: View;
 		statusFilter: string[];
 		search: string;
-		density: Density;
 		onViewChange: (v: View) => void;
 		onStatusFilterChange: (s: string[]) => void;
 		onSearchChange: (q: string) => void;
-		onDensityToggle: () => void;
 		onClearCompleted?: () => void;
 		clearableCount?: number;
 		onAddTorrent?: () => void;
@@ -188,27 +183,6 @@
 		{/if}
 	</div>
 
-	{#if view === "torrents" && onAddTorrent && canAddTorrent}
-		<button
-			type="button"
-			onclick={() => onAddTorrent?.()}
-			class="inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md bg-accent px-3.5 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover sm:ml-auto"
-		>
-			<Plus size={15} aria-hidden="true" />
-			Add torrent
-		</button>
-	{/if}
-	{#if view === "history" && onClearCompleted}
-		<button
-			type="button"
-			onclick={() => onClearCompleted?.()}
-			disabled={clearableCount === 0}
-			class="inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border border-border bg-bg-elevated px-3 text-sm font-medium text-fg-muted transition hover:border-border-strong hover:text-fg disabled:cursor-not-allowed disabled:opacity-50 sm:ml-auto"
-		>
-			<Trash2 size={14} aria-hidden="true" />
-			Clear completed{clearableCount > 0 ? ` (${clearableCount})` : ""}
-		</button>
-	{/if}
 	<div class="relative w-full sm:ml-auto sm:w-auto sm:flex-none">
 		<Search
 			size={15}
@@ -226,19 +200,25 @@
 			class="h-9 w-full min-w-0 rounded-md border border-border bg-bg-elevated pl-8 pr-3 text-sm text-fg placeholder:text-fg-faint focus:border-accent focus:outline-none sm:w-48"
 		/>
 	</div>
-	<button
-		type="button"
-		onclick={onDensityToggle}
-		aria-label={density === "comfortable"
-			? "Switch to compact rows"
-			: "Switch to comfortable rows"}
-		title="Row density"
-		class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border bg-bg-elevated text-fg-muted transition hover:text-fg"
-	>
-		{#if density === "comfortable"}
-			<Rows2 size={16} aria-hidden="true" />
-		{:else}
-			<Rows3 size={16} aria-hidden="true" />
-		{/if}
-	</button>
+	{#if view === "torrents" && onAddTorrent && canAddTorrent}
+		<button
+			type="button"
+			onclick={() => onAddTorrent?.()}
+			class="inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md bg-accent px-3.5 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover"
+		>
+			<Magnet size={15} aria-hidden="true" />
+			Add torrent
+		</button>
+	{/if}
+	{#if view === "history" && onClearCompleted}
+		<button
+			type="button"
+			onclick={() => onClearCompleted?.()}
+			disabled={clearableCount === 0}
+			class="inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border border-border bg-bg-elevated px-3 text-sm font-medium text-fg-muted transition hover:border-border-strong hover:text-fg disabled:cursor-not-allowed disabled:opacity-50"
+		>
+			<Trash2 size={14} aria-hidden="true" />
+			Clear completed{clearableCount > 0 ? ` (${clearableCount})` : ""}
+		</button>
+	{/if}
 </div>

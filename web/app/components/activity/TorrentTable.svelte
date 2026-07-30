@@ -5,24 +5,20 @@
 
 	let {
 		rows,
-		density,
 		loading,
 		error = null,
 		notConfigured = false,
 		canControl = false,
 		selectedHash = null,
 		onOpen,
-		onAdd,
 	}: {
 		rows: Torrent[];
-		density: "comfortable" | "compact";
 		loading: boolean;
 		error?: Error | null;
 		notConfigured?: boolean;
 		canControl?: boolean;
 		selectedHash?: string | null;
 		onOpen: (hash: string) => void;
-		onAdd: () => void;
 	} = $props();
 
 	const HEADERS = [
@@ -102,18 +98,10 @@
 				<Magnet size={26} class="text-fg-faint" aria-hidden="true" />
 				<p class="text-sm font-medium text-fg">No torrents yet</p>
 				<p class="text-xs text-fg-muted">
-					Add a magnet link or a .torrent file to get started.
+					{canControl
+						? "Use Add torrent above to paste a magnet link or upload a .torrent file."
+						: "Nothing is downloading right now."}
 				</p>
-				{#if canControl}
-					<button
-						type="button"
-						onclick={onAdd}
-						class="mt-2 inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-3.5 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover"
-					>
-						<Magnet size={15} aria-hidden="true" />
-						Add torrent
-					</button>
-				{/if}
 			</div>
 		{:else}
 			<table class="w-full min-w-[880px] border-collapse text-left">
@@ -135,7 +123,6 @@
 					{#each rows as t (t.hash)}
 						<TorrentRow
 							torrent={t}
-							{density}
 							selected={selectedHash === t.hash}
 							{onOpen}
 						/>

@@ -40,18 +40,6 @@
 	let search = $state("");
 	let selectedHash = $state<string | null>(null);
 	let addOpen = $state(false);
-	let density = $state<"comfortable" | "compact">(
-		(typeof localStorage !== "undefined" &&
-			(localStorage.getItem("streamline:activity-density") as
-				| "comfortable"
-				| "compact")) ||
-			"comfortable",
-	);
-	$effect(() => {
-		if (typeof localStorage !== "undefined")
-			localStorage.setItem("streamline:activity-density", density);
-	});
-
 	const qc = useQueryClient();
 
 	const queue = createQuery<DownloadQueue>(() => ({
@@ -471,7 +459,6 @@
 		{view}
 		{statusFilter}
 		{search}
-		{density}
 		clearableCount={historyItems.filter((h) => h.status === "completed").length}
 		onViewChange={(v) => {
 			view = v;
@@ -480,8 +467,6 @@
 		}}
 		onStatusFilterChange={(s) => (statusFilter = s)}
 		onSearchChange={(q) => (search = q)}
-		onDensityToggle={() =>
-			(density = density === "comfortable" ? "compact" : "comfortable")}
 		onClearCompleted={auth.isAdmin
 			? () => clearCompleted.mutate()
 			: undefined}
@@ -492,19 +477,16 @@
 	{#if view === "torrents"}
 		<TorrentTable
 			rows={torrentRows}
-			{density}
 			loading={torrents.isPending && !torrentsNotConfigured}
 			error={torrentsNotConfigured ? null : (torrents.error ?? null)}
 			notConfigured={torrentsNotConfigured}
 			canControl={auth.isAdmin}
 			{selectedHash}
 			onOpen={(h) => (selectedHash = h)}
-			onAdd={() => (addOpen = true)}
 		/>
 	{:else}
 		<ActivityTable
 			{view}
-			{density}
 			{rows}
 			{busyId}
 			loading={view === "queue" ? queue.isPending : history.isPending}

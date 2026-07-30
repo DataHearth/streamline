@@ -10,18 +10,16 @@
 	let {
 		item,
 		view,
-		density,
 		expanded,
 		onToggle,
 	}: {
 		item: QueueEntry | HistoryEntry;
 		view: "queue" | "history";
-		density: "comfortable" | "compact";
 		expanded: boolean;
 		onToggle: (id: number) => void;
 	} = $props();
 
-	let pad = $derived(density === "comfortable" ? "py-3" : "py-2");
+	const pad = "py-3";
 	let isActive = $derived(view === "queue" && item.status === "downloading");
 	let queue = $derived(item as QueueEntry);
 	let history = $derived(item as HistoryEntry);

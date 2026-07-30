@@ -6,7 +6,6 @@
 
 	let {
 		view,
-		density,
 		rows,
 		loading,
 		error,
@@ -21,7 +20,6 @@
 		onRemove,
 	}: {
 		view: "queue" | "history";
-		density: "comfortable" | "compact";
 		rows: (QueueEntry | HistoryEntry)[];
 		loading: boolean;
 		error: Error | null;
@@ -117,7 +115,6 @@
 					<ActivityRow
 						item={row}
 						{view}
-						{density}
 						expanded={expanded.get(row.id) ?? false}
 						onToggle={toggle}
 					/>

@@ -13,17 +13,15 @@
 
 	let {
 		torrent,
-		density,
 		selected = false,
 		onOpen,
 	}: {
 		torrent: Torrent;
-		density: "comfortable" | "compact";
 		selected?: boolean;
 		onOpen: (hash: string) => void;
 	} = $props();
 
-	let pad = $derived(density === "comfortable" ? "py-3" : "py-2");
+	const pad = "py-3";
 	let fetching = $derived(torrent.status === "fetching");
 	let active = $derived(
 		torrent.status === "downloading" ||
