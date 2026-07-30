@@ -43,7 +43,7 @@ var _ = Describe(
 			metaProv = metadatamocks.NewMockProvider(GinkgoT())
 			tmpDir = GinkgoT().TempDir()
 			libRoot = tmpDir
-			svc = NewService(store, metaProv, nil, nil, nil, libRoot)
+			svc = NewService(store, metaProv, nil, nil, nil, nil, libRoot, libRoot)
 		})
 
 		It("rejects relative path", func() {
@@ -76,6 +76,37 @@ var _ = Describe(
 				StartScanParams{SourcePath: file, Mode: entimportscan.ModeInPlace},
 			)
 			Expect(err).To(MatchError(ErrInvalidPath))
+		})
+
+		It("distinguishes a missing library root from a bad source path", func() {
+			svc = NewService(
+				store, metaProv, nil, nil, nil, nil,
+				"/nonexistent/library/root", "/nonexistent/library/root",
+			)
+			_, err := svc.StartScan(
+				ctx,
+				StartScanParams{SourcePath: tmpDir, Mode: entimportscan.ModeInPlace},
+			)
+			Expect(err).To(MatchError(ErrLibraryPathMissing))
+			Expect(err).ToNot(MatchError(ErrInvalidPath))
+		})
+
+		It("validates a series scan against series_path, not movie_path", func() {
+			seriesRoot := GinkgoT().TempDir()
+			svc = NewService(
+				store, metaProv, nil, nil, nil, nil,
+				"/nonexistent/movie/root", seriesRoot,
+			)
+			store.EXPECT().
+				CountActiveImportScans(mock.Anything).
+				Return(uint32(1), nil).
+				Once()
+			_, err := svc.StartScan(ctx, StartScanParams{
+				SourcePath: seriesRoot,
+				Kind:       entimportscan.KindSeries,
+				Mode:       entimportscan.ModeInPlace,
+			})
+			Expect(err).To(MatchError(ErrScanRunning))
 		})
 
 		It("rejects path outside library in in_place mode", func() {

@@ -183,12 +183,18 @@ export const importTransferMode = v.picklist(
 	"Pick a transfer mode",
 );
 
+export const importScanKind = v.picklist(
+	["movie", "series"] as const,
+	"Pick a media type",
+);
+
 export const importStartForm = v.object({
 	source_path: v.pipe(
 		v.string(),
 		v.minLength(1, "Required"),
 		v.regex(/^\//, "Must be an absolute path"),
 	),
+	kind: importScanKind,
 	mode: importMode,
 	import_mode: importTransferMode,
 });

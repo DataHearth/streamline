@@ -671,6 +671,8 @@ export type SystemInfo = {
 	db_path: string;
 	db_size?: string;
 	db_usage?: DiskUsage;
+	library_dir?: string;
+	library_usage?: DiskUsage;
 	version: string;
 	commit?: string;
 	built_at?: string;
@@ -804,6 +806,7 @@ export type ImportScanShowList = {
 
 export type ImportStartRequest = {
 	source_path: string;
+	kind?: ImportScanKind;
 	mode: ImportMode;
 	import_mode?: ImportTransferMode | "";
 };

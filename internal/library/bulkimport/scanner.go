@@ -38,6 +38,9 @@ func (s *Service) StartScan(
 	)
 	defer span.End()
 
+	if p.Kind == "" {
+		p.Kind = entimportscan.KindMovie
+	}
 	resolved, err := s.validateScanParams(p)
 	if err != nil {
 		return nil, otelx.RecordSpanError(span, err)
@@ -61,6 +64,7 @@ func (s *Service) StartScan(
 
 	scan, err := s.store.CreateImportScan(ctx, db.CreateImportScanParams{
 		SourcePath: resolved,
+		Kind:       p.Kind,
 		Mode:       p.Mode,
 		ImportMode: p.ImportMode,
 	})
@@ -73,9 +77,14 @@ func (s *Service) StartScan(
 	span.SetAttributes(attribute.Int64("scan.id", int64(scan.ID)))
 
 	bg := context.WithoutCancel(ctx)
-	go s.runScan(bg, scan)
+	if p.Kind == entimportscan.KindSeries {
+		go s.runScanSeries(bg, scan)
+	} else {
+		go s.runScan(bg, scan)
+	}
 	slog.InfoContext(ctx, "bulk import scan started",
-		"scan.id", scan.ID, "scan.mode", scan.Mode, "scan.source_path", resolved)
+		"scan.id", scan.ID, "scan.kind", scan.Kind,
+		"scan.mode", scan.Mode, "scan.source_path", resolved)
 
 	return scan, nil
 }
@@ -93,9 +102,15 @@ func (s *Service) validateScanParams(p StartScanParams) (string, error) {
 		return "", ErrInvalidPath
 	}
 
-	libAbs, err := filepath.EvalSymlinks(s.libraryDir)
+	// in_place/rename are defined relative to the library root for the media type
+	// being scanned — a TV folder is "outside" the movie library and vice versa.
+	root := s.moviePath
+	if p.Kind == entimportscan.KindSeries {
+		root = s.seriesPath
+	}
+	libAbs, err := filepath.EvalSymlinks(root)
 	if err != nil {
-		return "", ErrInvalidPath
+		return "", ErrLibraryPathMissing
 	}
 	inside := strings.HasPrefix(resolved, libAbs+string(filepath.Separator)) ||
 		resolved == libAbs

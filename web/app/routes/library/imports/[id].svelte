@@ -564,7 +564,7 @@
 		</header>
 
 		<div class="mt-5">
-			<ImportSteps status={scan.status} />
+			<ImportSteps status={scan.status} series={isSeries} />
 		</div>
 
 		{#if scan.status === "failed"}

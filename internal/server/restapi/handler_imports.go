@@ -23,6 +23,9 @@ func (s *Server) StartImport(
 		SourcePath: req.Body.SourcePath,
 		Mode:       entimportscan.Mode(req.Body.Mode),
 	}
+	if req.Body.Kind != nil {
+		params.Kind = entimportscan.Kind(*req.Body.Kind)
+	}
 	if req.Body.ImportMode != nil {
 		params.ImportMode = entimportscan.ImportMode(*req.Body.ImportMode)
 	}
@@ -30,7 +33,8 @@ func (s *Server) StartImport(
 	if err != nil {
 		switch {
 		case errors.Is(err, bulkimport.ErrInvalidPath),
-			errors.Is(err, bulkimport.ErrPathOutsideLibrary):
+			errors.Is(err, bulkimport.ErrPathOutsideLibrary),
+			errors.Is(err, bulkimport.ErrLibraryPathMissing):
 			return StartImport422JSONResponse{
 				UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
 			}, nil

@@ -491,6 +491,24 @@ func (e ImportScanCreateRequestImportMode) Valid() bool {
 	}
 }
 
+// Defines values for ImportScanCreateRequestKind.
+const (
+	ImportScanCreateRequestKindMovie  ImportScanCreateRequestKind = "movie"
+	ImportScanCreateRequestKindSeries ImportScanCreateRequestKind = "series"
+)
+
+// Valid indicates whether the value is a known member of the ImportScanCreateRequestKind enum.
+func (e ImportScanCreateRequestKind) Valid() bool {
+	switch e {
+	case ImportScanCreateRequestKindMovie:
+		return true
+	case ImportScanCreateRequestKindSeries:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ImportScanCreateRequestMode.
 const (
 	ImportScanCreateRequestModeInPlace ImportScanCreateRequestMode = "in_place"
@@ -2033,13 +2051,21 @@ type ImportScanCreateRequest struct {
 	// ImportMode Per-scan override of `library.import_mode`. Only meaningful when `mode=rename`.
 	// Omit (or empty) to use the global default.
 	ImportMode *ImportScanCreateRequestImportMode `json:"import_mode,omitempty"`
-	Mode       ImportScanCreateRequestMode        `json:"mode"`
-	SourcePath string                             `json:"source_path"`
+
+	// Kind Media type to scan for. `movie` matches each file against TMDB;
+	// `series` matches each top-level folder against TVDB.
+	Kind       *ImportScanCreateRequestKind `json:"kind,omitempty"`
+	Mode       ImportScanCreateRequestMode  `json:"mode"`
+	SourcePath string                       `json:"source_path"`
 }
 
 // ImportScanCreateRequestImportMode Per-scan override of `library.import_mode`. Only meaningful when `mode=rename`.
 // Omit (or empty) to use the global default.
 type ImportScanCreateRequestImportMode string
+
+// ImportScanCreateRequestKind Media type to scan for. `movie` matches each file against TMDB;
+// `series` matches each top-level folder against TVDB.
+type ImportScanCreateRequestKind string
 
 // ImportScanCreateRequestMode defines model for ImportScanCreateRequest.Mode.
 type ImportScanCreateRequestMode string
@@ -2753,9 +2779,13 @@ type SystemInfo struct {
 	GoVersion string     `json:"go_version"`
 
 	// HttpsWarn True when public_url is plain http://.
-	HttpsWarn bool   `json:"https_warn"`
-	PublicUrl string `json:"public_url"`
-	Version   string `json:"version"`
+	HttpsWarn bool `json:"https_warn"`
+
+	// LibraryDir Configured library.movie_path.
+	LibraryDir   *string    `json:"library_dir,omitempty"`
+	LibraryUsage *DiskUsage `json:"library_usage,omitempty"`
+	PublicUrl    string     `json:"public_url"`
+	Version      string     `json:"version"`
 }
 
 // TMDBMovieResult defines model for TMDBMovieResult.

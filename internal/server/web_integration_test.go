@@ -125,7 +125,8 @@ auth:
     email: %q
     password: %q%s
 library:
-  movie_path: /tmp/streamline/movies
+  movie_path: %s/movies
+  series_path: %s/series
   movie_naming: "{title}"
   import_mode: hardlink
   default_quality:
@@ -142,7 +143,8 @@ schedules:
 log:
   level: info
   format: text
-`, dataDir, opts.regMode, opts.seedEmail, opts.seedPassword, oidcBlock)
+`, dataDir, opts.regMode, opts.seedEmail, opts.seedPassword, oidcBlock,
+		dataDir, dataDir)
 	Expect(os.WriteFile(cfgPath, []byte(yaml), 0o600)).To(Succeed())
 
 	config.ResetForTest()

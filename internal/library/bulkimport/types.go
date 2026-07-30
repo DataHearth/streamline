@@ -9,6 +9,7 @@ import (
 // StartScanParams is the input for Service.StartScan.
 type StartScanParams struct {
 	SourcePath string
+	Kind       entimportscan.Kind       // movie | series — empty defaults to movie
 	Mode       entimportscan.Mode       // in_place | rename
 	ImportMode entimportscan.ImportMode // optional — empty means "use library.import_mode default" (only meaningful when Mode == rename)
 }

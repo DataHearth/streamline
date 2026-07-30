@@ -1,4 +1,4 @@
-package hygiene
+package bulkimport
 
 import (
 	. "github.com/onsi/ginkgo/v2"
@@ -8,9 +8,9 @@ import (
 	"github.com/datahearth/streamline/internal/metadata"
 )
 
-var _ = Describe("classifyShow", Label("unit", "hygiene"), func() {
+var _ = Describe("ClassifyShow", Label("unit", "bulkimport"), func() {
 	It("confirms a single strong title+year match", func() {
-		c := classifyShow("Breaking Bad", 2008, []metadata.TVResult{
+		c := ClassifyShow("Breaking Bad", 2008, []metadata.TVResult{
 			{TVDBID: 81189, Title: "Breaking Bad", Year: 2008},
 		}, nil)
 		Expect(c.Kind).To(Equal(entimportscanshow.ClassificationConfirmed))
@@ -18,7 +18,7 @@ var _ = Describe("classifyShow", Label("unit", "hygiene"), func() {
 	})
 
 	It("marks existing when the match is already tracked", func() {
-		c := classifyShow("Breaking Bad", 2008, []metadata.TVResult{
+		c := ClassifyShow("Breaking Bad", 2008, []metadata.TVResult{
 			{TVDBID: 81189, Title: "Breaking Bad", Year: 2008},
 		}, map[uint32]uint32{81189: 7})
 		Expect(c.Kind).To(Equal(entimportscanshow.ClassificationExisting))
@@ -26,7 +26,7 @@ var _ = Describe("classifyShow", Label("unit", "hygiene"), func() {
 	})
 
 	It("is ambiguous with multiple matches", func() {
-		c := classifyShow("The Office", 0, []metadata.TVResult{
+		c := ClassifyShow("The Office", 0, []metadata.TVResult{
 			{TVDBID: 1, Title: "The Office", Year: 2005},
 			{TVDBID: 2, Title: "The Office", Year: 2001},
 		}, nil)
@@ -34,7 +34,7 @@ var _ = Describe("classifyShow", Label("unit", "hygiene"), func() {
 	})
 
 	It("is unmatched with no results", func() {
-		Expect(classifyShow("zzz", 0, nil, nil).Kind).
+		Expect(ClassifyShow("zzz", 0, nil, nil).Kind).
 			To(Equal(entimportscanshow.ClassificationUnmatched))
 	})
 })

@@ -55,28 +55,34 @@ type SeriesAdder interface {
 type Service struct {
 	store       db.Store
 	metadata    metadata.Provider
+	tvmeta      metadata.TVProvider
 	importSvc   *library.ImportService
 	movieSvc    *movie.Service
 	seriesAdder SeriesAdder
-	libraryDir  string
+	moviePath   string
+	seriesPath  string
 }
 
 // NewService constructs the bulk-import service.
 func NewService(
 	store db.Store,
 	meta metadata.Provider,
+	tvmeta metadata.TVProvider,
 	importSvc *library.ImportService,
 	movieSvc *movie.Service,
 	seriesAdder SeriesAdder,
-	libraryDir string,
+	moviePath string,
+	seriesPath string,
 ) *Service {
 	return &Service{
 		store:       store,
 		metadata:    meta,
+		tvmeta:      tvmeta,
 		importSvc:   importSvc,
 		movieSvc:    movieSvc,
 		seriesAdder: seriesAdder,
-		libraryDir:  libraryDir,
+		moviePath:   moviePath,
+		seriesPath:  seriesPath,
 	}
 }
 

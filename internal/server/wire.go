@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -174,14 +175,28 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 	movieSvc := movie.NewService(store, tmdb, postersSvc, dlManager)
 	tvSvc := tvshow.NewService(store, tvdb, postersSvc, dlManager)
 	mediaServerSvc := mediaserver.New()
+	// Nothing else creates the library roots — the importer only makes per-title
+	// subfolders, so on a fresh install they'd first appear after an import that
+	// bulk-import refuses to run until they exist.
+	for _, p := range []string{cfg.Library.MoviePath, cfg.Library.SeriesPath} {
+		if p == "" {
+			continue
+		}
+		if err := os.MkdirAll(p, 0o755); err != nil {
+			dbClient.Close()
+			return nil, fmt.Errorf("create library path %s: %w", p, err)
+		}
+	}
 	libSvc := library.NewImportService(&cfg.Library)
 	bulkImportSvc := bulkimport.NewService(
 		store,
 		tmdb,
+		tvdb,
 		libSvc,
 		movieSvc,
 		tvSvc,
 		cfg.Library.MoviePath,
+		cfg.Library.SeriesPath,
 	)
 	hygieneSvc := hygiene.New(store, tmdb, tvdb, libSvc, &cfg.Library)
 	if n, err := bulkImportSvc.AbortInflight(ctx); err != nil {

@@ -5186,6 +5186,13 @@ components:
       properties:
         source_path:
           type: string
+        kind:
+          type: string
+          enum: [movie, series]
+          default: movie
+          description: |
+            Media type to scan for. `movie` matches each file against TMDB;
+            `series` matches each top-level folder against TVDB.
         mode:
           type: string
           enum: [in_place, rename]
@@ -5529,6 +5536,14 @@ components:
           description: Human-readable file size, empty when stat fails.
         db_usage:
           $ref: "#/components/schemas/DiskUsage"
+        library_dir:
+          type: string
+          description: Configured library.movie_path.
+        library_usage:
+          $ref: "#/components/schemas/DiskUsage"
+          description: |
+            Usage of the volume holding the media library, which is usually a
+            different mount from data_dir. Null when the path can't be probed.
         version:
           type: string
         commit:

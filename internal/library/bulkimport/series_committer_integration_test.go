@@ -46,7 +46,7 @@ var _ = Describe(
 			tvmeta = metamocks.NewMockTVProvider(GinkgoT())
 			// SeriesAdder = real tvshow.Service backed by the mock TVDB provider.
 			tvSvc := tvshow.NewService(store, tvmeta, nil, nil)
-			svc = NewService(store, nil, nil, nil, tvSvc, tmpDir)
+			svc = NewService(store, nil, tvmeta, nil, nil, tvSvc, tmpDir, tmpDir)
 		})
 
 		// placeEpisode writes a >MinMediaSize file in a season subfolder, exercising
@@ -207,8 +207,8 @@ var _ = Describe(
 					ImportMode: "hardlink",
 				})
 				svc := NewService(
-					store, nil, importSvc, nil,
-					tvshow.NewService(store, tvmeta, nil, nil), libDir,
+					store, nil, tvmeta, importSvc, nil,
+					tvshow.NewService(store, tvmeta, nil, nil), libDir, libDir,
 				)
 
 				const tvdbID = uint32(81189)

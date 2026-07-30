@@ -9,6 +9,9 @@ var (
 	ErrPathOutsideLibrary = errors.New(
 		"source path is outside library_path (in_place mode requires inside, rename mode requires outside)",
 	)
+	ErrLibraryPathMissing = errors.New(
+		"configured library path (library.movie_path / library.series_path) does not exist or is not a directory",
+	)
 	ErrScanRunning        = errors.New("another scan is already active")
 	ErrScanNotFound       = errors.New("scan not found")
 	ErrScanFileNotFound   = errors.New("scan file not found")

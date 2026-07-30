@@ -10,6 +10,7 @@
 	import type {
 		ImportMode,
 		ImportScan,
+		ImportScanKind,
 		ImportStartRequest,
 		ImportTransferMode,
 	} from "../../lib/types";
@@ -19,6 +20,7 @@
 
 	type Values = {
 		source_path: string;
+		kind: ImportScanKind;
 		mode: ImportMode;
 		import_mode: "" | ImportTransferMode;
 	};
@@ -52,6 +54,7 @@
 	const form = createForm(() => ({
 		defaultValues: {
 			source_path: "",
+			kind: "movie" as ImportScanKind,
 			mode: "in_place" as ImportMode,
 			import_mode: "" as Values["import_mode"],
 		},
@@ -59,6 +62,7 @@
 		onSubmit: ({ value }) => {
 			const body: ImportStartRequest = {
 				source_path: value.source_path,
+				kind: value.kind,
 				mode: value.mode,
 			};
 			if (value.mode === "rename" && value.import_mode) {
@@ -68,7 +72,26 @@
 		},
 	}));
 
-	const MODES: { v: ImportMode; label: string; desc: string }[] = [
+	// Mirrored rather than read off form.state: a top-level $derived on
+	// form.state.values doesn't re-run when a field changes, so the copy below
+	// would stay stuck on the movie wording.
+	let kind = $state<ImportScanKind>("movie");
+	let isSeries = $derived(kind === "series");
+
+	const KINDS: { v: ImportScanKind; label: string; desc: string }[] = [
+		{
+			v: "movie",
+			label: "Movies",
+			desc: "One entry per file, matched against TMDB.",
+		},
+		{
+			v: "series",
+			label: "Series",
+			desc: "One entry per show folder, matched against TVDB.",
+		},
+	];
+
+	const MODES: { v: ImportMode; label: string; desc: string }[] = $derived([
 		{
 			v: "in_place",
 			label: "Adopt in place",
@@ -77,9 +100,11 @@
 		{
 			v: "rename",
 			label: "Import & rename",
-			desc: "Files outside the library — copy/move into the configured movie path.",
+			desc: `Files outside the library — copy/move into the configured ${
+				isSeries ? "series" : "movie"
+			} path.`,
 		},
-	];
+	]);
 
 	const TRANSFER_MODES: { v: "" | ImportTransferMode; label: string }[] = [
 		{ v: "", label: "Use server default (library.import_mode)" },
@@ -96,14 +121,36 @@
 		form.handleSubmit();
 	}}
 >
+	<form.Field name="kind">
+		{#snippet children(field)}
+			<RadioCards
+				legend="Media type"
+				columns={2}
+				name={field.name}
+				value={field.state.value}
+				onChange={(v) => {
+					field.handleChange(v);
+					kind = v;
+				}}
+				options={KINDS.map((k) => ({
+					value: k.v,
+					label: k.label,
+					description: k.desc,
+				}))}
+			/>
+		{/snippet}
+	</form.Field>
+
 	<form.Field name="source_path">
 		{#snippet children(field)}
 			<TextField
 				{field}
 				label="Source path"
-				placeholder="/data/movies/incoming"
+				placeholder={isSeries ? "/data/tv/incoming" : "/data/movies/incoming"}
 				autocomplete="off"
-				help="Absolute path on the server, e.g. /data/movies/incoming."
+				help={isSeries
+					? "Absolute path on the server holding one folder per show, e.g. /data/tv/incoming."
+					: "Absolute path on the server, e.g. /data/movies/incoming."}
 			/>
 		{/snippet}
 	</form.Field>

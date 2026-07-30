@@ -2,16 +2,17 @@
 	import { Check, LoaderCircle } from "@lucide/svelte";
 	import type { ImportStatus } from "../../lib/types";
 
-	let { status }: { status: ImportStatus } = $props();
+	let { status, series = false }: { status: ImportStatus; series?: boolean } =
+		$props();
 
 	type State = "done" | "current" | "pending";
 
-	const STEPS = [
+	const STEPS = $derived([
 		{ label: "Discovery", sub: "Indexing files" },
-		{ label: "Parsing", sub: "Matching against TMDB" },
+		{ label: "Parsing", sub: `Matching against ${series ? "TVDB" : "TMDB"}` },
 		{ label: "Review", sub: "Resolve matches" },
 		{ label: "Commit", sub: "Import into library" },
-	] as const;
+	]);
 
 	// Map a scan status onto the four-stage pipeline. cancelled/failed freeze
 	// at whatever was reached (no "current" highlight — the route renders a

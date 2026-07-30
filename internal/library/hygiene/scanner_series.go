@@ -11,6 +11,7 @@ import (
 	entimportscan "github.com/datahearth/streamline/ent/importscan"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/library/bulkimport"
 	"github.com/datahearth/streamline/internal/otelx"
 )
 
@@ -73,10 +74,10 @@ func (s *Service) RunSeriesOrphanScan(ctx context.Context) error {
 			slog.WarnContext(ctx, "series tvdb lookup failed",
 				"folder", e.Name(), "error", herr)
 		}
-		c := classifyShow(p.Title, p.Year, hits, trackedByTVDB)
+		c := bulkimport.ClassifyShow(p.Title, p.Year, hits, trackedByTVDB)
 		queue = append(
 			queue,
-			buildShowParams(folder, p, c, uint16(len(files))),
+			bulkimport.BuildShowParams(folder, p, c, uint16(len(files))),
 		) //nolint:gosec // file count is bounded
 	}
 
@@ -164,29 +165,4 @@ func allTracked(files []string, tracked map[string]struct{}) bool {
 		}
 	}
 	return true
-}
-
-func buildShowParams(
-	folder string, p library.ParseResult, c showClassification, fileCount uint16,
-) db.CreateImportScanShowParams {
-	params := db.CreateImportScanShowParams{
-		FolderPath:     folder,
-		ParsedTitle:    p.Title,
-		Classification: c.Kind,
-		Candidates:     c.Candidates,
-		FileCount:      fileCount,
-	}
-	if p.Year != 0 {
-		year := p.Year
-		params.ParsedYear = &year
-	}
-	if c.TVDBID != 0 {
-		id := c.TVDBID
-		params.TVDBID = &id
-	}
-	if c.ExistingTvshowID != 0 {
-		id := c.ExistingTvshowID
-		params.ExistingTvshowID = &id
-	}
-	return params
 }

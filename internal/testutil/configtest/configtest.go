@@ -64,10 +64,14 @@ func marshalOverrides(tmpDir string, overrides []map[string]any) []byte {
 	GinkgoHelper()
 	downloadDir := filepath.Join(tmpDir, "downloads")
 	Expect(os.MkdirAll(downloadDir, 0o755)).To(Succeed())
+	// The library roots default to /media/*, which a wired app now creates at
+	// boot — keep that inside the Ginkgo temp dir instead of the real FS.
 	base := map[string]any{
 		"data_dir": tmpDir,
 		"library": map[string]any{
 			"download_path": downloadDir,
+			"movie_path":    filepath.Join(tmpDir, "movies"),
+			"series_path":   filepath.Join(tmpDir, "series"),
 		},
 	}
 	k := koanf.New(".")
