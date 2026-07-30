@@ -103,11 +103,82 @@ var _ = Describe("ImportScanFile store", Label("integration", "db"), func() {
 	})
 
 	Describe("UpdateImportScanFileDecision", func() {
-		It("reports an ent not-found for an unknown file id", func() {
+		It("reports a not-found for an unknown file id", func() {
 			err := store.UpdateImportScanFileDecision(
-				ctx, 999999, entimportscanfile.DecisionSkip, nil,
+				ctx, scanID, 999999, entimportscanfile.DecisionSkip, nil,
 			)
-			Expect(ent.IsNotFound(err)).To(BeTrue())
+			Expect(err).To(MatchError(ErrImportScanFileNotFound))
+		})
+
+		It("records the decision for a file under the addressed scan", func() {
+			Expect(store.BulkCreateImportScanFiles(
+				ctx,
+				scanID,
+				[]CreateImportScanFileParams{{
+					SourcePath:     "/x/own.mkv",
+					Size:           1,
+					Classification: entimportscanfile.ClassificationUnmatched,
+				}},
+			)).To(Succeed())
+			files, _, err := store.FilterImportScanFiles(
+				ctx,
+				FilterImportScanFilesParams{ScanID: scanID, Limit: 50},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(files).To(HaveLen(1))
+
+			tmdbID := uint32(27205)
+			Expect(store.UpdateImportScanFileDecision(
+				ctx, scanID, files[0].ID, entimportscanfile.DecisionAccept, &tmdbID,
+			)).To(Succeed())
+
+			row, err := store.FindImportScanFile(ctx, scanID, files[0].ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(row.Decision).To(Equal(entimportscanfile.DecisionAccept))
+			Expect(row.DecisionTmdbID).To(Equal(tmdbID))
+		})
+
+		// A decision addressed to scan A carrying a file id owned by scan B used
+		// to mutate B's row and only then 404 on the scoped read-back: the client
+		// saw a rejection while the foreign write had already landed.
+		It("leaves another scan's file untouched", func() {
+			other, err := store.CreateImportScan(ctx, CreateImportScanParams{
+				SourcePath: "/y",
+				Mode:       entimportscan.ModeInPlace,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(store.BulkCreateImportScanFiles(
+				ctx,
+				other.ID,
+				[]CreateImportScanFileParams{{
+					SourcePath:     "/y/foreign.mkv",
+					Size:           1,
+					Classification: entimportscanfile.ClassificationUnmatched,
+				}},
+			)).To(Succeed())
+			foreign, _, err := store.FilterImportScanFiles(
+				ctx,
+				FilterImportScanFilesParams{ScanID: other.ID, Limit: 50},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(foreign).To(HaveLen(1))
+			Expect(foreign[0].Decision).
+				To(Equal(entimportscanfile.DecisionPending))
+
+			tmdbID := uint32(27205)
+			err = store.UpdateImportScanFileDecision(
+				ctx,
+				scanID,
+				foreign[0].ID,
+				entimportscanfile.DecisionAccept,
+				&tmdbID,
+			)
+			Expect(err).To(MatchError(ErrImportScanFileNotFound))
+
+			row, err := store.FindImportScanFile(ctx, other.ID, foreign[0].ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(row.Decision).To(Equal(entimportscanfile.DecisionPending))
+			Expect(row.DecisionTmdbID).To(BeZero())
 		})
 	})
 
@@ -174,7 +245,13 @@ var _ = Describe("ImportScanFile store", Label("integration", "db"), func() {
 			}
 			decide := func(path string, d entimportscanfile.Decision) {
 				Expect(
-					store.UpdateImportScanFileDecision(ctx, id[path], d, nil),
+					store.UpdateImportScanFileDecision(
+						ctx,
+						scanID,
+						id[path],
+						d,
+						nil,
+					),
 				).To(Succeed())
 			}
 			decide("/x/confirmed-skip.mkv", entimportscanfile.DecisionSkip)

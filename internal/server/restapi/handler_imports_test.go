@@ -84,7 +84,8 @@ var _ = Describe("Handler: Import scan shows",
 			"PATCH /library/imports/{id}/shows/{showId} records the decision",
 			func() {
 				app.store.EXPECT().UpdateImportScanShowDecision(mock.Anything,
-					uint32(1), entimportscanshow.DecisionAccept, mock.Anything).
+					uint32(5), uint32(1), entimportscanshow.DecisionAccept,
+					mock.Anything).
 					Return(nil).Once()
 				app.store.EXPECT().
 					FindImportScanShow(mock.Anything, uint32(5), uint32(1)).
@@ -107,18 +108,28 @@ var _ = Describe("Handler: Import scan shows",
 			},
 		)
 
+		// An unknown show id and a show id owned by another scan reach the store
+		// as the same scan-scoped UPDATE and come back as the same sentinel. No
+		// FindImportScanShow expectation: the strict mock fails the spec if the
+		// handler still reads back after the write reported a miss.
 		It(
-			"404s PATCH /library/imports/{id}/shows/{showId} for an unknown show",
+			"404s PATCH /library/imports/{id}/shows/{showId} for a rejected pair",
 			func() {
 				app.store.EXPECT().UpdateImportScanShowDecision(mock.Anything,
-					uint32(999), entimportscanshow.DecisionSkip, (*uint32)(nil)).
-					Return(&ent.NotFoundError{}).Once()
+					uint32(5), uint32(999), entimportscanshow.DecisionSkip,
+					(*uint32)(nil)).
+					Return(db.ErrImportScanShowNotFound).Once()
 
 				resp := app.do(app.req(http.MethodPatch,
 					"/api/v1/library/imports/5/shows/999", app.adminKey,
 					strings.NewReader(`{"decision":"skip"}`)))
 				defer resp.Body.Close()
 				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+				var body struct {
+					Message string `json:"message"`
+				}
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				Expect(body.Message).To(Equal("import scan show not found"))
 			},
 		)
 
@@ -163,5 +174,28 @@ var _ = Describe("Handler: Import scan files",
 				"/api/v1/library/imports/999999/files", app.adminKey, nil))
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+		})
+	})
+
+var _ = Describe("Handler: Import scan lookup",
+	Label("unit", "server", "imports"), func() {
+		var app *apiKeyApp
+		BeforeEach(func() { app = newAPIKeyApp() })
+
+		// The body used to echo the raw ent error ("ent: import_scan not
+		// found"), leaking ORM vocabulary to API clients.
+		It("404s GET /library/imports/{id} with a client-safe message", func() {
+			app.bulkImports.EXPECT().Get(mock.Anything, uint32(999999)).
+				Return(nil, &ent.NotFoundError{}).Once()
+
+			resp := app.do(app.req(http.MethodGet,
+				"/api/v1/library/imports/999999", app.adminKey, nil))
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+			var body struct {
+				Message string `json:"message"`
+			}
+			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+			Expect(body.Message).To(Equal("scan not found"))
 		})
 	})

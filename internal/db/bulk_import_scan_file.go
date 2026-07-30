@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/datahearth/streamline/ent"
@@ -9,6 +10,13 @@ import (
 	entimportscanfile "github.com/datahearth/streamline/ent/importscanfile"
 	"github.com/datahearth/streamline/ent/schema"
 )
+
+// ErrImportScanFileNotFound reports that a scan-scoped UPDATE matched no row:
+// the file id does not exist, or it belongs to a different scan. An
+// affected-rows check has no ent error to hand back — NotFoundError's label
+// field is unexported, so one built here renders "ent:  not found" — so the
+// miss travels as a sentinel, the way ConsumeInvite's ErrInviteUsed does.
+var ErrImportScanFileNotFound = errors.New("import scan file not found")
 
 type CreateImportScanFileParams struct {
 	SourcePath         string
@@ -148,19 +156,35 @@ func (db *DB) FindImportScanFile(
 	return row, nil
 }
 
+// UpdateImportScanFileDecision records a reviewer decision on the file with
+// fileID under scanID. The scan predicate lives in the UPDATE itself so a
+// fileID belonging to another scan matches nothing instead of being mutated
+// before a scoped read-back can reject the request.
 func (db *DB) UpdateImportScanFileDecision(
 	ctx context.Context,
-	id uint32,
+	scanID, fileID uint32,
 	decision entimportscanfile.Decision,
 	tmdbID *uint32,
 ) error {
-	u := db.client.ImportScanFile.UpdateOneID(id).SetDecision(decision)
+	u := db.client.ImportScanFile.Update().
+		Where(
+			entimportscanfile.ID(fileID),
+			entimportscanfile.HasScanWith(entimportscan.ID(scanID)),
+		).
+		SetDecision(decision)
 	if tmdbID != nil {
 		u = u.SetDecisionTmdbID(*tmdbID)
 	} else {
 		u = u.ClearDecisionTmdbID()
 	}
-	return u.Exec(ctx)
+	n, err := u.Save(ctx)
+	if err != nil {
+		return fmt.Errorf("update import scan file decision: %w", err)
+	}
+	if n == 0 {
+		return ErrImportScanFileNotFound
+	}
+	return nil
 }
 
 func (db *DB) UpdateImportScanFileOutcome(

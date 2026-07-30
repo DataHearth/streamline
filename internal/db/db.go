@@ -366,9 +366,12 @@ type Store interface {
 		ctx context.Context,
 		scanID, fileID uint32,
 	) (*ent.ImportScanFile, error)
+	// UpdateImportScanFileDecision records a decision on the file with fileID
+	// under scanID, and reports ErrImportScanFileNotFound — without writing
+	// anything — when no such row exists under that scan.
 	UpdateImportScanFileDecision(
 		ctx context.Context,
-		id uint32,
+		scanID, fileID uint32,
 		decision importscanfile.Decision,
 		tmdbID *uint32,
 	) error
@@ -402,9 +405,12 @@ type Store interface {
 		ctx context.Context,
 		scanID, showID uint32,
 	) (*ent.ImportScanShow, error)
+	// UpdateImportScanShowDecision records a decision on the show with showID
+	// under scanID, and reports ErrImportScanShowNotFound — without writing
+	// anything — when no such row exists under that scan.
 	UpdateImportScanShowDecision(
 		ctx context.Context,
-		id uint32,
+		scanID, showID uint32,
 		decision importscanshow.Decision,
 		tvdbID *uint32,
 	) error

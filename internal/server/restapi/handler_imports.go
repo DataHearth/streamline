@@ -58,7 +58,7 @@ func (s *Server) GetImport(
 	if err != nil {
 		if ent.IsNotFound(err) {
 			return GetImport404JSONResponse{
-				NotFoundJSONResponse: errNotFound(err.Error()),
+				NotFoundJSONResponse: errNotFound("scan not found"),
 			}, nil
 		}
 		return nil, err
@@ -309,11 +309,12 @@ func (s *Server) UpdateImportShowDecision(
 	}
 	if err := s.store.UpdateImportScanShowDecision(
 		ctx,
+		req.Id,
 		req.ShowId,
 		entimportscanshow.Decision(req.Body.Decision),
 		tvdbID,
 	); err != nil {
-		if ent.IsNotFound(err) {
+		if errors.Is(err, db.ErrImportScanShowNotFound) {
 			return UpdateImportShowDecision404JSONResponse{
 				NotFoundJSONResponse: errNotFound("import scan show not found"),
 			}, nil

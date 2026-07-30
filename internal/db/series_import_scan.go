@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/datahearth/streamline/ent"
@@ -10,6 +11,11 @@ import (
 	entmediafile "github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/schema"
 )
+
+// ErrImportScanShowNotFound is the show-level counterpart of
+// ErrImportScanFileNotFound: the scan-scoped UPDATE matched no row because the
+// show id is unknown or belongs to a different scan.
+var ErrImportScanShowNotFound = errors.New("import scan show not found")
 
 type CreateImportScanShowParams struct {
 	FolderPath       string
@@ -127,17 +133,33 @@ func (db *DB) FindImportScanShow(
 	return row, nil
 }
 
+// UpdateImportScanShowDecision records a reviewer decision on the show with
+// showID under scanID. Scoping lives in the UPDATE predicate for the same
+// reason as UpdateImportScanFileDecision: a showID from another scan must match
+// nothing rather than be mutated behind a 404.
 func (db *DB) UpdateImportScanShowDecision(
-	ctx context.Context, id uint32,
+	ctx context.Context, scanID, showID uint32,
 	decision entimportscanshow.Decision, tvdbID *uint32,
 ) error {
-	u := db.client.ImportScanShow.UpdateOneID(id).SetDecision(decision)
+	u := db.client.ImportScanShow.Update().
+		Where(
+			entimportscanshow.ID(showID),
+			entimportscanshow.HasScanWith(entimportscan.ID(scanID)),
+		).
+		SetDecision(decision)
 	if tvdbID != nil {
 		u = u.SetDecisionTvdbID(*tvdbID)
 	} else {
 		u = u.ClearDecisionTvdbID()
 	}
-	return u.Exec(ctx)
+	n, err := u.Save(ctx)
+	if err != nil {
+		return fmt.Errorf("update import scan show decision: %w", err)
+	}
+	if n == 0 {
+		return ErrImportScanShowNotFound
+	}
+	return nil
 }
 
 // ListImportScanShowsForCommit returns the shows to adopt when a series scan is

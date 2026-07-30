@@ -39,6 +39,7 @@ var _ = Describe("Service file decisions", Label("unit", "bulkimport"), func() {
 			store.EXPECT().
 				UpdateImportScanFileDecision(
 					mock.Anything,
+					uint32(3),
 					uint32(12),
 					entimportscanfile.DecisionAccept,
 					&tmdbID,
@@ -60,42 +61,33 @@ var _ = Describe("Service file decisions", Label("unit", "bulkimport"), func() {
 			Expect(f.DecisionTmdbID).To(Equal(tmdbID))
 		})
 
-		It("maps an unknown file id to ErrScanFileNotFound", func() {
-			store.EXPECT().
-				UpdateImportScanFileDecision(
-					mock.Anything, uint32(99), entimportscanfile.DecisionSkip, (*uint32)(nil),
-				).
-				Return(&ent.NotFoundError{}).
-				Once()
+		// The store rejects an unknown file id and a file id owned by another
+		// scan the same way, so one spec covers both. No FindImportScanFile
+		// expectation: the strict mock fails the spec if a read-back is
+		// attempted after the write reported a miss.
+		It(
+			"maps a (scan, file) pair the store rejects to ErrScanFileNotFound",
+			func() {
+				store.EXPECT().
+					UpdateImportScanFileDecision(
+						mock.Anything, uint32(3), uint32(99),
+						entimportscanfile.DecisionSkip, (*uint32)(nil),
+					).
+					Return(db.ErrImportScanFileNotFound).
+					Once()
 
-			_, err := svc.UpdateFileDecision(
-				ctx, 3, 99, entimportscanfile.DecisionSkip, nil,
-			)
-			Expect(err).To(MatchError(ErrScanFileNotFound))
-		})
-
-		It("maps an unknown scan id to ErrScanFileNotFound", func() {
-			store.EXPECT().
-				UpdateImportScanFileDecision(
-					mock.Anything, uint32(12), entimportscanfile.DecisionSkip, (*uint32)(nil),
-				).
-				Return(nil).
-				Once()
-			store.EXPECT().
-				FindImportScanFile(mock.Anything, uint32(999), uint32(12)).
-				Return(nil, &ent.NotFoundError{}).
-				Once()
-
-			_, err := svc.UpdateFileDecision(
-				ctx, 999, 12, entimportscanfile.DecisionSkip, nil,
-			)
-			Expect(err).To(MatchError(ErrScanFileNotFound))
-		})
+				_, err := svc.UpdateFileDecision(
+					ctx, 3, 99, entimportscanfile.DecisionSkip, nil,
+				)
+				Expect(err).To(MatchError(ErrScanFileNotFound))
+			},
+		)
 
 		It("propagates the store write error without looking up the file", func() {
 			store.EXPECT().
 				UpdateImportScanFileDecision(
-					mock.Anything, uint32(12), entimportscanfile.DecisionSkip, (*uint32)(nil),
+					mock.Anything, uint32(3), uint32(12),
+					entimportscanfile.DecisionSkip, (*uint32)(nil),
 				).
 				Return(context.DeadlineExceeded).
 				Once()

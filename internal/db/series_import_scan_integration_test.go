@@ -72,11 +72,99 @@ var _ = Describe("Series import scan store", Label("integration", "db"), func() 
 		Expect(shows[0].FileCount).To(Equal(uint16(62)))
 	})
 
-	It("reports an ent not-found when deciding an unknown show id", func() {
-		err := store.UpdateImportScanShowDecision(
-			ctx, 999999, entimportscanshow.DecisionSkip, nil,
+	It("reports a not-found when deciding an unknown show id", func() {
+		scan, err := store.CreateImportScan(ctx, CreateImportScanParams{
+			SourcePath: "/tv",
+			Mode:       entimportscan.ModeInPlace,
+			Kind:       entimportscan.KindSeries,
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(store.UpdateImportScanShowDecision(
+			ctx, scan.ID, 999999, entimportscanshow.DecisionSkip, nil,
+		)).To(MatchError(ErrImportScanShowNotFound))
+	})
+
+	It("records the decision for a show under the addressed scan", func() {
+		scan, err := store.CreateImportScan(ctx, CreateImportScanParams{
+			SourcePath: "/tv",
+			Mode:       entimportscan.ModeInPlace,
+			Kind:       entimportscan.KindSeries,
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(store.BulkCreateImportScanShows(
+			ctx,
+			scan.ID,
+			[]CreateImportScanShowParams{{
+				FolderPath:     "/tv/Own Show",
+				ParsedTitle:    "Own Show",
+				Classification: entimportscanshow.ClassificationUnmatched,
+				FileCount:      1,
+			}},
+		)).To(Succeed())
+		shows, _, err := store.ListImportScanShows(
+			ctx,
+			ListImportScanShowsParams{ScanID: scan.ID},
 		)
-		Expect(ent.IsNotFound(err)).To(BeTrue())
+		Expect(err).NotTo(HaveOccurred())
+		Expect(shows).To(HaveLen(1))
+
+		tvdbID := uint32(81189)
+		Expect(store.UpdateImportScanShowDecision(
+			ctx, scan.ID, shows[0].ID, entimportscanshow.DecisionAccept, &tvdbID,
+		)).To(Succeed())
+
+		row, err := store.FindImportScanShow(ctx, scan.ID, shows[0].ID)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(row.Decision).To(Equal(entimportscanshow.DecisionAccept))
+		Expect(row.DecisionTvdbID).To(HaveValue(Equal(tvdbID)))
+	})
+
+	// A decision addressed to scan A carrying a show id owned by scan B used to
+	// mutate B's row and only then 404 on the scoped read-back: the client saw a
+	// rejection while the foreign write had already landed.
+	It("leaves another scan's show untouched", func() {
+		addressed, err := store.CreateImportScan(ctx, CreateImportScanParams{
+			SourcePath: "/tv",
+			Mode:       entimportscan.ModeInPlace,
+			Kind:       entimportscan.KindSeries,
+		})
+		Expect(err).NotTo(HaveOccurred())
+		other, err := store.CreateImportScan(ctx, CreateImportScanParams{
+			SourcePath: "/tv2",
+			Mode:       entimportscan.ModeInPlace,
+			Kind:       entimportscan.KindSeries,
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(store.BulkCreateImportScanShows(
+			ctx,
+			other.ID,
+			[]CreateImportScanShowParams{{
+				FolderPath:     "/tv2/Foreign Show",
+				ParsedTitle:    "Foreign Show",
+				Classification: entimportscanshow.ClassificationUnmatched,
+				FileCount:      1,
+			}},
+		)).To(Succeed())
+		foreign, _, err := store.ListImportScanShows(
+			ctx,
+			ListImportScanShowsParams{ScanID: other.ID},
+		)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(foreign).To(HaveLen(1))
+		Expect(foreign[0].Decision).To(Equal(entimportscanshow.DecisionPending))
+
+		tvdbID := uint32(81189)
+		err = store.UpdateImportScanShowDecision(
+			ctx, addressed.ID, foreign[0].ID,
+			entimportscanshow.DecisionAccept, &tvdbID,
+		)
+		Expect(err).To(MatchError(ErrImportScanShowNotFound))
+
+		row, err := store.FindImportScanShow(ctx, other.ID, foreign[0].ID)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(row.Decision).To(Equal(entimportscanshow.DecisionPending))
+		Expect(row.DecisionTvdbID).To(BeNil())
 	})
 
 	// The REST 404 for a (scan, show) pair that does not exist rides on

@@ -2,6 +2,7 @@ package bulkimport
 
 import (
 	"context"
+	"errors"
 
 	"github.com/datahearth/streamline/ent"
 	entimportscan "github.com/datahearth/streamline/ent/importscan"
@@ -148,17 +149,14 @@ func (s *Service) UpdateFileDecision(
 	decision entimportscanfile.Decision,
 	tmdbID *uint32,
 ) (*ent.ImportScanFile, error) {
-	// The write is keyed on fileID alone, so a fileID belonging to a different
-	// scan is mutated before the scan-scoped GetFile below answers 404. Fixing
-	// that needs a scan-scoped update predicate (scanID threaded into the store
-	// method, affected-rows check instead of UpdateOneID); deferred.
 	if err := s.store.UpdateImportScanFileDecision(
 		ctx,
+		scanID,
 		fileID,
 		decision,
 		tmdbID,
 	); err != nil {
-		if ent.IsNotFound(err) {
+		if errors.Is(err, db.ErrImportScanFileNotFound) {
 			return nil, ErrScanFileNotFound
 		}
 		return nil, err

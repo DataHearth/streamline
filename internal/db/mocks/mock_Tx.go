@@ -7958,17 +7958,17 @@ func (_c *MockTx_UpdateDownloadRecordStatus_Call) RunAndReturn(run func(context.
 	return _c
 }
 
-// UpdateImportScanFileDecision provides a mock function with given fields: ctx, id, decision, tmdbID
-func (_m *MockTx) UpdateImportScanFileDecision(ctx context.Context, id uint32, decision importscanfile.Decision, tmdbID *uint32) error {
-	ret := _m.Called(ctx, id, decision, tmdbID)
+// UpdateImportScanFileDecision provides a mock function with given fields: ctx, scanID, fileID, decision, tmdbID
+func (_m *MockTx) UpdateImportScanFileDecision(ctx context.Context, scanID uint32, fileID uint32, decision importscanfile.Decision, tmdbID *uint32) error {
+	ret := _m.Called(ctx, scanID, fileID, decision, tmdbID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpdateImportScanFileDecision")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, uint32, importscanfile.Decision, *uint32) error); ok {
-		r0 = rf(ctx, id, decision, tmdbID)
+	if rf, ok := ret.Get(0).(func(context.Context, uint32, uint32, importscanfile.Decision, *uint32) error); ok {
+		r0 = rf(ctx, scanID, fileID, decision, tmdbID)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -7983,16 +7983,17 @@ type MockTx_UpdateImportScanFileDecision_Call struct {
 
 // UpdateImportScanFileDecision is a helper method to define mock.On call
 //   - ctx context.Context
-//   - id uint32
+//   - scanID uint32
+//   - fileID uint32
 //   - decision importscanfile.Decision
 //   - tmdbID *uint32
-func (_e *MockTx_Expecter) UpdateImportScanFileDecision(ctx interface{}, id interface{}, decision interface{}, tmdbID interface{}) *MockTx_UpdateImportScanFileDecision_Call {
-	return &MockTx_UpdateImportScanFileDecision_Call{Call: _e.mock.On("UpdateImportScanFileDecision", ctx, id, decision, tmdbID)}
+func (_e *MockTx_Expecter) UpdateImportScanFileDecision(ctx interface{}, scanID interface{}, fileID interface{}, decision interface{}, tmdbID interface{}) *MockTx_UpdateImportScanFileDecision_Call {
+	return &MockTx_UpdateImportScanFileDecision_Call{Call: _e.mock.On("UpdateImportScanFileDecision", ctx, scanID, fileID, decision, tmdbID)}
 }
 
-func (_c *MockTx_UpdateImportScanFileDecision_Call) Run(run func(ctx context.Context, id uint32, decision importscanfile.Decision, tmdbID *uint32)) *MockTx_UpdateImportScanFileDecision_Call {
+func (_c *MockTx_UpdateImportScanFileDecision_Call) Run(run func(ctx context.Context, scanID uint32, fileID uint32, decision importscanfile.Decision, tmdbID *uint32)) *MockTx_UpdateImportScanFileDecision_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(uint32), args[2].(importscanfile.Decision), args[3].(*uint32))
+		run(args[0].(context.Context), args[1].(uint32), args[2].(uint32), args[3].(importscanfile.Decision), args[4].(*uint32))
 	})
 	return _c
 }
@@ -8002,7 +8003,7 @@ func (_c *MockTx_UpdateImportScanFileDecision_Call) Return(_a0 error) *MockTx_Up
 	return _c
 }
 
-func (_c *MockTx_UpdateImportScanFileDecision_Call) RunAndReturn(run func(context.Context, uint32, importscanfile.Decision, *uint32) error) *MockTx_UpdateImportScanFileDecision_Call {
+func (_c *MockTx_UpdateImportScanFileDecision_Call) RunAndReturn(run func(context.Context, uint32, uint32, importscanfile.Decision, *uint32) error) *MockTx_UpdateImportScanFileDecision_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -8056,17 +8057,17 @@ func (_c *MockTx_UpdateImportScanFileOutcome_Call) RunAndReturn(run func(context
 	return _c
 }
 
-// UpdateImportScanShowDecision provides a mock function with given fields: ctx, id, decision, tvdbID
-func (_m *MockTx) UpdateImportScanShowDecision(ctx context.Context, id uint32, decision importscanshow.Decision, tvdbID *uint32) error {
-	ret := _m.Called(ctx, id, decision, tvdbID)
+// UpdateImportScanShowDecision provides a mock function with given fields: ctx, scanID, showID, decision, tvdbID
+func (_m *MockTx) UpdateImportScanShowDecision(ctx context.Context, scanID uint32, showID uint32, decision importscanshow.Decision, tvdbID *uint32) error {
+	ret := _m.Called(ctx, scanID, showID, decision, tvdbID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpdateImportScanShowDecision")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, uint32, importscanshow.Decision, *uint32) error); ok {
-		r0 = rf(ctx, id, decision, tvdbID)
+	if rf, ok := ret.Get(0).(func(context.Context, uint32, uint32, importscanshow.Decision, *uint32) error); ok {
+		r0 = rf(ctx, scanID, showID, decision, tvdbID)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -8081,16 +8082,17 @@ type MockTx_UpdateImportScanShowDecision_Call struct {
 
 // UpdateImportScanShowDecision is a helper method to define mock.On call
 //   - ctx context.Context
-//   - id uint32
+//   - scanID uint32
+//   - showID uint32
 //   - decision importscanshow.Decision
 //   - tvdbID *uint32
-func (_e *MockTx_Expecter) UpdateImportScanShowDecision(ctx interface{}, id interface{}, decision interface{}, tvdbID interface{}) *MockTx_UpdateImportScanShowDecision_Call {
-	return &MockTx_UpdateImportScanShowDecision_Call{Call: _e.mock.On("UpdateImportScanShowDecision", ctx, id, decision, tvdbID)}
+func (_e *MockTx_Expecter) UpdateImportScanShowDecision(ctx interface{}, scanID interface{}, showID interface{}, decision interface{}, tvdbID interface{}) *MockTx_UpdateImportScanShowDecision_Call {
+	return &MockTx_UpdateImportScanShowDecision_Call{Call: _e.mock.On("UpdateImportScanShowDecision", ctx, scanID, showID, decision, tvdbID)}
 }
 
-func (_c *MockTx_UpdateImportScanShowDecision_Call) Run(run func(ctx context.Context, id uint32, decision importscanshow.Decision, tvdbID *uint32)) *MockTx_UpdateImportScanShowDecision_Call {
+func (_c *MockTx_UpdateImportScanShowDecision_Call) Run(run func(ctx context.Context, scanID uint32, showID uint32, decision importscanshow.Decision, tvdbID *uint32)) *MockTx_UpdateImportScanShowDecision_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(uint32), args[2].(importscanshow.Decision), args[3].(*uint32))
+		run(args[0].(context.Context), args[1].(uint32), args[2].(uint32), args[3].(importscanshow.Decision), args[4].(*uint32))
 	})
 	return _c
 }
@@ -8100,7 +8102,7 @@ func (_c *MockTx_UpdateImportScanShowDecision_Call) Return(_a0 error) *MockTx_Up
 	return _c
 }
 
-func (_c *MockTx_UpdateImportScanShowDecision_Call) RunAndReturn(run func(context.Context, uint32, importscanshow.Decision, *uint32) error) *MockTx_UpdateImportScanShowDecision_Call {
+func (_c *MockTx_UpdateImportScanShowDecision_Call) RunAndReturn(run func(context.Context, uint32, uint32, importscanshow.Decision, *uint32) error) *MockTx_UpdateImportScanShowDecision_Call {
 	_c.Call.Return(run)
 	return _c
 }
