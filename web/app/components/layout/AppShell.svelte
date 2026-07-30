@@ -32,7 +32,13 @@
 		Skip to main content
 	</a>
 	<Sidebar />
-	<main id="main" class="min-w-0 flex-1 overflow-y-auto pb-16 lg:pb-0">
+	<!-- scrollbar-gutter keeps the content width identical whether or not a route
+	     scrolls; without it a taller tab reclaims the scrollbar's ~15px and
+	     reflows anything sitting on a wrap boundary. -->
+	<main
+		id="main"
+		class="min-w-0 flex-1 overflow-y-auto pb-16 [scrollbar-gutter:stable] lg:pb-0"
+	>
 		<TopBar />
 		{@render children?.()}
 	</main>

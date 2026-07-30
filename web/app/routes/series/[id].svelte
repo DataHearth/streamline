@@ -537,7 +537,7 @@
 							<Eye size={14} aria-hidden="true" />
 							Monitor
 						</label>
-						<div class="w-44">
+						<div class="w-40">
 							<Select
 								id="series-monitor-preset"
 								value={presetValue}
@@ -550,29 +550,35 @@
 						</div>
 					</div>
 
-					<button
-						type="button"
-						onclick={() => monitor.mutate(!(show.monitored ?? false))}
-						disabled={monitor.isPending}
-						aria-pressed={show.monitored ?? false}
-						title={show.monitored ? "Stop monitoring" : "Monitor"}
-						class="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border-strong bg-white/[0.08] text-fg backdrop-blur-sm transition hover:bg-white/[0.14] disabled:cursor-not-allowed disabled:opacity-60"
-					>
-						<Bookmark
-							size={16}
-							fill={show.monitored ? "currentColor" : "none"}
-							aria-hidden="true"
-						/>
-						<span class="sr-only">
-							{show.monitored ? "Stop monitoring" : "Monitor"}
-						</span>
-					</button>
+					<!-- Grouped so the kebab never orphans onto a line of its own when the
+					     row wraps — the two icon buttons move together. -->
+					<div class="flex shrink-0 items-center gap-2.5">
+						<button
+							type="button"
+							onclick={() => monitor.mutate(!(show.monitored ?? false))}
+							disabled={monitor.isPending}
+							aria-pressed={show.monitored ?? false}
+							title={show.monitored ? "Stop monitoring" : "Monitor"}
+							class="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border-strong bg-white/[0.08] text-fg backdrop-blur-sm transition hover:bg-white/[0.14] disabled:cursor-not-allowed disabled:opacity-60"
+						>
+							<Bookmark
+								size={16}
+								fill={show.monitored ? "currentColor" : "none"}
+								aria-hidden="true"
+							/>
+							<span class="sr-only">
+								{show.monitored ? "Stop monitoring" : "Monitor"}
+							</span>
+						</button>
 
-					<SeriesKebabMenu
-						onPick={onKebabPick}
-						allowDeleteFiles
-						disabledActions={hasFiles ? [] : ["delete-with-files", "delete-files"]}
-					/>
+						<SeriesKebabMenu
+							onPick={onKebabPick}
+							allowDeleteFiles
+							disabledActions={hasFiles
+								? []
+								: ["delete-with-files", "delete-files"]}
+						/>
+					</div>
 				</div>
 			</div>
 		</div>
