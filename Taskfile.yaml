@@ -80,25 +80,25 @@ tasks:
 
   test:unit:
     desc: Run unit tests only
-    cmd: go tool ginkgo run -r --label-filter="unit{{with .LABEL_FILTER}} &&
+    cmd: go tool ginkgo run -r --keep-going --label-filter="unit{{with .LABEL_FILTER}} &&
       {{.}}{{end}}" {{.CLI_ARGS}}
 
   test:integration:
     desc: Run integration tests
-    cmd: go tool ginkgo run -r --label-filter="integration{{with .LABEL_FILTER}} &&
+    cmd: go tool ginkgo run -r --keep-going --label-filter="integration{{with .LABEL_FILTER}} &&
       {{.}}{{end}}" {{.CLI_ARGS}}
 
   test:e2e:
     desc: Run e2e browser tests
     deps: [build:js, build:css]
-    cmd: go tool ginkgo run -r --label-filter="e2e{{with .LABEL_FILTER}} &&
+    cmd: go tool ginkgo run -r --keep-going --label-filter="e2e{{with .LABEL_FILTER}} &&
       {{.}}{{end}}" --timeout=1m15s {{.CLI_ARGS}}
 
   test:coverage:
     desc: Run unit + integration tests with coverage report (e2e excluded, generated code filtered)
     cmds:
       - mkdir -p /tmp/streamline
-      - go tool ginkgo run -r --label-filter="!e2e"
+      - go tool ginkgo run -r --keep-going --label-filter="!e2e"
         --coverprofile=coverage.raw.out --output-dir=/tmp/streamline
         --coverpkg=github.com/datahearth/streamline/...
         {{.CLI_ARGS}}
@@ -110,7 +110,7 @@ tasks:
 
   test:
     desc: Run entire test suite
-    cmd: go tool ginkgo run -r {{.CLI_ARGS}}
+    cmd: go tool ginkgo run -r --keep-going {{.CLI_ARGS}}
 
   lint:
     desc: Run all linters
