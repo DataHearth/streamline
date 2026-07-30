@@ -21,10 +21,16 @@
 		TVShowCounts,
 		RequestCounts,
 		PendingList,
+		SystemInfo,
 	} from "../../lib/types";
 	import Avatar from "./Avatar.svelte";
 
-	const VERSION = "dev";
+	const systemQuery = createQuery<SystemInfo>(() => ({
+		queryKey: ["system", "info"],
+		queryFn: () => api<SystemInfo>("/system/info"),
+		retry: false,
+	}));
+	let version = $derived(systemQuery.data?.version ?? null);
 
 	type IsActiveFn = (path: string) => boolean;
 	let isActiveFn = $state<IsActiveFn>(() => false);
@@ -245,7 +251,7 @@
 							{auth.user.display_name || auth.user.email}
 						</div>
 						<div class="mt-px truncate font-mono text-[10px] text-fg-faint">
-							{roleLabel} · v{VERSION}
+							{roleLabel}{version ? ` · v${version}` : ""}
 						</div>
 					</div>
 				</a>
