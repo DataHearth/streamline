@@ -3,6 +3,7 @@ package restapi
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/datahearth/streamline/ent"
@@ -155,6 +156,74 @@ var _ = Describe("Request handlers", Label("unit", "restapi"), func() {
 			Expect(err).NotTo(HaveOccurred())
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+		})
+
+		It("404s an unknown request without calling TMDB", func() {
+			app.requests.EXPECT().
+				Approve(mock.Anything, uint32(999), app.adminID, "").
+				Return(nil, fmt.Errorf(
+					"request 999: %w", requestsvc.ErrRequestNotFound,
+				)).
+				Once()
+
+			resp, err := http.DefaultClient.Do(
+				app.req(
+					http.MethodPost,
+					"/api/v1/requests/999/approve",
+					app.adminKey,
+					nil,
+				),
+			)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+		})
+	})
+
+	Describe("POST /requests/{id}/deny", func() {
+		It("404s an unknown request", func() {
+			app.requests.EXPECT().
+				Deny(mock.Anything, uint32(999), app.adminID, "nope").
+				Return(nil, fmt.Errorf(
+					"request 999: %w", requestsvc.ErrRequestNotFound,
+				)).
+				Once()
+
+			payload, _ := json.Marshal(map[string]any{"reason": "nope"})
+			r := app.req(
+				http.MethodPost,
+				"/api/v1/requests/999/deny",
+				app.adminKey,
+				bytes.NewReader(payload),
+			)
+			r.Header.Set("Content-Type", "application/json")
+			resp, err := http.DefaultClient.Do(r)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+		})
+	})
+
+	Describe("POST /requests/{id}/reopen", func() {
+		It("404s an unknown request", func() {
+			app.requests.EXPECT().
+				Reopen(mock.Anything, uint32(999)).
+				Return(nil, fmt.Errorf(
+					"request 999: %w", requestsvc.ErrRequestNotFound,
+				)).
+				Once()
+
+			resp, err := http.DefaultClient.Do(
+				app.req(
+					http.MethodPost,
+					"/api/v1/requests/999/reopen",
+					app.adminKey,
+					nil,
+				),
+			)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
 	})
 })

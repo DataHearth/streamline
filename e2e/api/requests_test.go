@@ -133,8 +133,8 @@ var _ = Describe("REST API requests", Label("e2e"), func() {
 		Expect(list.Items).NotTo(ContainElement(HaveField("Id", foreign.Id)))
 	})
 
-	// Approval creates the library item, which needs TMDB; only the RBAC
-	// guard is hermetic.
+	// Approval's happy path creates the library item via TMDB, so only the
+	// RBAC guard and not-found cases are hermetic here.
 	It("403s review actions for a request_only caller", func() {
 		approved := post("/api/v1/requests/1/approve", viewerAuth, map[string]any{
 			"quality_profile": "default",
@@ -151,6 +151,30 @@ var _ = Describe("REST API requests", Label("e2e"), func() {
 		reopened := post("/api/v1/requests/1/reopen", viewerAuth, nil)
 		defer reopened.Body.Close()
 		Expect(reopened.StatusCode).To(Equal(http.StatusForbidden))
+	})
+
+	// The not-found lookup runs before the TMDB library-add call, so approve
+	// 404s on an unknown id without any external dependency.
+	It("404s review actions for an unknown request", func() {
+		approved := post(
+			"/api/v1/requests/999999/approve",
+			adminAuth,
+			map[string]any{
+				"quality_profile": "default",
+			},
+		)
+		defer approved.Body.Close()
+		Expect(approved.StatusCode).To(Equal(http.StatusNotFound))
+
+		denied := post("/api/v1/requests/999999/deny", adminAuth, map[string]any{
+			"reason": "nope",
+		})
+		defer denied.Body.Close()
+		Expect(denied.StatusCode).To(Equal(http.StatusNotFound))
+
+		reopened := post("/api/v1/requests/999999/reopen", adminAuth, nil)
+		defer reopened.Body.Close()
+		Expect(reopened.StatusCode).To(Equal(http.StatusNotFound))
 	})
 
 	Describe("GET /requests/{id}/metadata", func() {

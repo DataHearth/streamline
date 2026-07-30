@@ -117,6 +117,15 @@ var _ = Describe("Request service", Label("unit", "request"), func() {
 			_, err := svc.Approve(ctx, 1, 9, "")
 			Expect(err).To(HaveOccurred())
 		})
+
+		It("maps NotFound to ErrRequestNotFound without calling TMDB", func() {
+			storeMk.GetRequest(mock.Anything, uint32(99)).
+				Return(nil, &ent.NotFoundError{}).Once()
+
+			_, err := svc.Approve(ctx, 99, 9, "")
+			Expect(err).To(MatchError(ErrRequestNotFound))
+			Expect(err).To(MatchError(ContainSubstring("request 99")))
+		})
 	})
 
 	Describe("Deny", func() {
@@ -128,6 +137,36 @@ var _ = Describe("Request service", Label("unit", "request"), func() {
 
 			_, err := svc.Deny(ctx, 1, 9, "low quality")
 			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("maps NotFound to ErrRequestNotFound", func() {
+			storeMk.DenyRequest(mock.Anything, uint32(99), uint32(9), "reason").
+				Return(&ent.NotFoundError{}).Once()
+
+			_, err := svc.Deny(ctx, 99, 9, "reason")
+			Expect(err).To(MatchError(ErrRequestNotFound))
+			Expect(err).To(MatchError(ContainSubstring("request 99")))
+		})
+	})
+
+	Describe("Reopen", func() {
+		It("reopens a denied request", func() {
+			storeMk.ReopenRequest(mock.Anything, uint32(1)).
+				Return(nil).Once()
+			storeMk.GetRequest(mock.Anything, uint32(1)).
+				Return(&ent.Request{ID: 1}, nil).Once()
+
+			_, err := svc.Reopen(ctx, 1)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("maps NotFound to ErrRequestNotFound", func() {
+			storeMk.ReopenRequest(mock.Anything, uint32(99)).
+				Return(&ent.NotFoundError{}).Once()
+
+			_, err := svc.Reopen(ctx, 99)
+			Expect(err).To(MatchError(ErrRequestNotFound))
+			Expect(err).To(MatchError(ContainSubstring("request 99")))
 		})
 	})
 

@@ -142,7 +142,12 @@ func (s *Server) ApproveRequest(
 	}
 	claims := auth.ClaimsFromContext(ctx)
 	r, err := s.requests.Approve(ctx, req.Id, claims.UserID, qualityProfile)
-	if err != nil {
+	switch {
+	case errors.Is(err, requestsvc.ErrRequestNotFound):
+		return ApproveRequest404JSONResponse{
+			NotFoundJSONResponse: errNotFound("request not found"),
+		}, nil
+	case err != nil:
 		return ApproveRequest500JSONResponse{
 			InternalErrorJSONResponse: errInternal(err.Error()),
 		}, nil
@@ -167,7 +172,12 @@ func (s *Server) DenyRequest(
 		reason = *req.Body.Reason
 	}
 	r, err := s.requests.Deny(ctx, req.Id, claims.UserID, reason)
-	if err != nil {
+	switch {
+	case errors.Is(err, requestsvc.ErrRequestNotFound):
+		return DenyRequest404JSONResponse{
+			NotFoundJSONResponse: errNotFound("request not found"),
+		}, nil
+	case err != nil:
 		return DenyRequest500JSONResponse{
 			InternalErrorJSONResponse: errInternal(err.Error()),
 		}, nil
@@ -187,7 +197,12 @@ func (s *Server) ReopenRequest(
 		}, nil
 	}
 	r, err := s.requests.Reopen(ctx, req.Id)
-	if err != nil {
+	switch {
+	case errors.Is(err, requestsvc.ErrRequestNotFound):
+		return ReopenRequest404JSONResponse{
+			NotFoundJSONResponse: errNotFound("request not found"),
+		}, nil
+	case err != nil:
 		return ReopenRequest500JSONResponse{
 			InternalErrorJSONResponse: errInternal(err.Error()),
 		}, nil

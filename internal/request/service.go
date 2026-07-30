@@ -17,9 +17,14 @@ import (
 
 var tracer = otel.Tracer("github.com/datahearth/streamline/internal/request")
 
-// ErrDuplicate is returned when the media is already requested (active) or
-// already in the library.
-var ErrDuplicate = errors.New("request: already requested or in library")
+var (
+	// ErrDuplicate is returned when the media is already requested (active) or
+	// already in the library.
+	ErrDuplicate = errors.New("request: already requested or in library")
+	// ErrRequestNotFound is returned by Approve/Deny/Reopen for an unknown id
+	// so callers can answer 404 instead of 500.
+	ErrRequestNotFound = errors.New("request not found")
+)
 
 // MovieAdder / ShowAdder are the slices of the media services this needs —
 // declared at the consumer so the request service depends only on what it uses.
@@ -102,6 +107,9 @@ func (s *Service) Approve(
 
 	req, err := s.db.GetRequest(ctx, id)
 	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, fmt.Errorf("request %d: %w", id, ErrRequestNotFound)
+		}
 		return nil, err
 	}
 	switch req.MediaType {
@@ -126,6 +134,9 @@ func (s *Service) Deny(
 	reason string,
 ) (*ent.Request, error) {
 	if err := s.db.DenyRequest(ctx, id, adminID, reason); err != nil {
+		if ent.IsNotFound(err) {
+			return nil, fmt.Errorf("request %d: %w", id, ErrRequestNotFound)
+		}
 		return nil, err
 	}
 	return s.db.GetRequest(ctx, id)
@@ -133,6 +144,9 @@ func (s *Service) Deny(
 
 func (s *Service) Reopen(ctx context.Context, id uint32) (*ent.Request, error) {
 	if err := s.db.ReopenRequest(ctx, id); err != nil {
+		if ent.IsNotFound(err) {
+			return nil, fmt.Errorf("request %d: %w", id, ErrRequestNotFound)
+		}
 		return nil, err
 	}
 	return s.db.GetRequest(ctx, id)
