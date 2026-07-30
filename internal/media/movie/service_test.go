@@ -623,6 +623,59 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 		})
 	})
 
+	Describe("RefreshOne", func() {
+		It("maps NotFound to ErrMovieNotFound", func() {
+			storeMock.FindMovieByID(mock.Anything, uint32(99)).
+				Return(nil, &ent.NotFoundError{}).Once()
+
+			_, err := svc.RefreshOne(ctx, 99)
+			Expect(err).To(MatchError(ErrMovieNotFound))
+			Expect(err).To(MatchError(ContainSubstring("movie 99")))
+		})
+
+		It("wraps generic store errors without the not-found sentinel", func() {
+			storeErr := errors.New("query fail")
+			storeMock.FindMovieByID(mock.Anything, uint32(1)).
+				Return(nil, storeErr).Once()
+
+			_, err := svc.RefreshOne(ctx, 1)
+			Expect(err).To(MatchError(ContainSubstring("get movie")))
+			Expect(err).To(MatchError(storeErr))
+			Expect(err).NotTo(MatchError(ErrMovieNotFound))
+		})
+
+		It("returns the reloaded row after refreshing metadata", func() {
+			storeMock.FindMovieByID(mock.Anything, uint32(7)).
+				Return(&ent.Movie{ID: 7, TmdbID: 42, Title: "Old", Year: 2023}, nil).
+				Once()
+			metaMock.GetMovie(mock.Anything, uint32(42)).
+				Return(&metadata.MovieDetails{
+					MovieResult: metadata.MovieResult{
+						TMDBID:        42,
+						Title:         "New",
+						OriginalTitle: "Nouveau",
+						Year:          2024,
+					},
+				}, nil).
+				Once()
+			storeMock.UpdateMovieMetadata(
+				mock.Anything, uint32(7), db.UpdateMovieMetadataParams{
+					Title:         "New",
+					OriginalTitle: "Nouveau",
+					Year:          2024,
+				},
+			).Return(nil).Once()
+			storeMock.FindMovieByID(mock.Anything, uint32(7)).
+				Return(&ent.Movie{ID: 7, TmdbID: 42, Title: "New", Year: 2024}, nil).
+				Once()
+
+			m, err := svc.RefreshOne(ctx, 7)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(m).NotTo(BeNil())
+			Expect(m.Title).To(Equal("New"))
+		})
+	})
+
 	Describe("DeleteFile", func() {
 		It(
 			"deletes the file, reverts the movie, and removes the torrent when asked",

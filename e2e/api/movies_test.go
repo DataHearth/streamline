@@ -120,18 +120,20 @@ var _ = Describe("REST API movies", Label("e2e"), func() {
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
 
-		// Both routes look the movie up through a service that reports
-		// "not found" as a plain error, so they surface the 500 envelope
-		// rather than the 404 the spec also documents.
-		It("500s refresh-metadata and rename", func() {
-			refreshed := post(
+		It("404s refresh-metadata", func() {
+			resp := post(
 				"/api/v1/movies/999999/refresh-metadata",
 				adminAuth,
 				nil,
 			)
-			defer refreshed.Body.Close()
-			Expect(refreshed.StatusCode).To(Equal(http.StatusInternalServerError))
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+		})
 
+		// The rename route looks the movie up through a service that reports
+		// "not found" as a plain error, so it surfaces the 500 envelope
+		// rather than the 404 the spec also documents.
+		It("500s rename", func() {
 			renamed := post(
 				"/api/v1/movies/999999/rename?preview=true",
 				adminAuth,

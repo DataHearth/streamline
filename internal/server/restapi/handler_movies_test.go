@@ -615,6 +615,72 @@ var _ = Describe(
 			})
 		})
 
+		Describe("RefreshMovieMetadata", func() {
+			It("returns 404 when the movie does not exist", func() {
+				app.movies.EXPECT().
+					RefreshOne(mock.Anything, uint32(999)).
+					Return(nil, fmt.Errorf(
+						"movie 999: %w", moviesvc.ErrMovieNotFound,
+					)).
+					Once()
+
+				resp := app.do(app.req(
+					http.MethodPost,
+					"/api/v1/movies/999/refresh-metadata",
+					app.adminKey,
+					nil,
+				))
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+
+				var body map[string]any
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				Expect(body["message"]).To(Equal("movie not found"))
+			})
+
+			It("returns 500 when the refresh itself fails", func() {
+				app.movies.EXPECT().
+					RefreshOne(mock.Anything, uint32(5)).
+					Return(nil, errors.New("tmdb down")).
+					Once()
+
+				resp := app.do(app.req(
+					http.MethodPost,
+					"/api/v1/movies/5/refresh-metadata",
+					app.adminKey,
+					nil,
+				))
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusInternalServerError))
+			})
+
+			It("returns the refreshed movie on success", func() {
+				app.movies.EXPECT().
+					RefreshOne(mock.Anything, uint32(5)).
+					Return(&ent.Movie{
+						ID:     5,
+						Title:  "Fight Club",
+						Year:   1999,
+						TmdbID: 550,
+						Status: movie.StatusAvailable,
+					}, nil).
+					Once()
+
+				resp := app.do(app.req(
+					http.MethodPost,
+					"/api/v1/movies/5/refresh-metadata",
+					app.adminKey,
+					nil,
+				))
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				var refreshed Movie
+				Expect(json.NewDecoder(resp.Body).Decode(&refreshed)).To(Succeed())
+				Expect(refreshed.Title).To(Equal("Fight Club"))
+			})
+		})
+
 		Describe("DeleteMovieFile", func() {
 			It("deletes a movie file and returns 204", func() {
 				app.movies.EXPECT().

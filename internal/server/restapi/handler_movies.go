@@ -2,6 +2,7 @@ package restapi
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"path/filepath"
 	"time"
@@ -358,14 +359,14 @@ func (s *Server) RefreshMovieMetadata(
 	request RefreshMovieMetadataRequestObject,
 ) (RefreshMovieMetadataResponseObject, error) {
 	m, err := s.movies.RefreshOne(ctx, request.Id)
-	if err != nil {
-		return RefreshMovieMetadata500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
-		}, nil
-	}
-	if m == nil {
+	switch {
+	case errors.Is(err, moviesvc.ErrMovieNotFound):
 		return RefreshMovieMetadata404JSONResponse{
 			NotFoundJSONResponse: errNotFound("movie not found"),
+		}, nil
+	case err != nil:
+		return RefreshMovieMetadata500JSONResponse{
+			InternalErrorJSONResponse: errInternal(err.Error()),
 		}, nil
 	}
 	return RefreshMovieMetadata200JSONResponse{

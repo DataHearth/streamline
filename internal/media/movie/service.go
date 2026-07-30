@@ -53,7 +53,10 @@ func init() {
 	moviesDeleted.Add(ctx, 0)
 }
 
-var ErrNoQualityProfile = errors.New("no quality profile configured")
+var (
+	ErrNoQualityProfile = errors.New("no quality profile configured")
+	ErrMovieNotFound    = errors.New("movie not found")
+)
 
 type Manager interface {
 	Add(
@@ -719,7 +722,8 @@ func (s *Service) removeSourceTorrent(ctx context.Context, movieID uint32) {
 }
 
 // RefreshOne re-fetches TMDB metadata for one movie and returns the updated
-// row. Used by the manual "refresh metadata" UI action.
+// row. Used by the manual "refresh metadata" UI action. An unknown id yields
+// ErrMovieNotFound so callers can answer 404 instead of 500.
 func (s *Service) RefreshOne(
 	ctx context.Context, id uint32,
 ) (*ent.Movie, error) {
@@ -732,7 +736,7 @@ func (s *Service) RefreshOne(
 	if err != nil {
 		if ent.IsNotFound(err) {
 			return nil, otelx.RecordSpanError(span,
-				fmt.Errorf("movie %d not found", id))
+				fmt.Errorf("movie %d: %w", id, ErrMovieNotFound))
 		}
 		return nil, otelx.RecordSpanError(span, fmt.Errorf("get movie: %w", err))
 	}
