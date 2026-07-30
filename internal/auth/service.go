@@ -546,6 +546,12 @@ func (s *auth) ValidateAPIKey(
 		return nil, fmt.Errorf("invalid API key")
 	}
 
+	// Best-effort: a failed stamp must not reject an otherwise valid key.
+	if err := s.db.TouchAPIKey(ctx, ak.ID, time.Now()); err != nil {
+		slog.WarnContext(ctx, "failed to record API key usage",
+			"api_key.id", ak.ID, "error", err)
+	}
+
 	return ak.Edges.Owner, nil
 }
 

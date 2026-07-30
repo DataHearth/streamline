@@ -78,6 +78,7 @@ type Store interface {
 	// api keys
 	CreateAPIKey(ctx context.Context, p CreateAPIKeyParams) (*ent.ApiKey, error)
 	FindAPIKeyByHash(ctx context.Context, hash string) (*ent.ApiKey, error)
+	TouchAPIKey(ctx context.Context, id uint32, at time.Time) error
 	ListAPIKeysByUser(ctx context.Context, userID uint32) ([]*ent.ApiKey, error)
 	DeleteAPIKeyByID(ctx context.Context, userID, keyID uint32) (int, error)
 

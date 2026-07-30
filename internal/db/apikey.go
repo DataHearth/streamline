@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"time"
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/apikey"
@@ -33,6 +34,13 @@ func (db *DB) FindAPIKeyByHash(
 		Where(apikey.KeyHash(hash)).
 		WithOwner().
 		Only(ctx)
+}
+
+// TouchAPIKey stamps last_used_at. Called on every authenticated API request,
+// so it deliberately skips the update-time mutation hook's usual churn by
+// writing only the one column.
+func (db *DB) TouchAPIKey(ctx context.Context, id uint32, at time.Time) error {
+	return db.client.ApiKey.UpdateOneID(id).SetLastUsedAt(at).Exec(ctx)
 }
 
 func (db *DB) ListAPIKeysByUser(

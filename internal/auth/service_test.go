@@ -212,12 +212,37 @@ var _ = Describe("AuthService unit", Label("unit", "auth"), func() {
 	})
 
 	Describe("ValidateAPIKey", func() {
-		It("returns the owner when the hash matches", func() {
+		It(
+			"returns the owner and stamps last_used_at when the hash matches",
+			func() {
+				owner := &ent.User{ID: 1, Email: "a@x.com"}
+				ak := &ent.ApiKey{ID: 7, Edges: ent.ApiKeyEdges{Owner: owner}}
+				storeMock.FindAPIKeyByHash(ctx, mock.AnythingOfType("string")).
+					Return(ak, nil).
+					Once()
+				storeMock.TouchAPIKey(
+					ctx,
+					uint32(7),
+					mock.AnythingOfType("time.Time"),
+				).Return(nil).Once()
+
+				got, err := svc.ValidateAPIKey(ctx, "raw-key")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(got).To(Equal(owner))
+			},
+		)
+
+		It("still authenticates when the usage stamp fails", func() {
 			owner := &ent.User{ID: 1, Email: "a@x.com"}
-			ak := &ent.ApiKey{ID: 1, Edges: ent.ApiKeyEdges{Owner: owner}}
+			ak := &ent.ApiKey{ID: 7, Edges: ent.ApiKeyEdges{Owner: owner}}
 			storeMock.FindAPIKeyByHash(ctx, mock.AnythingOfType("string")).
 				Return(ak, nil).
 				Once()
+			storeMock.TouchAPIKey(
+				ctx,
+				uint32(7),
+				mock.AnythingOfType("time.Time"),
+			).Return(errors.New("db down")).Once()
 
 			got, err := svc.ValidateAPIKey(ctx, "raw-key")
 			Expect(err).NotTo(HaveOccurred())

@@ -7698,6 +7698,54 @@ func (_c *MockTx_SyncSeasonDownloadStateForRecord_Call) RunAndReturn(run func(co
 	return _c
 }
 
+// TouchAPIKey provides a mock function with given fields: ctx, id, at
+func (_m *MockTx) TouchAPIKey(ctx context.Context, id uint32, at time.Time) error {
+	ret := _m.Called(ctx, id, at)
+
+	if len(ret) == 0 {
+		panic("no return value specified for TouchAPIKey")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, uint32, time.Time) error); ok {
+		r0 = rf(ctx, id, at)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockTx_TouchAPIKey_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'TouchAPIKey'
+type MockTx_TouchAPIKey_Call struct {
+	*mock.Call
+}
+
+// TouchAPIKey is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - at time.Time
+func (_e *MockTx_Expecter) TouchAPIKey(ctx interface{}, id interface{}, at interface{}) *MockTx_TouchAPIKey_Call {
+	return &MockTx_TouchAPIKey_Call{Call: _e.mock.On("TouchAPIKey", ctx, id, at)}
+}
+
+func (_c *MockTx_TouchAPIKey_Call) Run(run func(ctx context.Context, id uint32, at time.Time)) *MockTx_TouchAPIKey_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(uint32), args[2].(time.Time))
+	})
+	return _c
+}
+
+func (_c *MockTx_TouchAPIKey_Call) Return(_a0 error) *MockTx_TouchAPIKey_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockTx_TouchAPIKey_Call) RunAndReturn(run func(context.Context, uint32, time.Time) error) *MockTx_TouchAPIKey_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // TouchSession provides a mock function with given fields: ctx, jti, when
 func (_m *MockTx) TouchSession(ctx context.Context, jti string, when time.Time) error {
 	ret := _m.Called(ctx, jti, when)
