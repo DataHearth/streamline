@@ -105,6 +105,12 @@ func (s *Service) Files(
 	ctx context.Context,
 	p FilesParams,
 ) ([]*ent.ImportScanFile, uint32, error) {
+	if _, err := s.store.FindImportScan(ctx, p.ScanID); err != nil {
+		if ent.IsNotFound(err) {
+			return nil, 0, ErrScanNotFound
+		}
+		return nil, 0, err
+	}
 	page := p.Page
 	if page == 0 {
 		page = 1

@@ -22,6 +22,8 @@ var _ = Describe("Handler: Import scan shows",
 		BeforeEach(func() { app = newAPIKeyApp() })
 
 		It("GET /library/imports/{id}/shows lists series rows", func() {
+			app.store.EXPECT().FindImportScan(mock.Anything, uint32(5)).
+				Return(&ent.ImportScan{ID: 5}, nil).Once()
 			app.store.EXPECT().ListImportScanShows(mock.Anything,
 				mock.MatchedBy(func(p db.ListImportScanShowsParams) bool {
 					return p.ScanID == 5
@@ -45,6 +47,37 @@ var _ = Describe("Handler: Import scan shows",
 			Expect(body.Total).To(Equal(uint32(1)))
 			Expect(body.Items).To(HaveLen(1))
 			Expect(body.Items[0].FolderPath).To(Equal("/tv/Breaking Bad"))
+		})
+
+		It(
+			"GET /library/imports/{id}/shows returns an empty page for a known, empty scan",
+			func() {
+				app.store.EXPECT().FindImportScan(mock.Anything, uint32(5)).
+					Return(&ent.ImportScan{ID: 5}, nil).Once()
+				app.store.EXPECT().ListImportScanShows(mock.Anything,
+					mock.MatchedBy(func(p db.ListImportScanShowsParams) bool {
+						return p.ScanID == 5
+					})).Return([]*ent.ImportScanShow{}, uint32(0), nil).Once()
+
+				resp := app.do(app.req(http.MethodGet,
+					"/api/v1/library/imports/5/shows", app.adminKey, nil))
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				var body ImportScanShowList
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				Expect(body.Total).To(BeZero())
+				Expect(body.Items).To(BeEmpty())
+			},
+		)
+
+		It("404s GET /library/imports/{id}/shows for an unknown scan", func() {
+			app.store.EXPECT().FindImportScan(mock.Anything, uint32(999999)).
+				Return(nil, &ent.NotFoundError{}).Once()
+
+			resp := app.do(app.req(http.MethodGet,
+				"/api/v1/library/imports/999999/shows", app.adminKey, nil))
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
 
 		It(
@@ -118,4 +151,17 @@ var _ = Describe("Handler: Import scan files",
 				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 			},
 		)
+
+		It("404s GET /library/imports/{id}/files for an unknown scan", func() {
+			app.bulkImports.EXPECT().Files(mock.Anything,
+				mock.MatchedBy(func(p bulkimport.FilesParams) bool {
+					return p.ScanID == 999999
+				})).
+				Return(nil, uint32(0), bulkimport.ErrScanNotFound).Once()
+
+			resp := app.do(app.req(http.MethodGet,
+				"/api/v1/library/imports/999999/files", app.adminKey, nil))
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+		})
 	})

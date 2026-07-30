@@ -9,6 +9,7 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	entimportscanfile "github.com/datahearth/streamline/ent/importscanfile"
+	"github.com/datahearth/streamline/internal/db"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 )
 
@@ -115,6 +116,38 @@ var _ = Describe("Service file decisions", Label("unit", "bulkimport"), func() {
 
 			_, err := svc.GetFile(ctx, 3, 99)
 			Expect(err).To(MatchError(ErrScanFileNotFound))
+		})
+	})
+
+	Describe("Files", func() {
+		It("maps an unknown scan id to ErrScanNotFound", func() {
+			store.EXPECT().
+				FindImportScan(mock.Anything, uint32(404)).
+				Return(nil, &ent.NotFoundError{}).
+				Once()
+
+			_, _, err := svc.Files(ctx, FilesParams{ScanID: 404})
+			Expect(err).To(MatchError(ErrScanNotFound))
+		})
+
+		It("returns an empty page for a known scan with no files", func() {
+			store.EXPECT().
+				FindImportScan(mock.Anything, uint32(3)).
+				Return(&ent.ImportScan{ID: 3}, nil).
+				Once()
+			store.EXPECT().
+				FilterImportScanFiles(mock.Anything, mock.MatchedBy(
+					func(p db.FilterImportScanFilesParams) bool {
+						return p.ScanID == 3
+					},
+				)).
+				Return([]*ent.ImportScanFile{}, uint32(0), nil).
+				Once()
+
+			items, total, err := svc.Files(ctx, FilesParams{ScanID: 3, Limit: 50})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(items).To(BeEmpty())
+			Expect(total).To(BeZero())
 		})
 	})
 })

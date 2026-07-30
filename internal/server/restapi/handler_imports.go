@@ -192,6 +192,11 @@ func (s *Server) ListImportFiles(
 		ScanID: req.Id, Classification: cls, Query: q, Page: page, Limit: limit,
 	})
 	if err != nil {
+		if errors.Is(err, bulkimport.ErrScanNotFound) {
+			return ListImportFiles404JSONResponse{
+				NotFoundJSONResponse: errNotFound(err.Error()),
+			}, nil
+		}
 		return nil, err
 	}
 	apiItems := make([]ImportScanFile, 0, len(items))
@@ -250,6 +255,14 @@ func (s *Server) ListImportShows(
 		return ListImportShows403JSONResponse{
 			ForbiddenJSONResponse: notAdminResp,
 		}, nil
+	}
+	if _, err := s.store.FindImportScan(ctx, req.Id); err != nil {
+		if ent.IsNotFound(err) {
+			return ListImportShows404JSONResponse{
+				NotFoundJSONResponse: errNotFound("scan not found"),
+			}, nil
+		}
+		return nil, err
 	}
 	page, limit := pageOr(req.Params.Page, 1), pageOr(req.Params.Limit, 50)
 	cls := entimportscanshow.Classification("")

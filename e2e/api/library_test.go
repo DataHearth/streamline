@@ -59,38 +59,20 @@ var _ = Describe("REST API library imports", Label("e2e"), func() {
 		Expect(deleted.StatusCode).To(Equal(http.StatusNotFound))
 	})
 
-	It("returns empty review pages for an unknown scan", func() {
+	It("404s the review-page routes for an unknown scan", func() {
 		files := get(
 			"/api/v1/library/imports/999999/files?classification=ambiguous&q=x&page=1&limit=10",
 			adminAuth,
 		)
 		defer files.Body.Close()
-		Expect(files.StatusCode).To(Equal(http.StatusOK))
-		var fileList struct {
-			Items []struct {
-				Id uint32 `json:"id"`
-			} `json:"items"`
-			Total uint32 `json:"total"`
-		}
-		decode(files, &fileList)
-		Expect(fileList.Items).To(BeEmpty())
-		Expect(fileList.Total).To(BeZero())
+		Expect(files.StatusCode).To(Equal(http.StatusNotFound))
 
 		shows := get(
 			"/api/v1/library/imports/999999/shows?classification=confirmed&page=1&limit=10",
 			adminAuth,
 		)
 		defer shows.Body.Close()
-		Expect(shows.StatusCode).To(Equal(http.StatusOK))
-		var showList struct {
-			Items []struct {
-				Id uint32 `json:"id"`
-			} `json:"items"`
-			Total uint32 `json:"total"`
-		}
-		decode(shows, &showList)
-		Expect(showList.Items).To(BeEmpty())
-		Expect(showList.Total).To(BeZero())
+		Expect(shows.StatusCode).To(Equal(http.StatusNotFound))
 	})
 
 	It("404s the decision routes for unknown ids", func() {
