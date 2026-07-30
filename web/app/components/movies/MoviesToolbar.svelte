@@ -105,11 +105,12 @@
 </script>
 
 <div
-	class="sticky top-16 z-20 flex flex-col gap-3 bg-bg-deep/85 px-4 py-3 backdrop-blur-md md:flex-row md:flex-wrap md:items-center md:justify-between md:gap-4 md:px-6"
+	class="sticky top-16 z-20 flex flex-col gap-3 bg-bg-deep/85 px-4 py-3 backdrop-blur-md md:px-6"
 >
+	<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
 	<nav
 		aria-label="Movie status"
-		class="filter-tabs flex w-full items-center gap-0.5 overflow-x-auto rounded-md border border-border bg-bg-elevated p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:w-auto md:shrink-0"
+		class="filter-tabs flex w-full items-center gap-0.5 overflow-x-auto rounded-md border border-border bg-bg-elevated p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:w-auto sm:shrink-0"
 	>
 		{#each tabs as t (t.key)}
 			{@const active = tab === t.key}
@@ -139,9 +140,19 @@
 		{/each}
 	</nav>
 
-	<div class="flex flex-col gap-2 md:flex-1 md:flex-row md:flex-wrap md:items-center md:justify-end">
+		<button
+			type="button"
+			onclick={onAddMovie}
+			class="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md bg-accent px-3.5 text-[12.5px] font-semibold text-fg-on-accent transition hover:bg-accent-hover hover:shadow-glow sm:ml-auto"
+		>
+			<Plus size={14} aria-hidden="true" />
+			Add movie
+		</button>
+	</div>
+
+	<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
 		<div
-			class="search-wrap flex h-9 w-full items-center gap-2 rounded-md border border-border bg-bg-elevated px-3 transition focus-within:border-accent md:w-auto"
+			class="search-wrap flex h-9 w-full items-center gap-2 rounded-md border border-border bg-bg-elevated px-3 transition focus-within:border-accent sm:w-56"
 		>
 			<Search class="h-3.5 w-3.5 text-fg-subtle" aria-hidden="true" />
 			<input
@@ -149,7 +160,7 @@
 				value={query}
 				oninput={(e) => onQueryChange(e.currentTarget.value)}
 				placeholder="Filter…"
-				class="min-w-0 flex-1 bg-transparent text-[13px] text-fg outline-none placeholder:text-fg-faint md:w-44 md:flex-none"
+				class="min-w-0 flex-1 bg-transparent text-[13px] text-fg outline-none placeholder:text-fg-faint"
 			/>
 			{#if query}
 				<button
@@ -163,14 +174,14 @@
 			{/if}
 		</div>
 
-		<div class="flex items-center gap-2 md:contents">
+		<div class="flex items-center gap-2 sm:ml-auto">
 		<div bind:this={sortRoot} class="relative">
 			<button
 				type="button"
 				onclick={() => (sortOpen = !sortOpen)}
 				aria-haspopup="listbox"
 				aria-expanded={sortOpen}
-				class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-3 text-[12.5px] font-medium text-fg-muted transition hover:border-border-strong hover:text-fg focus:outline-none focus:ring-2 focus:ring-accent-ring"
+				class="inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-border bg-bg-elevated px-3 text-[12.5px] font-medium text-fg-muted transition hover:border-border-strong hover:text-fg focus:outline-none focus:ring-2 focus:ring-accent-ring"
 			>
 				<span class="text-fg-subtle">Sort</span>
 				<span class="text-fg">{currentSortLabel}</span>
@@ -243,15 +254,6 @@
 				<span class="sr-only">List view</span>
 			</button>
 		</div>
-
-		<button
-			type="button"
-			onclick={onAddMovie}
-			class="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md bg-accent px-3.5 text-[12.5px] font-semibold text-fg-on-accent transition hover:bg-accent-hover hover:shadow-glow md:flex-none"
-		>
-			<Plus size={14} aria-hidden="true" />
-			Add movie
-		</button>
 		</div>
 	</div>
 </div>
