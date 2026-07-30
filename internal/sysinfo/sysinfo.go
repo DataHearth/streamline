@@ -28,11 +28,16 @@ type Snapshot struct {
 	DBPath    string
 	DBSize    string
 	DBUsage   *DiskUsage
-	Version   string
-	Commit    string
-	BuiltAt   string
-	GoVersion string
-	GoOSArch  string
+	// LibraryDir/LibraryUsage describe where media actually lands, which is
+	// normally a different mount from DataDir — reporting DataUsage as "free
+	// space" tells the operator about the config volume, not the library.
+	LibraryDir   string
+	LibraryUsage *DiskUsage
+	Version      string
+	Commit       string
+	BuiltAt      string
+	GoVersion    string
+	GoOSArch     string
 }
 
 // DiskUsage is the volume-level usage for a directory. Used / Total / Free
@@ -51,18 +56,20 @@ func Collect() Snapshot {
 	cfg := config.Get()
 	publicURL := config.PublicURL()
 	snap := Snapshot{
-		AppName:   "Streamline",
-		PublicURL: publicURL,
-		HTTPSWarn: !strings.HasPrefix(strings.ToLower(publicURL), "https://"),
-		AuthMode:  cfg.Auth.Mode,
-		DataDir:   cfg.DataDir,
-		DataUsage: DiskUsageFor(cfg.DataDir),
-		DBPath:    cfg.DatabasePath(),
-		Version:   buildinfo.Version,
-		Commit:    buildinfo.Commit,
-		BuiltAt:   buildinfo.Date,
-		GoVersion: runtime.Version(),
-		GoOSArch:  runtime.GOOS + "/" + runtime.GOARCH,
+		AppName:      "Streamline",
+		PublicURL:    publicURL,
+		HTTPSWarn:    !strings.HasPrefix(strings.ToLower(publicURL), "https://"),
+		AuthMode:     cfg.Auth.Mode,
+		DataDir:      cfg.DataDir,
+		DataUsage:    DiskUsageFor(cfg.DataDir),
+		LibraryDir:   cfg.Library.MoviePath,
+		LibraryUsage: DiskUsageFor(cfg.Library.MoviePath),
+		DBPath:       cfg.DatabasePath(),
+		Version:      buildinfo.Version,
+		Commit:       buildinfo.Commit,
+		BuiltAt:      buildinfo.Date,
+		GoVersion:    runtime.Version(),
+		GoOSArch:     runtime.GOOS + "/" + runtime.GOARCH,
 	}
 	if snap.Version == "" {
 		snap.Version = "dev"

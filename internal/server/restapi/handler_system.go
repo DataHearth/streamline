@@ -53,6 +53,13 @@ func snapshotToAPI(s sysinfo.Snapshot) SystemInfo {
 	if s.DBUsage != nil {
 		out.DbUsage = diskUsageToAPI(*s.DBUsage)
 	}
+	if s.LibraryDir != "" {
+		d := s.LibraryDir
+		out.LibraryDir = &d
+	}
+	if s.LibraryUsage != nil {
+		out.LibraryUsage = diskUsageToAPI(*s.LibraryUsage)
+	}
 	return out
 }
 

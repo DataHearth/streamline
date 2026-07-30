@@ -140,7 +140,10 @@
 		<StatStrip
 			counts={countsQuery.data}
 			{queue}
-			disk={systemQuery.data?.data_usage}
+			disk={systemQuery.data?.library_usage ?? systemQuery.data?.data_usage}
+			diskPath={systemQuery.data?.library_usage
+				? systemQuery.data?.library_dir
+				: systemQuery.data?.data_dir}
 		/>
 
 		<RecentScroller

@@ -7,10 +7,12 @@
 		counts,
 		queue,
 		disk,
+		diskPath,
 	}: {
 		counts?: MovieCounts;
 		queue: QueueItem[];
 		disk?: DiskUsage;
+		diskPath?: string;
 	} = $props();
 
 	function sumSpeed(items: QueueItem[]): number {
@@ -140,10 +142,13 @@
 		<div class="font-mono text-[28px] font-bold tabular leading-none tracking-tight">
 			{disk?.free ?? "—"}
 		</div>
-		<div
-			class="mt-2 text-[11px] uppercase tracking-[0.1em] text-fg-subtle"
-		>
-			Free
+		<div class="mt-2 flex min-w-0 items-baseline gap-1.5 text-[11px] text-fg-subtle">
+			<span class="shrink-0 uppercase tracking-[0.1em]">Free</span>
+			{#if diskPath}
+				<span class="truncate font-mono text-[10px] text-fg-faint" title={diskPath}>
+					{diskPath}
+				</span>
+			{/if}
 		</div>
 		{#if disk}
 			<div class="mt-2.5">
