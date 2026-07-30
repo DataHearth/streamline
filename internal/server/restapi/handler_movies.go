@@ -17,8 +17,13 @@ func (s *Server) ListMovies(
 	ctx context.Context,
 	request ListMoviesRequestObject,
 ) (ListMoviesResponseObject, error) {
-	page := uint16(*request.Params.Page)
-	limit := *request.Params.Limit
+	page, limit := uint16(1), uint16(20)
+	if request.Params.Page != nil {
+		page = uint16(*request.Params.Page)
+	}
+	if request.Params.Limit != nil {
+		limit = *request.Params.Limit
+	}
 
 	movies, total, err := s.movies.List(ctx, page, limit)
 	if err != nil {
