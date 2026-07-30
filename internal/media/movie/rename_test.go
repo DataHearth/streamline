@@ -2,6 +2,7 @@ package movie
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 
@@ -90,5 +91,55 @@ var _ = Describe("RenameService", Label("unit", "movies"), func() {
 		Expect(os.IsNotExist(statErr)).To(BeTrue())
 		_, statErr = os.Stat(plan.Operations[0].To)
 		Expect(statErr).NotTo(HaveOccurred())
+	})
+
+	It("maps NotFound to ErrMovieNotFound on preview", func() {
+		store := dbmocks.NewMockStore(GinkgoT())
+		svc := NewRenameService(store, "/library/movies", naming)
+		store.EXPECT().FindMovieByID(mock.Anything, uint32(99)).
+			Return(nil, &ent.NotFoundError{}).Once()
+
+		_, err := svc.Preview(ctx, 99)
+		Expect(err).To(MatchError(ErrMovieNotFound))
+		Expect(err).To(MatchError(ContainSubstring("movie 99")))
+	})
+
+	It("maps NotFound to ErrMovieNotFound on apply", func() {
+		store := dbmocks.NewMockStore(GinkgoT())
+		svc := NewRenameService(store, "/library/movies", naming)
+		store.EXPECT().FindMovieByID(mock.Anything, uint32(99)).
+			Return(nil, &ent.NotFoundError{}).Once()
+
+		_, err := svc.Apply(ctx, 99)
+		Expect(err).To(MatchError(ErrMovieNotFound))
+		Expect(err).To(MatchError(ContainSubstring("movie 99")))
+	})
+
+	It("wraps generic lookup errors without the not-found sentinel", func() {
+		store := dbmocks.NewMockStore(GinkgoT())
+		svc := NewRenameService(store, "/library/movies", naming)
+		storeErr := errors.New("db down")
+		store.EXPECT().FindMovieByID(mock.Anything, uint32(1)).
+			Return(nil, storeErr).Once()
+
+		_, err := svc.Preview(ctx, 1)
+		Expect(err).To(MatchError(storeErr))
+		Expect(err).To(MatchError(ContainSubstring("find movie")))
+		Expect(err).NotTo(MatchError(ErrMovieNotFound))
+	})
+
+	It("keeps a media-file listing failure off the not-found path", func() {
+		store := dbmocks.NewMockStore(GinkgoT())
+		svc := NewRenameService(store, "/library/movies", naming)
+		storeErr := errors.New("listing blew up")
+		store.EXPECT().FindMovieByID(mock.Anything, uint32(1)).
+			Return(&ent.Movie{ID: 1, Title: "Dune", Year: 2021}, nil).Once()
+		store.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(1)).
+			Return(nil, storeErr).Once()
+
+		_, err := svc.Preview(ctx, 1)
+		Expect(err).To(MatchError(storeErr))
+		Expect(err).To(MatchError(ContainSubstring("list media_files")))
+		Expect(err).NotTo(MatchError(ErrMovieNotFound))
 	})
 })

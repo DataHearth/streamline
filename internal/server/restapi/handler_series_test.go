@@ -3,6 +3,7 @@ package restapi
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -13,6 +14,7 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/indexer"
+	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/media/tvshow"
 	"github.com/datahearth/streamline/internal/metadata"
 )
@@ -377,6 +379,74 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 			resp := app.do(req)
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
+		})
+	})
+
+	Describe("RenameSeriesFiles", func() {
+		notFound := fmt.Errorf("series 999: %w", tvshow.ErrSeriesNotFound)
+
+		It("returns 404 when the previewed series does not exist", func() {
+			app.seriesRenamer.EXPECT().
+				Preview(mock.Anything, uint32(999)).
+				Return(library.RenamePlan{}, notFound).
+				Once()
+
+			resp := app.do(app.req(http.MethodPost,
+				"/api/v1/series/999/rename?preview=true", app.adminKey, nil))
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+
+			var body map[string]any
+			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+			Expect(body["message"]).To(Equal("series not found"))
+		})
+
+		It("returns 404 when the applied series does not exist", func() {
+			app.seriesRenamer.EXPECT().
+				Apply(mock.Anything, uint32(999)).
+				Return(library.RenamePlan{}, notFound).
+				Once()
+
+			resp := app.do(app.req(http.MethodPost,
+				"/api/v1/series/999/rename", app.adminKey, nil))
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+		})
+
+		It("returns 500 when the rename itself fails", func() {
+			app.seriesRenamer.EXPECT().
+				Apply(mock.Anything, uint32(3)).
+				Return(library.RenamePlan{}, errors.New("disk full")).
+				Once()
+
+			resp := app.do(app.req(http.MethodPost,
+				"/api/v1/series/3/rename", app.adminKey, nil))
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusInternalServerError))
+		})
+
+		It("returns the plan on success", func() {
+			app.seriesRenamer.EXPECT().
+				Preview(mock.Anything, uint32(3)).
+				Return(library.RenamePlan{
+					Operations: []library.RenameOperation{{
+						MediaFileID: 11,
+						From:        "/library/tv/old.mkv",
+						To:          "/library/tv/Show/Season 1/Show - S01E01.mkv",
+					}},
+				}, nil).
+				Once()
+
+			resp := app.do(app.req(http.MethodPost,
+				"/api/v1/series/3/rename?preview=true", app.adminKey, nil))
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+			var plan SeriesRenamePlan
+			Expect(json.NewDecoder(resp.Body).Decode(&plan)).To(Succeed())
+			Expect(plan.SeriesId).To(Equal(uint32(3)))
+			Expect(plan.Operations).To(HaveLen(1))
+			Expect(plan.Operations[0].MediaFileId).To(Equal(uint32(11)))
 		})
 	})
 })

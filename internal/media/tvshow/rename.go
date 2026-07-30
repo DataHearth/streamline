@@ -84,7 +84,9 @@ func (r *RenameService) buildPlan(
 	show, err := r.db.FindTVShowByID(ctx, seriesID)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return library.RenamePlan{}, fmt.Errorf("series %d not found", seriesID)
+			return library.RenamePlan{}, fmt.Errorf(
+				"series %d: %w", seriesID, ErrSeriesNotFound,
+			)
 		}
 		return library.RenamePlan{}, fmt.Errorf("find series: %w", err)
 	}

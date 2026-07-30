@@ -391,7 +391,12 @@ func (s *Server) RenameMovieFiles(
 	} else {
 		plan, err = s.renamer.Apply(ctx, request.Id)
 	}
-	if err != nil {
+	switch {
+	case errors.Is(err, moviesvc.ErrMovieNotFound):
+		return RenameMovieFiles404JSONResponse{
+			NotFoundJSONResponse: errNotFound("movie not found"),
+		}, nil
+	case err != nil:
 		return RenameMovieFiles500JSONResponse{
 			InternalErrorJSONResponse: errInternal(err.Error()),
 		}, nil

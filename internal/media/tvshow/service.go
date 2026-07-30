@@ -57,7 +57,10 @@ func init() {
 	showsDeleted.Add(ctx, 0)
 }
 
-var ErrNoQualityProfile = errors.New("no quality profile configured")
+var (
+	ErrNoQualityProfile = errors.New("no quality profile configured")
+	ErrSeriesNotFound   = errors.New("series not found")
+)
 
 type Service struct {
 	db       db.Store

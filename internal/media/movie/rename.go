@@ -86,7 +86,9 @@ func (r *RenameService) buildPlan(
 	m, err := r.db.FindMovieByID(ctx, movieID)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return library.RenamePlan{}, fmt.Errorf("movie %d not found", movieID)
+			return library.RenamePlan{}, fmt.Errorf(
+				"movie %d: %w", movieID, ErrMovieNotFound,
+			)
 		}
 		return library.RenamePlan{}, fmt.Errorf("find movie: %w", err)
 	}

@@ -2,6 +2,7 @@ package restapi
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 
 	"github.com/datahearth/streamline/internal/library"
@@ -559,7 +560,12 @@ func (s *Server) RenameSeriesFiles(
 	} else {
 		plan, err = s.seriesRenamer.Apply(ctx, request.Id)
 	}
-	if err != nil {
+	switch {
+	case errors.Is(err, tvshow.ErrSeriesNotFound):
+		return RenameSeriesFiles404JSONResponse{
+			NotFoundJSONResponse: errNotFound("series not found"),
+		}, nil
+	case err != nil:
 		return RenameSeriesFiles500JSONResponse{
 			InternalErrorJSONResponse: errInternal(err.Error()),
 		}, nil

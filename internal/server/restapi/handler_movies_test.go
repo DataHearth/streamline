@@ -15,6 +15,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/internal/indexer"
+	"github.com/datahearth/streamline/internal/library"
 	moviesvc "github.com/datahearth/streamline/internal/media/movie"
 	"github.com/datahearth/streamline/internal/metadata"
 )
@@ -678,6 +679,92 @@ var _ = Describe(
 				var refreshed Movie
 				Expect(json.NewDecoder(resp.Body).Decode(&refreshed)).To(Succeed())
 				Expect(refreshed.Title).To(Equal("Fight Club"))
+			})
+		})
+
+		Describe("RenameMovieFiles", func() {
+			notFound := fmt.Errorf("movie 999: %w", moviesvc.ErrMovieNotFound)
+
+			It("returns 404 when the previewed movie does not exist", func() {
+				app.renamer.EXPECT().
+					Preview(mock.Anything, uint32(999)).
+					Return(library.RenamePlan{}, notFound).
+					Once()
+
+				resp := app.do(app.req(
+					http.MethodPost,
+					"/api/v1/movies/999/rename?preview=true",
+					app.adminKey,
+					nil,
+				))
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+
+				var body map[string]any
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				Expect(body["message"]).To(Equal("movie not found"))
+			})
+
+			It("returns 404 when the applied movie does not exist", func() {
+				app.renamer.EXPECT().
+					Apply(mock.Anything, uint32(999)).
+					Return(library.RenamePlan{}, notFound).
+					Once()
+
+				resp := app.do(app.req(
+					http.MethodPost,
+					"/api/v1/movies/999/rename",
+					app.adminKey,
+					nil,
+				))
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+			})
+
+			It("returns 500 when the rename itself fails", func() {
+				app.renamer.EXPECT().
+					Apply(mock.Anything, uint32(5)).
+					Return(library.RenamePlan{}, errors.New("disk full")).
+					Once()
+
+				resp := app.do(app.req(
+					http.MethodPost,
+					"/api/v1/movies/5/rename",
+					app.adminKey,
+					nil,
+				))
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusInternalServerError))
+			})
+
+			It("returns the plan on success", func() {
+				app.renamer.EXPECT().
+					Preview(mock.Anything, uint32(5)).
+					Return(library.RenamePlan{
+						Operations: []library.RenameOperation{
+							{
+								MediaFileID: 10,
+								From:        "/library/movies/old.mkv",
+								To:          "/library/movies/Dune (2021)/Dune (2021).mkv",
+							},
+						},
+					}, nil).
+					Once()
+
+				resp := app.do(app.req(
+					http.MethodPost,
+					"/api/v1/movies/5/rename?preview=true",
+					app.adminKey,
+					nil,
+				))
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				var plan RenamePlan
+				Expect(json.NewDecoder(resp.Body).Decode(&plan)).To(Succeed())
+				Expect(plan.MovieId).To(Equal(uint32(5)))
+				Expect(plan.Operations).To(HaveLen(1))
+				Expect(plan.Operations[0].MediaFileId).To(Equal(uint32(10)))
 			})
 		})
 

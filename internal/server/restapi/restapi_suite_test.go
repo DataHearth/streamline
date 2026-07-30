@@ -18,6 +18,7 @@ import (
 	downloadmocks "github.com/datahearth/streamline/internal/download/mocks"
 	indexermocks "github.com/datahearth/streamline/internal/indexer/mocks"
 	bulkimportmocks "github.com/datahearth/streamline/internal/library/bulkimport/mocks"
+	librarymocks "github.com/datahearth/streamline/internal/library/mocks"
 	moviemocks "github.com/datahearth/streamline/internal/media/movie/mocks"
 	tvshowmocks "github.com/datahearth/streamline/internal/media/tvshow/mocks"
 	mediaservermocks "github.com/datahearth/streamline/internal/mediaserver/mocks"
@@ -63,18 +64,20 @@ type apiKeyApp struct {
 	srv *httptest.Server
 
 	// Mocks. Tests set expectations directly on these.
-	auth         *authmocks.MockManager
-	movies       *moviemocks.MockManager
-	metadata     *metadatamocks.MockProvider
-	indexers     *indexermocks.MockManager
-	downloads    *downloadmocks.MockDownloader
-	mediaServers *mediaservermocks.MockManager
-	tvshows      *tvshowmocks.MockManager
-	metadataTV   *metadatamocks.MockTVProvider
-	requests     *reqmocks.MockManager
-	torrents     *bittorrentmocks.MockManager
-	bulkImports  *bulkimportmocks.MockManager
-	store        *dbmocks.MockStore
+	auth          *authmocks.MockManager
+	movies        *moviemocks.MockManager
+	metadata      *metadatamocks.MockProvider
+	indexers      *indexermocks.MockManager
+	downloads     *downloadmocks.MockDownloader
+	mediaServers  *mediaservermocks.MockManager
+	tvshows       *tvshowmocks.MockManager
+	metadataTV    *metadatamocks.MockTVProvider
+	requests      *reqmocks.MockManager
+	torrents      *bittorrentmocks.MockManager
+	bulkImports   *bulkimportmocks.MockManager
+	store         *dbmocks.MockStore
+	renamer       *librarymocks.MockRenamer
+	seriesRenamer *librarymocks.MockRenamer
 
 	// Identity tokens consumed by the synthetic auth middleware.
 	adminKey       string
@@ -104,6 +107,8 @@ func newAPIKeyApp() *apiKeyApp {
 		torrents:       bittorrentmocks.NewMockManager(t),
 		bulkImports:    bulkimportmocks.NewMockManager(t),
 		store:          dbmocks.NewMockStore(t),
+		renamer:        librarymocks.NewMockRenamer(t),
+		seriesRenamer:  librarymocks.NewMockRenamer(t),
 		adminKey:       "test-admin-token",
 		adminID:        1,
 		requestOnlyKey: "test-requestonly-token",
@@ -111,18 +116,20 @@ func newAPIKeyApp() *apiKeyApp {
 	}
 
 	rsrv := New(Deps{
-		Auth:         a.auth,
-		Movies:       a.movies,
-		Metadata:     a.metadata,
-		Indexers:     a.indexers,
-		Downloads:    a.downloads,
-		MediaServers: a.mediaServers,
-		TVShows:      a.tvshows,
-		MetadataTV:   a.metadataTV,
-		Requests:     a.requests,
-		Torrents:     a.torrents,
-		BulkImports:  a.bulkImports,
-		Store:        a.store,
+		Auth:          a.auth,
+		Movies:        a.movies,
+		Metadata:      a.metadata,
+		Indexers:      a.indexers,
+		Downloads:     a.downloads,
+		MediaServers:  a.mediaServers,
+		TVShows:       a.tvshows,
+		MetadataTV:    a.metadataTV,
+		Requests:      a.requests,
+		Torrents:      a.torrents,
+		BulkImports:   a.bulkImports,
+		Store:         a.store,
+		Renamer:       a.renamer,
+		SeriesRenamer: a.seriesRenamer,
 	})
 
 	r := chi.NewRouter()
