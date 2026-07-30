@@ -1,0 +1,59 @@
+name: Bug report
+description: Something is broken
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, what you got instead.
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: "`streamline version`, the image tag, or the chart version."
+      placeholder: v1.2.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install
+    attributes:
+      label: Install method
+      options:
+        - Docker / Compose
+        - Helm / Kubernetes
+        - Binary from releases
+        - Built from source
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: >
+        Relevant output, ideally with `log.app.level: debug`. Redact API keys,
+        tokens and passwords.
+      render: text
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Config
+      description: >
+        The relevant part of your `config.yaml`. Redact `auth.session_secret`,
+        indexer/download-client/media-server credentials, and OIDC client
+        secrets.
+      render: yaml
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: >
+        Integrations involved (which indexer, download client, media server),
+        screenshots, browser console output for UI bugs.

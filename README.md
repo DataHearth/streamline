@@ -185,6 +185,14 @@ cosign download attestation ghcr.io/datahearth/streamline:latest \
 
 Every image push is scanned by [grype](https://github.com/anchore/grype) for known vulnerabilities (severity >= high). Results are uploaded to the repository's [Security tab](https://github.com/datahearth/streamline/security/code-scanning).
 
+## Contributing
+
+Bug reports and PRs welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for setup,
+the build/test loop, conventions and the policy on AI-assisted PRs. Participation
+is governed by the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+Found a vulnerability? Don't open an issue — see [SECURITY.md](SECURITY.md).
+
 ## License
 
 [GPL-3.0-or-later](LICENSE)
