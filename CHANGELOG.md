@@ -5,6 +5,49 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-07-30
+
+### Added
+
+- movies: Flag already-added titles in TMDB search
+- web: Failed movie tab and already-added search flags
+
+### Changed
+
+- web: Shared kebab menu, formatBytes, session cards, read-only chrome
+- server: Reuse grab conversion and scan-failure helpers
+- 
+
+### Fixed
+
+- auth: Drop revoked and expired rows from session list - closes #2
+- rss: Episode search eligibility and per-item quality profiles
+- download: Treat stopped and queued complete qBittorrent torrents as completed
+- library: Episode drift revert, movie delete cascade, episode import parity
+- tvshow: Profile validation, monitored-aware season views, pilot preset, counters
+- auth: Atomic invite consumption, user delete with invites, limiter pruning
+- metadata: Synchronize TVDB token and re-login on expiry
+- server: Importer shutdown panic, scheduler rootCtx race, DB close on boot failure
+- api: Expose failed movie status
+- web: Movie quality-profile flow, add-modal reset, on-accent contrast
+- web: History pagination, drawer scroll lock, play-on error state
+- web: Scan navigation, series param reset, settings breadcrumbs
+- web: Request approval invalidation, auth form reset, filter debounce, number field clearing
+- web: Debounce user search, clearable priority fields
+- server: Plex-only library_section on update, honest is_current for admin sessions
+- web: Send explicit clear signal for library_section
+- movies: Surface quality_profile in API responses and modal default option
+- deps: Bump vulnerable modules and pin Go to 1.26.5
+- series: Wire series renamer into REST server
+- library: Return 404 for unknown import decision targets
+- movies: 404 on refreshing metadata of unknown movie
+- media: 404 renaming files of an unknown movie or series
+- requests: 404 on approve/deny/reopen of unknown request
+- library: 404 listing files/shows of an unknown import scan
+- library: Scope import decision writes to their scan
+- bittorrent: Deterministic teardown and port reuse in restore integration spec
+- bittorrent: Drain piece-completion writes before closing the store
+
 ## [1.1.0] - 2026-07-21
 
 ### Added
@@ -40,6 +83,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - sysinfo: Make disk-usage probe cross-platform for releases (#1)
 
+[1.2.0]: https://github.com/datahearth/streamline/compare/v1.1.0..v1.2.0
 [1.1.0]: https://github.com/datahearth/streamline/compare/chart-v1.0.1..v1.1.0
 [1.0.0]: https://github.com/datahearth/streamline/tree/v1.0.0
 
