@@ -3,9 +3,11 @@ package bittorrent
 import (
 	"bytes"
 	"context"
+	"math/rand/v2"
 	"net"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	analog "github.com/anacrolix/log"
@@ -21,13 +23,45 @@ import (
 	"github.com/datahearth/streamline/internal/testutil/dbtest"
 )
 
-// freePort grabs an OS-assigned TCP port for the engine listener.
-func freePort() uint16 {
+// engineBindIP keeps the engine loopback-only. Binding it also switches off
+// anacrolix's UPnP discovery (see New), so a run neither multicasts SSDP nor
+// leaves transient sockets behind on ports this suite is about to hand out.
+const engineBindIP = "127.0.0.1"
+
+// reserveListenPort picks a port the engine can bind on both protocols.
+//
+// The engine binds TCP *and* UDP on its configured port, and anacrolix only
+// retries a taken port when it was asked for a dynamic one — a configured
+// port that is busy is a hard start failure. Ports are therefore drawn from
+// below the kernel's ephemeral range (32768-60999 on Linux), which nothing
+// on the box can be auto-assigned: an OS-assigned port would come out of
+// that shared pool, and probing it over TCP says nothing about whether the
+// UDP half is free.
+func reserveListenPort() uint16 {
 	GinkgoHelper()
-	l, err := net.Listen("tcp", "127.0.0.1:0")
-	Expect(err).NotTo(HaveOccurred())
+	for range 100 {
+		port := uint16(10000 + rand.IntN(20000))
+		if portBindable(port) {
+			return port
+		}
+	}
+	Fail("no port below the ephemeral range was free for TCP and UDP")
+	return 0
+}
+
+func portBindable(port uint16) bool {
+	addr := net.JoinHostPort(engineBindIP, strconv.Itoa(int(port)))
+	l, err := net.Listen("tcp", addr)
+	if err != nil {
+		return false
+	}
 	defer l.Close()
-	return uint16(l.Addr().(*net.TCPAddr).Port)
+	p, err := net.ListenPacket("udp", addr)
+	if err != nil {
+		return false
+	}
+	defer p.Close()
+	return true
 }
 
 // newSeeder builds a 2 MiB payload, its .torrent bytes, and a local
@@ -55,30 +89,58 @@ func newSeeder(dir string) ([]byte, int) {
 	cc.Seed = true
 	cc.NoDHT = true
 	cc.DisableTrackers = true
+	cc.NoDefaultPortForwarding = true
 	cc.ListenPort = 0
 	cc.Logger = analog.Default.WithFilterLevel(analog.Error)
 	seeder, err := antorrent.NewClient(cc)
 	Expect(err).NotTo(HaveOccurred())
-	DeferCleanup(func() { seeder.Close() })
+	DeferCleanup(func() { Expect(seeder.Close()).To(BeEmpty()) })
 	st, err := seeder.AddTorrent(&mi)
 	Expect(err).NotTo(HaveOccurred())
 	<-st.GotInfo()
 	return buf.Bytes(), seeder.LocalPort()
 }
 
-// newEngine spins an Engine on a temp dir wired to an in-memory store.
-func newEngine(ctx context.Context, dlDir string, store db.Store) *Engine {
+// newEngine spins an Engine on a temp dir wired to an in-memory store and
+// registers its shutdown before returning, so a spec that fails part-way
+// can never leave the listener bound.
+//
+// DHT is off and the engine is pinned to loopback so the suite talks to
+// nothing but its own seeder: with DHT on, the engine resolves and queries
+// the global bootstrap nodes and announces an infohash that is identical on
+// every machine running this suite, then competes the resulting internet
+// peers against the local seeder for connection slots.
+//
+// The returned stop closes the engine early — the restart spec needs that —
+// and turns the registered cleanup into a no-op, because Engine.Close closes
+// its stop channel and panics if called twice.
+func newEngine(
+	ctx context.Context,
+	dlDir string,
+	store db.Store,
+) (*Engine, func()) {
 	GinkgoHelper()
 	configtest.Setup(map[string]any{
 		"download_clients": []map[string]any{{
 			"name": "embedded", "client_type": "builtin",
-			"download_dir": dlDir, "listen_port": int(freePort()),
+			"download_dir": dlDir, "listen_port": int(reserveListenPort()),
+			"bind_interface": engineBindIP, "disable_dht": true,
 			"enabled": true,
 		}},
 	})
 	e, err := New(ctx, store)
 	Expect(err).NotTo(HaveOccurred())
-	return e
+	closed := false
+	stop := func() {
+		GinkgoHelper()
+		if closed {
+			return
+		}
+		closed = true
+		Expect(e.Close()).To(Succeed())
+	}
+	DeferCleanup(stop)
+	return e, stop
 }
 
 // connectToSeeder points the engine's torrent at the local seeder.
@@ -96,6 +158,7 @@ var _ = Describe("Engine download flow", Label("integration", "bittorrent"), fun
 		ctx          context.Context
 		store        db.Store
 		engine       *Engine
+		stopEngine   func()
 		dlDir        string
 		torrentBytes []byte
 		seederPort   int
@@ -114,8 +177,7 @@ var _ = Describe("Engine download flow", Label("integration", "bittorrent"), fun
 		store = db.New(entClient)
 
 		torrentBytes, seederPort = newSeeder(seedDir)
-		engine = newEngine(ctx, dlDir, store)
-		DeferCleanup(func() { Expect(engine.Close()).To(Succeed()) })
+		engine, stopEngine = newEngine(ctx, dlDir, store)
 	})
 
 	It("downloads a torrent to completion and reports status", func() {
@@ -262,11 +324,11 @@ var _ = Describe("Engine download flow", Label("integration", "bittorrent"), fun
 			return t.Status
 		}).WithTimeout(60 * time.Second).WithPolling(200 * time.Millisecond).
 			Should(Equal(download.StatusSeeding))
-		Expect(engine.Close()).To(Succeed())
+		stopEngine()
 
 		// Second engine boots from the same store + download dir; the seeder
 		// is gone from its peer list, so completion must come from disk.
-		engine = newEngine(ctx, dlDir, store)
+		engine, stopEngine = newEngine(ctx, dlDir, store)
 		Eventually(func() download.TorrentStatus {
 			t, terr := engine.GetTorrent(ctx, hash)
 			Expect(terr).NotTo(HaveOccurred())

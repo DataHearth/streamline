@@ -147,6 +147,14 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 		cc.TrackerListenPacket = func(network, _ string) (net.PacketConn, error) {
 			return net.ListenUDP(network, &net.UDPAddr{IP: bindIP})
 		}
+		// UPnP discovery ignores every binding above: anacrolix multicasts an
+		// SSDP M-SEARCH out of *each* multicast-capable interface and then asks
+		// whichever IGD answers to open an inbound mapping for the host's real
+		// WAN address. On a VPN-bound setup that both announces our presence on
+		// the LAN and forwards a port around the tunnel, so the binding stops
+		// being fail-closed. Peers reach a bound engine through the tunnel's own
+		// forwarding, not the LAN router's.
+		cc.NoDefaultPortForwarding = true
 	}
 
 	client, err := antorrent.NewClient(cc)
