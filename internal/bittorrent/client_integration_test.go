@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"sync"
 	"time"
 
 	analog "github.com/anacrolix/log"
@@ -68,7 +69,12 @@ func portBindable(port uint16) bool {
 // anacrolix client seeding it. Returns the torrent bytes and seeder port.
 func newSeeder(dir string) ([]byte, int) {
 	GinkgoHelper()
-	content := make([]byte, 2<<20)
+	return newSeederOfSize(dir, 2<<20, 256<<10)
+}
+
+func newSeederOfSize(dir string, size int, pieceLen int64) ([]byte, int) {
+	GinkgoHelper()
+	content := make([]byte, size)
 	for i := range content {
 		content[i] = byte(i % 251)
 	}
@@ -76,7 +82,7 @@ func newSeeder(dir string) ([]byte, int) {
 		filepath.Join(dir, "payload.bin"), content, 0o644,
 	)).To(Succeed())
 
-	info := metainfo.Info{PieceLength: 256 << 10}
+	info := metainfo.Info{PieceLength: pieceLen}
 	Expect(info.BuildFromFilePath(filepath.Join(dir, "payload.bin"))).To(Succeed())
 	ib, err := bencode.Marshal(info)
 	Expect(err).NotTo(HaveOccurred())
@@ -141,6 +147,42 @@ func newEngine(
 	}
 	DeferCleanup(stop)
 	return e, stop
+}
+
+// logSink collects everything tee'd off GinkgoWriter. It serializes access
+// because the writes this spec hunts for come from anacrolix goroutines that
+// outlive the call under test, so the buffer is read while they may still be
+// logging.
+type logSink struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (s *logSink) Write(p []byte) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.buf.Write(p)
+}
+
+func (s *logSink) String() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.buf.String()
+}
+
+// teeEngineLogs routes both log streams the engine can fail through into sink:
+// slog (the engine's own) and anacrolix's package logger, which the engine
+// snapshots from analog.Default and which otherwise writes straight to stderr,
+// bypassing GinkgoWriter entirely.
+func teeEngineLogs(sink *logSink) {
+	GinkgoHelper()
+	GinkgoWriter.TeeTo(sink)
+	DeferCleanup(GinkgoWriter.ClearTeeWriters)
+	prev := analog.Default
+	DeferCleanup(func() { analog.Default = prev })
+	analog.Default.SetHandlers(analog.StreamHandler{
+		W: GinkgoWriter, Fmt: analog.LineFormatter,
+	})
 }
 
 // connectToSeeder points the engine's torrent at the local seeder.
@@ -335,6 +377,53 @@ var _ = Describe("Engine download flow", Label("integration", "bittorrent"), fun
 			return t.Status
 		}).WithTimeout(30 * time.Second).WithPolling(200 * time.Millisecond).
 			Should(Equal(download.StatusSeeding))
+	})
+
+	It("never writes piece completion into a closing store", func() {
+		var sink logSink
+		teeEngineLogs(&sink)
+
+		tmp := GinkgoT().TempDir()
+		seedDir := filepath.Join(tmp, "seed")
+		Expect(os.MkdirAll(seedDir, 0o755)).To(Succeed())
+		// 256 pieces instead of the shared seeder's 8: every piece that passes
+		// its hash costs one completion write, so a fine piece length keeps
+		// marks continuously in flight and makes the close land inside one of
+		// them often enough to be reproducible.
+		cycleBytes, cyclePort := newSeederOfSize(seedDir, 8<<20, 32<<10)
+
+		for cycle := range 30 {
+			dlDir := filepath.Join(tmp, "dl", strconv.Itoa(cycle))
+			Expect(os.MkdirAll(dlDir, 0o755)).To(Succeed())
+			cycleEngine, closeCycle := newEngine(ctx, dlDir, store)
+
+			hash, err := cycleEngine.AddTorrent(ctx, download.TorrentSource{
+				Bytes: cycleBytes,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			connectToSeeder(cycleEngine, hash, cyclePort)
+
+			// Close while hashers are hot rather than after completion: a
+			// completed torrent has, by construction, no mark left to race —
+			// anacrolix only flips a piece's reported completion after
+			// MarkComplete has returned (torrent.go:2647-2657).
+			Eventually(func() float64 {
+				t, terr := cycleEngine.GetTorrent(ctx, hash)
+				Expect(terr).NotTo(HaveOccurred())
+				return t.Progress
+			}).WithTimeout(60 * time.Second).WithPolling(time.Millisecond).
+				Should(BeNumerically(">", 0))
+			closeCycle()
+
+			// The next cycle boots a fresh engine off the same store, so drop
+			// this cycle's session rather than have it re-added elsewhere.
+			Expect(store.DeleteTorrentSessionByHash(ctx, hash)).To(Succeed())
+		}
+
+		logs := sink.String()
+		Expect(logs).NotTo(ContainSubstring("database not open"))
+		Expect(logs).NotTo(ContainSubstring("error marking piece"))
+		Expect(logs).NotTo(ContainSubstring("after the storage closed"))
 	})
 
 	It("excludes skipped files from downloading until re-wanted", func() {

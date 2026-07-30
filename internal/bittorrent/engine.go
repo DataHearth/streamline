@@ -100,7 +100,9 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 	if err != nil {
 		return nil, fmt.Errorf("open piece completion: %w", err)
 	}
-	st := storage.NewFileWithCompletion(entry.DownloadDir, pc)
+	st := newDrainingStorage(
+		storage.NewFileWithCompletion(entry.DownloadDir, pc),
+	)
 
 	cc := antorrent.NewDefaultClientConfig()
 	cc.DataDir = entry.DownloadDir
@@ -259,13 +261,56 @@ func resolveBindIP(iface string) (net.IP, error) {
 func (e *Engine) Close() error {
 	close(e.stop)
 	e.wg.Wait()
+	// Snapshot before closing: client.Close empties the torrent set.
+	torrents := e.client.Torrents()
 	errs := e.client.Close()
+	waitPieceMarks(torrents)
 	// A custom DefaultStorage is not closed by client.Close (only the
 	// fallback file storage is); close it explicitly.
 	if err := e.storageImpl.Close(); err != nil {
 		errs = append(errs, err)
 	}
 	return errors.Join(errs...)
+}
+
+// pieceMarkPollInterval paces the shutdown wait below. anacrolix publishes
+// piece-state changes over a pubsub that Torrent.close tears down
+// (torrent.go:1136), so a mark finishing after the client closed can only be
+// observed by polling.
+const pieceMarkPollInterval = 500 * time.Microsecond
+
+// waitPieceMarks blocks until every piece-completion mark anacrolix committed
+// to before the client closed has finished writing.
+//
+// A mark runs with the client lock released and outside the per-torrent
+// storage lock, on a hasher goroutine Client.Close does not await — see
+// drainingStorage for the full trace — so closing the completion store as soon
+// as Client.Close returns can cut a mark off mid-write and cost the piece its
+// persisted completion. PieceState.Marking is the fence: pieceHashed raises it
+// under the client lock (torrent.go:2635) right after the same critical
+// section decided the torrent was still open (:2619), and lowers it from a
+// defer once the mark has returned (:2637-2640). Client.Close sets that closed
+// flag under the same lock (torrent.go:1103 via client.go:542-553), so once it
+// has returned every mark that will ever run is already flagged, and waiting
+// the flags out is a terminating wait rather than a grace period.
+func waitPieceMarks(torrents []*antorrent.Torrent) {
+	for _, t := range torrents {
+		if t.Info() == nil {
+			continue
+		}
+		for pieceMarkInFlight(t) {
+			time.Sleep(pieceMarkPollInterval)
+		}
+	}
+}
+
+func pieceMarkInFlight(t *antorrent.Torrent) bool {
+	for _, run := range t.PieceStateRuns() {
+		if run.Marking {
+			return true
+		}
+	}
+	return false
 }
 
 // restore re-adds every persisted torrent session. Unrestorable rows are
