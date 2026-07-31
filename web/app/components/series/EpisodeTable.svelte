@@ -1,14 +1,15 @@
 <script lang="ts" module>
-	import type { EpisodeStatus } from "../../lib/types";
+	import type { EpisodeDisplayStatus } from "../../lib/status";
 
 	// Episode statuses map onto the shared status color tokens. "unaired" and
 	// "skipped" have no dedicated status pill, so they borrow neutral tones.
 	const STATUS_META: Record<
-		EpisodeStatus,
+		EpisodeDisplayStatus,
 		{ label: string; token: string; live?: boolean }
 	> = {
 		available: { label: "Available", token: "available" },
 		wanted: { label: "Wanted", token: "wanted" },
+		missing: { label: "Missing", token: "missing" },
 		downloading: { label: "Downloading", token: "downloading", live: true },
 		paused: { label: "Paused", token: "paused" },
 		unaired: { label: "Unaired", token: "missing" },
@@ -17,9 +18,11 @@
 </script>
 
 <script lang="ts">
-	import { Bookmark, Search, Trash2 } from "@lucide/svelte";
+	import { Bookmark, Info, Search, Trash2 } from "@lucide/svelte";
 	import { cn } from "../../lib/cn";
-	import { formatDateShort, formatRelative } from "../../lib/dates";
+	import { episodeStatus } from "../../lib/status";
+	import Modal from "../modals/Modal.svelte";
+	import { formatDateShort, formatDateTime, formatRelative } from "../../lib/dates";
 	import { formatBytes } from "../../lib/format";
 	import type { Episode, SeriesType } from "../../lib/types";
 
@@ -48,6 +51,26 @@
 		if (seriesType === "daily") return `#${ep.number}`;
 		return `S${pad(seasonNumber)}E${pad(ep.number)}`;
 	}
+
+	let detail = $state<Episode | null>(null);
+	let detailRows = $derived(
+		detail
+			? [
+					{ label: "Episode", value: epCode(detail) },
+					{
+						label: "Absolute #",
+						value: detail.absolute_number ? `#${detail.absolute_number}` : "—",
+					},
+					{ label: "Air date", value: formatDateTime(detail.air_date) || "—" },
+					{
+						label: "Monitored",
+						value: detail.monitored ? "Yes" : "No",
+					},
+					{ label: "Quality", value: detail.quality || "—" },
+					{ label: "Size", value: formatBytes(detail.size) },
+				]
+			: [],
+	);
 </script>
 
 <div
@@ -87,7 +110,7 @@
 		</thead>
 		<tbody>
 			{#each episodes as ep (ep.id)}
-				{@const meta = STATUS_META[ep.status]}
+				{@const meta = STATUS_META[episodeStatus(ep)]}
 				{@const monitorDisabled = ep.status === "unaired" && !seasonMonitored}
 				<tr
 					class={cn(
@@ -124,7 +147,14 @@
 						{/if}
 					</td>
 					<td class="min-w-0 px-3 py-2.5">
-						<span class="block truncate text-fg">{ep.title || "TBA"}</span>
+						<button
+							type="button"
+							onclick={() => (detail = ep)}
+							title="Episode details"
+							class="block max-w-full truncate rounded-sm text-left text-fg transition hover:text-accent-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
+						>
+							{ep.title || "TBA"}
+						</button>
 					</td>
 					<td
 						class="hidden px-3 py-2.5 font-mono text-xs text-fg-muted md:table-cell"
@@ -162,6 +192,15 @@
 					</td>
 					<td class="px-2 py-2.5">
 						<div class="flex items-center justify-end gap-0.5">
+							<button
+								type="button"
+								onclick={() => (detail = ep)}
+								aria-label="Details for {epCode(ep)}"
+								title="Details"
+								class="grid h-7 w-7 place-items-center rounded-md text-fg-subtle transition hover:bg-surface hover:text-fg focus-visible:ring-2 focus-visible:ring-accent-ring"
+							>
+								<Info size={14} aria-hidden="true" />
+							</button>
 							{#if ep.status !== "unaired"}
 								<button
 									type="button"
@@ -191,6 +230,92 @@
 		</tbody>
 	</table>
 </div>
+
+{#if detail}
+	{@const meta = STATUS_META[episodeStatus(detail)]}
+	<Modal
+		open={true}
+		title={detail.title || "TBA"}
+		size="xl"
+		onClose={() => (detail = null)}
+	>
+		<div class="flex flex-wrap items-center gap-2">
+			<span
+				class="ep-pill inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-[10.5px] font-semibold"
+				style:--c={`var(--status-${meta.token})`}
+			>
+				<span
+					class={cn(
+						"dot h-1.5 w-1.5 shrink-0 rounded-full",
+						meta.live && "motion-safe:animate-pulse",
+					)}
+				></span>
+				{meta.label}
+			</span>
+			{#if detail.air_date}
+				<span class="text-xs text-fg-subtle">
+					{formatRelative(detail.air_date)}
+				</span>
+			{/if}
+		</div>
+
+		{#if detail.overview}
+			<p class="mt-3 text-sm leading-relaxed text-fg-muted">{detail.overview}</p>
+		{/if}
+
+		<dl class="mt-4 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2.5 text-sm">
+			{#each detailRows as row (row.label)}
+				<dt class="text-fg-subtle">{row.label}</dt>
+				<dd class="text-right font-mono text-xs tabular text-fg-muted">
+					{row.value}
+				</dd>
+			{/each}
+		</dl>
+
+		{#if detail.path}
+			<dl class="mt-4 border-t border-border pt-3">
+				<dt class="text-sm text-fg-subtle">File</dt>
+				<dd
+					class="mt-1 break-all font-mono text-xs text-fg-muted"
+					title={detail.path}
+				>
+					{detail.path}
+				</dd>
+			</dl>
+		{/if}
+
+		{#snippet footer()}
+			{#if (detail?.size ?? 0) > 0}
+				<button
+					type="button"
+					onclick={() => {
+						const ep = detail;
+						detail = null;
+						if (ep) onDeleteFile(ep);
+					}}
+					class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-3.5 text-sm font-medium text-fg-muted transition hover:border-status-failed/40 hover:bg-status-failed/10 hover:text-status-failed"
+				>
+					<Trash2 size={15} aria-hidden="true" />
+					Delete file
+				</button>
+			{/if}
+			{#if detail && detail.status !== "unaired"}
+				<button
+					type="button"
+					onclick={() => {
+						const ep = detail;
+						detail = null;
+						if (ep) onManualSearch(ep);
+					}}
+					class="inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-3.5 text-sm font-medium text-fg-on-accent transition hover:bg-accent-hover"
+				>
+					<Search size={15} aria-hidden="true" />
+					Manual search
+				</button>
+			{/if}
+		{/snippet}
+	</Modal>
+{/if}
 
 <style>
 	.ep-pill {
