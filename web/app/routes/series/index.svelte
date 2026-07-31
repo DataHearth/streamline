@@ -52,6 +52,7 @@
 			query: p.get("q") ?? "",
 			sort: VALID_SORTS.has(rawSort) ? rawSort : "recent",
 			view: (rawView === "list" ? "list" : "grid") as View,
+			monitoredOnly: p.get("monitored") === "1",
 		};
 	}
 
@@ -61,6 +62,7 @@
 	let query = $state(initial.query);
 	let sort = $state<SeriesSort>(initial.sort);
 	let view = $state<View>(initial.view);
+	let monitoredOnly = $state(initial.monitoredOnly);
 
 	function openAddSeries() {
 		window.dispatchEvent(new CustomEvent("streamline:open-add-series"));
@@ -72,6 +74,7 @@
 		if (tab !== "all") p.set("status", tab);
 		if (typeFilter !== "all") p.set("type", typeFilter);
 		if (query) p.set("q", query);
+		if (monitoredOnly) p.set("monitored", "1");
 		if (sort !== "recent") p.set("sort", sort);
 		if (view !== "grid") p.set("view", view);
 		const search = p.toString();
@@ -119,6 +122,7 @@
 	let visibleSeries = $derived.by(() => {
 		let list = allSeries.filter(passesTab);
 		if (typeFilter !== "all") list = list.filter((s) => s.type === typeFilter);
+		if (monitoredOnly) list = list.filter((s) => s.monitored);
 		const q = query.trim().toLowerCase();
 		if (q)
 			list = list.filter(
@@ -154,7 +158,11 @@
 	);
 
 	let libraryEmpty = $derived(
-		tab === "all" && typeFilter === "all" && !query && allSeries.length === 0,
+		tab === "all" &&
+			typeFilter === "all" &&
+			!query &&
+			!monitoredOnly &&
+			allSeries.length === 0,
 	);
 
 	let lastScan = $derived.by(() => {
@@ -172,6 +180,7 @@
 		tab = "all";
 		typeFilter = "all";
 		query = "";
+		monitoredOnly = false;
 	}
 </script>
 
@@ -201,9 +210,11 @@
 			{sort}
 			{view}
 			{counts}
+			{monitoredOnly}
 			onTabChange={(t) => (tab = t)}
 			onTypeChange={(t) => (typeFilter = t)}
 			onQueryChange={(q) => (query = q)}
+			onMonitoredChange={(v) => (monitoredOnly = v)}
 			onSortChange={(s) => (sort = s)}
 			onViewChange={(v) => (view = v)}
 			onAddSeries={openAddSeries}

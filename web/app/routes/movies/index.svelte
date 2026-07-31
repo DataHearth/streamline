@@ -40,6 +40,7 @@
 			sort: (rawSort === "year" ? "year" : "title") as SortKey,
 			order: (rawOrder === "desc" ? "desc" : "asc") as SortOrder,
 			view: (rawView === "list" ? "list" : "grid") as View,
+			monitoredOnly: p.get("monitored") === "1",
 		};
 	}
 
@@ -49,6 +50,7 @@
 	let sort = $state<SortKey>(initial.sort);
 	let order = $state<SortOrder>(initial.order);
 	let view = $state<View>(initial.view);
+	let monitoredOnly = $state(initial.monitoredOnly);
 
 	function openAddMovie() {
 		window.dispatchEvent(new CustomEvent("streamline:open-add-movie"));
@@ -59,6 +61,7 @@
 		const p = new URLSearchParams();
 		if (tab !== "all") p.set("status", tab);
 		if (query) p.set("q", query);
+		if (monitoredOnly) p.set("monitored", "1");
 		if (sort !== "title") p.set("sort", sort);
 		if (order !== "asc") p.set("order", order);
 		if (view !== "grid") p.set("view", view);
@@ -105,6 +108,7 @@
 
 	let visibleMovies = $derived.by(() => {
 		let list = allMovies.filter(passesTab);
+		if (monitoredOnly) list = list.filter((m) => m.monitored);
 		const q = query.trim().toLowerCase();
 		if (q)
 			list = list.filter(
@@ -126,7 +130,7 @@
 	});
 
 	let libraryEmpty = $derived(
-		tab === "all" && !query && allMovies.length === 0,
+		tab === "all" && !query && !monitoredOnly && allMovies.length === 0,
 	);
 
 	let monitoredSize = $derived.by(() => {
@@ -150,6 +154,7 @@
 	function clearFilters() {
 		tab = "all";
 		query = "";
+		monitoredOnly = false;
 	}
 </script>
 
@@ -179,8 +184,10 @@
 			{order}
 			{view}
 			{counts}
+			{monitoredOnly}
 			onTabChange={(t) => (tab = t)}
 			onQueryChange={(q) => (query = q)}
+			onMonitoredChange={(v) => (monitoredOnly = v)}
 			onSortChange={(s, o) => {
 				sort = s;
 				order = o;

@@ -19,6 +19,7 @@
 		ChevronDown,
 		Plus,
 		X,
+		Eye,
 	} from "@lucide/svelte";
 	import { fly } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
@@ -33,9 +34,11 @@
 		sort,
 		view,
 		counts,
+		monitoredOnly,
 		onTabChange,
 		onTypeChange,
 		onQueryChange,
+		onMonitoredChange,
 		onSortChange,
 		onViewChange,
 		onAddSeries,
@@ -46,9 +49,11 @@
 		sort: SeriesSort;
 		view: View;
 		counts: SeriesTabCounts;
+		monitoredOnly: boolean;
 		onTabChange: (t: SeriesTab) => void;
 		onTypeChange: (t: SeriesTypeFilter) => void;
 		onQueryChange: (q: string) => void;
+		onMonitoredChange: (v: boolean) => void;
 		onSortChange: (s: SeriesSort) => void;
 		onViewChange: (v: View) => void;
 		onAddSeries: () => void;
@@ -106,10 +111,10 @@
 <div
 	class="sticky top-16 z-20 flex flex-col gap-3 bg-bg-deep/85 px-4 py-3 backdrop-blur-md md:px-6"
 >
-	<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-	<nav
+	<div class="flex flex-wrap items-center gap-2 md:gap-3">
+		<nav
 		aria-label="Series status"
-		class="filter-tabs flex w-full items-center gap-0.5 overflow-x-auto rounded-md border border-border bg-bg-elevated p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:w-auto sm:shrink-0"
+		class="filter-tabs flex w-full items-center gap-0.5 overflow-x-auto rounded-md border border-border bg-bg-elevated p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:w-fit sm:shrink-0"
 	>
 		{#each tabs as t (t.key)}
 			{@const active = tab === t.key}
@@ -137,64 +142,7 @@
 				</span>
 			</button>
 		{/each}
-	</nav>
-
-		<button
-			type="button"
-			onclick={onAddSeries}
-			class="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md bg-accent px-3.5 text-[12.5px] font-semibold text-fg-on-accent transition hover:bg-accent-hover hover:shadow-glow sm:ml-auto"
-		>
-			<Plus size={14} aria-hidden="true" />
-			Add series
-		</button>
-	</div>
-
-	<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-		<div
-			class="inline-flex max-w-full shrink-0 items-center gap-0.5 overflow-x-auto rounded-md border border-border bg-bg-elevated p-[3px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-			role="group"
-			aria-label="Series type"
-		>
-			{#each typePills as t (t.key)}
-				{@const active = typeFilter === t.key}
-				<button
-					type="button"
-					onclick={() => onTypeChange(t.key)}
-					aria-pressed={active}
-					class={cn(
-						"shrink-0 rounded-sm px-2.5 py-1 font-mono text-[11px] lowercase transition",
-						active
-							? "bg-bg-card text-fg shadow-[var(--shadow-1)]"
-							: "text-fg-subtle hover:text-fg",
-					)}
-				>
-					{t.label}
-				</button>
-			{/each}
-		</div>
-
-		<div
-			class="search-wrap flex h-9 w-full items-center gap-2 rounded-md border border-border bg-bg-elevated px-3 transition focus-within:border-accent sm:w-56"
-		>
-			<Search class="h-3.5 w-3.5 text-fg-subtle" aria-hidden="true" />
-			<input
-				type="search"
-				value={query}
-				oninput={(e) => onQueryChange(e.currentTarget.value)}
-				placeholder="Filter…"
-				class="min-w-0 flex-1 bg-transparent text-[13px] text-fg outline-none placeholder:text-fg-faint"
-			/>
-			{#if query}
-				<button
-					type="button"
-					onclick={() => onQueryChange("")}
-					aria-label="Clear search"
-					class="grid h-5 w-5 place-items-center rounded text-fg-faint transition hover:text-fg"
-				>
-					<X size={12} aria-hidden="true" />
-				</button>
-			{/if}
-		</div>
+		</nav>
 
 		<div class="flex items-center gap-2 sm:ml-auto">
 		<div bind:this={sortRoot} class="relative">
@@ -269,6 +217,78 @@
 				<span class="sr-only">List view</span>
 			</button>
 		</div>
+
+		<button
+			type="button"
+			onclick={onAddSeries}
+			class="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md bg-accent px-3.5 text-[12.5px] font-semibold text-fg-on-accent transition hover:bg-accent-hover hover:shadow-glow"
+		>
+			<Plus size={14} aria-hidden="true" />
+			Add series
+		</button>
 		</div>
+	</div>
+
+	<div class="flex flex-wrap items-center gap-2 md:gap-3">
+		<div
+			class="inline-flex max-w-full shrink-0 items-center gap-0.5 overflow-x-auto rounded-md border border-border bg-bg-elevated p-[3px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+			role="group"
+			aria-label="Series type"
+		>
+			{#each typePills as t (t.key)}
+				{@const active = typeFilter === t.key}
+				<button
+					type="button"
+					onclick={() => onTypeChange(t.key)}
+					aria-pressed={active}
+					class={cn(
+						"shrink-0 rounded-sm px-2.5 py-1 font-mono text-[11px] lowercase transition",
+						active
+							? "bg-bg-card text-fg shadow-[var(--shadow-1)]"
+							: "text-fg-subtle hover:text-fg",
+					)}
+				>
+					{t.label}
+				</button>
+			{/each}
+		</div>
+
+		<div
+			class="search-wrap flex h-9 w-full items-center gap-2 rounded-md border border-border bg-bg-elevated px-3 transition focus-within:border-accent sm:w-56"
+		>
+			<Search class="h-3.5 w-3.5 text-fg-subtle" aria-hidden="true" />
+			<input
+				type="search"
+				value={query}
+				oninput={(e) => onQueryChange(e.currentTarget.value)}
+				placeholder="Filter…"
+				class="min-w-0 flex-1 bg-transparent text-[13px] text-fg outline-none placeholder:text-fg-faint"
+			/>
+			{#if query}
+				<button
+					type="button"
+					onclick={() => onQueryChange("")}
+					aria-label="Clear search"
+					class="grid h-5 w-5 place-items-center rounded text-fg-faint transition hover:text-fg"
+				>
+					<X size={12} aria-hidden="true" />
+				</button>
+			{/if}
+		</div>
+
+		<button
+			type="button"
+			onclick={() => onMonitoredChange(!monitoredOnly)}
+			aria-pressed={monitoredOnly}
+			class={cn(
+				"inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border px-3 text-[12.5px] font-medium transition",
+				monitoredOnly
+					? "border-accent bg-accent-soft text-accent-text"
+					: "border-border bg-bg-elevated text-fg-muted hover:border-border-strong hover:text-fg",
+			)}
+		>
+			<Eye size={14} aria-hidden="true" />
+			Monitored
+		</button>
 	</div>
 </div>
