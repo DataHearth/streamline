@@ -31,6 +31,7 @@ type CreateImportScanShowParams struct {
 type ListImportScanShowsParams struct {
 	ScanID         uint32
 	Classification entimportscanshow.Classification // empty = all
+	Query          string
 	Offset, Limit  uint32
 }
 
@@ -101,6 +102,14 @@ func (db *DB) ListImportScanShows(
 		Where(entimportscanshow.HasScanWith(entimportscan.ID(p.ScanID)))
 	if p.Classification != "" {
 		q = q.Where(entimportscanshow.ClassificationEQ(p.Classification))
+	}
+	// The movie side searches source_path alone; a show row shows both its
+	// folder and the title parsed out of it, so match either.
+	if p.Query != "" {
+		q = q.Where(entimportscanshow.Or(
+			entimportscanshow.FolderPathContainsFold(p.Query),
+			entimportscanshow.ParsedTitleContainsFold(p.Query),
+		))
 	}
 	total, err := q.Clone().Count(ctx)
 	if err != nil {

@@ -2081,6 +2081,7 @@ paths:
       tags: [library]
       parameters:
         - $ref: "#/components/parameters/ImportClassification"
+        - $ref: "#/components/parameters/ImportQuery"
         - $ref: "#/components/parameters/ImportPage"
         - $ref: "#/components/parameters/ImportFileLimit"
       responses:
@@ -5544,6 +5545,14 @@ components:
           description: |
             Usage of the volume holding the media library, which is usually a
             different mount from data_dir. Null when the path can't be probed.
+        series_dir:
+          type: string
+          description: Configured library.series_path.
+        series_usage:
+          $ref: "#/components/schemas/DiskUsage"
+          description: |
+            Usage of the volume holding the series library. Often the same
+            volume as library_usage. Null when the path can't be probed.
         version:
           type: string
         commit:
@@ -5557,7 +5566,7 @@ components:
 
     DiskUsage:
       type: object
-      required: [used, total, free, pct, kind]
+      required: [used, total, free, free_bytes, pct, kind]
       properties:
         used:
           type: string
@@ -5565,6 +5574,10 @@ components:
           type: string
         free:
           type: string
+        free_bytes:
+          type: integer
+          format: int64
+          description: Raw free bytes, for callers that aggregate across volumes.
         pct:
           type: integer
           x-go-type: uint8

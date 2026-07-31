@@ -40,6 +40,9 @@ func (s *Service) runScanSeries(ctx context.Context, scan *ent.ImportScan) {
 		return
 	}
 
+	// Upper bound only: entries that are not directories, or hold no usable
+	// video file, are skipped below. total_count is corrected to the real
+	// queue length once the walk is done.
 	total := uint32(len(entries))
 	if err := s.store.UpdateImportScanStatus(
 		ctx,
@@ -109,11 +112,12 @@ func (s *Service) runScanSeries(ctx context.Context, scan *ent.ImportScan) {
 	}
 
 	scannedAt := time.Now()
+	queued := uint32(len(queue))
 	if err := s.store.UpdateImportScanStatus(
 		ctx,
 		scan.ID,
 		entimportscan.StatusAwaitingReview,
-		db.UpdateScanStatusOpts{ScannedAt: &scannedAt},
+		db.UpdateScanStatusOpts{ScannedAt: &scannedAt, TotalCount: &queued},
 	); err != nil {
 		slog.ErrorContext(ctx, "series scan: failed to flip scan to awaiting_review",
 			"scan.id", scan.ID, "error", err)

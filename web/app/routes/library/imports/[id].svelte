@@ -155,12 +155,13 @@
 	// Series scans render per-show rows instead of files. The two queries mirror
 	// filesQuery / pendingQuery but hit the /shows endpoint.
 	const showsQuery = createQuery<ImportScanShowList>(() => ({
-		queryKey: ["import", importId, "shows", { classification }],
+		queryKey: ["import", importId, "shows", { q: debouncedQ, classification }],
 		queryFn: () => {
 			const sp = new URLSearchParams({
 				page: "1",
 				limit: String(FILE_LIMIT),
 			});
+			if (debouncedQ) sp.set("q", debouncedQ);
 			if (classification) sp.set("classification", classification);
 			return api<ImportScanShowList>(
 				`/library/imports/${importId}/shows?${sp}`,
@@ -624,6 +625,15 @@
 				<div
 					class="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3 md:px-5"
 				>
+					<label class="relative min-w-0 flex-1">
+						<span class="sr-only">Search shows</span>
+						<input
+							type="search"
+							bind:value={q}
+							placeholder="Search folder or title…"
+							class="w-full rounded-md border border-border bg-bg-card px-3 py-1.5 text-sm text-fg placeholder:text-fg-faint focus:outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent-ring"
+						/>
+					</label>
 					<div class="w-52 shrink-0">
 						<Select
 							value={classification}

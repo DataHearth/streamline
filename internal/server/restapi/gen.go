@@ -1841,8 +1841,11 @@ type DenyRequestRequest struct {
 
 // DiskUsage defines model for DiskUsage.
 type DiskUsage struct {
-	Free string        `json:"free"`
-	Kind DiskUsageKind `json:"kind"`
+	Free string `json:"free"`
+
+	// FreeBytes Raw free bytes, for callers that aggregate across volumes.
+	FreeBytes int64         `json:"free_bytes"`
+	Kind      DiskUsageKind `json:"kind"`
 
 	// Pct 0–100, rounded down.
 	Pct   uint8  `json:"pct"`
@@ -2785,7 +2788,11 @@ type SystemInfo struct {
 	LibraryDir   *string    `json:"library_dir,omitempty"`
 	LibraryUsage *DiskUsage `json:"library_usage,omitempty"`
 	PublicUrl    string     `json:"public_url"`
-	Version      string     `json:"version"`
+
+	// SeriesDir Configured library.series_path.
+	SeriesDir   *string    `json:"series_dir,omitempty"`
+	SeriesUsage *DiskUsage `json:"series_usage,omitempty"`
+	Version     string     `json:"version"`
 }
 
 // TMDBMovieResult defines model for TMDBMovieResult.
@@ -3435,6 +3442,7 @@ type ListImportFilesParamsClassification string
 // ListImportShowsParams defines parameters for ListImportShows.
 type ListImportShowsParams struct {
 	Classification *ListImportShowsParamsClassification `form:"classification,omitempty" json:"classification,omitempty"`
+	Q              *ImportQuery                         `form:"q,omitempty" json:"q,omitempty"`
 	Page           *ImportPage                          `form:"page,omitempty" json:"page,omitempty"`
 	Limit          *ImportFileLimit                     `form:"limit,omitempty" json:"limit,omitempty"`
 }
@@ -6496,6 +6504,14 @@ func (siw *ServerInterfaceWrapper) ListImportShows(w http.ResponseWriter, r *htt
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "classification", r.URL.Query(), &params.Classification, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
 	if err != nil {
 		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "classification", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "q" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
 		return
 	}
 

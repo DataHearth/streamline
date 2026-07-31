@@ -273,11 +273,16 @@ func (s *Server) ListImportShows(
 	if req.Params.Classification != nil {
 		cls = entimportscanshow.Classification(*req.Params.Classification)
 	}
+	q := ""
+	if req.Params.Q != nil {
+		q = *req.Params.Q
+	}
 	items, total, err := s.store.ListImportScanShows(
 		ctx,
 		db.ListImportScanShowsParams{
 			ScanID:         req.Id,
 			Classification: cls,
+			Query:          q,
 			Offset:         uint32(page-1) * uint32(limit),
 			Limit:          uint32(limit),
 		},
