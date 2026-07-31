@@ -65,9 +65,9 @@ filter_unconventional = false
 # An array of regex based parsers for extracting data from the commit message.
 # Assigns commits to groups.
 # Optionally sets the commit's scope and can decide to exclude commits from further processing.
-# Keyed off the scoped conventional commits the repo adopted. The skipped
-# types mirror the exclude filters in .goreleaser.yaml, so the release body
-# and CHANGELOG.md agree on what counts as a user-visible change.
+# Keyed off the scoped conventional commits the repo adopted. This is the only
+# place release content is filtered — GitHub release bodies are the rendered
+# CHANGELOG.md section (see .github/workflows/release.yaml).
 commit_parsers = [
     { message = "^feat", group = "Added" },
     { message = "^fix", group = "Fixed" },

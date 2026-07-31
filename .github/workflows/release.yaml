@@ -45,12 +45,30 @@ jobs:
       - name: Install syft
         uses: anchore/sbom-action/download-syft@v0
 
+      # --release-notes makes GoReleaser skip changelog generation *and* the
+      # release header/footer, so the whole body is assembled here. Written to
+      # RUNNER_TEMP, not the workspace: GoReleaser fails on a dirty git tree.
+      - name: Build release notes
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          notes="$RUNNER_TEMP/release-notes.md"
+          awk -v tag="## [$v]" 'index($0, tag) == 1 {p=1; next} p && /^## \[/ {exit} p' CHANGELOG.md > "$notes"
+          if ! grep -q '[^[:space:]]' "$notes"; then
+            echo "CHANGELOG.md has no section for $GITHUB_REF_NAME" >&2
+            exit 1
+          fi
+          {
+            printf '\n---\n'
+            printf 'Image: `ghcr.io/datahearth/streamline:%s`\n' "$v"
+            printf 'Verify: `cosign verify ghcr.io/datahearth/streamline:%s --certificate-identity-regexp="https://github.com/datahearth/streamline/.github/workflows/image.yaml@.*" --certificate-oidc-issuer=https://token.actions.githubusercontent.com`\n' "$v"
+          } >> "$notes"
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v7
         with:
           distribution: goreleaser
           version: "~> v2"
-          args: release --clean
+          args: release --clean --release-notes=${{ runner.temp }}/release-notes.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

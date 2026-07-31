@@ -65,26 +65,12 @@ signs:
       - "${artifact}"
     output: true
 
-changelog:
-  use: github
-  sort: asc
-  filters:
-    # Optional (scope) — matches both `docs:` and `docs(readme):`.
-    exclude:
-      - '^docs(\(.+\))?:'
-      - '^test(\(.+\))?:'
-      - '^chore(\(.+\))?:'
-      - '^ci(\(.+\))?:'
-
+# No changelog/header/footer config: the release body is the git-cliff section
+# of CHANGELOG.md, assembled and passed as --release-notes by
+# .github/workflows/release.yaml — which makes GoReleaser skip all three.
 release:
   github:
     owner: datahearth
     name: streamline
   draft: false
   prerelease: auto
-  header: |
-    ## Streamline {{ .Version }}
-  footer: |
-    ---
-    Image: `ghcr.io/datahearth/streamline:{{ .Version }}`
-    Verify: `cosign verify ghcr.io/datahearth/streamline:{{ .Version }} --certificate-identity-regexp="https://github.com/datahearth/streamline/.github/workflows/image.yaml@.*" --certificate-oidc-issuer=https://token.actions.githubusercontent.com`
