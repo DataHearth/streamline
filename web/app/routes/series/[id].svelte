@@ -27,7 +27,6 @@
 	import Checkbox from "../../components/forms/Checkbox.svelte";
 	import Dialog from "../../components/modals/Dialog.svelte";
 	import SeasonStrip from "../../components/series/SeasonStrip.svelte";
-	import SeasonGrid from "../../components/series/SeasonGrid.svelte";
 	import EpisodeTable from "../../components/series/EpisodeTable.svelte";
 	import SeriesFiles from "../../components/series/SeriesFiles.svelte";
 	import SeriesManualSearchModal from "../../components/series/SeriesManualSearchModal.svelte";
@@ -44,11 +43,10 @@
 		TVShow,
 	} from "../../lib/types";
 
-	type Tab = "overview" | "episodes" | "seasons" | "files" | "history" | "cast";
+	type Tab = "overview" | "episodes" | "files" | "history" | "cast";
 	const TABS: { key: Tab; label: string }[] = [
 		{ key: "overview", label: "Overview" },
 		{ key: "episodes", label: "Episodes" },
-		{ key: "seasons", label: "Seasons" },
 		{ key: "files", label: "Files" },
 		{ key: "history", label: "History" },
 		{ key: "cast", label: "Cast" },
@@ -56,7 +54,6 @@
 	const VALID_TABS = new Set<Tab>([
 		"overview",
 		"episodes",
-		"seasons",
 		"files",
 		"history",
 		"cast",
@@ -131,7 +128,13 @@
 	let currentEpisodes = $derived<Episode[]>(currentSeason?.episodes ?? []);
 
 	let seriesAvail = $derived<StatusKind>(
-		(show?.wanted_episodes ?? 0) > 0 ? "wanted" : "available",
+		(show?.wanted_episodes ?? 0) > 0
+			? "wanted"
+			: // Unmonitored shows report zero wanted episodes, so "nothing wanted"
+				// alone would call an empty series available.
+				(show?.have_episodes ?? 0) > 0
+				? "available"
+				: "missing",
 	);
 
 	let airedTotal = $derived.by(() => {
@@ -605,10 +608,6 @@
 						<span class="ml-1.5 font-mono text-[11px] text-fg-faint">
 							{show.have_episodes ?? 0}/{show.total_episodes ?? 0}
 						</span>
-					{:else if t.key === "seasons" && seasons.length > 0}
-						<span class="ml-1.5 font-mono text-[11px] text-fg-faint">
-							{seasons.length}
-						</span>
 					{/if}
 					{#if active}
 						<span
@@ -784,21 +783,6 @@
 						/>
 					{/if}
 				</div>
-			{/if}
-		{:else if tab === "seasons"}
-			{#if seasons.length === 0}
-				<p class="py-12 text-center text-sm text-fg-subtle">
-					No seasons found for this series.
-				</p>
-			{:else}
-				<SeasonGrid
-					{seasons}
-					selected={selectedSeason ?? seasons[0]?.number ?? 0}
-					onSelect={(n) => {
-						selectedSeason = n;
-						tab = "episodes";
-					}}
-				/>
 			{/if}
 		{:else if tab === "files"}
 			<SeriesFiles {seasons} seriesId={show.id} />

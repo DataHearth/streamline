@@ -25,8 +25,11 @@
 		onError: (e) => toast.err(e.message ?? "Update failed"),
 	}));
 
-	function availability(s: TVShow): "wanted" | "available" {
-		return (s.wanted_episodes ?? 0) > 0 ? "wanted" : "available";
+	function availability(s: TVShow): "wanted" | "available" | "missing" {
+		if ((s.wanted_episodes ?? 0) > 0) return "wanted";
+		// Unmonitored shows report zero wanted episodes, so "nothing wanted" alone
+		// would badge an empty library entry as available.
+		return (s.have_episodes ?? 0) > 0 ? "available" : "missing";
 	}
 </script>
 
