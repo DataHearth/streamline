@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { cn } from "../../lib/cn";
+	import { missingEpisodes } from "../../lib/status";
 	import SeasonProgress from "./SeasonProgress.svelte";
 	import type { Season } from "../../lib/types";
 
@@ -21,6 +22,7 @@
 <div class="flex gap-2 overflow-x-auto pb-1">
 	{#each seasons as s (s.number)}
 		{@const active = selected === s.number}
+		{@const missing = missingEpisodes(s.episodes ?? [])}
 		<button
 			type="button"
 			onclick={() => onSelect(s.number)}
@@ -41,7 +43,10 @@
 			<div class="font-mono text-[11px] text-fg-muted">
 				<span class="text-fg">{s.available ?? 0}</span>/{s.total ?? 0}
 				{#if (s.missing ?? 0) > 0}
-					<span class="text-status-wanted">· {s.missing} miss</span>
+					<span class="text-status-wanted">· {s.missing} want</span>
+				{/if}
+				{#if missing > 0}
+					<span class="text-status-missing">· {missing} miss</span>
 				{/if}
 				{#if (s.unaired ?? 0) > 0}
 					<span class="text-fg-faint">· {s.unaired} fut</span>

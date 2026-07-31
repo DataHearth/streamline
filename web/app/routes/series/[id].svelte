@@ -18,6 +18,7 @@
 	import { api } from "../../lib/api";
 	import { toast } from "../../lib/toast";
 	import { cn } from "../../lib/cn";
+	import { missingEpisodes } from "../../lib/status";
 	import { tvPosterUrl } from "../../lib/posters";
 	import Poster from "../../components/movies/Poster.svelte";
 	import StatusPill from "../../components/shared/StatusPill.svelte";
@@ -126,6 +127,14 @@
 		seasons.find((s) => s.number === selectedSeason) ?? null,
 	);
 	let currentEpisodes = $derived<Episode[]>(currentSeason?.episodes ?? []);
+
+	// The API's season.missing counts only *monitored* fileless episodes — the
+	// ones a search will chase — so it reads as "wanted" here. Episodes nobody
+	// monitors are the missing ones, and only the client knows that split.
+	let seasonMissing = $derived(missingEpisodes(currentEpisodes));
+	let showMissing = $derived(
+		seasons.reduce((n, s) => n + missingEpisodes(s.episodes ?? []), 0),
+	);
 
 	let seriesAvail = $derived<StatusKind>(
 		(show?.wanted_episodes ?? 0) > 0
@@ -500,6 +509,9 @@
 						{#if (show.wanted_episodes ?? 0) > 0}
 							<span class="text-status-wanted">· {show.wanted_episodes} wanted</span>
 						{/if}
+						{#if showMissing > 0}
+							<span class="text-status-missing">· {showMissing} missing</span>
+						{/if}
 						{#if unairedTotal > 0}
 							<span class="text-fg-faint">· {unairedTotal} unaired</span>
 						{/if}
@@ -657,6 +669,18 @@
 							<dd class="text-right font-mono text-fg">
 								{show.have_episodes ?? 0}/{show.total_episodes ?? 0}
 							</dd>
+							{#if (show.wanted_episodes ?? 0) > 0}
+								<dt class="text-fg-subtle">Wanted</dt>
+								<dd class="text-right font-mono text-status-wanted">
+									{show.wanted_episodes}
+								</dd>
+							{/if}
+							{#if showMissing > 0}
+								<dt class="text-fg-subtle">Missing</dt>
+								<dd class="text-right font-mono text-status-missing">
+									{showMissing}
+								</dd>
+							{/if}
 							{#if show.network}
 								<dt class="text-fg-subtle">Network</dt>
 								<dd class="text-right font-mono text-fg">{show.network}</dd>
@@ -700,30 +724,62 @@
 
 					{#if currentSeason}
 						<div class="flex flex-wrap items-center justify-between gap-3">
-							<div>
-								<h2 class="text-lg font-semibold text-fg">
-									{currentSeason.number === 0
-										? "Specials"
-										: `${seasonLabel} ${currentSeason.number}`}
-									{#if currentSeason.name && currentSeason.number !== 0}
-										<span class="text-fg-subtle">· {currentSeason.name}</span>
-									{/if}
-								</h2>
-								<p class="mt-0.5 font-mono text-xs text-fg-muted">
-									{currentSeason.total ?? 0} episodes
-									<span class="text-fg-faint">·</span>
-									{currentSeason.available ?? 0} available
-									{#if (currentSeason.missing ?? 0) > 0}
+							<div class="flex items-center gap-3">
+								<button
+									type="button"
+									onclick={() =>
+										currentSeason && monitorSeason.mutate(currentSeason)}
+									aria-pressed={currentSeason?.monitored}
+									title={currentSeason?.monitored
+										? "Stop monitoring season"
+										: "Monitor season"}
+									class={cn(
+										"grid h-9 w-9 shrink-0 place-items-center rounded-md border border-border bg-bg-elevated transition hover:border-border-strong",
+										currentSeason.monitored
+											? "text-accent-text"
+											: "text-fg-subtle hover:text-fg",
+									)}
+								>
+									<Bookmark
+										size={15}
+										fill={currentSeason.monitored ? "currentColor" : "none"}
+										aria-hidden="true"
+									/>
+									<span class="sr-only">
+										{currentSeason.monitored
+											? "Stop monitoring season"
+											: "Monitor season"}
+									</span>
+								</button>
+								<div>
+									<h2 class="text-lg font-semibold text-fg">
+										{currentSeason.number === 0
+											? "Specials"
+											: `${seasonLabel} ${currentSeason.number}`}
+										{#if currentSeason.name && currentSeason.number !== 0}
+											<span class="text-fg-subtle">· {currentSeason.name}</span>
+										{/if}
+									</h2>
+									<p class="mt-0.5 font-mono text-xs text-fg-muted">
+										{currentSeason.total ?? 0} episodes
 										<span class="text-fg-faint">·</span>
-										<span class="text-status-wanted"
-											>{currentSeason.missing} missing</span
-										>
-									{/if}
-									{#if (currentSeason.unaired ?? 0) > 0}
-										<span class="text-fg-faint">·</span>
-										<span class="text-fg-faint">{currentSeason.unaired} unaired</span>
-									{/if}
-								</p>
+										{currentSeason.available ?? 0} available
+										{#if (currentSeason.missing ?? 0) > 0}
+											<span class="text-fg-faint">·</span>
+											<span class="text-status-wanted"
+												>{currentSeason.missing} wanted</span
+											>
+										{/if}
+										{#if seasonMissing > 0}
+											<span class="text-fg-faint">·</span>
+											<span class="text-status-missing">{seasonMissing} missing</span>
+										{/if}
+										{#if (currentSeason.unaired ?? 0) > 0}
+											<span class="text-fg-faint">·</span>
+											<span class="text-fg-faint">{currentSeason.unaired} unaired</span>
+										{/if}
+									</p>
+								</div>
 							</div>
 							<div class="flex items-center gap-2">
 								{#if seasonFileEpisodes.length > 0}
@@ -743,32 +799,6 @@
 										Delete files
 									</button>
 								{/if}
-								<button
-									type="button"
-									onclick={() =>
-										currentSeason && monitorSeason.mutate(currentSeason)}
-									aria-pressed={currentSeason?.monitored}
-									title={currentSeason?.monitored
-										? "Stop monitoring season"
-										: "Monitor season"}
-									class={cn(
-										"grid h-9 w-9 place-items-center rounded-md border border-border bg-bg-elevated transition hover:border-border-strong",
-										currentSeason.monitored
-											? "text-accent-text"
-											: "text-fg-subtle hover:text-fg",
-									)}
-								>
-									<Bookmark
-										size={15}
-										fill={currentSeason.monitored ? "currentColor" : "none"}
-										aria-hidden="true"
-									/>
-									<span class="sr-only">
-										{currentSeason.monitored
-											? "Stop monitoring season"
-											: "Monitor season"}
-									</span>
-								</button>
 							</div>
 						</div>
 

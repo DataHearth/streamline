@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { episodeStatus } from "../../lib/status";
+	import type { EpisodeDisplayStatus } from "../../lib/status";
 	import type { Season } from "../../lib/types";
 
 	let {
@@ -17,18 +19,22 @@
 	let segments = $derived.by<Seg[]>(() => {
 		const eps = season.episodes ?? [];
 		if (eps.length > 0) {
-			const n = (s: string) => eps.filter((e) => e.status === s).length;
+			const n = (s: EpisodeDisplayStatus) =>
+				eps.filter((e) => episodeStatus(e) === s).length;
 			return [
 				{ key: "available", count: n("available"), token: "available", label: "available" },
 				{ key: "downloading", count: n("downloading"), token: "downloading", label: "downloading" },
 				{ key: "paused", count: n("paused"), token: "paused", label: "paused" },
-				{ key: "wanted", count: n("wanted"), token: "wanted", label: "missing" },
+				{ key: "wanted", count: n("wanted"), token: "wanted", label: "wanted" },
+				{ key: "missing", count: n("missing"), token: "missing", label: "missing" },
 				{ key: "unaired", count: n("unaired"), token: "missing", label: "unaired" },
 			];
 		}
+		// Rollup-only fallback: season.missing counts monitored fileless episodes,
+		// which is the "wanted" bucket — the unmonitored split needs episodes.
 		return [
 			{ key: "available", count: season.available ?? 0, token: "available", label: "available" },
-			{ key: "wanted", count: season.missing ?? 0, token: "wanted", label: "missing" },
+			{ key: "wanted", count: season.missing ?? 0, token: "wanted", label: "wanted" },
 			{ key: "unaired", count: season.unaired ?? 0, token: "missing", label: "unaired" },
 		];
 	});
