@@ -251,7 +251,7 @@
 							{auth.user.display_name || auth.user.email}
 						</div>
 						<div class="mt-px truncate font-mono text-[10px] text-fg-faint">
-							{roleLabel}{version ? ` · v${version}` : ""}
+							{roleLabel}{version ? ` · ${version}` : ""}
 						</div>
 					</div>
 				</a>

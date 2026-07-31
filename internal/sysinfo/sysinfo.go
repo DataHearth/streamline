@@ -51,6 +51,17 @@ type DiskUsage struct {
 	Kind  string // "ok" (<70%), "warn" (70–90%), "err" (>=90%)
 }
 
+// displayVersion renders the ldflag value the way every surface shows it, so
+// no caller prefixes a "v" of its own: goreleaser injects a bare semver
+// ("1.3.0") while the image build passes the tag through ("v1.3.0"), and a
+// plain go build leaves it empty.
+func displayVersion(v string) string {
+	if v == "" {
+		return "dev"
+	}
+	return "v" + strings.TrimPrefix(v, "v")
+}
+
 // Collect returns the current environment snapshot.
 func Collect() Snapshot {
 	cfg := config.Get()
@@ -65,14 +76,11 @@ func Collect() Snapshot {
 		LibraryDir:   cfg.Library.MoviePath,
 		LibraryUsage: DiskUsageFor(cfg.Library.MoviePath),
 		DBPath:       cfg.DatabasePath(),
-		Version:      buildinfo.Version,
+		Version:      displayVersion(buildinfo.Version),
 		Commit:       buildinfo.Commit,
 		BuiltAt:      buildinfo.Date,
 		GoVersion:    runtime.Version(),
 		GoOSArch:     runtime.GOOS + "/" + runtime.GOARCH,
-	}
-	if snap.Version == "" {
-		snap.Version = "dev"
 	}
 	if st, err := os.Stat(cfg.DatabasePath()); err == nil {
 		snap.DBSize = humanBytes(st.Size())
