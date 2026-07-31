@@ -41,10 +41,10 @@
 </script>
 
 <section
-	class="hero relative isolate"
+	class="hero relative"
 	aria-labelledby="movie-title"
 >
-	<div class="absolute inset-0 -z-10 overflow-hidden bg-bg-deep">
+	<div class="absolute inset-0 z-0 overflow-hidden bg-bg-deep">
 		<img
 			src={backdropSrc}
 			alt=""

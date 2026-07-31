@@ -402,8 +402,8 @@
 		</p>
 	</div>
 {:else if show}
-	<section class="hero relative isolate" aria-labelledby="series-title">
-		<div class="absolute inset-0 -z-10 overflow-hidden bg-bg-deep">
+	<section class="hero relative" aria-labelledby="series-title">
+		<div class="absolute inset-0 z-0 overflow-hidden bg-bg-deep">
 			<img
 				src={tvPosterUrl(show.id)}
 				alt=""
