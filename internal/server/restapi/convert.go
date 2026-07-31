@@ -732,6 +732,9 @@ func episodeToAPI(e *ent.Episode, now time.Time) Episode {
 	if e.Title != "" {
 		out.Title = &e.Title
 	}
+	if e.Overview != "" {
+		out.Overview = &e.Overview
+	}
 	if !e.AirDate.IsZero() {
 		ad := e.AirDate
 		out.AirDate = &ad
@@ -739,6 +742,7 @@ func episodeToAPI(e *ent.Episode, now time.Time) Episode {
 	if len(e.Edges.MediaFiles) > 0 {
 		f := e.Edges.MediaFiles[0]
 		out.Quality = &f.Quality
+		out.Path = &f.Path
 		sz := f.Size
 		out.Size = &sz
 	}

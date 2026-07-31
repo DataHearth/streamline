@@ -3922,6 +3922,8 @@ components:
           x-go-type: uint16
         title:
           type: string
+        overview:
+          type: string
         air_date:
           type: string
           format: date-time
@@ -3937,6 +3939,9 @@ components:
           type: integer
           format: int64
           nullable: true
+        path:
+          type: string
+          description: On-disk path of the episode's media file, when imported.
 
     PaginatedTVShows:
       type: object

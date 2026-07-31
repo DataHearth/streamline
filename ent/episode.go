@@ -26,6 +26,8 @@ type Episode struct {
 	Number uint16 `json:"number,omitempty"`
 	// Title holds the value of the "title" field.
 	Title string `json:"title,omitempty"`
+	// Overview holds the value of the "overview" field.
+	Overview string `json:"overview,omitempty"`
 	// AirDate holds the value of the "air_date" field.
 	AirDate time.Time `json:"air_date,omitempty"`
 	// Monitored holds the value of the "monitored" field.
@@ -96,7 +98,7 @@ func (*Episode) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case episode.FieldID, episode.FieldNumber, episode.FieldAbsoluteNumber, episode.FieldGrabFailures:
 			values[i] = new(sql.NullInt64)
-		case episode.FieldTitle, episode.FieldStatus:
+		case episode.FieldTitle, episode.FieldOverview, episode.FieldStatus:
 			values[i] = new(sql.NullString)
 		case episode.FieldCreateTime, episode.FieldUpdateTime, episode.FieldAirDate, episode.FieldLastSearchAt:
 			values[i] = new(sql.NullTime)
@@ -146,6 +148,12 @@ func (_m *Episode) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field title", values[i])
 			} else if value.Valid {
 				_m.Title = value.String
+			}
+		case episode.FieldOverview:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field overview", values[i])
+			} else if value.Valid {
+				_m.Overview = value.String
 			}
 		case episode.FieldAirDate:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -253,6 +261,9 @@ func (_m *Episode) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("title=")
 	builder.WriteString(_m.Title)
+	builder.WriteString(", ")
+	builder.WriteString("overview=")
+	builder.WriteString(_m.Overview)
 	builder.WriteString(", ")
 	builder.WriteString("air_date=")
 	builder.WriteString(_m.AirDate.Format(time.ANSIC))

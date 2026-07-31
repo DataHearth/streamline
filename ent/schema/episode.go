@@ -22,6 +22,7 @@ func (Episode) Fields() []ent.Field {
 	return []ent.Field{
 		field.Uint16("number"),
 		field.String("title").Optional(),
+		field.Text("overview").Optional(),
 		field.Time("air_date").Optional(),
 		field.Bool("monitored").Default(true),
 		field.Uint16("absolute_number").Optional().Default(0),

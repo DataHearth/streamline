@@ -23,6 +23,8 @@ const (
 	FieldNumber = "number"
 	// FieldTitle holds the string denoting the title field in the database.
 	FieldTitle = "title"
+	// FieldOverview holds the string denoting the overview field in the database.
+	FieldOverview = "overview"
 	// FieldAirDate holds the string denoting the air_date field in the database.
 	FieldAirDate = "air_date"
 	// FieldMonitored holds the string denoting the monitored field in the database.
@@ -73,6 +75,7 @@ var Columns = []string{
 	FieldUpdateTime,
 	FieldNumber,
 	FieldTitle,
+	FieldOverview,
 	FieldAirDate,
 	FieldMonitored,
 	FieldAbsoluteNumber,
@@ -172,6 +175,11 @@ func ByNumber(opts ...sql.OrderTermOption) OrderOption {
 // ByTitle orders the results by the title field.
 func ByTitle(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldTitle, opts...).ToFunc()
+}
+
+// ByOverview orders the results by the overview field.
+func ByOverview(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldOverview, opts...).ToFunc()
 }
 
 // ByAirDate orders the results by the air_date field.

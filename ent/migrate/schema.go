@@ -80,6 +80,7 @@ var (
 		{Name: "update_time", Type: field.TypeTime},
 		{Name: "number", Type: field.TypeUint16},
 		{Name: "title", Type: field.TypeString, Nullable: true},
+		{Name: "overview", Type: field.TypeString, Nullable: true, Size: 2147483647},
 		{Name: "air_date", Type: field.TypeTime, Nullable: true},
 		{Name: "monitored", Type: field.TypeBool, Default: true},
 		{Name: "absolute_number", Type: field.TypeUint16, Nullable: true, Default: 0},
@@ -96,7 +97,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "episodes_seasons_episodes",
-				Columns:    []*schema.Column{EpisodesColumns[11]},
+				Columns:    []*schema.Column{EpisodesColumns[12]},
 				RefColumns: []*schema.Column{SeasonsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},

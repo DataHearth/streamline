@@ -96,15 +96,15 @@ func init() {
 	// episode.UpdateDefaultUpdateTime holds the default value on update for the update_time field.
 	episode.UpdateDefaultUpdateTime = episodeDescUpdateTime.UpdateDefault.(func() time.Time)
 	// episodeDescMonitored is the schema descriptor for monitored field.
-	episodeDescMonitored := episodeFields[3].Descriptor()
+	episodeDescMonitored := episodeFields[4].Descriptor()
 	// episode.DefaultMonitored holds the default value on creation for the monitored field.
 	episode.DefaultMonitored = episodeDescMonitored.Default.(bool)
 	// episodeDescAbsoluteNumber is the schema descriptor for absolute_number field.
-	episodeDescAbsoluteNumber := episodeFields[4].Descriptor()
+	episodeDescAbsoluteNumber := episodeFields[5].Descriptor()
 	// episode.DefaultAbsoluteNumber holds the default value on creation for the absolute_number field.
 	episode.DefaultAbsoluteNumber = episodeDescAbsoluteNumber.Default.(uint16)
 	// episodeDescGrabFailures is the schema descriptor for grab_failures field.
-	episodeDescGrabFailures := episodeFields[5].Descriptor()
+	episodeDescGrabFailures := episodeFields[6].Descriptor()
 	// episode.DefaultGrabFailures holds the default value on creation for the grab_failures field.
 	episode.DefaultGrabFailures = episodeDescGrabFailures.Default.(uint8)
 	importscanMixin := schema.ImportScan{}.Mixin()

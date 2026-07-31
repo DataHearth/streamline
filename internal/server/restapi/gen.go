@@ -1942,15 +1942,19 @@ type DownloadQueue struct {
 
 // Episode defines model for Episode.
 type Episode struct {
-	AbsoluteNumber *uint16       `json:"absolute_number,omitempty"`
-	AirDate        *time.Time    `json:"air_date,omitempty"`
-	Id             uint32        `json:"id"`
-	Monitored      bool          `json:"monitored"`
-	Number         uint16        `json:"number"`
-	Quality        *string       `json:"quality,omitempty"`
-	Size           *int64        `json:"size,omitempty"`
-	Status         EpisodeStatus `json:"status"`
-	Title          *string       `json:"title,omitempty"`
+	AbsoluteNumber *uint16    `json:"absolute_number,omitempty"`
+	AirDate        *time.Time `json:"air_date,omitempty"`
+	Id             uint32     `json:"id"`
+	Monitored      bool       `json:"monitored"`
+	Number         uint16     `json:"number"`
+	Overview       *string    `json:"overview,omitempty"`
+
+	// Path On-disk path of the episode's media file, when imported.
+	Path    *string       `json:"path,omitempty"`
+	Quality *string       `json:"quality,omitempty"`
+	Size    *int64        `json:"size,omitempty"`
+	Status  EpisodeStatus `json:"status"`
+	Title   *string       `json:"title,omitempty"`
 }
 
 // EpisodeStatus defines model for Episode.Status.

@@ -24,11 +24,13 @@ export type Episode = {
 	number: number;
 	absolute_number?: number;
 	title?: string;
+	overview?: string;
 	air_date?: string | null;
 	status: EpisodeStatus;
 	monitored: boolean;
 	quality?: string;
 	size?: number | null;
+	path?: string;
 };
 
 export type Season = {

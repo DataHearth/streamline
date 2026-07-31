@@ -78,6 +78,26 @@ func (_u *EpisodeUpdate) ClearTitle() *EpisodeUpdate {
 	return _u
 }
 
+// SetOverview sets the "overview" field.
+func (_u *EpisodeUpdate) SetOverview(v string) *EpisodeUpdate {
+	_u.mutation.SetOverview(v)
+	return _u
+}
+
+// SetNillableOverview sets the "overview" field if the given value is not nil.
+func (_u *EpisodeUpdate) SetNillableOverview(v *string) *EpisodeUpdate {
+	if v != nil {
+		_u.SetOverview(*v)
+	}
+	return _u
+}
+
+// ClearOverview clears the value of the "overview" field.
+func (_u *EpisodeUpdate) ClearOverview() *EpisodeUpdate {
+	_u.mutation.ClearOverview()
+	return _u
+}
+
 // SetAirDate sets the "air_date" field.
 func (_u *EpisodeUpdate) SetAirDate(v time.Time) *EpisodeUpdate {
 	_u.mutation.SetAirDate(v)
@@ -364,6 +384,12 @@ func (_u *EpisodeUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.TitleCleared() {
 		_spec.ClearField(episode.FieldTitle, field.TypeString)
 	}
+	if value, ok := _u.mutation.Overview(); ok {
+		_spec.SetField(episode.FieldOverview, field.TypeString, value)
+	}
+	if _u.mutation.OverviewCleared() {
+		_spec.ClearField(episode.FieldOverview, field.TypeString)
+	}
 	if value, ok := _u.mutation.AirDate(); ok {
 		_spec.SetField(episode.FieldAirDate, field.TypeTime, value)
 	}
@@ -580,6 +606,26 @@ func (_u *EpisodeUpdateOne) SetNillableTitle(v *string) *EpisodeUpdateOne {
 // ClearTitle clears the value of the "title" field.
 func (_u *EpisodeUpdateOne) ClearTitle() *EpisodeUpdateOne {
 	_u.mutation.ClearTitle()
+	return _u
+}
+
+// SetOverview sets the "overview" field.
+func (_u *EpisodeUpdateOne) SetOverview(v string) *EpisodeUpdateOne {
+	_u.mutation.SetOverview(v)
+	return _u
+}
+
+// SetNillableOverview sets the "overview" field if the given value is not nil.
+func (_u *EpisodeUpdateOne) SetNillableOverview(v *string) *EpisodeUpdateOne {
+	if v != nil {
+		_u.SetOverview(*v)
+	}
+	return _u
+}
+
+// ClearOverview clears the value of the "overview" field.
+func (_u *EpisodeUpdateOne) ClearOverview() *EpisodeUpdateOne {
+	_u.mutation.ClearOverview()
 	return _u
 }
 
@@ -898,6 +944,12 @@ func (_u *EpisodeUpdateOne) sqlSave(ctx context.Context) (_node *Episode, err er
 	}
 	if _u.mutation.TitleCleared() {
 		_spec.ClearField(episode.FieldTitle, field.TypeString)
+	}
+	if value, ok := _u.mutation.Overview(); ok {
+		_spec.SetField(episode.FieldOverview, field.TypeString, value)
+	}
+	if _u.mutation.OverviewCleared() {
+		_spec.ClearField(episode.FieldOverview, field.TypeString)
 	}
 	if value, ok := _u.mutation.AirDate(); ok {
 		_spec.SetField(episode.FieldAirDate, field.TypeTime, value)

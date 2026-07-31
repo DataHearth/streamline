@@ -71,6 +71,20 @@ func (_c *EpisodeCreate) SetNillableTitle(v *string) *EpisodeCreate {
 	return _c
 }
 
+// SetOverview sets the "overview" field.
+func (_c *EpisodeCreate) SetOverview(v string) *EpisodeCreate {
+	_c.mutation.SetOverview(v)
+	return _c
+}
+
+// SetNillableOverview sets the "overview" field if the given value is not nil.
+func (_c *EpisodeCreate) SetNillableOverview(v *string) *EpisodeCreate {
+	if v != nil {
+		_c.SetOverview(*v)
+	}
+	return _c
+}
+
 // SetAirDate sets the "air_date" field.
 func (_c *EpisodeCreate) SetAirDate(v time.Time) *EpisodeCreate {
 	_c.mutation.SetAirDate(v)
@@ -338,6 +352,10 @@ func (_c *EpisodeCreate) createSpec() (*Episode, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Title(); ok {
 		_spec.SetField(episode.FieldTitle, field.TypeString, value)
 		_node.Title = value
+	}
+	if value, ok := _c.mutation.Overview(); ok {
+		_spec.SetField(episode.FieldOverview, field.TypeString, value)
+		_node.Overview = value
 	}
 	if value, ok := _c.mutation.AirDate(); ok {
 		_spec.SetField(episode.FieldAirDate, field.TypeTime, value)

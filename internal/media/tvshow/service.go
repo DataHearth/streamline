@@ -89,6 +89,7 @@ func seedSeasons(d *metadata.TVDetails) []db.SeasonSeed {
 			Number:         e.Number,
 			AbsoluteNumber: e.AbsoluteNumber,
 			Title:          e.Title,
+			Overview:       e.Overview,
 			AirDate:        e.AirDate,
 		})
 	}

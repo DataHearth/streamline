@@ -2168,6 +2168,7 @@ type EpisodeMutation struct {
 	number                  *uint16
 	addnumber               *int16
 	title                   *string
+	overview                *string
 	air_date                *time.Time
 	monitored               *bool
 	absolute_number         *uint16
@@ -2469,6 +2470,55 @@ func (m *EpisodeMutation) TitleCleared() bool {
 func (m *EpisodeMutation) ResetTitle() {
 	m.title = nil
 	delete(m.clearedFields, episode.FieldTitle)
+}
+
+// SetOverview sets the "overview" field.
+func (m *EpisodeMutation) SetOverview(s string) {
+	m.overview = &s
+}
+
+// Overview returns the value of the "overview" field in the mutation.
+func (m *EpisodeMutation) Overview() (r string, exists bool) {
+	v := m.overview
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOverview returns the old "overview" field's value of the Episode entity.
+// If the Episode object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *EpisodeMutation) OldOverview(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOverview is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOverview requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOverview: %w", err)
+	}
+	return oldValue.Overview, nil
+}
+
+// ClearOverview clears the value of the "overview" field.
+func (m *EpisodeMutation) ClearOverview() {
+	m.overview = nil
+	m.clearedFields[episode.FieldOverview] = struct{}{}
+}
+
+// OverviewCleared returns if the "overview" field was cleared in this mutation.
+func (m *EpisodeMutation) OverviewCleared() bool {
+	_, ok := m.clearedFields[episode.FieldOverview]
+	return ok
+}
+
+// ResetOverview resets all changes to the "overview" field.
+func (m *EpisodeMutation) ResetOverview() {
+	m.overview = nil
+	delete(m.clearedFields, episode.FieldOverview)
 }
 
 // SetAirDate sets the "air_date" field.
@@ -2948,7 +2998,7 @@ func (m *EpisodeMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *EpisodeMutation) Fields() []string {
-	fields := make([]string, 0, 10)
+	fields := make([]string, 0, 11)
 	if m.create_time != nil {
 		fields = append(fields, episode.FieldCreateTime)
 	}
@@ -2960,6 +3010,9 @@ func (m *EpisodeMutation) Fields() []string {
 	}
 	if m.title != nil {
 		fields = append(fields, episode.FieldTitle)
+	}
+	if m.overview != nil {
+		fields = append(fields, episode.FieldOverview)
 	}
 	if m.air_date != nil {
 		fields = append(fields, episode.FieldAirDate)
@@ -2995,6 +3048,8 @@ func (m *EpisodeMutation) Field(name string) (ent.Value, bool) {
 		return m.Number()
 	case episode.FieldTitle:
 		return m.Title()
+	case episode.FieldOverview:
+		return m.Overview()
 	case episode.FieldAirDate:
 		return m.AirDate()
 	case episode.FieldMonitored:
@@ -3024,6 +3079,8 @@ func (m *EpisodeMutation) OldField(ctx context.Context, name string) (ent.Value,
 		return m.OldNumber(ctx)
 	case episode.FieldTitle:
 		return m.OldTitle(ctx)
+	case episode.FieldOverview:
+		return m.OldOverview(ctx)
 	case episode.FieldAirDate:
 		return m.OldAirDate(ctx)
 	case episode.FieldMonitored:
@@ -3072,6 +3129,13 @@ func (m *EpisodeMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetTitle(v)
+		return nil
+	case episode.FieldOverview:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOverview(v)
 		return nil
 	case episode.FieldAirDate:
 		v, ok := value.(time.Time)
@@ -3187,6 +3251,9 @@ func (m *EpisodeMutation) ClearedFields() []string {
 	if m.FieldCleared(episode.FieldTitle) {
 		fields = append(fields, episode.FieldTitle)
 	}
+	if m.FieldCleared(episode.FieldOverview) {
+		fields = append(fields, episode.FieldOverview)
+	}
 	if m.FieldCleared(episode.FieldAirDate) {
 		fields = append(fields, episode.FieldAirDate)
 	}
@@ -3212,6 +3279,9 @@ func (m *EpisodeMutation) ClearField(name string) error {
 	switch name {
 	case episode.FieldTitle:
 		m.ClearTitle()
+		return nil
+	case episode.FieldOverview:
+		m.ClearOverview()
 		return nil
 	case episode.FieldAirDate:
 		m.ClearAirDate()
@@ -3241,6 +3311,9 @@ func (m *EpisodeMutation) ResetField(name string) error {
 		return nil
 	case episode.FieldTitle:
 		m.ResetTitle()
+		return nil
+	case episode.FieldOverview:
+		m.ResetOverview()
 		return nil
 	case episode.FieldAirDate:
 		m.ResetAirDate()

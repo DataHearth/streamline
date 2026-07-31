@@ -17,6 +17,7 @@ type EpisodeSeed struct {
 	Number         uint16
 	AbsoluteNumber uint16
 	Title          string
+	Overview       string
 	AirDate        *time.Time
 }
 
@@ -157,6 +158,7 @@ func (db *DB) ReconcileEpisodes(
 					SetNumber(e.Number).
 					SetAbsoluteNumber(e.AbsoluteNumber).
 					SetTitle(e.Title).
+					SetOverview(e.Overview).
 					SetMonitored(sr.Monitored).
 					SetSeasonID(sr.ID)
 				if e.AirDate != nil {
@@ -171,6 +173,9 @@ func (db *DB) ReconcileEpisodes(
 			u, changed := tx.Episode.UpdateOne(er), false
 			if e.Title != er.Title {
 				u, changed = u.SetTitle(e.Title), true
+			}
+			if e.Overview != er.Overview {
+				u, changed = u.SetOverview(e.Overview), true
 			}
 			if e.AirDate != nil && !e.AirDate.Equal(er.AirDate) {
 				u, changed = u.SetAirDate(*e.AirDate), true
@@ -275,6 +280,7 @@ func (db *DB) CreateTVShow(
 				SetNumber(e.Number).
 				SetAbsoluteNumber(e.AbsoluteNumber).
 				SetTitle(e.Title).
+				SetOverview(e.Overview).
 				SetSeasonID(seasonRow.ID)
 			if e.AirDate != nil {
 				b = b.SetAirDate(*e.AirDate)

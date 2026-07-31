@@ -75,6 +75,11 @@ func Title(v string) predicate.Episode {
 	return predicate.Episode(sql.FieldEQ(FieldTitle, v))
 }
 
+// Overview applies equality check predicate on the "overview" field. It's identical to OverviewEQ.
+func Overview(v string) predicate.Episode {
+	return predicate.Episode(sql.FieldEQ(FieldOverview, v))
+}
+
 // AirDate applies equality check predicate on the "air_date" field. It's identical to AirDateEQ.
 func AirDate(v time.Time) predicate.Episode {
 	return predicate.Episode(sql.FieldEQ(FieldAirDate, v))
@@ -293,6 +298,81 @@ func TitleEqualFold(v string) predicate.Episode {
 // TitleContainsFold applies the ContainsFold predicate on the "title" field.
 func TitleContainsFold(v string) predicate.Episode {
 	return predicate.Episode(sql.FieldContainsFold(FieldTitle, v))
+}
+
+// OverviewEQ applies the EQ predicate on the "overview" field.
+func OverviewEQ(v string) predicate.Episode {
+	return predicate.Episode(sql.FieldEQ(FieldOverview, v))
+}
+
+// OverviewNEQ applies the NEQ predicate on the "overview" field.
+func OverviewNEQ(v string) predicate.Episode {
+	return predicate.Episode(sql.FieldNEQ(FieldOverview, v))
+}
+
+// OverviewIn applies the In predicate on the "overview" field.
+func OverviewIn(vs ...string) predicate.Episode {
+	return predicate.Episode(sql.FieldIn(FieldOverview, vs...))
+}
+
+// OverviewNotIn applies the NotIn predicate on the "overview" field.
+func OverviewNotIn(vs ...string) predicate.Episode {
+	return predicate.Episode(sql.FieldNotIn(FieldOverview, vs...))
+}
+
+// OverviewGT applies the GT predicate on the "overview" field.
+func OverviewGT(v string) predicate.Episode {
+	return predicate.Episode(sql.FieldGT(FieldOverview, v))
+}
+
+// OverviewGTE applies the GTE predicate on the "overview" field.
+func OverviewGTE(v string) predicate.Episode {
+	return predicate.Episode(sql.FieldGTE(FieldOverview, v))
+}
+
+// OverviewLT applies the LT predicate on the "overview" field.
+func OverviewLT(v string) predicate.Episode {
+	return predicate.Episode(sql.FieldLT(FieldOverview, v))
+}
+
+// OverviewLTE applies the LTE predicate on the "overview" field.
+func OverviewLTE(v string) predicate.Episode {
+	return predicate.Episode(sql.FieldLTE(FieldOverview, v))
+}
+
+// OverviewContains applies the Contains predicate on the "overview" field.
+func OverviewContains(v string) predicate.Episode {
+	return predicate.Episode(sql.FieldContains(FieldOverview, v))
+}
+
+// OverviewHasPrefix applies the HasPrefix predicate on the "overview" field.
+func OverviewHasPrefix(v string) predicate.Episode {
+	return predicate.Episode(sql.FieldHasPrefix(FieldOverview, v))
+}
+
+// OverviewHasSuffix applies the HasSuffix predicate on the "overview" field.
+func OverviewHasSuffix(v string) predicate.Episode {
+	return predicate.Episode(sql.FieldHasSuffix(FieldOverview, v))
+}
+
+// OverviewIsNil applies the IsNil predicate on the "overview" field.
+func OverviewIsNil() predicate.Episode {
+	return predicate.Episode(sql.FieldIsNull(FieldOverview))
+}
+
+// OverviewNotNil applies the NotNil predicate on the "overview" field.
+func OverviewNotNil() predicate.Episode {
+	return predicate.Episode(sql.FieldNotNull(FieldOverview))
+}
+
+// OverviewEqualFold applies the EqualFold predicate on the "overview" field.
+func OverviewEqualFold(v string) predicate.Episode {
+	return predicate.Episode(sql.FieldEqualFold(FieldOverview, v))
+}
+
+// OverviewContainsFold applies the ContainsFold predicate on the "overview" field.
+func OverviewContainsFold(v string) predicate.Episode {
+	return predicate.Episode(sql.FieldContainsFold(FieldOverview, v))
 }
 
 // AirDateEQ applies the EQ predicate on the "air_date" field.
