@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-07-31
+
+### Added
+
+- imports: Scan tv folders against tvdb
+- dashboard: Report library filesystem free space
+
+### Fixed
+
+- web: Read sidebar version from /system/info instead of a hardcoded dev string
+- restapi: Default page and limit on the movie list
+- web: Add status tokens for stalled and fetching
+- web: Drop the redundant add-torrent cta and row density toggle
+- web: Give movies and series a matching toolbar layout
+- web: Stop series detail actions reflowing between tabs
+- auth: Record api key last-used timestamps
+
 ## [1.2.0] - 2026-07-30
 
 ### Added
@@ -16,7 +33,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - web: Shared kebab menu, formatBytes, session cards, read-only chrome
 - server: Reuse grab conversion and scan-failure helpers
-- 
 
 ### Fixed
 
@@ -83,6 +99,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - sysinfo: Make disk-usage probe cross-platform for releases (#1)
 
+[1.3.0]: https://github.com/datahearth/streamline/compare/v1.2.0..v1.3.0
 [1.2.0]: https://github.com/datahearth/streamline/compare/v1.1.0..v1.2.0
 [1.1.0]: https://github.com/datahearth/streamline/compare/chart-v1.0.1..v1.1.0
 [1.0.0]: https://github.com/datahearth/streamline/tree/v1.0.0
