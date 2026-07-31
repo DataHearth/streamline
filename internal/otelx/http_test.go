@@ -45,4 +45,8 @@ var _ = Describe("HTTPClient", Label("unit", "otelx"), func() {
 
 		Expect(gotTraceparent).NotTo(BeEmpty())
 	})
+
+	It("bounds requests to a provider that never answers", func() {
+		Expect(otelx.HTTPClient.Timeout).To(BeNumerically(">", 0))
+	})
 })

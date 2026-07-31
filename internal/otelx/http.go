@@ -6,6 +6,7 @@ package otelx
 
 import (
 	"net/http"
+	"time"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
@@ -16,6 +17,11 @@ import (
 // global meter provider. Use for every outbound HTTP call (external APIs,
 // indexers, media servers, download clients) so traces, latencies, and
 // errors are visible in the backend.
+// Timeout is a backstop, not a tuning knob: every caller here does
+// request/response API calls, and a provider that accepts the connection but
+// never answers (blocked egress, dead VPN sidecar) otherwise hangs the
+// handler — and any mutex it holds — for the process lifetime.
 var HTTPClient = &http.Client{
 	Transport: otelhttp.NewTransport(http.DefaultTransport),
+	Timeout:   30 * time.Second,
 }
