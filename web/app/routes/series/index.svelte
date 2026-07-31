@@ -113,6 +113,8 @@
 		return c;
 	});
 
+	let monitoredCount = $derived(allSeries.filter((s) => s.monitored).length);
+
 	function passesTab(s: TVShow): boolean {
 		if (tab === "all") return true;
 		if (tab === "missing") return (s.wanted_episodes ?? 0) > 0;
@@ -211,6 +213,7 @@
 			{view}
 			{counts}
 			{monitoredOnly}
+			{monitoredCount}
 			onTabChange={(t) => (tab = t)}
 			onTypeChange={(t) => (typeFilter = t)}
 			onQueryChange={(q) => (query = q)}

@@ -158,9 +158,11 @@
 	);
 	let wanted = $derived(
 		[
-			...allMovies.filter((m) => m.status === "wanted"),
+			// Unmonitored titles stay "wanted" server-side even though nothing is
+			// searching for them, so the row would advertise work that never runs.
+			...allMovies.filter((m) => m.status === "wanted" && m.monitored),
 			...allSeries
-				.filter((s) => (s.wanted_episodes ?? 0) > 0)
+				.filter((s) => s.monitored && (s.wanted_episodes ?? 0) > 0)
 				.map((s) => ({
 					id: s.id,
 					title: s.title,

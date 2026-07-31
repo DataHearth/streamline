@@ -35,6 +35,7 @@
 		view,
 		counts,
 		monitoredOnly,
+		monitoredCount,
 		onTabChange,
 		onTypeChange,
 		onQueryChange,
@@ -50,6 +51,7 @@
 		view: View;
 		counts: SeriesTabCounts;
 		monitoredOnly: boolean;
+		monitoredCount: number;
 		onTabChange: (t: SeriesTab) => void;
 		onTypeChange: (t: SeriesTypeFilter) => void;
 		onQueryChange: (q: string) => void;
@@ -59,12 +61,12 @@
 		onAddSeries: () => void;
 	} = $props();
 
-	const tabs: { key: SeriesTab; label: string }[] = [
-		{ key: "all", label: "All" },
-		{ key: "continuing", label: "Continuing" },
-		{ key: "ended", label: "Ended" },
-		{ key: "upcoming", label: "Upcoming" },
-		{ key: "missing", label: "Missing eps" },
+	const tabs: { key: SeriesTab; label: string; tint: string }[] = [
+		{ key: "all", label: "All", tint: "" },
+		{ key: "continuing", label: "Continuing", tint: "text-status-available" },
+		{ key: "ended", label: "Ended", tint: "text-status-completed" },
+		{ key: "upcoming", label: "Upcoming", tint: "text-status-fetching" },
+		{ key: "missing", label: "Missing eps", tint: "text-status-wanted" },
 	];
 
 	const typePills: { key: SeriesTypeFilter; label: string }[] = [
@@ -132,10 +134,8 @@
 				<span class="whitespace-nowrap">{t.label}</span>
 				<span
 					class={cn(
-						"rounded-sm px-1.5 py-px font-mono text-[10px] tabular",
-						active
-							? "bg-accent-soft text-accent-text"
-							: "bg-white/[0.04] text-fg-faint",
+						"rounded-sm bg-white/[0.04] px-1.5 py-px font-mono text-[10px] tabular",
+						t.tint || (active ? "text-accent-text" : "text-fg-faint"),
 					)}
 				>
 					{counts[t.key]}
@@ -289,6 +289,14 @@
 		>
 			<Eye size={14} aria-hidden="true" />
 			Monitored
+			<span
+				class={cn(
+					"rounded-sm bg-white/[0.04] px-1.5 py-px font-mono text-[10px] tabular",
+					monitoredOnly ? "text-accent-text" : "text-fg-faint",
+				)}
+			>
+				{monitoredCount}
+			</span>
 		</button>
 	</div>
 </div>

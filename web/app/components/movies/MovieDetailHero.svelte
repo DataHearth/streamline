@@ -2,6 +2,7 @@
 	import type { Snippet } from "svelte";
 	import { Film, ArrowLeft } from "@lucide/svelte";
 	import { posterUrl } from "../../lib/posters";
+	import { movieStatus } from "../../lib/status";
 	import Poster from "./Poster.svelte";
 	import StatusPill from "../shared/StatusPill.svelte";
 	import type { Movie, MediaFile } from "../../lib/types";
@@ -84,7 +85,7 @@
 		<div class="min-w-0 text-left">
 			<div class="mb-3 flex flex-wrap items-center gap-2">
 				<StatusPill
-					status={movie.status}
+					status={movieStatus(movie)}
 					size="md"
 					live={movie.status === "downloading"}
 					variant="translucent"

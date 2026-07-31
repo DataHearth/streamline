@@ -5,6 +5,7 @@
 	import { api } from "../../lib/api";
 	import { toast } from "../../lib/toast";
 	import { formatBytes } from "../../lib/format";
+	import { movieStatus } from "../../lib/status";
 	import Poster from "./Poster.svelte";
 	import StatusPill from "../shared/StatusPill.svelte";
 	import MovieActionsMenu from "./MovieActionsMenu.svelte";
@@ -172,7 +173,7 @@
 					</td>
 					<td class="px-3 py-2">
 						<StatusPill
-							status={movie.status}
+							status={movieStatus(movie)}
 							size="sm"
 							live={movie.status === "downloading"}
 						/>

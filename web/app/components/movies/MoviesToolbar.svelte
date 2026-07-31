@@ -25,6 +25,7 @@
 		view,
 		counts,
 		monitoredOnly,
+		monitoredCount,
 		onTabChange,
 		onQueryChange,
 		onMonitoredChange,
@@ -38,6 +39,7 @@
 		order: SortOrder;
 		view: View;
 		monitoredOnly: boolean;
+		monitoredCount: number;
 		// Only the per-status tallies are shown here; `trend` (from /movies/counts)
 		// isn't needed, so accept the client-computed counts without it.
 		counts: Omit<MovieCounts, "trend">;
@@ -50,11 +52,15 @@
 	} = $props();
 
 	const tabs = [
-		{ key: "all", label: "All" },
-		{ key: "available", label: "Available" },
-		{ key: "downloading", label: "Downloading" },
-		{ key: "wanted", label: "Wanted" },
-		{ key: "failed", label: "Failed" },
+		{ key: "all", label: "All", tint: "" },
+		{ key: "available", label: "Available", tint: "text-status-available" },
+		{
+			key: "downloading",
+			label: "Downloading",
+			tint: "text-status-downloading",
+		},
+		{ key: "wanted", label: "Wanted", tint: "text-status-wanted" },
+		{ key: "failed", label: "Failed", tint: "text-status-failed" },
 	];
 
 	const sortOptions: { key: `${SortKey}-${SortOrder}`; label: string }[] = [
@@ -133,10 +139,8 @@
 				<span>{t.label}</span>
 				<span
 					class={cn(
-						"rounded-sm px-1.5 py-px font-mono text-[10px] tabular",
-						active
-							? "bg-accent-soft text-accent-text"
-							: "bg-white/[0.04] text-fg-faint",
+						"rounded-sm bg-white/[0.04] px-1.5 py-px font-mono text-[10px] tabular",
+						t.tint || (active ? "text-accent-text" : "text-fg-faint"),
 					)}
 				>
 					{tabCount(t.key)}
@@ -274,6 +278,14 @@
 		>
 			<Eye size={14} aria-hidden="true" />
 			Monitored
+			<span
+				class={cn(
+					"rounded-sm bg-white/[0.04] px-1.5 py-px font-mono text-[10px] tabular",
+					monitoredOnly ? "text-accent-text" : "text-fg-faint",
+				)}
+			>
+				{monitoredCount}
+			</span>
 		</button>
 	</div>
 </div>

@@ -3,6 +3,7 @@
 	import { api } from "../../lib/api";
 	import { formatRelative } from "../../lib/dates";
 	import { formatBytes } from "../../lib/format";
+	import { movieStatus } from "../../lib/status";
 	import MoviesToolbar from "../../components/movies/MoviesToolbar.svelte";
 	import MovieGrid from "../../components/movies/MovieGrid.svelte";
 	import MovieList from "../../components/movies/MovieList.svelte";
@@ -93,17 +94,22 @@
 			failed: 0,
 		};
 		for (const m of allMovies) {
-			if (m.status === "wanted") c.wanted++;
-			else if (m.status === "downloading") c.downloading++;
-			else if (m.status === "available") c.available++;
-			else if (m.status === "failed") c.failed++;
+			const s = movieStatus(m);
+			if (s === "wanted") c.wanted++;
+			else if (s === "downloading") c.downloading++;
+			else if (s === "available") c.available++;
+			else if (s === "failed") c.failed++;
 		}
 		return c;
 	});
 
+	// Unmonitored fileless movies resolve to "missing", which has no tab — they
+	// stay reachable under All rather than padding the Wanted queue.
+	let monitoredCount = $derived(allMovies.filter((m) => m.monitored).length);
+
 	function passesTab(m: Movie): boolean {
 		if (tab === "all") return true;
-		return m.status === tab;
+		return movieStatus(m) === tab;
 	}
 
 	let visibleMovies = $derived.by(() => {
@@ -185,6 +191,7 @@
 			{view}
 			{counts}
 			{monitoredOnly}
+			{monitoredCount}
 			onTabChange={(t) => (tab = t)}
 			onQueryChange={(q) => (query = q)}
 			onMonitoredChange={(v) => (monitoredOnly = v)}

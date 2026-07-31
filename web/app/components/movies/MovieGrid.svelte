@@ -3,6 +3,7 @@
 	import { api } from "../../lib/api";
 	import { toast } from "../../lib/toast";
 	import { formatBytes } from "../../lib/format";
+	import { movieStatus } from "../../lib/status";
 	import PosterCard from "../shared/PosterCard.svelte";
 	import MovieActionsMenu from "./MovieActionsMenu.svelte";
 	import type { Movie, MediaFile } from "../../lib/types";
@@ -38,7 +39,7 @@
 			title: m.title,
 			original_title: m.original_title,
 			year: m.year,
-			status: m.status,
+			status: movieStatus(m),
 			monitored: m.monitored,
 			rating: m.rating,
 			resolution: f?.parsed_resolution,
