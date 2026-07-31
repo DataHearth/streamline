@@ -1,7 +1,20 @@
+<script lang="ts" module>
+	import type { StatusKind } from "../shared/StatusPill.svelte";
+
+	// Movies satisfy this as-is; series pass their own poster + detail route.
+	export type ScrollerItem = {
+		id: number;
+		title: string;
+		year: number;
+		status: StatusKind;
+		href?: string;
+		posterSrc?: string;
+	};
+</script>
+
 <script lang="ts">
 	import { Film, ChevronLeft, ChevronRight } from "@lucide/svelte";
 	import PosterCard from "../shared/PosterCard.svelte";
-	import type { Movie } from "../../lib/types";
 
 	let {
 		title,
@@ -13,7 +26,7 @@
 		pillVariant = "translucent",
 	}: {
 		title: string;
-		movies: Movie[];
+		movies: ScrollerItem[];
 		seeAllHref?: string;
 		seeAllLabel?: string;
 		countText?: string;
@@ -110,7 +123,7 @@
 			onscroll={updateBounds}
 			class="poster-scroll -mx-1 px-1 pb-1.5"
 		>
-			{#each movies as movie (movie.id)}
+			{#each movies as movie (movie.href ?? movie.id)}
 				<div class="snap-start">
 					<PosterCard
 						movie={{
@@ -120,6 +133,8 @@
 							status: movie.status,
 						}}
 						size="md"
+						href={movie.href}
+						posterSrc={movie.posterSrc}
 						{pillVariant}
 					/>
 				</div>

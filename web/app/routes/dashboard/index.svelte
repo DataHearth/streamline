@@ -5,6 +5,7 @@
 	import { formatBytes } from "../../lib/format";
 	import type {
 		ActivityList,
+		DiskUsage,
 		MovieCounts,
 		Movie,
 		MediaFile,
@@ -13,6 +14,7 @@
 		QueueItem,
 		SystemInfo,
 		TVShow,
+		TVShowCounts,
 		UpcomingList as UpcomingResponse,
 	} from "../../lib/types";
 	import Hero, { type HeroItem } from "../../components/dashboard/Hero.svelte";
@@ -36,6 +38,11 @@
 	const countsQuery = createQuery<MovieCounts>(() => ({
 		queryKey: ["movies", "counts"],
 		queryFn: () => api<MovieCounts>("/movies/counts"),
+	}));
+
+	const seriesCountsQuery = createQuery<TVShowCounts>(() => ({
+		queryKey: ["series", "counts"],
+		queryFn: () => api<TVShowCounts>("/series/counts"),
 	}));
 
 	const activityQuery = createQuery<ActivityList>(() => ({
@@ -69,6 +76,29 @@
 
 	let allMovies = $derived(moviesQuery.data?.items ?? []);
 	let allSeries = $derived(seriesQuery.data?.items ?? []);
+	let monitoredTotal = $derived(
+		allMovies.filter((m) => m.monitored).length +
+			allSeries.filter((s) => s.monitored).length,
+	);
+
+	// Falls back to the data dir when neither library path can be probed, so the
+	// tile still reports a real volume on a fresh install.
+	let libraryDisks = $derived.by(() => {
+		const sys = systemQuery.data;
+		if (!sys) return [];
+		const dirs = [
+			{ label: "movies", path: sys.library_dir, usage: sys.library_usage },
+			{ label: "series", path: sys.series_dir, usage: sys.series_usage },
+		].filter((d) => d.path && d.usage) as {
+			label: string;
+			path: string;
+			usage: DiskUsage;
+		}[];
+		if (dirs.length > 0) return dirs;
+		return sys.data_usage
+			? [{ label: "data", path: sys.data_dir, usage: sys.data_usage }]
+			: [];
+	});
 
 	function pickPrimary(files?: MediaFile[]): MediaFile | undefined {
 		if (!files || files.length === 0) return undefined;
@@ -106,11 +136,14 @@
 	}
 
 	// Feature an available title only (never a wanted one). Prefer a movie; fall
-	// back to a fully-downloaded series (has episodes, none still wanted).
+	// back to a fully-downloaded series. Keyed on files actually present, not on
+	// a zero wanted count — unmonitoring a series zeroes that count too.
 	let featuredMovie = $derived(allMovies.find((m) => m.status === "available"));
 	let featuredSeries = $derived(
 		allSeries.find(
-			(s) => (s.total_episodes ?? 0) > 0 && (s.wanted_episodes ?? 0) === 0,
+			(s) =>
+				(s.total_episodes ?? 0) > 0 &&
+				(s.have_episodes ?? 0) >= (s.total_episodes ?? 0),
 		),
 	);
 	let featured = $derived<HeroItem | undefined>(
@@ -123,7 +156,21 @@
 	let recent = $derived(
 		allMovies.filter((m) => m.status === "available").slice(0, 8),
 	);
-	let wanted = $derived(allMovies.filter((m) => m.status === "wanted").slice(0, 6));
+	let wanted = $derived(
+		[
+			...allMovies.filter((m) => m.status === "wanted"),
+			...allSeries
+				.filter((s) => (s.wanted_episodes ?? 0) > 0)
+				.map((s) => ({
+					id: s.id,
+					title: s.title,
+					year: s.year,
+					status: "wanted" as const,
+					href: `/series/${s.id}`,
+					posterSrc: tvPosterUrl(s.id),
+				})),
+		].slice(0, 6),
+	);
 	let events = $derived(activityQuery.data?.events ?? []);
 	let upcoming = $derived(upcomingQuery.data?.movies ?? []);
 </script>
@@ -139,11 +186,10 @@
 	>
 		<StatStrip
 			counts={countsQuery.data}
+			seriesTotal={seriesCountsQuery.data?.total}
+			{monitoredTotal}
 			{queue}
-			disk={systemQuery.data?.library_usage ?? systemQuery.data?.data_usage}
-			diskPath={systemQuery.data?.library_usage
-				? systemQuery.data?.library_dir
-				: systemQuery.data?.data_dir}
+			disks={libraryDisks}
 		/>
 
 		<RecentScroller

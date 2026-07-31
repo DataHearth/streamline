@@ -657,6 +657,7 @@ export type DiskUsage = {
 	used: string;
 	total: string;
 	free: string;
+	free_bytes: number;
 	pct: number;
 	kind: "ok" | "warn" | "err";
 };
@@ -673,6 +674,8 @@ export type SystemInfo = {
 	db_usage?: DiskUsage;
 	library_dir?: string;
 	library_usage?: DiskUsage;
+	series_dir?: string;
+	series_usage?: DiskUsage;
 	version: string;
 	commit?: string;
 	built_at?: string;

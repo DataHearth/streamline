@@ -1,8 +1,8 @@
 <script lang="ts">
 	import RecentScroller from "./RecentScroller.svelte";
-	import type { Movie } from "../../lib/types";
+	import type { ScrollerItem } from "./RecentScroller.svelte";
 
-	let { movies }: { movies: Movie[] } = $props();
+	let { movies }: { movies: ScrollerItem[] } = $props();
 
 	let countText = $derived(
 		movies.length === 0

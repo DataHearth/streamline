@@ -60,15 +60,23 @@ func snapshotToAPI(s sysinfo.Snapshot) SystemInfo {
 	if s.LibraryUsage != nil {
 		out.LibraryUsage = diskUsageToAPI(*s.LibraryUsage)
 	}
+	if s.SeriesDir != "" {
+		d := s.SeriesDir
+		out.SeriesDir = &d
+	}
+	if s.SeriesUsage != nil {
+		out.SeriesUsage = diskUsageToAPI(*s.SeriesUsage)
+	}
 	return out
 }
 
 func diskUsageToAPI(u sysinfo.DiskUsage) *DiskUsage {
 	return &DiskUsage{
-		Used:  u.Used,
-		Total: u.Total,
-		Free:  u.Free,
-		Pct:   u.Pct,
-		Kind:  DiskUsageKind(u.Kind),
+		Used:      u.Used,
+		Total:     u.Total,
+		Free:      u.Free,
+		FreeBytes: u.FreeBytes,
+		Pct:       u.Pct,
+		Kind:      DiskUsageKind(u.Kind),
 	}
 }
