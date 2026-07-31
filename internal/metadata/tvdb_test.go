@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -100,9 +101,10 @@ var _ = Describe("TVDB provider", Label("unit", "metadata"), func() {
 
 var _ = Describe("TVDB token handling", Label("unit", "metadata"), func() {
 	var (
-		ctx    context.Context
-		client *TVDB
-		logins atomic.Int32
+		ctx       context.Context
+		client    *TVDB
+		logins    atomic.Int32
+		failLogin atomic.Bool
 		// search is swapped per spec to drive the /search response.
 		search func(w http.ResponseWriter, r *http.Request)
 
@@ -115,6 +117,7 @@ var _ = Describe("TVDB token handling", Label("unit", "metadata"), func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 		logins.Store(0)
+		failLogin.Store(false)
 		bearers = nil
 		record = func(r *http.Request) {
 			mu.Lock()
@@ -132,11 +135,15 @@ var _ = Describe("TVDB token handling", Label("unit", "metadata"), func() {
 
 		mux := http.NewServeMux()
 		mux.HandleFunc("/login", func(w http.ResponseWriter, _ *http.Request) {
-			_, _ = fmt.Fprintf(
-				w,
-				`{"data":{"token":"token-%d"}}`,
-				logins.Add(1),
-			)
+			n := logins.Add(1)
+			if failLogin.Load() {
+				// Held open long enough that a serialising client would queue
+				// a second attempt behind this one.
+				time.Sleep(50 * time.Millisecond)
+				w.WriteHeader(http.StatusServiceUnavailable)
+				return
+			}
+			_, _ = fmt.Fprintf(w, `{"data":{"token":"token-%d"}}`, n)
 		})
 		mux.HandleFunc("/search", func(w http.ResponseWriter, r *http.Request) {
 			record(r)
@@ -171,6 +178,25 @@ var _ = Describe("TVDB token handling", Label("unit", "metadata"), func() {
 		Expect(logins.Load()).To(Equal(int32(1)))
 		Expect(snapshot()).To(HaveLen(parallel))
 		Expect(snapshot()).To(HaveEach("token-1"))
+	})
+
+	It("collapses a parallel burst onto one attempt when login fails", func() {
+		failLogin.Store(true)
+
+		const parallel = 8
+		errs := make([]error, parallel)
+		var wg sync.WaitGroup
+		for i := range parallel {
+			wg.Go(func() {
+				_, errs[i] = client.SearchSeries(ctx, "q")
+			})
+		}
+		wg.Wait()
+
+		for _, err := range errs {
+			Expect(err).To(MatchError(ContainSubstring("tvdb login")))
+		}
+		Expect(logins.Load()).To(Equal(int32(1)))
 	})
 
 	It("re-logs in and retries once when the token expired", func() {

@@ -18,6 +18,7 @@ import (
 	"github.com/datahearth/streamline/internal/otelx"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
+	"golang.org/x/sync/singleflight"
 	"golang.org/x/text/language"
 )
 
@@ -35,7 +36,11 @@ type TVDB struct {
 
 	// One TVDB instance is shared by the TV service, the hygiene service and
 	// the REST handlers, so every access to the cached token goes through mu.
+	// mu is never held across a round trip: logins collapse through group
+	// instead, so a stalled /login costs every waiter one timeout rather than
+	// one each, and callers that already have a token are never blocked.
 	mu    sync.Mutex
+	group singleflight.Group
 	token string // cached bearer token from /login
 }
 
@@ -62,13 +67,34 @@ func iso639_3(bcp47 string) string {
 }
 
 // login returns the cached bearer token, fetching a fresh one when the cache
-// is empty. mu is held across the HTTP round-trip so that a token expiring
-// under concurrent load produces a single /login rather than one per caller.
+// is empty. Concurrent callers that find the cache empty collapse onto a
+// single /login through singleflight — including the failing case, so a TVDB
+// outage costs one round trip for the whole burst instead of one per caller.
 func (t *TVDB) login(ctx context.Context) (string, error) {
 	t.mu.Lock()
-	defer t.mu.Unlock()
-	if t.token != "" {
-		return t.token, nil
+	cached := t.token
+	t.mu.Unlock()
+	if cached != "" {
+		return cached, nil
+	}
+	token, err, _ := t.group.Do("login", func() (any, error) {
+		return t.fetchToken(ctx)
+	})
+	if err != nil {
+		return "", err
+	}
+	return token.(string), nil
+}
+
+func (t *TVDB) fetchToken(ctx context.Context) (string, error) {
+	// A burst that queued behind an in-flight login is served by singleflight,
+	// but a burst that queued behind the *previous* one arrives here with the
+	// token already cached.
+	t.mu.Lock()
+	cached := t.token
+	t.mu.Unlock()
+	if cached != "" {
+		return cached, nil
 	}
 	body, err := json.Marshal(map[string]string{"apikey": t.apiKey})
 	if err != nil {
@@ -100,8 +126,10 @@ func (t *TVDB) login(ctx context.Context) (string, error) {
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
 		return "", err
 	}
+	t.mu.Lock()
 	t.token = out.Data.Token
-	return t.token, nil
+	t.mu.Unlock()
+	return out.Data.Token, nil
 }
 
 // invalidate drops a token TVDB rejected. The stale check keeps a slow caller
