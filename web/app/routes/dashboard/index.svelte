@@ -76,10 +76,8 @@
 
 	let allMovies = $derived(moviesQuery.data?.items ?? []);
 	let allSeries = $derived(seriesQuery.data?.items ?? []);
-	let monitoredTotal = $derived(
-		allMovies.filter((m) => m.monitored).length +
-			allSeries.filter((s) => s.monitored).length,
-	);
+	let monitoredMovies = $derived(allMovies.filter((m) => m.monitored).length);
+	let monitoredSeries = $derived(allSeries.filter((s) => s.monitored).length);
 
 	// Falls back to the data dir when neither library path can be probed, so the
 	// tile still reports a real volume on a fresh install.
@@ -189,7 +187,8 @@
 		<StatStrip
 			counts={countsQuery.data}
 			seriesTotal={seriesCountsQuery.data?.total}
-			{monitoredTotal}
+			{monitoredMovies}
+			{monitoredSeries}
 			{queue}
 			disks={libraryDisks}
 		/>
@@ -197,7 +196,6 @@
 		<RecentScroller
 			title="Recently added"
 			movies={recent}
-			seeAllHref="/movies"
 			emptyText="No movies yet. Add one to see it here."
 		/>
 
@@ -214,7 +212,12 @@
 			aria-label="Wanted and upcoming"
 		>
 			<WantedScroller movies={wanted} />
-			<UpcomingList events={upcoming} title="Upcoming" seeAllHref="/calendar" />
+			<UpcomingList
+				events={upcoming.slice(0, 4)}
+				title="Upcoming"
+				seeAllHref="/calendar"
+				stretch
+			/>
 		</section>
 	</div>
 </div>

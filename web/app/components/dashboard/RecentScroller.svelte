@@ -41,8 +41,14 @@
 	function updateBounds() {
 		if (!scrollEl) return;
 		const { scrollLeft, scrollWidth, clientWidth } = scrollEl;
-		atStart = scrollLeft <= 1;
-		atEnd = scrollLeft + clientWidth >= scrollWidth - 1;
+		// The row is inset by its own px-1 gutter (-mx-1 px-1), and scroll-snap
+		// parks the first poster at that offset — so a "far left" row rests at
+		// scrollLeft 4, not 0. Measure the gutter instead of assuming zero.
+		const cs = getComputedStyle(scrollEl);
+		const padL = parseFloat(cs.paddingLeft) || 0;
+		const padR = parseFloat(cs.paddingRight) || 0;
+		atStart = scrollLeft <= padL + 1;
+		atEnd = scrollLeft + clientWidth >= scrollWidth - padR - 1;
 	}
 
 	$effect(() => {

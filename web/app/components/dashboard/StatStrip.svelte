@@ -1,19 +1,23 @@
 <script lang="ts">
-	import { TriangleAlert } from "@lucide/svelte";
+	import { onDestroy, tick } from "svelte";
+	import { Info, TriangleAlert } from "@lucide/svelte";
 	import ProgressBar from "../shared/ProgressBar.svelte";
+	import { cn } from "../../lib/cn";
 	import { formatBytes } from "../../lib/format";
 	import type { MovieCounts, QueueItem, DiskUsage } from "../../lib/types";
 
 	let {
 		counts,
 		seriesTotal,
-		monitoredTotal,
+		monitoredMovies,
+		monitoredSeries,
 		queue,
 		disks,
 	}: {
 		counts?: MovieCounts;
 		seriesTotal?: number;
-		monitoredTotal?: number;
+		monitoredMovies?: number;
+		monitoredSeries?: number;
 		queue: QueueItem[];
 		disks: { label: string; path: string; usage?: DiskUsage }[];
 	} = $props();
@@ -58,33 +62,99 @@
 	);
 	let diskPct = $derived.by(() => {
 		if (volumes.length === 0) return 0;
-		const avg =
-			volumes.reduce((n, u) => n + u.pct, 0) / volumes.length;
+		const avg = volumes.reduce((n, u) => n + u.pct, 0) / volumes.length;
 		return Math.max(0, Math.min(1, avg / 100));
 	});
 
-	// buildSparkline maps the cumulative library trend into the 100×24 viewBox.
-	// min→max fills the available height; a flat or empty series (e.g. 0 movies)
-	// renders as a straight line along the baseline instead of a fake slope.
-	function buildSparkline(points: number[] | undefined): string {
-		if (!points || points.length < 2) return "";
-		const top = 3;
-		const bottom = 21;
-		const min = Math.min(...points);
-		const max = Math.max(...points);
-		const range = max - min || 1;
-		const last = points.length - 1;
-		return points
-			.map((v, i) => {
-				const x = (i / last) * 100;
-				const y = bottom - ((v - min) / range) * (bottom - top);
-				return `${i === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`;
-			})
-			.join(" ");
+	// Per-volume breakdown lives behind an ⓘ disclosure rather than under the
+	// free-space figure: two paths pushed the tile taller than its three
+	// siblings, and the detail is a lookup, not a glance.
+	// Opens on hover of the ⓘ and sits above the tile. The short leave delay
+	// covers the 12px the pointer crosses between trigger and panel; click pins
+	// it open so the paths can be selected without holding the hover.
+	let diskHover = $state(false);
+	let diskPinned = $state(false);
+	let diskOpen = $derived(diskHover || diskPinned);
+	let diskBtnEl = $state<HTMLButtonElement | null>(null);
+	let diskPanelEl = $state<HTMLElement | null>(null);
+	let leaveTimer: ReturnType<typeof setTimeout> | undefined;
+
+	function diskEnter() {
+		clearTimeout(leaveTimer);
+		diskHover = true;
+	}
+	function diskLeave() {
+		clearTimeout(leaveTimer);
+		leaveTimer = setTimeout(() => (diskHover = false), 140);
 	}
 
-	let sparkPath = $derived(buildSparkline(counts?.trend));
+	onDestroy(() => {
+		clearTimeout(leaveTimer);
+		window.removeEventListener("scroll", placeDisk, true);
+		window.removeEventListener("resize", placeDisk);
+	});
+
+	// Prefer opening upward, but the strip sits inside a scrolling <main>: when
+	// the tile is near the top of that viewport there is no room above and the
+	// panel would be clipped out of sight, so it flips below.
+	let diskAbove = $state(true);
+	const DISK_GAP = 6;
+	function placeDisk() {
+		if (!diskBtnEl) return;
+		const card = diskBtnEl.parentElement;
+		if (!card) return;
+		const scroller = card.closest("main") ?? document.documentElement;
+		const top =
+			card.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
+		diskAbove = top >= (diskPanelEl?.offsetHeight ?? 105) + DISK_GAP;
+	}
+
+	$effect(() => {
+		if (!diskOpen) {
+			window.removeEventListener("scroll", placeDisk, true);
+			window.removeEventListener("resize", placeDisk);
+			return;
+		}
+		placeDisk();
+		tick().then(placeDisk);
+		window.addEventListener("scroll", placeDisk, true);
+		window.addEventListener("resize", placeDisk);
+		return () => {
+			window.removeEventListener("scroll", placeDisk, true);
+			window.removeEventListener("resize", placeDisk);
+		};
+	});
+
+	$effect(() => {
+		if (!diskOpen) return;
+		const onDown = (e: MouseEvent) => {
+			const t = e.target as Node;
+			if (diskBtnEl?.contains(t) || diskPanelEl?.contains(t)) return;
+			diskPinned = false;
+			diskHover = false;
+		};
+		const onKey = (e: KeyboardEvent) => {
+			if (e.key === "Escape") {
+				diskBtnEl?.focus();
+				clearTimeout(leaveTimer);
+				diskPinned = false;
+				diskHover = false;
+			}
+		};
+		document.addEventListener("mousedown", onDown);
+		document.addEventListener("keydown", onKey);
+		return () => {
+			document.removeEventListener("mousedown", onDown);
+			document.removeEventListener("keydown", onKey);
+		};
+	});
+
 	let failedCount = $derived(counts?.failed ?? 0);
+	let monitoredTotal = $derived(
+		monitoredMovies !== undefined || monitoredSeries !== undefined
+			? (monitoredMovies ?? 0) + (monitoredSeries ?? 0)
+			: undefined,
+	);
 	let titleTotal = $derived(
 		counts || seriesTotal !== undefined
 			? (counts?.total ?? 0) + (seriesTotal ?? 0)
@@ -92,25 +162,9 @@
 	);
 </script>
 
-{#snippet spark()}
-	{#if sparkPath}
-		<svg
-			viewBox="0 0 100 24"
-			preserveAspectRatio="none"
-			aria-hidden="true"
-			class="pointer-events-none absolute right-3 bottom-3 h-5 w-20 text-accent opacity-65"
-		>
-			<path d={sparkPath} fill="none" stroke="currentColor" stroke-width="1.4" />
-		</svg>
-	{/if}
-{/snippet}
-
-<section
-	aria-label="Library stats"
-	class="grid grid-cols-2 gap-3 md:grid-cols-4"
->
+<section aria-label="Library stats" class="grid grid-cols-2 gap-3 md:grid-cols-4">
 	<div
-		class="relative overflow-hidden rounded-lg border border-border bg-bg-elevated px-5 py-[18px]"
+		class="relative overflow-hidden rounded-lg border border-border bg-bg-elevated px-4 py-[18px] md:px-5"
 	>
 		<div class="font-mono text-[28px] font-bold tabular leading-none tracking-tight">
 			{titleTotal ?? "—"}
@@ -118,15 +172,16 @@
 		<div class="mt-2 text-[11px] uppercase tracking-[0.1em] text-fg-subtle">
 			Titles
 		</div>
-		<div class="mt-1.5 font-mono text-[11.5px] text-fg-muted">
+		<div
+			class="mt-1.5 truncate font-mono text-[11px] text-fg-muted md:text-[11.5px]"
+		>
 			{counts?.total ?? 0}
 			movie{(counts?.total ?? 0) === 1 ? "" : "s"} · {seriesTotal ?? 0} series
 		</div>
-		{@render spark()}
 	</div>
 
 	<div
-		class="relative overflow-hidden rounded-lg border border-border bg-bg-elevated px-5 py-4"
+		class="relative overflow-hidden rounded-lg border border-border bg-bg-elevated px-4 py-4 md:px-5"
 	>
 		<div
 			class="font-mono text-3xl font-bold tabular leading-none tracking-tight text-status-downloading"
@@ -151,56 +206,95 @@
 	     mobile) and a fifth tile would orphan onto a second row at every
 	     breakpoint. Hidden at zero so a healthy library carries no noise. -->
 	<div
-		class="relative overflow-hidden rounded-lg border border-border bg-bg-elevated px-5 py-[18px]"
+		class="relative overflow-hidden rounded-lg border border-border bg-bg-elevated px-4 py-[18px] md:px-5"
 	>
 		<div class="font-mono text-[28px] font-bold tabular leading-none tracking-tight">
 			{monitoredTotal ?? "—"}
 		</div>
-		<div
-			class="mt-2 text-[11px] uppercase tracking-[0.1em] text-fg-subtle"
-		>
+		<div class="mt-2 text-[11px] uppercase tracking-[0.1em] text-fg-subtle">
 			Monitored
 		</div>
-		{@render spark()}
-		{#if failedCount > 0}
-			<div class="mt-1.5">
+		<div
+			class="mt-1.5 flex items-baseline gap-2.5 font-mono text-[11px] md:text-[11.5px]"
+		>
+			<span class="truncate text-fg-muted">
+				{monitoredMovies ?? 0}
+				movie{(monitoredMovies ?? 0) === 1 ? "" : "s"} · {monitoredSeries ?? 0} series
+			</span>
+			{#if failedCount > 0}
 				<a
 					href="/movies?status=failed"
-					class="inline-flex items-center gap-1 font-mono text-[11.5px] text-status-failed underline-offset-2 transition hover:underline"
+					class="inline-flex shrink-0 items-center gap-1 text-status-failed underline-offset-2 transition hover:underline"
 				>
 					<TriangleAlert size={12} aria-hidden="true" />
 					{failedCount} failed
 				</a>
-			</div>
-		{/if}
+			{/if}
+		</div>
 	</div>
 
 	<div
-		class="relative overflow-hidden rounded-lg border border-border bg-bg-elevated px-5 py-[18px]"
+		class="relative rounded-lg border border-border bg-bg-elevated px-4 py-[18px] md:px-5"
 	>
+		{#if volumes.length > 1}
+			<button
+				bind:this={diskBtnEl}
+				type="button"
+				aria-label="Free space by volume"
+				aria-expanded={diskOpen}
+				onclick={() => (diskPinned = !diskPinned)}
+				onpointerenter={diskEnter}
+				onpointerleave={diskLeave}
+				onfocus={diskEnter}
+				onblur={diskLeave}
+				class={cn(
+					"absolute right-1.5 top-1.5 z-20 grid h-7 w-7 place-items-center rounded-md transition hover:bg-surface hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring",
+					diskOpen ? "bg-surface text-fg" : "text-fg-subtle",
+				)}
+			>
+				<Info size={13} aria-hidden="true" />
+			</button>
+			{#if diskOpen}
+				<dl
+					bind:this={diskPanelEl}
+					onpointerenter={diskEnter}
+					onpointerleave={diskLeave}
+					class={cn(
+						"absolute right-2 z-30 w-60 space-y-2.5 rounded-md border border-border-strong bg-bg-elevated p-3 shadow-4",
+						diskAbove ? "bottom-full mb-1.5" : "top-full mt-1.5",
+					)}
+				>
+					{#each probed as d (d.label)}
+						<div class="min-w-0">
+							<div class="flex items-baseline justify-between gap-3">
+								<dt
+									class="shrink-0 text-[11px] uppercase tracking-[0.1em] text-fg-subtle"
+								>
+									{d.label}
+								</dt>
+								<dd
+									class="shrink-0 whitespace-nowrap font-mono text-[11.5px] text-fg"
+								>
+									{d.usage?.free} free
+								</dd>
+							</div>
+							<dd
+								class="mt-0.5 truncate font-mono text-[10px] text-fg-faint"
+								title={d.path}
+							>
+								{d.path}
+							</dd>
+						</div>
+					{/each}
+				</dl>
+			{/if}
+		{/if}
 		<div class="font-mono text-[28px] font-bold tabular leading-none tracking-tight">
 			{volumes.length > 0 ? freeText : "—"}
 		</div>
 		<div class="mt-2 text-[11px] uppercase tracking-[0.1em] text-fg-subtle">
 			Free
 		</div>
-		{#if volumes.length > 1}
-			<dl class="mt-1.5 space-y-0.5">
-				{#each probed as d (d.label)}
-					<div class="flex min-w-0 items-baseline gap-1.5">
-						<dt class="shrink-0 font-mono text-[10px] text-fg-subtle">
-							{d.label}
-						</dt>
-						<dd
-							class="truncate font-mono text-[10px] text-fg-faint"
-							title={d.path}
-						>
-							{d.usage?.free} · {d.path}
-						</dd>
-					</div>
-				{/each}
-			</dl>
-		{/if}
 		{#if volumes.length > 0}
 			<div class="mt-2.5">
 				<ProgressBar value={diskPct} status="available" height={2} />

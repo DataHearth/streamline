@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Calendar } from "@lucide/svelte";
+	import { cn } from "../../lib/cn";
 	import StatusPill from "./StatusPill.svelte";
 	import type { UpcomingMovie } from "../../lib/types";
 
@@ -9,12 +10,16 @@
 		seeAllHref,
 		seeAllLabel = "Calendar →",
 		emptyText = "Wanted movies with a digital release will appear here.",
+		stretch = false,
 	}: {
 		events: UpcomingMovie[];
 		title: string;
 		seeAllHref?: string;
 		seeAllLabel?: string;
 		emptyText?: string;
+		// Fill the grid row instead of hugging its content — the dashboard pairs
+		// this with the Wanted rail and the two should square off.
+		stretch?: boolean;
 	} = $props();
 
 	const MONTHS = [
@@ -52,7 +57,10 @@
 </script>
 
 <aside
-	class="self-start rounded-lg border border-border bg-bg-elevated p-4"
+	class={cn(
+		"rounded-lg border border-border bg-bg-elevated p-4",
+		stretch ? "h-full" : "self-start",
+	)}
 	aria-label={title}
 >
 	<header class="mb-3 flex items-baseline justify-between">

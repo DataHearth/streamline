@@ -43,7 +43,7 @@
 </script>
 
 <section
-	class="overflow-hidden rounded-lg border border-border bg-bg-elevated"
+	class="flex h-full flex-col overflow-hidden rounded-lg border border-border bg-bg-elevated"
 	aria-label="Live download queue"
 >
 	<header
@@ -69,7 +69,7 @@
 
 	{#if queue.length === 0}
 		<div
-			class="flex flex-col items-center justify-center gap-1.5 px-5 py-8 text-center"
+			class="flex flex-1 flex-col items-center justify-center gap-1.5 px-5 py-8 text-center"
 		>
 			<Activity size={22} class="text-fg-faint" aria-hidden="true" />
 			<p class="text-sm font-medium text-fg">Queue is quiet</p>
