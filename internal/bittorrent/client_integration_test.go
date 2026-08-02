@@ -95,6 +95,14 @@ func newSeederOfSize(dir string, size int, pieceLen int64) ([]byte, int) {
 	cc.Seed = true
 	cc.NoDHT = true
 	cc.DisableTrackers = true
+	// PEX is the last discovery path left once DHT and trackers are off, and it
+	// defeats the isolation they buy. Every spec seeds the same deterministic
+	// payload, so one infohash is shared across the suite on loopback: the
+	// seeder gossips peers it saw for that infohash to the engine under test,
+	// which dials a client from another spec — usually one already closed. That
+	// connection establishes and never sends a chunk, leaving the engine at
+	// ActivePeers=1 with zero bytes until the spec times out.
+	cc.DisablePEX = true
 	cc.NoDefaultPortForwarding = true
 	cc.ListenPort = 0
 	cc.Logger = analog.Default.WithFilterLevel(analog.Error)
