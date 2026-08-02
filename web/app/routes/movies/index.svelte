@@ -5,6 +5,7 @@
 	import { formatRelative } from "../../lib/dates";
 	import { formatBytes } from "../../lib/format";
 	import { movieStatus } from "../../lib/status";
+	import { loadPref, savePref } from "../../lib/prefs";
 	import MoviesToolbar from "../../components/movies/MoviesToolbar.svelte";
 	import MovieGrid from "../../components/movies/MovieGrid.svelte";
 	import MovieList from "../../components/movies/MovieList.svelte";
@@ -28,14 +29,19 @@
 		"failed",
 	]);
 
+	// An explicit ?sort in the URL wins so shared links keep their ordering;
+	// otherwise fall back to the last sort this browser chose, then A→Z.
+	const SORT_PREF = "streamline:movies:sort";
+
 	function readParams() {
 		const p =
 			typeof window === "undefined"
 				? new URLSearchParams()
 				: new URLSearchParams(window.location.search);
+		const stored = loadPref(SORT_PREF)?.split("-") ?? [];
 		const rawTab = p.get("status") ?? "all";
-		const rawSort = p.get("sort") ?? "title";
-		const rawOrder = p.get("order") ?? "asc";
+		const rawSort = p.get("sort") ?? stored[0] ?? "title";
+		const rawOrder = p.get("order") ?? stored[1] ?? "asc";
 		const rawView = p.get("view") ?? "grid";
 		return {
 			tab: VALID_TABS.has(rawTab) ? rawTab : "all",
@@ -54,6 +60,12 @@
 	let order = $state<SortOrder>(initial.order);
 	let view = $state<View>(initial.view);
 	let monitoredOnly = $state(initial.monitoredOnly);
+
+	function setSort(s: SortKey, o: SortOrder) {
+		sort = s;
+		order = o;
+		savePref(SORT_PREF, `${s}-${o}`);
+	}
 
 	function openAddMovie() {
 		window.dispatchEvent(new CustomEvent("streamline:open-add-movie"));
@@ -169,6 +181,18 @@
 	// Held as ids rather than movie objects so a refetch can't strand a stale
 	// copy in the set. Reassigned on every change — Set mutation isn't reactive.
 	let selected = $state(new Set<number>());
+	// Grid cards only reveal their checkbox on hover, which leaves touch users
+	// with no way in — the toolbar toggle pins them open instead.
+	let selectMode = $state(false);
+
+	function setSelectMode(v: boolean) {
+		selectMode = v;
+		if (!v) clearSelection();
+	}
+	function selectAll() {
+		selectMode = true;
+		toggleAll(true);
+	}
 
 	function toggle(id: number, v: boolean) {
 		const next = new Set(selected);
@@ -222,14 +246,16 @@
 			{counts}
 			{monitoredOnly}
 			{monitoredCount}
+			{selectMode}
+			selectedCount={selected.size}
+			visibleCount={visibleMovies.length}
 			onTabChange={(t) => (tab = t)}
 			onQueryChange={(q) => (query = q)}
 			onMonitoredChange={(v) => (monitoredOnly = v)}
-			onSortChange={(s, o) => {
-				sort = s;
-				order = o;
-			}}
+			onSortChange={setSort}
 			onViewChange={(v) => (view = v)}
+			onSelectModeChange={setSelectMode}
+			onSelectAll={selectAll}
 			onAddMovie={openAddMovie}
 		/>
 
@@ -274,16 +300,18 @@
 					movies={visibleMovies}
 					{sort}
 					{order}
-					onSortChange={(s, o) => {
-						sort = s;
-						order = o;
-					}}
+					onSortChange={setSort}
 					{selected}
 					onToggle={toggle}
 					onToggleAll={toggleAll}
 				/>
 			{:else}
-				<MovieGrid movies={visibleMovies} {selected} onToggle={toggle} />
+				<MovieGrid
+					movies={visibleMovies}
+					{selected}
+					{selectMode}
+					onToggle={toggle}
+				/>
 			{/if}
 		</div>
 

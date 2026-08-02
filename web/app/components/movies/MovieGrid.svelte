@@ -11,14 +11,16 @@
 	let {
 		movies,
 		selected,
+		selectMode = false,
 		onToggle,
 	}: {
 		movies: Movie[];
 		selected: Set<number>;
+		selectMode?: boolean;
 		onToggle: (id: number, v: boolean) => void;
 	} = $props();
 
-	let selectionActive = $derived(selected.size > 0);
+	let selectionActive = $derived(selectMode || selected.size > 0);
 
 	const qc = useQueryClient();
 	const monitor = createMutation<Movie, Error, Movie>(() => ({

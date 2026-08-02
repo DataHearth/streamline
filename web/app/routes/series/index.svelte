@@ -3,6 +3,7 @@
 	import { createQuery } from "@tanstack/svelte-query";
 	import { api } from "../../lib/api";
 	import { formatRelative } from "../../lib/dates";
+	import { loadPref, savePref } from "../../lib/prefs";
 	import SeriesToolbar from "../../components/series/SeriesToolbar.svelte";
 	import type {
 		SeriesTab,
@@ -39,6 +40,10 @@
 		"episodes",
 	]);
 
+	// An explicit ?sort in the URL wins so shared links keep their ordering;
+	// otherwise fall back to the last sort this browser chose, then A→Z.
+	const SORT_PREF = "streamline:series:sort";
+
 	function readParams() {
 		const p =
 			typeof window === "undefined"
@@ -46,13 +51,15 @@
 				: new URLSearchParams(window.location.search);
 		const rawTab = (p.get("status") ?? "all") as SeriesTab;
 		const rawType = (p.get("type") ?? "all") as SeriesTypeFilter;
-		const rawSort = (p.get("sort") ?? "recent") as SeriesSort;
+		const rawSort = (p.get("sort") ??
+			loadPref(SORT_PREF) ??
+			"title") as SeriesSort;
 		const rawView = p.get("view") ?? "grid";
 		return {
 			tab: VALID_TABS.has(rawTab) ? rawTab : "all",
 			typeFilter: VALID_TYPES.has(rawType) ? rawType : "all",
 			query: p.get("q") ?? "",
-			sort: VALID_SORTS.has(rawSort) ? rawSort : "recent",
+			sort: VALID_SORTS.has(rawSort) ? rawSort : "title",
 			view: (rawView === "list" ? "list" : "grid") as View,
 			monitoredOnly: p.get("monitored") === "1",
 		};
@@ -66,6 +73,11 @@
 	let view = $state<View>(initial.view);
 	let monitoredOnly = $state(initial.monitoredOnly);
 
+	function setSort(s: SeriesSort) {
+		sort = s;
+		savePref(SORT_PREF, s);
+	}
+
 	function openAddSeries() {
 		window.dispatchEvent(new CustomEvent("streamline:open-add-series"));
 	}
@@ -77,7 +89,7 @@
 		if (typeFilter !== "all") p.set("type", typeFilter);
 		if (query) p.set("q", query);
 		if (monitoredOnly) p.set("monitored", "1");
-		if (sort !== "recent") p.set("sort", sort);
+		if (sort !== "title") p.set("sort", sort);
 		if (view !== "grid") p.set("view", view);
 		const search = p.toString();
 		const next = `${window.location.pathname}${search ? `?${search}` : ""}`;
@@ -189,6 +201,18 @@
 
 	// ── Selection ────────────────────────────────────────────────────────────
 	let selected = $state(new Set<number>());
+	// Grid cards only reveal their checkbox on hover, which leaves touch users
+	// with no way in — the toolbar toggle pins them open instead.
+	let selectMode = $state(false);
+
+	function setSelectMode(v: boolean) {
+		selectMode = v;
+		if (!v) clearSelection();
+	}
+	function selectAll() {
+		selectMode = true;
+		toggleAll(true);
+	}
 
 	function toggle(id: number, v: boolean) {
 		const next = new Set(selected);
@@ -241,12 +265,17 @@
 			{counts}
 			{monitoredOnly}
 			{monitoredCount}
+			{selectMode}
+			selectedCount={selected.size}
+			visibleCount={visibleSeries.length}
 			onTabChange={(t) => (tab = t)}
 			onTypeChange={(t) => (typeFilter = t)}
 			onQueryChange={(q) => (query = q)}
 			onMonitoredChange={(v) => (monitoredOnly = v)}
-			onSortChange={(s) => (sort = s)}
+			onSortChange={setSort}
 			onViewChange={(v) => (view = v)}
+			onSelectModeChange={setSelectMode}
+			onSelectAll={selectAll}
 			onAddSeries={openAddSeries}
 		/>
 
@@ -294,7 +323,12 @@
 					onToggleAll={toggleAll}
 				/>
 			{:else}
-				<SeriesGrid series={visibleSeries} {selected} onToggle={toggle} />
+				<SeriesGrid
+					series={visibleSeries}
+					{selected}
+					{selectMode}
+					onToggle={toggle}
+				/>
 			{/if}
 		</div>
 

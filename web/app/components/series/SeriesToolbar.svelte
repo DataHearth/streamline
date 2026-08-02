@@ -24,6 +24,7 @@
 	import { fly } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { cn } from "../../lib/cn";
+	import SelectionControls from "../shared/SelectionControls.svelte";
 
 	type View = "grid" | "list";
 
@@ -36,12 +37,17 @@
 		counts,
 		monitoredOnly,
 		monitoredCount,
+		selectMode,
+		selectedCount,
+		visibleCount,
 		onTabChange,
 		onTypeChange,
 		onQueryChange,
 		onMonitoredChange,
 		onSortChange,
 		onViewChange,
+		onSelectModeChange,
+		onSelectAll,
 		onAddSeries,
 	}: {
 		tab: SeriesTab;
@@ -52,12 +58,17 @@
 		counts: SeriesTabCounts;
 		monitoredOnly: boolean;
 		monitoredCount: number;
+		selectMode: boolean;
+		selectedCount: number;
+		visibleCount: number;
 		onTabChange: (t: SeriesTab) => void;
 		onTypeChange: (t: SeriesTypeFilter) => void;
 		onQueryChange: (q: string) => void;
 		onMonitoredChange: (v: boolean) => void;
 		onSortChange: (s: SeriesSort) => void;
 		onViewChange: (v: View) => void;
+		onSelectModeChange: (v: boolean) => void;
+		onSelectAll: () => void;
 		onAddSeries: () => void;
 	} = $props();
 
@@ -88,7 +99,7 @@
 	let sortRoot = $state<HTMLDivElement | null>(null);
 
 	let currentSortLabel = $derived(
-		sortOptions.find((o) => o.key === sort)?.label ?? "Recently added",
+		sortOptions.find((o) => o.key === sort)?.label ?? "Title A→Z",
 	);
 
 	function selectSort(key: SeriesSort) {
@@ -298,5 +309,15 @@
 				{monitoredCount}
 			</span>
 		</button>
+
+		<div class="flex items-center gap-2 sm:ml-auto">
+			<SelectionControls
+				active={selectMode}
+				count={selectedCount}
+				total={visibleCount}
+				onActiveChange={onSelectModeChange}
+				{onSelectAll}
+			/>
+		</div>
 	</div>
 </div>

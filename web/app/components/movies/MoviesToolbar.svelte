@@ -11,6 +11,7 @@
 	import { fly } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { cn } from "../../lib/cn";
+	import SelectionControls from "../shared/SelectionControls.svelte";
 	import type { MovieCounts } from "../../lib/types";
 
 	type View = "grid" | "list";
@@ -26,11 +27,16 @@
 		counts,
 		monitoredOnly,
 		monitoredCount,
+		selectMode,
+		selectedCount,
+		visibleCount,
 		onTabChange,
 		onQueryChange,
 		onMonitoredChange,
 		onSortChange,
 		onViewChange,
+		onSelectModeChange,
+		onSelectAll,
 		onAddMovie,
 	}: {
 		tab: string;
@@ -40,6 +46,9 @@
 		view: View;
 		monitoredOnly: boolean;
 		monitoredCount: number;
+		selectMode: boolean;
+		selectedCount: number;
+		visibleCount: number;
 		// Only the per-status tallies are shown here; `trend` (from /movies/counts)
 		// isn't needed, so accept the client-computed counts without it.
 		counts: Omit<MovieCounts, "trend">;
@@ -48,6 +57,8 @@
 		onMonitoredChange: (v: boolean) => void;
 		onSortChange: (s: SortKey, o: SortOrder) => void;
 		onViewChange: (v: View) => void;
+		onSelectModeChange: (v: boolean) => void;
+		onSelectAll: () => void;
 		onAddMovie: () => void;
 	} = $props();
 
@@ -287,5 +298,15 @@
 				{monitoredCount}
 			</span>
 		</button>
+
+		<div class="flex items-center gap-2 sm:ml-auto">
+			<SelectionControls
+				active={selectMode}
+				count={selectedCount}
+				total={visibleCount}
+				onActiveChange={onSelectModeChange}
+				{onSelectAll}
+			/>
+		</div>
 	</div>
 </div>
