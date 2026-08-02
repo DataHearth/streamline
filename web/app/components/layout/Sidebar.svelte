@@ -23,6 +23,7 @@
 		TORRENT_PILLS,
 		torrentCountsQuery,
 		activityCurrent,
+		type IsActiveFn,
 	} from "../../lib/activity-nav";
 	import type {
 		MovieCounts,
@@ -40,7 +41,6 @@
 	}));
 	let version = $derived(systemQuery.data?.version ?? null);
 
-	type IsActiveFn = (path: string) => boolean;
 	let isActiveFn = $state<IsActiveFn>(() => false);
 	onMount(() => routifyIsActive.subscribe((fn) => (isActiveFn = fn)));
 
@@ -96,10 +96,12 @@
 	];
 	let activityActive = $derived(isActiveFn("/activity"));
 	let activityOpen = $state(false);
-	// Landing on any activity route unfolds the group, so the current page is
-	// always visible in the nav rather than hidden behind a collapsed row.
+	// Landing on any activity route unfolds the group so the current page is
+	// visible in the nav; leaving collapses it again. A manual toggle in
+	// between sticks — the effect only re-runs when the route crosses the
+	// activity boundary, not when activityOpen itself changes.
 	$effect(() => {
-		if (activityActive) activityOpen = true;
+		activityOpen = activityActive;
 	});
 	const torrentCounts = torrentCountsQuery();
 
@@ -231,13 +233,14 @@
 			</li>
 			{#if activityOpen}
 				{#each activityLinks as link (link.href)}
+					{@const current = activityCurrent(isActiveFn, link.href)}
 					<li class="ml-[11px] border-l border-border pl-2">
 						<a
 							href={link.href}
-							aria-current={activityCurrent(link.href) ? "page" : undefined}
+							aria-current={current ? "page" : undefined}
 							class={cn(
 								"flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] transition-colors",
-								activityCurrent(link.href)
+								current
 									? "bg-accent-soft font-medium text-accent-text"
 									: "text-fg-muted hover:bg-surface hover:text-fg",
 							)}

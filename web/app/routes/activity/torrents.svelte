@@ -5,6 +5,7 @@
 		useQueryClient,
 	} from "@tanstack/svelte-query";
 	import { api } from "../../lib/api";
+	import { engineDisabled } from "../../lib/activity-nav";
 	import { auth } from "../../lib/auth.svelte";
 	import { toast } from "../../lib/toast";
 	import type {
@@ -15,6 +16,7 @@
 		TorrentFilePriority,
 		AddTorrentRequest,
 	} from "../../lib/types";
+	import { Zap, ArrowUpRight } from "@lucide/svelte";
 	import ActivityToolbar from "../../components/activity/ActivityToolbar.svelte";
 	import TorrentTable from "../../components/activity/TorrentTable.svelte";
 	import TorrentDrawer from "../../components/activity/TorrentDrawer.svelte";
@@ -30,7 +32,9 @@
 	const torrents = createQuery<TorrentList>(() => ({
 		queryKey: ["activity", "torrents"],
 		queryFn: () => api<TorrentList>("/torrents"),
-		refetchInterval: 2000,
+		retry: (count, e) => !engineDisabled(e) && count < 1,
+		refetchInterval: (q) => (engineDisabled(q.state.error) ? false : 2000),
+		refetchOnWindowFocus: (q) => !engineDisabled(q.state.error),
 	}));
 	// The list stays light — files / peers / trackers come from a per-torrent
 	// detail query that polls only while the drawer is open (2 s), per the
@@ -108,10 +112,7 @@
 	}));
 
 	let torrentItems = $derived<Torrent[]>(torrents.data?.items ?? []);
-	let torrentsNotConfigured = $derived(
-		torrents.isError &&
-			(torrents.error as { status?: number } | null)?.status === 404,
-	);
+	let torrentsNotConfigured = $derived(engineDisabled(torrents.error));
 	let torrentRows = $derived.by<Torrent[]>(() => {
 		let out = torrentItems;
 		if (statusFilter.length)
@@ -161,12 +162,46 @@
 	<header class="mb-4">
 		<h1 class="text-2xl font-bold tracking-tight text-fg">Torrents</h1>
 		<p class="mt-1 text-sm text-fg-muted">
-			{torrentItems.length} torrent{torrentItems.length === 1 ? "" : "s"} · built-in
-			engine
+			{#if torrentsNotConfigured}
+				Built-in engine · disabled
+			{:else}
+				{torrentItems.length} torrent{torrentItems.length === 1 ? "" : "s"} · built-in
+				engine
+			{/if}
 		</p>
 	</header>
 
-	{#if !torrentsNotConfigured}
+	{#if torrentsNotConfigured}
+		<div
+			class="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border bg-bg-elevated px-5 py-20 text-center"
+		>
+			<div
+				class="grid h-12 w-12 place-items-center rounded-full bg-accent-soft text-accent"
+			>
+				<Zap size={22} aria-hidden="true" />
+			</div>
+			<div>
+				<p class="text-sm font-semibold text-fg">
+					The built-in client isn’t enabled
+				</p>
+				<p class="mx-auto mt-1 max-w-sm text-xs text-fg-muted">
+					Enable Streamline’s built-in BitTorrent engine to add and manage
+					torrents from here.
+				</p>
+			</div>
+			{#if auth.isAdmin}
+				<a
+					href="/settings/download-clients"
+					class="inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-3.5 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover"
+				>
+					Enable in Settings
+					<ArrowUpRight size={15} aria-hidden="true" />
+				</a>
+			{:else}
+				<p class="text-xs text-fg-subtle">Ask an admin to enable it in Settings.</p>
+			{/if}
+		</div>
+	{:else}
 		<div
 			class="mb-4 grid grid-cols-2 gap-4 rounded-lg border border-border bg-bg-elevated px-5 py-4 sm:grid-cols-4"
 		>
@@ -211,27 +246,26 @@
 				</div>
 			</div>
 		</div>
+
+		<ActivityToolbar
+			view="torrents"
+			{statusFilter}
+			{search}
+			onStatusFilterChange={(s) => (statusFilter = s)}
+			onSearchChange={(q) => (search = q)}
+			onAddTorrent={() => (addOpen = true)}
+			canAddTorrent={auth.isAdmin}
+		/>
+
+		<TorrentTable
+			rows={torrentRows}
+			loading={torrents.isPending}
+			error={torrents.error ?? null}
+			canControl={auth.isAdmin}
+			{selectedHash}
+			onOpen={(h) => (selectedHash = h)}
+		/>
 	{/if}
-
-	<ActivityToolbar
-		view="torrents"
-		{statusFilter}
-		{search}
-		onStatusFilterChange={(s) => (statusFilter = s)}
-		onSearchChange={(q) => (search = q)}
-		onAddTorrent={() => (addOpen = true)}
-		canAddTorrent={auth.isAdmin && !torrentsNotConfigured}
-	/>
-
-	<TorrentTable
-		rows={torrentRows}
-		loading={torrents.isPending && !torrentsNotConfigured}
-		error={torrentsNotConfigured ? null : (torrents.error ?? null)}
-		notConfigured={torrentsNotConfigured}
-		canControl={auth.isAdmin}
-		{selectedHash}
-		onOpen={(h) => (selectedHash = h)}
-	/>
 </div>
 
 <TorrentDrawer

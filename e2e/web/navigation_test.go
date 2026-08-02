@@ -53,6 +53,14 @@ var _ = Describe("Shell navigation", Label("e2e"), func() {
 			Expect(page.MustElementR("h1", "^"+section.heading+"$").MustText()).
 				To(Equal(section.heading))
 			expectPath(page, section.href)
+			// The highlight has to follow the route. A nav that derives "current"
+			// from a non-reactive source keeps lighting up the page it was left
+			// on, so assert exactly one link claims it and that it's this one.
+			current := page.MustElements(
+				`aside[aria-label="Primary navigation"] a[aria-current="page"]`,
+			)
+			Expect(current).To(HaveLen(1))
+			Expect(*current[0].MustAttribute("href")).To(Equal(section.href))
 		}
 	})
 

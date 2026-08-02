@@ -4,8 +4,15 @@
 // is its own route and carries live status pills in the nav.
 
 import { createQuery } from "@tanstack/svelte-query";
-import { api } from "./api";
+import { api, ApiError } from "./api";
 import type { TorrentList } from "./types";
+
+// /torrents 404s while the built-in engine is off, and it can't come back
+// without a config change. Refetching a query that has never held data resets
+// it to `pending` (TanStack's fetchState), so polling a permanent 404 flips
+// the UI between loading and empty forever — every refetch path checks this.
+export const engineDisabled = (e: unknown) =>
+	e instanceof ApiError && e.status === 404;
 
 // The three states worth watching at a glance. Completed/paused torrents are
 // not news, so they stay on the page's own filter row.
@@ -24,7 +31,7 @@ export function torrentCountsQuery() {
 		queryKey: ["activity", "torrents"],
 		queryFn: () => api<TorrentList>("/torrents"),
 		retry: false,
-		refetchInterval: 15000,
+		refetchInterval: (q) => (engineDisabled(q.state.error) ? false : 15000),
 	}));
 	return {
 		get counts(): TorrentCounts {
@@ -36,7 +43,14 @@ export function torrentCountsQuery() {
 	};
 }
 
-export function activityCurrent(href: string): boolean {
-	if (typeof window === "undefined") return false;
-	return window.location.pathname === href.split("?")[0];
-}
+export type IsActiveFn = (
+	path: string,
+	params?: Record<string, string>,
+	options?: { recursive?: boolean },
+) => boolean;
+
+// Routify's isActive matches the whole chain, so "/activity" also reports
+// active on /activity/torrents. Non-recursive resolves to the index node
+// instead, pinning each link to its own route.
+export const activityCurrent = (isActive: IsActiveFn, href: string) =>
+	isActive(href, {}, { recursive: false });

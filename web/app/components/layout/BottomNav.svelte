@@ -28,10 +28,10 @@
 		TORRENT_PILLS,
 		torrentCountsQuery,
 		activityCurrent,
+		type IsActiveFn,
 	} from "../../lib/activity-nav";
 	import Avatar from "./Avatar.svelte";
 
-	type IsActiveFn = (path: string) => boolean;
 	let isActiveFn = $state<IsActiveFn>(() => false);
 	onMount(() => routifyIsActive.subscribe((fn) => (isActiveFn = fn)));
 
@@ -198,14 +198,15 @@
 						class="absolute bottom-full left-1/2 z-50 mb-2 w-56 -translate-x-1/2 overflow-hidden rounded-xl border border-border-strong bg-bg-elevated p-1 shadow-4"
 					>
 						{#each MENUS[tab.label] ?? [] as link (link.href)}
+							{@const current = activityCurrent(isActiveFn, link.href)}
 							<a
 								href={link.href}
 								role="menuitem"
 								onclick={closeMenu}
-								aria-current={activityCurrent(link.href) ? "page" : undefined}
+								aria-current={current ? "page" : undefined}
 								class={cn(
 									"flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-[13.5px] font-medium transition-colors",
-									activityCurrent(link.href)
+									current
 										? "bg-accent-soft text-accent-text"
 										: "text-fg-muted hover:bg-surface hover:text-fg",
 								)}
