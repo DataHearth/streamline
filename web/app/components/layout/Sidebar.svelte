@@ -10,12 +10,20 @@
 		Inbox,
 		Settings,
 		LogOut,
+		ChevronDown,
+		ListVideo,
+		Magnet,
 	} from "@lucide/svelte";
 	import { isActive as routifyIsActive } from "@roxi/routify";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { api } from "../../lib/api";
 	import { auth } from "../../lib/auth.svelte";
 	import { cn } from "../../lib/cn";
+	import {
+		TORRENT_PILLS,
+		torrentCountsQuery,
+		activityCurrent,
+	} from "../../lib/activity-nav";
 	import type {
 		MovieCounts,
 		TVShowCounts,
@@ -74,13 +82,26 @@
 		{ label: "Series", href: "/series", icon: Tv },
 	];
 	let opsItems = $derived([
-		{ label: "Activity", href: "/activity", icon: Activity },
 		...(auth.isAdmin
 			? [{ label: "Imports", href: "/library/imports", icon: FolderInput }]
 			: []),
 		{ label: "Calendar", href: "/calendar", icon: CalendarDays },
 		{ label: "Requests", href: "/requests", icon: Inbox },
 	]);
+
+	// Activity covers two routes, so the nav row opens instead of navigating.
+	const activityLinks = [
+		{ label: "Queue & History", href: "/activity", icon: ListVideo },
+		{ label: "Torrents", href: "/activity/torrents", icon: Magnet },
+	];
+	let activityActive = $derived(isActiveFn("/activity"));
+	let activityOpen = $state(false);
+	// Landing on any activity route unfolds the group, so the current page is
+	// always visible in the nav rather than hidden behind a collapsed row.
+	$effect(() => {
+		if (activityActive) activityOpen = true;
+	});
+	const torrentCounts = torrentCountsQuery();
 
 	let roleLabel = $derived.by(() => {
 		const r = auth.user?.role;
@@ -185,6 +206,76 @@
 			Operations
 		</div>
 		<ul class="flex flex-col gap-px pb-3">
+			<li>
+				<button
+					type="button"
+					onclick={() => (activityOpen = !activityOpen)}
+					aria-expanded={activityOpen}
+					class={cn(
+						itemBase,
+						"w-full",
+						activityActive ? itemActive : itemInactive,
+					)}
+				>
+					<Activity size={18} class="shrink-0" />
+					<span class="flex-1 truncate text-left">Activity</span>
+					<ChevronDown
+						size={14}
+						class={cn(
+							"shrink-0 transition-transform duration-150",
+							activityOpen && "rotate-180",
+						)}
+						aria-hidden="true"
+					/>
+				</button>
+			</li>
+			{#if activityOpen}
+				{#each activityLinks as link (link.href)}
+					<li class="ml-[11px] border-l border-border pl-2">
+						<a
+							href={link.href}
+							aria-current={activityCurrent(link.href) ? "page" : undefined}
+							class={cn(
+								"flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] transition-colors",
+								activityCurrent(link.href)
+									? "bg-accent-soft font-medium text-accent-text"
+									: "text-fg-muted hover:bg-surface hover:text-fg",
+							)}
+						>
+							<link.icon size={15} class="shrink-0" />
+							<span class="min-w-0 flex-1 truncate">{link.label}</span>
+							{#if link.href === "/activity" && pendingAdoptions > 0}
+								<span
+									class="shrink-0 rounded-full bg-status-wanted/20 px-1.5 py-px font-mono text-[10.5px] tabular-nums text-status-wanted"
+									title="Adopted torrents need attention"
+								>
+									{pendingAdoptions.toLocaleString()}
+								</span>
+							{/if}
+							{#if link.href === "/activity/torrents"}
+								<span
+									class="flex shrink-0 items-center gap-1.5 font-mono text-[10px] tabular-nums leading-none text-fg-subtle"
+								>
+									{#each TORRENT_PILLS as p (p.key)}
+										{#if (torrentCounts.counts[p.key] ?? 0) > 0}
+											<span
+												class="flex items-center gap-[3px]"
+												title="{torrentCounts.counts[p.key]} {p.key}"
+											>
+												<span
+													class="h-[5px] w-[5px] rounded-full"
+													style:background-color="var(--status-{p.dot})"
+												></span>
+												{torrentCounts.counts[p.key]}
+											</span>
+										{/if}
+									{/each}
+								</span>
+							{/if}
+						</a>
+					</li>
+				{/each}
+			{/if}
 			{#each opsItems as item (item.href)}
 				{@const active = isActiveFn(item.href)}
 				<li>
@@ -200,13 +291,6 @@
 								class="shrink-0 rounded-full bg-status-wanted/20 px-1.5 py-px font-mono text-[10.5px] tabular-nums text-status-wanted"
 							>
 								{pendingRequests.toLocaleString()}
-							</span>
-						{:else if item.href === "/activity" && pendingAdoptions > 0}
-							<span
-								class="shrink-0 rounded-full bg-status-wanted/20 px-1.5 py-px font-mono text-[10.5px] tabular-nums text-status-wanted"
-								title="Adopted torrents need attention"
-							>
-								{pendingAdoptions.toLocaleString()}
 							</span>
 						{/if}
 					</a>

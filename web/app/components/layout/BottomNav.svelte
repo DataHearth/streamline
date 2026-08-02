@@ -7,6 +7,8 @@
 		Library,
 		Film,
 		Activity,
+		ListVideo,
+		Magnet,
 		Tv,
 		CalendarDays,
 		Inbox,
@@ -22,6 +24,11 @@
 	import type { RequestCounts } from "../../lib/types";
 	import { auth } from "../../lib/auth.svelte";
 	import { cn } from "../../lib/cn";
+	import {
+		TORRENT_PILLS,
+		torrentCountsQuery,
+		activityCurrent,
+	} from "../../lib/activity-nav";
 	import Avatar from "./Avatar.svelte";
 
 	type IsActiveFn = (path: string) => boolean;
@@ -32,7 +39,7 @@
 	const primary = [
 		{ label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
 		{ label: "Library", icon: Library, expand: true },
-		{ label: "Activity", href: "/activity", icon: Activity },
+		{ label: "Activity", icon: Activity, expand: true },
 	];
 
 	// Everything the sidebar exposes on desktop but the bar can't hold, grouped
@@ -60,41 +67,45 @@
 	];
 	let moreActive = $derived(SECONDARY.some((p) => isActiveFn(p)));
 
-	// Library popover (mobile) — Movies + Series behind one generic bar cell.
-	const libraryLinks = [
-		{ label: "Movies", href: "/movies", icon: Film },
-		{ label: "Series", href: "/series", icon: Tv },
-	];
-	let libActive = $derived(isActiveFn("/movies") || isActiveFn("/series"));
-	let libOpen = $state(false);
-	let libTrigger = $state<HTMLButtonElement | null>(null);
-	let libMenu = $state<HTMLDivElement | null>(null);
-	function closeLib() {
-		libOpen = false;
+	// Expanding bar cells (mobile): one generic cell fans out to its real
+	// destinations. Activity is two destinations across two routes.
+	const MENUS: Record<string, SheetItem[]> = {
+		Library: [
+			{ label: "Movies", href: "/movies", icon: Film },
+			{ label: "Series", href: "/series", icon: Tv },
+		],
+		Activity: [
+			{ label: "Queue & History", href: "/activity", icon: ListVideo },
+			{ label: "Torrents", href: "/activity/torrents", icon: Magnet },
+		],
+	};
+	let menuOpen = $state("");
+	const torrentCounts = torrentCountsQuery();
+
+	function menuActive(label: string) {
+		return (MENUS[label] ?? []).some((l) => isActiveFn(l.href));
 	}
-	function toggleLib() {
-		libOpen = !libOpen;
+	function closeMenu() {
+		menuOpen = "";
 	}
-	function onLibDocClick(e: MouseEvent) {
-		const t = e.target as Node;
-		if (libMenu?.contains(t) || libTrigger?.contains(t)) return;
-		closeLib();
-	}
-	function onLibKey(e: KeyboardEvent) {
-		if (e.key === "Escape") {
-			closeLib();
-			libTrigger?.focus();
-		}
-	}
-	$effect(() => {
-		if (!libOpen) return;
-		document.addEventListener("mousedown", onLibDocClick);
-		document.addEventListener("keydown", onLibKey);
-		return () => {
-			document.removeEventListener("mousedown", onLibDocClick);
-			document.removeEventListener("keydown", onLibKey);
+	// Outside-click / Escape, without binding a ref inside the {#each}.
+	function menuPopover(node: HTMLElement) {
+		const onDoc = (e: MouseEvent) => {
+			if (!node.parentElement?.contains(e.target as Node)) closeMenu();
 		};
-	});
+		const onKey = (e: KeyboardEvent) => {
+			if (e.key === "Escape") closeMenu();
+		};
+		const t = setTimeout(() => document.addEventListener("mousedown", onDoc));
+		document.addEventListener("keydown", onKey);
+		return {
+			destroy() {
+				clearTimeout(t);
+				document.removeEventListener("mousedown", onDoc);
+				document.removeEventListener("keydown", onKey);
+			},
+		};
+	}
 
 	const requestCountsQuery = createQuery<RequestCounts>(() => ({
 		queryKey: ["requests", "counts"],
@@ -158,53 +169,76 @@
 		{#if tab.expand}
 			<div class="relative flex min-w-0">
 				<button
-					bind:this={libTrigger}
 					type="button"
-					onclick={toggleLib}
+					onclick={() => (menuOpen = menuOpen === tab.label ? "" : tab.label)}
 					aria-haspopup="menu"
-					aria-expanded={libOpen}
-					aria-label="Library"
+					aria-expanded={menuOpen === tab.label}
+					aria-label={tab.label}
 					class={cn(
 						"relative flex w-full flex-col items-center justify-center gap-1 px-2 pt-2.5 pb-3 text-[10.5px] transition-colors",
-						libActive || libOpen
+						menuActive(tab.label) || menuOpen === tab.label
 							? "text-accent-text before:absolute before:inset-x-[18%] before:top-0 before:h-0.5 before:rounded-b-sm before:bg-accent"
 							: "text-fg-subtle hover:text-fg-muted",
 					)}
 				>
-					<tab.icon size={20} strokeWidth={libActive || libOpen ? 2 : 1.6} />
+					<tab.icon
+						size={20}
+						strokeWidth={menuActive(tab.label) || menuOpen === tab.label
+							? 2
+							: 1.6}
+					/>
 					<span>{tab.label}</span>
 				</button>
-				{#if libOpen}
+				{#if menuOpen === tab.label}
 					<div
-						bind:this={libMenu}
+						use:menuPopover
 						role="menu"
-						aria-label="Library"
+						aria-label={tab.label}
 						transition:fly={{ y: 8, duration: 160, easing: cubicOut }}
-						class="absolute bottom-full left-1/2 z-50 mb-2 w-44 -translate-x-1/2 overflow-hidden rounded-xl border border-border-strong bg-bg-elevated p-1 shadow-4"
+						class="absolute bottom-full left-1/2 z-50 mb-2 w-56 -translate-x-1/2 overflow-hidden rounded-xl border border-border-strong bg-bg-elevated p-1 shadow-4"
 					>
-						{#each libraryLinks as link (link.href)}
-							{@const active = isActiveFn(link.href)}
+						{#each MENUS[tab.label] ?? [] as link (link.href)}
 							<a
 								href={link.href}
 								role="menuitem"
-								onclick={closeLib}
-								aria-current={active ? "page" : undefined}
+								onclick={closeMenu}
+								aria-current={activityCurrent(link.href) ? "page" : undefined}
 								class={cn(
 									"flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-[13.5px] font-medium transition-colors",
-									active
+									activityCurrent(link.href)
 										? "bg-accent-soft text-accent-text"
 										: "text-fg-muted hover:bg-surface hover:text-fg",
 								)}
 							>
 								<link.icon size={18} class="shrink-0" />
-								<span>{link.label}</span>
+								<span class="min-w-0 flex-1">{link.label}</span>
+								{#if link.href === "/activity/torrents"}
+									<span
+										class="flex shrink-0 items-center gap-1.5 font-mono text-[10px] tabular-nums leading-none text-fg-subtle"
+									>
+										{#each TORRENT_PILLS as p (p.key)}
+											{#if (torrentCounts.counts[p.key] ?? 0) > 0}
+												<span
+													class="flex items-center gap-[3px]"
+													title="{torrentCounts.counts[p.key]} {p.key}"
+												>
+													<span
+														class="h-[5px] w-[5px] rounded-full"
+														style:background-color="var(--status-{p.dot})"
+													></span>
+													{torrentCounts.counts[p.key]}
+												</span>
+											{/if}
+										{/each}
+									</span>
+								{/if}
 							</a>
 						{/each}
 					</div>
 				{/if}
 			</div>
 		{:else}
-			{@const active = isActiveFn(tab.href)}
+			{@const active = isActiveFn(tab.href ?? "")}
 			<a
 				href={tab.href}
 				aria-current={active ? "page" : undefined}

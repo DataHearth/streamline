@@ -1,7 +1,5 @@
 <script lang="ts">
-	import { Search, X, Trash2, Magnet, ListFilter, Check } from "@lucide/svelte";
-	import { fly } from "svelte/transition";
-	import { cubicOut } from "svelte/easing";
+	import { Search, X, Trash2, Magnet } from "@lucide/svelte";
 	import { cn } from "../../lib/cn";
 
 	type View = "queue" | "history" | "torrents";
@@ -10,6 +8,7 @@
 		view,
 		statusFilter,
 		search,
+		counts,
 		onViewChange,
 		onStatusFilterChange,
 		onSearchChange,
@@ -21,7 +20,10 @@
 		view: View;
 		statusFilter: string[];
 		search: string;
-		onViewChange: (v: View) => void;
+		// Queue and History are two readings of one page, switched here; the
+		// torrents route fixes its view and passes neither.
+		counts?: { queue: number; history: number };
+		onViewChange?: (v: View) => void;
 		onStatusFilterChange: (s: string[]) => void;
 		onSearchChange: (q: string) => void;
 		onClearCompleted?: () => void;
@@ -34,28 +36,31 @@
 	// "importing"/"error" have no token of their own — mirror lib/format.pillStatus).
 	const CHIPS: Record<View, { key: string; label: string; dot: string }[]> = {
 		queue: [
-			{ key: "downloading", label: "Downloading", dot: "downloading" },
-			{ key: "importing", label: "Importing", dot: "grabbing" },
-			{ key: "paused", label: "Paused", dot: "paused" },
-			{ key: "error", label: "Error", dot: "failed" },
+			{ key: "downloading", label: "downloading", dot: "downloading" },
+			{ key: "importing", label: "importing", dot: "grabbing" },
+			{ key: "paused", label: "paused", dot: "paused" },
+			{ key: "error", label: "error", dot: "failed" },
 		],
 		history: [
-			{ key: "completed", label: "Completed", dot: "available" },
-			{ key: "failed", label: "Failed", dot: "failed" },
+			{ key: "completed", label: "completed", dot: "available" },
+			{ key: "failed", label: "failed", dot: "failed" },
 		],
 		torrents: [
-			{ key: "downloading", label: "Downloading", dot: "downloading" },
-			{ key: "stalled", label: "Stalled", dot: "stalled" },
-			{ key: "seeding", label: "Seeding", dot: "seeding" },
-			{ key: "completed", label: "Completed", dot: "completed" },
-			{ key: "paused", label: "Paused", dot: "paused" },
+			{ key: "downloading", label: "downloading", dot: "downloading" },
+			{ key: "stalled", label: "stalled", dot: "stalled" },
+			{ key: "seeding", label: "seeding", dot: "seeding" },
+			{ key: "completed", label: "completed", dot: "completed" },
+			{ key: "paused", label: "paused", dot: "paused" },
 		],
 	};
 
-	let chips = $derived(CHIPS[view]);
-	let filterOpen = $state(false);
-	let activeChips = $derived(chips.filter((c) => statusFilter.includes(c.key)));
+	const VIEWS: { key: View; label: string }[] = [
+		{ key: "queue", label: "Queue" },
+		{ key: "history", label: "History" },
+	];
 
+	let chips = $derived(CHIPS[view]);
+	let anyActive = $derived(chips.some((c) => statusFilter.includes(c.key)));
 	function toggleChip(key: string) {
 		onStatusFilterChange(
 			statusFilter.includes(key)
@@ -63,162 +68,133 @@
 				: [...statusFilter, key],
 		);
 	}
-
-	// Close the popover on outside click / Escape.
-	function filterPopover(node: HTMLElement) {
-		const onDoc = (e: MouseEvent) => {
-			if (!node.contains(e.target as Node)) filterOpen = false;
-		};
-		const onKey = (e: KeyboardEvent) => {
-			if (e.key === "Escape") filterOpen = false;
-		};
-		document.addEventListener("mousedown", onDoc);
-		document.addEventListener("keydown", onKey);
-		return {
-			destroy() {
-				document.removeEventListener("mousedown", onDoc);
-				document.removeEventListener("keydown", onKey);
-			},
-		};
-	}
 </script>
 
 <div
-	class="sticky top-16 z-20 -mx-4 mb-4 flex flex-wrap items-center gap-3 bg-bg-deep/85 px-4 pb-2 pt-3 backdrop-blur md:-mx-6 md:px-6 lg:-mx-8 lg:px-8"
+	class="sticky top-16 z-20 -mx-4 mb-4 flex flex-col gap-3 bg-bg-deep/85 px-4 pb-3 pt-3 backdrop-blur-md md:-mx-6 md:px-6 lg:-mx-8 lg:px-8"
 >
-	<div
-		class="relative inline-flex items-center gap-1 border-b border-border"
-		role="tablist"
-		aria-label="Activity view"
-	>
-		{#each [{ k: "queue", l: "Queue" }, { k: "history", l: "History" }, { k: "torrents", l: "Torrents" }] as t (t.k)}
-			{@const active = view === t.k}
-			<button
-				type="button"
-				role="tab"
-				aria-selected={active}
-				onclick={() => onViewChange(t.k as View)}
-				class={cn(
-					"relative flex items-center gap-1.5 px-4 py-3 text-[13px] font-medium transition",
-					active
-						? "text-fg after:absolute after:inset-x-3 after:-bottom-px after:h-0.5 after:bg-accent"
-						: "text-fg-subtle hover:text-fg",
-				)}
-			>
-				{t.l}
-			</button>
-		{/each}
-	</div>
-
-	<div class="relative" use:filterPopover>
-		<button
-			type="button"
-			onclick={() => (filterOpen = !filterOpen)}
-			aria-haspopup="true"
-			aria-expanded={filterOpen}
-			class={cn(
-				"inline-flex h-9 items-center gap-1.5 rounded-md border px-3 text-sm font-medium transition",
-				activeChips.length > 0
-					? "border-accent/60 bg-accent/10 text-accent"
-					: "border-border bg-bg-elevated text-fg-muted hover:border-border-strong hover:text-fg",
-			)}
-		>
-			<ListFilter size={15} aria-hidden="true" />
-			<span>Status</span>
-			{#if activeChips.length > 0}
-				<span
-					class="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold text-fg-on-accent"
-				>
-					{activeChips.length}
-				</span>
-			{/if}
-		</button>
-
-		{#if filterOpen}
+	{#if onViewChange}
+		<div class="flex flex-wrap items-center gap-2 md:gap-3">
 			<div
-				transition:fly={{ duration: 140, y: -4, easing: cubicOut }}
-				class="absolute left-0 top-full z-30 mt-1.5 w-52 origin-top overflow-hidden rounded-md border border-border-strong bg-bg-elevated p-1 shadow-4"
-				role="menu"
+				class="inline-flex shrink-0 items-center gap-0.5 rounded-md border border-border bg-bg-elevated p-[3px]"
+				role="group"
+				aria-label="List"
 			>
-				{#each chips as c (c.key)}
-					{@const on = statusFilter.includes(c.key)}
+				{#each VIEWS as v (v.key)}
 					<button
 						type="button"
-						role="menuitemcheckbox"
-						aria-checked={on}
-						onclick={() => toggleChip(c.key)}
-						class="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm text-fg-muted transition hover:bg-surface hover:text-fg"
+						onclick={() => onViewChange?.(v.key)}
+						aria-pressed={view === v.key}
+						class={cn(
+							"inline-flex shrink-0 items-center gap-1.5 rounded-sm px-3 py-1 text-[12.5px] font-medium transition",
+							view === v.key
+								? "bg-accent-soft text-accent-text"
+								: "text-fg-subtle hover:text-fg",
+						)}
 					>
-						<span
-							class={cn(
-								"grid h-4 w-4 shrink-0 place-items-center rounded border transition",
-							on
-								? "border-accent bg-accent text-fg-on-accent"
-								: "border-border-strong",
-							)}
-						>
-							{#if on}<Check size={11} aria-hidden="true" />{/if}
-						</span>
-						<span class="flex items-center gap-1.5">
-							<span
-								class="h-1.5 w-1.5 shrink-0 rounded-full"
-								style:background-color="var(--status-{c.dot})"
-							></span>
-							{c.label}
+						{v.label}
+						<span class="font-mono text-[10.5px] tabular text-fg-faint">
+							{v.key === "history"
+								? (counts?.history ?? 0)
+								: (counts?.queue ?? 0)}
 						</span>
 					</button>
 				{/each}
-				{#if activeChips.length > 0}
-					<div class="my-1 border-t border-border"></div>
+			</div>
+		</div>
+	{/if}
+
+	<div class="flex flex-wrap items-center gap-2 md:gap-3">
+		<!-- Status filters stay in the open as toggle pills: the set is small and
+		     view-specific, and a popover hid which filter was active. -->
+		<div
+			class="inline-flex max-w-full shrink-0 items-center gap-0.5 overflow-x-auto rounded-md border border-border bg-bg-elevated p-[3px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+			role="group"
+			aria-label="Status filter"
+		>
+			{#each chips as c (c.key)}
+				{@const on = statusFilter.includes(c.key)}
+				<button
+					type="button"
+					onclick={() => toggleChip(c.key)}
+					aria-pressed={on}
+					class={cn(
+						"inline-flex shrink-0 items-center gap-1.5 rounded-sm px-2.5 py-1 font-mono text-[11px] lowercase transition",
+						on
+							? "bg-accent-soft text-accent-text"
+							: "text-fg-subtle hover:text-fg",
+					)}
+				>
+					<span
+						class="h-1.5 w-1.5 shrink-0 rounded-full"
+						style:background-color="var(--status-{c.dot})"
+					></span>
+					{c.label}
+				</button>
+			{/each}
+			{#if anyActive}
+				<button
+					type="button"
+					onclick={() => onStatusFilterChange([])}
+					aria-label="Clear status filters"
+					title="Clear status filters"
+					class="grid h-6 w-6 shrink-0 place-items-center rounded-sm text-fg-faint transition hover:bg-surface hover:text-fg"
+				>
+					<X size={12} aria-hidden="true" />
+				</button>
+			{/if}
+		</div>
+
+		<div
+			class="search-wrap flex h-9 w-full items-center gap-2 rounded-md border border-border bg-bg-elevated px-3 transition focus-within:border-accent sm:w-56"
+		>
+			<Search class="h-3.5 w-3.5 text-fg-subtle" aria-hidden="true" />
+			<input
+				type="search"
+				value={search}
+				oninput={(e) => onSearchChange(e.currentTarget.value)}
+				placeholder={view === "torrents"
+					? "Filter name or hash…"
+					: "Filter title or movie…"}
+				aria-label="Filter activity"
+				class="min-w-0 flex-1 bg-transparent text-[13px] text-fg outline-none placeholder:text-fg-faint"
+			/>
+			{#if search}
+				<button
+					type="button"
+					onclick={() => onSearchChange("")}
+					aria-label="Clear search"
+					class="grid h-5 w-5 place-items-center rounded text-fg-faint transition hover:text-fg"
+				>
+					<X size={12} aria-hidden="true" />
+				</button>
+			{/if}
+		</div>
+
+		{#if (view === "torrents" && onAddTorrent && canAddTorrent) || (view === "history" && onClearCompleted)}
+			<div class="order-last ml-auto flex items-center gap-2 sm:order-none">
+				{#if view === "torrents" && onAddTorrent && canAddTorrent}
 					<button
 						type="button"
-						onclick={() => onStatusFilterChange([])}
-						class="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-xs font-medium text-fg-subtle transition hover:bg-surface hover:text-fg"
+						onclick={() => onAddTorrent?.()}
+						class="inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md bg-accent px-3.5 text-[12.5px] font-semibold text-fg-on-accent transition hover:bg-accent-hover hover:shadow-glow"
 					>
-						<X size={12} aria-hidden="true" />
-						Clear filters
+						<Magnet size={14} aria-hidden="true" />
+						Add torrent
+					</button>
+				{/if}
+				{#if view === "history" && onClearCompleted}
+					<button
+						type="button"
+						onclick={() => onClearCompleted?.()}
+						disabled={clearableCount === 0}
+						class="inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border border-border bg-bg-elevated px-3 text-[12.5px] font-medium text-fg-muted transition hover:border-border-strong hover:text-fg disabled:cursor-not-allowed disabled:opacity-50"
+					>
+						<Trash2 size={14} aria-hidden="true" />
+						Clear completed{clearableCount > 0 ? ` (${clearableCount})` : ""}
 					</button>
 				{/if}
 			</div>
 		{/if}
 	</div>
-
-	<div class="relative w-full sm:ml-auto sm:w-auto sm:flex-none">
-		<Search
-			size={15}
-			class="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-fg-faint"
-			aria-hidden="true"
-		/>
-		<input
-			type="search"
-			value={search}
-			oninput={(e) => onSearchChange(e.currentTarget.value)}
-			placeholder={view === "torrents"
-				? "Filter name or hash…"
-				: "Filter title or movie…"}
-			aria-label="Filter activity"
-			class="h-9 w-full min-w-0 rounded-md border border-border bg-bg-elevated pl-8 pr-3 text-sm text-fg placeholder:text-fg-faint focus:border-accent focus:outline-none sm:w-48"
-		/>
-	</div>
-	{#if view === "torrents" && onAddTorrent && canAddTorrent}
-		<button
-			type="button"
-			onclick={() => onAddTorrent?.()}
-			class="inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md bg-accent px-3.5 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover"
-		>
-			<Magnet size={15} aria-hidden="true" />
-			Add torrent
-		</button>
-	{/if}
-	{#if view === "history" && onClearCompleted}
-		<button
-			type="button"
-			onclick={() => onClearCompleted?.()}
-			disabled={clearableCount === 0}
-			class="inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border border-border bg-bg-elevated px-3 text-sm font-medium text-fg-muted transition hover:border-border-strong hover:text-fg disabled:cursor-not-allowed disabled:opacity-50"
-		>
-			<Trash2 size={14} aria-hidden="true" />
-			Clear completed{clearableCount > 0 ? ` (${clearableCount})` : ""}
-		</button>
-	{/if}
 </div>

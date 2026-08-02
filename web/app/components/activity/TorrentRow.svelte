@@ -21,7 +21,9 @@
 		onOpen: (hash: string) => void;
 	} = $props();
 
-	const pad = "py-3";
+	// w-px keeps a data column at its content width; the name column (w-full
+	// max-w-0) then absorbs everything left over instead of overflowing.
+	const pad = "w-px whitespace-nowrap py-3";
 	let fetching = $derived(torrent.status === "fetching");
 	let active = $derived(
 		torrent.status === "downloading" ||
@@ -42,7 +44,9 @@
 		<StatusPill status={torrent.status} size="sm" live={active} />
 	</td>
 
-	<td class={cn("min-w-0 px-2", pad)}>
+	<!-- w-full + max-w-0: the name column soaks up whatever width is left and
+	     truncates, rather than widening the table past its container. -->
+	<td class="w-full max-w-0 px-2 py-3">
 		{#if fetching && !torrent.name}
 			<div class="flex items-center gap-2">
 				<span class="italic text-fg-muted">Fetching metadata…</span>
@@ -70,7 +74,7 @@
 
 	<td class={cn("px-2", pad)}>
 		<div class="flex items-center gap-2">
-			<div class="w-20 sm:w-28">
+			<div class="w-14 sm:w-20">
 				<ProgressBar
 					value={fetching ? undefined : torrent.progress}
 					status={torrent.status}
