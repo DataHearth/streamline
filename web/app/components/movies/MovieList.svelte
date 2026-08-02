@@ -8,6 +8,7 @@
 	import { movieStatus } from "../../lib/status";
 	import Poster from "./Poster.svelte";
 	import StatusPill from "../shared/StatusPill.svelte";
+	import SelectBox from "../shared/SelectBox.svelte";
 	import MovieActionsMenu from "./MovieActionsMenu.svelte";
 	import type { Movie, MediaFile } from "../../lib/types";
 
@@ -19,12 +20,21 @@
 		sort,
 		order,
 		onSortChange,
+		selected,
+		onToggle,
+		onToggleAll,
 	}: {
 		movies: Movie[];
 		sort: SortKey;
 		order: SortOrder;
 		onSortChange: (s: SortKey, o: SortOrder) => void;
+		selected: Set<number>;
+		onToggle: (id: number, v: boolean) => void;
+		onToggleAll: (v: boolean) => void;
 	} = $props();
+
+	let pageSelected = $derived(movies.filter((m) => selected.has(m.id)).length);
+	let allSelected = $derived(movies.length > 0 && pageSelected === movies.length);
 
 	const qc = useQueryClient();
 	const monitor = createMutation<Movie, Error, Movie>(() => ({
@@ -75,6 +85,14 @@
 			class="bg-bg-elevated/95 text-[10px] uppercase tracking-[0.12em] text-fg-faint"
 		>
 			<tr class="border-b border-border">
+				<th scope="col" class="w-10 pl-3 pr-0 py-2.5">
+					<SelectBox
+						checked={allSelected}
+						indeterminate={pageSelected > 0 && !allSelected}
+						onChange={(v) => onToggleAll(v)}
+						label={allSelected ? "Deselect all" : "Select all"}
+					/>
+				</th>
 				<th scope="col" class="w-12 px-3 py-2.5" aria-hidden="true"></th>
 				<th
 					scope="col"
@@ -134,9 +152,20 @@
 		</thead>
 		<tbody>
 			{#each movies as movie (movie.id)}
+				{@const isSel = selected.has(movie.id)}
 				<tr
-					class="group border-b border-border last:border-b-0 transition hover:bg-surface"
+					class={cn(
+						"group border-b border-border last:border-b-0 transition",
+						isSel ? "bg-accent-soft" : "hover:bg-surface",
+					)}
 				>
+					<td class="pl-3 pr-0 py-2">
+						<SelectBox
+							checked={isSel}
+							onChange={(v) => onToggle(movie.id, v)}
+							label={isSel ? `Deselect ${movie.title}` : `Select ${movie.title}`}
+						/>
+					</td>
 					<td class="px-3 py-2">
 						<a
 							href="/movies/{movie.id}"

@@ -28,7 +28,9 @@
 		variant = "toolbar",
 	}: {
 		items: KebabItem[];
-		variant?: "toolbar" | "card";
+		// "bar" sits inside the bulk-action bar, which already supplies the
+		// elevated surface — so it stays borderless and matches the sibling pills.
+		variant?: "toolbar" | "card" | "bar";
 	} = $props();
 
 	let open = $state(false);
@@ -144,7 +146,9 @@
 		"grid place-items-center transition focus:outline-none focus:ring-2 focus:ring-accent-ring",
 		variant === "card"
 			? "h-7 w-7 rounded-full border border-white/10 bg-black/65 text-white backdrop-blur-sm hover:bg-black/80"
-			: "h-10 w-10 rounded-md border border-border-strong bg-white/[0.08] text-fg backdrop-blur-sm hover:bg-white/[0.14]",
+			: variant === "bar"
+				? "h-9 w-9 rounded-md border border-border bg-bg-elevated text-fg-muted hover:border-border-strong hover:text-fg"
+				: "h-10 w-10 rounded-md border border-border-strong bg-white/[0.08] text-fg backdrop-blur-sm hover:bg-white/[0.14]",
 	)}
 >
 	{#if variant === "card"}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from "svelte";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { api } from "../../lib/api";
 	import { formatRelative } from "../../lib/dates";
@@ -8,6 +9,7 @@
 	import MovieGrid from "../../components/movies/MovieGrid.svelte";
 	import MovieList from "../../components/movies/MovieList.svelte";
 	import MoviesEmpty from "../../components/movies/MoviesEmpty.svelte";
+	import MovieBulkActions from "../../components/movies/MovieBulkActions.svelte";
 	import type {
 		Movie,
 		PaginatedMovies,
@@ -162,6 +164,34 @@
 		query = "";
 		monitoredOnly = false;
 	}
+
+	// ── Selection ────────────────────────────────────────────────────────────
+	// Held as ids rather than movie objects so a refetch can't strand a stale
+	// copy in the set. Reassigned on every change — Set mutation isn't reactive.
+	let selected = $state(new Set<number>());
+
+	function toggle(id: number, v: boolean) {
+		const next = new Set(selected);
+		if (v) next.add(id);
+		else next.delete(id);
+		selected = next;
+	}
+	function toggleAll(v: boolean) {
+		if (!v) return clearSelection();
+		selected = new Set(visibleMovies.map((m) => m.id));
+	}
+	function clearSelection() {
+		if (selected.size > 0) selected = new Set();
+	}
+
+	// A selection made under one filter is meaningless under the next, and the
+	// bar would keep acting on rows the user can no longer see.
+	$effect(() => {
+		tab;
+		query;
+		monitoredOnly;
+		untrack(clearSelection);
+	});
 </script>
 
 <div class="flex flex-col">
@@ -248,10 +278,21 @@
 						sort = s;
 						order = o;
 					}}
+					{selected}
+					onToggle={toggle}
+					onToggleAll={toggleAll}
 				/>
 			{:else}
-				<MovieGrid movies={visibleMovies} />
+				<MovieGrid movies={visibleMovies} {selected} onToggle={toggle} />
 			{/if}
 		</div>
+
+		<MovieBulkActions
+			movies={visibleMovies}
+			{selected}
+			total={visibleMovies.length}
+			onSelectAll={() => toggleAll(true)}
+			onClear={clearSelection}
+		/>
 	{/if}
 </div>

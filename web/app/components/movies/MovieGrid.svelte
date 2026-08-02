@@ -10,9 +10,15 @@
 
 	let {
 		movies,
+		selected,
+		onToggle,
 	}: {
 		movies: Movie[];
+		selected: Set<number>;
+		onToggle: (id: number, v: boolean) => void;
 	} = $props();
+
+	let selectionActive = $derived(selected.size > 0);
 
 	const qc = useQueryClient();
 	const monitor = createMutation<Movie, Error, Movie>(() => ({
@@ -52,7 +58,13 @@
 	class="grid gap-x-4 gap-y-6 grid-cols-[repeat(auto-fill,minmax(160px,1fr))] md:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] xl:grid-cols-[repeat(auto-fill,minmax(200px,240px))]"
 >
 	{#each movies as movie (movie.id)}
-		<PosterCard movie={enrich(movie)} onMonitor={() => monitor.mutate(movie)}>
+		<PosterCard
+			movie={enrich(movie)}
+			onMonitor={() => monitor.mutate(movie)}
+			selected={selected.has(movie.id)}
+			{selectionActive}
+			onSelect={(v) => onToggle(movie.id, v)}
+		>
 			{#snippet kebab()}
 				<MovieActionsMenu {movie} />
 			{/snippet}

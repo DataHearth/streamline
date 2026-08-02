@@ -6,6 +6,7 @@
 	import Poster from "../movies/Poster.svelte";
 	import StatusPill from "./StatusPill.svelte";
 	import ProgressBar from "./ProgressBar.svelte";
+	import SelectBox from "./SelectBox.svelte";
 	import type { StatusKind } from "./StatusPill.svelte";
 
 	type PosterMovie = {
@@ -30,6 +31,9 @@
 		posterSrc,
 		onMonitor,
 		onSearch,
+		selected = false,
+		selectionActive = false,
+		onSelect,
 		kebab,
 	}: {
 		movie: PosterMovie;
@@ -41,11 +45,25 @@
 		posterSrc?: string;
 		onMonitor?: () => void;
 		onSearch?: () => void;
+		// Selection is opt-in: pass onSelect to make the card selectable. The
+		// checkbox hides behind hover until something is selected, so ordinary
+		// browsing keeps the poster art clean.
+		selected?: boolean;
+		selectionActive?: boolean;
+		onSelect?: (v: boolean) => void;
 		kebab?: Snippet;
 	} = $props();
 
 	let cardHref = $derived(href ?? `/movies/${movie.id}`);
 	let cardPoster = $derived(posterSrc ?? posterUrl(movie));
+
+	// While a selection is in progress the whole card becomes a selection
+	// target — clicking through to a detail page mid-triage loses the set.
+	function onCardClick(e: MouseEvent) {
+		if (!onSelect || !selectionActive) return;
+		e.preventDefault();
+		onSelect(!selected);
+	}
 
 	function stop(handler?: (e: MouseEvent) => void) {
 		return (e: MouseEvent) => {
@@ -65,10 +83,12 @@
 		size === "sm" && "w-[120px]",
 		size === "md" && "w-full",
 		size === "lg" && "w-[200px]",
+		selected && "shadow-[0_0_0_2px_var(--accent),0_24px_64px_rgb(0_0_0_/0.55)]",
 	)}
 >
 	<a
 		href={cardHref}
+		onclick={onCardClick}
 		class="relative block aspect-[2/3] w-full overflow-hidden rounded-lg focus:outline-none"
 	>
 		<div class="absolute inset-0 bg-bg-card"></div>
@@ -114,7 +134,15 @@
 			{/if}
 		</div>
 
-		<div class="absolute left-2 top-2">
+		<div
+			class={cn(
+				"absolute left-2 top-2 transition",
+				onSelect &&
+					(selectionActive
+						? "opacity-0"
+						: "group-hover:opacity-0 group-focus-within:opacity-0"),
+			)}
+		>
 			<StatusPill
 				status={movie.status}
 				size="sm"
@@ -134,6 +162,24 @@
 			</div>
 		{/if}
 	</a>
+
+	{#if onSelect}
+		<div
+			class={cn(
+				"absolute left-2 top-2 z-10 transition",
+				selectionActive
+					? "opacity-100"
+					: "pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100",
+			)}
+		>
+			<SelectBox
+				variant="card"
+				checked={selected}
+				onChange={(v) => onSelect(v)}
+				label={selected ? `Deselect ${movie.title}` : `Select ${movie.title}`}
+			/>
+		</div>
+	{/if}
 
 	{#if onMonitor}
 		<button

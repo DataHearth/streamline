@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from "svelte";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { api } from "../../lib/api";
 	import { formatRelative } from "../../lib/dates";
@@ -12,6 +13,7 @@
 	import SeriesGrid from "../../components/series/SeriesGrid.svelte";
 	import SeriesList from "../../components/series/SeriesList.svelte";
 	import SeriesEmpty from "../../components/series/SeriesEmpty.svelte";
+	import SeriesBulkActions from "../../components/series/SeriesBulkActions.svelte";
 	import type { PaginatedTVShows, ScheduleList, TVShow } from "../../lib/types";
 
 	type View = "grid" | "list";
@@ -184,6 +186,31 @@
 		query = "";
 		monitoredOnly = false;
 	}
+
+	// ── Selection ────────────────────────────────────────────────────────────
+	let selected = $state(new Set<number>());
+
+	function toggle(id: number, v: boolean) {
+		const next = new Set(selected);
+		if (v) next.add(id);
+		else next.delete(id);
+		selected = next;
+	}
+	function toggleAll(v: boolean) {
+		if (!v) return clearSelection();
+		selected = new Set(visibleSeries.map((s) => s.id));
+	}
+	function clearSelection() {
+		if (selected.size > 0) selected = new Set();
+	}
+
+	$effect(() => {
+		tab;
+		typeFilter;
+		query;
+		monitoredOnly;
+		untrack(clearSelection);
+	});
 </script>
 
 <div class="flex flex-col">
@@ -260,10 +287,23 @@
 					onClear={clearFilters}
 				/>
 			{:else if view === "list"}
-				<SeriesList series={visibleSeries} />
+				<SeriesList
+					series={visibleSeries}
+					{selected}
+					onToggle={toggle}
+					onToggleAll={toggleAll}
+				/>
 			{:else}
-				<SeriesGrid series={visibleSeries} />
+				<SeriesGrid series={visibleSeries} {selected} onToggle={toggle} />
 			{/if}
 		</div>
+
+		<SeriesBulkActions
+			series={visibleSeries}
+			{selected}
+			total={visibleSeries.length}
+			onSelectAll={() => toggleAll(true)}
+			onClear={clearSelection}
+		/>
 	{/if}
 </div>

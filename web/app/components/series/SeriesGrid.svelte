@@ -8,7 +8,17 @@
 	import type { StatusKind } from "../shared/StatusPill.svelte";
 	import type { TVShow } from "../../lib/types";
 
-	let { series }: { series: TVShow[] } = $props();
+	let {
+		series,
+		selected,
+		onToggle,
+	}: {
+		series: TVShow[];
+		selected: Set<number>;
+		onToggle: (id: number, v: boolean) => void;
+	} = $props();
+
+	let selectionActive = $derived(selected.size > 0);
 
 	const qc = useQueryClient();
 	const monitor = createMutation<TVShow, Error, TVShow>(() => ({
@@ -59,6 +69,9 @@
 			href={`/series/${show.id}`}
 			posterSrc={tvPosterUrl(show.id)}
 			onMonitor={() => monitor.mutate(show)}
+			selected={selected.has(show.id)}
+			{selectionActive}
+			onSelect={(v) => onToggle(show.id, v)}
 		>
 			{#snippet kebab()}
 				<SeriesActionsMenu {show} />
