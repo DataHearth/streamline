@@ -151,5 +151,11 @@
 		gap: 16px;
 		overflow-x: auto;
 		scroll-snap-type: x mandatory;
+		/* The ‹ › buttons are the affordance; the native bar just adds a rule
+		   under the posters. */
+		scrollbar-width: none;
+	}
+	.poster-scroll::-webkit-scrollbar {
+		display: none;
 	}
 </style>
