@@ -29,7 +29,6 @@
 	import Dialog from "../../components/modals/Dialog.svelte";
 	import SeasonStrip from "../../components/series/SeasonStrip.svelte";
 	import EpisodeTable from "../../components/series/EpisodeTable.svelte";
-	import SeriesFiles from "../../components/series/SeriesFiles.svelte";
 	import SeriesManualSearchModal from "../../components/series/SeriesManualSearchModal.svelte";
 	import SeriesReleaseSearchModal from "../../components/series/SeriesReleaseSearchModal.svelte";
 	import SeriesKebabMenu from "../../components/series/SeriesKebabMenu.svelte";
@@ -44,21 +43,14 @@
 		TVShow,
 	} from "../../lib/types";
 
-	type Tab = "overview" | "episodes" | "files" | "history" | "cast";
+	type Tab = "overview" | "episodes" | "history" | "cast";
 	const TABS: { key: Tab; label: string }[] = [
 		{ key: "overview", label: "Overview" },
 		{ key: "episodes", label: "Episodes" },
-		{ key: "files", label: "Files" },
 		{ key: "history", label: "History" },
 		{ key: "cast", label: "Cast" },
 	];
-	const VALID_TABS = new Set<Tab>([
-		"overview",
-		"episodes",
-		"files",
-		"history",
-		"cast",
-	]);
+	const VALID_TABS = new Set<Tab>(["overview", "episodes", "history", "cast"]);
 
 	let routeParams = $state<Record<string, string>>({});
 	let navigate = $state<(path: string) => void>(() => {});
@@ -200,7 +192,7 @@
 
 	// Clears everything scoped to the show being navigated away from. `tab` is
 	// re-read from the URL rather than reset to a constant so browser
-	// back/forward onto /series/x?tab=files lands on the tab it was left on.
+	// back/forward onto /series/x?tab=cast lands on the tab it was left on.
 	function resetSeriesState() {
 		tab = readTab();
 		selectedSeason = null;
@@ -814,8 +806,6 @@
 					{/if}
 				</div>
 			{/if}
-		{:else if tab === "files"}
-			<SeriesFiles {seasons} seriesId={show.id} />
 		{:else if tab === "history"}
 			<div
 				class="rounded-lg border border-dashed border-border bg-bg-card/40 py-14 text-center"
