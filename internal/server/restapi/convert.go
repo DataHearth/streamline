@@ -842,6 +842,9 @@ func toIndexerResult(body *SearchResult) (indexer.SearchResult, bool) {
 	if body.Leechers != nil {
 		sr.Leechers = *body.Leechers
 	}
+	if body.Indexer != nil {
+		sr.Indexer = *body.Indexer
+	}
 	return sr, true
 }
 

@@ -136,9 +136,7 @@ var _ = Describe(
 					HaveField("Status", "downloading"),
 					HaveField("Title", fakes.ReleaseTitle),
 					HaveField("Movie.Id", movieID),
-					// No indexer assertion: a manual grab body loses the
-					// field on the way in (restapi.toIndexerResult drops it),
-					// so the record carries no indexer name.
+					HaveField("Indexer", "e2e-pipeline-indexer"),
 					HaveField("DownloadClient", "e2e-pipeline-client"),
 					HaveField("Size", int64(fakes.ReleaseSize)),
 				)), func() string {
