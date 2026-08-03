@@ -5,7 +5,7 @@
 
 import { createQuery } from "@tanstack/svelte-query";
 import { api, ApiError } from "./api";
-import type { TorrentList } from "./types";
+import type { DownloadClient, TorrentList } from "./types";
 
 // /torrents 404s while the built-in engine is off, and it can't come back
 // without a config change. Refetching a query that has never held data resets
@@ -25,11 +25,22 @@ export const TORRENT_PILLS = [
 export type TorrentCounts = Record<string, number>;
 
 export function torrentCountsQuery() {
+	// The engine is a download-clients entry; with it off, /torrents only ever
+	// 404s. Shares the settings sidebar's cached list rather than probing.
+	const clients = createQuery<DownloadClient[]>(() => ({
+		queryKey: ["download-clients"],
+		queryFn: () => api<DownloadClient[]>("/download-clients"),
+		retry: false,
+		staleTime: 300000,
+	}));
 	// Same key as the torrents page, so the nav rides its 2 s poll instead of
 	// adding a second one.
 	const q = createQuery<TorrentList>(() => ({
 		queryKey: ["activity", "torrents"],
 		queryFn: () => api<TorrentList>("/torrents"),
+		enabled: !!clients.data?.some(
+			(c) => c.client_type === "builtin" && c.enabled,
+		),
 		retry: false,
 		refetchInterval: (q) => (engineDisabled(q.state.error) ? false : 15000),
 	}));
