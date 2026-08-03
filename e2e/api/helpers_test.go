@@ -111,6 +111,16 @@ func decode(resp *http.Response, out any) {
 	Expect(json.NewDecoder(resp.Body).Decode(out)).To(Succeed())
 }
 
+// bodyText drains resp for an assertion's failure description, so a status
+// mismatch reports the error payload instead of just the number. It consumes
+// the body — call it only where the response is otherwise finished with.
+func bodyText(resp *http.Response) string {
+	GinkgoHelper()
+	raw, err := io.ReadAll(resp.Body)
+	Expect(err).NotTo(HaveOccurred())
+	return string(raw)
+}
+
 // libraryMovieID resolves a library movie by its TMDB id, returning 0 when the
 // movie is not in the library.
 func libraryMovieID(tmdbID uint32) uint32 {

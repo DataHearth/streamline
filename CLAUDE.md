@@ -73,6 +73,7 @@ Unified media management platform replacing the *arr stack (Radarr, Sonarr, Lida
 - Framework: Ginkgo (Describe/Context/It/By) + Gomega assertions
 - Mocks: Mockery (`go tool mockery`) — config in `.mockery.yaml`, generated to `internal/<pkg>/mocks/`
 - Run tests: `task test:unit` / `task test:integration` / `task test:e2e` / `task test` / `task test:coverage` — all `go tool ginkgo run -r` with label filters (e2e capped at `--timeout=1m15s`); forward extra args via `CLI_ARGS`
+- `task test:e2e:containers` — container-backed e2e (Docker + `STREAMLINE_E2E_CONTAINERS=1`, 5m timeout); hermetic `test:e2e` excludes `containers`-labeled specs.
 - Run single suite: `task test:unit -- ./internal/metadata/...`
 - Each Ginkgo suite has a dedicated `<pkg>_suite_test.go` with `TestX` + `RunSpecs` + `BeforeSuite(func() { DeferCleanup(testutil.InstallSlog()) })` — `testutil.InstallSlog()` routes `slog.Default` to GinkgoWriter for the suite's lifetime.
 - Mocks emit to `internal/<pkg>/mocks/mock_<Name>.go` — type `Mock<Name>`, constructor `NewMock<Name>(GinkgoT())`

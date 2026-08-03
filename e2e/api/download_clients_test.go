@@ -1,10 +1,13 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	"github.com/datahearth/streamline/e2e/containers"
 )
 
 type downloadClientView struct {
@@ -17,10 +20,22 @@ type downloadClientView struct {
 	PasswordSet bool   `json:"password_set"`
 }
 
+// deleteDownloadClientLater schedules the named client's removal. Callers
+// register it before their first assertion so a later failure cannot leak the
+// entity; 404 covers specs that delete it themselves.
+func deleteDownloadClientLater(name string) {
+	GinkgoHelper()
+	DeferCleanup(func() {
+		cleanup := del("/api/v1/download-clients/"+name, adminAuth, nil)
+		defer cleanup.Body.Close()
+		Expect(cleanup.StatusCode).To(BeElementOf(
+			http.StatusNoContent, http.StatusNotFound,
+		))
+	})
+}
+
 // createDownloadClient adds a disabled qBittorrent entry pointed at a closed
-// local port and schedules its removal. Cleanup is registered before the first
-// assertion so a later failure cannot leak the entity; 404 covers specs that
-// delete it themselves.
+// local port and schedules its removal.
 func createDownloadClient(name string) downloadClientView {
 	GinkgoHelper()
 	resp := post("/api/v1/download-clients", adminAuth, map[string]any{
@@ -35,13 +50,7 @@ func createDownloadClient(name string) downloadClientView {
 		"enabled":     false,
 	})
 	defer resp.Body.Close()
-	DeferCleanup(func() {
-		cleanup := del("/api/v1/download-clients/"+name, adminAuth, nil)
-		defer cleanup.Body.Close()
-		Expect(cleanup.StatusCode).To(BeElementOf(
-			http.StatusNoContent, http.StatusNotFound,
-		))
-	})
+	deleteDownloadClientLater(name)
 	Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 	var dc downloadClientView
 	decode(resp, &dc)
@@ -205,3 +214,55 @@ var _ = Describe("REST API download clients", Label("e2e"), func() {
 		Expect(draft.StatusCode).To(Equal(http.StatusForbidden))
 	})
 })
+
+var _ = Describe(
+	"Download clients against qBittorrent",
+	Label("e2e", "containers"),
+	func() {
+		It("tests a live qbittorrent client", func() {
+			containers.Require()
+			qb := containers.StartQBittorrent(downloadDir)
+
+			By("serving the suite download dir as the container's save path")
+			prefs, err := httpClient.Get(fmt.Sprintf(
+				"http://%s:%d/api/v2/app/preferences", qb.Host, qb.Port,
+			))
+			Expect(err).NotTo(HaveOccurred())
+			defer prefs.Body.Close()
+			Expect(prefs.StatusCode).To(Equal(http.StatusOK))
+			var settings struct {
+				SavePath string `json:"save_path"`
+			}
+			decode(prefs, &settings)
+			// A follow-up pipeline spec will write release bytes here and
+			// expect qBittorrent to recheck them in place.
+			Expect(settings.SavePath).To(Equal(downloadDir))
+
+			const name = "e2e-qbit-live"
+			created := post("/api/v1/download-clients", adminAuth, map[string]any{
+				"name":        name,
+				"client_type": "qbittorrent",
+				"host":        qb.Host,
+				"port":        qb.Port,
+				"auth_method": "password",
+				// The container whitelists every subnet, so these are accepted
+				// without being validated: the test below proves the client
+				// reaches the container and its login endpoint answers, not
+				// that credentials are carried correctly.
+				"username": "e2e",
+				"password": "e2e-secret",
+				"enabled":  true,
+			})
+			defer created.Body.Close()
+			deleteDownloadClientLater(name)
+			Expect(created.StatusCode).To(Equal(http.StatusCreated))
+
+			resp := post("/api/v1/download-clients/"+name+"/test", adminAuth, nil)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(
+				Equal(http.StatusOK),
+				"connection test failed: %s", bodyText(resp),
+			)
+		})
+	},
+)
