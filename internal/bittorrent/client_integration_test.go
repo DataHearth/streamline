@@ -214,8 +214,9 @@ func pieceCheckSettled(t *antorrent.Torrent) bool {
 // with a live unchoked seeder until the spec times out. Hashing is CPU-bound,
 // so a contended machine — CI especially — loses this race regularly.
 //
-// That is a real engine-level bug and it is still open. These specs are not the
-// place it gets exercised, so they wait the window out instead of racing it.
+// The wedge is anacrolix's lost writer wakeup (see the keepalive note in
+// New, which bounds it to 5s). These specs are not the place it gets
+// exercised, so they wait the window out instead of racing it.
 // The Consistently guards against the check not having *started* yet: a bare
 // "nothing hashing" poll is also true before the first piece is queued.
 func connectToSeeder(e *Engine, hash string, seederPort int) {
@@ -417,40 +418,11 @@ var _ = Describe("Engine download flow", Label("integration", "bittorrent"), fun
 			Should(Equal(download.StatusSeeding))
 	})
 
-	// DISABLED 2026-08-03 — flaky on contended machines (fails on CI's 2-core
-	// runners and reproducibly under local CPU saturation). It is disabled for
-	// its exposure, not because it is a bad spec: it starts 30 downloads per
-	// run, so it hits the engine bug below ~30x more often than any other spec.
-	//
-	// The bug is real and still open, in the engine and not in this spec.
-	// Adding a torrent hashes every piece against the download dir, and a piece
-	// mid-hash is ignored for requests (anacrolix v1.61 piece.go:303). A peer
-	// that handshakes inside that window finds nothing to want and never sends
-	// a request; when the check ends the pieces become requestable but that
-	// peer's request loop is never woken, so the torrent sits at zero bytes
-	// with a live unchoked seeder forever. Two repairs were tried and both
-	// failed: toggling DisallowDataDownload/AllowDataDownload (regressed
-	// pause/resume even on an idle box) and cycling file priorities through
-	// None (idle-stable, still stalled under load).
-	//
-	// connectToSeeder now waits the window out, which cut the rate a lot
-	// (55 clean load-soak attempts vs failures by attempt 33 before) but did
-	// not eliminate it — hence this skip.
-	//
-	// To re-enable: delete the Skip, then soak it. Saturate the cores
-	//   for i in $(seq 1 $(nproc)); do (while :; do :; done) & done
-	// and run
-	//   task test -- --randomize-all --until-it-fails ./internal/bittorrent/...
-	// It must survive well past 60 attempts. KILL THE LOAD GENERATORS BY PID
-	// afterwards — they orphan to init and pkill patterns miss them.
-	//
-	// The other specs here start one download each and can still flake the same
-	// way, far more rarely; if one starts failing, it is this bug, not a
-	// regression in whatever the spec covers.
+	// Starts 30 download cycles, which made it the loudest victim of the
+	// anacrolix lost-wakeup wedge (see the keepalive note in New): the
+	// engine's 5s keepalive heals a wedge well inside every wait here.
+	// Removing that mitigation makes this spec flake under CPU load again.
 	It("never writes piece completion into a closing store", func() {
-		Skip("flaky: engine drops requests when a peer attaches during the " +
-			"initial piece check — see the comment above this spec")
-
 		var sink logSink
 		teeEngineLogs(&sink)
 
