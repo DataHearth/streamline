@@ -22,10 +22,10 @@ import (
 )
 
 const (
-	// 5.2.1, not the 5.0.x line: /api/v2/torrents/add only reports the
-	// infohash of an uploaded .torrent (added_torrent_ids) from WebAPI
-	// 2.15 on. 5.0.3 answers a bare "Ok.", which leaves QBittorrent.
-	// AddTorrent with no hash to record and fails every file-based grab.
+	// 5.2.1 exercises the modern add path: /api/v2/torrents/add reports the
+	// uploaded torrent's infohash (added_torrent_ids) from WebAPI 2.15 on.
+	// Older lines answer a bare "Ok." and rely on AddTorrent's locally
+	// derived infohash fallback, which the unit specs cover.
 	qbImage = "lscr.io/linuxserver/qbittorrent:5.2.1"
 
 	// The image takes the WebUI port as a bare number; every other use needs

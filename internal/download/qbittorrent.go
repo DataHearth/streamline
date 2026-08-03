@@ -12,6 +12,8 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/anacrolix/torrent/metainfo"
+
 	"github.com/datahearth/streamline/internal/otelx"
 )
 
@@ -315,6 +317,21 @@ func (q *QBittorrent) AddTorrent(
 				"hash", h,
 			)
 			return h, nil
+		}
+	}
+	// qBittorrent before WebAPI 2.15 (≤5.0.x) answers a bare "Ok." with no
+	// envelope, so for .torrent uploads the infohash is derived from the same
+	// bytes that were just sent. Guarded on a parseable info dict: hashing an
+	// absent one would mint a plausible-looking hash for garbage input.
+	if len(src.Bytes) > 0 {
+		if mi, merr := metainfo.Load(bytes.NewReader(src.Bytes)); merr == nil &&
+			len(mi.InfoBytes) > 0 {
+			hash := mi.HashInfoBytes().HexString()
+			slog.DebugContext(ctx,
+				"qbittorrent torrent added (locally derived infohash)",
+				"hash", hash,
+			)
+			return hash, nil
 		}
 	}
 	return "", fmt.Errorf(
