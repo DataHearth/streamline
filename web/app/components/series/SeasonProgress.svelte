@@ -3,13 +3,7 @@
 	import type { EpisodeDisplayStatus } from "../../lib/status";
 	import type { Season } from "../../lib/types";
 
-	let {
-		season,
-		height = 4,
-	}: {
-		season: Season;
-		height?: 1 | 1.5 | 2 | 4;
-	} = $props();
+	let { season }: { season: Season } = $props();
 
 	type Seg = { key: string; count: number; token: string; label: string };
 
@@ -53,8 +47,7 @@
 </script>
 
 <div
-	class="seg-track flex w-full overflow-hidden rounded-full bg-white/[0.06]"
-	style:--h="{height}px"
+	class="flex h-1 w-full overflow-hidden rounded-full bg-white/[0.06]"
 	role="img"
 	aria-label="Season progress: {summary}"
 >
@@ -69,9 +62,6 @@
 </div>
 
 <style>
-	.seg-track {
-		height: var(--h);
-	}
 	.seg {
 		background-color: var(--c);
 	}

@@ -28,7 +28,7 @@
 			onclick={() => onSelect(s.number)}
 			aria-current={active ? "true" : undefined}
 			class={cn(
-				"flex w-40 shrink-0 flex-col gap-1.5 rounded-lg border p-3 text-left transition",
+				"flex w-48 shrink-0 flex-col gap-1.5 rounded-lg border p-3 text-left transition",
 				active
 					? "border-accent/60 bg-accent-soft"
 					: "border-border bg-bg-elevated hover:border-border-strong",
@@ -43,16 +43,16 @@
 			<div class="font-mono text-[11px] text-fg-muted">
 				<span class="text-fg">{s.available ?? 0}</span>/{s.total ?? 0}
 				{#if (s.missing ?? 0) > 0}
-					<span class="text-status-wanted">· {s.missing} want</span>
+					<span class="text-status-wanted">· {s.missing} wanted</span>
 				{/if}
 				{#if missing > 0}
-					<span class="text-status-missing">· {missing} miss</span>
+					<span class="text-status-missing">· {missing} missing</span>
 				{/if}
 				{#if (s.unaired ?? 0) > 0}
-					<span class="text-fg-faint">· {s.unaired} fut</span>
+					<span class="text-fg-faint">· {s.unaired} future</span>
 				{/if}
 			</div>
-			<SeasonProgress season={s} height={1} />
+			<SeasonProgress season={s} />
 		</button>
 	{/each}
 </div>
