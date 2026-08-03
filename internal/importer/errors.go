@@ -9,4 +9,6 @@ var (
 	// ErrMovieHasFile is returned when a grab imports into a movie that
 	// already has a media file and the record did not request replacement.
 	ErrMovieHasFile = errors.New("movie already has a media file")
+	// ErrEpisodeHasFile is the episode-grab equivalent of ErrMovieHasFile.
+	ErrEpisodeHasFile = errors.New("episode already has a media file")
 )
