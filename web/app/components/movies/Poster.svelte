@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onDestroy } from "svelte";
+	import { isPosterMissing, markPosterMissing } from "../../lib/posters";
 
 	let {
 		src,
@@ -28,6 +29,7 @@
 
 	function handleError() {
 		if (attempt >= retryDelays.length) {
+			markPosterMissing(src);
 			visible = false;
 			return;
 		}
@@ -41,7 +43,7 @@
 	onDestroy(() => clearTimeout(timer));
 </script>
 
-{#if visible}
+{#if visible && !isPosterMissing(src)}
 	<img
 		src={url}
 		{alt}
