@@ -14,6 +14,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/datahearth/streamline/e2e/apptest"
+	"github.com/datahearth/streamline/e2e/fakes"
 	"github.com/datahearth/streamline/internal/auth"
 )
 
@@ -101,6 +102,29 @@ func seedQualityProfile(name string) {
 		"upgrade_allowed":      true,
 	}, nil)).To(Equal(http.StatusCreated))
 	DeferCleanup(func() { deleteQualityProfile(name) })
+}
+
+// seedMovie adds the TMDB fake's canned movie and returns its library id, so a
+// spec can drive the UI against a populated library without going through the
+// add flow it isn't testing. Removal is registered before the caller's first
+// assertion: the empty-library specs share this app.
+func seedMovie() uint32 {
+	GinkgoHelper()
+	var movie struct {
+		ID uint32 `json:"id"`
+	}
+	Expect(apiDo(http.MethodPost, "/api/v1/movies", map[string]any{
+		"tmdb_id": fakes.MovieTMDBID,
+	}, &movie)).To(Equal(http.StatusCreated))
+	DeferCleanup(func() {
+		Expect(apiDo(
+			http.MethodDelete,
+			fmt.Sprintf("/api/v1/movies/%d", movie.ID),
+			nil,
+			nil,
+		)).To(Equal(http.StatusNoContent))
+	})
+	return movie.ID
 }
 
 // revokeInvitesFor deletes every invite bound to email — keyed by email

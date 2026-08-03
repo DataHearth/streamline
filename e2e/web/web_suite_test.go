@@ -12,6 +12,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/datahearth/streamline/e2e/apptest"
+	"github.com/datahearth/streamline/e2e/fakes"
 	"github.com/datahearth/streamline/internal/auth"
 	"github.com/datahearth/streamline/internal/testutil"
 )
@@ -40,7 +41,12 @@ var _ = BeforeSuite(func() {
 	}
 
 	DeferCleanup(testutil.InstallSlog())
-	_, baseURL = apptest.Start()
+	tmdb := fakes.NewTMDB()
+	_, baseURL = apptest.Start(map[string]any{
+		"metadata": map[string]any{
+			"tmdb": map[string]any{"base_url": tmdb.URL},
+		},
+	})
 	sessionJWT = mintSessionJWT()
 
 	// CHROME_PATH comes from the nix devshell; rod's auto-download
