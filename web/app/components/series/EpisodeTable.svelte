@@ -157,7 +157,7 @@
 						</button>
 					</td>
 					<td
-						class="hidden px-3 py-2.5 font-mono text-xs text-fg-muted md:table-cell"
+						class="hidden whitespace-nowrap px-3 py-2.5 font-mono text-xs text-fg-muted md:table-cell"
 					>
 						{#if ep.air_date}
 							{formatDateShort(ep.air_date)}
