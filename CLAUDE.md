@@ -39,10 +39,10 @@ Unified media management platform replacing the *arr stack (Radarr, Sonarr, Lida
 - `/api/docs` — Scalar UI shell (`web.Handler.APIDocs`). `/api/v1/openapi.yaml` — embedded spec. REST API mounted via `restapi.Mount`.
 - SPA fallback: `s.router.NotFound` → `web.Handler.SPAShell`, which writes the embedded `web/app/index.html` for every non-API, non-static path; Routify owns client-side routing incl. its own 404. Static assets served at `/static/*` from `fs.Sub(web.Assets, "static")` (wired in `web.Mount`).
 - `/posters/{kind}/{id}/poster.jpg` — poster proxy via `s.posters.Serve`.
-- Auth-middleware `ExcludePaths` is assembled in `internal/server/wire.go` (`/login`, `/register`, `/auth/login`, `/auth/register`, `/auth/oidc/`); matcher in `internal/auth/middleware.go`, paths ending `/` match as prefix.
+- Auth-middleware `ExcludePaths` is assembled in `internal/server/wire.go` (`/login`, `/register`, `/auth/login`, `/auth/register`, `/auth/oidc/`); matcher in `internal/server/middleware/auth.go`, paths ending `/` match as prefix.
 
 ## Auth & Sessions
-- Middleware splits transport by path prefix (`internal/auth/middleware.go`):
+- Middleware splits transport by path prefix (`internal/server/middleware/auth.go`):
   - `/api/v1/*` accepts only `Authorization: Bearer <jwt>` or `X-API-Key`. 401 JSON on failure. Cookies ignored.
   - Everything else authenticates via the `streamline_session` cookie (httpOnly, SameSite=Lax, Secure when TLS/X-Forwarded-Proto=https). 302 to `/login?next=<escaped>` on failure. Bearer ignored.
 - Webui auth routes (`internal/server/web/auth.go`, registered via `web.Mount` → `registerWebAuthRoutes`): `GET /auth/config`, `GET /auth/invite/{token}`, `POST /auth/login`, `POST /auth/register`, `POST /auth/logout`, `GET /auth/oidc/{name}/start`, `GET /auth/oidc/{name}/callback`. There is no `GET /login`/`/register` handler — those fall through to the SPA shell (Svelte renders `login.svelte`/`register.svelte`). Login/register take JSON, set the `streamline_session` cookie, and return `204` on success / `4xx` JSON on failure — no server-rendered HTML.
