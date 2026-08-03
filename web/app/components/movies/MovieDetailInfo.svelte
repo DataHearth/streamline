@@ -38,34 +38,26 @@
 		</h4>
 		{#if primary}
 			<dl class="mt-3 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-[12px]">
-				{#if primary.parsed_resolution}
-					<dt class="text-fg-subtle">Resolution</dt>
-					<dd class="text-right font-mono text-fg">
-						{primary.parsed_resolution}
-					</dd>
-				{/if}
-				{#if primary.parsed_codec}
-					<dt class="text-fg-subtle">Codec</dt>
-					<dd class="text-right font-mono text-fg">
-						{primary.parsed_codec}
-					</dd>
-				{/if}
-				{#if primary.parsed_source}
-					<dt class="text-fg-subtle">Source</dt>
-					<dd class="text-right font-mono text-fg">
-						{primary.parsed_source}
-					</dd>
-				{/if}
+				<dt class="text-fg-subtle">Resolution</dt>
+				<dd class="text-right font-mono text-fg">
+					{primary.parsed_resolution || "—"}
+				</dd>
+				<dt class="text-fg-subtle">Codec</dt>
+				<dd class="text-right font-mono text-fg">
+					{primary.parsed_codec || "—"}
+				</dd>
+				<dt class="text-fg-subtle">Source</dt>
+				<dd class="text-right font-mono text-fg">
+					{primary.parsed_source || "—"}
+				</dd>
 				<dt class="text-fg-subtle">Size</dt>
 				<dd class="text-right font-mono text-fg">
 					{totalSize(movie.media_files)}
 				</dd>
-				{#if primary.release_group}
-					<dt class="text-fg-subtle">Group</dt>
-					<dd class="text-right font-mono text-fg">
-						{primary.release_group}
-					</dd>
-				{/if}
+				<dt class="text-fg-subtle">Group</dt>
+				<dd class="text-right font-mono text-fg">
+					{primary.release_group || "—"}
+				</dd>
 			</dl>
 		{:else}
 			<p class="mt-3 text-[12px] text-fg-subtle">
