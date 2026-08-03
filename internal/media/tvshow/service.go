@@ -332,22 +332,29 @@ type SeasonView struct {
 }
 
 // DeriveSeasonViews computes per-season counts from an eager-loaded show.
-// available = episode has a media_file; unaired = air_date in the future;
-// missing = aired/undated *monitored* episode without a file. An unmonitored
-// episode the user opted out of counts toward Total only, so specials and
-// skipped episodes never inflate the missing rollups — Available + Missing +
-// Unaired is therefore <= Total.
+// An episode is in scope when it is monitored or already on disk: a special the
+// user opted out of never inflates the missing counts, but one that was
+// downloaded before being unmonitored still counts as something the library
+// has — so a fully-unmonitored season of downloaded files still reads as
+// available. available = episode has a media_file; unaired = air_date in the
+// future; missing = aired or undated without a file. Available + Missing +
+// Unaired therefore equals Total.
 func DeriveSeasonViews(show *ent.TVShow, now time.Time) []SeasonView {
 	views := make([]SeasonView, 0, len(show.Edges.Seasons))
 	for _, se := range show.Edges.Seasons {
-		v := SeasonView{Number: se.Number, Total: len(se.Edges.Episodes)}
+		v := SeasonView{Number: se.Number}
 		for _, e := range se.Edges.Episodes {
+			hasFile := len(e.Edges.MediaFiles) > 0
+			if !e.Monitored && !hasFile {
+				continue
+			}
+			v.Total++
 			switch {
-			case len(e.Edges.MediaFiles) > 0:
+			case hasFile:
 				v.Available++
 			case !e.AirDate.IsZero() && e.AirDate.After(now):
 				v.Unaired++
-			case e.Monitored:
+			default:
 				v.Missing++
 			}
 		}

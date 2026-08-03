@@ -231,11 +231,12 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 			Expect(v.Total).To(Equal(1))
 		})
 
-		It("never counts an unmonitored episode as missing", func() {
+		It("leaves a file-less unmonitored episode out of every count", func() {
 			show := &ent.TVShow{Edges: ent.TVShowEdges{Seasons: []*ent.Season{
 				{Number: 0, Edges: ent.SeasonEdges{Episodes: []*ent.Episode{
 					{ID: 1, Number: 1, AirDate: aired},
-					{ID: 2, Number: 2},
+					{ID: 2, Number: 2, AirDate: now.Add(24 * time.Hour)},
+					{ID: 3, Number: 3},
 				}}},
 			}}}
 
@@ -243,24 +244,49 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 			Expect(v.Missing).To(BeZero())
 			Expect(v.Available).To(BeZero())
 			Expect(v.Unaired).To(BeZero())
-			Expect(v.Total).To(Equal(2))
+			Expect(v.Total).To(BeZero())
 		})
 
-		It("still counts an unmonitored episode's file and air date", func() {
+		It("counts a downloaded unmonitored episode as available", func() {
 			show := &ent.TVShow{Edges: ent.TVShowEdges{Seasons: []*ent.Season{
 				{Number: 0, Edges: ent.SeasonEdges{Episodes: []*ent.Episode{
 					{ID: 1, Number: 1, AirDate: aired, Edges: ent.EpisodeEdges{
 						MediaFiles: []*ent.MediaFile{{ID: 1}},
 					}},
-					{ID: 2, Number: 2, AirDate: now.Add(24 * time.Hour)},
+					{ID: 2, Number: 2, AirDate: aired},
 				}}},
 			}}}
 
 			v := DeriveSeasonViews(show, now)[0]
 			Expect(v.Available).To(Equal(1))
-			Expect(v.Unaired).To(Equal(1))
+			Expect(v.Total).To(Equal(1))
 			Expect(v.Missing).To(BeZero())
 		})
+
+		It(
+			"keeps a season whole when monitored and unmonitored files mix",
+			func() {
+				show := &ent.TVShow{Edges: ent.TVShowEdges{Seasons: []*ent.Season{
+					{Number: 1, Edges: ent.SeasonEdges{Episodes: []*ent.Episode{
+						{
+							ID: 1, Number: 1, AirDate: aired, Monitored: true,
+							Edges: ent.EpisodeEdges{
+								MediaFiles: []*ent.MediaFile{{ID: 1}},
+							},
+						},
+						{ID: 2, Number: 2, AirDate: aired, Edges: ent.EpisodeEdges{
+							MediaFiles: []*ent.MediaFile{{ID: 2}},
+						}},
+						{ID: 3, Number: 3, AirDate: aired},
+					}}},
+				}}}
+
+				v := DeriveSeasonViews(show, now)[0]
+				Expect(v.Available).To(Equal(2))
+				Expect(v.Total).To(Equal(2))
+				Expect(v.Missing).To(BeZero())
+			},
+		)
 	})
 
 	Describe("FilterList status=missing", func() {
