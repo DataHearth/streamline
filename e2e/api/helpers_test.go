@@ -109,6 +109,31 @@ func decode(resp *http.Response, out any) {
 	Expect(json.NewDecoder(resp.Body).Decode(out)).To(Succeed())
 }
 
+// libraryMovieID resolves a library movie by its TMDB id, returning 0 when the
+// movie is not in the library.
+func libraryMovieID(tmdbID uint32) uint32 {
+	GinkgoHelper()
+	resp := get("/api/v1/movies?page=1&limit=100", adminAuth)
+	defer resp.Body.Close()
+	Expect(resp.StatusCode).To(Equal(http.StatusOK))
+	var page struct {
+		Items []struct {
+			Id     uint32 `json:"id"`
+			TmdbId uint32 `json:"tmdb_id"`
+		} `json:"items"`
+		Total uint32 `json:"total"`
+	}
+	decode(resp, &page)
+	// A miss must mean "not in the library", never "on a later page".
+	Expect(page.Total).To(BeNumerically("<=", 100))
+	for _, m := range page.Items {
+		if m.TmdbId == tmdbID {
+			return m.Id
+		}
+	}
+	return 0
+}
+
 // bootstrapIdentities logs the seed admin in, provisions a request_only user,
 // and mints that user an API key. Called once from BeforeSuite.
 func bootstrapIdentities() {

@@ -21,9 +21,10 @@ const (
 )
 
 // Start boots the real wired app (temp SQLite, seeded admin) on an ephemeral
-// port and returns its base URL. Teardown is registered via DeferCleanup;
-// call from BeforeSuite.
-func Start() string {
+// port and returns its base URL. Extra override maps merge on top of the base
+// config, letting a suite point external clients at its own fakes. Teardown is
+// registered via DeferCleanup; call from BeforeSuite.
+func Start(extra ...map[string]any) string {
 	GinkgoHelper()
 	// Same seam as the server suite: the HTTP access logger writes to
 	// stderr with no injection point; repoint it at GinkgoWriter.
@@ -34,7 +35,8 @@ func Start() string {
 	// SetupFile, not Setup: config-backed resource CRUD (quality profiles,
 	// indexers, download clients, media servers, schedules) goes through
 	// config.Update, which needs a backing file to write to.
-	configtest.SetupFile(map[string]any{
+	overrides := make([]map[string]any, 0, 1+len(extra))
+	overrides = append(overrides, map[string]any{
 		"auth": map[string]any{
 			"session_secret": "e2e-session-secret",
 			"seed_admin": map[string]any{
@@ -43,6 +45,8 @@ func Start() string {
 			},
 		},
 	})
+	overrides = append(overrides, extra...)
+	configtest.SetupFile(overrides...)
 
 	app, err := server.NewFromConfig(context.Background())
 	Expect(err).NotTo(HaveOccurred())

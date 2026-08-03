@@ -1,10 +1,13 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	"github.com/datahearth/streamline/e2e/fakes"
 )
 
 // releaseBody is a minimal well-formed SearchResult, enough to get past the
@@ -16,8 +19,9 @@ var releaseBody = map[string]any{
 	"seeders":      5,
 }
 
-// The library starts empty and TMDB is unreachable by design, so the movie
-// specs assert list/count shapes plus the not-found and RBAC envelopes.
+// The library starts empty and TMDB is answered by the in-process fake
+// (e2e/fakes), so the specs cover the add/detail/search happy paths on top of
+// the list, count, not-found and RBAC envelopes.
 var _ = Describe("REST API movies", Label("e2e"), func() {
 	It("lists movies with pagination metadata", func() {
 		resp := get("/api/v1/movies?page=1&limit=5", adminAuth)
@@ -54,6 +58,58 @@ var _ = Describe("REST API movies", Label("e2e"), func() {
 			counts.Wanted + counts.Downloading + counts.Available + counts.Failed,
 		))
 		Expect(counts.Trend).NotTo(BeNil())
+	})
+
+	It("adds a movie from TMDB and serves its detail", func() {
+		created := post("/api/v1/movies", adminAuth, map[string]any{
+			"tmdb_id": fakes.MovieTMDBID,
+		})
+		defer created.Body.Close()
+		Expect(created.StatusCode).To(Equal(http.StatusCreated))
+		var movie struct {
+			Id       uint32 `json:"id"`
+			Title    string `json:"title"`
+			Year     uint16 `json:"year"`
+			Overview string `json:"overview"`
+			Runtime  uint16 `json:"runtime"`
+			Status   string `json:"status"`
+		}
+		decode(created, &movie)
+		DeferCleanup(func() {
+			removed := del(
+				fmt.Sprintf("/api/v1/movies/%d", movie.Id),
+				adminAuth,
+				nil,
+			)
+			defer removed.Body.Close()
+			Expect(removed.StatusCode).To(BeElementOf(
+				http.StatusNoContent, http.StatusNotFound,
+			))
+		})
+		Expect(movie.Title).To(Equal(fakes.MovieTitle))
+		Expect(movie.Year).To(BeEquivalentTo(fakes.MovieYear))
+		Expect(movie.Overview).To(Equal(fakes.MovieOverview))
+		Expect(movie.Runtime).To(BeEquivalentTo(fakes.MovieRuntime))
+		Expect(movie.Status).To(Equal("wanted"))
+
+		detail := get(fmt.Sprintf("/api/v1/movies/%d", movie.Id), adminAuth)
+		defer detail.Body.Close()
+		Expect(detail.StatusCode).To(Equal(http.StatusOK))
+		var view struct {
+			Id     uint32   `json:"id"`
+			TmdbId uint32   `json:"tmdb_id"`
+			Genres []string `json:"genres"`
+			Rating float32  `json:"rating"`
+			Cast   []struct {
+				Name string `json:"name"`
+			} `json:"cast"`
+		}
+		decode(detail, &view)
+		Expect(view.Id).To(Equal(movie.Id))
+		Expect(view.TmdbId).To(BeEquivalentTo(fakes.MovieTMDBID))
+		Expect(view.Genres).To(ContainElement(fakes.MovieGenre))
+		Expect(view.Cast).To(ContainElement(HaveField("Name", fakes.MovieCastName)))
+		Expect(view.Rating).To(BeNumerically("~", fakes.MovieRating, 0.01))
 	})
 
 	It("403s a direct library add for a request_only caller", func() {
@@ -141,8 +197,26 @@ var _ = Describe("REST API movies", Label("e2e"), func() {
 		})
 	})
 
-	// The TMDB search reaches the network, so only the required-parameter
-	// guard is exercised.
+	It("searches TMDB by title", func() {
+		resp := get("/api/v1/search/movie?q=fight", adminAuth)
+		defer resp.Body.Close()
+		Expect(resp.StatusCode).To(Equal(http.StatusOK))
+		var results []struct {
+			TmdbId    uint32 `json:"tmdb_id"`
+			Title     string `json:"title"`
+			Year      uint16 `json:"year"`
+			Overview  string `json:"overview"`
+			PosterUrl string `json:"poster_url"`
+		}
+		decode(resp, &results)
+		Expect(results).To(HaveLen(1))
+		Expect(results[0].TmdbId).To(BeEquivalentTo(fakes.MovieTMDBID))
+		Expect(results[0].Title).To(Equal(fakes.MovieTitle))
+		Expect(results[0].Year).To(BeEquivalentTo(fakes.MovieYear))
+		Expect(results[0].Overview).To(Equal(fakes.MovieOverview))
+		Expect(results[0].PosterUrl).To(HaveSuffix(fakes.MoviePosterPath))
+	})
+
 	It("400s a TMDB search with no query", func() {
 		resp := get("/api/v1/search/movie", adminAuth)
 		defer resp.Body.Close()

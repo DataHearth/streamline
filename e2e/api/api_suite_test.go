@@ -7,6 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/datahearth/streamline/e2e/apptest"
+	"github.com/datahearth/streamline/e2e/fakes"
 	"github.com/datahearth/streamline/internal/testutil"
 )
 
@@ -19,6 +20,11 @@ func TestAPI(t *testing.T) {
 
 var _ = BeforeSuite(func() {
 	DeferCleanup(testutil.InstallSlog())
-	baseURL = apptest.Start()
+	tmdb := fakes.NewTMDB()
+	baseURL = apptest.Start(map[string]any{
+		"metadata": map[string]any{
+			"tmdb": map[string]any{"base_url": tmdb.URL},
+		},
+	})
 	bootstrapIdentities()
 })
