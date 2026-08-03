@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"time"
@@ -11,6 +12,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/datahearth/streamline/e2e/apptest"
+	"github.com/datahearth/streamline/e2e/fakes"
 	"github.com/datahearth/streamline/internal/auth"
 )
 
@@ -132,6 +134,33 @@ func libraryMovieID(tmdbID uint32) uint32 {
 		}
 	}
 	return 0
+}
+
+// createLibraryMovie adds the canned TMDB fake movie to the library and
+// schedules its removal, returning the library id.
+func createLibraryMovie() uint32 {
+	GinkgoHelper()
+	resp := post("/api/v1/movies", adminAuth, map[string]any{
+		"tmdb_id": fakes.MovieTMDBID,
+	})
+	defer resp.Body.Close()
+	Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+	var movie struct {
+		Id uint32 `json:"id"`
+	}
+	decode(resp, &movie)
+	DeferCleanup(func() {
+		removed := del(
+			fmt.Sprintf("/api/v1/movies/%d", movie.Id),
+			adminAuth,
+			nil,
+		)
+		defer removed.Body.Close()
+		Expect(removed.StatusCode).To(BeElementOf(
+			http.StatusNoContent, http.StatusNotFound,
+		))
+	})
+	return movie.Id
 }
 
 // bootstrapIdentities logs the seed admin in, provisions a request_only user,

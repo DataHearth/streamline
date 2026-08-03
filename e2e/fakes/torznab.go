@@ -1,0 +1,175 @@
+package fakes
+
+import (
+	"bytes"
+	"crypto/sha1"
+	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
+
+	"github.com/anacrolix/torrent/bencode"
+	"github.com/anacrolix/torrent/metainfo"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+)
+
+// Torznab serves the tracker surface the indexer client consumes: the caps
+// document, a one-item feed and the torrent that feed advertises. One canned
+// release is enough — the e2e specs assert plumbing, not catalog breadth.
+type Torznab struct {
+	URL string
+}
+
+// The canned release, exported so specs can assert what came back is the
+// fake's and only the fake's.
+const (
+	// APIKey is the credential specs register the fake with. Requests carrying
+	// any other value are rejected with 401, which the client maps to
+	// ErrUnauthorized — so a broken credential plumb fails a spec instead of
+	// passing unnoticed.
+	APIKey = "fake-key"
+
+	// ReleaseTitle names the movie the TMDB fake serves, so a library movie's
+	// search reads as a real title match.
+	ReleaseTitle   = "Fight.Club.1999.1080p.BluRay.x264-FAKE"
+	ReleaseGUID    = "fake-release-1"
+	ReleasePubDate = "Fri, 15 Oct 1999 00:00:00 +0000"
+	ReleaseSize    = 16 * 1024
+	ReleaseSeeders = 10
+	ReleasePeers   = 12
+
+	// TorrentName is the file the torrent describes; the .mkv suffix belongs
+	// to the file, not to the release it ships under.
+	TorrentName = ReleaseTitle + ".mkv"
+
+	DownloadPath = "/dl/release.torrent"
+
+	// torrent() hashes Content() as exactly one piece, so ReleaseSize must
+	// never exceed pieceLength.
+	pieceLength = 32 * 1024
+)
+
+const (
+	capsXML = `<?xml version="1.0" encoding="UTF-8"?>
+<caps>
+  <server title="fake-torznab"/>
+  <limits max="100" default="50"/>
+  <searching>
+    <search available="yes" supportedParams="q"/>
+    <movie-search available="yes" supportedParams="q,imdbid,tmdbid"/>
+    <tv-search available="yes" supportedParams="q,season,ep"/>
+  </searching>
+  <categories><category id="2000" name="Movies"/></categories>
+</caps>`
+
+	// Interpolated values land in the document unescaped, which the canned
+	// release survives; a title carrying & or < would need escaping first.
+	rssTemplate = `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:torznab="http://torznab.com/schemas/2015/feed">
+<channel>
+  <item>
+    <title>%[1]s</title>
+    <guid>%[2]s</guid>
+    <link>%[3]s</link>
+    <pubDate>%[4]s</pubDate>
+    <size>%[5]d</size>
+    <enclosure url="%[3]s" length="%[5]d" type="application/x-bittorrent"/>
+    <torznab:attr name="category" value="2000"/>
+    <torznab:attr name="seeders" value="%[6]d"/>
+    <torznab:attr name="peers" value="%[7]d"/>
+  </item>
+</channel>
+</rss>`
+)
+
+func NewTorznab() *Torznab {
+	GinkgoHelper()
+
+	mux := http.NewServeMux()
+	srv := httptest.NewUnstartedServer(mux)
+	// Both the feed's enclosure and the torrent's announce URL point back at
+	// the fake, so its address must be known before the bodies are built: an
+	// unstarted server has its listener bound already.
+	t := &Torznab{URL: "http://" + srv.Listener.Addr().String()}
+	feed := fmt.Sprintf(
+		rssTemplate,
+		ReleaseTitle,
+		ReleaseGUID,
+		t.URL+DownloadPath,
+		ReleasePubDate,
+		ReleaseSize,
+		ReleaseSeeders,
+		ReleasePeers,
+	)
+	torrent := t.torrent()
+
+	mux.HandleFunc(
+		"GET "+DownloadPath,
+		func(w http.ResponseWriter, _ *http.Request) {
+			defer GinkgoRecover()
+			w.Header().Set("Content-Type", "application/x-bittorrent")
+			_, err := w.Write(torrent)
+			Expect(err).NotTo(HaveOccurred())
+		},
+	)
+	// Torznab pins no path — operators mount it wherever they like and the
+	// client only varies the query string — so the API answers on any route.
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		defer GinkgoRecover()
+		if r.URL.Query().Get("apikey") != APIKey {
+			http.Error(w, "bad apikey", http.StatusUnauthorized)
+			return
+		}
+		switch mode := r.URL.Query().Get("t"); mode {
+		case "caps":
+			writeXML(w, capsXML)
+		case "search", "movie", "tvsearch":
+			writeXML(w, feed)
+		default:
+			http.Error(w, "unsupported t="+mode, http.StatusBadRequest)
+		}
+	})
+
+	srv.Start()
+	DeferCleanup(srv.Close)
+	return t
+}
+
+// Content returns the deterministic payload the fake's torrent describes;
+// the pipeline spec writes exactly these bytes to disk so qBittorrent's
+// recheck reaches 100%.
+func (t *Torznab) Content() []byte {
+	buf := make([]byte, ReleaseSize)
+	for i := range buf {
+		buf[i] = byte(i % 251)
+	}
+	return buf
+}
+
+func (t *Torznab) torrent() []byte {
+	GinkgoHelper()
+	content := t.Content()
+	pieces := sha1.Sum(content)
+	info, err := bencode.Marshal(metainfo.Info{
+		Name:        TorrentName,
+		Length:      int64(len(content)),
+		PieceLength: pieceLength,
+		Pieces:      pieces[:],
+	})
+	Expect(err).NotTo(HaveOccurred())
+
+	mi := metainfo.MetaInfo{
+		Announce:  t.URL + "/announce",
+		InfoBytes: info,
+	}
+	var buf bytes.Buffer
+	Expect(mi.Write(&buf)).To(Succeed())
+	return buf.Bytes()
+}
+
+func writeXML(w http.ResponseWriter, body string) {
+	w.Header().Set("Content-Type", "application/xml")
+	_, err := io.WriteString(w, body)
+	Expect(err).NotTo(HaveOccurred())
+}
