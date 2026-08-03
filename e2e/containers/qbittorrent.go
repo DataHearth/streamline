@@ -2,8 +2,12 @@ package containers
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -18,7 +22,11 @@ import (
 )
 
 const (
-	qbImage = "lscr.io/linuxserver/qbittorrent:5.0.3"
+	// 5.2.1, not the 5.0.x line: /api/v2/torrents/add only reports the
+	// infohash of an uploaded .torrent (added_torrent_ids) from WebAPI
+	// 2.15 on. 5.0.3 answers a bare "Ok.", which leaves QBittorrent.
+	// AddTorrent with no hash to record and fails every file-based grab.
+	qbImage = "lscr.io/linuxserver/qbittorrent:5.2.1"
 
 	// The image takes the WebUI port as a bare number; every other use needs
 	// the proto-qualified form, so both derive from one value.
@@ -44,11 +52,107 @@ type QBittorrent struct {
 	SaveDir string
 }
 
+// Torrent is the slice of a qBittorrent /torrents/info entry the specs assert
+// on and drive their completion simulation from.
+type Torrent struct {
+	Hash     string  `json:"hash"`
+	Name     string  `json:"name"`
+	State    string  `json:"state"`
+	Progress float64 `json:"progress"`
+	// ContentPath is where the payload lives on disk. SaveDir is bind-mounted
+	// at the same path on the host, so it is directly readable — and
+	// writable — from the spec process.
+	ContentPath string `json:"content_path"`
+}
+
 var (
 	qbOnce sync.Once
 	qb     *QBittorrent
 	qbErr  error
+
+	// qbHTTP talks to the WebUI. A timeout rather than http.DefaultClient: a
+	// container that accepts connections but stops answering must fail the
+	// spec, not hang the suite.
+	qbHTTP = &http.Client{Timeout: 10 * time.Second}
 )
+
+// URL renders an absolute WebUI URL for path.
+func (q *QBittorrent) URL(path string) string {
+	return fmt.Sprintf("http://%s:%d%s", q.Host, q.Port, path)
+}
+
+// Get issues a WebUI GET and returns the response, whose body the caller
+// reads and closes. No credentials are sent: the container whitelists every
+// subnet.
+func (q *QBittorrent) Get(path string) *http.Response {
+	GinkgoHelper()
+	resp, err := qbHTTP.Get(q.URL(path))
+	Expect(err).NotTo(HaveOccurred())
+	// Lazily described: an eager drain(resp) argument would be evaluated on
+	// the success path too, emptying the body before the caller reads it.
+	Expect(resp.StatusCode).To(Equal(http.StatusOK), func() string {
+		return fmt.Sprintf("GET %s failed: %s", path, drain(resp))
+	})
+	return resp
+}
+
+// Post issues a WebUI form POST and asserts the daemon accepted it.
+func (q *QBittorrent) Post(path string, form url.Values) {
+	GinkgoHelper()
+	resp, err := qbHTTP.PostForm(q.URL(path), form)
+	Expect(err).NotTo(HaveOccurred())
+	defer resp.Body.Close()
+	// Read up front: nothing here wants the body except a failure message,
+	// and the daemon's replies to these verbs are one short line.
+	body := drain(resp)
+	Expect(resp.StatusCode).To(
+		Equal(http.StatusOK),
+		"POST %s failed: %s", path, body,
+	)
+}
+
+// Torrents lists the torrents filed under category.
+func (q *QBittorrent) Torrents(category string) []Torrent {
+	GinkgoHelper()
+	resp := q.Get("/api/v2/torrents/info?category=" + url.QueryEscape(category))
+	defer resp.Body.Close()
+	var torrents []Torrent
+	Expect(json.NewDecoder(resp.Body).Decode(&torrents)).To(Succeed())
+	return torrents
+}
+
+// Stop halts a torrent, releasing the session's handle on its files.
+// qBittorrent 5 renamed the 4.x pause verb to stop.
+func (q *QBittorrent) Stop(hash string) {
+	GinkgoHelper()
+	q.Post("/api/v2/torrents/stop", url.Values{"hashes": {hash}})
+}
+
+// Recheck re-hashes a torrent's data on disk against its piece hashes, which
+// is how a torrent whose payload arrived out of band reaches 100%.
+func (q *QBittorrent) Recheck(hash string) {
+	GinkgoHelper()
+	q.Post("/api/v2/torrents/recheck", url.Values{"hashes": {hash}})
+}
+
+// Remove drops a torrent from the client and leaves its files behind.
+func (q *QBittorrent) Remove(hash string) {
+	GinkgoHelper()
+	q.Post("/api/v2/torrents/delete", url.Values{
+		"hashes":      {hash},
+		"deleteFiles": {"false"},
+	})
+}
+
+// drain reads a response body for a failure description. It consumes the
+// body, so it belongs only in the message of an assertion that is failing.
+func drain(resp *http.Response) string {
+	raw, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "<unreadable body: " + err.Error() + ">"
+	}
+	return string(raw)
+}
 
 // StartQBittorrent starts (once per process) a qBittorrent container whose
 // WebUI auth is bypassed via subnet whitelist and whose default save path is

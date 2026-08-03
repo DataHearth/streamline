@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 
 	"github.com/anacrolix/torrent/bencode"
 	"github.com/anacrolix/torrent/metainfo"
@@ -35,9 +36,14 @@ const (
 	ReleaseTitle   = "Fight.Club.1999.1080p.BluRay.x264-FAKE"
 	ReleaseGUID    = "fake-release-1"
 	ReleasePubDate = "Fri, 15 Oct 1999 00:00:00 +0000"
-	ReleaseSize    = 16 * 1024
 	ReleaseSeeders = 10
 	ReleasePeers   = 12
+
+	// ReleaseSize clears library.MinMediaSize (50 MiB), below which the
+	// importer discards a completed download as "no media found" — the
+	// pipeline spec imports these bytes for real, so a token payload would
+	// never get past that filter.
+	ReleaseSize = 64 * 1024 * 1024
 
 	// TorrentName is the file the torrent describes; the .mkv suffix belongs
 	// to the file, not to the release it ships under.
@@ -45,9 +51,9 @@ const (
 
 	DownloadPath = "/dl/release.torrent"
 
-	// torrent() hashes Content() as exactly one piece, so ReleaseSize must
-	// never exceed pieceLength.
-	pieceLength = 32 * 1024
+	// torrent() hashes Content() piece by piece, so ReleaseSize must stay a
+	// whole multiple of pieceLength.
+	pieceLength = 4 * 1024 * 1024
 )
 
 const (
@@ -136,10 +142,14 @@ func NewTorznab() *Torznab {
 	return t
 }
 
-// Content returns the deterministic payload the fake's torrent describes;
-// the pipeline spec writes exactly these bytes to disk so qBittorrent's
-// recheck reaches 100%.
-func (t *Torznab) Content() []byte {
+// Content returns the payload the canned torrent describes — one fixed
+// sequence of bytes, the same for every fake. The pipeline spec writes exactly
+// these to disk so qBittorrent's recheck reaches 100%. Rebuilt per call rather
+// than cached: one transient 64 MiB allocation beats pinning that much for a
+// whole suite.
+func (t *Torznab) Content() []byte { return content() }
+
+func content() []byte {
 	buf := make([]byte, ReleaseSize)
 	for i := range buf {
 		buf[i] = byte(i % 251)
@@ -147,21 +157,32 @@ func (t *Torznab) Content() []byte {
 	return buf
 }
 
-func (t *Torznab) torrent() []byte {
+// infoBytes is the bencoded info dictionary, identical for every fake — only
+// the announce URL varies between them — so the pass over 64 MiB of content
+// happens once per process instead of once per fake.
+var infoBytes = sync.OnceValue(func() []byte {
 	GinkgoHelper()
-	content := t.Content()
-	pieces := sha1.Sum(content)
+	payload := content()
+	pieces := make([]byte, 0, sha1.Size*(ReleaseSize/pieceLength))
+	for off := 0; off < len(payload); off += pieceLength {
+		sum := sha1.Sum(payload[off : off+pieceLength])
+		pieces = append(pieces, sum[:]...)
+	}
 	info, err := bencode.Marshal(metainfo.Info{
 		Name:        TorrentName,
-		Length:      int64(len(content)),
+		Length:      int64(len(payload)),
 		PieceLength: pieceLength,
-		Pieces:      pieces[:],
+		Pieces:      pieces,
 	})
 	Expect(err).NotTo(HaveOccurred())
+	return info
+})
 
+func (t *Torznab) torrent() []byte {
+	GinkgoHelper()
 	mi := metainfo.MetaInfo{
 		Announce:  t.URL + "/announce",
-		InfoBytes: info,
+		InfoBytes: infoBytes(),
 	}
 	var buf bytes.Buffer
 	Expect(mi.Write(&buf)).To(Succeed())

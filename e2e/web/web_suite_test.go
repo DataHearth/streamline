@@ -40,7 +40,7 @@ var _ = BeforeSuite(func() {
 	}
 
 	DeferCleanup(testutil.InstallSlog())
-	baseURL = apptest.Start()
+	_, baseURL = apptest.Start()
 	sessionJWT = mintSessionJWT()
 
 	// CHROME_PATH comes from the nix devshell; rod's auto-download

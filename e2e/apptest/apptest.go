@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/datahearth/streamline/internal/observability"
+	"github.com/datahearth/streamline/internal/scheduler"
 	"github.com/datahearth/streamline/internal/server"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
@@ -21,10 +22,14 @@ const (
 )
 
 // Start boots the real wired app (temp SQLite, seeded admin) on an ephemeral
-// port and returns its base URL. Extra override maps merge on top of the base
-// config, letting a suite point external clients at its own fakes. Teardown is
-// registered via DeferCleanup; call from BeforeSuite.
-func Start(extra ...map[string]any) string {
+// port and returns it with its base URL. Extra override maps merge on top of
+// the base config, letting a suite point external clients at its own fakes.
+// Teardown is registered via DeferCleanup; call from BeforeSuite.
+//
+// Only the HTTP server is started — cmd/main.go's other half, the scheduler
+// loop, is left to StartScheduler so suites that don't need background jobs
+// stay free of them.
+func Start(extra ...map[string]any) (*server.App, string) {
 	GinkgoHelper()
 	// Same seam as the server suite: the HTTP access logger writes to
 	// stderr with no injection point; repoint it at GinkgoWriter.
@@ -63,5 +68,25 @@ func Start(extra ...map[string]any) string {
 			),
 		).To(Succeed())
 	})
-	return srv.URL
+	return app, srv.URL
+}
+
+// StartScheduler runs the scheduler loop cmd/main.go owns in production;
+// without it POST /schedules/{name}/run answers ErrNotStarted and no job ever
+// fires. Every registered job also runs once the moment the loop starts, so
+// call it before a spec seeds the indexers, clients or media those jobs act
+// on.
+//
+// The returned func stops the loop. Registering it as a DeferCleanup only
+// after those entities are seeded is what makes teardown stop the jobs before
+// deleting what they poll.
+func StartScheduler(sched *scheduler.Scheduler) func() {
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		// A panic in a spec-launched goroutine aborts the process with no
+		// attribution; GinkgoRecover turns it into a spec failure.
+		defer GinkgoRecover()
+		sched.Start(ctx)
+	}()
+	return cancel
 }

@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"net/http"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -55,6 +54,29 @@ func createDownloadClient(name string) downloadClientView {
 	var dc downloadClientView
 	decode(resp, &dc)
 	return dc
+}
+
+// createLiveDownloadClient adds an enabled qBittorrent entry pointed at the
+// container and schedules its removal, so grabs and status polls reach a real
+// client.
+func createLiveDownloadClient(name string, qb *containers.QBittorrent) {
+	GinkgoHelper()
+	resp := post("/api/v1/download-clients", adminAuth, map[string]any{
+		"name":        name,
+		"client_type": "qbittorrent",
+		"host":        qb.Host,
+		"port":        qb.Port,
+		"auth_method": "password",
+		// The container whitelists every subnet, so these are accepted
+		// without being validated: what the specs prove is that streamline
+		// reaches the container, not that credentials are carried correctly.
+		"username": "e2e",
+		"password": "e2e-secret",
+		"enabled":  true,
+	})
+	defer resp.Body.Close()
+	deleteDownloadClientLater(name)
+	Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 }
 
 var _ = Describe("REST API download clients", Label("e2e"), func() {
@@ -224,38 +246,18 @@ var _ = Describe(
 			qb := containers.StartQBittorrent(downloadDir)
 
 			By("serving the suite download dir as the container's save path")
-			prefs, err := httpClient.Get(fmt.Sprintf(
-				"http://%s:%d/api/v2/app/preferences", qb.Host, qb.Port,
-			))
-			Expect(err).NotTo(HaveOccurred())
+			prefs := qb.Get("/api/v2/app/preferences")
 			defer prefs.Body.Close()
-			Expect(prefs.StatusCode).To(Equal(http.StatusOK))
 			var settings struct {
 				SavePath string `json:"save_path"`
 			}
 			decode(prefs, &settings)
-			// A follow-up pipeline spec will write release bytes here and
-			// expect qBittorrent to recheck them in place.
+			// The pipeline spec writes release bytes here and expects
+			// qBittorrent to recheck them in place.
 			Expect(settings.SavePath).To(Equal(downloadDir))
 
 			const name = "e2e-qbit-live"
-			created := post("/api/v1/download-clients", adminAuth, map[string]any{
-				"name":        name,
-				"client_type": "qbittorrent",
-				"host":        qb.Host,
-				"port":        qb.Port,
-				"auth_method": "password",
-				// The container whitelists every subnet, so these are accepted
-				// without being validated: the test below proves the client
-				// reaches the container and its login endpoint answers, not
-				// that credentials are carried correctly.
-				"username": "e2e",
-				"password": "e2e-secret",
-				"enabled":  true,
-			})
-			defer created.Body.Close()
-			deleteDownloadClientLater(name)
-			Expect(created.StatusCode).To(Equal(http.StatusCreated))
+			createLiveDownloadClient(name, qb)
 
 			resp := post("/api/v1/download-clients/"+name+"/test", adminAuth, nil)
 			defer resp.Body.Close()

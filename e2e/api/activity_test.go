@@ -100,8 +100,11 @@ var _ = Describe("REST API activity", Label("e2e"), func() {
 			resp := post("/api/v1/activity/history/clear-completed", adminAuth, nil)
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
-			// Nothing in this suite reaches a completed download, so the
-			// clear is always a no-op.
+			// Zero, not a delta: no hermetic spec ever completes a download,
+			// and the one that does — the container-backed pipeline — is an
+			// Ordered container whose specs never interleave with this one
+			// and whose teardown deletes its movie, cascading the completed
+			// record away with it.
 			var result struct {
 				Deleted int `json:"deleted"`
 			}
