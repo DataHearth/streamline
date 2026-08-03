@@ -21,6 +21,12 @@ type EpisodeSeed struct {
 	AirDate        *time.Time
 }
 
+// tba reports that the provider has announced the episode without publishing
+// either a title or an air date. Those rows are placeholders — often for
+// episodes that never materialise — so they start unmonitored and only become
+// monitored once a refresh fills in one of the two.
+func (e EpisodeSeed) tba() bool { return e.Title == "" && e.AirDate == nil }
+
 type SeasonSeed struct {
 	Number   uint16
 	Name     string
@@ -100,8 +106,10 @@ func (db *DB) UpdateTVShowMetadata(
 // returns the on-disk paths of files whose episodes were removed so the caller
 // can delete them from disk — the DB layer never touches the filesystem.
 // User-owned state (monitored, status, grab counters) on surviving rows is
-// preserved; new episodes inherit their season's monitored flag, a brand-new
-// season defaults to monitored.
+// preserved, except that a TBA episode gaining a title or air date is promoted
+// back to monitored when its season is monitored; new episodes inherit their
+// season's monitored flag unless they are still TBA, a brand-new season
+// defaults to monitored.
 func (db *DB) ReconcileEpisodes(
 	ctx context.Context,
 	showID uint32,
@@ -159,7 +167,7 @@ func (db *DB) ReconcileEpisodes(
 					SetAbsoluteNumber(e.AbsoluteNumber).
 					SetTitle(e.Title).
 					SetOverview(e.Overview).
-					SetMonitored(sr.Monitored).
+					SetMonitored(sr.Monitored && !e.tba()).
 					SetSeasonID(sr.ID)
 				if e.AirDate != nil {
 					b = b.SetAirDate(*e.AirDate)
@@ -179,6 +187,10 @@ func (db *DB) ReconcileEpisodes(
 			}
 			if e.AirDate != nil && !e.AirDate.Equal(er.AirDate) {
 				u, changed = u.SetAirDate(*e.AirDate), true
+			}
+			if er.Title == "" && er.AirDate.IsZero() &&
+				!e.tba() && sr.Monitored && !er.Monitored {
+				u, changed = u.SetMonitored(true), true
 			}
 			if changed {
 				if err := u.Exec(ctx); err != nil {
@@ -281,6 +293,7 @@ func (db *DB) CreateTVShow(
 				SetAbsoluteNumber(e.AbsoluteNumber).
 				SetTitle(e.Title).
 				SetOverview(e.Overview).
+				SetMonitored(!e.tba()).
 				SetSeasonID(seasonRow.ID)
 			if e.AirDate != nil {
 				b = b.SetAirDate(*e.AirDate)
