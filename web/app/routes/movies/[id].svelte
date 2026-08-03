@@ -14,7 +14,6 @@
 	import MovieDetailHero from "../../components/movies/MovieDetailHero.svelte";
 	import DetailAbout from "../../components/shared/DetailAbout.svelte";
 	import MovieDetailInfo from "../../components/movies/MovieDetailInfo.svelte";
-	import MovieDetailFiles from "../../components/movies/MovieDetailFiles.svelte";
 	import MovieDetailHistory from "../../components/movies/MovieDetailHistory.svelte";
 	import MovieDetailCast from "../../components/movies/MovieDetailCast.svelte";
 	import MovieDetailSimilar from "../../components/movies/MovieDetailSimilar.svelte";
@@ -25,14 +24,13 @@
 	import RenameMoviePreviewModal from "../../components/movies/RenameMoviePreviewModal.svelte";
 	import Dialog from "../../components/modals/Dialog.svelte";
 
-	type Tab = "overview" | "files" | "history" | "cast";
+	type Tab = "overview" | "history" | "cast";
 	const TABS: { key: Tab; label: string }[] = [
 		{ key: "overview", label: "Overview" },
-		{ key: "files", label: "Files" },
 		{ key: "history", label: "History" },
 		{ key: "cast", label: "Cast" },
 	];
-	const VALID_TABS = new Set<Tab>(["overview", "files", "history", "cast"]);
+	const VALID_TABS = new Set<Tab>(["overview", "history", "cast"]);
 
 	let routeParams = $state<Record<string, string>>({});
 	let navigate = $state<(path: string) => void>(() => {});
@@ -279,8 +277,6 @@
 				/>
 				<MovieDetailInfo {movie} qualityProfileName={qpName} />
 			</div>
-		{:else if tab === "files"}
-			<MovieDetailFiles files={movie.media_files ?? []} movieId={movie.id} />
 		{:else if tab === "history"}
 			<MovieDetailHistory movieId={movie.id} />
 		{:else if tab === "cast"}
@@ -329,7 +325,7 @@
 	<Dialog
 		open={deleteWithFilesOpen}
 		title="Remove '{movie.title}' and delete its files?"
-		body="{movie.media_files?.length ?? 0} file(s) will be deleted from disk. This cannot be undone."
+		body="The movie's file will be deleted from disk. This cannot be undone."
 		onClose={() => (deleteWithFilesOpen = false)}
 		actions={[
 			{ label: "Cancel", variant: "ghost", autofocus: true },

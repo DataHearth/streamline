@@ -6,7 +6,7 @@
 	import { movieStatus } from "../../lib/status";
 	import PosterCard from "../shared/PosterCard.svelte";
 	import MovieActionsMenu from "./MovieActionsMenu.svelte";
-	import type { Movie, MediaFile } from "../../lib/types";
+	import type { Movie } from "../../lib/types";
 
 	let {
 		movies,
@@ -36,12 +36,8 @@
 		onError: (e) => toast.err(e.message ?? "Update failed"),
 	}));
 
-	function pickPrimary(files?: MediaFile[]): MediaFile | undefined {
-		if (!files || files.length === 0) return undefined;
-		return [...files].sort((a, b) => b.size - a.size)[0];
-	}
 	function enrich(m: Movie) {
-		const f = pickPrimary(m.media_files);
+		const f = m.media_files?.[0];
 		return {
 			id: m.id,
 			title: m.title,

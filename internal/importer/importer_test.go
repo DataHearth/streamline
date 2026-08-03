@@ -90,6 +90,8 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 
 		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
 			Return(rec, nil).Once()
+		storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+			Return(nil, nil).Once()
 		storeMk.EXPECT().
 			RecordImportSuccess(mock.Anything, mock.MatchedBy(func(p db.RecordImportSuccessParams) bool {
 				return p.RecordID == 1 && p.MovieID == 10
@@ -104,11 +106,63 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 		Expect(w.runImport(context.Background(), 1)).To(Succeed())
 	})
 
+	It("existing file + replace flag: old file replaced, import succeeds", func() {
+		src := filepath.Join(tmp, "dl")
+		Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+		seedMediaFile(src, "Flick.2024.1080p.mkv")
+		old := filepath.Join(libDir, "old.mkv")
+		Expect(os.WriteFile(old, []byte("old"), 0o644)).To(Succeed())
+		rec := fixtureRecord(1, 10, src, 0)
+		rec.ReplaceExisting = true
+
+		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+			Return(rec, nil).Once()
+		storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+			Return([]*ent.MediaFile{{ID: 5, Path: old}}, nil).Once()
+		storeMk.EXPECT().
+			DeleteMediaFileAndRevertMovie(mock.Anything, uint32(5), uint32(10)).
+			Return(nil).Once()
+		storeMk.EXPECT().
+			RecordImportSuccess(mock.Anything, mock.Anything).
+			Return(nil).Once()
+		storeMk.EXPECT().
+			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
+			Return(nil).Once()
+		msMk.EXPECT().RefreshAll(mock.Anything, libDir).Return(nil).Once()
+
+		Expect(w.runImport(context.Background(), 1)).To(Succeed())
+		Expect(old).NotTo(BeAnExistingFile())
+	})
+
+	It("existing file without replace flag: terminal ErrMovieHasFile", func() {
+		src := filepath.Join(tmp, "dl")
+		Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+		seedMediaFile(src, "Flick.2024.1080p.mkv")
+		rec := fixtureRecord(1, 10, src, 0)
+
+		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+			Return(rec, nil).Twice()
+		storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+			Return([]*ent.MediaFile{{ID: 5, Path: "/lib/old.mkv"}}, nil).Once()
+		storeMk.EXPECT().
+			RecordImportFailure(mock.Anything, mock.MatchedBy(func(p db.RecordImportFailureParams) bool {
+				return p.Terminal && p.Attempts == 1
+			})).
+			Return(nil).
+			Once()
+
+		err := w.runImport(context.Background(), 1)
+		Expect(err).To(MatchError(ErrMovieHasFile))
+		w.handleOutcome(context.Background(), 1, err)
+	})
+
 	It("retryable error increments attempts, does not flip movie to failed", func() {
 		rec := fixtureRecord(1, 10, filepath.Join(tmp, "nope"), 0)
 
 		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
 			Return(rec, nil).Twice()
+		storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+			Return(nil, nil).Once()
 		storeMk.EXPECT().
 			RecordImportFailure(mock.Anything, mock.MatchedBy(func(p db.RecordImportFailureParams) bool {
 				return p.RecordID == 1 && !p.Terminal && p.Attempts == 1
@@ -130,6 +184,8 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 
 		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
 			Return(rec, nil).Twice()
+		storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+			Return(nil, nil).Once()
 		storeMk.EXPECT().
 			RecordImportFailure(mock.Anything, mock.MatchedBy(func(p db.RecordImportFailureParams) bool {
 				return p.Terminal && p.Attempts == 1
@@ -147,6 +203,8 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 
 		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
 			Return(rec, nil).Twice()
+		storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+			Return(nil, nil).Once()
 		storeMk.EXPECT().
 			RecordImportFailure(mock.Anything, mock.MatchedBy(func(p db.RecordImportFailureParams) bool {
 				return p.Terminal && p.Attempts == 3
@@ -173,6 +231,8 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 
 		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(2)).
 			Return(rec, nil).Once()
+		storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(11)).
+			Return(nil, nil).Once()
 		storeMk.EXPECT().
 			RecordImportSuccess(mock.Anything, mock.Anything).
 			Return(nil).

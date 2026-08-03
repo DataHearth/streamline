@@ -140,6 +140,9 @@
 			class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"
 			style:color="var(--status-{cls.kind})"
 			style:background-color="color-mix(in srgb, var(--status-{cls.kind}) 14%, transparent)"
+			title={file.classification === "existing"
+				? "Movie already in the library — committing replaces its current file"
+				: undefined}
 		>
 			<cls.Icon size={13} aria-hidden="true" />
 			{cls.label}

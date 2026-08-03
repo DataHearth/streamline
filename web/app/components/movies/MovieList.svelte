@@ -51,13 +51,14 @@
 	}));
 
 	function totalSize(files: MediaFile[] | undefined): string {
-		return formatBytes((files ?? []).reduce((s, f) => s + f.size, 0));
+		const f = files?.[0];
+		return f ? formatBytes(f.size) : "—";
 	}
 
 	function quality(files: MediaFile[] | undefined): string {
-		if (!files || files.length === 0) return "—";
-		const primary = [...files].sort((a, b) => b.size - a.size)[0];
-		const parts = [primary.parsed_resolution, primary.parsed_codec].filter(
+		const f = files?.[0];
+		if (!f) return "—";
+		const parts = [f.parsed_resolution, f.parsed_codec].filter(
 			(v): v is string => Boolean(v),
 		);
 		return parts.length > 0 ? parts.join(" · ") : "—";

@@ -223,13 +223,22 @@ func (w *Worker) importMovieRecord(
 	m := rec.Edges.Movie
 	span.SetAttributes(attribute.Int64("movie.id", int64(m.ID)))
 
-	imported, err := w.lib.ImportMovie(ctx, rec.SavePath, m, "")
-	if errors.Is(err, library.ErrDestExists) && rec.ReplaceExisting {
-		if rErr := w.replaceMovieFiles(ctx, m.ID); rErr != nil {
-			return otelx.RecordSpanError(span, rErr)
-		}
-		imported, err = w.lib.ImportMovie(ctx, rec.SavePath, m, "")
+	// A movie holds at most one media file: a grab arriving while one exists
+	// either replaces it (record flagged via the manual-search toggle) or
+	// fails terminally before any transfer happens.
+	existing, err := w.db.ListMediaFilesByMovieID(ctx, m.ID)
+	if err != nil {
+		return otelx.RecordSpanError(span, fmt.Errorf("list movie files: %w", err))
 	}
+	if len(existing) > 0 {
+		if !rec.ReplaceExisting {
+			return otelx.RecordSpanError(span, ErrMovieHasFile)
+		}
+		if err := w.replaceMovieFiles(ctx, m.ID, existing); err != nil {
+			return otelx.RecordSpanError(span, err)
+		}
+	}
+	imported, err := w.lib.ImportMovie(ctx, rec.SavePath, m, "")
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
 	}
@@ -263,13 +272,12 @@ func (w *Worker) importMovieRecord(
 }
 
 // replaceMovieFiles deletes a movie's current media file(s) from disk and DB so
-// a replace-flagged grab can re-import over them. Only reached when an import
-// hit ErrDestExists and the record requested replacement.
-func (w *Worker) replaceMovieFiles(ctx context.Context, movieID uint32) error {
-	files, err := w.db.ListMediaFilesByMovieID(ctx, movieID)
-	if err != nil {
-		return fmt.Errorf("list movie files: %w", err)
-	}
+// a replace-flagged grab can re-import over them.
+func (w *Worker) replaceMovieFiles(
+	ctx context.Context,
+	movieID uint32,
+	files []*ent.MediaFile,
+) error {
 	for _, mf := range files {
 		if err := os.Remove(mf.Path); err != nil && !os.IsNotExist(err) {
 			slog.WarnContext(ctx, "replace: remove existing movie file failed",

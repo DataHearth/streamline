@@ -2,6 +2,8 @@ package bulkimport
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -92,6 +94,10 @@ var _ = Describe("Service.commitAttach", Label("unit", "bulkimport"), func() {
 			}
 
 			store.EXPECT().
+				ListMediaFilesByMovieID(mock.Anything, uint32(42)).
+				Return(nil, nil).
+				Once()
+			store.EXPECT().
 				CreateMediaFile(mock.Anything, db.CreateMediaFileParams{
 					MovieID:      42,
 					Path:         "/import/Movie.mkv",
@@ -113,4 +119,57 @@ var _ = Describe("Service.commitAttach", Label("unit", "bulkimport"), func() {
 			Expect(movieID).To(Equal(uint32(42)))
 		},
 	)
+
+	It("replaces the movie's current file before attaching", func() {
+		old := filepath.Join(GinkgoT().TempDir(), "old.mkv")
+		Expect(os.WriteFile(old, []byte("old"), 0o644)).To(Succeed())
+		f := &ent.ImportScanFile{
+			ID:              7,
+			ExistingMovieID: 42,
+			SourcePath:      "/import/Movie.mkv",
+			Size:            1_500_000_000,
+		}
+
+		store.EXPECT().
+			ListMediaFilesByMovieID(mock.Anything, uint32(42)).
+			Return([]*ent.MediaFile{{ID: 9, Path: old}}, nil).
+			Once()
+		store.EXPECT().
+			DeleteMediaFile(mock.Anything, uint32(9)).
+			Return(nil).
+			Once()
+		store.EXPECT().
+			CreateMediaFile(mock.Anything, mock.MatchedBy(func(p db.CreateMediaFileParams) bool {
+				return p.MovieID == 42 && p.Path == "/import/Movie.mkv"
+			})).
+			Return(&ent.MediaFile{}, nil).
+			Once()
+		store.EXPECT().
+			UpdateMovieStatus(mock.Anything, uint32(42), entmovie.StatusAvailable).
+			Return(nil).
+			Once()
+
+		outcome, _, movieID := svc.commitAttach(ctx, f)
+		Expect(outcome).To(Equal(entimportscanfile.OutcomeAttached))
+		Expect(movieID).To(Equal(uint32(42)))
+		Expect(old).NotTo(BeAnExistingFile())
+	})
+
+	It("is a no-op when the scanned path is already the movie's file", func() {
+		f := &ent.ImportScanFile{
+			ID:              7,
+			ExistingMovieID: 42,
+			SourcePath:      "/import/Movie.mkv",
+		}
+
+		store.EXPECT().
+			ListMediaFilesByMovieID(mock.Anything, uint32(42)).
+			Return([]*ent.MediaFile{{ID: 9, Path: "/import/Movie.mkv"}}, nil).
+			Once()
+
+		outcome, msg, movieID := svc.commitAttach(ctx, f)
+		Expect(outcome).To(Equal(entimportscanfile.OutcomeAttached))
+		Expect(msg).To(BeEmpty())
+		Expect(movieID).To(Equal(uint32(42)))
+	})
 })

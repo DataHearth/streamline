@@ -8,7 +8,6 @@
 		DiskUsage,
 		MovieCounts,
 		Movie,
-		MediaFile,
 		PaginatedMovies,
 		PaginatedTVShows,
 		QueueItem,
@@ -98,12 +97,8 @@
 			: [];
 	});
 
-	function pickPrimary(files?: MediaFile[]): MediaFile | undefined {
-		if (!files || files.length === 0) return undefined;
-		return [...files].sort((a, b) => b.size - a.size)[0];
-	}
 	function movieToHero(m: Movie): HeroItem {
-		const f = pickPrimary(m.media_files);
+		const f = m.media_files?.[0];
 		return {
 			title: m.title,
 			year: m.year,
