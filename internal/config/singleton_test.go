@@ -212,3 +212,44 @@ var _ = Describe("Singleton", Label("unit", "config"), func() {
 		Expect(reloaded.Auth.Mode).To(Equal("trusted-network"))
 	})
 })
+
+var _ = Describe("HiddenString", Label("unit", "config"), func() {
+	BeforeEach(func() {
+		ResetForTest()
+		DeferCleanup(ResetForTest)
+	})
+
+	It("returns a raw key that is not part of the Config struct", func() {
+		dataDir := GinkgoT().TempDir()
+		base := minimalYAML(dataDir)
+		raw := base + "metadata:\n  tmdb:\n    base_url: http://127.0.0.1:9\n"
+		Expect(LoadReader(strings.NewReader(raw))).To(Succeed())
+		Expect(HiddenString("metadata.tmdb.base_url")).
+			To(Equal("http://127.0.0.1:9"))
+	})
+
+	It("returns empty for an unset key", func() {
+		dataDir := GinkgoT().TempDir()
+		Expect(LoadReader(strings.NewReader(minimalYAML(dataDir)))).To(Succeed())
+		Expect(HiddenString("metadata.tmdb.base_url")).To(BeEmpty())
+	})
+
+	It("returns empty before any config is loaded", func() {
+		Expect(HiddenString("metadata.tmdb.base_url")).To(BeEmpty())
+	})
+
+	It("returns a hidden key loaded from a file via Load(path)", func() {
+		dir := GinkgoT().TempDir()
+		cfgPath := filepath.Join(dir, "cfg.yaml")
+		dataDir := filepath.Join(dir, "data")
+		Expect(os.MkdirAll(dataDir, 0o755)).To(Succeed())
+		base := minimalYAML(dataDir)
+		raw := base + "metadata:\n  tmdb:\n    base_url: http://127.0.0.1:9\n"
+		Expect(os.WriteFile(cfgPath, []byte(raw), 0o600)).To(Succeed())
+
+		_, err := Load(cfgPath)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(HiddenString("metadata.tmdb.base_url")).
+			To(Equal("http://127.0.0.1:9"))
+	})
+})

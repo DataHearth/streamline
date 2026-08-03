@@ -827,6 +827,22 @@ var _ = Describe("TMDB Client", Label("unit", "metadata"), func() {
 		})
 	})
 
+	Describe("hidden base_url override", func() {
+		It("honors metadata.tmdb.base_url from the hidden config key", func() {
+			configtest.Setup(map[string]any{
+				"metadata": map[string]any{
+					"tmdb": map[string]any{"base_url": "http://127.0.0.1:9"},
+				},
+			})
+			Expect(NewTMDB().BaseURL).To(Equal("http://127.0.0.1:9"))
+		})
+
+		It("falls back to the TMDB default when unset", func() {
+			configtest.Setup()
+			Expect(NewTMDB().BaseURL).To(Equal(tmdbBaseURL))
+		})
+	})
+
 	Describe("PosterURL", func() {
 		It("returns empty when path is empty", func() {
 			Expect(PosterURL("", "w185")).To(Equal(""))

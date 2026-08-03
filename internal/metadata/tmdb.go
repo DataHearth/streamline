@@ -59,13 +59,18 @@ type TMDB struct {
 // NewTMDB builds a TMDB client using the api key and language from the
 // config singleton (metadata.tmdb_api_key, metadata.language). An empty
 // metadata.language leaves the language param off requests, letting TMDB
-// fall back to its provider default.
+// fall back to its provider default. The hidden metadata.tmdb.base_url key
+// overrides the TMDB API base URL when set (e2e seam).
 func NewTMDB() *TMDB {
 	m := config.Get().Metadata
+	baseURL := config.HiddenString("metadata.tmdb.base_url")
+	if baseURL == "" {
+		baseURL = tmdbBaseURL
+	}
 	return &TMDB{
 		apiKey:   config.SecretValue(m.TMDBAPIKey, m.TMDBAPIKeyFile),
 		language: m.Language,
-		BaseURL:  tmdbBaseURL,
+		BaseURL:  baseURL,
 		client:   otelx.HTTPClient,
 	}
 }

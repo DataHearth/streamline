@@ -45,12 +45,18 @@ type TVDB struct {
 }
 
 // NewTVDB builds a TVDB client from metadata.tvdb_api_key in the config
-// singleton. The token is fetched lazily on first request.
+// singleton. The token is fetched lazily on first request. The hidden
+// metadata.tvdb.base_url key overrides the TVDB API base URL when set (e2e
+// seam).
 func NewTVDB() *TVDB {
 	m := config.Get().Metadata
+	baseURL := config.HiddenString("metadata.tvdb.base_url")
+	if baseURL == "" {
+		baseURL = tvdbBaseURL
+	}
 	return &TVDB{
 		apiKey:   config.SecretValue(m.TVDBAPIKey, m.TVDBAPIKeyFile),
-		BaseURL:  tvdbBaseURL,
+		BaseURL:  baseURL,
 		client:   otelx.HTTPClient,
 		language: iso639_3(m.Language),
 	}

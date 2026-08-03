@@ -17,6 +17,7 @@ var (
 	mu      sync.RWMutex
 	current *Config
 	cfgPath string
+	rawK    *koanf.Koanf
 )
 
 var (
@@ -40,12 +41,30 @@ func Get() *Config {
 	return current
 }
 
-// store sets the singleton config (package-internal).
-func store(c *Config, p string) {
+// store sets the singleton config (package-internal). k is the fully merged
+// load-time koanf (defaults + file + env); it is retained for HiddenString.
+func store(c *Config, p string, k *koanf.Koanf) {
 	mu.Lock()
 	defer mu.Unlock()
 	current = c
 	cfgPath = p
+	rawK = k
+}
+
+// HiddenString reads a raw koanf key that is deliberately NOT part of the
+// public config surface (no struct field, no defaults() entry, no schema
+// entry) — test-only seams such as metadata.tmdb.base_url. Returns "" when
+// unset. Hidden keys are read once at boot by their consumers; config.Update
+// rewrites the file from the struct, so a hidden key is erased from disk on
+// the first write-back (the in-memory snapshot keeps it). Acceptable because
+// these keys exist only for e2e.
+func HiddenString(key string) string {
+	mu.RLock()
+	defer mu.RUnlock()
+	if rawK == nil {
+		return ""
+	}
+	return rawK.String(key)
 }
 
 // ResetForTest clears the singleton. Tests only.
@@ -54,6 +73,7 @@ func ResetForTest() {
 	defer mu.Unlock()
 	current = nil
 	cfgPath = ""
+	rawK = nil
 }
 
 // Update deep-clones the current config, runs fn, validates the result,

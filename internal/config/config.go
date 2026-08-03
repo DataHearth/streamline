@@ -347,7 +347,7 @@ func LoadReader(r io.Reader) error {
 	if err != nil {
 		return err
 	}
-	store(cfg, "")
+	store(cfg, "", k)
 	return nil
 }
 
@@ -472,6 +472,6 @@ func Load(cfgFile string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	store(cfg, cfgFile)
+	store(cfg, cfgFile, k)
 	return cfg, nil
 }
