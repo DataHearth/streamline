@@ -58,6 +58,13 @@
 				<dd class="text-right font-mono text-fg">
 					{primary.release_group || "—"}
 				</dd>
+				<dt class="text-fg-subtle">Path</dt>
+				<dd
+					class="min-w-0 truncate text-right font-mono text-fg"
+					title={primary.path}
+				>
+					{primary.path}
+				</dd>
 			</dl>
 		{:else}
 			<p class="mt-3 text-[12px] text-fg-subtle">
