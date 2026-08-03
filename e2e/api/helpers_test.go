@@ -10,8 +10,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/datahearth/streamline/e2e/apptest"
 	"github.com/datahearth/streamline/internal/auth"
-	"github.com/datahearth/streamline/internal/testutil/apptest"
 )
 
 // identity is the credential a request authenticates with; the zero value is

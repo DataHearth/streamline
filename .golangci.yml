@@ -65,6 +65,10 @@ linters:
           - staticcheck
         text: "ST1001"
         path: internal/testutil/
+      - linters:
+          - staticcheck
+        text: "ST1001"
+        path: e2e/
       # slog.LogAttrs only accepts slog.Attr by API design; it's the documented
       # way to log at observability.LevelCritical, so kv-only can't apply.
       - linters:
