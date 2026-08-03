@@ -462,6 +462,7 @@ type Store interface {
 		seasonID uint32,
 		monitored bool,
 	) error
+	CascadeSpecialsMonitored(ctx context.Context, monitored bool) (int, error)
 	SetEpisodeStatus(ctx context.Context, id uint32, status episode.Status) error
 	SetEpisodeLastSearchAt(ctx context.Context, id uint32, when time.Time) error
 	IncrementEpisodeGrabFailures(ctx context.Context, id uint32) error

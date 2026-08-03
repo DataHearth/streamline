@@ -446,6 +446,63 @@ func (_c *MockStore_CascadeShowMonitored_Call) RunAndReturn(run func(context.Con
 	return _c
 }
 
+// CascadeSpecialsMonitored provides a mock function with given fields: ctx, monitored
+func (_m *MockStore) CascadeSpecialsMonitored(ctx context.Context, monitored bool) (int, error) {
+	ret := _m.Called(ctx, monitored)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CascadeSpecialsMonitored")
+	}
+
+	var r0 int
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, bool) (int, error)); ok {
+		return rf(ctx, monitored)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, bool) int); ok {
+		r0 = rf(ctx, monitored)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, bool) error); ok {
+		r1 = rf(ctx, monitored)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockStore_CascadeSpecialsMonitored_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CascadeSpecialsMonitored'
+type MockStore_CascadeSpecialsMonitored_Call struct {
+	*mock.Call
+}
+
+// CascadeSpecialsMonitored is a helper method to define mock.On call
+//   - ctx context.Context
+//   - monitored bool
+func (_e *MockStore_Expecter) CascadeSpecialsMonitored(ctx interface{}, monitored interface{}) *MockStore_CascadeSpecialsMonitored_Call {
+	return &MockStore_CascadeSpecialsMonitored_Call{Call: _e.mock.On("CascadeSpecialsMonitored", ctx, monitored)}
+}
+
+func (_c *MockStore_CascadeSpecialsMonitored_Call) Run(run func(ctx context.Context, monitored bool)) *MockStore_CascadeSpecialsMonitored_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(bool))
+	})
+	return _c
+}
+
+func (_c *MockStore_CascadeSpecialsMonitored_Call) Return(_a0 int, _a1 error) *MockStore_CascadeSpecialsMonitored_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockStore_CascadeSpecialsMonitored_Call) RunAndReturn(run func(context.Context, bool) (int, error)) *MockStore_CascadeSpecialsMonitored_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ConsumeInvite provides a mock function with given fields: ctx, id, userID, when
 func (_m *MockStore) ConsumeInvite(ctx context.Context, id uint32, userID uint32, when time.Time) error {
 	ret := _m.Called(ctx, id, userID, when)

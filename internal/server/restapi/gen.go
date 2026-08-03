@@ -2247,6 +2247,18 @@ type JWTRotated struct {
 	Token string `json:"token"`
 }
 
+// LibraryConfigPatch Only provided fields are applied.
+type LibraryConfigPatch struct {
+	MonitorSpecials *bool `json:"monitor_specials,omitempty"`
+}
+
+// LibraryConfigView defines model for LibraryConfigView.
+type LibraryConfigView struct {
+	// MonitorSpecials Monitor season 0 (specials) when a series is added or a refresh
+	// discovers the season. Applies to newly seeded seasons only.
+	MonitorSpecials bool `json:"monitor_specials"`
+}
+
 // MediaFile defines model for MediaFile.
 type MediaFile struct {
 	Format *string `json:"format,omitempty"`
@@ -2769,6 +2781,15 @@ type Session struct {
 	UserAgent  *string    `json:"user_agent,omitempty"`
 }
 
+// SpecialsMonitoredResult defines model for SpecialsMonitoredResult.
+type SpecialsMonitoredResult struct {
+	// Monitored The value applied — the current library.monitor_specials.
+	Monitored bool `json:"monitored"`
+
+	// SeasonsUpdated Specials seasons the setting was applied to.
+	SeasonsUpdated int `json:"seasons_updated"`
+}
+
 // SystemInfo defines model for SystemInfo.
 type SystemInfo struct {
 	AppName   string     `json:"app_name"`
@@ -3220,6 +3241,9 @@ type Forbidden = Error
 // InternalError defines model for InternalError.
 type InternalError = Error
 
+// LibraryConfig defines model for LibraryConfig.
+type LibraryConfig = LibraryConfigView
+
 // MediaServerCreated defines model for MediaServerCreated.
 type MediaServerCreated = MediaServer
 
@@ -3291,6 +3315,9 @@ type SeriesLookupResults = SeriesLookupResultList
 
 // SeriesPlayOnLinks defines model for SeriesPlayOnLinks.
 type SeriesPlayOnLinks = PlayOnLinkList
+
+// SpecialsMonitored defines model for SpecialsMonitored.
+type SpecialsMonitored = SpecialsMonitoredResult
 
 // Unauthorized defines model for Unauthorized.
 type Unauthorized = Error
@@ -3387,6 +3414,9 @@ type UpdateImportFileDecision = ImportScanFileDecisionRequest
 
 // UpdateImportShowDecision defines model for UpdateImportShowDecision.
 type UpdateImportShowDecision = ImportScanShowDecisionRequest
+
+// UpdateLibraryConfig Only provided fields are applied.
+type UpdateLibraryConfig = LibraryConfigPatch
 
 // UpdateMe defines model for UpdateMe.
 type UpdateMe = UpdateMeRequest
@@ -3585,6 +3615,9 @@ type ChangePasswordJSONRequestBody = ChangePasswordRequest
 // UpdateConfigAuthJSONRequestBody defines body for UpdateConfigAuth for application/json ContentType.
 type UpdateConfigAuthJSONRequestBody = AuthConfigPatch
 
+// UpdateConfigLibraryJSONRequestBody defines body for UpdateConfigLibrary for application/json ContentType.
+type UpdateConfigLibraryJSONRequestBody = LibraryConfigPatch
+
 // CreateOIDCProviderJSONRequestBody defines body for CreateOIDCProvider for application/json ContentType.
 type CreateOIDCProviderJSONRequestBody = OIDCProviderCreate
 
@@ -3782,6 +3815,12 @@ type ServerInterface interface {
 	// Patch auth configuration (admin)
 	// (PATCH /config/auth)
 	UpdateConfigAuth(w http.ResponseWriter, r *http.Request)
+	// Get library configuration (admin)
+	// (GET /config/library)
+	GetConfigLibrary(w http.ResponseWriter, r *http.Request)
+	// Patch library configuration (admin)
+	// (PATCH /config/library)
+	UpdateConfigLibrary(w http.ResponseWriter, r *http.Request)
 	// List OIDC providers (admin)
 	// (GET /config/oidc)
 	ListOIDCProviders(w http.ResponseWriter, r *http.Request)
@@ -3995,6 +4034,9 @@ type ServerInterface interface {
 	// Search TVDB for series to add
 	// (GET /series/lookup)
 	LookupSeries(w http.ResponseWriter, r *http.Request, params LookupSeriesParams)
+	// Apply the specials setting to existing series (admin)
+	// (POST /series/specials/apply)
+	ApplySpecialsToExisting(w http.ResponseWriter, r *http.Request)
 	// Remove a series from the library
 	// (DELETE /series/{id})
 	DeleteSeries(w http.ResponseWriter, r *http.Request, id ResourceID, params DeleteSeriesParams)
@@ -4259,6 +4301,18 @@ func (_ Unimplemented) GetConfigAuth(w http.ResponseWriter, r *http.Request) {
 // Patch auth configuration (admin)
 // (PATCH /config/auth)
 func (_ Unimplemented) UpdateConfigAuth(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get library configuration (admin)
+// (GET /config/library)
+func (_ Unimplemented) GetConfigLibrary(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Patch library configuration (admin)
+// (PATCH /config/library)
+func (_ Unimplemented) UpdateConfigLibrary(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -4675,6 +4729,12 @@ func (_ Unimplemented) GetSeriesCounts(w http.ResponseWriter, r *http.Request) {
 // Search TVDB for series to add
 // (GET /series/lookup)
 func (_ Unimplemented) LookupSeries(w http.ResponseWriter, r *http.Request, params LookupSeriesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Apply the specials setting to existing series (admin)
+// (POST /series/specials/apply)
+func (_ Unimplemented) ApplySpecialsToExisting(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -5689,6 +5749,50 @@ func (siw *ServerInterfaceWrapper) UpdateConfigAuth(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateConfigAuth(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetConfigLibrary operation middleware
+func (siw *ServerInterfaceWrapper) GetConfigLibrary(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, ApiKeyAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetConfigLibrary(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateConfigLibrary operation middleware
+func (siw *ServerInterfaceWrapper) UpdateConfigLibrary(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, ApiKeyAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateConfigLibrary(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -8032,6 +8136,28 @@ func (siw *ServerInterfaceWrapper) LookupSeries(w http.ResponseWriter, r *http.R
 	handler.ServeHTTP(w, r)
 }
 
+// ApplySpecialsToExisting operation middleware
+func (siw *ServerInterfaceWrapper) ApplySpecialsToExisting(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, ApiKeyAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ApplySpecialsToExisting(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // DeleteSeries operation middleware
 func (siw *ServerInterfaceWrapper) DeleteSeries(w http.ResponseWriter, r *http.Request) {
 
@@ -9437,6 +9563,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Patch(options.BaseURL+"/config/auth", wrapper.UpdateConfigAuth)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/config/library", wrapper.GetConfigLibrary)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/config/library", wrapper.UpdateConfigLibrary)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/config/oidc", wrapper.ListOIDCProviders)
 	})
 	r.Group(func(r chi.Router) {
@@ -9650,6 +9782,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/series/lookup", wrapper.LookupSeries)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/series/specials/apply", wrapper.ApplySpecialsToExisting)
+	})
+	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/series/{id}", wrapper.DeleteSeries)
 	})
 	r.Group(func(r chi.Router) {
@@ -9799,6 +9934,8 @@ type InternalErrorJSONResponse Error
 
 type JWTRotatedJSONResponse JWTRotated
 
+type LibraryConfigJSONResponse LibraryConfigView
+
 type MediaServerCreatedJSONResponse MediaServer
 
 type MediaServerDeletedResponse struct {
@@ -9882,6 +10019,8 @@ type SeriesRenamePlanJSONResponse SeriesRenamePlan
 
 type SeriesSearchAcceptedResponse struct {
 }
+
+type SpecialsMonitoredJSONResponse SpecialsMonitoredResult
 
 type SystemInfoJSONResponse SystemInfo
 
@@ -10756,6 +10895,68 @@ type UpdateConfigAuth422JSONResponse struct {
 }
 
 func (response UpdateConfigAuth422JSONResponse) VisitUpdateConfigAuthResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetConfigLibraryRequestObject struct {
+}
+
+type GetConfigLibraryResponseObject interface {
+	VisitGetConfigLibraryResponse(w http.ResponseWriter) error
+}
+
+type GetConfigLibrary200JSONResponse struct{ LibraryConfigJSONResponse }
+
+func (response GetConfigLibrary200JSONResponse) VisitGetConfigLibraryResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetConfigLibrary403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetConfigLibrary403JSONResponse) VisitGetConfigLibraryResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateConfigLibraryRequestObject struct {
+	Body *UpdateConfigLibraryJSONRequestBody
+}
+
+type UpdateConfigLibraryResponseObject interface {
+	VisitUpdateConfigLibraryResponse(w http.ResponseWriter) error
+}
+
+type UpdateConfigLibrary200JSONResponse struct{ LibraryConfigJSONResponse }
+
+func (response UpdateConfigLibrary200JSONResponse) VisitUpdateConfigLibraryResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateConfigLibrary403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpdateConfigLibrary403JSONResponse) VisitUpdateConfigLibraryResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateConfigLibrary422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response UpdateConfigLibrary422JSONResponse) VisitUpdateConfigLibraryResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(422)
 
@@ -13686,6 +13887,40 @@ func (response LookupSeries500JSONResponse) VisitLookupSeriesResponse(w http.Res
 	return json.NewEncoder(w).Encode(response)
 }
 
+type ApplySpecialsToExistingRequestObject struct {
+}
+
+type ApplySpecialsToExistingResponseObject interface {
+	VisitApplySpecialsToExistingResponse(w http.ResponseWriter) error
+}
+
+type ApplySpecialsToExisting200JSONResponse struct{ SpecialsMonitoredJSONResponse }
+
+func (response ApplySpecialsToExisting200JSONResponse) VisitApplySpecialsToExistingResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ApplySpecialsToExisting403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ApplySpecialsToExisting403JSONResponse) VisitApplySpecialsToExistingResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ApplySpecialsToExisting500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ApplySpecialsToExisting500JSONResponse) VisitApplySpecialsToExistingResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type DeleteSeriesRequestObject struct {
 	Id     ResourceID `json:"id"`
 	Params DeleteSeriesParams
@@ -14992,6 +15227,12 @@ type StrictServerInterface interface {
 	// Patch auth configuration (admin)
 	// (PATCH /config/auth)
 	UpdateConfigAuth(ctx context.Context, request UpdateConfigAuthRequestObject) (UpdateConfigAuthResponseObject, error)
+	// Get library configuration (admin)
+	// (GET /config/library)
+	GetConfigLibrary(ctx context.Context, request GetConfigLibraryRequestObject) (GetConfigLibraryResponseObject, error)
+	// Patch library configuration (admin)
+	// (PATCH /config/library)
+	UpdateConfigLibrary(ctx context.Context, request UpdateConfigLibraryRequestObject) (UpdateConfigLibraryResponseObject, error)
 	// List OIDC providers (admin)
 	// (GET /config/oidc)
 	ListOIDCProviders(ctx context.Context, request ListOIDCProvidersRequestObject) (ListOIDCProvidersResponseObject, error)
@@ -15205,6 +15446,9 @@ type StrictServerInterface interface {
 	// Search TVDB for series to add
 	// (GET /series/lookup)
 	LookupSeries(ctx context.Context, request LookupSeriesRequestObject) (LookupSeriesResponseObject, error)
+	// Apply the specials setting to existing series (admin)
+	// (POST /series/specials/apply)
+	ApplySpecialsToExisting(ctx context.Context, request ApplySpecialsToExistingRequestObject) (ApplySpecialsToExistingResponseObject, error)
 	// Remove a series from the library
 	// (DELETE /series/{id})
 	DeleteSeries(ctx context.Context, request DeleteSeriesRequestObject) (DeleteSeriesResponseObject, error)
@@ -16057,6 +16301,61 @@ func (sh *strictHandler) UpdateConfigAuth(w http.ResponseWriter, r *http.Request
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateConfigAuthResponseObject); ok {
 		if err := validResponse.VisitUpdateConfigAuthResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetConfigLibrary operation middleware
+func (sh *strictHandler) GetConfigLibrary(w http.ResponseWriter, r *http.Request) {
+	var request GetConfigLibraryRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetConfigLibrary(ctx, request.(GetConfigLibraryRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetConfigLibrary")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetConfigLibraryResponseObject); ok {
+		if err := validResponse.VisitGetConfigLibraryResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateConfigLibrary operation middleware
+func (sh *strictHandler) UpdateConfigLibrary(w http.ResponseWriter, r *http.Request) {
+	var request UpdateConfigLibraryRequestObject
+
+	var body UpdateConfigLibraryJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateConfigLibrary(ctx, request.(UpdateConfigLibraryRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateConfigLibrary")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateConfigLibraryResponseObject); ok {
+		if err := validResponse.VisitUpdateConfigLibraryResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -18054,6 +18353,30 @@ func (sh *strictHandler) LookupSeries(w http.ResponseWriter, r *http.Request, pa
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(LookupSeriesResponseObject); ok {
 		if err := validResponse.VisitLookupSeriesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ApplySpecialsToExisting operation middleware
+func (sh *strictHandler) ApplySpecialsToExisting(w http.ResponseWriter, r *http.Request) {
+	var request ApplySpecialsToExistingRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ApplySpecialsToExisting(ctx, request.(ApplySpecialsToExistingRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ApplySpecialsToExisting")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ApplySpecialsToExistingResponseObject); ok {
+		if err := validResponse.VisitApplySpecialsToExistingResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

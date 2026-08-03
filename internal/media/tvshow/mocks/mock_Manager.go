@@ -86,6 +86,62 @@ func (_c *MockManager_Add_Call) RunAndReturn(run func(context.Context, uint32, s
 	return _c
 }
 
+// ApplySpecialsToExisting provides a mock function with given fields: ctx
+func (_m *MockManager) ApplySpecialsToExisting(ctx context.Context) (int, error) {
+	ret := _m.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ApplySpecialsToExisting")
+	}
+
+	var r0 int
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context) (int, error)); ok {
+		return rf(ctx)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context) int); ok {
+		r0 = rf(ctx)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockManager_ApplySpecialsToExisting_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ApplySpecialsToExisting'
+type MockManager_ApplySpecialsToExisting_Call struct {
+	*mock.Call
+}
+
+// ApplySpecialsToExisting is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockManager_Expecter) ApplySpecialsToExisting(ctx interface{}) *MockManager_ApplySpecialsToExisting_Call {
+	return &MockManager_ApplySpecialsToExisting_Call{Call: _e.mock.On("ApplySpecialsToExisting", ctx)}
+}
+
+func (_c *MockManager_ApplySpecialsToExisting_Call) Run(run func(ctx context.Context)) *MockManager_ApplySpecialsToExisting_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context))
+	})
+	return _c
+}
+
+func (_c *MockManager_ApplySpecialsToExisting_Call) Return(_a0 int, _a1 error) *MockManager_ApplySpecialsToExisting_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockManager_ApplySpecialsToExisting_Call) RunAndReturn(run func(context.Context) (int, error)) *MockManager_ApplySpecialsToExisting_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Counts provides a mock function with given fields: ctx
 func (_m *MockManager) Counts(ctx context.Context) (tvshow.Counts, error) {
 	ret := _m.Called(ctx)

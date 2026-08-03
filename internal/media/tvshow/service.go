@@ -93,12 +93,14 @@ func seedSeasons(d *metadata.TVDetails) []db.SeasonSeed {
 			AirDate:        e.AirDate,
 		})
 	}
+	monitorSpecials := config.Get().Library.MonitorSpecials
 	seasons := make([]db.SeasonSeed, 0, len(d.Seasons))
 	for _, si := range d.Seasons {
 		seasons = append(seasons, db.SeasonSeed{
-			Number:   si.Number,
-			Name:     si.Name,
-			Episodes: bySeason[si.Number],
+			Number:      si.Number,
+			Name:        si.Name,
+			Unmonitored: si.Number == 0 && !monitorSpecials,
+			Episodes:    bySeason[si.Number],
 		})
 	}
 	return seasons
@@ -537,6 +539,29 @@ func (s *Service) SetEpisodeMonitored(ctx context.Context, id uint32, m bool) er
 	return s.db.SetEpisodeMonitored(ctx, id, m)
 }
 
+// ApplySpecialsToExisting pushes the current library.monitor_specials value
+// onto season 0 of every series already in the library — the toggle itself
+// only governs seasons seeded after it flipped. Turning it off is the way to
+// unmonitor specials in bulk.
+func (s *Service) ApplySpecialsToExisting(ctx context.Context) (int, error) {
+	monitored := config.Get().Library.MonitorSpecials
+	ctx, span := tracer.Start(ctx, "tvshow.apply_specials_to_existing",
+		trace.WithAttributes(attribute.Bool("monitor_specials", monitored)),
+	)
+	defer span.End()
+
+	n, err := s.db.CascadeSpecialsMonitored(ctx, monitored)
+	if err != nil {
+		return 0, otelx.RecordSpanError(span, err)
+	}
+	span.SetAttributes(attribute.Int("seasons.updated", n))
+	slog.InfoContext(ctx, "specials monitoring applied across the library",
+		"monitor_specials", monitored,
+		"seasons.updated", n,
+	)
+	return n, nil
+}
+
 func (s *Service) Delete(ctx context.Context, id uint32, opts DeleteOptions) error {
 	ctx, span := tracer.Start(ctx, "tvshow.delete",
 		trace.WithAttributes(
@@ -888,6 +913,7 @@ type Manager interface {
 	RefreshOne(ctx context.Context, id uint32) (*ent.TVShow, error)
 	SetSeasonMonitored(ctx context.Context, id uint32, monitored bool) error
 	SetEpisodeMonitored(ctx context.Context, id uint32, monitored bool) error
+	ApplySpecialsToExisting(ctx context.Context) (int, error)
 }
 
 type DeleteOptions struct{ DeleteFiles bool }

@@ -373,6 +373,89 @@ var _ = Describe("TVShow store", Label("unit", "db"), func() {
 		},
 	)
 
+	It(
+		"CascadeSpecialsMonitored(false) switches off season 0 everywhere",
+		func() {
+			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "Everything on", Year: 2020, TvdbID: 93,
+				Seasons: []SeasonSeed{
+					{
+						Number:   0,
+						Episodes: []EpisodeSeed{{Number: 1, Title: "Recap"}},
+					},
+					{
+						Number:   1,
+						Episodes: []EpisodeSeed{{Number: 1, Title: "Pilot"}},
+					},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			n, err := store.CascadeSpecialsMonitored(ctx, false)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(1))
+
+			got, err := store.FindTVShowByID(ctx, show.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.Edges.Seasons[0].Monitored).To(BeFalse())
+			Expect(got.Edges.Seasons[0].Edges.Episodes[0].Monitored).To(BeFalse())
+			// The regular season is untouched.
+			Expect(got.Edges.Seasons[1].Monitored).To(BeTrue())
+			Expect(got.Edges.Seasons[1].Edges.Episodes[0].Monitored).To(BeTrue())
+		},
+	)
+
+	It(
+		"CascadeSpecialsMonitored(true) switches on season 0 of monitored shows only",
+		func() {
+			specials := SeasonSeed{
+				Number:      0,
+				Unmonitored: true,
+				Episodes:    []EpisodeSeed{{Number: 1, Title: "Recap"}},
+			}
+			regular := SeasonSeed{
+				Number:   1,
+				Episodes: []EpisodeSeed{{Number: 1, Title: "Pilot"}},
+			}
+			kept, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "Watched", Year: 2020, TvdbID: 91,
+				Seasons: []SeasonSeed{specials, regular},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			ignored, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "Dropped", Year: 2020, TvdbID: 92,
+				Seasons: []SeasonSeed{specials, regular},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			off := false
+			_, err = store.UpdateTVShow(
+				ctx,
+				ignored.ID,
+				UpdateTVShowParams{Monitored: &off},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(store.CascadeShowMonitored(ctx, ignored.ID, false)).To(Succeed())
+
+			n, err := store.CascadeSpecialsMonitored(ctx, true)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(1))
+
+			got, err := store.FindTVShowByID(ctx, kept.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.Edges.Seasons[0].Number).To(Equal(uint16(0)))
+			Expect(got.Edges.Seasons[0].Monitored).To(BeTrue())
+			Expect(got.Edges.Seasons[0].Edges.Episodes[0].Monitored).To(BeTrue())
+
+			// The unmonitored show keeps its specials off — otherwise the
+			// fetcher would pick up work its owner explicitly switched off.
+			skipped, err := store.FindTVShowByID(ctx, ignored.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(skipped.Edges.Seasons[0].Monitored).To(BeFalse())
+			Expect(skipped.Edges.Seasons[0].Edges.Episodes[0].Monitored).
+				To(BeFalse())
+		},
+	)
+
 	It("lists shows with wanted monitored episodes", func() {
 		show, err := store.CreateTVShow(ctx, CreateTVShowParams{
 			Title:  "X",

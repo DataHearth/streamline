@@ -103,6 +103,11 @@ type LibraryConfig struct {
 	MovieNaming  string `koanf:"movie_naming"  validate:"required"`
 	SeriesPath   string `koanf:"series_path"   validate:"required"`
 	SeriesNaming string `koanf:"series_naming" validate:"required"`
+	// MonitorSpecials opts season 0 into monitoring when a series is added or
+	// a refresh discovers the season. Off by default: specials are usually
+	// recaps and OVAs nobody wants grabbed automatically. Only applies at seed
+	// time — flipping it never touches seasons already in the library.
+	MonitorSpecials bool `koanf:"monitor_specials"`
 	// DownloadPath is the host-side directory where streamline reads
 	// completed torrents from. qBittorrent (or any other client) decides
 	// its own save location; this only tells the importer where to look,
@@ -264,6 +269,7 @@ func defaults() map[string]any {
 		"library.download_path":          "/downloads",
 		"library.movie_naming":           "{title} ({year}) {tmdb-{tmdb_id}}/{title} ({year}) [{quality}].{ext}",
 		"library.import_mode":            "hardlink",
+		"library.monitor_specials":       false,
 		"library.keep_torrent_seeding":   true,
 		"library.import_max_attempts":    3,
 		"library.allowed_download_roots": []string{},

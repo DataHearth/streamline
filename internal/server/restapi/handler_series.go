@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 
+	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/media/tvshow"
 	"github.com/datahearth/streamline/internal/metadata"
@@ -520,6 +521,32 @@ func (s *Server) GetSeriesPlayOnLinks(
 	}
 	return GetSeriesPlayOnLinks200JSONResponse{
 		SeriesPlayOnLinksJSONResponse: SeriesPlayOnLinksJSONResponse{Items: items},
+	}, nil
+}
+
+// ApplySpecialsToExisting retro-applies library.monitor_specials to series
+// already in the library. Admin only — it is a library-wide bulk mutation
+// driven from the settings page.
+func (s *Server) ApplySpecialsToExisting(
+	ctx context.Context,
+	_ ApplySpecialsToExistingRequestObject,
+) (ApplySpecialsToExistingResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return ApplySpecialsToExisting403JSONResponse{
+			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
+	n, err := s.tvshows.ApplySpecialsToExisting(ctx)
+	if err != nil {
+		return ApplySpecialsToExisting500JSONResponse{
+			InternalErrorJSONResponse: errInternal(err.Error()),
+		}, nil
+	}
+	return ApplySpecialsToExisting200JSONResponse{
+		SpecialsMonitoredJSONResponse: SpecialsMonitoredJSONResponse{
+			SeasonsUpdated: n,
+			Monitored:      config.Get().Library.MonitorSpecials,
+		},
 	}, nil
 }
 

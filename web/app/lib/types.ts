@@ -466,6 +466,10 @@ export type AuthConfig = {
 	oidc_default_role: UserRole;
 };
 
+export type LibraryConfig = {
+	monitor_specials: boolean;
+};
+
 export type OIDCProvider = {
 	name: string;
 	issuer: string;

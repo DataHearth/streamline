@@ -28,9 +28,12 @@ type EpisodeSeed struct {
 func (e EpisodeSeed) tba() bool { return e.Title == "" && e.AirDate == nil }
 
 type SeasonSeed struct {
-	Number   uint16
-	Name     string
-	Episodes []EpisodeSeed
+	Number uint16
+	Name   string
+	// Unmonitored, not Monitored: the zero value has to mean "monitored", the
+	// long-standing default for a freshly seeded season.
+	Unmonitored bool
+	Episodes    []EpisodeSeed
 }
 
 type CreateTVShowParams struct {
@@ -143,6 +146,7 @@ func (db *DB) ReconcileEpisodes(
 			if sr, err = tx.Season.Create().
 				SetNumber(s.Number).
 				SetName(s.Name).
+				SetMonitored(!s.Unmonitored).
 				SetTvShowID(showID).
 				Save(ctx); err != nil {
 				tx.Rollback()
@@ -281,6 +285,7 @@ func (db *DB) CreateTVShow(
 		seasonRow, err := tx.Season.Create().
 			SetNumber(s.Number).
 			SetName(s.Name).
+			SetMonitored(!s.Unmonitored).
 			SetTvShowID(show.ID).
 			Save(ctx)
 		if err != nil {
@@ -293,7 +298,7 @@ func (db *DB) CreateTVShow(
 				SetAbsoluteNumber(e.AbsoluteNumber).
 				SetTitle(e.Title).
 				SetOverview(e.Overview).
-				SetMonitored(!e.tba()).
+				SetMonitored(!s.Unmonitored && !e.tba()).
 				SetSeasonID(seasonRow.ID)
 			if e.AirDate != nil {
 				b = b.SetAirDate(*e.AirDate)
@@ -433,6 +438,46 @@ func (db *DB) CascadeShowMonitored(
 		return fmt.Errorf("cascade episodes monitored: %w", err)
 	}
 	return tx.Commit()
+}
+
+// CascadeSpecialsMonitored sets season 0 — and its episodes — across the whole
+// library, retro-applying library.monitor_specials to series added before the
+// toggle was flipped. Returns the number of seasons touched.
+//
+// Switching specials ON skips unmonitored shows: a monitored episode under an
+// unmonitored show would hand the fetcher work its owner explicitly turned
+// off. Switching OFF has no such hazard and applies everywhere, so a season 0
+// left monitored under an unmonitored show still gets cleaned up.
+func (db *DB) CascadeSpecialsMonitored(
+	ctx context.Context,
+	monitored bool,
+) (int, error) {
+	target := []predicate.Season{season.NumberEQ(0)}
+	if monitored {
+		target = append(
+			target,
+			season.HasTvShowWith(tvshow.MonitoredEQ(true)),
+		)
+	}
+	inLibrary := season.And(target...)
+	tx, err := db.client.Tx(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("begin tx: %w", err)
+	}
+	n, err := tx.Season.Update().
+		Where(inLibrary).
+		SetMonitored(monitored).Save(ctx)
+	if err != nil {
+		tx.Rollback()
+		return 0, fmt.Errorf("set specials monitored: %w", err)
+	}
+	if _, err := tx.Episode.Update().
+		Where(episode.HasSeasonWith(inLibrary)).
+		SetMonitored(monitored).Save(ctx); err != nil {
+		tx.Rollback()
+		return 0, fmt.Errorf("cascade specials episodes monitored: %w", err)
+	}
+	return n, tx.Commit()
 }
 
 // CascadeSeasonMonitored sets a season and all its episodes to monitored in one

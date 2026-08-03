@@ -394,6 +394,30 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /series/specials/apply:
+    post:
+      operationId: applySpecialsToExisting
+      summary: Apply the specials setting to existing series (admin)
+      description: |
+        Pushes the current library.monitor_specials value onto season 0 — and
+        its episodes — of every series already in the library. The toggle
+        itself only governs seasons seeded after it was flipped; this is the
+        catch-up for older series, in both directions.
+
+        Turning specials on skips unmonitored series; turning them off applies
+        everywhere.
+      tags: [series, admin]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        "200":
+          $ref: "#/components/responses/SpecialsMonitored"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /series/lookup:
     get:
       operationId: lookupSeries
@@ -1529,6 +1553,39 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/AuthConfig"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /config/library:
+    get:
+      operationId: getConfigLibrary
+      summary: Get library configuration (admin)
+      description: |
+        Returns the runtime-editable library configuration. Changes made via
+        PATCH take effect immediately — no restart required.
+      tags: [config, admin]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        "200":
+          $ref: "#/components/responses/LibraryConfig"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    patch:
+      operationId: updateConfigLibrary
+      summary: Patch library configuration (admin)
+      tags: [config, admin]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      requestBody:
+        $ref: "#/components/requestBodies/UpdateLibraryConfig"
+      responses:
+        "200":
+          $ref: "#/components/responses/LibraryConfig"
         "403":
           $ref: "#/components/responses/Forbidden"
         "422":
@@ -2937,6 +2994,13 @@ components:
           schema:
             $ref: "#/components/schemas/AuthConfigPatch"
 
+    UpdateLibraryConfig:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/LibraryConfigPatch"
+
     CreateOIDCProvider:
       required: true
       content:
@@ -3306,6 +3370,20 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/AuthConfigView"
+
+    SpecialsMonitored:
+      description: Number of specials seasons the setting was applied to.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/SpecialsMonitoredResult"
+
+    LibraryConfig:
+      description: Current runtime-editable library configuration.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/LibraryConfigView"
 
     OIDCProvider:
       description: OIDC provider detail.
@@ -4827,6 +4905,34 @@ components:
         oidc_default_role:
           type: string
           enum: [admin, member, request_only]
+
+    SpecialsMonitoredResult:
+      type: object
+      required: [seasons_updated, monitored]
+      properties:
+        seasons_updated:
+          type: integer
+          description: Specials seasons the setting was applied to.
+        monitored:
+          type: boolean
+          description: The value applied — the current library.monitor_specials.
+
+    LibraryConfigView:
+      type: object
+      required: [monitor_specials]
+      properties:
+        monitor_specials:
+          type: boolean
+          description: |
+            Monitor season 0 (specials) when a series is added or a refresh
+            discovers the season. Applies to newly seeded seasons only.
+
+    LibraryConfigPatch:
+      type: object
+      description: Only provided fields are applied.
+      properties:
+        monitor_specials:
+          type: boolean
 
     OIDCProviderView:
       type: object

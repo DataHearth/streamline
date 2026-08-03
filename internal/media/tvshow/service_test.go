@@ -82,6 +82,25 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 		Eventually(done).Should(BeClosed())
 	})
 
+	DescribeTable(
+		"seedSeasons leaves specials unmonitored unless opted in",
+		func(monitorSpecials, wantSpecialsMonitored bool) {
+			configtest.Setup(
+				map[string]any{"library.monitor_specials": monitorSpecials},
+			)
+
+			seasons := seedSeasons(&metadata.TVDetails{
+				Seasons: []metadata.SeasonInfo{{Number: 0}, {Number: 1}},
+			})
+
+			Expect(seasons[0].Number).To(Equal(uint16(0)))
+			Expect(seasons[0].Unmonitored).To(Equal(!wantSpecialsMonitored))
+			Expect(seasons[1].Unmonitored).To(BeFalse())
+		},
+		Entry("off by default", false, false),
+		Entry("opted in", true, true),
+	)
+
 	It("Add rejects the show when no quality profile resolves", func() {
 		configtest.Setup(map[string]any{
 			"quality_profiles":        []any{},

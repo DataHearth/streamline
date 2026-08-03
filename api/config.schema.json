@@ -228,6 +228,10 @@
           "type": "string",
           "enum": ["hardlink", "copy", "move"]
         },
+        "monitor_specials": {
+          "type": "boolean",
+          "description": "Monitor season 0 (specials) when a series is added or a refresh discovers the season. Off by default."
+        },
         "no_match_cooldown": { "$ref": "#/definitions/duration" },
         "max_grab_failures": { "type": "integer", "minimum": 1 },
         "keep_torrent_seeding": { "type": "boolean" },

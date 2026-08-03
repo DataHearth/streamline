@@ -21,6 +21,12 @@ type AuthPatch struct {
 	OIDCDefaultRole  *string
 }
 
+// LibraryPatch carries optional field updates to the library section. Nil
+// fields are left untouched.
+type LibraryPatch struct {
+	MonitorSpecials *bool
+}
+
 // OIDCProviderPatch carries optional field updates to a single OIDC provider.
 // A nil ClientSecret (or empty string) preserves the existing secret — the
 // UI never shows the current value, so blank means "unchanged."
@@ -71,6 +77,23 @@ func UpdateAuth(ctx context.Context, patch AuthPatch) (AuthConfig, error) {
 	})
 	if err != nil {
 		return AuthConfig{}, err
+	}
+	return out, nil
+}
+
+// UpdateLibrary merges the patch into the library section and persists it.
+// Returns the resulting LibraryConfig so callers can echo the new state back.
+func UpdateLibrary(ctx context.Context, patch LibraryPatch) (LibraryConfig, error) {
+	var out LibraryConfig
+	err := Update(ctx, func(c *Config) error {
+		if patch.MonitorSpecials != nil {
+			c.Library.MonitorSpecials = *patch.MonitorSpecials
+		}
+		out = c.Library
+		return nil
+	})
+	if err != nil {
+		return LibraryConfig{}, err
 	}
 	return out, nil
 }
