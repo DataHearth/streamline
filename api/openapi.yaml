@@ -2650,7 +2650,7 @@ components:
       name: name
       in: path
       required: true
-      description: Registered scheduled-job name (e.g. "rss-sync").
+      description: Registered scheduled-job name (e.g. "movie-rss-sync").
       schema:
         type: string
         minLength: 1
@@ -5104,7 +5104,7 @@ components:
       properties:
         name:
           type: string
-          description: Job identifier (e.g. "rss-sync").
+          description: Job identifier (e.g. "movie-rss-sync").
         interval:
           type: string
           description: Go duration string (e.g. "15m").

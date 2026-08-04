@@ -37,6 +37,7 @@ include_ext = [
   "css",
   "png",
   "woff2",
+  "sql",
 ]
 include_file = []
 kill_delay = "0s"

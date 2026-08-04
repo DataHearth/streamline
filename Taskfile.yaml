@@ -34,6 +34,10 @@ tasks:
       - web/static/**
       - web/app/index.html
       - web/api_docs.html
+      # Embedded too (internal/db/migrations.go). Editing a .sql without this
+      # leaves the binary carrying the previous migration, which surfaces as a
+      # dirty schema_migrations row rather than as a stale build.
+      - internal/db/migrations/**
     generates:
       - "{{.BINARY}}"
 

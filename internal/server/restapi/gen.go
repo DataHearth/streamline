@@ -2675,7 +2675,7 @@ type Schedule struct {
 	LastFinishedAt *time.Time `json:"last_finished_at,omitempty"`
 	LastStartedAt  *time.Time `json:"last_started_at,omitempty"`
 
-	// Name Job identifier (e.g. "rss-sync").
+	// Name Job identifier (e.g. "movie-rss-sync").
 	Name      string     `json:"name"`
 	NextRunAt *time.Time `json:"next_run_at,omitempty"`
 	Paused    bool       `json:"paused"`

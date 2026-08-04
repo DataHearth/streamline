@@ -251,16 +251,36 @@
     "schedules": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Cron-like job intervals (Go duration strings).",
+      "description": "Cron-like job intervals (Go duration strings). One key per registered job; media-scoped jobs are keyed movie_*/tv_*, the rest are shared across both libraries.",
       "properties": {
-        "rss_sync": { "$ref": "#/definitions/duration" },
-        "metadata_refresh": { "$ref": "#/definitions/duration" },
+        "movie_rss_sync": { "$ref": "#/definitions/duration" },
+        "tv_rss_sync": { "$ref": "#/definitions/duration" },
+        "movie_missing_search": { "$ref": "#/definitions/duration" },
+        "tv_missing_search": { "$ref": "#/definitions/duration" },
+        "movie_metadata_refresh": { "$ref": "#/definitions/duration" },
+        "tv_metadata_refresh": { "$ref": "#/definitions/duration" },
+        "movie_orphan_scan": { "$ref": "#/definitions/duration" },
+        "tv_orphan_scan": { "$ref": "#/definitions/duration" },
         "download_monitor": { "$ref": "#/definitions/duration" },
-        "missing_search": { "$ref": "#/definitions/duration" },
         "cleanup": { "$ref": "#/definitions/duration" },
         "import_scan": { "$ref": "#/definitions/duration" },
-        "orphan_scan": { "$ref": "#/definitions/duration" },
-        "drift_check": { "$ref": "#/definitions/duration" }
+        "drift_check": { "$ref": "#/definitions/duration" },
+        "rss_sync": {
+          "$ref": "#/definitions/duration",
+          "description": "Deprecated: renamed to movie_rss_sync. Still honoured, with a warning on boot."
+        },
+        "missing_search": {
+          "$ref": "#/definitions/duration",
+          "description": "Deprecated: split into movie_missing_search and tv_missing_search. Still honoured for both, with a warning on boot."
+        },
+        "metadata_refresh": {
+          "$ref": "#/definitions/duration",
+          "description": "Deprecated: split into movie_metadata_refresh and tv_metadata_refresh. Still honoured for both, with a warning on boot."
+        },
+        "orphan_scan": {
+          "$ref": "#/definitions/duration",
+          "description": "Deprecated: split into movie_orphan_scan and tv_orphan_scan. Still honoured for both, with a warning on boot."
+        }
       }
     },
     "metadata": {

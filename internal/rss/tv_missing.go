@@ -176,7 +176,7 @@ func (s *EpisodeMissingSearcher) grabSeasonPack(
 		span.SetAttributes(attribute.String("release.title", r.Title))
 		now := time.Now()
 		for _, e := range wanted {
-			s.markDownloading(ctx, e.ID, now)
+			markEpisodeDownloading(ctx, s.store, e.ID, now)
 		}
 		slog.InfoContext(ctx, "tv missing-search: grabbed season pack",
 			"show", show.Title, "season", se.Number,
@@ -234,41 +234,43 @@ func (s *EpisodeMissingSearcher) grabEpisode(
 				"tv missing-search: reset episode grab_failures failed",
 				"episode.id", e.ID, "error", err)
 		}
-		s.stampLastSearch(ctx, e.ID, time.Now())
+		stampEpisodeSearch(ctx, s.store, e.ID, time.Now())
 		slog.InfoContext(ctx, "tv missing-search: grabbed episode",
 			"show", show.Title, "season", se.Number, "episode", e.Number,
 			"release", r.Title)
 		return
 	}
 	// No acceptable release: still advance the cooldown counter.
-	s.stampLastSearch(ctx, e.ID, time.Now())
+	stampEpisodeSearch(ctx, s.store, e.ID, time.Now())
 }
 
-// markDownloading flips an episode to downloading and stamps last_search_at,
-// logging (not returning) any store failure.
-func (s *EpisodeMissingSearcher) markDownloading(
+// markEpisodeDownloading flips an episode to downloading and stamps
+// last_search_at, logging (not returning) any store failure.
+func markEpisodeDownloading(
 	ctx context.Context,
+	store EligibleEpisodeLister,
 	id uint32,
 	when time.Time,
 ) {
-	if err := s.store.SetEpisodeStatus(
+	if err := store.SetEpisodeStatus(
 		ctx, id, episode.StatusDownloading,
 	); err != nil {
-		slog.WarnContext(ctx, "tv missing-search: set episode status failed",
+		slog.WarnContext(ctx, "tv sync: set episode status failed",
 			"episode.id", id, "error", err)
 	}
-	s.stampLastSearch(ctx, id, when)
+	stampEpisodeSearch(ctx, store, id, when)
 }
 
-// stampLastSearch records last_search_at, logging any store failure.
-func (s *EpisodeMissingSearcher) stampLastSearch(
+// stampEpisodeSearch records last_search_at, logging any store failure.
+func stampEpisodeSearch(
 	ctx context.Context,
+	store EligibleEpisodeLister,
 	id uint32,
 	when time.Time,
 ) {
-	if err := s.store.SetEpisodeLastSearchAt(ctx, id, when); err != nil {
+	if err := store.SetEpisodeLastSearchAt(ctx, id, when); err != nil {
 		slog.WarnContext(ctx,
-			"tv missing-search: set episode last_search_at failed",
+			"tv sync: set episode last_search_at failed",
 			"episode.id", id, "error", err)
 	}
 }

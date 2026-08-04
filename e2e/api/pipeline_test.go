@@ -75,7 +75,7 @@ var _ = Describe(
 			containers.Require()
 			qb = containers.StartQBittorrent(downloadDir)
 			// Before the indexer, client and movie exist: starting the loop
-			// runs every job once, and an rss-sync over a live indexer would
+			// runs every job once, and a movie-rss-sync over a live indexer would
 			// grab the release out from under the spec.
 			stopScheduler := apptest.StartScheduler(app.Scheduler)
 

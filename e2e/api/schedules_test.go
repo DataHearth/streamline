@@ -35,13 +35,13 @@ var _ = Describe("REST API schedules", Label("e2e"), func() {
 			Items []scheduleView `json:"items"`
 		}
 		decode(resp, &list)
-		Expect(list.Items).To(ContainElement(HaveField("Name", "rss-sync")))
+		Expect(list.Items).To(ContainElement(HaveField("Name", "movie-rss-sync")))
 		Expect(list.Items).To(ContainElement(HaveField("System", true)))
 	})
 
 	It("returns a single job by name", func() {
-		sched := readSchedule("rss-sync")
-		Expect(sched.Name).To(Equal("rss-sync"))
+		sched := readSchedule("movie-rss-sync")
+		Expect(sched.Name).To(Equal("movie-rss-sync"))
 		Expect(sched.Interval).NotTo(BeEmpty())
 		Expect(sched.System).To(BeFalse())
 	})
@@ -115,13 +115,17 @@ var _ = Describe("REST API schedules", Label("e2e"), func() {
 	})
 
 	It("pauses and resumes a job", func() {
-		paused := post("/api/v1/schedules/metadata-refresh/pause", adminAuth, nil)
+		paused := post(
+			"/api/v1/schedules/movie-metadata-refresh/pause",
+			adminAuth,
+			nil,
+		)
 		defer paused.Body.Close()
 		// Registered before the first assertion so a mid-spec failure still
 		// un-pauses the job. Conflict means it was never paused.
 		DeferCleanup(func() {
 			restore := post(
-				"/api/v1/schedules/metadata-refresh/resume",
+				"/api/v1/schedules/movie-metadata-refresh/resume",
 				adminAuth,
 				nil,
 			)
@@ -135,18 +139,26 @@ var _ = Describe("REST API schedules", Label("e2e"), func() {
 		decode(paused, &sched)
 		Expect(sched.Paused).To(BeTrue())
 
-		again := post("/api/v1/schedules/metadata-refresh/pause", adminAuth, nil)
+		again := post(
+			"/api/v1/schedules/movie-metadata-refresh/pause",
+			adminAuth,
+			nil,
+		)
 		defer again.Body.Close()
 		Expect(again.StatusCode).To(Equal(http.StatusConflict))
 
-		resumed := post("/api/v1/schedules/metadata-refresh/resume", adminAuth, nil)
+		resumed := post(
+			"/api/v1/schedules/movie-metadata-refresh/resume",
+			adminAuth,
+			nil,
+		)
 		defer resumed.Body.Close()
 		Expect(resumed.StatusCode).To(Equal(http.StatusOK))
 		decode(resumed, &sched)
 		Expect(sched.Paused).To(BeFalse())
 
 		notPaused := post(
-			"/api/v1/schedules/metadata-refresh/resume",
+			"/api/v1/schedules/movie-metadata-refresh/resume",
 			adminAuth,
 			nil,
 		)

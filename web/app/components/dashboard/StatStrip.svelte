@@ -236,7 +236,7 @@
 	<div
 		class="relative rounded-lg border border-border bg-bg-elevated px-4 py-[18px] md:px-5"
 	>
-		{#if volumes.length > 1}
+		{#if volumes.length > 0}
 			<button
 				bind:this={diskBtnEl}
 				type="button"

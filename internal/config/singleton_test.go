@@ -27,10 +27,10 @@ library:
     no_match_cooldown: 6h
     max_grab_failures: 3
 schedules:
-  rss_sync: 15m
-  metadata_refresh: 24h
+  movie_rss_sync: 15m
+  movie_metadata_refresh: 24h
   download_monitor: 30s
-  missing_search: 12h
+  movie_missing_search: 12h
   cleanup: 24h
 log:
   level: info
