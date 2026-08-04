@@ -37,72 +37,148 @@
 	const DEMOTE = 90;
 	const DISMISS = 74;
 
-	let dragY = $state(0);
-	let dragging = $state(false);
-	let startY = 0;
+	// Below this the gesture is still a tap. Capturing the pointer any earlier
+	// would retarget the click and swallow taps on the buttons inside the sheet.
+	const SLOP = 6;
 
-	// The detents are two heights, and a class swap between them wouldn't
-	// animate — so the peek's natural height is measured and both detents are
-	// driven as explicit px on a transitioned box. The observed element is the
-	// content column, which is never height-constrained while collapsed, so it
-	// still reports growth when the lazily-fetched detail lands.
-	let contentEl = $state<HTMLDivElement | null>(null);
+	// dragY is deliberately NOT reactive: mobile Gecko showed ~80ms stalls when
+	// every pointermove went through a framework flush, so the hot path writes
+	// element.style.transform directly and reactivity only handles the detents.
+	let dragY = 0;
+	let dragging = $state(false);
+	// Flipped once when a drag first opens room above the peek, so the full
+	// detail swaps in mid-gesture without dragY being reactive.
+	let dragLift = $state(false);
+	let startY = 0;
+	let pointerId: number | null = null;
+	// Mobile Gecko delivers pointermove at a few Hz during a claimed touch drag
+	// while touchmove flows at input rate, so the first touchmove takes over as
+	// the movement source and pointermove is ignored for the rest of the
+	// gesture. Pointer events still own down/up and the mouse path.
+	let touchDriven = false;
+
+	let sheetEl = $state<HTMLDivElement | null>(null);
+	let footerEl = $state<HTMLDivElement | null>(null);
+	let scrollEl = $state<HTMLDivElement | null>(null);
+	// While the detail sits at its top, the scroll container advertises
+	// pan-down (finger-up scrolling) only. APZ then knows a downward gesture
+	// cannot scroll and streams it to us immediately — without this, Gecko
+	// runs scroll-intent detection first and every demote-swipe starts with a
+	// dead zone (bugzilla 913942).
+	let atTop = $state(true);
 	let peekHeight = $state(0);
+	let handleHeight = $state(0);
+	let footerHeight = $state(0);
 	let availableHeight = $state(0);
 
-	// An upward drag grows the sheet from its pinned bottom edge. Translating it
-	// instead would lift the whole box off the bottom of the screen and show the
-	// page behind it. Only a downward drag — which is heading for demote or
-	// dismiss — moves the box itself.
-	let lift = $derived(!expanded && dragY < 0 ? -dragY : 0);
-	let slide = $derived(dragY > 0 ? dragY : 0);
+	// Both detents are the same full-height box at a different translate3d, so
+	// the drag and the settle are pure transform. Driving them as a height
+	// instead relayouts the whole detail on every frame, which a phone shows as
+	// jitter. will-change is load-bearing on Gecko: ActiveLayerTracker refuses
+	// to layerize a frequently-repainted JS-driven transform, so without the
+	// hint mobile Firefox repaints the sheet every frame at a locked ~30fps
+	// (measured p50 33ms vs 8ms). Never reintroduce backdrop-filter on the
+	// scrim either — WebRender re-blurs on the mobile GPU every composited
+	// frame (bugzilla 1731965/1798592/1809738; measured ~80ms stalls).
+	let collapsedOffset = $derived(
+		peekHeight
+			? Math.max(0, availableHeight - peekHeight - handleHeight - footerHeight)
+			: availableHeight,
+	);
+	let offset = $derived(expanded ? 0 : collapsedOffset);
 	// The detail renders as soon as the drag opens room for it, so the gesture
 	// swaps peek for full rather than growing an empty gap.
-	let showFull = $derived(expanded || lift > 0);
-	let sheetHeight = $derived(
-		expanded
-			? availableHeight
-			: peekHeight
-				? Math.min(peekHeight + lift, availableHeight)
-				: 0,
-	);
+	let showFull = $derived(expanded || dragLift);
+	let settled = $derived(peekHeight > 0 && !dragging);
 
+	// The footer stays pinned while the sheet slides behind it, and only rides
+	// along once the sheet is past its peek and heading off the bottom.
+	function applyDrag() {
+		const base = expanded ? 0 : collapsedOffset;
+		const off = Math.min(Math.max(base + dragY, 0), availableHeight);
+		if (!expanded && off < collapsedOffset) dragLift = true;
+		if (sheetEl) sheetEl.style.transform = `translate3d(0,${off}px,0)`;
+		if (footerEl)
+			footerEl.style.transform = `translate3d(0,${Math.max(0, off - collapsedOffset)}px,0)`;
+	}
+
+	function ownsGesture(dy: number) {
+		if (!expanded) return true;
+		// The expanded detail scrolls. The sheet only takes a downward gesture
+		// there once the content has nothing left to scroll back up to.
+		return !scrollEl || (scrollEl.scrollTop <= 0 && dy > 0);
+	}
+
+	function drive(dy: number) {
+		if (!dragging) {
+			if (Math.abs(dy) < SLOP) return;
+			dragging = true;
+		}
+		dragY = dy;
+		applyDrag();
+	}
+
+	// touchmove has to be non-passive and prevented on the very first move the
+	// sheet claims: once the browser starts scrolling the detail it keeps the
+	// gesture and fires pointercancel, so a downward swipe from the synopsis
+	// would scroll nothing and demote nothing. touch-action alone cannot
+	// express "mine only when scrolled to the top".
 	$effect(() => {
-		if (!open || !contentEl) return;
-		const el = contentEl;
-		const measure = () => {
-			if (showFull) return;
-			const h = el.scrollHeight;
-			if (h > 0 && Math.abs(h - peekHeight) > 1) peekHeight = h;
+		const el = sheetEl;
+		if (!el) return;
+		const claim = (e: TouchEvent) => {
+			if (pointerId === null) return;
+			const touch = e.touches[0];
+			if (!touch) return;
+			const dy = touch.clientY - startY;
+			if (!dragging && !ownsGesture(dy)) return;
+			if (e.cancelable) e.preventDefault();
+			touchDriven = true;
+			drive(dy);
 		};
-		measure();
-		const ro = new ResizeObserver(measure);
-		ro.observe(el);
-		return () => ro.disconnect();
+		el.addEventListener("touchmove", claim, { passive: false });
+		return () => el.removeEventListener("touchmove", claim);
 	});
 
 	function down(e: PointerEvent) {
 		if (e.pointerType === "mouse" && e.button !== 0) return;
-		dragging = true;
+		if (expanded && scrollEl?.contains(e.target as Node) && scrollEl.scrollTop > 0)
+			return;
+		pointerId = e.pointerId;
 		startY = e.clientY;
-		const el = e.currentTarget;
-		if (el && el.setPointerCapture) el.setPointerCapture(e.pointerId);
+		touchDriven = false;
 	}
 	function move(e: PointerEvent) {
-		if (!dragging) return;
-		dragY = e.clientY - startY;
+		if (e.pointerId !== pointerId || touchDriven) return;
+		const dy = e.clientY - startY;
+		if (!dragging) {
+			if (Math.abs(dy) < SLOP || !ownsGesture(dy)) return;
+			dragging = true;
+			sheetEl?.setPointerCapture(e.pointerId);
+		}
+		dragY = dy;
+		applyDrag();
 	}
 	function up() {
+		pointerId = null;
 		if (!dragging) return;
 		dragging = false;
 		const dy = dragY;
 		dragY = 0;
+		dragLift = false;
 		if (!expanded) {
 			if (dy <= PROMOTE) expanded = true;
-			else if (dy >= DISMISS) onClose();
+			else if (dy >= DISMISS) {
+				onClose();
+				return;
+			}
 		} else if (dy >= DEMOTE) {
 			expanded = false;
 		}
+		// A failed gesture leaves the manual mid-drag transform behind and the
+		// reactive value hasn't changed, so Svelte won't rewrite it. Restore by
+		// hand on the next frame, when the settle transition is armed again.
+		requestAnimationFrame(() => applyDrag());
 	}
 
 	$effect(() => {
@@ -110,6 +186,8 @@
 			expanded = false;
 			dragY = 0;
 			dragging = false;
+			dragLift = false;
+			pointerId = null;
 			peekHeight = 0;
 			return;
 		}
@@ -129,47 +207,47 @@
 </script>
 
 {#if open}
-	<div
-		class="fixed inset-0 z-[60] md:hidden"
-		role="dialog"
-		aria-modal="true"
-		aria-label={label}
-	>
+	<div class="fixed inset-0 z-[60] md:hidden">
 		<button
 			type="button"
 			aria-label="Close"
 			transition:fade={{ duration: 160 }}
 			onclick={onClose}
-			class="absolute inset-0 h-full w-full cursor-default bg-black/60 backdrop-blur-[2px]"
+			class="absolute inset-0 h-full w-full cursor-default bg-black/60"
 		></button>
 
-		<!-- Outer box owns the detent geometry; the inner one takes the drag
-		     transform, so a swipe never fights the enter transition. -->
+		<!-- Spans the screen, so it has to stay click-through or it would eat
+		     every tap meant for the backdrop above the sheet. -->
 		<div
 			transition:fly={{ y: 460, duration: 280, easing: cubicOut }}
 			bind:clientHeight={availableHeight}
-			class="absolute inset-x-0 bottom-0 top-9 flex flex-col justify-end"
+			class="pointer-events-none absolute inset-x-0 bottom-0 top-9 overflow-hidden"
 		>
 			<div
-				class="flex max-h-full min-h-0 flex-col overflow-hidden rounded-t-2xl border-t border-border-strong bg-bg-elevated shadow-4"
-				style:height={sheetHeight ? `${sheetHeight}px` : undefined}
-				style:transform={slide === 0 ? undefined : `translateY(${slide}px)`}
-				style:transition={dragging
-					? "height 260ms cubic-bezier(0.2,0.8,0.2,1)"
-					: "height 260ms cubic-bezier(0.2,0.8,0.2,1), transform 240ms cubic-bezier(0.2,0.8,0.2,1)"}
+				bind:this={sheetEl}
+				role="dialog"
+				aria-modal="true"
+				aria-label={label}
+				tabindex="-1"
+				onpointerdown={down}
+				onpointermove={move}
+				onpointerup={up}
+				onpointercancel={up}
+				ontouchend={up}
+				ontouchcancel={up}
+				style:transform="translate3d(0,{offset}px,0)"
+				style:will-change="transform"
+				style:padding-bottom="{footerHeight}px"
+				style:transition={settled
+					? "transform 260ms cubic-bezier(0.2,0.8,0.2,1)"
+					: "none"}
+				class="pointer-events-auto absolute inset-x-0 top-0 flex h-full select-none flex-col overflow-hidden rounded-t-2xl border-t border-border-strong bg-bg-elevated shadow-4 {expanded
+					? ''
+					: 'touch-none'}"
 			>
-				<!-- Natural height while collapsed — a stretched column would measure
-				     the height it was given and hold it there. -->
 				<div
-					bind:this={contentEl}
-					class="flex min-h-0 flex-col {showFull ? 'flex-1' : 'flex-none'}"
-				>
-				<div
-					class="flex-none cursor-grab touch-none select-none pt-2.5 pb-1"
-					onpointerdown={down}
-					onpointermove={move}
-					onpointerup={up}
-					onpointercancel={up}
+					bind:clientHeight={handleHeight}
+					class="flex-none cursor-grab touch-none pt-2.5 pb-1"
 				>
 					<span
 						aria-hidden="true"
@@ -177,39 +255,59 @@
 					></span>
 				</div>
 
-				<div
-					class="px-4 pb-4 {showFull
-						? 'min-h-0 flex-1 overflow-y-auto overscroll-contain'
-						: 'flex-none'}"
-				>
-					{#if showFull}
-						{@render full()}
-					{:else}
-						{@render peek()}
-					{/if}
-				</div>
-
-				{#if footer}
+				<!-- The full detail is a permanently laid-out overlay and the swap is
+				     visibility-only: a display flip would run layout of the whole
+				     detail on the exact frame a drag starts, a 40-80ms hitch per
+				     gesture on phones. The peek in normal flow sizes the collapsed
+				     detent; the overlay never affects it. -->
+				<div class="relative min-h-0 flex-1">
 					<div
-						class="flex-none px-4 pt-3 pb-[max(env(safe-area-inset-bottom),12px)] {showFull
-							? 'border-t border-border'
-							: ''}"
+						bind:clientHeight={peekHeight}
+						class="px-4 pb-4 {showFull ? 'invisible' : ''}"
 					>
-						{@render footer()}
-						{#if hint && !showFull}
-							<button
-								type="button"
-								onclick={() => (expanded = true)}
-								class="mt-2.5 flex w-full items-center justify-center gap-1.5 py-1 text-[13px] text-fg-faint transition hover:text-fg-muted"
-							>
-								<ChevronUp size={14} aria-hidden="true" />
-								{hint}
-							</button>
-						{/if}
+						{@render peek()}
 					</div>
-				{/if}
+					<div
+						bind:this={scrollEl}
+						onscroll={() => (atTop = (scrollEl?.scrollTop ?? 0) <= 0)}
+						style:touch-action={atTop ? "pan-down" : "pan-y"}
+						class="absolute inset-0 overflow-y-auto overscroll-contain px-4 pb-4 {showFull
+							? ''
+							: 'invisible'}"
+					>
+						{@render full()}
+					</div>
 				</div>
 			</div>
+
+			{#if footer}
+				<!-- Outside the transformed box: it belongs to the bottom of the
+				     screen, not to the sheet, so the sheet can be a pure transform. -->
+				<div
+					bind:this={footerEl}
+					bind:clientHeight={footerHeight}
+					style:transform="translate3d(0,{offset > collapsedOffset ? offset - collapsedOffset : 0}px,0)"
+					style:will-change="transform"
+					style:transition={settled
+						? "transform 260ms cubic-bezier(0.2,0.8,0.2,1)"
+						: "none"}
+					class="pointer-events-auto absolute inset-x-0 bottom-0 bg-bg-elevated px-4 pt-3 pb-[max(env(safe-area-inset-bottom),12px)] {showFull
+						? 'border-t border-border'
+						: ''}"
+				>
+					{@render footer()}
+					{#if hint && !showFull}
+						<button
+							type="button"
+							onclick={() => (expanded = true)}
+							class="mt-2.5 flex w-full items-center justify-center gap-1.5 py-1 text-[13px] text-fg-faint transition hover:text-fg-muted"
+						>
+							<ChevronUp size={14} aria-hidden="true" />
+							{hint}
+						</button>
+					{/if}
+				</div>
+			{/if}
 		</div>
 	</div>
 {/if}
