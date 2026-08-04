@@ -74,6 +74,31 @@ func (db *DB) SetTorrentSessionName(
 	return err
 }
 
+func (db *DB) CountTorrentSessions(ctx context.Context) (int, error) {
+	return db.client.TorrentSession.Query().Count(ctx)
+}
+
+func (db *DB) ListTorrentSessionsByPathPrefix(
+	ctx context.Context,
+	prefix string,
+) ([]*ent.TorrentSession, error) {
+	return db.client.TorrentSession.Query().
+		Where(torrentsession.SavePathHasPrefix(prefix)).
+		Order(ent.Asc(torrentsession.FieldSavePath)).
+		All(ctx)
+}
+
+func (db *DB) SetTorrentSessionSavePath(
+	ctx context.Context,
+	infoHash, path string,
+) error {
+	_, err := db.client.TorrentSession.Update().
+		Where(torrentsession.InfoHashEQ(infoHash)).
+		SetSavePath(path).
+		Save(ctx)
+	return err
+}
+
 func (db *DB) SetTorrentSessionCompleted(
 	ctx context.Context,
 	infoHash string,

@@ -441,6 +441,28 @@ func (db *DB) SetDownloadRecordSavePath(
 	return db.client.DownloadRecord.UpdateOneID(id).SetSavePath(path).Exec(ctx)
 }
 
+func (db *DB) CountDownloadRecords(ctx context.Context) (int, error) {
+	n, err := db.client.DownloadRecord.Query().Count(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("count download_records: %w", err)
+	}
+	return n, nil
+}
+
+func (db *DB) ListDownloadRecordsByPathPrefix(
+	ctx context.Context,
+	prefix string,
+) ([]*ent.DownloadRecord, error) {
+	rows, err := db.client.DownloadRecord.Query().
+		Where(downloadrecord.SavePathHasPrefix(prefix)).
+		Order(ent.Asc(downloadrecord.FieldSavePath)).
+		All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list download_records under %s: %w", prefix, err)
+	}
+	return rows, nil
+}
+
 // ListActiveDownloadRecords returns records still in flight (downloading or
 // importing) with movie / download_client / indexer edges eager-loaded.
 // Powers the live queue snapshot.

@@ -15,6 +15,7 @@ import (
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/library/bulkimport"
+	"github.com/datahearth/streamline/internal/library/pathmigrate"
 	"github.com/datahearth/streamline/internal/media/movie"
 	"github.com/datahearth/streamline/internal/media/tvshow"
 	"github.com/datahearth/streamline/internal/mediaserver"
@@ -66,6 +67,7 @@ type Config struct {
 	MetadataTV      metadata.TVProvider
 	Posters         posters.Manager
 	Torrents        bittorrent.Manager
+	PathMigrations  *pathmigrate.Service
 	AuthMiddleware  func(http.Handler) http.Handler
 	HTTPLog         func(http.Handler) http.Handler
 }
@@ -97,6 +99,7 @@ func New(cfg Config) *Server {
 		TVSearcher:      cfg.TVSearcher,
 		MetadataTV:      cfg.MetadataTV,
 		Torrents:        cfg.Torrents,
+		PathMigrations:  cfg.PathMigrations,
 		Store:           cfg.DB,
 		Ent:             cfg.Ent,
 		PublicURL:       config.PublicURL(),

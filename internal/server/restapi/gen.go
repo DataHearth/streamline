@@ -923,6 +923,69 @@ func (e PatchSeriesRequestPreset) Valid() bool {
 	}
 }
 
+// Defines values for PathMigrationPreviewRoot.
+const (
+	PathMigrationPreviewRootDownloads PathMigrationPreviewRoot = "downloads"
+	PathMigrationPreviewRootMovies    PathMigrationPreviewRoot = "movies"
+	PathMigrationPreviewRootSeries    PathMigrationPreviewRoot = "series"
+)
+
+// Valid indicates whether the value is a known member of the PathMigrationPreviewRoot enum.
+func (e PathMigrationPreviewRoot) Valid() bool {
+	switch e {
+	case PathMigrationPreviewRootDownloads:
+		return true
+	case PathMigrationPreviewRootMovies:
+		return true
+	case PathMigrationPreviewRootSeries:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PathMigrationRequestRoot.
+const (
+	PathMigrationRequestRootDownloads PathMigrationRequestRoot = "downloads"
+	PathMigrationRequestRootMovies    PathMigrationRequestRoot = "movies"
+	PathMigrationRequestRootSeries    PathMigrationRequestRoot = "series"
+)
+
+// Valid indicates whether the value is a known member of the PathMigrationRequestRoot enum.
+func (e PathMigrationRequestRoot) Valid() bool {
+	switch e {
+	case PathMigrationRequestRootDownloads:
+		return true
+	case PathMigrationRequestRootMovies:
+		return true
+	case PathMigrationRequestRootSeries:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PathMigrationRootRoot.
+const (
+	PathMigrationRootRootDownloads PathMigrationRootRoot = "downloads"
+	PathMigrationRootRootMovies    PathMigrationRootRoot = "movies"
+	PathMigrationRootRootSeries    PathMigrationRootRoot = "series"
+)
+
+// Valid indicates whether the value is a known member of the PathMigrationRootRoot enum.
+func (e PathMigrationRootRoot) Valid() bool {
+	switch e {
+	case PathMigrationRootRootDownloads:
+		return true
+	case PathMigrationRootRootMovies:
+		return true
+	case PathMigrationRootRootSeries:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PendingMediaType.
 const (
 	PendingMediaTypeEpisode PendingMediaType = "episode"
@@ -2527,6 +2590,86 @@ type PatchSeriesRequest struct {
 // PatchSeriesRequestPreset defines model for PatchSeriesRequest.Preset.
 type PatchSeriesRequestPreset string
 
+// PathMigration defines model for PathMigration.
+type PathMigration struct {
+	Current    string     `json:"current"`
+	Done       int        `json:"done"`
+	Error      *string    `json:"error,omitempty"`
+	FinishedAt *time.Time `json:"finished_at,omitempty"`
+	From       string     `json:"from"`
+	MoveFiles  bool       `json:"move_files"`
+	Root       string     `json:"root"`
+	Running    bool       `json:"running"`
+	Skipped    int        `json:"skipped"`
+	StartedAt  *time.Time `json:"started_at,omitempty"`
+	To         string     `json:"to"`
+	Total      int        `json:"total"`
+}
+
+// PathMigrationPreview defines model for PathMigrationPreview.
+type PathMigrationPreview struct {
+	CanMove bool                     `json:"can_move"`
+	From    string                   `json:"from"`
+	Root    PathMigrationPreviewRoot `json:"root"`
+	Samples []PathRewrite            `json:"samples"`
+
+	// Skipped Rows whose file is not where the migration expects it (the
+	// source when moving, the destination otherwise). They are left
+	// untouched.
+	Skipped int    `json:"skipped"`
+	To      string `json:"to"`
+	Total   int    `json:"total"`
+}
+
+// PathMigrationPreviewRoot defines model for PathMigrationPreview.Root.
+type PathMigrationPreviewRoot string
+
+// PathMigrationRequest defines model for PathMigrationRequest.
+type PathMigrationRequest struct {
+	// From Current prefix to rewrite. Defaults to the root's configured
+	// value, which is what the UI sends unless the operator has
+	// already edited the config themselves.
+	From *string `json:"from,omitempty"`
+
+	// MoveFiles Relocate each file before re-pointing its row. Rejected for the
+	// `downloads` root — that data belongs to the download client.
+	MoveFiles *bool                    `json:"move_files,omitempty"`
+	Root      PathMigrationRequestRoot `json:"root"`
+	To        string                   `json:"to"`
+}
+
+// PathMigrationRequestRoot defines model for PathMigrationRequest.Root.
+type PathMigrationRequestRoot string
+
+// PathMigrationRoot defines model for PathMigrationRoot.
+type PathMigrationRoot struct {
+	// Path The currently configured root.
+	Path string                `json:"path"`
+	Root PathMigrationRootRoot `json:"root"`
+
+	// Total Stored paths of that media type anywhere. `tracked == 0` while
+	// `total > 0` is the signal that the configured root no longer
+	// matches the database; both zero just means nothing is stored yet.
+	Total int `json:"total"`
+
+	// Tracked Stored paths sitting under that root.
+	Tracked int `json:"tracked"`
+}
+
+// PathMigrationRootRoot defines model for PathMigrationRoot.Root.
+type PathMigrationRootRoot string
+
+// PathMigrationRootList defines model for PathMigrationRootList.
+type PathMigrationRootList struct {
+	Items []PathMigrationRoot `json:"items"`
+}
+
+// PathRewrite defines model for PathRewrite.
+type PathRewrite struct {
+	From string `json:"from"`
+	To   string `json:"to"`
+}
+
 // PendingItem defines model for PendingItem.
 type PendingItem struct {
 	// HasFile Whether the matched movie/episode currently has a file. The UI
@@ -3487,6 +3630,9 @@ type SetTorrentFilePriority = TorrentFilePriorityUpdate
 // StartImport defines model for StartImport.
 type StartImport = ImportScanCreateRequest
 
+// StartPathMigration defines model for StartPathMigration.
+type StartPathMigration = PathMigrationRequest
+
 // UpdateAuthConfig Only provided fields are applied.
 type UpdateAuthConfig = AuthConfigPatch
 
@@ -3734,6 +3880,12 @@ type UpdateImportFileDecisionJSONRequestBody = ImportScanFileDecisionRequest
 
 // UpdateImportShowDecisionJSONRequestBody defines body for UpdateImportShowDecision for application/json ContentType.
 type UpdateImportShowDecisionJSONRequestBody = ImportScanShowDecisionRequest
+
+// StartPathMigrationJSONRequestBody defines body for StartPathMigration for application/json ContentType.
+type StartPathMigrationJSONRequestBody = PathMigrationRequest
+
+// PreviewPathMigrationJSONRequestBody defines body for PreviewPathMigration for application/json ContentType.
+type PreviewPathMigrationJSONRequestBody = PathMigrationRequest
 
 // CreateMediaServerJSONRequestBody defines body for CreateMediaServer for application/json ContentType.
 type CreateMediaServerJSONRequestBody = MediaServerCreate
@@ -3986,6 +4138,18 @@ type ServerInterface interface {
 
 	// (PATCH /library/imports/{id}/shows/{showId})
 	UpdateImportShowDecision(w http.ResponseWriter, r *http.Request, id ResourceID, showId ImportScanShowID)
+	// State of the running (or last) library path migration.
+	// (GET /library/path-migration)
+	GetPathMigration(w http.ResponseWriter, r *http.Request)
+	// Re-root a library to a new path.
+	// (POST /library/path-migration)
+	StartPathMigration(w http.ResponseWriter, r *http.Request)
+	// Dry run of a library path migration.
+	// (POST /library/path-migration/preview)
+	PreviewPathMigration(w http.ResponseWriter, r *http.Request)
+	// Configured library roots and how much is stored under each.
+	// (GET /library/path-migration/roots)
+	GetPathMigrationRoots(w http.ResponseWriter, r *http.Request)
 	// List configured media servers
 	// (GET /media-servers)
 	ListMediaServers(w http.ResponseWriter, r *http.Request)
@@ -4555,6 +4719,30 @@ func (_ Unimplemented) ListImportShows(w http.ResponseWriter, r *http.Request, i
 
 // (PATCH /library/imports/{id}/shows/{showId})
 func (_ Unimplemented) UpdateImportShowDecision(w http.ResponseWriter, r *http.Request, id ResourceID, showId ImportScanShowID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// State of the running (or last) library path migration.
+// (GET /library/path-migration)
+func (_ Unimplemented) GetPathMigration(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Re-root a library to a new path.
+// (POST /library/path-migration)
+func (_ Unimplemented) StartPathMigration(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Dry run of a library path migration.
+// (POST /library/path-migration/preview)
+func (_ Unimplemented) PreviewPathMigration(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Configured library roots and how much is stored under each.
+// (GET /library/path-migration/roots)
+func (_ Unimplemented) GetPathMigrationRoots(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -6785,6 +6973,94 @@ func (siw *ServerInterfaceWrapper) UpdateImportShowDecision(w http.ResponseWrite
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateImportShowDecision(w, r, id, showId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetPathMigration operation middleware
+func (siw *ServerInterfaceWrapper) GetPathMigration(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, ApiKeyAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetPathMigration(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// StartPathMigration operation middleware
+func (siw *ServerInterfaceWrapper) StartPathMigration(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, ApiKeyAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.StartPathMigration(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewPathMigration operation middleware
+func (siw *ServerInterfaceWrapper) PreviewPathMigration(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, ApiKeyAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewPathMigration(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetPathMigrationRoots operation middleware
+func (siw *ServerInterfaceWrapper) GetPathMigrationRoots(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, ApiKeyAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetPathMigrationRoots(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -9818,6 +10094,18 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Patch(options.BaseURL+"/library/imports/{id}/shows/{showId}", wrapper.UpdateImportShowDecision)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/library/path-migration", wrapper.GetPathMigration)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/library/path-migration", wrapper.StartPathMigration)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/library/path-migration/preview", wrapper.PreviewPathMigration)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/library/path-migration/roots", wrapper.GetPathMigrationRoots)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/media-servers", wrapper.ListMediaServers)
 	})
 	r.Group(func(r chi.Router) {
@@ -10151,6 +10439,12 @@ type OIDCProviderListJSONResponse OIDCProviderListView
 
 type PasswordResetResponse struct {
 }
+
+type PathMigrationJSONResponse PathMigration
+
+type PathMigrationPreviewJSONResponse PathMigrationPreview
+
+type PathMigrationRootListJSONResponse PathMigrationRootList
 
 type PendingListJSONResponse PendingList
 
@@ -12264,6 +12558,143 @@ type UpdateImportShowDecision404JSONResponse struct{ NotFoundJSONResponse }
 func (response UpdateImportShowDecision404JSONResponse) VisitUpdateImportShowDecisionResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetPathMigrationRequestObject struct {
+}
+
+type GetPathMigrationResponseObject interface {
+	VisitGetPathMigrationResponse(w http.ResponseWriter) error
+}
+
+type GetPathMigration200JSONResponse struct{ PathMigrationJSONResponse }
+
+func (response GetPathMigration200JSONResponse) VisitGetPathMigrationResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetPathMigration403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetPathMigration403JSONResponse) VisitGetPathMigrationResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type StartPathMigrationRequestObject struct {
+	Body *StartPathMigrationJSONRequestBody
+}
+
+type StartPathMigrationResponseObject interface {
+	VisitStartPathMigrationResponse(w http.ResponseWriter) error
+}
+
+type StartPathMigration202JSONResponse struct{ PathMigrationJSONResponse }
+
+func (response StartPathMigration202JSONResponse) VisitStartPathMigrationResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(202)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type StartPathMigration403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response StartPathMigration403JSONResponse) VisitStartPathMigrationResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type StartPathMigration409JSONResponse struct{ ConflictJSONResponse }
+
+func (response StartPathMigration409JSONResponse) VisitStartPathMigrationResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type StartPathMigration422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response StartPathMigration422JSONResponse) VisitStartPathMigrationResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PreviewPathMigrationRequestObject struct {
+	Body *PreviewPathMigrationJSONRequestBody
+}
+
+type PreviewPathMigrationResponseObject interface {
+	VisitPreviewPathMigrationResponse(w http.ResponseWriter) error
+}
+
+type PreviewPathMigration200JSONResponse struct {
+	PathMigrationPreviewJSONResponse
+}
+
+func (response PreviewPathMigration200JSONResponse) VisitPreviewPathMigrationResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PreviewPathMigration403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response PreviewPathMigration403JSONResponse) VisitPreviewPathMigrationResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PreviewPathMigration422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response PreviewPathMigration422JSONResponse) VisitPreviewPathMigrationResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetPathMigrationRootsRequestObject struct {
+}
+
+type GetPathMigrationRootsResponseObject interface {
+	VisitGetPathMigrationRootsResponse(w http.ResponseWriter) error
+}
+
+type GetPathMigrationRoots200JSONResponse struct {
+	PathMigrationRootListJSONResponse
+}
+
+func (response GetPathMigrationRoots200JSONResponse) VisitGetPathMigrationRootsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetPathMigrationRoots403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetPathMigrationRoots403JSONResponse) VisitGetPathMigrationRootsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
 
 	return json.NewEncoder(w).Encode(response)
 }
@@ -15547,6 +15978,18 @@ type StrictServerInterface interface {
 
 	// (PATCH /library/imports/{id}/shows/{showId})
 	UpdateImportShowDecision(ctx context.Context, request UpdateImportShowDecisionRequestObject) (UpdateImportShowDecisionResponseObject, error)
+	// State of the running (or last) library path migration.
+	// (GET /library/path-migration)
+	GetPathMigration(ctx context.Context, request GetPathMigrationRequestObject) (GetPathMigrationResponseObject, error)
+	// Re-root a library to a new path.
+	// (POST /library/path-migration)
+	StartPathMigration(ctx context.Context, request StartPathMigrationRequestObject) (StartPathMigrationResponseObject, error)
+	// Dry run of a library path migration.
+	// (POST /library/path-migration/preview)
+	PreviewPathMigration(ctx context.Context, request PreviewPathMigrationRequestObject) (PreviewPathMigrationResponseObject, error)
+	// Configured library roots and how much is stored under each.
+	// (GET /library/path-migration/roots)
+	GetPathMigrationRoots(ctx context.Context, request GetPathMigrationRootsRequestObject) (GetPathMigrationRootsResponseObject, error)
 	// List configured media servers
 	// (GET /media-servers)
 	ListMediaServers(ctx context.Context, request ListMediaServersRequestObject) (ListMediaServersResponseObject, error)
@@ -17370,6 +17813,116 @@ func (sh *strictHandler) UpdateImportShowDecision(w http.ResponseWriter, r *http
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateImportShowDecisionResponseObject); ok {
 		if err := validResponse.VisitUpdateImportShowDecisionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetPathMigration operation middleware
+func (sh *strictHandler) GetPathMigration(w http.ResponseWriter, r *http.Request) {
+	var request GetPathMigrationRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetPathMigration(ctx, request.(GetPathMigrationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetPathMigration")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetPathMigrationResponseObject); ok {
+		if err := validResponse.VisitGetPathMigrationResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// StartPathMigration operation middleware
+func (sh *strictHandler) StartPathMigration(w http.ResponseWriter, r *http.Request) {
+	var request StartPathMigrationRequestObject
+
+	var body StartPathMigrationJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.StartPathMigration(ctx, request.(StartPathMigrationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "StartPathMigration")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(StartPathMigrationResponseObject); ok {
+		if err := validResponse.VisitStartPathMigrationResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PreviewPathMigration operation middleware
+func (sh *strictHandler) PreviewPathMigration(w http.ResponseWriter, r *http.Request) {
+	var request PreviewPathMigrationRequestObject
+
+	var body PreviewPathMigrationJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PreviewPathMigration(ctx, request.(PreviewPathMigrationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PreviewPathMigration")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PreviewPathMigrationResponseObject); ok {
+		if err := validResponse.VisitPreviewPathMigrationResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetPathMigrationRoots operation middleware
+func (sh *strictHandler) GetPathMigrationRoots(w http.ResponseWriter, r *http.Request) {
+	var request GetPathMigrationRootsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetPathMigrationRoots(ctx, request.(GetPathMigrationRootsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetPathMigrationRoots")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetPathMigrationRootsResponseObject); ok {
+		if err := validResponse.VisitGetPathMigrationRootsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

@@ -12,6 +12,7 @@ import (
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/library/bulkimport"
+	"github.com/datahearth/streamline/internal/library/pathmigrate"
 	"github.com/datahearth/streamline/internal/media/movie"
 	"github.com/datahearth/streamline/internal/media/tvshow"
 	"github.com/datahearth/streamline/internal/mediaserver"
@@ -42,6 +43,7 @@ type Server struct {
 	seriesRenamer   library.Renamer
 	requests        request.Manager
 	torrents        bittorrent.Manager
+	pathMigrations  *pathmigrate.Service
 	store           db.Store
 	ent             *ent.Client
 	publicURL       string
@@ -66,6 +68,7 @@ type Deps struct {
 	SeriesRenamer   library.Renamer
 	Requests        request.Manager
 	Torrents        bittorrent.Manager
+	PathMigrations  *pathmigrate.Service
 	Store           db.Store
 	Ent             *ent.Client
 	PublicURL       string
@@ -91,6 +94,7 @@ func New(d Deps) *Server {
 		seriesRenamer:   d.SeriesRenamer,
 		requests:        d.Requests,
 		torrents:        d.Torrents,
+		pathMigrations:  d.PathMigrations,
 		store:           d.Store,
 		ent:             d.Ent,
 		publicURL:       d.PublicURL,

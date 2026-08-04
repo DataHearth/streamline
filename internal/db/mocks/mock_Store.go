@@ -608,6 +608,174 @@ func (_c *MockStore_CountActiveImportScans_Call) RunAndReturn(run func(context.C
 	return _c
 }
 
+// CountDownloadRecords provides a mock function with given fields: ctx
+func (_m *MockStore) CountDownloadRecords(ctx context.Context) (int, error) {
+	ret := _m.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CountDownloadRecords")
+	}
+
+	var r0 int
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context) (int, error)); ok {
+		return rf(ctx)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context) int); ok {
+		r0 = rf(ctx)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockStore_CountDownloadRecords_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CountDownloadRecords'
+type MockStore_CountDownloadRecords_Call struct {
+	*mock.Call
+}
+
+// CountDownloadRecords is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockStore_Expecter) CountDownloadRecords(ctx interface{}) *MockStore_CountDownloadRecords_Call {
+	return &MockStore_CountDownloadRecords_Call{Call: _e.mock.On("CountDownloadRecords", ctx)}
+}
+
+func (_c *MockStore_CountDownloadRecords_Call) Run(run func(ctx context.Context)) *MockStore_CountDownloadRecords_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context))
+	})
+	return _c
+}
+
+func (_c *MockStore_CountDownloadRecords_Call) Return(_a0 int, _a1 error) *MockStore_CountDownloadRecords_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockStore_CountDownloadRecords_Call) RunAndReturn(run func(context.Context) (int, error)) *MockStore_CountDownloadRecords_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CountEpisodeMediaFiles provides a mock function with given fields: ctx
+func (_m *MockStore) CountEpisodeMediaFiles(ctx context.Context) (int, error) {
+	ret := _m.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CountEpisodeMediaFiles")
+	}
+
+	var r0 int
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context) (int, error)); ok {
+		return rf(ctx)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context) int); ok {
+		r0 = rf(ctx)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockStore_CountEpisodeMediaFiles_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CountEpisodeMediaFiles'
+type MockStore_CountEpisodeMediaFiles_Call struct {
+	*mock.Call
+}
+
+// CountEpisodeMediaFiles is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockStore_Expecter) CountEpisodeMediaFiles(ctx interface{}) *MockStore_CountEpisodeMediaFiles_Call {
+	return &MockStore_CountEpisodeMediaFiles_Call{Call: _e.mock.On("CountEpisodeMediaFiles", ctx)}
+}
+
+func (_c *MockStore_CountEpisodeMediaFiles_Call) Run(run func(ctx context.Context)) *MockStore_CountEpisodeMediaFiles_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context))
+	})
+	return _c
+}
+
+func (_c *MockStore_CountEpisodeMediaFiles_Call) Return(_a0 int, _a1 error) *MockStore_CountEpisodeMediaFiles_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockStore_CountEpisodeMediaFiles_Call) RunAndReturn(run func(context.Context) (int, error)) *MockStore_CountEpisodeMediaFiles_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CountMovieMediaFiles provides a mock function with given fields: ctx
+func (_m *MockStore) CountMovieMediaFiles(ctx context.Context) (int, error) {
+	ret := _m.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CountMovieMediaFiles")
+	}
+
+	var r0 int
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context) (int, error)); ok {
+		return rf(ctx)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context) int); ok {
+		r0 = rf(ctx)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockStore_CountMovieMediaFiles_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CountMovieMediaFiles'
+type MockStore_CountMovieMediaFiles_Call struct {
+	*mock.Call
+}
+
+// CountMovieMediaFiles is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockStore_Expecter) CountMovieMediaFiles(ctx interface{}) *MockStore_CountMovieMediaFiles_Call {
+	return &MockStore_CountMovieMediaFiles_Call{Call: _e.mock.On("CountMovieMediaFiles", ctx)}
+}
+
+func (_c *MockStore_CountMovieMediaFiles_Call) Run(run func(ctx context.Context)) *MockStore_CountMovieMediaFiles_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context))
+	})
+	return _c
+}
+
+func (_c *MockStore_CountMovieMediaFiles_Call) Return(_a0 int, _a1 error) *MockStore_CountMovieMediaFiles_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockStore_CountMovieMediaFiles_Call) RunAndReturn(run func(context.Context) (int, error)) *MockStore_CountMovieMediaFiles_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // CountMovies provides a mock function with given fields: ctx
 func (_m *MockStore) CountMovies(ctx context.Context) (int, error) {
 	ret := _m.Called(ctx)
@@ -887,6 +1055,62 @@ func (_c *MockStore_CountTVShowsByStatus_Call) Return(_a0 int, _a1 error) *MockS
 }
 
 func (_c *MockStore_CountTVShowsByStatus_Call) RunAndReturn(run func(context.Context, tvshow.SeriesStatus) (int, error)) *MockStore_CountTVShowsByStatus_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CountTorrentSessions provides a mock function with given fields: ctx
+func (_m *MockStore) CountTorrentSessions(ctx context.Context) (int, error) {
+	ret := _m.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CountTorrentSessions")
+	}
+
+	var r0 int
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context) (int, error)); ok {
+		return rf(ctx)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context) int); ok {
+		r0 = rf(ctx)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockStore_CountTorrentSessions_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CountTorrentSessions'
+type MockStore_CountTorrentSessions_Call struct {
+	*mock.Call
+}
+
+// CountTorrentSessions is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockStore_Expecter) CountTorrentSessions(ctx interface{}) *MockStore_CountTorrentSessions_Call {
+	return &MockStore_CountTorrentSessions_Call{Call: _e.mock.On("CountTorrentSessions", ctx)}
+}
+
+func (_c *MockStore_CountTorrentSessions_Call) Run(run func(ctx context.Context)) *MockStore_CountTorrentSessions_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context))
+	})
+	return _c
+}
+
+func (_c *MockStore_CountTorrentSessions_Call) Return(_a0 int, _a1 error) *MockStore_CountTorrentSessions_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockStore_CountTorrentSessions_Call) RunAndReturn(run func(context.Context) (int, error)) *MockStore_CountTorrentSessions_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -4519,6 +4743,65 @@ func (_c *MockStore_ListDownloadHistory_Call) RunAndReturn(run func(context.Cont
 	return _c
 }
 
+// ListDownloadRecordsByPathPrefix provides a mock function with given fields: ctx, prefix
+func (_m *MockStore) ListDownloadRecordsByPathPrefix(ctx context.Context, prefix string) ([]*ent.DownloadRecord, error) {
+	ret := _m.Called(ctx, prefix)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListDownloadRecordsByPathPrefix")
+	}
+
+	var r0 []*ent.DownloadRecord
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) ([]*ent.DownloadRecord, error)); ok {
+		return rf(ctx, prefix)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string) []*ent.DownloadRecord); ok {
+		r0 = rf(ctx, prefix)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ent.DownloadRecord)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, prefix)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockStore_ListDownloadRecordsByPathPrefix_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListDownloadRecordsByPathPrefix'
+type MockStore_ListDownloadRecordsByPathPrefix_Call struct {
+	*mock.Call
+}
+
+// ListDownloadRecordsByPathPrefix is a helper method to define mock.On call
+//   - ctx context.Context
+//   - prefix string
+func (_e *MockStore_Expecter) ListDownloadRecordsByPathPrefix(ctx interface{}, prefix interface{}) *MockStore_ListDownloadRecordsByPathPrefix_Call {
+	return &MockStore_ListDownloadRecordsByPathPrefix_Call{Call: _e.mock.On("ListDownloadRecordsByPathPrefix", ctx, prefix)}
+}
+
+func (_c *MockStore_ListDownloadRecordsByPathPrefix_Call) Run(run func(ctx context.Context, prefix string)) *MockStore_ListDownloadRecordsByPathPrefix_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *MockStore_ListDownloadRecordsByPathPrefix_Call) Return(_a0 []*ent.DownloadRecord, _a1 error) *MockStore_ListDownloadRecordsByPathPrefix_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockStore_ListDownloadRecordsByPathPrefix_Call) RunAndReturn(run func(context.Context, string) ([]*ent.DownloadRecord, error)) *MockStore_ListDownloadRecordsByPathPrefix_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListDownloadingRecordsWithMovie provides a mock function with given fields: ctx
 func (_m *MockStore) ListDownloadingRecordsWithMovie(ctx context.Context) ([]*ent.DownloadRecord, error) {
 	ret := _m.Called(ctx)
@@ -5124,6 +5407,65 @@ func (_c *MockStore_ListMediaFilesByMovieID_Call) RunAndReturn(run func(context.
 	return _c
 }
 
+// ListMediaFilesByPathPrefix provides a mock function with given fields: ctx, prefix
+func (_m *MockStore) ListMediaFilesByPathPrefix(ctx context.Context, prefix string) ([]*ent.MediaFile, error) {
+	ret := _m.Called(ctx, prefix)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListMediaFilesByPathPrefix")
+	}
+
+	var r0 []*ent.MediaFile
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) ([]*ent.MediaFile, error)); ok {
+		return rf(ctx, prefix)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string) []*ent.MediaFile); ok {
+		r0 = rf(ctx, prefix)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ent.MediaFile)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, prefix)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockStore_ListMediaFilesByPathPrefix_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListMediaFilesByPathPrefix'
+type MockStore_ListMediaFilesByPathPrefix_Call struct {
+	*mock.Call
+}
+
+// ListMediaFilesByPathPrefix is a helper method to define mock.On call
+//   - ctx context.Context
+//   - prefix string
+func (_e *MockStore_Expecter) ListMediaFilesByPathPrefix(ctx interface{}, prefix interface{}) *MockStore_ListMediaFilesByPathPrefix_Call {
+	return &MockStore_ListMediaFilesByPathPrefix_Call{Call: _e.mock.On("ListMediaFilesByPathPrefix", ctx, prefix)}
+}
+
+func (_c *MockStore_ListMediaFilesByPathPrefix_Call) Run(run func(ctx context.Context, prefix string)) *MockStore_ListMediaFilesByPathPrefix_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *MockStore_ListMediaFilesByPathPrefix_Call) Return(_a0 []*ent.MediaFile, _a1 error) *MockStore_ListMediaFilesByPathPrefix_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockStore_ListMediaFilesByPathPrefix_Call) RunAndReturn(run func(context.Context, string) ([]*ent.MediaFile, error)) *MockStore_ListMediaFilesByPathPrefix_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListMovies provides a mock function with given fields: ctx, offset, limit
 func (_m *MockStore) ListMovies(ctx context.Context, offset uint32, limit uint32) ([]*ent.Movie, error) {
 	ret := _m.Called(ctx, offset, limit)
@@ -5655,6 +5997,65 @@ func (_c *MockStore_ListTorrentSessions_Call) Return(_a0 []*ent.TorrentSession, 
 }
 
 func (_c *MockStore_ListTorrentSessions_Call) RunAndReturn(run func(context.Context) ([]*ent.TorrentSession, error)) *MockStore_ListTorrentSessions_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListTorrentSessionsByPathPrefix provides a mock function with given fields: ctx, prefix
+func (_m *MockStore) ListTorrentSessionsByPathPrefix(ctx context.Context, prefix string) ([]*ent.TorrentSession, error) {
+	ret := _m.Called(ctx, prefix)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListTorrentSessionsByPathPrefix")
+	}
+
+	var r0 []*ent.TorrentSession
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) ([]*ent.TorrentSession, error)); ok {
+		return rf(ctx, prefix)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string) []*ent.TorrentSession); ok {
+		r0 = rf(ctx, prefix)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ent.TorrentSession)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, prefix)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockStore_ListTorrentSessionsByPathPrefix_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListTorrentSessionsByPathPrefix'
+type MockStore_ListTorrentSessionsByPathPrefix_Call struct {
+	*mock.Call
+}
+
+// ListTorrentSessionsByPathPrefix is a helper method to define mock.On call
+//   - ctx context.Context
+//   - prefix string
+func (_e *MockStore_Expecter) ListTorrentSessionsByPathPrefix(ctx interface{}, prefix interface{}) *MockStore_ListTorrentSessionsByPathPrefix_Call {
+	return &MockStore_ListTorrentSessionsByPathPrefix_Call{Call: _e.mock.On("ListTorrentSessionsByPathPrefix", ctx, prefix)}
+}
+
+func (_c *MockStore_ListTorrentSessionsByPathPrefix_Call) Run(run func(ctx context.Context, prefix string)) *MockStore_ListTorrentSessionsByPathPrefix_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *MockStore_ListTorrentSessionsByPathPrefix_Call) Return(_a0 []*ent.TorrentSession, _a1 error) *MockStore_ListTorrentSessionsByPathPrefix_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockStore_ListTorrentSessionsByPathPrefix_Call) RunAndReturn(run func(context.Context, string) ([]*ent.TorrentSession, error)) *MockStore_ListTorrentSessionsByPathPrefix_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -7566,6 +7967,54 @@ func (_c *MockStore_SetTorrentSessionPaused_Call) Return(_a0 error) *MockStore_S
 }
 
 func (_c *MockStore_SetTorrentSessionPaused_Call) RunAndReturn(run func(context.Context, string, bool) error) *MockStore_SetTorrentSessionPaused_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetTorrentSessionSavePath provides a mock function with given fields: ctx, infoHash, path
+func (_m *MockStore) SetTorrentSessionSavePath(ctx context.Context, infoHash string, path string) error {
+	ret := _m.Called(ctx, infoHash, path)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetTorrentSessionSavePath")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) error); ok {
+		r0 = rf(ctx, infoHash, path)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockStore_SetTorrentSessionSavePath_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetTorrentSessionSavePath'
+type MockStore_SetTorrentSessionSavePath_Call struct {
+	*mock.Call
+}
+
+// SetTorrentSessionSavePath is a helper method to define mock.On call
+//   - ctx context.Context
+//   - infoHash string
+//   - path string
+func (_e *MockStore_Expecter) SetTorrentSessionSavePath(ctx interface{}, infoHash interface{}, path interface{}) *MockStore_SetTorrentSessionSavePath_Call {
+	return &MockStore_SetTorrentSessionSavePath_Call{Call: _e.mock.On("SetTorrentSessionSavePath", ctx, infoHash, path)}
+}
+
+func (_c *MockStore_SetTorrentSessionSavePath_Call) Run(run func(ctx context.Context, infoHash string, path string)) *MockStore_SetTorrentSessionSavePath_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(string))
+	})
+	return _c
+}
+
+func (_c *MockStore_SetTorrentSessionSavePath_Call) Return(_a0 error) *MockStore_SetTorrentSessionSavePath_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockStore_SetTorrentSessionSavePath_Call) RunAndReturn(run func(context.Context, string, string) error) *MockStore_SetTorrentSessionSavePath_Call {
 	_c.Call.Return(run)
 	return _c
 }

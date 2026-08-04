@@ -26,6 +26,7 @@ import (
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/library/bulkimport"
 	"github.com/datahearth/streamline/internal/library/hygiene"
+	"github.com/datahearth/streamline/internal/library/pathmigrate"
 	"github.com/datahearth/streamline/internal/media/movie"
 	"github.com/datahearth/streamline/internal/media/tvshow"
 	"github.com/datahearth/streamline/internal/mediaserver"
@@ -222,6 +223,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 	seriesRenamer := tvshow.NewRenameService(
 		store, cfg.Library.SeriesPath, cfg.Library.SeriesNaming,
 	)
+	pathMigrations := pathmigrate.NewService(store)
 	imp := importer.NewWorker(importer.Deps{
 		DB:          store,
 		Library:     libSvc,
@@ -417,6 +419,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		MetadataTV:      tvdb,
 		Posters:         postersSvc,
 		Torrents:        torrentsAPI,
+		PathMigrations:  pathMigrations,
 		AuthMiddleware:  authMW,
 		HTTPLog:         httpLogger.Middleware(httpAccessSkip),
 	})

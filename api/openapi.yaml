@@ -2209,6 +2209,70 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /library/path-migration:
+    get:
+      operationId: GetPathMigration
+      summary: State of the running (or last) library path migration.
+      tags: [library]
+      responses:
+        "200":
+          $ref: "#/components/responses/PathMigration"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      operationId: StartPathMigration
+      summary: Re-root a library to a new path.
+      description: |
+        Rewrites every stored path under the root's current prefix to sit
+        under `to`, and points the config at the new root. With
+        `move_files` the server relocates each file first (a rename when
+        both sides share a filesystem, a copy when they don't); without it
+        the files are expected to already be there. Runs in the background
+        — poll the GET for progress.
+      tags: [library]
+      requestBody:
+        $ref: "#/components/requestBodies/StartPathMigration"
+      responses:
+        "202":
+          $ref: "#/components/responses/PathMigration"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /library/path-migration/roots:
+    get:
+      operationId: GetPathMigrationRoots
+      summary: Configured library roots and how much is stored under each.
+      description: |
+        `tracked` is the number of stored paths currently sitting under the
+        configured root. Zero on a non-empty library means the config was
+        re-pointed without the stored paths following, so a migration has to
+        be given the old prefix explicitly.
+      tags: [library]
+      responses:
+        "200":
+          $ref: "#/components/responses/PathMigrationRootList"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /library/path-migration/preview:
+    post:
+      operationId: PreviewPathMigration
+      summary: Dry run of a library path migration.
+      tags: [library]
+      requestBody:
+        $ref: "#/components/requestBodies/StartPathMigration"
+      responses:
+        "200":
+          $ref: "#/components/responses/PathMigrationPreview"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
   /activity:
     get:
       operationId: listActivity
@@ -3118,6 +3182,13 @@ components:
           schema:
             $ref: "#/components/schemas/ImportScanCreateRequest"
 
+    StartPathMigration:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/PathMigrationRequest"
+
     UpdateImportFileDecision:
       required: true
       content:
@@ -3573,6 +3644,27 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ImportScanShowList"
+
+    PathMigration:
+      description: State of a library path migration.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/PathMigration"
+
+    PathMigrationPreview:
+      description: What a library path migration would do.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/PathMigrationPreview"
+
+    PathMigrationRootList:
+      description: Configured library roots with their tracked path counts.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/PathMigrationRootList"
 
     ImportDeleted:
       description: Import scan deleted.
@@ -5409,6 +5501,124 @@ components:
           description: |
             Per-scan override of `library.import_mode`. Only meaningful when `mode=rename`.
             Omit (or empty) to use the global default.
+
+    PathMigrationRequest:
+      type: object
+      required: [root, to]
+      properties:
+        root:
+          type: string
+          enum: [movies, series, downloads]
+        from:
+          type: string
+          description: |
+            Current prefix to rewrite. Defaults to the root's configured
+            value, which is what the UI sends unless the operator has
+            already edited the config themselves.
+        to:
+          type: string
+        move_files:
+          type: boolean
+          default: false
+          description: |
+            Relocate each file before re-pointing its row. Rejected for the
+            `downloads` root — that data belongs to the download client.
+
+    PathMigrationRoot:
+      type: object
+      required: [root, path, tracked, total]
+      properties:
+        root:
+          type: string
+          enum: [movies, series, downloads]
+        path:
+          type: string
+          description: The currently configured root.
+        tracked:
+          type: integer
+          description: Stored paths sitting under that root.
+        total:
+          type: integer
+          description: |
+            Stored paths of that media type anywhere. `tracked == 0` while
+            `total > 0` is the signal that the configured root no longer
+            matches the database; both zero just means nothing is stored yet.
+
+    PathMigrationRootList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PathMigrationRoot"
+
+    PathRewrite:
+      type: object
+      required: [from, to]
+      properties:
+        from:
+          type: string
+        to:
+          type: string
+
+    PathMigrationPreview:
+      type: object
+      required: [root, from, to, total, skipped, can_move, samples]
+      properties:
+        root:
+          type: string
+          enum: [movies, series, downloads]
+        from:
+          type: string
+        to:
+          type: string
+        total:
+          type: integer
+        skipped:
+          type: integer
+          description: |
+            Rows whose file is not where the migration expects it (the
+            source when moving, the destination otherwise). They are left
+            untouched.
+        can_move:
+          type: boolean
+        samples:
+          type: array
+          items:
+            $ref: "#/components/schemas/PathRewrite"
+
+    PathMigration:
+      type: object
+      required:
+        [running, root, from, to, move_files, total, done, skipped, current]
+      properties:
+        running:
+          type: boolean
+        root:
+          type: string
+        from:
+          type: string
+        to:
+          type: string
+        move_files:
+          type: boolean
+        total:
+          type: integer
+        done:
+          type: integer
+        skipped:
+          type: integer
+        current:
+          type: string
+        error:
+          type: string
+        started_at:
+          type: string
+          format: date-time
+        finished_at:
+          type: string
+          format: date-time
 
     ImportScanFileDecisionRequest:
       type: object

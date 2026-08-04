@@ -304,9 +304,11 @@
 	size="3xl"
 	footer={results.length > 0 ? actionFooter : undefined}
 >
-	<div class="-mx-5 -my-4 grid min-h-[26rem] md:grid-cols-[340px_1fr]">
+	<div
+		class="-mx-5 -my-4 grid min-h-[26rem] md:h-[60vh] md:max-h-[34rem] md:grid-cols-[340px_1fr]"
+	>
 		<div
-			class="flex-col gap-3 border-border p-4 md:flex md:border-r {showPanelOnNarrow
+			class="min-h-0 flex-col gap-3 border-border p-4 md:flex md:border-r {showPanelOnNarrow
 				? 'hidden'
 				: 'flex'}"
 		>
@@ -351,6 +353,7 @@
 				>{announcer}</span
 			>
 
+			<div class="flex min-h-0 flex-1 flex-col md:overflow-y-auto md:overscroll-contain">
 			{#if debounced.length < 2}
 				<div
 					class="flex flex-1 flex-col items-center justify-center py-12 text-center"
@@ -468,9 +471,14 @@
 					{/each}
 				</ul>
 			{/if}
+			</div>
 		</div>
 
-		<div class={showPanelOnNarrow ? "block" : "hidden md:block"}>
+		<div
+			class="min-h-0 md:overflow-y-auto md:overscroll-contain {showPanelOnNarrow
+				? 'block'
+				: 'hidden md:block'}"
+		>
 			<LookupDetailPanel
 				kind="movie"
 				item={panelItem}

@@ -2,6 +2,7 @@
 	import { onMount } from "svelte";
 	import {
 		SlidersHorizontal,
+		Wrench,
 		Search,
 		Download,
 		Cast,
@@ -69,6 +70,11 @@
 						path: "/settings/general",
 						Icon: SlidersHorizontal,
 						label: "General",
+					},
+					{
+						path: "/settings/advanced",
+						Icon: Wrench,
+						label: "Advanced",
 					},
 				],
 			},

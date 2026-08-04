@@ -2,6 +2,7 @@ package library
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -9,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/datahearth/streamline/ent"
@@ -401,6 +403,29 @@ func transferFile(src, dst, mode string) error {
 	default:
 		return fmt.Errorf("unknown import mode: %s", mode)
 	}
+}
+
+// MoveFile relocates src to dst, creating dst's parent first. os.Rename does
+// it in a single metadata op when both sides share a filesystem; EXDEV means
+// they don't, and the only way across is a full copy. A failed copy takes the
+// half-written destination with it so no truncated media file is left behind
+// at a path the library considers valid.
+func MoveFile(ctx context.Context, src, dst string) error {
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		return fmt.Errorf("mkdir %s: %w", filepath.Dir(dst), err)
+	}
+	err := os.Rename(src, dst)
+	if err == nil || !errors.Is(err, syscall.EXDEV) {
+		return err
+	}
+	if err := copyFile(src, dst); err != nil {
+		if rmErr := os.Remove(dst); rmErr != nil && !os.IsNotExist(rmErr) {
+			slog.WarnContext(ctx, "could not remove partial copy",
+				"path", dst, "error", rmErr)
+		}
+		return err
+	}
+	return os.Remove(src)
 }
 
 func copyFile(src, dst string) error {

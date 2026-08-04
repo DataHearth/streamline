@@ -846,3 +846,53 @@ export type ImportStartRequest = {
 	mode: ImportMode;
 	import_mode?: ImportTransferMode | "";
 };
+
+export type MigrationRoot = "movies" | "series" | "downloads";
+
+export type PathMigrationRequest = {
+	root: MigrationRoot;
+	from?: string;
+	to: string;
+	move_files?: boolean;
+};
+
+export type PathRewrite = {
+	from: string;
+	to: string;
+};
+
+export type PathMigrationRoot = {
+	root: MigrationRoot;
+	path: string;
+	tracked: number;
+	total: number;
+};
+
+export type PathMigrationRootList = {
+	items: PathMigrationRoot[];
+};
+
+export type PathMigrationPreview = {
+	root: MigrationRoot;
+	from: string;
+	to: string;
+	total: number;
+	skipped: number;
+	can_move: boolean;
+	samples: PathRewrite[];
+};
+
+export type PathMigration = {
+	running: boolean;
+	root: string;
+	from: string;
+	to: string;
+	move_files: boolean;
+	total: number;
+	done: number;
+	skipped: number;
+	current: string;
+	error?: string;
+	started_at?: string;
+	finished_at?: string;
+};

@@ -99,6 +99,40 @@ func (db *DB) ListMediaFilesByMovieID(
 	return rows, nil
 }
 
+func (db *DB) CountMovieMediaFiles(ctx context.Context) (int, error) {
+	n, err := db.client.MediaFile.Query().
+		Where(mediafile.HasMovie()).
+		Count(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("count movie media_files: %w", err)
+	}
+	return n, nil
+}
+
+func (db *DB) CountEpisodeMediaFiles(ctx context.Context) (int, error) {
+	n, err := db.client.MediaFile.Query().
+		Where(mediafile.HasEpisode()).
+		Count(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("count episode media_files: %w", err)
+	}
+	return n, nil
+}
+
+func (db *DB) ListMediaFilesByPathPrefix(
+	ctx context.Context,
+	prefix string,
+) ([]*ent.MediaFile, error) {
+	rows, err := db.client.MediaFile.Query().
+		Where(mediafile.PathHasPrefix(prefix)).
+		Order(ent.Asc(mediafile.FieldPath)).
+		All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list media_files under %s: %w", prefix, err)
+	}
+	return rows, nil
+}
+
 func (db *DB) UpdateMediaFilePath(
 	ctx context.Context,
 	id uint32,
