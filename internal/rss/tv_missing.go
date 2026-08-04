@@ -7,6 +7,7 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/episode"
+	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/otelx"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -49,6 +50,15 @@ func (s *EpisodeMissingSearcher) Run(ctx context.Context) error {
 		return otelx.RecordSpanError(span, err)
 	}
 	span.SetAttributes(attribute.Int("shows.count", len(shows)))
+	// See MissingSearcher.Run: the client check is process-wide, so a pass
+	// without one is dead work — but the eligible-show count is still worth
+	// recording, hence the check sits after the query, not at the top.
+	if _, ok := config.PickDownloadClient(); !ok {
+		slog.InfoContext(ctx, "tv missing-search: no enabled download client",
+			"shows", len(shows),
+		)
+		return nil
+	}
 	for _, show := range shows {
 		titles := []string{show.Title}
 		for _, se := range show.Edges.Seasons {

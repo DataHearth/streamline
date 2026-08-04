@@ -51,6 +51,25 @@ var _ = Describe("MissingSearcher.Run", Label("unit", "rss"), func() {
 		})
 	})
 
+	When("no download client is enabled", func() {
+		It("skips the pass after the eligibility query", func() {
+			overlay := defaultRSSConfig()
+			overlay["download_clients"] = []map[string]any{}
+			configtest.Setup(overlay)
+
+			// The count still runs — an operator staring at the logs needs to
+			// know how much work is queued behind the missing client.
+			store.EXPECT().
+				ListEligibleMoviesForSync(mock.Anything, uint8(3), mock.Anything).
+				Return([]*ent.Movie{{ID: 7, Title: "Fight Club", TmdbID: 550}}, nil).
+				Once()
+
+			Expect(syncer.Run(ctx)).To(Succeed())
+			// No SearchMovie, no Grab, no grab_failures write: the mocks would
+			// fail the spec on any unexpected call.
+		})
+	})
+
 	When("the eligibility query fails", func() {
 		It("returns the wrapped error", func() {
 			boom := errors.New("db boom")

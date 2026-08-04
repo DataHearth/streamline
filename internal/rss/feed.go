@@ -57,6 +57,17 @@ func (s *FeedScanner) Run(ctx context.Context) error {
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
 	}
+	// Same reasoning as MissingSearcher.Run: no client means every grab below
+	// fails identically, after pulling each indexer's whole feed and bumping
+	// grab_failures per matched movie. Kept after the wanted query so the span
+	// still carries the backlog size.
+	if _, ok := config.PickDownloadClient(); !ok {
+		span.SetAttributes(attribute.Int("rss.feed_scan.wanted", len(wanted)))
+		slog.InfoContext(ctx, "feed-scan: no enabled download client",
+			"wanted", len(wanted),
+		)
+		return nil
+	}
 	byTitleYear := buildWantedIndex(wanted)
 
 	// grabbed tracks movie IDs already attempted this tick so a second

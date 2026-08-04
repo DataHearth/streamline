@@ -170,6 +170,20 @@ func (s *MissingSearcher) Run(ctx context.Context) error {
 		return nil
 	}
 
+	// Whether a download client exists is process-wide, not per-movie: without
+	// one every grab below fails identically, after an indexer query per movie
+	// and a grab_failures write per rejected release. Bail here rather than at
+	// the top of the pass — the eligible count above is the number the operator
+	// needs to see — and before the counters move, so nothing is thrown at the
+	// throttles for an attempt that never happened.
+	if _, ok := config.PickDownloadClient(); !ok {
+		slog.InfoContext(ctx, "missing-search: no enabled download client",
+			"eligible", len(movies),
+		)
+		outcome = "no_download_client"
+		return nil
+	}
+
 	var grabbed, noMatch, alreadyExists, errCount atomic.Int64
 	sem := make(chan struct{}, s.workers)
 	var wg sync.WaitGroup
