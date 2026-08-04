@@ -770,6 +770,9 @@ func requestToAPI(r *ent.Request) Request {
 	if r.Reason != "" {
 		out.Reason = &r.Reason
 	}
+	if r.QualityProfile != "" {
+		out.QualityProfile = &r.QualityProfile
+	}
 	if u := r.Edges.Requester; u != nil {
 		out.Requester = requestUserToAPI(u)
 	}

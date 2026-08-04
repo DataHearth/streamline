@@ -116,7 +116,10 @@
 						Open details
 						<ArrowRight size={14} aria-hidden="true" />
 					</a>
-					<div class="flex items-center gap-2">
+					<!-- Own row below md. The design stacks these, but only because its
+					     fileMeta happens to be long enough to force the wrap — an item
+					     without one would sit beside the button instead. -->
+					<div class="flex basis-full items-center gap-2 md:basis-auto">
 						<StatusPill status={item.status} variant="translucent" />
 						{#if item.fileMeta}
 							<span class="font-mono text-[11px] text-fg-subtle">

@@ -226,10 +226,15 @@ func (t *TMDB) GetMovie(ctx context.Context, tmdbID uint32) (*MovieDetails, erro
 			Overview:      overview,
 			PosterPath:    resp.PosterPath,
 		},
-		Genres:  genres,
-		Runtime: uint16(resp.Runtime),
-		Rating:  resp.VoteAverage,
-		Cast:    cast,
+		Genres:           genres,
+		Runtime:          uint16(resp.Runtime),
+		Rating:           resp.VoteAverage,
+		VoteCount:        resp.VoteCount,
+		Cast:             cast,
+		Tagline:          resp.Tagline,
+		ReleaseDate:      resp.ReleaseDate,
+		OriginalLanguage: resp.OriginalLanguage,
+		IMDbID:           resp.IMDbID,
 	}, nil
 }
 
@@ -458,10 +463,13 @@ type tmdbMovieResponse struct {
 	OriginalLanguage string             `json:"original_language"`
 	ReleaseDate      string             `json:"release_date"`
 	Overview         string             `json:"overview"`
+	Tagline          string             `json:"tagline"`
+	IMDbID           string             `json:"imdb_id"`
 	PosterPath       string             `json:"poster_path"`
 	Genres           []tmdbGenre        `json:"genres"`
 	Runtime          int                `json:"runtime"`
 	VoteAverage      float32            `json:"vote_average"`
+	VoteCount        uint32             `json:"vote_count"`
 	Translations     tmdbTranslationBag `json:"translations"`
 	Credits          tmdbCredits        `json:"credits"`
 }

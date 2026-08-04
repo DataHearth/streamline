@@ -344,6 +344,23 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /search/movie/{tmdb_id}:
+    parameters:
+      - $ref: "#/components/parameters/TMDBID"
+    get:
+      operationId: getTMDBMovieDetail
+      summary: Full TMDB metadata for one movie
+      description: |
+        Returns synopsis, cast, genres and external ids for a single TMDB id,
+        so the add/request flow can show a title in full before committing to
+        it. The list search stays lean; this is fetched per highlighted result.
+      tags: [movies]
+      responses:
+        "200":
+          $ref: "#/components/responses/LookupDetailResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   # ── Series (TV) ─────────────────────────────────────────
   /series:
     get:
@@ -431,6 +448,23 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/SeriesLookupResults"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /series/lookup/{tvdb_id}:
+    parameters:
+      - $ref: "#/components/parameters/TVDBID"
+    get:
+      operationId: getSeriesLookupDetail
+      summary: Full TVDB metadata for one series
+      description: |
+        Returns synopsis, cast, genres, season/episode counts and external ids
+        for a single TVDB id, so the add/request flow can show a show in full
+        before committing to it.
+      tags: [series]
+      responses:
+        "200":
+          $ref: "#/components/responses/LookupDetailResponse"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -2854,6 +2888,24 @@ components:
       schema:
         type: string
 
+    TMDBID:
+      name: tmdb_id
+      in: path
+      required: true
+      description: TMDB movie id.
+      schema:
+        type: integer
+        x-go-type: uint32
+
+    TVDBID:
+      name: tvdb_id
+      in: path
+      required: true
+      description: TVDB series id.
+      schema:
+        type: integer
+        x-go-type: uint32
+
     SeasonNumber:
       name: number
       in: path
@@ -3324,6 +3376,13 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/SeriesLookupResultList"
+
+    LookupDetailResponse:
+      description: Full provider metadata for one lookup result.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/LookupDetail"
 
     SeriesDeleted:
       description: Series deleted.
@@ -5730,6 +5789,11 @@ components:
           enum: [pending, approved, denied, available]
         reason:
           type: string
+        quality_profile:
+          type: string
+          description: |
+            Profile the requester asked for; absent means no preference. The
+            reviewer's approve form starts here and can override it.
         requester:
           $ref: "#/components/schemas/RequestUser"
         approved_by:
@@ -5784,6 +5848,11 @@ components:
           x-go-type: uint32
         title:
           type: string
+        quality_profile:
+          type: string
+          description: |
+            Preferred profile name; omitted or empty records no preference.
+            A preference, not a promise — the reviewer can override it.
 
     DenyRequestRequest:
       type: object
@@ -5798,25 +5867,67 @@ components:
           type: string
           description: Profile name; empty or omitted uses the server default.
 
-    RequestMediaDetails:
+    LookupDetail:
       type: object
-      required: [overview]
+      description: |
+        Everything a provider knows about one lookup result beyond what the
+        search response carries. One shape serves both verticals: movies fill
+        runtime/release_date/tmdb_id, series fill network/season_count/status.
       properties:
-        poster_url:
-          type: string
         overview:
           type: string
-        year:
+        tagline:
+          type: string
+        release_date:
+          type: string
+          description: Theatrical release (movie) or first air date (series), ISO yyyy-mm-dd.
+        runtime:
           type: integer
           x-go-type: uint16
+          description: Feature length for a movie, average episode length for a series.
         rating:
           type: number
           format: float
           x-go-type: float32
-        runtime:
+        vote_count:
           type: integer
-          x-go-type: uint16
+          x-go-type: uint32
         genres:
           type: array
           items:
             type: string
+        cast:
+          type: array
+          items:
+            $ref: "#/components/schemas/CastMember"
+        original_language:
+          type: string
+        tmdb_id:
+          type: integer
+          x-go-type: uint32
+        tvdb_id:
+          type: integer
+          x-go-type: uint32
+        imdb_id:
+          type: string
+        network:
+          type: string
+        season_count:
+          type: integer
+          x-go-type: uint16
+        episode_count:
+          type: integer
+          x-go-type: uint16
+        status:
+          type: string
+
+    RequestMediaDetails:
+      allOf:
+        - $ref: "#/components/schemas/LookupDetail"
+        - type: object
+          properties:
+            poster_url:
+              type: string
+            year:
+              type: integer
+              x-go-type: uint16

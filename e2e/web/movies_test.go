@@ -22,7 +22,9 @@ var _ = Describe("Movies page", Label("e2e"), func() {
 	})
 
 	// No search term is typed: the modal's TMDB query needs 2+ characters, and
-	// this suite must never reach out to the network.
+	// this suite must never reach out to the network. With no results the split
+	// modal shows both empty columns and no footer — the quality-profile row and
+	// the commit button only appear once there is something to act on.
 	It("opens and closes the add-movie modal from the toolbar", func() {
 		page := newSessionPage("/movies")
 		page.MustElementR("button", "Add movie").MustClick()
@@ -30,7 +32,8 @@ var _ = Describe("Movies page", Label("e2e"), func() {
 		modal := page.MustElement(`div[role=dialog]`)
 		Expect(modal.MustElement("h2").MustText()).To(Equal("Add movie"))
 		modal.MustElement(`input[aria-label="Search TMDB by title"]`)
-		Expect(modal.MustText()).To(ContainSubstring("Quality profile"))
+		Expect(modal.MustText()).To(ContainSubstring("Search TMDB"))
+		Expect(modal.MustText()).To(ContainSubstring("Nothing selected"))
 
 		modal.MustElement(`button[aria-label=Close]`).MustClick()
 		modal.MustWaitInvisible()

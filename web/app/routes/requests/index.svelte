@@ -9,7 +9,6 @@
 		RotateCcw,
 		Film,
 		Tv,
-		Star,
 	} from "@lucide/svelte";
 	import { api } from "../../lib/api";
 	import { toast } from "../../lib/toast";
@@ -18,6 +17,7 @@
 	import { auth } from "../../lib/auth.svelte";
 	import Dialog from "../../components/modals/Dialog.svelte";
 	import Select from "../../components/forms/Select.svelte";
+	import LookupDetailPanel from "../../components/shared/LookupDetailPanel.svelte";
 	import type {
 		MediaRequest,
 		PaginatedRequests,
@@ -42,7 +42,10 @@
 	function toggle(id: number) {
 		const open = expandedId === id;
 		expandedId = open ? null : id;
-		selectedProfile = "";
+		// Start the reviewer on whatever the requester asked for; still overridable.
+		selectedProfile = open
+			? ""
+			: (all.find((r) => r.id === id)?.quality_profile ?? "");
 	}
 
 	const qc = useQueryClient();
@@ -329,73 +332,25 @@
 							transition:slide={{ duration: 180 }}
 							class="border-t border-border px-4 py-3"
 						>
-							<!-- Cover + synopsis so reviewers can judge the request -->
-							<div class="mb-3 flex gap-4">
-								<div
-									class="aspect-[2/3] w-24 shrink-0 overflow-hidden rounded-md border border-border bg-bg-card sm:w-28"
-								>
-									{#if detailQuery.data?.poster_url}
-										<img
-											src={detailQuery.data.poster_url}
-											alt={`Poster for ${r.title}`}
-											loading="lazy"
-											class="h-full w-full object-cover"
-										/>
-									{:else}
-										<div class="grid h-full w-full place-items-center text-fg-faint">
-											{#if r.media_type === "tvshow"}
-												<Tv size={20} aria-hidden="true" />
-											{:else}
-												<Film size={20} aria-hidden="true" />
-											{/if}
-										</div>
-									{/if}
-								</div>
-								<div class="min-w-0 flex-1">
-									{#if detailQuery.isLoading}
-										<div class="space-y-2" aria-hidden="true">
-											<div class="h-3 w-24 animate-pulse rounded bg-white/5"></div>
-											<div class="h-3 w-full animate-pulse rounded bg-white/5"></div>
-											<div class="h-3 w-5/6 animate-pulse rounded bg-white/5"></div>
-										</div>
-									{:else if detailQuery.isError}
-										<p class="text-[13px] text-fg-subtle">Couldn't load details.</p>
-									{:else if detailQuery.data}
-										{@const d = detailQuery.data}
-										<div
-											class="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] text-fg-muted"
-										>
-											{#if d.year}<span class="tabular">{d.year}</span>{/if}
-											{#if d.rating}
-												<span class="inline-flex items-center gap-0.5">
-													<Star
-														size={11}
-														class="text-status-wanted"
-														aria-hidden="true"
-													/>
-													<span class="tabular">{d.rating.toFixed(1)}</span>
-												</span>
-											{/if}
-											{#if d.runtime}<span class="tabular">{d.runtime}m</span>{/if}
-											{#if d.genres?.length}
-												<span class="text-fg-faint"
-													>{d.genres.slice(0, 3).join(" · ")}</span
-												>
-											{/if}
-										</div>
-										{#if d.overview}
-											<p
-												class="mt-2 text-[13px] leading-relaxed text-fg-muted [text-wrap:pretty]"
-											>
-												{d.overview}
-											</p>
-										{:else}
-											<p class="mt-2 text-[13px] text-fg-subtle">
-												No synopsis available.
-											</p>
-										{/if}
-									{/if}
-								</div>
+							<!-- Cover, synopsis, cast and IDs so reviewers can judge the request -->
+							<div class="mb-3">
+								{#if detailQuery.isError}
+									<p class="text-[13px] text-fg-subtle">Couldn't load details.</p>
+								{:else}
+									<LookupDetailPanel
+										kind={r.media_type === "tvshow" ? "series" : "movie"}
+										item={{
+											title: r.title,
+											year: detailQuery.data?.year,
+											poster_url: detailQuery.data?.poster_url,
+											overview: detailQuery.data?.overview,
+										}}
+										detail={detailQuery.data}
+										loading={detailQuery.isLoading}
+										showTitle={false}
+										compact
+									/>
+								{/if}
 							</div>
 
 							<dl class="grid gap-2 text-[13px] sm:grid-cols-2">
@@ -404,6 +359,14 @@
 										Requested by
 									</dt>
 									<dd class="mt-0.5 text-fg">{r.requester.email}</dd>
+								</div>
+								<div>
+									<dt class="text-[11px] uppercase tracking-wide text-fg-faint">
+										Preferred quality
+									</dt>
+									<dd class="mt-0.5 font-mono text-fg">
+										{r.quality_profile || "No preference"}
+									</dd>
 								</div>
 								{#if r.approved_by}
 									<div>

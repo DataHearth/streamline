@@ -9,10 +9,11 @@ import (
 )
 
 type CreateRequestParams struct {
-	MediaType   string // "movie" | "tvshow"
-	MediaID     uint32
-	Title       string
-	RequesterID uint32
+	MediaType      string // "movie" | "tvshow"
+	MediaID        uint32
+	Title          string
+	RequesterID    uint32
+	QualityProfile string // "" = no preference
 }
 
 type ListRequestsParams struct {
@@ -32,6 +33,7 @@ func (db *DB) CreateRequest(
 		SetMediaID(p.MediaID).
 		SetTitle(p.Title).
 		SetRequesterID(p.RequesterID).
+		SetQualityProfile(p.QualityProfile).
 		Save(ctx)
 }
 

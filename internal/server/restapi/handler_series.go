@@ -145,6 +145,45 @@ func (s *Server) LookupSeries(
 	}, nil
 }
 
+func (s *Server) GetSeriesLookupDetail(
+	ctx context.Context,
+	request GetSeriesLookupDetailRequestObject,
+) (GetSeriesLookupDetailResponseObject, error) {
+	d, err := s.seriesWithCast(ctx, request.TvdbId)
+	if err != nil {
+		return GetSeriesLookupDetail500JSONResponse{
+			InternalErrorJSONResponse: errInternal(err.Error()),
+		}, nil
+	}
+	return GetSeriesLookupDetail200JSONResponse{
+		LookupDetailResponseJSONResponse: LookupDetailResponseJSONResponse(
+			toLookupDetail(seriesDetailsToRequestMedia(d)),
+		),
+	}, nil
+}
+
+// seriesWithCast is GetSeries plus the top-billed actors GetSeries leaves out,
+// as both the add/request lookup panel and the expanded request row show them.
+//
+// ponytail: second hit on the same /series/{id}/extended record GetSeries
+// already fetched — it drops `characters`. Parse cast inside GetSeries if this
+// ever shows up hot.
+func (s *Server) seriesWithCast(
+	ctx context.Context,
+	tvdbID uint32,
+) (*metadata.TVDetails, error) {
+	d, err := s.metadataTV.GetSeries(ctx, tvdbID)
+	if err != nil {
+		return nil, err
+	}
+	cast, err := s.metadataTV.GetSeriesCast(ctx, tvdbID)
+	if err != nil {
+		return nil, err
+	}
+	d.Cast = cast
+	return d, nil
+}
+
 func (s *Server) GetSeries(
 	ctx context.Context,
 	request GetSeriesRequestObject,

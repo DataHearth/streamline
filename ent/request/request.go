@@ -29,6 +29,8 @@ const (
 	FieldStatus = "status"
 	// FieldReason holds the string denoting the reason field in the database.
 	FieldReason = "reason"
+	// FieldQualityProfile holds the string denoting the quality_profile field in the database.
+	FieldQualityProfile = "quality_profile"
 	// EdgeRequester holds the string denoting the requester edge name in mutations.
 	EdgeRequester = "requester"
 	// EdgeApprovedBy holds the string denoting the approved_by edge name in mutations.
@@ -61,6 +63,7 @@ var Columns = []string{
 	FieldTitle,
 	FieldStatus,
 	FieldReason,
+	FieldQualityProfile,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "requests"
@@ -188,6 +191,11 @@ func ByStatus(opts ...sql.OrderTermOption) OrderOption {
 // ByReason orders the results by the reason field.
 func ByReason(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldReason, opts...).ToFunc()
+}
+
+// ByQualityProfile orders the results by the quality_profile field.
+func ByQualityProfile(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldQualityProfile, opts...).ToFunc()
 }
 
 // ByRequesterField orders the results by requester field.

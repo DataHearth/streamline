@@ -510,3 +510,20 @@ func (s *Server) SearchTMDBMovie(
 
 	return SearchTMDBMovie200JSONResponse(items), nil
 }
+
+func (s *Server) GetTMDBMovieDetail(
+	ctx context.Context,
+	request GetTMDBMovieDetailRequestObject,
+) (GetTMDBMovieDetailResponseObject, error) {
+	d, err := s.metadata.GetMovie(ctx, request.TmdbId)
+	if err != nil {
+		return GetTMDBMovieDetail500JSONResponse{
+			InternalErrorJSONResponse: errInternal(err.Error()),
+		}, nil
+	}
+	return GetTMDBMovieDetail200JSONResponse{
+		LookupDetailResponseJSONResponse: LookupDetailResponseJSONResponse(
+			toLookupDetail(movieDetailsToRequestMedia(d)),
+		),
+	}, nil
+}

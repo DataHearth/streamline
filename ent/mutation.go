@@ -12763,6 +12763,7 @@ type RequestMutation struct {
 	title              *string
 	status             *request.Status
 	reason             *string
+	quality_profile    *string
 	clearedFields      map[string]struct{}
 	requester          *uint32
 	clearedrequester   bool
@@ -13162,6 +13163,55 @@ func (m *RequestMutation) ResetReason() {
 	delete(m.clearedFields, request.FieldReason)
 }
 
+// SetQualityProfile sets the "quality_profile" field.
+func (m *RequestMutation) SetQualityProfile(s string) {
+	m.quality_profile = &s
+}
+
+// QualityProfile returns the value of the "quality_profile" field in the mutation.
+func (m *RequestMutation) QualityProfile() (r string, exists bool) {
+	v := m.quality_profile
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldQualityProfile returns the old "quality_profile" field's value of the Request entity.
+// If the Request object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RequestMutation) OldQualityProfile(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldQualityProfile is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldQualityProfile requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldQualityProfile: %w", err)
+	}
+	return oldValue.QualityProfile, nil
+}
+
+// ClearQualityProfile clears the value of the "quality_profile" field.
+func (m *RequestMutation) ClearQualityProfile() {
+	m.quality_profile = nil
+	m.clearedFields[request.FieldQualityProfile] = struct{}{}
+}
+
+// QualityProfileCleared returns if the "quality_profile" field was cleared in this mutation.
+func (m *RequestMutation) QualityProfileCleared() bool {
+	_, ok := m.clearedFields[request.FieldQualityProfile]
+	return ok
+}
+
+// ResetQualityProfile resets all changes to the "quality_profile" field.
+func (m *RequestMutation) ResetQualityProfile() {
+	m.quality_profile = nil
+	delete(m.clearedFields, request.FieldQualityProfile)
+}
+
 // SetRequesterID sets the "requester" edge to the User entity by id.
 func (m *RequestMutation) SetRequesterID(id uint32) {
 	m.requester = &id
@@ -13274,7 +13324,7 @@ func (m *RequestMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *RequestMutation) Fields() []string {
-	fields := make([]string, 0, 7)
+	fields := make([]string, 0, 8)
 	if m.create_time != nil {
 		fields = append(fields, request.FieldCreateTime)
 	}
@@ -13295,6 +13345,9 @@ func (m *RequestMutation) Fields() []string {
 	}
 	if m.reason != nil {
 		fields = append(fields, request.FieldReason)
+	}
+	if m.quality_profile != nil {
+		fields = append(fields, request.FieldQualityProfile)
 	}
 	return fields
 }
@@ -13318,6 +13371,8 @@ func (m *RequestMutation) Field(name string) (ent.Value, bool) {
 		return m.Status()
 	case request.FieldReason:
 		return m.Reason()
+	case request.FieldQualityProfile:
+		return m.QualityProfile()
 	}
 	return nil, false
 }
@@ -13341,6 +13396,8 @@ func (m *RequestMutation) OldField(ctx context.Context, name string) (ent.Value,
 		return m.OldStatus(ctx)
 	case request.FieldReason:
 		return m.OldReason(ctx)
+	case request.FieldQualityProfile:
+		return m.OldQualityProfile(ctx)
 	}
 	return nil, fmt.Errorf("unknown Request field %s", name)
 }
@@ -13399,6 +13456,13 @@ func (m *RequestMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetReason(v)
 		return nil
+	case request.FieldQualityProfile:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetQualityProfile(v)
+		return nil
 	}
 	return fmt.Errorf("unknown Request field %s", name)
 }
@@ -13447,6 +13511,9 @@ func (m *RequestMutation) ClearedFields() []string {
 	if m.FieldCleared(request.FieldReason) {
 		fields = append(fields, request.FieldReason)
 	}
+	if m.FieldCleared(request.FieldQualityProfile) {
+		fields = append(fields, request.FieldQualityProfile)
+	}
 	return fields
 }
 
@@ -13463,6 +13530,9 @@ func (m *RequestMutation) ClearField(name string) error {
 	switch name {
 	case request.FieldReason:
 		m.ClearReason()
+		return nil
+	case request.FieldQualityProfile:
+		m.ClearQualityProfile()
 		return nil
 	}
 	return fmt.Errorf("unknown Request nullable field %s", name)
@@ -13492,6 +13562,9 @@ func (m *RequestMutation) ResetField(name string) error {
 		return nil
 	case request.FieldReason:
 		m.ResetReason()
+		return nil
+	case request.FieldQualityProfile:
+		m.ResetQualityProfile()
 		return nil
 	}
 	return fmt.Errorf("unknown Request field %s", name)

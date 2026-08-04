@@ -80,6 +80,11 @@ func Reason(v string) predicate.Request {
 	return predicate.Request(sql.FieldEQ(FieldReason, v))
 }
 
+// QualityProfile applies equality check predicate on the "quality_profile" field. It's identical to QualityProfileEQ.
+func QualityProfile(v string) predicate.Request {
+	return predicate.Request(sql.FieldEQ(FieldQualityProfile, v))
+}
+
 // CreateTimeEQ applies the EQ predicate on the "create_time" field.
 func CreateTimeEQ(v time.Time) predicate.Request {
 	return predicate.Request(sql.FieldEQ(FieldCreateTime, v))
@@ -378,6 +383,81 @@ func ReasonEqualFold(v string) predicate.Request {
 // ReasonContainsFold applies the ContainsFold predicate on the "reason" field.
 func ReasonContainsFold(v string) predicate.Request {
 	return predicate.Request(sql.FieldContainsFold(FieldReason, v))
+}
+
+// QualityProfileEQ applies the EQ predicate on the "quality_profile" field.
+func QualityProfileEQ(v string) predicate.Request {
+	return predicate.Request(sql.FieldEQ(FieldQualityProfile, v))
+}
+
+// QualityProfileNEQ applies the NEQ predicate on the "quality_profile" field.
+func QualityProfileNEQ(v string) predicate.Request {
+	return predicate.Request(sql.FieldNEQ(FieldQualityProfile, v))
+}
+
+// QualityProfileIn applies the In predicate on the "quality_profile" field.
+func QualityProfileIn(vs ...string) predicate.Request {
+	return predicate.Request(sql.FieldIn(FieldQualityProfile, vs...))
+}
+
+// QualityProfileNotIn applies the NotIn predicate on the "quality_profile" field.
+func QualityProfileNotIn(vs ...string) predicate.Request {
+	return predicate.Request(sql.FieldNotIn(FieldQualityProfile, vs...))
+}
+
+// QualityProfileGT applies the GT predicate on the "quality_profile" field.
+func QualityProfileGT(v string) predicate.Request {
+	return predicate.Request(sql.FieldGT(FieldQualityProfile, v))
+}
+
+// QualityProfileGTE applies the GTE predicate on the "quality_profile" field.
+func QualityProfileGTE(v string) predicate.Request {
+	return predicate.Request(sql.FieldGTE(FieldQualityProfile, v))
+}
+
+// QualityProfileLT applies the LT predicate on the "quality_profile" field.
+func QualityProfileLT(v string) predicate.Request {
+	return predicate.Request(sql.FieldLT(FieldQualityProfile, v))
+}
+
+// QualityProfileLTE applies the LTE predicate on the "quality_profile" field.
+func QualityProfileLTE(v string) predicate.Request {
+	return predicate.Request(sql.FieldLTE(FieldQualityProfile, v))
+}
+
+// QualityProfileContains applies the Contains predicate on the "quality_profile" field.
+func QualityProfileContains(v string) predicate.Request {
+	return predicate.Request(sql.FieldContains(FieldQualityProfile, v))
+}
+
+// QualityProfileHasPrefix applies the HasPrefix predicate on the "quality_profile" field.
+func QualityProfileHasPrefix(v string) predicate.Request {
+	return predicate.Request(sql.FieldHasPrefix(FieldQualityProfile, v))
+}
+
+// QualityProfileHasSuffix applies the HasSuffix predicate on the "quality_profile" field.
+func QualityProfileHasSuffix(v string) predicate.Request {
+	return predicate.Request(sql.FieldHasSuffix(FieldQualityProfile, v))
+}
+
+// QualityProfileIsNil applies the IsNil predicate on the "quality_profile" field.
+func QualityProfileIsNil() predicate.Request {
+	return predicate.Request(sql.FieldIsNull(FieldQualityProfile))
+}
+
+// QualityProfileNotNil applies the NotNil predicate on the "quality_profile" field.
+func QualityProfileNotNil() predicate.Request {
+	return predicate.Request(sql.FieldNotNull(FieldQualityProfile))
+}
+
+// QualityProfileEqualFold applies the EqualFold predicate on the "quality_profile" field.
+func QualityProfileEqualFold(v string) predicate.Request {
+	return predicate.Request(sql.FieldEqualFold(FieldQualityProfile, v))
+}
+
+// QualityProfileContainsFold applies the ContainsFold predicate on the "quality_profile" field.
+func QualityProfileContainsFold(v string) predicate.Request {
+	return predicate.Request(sql.FieldContainsFold(FieldQualityProfile, v))
 }
 
 // HasRequester applies the HasEdge predicate on the "requester" edge.

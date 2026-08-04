@@ -95,6 +95,20 @@ func (_c *RequestCreate) SetNillableReason(v *string) *RequestCreate {
 	return _c
 }
 
+// SetQualityProfile sets the "quality_profile" field.
+func (_c *RequestCreate) SetQualityProfile(v string) *RequestCreate {
+	_c.mutation.SetQualityProfile(v)
+	return _c
+}
+
+// SetNillableQualityProfile sets the "quality_profile" field if the given value is not nil.
+func (_c *RequestCreate) SetNillableQualityProfile(v *string) *RequestCreate {
+	if v != nil {
+		_c.SetQualityProfile(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *RequestCreate) SetID(v uint32) *RequestCreate {
 	_c.mutation.SetID(v)
@@ -277,6 +291,10 @@ func (_c *RequestCreate) createSpec() (*Request, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Reason(); ok {
 		_spec.SetField(request.FieldReason, field.TypeString, value)
 		_node.Reason = value
+	}
+	if value, ok := _c.mutation.QualityProfile(); ok {
+		_spec.SetField(request.FieldQualityProfile, field.TypeString, value)
+		_node.QualityProfile = value
 	}
 	if nodes := _c.mutation.RequesterIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

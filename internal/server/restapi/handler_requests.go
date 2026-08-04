@@ -75,12 +75,17 @@ func (s *Server) CreateRequest(
 			UnauthorizedJSONResponse: unauthorizedResp("login required"),
 		}, nil
 	}
+	qualityProfile := ""
+	if req.Body.QualityProfile != nil {
+		qualityProfile = *req.Body.QualityProfile
+	}
 	r, err := s.requests.Create(
 		ctx,
 		string(req.Body.MediaType),
 		req.Body.MediaId,
 		req.Body.Title,
 		claims.UserID,
+		qualityProfile,
 	)
 	if errors.Is(err, requestsvc.ErrDuplicate) {
 		return CreateRequest409JSONResponse{
@@ -255,7 +260,7 @@ func (s *Server) GetRequestMetadata(
 		}
 		details = movieDetailsToRequestMedia(d)
 	case "tvshow":
-		d, err := s.metadataTV.GetSeries(ctx, r.MediaID)
+		d, err := s.seriesWithCast(ctx, r.MediaID)
 		if err != nil {
 			return GetRequestMetadata500JSONResponse{
 				InternalErrorJSONResponse: errInternal(err.Error()),
@@ -270,16 +275,40 @@ func (s *Server) GetRequestMetadata(
 	}, nil
 }
 
+// RequestMediaDetails is LookupDetail plus the poster and year, so the request
+// row and the add/request lookup endpoints share one mapping per provider and
+// project it down with toLookupDetail.
 func movieDetailsToRequestMedia(d *metadata.MovieDetails) RequestMediaDetails {
-	out := RequestMediaDetails{Overview: d.Overview}
+	out := RequestMediaDetails{}
 	if url := metadata.PosterURL(d.PosterPath, "w342"); url != "" {
 		out.PosterUrl = &url
 	}
 	if d.Year != 0 {
 		out.Year = &d.Year
 	}
+	if d.Overview != "" {
+		out.Overview = &d.Overview
+	}
+	if d.Tagline != "" {
+		out.Tagline = &d.Tagline
+	}
+	if d.ReleaseDate != "" {
+		out.ReleaseDate = &d.ReleaseDate
+	}
+	if d.OriginalLanguage != "" {
+		out.OriginalLanguage = &d.OriginalLanguage
+	}
+	if d.IMDbID != "" {
+		out.ImdbId = &d.IMDbID
+	}
+	if d.TMDBID != 0 {
+		out.TmdbId = &d.TMDBID
+	}
 	if d.Rating != 0 {
 		out.Rating = &d.Rating
+	}
+	if d.VoteCount != 0 {
+		out.VoteCount = &d.VoteCount
 	}
 	if d.Runtime != 0 {
 		out.Runtime = &d.Runtime
@@ -287,17 +316,38 @@ func movieDetailsToRequestMedia(d *metadata.MovieDetails) RequestMediaDetails {
 	if len(d.Genres) != 0 {
 		out.Genres = &d.Genres
 	}
+	if cast := castToAPI(d.Cast); len(cast) != 0 {
+		out.Cast = &cast
+	}
 	return out
 }
 
 func seriesDetailsToRequestMedia(d *metadata.TVDetails) RequestMediaDetails {
-	out := RequestMediaDetails{Overview: d.Overview}
+	out := RequestMediaDetails{}
 	if url := metadata.TVDBArtworkURL(d.PosterPath); url != "" {
 		out.PosterUrl = &url
 	}
 	if d.Year != 0 {
 		out.Year = &d.Year
 	}
+	if d.Overview != "" {
+		out.Overview = &d.Overview
+	}
+	if d.FirstAired != "" {
+		out.ReleaseDate = &d.FirstAired
+	}
+	if d.IMDbID != "" {
+		out.ImdbId = &d.IMDbID
+	}
+	if d.TVDBID != 0 {
+		out.TvdbId = &d.TVDBID
+	}
+	if d.Network != "" {
+		out.Network = &d.Network
+	}
+	if d.Status != "" {
+		out.Status = &d.Status
+	}
 	if d.Rating != 0 {
 		out.Rating = &d.Rating
 	}
@@ -307,5 +357,35 @@ func seriesDetailsToRequestMedia(d *metadata.TVDetails) RequestMediaDetails {
 	if len(d.Genres) != 0 {
 		out.Genres = &d.Genres
 	}
+	if cast := castToAPI(d.Cast); len(cast) != 0 {
+		out.Cast = &cast
+	}
+	if n := uint16(len(d.Seasons)); n != 0 {
+		out.SeasonCount = &n
+	}
+	if n := uint16(len(d.Episodes)); n != 0 {
+		out.EpisodeCount = &n
+	}
 	return out
+}
+
+func toLookupDetail(d RequestMediaDetails) LookupDetail {
+	return LookupDetail{
+		Cast:             d.Cast,
+		EpisodeCount:     d.EpisodeCount,
+		Genres:           d.Genres,
+		ImdbId:           d.ImdbId,
+		Network:          d.Network,
+		OriginalLanguage: d.OriginalLanguage,
+		Overview:         d.Overview,
+		Rating:           d.Rating,
+		ReleaseDate:      d.ReleaseDate,
+		Runtime:          d.Runtime,
+		SeasonCount:      d.SeasonCount,
+		Status:           d.Status,
+		Tagline:          d.Tagline,
+		TmdbId:           d.TmdbId,
+		TvdbId:           d.TvdbId,
+		VoteCount:        d.VoteCount,
+	}
 }

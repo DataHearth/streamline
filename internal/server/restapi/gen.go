@@ -1808,7 +1808,11 @@ type CreateInviteRequestRole string
 type CreateRequestRequest struct {
 	MediaId   uint32                        `json:"media_id"`
 	MediaType CreateRequestRequestMediaType `json:"media_type"`
-	Title     string                        `json:"title"`
+
+	// QualityProfile Preferred profile name; omitted or empty records no preference.
+	// A preference, not a promise — the reviewer can override it.
+	QualityProfile *string `json:"quality_profile,omitempty"`
+	Title          string  `json:"title"`
 }
 
 // CreateRequestRequestMediaType defines model for CreateRequestRequest.MediaType.
@@ -2259,6 +2263,32 @@ type LibraryConfigView struct {
 	MonitorSpecials bool `json:"monitor_specials"`
 }
 
+// LookupDetail Everything a provider knows about one lookup result beyond what the
+// search response carries. One shape serves both verticals: movies fill
+// runtime/release_date/tmdb_id, series fill network/season_count/status.
+type LookupDetail struct {
+	Cast             *[]CastMember `json:"cast,omitempty"`
+	EpisodeCount     *uint16       `json:"episode_count,omitempty"`
+	Genres           *[]string     `json:"genres,omitempty"`
+	ImdbId           *string       `json:"imdb_id,omitempty"`
+	Network          *string       `json:"network,omitempty"`
+	OriginalLanguage *string       `json:"original_language,omitempty"`
+	Overview         *string       `json:"overview,omitempty"`
+	Rating           *float32      `json:"rating,omitempty"`
+
+	// ReleaseDate Theatrical release (movie) or first air date (series), ISO yyyy-mm-dd.
+	ReleaseDate *string `json:"release_date,omitempty"`
+
+	// Runtime Feature length for a movie, average episode length for a series.
+	Runtime     *uint16 `json:"runtime,omitempty"`
+	SeasonCount *uint16 `json:"season_count,omitempty"`
+	Status      *string `json:"status,omitempty"`
+	Tagline     *string `json:"tagline,omitempty"`
+	TmdbId      *uint32 `json:"tmdb_id,omitempty"`
+	TvdbId      *uint32 `json:"tvdb_id,omitempty"`
+	VoteCount   *uint32 `json:"vote_count,omitempty"`
+}
+
 // MediaFile defines model for MediaFile.
 type MediaFile struct {
 	Format *string `json:"format,omitempty"`
@@ -2622,11 +2652,15 @@ type Request struct {
 	// MediaId TMDB id for movies, TVDB id for shows.
 	MediaId   uint32           `json:"media_id"`
 	MediaType RequestMediaType `json:"media_type"`
-	Reason    *string          `json:"reason,omitempty"`
-	Requester RequestUser      `json:"requester"`
-	Status    RequestStatus    `json:"status"`
-	Title     string           `json:"title"`
-	UpdatedAt time.Time        `json:"updated_at"`
+
+	// QualityProfile Profile the requester asked for; absent means no preference. The
+	// reviewer's approve form starts here and can override it.
+	QualityProfile *string       `json:"quality_profile,omitempty"`
+	Reason         *string       `json:"reason,omitempty"`
+	Requester      RequestUser   `json:"requester"`
+	Status         RequestStatus `json:"status"`
+	Title          string        `json:"title"`
+	UpdatedAt      time.Time     `json:"updated_at"`
 }
 
 // RequestMediaType defines model for Request.MediaType.
@@ -2645,12 +2679,28 @@ type RequestCounts struct {
 
 // RequestMediaDetails defines model for RequestMediaDetails.
 type RequestMediaDetails struct {
-	Genres    *[]string `json:"genres,omitempty"`
-	Overview  string    `json:"overview"`
-	PosterUrl *string   `json:"poster_url,omitempty"`
-	Rating    *float32  `json:"rating,omitempty"`
-	Runtime   *uint16   `json:"runtime,omitempty"`
-	Year      *uint16   `json:"year,omitempty"`
+	Cast             *[]CastMember `json:"cast,omitempty"`
+	EpisodeCount     *uint16       `json:"episode_count,omitempty"`
+	Genres           *[]string     `json:"genres,omitempty"`
+	ImdbId           *string       `json:"imdb_id,omitempty"`
+	Network          *string       `json:"network,omitempty"`
+	OriginalLanguage *string       `json:"original_language,omitempty"`
+	Overview         *string       `json:"overview,omitempty"`
+	PosterUrl        *string       `json:"poster_url,omitempty"`
+	Rating           *float32      `json:"rating,omitempty"`
+
+	// ReleaseDate Theatrical release (movie) or first air date (series), ISO yyyy-mm-dd.
+	ReleaseDate *string `json:"release_date,omitempty"`
+
+	// Runtime Feature length for a movie, average episode length for a series.
+	Runtime     *uint16 `json:"runtime,omitempty"`
+	SeasonCount *uint16 `json:"season_count,omitempty"`
+	Status      *string `json:"status,omitempty"`
+	Tagline     *string `json:"tagline,omitempty"`
+	TmdbId      *uint32 `json:"tmdb_id,omitempty"`
+	TvdbId      *uint32 `json:"tvdb_id,omitempty"`
+	VoteCount   *uint32 `json:"vote_count,omitempty"`
+	Year        *uint16 `json:"year,omitempty"`
 }
 
 // RequestUser defines model for RequestUser.
@@ -3211,6 +3261,12 @@ type SeriesType = string
 // SessionID defines model for SessionID.
 type SessionID = uint32
 
+// TMDBID defines model for TMDBID.
+type TMDBID = uint32
+
+// TVDBID defines model for TVDBID.
+type TVDBID = uint32
+
 // TorrentFileIndex defines model for TorrentFileIndex.
 type TorrentFileIndex = int
 
@@ -3243,6 +3299,11 @@ type InternalError = Error
 
 // LibraryConfig defines model for LibraryConfig.
 type LibraryConfig = LibraryConfigView
+
+// LookupDetailResponse Everything a provider knows about one lookup result beyond what the
+// search response carries. One shape serves both verticals: movies fill
+// runtime/release_date/tmdb_id, series fill network/season_count/status.
+type LookupDetailResponse = LookupDetail
 
 // MediaServerCreated defines model for MediaServerCreated.
 type MediaServerCreated = MediaServer
@@ -4022,6 +4083,9 @@ type ServerInterface interface {
 	// Search TMDB for movies
 	// (GET /search/movie)
 	SearchTMDBMovie(w http.ResponseWriter, r *http.Request, params SearchTMDBMovieParams)
+	// Full TMDB metadata for one movie
+	// (GET /search/movie/{tmdb_id})
+	GetTMDBMovieDetail(w http.ResponseWriter, r *http.Request, tmdbId TMDBID)
 	// List all series
 	// (GET /series)
 	ListSeries(w http.ResponseWriter, r *http.Request, params ListSeriesParams)
@@ -4034,6 +4098,9 @@ type ServerInterface interface {
 	// Search TVDB for series to add
 	// (GET /series/lookup)
 	LookupSeries(w http.ResponseWriter, r *http.Request, params LookupSeriesParams)
+	// Full TVDB metadata for one series
+	// (GET /series/lookup/{tvdb_id})
+	GetSeriesLookupDetail(w http.ResponseWriter, r *http.Request, tvdbId TVDBID)
 	// Apply the specials setting to existing series (admin)
 	// (POST /series/specials/apply)
 	ApplySpecialsToExisting(w http.ResponseWriter, r *http.Request)
@@ -4708,6 +4775,12 @@ func (_ Unimplemented) SearchTMDBMovie(w http.ResponseWriter, r *http.Request, p
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Full TMDB metadata for one movie
+// (GET /search/movie/{tmdb_id})
+func (_ Unimplemented) GetTMDBMovieDetail(w http.ResponseWriter, r *http.Request, tmdbId TMDBID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // List all series
 // (GET /series)
 func (_ Unimplemented) ListSeries(w http.ResponseWriter, r *http.Request, params ListSeriesParams) {
@@ -4729,6 +4802,12 @@ func (_ Unimplemented) GetSeriesCounts(w http.ResponseWriter, r *http.Request) {
 // Search TVDB for series to add
 // (GET /series/lookup)
 func (_ Unimplemented) LookupSeries(w http.ResponseWriter, r *http.Request, params LookupSeriesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Full TVDB metadata for one series
+// (GET /series/lookup/{tvdb_id})
+func (_ Unimplemented) GetSeriesLookupDetail(w http.ResponseWriter, r *http.Request, tvdbId TVDBID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -7975,6 +8054,39 @@ func (siw *ServerInterfaceWrapper) SearchTMDBMovie(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// GetTMDBMovieDetail operation middleware
+func (siw *ServerInterfaceWrapper) GetTMDBMovieDetail(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "tmdb_id" -------------
+	var tmdbId TMDBID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "tmdb_id", chi.URLParam(r, "tmdb_id"), &tmdbId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tmdb_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, ApiKeyAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetTMDBMovieDetail(w, r, tmdbId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListSeries operation middleware
 func (siw *ServerInterfaceWrapper) ListSeries(w http.ResponseWriter, r *http.Request) {
 
@@ -8127,6 +8239,39 @@ func (siw *ServerInterfaceWrapper) LookupSeries(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.LookupSeries(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetSeriesLookupDetail operation middleware
+func (siw *ServerInterfaceWrapper) GetSeriesLookupDetail(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "tvdb_id" -------------
+	var tvdbId TVDBID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "tvdb_id", chi.URLParam(r, "tvdb_id"), &tvdbId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tvdb_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, ApiKeyAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSeriesLookupDetail(w, r, tvdbId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -9770,6 +9915,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/search/movie", wrapper.SearchTMDBMovie)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/search/movie/{tmdb_id}", wrapper.GetTMDBMovieDetail)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/series", wrapper.ListSeries)
 	})
 	r.Group(func(r chi.Router) {
@@ -9780,6 +9928,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/series/lookup", wrapper.LookupSeries)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/series/lookup/{tvdb_id}", wrapper.GetSeriesLookupDetail)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/series/specials/apply", wrapper.ApplySpecialsToExisting)
@@ -9935,6 +10086,8 @@ type InternalErrorJSONResponse Error
 type JWTRotatedJSONResponse JWTRotated
 
 type LibraryConfigJSONResponse LibraryConfigView
+
+type LookupDetailResponseJSONResponse LookupDetail
 
 type MediaServerCreatedJSONResponse MediaServer
 
@@ -13762,6 +13915,34 @@ func (response SearchTMDBMovie500JSONResponse) VisitSearchTMDBMovieResponse(w ht
 	return json.NewEncoder(w).Encode(response)
 }
 
+type GetTMDBMovieDetailRequestObject struct {
+	TmdbId TMDBID `json:"tmdb_id"`
+}
+
+type GetTMDBMovieDetailResponseObject interface {
+	VisitGetTMDBMovieDetailResponse(w http.ResponseWriter) error
+}
+
+type GetTMDBMovieDetail200JSONResponse struct {
+	LookupDetailResponseJSONResponse
+}
+
+func (response GetTMDBMovieDetail200JSONResponse) VisitGetTMDBMovieDetailResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetTMDBMovieDetail500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetTMDBMovieDetail500JSONResponse) VisitGetTMDBMovieDetailResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type ListSeriesRequestObject struct {
 	Params ListSeriesParams
 }
@@ -13881,6 +14062,34 @@ func (response LookupSeries200JSONResponse) VisitLookupSeriesResponse(w http.Res
 type LookupSeries500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response LookupSeries500JSONResponse) VisitLookupSeriesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetSeriesLookupDetailRequestObject struct {
+	TvdbId TVDBID `json:"tvdb_id"`
+}
+
+type GetSeriesLookupDetailResponseObject interface {
+	VisitGetSeriesLookupDetailResponse(w http.ResponseWriter) error
+}
+
+type GetSeriesLookupDetail200JSONResponse struct {
+	LookupDetailResponseJSONResponse
+}
+
+func (response GetSeriesLookupDetail200JSONResponse) VisitGetSeriesLookupDetailResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetSeriesLookupDetail500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetSeriesLookupDetail500JSONResponse) VisitGetSeriesLookupDetailResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
 
@@ -15434,6 +15643,9 @@ type StrictServerInterface interface {
 	// Search TMDB for movies
 	// (GET /search/movie)
 	SearchTMDBMovie(ctx context.Context, request SearchTMDBMovieRequestObject) (SearchTMDBMovieResponseObject, error)
+	// Full TMDB metadata for one movie
+	// (GET /search/movie/{tmdb_id})
+	GetTMDBMovieDetail(ctx context.Context, request GetTMDBMovieDetailRequestObject) (GetTMDBMovieDetailResponseObject, error)
 	// List all series
 	// (GET /series)
 	ListSeries(ctx context.Context, request ListSeriesRequestObject) (ListSeriesResponseObject, error)
@@ -15446,6 +15658,9 @@ type StrictServerInterface interface {
 	// Search TVDB for series to add
 	// (GET /series/lookup)
 	LookupSeries(ctx context.Context, request LookupSeriesRequestObject) (LookupSeriesResponseObject, error)
+	// Full TVDB metadata for one series
+	// (GET /series/lookup/{tvdb_id})
+	GetSeriesLookupDetail(ctx context.Context, request GetSeriesLookupDetailRequestObject) (GetSeriesLookupDetailResponseObject, error)
 	// Apply the specials setting to existing series (admin)
 	// (POST /series/specials/apply)
 	ApplySpecialsToExisting(ctx context.Context, request ApplySpecialsToExistingRequestObject) (ApplySpecialsToExistingResponseObject, error)
@@ -18253,6 +18468,32 @@ func (sh *strictHandler) SearchTMDBMovie(w http.ResponseWriter, r *http.Request,
 	}
 }
 
+// GetTMDBMovieDetail operation middleware
+func (sh *strictHandler) GetTMDBMovieDetail(w http.ResponseWriter, r *http.Request, tmdbId TMDBID) {
+	var request GetTMDBMovieDetailRequestObject
+
+	request.TmdbId = tmdbId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetTMDBMovieDetail(ctx, request.(GetTMDBMovieDetailRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetTMDBMovieDetail")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetTMDBMovieDetailResponseObject); ok {
+		if err := validResponse.VisitGetTMDBMovieDetailResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListSeries operation middleware
 func (sh *strictHandler) ListSeries(w http.ResponseWriter, r *http.Request, params ListSeriesParams) {
 	var request ListSeriesRequestObject
@@ -18353,6 +18594,32 @@ func (sh *strictHandler) LookupSeries(w http.ResponseWriter, r *http.Request, pa
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(LookupSeriesResponseObject); ok {
 		if err := validResponse.VisitLookupSeriesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetSeriesLookupDetail operation middleware
+func (sh *strictHandler) GetSeriesLookupDetail(w http.ResponseWriter, r *http.Request, tvdbId TVDBID) {
+	var request GetSeriesLookupDetailRequestObject
+
+	request.TvdbId = tvdbId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetSeriesLookupDetail(ctx, request.(GetSeriesLookupDetailRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetSeriesLookupDetail")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetSeriesLookupDetailResponseObject); ok {
+		if err := validResponse.VisitGetSeriesLookupDetailResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

@@ -6,20 +6,29 @@
 	import CommandPalette from "./CommandPalette.svelte";
 	import AddMovieModal from "../movies/AddMovieModal.svelte";
 	import AddSeriesModal from "../series/AddSeriesModal.svelte";
+	import MediaLookupScreen from "../shared/MediaLookupScreen.svelte";
 
 	let { children }: { children: Snippet } = $props();
 
 	let addMovieOpen = $state(false);
 	let addSeriesOpen = $state(false);
+	// Below md the add/request flow is a full-screen search rather than the split
+	// modal, which is a different component — not something CSS can pick.
+	let compact = $state(false);
 
 	onMount(() => {
 		const onOpenMovie = () => (addMovieOpen = true);
 		const onOpenSeries = () => (addSeriesOpen = true);
 		window.addEventListener("streamline:open-add-movie", onOpenMovie);
 		window.addEventListener("streamline:open-add-series", onOpenSeries);
+		const mql = window.matchMedia("(max-width: 767px)");
+		const syncCompact = () => (compact = mql.matches);
+		syncCompact();
+		mql.addEventListener("change", syncCompact);
 		return () => {
 			window.removeEventListener("streamline:open-add-movie", onOpenMovie);
 			window.removeEventListener("streamline:open-add-series", onOpenSeries);
+			mql.removeEventListener("change", syncCompact);
 		};
 	});
 </script>
@@ -45,5 +54,18 @@
 	<BottomNav />
 </div>
 <CommandPalette />
-<AddMovieModal open={addMovieOpen} onClose={() => (addMovieOpen = false)} />
-<AddSeriesModal open={addSeriesOpen} onClose={() => (addSeriesOpen = false)} />
+{#if compact}
+	<MediaLookupScreen
+		kind="movie"
+		open={addMovieOpen}
+		onClose={() => (addMovieOpen = false)}
+	/>
+	<MediaLookupScreen
+		kind="series"
+		open={addSeriesOpen}
+		onClose={() => (addSeriesOpen = false)}
+	/>
+{:else}
+	<AddMovieModal open={addMovieOpen} onClose={() => (addMovieOpen = false)} />
+	<AddSeriesModal open={addSeriesOpen} onClose={() => (addSeriesOpen = false)} />
+{/if}

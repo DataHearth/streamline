@@ -32,6 +32,8 @@ type Request struct {
 	Status request.Status `json:"status,omitempty"`
 	// Admin-supplied reason, e.g. on denial.
 	Reason string `json:"reason,omitempty"`
+	// Profile the requester asked for; empty means no preference.
+	QualityProfile string `json:"quality_profile,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the RequestQuery when eager-loading is set.
 	Edges               RequestEdges `json:"edges"`
@@ -80,7 +82,7 @@ func (*Request) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case request.FieldID, request.FieldMediaID:
 			values[i] = new(sql.NullInt64)
-		case request.FieldMediaType, request.FieldTitle, request.FieldStatus, request.FieldReason:
+		case request.FieldMediaType, request.FieldTitle, request.FieldStatus, request.FieldReason, request.FieldQualityProfile:
 			values[i] = new(sql.NullString)
 		case request.FieldCreateTime, request.FieldUpdateTime:
 			values[i] = new(sql.NullTime)
@@ -150,6 +152,12 @@ func (_m *Request) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field reason", values[i])
 			} else if value.Valid {
 				_m.Reason = value.String
+			}
+		case request.FieldQualityProfile:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field quality_profile", values[i])
+			} else if value.Valid {
+				_m.QualityProfile = value.String
 			}
 		case request.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -231,6 +239,9 @@ func (_m *Request) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("reason=")
 	builder.WriteString(_m.Reason)
+	builder.WriteString(", ")
+	builder.WriteString("quality_profile=")
+	builder.WriteString(_m.QualityProfile)
 	builder.WriteByte(')')
 	return builder.String()
 }

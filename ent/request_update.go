@@ -118,6 +118,26 @@ func (_u *RequestUpdate) ClearReason() *RequestUpdate {
 	return _u
 }
 
+// SetQualityProfile sets the "quality_profile" field.
+func (_u *RequestUpdate) SetQualityProfile(v string) *RequestUpdate {
+	_u.mutation.SetQualityProfile(v)
+	return _u
+}
+
+// SetNillableQualityProfile sets the "quality_profile" field if the given value is not nil.
+func (_u *RequestUpdate) SetNillableQualityProfile(v *string) *RequestUpdate {
+	if v != nil {
+		_u.SetQualityProfile(*v)
+	}
+	return _u
+}
+
+// ClearQualityProfile clears the value of the "quality_profile" field.
+func (_u *RequestUpdate) ClearQualityProfile() *RequestUpdate {
+	_u.mutation.ClearQualityProfile()
+	return _u
+}
+
 // SetRequesterID sets the "requester" edge to the User entity by ID.
 func (_u *RequestUpdate) SetRequesterID(id uint32) *RequestUpdate {
 	_u.mutation.SetRequesterID(id)
@@ -259,6 +279,12 @@ func (_u *RequestUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.ReasonCleared() {
 		_spec.ClearField(request.FieldReason, field.TypeString)
+	}
+	if value, ok := _u.mutation.QualityProfile(); ok {
+		_spec.SetField(request.FieldQualityProfile, field.TypeString, value)
+	}
+	if _u.mutation.QualityProfileCleared() {
+		_spec.ClearField(request.FieldQualityProfile, field.TypeString)
 	}
 	if _u.mutation.RequesterCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -424,6 +450,26 @@ func (_u *RequestUpdateOne) SetNillableReason(v *string) *RequestUpdateOne {
 // ClearReason clears the value of the "reason" field.
 func (_u *RequestUpdateOne) ClearReason() *RequestUpdateOne {
 	_u.mutation.ClearReason()
+	return _u
+}
+
+// SetQualityProfile sets the "quality_profile" field.
+func (_u *RequestUpdateOne) SetQualityProfile(v string) *RequestUpdateOne {
+	_u.mutation.SetQualityProfile(v)
+	return _u
+}
+
+// SetNillableQualityProfile sets the "quality_profile" field if the given value is not nil.
+func (_u *RequestUpdateOne) SetNillableQualityProfile(v *string) *RequestUpdateOne {
+	if v != nil {
+		_u.SetQualityProfile(*v)
+	}
+	return _u
+}
+
+// ClearQualityProfile clears the value of the "quality_profile" field.
+func (_u *RequestUpdateOne) ClearQualityProfile() *RequestUpdateOne {
+	_u.mutation.ClearQualityProfile()
 	return _u
 }
 
@@ -598,6 +644,12 @@ func (_u *RequestUpdateOne) sqlSave(ctx context.Context) (_node *Request, err er
 	}
 	if _u.mutation.ReasonCleared() {
 		_spec.ClearField(request.FieldReason, field.TypeString)
+	}
+	if value, ok := _u.mutation.QualityProfile(); ok {
+		_spec.SetField(request.FieldQualityProfile, field.TypeString, value)
+	}
+	if _u.mutation.QualityProfileCleared() {
+		_spec.ClearField(request.FieldQualityProfile, field.TypeString)
 	}
 	if _u.mutation.RequesterCleared() {
 		edge := &sqlgraph.EdgeSpec{

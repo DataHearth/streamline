@@ -30,8 +30,13 @@ type MovieDetails struct {
 	Genres  []string
 	Runtime uint16
 	// Rating is TMDB's vote average (0–10). Zero when TMDB has no votes.
-	Rating float32
-	Cast   []CastMember
+	Rating           float32
+	VoteCount        uint32
+	Cast             []CastMember
+	Tagline          string
+	ReleaseDate      string // ISO yyyy-mm-dd, as TMDB returns it
+	OriginalLanguage string // ISO 639-1
+	IMDbID           string
 }
 
 type Provider interface {
@@ -109,15 +114,17 @@ const (
 // TVDetails is the full TVDB record used to seed a show + its seasons/episodes.
 type TVDetails struct {
 	TVResult
-	Status   string // "continuing" | "ended" | "upcoming"
-	Type     SeriesType
-	Creator  string
-	Runtime  uint16
-	Rating   float32
-	Genres   []string
-	Cast     []CastMember
-	Seasons  []SeasonInfo
-	Episodes []EpisodeInfo
+	Status     string // "continuing" | "ended" | "upcoming"
+	Type       SeriesType
+	Creator    string
+	Runtime    uint16
+	Rating     float32
+	Genres     []string
+	Cast       []CastMember
+	Seasons    []SeasonInfo
+	Episodes   []EpisodeInfo
+	FirstAired string // ISO yyyy-mm-dd, as TVDB returns it
+	IMDbID     string
 }
 
 // TVProvider fetches TV-series metadata. Implemented by *TVDB.

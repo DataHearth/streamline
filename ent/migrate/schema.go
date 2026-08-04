@@ -414,6 +414,7 @@ var (
 		{Name: "title", Type: field.TypeString},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"pending", "approved", "denied", "available"}, Default: "pending"},
 		{Name: "reason", Type: field.TypeString, Nullable: true},
+		{Name: "quality_profile", Type: field.TypeString, Nullable: true},
 		{Name: "request_approved_by", Type: field.TypeUint32, Nullable: true},
 		{Name: "user_requests", Type: field.TypeUint32},
 	}
@@ -425,13 +426,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "requests_users_approved_by",
-				Columns:    []*schema.Column{RequestsColumns[8]},
+				Columns:    []*schema.Column{RequestsColumns[9]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "requests_users_requests",
-				Columns:    []*schema.Column{RequestsColumns[9]},
+				Columns:    []*schema.Column{RequestsColumns[10]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
