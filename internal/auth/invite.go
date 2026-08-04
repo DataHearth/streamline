@@ -12,11 +12,19 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/invite"
 	entuser "github.com/datahearth/streamline/ent/user"
+	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"golang.org/x/crypto/bcrypt"
 )
 
-var ErrInviteInvalid = errors.New("invite invalid or expired")
+var (
+	ErrInviteInvalid = errors.New("invite invalid or expired")
+
+	// ErrRegistrationDisabled rejects minting an invite nobody could redeem:
+	// both the local register route and the OIDC new-user path refuse outright
+	// under registration_mode=disabled, invite or not.
+	ErrRegistrationDisabled = errors.New("registration is disabled")
+)
 
 func hashInviteToken(raw string) string {
 	sum := sha256.Sum256([]byte(raw))
@@ -31,6 +39,9 @@ func (s *auth) CreateInvite(
 	email, role string,
 	ttl time.Duration,
 ) (string, *ent.Invite, error) {
+	if config.Get().Auth.RegistrationMode == "disabled" {
+		return "", nil, ErrRegistrationDisabled
+	}
 	raw, err := generateToken(32)
 	if err != nil {
 		return "", nil, fmt.Errorf("generate invite token: %w", err)

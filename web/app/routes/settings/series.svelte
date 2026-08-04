@@ -6,7 +6,7 @@
 	} from "@tanstack/svelte-query";
 	import { Check, CalendarCog } from "@lucide/svelte";
 	import { api } from "../../lib/api";
-	import { config, READONLY_HINT } from "../../lib/config.svelte";
+	import { config } from "../../lib/config.svelte";
 	import { toast } from "../../lib/toast";
 	import type { LibraryConfig } from "../../lib/types";
 	import Checkbox from "../../components/forms/Checkbox.svelte";
@@ -85,8 +85,7 @@
 				<div class="mt-2.5 flex flex-wrap items-center gap-2">
 					<button
 						type="button"
-						disabled={config.readOnly || applyExisting.isPending}
-						title={config.readOnly ? READONLY_HINT : null}
+						disabled={applyExisting.isPending}
 						onclick={() => applyExisting.mutate()}
 						class="inline-flex h-8 items-center gap-1.5 rounded-md border border-border-strong bg-bg px-2.5 text-xs font-medium text-fg transition hover:bg-surface disabled:cursor-not-allowed disabled:opacity-60"
 					>

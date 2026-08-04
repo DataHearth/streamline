@@ -44,6 +44,10 @@ func Start(extra ...map[string]any) (*server.App, string) {
 	overrides = append(overrides, map[string]any{
 		"auth": map[string]any{
 			"session_secret": "e2e-session-secret",
+			// The default is "disabled", under which invite creation is
+			// refused — specs that exercise invites need a mode that admits
+			// new users.
+			"registration_mode": "invite",
 			"seed_admin": map[string]any{
 				"email":    AdminEmail,
 				"password": AdminPassword,

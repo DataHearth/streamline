@@ -14,6 +14,7 @@ import (
 	"github.com/datahearth/streamline/ent/invite"
 	"github.com/datahearth/streamline/internal/db"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
+	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
 
 var _ = Describe("Invite service unit", Label("unit", "auth"), func() {
@@ -33,6 +34,26 @@ var _ = Describe("Invite service unit", Label("unit", "auth"), func() {
 	})
 
 	Describe("CreateInvite", func() {
+		BeforeEach(func() {
+			configtest.Setup(map[string]any{
+				"auth": map[string]any{
+					"session_secret":    "test-secret-key-for-jwt",
+					"registration_mode": "invite",
+				},
+			})
+		})
+
+		It("refuses when registration is disabled", func() {
+			configtest.Setup(map[string]any{
+				"auth": map[string]any{
+					"session_secret":    "test-secret-key-for-jwt",
+					"registration_mode": "disabled",
+				},
+			})
+			_, _, err := svc.CreateInvite(ctx, 7, "g@x.com", "member", time.Hour)
+			Expect(err).To(MatchError(ErrRegistrationDisabled))
+		})
+
 		It("hashes the token, lowercases email, and persists", func() {
 			storeMock.CreateInvite(ctx, mock.MatchedBy(func(p db.CreateInviteParams) bool {
 				return p.Email == "guest@x.com" && p.Role == invite.RoleMember &&

@@ -3,6 +3,7 @@
 	import { Pause, Play, Zap, Pencil, Lock } from "@lucide/svelte";
 	import { api } from "../../lib/api";
 	import { cn } from "../../lib/cn";
+	import { config, READONLY_HINT } from "../../lib/config.svelte";
 	import { toast } from "../../lib/toast";
 	import { formatRelative, formatDateTime } from "../../lib/dates";
 	import type { Schedule, ScheduleList } from "../../lib/types";
@@ -179,9 +180,10 @@
 				</button>
 				<button
 					type="button"
+					disabled={config.readOnly}
 					onclick={() => onEdit(row)}
-					class="inline-flex h-7 w-7 items-center justify-center rounded border border-accent/40 text-accent transition hover:border-accent hover:bg-accent/10"
-					title="Edit interval"
+					class="inline-flex h-7 w-7 items-center justify-center rounded border border-accent/40 text-accent transition hover:border-accent hover:bg-accent/10 disabled:cursor-not-allowed disabled:opacity-40"
+					title={config.readOnly ? READONLY_HINT : "Edit interval"}
 				>
 					<Pencil size={14} aria-hidden="true" />
 				</button>

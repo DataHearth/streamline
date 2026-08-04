@@ -2247,8 +2247,18 @@ type InviteCreatedRole string
 
 // JWTRotated defines model for JWTRotated.
 type JWTRotated struct {
+	// Pending True when the instance is read-only: nothing has been rotated yet.
+	// The generated secret is returned once, held for five minutes, and
+	// applied only when the caller repeats the request with
+	// `confirmed: true`.
+	Pending *bool `json:"pending,omitempty"`
+
+	// Secret The generated signing secret, returned only alongside `pending` so
+	// the operator can write it into the config file they manage.
+	Secret *string `json:"secret,omitempty"`
+
 	// Token New bearer token signed with the rotated secret.
-	Token string `json:"token"`
+	Token *string `json:"token,omitempty"`
 }
 
 // LibraryConfigPatch Only provided fields are applied.
@@ -2714,6 +2724,13 @@ type RequestUser struct {
 type ResetPasswordRequest struct {
 	// NewPassword Replacement password. Must meet the local password policy.
 	NewPassword string `json:"new_password"`
+}
+
+// RotateJWTSecretRequest defines model for RotateJWTSecretRequest.
+type RotateJWTSecretRequest struct {
+	// Confirmed Applies the secret handed out by the preceding pending response.
+	// Ignored on a writable instance, which rotates in one step.
+	Confirmed *bool `json:"confirmed,omitempty"`
 }
 
 // Schedule defines model for Schedule.
@@ -3461,6 +3478,9 @@ type PatchSeries = PatchSeriesRequest
 // ReplacePending defines model for ReplacePending.
 type ReplacePending = ReplacePendingRequest
 
+// RotateJWTSecret defines model for RotateJWTSecret.
+type RotateJWTSecret = RotateJWTSecretRequest
+
 // SetTorrentFilePriority defines model for SetTorrentFilePriority.
 type SetTorrentFilePriority = TorrentFilePriorityUpdate
 
@@ -3663,6 +3683,9 @@ type ReplacePendingJSONRequestBody = ReplacePendingRequest
 
 // CreateInviteJSONRequestBody defines body for CreateInvite for application/json ContentType.
 type CreateInviteJSONRequestBody = CreateInviteRequest
+
+// RotateJWTSecretJSONRequestBody defines body for RotateJWTSecret for application/json ContentType.
+type RotateJWTSecretJSONRequestBody = RotateJWTSecretRequest
 
 // UpdateMeJSONRequestBody defines body for UpdateMe for application/json ContentType.
 type UpdateMeJSONRequestBody = UpdateMeRequest
@@ -10702,6 +10725,7 @@ func (response RevokeInvite404JSONResponse) VisitRevokeInviteResponse(w http.Res
 }
 
 type RotateJWTSecretRequestObject struct {
+	Body *RotateJWTSecretJSONRequestBody
 }
 
 type RotateJWTSecretResponseObject interface {
@@ -16204,6 +16228,16 @@ func (sh *strictHandler) RevokeInvite(w http.ResponseWriter, r *http.Request, id
 // RotateJWTSecret operation middleware
 func (sh *strictHandler) RotateJWTSecret(w http.ResponseWriter, r *http.Request) {
 	var request RotateJWTSecretRequestObject
+
+	var body RotateJWTSecretJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		if !errors.Is(err, io.EOF) {
+			sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+			return
+		}
+	} else {
+		request.Body = &body
+	}
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 		return sh.ssi.RotateJWTSecret(ctx, request.(RotateJWTSecretRequestObject))

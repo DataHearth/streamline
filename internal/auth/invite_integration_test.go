@@ -10,6 +10,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	entuser "github.com/datahearth/streamline/ent/user"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
 
 var _ = Describe("Invite end-to-end", Label("integration", "auth"), func() {
@@ -21,6 +22,12 @@ var _ = Describe("Invite end-to-end", Label("integration", "auth"), func() {
 	)
 
 	BeforeEach(func() {
+		configtest.Setup(map[string]any{
+			"auth": map[string]any{
+				"session_secret":    "test-secret-key-for-jwt",
+				"registration_mode": "invite",
+			},
+		})
 		ctx = context.Background()
 		var err error
 		dbClient, err = db.Open(ctx, ":memory:")

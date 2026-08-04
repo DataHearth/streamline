@@ -5,7 +5,7 @@
 		useQueryClient,
 	} from "@tanstack/svelte-query";
 	import { createForm } from "@tanstack/svelte-form";
-	import { KeyRound, RefreshCw, Check } from "@lucide/svelte";
+	import { KeyRound, RefreshCw, Check, Clipboard } from "@lucide/svelte";
 	import { api } from "../../lib/api";
 	import { config, READONLY_HINT } from "../../lib/config.svelte";
 	import { toast } from "../../lib/toast";
@@ -15,7 +15,9 @@
 	import Select from "../../components/forms/Select.svelte";
 	import RadioCards from "../../components/forms/RadioCards.svelte";
 	import SubmitButton from "../../components/forms/SubmitButton.svelte";
+	import ReadOnlyFieldset from "../../components/settings/ReadOnlyFieldset.svelte";
 	import Dialog from "../../components/modals/Dialog.svelte";
+	import Modal from "../../components/modals/Modal.svelte";
 
 	const qc = useQueryClient();
 
@@ -39,14 +41,38 @@
 		onError: (err) => toast.err(err.message),
 	}));
 
-	const rotate = createMutation<{ token: string }, Error, void>(() => ({
-		mutationFn: () =>
-			api<{ token: string }>("/auth/jwt/rotate", { method: "POST" }),
-		onSuccess: () => {
+	// Read-only instances can't persist the new secret, so the API hands it
+	// over first (pending) and only applies it on a second, confirmed call —
+	// the operator has to get it into the config file they manage.
+	let pendingSecret = $state<string | null>(null);
+
+	type RotateResult = { token?: string; pending?: boolean; secret?: string };
+
+	const rotate = createMutation<RotateResult, Error, boolean>(() => ({
+		mutationFn: (confirmed) =>
+			api<RotateResult>("/auth/jwt/rotate", {
+				method: "POST",
+				body: { confirmed },
+			}),
+		onSuccess: (resp) => {
+			if (resp.pending) {
+				pendingSecret = resp.secret ?? "";
+				return;
+			}
+			pendingSecret = null;
 			toast.ok("JWT secret rotated — other sessions invalidated");
 		},
 		onError: (err) => toast.err(err.message),
 	}));
+
+	async function copySecret() {
+		try {
+			await navigator.clipboard.writeText(pendingSecret ?? "");
+			toast.ok("Copied");
+		} catch {
+			toast.err("Clipboard unavailable");
+		}
+	}
 
 	const form = createForm(() => ({
 		defaultValues: {
@@ -114,12 +140,13 @@
 		</p>
 	{:else}
 		<form
-			class="mt-6 space-y-6"
+			class="mt-6"
 			onsubmit={(e) => {
 				e.preventDefault();
 				form.handleSubmit();
 			}}
 		>
+			<ReadOnlyFieldset class="space-y-6">
 			<form.Field name="registration_mode">
 				{#snippet children(field)}
 					<RadioCards
@@ -190,6 +217,7 @@
 					Applied immediately
 				</span>
 			</div>
+			</ReadOnlyFieldset>
 		</form>
 
 		<section class="mt-6 rounded-lg border border-border bg-bg-card p-4">
@@ -204,16 +232,20 @@
 					<p class="mt-0.5 text-xs text-fg-muted">
 						Rotate the HMAC secret used to sign session tokens. Every
 						active session is invalidated immediately — including those of
-						other admins. You will stay signed in.
+						other admins. You will stay signed in.{config.readOnly
+							? " This instance is read-only, so you get the new secret to save into your config before it takes effect."
+							: ""}
 					</p>
 				</div>
 			</header>
 			<div class="mt-3 flex justify-end">
 				<button
 					type="button"
-					disabled={config.readOnly || rotate.isPending}
-					title={config.readOnly ? READONLY_HINT : null}
-					onclick={() => (confirmRotate = true)}
+					disabled={rotate.isPending}
+					onclick={() =>
+						config.readOnly
+							? rotate.mutate(false)
+							: (confirmRotate = true)}
 					class="inline-flex h-9 items-center gap-1.5 rounded-md border border-status-failed/40 bg-status-failed/10 px-3 text-sm font-medium text-status-failed transition hover:bg-status-failed/15 disabled:cursor-not-allowed disabled:opacity-60"
 				>
 					<RefreshCw size={14} aria-hidden="true" />
@@ -234,7 +266,55 @@
 		{
 			label: "Rotate secret",
 			variant: "danger",
-			onClick: () => rotate.mutate(),
+			onClick: () => rotate.mutate(true),
 		},
 	]}
 />
+
+<Modal
+	open={pendingSecret !== null}
+	title="Save the new signing secret"
+	size="lg"
+	onClose={() => (pendingSecret = null)}
+>
+	<p class="text-sm text-fg-muted">
+		Nothing has changed yet. Copy this into <code
+			class="rounded bg-bg-deep px-1 py-0.5 font-mono text-xs text-fg"
+			>auth.session_secret</code
+		> in the config this instance reads, then apply — the rotation signs everyone
+		else out and won't survive a restart unless the file carries it.
+	</p>
+	<code
+		class="mt-3 block break-all rounded-md bg-bg-deep p-3 font-mono text-xs text-fg"
+	>
+		{pendingSecret}
+	</code>
+	<button
+		type="button"
+		onclick={copySecret}
+		class="mt-2 inline-flex h-8 items-center gap-1.5 rounded-md border border-border px-2.5 text-xs font-medium text-fg-muted transition hover:bg-surface hover:text-fg"
+	>
+		<Clipboard size={13} aria-hidden="true" />
+		Copy secret
+	</button>
+
+	{#snippet footer()}
+		<button
+			type="button"
+			data-autofocus
+			onclick={() => (pendingSecret = null)}
+			class="inline-flex h-9 items-center rounded-md border border-border px-3 text-sm text-fg-muted transition hover:text-fg"
+		>
+			Cancel
+		</button>
+		<button
+			type="button"
+			disabled={rotate.isPending}
+			onclick={() => rotate.mutate(true)}
+			class="inline-flex h-9 items-center gap-1.5 rounded-md border border-status-failed/40 bg-status-failed/10 px-3 text-sm font-medium text-status-failed transition hover:bg-status-failed/15 disabled:cursor-not-allowed disabled:opacity-60"
+		>
+			<RefreshCw size={14} aria-hidden="true" />
+			{rotate.isPending ? "Applying…" : "I saved it — apply now"}
+		</button>
+	{/snippet}
+</Modal>

@@ -11,11 +11,19 @@
 	import { toast } from "../../lib/toast";
 	import { inviteEmail, userRole } from "../../lib/schemas";
 	import { formatDateTime, formatRelative } from "../../lib/dates";
-	import type { Invite, InviteCreated, UserRole } from "../../lib/types";
+	import type {
+		AuthConfig,
+		Invite,
+		InviteCreated,
+		UserRole,
+	} from "../../lib/types";
 	import TextField from "../forms/TextField.svelte";
 	import Select from "../forms/Select.svelte";
 	import SubmitButton from "../forms/SubmitButton.svelte";
 	import Dialog from "../modals/Dialog.svelte";
+
+	const REGISTRATION_OFF_HINT =
+		"Registration is disabled — an invite created now could not be redeemed.";
 
 	const qc = useQueryClient();
 
@@ -25,6 +33,14 @@
 		queryKey: ["auth", "invites"],
 		queryFn: () => api<Invite[]>("/auth/invites"),
 	}));
+
+	const authCfg = createQuery<AuthConfig>(() => ({
+		queryKey: ["config", "auth"],
+		queryFn: () => api<AuthConfig>("/config/auth"),
+	}));
+	let registrationOff = $derived(
+		authCfg.data?.registration_mode === "disabled",
+	);
 
 	let lastCreated = $state<InviteCreated | null>(null);
 
@@ -97,8 +113,9 @@
 		<div>
 			<h2 class="text-lg font-semibold text-fg">Invites</h2>
 			<p class="mt-0.5 text-sm text-fg-muted">
-				Send registration links bound to an email and role. Tokens are
-				shown once.
+				{registrationOff
+					? REGISTRATION_OFF_HINT
+					: "Send registration links bound to an email and role. Tokens are shown once."}
 			</p>
 		</div>
 	</header>
@@ -118,6 +135,8 @@
 					type="email"
 					autocomplete="off"
 					placeholder="teammate@example.com"
+					readonly={registrationOff}
+					floatError
 				/>
 			{/snippet}
 		</form.Field>
@@ -132,10 +151,17 @@
 						{ value: "admin", label: "Admin" },
 					]}
 					onChange={(v) => field.handleChange(v)}
+					disabled={registrationOff}
 				/>
 			{/snippet}
 		</form.Field>
-		<SubmitButton {form} label="Create invite" pendingLabel="Creating…" />
+		<SubmitButton
+			{form}
+			label="Create invite"
+			pendingLabel="Creating…"
+			disabled={registrationOff}
+			title={registrationOff ? REGISTRATION_OFF_HINT : undefined}
+		/>
 	</form>
 
 	{#if lastCreated}

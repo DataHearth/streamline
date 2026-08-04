@@ -10,6 +10,7 @@
 	import BrandLogo from "../BrandLogo.svelte";
 	import PlexPINFlow from "../PlexPINFlow.svelte";
 	import { api } from "../../../lib/api";
+	import { readOnlyLock } from "../../../lib/config.svelte";
 	import { toast } from "../../../lib/toast";
 	import type {
 		MediaServerType,
@@ -31,6 +32,8 @@
 	};
 
 	let { form, isEdit = false }: Props = $props();
+
+	const lock = readOnlyLock();
 
 	const serverType = untrack(() => form.useStore((s) => s.values.server_type));
 	const apiKey = untrack(() => form.useStore((s) => s.values.api_key));
@@ -212,7 +215,8 @@
 											(e.currentTarget as HTMLInputElement).value,
 										)}
 									placeholder="Click Discover to enumerate sections, or enter a section key"
-									class="h-10 w-full rounded-md border border-border bg-bg px-3 text-sm text-fg focus-visible:outline-2 focus-visible:outline-accent"
+									readonly={lock()}
+									class="h-10 w-full rounded-md border border-border bg-bg px-3 text-sm text-fg focus-visible:outline-2 focus-visible:outline-accent read-only:cursor-not-allowed read-only:opacity-70"
 								/>
 							</label>
 						{/if}

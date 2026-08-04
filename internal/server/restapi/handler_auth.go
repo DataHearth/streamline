@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/datahearth/streamline/internal/auth"
+	"github.com/datahearth/streamline/internal/config"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
@@ -79,6 +80,11 @@ func (s *Server) CreateInvite(
 		string(req.Body.Role),
 		ttl,
 	)
+	if errors.Is(err, auth.ErrRegistrationDisabled) {
+		return CreateInvite403JSONResponse{
+			ForbiddenJSONResponse: forbiddenResp(err.Error()),
+		}, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +110,7 @@ func (s *Server) CreateInvite(
 // freshly-issued bearer token for the calling admin so they stay signed in.
 func (s *Server) RotateJWTSecret(
 	ctx context.Context,
-	_ RotateJWTSecretRequestObject,
+	req RotateJWTSecretRequestObject,
 ) (RotateJWTSecretResponseObject, error) {
 	if err := requireAdmin(ctx); err != nil {
 		return RotateJWTSecret403JSONResponse{
@@ -117,6 +123,14 @@ func (s *Server) RotateJWTSecret(
 			ForbiddenJSONResponse: notAdminResp,
 		}, nil
 	}
+
+	// Read-only can't persist the secret, so the operator has to copy it into
+	// the config they manage before the swap — hand it out first, apply only
+	// once they confirm. See PrepareJWTRotation.
+	if config.Get().ReadOnly {
+		return s.rotateJWTReadOnly(ctx, claims.UserID, req)
+	}
+
 	tok, err := s.auth.RotateJWTSecret(ctx, claims.UserID)
 	if configLocked(err) {
 		return RotateJWTSecret403JSONResponse{
@@ -127,7 +141,41 @@ func (s *Server) RotateJWTSecret(
 		return nil, err
 	}
 	return RotateJWTSecret200JSONResponse{
-		JWTRotatedJSONResponse: JWTRotatedJSONResponse{Token: tok},
+		JWTRotatedJSONResponse: JWTRotatedJSONResponse{Token: &tok},
+	}, nil
+}
+
+func (s *Server) rotateJWTReadOnly(
+	ctx context.Context,
+	callerID uint32,
+	req RotateJWTSecretRequestObject,
+) (RotateJWTSecretResponseObject, error) {
+	confirmed := req.Body != nil && req.Body.Confirmed != nil &&
+		*req.Body.Confirmed
+	if !confirmed {
+		secret, err := s.auth.PrepareJWTRotation(ctx, callerID)
+		if err != nil {
+			return nil, err
+		}
+		pending := true
+		return RotateJWTSecret200JSONResponse{
+			JWTRotatedJSONResponse: JWTRotatedJSONResponse{
+				Pending: &pending,
+				Secret:  &secret,
+			},
+		}, nil
+	}
+	tok, err := s.auth.ConfirmJWTRotation(ctx, callerID)
+	if errors.Is(err, auth.ErrNoPendingRotation) {
+		return RotateJWTSecret403JSONResponse{
+			ForbiddenJSONResponse: forbiddenResp(err.Error()),
+		}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return RotateJWTSecret200JSONResponse{
+		JWTRotatedJSONResponse: JWTRotatedJSONResponse{Token: &tok},
 	}, nil
 }
 

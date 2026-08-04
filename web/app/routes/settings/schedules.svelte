@@ -14,6 +14,7 @@
 	import Modal from "../../components/modals/Modal.svelte";
 	import ScheduleRow from "../../components/settings/ScheduleRow.svelte";
 	import TextField from "../../components/forms/TextField.svelte";
+	import ReadOnlyFieldset from "../../components/settings/ReadOnlyFieldset.svelte";
 
 	const JOB_DESCRIPTIONS: Record<string, string> = {
 		"movie-rss-sync": "Pull configured RSS feeds for new movie releases",
@@ -210,16 +211,18 @@
 			form.handleSubmit();
 		}}
 	>
-		<form.Field name="interval">
-			{#snippet children(field)}
-				<TextField
-					{field}
-					label="Interval"
-					placeholder="15m"
-					help="Go duration string. Minimum 10 seconds."
-				/>
-			{/snippet}
-		</form.Field>
+		<ReadOnlyFieldset>
+			<form.Field name="interval">
+				{#snippet children(field)}
+					<TextField
+						{field}
+						label="Interval"
+						placeholder="15m"
+						help="Go duration string. Minimum 10 seconds."
+					/>
+				{/snippet}
+			</form.Field>
+		</ReadOnlyFieldset>
 	</form>
 
 	{#snippet footer()}

@@ -3,6 +3,7 @@
 	import { ChevronDown, Check } from "@lucide/svelte";
 	import { cubicOut } from "svelte/easing";
 	import { cn } from "../../lib/cn";
+	import { readOnlyLock } from "../../lib/config.svelte";
 
 	// Expand/collapse from the trigger edge: fade + slide + subtle scaleY off
 	// transform-origin top. Honors prefers-reduced-motion.
@@ -42,6 +43,9 @@
 		disabled = false,
 		ariaLabel,
 	}: Props = $props();
+
+	const lock = readOnlyLock();
+	let off = $derived(disabled || lock());
 
 	let open = $state(false);
 	let triggerEl = $state<HTMLButtonElement | null>(null);
@@ -89,7 +93,7 @@
 	}
 
 	async function openMenu() {
-		if (disabled) return;
+		if (off) return;
 		open = true;
 		await tick();
 		recompute();
@@ -178,7 +182,7 @@
 			bind:this={triggerEl}
 			{id}
 			type="button"
-			{disabled}
+			disabled={off}
 			aria-label={label ? undefined : ariaLabel}
 			aria-haspopup="listbox"
 			aria-expanded={open}
@@ -186,7 +190,7 @@
 			class={cn(
 				"flex h-[38px] w-full items-center justify-between gap-2 rounded-md border border-border bg-bg px-3 text-sm text-fg transition-colors hover:border-border-strong focus-visible:outline-2 focus-visible:outline-accent",
 				open && "border-accent",
-				disabled && "cursor-not-allowed opacity-60",
+				off && "cursor-not-allowed opacity-60",
 			)}
 		>
 			<span class="truncate">{selectedLabel}</span>

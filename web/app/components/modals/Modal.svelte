@@ -37,8 +37,11 @@
 			"[data-autofocus]:not([disabled])",
 		);
 		if (explicit) return explicit;
+		// Readonly fields are skipped too: on a read-only instance every field
+		// is one, and focusing it plants a caret and a focus ring on something
+		// that can't be typed into.
 		const field = node.querySelector<HTMLElement>(
-			"input:not([disabled]), select:not([disabled]), textarea:not([disabled])",
+			"input:not([disabled]):not([readonly]), select:not([disabled]), textarea:not([disabled]):not([readonly])",
 		);
 		return field ?? focusableIn(node)[0] ?? null;
 	}

@@ -1493,10 +1493,19 @@ paths:
         atomically swaps the in-memory secret, truncates all sessions, and
         re-issues a fresh bearer token for the caller. Every other active
         session is invalidated immediately.
+
+        On a read-only instance the secret cannot be persisted, so rotation is
+        two-step: the first call returns the generated secret with
+        `pending: true` and changes nothing, and a second call with
+        `confirmed: true` applies it once the operator has copied it into the
+        config file they manage. An unconfirmed candidate expires after five
+        minutes.
       tags: [auth, admin]
       security:
         - BearerAuth: []
         - ApiKeyAuth: []
+      requestBody:
+        $ref: "#/components/requestBodies/RotateJWTSecret"
       responses:
         "200":
           $ref: "#/components/responses/JWTRotated"
@@ -2941,6 +2950,13 @@ components:
         x-go-type: uint32
 
   requestBodies:
+    RotateJWTSecret:
+      required: false
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/RotateJWTSecretRequest"
+
     AddMovie:
       required: true
       content:
@@ -4732,11 +4748,31 @@ components:
 
     JWTRotated:
       type: object
-      required: [token]
       properties:
         token:
           type: string
           description: New bearer token signed with the rotated secret.
+        pending:
+          type: boolean
+          description: |
+            True when the instance is read-only: nothing has been rotated yet.
+            The generated secret is returned once, held for five minutes, and
+            applied only when the caller repeats the request with
+            `confirmed: true`.
+        secret:
+          type: string
+          description: |
+            The generated signing secret, returned only alongside `pending` so
+            the operator can write it into the config file they manage.
+
+    RotateJWTSecretRequest:
+      type: object
+      properties:
+        confirmed:
+          type: boolean
+          description: |
+            Applies the secret handed out by the preceding pending response.
+            Ignored on a writable instance, which rotates in one step.
 
     Invite:
       type: object
