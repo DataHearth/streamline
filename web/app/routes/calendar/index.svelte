@@ -13,7 +13,6 @@
 	} from "../../lib/calendar";
 	import MonthGrid from "../../components/calendar/MonthGrid.svelte";
 	import Next30Panel from "../../components/calendar/Next30Panel.svelte";
-	import EventLegend from "../../components/calendar/EventLegend.svelte";
 
 	const today = new Date();
 	let year = $state(today.getFullYear());
@@ -165,8 +164,6 @@
 			</button>
 		</div>
 	</header>
-
-	<EventLegend />
 
 	{#if gridQuery.isError}
 		<div

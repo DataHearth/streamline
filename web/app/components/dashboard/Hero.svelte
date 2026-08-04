@@ -44,7 +44,7 @@
 		</div>
 
 		<div
-			class="relative mx-auto grid w-full max-w-7xl items-end gap-6 px-4 py-12 md:grid-cols-[340px_1fr] md:gap-12 md:px-8 md:py-20"
+			class="relative mx-auto grid w-full max-w-7xl items-end gap-6 px-4 pb-8 pt-12 md:grid-cols-[340px_1fr] md:gap-12 md:px-8 md:pb-12 md:pt-20"
 		>
 			<div
 				class="relative mx-auto aspect-[2/3] w-48 overflow-hidden rounded-lg shadow-[0_20px_60px_rgb(0_0_0_/0.55)] md:mx-0 md:w-auto"
@@ -108,7 +108,7 @@
 					</p>
 				{/if}
 
-				<div class="flex flex-wrap items-center gap-3">
+				<div class="flex flex-wrap items-center gap-x-3 gap-y-5">
 					<a
 						href={item.href}
 						class="inline-flex h-10 items-center gap-2 rounded-md bg-fg px-4 text-sm font-semibold text-bg-deep transition hover:bg-accent hover:text-fg-on-accent hover:shadow-glow active:scale-[0.97]"

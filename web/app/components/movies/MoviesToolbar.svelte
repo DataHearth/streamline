@@ -244,7 +244,7 @@
 		<button
 			type="button"
 			onclick={onAddMovie}
-			class="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md bg-accent px-3.5 text-[12.5px] font-semibold text-fg-on-accent transition hover:bg-accent-hover hover:shadow-glow"
+			class="hidden h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md bg-accent px-3.5 text-[12.5px] font-semibold text-fg-on-accent transition hover:bg-accent-hover hover:shadow-glow md:inline-flex"
 		>
 			<Plus size={14} aria-hidden="true" />
 			Add movie

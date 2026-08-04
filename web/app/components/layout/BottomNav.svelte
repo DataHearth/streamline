@@ -21,7 +21,7 @@
 	import { isActive as routifyIsActive } from "@roxi/routify";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { api } from "../../lib/api";
-	import type { RequestCounts } from "../../lib/types";
+	import type { RequestCounts, SystemInfo } from "../../lib/types";
 	import { auth } from "../../lib/auth.svelte";
 	import { cn } from "../../lib/cn";
 	import {
@@ -114,10 +114,17 @@
 	}));
 	let pendingRequests = $derived(requestCountsQuery.data?.pending ?? 0);
 
+	const systemQuery = createQuery<SystemInfo>(() => ({
+		queryKey: ["system", "info"],
+		queryFn: () => api<SystemInfo>("/system/info"),
+		retry: false,
+	}));
+	let version = $derived(systemQuery.data?.version ?? null);
+
 	let roleLabel = $derived.by(() => {
 		const r = auth.user?.role;
 		if (r === "admin") return "admin";
-		if (r === "request_only") return "request only";
+		if (r === "request_only") return "request";
 		return "member";
 	});
 
@@ -383,7 +390,7 @@
 									{auth.user.display_name || auth.user.email}
 								</div>
 								<div class="mt-0.5 truncate font-mono text-[11px] text-fg-faint">
-									{roleLabel}
+									{roleLabel}{version ? ` · ${version}` : ""}
 								</div>
 							</div>
 						</a>

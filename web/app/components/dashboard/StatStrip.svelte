@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { onDestroy, tick } from "svelte";
+	import { scale } from "svelte/transition";
+	import { cubicOut } from "svelte/easing";
 	import { Info, TriangleAlert } from "@lucide/svelte";
 	import ProgressBar from "../shared/ProgressBar.svelte";
 	import { cn } from "../../lib/cn";
@@ -257,6 +259,9 @@
 			{#if diskOpen}
 				<dl
 					bind:this={diskPanelEl}
+					in:scale={{ duration: 140, start: 0.94, opacity: 0, easing: cubicOut }}
+					out:scale={{ duration: 100, start: 0.96, opacity: 0, easing: cubicOut }}
+					style:transform-origin={diskAbove ? "bottom right" : "top right"}
 					onpointerenter={diskEnter}
 					onpointerleave={diskLeave}
 					class={cn(

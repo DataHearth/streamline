@@ -108,7 +108,7 @@
 	let roleLabel = $derived.by(() => {
 		const r = auth.user?.role;
 		if (r === "admin") return "admin";
-		if (r === "request_only") return "request only";
+		if (r === "request_only") return "request";
 		return "member";
 	});
 
