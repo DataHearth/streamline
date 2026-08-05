@@ -98,7 +98,7 @@
 	}
 	function searchNow() {
 		run("Search dispatched for", (s) =>
-			api(`/series/${s.id}/search-now`, { method: "POST" }),
+			api(`/series/${s.id}/search`, { method: "POST" }),
 		);
 	}
 	function refresh() {

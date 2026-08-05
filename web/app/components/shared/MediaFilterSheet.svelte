@@ -195,11 +195,11 @@
 					</button>
 				</div>
 
-				<div class="pt-5">
+				<!-- The list table needs columns a phone cannot give it, so the choice
+				     only appears from md up; below that the library is posters only. -->
+				<div class="hidden pt-5 md:block">
 					<div class={label}>Layout</div>
-					<!-- The list table needs columns a phone cannot give it, so the choice
-					     only appears from md up; below that the library is posters only. -->
-					<div class="hidden flex-wrap gap-2 md:flex">
+					<div class="flex flex-wrap gap-2">
 						<button
 							type="button"
 							aria-pressed={view === "grid"}
