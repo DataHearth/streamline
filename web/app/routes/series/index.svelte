@@ -1,10 +1,12 @@
 <script lang="ts">
 	import { untrack } from "svelte";
+	import { onMount } from "svelte";
 	import { Plus } from "@lucide/svelte";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { api } from "../../lib/api";
 	import { formatRelative } from "../../lib/dates";
 	import { loadPref, savePref } from "../../lib/prefs";
+	import { pageMeta } from "../../lib/page-meta.svelte";
 	import SeriesToolbar from "../../components/series/SeriesToolbar.svelte";
 	import type {
 		SeriesTab,
@@ -19,6 +21,7 @@
 	import type { PaginatedTVShows, ScheduleList, TVShow } from "../../lib/types";
 
 	type View = "grid" | "list";
+	type Density = "compact" | "roomy";
 
 	const VALID_TABS = new Set<SeriesTab>([
 		"all",
@@ -44,6 +47,8 @@
 	// An explicit ?sort in the URL wins so shared links keep their ordering;
 	// otherwise fall back to the last sort this browser chose, then A→Z.
 	const SORT_PREF = "streamline:series:sort";
+	// Poster density is a phone-only choice and never worth a URL parameter.
+	const DENSITY_PREF = "streamline:series:density";
 
 	function readParams() {
 		const p =
@@ -73,6 +78,26 @@
 	let sort = $state<SeriesSort>(initial.sort);
 	let view = $state<View>(initial.view);
 	let monitoredOnly = $state(initial.monitoredOnly);
+	let density = $state<Density>(
+		loadPref(DENSITY_PREF) === "roomy" ? "roomy" : "compact",
+	);
+
+	function setDensity(d: Density) {
+		density = d;
+		savePref(DENSITY_PREF, d);
+	}
+
+	// A phone has no width for the list table, so below md the library is posters
+	// only — whatever the URL or the last-used view says.
+	let narrow = $state(false);
+	onMount(() => {
+		const mql = window.matchMedia("(max-width: 767px)");
+		const sync = () => (narrow = mql.matches);
+		sync();
+		mql.addEventListener("change", sync);
+		return () => mql.removeEventListener("change", sync);
+	});
+	let shownView = $derived<View>(narrow ? "grid" : view);
 
 	function setSort(s: SeriesSort) {
 		sort = s;
@@ -84,7 +109,9 @@
 	}
 
 	$effect(() => {
-		if (typeof window === "undefined") return;
+		// Every reactive read happens before the early returns below: a run that
+		// bails out first would register no dependencies and the effect would
+		// never fire again.
 		const p = new URLSearchParams();
 		if (tab !== "all") p.set("status", tab);
 		if (typeFilter !== "all") p.set("type", typeFilter);
@@ -93,6 +120,16 @@
 		if (sort !== "title") p.set("sort", sort);
 		if (view !== "grid") p.set("view", view);
 		const search = p.toString();
+
+		if (typeof window === "undefined") return;
+		// Routify mounts the incoming route before it updates window.location, so
+		// on a navigation *into* this page the first flush still sees the outgoing
+		// URL. Writing then would stamp this page's (default, empty) filters onto
+		// the previous route's path and cancel the navigation — which is exactly
+		// what a detail page's back link hit: /series/1?tab=episodes became
+		// /series/1 and never reached the list.
+		if (window.location.pathname !== "/series") return;
+
 		const next = `${window.location.pathname}${search ? `?${search}` : ""}`;
 		if (next !== window.location.pathname + window.location.search) {
 			window.history.replaceState(null, "", next);
@@ -173,6 +210,9 @@
 	let totalEpisodes = $derived(
 		allSeries.reduce((sum, s) => sum + (s.have_episodes ?? 0), 0),
 	);
+	let libraryEpisodes = $derived(
+		allSeries.reduce((sum, s) => sum + (s.total_episodes ?? 0), 0),
+	);
 
 	let libraryEmpty = $derived(
 		tab === "all" &&
@@ -200,6 +240,23 @@
 		monitoredOnly = false;
 	}
 
+	// Below md the topbar carries this under the title and the page's own count
+	// line stands down; at md and up nothing changes.
+	let metaLine = $derived.by(() => {
+		const parts = [`${counts.all} shows`];
+		if (libraryEpisodes > 0)
+			parts.push(
+				`${totalEpisodes.toLocaleString()} of ${libraryEpisodes.toLocaleString()} episodes`,
+			);
+		if (lastScan) parts.push(`scan ${formatRelative(lastScan)}`);
+		return parts.join(" · ");
+	});
+
+	$effect(() => {
+		pageMeta.set(metaLine);
+		return () => pageMeta.clear();
+	});
+
 	// ── Selection ────────────────────────────────────────────────────────────
 	let selected = $state(new Set<number>());
 	// Grid cards only reveal their checkbox on hover, which leaves touch users
@@ -213,6 +270,11 @@
 	function selectAll() {
 		selectMode = true;
 		toggleAll(true);
+	}
+	// Press and hold a poster: selection on, that card selected.
+	function beginLongPress(id: number) {
+		selectMode = true;
+		toggle(id, true);
 	}
 
 	function toggle(id: number, v: boolean) {
@@ -262,10 +324,11 @@
 			{typeFilter}
 			{query}
 			{sort}
-			{view}
+			view={shownView}
 			{counts}
 			{monitoredOnly}
 			{monitoredCount}
+			{density}
 			{selectMode}
 			selectedCount={selected.size}
 			visibleCount={visibleSeries.length}
@@ -275,13 +338,15 @@
 			onMonitoredChange={(v) => (monitoredOnly = v)}
 			onSortChange={setSort}
 			onViewChange={(v) => (view = v)}
+			onDensityChange={setDensity}
+			onClearFilters={clearFilters}
 			onSelectModeChange={setSelectMode}
 			onSelectAll={selectAll}
 			onAddSeries={openAddSeries}
 		/>
 
 		<div
-			class="flex w-full flex-wrap items-baseline justify-between gap-2 px-4 pt-4 pb-2 font-mono text-[11px] text-fg-subtle md:px-6"
+			class="hidden w-full flex-wrap items-baseline justify-between gap-2 px-4 pt-4 pb-2 font-mono text-[11px] text-fg-subtle md:flex md:px-6"
 		>
 			<div>
 				{visibleSeries.length} of {counts.all} series
@@ -310,13 +375,13 @@
 			</div>
 		</div>
 
-		<div class="w-full px-4 pb-6 md:px-6">
+		<div class="w-full px-4 pb-6 pt-3 md:px-6 md:pt-0">
 			{#if visibleSeries.length === 0}
 				<SeriesEmpty
 					variant={libraryEmpty ? "library" : "filter"}
 					onClear={clearFilters}
 				/>
-			{:else if view === "list"}
+			{:else if shownView === "list"}
 				<SeriesList
 					series={visibleSeries}
 					{selected}
@@ -328,7 +393,9 @@
 					series={visibleSeries}
 					{selected}
 					{selectMode}
+					{density}
 					onToggle={toggle}
+					onLongPress={beginLongPress}
 				/>
 			{/if}
 		</div>
@@ -342,14 +409,17 @@
 		/>
 
 		<!-- Touch entry point: the toolbar's Add button is a 36px control at the top
-		     of the page, out of thumb reach on a phone. -->
-		<button
-			type="button"
-			onclick={openAddSeries}
-			aria-label="Add series"
-			class="fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+4.75rem)] z-30 grid h-14 w-14 place-items-center rounded-full bg-accent text-fg-on-accent shadow-3 transition active:scale-95 md:hidden"
-		>
-			<Plus size={26} aria-hidden="true" />
-		</button>
+		     of the page, out of thumb reach on a phone. It stands down while a
+		     selection owns the bottom of the screen. -->
+		{#if selected.size === 0 && !selectMode}
+			<button
+				type="button"
+				onclick={openAddSeries}
+				aria-label="Add series"
+				class="fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+4.75rem)] z-30 grid h-14 w-14 place-items-center rounded-full bg-accent text-fg-on-accent shadow-3 transition active:scale-95 md:hidden"
+			>
+				<Plus size={26} aria-hidden="true" />
+			</button>
+		{/if}
 	{/if}
 </div>

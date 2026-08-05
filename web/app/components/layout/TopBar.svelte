@@ -13,6 +13,7 @@
 	} from "@lucide/svelte";
 	import { api } from "../../lib/api";
 	import { auth } from "../../lib/auth.svelte";
+	import { pageMeta } from "../../lib/page-meta.svelte";
 	import type { SystemInfo } from "../../lib/types";
 	import { toast } from "../../lib/toast";
 
@@ -34,7 +35,7 @@
 	// the topbar — only breadcrumbs appear when the user is on a detail page.
 	const TITLELESS_PREFIXES = new Set(["/account", "/settings"]);
 	const SECTIONS: { prefix: string; label: string }[] = [
-		{ prefix: "/dashboard", label: "Dashboard" },
+		{ prefix: "/dashboard", label: "Streamline" },
 		{ prefix: "/movies", label: "Movies" },
 		{ prefix: "/series", label: "Series" },
 		{ prefix: "/activity", label: "Activity" },
@@ -268,6 +269,15 @@
 			<h1 class="text-[22px] font-semibold leading-none tracking-tight text-fg">
 				{crumbs[0]?.label}
 			</h1>
+			{#if pageMeta.line}
+				<!-- Phone only: below md the page's own count line costs 30px of a
+				     774px viewport, so it rides here instead. -->
+				<p
+					class="mt-1.5 truncate font-mono text-[10.5px] text-fg-subtle md:hidden"
+				>
+					{pageMeta.line}
+				</p>
+			{/if}
 		{:else if crumbs.length > 1}
 			<nav
 				aria-label="Breadcrumb"

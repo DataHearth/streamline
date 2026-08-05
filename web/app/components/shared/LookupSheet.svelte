@@ -8,7 +8,9 @@
 	// A bottom sheet with two detents, used by the touch add/request flow. The
 	// peek is content-sized and only has to confirm you picked the right title;
 	// dragging it up — or tapping the hint, for anyone not dragging — promotes
-	// it to full height for the whole detail. Dragging the peek down dismisses.
+	// it to full height. The peek stays rendered in both detents and `full` is
+	// appended below it, so promoting adds detail under the header instead of
+	// swapping one header for another. Dragging the peek down dismisses.
 	// Touch only: above md the flow stays a centred modal.
 	type Props = {
 		open: boolean;
@@ -17,7 +19,8 @@
 		// Tappable affordance under the footer, shown in the peek only.
 		hint?: string;
 		onClose: () => void;
-		peek: Snippet;
+		// Gets the detent so it can relax clamps once the sheet is fully open.
+		peek: Snippet<[boolean]>;
 		full: Snippet;
 		footer?: Snippet;
 	};
@@ -46,8 +49,8 @@
 	// element.style.transform directly and reactivity only handles the detents.
 	let dragY = 0;
 	let dragging = $state(false);
-	// Flipped once when a drag first opens room above the peek, so the full
-	// detail swaps in mid-gesture without dragY being reactive.
+	// Flipped once when a drag first opens room above the peek, so the footer
+	// restyles mid-gesture without dragY being reactive.
 	let dragLift = $state(false);
 	let startY = 0;
 	let pointerId: number | null = null;
@@ -86,9 +89,9 @@
 			: availableHeight,
 	);
 	let offset = $derived(expanded ? 0 : collapsedOffset);
-	// The detail renders as soon as the drag opens room for it, so the gesture
-	// swaps peek for full rather than growing an empty gap.
-	let showFull = $derived(expanded || dragLift);
+	// Styling only. `full` is permanently laid out below the peek and is simply
+	// off-screen while collapsed, so nothing has to render mid-gesture.
+	let lifted = $derived(expanded || dragLift);
 	let settled = $derived(peekHeight > 0 && !dragging);
 
 	// The footer stays pinned while the sheet slides behind it, and only rides
@@ -174,6 +177,9 @@
 			}
 		} else if (dy >= DEMOTE) {
 			expanded = false;
+			// Peek and detail scroll as one column, so a demote from halfway down
+			// the detail would otherwise leave the peek scrolled off the top.
+			if (scrollEl) scrollEl.scrollTop = 0;
 		}
 		// A failed gesture leaves the manual mid-drag transform behind and the
 		// reactive value hasn't changed, so Svelte won't rewrite it. Restore by
@@ -255,28 +261,25 @@
 					></span>
 				</div>
 
-				<!-- The full detail is a permanently laid-out overlay and the swap is
-				     visibility-only: a display flip would run layout of the whole
-				     detail on the exact frame a drag starts, a 40-80ms hitch per
-				     gesture on phones. The peek in normal flow sizes the collapsed
-				     detent; the overlay never affects it. -->
-				<div class="relative min-h-0 flex-1">
-					<div
-						bind:clientHeight={peekHeight}
-						class="px-4 pb-4 {showFull ? 'invisible' : ''}"
-					>
-						{@render peek()}
+				<!-- Peek and detail are one scrolling column, and the detail is
+				     permanently laid out rather than rendered on promote: a display
+				     flip would run layout of the whole detail on the exact frame a
+				     drag starts, a 40-80ms hitch per gesture on phones. While
+				     collapsed the detail begins exactly where the footer does, so
+				     the opaque footer and the overlay's clip hide it without any
+				     per-frame work. -->
+				<div
+					bind:this={scrollEl}
+					onscroll={() => (atTop = (scrollEl?.scrollTop ?? 0) <= 0)}
+					style:touch-action={atTop ? "pan-down" : "pan-y"}
+					class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4"
+				>
+					<!-- pb-4 sits on the measured block, not the column: it is part of
+					     what the collapsed detent has to make room for. -->
+					<div bind:clientHeight={peekHeight} class="pb-4">
+						{@render peek(expanded)}
 					</div>
-					<div
-						bind:this={scrollEl}
-						onscroll={() => (atTop = (scrollEl?.scrollTop ?? 0) <= 0)}
-						style:touch-action={atTop ? "pan-down" : "pan-y"}
-						class="absolute inset-0 overflow-y-auto overscroll-contain px-4 pb-4 {showFull
-							? ''
-							: 'invisible'}"
-					>
-						{@render full()}
-					</div>
+					{@render full()}
 				</div>
 			</div>
 
@@ -291,12 +294,12 @@
 					style:transition={settled
 						? "transform 260ms cubic-bezier(0.2,0.8,0.2,1)"
 						: "none"}
-					class="pointer-events-auto absolute inset-x-0 bottom-0 bg-bg-elevated px-4 pt-3 pb-[max(env(safe-area-inset-bottom),12px)] {showFull
+					class="pointer-events-auto absolute inset-x-0 bottom-0 bg-bg-elevated px-4 pt-3 pb-[max(env(safe-area-inset-bottom),12px)] {lifted
 						? 'border-t border-border'
 						: ''}"
 				>
 					{@render footer()}
-					{#if hint && !showFull}
+					{#if hint && !lifted}
 						<button
 							type="button"
 							onclick={() => (expanded = true)}

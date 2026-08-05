@@ -12,9 +12,10 @@ import (
 var _ = Describe("Shell navigation", Label("e2e"), func() {
 	It("renders the app shell for an authenticated admin", func() {
 		page := newSessionPage("/dashboard")
-		sidebar := page.MustElement(`aside[aria-label="Primary navigation"]`)
-		Expect(page.MustElementR("h1", "^Dashboard$").MustText()).
-			To(Equal("Dashboard"))
+		sidebar := visibleElement(page, `aside[aria-label="Primary navigation"]`)
+		// The topbar names the dashboard after the app, not the route.
+		Expect(page.MustElementR("h1", "^Streamline$").MustText()).
+			To(Equal("Streamline"))
 		// The identity block shows the display name when one is set, so assert
 		// on the role line — it doesn't move when a profile spec edits the name.
 		Expect(sidebar.MustElement(`a[aria-label="Account settings"]`).MustText()).
@@ -40,7 +41,7 @@ var _ = Describe("Shell navigation", Label("e2e"), func() {
 			{"/activity/torrents", "Torrents"},
 			{"/calendar", "Calendar"},
 			{"/requests", "Requests"},
-			{"/dashboard", "Dashboard"},
+			{"/dashboard", "Streamline"},
 		} {
 			By("navigating to " + section.href)
 			// Per-hop budget: six hops each allowing expectPath its own 5s of
@@ -56,7 +57,10 @@ var _ = Describe("Shell navigation", Label("e2e"), func() {
 			// The highlight has to follow the route. A nav that derives "current"
 			// from a non-reactive source keeps lighting up the page it was left
 			// on, so assert exactly one link claims it and that it's this one.
-			current := page.MustElements(
+			// Scoped to the visible sidebar: the tablet rail is a second copy of
+			// the same nav and marks its own current link.
+			current := visibleElements(
+				page,
 				`aside[aria-label="Primary navigation"] a[aria-current="page"]`,
 			)
 			Expect(current).To(HaveLen(1))

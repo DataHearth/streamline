@@ -5,7 +5,7 @@
 		ChevronDown,
 		ChevronUp,
 		Download,
-		Loader2,
+		LoaderCircle,
 	} from "@lucide/svelte";
 	import { cn } from "../../lib/cn";
 	import { api } from "../../lib/api";
@@ -448,7 +448,7 @@
 									class="inline-flex h-7 items-center gap-1 rounded-md bg-accent px-2.5 text-[11px] font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
 								>
 									{#if pending}
-										<Loader2
+										<LoaderCircle
 											size={12}
 											class="animate-spin"
 											aria-hidden="true"

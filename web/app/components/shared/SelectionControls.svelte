@@ -49,7 +49,7 @@
 	type="button"
 	onclick={onSelectAll}
 	disabled={total === 0}
-	class={cn(base, off, "disabled:pointer-events-none disabled:opacity-40")}
+	class={cn(base, off, "hidden lg:inline-flex", "disabled:pointer-events-none disabled:opacity-40")}
 >
 	<CheckCheck size={14} aria-hidden="true" />
 	Select all

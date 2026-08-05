@@ -20,6 +20,7 @@
 <script lang="ts">
 	import { Bookmark, Info, Search, Trash2 } from "@lucide/svelte";
 	import { cn } from "../../lib/cn";
+	import { dragScroll } from "../../lib/drag-scroll";
 	import { episodeStatus } from "../../lib/status";
 	import Modal from "../modals/Modal.svelte";
 	import { formatDateShort, formatDateTime, formatRelative } from "../../lib/dates";
@@ -73,8 +74,16 @@
 	);
 </script>
 
+<!-- overflow-x-auto, not hidden: inside the tablet two-pane the table can be
+     wider than its cell, and clipping put the Actions column out of reach. The
+     column hiding below is container-based for the same reason — a viewport media
+     query says nothing about how much room this pane has — and the thresholds
+     leave Actions visible at the ~460px the tablet pane gives it. dragScroll so
+     any remaining overflow is reachable with a pointer: below lg the app hides
+     every scrollbar. -->
 <div
-	class="overflow-hidden rounded-lg border border-border bg-bg-elevated/70 backdrop-blur-md"
+	use:dragScroll
+	class="@container overflow-x-auto overflow-y-hidden rounded-lg border border-border bg-bg-elevated/70 backdrop-blur-md"
 >
 	<table class="w-full text-sm">
 		<thead
@@ -86,20 +95,20 @@
 				<th scope="col" class="px-3 py-2.5 text-left font-medium">Title</th>
 				<th
 					scope="col"
-					class="hidden w-36 px-3 py-2.5 text-left font-medium md:table-cell"
+					class="hidden w-36 px-3 py-2.5 text-left font-medium @xl:table-cell"
 				>
 					Air date
 				</th>
 				<th scope="col" class="w-28 px-3 py-2.5 text-left font-medium">Status</th>
 				<th
 					scope="col"
-					class="hidden w-24 px-3 py-2.5 text-left font-medium sm:table-cell"
+					class="hidden w-24 px-3 py-2.5 text-left font-medium @lg:table-cell"
 				>
 					Quality
 				</th>
 				<th
 					scope="col"
-					class="hidden w-20 px-3 py-2.5 text-right font-medium sm:table-cell"
+					class="hidden w-20 px-3 py-2.5 text-right font-medium @lg:table-cell"
 				>
 					Size
 				</th>
@@ -157,7 +166,7 @@
 						</button>
 					</td>
 					<td
-						class="hidden whitespace-nowrap px-3 py-2.5 font-mono text-xs text-fg-muted md:table-cell"
+						class="hidden whitespace-nowrap px-3 py-2.5 font-mono text-xs text-fg-muted @xl:table-cell"
 					>
 						{#if ep.air_date}
 							{formatDateShort(ep.air_date)}
@@ -181,12 +190,12 @@
 						</span>
 					</td>
 					<td
-						class="hidden px-3 py-2.5 font-mono text-xs text-fg-muted sm:table-cell"
+						class="hidden px-3 py-2.5 font-mono text-xs text-fg-muted @lg:table-cell"
 					>
 						{ep.quality || "—"}
 					</td>
 					<td
-						class="hidden px-3 py-2.5 text-right font-mono text-xs tabular text-fg-muted sm:table-cell"
+						class="hidden px-3 py-2.5 text-right font-mono text-xs tabular text-fg-muted @lg:table-cell"
 					>
 						{formatBytes(ep.size)}
 					</td>

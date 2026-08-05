@@ -5,7 +5,7 @@
 		createMutation,
 	} from "@tanstack/svelte-query";
 	import { params, goto } from "@roxi/routify";
-	import { Search, Loader2, Bookmark } from "@lucide/svelte";
+	import { Search, LoaderCircle, Bookmark } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { api } from "../../lib/api";
 	import { toast } from "../../lib/toast";
@@ -193,7 +193,7 @@
 				<span
 					class="inline-flex h-10 items-center gap-2 rounded-md bg-status-downloading/15 px-3 text-sm font-medium text-status-downloading"
 				>
-					<Loader2 size={14} class="animate-spin" aria-hidden="true" />
+					<LoaderCircle size={14} class="animate-spin" aria-hidden="true" />
 					Downloading…
 				</span>
 			{/if}
@@ -241,7 +241,7 @@
 
 	<nav
 		aria-label="Movie sections"
-		class="sticky top-14 z-10 border-b border-border bg-bg-deep/70 px-4 backdrop-blur-md saturate-150 md:px-8"
+		class="sticky top-16 z-10 border-b border-border bg-bg-deep/70 px-4 backdrop-blur-md saturate-150 md:px-8"
 	>
 		<div class="tabs-track flex w-full gap-0.5">
 			{#each TABS as t (t.key)}
@@ -269,7 +269,9 @@
 
 	<div class="w-full px-4 py-6 md:px-8">
 		{#if tab === "overview"}
-			<div class="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px] lg:gap-10">
+			<div
+				class="grid grid-cols-1 gap-6 md:grid-cols-[1fr_260px] md:gap-7 lg:grid-cols-[1fr_320px] lg:gap-10"
+			>
 				<DetailAbout
 					overview={movie.overview}
 					cast={movie.cast ?? []}
@@ -284,8 +286,61 @@
 		{/if}
 	</div>
 
-	<div class="w-full px-4 pb-6 md:px-8">
+	<div class="w-full px-4 pb-24 md:px-8 md:pb-6">
 		<MovieDetailSimilar movieId={movie.id} />
+	</div>
+
+	<!-- Phone: the action row the hero gives up, pinned above the bottom nav so
+	     Manual search is in reach from anywhere in the page. -->
+	<div
+		class="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+3.5rem)] z-30 flex items-center gap-2 border-t border-border bg-bg-elevated/95 px-3 py-2.5 backdrop-blur-md md:hidden"
+		aria-label="Movie actions"
+	>
+		<button
+			type="button"
+			onclick={() => (searchOpen = true)}
+			class="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-semibold text-fg-on-accent transition active:bg-accent-pressed"
+		>
+			{#if movie.status === "downloading"}
+				<LoaderCircle size={15} class="animate-spin" aria-hidden="true" />
+			{:else}
+				<Search size={15} aria-hidden="true" />
+			{/if}
+			Manual search
+		</button>
+
+		<PlayOnMenu
+			compact
+			path={`/movies/${movie.id}/play-on`}
+			queryKey={["movie", movie.id, "play-on"]}
+			disabled={!hasFiles}
+			disabledTitle="Available after the movie has been imported"
+		/>
+
+		<button
+			type="button"
+			onclick={() => monitor.mutate(!(movie.monitored ?? false))}
+			disabled={monitor.isPending}
+			aria-pressed={movie.monitored ?? false}
+			aria-label={movie.monitored ? "Stop monitoring" : "Monitor"}
+			class={cn(
+				"grid h-11 w-11 shrink-0 place-items-center rounded-lg border transition disabled:opacity-60",
+				movie.monitored
+					? "border-accent-line bg-accent-soft text-accent-text"
+					: "border-border-strong bg-bg-elevated text-fg-muted",
+			)}
+		>
+			<Bookmark
+				size={18}
+				fill={movie.monitored ? "currentColor" : "none"}
+				aria-hidden="true"
+			/>
+		</button>
+
+		<MovieKebabMenu
+			onPick={onKebabPick}
+			disabledActions={hasFiles ? [] : ["rename", "delete-with-files"]}
+		/>
 	</div>
 
 	<ManualSearchModal

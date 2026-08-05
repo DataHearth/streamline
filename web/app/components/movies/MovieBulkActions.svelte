@@ -11,7 +11,13 @@
 	import { api } from "../../lib/api";
 	import { toast } from "../../lib/toast";
 	import { runBulk, plural } from "../../lib/bulk";
+	import { formatBytes } from "../../lib/format";
 	import BulkActionBar from "../shared/BulkActionBar.svelte";
+	import BulkTouchBar from "../shared/BulkTouchBar.svelte";
+	import type {
+		TouchAction,
+		TouchMenuRow,
+	} from "../shared/BulkTouchBar.svelte";
 	import KebabMenu from "../shared/KebabMenu.svelte";
 	import type { KebabItem } from "../shared/KebabMenu.svelte";
 	import QualityProfileModal from "./QualityProfileModal.svelte";
@@ -39,6 +45,23 @@
 	let picked = $derived(movies.filter((m) => selected.has(m.id)));
 	let fileCount = $derived(
 		picked.reduce((n, m) => n + (m.media_files?.length ?? 0), 0),
+	);
+	let pickedBytes = $derived(
+		picked.reduce(
+			(n, m) => n + (m.media_files ?? []).reduce((s, f) => s + f.size, 0),
+			0,
+		),
+	);
+	let monitoredPicked = $derived(picked.filter((m) => m.monitored).length);
+	// The selection is off-screen as often as not on a phone, so the sheet says
+	// which titles it is about to act on.
+	let pickedNames = $derived(
+		picked.length === 0
+			? ""
+			: picked
+					.slice(0, 2)
+					.map((m) => m.title)
+					.join(", ") + (picked.length > 2 ? `, +${picked.length - 2}` : ""),
 	);
 
 	let qpOpen = $state(false);
@@ -145,10 +168,87 @@
 
 	const btn =
 		"inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border border-border bg-bg-elevated px-3 text-[12.5px] font-medium text-fg-muted transition hover:border-border-strong hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring disabled:cursor-not-allowed disabled:opacity-50";
+
+	// Phone: three cells and a More sheet. Monitor / Search are the everyday
+	// pair; Delete keeps its confirm dialog, so the cell is a route to it, not
+	// the deletion itself.
+	let touchActions = $derived<TouchAction[]>([
+		{
+			key: "monitor",
+			label: "Monitor",
+			icon: Bookmark,
+			onSelect: () => setMonitored(true),
+		},
+		{ key: "search", label: "Search", icon: Search, onSelect: searchNow },
+		{
+			key: "delete",
+			label: "Delete",
+			icon: Trash2,
+			danger: true,
+			onSelect: () => (deleteOpen = true),
+		},
+	]);
+
+	let touchMenu = $derived<TouchMenuRow[]>([
+		{
+			key: "monitor",
+			label: "Monitor",
+			icon: Bookmark,
+			line: `${monitoredPicked} of ${count} already monitored`,
+			onSelect: () => setMonitored(true),
+		},
+		{
+			key: "unmonitor",
+			label: "Stop monitoring",
+			icon: BookmarkX,
+			onSelect: () => setMonitored(false),
+		},
+		{
+			key: "search",
+			label: "Search for releases",
+			icon: Search,
+			line: "queues one search per title",
+			onSelect: searchNow,
+		},
+		{
+			key: "quality",
+			label: "Change quality profile",
+			icon: SlidersHorizontal,
+			onSelect: () => (qpOpen = true),
+		},
+		{
+			key: "refresh",
+			label: "Refresh metadata",
+			icon: RefreshCw,
+			onSelect: refresh,
+		},
+		{
+			key: "delete",
+			label: "Remove from library",
+			icon: Trash2,
+			danger: true,
+			dividerBefore: true,
+			line: "keeps files on disk",
+			onSelect: () => (deleteOpen = true),
+		},
+		{
+			key: "delete-with-files",
+			label: "Remove and delete files",
+			icon: Trash2,
+			danger: true,
+			disabled: fileCount === 0,
+			line:
+				fileCount === 0
+					? "no files on disk"
+					: `frees ${formatBytes(pickedBytes, "0 B")} · cannot be undone`,
+			onSelect: () => (deleteWithFilesOpen = true),
+		},
+	]);
 </script>
 
 {#if active}
-	<BulkActionBar {count} {total} {busy} noun="title" {onSelectAll} {onClear}>
+	<div class="hidden md:block">
+		<BulkActionBar {count} {total} {busy} noun="title" {onSelectAll} {onClear}>
 		<button
 			type="button"
 			disabled={busy}
@@ -180,8 +280,21 @@
 			<SlidersHorizontal size={14} aria-hidden="true" />
 			Quality
 		</button>
-		<KebabMenu items={menuItems} variant="bar" />
-	</BulkActionBar>
+			<KebabMenu items={menuItems} variant="bar" />
+		</BulkActionBar>
+	</div>
+
+	<BulkTouchBar
+		{count}
+		{total}
+		{busy}
+		noun="title"
+		actions={touchActions}
+		menu={touchMenu}
+		footer={pickedNames}
+		{onSelectAll}
+		{onClear}
+	/>
 {/if}
 
 <QualityProfileModal

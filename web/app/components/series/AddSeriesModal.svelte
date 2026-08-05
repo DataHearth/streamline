@@ -10,7 +10,7 @@
 		Tv,
 		ArrowUpRight,
 		Check,
-		Loader2,
+		LoaderCircle,
 		Gauge,
 		Eye,
 		X,
@@ -571,7 +571,7 @@
 				class="inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-4 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
 			>
 				{#if selectedPending}
-					<Loader2 size={15} class="animate-spin" aria-hidden="true" />
+					<LoaderCircle size={15} class="animate-spin" aria-hidden="true" />
 					{canAdd ? "Adding…" : "Requesting…"}
 				{:else}
 					<Plus size={15} aria-hidden="true" />

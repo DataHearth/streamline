@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, type Snippet } from "svelte";
 	import Sidebar from "./Sidebar.svelte";
+	import SidebarRail from "./SidebarRail.svelte";
 	import BottomNav from "./BottomNav.svelte";
 	import TopBar from "./TopBar.svelte";
 	import CommandPalette from "./CommandPalette.svelte";
@@ -41,12 +42,13 @@
 		Skip to main content
 	</a>
 	<Sidebar />
+	<SidebarRail />
 	<!-- scrollbar-gutter keeps the content width identical whether or not a route
 	     scrolls; without it a taller tab reclaims the scrollbar's ~15px and
 	     reflows anything sitting on a wrap boundary. -->
 	<main
 		id="main"
-		class="min-w-0 flex-1 overflow-y-auto pb-16 [scrollbar-gutter:stable] lg:pb-0"
+		class="min-w-0 flex-1 overflow-y-auto pb-16 [scrollbar-gutter:stable] md:pb-0"
 	>
 		<TopBar />
 		{@render children?.()}
@@ -54,6 +56,7 @@
 	<BottomNav />
 </div>
 <CommandPalette />
+
 {#if compact}
 	<MediaLookupScreen
 		kind="movie"
@@ -69,3 +72,19 @@
 	<AddMovieModal open={addMovieOpen} onClose={() => (addMovieOpen = false)} />
 	<AddSeriesModal open={addSeriesOpen} onClose={() => (addSeriesOpen = false)} />
 {/if}
+
+<style>
+	/* Touch layouts have no pointer to grab a bar with, and a bar that appears
+	   the moment content overflows steals width from the text under it — the
+	   add sheet's synopsis reflowing mid-drag was the visible case. Hide the
+	   bars below lg; scrolling itself is untouched. */
+	@media (max-width: 1023px) {
+		:global(*) {
+			scrollbar-width: none;
+			-ms-overflow-style: none;
+		}
+		:global(*::-webkit-scrollbar) {
+			display: none;
+		}
+	}
+</style>

@@ -16,12 +16,13 @@
 		Settings,
 		LogOut,
 		MoreHorizontal,
+		ChevronRight,
 		X,
 	} from "@lucide/svelte";
 	import { isActive as routifyIsActive } from "@roxi/routify";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { api } from "../../lib/api";
-	import type { RequestCounts, SystemInfo } from "../../lib/types";
+	import type { PendingList, RequestCounts, SystemInfo } from "../../lib/types";
 	import { auth } from "../../lib/auth.svelte";
 	import { cn } from "../../lib/cn";
 	import {
@@ -30,82 +31,17 @@
 		activityCurrent,
 		type IsActiveFn,
 	} from "../../lib/activity-nav";
+	import { navCountsQuery } from "../../lib/nav-counts";
+	import { bulkMode } from "../../lib/bulk-mode.svelte";
 	import Avatar from "./Avatar.svelte";
 
+	// Phone only. From md up the rail takes over (SidebarRail), and from lg the
+	// full sidebar does.
 	let isActiveFn = $state<IsActiveFn>(() => false);
 	onMount(() => routifyIsActive.subscribe((fn) => (isActiveFn = fn)));
 
-	// Primary bar — always four cells so the grid is identical across roles.
-	const primary = [
-		{ label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-		{ label: "Library", icon: Library, expand: true },
-		{ label: "Activity", icon: Activity, expand: true },
-	];
-
-	// Everything the sidebar exposes on desktop but the bar can't hold, grouped
-	// the same way for a coherent mental model.
-	type SheetItem = { label: string; href: string; icon: typeof Tv };
-	let opsItems = $derived<SheetItem[]>([
-		{ label: "Calendar", href: "/calendar", icon: CalendarDays },
-		{ label: "Requests", href: "/requests", icon: Inbox },
-		...(auth.isAdmin
-			? [{ label: "Imports", href: "/library/imports", icon: FolderInput }]
-			: []),
-	]);
-	let adminItems = $derived<SheetItem[]>(
-		auth.isAdmin ? [{ label: "Settings", href: "/settings", icon: Settings }] : [],
-	);
-
-	// Secondary routes light up the "More" cell so the user still has a sense of
-	// place while on a sheet-reached page.
-	const SECONDARY = [
-		"/calendar",
-		"/requests",
-		"/library/imports",
-		"/settings",
-		"/account",
-	];
-	let moreActive = $derived(SECONDARY.some((p) => isActiveFn(p)));
-
-	// Expanding bar cells (mobile): one generic cell fans out to its real
-	// destinations. Activity is two destinations across two routes.
-	const MENUS: Record<string, SheetItem[]> = {
-		Library: [
-			{ label: "Movies", href: "/movies", icon: Film },
-			{ label: "Series", href: "/series", icon: Tv },
-		],
-		Activity: [
-			{ label: "Queue & History", href: "/activity", icon: ListVideo },
-			{ label: "Torrents", href: "/activity/torrents", icon: Magnet },
-		],
-	};
-	let menuOpen = $state("");
+	const counts = navCountsQuery();
 	const torrentCounts = torrentCountsQuery();
-
-	function menuActive(label: string) {
-		return (MENUS[label] ?? []).some((l) => isActiveFn(l.href));
-	}
-	function closeMenu() {
-		menuOpen = "";
-	}
-	// Outside-click / Escape, without binding a ref inside the {#each}.
-	function menuPopover(node: HTMLElement) {
-		const onDoc = (e: MouseEvent) => {
-			if (!node.parentElement?.contains(e.target as Node)) closeMenu();
-		};
-		const onKey = (e: KeyboardEvent) => {
-			if (e.key === "Escape") closeMenu();
-		};
-		const t = setTimeout(() => document.addEventListener("mousedown", onDoc));
-		document.addEventListener("keydown", onKey);
-		return {
-			destroy() {
-				clearTimeout(t);
-				document.removeEventListener("mousedown", onDoc);
-				document.removeEventListener("keydown", onKey);
-			},
-		};
-	}
 
 	const requestCountsQuery = createQuery<RequestCounts>(() => ({
 		queryKey: ["requests", "counts"],
@@ -113,6 +49,23 @@
 		retry: false,
 	}));
 	let pendingRequests = $derived(requestCountsQuery.data?.pending ?? 0);
+	// The badge already says how many are pending, so the line carries the rest
+	// of the picture rather than repeating it.
+	let requestsLine = $derived.by(() => {
+		const d = requestCountsQuery.data;
+		if (!d) return "";
+		if (!d.pending) return "Nothing waiting on you";
+		return `${d.approved.toLocaleString()} approved · ${d.denied.toLocaleString()} denied`;
+	});
+
+	const pendingQuery = createQuery<PendingList>(() => ({
+		queryKey: ["activity", "pending"],
+		queryFn: () => api<PendingList>("/activity/pending"),
+		enabled: auth.isAdmin,
+		retry: false,
+		refetchInterval: 30000,
+	}));
+	let pendingAdoptions = $derived(pendingQuery.data?.items.length ?? 0);
 
 	const systemQuery = createQuery<SystemInfo>(() => ({
 		queryKey: ["system", "info"],
@@ -121,19 +74,104 @@
 	}));
 	let version = $derived(systemQuery.data?.version ?? null);
 
-	let roleLabel = $derived.by(() => {
-		const r = auth.user?.role;
-		if (r === "admin") return "admin";
-		if (r === "request_only") return "request";
-		return "member";
-	});
+	type Row = {
+		label: string;
+		href: string;
+		icon: typeof Tv;
+		line?: string;
+		badge?: number;
+		// Torrents states go in the line slot as coloured dots, not as text.
+		torrents?: boolean;
+	};
 
-	let open = $state(false);
-	function openSheet() {
-		open = true;
+	// Every fan-out in the bar raises the same sheet; only the rows differ.
+	// Imports is an operation, not a library destination, so it sits under More
+	// with Calendar and Requests — the same grouping the desktop sidebar uses.
+	let libraryRows = $derived<Row[]>([
+		{ label: "Movies", href: "/movies", icon: Film, line: counts.moviesLine },
+		{ label: "Series", href: "/series", icon: Tv, line: counts.seriesLine },
+	]);
+	let activityRows = $derived<Row[]>([
+		{
+			label: "Queue & History",
+			href: "/activity",
+			icon: ListVideo,
+			line: counts.queueLine,
+			badge: pendingAdoptions,
+		},
+		{
+			label: "Torrents",
+			href: "/activity/torrents",
+			icon: Magnet,
+			torrents: true,
+		},
+	]);
+	let moreRows = $derived<Row[]>([
+		{ label: "Calendar", href: "/calendar", icon: CalendarDays },
+		{
+			label: "Requests",
+			href: "/requests",
+			icon: Inbox,
+			line: requestsLine,
+			badge: pendingRequests,
+		},
+		...(auth.isAdmin
+			? [
+					{
+						label: "Imports",
+						href: "/library/imports",
+						icon: FolderInput,
+						line: counts.importsLine,
+					},
+				]
+			: []),
+	]);
+	// Settings sits below a hairline rather than under an "Admin" heading — one
+	// rule says the same thing in less space.
+	let adminRows = $derived<Row[]>(
+		auth.isAdmin
+			? [{ label: "Settings", href: "/settings", icon: Settings }]
+			: [],
+	);
+
+	const SECTIONS = ["Library", "Activity", "More"] as const;
+	type Section = (typeof SECTIONS)[number];
+
+	let sheet = $state<Section | "">("");
+	let sheetRows = $derived<Row[]>(
+		sheet === "Library" ? libraryRows : sheet === "Activity" ? activityRows : moreRows,
+	);
+
+	// Secondary routes light up the cell that reaches them, so the bar still
+	// says where you are while you are on a sheet-reached page.
+	const IN_MORE = [
+		"/calendar",
+		"/requests",
+		"/library/imports",
+		"/settings",
+		"/account",
+	];
+	let libraryActive = $derived(["/movies", "/series"].some((p) => isActiveFn(p)));
+	let activityActive = $derived(isActiveFn("/activity"));
+	let moreActive = $derived(IN_MORE.some((p) => isActiveFn(p)));
+	let moreOn = $derived(moreActive || sheet === "More");
+
+	const primary = [
+		{ label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+		{ label: "Library", icon: Library, section: "Library" as const },
+		{ label: "Activity", icon: Activity, section: "Activity" as const },
+	];
+	function cellActive(label: string) {
+		if (label === "Library") return libraryActive;
+		if (label === "Activity") return activityActive;
+		return false;
 	}
+
 	function closeSheet() {
-		open = false;
+		sheet = "";
+	}
+	function toggleSheet(s: Section) {
+		sheet = sheet === s ? "" : s;
 	}
 
 	// Routify intercepts internal <a> clicks and navigates client-side; close
@@ -144,7 +182,7 @@
 	}
 
 	$effect(() => {
-		if (!open) return;
+		if (!sheet) return;
 		const onKey = (e: KeyboardEvent) => {
 			if (e.key === "Escape") closeSheet();
 		};
@@ -161,101 +199,146 @@
 		}
 	}
 
+	// Drag the sheet down to dismiss. Pointer events so a mouse works too; the
+	// drag only starts from the header or from a list already scrolled to the
+	// top, otherwise the gesture belongs to the list. Past a quarter of the
+	// sheet's height — or on a flick — it closes; anything less springs back.
+	const DISMISS_RATIO = 0.25;
+	const FLICK = 0.5; // px per ms
+	function swipeSheet(node: HTMLElement) {
+		let id: number | null = null;
+		let startY = 0;
+		let startedAt = 0;
+		let dy = 0;
+		let dragging = false;
+		const backdrop = () =>
+			node.parentElement?.querySelector<HTMLElement>('[data-sheet-backdrop=""]');
+
+		const paint = () => {
+			node.style.transform = dy > 0 ? `translate3d(0, ${dy}px, 0)` : "";
+			const b = backdrop();
+			if (b) b.style.opacity = String(Math.max(0.25, 1 - dy / (node.offsetHeight || 1)));
+		};
+		const reset = (animate: boolean) => {
+			node.style.transition = animate
+				? "transform var(--dur-base, 200ms) var(--ease, ease-out)"
+				: "";
+			node.style.transform = "";
+			const b = backdrop();
+			if (b) b.style.opacity = "";
+		};
+
+		const onDown = (e: PointerEvent) => {
+			if (id !== null || e.button !== 0) return;
+			const target = e.target as HTMLElement;
+			const scroller = node.querySelector<HTMLElement>("[data-sheet-scroll]");
+			if (scroller?.contains(target) && scroller.scrollTop > 0) return;
+			id = e.pointerId;
+			startY = e.clientY;
+			startedAt = e.timeStamp;
+			dy = 0;
+		};
+		const onMove = (e: PointerEvent) => {
+			if (e.pointerId !== id) return;
+			const delta = e.clientY - startY;
+			// 6px of slop so a tap on a row is still a tap.
+			if (!dragging) {
+				if (delta < 6) return;
+				dragging = true;
+				node.style.transition = "none";
+				// Capture keeps the gesture alive if the finger leaves the sheet;
+				// it can legitimately fail (pointer already released), and the
+				// drag still works without it.
+				try {
+					node.setPointerCapture(e.pointerId);
+				} catch {}
+			}
+			// Resistance above the resting position rather than a gap under it.
+			dy = delta > 0 ? delta : delta / 4;
+			paint();
+		};
+		const onUp = (e: PointerEvent) => {
+			if (e.pointerId !== id) return;
+			const velocity = dy / Math.max(1, e.timeStamp - startedAt);
+			const far = dy > (node.offsetHeight || 0) * DISMISS_RATIO;
+			id = null;
+			if (!dragging) return;
+			dragging = false;
+			if (far || velocity > FLICK) {
+				reset(false); // hand the exit to the fly transition
+				closeSheet();
+			} else {
+				reset(true);
+			}
+		};
+		const onCancel = (e: PointerEvent) => {
+			if (e.pointerId !== id) return;
+			id = null;
+			dragging = false;
+			reset(true);
+		};
+
+		node.addEventListener("pointerdown", onDown);
+		node.addEventListener("pointermove", onMove);
+		node.addEventListener("pointerup", onUp);
+		node.addEventListener("pointercancel", onCancel);
+		return {
+			destroy() {
+				node.removeEventListener("pointerdown", onDown);
+				node.removeEventListener("pointermove", onMove);
+				node.removeEventListener("pointerup", onUp);
+				node.removeEventListener("pointercancel", onCancel);
+			},
+		};
+	}
+
+	let roleLabel = $derived.by(() => {
+		const r = auth.user?.role;
+		if (r === "admin") return "admin";
+		if (r === "request_only") return "request";
+		return "member";
+	});
+
+	const cellBase =
+		"relative flex flex-col items-center justify-center gap-1 px-2 pt-2.5 pb-3 text-[10.5px] transition-colors";
+	const cellOn =
+		"text-accent-text before:absolute before:inset-x-[18%] before:top-0 before:h-0.5 before:rounded-b-sm before:bg-accent";
+	const cellOff = "text-fg-subtle hover:text-fg-muted";
 	const rowBase =
-		"flex items-center gap-3 rounded-lg px-3 py-3 text-[14px] font-medium transition-colors";
+		"relative flex items-center gap-3.5 rounded-xl px-2.5 py-3 transition-colors";
 	const rowInactive = "text-fg-muted hover:bg-surface hover:text-fg";
-	const rowActive =
-		"bg-accent-soft text-accent-text before:absolute before:left-0 before:top-1/2 before:h-5 before:w-[3px] before:-translate-y-1/2 before:rounded-r-full before:bg-accent";
+	const rowActive = "bg-accent-soft text-accent-text";
 </script>
 
 <nav
-	class="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 min-h-14 border-t border-border bg-bg-elevated/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md saturate-150 lg:hidden"
+	class={cn(
+		"fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 min-h-14 border-t border-border bg-bg-elevated/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md saturate-150 md:hidden",
+		// A phone bulk selection puts its action bar here rather than stacking a
+		// second bar on top of this one.
+		bulkMode.active && "hidden",
+	)}
 	aria-label="Primary"
 >
 	{#each primary as tab (tab.label)}
-		{#if tab.expand}
-			<div class="relative flex min-w-0">
-				<button
-					type="button"
-					onclick={() => (menuOpen = menuOpen === tab.label ? "" : tab.label)}
-					aria-haspopup="menu"
-					aria-expanded={menuOpen === tab.label}
-					aria-label={tab.label}
-					class={cn(
-						"relative flex w-full flex-col items-center justify-center gap-1 px-2 pt-2.5 pb-3 text-[10.5px] transition-colors",
-						menuActive(tab.label) || menuOpen === tab.label
-							? "text-accent-text before:absolute before:inset-x-[18%] before:top-0 before:h-0.5 before:rounded-b-sm before:bg-accent"
-							: "text-fg-subtle hover:text-fg-muted",
-					)}
-				>
-					<tab.icon
-						size={20}
-						strokeWidth={menuActive(tab.label) || menuOpen === tab.label
-							? 2
-							: 1.6}
-					/>
-					<span>{tab.label}</span>
-				</button>
-				{#if menuOpen === tab.label}
-					<div
-						use:menuPopover
-						role="menu"
-						aria-label={tab.label}
-						transition:fly={{ y: 8, duration: 160, easing: cubicOut }}
-						class="absolute bottom-full left-1/2 z-50 mb-2 w-56 -translate-x-1/2 overflow-hidden rounded-xl border border-border-strong bg-bg-elevated p-1 shadow-4"
-					>
-						{#each MENUS[tab.label] ?? [] as link (link.href)}
-							{@const current = activityCurrent(isActiveFn, link.href)}
-							<a
-								href={link.href}
-								role="menuitem"
-								onclick={closeMenu}
-								aria-current={current ? "page" : undefined}
-								class={cn(
-									"flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-[13.5px] font-medium transition-colors",
-									current
-										? "bg-accent-soft text-accent-text"
-										: "text-fg-muted hover:bg-surface hover:text-fg",
-								)}
-							>
-								<link.icon size={18} class="shrink-0" />
-								<span class="min-w-0 flex-1">{link.label}</span>
-								{#if link.href === "/activity/torrents"}
-									<span
-										class="flex shrink-0 items-center gap-1.5 font-mono text-[10px] tabular-nums leading-none text-fg-subtle"
-									>
-										{#each TORRENT_PILLS as p (p.key)}
-											{#if (torrentCounts.counts[p.key] ?? 0) > 0}
-												<span
-													class="flex items-center gap-[3px]"
-													title="{torrentCounts.counts[p.key]} {p.key}"
-												>
-													<span
-														class="h-[5px] w-[5px] rounded-full"
-														style:background-color="var(--status-{p.dot})"
-													></span>
-													{torrentCounts.counts[p.key]}
-												</span>
-											{/if}
-										{/each}
-									</span>
-								{/if}
-							</a>
-						{/each}
-					</div>
-				{/if}
-			</div>
+		{#if tab.section}
+			{@const on = cellActive(tab.label) || sheet === tab.section}
+			<button
+				type="button"
+				onclick={() => toggleSheet(tab.section)}
+				aria-haspopup="dialog"
+				aria-expanded={sheet === tab.section}
+				aria-label={tab.label}
+				class={cn(cellBase, on ? cellOn : cellOff)}
+			>
+				<tab.icon size={20} strokeWidth={on ? 2 : 1.6} />
+				<span>{tab.label}</span>
+			</button>
 		{:else}
 			{@const active = isActiveFn(tab.href ?? "")}
 			<a
 				href={tab.href}
 				aria-current={active ? "page" : undefined}
-				class={cn(
-					"relative flex flex-col items-center justify-center gap-1 px-2 pt-2.5 pb-3 text-[10.5px] transition-colors",
-					active
-						? "text-accent-text before:absolute before:inset-x-[18%] before:top-0 before:h-0.5 before:rounded-b-sm before:bg-accent"
-						: "text-fg-subtle hover:text-fg-muted",
-				)}
+				class={cn(cellBase, active ? cellOn : cellOff)}
 			>
 				<tab.icon size={20} strokeWidth={active ? 2 : 1.6} />
 				<span>{tab.label}</span>
@@ -265,20 +348,15 @@
 
 	<button
 		type="button"
-		onclick={openSheet}
+		onclick={() => toggleSheet("More")}
 		aria-haspopup="dialog"
-		aria-expanded={open}
+		aria-expanded={sheet === "More"}
 		aria-label="More destinations"
-		class={cn(
-			"relative flex flex-col items-center justify-center gap-1 px-2 pt-2.5 pb-3 text-[10.5px] transition-colors",
-			moreActive || open
-				? "text-accent-text before:absolute before:inset-x-[18%] before:top-0 before:h-0.5 before:rounded-b-sm before:bg-accent"
-				: "text-fg-subtle hover:text-fg-muted",
-		)}
+		class={cn(cellBase, moreOn ? cellOn : cellOff)}
 	>
 		<div class="relative">
-			<MoreHorizontal size={20} strokeWidth={moreActive || open ? 2 : 1.6} />
-			{#if pendingRequests > 0 && !open}
+			<MoreHorizontal size={20} strokeWidth={moreOn ? 2 : 1.6} />
+			{#if pendingRequests > 0 && sheet !== "More"}
 				<span
 					class="absolute -right-1.5 -top-1 h-1.5 w-1.5 rounded-full bg-status-wanted"
 					aria-hidden="true"
@@ -289,96 +367,146 @@
 	</button>
 </nav>
 
-{#if open}
-	<div class="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="More">
+{#if sheet}
+	<div
+		class="fixed inset-0 z-50 md:hidden"
+		role="dialog"
+		aria-modal="true"
+		aria-label={sheet}
+	>
 		<button
 			type="button"
 			aria-label="Close menu"
+			data-sheet-backdrop=""
 			transition:fade={{ duration: 180 }}
 			onclick={closeSheet}
 			class="absolute inset-0 h-full w-full cursor-default bg-black/55 backdrop-blur-[2px]"
 		></button>
 
 		<div
+			use:swipeSheet
 			transition:fly={{ y: 420, duration: 300, easing: cubicOut }}
 			onclick={onSheetClick}
 			class="absolute inset-x-0 bottom-0 flex max-h-[85dvh] flex-col overflow-hidden rounded-t-2xl border-t border-border-strong bg-bg-elevated shadow-4"
 		>
-			<div class="flex items-center justify-between px-5 pb-1 pt-3">
+			<div
+				class="relative flex cursor-grab touch-none select-none items-center justify-between px-5 pb-1 pt-4 active:cursor-grabbing"
+			>
 				<span
 					aria-hidden="true"
 					class="absolute left-1/2 top-2 h-1 w-9 -translate-x-1/2 rounded-full bg-border-strong"
 				></span>
-				<span
-					class="mt-2 font-mono text-[10px] uppercase tracking-[0.18em] text-fg-faint"
-				>
-					Navigate
-				</span>
+				<h2 class="text-[17px] font-semibold tracking-tight text-fg">{sheet}</h2>
 				<button
 					type="button"
 					onclick={closeSheet}
 					aria-label="Close"
-					class="mt-1 grid h-9 w-9 place-items-center rounded-md text-fg-subtle transition hover:bg-surface hover:text-fg"
+					class="grid h-9 w-9 place-items-center rounded-full bg-surface text-fg-subtle transition hover:bg-bg-hover hover:text-fg"
 				>
-					<X size={18} aria-hidden="true" />
+					<X size={16} aria-hidden="true" />
 				</button>
 			</div>
 
-			<div class="min-h-0 flex-1 overflow-y-auto px-3 pb-[max(env(safe-area-inset-bottom),12px)]">
-				<div class="px-2 pb-1 pt-2 font-mono text-[10px] uppercase tracking-[0.14em] text-fg-faint">
-					Operations
-				</div>
+			<div
+				data-sheet-scroll
+				class="min-h-0 flex-1 overscroll-contain overflow-y-auto px-2.5 pb-[max(env(safe-area-inset-bottom),12px)] pt-1"
+			>
 				<ul class="flex flex-col gap-0.5">
-					{#each opsItems as item (item.href)}
-						{@const active = isActiveFn(item.href)}
-						<li class="relative">
+					{#each sheetRows as row (row.href)}
+						{@const active =
+							sheet === "Activity"
+								? activityCurrent(isActiveFn, row.href)
+								: isActiveFn(row.href)}
+						<li>
 							<a
-								href={item.href}
+								href={row.href}
 								aria-current={active ? "page" : undefined}
 								class={cn(rowBase, active ? rowActive : rowInactive)}
 							>
-								<item.icon size={19} class="shrink-0" />
-								<span class="flex-1 truncate">{item.label}</span>
-								{#if item.href === "/requests" && pendingRequests > 0}
+								<row.icon size={22} class="shrink-0" />
+								<span class="min-w-0 flex-1">
+									<span class="block text-[15px] font-medium leading-tight tracking-tight">
+										{row.label}
+									</span>
+									{#if row.torrents}
+										<span
+											class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] leading-none tabular-nums text-fg-subtle"
+										>
+											{#each TORRENT_PILLS as p (p.key)}
+												{#if (torrentCounts.counts[p.key] ?? 0) > 0}
+													<span class="flex items-center gap-1.5">
+														<span
+															class="h-[6px] w-[6px] rounded-full"
+															style:background-color="var(--status-{p.dot})"
+														></span>
+														{torrentCounts.counts[p.key]}
+														{p.key}
+													</span>
+												{/if}
+											{/each}
+										</span>
+									{:else if row.line}
+										<span
+											class={cn(
+												"mt-1 block truncate font-mono text-[11px]",
+												active ? "text-accent-text opacity-80" : "text-fg-subtle",
+											)}
+										>
+											{row.line}
+										</span>
+									{/if}
+								</span>
+								{#if row.badge}
 									<span
 										class="shrink-0 rounded-full bg-status-wanted/20 px-2 py-0.5 font-mono text-[11px] tabular-nums text-status-wanted"
 									>
-										{pendingRequests.toLocaleString()}
+										{row.badge.toLocaleString()}
 									</span>
+								{:else}
+									<ChevronRight
+										size={18}
+										class={cn("shrink-0", active ? "text-accent-text" : "text-fg-faint")}
+										aria-hidden="true"
+									/>
 								{/if}
 							</a>
 						</li>
 					{/each}
 				</ul>
 
-				{#if adminItems.length}
-					<div class="px-2 pb-1 pt-3 font-mono text-[10px] uppercase tracking-[0.14em] text-fg-faint">
-						Admin
-					</div>
+				{#if sheet === "More" && adminRows.length}
+					<div class="my-2 h-px bg-border" role="presentation"></div>
 					<ul class="flex flex-col gap-0.5">
-						{#each adminItems as item (item.href)}
-							{@const active = isActiveFn(item.href)}
-							<li class="relative">
+						{#each adminRows as row (row.href)}
+							{@const active = isActiveFn(row.href)}
+							<li>
 								<a
-									href={item.href}
+									href={row.href}
 									aria-current={active ? "page" : undefined}
 									class={cn(rowBase, active ? rowActive : rowInactive)}
 								>
-									<item.icon size={19} class="shrink-0" />
-									<span class="flex-1 truncate">{item.label}</span>
+									<row.icon size={22} class="shrink-0" />
+									<span class="min-w-0 flex-1 text-[15px] font-medium tracking-tight">
+										{row.label}
+									</span>
+									<ChevronRight
+										size={18}
+										class={cn("shrink-0", active ? "text-accent-text" : "text-fg-faint")}
+										aria-hidden="true"
+									/>
 								</a>
 							</li>
 						{/each}
 					</ul>
 				{/if}
 
-				{#if auth.user}
-					<div class="mt-3 flex items-center gap-2 border-t border-border pt-3">
+				{#if sheet === "More" && auth.user}
+					<div class="mt-2 flex items-center gap-2 border-t border-border px-1 pt-3">
 						<a
 							href="/account"
 							aria-current={isActiveFn("/account") ? "page" : undefined}
 							class={cn(
-								"flex min-w-0 flex-1 items-center gap-3 rounded-lg px-2 py-2 transition-colors",
+								"flex min-w-0 flex-1 items-center gap-3 rounded-lg px-1.5 py-2 transition-colors",
 								isActiveFn("/account")
 									? "bg-accent-soft text-accent-text"
 									: "text-fg-muted hover:bg-surface hover:text-fg",

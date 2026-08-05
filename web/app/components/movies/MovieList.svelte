@@ -2,6 +2,7 @@
 	import { createMutation, useQueryClient } from "@tanstack/svelte-query";
 	import { Film, ChevronUp, ChevronDown, Bookmark } from "@lucide/svelte";
 	import { cn } from "../../lib/cn";
+	import { dragScroll } from "../../lib/drag-scroll";
 	import { api } from "../../lib/api";
 	import { toast } from "../../lib/toast";
 	import { formatBytes } from "../../lib/format";
@@ -78,8 +79,12 @@
 	}
 </script>
 
+<!-- Columns hide on CONTAINER width, not viewport width: at tablet the table has
+     ~700px of page, where viewport media queries kept every column and the
+     right-hand ones fell outside the box. -->
 <div
-	class="overflow-hidden rounded-lg border border-border bg-bg-elevated/70 backdrop-blur-md"
+	use:dragScroll
+	class="@container overflow-x-auto overflow-y-hidden rounded-lg border border-border bg-bg-elevated/70 backdrop-blur-md"
 >
 	<table class="w-full text-sm">
 		<thead
@@ -138,13 +143,13 @@
 				<th scope="col" class="w-28 px-3 py-2.5 text-left font-medium">Status</th>
 				<th
 					scope="col"
-					class="hidden w-40 px-3 py-2.5 text-left font-medium md:table-cell"
+					class="hidden w-40 px-3 py-2.5 text-left font-medium @3xl:table-cell"
 				>
 					Quality
 				</th>
 				<th
 					scope="col"
-					class="hidden w-24 px-3 py-2.5 text-right font-medium md:table-cell"
+					class="hidden w-24 px-3 py-2.5 text-right font-medium @2xl:table-cell"
 				>
 					Size
 				</th>
@@ -209,13 +214,13 @@
 						/>
 					</td>
 					<td
-						class="hidden px-3 py-2 font-mono text-xs text-fg-muted md:table-cell"
+						class="hidden px-3 py-2 font-mono text-xs text-fg-muted @3xl:table-cell"
 					>
 						{quality(movie.media_files)}
 					</td>
 					<td
 						class={cn(
-							"hidden px-3 py-2 text-right font-mono text-xs tabular md:table-cell",
+							"hidden px-3 py-2 text-right font-mono text-xs tabular @2xl:table-cell",
 							totalSize(movie.media_files) === "—"
 								? "text-fg-faint"
 								: "text-fg-muted",

@@ -19,12 +19,16 @@
 		queryKey: readonly unknown[];
 		disabled?: boolean;
 		disabledTitle?: string;
+		// Icon-only trigger for the phone action bar, where a 220px button would
+		// take the whole width.
+		compact?: boolean;
 	};
 	let {
 		path,
 		queryKey,
 		disabled = false,
 		disabledTitle,
+		compact = false,
 	}: Props = $props();
 
 	let open = $state(false);
@@ -69,32 +73,50 @@
 {/snippet}
 
 <div class="relative" onkeydown={onKey} role="presentation">
-	<button
-		bind:this={triggerEl}
-		type="button"
-		aria-haspopup="menu"
-		aria-expanded={open}
-		{disabled}
-		title={disabled ? disabledTitle : undefined}
-		onclick={toggle}
-		class="inline-flex w-[220px] items-center justify-between gap-2 rounded-md border border-border-strong bg-bg-elevated px-3 py-2 text-sm font-medium text-fg hover:border-accent/60 focus:outline-none focus:ring-2 focus:ring-accent/40 disabled:cursor-not-allowed disabled:border-border disabled:text-fg-faint disabled:hover:border-border"
-	>
-		<span class="inline-flex items-center gap-2">
-			<Play class="h-4 w-4 text-accent" aria-hidden="true" />
-			Play on
-		</span>
-		<ChevronDown
-			class="h-4 w-4 text-fg-muted transition {open ? 'rotate-180' : ''}"
-			aria-hidden="true"
-		/>
-	</button>
+	{#if compact}
+		<button
+			bind:this={triggerEl}
+			type="button"
+			aria-haspopup="menu"
+			aria-expanded={open}
+			aria-label="Play on"
+			{disabled}
+			title={disabled ? disabledTitle : "Play on"}
+			onclick={toggle}
+			class="grid h-11 w-11 place-items-center rounded-lg border border-border-strong bg-bg-elevated text-fg transition focus:outline-none focus:ring-2 focus:ring-accent/40 disabled:cursor-not-allowed disabled:border-border disabled:text-fg-faint"
+		>
+			<Play class="h-[18px] w-[18px] text-accent" aria-hidden="true" />
+		</button>
+	{:else}
+		<button
+			bind:this={triggerEl}
+			type="button"
+			aria-haspopup="menu"
+			aria-expanded={open}
+			{disabled}
+			title={disabled ? disabledTitle : undefined}
+			onclick={toggle}
+			class="inline-flex w-[220px] items-center justify-between gap-2 rounded-md border border-border-strong bg-bg-elevated px-3 py-2 text-sm font-medium text-fg hover:border-accent/60 focus:outline-none focus:ring-2 focus:ring-accent/40 disabled:cursor-not-allowed disabled:border-border disabled:text-fg-faint disabled:hover:border-border"
+		>
+			<span class="inline-flex items-center gap-2">
+				<Play class="h-4 w-4 text-accent" aria-hidden="true" />
+				Play on
+			</span>
+			<ChevronDown
+				class="h-4 w-4 text-fg-muted transition {open ? 'rotate-180' : ''}"
+				aria-hidden="true"
+			/>
+		</button>
+	{/if}
 
 	{#if open}
 		<div
 			role="menu"
 			aria-live="polite"
 			transition:fly={{ duration: 140, y: -4, easing: cubicOut }}
-			class="absolute right-0 z-30 mt-1 w-[260px] overflow-hidden rounded-md border border-border bg-bg-elevated shadow-3"
+			class="absolute right-0 z-30 w-[260px] overflow-hidden rounded-md border border-border bg-bg-elevated shadow-3 {compact
+				? 'bottom-full mb-2'
+				: 'mt-1'}"
 		>
 			{#if q.isLoading}
 				<p class="px-3 py-3 text-xs text-fg-muted">Resolving…</p>

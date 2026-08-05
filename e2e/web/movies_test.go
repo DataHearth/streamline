@@ -17,7 +17,7 @@ var _ = Describe("Movies page", Label("e2e"), func() {
 		Expect(page.MustElementR("h1", "^Movies$").MustText()).To(Equal("Movies"))
 		Expect(page.MustElementR("p", "Your library is empty").MustText()).
 			To(ContainSubstring("Your library is empty"))
-		Expect(page.MustElement(`nav[aria-label="Movie status"]`).MustText()).
+		Expect(visibleElement(page, `nav[aria-label="Movie status"]`).MustText()).
 			To(ContainSubstring("All"))
 	})
 
@@ -41,7 +41,7 @@ var _ = Describe("Movies page", Label("e2e"), func() {
 
 	It("filters to a status tab and clears back to the library view", func() {
 		page := newSessionPage("/movies")
-		page.MustElement(`nav[aria-label="Movie status"]`).
+		visibleElement(page, `nav[aria-label="Movie status"]`).
 			MustElementR("button", "Wanted").MustClick()
 
 		Expect(page.MustElementR("p", "No movies match this view").MustText()).

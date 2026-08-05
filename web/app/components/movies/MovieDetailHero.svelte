@@ -65,10 +65,10 @@
 	</div>
 
 	<div
-		class="relative grid w-full items-end gap-6 px-4 pb-12 pt-8 md:grid-cols-[260px_1fr] md:gap-10 md:px-8 md:pb-20 md:pt-10"
+		class="relative grid w-full items-end gap-5 px-4 pb-7 pt-6 md:grid-cols-[200px_1fr] md:gap-8 md:px-8 md:pb-16 md:pt-10 lg:grid-cols-[260px_1fr] lg:gap-10 lg:pb-20"
 	>
 		<div
-			class="relative aspect-[2/3] w-40 overflow-hidden rounded-lg shadow-[0_24px_48px_rgb(0_0_0_/0.5)] md:w-auto"
+			class="relative aspect-[2/3] w-24 overflow-hidden rounded-lg shadow-[0_24px_48px_rgb(0_0_0_/0.5)] md:w-auto"
 		>
 			<div class="absolute inset-0 bg-bg-card"></div>
 			<div class="absolute inset-0 grid place-items-center text-fg-faint">
@@ -94,7 +94,7 @@
 
 			<h1
 				id="movie-title"
-				class="text-3xl font-bold leading-[1.05] tracking-tight text-fg md:text-5xl"
+				class="text-[26px] font-bold leading-[1.05] tracking-tight text-fg md:text-4xl lg:text-5xl"
 				title={movie.title}
 			>
 				{movie.title}
@@ -128,8 +128,11 @@
 			{/if}
 
 			{#if actions}
+				<!-- md and up only: on a phone these live in the pinned bar at the
+				     bottom of the page, where Manual search is reachable from anywhere
+				     in the document rather than only from the top of it. -->
 				<div
-					class="mt-5 flex flex-wrap items-center gap-2.5"
+					class="mt-5 hidden flex-wrap items-center gap-2.5 md:flex"
 					aria-label="Movie actions"
 				>
 					{@render actions()}

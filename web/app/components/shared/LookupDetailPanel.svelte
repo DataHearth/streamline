@@ -25,6 +25,7 @@
 		onBack,
 		showTitle = true,
 		compact = false,
+		headless = false,
 	}: {
 		kind: "movie" | "series";
 		item?: Item;
@@ -37,6 +38,10 @@
 		showTitle?: boolean;
 		// Drops the panel's own padding for hosts that bring their own.
 		compact?: boolean;
+		// Drops the poster/title/meta block and the synopsis, for a host that
+		// already shows them and only wants what comes after (the add sheet, whose
+		// peek is the header — reprinting it would shift the layout mid-drag).
+		headless?: boolean;
 	} = $props();
 
 	function formatDate(iso?: string): string {
@@ -158,6 +163,7 @@
 			</button>
 		{/if}
 
+		{#if !headless}
 		<div class="flex gap-4">
 			<div
 				class="relative aspect-[2/3] w-[104px] flex-none overflow-hidden rounded-md border border-white/[0.06] bg-bg-card shadow-2"
@@ -244,8 +250,9 @@
 				</div>
 			</div>
 		</div>
+		{/if}
 
-		{#if synopsis}
+		{#if synopsis && !headless}
 			<section>
 				<h4
 					class="mb-2 font-mono text-[10.5px] uppercase tracking-[0.14em] text-fg-faint"

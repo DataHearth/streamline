@@ -34,6 +34,7 @@
 		selected = false,
 		selectionActive = false,
 		onSelect,
+		onLongPress,
 		kebab,
 	}: {
 		movie: PosterMovie;
@@ -51,6 +52,9 @@
 		selected?: boolean;
 		selectionActive?: boolean;
 		onSelect?: (v: boolean) => void;
+		// Touch has no hover to reveal the checkbox with: a press and hold enters
+		// selection mode and takes this card with it.
+		onLongPress?: () => void;
 		kebab?: Snippet;
 	} = $props();
 
@@ -60,9 +64,61 @@
 	// While a selection is in progress the whole card becomes a selection
 	// target — clicking through to a detail page mid-triage loses the set.
 	function onCardClick(e: MouseEvent) {
+		// The click that follows a long press would immediately undo it.
+		if (longPressed) {
+			longPressed = false;
+			e.preventDefault();
+			return;
+		}
 		if (!onSelect || !selectionActive) return;
 		e.preventDefault();
 		onSelect(!selected);
+	}
+
+	// ── Long press ───────────────────────────────────────────────────────────
+	// Touch only: a mouse has hover, which already reveals the checkbox. 480ms
+	// with 8px of slop, so a scroll that starts on a poster is still a scroll.
+	const HOLD_MS = 480;
+	const HOLD_SLOP = 8;
+	let holdTimer: number | null = null;
+	let holdX = 0;
+	let holdY = 0;
+	let longPressed = $state(false);
+	let holding = $state(false);
+
+	function cancelHold() {
+		holding = false;
+		if (holdTimer !== null) {
+			clearTimeout(holdTimer);
+			holdTimer = null;
+		}
+	}
+	function onPointerDown(e: PointerEvent) {
+		if (!onLongPress || selectionActive || e.pointerType === "mouse") return;
+		cancelHold();
+		holdX = e.clientX;
+		holdY = e.clientY;
+		longPressed = false;
+		holding = true;
+		holdTimer = window.setTimeout(() => {
+			holdTimer = null;
+			holding = false;
+			longPressed = true;
+			navigator.vibrate?.(10);
+			onLongPress?.();
+		}, HOLD_MS);
+	}
+	function onPointerMove(e: PointerEvent) {
+		if (holdTimer === null) return;
+		if (
+			Math.abs(e.clientX - holdX) > HOLD_SLOP ||
+			Math.abs(e.clientY - holdY) > HOLD_SLOP
+		)
+			cancelHold();
+	}
+	function onContextMenu(e: MouseEvent) {
+		// Android fires the context menu on the same gesture.
+		if (longPressed || holding) e.preventDefault();
 	}
 
 	function stop(handler?: (e: MouseEvent) => void) {
@@ -84,12 +140,18 @@
 		size === "md" && "w-full",
 		size === "lg" && "w-[200px]",
 		selected && "shadow-[0_0_0_2px_var(--accent),0_24px_64px_rgb(0_0_0_/0.55)]",
+		holding && "scale-[0.97]",
 	)}
 >
 	<a
 		href={cardHref}
 		onclick={onCardClick}
-		class="relative block aspect-[2/3] w-full overflow-hidden rounded-lg focus:outline-none"
+		onpointerdown={onPointerDown}
+		onpointermove={onPointerMove}
+		onpointerup={cancelHold}
+		onpointercancel={cancelHold}
+		oncontextmenu={onContextMenu}
+		class="relative block aspect-[2/3] w-full overflow-hidden rounded-lg [-webkit-touch-callout:none] focus:outline-none"
 	>
 		<div class="absolute inset-0 bg-bg-card"></div>
 		<div class="absolute inset-0 grid place-items-center text-fg-faint">

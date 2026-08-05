@@ -8,10 +8,14 @@
 		seasons,
 		selected,
 		onSelect,
+		vertical = false,
 	}: {
 		seasons: Season[];
 		selected: number;
 		onSelect: (n: number) => void;
+		// The tablet two-pane layout stacks the strip down the left instead of
+		// scrolling it across the top.
+		vertical?: boolean;
 	} = $props();
 
 	function pad(n: number): string {
@@ -19,7 +23,11 @@
 	}
 </script>
 
-<div class="flex gap-2 overflow-x-auto pb-1">
+<div
+	class={vertical
+		? "flex flex-col gap-2"
+		: "flex gap-2 overflow-x-auto pb-1"}
+>
 	{#each seasons as s (s.number)}
 		{@const active = selected === s.number}
 		{@const missing = missingEpisodes(s.episodes ?? [])}
@@ -28,7 +36,8 @@
 			onclick={() => onSelect(s.number)}
 			aria-current={active ? "true" : undefined}
 			class={cn(
-				"flex w-48 shrink-0 flex-col gap-1.5 rounded-lg border p-3 text-left transition",
+				"flex flex-col gap-1.5 rounded-lg border p-3 text-left transition",
+				vertical ? "w-full" : "w-48 shrink-0",
 				active
 					? "border-accent/60 bg-accent-soft"
 					: "border-border bg-bg-elevated hover:border-border-strong",

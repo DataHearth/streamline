@@ -754,6 +754,11 @@ export type ImportScan = {
 	updated_at: string;
 };
 
+export type ImportCounts = {
+	running: number;
+	awaiting_review: number;
+};
+
 export type ImportScanList = {
 	items: ImportScan[];
 	total: number;

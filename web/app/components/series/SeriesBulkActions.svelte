@@ -12,6 +12,11 @@
 	import { toast } from "../../lib/toast";
 	import { runBulk, plural } from "../../lib/bulk";
 	import BulkActionBar from "../shared/BulkActionBar.svelte";
+	import BulkTouchBar from "../shared/BulkTouchBar.svelte";
+	import type {
+		TouchAction,
+		TouchMenuRow,
+	} from "../shared/BulkTouchBar.svelte";
 	import KebabMenu from "../shared/KebabMenu.svelte";
 	import type { KebabItem } from "../shared/KebabMenu.svelte";
 	import QualityProfileModal from "../movies/QualityProfileModal.svelte";
@@ -37,6 +42,18 @@
 	let picked = $derived(series.filter((s) => selected.has(s.id)));
 	let episodeCount = $derived(
 		picked.reduce((n, s) => n + (s.have_episodes ?? 0), 0),
+	);
+	let wantedCount = $derived(
+		picked.reduce((n, s) => n + (s.wanted_episodes ?? 0), 0),
+	);
+	let monitoredPicked = $derived(picked.filter((s) => s.monitored).length);
+	let pickedNames = $derived(
+		picked.length === 0
+			? ""
+			: picked
+					.slice(0, 2)
+					.map((s) => s.title)
+					.join(", ") + (picked.length > 2 ? `, +${picked.length - 2}` : ""),
 	);
 
 	let qpOpen = $state(false);
@@ -144,10 +161,86 @@
 
 	const btn =
 		"inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border border-border bg-bg-elevated px-3 text-[12.5px] font-medium text-fg-muted transition hover:border-border-strong hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring disabled:cursor-not-allowed disabled:opacity-50";
+
+	let touchActions = $derived<TouchAction[]>([
+		{
+			key: "monitor",
+			label: "Monitor",
+			icon: Bookmark,
+			onSelect: () => setMonitored(true),
+		},
+		{ key: "search", label: "Search", icon: Search, onSelect: searchNow },
+		{
+			key: "delete",
+			label: "Delete",
+			icon: Trash2,
+			danger: true,
+			onSelect: () => (deleteOpen = true),
+		},
+	]);
+
+	let touchMenu = $derived<TouchMenuRow[]>([
+		{
+			key: "monitor",
+			label: "Monitor",
+			icon: Bookmark,
+			line: `${monitoredPicked} of ${count} already monitored`,
+			onSelect: () => setMonitored(true),
+		},
+		{
+			key: "unmonitor",
+			label: "Stop monitoring",
+			icon: BookmarkX,
+			onSelect: () => setMonitored(false),
+		},
+		{
+			key: "search",
+			label: "Search for wanted episodes",
+			icon: Search,
+			line: wantedCount
+				? `${plural(wantedCount, "episode")} wanted`
+				: "nothing wanted right now",
+			onSelect: searchNow,
+		},
+		{
+			key: "quality",
+			label: "Change quality profile",
+			icon: SlidersHorizontal,
+			onSelect: () => (qpOpen = true),
+		},
+		{
+			key: "refresh",
+			label: "Refresh metadata",
+			icon: RefreshCw,
+			onSelect: refresh,
+		},
+		{
+			key: "delete",
+			label: "Remove from library",
+			icon: Trash2,
+			danger: true,
+			dividerBefore: true,
+			line: "keeps files on disk",
+			onSelect: () => (deleteOpen = true),
+		},
+		{
+			key: "delete-with-files",
+			label: "Remove and delete files",
+			icon: Trash2,
+			danger: true,
+			disabled: episodeCount === 0,
+			line:
+				episodeCount === 0
+					? "no episodes on disk"
+					: `deletes ${plural(episodeCount, "episode")} · cannot be undone`,
+			onSelect: () => (deleteWithFilesOpen = true),
+		},
+	]);
 </script>
 
 {#if active}
-	<BulkActionBar
+	<div class="hidden md:block">
+		<BulkActionBar
 		{count}
 		{total}
 		{busy}
@@ -189,6 +282,20 @@
 		</button>
 		<KebabMenu items={menuItems} variant="bar" />
 	</BulkActionBar>
+	</div>
+
+	<BulkTouchBar
+		{count}
+		{total}
+		{busy}
+		noun="series"
+		nounPlural="series"
+		actions={touchActions}
+		menu={touchMenu}
+		footer={pickedNames}
+		{onSelectAll}
+		{onClear}
+	/>
 {/if}
 
 <QualityProfileModal

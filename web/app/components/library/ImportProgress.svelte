@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Loader2 } from "@lucide/svelte";
+	import { LoaderCircle } from "@lucide/svelte";
 	import type { ImportScan } from "../../lib/types";
 
 	type Props = { scan: ImportScan };
@@ -17,7 +17,7 @@
 
 <div class="flex flex-col items-center gap-5 text-center">
 	<div class="relative flex h-16 w-16 items-center justify-center">
-		<Loader2 size={48} class="animate-spin text-accent" aria-hidden="true" />
+		<LoaderCircle size={48} class="animate-spin text-accent" aria-hidden="true" />
 	</div>
 	<div class="space-y-1">
 		<p class="text-base font-semibold text-fg">

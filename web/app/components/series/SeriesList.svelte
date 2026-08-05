@@ -2,6 +2,7 @@
 	import { createMutation, useQueryClient } from "@tanstack/svelte-query";
 	import { Bookmark, Tv } from "@lucide/svelte";
 	import { cn } from "../../lib/cn";
+	import { dragScroll } from "../../lib/drag-scroll";
 	import { api } from "../../lib/api";
 	import { toast } from "../../lib/toast";
 	import { tvPosterUrl } from "../../lib/posters";
@@ -47,8 +48,12 @@
 	}
 </script>
 
+<!-- Columns hide on CONTAINER width, not viewport width: at tablet the table has
+     ~700px of page (and less inside a pane), where viewport media queries kept
+     every column and the right-hand ones fell outside the box. -->
 <div
-	class="overflow-hidden rounded-lg border border-border bg-bg-elevated/70 backdrop-blur-md"
+	use:dragScroll
+	class="@container overflow-x-auto overflow-y-hidden rounded-lg border border-border bg-bg-elevated/70 backdrop-blur-md"
 >
 	<table class="w-full text-sm">
 		<thead
@@ -67,23 +72,23 @@
 				<th scope="col" class="px-3 py-2.5 text-left font-medium">Title</th>
 				<th
 					scope="col"
-					class="hidden w-28 px-3 py-2.5 text-left font-medium md:table-cell"
+					class="hidden w-28 px-3 py-2.5 text-left font-medium @4xl:table-cell"
 				>
 					Network
 				</th>
 				<th
 					scope="col"
-					class="hidden w-20 px-3 py-2.5 text-left font-medium sm:table-cell"
+					class="hidden w-20 px-3 py-2.5 text-left font-medium @3xl:table-cell"
 				>
 					Type
 				</th>
 				<th scope="col" class="w-32 px-3 py-2.5 text-left font-medium">Status</th>
-				<th scope="col" class="w-52 px-3 py-2.5 text-left font-medium">
+				<th scope="col" class="w-44 px-3 py-2.5 text-left font-medium @2xl:w-52">
 					Episodes
 				</th>
 				<th
 					scope="col"
-					class="hidden w-20 px-3 py-2.5 text-right font-medium sm:table-cell"
+					class="hidden w-20 px-3 py-2.5 text-right font-medium @2xl:table-cell"
 				>
 					Rating
 				</th>
@@ -139,13 +144,13 @@
 						{/if}
 					</td>
 					<td
-						class="hidden px-3 py-2.5 font-mono text-xs text-fg-muted md:table-cell"
+						class="hidden px-3 py-2.5 font-mono text-xs text-fg-muted @4xl:table-cell"
 					>
 						{show.network ?? "—"}
 					</td>
 					<td
 						class={cn(
-							"hidden px-3 py-2.5 font-mono text-xs lowercase sm:table-cell",
+							"hidden px-3 py-2.5 font-mono text-xs lowercase @3xl:table-cell",
 							show.type === "anime"
 								? "text-accent-text"
 								: show.type === "daily"
@@ -179,7 +184,7 @@
 						{/if}
 					</td>
 					<td
-						class="hidden px-3 py-2.5 text-right font-mono text-xs tabular text-fg-muted sm:table-cell"
+						class="hidden px-3 py-2.5 text-right font-mono text-xs tabular text-fg-muted @2xl:table-cell"
 					>
 						{#if show.rating && show.rating > 0}
 							★ {show.rating.toFixed(1)}

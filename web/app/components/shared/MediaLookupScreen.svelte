@@ -11,7 +11,7 @@
 		X,
 		Plus,
 		Check,
-		Loader2,
+		LoaderCircle,
 		Film,
 		Tv,
 		ArrowUpRight,
@@ -33,7 +33,6 @@
 		PaginatedMovies,
 		PaginatedTVShows,
 		QualityProfile,
-		SeriesLookupResult,
 		SeriesLookupResultList,
 		TMDBMovieResult,
 		TVShow,
@@ -235,7 +234,9 @@
 	let libraryByLookupId = $derived.by(() => {
 		const map = new Map<number, Movie | TVShow>();
 		for (const item of libraryQuery.data?.items ?? []) {
-			const key = isMovie ? item.tmdb_id : item.tvdb_id;
+			// `in` rather than `isMovie`: the flag is a prop, so it narrows nothing
+			// for the compiler, and the required id field is the real discriminant.
+			const key = "tmdb_id" in item ? item.tmdb_id : item.tvdb_id;
 			if (key) map.set(key, item);
 		}
 		return map;
@@ -249,6 +250,14 @@
 	let heldCount = $derived(results.filter(isHeld).length);
 	let selected = $derived(results.find((r) => r.id === selectedId));
 	let selectedLocal = $derived(selected ? localFor(selected.id) : undefined);
+	// The library row narrowed to one kind, so the movie-only and series-only
+	// fields below are reachable without asserting.
+	let selectedMovie = $derived(
+		selectedLocal && "tmdb_id" in selectedLocal ? selectedLocal : undefined,
+	);
+	let selectedShow = $derived(
+		selectedLocal && "tvdb_id" in selectedLocal ? selectedLocal : undefined,
+	);
 	let selectedLocalId = $derived(selected ? localIdFor(selected.id) : undefined);
 	let selectedHeld = $derived(selected ? isHeld(selected) : false);
 	let selectedRequested = $derived(selected ? requested.has(selected.id) : false);
@@ -281,20 +290,20 @@
 
 	// What you already hold, for the library state of the sheet.
 	let heldSize = $derived.by(() => {
-		if (!isMovie || !selectedLocal) return "";
+		if (!selectedMovie) return "";
 		let total = 0;
-		for (const f of selectedLocal.media_files ?? []) total += f.size;
+		for (const f of selectedMovie.media_files ?? []) total += f.size;
 		return total > 0 ? formatBytes(total, "") : "";
 	});
 	let heldDetail = $derived.by(() => {
-		if (!selectedLocal) return "";
-		if (isMovie) {
-			return [selectedLocal.quality_profile, heldSize].filter(Boolean).join(" · ");
+		if (selectedMovie) {
+			return [selectedMovie.quality_profile, heldSize].filter(Boolean).join(" · ");
 		}
-		const have = selectedLocal.have_episodes ?? 0;
-		const total = selectedLocal.total_episodes ?? 0;
+		if (!selectedShow) return "";
+		const have = selectedShow.have_episodes ?? 0;
+		const total = selectedShow.total_episodes ?? 0;
 		return [
-			selectedLocal.quality_profile,
+			selectedShow.quality_profile,
 			total > 0 ? `${have}/${total} episodes` : "",
 		]
 			.filter(Boolean)
@@ -468,10 +477,9 @@
 		open={selected !== undefined}
 		bind:expanded={sheetExpanded}
 		label={isMovie ? "Movie details" : "Series details"}
-		hint="Swipe up for cast and source"
 		onClose={() => (selectedId = null)}
 	>
-		{#snippet peek()}
+		{#snippet peek(atFullHeight)}
 			{#if selected}
 				<div class="flex gap-4 pt-1">
 					<div
@@ -535,17 +543,26 @@
 					</div>
 				</div>
 				{#if synopsis}
-					<p
-						class="mt-4 line-clamp-3 text-[13.5px] leading-relaxed text-fg-muted [text-wrap:pretty]"
-					>
-						{synopsis}
-					</p>
+					<section class="mt-4">
+						<h3
+							class="mb-2 font-mono text-[10.5px] uppercase tracking-[0.14em] text-fg-faint"
+						>
+							Synopsis
+						</h3>
+						<p
+							class="text-[13.5px] leading-relaxed text-fg-muted [text-wrap:pretty] {atFullHeight
+								? ''
+								: 'line-clamp-3'}"
+						>
+							{synopsis}
+						</p>
+					</section>
 				{/if}
 			{/if}
 		{/snippet}
 
 		{#snippet full()}
-			<div class="pt-1">
+			<div class="pb-4">
 				<LookupDetailPanel
 					{kind}
 					item={panelItem}
@@ -555,6 +572,7 @@
 						? (detailQuery.error?.message ?? "Couldn't load details")
 						: undefined}
 					compact
+					headless
 				/>
 			</div>
 		{/snippet}
@@ -564,8 +582,8 @@
 				<div
 					class="flex h-[46px] items-center justify-between gap-3 rounded-xl border border-border bg-surface px-3.5"
 				>
-					{#if isMovie && selectedLocal}
-						<StatusPill status={movieStatus(selectedLocal)} size="sm" />
+					{#if selectedMovie}
+						<StatusPill status={movieStatus(selectedMovie)} size="sm" />
 					{:else}
 						<span class="text-[13.5px] text-fg">In library</span>
 					{/if}
@@ -614,7 +632,7 @@
 					class="mt-2.5 flex h-[50px] w-full items-center justify-center gap-2 rounded-xl bg-accent text-[16px] font-semibold text-fg-on-accent transition active:opacity-80 disabled:opacity-60"
 				>
 					{#if selectedPending}
-						<Loader2 size={17} class="animate-spin" aria-hidden="true" />
+						<LoaderCircle size={17} class="animate-spin" aria-hidden="true" />
 						{canAdd ? "Adding…" : "Requesting…"}
 					{:else}
 						<Plus size={18} aria-hidden="true" />
