@@ -62,6 +62,9 @@
 					"—",
 				),
 	);
+	// "347.9 GiB" at 28px is wider than a quarter-width tile, so the unit rides
+	// smaller on the baseline and the value keeps clear of the ⓘ button.
+	let freeParts = $derived(/^([\d.,]+)\s*(\S+)$/.exec(freeText));
 	let diskPct = $derived.by(() => {
 		if (volumes.length === 0) return 0;
 		const avg = volumes.reduce((n, u) => n + u.pct, 0) / volumes.length;
@@ -294,8 +297,19 @@
 				</dl>
 			{/if}
 		{/if}
-		<div class="font-mono text-[28px] font-bold tabular leading-none tracking-tight">
-			{volumes.length > 0 ? freeText : "—"}
+		<div
+			class="flex items-baseline gap-1 pr-7 font-mono text-[28px] font-bold tabular leading-none tracking-tight"
+		>
+			{#if volumes.length === 0}
+				—
+			{:else if freeParts}
+				<span class="truncate">{freeParts[1]}</span>
+				<span class="shrink-0 text-[13px] font-semibold text-fg-muted">
+					{freeParts[2]}
+				</span>
+			{:else}
+				<span class="truncate">{freeText}</span>
+			{/if}
 		</div>
 		<div class="mt-2 text-[11px] uppercase tracking-[0.1em] text-fg-subtle">
 			Free
