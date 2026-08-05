@@ -2,6 +2,7 @@ package tvshow
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/datahearth/streamline/ent"
@@ -84,6 +85,42 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(show.ID).To(Equal(uint32(7)))
 		Eventually(done).Should(BeClosed())
+	})
+
+	It("adds the show anyway when the cast fetch fails", func() {
+		metaMk.GetSeries(mock.Anything, uint32(123)).Return(&metadata.TVDetails{
+			TVResult: metadata.TVResult{TVDBID: 123, Title: "The Black Sea"},
+			Status:   "continuing",
+			Type:     metadata.SeriesStandard,
+		}, nil).Once()
+		metaMk.GetSeriesCast(mock.Anything, uint32(123)).
+			Return(nil, errors.New("tvdb down")).
+			Once()
+		storeMk.CreateTVShow(mock.Anything, mock.MatchedBy(
+			func(p db.CreateTVShowParams) bool { return len(p.Cast) == 0 },
+		)).
+			Return(&ent.TVShow{ID: 7, TvdbID: 123}, nil).
+			Once()
+
+		show, err := svc.Add(ctx, 123, "")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(show.ID).To(Equal(uint32(7)))
+	})
+
+	It("RefreshStale only visits shows past the refresh interval", func() {
+		storeMk.ListTVShowsStaleSince(
+			mock.Anything,
+			mock.AnythingOfType("time.Time"),
+		).
+			RunAndReturn(func(_ context.Context, cutoff time.Time) ([]*ent.TVShow, error) {
+				Expect(cutoff).To(BeTemporally(
+					"~", time.Now().Add(-metadataMinRefreshInterval), time.Minute,
+				))
+				return nil, nil
+			}).
+			Once()
+
+		Expect(svc.RefreshStale(ctx)).To(Succeed())
 	})
 
 	DescribeTable(

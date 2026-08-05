@@ -474,6 +474,10 @@ type Store interface {
 	FindTVShowByID(ctx context.Context, id uint32) (*ent.TVShow, error)
 	FindTVShowByTVDBID(ctx context.Context, tvdbID uint32) (*ent.TVShow, error)
 	ListTVShows(ctx context.Context, offset, limit uint32) ([]*ent.TVShow, error)
+	ListTVShowsStaleSince(
+		ctx context.Context,
+		cutoff time.Time,
+	) ([]*ent.TVShow, error)
 	CountTVShows(ctx context.Context) (int, error)
 	CountTVShowsByStatus(
 		ctx context.Context,

@@ -5988,6 +5988,65 @@ func (_c *MockTx_ListTVShows_Call) RunAndReturn(run func(context.Context, uint32
 	return _c
 }
 
+// ListTVShowsStaleSince provides a mock function with given fields: ctx, cutoff
+func (_m *MockTx) ListTVShowsStaleSince(ctx context.Context, cutoff time.Time) ([]*ent.TVShow, error) {
+	ret := _m.Called(ctx, cutoff)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListTVShowsStaleSince")
+	}
+
+	var r0 []*ent.TVShow
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, time.Time) ([]*ent.TVShow, error)); ok {
+		return rf(ctx, cutoff)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, time.Time) []*ent.TVShow); ok {
+		r0 = rf(ctx, cutoff)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ent.TVShow)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, time.Time) error); ok {
+		r1 = rf(ctx, cutoff)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockTx_ListTVShowsStaleSince_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListTVShowsStaleSince'
+type MockTx_ListTVShowsStaleSince_Call struct {
+	*mock.Call
+}
+
+// ListTVShowsStaleSince is a helper method to define mock.On call
+//   - ctx context.Context
+//   - cutoff time.Time
+func (_e *MockTx_Expecter) ListTVShowsStaleSince(ctx interface{}, cutoff interface{}) *MockTx_ListTVShowsStaleSince_Call {
+	return &MockTx_ListTVShowsStaleSince_Call{Call: _e.mock.On("ListTVShowsStaleSince", ctx, cutoff)}
+}
+
+func (_c *MockTx_ListTVShowsStaleSince_Call) Run(run func(ctx context.Context, cutoff time.Time)) *MockTx_ListTVShowsStaleSince_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(time.Time))
+	})
+	return _c
+}
+
+func (_c *MockTx_ListTVShowsStaleSince_Call) Return(_a0 []*ent.TVShow, _a1 error) *MockTx_ListTVShowsStaleSince_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockTx_ListTVShowsStaleSince_Call) RunAndReturn(run func(context.Context, time.Time) ([]*ent.TVShow, error)) *MockTx_ListTVShowsStaleSince_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListTorrentSessions provides a mock function with given fields: ctx
 func (_m *MockTx) ListTorrentSessions(ctx context.Context) ([]*ent.TorrentSession, error) {
 	ret := _m.Called(ctx)

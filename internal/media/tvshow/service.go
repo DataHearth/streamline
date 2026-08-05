@@ -62,6 +62,10 @@ var (
 	ErrSeriesNotFound   = errors.New("series not found")
 )
 
+// metadataMinRefreshInterval bounds the TVDB call rate of the metadata-refresh
+// scheduler job: only shows last refreshed longer ago than this are touched.
+const metadataMinRefreshInterval = 24 * time.Hour
+
 type Service struct {
 	db       db.Store
 	metadata metadata.TVProvider
@@ -131,10 +135,7 @@ func (s *Service) Add(
 	if err != nil {
 		return nil, fmt.Errorf("tvdb get series: %w", err)
 	}
-	cast, err := s.metadata.GetSeriesCast(ctx, tvdbID)
-	if err != nil {
-		return nil, fmt.Errorf("tvdb get series cast: %w", err)
-	}
+	cast := s.seriesCast(ctx, tvdbID)
 
 	show, err := s.db.CreateTVShow(ctx, db.CreateTVShowParams{
 		Title:          d.Title,
@@ -808,6 +809,23 @@ func (s *Service) grabPackAndMark(
 	return nil
 }
 
+// seriesCast fetches top-billed actors, degrading to nil when TVDB's extended
+// record is unavailable. Cast is a display-only section, so a flaky call must
+// not fail the add/refresh around it — and nil leaves any stored cast intact
+// rather than wiping it.
+func (s *Service) seriesCast(
+	ctx context.Context,
+	tvdbID uint32,
+) []metadata.CastMember {
+	cast, err := s.metadata.GetSeriesCast(ctx, tvdbID)
+	if err != nil {
+		slog.WarnContext(ctx, "tvdb cast fetch failed",
+			"tvshow.tvdb_id", tvdbID, "error", err)
+		return nil
+	}
+	return cast
+}
+
 func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.TVShow, error) {
 	ctx, span := tracer.Start(
 		ctx,
@@ -823,13 +841,7 @@ func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.TVShow, error
 	if err != nil {
 		return nil, otelx.RecordSpanError(span, fmt.Errorf("tvdb refresh: %w", err))
 	}
-	cast, err := s.metadata.GetSeriesCast(ctx, show.TvdbID)
-	if err != nil {
-		return nil, otelx.RecordSpanError(
-			span,
-			fmt.Errorf("tvdb refresh cast: %w", err),
-		)
-	}
+	cast := s.seriesCast(ctx, show.TvdbID)
 	// Persist refreshed provider fields so changes (status, rating, network,
 	// etc.) surface. Season/episode reconciliation is tracked separately.
 	if err := s.db.UpdateTVShowMetadata(ctx, id, db.UpdateTVShowMetadataParams{
@@ -868,27 +880,36 @@ func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.TVShow, error
 	return s.db.FindTVShowByID(ctx, id)
 }
 
-// RefreshStale re-pulls metadata for every show. A Phase 2 scheduler job wires
-// this to the metadata_refresh tick.
+// RefreshStale re-pulls TVDB metadata for shows not refreshed within
+// metadataMinRefreshInterval. Per-row failures are logged and skipped; the
+// tick returns nil unless the initial DB query fails.
 func (s *Service) RefreshStale(ctx context.Context) error {
 	ctx, span := tracer.Start(ctx, "tvshow.refresh_stale")
 	defer span.End()
-	rows, err := s.db.ListTVShows(ctx, 0, 10000)
+	cutoff := time.Now().Add(-metadataMinRefreshInterval)
+	rows, err := s.db.ListTVShowsStaleSince(ctx, cutoff)
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
 	}
+	span.SetAttributes(attribute.Int("refresh.candidate_count", len(rows)))
+
+	refreshed, skipped := 0, 0
 	for _, sh := range rows {
 		if _, err := s.RefreshOne(ctx, sh.ID); err != nil {
-			slog.WarnContext(
-				ctx,
-				"tv refresh failed",
-				"tvshow.id",
-				sh.ID,
-				"error",
-				err,
-			)
+			slog.WarnContext(ctx, "tv refresh failed",
+				"tvshow.id", sh.ID, "error", err)
+			skipped++
+			continue
 		}
+		refreshed++
 	}
+
+	span.SetAttributes(
+		attribute.Int("refresh.refreshed_count", refreshed),
+		attribute.Int("refresh.skipped_count", skipped),
+	)
+	slog.InfoContext(ctx, "tv metadata refresh complete",
+		"refreshed", refreshed, "skipped", skipped)
 	return nil
 }
 

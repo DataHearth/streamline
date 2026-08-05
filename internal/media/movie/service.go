@@ -127,7 +127,7 @@ type FilterParams struct {
 }
 
 // metadataMinRefreshInterval bounds the TMDB call rate of the metadata-refresh
-// scheduler job: only movies whose update_time is older than this are touched.
+// scheduler job: only movies last refreshed longer ago than this are touched.
 const metadataMinRefreshInterval = 24 * time.Hour
 
 // MetadataRefresher is the consumer-facing surface for the metadata-refresh

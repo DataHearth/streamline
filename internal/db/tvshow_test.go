@@ -7,6 +7,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
+	"github.com/datahearth/streamline/ent/schema"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -293,6 +294,50 @@ var _ = Describe("TVShow store", Label("unit", "db"), func() {
 		none, err := store.FindTVShowByTVDBID(ctx, 404)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(none).To(BeNil())
+	})
+
+	Describe("UpdateTVShowMetadata", func() {
+		It("keeps the stored cast when the refresh carries none", func() {
+			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "X", Year: 2020, TvdbID: 11,
+				Cast: []schema.CastMember{{Name: "Ana Vidal"}},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(
+				store.UpdateTVShowMetadata(ctx, show.ID, UpdateTVShowMetadataParams{
+					Title: "X", Year: 2020,
+				}),
+			).To(Succeed())
+
+			got, err := store.FindTVShowByID(ctx, show.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.Cast).To(HaveLen(1))
+			Expect(got.Cast[0].Name).To(Equal("Ana Vidal"))
+		})
+	})
+
+	Describe("ListTVShowsStaleSince", func() {
+		It("returns never-refreshed shows and skips freshly refreshed ones", func() {
+			stale, err := store.CreateTVShow(
+				ctx, CreateTVShowParams{Title: "stale", Year: 2020, TvdbID: 21},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			fresh, err := store.CreateTVShow(
+				ctx, CreateTVShowParams{Title: "fresh", Year: 2020, TvdbID: 22},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(
+				store.SetTVShowRefreshedAt(ctx, fresh.ID, time.Now()),
+			).To(Succeed())
+
+			items, err := store.ListTVShowsStaleSince(
+				ctx, time.Now().Add(-24*time.Hour),
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(items).To(HaveLen(1))
+			Expect(items[0].ID).To(Equal(stale.ID))
+		})
 	})
 
 	It("toggles season and episode monitored flags", func() {

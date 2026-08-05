@@ -94,8 +94,13 @@ func (db *DB) UpdateTVShowMetadata(
 		SetCreator(p.Creator).
 		SetRuntime(p.Runtime).
 		SetRating(p.Rating).
-		SetGenres(p.Genres).
-		SetCast(p.Cast)
+		SetGenres(p.Genres)
+	// Cast comes from a separate provider call than the rest, so an empty
+	// slice means "that call failed" far more often than "this show has no
+	// actors" — keep whatever is already stored.
+	if len(p.Cast) > 0 {
+		u = u.SetCast(p.Cast)
+	}
 	if p.SeriesStatus != "" {
 		u = u.SetSeriesStatus(tvshow.SeriesStatus(p.SeriesStatus))
 	}
@@ -341,6 +346,22 @@ func (db *DB) FindTVShowByTVDBID(
 		return nil, nil
 	}
 	return row, err
+}
+
+// ListTVShowsStaleSince returns shows never refreshed, or last refreshed
+// before cutoff. Mirrors ListMoviesStaleSince: keyed on last_refreshed_at, not
+// update_time, because that column moves on every write (episode import,
+// status change) and would make the refresh tick a no-op.
+func (db *DB) ListTVShowsStaleSince(
+	ctx context.Context,
+	cutoff time.Time,
+) ([]*ent.TVShow, error) {
+	return db.client.TVShow.Query().
+		Where(tvshow.Or(
+			tvshow.LastRefreshedAtIsNil(),
+			tvshow.LastRefreshedAtLT(cutoff),
+		)).
+		All(ctx)
 }
 
 func (db *DB) ListTVShows(
