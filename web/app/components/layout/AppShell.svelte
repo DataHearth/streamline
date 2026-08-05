@@ -3,8 +3,10 @@
 	import Sidebar from "./Sidebar.svelte";
 	import SidebarRail from "./SidebarRail.svelte";
 	import BottomNav from "./BottomNav.svelte";
+	import AddButton from "./AddButton.svelte";
 	import TopBar from "./TopBar.svelte";
 	import CommandPalette from "./CommandPalette.svelte";
+	import SearchScreen from "./SearchScreen.svelte";
 	import AddMovieModal from "../movies/AddMovieModal.svelte";
 	import AddSeriesModal from "../series/AddSeriesModal.svelte";
 	import MediaLookupScreen from "../shared/MediaLookupScreen.svelte";
@@ -14,7 +16,8 @@
 	let addMovieOpen = $state(false);
 	let addSeriesOpen = $state(false);
 	// Below md the add/request flow is a full-screen search rather than the split
-	// modal, which is a different component — not something CSS can pick.
+	// modal, and search itself is a screen rather than the centred palette —
+	// different components, not something CSS can pick.
 	let compact = $state(false);
 
 	onMount(() => {
@@ -54,8 +57,13 @@
 		{@render children?.()}
 	</main>
 	<BottomNav />
+	<AddButton />
 </div>
-<CommandPalette />
+{#if compact}
+	<SearchScreen />
+{:else}
+	<CommandPalette />
+{/if}
 
 {#if compact}
 	<MediaLookupScreen
@@ -85,6 +93,14 @@
 		}
 		:global(*::-webkit-scrollbar) {
 			display: none;
+		}
+	}
+	/* main's pb-16 clears the bottom bar, but not the add pill floating 5.25rem
+	   above it — without this the last row of a grid ends underneath it at the
+	   bottom of a scroll. AddButton sets the flag only while it is showing. */
+	@media (max-width: 767px) {
+		:global(body[data-add-pill] #main) {
+			padding-bottom: 9.5rem;
 		}
 	}
 </style>

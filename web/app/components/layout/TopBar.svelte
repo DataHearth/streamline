@@ -14,6 +14,7 @@
 	import { api } from "../../lib/api";
 	import { auth } from "../../lib/auth.svelte";
 	import { pageMeta } from "../../lib/page-meta.svelte";
+	import SearchField from "./SearchField.svelte";
 	import type { SystemInfo } from "../../lib/types";
 	import { toast } from "../../lib/toast";
 
@@ -116,6 +117,9 @@
 	}
 
 	// Add-to-library dropdown ------------------------------------------------
+	// Desktop only (lg+). Below that the plus is not in the bar at all: the
+	// tablet rail carries it as its first item, and on a phone it is the pill
+	// above the bottom nav (AddButton). Both raise the same two events.
 	// request_only users may only request, so they see a trimmed menu (Movie +
 	// Series, which the modals route to a request) under a "Request a title"
 	// heading. admins/members get the full "Add to library" menu.
@@ -318,13 +322,14 @@
 	</button>
 
 	<div class="flex flex-1 items-center justify-end gap-2">
+		<SearchField />
 		<button
 			type="button"
 			onclick={openPalette}
 			aria-label="Search"
-			class="grid h-10 w-10 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg lg:hidden"
+			class="grid h-11 w-11 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg md:hidden"
 		>
-			<Search size={18} aria-hidden="true" />
+			<Search size={19} aria-hidden="true" />
 		</button>
 		<button
 			bind:this={addTrigger}
@@ -334,7 +339,7 @@
 			aria-haspopup="menu"
 			aria-expanded={addOpen}
 			title={addHeading}
-			class="grid h-10 w-10 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg"
+			class="hidden h-10 w-10 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg lg:grid"
 		>
 			<Plus size={18} aria-hidden="true" />
 		</button>

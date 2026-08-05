@@ -369,7 +369,7 @@
 
 {#if sheet}
 	<div
-		class="fixed inset-0 z-50 md:hidden"
+		class="fixed inset-0 z-[60] md:hidden"
 		role="dialog"
 		aria-modal="true"
 		aria-label={sheet}

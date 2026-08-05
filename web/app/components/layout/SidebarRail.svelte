@@ -15,6 +15,7 @@
 		FolderInput,
 		Settings,
 		LogOut,
+		Plus,
 	} from "@lucide/svelte";
 	import { isActive as routifyIsActive } from "@roxi/routify";
 	import { createQuery } from "@tanstack/svelte-query";
@@ -65,6 +66,50 @@
 	function closeFlyout() {
 		flyout = "";
 	}
+	// Adding is an action, not a destination, so it sits above the hairline at the
+	// top of the rail rather than among the sections. The tablet has no thumb
+	// corner for a floating pill and the top bar is now search only, so the rail
+	// is where the plus goes — reusing the flyout the sections already open.
+	let addHeading = $derived(
+		auth.canAddDirectly ? "Add to library" : "Request a title",
+	);
+	let addLabel = $derived(auth.canAddDirectly ? "Add" : "Request");
+	type AddItem = {
+		id: "movie" | "series" | "import";
+		label: string;
+		desc: string;
+		icon: typeof Tv;
+		href?: string;
+	};
+	let addItems = $derived<AddItem[]>([
+		{
+			id: "movie",
+			label: "Movie",
+			desc: "Search TMDB and start tracking",
+			icon: Film,
+		},
+		{ id: "series", label: "Series", desc: "TV, anime, daily shows", icon: Tv },
+		// Adopting files on disk is an admin operation, and not a request.
+		...(auth.canAddDirectly && auth.isAdmin
+			? [
+					{
+						id: "import" as const,
+						label: "Import existing files",
+						desc: "Adopt media already on disk",
+						icon: FolderInput,
+						href: "/library/imports",
+					},
+				]
+			: []),
+	]);
+	function pickAdd(id: AddItem["id"]) {
+		closeFlyout();
+		if (id === "movie")
+			window.dispatchEvent(new CustomEvent("streamline:open-add-movie"));
+		else if (id === "series")
+			window.dispatchEvent(new CustomEvent("streamline:open-add-series"));
+	}
+
 	// Outside-click / Escape, without binding a ref inside the {#each}.
 	function popover(node: HTMLElement) {
 		const onDoc = (e: MouseEvent) => {
@@ -129,6 +174,8 @@
 		"bg-accent-soft text-accent-text before:absolute before:-left-2.5 before:top-1/2 before:h-5 before:w-[3px] before:-translate-y-1/2 before:rounded-r-full before:bg-accent";
 	const menuRow =
 		"flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13.5px] font-medium transition-colors";
+	const addRow =
+		"flex w-full items-center gap-3 rounded-lg px-2.5 py-2.5 text-left transition-colors text-fg-muted hover:bg-surface hover:text-fg";
 </script>
 
 <aside
@@ -148,6 +195,82 @@
 	</a>
 
 	<nav aria-label="Primary" class="flex flex-col items-center gap-1">
+		<div class="relative flex justify-center">
+			<button
+				type="button"
+				onclick={() => (flyout = flyout === "Add" ? "" : "Add")}
+				aria-haspopup="menu"
+				aria-expanded={flyout === "Add"}
+				aria-label={addHeading}
+				class={cn(
+					itemBase,
+					"bg-accent font-semibold text-fg-on-accent transition hover:opacity-90",
+				)}
+			>
+				<Plus size={20} strokeWidth={2.4} />
+				<span>{addLabel}</span>
+			</button>
+
+			{#if flyout === "Add"}
+				<div
+					use:popover
+					role="menu"
+					aria-label={addHeading}
+					transition:fly={{ x: -8, duration: 160, easing: cubicOut }}
+					class="absolute left-full top-0 z-50 ml-2.5 w-[300px] overflow-hidden rounded-xl border border-border-strong bg-bg-elevated p-1.5 shadow-4"
+				>
+					<div
+						class="px-2.5 pb-1.5 pt-1 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fg-faint"
+					>
+						{addHeading}
+					</div>
+					{#each addItems as item (item.id)}
+						{#if item.href}
+							<div class="my-1.5 h-px bg-border" role="separator"></div>
+							<a href={item.href} role="menuitem" onclick={closeFlyout} class={addRow}>
+								<span
+									class="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-bg-card text-fg-muted"
+								>
+									<item.icon size={16} aria-hidden="true" />
+								</span>
+								<span class="min-w-0 flex-1">
+									<span class="block text-[13.5px] font-medium leading-tight text-fg">
+										{item.label}
+									</span>
+									<span class="mt-0.5 block text-[10.5px] text-fg-subtle">
+										{item.desc}
+									</span>
+								</span>
+							</a>
+						{:else}
+							<button
+								type="button"
+								role="menuitem"
+								onclick={() => pickAdd(item.id)}
+								class={addRow}
+							>
+								<span
+									class="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-bg-card text-fg-muted"
+								>
+									<item.icon size={16} aria-hidden="true" />
+								</span>
+								<span class="min-w-0 flex-1">
+									<span class="block text-[13.5px] font-medium leading-tight text-fg">
+										{item.label}
+									</span>
+									<span class="mt-0.5 block text-[10.5px] text-fg-subtle">
+										{item.desc}
+									</span>
+								</span>
+							</button>
+						{/if}
+					{/each}
+				</div>
+			{/if}
+		</div>
+
+		<div class="my-1 h-px w-11 bg-border" role="presentation"></div>
+
 		<a
 			href="/dashboard"
 			aria-current={dashActive ? "page" : undefined}

@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { untrack } from "svelte";
 	import { onMount } from "svelte";
-	import { Plus } from "@lucide/svelte";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { api } from "../../lib/api";
 	import { formatRelative } from "../../lib/dates";
@@ -387,19 +386,5 @@
 			onSelectAll={() => toggleAll(true)}
 			onClear={clearSelection}
 		/>
-
-		<!-- Touch entry point: the toolbar's Add button is a 36px control at the top
-		     of the page, out of thumb reach on a phone. It stands down while a
-		     selection owns the bottom of the screen. -->
-		{#if selected.size === 0 && !selectMode}
-			<button
-				type="button"
-				onclick={openAddMovie}
-				aria-label="Add movie"
-				class="fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+4.75rem)] z-30 grid h-14 w-14 place-items-center rounded-full bg-accent text-fg-on-accent shadow-3 transition active:scale-95 md:hidden"
-			>
-				<Plus size={26} aria-hidden="true" />
-			</button>
-		{/if}
 	{/if}
 </div>
