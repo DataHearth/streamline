@@ -130,6 +130,11 @@ func Rating(v float64) predicate.Movie {
 	return predicate.Movie(sql.FieldEQ(FieldRating, v))
 }
 
+// LastRefreshedAt applies equality check predicate on the "last_refreshed_at" field. It's identical to LastRefreshedAtEQ.
+func LastRefreshedAt(v time.Time) predicate.Movie {
+	return predicate.Movie(sql.FieldEQ(FieldLastRefreshedAt, v))
+}
+
 // CreateTimeEQ applies the EQ predicate on the "create_time" field.
 func CreateTimeEQ(v time.Time) predicate.Movie {
 	return predicate.Movie(sql.FieldEQ(FieldCreateTime, v))
@@ -933,6 +938,56 @@ func CastIsNil() predicate.Movie {
 // CastNotNil applies the NotNil predicate on the "cast" field.
 func CastNotNil() predicate.Movie {
 	return predicate.Movie(sql.FieldNotNull(FieldCast))
+}
+
+// LastRefreshedAtEQ applies the EQ predicate on the "last_refreshed_at" field.
+func LastRefreshedAtEQ(v time.Time) predicate.Movie {
+	return predicate.Movie(sql.FieldEQ(FieldLastRefreshedAt, v))
+}
+
+// LastRefreshedAtNEQ applies the NEQ predicate on the "last_refreshed_at" field.
+func LastRefreshedAtNEQ(v time.Time) predicate.Movie {
+	return predicate.Movie(sql.FieldNEQ(FieldLastRefreshedAt, v))
+}
+
+// LastRefreshedAtIn applies the In predicate on the "last_refreshed_at" field.
+func LastRefreshedAtIn(vs ...time.Time) predicate.Movie {
+	return predicate.Movie(sql.FieldIn(FieldLastRefreshedAt, vs...))
+}
+
+// LastRefreshedAtNotIn applies the NotIn predicate on the "last_refreshed_at" field.
+func LastRefreshedAtNotIn(vs ...time.Time) predicate.Movie {
+	return predicate.Movie(sql.FieldNotIn(FieldLastRefreshedAt, vs...))
+}
+
+// LastRefreshedAtGT applies the GT predicate on the "last_refreshed_at" field.
+func LastRefreshedAtGT(v time.Time) predicate.Movie {
+	return predicate.Movie(sql.FieldGT(FieldLastRefreshedAt, v))
+}
+
+// LastRefreshedAtGTE applies the GTE predicate on the "last_refreshed_at" field.
+func LastRefreshedAtGTE(v time.Time) predicate.Movie {
+	return predicate.Movie(sql.FieldGTE(FieldLastRefreshedAt, v))
+}
+
+// LastRefreshedAtLT applies the LT predicate on the "last_refreshed_at" field.
+func LastRefreshedAtLT(v time.Time) predicate.Movie {
+	return predicate.Movie(sql.FieldLT(FieldLastRefreshedAt, v))
+}
+
+// LastRefreshedAtLTE applies the LTE predicate on the "last_refreshed_at" field.
+func LastRefreshedAtLTE(v time.Time) predicate.Movie {
+	return predicate.Movie(sql.FieldLTE(FieldLastRefreshedAt, v))
+}
+
+// LastRefreshedAtIsNil applies the IsNil predicate on the "last_refreshed_at" field.
+func LastRefreshedAtIsNil() predicate.Movie {
+	return predicate.Movie(sql.FieldIsNull(FieldLastRefreshedAt))
+}
+
+// LastRefreshedAtNotNil applies the NotNil predicate on the "last_refreshed_at" field.
+func LastRefreshedAtNotNil() predicate.Movie {
+	return predicate.Movie(sql.FieldNotNull(FieldLastRefreshedAt))
 }
 
 // HasDownloadRecords applies the HasEdge predicate on the "download_records" edge.

@@ -228,6 +228,20 @@ func (_c *MovieCreate) SetCast(v []schema.CastMember) *MovieCreate {
 	return _c
 }
 
+// SetLastRefreshedAt sets the "last_refreshed_at" field.
+func (_c *MovieCreate) SetLastRefreshedAt(v time.Time) *MovieCreate {
+	_c.mutation.SetLastRefreshedAt(v)
+	return _c
+}
+
+// SetNillableLastRefreshedAt sets the "last_refreshed_at" field if the given value is not nil.
+func (_c *MovieCreate) SetNillableLastRefreshedAt(v *time.Time) *MovieCreate {
+	if v != nil {
+		_c.SetLastRefreshedAt(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *MovieCreate) SetID(v uint32) *MovieCreate {
 	_c.mutation.SetID(v)
@@ -491,6 +505,10 @@ func (_c *MovieCreate) createSpec() (*Movie, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Cast(); ok {
 		_spec.SetField(movie.FieldCast, field.TypeJSON, value)
 		_node.Cast = value
+	}
+	if value, ok := _c.mutation.LastRefreshedAt(); ok {
+		_spec.SetField(movie.FieldLastRefreshedAt, field.TypeTime, value)
+		_node.LastRefreshedAt = &value
 	}
 	if nodes := _c.mutation.DownloadRecordsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

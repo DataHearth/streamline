@@ -9960,6 +9960,7 @@ type MovieMutation struct {
 	appendgenres            []string
 	cast                    *[]schema.CastMember
 	appendcast              []schema.CastMember
+	last_refreshed_at       *time.Time
 	clearedFields           map[string]struct{}
 	download_records        map[uint32]struct{}
 	removeddownload_records map[uint32]struct{}
@@ -10978,6 +10979,55 @@ func (m *MovieMutation) ResetCast() {
 	delete(m.clearedFields, movie.FieldCast)
 }
 
+// SetLastRefreshedAt sets the "last_refreshed_at" field.
+func (m *MovieMutation) SetLastRefreshedAt(t time.Time) {
+	m.last_refreshed_at = &t
+}
+
+// LastRefreshedAt returns the value of the "last_refreshed_at" field in the mutation.
+func (m *MovieMutation) LastRefreshedAt() (r time.Time, exists bool) {
+	v := m.last_refreshed_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLastRefreshedAt returns the old "last_refreshed_at" field's value of the Movie entity.
+// If the Movie object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MovieMutation) OldLastRefreshedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLastRefreshedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLastRefreshedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLastRefreshedAt: %w", err)
+	}
+	return oldValue.LastRefreshedAt, nil
+}
+
+// ClearLastRefreshedAt clears the value of the "last_refreshed_at" field.
+func (m *MovieMutation) ClearLastRefreshedAt() {
+	m.last_refreshed_at = nil
+	m.clearedFields[movie.FieldLastRefreshedAt] = struct{}{}
+}
+
+// LastRefreshedAtCleared returns if the "last_refreshed_at" field was cleared in this mutation.
+func (m *MovieMutation) LastRefreshedAtCleared() bool {
+	_, ok := m.clearedFields[movie.FieldLastRefreshedAt]
+	return ok
+}
+
+// ResetLastRefreshedAt resets all changes to the "last_refreshed_at" field.
+func (m *MovieMutation) ResetLastRefreshedAt() {
+	m.last_refreshed_at = nil
+	delete(m.clearedFields, movie.FieldLastRefreshedAt)
+}
+
 // AddDownloadRecordIDs adds the "download_records" edge to the DownloadRecord entity by ids.
 func (m *MovieMutation) AddDownloadRecordIDs(ids ...uint32) {
 	if m.download_records == nil {
@@ -11174,7 +11224,7 @@ func (m *MovieMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *MovieMutation) Fields() []string {
-	fields := make([]string, 0, 18)
+	fields := make([]string, 0, 19)
 	if m.create_time != nil {
 		fields = append(fields, movie.FieldCreateTime)
 	}
@@ -11229,6 +11279,9 @@ func (m *MovieMutation) Fields() []string {
 	if m.cast != nil {
 		fields = append(fields, movie.FieldCast)
 	}
+	if m.last_refreshed_at != nil {
+		fields = append(fields, movie.FieldLastRefreshedAt)
+	}
 	return fields
 }
 
@@ -11273,6 +11326,8 @@ func (m *MovieMutation) Field(name string) (ent.Value, bool) {
 		return m.Genres()
 	case movie.FieldCast:
 		return m.Cast()
+	case movie.FieldLastRefreshedAt:
+		return m.LastRefreshedAt()
 	}
 	return nil, false
 }
@@ -11318,6 +11373,8 @@ func (m *MovieMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldGenres(ctx)
 	case movie.FieldCast:
 		return m.OldCast(ctx)
+	case movie.FieldLastRefreshedAt:
+		return m.OldLastRefreshedAt(ctx)
 	}
 	return nil, fmt.Errorf("unknown Movie field %s", name)
 }
@@ -11453,6 +11510,13 @@ func (m *MovieMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetCast(v)
 		return nil
+	case movie.FieldLastRefreshedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLastRefreshedAt(v)
+		return nil
 	}
 	return fmt.Errorf("unknown Movie field %s", name)
 }
@@ -11573,6 +11637,9 @@ func (m *MovieMutation) ClearedFields() []string {
 	if m.FieldCleared(movie.FieldCast) {
 		fields = append(fields, movie.FieldCast)
 	}
+	if m.FieldCleared(movie.FieldLastRefreshedAt) {
+		fields = append(fields, movie.FieldLastRefreshedAt)
+	}
 	return fields
 }
 
@@ -11613,6 +11680,9 @@ func (m *MovieMutation) ClearField(name string) error {
 		return nil
 	case movie.FieldCast:
 		m.ClearCast()
+		return nil
+	case movie.FieldLastRefreshedAt:
+		m.ClearLastRefreshedAt()
 		return nil
 	}
 	return fmt.Errorf("unknown Movie nullable field %s", name)
@@ -11675,6 +11745,9 @@ func (m *MovieMutation) ResetField(name string) error {
 		return nil
 	case movie.FieldCast:
 		m.ResetCast()
+		return nil
+	case movie.FieldLastRefreshedAt:
+		m.ResetLastRefreshedAt()
 		return nil
 	}
 	return fmt.Errorf("unknown Movie field %s", name)

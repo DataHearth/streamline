@@ -39,6 +39,7 @@ func (Movie) Fields() []ent.Field {
 		field.Float("rating").Optional().Default(0),
 		field.Strings("genres").Optional(),
 		field.JSON("cast", []CastMember{}).Optional(),
+		field.Time("last_refreshed_at").Optional().Nillable(),
 	}
 }
 

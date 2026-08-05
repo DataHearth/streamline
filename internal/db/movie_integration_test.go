@@ -319,18 +319,35 @@ var _ = Describe("Movie filter + lookup", Label("integration", "db"), func() {
 	})
 
 	Describe("ListMoviesStaleSince", func() {
-		It("returns movies whose update_time is older than cutoff", func() {
+		It("returns movies last refreshed before cutoff", func() {
 			stale := seed("stale", 2020, 1101, entmovie.StatusAvailable)
 			_, err := client.Movie.UpdateOneID(stale.ID).
-				SetUpdateTime(time.Now().Add(-48 * time.Hour)).Save(ctx)
+				SetLastRefreshedAt(time.Now().Add(-48 * time.Hour)).Save(ctx)
 			Expect(err).NotTo(HaveOccurred())
-			seed("fresh", 2024, 1102, entmovie.StatusAvailable)
+			fresh := seed("fresh", 2024, 1102, entmovie.StatusAvailable)
+			_, err = client.Movie.UpdateOneID(fresh.ID).
+				SetLastRefreshedAt(time.Now()).Save(ctx)
+			Expect(err).NotTo(HaveOccurred())
 
 			cutoff := time.Now().Add(-24 * time.Hour)
 			items, err := store.ListMoviesStaleSince(ctx, cutoff)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(items).To(HaveLen(1))
 			Expect(items[0].Title).To(Equal("stale"))
+		})
+
+		It("returns a never-refreshed movie written to moments ago", func() {
+			m := seed("scanned", 2020, 1103, entmovie.StatusAvailable)
+			_, err := client.Movie.UpdateOneID(m.ID).
+				SetStatus(entmovie.StatusAvailable).Save(ctx)
+			Expect(err).NotTo(HaveOccurred())
+
+			items, err := store.ListMoviesStaleSince(
+				ctx, time.Now().Add(-24*time.Hour),
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(items).To(HaveLen(1))
+			Expect(items[0].Title).To(Equal("scanned"))
 		})
 	})
 
@@ -351,6 +368,7 @@ var _ = Describe("Movie filter + lookup", Label("integration", "db"), func() {
 			Expect(got.Year).To(Equal(uint16(2024)))
 			Expect(got.Overview).To(Equal("fresh"))
 			Expect(got.Status).To(Equal(entmovie.StatusWanted))
+			Expect(got.LastRefreshedAt).NotTo(BeNil())
 		})
 	})
 

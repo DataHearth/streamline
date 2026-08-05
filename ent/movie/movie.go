@@ -51,6 +51,8 @@ const (
 	FieldGenres = "genres"
 	// FieldCast holds the string denoting the cast field in the database.
 	FieldCast = "cast"
+	// FieldLastRefreshedAt holds the string denoting the last_refreshed_at field in the database.
+	FieldLastRefreshedAt = "last_refreshed_at"
 	// EdgeDownloadRecords holds the string denoting the download_records edge name in mutations.
 	EdgeDownloadRecords = "download_records"
 	// EdgeMediaFiles holds the string denoting the media_files edge name in mutations.
@@ -103,6 +105,7 @@ var Columns = []string{
 	FieldRating,
 	FieldGenres,
 	FieldCast,
+	FieldLastRefreshedAt,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -250,6 +253,11 @@ func ByQualityProfile(opts ...sql.OrderTermOption) OrderOption {
 // ByRating orders the results by the rating field.
 func ByRating(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldRating, opts...).ToFunc()
+}
+
+// ByLastRefreshedAt orders the results by the last_refreshed_at field.
+func ByLastRefreshedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldLastRefreshedAt, opts...).ToFunc()
 }
 
 // ByDownloadRecordsCount orders the results by download_records count.

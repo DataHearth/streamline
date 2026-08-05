@@ -55,6 +55,8 @@ type Movie struct {
 	Genres []string `json:"genres,omitempty"`
 	// Cast holds the value of the "cast" field.
 	Cast []schema.CastMember `json:"cast,omitempty"`
+	// LastRefreshedAt holds the value of the "last_refreshed_at" field.
+	LastRefreshedAt *time.Time `json:"last_refreshed_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the MovieQuery when eager-loading is set.
 	Edges        MovieEdges `json:"edges"`
@@ -116,7 +118,7 @@ func (*Movie) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullInt64)
 		case movie.FieldTitle, movie.FieldOriginalTitle, movie.FieldOverview, movie.FieldStatus, movie.FieldFailureReason, movie.FieldQualityProfile:
 			values[i] = new(sql.NullString)
-		case movie.FieldCreateTime, movie.FieldUpdateTime, movie.FieldLastSearchAt, movie.FieldDigitalReleaseDate:
+		case movie.FieldCreateTime, movie.FieldUpdateTime, movie.FieldLastSearchAt, movie.FieldDigitalReleaseDate, movie.FieldLastRefreshedAt:
 			values[i] = new(sql.NullTime)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -253,6 +255,13 @@ func (_m *Movie) assignValues(columns []string, values []any) error {
 					return fmt.Errorf("unmarshal field cast: %w", err)
 				}
 			}
+		case movie.FieldLastRefreshedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field last_refreshed_at", values[i])
+			} else if value.Valid {
+				_m.LastRefreshedAt = new(time.Time)
+				*_m.LastRefreshedAt = value.Time
+			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -361,6 +370,11 @@ func (_m *Movie) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("cast=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Cast))
+	builder.WriteString(", ")
+	if v := _m.LastRefreshedAt; v != nil {
+		builder.WriteString("last_refreshed_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
 	builder.WriteByte(')')
 	return builder.String()
 }

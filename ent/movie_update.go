@@ -348,6 +348,26 @@ func (_u *MovieUpdate) ClearCast() *MovieUpdate {
 	return _u
 }
 
+// SetLastRefreshedAt sets the "last_refreshed_at" field.
+func (_u *MovieUpdate) SetLastRefreshedAt(v time.Time) *MovieUpdate {
+	_u.mutation.SetLastRefreshedAt(v)
+	return _u
+}
+
+// SetNillableLastRefreshedAt sets the "last_refreshed_at" field if the given value is not nil.
+func (_u *MovieUpdate) SetNillableLastRefreshedAt(v *time.Time) *MovieUpdate {
+	if v != nil {
+		_u.SetLastRefreshedAt(*v)
+	}
+	return _u
+}
+
+// ClearLastRefreshedAt clears the value of the "last_refreshed_at" field.
+func (_u *MovieUpdate) ClearLastRefreshedAt() *MovieUpdate {
+	_u.mutation.ClearLastRefreshedAt()
+	return _u
+}
+
 // AddDownloadRecordIDs adds the "download_records" edge to the DownloadRecord entity by IDs.
 func (_u *MovieUpdate) AddDownloadRecordIDs(ids ...uint32) *MovieUpdate {
 	_u.mutation.AddDownloadRecordIDs(ids...)
@@ -631,6 +651,12 @@ func (_u *MovieUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.CastCleared() {
 		_spec.ClearField(movie.FieldCast, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.LastRefreshedAt(); ok {
+		_spec.SetField(movie.FieldLastRefreshedAt, field.TypeTime, value)
+	}
+	if _u.mutation.LastRefreshedAtCleared() {
+		_spec.ClearField(movie.FieldLastRefreshedAt, field.TypeTime)
 	}
 	if _u.mutation.DownloadRecordsCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -1102,6 +1128,26 @@ func (_u *MovieUpdateOne) ClearCast() *MovieUpdateOne {
 	return _u
 }
 
+// SetLastRefreshedAt sets the "last_refreshed_at" field.
+func (_u *MovieUpdateOne) SetLastRefreshedAt(v time.Time) *MovieUpdateOne {
+	_u.mutation.SetLastRefreshedAt(v)
+	return _u
+}
+
+// SetNillableLastRefreshedAt sets the "last_refreshed_at" field if the given value is not nil.
+func (_u *MovieUpdateOne) SetNillableLastRefreshedAt(v *time.Time) *MovieUpdateOne {
+	if v != nil {
+		_u.SetLastRefreshedAt(*v)
+	}
+	return _u
+}
+
+// ClearLastRefreshedAt clears the value of the "last_refreshed_at" field.
+func (_u *MovieUpdateOne) ClearLastRefreshedAt() *MovieUpdateOne {
+	_u.mutation.ClearLastRefreshedAt()
+	return _u
+}
+
 // AddDownloadRecordIDs adds the "download_records" edge to the DownloadRecord entity by IDs.
 func (_u *MovieUpdateOne) AddDownloadRecordIDs(ids ...uint32) *MovieUpdateOne {
 	_u.mutation.AddDownloadRecordIDs(ids...)
@@ -1415,6 +1461,12 @@ func (_u *MovieUpdateOne) sqlSave(ctx context.Context) (_node *Movie, err error)
 	}
 	if _u.mutation.CastCleared() {
 		_spec.ClearField(movie.FieldCast, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.LastRefreshedAt(); ok {
+		_spec.SetField(movie.FieldLastRefreshedAt, field.TypeTime, value)
+	}
+	if _u.mutation.LastRefreshedAtCleared() {
+		_spec.ClearField(movie.FieldLastRefreshedAt, field.TypeTime)
 	}
 	if _u.mutation.DownloadRecordsCleared() {
 		edge := &sqlgraph.EdgeSpec{
