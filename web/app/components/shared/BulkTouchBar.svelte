@@ -27,36 +27,28 @@
 
 	// The phone half of bulk actions. It takes the bottom bar's place instead of
 	// stacking above it, and everything rare or destructive goes in the sheet
-	// with a line saying what it will do — a row of four unlabelled icons is not
-	// where a delete belongs.
+	// with a line saying what it will do — a row of unlabelled icons is not
+	// where a delete belongs. Counting and select-all/clear stay with
+	// SelectionTopBar rather than being repeated down here.
 	let {
 		count,
-		total,
 		noun = "title",
 		nounPlural,
 		busy = false,
 		actions,
 		menu,
-		footer,
-		onSelectAll,
-		onClear,
 	}: {
 		count: number;
-		total: number;
 		noun?: string;
 		nounPlural?: string;
 		busy?: boolean;
-		// Three at most: the bar keeps a fourth cell for More.
+		// Three at most: the bar keeps a last cell for More.
 		actions: TouchAction[];
 		menu: TouchMenuRow[];
-		// Names the set, since on a phone the selection is off-screen as often
-		// as not.
-		footer?: string;
-		onSelectAll: () => void;
-		onClear: () => void;
 	} = $props();
 
 	let sheet = $state(false);
+	let cells = $derived(Math.min(actions.length, 3) + 1);
 
 	// While this bar is mounted the bottom nav stands down.
 	$effect(() => {
@@ -88,9 +80,10 @@
 	aria-busy={busy}
 	transition:fly={{ y: 64, duration: 200, easing: cubicOut }}
 	class={cn(
-		"fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-border-strong bg-bg-elevated/96 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden",
+		"fixed inset-x-0 bottom-0 z-40 grid border-t border-border-strong bg-bg-elevated/96 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden",
 		busy && "pointer-events-none opacity-60",
 	)}
+	style:grid-template-columns="repeat({cells}, minmax(0, 1fr))"
 >
 	{#each actions.slice(0, 3) as a (a.key)}
 		<button
@@ -158,7 +151,7 @@
 
 			<div
 				data-sheet-scroll
-				class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2.5 pb-1"
+				class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2.5 pb-[max(env(safe-area-inset-bottom),12px)]"
 			>
 				{#each menu as row (row.key)}
 					{#if row.dividerBefore}
@@ -186,35 +179,6 @@
 						</span>
 					</button>
 				{/each}
-			</div>
-
-			<div
-				class="flex items-center justify-between gap-3 border-t border-border px-5 pb-[max(env(safe-area-inset-bottom),14px)] pt-3 font-mono text-[11px] text-fg-faint"
-			>
-				<span class="min-w-0 truncate">{footer ?? ""}</span>
-				{#if count < total}
-					<button
-						type="button"
-						onclick={() => {
-							sheet = false;
-							onSelectAll();
-						}}
-						class="shrink-0 text-accent-text"
-					>
-						select all {total}
-					</button>
-				{:else}
-					<button
-						type="button"
-						onclick={() => {
-							sheet = false;
-							onClear();
-						}}
-						class="shrink-0 text-accent-text"
-					>
-						clear
-					</button>
-				{/if}
 			</div>
 		</div>
 	</div>

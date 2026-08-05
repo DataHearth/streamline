@@ -68,7 +68,7 @@
 		class="relative grid w-full items-end gap-5 px-4 pb-7 pt-6 md:grid-cols-[200px_1fr] md:gap-8 md:px-8 md:pb-16 md:pt-10 lg:grid-cols-[260px_1fr] lg:gap-10 lg:pb-20"
 	>
 		<div
-			class="relative aspect-[2/3] w-24 overflow-hidden rounded-lg shadow-[0_24px_48px_rgb(0_0_0_/0.5)] md:w-auto"
+			class="relative mx-auto aspect-[2/3] w-60 overflow-hidden rounded-lg shadow-[0_24px_48px_rgb(0_0_0_/0.5)] md:mx-0 md:w-auto"
 		>
 			<div class="absolute inset-0 bg-bg-card"></div>
 			<div class="absolute inset-0 grid place-items-center text-fg-faint">

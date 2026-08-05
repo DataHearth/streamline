@@ -27,6 +27,7 @@
 	import Select from "../../components/forms/Select.svelte";
 	import Checkbox from "../../components/forms/Checkbox.svelte";
 	import Dialog from "../../components/modals/Dialog.svelte";
+	import DeleteTitleDialog from "../../components/shared/DeleteTitleDialog.svelte";
 	import SeasonStrip from "../../components/series/SeasonStrip.svelte";
 	import SeasonAccordion from "../../components/series/SeasonAccordion.svelte";
 	import EpisodeTable from "../../components/series/EpisodeTable.svelte";
@@ -182,7 +183,6 @@
 	let presetValue = $state<MonitoringPreset>("all");
 
 	let deleteOpen = $state(false);
-	let deleteWithFilesOpen = $state(false);
 	let manualOpen = $state(false);
 	let manualEpisode = $state<Episode | null>(null);
 	let packSearchOpen = $state(false);
@@ -199,7 +199,6 @@
 		selectedSeason = null;
 		presetValue = "all";
 		deleteOpen = false;
-		deleteWithFilesOpen = false;
 		manualOpen = false;
 		manualEpisode = null;
 		packSearchOpen = false;
@@ -343,7 +342,6 @@
 		if (a === "search") searchSeries.mutate();
 		else if (a === "refresh") refresh.mutate();
 		else if (a === "delete") deleteOpen = true;
-		else if (a === "delete-with-files") deleteWithFilesOpen = true;
 		else if (a === "delete-files") openDeleteFiles("this series", seriesFileEpisodes);
 	}
 
@@ -420,7 +418,7 @@
 			class="relative grid w-full items-end gap-5 px-4 pb-6 pt-4 md:grid-cols-[200px_1fr] md:gap-8 md:px-8 md:pb-14 md:pt-10 lg:grid-cols-[260px_1fr] lg:gap-10 lg:pb-16"
 		>
 			<div
-				class="relative aspect-[2/3] w-[76px] overflow-hidden rounded-lg shadow-[0_24px_48px_rgb(0_0_0_/0.5)] md:w-auto"
+				class="relative mx-auto aspect-[2/3] w-60 overflow-hidden rounded-lg shadow-[0_24px_48px_rgb(0_0_0_/0.5)] md:mx-0 md:w-auto"
 			>
 				<div class="absolute inset-0 bg-bg-card"></div>
 				<div class="absolute inset-0 grid place-items-center text-fg-faint">
@@ -562,9 +560,7 @@
 						<SeriesKebabMenu
 							onPick={onKebabPick}
 							allowDeleteFiles
-							disabledActions={hasFiles
-								? []
-								: ["delete-with-files", "delete-files"]}
+							disabledActions={hasFiles ? [] : ["delete-files"]}
 						/>
 					</div>
 					<div class="flex items-center gap-2">
@@ -654,9 +650,7 @@
 						<SeriesKebabMenu
 							onPick={onKebabPick}
 							allowDeleteFiles
-							disabledActions={hasFiles
-								? []
-								: ["delete-with-files", "delete-files"]}
+							disabledActions={hasFiles ? [] : ["delete-files"]}
 						/>
 					</div>
 				</div>
@@ -676,7 +670,7 @@
 					onclick={() => (tab = t.key)}
 					aria-current={active ? "page" : undefined}
 					class={cn(
-						"relative -mb-px shrink-0 px-4 py-3.5 text-[13px] font-medium transition",
+						"relative -mb-px shrink-0 px-3 py-3.5 text-[13px] font-medium transition md:px-4",
 						active ? "text-fg" : "text-fg-subtle hover:text-fg",
 					)}
 				>
@@ -796,6 +790,11 @@
 						onMonitorEpisode={(ep) => monitorEpisode.mutate(ep)}
 						onManualSearch={openManualSearch}
 						onDeleteFile={(ep) => openDeleteFiles(episodeCode(ep), [ep])}
+						onDeleteSeasonFiles={(s) =>
+							openDeleteFiles(
+								s.number === 0 ? "Specials" : `${seasonLabel} ${String(s.number).padStart(2, "0")}`,
+								(s.episodes ?? []).filter((e) => (e.size ?? 0) > 0),
+							)}
 					/>
 				</div>
 
@@ -918,37 +917,16 @@
 		{/if}
 	</div>
 
-	<Dialog
+	<DeleteTitleDialog
 		open={deleteOpen}
 		title="Remove '{show.title}' from your library?"
-		body="Files on disk will be kept."
+		body="The series leaves your library. Files on disk are kept unless you say otherwise."
+		filesLabel="Also delete every downloaded episode from disk"
+		filesNote="This cannot be undone."
+		canDeleteFiles={hasFiles}
+		pending={del.isPending}
 		onClose={() => (deleteOpen = false)}
-		actions={[
-			{ label: "Cancel", variant: "ghost", autofocus: true },
-			{
-				label: "Delete",
-				variant: "danger",
-				dismiss: false,
-				pending: del.isPending,
-				onClick: () => del.mutate(false),
-			},
-		]}
-	/>
-	<Dialog
-		open={deleteWithFilesOpen}
-		title="Remove '{show.title}' and delete its files?"
-		body="All downloaded episode files will be deleted from disk. This cannot be undone."
-		onClose={() => (deleteWithFilesOpen = false)}
-		actions={[
-			{ label: "Cancel", variant: "ghost", autofocus: true },
-			{
-				label: "Delete + files",
-				variant: "danger",
-				dismiss: false,
-				pending: del.isPending,
-				onClick: () => del.mutate(true),
-			},
-		]}
+		onConfirm={(withFiles) => del.mutate(withFiles)}
 	/>
 	<SeriesManualSearchModal
 		open={manualOpen}

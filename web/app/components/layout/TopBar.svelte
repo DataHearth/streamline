@@ -266,7 +266,7 @@
 </script>
 
 <header
-	class="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-border bg-bg-deep/70 px-4 backdrop-blur-md saturate-150 md:px-8"
+	class="sticky top-0 z-30 flex h-16 items-center gap-2 border-b border-border bg-bg-deep/70 pl-4 pr-2 backdrop-blur-md saturate-150 md:gap-4 md:px-8"
 >
 	<div class="min-w-0 flex-1">
 		{#if crumbs.length === 1}
@@ -321,7 +321,9 @@
 		</kbd>
 	</button>
 
-	<div class="flex flex-1 items-center justify-end gap-2">
+	<!-- flex-none below lg: on a phone this group holds one 44px icon button, and
+	     a flex-1 here took half the header, truncating the page's count line. -->
+	<div class="flex flex-none items-center justify-end gap-2 lg:flex-1">
 		<SearchField />
 		<button
 			type="button"

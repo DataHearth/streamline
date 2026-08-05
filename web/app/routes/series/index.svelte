@@ -20,7 +20,6 @@
 	import type { PaginatedTVShows, ScheduleList, TVShow } from "../../lib/types";
 
 	type View = "grid" | "list";
-	type Density = "compact" | "roomy";
 
 	const VALID_TABS = new Set<SeriesTab>([
 		"all",
@@ -46,8 +45,6 @@
 	// An explicit ?sort in the URL wins so shared links keep their ordering;
 	// otherwise fall back to the last sort this browser chose, then A→Z.
 	const SORT_PREF = "streamline:series:sort";
-	// Poster density is a phone-only choice and never worth a URL parameter.
-	const DENSITY_PREF = "streamline:series:density";
 
 	function readParams() {
 		const p =
@@ -77,15 +74,6 @@
 	let sort = $state<SeriesSort>(initial.sort);
 	let view = $state<View>(initial.view);
 	let monitoredOnly = $state(initial.monitoredOnly);
-	let density = $state<Density>(
-		loadPref(DENSITY_PREF) === "roomy" ? "roomy" : "compact",
-	);
-
-	function setDensity(d: Density) {
-		density = d;
-		savePref(DENSITY_PREF, d);
-	}
-
 	// A phone has no width for the list table, so below md the library is posters
 	// only — whatever the URL or the last-used view says.
 	let narrow = $state(false);
@@ -327,7 +315,6 @@
 			{counts}
 			{monitoredOnly}
 			{monitoredCount}
-			{density}
 			{selectMode}
 			selectedCount={selected.size}
 			visibleCount={visibleSeries.length}
@@ -337,7 +324,6 @@
 			onMonitoredChange={(v) => (monitoredOnly = v)}
 			onSortChange={setSort}
 			onViewChange={(v) => (view = v)}
-			onDensityChange={setDensity}
 			onClearFilters={clearFilters}
 			onSelectModeChange={setSelectMode}
 			onSelectAll={selectAll}
@@ -392,7 +378,6 @@
 					series={visibleSeries}
 					{selected}
 					{selectMode}
-					{density}
 					onToggle={toggle}
 					onLongPress={beginLongPress}
 				/>

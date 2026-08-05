@@ -16,7 +16,6 @@
 	import SelectionControls from "../shared/SelectionControls.svelte";
 	import SelectionTopBar from "../shared/SelectionTopBar.svelte";
 	import MediaFilterSheet from "../shared/MediaFilterSheet.svelte";
-	import type { Density } from "../shared/MediaFilterSheet.svelte";
 	import type { MovieCounts } from "../../lib/types";
 
 	type View = "grid" | "list";
@@ -32,7 +31,6 @@
 		counts,
 		monitoredOnly,
 		monitoredCount,
-		density,
 		selectMode,
 		selectedCount,
 		visibleCount,
@@ -41,7 +39,6 @@
 		onMonitoredChange,
 		onSortChange,
 		onViewChange,
-		onDensityChange,
 		onClearFilters,
 		onSelectModeChange,
 		onSelectAll,
@@ -54,7 +51,6 @@
 		view: View;
 		monitoredOnly: boolean;
 		monitoredCount: number;
-		density: Density;
 		selectMode: boolean;
 		selectedCount: number;
 		visibleCount: number;
@@ -66,7 +62,6 @@
 		onMonitoredChange: (v: boolean) => void;
 		onSortChange: (s: SortKey, o: SortOrder) => void;
 		onViewChange: (v: View) => void;
-		onDensityChange: (v: Density) => void;
 		onClearFilters: () => void;
 		onSelectModeChange: (v: boolean) => void;
 		onSelectAll: () => void;
@@ -266,8 +261,6 @@
 	{onMonitoredChange}
 	{view}
 	{onViewChange}
-	{density}
-	{onDensityChange}
 	onSelectMode={() => onSelectModeChange(true)}
 	onReset={onClearFilters}
 	activeCount={activeFilters}

@@ -25,6 +25,18 @@ const n = (v: number) => v.toLocaleString();
 // always inside the first page and the count is exact rather than sampled.
 const IMPORT_SCAN_WINDOW = 100;
 
+// The queue line reads as colour first, number second — the same dot-per-status
+// vocabulary the torrents row and the activity filter chips already use. Keys
+// without a token of their own borrow one (mirrors lib/format.pillStatus).
+const QUEUE_DOTS = [
+	{ key: "downloading", label: "downloading", dot: "downloading" },
+	{ key: "importing", label: "importing", dot: "grabbing" },
+	{ key: "paused", label: "paused", dot: "paused" },
+	{ key: "error", label: "failed", dot: "failed" },
+] as const;
+
+export type NavDot = { key: string; label: string; count: number; dot: string };
+
 function countImports(list: ImportScanList): ImportCounts {
 	let running = 0;
 	let awaiting_review = 0;
@@ -100,6 +112,16 @@ export function navCountsQuery() {
 				.filter((s) => by[s])
 				.map((s) => `${n(by[s])} ${s === "error" ? "failed" : s}`)
 				.join(" · ");
+		},
+		get queueDots(): NavDot[] {
+			const items = queue.data?.items;
+			if (!items?.length) return [];
+			const by: Record<string, number> = {};
+			for (const i of items) by[i.status] = (by[i.status] ?? 0) + 1;
+			return QUEUE_DOTS.filter((s) => by[s.key]).map((s) => ({
+				...s,
+				count: by[s.key],
+			}));
 		},
 		get importsLine(): string {
 			const d = imports.data;

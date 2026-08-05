@@ -10,6 +10,23 @@ const SLOP = 5;
 
 export function dragScroll(node: HTMLElement) {
 	let id: number | null = null;
+	// data-scroll = start | middle | end while the strip overflows, absent when it
+	// doesn't — enough for a caller to fade the edge that has more behind it.
+	const sync = () => {
+		if (node.scrollWidth - node.clientWidth <= 1) {
+			node.removeAttribute("data-scroll");
+			return;
+		}
+		const max = node.scrollWidth - node.clientWidth;
+		node.setAttribute(
+			"data-scroll",
+			node.scrollLeft <= 1 ? "start" : node.scrollLeft >= max - 1 ? "end" : "middle",
+		);
+	};
+	const ro = new ResizeObserver(sync);
+	ro.observe(node);
+	node.addEventListener("scroll", sync, { passive: true });
+	sync();
 	let startX = 0;
 	let startScroll = 0;
 	let dragged = false;
@@ -59,6 +76,8 @@ export function dragScroll(node: HTMLElement) {
 
 	return {
 		destroy() {
+			ro.disconnect();
+			node.removeEventListener("scroll", sync);
 			node.removeEventListener("pointerdown", onDown);
 			node.removeEventListener("pointermove", onMove);
 			node.removeEventListener("pointerup", stop);

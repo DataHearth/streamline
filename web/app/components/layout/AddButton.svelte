@@ -99,7 +99,7 @@
 	></button>
 
 	<div
-		class="add-pill fixed right-4 z-50 flex flex-col items-end gap-2.5 md:hidden"
+		class="add-pill fixed right-4 z-[45] flex flex-col items-end gap-2.5 md:hidden"
 		role="group"
 		aria-label={heading}
 	>
@@ -173,6 +173,14 @@
 	/* Clears the bottom bar (56px + safe area) with 28px of air under the pill. */
 	.add-pill {
 		bottom: calc(env(safe-area-inset-bottom) + 5.25rem);
+		/* The closed fan still occupies its rows (visibility, not display), so the
+		   column's box reaches most of the way up the screen. Without this it
+		   swallows every tap over the grid behind it. Only the pill and an open
+		   fan row take pointer events back. */
+		pointer-events: none;
+	}
+	.add-pill > .pill {
+		pointer-events: auto;
 	}
 
 	.scrim {

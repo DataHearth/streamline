@@ -13,9 +13,10 @@ const SLOP = 6; // a tap on a row must stay a tap
 
 export function sheetSwipe(
 	node: HTMLElement,
-	params: { onDismiss: () => void },
+	params: { onDismiss: () => void; disabled?: boolean },
 ) {
 	let onDismiss = params.onDismiss;
+	let disabled = params.disabled ?? false;
 	let id: number | null = null;
 	let startY = 0;
 	let startedAt = 0;
@@ -30,7 +31,9 @@ export function sheetSwipe(
 	};
 
 	const onDown = (e: PointerEvent) => {
-		if (id !== null || e.button !== 0) return;
+		// The same component can be a sheet on touch and a side drawer on a pointer
+		// layout; the drag belongs only to the sheet.
+		if (disabled || id !== null || e.button !== 0) return;
 		const scroller = node.querySelector<HTMLElement>("[data-sheet-scroll]");
 		if (scroller?.contains(e.target as Node) && scroller.scrollTop > 0) return;
 		id = e.pointerId;
@@ -82,8 +85,14 @@ export function sheetSwipe(
 	node.addEventListener("pointercancel", onCancel);
 
 	return {
-		update(next: { onDismiss: () => void }) {
+		update(next: { onDismiss: () => void; disabled?: boolean }) {
 			onDismiss = next.onDismiss;
+			disabled = next.disabled ?? false;
+			if (disabled && id !== null) {
+				id = null;
+				dragging = false;
+				reset(false);
+			}
 		},
 		destroy() {
 			node.removeEventListener("pointerdown", onDown);

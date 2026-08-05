@@ -42,7 +42,6 @@
 		counts,
 		monitoredOnly,
 		monitoredCount,
-		density,
 		selectMode,
 		selectedCount,
 		visibleCount,
@@ -52,7 +51,6 @@
 		onMonitoredChange,
 		onSortChange,
 		onViewChange,
-		onDensityChange,
 		onClearFilters,
 		onSelectModeChange,
 		onSelectAll,
@@ -66,7 +64,6 @@
 		counts: SeriesTabCounts;
 		monitoredOnly: boolean;
 		monitoredCount: number;
-		density: Density;
 		selectMode: boolean;
 		selectedCount: number;
 		visibleCount: number;
@@ -76,7 +73,6 @@
 		onMonitoredChange: (v: boolean) => void;
 		onSortChange: (s: SeriesSort) => void;
 		onViewChange: (v: View) => void;
-		onDensityChange: (v: Density) => void;
 		onClearFilters: () => void;
 		onSelectModeChange: (v: boolean) => void;
 		onSelectAll: () => void;
@@ -266,8 +262,6 @@
 	{onMonitoredChange}
 	{view}
 	{onViewChange}
-	{density}
-	{onDensityChange}
 	onSelectMode={() => onSelectModeChange(true)}
 	onReset={onClearFilters}
 	activeCount={activeFilters}

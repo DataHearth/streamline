@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { slide } from "svelte/transition";
-	import { ChevronDown } from "@lucide/svelte";
+	import { ChevronDown, ChevronRight, LoaderCircle } from "@lucide/svelte";
 	import {
 		createQuery,
 		createInfiniteQuery,
@@ -10,6 +10,8 @@
 	import { api } from "../../lib/api";
 	import { auth } from "../../lib/auth.svelte";
 	import { toast } from "../../lib/toast";
+	import { pullRefresh } from "../../lib/pull-refresh";
+	import { formatEta, formatSpeed } from "../../lib/format";
 	import type {
 		DownloadQueue,
 		DownloadHistory,
@@ -18,16 +20,33 @@
 		PendingList,
 		PendingItem,
 	} from "../../lib/types";
-	import ActivityToolbar from "../../components/activity/ActivityToolbar.svelte";
+	import ActivityToolbar, {
+		ACTIVITY_CHIPS,
+	} from "../../components/activity/ActivityToolbar.svelte";
+	import ActivityViewSwitch from "../../components/activity/ActivityViewSwitch.svelte";
 	import ActivityTable from "../../components/activity/ActivityTable.svelte";
+	import ActivityTouchList from "../../components/activity/ActivityTouchList.svelte";
+	import ActivityDetailSheet from "../../components/activity/ActivityDetailSheet.svelte";
+	import ActivityFilterSheet from "../../components/activity/ActivityFilterSheet.svelte";
+	import PendingSheet from "../../components/activity/PendingSheet.svelte";
+	import TouchStatLine from "../../components/activity/TouchStatLine.svelte";
 	import LiveStrip from "../../components/activity/LiveStrip.svelte";
 	import PendingRow from "../../components/pending/PendingRow.svelte";
 
 	// Torrents live on their own route (/activity/torrents); this page is the
-	// queue/history pair the toolbar swaps between.
+	// queue/history pair the switch above the toolbar swaps between.
 	type View = "queue" | "history";
 
-	let view = $state<View>("queue");
+	// The switch is page state, not a route, so nothing links straight to History.
+	// `?view=history` is still honoured for a link someone typed or bookmarked.
+	function initialView(): View {
+		if (typeof window === "undefined") return "queue";
+		return new URLSearchParams(window.location.search).get("view") === "history"
+			? "history"
+			: "queue";
+	}
+
+	let view = $state<View>(initialView());
 	let statusFilter = $state<string[]>([]);
 	let search = $state("");
 	const qc = useQueryClient();
@@ -105,11 +124,14 @@
 		refetchInterval: 30000,
 	}));
 	let pendingItems = $derived<PendingItem[]>(pendingQuery.data?.items ?? []);
-	// Collapsed by default on phones so it doesn't bury the queue/history table.
-	let attnOpen = $state(
-		typeof window === "undefined" ||
-			!window.matchMedia("(max-width: 767px)").matches,
+	let showPending = $derived(
+		auth.isAdmin && (pendingItems.length > 0 || pendingQuery.isError),
 	);
+	let attnOpen = $state(true);
+	// Below md the section is one banner line and the proposals open in a sheet:
+	// three of them expanded push the queue entirely below the fold, and each one's
+	// three decisions want the full width.
+	let pendingOpen = $state(false);
 
 	function invalidatePending() {
 		qc.invalidateQueries({ queryKey: ["activity", "pending"] });
@@ -171,10 +193,11 @@
 		(history.data?.pages ?? []).flatMap((p) => p.items),
 	);
 
+	let source = $derived<(QueueEntry | HistoryEntry)[]>(
+		view === "queue" ? queueItems : historyItems,
+	);
 	let rows = $derived.by<(QueueEntry | HistoryEntry)[]>(() => {
-		const src: (QueueEntry | HistoryEntry)[] =
-			view === "queue" ? queueItems : historyItems;
-		let out = src;
+		let out = source;
 		if (statusFilter.length)
 			out = out.filter((i) => statusFilter.includes(i.status));
 		if (search.trim()) {
@@ -196,19 +219,80 @@
 		if (removeHistory.isPending) return removeHistory.variables ?? null;
 		return null;
 	});
+
+	// ── Touch surfaces ───────────────────────────────────────────────────────
+	let filtersOpen = $state(false);
+	let detailId = $state<number | null>(null);
+	// Held by id, not by value: the queue repolls every 2 s, and a sheet holding
+	// the snapshot it opened with would show a frozen speed and percentage.
+	let detailItem = $derived<QueueEntry | HistoryEntry | null>(
+		detailId === null ? null : (source.find((i) => i.id === detailId) ?? null),
+	);
+	let activeFilters = $derived(statusFilter.length + (search.trim() ? 1 : 0));
+	let clearableCount = $derived(
+		historyItems.filter((h) => h.status === "completed").length,
+	);
+
+	let aggregate = $derived(
+		queueItems.reduce((s, i) => s + (i.download_speed ?? 0), 0),
+	);
+	let minEta = $derived.by(() => {
+		const etas = queueItems.map((i) => i.eta ?? 0).filter((e) => e > 0);
+		return etas.length ? Math.min(...etas) : 0;
+	});
+	let activeCount = $derived(
+		queueItems.filter((i) => i.status === "downloading").length,
+	);
+
+	function resetFilters() {
+		statusFilter = [];
+		search = "";
+	}
+
+	// A pull re-fetches everything the page shows, not just the view in front —
+	// the point of the gesture is "is all of this current?".
+	async function refreshAll() {
+		await Promise.all([
+			qc.refetchQueries({ queryKey: ["activity", "queue"] }),
+			qc.refetchQueries({ queryKey: ["activity", "history"] }),
+			auth.isAdmin
+				? qc.refetchQueries({ queryKey: ["activity", "pending"] })
+				: Promise.resolve(),
+		]);
+	}
 </script>
 
-<div class="flex flex-col px-4 py-6 md:px-6">
-	<header class="mb-4">
+<div
+	use:pullRefresh={{ onRefresh: refreshAll }}
+	class="group relative flex flex-col px-4 py-6 md:px-6"
+>
+	<!-- Sits in the gap the pull opens above the page. -->
+	<div
+		aria-hidden="true"
+		class="pointer-events-none absolute inset-x-0 -top-11 flex h-11 items-center justify-center gap-2 text-[11.5px] text-fg-subtle opacity-0 transition-opacity group-data-[pulling]:opacity-100 md:hidden"
+	>
+		<LoaderCircle
+			size={15}
+			class="group-data-[refreshing]:motion-safe:animate-spin"
+			aria-hidden="true"
+		/>
+		<span class="group-data-[pull-armed]:hidden group-data-[refreshing]:hidden">
+			Pull to refresh
+		</span>
+		<span class="hidden group-data-[pull-armed]:inline">Release to refresh</span>
+		<span class="hidden group-data-[refreshing]:inline">Refreshing…</span>
+	</div>
+
+	<header class="mb-1">
 		<h1 class="text-2xl font-bold tracking-tight text-fg">Queue &amp; History</h1>
 		<p class="mt-1 text-sm text-fg-muted">
 			{queueItems.length} active · {historyItems.length} in history
 		</p>
 	</header>
 
-	{#if auth.isAdmin && (pendingItems.length > 0 || pendingQuery.isError)}
+	{#if showPending}
 		<section
-			class="mb-4 rounded-xl border border-status-wanted/30 bg-status-wanted/[0.04] p-4"
+			class="mt-4 hidden rounded-xl border border-status-wanted/30 bg-status-wanted/[0.04] p-4 md:block"
 		>
 			<button
 				type="button"
@@ -256,22 +340,73 @@
 		</section>
 	{/if}
 
-	<LiveStrip items={queueItems} />
+	<div class="hidden md:mt-3 md:block">
+		<LiveStrip items={queueItems} />
+	</div>
+
+	<TouchStatLine
+		stats={[
+			{ value: String(activeCount), label: "Active" },
+			{
+				value: formatSpeed(aggregate) || "—",
+				label: "Aggregate ↓",
+				color: "var(--status-downloading)",
+			},
+			{ value: formatEta(minEta) || "—", label: "Next ETA" },
+		]}
+	/>
 
 	<ActivityToolbar
 		{view}
 		{statusFilter}
 		{search}
-		counts={{ queue: queueItems.length, history: historyItems.length }}
-		onViewChange={(v) => {
-			view = v;
-			statusFilter = [];
-		}}
-		clearableCount={historyItems.filter((h) => h.status === "completed").length}
+		{activeFilters}
+		{clearableCount}
+		onOpenFilters={() => (filtersOpen = true)}
 		onStatusFilterChange={(s) => (statusFilter = s)}
 		onSearchChange={(q) => (search = q)}
 		onClearCompleted={auth.isAdmin ? () => clearCompleted.mutate() : undefined}
-	/>
+	>
+		{#snippet leading()}
+			<ActivityViewSwitch
+				{view}
+				counts={{ queue: queueItems.length, history: historyItems.length }}
+				onViewChange={(v) => {
+					view = v;
+					statusFilter = [];
+					detailId = null;
+				}}
+			/>
+		{/snippet}
+	</ActivityToolbar>
+
+	{#if showPending}
+		<!-- Below md the section is one line, and it sits under the toolbar rather than
+		     above the stats: up there it pushed the stat card down, so the same numbers
+		     landed in a different place on Queue than on Torrents. -->
+		<button
+			type="button"
+			onclick={() => (pendingOpen = true)}
+			class="mt-2 flex items-center gap-2.5 rounded-xl border border-status-wanted/30 bg-status-wanted/[0.06] px-3.5 py-2.5 text-left md:hidden"
+		>
+			<span
+				class="h-[7px] w-[7px] shrink-0 rounded-full bg-status-wanted"
+				aria-hidden="true"
+			></span>
+			<span class="min-w-0 flex-1 truncate text-[12.5px] font-medium text-fg">
+				{#if pendingQuery.isError}
+					Couldn't load proposals
+				{:else}
+					{pendingItems.length}
+					{pendingItems.length === 1 ? "proposal needs" : "proposals need"} a decision
+				{/if}
+			</span>
+			<span class="shrink-0 text-[12.5px] font-semibold text-status-wanted">
+				Review
+			</span>
+			<ChevronRight size={14} class="shrink-0 text-status-wanted" aria-hidden="true" />
+		</button>
+	{/if}
 
 	<ActivityTable
 		{view}
@@ -288,4 +423,48 @@
 		onResume={(id) => resume.mutate(id)}
 		onRemove={(id) => removeHistory.mutate(id)}
 	/>
+
+	<ActivityTouchList
+		{view}
+		{rows}
+		loading={view === "queue" ? queue.isPending : history.isPending}
+		error={view === "queue" ? (queue.error ?? null) : (history.error ?? null)}
+		hasMore={view === "history" && (history.hasNextPage ?? false)}
+		loadingMore={history.isFetchingNextPage}
+		onLoadMore={() => history.fetchNextPage()}
+		onOpen={(item) => (detailId = item.id)}
+	/>
 </div>
+
+<ActivityFilterSheet
+	open={filtersOpen}
+	onClose={() => (filtersOpen = false)}
+	{search}
+	onSearchChange={(q) => (search = q)}
+	searchPlaceholder="Filter title or movie…"
+	onReset={resetFilters}
+	activeCount={activeFilters}
+/>
+
+<PendingSheet
+	open={pendingOpen}
+	items={pendingItems}
+	busyId={pendingBusyId}
+	error={pendingQuery.isError}
+	onClose={() => (pendingOpen = false)}
+	onImport={(id) => importPending.mutate(id)}
+	onReplace={(id, removeOld) => replacePending.mutate({ id, removeOld })}
+	onIgnore={(id, removeTorrent) => ignorePending.mutate({ id, removeTorrent })}
+/>
+
+<ActivityDetailSheet
+	item={detailItem}
+	{view}
+	busy={detailId !== null && busyId === detailId}
+	canControl={auth.isAdmin}
+	onClose={() => (detailId = null)}
+	onCancel={(id) => cancel.mutate(id)}
+	onPause={(id) => pause.mutate(id)}
+	onResume={(id) => resume.mutate(id)}
+	onRemove={(id) => removeHistory.mutate(id)}
+/>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from "svelte";
 	import { fly, fade } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import {
@@ -14,7 +15,7 @@
 		Globe,
 	} from "@lucide/svelte";
 	import StatusPill from "../shared/StatusPill.svelte";
-	import ProgressBar from "../shared/ProgressBar.svelte";
+	import ProgressRing from "./ProgressRing.svelte";
 	import Dialog from "../modals/Dialog.svelte";
 	import Checkbox from "../forms/Checkbox.svelte";
 	import TorrentFilesTab from "./TorrentFilesTab.svelte";
@@ -22,6 +23,7 @@
 	import TorrentTrackersTab from "./TorrentTrackersTab.svelte";
 	import { cn } from "../../lib/cn";
 	import { lockScroll, unlockScroll } from "../../lib/scrollLock";
+	import { sheetSwipe } from "../../lib/sheet-swipe";
 	import {
 		formatBytes,
 		formatSpeed,
@@ -66,6 +68,20 @@
 	let copied = $state(false);
 	let confirmRemove = $state(false);
 	let deleteFiles = $state(false);
+
+	// Below md the same detail is a bottom sheet rather than a side drawer: it
+	// arrives from the edge the thumb is on, and it's dismissed by dragging rather
+	// than by finding a close target in a far corner. Same content either way — only
+	// the container and the axis it travels on change, and the axis can't be a CSS
+	// class, so the breakpoint is read here.
+	let compact = $state(false);
+	onMount(() => {
+		const mql = window.matchMedia("(max-width: 767px)");
+		const sync = () => (compact = mql.matches);
+		sync();
+		mql.addEventListener("change", sync);
+		return () => mql.removeEventListener("change", sync);
+	});
 
 	// Reset to Files + clear transient UI whenever a different torrent opens.
 	let lastHash = "";
@@ -130,98 +146,118 @@
 		></div>
 
 		<div
-			transition:fly={{ x: 540, duration: 240, easing: cubicOut }}
-			class="absolute inset-y-0 right-0 flex w-full max-w-[720px] flex-col border-l border-border bg-bg-elevated shadow-4"
+			use:sheetSwipe={{ onDismiss: onClose, disabled: !compact }}
+			transition:fly={compact
+				? { y: 420, duration: 280, easing: cubicOut }
+				: { x: 540, duration: 240, easing: cubicOut }}
+			class={cn(
+				"absolute flex flex-col bg-bg-elevated shadow-4",
+				compact
+					? "inset-x-0 bottom-0 max-h-[88dvh] overflow-hidden rounded-t-2xl border-t border-border-strong"
+					: "inset-y-0 right-0 w-full max-w-[560px] border-l border-border lg:max-w-[720px]",
+			)}
 			role="dialog"
 			aria-modal="true"
 			aria-label="Torrent detail"
 		>
 			<!-- Header -->
-			<header class="shrink-0 border-b border-border p-5">
+			<header class="relative shrink-0 border-b border-border p-5">
+				{#if compact}
+					<span
+						aria-hidden="true"
+						class="absolute left-1/2 top-2 h-1 w-9 -translate-x-1/2 rounded-full bg-border-strong"
+					></span>
+				{/if}
 				<div class="flex items-start justify-between gap-3">
-					<div class="flex flex-wrap items-center gap-2">
-						<StatusPill status={torrent.status} live={active} />
-						{#if torrent.seeding_stopped}
-							<span
-								class="inline-flex items-center gap-1 rounded-full border border-status-completed/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-status-completed"
-								title="Ratio / seed-time limit reached"
+					<div class="flex min-w-0 items-start gap-3">
+						<ProgressRing
+							status={torrent.status}
+							progress={torrent.progress}
+							size="lg"
+						/>
+						<div class="min-w-0">
+							<h2 class="break-words text-base font-semibold leading-snug text-fg">
+								{#if fetching && !torrent.name}
+									<span class="italic text-fg-muted">Fetching metadata…</span>
+								{:else}
+									{torrent.name}
+								{/if}
+							</h2>
+							<!-- infohash · click to copy -->
+							<button
+								type="button"
+								onclick={copyHash}
+								class="group mt-1 inline-flex max-w-full items-center gap-1.5 text-left"
+								title="Copy infohash"
 							>
-								Seeding stopped
-							</span>
-						{/if}
-						{#if !torrent.tracked}
-							<span
-								class="inline-flex items-center rounded-full border border-border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fg-subtle"
-							>
-								untracked
-							</span>
-						{/if}
+								<span
+									class="truncate font-mono text-[11px] text-fg-subtle group-hover:text-fg-muted"
+								>
+									{torrent.hash}
+								</span>
+								{#if copied}
+									<Check
+										size={12}
+										class="shrink-0 text-status-available"
+										aria-hidden="true"
+									/>
+								{:else}
+									<Copy
+										size={12}
+										class="shrink-0 text-fg-faint group-hover:text-fg-muted"
+										aria-hidden="true"
+									/>
+								{/if}
+							</button>
+						</div>
 					</div>
 					<button
 						type="button"
 						onclick={onClose}
 						aria-label="Close"
-						class="grid h-8 w-8 shrink-0 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg"
+						class="grid h-9 w-9 shrink-0 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg"
 					>
 						<X size={16} aria-hidden="true" />
 					</button>
 				</div>
 
-				<h2 class="mt-3 break-words text-lg font-semibold leading-snug text-fg">
-					{#if fetching && !torrent.name}
-						<span class="italic text-fg-muted">Fetching metadata…</span>
-					{:else}
-						{torrent.name}
+				<div class="mt-3 flex flex-wrap items-center gap-2">
+					<StatusPill status={torrent.status} live={active} />
+					{#if torrent.seeding_stopped}
+						<span
+							class="inline-flex items-center gap-1 rounded-full border border-status-completed/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-status-completed"
+							title="Ratio / seed-time limit reached"
+						>
+							Seeding stopped
+						</span>
 					{/if}
-				</h2>
-
-				<!-- infohash · click to copy -->
-				<button
-					type="button"
-					onclick={copyHash}
-					class="group mt-1.5 inline-flex max-w-full items-center gap-1.5 text-left"
-					title="Copy infohash"
-				>
-					<span class="truncate font-mono text-[11px] text-fg-subtle group-hover:text-fg-muted">
-						{torrent.hash}
+					{#if !torrent.tracked}
+						<span
+							class="inline-flex items-center rounded-full border border-border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fg-subtle"
+						>
+							untracked
+						</span>
+					{/if}
+					<span class="ml-auto font-mono text-xs tabular-nums text-fg-faint">
+						{#if torrent.status === "downloading" && torrent.eta > 0}
+							{formatEta(torrent.eta)} left
+						{:else if torrent.status === "seeding"}
+							seeding
+						{:else if torrent.status === "completed"}
+							complete
+						{/if}
 					</span>
-					{#if copied}
-						<Check size={12} class="shrink-0 text-status-available" aria-hidden="true" />
-					{:else}
-						<Copy size={12} class="shrink-0 text-fg-faint group-hover:text-fg-muted" aria-hidden="true" />
-					{/if}
-				</button>
-
-				<!-- overall progress -->
-				<div class="mt-4">
-					<ProgressBar
-						value={fetching ? undefined : torrent.progress}
-						status={torrent.status}
-						height={4}
-						shimmer={torrent.status === "downloading"}
-					/>
-					<div class="mt-1.5 flex items-center justify-between text-xs">
-						<span class="font-mono tabular-nums font-semibold text-fg">
-							{fetching ? "—" : `${Math.round(torrent.progress * 100)}%`}
-						</span>
-						<span class="font-mono tabular-nums text-fg-faint">
-							{#if torrent.status === "downloading" && torrent.eta > 0}
-								{formatEta(torrent.eta)} left
-							{:else if torrent.status === "seeding"}
-								seeding
-							{:else if torrent.status === "completed"}
-								complete
-							{/if}
-						</span>
-					</div>
 				</div>
 
-				<!-- stat tiles -->
-				<div class="mt-4 grid grid-cols-4 gap-px overflow-hidden rounded-md border border-border bg-border">
+				<!-- stat tiles. Four across at every width: TouchStatLine already proves
+				     four numbers read at 390px, and a 2×2 grid split the pair apart. -->
+				<div
+					class="mt-4 grid grid-cols-4 gap-px overflow-hidden rounded-md border border-border bg-border"
+				>
 					{@render stat("Ratio", fetching ? "—" : formatRatio(torrent.ratio))}
+					{@render stat("Size", formatBytes(torrent.size))}
 					{@render stat("↓ Down", formatSpeed(torrent.download_speed) || "—")}
 					{@render stat("↑ Up", formatSpeed(torrent.upload_speed) || "—")}
-					{@render stat("Size", formatBytes(torrent.size))}
 				</div>
 
 				<!-- meta -->
@@ -265,7 +301,7 @@
 			</div>
 
 			<!-- Tab body -->
-			<div class="min-h-0 flex-1 overflow-y-auto p-4">
+			<div data-sheet-scroll class="min-h-0 flex-1 overflow-y-auto p-4">
 				{#if !detail}
 					<div class="flex flex-col items-center justify-center gap-2 py-16 text-center">
 						<LoaderCircle size={22} class="text-fg-faint motion-safe:animate-spin" aria-hidden="true" />
@@ -298,7 +334,9 @@
 
 			<!-- Actions -->
 			{#if canControl}
-				<footer class="flex shrink-0 items-center gap-2 border-t border-border p-4">
+				<footer
+					class="flex shrink-0 items-center gap-2 border-t border-border p-4 pb-[max(env(safe-area-inset-bottom),1rem)] md:pb-4"
+				>
 					{#if torrent.status === "paused"}
 						<button
 							type="button"
@@ -340,9 +378,15 @@
 {/if}
 
 {#snippet stat(label: string, value: string)}
-	<div class="bg-bg-elevated px-3 py-2.5">
-		<div class="font-mono tabular-nums text-sm font-semibold text-fg">{value}</div>
-		<div class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.1em] text-fg-faint">
+	<div class="min-w-0 bg-bg-elevated px-2.5 py-2.5 md:px-3">
+		<div
+			class="truncate font-mono text-[13px] font-semibold tabular-nums text-fg md:text-sm"
+		>
+			{value}
+		</div>
+		<div
+			class="mt-0.5 truncate text-[9px] font-medium uppercase tracking-[0.1em] text-fg-faint md:text-[10px]"
+		>
 			{label}
 		</div>
 	</div>
@@ -351,6 +395,7 @@
 <Dialog
 	open={confirmRemove}
 	title="Remove torrent?"
+	inlineActions
 	onClose={() => (confirmRemove = false)}
 	actions={[
 		{ label: "Cancel", variant: "ghost", autofocus: true },

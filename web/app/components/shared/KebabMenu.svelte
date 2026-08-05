@@ -55,7 +55,11 @@
 			close();
 			return;
 		}
-		menuRight = Math.max(8, window.innerWidth - rect.right);
+		// Right-aligned to the trigger, but clamped to both edges: a left-column
+		// card on a phone sits far enough from the right that a right-anchored
+		// 240px menu would start off the left of the screen.
+		const maxRight = Math.max(8, window.innerWidth - MENU_W - 8);
+		menuRight = Math.min(maxRight, Math.max(8, window.innerWidth - rect.right));
 		// Open downward by default; flip above the trigger when there's not
 		// enough room below but enough above (bottom-row cards in a grid).
 		const below = rect.bottom + MENU_GAP;
@@ -201,6 +205,6 @@
 	.kebab-menu {
 		top: var(--menu-top);
 		right: var(--menu-right);
-		width: var(--menu-width);
+		width: min(var(--menu-width), calc(100vw - 16px));
 	}
 </style>

@@ -1,6 +1,5 @@
 <script lang="ts" module>
 	export type FilterOption = { key: string; label: string };
-	export type Density = "compact" | "roomy";
 </script>
 
 <script lang="ts">
@@ -13,18 +12,16 @@
 		Bookmark,
 		LayoutGrid,
 		List,
-		Rows2,
-		Rows3,
 		ListChecks,
-		Check,
 	} from "@lucide/svelte";
 	import { cn } from "../../lib/cn";
+	import { dragScroll } from "../../lib/drag-scroll";
 	import { lockScroll, unlockScroll } from "../../lib/scrollLock";
 	import { sheetSwipe } from "../../lib/sheet-swipe";
 
 	// Everything the library toolbars can no longer afford to keep on screen at
-	// phone width: the filter query, sort, monitored, view, density and the way
-	// into selection. One sheet, one trip.
+	// phone width: the filter query, sort, monitored, view and the way into
+	// selection. One sheet, one trip.
 	let {
 		open,
 		onClose,
@@ -39,8 +36,6 @@
 		onMonitoredChange,
 		view,
 		onViewChange,
-		density,
-		onDensityChange,
 		onSelectMode,
 		onReset,
 		activeCount = 0,
@@ -59,8 +54,6 @@
 		onMonitoredChange: (v: boolean) => void;
 		view: "grid" | "list";
 		onViewChange: (v: "grid" | "list") => void;
-		density: Density;
-		onDensityChange: (v: Density) => void;
 		onSelectMode: () => void;
 		onReset: () => void;
 		activeCount?: number;
@@ -157,7 +150,13 @@
 
 				<div class="pt-5">
 					<div class={label}>Sort</div>
-					<div class="flex flex-wrap gap-2">
+					<!-- One scrolling line rather than a wrap, like the status pills on the
+					     toolbar: the group keeps its height however many sorts a page has.
+					     The right edge fades, so a cut chip reads as more to scroll to. -->
+					<div
+						use:dragScroll
+						class="sort-scroll -mx-5 flex items-center gap-2 overflow-x-auto px-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+					>
 						{#each sortOptions as opt (opt.key)}
 							{@const on = sort === opt.key}
 							<button
@@ -167,13 +166,6 @@
 								class={cn(chip, on ? chipOn : chipOff)}
 							>
 								{opt.label}
-								<!-- The tick is always laid out, only hidden: revealing it on pick
-								     changed the chip's width and reflowed the whole wrap. -->
-								<Check
-									size={14}
-									class={on ? "" : "invisible"}
-									aria-hidden="true"
-								/>
 							</button>
 						{/each}
 					</div>
@@ -227,28 +219,6 @@
 							List
 						</button>
 					</div>
-					{#if view === "grid"}
-						<div class="flex flex-wrap gap-2 md:mt-2">
-							<button
-								type="button"
-								aria-pressed={density === "compact"}
-								onclick={() => onDensityChange("compact")}
-								class={cn(chip, density === "compact" ? chipOn : chipOff)}
-							>
-								<Rows3 size={14} aria-hidden="true" />
-								Compact
-							</button>
-							<button
-								type="button"
-								aria-pressed={density === "roomy"}
-								onclick={() => onDensityChange("roomy")}
-								class={cn(chip, density === "roomy" ? chipOn : chipOff)}
-							>
-								<Rows2 size={14} aria-hidden="true" />
-								Roomy
-							</button>
-						</div>
-					{/if}
 				</div>
 			</div>
 
@@ -285,3 +255,24 @@
 		</div>
 	</div>
 {/if}
+
+<style>
+	/* The row bleeds to the sheet's edges, so a chip that runs past the right
+	   would otherwise look clipped rather than scrollable. */
+	.sort-scroll {
+		-webkit-mask-image: linear-gradient(
+			to right,
+			transparent 0,
+			#000 20px,
+			#000 calc(100% - 28px),
+			transparent 100%
+		);
+		mask-image: linear-gradient(
+			to right,
+			transparent 0,
+			#000 20px,
+			#000 calc(100% - 28px),
+			transparent 100%
+		);
+	}
+</style>

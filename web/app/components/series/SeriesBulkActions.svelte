@@ -3,7 +3,7 @@
 	import {
 		Bookmark,
 		BookmarkX,
-		Search,
+		Radar,
 		SlidersHorizontal,
 		RefreshCw,
 		Trash2,
@@ -20,7 +20,7 @@
 	import KebabMenu from "../shared/KebabMenu.svelte";
 	import type { KebabItem } from "../shared/KebabMenu.svelte";
 	import QualityProfileModal from "../movies/QualityProfileModal.svelte";
-	import Dialog from "../modals/Dialog.svelte";
+	import DeleteTitleDialog from "../shared/DeleteTitleDialog.svelte";
 	import type { TVShow, QualityProfile } from "../../lib/types";
 
 	let {
@@ -47,18 +47,8 @@
 		picked.reduce((n, s) => n + (s.wanted_episodes ?? 0), 0),
 	);
 	let monitoredPicked = $derived(picked.filter((s) => s.monitored).length);
-	let pickedNames = $derived(
-		picked.length === 0
-			? ""
-			: picked
-					.slice(0, 2)
-					.map((s) => s.title)
-					.join(", ") + (picked.length > 2 ? `, +${picked.length - 2}` : ""),
-	);
-
 	let qpOpen = $state(false);
 	let deleteOpen = $state(false);
-	let deleteWithFilesOpen = $state(false);
 	let busy = $state(false);
 
 	const qc = useQueryClient();
@@ -128,7 +118,6 @@
 			() => {
 				qc.invalidateQueries({ queryKey: ["series", "counts"] });
 				deleteOpen = false;
-				deleteWithFilesOpen = false;
 			},
 		);
 	}
@@ -142,20 +131,11 @@
 		},
 		{
 			key: "delete",
-			label: "Remove from library",
+			label: "Remove from library…",
 			icon: Trash2,
 			danger: true,
 			dividerBefore: true,
 			onSelect: () => (deleteOpen = true),
-		},
-		{
-			key: "delete-with-files",
-			label: "Remove + delete files",
-			icon: Trash2,
-			danger: true,
-			disabled: episodeCount === 0,
-			title: episodeCount === 0 ? "No episodes on disk" : undefined,
-			onSelect: () => (deleteWithFilesOpen = true),
 		},
 	]);
 
@@ -169,14 +149,7 @@
 			icon: Bookmark,
 			onSelect: () => setMonitored(true),
 		},
-		{ key: "search", label: "Search", icon: Search, onSelect: searchNow },
-		{
-			key: "delete",
-			label: "Delete",
-			icon: Trash2,
-			danger: true,
-			onSelect: () => (deleteOpen = true),
-		},
+		{ key: "search", label: "Search", icon: Radar, onSelect: searchNow },
 	]);
 
 	let touchMenu = $derived<TouchMenuRow[]>([
@@ -196,7 +169,7 @@
 		{
 			key: "search",
 			label: "Search for wanted episodes",
-			icon: Search,
+			icon: Radar,
 			line: wantedCount
 				? `${plural(wantedCount, "episode")} wanted`
 				: "nothing wanted right now",
@@ -216,24 +189,15 @@
 		},
 		{
 			key: "delete",
-			label: "Remove from library",
+			label: "Remove from library…",
 			icon: Trash2,
 			danger: true,
 			dividerBefore: true,
-			line: "keeps files on disk",
-			onSelect: () => (deleteOpen = true),
-		},
-		{
-			key: "delete-with-files",
-			label: "Remove and delete files",
-			icon: Trash2,
-			danger: true,
-			disabled: episodeCount === 0,
 			line:
 				episodeCount === 0
 					? "no episodes on disk"
-					: `deletes ${plural(episodeCount, "episode")} · cannot be undone`,
-			onSelect: () => (deleteWithFilesOpen = true),
+					: `${plural(episodeCount, "episode")} on disk`,
+			onSelect: () => (deleteOpen = true),
 		},
 	]);
 </script>
@@ -268,7 +232,7 @@
 			Unmonitor
 		</button>
 		<button type="button" disabled={busy} onclick={searchNow} class={btn}>
-			<Search size={14} aria-hidden="true" />
+			<Radar size={14} aria-hidden="true" />
 			Search
 		</button>
 		<button
@@ -286,15 +250,11 @@
 
 	<BulkTouchBar
 		{count}
-		{total}
 		{busy}
 		noun="series"
 		nounPlural="series"
 		actions={touchActions}
 		menu={touchMenu}
-		footer={pickedNames}
-		{onSelectAll}
-		{onClear}
 	/>
 {/if}
 
@@ -305,35 +265,14 @@
 	onClose={() => (qpOpen = false)}
 	onSave={saveProfile}
 />
-<Dialog
+<DeleteTitleDialog
 	open={deleteOpen}
 	title="Remove {count} series from your library?"
-	body="Files on disk will be kept."
+	body="The series leave your library. Files on disk are kept unless you say otherwise."
+	filesLabel="Also delete {plural(episodeCount, 'episode')} from disk"
+	filesNote="This cannot be undone."
+	canDeleteFiles={episodeCount > 0}
+	pending={busy}
 	onClose={() => (deleteOpen = false)}
-	actions={[
-		{ label: "Cancel", variant: "ghost", autofocus: true },
-		{
-			label: "Delete",
-			variant: "danger",
-			dismiss: false,
-			pending: busy,
-			onClick: () => remove(false),
-		},
-	]}
-/>
-<Dialog
-	open={deleteWithFilesOpen}
-	title="Remove {count} series and delete their files?"
-	body="{plural(episodeCount, 'episode')} will be deleted from disk. This cannot be undone."
-	onClose={() => (deleteWithFilesOpen = false)}
-	actions={[
-		{ label: "Cancel", variant: "ghost", autofocus: true },
-		{
-			label: "Delete + files",
-			variant: "danger",
-			dismiss: false,
-			pending: busy,
-			onClick: () => remove(true),
-		},
-	]}
+	onConfirm={(withFiles) => remove(withFiles)}
 />

@@ -95,23 +95,34 @@
 		</div>
 	</td>
 
-	<td class={cn("px-2 text-fg-muted", num, pad)}>
-		{formatBytes(torrent.size)}
+	<!-- Narrow containers get one stacked cell instead of two columns; the
+	     separate Down and Up columns come back at @3xl. -->
+	<td class={cn("px-2 leading-tight @3xl:hidden", num, pad)}>
+		<div class={torrent.download_speed > 0 ? "text-status-downloading" : "text-fg-faint"}>
+			{formatSpeed(torrent.download_speed) || "—"}
+		</div>
+		<div class={torrent.upload_speed > 0 ? "text-status-seeding" : "text-fg-faint"}>
+			{formatSpeed(torrent.upload_speed) || "—"}
+		</div>
 	</td>
-	<td class={cn("px-2", num, pad)}>
+
+	<td class={cn("hidden px-2 @3xl:table-cell", num, pad)}>
 		<span class={torrent.download_speed > 0 ? "text-status-downloading" : "text-fg-faint"}>
 			{formatSpeed(torrent.download_speed) || "—"}
 		</span>
 	</td>
-	<td class={cn("px-2", num, pad)}>
+	<td class={cn("hidden px-2 @3xl:table-cell", num, pad)}>
 		<span class={torrent.upload_speed > 0 ? "text-status-seeding" : "text-fg-faint"}>
 			{formatSpeed(torrent.upload_speed) || "—"}
 		</span>
 	</td>
-	<td class={cn("px-2 text-fg-muted", num, pad)}>
+	<td class={cn("hidden px-2 text-fg-muted @3xl:table-cell", num, pad)}>
+		{formatBytes(torrent.size)}
+	</td>
+	<td class={cn("hidden px-2 text-fg-muted @4xl:table-cell", num, pad)}>
 		{fetching ? "—" : formatRatio(torrent.ratio)}
 	</td>
-	<td class={cn("px-2 text-fg-muted", num, pad)}>
+	<td class={cn("hidden px-2 text-fg-muted @4xl:table-cell", num, pad)}>
 		{#if torrent.peer_count === 0 && torrent.seeds === 0}
 			—
 		{:else}

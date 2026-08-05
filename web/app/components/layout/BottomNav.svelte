@@ -31,7 +31,7 @@
 		activityCurrent,
 		type IsActiveFn,
 	} from "../../lib/activity-nav";
-	import { navCountsQuery } from "../../lib/nav-counts";
+	import { navCountsQuery, type NavDot } from "../../lib/nav-counts";
 	import { bulkMode } from "../../lib/bulk-mode.svelte";
 	import Avatar from "./Avatar.svelte";
 
@@ -80,6 +80,8 @@
 		icon: typeof Tv;
 		line?: string;
 		badge?: number;
+		// Status counts in the line slot as coloured dots rather than plain text.
+		dots?: NavDot[];
 		// Torrents states go in the line slot as coloured dots, not as text.
 		torrents?: boolean;
 	};
@@ -96,6 +98,7 @@
 			label: "Queue & History",
 			href: "/activity",
 			icon: ListVideo,
+			dots: counts.queueDots,
 			line: counts.queueLine,
 			badge: pendingAdoptions,
 		},
@@ -443,6 +446,21 @@
 														{p.key}
 													</span>
 												{/if}
+											{/each}
+										</span>
+									{:else if row.dots?.length}
+										<span
+											class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] leading-none tabular-nums text-fg-subtle"
+										>
+											{#each row.dots as p (p.key)}
+												<span class="flex items-center gap-1.5">
+													<span
+														class="h-[6px] w-[6px] rounded-full"
+														style:background-color="var(--status-{p.dot})"
+													></span>
+													{p.count}
+													{p.label}
+												</span>
 											{/each}
 										</span>
 									{:else if row.line}

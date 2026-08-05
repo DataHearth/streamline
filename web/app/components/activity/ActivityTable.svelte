@@ -2,6 +2,7 @@
 	import { Activity, LoaderCircle } from "@lucide/svelte";
 	import ActivityRow from "./ActivityRow.svelte";
 	import ExpandedRowDetail from "./ExpandedRowDetail.svelte";
+	import { cn } from "../../lib/cn";
 	import type { QueueEntry, HistoryEntry } from "../../lib/types";
 
 	let {
@@ -35,17 +36,39 @@
 	} = $props();
 
 	const COLSPAN = 6;
-	const HEADERS: Record<"queue" | "history", string[]> = {
-		queue: ["Status", "Title", "Progress", "Speed / ETA", "Client", ""],
-		history: ["Status", "Title", "Indexer", "Size", "When", ""],
+	// Columns hide on the table's own container width, not the viewport's: at
+	// tablet the rail leaves it ~630px, where a viewport media query still counted
+	// the 88px it no longer has and kept a column that fell outside the box.
+	type Col = { label: string; hide?: string; grow?: boolean };
+	const HEADERS: Record<"queue" | "history", Col[]> = {
+		queue: [
+			{ label: "Status" },
+			// `grow` + max-w-0 on the cell: the title absorbs the leftover width and
+			// truncates, instead of pushing the table past its container.
+			{ label: "Title", grow: true },
+			{ label: "Progress" },
+			{ label: "Speed / ETA" },
+			{ label: "Client", hide: "hidden @3xl:table-cell" },
+			{ label: "" },
+		],
+		history: [
+			{ label: "Status" },
+			{ label: "Title", grow: true },
+			// Least actionable of the five, so it's the one that goes.
+			{ label: "Indexer", hide: "hidden @3xl:table-cell" },
+			{ label: "Size" },
+			{ label: "When" },
+			{ label: "" },
+		],
 	};
 	let headers = $derived(HEADERS[view]);
 
-	let expanded = $state(new Map<number, boolean>());
+	// One row open at a time: two expanded details in a table read as two competing
+	// answers to "what am I looking at", and on a short viewport the second one
+	// pushes the first off screen.
+	let expandedId = $state<number | null>(null);
 	function toggle(id: number) {
-		const next = new Map(expanded);
-		next.set(id, !next.get(id));
-		expanded = next;
+		expandedId = expandedId === id ? null : id;
 	}
 
 	// The sentinel only exists in the history view, so it mounts long after the
@@ -66,8 +89,10 @@
 	});
 </script>
 
+<!-- The table is the md-and-up reading; below that ActivityTouchList takes over,
+     since six columns don't survive 390px. -->
 <div
-	class="overflow-x-auto rounded-lg border border-border bg-bg-elevated"
+	class="@container mt-3 hidden overflow-x-auto rounded-lg border border-border bg-bg-elevated md:block"
 >
 	{#if loading}
 		<div class="px-5 py-10 text-center text-sm text-fg-subtle">Loading…</div>
@@ -95,7 +120,7 @@
 			</p>
 		</div>
 	{:else}
-		<table class="w-full min-w-[720px] border-collapse text-left">
+		<table class="w-full min-w-[520px] border-collapse text-left">
 			<thead
 				class="sticky top-0 z-10 bg-surface text-[10px] uppercase tracking-[0.12em] text-fg-faint"
 			>
@@ -103,9 +128,13 @@
 					{#each headers as h, i (i)}
 						<th
 							scope="col"
-							class="px-2 py-2.5 font-medium first:pl-4 last:pr-4"
+							class={cn(
+								"px-2 py-2.5 font-medium first:pl-4 last:pr-4",
+								h.grow ? "w-full max-w-0" : "w-px whitespace-nowrap",
+								h.hide,
+							)}
 						>
-							{h}
+							{h.label}
 						</th>
 					{/each}
 				</tr>
@@ -115,10 +144,10 @@
 					<ActivityRow
 						item={row}
 						{view}
-						expanded={expanded.get(row.id) ?? false}
+						expanded={expandedId === row.id}
 						onToggle={toggle}
 					/>
-					{#if expanded.get(row.id)}
+					{#if expandedId === row.id}
 						<ExpandedRowDetail
 							item={row}
 							{view}

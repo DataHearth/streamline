@@ -20,7 +20,7 @@
 </script>
 
 <Modal {open} title="Manual search" size="4xl" {onClose}>
-	<div class="mb-4 flex justify-end">
+	<div class="mb-4 flex justify-start md:justify-end">
 		<ReplaceExistingToggle
 			checked={replaceExisting}
 			onChange={(v) => (replaceExisting = v)}

@@ -1,5 +1,7 @@
 <script lang="ts">
-	import { Bookmark, ChevronRight, Search, Trash2 } from "@lucide/svelte";
+	import { Bookmark, ChevronRight, Info, Search, Trash2 } from "@lucide/svelte";
+	import KebabMenu, { type KebabItem } from "../shared/KebabMenu.svelte";
+	import EpisodeDetailModal from "./EpisodeDetailModal.svelte";
 	import { slide } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { cn } from "../../lib/cn";
@@ -22,6 +24,7 @@
 		onMonitorEpisode,
 		onManualSearch,
 		onDeleteFile,
+		onDeleteSeasonFiles,
 	}: {
 		seasons: Season[];
 		selected: number;
@@ -32,7 +35,69 @@
 		onMonitorEpisode: (ep: Episode) => void;
 		onManualSearch: (ep: Episode) => void;
 		onDeleteFile: (ep: Episode) => void;
+		// Season scope: wipes every file under it and reverts those episodes to
+		// wanted. The season keeps existing — this is not "delete the season".
+		onDeleteSeasonFiles: (s: Season) => void;
 	} = $props();
+
+	// Collapse is local, expand is shared. Pushing "nothing open" up into the
+	// route's selectedSeason would leave the md+ two-pane with no season to show
+	// on a resize, so only a real selection is reported.
+	let closed = $state(false);
+	let openSeason = $derived(closed ? -1 : selected);
+	function toggle(n: number) {
+		if (openSeason === n) {
+			closed = true;
+			return;
+		}
+		closed = false;
+		onSelect(n);
+	}
+
+	// The same sheet the desktop table opens, so "info" means one thing.
+	let detail = $state<Episode | null>(null);
+	let detailCode = $state("");
+	function openDetail(s: Season, ep: Episode) {
+		detailCode = epCode(s, ep);
+		detail = ep;
+	}
+
+	// Three actions behind one ⋯ instead of a single contextual button: the row
+	// used to show Search OR Delete OR a dot, so which action existed depended on
+	// state and details were unreachable at this width entirely.
+	function epMenu(s: Season, ep: Episode): KebabItem[] {
+		const st = episodeStatus(ep);
+		const hasFile = (ep.size ?? 0) > 0;
+		return [
+			{
+				key: "info",
+				label: "Episode details",
+				icon: Info,
+				onSelect: () => openDetail(s, ep),
+			},
+			{
+				key: "search",
+				label: "Manual search…",
+				icon: Search,
+				disabled: st === "unaired",
+				title: st === "unaired" ? "Not aired yet" : undefined,
+				onSelect: () => onManualSearch(ep),
+			},
+			{
+				key: "delete",
+				label: "Delete file",
+				icon: Trash2,
+				danger: true,
+				dividerBefore: true,
+				disabled: !hasFile,
+				title: hasFile ? undefined : "No file on disk",
+				onSelect: () => onDeleteFile(ep),
+			},
+		];
+	}
+	function seasonFiles(s: Season): Episode[] {
+		return (s.episodes ?? []).filter((e) => (e.size ?? 0) > 0);
+	}
 
 	function pad(n: number): string {
 		return String(n).padStart(2, "0");
@@ -83,7 +148,7 @@
 
 <div class="overflow-hidden rounded-lg border border-border bg-bg-elevated/60">
 	{#each seasons as s (s.number)}
-		{@const open = selected === s.number}
+		{@const open = openSeason === s.number}
 		{@const missing = missingEpisodes(s.episodes ?? [])}
 		{@const wanted = s.missing ?? 0}
 		<section class="border-b border-border last:border-b-0">
@@ -95,7 +160,7 @@
 			>
 				<button
 					type="button"
-					onclick={() => onSelect(s.number)}
+					onclick={() => toggle(s.number)}
 					aria-expanded={open}
 					class="flex min-w-0 flex-1 items-center gap-3 text-left"
 				>
@@ -156,21 +221,38 @@
 					/>
 				</button>
 
-				<ChevronRight
-					size={18}
-					class={cn(
-						"shrink-0 transition",
-						open ? "rotate-90 text-accent-text" : "text-fg-faint",
-					)}
-					aria-hidden="true"
-				/>
+				<button
+					type="button"
+					disabled={seasonFiles(s).length === 0}
+					onclick={() => onDeleteSeasonFiles(s)}
+					aria-label="Delete all files in {seasonName(s)}"
+					class="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-border bg-bg-elevated text-fg-subtle transition active:bg-status-failed/10 active:text-status-failed disabled:opacity-35"
+				>
+					<Trash2 size={15} aria-hidden="true" />
+				</button>
+
+				<button
+					type="button"
+					onclick={() => toggle(s.number)}
+					aria-expanded={open}
+					aria-label="{open ? 'Collapse' : 'Expand'} {seasonName(s)}"
+					class="grid h-9 w-6 shrink-0 place-items-center"
+				>
+					<ChevronRight
+						size={18}
+						class={cn(
+							"transition",
+							open ? "rotate-90 text-accent-text" : "text-fg-faint",
+						)}
+						aria-hidden="true"
+					/>
+				</button>
 			</div>
 
 			{#if open}
 				<ul transition:slide={{ duration: 180, easing: cubicOut }}>
 					{#each s.episodes ?? [] as ep (ep.id)}
 						{@const st = episodeStatus(ep)}
-						{@const searchable = st !== "available" && st !== "unaired"}
 						<li
 							class="flex items-center gap-2.5 border-t border-border bg-bg-deep px-3 py-2.5"
 						>
@@ -220,30 +302,13 @@
 									{epLine(ep)}
 								</span>
 							</span>
-							{#if searchable}
-								<button
-									type="button"
-									onclick={() => onManualSearch(ep)}
-									aria-label="Manual search for {epCode(s, ep)}"
-									class="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-fg-subtle transition active:bg-surface"
-								>
-									<Search size={16} aria-hidden="true" />
-								</button>
-							{:else if (ep.size ?? 0) > 0}
-								<button
-									type="button"
-									onclick={() => onDeleteFile(ep)}
-									aria-label="Delete file for {epCode(s, ep)}"
-									class="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-fg-faint transition active:bg-status-failed/10 active:text-status-failed"
-								>
-									<Trash2 size={15} aria-hidden="true" />
-								</button>
-							{:else}
-								<span
-									class={cn("h-1.5 w-1.5 shrink-0 rounded-full", DOT[st])}
-									aria-hidden="true"
-								></span>
-							{/if}
+							<span
+								class={cn("h-1.5 w-1.5 shrink-0 rounded-full", DOT[st])}
+								aria-hidden="true"
+							></span>
+							<span class="shrink-0 [&_button]:h-9 [&_button]:w-9">
+								<KebabMenu items={epMenu(s, ep)} variant="bar" />
+							</span>
 						</li>
 					{/each}
 				</ul>
@@ -251,3 +316,11 @@
 		</section>
 	{/each}
 </div>
+
+<EpisodeDetailModal
+	episode={detail}
+	code={detailCode}
+	onClose={() => (detail = null)}
+	{onManualSearch}
+	{onDeleteFile}
+/>

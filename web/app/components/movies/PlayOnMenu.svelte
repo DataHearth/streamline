@@ -19,9 +19,10 @@
 		queryKey: readonly unknown[];
 		disabled?: boolean;
 		disabledTitle?: string;
-		// Icon-only trigger for the phone action bar, where a 220px button would
-		// take the whole width.
+		// Icon-only trigger, for a bar that already has a wide primary action.
 		compact?: boolean;
+		// Wide accent trigger: the primary action of the phone action bar.
+		primary?: boolean;
 	};
 	let {
 		path,
@@ -29,6 +30,7 @@
 		disabled = false,
 		disabledTitle,
 		compact = false,
+		primary = false,
 	}: Props = $props();
 
 	let open = $state(false);
@@ -72,8 +74,26 @@
 	{/if}
 {/snippet}
 
-<div class="relative" onkeydown={onKey} role="presentation">
-	{#if compact}
+<div
+	class={primary ? "relative flex min-w-0 flex-1" : "relative"}
+	onkeydown={onKey}
+	role="presentation"
+>
+	{#if primary}
+		<button
+			bind:this={triggerEl}
+			type="button"
+			aria-haspopup="menu"
+			aria-expanded={open}
+			{disabled}
+			title={disabled ? disabledTitle : undefined}
+			onclick={toggle}
+			class="inline-flex h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-semibold text-fg-on-accent transition active:bg-accent-pressed disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-fg-faint"
+		>
+			<Play class="h-[18px] w-[18px]" aria-hidden="true" />
+			Play on
+		</button>
+	{:else if compact}
 		<button
 			bind:this={triggerEl}
 			type="button"
@@ -114,7 +134,7 @@
 			role="menu"
 			aria-live="polite"
 			transition:fly={{ duration: 140, y: -4, easing: cubicOut }}
-			class="absolute right-0 z-30 w-[260px] overflow-hidden rounded-md border border-border bg-bg-elevated shadow-3 {compact
+			class="absolute right-0 z-30 w-[260px] overflow-hidden rounded-md border border-border bg-bg-elevated shadow-3 {compact || primary
 				? 'bottom-full mb-2'
 				: 'mt-1'}"
 		>

@@ -3,6 +3,7 @@
 	import StatusPill from "../shared/StatusPill.svelte";
 	import ProgressBar from "../shared/ProgressBar.svelte";
 	import { cn } from "../../lib/cn";
+	import { entryHeading } from "../../lib/activity-touch";
 	import { pillStatus, formatBytes, formatSpeed, formatEta } from "../../lib/format";
 	import { formatRelative, formatDateTime } from "../../lib/dates";
 	import type { QueueEntry, HistoryEntry } from "../../lib/types";
@@ -20,6 +21,9 @@
 	} = $props();
 
 	const pad = "py-3";
+	// Data columns hold their content width; the title column takes the remainder
+	// and truncates (w-full + max-w-0), so a long release can't widen the table.
+	const tight = "w-px whitespace-nowrap";
 	let isActive = $derived(view === "queue" && item.status === "downloading");
 	let queue = $derived(item as QueueEntry);
 	let history = $derived(item as HistoryEntry);
@@ -32,22 +36,8 @@
 		return parts.join(" · ");
 	});
 
-	// Episode records carry no movie; render "<show> · SxxExx" instead.
-	function pad2(n: number): string {
-		return String(n).padStart(2, "0");
-	}
-	const episodeTokenRe = /S\d{1,2}E\d{1,2}/i;
-	let heading = $derived.by(() => {
-		const ep = item.episode;
-		if (!ep) return item.movie.title;
-		// A season pack names no specific episode, so its linked episode is just
-		// the season's first — label it as the season, not a misleading "SxxE01".
-		if (episodeTokenRe.test(item.title)) {
-			return `${ep.show_title} · S${pad2(ep.season)}E${pad2(ep.episode)}`;
-		}
-		const season = ep.season === 0 ? "Specials" : `Season ${pad2(ep.season)}`;
-		return `${ep.show_title} · ${season}`;
-	});
+	// Shared with the touch row, which puts the same heading over the release line.
+	let heading = $derived(entryHeading(item));
 </script>
 
 <tr
@@ -58,7 +48,7 @@
 	aria-expanded={expanded}
 	onclick={() => onToggle(item.id)}
 >
-	<td class={cn("pl-4 pr-2", pad)}>
+	<td class={cn("pl-4 pr-2", tight, pad)}>
 		<StatusPill
 			status={pillStatus(item.status)}
 			size="sm"
@@ -66,7 +56,7 @@
 		/>
 	</td>
 
-	<td class={cn("min-w-0 px-2", pad)}>
+	<td class={cn("w-full max-w-0 px-2", pad)}>
 		<div class="truncate font-medium text-fg">{heading}</div>
 		<div class="truncate font-mono text-[11px] text-fg-subtle">
 			{item.title}
@@ -74,9 +64,9 @@
 	</td>
 
 	{#if view === "queue"}
-		<td class={cn("px-2", pad)}>
+		<td class={cn("px-2", tight, pad)}>
 			<div class="flex items-center gap-2">
-				<div class="w-24 sm:w-32">
+				<div class="w-24 sm:w-28">
 					<ProgressBar
 						value={queue.status === "importing" ? 1 : queue.progress}
 						status={queue.status === "importing"
@@ -91,28 +81,28 @@
 				</span>
 			</div>
 		</td>
-		<td class={cn("px-2 tabular-nums text-xs text-fg-muted", pad)}>
+		<td class={cn("px-2 tabular-nums text-xs text-fg-muted", tight, pad)}>
 			{speedEta || "—"}
 		</td>
-		<td class={cn("px-2 text-xs text-fg-subtle", pad)}>
+		<td class={cn("hidden px-2 text-xs text-fg-subtle @3xl:table-cell", tight, pad)}>
 			{queue.download_client || "—"}
 		</td>
 	{:else}
-		<td class={cn("px-2 text-xs text-fg-subtle", pad)}>
+		<td class={cn("hidden px-2 text-xs text-fg-subtle @3xl:table-cell", tight, pad)}>
 			{history.indexer || "—"}
 		</td>
-		<td class={cn("px-2 tabular-nums text-xs text-fg-muted", pad)}>
+		<td class={cn("px-2 tabular-nums text-xs text-fg-muted", tight, pad)}>
 			{formatBytes(history.size)}
 		</td>
 		<td
-			class={cn("px-2 text-xs text-fg-subtle", pad)}
+			class={cn("px-2 text-xs text-fg-subtle", tight, pad)}
 			title={formatDateTime(history.updated_at)}
 		>
 			{formatRelative(history.updated_at)}
 		</td>
 	{/if}
 
-	<td class={cn("pr-4 pl-2 text-right", pad)}>
+	<td class={cn("pr-4 pl-2 text-right", tight, pad)}>
 		<button
 			type="button"
 			aria-label={expanded ? "Collapse details" : "Expand details"}

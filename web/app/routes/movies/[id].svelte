@@ -22,7 +22,7 @@
 	import ManualSearchModal from "../../components/movies/ManualSearchModal.svelte";
 	import QualityProfileModal from "../../components/movies/QualityProfileModal.svelte";
 	import RenameMoviePreviewModal from "../../components/movies/RenameMoviePreviewModal.svelte";
-	import Dialog from "../../components/modals/Dialog.svelte";
+	import DeleteTitleDialog from "../../components/shared/DeleteTitleDialog.svelte";
 
 	type Tab = "overview" | "history" | "cast";
 	const TABS: { key: Tab; label: string }[] = [
@@ -81,7 +81,6 @@
 	let qpOpen = $state(false);
 	let renameOpen = $state(false);
 	let deleteOpen = $state(false);
-	let deleteWithFilesOpen = $state(false);
 
 	const qc = useQueryClient();
 	const refresh = createMutation(() => ({
@@ -150,7 +149,6 @@
 		else if (a === "rename") renameOpen = true;
 		else if (a === "refresh") refresh.mutate();
 		else if (a === "delete") deleteOpen = true;
-		else if (a === "delete-with-files") deleteWithFilesOpen = true;
 	}
 </script>
 
@@ -232,10 +230,7 @@
 				</span>
 			</button>
 
-			<MovieKebabMenu
-				onPick={onKebabPick}
-				disabledActions={hasFiles ? [] : ["rename", "delete-with-files"]}
-			/>
+			<MovieKebabMenu onPick={onKebabPick} disabledActions={hasFiles ? [] : ["rename"]} />
 		{/snippet}
 	</MovieDetailHero>
 
@@ -291,31 +286,32 @@
 	</div>
 
 	<!-- Phone: the action row the hero gives up, pinned above the bottom nav so
-	     Manual search is in reach from anywhere in the page. -->
+	     playing and searching are in reach from anywhere in the page. -->
 	<div
-		class="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+3.5rem)] z-30 flex items-center gap-2 border-t border-border bg-bg-elevated/95 px-3 py-2.5 backdrop-blur-md md:hidden"
+		class="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+3.5rem)] z-30 flex items-center gap-2 border-t border-border bg-bg-elevated/95 px-3 pb-4 pt-2.5 backdrop-blur-md md:hidden"
 		aria-label="Movie actions"
 	>
-		<button
-			type="button"
-			onclick={() => (searchOpen = true)}
-			class="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-semibold text-fg-on-accent transition active:bg-accent-pressed"
-		>
-			{#if movie.status === "downloading"}
-				<LoaderCircle size={15} class="animate-spin" aria-hidden="true" />
-			{:else}
-				<Search size={15} aria-hidden="true" />
-			{/if}
-			Manual search
-		</button>
-
 		<PlayOnMenu
-			compact
+			primary
 			path={`/movies/${movie.id}/play-on`}
 			queryKey={["movie", movie.id, "play-on"]}
 			disabled={!hasFiles}
 			disabledTitle="Available after the movie has been imported"
 		/>
+
+		<button
+			type="button"
+			onclick={() => (searchOpen = true)}
+			aria-label="Manual search"
+			title="Manual search"
+			class="grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-border-strong bg-bg-elevated text-fg-muted transition active:bg-surface"
+		>
+			{#if movie.status === "downloading"}
+				<LoaderCircle size={18} class="animate-spin" aria-hidden="true" />
+			{:else}
+				<Search size={18} aria-hidden="true" />
+			{/if}
+		</button>
 
 		<button
 			type="button"
@@ -337,10 +333,7 @@
 			/>
 		</button>
 
-		<MovieKebabMenu
-			onPick={onKebabPick}
-			disabledActions={hasFiles ? [] : ["rename", "delete-with-files"]}
-		/>
+		<MovieKebabMenu onPick={onKebabPick} disabledActions={hasFiles ? [] : ["rename"]} />
 	</div>
 
 	<ManualSearchModal
@@ -361,37 +354,16 @@
 		movieId={movie.id}
 		onClose={() => (renameOpen = false)}
 	/>
-	<Dialog
+	<DeleteTitleDialog
 		open={deleteOpen}
 		title="Remove '{movie.title}' from your library?"
-		body="Files on disk will be kept."
+		body="The movie leaves your library. Files on disk are kept unless you say otherwise."
+		filesLabel="Also delete the movie's files from disk"
+		filesNote="This cannot be undone."
+		canDeleteFiles={hasFiles}
+		pending={del.isPending}
 		onClose={() => (deleteOpen = false)}
-		actions={[
-			{ label: "Cancel", variant: "ghost", autofocus: true },
-			{
-				label: "Delete",
-				variant: "danger",
-				dismiss: false,
-				pending: del.isPending,
-				onClick: () => del.mutate(false),
-			},
-		]}
-	/>
-	<Dialog
-		open={deleteWithFilesOpen}
-		title="Remove '{movie.title}' and delete its files?"
-		body="The movie's file will be deleted from disk. This cannot be undone."
-		onClose={() => (deleteWithFilesOpen = false)}
-		actions={[
-			{ label: "Cancel", variant: "ghost", autofocus: true },
-			{
-				label: "Delete + files",
-				variant: "danger",
-				dismiss: false,
-				pending: del.isPending,
-				onClick: () => del.mutate(true),
-			},
-		]}
+		onConfirm={(withFiles) => del.mutate(withFiles)}
 	/>
 {/if}
 

@@ -19,6 +19,69 @@
 
 	let primary = $derived(movie.media_files?.[0]);
 
+	// The path is far wider than the column and truncates. Desktop has the
+	// title tooltip; touch has neither hover nor room, so a press and hold
+	// puts the whole path on the clipboard — the same 480ms/8px gesture the
+	// poster grid uses for selection.
+	const HOLD_MS = 480;
+	const HOLD_SLOP = 8;
+	let holdTimer: number | null = null;
+	let holdX = 0;
+	let holdY = 0;
+	let holding = $state(false);
+	let longPressed = false;
+	let touchGesture = false;
+
+	async function copyPath() {
+		if (!primary?.path) return;
+		try {
+			await navigator.clipboard.writeText(primary.path);
+			toast.ok("Path copied");
+		} catch {
+			toast.err("Clipboard unavailable");
+		}
+	}
+	function cancelHold() {
+		holding = false;
+		if (holdTimer !== null) {
+			clearTimeout(holdTimer);
+			holdTimer = null;
+		}
+	}
+	function onPointerDown(e: PointerEvent) {
+		longPressed = false;
+		touchGesture = e.pointerType !== "mouse";
+		if (!touchGesture) return;
+		cancelHold();
+		holdX = e.clientX;
+		holdY = e.clientY;
+		holding = true;
+		holdTimer = window.setTimeout(() => {
+			holdTimer = null;
+			holding = false;
+			longPressed = true;
+			navigator.vibrate?.(10);
+			copyPath();
+		}, HOLD_MS);
+	}
+	function onPointerMove(e: PointerEvent) {
+		if (holdTimer === null) return;
+		if (
+			Math.abs(e.clientX - holdX) > HOLD_SLOP ||
+			Math.abs(e.clientY - holdY) > HOLD_SLOP
+		)
+			cancelHold();
+	}
+	// A tap is not a copy — touch waits for the hold. Keyboard activation
+	// (detail 0) always copies.
+	function onClick(e: MouseEvent) {
+		if (e.detail === 0 || !touchGesture) copyPath();
+	}
+	function onContextMenu(e: MouseEvent) {
+		// Android raises its own menu on the same gesture.
+		if (longPressed || holding) e.preventDefault();
+	}
+
 	const qc = useQueryClient();
 	let deleteOpen = $state(false);
 	let removeTorrent = $state(false);
@@ -90,11 +153,23 @@
 					{primary.release_group || "—"}
 				</dd>
 				<dt class="text-fg-subtle">Path</dt>
-				<dd
-					class="min-w-0 truncate text-right font-mono text-fg"
-					title={primary.path}
-				>
-					{primary.path}
+				<dd class="min-w-0">
+					<button
+						type="button"
+						onpointerdown={onPointerDown}
+						onpointermove={onPointerMove}
+						onpointerup={cancelHold}
+						onpointercancel={cancelHold}
+						oncontextmenu={onContextMenu}
+						onclick={onClick}
+						title={primary.path}
+						aria-label="Copy file path"
+						class="block w-full truncate rounded text-right font-mono underline decoration-border-strong decoration-dotted underline-offset-[3px] transition-colors [-webkit-touch-callout:none] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring {holding
+							? 'text-accent-text'
+							: 'text-fg'}"
+					>
+						{primary.path}
+					</button>
 				</dd>
 			</dl>
 		{:else}

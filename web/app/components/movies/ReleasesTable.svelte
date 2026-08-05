@@ -282,8 +282,79 @@
 			</button>
 		</div>
 	{:else}
+		<!-- Phone: cards. A row has seven columns of which only two fit, and
+		     sideways scrolling to compare seeders is not a comparison. -->
+		<ul
+			class="flex max-h-[60vh] flex-col gap-2 overflow-y-auto overscroll-contain md:hidden"
+		>
+			{#each rows as r (r.download_url)}
+				{@const pending = pendingId === r.download_url}
+				<li
+					class="rounded-lg border border-border bg-bg-elevated p-3"
+				>
+					<div class="break-all font-mono text-[12px] leading-snug text-fg [text-wrap:pretty]">
+						{r.title}
+					</div>
+					<div class="mt-1.5 flex flex-wrap gap-1">
+						{#if r.resolution}
+							<span class="rounded-sm bg-bg-card px-1.5 py-px font-mono text-[10px] text-fg-muted">
+								{r.resolution}
+							</span>
+						{/if}
+						{#if r.source}
+							<span class="rounded-sm bg-bg-card px-1.5 py-px font-mono text-[10px] text-fg-muted">
+								{r.source}
+							</span>
+						{/if}
+						{#if r.codec}
+							<span class="rounded-sm bg-bg-card px-1.5 py-px font-mono text-[10px] text-fg-muted">
+								{r.codec}
+							</span>
+						{/if}
+						{#if r.release_group}
+							<span class="rounded-sm bg-bg-card px-1.5 py-px font-mono text-[10px] text-fg-muted">
+								{r.release_group}
+							</span>
+						{/if}
+					</div>
+					<div class="mt-2.5 flex items-center gap-3">
+						<span
+							class={cn(
+								"shrink-0 font-mono text-[11.5px] tabular font-medium",
+								seederClass(r.seeders),
+							)}
+						>
+							▲ {r.seeders}
+						</span>
+						<span class="shrink-0 font-mono text-[11.5px] tabular text-fg-muted">
+							{formatBytes(r.size)}
+						</span>
+						<span
+							class="min-w-0 truncate font-mono text-[11.5px] text-fg-subtle"
+							title={fmtDate(r.published_at)}
+						>
+							{fmtAge(r.published_at)} · {r.indexer ?? "—"}
+						</span>
+						<button
+							type="button"
+							onclick={() => onGrab(r)}
+							disabled={pending || grab.isPending}
+							class="ml-auto inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md bg-accent px-3 text-[12px] font-semibold text-fg-on-accent transition active:bg-accent-pressed disabled:cursor-not-allowed disabled:opacity-60"
+						>
+							{#if pending}
+								<LoaderCircle size={13} class="animate-spin" aria-hidden="true" />
+							{:else}
+								<Download size={13} aria-hidden="true" />
+							{/if}
+							Grab
+						</button>
+					</div>
+				</li>
+			{/each}
+		</ul>
+
 		<div
-			class="max-h-[60vh] overflow-auto rounded-lg border border-border bg-bg-elevated"
+			class="hidden max-h-[60vh] overflow-auto rounded-lg border border-border bg-bg-elevated md:block"
 		>
 			<table class="w-full min-w-[680px] table-fixed text-sm">
 				<thead

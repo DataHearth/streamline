@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Search, Gauge, FileEdit, RefreshCw, Trash2 } from "@lucide/svelte";
+	import { Radar, Gauge, FileEdit, RefreshCw, Trash2 } from "@lucide/svelte";
 	import KebabMenu, { type KebabItem } from "../shared/KebabMenu.svelte";
 
 	type Action =
@@ -7,8 +7,7 @@
 		| "quality"
 		| "rename"
 		| "refresh"
-		| "delete"
-		| "delete-with-files";
+		| "delete";
 
 	let {
 		onPick,
@@ -26,7 +25,7 @@
 		{
 			key: "search",
 			label: "Search for releases",
-			icon: Search,
+			icon: Radar,
 			onSelect: () => onPick("search"),
 		},
 		{
@@ -52,20 +51,14 @@
 			onSelect: () => onPick("refresh"),
 		},
 		{
+			// Deleting the files is a checkbox in the confirm, not a second entry
+			// one row below the safe one.
 			key: "delete",
-			label: "Delete from library",
+			label: "Delete from library…",
 			icon: Trash2,
 			danger: true,
 			dividerBefore: true,
 			onSelect: () => onPick("delete"),
-		},
-		{
-			key: "delete-with-files",
-			label: "Delete + files",
-			icon: Trash2,
-			danger: true,
-			disabled: isDisabled("delete-with-files"),
-			onSelect: () => onPick("delete-with-files"),
 		},
 	]);
 </script>

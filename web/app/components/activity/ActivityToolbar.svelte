@@ -1,40 +1,13 @@
-<script lang="ts">
-	import { Search, X, Trash2, Magnet } from "@lucide/svelte";
-	import { cn } from "../../lib/cn";
-
-	type View = "queue" | "history" | "torrents";
-
-	let {
-		view,
-		statusFilter,
-		search,
-		counts,
-		onViewChange,
-		onStatusFilterChange,
-		onSearchChange,
-		onClearCompleted,
-		clearableCount = 0,
-		onAddTorrent,
-		canAddTorrent = false,
-	}: {
-		view: View;
-		statusFilter: string[];
-		search: string;
-		// Queue and History are two readings of one page, switched here; the
-		// torrents route fixes its view and passes neither.
-		counts?: { queue: number; history: number };
-		onViewChange?: (v: View) => void;
-		onStatusFilterChange: (s: string[]) => void;
-		onSearchChange: (q: string) => void;
-		onClearCompleted?: () => void;
-		clearableCount?: number;
-		onAddTorrent?: () => void;
-		canAddTorrent?: boolean;
-	} = $props();
+<script lang="ts" module>
+	export type ActivityView = "queue" | "history" | "torrents";
 
 	// `dot` maps each filter to a real --status-* token (some chip keys like
 	// "importing"/"error" have no token of their own — mirror lib/format.pillStatus).
-	const CHIPS: Record<View, { key: string; label: string; dot: string }[]> = {
+	// Exported because the filter sheet renders the same set below lg.
+	export const ACTIVITY_CHIPS: Record<
+		ActivityView,
+		{ key: string; label: string; dot: string }[]
+	> = {
 		queue: [
 			{ key: "downloading", label: "downloading", dot: "downloading" },
 			{ key: "importing", label: "importing", dot: "grabbing" },
@@ -53,13 +26,51 @@
 			{ key: "paused", label: "paused", dot: "paused" },
 		],
 	};
+</script>
 
-	const VIEWS: { key: View; label: string }[] = [
-		{ key: "queue", label: "Queue" },
-		{ key: "history", label: "History" },
-	];
+<script lang="ts">
+	import type { Snippet } from "svelte";
+	import { Magnet, Search, Trash2, X } from "@lucide/svelte";
+	import { cn } from "../../lib/cn";
+	import { dragScroll } from "../../lib/drag-scroll";
 
-	let chips = $derived(CHIPS[view]);
+	type View = ActivityView;
+
+	// The controls line. `leading` is where /activity puts its Queue / History
+	// switch: one line, not two — the switch is a fixed-width block and the chip
+	// strip takes whatever is left, swiping through the rest. Below lg the search
+	// field and Clear completed move into the filter sheet — 390px cannot hold a
+	// chip strip, a field and two buttons, and the tablet band can't either once
+	// the rail takes its 88px.
+	let {
+		leading,
+		view,
+		statusFilter,
+		search,
+		onStatusFilterChange,
+		onSearchChange,
+		onOpenFilters,
+		activeFilters = 0,
+		onClearCompleted,
+		clearableCount = 0,
+		onAddTorrent,
+		canAddTorrent = false,
+	}: {
+		leading?: Snippet;
+		view: View;
+		statusFilter: string[];
+		search: string;
+		onStatusFilterChange: (s: string[]) => void;
+		onSearchChange: (q: string) => void;
+		onOpenFilters: () => void;
+		activeFilters?: number;
+		onClearCompleted?: () => void;
+		clearableCount?: number;
+		onAddTorrent?: () => void;
+		canAddTorrent?: boolean;
+	} = $props();
+
+	let chips = $derived(ACTIVITY_CHIPS[view]);
 	let anyActive = $derived(chips.some((c) => statusFilter.includes(c.key)));
 	function toggleChip(key: string) {
 		onStatusFilterChange(
@@ -71,44 +82,20 @@
 </script>
 
 <div
-	class="sticky top-16 z-20 -mx-4 mb-4 flex flex-col gap-3 bg-bg-deep/85 px-4 pb-3 pt-3 backdrop-blur-md md:-mx-6 md:px-6 lg:-mx-8 lg:px-8"
+	class="sticky top-16 z-20 -mx-4 mb-1 flex flex-nowrap items-center gap-2 bg-bg-deep/85 px-4 pb-3 pt-3 backdrop-blur-md md:-mx-6 md:flex-wrap md:gap-3 md:px-6 lg:-mx-8 lg:px-8"
 >
-	{#if onViewChange}
-		<div class="flex flex-wrap items-center gap-2 md:gap-3">
-			<div
-				class="inline-flex shrink-0 items-center gap-0.5 rounded-md border border-border bg-bg-elevated p-[3px]"
-				role="group"
-				aria-label="List"
-			>
-				{#each VIEWS as v (v.key)}
-					<button
-						type="button"
-						onclick={() => onViewChange?.(v.key)}
-						aria-pressed={view === v.key}
-						class={cn(
-							"inline-flex shrink-0 items-center gap-1.5 rounded-sm px-3 py-1 text-[12.5px] font-medium transition",
-							view === v.key
-								? "bg-accent-soft text-accent-text"
-								: "text-fg-subtle hover:text-fg",
-						)}
-					>
-						{v.label}
-						<span class="font-mono text-[10.5px] tabular text-fg-faint">
-							{v.key === "history"
-								? (counts?.history ?? 0)
-								: (counts?.queue ?? 0)}
-						</span>
-					</button>
-				{/each}
-			</div>
-		</div>
-	{/if}
+	{@render leading?.()}
 
-	<div class="flex flex-wrap items-center gap-2 md:gap-3">
-		<!-- Status filters stay in the open as toggle pills: the set is small and
-		     view-specific, and a popover hid which filter was active. -->
+	<!-- Status filters stay in the open as toggle pills: the set is small and
+	     view-specific, and a popover hid which filter was active. The strip swipes
+	     rather than wrapping, so the line height never changes and the switch
+	     beside it keeps its width. Clear sits outside the scroller. -->
+	<div
+		class="inline-flex min-w-0 shrink items-center rounded-md border border-border bg-bg-elevated p-[3px] md:flex-none"
+	>
 		<div
-			class="inline-flex max-w-full shrink-0 items-center gap-0.5 overflow-x-auto rounded-md border border-border bg-bg-elevated p-[3px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+			use:dragScroll
+			class="filter-chips flex min-w-0 items-center gap-0.5 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [touch-action:pan-x] [&::-webkit-scrollbar]:hidden"
 			role="group"
 			aria-label="Status filter"
 		>
@@ -119,10 +106,8 @@
 					onclick={() => toggleChip(c.key)}
 					aria-pressed={on}
 					class={cn(
-						"inline-flex shrink-0 items-center gap-1.5 rounded-sm px-2.5 py-1 font-mono text-[11px] lowercase transition",
-						on
-							? "bg-accent-soft text-accent-text"
-							: "text-fg-subtle hover:text-fg",
+						"inline-flex h-7 shrink-0 items-center gap-1.5 rounded-sm px-2.5 font-mono text-[11px] lowercase transition",
+						on ? "bg-accent-soft text-accent-text" : "text-fg-subtle hover:text-fg",
 					)}
 				>
 					<span
@@ -132,69 +117,124 @@
 					{c.label}
 				</button>
 			{/each}
-			{#if anyActive}
-				<button
-					type="button"
-					onclick={() => onStatusFilterChange([])}
-					aria-label="Clear status filters"
-					title="Clear status filters"
-					class="grid h-6 w-6 shrink-0 place-items-center rounded-sm text-fg-faint transition hover:bg-surface hover:text-fg"
-				>
-					<X size={12} aria-hidden="true" />
-				</button>
-			{/if}
 		</div>
-
-		<div
-			class="search-wrap flex h-9 w-full items-center gap-2 rounded-md border border-border bg-bg-elevated px-3 transition focus-within:border-accent sm:w-56"
-		>
-			<Search class="h-3.5 w-3.5 text-fg-subtle" aria-hidden="true" />
-			<input
-				type="search"
-				value={search}
-				oninput={(e) => onSearchChange(e.currentTarget.value)}
-				placeholder={view === "torrents"
-					? "Filter name or hash…"
-					: "Filter title or movie…"}
-				aria-label="Filter activity"
-				class="min-w-0 flex-1 bg-transparent text-[13px] text-fg outline-none placeholder:text-fg-faint"
-			/>
-			{#if search}
-				<button
-					type="button"
-					onclick={() => onSearchChange("")}
-					aria-label="Clear search"
-					class="grid h-5 w-5 place-items-center rounded text-fg-faint transition hover:text-fg"
-				>
-					<X size={12} aria-hidden="true" />
-				</button>
-			{/if}
-		</div>
-
-		{#if (view === "torrents" && onAddTorrent && canAddTorrent) || (view === "history" && onClearCompleted)}
-			<div class="order-last ml-auto flex items-center gap-2 sm:order-none">
-				{#if view === "torrents" && onAddTorrent && canAddTorrent}
-					<button
-						type="button"
-						onclick={() => onAddTorrent?.()}
-						class="inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md bg-accent px-3.5 text-[12.5px] font-semibold text-fg-on-accent transition hover:bg-accent-hover hover:shadow-glow"
-					>
-						<Magnet size={14} aria-hidden="true" />
-						Add torrent
-					</button>
-				{/if}
-				{#if view === "history" && onClearCompleted}
-					<button
-						type="button"
-						onclick={() => onClearCompleted?.()}
-						disabled={clearableCount === 0}
-						class="inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border border-border bg-bg-elevated px-3 text-[12.5px] font-medium text-fg-muted transition hover:border-border-strong hover:text-fg disabled:cursor-not-allowed disabled:opacity-50"
-					>
-						<Trash2 size={14} aria-hidden="true" />
-						Clear completed{clearableCount > 0 ? ` (${clearableCount})` : ""}
-					</button>
-				{/if}
-			</div>
+		{#if anyActive}
+			<button
+				type="button"
+				onclick={() => onStatusFilterChange([])}
+				aria-label="Clear status filters"
+				title="Clear status filters"
+				class="ml-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-sm text-fg-faint transition hover:bg-surface hover:text-fg"
+			>
+				<X size={12} aria-hidden="true" />
+			</button>
 		{/if}
 	</div>
+
+	<!-- Search and sort live behind this below lg — a magnifier, since the status
+	     pills above never leave the line. History doesn't get one: its two chips
+	     are already in the open and Clear completed sits next to them, which left
+	     the sheet holding nothing the line didn't. -->
+	{#if view !== "history"}
+		<button
+			type="button"
+			onclick={onOpenFilters}
+			aria-haspopup="dialog"
+			aria-label="Search and sort"
+			title="Search and sort"
+			class={cn(
+				"relative ml-auto grid h-9 w-9 shrink-0 place-items-center rounded-md border transition lg:hidden",
+				activeFilters > 0
+					? "border-accent-line bg-accent-soft text-accent-text"
+					: "border-border-strong bg-bg-elevated text-fg-muted hover:text-fg",
+			)}
+		>
+			<Search size={15} aria-hidden="true" />
+			{#if activeFilters > 0}
+				<span
+					class="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-accent px-1 font-mono text-[9.5px] font-semibold text-fg-on-accent"
+				>
+					{activeFilters}
+				</span>
+			{/if}
+		</button>
+	{/if}
+
+	{#if view === "history" && onClearCompleted}
+		<button
+			type="button"
+			onclick={() => onClearCompleted?.()}
+			disabled={clearableCount === 0}
+			class="ml-auto inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border border-border bg-bg-elevated px-3 text-[12.5px] font-medium text-fg-muted transition hover:border-border-strong hover:text-fg disabled:cursor-not-allowed disabled:opacity-50"
+		>
+			<Trash2 size={14} aria-hidden="true" />
+			<span class="md:hidden">Clear{clearableCount > 0 ? ` (${clearableCount})` : ""}</span>
+			<span class="hidden md:inline">
+				Clear completed{clearableCount > 0 ? ` (${clearableCount})` : ""}
+			</span>
+		</button>
+	{/if}
+
+	<div
+		class="search-wrap hidden h-9 w-56 items-center gap-2 rounded-md border border-border bg-bg-elevated px-3 transition focus-within:border-accent lg:flex"
+	>
+		<Search class="h-3.5 w-3.5 shrink-0 text-fg-subtle" aria-hidden="true" />
+		<input
+			type="search"
+			value={search}
+			oninput={(e) => onSearchChange(e.currentTarget.value)}
+			placeholder={view === "torrents"
+				? "Filter name or hash…"
+				: "Filter title or movie…"}
+			aria-label="Filter activity"
+			class="min-w-0 flex-1 bg-transparent text-[13px] text-fg outline-none placeholder:text-fg-faint"
+		/>
+		{#if search}
+			<button
+				type="button"
+				onclick={() => onSearchChange("")}
+				aria-label="Clear search"
+				class="grid h-5 w-5 shrink-0 place-items-center rounded text-fg-faint transition hover:text-fg"
+			>
+				<X size={12} aria-hidden="true" />
+			</button>
+		{/if}
+	</div>
+
+	{#if view === "torrents" && onAddTorrent && canAddTorrent}
+		<div class="ml-auto flex items-center gap-2">
+			<!-- Below md adding is the pill above the bottom nav, not a button in a
+			     line the thumb can't reach. -->
+			<button
+				type="button"
+				onclick={() => onAddTorrent?.()}
+				class="hidden h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md bg-accent px-3.5 text-[12.5px] font-semibold text-fg-on-accent transition hover:bg-accent-hover hover:shadow-glow md:inline-flex"
+			>
+				<Magnet size={14} aria-hidden="true" />
+				Add torrent
+			</button>
+		</div>
+	{/if}
 </div>
+
+<style>
+	/* The edge with more chips behind it fades, so a strip narrowed by the switch
+	   reads as swipeable rather than as a clipped row. :global because dragScroll
+	   sets data-scroll imperatively — Svelte's CSS analysis can't see it and
+	   prunes the scoped rules as unused. */
+	:global(.filter-chips[data-scroll="start"]) {
+		mask-image: linear-gradient(to right, #000 calc(100% - 18px), transparent);
+	}
+	:global(.filter-chips[data-scroll="middle"]) {
+		mask-image: linear-gradient(
+			to right,
+			transparent,
+			#000 18px,
+			#000 calc(100% - 18px),
+			transparent
+		);
+	}
+	:global(.filter-chips[data-scroll="end"]) {
+		mask-image: linear-gradient(to right, transparent, #000 18px);
+	}
+</style>

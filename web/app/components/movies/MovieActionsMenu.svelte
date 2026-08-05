@@ -10,7 +10,7 @@
 	import MovieKebabMenu from "./MovieKebabMenu.svelte";
 	import QualityProfileModal from "./QualityProfileModal.svelte";
 	import RenameMoviePreviewModal from "./RenameMoviePreviewModal.svelte";
-	import Dialog from "../modals/Dialog.svelte";
+	import DeleteTitleDialog from "../shared/DeleteTitleDialog.svelte";
 
 	let { movie, variant = "card" }: { movie: Movie; variant?: "card" | "toolbar" } =
 		$props();
@@ -20,7 +20,7 @@
 	let qpOpen = $state(false);
 	let renameOpen = $state(false);
 	let deleteOpen = $state(false);
-	let deleteWithFilesOpen = $state(false);
+	let fileCount = $derived(movie.media_files?.length ?? 0);
 
 	const qc = useQueryClient();
 
@@ -72,7 +72,6 @@
 			qc.invalidateQueries({ queryKey: ["movies"] });
 			qc.invalidateQueries({ queryKey: ["movies", "counts"] });
 			deleteOpen = false;
-			deleteWithFilesOpen = false;
 			toast.ok("Movie deleted");
 		},
 		onError: (e: Error) => toast.err(e.message ?? "Delete failed"),
@@ -84,14 +83,13 @@
 		else if (a === "rename") renameOpen = true;
 		else if (a === "refresh") refresh.mutate();
 		else if (a === "delete") deleteOpen = true;
-		else if (a === "delete-with-files") deleteWithFilesOpen = true;
 	}
 </script>
 
 <MovieKebabMenu
 	{variant}
 	{onPick}
-	disabledActions={hasFiles ? [] : ["rename", "delete-with-files"]}
+	disabledActions={hasFiles ? [] : ["rename"]}
 />
 
 <QualityProfileModal
@@ -107,35 +105,14 @@
 	movieId={movie.id}
 	onClose={() => (renameOpen = false)}
 />
-<Dialog
+<DeleteTitleDialog
 	open={deleteOpen}
 	title="Remove '{movie.title}' from your library?"
-	body="Files on disk will be kept."
+	body="The movie leaves your library. Files on disk are kept unless you say otherwise."
+	filesLabel="Also delete {fileCount} file{fileCount === 1 ? '' : 's'} from disk"
+	filesNote="This cannot be undone."
+	canDeleteFiles={fileCount > 0}
+	pending={del.isPending}
 	onClose={() => (deleteOpen = false)}
-	actions={[
-		{ label: "Cancel", variant: "ghost", autofocus: true },
-		{
-			label: "Delete",
-			variant: "danger",
-			dismiss: false,
-			pending: del.isPending,
-			onClick: () => del.mutate(false),
-		},
-	]}
-/>
-<Dialog
-	open={deleteWithFilesOpen}
-	title="Remove '{movie.title}' and delete its files?"
-	body="{movie.media_files?.length ?? 0} file(s) will be deleted from disk. This cannot be undone."
-	onClose={() => (deleteWithFilesOpen = false)}
-	actions={[
-		{ label: "Cancel", variant: "ghost", autofocus: true },
-		{
-			label: "Delete + files",
-			variant: "danger",
-			dismiss: false,
-			pending: del.isPending,
-			onClick: () => del.mutate(true),
-		},
-	]}
+	onConfirm={(withFiles) => del.mutate(withFiles)}
 />

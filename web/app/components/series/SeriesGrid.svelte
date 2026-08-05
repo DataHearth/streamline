@@ -12,14 +12,12 @@
 		series,
 		selected,
 		selectMode = false,
-		density = "compact",
 		onToggle,
 		onLongPress,
 	}: {
 		series: TVShow[];
 		selected: Set<number>;
 		selectMode?: boolean;
-		density?: "compact" | "roomy";
 		onToggle: (id: number, v: boolean) => void;
 		onLongPress?: (id: number) => void;
 	} = $props();
@@ -67,9 +65,7 @@
 </script>
 
 <div
-	class={density === "roomy"
-		? "grid gap-x-4 gap-y-6 grid-cols-[repeat(auto-fill,minmax(160px,1fr))] md:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] xl:grid-cols-[repeat(auto-fill,minmax(200px,1fr))]"
-		: "grid gap-x-2.5 gap-y-4 grid-cols-[repeat(auto-fill,minmax(104px,1fr))] sm:gap-x-4 sm:gap-y-6 sm:grid-cols-[repeat(auto-fill,minmax(160px,1fr))] md:grid-cols-[repeat(auto-fill,minmax(150px,1fr))] lg:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] xl:grid-cols-[repeat(auto-fill,minmax(200px,1fr))]"}
+	class="grid gap-x-4 gap-y-6 grid-cols-[repeat(auto-fill,minmax(160px,1fr))] md:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] xl:grid-cols-[repeat(auto-fill,minmax(200px,1fr))]"
 >
 	{#each series as show (show.id)}
 		<PosterCard

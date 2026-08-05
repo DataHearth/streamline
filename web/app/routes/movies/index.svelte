@@ -22,7 +22,6 @@
 	type View = "grid" | "list";
 	type SortKey = "title" | "year";
 	type SortOrder = "asc" | "desc";
-	type Density = "compact" | "roomy";
 
 	const VALID_TABS = new Set([
 		"all",
@@ -35,8 +34,6 @@
 	// An explicit ?sort in the URL wins so shared links keep their ordering;
 	// otherwise fall back to the last sort this browser chose, then A→Z.
 	const SORT_PREF = "streamline:movies:sort";
-	// Poster density is a phone-only choice and never worth a URL parameter.
-	const DENSITY_PREF = "streamline:movies:density";
 
 	function readParams() {
 		const p =
@@ -65,15 +62,6 @@
 	let order = $state<SortOrder>(initial.order);
 	let view = $state<View>(initial.view);
 	let monitoredOnly = $state(initial.monitoredOnly);
-	let density = $state<Density>(
-		loadPref(DENSITY_PREF) === "roomy" ? "roomy" : "compact",
-	);
-
-	function setDensity(d: Density) {
-		density = d;
-		savePref(DENSITY_PREF, d);
-	}
-
 	// A phone has no width for the list table — seven columns at 390px is not a
 	// readable row. Below md the library is posters only, whatever the URL or the
 	// last-used view says, and the sheet stops offering the choice.
@@ -305,7 +293,6 @@
 			{counts}
 			{monitoredOnly}
 			{monitoredCount}
-			{density}
 			{selectMode}
 			selectedCount={selected.size}
 			visibleCount={visibleMovies.length}
@@ -314,7 +301,6 @@
 			onMonitoredChange={(v) => (monitoredOnly = v)}
 			onSortChange={setSort}
 			onViewChange={(v) => (view = v)}
-			onDensityChange={setDensity}
 			onClearFilters={clearFilters}
 			onSelectModeChange={setSelectMode}
 			onSelectAll={selectAll}
@@ -372,7 +358,6 @@
 					movies={visibleMovies}
 					{selected}
 					{selectMode}
-					{density}
 					onToggle={toggle}
 					onLongPress={beginLongPress}
 				/>
