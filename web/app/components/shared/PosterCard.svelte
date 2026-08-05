@@ -63,6 +63,10 @@
 
 	// While a selection is in progress the whole card becomes a selection
 	// target — clicking through to a detail page mid-triage loses the set.
+	//
+	// Capture phase, not bubble: Svelte delegates onclick to the app root, which
+	// is *above* Routify's click scope, so a bubble-phase preventDefault lands
+	// after Routify has already pushed the URL.
 	function onCardClick(e: MouseEvent) {
 		// The click that follows a long press would immediately undo it.
 		if (longPressed) {
@@ -145,7 +149,7 @@
 >
 	<a
 		href={cardHref}
-		onclick={onCardClick}
+		onclickcapture={onCardClick}
 		onpointerdown={onPointerDown}
 		onpointermove={onPointerMove}
 		onpointerup={cancelHold}
@@ -243,7 +247,7 @@
 		</div>
 	{/if}
 
-	{#if onMonitor}
+	{#if onMonitor && !selectionActive}
 		<button
 			type="button"
 			onclick={stop(onMonitor)}
