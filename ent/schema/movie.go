@@ -36,6 +36,9 @@ func (Movie) Fields() []ent.Field {
 		field.Uint8("grab_failures").Default(0),
 		field.String("failure_reason").Optional(),
 		field.String("quality_profile").Optional(),
+		field.Float("rating").Optional().Default(0),
+		field.Strings("genres").Optional(),
+		field.JSON("cast", []CastMember{}).Optional(),
 	}
 }
 

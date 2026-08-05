@@ -62,11 +62,15 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 				{SeasonNumber: 1, Number: 1, Title: "Pilot", AirDate: &air},
 			},
 		}, nil).Once()
+		metaMk.GetSeriesCast(mock.Anything, uint32(123)).
+			Return([]metadata.CastMember{{Name: "Ana Vidal", Character: "Iris"}}, nil).
+			Once()
 
 		storeMk.CreateTVShow(mock.Anything, mock.MatchedBy(func(p db.CreateTVShowParams) bool {
 			return p.TvdbID == 123 && p.Title == "The Black Sea" &&
 				len(p.Seasons) == 1 &&
-				len(p.Seasons[0].Episodes) == 1
+				len(p.Seasons[0].Episodes) == 1 &&
+				len(p.Cast) == 1 && p.Cast[0].Name == "Ana Vidal"
 		})).
 			Return(&ent.TVShow{ID: 7, Title: "The Black Sea", TvdbID: 123}, nil).
 			Once()
@@ -221,6 +225,7 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 		metaMk.GetSeries(mock.Anything, uint32(123)).
 			Return(&metadata.TVDetails{TVResult: metadata.TVResult{TVDBID: 123, Title: "X"}}, nil).
 			Once()
+		metaMk.GetSeriesCast(mock.Anything, uint32(123)).Return(nil, nil).Once()
 		storeMk.UpdateTVShowMetadata(mock.Anything, uint32(7), mock.Anything).
 			Return(nil).
 			Once()

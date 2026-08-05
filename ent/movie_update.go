@@ -10,12 +10,14 @@ import (
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"entgo.io/ent/dialect/sql/sqljson"
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/movieevent"
 	"github.com/datahearth/streamline/ent/predicate"
+	"github.com/datahearth/streamline/ent/schema"
 )
 
 // MovieUpdate is the builder for updating Movie entities.
@@ -283,6 +285,69 @@ func (_u *MovieUpdate) ClearQualityProfile() *MovieUpdate {
 	return _u
 }
 
+// SetRating sets the "rating" field.
+func (_u *MovieUpdate) SetRating(v float64) *MovieUpdate {
+	_u.mutation.ResetRating()
+	_u.mutation.SetRating(v)
+	return _u
+}
+
+// SetNillableRating sets the "rating" field if the given value is not nil.
+func (_u *MovieUpdate) SetNillableRating(v *float64) *MovieUpdate {
+	if v != nil {
+		_u.SetRating(*v)
+	}
+	return _u
+}
+
+// AddRating adds value to the "rating" field.
+func (_u *MovieUpdate) AddRating(v float64) *MovieUpdate {
+	_u.mutation.AddRating(v)
+	return _u
+}
+
+// ClearRating clears the value of the "rating" field.
+func (_u *MovieUpdate) ClearRating() *MovieUpdate {
+	_u.mutation.ClearRating()
+	return _u
+}
+
+// SetGenres sets the "genres" field.
+func (_u *MovieUpdate) SetGenres(v []string) *MovieUpdate {
+	_u.mutation.SetGenres(v)
+	return _u
+}
+
+// AppendGenres appends value to the "genres" field.
+func (_u *MovieUpdate) AppendGenres(v []string) *MovieUpdate {
+	_u.mutation.AppendGenres(v)
+	return _u
+}
+
+// ClearGenres clears the value of the "genres" field.
+func (_u *MovieUpdate) ClearGenres() *MovieUpdate {
+	_u.mutation.ClearGenres()
+	return _u
+}
+
+// SetCast sets the "cast" field.
+func (_u *MovieUpdate) SetCast(v []schema.CastMember) *MovieUpdate {
+	_u.mutation.SetCast(v)
+	return _u
+}
+
+// AppendCast appends value to the "cast" field.
+func (_u *MovieUpdate) AppendCast(v []schema.CastMember) *MovieUpdate {
+	_u.mutation.AppendCast(v)
+	return _u
+}
+
+// ClearCast clears the value of the "cast" field.
+func (_u *MovieUpdate) ClearCast() *MovieUpdate {
+	_u.mutation.ClearCast()
+	return _u
+}
+
 // AddDownloadRecordIDs adds the "download_records" edge to the DownloadRecord entity by IDs.
 func (_u *MovieUpdate) AddDownloadRecordIDs(ids ...uint32) *MovieUpdate {
 	_u.mutation.AddDownloadRecordIDs(ids...)
@@ -535,6 +600,37 @@ func (_u *MovieUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.QualityProfileCleared() {
 		_spec.ClearField(movie.FieldQualityProfile, field.TypeString)
+	}
+	if value, ok := _u.mutation.Rating(); ok {
+		_spec.SetField(movie.FieldRating, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedRating(); ok {
+		_spec.AddField(movie.FieldRating, field.TypeFloat64, value)
+	}
+	if _u.mutation.RatingCleared() {
+		_spec.ClearField(movie.FieldRating, field.TypeFloat64)
+	}
+	if value, ok := _u.mutation.Genres(); ok {
+		_spec.SetField(movie.FieldGenres, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedGenres(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, movie.FieldGenres, value)
+		})
+	}
+	if _u.mutation.GenresCleared() {
+		_spec.ClearField(movie.FieldGenres, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.Cast(); ok {
+		_spec.SetField(movie.FieldCast, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedCast(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, movie.FieldCast, value)
+		})
+	}
+	if _u.mutation.CastCleared() {
+		_spec.ClearField(movie.FieldCast, field.TypeJSON)
 	}
 	if _u.mutation.DownloadRecordsCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -943,6 +1039,69 @@ func (_u *MovieUpdateOne) ClearQualityProfile() *MovieUpdateOne {
 	return _u
 }
 
+// SetRating sets the "rating" field.
+func (_u *MovieUpdateOne) SetRating(v float64) *MovieUpdateOne {
+	_u.mutation.ResetRating()
+	_u.mutation.SetRating(v)
+	return _u
+}
+
+// SetNillableRating sets the "rating" field if the given value is not nil.
+func (_u *MovieUpdateOne) SetNillableRating(v *float64) *MovieUpdateOne {
+	if v != nil {
+		_u.SetRating(*v)
+	}
+	return _u
+}
+
+// AddRating adds value to the "rating" field.
+func (_u *MovieUpdateOne) AddRating(v float64) *MovieUpdateOne {
+	_u.mutation.AddRating(v)
+	return _u
+}
+
+// ClearRating clears the value of the "rating" field.
+func (_u *MovieUpdateOne) ClearRating() *MovieUpdateOne {
+	_u.mutation.ClearRating()
+	return _u
+}
+
+// SetGenres sets the "genres" field.
+func (_u *MovieUpdateOne) SetGenres(v []string) *MovieUpdateOne {
+	_u.mutation.SetGenres(v)
+	return _u
+}
+
+// AppendGenres appends value to the "genres" field.
+func (_u *MovieUpdateOne) AppendGenres(v []string) *MovieUpdateOne {
+	_u.mutation.AppendGenres(v)
+	return _u
+}
+
+// ClearGenres clears the value of the "genres" field.
+func (_u *MovieUpdateOne) ClearGenres() *MovieUpdateOne {
+	_u.mutation.ClearGenres()
+	return _u
+}
+
+// SetCast sets the "cast" field.
+func (_u *MovieUpdateOne) SetCast(v []schema.CastMember) *MovieUpdateOne {
+	_u.mutation.SetCast(v)
+	return _u
+}
+
+// AppendCast appends value to the "cast" field.
+func (_u *MovieUpdateOne) AppendCast(v []schema.CastMember) *MovieUpdateOne {
+	_u.mutation.AppendCast(v)
+	return _u
+}
+
+// ClearCast clears the value of the "cast" field.
+func (_u *MovieUpdateOne) ClearCast() *MovieUpdateOne {
+	_u.mutation.ClearCast()
+	return _u
+}
+
 // AddDownloadRecordIDs adds the "download_records" edge to the DownloadRecord entity by IDs.
 func (_u *MovieUpdateOne) AddDownloadRecordIDs(ids ...uint32) *MovieUpdateOne {
 	_u.mutation.AddDownloadRecordIDs(ids...)
@@ -1225,6 +1384,37 @@ func (_u *MovieUpdateOne) sqlSave(ctx context.Context) (_node *Movie, err error)
 	}
 	if _u.mutation.QualityProfileCleared() {
 		_spec.ClearField(movie.FieldQualityProfile, field.TypeString)
+	}
+	if value, ok := _u.mutation.Rating(); ok {
+		_spec.SetField(movie.FieldRating, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedRating(); ok {
+		_spec.AddField(movie.FieldRating, field.TypeFloat64, value)
+	}
+	if _u.mutation.RatingCleared() {
+		_spec.ClearField(movie.FieldRating, field.TypeFloat64)
+	}
+	if value, ok := _u.mutation.Genres(); ok {
+		_spec.SetField(movie.FieldGenres, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedGenres(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, movie.FieldGenres, value)
+		})
+	}
+	if _u.mutation.GenresCleared() {
+		_spec.ClearField(movie.FieldGenres, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.Cast(); ok {
+		_spec.SetField(movie.FieldCast, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedCast(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, movie.FieldCast, value)
+		})
+	}
+	if _u.mutation.CastCleared() {
+		_spec.ClearField(movie.FieldCast, field.TypeJSON)
 	}
 	if _u.mutation.DownloadRecordsCleared() {
 		edge := &sqlgraph.EdgeSpec{

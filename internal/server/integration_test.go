@@ -79,10 +79,6 @@ var _ = Describe("Full Vertical Slice", Label("unit", "server", "movies"), func(
 			ListMediaFilesByMovieID(mock.Anything, uint32(1)).
 			Return(nil, nil).
 			Once()
-		md.EXPECT().
-			GetMovie(mock.Anything, uint32(550)).
-			Return(&metadata.MovieDetails{}, nil).
-			Once()
 		searchHit := metadata.MovieResult{
 			TMDBID:   550,
 			Title:    "Fight Club",
@@ -201,10 +197,6 @@ var _ = Describe("Full Vertical Slice", Label("unit", "server", "movies"), func(
 		store.EXPECT().
 			ListMediaFilesByMovieID(mock.Anything, uint32(1)).
 			Return(nil, nil).
-			Once()
-		md.EXPECT().
-			GetMovie(mock.Anything, uint32(550)).
-			Return(&metadata.MovieDetails{}, nil).
 			Once()
 		movies.EXPECT().
 			Delete(mock.Anything, uint32(1), mock.AnythingOfType("movie.DeleteOptions")).

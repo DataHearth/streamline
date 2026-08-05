@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/media/tvshow"
@@ -99,12 +100,16 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
 
-		It("attaches live cast from TVDB", func() {
+		// The strict TVDB mock carries no GetSeriesCast expectation in either
+		// spec: the detail view must serve cast from the stored row.
+		It("attaches the cast stored on the show", func() {
 			app.tvshows.EXPECT().Get(mock.Anything, uint32(1)).
-				Return(&ent.TVShow{ID: 1, Title: "Breaking Bad", Year: 2008, TvdbID: 81189}, nil).
-				Once()
-			app.metadataTV.EXPECT().GetSeriesCast(mock.Anything, uint32(81189)).
-				Return([]metadata.CastMember{{Name: "Bryan Cranston", Character: "Walter White"}}, nil).
+				Return(&ent.TVShow{
+					ID: 1, Title: "Breaking Bad", Year: 2008, TvdbID: 81189,
+					Cast: []schema.CastMember{
+						{Name: "Bryan Cranston", Character: "Walter White"},
+					},
+				}, nil).
 				Once()
 
 			resp := app.do(
@@ -125,18 +130,20 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 			Expect(body.Cast[0].Character).To(Equal("Walter White"))
 		})
 
-		It("still returns 200 when the cast fetch fails", func() {
+		It("omits cast when the show has none stored", func() {
 			app.tvshows.EXPECT().Get(mock.Anything, uint32(1)).
 				Return(&ent.TVShow{ID: 1, Title: "Breaking Bad", Year: 2008, TvdbID: 81189}, nil).
 				Once()
-			app.metadataTV.EXPECT().GetSeriesCast(mock.Anything, uint32(81189)).
-				Return(nil, errors.New("tvdb down")).Once()
 
 			resp := app.do(
 				app.req(http.MethodGet, "/api/v1/series/1", app.adminKey, nil),
 			)
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+			var body map[string]any
+			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+			Expect(body).NotTo(HaveKey("cast"))
 		})
 	})
 

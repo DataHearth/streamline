@@ -125,6 +125,11 @@ func QualityProfile(v string) predicate.Movie {
 	return predicate.Movie(sql.FieldEQ(FieldQualityProfile, v))
 }
 
+// Rating applies equality check predicate on the "rating" field. It's identical to RatingEQ.
+func Rating(v float64) predicate.Movie {
+	return predicate.Movie(sql.FieldEQ(FieldRating, v))
+}
+
 // CreateTimeEQ applies the EQ predicate on the "create_time" field.
 func CreateTimeEQ(v time.Time) predicate.Movie {
 	return predicate.Movie(sql.FieldEQ(FieldCreateTime, v))
@@ -858,6 +863,76 @@ func QualityProfileEqualFold(v string) predicate.Movie {
 // QualityProfileContainsFold applies the ContainsFold predicate on the "quality_profile" field.
 func QualityProfileContainsFold(v string) predicate.Movie {
 	return predicate.Movie(sql.FieldContainsFold(FieldQualityProfile, v))
+}
+
+// RatingEQ applies the EQ predicate on the "rating" field.
+func RatingEQ(v float64) predicate.Movie {
+	return predicate.Movie(sql.FieldEQ(FieldRating, v))
+}
+
+// RatingNEQ applies the NEQ predicate on the "rating" field.
+func RatingNEQ(v float64) predicate.Movie {
+	return predicate.Movie(sql.FieldNEQ(FieldRating, v))
+}
+
+// RatingIn applies the In predicate on the "rating" field.
+func RatingIn(vs ...float64) predicate.Movie {
+	return predicate.Movie(sql.FieldIn(FieldRating, vs...))
+}
+
+// RatingNotIn applies the NotIn predicate on the "rating" field.
+func RatingNotIn(vs ...float64) predicate.Movie {
+	return predicate.Movie(sql.FieldNotIn(FieldRating, vs...))
+}
+
+// RatingGT applies the GT predicate on the "rating" field.
+func RatingGT(v float64) predicate.Movie {
+	return predicate.Movie(sql.FieldGT(FieldRating, v))
+}
+
+// RatingGTE applies the GTE predicate on the "rating" field.
+func RatingGTE(v float64) predicate.Movie {
+	return predicate.Movie(sql.FieldGTE(FieldRating, v))
+}
+
+// RatingLT applies the LT predicate on the "rating" field.
+func RatingLT(v float64) predicate.Movie {
+	return predicate.Movie(sql.FieldLT(FieldRating, v))
+}
+
+// RatingLTE applies the LTE predicate on the "rating" field.
+func RatingLTE(v float64) predicate.Movie {
+	return predicate.Movie(sql.FieldLTE(FieldRating, v))
+}
+
+// RatingIsNil applies the IsNil predicate on the "rating" field.
+func RatingIsNil() predicate.Movie {
+	return predicate.Movie(sql.FieldIsNull(FieldRating))
+}
+
+// RatingNotNil applies the NotNil predicate on the "rating" field.
+func RatingNotNil() predicate.Movie {
+	return predicate.Movie(sql.FieldNotNull(FieldRating))
+}
+
+// GenresIsNil applies the IsNil predicate on the "genres" field.
+func GenresIsNil() predicate.Movie {
+	return predicate.Movie(sql.FieldIsNull(FieldGenres))
+}
+
+// GenresNotNil applies the NotNil predicate on the "genres" field.
+func GenresNotNil() predicate.Movie {
+	return predicate.Movie(sql.FieldNotNull(FieldGenres))
+}
+
+// CastIsNil applies the IsNil predicate on the "cast" field.
+func CastIsNil() predicate.Movie {
+	return predicate.Movie(sql.FieldIsNull(FieldCast))
+}
+
+// CastNotNil applies the NotNil predicate on the "cast" field.
+func CastNotNil() predicate.Movie {
+	return predicate.Movie(sql.FieldNotNull(FieldCast))
 }
 
 // HasDownloadRecords applies the HasEdge predicate on the "download_records" edge.

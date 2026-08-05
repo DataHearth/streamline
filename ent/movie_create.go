@@ -14,6 +14,7 @@ import (
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/movieevent"
+	"github.com/datahearth/streamline/ent/schema"
 )
 
 // MovieCreate is the builder for creating a Movie entity.
@@ -201,6 +202,32 @@ func (_c *MovieCreate) SetNillableQualityProfile(v *string) *MovieCreate {
 	return _c
 }
 
+// SetRating sets the "rating" field.
+func (_c *MovieCreate) SetRating(v float64) *MovieCreate {
+	_c.mutation.SetRating(v)
+	return _c
+}
+
+// SetNillableRating sets the "rating" field if the given value is not nil.
+func (_c *MovieCreate) SetNillableRating(v *float64) *MovieCreate {
+	if v != nil {
+		_c.SetRating(*v)
+	}
+	return _c
+}
+
+// SetGenres sets the "genres" field.
+func (_c *MovieCreate) SetGenres(v []string) *MovieCreate {
+	_c.mutation.SetGenres(v)
+	return _c
+}
+
+// SetCast sets the "cast" field.
+func (_c *MovieCreate) SetCast(v []schema.CastMember) *MovieCreate {
+	_c.mutation.SetCast(v)
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *MovieCreate) SetID(v uint32) *MovieCreate {
 	_c.mutation.SetID(v)
@@ -310,6 +337,10 @@ func (_c *MovieCreate) defaults() {
 	if _, ok := _c.mutation.GrabFailures(); !ok {
 		v := movie.DefaultGrabFailures
 		_c.mutation.SetGrabFailures(v)
+	}
+	if _, ok := _c.mutation.Rating(); !ok {
+		v := movie.DefaultRating
+		_c.mutation.SetRating(v)
 	}
 }
 
@@ -448,6 +479,18 @@ func (_c *MovieCreate) createSpec() (*Movie, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.QualityProfile(); ok {
 		_spec.SetField(movie.FieldQualityProfile, field.TypeString, value)
 		_node.QualityProfile = value
+	}
+	if value, ok := _c.mutation.Rating(); ok {
+		_spec.SetField(movie.FieldRating, field.TypeFloat64, value)
+		_node.Rating = value
+	}
+	if value, ok := _c.mutation.Genres(); ok {
+		_spec.SetField(movie.FieldGenres, field.TypeJSON, value)
+		_node.Genres = value
+	}
+	if value, ok := _c.mutation.Cast(); ok {
+		_spec.SetField(movie.FieldCast, field.TypeJSON, value)
+		_node.Cast = value
 	}
 	if nodes := _c.mutation.DownloadRecordsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

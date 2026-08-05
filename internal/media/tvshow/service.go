@@ -131,6 +131,10 @@ func (s *Service) Add(
 	if err != nil {
 		return nil, fmt.Errorf("tvdb get series: %w", err)
 	}
+	cast, err := s.metadata.GetSeriesCast(ctx, tvdbID)
+	if err != nil {
+		return nil, fmt.Errorf("tvdb get series cast: %w", err)
+	}
 
 	show, err := s.db.CreateTVShow(ctx, db.CreateTVShowParams{
 		Title:          d.Title,
@@ -145,6 +149,7 @@ func (s *Service) Add(
 		Runtime:        d.Runtime,
 		Rating:         float64(d.Rating),
 		Genres:         d.Genres,
+		Cast:           db.StoredCast(cast),
 		PosterPath:     d.PosterPath,
 		QualityProfile: qualityProfile,
 		Seasons:        seedSeasons(d),
@@ -818,6 +823,13 @@ func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.TVShow, error
 	if err != nil {
 		return nil, otelx.RecordSpanError(span, fmt.Errorf("tvdb refresh: %w", err))
 	}
+	cast, err := s.metadata.GetSeriesCast(ctx, show.TvdbID)
+	if err != nil {
+		return nil, otelx.RecordSpanError(
+			span,
+			fmt.Errorf("tvdb refresh cast: %w", err),
+		)
+	}
 	// Persist refreshed provider fields so changes (status, rating, network,
 	// etc.) surface. Season/episode reconciliation is tracked separately.
 	if err := s.db.UpdateTVShowMetadata(ctx, id, db.UpdateTVShowMetadataParams{
@@ -832,6 +844,7 @@ func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.TVShow, error
 		Runtime:       d.Runtime,
 		Rating:        float64(d.Rating),
 		Genres:        d.Genres,
+		Cast:          db.StoredCast(cast),
 	}); err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}

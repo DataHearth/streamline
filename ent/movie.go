@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -10,6 +11,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/datahearth/streamline/ent/movie"
+	"github.com/datahearth/streamline/ent/schema"
 )
 
 // Movie is the model entity for the Movie schema.
@@ -47,6 +49,12 @@ type Movie struct {
 	FailureReason string `json:"failure_reason,omitempty"`
 	// QualityProfile holds the value of the "quality_profile" field.
 	QualityProfile string `json:"quality_profile,omitempty"`
+	// Rating holds the value of the "rating" field.
+	Rating float64 `json:"rating,omitempty"`
+	// Genres holds the value of the "genres" field.
+	Genres []string `json:"genres,omitempty"`
+	// Cast holds the value of the "cast" field.
+	Cast []schema.CastMember `json:"cast,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the MovieQuery when eager-loading is set.
 	Edges        MovieEdges `json:"edges"`
@@ -98,8 +106,12 @@ func (*Movie) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
+		case movie.FieldGenres, movie.FieldCast:
+			values[i] = new([]byte)
 		case movie.FieldMonitored:
 			values[i] = new(sql.NullBool)
+		case movie.FieldRating:
+			values[i] = new(sql.NullFloat64)
 		case movie.FieldID, movie.FieldYear, movie.FieldRuntime, movie.FieldTmdbID, movie.FieldGrabFailures:
 			values[i] = new(sql.NullInt64)
 		case movie.FieldTitle, movie.FieldOriginalTitle, movie.FieldOverview, movie.FieldStatus, movie.FieldFailureReason, movie.FieldQualityProfile:
@@ -219,6 +231,28 @@ func (_m *Movie) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.QualityProfile = value.String
 			}
+		case movie.FieldRating:
+			if value, ok := values[i].(*sql.NullFloat64); !ok {
+				return fmt.Errorf("unexpected type %T for field rating", values[i])
+			} else if value.Valid {
+				_m.Rating = value.Float64
+			}
+		case movie.FieldGenres:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field genres", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.Genres); err != nil {
+					return fmt.Errorf("unmarshal field genres: %w", err)
+				}
+			}
+		case movie.FieldCast:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field cast", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.Cast); err != nil {
+					return fmt.Errorf("unmarshal field cast: %w", err)
+				}
+			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -318,6 +352,15 @@ func (_m *Movie) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("quality_profile=")
 	builder.WriteString(_m.QualityProfile)
+	builder.WriteString(", ")
+	builder.WriteString("rating=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Rating))
+	builder.WriteString(", ")
+	builder.WriteString("genres=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Genres))
+	builder.WriteString(", ")
+	builder.WriteString("cast=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Cast))
 	builder.WriteByte(')')
 	return builder.String()
 }

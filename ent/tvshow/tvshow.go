@@ -47,6 +47,8 @@ const (
 	FieldRating = "rating"
 	// FieldGenres holds the string denoting the genres field in the database.
 	FieldGenres = "genres"
+	// FieldCast holds the string denoting the cast field in the database.
+	FieldCast = "cast"
 	// FieldLastRefreshedAt holds the string denoting the last_refreshed_at field in the database.
 	FieldLastRefreshedAt = "last_refreshed_at"
 	// FieldQualityProfile holds the string denoting the quality_profile field in the database.
@@ -83,6 +85,7 @@ var Columns = []string{
 	FieldRuntime,
 	FieldRating,
 	FieldGenres,
+	FieldCast,
 	FieldLastRefreshedAt,
 	FieldQualityProfile,
 }

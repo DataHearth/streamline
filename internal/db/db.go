@@ -15,9 +15,24 @@ import (
 	"github.com/datahearth/streamline/ent/importscanshow"
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/request"
+	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/ent/user"
+	"github.com/datahearth/streamline/internal/metadata"
 )
+
+// StoredCast converts provider cast into the JSON shape persisted on Movie and
+// TVShow. The two structs are field-identical, so the conversion is direct.
+func StoredCast(cast []metadata.CastMember) []schema.CastMember {
+	if len(cast) == 0 {
+		return nil
+	}
+	out := make([]schema.CastMember, 0, len(cast))
+	for _, c := range cast {
+		out = append(out, schema.CastMember(c))
+	}
+	return out
+}
 
 // Tx is a transaction-bound Store. Caller invokes regular Store methods, then
 // Commit or Rollback. Either method is terminal — calling both, or calling

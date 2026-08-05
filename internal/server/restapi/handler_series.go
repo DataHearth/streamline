@@ -195,14 +195,8 @@ func (s *Server) GetSeries(
 		}, nil
 	}
 	result := tvShowToAPI(show)
-	// Cast is fetched live from TVDB on the detail view. A failure here (no API
-	// key, transport error) must not fail the response — the section degrades
-	// to empty instead, mirroring GetMovie.
-	if cast, cerr := s.metadataTV.GetSeriesCast(ctx, show.TvdbID); cerr != nil {
-		slog.WarnContext(ctx, "series detail: cast fetch failed",
-			"series.id", show.ID, "series.tvdb_id", show.TvdbID, "error", cerr)
-	} else if len(cast) > 0 {
-		apiCast := castToAPI(cast)
+	if len(show.Cast) > 0 {
+		apiCast := storedCastToAPI(show.Cast)
 		result.Cast = &apiCast
 	}
 	return GetSeries200JSONResponse{

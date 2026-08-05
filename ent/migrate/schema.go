@@ -319,6 +319,9 @@ var (
 		{Name: "grab_failures", Type: field.TypeUint8, Default: 0},
 		{Name: "failure_reason", Type: field.TypeString, Nullable: true},
 		{Name: "quality_profile", Type: field.TypeString, Nullable: true},
+		{Name: "rating", Type: field.TypeFloat64, Nullable: true, Default: 0},
+		{Name: "genres", Type: field.TypeJSON, Nullable: true},
+		{Name: "cast", Type: field.TypeJSON, Nullable: true},
 	}
 	// MoviesTable holds the schema information for the "movies" table.
 	MoviesTable = &schema.Table{
@@ -525,6 +528,7 @@ var (
 		{Name: "runtime", Type: field.TypeUint16, Nullable: true, Default: 0},
 		{Name: "rating", Type: field.TypeFloat64, Nullable: true, Default: 0},
 		{Name: "genres", Type: field.TypeJSON, Nullable: true},
+		{Name: "cast", Type: field.TypeJSON, Nullable: true},
 		{Name: "last_refreshed_at", Type: field.TypeTime, Nullable: true},
 		{Name: "quality_profile", Type: field.TypeString, Nullable: true},
 	}

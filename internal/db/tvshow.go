@@ -9,6 +9,7 @@ import (
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/predicate"
+	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/ent/season"
 	"github.com/datahearth/streamline/ent/tvshow"
 )
@@ -49,6 +50,7 @@ type CreateTVShowParams struct {
 	Runtime        uint16
 	Rating         float64
 	Genres         []string
+	Cast           []schema.CastMember
 	PosterPath     string
 	QualityProfile string
 	Seasons        []SeasonSeed
@@ -73,6 +75,7 @@ type UpdateTVShowMetadataParams struct {
 	Runtime       uint16
 	Rating        float64
 	Genres        []string
+	Cast          []schema.CastMember
 }
 
 // UpdateTVShowMetadata persists refreshed provider metadata onto an existing
@@ -91,7 +94,8 @@ func (db *DB) UpdateTVShowMetadata(
 		SetCreator(p.Creator).
 		SetRuntime(p.Runtime).
 		SetRating(p.Rating).
-		SetGenres(p.Genres)
+		SetGenres(p.Genres).
+		SetCast(p.Cast)
 	if p.SeriesStatus != "" {
 		u = u.SetSeriesStatus(tvshow.SeriesStatus(p.SeriesStatus))
 	}
@@ -274,6 +278,7 @@ func (db *DB) CreateTVShow(
 		SetRuntime(p.Runtime).
 		SetRating(p.Rating).
 		SetGenres(p.Genres).
+		SetCast(p.Cast).
 		SetPosterPath(p.PosterPath).
 		SetQualityProfile(p.QualityProfile).
 		Save(ctx)

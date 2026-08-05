@@ -261,6 +261,10 @@ func init() {
 	movieDescGrabFailures := movieFields[10].Descriptor()
 	// movie.DefaultGrabFailures holds the default value on creation for the grab_failures field.
 	movie.DefaultGrabFailures = movieDescGrabFailures.Default.(uint8)
+	// movieDescRating is the schema descriptor for rating field.
+	movieDescRating := movieFields[13].Descriptor()
+	// movie.DefaultRating holds the default value on creation for the rating field.
+	movie.DefaultRating = movieDescRating.Default.(float64)
 	movieeventMixin := schema.MovieEvent{}.Mixin()
 	movieeventMixinFields1 := movieeventMixin[1].Fields()
 	_ = movieeventMixinFields1

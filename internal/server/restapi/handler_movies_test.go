@@ -14,6 +14,7 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/movie"
+	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
 	moviesvc "github.com/datahearth/streamline/internal/media/movie"
@@ -337,10 +338,6 @@ var _ = Describe(
 						},
 					}, nil).
 					Once()
-				app.metadata.EXPECT().
-					GetMovie(mock.Anything, uint32(42)).
-					Return(&metadata.MovieDetails{}, nil).
-					Once()
 
 				resp, err := http.Get(
 					fmt.Sprintf("%s/api/v1/movies/%d", app.srv.URL, movieID),
@@ -379,10 +376,6 @@ var _ = Describe(
 					ListMediaFilesByMovieID(mock.Anything, movieID).
 					Return(nil, nil).
 					Once()
-				app.metadata.EXPECT().
-					GetMovie(mock.Anything, uint32(43)).
-					Return(&metadata.MovieDetails{}, nil).
-					Once()
 
 				resp, err := http.Get(
 					fmt.Sprintf("%s/api/v1/movies/%d", app.srv.URL, movieID),
@@ -397,7 +390,10 @@ var _ = Describe(
 		})
 
 		Describe("GetMovie metadata", func() {
-			It("includes genres and rating from TMDB", func() {
+			// The strict provider mock carries no GetMovie expectation here:
+			// the detail view must serve genres/rating/cast from the stored
+			// row without touching TMDB.
+			It("serves genres, rating and cast from the stored row", func() {
 				const movieID uint32 = 44
 				app.movies.EXPECT().
 					Get(mock.Anything, movieID).
@@ -407,18 +403,16 @@ var _ = Describe(
 						Year:   2022,
 						TmdbID: 77,
 						Status: movie.StatusAvailable,
+						Rating: 8.2,
+						Genres: []string{"Thriller", "Mystery"},
+						Cast: []schema.CastMember{
+							{Name: "Yara Osei", Character: "The Broker"},
+						},
 					}, nil).
 					Once()
 				app.store.EXPECT().
 					ListMediaFilesByMovieID(mock.Anything, movieID).
 					Return(nil, nil).
-					Once()
-				app.metadata.EXPECT().
-					GetMovie(mock.Anything, uint32(77)).
-					Return(&metadata.MovieDetails{
-						Genres: []string{"Thriller", "Mystery"},
-						Rating: 8.2,
-					}, nil).
 					Once()
 
 				resp, err := http.Get(
@@ -428,10 +422,20 @@ var _ = Describe(
 				defer resp.Body.Close()
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-				var body map[string]any
+				var body struct {
+					Genres []string `json:"genres"`
+					Rating float32  `json:"rating"`
+					Cast   []struct {
+						Name      string `json:"name"`
+						Character string `json:"character"`
+					} `json:"cast"`
+				}
 				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
-				Expect(body["genres"]).To(ConsistOf("Thriller", "Mystery"))
-				Expect(body["rating"]).To(BeNumerically("~", 8.2, 0.001))
+				Expect(body.Genres).To(ConsistOf("Thriller", "Mystery"))
+				Expect(body.Rating).To(BeNumerically("~", 8.2, 0.001))
+				Expect(body.Cast).To(HaveLen(1))
+				Expect(body.Cast[0].Name).To(Equal("Yara Osei"))
+				Expect(body.Cast[0].Character).To(Equal("The Broker"))
 			})
 		})
 
