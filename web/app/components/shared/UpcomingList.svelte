@@ -2,17 +2,17 @@
 	import { Calendar } from "@lucide/svelte";
 	import { cn } from "../../lib/cn";
 	import StatusPill from "./StatusPill.svelte";
-	import type { UpcomingMovie } from "../../lib/types";
+	import type { CalendarEvent } from "../../lib/calendar";
 
 	let {
 		events,
 		title,
 		seeAllHref,
 		seeAllLabel = "Calendar →",
-		emptyText = "Wanted movies with a digital release will appear here.",
+		emptyText = "Digital releases and upcoming episodes will appear here.",
 		stretch = false,
 	}: {
-		events: UpcomingMovie[];
+		events: CalendarEvent[];
 		title: string;
 		seeAllHref?: string;
 		seeAllLabel?: string;
@@ -37,9 +37,7 @@
 		"DEC",
 	];
 
-	function stamp(iso: string | undefined): { day: string; month: string } {
-		if (!iso) return { day: "—", month: "" };
-		const d = new Date(iso);
+	function stamp(d: Date): { day: string; month: string } {
 		if (Number.isNaN(d.getTime())) return { day: "—", month: "" };
 		return {
 			day: String(d.getDate()).padStart(2, "0"),
@@ -47,9 +45,8 @@
 		};
 	}
 
-	function daysUntil(iso: string | undefined): string {
-		if (!iso) return "";
-		const target = new Date(iso).getTime();
+	function daysUntil(d: Date): string {
+		const target = d.getTime();
 		if (Number.isNaN(target)) return "";
 		const days = Math.max(0, Math.round((target - Date.now()) / 86_400_000));
 		return days === 0 ? "today" : `in ${days}d`;
@@ -86,11 +83,11 @@
 	{:else}
 		<ul class="flex flex-col gap-1">
 			{#each events as ev (ev.id)}
-				{@const date = stamp(ev.digital_release_date)}
-				{@const when = daysUntil(ev.digital_release_date)}
+				{@const date = stamp(ev.date)}
+				{@const when = daysUntil(ev.date)}
 				<li>
 					<a
-						href="/movies/{ev.id}"
+						href={ev.href}
 						class="grid grid-cols-[44px_1fr_auto] items-center gap-3 rounded-md px-1.5 py-2.5 transition hover:bg-surface"
 					>
 						<span
@@ -108,10 +105,10 @@
 								{ev.title}
 							</div>
 							<div class="mt-0.5 font-mono text-[10.5px] text-fg-subtle">
-								digital release{when ? ` · ${when}` : ""}
+								{ev.subtitle ?? "digital release"}{when ? ` · ${when}` : ""}
 							</div>
 						</div>
-						<StatusPill status="wanted" size="sm" />
+						<StatusPill status={ev.status} size="sm" />
 					</a>
 				</li>
 			{/each}

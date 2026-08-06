@@ -1,8 +1,8 @@
 <script lang="ts">
 	import UpcomingList from "../shared/UpcomingList.svelte";
-	import type { UpcomingMovie } from "../../lib/types";
+	import type { CalendarEvent } from "../../lib/calendar";
 
-	let { events }: { events: UpcomingMovie[] } = $props();
+	let { events }: { events: CalendarEvent[] } = $props();
 </script>
 
 <UpcomingList {events} title="Next 30 days" />

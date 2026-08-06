@@ -9,6 +9,7 @@
 		gridRange,
 		resolveWeekStart,
 		toCalendarEvents,
+		upcomingEvents,
 		type CalendarEvent,
 	} from "../../lib/calendar";
 	import MonthGrid from "../../components/calendar/MonthGrid.svelte";
@@ -63,7 +64,7 @@
 			out.push(...episodesToCalendarEvents(gridQuery.data?.episodes ?? []));
 		return out;
 	});
-	let upcoming = $derived(upcomingQuery.data?.movies ?? []);
+	let upcoming = $derived(upcomingEvents(upcomingQuery.data));
 
 	function shift(delta: number) {
 		let m = month0 + delta;

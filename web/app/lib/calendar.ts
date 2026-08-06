@@ -1,4 +1,4 @@
-import type { UpcomingEpisode, UpcomingMovie } from "./types";
+import type { UpcomingEpisode, UpcomingList, UpcomingMovie } from "./types";
 
 export type CalendarKind = "movie" | "episode";
 
@@ -45,6 +45,14 @@ export function episodesToCalendarEvents(
 		date: new Date(e.air_date),
 		status: "grabbing",
 	}));
+}
+
+export function upcomingEvents(data: UpcomingList | undefined): CalendarEvent[] {
+	if (!data) return [];
+	return [
+		...toCalendarEvents(data.movies ?? []),
+		...episodesToCalendarEvents(data.episodes ?? []),
+	].sort((a, b) => a.date.getTime() - b.date.getTime());
 }
 
 // Monday-first, app-wide. The Claude design artifact pins Mon-first as the

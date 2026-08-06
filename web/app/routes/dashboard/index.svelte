@@ -23,6 +23,7 @@
 	import RecentActivityPanel from "../../components/dashboard/RecentActivityPanel.svelte";
 	import WantedScroller from "../../components/dashboard/WantedScroller.svelte";
 	import UpcomingList from "../../components/shared/UpcomingList.svelte";
+	import { upcomingEvents } from "../../lib/calendar";
 
 	const moviesQuery = createQuery<PaginatedMovies>(() => ({
 		queryKey: ["movies"],
@@ -172,7 +173,7 @@
 		].slice(0, 6),
 	);
 	let events = $derived(activityQuery.data?.events ?? []);
-	let upcoming = $derived(upcomingQuery.data?.movies ?? []);
+	let upcoming = $derived(upcomingEvents(upcomingQuery.data));
 </script>
 
 <div class="flex flex-col gap-5 pb-6 md:gap-6">
