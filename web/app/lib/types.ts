@@ -347,25 +347,8 @@ export type ActivityList = {
 	next_cursor: string | null;
 };
 
-// QueueItem is the shape the cinematic dashboard expects from a future
-// /activity/queue endpoint. Until the backend lands the dashboard treats
-// an empty list as "no active downloads".
-export type QueueItem = {
-	id: number;
-	movie_id: number;
-	title: string;
-	release?: string;
-	status: "downloading" | "grabbing";
-	progress: number;
-	speed?: string;
-	eta?: string;
-	size?: string;
-	indexer?: string;
-};
-
 // Live download queue (GET /activity/queue) — DownloadRecords still in
-// flight, enriched with client telemetry. Distinct from the legacy
-// QueueItem the dashboard stubs.
+// flight, enriched with client telemetry.
 export type EpisodeRef = {
 	show_title: string;
 	season: number;

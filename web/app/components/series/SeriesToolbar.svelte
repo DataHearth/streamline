@@ -29,7 +29,6 @@
 	import SelectionControls from "../shared/SelectionControls.svelte";
 	import SelectionTopBar from "../shared/SelectionTopBar.svelte";
 	import MediaFilterSheet from "../shared/MediaFilterSheet.svelte";
-	import type { Density } from "../shared/MediaFilterSheet.svelte";
 
 	type View = "grid" | "list";
 
