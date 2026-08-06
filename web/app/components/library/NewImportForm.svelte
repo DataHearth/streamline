@@ -72,11 +72,13 @@
 		},
 	}));
 
-	// Mirrored rather than read off form.state: a top-level $derived on
-	// form.state.values doesn't re-run when a field changes, so the copy below
-	// would stay stuck on the movie wording.
+	// Mirrored rather than read off form.state: neither a top-level $derived nor
+	// a template read of form.state.values re-runs when a field changes, so the
+	// copy below would stay stuck on the movie wording and the transfer-mode
+	// select would never appear.
 	let kind = $state<ImportScanKind>("movie");
 	let isSeries = $derived(kind === "series");
+	let mode = $state<ImportMode>("in_place");
 
 	const KINDS: { v: ImportScanKind; label: string; desc: string }[] = [
 		{
@@ -162,7 +164,10 @@
 				columns={2}
 				name={field.name}
 				value={field.state.value}
-				onChange={(v) => field.handleChange(v)}
+				onChange={(v) => {
+					field.handleChange(v);
+					mode = v;
+				}}
 				options={MODES.map((m) => ({
 					value: m.v,
 					label: m.label,
@@ -172,7 +177,7 @@
 		{/snippet}
 	</form.Field>
 
-	{#if form.state.values.mode === "rename"}
+	{#if mode === "rename"}
 		<form.Field name="import_mode">
 			{#snippet children(field)}
 				<div>
