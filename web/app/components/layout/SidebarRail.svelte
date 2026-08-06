@@ -30,6 +30,7 @@
 	} from "../../lib/activity-nav";
 	import { navCountsQuery } from "../../lib/nav-counts";
 	import Avatar from "./Avatar.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	// Tablet band (md → lg): the desktop sidebar collapsed to icons, rather than
 	// the phone's four-cell bar. Every top-level destination is on screen, so
@@ -52,12 +53,12 @@
 
 	const MENUS: Record<string, Link[]> = {
 		Library: [
-			{ label: "Movies", href: "/movies", icon: Film },
-			{ label: "Series", href: "/series", icon: Tv },
+			{ label: i18n.movies_label(), href: "/movies", icon: Film },
+			{ label: i18n.settings_series(), href: "/series", icon: Tv },
 		],
 		Activity: [
-			{ label: "Queue & History", href: "/activity", icon: ListVideo },
-			{ label: "Torrents", href: "/activity/torrents", icon: Magnet },
+			{ label: i18n.activity_queue_history(), href: "/activity", icon: ListVideo },
+			{ label: i18n.torrent_label(), href: "/activity/torrents", icon: Magnet },
 		],
 	};
 
@@ -93,9 +94,9 @@
 	// say "something here wants you". Requests is pending approvals; Imports is
 	// a scan waiting on a review decision, or one still running.
 	let opsItems = $derived([
-		{ label: "Calendar", href: "/calendar", icon: CalendarDays, dot: null as string | null },
+		{ label: i18n.common_calendar(), href: "/calendar", icon: CalendarDays, dot: null as string | null },
 		{
-			label: "Requests",
+			label: i18n.requests_label(),
 			href: "/requests",
 			icon: Inbox,
 			dot: pendingRequests > 0 ? "wanted" : null,
@@ -103,7 +104,7 @@
 		...(auth.isAdmin
 			? [
 					{
-						label: "Imports",
+						label: i18n.imports_label(),
 						href: "/library/imports",
 						icon: FolderInput,
 						dot: counts.importsDot,
@@ -111,7 +112,7 @@
 				]
 			: []),
 		...(auth.isAdmin
-			? [{ label: "Settings", href: "/settings", icon: Settings, dot: null }]
+			? [{ label: i18n.nav_settings(), href: "/settings", icon: Settings, dot: null }]
 			: []),
 	]);
 
@@ -134,11 +135,11 @@
 
 <aside
 	class="sticky top-0 z-40 hidden h-dvh w-[88px] shrink-0 flex-col items-center gap-1 border-r border-border bg-bg-elevated px-2.5 pb-4 pt-4 md:flex lg:hidden"
-	aria-label="Primary navigation"
+	aria-label={i18n.nav_primary_navigation()}
 >
 	<a
 		href="/dashboard"
-		aria-label="Streamline home — go to dashboard"
+		aria-label={i18n.nav_home_dashboard()}
 		class="mb-3 rounded-md transition hover:opacity-90"
 	>
 		<img
@@ -148,17 +149,17 @@
 		/>
 	</a>
 
-	<nav aria-label="Primary" class="flex flex-col items-center gap-1">
+	<nav aria-label={i18n.nav_primary()} class="flex flex-col items-center gap-1">
 		<a
 			href="/dashboard"
 			aria-current={dashActive ? "page" : undefined}
 			class={cn(itemBase, dashActive ? itemActive : itemInactive)}
 		>
 			<LayoutDashboard size={20} strokeWidth={dashActive ? 2 : 1.6} />
-			<span>Dashboard</span>
+			<span>{i18n.nav_dashboard()}</span>
 		</a>
 
-		{#each [{ label: "Library", icon: Library, active: libraryActive }, { label: "Activity", icon: Activity, active: activityActive }] as group (group.label)}
+		{#each [{ label: i18n.nav_library(), icon: Library, active: libraryActive }, { label: i18n.nav_activity(), icon: Activity, active: activityActive }] as group (group.label)}
 			{@const on = group.active || flyout === group.label}
 			<div class="relative flex justify-center">
 				<button
@@ -285,7 +286,7 @@
 			<a
 				href="/account"
 				aria-current={accountActive ? "page" : undefined}
-				aria-label="Account settings"
+				aria-label={i18n.nav_account_settings()}
 				title={auth.user.display_name || auth.user.email}
 				class={cn(
 					"grid h-12 w-12 place-items-center rounded-xl transition-colors",
@@ -297,8 +298,8 @@
 			<button
 				type="button"
 				onclick={signOut}
-				aria-label="Sign out"
-				title="Sign out"
+				aria-label={i18n.common_sign_out()}
+				title={i18n.common_sign_out()}
 				class="grid h-11 w-11 place-items-center rounded-xl text-fg-muted transition-colors hover:bg-status-failed/10 hover:text-status-failed"
 			>
 				<LogOut size={19} aria-hidden="true" />

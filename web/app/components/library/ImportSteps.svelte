@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Check, LoaderCircle } from "@lucide/svelte";
 	import type { ImportStatus } from "../../lib/types";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	let { status, series = false }: { status: ImportStatus; series?: boolean } =
 		$props();
@@ -8,10 +9,10 @@
 	type State = "done" | "current" | "pending";
 
 	const STEPS = $derived([
-		{ label: "Discovery", sub: "Indexing files" },
-		{ label: "Parsing", sub: `Matching against ${series ? "TVDB" : "TMDB"}` },
-		{ label: "Review", sub: "Resolve matches" },
-		{ label: "Commit", sub: "Import into library" },
+		{ label: i18n.imports_discovery(), sub: i18n.imports_step_indexing() },
+		{ label: i18n.imports_parsing(), sub: i18n.imports_matching_against({ provider: series ? "TVDB" : "TMDB" }) },
+		{ label: i18n.common_review(), sub: i18n.imports_step_resolve() },
+		{ label: i18n.imports_commit(), sub: i18n.imports_step_import() },
 	]);
 
 	// Map a scan status onto the four-stage pipeline. cancelled/failed freeze
@@ -39,7 +40,7 @@
 
 <ol
 	class="flex items-stretch gap-0 rounded-lg border border-border bg-bg-elevated px-3 py-4 md:px-6"
-	aria-label="Import progress"
+	aria-label={i18n.imports_progress()}
 >
 	{#each STEPS as step, i (step.label)}
 		{@const state = states[i]}

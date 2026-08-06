@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { createQuery } from "@tanstack/svelte-query";
 	import { Inbox } from "@lucide/svelte";
-	import { api } from "../../../lib/api";
+	import { api, errorText } from "../../../lib/api";
 	import type { ImportScanList } from "../../../lib/types";
 	import Modal from "../../../components/modals/Modal.svelte";
 	import ImportsHeader from "../../../components/library/ImportsHeader.svelte";
 	import ScanRow from "../../../components/library/ScanRow.svelte";
 	import NewImportForm from "../../../components/library/NewImportForm.svelte";
+	import { m as i18n } from "../../../lib/paraglide/messages.js";
 
 	const LIMIT = 20;
 	let page = $state(1);
@@ -51,7 +52,7 @@
 		<header
 			class="flex items-center justify-between border-b border-border px-5 py-3.5 md:px-6"
 		>
-			<h2 class="text-base font-semibold text-fg">Recent scans</h2>
+			<h2 class="text-base font-semibold text-fg">{i18n.imports_recent_scans()}</h2>
 			{#if total > 0}
 				<span class="font-mono text-xs tabular-nums text-fg-subtle">
 					{total}
@@ -60,18 +61,20 @@
 		</header>
 
 		{#if list.isPending}
-			<p class="px-5 py-10 text-center text-sm text-fg-subtle">Loading…</p>
+			<p class="px-5 py-10 text-center text-sm text-fg-subtle">{i18n.common_loading()}</p>
 		{:else if list.isError}
 			<p class="px-5 py-10 text-center text-sm text-status-failed">
-				Failed to load: {list.error?.message}
+				{i18n.err_load_failed_detail({ reason: errorText(list.error) })}
 			</p>
 		{:else if items.length === 0}
 			<div class="flex flex-col items-center gap-2 px-5 py-12 text-center">
 				<Inbox size={32} class="text-fg-faint" aria-hidden="true" />
-				<p class="text-sm text-fg-muted">No scans yet.</p>
+				<p class="text-sm text-fg-muted">{i18n.imports_no_scans()}</p>
 				<p class="text-xs text-fg-subtle">
-					Click <span class="font-medium text-fg-muted">New scan</span>
-					to start one.
+					{i18n.imports_click_prefix()} <span class="font-medium text-fg-muted"
+						>{i18n.imports_new_scan()}</span
+					>
+					{i18n.imports_click_suffix()}
 				</p>
 			</div>
 		{:else}
@@ -98,7 +101,7 @@
 						onclick={() => (page = Math.max(1, page - 1))}
 						class="inline-flex h-8 items-center rounded-md border border-border px-3 transition hover:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring disabled:cursor-not-allowed disabled:opacity-40"
 					>
-						Prev
+						{i18n.common_prev()}
 					</button>
 					<button
 						type="button"
@@ -106,7 +109,7 @@
 						onclick={() => (page += 1)}
 						class="inline-flex h-8 items-center rounded-md border border-border px-3 transition hover:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring disabled:cursor-not-allowed disabled:opacity-40"
 					>
-						Next
+						{i18n.common_next()}
 					</button>
 				</div>
 			</div>
@@ -116,7 +119,7 @@
 
 <Modal
 	open={modalOpen}
-	title="Start a new scan"
+	title={i18n.imports_start_new_scan()}
 	size="lg"
 	onClose={() => (modalOpen = false)}
 >

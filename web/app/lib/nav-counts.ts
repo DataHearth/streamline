@@ -9,6 +9,7 @@
 import { createQuery } from "@tanstack/svelte-query";
 import { api } from "./api";
 import { auth } from "./auth.svelte";
+import { m as i18n } from "./paraglide/messages.js";
 import type {
 	DownloadQueue,
 	ImportCounts,
@@ -29,10 +30,10 @@ const IMPORT_SCAN_WINDOW = 100;
 // vocabulary the torrents row and the activity filter chips already use. Keys
 // without a token of their own borrow one (mirrors lib/format.pillStatus).
 const QUEUE_DOTS = [
-	{ key: "downloading", label: "downloading", dot: "downloading" },
-	{ key: "importing", label: "importing", dot: "grabbing" },
-	{ key: "paused", label: "paused", dot: "paused" },
-	{ key: "error", label: "failed", dot: "failed" },
+	{ key: "downloading", label: i18n.lc_downloading(), dot: "downloading" },
+	{ key: "importing", label: i18n.lc_importing(), dot: "grabbing" },
+	{ key: "paused", label: i18n.lc_paused(), dot: "paused" },
+	{ key: "error", label: i18n.lc_failed(), dot: "failed" },
 ] as const;
 
 export type NavDot = { key: string; label: string; count: number; dot: string };

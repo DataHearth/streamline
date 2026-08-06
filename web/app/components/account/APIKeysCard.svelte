@@ -5,11 +5,12 @@
 		useQueryClient,
 	} from "@tanstack/svelte-query";
 	import { Key, Plus, Clipboard, X, ShieldAlert } from "@lucide/svelte";
-	import { api } from "../../lib/api";
+	import { api, errorText } from "../../lib/api";
 	import { toast } from "../../lib/toast";
 	import type { ApiKey } from "../../lib/types";
 	import Dialog from "../modals/Dialog.svelte";
 	import ApiKeyRow from "../shared/ApiKeyRow.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	type ApiKeyCreated = ApiKey & { raw_token: string };
 
@@ -37,7 +38,7 @@
 			qc.invalidateQueries({ queryKey: ["auth", "me", "api-keys"] });
 			toast.ok("API key created");
 		},
-		onError: (err) => toast.err(err.message),
+		onError: (err) => toast.err(errorText(err)),
 	}));
 
 	const revoke = createMutation<null, Error, number>(() => ({
@@ -47,7 +48,7 @@
 			qc.invalidateQueries({ queryKey: ["auth", "me", "api-keys"] });
 			toast.ok("Key revoked");
 		},
-		onError: (err) => toast.err(err.message),
+		onError: (err) => toast.err(errorText(err)),
 	}));
 
 	async function copyRaw() {
@@ -68,9 +69,9 @@
 		class="flex items-center justify-between border-b border-border px-5 py-3.5"
 	>
 		<div>
-			<h3 class="text-base font-semibold text-fg">API keys</h3>
+			<h3 class="text-base font-semibold text-fg">{i18n.account_api_keys()}</h3>
 			<p class="mt-0.5 text-xs text-fg-muted">
-				For mobile apps and CLI tooling. Tokens are shown once.
+				{i18n.account_api_keys_help()}
 			</p>
 		</div>
 	</header>
@@ -86,11 +87,11 @@
 		>
 			<label class="min-w-[200px] flex-1">
 				<span class="mb-1 block text-xs font-medium text-fg-muted"
-					>New key name</span
+					>{i18n.account_new_key_name()}</span
 				>
 				<input
 					bind:value={newName}
-					placeholder="e.g. iOS, CLI"
+					placeholder={i18n.account_key_name_example()}
 					class="h-9 w-full rounded-md border border-border bg-bg px-3 text-sm text-fg placeholder:text-fg-faint focus-visible:outline-2 focus-visible:outline-accent"
 				/>
 			</label>
@@ -100,7 +101,7 @@
 				class="inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-3.5 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
 			>
 				<Plus size={14} aria-hidden="true" />
-				{create.isPending ? "Creating…" : "Create"}
+				{create.isPending ? i18n.common_creating() : i18n.common_create()}
 			</button>
 		</form>
 	</div>
@@ -117,17 +118,17 @@
 				/>
 				<div class="min-w-0 flex-1">
 					<p class="text-sm font-semibold text-fg">
-						Copy this token now
+						{i18n.account_copy_token_now()}
 					</p>
 					<p class="mt-0.5 text-xs text-fg-muted">
-						It won't be shown again. Treat it like a password.
+						{i18n.account_token_once()}
 					</p>
 				</div>
 				<button
 					type="button"
 					onclick={() => (revealed = null)}
 					class="grid h-7 w-7 shrink-0 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg"
-					aria-label="Dismiss"
+					aria-label={i18n.common_dismiss()}
 				>
 					<X size={14} aria-hidden="true" />
 				</button>
@@ -142,21 +143,21 @@
 				class="inline-flex h-8 w-fit items-center gap-1.5 rounded-md border border-border bg-bg-base px-2.5 text-xs font-medium text-fg-muted transition hover:border-border-strong hover:text-fg"
 			>
 				<Clipboard size={12} aria-hidden="true" />
-				Copy to clipboard
+				{i18n.common_copy_clipboard()}
 			</button>
 		</div>
 	{/if}
 
 	{#if keys.isPending}
-		<p class="px-5 py-6 text-sm text-fg-subtle">Loading…</p>
+		<p class="px-5 py-6 text-sm text-fg-subtle">{i18n.common_loading()}</p>
 	{:else if keys.isError}
 		<p class="px-5 py-6 text-sm text-status-failed">
-			Failed to load: {keys.error?.message}
+			{i18n.err_load_failed_detail({ reason: errorText(keys.error) })}
 		</p>
 	{:else if items.length === 0}
 		<div class="flex items-center gap-2 px-5 py-6 text-sm text-fg-muted">
 			<Key size={16} aria-hidden="true" />
-			<span>No keys yet.</span>
+			<span>{i18n.account_no_keys()}</span>
 		</div>
 	{:else}
 		<ul class="max-h-[26rem] divide-y divide-border overflow-y-auto">
@@ -177,9 +178,9 @@
 	body="Anything using this key will immediately lose access."
 	onClose={() => (revoking = null)}
 	actions={[
-		{ label: "Cancel", variant: "ghost", autofocus: true },
+		{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },
 		{
-			label: "Revoke",
+			label: i18n.common_revoke(),
 			variant: "danger",
 			onClick: () => revoking && revoke.mutate(revoking.id),
 		},

@@ -34,6 +34,7 @@
 	import { navCountsQuery, type NavDot } from "../../lib/nav-counts";
 	import { bulkMode } from "../../lib/bulk-mode.svelte";
 	import Avatar from "./Avatar.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	// Phone only. From md up the rail takes over (SidebarRail), and from lg the
 	// full sidebar does.
@@ -54,7 +55,7 @@
 	let requestsLine = $derived.by(() => {
 		const d = requestCountsQuery.data;
 		if (!d) return "";
-		if (!d.pending) return "Nothing waiting on you";
+		if (!d.pending) return i18n.nothing_waiting();
 		return `${d.approved.toLocaleString()} approved · ${d.denied.toLocaleString()} denied`;
 	});
 
@@ -90,12 +91,12 @@
 	// Imports is an operation, not a library destination, so it sits under More
 	// with Calendar and Requests — the same grouping the desktop sidebar uses.
 	let libraryRows = $derived<Row[]>([
-		{ label: "Movies", href: "/movies", icon: Film, line: counts.moviesLine },
-		{ label: "Series", href: "/series", icon: Tv, line: counts.seriesLine },
+		{ label: i18n.movies_label(), href: "/movies", icon: Film, line: counts.moviesLine },
+		{ label: i18n.settings_series(), href: "/series", icon: Tv, line: counts.seriesLine },
 	]);
 	let activityRows = $derived<Row[]>([
 		{
-			label: "Queue & History",
+			label: i18n.activity_queue_history(),
 			href: "/activity",
 			icon: ListVideo,
 			dots: counts.queueDots,
@@ -103,16 +104,16 @@
 			badge: pendingAdoptions,
 		},
 		{
-			label: "Torrents",
+			label: i18n.torrent_label(),
 			href: "/activity/torrents",
 			icon: Magnet,
 			torrents: true,
 		},
 	]);
 	let moreRows = $derived<Row[]>([
-		{ label: "Calendar", href: "/calendar", icon: CalendarDays },
+		{ label: i18n.common_calendar(), href: "/calendar", icon: CalendarDays },
 		{
-			label: "Requests",
+			label: i18n.requests_label(),
 			href: "/requests",
 			icon: Inbox,
 			line: requestsLine,
@@ -121,7 +122,7 @@
 		...(auth.isAdmin
 			? [
 					{
-						label: "Imports",
+						label: i18n.imports_label(),
 						href: "/library/imports",
 						icon: FolderInput,
 						line: counts.importsLine,
@@ -133,7 +134,7 @@
 	// rule says the same thing in less space.
 	let adminRows = $derived<Row[]>(
 		auth.isAdmin
-			? [{ label: "Settings", href: "/settings", icon: Settings }]
+			? [{ label: i18n.nav_settings(), href: "/settings", icon: Settings }]
 			: [],
 	);
 
@@ -160,9 +161,9 @@
 	let moreOn = $derived(moreActive || sheet === "More");
 
 	const primary = [
-		{ label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-		{ label: "Library", icon: Library, section: "Library" as const },
-		{ label: "Activity", icon: Activity, section: "Activity" as const },
+		{ label: i18n.nav_dashboard(), href: "/dashboard", icon: LayoutDashboard },
+		{ label: i18n.nav_library(), icon: Library, section: "Library" as const },
+		{ label: i18n.nav_activity(), icon: Activity, section: "Activity" as const },
 	];
 	function cellActive(label: string) {
 		if (label === "Library") return libraryActive;
@@ -320,7 +321,7 @@
 		// second bar on top of this one.
 		bulkMode.active && "hidden",
 	)}
-	aria-label="Primary"
+	aria-label={i18n.nav_primary()}
 >
 	{#each primary as tab (tab.label)}
 		{#if tab.section}
@@ -354,7 +355,7 @@
 		onclick={() => toggleSheet("More")}
 		aria-haspopup="dialog"
 		aria-expanded={sheet === "More"}
-		aria-label="More destinations"
+		aria-label={i18n.nav_more_destinations()}
 		class={cn(cellBase, moreOn ? cellOn : cellOff)}
 	>
 		<div class="relative">
@@ -366,7 +367,7 @@
 				></span>
 			{/if}
 		</div>
-		<span>More</span>
+		<span>{i18n.common_more()}</span>
 	</button>
 </nav>
 
@@ -379,7 +380,7 @@
 	>
 		<button
 			type="button"
-			aria-label="Close menu"
+			aria-label={i18n.nav_close_menu()}
 			data-sheet-backdrop=""
 			transition:fade={{ duration: 180 }}
 			onclick={closeSheet}
@@ -403,7 +404,7 @@
 				<button
 					type="button"
 					onclick={closeSheet}
-					aria-label="Close"
+					aria-label={i18n.common_close()}
 					class="grid h-9 w-9 place-items-center rounded-full bg-surface text-fg-subtle transition hover:bg-bg-hover hover:text-fg"
 				>
 					<X size={16} aria-hidden="true" />
@@ -543,8 +544,8 @@
 						<button
 							type="button"
 							onclick={signOut}
-							aria-label="Sign out"
-							title="Sign out"
+							aria-label={i18n.common_sign_out()}
+							title={i18n.common_sign_out()}
 							class="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-fg-muted transition-colors hover:bg-status-failed/10 hover:text-status-failed"
 						>
 							<LogOut size={19} aria-hidden="true" />

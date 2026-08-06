@@ -6,7 +6,7 @@
 	} from "@tanstack/svelte-query";
 	import { createForm } from "@tanstack/svelte-form";
 	import { Plus, Trash2, Gauge, Pencil, Eye } from "@lucide/svelte";
-	import { api } from "../../lib/api";
+	import { api, errorText } from "../../lib/api";
 	import { config, READONLY_HINT } from "../../lib/config.svelte";
 	import { toast } from "../../lib/toast";
 	import { qualityProfile } from "../../lib/schemas";
@@ -16,6 +16,7 @@
 	import QualityProfileForm from "../../components/settings/forms/QualityProfileForm.svelte";
 	import ReadOnlyFieldset from "../../components/settings/ReadOnlyFieldset.svelte";
 	import ConfigModalFooter from "../../components/settings/ConfigModalFooter.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	type Values = {
 		name: string;
@@ -49,11 +50,11 @@
 		},
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: ["quality-profiles"] });
-			toast.ok(editing ? "Profile updated" : "Profile created");
+			toast.ok(editing ? i18n.quality_updated() : i18n.quality_created());
 			modalOpen = false;
 			editing = null;
 		},
-		onError: (err) => toast.err(err.message),
+		onError: (err) => toast.err(errorText(err)),
 	}));
 
 	const remove = createMutation<null, Error, string>(() => ({
@@ -65,7 +66,7 @@
 			qc.invalidateQueries({ queryKey: ["quality-profiles"] });
 			toast.ok("Profile deleted");
 		},
-		onError: (err) => toast.err(err.message),
+		onError: (err) => toast.err(errorText(err)),
 	}));
 
 	const defaults: Values = {
@@ -110,10 +111,10 @@
 	<header class="flex flex-wrap items-end justify-between gap-3">
 		<div>
 			<h1 class="text-2xl font-bold tracking-tight text-fg">
-				Quality profiles
+				{i18n.settings_quality_profiles()}
 			</h1>
 			<p class="mt-1 text-sm text-fg-muted">
-				Resolution ranges Streamline accepts when grabbing releases.
+				{i18n.quality_intro()}
 			</p>
 		</div>
 		<button
@@ -124,25 +125,25 @@
 			class="inline-flex items-center gap-1.5 rounded-md bg-accent px-3.5 py-2 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
 		>
 			<Plus size={16} aria-hidden="true" />
-			Add profile
+			{i18n.quality_add()}
 		</button>
 	</header>
 
 	<div class="mt-6 space-y-3">
 		{#if list.isPending}
-			<p class="text-sm text-fg-subtle">Loading…</p>
+			<p class="text-sm text-fg-subtle">{i18n.common_loading()}</p>
 		{:else if list.isError}
 			<p class="text-sm text-status-failed">
-				Failed to load: {list.error?.message}
+				{i18n.err_load_failed_detail({ reason: errorText(list.error) })}
 			</p>
 		{:else if items.length === 0}
 			<div
 				class="rounded-lg border border-dashed border-border bg-bg-deep/40 p-8 text-center"
 			>
 				<Gauge size={24} class="mx-auto text-fg-faint" aria-hidden="true" />
-				<p class="mt-3 text-sm text-fg">No quality profiles yet.</p>
+				<p class="mt-3 text-sm text-fg">{i18n.quality_none()}</p>
 				<p class="mt-1 text-xs text-fg-muted">
-					Create one to control which release qualities Streamline grabs.
+					{i18n.quality_none_help()}
 				</p>
 			</div>
 		{:else}
@@ -181,7 +182,7 @@
 								{/if}
 							</div>
 							<div class="mt-1 truncate text-xs text-fg-muted">
-								Preferred
+								{i18n.quality_preferred_short()}
 								<span class="font-mono text-fg"
 									>{p.preferred_resolution}</span
 								> · Min
@@ -195,7 +196,7 @@
 								type="button"
 								onclick={() => openEdit(p)}
 								class="rounded-md p-1.5 text-fg-muted transition hover:bg-surface hover:text-fg"
-								aria-label="View profile"
+								aria-label={i18n.quality_view_short()}
 							>
 								<Eye size={16} aria-hidden="true" />
 							</button>
@@ -204,7 +205,7 @@
 								type="button"
 								onclick={() => openEdit(p)}
 								class="rounded-md p-1.5 text-fg-muted transition hover:bg-surface hover:text-fg"
-								aria-label="Edit profile"
+								aria-label={i18n.quality_edit_short()}
 							>
 								<Pencil size={16} aria-hidden="true" />
 							</button>
@@ -212,7 +213,7 @@
 								type="button"
 								onclick={() => onDelete(p)}
 								class="rounded-md p-1.5 text-fg-muted transition hover:bg-status-failed/10 hover:text-status-failed"
-								aria-label="Delete profile"
+								aria-label={i18n.quality_delete()}
 							>
 								<Trash2 size={16} aria-hidden="true" />
 							</button>
@@ -227,10 +228,10 @@
 <Modal
 	open={modalOpen}
 	title={config.readOnly
-		? "View quality profile"
+		? i18n.quality_view()
 		: editing
-			? "Edit quality profile"
-			: "Add quality profile"}
+			? i18n.quality_edit()
+			: i18n.quality_add_long()}
 	size="md"
 	onClose={() => (modalOpen = false)}
 >
@@ -250,10 +251,10 @@
 		<ConfigModalFooter
 			formId="quality-profile-form"
 			submitLabel={form.state.isSubmitting
-				? "Saving…"
+				? i18n.common_saving()
 				: editing
-					? "Save changes"
-					: "Add profile"}
+					? i18n.common_save_changes()
+					: i18n.quality_add()}
 			submitDisabled={!form.state.canSubmit || form.state.isSubmitting}
 			onCancel={() => (modalOpen = false)}
 		/>
@@ -266,9 +267,9 @@
 	body="Movies using it will fall back to the default profile."
 	onClose={() => (deleting = null)}
 	actions={[
-		{ label: "Cancel", variant: "ghost", autofocus: true },
+		{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },
 		{
-			label: "Delete",
+			label: i18n.common_delete(),
 			variant: "danger",
 			onClick: () => deleting && remove.mutate(deleting.name),
 		},

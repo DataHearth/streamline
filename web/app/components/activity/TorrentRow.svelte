@@ -10,6 +10,7 @@
 		formatRatio,
 	} from "../../lib/format";
 	import type { Torrent } from "../../lib/types";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	let {
 		torrent,
@@ -49,7 +50,7 @@
 	<td class="w-full max-w-0 px-2 py-3">
 		{#if fetching && !torrent.name}
 			<div class="flex items-center gap-2">
-				<span class="italic text-fg-muted">Fetching metadata…</span>
+				<span class="italic text-fg-muted">{i18n.torrent_fetching_metadata()}</span>
 			</div>
 			<div class="truncate font-mono text-[11px] text-fg-faint">
 				{torrent.hash.slice(0, 24)}…
@@ -60,7 +61,7 @@
 				{#if !torrent.tracked}
 					<span
 						class="shrink-0 rounded-full border border-border px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-fg-subtle"
-						title="Not linked to a library item"
+						title={i18n.torrent_not_linked()}
 					>
 						untracked
 					</span>

@@ -5,6 +5,7 @@
 	import { entryHeading, queueMeta } from "../../lib/activity-touch";
 	import { formatEta, formatSpeed, pillStatus } from "../../lib/format";
 	import type { QueueEntry } from "../../lib/types";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	let { queue }: { queue: QueueEntry[] } = $props();
 
@@ -28,7 +29,7 @@
 
 <section
 	class="flex h-full flex-col overflow-hidden rounded-lg border border-border bg-bg-elevated"
-	aria-label="Live download queue"
+	aria-label={i18n.dash_live_download_queue()}
 >
 	<header
 		class="flex items-center justify-between border-b border-border px-5 py-4"
@@ -38,7 +39,7 @@
 				aria-hidden="true"
 				class="inline-block h-1.5 w-1.5 rounded-full bg-status-downloading motion-safe:animate-pulse"
 			></span>
-			<h3 class="text-sm font-semibold text-fg">Live queue</h3>
+			<h3 class="text-sm font-semibold text-fg">{i18n.dash_live_queue()}</h3>
 			<span class="font-mono text-[11px] text-fg-subtle">
 				{active} active
 			</span>
@@ -47,7 +48,7 @@
 			href="/activity"
 			class="text-[11.5px] text-fg-subtle transition hover:text-accent-text"
 		>
-			Open Activity →
+			{i18n.dash_open_activity()}
 		</a>
 	</header>
 
@@ -56,9 +57,9 @@
 			class="flex flex-1 flex-col items-center justify-center gap-1.5 px-5 py-8 text-center"
 		>
 			<Activity size={22} class="text-fg-faint" aria-hidden="true" />
-			<p class="text-sm font-medium text-fg">Queue is quiet</p>
+			<p class="text-sm font-medium text-fg">{i18n.activity_queue_quiet()}</p>
 			<p class="text-xs text-fg-muted">
-				Grabs in flight will show up here in real time.
+				{i18n.dash_grabs_in_flight()}
 			</p>
 		</div>
 	{:else}

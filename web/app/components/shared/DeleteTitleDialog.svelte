@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Dialog from "../modals/Dialog.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	// One delete, not two. The library had a "Delete from library" and a
 	// "Delete + files" entry side by side in every kebab, which made the
@@ -42,9 +43,9 @@
 	{title}
 	{onClose}
 	actions={[
-		{ label: "Cancel", variant: "ghost", autofocus: true },
+		{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },
 		{
-			label: withFiles ? "Delete + files" : "Delete",
+			label: withFiles ? i18n.delete_with_files() : i18n.common_delete(),
 			variant: "danger",
 			dismiss: false,
 			pending,

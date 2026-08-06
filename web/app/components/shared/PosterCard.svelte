@@ -8,6 +8,7 @@
 	import ProgressBar from "./ProgressBar.svelte";
 	import SelectBox from "./SelectBox.svelte";
 	import type { StatusKind } from "./StatusPill.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	type PosterMovie = {
 		id: number;
@@ -223,7 +224,7 @@
 					value={movie.progress}
 					status="downloading"
 					height={2}
-					label="Downloading"
+					label={i18n.status_downloading()}
 				/>
 			</div>
 		{/if}
@@ -242,7 +243,7 @@
 				variant="card"
 				checked={selected}
 				onChange={(v) => onSelect(v)}
-				label={selected ? `Deselect ${movie.title}` : `Select ${movie.title}`}
+				label={selected ? `Deselect ${movie.title}` : i18n.a11y_select_item({ title: movie.title })}
 			/>
 		</div>
 	{/if}
@@ -251,9 +252,9 @@
 		<button
 			type="button"
 			onclick={stop(onMonitor)}
-			aria-label={movie.monitored ? "Stop monitoring" : "Monitor"}
+			aria-label={movie.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
 			aria-pressed={movie.monitored ?? false}
-			title={movie.monitored ? "Stop monitoring" : "Monitor"}
+			title={movie.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
 			class={cn(
 				"absolute right-2 top-2 z-10 grid h-7 w-7 place-items-center rounded-full border border-white/10 bg-bg-deep transition hover:bg-bg-elevated focus:outline-none focus:ring-2 focus:ring-accent-ring",
 				movie.monitored ? "text-accent-text" : "text-fg-subtle hover:text-fg",
@@ -274,7 +275,7 @@
 			<button
 				type="button"
 				onclick={stop(onSearch)}
-				aria-label="Search releases"
+				aria-label={i18n.action_search_releases()}
 				class="grid h-7 w-7 place-items-center rounded-full border border-white/10 bg-black/65 text-white backdrop-blur-sm transition hover:bg-black/80"
 			>
 				<Search size={14} aria-hidden="true" />

@@ -8,11 +8,12 @@
 		LoaderCircle,
 	} from "@lucide/svelte";
 	import { cn } from "../../lib/cn";
-	import { api } from "../../lib/api";
+	import { api, errorText } from "../../lib/api";
 	import { toast } from "../../lib/toast";
 	import { formatBytes } from "../../lib/format";
 	import type { SearchResult } from "../../lib/types";
 	import Select from "../forms/Select.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	type Field =
 		| "title"
@@ -100,11 +101,11 @@
 	let indexers = $derived(distinct((r) => r.indexer));
 
 	let groupOptions = $derived([
-		{ value: "", label: "All groups" },
+		{ value: "", label: i18n.movies_all_groups() },
 		...groups.map((g) => ({ value: g, label: g })),
 	]);
 	let indexerOptions = $derived([
-		{ value: "", label: "All indexers" },
+		{ value: "", label: i18n.movies_all_indexers() },
 		...indexers.map((ix) => ({ value: ix, label: ix })),
 	]);
 
@@ -132,11 +133,11 @@
 				body: replaceExisting ? { ...r, replace_existing: true } : r,
 			}),
 		onSuccess: (_d, r) => {
-			toast.ok(`Grabbed: ${r.title}`);
+			toast.ok(i18n.toast_grabbed({ title: r.title }));
 			onGrabbed?.();
 		},
 		onError: (e) => {
-			errMsg = e.message ?? "Grab failed";
+			errMsg = errorText(e, i18n.grab_failed());
 			toast.err(errMsg);
 		},
 	}));
@@ -161,9 +162,9 @@
 	}
 
 	function fmtDate(iso?: string): string {
-		if (!iso) return "Unknown release date";
+		if (!iso) return i18n.unknown_release_date();
 		const t = Date.parse(iso);
-		if (Number.isNaN(t)) return "Unknown release date";
+		if (Number.isNaN(t)) return i18n.unknown_release_date();
 		return new Date(t).toLocaleString();
 	}
 
@@ -230,11 +231,11 @@
 		role="alert"
 		class="rounded-lg border border-dashed border-status-failed/40 bg-status-failed/5 py-10 text-center text-sm text-status-failed"
 	>
-		{q.error?.message ?? "Search failed"}
+		{errorText(q.error, i18n.common_search_failed())}
 	</div>
 {:else if (q.data?.length ?? 0) === 0}
 	<p class="py-10 text-center text-sm text-fg-muted">
-		No releases found across enabled indexers.
+		{i18n.grab_no_releases()}
 	</p>
 {:else}
 	<div class="mb-3 flex flex-wrap items-center justify-between gap-3">
@@ -269,7 +270,7 @@
 		<div
 			class="rounded-lg border border-dashed border-border bg-bg-elevated py-10 text-center text-sm text-fg-muted"
 		>
-			<p>No releases match the current filters.</p>
+			<p>{i18n.grab_no_releases_filtered()}</p>
 			<button
 				type="button"
 				onclick={() => {
@@ -278,7 +279,7 @@
 				}}
 				class="mt-2 text-xs font-medium text-accent transition hover:text-accent-hover"
 			>
-				Clear filters
+				{i18n.common_clear_filters()}
 			</button>
 		</div>
 	{:else}
@@ -449,7 +450,7 @@
 							scope="col"
 							class="w-20 px-3 py-2.5 text-right font-medium"
 						>
-							Action
+							{i18n.common_action()}
 						</th>
 					</tr>
 				</thead>

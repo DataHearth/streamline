@@ -31,6 +31,7 @@
 		formatRatio,
 	} from "../../lib/format";
 	import { formatRelative, formatDateTime } from "../../lib/dates";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 	import type {
 		Torrent,
 		TorrentDetails,
@@ -124,9 +125,9 @@
 	);
 
 	const TABS: { key: Tab; label: string }[] = [
-		{ key: "files", label: "Files" },
-		{ key: "peers", label: "Peers" },
-		{ key: "trackers", label: "Trackers" },
+		{ key: "files", label: i18n.common_files() },
+		{ key: "peers", label: i18n.torrent_peers() },
+		{ key: "trackers", label: i18n.torrent_trackers() },
 	];
 	function tabCount(k: Tab): number {
 		if (!detail) return 0;
@@ -158,7 +159,7 @@
 			)}
 			role="dialog"
 			aria-modal="true"
-			aria-label="Torrent detail"
+			aria-label={i18n.torrent_detail()}
 		>
 			<!-- Header -->
 			<header class="relative shrink-0 border-b border-border p-5">
@@ -178,7 +179,7 @@
 						<div class="min-w-0">
 							<h2 class="break-words text-base font-semibold leading-snug text-fg">
 								{#if fetching && !torrent.name}
-									<span class="italic text-fg-muted">Fetching metadata…</span>
+									<span class="italic text-fg-muted">{i18n.torrent_fetching_metadata()}</span>
 								{:else}
 									{torrent.name}
 								{/if}
@@ -188,7 +189,7 @@
 								type="button"
 								onclick={copyHash}
 								class="group mt-1 inline-flex max-w-full items-center gap-1.5 text-left"
-								title="Copy infohash"
+								title={i18n.action_copy_infohash()}
 							>
 								<span
 									class="truncate font-mono text-[11px] text-fg-subtle group-hover:text-fg-muted"
@@ -214,7 +215,7 @@
 					<button
 						type="button"
 						onclick={onClose}
-						aria-label="Close"
+						aria-label={i18n.common_close()}
 						class="grid h-9 w-9 shrink-0 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg"
 					>
 						<X size={16} aria-hidden="true" />
@@ -226,9 +227,9 @@
 					{#if torrent.seeding_stopped}
 						<span
 							class="inline-flex items-center gap-1 rounded-full border border-status-completed/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-status-completed"
-							title="Ratio / seed-time limit reached"
+							title={i18n.torrent_ratio_limit_reached()}
 						>
-							Seeding stopped
+							{i18n.torrent_seeding_stopped()}
 						</span>
 					{/if}
 					{#if !torrent.tracked}
@@ -262,13 +263,13 @@
 
 				<!-- meta -->
 				<dl class="mt-4 grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1.5 text-xs">
-					<dt class="font-medium uppercase tracking-[0.1em] text-fg-faint">Save path</dt>
+					<dt class="font-medium uppercase tracking-[0.1em] text-fg-faint">{i18n.torrent_save_path()}</dt>
 					<dd class="min-w-0 break-all font-mono text-fg-muted">{torrent.save_path}</dd>
-					<dt class="font-medium uppercase tracking-[0.1em] text-fg-faint">Swarm</dt>
+					<dt class="font-medium uppercase tracking-[0.1em] text-fg-faint">{i18n.torrent_swarm()}</dt>
 					<dd class="font-mono tabular-nums text-fg-muted">
 						{torrent.seeds} seeds · {torrent.peer_count} peers
 					</dd>
-					<dt class="font-medium uppercase tracking-[0.1em] text-fg-faint">Added</dt>
+					<dt class="font-medium uppercase tracking-[0.1em] text-fg-faint">{i18n.common_added()}</dt>
 					<dd class="text-fg-muted" title={formatDateTime(torrent.added_at)}>
 						{formatRelative(torrent.added_at)}
 					</dd>
@@ -305,15 +306,15 @@
 				{#if !detail}
 					<div class="flex flex-col items-center justify-center gap-2 py-16 text-center">
 						<LoaderCircle size={22} class="text-fg-faint motion-safe:animate-spin" aria-hidden="true" />
-						<p class="text-sm text-fg-muted">Loading details…</p>
+						<p class="text-sm text-fg-muted">{i18n.common_loading_details()}</p>
 					</div>
 				{:else if tab === "files"}
 					{#if detail.files.length === 0}
 						<div class="flex flex-col items-center justify-center gap-2 py-16 text-center">
 							<FileText size={24} class="text-fg-faint" aria-hidden="true" />
-							<p class="text-sm font-medium text-fg">Waiting for metadata</p>
+							<p class="text-sm font-medium text-fg">{i18n.torrent_waiting_metadata()}</p>
 							<p class="text-xs text-fg-muted">
-								The file list appears once the magnet resolves.
+								{i18n.torrent_file_list_after_magnet()}
 							</p>
 						</div>
 					{:else}
@@ -365,12 +366,12 @@
 						class="ml-auto inline-flex h-9 items-center gap-1.5 rounded-md bg-status-failed/15 px-3.5 text-sm font-semibold text-status-failed transition hover:bg-status-failed/25 disabled:opacity-50"
 					>
 						<Trash2 size={14} aria-hidden="true" />
-						Remove
+						{i18n.common_remove()}
 					</button>
 				</footer>
 			{:else}
 				<footer class="shrink-0 border-t border-border p-4 text-center text-xs text-fg-subtle">
-					You have read-only access to torrents.
+					{i18n.torrent_readonly()}
 				</footer>
 			{/if}
 		</div>
@@ -394,20 +395,20 @@
 
 <Dialog
 	open={confirmRemove}
-	title="Remove torrent?"
+	title={i18n.torrent_remove_confirm()}
 	inlineActions
 	onClose={() => (confirmRemove = false)}
 	actions={[
-		{ label: "Cancel", variant: "ghost", autofocus: true },
+		{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },
 		{
-			label: "Remove",
+			label: i18n.common_remove(),
 			variant: "danger",
 			onClick: () => torrent && onRemove(torrent.hash, deleteFiles),
 		},
 	]}
 >
 	<p class="text-sm text-fg-muted">
-		Removes
+		{i18n.torrent_removes()}
 		<span class="font-medium text-fg">{torrent?.name || "this torrent"}</span>
 		from the built-in engine.
 	</p>
@@ -418,7 +419,7 @@
 		class="mt-4 rounded-md border border-border bg-bg-card p-3"
 	>
 		<span class="text-sm text-fg-muted">
-			<span class="font-medium text-fg">Also delete downloaded files</span>
+			<span class="font-medium text-fg">{i18n.torrent_also_delete_files()}</span>
 			from disk. This can’t be undone.
 		</span>
 	</Checkbox>

@@ -9,6 +9,7 @@
 	import { cn } from "../../../lib/cn";
 	import { readOnlyLock } from "../../../lib/config.svelte";
 	import type { IndexerProtocol } from "../../../lib/types";
+	import { m as i18n } from "../../../lib/paraglide/messages.js";
 
 	type Values = {
 		name: string;
@@ -88,10 +89,10 @@
 	> = {
 		prowlarr: {
 			label: "Prowlarr",
-			desc: "Native API · queries all indexers",
+			desc: i18n.indexer_native_api(),
 			logo: "prowlarr",
 		},
-		torznab: { label: "Torznab", desc: "Single feed endpoint" },
+		torznab: { label: "Torznab", desc: i18n.indexer_single_endpoint() },
 	};
 
 	const meta = $derived(PROTOCOL_META[protocol.current]);
@@ -138,7 +139,7 @@
 				<div class="mb-1.5 flex flex-wrap items-center gap-2">
 					<span
 						class="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-fg-muted"
-						>Aggregators</span
+						>{i18n.indexer_aggregators()}</span
 					>
 					<span class="text-[11px] text-fg-subtle"
 						>query every indexer at once</span
@@ -155,7 +156,7 @@
 				<div class="mb-1.5 flex flex-wrap items-center gap-2">
 					<span
 						class="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-fg-muted"
-						>Single Torznab feed</span
+						>{i18n.indexer_single_feed()}</span
 					>
 					<span class="text-[11px] text-fg-subtle"
 						>one tracker per entry</span
@@ -174,14 +175,14 @@
 		<div class="min-w-0 flex-1">
 			<form.Field name="name">
 				{#snippet children(field)}
-					<TextField {field} label="Name" placeholder="My indexer" />
+					<TextField {field} label={i18n.common_name()} placeholder="My indexer" />
 				{/snippet}
 			</form.Field>
 		</div>
 		<form.Field name="enabled">
 			{#snippet children(field)}
 				<TogglePill
-					label="Enabled"
+					label={i18n.common_enabled()}
 					tone="status"
 					name={field.name}
 					checked={field.state.value}
@@ -195,18 +196,18 @@
 		<div class="grid gap-3 sm:grid-cols-[1fr_6rem_auto] sm:items-end">
 			<form.Field name="host">
 				{#snippet children(field)}
-					<TextField {field} label="Host" placeholder="prowlarr.local" />
+					<TextField {field} label={i18n.field_host()} placeholder="prowlarr.local" />
 				{/snippet}
 			</form.Field>
 			<form.Field name="port">
 				{#snippet children(field)}
-					<TextField {field} label="Port" type="number" min={1} max={65535} />
+					<TextField {field} label={i18n.field_port()} type="number" min={1} max={65535} />
 				{/snippet}
 			</form.Field>
 			<form.Field name="use_ssl">
 				{#snippet children(field)}
 					<TogglePill
-						label="HTTPS"
+						label={i18n.field_https()}
 						icon={Lock}
 						name={field.name}
 						checked={field.state.value}
@@ -221,11 +222,11 @@
 				{#snippet children(field)}
 					<TextField
 						{field}
-						label="Path"
+						label={i18n.field_path()}
 						placeholder={protocol.current === "prowlarr" ? "(blank)" : "/api"}
 						help={protocol.current === "prowlarr"
-							? "Only set this if Prowlarr runs under a URL base; the /api/v1 path is added automatically."
-							: "Torznab API path, e.g. /api (Jackett uses its /indexers/all/…/torznab/api endpoint)."}
+							? i18n.indexer_urlbase_help()
+							: i18n.indexer_path_help()}
 					/>
 				{/snippet}
 			</form.Field>
@@ -233,11 +234,11 @@
 				{#snippet children(field)}
 					<TextField
 						{field}
-						label="API key"
+						label={i18n.field_api_key()}
 						type="password"
 						autocomplete="off"
 						help={isEdit
-							? "Leave blank to keep the existing API key."
+							? i18n.indexer_apikey_keep()
 							: undefined}
 					/>
 				{/snippet}
@@ -253,7 +254,7 @@
 					<label
 						class="flex items-center gap-1.5 text-xs font-medium text-fg-muted"
 					>
-						Priority
+						{i18n.common_priority()}
 						<input
 							type="number"
 							inputmode="numeric"

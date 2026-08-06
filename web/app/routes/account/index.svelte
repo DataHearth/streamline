@@ -5,7 +5,9 @@
 	import APIKeysCard from "../../components/account/APIKeysCard.svelte";
 	import SessionsCard from "../../components/account/SessionsCard.svelte";
 	import JWTRotateCard from "../../components/account/JWTRotateCard.svelte";
+	import LanguageCard from "../../components/account/LanguageCard.svelte";
 	import { auth } from "../../lib/auth.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	let isAdmin = $derived(auth.user?.role === "admin");
 </script>
@@ -16,21 +18,27 @@
 	<IdentityHero />
 
 	{@render section(
-		"Identity",
-		"Who you are and how you sign in.",
+		i18n.account_section_identity(),
+		i18n.account_section_identity_sub(),
 		identitySection,
 	)}
 
 	{@render section(
-		"Devices & access",
-		"Where you're signed in and which tools can talk to your account.",
+		i18n.account_section_prefs(),
+		i18n.account_section_prefs_sub(),
+		prefsSection,
+	)}
+
+	{@render section(
+		i18n.account_section_devices(),
+		i18n.account_section_devices_sub(),
 		devicesSection,
 	)}
 
 	{#if isAdmin}
 		{@render section(
-			"Danger zone",
-			"Destructive, server-wide actions. Admin only.",
+			i18n.account_section_danger(),
+			i18n.account_section_danger_sub(),
 			dangerSection,
 			true,
 		)}
@@ -73,6 +81,10 @@
 		<ProfileCard />
 		<PasswordCard />
 	</div>
+{/snippet}
+
+{#snippet prefsSection()}
+	<LanguageCard />
 {/snippet}
 
 {#snippet devicesSection()}

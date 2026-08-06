@@ -49,6 +49,10 @@ tasks:
         --outdir=/tmp/streamline/bundle --entry-names=[name].min
       - mv /tmp/streamline/bundle/docs.min.js web/static/js/docs.min.js
       - mv /tmp/streamline/bundle/docs.min.css web/static/css/docs.min.css
+      - pnpm exec paraglide-js compile --project ./web/app/project.inlang
+        --outdir ./web/app/lib/paraglide --is-server false
+        --emit-ts-declarations
+        --strategy localStorage preferredLanguage baseLocale
       - pnpm exec routify build
       - node web/app/esbuild.config.mjs
     sources:
@@ -56,6 +60,8 @@ tasks:
       - web/app/**/*.ts
       - web/app/**/*.svelte
       - exclude: web/app/.routify/**
+      - web/app/messages/*.json
+      - web/app/project.inlang/settings.json
       - web/app/esbuild.config.mjs
       - web/app/tsconfig.json
       - routify.config.js

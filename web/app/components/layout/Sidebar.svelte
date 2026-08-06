@@ -33,6 +33,7 @@
 		SystemInfo,
 	} from "../../lib/types";
 	import Avatar from "./Avatar.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	const systemQuery = createQuery<SystemInfo>(() => ({
 		queryKey: ["system", "info"],
@@ -77,22 +78,22 @@
 	let pendingAdoptions = $derived(pendingQuery.data?.items.length ?? 0);
 
 	const libraryItems = [
-		{ label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-		{ label: "Movies", href: "/movies", icon: Film },
-		{ label: "Series", href: "/series", icon: Tv },
+		{ label: i18n.nav_dashboard(), href: "/dashboard", icon: LayoutDashboard },
+		{ label: i18n.movies_label(), href: "/movies", icon: Film },
+		{ label: i18n.settings_series(), href: "/series", icon: Tv },
 	];
 	let opsItems = $derived([
 		...(auth.isAdmin
-			? [{ label: "Imports", href: "/library/imports", icon: FolderInput }]
+			? [{ label: i18n.imports_label(), href: "/library/imports", icon: FolderInput }]
 			: []),
-		{ label: "Calendar", href: "/calendar", icon: CalendarDays },
-		{ label: "Requests", href: "/requests", icon: Inbox },
+		{ label: i18n.common_calendar(), href: "/calendar", icon: CalendarDays },
+		{ label: i18n.requests_label(), href: "/requests", icon: Inbox },
 	]);
 
 	// Activity covers two routes, so the nav row opens instead of navigating.
 	const activityLinks = [
-		{ label: "Queue & History", href: "/activity", icon: ListVideo },
-		{ label: "Torrents", href: "/activity/torrents", icon: Magnet },
+		{ label: i18n.activity_queue_history(), href: "/activity", icon: ListVideo },
+		{ label: i18n.torrent_label(), href: "/activity/torrents", icon: Magnet },
 	];
 	let activityActive = $derived(isActiveFn("/activity"));
 	let activityOpen = $state(false);
@@ -134,12 +135,12 @@
 
 <aside
 	class="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-3.5 border-r border-border bg-bg-elevated px-3.5 pb-5 pt-5 lg:flex"
-	aria-label="Primary navigation"
+	aria-label={i18n.nav_primary_navigation()}
 >
 	<div class="px-2 pb-2 pt-1">
 		<a
 			href="/dashboard"
-			aria-label="Streamline home — go to dashboard"
+			aria-label={i18n.nav_home_dashboard()}
 			class="flex items-center gap-3 rounded-md transition hover:opacity-90"
 		>
 			<img
@@ -159,13 +160,13 @@
 	</div>
 
 	<nav
-		aria-label="Primary"
+		aria-label={i18n.nav_primary()}
 		class="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto pr-0.5"
 	>
 		<div
 			class="px-2 pb-1 pt-2 font-mono text-[10px] uppercase tracking-[0.14em] text-fg-faint"
 		>
-			Library
+			{i18n.nav_library()}
 		</div>
 		<ul class="flex flex-col gap-px pb-3">
 			{#each libraryItems as item (item.href)}
@@ -205,7 +206,7 @@
 		<div
 			class="px-2 pb-1 pt-2 font-mono text-[10px] uppercase tracking-[0.14em] text-fg-faint"
 		>
-			Operations
+			{i18n.nav_operations()}
 		</div>
 		<ul class="flex flex-col gap-px pb-3">
 			<li>
@@ -220,7 +221,7 @@
 					)}
 				>
 					<Activity size={18} class="shrink-0" />
-					<span class="flex-1 truncate text-left">Activity</span>
+					<span class="flex-1 truncate text-left">{i18n.nav_activity()}</span>
 					<ChevronDown
 						size={14}
 						class={cn(
@@ -250,7 +251,7 @@
 							{#if link.href === "/activity" && pendingAdoptions > 0}
 								<span
 									class="shrink-0 rounded-full bg-status-wanted/20 px-1.5 py-px font-mono text-[10.5px] tabular-nums text-status-wanted"
-									title="Adopted torrents need attention"
+									title={i18n.nav_adopted_needs_attention()}
 								>
 									{pendingAdoptions.toLocaleString()}
 								</span>
@@ -310,7 +311,7 @@
 				class={cn(itemBase, isActiveFn("/settings") ? itemActive : itemInactive)}
 			>
 				<Settings size={18} class="shrink-0" />
-				<span class="flex-1 truncate">Settings</span>
+				<span class="flex-1 truncate">{i18n.nav_settings()}</span>
 			</a>
 		{/if}
 
@@ -320,7 +321,7 @@
 				<a
 					href="/account"
 					aria-current={accountActive ? "page" : undefined}
-					aria-label="Account settings"
+					aria-label={i18n.nav_account_settings()}
 					class={cn(
 						"flex min-w-0 flex-1 items-center gap-2.5 rounded-md px-2 py-1.5 transition-colors",
 						accountActive
@@ -345,8 +346,8 @@
 				<button
 					type="button"
 					onclick={signOut}
-					aria-label="Sign out"
-					title="Sign out"
+					aria-label={i18n.common_sign_out()}
+					title={i18n.common_sign_out()}
 					class="grid h-10 w-10 shrink-0 place-items-center rounded-md text-fg-muted transition-colors hover:bg-status-failed/10 hover:text-status-failed"
 				>
 					<LogOut size={18} aria-hidden="true" />

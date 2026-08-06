@@ -19,7 +19,7 @@
 	} from "@lucide/svelte";
 	import { fly } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
-	import { api } from "../../lib/api";
+	import { api, errorText } from "../../lib/api";
 	import { toast } from "../../lib/toast";
 	import { auth } from "../../lib/auth.svelte";
 	import { formatBytes } from "../../lib/format";
@@ -41,6 +41,7 @@
 	import LookupSheet from "./LookupSheet.svelte";
 	import StatusPill from "./StatusPill.svelte";
 	import Select from "../forms/Select.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	// The touch add/request flow. Where the desktop modal is a split panel with
 	// a commit button in its footer, this takes over the screen: the library's
@@ -204,20 +205,20 @@
 		onSuccess: (item, h) => {
 			if (!canAdd || !item) {
 				requested = new Set(requested).add(h.id);
-				toast.ok(`Requested ${h.title}`);
+				toast.ok(i18n.toast_requested({ title: h.title }));
 			} else {
 				sessionAdds = new Map(sessionAdds).set(h.id, item.id);
 				qc.invalidateQueries({ queryKey: isMovie ? ["movies"] : ["series"] });
 				qc.invalidateQueries({
 					queryKey: isMovie ? ["movies", "counts"] : ["series", "counts"],
 				});
-				toast.ok(`Added ${h.title}`);
+				toast.ok(i18n.toast_added({ title: h.title }));
 			}
 			// Back to the grid — the badge carries the new state, and the next
 			// title is one tap away.
 			selectedId = null;
 		},
-		onError: (e) => toast.err(e.message ?? "Add failed"),
+		onError: (e) => toast.err(errorText(e, i18n.common_add_failed())),
 		onSettled: () => {
 			pendingId = null;
 		},
@@ -225,7 +226,7 @@
 
 	let results = $derived(searchQuery.data ?? []);
 	let qpOptions = $derived([
-		{ value: "", label: canAdd ? "Server default" : "No preference" },
+		{ value: "", label: canAdd ? i18n.quality_server_default() : i18n.quality_no_preference() },
 		...(qpQuery.data ?? []).map((p) => ({ value: p.name, label: p.name })),
 	]);
 
@@ -331,7 +332,7 @@
 				class="-ml-1 inline-flex items-center gap-0.5 rounded-md py-1 pr-2 pl-1 text-[15px] text-accent-text transition active:opacity-70"
 			>
 				<ChevronLeft size={20} aria-hidden="true" />
-				Library
+				{i18n.nav_library()}
 			</button>
 			<span class="font-mono text-[10.5px] uppercase tracking-[0.16em] text-fg-faint">
 				{isMovie ? "TMDB" : "TVDB"}
@@ -347,9 +348,9 @@
 				type="search"
 				bind:this={input}
 				bind:value={query}
-				placeholder={isMovie ? "Search TMDB by title…" : "Search TVDB by title…"}
+				placeholder={isMovie ? i18n.lookup_search_tmdb_placeholder() : i18n.lookup_search_tvdb_placeholder()}
 				autocomplete="off"
-				aria-label={isMovie ? "Search TMDB by title" : "Search TVDB by title"}
+				aria-label={isMovie ? i18n.lookup_search_tmdb() : i18n.lookup_search_tvdb()}
 				class="h-11 w-full rounded-xl border border-border bg-bg-card pr-10 pl-10 text-base text-fg outline-none focus:border-accent focus:ring-2 focus:ring-accent-ring placeholder:text-fg-faint"
 			/>
 			{#if query.length > 0}
@@ -359,7 +360,7 @@
 						query = "";
 						input?.focus();
 					}}
-					aria-label="Clear search"
+					aria-label={i18n.common_clear_search()}
 					class="absolute right-6 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full bg-surface text-fg-subtle transition active:opacity-70"
 				>
 					<X size={13} aria-hidden="true" />
@@ -401,7 +402,7 @@
 					role="alert"
 					class="rounded-lg border border-dashed border-status-failed/40 bg-status-failed/5 py-10 text-center text-xs text-status-failed"
 				>
-					{searchQuery.error?.message ?? "Search failed"}
+					{errorText(searchQuery.error, i18n.common_search_failed())}
 				</p>
 			{:else if results.length === 0}
 				<div class="flex flex-col items-center justify-center px-8 py-20 text-center">
@@ -410,7 +411,7 @@
 					{:else}
 						<Tv class="mb-3 h-8 w-8 text-fg-faint" aria-hidden="true" />
 					{/if}
-					<p class="text-sm font-medium text-fg-muted">No matches</p>
+					<p class="text-sm font-medium text-fg-muted">{i18n.common_no_matches()}</p>
 					<p class="mt-1 text-xs text-fg-faint">
 						Nothing on {isMovie ? "TMDB" : "TVDB"} for &ldquo;{debounced}&rdquo;.
 					</p>
@@ -476,7 +477,7 @@
 	<LookupSheet
 		open={selected !== undefined}
 		bind:expanded={sheetExpanded}
-		label={isMovie ? "Movie details" : "Series details"}
+		label={isMovie ? i18n.lookup_movie_details() : i18n.lookup_series_details()}
 		onClose={() => (selectedId = null)}
 	>
 		{#snippet peek(atFullHeight)}
@@ -505,7 +506,7 @@
 							<span
 								class="mb-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-accent-text"
 							>
-								In library
+								{i18n.status_in_library()}
 							</span>
 						{/if}
 						<h2 class="text-[20px] font-bold leading-tight tracking-tight text-fg">
@@ -547,7 +548,7 @@
 						<h3
 							class="mb-2 font-mono text-[10.5px] uppercase tracking-[0.14em] text-fg-faint"
 						>
-							Synopsis
+							{i18n.detail_synopsis()}
 						</h3>
 						<p
 							class="text-[13.5px] leading-relaxed text-fg-muted [text-wrap:pretty] {atFullHeight
@@ -569,7 +570,7 @@
 					detail={detailQuery.data}
 					loading={detailQuery.isLoading}
 					error={detailQuery.isError
-						? (detailQuery.error?.message ?? "Couldn't load details")
+						? (errorText(detailQuery.error, i18n.torrent_details_failed()))
 						: undefined}
 					compact
 					headless
@@ -585,7 +586,7 @@
 					{#if selectedMovie}
 						<StatusPill status={movieStatus(selectedMovie)} size="sm" />
 					{:else}
-						<span class="text-[13.5px] text-fg">In library</span>
+						<span class="text-[13.5px] text-fg">{i18n.status_in_library()}</span>
 					{/if}
 					<span class="truncate font-mono text-[12px] text-fg-muted">
 						{heldDetail}
@@ -597,7 +598,7 @@
 						onclick={onClose}
 						class="mt-2.5 flex h-[50px] items-center justify-center gap-2 rounded-xl border border-border bg-surface text-[16px] font-semibold text-fg-muted transition active:opacity-80"
 					>
-						Open in library
+						{i18n.action_open_in_library()}
 						<ArrowUpRight size={17} aria-hidden="true" />
 					</a>
 				{/if}
@@ -606,21 +607,21 @@
 					class="flex h-[50px] items-center justify-center gap-2 rounded-xl border border-accent-line bg-accent-soft text-[16px] font-semibold text-accent-text"
 				>
 					<Check size={17} aria-hidden="true" />
-					Requested
+					{i18n.status_requested()}
 				</div>
 			{:else}
 				<div
 					class="flex h-[46px] items-center justify-between gap-3 rounded-xl border border-border bg-surface pr-1.5 pl-3.5"
 				>
 					<span class="flex-none text-[13.5px] text-fg">
-						{canAdd ? "Quality profile" : "Preferred quality"}
+						{canAdd ? i18n.quality_profile() : i18n.quality_preferred()}
 					</span>
 					<div class="w-[9.5rem]">
 						<Select
 							value={qualityProfileName}
 							options={qpOptions}
 							onChange={(v) => (qualityProfileName = v)}
-							ariaLabel={canAdd ? "Quality profile" : "Preferred quality"}
+							ariaLabel={canAdd ? i18n.quality_profile() : i18n.quality_preferred()}
 						/>
 					</div>
 				</div>
@@ -633,14 +634,14 @@
 				>
 					{#if selectedPending}
 						<LoaderCircle size={17} class="animate-spin" aria-hidden="true" />
-						{canAdd ? "Adding…" : "Requesting…"}
+						{canAdd ? i18n.action_adding() : i18n.action_requesting()}
 					{:else}
 						<Plus size={18} aria-hidden="true" />
 						{canAdd
 							? isMovie
-								? "Add movie"
-								: "Add series"
-							: "Request"}
+								? i18n.action_add_movie()
+								: i18n.action_add_series()
+							: i18n.action_request()}
 					{/if}
 				</button>
 			{/if}

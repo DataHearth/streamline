@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { createMutation, useQueryClient } from "@tanstack/svelte-query";
-	import { api } from "../../lib/api";
+	import { api, errorText } from "../../lib/api";
 	import { toast } from "../../lib/toast";
 	import { tvPosterUrl } from "../../lib/posters";
 	import PosterCard from "../shared/PosterCard.svelte";
 	import SeriesActionsMenu from "./SeriesActionsMenu.svelte";
 	import type { StatusKind } from "../shared/StatusPill.svelte";
 	import type { TVShow } from "../../lib/types";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	let {
 		series,
@@ -33,9 +34,9 @@
 			}),
 		onSuccess: (_d, s) => {
 			qc.invalidateQueries({ queryKey: ["series"] });
-			toast.ok(s.monitored ? "Stopped monitoring" : "Now monitoring");
+			toast.ok(s.monitored ? i18n.monitor_stopped() : i18n.monitor_now_monitoring());
 		},
-		onError: (e) => toast.err(e.message ?? "Update failed"),
+		onError: (e) => toast.err(errorText(e, i18n.common_update_failed())),
 	}));
 
 	function cardStatus(s: TVShow): StatusKind {

@@ -7,6 +7,7 @@
 	import { pillStatus, formatBytes, formatSpeed, formatEta } from "../../lib/format";
 	import { formatRelative, formatDateTime } from "../../lib/dates";
 	import type { QueueEntry, HistoryEntry } from "../../lib/types";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	let {
 		item,
@@ -105,7 +106,7 @@
 	<td class={cn("pr-4 pl-2 text-right", tight, pad)}>
 		<button
 			type="button"
-			aria-label={expanded ? "Collapse details" : "Expand details"}
+			aria-label={expanded ? i18n.action_collapse_details() : i18n.common_expand_details()}
 			aria-expanded={expanded}
 			onclick={(e) => {
 				e.stopPropagation();

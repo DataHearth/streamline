@@ -4,6 +4,7 @@
 	import ReleasesTable from "../movies/ReleasesTable.svelte";
 	import ReplaceExistingToggle from "../movies/ReplaceExistingToggle.svelte";
 	import Select from "../forms/Select.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	let {
 		open,
@@ -31,7 +32,7 @@
 	});
 
 	let options = $derived([
-		{ value: "series", label: "Whole series" },
+		{ value: "series", label: i18n.series_whole_series() },
 		...seasons.map((s) => ({ value: String(s.number), label: s.label })),
 	]);
 
@@ -52,10 +53,10 @@
 	);
 </script>
 
-<Modal {open} title="Manual search" size="4xl" {onClose}>
+<Modal {open} title={i18n.action_manual_search()} size="4xl" {onClose}>
 	<div class="mb-4 flex flex-wrap items-center gap-3">
 		<span class="text-xs font-medium uppercase tracking-wide text-fg-subtle">
-			Scope
+			{i18n.series_scope()}
 		</span>
 		<div class="w-56">
 			<Select
@@ -76,8 +77,7 @@
 		<p class="mb-4 -mt-1 flex items-start gap-1.5 text-xs text-fg-subtle">
 			<Info size={13} class="mt-px shrink-0" aria-hidden="true" />
 			<span>
-				Complete and multi-season packs are hidden in a season search —
-				switch to <span class="font-medium text-fg-muted">Whole series</span>
+				{i18n.series_packs_hidden()} <span class="font-medium text-fg-muted">{i18n.series_whole_series()}</span>
 				to grab those.
 			</span>
 		</p>

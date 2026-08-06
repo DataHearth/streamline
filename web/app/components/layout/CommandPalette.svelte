@@ -4,6 +4,7 @@
 	import { cn } from "../../lib/cn";
 	import { posterUrl, tvPosterUrl } from "../../lib/posters";
 	import Poster from "../movies/Poster.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 	import {
 		createSearchModel,
 		itemKindLabel,
@@ -165,7 +166,7 @@
 
 <dialog
 	bind:this={dialogEl}
-	aria-label="Command palette"
+	aria-label={i18n.palette_label()}
 	class="palette max-h-[70dvh] w-[min(640px,92vw)] overflow-hidden rounded-xl border border-border-strong bg-bg-elevated text-fg shadow-4"
 	class:is-closing={closing}
 	onclick={onBackdropClick}
@@ -185,7 +186,7 @@
 					bind:this={inputEl}
 					bind:value={query}
 					type="text"
-					placeholder="Search movies & series, run actions, jump anywhere…"
+					placeholder={i18n.palette_placeholder()}
 					class="search-input flex-1 border-0 bg-transparent text-[15px] text-fg placeholder:text-fg-faint"
 					autocomplete="off"
 					spellcheck="false"
@@ -307,7 +308,7 @@
 				<span>
 					<kbd
 						class="mr-1 rounded border border-border bg-surface px-1 py-px text-fg-subtle"
-						>Esc</kbd
+						>{i18n.palette_esc()}</kbd
 					> close
 				</span>
 			</footer>

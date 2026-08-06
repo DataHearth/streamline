@@ -6,6 +6,7 @@
 	import { config } from "../../lib/config.svelte";
 	import { requireAdmin } from "../../lib/guards";
 	import SettingsSidebar from "../../components/settings/SettingsSidebar.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	$effect(() => {
 		if (!auth.loading) requireAdmin();
@@ -41,10 +42,9 @@
 			>
 				<TriangleAlert size={14} class="mt-0.5 shrink-0" aria-hidden="true" />
 				<div>
-					<p class="font-medium">Read-only configuration</p>
+					<p class="font-medium">{i18n.settings_readonly_config()}</p>
 					<p class="mt-0.5 text-status-wanted/80">
-						This instance is configured externally and runs read-only.
-						Editing controls are disabled.
+						{i18n.settings_readonly_banner()}
 					</p>
 				</div>
 			</div>

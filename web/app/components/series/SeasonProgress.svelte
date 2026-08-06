@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { episodeStatus } from "../../lib/status";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 	import type { EpisodeDisplayStatus } from "../../lib/status";
 	import type { Season } from "../../lib/types";
 
@@ -16,20 +17,20 @@
 			const n = (s: EpisodeDisplayStatus) =>
 				eps.filter((e) => episodeStatus(e) === s).length;
 			return [
-				{ key: "available", count: n("available"), token: "available", label: "available" },
-				{ key: "downloading", count: n("downloading"), token: "downloading", label: "downloading" },
-				{ key: "paused", count: n("paused"), token: "paused", label: "paused" },
-				{ key: "wanted", count: n("wanted"), token: "wanted", label: "wanted" },
-				{ key: "missing", count: n("missing"), token: "missing", label: "missing" },
-				{ key: "unaired", count: n("unaired"), token: "missing", label: "unaired" },
+				{ key: "available", count: n("available"), token: "available", label: i18n.lc_available() },
+				{ key: "downloading", count: n("downloading"), token: "downloading", label: i18n.lc_downloading() },
+				{ key: "paused", count: n("paused"), token: "paused", label: i18n.lc_paused() },
+				{ key: "wanted", count: n("wanted"), token: "wanted", label: i18n.lc_wanted() },
+				{ key: "missing", count: n("missing"), token: "missing", label: i18n.lc_missing() },
+				{ key: "unaired", count: n("unaired"), token: "missing", label: i18n.lc_unaired() },
 			];
 		}
 		// Rollup-only fallback: season.missing counts monitored fileless episodes,
 		// which is the "wanted" bucket — the unmonitored split needs episodes.
 		return [
-			{ key: "available", count: season.available ?? 0, token: "available", label: "available" },
-			{ key: "wanted", count: season.missing ?? 0, token: "wanted", label: "wanted" },
-			{ key: "unaired", count: season.unaired ?? 0, token: "missing", label: "unaired" },
+			{ key: "available", count: season.available ?? 0, token: "available", label: i18n.lc_available() },
+			{ key: "wanted", count: season.missing ?? 0, token: "wanted", label: i18n.lc_wanted() },
+			{ key: "unaired", count: season.unaired ?? 0, token: "missing", label: i18n.lc_unaired() },
 		];
 	});
 

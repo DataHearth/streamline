@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { cn } from "../../lib/cn";
 	import type { CastMember } from "../../lib/types";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	let {
 		cast,
@@ -76,9 +77,9 @@
 	<div
 		class="rounded-lg border border-dashed border-border bg-bg-elevated/40 py-10 text-center"
 	>
-		<p class="text-sm font-medium text-fg">No cast information</p>
+		<p class="text-sm font-medium text-fg">{i18n.cast_none()}</p>
 		<p class="mt-1 text-xs text-fg-muted">
-			Cast appears once TMDB credits are fetched for this title.
+			{i18n.cast_none_help()}
 		</p>
 	</div>
 {/if}

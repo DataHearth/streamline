@@ -17,6 +17,7 @@
 	import SelectionTopBar from "../shared/SelectionTopBar.svelte";
 	import MediaFilterSheet from "../shared/MediaFilterSheet.svelte";
 	import type { MovieCounts } from "../../lib/types";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	type View = "grid" | "list";
 	type SortKey = "title" | "year";
@@ -69,38 +70,38 @@
 	} = $props();
 
 	const tabs = [
-		{ key: "all", label: "All", tint: "", dot: "" },
+		{ key: "all", label: i18n.common_all(), tint: "", dot: "" },
 		{
 			key: "available",
-			label: "Available",
+			label: i18n.status_available(),
 			tint: "text-status-available",
 			dot: "bg-status-available",
 		},
 		{
 			key: "downloading",
-			label: "Downloading",
+			label: i18n.status_downloading(),
 			tint: "text-status-downloading",
 			dot: "bg-status-downloading",
 		},
 		{
 			key: "wanted",
-			label: "Wanted",
+			label: i18n.status_wanted(),
 			tint: "text-status-wanted",
 			dot: "bg-status-wanted",
 		},
 		{
 			key: "failed",
-			label: "Failed",
+			label: i18n.status_failed(),
 			tint: "text-status-failed",
 			dot: "bg-status-failed",
 		},
 	];
 
 	const sortOptions: { key: `${SortKey}-${SortOrder}`; label: string }[] = [
-		{ key: "title-asc", label: "Title A→Z" },
-		{ key: "title-desc", label: "Title Z→A" },
-		{ key: "year-desc", label: "Year newest" },
-		{ key: "year-asc", label: "Year oldest" },
+		{ key: "title-asc", label: i18n.common_sort_title_az() },
+		{ key: "title-desc", label: i18n.sort_title_za() },
+		{ key: "year-desc", label: i18n.sort_year_newest() },
+		{ key: "year-asc", label: i18n.sort_year_oldest() },
 	];
 
 	let sortOpen = $state(false);
@@ -108,7 +109,7 @@
 
 	let currentSortKey = $derived(`${sort}-${order}` as const);
 	let currentSortLabel = $derived(
-		sortOptions.find((o) => o.key === currentSortKey)?.label ?? "Title A→Z",
+		sortOptions.find((o) => o.key === currentSortKey)?.label ?? i18n.common_sort_title_az(),
 	);
 
 	function selectSort(key: string) {
@@ -176,7 +177,7 @@
 		<div class="flex items-center gap-2 px-4 py-2">
 			<nav
 				use:dragScroll
-				aria-label="Movie status"
+				aria-label={i18n.movies_status()}
 				class="filter-tabs flex min-w-0 flex-1 items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
 			>
 				{#if query}
@@ -187,7 +188,7 @@
 						<button
 							type="button"
 							onclick={() => onQueryChange("")}
-							aria-label="Clear search"
+							aria-label={i18n.common_clear_search()}
 							class="-mr-1 grid h-6 w-6 place-items-center rounded-full text-accent-text"
 						>
 							<X size={12} aria-hidden="true" />
@@ -226,7 +227,7 @@
 				onclick={() => (sheetOpen = true)}
 				aria-haspopup="dialog"
 				aria-expanded={sheetOpen}
-				aria-label="Filter and sort"
+				aria-label={i18n.filter_and_sort()}
 				class={cn(
 					"relative grid h-9 w-9 shrink-0 place-items-center rounded-lg border transition",
 					activeFilters > 0
@@ -274,7 +275,7 @@
 >
 	<nav
 		use:dragScroll
-		aria-label="Movie status"
+		aria-label={i18n.movies_status()}
 		class="filter-tabs order-1 flex w-fit max-w-full shrink-0 items-center gap-0.5 overflow-x-auto rounded-md border border-border bg-bg-elevated p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:order-none"
 	>
 		{#each tabs as t (t.key)}
@@ -311,8 +312,8 @@
 			onclick={() => (sheetOpen = true)}
 			aria-haspopup="dialog"
 			aria-expanded={sheetOpen}
-			aria-label="Sort and filter"
-			title="Sort and filter"
+			aria-label={i18n.common_sort_and_filter()}
+			title={i18n.common_sort_and_filter()}
 			class={cn(
 				"grid h-9 w-9 shrink-0 place-items-center rounded-md border transition lg:hidden",
 				activeFilters > 0
@@ -331,7 +332,7 @@
 				aria-expanded={sortOpen}
 				class="inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-border bg-bg-elevated px-3 text-[12.5px] font-medium text-fg-muted transition hover:border-border-strong hover:text-fg focus:outline-none focus:ring-2 focus:ring-accent-ring"
 			>
-				<span class="text-fg-subtle">Sort</span>
+				<span class="text-fg-subtle">{i18n.filter_sort()}</span>
 				<!-- Fixed width: the labels differ in length, and letting the trigger
 				     resize moved every control to its right on each pick. -->
 				<span class="w-[5.5rem] text-left text-fg">{currentSortLabel}</span>
@@ -373,12 +374,12 @@
 		<div
 			class="inline-flex items-center rounded-md border border-border bg-bg-elevated p-0.5"
 			role="group"
-			aria-label="View mode"
+			aria-label={i18n.common_view_mode()}
 		>
 			<button
 				type="button"
 				onclick={() => onViewChange("grid")}
-				title="Grid view"
+				title={i18n.common_grid_view()}
 				class={cn(
 					"grid h-[30px] w-[30px] place-items-center rounded-sm transition",
 					view === "grid"
@@ -387,12 +388,12 @@
 				)}
 			>
 				<LayoutGrid size={15} aria-hidden="true" />
-				<span class="sr-only">Grid view</span>
+				<span class="sr-only">{i18n.common_grid_view()}</span>
 			</button>
 			<button
 				type="button"
 				onclick={() => onViewChange("list")}
-				title="List view"
+				title={i18n.common_list_view()}
 				class={cn(
 					"grid h-7 w-7 place-items-center rounded-sm transition",
 					view === "list"
@@ -401,7 +402,7 @@
 				)}
 			>
 				<List size={14} aria-hidden="true" />
-				<span class="sr-only">List view</span>
+				<span class="sr-only">{i18n.common_list_view()}</span>
 			</button>
 		</div>
 
@@ -411,8 +412,8 @@
 			class="hidden h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md bg-accent px-3.5 text-[12.5px] font-semibold text-fg-on-accent transition hover:bg-accent-hover hover:shadow-glow md:inline-flex"
 		>
 			<Plus size={14} aria-hidden="true" />
-			<span class="hidden lg:inline">Add movie</span>
-			<span class="lg:hidden">Add</span>
+			<span class="hidden lg:inline">{i18n.action_add_movie()}</span>
+			<span class="lg:hidden">{i18n.common_add()}</span>
 		</button>
 	</div>
 
@@ -427,14 +428,14 @@
 				type="search"
 				value={query}
 				oninput={(e) => onQueryChange(e.currentTarget.value)}
-				placeholder="Filter…"
+				placeholder={i18n.common_filter_ellipsis()}
 				class="min-w-0 flex-1 bg-transparent text-[13px] text-fg outline-none placeholder:text-fg-faint"
 			/>
 			{#if query}
 				<button
 					type="button"
 					onclick={() => onQueryChange("")}
-					aria-label="Clear search"
+					aria-label={i18n.common_clear_search()}
 					class="grid h-5 w-5 place-items-center rounded text-fg-faint transition hover:text-fg"
 				>
 					<X size={12} aria-hidden="true" />
@@ -454,7 +455,7 @@
 		)}
 	>
 			<Eye size={14} aria-hidden="true" />
-			Monitored
+			{i18n.monitor_monitored()}
 			<span
 				class={cn(
 					"rounded-sm bg-white/[0.04] px-1.5 py-px font-mono text-[10px] tabular",

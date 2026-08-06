@@ -7,6 +7,7 @@
 	import { cn } from "../../lib/cn";
 	import { formatBytes, formatSpeed } from "../../lib/format";
 	import type { MovieCounts, QueueEntry, DiskUsage } from "../../lib/types";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	let {
 		counts,
@@ -173,7 +174,7 @@
      which makes a quarter-width tile 161px — narrower than the phone's 173px,
      and too narrow for the movie/series sub-line. -->
 <section
-	aria-label="Library stats"
+	aria-label={i18n.dash_library_stats()}
 	class="grid grid-cols-2 gap-3 lg:grid-cols-4"
 >
 	<div
@@ -183,7 +184,7 @@
 			{titleTotal ?? "—"}
 		</div>
 		<div class="mt-2 text-[11px] uppercase tracking-[0.1em] text-fg-subtle">
-			Titles
+			{i18n.dash_titles()}
 		</div>
 		<div
 			class="mt-1.5 truncate font-mono text-[11px] text-fg-muted md:text-[11.5px]"
@@ -204,7 +205,7 @@
 		<div
 			class="mt-2 flex items-center gap-1.5 text-[11px] uppercase tracking-[0.1em] text-fg-subtle"
 		>
-			Downloading
+			{i18n.status_downloading()}
 			<span
 				aria-hidden="true"
 				class="inline-block h-1.5 w-1.5 rounded-full bg-status-downloading motion-safe:animate-pulse"
@@ -225,7 +226,7 @@
 			{monitoredTotal ?? "—"}
 		</div>
 		<div class="mt-2 text-[11px] uppercase tracking-[0.1em] text-fg-subtle">
-			Monitored
+			{i18n.monitor_monitored()}
 		</div>
 		<div
 			class="mt-1.5 flex items-baseline gap-2.5 font-mono text-[11px] md:text-[11.5px]"
@@ -253,7 +254,7 @@
 			<button
 				bind:this={diskBtnEl}
 				type="button"
-				aria-label="Free space by volume"
+				aria-label={i18n.dash_free_space()}
 				aria-expanded={diskOpen}
 				onclick={() => (diskPinned = !diskPinned)}
 				onpointerenter={diskEnter}
@@ -320,7 +321,7 @@
 			{/if}
 		</div>
 		<div class="mt-2 text-[11px] uppercase tracking-[0.1em] text-fg-subtle">
-			Free
+			{i18n.dash_free()}
 		</div>
 		{#if volumes.length > 0}
 			<div class="mt-2.5">

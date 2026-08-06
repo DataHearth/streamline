@@ -3,6 +3,7 @@
 	import { toast } from "../../lib/toast";
 	import { startPlexPin } from "../../lib/plex_pin";
 	import PlexCredentialsModal from "./PlexCredentialsModal.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	type Props = {
 		token: string;
@@ -61,14 +62,14 @@
 		{/if}
 	</button>
 	<span class="min-w-0 flex-1 text-[11px] text-fg-muted">
-		PIN sign-in opens in a popup; the token fills in here.
+		{i18n.plex_pin_help()}
 	</span>
 	{#if token}
 		<span
 			class="inline-flex items-center gap-1.5 text-xs text-status-available"
 		>
 			<CircleCheck size={12} aria-hidden="true" />
-			Token connected
+			{i18n.mediaserver_token_connected()}
 		</span>
 	{/if}
 </div>

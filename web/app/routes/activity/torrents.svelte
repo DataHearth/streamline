@@ -5,7 +5,7 @@
 		createMutation,
 		useQueryClient,
 	} from "@tanstack/svelte-query";
-	import { api } from "../../lib/api";
+	import { api, errorText } from "../../lib/api";
 	import { engineDisabled } from "../../lib/activity-nav";
 	import { auth } from "../../lib/auth.svelte";
 	import { toast } from "../../lib/toast";
@@ -38,6 +38,7 @@
 	import AddTorrentModal from "../../components/activity/AddTorrentModal.svelte";
 	import AddTorrentSheet from "../../components/activity/AddTorrentSheet.svelte";
 	import { formatSpeed } from "../../lib/format";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	let statusFilter = $state<string[]>([]);
 	let search = $state("");
@@ -93,21 +94,21 @@
 				invalidateTorrents();
 				addOpen = false;
 				toast.ok(
-					vars.magnet ? "Magnet added — fetching metadata" : "Torrent added",
+					vars.magnet ? i18n.torrent_magnet_added() : i18n.torrent_added(),
 				);
 			},
-			onError: (e) => toast.err(e.message),
+			onError: (e) => toast.err(errorText(e)),
 		}),
 	);
 	const pauseTorrent = createMutation<unknown, Error, string>(() => ({
 		mutationFn: (hash) => api(`/torrents/${hash}/pause`, { method: "POST" }),
 		onSuccess: invalidateTorrents,
-		onError: (e) => toast.err(e.message),
+		onError: (e) => toast.err(errorText(e)),
 	}));
 	const resumeTorrent = createMutation<unknown, Error, string>(() => ({
 		mutationFn: (hash) => api(`/torrents/${hash}/resume`, { method: "POST" }),
 		onSuccess: invalidateTorrents,
-		onError: (e) => toast.err(e.message),
+		onError: (e) => toast.err(errorText(e)),
 	}));
 	const removeTorrent = createMutation<
 		unknown,
@@ -125,7 +126,7 @@
 			selectedHash = null;
 			toast.ok("Torrent removed");
 		},
-		onError: (e) => toast.err(e.message),
+		onError: (e) => toast.err(errorText(e)),
 	}));
 	const setPriority = createMutation<
 		unknown,
@@ -141,7 +142,7 @@
 			invalidateTorrents();
 			invalidateTorrentDetail();
 		},
-		onError: (e) => toast.err(e.message),
+		onError: (e) => toast.err(errorText(e)),
 	}));
 
 	let torrentItems = $derived<Torrent[]>(torrents.data?.items ?? []);
@@ -235,14 +236,14 @@
 			aria-hidden="true"
 		/>
 		<span class="group-data-[pull-armed]:hidden group-data-[refreshing]:hidden">
-			Pull to refresh
+			{i18n.common_pull_to_refresh()}
 		</span>
-		<span class="hidden group-data-[pull-armed]:inline">Release to refresh</span>
-		<span class="hidden group-data-[refreshing]:inline">Refreshing…</span>
+		<span class="hidden group-data-[pull-armed]:inline">{i18n.common_release_to_refresh()}</span>
+		<span class="hidden group-data-[refreshing]:inline">{i18n.common_refreshing()}</span>
 	</div>
 
 	<header class="mb-1">
-		<h1 class="text-2xl font-bold tracking-tight text-fg">Torrents</h1>
+		<h1 class="text-2xl font-bold tracking-tight text-fg">{i18n.torrent_label()}</h1>
 		<p class="mt-1 text-sm text-fg-muted">
 			{#if torrentsNotConfigured}
 				Built-in engine · disabled
@@ -264,11 +265,10 @@
 			</div>
 			<div>
 				<p class="text-sm font-semibold text-fg">
-					The built-in client isn’t enabled
+					{i18n.torrent_builtin_disabled()}
 				</p>
 				<p class="mx-auto mt-1 max-w-sm text-xs text-fg-muted">
-					Enable Streamline’s built-in BitTorrent engine to add and manage
-					torrents from here.
+					{i18n.torrents_empty_help()}
 				</p>
 			</div>
 			{#if auth.isAdmin}
@@ -276,30 +276,30 @@
 					href="/settings/download-clients"
 					class="inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-3.5 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover"
 				>
-					Enable in Settings
+					{i18n.torrent_enable_in_settings()}
 					<ArrowUpRight size={15} aria-hidden="true" />
 				</a>
 			{:else}
-				<p class="text-xs text-fg-subtle">Ask an admin to enable it in Settings.</p>
+				<p class="text-xs text-fg-subtle">{i18n.torrent_ask_admin()}</p>
 			{/if}
 		</div>
 	{:else}
 		<TouchStatLine
 			stats={[
-				{ value: String(torrentDownloading), label: "Down" },
+				{ value: String(torrentDownloading), label: i18n.torrent_down() },
 				{
 					value: String(torrentSeeding),
-					label: "Seeding",
+					label: i18n.status_seeding(),
 					color: "var(--status-seeding)",
 				},
 				{
 					value: formatSpeed(torrentAggDown) || "—",
-					label: "Agg ↓",
+					label: i18n.torrent_agg_down(),
 					color: "var(--status-downloading)",
 				},
 				{
 					value: formatSpeed(torrentAggUp) || "—",
-					label: "Agg ↑",
+					label: i18n.torrent_agg_up(),
 					color: "var(--status-seeding)",
 				},
 			]}
@@ -315,7 +315,7 @@
 				<div
 					class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-fg-faint"
 				>
-					Downloading
+					{i18n.status_downloading()}
 				</div>
 			</div>
 			<div>
@@ -325,7 +325,7 @@
 				<div
 					class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-fg-faint"
 				>
-					Seeding
+					{i18n.status_seeding()}
 				</div>
 			</div>
 			<div>
@@ -335,7 +335,7 @@
 				<div
 					class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-fg-faint"
 				>
-					Aggregate ↓
+					{i18n.torrent_aggregate_down()}
 				</div>
 			</div>
 			<div>
@@ -345,7 +345,7 @@
 				<div
 					class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-fg-faint"
 				>
-					Aggregate ↑
+					{i18n.sort_aggregate_up()}
 				</div>
 			</div>
 		</div>
@@ -394,7 +394,7 @@
 		class="add-torrent-pill fixed right-4 z-30 flex h-[52px] items-center gap-2 rounded-full bg-accent pl-[17px] pr-5 text-[15px] font-semibold text-fg-on-accent shadow-4 transition active:bg-accent-pressed md:hidden"
 	>
 		<Plus size={20} strokeWidth={2.4} aria-hidden="true" />
-		Add torrent
+		{i18n.action_add_torrent()}
 	</button>
 {/if}
 

@@ -12,6 +12,7 @@
 	import { formatBytes, pillStatus } from "../../lib/format";
 	import { formatDateTime } from "../../lib/dates";
 	import type { HistoryEntry, QueueEntry } from "../../lib/types";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	// Where a queue or history row opens below md, and the only place pause,
 	// resume, cancel and remove exist on touch — no swipe, no per-row kebab, so
@@ -72,19 +73,19 @@
 	let rows = $derived.by<KV[]>(() => {
 		if (!item) return [];
 		const out: KV[] = [
-			{ label: "Release", value: item.title },
-			{ label: "Indexer", value: item.indexer || "—" },
-			{ label: "Created", value: formatDateTime(item.created_at) },
+			{ label: i18n.common_release(), value: item.title },
+			{ label: i18n.common_indexer(), value: item.indexer || "—" },
+			{ label: i18n.common_created(), value: formatDateTime(item.created_at) },
 		];
 		if (view === "history") {
 			out.push({
-				label: "Imported",
+				label: i18n.activity_imported(),
 				value: history?.imported_at ? formatDateTime(history.imported_at) : "—",
 			});
 		}
 		if (item.failure_reason) {
 			out.push({
-				label: "Error",
+				label: i18n.common_error(),
 				value: item.failure_reason,
 				tone: "var(--status-failed)",
 			});
@@ -98,11 +99,11 @@
 		class="fixed inset-0 z-50 md:hidden"
 		role="dialog"
 		aria-modal="true"
-		aria-label="Download detail"
+		aria-label={i18n.activity_download_detail()}
 	>
 		<button
 			type="button"
-			aria-label="Close"
+			aria-label={i18n.common_close()}
 			transition:fade={{ duration: 160 }}
 			onclick={onClose}
 			class="absolute inset-0 h-full w-full cursor-default bg-black/55"
@@ -132,7 +133,7 @@
 				<button
 					type="button"
 					onclick={onClose}
-					aria-label="Close"
+					aria-label={i18n.common_close()}
 					class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-surface text-fg-subtle transition active:bg-bg-hover"
 				>
 					<X size={16} aria-hidden="true" />
@@ -163,7 +164,7 @@
 						<div
 							class="mt-px text-[9px] font-medium uppercase tracking-[0.12em] text-fg-faint"
 						>
-							Size
+							{i18n.common_size()}
 						</div>
 					</div>
 					<div class="bg-bg-elevated px-3 py-2.5">
@@ -173,7 +174,7 @@
 						<div
 							class="mt-px text-[9px] font-medium uppercase tracking-[0.12em] text-fg-faint"
 						>
-							Client
+							{i18n.common_client()}
 						</div>
 					</div>
 				</div>
@@ -214,7 +215,7 @@
 							{:else}
 								<Pause size={16} aria-hidden="true" />
 							{/if}
-							{isPaused ? "Resume" : "Pause"}
+							{isPaused ? i18n.schedule_resume() : i18n.schedule_pause()}
 						</button>
 						<button
 							type="button"
@@ -223,7 +224,7 @@
 							class="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-status-failed/15 text-[14px] font-semibold text-status-failed transition active:bg-status-failed/25 disabled:opacity-50"
 						>
 							<Ban size={16} aria-hidden="true" />
-							Cancel
+							{i18n.common_cancel()}
 						</button>
 					{:else}
 						<button
@@ -235,7 +236,7 @@
 							)}
 						>
 							<Trash2 size={16} aria-hidden="true" />
-							Remove from history
+							{i18n.action_remove_from_history()}
 						</button>
 					{/if}
 				</div>
@@ -243,7 +244,7 @@
 				<div
 					class="border-t border-border px-5 pb-[max(env(safe-area-inset-bottom),14px)] pt-3.5 text-center text-xs text-fg-subtle"
 				>
-					You have read-only access to downloads.
+					{i18n.activity_readonly_downloads()}
 				</div>
 			{/if}
 		</div>
@@ -251,13 +252,13 @@
 
 	<Dialog
 		open={confirmCancel}
-		title="Cancel download?"
+		title={i18n.activity_cancel_confirm()}
 		inlineActions
 		onClose={() => (confirmCancel = false)}
 		actions={[
-			{ label: "Keep", variant: "ghost", autofocus: true },
+			{ label: i18n.common_keep(), variant: "ghost", autofocus: true },
 			{
-				label: "Cancel download",
+				label: i18n.action_cancel_download(),
 				variant: "danger",
 				onClick: () => {
 					onCancel(item.id);
@@ -267,7 +268,7 @@
 		]}
 	>
 		<p class="text-sm text-fg-muted">
-			Removes the torrent and its partial files from the client, then deletes
+			{i18n.activity_cancel_help()}
 			<span class="font-medium text-fg">{item.title}</span> from the queue. The movie
 			returns to <em>wanted</em> if it has no file yet.
 		</p>
@@ -275,13 +276,13 @@
 
 	<Dialog
 		open={confirmRemove}
-		title="Remove history record?"
+		title={i18n.activity_remove_record_confirm()}
 		inlineActions
 		onClose={() => (confirmRemove = false)}
 		actions={[
-			{ label: "Cancel", variant: "ghost", autofocus: true },
+			{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },
 			{
-				label: "Remove",
+				label: i18n.common_remove(),
 				variant: "danger",
 				onClick: () => {
 					onRemove(item.id);
@@ -291,7 +292,7 @@
 		]}
 	>
 		<p class="text-sm text-fg-muted">
-			Deletes the history entry for
+			{i18n.activity_deletes_entry_for()}
 			<span class="font-medium text-fg">{item.title}</span>. The movie and its files
 			are not affected.
 		</p>

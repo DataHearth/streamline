@@ -9,9 +9,10 @@
 	import { createQuery } from "@tanstack/svelte-query";
 	import { fly } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
-	import { api } from "../../lib/api";
+	import { api, errorText } from "../../lib/api";
 	import BrandLogo from "../settings/BrandLogo.svelte";
 	import type { PlayOnLink, PlayOnLinkList } from "../../lib/types";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	type Props = {
 		// Play-on endpoint (movie or series) returning a PlayOnLinkList.
@@ -65,7 +66,7 @@
 			{#if l.status === "fallback"}
 				<span class="text-[10px] text-fg-muted">↗ Library</span>
 			{:else if l.status === "unavailable"}
-				<span class="text-[10px] text-fg-faint">Unavailable</span>
+				<span class="text-[10px] text-fg-faint">{i18n.playback_unavailable()}</span>
 			{/if}
 		</span>
 	</span>
@@ -91,7 +92,7 @@
 			class="inline-flex h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-semibold text-fg-on-accent transition active:bg-accent-pressed disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-fg-faint"
 		>
 			<Play class="h-[18px] w-[18px]" aria-hidden="true" />
-			Play on
+			{i18n.action_play_on()}
 		</button>
 	{:else if compact}
 		<button
@@ -99,9 +100,9 @@
 			type="button"
 			aria-haspopup="menu"
 			aria-expanded={open}
-			aria-label="Play on"
+			aria-label={i18n.action_play_on()}
 			{disabled}
-			title={disabled ? disabledTitle : "Play on"}
+			title={disabled ? disabledTitle : i18n.action_play_on()}
 			onclick={toggle}
 			class="grid h-11 w-11 place-items-center rounded-lg border border-border-strong bg-bg-elevated text-fg transition focus:outline-none focus:ring-2 focus:ring-accent/40 disabled:cursor-not-allowed disabled:border-border disabled:text-fg-faint"
 		>
@@ -120,7 +121,7 @@
 		>
 			<span class="inline-flex items-center gap-2">
 				<Play class="h-4 w-4 text-accent" aria-hidden="true" />
-				Play on
+				{i18n.action_play_on()}
 			</span>
 			<ChevronDown
 				class="h-4 w-4 text-fg-muted transition {open ? 'rotate-180' : ''}"
@@ -139,11 +140,11 @@
 				: 'mt-1'}"
 		>
 			{#if q.isLoading}
-				<p class="px-3 py-3 text-xs text-fg-muted">Resolving…</p>
+				<p class="px-3 py-3 text-xs text-fg-muted">{i18n.common_resolving()}</p>
 			{:else if q.isError}
 				<div
 					role="alert"
-					title={q.error?.message}
+					title={errorText(q.error)}
 					class="flex flex-col gap-1.5 px-3 py-3 text-xs text-status-failed"
 				>
 					<span class="flex items-start gap-2">
@@ -151,14 +152,14 @@
 							class="mt-px h-3.5 w-3.5 shrink-0"
 							aria-hidden="true"
 						/>
-						Couldn't load playback links.
+						{i18n.playback_load_failed()}
 					</span>
 					<button
 						type="button"
 						onclick={() => q.refetch()}
 						class="self-start rounded font-medium underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
 					>
-						Retry
+						{i18n.common_retry()}
 					</button>
 				</div>
 			{:else if links.length === 0}
@@ -168,13 +169,13 @@
 						aria-hidden="true"
 					/>
 					<p class="text-xs text-fg-muted">
-						No media servers configured.
+						{i18n.mediaserver_none()}
 					</p>
 					<a
 						href="/settings/media-servers"
 						class="text-xs text-accent hover:underline"
 					>
-						Configure servers →
+						{i18n.playon_configure_servers()}
 					</a>
 				</div>
 			{:else}

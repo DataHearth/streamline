@@ -12,7 +12,7 @@
 		Info,
 		Loader,
 	} from "@lucide/svelte";
-	import { api } from "../../lib/api";
+	import { api, errorText } from "../../lib/api";
 	import { config } from "../../lib/config.svelte";
 	import { toast } from "../../lib/toast";
 	import { cn } from "../../lib/cn";
@@ -26,11 +26,12 @@
 	import Select from "../../components/forms/Select.svelte";
 	import Checkbox from "../../components/forms/Checkbox.svelte";
 	import Dialog from "../../components/modals/Dialog.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	const ROOTS: { value: MigrationRoot; label: string }[] = [
-		{ value: "movies", label: "Movie library" },
-		{ value: "series", label: "Series library" },
-		{ value: "downloads", label: "Download folder" },
+		{ value: "movies", label: i18n.migration_movie_library() },
+		{ value: "series", label: i18n.migration_series_library() },
+		{ value: "downloads", label: i18n.migration_download_folder() },
 	];
 
 	const qc = useQueryClient();
@@ -135,7 +136,7 @@
 		onSuccess: (data) => (preview = data),
 		onError: (err) => {
 			preview = null;
-			toast.err(err.message);
+			toast.err(errorText(err));
 		},
 	}));
 
@@ -151,7 +152,7 @@
 			status.refetch();
 			toast.ok(`Migrating ${data.total} path${data.total === 1 ? "" : "s"}`);
 		},
-		onError: (err) => toast.err(err.message),
+		onError: (err) => toast.err(errorText(err)),
 	}));
 
 	// Any change to the inputs invalidates the preview: acting on stale counts
@@ -169,10 +170,9 @@
 
 <div class="mx-auto max-w-4xl">
 	<header>
-		<h1 class="text-2xl font-bold tracking-tight text-fg">Advanced</h1>
+		<h1 class="text-2xl font-bold tracking-tight text-fg">{i18n.settings_advanced()}</h1>
 		<p class="mt-1 text-sm text-fg-muted">
-			Maintenance tools that rewrite stored data. Preview before you run
-			anything here.
+			{i18n.settings_advanced_intro()}
 		</p>
 	</header>
 
@@ -184,11 +184,9 @@
 				aria-hidden="true"
 			/>
 			<div class="min-w-0">
-				<h2 class="text-base font-semibold text-fg">Library path migration</h2>
+				<h2 class="text-base font-semibold text-fg">{i18n.migration_title()}</h2>
 				<p class="mt-1 text-sm text-fg-muted">
-					Moved your media to a new mount or remapped a volume? This rewrites
-					every stored path under the old root so it points at the new one, and
-					updates the configured root to match.
+					{i18n.migration_intro()}
 				</p>
 			</div>
 		</div>
@@ -196,7 +194,7 @@
 		<div class="mt-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:gap-2.5">
 			<div class="shrink-0 sm:w-48">
 				<Select
-					label="Root"
+					label={i18n.migration_root()}
 					value={root}
 					options={ROOTS}
 					disabled={live}
@@ -267,7 +265,7 @@
 					{/if}
 				{:else}
 					<span class="font-sans text-fg-faint">
-						Fill in <em class="not-italic">To</em> to see where the root lands
+						{i18n.migration_fill_in()} <em class="not-italic">To</em> to see where the root lands
 					</span>
 				{/if}
 			</output>
@@ -286,7 +284,7 @@
 				{:else if rootEmpty}
 					Nothing is stored for this root yet, so there is nothing to migrate.
 				{:else}
-					<em class="not-italic text-fg-subtle">From</em> is the configured
+					<em class="not-italic text-fg-subtle">{i18n.common_from()}</em> is the configured
 					root, which is where your files are stored right now, so there is
 					nothing to choose. It unlocks only if the config stops matching the
 					database.
@@ -307,10 +305,8 @@
 						moveFiles = v;
 						reset();
 					}}
-					label="Move the files for me"
-					description="Off, the files are expected to already be at the new path and only
-					the database is updated. On, each file is relocated first — instant on
-					the same filesystem, a full copy across different ones."
+					label={i18n.migration_move_files()}
+					description={i18n.migration_move_files_help()}
 				/>
 			</div>
 		{:else}
@@ -319,9 +315,7 @@
 				role="note"
 			>
 				<TriangleAlert size={12} class="mt-0.5 shrink-0" aria-hidden="true" />
-				Download data belongs to the download client, so it is never moved for
-				you. Remap the client's own volume first, then re-point the records
-				here.
+				{i18n.migration_download_note()}
 			</p>
 		{/if}
 
@@ -330,8 +324,7 @@
 				class="mt-3 flex items-start gap-1.5 rounded-md border border-status-wanted/40 bg-status-wanted/10 p-2.5 text-xs text-status-wanted"
 			>
 				<TriangleAlert size={12} class="mt-0.5 shrink-0" aria-hidden="true" />
-				This instance is read-only, so the configured root is left untouched —
-				edit it where the config lives. The stored paths are still rewritten.
+				{i18n.migration_readonly_note()}
 			</p>
 		{/if}
 
@@ -342,7 +335,7 @@
 				onclick={() => runPreview.mutate()}
 				class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border-strong bg-bg px-3 text-sm font-medium text-fg transition hover:bg-surface disabled:cursor-not-allowed disabled:opacity-60"
 			>
-				{runPreview.isPending ? "Checking…" : "Preview"}
+				{runPreview.isPending ? i18n.common_checking() : i18n.common_preview()}
 			</button>
 			<button
 				type="button"
@@ -350,7 +343,7 @@
 				onclick={() => (confirmOpen = true)}
 				class="inline-flex h-9 items-center gap-1.5 rounded-md bg-status-failed px-3 text-sm font-medium text-bg-deep transition hover:bg-status-failed/90 disabled:cursor-not-allowed disabled:opacity-60"
 			>
-				Run migration
+				{i18n.migration_run()}
 			</button>
 		</div>
 
@@ -369,7 +362,7 @@
 				</p>
 				{#if preview.total === 0}
 					<p class="mt-1.5 text-xs text-fg-muted">
-						Nothing is stored under that prefix — check the current prefix.
+						{i18n.migration_nothing_stored()}
 					</p>
 				{:else if preview.skipped > 0}
 					<p
@@ -447,7 +440,7 @@
 					aria-valuenow={pct}
 					aria-valuemin={0}
 					aria-valuemax={100}
-					aria-label="Migration progress"
+					aria-label={i18n.migration_progress()}
 				>
 					<div
 						class={cn(
@@ -480,13 +473,13 @@
 
 <Dialog
 	open={confirmOpen}
-	title="Run library path migration?"
+	title={i18n.migration_confirm()}
 	size="lg"
 	onClose={() => (confirmOpen = false)}
 	actions={[
-		{ label: "Cancel", variant: "ghost" },
+		{ label: i18n.common_cancel(), variant: "ghost" },
 		{
-			label: start.isPending ? "Starting…" : "Run migration",
+			label: start.isPending ? i18n.common_starting() : i18n.migration_run(),
 			variant: "danger",
 			dismiss: false,
 			pending: start.isPending,
@@ -509,6 +502,6 @@
 		{/if}
 	</p>
 	<p class="mt-2 text-sm text-fg-muted">
-		There is no undo — running the migration in reverse is how you go back.
+		{i18n.migration_no_undo()}
 	</p>
 </Dialog>

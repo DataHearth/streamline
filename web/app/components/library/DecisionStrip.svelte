@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { CircleCheckBig, TriangleAlert } from "@lucide/svelte";
 	import Dialog from "../modals/Dialog.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	let {
 		pendingCount,
@@ -59,7 +60,7 @@
 				onclick={() => (confirmSkipOpen = true)}
 				class="inline-flex items-center gap-1.5 rounded-md border border-border-strong bg-surface px-3.5 py-2 text-sm font-medium text-fg-muted transition hover:bg-surface-2 hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring disabled:cursor-not-allowed disabled:opacity-60"
 			>
-				{skipBusy ? "Skipping…" : "Skip all unmatched"}
+				{skipBusy ? i18n.common_skipping() : i18n.imports_skip_unmatched()}
 			</button>
 		{/if}
 		<button
@@ -70,8 +71,8 @@
 		>
 			<CircleCheckBig size={14} aria-hidden="true" />
 			{commitBusy
-				? "Starting…"
-				: `Commit ${commitableCount} ${noun}${commitableCount === 1 ? "" : "s"}`}
+				? i18n.common_starting()
+				: commitableCount === 1 ? i18n.imports_commit_count_one({ count: commitableCount, noun }) : i18n.imports_commit_count_other({ count: commitableCount, noun })}
 		</button>
 	</div>
 </div>
@@ -81,8 +82,8 @@
 	title="Skip all unmatched {noun}s?"
 	onClose={() => (confirmSkipOpen = false)}
 	actions={[
-		{ label: "Cancel", variant: "ghost", autofocus: true },
-		{ label: "Skip them", variant: "danger", onClick: onSkipAll },
+		{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },
+		{ label: i18n.imports_skip_them(), variant: "danger", onClick: onSkipAll },
 	]}
 >
 	<p class="text-sm text-fg-muted">

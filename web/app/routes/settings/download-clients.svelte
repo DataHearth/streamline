@@ -6,7 +6,7 @@
 	} from "@tanstack/svelte-query";
 	import { createForm } from "@tanstack/svelte-form";
 	import { Plus, Trash2, Download, Pencil, Eye, Zap, Info } from "@lucide/svelte";
-	import { api } from "../../lib/api";
+	import { api, errorText } from "../../lib/api";
 	import { config, READONLY_HINT } from "../../lib/config.svelte";
 	import { toast } from "../../lib/toast";
 	import { downloadClientForm, builtinClientForm } from "../../lib/schemas";
@@ -23,6 +23,7 @@
 	import BrandLogo from "../../components/settings/BrandLogo.svelte";
 	import ReadOnlyFieldset from "../../components/settings/ReadOnlyFieldset.svelte";
 	import ConfigModalFooter from "../../components/settings/ConfigModalFooter.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	type Values = {
 		name: string;
@@ -91,11 +92,11 @@
 		},
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: ["download-clients"] });
-			toast.ok(editing ? "Client updated" : "Client added");
+			toast.ok(editing ? i18n.dlclient_updated() : i18n.dlclient_added());
 			modalOpen = false;
 			editing = null;
 		},
-		onError: (err) => toast.err(err.message),
+		onError: (err) => toast.err(errorText(err)),
 	}));
 
 	const remove = createMutation<null, Error, string>(() => ({
@@ -107,7 +108,7 @@
 			qc.invalidateQueries({ queryKey: ["download-clients"] });
 			toast.ok("Client deleted");
 		},
-		onError: (err) => toast.err(err.message),
+		onError: (err) => toast.err(errorText(err)),
 	}));
 
 	const defaults: Values = {
@@ -197,7 +198,7 @@
 				toast.ok("Built-in client saved — changes apply after restart");
 				builtinModalOpen = false;
 			},
-			onError: (err) => toast.err(err.message),
+			onError: (err) => toast.err(errorText(err)),
 		}),
 	);
 
@@ -208,7 +209,7 @@
 			qc.invalidateQueries({ queryKey: ["download-clients"] });
 			toast.ok("Built-in client removed");
 		},
-		onError: (err) => toast.err(err.message),
+		onError: (err) => toast.err(errorText(err)),
 	}));
 
 	const builtinForm = createForm(() => ({
@@ -250,7 +251,7 @@
 		const ratio = builtinCfg.seed_ratio ?? 0;
 		const seed =
 			ratio > 0 ? `seed to ratio ${ratio.toFixed(1)}` : "unlimited seeding";
-		return `Built-in · ${net} · ${seed}`;
+		return i18n.dlclient_builtin_summary({ net, seed });
 	});
 </script>
 
@@ -258,10 +259,10 @@
 	<header class="flex flex-wrap items-end justify-between gap-3">
 		<div>
 			<h1 class="text-2xl font-bold tracking-tight text-fg">
-				Download clients
+				{i18n.settings_download_clients()}
 			</h1>
 			<p class="mt-1 text-sm text-fg-muted">
-				Torrent clients Streamline pushes grabs to.
+				{i18n.dlclient_intro()}
 			</p>
 		</div>
 		<button
@@ -272,7 +273,7 @@
 			class="inline-flex items-center gap-1.5 rounded-md bg-accent px-3.5 py-2 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
 		>
 			<Plus size={16} aria-hidden="true" />
-			Add client
+			{i18n.dlclient_add()}
 		</button>
 	</header>
 
@@ -296,7 +297,7 @@
 					<div class="min-w-0 flex-1">
 						<div class="flex flex-wrap items-center gap-2">
 							<span class="truncate text-base font-semibold text-fg">
-								Built-in client
+								{i18n.builtin_client()}
 							</span>
 							{#if builtinCfg.enabled}
 								<span
@@ -352,7 +353,7 @@
 								type="button"
 								onclick={openBuiltinEdit}
 								class="rounded-md p-1.5 text-fg-muted transition hover:bg-surface hover:text-fg"
-								aria-label="View built-in client"
+								aria-label={i18n.builtin_view()}
 							>
 								<Eye size={16} aria-hidden="true" />
 							</button>
@@ -361,7 +362,7 @@
 								type="button"
 								onclick={openBuiltinEdit}
 								class="rounded-md p-1.5 text-fg-muted transition hover:bg-surface hover:text-fg"
-								aria-label="Edit built-in client"
+								aria-label={i18n.builtin_edit()}
 							>
 								<Pencil size={16} aria-hidden="true" />
 							</button>
@@ -369,7 +370,7 @@
 								type="button"
 								onclick={() => (deletingBuiltin = true)}
 								class="rounded-md p-1.5 text-fg-muted transition hover:bg-status-failed/10 hover:text-status-failed"
-								aria-label="Remove built-in client"
+								aria-label={i18n.builtin_remove()}
 							>
 								<Trash2 size={16} aria-hidden="true" />
 							</button>
@@ -388,11 +389,10 @@
 				</div>
 				<div class="min-w-0 flex-1">
 					<p class="text-sm font-semibold text-fg">
-						Run torrents inside Streamline
+						{i18n.builtin_run_inside()}
 					</p>
 					<p class="mt-0.5 text-xs text-fg-muted">
-						Enable the built-in BitTorrent engine to manage torrents from
-						the Activity page — no external client to install.
+						{i18n.dlclients_builtin_help()}
 					</p>
 				</div>
 				<button
@@ -403,16 +403,16 @@
 					class="inline-flex items-center gap-1.5 rounded-md bg-accent px-3.5 py-2 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
 				>
 					<Zap size={15} aria-hidden="true" />
-					Enable built-in client
+					{i18n.builtin_enable()}
 				</button>
 			</div>
 		{/if}
 
 		{#if list.isPending}
-			<p class="text-sm text-fg-subtle">Loading…</p>
+			<p class="text-sm text-fg-subtle">{i18n.common_loading()}</p>
 		{:else if list.isError}
 			<p class="text-sm text-status-failed">
-				Failed to load: {list.error?.message}
+				{i18n.err_load_failed_detail({ reason: errorText(list.error) })}
 			</p>
 		{:else if items.length === 0}
 			<div
@@ -423,10 +423,9 @@
 					class="mx-auto text-fg-faint"
 					aria-hidden="true"
 				/>
-				<p class="mt-3 text-sm text-fg">No external download clients.</p>
+				<p class="mt-3 text-sm text-fg">{i18n.dlclient_none()}</p>
 				<p class="mt-1 text-xs text-fg-muted">
-					Add a qBittorrent, Transmission, or Deluge instance to receive
-					grabs.
+					{i18n.dlclients_empty_help()}
 				</p>
 			</div>
 		{:else}
@@ -499,7 +498,7 @@
 									type="button"
 									onclick={() => openEdit(c)}
 									class="rounded-md p-1.5 text-fg-muted transition hover:bg-surface hover:text-fg"
-									aria-label="View client"
+									aria-label={i18n.dlclient_view_short()}
 								>
 									<Eye size={16} aria-hidden="true" />
 								</button>
@@ -508,7 +507,7 @@
 									type="button"
 									onclick={() => openEdit(c)}
 									class="rounded-md p-1.5 text-fg-muted transition hover:bg-surface hover:text-fg"
-									aria-label="Edit client"
+									aria-label={i18n.dlclient_edit_short()}
 								>
 									<Pencil size={16} aria-hidden="true" />
 								</button>
@@ -516,7 +515,7 @@
 									type="button"
 									onclick={() => onDelete(c)}
 									class="rounded-md p-1.5 text-fg-muted transition hover:bg-status-failed/10 hover:text-status-failed"
-									aria-label="Delete client"
+									aria-label={i18n.dlclient_delete()}
 								>
 									<Trash2 size={16} aria-hidden="true" />
 								</button>
@@ -532,10 +531,10 @@
 <Modal
 	open={modalOpen}
 	title={config.readOnly
-		? "View download client"
+		? i18n.dlclient_view()
 		: editing
-			? "Edit download client"
-			: "Add download client"}
+			? i18n.dlclient_edit()
+			: i18n.dlclient_add_long()}
 	size="xl"
 	onClose={() => (modalOpen = false)}
 >
@@ -555,10 +554,10 @@
 		<ConfigModalFooter
 			formId="download-client-form"
 			submitLabel={form.state.isSubmitting
-				? "Saving…"
+				? i18n.common_saving()
 				: editing
-					? "Save changes"
-					: "Add client"}
+					? i18n.common_save_changes()
+					: i18n.dlclient_add()}
 			submitDisabled={!form.state.canSubmit || form.state.isSubmitting}
 			onCancel={() => (modalOpen = false)}
 		>
@@ -586,10 +585,10 @@
 <Modal
 	open={builtinModalOpen}
 	title={config.readOnly
-		? "View built-in client"
+		? i18n.builtin_view()
 		: builtinIsEdit
-			? "Built-in client"
-			: "Enable built-in client"}
+			? i18n.builtin_client()
+			: i18n.builtin_enable()}
 	size="xl"
 	onClose={() => (builtinModalOpen = false)}
 >
@@ -609,10 +608,10 @@
 		<ConfigModalFooter
 			formId="builtin-client-form"
 			submitLabel={builtinForm.state.isSubmitting
-				? "Saving…"
+				? i18n.common_saving()
 				: builtinIsEdit
-					? "Save changes"
-					: "Enable client"}
+					? i18n.common_save_changes()
+					: i18n.dlclient_enable()}
 			submitDisabled={!builtinForm.state.canSubmit ||
 				builtinForm.state.isSubmitting}
 			onCancel={() => (builtinModalOpen = false)}
@@ -620,7 +619,7 @@
 			{#snippet left()}
 				<div class="mr-auto flex items-center gap-1.5 text-xs text-fg-subtle">
 					<Info size={13} aria-hidden="true" />
-					<span>Changes apply after restart.</span>
+					<span>{i18n.settings_changes_after_restart()}</span>
 				</div>
 			{/snippet}
 		</ConfigModalFooter>
@@ -633,9 +632,9 @@
 	body="Grabs will no longer be sent to this client."
 	onClose={() => (deleting = null)}
 	actions={[
-		{ label: "Cancel", variant: "ghost", autofocus: true },
+		{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },
 		{
-			label: "Delete",
+			label: i18n.common_delete(),
 			variant: "danger",
 			onClick: () => deleting && remove.mutate(deleting.name),
 		},
@@ -644,13 +643,13 @@
 
 <Dialog
 	open={deletingBuiltin}
-	title="Remove built-in client?"
+	title={i18n.builtin_remove_confirm()}
 	body="The engine stops managing torrents and won't start on next restart. Downloaded files on disk are left in place."
 	onClose={() => (deletingBuiltin = false)}
 	actions={[
-		{ label: "Cancel", variant: "ghost", autofocus: true },
+		{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },
 		{
-			label: "Remove",
+			label: i18n.common_remove(),
 			variant: "danger",
 			onClick: () => removeBuiltin.mutate(),
 		},

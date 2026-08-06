@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { LoaderCircle } from "@lucide/svelte";
 	import type { ImportScan } from "../../lib/types";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	type Props = { scan: ImportScan };
 	let { scan }: Props = $props();
@@ -21,7 +22,7 @@
 	</div>
 	<div class="space-y-1">
 		<p class="text-base font-semibold text-fg">
-			{scan.status === "committing" ? "Committing decisions…" : "Scanning for media files…"}
+			{scan.status === "committing" ? i18n.imports_committing() : i18n.imports_scanning()}
 		</p>
 		<p class="text-sm text-fg-muted">
 			{#if scan.total_count > 0}

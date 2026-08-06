@@ -2,7 +2,7 @@
 	import { untrack } from "svelte";
 	import { onMount } from "svelte";
 	import { createQuery } from "@tanstack/svelte-query";
-	import { api } from "../../lib/api";
+	import { api, errorText } from "../../lib/api";
 	import { formatRelative } from "../../lib/dates";
 	import { formatBytes } from "../../lib/format";
 	import { movieStatus } from "../../lib/status";
@@ -14,6 +14,7 @@
 	import MovieList from "../../components/movies/MovieList.svelte";
 	import MoviesEmpty from "../../components/movies/MoviesEmpty.svelte";
 	import MovieBulkActions from "../../components/movies/MovieBulkActions.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 	import type {
 		Movie,
 		PaginatedMovies,
@@ -268,7 +269,7 @@
 <div class="flex flex-col">
 	{#if moviesQuery.isLoading}
 		<div class="w-full px-4 py-16 text-center text-sm text-fg-subtle md:px-6">
-			Loading movies…
+			{i18n.common_loading_movies()}
 		</div>
 	{:else if moviesQuery.isError}
 		<div class="w-full px-4 md:px-6">
@@ -276,10 +277,10 @@
 				class="rounded-lg border border-dashed border-status-failed/40 bg-status-failed/5 py-12 text-center"
 			>
 				<p class="text-sm font-semibold text-status-failed">
-					Failed to load movies
+					{i18n.movies_load_list_failed()}
 				</p>
 				<p class="mt-1 text-xs text-fg-subtle">
-					{moviesQuery.error?.message ?? "Unknown error"}
+					{errorText(moviesQuery.error, i18n.common_unknown_error())}
 				</p>
 			</div>
 		</div>
@@ -320,7 +321,7 @@
 						<button
 							type="button"
 							onclick={() => (query = "")}
-							aria-label="Clear search"
+							aria-label={i18n.common_clear_search()}
 							class="text-accent-text transition hover:text-fg"
 						>
 							×

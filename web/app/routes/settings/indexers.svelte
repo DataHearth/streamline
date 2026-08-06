@@ -6,7 +6,7 @@
 	} from "@tanstack/svelte-query";
 	import { createForm } from "@tanstack/svelte-form";
 	import { Plus, Trash2, Search, Pencil, Eye } from "@lucide/svelte";
-	import { api } from "../../lib/api";
+	import { api, errorText } from "../../lib/api";
 	import { config, READONLY_HINT } from "../../lib/config.svelte";
 	import { toast } from "../../lib/toast";
 	import { indexerForm } from "../../lib/schemas";
@@ -18,6 +18,7 @@
 	import TestConnectionButton from "../../components/settings/TestConnectionButton.svelte";
 	import ReadOnlyFieldset from "../../components/settings/ReadOnlyFieldset.svelte";
 	import ConfigModalFooter from "../../components/settings/ConfigModalFooter.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	type Values = {
 		name: string;
@@ -68,11 +69,11 @@
 		},
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: ["indexers"] });
-			toast.ok(editing ? "Indexer updated" : "Indexer added");
+			toast.ok(editing ? i18n.indexer_updated() : i18n.indexer_added());
 			modalOpen = false;
 			editing = null;
 		},
-		onError: (err) => toast.err(err.message),
+		onError: (err) => toast.err(errorText(err)),
 	}));
 
 	const remove = createMutation<null, Error, string>(() => ({
@@ -82,7 +83,7 @@
 			qc.invalidateQueries({ queryKey: ["indexers"] });
 			toast.ok("Indexer deleted");
 		},
-		onError: (err) => toast.err(err.message),
+		onError: (err) => toast.err(errorText(err)),
 	}));
 
 	const defaults: Values = {
@@ -136,9 +137,9 @@
 <div class="mx-auto max-w-4xl">
 	<header class="flex flex-wrap items-end justify-between gap-3">
 		<div>
-			<h1 class="text-2xl font-bold tracking-tight text-fg">Indexers</h1>
+			<h1 class="text-2xl font-bold tracking-tight text-fg">{i18n.settings_indexers()}</h1>
 			<p class="mt-1 text-sm text-fg-muted">
-				Torznab indexers Streamline queries for releases.
+				{i18n.indexer_intro()}
 			</p>
 		</div>
 		<button
@@ -149,16 +150,16 @@
 			class="inline-flex items-center gap-1.5 rounded-md bg-accent px-3.5 py-2 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
 		>
 			<Plus size={16} aria-hidden="true" />
-			Add indexer
+			{i18n.indexer_add()}
 		</button>
 	</header>
 
 	<div class="mt-6 grid gap-3 sm:grid-cols-2">
 		{#if list.isPending}
-			<p class="text-sm text-fg-subtle">Loading…</p>
+			<p class="text-sm text-fg-subtle">{i18n.common_loading()}</p>
 		{:else if list.isError}
 			<p class="text-sm text-status-failed">
-				Failed to load: {list.error?.message}
+				{i18n.err_load_failed_detail({ reason: errorText(list.error) })}
 			</p>
 		{:else if items.length === 0}
 			<div
@@ -169,10 +170,9 @@
 					class="mx-auto text-fg-faint"
 					aria-hidden="true"
 				/>
-				<p class="mt-3 text-sm text-fg">No indexers configured.</p>
+				<p class="mt-3 text-sm text-fg">{i18n.indexer_none()}</p>
 				<p class="mt-1 text-xs text-fg-muted">
-					Add at least one Torznab indexer to start searching for
-					releases.
+					{i18n.indexers_empty_help()}
 				</p>
 			</div>
 		{:else}
@@ -255,7 +255,7 @@
 									type="button"
 									onclick={() => openEdit(i)}
 									class="rounded-md p-1.5 text-fg-muted transition hover:bg-surface hover:text-fg"
-									aria-label="View indexer"
+									aria-label={i18n.indexer_view()}
 								>
 									<Eye size={16} aria-hidden="true" />
 								</button>
@@ -264,7 +264,7 @@
 									type="button"
 									onclick={() => openEdit(i)}
 									class="rounded-md p-1.5 text-fg-muted transition hover:bg-surface hover:text-fg"
-									aria-label="Edit indexer"
+									aria-label={i18n.indexer_edit()}
 								>
 									<Pencil size={16} aria-hidden="true" />
 								</button>
@@ -272,7 +272,7 @@
 									type="button"
 									onclick={() => onDelete(i)}
 									class="rounded-md p-1.5 text-fg-muted transition hover:bg-status-failed/10 hover:text-status-failed"
-									aria-label="Delete indexer"
+									aria-label={i18n.indexer_delete()}
 								>
 									<Trash2 size={16} aria-hidden="true" />
 								</button>
@@ -288,10 +288,10 @@
 <Modal
 	open={modalOpen}
 	title={config.readOnly
-		? "View indexer"
+		? i18n.indexer_view()
 		: editing
-			? "Edit indexer"
-			: "Add indexer"}
+			? i18n.indexer_edit()
+			: i18n.indexer_add()}
 	size="xl"
 	onClose={() => (modalOpen = false)}
 >
@@ -311,10 +311,10 @@
 		<ConfigModalFooter
 			formId="indexer-form"
 			submitLabel={form.state.isSubmitting
-				? "Saving…"
+				? i18n.common_saving()
 				: editing
-					? "Save changes"
-					: "Add indexer"}
+					? i18n.common_save_changes()
+					: i18n.indexer_add()}
 			submitDisabled={!form.state.canSubmit || form.state.isSubmitting}
 			onCancel={() => (modalOpen = false)}
 		>
@@ -344,9 +344,9 @@
 	body="Streamline will stop searching this indexer for releases."
 	onClose={() => (deleting = null)}
 	actions={[
-		{ label: "Cancel", variant: "ghost", autofocus: true },
+		{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },
 		{
-			label: "Delete",
+			label: i18n.common_delete(),
 			variant: "danger",
 			onClick: () => deleting && remove.mutate(deleting.name),
 		},

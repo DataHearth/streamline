@@ -5,6 +5,7 @@
 	import { auth } from "../../lib/auth.svelte";
 	import { cn } from "../../lib/cn";
 	import { bulkMode } from "../../lib/bulk-mode.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	// Phone only. Adding is a repeated one-handed action, and the top-right
 	// corner is the furthest point on the screen from a thumb — so the plus
@@ -48,16 +49,16 @@
 	});
 
 	let heading = $derived(
-		auth.canAddDirectly ? "Add to library" : "Request a title",
+		auth.canAddDirectly ? i18n.action_add_to_library() : i18n.action_request_title(),
 	);
 
 	type Item = { id: "movie" | "series" | "import"; label: string; icon: typeof Film };
 	let items = $derived<Item[]>([
-		{ id: "movie", label: "Movie", icon: Film },
-		{ id: "series", label: "Series", icon: Tv },
+		{ id: "movie", label: i18n.common_movie(), icon: Film },
+		{ id: "series", label: i18n.settings_series(), icon: Tv },
 		// Adopting files on disk is an admin operation, and not a request.
 		...(auth.canAddDirectly && auth.isAdmin
-			? [{ id: "import" as const, label: "Import existing files", icon: FolderInput }]
+			? [{ id: "import" as const, label: i18n.add_import_existing(), icon: FolderInput }]
 			: []),
 	]);
 	// Nearest the thumb wins: Movie sits directly above the pill.
@@ -79,7 +80,7 @@
 	     orphaned the scrim before. CSS can't orphan anything. -->
 	<button
 		type="button"
-		aria-label="Close"
+		aria-label={i18n.common_close()}
 		onclick={() => (open = false)}
 		tabindex={open ? 0 : -1}
 		aria-hidden={!open}
@@ -143,7 +144,7 @@
 			onclick={() => (open = !open)}
 			aria-haspopup="menu"
 			aria-expanded={open}
-			aria-label={open ? "Close" : heading}
+			aria-label={open ? i18n.common_close() : heading}
 			class={cn(
 				"pill grid h-[52px] w-[52px] place-items-center rounded-full shadow-4",
 				open ? "bg-surface-2 text-fg-muted" : "bg-accent text-fg-on-accent",

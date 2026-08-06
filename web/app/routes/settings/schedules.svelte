@@ -6,7 +6,7 @@
 	} from "@tanstack/svelte-query";
 	import { createForm } from "@tanstack/svelte-form";
 	import * as v from "valibot";
-	import { api } from "../../lib/api";
+	import { api, errorText } from "../../lib/api";
 	import { config } from "../../lib/config.svelte";
 	import { toast } from "../../lib/toast";
 	import { scheduleInterval } from "../../lib/schemas";
@@ -15,27 +15,28 @@
 	import ScheduleRow from "../../components/settings/ScheduleRow.svelte";
 	import TextField from "../../components/forms/TextField.svelte";
 	import ReadOnlyFieldset from "../../components/settings/ReadOnlyFieldset.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	const JOB_DESCRIPTIONS: Record<string, string> = {
-		"movie-rss-sync": "Pull configured RSS feeds for new movie releases",
-		"tv-rss-sync": "Pull configured RSS feeds for newly aired episodes",
+		"movie-rss-sync": i18n.schedule_rss_movies(),
+		"tv-rss-sync": i18n.schedule_rss_series(),
 		"movie-missing-search":
-			"Per-title indexer search for every wanted movie past cooldown",
+			i18n.schedule_search_movies(),
 		"tv-missing-search":
-			"Per-season indexer search for wanted episodes past cooldown",
-		"movie-metadata-refresh": "Re-fetch TMDB metadata for tracked movies",
-		"tv-metadata-refresh": "Re-fetch TVDB metadata for tracked series",
+			i18n.schedule_search_series(),
+		"movie-metadata-refresh": i18n.schedule_refresh_movies(),
+		"tv-metadata-refresh": i18n.schedule_refresh_series(),
 		"movie-orphan-scan":
-			"Walk the movie library for untracked media and classify against TMDB",
+			i18n.schedule_scan_movies(),
 		"tv-orphan-scan":
-			"Walk the series library for untracked episodes and classify against TVDB",
+			i18n.schedule_scan_series(),
 		"download-monitor":
-			"Track active torrents, hand finished ones to the importer",
-		"import-scan": "Walk the import directory and stage matched files",
-		cleanup: "Purge old download records past their retention window",
-		"purge-sessions": "Drop expired auth sessions from the DB",
+			i18n.schedule_track_torrents(),
+		"import-scan": i18n.schedule_import_walk(),
+		cleanup: i18n.schedule_purge_downloads(),
+		"purge-sessions": i18n.schedule_purge_sessions(),
 		"drift-check":
-			"Verify tracked files still exist on disk; revert missing movies and episodes to wanted",
+			i18n.schedule_verify_files(),
 	};
 
 	const qc = useQueryClient();
@@ -70,7 +71,7 @@
 			modalOpen = false;
 			editing = null;
 		},
-		onError: (err) => toast.err(err.message),
+		onError: (err) => toast.err(errorText(err)),
 	}));
 
 	const form = createForm(() => ({
@@ -92,21 +93,20 @@
 
 <div>
 	<header>
-		<h1 class="text-2xl font-bold tracking-tight text-fg">Schedules</h1>
+		<h1 class="text-2xl font-bold tracking-tight text-fg">{i18n.settings_schedules()}</h1>
 		<p class="mt-1 text-sm text-fg-muted">
-			Background jobs Streamline runs on a fixed interval. Edit the cadence,
-			pause, or trigger a run on demand.
+			{i18n.schedules_intro()}
 		</p>
 	</header>
 
 	{#if list.isPending}
-		<p class="mt-6 text-sm text-fg-subtle">Loading…</p>
+		<p class="mt-6 text-sm text-fg-subtle">{i18n.common_loading()}</p>
 	{:else if list.isError}
 		<p class="mt-6 text-sm text-status-failed">
-			Failed to load: {list.error?.message}
+			{i18n.err_load_failed_detail({ reason: errorText(list.error) })}
 		</p>
 	{:else if items.length === 0}
-		<p class="mt-6 text-sm text-fg-muted">No schedules registered.</p>
+		<p class="mt-6 text-sm text-fg-muted">{i18n.schedule_none()}</p>
 	{:else}
 		<div
 			class="mt-6 overflow-x-auto rounded-lg border border-border bg-bg-elevated"
@@ -116,12 +116,12 @@
 					class="bg-surface text-left text-xs uppercase tracking-wider text-fg-muted"
 				>
 					<tr>
-						<th class="px-4 py-2.5 font-semibold">Job</th>
-						<th class="px-4 py-2.5 font-semibold">Interval</th>
-						<th class="px-4 py-2.5 font-semibold">Last run</th>
-						<th class="px-4 py-2.5 font-semibold">Status</th>
-						<th class="px-4 py-2.5 font-semibold">Next run</th>
-						<th class="px-4 py-2.5 text-right font-semibold">Actions</th>
+						<th class="px-4 py-2.5 font-semibold">{i18n.schedule_job()}</th>
+						<th class="px-4 py-2.5 font-semibold">{i18n.field_interval()}</th>
+						<th class="px-4 py-2.5 font-semibold">{i18n.schedule_last_run()}</th>
+						<th class="px-4 py-2.5 font-semibold">{i18n.common_status()}</th>
+						<th class="px-4 py-2.5 font-semibold">{i18n.schedule_next_run()}</th>
+						<th class="px-4 py-2.5 text-right font-semibold">{i18n.common_actions()}</th>
 					</tr>
 				</thead>
 				<tbody class="divide-y divide-border">
@@ -144,13 +144,13 @@
 				<span
 					class="font-mono text-[10px] uppercase tracking-[0.18em] text-fg-faint"
 				>
-					System
+					{i18n.settings_system()}
 				</span>
 				<div class="h-px flex-1 bg-border"></div>
 				<span
 					class="font-mono text-[10px] uppercase tracking-[0.12em] text-fg-faint"
 				>
-					Predefined · interval not editable
+					{i18n.schedules_predefined()}
 				</span>
 			</div>
 
@@ -162,11 +162,11 @@
 						class="bg-surface text-left text-xs uppercase tracking-wider text-fg-muted"
 					>
 						<tr>
-							<th class="px-4 py-2.5 font-semibold">Job</th>
-							<th class="px-4 py-2.5 font-semibold">Interval</th>
-							<th class="px-4 py-2.5 font-semibold">Last run</th>
-							<th class="px-4 py-2.5 font-semibold">Status</th>
-							<th class="px-4 py-2.5 font-semibold">Next run</th>
+							<th class="px-4 py-2.5 font-semibold">{i18n.schedule_job()}</th>
+							<th class="px-4 py-2.5 font-semibold">{i18n.field_interval()}</th>
+							<th class="px-4 py-2.5 font-semibold">{i18n.schedule_last_run()}</th>
+							<th class="px-4 py-2.5 font-semibold">{i18n.common_status()}</th>
+							<th class="px-4 py-2.5 font-semibold">{i18n.schedule_next_run()}</th>
 							<th class="px-4 py-2.5 text-right font-semibold"></th>
 						</tr>
 					</thead>
@@ -185,7 +185,7 @@
 	{/if}
 
 	<p class="mt-3 text-xs text-fg-subtle">
-		Tip: intervals are Go duration strings (e.g.
+		{i18n.schedule_tip_prefix()}
 		<code class="rounded bg-bg-card px-1.5 py-0.5 font-mono text-fg-muted"
 			>15m</code
 		>,
@@ -194,13 +194,13 @@
 		>,
 		<code class="rounded bg-bg-card px-1.5 py-0.5 font-mono text-fg-muted"
 			>30s</code
-		>) — minimum 10 seconds.
+		>{i18n.schedule_tip_suffix()}
 	</p>
 </div>
 
 <Modal
 	open={modalOpen}
-	title={editing ? `Edit interval — ${editing.name}` : "Edit interval"}
+	title={editing ? i18n.schedule_edit_interval_for({ name: editing.name }) : i18n.schedule_edit_interval()}
 	size="md"
 	onClose={() => (modalOpen = false)}
 >
@@ -216,9 +216,9 @@
 				{#snippet children(field)}
 					<TextField
 						{field}
-						label="Interval"
+						label={i18n.field_interval()}
 						placeholder="15m"
-						help="Go duration string. Minimum 10 seconds."
+						help={i18n.schedule_interval_help()}
 					/>
 				{/snippet}
 			</form.Field>
@@ -231,7 +231,7 @@
 			onclick={() => (modalOpen = false)}
 			class="inline-flex h-9 items-center rounded-md border border-border px-3 text-sm text-fg-muted hover:text-fg"
 		>
-			Cancel
+			{i18n.common_cancel()}
 		</button>
 		<button
 			type="submit"
@@ -239,7 +239,7 @@
 			disabled={config.readOnly || !form.state.canSubmit || form.state.isSubmitting}
 			class="inline-flex h-9 items-center rounded-md bg-accent px-4 text-sm font-semibold text-fg-on-accent hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
 		>
-			{form.state.isSubmitting ? "Saving…" : "Save"}
+			{form.state.isSubmitting ? i18n.common_saving() : i18n.common_save()}
 		</button>
 	{/snippet}
 </Modal>

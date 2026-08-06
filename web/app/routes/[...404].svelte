@@ -2,6 +2,7 @@
 	import { onMount } from "svelte";
 	import { Compass, House, Film } from "@lucide/svelte";
 	import AuthCard from "../components/auth/AuthCard.svelte";
+	import { m as i18n } from "../lib/paraglide/messages.js";
 
 	let path = $state("");
 	onMount(() => {
@@ -9,11 +10,11 @@
 	});
 </script>
 
-<svelte:head><title>Page not found — Streamline</title></svelte:head>
+<svelte:head><title>{i18n.error_404_page_title()}</title></svelte:head>
 
 <AuthCard
-	title="Off the grid"
-	subtitle="The page you're looking for isn't streaming anywhere we can find."
+	title={i18n.error_404_title()}
+	subtitle={i18n.error_404_body()}
 	eyebrow="404"
 >
 	<div class="mb-6 flex justify-center">
@@ -39,14 +40,14 @@
 			class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-accent text-sm font-semibold text-fg-on-accent transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
 		>
 			<House size={16} aria-hidden="true" />
-			Back to dashboard
+			{i18n.error_back_to_dashboard()}
 		</a>
 		<a
 			href="/movies"
 			class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md border border-border-strong bg-surface px-4 text-sm font-medium text-fg transition-colors hover:border-accent hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
 		>
 			<Film size={16} aria-hidden="true" />
-			Browse movies
+			{i18n.error_browse_movies()}
 		</a>
 	</div>
 </AuthCard>

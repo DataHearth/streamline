@@ -18,6 +18,7 @@
 	import { dragScroll } from "../../lib/drag-scroll";
 	import { lockScroll, unlockScroll } from "../../lib/scrollLock";
 	import { sheetSwipe } from "../../lib/sheet-swipe";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	// Everything the library toolbars can no longer afford to keep on screen at
 	// phone width: the filter query, sort, monitored, view and the way into
@@ -88,11 +89,11 @@
 		class="fixed inset-0 z-50 lg:hidden"
 		role="dialog"
 		aria-modal="true"
-		aria-label="Filter and sort"
+		aria-label={i18n.filter_and_sort()}
 	>
 		<button
 			type="button"
-			aria-label="Close"
+			aria-label={i18n.common_close()}
 			transition:fade={{ duration: 160 }}
 			onclick={onClose}
 			class="absolute inset-0 h-full w-full cursor-default bg-black/55"
@@ -110,11 +111,11 @@
 					aria-hidden="true"
 					class="absolute left-1/2 top-2 h-1 w-9 -translate-x-1/2 rounded-full bg-border-strong"
 				></span>
-				<h2 class="text-[17px] font-semibold tracking-tight text-fg">Filter</h2>
+				<h2 class="text-[17px] font-semibold tracking-tight text-fg">{i18n.filter_label()}</h2>
 				<button
 					type="button"
 					onclick={onClose}
-					aria-label="Close"
+					aria-label={i18n.common_close()}
 					class="grid h-9 w-9 place-items-center rounded-full bg-surface text-fg-subtle transition active:bg-bg-hover"
 				>
 					<X size={16} aria-hidden="true" />
@@ -140,7 +141,7 @@
 						<button
 							type="button"
 							onclick={() => onQueryChange("")}
-							aria-label="Clear search"
+							aria-label={i18n.common_clear_search()}
 							class="grid h-7 w-7 place-items-center rounded-full text-fg-faint transition active:bg-surface"
 						>
 							<X size={14} aria-hidden="true" />
@@ -149,7 +150,7 @@
 				</div>
 
 				<div class="pt-5">
-					<div class={label}>Sort</div>
+					<div class={label}>{i18n.filter_sort()}</div>
 					<!-- One scrolling line rather than a wrap, like the status pills on the
 					     toolbar: the group keeps its height however many sorts a page has.
 					     The right edge fades, so a cut chip reads as more to scroll to. -->
@@ -176,7 +177,7 @@
 				{/if}
 
 				<div class="pt-5">
-					<div class={label}>Show</div>
+					<div class={label}>{i18n.filter_show()}</div>
 					<button
 						type="button"
 						aria-pressed={monitoredOnly}
@@ -188,7 +189,7 @@
 							fill={monitoredOnly ? "currentColor" : "none"}
 							aria-hidden="true"
 						/>
-						Monitored only
+						{i18n.filter_monitored_only()}
 						<span class="font-mono text-[11px] tabular-nums opacity-70">
 							{monitoredCount}
 						</span>
@@ -198,7 +199,7 @@
 				<!-- The list table needs columns a phone cannot give it, so the choice
 				     only appears from md up; below that the library is posters only. -->
 				<div class="hidden pt-5 md:block">
-					<div class={label}>Layout</div>
+					<div class={label}>{i18n.filter_layout()}</div>
 					<div class="flex flex-wrap gap-2">
 						<button
 							type="button"
@@ -207,7 +208,7 @@
 							class={cn(chip, view === "grid" ? chipOn : chipOff)}
 						>
 							<LayoutGrid size={14} aria-hidden="true" />
-							Posters
+							{i18n.filter_posters()}
 						</button>
 						<button
 							type="button"
@@ -216,7 +217,7 @@
 							class={cn(chip, view === "list" ? chipOn : chipOff)}
 						>
 							<List size={14} aria-hidden="true" />
-							List
+							{i18n.filter_list()}
 						</button>
 					</div>
 				</div>
@@ -249,7 +250,7 @@
 						view === "list" && "flex-1 border border-border bg-surface",
 					)}
 				>
-					Reset
+					{i18n.common_reset()}
 				</button>
 			</div>
 		</div>

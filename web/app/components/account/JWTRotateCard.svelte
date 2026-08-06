@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { createMutation } from "@tanstack/svelte-query";
 	import { ShieldAlert, RotateCcw } from "@lucide/svelte";
-	import { api } from "../../lib/api";
+	import { api, errorText } from "../../lib/api";
 	import { auth } from "../../lib/auth.svelte";
 	import { toast } from "../../lib/toast";
 	import Dialog from "../modals/Dialog.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	const rotate = createMutation<{ token: string }, Error, void>(() => ({
 		mutationFn: () =>
@@ -14,7 +15,7 @@
 			window.location.href = "/login";
 		},
 		onError: (err) => {
-			toast.err(err.message);
+			toast.err(errorText(err));
 			open = false;
 		},
 	}));
@@ -46,13 +47,10 @@
 				</span>
 				<div>
 					<h3 class="text-base font-semibold text-fg">
-						Rotate JWT signing key
+						{i18n.account_rotate_key_long()}
 					</h3>
 					<p class="mt-1 max-w-xl text-sm text-fg-muted">
-						Generates a fresh HMAC signing secret and invalidates
-						every active session and API key, including your own.
-						Use after a suspected secret compromise — everyone has
-						to sign back in.
+						{i18n.jwt_rotate_help()}
 					</p>
 				</div>
 			</div>
@@ -63,21 +61,21 @@
 				class="inline-flex h-10 shrink-0 items-center gap-2 rounded-md border border-status-failed/40 bg-status-failed/10 px-4 text-sm font-semibold text-status-failed transition hover:bg-status-failed/20 disabled:cursor-not-allowed disabled:opacity-60"
 			>
 				<RotateCcw size={14} aria-hidden="true" />
-				{rotate.isPending ? "Rotating…" : "Rotate key…"}
+				{rotate.isPending ? i18n.auth_rotating() : i18n.action_rotate_key_ellipsis()}
 			</button>
 		</div>
 	</section>
 
 	<Dialog
 		{open}
-		title="Rotate the JWT signing key?"
+		title={i18n.account_rotate_key_confirm()}
 		onClose={() => {
 			if (!rotate.isPending) open = false;
 		}}
 		actions={[
-			{ label: "Cancel", variant: "ghost" },
+			{ label: i18n.common_cancel(), variant: "ghost" },
 			{
-				label: "Rotate key",
+				label: i18n.account_rotate_key(),
 				variant: "danger",
 				dismiss: false,
 				disabled: !canRotate,
@@ -87,13 +85,11 @@
 		]}
 	>
 		<p class="text-sm leading-relaxed text-fg-muted">
-			A fresh HMAC secret will be generated, persisted to config, and every
-			active session and API key will be invalidated. You will be signed
-			out immediately.
+			{i18n.jwt_rotate_confirm_help()}
 		</p>
 		<label class="mt-4 block">
 			<span class="mb-1 block text-xs font-medium text-fg-muted">
-				Type
+				{i18n.common_type()}
 				<code class="rounded bg-bg-deep px-1 py-0.5 font-mono text-fg">
 					rotate
 				</code>

@@ -8,8 +8,9 @@
 		GitBranch,
 		ShieldCheck,
 	} from "@lucide/svelte";
-	import { api } from "../../lib/api";
+	import { api, errorText } from "../../lib/api";
 	import { formatRelative, formatDateTime } from "../../lib/dates";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 	import type {
 		ActivityEvent,
 		ActivityList,
@@ -36,43 +37,43 @@
 			icon: Check,
 			bg: "bg-status-available/15",
 			fg: "text-status-available",
-			label: "IMPORTED",
+			label: i18n.activity_evt_imported(),
 		},
 		download_completed: {
 			icon: Check,
 			bg: "bg-status-available/15",
 			fg: "text-status-available",
-			label: "DOWNLOAD COMPLETED",
+			label: i18n.activity_evt_download_completed(),
 		},
 		grabbed: {
 			icon: Download,
 			bg: "bg-status-grabbing/15",
 			fg: "text-status-grabbing",
-			label: "GRABBED",
+			label: i18n.activity_evt_grabbed(),
 		},
 		download_failed: {
 			icon: X,
 			bg: "bg-status-failed/15",
 			fg: "text-status-failed",
-			label: "DOWNLOAD FAILED",
+			label: i18n.activity_evt_download_failed(),
 		},
 		import_failed: {
 			icon: X,
 			bg: "bg-status-failed/15",
 			fg: "text-status-failed",
-			label: "IMPORT FAILED",
+			label: i18n.activity_evt_import_failed(),
 		},
 		drift_detected: {
 			icon: GitBranch,
 			bg: "bg-status-wanted/15",
 			fg: "text-status-wanted",
-			label: "DRIFT DETECTED",
+			label: i18n.activity_evt_drift_detected(),
 		},
 		drift_confirmed: {
 			icon: ShieldCheck,
 			bg: "bg-status-wanted/15",
 			fg: "text-status-wanted",
-			label: "DRIFT CONFIRMED",
+			label: i18n.activity_evt_drift_confirmed(),
 		},
 	};
 
@@ -104,7 +105,7 @@
 		role="alert"
 		class="rounded-lg border border-dashed border-status-failed/40 bg-status-failed/5 py-10 text-center text-sm text-status-failed"
 	>
-		{q.error?.message ?? "Failed to load history"}
+		{errorText(q.error, i18n.movies_history_failed())}
 	</div>
 {:else if events.length === 0}
 	<div
@@ -115,9 +116,9 @@
 			class="mx-auto mb-3 text-fg-faint"
 			aria-hidden="true"
 		/>
-		<p class="text-sm font-medium text-fg">No history yet</p>
+		<p class="text-sm font-medium text-fg">{i18n.common_no_history()}</p>
 		<p class="mt-1 text-xs text-fg-muted">
-			Grabs, imports, and drift events will appear here.
+			{i18n.activity_history_help()}
 		</p>
 	</div>
 {:else}

@@ -9,9 +9,10 @@
 	import TypePicker from "../../forms/TypePicker.svelte";
 	import BrandLogo from "../BrandLogo.svelte";
 	import PlexPINFlow from "../PlexPINFlow.svelte";
-	import { api } from "../../../lib/api";
+	import { api, errorText } from "../../../lib/api";
 	import { readOnlyLock } from "../../../lib/config.svelte";
 	import { toast } from "../../../lib/toast";
+	import { m as i18n } from "../../../lib/paraglide/messages.js";
 	import type {
 		MediaServerType,
 		MediaServerSection,
@@ -52,10 +53,10 @@
 
 	const KEY_HINTS: Record<MediaServerType, string> = {
 		plex:
-			"Click Connect with Plex above. The token is filled in automatically after you sign in.",
+			i18n.mediaserver_plex_token_help(),
 		jellyfin:
-			"Generate from your Jellyfin Dashboard → Advanced → API Keys.",
-		emby: "Generate from your Emby Dashboard → Advanced → API Keys.",
+			i18n.mediaserver_jellyfin_help(),
+		emby: i18n.mediaserver_emby_help(),
 	};
 
 	function applyPreset(t: MediaServerType) {
@@ -96,7 +97,7 @@
 			sections = resp.sections ?? [];
 			if (sections.length === 0) toast.warn("No sections returned");
 		},
-		onError: (err) => toast.err(`Discover failed: ${err.message}`),
+		onError: (err) => toast.err(i18n.mediaserver_discover_failed({ error: errorText(err) })),
 	}));
 </script>
 
@@ -104,7 +105,7 @@
 	<form.Field name="server_type">
 		{#snippet children(field)}
 			<TypePicker
-				label="Server type"
+				label={i18n.mediaserver_type()}
 				name={field.name}
 				value={field.state.value}
 				locked={isEdit}
@@ -128,7 +129,7 @@
 				{#snippet children(field)}
 					<TextField
 						{field}
-						label="Name"
+						label={i18n.common_name()}
 						placeholder="Living room Plex"
 					/>
 				{/snippet}
@@ -137,7 +138,7 @@
 		<form.Field name="enabled">
 			{#snippet children(field)}
 				<TogglePill
-					label="Enabled"
+					label={i18n.common_enabled()}
 					tone="status"
 					name={field.name}
 					checked={field.state.value}
@@ -152,9 +153,9 @@
 			{#snippet children(field)}
 				<TextField
 					{field}
-					label="URL"
+					label={i18n.field_url()}
 					placeholder="https://plex.local:32400"
-					help="Full base URL including scheme and port."
+					help={i18n.mediaserver_url_help()}
 				/>
 			{/snippet}
 		</form.Field>
@@ -173,11 +174,11 @@
 				{#snippet children(field)}
 					<TextField
 						{field}
-						label="Token / API key"
+						label={i18n.mediaserver_token()}
 						type="password"
 						autocomplete="off"
 						help={isEdit
-							? "Leave blank to keep the existing token/API key."
+							? i18n.mediaserver_token_keep()
 							: (KEY_HINTS[serverType.current] ?? "")}
 					/>
 				{/snippet}
@@ -190,10 +191,10 @@
 					{#snippet children(field)}
 						{#if sections.length > 0}
 							<Select
-								label="Library section"
+								label={i18n.mediaserver_library_section()}
 								value={field.state.value ?? ""}
 								options={[
-									{ value: "", label: "Pick a section" },
+									{ value: "", label: i18n.mediaserver_pick_section() },
 									...sections.map((s: MediaServerSection) => ({
 										value: s.key,
 										label: `${s.name} — ${s.type}`,
@@ -204,7 +205,7 @@
 						{:else}
 							<label class="block">
 								<span class="mb-1 block text-sm font-medium text-fg">
-									Library section
+									{i18n.mediaserver_library_section()}
 								</span>
 								<input
 									type="text"
@@ -214,7 +215,7 @@
 										field.handleChange(
 											(e.currentTarget as HTMLInputElement).value,
 										)}
-									placeholder="Click Discover to enumerate sections, or enter a section key"
+									placeholder={i18n.mediaserver_section_help()}
 									readonly={lock()}
 									class="h-10 w-full rounded-md border border-border bg-bg px-3 text-sm text-fg focus-visible:outline-2 focus-visible:outline-accent read-only:cursor-not-allowed read-only:opacity-70"
 								/>
@@ -240,7 +241,7 @@
 					</button>
 					{#if !apiKey.current}
 						<span class="font-mono text-[10.5px] text-fg-faint">
-							Sign in with Plex first
+							{i18n.mediaserver_plex_signin_first()}
 						</span>
 					{/if}
 				</div>

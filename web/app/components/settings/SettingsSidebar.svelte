@@ -20,6 +20,7 @@
 	import { cn } from "../../lib/cn";
 	import Select from "../forms/Select.svelte";
 	import type { DownloadClient, Indexer, MediaServer } from "../../lib/types";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	type IsActiveFn = (path: string) => boolean;
 	let isActiveFn = $state<IsActiveFn>(() => false);
@@ -64,87 +65,87 @@
 	let groups: Group[] = $derived.by(() => {
 		const base: Group[] = [
 			{
-				name: "System",
+				name: i18n.settings_system(),
 				items: [
 					{
 						path: "/settings/general",
 						Icon: SlidersHorizontal,
-						label: "General",
+						label: i18n.settings_general(),
 					},
 					{
 						path: "/settings/advanced",
 						Icon: Wrench,
-						label: "Advanced",
+						label: i18n.settings_advanced(),
 					},
 				],
 			},
 			{
-				name: "Library",
+				name: i18n.nav_library(),
 				items: [
 					{
 						path: "/settings/quality-profiles",
 						Icon: Gauge,
-						label: "Quality profiles",
+						label: i18n.settings_quality_profiles(),
 					},
 					{
 						path: "/settings/series",
 						Icon: Tv,
-						label: "Series",
+						label: i18n.settings_series(),
 					},
 				],
 			},
 			{
-				name: "Connections",
+				name: i18n.settings_connections(),
 				items: [
 					{
 						path: "/settings/indexers",
 						Icon: Search,
-						label: "Indexers",
+						label: i18n.settings_indexers(),
 						count: indexerCount,
 					},
 					{
 						path: "/settings/download-clients",
 						Icon: Download,
-						label: "Download clients",
+						label: i18n.settings_download_clients(),
 						count: downloadClientCount,
 					},
 					{
 						path: "/settings/media-servers",
 						Icon: Cast,
-						label: "Media servers",
+						label: i18n.settings_media_servers(),
 						count: mediaServerCount,
 					},
 				],
 			},
 			{
-				name: "Automation",
+				name: i18n.settings_automation(),
 				items: [
 					{
 						path: "/settings/schedules",
 						Icon: Clock,
-						label: "Schedules",
+						label: i18n.settings_schedules(),
 					},
 				],
 			},
 		];
 		if (isAdmin) {
 			base.push({
-				name: "Security",
+				name: i18n.settings_security(),
 				items: [
 					{
 						path: "/settings/auth",
 						Icon: Shield,
-						label: "Authentication",
+						label: i18n.settings_authentication(),
 					},
 					{
 						path: "/settings/oidc",
 						Icon: KeyRound,
-						label: "Single Sign-On",
+						label: i18n.settings_sso(),
 					},
 					{
 						path: "/settings/users",
 						Icon: Users,
-						label: "Users",
+						label: i18n.settings_users(),
 					},
 				],
 			});
@@ -185,16 +186,16 @@
 
 <aside
 	class="hidden shrink-0 self-start md:sticky md:top-20 md:block md:w-56"
-	aria-label="Settings sections"
+	aria-label={i18n.settings_sections()}
 >
 	<div class="mb-3.5 px-2">
 		<div
 			class="font-mono text-[9.5px] uppercase tracking-[0.18em] text-fg-faint"
 		>
-			Settings
+			{i18n.nav_settings()}
 		</div>
 		<h2 class="mt-0.5 text-base font-semibold tracking-tight text-fg">
-			Server &amp; library
+			{i18n.settings_server_library()}
 		</h2>
 	</div>
 	<nav class="space-y-3.5 text-sm">

@@ -1,5 +1,6 @@
 import type { StatusKind } from "../components/shared/StatusPill.svelte";
 import type { ImportMode, ImportStatus, ImportTransferMode } from "./types";
+import { m as i18n } from "./paraglide/messages.js";
 
 export type ImportStatusMeta = {
 	label: string;
@@ -13,17 +14,17 @@ export type ImportStatusMeta = {
 export function importStatusMeta(status: ImportStatus): ImportStatusMeta {
 	switch (status) {
 		case "running":
-			return { label: "Running", kind: "downloading", live: true };
+			return { label: i18n.common_running(), kind: "downloading", live: true };
 		case "committing":
-			return { label: "Committing", kind: "grabbing", live: true };
+			return { label: i18n.common_committing(), kind: "grabbing", live: true };
 		case "awaiting_review":
-			return { label: "Awaiting review", kind: "wanted", live: false };
+			return { label: i18n.common_awaiting_review(), kind: "wanted", live: false };
 		case "completed":
-			return { label: "Completed", kind: "available", live: false };
+			return { label: i18n.status_completed(), kind: "available", live: false };
 		case "cancelled":
-			return { label: "Cancelled", kind: "paused", live: false };
+			return { label: i18n.common_cancelled(), kind: "paused", live: false };
 		case "failed":
-			return { label: "Failed", kind: "failed", live: false };
+			return { label: i18n.status_failed(), kind: "failed", live: false };
 	}
 }
 
@@ -34,9 +35,9 @@ export function importModeLabel(
 	mode: ImportMode,
 	importMode: ImportTransferMode | "" | undefined,
 ): string {
-	if (mode === "in_place") return "Adopt in place";
+	if (mode === "in_place") return i18n.imports_adopt_in_place_label();
 	if (importMode) return importMode.charAt(0).toUpperCase() + importMode.slice(1);
-	return "Import & rename";
+	return i18n.imports_import_rename_label();
 }
 
 // commitVerb returns the past-tense action the user sees on the action strip,

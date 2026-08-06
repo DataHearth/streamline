@@ -4,13 +4,14 @@
 		createMutation,
 		useQueryClient,
 	} from "@tanstack/svelte-query";
-	import { api } from "../../lib/api";
+	import { api, errorText } from "../../lib/api";
 	import { toast } from "../../lib/toast";
 	import type { TVShow, QualityProfile } from "../../lib/types";
 	import SeriesKebabMenu, { type SeriesAction } from "./SeriesKebabMenu.svelte";
 	import QualityProfileModal from "../movies/QualityProfileModal.svelte";
 	import SeriesRenamePreviewModal from "./SeriesRenamePreviewModal.svelte";
 	import DeleteTitleDialog from "../shared/DeleteTitleDialog.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	let { show, variant = "card" }: { show: TVShow; variant?: "card" | "toolbar" } =
 		$props();
@@ -43,13 +44,13 @@
 			toast.ok("Quality profile updated");
 			qpOpen = false;
 		},
-		onError: (e: Error) => toast.err(e.message ?? "Update failed"),
+		onError: (e: Error) => toast.err(errorText(e, i18n.common_update_failed())),
 	}));
 
 	const searchNow = createMutation(() => ({
 		mutationFn: () => api(`/series/${show.id}/search`, { method: "POST" }),
 		onSuccess: () => toast.ok("Search dispatched for wanted episodes"),
-		onError: (e: Error) => toast.err(e.message ?? "Search failed"),
+		onError: (e: Error) => toast.err(errorText(e, i18n.common_search_failed())),
 	}));
 
 	const refresh = createMutation(() => ({
@@ -59,7 +60,7 @@
 			qc.invalidateQueries({ queryKey: ["series", show.id] });
 			toast.ok("Metadata refresh requested");
 		},
-		onError: (e: Error) => toast.err(e.message ?? "Refresh failed"),
+		onError: (e: Error) => toast.err(errorText(e, i18n.common_refresh_failed())),
 	}));
 
 	const del = createMutation<unknown, Error, boolean>(() => ({
@@ -72,7 +73,7 @@
 			deleteOpen = false;
 			toast.ok("Series deleted");
 		},
-		onError: (e: Error) => toast.err(e.message ?? "Delete failed"),
+		onError: (e: Error) => toast.err(errorText(e, i18n.common_delete_failed())),
 	}));
 
 	function onPick(a: SeriesAction) {

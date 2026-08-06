@@ -1,9 +1,10 @@
 import * as v from "valibot";
+import { m as i18n } from "./paraglide/messages.js";
 
 export const password = v.pipe(
 	v.string(),
-	v.minLength(8, "At least 8 characters"),
-	v.maxLength(128, "Too long"),
+	v.minLength(8, i18n.validation_password_min()),
+	v.maxLength(128, i18n.validation_too_long()),
 );
 
 export const displayName = v.pipe(
@@ -11,7 +12,7 @@ export const displayName = v.pipe(
 	v.maxLength(64, "Too long"),
 );
 
-export const email = v.pipe(v.string(), v.email("Invalid email"));
+export const email = v.pipe(v.string(), v.email(i18n.validation_invalid_email()));
 
 export const userRole = v.picklist(
 	["admin", "member", "request_only"] as const,

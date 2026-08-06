@@ -29,6 +29,7 @@
 	import SelectionControls from "../shared/SelectionControls.svelte";
 	import SelectionTopBar from "../shared/SelectionTopBar.svelte";
 	import MediaFilterSheet from "../shared/MediaFilterSheet.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	type View = "grid" | "list";
 
@@ -79,53 +80,53 @@
 	} = $props();
 
 	const tabs: { key: SeriesTab; label: string; tint: string; dot: string }[] = [
-		{ key: "all", label: "All", tint: "", dot: "" },
+		{ key: "all", label: i18n.common_all(), tint: "", dot: "" },
 		{
 			key: "continuing",
-			label: "Continuing",
+			label: i18n.series_continuing(),
 			tint: "text-status-available",
 			dot: "bg-status-available",
 		},
 		{
 			key: "ended",
-			label: "Ended",
+			label: i18n.series_ended(),
 			tint: "text-status-completed",
 			dot: "bg-status-completed",
 		},
 		{
 			key: "upcoming",
-			label: "Upcoming",
+			label: i18n.series_upcoming(),
 			tint: "text-status-fetching",
 			dot: "bg-status-fetching",
 		},
 		{
 			key: "missing",
-			label: "Missing eps",
+			label: i18n.series_missing_eps(),
 			tint: "text-status-wanted",
 			dot: "bg-status-wanted",
 		},
 	];
 
 	const typePills: { key: SeriesTypeFilter; label: string }[] = [
-		{ key: "all", label: "all" },
-		{ key: "standard", label: "standard" },
-		{ key: "anime", label: "anime" },
-		{ key: "daily", label: "daily" },
+		{ key: "all", label: i18n.lc_all() },
+		{ key: "standard", label: i18n.lc_standard() },
+		{ key: "anime", label: i18n.lc_anime() },
+		{ key: "daily", label: i18n.lc_daily() },
 	];
 
 	const sortOptions: { key: SeriesSort; label: string }[] = [
-		{ key: "recent", label: "Recently added" },
-		{ key: "title", label: "Title A→Z" },
-		{ key: "year", label: "Year newest" },
-		{ key: "rating", label: "Rating highest" },
-		{ key: "episodes", label: "Most episodes" },
+		{ key: "recent", label: i18n.dash_recently_added() },
+		{ key: "title", label: i18n.common_sort_title_az() },
+		{ key: "year", label: i18n.sort_year_newest() },
+		{ key: "rating", label: i18n.sort_rating_highest() },
+		{ key: "episodes", label: i18n.sort_most_episodes() },
 	];
 
 	let sortOpen = $state(false);
 	let sortRoot = $state<HTMLDivElement | null>(null);
 
 	let currentSortLabel = $derived(
-		sortOptions.find((o) => o.key === sort)?.label ?? "Title A→Z",
+		sortOptions.find((o) => o.key === sort)?.label ?? i18n.common_sort_title_az(),
 	);
 
 	function selectSort(key: SeriesSort) {
@@ -176,7 +177,7 @@
 		<div class="flex items-center gap-2 px-4 py-2">
 			<nav
 				use:dragScroll
-				aria-label="Series status"
+				aria-label={i18n.series_status()}
 				class="filter-tabs flex min-w-0 flex-1 items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
 			>
 				{#if query}
@@ -187,7 +188,7 @@
 						<button
 							type="button"
 							onclick={() => onQueryChange("")}
-							aria-label="Clear search"
+							aria-label={i18n.common_clear_search()}
 							class="-mr-1 grid h-6 w-6 place-items-center rounded-full text-accent-text"
 						>
 							<X size={12} aria-hidden="true" />
@@ -226,7 +227,7 @@
 				onclick={() => (sheetOpen = true)}
 				aria-haspopup="dialog"
 				aria-expanded={sheetOpen}
-				aria-label="Filter and sort"
+				aria-label={i18n.filter_and_sort()}
 				class={cn(
 					"relative grid h-9 w-9 shrink-0 place-items-center rounded-lg border transition",
 					activeFilters > 0
@@ -270,7 +271,7 @@
 			<div
 				class="mb-2.5 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fg-faint"
 			>
-				Type
+				{i18n.common_type()}
 			</div>
 			<div class="flex flex-wrap gap-2">
 				{#each typePills as t (t.key)}
@@ -301,7 +302,7 @@
 >
 	<nav
 		use:dragScroll
-		aria-label="Series status"
+		aria-label={i18n.series_status()}
 		class="filter-tabs order-1 flex w-fit max-w-full shrink-0 items-center gap-0.5 overflow-x-auto rounded-md border border-border bg-bg-elevated p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:order-none"
 	>
 		{#each tabs as t (t.key)}
@@ -336,8 +337,8 @@
 			onclick={() => (sheetOpen = true)}
 			aria-haspopup="dialog"
 			aria-expanded={sheetOpen}
-			aria-label="Sort and filter"
-			title="Sort and filter"
+			aria-label={i18n.common_sort_and_filter()}
+			title={i18n.common_sort_and_filter()}
 			class={cn(
 				"grid h-9 w-9 shrink-0 place-items-center rounded-md border transition lg:hidden",
 				activeFilters > 0
@@ -356,7 +357,7 @@
 				aria-expanded={sortOpen}
 				class="inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-border bg-bg-elevated px-3 text-[12.5px] font-medium text-fg-muted transition hover:border-border-strong hover:text-fg focus:outline-none focus:ring-2 focus:ring-accent-ring"
 			>
-				<span class="text-fg-subtle">Sort</span>
+				<span class="text-fg-subtle">{i18n.filter_sort()}</span>
 				<!-- Fixed width: the labels differ in length, and letting the trigger
 				     resize moved every control to its right on each pick. -->
 				<span class="w-[7.5rem] text-left text-fg">{currentSortLabel}</span>
@@ -395,31 +396,31 @@
 		<div
 			class="inline-flex items-center rounded-md border border-border bg-bg-elevated p-0.5"
 			role="group"
-			aria-label="View mode"
+			aria-label={i18n.common_view_mode()}
 		>
 			<button
 				type="button"
 				onclick={() => onViewChange("grid")}
-				title="Grid view"
+				title={i18n.common_grid_view()}
 				class={cn(
 					"grid h-[30px] w-[30px] place-items-center rounded-sm transition",
 					view === "grid" ? "bg-bg-card text-fg" : "text-fg-subtle hover:text-fg",
 				)}
 			>
 				<LayoutGrid size={15} aria-hidden="true" />
-				<span class="sr-only">Grid view</span>
+				<span class="sr-only">{i18n.common_grid_view()}</span>
 			</button>
 			<button
 				type="button"
 				onclick={() => onViewChange("list")}
-				title="List view"
+				title={i18n.common_list_view()}
 				class={cn(
 					"grid h-7 w-7 place-items-center rounded-sm transition",
 					view === "list" ? "bg-bg-card text-fg" : "text-fg-subtle hover:text-fg",
 				)}
 			>
 				<List size={14} aria-hidden="true" />
-				<span class="sr-only">List view</span>
+				<span class="sr-only">{i18n.common_list_view()}</span>
 			</button>
 		</div>
 
@@ -429,15 +430,15 @@
 			class="hidden h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md bg-accent px-3.5 text-[12.5px] font-semibold text-fg-on-accent transition hover:bg-accent-hover hover:shadow-glow md:inline-flex"
 		>
 			<Plus size={14} aria-hidden="true" />
-			<span class="hidden lg:inline">Add series</span>
-			<span class="lg:hidden">Add</span>
+			<span class="hidden lg:inline">{i18n.action_add_series()}</span>
+			<span class="lg:hidden">{i18n.common_add()}</span>
 		</button>
 	</div>
 
 	<div
 		class="hidden max-w-full shrink-0 items-center gap-0.5 overflow-x-auto rounded-md border border-border bg-bg-elevated p-[3px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:inline-flex"
 		role="group"
-		aria-label="Series type"
+		aria-label={i18n.series_type()}
 	>
 			{#each typePills as t (t.key)}
 				{@const active = typeFilter === t.key}
@@ -468,14 +469,14 @@
 				type="search"
 				value={query}
 				oninput={(e) => onQueryChange(e.currentTarget.value)}
-				placeholder="Filter…"
+				placeholder={i18n.common_filter_ellipsis()}
 				class="min-w-0 flex-1 bg-transparent text-[13px] text-fg outline-none placeholder:text-fg-faint"
 			/>
 			{#if query}
 				<button
 					type="button"
 					onclick={() => onQueryChange("")}
-					aria-label="Clear search"
+					aria-label={i18n.common_clear_search()}
 					class="grid h-5 w-5 place-items-center rounded text-fg-faint transition hover:text-fg"
 				>
 					<X size={12} aria-hidden="true" />
@@ -495,7 +496,7 @@
 			)}
 		>
 			<Eye size={14} aria-hidden="true" />
-			Monitored
+			{i18n.monitor_monitored()}
 			<span
 				class={cn(
 					"rounded-sm bg-white/[0.04] px-1.5 py-px font-mono text-[10px] tabular",

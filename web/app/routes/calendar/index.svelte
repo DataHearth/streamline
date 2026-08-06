@@ -3,6 +3,7 @@
 	import { ChevronLeft, ChevronRight, TriangleAlert } from "@lucide/svelte";
 	import { api } from "../../lib/api";
 	import { cn } from "../../lib/cn";
+	import { getLocale } from "../../lib/paraglide/runtime.js";
 	import type { UpcomingList } from "../../lib/types";
 	import {
 		episodesToCalendarEvents,
@@ -14,6 +15,7 @@
 	} from "../../lib/calendar";
 	import MonthGrid from "../../components/calendar/MonthGrid.svelte";
 	import Next30Panel from "../../components/calendar/Next30Panel.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	const today = new Date();
 	let year = $state(today.getFullYear());
@@ -22,7 +24,7 @@
 	const weekStart = resolveWeekStart();
 
 	const monthLabel = $derived(
-		new Date(year, month0).toLocaleString(undefined, {
+		new Date(year, month0).toLocaleString(getLocale(), {
 			month: "long",
 			year: "numeric",
 		}),
@@ -96,14 +98,14 @@
 				{monthLabel}
 			</h1>
 			<p class="mt-1 text-sm text-fg-muted">
-				Releases on the radar — cinema, digital, and streaming windows.
+				{i18n.calendar_intro()}
 			</p>
 		</div>
 		<div class="flex flex-wrap items-center gap-2">
 			<div
 				class="flex items-center gap-1 rounded-full border border-border bg-surface px-1 py-1 text-[12px] text-fg-muted"
 				role="group"
-				aria-label="Filter events"
+				aria-label={i18n.calendar_filter_events()}
 			>
 				<button
 					type="button"
@@ -120,7 +122,7 @@
 						class="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-status-wanted"
 						aria-hidden="true"
 					></span>
-					Movies
+					{i18n.movies_label()}
 				</button>
 				<button
 					type="button"
@@ -137,13 +139,13 @@
 						class="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-status-grabbing"
 						aria-hidden="true"
 					></span>
-					Episodes
+					{i18n.series_episodes()}
 				</button>
 			</div>
 			<button
 				type="button"
 				onclick={() => shift(-1)}
-				aria-label="Previous month"
+				aria-label={i18n.calendar_previous_month()}
 				class={navIcon}
 			>
 				<ChevronLeft size={16} aria-hidden="true" />
@@ -153,12 +155,12 @@
 				onclick={jumpToday}
 				class="h-9 rounded-md border border-border-strong px-4 text-sm text-fg transition-colors hover:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
 			>
-				Today
+				{i18n.common_today()}
 			</button>
 			<button
 				type="button"
 				onclick={() => shift(1)}
-				aria-label="Next month"
+				aria-label={i18n.calendar_next_month()}
 				class={navIcon}
 			>
 				<ChevronRight size={16} aria-hidden="true" />
@@ -172,13 +174,13 @@
 			class="mt-4 flex items-center gap-2 rounded-md border border-status-failed/40 bg-status-failed/10 px-3 py-2 text-sm text-status-failed"
 		>
 			<TriangleAlert size={15} aria-hidden="true" />
-			<span>Couldn't load releases for this month.</span>
+			<span>{i18n.calendar_load_failed()}</span>
 			<button
 				type="button"
 				onclick={() => gridQuery.refetch()}
 				class="ml-auto rounded px-2 py-0.5 font-medium underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
 			>
-				Retry
+				{i18n.common_retry()}
 			</button>
 		</div>
 	{/if}

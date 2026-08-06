@@ -4,6 +4,8 @@
 	import { entryHeading, historyMeta, queueMeta } from "../../lib/activity-touch";
 	import { pillStatus } from "../../lib/format";
 	import type { HistoryEntry, QueueEntry } from "../../lib/types";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { errorText } from "../../lib/api";
 
 	// The table's replacement below md: one surface, hairline rows, and the ring
 	// carrying what the Status and Progress columns used to. Everything else the
@@ -56,7 +58,7 @@
 		<div
 			class="rounded-xl border border-border bg-bg-elevated px-5 py-10 text-center text-sm text-fg-subtle"
 		>
-			Loading…
+			{i18n.common_loading()}
 		</div>
 	{:else if error}
 		<div
@@ -66,7 +68,7 @@
 				Failed to load {view}
 			</p>
 			<p class="mt-1 font-mono text-[11px] text-fg-subtle">
-				{error.message || "Unknown error"}
+				{errorText(error)}
 			</p>
 		</div>
 	{:else if rows.length === 0}
@@ -75,12 +77,12 @@
 		>
 			<Activity size={26} class="text-fg-faint" aria-hidden="true" />
 			<p class="text-sm font-semibold text-fg">
-				{view === "queue" ? "Queue is quiet" : "No history yet"}
+				{view === "queue" ? i18n.activity_queue_quiet() : i18n.common_no_history()}
 			</p>
 			<p class="max-w-[16rem] text-xs text-fg-muted">
 				{view === "queue"
-					? "Active and queued downloads will appear here."
-					: "Completed and failed downloads will appear here."}
+					? i18n.activity_queue_help()
+					: i18n.activity_none_completed()}
 			</p>
 		</div>
 	{:else}
@@ -109,7 +111,7 @@
 						class="motion-safe:animate-spin"
 						aria-hidden="true"
 					/>
-					Loading more…
+					{i18n.common_loading_more()}
 				</div>
 			{/if}
 		{/if}

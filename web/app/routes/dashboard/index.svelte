@@ -24,6 +24,7 @@
 	import WantedScroller from "../../components/dashboard/WantedScroller.svelte";
 	import UpcomingList from "../../components/shared/UpcomingList.svelte";
 	import { upcomingEvents } from "../../lib/calendar";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	const moviesQuery = createQuery<PaginatedMovies>(() => ({
 		queryKey: ["movies"],
@@ -90,7 +91,7 @@
 		const sys = systemQuery.data;
 		if (!sys) return [];
 		const dirs = [
-			{ label: "movies", path: sys.library_dir, usage: sys.library_usage },
+			{ label: i18n.lc_movies(), path: sys.library_dir, usage: sys.library_usage },
 			{ label: "series", path: sys.series_dir, usage: sys.series_usage },
 		].filter((d) => d.path && d.usage) as {
 			label: string;
@@ -99,7 +100,7 @@
 		}[];
 		if (dirs.length > 0) return dirs;
 		return sys.data_usage
-			? [{ label: "data", path: sys.data_dir, usage: sys.data_usage }]
+			? [{ label: i18n.lc_data(), path: sys.data_dir, usage: sys.data_usage }]
 			: [];
 	});
 
@@ -195,14 +196,14 @@
 		/>
 
 		<RecentScroller
-			title="Recently added"
+			title={i18n.dash_recently_added()}
 			movies={recent}
-			emptyText="No movies yet. Add one to see it here."
+			emptyText={i18n.dash_no_movies_yet()}
 		/>
 
 		<section
 			class="grid grid-cols-1 gap-4 lg:grid-cols-[1.4fr_1fr]"
-			aria-label="Operations"
+			aria-label={i18n.nav_operations()}
 		>
 			<LiveQueuePanel {queue} />
 			<RecentActivityPanel {events} />
@@ -210,12 +211,12 @@
 
 		<section
 			class="grid grid-cols-1 gap-7 lg:grid-cols-[1fr_320px] lg:gap-8"
-			aria-label="Wanted and upcoming"
+			aria-label={i18n.dash_wanted_upcoming()}
 		>
 			<WantedScroller movies={wanted} />
 			<UpcomingList
 				events={upcoming.slice(0, 4)}
-				title="Upcoming"
+				title={i18n.series_upcoming()}
 				seeAllHref="/calendar"
 				stretch
 			/>

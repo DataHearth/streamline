@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from "svelte";
 	import { config } from "../../lib/config.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	let {
 		formId,
@@ -25,7 +26,7 @@
 	onclick={onCancel}
 	class="inline-flex h-9 items-center rounded-md border border-border px-3 text-sm text-fg-muted hover:text-fg"
 >
-	{config.readOnly ? "Close" : "Cancel"}
+	{config.readOnly ? i18n.common_close() : i18n.common_cancel()}
 </button>
 {#if !config.readOnly}
 	<button

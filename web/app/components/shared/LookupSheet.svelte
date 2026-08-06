@@ -4,6 +4,7 @@
 	import { cubicOut } from "svelte/easing";
 	import { ChevronUp } from "@lucide/svelte";
 	import { lockScroll, unlockScroll } from "../../lib/scrollLock";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	// A bottom sheet with two detents, used by the touch add/request flow. The
 	// peek is content-sized and only has to confirm you picked the right title;
@@ -216,7 +217,7 @@
 	<div class="fixed inset-0 z-[60] md:hidden">
 		<button
 			type="button"
-			aria-label="Close"
+			aria-label={i18n.common_close()}
 			transition:fade={{ duration: 160 }}
 			onclick={onClose}
 			class="absolute inset-0 h-full w-full cursor-default bg-black/60"

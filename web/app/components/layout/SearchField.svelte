@@ -8,6 +8,7 @@
 		type SearchItem,
 	} from "../../lib/search-model.svelte";
 	import SearchResultRow from "./SearchResultRow.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	// Tablet band (md → lg). The width is there for a real field, so the bar gets
 	// one instead of an icon, and the results drop as a panel under it — the one
@@ -81,8 +82,8 @@
 			onfocus={() => (panelOpen = true)}
 			oninput={() => (panelOpen = true)}
 			type="text"
-			placeholder="Find a movie, release, indexer…"
-			aria-label="Search"
+			placeholder={i18n.search_field_placeholder()}
+			aria-label={i18n.common_search()}
 			enterkeyhint="search"
 			autocomplete="off"
 			autocapitalize="off"
@@ -96,7 +97,7 @@
 					query = "";
 					inputEl?.focus();
 				}}
-				aria-label="Clear search"
+				aria-label={i18n.common_clear_search()}
 				class="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-surface-2 text-fg-subtle transition hover:text-fg"
 			>
 				<X size={13} aria-hidden="true" />
@@ -107,7 +108,7 @@
 	{#if showPanel}
 		<div
 			role="listbox"
-			aria-label="Search results"
+			aria-label={i18n.search_results_label()}
 			transition:fly={{ y: -4, duration: 160, easing: cubicOut }}
 			class="absolute right-0 top-[calc(100%+8px)] z-50 max-h-[420px] w-[520px] overflow-y-auto overscroll-contain rounded-xl border border-border-strong bg-bg-elevated p-1.5 shadow-4"
 		>

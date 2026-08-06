@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Replace } from "@lucide/svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	let {
 		checked,
@@ -17,7 +18,7 @@
   cautionary rather than danger-red.
 -->
 <label
-	title="Overwrite files already in your library with this release when it imports."
+	title={i18n.grab_replace_help()}
 	class="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-md border border-border bg-bg-base px-2.5 text-xs font-medium text-fg-subtle transition has-[:checked]:border-status-wanted/45 has-[:checked]:bg-status-wanted/10 has-[:checked]:text-status-wanted"
 >
 	<input
@@ -27,5 +28,5 @@
 		class="sr-only"
 	/>
 	<Replace size={14} aria-hidden="true" />
-	<span class="leading-none">Replace existing files</span>
+	<span class="leading-none">{i18n.grab_replace_existing()}</span>
 </label>

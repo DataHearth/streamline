@@ -10,6 +10,7 @@
 	import AddMovieModal from "../movies/AddMovieModal.svelte";
 	import AddSeriesModal from "../series/AddSeriesModal.svelte";
 	import MediaLookupScreen from "../shared/MediaLookupScreen.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	let { children }: { children: Snippet } = $props();
 
@@ -42,7 +43,7 @@
 		href="#main"
 		class="skip-link sr-only focus:not-sr-only rounded-md bg-accent px-3 py-2 text-sm font-semibold text-fg-on-accent shadow-lg"
 	>
-		Skip to main content
+		{i18n.a11y_skip_to_content()}
 	</a>
 	<Sidebar />
 	<SidebarRail />

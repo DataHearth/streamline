@@ -1,4 +1,5 @@
 import { authFetch } from "./api";
+import { m as i18n } from "./paraglide/messages.js";
 
 export type AuthConfig = {
 	registration_mode: "disabled" | "open" | "invite";
@@ -54,16 +55,16 @@ export function oidcErrorMessage(code: string | null): string {
 		case "oidc_state_missing":
 		case "oidc_state_mismatch":
 		case "oidc_nonce_mismatch":
-			return "Sign-in session expired. Please try again.";
+			return i18n.auth_oidc_session_expired();
 		case "oidc_email_unverified":
-			return "Your email address is not verified with the provider.";
+			return i18n.auth_oidc_email_unverified();
 		case "oidc_registration_disabled":
-			return "Registration is disabled.";
+			return i18n.auth_oidc_registration_disabled();
 		case "oidc_no_invite":
-			return "An invite is required to register.";
+			return i18n.auth_oidc_no_invite();
 		case "oidc_provider_error":
-			return "The identity provider returned an error.";
+			return i18n.auth_oidc_provider_error();
 		default:
-			return "Sign-in failed.";
+			return i18n.auth_oidc_failed();
 	}
 }

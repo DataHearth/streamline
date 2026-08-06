@@ -11,10 +11,11 @@
 		Pencil,
 		TriangleAlert,
 	} from "@lucide/svelte";
-	import { api } from "../../lib/api";
+	import { api, errorText } from "../../lib/api";
 	import { cn } from "../../lib/cn";
 	import { formatBytes } from "../../lib/format";
 	import { toast } from "../../lib/toast";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 	import type {
 		ImportFileDecision,
 		ImportScanFile,
@@ -46,17 +47,17 @@
 					queryKey: ["import", scanId, "pending"],
 				});
 			},
-			onError: (err) => toast.err(err.message),
+			onError: (err) => toast.err(errorText(err)),
 		}),
 	);
 
 	// confirmed / existing are decided by the parser; ambiguous / unmatched
 	// are the only classes the reviewer can act on.
 	const CLASS = {
-		confirmed: { label: "Confirmed", kind: "available", Icon: CircleCheckBig },
-		ambiguous: { label: "Ambiguous", kind: "wanted", Icon: CircleHelp },
-		unmatched: { label: "Unmatched", kind: "paused", Icon: CircleHelp },
-		existing: { label: "Existing", kind: "grabbing", Icon: Link2 },
+		confirmed: { label: i18n.imports_confirmed(), kind: "available", Icon: CircleCheckBig },
+		ambiguous: { label: i18n.imports_ambiguous(), kind: "wanted", Icon: CircleHelp },
+		unmatched: { label: i18n.imports_unmatched(), kind: "paused", Icon: CircleHelp },
+		existing: { label: i18n.imports_existing(), kind: "grabbing", Icon: Link2 },
 	} as const;
 	let cls = $derived(CLASS[file.classification]);
 	let actionable = $derived(
@@ -74,8 +75,8 @@
 	);
 	let chosenLabel = $derived(
 		chosenTmdb == null
-			? "Choose match"
-			: (chosenMatch?.title ?? "Match selected"),
+			? i18n.action_choose_match()
+			: (chosenMatch?.title ?? i18n.imports_match_selected()),
 	);
 
 	// Skip is a toggle: skip excludes the file from commit, restore returns it
@@ -93,8 +94,8 @@
 		onclick={toggleSkip}
 		aria-pressed={skipped}
 		title={skipped
-			? "Restore this file to the import"
-			: "Exclude this file from the import"}
+			? i18n.imports_restore_file()
+			: i18n.imports_exclude_file()}
 		class={cn(
 			"inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring disabled:opacity-60",
 			skipped
@@ -102,7 +103,7 @@
 				: "border border-border bg-bg-card text-fg-muted hover:border-status-failed/40 hover:text-status-failed",
 		)}
 	>
-		{skipped ? "Restore" : "Skip"}
+		{skipped ? i18n.common_restore() : i18n.common_skip()}
 	</button>
 {/snippet}
 
@@ -119,7 +120,7 @@
 			{#if file.parsed_title}
 				<span aria-hidden="true" class="text-fg-faint">·</span>
 				<span>
-					Parsed: <span class="text-fg-muted">{file.parsed_title}</span
+					{i18n.imports_parsed()} <span class="text-fg-muted">{file.parsed_title}</span
 					>{#if file.parsed_year}<span class="text-fg-muted"> ({file.parsed_year})</span
 						>{/if}
 				</span>
@@ -149,7 +150,7 @@
 			style:color="var(--status-{cls.kind})"
 			style:background-color="color-mix(in srgb, var(--status-{cls.kind}) 14%, transparent)"
 			title={file.classification === "existing"
-				? "Movie already in the library — committing replaces its current file"
+				? i18n.imports_movie_exists()
 				: undefined}
 		>
 			<cls.Icon size={13} aria-hidden="true" />
@@ -161,17 +162,17 @@
 		{#if file.outcome === "created"}
 			<span class="inline-flex items-center gap-1 text-xs font-semibold text-status-available">
 				<CircleCheckBig size={13} aria-hidden="true" />
-				Created
+				{i18n.common_created()}
 			</span>
 		{:else if file.outcome === "attached"}
 			<span class="inline-flex items-center gap-1 text-xs font-semibold text-status-available">
 				<Link2 size={13} aria-hidden="true" />
-				Attached
+				{i18n.imports_attached()}
 			</span>
 		{:else if file.outcome === "skipped"}
 			<span class="inline-flex items-center gap-1 text-xs font-semibold text-fg-muted">
 				<CircleX size={13} aria-hidden="true" />
-				Skipped
+				{i18n.common_skipped()}
 			</span>
 		{:else if file.outcome === "failed"}
 			<span
@@ -179,24 +180,24 @@
 				title={file.outcome_message}
 			>
 				<TriangleAlert size={13} aria-hidden="true" />
-				Failed
+				{i18n.status_failed()}
 			</span>
 		{:else if file.decision === "accept"}
 			<span class="inline-flex items-center gap-1 text-xs font-medium text-status-available">
 				<ArrowUp size={13} aria-hidden="true" />
-				Will accept
+				{i18n.imports_will_accept()}
 			</span>
 		{:else if file.decision === "skip"}
 			<span class="inline-flex items-center gap-1 text-xs font-medium text-fg-muted">
 				<Minus size={13} aria-hidden="true" />
-				Will skip
+				{i18n.imports_will_skip()}
 			</span>
 		{:else if file.classification === "confirmed"}
-			<span class="text-xs text-fg-subtle">Auto-accept</span>
+			<span class="text-xs text-fg-subtle">{i18n.imports_auto_accept()}</span>
 		{:else if file.classification === "existing"}
-			<span class="text-xs text-fg-subtle">Attach to library</span>
+			<span class="text-xs text-fg-subtle">{i18n.imports_attach_to_library()}</span>
 		{:else}
-			<span class="text-xs text-fg-faint">Awaits decision</span>
+			<span class="text-xs text-fg-faint">{i18n.imports_awaits_decision()}</span>
 		{/if}
 	</td>
 
@@ -207,8 +208,8 @@
 					type="button"
 					onclick={() => onChooseMatch(file)}
 					title={chosenTmdb != null
-						? "Change the matched movie"
-						: "Pick a TMDB match for this file"}
+						? i18n.imports_change_matched_movie()
+						: i18n.imports_pick_tmdb()}
 					class="inline-flex max-w-[12rem] items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring {chosenTmdb !=
 					null
 						? 'bg-status-available/15 text-status-available'
@@ -231,7 +232,7 @@
 					class="inline-flex items-center gap-1 rounded-md border border-border bg-bg-card px-2.5 py-1 text-xs font-medium text-fg-muted transition hover:border-accent/40 hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
 				>
 					<Pencil size={12} aria-hidden="true" />
-					Change match
+					{i18n.imports_change_match()}
 				</button>
 				{@render skipToggle()}
 			</div>

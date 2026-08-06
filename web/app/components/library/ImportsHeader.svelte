@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Plus } from "@lucide/svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	type Counts = { running: number; review: number };
 
@@ -12,21 +13,21 @@
 	// and an amber-tinted REVIEW count that pulls attention to scans awaiting a
 	// human decision.
 	const CHIPS: { key: keyof Counts; label: string; warn: boolean }[] = [
-		{ key: "running", label: "running", warn: false },
-		{ key: "review", label: "review", warn: true },
+		{ key: "running", label: i18n.lc_running(), warn: false },
+		{ key: "review", label: i18n.lc_review(), warn: true },
 	];
 </script>
 
 <header class="flex flex-wrap items-end justify-between gap-4">
 	<div>
-		<h1 class="text-2xl font-bold tracking-tight text-fg">Imports</h1>
+		<h1 class="text-2xl font-bold tracking-tight text-fg">{i18n.imports_label()}</h1>
 		<p class="mt-1 text-sm text-fg-muted">
-			Scan a directory and adopt media files into your library.
+			{i18n.imports_intro()}
 		</p>
 	</div>
 
 	<div class="flex flex-wrap items-center gap-4">
-		<ul class="flex flex-wrap items-stretch gap-4" aria-label="Recent scan summary">
+		<ul class="flex flex-wrap items-stretch gap-4" aria-label={i18n.imports_scan_summary()}>
 			{#each CHIPS as chip (chip.key)}
 				<li
 					class="stat rounded-md border border-border bg-bg-elevated px-3.5 py-1.5 text-center"
@@ -52,7 +53,7 @@
 			class="inline-flex items-center gap-1.5 rounded-md bg-accent px-3.5 py-2 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
 		>
 			<Plus size={16} aria-hidden="true" />
-			New scan
+			{i18n.imports_new_scan()}
 		</button>
 	</div>
 </header>

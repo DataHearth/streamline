@@ -5,11 +5,12 @@
 	import { onMount } from "svelte";
 	import { KeyRound, Unlock, Trash2 } from "@lucide/svelte";
 	import * as v from "valibot";
-	import { api } from "../../lib/api";
+	import { api, errorText } from "../../lib/api";
 	import { toast } from "../../lib/toast";
 	import { password } from "../../lib/schemas";
 	import type { User } from "../../lib/types";
 	import Dialog from "../modals/Dialog.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	let { user, isSelf }: { user: User; isSelf: boolean } = $props();
 
@@ -39,7 +40,7 @@
 			qc.invalidateQueries({ queryKey: ["user", user.id] });
 			toast.ok("Password reset; sessions revoked");
 		},
-		onError: (err) => toast.err(err.message),
+		onError: (err) => toast.err(errorText(err)),
 	}));
 
 	const unlock = createMutation<null, Error, void>(() => ({
@@ -49,7 +50,7 @@
 			qc.invalidateQueries({ queryKey: ["user", user.id] });
 			toast.ok("Lockout cleared");
 		},
-		onError: (err) => toast.err(err.message),
+		onError: (err) => toast.err(errorText(err)),
 	}));
 
 	const del = createMutation<null, Error, void>(() => ({
@@ -59,7 +60,7 @@
 			toast.ok("User deleted");
 			navigate("/settings/users");
 		},
-		onError: (err) => toast.err(err.message),
+		onError: (err) => toast.err(errorText(err)),
 	}));
 
 	const form = createForm(() => ({
@@ -88,10 +89,9 @@
 					<KeyRound size={20} />
 				</span>
 				<div class="min-w-0 max-w-md">
-					<h3 class="text-sm font-semibold text-fg">Reset password</h3>
+					<h3 class="text-sm font-semibold text-fg">{i18n.users_reset_password()}</h3>
 					<p class="mt-1 text-xs text-fg-muted">
-						Replaces the password and revokes every active session for
-						this user.
+						{i18n.users_reset_help()}
 					</p>
 				</div>
 			</div>
@@ -112,7 +112,7 @@
 								field.handleChange(
 									(e.currentTarget as HTMLInputElement).value,
 								)}
-							placeholder="New password"
+							placeholder={i18n.account_new_password()}
 							autocomplete="new-password"
 							class="h-10 w-full min-w-0 rounded-md border border-status-failed/30 bg-bg px-3 text-sm text-fg placeholder:text-fg-faint focus-visible:border-status-failed focus-visible:outline-2 focus-visible:outline-status-failed md:w-56"
 						/>
@@ -124,7 +124,7 @@
 					class="inline-flex h-10 shrink-0 items-center gap-2 rounded-md border border-status-failed/40 bg-status-failed/10 px-4 text-sm font-semibold text-status-failed transition hover:bg-status-failed/20 disabled:cursor-not-allowed disabled:opacity-60"
 				>
 					<KeyRound size={14} aria-hidden="true" />
-					{form.state.isSubmitting ? "Resetting…" : "Reset"}
+					{form.state.isSubmitting ? i18n.common_resetting() : i18n.common_reset()}
 				</button>
 			</form>
 		</div>
@@ -140,11 +140,11 @@
 					<Unlock size={20} />
 				</span>
 				<div class="min-w-0 max-w-md">
-					<h3 class="text-sm font-semibold text-fg">Clear lockout</h3>
+					<h3 class="text-sm font-semibold text-fg">{i18n.users_clear_lockout()}</h3>
 					<p class="mt-1 text-xs text-fg-muted">
 						{locked
-							? "Account is currently locked. This resets the failed-login counter."
-							: "No active lockout — safe to leave alone."}
+							? i18n.users_locked_help()
+							: i18n.users_no_lockout()}
 					</p>
 				</div>
 			</div>
@@ -155,7 +155,7 @@
 				class="inline-flex h-10 shrink-0 items-center gap-2 rounded-md border border-status-failed/40 bg-status-failed/10 px-4 text-sm font-semibold text-status-failed transition hover:bg-status-failed/20 disabled:cursor-not-allowed disabled:opacity-60"
 			>
 				<Unlock size={14} aria-hidden="true" />
-				{unlock.isPending ? "Clearing…" : "Clear lockout"}
+				{unlock.isPending ? i18n.common_clearing() : i18n.users_clear_lockout()}
 			</button>
 		</div>
 
@@ -170,11 +170,11 @@
 					<Trash2 size={20} />
 				</span>
 				<div class="min-w-0 max-w-md">
-					<h3 class="text-sm font-semibold text-fg">Delete user</h3>
+					<h3 class="text-sm font-semibold text-fg">{i18n.users_delete()}</h3>
 					<p class="mt-1 text-xs text-fg-muted">
 						{isSelf
-							? "You can't delete your own account."
-							: "Permanently removes the account and every resource they own."}
+							? i18n.users_cannot_delete_self()
+							: i18n.users_delete_help()}
 					</p>
 				</div>
 			</div>
@@ -185,7 +185,7 @@
 				class="inline-flex h-10 shrink-0 items-center gap-2 rounded-md border border-status-failed bg-status-failed/15 px-4 text-sm font-semibold text-status-failed transition hover:bg-status-failed hover:text-fg-on-accent disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-status-failed/15 disabled:hover:text-status-failed"
 			>
 				<Trash2 size={14} aria-hidden="true" />
-				{del.isPending ? "Deleting…" : "Delete user"}
+				{del.isPending ? i18n.common_deleting() : i18n.users_delete()}
 			</button>
 		</div>
 	</div>
@@ -197,7 +197,7 @@
 	body="This permanently erases the account and every resource they own."
 	onClose={() => (confirmDelete = false)}
 	actions={[
-		{ label: "Cancel", variant: "ghost", autofocus: true },
-		{ label: "Delete user", variant: "danger", onClick: () => del.mutate() },
+		{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },
+		{ label: i18n.users_delete(), variant: "danger", onClick: () => del.mutate() },
 	]}
 />

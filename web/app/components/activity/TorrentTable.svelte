@@ -4,6 +4,8 @@
 	import TorrentRow from "./TorrentRow.svelte";
 	import type { SortOrder, TorrentSortKey } from "../../lib/activity-touch";
 	import type { Torrent } from "../../lib/types";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { errorText } from "../../lib/api";
 
 	// The md-and-up reading of the torrent list; below that TorrentTouchList takes
 	// over. Sorting is the route's state, not this component's: the headers set it
@@ -46,26 +48,26 @@
 		grow?: boolean;
 		hide?: string;
 	}[] = [
-		{ label: "Status", key: "status" },
-		{ label: "Name", key: "name", grow: true },
-		{ label: "Progress", key: "progress", numeric: true },
+		{ label: i18n.common_status(), key: "status" },
+		{ label: i18n.common_name(), key: "name", grow: true },
+		{ label: i18n.common_progress(), key: "progress", numeric: true },
 		{ label: "↓ / ↑", hide: "@3xl:hidden" },
 		{
-			label: "Down",
+			label: i18n.torrent_down(),
 			key: "download_speed",
 			numeric: true,
 			hide: "hidden @3xl:table-cell",
 		},
 		{
-			label: "Up",
+			label: i18n.torrent_up(),
 			key: "upload_speed",
 			numeric: true,
 			hide: "hidden @3xl:table-cell",
 		},
-		{ label: "Size", key: "size", numeric: true, hide: "hidden @3xl:table-cell" },
-		{ label: "Ratio", key: "ratio", numeric: true, hide: "hidden @4xl:table-cell" },
+		{ label: i18n.common_size(), key: "size", numeric: true, hide: "hidden @3xl:table-cell" },
+		{ label: i18n.torrent_ratio(), key: "ratio", numeric: true, hide: "hidden @4xl:table-cell" },
 		{
-			label: "Seeds/Peers",
+			label: i18n.torrent_seeds_peers(),
 			key: "seeds",
 			numeric: true,
 			hide: "hidden @4xl:table-cell",
@@ -111,10 +113,10 @@
 	{:else if error}
 		<div class="px-5 py-10 text-center">
 			<p class="text-sm font-semibold text-status-failed">
-				Failed to load torrents
+				{i18n.torrent_load_failed()}
 			</p>
 			<p class="mt-1 text-xs text-fg-subtle">
-				{error.message || "Unknown error"}
+				{errorText(error)}
 			</p>
 		</div>
 	{:else if rows.length === 0}
@@ -122,11 +124,11 @@
 			class="flex flex-col items-center justify-center gap-2 px-5 py-14 text-center"
 		>
 			<Magnet size={26} class="text-fg-faint" aria-hidden="true" />
-			<p class="text-sm font-medium text-fg">No torrents yet</p>
+			<p class="text-sm font-medium text-fg">{i18n.torrent_none_yet()}</p>
 			<p class="text-xs text-fg-muted">
 				{canControl
-					? "Use Add torrent above to paste a magnet link or upload a .torrent file."
-					: "Nothing is downloading right now."}
+					? i18n.torrent_use_add_above()
+					: i18n.activity_nothing_downloading()}
 			</p>
 		</div>
 	{:else}

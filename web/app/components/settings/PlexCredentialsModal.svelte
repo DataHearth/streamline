@@ -2,6 +2,7 @@
 	import { Check, Copy, TriangleAlert } from "@lucide/svelte";
 	import { toast } from "../../lib/toast";
 	import Modal from "../modals/Modal.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	type Props = {
 		open: boolean;
@@ -48,16 +49,14 @@
 	}
 </script>
 
-<Modal {open} title="Connect Plex (read-only)" size="lg" onClose={close}>
+<Modal {open} title={i18n.mediaserver_plex_connect()} size="lg" onClose={close}>
 	<div class="space-y-4 text-sm text-fg">
 		<div
 			class="flex items-start gap-2.5 rounded-md border border-status-wanted/40 bg-status-wanted/10 p-3 text-xs text-status-wanted"
 		>
 			<TriangleAlert size={14} class="mt-0.5 shrink-0" aria-hidden="true" />
 			<p>
-				This instance runs read-only, so Plex can't be saved from here. Finish
-				sign-in in the Plex popup; the client ID + token appear below to add to
-				your config and redeploy.
+				{i18n.plex_readonly_help()}
 			</p>
 		</div>
 
@@ -86,7 +85,7 @@
 
 		{#if !token}
 			<p class="text-xs text-fg-muted">
-				Waiting for Plex sign-in — finish in the popup window…
+				{i18n.plex_waiting()}
 			</p>
 		{/if}
 
@@ -111,7 +110,7 @@
 				<pre
 					class="overflow-x-auto rounded-md border border-border bg-bg-base p-3 font-mono text-[11px] leading-relaxed text-fg">{snippet}</pre>
 				<p class="mt-1 text-[11px] text-fg-muted">
-					Edit <code class="font-mono">host</code> to your Plex address, then commit and redeploy.
+					{i18n.common_edit()} <code class="font-mono">host</code> to your Plex address, then commit and redeploy.
 				</p>
 			</div>
 		{/if}
@@ -123,7 +122,7 @@
 			onclick={close}
 			class="inline-flex h-9 items-center rounded-md border border-border px-3 text-sm font-medium text-fg-muted transition hover:bg-surface hover:text-fg"
 		>
-			Close
+			{i18n.common_close()}
 		</button>
 	{/snippet}
 </Modal>

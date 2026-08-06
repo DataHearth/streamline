@@ -2,6 +2,7 @@
 	import Modal from "../modals/Modal.svelte";
 	import ReleasesTable from "../movies/ReleasesTable.svelte";
 	import ReplaceExistingToggle from "../movies/ReplaceExistingToggle.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	let {
 		open,
@@ -26,7 +27,7 @@
 
 <Modal
 	{open}
-	title={scopeLabel ? `Manual search · ${scopeLabel}` : "Manual search"}
+	title={scopeLabel ? i18n.manual_search_scope({ scope: scopeLabel }) : i18n.action_manual_search()}
 	size="4xl"
 	{onClose}
 >

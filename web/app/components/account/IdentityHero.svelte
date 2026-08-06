@@ -5,6 +5,7 @@
 	import { auth } from "../../lib/auth.svelte";
 	import { formatDateTime, formatRelative } from "../../lib/dates";
 	import type { ApiKey, Session } from "../../lib/types";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	const sessions = createQuery<Session[]>(() => ({
 		queryKey: ["auth", "me", "sessions"],
@@ -39,11 +40,11 @@
 
 	let authMethodLabel = $derived(
 		user?.auth_method === "both"
-			? "local + SSO"
+			? i18n.account_auth_local_sso()
 			: user?.auth_method === "oidc"
-				? "SSO"
+				? i18n.common_sso()
 				: user?.auth_method === "local"
-					? "password"
+					? i18n.account_auth_password()
 					: null,
 	);
 </script>
@@ -75,7 +76,7 @@
 							class="inline-flex items-center gap-1 rounded-full bg-accent-soft px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-accent-text"
 						>
 							<ShieldCheck size={10} aria-hidden="true" />
-							Admin
+							{i18n.common_admin()}
 						</span>
 					{:else if user?.role}
 						<span
@@ -89,9 +90,11 @@
 					{user?.email ?? ""}
 				</p>
 				<p class="mt-1 font-mono text-[11px] text-fg-subtle">
-					Member since {formatDateTime(user?.created_at ?? "")}
+					{i18n.account_member_since({
+						date: formatDateTime(user?.created_at ?? ""),
+					})}
 					{#if authMethodLabel}
-						· signs in via {authMethodLabel}
+						{i18n.account_signs_in_via({ method: authMethodLabel })}
 					{/if}
 				</p>
 			</div>
@@ -100,11 +103,21 @@
 		<dl
 			class="grid w-full shrink-0 grid-cols-3 overflow-hidden rounded-lg border border-border bg-surface md:w-auto md:min-w-[320px] md:flex-1 md:max-w-md"
 		>
-			{@render stat(Monitor, "Sessions", String(sessionCount), true)}
-			{@render stat(KeyRound, "API keys", String(keyCount), true)}
+			{@render stat(
+				Monitor,
+				i18n.account_stat_sessions(),
+				String(sessionCount),
+				true,
+			)}
+			{@render stat(
+				KeyRound,
+				i18n.account_stat_api_keys(),
+				String(keyCount),
+				true,
+			)}
 			{@render stat(
 				Shield,
-				"Last seen",
+				i18n.account_stat_last_seen(),
 				lastSeen ? formatRelative(lastSeen) : "—",
 				false,
 			)}

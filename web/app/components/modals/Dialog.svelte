@@ -16,6 +16,7 @@
 <script lang="ts">
 	import type { Snippet } from "svelte";
 	import Modal from "./Modal.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	type Props = {
 		open: boolean;
@@ -95,6 +96,6 @@
 			a.variant ?? 'primary'
 		]}"
 	>
-		{a.pending ? "Working…" : a.label}
+		{a.pending ? i18n.common_working() : a.label}
 	</button>
 {/snippet}

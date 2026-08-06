@@ -11,6 +11,7 @@
 	import { importModeLabel, importStatusMeta } from "../../lib/imports";
 	import type { ImportScan } from "../../lib/types";
 	import ProgressBar from "../shared/ProgressBar.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	let { scan }: { scan: ImportScan } = $props();
 
@@ -83,7 +84,7 @@
 					status={meta.kind}
 					height={1.5}
 					shimmer
-					label="Scan progress"
+					label={i18n.imports_scan_progress()}
 				/>
 			</span>
 		{:else if scan.status === "failed" && scan.failure_reason}

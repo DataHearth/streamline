@@ -8,7 +8,7 @@
 	import { createForm } from "@tanstack/svelte-form";
 	import * as v from "valibot";
 	import { Users, Search, UserPlus } from "@lucide/svelte";
-	import { api } from "../../../lib/api";
+	import { api, errorText } from "../../../lib/api";
 	import { auth } from "../../../lib/auth.svelte";
 	import { toast } from "../../../lib/toast";
 	import { requireAdmin } from "../../../lib/guards";
@@ -20,6 +20,7 @@
 	import TextField from "../../../components/forms/TextField.svelte";
 	import Select from "../../../components/forms/Select.svelte";
 	import Dialog from "../../../components/modals/Dialog.svelte";
+	import { m as i18n } from "../../../lib/paraglide/messages.js";
 
 	const LIMIT = 25;
 
@@ -98,7 +99,7 @@
 			qc.invalidateQueries({ queryKey: ["users"] });
 			toast.ok("User deleted");
 		},
-		onError: (err) => toast.err(err.message),
+		onError: (err) => toast.err(errorText(err)),
 	}));
 
 	let deleting = $state<User | null>(null);
@@ -122,7 +123,7 @@
 			toast.ok("User created");
 			closeCreate();
 		},
-		onError: (err) => toast.err(err.message),
+		onError: (err) => toast.err(errorText(err)),
 	}));
 
 	const form = createForm(() => ({
@@ -173,7 +174,7 @@
 			<Users size={18} aria-hidden="true" />
 		</span>
 		<div>
-			<h1 class="text-2xl font-bold tracking-tight text-fg">Users</h1>
+			<h1 class="text-2xl font-bold tracking-tight text-fg">{i18n.settings_users()}</h1>
 			<p class="mt-0.5 text-sm text-fg-muted">
 				{total} total — admins, members, and request-only accounts.
 			</p>
@@ -185,7 +186,7 @@
 		class="inline-flex items-center gap-1.5 rounded-md bg-accent px-3.5 py-2 text-sm font-medium text-fg-on-accent transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
 	>
 		<UserPlus size={16} aria-hidden="true" />
-		New user
+		{i18n.users_new()}
 	</button>
 </header>
 
@@ -197,7 +198,7 @@
 		onsubmit={(e) => e.preventDefault()}
 	>
 		<label class="block">
-			<span class="mb-1 block text-xs font-medium text-fg-muted">Search</span>
+			<span class="mb-1 block text-xs font-medium text-fg-muted">{i18n.common_search()}</span>
 			<span
 				class="relative flex items-center rounded-md border border-border bg-bg focus-within:border-accent"
 			>
@@ -209,22 +210,22 @@
 				<input
 					type="search"
 					bind:value={q}
-					placeholder="Email or name"
+					placeholder={i18n.field_email_or_name()}
 					autocomplete="off"
 					class="w-full rounded-md bg-transparent py-2 pl-9 pr-3 text-sm text-fg placeholder:text-fg-faint focus:outline-none"
 				/>
 			</span>
 		</label>
 		<div class="block">
-			<span class="mb-1 block text-xs font-medium text-fg-muted">Role</span>
+			<span class="mb-1 block text-xs font-medium text-fg-muted">{i18n.common_role()}</span>
 			<Select
 				ariaLabel="Filter by role"
 				value={role}
 				options={[
-					{ value: "", label: "All roles" },
-					{ value: "admin", label: "Admin" },
-					{ value: "member", label: "Member" },
-					{ value: "request_only", label: "Request only" },
+					{ value: "", label: i18n.role_all() },
+					{ value: "admin", label: i18n.common_admin() },
+					{ value: "member", label: i18n.role_member() },
+					{ value: "request_only", label: i18n.role_request_only() },
 				]}
 				onChange={(v) => (role = v)}
 			/>
@@ -233,10 +234,10 @@
 
 	<div class="mt-5">
 		{#if users.isPending}
-			<p class="px-1 py-4 text-sm text-fg-subtle">Loading…</p>
+			<p class="px-1 py-4 text-sm text-fg-subtle">{i18n.common_loading()}</p>
 		{:else if users.isError}
 			<p class="px-1 py-4 text-sm text-status-failed">
-				Failed to load users: {users.error?.message}
+				{i18n.err_load_failed_detail({ reason: errorText(users.error) })}
 			</p>
 		{:else if items.length === 0}
 			<div
@@ -248,12 +249,12 @@
 					aria-hidden="true"
 				/>
 				<p class="mt-3 text-sm text-fg">
-					{hasFilter ? "No users match this filter." : "No users yet."}
+					{hasFilter ? i18n.users_no_match() : i18n.users_none_yet()}
 				</p>
 				<p class="mt-1 text-xs text-fg-muted">
 					{hasFilter
-						? "Try widening the search or clearing the role filter."
-						: "Create an invite below to onboard a teammate."}
+						? i18n.users_no_match_help()
+						: i18n.users_none_help()}
 				</p>
 			</div>
 		{:else}
@@ -296,7 +297,7 @@
 					onclick={() => (offset = Math.max(0, offset - LIMIT))}
 					class="inline-flex h-9 items-center rounded-md border border-border px-3 hover:border-accent disabled:cursor-not-allowed disabled:opacity-40"
 				>
-					Prev
+					{i18n.common_prev()}
 				</button>
 				<button
 					type="button"
@@ -304,7 +305,7 @@
 					onclick={() => (offset += LIMIT)}
 					class="inline-flex h-9 items-center rounded-md border border-border px-3 hover:border-accent disabled:cursor-not-allowed disabled:opacity-40"
 				>
-					Next
+					{i18n.common_next()}
 				</button>
 			</div>
 		</div>
@@ -345,12 +346,12 @@
 
 <Dialog
 	open={creating}
-	title="New user"
+	title={i18n.users_new()}
 	onClose={closeCreate}
 	actions={[
-		{ label: "Cancel", variant: "ghost" },
+		{ label: i18n.common_cancel(), variant: "ghost" },
 		{
-			label: "Create user",
+			label: i18n.users_create(),
 			variant: "primary",
 			onClick: () => form.handleSubmit(),
 			dismiss: false,
@@ -369,7 +370,7 @@
 			{#snippet children(field)}
 				<TextField
 					{field}
-					label="Email"
+					label={i18n.common_email()}
 					type="email"
 					autocomplete="off"
 					placeholder="teammate@example.com"
@@ -380,10 +381,10 @@
 			{#snippet children(field)}
 				<TextField
 					{field}
-					label="Password"
+					label={i18n.common_password()}
 					type="password"
 					autocomplete="new-password"
-					help="At least 8 characters"
+					help={i18n.validation_password_min()}
 				/>
 			{/snippet}
 		</form.Field>
@@ -391,7 +392,7 @@
 			{#snippet children(field)}
 				<TextField
 					{field}
-					label="Display name (optional)"
+					label={i18n.field_display_name()}
 					autocomplete="off"
 					placeholder="Jane Doe"
 				/>
@@ -400,19 +401,19 @@
 		<form.Field name="role">
 			{#snippet children(field)}
 				<Select
-					label="Role"
+					label={i18n.common_role()}
 					value={field.state.value as UserRole}
 					onChange={(v) => field.handleChange(v)}
 					options={[
-						{ value: "member", label: "Member" },
-						{ value: "request_only", label: "Request only" },
-						{ value: "admin", label: "Admin" },
+						{ value: "member", label: i18n.role_member() },
+						{ value: "request_only", label: i18n.role_request_only() },
+						{ value: "admin", label: i18n.common_admin() },
 					]}
 				/>
 			{/snippet}
 		</form.Field>
 		<button type="submit" class="sr-only" tabindex="-1" aria-hidden="true">
-			Create
+			{i18n.common_create()}
 		</button>
 	</form>
 </Dialog>
@@ -423,9 +424,9 @@
 	body="This permanently erases every resource they own."
 	onClose={() => (deleting = null)}
 	actions={[
-		{ label: "Cancel", variant: "ghost", autofocus: true },
+		{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },
 		{
-			label: "Delete user",
+			label: i18n.users_delete(),
 			variant: "danger",
 			onClick: () => deleting && deleteUser.mutate(deleting.id),
 		},

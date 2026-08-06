@@ -22,6 +22,7 @@
 	import { ArrowRight, Film } from "@lucide/svelte";
 	import Poster from "../movies/Poster.svelte";
 	import StatusPill from "../shared/StatusPill.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	let { item, loading = false }: { item?: HeroItem; loading?: boolean } =
 		$props();
@@ -70,7 +71,7 @@
 						class="h-1.5 w-1.5 rounded-full bg-accent motion-safe:animate-pulse"
 						aria-hidden="true"
 					></span>
-					New · Monitored · Tonight
+					{i18n.dash_hero_badge()}
 				</div>
 
 				<h2
@@ -119,7 +120,7 @@
 					href={item.href}
 					class="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-fg px-4 text-sm font-semibold text-bg-deep transition hover:bg-accent hover:text-fg-on-accent hover:shadow-glow active:scale-[0.97] md:w-auto md:justify-start"
 				>
-					Open details
+					{i18n.common_open_details()}
 					<ArrowRight size={14} aria-hidden="true" />
 				</a>
 				<!-- Own row below md. The design stacks these, but only because its
@@ -173,7 +174,7 @@
 {:else}
 	<section
 		class="relative overflow-hidden bg-bg-deep"
-		aria-label="No featured media yet"
+		aria-label={i18n.dash_featured_none()}
 	>
 		<div class="mx-auto w-full max-w-7xl px-4 py-16 md:px-8 md:py-24">
 			<div class="max-w-md">
@@ -185,17 +186,16 @@
 				<h2
 					class="mb-2 text-2xl font-bold tracking-tight text-fg md:text-3xl"
 				>
-					Your library is waiting
+					{i18n.dash_library_waiting()}
 				</h2>
 				<p class="mb-6 text-sm leading-relaxed text-fg-muted [text-wrap:pretty]">
-					Add a movie or series — once it's downloaded and available, it'll be
-					featured right here.
+					{i18n.dash_hero_empty_help()}
 				</p>
 				<a
 					href="/movies"
 					class="inline-flex h-10 items-center gap-2 rounded-md bg-fg px-4 text-sm font-semibold text-bg-deep transition hover:bg-accent hover:text-fg-on-accent hover:shadow-glow active:scale-[0.97]"
 				>
-					Browse library
+					{i18n.dash_browse_library()}
 					<ArrowRight size={14} aria-hidden="true" />
 				</a>
 			</div>

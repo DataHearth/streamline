@@ -4,6 +4,7 @@
 	import Select from "../../forms/Select.svelte";
 	import Checkbox from "../../forms/Checkbox.svelte";
 	import type { Resolution } from "../../../lib/types";
+	import { m as i18n } from "../../../lib/paraglide/messages.js";
 
 	type Values = {
 		name: string;
@@ -21,7 +22,7 @@
 <div class="space-y-4">
 	<form.Field name="name">
 		{#snippet children(field)}
-			<TextField {field} label="Name" placeholder="1080p preferred" />
+			<TextField {field} label={i18n.common_name()} placeholder="1080p preferred" />
 		{/snippet}
 	</form.Field>
 
@@ -30,13 +31,13 @@
 			{#snippet children(field)}
 				<div>
 					<Select
-						label="Preferred resolution"
+						label={i18n.quality_preferred_resolution()}
 						value={field.state.value}
 						options={RESOLUTIONS.map((r) => ({ value: r, label: r }))}
 						onChange={(v) => field.handleChange(v)}
 					/>
 					<p class="mt-1 text-xs text-fg-muted">
-						Releases at this resolution score highest.
+						{i18n.quality_preferred_help()}
 					</p>
 				</div>
 			{/snippet}
@@ -46,13 +47,13 @@
 			{#snippet children(field)}
 				<div>
 					<Select
-						label="Minimum resolution"
+						label={i18n.quality_minimum_resolution()}
 						value={field.state.value}
 						options={RESOLUTIONS.map((r) => ({ value: r, label: r }))}
 						onChange={(v) => field.handleChange(v)}
 					/>
 					<p class="mt-1 text-xs text-fg-muted">
-						Releases below this resolution are skipped.
+						{i18n.quality_minimum_help()}
 					</p>
 				</div>
 			{/snippet}
@@ -65,8 +66,8 @@
 				name={field.name}
 				checked={field.state.value}
 				onChange={(v) => field.handleChange(v)}
-				label="Allow upgrades"
-				description="Re-grab when a higher-quality release becomes available."
+				label={i18n.quality_allow_upgrades()}
+				description={i18n.quality_upgrades_help()}
 			/>
 		{/snippet}
 	</form.Field>

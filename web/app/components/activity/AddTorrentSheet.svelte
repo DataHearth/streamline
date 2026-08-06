@@ -6,6 +6,8 @@
 	import { sheetSwipe } from "../../lib/sheet-swipe";
 	import { isMagnet, readTorrentFile } from "../../lib/torrent-file";
 	import type { AddTorrentRequest } from "../../lib/types";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { errorText } from "../../lib/api";
 
 	// The add-torrent modal below md. Both inputs are on screen at once rather
 	// than behind a source switcher — on a phone the magnet almost always comes
@@ -59,7 +61,7 @@
 			// A file and a magnet are two different adds; the file wins the form.
 			magnet = "";
 		} catch (err) {
-			fileErr = err instanceof Error ? err.message : "Could not read that file.";
+			fileErr = errorText(err, i18n.torrent_read_failed());
 		}
 	}
 
@@ -88,11 +90,11 @@
 		class="fixed inset-0 z-50 md:hidden"
 		role="dialog"
 		aria-modal="true"
-		aria-label="Add torrent"
+		aria-label={i18n.action_add_torrent()}
 	>
 		<button
 			type="button"
-			aria-label="Close"
+			aria-label={i18n.common_close()}
 			transition:fade={{ duration: 160 }}
 			onclick={onClose}
 			class="absolute inset-0 h-full w-full cursor-default bg-black/55"
@@ -110,11 +112,11 @@
 					aria-hidden="true"
 					class="absolute left-1/2 top-2 h-1 w-9 -translate-x-1/2 rounded-full bg-border-strong"
 				></span>
-				<h2 class="text-[17px] font-semibold tracking-tight text-fg">Add torrent</h2>
+				<h2 class="text-[17px] font-semibold tracking-tight text-fg">{i18n.action_add_torrent()}</h2>
 				<button
 					type="button"
 					onclick={onClose}
-					aria-label="Close"
+					aria-label={i18n.common_close()}
 					class="grid h-9 w-9 place-items-center rounded-full bg-surface text-fg-subtle transition active:bg-bg-hover"
 				>
 					<X size={16} aria-hidden="true" />
@@ -126,7 +128,7 @@
 				class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-2"
 			>
 				<div class="mb-2.5 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fg-faint">
-					Magnet link
+					{i18n.torrent_magnet_link()}
 				</div>
 				<div
 					class="flex h-11 items-center gap-2.5 rounded-xl border border-border bg-bg-card px-3.5 transition focus-within:border-accent"
@@ -145,7 +147,7 @@
 							}
 						}}
 						placeholder="magnet:?xt=urn:btih:…"
-						aria-label="Magnet link"
+						aria-label={i18n.torrent_magnet_link()}
 						class="min-w-0 flex-1 bg-transparent font-mono text-[13px] text-fg outline-none placeholder:text-fg-faint"
 					/>
 					<button
@@ -153,12 +155,12 @@
 						onclick={paste}
 						class="shrink-0 text-[12.5px] font-semibold text-accent-text transition active:opacity-70"
 					>
-						Paste
+						{i18n.common_paste()}
 					</button>
 				</div>
 				{#if magnet.trim() && !magnetValid}
 					<p class="mt-1.5 text-[11.5px] text-status-failed">
-						That doesn't look like a magnet link — it should start with
+						{i18n.torrent_not_magnet_straight()}
 						<code class="font-mono">magnet:?</code>.
 					</p>
 				{/if}
@@ -172,10 +174,10 @@
 						<span class="max-w-full truncate font-mono text-[12px] text-fg">
 							{fileName}
 						</span>
-						<span class="text-[11px] text-fg-subtle">Tap to choose a different file</span>
+						<span class="text-[11px] text-fg-subtle">{i18n.torrent_tap_change_file()}</span>
 					{:else}
 						<Upload size={20} class="text-fg-faint" aria-hidden="true" />
-						<span class="text-[13px] font-semibold text-fg">Choose a .torrent file</span>
+						<span class="text-[13px] font-semibold text-fg">{i18n.torrent_choose_file()}</span>
 						<span class="text-[11px] text-fg-subtle">or drop it here</span>
 					{/if}
 				</label>
@@ -188,8 +190,8 @@
 				>
 					<Info size={14} class="mt-0.5 shrink-0" aria-hidden="true" />
 					<span>
-						Not linked to a library item — you'll be prompted to import it from
-						<span class="font-semibold">Needs attention</span> once it finishes.
+						{i18n.torrent_not_linked_straight()}
+						<span class="font-semibold">{i18n.common_needs_attention()}</span> once it finishes.
 					</span>
 				</div>
 			</div>
@@ -202,7 +204,7 @@
 					onclick={onClose}
 					class="inline-flex h-11 items-center justify-center rounded-xl px-4 text-[14px] font-medium text-fg-muted transition active:bg-surface"
 				>
-					Cancel
+					{i18n.common_cancel()}
 				</button>
 				<button
 					type="button"
@@ -213,7 +215,7 @@
 					{#if busy}
 						<LoaderCircle size={16} class="motion-safe:animate-spin" aria-hidden="true" />
 					{/if}
-					{busy ? "Adding…" : "Add torrent"}
+					{busy ? i18n.action_adding() : i18n.action_add_torrent()}
 				</button>
 			</div>
 		</div>

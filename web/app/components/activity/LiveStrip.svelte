@@ -2,6 +2,7 @@
 	import { untrack } from "svelte";
 	import type { QueueEntry } from "../../lib/types";
 	import { formatSpeed, formatEta } from "../../lib/format";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	let { items }: { items: QueueEntry[] } = $props();
 
@@ -83,7 +84,7 @@
 		<div
 			class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-fg-faint"
 		>
-			Active
+			{i18n.common_active()}
 		</div>
 	</div>
 	<div>
@@ -93,7 +94,7 @@
 		<div
 			class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-fg-faint"
 		>
-			Aggregate ↓
+			{i18n.torrent_aggregate_down()}
 		</div>
 	</div>
 	<div>
@@ -101,7 +102,7 @@
 		<div
 			class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-fg-faint"
 		>
-			Importing
+			{i18n.activity_importing()}
 		</div>
 	</div>
 	<div>
@@ -111,7 +112,7 @@
 		<div
 			class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-fg-faint"
 		>
-			Next ETA
+			{i18n.activity_next_eta()}
 		</div>
 	</div>
 	<div class="col-span-2 h-10 sm:col-span-4 lg:col-span-1">

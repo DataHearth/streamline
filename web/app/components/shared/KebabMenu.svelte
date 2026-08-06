@@ -22,6 +22,7 @@
 	import { cubicOut } from "svelte/easing";
 	import { MoreHorizontal, MoreVertical } from "@lucide/svelte";
 	import { cn } from "../../lib/cn";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	let {
 		items,
@@ -144,7 +145,7 @@
 	type="button"
 	aria-haspopup="menu"
 	aria-expanded={open}
-	aria-label="More actions"
+	aria-label={i18n.common_more_actions()}
 	onclick={toggle}
 	class={cn(
 		"grid place-items-center transition focus:outline-none focus:ring-2 focus:ring-accent-ring",

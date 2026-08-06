@@ -7,7 +7,7 @@
 	import { createForm } from "@tanstack/svelte-form";
 	import { Mail, Send, Trash2, Clipboard, Link as LinkIcon } from "@lucide/svelte";
 	import * as v from "valibot";
-	import { api } from "../../lib/api";
+	import { api, errorText } from "../../lib/api";
 	import { toast } from "../../lib/toast";
 	import { inviteEmail, userRole } from "../../lib/schemas";
 	import { formatDateTime, formatRelative } from "../../lib/dates";
@@ -21,6 +21,7 @@
 	import Select from "../forms/Select.svelte";
 	import SubmitButton from "../forms/SubmitButton.svelte";
 	import Dialog from "../modals/Dialog.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	const REGISTRATION_OFF_HINT =
 		"Registration is disabled — an invite created now could not be redeemed.";
@@ -57,7 +58,7 @@
 			qc.invalidateQueries({ queryKey: ["auth", "invites"] });
 			toast.ok("Invite created");
 		},
-		onError: (err) => toast.err(err.message),
+		onError: (err) => toast.err(errorText(err)),
 	}));
 
 	const revoke = createMutation<null, Error, number>(() => ({
@@ -67,7 +68,7 @@
 			qc.invalidateQueries({ queryKey: ["auth", "invites"] });
 			toast.ok("Invite revoked");
 		},
-		onError: (err) => toast.err(err.message),
+		onError: (err) => toast.err(errorText(err)),
 	}));
 
 	const form = createForm(() => ({
@@ -111,11 +112,11 @@
 			<Mail size={16} aria-hidden="true" />
 		</span>
 		<div>
-			<h2 class="text-lg font-semibold text-fg">Invites</h2>
+			<h2 class="text-lg font-semibold text-fg">{i18n.invites_label()}</h2>
 			<p class="mt-0.5 text-sm text-fg-muted">
 				{registrationOff
 					? REGISTRATION_OFF_HINT
-					: "Send registration links bound to an email and role. Tokens are shown once."}
+					: i18n.users_invites_help()}
 			</p>
 		</div>
 	</header>
@@ -131,7 +132,7 @@
 			{#snippet children(field)}
 				<TextField
 					{field}
-					label="Email"
+					label={i18n.common_email()}
 					type="email"
 					autocomplete="off"
 					placeholder="teammate@example.com"
@@ -143,12 +144,12 @@
 		<form.Field name="role">
 			{#snippet children(field)}
 				<Select
-					label="Role"
+					label={i18n.common_role()}
 					value={field.state.value as UserRole}
 					options={[
-						{ value: "member", label: "Member" },
-						{ value: "request_only", label: "Request only" },
-						{ value: "admin", label: "Admin" },
+						{ value: "member", label: i18n.role_member() },
+						{ value: "request_only", label: i18n.role_request_only() },
+						{ value: "admin", label: i18n.common_admin() },
 					]}
 					onChange={(v) => field.handleChange(v)}
 					disabled={registrationOff}
@@ -157,7 +158,7 @@
 		</form.Field>
 		<SubmitButton
 			{form}
-			label="Create invite"
+			label={i18n.invites_create()}
 			pendingLabel="Creating…"
 			disabled={registrationOff}
 			title={registrationOff ? REGISTRATION_OFF_HINT : undefined}
@@ -175,7 +176,7 @@
 			</p>
 			<div class="grid gap-2">
 				<div>
-					<p class="text-fg-muted">Registration link</p>
+					<p class="text-fg-muted">{i18n.invites_registration_link()}</p>
 					<code
 						class="mt-1 block break-all rounded bg-bg-deep p-2 font-mono text-fg"
 					>
@@ -187,11 +188,11 @@
 						class="mt-1.5 inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-fg-muted hover:bg-surface hover:text-fg"
 					>
 						<LinkIcon size={12} aria-hidden="true" />
-						Copy link
+						{i18n.common_copy_link()}
 					</button>
 				</div>
 				<div>
-					<p class="text-fg-muted">Raw token</p>
+					<p class="text-fg-muted">{i18n.invites_raw_token()}</p>
 					<code
 						class="mt-1 block break-all rounded bg-bg-deep p-2 font-mono text-fg"
 					>
@@ -203,7 +204,7 @@
 						class="mt-1.5 inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-fg-muted hover:bg-surface hover:text-fg"
 					>
 						<Clipboard size={12} aria-hidden="true" />
-						Copy token
+						{i18n.common_copy_token()}
 					</button>
 				</div>
 			</div>
@@ -212,16 +213,16 @@
 
 	<div class="mt-5">
 		{#if invites.isPending}
-			<p class="text-sm text-fg-subtle">Loading…</p>
+			<p class="text-sm text-fg-subtle">{i18n.common_loading()}</p>
 		{:else if invites.isError}
 			<p class="text-sm text-status-failed">
-				Failed to load invites: {invites.error?.message}
+				{i18n.err_load_failed_detail({ reason: errorText(invites.error) })}
 			</p>
 		{:else if (invites.data ?? []).length === 0}
 			<p
 				class="rounded-md border border-dashed border-border bg-bg-deep/40 px-4 py-3 text-sm text-fg-muted"
 			>
-				No pending invites.
+				{i18n.invites_none()}
 			</p>
 		{:else}
 			<ul class="divide-y divide-border rounded-md border border-border">
@@ -269,10 +270,10 @@
 								type="button"
 								onclick={() => (revoking = inv.id)}
 								class="inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs font-medium text-status-failed hover:bg-status-failed/10"
-								aria-label="Revoke invite"
+								aria-label={i18n.invites_revoke()}
 							>
 								<Trash2 size={14} aria-hidden="true" />
-								Revoke
+								{i18n.common_revoke()}
 							</button>
 						{/if}
 					</li>
@@ -284,13 +285,13 @@
 
 <Dialog
 	open={revoking !== null}
-	title="Revoke this invite?"
+	title={i18n.invites_revoke_confirm()}
 	body="The invite link will stop working immediately."
 	onClose={() => (revoking = null)}
 	actions={[
-		{ label: "Cancel", variant: "ghost", autofocus: true },
+		{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },
 		{
-			label: "Revoke",
+			label: i18n.common_revoke(),
 			variant: "danger",
 			onClick: () => revoking !== null && revoke.mutate(revoking),
 		},

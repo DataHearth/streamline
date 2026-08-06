@@ -2,7 +2,7 @@
 	import { untrack } from "svelte";
 	import { onMount } from "svelte";
 	import { createQuery } from "@tanstack/svelte-query";
-	import { api } from "../../lib/api";
+	import { api, errorText } from "../../lib/api";
 	import { formatRelative } from "../../lib/dates";
 	import { loadPref, savePref } from "../../lib/prefs";
 	import { fold } from "../../lib/text";
@@ -19,6 +19,7 @@
 	import SeriesEmpty from "../../components/series/SeriesEmpty.svelte";
 	import SeriesBulkActions from "../../components/series/SeriesBulkActions.svelte";
 	import type { PaginatedTVShows, ScheduleList, TVShow } from "../../lib/types";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	type View = "grid" | "list";
 
@@ -231,12 +232,16 @@
 	// Below md the topbar carries this under the title and the page's own count
 	// line stands down; at md and up nothing changes.
 	let metaLine = $derived.by(() => {
-		const parts = [`${counts.all} shows`];
+		const parts = [i18n.series_shows_count({ count: counts.all })];
 		if (libraryEpisodes > 0)
 			parts.push(
-				`${totalEpisodes.toLocaleString()} of ${libraryEpisodes.toLocaleString()} episodes`,
+				i18n.series_episodes_of({
+					have: totalEpisodes.toLocaleString(),
+					total: libraryEpisodes.toLocaleString(),
+				}),
 			);
-		if (lastScan) parts.push(`scan ${formatRelative(lastScan)}`);
+		if (lastScan)
+			parts.push(i18n.series_scan_meta({ when: formatRelative(lastScan) }));
 		return parts.join(" · ");
 	});
 
@@ -291,7 +296,7 @@
 <div class="flex flex-col">
 	{#if seriesQuery.isLoading}
 		<div class="w-full px-4 py-16 text-center text-sm text-fg-subtle md:px-6">
-			Loading series…
+			{i18n.common_loading_series()}
 		</div>
 	{:else if seriesQuery.isError}
 		<div class="w-full px-4 md:px-6">
@@ -299,10 +304,10 @@
 				class="rounded-lg border border-dashed border-status-failed/40 bg-status-failed/5 py-12 text-center"
 			>
 				<p class="text-sm font-semibold text-status-failed">
-					Failed to load series
+					{i18n.series_load_failed()}
 				</p>
 				<p class="mt-1 text-xs text-fg-subtle">
-					{seriesQuery.error?.message ?? "Unknown error"}
+					{errorText(seriesQuery.error, i18n.common_unknown_error())}
 				</p>
 			</div>
 		</div>
@@ -335,7 +340,10 @@
 			class="hidden w-full flex-wrap items-baseline justify-between gap-2 px-4 pt-4 pb-2 font-mono text-[11px] text-fg-subtle md:flex md:px-6"
 		>
 			<div>
-				{visibleSeries.length} of {counts.all} series
+				{i18n.series_count_of({
+					visible: visibleSeries.length,
+					total: counts.all,
+				})}
 				{#if query}
 					<span
 						class="ml-2 inline-flex items-center gap-1 rounded-full bg-accent-soft px-2 py-0.5 text-accent-text"
@@ -344,7 +352,7 @@
 						<button
 							type="button"
 							onclick={() => (query = "")}
-							aria-label="Clear search"
+							aria-label={i18n.common_clear_search()}
 							class="text-accent-text transition hover:text-fg"
 						>
 							×
@@ -353,10 +361,14 @@
 				{/if}
 			</div>
 			<div class="flex flex-wrap items-center gap-2">
-				<span>{totalEpisodes.toLocaleString()} episodes</span>
+				<span
+					>{i18n.series_episode_count({
+						count: totalEpisodes.toLocaleString(),
+					})}</span
+				>
 				{#if lastScan}
 					<span class="text-fg-faint">·</span>
-					<span>last scan {formatRelative(lastScan)}</span>
+					<span>{i18n.series_last_scan({ when: formatRelative(lastScan) })}</span>
 				{/if}
 			</div>
 		</div>

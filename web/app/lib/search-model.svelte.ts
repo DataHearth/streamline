@@ -29,6 +29,7 @@ import { api } from "./api";
 import { auth } from "./auth.svelte";
 import { fold } from "./text";
 import type { Movie, TVShow } from "./types";
+import { m as i18n } from "./paraglide/messages.js";
 
 export type PageItem = {
 	kind: "page";
@@ -68,22 +69,22 @@ const TITLE_MIN = 2;
 const TITLE_LIMIT = 5;
 
 const PAGES: PageItem[] = [
-	{ kind: "page", label: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
-	{ kind: "page", label: "Movies", path: "/movies", icon: Film },
-	{ kind: "page", label: "Series", path: "/series", icon: Tv },
-	{ kind: "page", label: "Requests", path: "/requests", icon: Inbox },
-	{ kind: "page", label: "Activity", path: "/activity", icon: Activity },
-	{ kind: "page", label: "Torrents", path: "/activity/torrents", icon: Magnet },
-	{ kind: "page", label: "Imports", path: "/library/imports", icon: FolderInput },
-	{ kind: "page", label: "Calendar", path: "/calendar", icon: CalendarDays },
-	{ kind: "page", label: "Settings", path: "/settings", icon: Settings },
-	{ kind: "page", label: "Account", path: "/account", icon: User },
+	{ kind: "page", label: i18n.nav_dashboard(), path: "/dashboard", icon: LayoutDashboard },
+	{ kind: "page", label: i18n.movies_label(), path: "/movies", icon: Film },
+	{ kind: "page", label: i18n.settings_series(), path: "/series", icon: Tv },
+	{ kind: "page", label: i18n.requests_label(), path: "/requests", icon: Inbox },
+	{ kind: "page", label: i18n.nav_activity(), path: "/activity", icon: Activity },
+	{ kind: "page", label: i18n.torrent_label(), path: "/activity/torrents", icon: Magnet },
+	{ kind: "page", label: i18n.imports_label(), path: "/library/imports", icon: FolderInput },
+	{ kind: "page", label: i18n.common_calendar(), path: "/calendar", icon: CalendarDays },
+	{ kind: "page", label: i18n.nav_settings(), path: "/settings", icon: Settings },
+	{ kind: "page", label: i18n.common_account(), path: "/account", icon: User },
 ];
 
 export function itemKindLabel(item: SearchItem): string {
 	if (item.kind === "page") return "Navigate";
 	if (item.kind === "action") return "Action";
-	return item.kind === "movie" ? "Movie" : "Series";
+	return item.kind === "movie" ? i18n.common_movie() : i18n.settings_series();
 }
 
 function openAddMovie() {
@@ -123,7 +124,7 @@ export function createSearchModel(
 		if (isAdmin) {
 			base.push({
 				kind: "page",
-				label: "Users",
+				label: i18n.settings_users(),
 				path: "/settings/users",
 				icon: Users,
 			});
@@ -133,11 +134,11 @@ export function createSearchModel(
 
 	// request_only users request rather than add, so the labels adapt.
 	function actions(): ActionItem[] {
-		const verb = auth.canAddDirectly ? "Add" : "Request";
+		const verb = auth.canAddDirectly ? i18n.common_add() : i18n.action_request();
 		return [
 			{ kind: "action", label: `${verb} movie…`, icon: Film, run: openAddMovie },
 			{ kind: "action", label: `${verb} series…`, icon: Tv, run: openAddSeries },
-			{ kind: "action", label: "Sign out", icon: LogOut, run: signOut },
+			{ kind: "action", label: i18n.common_sign_out(), icon: LogOut, run: signOut },
 		];
 	}
 
@@ -173,21 +174,21 @@ export function createSearchModel(
 		const titles: SearchSection[] = [];
 		if (opts.compact) {
 			const items = [...movieHits, ...seriesHits];
-			if (items.length) titles.push({ id: "titles", label: "Titles", items });
+			if (items.length) titles.push({ id: "titles", label: i18n.dash_titles(), items });
 		} else {
 			if (movieHits.length)
-				titles.push({ id: "movies", label: "Movies", items: movieHits });
+				titles.push({ id: "movies", label: i18n.movies_label(), items: movieHits });
 			if (seriesHits.length)
-				titles.push({ id: "series", label: "Series", items: seriesHits });
+				titles.push({ id: "series", label: i18n.settings_series(), items: seriesHits });
 		}
 
 		const rest: SearchSection[] = [];
 		if (matchedPages.length)
-			rest.push({ id: "pages", label: "Pages", items: matchedPages });
+			rest.push({ id: "pages", label: i18n.common_pages(), items: matchedPages });
 		if (matchedActions.length)
 			rest.push({
 				id: "actions",
-				label: opts.compact ? "Actions" : "Quick actions",
+				label: opts.compact ? i18n.common_actions() : i18n.common_quick_actions(),
 				items: matchedActions,
 			});
 

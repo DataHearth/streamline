@@ -9,6 +9,7 @@
 	import { formatBytes } from "../../lib/format";
 	import { formatDateShort } from "../../lib/dates";
 	import type { Episode, Season, SeriesType } from "../../lib/types";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	// Phone shape for the episodes tab. The desktop pair — a horizontal season
 	// strip above a seven-column table — needs width this viewport doesn't have,
@@ -71,26 +72,26 @@
 		return [
 			{
 				key: "info",
-				label: "Episode details",
+				label: i18n.series_episode_details(),
 				icon: Info,
 				onSelect: () => openDetail(s, ep),
 			},
 			{
 				key: "search",
-				label: "Manual search…",
+				label: i18n.action_manual_search_ellipsis(),
 				icon: Search,
 				disabled: st === "unaired",
-				title: st === "unaired" ? "Not aired yet" : undefined,
+				title: st === "unaired" ? i18n.series_not_aired_yet() : undefined,
 				onSelect: () => onManualSearch(ep),
 			},
 			{
 				key: "delete",
-				label: "Delete file",
+				label: i18n.action_delete_file(),
 				icon: Trash2,
 				danger: true,
 				dividerBefore: true,
 				disabled: !hasFile,
-				title: hasFile ? undefined : "No file on disk",
+				title: hasFile ? undefined : i18n.series_no_file_on_disk(),
 				onSelect: () => onDeleteFile(ep),
 			},
 		];
@@ -103,7 +104,7 @@
 		return String(n).padStart(2, "0");
 	}
 	function seasonName(s: Season): string {
-		return s.number === 0 ? "Specials" : `${seasonLabel} ${pad(s.number)}`;
+		return s.number === 0 ? i18n.series_specials() : `${seasonLabel} ${pad(s.number)}`;
 	}
 	function epCode(s: Season, ep: Episode): string {
 		if (seriesType === "daily") return `#${ep.number}`;
@@ -205,8 +206,8 @@
 					onclick={() => onMonitorSeason(s)}
 					aria-pressed={s.monitored}
 					aria-label={s.monitored
-						? `Stop monitoring ${seasonName(s)}`
-						: `Monitor ${seasonName(s)}`}
+						? i18n.a11y_stop_monitoring_season({ season: seasonName(s) })
+						: i18n.a11y_monitor_season({ season: seasonName(s) })}
 					class={cn(
 						"grid h-9 w-9 shrink-0 place-items-center rounded-lg border transition",
 						s.monitored
@@ -262,8 +263,8 @@
 								onclick={() => onMonitorEpisode(ep)}
 								aria-pressed={ep.monitored}
 								aria-label={ep.monitored
-									? "Stop monitoring episode"
-									: "Monitor episode"}
+									? i18n.action_stop_monitoring_episode()
+									: i18n.action_monitor_episode()}
 								class={cn(
 									"grid h-8 w-8 shrink-0 place-items-center rounded-md transition disabled:opacity-40",
 									ep.monitored ? "text-accent-text" : "text-fg-faint",

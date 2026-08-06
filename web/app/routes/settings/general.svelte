@@ -7,8 +7,9 @@
 		Database,
 		Lock,
 	} from "@lucide/svelte";
-	import { api } from "../../lib/api";
+	import { api, errorText } from "../../lib/api";
 	import type { DiskUsage, SystemInfo } from "../../lib/types";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	const info = createQuery<SystemInfo>(() => ({
 		queryKey: ["system", "info"],
@@ -23,18 +24,17 @@
 </script>
 
 <header>
-	<h1 class="text-2xl font-bold tracking-tight text-fg">General</h1>
+	<h1 class="text-2xl font-bold tracking-tight text-fg">{i18n.settings_general()}</h1>
 	<p class="mt-1 max-w-2xl text-sm text-fg-muted">
-		A snapshot of how Streamline is running. These values are read-only —
-		edit your config file to change them.
+		{i18n.settings_general_intro()}
 	</p>
 </header>
 
 {#if info.isPending}
-	<p class="mt-6 text-sm text-fg-subtle">Loading…</p>
+	<p class="mt-6 text-sm text-fg-subtle">{i18n.common_loading()}</p>
 {:else if info.isError}
 	<p class="mt-6 text-sm text-status-failed">
-		Failed to load system info: {info.error?.message}
+		{i18n.err_load_failed_detail({ reason: errorText(info.error) })}
 	</p>
 {:else if info.data}
 	{@const d = info.data}
@@ -45,7 +45,7 @@
 			"Public URL",
 			d.public_url,
 			true,
-			d.https_warn ? { kind: "warn", label: "No HTTPS" } : null,
+			d.https_warn ? { kind: "warn", label: i18n.settings_no_https() } : null,
 		)}
 		{@render storageCard(
 			Folder,
@@ -63,7 +63,7 @@
 		)}
 		{@render card(Lock, "Auth mode", d.auth_mode, true, {
 			kind: "ok",
-			label: "Login required",
+			label: i18n.settings_login_required(),
 		})}
 	</div>
 
@@ -72,9 +72,9 @@
 			class="flex items-start justify-between border-b border-border px-5 py-3.5"
 		>
 			<div>
-				<h2 class="text-sm font-semibold text-fg">Build & runtime</h2>
+				<h2 class="text-sm font-semibold text-fg">{i18n.settings_build_runtime()}</h2>
 				<p class="mt-0.5 text-xs text-fg-muted">
-					Helpful when filing bug reports.
+					{i18n.settings_build_help()}
 				</p>
 			</div>
 		</header>

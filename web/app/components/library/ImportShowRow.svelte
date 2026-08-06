@@ -10,10 +10,11 @@
 		Pencil,
 		TriangleAlert,
 	} from "@lucide/svelte";
-	import { api } from "../../lib/api";
+	import { api, errorText } from "../../lib/api";
 	import { cn } from "../../lib/cn";
 	import { toast } from "../../lib/toast";
 	import type { ImportFileDecision, ImportScanShow } from "../../lib/types";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	type Props = {
 		show: ImportScanShow;
@@ -40,15 +41,15 @@
 			qc.invalidateQueries({ queryKey: ["import", scanId, "shows"] });
 			qc.invalidateQueries({ queryKey: ["import", scanId, "pending-shows"] });
 		},
-		onError: (err) => toast.err(err.message),
+		onError: (err) => toast.err(errorText(err)),
 	}));
 
 	// Same four buckets as the movie file row, tinted identically.
 	const CLASS = {
-		confirmed: { label: "Confirmed", kind: "available", Icon: CircleCheckBig },
-		ambiguous: { label: "Ambiguous", kind: "wanted", Icon: CircleHelp },
-		unmatched: { label: "Unmatched", kind: "paused", Icon: CircleHelp },
-		existing: { label: "Existing", kind: "grabbing", Icon: Link2 },
+		confirmed: { label: i18n.imports_confirmed(), kind: "available", Icon: CircleCheckBig },
+		ambiguous: { label: i18n.imports_ambiguous(), kind: "wanted", Icon: CircleHelp },
+		unmatched: { label: i18n.imports_unmatched(), kind: "paused", Icon: CircleHelp },
+		existing: { label: i18n.imports_existing(), kind: "grabbing", Icon: Link2 },
 	} as const;
 	let cls = $derived(CLASS[show.classification]);
 
@@ -69,12 +70,12 @@
 	);
 	let chosenLabel = $derived(
 		chosenTvdb == null
-			? "Choose match"
+			? i18n.action_choose_match()
 			: chosenMatch
 				? chosenMatch.year
 					? `${chosenMatch.title} (${chosenMatch.year})`
 					: chosenMatch.title
-				: "Match selected",
+				: i18n.imports_match_selected(),
 	);
 
 	let skipped = $derived(show.decision === "skip");
@@ -90,8 +91,8 @@
 		onclick={toggleSkip}
 		aria-pressed={skipped}
 		title={skipped
-			? "Restore this show to the import"
-			: "Exclude this show from the import"}
+			? i18n.imports_restore_show()
+			: i18n.imports_exclude_show()}
 		class={cn(
 			"inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring disabled:opacity-60",
 			skipped
@@ -99,7 +100,7 @@
 				: "border border-border bg-bg-card text-fg-muted hover:border-status-failed/40 hover:text-status-failed",
 		)}
 	>
-		{skipped ? "Restore" : "Skip"}
+		{skipped ? i18n.common_restore() : i18n.common_skip()}
 	</button>
 {/snippet}
 
@@ -142,7 +143,7 @@
 			style:color="var(--status-{cls.kind})"
 			style:background-color="color-mix(in srgb, var(--status-{cls.kind}) 14%, transparent)"
 			title={show.classification === "existing"
-				? "Show already in the library — committing replaces episode files that conflict"
+				? i18n.imports_show_exists()
 				: undefined}
 		>
 			<cls.Icon size={13} aria-hidden="true" />
@@ -156,7 +157,7 @@
 				class="inline-flex items-center gap-1 text-xs font-semibold text-status-available"
 			>
 				<CircleCheckBig size={13} aria-hidden="true" />
-				Created
+				{i18n.common_created()}
 			</span>
 		{:else if show.outcome === "failed"}
 			<span
@@ -164,28 +165,28 @@
 				title={show.outcome_message}
 			>
 				<TriangleAlert size={13} aria-hidden="true" />
-				Failed
+				{i18n.status_failed()}
 			</span>
 		{:else if show.decision === "accept"}
 			<span
 				class="inline-flex items-center gap-1 text-xs font-medium text-status-available"
 			>
 				<ArrowUp size={13} aria-hidden="true" />
-				Will adopt
+				{i18n.imports_will_adopt()}
 			</span>
 		{:else if show.decision === "skip"}
 			<span
 				class="inline-flex items-center gap-1 text-xs font-medium text-fg-muted"
 			>
 				<Minus size={13} aria-hidden="true" />
-				Will skip
+				{i18n.imports_will_skip()}
 			</span>
 		{:else if show.classification === "confirmed"}
-			<span class="text-xs text-fg-subtle">Auto-adopt</span>
+			<span class="text-xs text-fg-subtle">{i18n.imports_auto_adopt()}</span>
 		{:else if show.classification === "existing"}
-			<span class="text-xs text-fg-subtle">Link to show</span>
+			<span class="text-xs text-fg-subtle">{i18n.imports_link_to_show()}</span>
 		{:else}
-			<span class="text-xs text-fg-faint">Awaits decision</span>
+			<span class="text-xs text-fg-faint">{i18n.imports_awaits_decision()}</span>
 		{/if}
 	</td>
 
@@ -196,8 +197,8 @@
 					type="button"
 					onclick={() => onChooseMatch(show)}
 					title={chosenTvdb != null
-						? "Change the matched show"
-						: "Pick a TVDB match for this folder"}
+						? i18n.imports_change_matched_show()
+						: i18n.imports_pick_tvdb()}
 					class="inline-flex max-w-[12rem] items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring {chosenTvdb !=
 					null
 						? 'bg-status-available/15 text-status-available'
@@ -220,7 +221,7 @@
 					class="inline-flex items-center gap-1 rounded-md border border-border bg-bg-card px-2.5 py-1 text-xs font-medium text-fg-muted transition hover:border-accent/40 hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
 				>
 					<Pencil size={12} aria-hidden="true" />
-					Change match
+					{i18n.imports_change_match()}
 				</button>
 				{@render skipToggle()}
 			</div>

@@ -15,7 +15,7 @@
 		Trash2,
 		TriangleAlert,
 	} from "@lucide/svelte";
-	import { api } from "../../../lib/api";
+	import { api, errorText } from "../../../lib/api";
 	import { cn } from "../../../lib/cn";
 	import { formatDateTime, formatRelative } from "../../../lib/dates";
 	import {
@@ -43,6 +43,7 @@
 	import ImportShowRow from "../../../components/library/ImportShowRow.svelte";
 	import ImportProgress from "../../../components/library/ImportProgress.svelte";
 	import ImportSteps from "../../../components/library/ImportSteps.svelte";
+	import { m as i18n } from "../../../lib/paraglide/messages.js";
 
 	let routeParams = $state<Record<string, string>>({});
 	// goto is a derived store layered over the current fragment; calling
@@ -88,7 +89,7 @@
 		if (!cur) return;
 		if (prevStatus === "committing" && cur === "completed") {
 			toast.ok(
-				`Commit finished — ${scan.commit_success_count} imported, ${scan.commit_failed_count} failed`,
+				i18n.imports_commit_finished({ imported: scan.commit_success_count, failed: scan.commit_failed_count }),
 			);
 		}
 		prevStatus = cur;
@@ -255,7 +256,7 @@
 			qc.invalidateQueries({ queryKey: ["imports"] });
 			toast.ok("Scan cancelled");
 		},
-		onError: (err) => toast.err(err.message),
+		onError: (err) => toast.err(errorText(err)),
 	}));
 
 	const commit = createMutation<ImportScan, Error, void>(() => ({
@@ -268,7 +269,7 @@
 			qc.invalidateQueries({ queryKey: ["imports"] });
 			toast.ok("Commit started");
 		},
-		onError: (err) => toast.err(err.message),
+		onError: (err) => toast.err(errorText(err)),
 	}));
 
 	const discard = createMutation<null, Error, void>(() => ({
@@ -279,7 +280,7 @@
 			toast.ok("Scan discarded");
 			navigate("/library/imports");
 		},
-		onError: (err) => toast.err(err.message),
+		onError: (err) => toast.err(errorText(err)),
 	}));
 
 	// No bulk decision endpoint exists, so "Skip all unmatched" fans out
@@ -310,13 +311,13 @@
 				qc.invalidateQueries({
 					queryKey: ["import", importId, "pending"],
 				});
-				if (fail === 0) toast.ok(`Skipped ${ok} file${ok === 1 ? "" : "s"}`);
+				if (fail === 0) toast.ok(ok === 1 ? i18n.imports_skipped_file_one({ count: ok }) : i18n.imports_skipped_file_other({ count: ok }));
 				else
 					toast.err(
-						`Skipped ${ok}, failed on ${fail} — review the remaining files manually`,
+						i18n.imports_skip_partial_files({ ok, fail }),
 					);
 			},
-			onError: (err) => toast.err(err.message),
+			onError: (err) => toast.err(errorText(err)),
 		}),
 	);
 
@@ -345,13 +346,13 @@
 				qc.invalidateQueries({
 					queryKey: ["import", importId, "pending-shows"],
 				});
-				if (fail === 0) toast.ok(`Skipped ${ok} show${ok === 1 ? "" : "s"}`);
+				if (fail === 0) toast.ok(ok === 1 ? i18n.imports_skipped_show_one({ count: ok }) : i18n.imports_skipped_show_other({ count: ok }));
 				else
 					toast.err(
-						`Skipped ${ok}, failed on ${fail} — review the remaining shows manually`,
+						i18n.imports_skip_partial_shows({ ok, fail }),
 					);
 			},
-			onError: (err) => toast.err(err.message),
+			onError: (err) => toast.err(errorText(err)),
 		}),
 	);
 
@@ -382,7 +383,7 @@
 			qc.invalidateQueries({ queryKey: ["import", importId, "pending"] });
 			toast.ok("Match selected");
 		},
-		onError: (err) => toast.err(err.message),
+		onError: (err) => toast.err(errorText(err)),
 	}));
 
 	function onPickMatch(result: TMDBMovieResult) {
@@ -417,7 +418,7 @@
 			});
 			toast.ok("Match selected");
 		},
-		onError: (err) => toast.err(err.message),
+		onError: (err) => toast.err(errorText(err)),
 	}));
 
 	function onPickShowMatch(result: SeriesLookupResult) {
@@ -476,14 +477,14 @@
 		class="inline-flex items-center gap-1.5 text-xs text-fg-subtle transition hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
 	>
 		<ArrowLeft size={14} aria-hidden="true" />
-		Imports
+		{i18n.imports_label()}
 	</a>
 
 	{#if scanQuery.isPending}
-		<p class="mt-6 text-sm text-fg-subtle">Loading…</p>
+		<p class="mt-6 text-sm text-fg-subtle">{i18n.common_loading()}</p>
 	{:else if scanQuery.isError}
 		<p class="mt-6 text-sm text-status-failed">
-			Failed to load: {scanQuery.error?.message}
+			{i18n.err_load_failed_detail({ reason: errorText(scanQuery.error) })}
 		</p>
 	{:else if scan && headerMeta}
 		<header class="mt-3 flex flex-wrap items-start justify-between gap-3">
@@ -548,7 +549,7 @@
 						class="inline-flex items-center gap-1.5 rounded-md border border-border bg-bg-card px-3 py-1.5 text-xs font-medium text-fg-muted transition hover:border-border-strong hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring disabled:opacity-60"
 					>
 						<Square size={13} aria-hidden="true" />
-						{cancel.isPending ? "Cancelling…" : "Cancel"}
+						{cancel.isPending ? i18n.common_cancelling() : i18n.common_cancel()}
 					</button>
 				{:else if isReviewing}
 					<button
@@ -558,7 +559,7 @@
 						class="inline-flex items-center gap-1.5 rounded-md border border-border bg-bg-card px-3 py-1.5 text-xs font-medium text-fg-muted transition hover:border-status-failed/50 hover:text-status-failed focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring disabled:opacity-60"
 					>
 						<Trash2 size={13} aria-hidden="true" />
-						{discard.isPending ? "Discarding…" : "Discard"}
+						{discard.isPending ? i18n.common_discarding() : i18n.common_discard()}
 					</button>
 				{/if}
 			</div>
@@ -579,7 +580,7 @@
 					aria-hidden="true"
 				/>
 				<div class="min-w-0">
-					<p class="font-semibold">Scan failed</p>
+					<p class="font-semibold">{i18n.imports_scan_failed()}</p>
 					{#if scan.failure_reason}
 						<p class="mt-0.5 break-words text-xs">
 							{scan.failure_reason}
@@ -614,7 +615,7 @@
 				<header
 					class="flex items-center justify-between border-b border-border px-5 py-3.5 md:px-6"
 				>
-					<h2 class="text-base font-semibold text-fg">Shows</h2>
+					<h2 class="text-base font-semibold text-fg">{i18n.common_shows()}</h2>
 					{#if showTotal > 0}
 						<span class="font-mono text-xs tabular-nums text-fg-subtle">
 							{showTotal}
@@ -626,11 +627,11 @@
 					class="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3 md:px-5"
 				>
 					<label class="relative min-w-0 flex-1">
-						<span class="sr-only">Search shows</span>
+						<span class="sr-only">{i18n.imports_search_shows()}</span>
 						<input
 							type="search"
 							bind:value={q}
-							placeholder="Search folder or title…"
+							placeholder={i18n.imports_search_folder_title()}
 							class="w-full rounded-md border border-border bg-bg-card px-3 py-1.5 text-sm text-fg placeholder:text-fg-faint focus:outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent-ring"
 						/>
 					</label>
@@ -640,11 +641,11 @@
 							ariaLabel="Filter by classification"
 							onChange={(v) => (classification = v)}
 							options={[
-								{ value: "", label: "All classifications" },
-								{ value: "confirmed", label: "Confirmed" },
-								{ value: "ambiguous", label: "Ambiguous" },
-								{ value: "unmatched", label: "Unmatched" },
-								{ value: "existing", label: "Existing" },
+								{ value: "", label: i18n.imports_all_classifications() },
+								{ value: "confirmed", label: i18n.imports_confirmed() },
+								{ value: "ambiguous", label: i18n.imports_ambiguous() },
+								{ value: "unmatched", label: i18n.imports_unmatched() },
+								{ value: "existing", label: i18n.imports_existing() },
 							]}
 						/>
 					</div>
@@ -652,14 +653,14 @@
 
 				<div class="overflow-x-auto">
 					{#if showsQuery.isPending}
-						<p class="px-5 py-8 text-sm text-fg-subtle">Loading shows…</p>
+						<p class="px-5 py-8 text-sm text-fg-subtle">{i18n.common_loading_shows()}</p>
 					{:else if showsQuery.isError}
 						<p class="px-5 py-8 text-sm text-status-failed">
-							Failed: {showsQuery.error?.message}
+							Failed: {errorText(showsQuery.error)}
 						</p>
 					{:else if showItems.length === 0}
 						<p class="px-5 py-8 text-sm text-fg-muted">
-							No shows match this filter.
+							{i18n.imports_no_shows_match()}
 						</p>
 					{:else}
 						<table class="w-full text-sm">
@@ -667,15 +668,15 @@
 								class="bg-surface text-left text-[10px] uppercase tracking-[0.14em] text-fg-faint"
 							>
 								<tr>
-									<th class="px-4 py-2.5 font-semibold">Show folder</th>
+									<th class="px-4 py-2.5 font-semibold">{i18n.imports_show_folder()}</th>
 									<th class="hidden px-4 py-2.5 font-semibold md:table-cell">
-										Classification
+										{i18n.imports_classification()}
 									</th>
 									<th class="hidden px-4 py-2.5 font-semibold md:table-cell">
-										Outcome
+										{i18n.common_outcome()}
 									</th>
 									<th class="px-4 py-2.5 text-right font-semibold">
-										Decision
+										{i18n.common_decision()}
 									</th>
 								</tr>
 							</thead>
@@ -699,7 +700,7 @@
 				<header
 					class="flex items-center justify-between border-b border-border px-5 py-3.5 md:px-6"
 				>
-					<h2 class="text-base font-semibold text-fg">Files</h2>
+					<h2 class="text-base font-semibold text-fg">{i18n.common_files()}</h2>
 					{#if total > 0}
 						<span
 							class="font-mono text-xs tabular-nums text-fg-subtle"
@@ -713,11 +714,11 @@
 					class="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3 md:px-5"
 				>
 					<label class="relative min-w-0 flex-1">
-						<span class="sr-only">Search filenames</span>
+						<span class="sr-only">{i18n.imports_search_filenames()}</span>
 						<input
 							type="search"
 							bind:value={q}
-							placeholder="Search filename…"
+							placeholder={i18n.imports_search_filename()}
 							class="w-full rounded-md border border-border bg-bg-card px-3 py-1.5 text-sm text-fg placeholder:text-fg-faint focus:outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent-ring"
 						/>
 					</label>
@@ -727,11 +728,11 @@
 							ariaLabel="Filter by classification"
 							onChange={(v) => (classification = v)}
 							options={[
-								{ value: "", label: "All classifications" },
-								{ value: "confirmed", label: "Confirmed" },
-								{ value: "ambiguous", label: "Ambiguous" },
-								{ value: "unmatched", label: "Unmatched" },
-								{ value: "existing", label: "Existing" },
+								{ value: "", label: i18n.imports_all_classifications() },
+								{ value: "confirmed", label: i18n.imports_confirmed() },
+								{ value: "ambiguous", label: i18n.imports_ambiguous() },
+								{ value: "unmatched", label: i18n.imports_unmatched() },
+								{ value: "existing", label: i18n.imports_existing() },
 							]}
 						/>
 					</div>
@@ -740,15 +741,15 @@
 				<div class="overflow-x-auto">
 					{#if filesQuery.isPending}
 						<p class="px-5 py-8 text-sm text-fg-subtle">
-							Loading files…
+							{i18n.common_loading_files()}
 						</p>
 					{:else if filesQuery.isError}
 						<p class="px-5 py-8 text-sm text-status-failed">
-							Failed: {filesQuery.error?.message}
+							Failed: {errorText(filesQuery.error)}
 						</p>
 					{:else if items.length === 0}
 						<p class="px-5 py-8 text-sm text-fg-muted">
-							No files match this filter.
+							{i18n.imports_no_files_match()}
 						</p>
 					{:else}
 						<table class="w-full text-sm">
@@ -764,7 +765,7 @@
 									)}
 									{@render sortHeader("outcome", "Outcome", false)}
 									<th class="px-4 py-2.5 text-right font-semibold">
-										Decision
+										{i18n.common_decision()}
 									</th>
 								</tr>
 							</thead>
@@ -837,23 +838,23 @@
 
 <Dialog
 	open={confirmCancel}
-	title="Cancel this scan?"
+	title={i18n.imports_cancel_confirm()}
 	body="The running import scan will be stopped."
 	onClose={() => (confirmCancel = false)}
 	actions={[
-		{ label: "Keep scanning", variant: "ghost", autofocus: true },
-		{ label: "Cancel scan", variant: "danger", onClick: () => cancel.mutate() },
+		{ label: i18n.imports_keep_scanning(), variant: "ghost", autofocus: true },
+		{ label: i18n.imports_cancel_scan(), variant: "danger", onClick: () => cancel.mutate() },
 	]}
 />
 
 <Dialog
 	open={confirmDiscard}
-	title="Discard this scan?"
+	title={i18n.imports_discard_confirm()}
 	body="All decisions made for this scan will be lost."
 	onClose={() => (confirmDiscard = false)}
 	actions={[
-		{ label: "Keep", variant: "ghost", autofocus: true },
-		{ label: "Discard", variant: "danger", onClick: () => discard.mutate() },
+		{ label: i18n.common_keep(), variant: "ghost", autofocus: true },
+		{ label: i18n.common_discard(), variant: "danger", onClick: () => discard.mutate() },
 	]}
 />
 

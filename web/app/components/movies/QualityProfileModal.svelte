@@ -3,6 +3,7 @@
 	import Modal from "../modals/Modal.svelte";
 	import Select from "../forms/Select.svelte";
 	import type { QualityProfile } from "../../lib/types";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	type Props = {
 		open: boolean;
@@ -20,12 +21,12 @@
 	let selected = $state<string>(untrack(() => current ?? ""));
 </script>
 
-<Modal {open} title="Change quality profile" size="md" {onClose}>
+<Modal {open} title={i18n.action_change_quality_profile()} size="md" {onClose}>
 	<Select
-		label="Quality profile"
+		label={i18n.quality_profile()}
 		value={selected}
 		options={[
-			{ value: "", label: "Server default" },
+			{ value: "", label: i18n.quality_server_default() },
 			...profiles.map((p) => ({ value: p.name, label: p.name })),
 		]}
 		onChange={(v) => (selected = v)}
@@ -36,7 +37,7 @@
 			onclick={onClose}
 			class="rounded-md border border-border bg-bg-elevated px-3 py-1.5 text-sm font-medium text-fg hover:border-border-strong"
 		>
-			Cancel
+			{i18n.common_cancel()}
 		</button>
 		<button
 			type="button"
@@ -44,7 +45,7 @@
 			onclick={() => onSave(selected)}
 			class="rounded-md bg-accent px-3 py-1.5 text-sm font-semibold text-fg-on-accent hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
 		>
-			{saving ? "Saving…" : "Save"}
+			{saving ? i18n.common_saving() : i18n.common_save()}
 		</button>
 	{/snippet}
 </Modal>

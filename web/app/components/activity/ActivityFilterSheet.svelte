@@ -5,6 +5,7 @@
 	import { cn } from "../../lib/cn";
 	import { lockScroll, unlockScroll } from "../../lib/scrollLock";
 	import { sheetSwipe } from "../../lib/sheet-swipe";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	// Everything the activity toolbars can't afford to keep on screen below lg:
 	// the release filter, the sort the torrent table's headers used to own, and
@@ -67,11 +68,11 @@
 		class="fixed inset-0 z-50 lg:hidden"
 		role="dialog"
 		aria-modal="true"
-		aria-label="Filter and sort"
+		aria-label={i18n.filter_and_sort()}
 	>
 		<button
 			type="button"
-			aria-label="Close"
+			aria-label={i18n.common_close()}
 			transition:fade={{ duration: 160 }}
 			onclick={onClose}
 			class="absolute inset-0 h-full w-full cursor-default bg-black/55"
@@ -93,7 +94,7 @@
 				<button
 					type="button"
 					onclick={onClose}
-					aria-label="Close"
+					aria-label={i18n.common_close()}
 					class="grid h-9 w-9 place-items-center rounded-full bg-surface text-fg-subtle transition active:bg-bg-hover"
 				>
 					<X size={16} aria-hidden="true" />
@@ -119,7 +120,7 @@
 						<button
 							type="button"
 							onclick={() => onSearchChange("")}
-							aria-label="Clear search"
+							aria-label={i18n.common_clear_search()}
 							class="grid h-7 w-7 shrink-0 place-items-center rounded-full text-fg-faint transition active:bg-surface"
 						>
 							<X size={14} aria-hidden="true" />
@@ -129,7 +130,7 @@
 
 				{#if sortChips && onSortChange}
 					<div class="pt-5">
-						<div class={label}>Sort</div>
+						<div class={label}>{i18n.filter_sort()}</div>
 						<div class="flex flex-wrap gap-2">
 							{#each sortChips as opt (opt.key)}
 								{@const active = sortKey === opt.key}
@@ -173,7 +174,7 @@
 						!onClearCompleted && "flex-1 border border-border bg-surface",
 					)}
 				>
-					Reset
+					{i18n.common_reset()}
 				</button>
 			</div>
 		</div>

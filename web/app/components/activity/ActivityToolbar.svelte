@@ -9,21 +9,21 @@
 		{ key: string; label: string; dot: string }[]
 	> = {
 		queue: [
-			{ key: "downloading", label: "downloading", dot: "downloading" },
-			{ key: "importing", label: "importing", dot: "grabbing" },
-			{ key: "paused", label: "paused", dot: "paused" },
-			{ key: "error", label: "error", dot: "failed" },
+			{ key: "downloading", label: i18n.lc_downloading(), dot: "downloading" },
+			{ key: "importing", label: i18n.lc_importing(), dot: "grabbing" },
+			{ key: "paused", label: i18n.lc_paused(), dot: "paused" },
+			{ key: "error", label: i18n.lc_error(), dot: "failed" },
 		],
 		history: [
-			{ key: "completed", label: "completed", dot: "available" },
-			{ key: "failed", label: "failed", dot: "failed" },
+			{ key: "completed", label: i18n.lc_completed(), dot: "available" },
+			{ key: "failed", label: i18n.lc_failed(), dot: "failed" },
 		],
 		torrents: [
-			{ key: "downloading", label: "downloading", dot: "downloading" },
+			{ key: "downloading", label: i18n.lc_downloading(), dot: "downloading" },
 			{ key: "stalled", label: "stalled", dot: "stalled" },
 			{ key: "seeding", label: "seeding", dot: "seeding" },
-			{ key: "completed", label: "completed", dot: "completed" },
-			{ key: "paused", label: "paused", dot: "paused" },
+			{ key: "completed", label: i18n.lc_completed(), dot: "completed" },
+			{ key: "paused", label: i18n.lc_paused(), dot: "paused" },
 		],
 	};
 </script>
@@ -33,6 +33,7 @@
 	import { Magnet, Search, Trash2, X } from "@lucide/svelte";
 	import { cn } from "../../lib/cn";
 	import { dragScroll } from "../../lib/drag-scroll";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	type View = ActivityView;
 
@@ -97,7 +98,7 @@
 			use:dragScroll
 			class="filter-chips flex min-w-0 items-center gap-0.5 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [touch-action:pan-x] [&::-webkit-scrollbar]:hidden"
 			role="group"
-			aria-label="Status filter"
+			aria-label={i18n.activity_status_filter()}
 		>
 			{#each chips as c (c.key)}
 				{@const on = statusFilter.includes(c.key)}
@@ -122,8 +123,8 @@
 			<button
 				type="button"
 				onclick={() => onStatusFilterChange([])}
-				aria-label="Clear status filters"
-				title="Clear status filters"
+				aria-label={i18n.activity_clear_status_filters()}
+				title={i18n.activity_clear_status_filters()}
 				class="ml-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-sm text-fg-faint transition hover:bg-surface hover:text-fg"
 			>
 				<X size={12} aria-hidden="true" />
@@ -140,8 +141,8 @@
 			type="button"
 			onclick={onOpenFilters}
 			aria-haspopup="dialog"
-			aria-label="Search and sort"
-			title="Search and sort"
+			aria-label={i18n.common_search_and_sort()}
+			title={i18n.common_search_and_sort()}
 			class={cn(
 				"relative ml-auto grid h-9 w-9 shrink-0 place-items-center rounded-md border transition lg:hidden",
 				activeFilters > 0
@@ -184,16 +185,16 @@
 			value={search}
 			oninput={(e) => onSearchChange(e.currentTarget.value)}
 			placeholder={view === "torrents"
-				? "Filter name or hash…"
-				: "Filter title or movie…"}
-			aria-label="Filter activity"
+				? i18n.activity_filter_placeholder()
+				: i18n.activity_filter_title_movie()}
+			aria-label={i18n.activity_filter()}
 			class="min-w-0 flex-1 bg-transparent text-[13px] text-fg outline-none placeholder:text-fg-faint"
 		/>
 		{#if search}
 			<button
 				type="button"
 				onclick={() => onSearchChange("")}
-				aria-label="Clear search"
+				aria-label={i18n.common_clear_search()}
 				class="grid h-5 w-5 shrink-0 place-items-center rounded text-fg-faint transition hover:text-fg"
 			>
 				<X size={12} aria-hidden="true" />
@@ -211,7 +212,7 @@
 				class="hidden h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md bg-accent px-3.5 text-[12.5px] font-semibold text-fg-on-accent transition hover:bg-accent-hover hover:shadow-glow md:inline-flex"
 			>
 				<Magnet size={14} aria-hidden="true" />
-				Add torrent
+				{i18n.action_add_torrent()}
 			</button>
 		</div>
 	{/if}

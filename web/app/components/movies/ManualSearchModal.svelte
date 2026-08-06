@@ -2,6 +2,7 @@
 	import Modal from "../modals/Modal.svelte";
 	import ReleasesTable from "./ReleasesTable.svelte";
 	import ReplaceExistingToggle from "./ReplaceExistingToggle.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	let {
 		open,
@@ -19,7 +20,7 @@
 	});
 </script>
 
-<Modal {open} title="Manual search" size="4xl" {onClose}>
+<Modal {open} title={i18n.action_manual_search()} size="4xl" {onClose}>
 	<div class="mb-4 flex justify-start md:justify-end">
 		<ReplaceExistingToggle
 			checked={replaceExisting}

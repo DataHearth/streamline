@@ -4,6 +4,7 @@
 	import { fly } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { plural } from "../../lib/bulk";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	let {
 		count,
@@ -32,7 +33,7 @@
      the bottom of the viewport. -->
 <div
 	role="toolbar"
-	aria-label="Bulk actions"
+	aria-label={i18n.bulk_actions()}
 	transition:fly={{ duration: 180, y: 12, easing: cubicOut }}
 	class="pointer-events-none fixed inset-x-0 bottom-6 z-40 flex justify-center px-4"
 >
@@ -69,8 +70,8 @@
 		<button
 			type="button"
 			onclick={onClear}
-			aria-label="Clear selection"
-			title="Clear selection"
+			aria-label={i18n.bulk_clear_selection()}
+			title={i18n.bulk_clear_selection()}
 			class="grid h-9 w-9 shrink-0 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
 		>
 			<X size={16} aria-hidden="true" />

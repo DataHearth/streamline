@@ -4,6 +4,8 @@
 	import { cn } from "../../lib/cn";
 	import { isMagnet, readTorrentFile } from "../../lib/torrent-file";
 	import type { AddTorrentRequest } from "../../lib/types";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { errorText } from "../../lib/api";
 
 	let {
 		open,
@@ -49,7 +51,7 @@
 			fileName = read.name;
 			fileB64 = read.base64;
 		} catch (err) {
-			fileErr = err instanceof Error ? err.message : "Could not read that file.";
+			fileErr = errorText(err, i18n.torrent_read_failed());
 		}
 	}
 
@@ -60,7 +62,7 @@
 	}
 </script>
 
-<Modal {open} title="Add torrent" size="lg" {onClose}>
+<Modal {open} title={i18n.action_add_torrent()} size="lg" {onClose}>
 	<!-- source switcher -->
 	<div class="mb-4 grid grid-cols-2 gap-1 rounded-lg border border-border bg-bg-card p-1">
 		<button
@@ -72,7 +74,7 @@
 			)}
 		>
 			<Magnet size={15} aria-hidden="true" />
-			Magnet link
+			{i18n.torrent_magnet_link()}
 		</button>
 		<button
 			type="button"
@@ -83,13 +85,13 @@
 			)}
 		>
 			<Upload size={15} aria-hidden="true" />
-			Upload .torrent
+			{i18n.torrent_upload_file()}
 		</button>
 	</div>
 
 	{#if source === "magnet"}
 		<label class="block">
-			<span class="mb-1 block text-sm font-medium text-fg">Magnet URI</span>
+			<span class="mb-1 block text-sm font-medium text-fg">{i18n.torrent_magnet_uri()}</span>
 			<textarea
 				value={magnet}
 				oninput={(e) => (magnet = e.currentTarget.value)}
@@ -100,7 +102,7 @@
 		</label>
 		{#if magnet.trim() && !magnetValid}
 			<p class="mt-1 text-xs text-status-failed">
-				That doesn’t look like a magnet link (should start with
+				{i18n.torrent_not_magnet_curly()}
 				<code class="font-mono">magnet:?</code>).
 			</p>
 		{/if}
@@ -112,10 +114,10 @@
 			{#if fileName}
 				<FileText size={22} class="text-accent-text" aria-hidden="true" />
 				<span class="max-w-full truncate font-mono text-xs text-fg">{fileName}</span>
-				<span class="text-[11px] text-fg-subtle">Click to choose a different file</span>
+				<span class="text-[11px] text-fg-subtle">{i18n.torrent_click_change_file()}</span>
 			{:else}
 				<Upload size={22} class="text-fg-faint" aria-hidden="true" />
-				<span class="text-sm text-fg-muted">Choose a .torrent file</span>
+				<span class="text-sm text-fg-muted">{i18n.torrent_choose_file()}</span>
 				<span class="text-[11px] text-fg-subtle">or drag it onto this area</span>
 			{/if}
 		</label>
@@ -130,8 +132,8 @@
 	>
 		<Info size={14} class="mt-0.5 shrink-0" aria-hidden="true" />
 		<span>
-			Not linked to a library item — you’ll be prompted to import it from
-			<span class="font-medium">Needs attention</span> once it finishes.
+			{i18n.torrent_not_linked_curly()}
+			<span class="font-medium">{i18n.common_needs_attention()}</span> once it finishes.
 		</span>
 	</div>
 
@@ -141,7 +143,7 @@
 			onclick={onClose}
 			class="inline-flex h-9 items-center rounded-md border border-border px-3 text-sm text-fg-muted hover:text-fg"
 		>
-			Cancel
+			{i18n.common_cancel()}
 		</button>
 		<button
 			type="button"
@@ -149,7 +151,7 @@
 			disabled={!canSubmit}
 			class="inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-4 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
 		>
-			{busy ? "Adding…" : "Add torrent"}
+			{busy ? i18n.action_adding() : i18n.action_add_torrent()}
 		</button>
 	{/snippet}
 </Modal>

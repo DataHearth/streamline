@@ -3,6 +3,7 @@
 	import { formatDateTime, formatRelative } from "../../lib/dates";
 	import { parseUA } from "../../lib/ua";
 	import type { Session } from "../../lib/types";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	let {
 		session,
@@ -34,7 +35,7 @@
 					class="inline-flex items-center gap-1 rounded-full bg-status-available/12 px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wide text-status-available"
 				>
 					<span class="h-1.5 w-1.5 rounded-full bg-current"></span>
-					This device
+					{i18n.session_this_device()}
 				</span>
 			{/if}
 		</div>
@@ -66,9 +67,9 @@
 		disabled={session.is_current || revoking}
 		onclick={onRevoke}
 		class="inline-flex h-8 shrink-0 items-center gap-1 rounded-md px-2 text-xs font-medium text-status-failed transition hover:bg-status-failed/10 disabled:cursor-not-allowed disabled:text-fg-faint disabled:hover:bg-transparent"
-		aria-label="Revoke session"
+		aria-label={i18n.action_revoke_session()}
 	>
 		<Trash2 size={14} aria-hidden="true" />
-		Revoke
+		{i18n.common_revoke()}
 	</button>
 </li>

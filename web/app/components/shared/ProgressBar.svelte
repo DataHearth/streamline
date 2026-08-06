@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { cn } from "../../lib/cn";
 	import type { StatusKind } from "./StatusPill.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	let {
 		value,
@@ -25,7 +26,7 @@
 <div
 	class="track relative w-full overflow-hidden rounded-full bg-white/[0.06]"
 	role="progressbar"
-	aria-label={label ?? "Progress"}
+	aria-label={label ?? i18n.common_progress()}
 	aria-valuenow={indeterminate ? undefined : Math.round(pct)}
 	aria-valuemin={indeterminate ? undefined : 0}
 	aria-valuemax={indeterminate ? undefined : 100}

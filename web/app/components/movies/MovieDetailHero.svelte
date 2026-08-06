@@ -6,6 +6,7 @@
 	import Poster from "./Poster.svelte";
 	import StatusPill from "../shared/StatusPill.svelte";
 	import type { Movie, MediaFile } from "../../lib/types";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	let {
 		movie,
@@ -60,7 +61,7 @@
 			class="inline-flex items-center gap-1.5 rounded-full border border-border bg-black/40 px-3 py-1.5 text-[11.5px] font-medium text-fg-muted backdrop-blur-sm transition hover:bg-black/60 hover:text-fg"
 		>
 			<ArrowLeft size={13} aria-hidden="true" />
-			Movies
+			{i18n.movies_label()}
 		</a>
 	</div>
 
@@ -133,7 +134,7 @@
 				     in the document rather than only from the top of it. -->
 				<div
 					class="mt-5 hidden flex-wrap items-center gap-2.5 md:flex"
-					aria-label="Movie actions"
+					aria-label={i18n.movies_actions()}
 				>
 					{@render actions()}
 				</div>

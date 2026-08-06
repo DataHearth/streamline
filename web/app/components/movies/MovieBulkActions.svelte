@@ -23,6 +23,7 @@
 	import QualityProfileModal from "./QualityProfileModal.svelte";
 	import DeleteTitleDialog from "../shared/DeleteTitleDialog.svelte";
 	import type { Movie, QualityProfile } from "../../lib/types";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	let {
 		movies,
@@ -97,7 +98,7 @@
 		api(`/movies/${m.id}`, { method: "PATCH", body });
 
 	function setMonitored(v: boolean) {
-		run(v ? "Monitoring" : "Stopped monitoring", (m) =>
+		run(v ? i18n.monitor_monitoring() : i18n.monitor_stopped(), (m) =>
 			patch(m, { monitored: v }),
 		);
 	}
@@ -130,13 +131,13 @@
 	let menuItems = $derived<KebabItem[]>([
 		{
 			key: "refresh",
-			label: "Refresh metadata",
+			label: i18n.action_refresh_metadata(),
 			icon: RefreshCw,
 			onSelect: refresh,
 		},
 		{
 			key: "delete",
-			label: "Remove from library…",
+			label: i18n.action_remove_from_library(),
 			icon: Trash2,
 			danger: true,
 			dividerBefore: true,
@@ -153,49 +154,49 @@
 	let touchActions = $derived<TouchAction[]>([
 		{
 			key: "monitor",
-			label: "Monitor",
+			label: i18n.action_monitor(),
 			icon: Bookmark,
 			onSelect: () => setMonitored(true),
 		},
-		{ key: "search", label: "Search", icon: Radar, onSelect: searchNow },
+		{ key: "search", label: i18n.common_search(), icon: Radar, onSelect: searchNow },
 	]);
 
 	let touchMenu = $derived<TouchMenuRow[]>([
 		{
 			key: "monitor",
-			label: "Monitor",
+			label: i18n.action_monitor(),
 			icon: Bookmark,
 			line: `${monitoredPicked} of ${count} already monitored`,
 			onSelect: () => setMonitored(true),
 		},
 		{
 			key: "unmonitor",
-			label: "Stop monitoring",
+			label: i18n.action_stop_monitoring(),
 			icon: BookmarkX,
 			onSelect: () => setMonitored(false),
 		},
 		{
 			key: "search",
-			label: "Search for releases",
+			label: i18n.action_search_releases_for(),
 			icon: Radar,
 			line: "queues one search per title",
 			onSelect: searchNow,
 		},
 		{
 			key: "quality",
-			label: "Change quality profile",
+			label: i18n.action_change_quality_profile(),
 			icon: SlidersHorizontal,
 			onSelect: () => (qpOpen = true),
 		},
 		{
 			key: "refresh",
-			label: "Refresh metadata",
+			label: i18n.action_refresh_metadata(),
 			icon: RefreshCw,
 			onSelect: refresh,
 		},
 		{
 			key: "delete",
-			label: "Remove from library…",
+			label: i18n.action_remove_from_library(),
 			icon: Trash2,
 			danger: true,
 			dividerBefore: true,
@@ -218,7 +219,7 @@
 			class={btn}
 		>
 			<Bookmark size={14} aria-hidden="true" />
-			Monitor
+			{i18n.action_monitor()}
 		</button>
 		<button
 			type="button"
@@ -227,11 +228,11 @@
 			class={btn}
 		>
 			<BookmarkX size={14} aria-hidden="true" />
-			Unmonitor
+			{i18n.action_unmonitor()}
 		</button>
 		<button type="button" disabled={busy} onclick={searchNow} class={btn}>
 			<Radar size={14} aria-hidden="true" />
-			Search
+			{i18n.common_search()}
 		</button>
 		<button
 			type="button"
@@ -240,7 +241,7 @@
 			class={btn}
 		>
 			<SlidersHorizontal size={14} aria-hidden="true" />
-			Quality
+			{i18n.common_quality()}
 		</button>
 			<KebabMenu items={menuItems} variant="bar" />
 		</BulkActionBar>

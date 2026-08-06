@@ -3,6 +3,8 @@
 	import TouchRow from "./TouchRow.svelte";
 	import { torrentMeta } from "../../lib/activity-touch";
 	import type { Torrent } from "../../lib/types";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { errorText } from "../../lib/api";
 
 	// The torrent table below md. Nine columns don't survive 390px, so the name
 	// takes the title line, the infohash the release line, and ↓ / ↑ / ratio /
@@ -43,9 +45,9 @@
 		<div
 			class="rounded-xl border border-status-failed/25 bg-bg-elevated px-5 py-9 text-center"
 		>
-			<p class="text-sm font-semibold text-status-failed">Failed to load torrents</p>
+			<p class="text-sm font-semibold text-status-failed">{i18n.torrent_load_failed()}</p>
 			<p class="mt-1 font-mono text-[11px] text-fg-subtle">
-				{error.message || "Unknown error"}
+				{errorText(error)}
 			</p>
 		</div>
 	{:else if rows.length === 0}
@@ -53,11 +55,11 @@
 			class="flex flex-col items-center gap-1.5 rounded-xl border border-border bg-bg-elevated px-5 py-11 text-center"
 		>
 			<Magnet size={24} class="text-fg-faint" aria-hidden="true" />
-			<p class="text-sm font-semibold text-fg">No torrents yet</p>
+			<p class="text-sm font-semibold text-fg">{i18n.torrent_none_yet()}</p>
 			<p class="max-w-[17rem] text-xs text-fg-muted">
 				{canControl
-					? "Use Add torrent to paste a magnet link or pick a .torrent file."
-					: "Nothing is downloading right now."}
+					? i18n.torrent_use_add()
+					: i18n.activity_nothing_downloading()}
 			</p>
 		</div>
 	{:else}
@@ -66,7 +68,7 @@
 				<TouchRow
 					status={t.status}
 					progress={t.progress}
-					title={fetching(t) ? "Fetching metadata…" : t.name}
+					title={fetching(t) ? i18n.torrent_fetching_metadata() : t.name}
 					placeholderTitle={fetching(t)}
 					release={`${t.hash.slice(0, 24)}…`}
 					badge={t.tracked ? undefined : "untracked"}

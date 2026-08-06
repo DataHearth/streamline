@@ -4,6 +4,7 @@
 	import TextField from "../../forms/TextField.svelte";
 	import Select from "../../forms/Select.svelte";
 	import TogglePill from "../../forms/TogglePill.svelte";
+	import { m as i18n } from "../../../lib/paraglide/messages.js";
 
 	type Values = {
 		download_dir: string;
@@ -26,7 +27,7 @@
 
 	// Common network interfaces to bind to. Empty = all interfaces.
 	const INTERFACES = [
-		{ value: "", label: "All interfaces" },
+		{ value: "", label: i18n.builtin_all_interfaces() },
 		{ value: "wg0", label: "wg0 · WireGuard (VPN)" },
 		{ value: "tun0", label: "tun0 · OpenVPN (VPN)" },
 		{ value: "tailscale0", label: "tailscale0 · Tailscale" },
@@ -47,17 +48,16 @@
 				<Zap size={22} aria-hidden="true" />
 			</div>
 			<div class="min-w-0">
-				<div class="text-sm font-semibold text-fg">Built-in engine</div>
+				<div class="text-sm font-semibold text-fg">{i18n.builtin_engine()}</div>
 				<div class="mt-0.5 text-xs text-fg-muted">
-					Runs a BitTorrent engine inside Streamline — no external client
-					needed.
+					{i18n.builtin_engine_help()}
 				</div>
 			</div>
 		</div>
 		<form.Field name="enabled">
 			{#snippet children(field)}
 				<TogglePill
-					label="Enabled"
+					label={i18n.common_enabled()}
 					tone="status"
 					name={field.name}
 					checked={field.state.value}
@@ -71,9 +71,9 @@
 		{#snippet children(field)}
 			<TextField
 				{field}
-				label="Download directory"
+				label={i18n.builtin_download_dir()}
 				placeholder="/data/torrents"
-				help="Absolute path where the engine writes completed and in-progress data."
+				help={i18n.builtin_download_dir_help()}
 			/>
 		{/snippet}
 	</form.Field>
@@ -84,7 +84,7 @@
 			<Globe size={13} class="text-fg-faint" aria-hidden="true" />
 			<span
 				class="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-fg-muted"
-				>Network</span
+				>{i18n.builtin_network()}</span
 			>
 		</div>
 		<form.Field name="bind_interface">
@@ -97,15 +97,13 @@
 						]}
 				<div class="block">
 					<Select
-						label="Bind to interface"
+						label={i18n.builtin_bind_interface()}
 						value={field.state.value}
 						options={opts}
 						onChange={(v) => field.handleChange(v)}
 					/>
 					<p class="mt-1 text-xs text-fg-muted">
-						Pin peer traffic to one interface. Choose your VPN
-						interface so traffic never leaves the tunnel — if it drops,
-						the engine stops instead of leaking over the default route.
+						{i18n.builtin_bind_help()}
 					</p>
 				</div>
 			{/snippet}
@@ -115,11 +113,11 @@
 				{#snippet children(field)}
 					<TextField
 						{field}
-						label="Listen port"
+						label={i18n.builtin_listen_port()}
 						type="number"
 						min={0}
 						max={65535}
-						help="Incoming peer port. Behind a VPN, set this to the port your provider forwards. 0 = auto-select."
+						help={i18n.builtin_listen_port_help()}
 					/>
 				{/snippet}
 			</form.Field>
@@ -127,7 +125,7 @@
 				{#snippet children(field)}
 					<div class="pt-6">
 						<TogglePill
-							label="DHT"
+							label={i18n.builtin_dht()}
 							name={field.name}
 							checked={!field.state.value}
 							onChange={(v) => field.handleChange(!v)}
@@ -137,8 +135,7 @@
 			</form.Field>
 		</div>
 		<p class="text-[11px] text-fg-subtle">
-			VPN + port forwarding: bind to the VPN interface and set the listen
-			port to the one your provider forwards.
+			{i18n.builtin_vpn_tip()}
 		</p>
 	</div>
 
@@ -148,7 +145,7 @@
 			<Gauge size={13} class="text-fg-faint" aria-hidden="true" />
 			<span
 				class="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-fg-muted"
-				>Speed limits</span
+				>{i18n.builtin_speed_limits()}</span
 			>
 			<span
 				class="rounded-full bg-surface px-2 py-0.5 text-[10px] font-medium text-fg-subtle"
@@ -160,10 +157,10 @@
 				{#snippet children(field)}
 					<TextField
 						{field}
-						label="Max download · KB/s"
+						label={i18n.builtin_max_download()}
 						type="number"
 						min={0}
-						help="0 = unlimited."
+						help={i18n.builtin_unlimited_help()}
 					/>
 				{/snippet}
 			</form.Field>
@@ -171,16 +168,16 @@
 				{#snippet children(field)}
 					<TextField
 						{field}
-						label="Max upload · KB/s"
+						label={i18n.builtin_max_upload()}
 						type="number"
 						min={0}
-						help="0 = unlimited."
+						help={i18n.builtin_unlimited_help()}
 					/>
 				{/snippet}
 			</form.Field>
 		</div>
 		<p class="text-[11px] text-fg-subtle">
-			Limits apply to the whole engine, not per-torrent.
+			{i18n.builtin_speed_limits_help()}
 		</p>
 	</div>
 
@@ -190,7 +187,7 @@
 			<Folder size={13} class="text-fg-faint" aria-hidden="true" />
 			<span
 				class="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-fg-muted"
-				>Seeding</span
+				>{i18n.status_seeding()}</span
 			>
 		</div>
 		<div class="grid gap-3 sm:grid-cols-2">
@@ -198,10 +195,10 @@
 				{#snippet children(field)}
 					<TextField
 						{field}
-						label="Seed ratio"
+						label={i18n.builtin_seed_ratio()}
 						type="number"
 						min={0}
-						help="Stop seeding at this ratio. 0 = unlimited."
+						help={i18n.builtin_seed_ratio_help()}
 					/>
 				{/snippet}
 			</form.Field>
@@ -209,9 +206,9 @@
 				{#snippet children(field)}
 					<TextField
 						{field}
-						label="Seed time"
+						label={i18n.builtin_seed_time()}
 						placeholder="72h"
-						help="Go duration. Empty = unlimited."
+						help={i18n.builtin_seed_time_help()}
 					/>
 				{/snippet}
 			</form.Field>

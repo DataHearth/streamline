@@ -5,11 +5,12 @@
 		useQueryClient,
 	} from "@tanstack/svelte-query";
 	import { Check, CalendarCog } from "@lucide/svelte";
-	import { api } from "../../lib/api";
+	import { api, errorText } from "../../lib/api";
 	import { config } from "../../lib/config.svelte";
 	import { toast } from "../../lib/toast";
 	import type { LibraryConfig } from "../../lib/types";
 	import Checkbox from "../../components/forms/Checkbox.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	const qc = useQueryClient();
 
@@ -26,7 +27,7 @@
 				qc.setQueryData(["config", "library"], resp);
 				toast.ok("Series settings saved");
 			},
-			onError: (err) => toast.err(err.message),
+			onError: (err) => toast.err(errorText(err)),
 		}),
 	);
 
@@ -40,28 +41,27 @@
 			const verb = monitored ? "monitored" : "unmonitored";
 			toast.ok(
 				n === 0
-					? "No specials seasons to update"
-					: `Specials ${verb} on ${n} season${n === 1 ? "" : "s"}`,
+					? i18n.series_specials_none()
+					: n === 1 ? i18n.series_specials_applied_one({ verb, count: n }) : i18n.series_specials_applied_other({ verb, count: n }),
 			);
 		},
-		onError: (err) => toast.err(err.message),
+		onError: (err) => toast.err(errorText(err)),
 	}));
 </script>
 
 <div class="mx-auto max-w-4xl">
 	<header>
-		<h1 class="text-2xl font-bold tracking-tight text-fg">Series</h1>
+		<h1 class="text-2xl font-bold tracking-tight text-fg">{i18n.settings_series()}</h1>
 		<p class="mt-1 text-sm text-fg-muted">
-			How new series and seasons enter the library. Changes take effect
-			immediately — no restart required.
+			{i18n.settings_series_intro()}
 		</p>
 	</header>
 
 	{#if cfg.isPending}
-		<p class="mt-6 text-sm text-fg-subtle">Loading…</p>
+		<p class="mt-6 text-sm text-fg-subtle">{i18n.common_loading()}</p>
 	{:else if cfg.isError}
 		<p class="mt-6 text-sm text-status-failed">
-			Failed to load series settings: {cfg.error?.message}
+			{i18n.err_load_failed_detail({ reason: errorText(cfg.error) })}
 		</p>
 	{:else if cfg.data}
 		<section class="mt-6 rounded-lg border border-border bg-bg-card p-4">
@@ -69,18 +69,15 @@
 				checked={cfg.data.monitor_specials}
 				disabled={config.readOnly || save.isPending}
 				onChange={(v) => save.mutate({ monitor_specials: v })}
-				label="Monitor specials"
-				description="Season 0 holds recaps, OVAs and behind-the-scenes extras. Left off,
-				a new series arrives with its specials unmonitored — nothing is searched
-				or grabbed for them until you turn the season on."
+				label={i18n.series_monitor_specials()}
+				description={i18n.series_specials_help()}
 			/>
 			<div
 				class="mt-3 border-t border-border pt-3 text-xs text-fg-subtle"
 			>
 				<p class="flex items-center gap-1.5">
 					<Check size={12} aria-hidden="true" />
-					Applies to series added — or seasons discovered — from now on.
-					Seasons already in your library keep their current setting.
+					{i18n.settings_series_applies()}
 				</p>
 				<div class="mt-2.5 flex flex-wrap items-center gap-2">
 					<button
@@ -91,13 +88,13 @@
 					>
 						<CalendarCog size={13} aria-hidden="true" />
 						{applyExisting.isPending
-							? "Applying…"
-							: "Apply to existing series"}
+							? i18n.common_applying()
+							: i18n.series_apply_existing()}
 					</button>
 					<span>
 						{cfg.data.monitor_specials
-							? "Switches season 0 on for every monitored series already in the library."
-							: "Switches season 0 off for every series already in the library."}
+							? i18n.series_specials_switch()
+							: i18n.series_specials_switch_off()}
 					</span>
 				</div>
 			</div>

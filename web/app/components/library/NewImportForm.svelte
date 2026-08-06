@@ -4,7 +4,7 @@
 	import { goto } from "@roxi/routify";
 	import { onMount } from "svelte";
 	import { Play } from "@lucide/svelte";
-	import { api } from "../../lib/api";
+	import { api, errorText } from "../../lib/api";
 	import { toast } from "../../lib/toast";
 	import { importStartForm } from "../../lib/schemas";
 	import type {
@@ -17,6 +17,7 @@
 	import TextField from "../forms/TextField.svelte";
 	import Select from "../forms/Select.svelte";
 	import RadioCards from "../forms/RadioCards.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	type Values = {
 		source_path: string;
@@ -48,7 +49,7 @@
 			onCreated?.();
 			navigate("/library/imports/[id]", { id: String(scan.id) });
 		},
-		onError: (err) => toast.err(err.message),
+		onError: (err) => toast.err(errorText(err)),
 	}));
 
 	const form = createForm(() => ({
@@ -83,25 +84,25 @@
 	const KINDS: { v: ImportScanKind; label: string; desc: string }[] = [
 		{
 			v: "movie",
-			label: "Movies",
-			desc: "One entry per file, matched against TMDB.",
+			label: i18n.movies_label(),
+			desc: i18n.imports_one_per_file(),
 		},
 		{
 			v: "series",
-			label: "Series",
-			desc: "One entry per show folder, matched against TVDB.",
+			label: i18n.settings_series(),
+			desc: i18n.imports_one_per_show(),
 		},
 	];
 
 	const MODES: { v: ImportMode; label: string; desc: string }[] = $derived([
 		{
 			v: "in_place",
-			label: "Adopt in place",
-			desc: "Files already inside your library — keep them where they are.",
+			label: i18n.imports_adopt_in_place(),
+			desc: i18n.imports_adopt_help(),
 		},
 		{
 			v: "rename",
-			label: "Import & rename",
+			label: i18n.imports_import_rename(),
 			desc: `Files outside the library — copy/move into the configured ${
 				isSeries ? "series" : "movie"
 			} path.`,
@@ -109,10 +110,10 @@
 	]);
 
 	const TRANSFER_MODES: { v: "" | ImportTransferMode; label: string }[] = [
-		{ v: "", label: "Use server default (library.import_mode)" },
-		{ v: "hardlink", label: "Hardlink — same filesystem, instant, no extra disk" },
-		{ v: "copy", label: "Copy — leaves original intact, uses double the disk" },
-		{ v: "move", label: "Move — destructive, frees source disk" },
+		{ v: "", label: i18n.imports_mode_server_default() },
+		{ v: "hardlink", label: i18n.imports_mode_hardlink() },
+		{ v: "copy", label: i18n.imports_mode_copy() },
+		{ v: "move", label: i18n.imports_mode_move() },
 	];
 </script>
 
@@ -126,7 +127,7 @@
 	<form.Field name="kind">
 		{#snippet children(field)}
 			<RadioCards
-				legend="Media type"
+				legend={i18n.imports_media_type()}
 				columns={2}
 				name={field.name}
 				value={field.state.value}
@@ -147,12 +148,12 @@
 		{#snippet children(field)}
 			<TextField
 				{field}
-				label="Source path"
+				label={i18n.imports_source_path()}
 				placeholder={isSeries ? "/data/tv/incoming" : "/data/movies/incoming"}
 				autocomplete="off"
 				help={isSeries
-					? "Absolute path on the server holding one folder per show, e.g. /data/tv/incoming."
-					: "Absolute path on the server, e.g. /data/movies/incoming."}
+					? i18n.imports_shows_path_help()
+					: i18n.imports_path_help()}
 			/>
 		{/snippet}
 	</form.Field>
@@ -160,7 +161,7 @@
 	<form.Field name="mode">
 		{#snippet children(field)}
 			<RadioCards
-				legend="Mode"
+				legend={i18n.common_mode()}
 				columns={2}
 				name={field.name}
 				value={field.state.value}
@@ -182,7 +183,7 @@
 			{#snippet children(field)}
 				<div>
 					<Select
-						label="Transfer mode"
+						label={i18n.imports_transfer_mode()}
 						value={field.state.value}
 						options={TRANSFER_MODES.map((t) => ({
 							value: t.v,
@@ -191,7 +192,7 @@
 						onChange={(v) => field.handleChange(v)}
 					/>
 					<p class="mt-1 text-xs text-fg-muted">
-						Overrides the global setting for this scan only.
+						{i18n.imports_overrides_global()}
 					</p>
 				</div>
 			{/snippet}
@@ -205,7 +206,7 @@
 			class="inline-flex items-center gap-1.5 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
 		>
 			<Play size={14} aria-hidden="true" />
-			{form.state.isSubmitting ? "Starting…" : "Start scan"}
+			{form.state.isSubmitting ? i18n.common_starting() : i18n.imports_start_scan()}
 		</button>
 	</div>
 </form>

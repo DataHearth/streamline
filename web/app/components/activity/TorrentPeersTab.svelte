@@ -3,6 +3,7 @@
 	import { cn } from "../../lib/cn";
 	import { formatSpeed } from "../../lib/format";
 	import type { TorrentPeer, TorrentStatus } from "../../lib/types";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	let {
 		peers,
@@ -27,10 +28,10 @@
 		grow?: boolean;
 		hide?: string;
 	}[] = [
-		{ key: "addr", label: "Address", grow: true },
-		{ key: "client", label: "Client", hide: "hidden @sm:table-cell" },
-		{ key: "download_rate", label: "Down", numeric: true, right: true },
-		{ key: "upload_rate", label: "Up", numeric: true, right: true },
+		{ key: "addr", label: i18n.torrent_address(), grow: true },
+		{ key: "client", label: i18n.common_client(), hide: "hidden @sm:table-cell" },
+		{ key: "download_rate", label: i18n.torrent_down(), numeric: true, right: true },
+		{ key: "upload_rate", label: i18n.torrent_up(), numeric: true, right: true },
 	];
 
 	// Fastest first: the swarm's useful members are the question this table
@@ -60,11 +61,11 @@
 {#if peers.length === 0}
 	<div class="flex flex-col items-center justify-center gap-2 py-16 text-center">
 		<Users size={24} class="text-fg-faint" aria-hidden="true" />
-		<p class="text-sm font-medium text-fg">No peers connected</p>
+		<p class="text-sm font-medium text-fg">{i18n.torrent_no_peers()}</p>
 		<p class="text-xs text-fg-muted">
 			{status === "paused"
-				? "Resume the torrent to reconnect to the swarm."
-				: "The engine isn’t connected to any peers right now."}
+				? i18n.torrent_resume_to_reconnect()
+				: i18n.torrent_no_peers_engine()}
 		</p>
 	</div>
 {:else}

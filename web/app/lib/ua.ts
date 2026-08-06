@@ -1,10 +1,11 @@
+import { m as i18n } from "./paraglide/messages.js";
 export type ParsedAgent = {
 	browser: string;
 	os: string;
 };
 
 export function parseUA(ua: string | undefined | null): ParsedAgent {
-	if (!ua) return { browser: "Browser", os: "Desktop" };
+	if (!ua) return { browser: i18n.common_browser(), os: i18n.common_desktop() };
 	const s = ua.toLowerCase();
 	return { browser: detectBrowser(s), os: detectOS(s) };
 }

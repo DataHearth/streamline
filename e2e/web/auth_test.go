@@ -30,9 +30,14 @@ var _ = Describe("Auth flows", Label("e2e"), func() {
 		page.MustElement(`input[type=email]`).MustInput(apptest.AdminEmail)
 		page.MustElement(`input[type=password]`).MustInput("definitely-wrong")
 		page.MustElementR("button", "Sign in").MustClick()
+		// The SPA never renders the API's own message — it resolves the
+		// `invalid_credentials` code to its own translated copy. Asserting the
+		// specific line also catches a broken code lookup, which would fall
+		// back to the generic 401 ("session has expired") and read as nonsense
+		// on a login form.
 		Expect(
 			page.MustElement(`p[role=alert]`).MustText(),
-		).To(ContainSubstring("Invalid credentials"))
+		).To(ContainSubstring("Incorrect email or password"))
 	})
 
 	It("logs out back to the login page", func() {

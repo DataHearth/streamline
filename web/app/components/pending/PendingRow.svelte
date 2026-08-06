@@ -3,6 +3,7 @@
 	import Dialog from "../modals/Dialog.svelte";
 	import Checkbox from "../forms/Checkbox.svelte";
 	import type { PendingItem } from "../../lib/types";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	let {
 		item,
@@ -109,19 +110,19 @@
 			disabled={busy}
 			class="inline-flex h-8 items-center rounded-md px-3 text-xs font-medium text-fg-muted transition hover:bg-status-failed/10 hover:text-status-failed focus:outline-none focus:ring-2 focus:ring-accent-ring disabled:cursor-not-allowed disabled:opacity-60"
 		>
-			Ignore
+			{i18n.common_ignore()}
 		</button>
 	</div>
 </article>
 
 <Dialog
 	open={replaceOpen}
-	title="Replace the existing file?"
+	title={i18n.imports_replace_confirm()}
 	onClose={() => (replaceOpen = false)}
 	actions={[
-		{ label: "Cancel", variant: "ghost", autofocus: true },
+		{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },
 		{
-			label: "Replace",
+			label: i18n.common_replace(),
 			variant: "danger",
 			dismiss: false,
 			pending: busy,
@@ -133,25 +134,25 @@
 	]}
 >
 	<p class="text-sm leading-relaxed text-fg-muted">
-		The current file is deleted and this release is imported in its place.
+		{i18n.imports_replace_help()}
 	</p>
 	<Checkbox
 		checked={removeOld}
 		onChange={(v) => (removeOld = v)}
 		class="mt-4 text-sm text-fg"
 	>
-		Also remove the old torrent from the download client
+		{i18n.imports_remove_old_torrent()}
 	</Checkbox>
 </Dialog>
 
 <Dialog
 	open={ignoreOpen}
-	title="Ignore this proposal?"
+	title={i18n.imports_ignore_confirm()}
 	onClose={() => (ignoreOpen = false)}
 	actions={[
-		{ label: "Cancel", variant: "ghost", autofocus: true },
+		{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },
 		{
-			label: "Ignore",
+			label: i18n.common_ignore(),
 			variant: "danger",
 			dismiss: false,
 			pending: busy,
@@ -163,13 +164,13 @@
 	]}
 >
 	<p class="text-sm leading-relaxed text-fg-muted">
-		The proposal is dismissed and won't be offered again.
+		{i18n.imports_ignore_help()}
 	</p>
 	<Checkbox
 		checked={removeTorrent}
 		onChange={(v) => (removeTorrent = v)}
 		class="mt-4 text-sm text-fg"
 	>
-		Also remove the torrent from the download client
+		{i18n.file_also_remove_torrent()}
 	</Checkbox>
 </Dialog>

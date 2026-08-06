@@ -6,7 +6,7 @@
 	} from "@tanstack/svelte-query";
 	import { createForm } from "@tanstack/svelte-form";
 	import { KeyRound, RefreshCw, Check, Clipboard } from "@lucide/svelte";
-	import { api } from "../../lib/api";
+	import { api, errorText } from "../../lib/api";
 	import { config, READONLY_HINT } from "../../lib/config.svelte";
 	import { toast } from "../../lib/toast";
 	import { authConfigPatch } from "../../lib/schemas";
@@ -18,6 +18,7 @@
 	import ReadOnlyFieldset from "../../components/settings/ReadOnlyFieldset.svelte";
 	import Dialog from "../../components/modals/Dialog.svelte";
 	import Modal from "../../components/modals/Modal.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	const qc = useQueryClient();
 
@@ -38,7 +39,7 @@
 			seedFrom(resp);
 			toast.ok("Auth settings saved");
 		},
-		onError: (err) => toast.err(err.message),
+		onError: (err) => toast.err(errorText(err)),
 	}));
 
 	// Read-only instances can't persist the new secret, so the API hands it
@@ -62,7 +63,7 @@
 			pendingSecret = null;
 			toast.ok("JWT secret rotated — other sessions invalidated");
 		},
-		onError: (err) => toast.err(err.message),
+		onError: (err) => toast.err(errorText(err)),
 	}));
 
 	async function copySecret() {
@@ -107,36 +108,35 @@
 	const modes = [
 		{
 			value: "open",
-			label: "Open",
-			sub: "Anyone with the URL can register.",
+			label: i18n.common_open(),
+			sub: i18n.auth_mode_open_help(),
 		},
 		{
 			value: "invite",
-			label: "Invite-only",
-			sub: "Only invited emails can register.",
+			label: i18n.auth_mode_invite(),
+			sub: i18n.auth_mode_invite_help(),
 		},
 		{
 			value: "disabled",
-			label: "Closed",
-			sub: "Registration is turned off.",
+			label: i18n.auth_mode_closed(),
+			sub: i18n.auth_mode_closed_help(),
 		},
 	] as const;
 </script>
 
 <div class="mx-auto max-w-4xl">
 	<header>
-		<h1 class="text-2xl font-bold tracking-tight text-fg">Authentication</h1>
+		<h1 class="text-2xl font-bold tracking-tight text-fg">{i18n.settings_authentication()}</h1>
 		<p class="mt-1 text-sm text-fg-muted">
-			Who is allowed to register, and how long sessions stay valid. Changes
-			take effect immediately — no restart required.
+			{i18n.settings_auth_intro()}
 		</p>
 	</header>
 
 	{#if cfg.isPending}
-		<p class="mt-6 text-sm text-fg-subtle">Loading…</p>
+		<p class="mt-6 text-sm text-fg-subtle">{i18n.common_loading()}</p>
 	{:else if cfg.isError}
 		<p class="mt-6 text-sm text-status-failed">
-			Failed to load auth settings: {cfg.error?.message}
+			{i18n.err_load_failed_detail({ reason: errorText(cfg.error) })}
 		</p>
 	{:else}
 		<form
@@ -150,7 +150,7 @@
 			<form.Field name="registration_mode">
 				{#snippet children(field)}
 					<RadioCards
-						legend="Registration mode"
+						legend={i18n.auth_registration_mode()}
 						columns={3}
 						name={field.name}
 						value={field.state.value}
@@ -169,9 +169,9 @@
 					{#snippet children(field)}
 						<TextField
 							{field}
-							label="Session TTL"
+							label={i18n.auth_session_ttl()}
 							placeholder="168h"
-							help="Go duration (e.g. 30m, 12h, 168h). Applies to tokens issued after save."
+							help={i18n.auth_session_ttl_help()}
 						/>
 					{/snippet}
 				</form.Field>
@@ -180,18 +180,17 @@
 					{#snippet children(field)}
 						<div>
 							<Select
-								label="OIDC default role"
+								label={i18n.auth_oidc_default_role()}
 								value={field.state.value as UserRole}
 								options={[
-									{ value: "admin", label: "Admin" },
-									{ value: "member", label: "Member" },
-									{ value: "request_only", label: "Request-only" },
+									{ value: "admin", label: i18n.common_admin() },
+									{ value: "member", label: i18n.role_member() },
+									{ value: "request_only", label: i18n.role_request_only_hyphen() },
 								]}
 								onChange={(role) => field.handleChange(role)}
 							/>
 							<p class="mt-1 text-xs text-fg-muted">
-								Assigned to new users created via OIDC when registration
-								is open.
+								{i18n.settings_oidc_role_help()}
 							</p>
 						</div>
 					{/snippet}
@@ -201,7 +200,7 @@
 			<div class="flex justify-end gap-2">
 				<SubmitButton
 				{form}
-				label="Save changes"
+				label={i18n.common_save_changes()}
 				pendingLabel="Saving…"
 				disabled={config.readOnly}
 				title={config.readOnly ? READONLY_HINT : undefined}
@@ -214,7 +213,7 @@
 				></button>
 				<span class="inline-flex items-center gap-1.5 text-xs text-fg-subtle">
 					<Check size={12} aria-hidden="true" />
-					Applied immediately
+					{i18n.auth_applied_immediately()}
 				</span>
 			</div>
 			</ReadOnlyFieldset>
@@ -228,7 +227,7 @@
 					<KeyRound size={16} aria-hidden="true" />
 				</span>
 				<div class="min-w-0 flex-1">
-					<h3 class="text-sm font-semibold text-fg">JWT signing secret</h3>
+					<h3 class="text-sm font-semibold text-fg">{i18n.auth_jwt_secret()}</h3>
 					<p class="mt-0.5 text-xs text-fg-muted">
 						Rotate the HMAC secret used to sign session tokens. Every
 						active session is invalidated immediately — including those of
@@ -249,7 +248,7 @@
 					class="inline-flex h-9 items-center gap-1.5 rounded-md border border-status-failed/40 bg-status-failed/10 px-3 text-sm font-medium text-status-failed transition hover:bg-status-failed/15 disabled:cursor-not-allowed disabled:opacity-60"
 				>
 					<RefreshCw size={14} aria-hidden="true" />
-					{rotate.isPending ? "Rotating…" : "Rotate secret"}
+					{rotate.isPending ? i18n.auth_rotating() : i18n.auth_rotate_secret()}
 				</button>
 			</div>
 		</section>
@@ -258,13 +257,13 @@
 
 <Dialog
 	open={confirmRotate}
-	title="Rotate the JWT secret?"
+	title={i18n.auth_rotate_confirm()}
 	body="This signs everyone else out. You will stay signed in."
 	onClose={() => (confirmRotate = false)}
 	actions={[
-		{ label: "Cancel", variant: "ghost", autofocus: true },
+		{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },
 		{
-			label: "Rotate secret",
+			label: i18n.auth_rotate_secret(),
 			variant: "danger",
 			onClick: () => rotate.mutate(true),
 		},
@@ -273,16 +272,15 @@
 
 <Modal
 	open={pendingSecret !== null}
-	title="Save the new signing secret"
+	title={i18n.auth_rotate_save()}
 	size="lg"
 	onClose={() => (pendingSecret = null)}
 >
 	<p class="text-sm text-fg-muted">
-		Nothing has changed yet. Copy this into <code
+		{i18n.auth_secret_prefix()} <code
 			class="rounded bg-bg-deep px-1 py-0.5 font-mono text-xs text-fg"
 			>auth.session_secret</code
-		> in the config this instance reads, then apply — the rotation signs everyone
-		else out and won't survive a restart unless the file carries it.
+		> {i18n.auth_secret_suffix()}
 	</p>
 	<code
 		class="mt-3 block break-all rounded-md bg-bg-deep p-3 font-mono text-xs text-fg"
@@ -295,7 +293,7 @@
 		class="mt-2 inline-flex h-8 items-center gap-1.5 rounded-md border border-border px-2.5 text-xs font-medium text-fg-muted transition hover:bg-surface hover:text-fg"
 	>
 		<Clipboard size={13} aria-hidden="true" />
-		Copy secret
+		{i18n.auth_copy_secret()}
 	</button>
 
 	{#snippet footer()}
@@ -305,7 +303,7 @@
 			onclick={() => (pendingSecret = null)}
 			class="inline-flex h-9 items-center rounded-md border border-border px-3 text-sm text-fg-muted transition hover:text-fg"
 		>
-			Cancel
+			{i18n.common_cancel()}
 		</button>
 		<button
 			type="button"
@@ -314,7 +312,7 @@
 			class="inline-flex h-9 items-center gap-1.5 rounded-md border border-status-failed/40 bg-status-failed/10 px-3 text-sm font-medium text-status-failed transition hover:bg-status-failed/15 disabled:cursor-not-allowed disabled:opacity-60"
 		>
 			<RefreshCw size={14} aria-hidden="true" />
-			{rotate.isPending ? "Applying…" : "I saved it — apply now"}
+			{rotate.isPending ? i18n.common_applying() : i18n.auth_saved_apply()}
 		</button>
 	{/snippet}
 </Modal>

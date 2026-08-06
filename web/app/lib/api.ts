@@ -1,3 +1,5 @@
+import { m as i18n } from "./paraglide/messages.js";
+
 const BASE = "/api/v1";
 
 export type ApiErrorBody = { message?: string; code?: string } | null;
@@ -17,6 +19,63 @@ export type ApiOptions = {
 	body?: unknown;
 	headers?: Record<string, string>;
 };
+
+// The API answers in English by design — `message` stays readable for curl,
+// logs and non-browser clients. The SPA therefore never renders it: it resolves
+// the stable `code` first, falls back to the HTTP status, and only then to the
+// caller's action-specific text. Many handlers still pass raw service errors
+// through `message`, so showing it would leak internal Go strings as well as
+// English.
+const BY_CODE: Record<string, () => string> = {
+	invalid_credentials: i18n.err_invalid_credentials,
+	invite_invalid: i18n.err_invite_invalid,
+	invite_required: i18n.err_invite_required,
+	email_required: i18n.err_email_required,
+	weak_password: i18n.err_weak_password,
+	password_mismatch: i18n.err_password_mismatch,
+	registration_disabled: i18n.err_registration_disabled,
+	register_failed: i18n.err_register_failed,
+	rate_limited: i18n.err_rate_limited,
+	bad_request: i18n.err_bad_request,
+};
+
+function byStatus(status: number): string {
+	switch (status) {
+		case 400:
+			return i18n.err_bad_request();
+		case 401:
+			return i18n.err_unauthorized();
+		case 403:
+			return i18n.err_forbidden();
+		case 404:
+			return i18n.err_not_found();
+		case 409:
+			return i18n.err_conflict();
+		case 422:
+			return i18n.err_unprocessable();
+		case 429:
+			return i18n.err_rate_limited();
+		case 503:
+		case 504:
+			return i18n.err_unavailable();
+		default:
+			return status >= 500 ? i18n.err_server() : i18n.err_generic();
+	}
+}
+
+// errorText turns any thrown value into a translated, user-safe sentence.
+// `fallback` describes the attempted action (e.g. "Update failed") and is used
+// only for non-HTTP failures, where there is no status to explain the cause.
+export function errorText(err: unknown, fallback?: string): string {
+	if (err instanceof ApiError) {
+		const code = err.body?.code;
+		if (code && BY_CODE[code]) return BY_CODE[code]();
+		return byStatus(err.status);
+	}
+	// fetch() rejects with a TypeError when the request never reached the server.
+	if (err instanceof TypeError) return i18n.err_offline();
+	return fallback ?? i18n.err_generic();
+}
 
 // readBody reads a response that *should* be JSON but, on error paths, may be
 // plaintext (chi / oapi-codegen default error handlers, reverse proxies). It

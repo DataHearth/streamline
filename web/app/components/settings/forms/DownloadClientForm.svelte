@@ -9,6 +9,7 @@
 	import BrandLogo from "../BrandLogo.svelte";
 	import { readOnlyLock } from "../../../lib/config.svelte";
 	import type { DownloadClientType, DownloadClientAuth } from "../../../lib/types";
+	import { m as i18n } from "../../../lib/paraglide/messages.js";
 
 	type Values = {
 		name: string;
@@ -68,7 +69,7 @@
 	<form.Field name="client_type">
 		{#snippet children(field)}
 			<TypePicker
-				label="Client type"
+				label={i18n.dlclient_type()}
 				name={field.name}
 				value={field.state.value}
 				locked={isEdit}
@@ -92,7 +93,7 @@
 				{#snippet children(field)}
 					<TextField
 						{field}
-						label="Name"
+						label={i18n.common_name()}
 						placeholder="My download client"
 					/>
 				{/snippet}
@@ -101,7 +102,7 @@
 		<form.Field name="enabled">
 			{#snippet children(field)}
 				<TogglePill
-					label="Enabled"
+					label={i18n.common_enabled()}
 					tone="status"
 					name={field.name}
 					checked={field.state.value}
@@ -115,18 +116,18 @@
 		<div class="grid gap-3 sm:grid-cols-[1fr_6rem_auto] sm:items-end">
 			<form.Field name="host">
 				{#snippet children(field)}
-					<TextField {field} label="Host" placeholder="download.local" />
+					<TextField {field} label={i18n.field_host()} placeholder="download.local" />
 				{/snippet}
 			</form.Field>
 			<form.Field name="port">
 				{#snippet children(field)}
-					<TextField {field} label="Port" type="number" min={1} max={65535} />
+					<TextField {field} label={i18n.field_port()} type="number" min={1} max={65535} />
 				{/snippet}
 			</form.Field>
 			<form.Field name="use_ssl">
 				{#snippet children(field)}
 					<TogglePill
-						label="HTTPS"
+						label={i18n.field_https()}
 						icon={Lock}
 						name={field.name}
 						checked={field.state.value}
@@ -142,9 +143,9 @@
 					<div class="flex flex-wrap items-center gap-2" role="radiogroup">
 						<span
 							class="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-fg-muted"
-							>Auth method</span
+							>{i18n.dlclient_auth_method()}</span
 						>
-						{#each [{ v: "password" as const, l: "Username & password" }, { v: "api_key" as const, l: "API key" }] as o}
+						{#each [{ v: "password" as const, l: i18n.dlclient_user_pass() }, { v: "api_key" as const, l: i18n.field_api_key() }] as o}
 							<label
 								class="inline-flex h-9 cursor-pointer items-center rounded-md border border-border bg-bg-card px-3 text-xs font-medium text-fg-muted transition hover:border-border-strong has-[:checked]:border-accent has-[:checked]:bg-accent-soft has-[:checked]:text-fg has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60"
 							>
@@ -168,18 +169,18 @@
 				<div class="grid gap-3 sm:grid-cols-2">
 					<form.Field name="username">
 						{#snippet children(field)}
-							<TextField {field} label="Username" autocomplete="off" />
+							<TextField {field} label={i18n.field_username()} autocomplete="off" />
 						{/snippet}
 					</form.Field>
 					<form.Field name="password">
 						{#snippet children(field)}
 							<TextField
 								{field}
-								label="Password"
+								label={i18n.common_password()}
 								type="password"
 								autocomplete="new-password"
 								help={isEdit
-									? "Leave blank to keep the existing password."
+									? i18n.dlclient_password_keep()
 									: undefined}
 							/>
 						{/snippet}
@@ -190,12 +191,12 @@
 					{#snippet children(field)}
 						<TextField
 							{field}
-							label="API key"
+							label={i18n.field_api_key()}
 							type="password"
 							autocomplete="off"
 							help={isEdit
-								? "Leave blank to keep the existing API key. Generate in qBittorrent → Preferences → WebUI → API Key. Requires qBittorrent 5.2.0+."
-								: "Generate in qBittorrent → Preferences → WebUI → API Key. Requires qBittorrent 5.2.0+."}
+								? i18n.dlclient_apikey_keep_qbit()
+								: i18n.dlclient_qbit_apikey_help()}
 						/>
 					{/snippet}
 				</form.Field>
@@ -204,18 +205,18 @@
 			<div class="grid gap-3 sm:grid-cols-2">
 				<form.Field name="username">
 					{#snippet children(field)}
-						<TextField {field} label="Username" autocomplete="off" />
+						<TextField {field} label={i18n.field_username()} autocomplete="off" />
 					{/snippet}
 				</form.Field>
 				<form.Field name="password">
 					{#snippet children(field)}
 						<TextField
 							{field}
-							label="Password"
+							label={i18n.common_password()}
 							type="password"
 							autocomplete="new-password"
 							help={isEdit
-								? "Leave blank to keep the existing password."
+								? i18n.dlclient_password_keep()
 								: undefined}
 						/>
 					{/snippet}
@@ -232,7 +233,7 @@
 					<label
 						class="flex items-center gap-1.5 text-xs font-medium text-fg-muted"
 					>
-						Priority
+						{i18n.common_priority()}
 						<input
 							type="number"
 							inputmode="numeric"

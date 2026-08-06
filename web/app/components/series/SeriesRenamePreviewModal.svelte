@@ -5,9 +5,10 @@
 		useQueryClient,
 	} from "@tanstack/svelte-query";
 	import Modal from "../modals/Modal.svelte";
-	import { api } from "../../lib/api";
+	import { api, errorText } from "../../lib/api";
 	import { toast } from "../../lib/toast";
 	import type { SeriesRenamePlan } from "../../lib/types";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	type Props = {
 		open: boolean;
@@ -34,21 +35,21 @@
 			toast.ok("Files renamed");
 			onClose();
 		},
-		onError: (e: Error) => toast.err(e.message ?? "Rename failed"),
+		onError: (e: Error) => toast.err(errorText(e, i18n.rename_failed())),
 	}));
 
 	let opsCount = $derived(preview.data?.operations.length ?? 0);
 </script>
 
-<Modal {open} title="Rename files" size="lg" {onClose}>
+<Modal {open} title={i18n.action_rename_files()} size="lg" {onClose}>
 	{#if preview.isLoading}
-		<p class="text-sm text-fg-subtle">Computing rename plan…</p>
+		<p class="text-sm text-fg-subtle">{i18n.rename_computing()}</p>
 	{:else if preview.isError}
 		<p class="text-sm text-status-failed">
-			{preview.error?.message ?? "Failed to compute plan"}
+			{errorText(preview.error, i18n.rename_plan_failed())}
 		</p>
 	{:else if opsCount === 0}
-		<p class="text-sm text-fg-muted">Everything is already named correctly.</p>
+		<p class="text-sm text-fg-muted">{i18n.rename_already_correct()}</p>
 	{:else}
 		<p class="mb-3 text-sm text-fg-muted">
 			{opsCount} file{opsCount === 1 ? "" : "s"} will be moved:
@@ -64,7 +65,7 @@
 						<span
 							class="w-8 shrink-0 pt-px font-mono text-[9.5px] uppercase tracking-[0.14em] text-fg-faint"
 						>
-							From
+							{i18n.common_from()}
 						</span>
 						<span class="min-w-0 break-all font-mono text-fg-muted" title={op.from}>
 							{op.from}
@@ -92,7 +93,7 @@
 			onclick={onClose}
 			class="rounded-md border border-border bg-bg-elevated px-3 py-1.5 text-sm font-medium text-fg hover:border-border-strong"
 		>
-			{opsCount === 0 ? "Close" : "Cancel"}
+			{opsCount === 0 ? i18n.common_close() : i18n.common_cancel()}
 		</button>
 		{#if opsCount > 0}
 			<button
@@ -101,7 +102,7 @@
 				onclick={() => apply.mutate()}
 				class="rounded-md bg-accent px-3 py-1.5 text-sm font-semibold text-fg-on-accent hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
 			>
-				{apply.isPending ? "Applying…" : "Apply"}
+				{apply.isPending ? i18n.common_applying() : i18n.common_apply()}
 			</button>
 		{/if}
 	{/snippet}

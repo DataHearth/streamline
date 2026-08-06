@@ -3,6 +3,7 @@
 	import { fly } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { cn } from "../../lib/cn";
+	import { getLocale } from "../../lib/paraglide/runtime.js";
 	import {
 		buildMonthGrid,
 		eventsForDay,
@@ -22,7 +23,7 @@
 	const weekStart = resolveWeekStart();
 	const labels = weekdayLabels(weekStart);
 	const today = new Date();
-	const longDate = new Intl.DateTimeFormat(undefined, {
+	const longDate = new Intl.DateTimeFormat(getLocale(), {
 		weekday: "long",
 		month: "long",
 		day: "numeric",

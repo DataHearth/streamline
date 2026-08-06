@@ -3,13 +3,14 @@
 	import { Bookmark, Tv } from "@lucide/svelte";
 	import { cn } from "../../lib/cn";
 	import { dragScroll } from "../../lib/drag-scroll";
-	import { api } from "../../lib/api";
+	import { api, errorText } from "../../lib/api";
 	import { toast } from "../../lib/toast";
 	import { tvPosterUrl } from "../../lib/posters";
 	import Poster from "../movies/Poster.svelte";
 	import SelectBox from "../shared/SelectBox.svelte";
 	import SeriesActionsMenu from "./SeriesActionsMenu.svelte";
 	import type { TVShow } from "../../lib/types";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	let {
 		series,
@@ -35,9 +36,9 @@
 			}),
 		onSuccess: (_d, s) => {
 			qc.invalidateQueries({ queryKey: ["series"] });
-			toast.ok(s.monitored ? "Stopped monitoring" : "Now monitoring");
+			toast.ok(s.monitored ? i18n.monitor_stopped() : i18n.monitor_now_monitoring());
 		},
-		onError: (e) => toast.err(e.message ?? "Update failed"),
+		onError: (e) => toast.err(errorText(e, i18n.common_update_failed())),
 	}));
 
 	function availability(s: TVShow): "wanted" | "available" | "missing" {
@@ -65,32 +66,32 @@
 						checked={allSelected}
 						indeterminate={pageSelected > 0 && !allSelected}
 						onChange={(v) => onToggleAll(v)}
-						label={allSelected ? "Deselect all" : "Select all"}
+						label={allSelected ? i18n.common_deselect_all() : i18n.common_select_all()}
 					/>
 				</th>
 				<th scope="col" class="w-12 px-3 py-2.5" aria-hidden="true"></th>
-				<th scope="col" class="px-3 py-2.5 text-left font-medium">Title</th>
+				<th scope="col" class="px-3 py-2.5 text-left font-medium">{i18n.common_title()}</th>
 				<th
 					scope="col"
 					class="hidden w-28 px-3 py-2.5 text-left font-medium @4xl:table-cell"
 				>
-					Network
+					{i18n.builtin_network()}
 				</th>
 				<th
 					scope="col"
 					class="hidden w-20 px-3 py-2.5 text-left font-medium @3xl:table-cell"
 				>
-					Type
+					{i18n.common_type()}
 				</th>
-				<th scope="col" class="w-32 px-3 py-2.5 text-left font-medium">Status</th>
+				<th scope="col" class="w-32 px-3 py-2.5 text-left font-medium">{i18n.common_status()}</th>
 				<th scope="col" class="w-44 px-3 py-2.5 text-left font-medium @2xl:w-52">
-					Episodes
+					{i18n.series_episodes()}
 				</th>
 				<th
 					scope="col"
 					class="hidden w-20 px-3 py-2.5 text-right font-medium @2xl:table-cell"
 				>
-					Rating
+					{i18n.series_rating()}
 				</th>
 				<th scope="col" class="w-20 px-3 py-2.5" aria-hidden="true"></th>
 			</tr>
@@ -109,7 +110,7 @@
 						<SelectBox
 							checked={isSel}
 							onChange={(v) => onToggle(show.id, v)}
-							label={isSel ? `Deselect ${show.title}` : `Select ${show.title}`}
+							label={isSel ? `Deselect ${show.title}` : i18n.a11y_select_item({ title: show.title })}
 						/>
 					</td>
 					<td class="px-3 py-2.5">
@@ -197,9 +198,9 @@
 							<button
 								type="button"
 								onclick={() => monitor.mutate(show)}
-								aria-label={show.monitored ? "Stop monitoring" : "Monitor"}
+								aria-label={show.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
 								aria-pressed={show.monitored}
-								title={show.monitored ? "Stop monitoring" : "Monitor"}
+								title={show.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
 								class={cn(
 									"grid h-8 w-8 place-items-center rounded-md transition hover:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring",
 									show.monitored

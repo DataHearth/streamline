@@ -2,12 +2,13 @@
 	import { ExternalLink, Trash2 } from "@lucide/svelte";
 	import { createMutation, useQueryClient } from "@tanstack/svelte-query";
 	import { auth } from "../../lib/auth.svelte";
-	import { api } from "../../lib/api";
+	import { api, errorText } from "../../lib/api";
 	import { toast } from "../../lib/toast";
 	import { formatBytes } from "../../lib/format";
 	import Dialog from "../modals/Dialog.svelte";
 	import Checkbox from "../forms/Checkbox.svelte";
 	import type { Movie } from "../../lib/types";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	let {
 		movie,
@@ -98,7 +99,7 @@
 				toast.ok("File deleted");
 				deleteOpen = false;
 			},
-			onError: (e) => toast.err(e.message ?? "Delete failed"),
+			onError: (e) => toast.err(errorText(e, i18n.common_delete_failed())),
 		}),
 	);
 </script>
@@ -113,7 +114,7 @@
 				id="info-file"
 				class="font-mono text-[11px] uppercase tracking-[0.14em] text-fg-faint"
 			>
-				File
+				{i18n.common_file()}
 			</h4>
 			{#if primary && auth.canAddDirectly}
 				<button
@@ -122,8 +123,8 @@
 						removeTorrent = false;
 						deleteOpen = true;
 					}}
-					aria-label="Delete file"
-					title="Delete file"
+					aria-label={i18n.action_delete_file()}
+					title={i18n.action_delete_file()}
 					class="grid h-7 w-7 place-items-center rounded-md text-fg-muted transition hover:bg-status-failed/10 hover:text-status-failed focus:outline-none focus:ring-2 focus:ring-accent-ring"
 				>
 					<Trash2 class="h-4 w-4" aria-hidden="true" />
@@ -132,27 +133,27 @@
 		</div>
 		{#if primary}
 			<dl class="mt-3 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-[12px]">
-				<dt class="text-fg-subtle">Resolution</dt>
+				<dt class="text-fg-subtle">{i18n.file_resolution()}</dt>
 				<dd class="text-right font-mono text-fg">
 					{primary.parsed_resolution || "—"}
 				</dd>
-				<dt class="text-fg-subtle">Codec</dt>
+				<dt class="text-fg-subtle">{i18n.file_codec()}</dt>
 				<dd class="text-right font-mono text-fg">
 					{primary.parsed_codec || "—"}
 				</dd>
-				<dt class="text-fg-subtle">Source</dt>
+				<dt class="text-fg-subtle">{i18n.file_source()}</dt>
 				<dd class="text-right font-mono text-fg">
 					{primary.parsed_source || "—"}
 				</dd>
-				<dt class="text-fg-subtle">Size</dt>
+				<dt class="text-fg-subtle">{i18n.common_size()}</dt>
 				<dd class="text-right font-mono text-fg">
 					{formatBytes(primary.size)}
 				</dd>
-				<dt class="text-fg-subtle">Group</dt>
+				<dt class="text-fg-subtle">{i18n.file_group()}</dt>
 				<dd class="text-right font-mono text-fg">
 					{primary.release_group || "—"}
 				</dd>
-				<dt class="text-fg-subtle">Path</dt>
+				<dt class="text-fg-subtle">{i18n.field_path()}</dt>
 				<dd class="min-w-0">
 					<button
 						type="button"
@@ -163,7 +164,7 @@
 						oncontextmenu={onContextMenu}
 						onclick={onClick}
 						title={primary.path}
-						aria-label="Copy file path"
+						aria-label={i18n.action_copy_file_path()}
 						class="block w-full truncate rounded text-right font-mono underline decoration-border-strong decoration-dotted underline-offset-[3px] transition-colors [-webkit-touch-callout:none] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring {holding
 							? 'text-accent-text'
 							: 'text-fg'}"
@@ -189,27 +190,27 @@
 			id="info-library"
 			class="font-mono text-[11px] uppercase tracking-[0.14em] text-fg-faint"
 		>
-			Library
+			{i18n.nav_library()}
 		</h4>
 		<dl class="mt-3 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-[12px]">
-			<dt class="text-fg-subtle">Quality profile</dt>
+			<dt class="text-fg-subtle">{i18n.quality_profile()}</dt>
 			<dd class="text-right font-mono text-fg">
 				{qualityProfileName ?? "—"}
 			</dd>
-			<dt class="text-fg-subtle">Status</dt>
+			<dt class="text-fg-subtle">{i18n.common_status()}</dt>
 			<dd class="text-right font-mono text-fg capitalize">
 				{movie.status}
 			</dd>
-			<dt class="text-fg-subtle">Monitored</dt>
+			<dt class="text-fg-subtle">{i18n.monitor_monitored()}</dt>
 			<dd class="text-right font-mono text-fg">
-				{movie.monitored ? "Yes" : "No"}
+				{movie.monitored ? i18n.common_yes() : i18n.common_no()}
 			</dd>
 			{#if movie.year}
-				<dt class="text-fg-subtle">Year</dt>
+				<dt class="text-fg-subtle">{i18n.common_year()}</dt>
 				<dd class="text-right font-mono text-fg">{movie.year}</dd>
 			{/if}
 			{#if movie.runtime}
-				<dt class="text-fg-subtle">Runtime</dt>
+				<dt class="text-fg-subtle">{i18n.detail_runtime()}</dt>
 				<dd class="text-right font-mono text-fg">{movie.runtime}m</dd>
 			{/if}
 			<dt class="text-fg-subtle">TMDB</dt>
@@ -230,12 +231,12 @@
 
 <Dialog
 	open={deleteOpen}
-	title="Delete this file?"
+	title={i18n.file_delete_confirm()}
 	onClose={() => (deleteOpen = false)}
 	actions={[
-		{ label: "Cancel", variant: "ghost", autofocus: true },
+		{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },
 		{
-			label: "Delete file",
+			label: i18n.action_delete_file(),
 			variant: "danger",
 			dismiss: false,
 			pending: del.isPending,
@@ -245,7 +246,7 @@
 	]}
 >
 	<p class="text-sm leading-relaxed text-fg-muted">
-		The file is removed from disk and the movie reverts to <span
+		{i18n.file_removed_reverts()} <span
 			class="font-medium text-fg">wanted</span
 		>, so the next monitored search re-grabs it.
 	</p>
@@ -254,6 +255,6 @@
 		onChange={(v) => (removeTorrent = v)}
 		class="mt-4 text-sm text-fg"
 	>
-		Also remove the torrent from the download client
+		{i18n.file_also_remove_torrent()}
 	</Checkbox>
 </Dialog>

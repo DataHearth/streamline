@@ -4,6 +4,7 @@
 	import { api } from "../../lib/api";
 	import Poster from "./Poster.svelte";
 	import AddRecommendationModal from "./AddRecommendationModal.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 	import type {
 		MovieRecommendations,
 		PaginatedMovies,
@@ -53,7 +54,7 @@
 				id="similar-label"
 				class="font-mono text-[11px] uppercase tracking-[0.14em] text-fg-faint"
 			>
-				More like this
+				{i18n.movies_more_like_this()}
 			</h3>
 		</header>
 		<div class="poster-scroll -mx-1 px-1 pb-1">
@@ -103,7 +104,7 @@
 					<a
 						href="/movies/{localId}"
 						class="snap-start group relative block overflow-hidden rounded-lg ring-1 ring-border transition duration-200 hover:ring-border-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-accent motion-reduce:transition-none"
-						title="In your library — open details"
+						title={i18n.movies_in_library_open()}
 					>
 						{@render poster()}
 					</a>

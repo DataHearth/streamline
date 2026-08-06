@@ -16,7 +16,7 @@
 		X,
 	} from "@lucide/svelte";
 	import { fade } from "svelte/transition";
-	import { api } from "../../lib/api";
+	import { api, errorText } from "../../lib/api";
 	import { toast } from "../../lib/toast";
 	import { auth } from "../../lib/auth.svelte";
 	import type {
@@ -32,6 +32,7 @@
 	import Modal from "../modals/Modal.svelte";
 	import Select from "../forms/Select.svelte";
 	import LookupDetailPanel from "../shared/LookupDetailPanel.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	type Props = {
 		open: boolean;
@@ -166,15 +167,15 @@
 		},
 		onSuccess: (show, s) => {
 			if (!canAdd || !show) {
-				toast.ok(`Requested ${s.title}`);
+				toast.ok(i18n.toast_requested({ title: s.title }));
 				return;
 			}
 			sessionAdds = new Map(sessionAdds).set(s.tvdb_id, show.id);
 			qc.invalidateQueries({ queryKey: ["series"] });
 			qc.invalidateQueries({ queryKey: ["series", "counts"] });
-			toast.ok(`Added ${s.title}`);
+			toast.ok(i18n.toast_added({ title: s.title }));
 		},
-		onError: (e) => toast.err(e.message ?? "Add failed"),
+		onError: (e) => toast.err(errorText(e, i18n.common_add_failed())),
 		onSettled: () => {
 			pendingTvdbId = null;
 		},
@@ -183,17 +184,17 @@
 	let results = $derived(searchQuery.data ?? []);
 	let qpItems = $derived(qpQuery.data ?? []);
 	let qpOptions = $derived<{ value: string; label: string }[]>([
-		{ value: "", label: canAdd ? "Server default" : "No preference" },
+		{ value: "", label: canAdd ? i18n.quality_server_default() : i18n.quality_no_preference() },
 		...qpItems.map((p) => ({ value: p.name, label: p.name })),
 	]);
 
 	const presetOptions: { value: MonitoringPreset; label: string }[] = [
-		{ value: "all", label: "All episodes" },
-		{ value: "future", label: "Future episodes" },
-		{ value: "missing", label: "Missing episodes" },
-		{ value: "existing", label: "Existing episodes" },
-		{ value: "pilot", label: "Pilot only" },
-		{ value: "none", label: "None" },
+		{ value: "all", label: i18n.series_monitor_all() },
+		{ value: "future", label: i18n.series_monitor_future() },
+		{ value: "missing", label: i18n.series_monitor_missing() },
+		{ value: "existing", label: i18n.series_monitor_existing() },
+		{ value: "pilot", label: i18n.series_monitor_pilot() },
+		{ value: "none", label: i18n.common_none() },
 	];
 
 	let libraryByTvdb = $derived.by(() => {
@@ -244,9 +245,9 @@
 
 	let announcer = $derived.by(() => {
 		if (debounced.length < 2) return "";
-		if (searchQuery.isLoading) return "Searching TVDB";
-		if (searchQuery.isError) return searchQuery.error?.message ?? "Search failed";
-		if (results.length === 0) return `No results for "${debounced}"`;
+		if (searchQuery.isLoading) return i18n.searching_tvdb();
+		if (searchQuery.isError) return errorText(searchQuery.error, i18n.common_search_failed());
+		if (results.length === 0) return i18n.lookup_no_results_for({ query: debounced });
 		const n = results.length;
 		return `${n} result${n === 1 ? "" : "s"} for "${debounced}"`;
 	});
@@ -303,10 +304,10 @@
 	{open}
 	{onClose}
 	title={mode === "pick"
-		? "Choose match"
+		? i18n.action_choose_match()
 		: canAdd
-			? "Add series"
-			: "Request a series"}
+			? i18n.action_add_series()
+			: i18n.action_request_series()}
 	size="3xl"
 	footer={results.length > 0 ? actionFooter : undefined}
 >
@@ -328,9 +329,9 @@
 					bind:this={searchInput}
 					bind:value={query}
 					onkeydown={onSearchKeydown}
-					placeholder="Search TVDB by title…"
+					placeholder={i18n.lookup_search_tvdb_placeholder()}
 					autocomplete="off"
-					aria-label="Search TVDB by title"
+					aria-label={i18n.lookup_search_tvdb()}
 					class="w-full rounded-md border border-border bg-bg-card py-2 pl-10 pr-10 text-sm text-fg outline-none focus:border-accent focus:ring-2 focus:ring-accent-ring placeholder:text-fg-faint"
 				/>
 				{#if query.length > 0}
@@ -340,7 +341,7 @@
 							query = "";
 							searchInput?.focus();
 						}}
-						aria-label="Clear search"
+						aria-label={i18n.common_clear_search()}
 						class="absolute right-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded text-fg-faint transition hover:bg-surface hover:text-fg"
 					>
 						<X size={14} aria-hidden="true" />
@@ -363,9 +364,9 @@
 					class="flex flex-1 flex-col items-center justify-center py-12 text-center"
 				>
 					<Search class="mb-3 h-8 w-8 text-fg-faint" aria-hidden="true" />
-					<p class="text-sm font-medium text-fg-muted">Search TVDB</p>
+					<p class="text-sm font-medium text-fg-muted">{i18n.series_search_tvdb()}</p>
 					<p class="mt-1 text-xs text-fg-faint">
-						Type at least 2 characters to find a show.
+						{i18n.series_type_2_chars()}
 					</p>
 				</div>
 			{:else if searchQuery.isLoading}
@@ -389,14 +390,14 @@
 					role="alert"
 					class="rounded-lg border border-dashed border-status-failed/40 bg-status-failed/5 py-8 text-center text-xs text-status-failed"
 				>
-					{searchQuery.error?.message ?? "Search failed"}
+					{errorText(searchQuery.error, i18n.common_search_failed())}
 				</p>
 			{:else if results.length === 0}
 				<div
 					class="flex flex-1 flex-col items-center justify-center py-12 text-center"
 				>
 					<Tv class="mb-3 h-8 w-8 text-fg-faint" aria-hidden="true" />
-					<p class="text-sm font-medium text-fg-muted">No matches</p>
+					<p class="text-sm font-medium text-fg-muted">{i18n.common_no_matches()}</p>
 					<p class="mt-1 text-xs text-fg-faint">
 						Nothing on TVDB for &ldquo;{debounced}&rdquo;.
 					</p>
@@ -460,7 +461,7 @@
 										<span
 											class="mt-1 inline-flex w-fit items-center rounded-full border border-border bg-bg-elevated px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.1em] text-fg-subtle"
 										>
-											In library
+											{i18n.status_in_library()}
 										</span>
 									{:else if r.network}
 										<span class="block truncate text-[11.5px] text-fg-subtle">
@@ -487,7 +488,7 @@
 				detail={detailQuery.data}
 				loading={detailQuery.isLoading}
 				error={detailQuery.isError
-					? (detailQuery.error?.message ?? "Couldn't load details")
+					? (errorText(detailQuery.error, i18n.torrent_details_failed()))
 					: undefined}
 				onBack={() => (showPanelOnNarrow = false)}
 			/>
@@ -504,7 +505,7 @@
 					class="inline-flex shrink-0 items-center gap-1.5 text-sm font-medium text-fg"
 				>
 					<Gauge size={16} class="text-fg-muted" aria-hidden="true" />
-					{canAdd ? "Quality" : "Preferred quality"}
+					{canAdd ? i18n.common_quality() : i18n.quality_preferred()}
 				</label>
 				<div class="w-44">
 					<Select
@@ -522,7 +523,7 @@
 						class="inline-flex items-center gap-1.5 text-sm font-medium text-fg"
 					>
 						<Eye size={16} class="text-fg-muted" aria-hidden="true" />
-						Monitor
+						{i18n.action_monitor()}
 					</label>
 					<div class="w-44">
 						<Select
@@ -545,7 +546,7 @@
 				class="inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-4 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover"
 			>
 				<Check size={15} aria-hidden="true" />
-				Use match
+				{i18n.action_use_match()}
 			</button>
 		{:else if selectedInLibrary && selectedLocalId !== undefined}
 			<a
@@ -553,14 +554,14 @@
 				onclick={onClose}
 				class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-4 text-sm font-medium text-fg-muted transition hover:border-border-strong hover:text-fg"
 			>
-				Open in library
+				{i18n.action_open_in_library()}
 				<ArrowUpRight size={15} aria-hidden="true" />
 			</a>
 		{:else if selectedInLibrary}
 			<span
 				class="inline-flex h-9 items-center rounded-md border border-border bg-bg-elevated px-4 text-sm font-medium text-fg-muted"
 			>
-				In library
+				{i18n.status_in_library()}
 			</span>
 		{:else}
 			<button
@@ -572,10 +573,10 @@
 			>
 				{#if selectedPending}
 					<LoaderCircle size={15} class="animate-spin" aria-hidden="true" />
-					{canAdd ? "Adding…" : "Requesting…"}
+					{canAdd ? i18n.action_adding() : i18n.action_requesting()}
 				{:else}
 					<Plus size={15} aria-hidden="true" />
-					{canAdd ? "Add series" : "Request"}
+					{canAdd ? i18n.action_add_series() : i18n.action_request()}
 				{/if}
 			</button>
 		{/if}

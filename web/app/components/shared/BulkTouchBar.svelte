@@ -24,6 +24,7 @@
 	import { plural } from "../../lib/bulk";
 	import { bulkMode } from "../../lib/bulk-mode.svelte";
 	import { sheetSwipe } from "../../lib/sheet-swipe";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	// The phone half of bulk actions. It takes the bottom bar's place instead of
 	// stacking above it, and everything rare or destructive goes in the sheet
@@ -76,7 +77,7 @@
 
 <div
 	role="toolbar"
-	aria-label="Bulk actions"
+	aria-label={i18n.bulk_actions()}
 	aria-busy={busy}
 	transition:fly={{ y: 64, duration: 200, easing: cubicOut }}
 	class={cn(
@@ -105,7 +106,7 @@
 		class={cn(cell, "text-fg-muted")}
 	>
 		<MoreHorizontal size={22} aria-hidden="true" />
-		More
+		{i18n.common_more()}
 	</button>
 </div>
 
@@ -114,11 +115,11 @@
 		class="fixed inset-0 z-50 md:hidden"
 		role="dialog"
 		aria-modal="true"
-		aria-label="Bulk actions"
+		aria-label={i18n.bulk_actions()}
 	>
 		<button
 			type="button"
-			aria-label="Close"
+			aria-label={i18n.common_close()}
 			transition:fade={{ duration: 160 }}
 			onclick={() => (sheet = false)}
 			class="absolute inset-0 h-full w-full cursor-default bg-black/55"
@@ -142,7 +143,7 @@
 				<button
 					type="button"
 					onclick={() => (sheet = false)}
-					aria-label="Close"
+					aria-label={i18n.common_close()}
 					class="grid h-9 w-9 place-items-center rounded-full bg-surface text-fg-subtle transition active:bg-bg-hover"
 				>
 					<X size={16} aria-hidden="true" />

@@ -3,6 +3,7 @@
 	import { missingEpisodes } from "../../lib/status";
 	import SeasonProgress from "./SeasonProgress.svelte";
 	import type { Season } from "../../lib/types";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	let {
 		seasons,
@@ -44,7 +45,7 @@
 			)}
 		>
 			<div class="font-mono text-xs font-semibold text-fg">
-				{s.number === 0 ? "SPECIALS" : `Season ${pad(s.number)}`}
+				{s.number === 0 ? i18n.series_specials_caps() : i18n.season_number({ number: pad(s.number) })}
 			</div>
 			{#if s.name && s.number !== 0}
 				<div class="truncate text-[11px] text-fg-subtle">{s.name}</div>

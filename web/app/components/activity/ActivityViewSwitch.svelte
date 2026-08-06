@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { cn } from "../../lib/cn";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	// Queue and History are two readings of one page, so this switches between them
 	// in place. Torrents is NOT a third cell: it's a separate route, and the nav
@@ -26,7 +27,7 @@
 <div
 	class="flex shrink-0 items-center gap-0.5 rounded-md border border-border bg-bg-elevated p-[3px]"
 	role="group"
-	aria-label="Activity view"
+	aria-label={i18n.activity_view()}
 >
 	<button
 		type="button"

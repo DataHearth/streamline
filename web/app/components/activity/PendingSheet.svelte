@@ -6,6 +6,7 @@
 	import { lockScroll, unlockScroll } from "../../lib/scrollLock";
 	import { sheetSwipe } from "../../lib/sheet-swipe";
 	import type { PendingItem } from "../../lib/types";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	// Below md the "needs attention" section is one banner line on the page; the
 	// proposals themselves open here, where each one gets the full width its three
@@ -49,11 +50,11 @@
 		class="fixed inset-0 z-50 md:hidden"
 		role="dialog"
 		aria-modal="true"
-		aria-label="Needs attention"
+		aria-label={i18n.common_needs_attention()}
 	>
 		<button
 			type="button"
-			aria-label="Close"
+			aria-label={i18n.common_close()}
 			transition:fade={{ duration: 160 }}
 			onclick={onClose}
 			class="absolute inset-0 h-full w-full cursor-default bg-black/55"
@@ -84,7 +85,7 @@
 				<button
 					type="button"
 					onclick={onClose}
-					aria-label="Close"
+					aria-label={i18n.common_close()}
 					class="grid h-9 w-9 place-items-center rounded-full bg-surface text-fg-subtle transition active:bg-bg-hover"
 				>
 					<X size={16} aria-hidden="true" />
@@ -97,11 +98,11 @@
 			>
 				{#if error}
 					<p class="py-6 text-center text-sm text-status-failed">
-						Failed to load proposals.
+						{i18n.torrent_proposals_failed()}
 					</p>
 				{:else if items.length === 0}
 					<p class="py-6 text-center text-sm text-fg-muted">
-						Nothing is waiting on a decision.
+						{i18n.activity_nothing_waiting()}
 					</p>
 				{:else}
 					<div class="flex flex-col gap-2.5">

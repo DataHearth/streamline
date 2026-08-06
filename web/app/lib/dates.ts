@@ -1,12 +1,19 @@
-const dtf = new Intl.DateTimeFormat(undefined, {
+import { getLocale } from "./paraglide/runtime.js";
+
+// Bound to the app locale, not the browser's: a French UI in an English
+// browser must not render English dates. Locale changes force a reload, so
+// resolving once at module load is enough.
+const locale = getLocale();
+
+const dtf = new Intl.DateTimeFormat(locale, {
 	dateStyle: "medium",
 	timeStyle: "short",
 });
-const dateShort = new Intl.DateTimeFormat(undefined, {
+const dateShort = new Intl.DateTimeFormat(locale, {
 	month: "short",
 	day: "numeric",
 });
-const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
+const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
 
 export function formatDateTime(iso: string | null | undefined): string {
 	if (!iso) return "";

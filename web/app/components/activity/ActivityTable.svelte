@@ -4,6 +4,8 @@
 	import ExpandedRowDetail from "./ExpandedRowDetail.svelte";
 	import { cn } from "../../lib/cn";
 	import type { QueueEntry, HistoryEntry } from "../../lib/types";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { errorText } from "../../lib/api";
 
 	let {
 		view,
@@ -42,22 +44,22 @@
 	type Col = { label: string; hide?: string; grow?: boolean };
 	const HEADERS: Record<"queue" | "history", Col[]> = {
 		queue: [
-			{ label: "Status" },
+			{ label: i18n.common_status() },
 			// `grow` + max-w-0 on the cell: the title absorbs the leftover width and
 			// truncates, instead of pushing the table past its container.
-			{ label: "Title", grow: true },
-			{ label: "Progress" },
-			{ label: "Speed / ETA" },
-			{ label: "Client", hide: "hidden @3xl:table-cell" },
+			{ label: i18n.common_title(), grow: true },
+			{ label: i18n.common_progress() },
+			{ label: i18n.activity_speed_eta() },
+			{ label: i18n.common_client(), hide: "hidden @3xl:table-cell" },
 			{ label: "" },
 		],
 		history: [
-			{ label: "Status" },
-			{ label: "Title", grow: true },
+			{ label: i18n.common_status() },
+			{ label: i18n.common_title(), grow: true },
 			// Least actionable of the five, so it's the one that goes.
-			{ label: "Indexer", hide: "hidden @3xl:table-cell" },
-			{ label: "Size" },
-			{ label: "When" },
+			{ label: i18n.common_indexer(), hide: "hidden @3xl:table-cell" },
+			{ label: i18n.common_size() },
+			{ label: i18n.common_when() },
 			{ label: "" },
 		],
 	};
@@ -95,14 +97,14 @@
 	class="@container mt-3 hidden overflow-x-auto rounded-lg border border-border bg-bg-elevated md:block"
 >
 	{#if loading}
-		<div class="px-5 py-10 text-center text-sm text-fg-subtle">Loading…</div>
+		<div class="px-5 py-10 text-center text-sm text-fg-subtle">{i18n.common_loading()}</div>
 	{:else if error}
 		<div class="px-5 py-10 text-center">
 			<p class="text-sm font-semibold text-status-failed">
 				Failed to load {view}
 			</p>
 			<p class="mt-1 text-xs text-fg-subtle">
-				{error.message || "Unknown error"}
+				{errorText(error)}
 			</p>
 		</div>
 	{:else if rows.length === 0}
@@ -111,12 +113,12 @@
 		>
 			<Activity size={28} class="text-fg-faint" aria-hidden="true" />
 			<p class="text-sm font-medium text-fg">
-				{view === "queue" ? "Queue is quiet" : "No history yet"}
+				{view === "queue" ? i18n.activity_queue_quiet() : i18n.common_no_history()}
 			</p>
 			<p class="text-xs text-fg-muted">
 				{view === "queue"
-					? "Active and queued downloads will appear here."
-					: "Completed and failed downloads will appear here."}
+					? i18n.activity_queue_help()
+					: i18n.activity_none_completed()}
 			</p>
 		</div>
 	{:else}
@@ -174,7 +176,7 @@
 						class="motion-safe:animate-spin"
 						aria-hidden="true"
 					/>
-					Loading more…
+					{i18n.common_loading_more()}
 				</div>
 			{/if}
 		{/if}

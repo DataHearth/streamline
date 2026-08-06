@@ -3,6 +3,7 @@
 	import { formatDateTime, formatRelative } from "../../lib/dates";
 	import type { ApiKey, Session, User } from "../../lib/types";
 	import Avatar from "../layout/Avatar.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	let {
 		user,
@@ -55,7 +56,7 @@
 							class="inline-flex items-center gap-1 rounded-full bg-accent/12 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent"
 						>
 							<ShieldCheck size={10} aria-hidden="true" />
-							Admin
+							{i18n.common_admin()}
 						</span>
 					{:else}
 						<span

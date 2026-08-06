@@ -1,5 +1,6 @@
 <script lang="ts" module>
 	import type { EpisodeDisplayStatus } from "../../lib/status";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	// Episode statuses map onto the shared status color tokens. "unaired" and
 	// "skipped" have no dedicated status pill, so they borrow neutral tones.
@@ -8,13 +9,13 @@
 		EpisodeDisplayStatus,
 		{ label: string; token: string; live?: boolean }
 	> = {
-		available: { label: "Available", token: "available" },
-		wanted: { label: "Wanted", token: "wanted" },
-		missing: { label: "Missing", token: "missing" },
-		downloading: { label: "Downloading", token: "downloading", live: true },
-		paused: { label: "Paused", token: "paused" },
-		unaired: { label: "Unaired", token: "missing" },
-		skipped: { label: "Skipped", token: "paused" },
+		available: { label: i18n.status_available(), token: "available" },
+		wanted: { label: i18n.status_wanted(), token: "wanted" },
+		missing: { label: i18n.status_missing(), token: "missing" },
+		downloading: { label: i18n.status_downloading(), token: "downloading", live: true },
+		paused: { label: i18n.status_paused(), token: "paused" },
+		unaired: { label: i18n.series_unaired(), token: "missing" },
+		skipped: { label: i18n.common_skipped(), token: "paused" },
 	};
 </script>
 
@@ -46,15 +47,15 @@
 	let rows = $derived(
 		episode
 			? [
-					{ label: "Episode", value: code },
+					{ label: i18n.common_episode(), value: code },
 					{
-						label: "Absolute #",
+						label: i18n.series_absolute_num(),
 						value: episode.absolute_number ? `#${episode.absolute_number}` : "—",
 					},
-					{ label: "Air date", value: formatDateTime(episode.air_date) || "—" },
-					{ label: "Monitored", value: episode.monitored ? "Yes" : "No" },
-					{ label: "Quality", value: episode.quality || "—" },
-					{ label: "Size", value: formatBytes(episode.size) },
+					{ label: i18n.series_air_date(), value: formatDateTime(episode.air_date) || "—" },
+					{ label: i18n.monitor_monitored(), value: episode.monitored ? i18n.common_yes() : i18n.common_no() },
+					{ label: i18n.common_quality(), value: episode.quality || "—" },
+					{ label: i18n.common_size(), value: formatBytes(episode.size) },
 				]
 			: [],
 	);
@@ -98,7 +99,7 @@
 
 		{#if episode.path}
 			<dl class="mt-4 border-t border-border pt-3">
-				<dt class="text-sm text-fg-subtle">File</dt>
+				<dt class="text-sm text-fg-subtle">{i18n.common_file()}</dt>
 				<dd
 					class="mt-1 break-all font-mono text-xs text-fg-muted"
 					title={episode.path}
@@ -120,7 +121,7 @@
 					class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-3.5 text-sm font-medium text-fg-muted transition hover:border-status-failed/40 hover:bg-status-failed/10 hover:text-status-failed"
 				>
 					<Trash2 size={15} aria-hidden="true" />
-					Delete file
+					{i18n.action_delete_file()}
 				</button>
 			{/if}
 			{#if episode && episode.status !== "unaired"}
@@ -134,7 +135,7 @@
 					class="inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-3.5 text-sm font-medium text-fg-on-accent transition hover:bg-accent-hover"
 				>
 					<Search size={15} aria-hidden="true" />
-					Manual search
+					{i18n.action_manual_search()}
 				</button>
 			{/if}
 		{/snippet}

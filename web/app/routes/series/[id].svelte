@@ -15,7 +15,7 @@
 		ExternalLink,
 		Trash2,
 	} from "@lucide/svelte";
-	import { api } from "../../lib/api";
+	import { api, errorText } from "../../lib/api";
 	import { toast } from "../../lib/toast";
 	import { cn } from "../../lib/cn";
 	import { missingEpisodes } from "../../lib/status";
@@ -38,6 +38,7 @@
 	import DetailAbout from "../../components/shared/DetailAbout.svelte";
 	import PlayOnMenu from "../../components/movies/PlayOnMenu.svelte";
 	import type { SeriesAction } from "../../components/series/SeriesKebabMenu.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 	import type {
 		Episode,
 		MonitoringPreset,
@@ -47,10 +48,10 @@
 
 	type Tab = "overview" | "episodes" | "history" | "cast";
 	const TABS: { key: Tab; label: string }[] = [
-		{ key: "overview", label: "Overview" },
-		{ key: "episodes", label: "Episodes" },
-		{ key: "history", label: "History" },
-		{ key: "cast", label: "Cast" },
+		{ key: "overview", label: i18n.common_overview() },
+		{ key: "episodes", label: i18n.series_episodes() },
+		{ key: "history", label: i18n.common_history() },
+		{ key: "cast", label: i18n.detail_cast() },
 	];
 	const VALID_TABS = new Set<Tab>(["overview", "episodes", "history", "cast"]);
 
@@ -170,12 +171,12 @@
 	});
 
 	const presetOptions: { value: MonitoringPreset; label: string }[] = [
-		{ value: "all", label: "All episodes" },
-		{ value: "future", label: "Future episodes" },
-		{ value: "missing", label: "Missing episodes" },
-		{ value: "existing", label: "Existing episodes" },
-		{ value: "pilot", label: "Pilot only" },
-		{ value: "none", label: "None" },
+		{ value: "all", label: i18n.series_monitor_all() },
+		{ value: "future", label: i18n.series_monitor_future() },
+		{ value: "missing", label: i18n.series_monitor_missing() },
+		{ value: "existing", label: i18n.series_monitor_existing() },
+		{ value: "pilot", label: i18n.series_monitor_pilot() },
+		{ value: "none", label: i18n.common_none() },
 	];
 	// The backend applies a preset as a one-shot bulk toggle; it stores no
 	// ongoing "monitoring mode", so this control has no persisted value to
@@ -221,7 +222,7 @@
 	function episodeCode(ep: Episode): string {
 		return currentSeason
 			? `S${pad2(currentSeason.number)}E${pad2(ep.number)}`
-			: `Episode ${ep.number}`;
+			: i18n.episode_number({ number: ep.number });
 	}
 	let manualScope = $derived.by(() => {
 		if (!manualEpisode || currentSeason === null) return undefined;
@@ -244,9 +245,9 @@
 			}),
 		onSuccess: (_d, next) => {
 			invalidate();
-			toast.ok(next ? "Now monitoring" : "Stopped monitoring");
+			toast.ok(next ? i18n.monitor_now_monitoring() : i18n.monitor_stopped());
 		},
-		onError: (e) => toast.err(e.message ?? "Update failed"),
+		onError: (e) => toast.err(errorText(e, i18n.common_update_failed())),
 	}));
 
 	const applyPreset = createMutation<TVShow, Error, MonitoringPreset>(() => ({
@@ -259,9 +260,9 @@
 			invalidate();
 			const label =
 				presetOptions.find((o) => o.value === p)?.label ?? p;
-			toast.ok(`Monitoring set to ${label.toLowerCase()}`);
+			toast.ok(i18n.monitor_set_to({ mode: label.toLowerCase() }));
 		},
-		onError: (e) => toast.err(e.message ?? "Update failed"),
+		onError: (e) => toast.err(errorText(e, i18n.common_update_failed())),
 	}));
 
 	const refresh = createMutation(() => ({
@@ -271,13 +272,13 @@
 			invalidate();
 			toast.ok("Metadata refresh requested");
 		},
-		onError: (e: Error) => toast.err(e.message ?? "Refresh failed"),
+		onError: (e: Error) => toast.err(errorText(e, i18n.common_refresh_failed())),
 	}));
 
 	const searchSeries = createMutation(() => ({
 		mutationFn: () => api(`/series/${seriesId}/search`, { method: "POST" }),
 		onSuccess: () => toast.ok("Search dispatched for wanted episodes"),
-		onError: (e: Error) => toast.err(e.message ?? "Search failed"),
+		onError: (e: Error) => toast.err(errorText(e, i18n.common_search_failed())),
 	}));
 
 	const del = createMutation<unknown, Error, boolean>(() => ({
@@ -290,7 +291,7 @@
 			toast.ok("Series deleted");
 			navigate("/series");
 		},
-		onError: (e: Error) => toast.err(e.message ?? "Delete failed"),
+		onError: (e: Error) => toast.err(errorText(e, i18n.common_delete_failed())),
 	}));
 
 	const monitorSeason = createMutation<unknown, Error, Season>(() => ({
@@ -301,9 +302,9 @@
 			}),
 		onSuccess: (_d, s) => {
 			invalidate();
-			toast.ok(s.monitored ? "Season unmonitored" : "Season monitored");
+			toast.ok(s.monitored ? i18n.monitor_season_unmonitored() : i18n.monitor_season_monitored());
 		},
-		onError: (e) => toast.err(e.message ?? "Update failed"),
+		onError: (e) => toast.err(errorText(e, i18n.common_update_failed())),
 	}));
 
 	const monitorEpisode = createMutation<unknown, Error, Episode>(() => ({
@@ -313,7 +314,7 @@
 				body: { monitored: !ep.monitored },
 			}),
 		onSuccess: () => invalidate(),
-		onError: (e) => toast.err(e.message ?? "Update failed"),
+		onError: (e) => toast.err(errorText(e, i18n.common_update_failed())),
 	}));
 
 	const delFiles = createMutation<unknown, Error, { episodes: Episode[]; remove: boolean }>(
@@ -331,10 +332,10 @@
 			},
 			onSuccess: (_d, { episodes }) => {
 				invalidate();
-				toast.ok(episodes.length > 1 ? "Files deleted" : "File deleted");
+				toast.ok(episodes.length > 1 ? i18n.files_deleted() : i18n.file_deleted());
 				deleteFiles = null;
 			},
-			onError: (e: Error) => toast.err(e.message ?? "Delete failed"),
+			onError: (e: Error) => toast.err(errorText(e, i18n.common_delete_failed())),
 		}),
 	);
 
@@ -358,7 +359,7 @@
 			.filter((s) => (s.total ?? 0) > 0)
 			.map((s) => ({
 				number: s.number,
-				label: s.number === 0 ? "Specials" : `${seasonLabel} ${s.number}`,
+				label: s.number === 0 ? i18n.series_specials() : `${seasonLabel} ${s.number}`,
 			})),
 	);
 	let qpName = $derived(show?.quality_profile || "Server default");
@@ -387,9 +388,9 @@
 	<div
 		class="mx-4 mt-4 rounded-lg border border-dashed border-status-failed/40 bg-status-failed/5 py-12 text-center md:mx-8"
 	>
-		<p class="text-sm font-semibold text-status-failed">Failed to load series</p>
+		<p class="text-sm font-semibold text-status-failed">{i18n.series_load_failed()}</p>
 		<p class="mt-1 text-xs text-fg-subtle">
-			{seriesQuery.error?.message ?? "Unknown error"}
+			{errorText(seriesQuery.error, i18n.common_unknown_error())}
 		</p>
 	</div>
 {:else if show}
@@ -410,7 +411,7 @@
 				class="inline-flex items-center gap-1.5 rounded-full border border-border bg-black/40 px-3 py-1.5 text-[11.5px] font-medium text-fg-muted backdrop-blur-sm transition hover:bg-black/60 hover:text-fg"
 			>
 				<ArrowLeft size={13} aria-hidden="true" />
-				Series
+				{i18n.settings_series()}
 			</a>
 		</div>
 
@@ -513,7 +514,7 @@
 						value={seriesProgress}
 						status="available"
 						height={4}
-						label="Series progress"
+						label={i18n.series_progress()}
 					/>
 				</div>
 
@@ -528,8 +529,8 @@
 						>
 							<Search size={15} aria-hidden="true" />
 							{(show.wanted_episodes ?? 0) > 0
-								? `Search ${show.wanted_episodes} wanted`
-								: "Manual search"}
+								? i18n.series_search_wanted({ count: show.wanted_episodes })
+								: i18n.action_manual_search()}
 						</button>
 						<PlayOnMenu
 							compact
@@ -543,7 +544,7 @@
 							onclick={() => monitor.mutate(!(show.monitored ?? false))}
 							disabled={monitor.isPending}
 							aria-pressed={show.monitored ?? false}
-							aria-label={show.monitored ? "Stop monitoring" : "Monitor"}
+							aria-label={show.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
 							class={cn(
 								"grid h-11 w-11 shrink-0 place-items-center rounded-lg border transition disabled:opacity-60",
 								show.monitored
@@ -569,7 +570,7 @@
 							class="inline-flex shrink-0 items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-fg-subtle"
 						>
 							<Eye size={14} aria-hidden="true" />
-							Monitor
+							{i18n.action_monitor()}
 						</label>
 						<div class="min-w-0 flex-1">
 							<Select
@@ -587,7 +588,7 @@
 
 				<div
 					class="mt-5 hidden flex-wrap items-center gap-2.5 md:flex"
-					aria-label="Series actions"
+					aria-label={i18n.series_actions()}
 				>
 					<PlayOnMenu
 						path={`/series/${show.id}/play-on`}
@@ -602,7 +603,7 @@
 						class="inline-flex h-10 items-center gap-2 rounded-md bg-accent px-4 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover hover:shadow-glow"
 					>
 						<Search size={14} aria-hidden="true" />
-						Manual search
+						{i18n.action_manual_search()}
 					</button>
 
 					<div class="flex items-center gap-2">
@@ -611,7 +612,7 @@
 							class="inline-flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-fg-subtle"
 						>
 							<Eye size={14} aria-hidden="true" />
-							Monitor
+							{i18n.action_monitor()}
 						</label>
 						<div class="w-40">
 							<Select
@@ -634,7 +635,7 @@
 							onclick={() => monitor.mutate(!(show.monitored ?? false))}
 							disabled={monitor.isPending}
 							aria-pressed={show.monitored ?? false}
-							title={show.monitored ? "Stop monitoring" : "Monitor"}
+							title={show.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
 							class="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border-strong bg-white/[0.08] text-fg backdrop-blur-sm transition hover:bg-white/[0.14] disabled:cursor-not-allowed disabled:opacity-60"
 						>
 							<Bookmark
@@ -643,7 +644,7 @@
 								aria-hidden="true"
 							/>
 							<span class="sr-only">
-								{show.monitored ? "Stop monitoring" : "Monitor"}
+								{show.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
 							</span>
 						</button>
 
@@ -659,7 +660,7 @@
 	</section>
 
 	<nav
-		aria-label="Series sections"
+		aria-label={i18n.series_sections()}
 		class="sticky top-16 z-10 border-b border-border bg-bg-deep/70 px-4 backdrop-blur-md saturate-150 md:px-8"
 	>
 		<div class="tabs-track flex w-full gap-0.5">
@@ -711,47 +712,47 @@
 							id="series-info-library"
 							class="font-mono text-[11px] uppercase tracking-[0.14em] text-fg-faint"
 						>
-							Library
+							{i18n.nav_library()}
 						</h4>
 						<dl
 							class="mt-3 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-[12px]"
 						>
-							<dt class="text-fg-subtle">Quality profile</dt>
+							<dt class="text-fg-subtle">{i18n.quality_profile()}</dt>
 							<dd class="text-right font-mono text-fg">{qpName}</dd>
-							<dt class="text-fg-subtle">Status</dt>
+							<dt class="text-fg-subtle">{i18n.common_status()}</dt>
 							<dd class="text-right font-mono text-fg capitalize">
 								{show.series_status}
 							</dd>
-							<dt class="text-fg-subtle">Monitored</dt>
+							<dt class="text-fg-subtle">{i18n.monitor_monitored()}</dt>
 							<dd class="text-right font-mono text-fg">
-								{show.monitored ? "Yes" : "No"}
+								{show.monitored ? i18n.common_yes() : i18n.common_no()}
 							</dd>
-							<dt class="text-fg-subtle">Episodes</dt>
+							<dt class="text-fg-subtle">{i18n.series_episodes()}</dt>
 							<dd class="text-right font-mono text-fg">
 								{show.have_episodes ?? 0}/{show.total_episodes ?? 0}
 							</dd>
 							{#if (show.wanted_episodes ?? 0) > 0}
-								<dt class="text-fg-subtle">Wanted</dt>
+								<dt class="text-fg-subtle">{i18n.status_wanted()}</dt>
 								<dd class="text-right font-mono text-status-wanted">
 									{show.wanted_episodes}
 								</dd>
 							{/if}
 							{#if showMissing > 0}
-								<dt class="text-fg-subtle">Missing</dt>
+								<dt class="text-fg-subtle">{i18n.status_missing()}</dt>
 								<dd class="text-right font-mono text-status-missing">
 									{showMissing}
 								</dd>
 							{/if}
 							{#if show.network}
-								<dt class="text-fg-subtle">Network</dt>
+								<dt class="text-fg-subtle">{i18n.builtin_network()}</dt>
 								<dd class="text-right font-mono text-fg">{show.network}</dd>
 							{/if}
 							{#if show.year}
-								<dt class="text-fg-subtle">Year</dt>
+								<dt class="text-fg-subtle">{i18n.common_year()}</dt>
 								<dd class="text-right font-mono text-fg">{show.year}</dd>
 							{/if}
 							{#if show.runtime}
-								<dt class="text-fg-subtle">Runtime</dt>
+								<dt class="text-fg-subtle">{i18n.detail_runtime()}</dt>
 								<dd class="text-right font-mono text-fg">{show.runtime}m</dd>
 							{/if}
 							<dt class="text-fg-subtle">TVDB</dt>
@@ -773,7 +774,7 @@
 		{:else if tab === "episodes"}
 			{#if seasons.length === 0}
 				<p class="py-12 text-center text-sm text-fg-subtle">
-					No seasons found for this series.
+					{i18n.series_no_seasons()}
 				</p>
 			{:else}
 				<!-- Phone: every season is a row with its own progress, one open at a
@@ -792,7 +793,7 @@
 						onDeleteFile={(ep) => openDeleteFiles(episodeCode(ep), [ep])}
 						onDeleteSeasonFiles={(s) =>
 							openDeleteFiles(
-								s.number === 0 ? "Specials" : `${seasonLabel} ${String(s.number).padStart(2, "0")}`,
+								s.number === 0 ? i18n.series_specials() : `${seasonLabel} ${String(s.number).padStart(2, "0")}`,
 								(s.episodes ?? []).filter((e) => (e.size ?? 0) > 0),
 							)}
 					/>
@@ -819,8 +820,8 @@
 										currentSeason && monitorSeason.mutate(currentSeason)}
 									aria-pressed={currentSeason?.monitored}
 									title={currentSeason?.monitored
-										? "Stop monitoring season"
-										: "Monitor season"}
+										? i18n.action_stop_monitoring_season()
+										: i18n.action_monitor_season()}
 									class={cn(
 										"grid h-9 w-9 shrink-0 place-items-center rounded-md border border-border bg-bg-elevated transition hover:border-border-strong",
 										currentSeason.monitored
@@ -835,14 +836,14 @@
 									/>
 									<span class="sr-only">
 										{currentSeason.monitored
-											? "Stop monitoring season"
-											: "Monitor season"}
+											? i18n.action_stop_monitoring_season()
+											: i18n.action_monitor_season()}
 									</span>
 								</button>
 								<div>
 									<h2 class="text-lg font-semibold text-fg">
 										{currentSeason.number === 0
-											? "Specials"
+											? i18n.series_specials()
 											: `${seasonLabel} ${currentSeason.number}`}
 										{#if currentSeason.name && currentSeason.number !== 0}
 											<span class="text-fg-subtle">· {currentSeason.name}</span>
@@ -877,14 +878,14 @@
 											currentSeason &&
 											openDeleteFiles(
 												currentSeason.number === 0
-													? "Specials"
+													? i18n.series_specials()
 													: `${seasonLabel} ${currentSeason.number}`,
 												seasonFileEpisodes,
 											)}
 										class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-3 text-sm text-fg-muted transition hover:border-status-failed/40 hover:bg-status-failed/10 hover:text-status-failed"
 									>
 										<Trash2 size={15} aria-hidden="true" />
-										Delete files
+										{i18n.action_delete_files()}
 									</button>
 								{/if}
 							</div>
@@ -907,9 +908,9 @@
 			<div
 				class="rounded-lg border border-dashed border-border bg-bg-card/40 py-14 text-center"
 			>
-				<p class="text-sm font-medium text-fg-muted">No history yet</p>
+				<p class="text-sm font-medium text-fg-muted">{i18n.common_no_history()}</p>
 				<p class="mt-1 text-xs text-fg-subtle">
-					Per-series grab and import history isn't surfaced by the API yet.
+					{i18n.series_history_not_surfaced()}
 				</p>
 			</div>
 		{:else if tab === "cast"}
@@ -945,15 +946,15 @@
 		open={deleteFiles !== null}
 		title={deleteFiles && deleteFiles.episodes.length > 1
 			? `Delete all ${deleteFiles.episodes.length} files in ${deleteFiles.label}?`
-			: "Delete this episode file?"}
+			: i18n.series_delete_episode_confirm()}
 		onClose={() => (deleteFiles = null)}
 		actions={[
-			{ label: "Cancel", variant: "ghost", autofocus: true },
+			{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },
 			{
 				label:
 					deleteFiles && deleteFiles.episodes.length > 1
-						? "Delete files"
-						: "Delete file",
+						? i18n.action_delete_files()
+						: i18n.action_delete_file(),
 				variant: "danger",
 				dismiss: false,
 				pending: delFiles.isPending,

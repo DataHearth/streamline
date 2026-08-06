@@ -12,6 +12,7 @@ import type { StatusKind } from "../components/shared/StatusPill.svelte";
 import { formatBytes, formatEta, formatRatio, formatSpeed } from "./format";
 import { formatRelative } from "./dates";
 import type { HistoryEntry, QueueEntry, Torrent } from "./types";
+import { m as i18n } from "./paraglide/messages.js";
 
 const episodeTokenRe = /S\d{1,2}E\d{1,2}/i;
 const pad2 = (n: number) => String(n).padStart(2, "0");
@@ -29,7 +30,7 @@ export function entryHeading(item: QueueEntry | HistoryEntry): string {
 	if (episodeTokenRe.test(item.title)) {
 		return `${ep.show_title} · S${pad2(ep.season)}E${pad2(ep.episode)}`;
 	}
-	const season = ep.season === 0 ? "Specials" : `Season ${pad2(ep.season)}`;
+	const season = ep.season === 0 ? i18n.series_specials() : i18n.season_number({ number: pad2(ep.season) });
 	return `${ep.show_title} · ${season}`;
 }
 
@@ -209,11 +210,11 @@ export const TORRENT_SORT_CHIPS: {
 	sort: TorrentSortKey;
 	order: SortOrder;
 }[] = [
-	{ key: "attention", label: "Attention first", sort: "status", order: "asc" },
-	{ key: "name", label: "Name A→Z", sort: "name", order: "asc" },
-	{ key: "size", label: "Largest", sort: "size", order: "desc" },
-	{ key: "speed", label: "Fastest ↓", sort: "download_speed", order: "desc" },
-	{ key: "ratio", label: "Best ratio", sort: "ratio", order: "desc" },
+	{ key: "attention", label: i18n.sort_attention_first(), sort: "status", order: "asc" },
+	{ key: "name", label: i18n.sort_name_az(), sort: "name", order: "asc" },
+	{ key: "size", label: i18n.sort_largest(), sort: "size", order: "desc" },
+	{ key: "speed", label: i18n.sort_fastest(), sort: "download_speed", order: "desc" },
+	{ key: "ratio", label: i18n.sort_best_ratio(), sort: "ratio", order: "desc" },
 ];
 
 export function torrentSortChipKey(

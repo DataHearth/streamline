@@ -10,7 +10,7 @@
 		Film,
 		Tv,
 	} from "@lucide/svelte";
-	import { api } from "../../lib/api";
+	import { api, errorText } from "../../lib/api";
 	import { toast } from "../../lib/toast";
 	import { cn } from "../../lib/cn";
 	import { formatRelative } from "../../lib/dates";
@@ -18,6 +18,7 @@
 	import Dialog from "../../components/modals/Dialog.svelte";
 	import Select from "../../components/forms/Select.svelte";
 	import LookupDetailPanel from "../../components/shared/LookupDetailPanel.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 	import type {
 		MediaRequest,
 		PaginatedRequests,
@@ -121,7 +122,7 @@
 			toast.ok(`Approved "${r.title}" — added to library`);
 			expandedId = null;
 		},
-		onError: (e) => toast.err(e.message ?? "Approve failed"),
+		onError: (e) => toast.err(errorText(e, i18n.requests_approve_failed())),
 	}));
 
 	const reopen = createMutation<unknown, Error, MediaRequest>(() => ({
@@ -130,7 +131,7 @@
 			invalidate();
 			toast.ok(`Reopened "${r.title}"`);
 		},
-		onError: (e) => toast.err(e.message ?? "Reopen failed"),
+		onError: (e) => toast.err(errorText(e, i18n.requests_reopen_failed())),
 	}));
 
 	let denyTarget = $state<MediaRequest | null>(null);
@@ -146,7 +147,7 @@
 				denyReason = "";
 				expandedId = null;
 			},
-			onError: (e) => toast.err(e.message ?? "Deny failed"),
+			onError: (e) => toast.err(errorText(e, i18n.requests_deny_failed())),
 		}),
 	);
 
@@ -159,17 +160,17 @@
 		RequestStatus,
 		{ label: string; token: string }
 	> = {
-		pending: { label: "Pending", token: "wanted" },
-		approved: { label: "Approved", token: "grabbing" },
-		denied: { label: "Rejected", token: "failed" },
-		available: { label: "Available", token: "available" },
+		pending: { label: i18n.common_pending(), token: "wanted" },
+		approved: { label: i18n.common_approved(), token: "grabbing" },
+		denied: { label: i18n.common_rejected(), token: "failed" },
+		available: { label: i18n.status_available(), token: "available" },
 	};
 
 	const tabs: { key: Tab; label: string; count?: number }[] = $derived([
-		{ key: "pending", label: "Pending", count: counts.pending },
-		{ key: "approved", label: "Approved", count: counts.approved },
-		{ key: "rejected", label: "Rejected", count: counts.denied },
-		{ key: "all", label: "All" },
+		{ key: "pending", label: i18n.common_pending(), count: counts.pending },
+		{ key: "approved", label: i18n.common_approved(), count: counts.approved },
+		{ key: "rejected", label: i18n.common_rejected(), count: counts.denied },
+		{ key: "all", label: i18n.common_all() },
 	]);
 
 	function requesterName(r: MediaRequest): string {
@@ -179,11 +180,11 @@
 
 <div class="flex flex-col px-4 py-6 md:px-6">
 	<header class="mb-4">
-		<h1 class="text-2xl font-bold tracking-tight text-fg">Requests</h1>
+		<h1 class="text-2xl font-bold tracking-tight text-fg">{i18n.requests_label()}</h1>
 		<p class="mt-1 text-sm text-fg-muted">
 			{isReviewer
-				? "Review and approve what your household asks for."
-				: "Titles you've asked the library to add."}
+				? i18n.requests_intro()
+				: i18n.requests_intro_user()}
 		</p>
 	</header>
 
@@ -191,7 +192,7 @@
 	<div
 		class="mb-4 grid grid-cols-2 gap-3 rounded-lg border border-border bg-bg-elevated p-4 sm:grid-cols-4"
 	>
-		{#each [{ n: counts.pending, l: "Pending review", hot: true }, { n: counts.approved, l: "Approved" }, { n: counts.denied, l: "Rejected" }, { n: counts.available, l: "Available" }] as s (s.l)}
+		{#each [{ n: counts.pending, l: i18n.requests_pending_review(), hot: true }, { n: counts.approved, l: i18n.common_approved() }, { n: counts.denied, l: i18n.common_rejected() }, { n: counts.available, l: i18n.status_available() }] as s (s.l)}
 			<div>
 				<div
 					class={cn(
@@ -210,7 +211,7 @@
 	<div class="mb-4 flex flex-wrap items-center gap-3">
 		<nav
 			class="flex items-center gap-0.5 rounded-md border border-border bg-bg-elevated p-1"
-			aria-label="Request status"
+			aria-label={i18n.requests_status()}
 		>
 			{#each tabs as t (t.key)}
 				{@const active = tab === t.key}
@@ -245,9 +246,9 @@
 		<div
 			class="flex items-center gap-0.5 rounded-md border border-border bg-bg-elevated p-1"
 			role="group"
-			aria-label="Media type"
+			aria-label={i18n.imports_media_type()}
 		>
-			{#each [{ v: "all", l: "All" }, { v: "movies", l: "Movies" }, { v: "series", l: "Series" }] as opt (opt.v)}
+			{#each [{ v: "all", l: i18n.common_all() }, { v: "movies", l: i18n.movies_label() }, { v: "series", l: i18n.settings_series() }] as opt (opt.v)}
 				<button
 					type="button"
 					onclick={() => (kind = opt.v as Kind)}
@@ -266,13 +267,13 @@
 	</div>
 
 	{#if requestsQuery.isLoading}
-		<p class="py-16 text-center text-sm text-fg-subtle">Loading requests…</p>
+		<p class="py-16 text-center text-sm text-fg-subtle">{i18n.common_loading_requests()}</p>
 	{:else if visible.length === 0}
 		<div
 			class="flex flex-col items-center justify-center rounded-lg border border-dashed border-border bg-bg-card/40 py-16 text-center"
 		>
 			<Inbox class="mb-3 h-10 w-10 text-fg-faint" aria-hidden="true" />
-			<p class="text-base font-semibold text-fg">Inbox zero</p>
+			<p class="text-base font-semibold text-fg">{i18n.requests_inbox_zero()}</p>
 			<p class="mt-1 max-w-sm text-sm text-fg-subtle">
 				No {tab === "all" ? "" : tab} requests right now.
 			</p>
@@ -335,7 +336,7 @@
 							<!-- Cover, synopsis, cast and IDs so reviewers can judge the request -->
 							<div class="mb-3">
 								{#if detailQuery.isError}
-									<p class="text-[13px] text-fg-subtle">Couldn't load details.</p>
+									<p class="text-[13px] text-fg-subtle">{i18n.requests_load_failed()}</p>
 								{:else}
 									<LookupDetailPanel
 										kind={r.media_type === "tvshow" ? "series" : "movie"}
@@ -356,13 +357,13 @@
 							<dl class="grid gap-2 text-[13px] sm:grid-cols-2">
 								<div>
 									<dt class="text-[11px] uppercase tracking-wide text-fg-faint">
-										Requested by
+										{i18n.requests_requested_by()}
 									</dt>
 									<dd class="mt-0.5 text-fg">{r.requester.email}</dd>
 								</div>
 								<div>
 									<dt class="text-[11px] uppercase tracking-wide text-fg-faint">
-										Preferred quality
+										{i18n.quality_preferred()}
 									</dt>
 									<dd class="mt-0.5 font-mono text-fg">
 										{r.quality_profile || "No preference"}
@@ -371,7 +372,7 @@
 								{#if r.approved_by}
 									<div>
 										<dt class="text-[11px] uppercase tracking-wide text-fg-faint">
-											Decided by
+											{i18n.requests_decided_by()}
 										</dt>
 										<dd class="mt-0.5 text-fg">
 											{r.approved_by.display_name || r.approved_by.email}
@@ -383,7 +384,7 @@
 							{#if r.status === "denied" && r.reason}
 								<div class="mt-3">
 									<div class="text-[11px] uppercase tracking-wide text-fg-faint">
-										Reason
+										{i18n.common_reason()}
 									</div>
 									<blockquote
 										class="mt-1 border-l-2 border-status-failed/50 pl-3 text-[13px] text-fg-muted"
@@ -403,13 +404,13 @@
 												for="qp-{r.id}"
 												class="mb-1 block text-[11px] font-medium uppercase tracking-wide text-fg-faint"
 											>
-												Quality profile
+												{i18n.quality_profile()}
 											</label>
 											<Select
 												id="qp-{r.id}"
 												value={selectedProfile}
 												options={[
-													{ value: "", label: "Server default" },
+													{ value: "", label: i18n.quality_server_default() },
 													...(profilesQuery.data ?? []).map((p) => ({
 														value: p.name,
 														label: p.name,
@@ -425,7 +426,7 @@
 												class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border px-3 text-sm font-medium text-fg-muted transition hover:border-border-strong hover:text-fg"
 											>
 												<X size={14} aria-hidden="true" />
-												Reject
+												{i18n.common_reject()}
 											</button>
 											<button
 												type="button"
@@ -435,7 +436,7 @@
 												class="inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-3.5 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:opacity-60"
 											>
 												<Check size={14} aria-hidden="true" />
-												Approve &amp; add
+												{i18n.requests_approve_add()}
 											</button>
 										</div>
 									</div>
@@ -447,7 +448,7 @@
 											class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border px-3 text-sm font-medium text-fg-muted transition hover:border-border-strong hover:text-fg"
 										>
 											<RotateCcw size={14} aria-hidden="true" />
-											Reopen as pending
+											{i18n.requests_reopen()}
 										</button>
 									</div>
 								{/if}
@@ -465,9 +466,9 @@
 	title="Reject '{denyTarget?.title ?? ''}'?"
 	onClose={() => (denyTarget = null)}
 	actions={[
-		{ label: "Cancel", variant: "ghost", autofocus: true },
+		{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },
 		{
-			label: "Confirm rejection",
+			label: i18n.requests_confirm_rejection(),
 			variant: "danger",
 			dismiss: false,
 			pending: deny.isPending,
@@ -480,13 +481,13 @@
 		for="deny-reason"
 		class="mb-1.5 block text-[12px] font-medium text-fg-muted"
 	>
-		Reason (visible to the requester)
+		{i18n.requests_reason_visible()}
 	</label>
 	<textarea
 		id="deny-reason"
 		bind:value={denyReason}
 		rows="3"
-		placeholder="e.g. Still in cinemas — let's revisit when it's on digital."
+		placeholder={i18n.requests_reason_example()}
 		class="w-full rounded-md border border-border bg-bg-card px-3 py-2 text-sm text-fg outline-none focus:border-accent focus:ring-2 focus:ring-accent-ring placeholder:text-fg-faint"
 	></textarea>
 </Dialog>

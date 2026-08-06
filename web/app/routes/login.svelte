@@ -11,7 +11,8 @@
 		type AuthConfig,
 		type LoginInput,
 	} from "../lib/auth_api";
-	import { ApiError } from "../lib/api";
+	import { ApiError, errorText } from "../lib/api";
+	import { m as i18n } from "../lib/paraglide/messages.js";
 	import { email as emailSchema } from "../lib/schemas";
 	import TextField from "../components/forms/TextField.svelte";
 	import AuthCard from "../components/auth/AuthCard.svelte";
@@ -50,7 +51,7 @@
 			window.location.assign(nextParam);
 		},
 		onError: (err) => {
-			errorMsg = err instanceof ApiError ? err.message : "Sign-in failed";
+			errorMsg = errorText(err, i18n.auth_login_failed());
 		},
 	}));
 
@@ -59,7 +60,7 @@
 		validators: {
 			onChange: v.object({
 				email: emailSchema,
-				password: v.pipe(v.string(), v.minLength(1, "Required")),
+				password: v.pipe(v.string(), v.minLength(1, i18n.validation_required())),
 			}),
 		},
 		onSubmit: ({ value }) => {
@@ -69,11 +70,11 @@
 	}));
 
 	let providers = $derived(cfg.data?.providers ?? []);
-	let title = "Welcome back";
-	let subtitle = "Your media, unified.";
+	let title = i18n.auth_login_title();
+	let subtitle = i18n.auth_login_subtitle();
 </script>
 
-<svelte:head><title>Sign in — Streamline</title></svelte:head>
+<svelte:head><title>{i18n.auth_login_page_title()}</title></svelte:head>
 
 <AuthCard {title} {subtitle} eyebrow="Streamline">
 	{#if oidcError}
@@ -104,7 +105,7 @@
 			{#snippet children(field)}
 				<TextField
 					{field}
-					label="Email"
+					label={i18n.field_email()}
 					type="email"
 					autocomplete="username"
 				/>
@@ -114,7 +115,7 @@
 			{#snippet children(field)}
 				<TextField
 					{field}
-					label="Password"
+					label={i18n.field_password()}
 					type="password"
 					autocomplete="current-password"
 				/>
@@ -125,7 +126,7 @@
 			disabled={!form.state.canSubmit || login.isPending}
 			class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-accent text-sm font-semibold text-fg-on-accent transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
 		>
-			{login.isPending ? "Signing in…" : "Sign in"}
+			{login.isPending ? i18n.auth_signing_in() : i18n.auth_sign_in()}
 		</button>
 	</form>
 
@@ -137,7 +138,7 @@
 			<div class="relative flex justify-center text-xs uppercase">
 				<span
 					class="bg-bg-elevated px-2 font-mono tracking-wider text-fg-faint"
-					>or continue with</span
+					>{i18n.auth_or_continue_with()}</span
 				>
 			</div>
 		</div>
@@ -149,19 +150,19 @@
 					class="inline-flex h-11 w-full items-center justify-center gap-3 rounded-md border border-border-strong bg-surface px-4 text-sm font-medium text-fg transition-colors hover:border-accent hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
 				>
 					<BrandLogo name={p.name} size={20} />
-					Continue with {p.name}
+					{i18n.auth_continue_with_provider({ provider: p.name })}
 				</a>
 			{/each}
 		</div>
 	{/if}
 
 	{#snippet footer()}
-		No account?
+		{i18n.auth_no_account()}
 		<a
 			href="/register"
 			class="cursor-pointer rounded font-medium text-accent hover:text-accent-hover hover:underline focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
 		>
-			Create one
+			{i18n.auth_create_one()}
 		</a>
 	{/snippet}
 </AuthCard>

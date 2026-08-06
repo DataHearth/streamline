@@ -9,6 +9,7 @@
 		type SearchItem,
 	} from "../../lib/search-model.svelte";
 	import SearchResultRow from "./SearchResultRow.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	// Phone only — AppShell renders this in place of CommandPalette below md,
 	// off the same matchMedia switch it already runs for the add flow. Both
@@ -75,7 +76,7 @@
 	<div
 		role="dialog"
 		aria-modal="true"
-		aria-label="Search"
+		aria-label={i18n.common_search()}
 		transition:fly={{ y: 16, duration: 200, easing: cubicOut }}
 		class="fixed inset-0 z-50 flex flex-col bg-bg-deep md:hidden"
 	>
@@ -95,8 +96,8 @@
 					bind:this={inputEl}
 					bind:value={query}
 					type="text"
-					placeholder="Search your library"
-					aria-label="Search your library"
+					placeholder={i18n.search_your_library()}
+					aria-label={i18n.search_your_library()}
 					enterkeyhint="search"
 					autocomplete="off"
 					autocapitalize="off"
@@ -110,7 +111,7 @@
 							query = "";
 							inputEl?.focus();
 						}}
-						aria-label="Clear search"
+						aria-label={i18n.common_clear_search()}
 						class="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-surface-2 text-fg-subtle transition hover:text-fg"
 					>
 						<X size={13} aria-hidden="true" />
@@ -122,7 +123,7 @@
 				onclick={close}
 				class="flex-none text-[14.5px] font-medium text-accent-text"
 			>
-				Cancel
+				{i18n.common_cancel()}
 			</button>
 		</form>
 

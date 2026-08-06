@@ -2,6 +2,7 @@
 	import { ChevronLeft, ExternalLink, Film, Star, Tv } from "@lucide/svelte";
 	import MovieDetailCast from "../movies/MovieDetailCast.svelte";
 	import type { LookupDetail } from "../../lib/types";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	// The right-hand pane of the add/request modals: everything TMDB/TVDB knows
 	// about the highlighted result, so the choice can be made without leaving
@@ -75,39 +76,39 @@
 		if (!detail) return out;
 		if (detail.release_date) {
 			out.push({
-				label: kind === "movie" ? "Released" : "First aired",
+				label: kind === "movie" ? i18n.detail_released() : i18n.detail_first_aired(),
 				value: detail.release_date,
 			});
 		}
 		if (detail.runtime) {
 			out.push({
-				label: kind === "movie" ? "Runtime" : "Episode",
+				label: kind === "movie" ? i18n.detail_runtime() : i18n.common_episode(),
 				value: `${detail.runtime}m`,
 			});
 		}
 		if (detail.season_count) {
 			out.push({
-				label: "Seasons",
+				label: i18n.common_seasons(),
 				value: `${detail.season_count}`,
 			});
 		}
 		if (detail.episode_count) {
-			out.push({ label: "Episodes", value: `${detail.episode_count}` });
+			out.push({ label: i18n.series_episodes(), value: `${detail.episode_count}` });
 		}
-		if (detail.status) out.push({ label: "Status", value: detail.status });
-		if (detail.network) out.push({ label: "Network", value: detail.network });
+		if (detail.status) out.push({ label: i18n.common_status(), value: detail.status });
+		if (detail.network) out.push({ label: i18n.builtin_network(), value: detail.network });
 		if (detail.original_language) {
 			out.push({
-				label: "Language",
+				label: i18n.common_language(),
 				value: detail.original_language.toUpperCase(),
 			});
 		}
 		if (detail.rating) {
-			out.push({ label: "Rating", value: `${detail.rating.toFixed(1)} / 10` });
+			out.push({ label: i18n.series_rating(), value: `${detail.rating.toFixed(1)} / 10` });
 		}
 		if (detail.vote_count) {
 			out.push({
-				label: "Votes",
+				label: i18n.common_votes(),
 				value: detail.vote_count.toLocaleString(),
 			});
 		}
@@ -145,9 +146,9 @@
 		{:else}
 			<Tv class="mb-3 h-8 w-8 text-fg-faint" aria-hidden="true" />
 		{/if}
-		<p class="text-sm font-medium text-fg-muted">Nothing selected</p>
+		<p class="text-sm font-medium text-fg-muted">{i18n.lookup_nothing_selected()}</p>
 		<p class="mt-1 text-xs text-fg-faint">
-			Pick a result to see its synopsis, cast and IDs.
+			{i18n.lookup_pick_result()}
 		</p>
 	</div>
 {:else}
@@ -159,7 +160,7 @@
 				class="-ml-2 -mt-1 inline-flex w-fit items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-fg-muted transition hover:bg-surface hover:text-fg md:hidden"
 			>
 				<ChevronLeft size={14} aria-hidden="true" />
-				Results
+				{i18n.common_results()}
 			</button>
 		{/if}
 
@@ -257,7 +258,7 @@
 				<h4
 					class="mb-2 font-mono text-[10.5px] uppercase tracking-[0.14em] text-fg-faint"
 				>
-					Synopsis
+					{i18n.detail_synopsis()}
 				</h4>
 				<p class="text-[13px] leading-relaxed text-fg-muted [text-wrap:pretty]">
 					{synopsis}
@@ -277,7 +278,7 @@
 				<h4
 					class="mb-2 font-mono text-[10.5px] uppercase tracking-[0.14em] text-fg-faint"
 				>
-					Top billed
+					{i18n.detail_top_billed()}
 				</h4>
 				<div class="grid grid-cols-5 gap-3">
 					{#each [0, 1, 2, 3, 4] as i (i)}
@@ -297,7 +298,7 @@
 				<h4
 					class="mb-2.5 font-mono text-[10.5px] uppercase tracking-[0.14em] text-fg-faint"
 				>
-					Top billed
+					{i18n.detail_top_billed()}
 				</h4>
 				<MovieDetailCast {cast} dense />
 			</section>
@@ -308,7 +309,7 @@
 				<h4
 					class="mb-2.5 font-mono text-[10.5px] uppercase tracking-[0.14em] text-fg-faint"
 				>
-					Details
+					{i18n.common_details()}
 				</h4>
 				<dl
 					class="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-[12px] sm:grid-cols-[auto_1fr_auto_1fr] sm:gap-x-5"

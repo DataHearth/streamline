@@ -8,6 +8,7 @@
 	import ProgressBar from "../shared/ProgressBar.svelte";
 	import { cn } from "../../lib/cn";
 	import { formatBytes } from "../../lib/format";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 	import type {
 		TorrentFile,
 		TorrentFilePriority,
@@ -41,19 +42,19 @@
 	}[] = [
 		{
 			key: "skip",
-			label: "Skip",
+			label: i18n.common_skip(),
 			on: "bg-status-missing/25 text-fg-subtle",
 			dot: "bg-status-missing",
 		},
 		{
 			key: "normal",
-			label: "Normal",
+			label: i18n.common_normal(),
 			on: "bg-accent-soft text-accent-text",
 			dot: "bg-accent",
 		},
 		{
 			key: "high",
-			label: "High",
+			label: i18n.common_high(),
 			on: "bg-status-wanted/20 text-status-wanted",
 			dot: "bg-status-wanted",
 		},
@@ -214,7 +215,7 @@
 			onclick={() => (allCollapsed ? expandAll() : collapseAll())}
 			class="text-[11px] font-medium text-fg-subtle transition hover:text-fg"
 		>
-			{allCollapsed ? "Expand all" : "Collapse all"}
+			{allCollapsed ? i18n.common_expand_all() : i18n.common_collapse_all()}
 		</button>
 	{/if}
 </div>
@@ -340,7 +341,7 @@
 								busyIndex === f.index && "opacity-50",
 							)}
 							role="radiogroup"
-							aria-label="Priority"
+							aria-label={i18n.common_priority()}
 						>
 							{#each PRIOS as p (p.key)}
 								{@const sel = f.priority === p.key}

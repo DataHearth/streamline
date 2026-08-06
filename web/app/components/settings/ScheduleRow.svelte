@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { createMutation, useQueryClient } from "@tanstack/svelte-query";
 	import { Pause, Play, Zap, Pencil, Lock } from "@lucide/svelte";
-	import { api } from "../../lib/api";
+	import { api, errorText } from "../../lib/api";
 	import { cn } from "../../lib/cn";
 	import { config, READONLY_HINT } from "../../lib/config.svelte";
 	import { toast } from "../../lib/toast";
 	import { formatRelative, formatDateTime } from "../../lib/dates";
 	import type { Schedule, ScheduleList } from "../../lib/types";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	type Props = {
 		row: Schedule;
@@ -19,9 +20,9 @@
 	const qc = useQueryClient();
 
 	const SUCCESS_MESSAGE: Record<"pause" | "resume" | "run", string> = {
-		pause: "Paused",
-		resume: "Resumed",
-		run: "Triggered",
+		pause: i18n.status_paused(),
+		resume: i18n.schedule_resumed(),
+		run: i18n.schedule_triggered(),
 	};
 
 	function action(verb: "pause" | "resume" | "run") {
@@ -42,7 +43,7 @@
 				);
 				toast.info(`${SUCCESS_MESSAGE[verb]} ${resp.name}`);
 			},
-			onError: (err) => toast.err(err.message),
+			onError: (err) => toast.err(errorText(err)),
 		}));
 	}
 
@@ -55,42 +56,42 @@
 			? {
 					mutate: () => resume.mutate(),
 					pending: resume.isPending,
-					label: "Resume",
+					label: i18n.schedule_resume(),
 					cls: "border-status-available/40 text-status-available hover:border-status-available hover:bg-status-available/10",
 				}
 			: {
 					mutate: () => pause.mutate(),
 					pending: pause.isPending,
-					label: "Pause",
+					label: i18n.schedule_pause(),
 					cls: "border-status-wanted/40 text-status-wanted hover:border-status-wanted hover:bg-status-wanted/10",
 				},
 	);
 
 	function statusBadge(s: Schedule) {
 		if (s.running)
-			return { cls: "bg-accent/15 text-accent", label: "Running…" };
+			return { cls: "bg-accent/15 text-accent", label: i18n.common_running_ellipsis() };
 		if (s.paused)
-			return { cls: "bg-surface text-fg-muted", label: "Paused" };
+			return { cls: "bg-surface text-fg-muted", label: i18n.status_paused() };
 		switch (s.status) {
 			case "success":
 				return {
 					cls: "bg-status-available/10 text-status-available",
-					label: "OK",
+					label: i18n.common_ok(),
 				};
 			case "error":
 				return {
 					cls: "bg-status-failed/10 text-status-failed",
-					label: "Failed",
+					label: i18n.status_failed(),
 				};
 			case "skipped":
 				return {
 					cls: "bg-surface text-fg-muted",
-					label: "Skipped",
+					label: i18n.common_skipped(),
 				};
 			default:
 				return {
 					cls: "bg-surface text-fg-muted",
-					label: "Never",
+					label: i18n.common_never(),
 				};
 		}
 	}
@@ -146,7 +147,7 @@
 			{#if row.system}
 				<span
 					class="inline-flex items-center gap-1.5 rounded-full border border-dashed border-border bg-bg-card px-2.5 py-1 text-xs font-medium text-fg-muted"
-					title="Managed by Streamline; not user-configurable"
+					title={i18n.settings_managed_by_streamline()}
 				>
 					<Lock size={12} aria-hidden="true" />
 					system
@@ -157,7 +158,7 @@
 					disabled={row.running || run.isPending}
 					onclick={() => run.mutate()}
 					class="inline-flex h-7 w-7 items-center justify-center rounded border border-accent/40 text-accent transition hover:border-accent hover:bg-accent/10 disabled:cursor-not-allowed disabled:opacity-40"
-					title="Run now"
+					title={i18n.schedule_run_now()}
 				>
 					<Zap size={14} aria-hidden="true" />
 				</button>
@@ -183,7 +184,7 @@
 					disabled={config.readOnly}
 					onclick={() => onEdit(row)}
 					class="inline-flex h-7 w-7 items-center justify-center rounded border border-accent/40 text-accent transition hover:border-accent hover:bg-accent/10 disabled:cursor-not-allowed disabled:opacity-40"
-					title={config.readOnly ? READONLY_HINT : "Edit interval"}
+					title={config.readOnly ? READONLY_HINT : i18n.schedule_edit_interval()}
 				>
 					<Pencil size={14} aria-hidden="true" />
 				</button>

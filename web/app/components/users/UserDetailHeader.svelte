@@ -2,23 +2,24 @@
 	import { createForm } from "@tanstack/svelte-form";
 	import { createMutation, useQueryClient } from "@tanstack/svelte-query";
 	import * as v from "valibot";
-	import { api } from "../../lib/api";
+	import { api, errorText } from "../../lib/api";
 	import { toast } from "../../lib/toast";
 	import { displayName, email as emailSchema } from "../../lib/schemas";
 	import type { AuthMethod, User, UserRole } from "../../lib/types";
 	import TextField from "../forms/TextField.svelte";
 	import SubmitButton from "../forms/SubmitButton.svelte";
 	import Select from "../forms/Select.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	const ROLE_OPTIONS: { value: UserRole; label: string }[] = [
-		{ value: "member", label: "Member" },
-		{ value: "request_only", label: "Request only" },
-		{ value: "admin", label: "Admin" },
+		{ value: "member", label: i18n.role_member() },
+		{ value: "request_only", label: i18n.role_request_only() },
+		{ value: "admin", label: i18n.common_admin() },
 	];
 	const AUTH_OPTIONS: { value: AuthMethod; label: string }[] = [
-		{ value: "local", label: "Local" },
+		{ value: "local", label: i18n.auth_method_local() },
 		{ value: "oidc", label: "OIDC" },
-		{ value: "both", label: "Both" },
+		{ value: "both", label: i18n.auth_method_both() },
 	];
 
 	let { user }: { user: User } = $props();
@@ -40,7 +41,7 @@
 			qc.invalidateQueries({ queryKey: ["users"] });
 			toast.ok("Saved");
 		},
-		onError: (err) => toast.err(err.message),
+		onError: (err) => toast.err(errorText(err)),
 	}));
 
 	const form = createForm(() => ({
@@ -64,9 +65,9 @@
 
 <section class="rounded-lg border border-border bg-bg-elevated p-5">
 	<header class="mb-4">
-		<h3 class="text-base font-semibold text-fg">Profile</h3>
+		<h3 class="text-base font-semibold text-fg">{i18n.common_profile()}</h3>
 		<p class="mt-0.5 text-xs text-fg-muted">
-			Role and auth method take effect immediately.
+			{i18n.users_role_immediate()}
 		</p>
 	</header>
 
@@ -81,10 +82,10 @@
 			{#snippet children(field)}
 				<TextField
 					{field}
-					label="Email"
+					label={i18n.common_email()}
 					type="email"
 					autocomplete="email"
-					help="Must be unique across users."
+					help={i18n.users_email_unique()}
 				/>
 			{/snippet}
 		</form.Field>
@@ -93,8 +94,8 @@
 			{#snippet children(field)}
 				<TextField
 					{field}
-					label="Display name"
-					placeholder="Leave blank to use email"
+					label={i18n.common_display_name()}
+					placeholder={i18n.account_blank_uses_email()}
 				/>
 			{/snippet}
 		</form.Field>
@@ -102,7 +103,7 @@
 		<form.Field name="role">
 			{#snippet children(field)}
 				<Select
-					label="Role"
+					label={i18n.common_role()}
 					value={field.state.value}
 					options={ROLE_OPTIONS}
 					onChange={(v) => field.handleChange(v)}
@@ -113,7 +114,7 @@
 		<form.Field name="auth_method">
 			{#snippet children(field)}
 				<Select
-					label="Auth method"
+					label={i18n.dlclient_auth_method()}
 					value={field.state.value}
 					options={AUTH_OPTIONS}
 					onChange={(v) => field.handleChange(v)}

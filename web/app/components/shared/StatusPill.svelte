@@ -1,4 +1,5 @@
 <script lang="ts" module>
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 	export type StatusKind =
 		| "downloading"
 		| "grabbing"
@@ -13,17 +14,17 @@
 		| "stalled";
 
 	const LABELS: Record<StatusKind, string> = {
-		downloading: "Downloading",
-		grabbing: "Grabbing",
-		available: "Available",
-		wanted: "Wanted",
-		missing: "Missing",
-		failed: "Failed",
-		paused: "Paused",
-		seeding: "Seeding",
-		completed: "Completed",
-		fetching: "Fetching metadata",
-		stalled: "Stalled",
+		downloading: i18n.status_downloading(),
+		grabbing: i18n.status_grabbing(),
+		available: i18n.status_available(),
+		wanted: i18n.status_wanted(),
+		missing: i18n.status_missing(),
+		failed: i18n.status_failed(),
+		paused: i18n.status_paused(),
+		seeding: i18n.status_seeding(),
+		completed: i18n.status_completed(),
+		fetching: i18n.status_fetching_metadata(),
+		stalled: i18n.status_stalled(),
 	};
 </script>
 

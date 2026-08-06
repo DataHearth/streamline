@@ -9,6 +9,7 @@
 	import { formatDateShort, formatRelative } from "../../lib/dates";
 	import { formatBytes } from "../../lib/format";
 	import type { Episode, SeriesType } from "../../lib/types";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	let {
 		episodes,
@@ -57,28 +58,28 @@
 			<tr class="border-b border-border">
 				<th scope="col" class="w-10 px-2 py-2.5" aria-hidden="true"></th>
 				<th scope="col" class="w-28 px-3 py-2.5 text-left font-medium">#</th>
-				<th scope="col" class="px-3 py-2.5 text-left font-medium">Title</th>
+				<th scope="col" class="px-3 py-2.5 text-left font-medium">{i18n.common_title()}</th>
 				<th
 					scope="col"
 					class="hidden w-36 px-3 py-2.5 text-left font-medium @xl:table-cell"
 				>
-					Air date
+					{i18n.series_air_date()}
 				</th>
-				<th scope="col" class="w-28 px-3 py-2.5 text-left font-medium">Status</th>
+				<th scope="col" class="w-28 px-3 py-2.5 text-left font-medium">{i18n.common_status()}</th>
 				<th
 					scope="col"
 					class="hidden w-24 px-3 py-2.5 text-left font-medium @lg:table-cell"
 				>
-					Quality
+					{i18n.common_quality()}
 				</th>
 				<th
 					scope="col"
 					class="hidden w-20 px-3 py-2.5 text-right font-medium @lg:table-cell"
 				>
-					Size
+					{i18n.common_size()}
 				</th>
 				<th scope="col" class="w-20 px-2 py-2.5 text-right font-medium">
-					Actions
+					{i18n.common_actions()}
 				</th>
 			</tr>
 		</thead>
@@ -98,8 +99,8 @@
 							disabled={monitorDisabled}
 							onclick={() => onMonitorEpisode(ep)}
 							aria-pressed={ep.monitored}
-							aria-label={ep.monitored ? "Stop monitoring episode" : "Monitor episode"}
-							title={ep.monitored ? "Stop monitoring" : "Monitor"}
+							aria-label={ep.monitored ? i18n.action_stop_monitoring_episode() : i18n.action_monitor_episode()}
+							title={ep.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
 							class={cn(
 								"grid h-7 w-7 place-items-center rounded-md transition focus:outline-none focus:ring-2 focus:ring-accent-ring disabled:cursor-not-allowed disabled:opacity-40",
 								ep.monitored
@@ -124,7 +125,7 @@
 						<button
 							type="button"
 							onclick={() => (detail = ep)}
-							title="Episode details"
+							title={i18n.series_episode_details()}
 							class="block max-w-full truncate rounded-sm text-left text-fg transition hover:text-accent-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
 						>
 							{ep.title || "TBA"}
@@ -170,7 +171,7 @@
 								type="button"
 								onclick={() => (detail = ep)}
 								aria-label="Details for {epCode(ep)}"
-								title="Details"
+								title={i18n.common_details()}
 								class="grid h-7 w-7 place-items-center rounded-md text-fg-subtle transition hover:bg-surface hover:text-fg focus-visible:ring-2 focus-visible:ring-accent-ring"
 							>
 								<Info size={14} aria-hidden="true" />
@@ -180,7 +181,7 @@
 									type="button"
 									onclick={() => onManualSearch(ep)}
 									aria-label="Manual search for {epCode(ep)}"
-									title="Manual search"
+									title={i18n.action_manual_search()}
 									class="grid h-7 w-7 place-items-center rounded-md text-fg-subtle transition hover:bg-surface hover:text-fg focus-visible:ring-2 focus-visible:ring-accent-ring"
 								>
 									<Search size={14} aria-hidden="true" />
@@ -191,7 +192,7 @@
 									type="button"
 									onclick={() => onDeleteFile(ep)}
 									aria-label="Delete file for {epCode(ep)}"
-									title="Delete file"
+									title={i18n.action_delete_file()}
 									class="grid h-7 w-7 place-items-center rounded-md text-fg-subtle transition hover:bg-status-failed/10 hover:text-status-failed focus-visible:ring-2 focus-visible:ring-accent-ring"
 								>
 									<Trash2 size={14} aria-hidden="true" />

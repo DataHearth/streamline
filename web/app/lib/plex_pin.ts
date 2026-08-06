@@ -1,5 +1,7 @@
 import { toast } from "./toast";
+import { m as i18n } from "./paraglide/messages.js";
 import type { PlexPinBegin, PlexPinPoll } from "./types";
+import { errorText } from "./api";
 
 const POLL_MS = 1500;
 const TIMEOUT_MS = 5 * 60 * 1000;
@@ -38,7 +40,7 @@ export async function startPlexPin({
 		clientID = body.client_id;
 		onClientId?.(clientID);
 	} catch (err) {
-		toast.err(`Couldn't start Plex sign-in: ${errMsg(err)}`);
+		toast.err(i18n.plex_signin_failed({ error: errMsg(err) }));
 		onDone?.();
 		return;
 	}
@@ -92,7 +94,7 @@ export async function startPlexPin({
 }
 
 function errMsg(err: unknown) {
-	return err instanceof Error ? err.message : String(err);
+	return errorText(err, String(err));
 }
 
 function closePopup(popup: Window) {

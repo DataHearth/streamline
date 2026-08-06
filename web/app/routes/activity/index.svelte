@@ -7,7 +7,7 @@
 		createMutation,
 		useQueryClient,
 	} from "@tanstack/svelte-query";
-	import { api } from "../../lib/api";
+	import { api, errorText } from "../../lib/api";
 	import { auth } from "../../lib/auth.svelte";
 	import { toast } from "../../lib/toast";
 	import { pullRefresh } from "../../lib/pull-refresh";
@@ -33,6 +33,7 @@
 	import TouchStatLine from "../../components/activity/TouchStatLine.svelte";
 	import LiveStrip from "../../components/activity/LiveStrip.svelte";
 	import PendingRow from "../../components/pending/PendingRow.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	// Torrents live on their own route (/activity/torrents); this page is the
 	// queue/history pair the switch above the toolbar swaps between.
@@ -87,17 +88,17 @@
 			toast.ok("Download cancelled");
 			invalidate();
 		},
-		onError: (e) => toast.err(e.message),
+		onError: (e) => toast.err(errorText(e)),
 	}));
 	const pause = createMutation<unknown, Error, number>(() => ({
 		mutationFn: (id) => api(`/activity/queue/${id}/pause`, { method: "POST" }),
 		onSuccess: invalidate,
-		onError: (e) => toast.err(e.message),
+		onError: (e) => toast.err(errorText(e)),
 	}));
 	const resume = createMutation<unknown, Error, number>(() => ({
 		mutationFn: (id) => api(`/activity/queue/${id}/resume`, { method: "POST" }),
 		onSuccess: invalidate,
-		onError: (e) => toast.err(e.message),
+		onError: (e) => toast.err(errorText(e)),
 	}));
 	const removeHistory = createMutation<unknown, Error, number>(() => ({
 		mutationFn: (id) => api(`/activity/history/${id}`, { method: "DELETE" }),
@@ -105,7 +106,7 @@
 			toast.ok("Removed");
 			invalidate();
 		},
-		onError: (e) => toast.err(e.message),
+		onError: (e) => toast.err(errorText(e)),
 	}));
 	const clearCompleted = createMutation<unknown, Error, void>(() => ({
 		mutationFn: () =>
@@ -114,7 +115,7 @@
 			toast.ok("Cleared completed");
 			invalidate();
 		},
-		onError: (e) => toast.err(e.message),
+		onError: (e) => toast.err(errorText(e)),
 	}));
 
 	// "Needs attention": adopted-torrent proposals awaiting a decision (admin).
@@ -146,7 +147,7 @@
 			invalidatePending();
 			invalidate();
 		},
-		onError: (e) => toast.err(e.message),
+		onError: (e) => toast.err(errorText(e)),
 	}));
 	const replacePending = createMutation<
 		unknown,
@@ -163,7 +164,7 @@
 			invalidatePending();
 			invalidate();
 		},
-		onError: (e) => toast.err(e.message),
+		onError: (e) => toast.err(errorText(e)),
 	}));
 	const ignorePending = createMutation<
 		unknown,
@@ -179,7 +180,7 @@
 			toast.ok("Ignored");
 			invalidatePending();
 		},
-		onError: (e) => toast.err(e.message),
+		onError: (e) => toast.err(errorText(e)),
 	}));
 
 	let pendingBusyId = $derived.by<number | null>(() => {
@@ -278,14 +279,16 @@
 			aria-hidden="true"
 		/>
 		<span class="group-data-[pull-armed]:hidden group-data-[refreshing]:hidden">
-			Pull to refresh
+			{i18n.common_pull_to_refresh()}
 		</span>
-		<span class="hidden group-data-[pull-armed]:inline">Release to refresh</span>
-		<span class="hidden group-data-[refreshing]:inline">Refreshing…</span>
+		<span class="hidden group-data-[pull-armed]:inline">{i18n.common_release_to_refresh()}</span>
+		<span class="hidden group-data-[refreshing]:inline">{i18n.common_refreshing()}</span>
 	</div>
 
 	<header class="mb-1">
-		<h1 class="text-2xl font-bold tracking-tight text-fg">Queue &amp; History</h1>
+		<h1 class="text-2xl font-bold tracking-tight text-fg">
+			{i18n.activity_queue_and_history()}
+		</h1>
 		<p class="mt-1 text-sm text-fg-muted">
 			{queueItems.length} active · {historyItems.length} in history
 		</p>
@@ -301,7 +304,7 @@
 				aria-expanded={attnOpen}
 				class="flex w-full items-center gap-2 text-left {attnOpen ? 'mb-3' : ''}"
 			>
-				<h2 class="text-sm font-semibold text-fg">Needs attention</h2>
+				<h2 class="text-sm font-semibold text-fg">{i18n.common_needs_attention()}</h2>
 				{#if pendingItems.length > 0}
 					<span
 						class="rounded-full bg-status-wanted/20 px-1.5 py-px font-mono text-[10.5px] tabular-nums text-status-wanted"
@@ -320,7 +323,7 @@
 			{#if attnOpen}
 				<div transition:slide={{ duration: 180 }}>
 					{#if pendingQuery.isError}
-						<p class="text-sm text-status-failed">Failed to load proposals.</p>
+						<p class="text-sm text-status-failed">{i18n.torrent_proposals_failed()}</p>
 					{:else}
 						<div class="flex flex-col gap-2">
 							{#each pendingItems as item (item.id)}
@@ -347,13 +350,13 @@
 
 	<TouchStatLine
 		stats={[
-			{ value: String(activeCount), label: "Active" },
+			{ value: String(activeCount), label: i18n.common_active() },
 			{
 				value: formatSpeed(aggregate) || "—",
-				label: "Aggregate ↓",
+				label: i18n.torrent_aggregate_down(),
 				color: "var(--status-downloading)",
 			},
-			{ value: formatEta(minEta) || "—", label: "Next ETA" },
+			{ value: formatEta(minEta) || "—", label: i18n.activity_next_eta() },
 		]}
 	/>
 
@@ -403,7 +406,7 @@
 				{/if}
 			</span>
 			<span class="shrink-0 text-[12.5px] font-semibold text-status-wanted">
-				Review
+				{i18n.common_review()}
 			</span>
 			<ChevronRight size={14} class="shrink-0 text-status-wanted" aria-hidden="true" />
 		</button>

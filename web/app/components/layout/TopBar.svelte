@@ -17,6 +17,7 @@
 	import SearchField from "./SearchField.svelte";
 	import type { SystemInfo } from "../../lib/types";
 	import { toast } from "../../lib/toast";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	// Routify's `activeRoute` only emits once a navigation has resolved, so
 	// its `.url` is always the page we're actually on. Reading
@@ -37,22 +38,22 @@
 	const TITLELESS_PREFIXES = new Set(["/account", "/settings"]);
 	const SECTIONS: { prefix: string; label: string }[] = [
 		{ prefix: "/dashboard", label: "Streamline" },
-		{ prefix: "/movies", label: "Movies" },
-		{ prefix: "/series", label: "Series" },
-		{ prefix: "/activity", label: "Activity" },
-		{ prefix: "/calendar", label: "Calendar" },
-		{ prefix: "/requests", label: "Requests" },
-		{ prefix: "/library/imports", label: "Imports" },
-		{ prefix: "/account", label: "Account" },
-		{ prefix: "/settings", label: "Settings" },
+		{ prefix: "/movies", label: i18n.movies_label() },
+		{ prefix: "/series", label: i18n.settings_series() },
+		{ prefix: "/activity", label: i18n.nav_activity() },
+		{ prefix: "/calendar", label: i18n.common_calendar() },
+		{ prefix: "/requests", label: i18n.requests_label() },
+		{ prefix: "/library/imports", label: i18n.imports_label() },
+		{ prefix: "/account", label: i18n.common_account() },
+		{ prefix: "/settings", label: i18n.nav_settings() },
 	];
 
 	// Sub-page segments name themselves — "media-servers" becomes "Media
 	// servers", matching the h1 that page renders. Only slugs whose page title
 	// isn't a transform of the slug need an entry here.
 	const SEGMENT_LABELS: Record<string, string> = {
-		auth: "Authentication",
-		oidc: "Single Sign-On",
+		auth: i18n.settings_authentication(),
+		oidc: i18n.settings_sso(),
 	};
 
 	function segmentLabel(segment: string): string {
@@ -106,6 +107,15 @@
 		return "healthy";
 	});
 
+	// `health` stays the enum — it drives the `health-${health}` class. Display
+	// text goes through a separate lookup.
+	const HEALTH_LABELS: Record<Health, string> = {
+		healthy: i18n.lc_healthy(),
+		degraded: i18n.lc_degraded(),
+		down: i18n.lc_down(),
+	};
+	let healthLabel = $derived(HEALTH_LABELS[health]);
+
 	function openPalette() {
 		window.dispatchEvent(new CustomEvent("streamline:open-palette"));
 	}
@@ -136,29 +146,29 @@
 	const ADD_ITEMS: AddItem[] = [
 		{
 			id: "movie",
-			label: "Movie",
-			desc: "Search TMDB and start tracking",
+			label: i18n.common_movie(),
+			desc: i18n.add_search_tmdb_track(),
 			icon: Film,
 			requestable: true,
 		},
 		{
 			id: "series",
-			label: "Series",
-			desc: "TV, anime, daily shows",
+			label: i18n.settings_series(),
+			desc: i18n.add_tv_anime_daily(),
 			icon: Tv,
 			requestable: true,
 		},
 		{
 			id: "import",
-			label: "Import existing files",
-			desc: "Adopt media already on disk",
+			label: i18n.add_import_existing(),
+			desc: i18n.add_adopt_on_disk(),
 			icon: FolderInput,
 			divider: true,
 		},
 	];
 
 	let addHeading = $derived(
-		auth.canAddDirectly ? "Add to library" : "Request a title",
+		auth.canAddDirectly ? i18n.action_add_to_library() : i18n.action_request_title(),
 	);
 	// request_only only sees the requestable items (Movie / Series); Import is
 	// admin-only, so members lose it too.
@@ -285,7 +295,7 @@
 			{/if}
 		{:else if crumbs.length > 1}
 			<nav
-				aria-label="Breadcrumb"
+				aria-label={i18n.nav_breadcrumb()}
 				class="flex items-center gap-2 text-sm text-fg-muted"
 			>
 				{#each crumbs as c, i (i)}
@@ -310,11 +320,11 @@
 	<button
 		type="button"
 		onclick={openPalette}
-		aria-label="Open command palette"
+		aria-label={i18n.palette_open()}
 		class="hidden h-10 w-full max-w-[540px] flex-1 shrink-0 items-center gap-2.5 rounded-md border border-border bg-surface px-3.5 text-left text-[13px] text-fg-subtle transition hover:border-border-strong hover:bg-surface-2 hover:text-fg-muted lg:flex"
 	>
 		<Search size={14} aria-hidden="true" />
-		<span class="flex-1 truncate">Find a movie, release, indexer…</span>
+		<span class="flex-1 truncate">{i18n.search_field_placeholder()}</span>
 		<kbd
 			class="rounded border border-border bg-surface px-1.5 py-px font-mono text-[10.5px] text-fg-faint"
 		>
@@ -329,7 +339,7 @@
 		<button
 			type="button"
 			onclick={openPalette}
-			aria-label="Search"
+			aria-label={i18n.common_search()}
 			class="grid h-11 w-11 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg md:hidden"
 		>
 			<Search size={19} aria-hidden="true" />
@@ -349,10 +359,10 @@
 
 		<div
 			class={`health-pill health-${health} hidden items-center gap-2 rounded-full px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.08em] md:inline-flex`}
-			title="System {health}"
+			title={i18n.health_system({ state: healthLabel })}
 		>
 			<span aria-hidden="true" class="health-dot h-1.5 w-1.5 rounded-full"></span>
-			<span>{health}</span>
+			<span>{healthLabel}</span>
 		</div>
 	</div>
 </header>

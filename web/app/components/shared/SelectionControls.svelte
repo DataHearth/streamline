@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { ListChecks, CheckCheck } from "@lucide/svelte";
 	import { cn } from "../../lib/cn";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	let {
 		active,
@@ -32,7 +33,7 @@
 	class={cn(base, active ? on : off)}
 >
 	<ListChecks size={14} aria-hidden="true" />
-	Select
+	{i18n.common_select()}
 	{#if count > 0}
 		<span
 			class={cn(
@@ -52,5 +53,5 @@
 	class={cn(base, off, "hidden lg:inline-flex", "disabled:pointer-events-none disabled:opacity-40")}
 >
 	<CheckCheck size={14} aria-hidden="true" />
-	Select all
+	{i18n.common_select_all()}
 </button>

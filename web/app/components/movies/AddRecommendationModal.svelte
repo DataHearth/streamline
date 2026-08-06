@@ -5,7 +5,7 @@
 		useQueryClient,
 	} from "@tanstack/svelte-query";
 	import { Film, LoaderCircle, Plus } from "@lucide/svelte";
-	import { api } from "../../lib/api";
+	import { api, errorText } from "../../lib/api";
 	import { toast } from "../../lib/toast";
 	import type {
 		AddMovieRequest,
@@ -16,6 +16,7 @@
 	import Modal from "../modals/Modal.svelte";
 	import Select from "../forms/Select.svelte";
 	import Poster from "./Poster.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	type Props = {
 		open: boolean;
@@ -37,7 +38,7 @@
 	}));
 
 	let qpOptions = $derived([
-		{ value: "", label: "Server default" },
+		{ value: "", label: i18n.quality_server_default() },
 		...(qpQuery.data ?? []).map((p) => ({
 			value: p.name,
 			label: p.name,
@@ -56,14 +57,14 @@
 		onSuccess: (_movie, m) => {
 			qc.invalidateQueries({ queryKey: ["movies"] });
 			qc.invalidateQueries({ queryKey: ["movies", "counts"] });
-			toast.ok(`Added ${m.title}`);
+			toast.ok(i18n.toast_added({ title: m.title }));
 			onClose();
 		},
-		onError: (e) => toast.err(e.message ?? "Add failed"),
+		onError: (e) => toast.err(errorText(e, i18n.common_add_failed())),
 	}));
 </script>
 
-<Modal {open} title="Add to library" size="md" {onClose}>
+<Modal {open} title={i18n.action_add_to_library()} size="md" {onClose}>
 	{#snippet children()}
 		{#if rec}
 			<div class="flex gap-4">
@@ -107,7 +108,7 @@
 
 			<div class="mt-5">
 				<Select
-					label="Quality profile"
+					label={i18n.quality_profile()}
 					value={qualityProfileName}
 					options={qpOptions}
 					onChange={(v) => (qualityProfileName = v)}
@@ -122,7 +123,7 @@
 			onclick={onClose}
 			class="inline-flex h-9 items-center rounded-md px-3 text-sm font-medium text-fg-muted transition hover:bg-surface hover:text-fg"
 		>
-			Cancel
+			{i18n.common_cancel()}
 		</button>
 		<button
 			type="button"

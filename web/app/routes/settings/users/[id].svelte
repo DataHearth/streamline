@@ -3,7 +3,7 @@
 	import { params } from "@roxi/routify";
 	import { onMount } from "svelte";
 	import { ArrowLeft } from "@lucide/svelte";
-	import { api } from "../../../lib/api";
+	import { api, errorText } from "../../../lib/api";
 	import { auth } from "../../../lib/auth.svelte";
 	import { requireAdmin } from "../../../lib/guards";
 	import type { UserDetail } from "../../../lib/types";
@@ -12,6 +12,7 @@
 	import UserDangerActions from "../../../components/users/UserDangerActions.svelte";
 	import UserSessionsCard from "../../../components/users/UserSessionsCard.svelte";
 	import UserAPIKeysCard from "../../../components/users/UserAPIKeysCard.svelte";
+	import { m as i18n } from "../../../lib/paraglide/messages.js";
 
 	let routeParams = $state<Record<string, string>>({});
 	onMount(() => {
@@ -45,22 +46,22 @@
 		class="inline-flex items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-3 py-1.5 text-xs font-medium text-fg-muted transition hover:border-border-strong hover:text-fg"
 	>
 		<ArrowLeft class="h-3.5 w-3.5" aria-hidden="true" />
-		Back to Users
+		{i18n.users_back()}
 	</a>
 
 	{#if detail.isPending}
 		<div class="mt-6 py-16 text-center text-sm text-fg-subtle">
-			Loading user…
+			{i18n.common_loading_user()}
 		</div>
 	{:else if detail.isError}
 		<div
 			class="mt-6 rounded-lg border border-dashed border-status-failed/40 bg-status-failed/5 py-12 text-center"
 		>
 			<p class="text-sm font-semibold text-status-failed">
-				Failed to load user
+				{i18n.users_load_failed()}
 			</p>
 			<p class="mt-1 text-xs text-fg-subtle">
-				{detail.error?.message ?? "Unknown error"}
+				{errorText(detail.error, i18n.common_unknown_error())}
 			</p>
 		</div>
 	{:else if target && detail.data}

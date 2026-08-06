@@ -3,7 +3,7 @@
 	import { Film, ChevronUp, ChevronDown, Bookmark } from "@lucide/svelte";
 	import { cn } from "../../lib/cn";
 	import { dragScroll } from "../../lib/drag-scroll";
-	import { api } from "../../lib/api";
+	import { api, errorText } from "../../lib/api";
 	import { toast } from "../../lib/toast";
 	import { formatBytes } from "../../lib/format";
 	import { movieStatus } from "../../lib/status";
@@ -12,6 +12,7 @@
 	import SelectBox from "../shared/SelectBox.svelte";
 	import MovieActionsMenu from "./MovieActionsMenu.svelte";
 	import type { Movie, MediaFile } from "../../lib/types";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	type SortKey = "title" | "year";
 	type SortOrder = "asc" | "desc";
@@ -46,9 +47,9 @@
 			}),
 		onSuccess: (_d, m) => {
 			qc.invalidateQueries({ queryKey: ["movies"] });
-			toast.ok(m.monitored ? "Stopped monitoring" : "Now monitoring");
+			toast.ok(m.monitored ? i18n.monitor_stopped() : i18n.monitor_now_monitoring());
 		},
-		onError: (e) => toast.err(e.message ?? "Update failed"),
+		onError: (e) => toast.err(errorText(e, i18n.common_update_failed())),
 	}));
 
 	function totalSize(files: MediaFile[] | undefined): string {
@@ -96,7 +97,7 @@
 						checked={allSelected}
 						indeterminate={pageSelected > 0 && !allSelected}
 						onChange={(v) => onToggleAll(v)}
-						label={allSelected ? "Deselect all" : "Select all"}
+						label={allSelected ? i18n.common_deselect_all() : i18n.common_select_all()}
 					/>
 				</th>
 				<th scope="col" class="w-12 px-3 py-2.5" aria-hidden="true"></th>
@@ -140,18 +141,18 @@
 						{/if}
 					</button>
 				</th>
-				<th scope="col" class="w-28 px-3 py-2.5 text-left font-medium">Status</th>
+				<th scope="col" class="w-28 px-3 py-2.5 text-left font-medium">{i18n.common_status()}</th>
 				<th
 					scope="col"
 					class="hidden w-40 px-3 py-2.5 text-left font-medium @3xl:table-cell"
 				>
-					Quality
+					{i18n.common_quality()}
 				</th>
 				<th
 					scope="col"
 					class="hidden w-24 px-3 py-2.5 text-right font-medium @2xl:table-cell"
 				>
-					Size
+					{i18n.common_size()}
 				</th>
 				<th scope="col" class="w-12 px-3 py-2.5" aria-hidden="true"></th>
 			</tr>
@@ -169,7 +170,7 @@
 						<SelectBox
 							checked={isSel}
 							onChange={(v) => onToggle(movie.id, v)}
-							label={isSel ? `Deselect ${movie.title}` : `Select ${movie.title}`}
+							label={isSel ? `Deselect ${movie.title}` : i18n.a11y_select_item({ title: movie.title })}
 						/>
 					</td>
 					<td class="px-3 py-2">
@@ -233,9 +234,9 @@
 							<button
 								type="button"
 								onclick={() => monitor.mutate(movie)}
-								aria-label={movie.monitored ? "Stop monitoring" : "Monitor"}
+								aria-label={movie.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
 								aria-pressed={movie.monitored}
-								title={movie.monitored ? "Stop monitoring" : "Monitor"}
+								title={movie.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
 								class={cn(
 									"grid h-8 w-8 place-items-center rounded-md transition hover:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring",
 									movie.monitored

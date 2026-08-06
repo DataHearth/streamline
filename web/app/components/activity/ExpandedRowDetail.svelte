@@ -6,6 +6,7 @@
 	import { formatBytes } from "../../lib/format";
 	import { formatDateTime } from "../../lib/dates";
 	import type { QueueEntry, HistoryEntry } from "../../lib/types";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	let {
 		item,
@@ -37,16 +38,16 @@
 	type KV = { label: string; value: string };
 	let rows = $derived.by<KV[]>(() => {
 		const out: KV[] = [
-			{ label: "Release", value: item.title },
-			{ label: "Indexer", value: item.indexer || "—" },
-			{ label: "Client", value: item.download_client || "—" },
-			{ label: "Size", value: formatBytes(item.size) },
-			{ label: "Created", value: formatDateTime(item.created_at) },
+			{ label: i18n.common_release(), value: item.title },
+			{ label: i18n.common_indexer(), value: item.indexer || "—" },
+			{ label: i18n.common_client(), value: item.download_client || "—" },
+			{ label: i18n.common_size(), value: formatBytes(item.size) },
+			{ label: i18n.common_created(), value: formatDateTime(item.created_at) },
 		];
 		if (view === "history") {
 			const h = item as HistoryEntry;
 			out.push({
-				label: "Imported",
+				label: i18n.activity_imported(),
 				value: h.imported_at ? formatDateTime(h.imported_at) : "—",
 			});
 		}
@@ -81,7 +82,7 @@
 					<dt
 						class="font-medium uppercase tracking-[0.1em] text-status-failed"
 					>
-						Error
+						{i18n.common_error()}
 					</dt>
 					<dd class="min-w-0 break-words font-mono text-status-failed">
 						{item.failure_reason}
@@ -139,7 +140,7 @@
 						)}
 					>
 						<Ban size={13} aria-hidden="true" />
-						Cancel
+						{i18n.common_cancel()}
 					</button>
 				{:else}
 					<button
@@ -152,7 +153,7 @@
 						)}
 					>
 						<Trash2 size={13} aria-hidden="true" />
-						Remove
+						{i18n.common_remove()}
 					</button>
 				{/if}
 			</div>
@@ -163,35 +164,34 @@
 
 <Dialog
 	open={confirmCancel}
-	title="Cancel download?"
+	title={i18n.activity_cancel_confirm()}
 	onClose={() => (confirmCancel = false)}
 	actions={[
-		{ label: "Keep", variant: "ghost", autofocus: true },
+		{ label: i18n.common_keep(), variant: "ghost", autofocus: true },
 		{
-			label: "Cancel download",
+			label: i18n.action_cancel_download(),
 			variant: "danger",
 			onClick: () => onCancel(item.id),
 		},
 	]}
 >
 	<p class="text-sm text-fg-muted">
-		Removes the torrent and its partial files from the client, then
-		deletes <span class="font-medium text-fg">{item.title}</span> from the
+		{i18n.activity_cancel_help()} <span class="font-medium text-fg">{item.title}</span> from the
 		queue. The movie returns to <em>wanted</em> if it has no file yet.
 	</p>
 </Dialog>
 
 <Dialog
 	open={confirmRemove}
-	title="Remove history record?"
+	title={i18n.activity_remove_record_confirm()}
 	onClose={() => (confirmRemove = false)}
 	actions={[
-		{ label: "Cancel", variant: "ghost", autofocus: true },
-		{ label: "Remove", variant: "danger", onClick: () => onRemove(item.id) },
+		{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },
+		{ label: i18n.common_remove(), variant: "danger", onClick: () => onRemove(item.id) },
 	]}
 >
 	<p class="text-sm text-fg-muted">
-		Deletes the history entry for
+		{i18n.activity_deletes_entry_for()}
 		<span class="font-medium text-fg">{item.title}</span>. The movie and
 		its files are not affected.
 	</p>

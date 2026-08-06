@@ -3,6 +3,7 @@
 	import { cn } from "../../lib/cn";
 	import StatusPill from "./StatusPill.svelte";
 	import type { CalendarEvent } from "../../lib/calendar";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	let {
 		events,
@@ -77,7 +78,7 @@
 			class="flex flex-col items-center justify-center gap-1.5 px-2 py-6 text-center"
 		>
 			<Calendar size={22} class="text-fg-faint" aria-hidden="true" />
-			<p class="text-sm font-medium text-fg">Nothing scheduled</p>
+			<p class="text-sm font-medium text-fg">{i18n.upcoming_nothing_scheduled()}</p>
 			<p class="text-xs text-fg-muted">{emptyText}</p>
 		</div>
 	{:else}

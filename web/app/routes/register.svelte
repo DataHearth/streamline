@@ -10,7 +10,8 @@
 		type AuthConfig,
 		type RegisterInput,
 	} from "../lib/auth_api";
-	import { ApiError } from "../lib/api";
+	import { ApiError, errorText } from "../lib/api";
+	import { m as i18n } from "../lib/paraglide/messages.js";
 	import { email as emailSchema, password as passwordSchema } from "../lib/schemas";
 	import TextField from "../components/forms/TextField.svelte";
 	import AuthCard from "../components/auth/AuthCard.svelte";
@@ -31,7 +32,8 @@
 					form.setFieldValue("email", inv.email);
 				}
 			} catch (err) {
-				prefillError = err instanceof ApiError ? err.message : "Invite invalid";
+				prefillError =
+					errorText(err, i18n.auth_invite_invalid());
 			}
 		}
 	});
@@ -50,7 +52,7 @@
 			window.location.assign("/dashboard");
 		},
 		onError: (err) => {
-			errorMsg = err instanceof ApiError ? err.message : "Registration failed";
+			errorMsg = errorText(err, i18n.auth_register_failed());
 		},
 	}));
 
@@ -72,7 +74,7 @@
 				v.forward(
 					v.check(
 						(input) => input.password === input.confirm,
-						"Passwords do not match",
+						i18n.validation_passwords_mismatch(),
 					),
 					["confirm"],
 				),
@@ -93,11 +95,13 @@
 	let mode = $derived(cfg.data?.registration_mode ?? "open");
 	let blocked = $derived(mode === "disabled");
 	let needsInvite = $derived(mode === "invite" && !token);
-	let title = $derived(token ? "Accept invite" : "Create your account");
-	let subtitle = "Welcome to Streamline.";
+	let title = $derived(
+		token ? i18n.auth_accept_invite_title() : i18n.auth_register_title(),
+	);
+	let subtitle = i18n.auth_register_subtitle();
 </script>
 
-<svelte:head><title>Create account — Streamline</title></svelte:head>
+<svelte:head><title>{i18n.auth_register_page_title()}</title></svelte:head>
 
 <AuthCard {title} {subtitle} eyebrow="Streamline">
 	{#if blocked}
@@ -105,15 +109,14 @@
 			role="alert"
 			class="rounded-md border border-status-failed/40 bg-status-failed/10 px-3 py-2 text-sm text-status-failed"
 		>
-			Registration is disabled. Ask an admin for an invite or to enable open
-			registration.
+			{i18n.auth_registration_disabled()}
 		</p>
 	{:else if needsInvite}
 		<p
 			role="alert"
 			class="rounded-md border border-status-wanted/40 bg-status-wanted/10 px-3 py-2 text-sm text-status-wanted"
 		>
-			An invite token is required. Use the link an admin sent you.
+			{i18n.auth_invite_required()}
 		</p>
 	{:else}
 		{#if prefillError}
@@ -144,7 +147,7 @@
 				{#snippet children(field)}
 					<TextField
 						{field}
-						label="Email"
+						label={i18n.field_email()}
 						type="email"
 						autocomplete="username"
 						readonly={emailLocked}
@@ -155,7 +158,7 @@
 				{#snippet children(field)}
 					<TextField
 						{field}
-						label="Display name (optional)"
+						label={i18n.field_display_name_optional()}
 						autocomplete="nickname"
 					/>
 				{/snippet}
@@ -164,10 +167,10 @@
 				{#snippet children(field)}
 					<TextField
 						{field}
-						label="Password"
+						label={i18n.field_password()}
 						type="password"
 						autocomplete="new-password"
-						help="Minimum 8 characters."
+						help={i18n.auth_password_help()}
 					/>
 				{/snippet}
 			</form.Field>
@@ -175,7 +178,7 @@
 				{#snippet children(field)}
 					<TextField
 						{field}
-						label="Confirm password"
+						label={i18n.field_confirm_password()}
 						type="password"
 						autocomplete="new-password"
 					/>
@@ -186,18 +189,18 @@
 				disabled={!form.state.canSubmit || register.isPending}
 				class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-accent text-sm font-semibold text-fg-on-accent transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
 			>
-				{register.isPending ? "Creating account…" : "Create account"}
+				{register.isPending ? i18n.auth_creating_account() : i18n.auth_create_account()}
 			</button>
 		</form>
 	{/if}
 
 	{#snippet footer()}
-		Already have an account?
+		{i18n.auth_have_account()}
 		<a
 			href="/login"
 			class="cursor-pointer rounded font-medium text-accent hover:text-accent-hover hover:underline focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
 		>
-			Sign in
+			{i18n.auth_sign_in()}
 		</a>
 	{/snippet}
 </AuthCard>

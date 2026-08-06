@@ -7,7 +7,7 @@
 	import { params, goto } from "@roxi/routify";
 	import { Search, LoaderCircle, Bookmark } from "@lucide/svelte";
 	import { onMount } from "svelte";
-	import { api } from "../../lib/api";
+	import { api, errorText } from "../../lib/api";
 	import { toast } from "../../lib/toast";
 	import { cn } from "../../lib/cn";
 	import type { Movie, QualityProfile } from "../../lib/types";
@@ -23,12 +23,13 @@
 	import QualityProfileModal from "../../components/movies/QualityProfileModal.svelte";
 	import RenameMoviePreviewModal from "../../components/movies/RenameMoviePreviewModal.svelte";
 	import DeleteTitleDialog from "../../components/shared/DeleteTitleDialog.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	type Tab = "overview" | "history" | "cast";
 	const TABS: { key: Tab; label: string }[] = [
-		{ key: "overview", label: "Overview" },
-		{ key: "history", label: "History" },
-		{ key: "cast", label: "Cast" },
+		{ key: "overview", label: i18n.common_overview() },
+		{ key: "history", label: i18n.common_history() },
+		{ key: "cast", label: i18n.detail_cast() },
 	];
 	const VALID_TABS = new Set<Tab>(["overview", "history", "cast"]);
 
@@ -92,14 +93,14 @@
 			qc.invalidateQueries({ queryKey: ["movie", movieId] });
 			toast.ok("Metadata refresh requested");
 		},
-		onError: (e: Error) => toast.err(e.message ?? "Refresh failed"),
+		onError: (e: Error) => toast.err(errorText(e, i18n.common_refresh_failed())),
 	}));
 
 	const searchNow = createMutation(() => ({
 		mutationFn: () =>
 			api(`/movies/${movieId}/search-now`, { method: "POST" }),
 		onSuccess: () => toast.ok("Search dispatched"),
-		onError: (e: Error) => toast.err(e.message ?? "Search failed"),
+		onError: (e: Error) => toast.err(errorText(e, i18n.common_search_failed())),
 	}));
 
 	const monitor = createMutation<Movie, Error, boolean>(() => ({
@@ -110,9 +111,9 @@
 			}),
 		onSuccess: (_d, next) => {
 			qc.invalidateQueries({ queryKey: ["movie", movieId] });
-			toast.ok(next ? "Now monitoring" : "Stopped monitoring");
+			toast.ok(next ? i18n.monitor_now_monitoring() : i18n.monitor_stopped());
 		},
-		onError: (e: Error) => toast.err(e.message ?? "Update failed"),
+		onError: (e: Error) => toast.err(errorText(e, i18n.common_update_failed())),
 	}));
 
 	const saveProfile = createMutation<Movie, Error, string>(() => ({
@@ -127,7 +128,7 @@
 			toast.ok("Quality profile updated");
 			qpOpen = false;
 		},
-		onError: (e: Error) => toast.err(e.message ?? "Update failed"),
+		onError: (e: Error) => toast.err(errorText(e, i18n.common_update_failed())),
 	}));
 
 	const del = createMutation<unknown, Error, boolean>(() => ({
@@ -140,7 +141,7 @@
 			toast.ok("Movie deleted");
 			navigate("/movies");
 		},
-		onError: (e: Error) => toast.err(e.message ?? "Delete failed"),
+		onError: (e: Error) => toast.err(errorText(e, i18n.common_delete_failed())),
 	}));
 
 	function onKebabPick(a: string) {
@@ -178,10 +179,10 @@
 		class="mx-4 mt-4 rounded-lg border border-dashed border-status-failed/40 bg-status-failed/5 py-12 text-center md:mx-8"
 	>
 		<p class="text-sm font-semibold text-status-failed">
-			Failed to load movie
+			{i18n.movies_load_failed()}
 		</p>
 		<p class="mt-1 text-xs text-fg-subtle">
-			{movieQuery.error?.message ?? "Unknown error"}
+			{errorText(movieQuery.error, i18n.common_unknown_error())}
 		</p>
 	</div>
 {:else if movie}
@@ -192,7 +193,7 @@
 					class="inline-flex h-10 items-center gap-2 rounded-md bg-status-downloading/15 px-3 text-sm font-medium text-status-downloading"
 				>
 					<LoaderCircle size={14} class="animate-spin" aria-hidden="true" />
-					Downloading…
+					{i18n.common_downloading_ellipsis()}
 				</span>
 			{/if}
 
@@ -209,7 +210,7 @@
 				class="inline-flex h-10 items-center gap-2 rounded-md bg-accent px-4 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover hover:shadow-glow"
 			>
 				<Search size={14} aria-hidden="true" />
-				Manual search
+				{i18n.action_manual_search()}
 			</button>
 
 			<button
@@ -217,7 +218,7 @@
 				onclick={() => monitor.mutate(!(movie.monitored ?? false))}
 				disabled={monitor.isPending}
 				aria-pressed={movie.monitored ?? false}
-				title={movie.monitored ? "Stop monitoring" : "Monitor"}
+				title={movie.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
 				class="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border-strong bg-white/[0.08] text-fg backdrop-blur-sm transition hover:bg-white/[0.14] disabled:cursor-not-allowed disabled:opacity-60"
 			>
 				<Bookmark
@@ -226,7 +227,7 @@
 					aria-hidden="true"
 				/>
 				<span class="sr-only">
-					{movie.monitored ? "Stop monitoring" : "Monitor"}
+					{movie.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
 				</span>
 			</button>
 
@@ -235,7 +236,7 @@
 	</MovieDetailHero>
 
 	<nav
-		aria-label="Movie sections"
+		aria-label={i18n.movies_sections()}
 		class="sticky top-16 z-10 border-b border-border bg-bg-deep/70 px-4 backdrop-blur-md saturate-150 md:px-8"
 	>
 		<div class="tabs-track flex w-full gap-0.5">
@@ -289,7 +290,7 @@
 	     playing and searching are in reach from anywhere in the page. -->
 	<div
 		class="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+3.5rem)] z-30 flex items-center gap-2 border-t border-border bg-bg-elevated/95 px-3 pb-4 pt-2.5 backdrop-blur-md md:hidden"
-		aria-label="Movie actions"
+		aria-label={i18n.movies_actions()}
 	>
 		<PlayOnMenu
 			primary
@@ -302,8 +303,8 @@
 		<button
 			type="button"
 			onclick={() => (searchOpen = true)}
-			aria-label="Manual search"
-			title="Manual search"
+			aria-label={i18n.action_manual_search()}
+			title={i18n.action_manual_search()}
 			class="grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-border-strong bg-bg-elevated text-fg-muted transition active:bg-surface"
 		>
 			{#if movie.status === "downloading"}
@@ -318,7 +319,7 @@
 			onclick={() => monitor.mutate(!(movie.monitored ?? false))}
 			disabled={monitor.isPending}
 			aria-pressed={movie.monitored ?? false}
-			aria-label={movie.monitored ? "Stop monitoring" : "Monitor"}
+			aria-label={movie.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
 			class={cn(
 				"grid h-11 w-11 shrink-0 place-items-center rounded-lg border transition disabled:opacity-60",
 				movie.monitored

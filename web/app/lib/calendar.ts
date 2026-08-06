@@ -1,4 +1,5 @@
 import type { UpcomingEpisode, UpcomingList, UpcomingMovie } from "./types";
+import { getLocale } from "./paraglide/runtime.js";
 
 export type CalendarKind = "movie" | "episode";
 
@@ -108,7 +109,7 @@ export function isSameDay(a: Date, b: Date): boolean {
 // Short weekday labels ordered for the chosen week start. 2023-01-01 is a
 // Sunday, so day-of-month i maps cleanly to weekday i.
 export function weekdayLabels(weekStartsOn: 0 | 1): string[] {
-	const fmt = new Intl.DateTimeFormat(undefined, { weekday: "short" });
+	const fmt = new Intl.DateTimeFormat(getLocale(), { weekday: "short" });
 	const labels: string[] = [];
 	for (let i = 0; i < 7; i++) {
 		labels.push(fmt.format(new Date(2023, 0, 1 + ((weekStartsOn + i) % 7))));

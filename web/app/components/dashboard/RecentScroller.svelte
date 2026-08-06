@@ -15,6 +15,7 @@
 <script lang="ts">
 	import { Film, ChevronLeft, ChevronRight } from "@lucide/svelte";
 	import PosterCard from "../shared/PosterCard.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	let {
 		title,
@@ -84,7 +85,7 @@
 					<button
 						type="button"
 						class={navBtn}
-						aria-label="Scroll left"
+						aria-label={i18n.common_scroll_left()}
 						disabled={atStart}
 						onclick={() => scrollBy(-1)}
 					>
@@ -93,7 +94,7 @@
 					<button
 						type="button"
 						class={navBtn}
-						aria-label="Scroll right"
+						aria-label={i18n.common_scroll_right()}
 						disabled={atEnd}
 						onclick={() => scrollBy(1)}
 					>

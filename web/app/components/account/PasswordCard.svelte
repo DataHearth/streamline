@@ -2,11 +2,12 @@
 	import { createForm } from "@tanstack/svelte-form";
 	import { createMutation } from "@tanstack/svelte-query";
 	import * as v from "valibot";
-	import { api } from "../../lib/api";
+	import { api, errorText } from "../../lib/api";
 	import { toast } from "../../lib/toast";
 	import { password } from "../../lib/schemas";
 	import TextField from "../forms/TextField.svelte";
 	import Modal from "../modals/Modal.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	type Body = { current_password: string; new_password: string };
 
@@ -20,7 +21,7 @@
 			toast.ok("Password changed");
 			open = false;
 		},
-		onError: (err) => toast.err(err.message),
+		onError: (err) => toast.err(errorText(err)),
 	}));
 
 	const form = createForm(() => ({
@@ -88,19 +89,18 @@
 
 <section class="rounded-lg border border-border bg-bg-elevated p-6">
 	<header class="mb-3 flex items-start justify-between gap-3">
-		<h3 class="text-base font-semibold text-fg">Password</h3>
+		<h3 class="text-base font-semibold text-fg">{i18n.common_password()}</h3>
 		<!-- We never see the cleartext, so this presents the static enforced
 		     minimum rather than pretending to grade the current secret. -->
 		<span
 			class="inline-flex items-center rounded-full bg-status-available/15 px-2 py-0.5 font-mono text-[9.5px] font-semibold uppercase tracking-[0.1em] text-status-available"
 		>
-			Set
+			{i18n.common_set()}
 		</span>
 	</header>
 
 	<p class="text-xs text-fg-muted">
-		Sign in with email and password. Other sessions sign out after a
-		change.
+		{i18n.password_card_help()}
 	</p>
 
 	<!-- Decorative meter matching the prototype's "this password slot is
@@ -116,13 +116,13 @@
 		onclick={startChange}
 		class="mt-4 inline-flex h-9 items-center rounded-md border border-border bg-surface px-3.5 text-sm font-medium text-fg transition hover:bg-surface-2"
 	>
-		Change password
+		{i18n.account_change_password()}
 	</button>
 </section>
 
 <Modal
 	{open}
-	title="Change password"
+	title={i18n.account_change_password()}
 	size="md"
 	onClose={() => {
 		if (!mutation.isPending) open = false;
@@ -140,7 +140,7 @@
 			{#snippet children(field)}
 				<TextField
 					{field}
-					label="Current password"
+					label={i18n.account_current_password()}
 					type="password"
 					autocomplete="current-password"
 				/>
@@ -152,16 +152,16 @@
 				<div class="grid gap-1.5">
 					<TextField
 						{field}
-						label="New password"
+						label={i18n.account_new_password()}
 						type="password"
 						autocomplete="new-password"
-						help="At least 8 characters. Mix letters, numbers, symbols for a stronger score."
+						help={i18n.account_password_help()}
 					/>
 					<div class="flex items-center gap-2">
 						<div
 							class="flex flex-1 gap-1"
 							role="meter"
-							aria-label="Password strength"
+							aria-label={i18n.account_password_strength()}
 							aria-valuemin={0}
 							aria-valuemax={4}
 							aria-valuenow={score}
@@ -197,7 +197,7 @@
 				<div class="grid gap-1">
 					<TextField
 						{field}
-						label="Confirm new password"
+						label={i18n.account_confirm_new_password()}
 						type="password"
 						autocomplete="new-password"
 					/>
@@ -207,7 +207,7 @@
 							role="alert"
 							aria-live="polite"
 						>
-							Passwords don't match.
+							{i18n.account_passwords_mismatch()}
 						</p>
 					{/if}
 				</div>
@@ -224,7 +224,7 @@
 			disabled={mutation.isPending}
 			class="inline-flex h-9 items-center rounded-md border border-border bg-surface px-3.5 text-sm font-medium text-fg-muted transition hover:bg-surface-2 hover:text-fg disabled:cursor-not-allowed disabled:opacity-60"
 		>
-			Cancel
+			{i18n.common_cancel()}
 		</button>
 		<button
 			type="submit"
@@ -232,7 +232,7 @@
 			disabled={mutation.isPending}
 			class="inline-flex h-9 items-center rounded-md bg-accent px-3.5 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
 		>
-			{mutation.isPending ? "Changing…" : "Change password"}
+			{mutation.isPending ? i18n.common_changing() : i18n.account_change_password()}
 		</button>
 	{/snippet}
 </Modal>

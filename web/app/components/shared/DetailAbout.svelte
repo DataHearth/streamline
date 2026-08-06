@@ -1,6 +1,7 @@
 <script lang="ts">
 	import MovieDetailCast from "../movies/MovieDetailCast.svelte";
 	import type { CastMember } from "../../lib/types";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	let {
 		overview,
@@ -20,7 +21,7 @@
 		id="detail-synopsis"
 		class="font-mono text-[11px] uppercase tracking-[0.14em] text-fg-faint"
 	>
-		Synopsis
+		{i18n.detail_synopsis()}
 	</h2>
 	{#if overview}
 		<p
@@ -29,7 +30,7 @@
 			{overview}
 		</p>
 	{:else}
-		<p class="mt-3 text-sm italic text-fg-subtle">No overview available.</p>
+		<p class="mt-3 text-sm italic text-fg-subtle">{i18n.detail_no_overview()}</p>
 	{/if}
 
 	{#if topCast.length > 0}
@@ -38,7 +39,7 @@
 			<h3
 				class="font-mono text-[11px] uppercase tracking-[0.14em] text-fg-faint"
 			>
-				Cast
+				{i18n.detail_cast()}
 			</h3>
 			{#if cast.length > topCast.length && onViewAllCast}
 				<button
@@ -46,7 +47,7 @@
 					onclick={onViewAllCast}
 					class="font-mono text-[11px] text-accent-text transition hover:text-accent"
 				>
-					View all
+					{i18n.common_view_all()}
 				</button>
 			{/if}
 		</div>

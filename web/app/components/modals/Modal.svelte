@@ -5,6 +5,7 @@
 	import { cubicOut } from "svelte/easing";
 	import { X } from "@lucide/svelte";
 	import { lockScroll, unlockScroll } from "../../lib/scrollLock";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	type Props = {
 		open: boolean;
@@ -175,7 +176,7 @@
 					<button
 						type="button"
 						onclick={onClose}
-						aria-label="Close"
+						aria-label={i18n.common_close()}
 						class="grid h-8 w-8 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg"
 					>
 						<X size={16} aria-hidden="true" />
