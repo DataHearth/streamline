@@ -9,6 +9,16 @@
 	import type { MovieCounts, QueueEntry, DiskUsage } from "../../lib/types";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 
+	const movieCount = (n: number) =>
+		n === 1
+			? i18n.dash_movie_count_one({ count: n })
+			: i18n.dash_movie_count_other({ count: n });
+
+	const seriesCount = (n: number) =>
+		n === 1
+			? i18n.dash_series_count_one({ count: n })
+			: i18n.dash_series_count_other({ count: n });
+
 	let {
 		counts,
 		seriesTotal,
@@ -189,8 +199,7 @@
 		<div
 			class="mt-1.5 truncate font-mono text-[11px] text-fg-muted md:text-[11.5px]"
 		>
-			{counts?.total ?? 0}
-			movie{(counts?.total ?? 0) === 1 ? "" : "s"} · {seriesTotal ?? 0} series
+			{movieCount(counts?.total ?? 0)} · {seriesCount(seriesTotal ?? 0)}
 		</div>
 	</div>
 
@@ -212,7 +221,7 @@
 			></span>
 		</div>
 		<div class="mt-1.5 font-mono text-[11.5px] text-fg-muted">
-			{speedText ? `↓ ${speedText}` : "idle"}
+			{speedText ? `↓ ${speedText}` : i18n.lc_idle()}
 		</div>
 	</div>
 
@@ -232,8 +241,7 @@
 			class="mt-1.5 flex items-baseline gap-2.5 font-mono text-[11px] md:text-[11.5px]"
 		>
 			<span class="truncate text-fg-muted">
-				{monitoredMovies ?? 0}
-				movie{(monitoredMovies ?? 0) === 1 ? "" : "s"} · {monitoredSeries ?? 0} series
+				{movieCount(monitoredMovies ?? 0)} · {seriesCount(monitoredSeries ?? 0)}
 			</span>
 			{#if failedCount > 0}
 				<a

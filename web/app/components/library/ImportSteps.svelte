@@ -36,10 +36,50 @@
 
 	let states = $derived(statesFor(status));
 	let live = $derived(status === "running" || status === "committing");
+
+	// The phone strip names one step. A cancelled/failed scan has no "current",
+	// so it falls back to the last stage actually reached — which is the thing
+	// the status pill alone cannot say.
+	let currentIndex = $derived(
+		states.indexOf("current") !== -1
+			? states.indexOf("current")
+			: Math.max(0, states.lastIndexOf("done")),
+	);
+	let current = $derived(STEPS[currentIndex]);
 </script>
 
+<!-- Below md the four labels are single unbreakable words that overflow a 358px
+     card, so the phone gets dots plus the current step's label and sub-label —
+     the latter being exactly what the old strip hid at this width. -->
+<div
+	class="flex items-center gap-3 rounded-lg border border-border bg-bg-elevated px-4 py-3 md:hidden"
+	aria-label={i18n.imports_progress()}
+>
+	<div class="flex shrink-0 items-center gap-1.5" aria-hidden="true">
+		{#each STEPS as step, i (step.label)}
+			{@const state = states[i]}
+			<span
+				class="rounded-full transition-colors {state === 'done'
+					? 'h-2 w-2 bg-status-available'
+					: state === 'current'
+						? 'h-2.5 w-2.5 bg-accent ring-2 ring-accent-ring'
+						: 'h-2 w-2 bg-border-strong'}"
+			></span>
+		{/each}
+	</div>
+	<div class="min-w-0 flex-1">
+		<p class="truncate text-[13.5px] font-semibold tracking-[-0.01em] text-fg">
+			{current.label}
+		</p>
+		<p class="mt-0.5 truncate text-[11.5px] text-fg-subtle">{current.sub}</p>
+	</div>
+	<span class="shrink-0 font-mono text-[10.5px] tabular-nums text-fg-faint">
+		{currentIndex + 1}/{STEPS.length}
+	</span>
+</div>
+
 <ol
-	class="flex items-stretch gap-0 rounded-lg border border-border bg-bg-elevated px-3 py-4 md:px-6"
+	class="hidden items-stretch gap-0 rounded-lg border border-border bg-bg-elevated px-3 py-4 md:flex md:px-6"
 	aria-label={i18n.imports_progress()}
 >
 	{#each STEPS as step, i (step.label)}

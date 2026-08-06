@@ -8,7 +8,11 @@
 	let countText = $derived(
 		movies.length === 0
 			? undefined
-			: `${movies.length} title${movies.length === 1 ? "" : "s"} · search nightly`,
+			: `${
+					movies.length === 1
+						? i18n.dash_title_count_one({ count: movies.length })
+						: i18n.dash_title_count_other({ count: movies.length })
+				} · ${i18n.dash_search_nightly()}`,
 	);
 </script>
 

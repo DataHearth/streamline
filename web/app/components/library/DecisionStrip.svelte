@@ -6,7 +6,7 @@
 	let {
 		pendingCount,
 		commitableCount,
-		commitVerb,
+		commitNote,
 		noun = "file",
 		skipBusy = false,
 		commitBusy = false,
@@ -15,7 +15,7 @@
 	}: {
 		pendingCount: number;
 		commitableCount: number;
-		commitVerb: string;
+		commitNote: string;
 		// Row noun for a movie ("file") vs series ("show") scan.
 		noun?: string;
 		skipBusy?: boolean;
@@ -40,15 +40,17 @@
 		<div class="min-w-0">
 			<p class="text-sm font-semibold text-fg">
 				{#if pendingCount > 0}
-					{pendingCount} {noun}{pendingCount === 1 ? " needs" : "s need"} a
-					decision before commit.
+					{pendingCount === 1
+						? i18n.imports_needs_decision_one({ count: pendingCount })
+						: i18n.imports_needs_decision_other({ count: pendingCount })}
 				{:else}
-					All {commitableCount} {noun}{commitableCount === 1 ? "" : "s"} ready
-					to commit.
+					{commitableCount === 1
+						? i18n.imports_all_ready_one({ count: commitableCount })
+						: i18n.imports_all_ready_other({ count: commitableCount })}
 				{/if}
 			</p>
 			<p class="mt-0.5 font-mono text-[10.5px] text-fg-subtle">
-				Confirmed {noun}s will be {commitVerb} into the library.
+				{commitNote}
 			</p>
 		</div>
 	</div>

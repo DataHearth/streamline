@@ -40,21 +40,54 @@ export function importModeLabel(
 	return i18n.imports_import_rename_label();
 }
 
-// commitVerb returns the past-tense action the user sees on the action strip,
-// e.g. "Confirmed files will be {commitVerb} into the library."
-export function commitVerb(
+type CommitAction = "in_place" | "move" | "copy" | "hardlink" | "import";
+
+function commitAction(
+	mode: ImportMode,
+	importMode: ImportTransferMode | "" | undefined,
+): CommitAction {
+	if (mode === "in_place") return "in_place";
+	switch (importMode) {
+		case "move":
+			return "move";
+		case "copy":
+			return "copy";
+		case "hardlink":
+			return "hardlink";
+		default:
+			return "import";
+	}
+}
+
+// Each action carries a whole sentence rather than a verb the caller splices
+// in: a French past participle has to agree with its subject, which a
+// substituted word cannot do.
+const NOTE: Record<CommitAction, () => string> = {
+	in_place: i18n.imports_commit_note_in_place,
+	move: i18n.imports_commit_note_move,
+	copy: i18n.imports_commit_note_copy,
+	hardlink: i18n.imports_commit_note_hardlink,
+	import: i18n.imports_commit_note_import,
+};
+
+const SHORT: Record<CommitAction, () => string> = {
+	in_place: i18n.imports_commit_short_in_place,
+	move: i18n.imports_commit_short_move,
+	copy: i18n.imports_commit_short_copy,
+	hardlink: i18n.imports_commit_short_hardlink,
+	import: i18n.imports_commit_short_import,
+};
+
+export function commitNote(
 	mode: ImportMode,
 	importMode: ImportTransferMode | "" | undefined,
 ): string {
-	if (mode === "in_place") return "adopted in place";
-	switch (importMode) {
-		case "move":
-			return "moved";
-		case "copy":
-			return "copied";
-		case "hardlink":
-			return "hard-linked";
-		default:
-			return "imported";
-	}
+	return NOTE[commitAction(mode, importMode)]();
+}
+
+export function commitSummary(
+	mode: ImportMode,
+	importMode: ImportTransferMode | "" | undefined,
+): string {
+	return SHORT[commitAction(mode, importMode)]();
 }

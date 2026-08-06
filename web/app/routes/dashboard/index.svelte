@@ -92,7 +92,7 @@
 		if (!sys) return [];
 		const dirs = [
 			{ label: i18n.lc_movies(), path: sys.library_dir, usage: sys.library_usage },
-			{ label: "series", path: sys.series_dir, usage: sys.series_usage },
+			{ label: i18n.lc_series(), path: sys.series_dir, usage: sys.series_usage },
 		].filter((d) => d.path && d.usage) as {
 			label: string;
 			path: string;

@@ -4,13 +4,14 @@
 	import StatusPill from "./StatusPill.svelte";
 	import type { CalendarEvent } from "../../lib/calendar";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { getLocale } from "../../lib/paraglide/runtime.js";
 
 	let {
 		events,
 		title,
 		seeAllHref,
-		seeAllLabel = "Calendar →",
-		emptyText = "Digital releases and upcoming episodes will appear here.",
+		seeAllLabel = i18n.upcoming_see_all(),
+		emptyText = i18n.upcoming_empty_hint(),
 		stretch = false,
 	}: {
 		events: CalendarEvent[];
@@ -23,26 +24,15 @@
 		stretch?: boolean;
 	} = $props();
 
-	const MONTHS = [
-		"JAN",
-		"FEB",
-		"MAR",
-		"APR",
-		"MAY",
-		"JUN",
-		"JUL",
-		"AUG",
-		"SEP",
-		"OCT",
-		"NOV",
-		"DEC",
-	];
+	const monthFmt = new Intl.DateTimeFormat(getLocale(), { month: "short" });
 
 	function stamp(d: Date): { day: string; month: string } {
 		if (Number.isNaN(d.getTime())) return { day: "—", month: "" };
 		return {
 			day: String(d.getDate()).padStart(2, "0"),
-			month: MONTHS[d.getMonth()] ?? "",
+			// The 44px stamp cell fits four mono glyphs; French short months carry a
+			// trailing period ("janv.") that would spend one of them on punctuation.
+			month: monthFmt.format(d).replace(".", "").toUpperCase().slice(0, 4),
 		};
 	}
 
@@ -50,7 +40,7 @@
 		const target = d.getTime();
 		if (Number.isNaN(target)) return "";
 		const days = Math.max(0, Math.round((target - Date.now()) / 86_400_000));
-		return days === 0 ? "today" : `in ${days}d`;
+		return days === 0 ? i18n.lc_today() : i18n.upcoming_in_days({ days });
 	}
 </script>
 
@@ -106,7 +96,7 @@
 								{ev.title}
 							</div>
 							<div class="mt-0.5 font-mono text-[10.5px] text-fg-subtle">
-								{ev.subtitle ?? "digital release"}{when ? ` · ${when}` : ""}
+								{ev.subtitle ?? i18n.lc_digital_release()}{when ? ` · ${when}` : ""}
 							</div>
 						</div>
 						<StatusPill status={ev.status} size="sm" />

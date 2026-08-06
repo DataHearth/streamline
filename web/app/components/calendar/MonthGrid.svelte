@@ -3,7 +3,7 @@
 	import { fly } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { cn } from "../../lib/cn";
-	import { getLocale } from "../../lib/paraglide/runtime.js";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 	import {
 		buildMonthGrid,
 		eventsForDay,
@@ -23,7 +23,7 @@
 	const weekStart = resolveWeekStart();
 	const labels = weekdayLabels(weekStart);
 	const today = new Date();
-	const longDate = new Intl.DateTimeFormat(getLocale(), {
+	const longDate = new Intl.DateTimeFormat(undefined, {
 		weekday: "long",
 		month: "long",
 		day: "numeric",
@@ -134,7 +134,9 @@
 	}
 </script>
 
-<div class="rounded-lg border border-border bg-bg-elevated p-2 sm:p-3">
+<!-- md and up only: below that the phone renders DotGrid, so the small-screen
+     variants this used to carry are gone. -->
+<div class="rounded-lg border border-border bg-bg-elevated p-2">
 	<div
 		class="grid grid-cols-7 gap-1.5 px-1 pb-2"
 		aria-hidden="true"
@@ -156,7 +158,7 @@
 				{@const key = cell.date.toDateString()}
 				<div
 					class={cn(
-						"flex min-h-[72px] flex-col gap-1 rounded-md border border-border p-1.5 sm:min-h-[92px] sm:p-2",
+						"flex min-h-[92px] flex-col gap-1 rounded-md border border-border p-1.5",
 						!cell.inMonth && "opacity-40",
 						isToday && "ring-2 ring-inset ring-accent",
 					)}
@@ -172,20 +174,20 @@
 						</span>
 					</div>
 
+					<!-- The chip carries the title and nothing else. A `shrink-0`
+					     "S01E06" plus a dot claimed ~45px of a 74px chip, and the
+					     title — the only flexible child — absorbed the whole
+					     shortfall: every episode rendered one character. Kind is
+					     already the 2px coloured left border, and the episode number
+					     is in the tooltip, the +N popover and the day panel. -->
 					{#each evs.slice(0, VISIBLE) as e (e.id)}
 						<a
 							href={e.href}
 							title={e.subtitle ? `${e.title} · ${e.subtitle}` : e.title}
 							style:--c="var(--status-{e.status})"
-							class="chip flex items-center gap-1.5 overflow-hidden rounded bg-bg-card px-1.5 py-1 text-left text-[10.5px] text-fg transition-colors hover:bg-bg-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
+							class="chip block truncate rounded bg-bg-card px-1.5 py-1 text-left text-[10.5px] font-medium text-fg transition-colors hover:bg-bg-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
 						>
-							<EventDot status={e.status} />
-							<span class="truncate font-medium">{e.title}</span>
-							{#if e.subtitle}
-								<span class="shrink-0 font-mono text-[9px] text-fg-faint">
-									{e.subtitle}
-								</span>
-							{/if}
+							{e.title}
 						</a>
 					{/each}
 
@@ -204,9 +206,9 @@
 									longDate.format(cell.date),
 									ev.currentTarget,
 								)}
-							class="rounded px-1.5 text-left font-mono text-[9.5px] text-fg-subtle transition-colors hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
+							class="rounded px-1.5 py-1 text-left font-mono text-[10px] text-fg-subtle transition-colors hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
 						>
-							+{evs.length - VISIBLE} more
+							{i18n.calendar_more_count({ count: evs.length - VISIBLE })}
 						</button>
 					{/if}
 				</div>
@@ -220,7 +222,7 @@
 		bind:this={popEl}
 		use:portal
 		role="dialog"
-		aria-label="Releases on {popLabel}"
+		aria-label={i18n.calendar_releases_on({ day: popLabel })}
 		transition:fly={{ duration: 140, y: -4, easing: cubicOut }}
 		class="pop fixed z-50 flex max-h-[60vh] flex-col overflow-hidden rounded-md border border-border-strong bg-bg-elevated shadow-4"
 		style:--pop-top="{popTop}px"

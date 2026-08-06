@@ -2,30 +2,50 @@
 	import { createQuery } from "@tanstack/svelte-query";
 	import { ChevronLeft, ChevronRight, TriangleAlert } from "@lucide/svelte";
 	import { api } from "../../lib/api";
-	import { cn } from "../../lib/cn";
-	import { getLocale } from "../../lib/paraglide/runtime.js";
 	import type { UpcomingList } from "../../lib/types";
 	import {
-		episodesToCalendarEvents,
+		dayLabel,
+		eventsForDay,
+		filterEvents,
 		gridRange,
+		isSameDay,
+		next30Range,
 		resolveWeekStart,
-		toCalendarEvents,
 		upcomingEvents,
-		type CalendarEvent,
+		type CalendarFilter,
 	} from "../../lib/calendar";
+	import { monthSwipe } from "../../lib/calendar-swipe";
+	import type { CalendarView } from "../../components/calendar/CalendarViewSwitch.svelte";
 	import MonthGrid from "../../components/calendar/MonthGrid.svelte";
+	import DotGrid from "../../components/calendar/DotGrid.svelte";
+	import AgendaList from "../../components/calendar/AgendaList.svelte";
+	import EventRow from "../../components/calendar/EventRow.svelte";
 	import Next30Panel from "../../components/calendar/Next30Panel.svelte";
+	import CalendarFilterSwitch from "../../components/calendar/CalendarFilter.svelte";
+	import CalendarViewSwitch from "../../components/calendar/CalendarViewSwitch.svelte";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { getLocale } from "../../lib/paraglide/runtime.js";
 
 	const today = new Date();
 	let year = $state(today.getFullYear());
 	let month0 = $state(today.getMonth());
+	let selected = $state(new Date(today.getFullYear(), today.getMonth(), today.getDate()));
+	let filter = $state<CalendarFilter>("all");
+	let view = $state<CalendarView>("month");
 
 	const weekStart = resolveWeekStart();
 
 	const monthLabel = $derived(
 		new Date(year, month0).toLocaleString(getLocale(), {
 			month: "long",
+			year: "numeric",
+		}),
+	);
+	// The phone header shares its line with the filter switch, and "September
+	// 2026" does not fit next to it at 390px.
+	const monthLabelShort = $derived(
+		new Date(year, month0).toLocaleString(getLocale(), {
+			month: "short",
 			year: "numeric",
 		}),
 	);
@@ -41,11 +61,6 @@
 		};
 	});
 
-	function next30Range() {
-		const now = new Date();
-		const to = new Date(now.getTime() + 30 * 86_400_000);
-		return { from: now.toISOString(), to: to.toISOString() };
-	}
 	const upcomingQuery = createQuery<UpcomingList>(() => ({
 		queryKey: ["calendar", "upcoming", 30],
 		queryFn: () => {
@@ -56,17 +71,20 @@
 		},
 	}));
 
-	let showMovies = $state(true);
-	let showEpisodes = $state(true);
+	let gridEvents = $derived(filterEvents(upcomingEvents(gridQuery.data), filter));
+	let upcomingAll = $derived(upcomingEvents(upcomingQuery.data));
+	let agendaEvents = $derived(filterEvents(upcomingAll, filter));
+	let dayEvents = $derived(eventsForDay(gridEvents, selected));
 
-	let events = $derived.by(() => {
-		const out: CalendarEvent[] = [];
-		if (showMovies) out.push(...toCalendarEvents(gridQuery.data?.movies ?? []));
-		if (showEpisodes)
-			out.push(...episodesToCalendarEvents(gridQuery.data?.episodes ?? []));
-		return out;
-	});
-	let upcoming = $derived(upcomingEvents(upcomingQuery.data));
+	// Keep the selected day inside the month on screen: after a swipe, today if
+	// this is today's month, otherwise the first.
+	function syncSelection() {
+		if (selected.getFullYear() === year && selected.getMonth() === month0) return;
+		selected =
+			today.getFullYear() === year && today.getMonth() === month0
+				? new Date(year, month0, today.getDate())
+				: new Date(year, month0, 1);
+	}
 
 	function shift(delta: number) {
 		let m = month0 + delta;
@@ -81,67 +99,45 @@
 		}
 		month0 = m;
 		year = y;
+		syncSelection();
 	}
+
 	function jumpToday() {
 		year = today.getFullYear();
 		month0 = today.getMonth();
+		selected = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+	}
+
+	// Tapping a bleed-in cell moves the month with it, so the grid never shows a
+	// selection it isn't the month for.
+	function select(date: Date) {
+		selected = date;
+		if (date.getFullYear() !== year || date.getMonth() !== month0) {
+			year = date.getFullYear();
+			month0 = date.getMonth();
+		}
 	}
 
 	const navIcon =
 		"grid h-9 w-9 place-items-center rounded-md border border-border-strong text-fg-muted transition-colors hover:bg-surface hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring";
+	const todayBtn =
+		"h-9 rounded-md border border-border-strong px-4 text-sm text-fg transition-colors hover:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring";
 </script>
 
-<div class="flex flex-col px-4 py-6 md:px-6">
-	<header class="mb-4 flex flex-wrap items-center justify-between gap-4">
-		<div>
-			<h1 class="text-2xl font-bold tracking-tight text-fg">
-				{monthLabel}
-			</h1>
-			<p class="mt-1 text-sm text-fg-muted">
-				{i18n.calendar_intro()}
-			</p>
-		</div>
-		<div class="flex flex-wrap items-center gap-2">
-			<div
-				class="flex items-center gap-1 rounded-full border border-border bg-surface px-1 py-1 text-[12px] text-fg-muted"
-				role="group"
-				aria-label={i18n.calendar_filter_events()}
-			>
-				<button
-					type="button"
-					aria-pressed={showMovies}
-					onclick={() => (showMovies = !showMovies)}
-					class={cn(
-						"rounded-full px-3 py-1 transition-colors",
-						showMovies
-							? "bg-bg-elevated text-fg shadow-1"
-							: "text-fg-faint hover:text-fg",
-					)}
-				>
-					<span
-						class="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-status-wanted"
-						aria-hidden="true"
-					></span>
-					{i18n.movies_label()}
-				</button>
-				<button
-					type="button"
-					aria-pressed={showEpisodes}
-					onclick={() => (showEpisodes = !showEpisodes)}
-					class={cn(
-						"rounded-full px-3 py-1 transition-colors",
-						showEpisodes
-							? "bg-bg-elevated text-fg shadow-1"
-							: "text-fg-faint hover:text-fg",
-					)}
-				>
-					<span
-						class="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-status-grabbing"
-						aria-hidden="true"
-					></span>
-					{i18n.series_episodes()}
-				</button>
-			</div>
+<div
+	class="flex flex-col px-4 py-5 md:px-6 md:py-6"
+	use:monthSwipe={{
+		onPrev: () => shift(-1),
+		onNext: () => shift(1),
+		disabled: view === "upcoming",
+	}}
+>
+	<!-- Phone: the view switch takes the heading line, the month label drops to
+	     the second row beside the filter. Two rows fit; three did not. -->
+	<div class="flex items-center gap-2 md:hidden">
+		<CalendarViewSwitch {view} onViewChange={(v) => (view = v)} />
+		<span class="flex-1"></span>
+		{#if view === "month"}
 			<button
 				type="button"
 				onclick={() => shift(-1)}
@@ -150,13 +146,42 @@
 			>
 				<ChevronLeft size={16} aria-hidden="true" />
 			</button>
+			<button type="button" onclick={jumpToday} class={todayBtn}>{i18n.common_today()}</button>
 			<button
 				type="button"
-				onclick={jumpToday}
-				class="h-9 rounded-md border border-border-strong px-4 text-sm text-fg transition-colors hover:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
+				onclick={() => shift(1)}
+				aria-label={i18n.calendar_next_month()}
+				class={navIcon}
 			>
-				{i18n.common_today()}
+				<ChevronRight size={16} aria-hidden="true" />
 			</button>
+		{/if}
+	</div>
+	<div class="mt-3 flex items-center justify-between gap-3 md:hidden">
+		<h1 class="truncate text-[17px] font-semibold tracking-[-0.02em] text-fg">
+			{view === "month" ? monthLabelShort : i18n.dash_next_30_days()}
+		</h1>
+		<CalendarFilterSwitch {filter} onChange={(f) => (filter = f)} />
+	</div>
+
+	<header class="hidden flex-wrap items-center justify-between gap-4 md:flex">
+		<div>
+			<h1 class="text-2xl font-bold tracking-tight text-fg">{monthLabel}</h1>
+			<p class="mt-1 text-sm text-fg-muted">
+				{i18n.calendar_intro()}
+			</p>
+		</div>
+		<div class="flex items-center gap-2">
+			<CalendarFilterSwitch {filter} onChange={(f) => (filter = f)} />
+			<button
+				type="button"
+				onclick={() => shift(-1)}
+				aria-label={i18n.calendar_previous_month()}
+				class={navIcon}
+			>
+				<ChevronLeft size={16} aria-hidden="true" />
+			</button>
+			<button type="button" onclick={jumpToday} class={todayBtn}>{i18n.common_today()}</button>
 			<button
 				type="button"
 				onclick={() => shift(1)}
@@ -185,8 +210,54 @@
 		</div>
 	{/if}
 
-	<div class="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]">
-		<MonthGrid {year} {month0} {events} />
-		<Next30Panel events={upcoming} />
+	<!-- Phone -->
+	<div class="mt-4 md:hidden">
+		{#if view === "month"}
+			<DotGrid {year} {month0} events={gridEvents} {selected} onSelect={select} />
+			<div class="mt-5 flex items-baseline justify-between gap-3 px-1">
+				<h2 class="text-sm font-semibold tracking-[-0.01em] text-fg">
+					{dayLabel(selected)}
+					{#if isSameDay(selected, today)}
+						<span class="ml-1 font-mono text-[10px] uppercase tracking-[0.12em] text-accent-text">
+							{i18n.common_today()}
+						</span>
+					{/if}
+				</h2>
+				<span class="shrink-0 font-mono text-[10.5px] text-fg-faint">
+					{dayEvents.length === 1
+						? i18n.calendar_release_count_one({ count: dayEvents.length })
+						: i18n.calendar_release_count_other({ count: dayEvents.length })}
+				</span>
+			</div>
+			{#if dayEvents.length > 0}
+				<div class="mt-1.5 flex flex-col">
+					{#each dayEvents as event (event.id)}
+						<EventRow {event} />
+					{/each}
+				</div>
+			{:else}
+				<p class="mt-3 px-1 text-[13px] text-fg-muted">
+					{i18n.calendar_nothing_this_day()}
+				</p>
+			{/if}
+		{:else}
+			<AgendaList events={agendaEvents} />
+		{/if}
+	</div>
+
+	<!-- Tablet and desktop: one grid. The tablet folds the agenda in below it;
+	     from lg the movies-only panel takes the second column instead. -->
+	<div class="mt-4 hidden gap-4 md:grid lg:grid-cols-[1fr_320px]">
+		<MonthGrid {year} {month0} events={gridEvents} />
+		<div class="hidden lg:block">
+			<Next30Panel events={upcomingAll} />
+		</div>
+		<section class="mt-2 lg:hidden">
+			<div class="mb-1 flex items-baseline justify-between gap-3 px-1">
+				<h2 class="text-base font-semibold tracking-tight text-fg">{i18n.calendar_coming_up()}</h2>
+				<span class="font-mono text-[11px] text-fg-faint">{i18n.lc_next_30_days()}</span>
+			</div>
+			<AgendaList events={agendaEvents} size="md" />
+		</section>
 	</div>
 </div>

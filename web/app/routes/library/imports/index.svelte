@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { createQuery } from "@tanstack/svelte-query";
+	import { onMount } from "svelte";
 	import { Inbox } from "@lucide/svelte";
 	import { api, errorText } from "../../../lib/api";
 	import type { ImportScanList } from "../../../lib/types";
@@ -7,7 +8,20 @@
 	import ImportsHeader from "../../../components/library/ImportsHeader.svelte";
 	import ScanRow from "../../../components/library/ScanRow.svelte";
 	import NewImportForm from "../../../components/library/NewImportForm.svelte";
+	import NewImportSheet from "../../../components/library/NewImportSheet.svelte";
 	import { m as i18n } from "../../../lib/paraglide/messages.js";
+
+	// Which container the form gets. Rendered as an either/or rather than two
+	// breakpoint-hidden copies, so only one NewImportForm — and one createForm —
+	// is ever mounted.
+	let isTouch = $state(false);
+	onMount(() => {
+		const mq = window.matchMedia("(max-width: 767px)");
+		const sync = () => (isTouch = mq.matches);
+		sync();
+		mq.addEventListener("change", sync);
+		return () => mq.removeEventListener("change", sync);
+	});
 
 	const LIMIT = 20;
 	let page = $state(1);
@@ -71,9 +85,8 @@
 				<Inbox size={32} class="text-fg-faint" aria-hidden="true" />
 				<p class="text-sm text-fg-muted">{i18n.imports_no_scans()}</p>
 				<p class="text-xs text-fg-subtle">
-					{i18n.imports_click_prefix()} <span class="font-medium text-fg-muted"
-						>{i18n.imports_new_scan()}</span
-					>
+					{i18n.imports_click_prefix()}
+					<span class="font-medium text-fg-muted">{i18n.imports_new_scan()}</span>
 					{i18n.imports_click_suffix()}
 				</p>
 			</div>
@@ -117,11 +130,15 @@
 	</section>
 </div>
 
-<Modal
-	open={modalOpen}
-	title={i18n.imports_start_new_scan()}
-	size="lg"
-	onClose={() => (modalOpen = false)}
->
-	<NewImportForm onCreated={() => (modalOpen = false)} />
-</Modal>
+{#if isTouch}
+	<NewImportSheet open={modalOpen} onClose={() => (modalOpen = false)} />
+{:else}
+	<Modal
+		open={modalOpen}
+		title={i18n.imports_start_new_scan()}
+		size="lg"
+		onClose={() => (modalOpen = false)}
+	>
+		<NewImportForm onCreated={() => (modalOpen = false)} />
+	</Modal>
+{/if}
