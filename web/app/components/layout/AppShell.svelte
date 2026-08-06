@@ -95,12 +95,4 @@
 			display: none;
 		}
 	}
-	/* main's pb-16 clears the bottom bar, but not the add pill floating 5.25rem
-	   above it — without this the last row of a grid ends underneath it at the
-	   bottom of a scroll. AddButton sets the flag only while it is showing. */
-	@media (max-width: 767px) {
-		:global(body[data-add-pill] #main) {
-			padding-bottom: 9.5rem;
-		}
-	}
 </style>

@@ -213,17 +213,11 @@
 	// Adding is a corner pill above the bottom nav below md, the same way the
 	// library routes do it — a button in the toolbar line is at the far end of the
 	// screen from a thumb. AddButton owns the library's; this owns its own, because
-	// only this page knows whether the engine is on. The clearance flag is the one
-	// AppShell already handles: main's pb-16 clears the bar, not a pill floating
-	// above it.
+	// only this page knows whether the engine is on. It floats over the end of the
+	// list like any corner action: `main`'s pb-16 keeps content clear of the bar,
+	// and reserving a second band for the pill on top of that left a visibly empty
+	// strip at the bottom of every scroll.
 	let showAddPill = $derived(compact && !torrentsNotConfigured && auth.isAdmin);
-	$effect(() => {
-		if (!showAddPill) return;
-		document.body.dataset.addPill = "";
-		return () => {
-			delete document.body.dataset.addPill;
-		};
-	});
 </script>
 
 <div

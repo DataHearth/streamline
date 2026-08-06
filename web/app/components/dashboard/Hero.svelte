@@ -44,10 +44,11 @@
 		</div>
 
 		<div
-			class="relative mx-auto grid w-full max-w-7xl items-end gap-6 px-4 pb-8 pt-12 md:grid-cols-[340px_1fr] md:gap-12 md:px-8 md:pb-12 md:pt-20"
+			class="hero-grid relative mx-auto w-full max-w-7xl px-4 pb-6 pt-6 md:px-8 md:pb-12 md:pt-14 lg:pt-20"
 		>
 			<div
-				class="relative mx-auto aspect-[2/3] w-48 overflow-hidden rounded-lg shadow-[0_20px_60px_rgb(0_0_0_/0.55)] md:mx-0 md:w-auto"
+				class="relative aspect-[2/3] w-full self-start overflow-hidden rounded-lg shadow-[0_20px_60px_rgb(0_0_0_/0.55)] md:self-end"
+				style="grid-area:poster"
 			>
 				<div class="absolute inset-0 bg-bg-card"></div>
 				<div class="absolute inset-0 grid place-items-center text-fg-faint">
@@ -61,7 +62,7 @@
 				/>
 			</div>
 
-			<div class="pb-2 text-fg">
+			<div class="text-fg" style="grid-area:head">
 				<div
 					class="mb-3 inline-flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-[0.18em] text-accent-text"
 				>
@@ -73,13 +74,13 @@
 				</div>
 
 				<h2
-					class="mb-3 text-4xl font-bold leading-[1.05] tracking-tight text-fg md:text-[56px]"
+					class="mb-3 text-[26px] font-bold leading-[1.08] tracking-tight text-fg md:text-[40px] md:leading-[1.05] lg:text-[56px]"
 				>
 					{item.title}
 				</h2>
 
 				<div
-					class="mb-3 flex flex-wrap items-center gap-2 font-mono text-xs text-fg-muted"
+					class="flex flex-wrap items-center gap-2 font-mono text-xs text-fg-muted"
 				>
 					<span>{item.year}</span>
 					{#if item.runtime}
@@ -99,34 +100,38 @@
 						<span>{item.codec}</span>
 					{/if}
 				</div>
+			</div>
 
-				{#if item.overview}
-					<p
-						class="mb-6 line-clamp-3 max-w-[640px] text-sm text-fg-muted [text-wrap:pretty]"
-					>
-						{item.overview}
-					</p>
-				{/if}
+			{#if item.overview}
+				<p
+					class="line-clamp-2 max-w-[640px] text-sm text-fg-muted [text-wrap:pretty] md:line-clamp-3"
+					style="grid-area:body"
+				>
+					{item.overview}
+				</p>
+			{/if}
 
-				<div class="flex flex-wrap items-center gap-x-3 gap-y-5">
-					<a
-						href={item.href}
-						class="inline-flex h-10 items-center gap-2 rounded-md bg-fg px-4 text-sm font-semibold text-bg-deep transition hover:bg-accent hover:text-fg-on-accent hover:shadow-glow active:scale-[0.97]"
-					>
-						Open details
-						<ArrowRight size={14} aria-hidden="true" />
-					</a>
-					<!-- Own row below md. The design stacks these, but only because its
-					     fileMeta happens to be long enough to force the wrap — an item
-					     without one would sit beside the button instead. -->
-					<div class="flex basis-full items-center gap-2 md:basis-auto">
-						<StatusPill status={item.status} variant="translucent" />
-						{#if item.fileMeta}
-							<span class="font-mono text-[11px] text-fg-subtle">
-								{item.fileMeta}
-							</span>
-						{/if}
-					</div>
+			<div
+				class="flex flex-wrap items-center gap-x-3 gap-y-4"
+				style="grid-area:actions"
+			>
+				<a
+					href={item.href}
+					class="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-fg px-4 text-sm font-semibold text-bg-deep transition hover:bg-accent hover:text-fg-on-accent hover:shadow-glow active:scale-[0.97] md:w-auto md:justify-start"
+				>
+					Open details
+					<ArrowRight size={14} aria-hidden="true" />
+				</a>
+				<!-- Own row below md. The design stacks these, but only because its
+				     fileMeta happens to be long enough to force the wrap — an item
+				     without one would sit beside the button instead. -->
+				<div class="flex basis-full items-center gap-2 md:basis-auto">
+					<StatusPill status={item.status} variant="translucent" />
+					{#if item.fileMeta}
+						<span class="font-mono text-[11px] text-fg-subtle">
+							{item.fileMeta}
+						</span>
+					{/if}
 				</div>
 			</div>
 		</div>
@@ -134,31 +139,35 @@
 {:else if loading}
 	<section class="relative overflow-hidden bg-bg-deep" aria-hidden="true">
 		<div
-			class="mx-auto grid w-full max-w-7xl items-end gap-6 px-4 py-12 md:grid-cols-[340px_1fr] md:gap-12 md:px-8 md:py-20"
+			class="hero-grid mx-auto w-full max-w-7xl px-4 py-6 md:px-8 md:py-14 lg:py-20"
 		>
 			<div
-				class="aspect-[2/3] w-48 rounded-lg bg-bg-elevated motion-safe:animate-pulse md:w-auto"
+				class="aspect-[2/3] w-full self-start rounded-lg bg-bg-elevated motion-safe:animate-pulse md:self-end"
+				style="grid-area:poster"
 			></div>
-			<div class="flex flex-col gap-4 pb-2">
+			<div class="flex flex-col gap-3" style="grid-area:head">
 				<div
 					class="h-3 w-40 rounded bg-bg-elevated motion-safe:animate-pulse"
 				></div>
 				<div
-					class="h-11 w-2/3 rounded-lg bg-bg-elevated motion-safe:animate-pulse md:h-14"
+					class="h-8 w-2/3 rounded-lg bg-bg-elevated motion-safe:animate-pulse md:h-11 lg:h-14"
 				></div>
 				<div
 					class="h-3 w-24 rounded bg-bg-elevated motion-safe:animate-pulse"
 				></div>
+			</div>
+			<div class="flex flex-col gap-3" style="grid-area:body">
 				<div
-					class="mt-2 h-3 w-full max-w-[560px] rounded bg-bg-elevated motion-safe:animate-pulse"
+					class="h-3 w-full max-w-[560px] rounded bg-bg-elevated motion-safe:animate-pulse"
 				></div>
 				<div
 					class="h-3 w-4/5 max-w-[460px] rounded bg-bg-elevated motion-safe:animate-pulse"
 				></div>
-				<div
-					class="mt-3 h-10 w-36 rounded-md bg-bg-elevated motion-safe:animate-pulse"
-				></div>
 			</div>
+			<div
+				class="h-10 w-full rounded-md bg-bg-elevated motion-safe:animate-pulse md:w-36"
+				style="grid-area:actions"
+			></div>
 		</div>
 	</section>
 {:else}
@@ -195,6 +204,40 @@
 {/if}
 
 <style>
+	/* Phone: the poster sits beside the heading and the copy runs full width
+	   under both, so the hero costs ~300px instead of a whole viewport. From md
+	   the poster takes its own column beside everything, and the track widens
+	   again at lg — a 340px poster in the tablet band left the words 294px. */
+	.hero-grid {
+		display: grid;
+		align-items: start;
+		grid-template-columns: 104px 1fr;
+		grid-template-areas:
+			"poster head"
+			"body body"
+			"actions actions";
+		column-gap: 14px;
+		row-gap: 14px;
+	}
+	@media (min-width: 768px) {
+		.hero-grid {
+			align-items: end;
+			grid-template-columns: 200px 1fr;
+			grid-template-areas:
+				"poster head"
+				"poster body"
+				"poster actions";
+			column-gap: 32px;
+			row-gap: 16px;
+		}
+	}
+	@media (min-width: 1024px) {
+		.hero-grid {
+			grid-template-columns: 340px 1fr;
+			column-gap: 48px;
+		}
+	}
+
 	.hero-overlay {
 		background-image: linear-gradient(
 			180deg,

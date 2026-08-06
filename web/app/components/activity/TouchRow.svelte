@@ -16,6 +16,7 @@
 		meta,
 		badge,
 		placeholderTitle = false,
+		href,
 		onOpen,
 	}: {
 		status: StatusKind;
@@ -28,15 +29,18 @@
 		// A magnet that hasn't resolved has no name yet, so the title is standing
 		// in for one and shouldn't read as the release's own.
 		placeholderTitle?: boolean;
-		onOpen: () => void;
+		// A row that navigates rather than opening a sheet — the dashboard's
+		// queue rows, which have no detail surface of their own. Routify
+		// intercepts the click, so an <a> is all it takes.
+		href?: string;
+		onOpen?: () => void;
 	} = $props();
+
+	const rowClass =
+		"flex w-full items-center gap-3 border-b border-border px-3 py-2.5 text-left transition last:border-b-0 active:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-ring";
 </script>
 
-<button
-	type="button"
-	onclick={onOpen}
-	class="flex w-full items-center gap-3 border-b border-border px-3 py-2.5 text-left transition last:border-b-0 active:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-ring"
->
+{#snippet body()}
 	<ProgressRing {status} {progress} />
 
 	<span class="min-w-0 flex-1">
@@ -69,4 +73,12 @@
 	</span>
 
 	<ChevronRight size={15} class="shrink-0 text-fg-faint" aria-hidden="true" />
-</button>
+{/snippet}
+
+{#if href}
+	<a {href} class={rowClass}>{@render body()}</a>
+{:else}
+	<button type="button" onclick={onOpen} class={rowClass}>
+		{@render body()}
+	</button>
+{/if}

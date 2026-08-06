@@ -8,8 +8,9 @@
 
 	// Phone only. Adding is a repeated one-handed action, and the top-right
 	// corner is the furthest point on the screen from a thumb — so the plus
-	// leaves the bar below md and sits above the bottom nav instead, labelled,
-	// which the 40px icon never was.
+	// leaves the bar below md and sits above the bottom nav instead, as a 52px
+	// circle: the fan it opens names each destination, so the trigger doesn't
+	// need to name itself.
 	//
 	// It rides the route rather than the shell: the library screens and the
 	// dashboard are where adding follows from what you're looking at. On a
@@ -46,18 +47,6 @@
 		if (!visible) open = false;
 	});
 
-	// main's pb-16 clears the bottom bar, not a 52px pill floating above it —
-	// without the extra padding the last poster row ends underneath it. AppShell
-	// owns the rule; this just says when it applies.
-	$effect(() => {
-		if (!visible) return;
-		document.body.dataset.addPill = "";
-		return () => {
-			delete document.body.dataset.addPill;
-		};
-	});
-
-	let label = $derived(auth.canAddDirectly ? "Add" : "Request");
 	let heading = $derived(
 		auth.canAddDirectly ? "Add to library" : "Request a title",
 	);
@@ -156,7 +145,7 @@
 			aria-expanded={open}
 			aria-label={open ? "Close" : heading}
 			class={cn(
-				"pill flex h-[52px] items-center justify-center rounded-full text-[15px] font-semibold shadow-4",
+				"pill grid h-[52px] w-[52px] place-items-center rounded-full shadow-4",
 				open ? "bg-surface-2 text-fg-muted" : "bg-accent text-fg-on-accent",
 			)}
 			class:open
@@ -164,15 +153,15 @@
 			<!-- A plus turned 45° is the close mark, so the icon morphs rather than
 			     being swapped for an X. -->
 			<Plus class="pill-icon" size={20} strokeWidth={2.4} aria-hidden="true" />
-			<span class="pill-label">{label}</span>
 		</button>
 	</div>
 {/if}
 
 <style>
-	/* Clears the bottom bar (56px + safe area) with 28px of air under the pill. */
+	/* Clears the bottom bar (56px + safe area) with 14px of air under the pill.
+	   A plain 52px circle can sit closer to the bar than the old labelled pill. */
 	.add-pill {
-		bottom: calc(env(safe-area-inset-bottom) + 5.25rem);
+		bottom: calc(env(safe-area-inset-bottom) + 4.75rem);
 		/* The closed fan still occupies its rows (visibility, not display), so the
 		   column's box reaches most of the way up the screen. Without this it
 		   swallows every tap over the grid behind it. Only the pill and an open
@@ -220,21 +209,9 @@
 	}
 
 	.pill {
-		gap: 8px;
-		padding-left: 17px;
-		padding-right: 20px;
 		transition:
-			gap 200ms var(--ease),
-			padding-left 200ms var(--ease),
-			padding-right 200ms var(--ease),
 			background-color 160ms var(--ease),
 			color 160ms var(--ease);
-	}
-	/* Collapses to a 52px circle: 16 + 20 (icon) + 16. */
-	.pill.open {
-		gap: 0;
-		padding-left: 16px;
-		padding-right: 16px;
 	}
 	.pill :global(.pill-icon) {
 		flex: none;
@@ -243,18 +220,6 @@
 	.pill.open :global(.pill-icon) {
 		transform: rotate(45deg);
 	}
-	.pill-label {
-		max-width: 6rem;
-		overflow: hidden;
-		white-space: nowrap;
-		transition:
-			max-width 200ms var(--ease),
-			opacity 130ms var(--ease);
-	}
-	.pill.open .pill-label {
-		max-width: 0;
-		opacity: 0;
-	}
 
 	@media (prefers-reduced-motion: reduce) {
 		.scrim,
@@ -262,8 +227,7 @@
 		.fan-item,
 		.fan-item.on,
 		.pill,
-		.pill :global(.pill-icon),
-		.pill-label {
+		.pill :global(.pill-icon) {
 			transition: none;
 		}
 	}

@@ -6,11 +6,11 @@
 	import type {
 		ActivityList,
 		DiskUsage,
+		DownloadQueue,
 		MovieCounts,
 		Movie,
 		PaginatedMovies,
 		PaginatedTVShows,
-		QueueItem,
 		SystemInfo,
 		TVShow,
 		TVShowCounts,
@@ -69,9 +69,14 @@
 		queryFn: () => api<SystemInfo>("/system/info"),
 	}));
 
-	// /activity/queue is not yet exposed by the backend. Render the live queue
-	// section's empty state until the endpoint lands.
-	const queue: QueueItem[] = [];
+	// The live queue. Activity polls this every 2s because it is the page you
+	// watch; the dashboard is a glance, so it settles for 10.
+	const queueQuery = createQuery<DownloadQueue>(() => ({
+		queryKey: ["activity", "queue"],
+		queryFn: () => api<DownloadQueue>("/activity/queue"),
+		refetchInterval: 10000,
+	}));
+	let queue = $derived(queueQuery.data?.items ?? []);
 
 	let allMovies = $derived(moviesQuery.data?.items ?? []);
 	let allSeries = $derived(seriesQuery.data?.items ?? []);

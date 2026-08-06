@@ -117,9 +117,10 @@
 	}
 
 	// Add-to-library dropdown ------------------------------------------------
-	// Desktop only (lg+). Below that the plus is not in the bar at all: the
-	// tablet rail carries it as its first item, and on a phone it is the pill
-	// above the bottom nav (AddButton). Both raise the same two events.
+	// md and up, beside the search field. Below that the plus is not in the bar
+	// at all: on a phone it is the pill above the bottom nav (AddButton), since
+	// the top-right corner is the furthest point from a thumb. Both raise the
+	// same two events.
 	// request_only users may only request, so they see a trimmed menu (Movie +
 	// Series, which the modals route to a request) under a "Request a title"
 	// heading. admins/members get the full "Add to library" menu.
@@ -341,7 +342,7 @@
 			aria-haspopup="menu"
 			aria-expanded={addOpen}
 			title={addHeading}
-			class="hidden h-10 w-10 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg lg:grid"
+			class="hidden h-10 w-10 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg md:grid"
 		>
 			<Plus size={18} aria-hidden="true" />
 		</button>
