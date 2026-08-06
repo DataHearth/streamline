@@ -59,13 +59,18 @@ type TMDB struct {
 // NewTMDB builds a TMDB client using the api key and language from the
 // config singleton (metadata.tmdb_api_key, metadata.language). An empty
 // metadata.language leaves the language param off requests, letting TMDB
-// fall back to its provider default.
+// fall back to its provider default. The hidden metadata.tmdb.base_url key
+// overrides the TMDB API base URL when set (e2e seam).
 func NewTMDB() *TMDB {
 	m := config.Get().Metadata
+	baseURL := config.HiddenString("metadata.tmdb.base_url")
+	if baseURL == "" {
+		baseURL = tmdbBaseURL
+	}
 	return &TMDB{
 		apiKey:   config.SecretValue(m.TMDBAPIKey, m.TMDBAPIKeyFile),
 		language: m.Language,
-		BaseURL:  tmdbBaseURL,
+		BaseURL:  baseURL,
 		client:   otelx.HTTPClient,
 	}
 }
@@ -221,10 +226,15 @@ func (t *TMDB) GetMovie(ctx context.Context, tmdbID uint32) (*MovieDetails, erro
 			Overview:      overview,
 			PosterPath:    resp.PosterPath,
 		},
-		Genres:  genres,
-		Runtime: uint16(resp.Runtime),
-		Rating:  resp.VoteAverage,
-		Cast:    cast,
+		Genres:           genres,
+		Runtime:          uint16(resp.Runtime),
+		Rating:           resp.VoteAverage,
+		VoteCount:        resp.VoteCount,
+		Cast:             cast,
+		Tagline:          resp.Tagline,
+		ReleaseDate:      resp.ReleaseDate,
+		OriginalLanguage: resp.OriginalLanguage,
+		IMDbID:           resp.IMDbID,
 	}, nil
 }
 
@@ -453,10 +463,13 @@ type tmdbMovieResponse struct {
 	OriginalLanguage string             `json:"original_language"`
 	ReleaseDate      string             `json:"release_date"`
 	Overview         string             `json:"overview"`
+	Tagline          string             `json:"tagline"`
+	IMDbID           string             `json:"imdb_id"`
 	PosterPath       string             `json:"poster_path"`
 	Genres           []tmdbGenre        `json:"genres"`
 	Runtime          int                `json:"runtime"`
 	VoteAverage      float32            `json:"vote_average"`
+	VoteCount        uint32             `json:"vote_count"`
 	Translations     tmdbTranslationBag `json:"translations"`
 	Credits          tmdbCredits        `json:"credits"`
 }

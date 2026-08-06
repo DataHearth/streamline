@@ -31,7 +31,7 @@
 	{onClose}
 >
 	{#if episodeId > 0}
-		<div class="mb-4 flex justify-end">
+		<div class="mb-4 flex justify-start md:justify-end">
 			<ReplaceExistingToggle
 				checked={replaceExisting}
 				onChange={(v) => (replaceExisting = v)}

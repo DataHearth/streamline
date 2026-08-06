@@ -103,6 +103,39 @@ var _ = Describe("Handler: Config API", Label("unit", "server", "config"), func(
 		})
 	})
 
+	Describe("Config library", func() {
+		It("round-trips a monitor_specials patch", func() {
+			body := strings.NewReader(`{"monitor_specials":true}`)
+			resp := app.do(
+				jsonReq(app, http.MethodPatch, "/api/v1/config/library", body),
+			)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(config.Get().Library.MonitorSpecials).To(BeTrue())
+
+			get := app.do(
+				app.req(http.MethodGet, "/api/v1/config/library", app.adminKey, nil),
+			)
+			defer get.Body.Close()
+			var got LibraryConfigView
+			Expect(json.NewDecoder(get.Body).Decode(&got)).To(Succeed())
+			Expect(got.MonitorSpecials).To(BeTrue())
+		})
+
+		It("rejects a non-admin with 403", func() {
+			resp := app.do(
+				app.req(
+					http.MethodGet,
+					"/api/v1/config/library",
+					app.memberKey,
+					nil,
+				),
+			)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
+		})
+	})
+
 	Describe("OIDC provider CRUD", func() {
 		var oidc *httptest.Server
 

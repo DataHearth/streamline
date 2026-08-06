@@ -1,12 +1,15 @@
 package download
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 
+	"github.com/anacrolix/torrent/bencode"
+	"github.com/anacrolix/torrent/metainfo"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -247,7 +250,49 @@ var _ = Describe("qBittorrent Client", Label("unit", "downloads"), func() {
 			Expect(receivedCT).To(HavePrefix("multipart/form-data"))
 		})
 
-		It("errors when bytes are sent and qBittorrent returns no hash", func() {
+		It(
+			"derives the infohash locally when qBittorrent returns no envelope",
+			func() {
+				mux := http.NewServeMux()
+				mux.HandleFunc("/api/v2/auth/login",
+					func(w http.ResponseWriter, _ *http.Request) {
+						http.SetCookie(w, &http.Cookie{Name: "SID", Value: "s"})
+						w.WriteHeader(http.StatusOK)
+					})
+				mux.HandleFunc("/api/v2/torrents/createCategory",
+					func(w http.ResponseWriter, _ *http.Request) {
+						w.WriteHeader(http.StatusOK)
+					})
+				// qBittorrent ≤5.0.x: plain-text "Ok.", no JSON envelope.
+				mux.HandleFunc("/api/v2/torrents/add",
+					func(w http.ResponseWriter, _ *http.Request) {
+						_, _ = w.Write([]byte("Ok."))
+					})
+				srv := httptest.NewServer(mux)
+				DeferCleanup(srv.Close)
+
+				info, err := bencode.Marshal(metainfo.Info{
+					Name:        "release.mkv",
+					Length:      4,
+					PieceLength: 32768,
+					Pieces:      make([]byte, 20),
+				})
+				Expect(err).NotTo(HaveOccurred())
+				mi := metainfo.MetaInfo{InfoBytes: info}
+				var torrent bytes.Buffer
+				Expect(mi.Write(&torrent)).To(Succeed())
+
+				c := NewQBittorrentPassword(srv.URL, "admin", "password")
+				hash, err := c.AddTorrent(
+					context.Background(),
+					TorrentSource{Bytes: torrent.Bytes()},
+				)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(hash).To(Equal(mi.HashInfoBytes().HexString()))
+			},
+		)
+
+		It("errors when no envelope arrives and no hash is derivable", func() {
 			mux := http.NewServeMux()
 			mux.HandleFunc("/api/v2/auth/login",
 				func(w http.ResponseWriter, _ *http.Request) {
@@ -269,6 +314,7 @@ var _ = Describe("qBittorrent Client", Label("unit", "downloads"), func() {
 			srv := httptest.NewServer(mux)
 			DeferCleanup(srv.Close)
 
+			// A bencoded dict with no info entry: uploadable, but hashless.
 			c := NewQBittorrentPassword(srv.URL, "admin", "password")
 			_, err := c.AddTorrent(
 				context.Background(),

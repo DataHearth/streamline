@@ -45,12 +45,18 @@ type TVDB struct {
 }
 
 // NewTVDB builds a TVDB client from metadata.tvdb_api_key in the config
-// singleton. The token is fetched lazily on first request.
+// singleton. The token is fetched lazily on first request. The hidden
+// metadata.tvdb.base_url key overrides the TVDB API base URL when set (e2e
+// seam).
 func NewTVDB() *TVDB {
 	m := config.Get().Metadata
+	baseURL := config.HiddenString("metadata.tvdb.base_url")
+	if baseURL == "" {
+		baseURL = tvdbBaseURL
+	}
 	return &TVDB{
 		apiKey:   config.SecretValue(m.TVDBAPIKey, m.TVDBAPIKeyFile),
-		BaseURL:  tvdbBaseURL,
+		BaseURL:  baseURL,
 		client:   otelx.HTTPClient,
 		language: iso639_3(m.Language),
 	}
@@ -275,9 +281,14 @@ func (t *TVDB) GetSeries(ctx context.Context, tvdbID uint32) (*TVDetails, error)
 			Overview       string `json:"overview"`
 			AverageRuntime uint16 `json:"averageRuntime"`
 			Image          string `json:"image"`
+			FirstAired     string `json:"firstAired"`
 			Status         struct {
 				Name string `json:"name"`
 			} `json:"status"`
+			RemoteIDs []struct {
+				ID         string `json:"id"`
+				SourceName string `json:"sourceName"`
+			} `json:"remoteIds"`
 			Genres []struct {
 				Name string `json:"name"`
 			} `json:"genres"`
@@ -325,11 +336,18 @@ func (t *TVDB) GetSeries(ctx context.Context, tvdbID uint32) (*TVDetails, error)
 			Overview:      ext.Data.Overview,
 			PosterPath:    ext.Data.Image,
 		},
-		Status:  normalizeStatus(ext.Data.Status.Name),
-		Type:    SeriesStandard, // refined below if a genre marks it anime
-		Runtime: ext.Data.AverageRuntime,
+		Status:     normalizeStatus(ext.Data.Status.Name),
+		Type:       SeriesStandard, // refined below if a genre marks it anime
+		Runtime:    ext.Data.AverageRuntime,
+		FirstAired: ext.Data.FirstAired,
 		// TVDB v4 removed user ratings; `score` is an arbitrary popularity
 		// metric (not a 0-10 rating), so Rating is left unset (0 = unknown).
+	}
+	for _, r := range ext.Data.RemoteIDs {
+		if strings.EqualFold(r.SourceName, "IMDB") {
+			d.IMDbID = r.ID
+			break
+		}
 	}
 	for _, g := range ext.Data.Genres {
 		d.Genres = append(d.Genres, g.Name)

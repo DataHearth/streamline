@@ -13,11 +13,13 @@
 		selected,
 		selectMode = false,
 		onToggle,
+		onLongPress,
 	}: {
 		series: TVShow[];
 		selected: Set<number>;
 		selectMode?: boolean;
 		onToggle: (id: number, v: boolean) => void;
+		onLongPress?: (id: number) => void;
 	} = $props();
 
 	let selectionActive = $derived(selectMode || selected.size > 0);
@@ -74,6 +76,7 @@
 			selected={selected.has(show.id)}
 			{selectionActive}
 			onSelect={(v) => onToggle(show.id, v)}
+			onLongPress={onLongPress ? () => onLongPress(show.id) : undefined}
 		>
 			{#snippet kebab()}
 				<SeriesActionsMenu {show} />

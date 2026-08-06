@@ -1,6 +1,8 @@
 <script lang="ts">
 	import type { AnyFieldApi } from "@tanstack/form-core";
+	import { cn } from "../../lib/cn";
 	import { fieldErrorMessages } from "../../lib/fieldErrors";
+	import { readOnlyLock } from "../../lib/config.svelte";
 
 	type Props = {
 		field: AnyFieldApi;
@@ -10,6 +12,9 @@
 		placeholder?: string;
 		readonly?: boolean;
 		help?: string;
+		// Renders validation text out of flow. For single-row forms, where a
+		// field that grows by one line shoves its neighbours out of alignment.
+		floatError?: boolean;
 		// number-only bounds
 		min?: number;
 		max?: number;
@@ -23,20 +28,26 @@
 		placeholder,
 		readonly = false,
 		help,
+		floatError = false,
 		min,
 		max,
 	}: Props = $props();
 
 	let errorMessages = $derived(fieldErrorMessages(field));
+
+	// readonly rather than disabled: an operator on a read-only instance still
+	// needs to select and copy what the values currently are.
+	const lock = readOnlyLock();
+	let locked = $derived(readonly || lock());
 </script>
 
-<label class="block">
+<label class={cn("block", floatError && "relative")}>
 	<span class="mb-1 block text-sm font-medium text-fg">{label}</span>
 	<input
 		{type}
 		{autocomplete}
 		{placeholder}
-		{readonly}
+		readonly={locked}
 		{min}
 		{max}
 		inputmode={type === "number" ? "numeric" : undefined}
@@ -62,7 +73,14 @@
 		<p class="mt-1 text-xs text-fg-muted">{help}</p>
 	{/if}
 	{#each errorMessages as msg}
-		<p class="mt-1 text-xs text-status-failed">{msg}</p>
+		<p
+			class={cn(
+				"mt-1 text-xs text-status-failed",
+				floatError && "absolute left-0 top-full",
+			)}
+		>
+			{msg}
+		</p>
 	{/each}
 </label>
 

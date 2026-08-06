@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
 	"path/filepath"
 	"sync"
 	"sync/atomic"
@@ -239,6 +240,26 @@ func (s *Service) commitAttach(
 	ctx context.Context,
 	f *ent.ImportScanFile,
 ) (entimportscanfile.Outcome, string, uint32) {
+	existing, err := s.store.ListMediaFilesByMovieID(ctx, f.ExistingMovieID)
+	if err != nil {
+		return commitFail("list existing files", err, 0)
+	}
+	for _, mf := range existing {
+		if mf.Path == f.SourcePath {
+			return entimportscanfile.OutcomeAttached, "", f.ExistingMovieID
+		}
+	}
+	// A movie holds at most one media file: accepting a scanned file for an
+	// already-known movie replaces whatever file it currently has.
+	for _, mf := range existing {
+		if err := os.Remove(mf.Path); err != nil && !os.IsNotExist(err) {
+			slog.WarnContext(ctx, "attach replace: remove old file failed",
+				"path", mf.Path, "error", err)
+		}
+		if err := s.store.DeleteMediaFile(ctx, mf.ID); err != nil {
+			return commitFail("delete replaced file", err, 0)
+		}
+	}
 	return s.linkAndMarkAvailable(ctx, db.CreateMediaFileParams{
 		MovieID:      f.ExistingMovieID,
 		Path:         f.SourcePath,

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Loader2 } from "@lucide/svelte";
+	import { LoaderCircle } from "@lucide/svelte";
 	import Dialog from "../modals/Dialog.svelte";
 	import Checkbox from "../forms/Checkbox.svelte";
 	import type { PendingItem } from "../../lib/types";
@@ -86,7 +86,7 @@
 				class="inline-flex h-8 items-center gap-1.5 rounded-md bg-accent px-3 text-xs font-semibold text-fg-on-accent transition hover:bg-accent-hover focus:outline-none focus:ring-2 focus:ring-accent-ring disabled:cursor-not-allowed disabled:opacity-60"
 			>
 				{#if busy}
-					<Loader2 class="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+					<LoaderCircle class="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
 				{/if}
 				Replace
 			</button>
@@ -98,7 +98,7 @@
 				class="inline-flex h-8 items-center gap-1.5 rounded-md bg-accent px-3 text-xs font-semibold text-fg-on-accent transition hover:bg-accent-hover focus:outline-none focus:ring-2 focus:ring-accent-ring disabled:cursor-not-allowed disabled:opacity-60"
 			>
 				{#if busy}
-					<Loader2 class="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+					<LoaderCircle class="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
 				{/if}
 				Import
 			</button>

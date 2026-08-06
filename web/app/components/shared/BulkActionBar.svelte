@@ -27,12 +27,14 @@
 	} = $props();
 </script>
 
-<!-- Floats above the bottom nav on mobile so it never buries the tab bar. -->
+<!-- md and up only: below md the phone touch bar (BulkTouchBar) takes the bottom
+     bar's place instead. From md the rail owns navigation, so this can sit at
+     the bottom of the viewport. -->
 <div
 	role="toolbar"
 	aria-label="Bulk actions"
 	transition:fly={{ duration: 180, y: 12, easing: cubicOut }}
-	class="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+72px)] z-40 flex justify-center px-4 lg:bottom-6"
+	class="pointer-events-none fixed inset-x-0 bottom-6 z-40 flex justify-center px-4"
 >
 	<div
 		class="pointer-events-auto flex max-w-full items-center gap-2 overflow-x-auto rounded-lg border border-border-strong bg-bg-elevated/95 p-2 shadow-4 backdrop-blur-md [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"

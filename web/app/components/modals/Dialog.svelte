@@ -24,12 +24,26 @@
 		body?: string;
 		size?: "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl";
 		actions: DialogAction[];
+		// Two buttons share a line at phone width; three or more stack. A pair is
+		// always one decision with two answers, and stacking it wastes a row and
+		// reads as two unrelated choices. Pass false to force the stack back.
+		inlineActions?: boolean;
 		onClose: () => void;
 		children?: Snippet;
 	};
 
-	let { open, title, body, size = "md", actions, onClose, children }: Props =
-		$props();
+	let {
+		open,
+		title,
+		body,
+		size = "md",
+		actions,
+		inlineActions,
+		onClose,
+		children,
+	}: Props = $props();
+
+	let inline = $derived(inlineActions ?? actions.length === 2);
 
 	const VARIANT: Record<NonNullable<DialogAction["variant"]>, string> = {
 		primary: "bg-accent text-fg-on-accent hover:bg-accent-hover",
@@ -52,18 +66,35 @@
 		<p class="text-sm leading-relaxed text-fg-muted">{body}</p>
 	{/if}
 	{#snippet footer()}
-		{#each actions as a (a.label)}
-			<button
-				type="button"
-				onclick={() => run(a)}
-				disabled={a.disabled || a.pending}
-				data-autofocus={a.autofocus ? true : undefined}
-				class="inline-flex h-9 items-center rounded-md px-3.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60 {VARIANT[
-					a.variant ?? 'primary'
-				]}"
-			>
-				{a.pending ? "Working…" : a.label}
-			</button>
-		{/each}
+		{#if inline}
+			<!-- One row. Modal's footer stacks below sm and forces every button to
+			     w-full; inside this wrapper they share the row instead. From sm the
+			     wrapper dissolves, so the grow has to be scoped too — with
+			     display:contents the buttons become the footer's own flex children
+			     and an unscoped flex-1 would stretch them across it. -->
+			<div class="flex w-full items-center gap-2 max-sm:[&_button]:flex-1 sm:contents">
+				{#each actions as a (a.label)}
+					{@render action(a)}
+				{/each}
+			</div>
+		{:else}
+			{#each actions as a (a.label)}
+				{@render action(a)}
+			{/each}
+		{/if}
 	{/snippet}
 </Modal>
+
+{#snippet action(a: DialogAction)}
+	<button
+		type="button"
+		onclick={() => run(a)}
+		disabled={a.disabled || a.pending}
+		data-autofocus={a.autofocus ? true : undefined}
+		class="inline-flex h-9 items-center rounded-md px-3.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60 {VARIANT[
+			a.variant ?? 'primary'
+		]}"
+	>
+		{a.pending ? "Working…" : a.label}
+	</button>
+{/snippet}

@@ -10,6 +10,18 @@ import (
 	"github.com/datahearth/streamline/ent/schema/mixins"
 )
 
+// CastMember is the JSON inner type stored in Movie.cast and TVShow.cast.
+// Field names and types mirror metadata.CastMember exactly so the two convert
+// directly; defined here because ent code-gen cannot import internal/metadata
+// without a cycle (metadata → config → ent).
+type CastMember struct {
+	TMDBID     uint32 `json:"tmdb_id"`
+	Name       string `json:"name"`
+	Character  string `json:"character"`
+	ProfileURL string `json:"profile_url"`
+	PersonURL  string `json:"person_url"`
+}
+
 type TVShow struct {
 	ent.Schema
 }
@@ -38,6 +50,7 @@ func (TVShow) Fields() []ent.Field {
 		field.Uint16("runtime").Optional().Default(0),
 		field.Float("rating").Optional().Default(0),
 		field.Strings("genres").Optional(),
+		field.JSON("cast", []CastMember{}).Optional(),
 		field.Time("last_refreshed_at").Optional().Nillable(),
 		field.String("quality_profile").Optional(),
 	}

@@ -1,45 +1,29 @@
 <script lang="ts">
-	import { onMount, onDestroy } from "svelte";
 	import { Activity } from "@lucide/svelte";
 	import ProgressBar from "../shared/ProgressBar.svelte";
-	import StatusPill from "../shared/StatusPill.svelte";
-	import type { QueueItem } from "../../lib/types";
+	import TouchRow from "../activity/TouchRow.svelte";
+	import { entryHeading, queueMeta } from "../../lib/activity-touch";
+	import { formatEta, formatSpeed, pillStatus } from "../../lib/format";
+	import type { QueueEntry } from "../../lib/types";
 
-	let { queue }: { queue: QueueItem[] } = $props();
+	let { queue }: { queue: QueueEntry[] } = $props();
 
-	let reducedMotion = $state(false);
-	let tick = $state(0);
-	let interval: ReturnType<typeof setInterval> | undefined;
-
-	onMount(() => {
-		const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-		reducedMotion = mq.matches;
-		if (!reducedMotion) {
-			interval = setInterval(() => {
-				tick = (tick + 1) % 10_000;
-			}, 1200);
-		}
-	});
-
-	onDestroy(() => {
-		if (interval) clearInterval(interval);
-	});
-
-	function jitter(base: number, seed: number): number {
-		if (reducedMotion) return Math.max(0, Math.min(1, base));
-		const noise = Math.sin(tick * 0.7 + seed * 10) * 0.012 + 0.006;
-		return Math.max(0, Math.min(0.98, base + noise));
+	// Importing has finished downloading but isn't done, so its bar reads full
+	// and takes the in-progress token — the same reading ActivityRow gives it.
+	function progressOf(q: QueueEntry): number {
+		return q.status === "importing" ? 1 : (q.progress ?? 0);
+	}
+	// A percentage is only true while bytes are moving: importing sits at 100%
+	// without being finished, and a failed grab never had progress. Those get
+	// the meta line alone.
+	function hasPercent(q: QueueEntry): boolean {
+		return q.status === "downloading" || q.status === "paused";
 	}
 
-	function releaseTail(release: string | undefined): string {
-		if (!release) return "";
-		const parts = release.split(".");
-		return parts.length > 1 ? parts.slice(-2)[0] : release;
-	}
-
-	let downloading = $derived(queue.filter((q) => q.status === "downloading"));
-	let grabbing = $derived(queue.filter((q) => q.status === "grabbing"));
-	let active = $derived(downloading.length);
+	let active = $derived(queue.filter((q) => q.status === "downloading").length);
+	// The dashboard shows the head of the queue; Activity owns the whole list.
+	let rows = $derived(queue.slice(0, 4));
+	let more = $derived(queue.length - rows.length);
 </script>
 
 <section
@@ -78,81 +62,86 @@
 			</p>
 		</div>
 	{:else}
-		<ul class="flex flex-col gap-0.5 p-2">
-			{#each downloading as q, i (q.id)}
+		<!-- Below md the ring carries progress and state together, freeing all
+		     three text lines for words. The table-shaped row needs width the
+		     phone doesn't have. -->
+		<div class="md:hidden">
+			{#each rows as q (q.id)}
+				<TouchRow
+					status={pillStatus(q.status)}
+					progress={progressOf(q)}
+					title={entryHeading(q)}
+					release={q.title}
+					meta={queueMeta(q)}
+					href="/activity"
+				/>
+			{/each}
+		</div>
+
+		<ul class="hidden flex-col gap-0.5 p-2 md:flex">
+			{#each rows as q (q.id)}
 				<li>
 					<a
-						href="/movies/{q.movie_id}"
+						href="/activity"
 						class="grid grid-cols-[1fr_1fr_auto] items-center gap-4 rounded-md px-3 py-3 transition hover:bg-surface"
 					>
 						<div class="min-w-0">
 							<div class="truncate text-[13px] font-medium text-fg">
+								{entryHeading(q)}
+							</div>
+							<div
+								class="mt-0.5 truncate font-mono text-[10.5px] text-fg-subtle"
+							>
 								{q.title}
 							</div>
-							{#if q.release}
-								<div class="mt-0.5 truncate font-mono text-[10.5px] text-fg-subtle">
-									{releaseTail(q.release)}
-								</div>
-							{/if}
 						</div>
 						<div class="min-w-0">
 							<ProgressBar
-								value={jitter(q.progress, i)}
-								status="downloading"
+								value={progressOf(q)}
+								status={pillStatus(q.status)}
 								height={4}
-								shimmer
+								shimmer={q.status === "downloading" ||
+									q.status === "importing"}
 							/>
 						</div>
 						<div
 							class="flex items-center gap-3 whitespace-nowrap font-mono text-[11px] tabular text-fg-muted"
 						>
-							<span class="font-medium text-fg">
-								{Math.round(jitter(q.progress, i) * 100)}%
-							</span>
-							{#if q.speed}
-								<span class="font-medium text-status-downloading">
-									↓ {q.speed}<span class="ml-0.5 text-fg-faint">MB/s</span>
+							{#if hasPercent(q)}
+								<span class="font-medium text-fg">
+									{Math.round(progressOf(q) * 100)}%
 								</span>
 							{/if}
-							{#if q.eta}
-								<span>{q.eta}</span>
-							{/if}
-						</div>
-					</a>
-				</li>
-			{/each}
-
-			{#each grabbing as q (q.id)}
-				<li>
-					<a
-						href="/movies/{q.movie_id}"
-						class="grid grid-cols-[1fr_1fr_auto] items-center gap-4 rounded-md px-3 py-3 transition hover:bg-surface"
-					>
-						<div class="min-w-0">
-							<div class="truncate text-[13px] font-medium text-fg">
-								{q.title}
-							</div>
-							<div class="mt-0.5 truncate font-mono text-[10.5px] text-fg-subtle">
-								queueing release…
-							</div>
-						</div>
-						<div class="min-w-0">
-							<ProgressBar value={1} status="grabbing" height={4} shimmer />
-						</div>
-						<div
-							class="flex items-center gap-3 whitespace-nowrap font-mono text-[11px] tabular text-fg-muted"
-						>
-							<StatusPill status="grabbing" size="sm" live variant="translucent" />
-							{#if q.indexer}
-								<span>{q.indexer}</span>
-							{/if}
-							{#if q.size}
-								<span>{q.size}</span>
+							{#if q.status === "downloading"}
+								{@const speed = formatSpeed(q.download_speed)}
+								{@const eta = formatEta(q.eta)}
+								{#if speed}
+									<span class="font-medium text-status-downloading">
+										↓ {speed}
+									</span>
+								{/if}
+								{#if eta}
+									<span>{eta}</span>
+								{/if}
+							{:else}
+								{@const meta = queueMeta(q)}
+								<span style:color={meta.color ?? "var(--fg-muted)"}>
+									{meta.text}
+								</span>
 							{/if}
 						</div>
 					</a>
 				</li>
 			{/each}
 		</ul>
+
+		{#if more > 0}
+			<a
+				href="/activity"
+				class="border-t border-border px-5 py-2.5 text-center font-mono text-[11px] text-fg-subtle transition hover:text-accent-text"
+			>
+				+{more} more in Activity
+			</a>
+		{/if}
 	{/if}
 </section>

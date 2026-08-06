@@ -62,12 +62,13 @@ var _ = Describe("Request handlers", Label("unit", "restapi"), func() {
 	Describe("POST /requests", func() {
 		It("creates a request (201)", func() {
 			app.requests.EXPECT().
-				Create(mock.Anything, "movie", uint32(5), "Flick", app.memberID).
+				Create(mock.Anything, "movie", uint32(5), "Flick", app.memberID, "Remux").
 				Return(&ent.Request{ID: 1, MediaType: "movie", MediaID: 5, Title: "Flick", Status: "pending"}, nil).
 				Once()
 
 			payload, _ := json.Marshal(map[string]any{
 				"media_type": "movie", "media_id": 5, "title": "Flick",
+				"quality_profile": "Remux",
 			})
 			r := app.req(
 				http.MethodPost,
@@ -84,7 +85,7 @@ var _ = Describe("Request handlers", Label("unit", "restapi"), func() {
 
 		It("409s on duplicate", func() {
 			app.requests.EXPECT().
-				Create(mock.Anything, "movie", uint32(5), "Flick", app.memberID).
+				Create(mock.Anything, "movie", uint32(5), "Flick", app.memberID, "").
 				Return(nil, requestsvc.ErrDuplicate).Once()
 
 			payload, _ := json.Marshal(map[string]any{

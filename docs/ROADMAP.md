@@ -41,3 +41,4 @@ Music and books follow the same path as movies and TV: browse and organise your 
 | REST API (OpenAPI 3.0) | Shipped |
 | OpenTelemetry traces, metrics, logs | Shipped |
 | Docker images, Helm chart, single binary | Shipped |
+| Library path migration (re-root a moved library) | Shipped |

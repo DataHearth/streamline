@@ -5,7 +5,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/datahearth/streamline/internal/testutil/apptest"
+	"github.com/datahearth/streamline/e2e/apptest"
 )
 
 // auth.Limiter allows 5 /auth/login attempts per 15 minutes per IP and all

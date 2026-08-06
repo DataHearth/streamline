@@ -45,16 +45,31 @@ var _ = Describe("Request service", Label("unit", "request"), func() {
 				Return(&ent.Request{ID: 1}, nil).
 				Once()
 
-			r, err := svc.Create(ctx, "movie", 5, "Flick", 9)
+			r, err := svc.Create(ctx, "movie", 5, "Flick", 9, "")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(r.ID).To(Equal(uint32(1)))
+		})
+
+		It("records the requester's preferred quality profile", func() {
+			storeMk.FindActiveRequest(mock.Anything, "movie", uint32(5)).
+				Return(nil, nil).Once()
+			movieMk.GetByTMDBID(mock.Anything, uint32(5)).
+				Return(nil, errors.New("not found")).Once()
+			storeMk.CreateRequest(mock.Anything, mock.MatchedBy(func(p db.CreateRequestParams) bool {
+				return p.QualityProfile == "Remux"
+			})).
+				Return(&ent.Request{ID: 1}, nil).
+				Once()
+
+			_, err := svc.Create(ctx, "movie", 5, "Flick", 9, "Remux")
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("rejects duplicates when an active request exists", func() {
 			storeMk.FindActiveRequest(mock.Anything, "movie", uint32(5)).
 				Return(&ent.Request{ID: 7}, nil).Once()
 
-			_, err := svc.Create(ctx, "movie", 5, "Flick", 9)
+			_, err := svc.Create(ctx, "movie", 5, "Flick", 9, "")
 			Expect(err).To(MatchError(ErrDuplicate))
 		})
 
@@ -64,7 +79,7 @@ var _ = Describe("Request service", Label("unit", "request"), func() {
 			movieMk.GetByTMDBID(mock.Anything, uint32(5)).
 				Return(&ent.Movie{ID: 3}, nil).Once()
 
-			_, err := svc.Create(ctx, "movie", 5, "Flick", 9)
+			_, err := svc.Create(ctx, "movie", 5, "Flick", 9, "")
 			Expect(err).To(MatchError(ErrDuplicate))
 		})
 
@@ -74,7 +89,7 @@ var _ = Describe("Request service", Label("unit", "request"), func() {
 			storeMk.FindTVShowByTVDBID(mock.Anything, uint32(8)).
 				Return(&ent.TVShow{ID: 2}, nil).Once()
 
-			_, err := svc.Create(ctx, "tvshow", 8, "Show", 9)
+			_, err := svc.Create(ctx, "tvshow", 8, "Show", 9, "")
 			Expect(err).To(MatchError(ErrDuplicate))
 		})
 	})

@@ -45,6 +45,14 @@ const (
 	FieldFailureReason = "failure_reason"
 	// FieldQualityProfile holds the string denoting the quality_profile field in the database.
 	FieldQualityProfile = "quality_profile"
+	// FieldRating holds the string denoting the rating field in the database.
+	FieldRating = "rating"
+	// FieldGenres holds the string denoting the genres field in the database.
+	FieldGenres = "genres"
+	// FieldCast holds the string denoting the cast field in the database.
+	FieldCast = "cast"
+	// FieldLastRefreshedAt holds the string denoting the last_refreshed_at field in the database.
+	FieldLastRefreshedAt = "last_refreshed_at"
 	// EdgeDownloadRecords holds the string denoting the download_records edge name in mutations.
 	EdgeDownloadRecords = "download_records"
 	// EdgeMediaFiles holds the string denoting the media_files edge name in mutations.
@@ -94,6 +102,10 @@ var Columns = []string{
 	FieldGrabFailures,
 	FieldFailureReason,
 	FieldQualityProfile,
+	FieldRating,
+	FieldGenres,
+	FieldCast,
+	FieldLastRefreshedAt,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -123,6 +135,8 @@ var (
 	DefaultMonitored bool
 	// DefaultGrabFailures holds the default value on creation for the "grab_failures" field.
 	DefaultGrabFailures uint8
+	// DefaultRating holds the default value on creation for the "rating" field.
+	DefaultRating float64
 )
 
 // Status defines the type for the "status" enum field.
@@ -234,6 +248,16 @@ func ByFailureReason(opts ...sql.OrderTermOption) OrderOption {
 // ByQualityProfile orders the results by the quality_profile field.
 func ByQualityProfile(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldQualityProfile, opts...).ToFunc()
+}
+
+// ByRating orders the results by the rating field.
+func ByRating(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRating, opts...).ToFunc()
+}
+
+// ByLastRefreshedAt orders the results by the last_refreshed_at field.
+func ByLastRefreshedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldLastRefreshedAt, opts...).ToFunc()
 }
 
 // ByDownloadRecordsCount orders the results by download_records count.

@@ -14,24 +14,28 @@
 	import Modal from "../../components/modals/Modal.svelte";
 	import ScheduleRow from "../../components/settings/ScheduleRow.svelte";
 	import TextField from "../../components/forms/TextField.svelte";
+	import ReadOnlyFieldset from "../../components/settings/ReadOnlyFieldset.svelte";
 
 	const JOB_DESCRIPTIONS: Record<string, string> = {
-		"rss-sync": "Pull configured RSS feeds for new releases",
-		"missing-search":
+		"movie-rss-sync": "Pull configured RSS feeds for new movie releases",
+		"tv-rss-sync": "Pull configured RSS feeds for newly aired episodes",
+		"movie-missing-search":
 			"Per-title indexer search for every wanted movie past cooldown",
 		"tv-missing-search":
 			"Per-season indexer search for wanted episodes past cooldown",
-		"metadata-refresh": "Re-fetch TMDB metadata for tracked movies",
+		"movie-metadata-refresh": "Re-fetch TMDB metadata for tracked movies",
 		"tv-metadata-refresh": "Re-fetch TVDB metadata for tracked series",
+		"movie-orphan-scan":
+			"Walk the movie library for untracked media and classify against TMDB",
+		"tv-orphan-scan":
+			"Walk the series library for untracked episodes and classify against TVDB",
 		"download-monitor":
 			"Track active torrents, hand finished ones to the importer",
 		"import-scan": "Walk the import directory and stage matched files",
 		cleanup: "Purge old download records past their retention window",
 		"purge-sessions": "Drop expired auth sessions from the DB",
-		"orphan-scan":
-			"Walk the library for untracked media and classify against TMDB",
 		"drift-check":
-			"Verify tracked files still exist on disk; revert missing movies to wanted",
+			"Verify tracked files still exist on disk; revert missing movies and episodes to wanted",
 	};
 
 	const qc = useQueryClient();
@@ -207,16 +211,18 @@
 			form.handleSubmit();
 		}}
 	>
-		<form.Field name="interval">
-			{#snippet children(field)}
-				<TextField
-					{field}
-					label="Interval"
-					placeholder="15m"
-					help="Go duration string. Minimum 10 seconds."
-				/>
-			{/snippet}
-		</form.Field>
+		<ReadOnlyFieldset>
+			<form.Field name="interval">
+				{#snippet children(field)}
+					<TextField
+						{field}
+						label="Interval"
+						placeholder="15m"
+						help="Go duration string. Minimum 10 seconds."
+					/>
+				{/snippet}
+			</form.Field>
+		</ReadOnlyFieldset>
 	</form>
 
 	{#snippet footer()}

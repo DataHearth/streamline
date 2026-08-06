@@ -62,6 +62,10 @@ var (
 	ErrSeriesNotFound   = errors.New("series not found")
 )
 
+// metadataMinRefreshInterval bounds the TVDB call rate of the metadata-refresh
+// scheduler job: only shows last refreshed longer ago than this are touched.
+const metadataMinRefreshInterval = 24 * time.Hour
+
 type Service struct {
 	db       db.Store
 	metadata metadata.TVProvider
@@ -93,12 +97,14 @@ func seedSeasons(d *metadata.TVDetails) []db.SeasonSeed {
 			AirDate:        e.AirDate,
 		})
 	}
+	monitorSpecials := config.Get().Library.MonitorSpecials
 	seasons := make([]db.SeasonSeed, 0, len(d.Seasons))
 	for _, si := range d.Seasons {
 		seasons = append(seasons, db.SeasonSeed{
-			Number:   si.Number,
-			Name:     si.Name,
-			Episodes: bySeason[si.Number],
+			Number:      si.Number,
+			Name:        si.Name,
+			Unmonitored: si.Number == 0 && !monitorSpecials,
+			Episodes:    bySeason[si.Number],
 		})
 	}
 	return seasons
@@ -129,6 +135,7 @@ func (s *Service) Add(
 	if err != nil {
 		return nil, fmt.Errorf("tvdb get series: %w", err)
 	}
+	cast := s.seriesCast(ctx, tvdbID)
 
 	show, err := s.db.CreateTVShow(ctx, db.CreateTVShowParams{
 		Title:          d.Title,
@@ -143,6 +150,7 @@ func (s *Service) Add(
 		Runtime:        d.Runtime,
 		Rating:         float64(d.Rating),
 		Genres:         d.Genres,
+		Cast:           db.StoredCast(cast),
 		PosterPath:     d.PosterPath,
 		QualityProfile: qualityProfile,
 		Seasons:        seedSeasons(d),
@@ -332,22 +340,29 @@ type SeasonView struct {
 }
 
 // DeriveSeasonViews computes per-season counts from an eager-loaded show.
-// available = episode has a media_file; unaired = air_date in the future;
-// missing = aired/undated *monitored* episode without a file. An unmonitored
-// episode the user opted out of counts toward Total only, so specials and
-// skipped episodes never inflate the missing rollups — Available + Missing +
-// Unaired is therefore <= Total.
+// An episode is in scope when it is monitored or already on disk: a special the
+// user opted out of never inflates the missing counts, but one that was
+// downloaded before being unmonitored still counts as something the library
+// has — so a fully-unmonitored season of downloaded files still reads as
+// available. available = episode has a media_file; unaired = air_date in the
+// future; missing = aired or undated without a file. Available + Missing +
+// Unaired therefore equals Total.
 func DeriveSeasonViews(show *ent.TVShow, now time.Time) []SeasonView {
 	views := make([]SeasonView, 0, len(show.Edges.Seasons))
 	for _, se := range show.Edges.Seasons {
-		v := SeasonView{Number: se.Number, Total: len(se.Edges.Episodes)}
+		v := SeasonView{Number: se.Number}
 		for _, e := range se.Edges.Episodes {
+			hasFile := len(e.Edges.MediaFiles) > 0
+			if !e.Monitored && !hasFile {
+				continue
+			}
+			v.Total++
 			switch {
-			case len(e.Edges.MediaFiles) > 0:
+			case hasFile:
 				v.Available++
 			case !e.AirDate.IsZero() && e.AirDate.After(now):
 				v.Unaired++
-			case e.Monitored:
+			default:
 				v.Missing++
 			}
 		}
@@ -528,6 +543,29 @@ func (s *Service) SetSeasonMonitored(ctx context.Context, id uint32, m bool) err
 
 func (s *Service) SetEpisodeMonitored(ctx context.Context, id uint32, m bool) error {
 	return s.db.SetEpisodeMonitored(ctx, id, m)
+}
+
+// ApplySpecialsToExisting pushes the current library.monitor_specials value
+// onto season 0 of every series already in the library — the toggle itself
+// only governs seasons seeded after it flipped. Turning it off is the way to
+// unmonitor specials in bulk.
+func (s *Service) ApplySpecialsToExisting(ctx context.Context) (int, error) {
+	monitored := config.Get().Library.MonitorSpecials
+	ctx, span := tracer.Start(ctx, "tvshow.apply_specials_to_existing",
+		trace.WithAttributes(attribute.Bool("monitor_specials", monitored)),
+	)
+	defer span.End()
+
+	n, err := s.db.CascadeSpecialsMonitored(ctx, monitored)
+	if err != nil {
+		return 0, otelx.RecordSpanError(span, err)
+	}
+	span.SetAttributes(attribute.Int("seasons.updated", n))
+	slog.InfoContext(ctx, "specials monitoring applied across the library",
+		"monitor_specials", monitored,
+		"seasons.updated", n,
+	)
+	return n, nil
 }
 
 func (s *Service) Delete(ctx context.Context, id uint32, opts DeleteOptions) error {
@@ -771,6 +809,23 @@ func (s *Service) grabPackAndMark(
 	return nil
 }
 
+// seriesCast fetches top-billed actors, degrading to nil when TVDB's extended
+// record is unavailable. Cast is a display-only section, so a flaky call must
+// not fail the add/refresh around it — and nil leaves any stored cast intact
+// rather than wiping it.
+func (s *Service) seriesCast(
+	ctx context.Context,
+	tvdbID uint32,
+) []metadata.CastMember {
+	cast, err := s.metadata.GetSeriesCast(ctx, tvdbID)
+	if err != nil {
+		slog.WarnContext(ctx, "tvdb cast fetch failed",
+			"tvshow.tvdb_id", tvdbID, "error", err)
+		return nil
+	}
+	return cast
+}
+
 func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.TVShow, error) {
 	ctx, span := tracer.Start(
 		ctx,
@@ -786,6 +841,7 @@ func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.TVShow, error
 	if err != nil {
 		return nil, otelx.RecordSpanError(span, fmt.Errorf("tvdb refresh: %w", err))
 	}
+	cast := s.seriesCast(ctx, show.TvdbID)
 	// Persist refreshed provider fields so changes (status, rating, network,
 	// etc.) surface. Season/episode reconciliation is tracked separately.
 	if err := s.db.UpdateTVShowMetadata(ctx, id, db.UpdateTVShowMetadataParams{
@@ -800,6 +856,7 @@ func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.TVShow, error
 		Runtime:       d.Runtime,
 		Rating:        float64(d.Rating),
 		Genres:        d.Genres,
+		Cast:          db.StoredCast(cast),
 	}); err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
@@ -823,27 +880,36 @@ func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.TVShow, error
 	return s.db.FindTVShowByID(ctx, id)
 }
 
-// RefreshStale re-pulls metadata for every show. A Phase 2 scheduler job wires
-// this to the metadata_refresh tick.
+// RefreshStale re-pulls TVDB metadata for shows not refreshed within
+// metadataMinRefreshInterval. Per-row failures are logged and skipped; the
+// tick returns nil unless the initial DB query fails.
 func (s *Service) RefreshStale(ctx context.Context) error {
 	ctx, span := tracer.Start(ctx, "tvshow.refresh_stale")
 	defer span.End()
-	rows, err := s.db.ListTVShows(ctx, 0, 10000)
+	cutoff := time.Now().Add(-metadataMinRefreshInterval)
+	rows, err := s.db.ListTVShowsStaleSince(ctx, cutoff)
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
 	}
+	span.SetAttributes(attribute.Int("refresh.candidate_count", len(rows)))
+
+	refreshed, skipped := 0, 0
 	for _, sh := range rows {
 		if _, err := s.RefreshOne(ctx, sh.ID); err != nil {
-			slog.WarnContext(
-				ctx,
-				"tv refresh failed",
-				"tvshow.id",
-				sh.ID,
-				"error",
-				err,
-			)
+			slog.WarnContext(ctx, "tv refresh failed",
+				"tvshow.id", sh.ID, "error", err)
+			skipped++
+			continue
 		}
+		refreshed++
 	}
+
+	span.SetAttributes(
+		attribute.Int("refresh.refreshed_count", refreshed),
+		attribute.Int("refresh.skipped_count", skipped),
+	)
+	slog.InfoContext(ctx, "tv metadata refresh complete",
+		"refreshed", refreshed, "skipped", skipped)
 	return nil
 }
 
@@ -881,6 +947,7 @@ type Manager interface {
 	RefreshOne(ctx context.Context, id uint32) (*ent.TVShow, error)
 	SetSeasonMonitored(ctx context.Context, id uint32, monitored bool) error
 	SetEpisodeMonitored(ctx context.Context, id uint32, monitored bool) error
+	ApplySpecialsToExisting(ctx context.Context) (int, error)
 }
 
 type DeleteOptions struct{ DeleteFiles bool }

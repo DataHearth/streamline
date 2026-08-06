@@ -1,6 +1,7 @@
 <script lang="ts" generics="T extends string">
 	import type { Snippet } from "svelte";
 	import { cn } from "../../lib/cn";
+	import { readOnlyLock } from "../../lib/config.svelte";
 
 	type Option = { value: T; label: string };
 
@@ -27,6 +28,9 @@
 		lockedHint,
 		logo,
 	}: Props = $props();
+
+	const readOnly = readOnlyLock();
+	let allLocked = $derived(locked || readOnly());
 </script>
 
 <div
@@ -40,12 +44,12 @@
 	>
 	{#each options as o (o.value)}
 		{@const active = value === o.value}
-		{@const disabled = locked && !active}
+		{@const disabled = allLocked && !active}
 		<label
 			title={o.label}
 			class={cn(
 				"grid h-9 w-9 place-items-center rounded-md border border-border bg-bg-card text-fg-muted transition hover:border-border-strong has-[:checked]:border-accent has-[:checked]:bg-accent-soft has-[:checked]:text-fg has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent",
-				locked ? "cursor-not-allowed" : "cursor-pointer",
+				allLocked ? "cursor-not-allowed" : "cursor-pointer",
 				disabled && "opacity-40",
 			)}
 		>

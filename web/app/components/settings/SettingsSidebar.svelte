@@ -2,10 +2,12 @@
 	import { onMount } from "svelte";
 	import {
 		SlidersHorizontal,
+		Wrench,
 		Search,
 		Download,
 		Cast,
 		Gauge,
+		Tv,
 		Clock,
 		Shield,
 		KeyRound,
@@ -69,6 +71,11 @@
 						Icon: SlidersHorizontal,
 						label: "General",
 					},
+					{
+						path: "/settings/advanced",
+						Icon: Wrench,
+						label: "Advanced",
+					},
 				],
 			},
 			{
@@ -78,6 +85,11 @@
 						path: "/settings/quality-profiles",
 						Icon: Gauge,
 						label: "Quality profiles",
+					},
+					{
+						path: "/settings/series",
+						Icon: Tv,
+						label: "Series",
 					},
 				],
 			},

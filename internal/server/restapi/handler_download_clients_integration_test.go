@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -41,6 +42,12 @@ var _ = Describe(
 		)
 
 		BeforeAll(func() {
+			// Same gate as e2e/containers.Require: without it a bare
+			// `task test` / `task test:integration` silently launches Docker.
+			if os.Getenv("STREAMLINE_E2E_CONTAINERS") == "" {
+				Skip("container specs disabled — set STREAMLINE_E2E_CONTAINERS=1")
+			}
+
 			By("Starting qBittorrent container")
 			ctx := context.Background()
 			req := testcontainers.ContainerRequest{

@@ -1,28 +1,12 @@
-<script lang="ts" module>
-	import type { EpisodeDisplayStatus } from "../../lib/status";
-
-	// Episode statuses map onto the shared status color tokens. "unaired" and
-	// "skipped" have no dedicated status pill, so they borrow neutral tones.
-	const STATUS_META: Record<
-		EpisodeDisplayStatus,
-		{ label: string; token: string; live?: boolean }
-	> = {
-		available: { label: "Available", token: "available" },
-		wanted: { label: "Wanted", token: "wanted" },
-		missing: { label: "Missing", token: "missing" },
-		downloading: { label: "Downloading", token: "downloading", live: true },
-		paused: { label: "Paused", token: "paused" },
-		unaired: { label: "Unaired", token: "missing" },
-		skipped: { label: "Skipped", token: "paused" },
-	};
-</script>
-
 <script lang="ts">
 	import { Bookmark, Info, Search, Trash2 } from "@lucide/svelte";
 	import { cn } from "../../lib/cn";
+	import { dragScroll } from "../../lib/drag-scroll";
 	import { episodeStatus } from "../../lib/status";
-	import Modal from "../modals/Modal.svelte";
-	import { formatDateShort, formatDateTime, formatRelative } from "../../lib/dates";
+	import EpisodeDetailModal, {
+		STATUS_META,
+	} from "./EpisodeDetailModal.svelte";
+	import { formatDateShort, formatRelative } from "../../lib/dates";
 	import { formatBytes } from "../../lib/format";
 	import type { Episode, SeriesType } from "../../lib/types";
 
@@ -53,28 +37,18 @@
 	}
 
 	let detail = $state<Episode | null>(null);
-	let detailRows = $derived(
-		detail
-			? [
-					{ label: "Episode", value: epCode(detail) },
-					{
-						label: "Absolute #",
-						value: detail.absolute_number ? `#${detail.absolute_number}` : "—",
-					},
-					{ label: "Air date", value: formatDateTime(detail.air_date) || "—" },
-					{
-						label: "Monitored",
-						value: detail.monitored ? "Yes" : "No",
-					},
-					{ label: "Quality", value: detail.quality || "—" },
-					{ label: "Size", value: formatBytes(detail.size) },
-				]
-			: [],
-	);
 </script>
 
+<!-- overflow-x-auto, not hidden: inside the tablet two-pane the table can be
+     wider than its cell, and clipping put the Actions column out of reach. The
+     column hiding below is container-based for the same reason — a viewport media
+     query says nothing about how much room this pane has — and the thresholds
+     leave Actions visible at the ~460px the tablet pane gives it. dragScroll so
+     any remaining overflow is reachable with a pointer: below lg the app hides
+     every scrollbar. -->
 <div
-	class="overflow-hidden rounded-lg border border-border bg-bg-elevated/70 backdrop-blur-md"
+	use:dragScroll
+	class="@container overflow-x-auto overflow-y-hidden rounded-lg border border-border bg-bg-elevated/70 backdrop-blur-md"
 >
 	<table class="w-full text-sm">
 		<thead
@@ -86,20 +60,20 @@
 				<th scope="col" class="px-3 py-2.5 text-left font-medium">Title</th>
 				<th
 					scope="col"
-					class="hidden w-36 px-3 py-2.5 text-left font-medium md:table-cell"
+					class="hidden w-36 px-3 py-2.5 text-left font-medium @xl:table-cell"
 				>
 					Air date
 				</th>
 				<th scope="col" class="w-28 px-3 py-2.5 text-left font-medium">Status</th>
 				<th
 					scope="col"
-					class="hidden w-24 px-3 py-2.5 text-left font-medium sm:table-cell"
+					class="hidden w-24 px-3 py-2.5 text-left font-medium @lg:table-cell"
 				>
 					Quality
 				</th>
 				<th
 					scope="col"
-					class="hidden w-20 px-3 py-2.5 text-right font-medium sm:table-cell"
+					class="hidden w-20 px-3 py-2.5 text-right font-medium @lg:table-cell"
 				>
 					Size
 				</th>
@@ -157,7 +131,7 @@
 						</button>
 					</td>
 					<td
-						class="hidden px-3 py-2.5 font-mono text-xs text-fg-muted md:table-cell"
+						class="hidden whitespace-nowrap px-3 py-2.5 font-mono text-xs text-fg-muted @xl:table-cell"
 					>
 						{#if ep.air_date}
 							{formatDateShort(ep.air_date)}
@@ -181,12 +155,12 @@
 						</span>
 					</td>
 					<td
-						class="hidden px-3 py-2.5 font-mono text-xs text-fg-muted sm:table-cell"
+						class="hidden px-3 py-2.5 font-mono text-xs text-fg-muted @lg:table-cell"
 					>
 						{ep.quality || "—"}
 					</td>
 					<td
-						class="hidden px-3 py-2.5 text-right font-mono text-xs tabular text-fg-muted sm:table-cell"
+						class="hidden px-3 py-2.5 text-right font-mono text-xs tabular text-fg-muted @lg:table-cell"
 					>
 						{formatBytes(ep.size)}
 					</td>
@@ -231,98 +205,10 @@
 	</table>
 </div>
 
-{#if detail}
-	{@const meta = STATUS_META[episodeStatus(detail)]}
-	<Modal
-		open={true}
-		title={detail.title || "TBA"}
-		size="xl"
-		onClose={() => (detail = null)}
-	>
-		<div class="flex flex-wrap items-center gap-2">
-			<span
-				class="ep-pill inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-[10.5px] font-semibold"
-				style:--c={`var(--status-${meta.token})`}
-			>
-				<span
-					class={cn(
-						"dot h-1.5 w-1.5 shrink-0 rounded-full",
-						meta.live && "motion-safe:animate-pulse",
-					)}
-				></span>
-				{meta.label}
-			</span>
-			{#if detail.air_date}
-				<span class="text-xs text-fg-subtle">
-					{formatRelative(detail.air_date)}
-				</span>
-			{/if}
-		</div>
-
-		{#if detail.overview}
-			<p class="mt-3 text-sm leading-relaxed text-fg-muted">{detail.overview}</p>
-		{/if}
-
-		<dl class="mt-4 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2.5 text-sm">
-			{#each detailRows as row (row.label)}
-				<dt class="text-fg-subtle">{row.label}</dt>
-				<dd class="text-right font-mono text-xs tabular text-fg-muted">
-					{row.value}
-				</dd>
-			{/each}
-		</dl>
-
-		{#if detail.path}
-			<dl class="mt-4 border-t border-border pt-3">
-				<dt class="text-sm text-fg-subtle">File</dt>
-				<dd
-					class="mt-1 break-all font-mono text-xs text-fg-muted"
-					title={detail.path}
-				>
-					{detail.path}
-				</dd>
-			</dl>
-		{/if}
-
-		{#snippet footer()}
-			{#if (detail?.size ?? 0) > 0}
-				<button
-					type="button"
-					onclick={() => {
-						const ep = detail;
-						detail = null;
-						if (ep) onDeleteFile(ep);
-					}}
-					class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-3.5 text-sm font-medium text-fg-muted transition hover:border-status-failed/40 hover:bg-status-failed/10 hover:text-status-failed"
-				>
-					<Trash2 size={15} aria-hidden="true" />
-					Delete file
-				</button>
-			{/if}
-			{#if detail && detail.status !== "unaired"}
-				<button
-					type="button"
-					onclick={() => {
-						const ep = detail;
-						detail = null;
-						if (ep) onManualSearch(ep);
-					}}
-					class="inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-3.5 text-sm font-medium text-fg-on-accent transition hover:bg-accent-hover"
-				>
-					<Search size={15} aria-hidden="true" />
-					Manual search
-				</button>
-			{/if}
-		{/snippet}
-	</Modal>
-{/if}
-
-<style>
-	.ep-pill {
-		background-color: color-mix(in srgb, var(--c) 15%, transparent);
-		color: var(--c);
-	}
-	.ep-pill .dot {
-		background-color: var(--c);
-	}
-</style>
+<EpisodeDetailModal
+	episode={detail}
+	code={detail ? epCode(detail) : ""}
+	onClose={() => (detail = null)}
+	{onManualSearch}
+	{onDeleteFile}
+/>

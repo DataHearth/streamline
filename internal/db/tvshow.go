@@ -9,6 +9,7 @@ import (
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/predicate"
+	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/ent/season"
 	"github.com/datahearth/streamline/ent/tvshow"
 )
@@ -21,10 +22,19 @@ type EpisodeSeed struct {
 	AirDate        *time.Time
 }
 
+// tba reports that the provider has announced the episode without publishing
+// either a title or an air date. Those rows are placeholders — often for
+// episodes that never materialise — so they start unmonitored and only become
+// monitored once a refresh fills in one of the two.
+func (e EpisodeSeed) tba() bool { return e.Title == "" && e.AirDate == nil }
+
 type SeasonSeed struct {
-	Number   uint16
-	Name     string
-	Episodes []EpisodeSeed
+	Number uint16
+	Name   string
+	// Unmonitored, not Monitored: the zero value has to mean "monitored", the
+	// long-standing default for a freshly seeded season.
+	Unmonitored bool
+	Episodes    []EpisodeSeed
 }
 
 type CreateTVShowParams struct {
@@ -40,6 +50,7 @@ type CreateTVShowParams struct {
 	Runtime        uint16
 	Rating         float64
 	Genres         []string
+	Cast           []schema.CastMember
 	PosterPath     string
 	QualityProfile string
 	Seasons        []SeasonSeed
@@ -64,6 +75,7 @@ type UpdateTVShowMetadataParams struct {
 	Runtime       uint16
 	Rating        float64
 	Genres        []string
+	Cast          []schema.CastMember
 }
 
 // UpdateTVShowMetadata persists refreshed provider metadata onto an existing
@@ -83,6 +95,12 @@ func (db *DB) UpdateTVShowMetadata(
 		SetRuntime(p.Runtime).
 		SetRating(p.Rating).
 		SetGenres(p.Genres)
+	// Cast comes from a separate provider call than the rest, so an empty
+	// slice means "that call failed" far more often than "this show has no
+	// actors" — keep whatever is already stored.
+	if len(p.Cast) > 0 {
+		u = u.SetCast(p.Cast)
+	}
 	if p.SeriesStatus != "" {
 		u = u.SetSeriesStatus(tvshow.SeriesStatus(p.SeriesStatus))
 	}
@@ -100,8 +118,10 @@ func (db *DB) UpdateTVShowMetadata(
 // returns the on-disk paths of files whose episodes were removed so the caller
 // can delete them from disk — the DB layer never touches the filesystem.
 // User-owned state (monitored, status, grab counters) on surviving rows is
-// preserved; new episodes inherit their season's monitored flag, a brand-new
-// season defaults to monitored.
+// preserved, except that a TBA episode gaining a title or air date is promoted
+// back to monitored when its season is monitored; new episodes inherit their
+// season's monitored flag unless they are still TBA, a brand-new season
+// defaults to monitored.
 func (db *DB) ReconcileEpisodes(
 	ctx context.Context,
 	showID uint32,
@@ -135,6 +155,7 @@ func (db *DB) ReconcileEpisodes(
 			if sr, err = tx.Season.Create().
 				SetNumber(s.Number).
 				SetName(s.Name).
+				SetMonitored(!s.Unmonitored).
 				SetTvShowID(showID).
 				Save(ctx); err != nil {
 				tx.Rollback()
@@ -159,7 +180,7 @@ func (db *DB) ReconcileEpisodes(
 					SetAbsoluteNumber(e.AbsoluteNumber).
 					SetTitle(e.Title).
 					SetOverview(e.Overview).
-					SetMonitored(sr.Monitored).
+					SetMonitored(sr.Monitored && !e.tba()).
 					SetSeasonID(sr.ID)
 				if e.AirDate != nil {
 					b = b.SetAirDate(*e.AirDate)
@@ -179,6 +200,10 @@ func (db *DB) ReconcileEpisodes(
 			}
 			if e.AirDate != nil && !e.AirDate.Equal(er.AirDate) {
 				u, changed = u.SetAirDate(*e.AirDate), true
+			}
+			if er.Title == "" && er.AirDate.IsZero() &&
+				!e.tba() && sr.Monitored && !er.Monitored {
+				u, changed = u.SetMonitored(true), true
 			}
 			if changed {
 				if err := u.Exec(ctx); err != nil {
@@ -258,6 +283,7 @@ func (db *DB) CreateTVShow(
 		SetRuntime(p.Runtime).
 		SetRating(p.Rating).
 		SetGenres(p.Genres).
+		SetCast(p.Cast).
 		SetPosterPath(p.PosterPath).
 		SetQualityProfile(p.QualityProfile).
 		Save(ctx)
@@ -269,6 +295,7 @@ func (db *DB) CreateTVShow(
 		seasonRow, err := tx.Season.Create().
 			SetNumber(s.Number).
 			SetName(s.Name).
+			SetMonitored(!s.Unmonitored).
 			SetTvShowID(show.ID).
 			Save(ctx)
 		if err != nil {
@@ -281,6 +308,7 @@ func (db *DB) CreateTVShow(
 				SetAbsoluteNumber(e.AbsoluteNumber).
 				SetTitle(e.Title).
 				SetOverview(e.Overview).
+				SetMonitored(!s.Unmonitored && !e.tba()).
 				SetSeasonID(seasonRow.ID)
 			if e.AirDate != nil {
 				b = b.SetAirDate(*e.AirDate)
@@ -318,6 +346,22 @@ func (db *DB) FindTVShowByTVDBID(
 		return nil, nil
 	}
 	return row, err
+}
+
+// ListTVShowsStaleSince returns shows never refreshed, or last refreshed
+// before cutoff. Mirrors ListMoviesStaleSince: keyed on last_refreshed_at, not
+// update_time, because that column moves on every write (episode import,
+// status change) and would make the refresh tick a no-op.
+func (db *DB) ListTVShowsStaleSince(
+	ctx context.Context,
+	cutoff time.Time,
+) ([]*ent.TVShow, error) {
+	return db.client.TVShow.Query().
+		Where(tvshow.Or(
+			tvshow.LastRefreshedAtIsNil(),
+			tvshow.LastRefreshedAtLT(cutoff),
+		)).
+		All(ctx)
 }
 
 func (db *DB) ListTVShows(
@@ -420,6 +464,46 @@ func (db *DB) CascadeShowMonitored(
 		return fmt.Errorf("cascade episodes monitored: %w", err)
 	}
 	return tx.Commit()
+}
+
+// CascadeSpecialsMonitored sets season 0 — and its episodes — across the whole
+// library, retro-applying library.monitor_specials to series added before the
+// toggle was flipped. Returns the number of seasons touched.
+//
+// Switching specials ON skips unmonitored shows: a monitored episode under an
+// unmonitored show would hand the fetcher work its owner explicitly turned
+// off. Switching OFF has no such hazard and applies everywhere, so a season 0
+// left monitored under an unmonitored show still gets cleaned up.
+func (db *DB) CascadeSpecialsMonitored(
+	ctx context.Context,
+	monitored bool,
+) (int, error) {
+	target := []predicate.Season{season.NumberEQ(0)}
+	if monitored {
+		target = append(
+			target,
+			season.HasTvShowWith(tvshow.MonitoredEQ(true)),
+		)
+	}
+	inLibrary := season.And(target...)
+	tx, err := db.client.Tx(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("begin tx: %w", err)
+	}
+	n, err := tx.Season.Update().
+		Where(inLibrary).
+		SetMonitored(monitored).Save(ctx)
+	if err != nil {
+		tx.Rollback()
+		return 0, fmt.Errorf("set specials monitored: %w", err)
+	}
+	if _, err := tx.Episode.Update().
+		Where(episode.HasSeasonWith(inLibrary)).
+		SetMonitored(monitored).Save(ctx); err != nil {
+		tx.Rollback()
+		return 0, fmt.Errorf("cascade specials episodes monitored: %w", err)
+	}
+	return n, tx.Commit()
 }
 
 // CascadeSeasonMonitored sets a season and all its episodes to monitored in one

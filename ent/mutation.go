@@ -9954,6 +9954,13 @@ type MovieMutation struct {
 	addgrab_failures        *int8
 	failure_reason          *string
 	quality_profile         *string
+	rating                  *float64
+	addrating               *float64
+	genres                  *[]string
+	appendgenres            []string
+	cast                    *[]schema.CastMember
+	appendcast              []schema.CastMember
+	last_refreshed_at       *time.Time
 	clearedFields           map[string]struct{}
 	download_records        map[uint32]struct{}
 	removeddownload_records map[uint32]struct{}
@@ -10772,6 +10779,255 @@ func (m *MovieMutation) ResetQualityProfile() {
 	delete(m.clearedFields, movie.FieldQualityProfile)
 }
 
+// SetRating sets the "rating" field.
+func (m *MovieMutation) SetRating(f float64) {
+	m.rating = &f
+	m.addrating = nil
+}
+
+// Rating returns the value of the "rating" field in the mutation.
+func (m *MovieMutation) Rating() (r float64, exists bool) {
+	v := m.rating
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRating returns the old "rating" field's value of the Movie entity.
+// If the Movie object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MovieMutation) OldRating(ctx context.Context) (v float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRating is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRating requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRating: %w", err)
+	}
+	return oldValue.Rating, nil
+}
+
+// AddRating adds f to the "rating" field.
+func (m *MovieMutation) AddRating(f float64) {
+	if m.addrating != nil {
+		*m.addrating += f
+	} else {
+		m.addrating = &f
+	}
+}
+
+// AddedRating returns the value that was added to the "rating" field in this mutation.
+func (m *MovieMutation) AddedRating() (r float64, exists bool) {
+	v := m.addrating
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearRating clears the value of the "rating" field.
+func (m *MovieMutation) ClearRating() {
+	m.rating = nil
+	m.addrating = nil
+	m.clearedFields[movie.FieldRating] = struct{}{}
+}
+
+// RatingCleared returns if the "rating" field was cleared in this mutation.
+func (m *MovieMutation) RatingCleared() bool {
+	_, ok := m.clearedFields[movie.FieldRating]
+	return ok
+}
+
+// ResetRating resets all changes to the "rating" field.
+func (m *MovieMutation) ResetRating() {
+	m.rating = nil
+	m.addrating = nil
+	delete(m.clearedFields, movie.FieldRating)
+}
+
+// SetGenres sets the "genres" field.
+func (m *MovieMutation) SetGenres(s []string) {
+	m.genres = &s
+	m.appendgenres = nil
+}
+
+// Genres returns the value of the "genres" field in the mutation.
+func (m *MovieMutation) Genres() (r []string, exists bool) {
+	v := m.genres
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldGenres returns the old "genres" field's value of the Movie entity.
+// If the Movie object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MovieMutation) OldGenres(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldGenres is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldGenres requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldGenres: %w", err)
+	}
+	return oldValue.Genres, nil
+}
+
+// AppendGenres adds s to the "genres" field.
+func (m *MovieMutation) AppendGenres(s []string) {
+	m.appendgenres = append(m.appendgenres, s...)
+}
+
+// AppendedGenres returns the list of values that were appended to the "genres" field in this mutation.
+func (m *MovieMutation) AppendedGenres() ([]string, bool) {
+	if len(m.appendgenres) == 0 {
+		return nil, false
+	}
+	return m.appendgenres, true
+}
+
+// ClearGenres clears the value of the "genres" field.
+func (m *MovieMutation) ClearGenres() {
+	m.genres = nil
+	m.appendgenres = nil
+	m.clearedFields[movie.FieldGenres] = struct{}{}
+}
+
+// GenresCleared returns if the "genres" field was cleared in this mutation.
+func (m *MovieMutation) GenresCleared() bool {
+	_, ok := m.clearedFields[movie.FieldGenres]
+	return ok
+}
+
+// ResetGenres resets all changes to the "genres" field.
+func (m *MovieMutation) ResetGenres() {
+	m.genres = nil
+	m.appendgenres = nil
+	delete(m.clearedFields, movie.FieldGenres)
+}
+
+// SetCast sets the "cast" field.
+func (m *MovieMutation) SetCast(sm []schema.CastMember) {
+	m.cast = &sm
+	m.appendcast = nil
+}
+
+// Cast returns the value of the "cast" field in the mutation.
+func (m *MovieMutation) Cast() (r []schema.CastMember, exists bool) {
+	v := m.cast
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCast returns the old "cast" field's value of the Movie entity.
+// If the Movie object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MovieMutation) OldCast(ctx context.Context) (v []schema.CastMember, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCast is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCast requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCast: %w", err)
+	}
+	return oldValue.Cast, nil
+}
+
+// AppendCast adds sm to the "cast" field.
+func (m *MovieMutation) AppendCast(sm []schema.CastMember) {
+	m.appendcast = append(m.appendcast, sm...)
+}
+
+// AppendedCast returns the list of values that were appended to the "cast" field in this mutation.
+func (m *MovieMutation) AppendedCast() ([]schema.CastMember, bool) {
+	if len(m.appendcast) == 0 {
+		return nil, false
+	}
+	return m.appendcast, true
+}
+
+// ClearCast clears the value of the "cast" field.
+func (m *MovieMutation) ClearCast() {
+	m.cast = nil
+	m.appendcast = nil
+	m.clearedFields[movie.FieldCast] = struct{}{}
+}
+
+// CastCleared returns if the "cast" field was cleared in this mutation.
+func (m *MovieMutation) CastCleared() bool {
+	_, ok := m.clearedFields[movie.FieldCast]
+	return ok
+}
+
+// ResetCast resets all changes to the "cast" field.
+func (m *MovieMutation) ResetCast() {
+	m.cast = nil
+	m.appendcast = nil
+	delete(m.clearedFields, movie.FieldCast)
+}
+
+// SetLastRefreshedAt sets the "last_refreshed_at" field.
+func (m *MovieMutation) SetLastRefreshedAt(t time.Time) {
+	m.last_refreshed_at = &t
+}
+
+// LastRefreshedAt returns the value of the "last_refreshed_at" field in the mutation.
+func (m *MovieMutation) LastRefreshedAt() (r time.Time, exists bool) {
+	v := m.last_refreshed_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLastRefreshedAt returns the old "last_refreshed_at" field's value of the Movie entity.
+// If the Movie object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MovieMutation) OldLastRefreshedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLastRefreshedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLastRefreshedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLastRefreshedAt: %w", err)
+	}
+	return oldValue.LastRefreshedAt, nil
+}
+
+// ClearLastRefreshedAt clears the value of the "last_refreshed_at" field.
+func (m *MovieMutation) ClearLastRefreshedAt() {
+	m.last_refreshed_at = nil
+	m.clearedFields[movie.FieldLastRefreshedAt] = struct{}{}
+}
+
+// LastRefreshedAtCleared returns if the "last_refreshed_at" field was cleared in this mutation.
+func (m *MovieMutation) LastRefreshedAtCleared() bool {
+	_, ok := m.clearedFields[movie.FieldLastRefreshedAt]
+	return ok
+}
+
+// ResetLastRefreshedAt resets all changes to the "last_refreshed_at" field.
+func (m *MovieMutation) ResetLastRefreshedAt() {
+	m.last_refreshed_at = nil
+	delete(m.clearedFields, movie.FieldLastRefreshedAt)
+}
+
 // AddDownloadRecordIDs adds the "download_records" edge to the DownloadRecord entity by ids.
 func (m *MovieMutation) AddDownloadRecordIDs(ids ...uint32) {
 	if m.download_records == nil {
@@ -10968,7 +11224,7 @@ func (m *MovieMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *MovieMutation) Fields() []string {
-	fields := make([]string, 0, 15)
+	fields := make([]string, 0, 19)
 	if m.create_time != nil {
 		fields = append(fields, movie.FieldCreateTime)
 	}
@@ -11014,6 +11270,18 @@ func (m *MovieMutation) Fields() []string {
 	if m.quality_profile != nil {
 		fields = append(fields, movie.FieldQualityProfile)
 	}
+	if m.rating != nil {
+		fields = append(fields, movie.FieldRating)
+	}
+	if m.genres != nil {
+		fields = append(fields, movie.FieldGenres)
+	}
+	if m.cast != nil {
+		fields = append(fields, movie.FieldCast)
+	}
+	if m.last_refreshed_at != nil {
+		fields = append(fields, movie.FieldLastRefreshedAt)
+	}
 	return fields
 }
 
@@ -11052,6 +11320,14 @@ func (m *MovieMutation) Field(name string) (ent.Value, bool) {
 		return m.FailureReason()
 	case movie.FieldQualityProfile:
 		return m.QualityProfile()
+	case movie.FieldRating:
+		return m.Rating()
+	case movie.FieldGenres:
+		return m.Genres()
+	case movie.FieldCast:
+		return m.Cast()
+	case movie.FieldLastRefreshedAt:
+		return m.LastRefreshedAt()
 	}
 	return nil, false
 }
@@ -11091,6 +11367,14 @@ func (m *MovieMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldFailureReason(ctx)
 	case movie.FieldQualityProfile:
 		return m.OldQualityProfile(ctx)
+	case movie.FieldRating:
+		return m.OldRating(ctx)
+	case movie.FieldGenres:
+		return m.OldGenres(ctx)
+	case movie.FieldCast:
+		return m.OldCast(ctx)
+	case movie.FieldLastRefreshedAt:
+		return m.OldLastRefreshedAt(ctx)
 	}
 	return nil, fmt.Errorf("unknown Movie field %s", name)
 }
@@ -11205,6 +11489,34 @@ func (m *MovieMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetQualityProfile(v)
 		return nil
+	case movie.FieldRating:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRating(v)
+		return nil
+	case movie.FieldGenres:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetGenres(v)
+		return nil
+	case movie.FieldCast:
+		v, ok := value.([]schema.CastMember)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCast(v)
+		return nil
+	case movie.FieldLastRefreshedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLastRefreshedAt(v)
+		return nil
 	}
 	return fmt.Errorf("unknown Movie field %s", name)
 }
@@ -11225,6 +11537,9 @@ func (m *MovieMutation) AddedFields() []string {
 	if m.addgrab_failures != nil {
 		fields = append(fields, movie.FieldGrabFailures)
 	}
+	if m.addrating != nil {
+		fields = append(fields, movie.FieldRating)
+	}
 	return fields
 }
 
@@ -11241,6 +11556,8 @@ func (m *MovieMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedTmdbID()
 	case movie.FieldGrabFailures:
 		return m.AddedGrabFailures()
+	case movie.FieldRating:
+		return m.AddedRating()
 	}
 	return nil, false
 }
@@ -11278,6 +11595,13 @@ func (m *MovieMutation) AddField(name string, value ent.Value) error {
 		}
 		m.AddGrabFailures(v)
 		return nil
+	case movie.FieldRating:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddRating(v)
+		return nil
 	}
 	return fmt.Errorf("unknown Movie numeric field %s", name)
 }
@@ -11303,6 +11627,18 @@ func (m *MovieMutation) ClearedFields() []string {
 	}
 	if m.FieldCleared(movie.FieldQualityProfile) {
 		fields = append(fields, movie.FieldQualityProfile)
+	}
+	if m.FieldCleared(movie.FieldRating) {
+		fields = append(fields, movie.FieldRating)
+	}
+	if m.FieldCleared(movie.FieldGenres) {
+		fields = append(fields, movie.FieldGenres)
+	}
+	if m.FieldCleared(movie.FieldCast) {
+		fields = append(fields, movie.FieldCast)
+	}
+	if m.FieldCleared(movie.FieldLastRefreshedAt) {
+		fields = append(fields, movie.FieldLastRefreshedAt)
 	}
 	return fields
 }
@@ -11335,6 +11671,18 @@ func (m *MovieMutation) ClearField(name string) error {
 		return nil
 	case movie.FieldQualityProfile:
 		m.ClearQualityProfile()
+		return nil
+	case movie.FieldRating:
+		m.ClearRating()
+		return nil
+	case movie.FieldGenres:
+		m.ClearGenres()
+		return nil
+	case movie.FieldCast:
+		m.ClearCast()
+		return nil
+	case movie.FieldLastRefreshedAt:
+		m.ClearLastRefreshedAt()
 		return nil
 	}
 	return fmt.Errorf("unknown Movie nullable field %s", name)
@@ -11388,6 +11736,18 @@ func (m *MovieMutation) ResetField(name string) error {
 		return nil
 	case movie.FieldQualityProfile:
 		m.ResetQualityProfile()
+		return nil
+	case movie.FieldRating:
+		m.ResetRating()
+		return nil
+	case movie.FieldGenres:
+		m.ResetGenres()
+		return nil
+	case movie.FieldCast:
+		m.ResetCast()
+		return nil
+	case movie.FieldLastRefreshedAt:
+		m.ResetLastRefreshedAt()
 		return nil
 	}
 	return fmt.Errorf("unknown Movie field %s", name)
@@ -12763,6 +13123,7 @@ type RequestMutation struct {
 	title              *string
 	status             *request.Status
 	reason             *string
+	quality_profile    *string
 	clearedFields      map[string]struct{}
 	requester          *uint32
 	clearedrequester   bool
@@ -13162,6 +13523,55 @@ func (m *RequestMutation) ResetReason() {
 	delete(m.clearedFields, request.FieldReason)
 }
 
+// SetQualityProfile sets the "quality_profile" field.
+func (m *RequestMutation) SetQualityProfile(s string) {
+	m.quality_profile = &s
+}
+
+// QualityProfile returns the value of the "quality_profile" field in the mutation.
+func (m *RequestMutation) QualityProfile() (r string, exists bool) {
+	v := m.quality_profile
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldQualityProfile returns the old "quality_profile" field's value of the Request entity.
+// If the Request object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RequestMutation) OldQualityProfile(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldQualityProfile is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldQualityProfile requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldQualityProfile: %w", err)
+	}
+	return oldValue.QualityProfile, nil
+}
+
+// ClearQualityProfile clears the value of the "quality_profile" field.
+func (m *RequestMutation) ClearQualityProfile() {
+	m.quality_profile = nil
+	m.clearedFields[request.FieldQualityProfile] = struct{}{}
+}
+
+// QualityProfileCleared returns if the "quality_profile" field was cleared in this mutation.
+func (m *RequestMutation) QualityProfileCleared() bool {
+	_, ok := m.clearedFields[request.FieldQualityProfile]
+	return ok
+}
+
+// ResetQualityProfile resets all changes to the "quality_profile" field.
+func (m *RequestMutation) ResetQualityProfile() {
+	m.quality_profile = nil
+	delete(m.clearedFields, request.FieldQualityProfile)
+}
+
 // SetRequesterID sets the "requester" edge to the User entity by id.
 func (m *RequestMutation) SetRequesterID(id uint32) {
 	m.requester = &id
@@ -13274,7 +13684,7 @@ func (m *RequestMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *RequestMutation) Fields() []string {
-	fields := make([]string, 0, 7)
+	fields := make([]string, 0, 8)
 	if m.create_time != nil {
 		fields = append(fields, request.FieldCreateTime)
 	}
@@ -13295,6 +13705,9 @@ func (m *RequestMutation) Fields() []string {
 	}
 	if m.reason != nil {
 		fields = append(fields, request.FieldReason)
+	}
+	if m.quality_profile != nil {
+		fields = append(fields, request.FieldQualityProfile)
 	}
 	return fields
 }
@@ -13318,6 +13731,8 @@ func (m *RequestMutation) Field(name string) (ent.Value, bool) {
 		return m.Status()
 	case request.FieldReason:
 		return m.Reason()
+	case request.FieldQualityProfile:
+		return m.QualityProfile()
 	}
 	return nil, false
 }
@@ -13341,6 +13756,8 @@ func (m *RequestMutation) OldField(ctx context.Context, name string) (ent.Value,
 		return m.OldStatus(ctx)
 	case request.FieldReason:
 		return m.OldReason(ctx)
+	case request.FieldQualityProfile:
+		return m.OldQualityProfile(ctx)
 	}
 	return nil, fmt.Errorf("unknown Request field %s", name)
 }
@@ -13399,6 +13816,13 @@ func (m *RequestMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetReason(v)
 		return nil
+	case request.FieldQualityProfile:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetQualityProfile(v)
+		return nil
 	}
 	return fmt.Errorf("unknown Request field %s", name)
 }
@@ -13447,6 +13871,9 @@ func (m *RequestMutation) ClearedFields() []string {
 	if m.FieldCleared(request.FieldReason) {
 		fields = append(fields, request.FieldReason)
 	}
+	if m.FieldCleared(request.FieldQualityProfile) {
+		fields = append(fields, request.FieldQualityProfile)
+	}
 	return fields
 }
 
@@ -13463,6 +13890,9 @@ func (m *RequestMutation) ClearField(name string) error {
 	switch name {
 	case request.FieldReason:
 		m.ClearReason()
+		return nil
+	case request.FieldQualityProfile:
+		m.ClearQualityProfile()
 		return nil
 	}
 	return fmt.Errorf("unknown Request nullable field %s", name)
@@ -13492,6 +13922,9 @@ func (m *RequestMutation) ResetField(name string) error {
 		return nil
 	case request.FieldReason:
 		m.ResetReason()
+		return nil
+	case request.FieldQualityProfile:
+		m.ResetQualityProfile()
 		return nil
 	}
 	return fmt.Errorf("unknown Request field %s", name)
@@ -15982,6 +16415,8 @@ type TVShowMutation struct {
 	addrating         *float64
 	genres            *[]string
 	appendgenres      []string
+	cast              *[]schema.CastMember
+	appendcast        []schema.CastMember
 	last_refreshed_at *time.Time
 	quality_profile   *string
 	clearedFields     map[string]struct{}
@@ -16875,6 +17310,71 @@ func (m *TVShowMutation) ResetGenres() {
 	delete(m.clearedFields, tvshow.FieldGenres)
 }
 
+// SetCast sets the "cast" field.
+func (m *TVShowMutation) SetCast(sm []schema.CastMember) {
+	m.cast = &sm
+	m.appendcast = nil
+}
+
+// Cast returns the value of the "cast" field in the mutation.
+func (m *TVShowMutation) Cast() (r []schema.CastMember, exists bool) {
+	v := m.cast
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCast returns the old "cast" field's value of the TVShow entity.
+// If the TVShow object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TVShowMutation) OldCast(ctx context.Context) (v []schema.CastMember, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCast is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCast requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCast: %w", err)
+	}
+	return oldValue.Cast, nil
+}
+
+// AppendCast adds sm to the "cast" field.
+func (m *TVShowMutation) AppendCast(sm []schema.CastMember) {
+	m.appendcast = append(m.appendcast, sm...)
+}
+
+// AppendedCast returns the list of values that were appended to the "cast" field in this mutation.
+func (m *TVShowMutation) AppendedCast() ([]schema.CastMember, bool) {
+	if len(m.appendcast) == 0 {
+		return nil, false
+	}
+	return m.appendcast, true
+}
+
+// ClearCast clears the value of the "cast" field.
+func (m *TVShowMutation) ClearCast() {
+	m.cast = nil
+	m.appendcast = nil
+	m.clearedFields[tvshow.FieldCast] = struct{}{}
+}
+
+// CastCleared returns if the "cast" field was cleared in this mutation.
+func (m *TVShowMutation) CastCleared() bool {
+	_, ok := m.clearedFields[tvshow.FieldCast]
+	return ok
+}
+
+// ResetCast resets all changes to the "cast" field.
+func (m *TVShowMutation) ResetCast() {
+	m.cast = nil
+	m.appendcast = nil
+	delete(m.clearedFields, tvshow.FieldCast)
+}
+
 // SetLastRefreshedAt sets the "last_refreshed_at" field.
 func (m *TVShowMutation) SetLastRefreshedAt(t time.Time) {
 	m.last_refreshed_at = &t
@@ -17061,7 +17561,7 @@ func (m *TVShowMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *TVShowMutation) Fields() []string {
-	fields := make([]string, 0, 18)
+	fields := make([]string, 0, 19)
 	if m.create_time != nil {
 		fields = append(fields, tvshow.FieldCreateTime)
 	}
@@ -17110,6 +17610,9 @@ func (m *TVShowMutation) Fields() []string {
 	if m.genres != nil {
 		fields = append(fields, tvshow.FieldGenres)
 	}
+	if m.cast != nil {
+		fields = append(fields, tvshow.FieldCast)
+	}
 	if m.last_refreshed_at != nil {
 		fields = append(fields, tvshow.FieldLastRefreshedAt)
 	}
@@ -17156,6 +17659,8 @@ func (m *TVShowMutation) Field(name string) (ent.Value, bool) {
 		return m.Rating()
 	case tvshow.FieldGenres:
 		return m.Genres()
+	case tvshow.FieldCast:
+		return m.Cast()
 	case tvshow.FieldLastRefreshedAt:
 		return m.LastRefreshedAt()
 	case tvshow.FieldQualityProfile:
@@ -17201,6 +17706,8 @@ func (m *TVShowMutation) OldField(ctx context.Context, name string) (ent.Value, 
 		return m.OldRating(ctx)
 	case tvshow.FieldGenres:
 		return m.OldGenres(ctx)
+	case tvshow.FieldCast:
+		return m.OldCast(ctx)
 	case tvshow.FieldLastRefreshedAt:
 		return m.OldLastRefreshedAt(ctx)
 	case tvshow.FieldQualityProfile:
@@ -17326,6 +17833,13 @@ func (m *TVShowMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetGenres(v)
 		return nil
+	case tvshow.FieldCast:
+		v, ok := value.([]schema.CastMember)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCast(v)
+		return nil
 	case tvshow.FieldLastRefreshedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -17445,6 +17959,9 @@ func (m *TVShowMutation) ClearedFields() []string {
 	if m.FieldCleared(tvshow.FieldGenres) {
 		fields = append(fields, tvshow.FieldGenres)
 	}
+	if m.FieldCleared(tvshow.FieldCast) {
+		fields = append(fields, tvshow.FieldCast)
+	}
 	if m.FieldCleared(tvshow.FieldLastRefreshedAt) {
 		fields = append(fields, tvshow.FieldLastRefreshedAt)
 	}
@@ -17488,6 +18005,9 @@ func (m *TVShowMutation) ClearField(name string) error {
 		return nil
 	case tvshow.FieldGenres:
 		m.ClearGenres()
+		return nil
+	case tvshow.FieldCast:
+		m.ClearCast()
 		return nil
 	case tvshow.FieldLastRefreshedAt:
 		m.ClearLastRefreshedAt()
@@ -17550,6 +18070,9 @@ func (m *TVShowMutation) ResetField(name string) error {
 		return nil
 	case tvshow.FieldGenres:
 		m.ResetGenres()
+		return nil
+	case tvshow.FieldCast:
+		m.ResetCast()
 		return nil
 	case tvshow.FieldLastRefreshedAt:
 		m.ResetLastRefreshedAt()

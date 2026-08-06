@@ -127,7 +127,7 @@ type FilterParams struct {
 }
 
 // metadataMinRefreshInterval bounds the TMDB call rate of the metadata-refresh
-// scheduler job: only movies whose update_time is older than this are touched.
+// scheduler job: only movies last refreshed longer ago than this are touched.
 const metadataMinRefreshInterval = 24 * time.Hour
 
 // MetadataRefresher is the consumer-facing surface for the metadata-refresh
@@ -194,6 +194,9 @@ func (s *Service) Add(
 		Overview:       details.Overview,
 		Runtime:        details.Runtime,
 		QualityProfile: qualityProfile,
+		Rating:         float64(details.Rating),
+		Genres:         details.Genres,
+		Cast:           db.StoredCast(details.Cast),
 	})
 	if err != nil {
 		if ent.IsConstraintError(err) {
@@ -551,6 +554,9 @@ func (s *Service) refreshOne(ctx context.Context, m *ent.Movie) error {
 		Overview:      details.Overview,
 		Year:          details.Year,
 		Runtime:       details.Runtime,
+		Rating:        float64(details.Rating),
+		Genres:        details.Genres,
+		Cast:          db.StoredCast(details.Cast),
 	}); err != nil {
 		return otelx.RecordSpanError(span, err)
 	}

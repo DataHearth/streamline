@@ -7,6 +7,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/movie"
+	"github.com/datahearth/streamline/ent/schema"
 )
 
 type CreateMovieParams struct {
@@ -18,6 +19,9 @@ type CreateMovieParams struct {
 	Overview       string
 	Runtime        uint16
 	QualityProfile string
+	Rating         float64
+	Genres         []string
+	Cast           []schema.CastMember
 }
 
 func (db *DB) CreateMovie(
@@ -38,6 +42,15 @@ func (db *DB) CreateMovie(
 	}
 	if p.QualityProfile != "" {
 		b.SetQualityProfile(p.QualityProfile)
+	}
+	if p.Rating != 0 {
+		b.SetRating(p.Rating)
+	}
+	if len(p.Genres) != 0 {
+		b.SetGenres(p.Genres)
+	}
+	if len(p.Cast) != 0 {
+		b.SetCast(p.Cast)
 	}
 	return b.Save(ctx)
 }
@@ -121,14 +134,20 @@ func (db *DB) UpcomingReleases(
 		All(ctx)
 }
 
-// ListMoviesStaleSince returns movies whose updated_at is older than cutoff.
-// Used by metadata-refresh to bound TMDB calls per tick.
+// ListMoviesStaleSince returns movies never refreshed, or last refreshed
+// before cutoff. Used by metadata-refresh to bound TMDB calls per tick.
+// Deliberately NOT keyed on update_time: that column moves on every write
+// (orphan import, status change, grab), so a library that scans on boot would
+// never look stale and the refresh would never run.
 func (db *DB) ListMoviesStaleSince(
 	ctx context.Context,
 	cutoff time.Time,
 ) ([]*ent.Movie, error) {
 	return db.client.Movie.Query().
-		Where(movie.UpdateTimeLT(cutoff)).
+		Where(movie.Or(
+			movie.LastRefreshedAtIsNil(),
+			movie.LastRefreshedAtLT(cutoff),
+		)).
 		All(ctx)
 }
 
@@ -268,10 +287,12 @@ type UpdateMovieMetadataParams struct {
 	Overview      string
 	Year          uint16
 	Runtime       uint16
+	Rating        float64
+	Genres        []string
+	Cast          []schema.CastMember
 }
 
-// UpdateMovieMetadata updates only the TMDB-sourced metadata fields
-// (title, original_title, year, overview, runtime). Status and
+// UpdateMovieMetadata updates only the TMDB-sourced metadata fields. Status and
 // QualityProfileID are intentionally not touched — those are owned by the
 // lifecycle update path.
 func (db *DB) UpdateMovieMetadata(
@@ -285,6 +306,10 @@ func (db *DB) UpdateMovieMetadata(
 		SetYear(p.Year).
 		SetOverview(p.Overview).
 		SetRuntime(p.Runtime).
+		SetRating(p.Rating).
+		SetGenres(p.Genres).
+		SetCast(p.Cast).
+		SetLastRefreshedAt(time.Now()).
 		Exec(ctx)
 }
 

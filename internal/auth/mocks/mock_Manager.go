@@ -314,6 +314,63 @@ func (_c *MockManager_ChangePassword_Call) RunAndReturn(run func(context.Context
 	return _c
 }
 
+// ConfirmJWTRotation provides a mock function with given fields: ctx, callerID
+func (_m *MockManager) ConfirmJWTRotation(ctx context.Context, callerID uint32) (string, error) {
+	ret := _m.Called(ctx, callerID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ConfirmJWTRotation")
+	}
+
+	var r0 string
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uint32) (string, error)); ok {
+		return rf(ctx, callerID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uint32) string); ok {
+		r0 = rf(ctx, callerID)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+		r1 = rf(ctx, callerID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockManager_ConfirmJWTRotation_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ConfirmJWTRotation'
+type MockManager_ConfirmJWTRotation_Call struct {
+	*mock.Call
+}
+
+// ConfirmJWTRotation is a helper method to define mock.On call
+//   - ctx context.Context
+//   - callerID uint32
+func (_e *MockManager_Expecter) ConfirmJWTRotation(ctx interface{}, callerID interface{}) *MockManager_ConfirmJWTRotation_Call {
+	return &MockManager_ConfirmJWTRotation_Call{Call: _e.mock.On("ConfirmJWTRotation", ctx, callerID)}
+}
+
+func (_c *MockManager_ConfirmJWTRotation_Call) Run(run func(ctx context.Context, callerID uint32)) *MockManager_ConfirmJWTRotation_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(uint32))
+	})
+	return _c
+}
+
+func (_c *MockManager_ConfirmJWTRotation_Call) Return(_a0 string, _a1 error) *MockManager_ConfirmJWTRotation_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockManager_ConfirmJWTRotation_Call) RunAndReturn(run func(context.Context, uint32) (string, error)) *MockManager_ConfirmJWTRotation_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // CreateAPIKey provides a mock function with given fields: ctx, userID, name
 func (_m *MockManager) CreateAPIKey(ctx context.Context, userID uint32, name string) (string, *ent.ApiKey, error) {
 	ret := _m.Called(ctx, userID, name)
@@ -1124,6 +1181,63 @@ func (_c *MockManager_LookupInviteForPrefill_Call) Return(_a0 *ent.Invite, _a1 e
 }
 
 func (_c *MockManager_LookupInviteForPrefill_Call) RunAndReturn(run func(context.Context, string) (*ent.Invite, error)) *MockManager_LookupInviteForPrefill_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// PrepareJWTRotation provides a mock function with given fields: ctx, callerID
+func (_m *MockManager) PrepareJWTRotation(ctx context.Context, callerID uint32) (string, error) {
+	ret := _m.Called(ctx, callerID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for PrepareJWTRotation")
+	}
+
+	var r0 string
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uint32) (string, error)); ok {
+		return rf(ctx, callerID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uint32) string); ok {
+		r0 = rf(ctx, callerID)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+		r1 = rf(ctx, callerID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockManager_PrepareJWTRotation_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PrepareJWTRotation'
+type MockManager_PrepareJWTRotation_Call struct {
+	*mock.Call
+}
+
+// PrepareJWTRotation is a helper method to define mock.On call
+//   - ctx context.Context
+//   - callerID uint32
+func (_e *MockManager_Expecter) PrepareJWTRotation(ctx interface{}, callerID interface{}) *MockManager_PrepareJWTRotation_Call {
+	return &MockManager_PrepareJWTRotation_Call{Call: _e.mock.On("PrepareJWTRotation", ctx, callerID)}
+}
+
+func (_c *MockManager_PrepareJWTRotation_Call) Run(run func(ctx context.Context, callerID uint32)) *MockManager_PrepareJWTRotation_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(uint32))
+	})
+	return _c
+}
+
+func (_c *MockManager_PrepareJWTRotation_Call) Return(_a0 string, _a1 error) *MockManager_PrepareJWTRotation_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockManager_PrepareJWTRotation_Call) RunAndReturn(run func(context.Context, uint32) (string, error)) *MockManager_PrepareJWTRotation_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -4,7 +4,7 @@
 		createMutation,
 		useQueryClient,
 	} from "@tanstack/svelte-query";
-	import { Film, Loader2, Plus } from "@lucide/svelte";
+	import { Film, LoaderCircle, Plus } from "@lucide/svelte";
 	import { api } from "../../lib/api";
 	import { toast } from "../../lib/toast";
 	import type {
@@ -131,7 +131,7 @@
 			class="inline-flex h-9 items-center gap-2 rounded-md bg-accent px-4 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
 		>
 			{#if addMutation.isPending}
-				<Loader2 size={14} class="animate-spin" aria-hidden="true" />
+				<LoaderCircle size={14} class="animate-spin" aria-hidden="true" />
 				Adding…
 			{:else}
 				<Plus size={14} aria-hidden="true" />

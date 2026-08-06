@@ -1,8 +1,10 @@
 package config
 
 import (
+	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -103,6 +105,11 @@ type LibraryConfig struct {
 	MovieNaming  string `koanf:"movie_naming"  validate:"required"`
 	SeriesPath   string `koanf:"series_path"   validate:"required"`
 	SeriesNaming string `koanf:"series_naming" validate:"required"`
+	// MonitorSpecials opts season 0 into monitoring when a series is added or
+	// a refresh discovers the season. Off by default: specials are usually
+	// recaps and OVAs nobody wants grabbed automatically. Only applies at seed
+	// time — flipping it never touches seasons already in the library.
+	MonitorSpecials bool `koanf:"monitor_specials"`
 	// DownloadPath is the host-side directory where streamline reads
 	// completed torrents from. qBittorrent (or any other client) decides
 	// its own save location; this only tells the importer where to look,
@@ -124,15 +131,22 @@ type LibraryConfig struct {
 	DriftGraceTicks uint8 `koanf:"drift_grace_ticks" validate:"required,min=1,max=20"`
 }
 
+// ScheduleConfig carries one interval per registered job. Media-scoped jobs
+// are keyed movie_*/tv_* to match their scheduler names; the rest are shared
+// across both libraries and stay unprefixed.
 type ScheduleConfig struct {
-	RSSSync         string `koanf:"rss_sync"         validate:"required"`
-	MetadataRefresh string `koanf:"metadata_refresh" validate:"required"`
-	DownloadMonitor string `koanf:"download_monitor" validate:"required"`
-	MissingSearch   string `koanf:"missing_search"   validate:"required"`
-	Cleanup         string `koanf:"cleanup"          validate:"required"`
-	ImportScan      string `koanf:"import_scan"      validate:"required"`
-	OrphanScan      string `koanf:"orphan_scan"      validate:"required"`
-	DriftCheck      string `koanf:"drift_check"      validate:"required"`
+	MovieRSSSync         string `koanf:"movie_rss_sync"         validate:"required"`
+	TVRSSSync            string `koanf:"tv_rss_sync"            validate:"required"`
+	MovieMissingSearch   string `koanf:"movie_missing_search"   validate:"required"`
+	TVMissingSearch      string `koanf:"tv_missing_search"      validate:"required"`
+	MovieMetadataRefresh string `koanf:"movie_metadata_refresh" validate:"required"`
+	TVMetadataRefresh    string `koanf:"tv_metadata_refresh"    validate:"required"`
+	MovieOrphanScan      string `koanf:"movie_orphan_scan"      validate:"required"`
+	TVOrphanScan         string `koanf:"tv_orphan_scan"         validate:"required"`
+	DownloadMonitor      string `koanf:"download_monitor"       validate:"required"`
+	ImportScan           string `koanf:"import_scan"            validate:"required"`
+	Cleanup              string `koanf:"cleanup"                validate:"required"`
+	DriftCheck           string `koanf:"drift_check"            validate:"required"`
 }
 
 type MetadataConfig struct {
@@ -239,56 +253,61 @@ func (c *Config) Validate() error {
 // Keys use koanf's dotted notation.
 func defaults() map[string]any {
 	return map[string]any{
-		"server.host":                    "0.0.0.0",
-		"server.port":                    8080,
-		"data_dir":                       "./data",
-		"read_only":                      false,
-		"auth.mode":                      "full",
-		"auth.trusted_networks":          []string{},
-		"auth.trusted_role":              "admin",
-		"auth.session_secret":            "",
-		"auth.session_secret_file":       "",
-		"auth.session_ttl":               "168h",
-		"auth.registration_mode":         "disabled",
-		"auth.oidc_default_role":         "member",
-		"auth.seed_admin.email":          "",
-		"auth.seed_admin.password":       "",
-		"auth.seed_admin.password_file":  "",
-		"auth.oidc":                      []any{},
-		"auth.lockout.threshold":         10,
-		"auth.lockout.window":            "15m",
-		"auth.lockout.duration":          "15m",
-		"library.movie_path":             "/media/movies",
-		"library.series_path":            "/media/series",
-		"library.series_naming":          "{title} ({year})/Season {season}/{title} - S{season:2}E{episode:2} - {episode_title} [{quality}].{ext}",
-		"library.download_path":          "/downloads",
-		"library.movie_naming":           "{title} ({year}) {tmdb-{tmdb_id}}/{title} ({year}) [{quality}].{ext}",
-		"library.import_mode":            "hardlink",
-		"library.keep_torrent_seeding":   true,
-		"library.import_max_attempts":    3,
-		"library.allowed_download_roots": []string{},
-		"library.no_match_cooldown":      "6h",
-		"library.max_grab_failures":      3,
-		"schedules.rss_sync":             "15m",
-		"schedules.metadata_refresh":     "24h",
-		"schedules.download_monitor":     "30s",
-		"schedules.missing_search":       "12h",
-		"schedules.cleanup":              "24h",
-		"schedules.import_scan":          "60s",
-		"schedules.orphan_scan":          "6h",
-		"schedules.drift_check":          "15m",
-		"library.drift_grace_ticks":      3,
-		"metadata.tmdb_api_key":          "",
-		"metadata.tmdb_api_key_file":     "",
-		"metadata.tvdb_api_key":          "",
-		"metadata.tvdb_api_key_file":     "",
-		"metadata.language":              "en",
-		"metadata.tmdb_region":           "FR",
-		"otel.endpoint":                  "",
-		"media_server.plex_client_id":    "",
-		"media_server.servers":           []any{},
-		"download_clients":               []any{},
-		"indexers":                       []any{},
+		"server.host":                      "0.0.0.0",
+		"server.port":                      8080,
+		"data_dir":                         "./data",
+		"read_only":                        false,
+		"auth.mode":                        "full",
+		"auth.trusted_networks":            []string{},
+		"auth.trusted_role":                "admin",
+		"auth.session_secret":              "",
+		"auth.session_secret_file":         "",
+		"auth.session_ttl":                 "168h",
+		"auth.registration_mode":           "disabled",
+		"auth.oidc_default_role":           "member",
+		"auth.seed_admin.email":            "",
+		"auth.seed_admin.password":         "",
+		"auth.seed_admin.password_file":    "",
+		"auth.oidc":                        []any{},
+		"auth.lockout.threshold":           10,
+		"auth.lockout.window":              "15m",
+		"auth.lockout.duration":            "15m",
+		"library.movie_path":               "/media/movies",
+		"library.series_path":              "/media/series",
+		"library.series_naming":            "{title} ({year})/Season {season}/{title} - S{season:2}E{episode:2} - {episode_title} [{quality}].{ext}",
+		"library.download_path":            "/downloads",
+		"library.movie_naming":             "{title} ({year}) {tmdb-{tmdb_id}}/{title} ({year}) [{quality}].{ext}",
+		"library.import_mode":              "hardlink",
+		"library.monitor_specials":         false,
+		"library.keep_torrent_seeding":     true,
+		"library.import_max_attempts":      3,
+		"library.allowed_download_roots":   []string{},
+		"library.no_match_cooldown":        "6h",
+		"library.max_grab_failures":        3,
+		"schedules.movie_rss_sync":         "15m",
+		"schedules.tv_rss_sync":            "15m",
+		"schedules.movie_missing_search":   "12h",
+		"schedules.tv_missing_search":      "12h",
+		"schedules.movie_metadata_refresh": "24h",
+		"schedules.tv_metadata_refresh":    "24h",
+		"schedules.movie_orphan_scan":      "6h",
+		"schedules.tv_orphan_scan":         "6h",
+		"schedules.download_monitor":       "30s",
+		"schedules.cleanup":                "24h",
+		"schedules.import_scan":            "60s",
+		"schedules.drift_check":            "15m",
+		"library.drift_grace_ticks":        3,
+		"metadata.tmdb_api_key":            "",
+		"metadata.tmdb_api_key_file":       "",
+		"metadata.tvdb_api_key":            "",
+		"metadata.tvdb_api_key_file":       "",
+		"metadata.language":                "en",
+		"metadata.tmdb_region":             "FR",
+		"otel.endpoint":                    "",
+		"media_server.plex_client_id":      "",
+		"media_server.servers":             []any{},
+		"download_clients":                 []any{},
+		"indexers":                         []any{},
 		"quality_profiles": []map[string]any{
 			{
 				"name":                 "default",
@@ -347,7 +366,7 @@ func LoadReader(r io.Reader) error {
 	if err != nil {
 		return err
 	}
-	store(cfg, "")
+	store(cfg, "", k)
 	return nil
 }
 
@@ -359,6 +378,60 @@ func newDefaultsKoanf() *koanf.Koanf {
 	return k
 }
 
+// renamedScheduleKeys maps each pre-media-split schedules key to the keys that
+// replaced it. missing_search, metadata_refresh and orphan_scan each drove both
+// the movie and the TV job, so a value set under the old name has to land on
+// both replacements or the operator's cadence silently changes for one library.
+var renamedScheduleKeys = map[string][]string{
+	"schedules.rss_sync": {"schedules.movie_rss_sync"},
+	"schedules.missing_search": {
+		"schedules.movie_missing_search",
+		"schedules.tv_missing_search",
+	},
+	"schedules.metadata_refresh": {
+		"schedules.movie_metadata_refresh",
+		"schedules.tv_metadata_refresh",
+	},
+	"schedules.orphan_scan": {
+		"schedules.movie_orphan_scan",
+		"schedules.tv_orphan_scan",
+	},
+}
+
+// applyRenamedScheduleKeys copies a value still set under a pre-media-split
+// schedules key onto its replacements, skipping any replacement the operator
+// already set themselves. Without it an old config keeps parsing — koanf drops
+// keys the struct no longer has — while every renamed job silently reverts to
+// its default interval.
+//
+// "Already set themselves" is read as "differs from the default", since the
+// defaults layer is merged into k before the file and env layers.
+func applyRenamedScheduleKeys(k *koanf.Koanf) error {
+	d := defaults()
+	for old, replacements := range renamedScheduleKeys {
+		if !k.Exists(old) {
+			continue
+		}
+		val := k.String(old)
+		for _, key := range replacements {
+			if def, _ := d[key].(string); k.String(key) != def {
+				continue
+			}
+			if err := k.Set(key, val); err != nil {
+				return err
+			}
+		}
+		slog.WarnContext(
+			context.Background(),
+			"config: schedules key was renamed; still honouring the old one",
+			"deprecated.key", old,
+			"replacement.keys", strings.Join(replacements, ", "),
+			"interval", val,
+		)
+	}
+	return nil
+}
+
 func finalize(k *koanf.Koanf) (*Config, error) {
 	// Double-underscore is the path separator; a single underscore is literal
 	// so keys with underscore segments (data_dir, session_secret, tmdb_api_key)
@@ -368,6 +441,9 @@ func finalize(k *koanf.Koanf) (*Config, error) {
 		return strings.ReplaceAll(key, "__", ".")
 	})
 	if err := k.Load(envProvider, nil); err != nil {
+		return nil, err
+	}
+	if err := applyRenamedScheduleKeys(k); err != nil {
 		return nil, err
 	}
 
@@ -472,6 +548,6 @@ func Load(cfgFile string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	store(cfg, cfgFile)
+	store(cfg, cfgFile, k)
 	return cfg, nil
 }

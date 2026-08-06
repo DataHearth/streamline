@@ -13,6 +13,8 @@
 	} from "@lucide/svelte";
 	import { api } from "../../lib/api";
 	import { auth } from "../../lib/auth.svelte";
+	import { pageMeta } from "../../lib/page-meta.svelte";
+	import SearchField from "./SearchField.svelte";
 	import type { SystemInfo } from "../../lib/types";
 	import { toast } from "../../lib/toast";
 
@@ -34,7 +36,7 @@
 	// the topbar — only breadcrumbs appear when the user is on a detail page.
 	const TITLELESS_PREFIXES = new Set(["/account", "/settings"]);
 	const SECTIONS: { prefix: string; label: string }[] = [
-		{ prefix: "/dashboard", label: "Dashboard" },
+		{ prefix: "/dashboard", label: "Streamline" },
 		{ prefix: "/movies", label: "Movies" },
 		{ prefix: "/series", label: "Series" },
 		{ prefix: "/activity", label: "Activity" },
@@ -115,6 +117,10 @@
 	}
 
 	// Add-to-library dropdown ------------------------------------------------
+	// md and up, beside the search field. Below that the plus is not in the bar
+	// at all: on a phone it is the pill above the bottom nav (AddButton), since
+	// the top-right corner is the furthest point from a thumb. Both raise the
+	// same two events.
 	// request_only users may only request, so they see a trimmed menu (Movie +
 	// Series, which the modals route to a request) under a "Request a title"
 	// heading. admins/members get the full "Add to library" menu.
@@ -261,13 +267,22 @@
 </script>
 
 <header
-	class="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-border bg-bg-deep/70 px-4 backdrop-blur-md saturate-150 md:px-8"
+	class="sticky top-0 z-30 flex h-16 items-center gap-2 border-b border-border bg-bg-deep/70 pl-4 pr-2 backdrop-blur-md saturate-150 md:gap-4 md:px-8"
 >
 	<div class="min-w-0 flex-1">
 		{#if crumbs.length === 1}
 			<h1 class="text-[22px] font-semibold leading-none tracking-tight text-fg">
 				{crumbs[0]?.label}
 			</h1>
+			{#if pageMeta.line}
+				<!-- Phone only: below md the page's own count line costs 30px of a
+				     774px viewport, so it rides here instead. -->
+				<p
+					class="mt-1.5 truncate font-mono text-[10.5px] text-fg-subtle md:hidden"
+				>
+					{pageMeta.line}
+				</p>
+			{/if}
 		{:else if crumbs.length > 1}
 			<nav
 				aria-label="Breadcrumb"
@@ -307,14 +322,17 @@
 		</kbd>
 	</button>
 
-	<div class="flex flex-1 items-center justify-end gap-2">
+	<!-- flex-none below lg: on a phone this group holds one 44px icon button, and
+	     a flex-1 here took half the header, truncating the page's count line. -->
+	<div class="flex flex-none items-center justify-end gap-2 lg:flex-1">
+		<SearchField />
 		<button
 			type="button"
 			onclick={openPalette}
 			aria-label="Search"
-			class="grid h-10 w-10 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg lg:hidden"
+			class="grid h-11 w-11 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg md:hidden"
 		>
-			<Search size={18} aria-hidden="true" />
+			<Search size={19} aria-hidden="true" />
 		</button>
 		<button
 			bind:this={addTrigger}
@@ -324,7 +342,7 @@
 			aria-haspopup="menu"
 			aria-expanded={addOpen}
 			title={addHeading}
-			class="grid h-10 w-10 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg"
+			class="hidden h-10 w-10 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg md:grid"
 		>
 			<Plus size={18} aria-hidden="true" />
 		</button>

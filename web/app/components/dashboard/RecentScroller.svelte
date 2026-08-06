@@ -77,7 +77,7 @@
 		<div class="flex items-center gap-3">
 			{#if movies.length > 0}
 				<div
-					class="flex items-center gap-1"
+					class="hidden items-center gap-1 md:flex"
 					role="group"
 					aria-label="Scroll {title} row"
 				>
@@ -150,16 +150,24 @@
 </section>
 
 <style>
+	/* 171px below md is the library grid's own poster width at 390px, so a
+	   poster is the same object on both screens. The ‹ › buttons are md-only —
+	   28px targets that duplicate a swipe — so touch scrolls the row itself. */
 	.poster-scroll {
 		display: grid;
 		grid-auto-flow: column;
-		grid-auto-columns: 200px;
+		grid-auto-columns: 171px;
 		gap: 16px;
 		overflow-x: auto;
 		scroll-snap-type: x mandatory;
 		/* The ‹ › buttons are the affordance; the native bar just adds a rule
 		   under the posters. */
 		scrollbar-width: none;
+	}
+	@media (min-width: 768px) {
+		.poster-scroll {
+			grid-auto-columns: 200px;
+		}
 	}
 	.poster-scroll::-webkit-scrollbar {
 		display: none;

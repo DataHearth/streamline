@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -148,6 +149,63 @@ var _ = Describe("Config", Label("unit", "config"), func() {
 				Expect(cfg.Library.MovieNaming).
 					To(Equal("{title} ({year}) {tmdb-{tmdb_id}}/{title} ({year}) [{quality}].{ext}"))
 				Expect(cfg.Schedule.ImportScan).To(Equal("60s"))
+			})
+		})
+
+		Context("with pre-media-split schedules keys", func() {
+			// Each renamed key drove one job; missing_search/metadata_refresh/
+			// orphan_scan drove two, so the old value has to reach both halves.
+			renamed := func(dataDir string) string {
+				return "data_dir: " + dataDir + `
+schedules:
+  rss_sync: 5m
+  missing_search: 3h
+  metadata_refresh: 48h
+  orphan_scan: 9h
+`
+			}
+
+			It("carries an old interval onto every replacement key", func() {
+				Expect(LoadReader(
+					strings.NewReader(renamed(GinkgoT().TempDir())),
+				)).To(Succeed())
+
+				s := Get().Schedule
+				Expect(s.MovieRSSSync).To(Equal("5m"))
+				Expect(s.MovieMissingSearch).To(Equal("3h"))
+				Expect(s.TVMissingSearch).To(Equal("3h"))
+				Expect(s.MovieMetadataRefresh).To(Equal("48h"))
+				Expect(s.TVMetadataRefresh).To(Equal("48h"))
+				Expect(s.MovieOrphanScan).To(Equal("9h"))
+				Expect(s.TVOrphanScan).To(Equal("9h"))
+			})
+
+			It("warns, naming the old key and its replacements", func() {
+				var logs bytes.Buffer
+				GinkgoWriter.TeeTo(&logs)
+				DeferCleanup(GinkgoWriter.ClearTeeWriters)
+
+				Expect(LoadReader(
+					strings.NewReader(renamed(GinkgoT().TempDir())),
+				)).To(Succeed())
+
+				Expect(logs.String()).To(ContainSubstring("schedules.rss_sync"))
+				Expect(
+					logs.String(),
+				).To(ContainSubstring("schedules.movie_rss_sync"))
+			})
+
+			It("lets an explicitly set replacement win over the old key", func() {
+				raw := "data_dir: " + GinkgoT().TempDir() + `
+schedules:
+  missing_search: 3h
+  tv_missing_search: 30m
+`
+				Expect(LoadReader(strings.NewReader(raw))).To(Succeed())
+
+				s := Get().Schedule
+				Expect(s.TVMissingSearch).To(Equal("30m"))
+				Expect(s.MovieMissingSearch).To(Equal("3h"))
 			})
 		})
 

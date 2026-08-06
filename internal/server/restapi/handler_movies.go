@@ -119,25 +119,17 @@ func (s *Server) GetMovie(
 		}
 		result.MediaFiles = &apiFiles
 	}
-	// Cast, genres and rating are fetched live from TMDB on the detail
-	// view. A failure here (no API key, transport error) must not fail
-	// the whole response — those sections degrade to empty instead.
-	if details, derr := s.metadata.GetMovie(ctx, m.TmdbID); derr != nil {
-		slog.WarnContext(ctx, "movie detail: metadata fetch failed",
-			"movie.id", m.ID, "movie.tmdb_id", m.TmdbID, "error", derr)
-	} else {
-		if len(details.Cast) > 0 {
-			cast := castToAPI(details.Cast)
-			result.Cast = &cast
-		}
-		if len(details.Genres) > 0 {
-			genres := details.Genres
-			result.Genres = &genres
-		}
-		if details.Rating > 0 {
-			rating := details.Rating
-			result.Rating = &rating
-		}
+	if len(m.Cast) > 0 {
+		cast := storedCastToAPI(m.Cast)
+		result.Cast = &cast
+	}
+	if len(m.Genres) > 0 {
+		genres := m.Genres
+		result.Genres = &genres
+	}
+	if m.Rating > 0 {
+		rating := float32(m.Rating)
+		result.Rating = &rating
 	}
 	return GetMovie200JSONResponse(result), nil
 }
@@ -509,4 +501,21 @@ func (s *Server) SearchTMDBMovie(
 	}
 
 	return SearchTMDBMovie200JSONResponse(items), nil
+}
+
+func (s *Server) GetTMDBMovieDetail(
+	ctx context.Context,
+	request GetTMDBMovieDetailRequestObject,
+) (GetTMDBMovieDetailResponseObject, error) {
+	d, err := s.metadata.GetMovie(ctx, request.TmdbId)
+	if err != nil {
+		return GetTMDBMovieDetail500JSONResponse{
+			InternalErrorJSONResponse: errInternal(err.Error()),
+		}, nil
+	}
+	return GetTMDBMovieDetail200JSONResponse{
+		LookupDetailResponseJSONResponse: LookupDetailResponseJSONResponse(
+			toLookupDetail(movieDetailsToRequestMedia(d)),
+		),
+	}, nil
 }

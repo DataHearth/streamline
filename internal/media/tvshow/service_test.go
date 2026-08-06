@@ -2,6 +2,7 @@ package tvshow
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/datahearth/streamline/ent"
@@ -62,11 +63,15 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 				{SeasonNumber: 1, Number: 1, Title: "Pilot", AirDate: &air},
 			},
 		}, nil).Once()
+		metaMk.GetSeriesCast(mock.Anything, uint32(123)).
+			Return([]metadata.CastMember{{Name: "Ana Vidal", Character: "Iris"}}, nil).
+			Once()
 
 		storeMk.CreateTVShow(mock.Anything, mock.MatchedBy(func(p db.CreateTVShowParams) bool {
 			return p.TvdbID == 123 && p.Title == "The Black Sea" &&
 				len(p.Seasons) == 1 &&
-				len(p.Seasons[0].Episodes) == 1
+				len(p.Seasons[0].Episodes) == 1 &&
+				len(p.Cast) == 1 && p.Cast[0].Name == "Ana Vidal"
 		})).
 			Return(&ent.TVShow{ID: 7, Title: "The Black Sea", TvdbID: 123}, nil).
 			Once()
@@ -81,6 +86,61 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 		Expect(show.ID).To(Equal(uint32(7)))
 		Eventually(done).Should(BeClosed())
 	})
+
+	It("adds the show anyway when the cast fetch fails", func() {
+		metaMk.GetSeries(mock.Anything, uint32(123)).Return(&metadata.TVDetails{
+			TVResult: metadata.TVResult{TVDBID: 123, Title: "The Black Sea"},
+			Status:   "continuing",
+			Type:     metadata.SeriesStandard,
+		}, nil).Once()
+		metaMk.GetSeriesCast(mock.Anything, uint32(123)).
+			Return(nil, errors.New("tvdb down")).
+			Once()
+		storeMk.CreateTVShow(mock.Anything, mock.MatchedBy(
+			func(p db.CreateTVShowParams) bool { return len(p.Cast) == 0 },
+		)).
+			Return(&ent.TVShow{ID: 7, TvdbID: 123}, nil).
+			Once()
+
+		show, err := svc.Add(ctx, 123, "")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(show.ID).To(Equal(uint32(7)))
+	})
+
+	It("RefreshStale only visits shows past the refresh interval", func() {
+		storeMk.ListTVShowsStaleSince(
+			mock.Anything,
+			mock.AnythingOfType("time.Time"),
+		).
+			RunAndReturn(func(_ context.Context, cutoff time.Time) ([]*ent.TVShow, error) {
+				Expect(cutoff).To(BeTemporally(
+					"~", time.Now().Add(-metadataMinRefreshInterval), time.Minute,
+				))
+				return nil, nil
+			}).
+			Once()
+
+		Expect(svc.RefreshStale(ctx)).To(Succeed())
+	})
+
+	DescribeTable(
+		"seedSeasons leaves specials unmonitored unless opted in",
+		func(monitorSpecials, wantSpecialsMonitored bool) {
+			configtest.Setup(
+				map[string]any{"library.monitor_specials": monitorSpecials},
+			)
+
+			seasons := seedSeasons(&metadata.TVDetails{
+				Seasons: []metadata.SeasonInfo{{Number: 0}, {Number: 1}},
+			})
+
+			Expect(seasons[0].Number).To(Equal(uint16(0)))
+			Expect(seasons[0].Unmonitored).To(Equal(!wantSpecialsMonitored))
+			Expect(seasons[1].Unmonitored).To(BeFalse())
+		},
+		Entry("off by default", false, false),
+		Entry("opted in", true, true),
+	)
 
 	It("Add rejects the show when no quality profile resolves", func() {
 		configtest.Setup(map[string]any{
@@ -202,6 +262,7 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 		metaMk.GetSeries(mock.Anything, uint32(123)).
 			Return(&metadata.TVDetails{TVResult: metadata.TVResult{TVDBID: 123, Title: "X"}}, nil).
 			Once()
+		metaMk.GetSeriesCast(mock.Anything, uint32(123)).Return(nil, nil).Once()
 		storeMk.UpdateTVShowMetadata(mock.Anything, uint32(7), mock.Anything).
 			Return(nil).
 			Once()
@@ -231,11 +292,12 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 			Expect(v.Total).To(Equal(1))
 		})
 
-		It("never counts an unmonitored episode as missing", func() {
+		It("leaves a file-less unmonitored episode out of every count", func() {
 			show := &ent.TVShow{Edges: ent.TVShowEdges{Seasons: []*ent.Season{
 				{Number: 0, Edges: ent.SeasonEdges{Episodes: []*ent.Episode{
 					{ID: 1, Number: 1, AirDate: aired},
-					{ID: 2, Number: 2},
+					{ID: 2, Number: 2, AirDate: now.Add(24 * time.Hour)},
+					{ID: 3, Number: 3},
 				}}},
 			}}}
 
@@ -243,24 +305,49 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 			Expect(v.Missing).To(BeZero())
 			Expect(v.Available).To(BeZero())
 			Expect(v.Unaired).To(BeZero())
-			Expect(v.Total).To(Equal(2))
+			Expect(v.Total).To(BeZero())
 		})
 
-		It("still counts an unmonitored episode's file and air date", func() {
+		It("counts a downloaded unmonitored episode as available", func() {
 			show := &ent.TVShow{Edges: ent.TVShowEdges{Seasons: []*ent.Season{
 				{Number: 0, Edges: ent.SeasonEdges{Episodes: []*ent.Episode{
 					{ID: 1, Number: 1, AirDate: aired, Edges: ent.EpisodeEdges{
 						MediaFiles: []*ent.MediaFile{{ID: 1}},
 					}},
-					{ID: 2, Number: 2, AirDate: now.Add(24 * time.Hour)},
+					{ID: 2, Number: 2, AirDate: aired},
 				}}},
 			}}}
 
 			v := DeriveSeasonViews(show, now)[0]
 			Expect(v.Available).To(Equal(1))
-			Expect(v.Unaired).To(Equal(1))
+			Expect(v.Total).To(Equal(1))
 			Expect(v.Missing).To(BeZero())
 		})
+
+		It(
+			"keeps a season whole when monitored and unmonitored files mix",
+			func() {
+				show := &ent.TVShow{Edges: ent.TVShowEdges{Seasons: []*ent.Season{
+					{Number: 1, Edges: ent.SeasonEdges{Episodes: []*ent.Episode{
+						{
+							ID: 1, Number: 1, AirDate: aired, Monitored: true,
+							Edges: ent.EpisodeEdges{
+								MediaFiles: []*ent.MediaFile{{ID: 1}},
+							},
+						},
+						{ID: 2, Number: 2, AirDate: aired, Edges: ent.EpisodeEdges{
+							MediaFiles: []*ent.MediaFile{{ID: 2}},
+						}},
+						{ID: 3, Number: 3, AirDate: aired},
+					}}},
+				}}}
+
+				v := DeriveSeasonViews(show, now)[0]
+				Expect(v.Available).To(Equal(2))
+				Expect(v.Total).To(Equal(2))
+				Expect(v.Missing).To(BeZero())
+			},
+		)
 	})
 
 	Describe("FilterList status=missing", func() {

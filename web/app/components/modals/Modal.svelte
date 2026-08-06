@@ -37,8 +37,11 @@
 			"[data-autofocus]:not([disabled])",
 		);
 		if (explicit) return explicit;
+		// Readonly fields are skipped too: on a read-only instance every field
+		// is one, and focusing it plants a caret and a focus ring on something
+		// that can't be typed into.
 		const field = node.querySelector<HTMLElement>(
-			"input:not([disabled]), select:not([disabled]), textarea:not([disabled])",
+			"input:not([disabled]):not([readonly]), select:not([disabled]), textarea:not([disabled]):not([readonly])",
 		);
 		return field ?? focusableIn(node)[0] ?? null;
 	}
@@ -183,7 +186,7 @@
 				</div>
 				{#if footer}
 					<footer
-						class="flex flex-col gap-2 border-t border-border px-5 py-3.5 [&_button]:w-full [&_button]:justify-center [&_button]:whitespace-nowrap sm:flex-row sm:items-center sm:justify-end sm:[&_button]:w-auto"
+						class="flex items-center justify-end gap-2 border-t border-border px-5 py-3.5 [&_button]:flex-1 [&_button]:justify-center [&_button]:whitespace-nowrap sm:[&_button]:flex-none"
 					>
 						{@render footer()}
 					</footer>

@@ -57,15 +57,33 @@
 		</p>
 		<ul class="flex flex-col gap-2">
 			{#each preview.data?.operations ?? [] as op (op.media_file_id)}
+				<!-- Labelled rows, not an arrow: at 12px mono between two long paths the
+				     ↓ was invisible, and nothing said which one was the new name. -->
 				<li
-					class="grid grid-cols-1 gap-1 rounded-md border border-border bg-bg-card/60 p-3 text-xs"
+					class="overflow-hidden rounded-md border border-border bg-bg-card/60 text-xs"
 				>
-					<span class="font-mono text-fg-muted" title={op.from}>
-						{op.from}
-					</span>
-					<span class="font-mono text-fg" title={op.to}>
-						↓ {op.to}
-					</span>
+					<div class="flex gap-2.5 px-3 py-2">
+						<span
+							class="w-8 shrink-0 pt-px font-mono text-[9.5px] uppercase tracking-[0.14em] text-fg-faint"
+						>
+							From
+						</span>
+						<span class="min-w-0 break-all font-mono text-fg-muted" title={op.from}>
+							{op.from}
+						</span>
+					</div>
+					<div
+						class="flex gap-2.5 border-t border-border bg-accent-soft px-3 py-2"
+					>
+						<span
+							class="w-8 shrink-0 pt-px font-mono text-[9.5px] uppercase tracking-[0.14em] text-accent-text"
+						>
+							To
+						</span>
+						<span class="min-w-0 break-all font-mono text-fg" title={op.to}>
+							{op.to}
+						</span>
+					</div>
 				</li>
 			{/each}
 		</ul>

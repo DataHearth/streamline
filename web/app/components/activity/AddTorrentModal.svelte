@@ -2,6 +2,7 @@
 	import { Magnet, Upload, Info, FileText } from "@lucide/svelte";
 	import Modal from "../modals/Modal.svelte";
 	import { cn } from "../../lib/cn";
+	import { isMagnet, readTorrentFile } from "../../lib/torrent-file";
 	import type { AddTorrentRequest } from "../../lib/types";
 
 	let {
@@ -34,26 +35,22 @@
 		}
 	});
 
-	let magnetValid = $derived(magnet.trim().toLowerCase().startsWith("magnet:?"));
+	let magnetValid = $derived(isMagnet(magnet));
 	let canSubmit = $derived(
 		!busy && (source === "magnet" ? magnetValid : !!fileB64),
 	);
 
 	async function onFile(e: Event) {
 		fileErr = "";
-		const input = e.currentTarget as HTMLInputElement;
-		const f = input.files?.[0];
+		const f = (e.currentTarget as HTMLInputElement).files?.[0];
 		if (!f) return;
-		if (!f.name.toLowerCase().endsWith(".torrent")) {
-			fileErr = "Choose a .torrent file.";
-			return;
+		try {
+			const read = await readTorrentFile(f);
+			fileName = read.name;
+			fileB64 = read.base64;
+		} catch (err) {
+			fileErr = err instanceof Error ? err.message : "Could not read that file.";
 		}
-		fileName = f.name;
-		const buf = await f.arrayBuffer();
-		let binary = "";
-		const bytes = new Uint8Array(buf);
-		for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-		fileB64 = btoa(binary);
 	}
 
 	function submit() {

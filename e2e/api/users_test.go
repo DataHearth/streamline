@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/datahearth/streamline/internal/testutil/apptest"
+	"github.com/datahearth/streamline/e2e/apptest"
 )
 
 // createUser provisions a member user and schedules its removal. Cleanup is

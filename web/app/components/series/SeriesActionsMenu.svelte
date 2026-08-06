@@ -10,7 +10,7 @@
 	import SeriesKebabMenu, { type SeriesAction } from "./SeriesKebabMenu.svelte";
 	import QualityProfileModal from "../movies/QualityProfileModal.svelte";
 	import SeriesRenamePreviewModal from "./SeriesRenamePreviewModal.svelte";
-	import Dialog from "../modals/Dialog.svelte";
+	import DeleteTitleDialog from "../shared/DeleteTitleDialog.svelte";
 
 	let { show, variant = "card" }: { show: TVShow; variant?: "card" | "toolbar" } =
 		$props();
@@ -20,7 +20,6 @@
 	let qpOpen = $state(false);
 	let renameOpen = $state(false);
 	let deleteOpen = $state(false);
-	let deleteWithFilesOpen = $state(false);
 
 	const qc = useQueryClient();
 
@@ -71,7 +70,6 @@
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: ["series"] });
 			deleteOpen = false;
-			deleteWithFilesOpen = false;
 			toast.ok("Series deleted");
 		},
 		onError: (e: Error) => toast.err(e.message ?? "Delete failed"),
@@ -83,14 +81,13 @@
 		else if (a === "rename") renameOpen = true;
 		else if (a === "refresh") refresh.mutate();
 		else if (a === "delete") deleteOpen = true;
-		else if (a === "delete-with-files") deleteWithFilesOpen = true;
 	}
 </script>
 
 <SeriesKebabMenu
 	{variant}
 	{onPick}
-	disabledActions={hasFiles ? [] : ["rename", "delete-with-files"]}
+	disabledActions={hasFiles ? [] : ["rename"]}
 />
 
 <QualityProfileModal
@@ -108,35 +105,14 @@
 	onClose={() => (renameOpen = false)}
 />
 
-<Dialog
+<DeleteTitleDialog
 	open={deleteOpen}
 	title="Remove '{show.title}' from your library?"
-	body="Files on disk will be kept."
+	body="The series leaves your library. Files on disk are kept unless you say otherwise."
+	filesLabel="Also delete every downloaded episode from disk"
+	filesNote="This cannot be undone."
+	canDeleteFiles={hasFiles}
+	pending={del.isPending}
 	onClose={() => (deleteOpen = false)}
-	actions={[
-		{ label: "Cancel", variant: "ghost", autofocus: true },
-		{
-			label: "Delete",
-			variant: "danger",
-			dismiss: false,
-			pending: del.isPending,
-			onClick: () => del.mutate(false),
-		},
-	]}
-/>
-<Dialog
-	open={deleteWithFilesOpen}
-	title="Remove '{show.title}' and delete its files?"
-	body="All downloaded episode files will be deleted from disk. This cannot be undone."
-	onClose={() => (deleteWithFilesOpen = false)}
-	actions={[
-		{ label: "Cancel", variant: "ghost", autofocus: true },
-		{
-			label: "Delete + files",
-			variant: "danger",
-			dismiss: false,
-			pending: del.isPending,
-			onClick: () => del.mutate(true),
-		},
-	]}
+	onConfirm={(withFiles) => del.mutate(withFiles)}
 />

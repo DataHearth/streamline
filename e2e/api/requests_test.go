@@ -6,6 +6,8 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	"github.com/datahearth/streamline/e2e/fakes"
 )
 
 type requestView struct {
@@ -133,8 +135,34 @@ var _ = Describe("REST API requests", Label("e2e"), func() {
 		Expect(list.Items).NotTo(ContainElement(HaveField("Id", foreign.Id)))
 	})
 
-	// Approval's happy path creates the library item via TMDB, so only the
-	// RBAC guard and not-found cases are hermetic here.
+	It("approves a request and adds the movie to the library", func() {
+		created := createRequest(adminAuth, fakes.MovieTMDBID, fakes.MovieTitle)
+		DeferCleanup(func() {
+			removed := del(
+				fmt.Sprintf("/api/v1/movies/%d", libraryMovieID(fakes.MovieTMDBID)),
+				adminAuth,
+				nil,
+			)
+			defer removed.Body.Close()
+			Expect(removed.StatusCode).To(BeElementOf(
+				http.StatusNoContent, http.StatusNotFound,
+			))
+		})
+
+		approved := post(
+			fmt.Sprintf("/api/v1/requests/%d/approve", created.Id),
+			adminAuth,
+			map[string]any{"quality_profile": "default"},
+		)
+		defer approved.Body.Close()
+		Expect(approved.StatusCode).To(Equal(http.StatusOK))
+		var detail requestView
+		decode(approved, &detail)
+		Expect(detail.Status).To(Equal("approved"))
+
+		Expect(libraryMovieID(fakes.MovieTMDBID)).NotTo(BeZero())
+	})
+
 	It("403s review actions for a request_only caller", func() {
 		approved := post("/api/v1/requests/1/approve", viewerAuth, map[string]any{
 			"quality_profile": "default",
@@ -153,8 +181,6 @@ var _ = Describe("REST API requests", Label("e2e"), func() {
 		Expect(reopened.StatusCode).To(Equal(http.StatusForbidden))
 	})
 
-	// The not-found lookup runs before the TMDB library-add call, so approve
-	// 404s on an unknown id without any external dependency.
 	It("404s review actions for an unknown request", func() {
 		approved := post(
 			"/api/v1/requests/999999/approve",

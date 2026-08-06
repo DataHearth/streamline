@@ -26,6 +26,7 @@ import (
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/library/bulkimport"
 	"github.com/datahearth/streamline/internal/library/hygiene"
+	"github.com/datahearth/streamline/internal/library/pathmigrate"
 	"github.com/datahearth/streamline/internal/media/movie"
 	"github.com/datahearth/streamline/internal/media/tvshow"
 	"github.com/datahearth/streamline/internal/mediaserver"
@@ -222,6 +223,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 	seriesRenamer := tvshow.NewRenameService(
 		store, cfg.Library.SeriesPath, cfg.Library.SeriesNaming,
 	)
+	pathMigrations := pathmigrate.NewService(store)
 	imp := importer.NewWorker(importer.Deps{
 		DB:          store,
 		Library:     libSvc,
@@ -273,6 +275,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 
 	reqSvc := request.NewService(store, movieSvc, tvSvc)
 	tvMissing := rss.NewEpisodeMissingSearcher(store, indexerSvc, dlManager)
+	tvFeedScanner := rss.NewTVFeedScanner(store, indexerSvc, dlManager)
 
 	jobsToRegister := []struct {
 		name     string
@@ -296,28 +299,33 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 			func(time.Duration) scheduler.JobFunc { return imp.Scan },
 		},
 		{
-			"rss-sync",
-			cfg.Schedule.RSSSync,
+			"movie-rss-sync",
+			cfg.Schedule.MovieRSSSync,
 			func(time.Duration) scheduler.JobFunc { return jobs.RSSFeed(feedScanner) },
 		},
 		{
-			"missing-search",
-			cfg.Schedule.MissingSearch,
+			"movie-missing-search",
+			cfg.Schedule.MovieMissingSearch,
 			func(time.Duration) scheduler.JobFunc { return jobs.MissingSearch(missingSearcher) },
 		},
 		{
-			"metadata-refresh",
-			cfg.Schedule.MetadataRefresh,
+			"movie-metadata-refresh",
+			cfg.Schedule.MovieMetadataRefresh,
 			func(time.Duration) scheduler.JobFunc { return jobs.MetadataRefresh(movieSvc) },
 		},
 		{
 			"tv-missing-search",
-			cfg.Schedule.MissingSearch,
+			cfg.Schedule.TVMissingSearch,
 			func(time.Duration) scheduler.JobFunc { return jobs.MissingSearch(tvMissing) },
 		},
 		{
+			"tv-rss-sync",
+			cfg.Schedule.TVRSSSync,
+			func(time.Duration) scheduler.JobFunc { return jobs.RSSFeed(tvFeedScanner) },
+		},
+		{
 			"tv-metadata-refresh",
-			cfg.Schedule.MetadataRefresh,
+			cfg.Schedule.TVMetadataRefresh,
 			func(time.Duration) scheduler.JobFunc { return jobs.TVMetadataRefresh(tvSvc) },
 		},
 		{
@@ -326,13 +334,13 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 			func(time.Duration) scheduler.JobFunc { return jobs.Cleanup(dlManager.(download.Cleaner)) },
 		},
 		{
-			"orphan-scan",
-			cfg.Schedule.OrphanScan,
+			"movie-orphan-scan",
+			cfg.Schedule.MovieOrphanScan,
 			func(time.Duration) scheduler.JobFunc { return jobs.OrphanScan(hygieneSvc) },
 		},
 		{
-			"series-orphan-scan",
-			cfg.Schedule.OrphanScan,
+			"tv-orphan-scan",
+			cfg.Schedule.TVOrphanScan,
 			func(time.Duration) scheduler.JobFunc { return jobs.SeriesOrphanScan(hygieneSvc) },
 		},
 		{
@@ -411,6 +419,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		MetadataTV:      tvdb,
 		Posters:         postersSvc,
 		Torrents:        torrentsAPI,
+		PathMigrations:  pathMigrations,
 		AuthMiddleware:  authMW,
 		HTTPLog:         httpLogger.Middleware(httpAccessSkip),
 	})

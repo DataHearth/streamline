@@ -34,6 +34,7 @@
 		selected = false,
 		selectionActive = false,
 		onSelect,
+		onLongPress,
 		kebab,
 	}: {
 		movie: PosterMovie;
@@ -51,6 +52,9 @@
 		selected?: boolean;
 		selectionActive?: boolean;
 		onSelect?: (v: boolean) => void;
+		// Touch has no hover to reveal the checkbox with: a press and hold enters
+		// selection mode and takes this card with it.
+		onLongPress?: () => void;
 		kebab?: Snippet;
 	} = $props();
 
@@ -59,10 +63,66 @@
 
 	// While a selection is in progress the whole card becomes a selection
 	// target — clicking through to a detail page mid-triage loses the set.
+	//
+	// Capture phase, not bubble: Svelte delegates onclick to the app root, which
+	// is *above* Routify's click scope, so a bubble-phase preventDefault lands
+	// after Routify has already pushed the URL.
 	function onCardClick(e: MouseEvent) {
+		// The click that follows a long press would immediately undo it.
+		if (longPressed) {
+			longPressed = false;
+			e.preventDefault();
+			return;
+		}
 		if (!onSelect || !selectionActive) return;
 		e.preventDefault();
 		onSelect(!selected);
+	}
+
+	// ── Long press ───────────────────────────────────────────────────────────
+	// Touch only: a mouse has hover, which already reveals the checkbox. 480ms
+	// with 8px of slop, so a scroll that starts on a poster is still a scroll.
+	const HOLD_MS = 480;
+	const HOLD_SLOP = 8;
+	let holdTimer: number | null = null;
+	let holdX = 0;
+	let holdY = 0;
+	let longPressed = $state(false);
+	let holding = $state(false);
+
+	function cancelHold() {
+		holding = false;
+		if (holdTimer !== null) {
+			clearTimeout(holdTimer);
+			holdTimer = null;
+		}
+	}
+	function onPointerDown(e: PointerEvent) {
+		if (!onLongPress || selectionActive || e.pointerType === "mouse") return;
+		cancelHold();
+		holdX = e.clientX;
+		holdY = e.clientY;
+		longPressed = false;
+		holding = true;
+		holdTimer = window.setTimeout(() => {
+			holdTimer = null;
+			holding = false;
+			longPressed = true;
+			navigator.vibrate?.(10);
+			onLongPress?.();
+		}, HOLD_MS);
+	}
+	function onPointerMove(e: PointerEvent) {
+		if (holdTimer === null) return;
+		if (
+			Math.abs(e.clientX - holdX) > HOLD_SLOP ||
+			Math.abs(e.clientY - holdY) > HOLD_SLOP
+		)
+			cancelHold();
+	}
+	function onContextMenu(e: MouseEvent) {
+		// Android fires the context menu on the same gesture.
+		if (longPressed || holding) e.preventDefault();
 	}
 
 	function stop(handler?: (e: MouseEvent) => void) {
@@ -79,17 +139,23 @@
 	class={cn(
 		"group relative rounded-lg transition duration-200",
 		"hover:scale-[1.02] hover:shadow-[0_0_0_2px_var(--accent-ring),0_24px_64px_rgb(0_0_0_/0.55)]",
-		"focus-within:scale-[1.02] focus-within:shadow-[0_0_0_2px_var(--accent-ring),0_24px_64px_rgb(0_0_0_/0.55)]",
+		"has-[:focus-visible]:scale-[1.02] has-[:focus-visible]:shadow-[0_0_0_2px_var(--accent-ring),0_24px_64px_rgb(0_0_0_/0.55)]",
 		size === "sm" && "w-[120px]",
 		size === "md" && "w-full",
 		size === "lg" && "w-[200px]",
 		selected && "shadow-[0_0_0_2px_var(--accent),0_24px_64px_rgb(0_0_0_/0.55)]",
+		holding && "scale-[0.97]",
 	)}
 >
 	<a
 		href={cardHref}
-		onclick={onCardClick}
-		class="relative block aspect-[2/3] w-full overflow-hidden rounded-lg focus:outline-none"
+		onclickcapture={onCardClick}
+		onpointerdown={onPointerDown}
+		onpointermove={onPointerMove}
+		onpointerup={cancelHold}
+		onpointercancel={cancelHold}
+		oncontextmenu={onContextMenu}
+		class="relative block aspect-[2/3] w-full overflow-hidden rounded-lg [-webkit-touch-callout:none] focus:outline-none"
 	>
 		<div class="absolute inset-0 bg-bg-card"></div>
 		<div class="absolute inset-0 grid place-items-center text-fg-faint">
@@ -140,7 +206,7 @@
 				onSelect &&
 					(selectionActive
 						? "opacity-0"
-						: "group-hover:opacity-0 group-focus-within:opacity-0"),
+						: "group-hover:opacity-0 group-has-[:focus-visible]:opacity-0"),
 			)}
 		>
 			<StatusPill
@@ -169,7 +235,7 @@
 				"absolute left-2 top-2 z-10 transition",
 				selectionActive
 					? "opacity-100"
-					: "pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100",
+					: "pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-has-[:focus-visible]:pointer-events-auto group-has-[:focus-visible]:opacity-100",
 			)}
 		>
 			<SelectBox
@@ -181,7 +247,7 @@
 		</div>
 	{/if}
 
-	{#if onMonitor}
+	{#if onMonitor && !selectionActive}
 		<button
 			type="button"
 			onclick={stop(onMonitor)}
@@ -202,7 +268,7 @@
 	{/if}
 
 	<div
-		class="pointer-events-none absolute right-2 bottom-2 flex translate-y-1 gap-1 opacity-0 transition duration-200 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:translate-y-0 group-focus-within:opacity-100"
+		class="pointer-events-none absolute right-2 bottom-2 flex translate-y-1 gap-1 opacity-0 transition duration-200 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100 group-has-[:focus-visible]:pointer-events-auto group-has-[:focus-visible]:translate-y-0 group-has-[:focus-visible]:opacity-100"
 	>
 		{#if onSearch}
 			<button

@@ -104,6 +104,32 @@ export type AddSeriesRequest = {
 	preset?: MonitoringPreset;
 };
 
+// Everything the add/request modals show for a highlighted lookup result that
+// the search response itself doesn't carry. Fetched per selected title from
+// GET /search/movie/:tmdb_id and GET /series/lookup/:tvdb_id. One shape serves
+// both: movies fill runtime/release_date, series fill network/season_count.
+export type LookupDetail = {
+	overview?: string;
+	tagline?: string;
+	// Theatrical release (movie) or first air date (series), ISO yyyy-mm-dd.
+	release_date?: string;
+	// Minutes — feature length for a movie, average episode length for a series.
+	runtime?: number;
+	rating?: number;
+	vote_count?: number;
+	genres?: string[];
+	cast?: CastMember[];
+	original_language?: string;
+	tmdb_id?: number;
+	tvdb_id?: number;
+	imdb_id?: string;
+	// Series only.
+	network?: string;
+	season_count?: number;
+	episode_count?: number;
+	status?: string;
+};
+
 export type CastMember = {
 	tmdb_id?: number;
 	name: string;
@@ -234,6 +260,9 @@ export type MediaRequest = {
 	title: string;
 	status: RequestStatus;
 	reason?: string;
+	// Quality profile the requester asked for; empty means no preference. The
+	// reviewer's approve form starts here and can override it.
+	quality_profile?: string;
 	requester: RequestUser;
 	approved_by?: RequestUser;
 	created_at: string;
@@ -254,14 +283,12 @@ export type RequestCounts = {
 	available: number;
 };
 
-// Cover/synopsis fetched on demand so reviewers can judge a request.
-export type RequestMediaDetails = {
+// Cover + full metadata fetched on demand so reviewers can judge a request.
+// Extends LookupDetail with the cover, so the same LookupDetailPanel renders
+// an expanded request row and a highlighted add-modal result.
+export type RequestMediaDetails = LookupDetail & {
 	poster_url?: string;
-	overview: string;
 	year?: number;
-	rating?: number;
-	runtime?: number;
-	genres?: string[];
 };
 
 export type MovieCounts = {
@@ -320,25 +347,8 @@ export type ActivityList = {
 	next_cursor: string | null;
 };
 
-// QueueItem is the shape the cinematic dashboard expects from a future
-// /activity/queue endpoint. Until the backend lands the dashboard treats
-// an empty list as "no active downloads".
-export type QueueItem = {
-	id: number;
-	movie_id: number;
-	title: string;
-	release?: string;
-	status: "downloading" | "grabbing";
-	progress: number;
-	speed?: string;
-	eta?: string;
-	size?: string;
-	indexer?: string;
-};
-
 // Live download queue (GET /activity/queue) — DownloadRecords still in
-// flight, enriched with client telemetry. Distinct from the legacy
-// QueueItem the dashboard stubs.
+// flight, enriched with client telemetry.
 export type EpisodeRef = {
 	show_title: string;
 	season: number;
@@ -464,6 +474,10 @@ export type AuthConfig = {
 	registration_mode: "disabled" | "open" | "invite";
 	session_ttl: string;
 	oidc_default_role: UserRole;
+};
+
+export type LibraryConfig = {
+	monitor_specials: boolean;
 };
 
 export type OIDCProvider = {
@@ -723,6 +737,11 @@ export type ImportScan = {
 	updated_at: string;
 };
 
+export type ImportCounts = {
+	running: number;
+	awaiting_review: number;
+};
+
 export type ImportScanList = {
 	items: ImportScan[];
 	total: number;
@@ -814,4 +833,54 @@ export type ImportStartRequest = {
 	kind?: ImportScanKind;
 	mode: ImportMode;
 	import_mode?: ImportTransferMode | "";
+};
+
+export type MigrationRoot = "movies" | "series" | "downloads";
+
+export type PathMigrationRequest = {
+	root: MigrationRoot;
+	from?: string;
+	to: string;
+	move_files?: boolean;
+};
+
+export type PathRewrite = {
+	from: string;
+	to: string;
+};
+
+export type PathMigrationRoot = {
+	root: MigrationRoot;
+	path: string;
+	tracked: number;
+	total: number;
+};
+
+export type PathMigrationRootList = {
+	items: PathMigrationRoot[];
+};
+
+export type PathMigrationPreview = {
+	root: MigrationRoot;
+	from: string;
+	to: string;
+	total: number;
+	skipped: number;
+	can_move: boolean;
+	samples: PathRewrite[];
+};
+
+export type PathMigration = {
+	running: boolean;
+	root: string;
+	from: string;
+	to: string;
+	move_files: boolean;
+	total: number;
+	done: number;
+	skipped: number;
+	current: string;
+	error?: string;
+	started_at?: string;
+	finished_at?: string;
 };

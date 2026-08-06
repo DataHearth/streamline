@@ -18,11 +18,16 @@ exclude_dir = [
   "node_modules",
   "migrations",
 ]
+# Every build output under the watched `web` tree, or the build that writes
+# them retriggers the watcher: air then starts the binary from the previous
+# build while the next one is still linking, and the running server serves a
+# stale embedded SPA. Keep in sync with the `generates:` lists in Taskfile.yaml.
 exclude_file = [
-  "web/static/js/bundle.min.js",
   "web/static/js/docs.min.js",
-  "web/static/css/style.css",
   "web/static/css/docs.min.css",
+  "web/static/css/style.css",
+  "web/static/dist/spa.min.js",
+  "web/static/dist/spa.min.css",
 ]
 exclude_regex = ["_test\\.go$", "mocks/mock_.*\\.go$", "\\.test$"]
 include_dir = ["web", "internal", "ent", "cmd", "api"]
@@ -37,6 +42,7 @@ include_ext = [
   "css",
   "png",
   "woff2",
+  "sql",
 ]
 include_file = []
 kill_delay = "0s"

@@ -306,7 +306,9 @@ func buildSchedule(info scheduler.JobInfo, row *ent.ScheduledJob) Schedule {
 
 func isUserConfigurable(name string) bool {
 	switch name {
-	case "rss-sync", "missing-search", "metadata-refresh",
+	case "movie-rss-sync", "tv-rss-sync",
+		"movie-missing-search", "tv-missing-search",
+		"movie-metadata-refresh", "tv-metadata-refresh",
 		"download-monitor", "import-scan", "cleanup":
 		return true
 	}
@@ -315,12 +317,18 @@ func isUserConfigurable(name string) bool {
 
 func assignScheduleField(c *config.Config, name, value string) {
 	switch name {
-	case "rss-sync":
-		c.Schedule.RSSSync = value
-	case "missing-search":
-		c.Schedule.MissingSearch = value
-	case "metadata-refresh":
-		c.Schedule.MetadataRefresh = value
+	case "movie-rss-sync":
+		c.Schedule.MovieRSSSync = value
+	case "tv-rss-sync":
+		c.Schedule.TVRSSSync = value
+	case "movie-missing-search":
+		c.Schedule.MovieMissingSearch = value
+	case "tv-missing-search":
+		c.Schedule.TVMissingSearch = value
+	case "movie-metadata-refresh":
+		c.Schedule.MovieMetadataRefresh = value
+	case "tv-metadata-refresh":
+		c.Schedule.TVMetadataRefresh = value
 	case "download-monitor":
 		c.Schedule.DownloadMonitor = value
 	case "import-scan":

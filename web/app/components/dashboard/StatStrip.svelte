@@ -1,10 +1,12 @@
 <script lang="ts">
 	import { onDestroy, tick } from "svelte";
+	import { scale } from "svelte/transition";
+	import { cubicOut } from "svelte/easing";
 	import { Info, TriangleAlert } from "@lucide/svelte";
 	import ProgressBar from "../shared/ProgressBar.svelte";
 	import { cn } from "../../lib/cn";
-	import { formatBytes } from "../../lib/format";
-	import type { MovieCounts, QueueItem, DiskUsage } from "../../lib/types";
+	import { formatBytes, formatSpeed } from "../../lib/format";
+	import type { MovieCounts, QueueEntry, DiskUsage } from "../../lib/types";
 
 	let {
 		counts,
@@ -18,21 +20,23 @@
 		seriesTotal?: number;
 		monitoredMovies?: number;
 		monitoredSeries?: number;
-		queue: QueueItem[];
+		queue: QueueEntry[];
 		disks: { label: string; path: string; usage?: DiskUsage }[];
 	} = $props();
 
-	function sumSpeed(items: QueueItem[]): number {
+	// Bytes/sec across everything actually moving. Paused and importing entries
+	// carry a stale rate, so only downloading counts toward the figure.
+	function sumSpeed(items: QueueEntry[]): number {
 		let total = 0;
 		for (const q of items) {
-			if (q.status !== "downloading" || !q.speed) continue;
-			const n = parseFloat(q.speed);
-			if (!Number.isNaN(n)) total += n;
+			if (q.status !== "downloading") continue;
+			total += q.download_speed ?? 0;
 		}
 		return total;
 	}
 
 	let speed = $derived(sumSpeed(queue));
+	let speedText = $derived(formatSpeed(speed));
 
 	let probed = $derived(disks.filter((d) => d.usage));
 
@@ -60,6 +64,9 @@
 					"—",
 				),
 	);
+	// "347.9 GiB" at 28px is wider than a quarter-width tile, so the unit rides
+	// smaller on the baseline and the value keeps clear of the ⓘ button.
+	let freeParts = $derived(/^([\d.,]+)\s*(\S+)$/.exec(freeText));
 	let diskPct = $derived.by(() => {
 		if (volumes.length === 0) return 0;
 		const avg = volumes.reduce((n, u) => n + u.pct, 0) / volumes.length;
@@ -162,7 +169,13 @@
 	);
 </script>
 
-<section aria-label="Library stats" class="grid grid-cols-2 gap-3 md:grid-cols-4">
+<!-- Four across only from lg. In the tablet band the content column is 682px,
+     which makes a quarter-width tile 161px — narrower than the phone's 173px,
+     and too narrow for the movie/series sub-line. -->
+<section
+	aria-label="Library stats"
+	class="grid grid-cols-2 gap-3 lg:grid-cols-4"
+>
 	<div
 		class="relative overflow-hidden rounded-lg border border-border bg-bg-elevated px-4 py-[18px] md:px-5"
 	>
@@ -198,7 +211,7 @@
 			></span>
 		</div>
 		<div class="mt-1.5 font-mono text-[11.5px] text-fg-muted">
-			↓ {speed.toFixed(1)} MB/s
+			{speedText ? `↓ ${speedText}` : "idle"}
 		</div>
 	</div>
 
@@ -236,7 +249,7 @@
 	<div
 		class="relative rounded-lg border border-border bg-bg-elevated px-4 py-[18px] md:px-5"
 	>
-		{#if volumes.length > 1}
+		{#if volumes.length > 0}
 			<button
 				bind:this={diskBtnEl}
 				type="button"
@@ -257,6 +270,9 @@
 			{#if diskOpen}
 				<dl
 					bind:this={diskPanelEl}
+					in:scale={{ duration: 140, start: 0.94, opacity: 0, easing: cubicOut }}
+					out:scale={{ duration: 100, start: 0.96, opacity: 0, easing: cubicOut }}
+					style:transform-origin={diskAbove ? "bottom right" : "top right"}
 					onpointerenter={diskEnter}
 					onpointerleave={diskLeave}
 					class={cn(
@@ -289,8 +305,19 @@
 				</dl>
 			{/if}
 		{/if}
-		<div class="font-mono text-[28px] font-bold tabular leading-none tracking-tight">
-			{volumes.length > 0 ? freeText : "—"}
+		<div
+			class="flex items-baseline gap-1 pr-7 font-mono text-[28px] font-bold tabular leading-none tracking-tight"
+		>
+			{#if volumes.length === 0}
+				—
+			{:else if freeParts}
+				<span class="truncate">{freeParts[1]}</span>
+				<span class="shrink-0 text-[13px] font-semibold text-fg-muted">
+					{freeParts[2]}
+				</span>
+			{:else}
+				<span class="truncate">{freeText}</span>
+			{/if}
 		</div>
 		<div class="mt-2 text-[11px] uppercase tracking-[0.1em] text-fg-subtle">
 			Free

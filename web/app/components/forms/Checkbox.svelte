@@ -2,6 +2,7 @@
 	import type { Snippet } from "svelte";
 	import { Check } from "@lucide/svelte";
 	import { cn } from "../../lib/cn";
+	import { readOnlyLock } from "../../lib/config.svelte";
 
 	type Props = {
 		checked: boolean;
@@ -29,12 +30,15 @@
 		tone = "accent",
 		children,
 	}: Props = $props();
+
+	const lock = readOnlyLock();
+	let off = $derived(disabled || lock());
 </script>
 
 <label
 	class={cn(
 		"flex cursor-pointer items-start gap-2.5",
-		disabled && "cursor-not-allowed opacity-60",
+		off && "cursor-not-allowed opacity-60",
 		className,
 	)}
 >
@@ -42,7 +46,7 @@
 		type="checkbox"
 		{name}
 		{checked}
-		{disabled}
+		disabled={off}
 		onchange={(e) => onChange((e.currentTarget as HTMLInputElement).checked)}
 		class="peer sr-only"
 	/>

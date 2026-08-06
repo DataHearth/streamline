@@ -10,6 +10,7 @@ import (
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/ent/season"
 	"github.com/datahearth/streamline/ent/tvshow"
 )
@@ -210,6 +211,12 @@ func (_c *TVShowCreate) SetNillableRating(v *float64) *TVShowCreate {
 // SetGenres sets the "genres" field.
 func (_c *TVShowCreate) SetGenres(v []string) *TVShowCreate {
 	_c.mutation.SetGenres(v)
+	return _c
+}
+
+// SetCast sets the "cast" field.
+func (_c *TVShowCreate) SetCast(v []schema.CastMember) *TVShowCreate {
+	_c.mutation.SetCast(v)
 	return _c
 }
 
@@ -463,6 +470,10 @@ func (_c *TVShowCreate) createSpec() (*TVShow, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Genres(); ok {
 		_spec.SetField(tvshow.FieldGenres, field.TypeJSON, value)
 		_node.Genres = value
+	}
+	if value, ok := _c.mutation.Cast(); ok {
+		_spec.SetField(tvshow.FieldCast, field.TypeJSON, value)
+		_node.Cast = value
 	}
 	if value, ok := _c.mutation.LastRefreshedAt(); ok {
 		_spec.SetField(tvshow.FieldLastRefreshedAt, field.TypeTime, value)

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/indexer"
@@ -75,6 +76,16 @@ func movieToAPI(m *ent.Movie) Movie {
 		mov.Runtime = &rt
 	}
 	return mov
+}
+
+// storedCastToAPI renders the cast persisted on a Movie/TVShow row. Detail
+// views read cast from the DB, so nothing on that path calls a provider.
+func storedCastToAPI(cast []schema.CastMember) []CastMember {
+	out := make([]metadata.CastMember, 0, len(cast))
+	for _, c := range cast {
+		out = append(out, metadata.CastMember(c))
+	}
+	return castToAPI(out)
 }
 
 func castToAPI(cast []metadata.CastMember) []CastMember {
@@ -770,6 +781,9 @@ func requestToAPI(r *ent.Request) Request {
 	if r.Reason != "" {
 		out.Reason = &r.Reason
 	}
+	if r.QualityProfile != "" {
+		out.QualityProfile = &r.QualityProfile
+	}
 	if u := r.Edges.Requester; u != nil {
 		out.Requester = requestUserToAPI(u)
 	}
@@ -841,6 +855,9 @@ func toIndexerResult(body *SearchResult) (indexer.SearchResult, bool) {
 	}
 	if body.Leechers != nil {
 		sr.Leechers = *body.Leechers
+	}
+	if body.Indexer != nil {
+		sr.Indexer = *body.Indexer
 	}
 	return sr, true
 }

@@ -61,6 +61,23 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 	const acceptablePack = "The.Black.Sea.S03.1080p.WEB-DL.x265-GRP"
 	const acceptableEp = "The.Black.Sea.S03E01.1080p.WEB-DL.x265-GRP"
 
+	When("no download client is enabled", func() {
+		It("skips the pass after the eligibility query", func() {
+			overlay := defaultRSSConfig()
+			overlay["download_clients"] = []map[string]any{}
+			configtest.Setup(overlay)
+
+			expectEligible(
+				[]*ent.TVShow{showWith(&ent.Episode{ID: 11, Number: 1})},
+				nil,
+			)
+
+			Expect(searcher.Run(ctx)).To(Succeed())
+			// Neither the indexer nor the grabber is touched: the mocks fail the
+			// spec on any unexpected call.
+		})
+	})
+
 	When("a whole season is wanted", func() {
 		It(
 			"prefers a season pack, grabs it once, marks all episodes downloading",

@@ -344,6 +344,23 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /search/movie/{tmdb_id}:
+    parameters:
+      - $ref: "#/components/parameters/TMDBID"
+    get:
+      operationId: getTMDBMovieDetail
+      summary: Full TMDB metadata for one movie
+      description: |
+        Returns synopsis, cast, genres and external ids for a single TMDB id,
+        so the add/request flow can show a title in full before committing to
+        it. The list search stays lean; this is fetched per highlighted result.
+      tags: [movies]
+      responses:
+        "200":
+          $ref: "#/components/responses/LookupDetailResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   # ── Series (TV) ─────────────────────────────────────────
   /series:
     get:
@@ -394,6 +411,30 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /series/specials/apply:
+    post:
+      operationId: applySpecialsToExisting
+      summary: Apply the specials setting to existing series (admin)
+      description: |
+        Pushes the current library.monitor_specials value onto season 0 — and
+        its episodes — of every series already in the library. The toggle
+        itself only governs seasons seeded after it was flipped; this is the
+        catch-up for older series, in both directions.
+
+        Turning specials on skips unmonitored series; turning them off applies
+        everywhere.
+      tags: [series, admin]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        "200":
+          $ref: "#/components/responses/SpecialsMonitored"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /series/lookup:
     get:
       operationId: lookupSeries
@@ -407,6 +448,23 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/SeriesLookupResults"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /series/lookup/{tvdb_id}:
+    parameters:
+      - $ref: "#/components/parameters/TVDBID"
+    get:
+      operationId: getSeriesLookupDetail
+      summary: Full TVDB metadata for one series
+      description: |
+        Returns synopsis, cast, genres, season/episode counts and external ids
+        for a single TVDB id, so the add/request flow can show a show in full
+        before committing to it.
+      tags: [series]
+      responses:
+        "200":
+          $ref: "#/components/responses/LookupDetailResponse"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -1435,10 +1493,19 @@ paths:
         atomically swaps the in-memory secret, truncates all sessions, and
         re-issues a fresh bearer token for the caller. Every other active
         session is invalidated immediately.
+
+        On a read-only instance the secret cannot be persisted, so rotation is
+        two-step: the first call returns the generated secret with
+        `pending: true` and changes nothing, and a second call with
+        `confirmed: true` applies it once the operator has copied it into the
+        config file they manage. An unconfirmed candidate expires after five
+        minutes.
       tags: [auth, admin]
       security:
         - BearerAuth: []
         - ApiKeyAuth: []
+      requestBody:
+        $ref: "#/components/requestBodies/RotateJWTSecret"
       responses:
         "200":
           $ref: "#/components/responses/JWTRotated"
@@ -1529,6 +1596,39 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/AuthConfig"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /config/library:
+    get:
+      operationId: getConfigLibrary
+      summary: Get library configuration (admin)
+      description: |
+        Returns the runtime-editable library configuration. Changes made via
+        PATCH take effect immediately — no restart required.
+      tags: [config, admin]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        "200":
+          $ref: "#/components/responses/LibraryConfig"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    patch:
+      operationId: updateConfigLibrary
+      summary: Patch library configuration (admin)
+      tags: [config, admin]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      requestBody:
+        $ref: "#/components/requestBodies/UpdateLibraryConfig"
+      responses:
+        "200":
+          $ref: "#/components/responses/LibraryConfig"
         "403":
           $ref: "#/components/responses/Forbidden"
         "422":
@@ -2109,6 +2209,70 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /library/path-migration:
+    get:
+      operationId: GetPathMigration
+      summary: State of the running (or last) library path migration.
+      tags: [library]
+      responses:
+        "200":
+          $ref: "#/components/responses/PathMigration"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      operationId: StartPathMigration
+      summary: Re-root a library to a new path.
+      description: |
+        Rewrites every stored path under the root's current prefix to sit
+        under `to`, and points the config at the new root. With
+        `move_files` the server relocates each file first (a rename when
+        both sides share a filesystem, a copy when they don't); without it
+        the files are expected to already be there. Runs in the background
+        — poll the GET for progress.
+      tags: [library]
+      requestBody:
+        $ref: "#/components/requestBodies/StartPathMigration"
+      responses:
+        "202":
+          $ref: "#/components/responses/PathMigration"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /library/path-migration/roots:
+    get:
+      operationId: GetPathMigrationRoots
+      summary: Configured library roots and how much is stored under each.
+      description: |
+        `tracked` is the number of stored paths currently sitting under the
+        configured root. Zero on a non-empty library means the config was
+        re-pointed without the stored paths following, so a migration has to
+        be given the old prefix explicitly.
+      tags: [library]
+      responses:
+        "200":
+          $ref: "#/components/responses/PathMigrationRootList"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /library/path-migration/preview:
+    post:
+      operationId: PreviewPathMigration
+      summary: Dry run of a library path migration.
+      tags: [library]
+      requestBody:
+        $ref: "#/components/requestBodies/StartPathMigration"
+      responses:
+        "200":
+          $ref: "#/components/responses/PathMigrationPreview"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
   /activity:
     get:
       operationId: listActivity
@@ -2593,7 +2757,7 @@ components:
       name: name
       in: path
       required: true
-      description: Registered scheduled-job name (e.g. "rss-sync").
+      description: Registered scheduled-job name (e.g. "movie-rss-sync").
       schema:
         type: string
         minLength: 1
@@ -2797,6 +2961,24 @@ components:
       schema:
         type: string
 
+    TMDBID:
+      name: tmdb_id
+      in: path
+      required: true
+      description: TMDB movie id.
+      schema:
+        type: integer
+        x-go-type: uint32
+
+    TVDBID:
+      name: tvdb_id
+      in: path
+      required: true
+      description: TVDB series id.
+      schema:
+        type: integer
+        x-go-type: uint32
+
     SeasonNumber:
       name: number
       in: path
@@ -2832,6 +3014,13 @@ components:
         x-go-type: uint32
 
   requestBodies:
+    RotateJWTSecret:
+      required: false
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/RotateJWTSecretRequest"
+
     AddMovie:
       required: true
       content:
@@ -2937,6 +3126,13 @@ components:
           schema:
             $ref: "#/components/schemas/AuthConfigPatch"
 
+    UpdateLibraryConfig:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/LibraryConfigPatch"
+
     CreateOIDCProvider:
       required: true
       content:
@@ -2985,6 +3181,13 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ImportScanCreateRequest"
+
+    StartPathMigration:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/PathMigrationRequest"
 
     UpdateImportFileDecision:
       required: true
@@ -3261,6 +3464,13 @@ components:
           schema:
             $ref: "#/components/schemas/SeriesLookupResultList"
 
+    LookupDetailResponse:
+      description: Full provider metadata for one lookup result.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/LookupDetail"
+
     SeriesDeleted:
       description: Series deleted.
 
@@ -3306,6 +3516,20 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/AuthConfigView"
+
+    SpecialsMonitored:
+      description: Number of specials seasons the setting was applied to.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/SpecialsMonitoredResult"
+
+    LibraryConfig:
+      description: Current runtime-editable library configuration.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/LibraryConfigView"
 
     OIDCProvider:
       description: OIDC provider detail.
@@ -3420,6 +3644,27 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ImportScanShowList"
+
+    PathMigration:
+      description: State of a library path migration.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/PathMigration"
+
+    PathMigrationPreview:
+      description: What a library path migration would do.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/PathMigrationPreview"
+
+    PathMigrationRootList:
+      description: Configured library roots with their tracked path counts.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/PathMigrationRootList"
 
     ImportDeleted:
       description: Import scan deleted.
@@ -4595,11 +4840,31 @@ components:
 
     JWTRotated:
       type: object
-      required: [token]
       properties:
         token:
           type: string
           description: New bearer token signed with the rotated secret.
+        pending:
+          type: boolean
+          description: |
+            True when the instance is read-only: nothing has been rotated yet.
+            The generated secret is returned once, held for five minutes, and
+            applied only when the caller repeats the request with
+            `confirmed: true`.
+        secret:
+          type: string
+          description: |
+            The generated signing secret, returned only alongside `pending` so
+            the operator can write it into the config file they manage.
+
+    RotateJWTSecretRequest:
+      type: object
+      properties:
+        confirmed:
+          type: boolean
+          description: |
+            Applies the secret handed out by the preceding pending response.
+            Ignored on a writable instance, which rotates in one step.
 
     Invite:
       type: object
@@ -4828,6 +5093,34 @@ components:
           type: string
           enum: [admin, member, request_only]
 
+    SpecialsMonitoredResult:
+      type: object
+      required: [seasons_updated, monitored]
+      properties:
+        seasons_updated:
+          type: integer
+          description: Specials seasons the setting was applied to.
+        monitored:
+          type: boolean
+          description: The value applied — the current library.monitor_specials.
+
+    LibraryConfigView:
+      type: object
+      required: [monitor_specials]
+      properties:
+        monitor_specials:
+          type: boolean
+          description: |
+            Monitor season 0 (specials) when a series is added or a refresh
+            discovers the season. Applies to newly seeded seasons only.
+
+    LibraryConfigPatch:
+      type: object
+      description: Only provided fields are applied.
+      properties:
+        monitor_specials:
+          type: boolean
+
     OIDCProviderView:
       type: object
       required: [name, issuer, client_id, client_secret_set]
@@ -4998,7 +5291,7 @@ components:
       properties:
         name:
           type: string
-          description: Job identifier (e.g. "rss-sync").
+          description: Job identifier (e.g. "movie-rss-sync").
         interval:
           type: string
           description: Go duration string (e.g. "15m").
@@ -5208,6 +5501,124 @@ components:
           description: |
             Per-scan override of `library.import_mode`. Only meaningful when `mode=rename`.
             Omit (or empty) to use the global default.
+
+    PathMigrationRequest:
+      type: object
+      required: [root, to]
+      properties:
+        root:
+          type: string
+          enum: [movies, series, downloads]
+        from:
+          type: string
+          description: |
+            Current prefix to rewrite. Defaults to the root's configured
+            value, which is what the UI sends unless the operator has
+            already edited the config themselves.
+        to:
+          type: string
+        move_files:
+          type: boolean
+          default: false
+          description: |
+            Relocate each file before re-pointing its row. Rejected for the
+            `downloads` root — that data belongs to the download client.
+
+    PathMigrationRoot:
+      type: object
+      required: [root, path, tracked, total]
+      properties:
+        root:
+          type: string
+          enum: [movies, series, downloads]
+        path:
+          type: string
+          description: The currently configured root.
+        tracked:
+          type: integer
+          description: Stored paths sitting under that root.
+        total:
+          type: integer
+          description: |
+            Stored paths of that media type anywhere. `tracked == 0` while
+            `total > 0` is the signal that the configured root no longer
+            matches the database; both zero just means nothing is stored yet.
+
+    PathMigrationRootList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PathMigrationRoot"
+
+    PathRewrite:
+      type: object
+      required: [from, to]
+      properties:
+        from:
+          type: string
+        to:
+          type: string
+
+    PathMigrationPreview:
+      type: object
+      required: [root, from, to, total, skipped, can_move, samples]
+      properties:
+        root:
+          type: string
+          enum: [movies, series, downloads]
+        from:
+          type: string
+        to:
+          type: string
+        total:
+          type: integer
+        skipped:
+          type: integer
+          description: |
+            Rows whose file is not where the migration expects it (the
+            source when moving, the destination otherwise). They are left
+            untouched.
+        can_move:
+          type: boolean
+        samples:
+          type: array
+          items:
+            $ref: "#/components/schemas/PathRewrite"
+
+    PathMigration:
+      type: object
+      required:
+        [running, root, from, to, move_files, total, done, skipped, current]
+      properties:
+        running:
+          type: boolean
+        root:
+          type: string
+        from:
+          type: string
+        to:
+          type: string
+        move_files:
+          type: boolean
+        total:
+          type: integer
+        done:
+          type: integer
+        skipped:
+          type: integer
+        current:
+          type: string
+        error:
+          type: string
+        started_at:
+          type: string
+          format: date-time
+        finished_at:
+          type: string
+          format: date-time
 
     ImportScanFileDecisionRequest:
       type: object
@@ -5624,6 +6035,11 @@ components:
           enum: [pending, approved, denied, available]
         reason:
           type: string
+        quality_profile:
+          type: string
+          description: |
+            Profile the requester asked for; absent means no preference. The
+            reviewer's approve form starts here and can override it.
         requester:
           $ref: "#/components/schemas/RequestUser"
         approved_by:
@@ -5678,6 +6094,11 @@ components:
           x-go-type: uint32
         title:
           type: string
+        quality_profile:
+          type: string
+          description: |
+            Preferred profile name; omitted or empty records no preference.
+            A preference, not a promise — the reviewer can override it.
 
     DenyRequestRequest:
       type: object
@@ -5692,25 +6113,67 @@ components:
           type: string
           description: Profile name; empty or omitted uses the server default.
 
-    RequestMediaDetails:
+    LookupDetail:
       type: object
-      required: [overview]
+      description: |
+        Everything a provider knows about one lookup result beyond what the
+        search response carries. One shape serves both verticals: movies fill
+        runtime/release_date/tmdb_id, series fill network/season_count/status.
       properties:
-        poster_url:
-          type: string
         overview:
           type: string
-        year:
+        tagline:
+          type: string
+        release_date:
+          type: string
+          description: Theatrical release (movie) or first air date (series), ISO yyyy-mm-dd.
+        runtime:
           type: integer
           x-go-type: uint16
+          description: Feature length for a movie, average episode length for a series.
         rating:
           type: number
           format: float
           x-go-type: float32
-        runtime:
+        vote_count:
           type: integer
-          x-go-type: uint16
+          x-go-type: uint32
         genres:
           type: array
           items:
             type: string
+        cast:
+          type: array
+          items:
+            $ref: "#/components/schemas/CastMember"
+        original_language:
+          type: string
+        tmdb_id:
+          type: integer
+          x-go-type: uint32
+        tvdb_id:
+          type: integer
+          x-go-type: uint32
+        imdb_id:
+          type: string
+        network:
+          type: string
+        season_count:
+          type: integer
+          x-go-type: uint16
+        episode_count:
+          type: integer
+          x-go-type: uint16
+        status:
+          type: string
+
+    RequestMediaDetails:
+      allOf:
+        - $ref: "#/components/schemas/LookupDetail"
+        - type: object
+          properties:
+            poster_url:
+              type: string
+            year:
+              type: integer
+              x-go-type: uint16

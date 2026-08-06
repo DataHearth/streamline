@@ -19,6 +19,7 @@ import (
 	indexermocks "github.com/datahearth/streamline/internal/indexer/mocks"
 	bulkimportmocks "github.com/datahearth/streamline/internal/library/bulkimport/mocks"
 	librarymocks "github.com/datahearth/streamline/internal/library/mocks"
+	"github.com/datahearth/streamline/internal/library/pathmigrate"
 	moviemocks "github.com/datahearth/streamline/internal/media/movie/mocks"
 	tvshowmocks "github.com/datahearth/streamline/internal/media/tvshow/mocks"
 	mediaservermocks "github.com/datahearth/streamline/internal/mediaserver/mocks"
@@ -116,20 +117,21 @@ func newAPIKeyApp() *apiKeyApp {
 	}
 
 	rsrv := New(Deps{
-		Auth:          a.auth,
-		Movies:        a.movies,
-		Metadata:      a.metadata,
-		Indexers:      a.indexers,
-		Downloads:     a.downloads,
-		MediaServers:  a.mediaServers,
-		TVShows:       a.tvshows,
-		MetadataTV:    a.metadataTV,
-		Requests:      a.requests,
-		Torrents:      a.torrents,
-		BulkImports:   a.bulkImports,
-		Store:         a.store,
-		Renamer:       a.renamer,
-		SeriesRenamer: a.seriesRenamer,
+		Auth:           a.auth,
+		Movies:         a.movies,
+		Metadata:       a.metadata,
+		Indexers:       a.indexers,
+		Downloads:      a.downloads,
+		MediaServers:   a.mediaServers,
+		TVShows:        a.tvshows,
+		MetadataTV:     a.metadataTV,
+		Requests:       a.requests,
+		Torrents:       a.torrents,
+		BulkImports:    a.bulkImports,
+		Store:          a.store,
+		Renamer:        a.renamer,
+		SeriesRenamer:  a.seriesRenamer,
+		PathMigrations: pathmigrate.NewService(a.store),
 	})
 
 	r := chi.NewRouter()

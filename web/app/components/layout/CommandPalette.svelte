@@ -1,55 +1,15 @@
 <script lang="ts">
-	import { onMount, tick, type Component } from "svelte";
-	import { goto } from "@roxi/routify";
-	import { createQuery } from "@tanstack/svelte-query";
-	import {
-		Search,
-		LayoutDashboard,
-		Film,
-		Tv,
-		Inbox,
-		Activity,
-		Magnet,
-		FolderInput,
-		CalendarDays,
-		Settings,
-		User,
-		Users,
-		LogOut,
-		ArrowRight,
-	} from "@lucide/svelte";
-	import { api } from "../../lib/api";
-	import { auth } from "../../lib/auth.svelte";
+	import { onMount, tick } from "svelte";
+	import { Search, Film, Tv, ArrowRight } from "@lucide/svelte";
 	import { cn } from "../../lib/cn";
 	import { posterUrl, tvPosterUrl } from "../../lib/posters";
 	import Poster from "../movies/Poster.svelte";
-	import type { Movie, TVShow } from "../../lib/types";
-
-	type PageItem = {
-		kind: "page";
-		label: string;
-		path: string;
-		icon: Component;
-	};
-	type ActionItem = {
-		kind: "action";
-		label: string;
-		icon: Component;
-		run: () => void;
-	};
-	type MovieItem = {
-		kind: "movie";
-		id: number;
-		label: string;
-		year?: number;
-	};
-	type SeriesItem = {
-		kind: "series";
-		id: number;
-		label: string;
-		year?: number;
-	};
-	type Item = PageItem | ActionItem | MovieItem | SeriesItem;
+	import {
+		createSearchModel,
+		itemKindLabel,
+		searchNav,
+		type SearchItem,
+	} from "../../lib/search-model.svelte";
 
 	let open = $state(false);
 	let closing = $state(false);
@@ -58,117 +18,14 @@
 	let inputEl = $state<HTMLInputElement | null>(null);
 	let dialogEl = $state<HTMLDialogElement | null>(null);
 	let prevFocus: HTMLElement | null = null;
-	// Routify's goto resolves route PATTERNS (`/movies/[id]`), not concrete
-	// paths — passing `/movies/1` fails with "could not travel to 1".
-	let navigate!: (path: string, params?: Record<string, string>) => void;
 
-	const moviesQuery = createQuery(() => ({
-		queryKey: ["movies"],
-		queryFn: () => api<{ items: Movie[] }>("/movies?page=1&limit=500"),
-		staleTime: 30_000,
-	}));
-
-	const seriesQuery = createQuery(() => ({
-		queryKey: ["series"],
-		queryFn: () => api<{ items: TVShow[] }>("/series?page=1&limit=500"),
-		staleTime: 30_000,
-	}));
-
-	const PAGES: PageItem[] = [
-		{ kind: "page", label: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
-		{ kind: "page", label: "Movies", path: "/movies", icon: Film },
-		{ kind: "page", label: "Series", path: "/series", icon: Tv },
-		{ kind: "page", label: "Requests", path: "/requests", icon: Inbox },
-		{ kind: "page", label: "Activity", path: "/activity", icon: Activity },
-		{ kind: "page", label: "Torrents", path: "/activity/torrents", icon: Magnet },
-		{ kind: "page", label: "Imports", path: "/library/imports", icon: FolderInput },
-		{ kind: "page", label: "Calendar", path: "/calendar", icon: CalendarDays },
-		{ kind: "page", label: "Settings", path: "/settings", icon: Settings },
-		{ kind: "page", label: "Account", path: "/account", icon: User },
-	];
-
-	function pages(): PageItem[] {
-		const isAdmin = auth.user?.role === "admin";
-		// Imports is admin-only.
-		const base = PAGES.filter((p) => isAdmin || p.path !== "/library/imports");
-		if (isAdmin) {
-			base.push({
-				kind: "page",
-				label: "Users",
-				path: "/settings/users",
-				icon: Users,
-			});
-		}
-		return base;
-	}
-
-	async function signOut() {
-		try {
-			await fetch("/auth/logout", { method: "POST", credentials: "same-origin" });
-		} finally {
-			window.location.href = "/login";
-		}
-	}
-
-	function addMovie() {
-		window.dispatchEvent(new CustomEvent("streamline:open-add-movie"));
-	}
-	function addSeries() {
-		window.dispatchEvent(new CustomEvent("streamline:open-add-series"));
-	}
-
-	// request_only users request rather than add, so the labels adapt.
-	function actions(): ActionItem[] {
-		const verb = auth.canAddDirectly ? "Add" : "Request";
-		return [
-			{ kind: "action", label: `${verb} movie…`, icon: Film, run: addMovie },
-			{ kind: "action", label: `${verb} series…`, icon: Tv, run: addSeries },
-			{ kind: "action", label: "Sign out", icon: LogOut, run: signOut },
-		];
-	}
-
-	type Section = { label: string; items: Item[] };
-	let sections = $derived.by<Section[]>(() => {
-		const q = query.trim().toLowerCase();
-		const matchedPages = pages().filter((p) =>
-			p.label.toLowerCase().includes(q),
-		);
-		const matchedActions = actions().filter((a) =>
-			a.label.toLowerCase().includes(q),
-		);
-		const out: Section[] = [];
-		if (matchedPages.length)
-			out.push({ label: "Pages", items: matchedPages });
-		if (matchedActions.length)
-			out.push({ label: "Quick actions", items: matchedActions });
-		if (q.length >= 2 && moviesQuery.data) {
-			const hits: MovieItem[] = moviesQuery.data.items
-				.filter((m) => m.title.toLowerCase().includes(q))
-				.slice(0, 5)
-				.map((m) => ({
-					kind: "movie",
-					id: m.id,
-					label: m.title,
-					year: m.year,
-				}));
-			if (hits.length) out.push({ label: "Movies", items: hits });
-		}
-		if (q.length >= 2 && seriesQuery.data) {
-			const hits: SeriesItem[] = seriesQuery.data.items
-				.filter((s) => s.title.toLowerCase().includes(q))
-				.slice(0, 5)
-				.map((s) => ({
-					kind: "series",
-					id: s.id,
-					label: s.title,
-					year: s.year,
-				}));
-			if (hits.length) out.push({ label: "Series", items: hits });
-		}
-		return out;
-	});
-
-	let flat = $derived(sections.flatMap((s) => s.items));
+	// The list itself lives in lib/search-model: the phone screen and the tablet
+	// panel show the same items, ordered for touch. Here it keeps the palette's
+	// order — pages and actions first, titles under them.
+	const model = createSearchModel(() => query, {});
+	const navigateTo = searchNav();
+	let sections = $derived(model.sections);
+	let flat = $derived(model.flat);
 
 	function indexOf(sectionIdx: number, itemIdx: number): number {
 		const before = sections
@@ -234,14 +91,9 @@
 		hide();
 	}
 
-	function activate(item: Item) {
+	function activate(item: SearchItem) {
 		hide();
-		if (item.kind === "page") navigate(item.path);
-		else if (item.kind === "action") item.run();
-		else if (item.kind === "movie")
-			navigate("/movies/[id]", { id: String(item.id) });
-		else if (item.kind === "series")
-			navigate("/series/[id]", { id: String(item.id) });
+		navigateTo(item);
 	}
 
 	function onKeydown(e: KeyboardEvent) {
@@ -302,11 +154,9 @@
 	});
 
 	onMount(() => {
-		const unsubGoto = goto.subscribe((fn) => (navigate = fn));
 		window.addEventListener("keydown", onKeydown);
 		window.addEventListener("streamline:open-palette", onOpenEvent);
 		return () => {
-			unsubGoto();
 			window.removeEventListener("keydown", onKeydown);
 			window.removeEventListener("streamline:open-palette", onOpenEvent);
 		};
@@ -416,13 +266,7 @@
 							<span
 								class="font-mono text-[9.5px] uppercase tracking-[0.1em] text-fg-faint"
 							>
-								{item.kind === "page"
-									? "Navigate"
-									: item.kind === "action"
-										? "Action"
-										: item.kind === "movie"
-											? "Movie"
-											: "Series"}
+								{itemKindLabel(item)}
 							</span>
 							{#if active}
 								<ArrowRight

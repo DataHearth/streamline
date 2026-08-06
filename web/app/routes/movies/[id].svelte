@@ -5,7 +5,7 @@
 		createMutation,
 	} from "@tanstack/svelte-query";
 	import { params, goto } from "@roxi/routify";
-	import { Search, Loader2, Bookmark } from "@lucide/svelte";
+	import { Search, LoaderCircle, Bookmark } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { api } from "../../lib/api";
 	import { toast } from "../../lib/toast";
@@ -14,7 +14,6 @@
 	import MovieDetailHero from "../../components/movies/MovieDetailHero.svelte";
 	import DetailAbout from "../../components/shared/DetailAbout.svelte";
 	import MovieDetailInfo from "../../components/movies/MovieDetailInfo.svelte";
-	import MovieDetailFiles from "../../components/movies/MovieDetailFiles.svelte";
 	import MovieDetailHistory from "../../components/movies/MovieDetailHistory.svelte";
 	import MovieDetailCast from "../../components/movies/MovieDetailCast.svelte";
 	import MovieDetailSimilar from "../../components/movies/MovieDetailSimilar.svelte";
@@ -23,16 +22,15 @@
 	import ManualSearchModal from "../../components/movies/ManualSearchModal.svelte";
 	import QualityProfileModal from "../../components/movies/QualityProfileModal.svelte";
 	import RenameMoviePreviewModal from "../../components/movies/RenameMoviePreviewModal.svelte";
-	import Dialog from "../../components/modals/Dialog.svelte";
+	import DeleteTitleDialog from "../../components/shared/DeleteTitleDialog.svelte";
 
-	type Tab = "overview" | "files" | "history" | "cast";
+	type Tab = "overview" | "history" | "cast";
 	const TABS: { key: Tab; label: string }[] = [
 		{ key: "overview", label: "Overview" },
-		{ key: "files", label: "Files" },
 		{ key: "history", label: "History" },
 		{ key: "cast", label: "Cast" },
 	];
-	const VALID_TABS = new Set<Tab>(["overview", "files", "history", "cast"]);
+	const VALID_TABS = new Set<Tab>(["overview", "history", "cast"]);
 
 	let routeParams = $state<Record<string, string>>({});
 	let navigate = $state<(path: string) => void>(() => {});
@@ -83,7 +81,6 @@
 	let qpOpen = $state(false);
 	let renameOpen = $state(false);
 	let deleteOpen = $state(false);
-	let deleteWithFilesOpen = $state(false);
 
 	const qc = useQueryClient();
 	const refresh = createMutation(() => ({
@@ -152,7 +149,6 @@
 		else if (a === "rename") renameOpen = true;
 		else if (a === "refresh") refresh.mutate();
 		else if (a === "delete") deleteOpen = true;
-		else if (a === "delete-with-files") deleteWithFilesOpen = true;
 	}
 </script>
 
@@ -195,7 +191,7 @@
 				<span
 					class="inline-flex h-10 items-center gap-2 rounded-md bg-status-downloading/15 px-3 text-sm font-medium text-status-downloading"
 				>
-					<Loader2 size={14} class="animate-spin" aria-hidden="true" />
+					<LoaderCircle size={14} class="animate-spin" aria-hidden="true" />
 					Downloading…
 				</span>
 			{/if}
@@ -234,16 +230,13 @@
 				</span>
 			</button>
 
-			<MovieKebabMenu
-				onPick={onKebabPick}
-				disabledActions={hasFiles ? [] : ["rename", "delete-with-files"]}
-			/>
+			<MovieKebabMenu onPick={onKebabPick} disabledActions={hasFiles ? [] : ["rename"]} />
 		{/snippet}
 	</MovieDetailHero>
 
 	<nav
 		aria-label="Movie sections"
-		class="sticky top-14 z-10 border-b border-border bg-bg-deep/70 px-4 backdrop-blur-md saturate-150 md:px-8"
+		class="sticky top-16 z-10 border-b border-border bg-bg-deep/70 px-4 backdrop-blur-md saturate-150 md:px-8"
 	>
 		<div class="tabs-track flex w-full gap-0.5">
 			{#each TABS as t (t.key)}
@@ -271,7 +264,9 @@
 
 	<div class="w-full px-4 py-6 md:px-8">
 		{#if tab === "overview"}
-			<div class="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px] lg:gap-10">
+			<div
+				class="grid grid-cols-1 gap-6 md:grid-cols-[1fr_260px] md:gap-7 lg:grid-cols-[1fr_320px] lg:gap-10"
+			>
 				<DetailAbout
 					overview={movie.overview}
 					cast={movie.cast ?? []}
@@ -279,8 +274,6 @@
 				/>
 				<MovieDetailInfo {movie} qualityProfileName={qpName} />
 			</div>
-		{:else if tab === "files"}
-			<MovieDetailFiles files={movie.media_files ?? []} movieId={movie.id} />
 		{:else if tab === "history"}
 			<MovieDetailHistory movieId={movie.id} />
 		{:else if tab === "cast"}
@@ -288,8 +281,59 @@
 		{/if}
 	</div>
 
-	<div class="w-full px-4 pb-6 md:px-8">
+	<div class="w-full px-4 pb-24 md:px-8 md:pb-6">
 		<MovieDetailSimilar movieId={movie.id} />
+	</div>
+
+	<!-- Phone: the action row the hero gives up, pinned above the bottom nav so
+	     playing and searching are in reach from anywhere in the page. -->
+	<div
+		class="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+3.5rem)] z-30 flex items-center gap-2 border-t border-border bg-bg-elevated/95 px-3 pb-4 pt-2.5 backdrop-blur-md md:hidden"
+		aria-label="Movie actions"
+	>
+		<PlayOnMenu
+			primary
+			path={`/movies/${movie.id}/play-on`}
+			queryKey={["movie", movie.id, "play-on"]}
+			disabled={!hasFiles}
+			disabledTitle="Available after the movie has been imported"
+		/>
+
+		<button
+			type="button"
+			onclick={() => (searchOpen = true)}
+			aria-label="Manual search"
+			title="Manual search"
+			class="grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-border-strong bg-bg-elevated text-fg-muted transition active:bg-surface"
+		>
+			{#if movie.status === "downloading"}
+				<LoaderCircle size={18} class="animate-spin" aria-hidden="true" />
+			{:else}
+				<Search size={18} aria-hidden="true" />
+			{/if}
+		</button>
+
+		<button
+			type="button"
+			onclick={() => monitor.mutate(!(movie.monitored ?? false))}
+			disabled={monitor.isPending}
+			aria-pressed={movie.monitored ?? false}
+			aria-label={movie.monitored ? "Stop monitoring" : "Monitor"}
+			class={cn(
+				"grid h-11 w-11 shrink-0 place-items-center rounded-lg border transition disabled:opacity-60",
+				movie.monitored
+					? "border-accent-line bg-accent-soft text-accent-text"
+					: "border-border-strong bg-bg-elevated text-fg-muted",
+			)}
+		>
+			<Bookmark
+				size={18}
+				fill={movie.monitored ? "currentColor" : "none"}
+				aria-hidden="true"
+			/>
+		</button>
+
+		<MovieKebabMenu onPick={onKebabPick} disabledActions={hasFiles ? [] : ["rename"]} />
 	</div>
 
 	<ManualSearchModal
@@ -310,37 +354,16 @@
 		movieId={movie.id}
 		onClose={() => (renameOpen = false)}
 	/>
-	<Dialog
+	<DeleteTitleDialog
 		open={deleteOpen}
 		title="Remove '{movie.title}' from your library?"
-		body="Files on disk will be kept."
+		body="The movie leaves your library. Files on disk are kept unless you say otherwise."
+		filesLabel="Also delete the movie's files from disk"
+		filesNote="This cannot be undone."
+		canDeleteFiles={hasFiles}
+		pending={del.isPending}
 		onClose={() => (deleteOpen = false)}
-		actions={[
-			{ label: "Cancel", variant: "ghost", autofocus: true },
-			{
-				label: "Delete",
-				variant: "danger",
-				dismiss: false,
-				pending: del.isPending,
-				onClick: () => del.mutate(false),
-			},
-		]}
-	/>
-	<Dialog
-		open={deleteWithFilesOpen}
-		title="Remove '{movie.title}' and delete its files?"
-		body="{movie.media_files?.length ?? 0} file(s) will be deleted from disk. This cannot be undone."
-		onClose={() => (deleteWithFilesOpen = false)}
-		actions={[
-			{ label: "Cancel", variant: "ghost", autofocus: true },
-			{
-				label: "Delete + files",
-				variant: "danger",
-				dismiss: false,
-				pending: del.isPending,
-				onClick: () => del.mutate(true),
-			},
-		]}
+		onConfirm={(withFiles) => del.mutate(withFiles)}
 	/>
 {/if}
 

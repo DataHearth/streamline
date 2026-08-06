@@ -28,6 +28,8 @@ func (Request) Fields() []ent.Field {
 			Default("pending"),
 		field.String("reason").Optional().
 			Comment("Admin-supplied reason, e.g. on denial."),
+		field.String("quality_profile").Optional().
+			Comment("Profile the requester asked for; empty means no preference."),
 	}
 }
 

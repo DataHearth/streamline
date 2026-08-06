@@ -319,6 +319,10 @@ var (
 		{Name: "grab_failures", Type: field.TypeUint8, Default: 0},
 		{Name: "failure_reason", Type: field.TypeString, Nullable: true},
 		{Name: "quality_profile", Type: field.TypeString, Nullable: true},
+		{Name: "rating", Type: field.TypeFloat64, Nullable: true, Default: 0},
+		{Name: "genres", Type: field.TypeJSON, Nullable: true},
+		{Name: "cast", Type: field.TypeJSON, Nullable: true},
+		{Name: "last_refreshed_at", Type: field.TypeTime, Nullable: true},
 	}
 	// MoviesTable holds the schema information for the "movies" table.
 	MoviesTable = &schema.Table{
@@ -414,6 +418,7 @@ var (
 		{Name: "title", Type: field.TypeString},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"pending", "approved", "denied", "available"}, Default: "pending"},
 		{Name: "reason", Type: field.TypeString, Nullable: true},
+		{Name: "quality_profile", Type: field.TypeString, Nullable: true},
 		{Name: "request_approved_by", Type: field.TypeUint32, Nullable: true},
 		{Name: "user_requests", Type: field.TypeUint32},
 	}
@@ -425,13 +430,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "requests_users_approved_by",
-				Columns:    []*schema.Column{RequestsColumns[8]},
+				Columns:    []*schema.Column{RequestsColumns[9]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "requests_users_requests",
-				Columns:    []*schema.Column{RequestsColumns[9]},
+				Columns:    []*schema.Column{RequestsColumns[10]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -524,6 +529,7 @@ var (
 		{Name: "runtime", Type: field.TypeUint16, Nullable: true, Default: 0},
 		{Name: "rating", Type: field.TypeFloat64, Nullable: true, Default: 0},
 		{Name: "genres", Type: field.TypeJSON, Nullable: true},
+		{Name: "cast", Type: field.TypeJSON, Nullable: true},
 		{Name: "last_refreshed_at", Type: field.TypeTime, Nullable: true},
 		{Name: "quality_profile", Type: field.TypeString, Nullable: true},
 	}

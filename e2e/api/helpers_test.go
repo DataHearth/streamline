@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"time"
@@ -10,8 +11,9 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/datahearth/streamline/e2e/apptest"
+	"github.com/datahearth/streamline/e2e/fakes"
 	"github.com/datahearth/streamline/internal/auth"
-	"github.com/datahearth/streamline/internal/testutil/apptest"
 )
 
 // identity is the credential a request authenticates with; the zero value is
@@ -107,6 +109,68 @@ func del(path string, id identity, body any) *http.Response {
 func decode(resp *http.Response, out any) {
 	GinkgoHelper()
 	Expect(json.NewDecoder(resp.Body).Decode(out)).To(Succeed())
+}
+
+// bodyText drains resp for an assertion's failure description, so a status
+// mismatch reports the error payload instead of just the number. It consumes
+// the body — call it only where the response is otherwise finished with.
+func bodyText(resp *http.Response) string {
+	GinkgoHelper()
+	raw, err := io.ReadAll(resp.Body)
+	Expect(err).NotTo(HaveOccurred())
+	return string(raw)
+}
+
+// libraryMovieID resolves a library movie by its TMDB id, returning 0 when the
+// movie is not in the library.
+func libraryMovieID(tmdbID uint32) uint32 {
+	GinkgoHelper()
+	resp := get("/api/v1/movies?page=1&limit=100", adminAuth)
+	defer resp.Body.Close()
+	Expect(resp.StatusCode).To(Equal(http.StatusOK))
+	var page struct {
+		Items []struct {
+			Id     uint32 `json:"id"`
+			TmdbId uint32 `json:"tmdb_id"`
+		} `json:"items"`
+		Total uint32 `json:"total"`
+	}
+	decode(resp, &page)
+	// A miss must mean "not in the library", never "on a later page".
+	Expect(page.Total).To(BeNumerically("<=", 100))
+	for _, m := range page.Items {
+		if m.TmdbId == tmdbID {
+			return m.Id
+		}
+	}
+	return 0
+}
+
+// createLibraryMovie adds the canned TMDB fake movie to the library and
+// schedules its removal, returning the library id.
+func createLibraryMovie() uint32 {
+	GinkgoHelper()
+	resp := post("/api/v1/movies", adminAuth, map[string]any{
+		"tmdb_id": fakes.MovieTMDBID,
+	})
+	defer resp.Body.Close()
+	Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+	var movie struct {
+		Id uint32 `json:"id"`
+	}
+	decode(resp, &movie)
+	DeferCleanup(func() {
+		removed := del(
+			fmt.Sprintf("/api/v1/movies/%d", movie.Id),
+			adminAuth,
+			nil,
+		)
+		defer removed.Body.Close()
+		Expect(removed.StatusCode).To(BeElementOf(
+			http.StatusNoContent, http.StatusNotFound,
+		))
+	})
+	return movie.Id
 }
 
 // bootstrapIdentities logs the seed admin in, provisions a request_only user,

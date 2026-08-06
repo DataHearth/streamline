@@ -61,6 +61,7 @@ func (s *Service) Create(
 	mediaID uint32,
 	title string,
 	requesterID uint32,
+	qualityProfile string,
 ) (*ent.Request, error) {
 	ctx, span := tracer.Start(ctx, "request.create",
 		trace.WithAttributes(
@@ -87,10 +88,11 @@ func (s *Service) Create(
 		}
 	}
 	return s.db.CreateRequest(ctx, db.CreateRequestParams{
-		MediaType:   mediaType,
-		MediaID:     mediaID,
-		Title:       title,
-		RequesterID: requesterID,
+		MediaType:      mediaType,
+		MediaID:        mediaID,
+		Title:          title,
+		RequesterID:    requesterID,
+		QualityProfile: qualityProfile,
 	})
 }
 
@@ -171,6 +173,7 @@ type Manager interface {
 		mediaID uint32,
 		title string,
 		requesterID uint32,
+		qualityProfile string,
 	) (*ent.Request, error)
 	Approve(
 		ctx context.Context,

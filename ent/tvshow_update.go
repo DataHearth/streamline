@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqljson"
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/predicate"
+	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/ent/season"
 	"github.com/datahearth/streamline/ent/tvshow"
 )
@@ -306,6 +307,24 @@ func (_u *TVShowUpdate) ClearGenres() *TVShowUpdate {
 	return _u
 }
 
+// SetCast sets the "cast" field.
+func (_u *TVShowUpdate) SetCast(v []schema.CastMember) *TVShowUpdate {
+	_u.mutation.SetCast(v)
+	return _u
+}
+
+// AppendCast appends value to the "cast" field.
+func (_u *TVShowUpdate) AppendCast(v []schema.CastMember) *TVShowUpdate {
+	_u.mutation.AppendCast(v)
+	return _u
+}
+
+// ClearCast clears the value of the "cast" field.
+func (_u *TVShowUpdate) ClearCast() *TVShowUpdate {
+	_u.mutation.ClearCast()
+	return _u
+}
+
 // SetLastRefreshedAt sets the "last_refreshed_at" field.
 func (_u *TVShowUpdate) SetLastRefreshedAt(v time.Time) *TVShowUpdate {
 	_u.mutation.SetLastRefreshedAt(v)
@@ -540,6 +559,17 @@ func (_u *TVShowUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.GenresCleared() {
 		_spec.ClearField(tvshow.FieldGenres, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.Cast(); ok {
+		_spec.SetField(tvshow.FieldCast, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedCast(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, tvshow.FieldCast, value)
+		})
+	}
+	if _u.mutation.CastCleared() {
+		_spec.ClearField(tvshow.FieldCast, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.LastRefreshedAt(); ok {
 		_spec.SetField(tvshow.FieldLastRefreshedAt, field.TypeTime, value)
@@ -894,6 +924,24 @@ func (_u *TVShowUpdateOne) ClearGenres() *TVShowUpdateOne {
 	return _u
 }
 
+// SetCast sets the "cast" field.
+func (_u *TVShowUpdateOne) SetCast(v []schema.CastMember) *TVShowUpdateOne {
+	_u.mutation.SetCast(v)
+	return _u
+}
+
+// AppendCast appends value to the "cast" field.
+func (_u *TVShowUpdateOne) AppendCast(v []schema.CastMember) *TVShowUpdateOne {
+	_u.mutation.AppendCast(v)
+	return _u
+}
+
+// ClearCast clears the value of the "cast" field.
+func (_u *TVShowUpdateOne) ClearCast() *TVShowUpdateOne {
+	_u.mutation.ClearCast()
+	return _u
+}
+
 // SetLastRefreshedAt sets the "last_refreshed_at" field.
 func (_u *TVShowUpdateOne) SetLastRefreshedAt(v time.Time) *TVShowUpdateOne {
 	_u.mutation.SetLastRefreshedAt(v)
@@ -1158,6 +1206,17 @@ func (_u *TVShowUpdateOne) sqlSave(ctx context.Context) (_node *TVShow, err erro
 	}
 	if _u.mutation.GenresCleared() {
 		_spec.ClearField(tvshow.FieldGenres, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.Cast(); ok {
+		_spec.SetField(tvshow.FieldCast, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedCast(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, tvshow.FieldCast, value)
+		})
+	}
+	if _u.mutation.CastCleared() {
+		_spec.ClearField(tvshow.FieldCast, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.LastRefreshedAt(); ok {
 		_spec.SetField(tvshow.FieldLastRefreshedAt, field.TypeTime, value)

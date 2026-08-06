@@ -107,7 +107,7 @@
 {/snippet}
 
 <tr class="transition hover:bg-bg-card">
-	<td class="px-4 py-3 align-top">
+	<td class="hidden px-4 py-3 align-top md:table-cell">
 		<p
 			class="break-all font-mono text-[13px] text-fg"
 			title={file.source_path}
@@ -133,11 +133,8 @@
 				{/if}
 			{/if}
 		</p>
-	</td>
-
-	<td class="px-4 py-3 align-top">
 		<span
-			class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"
+			class="mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold md:hidden"
 			style:color="var(--status-{cls.kind})"
 			style:background-color="color-mix(in srgb, var(--status-{cls.kind}) 14%, transparent)"
 		>
@@ -146,7 +143,21 @@
 		</span>
 	</td>
 
-	<td class="px-4 py-3 align-top">
+	<td class="hidden px-4 py-3 align-top md:table-cell">
+		<span
+			class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"
+			style:color="var(--status-{cls.kind})"
+			style:background-color="color-mix(in srgb, var(--status-{cls.kind}) 14%, transparent)"
+			title={file.classification === "existing"
+				? "Movie already in the library — committing replaces its current file"
+				: undefined}
+		>
+			<cls.Icon size={13} aria-hidden="true" />
+			{cls.label}
+		</span>
+	</td>
+
+	<td class="hidden px-4 py-3 align-top md:table-cell">
 		{#if file.outcome === "created"}
 			<span class="inline-flex items-center gap-1 text-xs font-semibold text-status-available">
 				<CircleCheckBig size={13} aria-hidden="true" />

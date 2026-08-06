@@ -34,6 +34,10 @@ tasks:
       - web/static/**
       - web/app/index.html
       - web/api_docs.html
+      # Embedded too (internal/db/migrations.go). Editing a .sql without this
+      # leaves the binary carrying the previous migration, which surfaces as a
+      # dirty schema_migrations row rather than as a stale build.
+      - internal/db/migrations/**
     generates:
       - "{{.BINARY}}"
 
@@ -89,10 +93,18 @@ tasks:
       {{.}}{{end}}" {{.CLI_ARGS}}
 
   test:e2e:
-    desc: Run e2e browser tests
+    desc: Run hermetic e2e tests (API + web; container-backed specs excluded)
     deps: [build:js, build:css]
-    cmd: go tool ginkgo run -r --keep-going --label-filter="e2e{{with .LABEL_FILTER}} &&
-      {{.}}{{end}}" --timeout=1m15s {{.CLI_ARGS}}
+    cmd: go tool ginkgo run -r --keep-going --label-filter="e2e && !containers{{with
+      .LABEL_FILTER}} && {{.}}{{end}}" --timeout=1m15s {{.CLI_ARGS}}
+
+  test:e2e:containers:
+    desc: Run container-backed e2e tests (needs Docker)
+    deps: [build:js, build:css]
+    env:
+      STREAMLINE_E2E_CONTAINERS: "1"
+    cmd: go tool ginkgo run -r --keep-going --label-filter="e2e && containers{{with
+      .LABEL_FILTER}} && {{.}}{{end}}" --timeout=5m {{.CLI_ARGS}}
 
   test:coverage:
     desc: Run unit + integration tests with coverage report (e2e excluded, generated code filtered)

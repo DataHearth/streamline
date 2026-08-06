@@ -7,6 +7,7 @@
 	import TogglePill from "../../forms/TogglePill.svelte";
 	import TypePicker from "../../forms/TypePicker.svelte";
 	import BrandLogo from "../BrandLogo.svelte";
+	import { readOnlyLock } from "../../../lib/config.svelte";
 	import type { DownloadClientType, DownloadClientAuth } from "../../../lib/types";
 
 	type Values = {
@@ -29,6 +30,8 @@
 	};
 
 	let { form, isEdit = false }: Props = $props();
+
+	const lock = readOnlyLock();
 
 	const TYPES: { type: DownloadClientType; label: string }[] = [
 		{ type: "qbittorrent", label: "qBittorrent" },
@@ -143,13 +146,14 @@
 						>
 						{#each [{ v: "password" as const, l: "Username & password" }, { v: "api_key" as const, l: "API key" }] as o}
 							<label
-								class="inline-flex h-9 cursor-pointer items-center rounded-md border border-border bg-bg-card px-3 text-xs font-medium text-fg-muted transition hover:border-border-strong has-[:checked]:border-accent has-[:checked]:bg-accent-soft has-[:checked]:text-fg"
+								class="inline-flex h-9 cursor-pointer items-center rounded-md border border-border bg-bg-card px-3 text-xs font-medium text-fg-muted transition hover:border-border-strong has-[:checked]:border-accent has-[:checked]:bg-accent-soft has-[:checked]:text-fg has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60"
 							>
 								<input
 									type="radio"
 									name={field.name}
 									value={o.v}
 									checked={field.state.value === o.v}
+									disabled={lock()}
 									onchange={() => field.handleChange(o.v)}
 									class="sr-only"
 								/>
@@ -244,7 +248,8 @@
 								field.handleChange(raw === "" ? undefined : Number(raw));
 							}}
 							onblur={() => field.handleBlur()}
-							class="h-9 w-16 rounded-md border bg-bg-elevated px-2 text-center text-sm text-fg focus-visible:outline-2 focus-visible:outline-accent"
+							readonly={lock()}
+							class="h-9 w-16 rounded-md border bg-bg-elevated px-2 text-center text-sm text-fg focus-visible:outline-2 focus-visible:outline-accent read-only:cursor-not-allowed read-only:opacity-70"
 							class:border-status-failed={errors.length > 0}
 							class:border-border={errors.length === 0}
 						/>

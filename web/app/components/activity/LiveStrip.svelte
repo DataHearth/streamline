@@ -72,8 +72,11 @@
 	});
 </script>
 
+<!-- The tiles and the sparkline are the md-and-up reading. Below that the four
+     numbers collapse into TouchStatLine's single row: the sparkline needs width
+     to say anything, and 390px isn't it. -->
 <div
-	class="mb-4 grid grid-cols-2 items-center gap-4 rounded-lg border border-border bg-bg-elevated px-5 py-4 sm:grid-cols-4 lg:grid-cols-[repeat(4,auto)_1fr]"
+	class="mb-4 hidden grid-cols-2 items-center gap-4 rounded-lg border border-border bg-bg-elevated px-5 py-4 sm:grid-cols-4 md:grid lg:grid-cols-[repeat(4,auto)_1fr]"
 >
 	<div>
 		<div class="text-2xl font-bold tabular-nums text-fg">{active}</div>

@@ -13,8 +13,9 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/datahearth/streamline/e2e/apptest"
+	"github.com/datahearth/streamline/e2e/fakes"
 	"github.com/datahearth/streamline/internal/auth"
-	"github.com/datahearth/streamline/internal/testutil/apptest"
 )
 
 var (
@@ -103,6 +104,29 @@ func seedQualityProfile(name string) {
 	DeferCleanup(func() { deleteQualityProfile(name) })
 }
 
+// seedMovie adds the TMDB fake's canned movie and returns its library id, so a
+// spec can drive the UI against a populated library without going through the
+// add flow it isn't testing. Removal is registered before the caller's first
+// assertion: the empty-library specs share this app.
+func seedMovie() uint32 {
+	GinkgoHelper()
+	var movie struct {
+		ID uint32 `json:"id"`
+	}
+	Expect(apiDo(http.MethodPost, "/api/v1/movies", map[string]any{
+		"tmdb_id": fakes.MovieTMDBID,
+	}, &movie)).To(Equal(http.StatusCreated))
+	DeferCleanup(func() {
+		Expect(apiDo(
+			http.MethodDelete,
+			fmt.Sprintf("/api/v1/movies/%d", movie.ID),
+			nil,
+			nil,
+		)).To(Equal(http.StatusNoContent))
+	})
+	return movie.ID
+}
+
 // revokeInvitesFor deletes every invite bound to email — keyed by email
 // because the UI never reveals the id of the invite it just created.
 func revokeInvitesFor(email string) {
@@ -172,6 +196,43 @@ func expectToast(page *rod.Page, title string) {
 			}
 			return fmt.Sprintf("expected a toast titled %q, got %q", title, shown)
 		})
+}
+
+// visibleElements returns only the matches that are actually rendered. The
+// responsive rework ships a phone and a desktop variant of several landmarks —
+// two asides labelled "Primary navigation", two navs labelled "Movie status" —
+// both present in the DOM and gated purely by CSS. Specs run at 1440px, so the
+// phone twin is the hidden one, and it sorts first.
+func visibleElements(page *rod.Page, selector string) rod.Elements {
+	GinkgoHelper()
+	var out rod.Elements
+	for _, el := range page.MustElements(selector) {
+		if el.MustVisible() {
+			out = append(out, el)
+		}
+	}
+	return out
+}
+
+// visibleElement is visibleElements for the single-match case. It polls: the
+// variant that wins is decided by CSS, which is not settled on the first paint.
+// Reaching for MustElement instead hands back whichever copy sorts first, and
+// clicking a hidden one just burns the page budget into a deadline error.
+func visibleElement(page *rod.Page, selector string) *rod.Element {
+	GinkgoHelper()
+	var found *rod.Element
+	Eventually(func() bool {
+		matches := visibleElements(page, selector)
+		if len(matches) == 0 {
+			return false
+		}
+		found = matches[0]
+		return true
+	}).
+		WithTimeout(5*time.Second).
+		WithPolling(50*time.Millisecond).
+		Should(BeTrue(), "no visible element matched %q", selector)
+	return found
 }
 
 // expectPath waits for the client-side router to commit path. Routify paints

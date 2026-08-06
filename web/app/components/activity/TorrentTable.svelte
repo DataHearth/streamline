@@ -2,14 +2,22 @@
 	import { Magnet, ChevronUp, ChevronDown } from "@lucide/svelte";
 	import { cn } from "../../lib/cn";
 	import TorrentRow from "./TorrentRow.svelte";
+	import type { SortOrder, TorrentSortKey } from "../../lib/activity-touch";
 	import type { Torrent } from "../../lib/types";
 
+	// The md-and-up reading of the torrent list; below that TorrentTouchList takes
+	// over. Sorting is the route's state, not this component's: the headers set it
+	// here and the filter sheet's chips set it below lg, so the table and the touch
+	// list can never disagree about the order.
 	let {
 		rows,
 		loading,
 		error = null,
 		canControl = false,
 		selectedHash = null,
+		sort,
+		order,
+		onSortChange,
 		onOpen,
 	}: {
 		rows: Torrent[];
@@ -17,82 +25,69 @@
 		error?: Error | null;
 		canControl?: boolean;
 		selectedHash?: string | null;
+		sort: TorrentSortKey;
+		order: SortOrder;
+		onSortChange: (sort: TorrentSortKey, order: SortOrder) => void;
 		onOpen: (hash: string) => void;
 	} = $props();
-
-	type SortKey =
-		| "status"
-		| "name"
-		| "progress"
-		| "size"
-		| "download_speed"
-		| "upload_speed"
-		| "ratio"
-		| "seeds";
 
 	// `grow` marks the column that absorbs the leftover width. Paired with
 	// `max-w-0` on the cell it lets the name truncate instead of forcing the
 	// table past its container and spawning a horizontal scrollbar.
+	//
+	// `hide` is a container query, not a viewport one: the tablet band leaves this
+	// table ~630px whatever the viewport says. Nine columns don't fit that, so
+	// Size, Ratio and Seeds/Peers drop out and Down / Up collapse into one stacked
+	// cell — everything they carried is in the detail the row already opens.
 	const HEADERS: {
 		label: string;
-		key?: SortKey;
+		key?: TorrentSortKey;
 		numeric?: boolean;
 		grow?: boolean;
+		hide?: string;
 	}[] = [
 		{ label: "Status", key: "status" },
 		{ label: "Name", key: "name", grow: true },
 		{ label: "Progress", key: "progress", numeric: true },
-		{ label: "Size", key: "size", numeric: true },
-		{ label: "Down", key: "download_speed", numeric: true },
-		{ label: "Up", key: "upload_speed", numeric: true },
-		{ label: "Ratio", key: "ratio", numeric: true },
-		{ label: "Seeds/Peers", key: "seeds", numeric: true },
+		{ label: "↓ / ↑", hide: "@3xl:hidden" },
+		{
+			label: "Down",
+			key: "download_speed",
+			numeric: true,
+			hide: "hidden @3xl:table-cell",
+		},
+		{
+			label: "Up",
+			key: "upload_speed",
+			numeric: true,
+			hide: "hidden @3xl:table-cell",
+		},
+		{ label: "Size", key: "size", numeric: true, hide: "hidden @3xl:table-cell" },
+		{ label: "Ratio", key: "ratio", numeric: true, hide: "hidden @4xl:table-cell" },
+		{
+			label: "Seeds/Peers",
+			key: "seeds",
+			numeric: true,
+			hide: "hidden @4xl:table-cell",
+		},
 		{ label: "" },
 	];
 
-	// Default order: what needs attention first. Live transfers on top, then the
-	// stuck ones, then anything merely seeding or done — progress descending
-	// within each group, so the nearly-finished sit above the just-started.
-	const STATUS_RANK: Record<string, number> = {
-		downloading: 0,
-		stalled: 1,
-		paused: 2,
-		seeding: 3,
-		completed: 4,
-	};
-
-	let sort = $state<SortKey>("status");
-	let order = $state<"asc" | "desc">("asc");
-
-	function toggleSort(key: SortKey, numeric: boolean) {
+	function toggleSort(key: TorrentSortKey, numeric: boolean) {
 		if (sort === key) {
-			order = order === "asc" ? "desc" : "asc";
+			onSortChange(key, order === "asc" ? "desc" : "asc");
 			return;
 		}
-		sort = key;
 		// Numbers read best largest-first; names and statuses ascending.
-		order = numeric ? "desc" : "asc";
+		onSortChange(key, numeric ? "desc" : "asc");
 	}
-
-	function compare(a: Torrent, b: Torrent): number {
-		if (sort === "status") {
-			const d = (STATUS_RANK[a.status] ?? 9) - (STATUS_RANK[b.status] ?? 9);
-			if (d !== 0) return d;
-			return (b.progress ?? 0) - (a.progress ?? 0);
-		}
-		if (sort === "name") return a.name.localeCompare(b.name);
-		return ((a[sort] as number) ?? 0) - ((b[sort] as number) ?? 0);
-	}
-
-	let sortedRows = $derived.by(() => {
-		const out = [...rows].sort(compare);
-		return order === "desc" ? out.reverse() : out;
-	});
 </script>
 
-<div class="overflow-x-auto rounded-lg border border-border bg-bg-elevated">
+<div
+	class="@container hidden overflow-x-auto rounded-lg border border-border bg-bg-elevated md:block"
+>
 	{#if loading}
-		<table class="w-full min-w-[700px] border-collapse text-left">
+		<table class="w-full min-w-[520px] border-collapse text-left">
 			<tbody>
 				{#each Array(5) as _, i (i)}
 					<tr class="border-b border-border">
@@ -135,7 +130,7 @@
 			</p>
 		</div>
 	{:else}
-		<table class="w-full min-w-[700px] border-collapse text-left">
+		<table class="w-full min-w-[520px] border-collapse text-left">
 			<thead
 				class="sticky top-0 z-10 bg-surface text-[10px] uppercase tracking-[0.12em] text-fg-faint"
 			>
@@ -153,6 +148,7 @@
 								// Every other column shrinks to its content so the
 								// name column keeps the remainder.
 								h.grow ? "w-full max-w-0" : "w-px whitespace-nowrap",
+								h.hide,
 							)}
 						>
 							{#if h.key}
@@ -168,17 +164,9 @@
 									{h.label}
 									{#if sort === h.key}
 										{#if order === "asc"}
-											<ChevronUp
-												size={11}
-												class="shrink-0"
-												aria-hidden="true"
-											/>
+											<ChevronUp size={11} class="shrink-0" aria-hidden="true" />
 										{:else}
-											<ChevronDown
-												size={11}
-												class="shrink-0"
-												aria-hidden="true"
-											/>
+											<ChevronDown size={11} class="shrink-0" aria-hidden="true" />
 										{/if}
 									{/if}
 								</button>
@@ -190,7 +178,7 @@
 				</tr>
 			</thead>
 			<tbody>
-				{#each sortedRows as t (t.hash)}
+				{#each rows as t (t.hash)}
 					<TorrentRow torrent={t} selected={selectedHash === t.hash} {onOpen} />
 				{/each}
 			</tbody>

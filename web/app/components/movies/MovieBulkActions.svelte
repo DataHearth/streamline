@@ -3,7 +3,7 @@
 	import {
 		Bookmark,
 		BookmarkX,
-		Search,
+		Radar,
 		SlidersHorizontal,
 		RefreshCw,
 		Trash2,
@@ -11,11 +11,17 @@
 	import { api } from "../../lib/api";
 	import { toast } from "../../lib/toast";
 	import { runBulk, plural } from "../../lib/bulk";
+	import { formatBytes } from "../../lib/format";
 	import BulkActionBar from "../shared/BulkActionBar.svelte";
+	import BulkTouchBar from "../shared/BulkTouchBar.svelte";
+	import type {
+		TouchAction,
+		TouchMenuRow,
+	} from "../shared/BulkTouchBar.svelte";
 	import KebabMenu from "../shared/KebabMenu.svelte";
 	import type { KebabItem } from "../shared/KebabMenu.svelte";
 	import QualityProfileModal from "./QualityProfileModal.svelte";
-	import Dialog from "../modals/Dialog.svelte";
+	import DeleteTitleDialog from "../shared/DeleteTitleDialog.svelte";
 	import type { Movie, QualityProfile } from "../../lib/types";
 
 	let {
@@ -40,10 +46,15 @@
 	let fileCount = $derived(
 		picked.reduce((n, m) => n + (m.media_files?.length ?? 0), 0),
 	);
-
+	let pickedBytes = $derived(
+		picked.reduce(
+			(n, m) => n + (m.media_files ?? []).reduce((s, f) => s + f.size, 0),
+			0,
+		),
+	);
+	let monitoredPicked = $derived(picked.filter((m) => m.monitored).length);
 	let qpOpen = $state(false);
 	let deleteOpen = $state(false);
-	let deleteWithFilesOpen = $state(false);
 	let busy = $state(false);
 
 	const qc = useQueryClient();
@@ -112,7 +123,6 @@
 			() => {
 				qc.invalidateQueries({ queryKey: ["movies", "counts"] });
 				deleteOpen = false;
-				deleteWithFilesOpen = false;
 			},
 		);
 	}
@@ -126,29 +136,81 @@
 		},
 		{
 			key: "delete",
-			label: "Remove from library",
+			label: "Remove from library…",
 			icon: Trash2,
 			danger: true,
 			dividerBefore: true,
 			onSelect: () => (deleteOpen = true),
 		},
-		{
-			key: "delete-with-files",
-			label: "Remove + delete files",
-			icon: Trash2,
-			danger: true,
-			disabled: fileCount === 0,
-			title: fileCount === 0 ? "No files on disk" : undefined,
-			onSelect: () => (deleteWithFilesOpen = true),
-		},
 	]);
 
 	const btn =
 		"inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border border-border bg-bg-elevated px-3 text-[12.5px] font-medium text-fg-muted transition hover:border-border-strong hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring disabled:cursor-not-allowed disabled:opacity-50";
+
+	// Phone: three cells and a More sheet. Monitor / Search are the everyday
+	// pair; Delete keeps its confirm dialog, so the cell is a route to it, not
+	// the deletion itself.
+	let touchActions = $derived<TouchAction[]>([
+		{
+			key: "monitor",
+			label: "Monitor",
+			icon: Bookmark,
+			onSelect: () => setMonitored(true),
+		},
+		{ key: "search", label: "Search", icon: Radar, onSelect: searchNow },
+	]);
+
+	let touchMenu = $derived<TouchMenuRow[]>([
+		{
+			key: "monitor",
+			label: "Monitor",
+			icon: Bookmark,
+			line: `${monitoredPicked} of ${count} already monitored`,
+			onSelect: () => setMonitored(true),
+		},
+		{
+			key: "unmonitor",
+			label: "Stop monitoring",
+			icon: BookmarkX,
+			onSelect: () => setMonitored(false),
+		},
+		{
+			key: "search",
+			label: "Search for releases",
+			icon: Radar,
+			line: "queues one search per title",
+			onSelect: searchNow,
+		},
+		{
+			key: "quality",
+			label: "Change quality profile",
+			icon: SlidersHorizontal,
+			onSelect: () => (qpOpen = true),
+		},
+		{
+			key: "refresh",
+			label: "Refresh metadata",
+			icon: RefreshCw,
+			onSelect: refresh,
+		},
+		{
+			key: "delete",
+			label: "Remove from library…",
+			icon: Trash2,
+			danger: true,
+			dividerBefore: true,
+			line:
+				fileCount === 0
+					? "no files on disk"
+					: `deleting the files frees ${formatBytes(pickedBytes, "0 B")}`,
+			onSelect: () => (deleteOpen = true),
+		},
+	]);
 </script>
 
 {#if active}
-	<BulkActionBar {count} {total} {busy} noun="title" {onSelectAll} {onClear}>
+	<div class="hidden md:block">
+		<BulkActionBar {count} {total} {busy} noun="title" {onSelectAll} {onClear}>
 		<button
 			type="button"
 			disabled={busy}
@@ -168,7 +230,7 @@
 			Unmonitor
 		</button>
 		<button type="button" disabled={busy} onclick={searchNow} class={btn}>
-			<Search size={14} aria-hidden="true" />
+			<Radar size={14} aria-hidden="true" />
 			Search
 		</button>
 		<button
@@ -180,8 +242,17 @@
 			<SlidersHorizontal size={14} aria-hidden="true" />
 			Quality
 		</button>
-		<KebabMenu items={menuItems} variant="bar" />
-	</BulkActionBar>
+			<KebabMenu items={menuItems} variant="bar" />
+		</BulkActionBar>
+	</div>
+
+	<BulkTouchBar
+		{count}
+		{busy}
+		noun="title"
+		actions={touchActions}
+		menu={touchMenu}
+	/>
 {/if}
 
 <QualityProfileModal
@@ -191,35 +262,14 @@
 	onClose={() => (qpOpen = false)}
 	onSave={saveProfile}
 />
-<Dialog
+<DeleteTitleDialog
 	open={deleteOpen}
 	title="Remove {plural(count, 'title')} from your library?"
-	body="Files on disk will be kept."
+	body="The titles leave your library. Files on disk are kept unless you say otherwise."
+	filesLabel="Also delete {plural(fileCount, 'file')} from disk"
+	filesNote="Frees {formatBytes(pickedBytes, '0 B')} · cannot be undone."
+	canDeleteFiles={fileCount > 0}
+	pending={busy}
 	onClose={() => (deleteOpen = false)}
-	actions={[
-		{ label: "Cancel", variant: "ghost", autofocus: true },
-		{
-			label: "Delete",
-			variant: "danger",
-			dismiss: false,
-			pending: busy,
-			onClick: () => remove(false),
-		},
-	]}
-/>
-<Dialog
-	open={deleteWithFilesOpen}
-	title="Remove {plural(count, 'title')} and delete their files?"
-	body="{plural(fileCount, 'file')} will be deleted from disk. This cannot be undone."
-	onClose={() => (deleteWithFilesOpen = false)}
-	actions={[
-		{ label: "Cancel", variant: "ghost", autofocus: true },
-		{
-			label: "Delete + files",
-			variant: "danger",
-			dismiss: false,
-			pending: busy,
-			onClick: () => remove(true),
-		},
-	]}
+	onConfirm={(withFiles) => remove(withFiles)}
 />

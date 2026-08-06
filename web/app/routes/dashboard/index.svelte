@@ -6,12 +6,11 @@
 	import type {
 		ActivityList,
 		DiskUsage,
+		DownloadQueue,
 		MovieCounts,
 		Movie,
-		MediaFile,
 		PaginatedMovies,
 		PaginatedTVShows,
-		QueueItem,
 		SystemInfo,
 		TVShow,
 		TVShowCounts,
@@ -70,9 +69,14 @@
 		queryFn: () => api<SystemInfo>("/system/info"),
 	}));
 
-	// /activity/queue is not yet exposed by the backend. Render the live queue
-	// section's empty state until the endpoint lands.
-	const queue: QueueItem[] = [];
+	// The live queue. Activity polls this every 2s because it is the page you
+	// watch; the dashboard is a glance, so it settles for 10.
+	const queueQuery = createQuery<DownloadQueue>(() => ({
+		queryKey: ["activity", "queue"],
+		queryFn: () => api<DownloadQueue>("/activity/queue"),
+		refetchInterval: 10000,
+	}));
+	let queue = $derived(queueQuery.data?.items ?? []);
 
 	let allMovies = $derived(moviesQuery.data?.items ?? []);
 	let allSeries = $derived(seriesQuery.data?.items ?? []);
@@ -98,12 +102,8 @@
 			: [];
 	});
 
-	function pickPrimary(files?: MediaFile[]): MediaFile | undefined {
-		if (!files || files.length === 0) return undefined;
-		return [...files].sort((a, b) => b.size - a.size)[0];
-	}
 	function movieToHero(m: Movie): HeroItem {
-		const f = pickPrimary(m.media_files);
+		const f = m.media_files?.[0];
 		return {
 			title: m.title,
 			year: m.year,
@@ -175,7 +175,7 @@
 	let upcoming = $derived(upcomingQuery.data?.movies ?? []);
 </script>
 
-<div class="flex flex-col gap-9 pb-6">
+<div class="flex flex-col gap-5 pb-6 md:gap-6">
 	<Hero
 		item={featured}
 		loading={moviesQuery.isLoading || seriesQuery.isLoading}

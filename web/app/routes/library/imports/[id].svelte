@@ -668,10 +668,12 @@
 							>
 								<tr>
 									<th class="px-4 py-2.5 font-semibold">Show folder</th>
-									<th class="px-4 py-2.5 font-semibold">
+									<th class="hidden px-4 py-2.5 font-semibold md:table-cell">
 										Classification
 									</th>
-									<th class="px-4 py-2.5 font-semibold">Outcome</th>
+									<th class="hidden px-4 py-2.5 font-semibold md:table-cell">
+										Outcome
+									</th>
 									<th class="px-4 py-2.5 text-right font-semibold">
 										Decision
 									</th>
@@ -758,8 +760,9 @@
 									{@render sortHeader(
 										"classification",
 										"Classification",
+										false,
 									)}
-									{@render sortHeader("outcome", "Outcome")}
+									{@render sortHeader("outcome", "Outcome", false)}
 									<th class="px-4 py-2.5 text-right font-semibold">
 										Decision
 									</th>
@@ -784,10 +787,10 @@
 	{/if}
 </div>
 
-{#snippet sortHeader(key: FileSortKey, label: string)}
+{#snippet sortHeader(key: FileSortKey, label: string, phone = true)}
 	{@const active = sortKey === key}
 	<th
-		class="px-4 py-2.5"
+		class={cn("px-4 py-2.5", !phone && "hidden md:table-cell")}
 		aria-sort={active
 			? sortDir === "asc"
 				? "ascending"

@@ -70,6 +70,55 @@ func (s *Server) UpdateConfigAuth(
 	}, nil
 }
 
+// GetConfigLibrary returns the runtime-editable library configuration. Admin
+// only.
+func (s *Server) GetConfigLibrary(
+	ctx context.Context,
+	_ GetConfigLibraryRequestObject,
+) (GetConfigLibraryResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return GetConfigLibrary403JSONResponse{
+			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
+	return GetConfigLibrary200JSONResponse{
+		LibraryConfigJSONResponse: libraryConfigView(config.Get().Library),
+	}, nil
+}
+
+// UpdateConfigLibrary applies a partial update to the library config. Admin
+// only. Changes take effect immediately — no restart required.
+func (s *Server) UpdateConfigLibrary(
+	ctx context.Context,
+	req UpdateConfigLibraryRequestObject,
+) (UpdateConfigLibraryResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return UpdateConfigLibrary403JSONResponse{
+			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
+
+	updated, err := config.UpdateLibrary(ctx, config.LibraryPatch{
+		MonitorSpecials: req.Body.MonitorSpecials,
+	})
+	if configLocked(err) {
+		return UpdateConfigLibrary403JSONResponse{
+			ForbiddenJSONResponse: forbiddenResp(err.Error()),
+		}, nil
+	}
+	if err != nil {
+		return UpdateConfigLibrary422JSONResponse{
+			UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
+		}, nil
+	}
+	slog.InfoContext(ctx, "library config updated",
+		"monitor_specials", updated.MonitorSpecials,
+	)
+	return UpdateConfigLibrary200JSONResponse{
+		LibraryConfigJSONResponse: libraryConfigView(updated),
+	}, nil
+}
+
 // ListOIDCProviders returns every configured provider plus the process-wide
 // restart-required flag. Admin only.
 func (s *Server) ListOIDCProviders(
@@ -265,6 +314,13 @@ func authConfigView(a config.AuthConfig) AuthConfigJSONResponse {
 		SessionTtl:       a.SessionTTL,
 		OidcDefaultRole:  AuthConfigViewOidcDefaultRole(a.OIDCDefaultRole),
 	}
+}
+
+// libraryConfigView maps config.LibraryConfig into the generated view. Only
+// runtime-editable knobs are exposed — paths and naming patterns stay
+// file-only.
+func libraryConfigView(l config.LibraryConfig) LibraryConfigJSONResponse {
+	return LibraryConfigJSONResponse{MonitorSpecials: l.MonitorSpecials}
 }
 
 // oidcProviderView maps config.OIDCConfig into the generated OIDCProviderView.

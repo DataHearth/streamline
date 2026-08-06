@@ -923,6 +923,69 @@ func (e PatchSeriesRequestPreset) Valid() bool {
 	}
 }
 
+// Defines values for PathMigrationPreviewRoot.
+const (
+	PathMigrationPreviewRootDownloads PathMigrationPreviewRoot = "downloads"
+	PathMigrationPreviewRootMovies    PathMigrationPreviewRoot = "movies"
+	PathMigrationPreviewRootSeries    PathMigrationPreviewRoot = "series"
+)
+
+// Valid indicates whether the value is a known member of the PathMigrationPreviewRoot enum.
+func (e PathMigrationPreviewRoot) Valid() bool {
+	switch e {
+	case PathMigrationPreviewRootDownloads:
+		return true
+	case PathMigrationPreviewRootMovies:
+		return true
+	case PathMigrationPreviewRootSeries:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PathMigrationRequestRoot.
+const (
+	PathMigrationRequestRootDownloads PathMigrationRequestRoot = "downloads"
+	PathMigrationRequestRootMovies    PathMigrationRequestRoot = "movies"
+	PathMigrationRequestRootSeries    PathMigrationRequestRoot = "series"
+)
+
+// Valid indicates whether the value is a known member of the PathMigrationRequestRoot enum.
+func (e PathMigrationRequestRoot) Valid() bool {
+	switch e {
+	case PathMigrationRequestRootDownloads:
+		return true
+	case PathMigrationRequestRootMovies:
+		return true
+	case PathMigrationRequestRootSeries:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PathMigrationRootRoot.
+const (
+	PathMigrationRootRootDownloads PathMigrationRootRoot = "downloads"
+	PathMigrationRootRootMovies    PathMigrationRootRoot = "movies"
+	PathMigrationRootRootSeries    PathMigrationRootRoot = "series"
+)
+
+// Valid indicates whether the value is a known member of the PathMigrationRootRoot enum.
+func (e PathMigrationRootRoot) Valid() bool {
+	switch e {
+	case PathMigrationRootRootDownloads:
+		return true
+	case PathMigrationRootRootMovies:
+		return true
+	case PathMigrationRootRootSeries:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PendingMediaType.
 const (
 	PendingMediaTypeEpisode PendingMediaType = "episode"
@@ -1808,7 +1871,11 @@ type CreateInviteRequestRole string
 type CreateRequestRequest struct {
 	MediaId   uint32                        `json:"media_id"`
 	MediaType CreateRequestRequestMediaType `json:"media_type"`
-	Title     string                        `json:"title"`
+
+	// QualityProfile Preferred profile name; omitted or empty records no preference.
+	// A preference, not a promise — the reviewer can override it.
+	QualityProfile *string `json:"quality_profile,omitempty"`
+	Title          string  `json:"title"`
 }
 
 // CreateRequestRequestMediaType defines model for CreateRequestRequest.MediaType.
@@ -2243,8 +2310,56 @@ type InviteCreatedRole string
 
 // JWTRotated defines model for JWTRotated.
 type JWTRotated struct {
+	// Pending True when the instance is read-only: nothing has been rotated yet.
+	// The generated secret is returned once, held for five minutes, and
+	// applied only when the caller repeats the request with
+	// `confirmed: true`.
+	Pending *bool `json:"pending,omitempty"`
+
+	// Secret The generated signing secret, returned only alongside `pending` so
+	// the operator can write it into the config file they manage.
+	Secret *string `json:"secret,omitempty"`
+
 	// Token New bearer token signed with the rotated secret.
-	Token string `json:"token"`
+	Token *string `json:"token,omitempty"`
+}
+
+// LibraryConfigPatch Only provided fields are applied.
+type LibraryConfigPatch struct {
+	MonitorSpecials *bool `json:"monitor_specials,omitempty"`
+}
+
+// LibraryConfigView defines model for LibraryConfigView.
+type LibraryConfigView struct {
+	// MonitorSpecials Monitor season 0 (specials) when a series is added or a refresh
+	// discovers the season. Applies to newly seeded seasons only.
+	MonitorSpecials bool `json:"monitor_specials"`
+}
+
+// LookupDetail Everything a provider knows about one lookup result beyond what the
+// search response carries. One shape serves both verticals: movies fill
+// runtime/release_date/tmdb_id, series fill network/season_count/status.
+type LookupDetail struct {
+	Cast             *[]CastMember `json:"cast,omitempty"`
+	EpisodeCount     *uint16       `json:"episode_count,omitempty"`
+	Genres           *[]string     `json:"genres,omitempty"`
+	ImdbId           *string       `json:"imdb_id,omitempty"`
+	Network          *string       `json:"network,omitempty"`
+	OriginalLanguage *string       `json:"original_language,omitempty"`
+	Overview         *string       `json:"overview,omitempty"`
+	Rating           *float32      `json:"rating,omitempty"`
+
+	// ReleaseDate Theatrical release (movie) or first air date (series), ISO yyyy-mm-dd.
+	ReleaseDate *string `json:"release_date,omitempty"`
+
+	// Runtime Feature length for a movie, average episode length for a series.
+	Runtime     *uint16 `json:"runtime,omitempty"`
+	SeasonCount *uint16 `json:"season_count,omitempty"`
+	Status      *string `json:"status,omitempty"`
+	Tagline     *string `json:"tagline,omitempty"`
+	TmdbId      *uint32 `json:"tmdb_id,omitempty"`
+	TvdbId      *uint32 `json:"tvdb_id,omitempty"`
+	VoteCount   *uint32 `json:"vote_count,omitempty"`
 }
 
 // MediaFile defines model for MediaFile.
@@ -2475,6 +2590,86 @@ type PatchSeriesRequest struct {
 // PatchSeriesRequestPreset defines model for PatchSeriesRequest.Preset.
 type PatchSeriesRequestPreset string
 
+// PathMigration defines model for PathMigration.
+type PathMigration struct {
+	Current    string     `json:"current"`
+	Done       int        `json:"done"`
+	Error      *string    `json:"error,omitempty"`
+	FinishedAt *time.Time `json:"finished_at,omitempty"`
+	From       string     `json:"from"`
+	MoveFiles  bool       `json:"move_files"`
+	Root       string     `json:"root"`
+	Running    bool       `json:"running"`
+	Skipped    int        `json:"skipped"`
+	StartedAt  *time.Time `json:"started_at,omitempty"`
+	To         string     `json:"to"`
+	Total      int        `json:"total"`
+}
+
+// PathMigrationPreview defines model for PathMigrationPreview.
+type PathMigrationPreview struct {
+	CanMove bool                     `json:"can_move"`
+	From    string                   `json:"from"`
+	Root    PathMigrationPreviewRoot `json:"root"`
+	Samples []PathRewrite            `json:"samples"`
+
+	// Skipped Rows whose file is not where the migration expects it (the
+	// source when moving, the destination otherwise). They are left
+	// untouched.
+	Skipped int    `json:"skipped"`
+	To      string `json:"to"`
+	Total   int    `json:"total"`
+}
+
+// PathMigrationPreviewRoot defines model for PathMigrationPreview.Root.
+type PathMigrationPreviewRoot string
+
+// PathMigrationRequest defines model for PathMigrationRequest.
+type PathMigrationRequest struct {
+	// From Current prefix to rewrite. Defaults to the root's configured
+	// value, which is what the UI sends unless the operator has
+	// already edited the config themselves.
+	From *string `json:"from,omitempty"`
+
+	// MoveFiles Relocate each file before re-pointing its row. Rejected for the
+	// `downloads` root — that data belongs to the download client.
+	MoveFiles *bool                    `json:"move_files,omitempty"`
+	Root      PathMigrationRequestRoot `json:"root"`
+	To        string                   `json:"to"`
+}
+
+// PathMigrationRequestRoot defines model for PathMigrationRequest.Root.
+type PathMigrationRequestRoot string
+
+// PathMigrationRoot defines model for PathMigrationRoot.
+type PathMigrationRoot struct {
+	// Path The currently configured root.
+	Path string                `json:"path"`
+	Root PathMigrationRootRoot `json:"root"`
+
+	// Total Stored paths of that media type anywhere. `tracked == 0` while
+	// `total > 0` is the signal that the configured root no longer
+	// matches the database; both zero just means nothing is stored yet.
+	Total int `json:"total"`
+
+	// Tracked Stored paths sitting under that root.
+	Tracked int `json:"tracked"`
+}
+
+// PathMigrationRootRoot defines model for PathMigrationRoot.Root.
+type PathMigrationRootRoot string
+
+// PathMigrationRootList defines model for PathMigrationRootList.
+type PathMigrationRootList struct {
+	Items []PathMigrationRoot `json:"items"`
+}
+
+// PathRewrite defines model for PathRewrite.
+type PathRewrite struct {
+	From string `json:"from"`
+	To   string `json:"to"`
+}
+
 // PendingItem defines model for PendingItem.
 type PendingItem struct {
 	// HasFile Whether the matched movie/episode currently has a file. The UI
@@ -2610,11 +2805,15 @@ type Request struct {
 	// MediaId TMDB id for movies, TVDB id for shows.
 	MediaId   uint32           `json:"media_id"`
 	MediaType RequestMediaType `json:"media_type"`
-	Reason    *string          `json:"reason,omitempty"`
-	Requester RequestUser      `json:"requester"`
-	Status    RequestStatus    `json:"status"`
-	Title     string           `json:"title"`
-	UpdatedAt time.Time        `json:"updated_at"`
+
+	// QualityProfile Profile the requester asked for; absent means no preference. The
+	// reviewer's approve form starts here and can override it.
+	QualityProfile *string       `json:"quality_profile,omitempty"`
+	Reason         *string       `json:"reason,omitempty"`
+	Requester      RequestUser   `json:"requester"`
+	Status         RequestStatus `json:"status"`
+	Title          string        `json:"title"`
+	UpdatedAt      time.Time     `json:"updated_at"`
 }
 
 // RequestMediaType defines model for Request.MediaType.
@@ -2633,12 +2832,28 @@ type RequestCounts struct {
 
 // RequestMediaDetails defines model for RequestMediaDetails.
 type RequestMediaDetails struct {
-	Genres    *[]string `json:"genres,omitempty"`
-	Overview  string    `json:"overview"`
-	PosterUrl *string   `json:"poster_url,omitempty"`
-	Rating    *float32  `json:"rating,omitempty"`
-	Runtime   *uint16   `json:"runtime,omitempty"`
-	Year      *uint16   `json:"year,omitempty"`
+	Cast             *[]CastMember `json:"cast,omitempty"`
+	EpisodeCount     *uint16       `json:"episode_count,omitempty"`
+	Genres           *[]string     `json:"genres,omitempty"`
+	ImdbId           *string       `json:"imdb_id,omitempty"`
+	Network          *string       `json:"network,omitempty"`
+	OriginalLanguage *string       `json:"original_language,omitempty"`
+	Overview         *string       `json:"overview,omitempty"`
+	PosterUrl        *string       `json:"poster_url,omitempty"`
+	Rating           *float32      `json:"rating,omitempty"`
+
+	// ReleaseDate Theatrical release (movie) or first air date (series), ISO yyyy-mm-dd.
+	ReleaseDate *string `json:"release_date,omitempty"`
+
+	// Runtime Feature length for a movie, average episode length for a series.
+	Runtime     *uint16 `json:"runtime,omitempty"`
+	SeasonCount *uint16 `json:"season_count,omitempty"`
+	Status      *string `json:"status,omitempty"`
+	Tagline     *string `json:"tagline,omitempty"`
+	TmdbId      *uint32 `json:"tmdb_id,omitempty"`
+	TvdbId      *uint32 `json:"tvdb_id,omitempty"`
+	VoteCount   *uint32 `json:"vote_count,omitempty"`
+	Year        *uint16 `json:"year,omitempty"`
 }
 
 // RequestUser defines model for RequestUser.
@@ -2654,6 +2869,13 @@ type ResetPasswordRequest struct {
 	NewPassword string `json:"new_password"`
 }
 
+// RotateJWTSecretRequest defines model for RotateJWTSecretRequest.
+type RotateJWTSecretRequest struct {
+	// Confirmed Applies the secret handed out by the preceding pending response.
+	// Ignored on a writable instance, which rotates in one step.
+	Confirmed *bool `json:"confirmed,omitempty"`
+}
+
 // Schedule defines model for Schedule.
 type Schedule struct {
 	// Interval Go duration string (e.g. "15m").
@@ -2663,7 +2885,7 @@ type Schedule struct {
 	LastFinishedAt *time.Time `json:"last_finished_at,omitempty"`
 	LastStartedAt  *time.Time `json:"last_started_at,omitempty"`
 
-	// Name Job identifier (e.g. "rss-sync").
+	// Name Job identifier (e.g. "movie-rss-sync").
 	Name      string     `json:"name"`
 	NextRunAt *time.Time `json:"next_run_at,omitempty"`
 	Paused    bool       `json:"paused"`
@@ -2767,6 +2989,15 @@ type Session struct {
 	IsCurrent  bool       `json:"is_current"`
 	LastSeenAt *time.Time `json:"last_seen_at,omitempty"`
 	UserAgent  *string    `json:"user_agent,omitempty"`
+}
+
+// SpecialsMonitoredResult defines model for SpecialsMonitoredResult.
+type SpecialsMonitoredResult struct {
+	// Monitored The value applied — the current library.monitor_specials.
+	Monitored bool `json:"monitored"`
+
+	// SeasonsUpdated Specials seasons the setting was applied to.
+	SeasonsUpdated int `json:"seasons_updated"`
 }
 
 // SystemInfo defines model for SystemInfo.
@@ -3190,6 +3421,12 @@ type SeriesType = string
 // SessionID defines model for SessionID.
 type SessionID = uint32
 
+// TMDBID defines model for TMDBID.
+type TMDBID = uint32
+
+// TVDBID defines model for TVDBID.
+type TVDBID = uint32
+
 // TorrentFileIndex defines model for TorrentFileIndex.
 type TorrentFileIndex = int
 
@@ -3219,6 +3456,14 @@ type Forbidden = Error
 
 // InternalError defines model for InternalError.
 type InternalError = Error
+
+// LibraryConfig defines model for LibraryConfig.
+type LibraryConfig = LibraryConfigView
+
+// LookupDetailResponse Everything a provider knows about one lookup result beyond what the
+// search response carries. One shape serves both verticals: movies fill
+// runtime/release_date/tmdb_id, series fill network/season_count/status.
+type LookupDetailResponse = LookupDetail
 
 // MediaServerCreated defines model for MediaServerCreated.
 type MediaServerCreated = MediaServer
@@ -3291,6 +3536,9 @@ type SeriesLookupResults = SeriesLookupResultList
 
 // SeriesPlayOnLinks defines model for SeriesPlayOnLinks.
 type SeriesPlayOnLinks = PlayOnLinkList
+
+// SpecialsMonitored defines model for SpecialsMonitored.
+type SpecialsMonitored = SpecialsMonitoredResult
 
 // Unauthorized defines model for Unauthorized.
 type Unauthorized = Error
@@ -3373,11 +3621,17 @@ type PatchSeries = PatchSeriesRequest
 // ReplacePending defines model for ReplacePending.
 type ReplacePending = ReplacePendingRequest
 
+// RotateJWTSecret defines model for RotateJWTSecret.
+type RotateJWTSecret = RotateJWTSecretRequest
+
 // SetTorrentFilePriority defines model for SetTorrentFilePriority.
 type SetTorrentFilePriority = TorrentFilePriorityUpdate
 
 // StartImport defines model for StartImport.
 type StartImport = ImportScanCreateRequest
+
+// StartPathMigration defines model for StartPathMigration.
+type StartPathMigration = PathMigrationRequest
 
 // UpdateAuthConfig Only provided fields are applied.
 type UpdateAuthConfig = AuthConfigPatch
@@ -3387,6 +3641,9 @@ type UpdateImportFileDecision = ImportScanFileDecisionRequest
 
 // UpdateImportShowDecision defines model for UpdateImportShowDecision.
 type UpdateImportShowDecision = ImportScanShowDecisionRequest
+
+// UpdateLibraryConfig Only provided fields are applied.
+type UpdateLibraryConfig = LibraryConfigPatch
 
 // UpdateMe defines model for UpdateMe.
 type UpdateMe = UpdateMeRequest
@@ -3573,6 +3830,9 @@ type ReplacePendingJSONRequestBody = ReplacePendingRequest
 // CreateInviteJSONRequestBody defines body for CreateInvite for application/json ContentType.
 type CreateInviteJSONRequestBody = CreateInviteRequest
 
+// RotateJWTSecretJSONRequestBody defines body for RotateJWTSecret for application/json ContentType.
+type RotateJWTSecretJSONRequestBody = RotateJWTSecretRequest
+
 // UpdateMeJSONRequestBody defines body for UpdateMe for application/json ContentType.
 type UpdateMeJSONRequestBody = UpdateMeRequest
 
@@ -3584,6 +3844,9 @@ type ChangePasswordJSONRequestBody = ChangePasswordRequest
 
 // UpdateConfigAuthJSONRequestBody defines body for UpdateConfigAuth for application/json ContentType.
 type UpdateConfigAuthJSONRequestBody = AuthConfigPatch
+
+// UpdateConfigLibraryJSONRequestBody defines body for UpdateConfigLibrary for application/json ContentType.
+type UpdateConfigLibraryJSONRequestBody = LibraryConfigPatch
 
 // CreateOIDCProviderJSONRequestBody defines body for CreateOIDCProvider for application/json ContentType.
 type CreateOIDCProviderJSONRequestBody = OIDCProviderCreate
@@ -3617,6 +3880,12 @@ type UpdateImportFileDecisionJSONRequestBody = ImportScanFileDecisionRequest
 
 // UpdateImportShowDecisionJSONRequestBody defines body for UpdateImportShowDecision for application/json ContentType.
 type UpdateImportShowDecisionJSONRequestBody = ImportScanShowDecisionRequest
+
+// StartPathMigrationJSONRequestBody defines body for StartPathMigration for application/json ContentType.
+type StartPathMigrationJSONRequestBody = PathMigrationRequest
+
+// PreviewPathMigrationJSONRequestBody defines body for PreviewPathMigration for application/json ContentType.
+type PreviewPathMigrationJSONRequestBody = PathMigrationRequest
 
 // CreateMediaServerJSONRequestBody defines body for CreateMediaServer for application/json ContentType.
 type CreateMediaServerJSONRequestBody = MediaServerCreate
@@ -3782,6 +4051,12 @@ type ServerInterface interface {
 	// Patch auth configuration (admin)
 	// (PATCH /config/auth)
 	UpdateConfigAuth(w http.ResponseWriter, r *http.Request)
+	// Get library configuration (admin)
+	// (GET /config/library)
+	GetConfigLibrary(w http.ResponseWriter, r *http.Request)
+	// Patch library configuration (admin)
+	// (PATCH /config/library)
+	UpdateConfigLibrary(w http.ResponseWriter, r *http.Request)
 	// List OIDC providers (admin)
 	// (GET /config/oidc)
 	ListOIDCProviders(w http.ResponseWriter, r *http.Request)
@@ -3863,6 +4138,18 @@ type ServerInterface interface {
 
 	// (PATCH /library/imports/{id}/shows/{showId})
 	UpdateImportShowDecision(w http.ResponseWriter, r *http.Request, id ResourceID, showId ImportScanShowID)
+	// State of the running (or last) library path migration.
+	// (GET /library/path-migration)
+	GetPathMigration(w http.ResponseWriter, r *http.Request)
+	// Re-root a library to a new path.
+	// (POST /library/path-migration)
+	StartPathMigration(w http.ResponseWriter, r *http.Request)
+	// Dry run of a library path migration.
+	// (POST /library/path-migration/preview)
+	PreviewPathMigration(w http.ResponseWriter, r *http.Request)
+	// Configured library roots and how much is stored under each.
+	// (GET /library/path-migration/roots)
+	GetPathMigrationRoots(w http.ResponseWriter, r *http.Request)
 	// List configured media servers
 	// (GET /media-servers)
 	ListMediaServers(w http.ResponseWriter, r *http.Request)
@@ -3983,6 +4270,9 @@ type ServerInterface interface {
 	// Search TMDB for movies
 	// (GET /search/movie)
 	SearchTMDBMovie(w http.ResponseWriter, r *http.Request, params SearchTMDBMovieParams)
+	// Full TMDB metadata for one movie
+	// (GET /search/movie/{tmdb_id})
+	GetTMDBMovieDetail(w http.ResponseWriter, r *http.Request, tmdbId TMDBID)
 	// List all series
 	// (GET /series)
 	ListSeries(w http.ResponseWriter, r *http.Request, params ListSeriesParams)
@@ -3995,6 +4285,12 @@ type ServerInterface interface {
 	// Search TVDB for series to add
 	// (GET /series/lookup)
 	LookupSeries(w http.ResponseWriter, r *http.Request, params LookupSeriesParams)
+	// Full TVDB metadata for one series
+	// (GET /series/lookup/{tvdb_id})
+	GetSeriesLookupDetail(w http.ResponseWriter, r *http.Request, tvdbId TVDBID)
+	// Apply the specials setting to existing series (admin)
+	// (POST /series/specials/apply)
+	ApplySpecialsToExisting(w http.ResponseWriter, r *http.Request)
 	// Remove a series from the library
 	// (DELETE /series/{id})
 	DeleteSeries(w http.ResponseWriter, r *http.Request, id ResourceID, params DeleteSeriesParams)
@@ -4262,6 +4558,18 @@ func (_ Unimplemented) UpdateConfigAuth(w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Get library configuration (admin)
+// (GET /config/library)
+func (_ Unimplemented) GetConfigLibrary(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Patch library configuration (admin)
+// (PATCH /config/library)
+func (_ Unimplemented) UpdateConfigLibrary(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // List OIDC providers (admin)
 // (GET /config/oidc)
 func (_ Unimplemented) ListOIDCProviders(w http.ResponseWriter, r *http.Request) {
@@ -4411,6 +4719,30 @@ func (_ Unimplemented) ListImportShows(w http.ResponseWriter, r *http.Request, i
 
 // (PATCH /library/imports/{id}/shows/{showId})
 func (_ Unimplemented) UpdateImportShowDecision(w http.ResponseWriter, r *http.Request, id ResourceID, showId ImportScanShowID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// State of the running (or last) library path migration.
+// (GET /library/path-migration)
+func (_ Unimplemented) GetPathMigration(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Re-root a library to a new path.
+// (POST /library/path-migration)
+func (_ Unimplemented) StartPathMigration(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Dry run of a library path migration.
+// (POST /library/path-migration/preview)
+func (_ Unimplemented) PreviewPathMigration(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Configured library roots and how much is stored under each.
+// (GET /library/path-migration/roots)
+func (_ Unimplemented) GetPathMigrationRoots(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -4654,6 +4986,12 @@ func (_ Unimplemented) SearchTMDBMovie(w http.ResponseWriter, r *http.Request, p
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Full TMDB metadata for one movie
+// (GET /search/movie/{tmdb_id})
+func (_ Unimplemented) GetTMDBMovieDetail(w http.ResponseWriter, r *http.Request, tmdbId TMDBID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // List all series
 // (GET /series)
 func (_ Unimplemented) ListSeries(w http.ResponseWriter, r *http.Request, params ListSeriesParams) {
@@ -4675,6 +5013,18 @@ func (_ Unimplemented) GetSeriesCounts(w http.ResponseWriter, r *http.Request) {
 // Search TVDB for series to add
 // (GET /series/lookup)
 func (_ Unimplemented) LookupSeries(w http.ResponseWriter, r *http.Request, params LookupSeriesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Full TVDB metadata for one series
+// (GET /series/lookup/{tvdb_id})
+func (_ Unimplemented) GetSeriesLookupDetail(w http.ResponseWriter, r *http.Request, tvdbId TVDBID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Apply the specials setting to existing series (admin)
+// (POST /series/specials/apply)
+func (_ Unimplemented) ApplySpecialsToExisting(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -5698,6 +6048,50 @@ func (siw *ServerInterfaceWrapper) UpdateConfigAuth(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// GetConfigLibrary operation middleware
+func (siw *ServerInterfaceWrapper) GetConfigLibrary(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, ApiKeyAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetConfigLibrary(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateConfigLibrary operation middleware
+func (siw *ServerInterfaceWrapper) UpdateConfigLibrary(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, ApiKeyAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateConfigLibrary(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListOIDCProviders operation middleware
 func (siw *ServerInterfaceWrapper) ListOIDCProviders(w http.ResponseWriter, r *http.Request) {
 
@@ -6579,6 +6973,94 @@ func (siw *ServerInterfaceWrapper) UpdateImportShowDecision(w http.ResponseWrite
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateImportShowDecision(w, r, id, showId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetPathMigration operation middleware
+func (siw *ServerInterfaceWrapper) GetPathMigration(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, ApiKeyAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetPathMigration(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// StartPathMigration operation middleware
+func (siw *ServerInterfaceWrapper) StartPathMigration(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, ApiKeyAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.StartPathMigration(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewPathMigration operation middleware
+func (siw *ServerInterfaceWrapper) PreviewPathMigration(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, ApiKeyAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewPathMigration(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetPathMigrationRoots operation middleware
+func (siw *ServerInterfaceWrapper) GetPathMigrationRoots(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, ApiKeyAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetPathMigrationRoots(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -7871,6 +8353,39 @@ func (siw *ServerInterfaceWrapper) SearchTMDBMovie(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// GetTMDBMovieDetail operation middleware
+func (siw *ServerInterfaceWrapper) GetTMDBMovieDetail(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "tmdb_id" -------------
+	var tmdbId TMDBID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "tmdb_id", chi.URLParam(r, "tmdb_id"), &tmdbId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tmdb_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, ApiKeyAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetTMDBMovieDetail(w, r, tmdbId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListSeries operation middleware
 func (siw *ServerInterfaceWrapper) ListSeries(w http.ResponseWriter, r *http.Request) {
 
@@ -8023,6 +8538,61 @@ func (siw *ServerInterfaceWrapper) LookupSeries(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.LookupSeries(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetSeriesLookupDetail operation middleware
+func (siw *ServerInterfaceWrapper) GetSeriesLookupDetail(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "tvdb_id" -------------
+	var tvdbId TVDBID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "tvdb_id", chi.URLParam(r, "tvdb_id"), &tvdbId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tvdb_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, ApiKeyAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSeriesLookupDetail(w, r, tvdbId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ApplySpecialsToExisting operation middleware
+func (siw *ServerInterfaceWrapper) ApplySpecialsToExisting(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, ApiKeyAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ApplySpecialsToExisting(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -9437,6 +10007,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Patch(options.BaseURL+"/config/auth", wrapper.UpdateConfigAuth)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/config/library", wrapper.GetConfigLibrary)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/config/library", wrapper.UpdateConfigLibrary)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/config/oidc", wrapper.ListOIDCProviders)
 	})
 	r.Group(func(r chi.Router) {
@@ -9516,6 +10092,18 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/library/imports/{id}/shows/{showId}", wrapper.UpdateImportShowDecision)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/library/path-migration", wrapper.GetPathMigration)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/library/path-migration", wrapper.StartPathMigration)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/library/path-migration/preview", wrapper.PreviewPathMigration)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/library/path-migration/roots", wrapper.GetPathMigrationRoots)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/media-servers", wrapper.ListMediaServers)
@@ -9638,6 +10226,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/search/movie", wrapper.SearchTMDBMovie)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/search/movie/{tmdb_id}", wrapper.GetTMDBMovieDetail)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/series", wrapper.ListSeries)
 	})
 	r.Group(func(r chi.Router) {
@@ -9648,6 +10239,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/series/lookup", wrapper.LookupSeries)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/series/lookup/{tvdb_id}", wrapper.GetSeriesLookupDetail)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/series/specials/apply", wrapper.ApplySpecialsToExisting)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/series/{id}", wrapper.DeleteSeries)
@@ -9799,6 +10396,10 @@ type InternalErrorJSONResponse Error
 
 type JWTRotatedJSONResponse JWTRotated
 
+type LibraryConfigJSONResponse LibraryConfigView
+
+type LookupDetailResponseJSONResponse LookupDetail
+
 type MediaServerCreatedJSONResponse MediaServer
 
 type MediaServerDeletedResponse struct {
@@ -9838,6 +10439,12 @@ type OIDCProviderListJSONResponse OIDCProviderListView
 
 type PasswordResetResponse struct {
 }
+
+type PathMigrationJSONResponse PathMigration
+
+type PathMigrationPreviewJSONResponse PathMigrationPreview
+
+type PathMigrationRootListJSONResponse PathMigrationRootList
 
 type PendingListJSONResponse PendingList
 
@@ -9882,6 +10489,8 @@ type SeriesRenamePlanJSONResponse SeriesRenamePlan
 
 type SeriesSearchAcceptedResponse struct {
 }
+
+type SpecialsMonitoredJSONResponse SpecialsMonitoredResult
 
 type SystemInfoJSONResponse SystemInfo
 
@@ -10410,6 +11019,7 @@ func (response RevokeInvite404JSONResponse) VisitRevokeInviteResponse(w http.Res
 }
 
 type RotateJWTSecretRequestObject struct {
+	Body *RotateJWTSecretJSONRequestBody
 }
 
 type RotateJWTSecretResponseObject interface {
@@ -10756,6 +11366,68 @@ type UpdateConfigAuth422JSONResponse struct {
 }
 
 func (response UpdateConfigAuth422JSONResponse) VisitUpdateConfigAuthResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetConfigLibraryRequestObject struct {
+}
+
+type GetConfigLibraryResponseObject interface {
+	VisitGetConfigLibraryResponse(w http.ResponseWriter) error
+}
+
+type GetConfigLibrary200JSONResponse struct{ LibraryConfigJSONResponse }
+
+func (response GetConfigLibrary200JSONResponse) VisitGetConfigLibraryResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetConfigLibrary403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetConfigLibrary403JSONResponse) VisitGetConfigLibraryResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateConfigLibraryRequestObject struct {
+	Body *UpdateConfigLibraryJSONRequestBody
+}
+
+type UpdateConfigLibraryResponseObject interface {
+	VisitUpdateConfigLibraryResponse(w http.ResponseWriter) error
+}
+
+type UpdateConfigLibrary200JSONResponse struct{ LibraryConfigJSONResponse }
+
+func (response UpdateConfigLibrary200JSONResponse) VisitUpdateConfigLibraryResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateConfigLibrary403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpdateConfigLibrary403JSONResponse) VisitUpdateConfigLibraryResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateConfigLibrary422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response UpdateConfigLibrary422JSONResponse) VisitUpdateConfigLibraryResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(422)
 
@@ -11886,6 +12558,143 @@ type UpdateImportShowDecision404JSONResponse struct{ NotFoundJSONResponse }
 func (response UpdateImportShowDecision404JSONResponse) VisitUpdateImportShowDecisionResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetPathMigrationRequestObject struct {
+}
+
+type GetPathMigrationResponseObject interface {
+	VisitGetPathMigrationResponse(w http.ResponseWriter) error
+}
+
+type GetPathMigration200JSONResponse struct{ PathMigrationJSONResponse }
+
+func (response GetPathMigration200JSONResponse) VisitGetPathMigrationResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetPathMigration403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetPathMigration403JSONResponse) VisitGetPathMigrationResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type StartPathMigrationRequestObject struct {
+	Body *StartPathMigrationJSONRequestBody
+}
+
+type StartPathMigrationResponseObject interface {
+	VisitStartPathMigrationResponse(w http.ResponseWriter) error
+}
+
+type StartPathMigration202JSONResponse struct{ PathMigrationJSONResponse }
+
+func (response StartPathMigration202JSONResponse) VisitStartPathMigrationResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(202)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type StartPathMigration403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response StartPathMigration403JSONResponse) VisitStartPathMigrationResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type StartPathMigration409JSONResponse struct{ ConflictJSONResponse }
+
+func (response StartPathMigration409JSONResponse) VisitStartPathMigrationResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type StartPathMigration422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response StartPathMigration422JSONResponse) VisitStartPathMigrationResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PreviewPathMigrationRequestObject struct {
+	Body *PreviewPathMigrationJSONRequestBody
+}
+
+type PreviewPathMigrationResponseObject interface {
+	VisitPreviewPathMigrationResponse(w http.ResponseWriter) error
+}
+
+type PreviewPathMigration200JSONResponse struct {
+	PathMigrationPreviewJSONResponse
+}
+
+func (response PreviewPathMigration200JSONResponse) VisitPreviewPathMigrationResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PreviewPathMigration403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response PreviewPathMigration403JSONResponse) VisitPreviewPathMigrationResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PreviewPathMigration422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response PreviewPathMigration422JSONResponse) VisitPreviewPathMigrationResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetPathMigrationRootsRequestObject struct {
+}
+
+type GetPathMigrationRootsResponseObject interface {
+	VisitGetPathMigrationRootsResponse(w http.ResponseWriter) error
+}
+
+type GetPathMigrationRoots200JSONResponse struct {
+	PathMigrationRootListJSONResponse
+}
+
+func (response GetPathMigrationRoots200JSONResponse) VisitGetPathMigrationRootsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetPathMigrationRoots403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetPathMigrationRoots403JSONResponse) VisitGetPathMigrationRootsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
 
 	return json.NewEncoder(w).Encode(response)
 }
@@ -13561,6 +14370,34 @@ func (response SearchTMDBMovie500JSONResponse) VisitSearchTMDBMovieResponse(w ht
 	return json.NewEncoder(w).Encode(response)
 }
 
+type GetTMDBMovieDetailRequestObject struct {
+	TmdbId TMDBID `json:"tmdb_id"`
+}
+
+type GetTMDBMovieDetailResponseObject interface {
+	VisitGetTMDBMovieDetailResponse(w http.ResponseWriter) error
+}
+
+type GetTMDBMovieDetail200JSONResponse struct {
+	LookupDetailResponseJSONResponse
+}
+
+func (response GetTMDBMovieDetail200JSONResponse) VisitGetTMDBMovieDetailResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetTMDBMovieDetail500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetTMDBMovieDetail500JSONResponse) VisitGetTMDBMovieDetailResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type ListSeriesRequestObject struct {
 	Params ListSeriesParams
 }
@@ -13680,6 +14517,68 @@ func (response LookupSeries200JSONResponse) VisitLookupSeriesResponse(w http.Res
 type LookupSeries500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response LookupSeries500JSONResponse) VisitLookupSeriesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetSeriesLookupDetailRequestObject struct {
+	TvdbId TVDBID `json:"tvdb_id"`
+}
+
+type GetSeriesLookupDetailResponseObject interface {
+	VisitGetSeriesLookupDetailResponse(w http.ResponseWriter) error
+}
+
+type GetSeriesLookupDetail200JSONResponse struct {
+	LookupDetailResponseJSONResponse
+}
+
+func (response GetSeriesLookupDetail200JSONResponse) VisitGetSeriesLookupDetailResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetSeriesLookupDetail500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetSeriesLookupDetail500JSONResponse) VisitGetSeriesLookupDetailResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ApplySpecialsToExistingRequestObject struct {
+}
+
+type ApplySpecialsToExistingResponseObject interface {
+	VisitApplySpecialsToExistingResponse(w http.ResponseWriter) error
+}
+
+type ApplySpecialsToExisting200JSONResponse struct{ SpecialsMonitoredJSONResponse }
+
+func (response ApplySpecialsToExisting200JSONResponse) VisitApplySpecialsToExistingResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ApplySpecialsToExisting403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ApplySpecialsToExisting403JSONResponse) VisitApplySpecialsToExistingResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ApplySpecialsToExisting500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ApplySpecialsToExisting500JSONResponse) VisitApplySpecialsToExistingResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
 
@@ -14992,6 +15891,12 @@ type StrictServerInterface interface {
 	// Patch auth configuration (admin)
 	// (PATCH /config/auth)
 	UpdateConfigAuth(ctx context.Context, request UpdateConfigAuthRequestObject) (UpdateConfigAuthResponseObject, error)
+	// Get library configuration (admin)
+	// (GET /config/library)
+	GetConfigLibrary(ctx context.Context, request GetConfigLibraryRequestObject) (GetConfigLibraryResponseObject, error)
+	// Patch library configuration (admin)
+	// (PATCH /config/library)
+	UpdateConfigLibrary(ctx context.Context, request UpdateConfigLibraryRequestObject) (UpdateConfigLibraryResponseObject, error)
 	// List OIDC providers (admin)
 	// (GET /config/oidc)
 	ListOIDCProviders(ctx context.Context, request ListOIDCProvidersRequestObject) (ListOIDCProvidersResponseObject, error)
@@ -15073,6 +15978,18 @@ type StrictServerInterface interface {
 
 	// (PATCH /library/imports/{id}/shows/{showId})
 	UpdateImportShowDecision(ctx context.Context, request UpdateImportShowDecisionRequestObject) (UpdateImportShowDecisionResponseObject, error)
+	// State of the running (or last) library path migration.
+	// (GET /library/path-migration)
+	GetPathMigration(ctx context.Context, request GetPathMigrationRequestObject) (GetPathMigrationResponseObject, error)
+	// Re-root a library to a new path.
+	// (POST /library/path-migration)
+	StartPathMigration(ctx context.Context, request StartPathMigrationRequestObject) (StartPathMigrationResponseObject, error)
+	// Dry run of a library path migration.
+	// (POST /library/path-migration/preview)
+	PreviewPathMigration(ctx context.Context, request PreviewPathMigrationRequestObject) (PreviewPathMigrationResponseObject, error)
+	// Configured library roots and how much is stored under each.
+	// (GET /library/path-migration/roots)
+	GetPathMigrationRoots(ctx context.Context, request GetPathMigrationRootsRequestObject) (GetPathMigrationRootsResponseObject, error)
 	// List configured media servers
 	// (GET /media-servers)
 	ListMediaServers(ctx context.Context, request ListMediaServersRequestObject) (ListMediaServersResponseObject, error)
@@ -15193,6 +16110,9 @@ type StrictServerInterface interface {
 	// Search TMDB for movies
 	// (GET /search/movie)
 	SearchTMDBMovie(ctx context.Context, request SearchTMDBMovieRequestObject) (SearchTMDBMovieResponseObject, error)
+	// Full TMDB metadata for one movie
+	// (GET /search/movie/{tmdb_id})
+	GetTMDBMovieDetail(ctx context.Context, request GetTMDBMovieDetailRequestObject) (GetTMDBMovieDetailResponseObject, error)
 	// List all series
 	// (GET /series)
 	ListSeries(ctx context.Context, request ListSeriesRequestObject) (ListSeriesResponseObject, error)
@@ -15205,6 +16125,12 @@ type StrictServerInterface interface {
 	// Search TVDB for series to add
 	// (GET /series/lookup)
 	LookupSeries(ctx context.Context, request LookupSeriesRequestObject) (LookupSeriesResponseObject, error)
+	// Full TVDB metadata for one series
+	// (GET /series/lookup/{tvdb_id})
+	GetSeriesLookupDetail(ctx context.Context, request GetSeriesLookupDetailRequestObject) (GetSeriesLookupDetailResponseObject, error)
+	// Apply the specials setting to existing series (admin)
+	// (POST /series/specials/apply)
+	ApplySpecialsToExisting(ctx context.Context, request ApplySpecialsToExistingRequestObject) (ApplySpecialsToExistingResponseObject, error)
 	// Remove a series from the library
 	// (DELETE /series/{id})
 	DeleteSeries(ctx context.Context, request DeleteSeriesRequestObject) (DeleteSeriesResponseObject, error)
@@ -15746,6 +16672,16 @@ func (sh *strictHandler) RevokeInvite(w http.ResponseWriter, r *http.Request, id
 func (sh *strictHandler) RotateJWTSecret(w http.ResponseWriter, r *http.Request) {
 	var request RotateJWTSecretRequestObject
 
+	var body RotateJWTSecretJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		if !errors.Is(err, io.EOF) {
+			sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+			return
+		}
+	} else {
+		request.Body = &body
+	}
+
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 		return sh.ssi.RotateJWTSecret(ctx, request.(RotateJWTSecretRequestObject))
 	}
@@ -16057,6 +16993,61 @@ func (sh *strictHandler) UpdateConfigAuth(w http.ResponseWriter, r *http.Request
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateConfigAuthResponseObject); ok {
 		if err := validResponse.VisitUpdateConfigAuthResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetConfigLibrary operation middleware
+func (sh *strictHandler) GetConfigLibrary(w http.ResponseWriter, r *http.Request) {
+	var request GetConfigLibraryRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetConfigLibrary(ctx, request.(GetConfigLibraryRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetConfigLibrary")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetConfigLibraryResponseObject); ok {
+		if err := validResponse.VisitGetConfigLibraryResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateConfigLibrary operation middleware
+func (sh *strictHandler) UpdateConfigLibrary(w http.ResponseWriter, r *http.Request) {
+	var request UpdateConfigLibraryRequestObject
+
+	var body UpdateConfigLibraryJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateConfigLibrary(ctx, request.(UpdateConfigLibraryRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateConfigLibrary")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateConfigLibraryResponseObject); ok {
+		if err := validResponse.VisitUpdateConfigLibraryResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -16822,6 +17813,116 @@ func (sh *strictHandler) UpdateImportShowDecision(w http.ResponseWriter, r *http
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateImportShowDecisionResponseObject); ok {
 		if err := validResponse.VisitUpdateImportShowDecisionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetPathMigration operation middleware
+func (sh *strictHandler) GetPathMigration(w http.ResponseWriter, r *http.Request) {
+	var request GetPathMigrationRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetPathMigration(ctx, request.(GetPathMigrationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetPathMigration")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetPathMigrationResponseObject); ok {
+		if err := validResponse.VisitGetPathMigrationResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// StartPathMigration operation middleware
+func (sh *strictHandler) StartPathMigration(w http.ResponseWriter, r *http.Request) {
+	var request StartPathMigrationRequestObject
+
+	var body StartPathMigrationJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.StartPathMigration(ctx, request.(StartPathMigrationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "StartPathMigration")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(StartPathMigrationResponseObject); ok {
+		if err := validResponse.VisitStartPathMigrationResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PreviewPathMigration operation middleware
+func (sh *strictHandler) PreviewPathMigration(w http.ResponseWriter, r *http.Request) {
+	var request PreviewPathMigrationRequestObject
+
+	var body PreviewPathMigrationJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PreviewPathMigration(ctx, request.(PreviewPathMigrationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PreviewPathMigration")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PreviewPathMigrationResponseObject); ok {
+		if err := validResponse.VisitPreviewPathMigrationResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetPathMigrationRoots operation middleware
+func (sh *strictHandler) GetPathMigrationRoots(w http.ResponseWriter, r *http.Request) {
+	var request GetPathMigrationRootsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetPathMigrationRoots(ctx, request.(GetPathMigrationRootsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetPathMigrationRoots")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetPathMigrationRootsResponseObject); ok {
+		if err := validResponse.VisitGetPathMigrationRootsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -17954,6 +19055,32 @@ func (sh *strictHandler) SearchTMDBMovie(w http.ResponseWriter, r *http.Request,
 	}
 }
 
+// GetTMDBMovieDetail operation middleware
+func (sh *strictHandler) GetTMDBMovieDetail(w http.ResponseWriter, r *http.Request, tmdbId TMDBID) {
+	var request GetTMDBMovieDetailRequestObject
+
+	request.TmdbId = tmdbId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetTMDBMovieDetail(ctx, request.(GetTMDBMovieDetailRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetTMDBMovieDetail")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetTMDBMovieDetailResponseObject); ok {
+		if err := validResponse.VisitGetTMDBMovieDetailResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListSeries operation middleware
 func (sh *strictHandler) ListSeries(w http.ResponseWriter, r *http.Request, params ListSeriesParams) {
 	var request ListSeriesRequestObject
@@ -18054,6 +19181,56 @@ func (sh *strictHandler) LookupSeries(w http.ResponseWriter, r *http.Request, pa
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(LookupSeriesResponseObject); ok {
 		if err := validResponse.VisitLookupSeriesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetSeriesLookupDetail operation middleware
+func (sh *strictHandler) GetSeriesLookupDetail(w http.ResponseWriter, r *http.Request, tvdbId TVDBID) {
+	var request GetSeriesLookupDetailRequestObject
+
+	request.TvdbId = tvdbId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetSeriesLookupDetail(ctx, request.(GetSeriesLookupDetailRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetSeriesLookupDetail")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetSeriesLookupDetailResponseObject); ok {
+		if err := validResponse.VisitGetSeriesLookupDetailResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ApplySpecialsToExisting operation middleware
+func (sh *strictHandler) ApplySpecialsToExisting(w http.ResponseWriter, r *http.Request) {
+	var request ApplySpecialsToExistingRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ApplySpecialsToExisting(ctx, request.(ApplySpecialsToExistingRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ApplySpecialsToExisting")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ApplySpecialsToExistingResponseObject); ok {
+		if err := validResponse.VisitApplySpecialsToExistingResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

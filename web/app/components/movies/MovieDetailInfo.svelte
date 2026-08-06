@@ -1,7 +1,13 @@
 <script lang="ts">
-	import { ExternalLink } from "@lucide/svelte";
+	import { ExternalLink, Trash2 } from "@lucide/svelte";
+	import { createMutation, useQueryClient } from "@tanstack/svelte-query";
+	import { auth } from "../../lib/auth.svelte";
+	import { api } from "../../lib/api";
+	import { toast } from "../../lib/toast";
 	import { formatBytes } from "../../lib/format";
-	import type { Movie, MediaFile } from "../../lib/types";
+	import Dialog from "../modals/Dialog.svelte";
+	import Checkbox from "../forms/Checkbox.svelte";
+	import type { Movie } from "../../lib/types";
 
 	let {
 		movie,
@@ -11,18 +17,90 @@
 		qualityProfileName: string | null;
 	} = $props();
 
-	function pickPrimary(
-		files: MediaFile[] | undefined,
-	): MediaFile | undefined {
-		if (!files || files.length === 0) return undefined;
-		return [...files].sort((a, b) => b.size - a.size)[0];
+	let primary = $derived(movie.media_files?.[0]);
+
+	// The path is far wider than the column and truncates. Desktop has the
+	// title tooltip; touch has neither hover nor room, so a press and hold
+	// puts the whole path on the clipboard — the same 480ms/8px gesture the
+	// poster grid uses for selection.
+	const HOLD_MS = 480;
+	const HOLD_SLOP = 8;
+	let holdTimer: number | null = null;
+	let holdX = 0;
+	let holdY = 0;
+	let holding = $state(false);
+	let longPressed = false;
+	let touchGesture = false;
+
+	async function copyPath() {
+		if (!primary?.path) return;
+		try {
+			await navigator.clipboard.writeText(primary.path);
+			toast.ok("Path copied");
+		} catch {
+			toast.err("Clipboard unavailable");
+		}
+	}
+	function cancelHold() {
+		holding = false;
+		if (holdTimer !== null) {
+			clearTimeout(holdTimer);
+			holdTimer = null;
+		}
+	}
+	function onPointerDown(e: PointerEvent) {
+		longPressed = false;
+		touchGesture = e.pointerType !== "mouse";
+		if (!touchGesture) return;
+		cancelHold();
+		holdX = e.clientX;
+		holdY = e.clientY;
+		holding = true;
+		holdTimer = window.setTimeout(() => {
+			holdTimer = null;
+			holding = false;
+			longPressed = true;
+			navigator.vibrate?.(10);
+			copyPath();
+		}, HOLD_MS);
+	}
+	function onPointerMove(e: PointerEvent) {
+		if (holdTimer === null) return;
+		if (
+			Math.abs(e.clientX - holdX) > HOLD_SLOP ||
+			Math.abs(e.clientY - holdY) > HOLD_SLOP
+		)
+			cancelHold();
+	}
+	// A tap is not a copy — touch waits for the hold. Keyboard activation
+	// (detail 0) always copies.
+	function onClick(e: MouseEvent) {
+		if (e.detail === 0 || !touchGesture) copyPath();
+	}
+	function onContextMenu(e: MouseEvent) {
+		// Android raises its own menu on the same gesture.
+		if (longPressed || holding) e.preventDefault();
 	}
 
-	function totalSize(files: MediaFile[] | undefined): string {
-		return formatBytes((files ?? []).reduce((s, f) => s + f.size, 0));
-	}
+	const qc = useQueryClient();
+	let deleteOpen = $state(false);
+	let removeTorrent = $state(false);
 
-	let primary = $derived(pickPrimary(movie.media_files));
+	const del = createMutation<unknown, Error, { fileId: number; remove: boolean }>(
+		() => ({
+			mutationFn: ({ fileId, remove }) =>
+				api(`/movies/${movie.id}/files/${fileId}`, {
+					method: "DELETE",
+					body: { remove_torrent: remove },
+				}),
+			onSuccess: () => {
+				qc.invalidateQueries({ queryKey: ["movie", movie.id] });
+				toast.ok("File deleted");
+				deleteOpen = false;
+			},
+			onError: (e) => toast.err(e.message ?? "Delete failed"),
+		}),
+	);
 </script>
 
 <aside class="flex flex-col gap-4">
@@ -30,42 +108,69 @@
 		class="rounded-lg border border-border bg-bg-elevated p-5"
 		aria-labelledby="info-file"
 	>
-		<h4
-			id="info-file"
-			class="font-mono text-[11px] uppercase tracking-[0.14em] text-fg-faint"
-		>
-			File
-		</h4>
+		<div class="flex items-center justify-between">
+			<h4
+				id="info-file"
+				class="font-mono text-[11px] uppercase tracking-[0.14em] text-fg-faint"
+			>
+				File
+			</h4>
+			{#if primary && auth.canAddDirectly}
+				<button
+					type="button"
+					onclick={() => {
+						removeTorrent = false;
+						deleteOpen = true;
+					}}
+					aria-label="Delete file"
+					title="Delete file"
+					class="grid h-7 w-7 place-items-center rounded-md text-fg-muted transition hover:bg-status-failed/10 hover:text-status-failed focus:outline-none focus:ring-2 focus:ring-accent-ring"
+				>
+					<Trash2 class="h-4 w-4" aria-hidden="true" />
+				</button>
+			{/if}
+		</div>
 		{#if primary}
 			<dl class="mt-3 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-[12px]">
-				{#if primary.parsed_resolution}
-					<dt class="text-fg-subtle">Resolution</dt>
-					<dd class="text-right font-mono text-fg">
-						{primary.parsed_resolution}
-					</dd>
-				{/if}
-				{#if primary.parsed_codec}
-					<dt class="text-fg-subtle">Codec</dt>
-					<dd class="text-right font-mono text-fg">
-						{primary.parsed_codec}
-					</dd>
-				{/if}
-				{#if primary.parsed_source}
-					<dt class="text-fg-subtle">Source</dt>
-					<dd class="text-right font-mono text-fg">
-						{primary.parsed_source}
-					</dd>
-				{/if}
+				<dt class="text-fg-subtle">Resolution</dt>
+				<dd class="text-right font-mono text-fg">
+					{primary.parsed_resolution || "—"}
+				</dd>
+				<dt class="text-fg-subtle">Codec</dt>
+				<dd class="text-right font-mono text-fg">
+					{primary.parsed_codec || "—"}
+				</dd>
+				<dt class="text-fg-subtle">Source</dt>
+				<dd class="text-right font-mono text-fg">
+					{primary.parsed_source || "—"}
+				</dd>
 				<dt class="text-fg-subtle">Size</dt>
 				<dd class="text-right font-mono text-fg">
-					{totalSize(movie.media_files)}
+					{formatBytes(primary.size)}
 				</dd>
-				{#if primary.release_group}
-					<dt class="text-fg-subtle">Group</dt>
-					<dd class="text-right font-mono text-fg">
-						{primary.release_group}
-					</dd>
-				{/if}
+				<dt class="text-fg-subtle">Group</dt>
+				<dd class="text-right font-mono text-fg">
+					{primary.release_group || "—"}
+				</dd>
+				<dt class="text-fg-subtle">Path</dt>
+				<dd class="min-w-0">
+					<button
+						type="button"
+						onpointerdown={onPointerDown}
+						onpointermove={onPointerMove}
+						onpointerup={cancelHold}
+						onpointercancel={cancelHold}
+						oncontextmenu={onContextMenu}
+						onclick={onClick}
+						title={primary.path}
+						aria-label="Copy file path"
+						class="block w-full truncate rounded text-right font-mono underline decoration-border-strong decoration-dotted underline-offset-[3px] transition-colors [-webkit-touch-callout:none] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring {holding
+							? 'text-accent-text'
+							: 'text-fg'}"
+					>
+						{primary.path}
+					</button>
+				</dd>
 			</dl>
 		{:else}
 			<p class="mt-3 text-[12px] text-fg-subtle">
@@ -122,3 +227,33 @@
 		</dl>
 	</section>
 </aside>
+
+<Dialog
+	open={deleteOpen}
+	title="Delete this file?"
+	onClose={() => (deleteOpen = false)}
+	actions={[
+		{ label: "Cancel", variant: "ghost", autofocus: true },
+		{
+			label: "Delete file",
+			variant: "danger",
+			dismiss: false,
+			pending: del.isPending,
+			onClick: () =>
+				primary && del.mutate({ fileId: primary.id, remove: removeTorrent }),
+		},
+	]}
+>
+	<p class="text-sm leading-relaxed text-fg-muted">
+		The file is removed from disk and the movie reverts to <span
+			class="font-medium text-fg">wanted</span
+		>, so the next monitored search re-grabs it.
+	</p>
+	<Checkbox
+		checked={removeTorrent}
+		onChange={(v) => (removeTorrent = v)}
+		class="mt-4 text-sm text-fg"
+	>
+		Also remove the torrent from the download client
+	</Checkbox>
+</Dialog>

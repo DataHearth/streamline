@@ -126,14 +126,9 @@ func (s *Service) commitShow(
 				"file", filepath.Base(f), "tvshow.id", show.ID)
 			continue
 		}
-		// Don't double-link an episode that already has a file (existing shows).
-		if _, err := s.store.FindMediaFileByEpisodeID(ctx, target.ID); err == nil {
-			continue
-		} else if !ent.IsNotFound(err) {
-			slog.WarnContext(ctx, "series adopt: media file lookup failed",
-				"episode.id", target.ID, "error", err)
-			continue
-		}
+		// Stat before the replace check: a path this loop already removed while
+		// replacing (old copy + repack in one folder) must not tear down the
+		// record its replacement just created.
 		info, err := os.Stat(f)
 		if err != nil {
 			slog.WarnContext(
@@ -144,6 +139,27 @@ func (s *Service) commitShow(
 				"error",
 				err,
 			)
+			continue
+		}
+		// An episode holds at most one media file: committing an accepted show
+		// replaces whatever file a matched episode already has. The same path
+		// being re-scanned is already adopted, so it needs no rewrite.
+		if mf, err := s.store.FindMediaFileByEpisodeID(ctx, target.ID); err == nil {
+			if mf.Path == f {
+				continue
+			}
+			if rmErr := os.Remove(mf.Path); rmErr != nil && !os.IsNotExist(rmErr) {
+				slog.WarnContext(ctx, "series adopt: remove old file failed",
+					"path", mf.Path, "error", rmErr)
+			}
+			if dErr := s.store.DeleteMediaFile(ctx, mf.ID); dErr != nil {
+				slog.WarnContext(ctx, "series adopt: delete replaced file failed",
+					"episode.id", target.ID, "error", dErr)
+				continue
+			}
+		} else if !ent.IsNotFound(err) {
+			slog.WarnContext(ctx, "series adopt: media file lookup failed",
+				"episode.id", target.ID, "error", err)
 			continue
 		}
 		path, size := f, info.Size()

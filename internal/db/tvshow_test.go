@@ -7,6 +7,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
+	"github.com/datahearth/streamline/ent/schema"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -104,6 +105,107 @@ var _ = Describe("TVShow store", Label("unit", "db"), func() {
 		Expect(season2.Edges.Episodes).To(HaveLen(1))
 	})
 
+	Describe("TBA episodes", func() {
+		aired := time.Date(2024, 3, 1, 0, 0, 0, 0, time.UTC)
+
+		epByNum := func(showID uint32, seasonNo, epNo uint16) *ent.Episode {
+			GinkgoHelper()
+			got, err := store.FindTVShowByID(ctx, showID)
+			Expect(err).NotTo(HaveOccurred())
+			for _, se := range got.Edges.Seasons {
+				if se.Number != seasonNo {
+					continue
+				}
+				for _, e := range se.Edges.Episodes {
+					if e.Number == epNo {
+						return e
+					}
+				}
+			}
+			Fail("episode not found")
+			return nil
+		}
+
+		It("start unmonitored when neither title nor air date is known", func() {
+			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "X", Year: 2024, TvdbID: 90,
+				Seasons: []SeasonSeed{{Number: 1, Episodes: []EpisodeSeed{
+					{Number: 1, Title: "Pilot"},
+					{Number: 2, AirDate: &aired},
+					{Number: 3},
+				}}},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(epByNum(show.ID, 1, 1).Monitored).To(BeTrue())
+			Expect(epByNum(show.ID, 1, 2).Monitored).To(BeTrue())
+			Expect(epByNum(show.ID, 1, 3).Monitored).To(BeFalse())
+		})
+
+		It("become monitored once a refresh publishes either field", func() {
+			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "X", Year: 2024, TvdbID: 91,
+				Seasons: []SeasonSeed{{Number: 1, Episodes: []EpisodeSeed{
+					{Number: 1}, {Number: 2}, {Number: 3},
+				}}},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = store.ReconcileEpisodes(ctx, show.ID, []SeasonSeed{
+				{Number: 1, Episodes: []EpisodeSeed{
+					{Number: 1, Title: "Pilot"},
+					{Number: 2, AirDate: &aired},
+					{Number: 3},
+				}},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(epByNum(show.ID, 1, 1).Monitored).To(BeTrue())
+			Expect(epByNum(show.ID, 1, 2).Monitored).To(BeTrue())
+			Expect(epByNum(show.ID, 1, 3).Monitored).To(BeFalse())
+		})
+
+		It("stay unmonitored when their season is unmonitored", func() {
+			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "X", Year: 2024, TvdbID: 92,
+				Seasons: []SeasonSeed{
+					{Number: 1, Episodes: []EpisodeSeed{{Number: 1}}},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(
+				store.SetSeasonMonitored(ctx, show.Edges.Seasons[0].ID, false),
+			).To(Succeed())
+
+			_, err = store.ReconcileEpisodes(ctx, show.ID, []SeasonSeed{
+				{Number: 1, Episodes: []EpisodeSeed{{Number: 1, Title: "Pilot"}}},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(epByNum(show.ID, 1, 1).Monitored).To(BeFalse())
+		})
+
+		It("do not re-monitor an episode the user unmonitored", func() {
+			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "X", Year: 2024, TvdbID: 93,
+				Seasons: []SeasonSeed{
+					{
+						Number:   1,
+						Episodes: []EpisodeSeed{{Number: 1, Title: "Pilot"}},
+					},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			ep := show.Edges.Seasons[0].Edges.Episodes[0]
+			Expect(store.SetEpisodeMonitored(ctx, ep.ID, false)).To(Succeed())
+
+			_, err = store.ReconcileEpisodes(ctx, show.ID, []SeasonSeed{
+				{Number: 1, Episodes: []EpisodeSeed{
+					{Number: 1, Title: "Pilot", AirDate: &aired},
+				}},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(epByNum(show.ID, 1, 1).Monitored).To(BeFalse())
+		})
+	})
+
 	It(
 		"prunes provider-removed seasons/episodes and returns their file paths",
 		func() {
@@ -194,6 +296,50 @@ var _ = Describe("TVShow store", Label("unit", "db"), func() {
 		Expect(none).To(BeNil())
 	})
 
+	Describe("UpdateTVShowMetadata", func() {
+		It("keeps the stored cast when the refresh carries none", func() {
+			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "X", Year: 2020, TvdbID: 11,
+				Cast: []schema.CastMember{{Name: "Ana Vidal"}},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(
+				store.UpdateTVShowMetadata(ctx, show.ID, UpdateTVShowMetadataParams{
+					Title: "X", Year: 2020,
+				}),
+			).To(Succeed())
+
+			got, err := store.FindTVShowByID(ctx, show.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.Cast).To(HaveLen(1))
+			Expect(got.Cast[0].Name).To(Equal("Ana Vidal"))
+		})
+	})
+
+	Describe("ListTVShowsStaleSince", func() {
+		It("returns never-refreshed shows and skips freshly refreshed ones", func() {
+			stale, err := store.CreateTVShow(
+				ctx, CreateTVShowParams{Title: "stale", Year: 2020, TvdbID: 21},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			fresh, err := store.CreateTVShow(
+				ctx, CreateTVShowParams{Title: "fresh", Year: 2020, TvdbID: 22},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(
+				store.SetTVShowRefreshedAt(ctx, fresh.ID, time.Now()),
+			).To(Succeed())
+
+			items, err := store.ListTVShowsStaleSince(
+				ctx, time.Now().Add(-24*time.Hour),
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(items).To(HaveLen(1))
+			Expect(items[0].ID).To(Equal(stale.ID))
+		})
+	})
+
 	It("toggles season and episode monitored flags", func() {
 		show, err := store.CreateTVShow(ctx, CreateTVShowParams{
 			Title: "X", Year: 2020, TvdbID: 1,
@@ -242,8 +388,10 @@ var _ = Describe("TVShow store", Label("unit", "db"), func() {
 			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
 				Title: "X", Year: 2020, TvdbID: 3,
 				Seasons: []SeasonSeed{
-					{Number: 1, Episodes: []EpisodeSeed{{Number: 1}, {Number: 2}}},
-					{Number: 2, Episodes: []EpisodeSeed{{Number: 1}}},
+					{Number: 1, Episodes: []EpisodeSeed{
+						{Number: 1, Title: "A"}, {Number: 2, Title: "B"},
+					}},
+					{Number: 2, Episodes: []EpisodeSeed{{Number: 1, Title: "C"}}},
 				},
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -270,13 +418,98 @@ var _ = Describe("TVShow store", Label("unit", "db"), func() {
 		},
 	)
 
+	It(
+		"CascadeSpecialsMonitored(false) switches off season 0 everywhere",
+		func() {
+			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "Everything on", Year: 2020, TvdbID: 93,
+				Seasons: []SeasonSeed{
+					{
+						Number:   0,
+						Episodes: []EpisodeSeed{{Number: 1, Title: "Recap"}},
+					},
+					{
+						Number:   1,
+						Episodes: []EpisodeSeed{{Number: 1, Title: "Pilot"}},
+					},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			n, err := store.CascadeSpecialsMonitored(ctx, false)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(1))
+
+			got, err := store.FindTVShowByID(ctx, show.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.Edges.Seasons[0].Monitored).To(BeFalse())
+			Expect(got.Edges.Seasons[0].Edges.Episodes[0].Monitored).To(BeFalse())
+			// The regular season is untouched.
+			Expect(got.Edges.Seasons[1].Monitored).To(BeTrue())
+			Expect(got.Edges.Seasons[1].Edges.Episodes[0].Monitored).To(BeTrue())
+		},
+	)
+
+	It(
+		"CascadeSpecialsMonitored(true) switches on season 0 of monitored shows only",
+		func() {
+			specials := SeasonSeed{
+				Number:      0,
+				Unmonitored: true,
+				Episodes:    []EpisodeSeed{{Number: 1, Title: "Recap"}},
+			}
+			regular := SeasonSeed{
+				Number:   1,
+				Episodes: []EpisodeSeed{{Number: 1, Title: "Pilot"}},
+			}
+			kept, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "Watched", Year: 2020, TvdbID: 91,
+				Seasons: []SeasonSeed{specials, regular},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			ignored, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "Dropped", Year: 2020, TvdbID: 92,
+				Seasons: []SeasonSeed{specials, regular},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			off := false
+			_, err = store.UpdateTVShow(
+				ctx,
+				ignored.ID,
+				UpdateTVShowParams{Monitored: &off},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(store.CascadeShowMonitored(ctx, ignored.ID, false)).To(Succeed())
+
+			n, err := store.CascadeSpecialsMonitored(ctx, true)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(1))
+
+			got, err := store.FindTVShowByID(ctx, kept.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.Edges.Seasons[0].Number).To(Equal(uint16(0)))
+			Expect(got.Edges.Seasons[0].Monitored).To(BeTrue())
+			Expect(got.Edges.Seasons[0].Edges.Episodes[0].Monitored).To(BeTrue())
+
+			// The unmonitored show keeps its specials off — otherwise the
+			// fetcher would pick up work its owner explicitly switched off.
+			skipped, err := store.FindTVShowByID(ctx, ignored.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(skipped.Edges.Seasons[0].Monitored).To(BeFalse())
+			Expect(skipped.Edges.Seasons[0].Edges.Episodes[0].Monitored).
+				To(BeFalse())
+		},
+	)
+
 	It("lists shows with wanted monitored episodes", func() {
 		show, err := store.CreateTVShow(ctx, CreateTVShowParams{
 			Title:  "X",
 			Year:   2020,
 			TvdbID: 1,
 			Seasons: []SeasonSeed{
-				{Number: 1, Episodes: []EpisodeSeed{{Number: 1}, {Number: 2}}},
+				{Number: 1, Episodes: []EpisodeSeed{
+					{Number: 1, Title: "A"}, {Number: 2, Title: "B"},
+				}},
 			},
 		})
 		Expect(err).NotTo(HaveOccurred())
@@ -312,7 +545,9 @@ var _ = Describe("TVShow store", Label("unit", "db"), func() {
 			show, err = store.CreateTVShow(ctx, CreateTVShowParams{
 				Title: "X", Year: 2020, TvdbID: 42,
 				Seasons: []SeasonSeed{
-					{Number: 1, Episodes: []EpisodeSeed{{Number: 1}, {Number: 2}}},
+					{Number: 1, Episodes: []EpisodeSeed{
+						{Number: 1, Title: "A"}, {Number: 2, Title: "B"},
+					}},
 				},
 			})
 			Expect(err).NotTo(HaveOccurred())

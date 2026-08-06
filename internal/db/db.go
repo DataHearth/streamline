@@ -15,9 +15,24 @@ import (
 	"github.com/datahearth/streamline/ent/importscanshow"
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/request"
+	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/ent/user"
+	"github.com/datahearth/streamline/internal/metadata"
 )
+
+// StoredCast converts provider cast into the JSON shape persisted on Movie and
+// TVShow. The two structs are field-identical, so the conversion is direct.
+func StoredCast(cast []metadata.CastMember) []schema.CastMember {
+	if len(cast) == 0 {
+		return nil
+	}
+	out := make([]schema.CastMember, 0, len(cast))
+	for _, c := range cast {
+		out = append(out, schema.CastMember(c))
+	}
+	return out
+}
 
 // Tx is a transaction-bound Store. Caller invokes regular Store methods, then
 // Commit or Rollback. Either method is terminal — calling both, or calling
@@ -101,6 +116,14 @@ type Store interface {
 		at time.Time,
 	) error
 	SetTorrentSessionSeedStopped(ctx context.Context, infoHash string) error
+	CountTorrentSessions(ctx context.Context) (int, error)
+	// ListTorrentSessionsByPathPrefix returns sessions whose save_path sits
+	// under prefix. Used by the library path migration.
+	ListTorrentSessionsByPathPrefix(
+		ctx context.Context,
+		prefix string,
+	) ([]*ent.TorrentSession, error)
+	SetTorrentSessionSavePath(ctx context.Context, infoHash, path string) error
 
 	// invites
 	CreateInvite(ctx context.Context, p CreateInviteParams) (*ent.Invite, error)
@@ -219,6 +242,13 @@ type Store interface {
 	) error
 	RecordImportFailure(ctx context.Context, p RecordImportFailureParams) error
 	SetDownloadRecordSavePath(ctx context.Context, id uint32, path string) error
+	CountDownloadRecords(ctx context.Context) (int, error)
+	// ListDownloadRecordsByPathPrefix returns records whose save_path sits
+	// under prefix. Used by the library path migration.
+	ListDownloadRecordsByPathPrefix(
+		ctx context.Context,
+		prefix string,
+	) ([]*ent.DownloadRecord, error)
 	DeleteCompletedDownloadRecordsBefore(
 		ctx context.Context,
 		cutoff time.Time,
@@ -303,6 +333,18 @@ type Store interface {
 	) ([]*ent.MediaFile, error)
 	// BumpMediaFileLastSeen sets last_seen_at = now for the given row.
 	BumpMediaFileLastSeen(ctx context.Context, id uint32) error
+	// CountMovieMediaFiles / CountEpisodeMediaFiles split the shared
+	// media_files table by owner, so the path migration can tell "this root
+	// holds nothing because the library is empty" apart from "…because the
+	// configured root no longer matches the stored paths".
+	CountMovieMediaFiles(ctx context.Context) (int, error)
+	CountEpisodeMediaFiles(ctx context.Context) (int, error)
+	// ListMediaFilesByPathPrefix returns every MediaFile whose path sits under
+	// prefix, ordered by path. Used by the library path migration.
+	ListMediaFilesByPathPrefix(
+		ctx context.Context,
+		prefix string,
+	) ([]*ent.MediaFile, error)
 	// UpdateMediaFilePath rewrites a MediaFile's path (used by rename).
 	UpdateMediaFilePath(ctx context.Context, id uint32, path string) error
 	// DeleteMediaFile removes a MediaFile row and leaves owners untouched.
@@ -432,6 +474,10 @@ type Store interface {
 	FindTVShowByID(ctx context.Context, id uint32) (*ent.TVShow, error)
 	FindTVShowByTVDBID(ctx context.Context, tvdbID uint32) (*ent.TVShow, error)
 	ListTVShows(ctx context.Context, offset, limit uint32) ([]*ent.TVShow, error)
+	ListTVShowsStaleSince(
+		ctx context.Context,
+		cutoff time.Time,
+	) ([]*ent.TVShow, error)
 	CountTVShows(ctx context.Context) (int, error)
 	CountTVShowsByStatus(
 		ctx context.Context,
@@ -462,6 +508,7 @@ type Store interface {
 		seasonID uint32,
 		monitored bool,
 	) error
+	CascadeSpecialsMonitored(ctx context.Context, monitored bool) (int, error)
 	SetEpisodeStatus(ctx context.Context, id uint32, status episode.Status) error
 	SetEpisodeLastSearchAt(ctx context.Context, id uint32, when time.Time) error
 	IncrementEpisodeGrabFailures(ctx context.Context, id uint32) error

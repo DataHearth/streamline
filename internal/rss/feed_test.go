@@ -24,7 +24,11 @@ func indexerConfig(names ...string) map[string]any {
 			"protocol": "torznab", "enabled": true,
 		})
 	}
-	return map[string]any{"indexers": entries}
+	// The scanner skips its pass without an enabled download client, so the
+	// baseline config carries one; specs that want the skip path override it.
+	cfg := defaultRSSConfig()
+	cfg["indexers"] = entries
+	return cfg
 }
 
 var _ = Describe("FeedScanner.Run", Label("unit", "rss"), func() {
@@ -50,6 +54,18 @@ var _ = Describe("FeedScanner.Run", Label("unit", "rss"), func() {
 	It("noops when no indexers are configured", func() {
 		configtest.Setup()
 		newScanner()
+		Expect(scanner.Run(ctx)).To(Succeed())
+	})
+
+	It("skips the pass when no download client is enabled", func() {
+		cfg := indexerConfig("a")
+		cfg["download_clients"] = []map[string]any{}
+		configtest.Setup(cfg)
+		newScanner()
+		store.EXPECT().ListWantedMovies(mock.Anything).
+			Return([]*ent.Movie{{ID: 7, TmdbID: 42, Title: "Dune", Year: 2021}}, nil).
+			Once()
+		// No Feed call: the whole point is not to pull feeds we can't act on.
 		Expect(scanner.Run(ctx)).To(Succeed())
 	})
 

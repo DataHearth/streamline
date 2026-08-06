@@ -27,9 +27,10 @@
 	import Select from "../../components/forms/Select.svelte";
 	import Checkbox from "../../components/forms/Checkbox.svelte";
 	import Dialog from "../../components/modals/Dialog.svelte";
+	import DeleteTitleDialog from "../../components/shared/DeleteTitleDialog.svelte";
 	import SeasonStrip from "../../components/series/SeasonStrip.svelte";
+	import SeasonAccordion from "../../components/series/SeasonAccordion.svelte";
 	import EpisodeTable from "../../components/series/EpisodeTable.svelte";
-	import SeriesFiles from "../../components/series/SeriesFiles.svelte";
 	import SeriesManualSearchModal from "../../components/series/SeriesManualSearchModal.svelte";
 	import SeriesReleaseSearchModal from "../../components/series/SeriesReleaseSearchModal.svelte";
 	import SeriesKebabMenu from "../../components/series/SeriesKebabMenu.svelte";
@@ -44,21 +45,14 @@
 		TVShow,
 	} from "../../lib/types";
 
-	type Tab = "overview" | "episodes" | "files" | "history" | "cast";
+	type Tab = "overview" | "episodes" | "history" | "cast";
 	const TABS: { key: Tab; label: string }[] = [
 		{ key: "overview", label: "Overview" },
 		{ key: "episodes", label: "Episodes" },
-		{ key: "files", label: "Files" },
 		{ key: "history", label: "History" },
 		{ key: "cast", label: "Cast" },
 	];
-	const VALID_TABS = new Set<Tab>([
-		"overview",
-		"episodes",
-		"files",
-		"history",
-		"cast",
-	]);
+	const VALID_TABS = new Set<Tab>(["overview", "episodes", "history", "cast"]);
 
 	let routeParams = $state<Record<string, string>>({});
 	let navigate = $state<(path: string) => void>(() => {});
@@ -189,7 +183,6 @@
 	let presetValue = $state<MonitoringPreset>("all");
 
 	let deleteOpen = $state(false);
-	let deleteWithFilesOpen = $state(false);
 	let manualOpen = $state(false);
 	let manualEpisode = $state<Episode | null>(null);
 	let packSearchOpen = $state(false);
@@ -200,13 +193,12 @@
 
 	// Clears everything scoped to the show being navigated away from. `tab` is
 	// re-read from the URL rather than reset to a constant so browser
-	// back/forward onto /series/x?tab=files lands on the tab it was left on.
+	// back/forward onto /series/x?tab=cast lands on the tab it was left on.
 	function resetSeriesState() {
 		tab = readTab();
 		selectedSeason = null;
 		presetValue = "all";
 		deleteOpen = false;
-		deleteWithFilesOpen = false;
 		manualOpen = false;
 		manualEpisode = null;
 		packSearchOpen = false;
@@ -350,7 +342,6 @@
 		if (a === "search") searchSeries.mutate();
 		else if (a === "refresh") refresh.mutate();
 		else if (a === "delete") deleteOpen = true;
-		else if (a === "delete-with-files") deleteWithFilesOpen = true;
 		else if (a === "delete-files") openDeleteFiles("this series", seriesFileEpisodes);
 	}
 
@@ -424,10 +415,10 @@
 		</div>
 
 		<div
-			class="relative grid w-full items-end gap-6 px-4 pb-12 pt-8 md:grid-cols-[260px_1fr] md:gap-10 md:px-8 md:pb-16 md:pt-10"
+			class="relative grid w-full items-end gap-5 px-4 pb-6 pt-4 md:grid-cols-[200px_1fr] md:gap-8 md:px-8 md:pb-14 md:pt-10 lg:grid-cols-[260px_1fr] lg:gap-10 lg:pb-16"
 		>
 			<div
-				class="relative aspect-[2/3] w-40 overflow-hidden rounded-lg shadow-[0_24px_48px_rgb(0_0_0_/0.5)] md:w-auto"
+				class="relative mx-auto aspect-[2/3] w-60 overflow-hidden rounded-lg shadow-[0_24px_48px_rgb(0_0_0_/0.5)] md:mx-0 md:w-auto"
 			>
 				<div class="absolute inset-0 bg-bg-card"></div>
 				<div class="absolute inset-0 grid place-items-center text-fg-faint">
@@ -471,7 +462,7 @@
 
 				<h1
 					id="series-title"
-					class="text-3xl font-bold leading-[1.05] tracking-tight text-fg md:text-5xl"
+					class="text-[23px] font-bold leading-[1.05] tracking-tight text-fg md:text-4xl lg:text-5xl"
 					title={show.title}
 				>
 					{show.title}
@@ -491,8 +482,10 @@
 				{/if}
 
 				{#if show.overview}
+					<!-- The synopsis has a home in the Overview tab; on a phone the header
+					     spends its height on state instead. -->
 					<p
-						class="mt-4 line-clamp-3 max-w-[680px] text-sm leading-relaxed text-fg-muted [text-wrap:pretty]"
+						class="mt-4 hidden max-w-[680px] text-sm leading-relaxed text-fg-muted md:line-clamp-3 md:block [text-wrap:pretty]"
 					>
 						{show.overview}
 					</p>
@@ -524,8 +517,76 @@
 					/>
 				</div>
 
+				<!-- Phone: one row of the actions that matter, then the monitoring
+				     preset on its own line. The md row below carries all of it inline. -->
+				<div class="mt-4 flex flex-col gap-2.5 md:hidden">
+					<div class="flex items-center gap-2">
+						<button
+							type="button"
+							onclick={() => (packSearchOpen = true)}
+							class="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-semibold text-fg-on-accent transition active:bg-accent-pressed"
+						>
+							<Search size={15} aria-hidden="true" />
+							{(show.wanted_episodes ?? 0) > 0
+								? `Search ${show.wanted_episodes} wanted`
+								: "Manual search"}
+						</button>
+						<PlayOnMenu
+							compact
+							path={`/series/${show.id}/play-on`}
+							queryKey={["series", show.id, "play-on"]}
+							disabled={!hasFiles}
+							disabledTitle="Available once episodes are imported"
+						/>
+						<button
+							type="button"
+							onclick={() => monitor.mutate(!(show.monitored ?? false))}
+							disabled={monitor.isPending}
+							aria-pressed={show.monitored ?? false}
+							aria-label={show.monitored ? "Stop monitoring" : "Monitor"}
+							class={cn(
+								"grid h-11 w-11 shrink-0 place-items-center rounded-lg border transition disabled:opacity-60",
+								show.monitored
+									? "border-accent-line bg-accent-soft text-accent-text"
+									: "border-border-strong bg-white/[0.08] text-fg",
+							)}
+						>
+							<Bookmark
+								size={17}
+								fill={show.monitored ? "currentColor" : "none"}
+								aria-hidden="true"
+							/>
+						</button>
+						<SeriesKebabMenu
+							onPick={onKebabPick}
+							allowDeleteFiles
+							disabledActions={hasFiles ? [] : ["delete-files"]}
+						/>
+					</div>
+					<div class="flex items-center gap-2">
+						<label
+							for="series-monitor-preset-phone"
+							class="inline-flex shrink-0 items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-fg-subtle"
+						>
+							<Eye size={14} aria-hidden="true" />
+							Monitor
+						</label>
+						<div class="min-w-0 flex-1">
+							<Select
+								id="series-monitor-preset-phone"
+								value={presetValue}
+								options={presetOptions}
+								onChange={(v) => {
+									presetValue = v;
+									applyPreset.mutate(v);
+								}}
+							/>
+						</div>
+					</div>
+				</div>
+
 				<div
-					class="mt-5 flex flex-wrap items-center gap-2.5"
+					class="mt-5 hidden flex-wrap items-center gap-2.5 md:flex"
 					aria-label="Series actions"
 				>
 					<PlayOnMenu
@@ -589,9 +650,7 @@
 						<SeriesKebabMenu
 							onPick={onKebabPick}
 							allowDeleteFiles
-							disabledActions={hasFiles
-								? []
-								: ["delete-with-files", "delete-files"]}
+							disabledActions={hasFiles ? [] : ["delete-files"]}
 						/>
 					</div>
 				</div>
@@ -601,7 +660,7 @@
 
 	<nav
 		aria-label="Series sections"
-		class="sticky top-14 z-10 border-b border-border bg-bg-deep/70 px-4 backdrop-blur-md saturate-150 md:px-8"
+		class="sticky top-16 z-10 border-b border-border bg-bg-deep/70 px-4 backdrop-blur-md saturate-150 md:px-8"
 	>
 		<div class="tabs-track flex w-full gap-0.5">
 			{#each TABS as t (t.key)}
@@ -611,7 +670,7 @@
 					onclick={() => (tab = t.key)}
 					aria-current={active ? "page" : undefined}
 					class={cn(
-						"relative -mb-px shrink-0 px-4 py-3.5 text-[13px] font-medium transition",
+						"relative -mb-px shrink-0 px-3 py-3.5 text-[13px] font-medium transition md:px-4",
 						active ? "text-fg" : "text-fg-subtle hover:text-fg",
 					)}
 				>
@@ -634,7 +693,9 @@
 
 	<div class="w-full px-4 py-6 md:px-8">
 		{#if tab === "overview"}
-			<div class="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px] lg:gap-10">
+			<div
+				class="grid grid-cols-1 gap-6 md:grid-cols-[1fr_260px] md:gap-7 lg:grid-cols-[1fr_320px] lg:gap-10"
+			>
 				<DetailAbout
 					overview={show.overview}
 					cast={show.cast ?? []}
@@ -715,12 +776,39 @@
 					No seasons found for this series.
 				</p>
 			{:else}
-				<div class="flex flex-col gap-5">
+				<!-- Phone: every season is a row with its own progress, one open at a
+				     time — a five-season show would turn the strip into a second scroll
+				     direction, and the table has no room for its columns here. -->
+				<div class="md:hidden">
+					<SeasonAccordion
+						{seasons}
+						selected={selectedSeason ?? seasons[0]?.number ?? 0}
+						onSelect={(n) => (selectedSeason = n)}
+						seriesType={show.type}
+						{seasonLabel}
+						onMonitorSeason={(s) => monitorSeason.mutate(s)}
+						onMonitorEpisode={(ep) => monitorEpisode.mutate(ep)}
+						onManualSearch={openManualSearch}
+						onDeleteFile={(ep) => openDeleteFiles(episodeCode(ep), [ep])}
+						onDeleteSeasonFiles={(s) =>
+							openDeleteFiles(
+								s.number === 0 ? "Specials" : `${seasonLabel} ${String(s.number).padStart(2, "0")}`,
+								(s.episodes ?? []).filter((e) => (e.size ?? 0) > 0),
+							)}
+					/>
+				</div>
+
+				<!-- md and up: seasons down the left, episodes beside them, so choosing a
+				     season never pushes the table off screen. -->
+				<div class="hidden gap-6 md:grid md:grid-cols-[200px_1fr] lg:grid-cols-[250px_1fr]">
 					<SeasonStrip
+						vertical
 						{seasons}
 						selected={selectedSeason ?? seasons[0]?.number ?? 0}
 						onSelect={(n) => (selectedSeason = n)}
 					/>
+
+					<div class="flex min-w-0 flex-col gap-4">
 
 					{#if currentSeason}
 						<div class="flex flex-wrap items-center justify-between gap-3">
@@ -812,10 +900,9 @@
 							onDeleteFile={(ep) => openDeleteFiles(episodeCode(ep), [ep])}
 						/>
 					{/if}
+					</div>
 				</div>
 			{/if}
-		{:else if tab === "files"}
-			<SeriesFiles {seasons} seriesId={show.id} />
 		{:else if tab === "history"}
 			<div
 				class="rounded-lg border border-dashed border-border bg-bg-card/40 py-14 text-center"
@@ -830,37 +917,16 @@
 		{/if}
 	</div>
 
-	<Dialog
+	<DeleteTitleDialog
 		open={deleteOpen}
 		title="Remove '{show.title}' from your library?"
-		body="Files on disk will be kept."
+		body="The series leaves your library. Files on disk are kept unless you say otherwise."
+		filesLabel="Also delete every downloaded episode from disk"
+		filesNote="This cannot be undone."
+		canDeleteFiles={hasFiles}
+		pending={del.isPending}
 		onClose={() => (deleteOpen = false)}
-		actions={[
-			{ label: "Cancel", variant: "ghost", autofocus: true },
-			{
-				label: "Delete",
-				variant: "danger",
-				dismiss: false,
-				pending: del.isPending,
-				onClick: () => del.mutate(false),
-			},
-		]}
-	/>
-	<Dialog
-		open={deleteWithFilesOpen}
-		title="Remove '{show.title}' and delete its files?"
-		body="All downloaded episode files will be deleted from disk. This cannot be undone."
-		onClose={() => (deleteWithFilesOpen = false)}
-		actions={[
-			{ label: "Cancel", variant: "ghost", autofocus: true },
-			{
-				label: "Delete + files",
-				variant: "danger",
-				dismiss: false,
-				pending: del.isPending,
-				onClick: () => del.mutate(true),
-			},
-		]}
+		onConfirm={(withFiles) => del.mutate(withFiles)}
 	/>
 	<SeriesManualSearchModal
 		open={manualOpen}

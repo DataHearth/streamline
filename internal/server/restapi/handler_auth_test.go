@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/internal/auth"
 )
 
 var _ = Describe("Handler: Auth API", Label("unit", "server", "auth"), func() {
@@ -163,6 +164,25 @@ var _ = Describe("Handler: Auth API", Label("unit", "server", "auth"), func() {
 				Expect(string(unbound.Role)).To(Equal("admin"))
 			},
 		)
+
+		It("returns 403 when registration is disabled", func() {
+			app.auth.EXPECT().
+				CreateInvite(mock.Anything, app.adminID, "nope@test.com", "member", mock.Anything).
+				Return("", nil, auth.ErrRegistrationDisabled).
+				Once()
+
+			req := app.req(
+				http.MethodPost,
+				"/api/v1/auth/invites",
+				app.adminKey,
+				strings.NewReader(`{"email": "nope@test.com", "role": "member"}`),
+			)
+			req.Header.Set("Content-Type", "application/json")
+			resp := app.do(req)
+			defer resp.Body.Close()
+
+			Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
+		})
 
 		It("creates an invite and returns raw token + URL", func() {
 			app.auth.EXPECT().

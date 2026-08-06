@@ -3,6 +3,7 @@
 	import { ChevronDown, Check } from "@lucide/svelte";
 	import { cubicOut } from "svelte/easing";
 	import { cn } from "../../lib/cn";
+	import { readOnlyLock } from "../../lib/config.svelte";
 
 	// Expand/collapse from the trigger edge: fade + slide + subtle scaleY off
 	// transform-origin top. Honors prefers-reduced-motion.
@@ -10,11 +11,12 @@
 		const reduce = window.matchMedia(
 			"(prefers-reduced-motion: reduce)",
 		).matches;
+		const dir = flipped ? -1 : 1;
 		return {
 			duration: reduce ? 0 : 170,
 			easing: cubicOut,
 			css: (t: number) =>
-				`opacity:${t};transform-origin:top;transform:translateY(${(t - 1) * 8}px) scaleY(${0.95 + t * 0.05})`,
+				`opacity:${t};transform-origin:${flipped ? "bottom" : "top"};transform:translateY(${(t - 1) * 8 * dir}px) scaleY(${0.95 + t * 0.05})`,
 		};
 	}
 
@@ -42,13 +44,19 @@
 		ariaLabel,
 	}: Props = $props();
 
+	const lock = readOnlyLock();
+	let off = $derived(disabled || lock());
+
 	let open = $state(false);
 	let triggerEl = $state<HTMLButtonElement | null>(null);
 	let menuEl = $state<HTMLDivElement | null>(null);
 	let menuTop = $state(0);
 	let menuLeft = $state(0);
 	let menuWidth = $state(0);
+	let flipped = $state(false);
+	let menuObserver: ResizeObserver | null = null;
 	const MENU_GAP = 8;
+	const VIEWPORT_PAD = 8;
 
 	let selectedLabel = $derived(
 		options.find((o) => o.value === value)?.label ?? "",
@@ -66,16 +74,37 @@
 			close();
 			return;
 		}
-		menuTop = r.bottom + MENU_GAP;
-		menuLeft = r.left;
 		menuWidth = r.width;
+		// Keep the menu inside the viewport horizontally (triggers near the right
+		// edge would otherwise push it off-screen).
+		menuLeft = Math.max(
+			VIEWPORT_PAD,
+			Math.min(r.left, window.innerWidth - r.width - VIEWPORT_PAD),
+		);
+		// Flip above the trigger when the menu wouldn't fit below it — the case
+		// for any select sitting in a modal footer or near the viewport bottom.
+		const menuH = menuEl?.offsetHeight ?? 0;
+		const below = window.innerHeight - r.bottom - MENU_GAP - VIEWPORT_PAD;
+		const above = r.top - MENU_GAP - VIEWPORT_PAD;
+		flipped = menuH > below && above > below;
+		menuTop = flipped
+			? Math.max(VIEWPORT_PAD, r.top - MENU_GAP - menuH)
+			: r.bottom + MENU_GAP;
 	}
 
 	async function openMenu() {
-		if (disabled) return;
+		if (off) return;
 		open = true;
 		await tick();
 		recompute();
+		// The portalled menu isn't at its final height one tick after mount (the
+		// browser Tailwind JIT hasn't emitted its utilities yet), and the flip-up
+		// branch positions from that height. Re-measure whenever it settles — this
+		// also covers webfont load and option-list changes.
+		if (menuEl && typeof ResizeObserver !== "undefined") {
+			menuObserver = new ResizeObserver(() => recompute());
+			menuObserver.observe(menuEl);
+		}
 		window.addEventListener("scroll", recompute, true);
 		window.addEventListener("resize", recompute);
 	}
@@ -83,6 +112,8 @@
 	function close() {
 		if (!open) return;
 		open = false;
+		menuObserver?.disconnect();
+		menuObserver = null;
 		window.removeEventListener("scroll", recompute, true);
 		window.removeEventListener("resize", recompute);
 	}
@@ -127,6 +158,7 @@
 	});
 
 	onDestroy(() => {
+		menuObserver?.disconnect();
 		window.removeEventListener("scroll", recompute, true);
 		window.removeEventListener("resize", recompute);
 	});
@@ -150,7 +182,7 @@
 			bind:this={triggerEl}
 			{id}
 			type="button"
-			{disabled}
+			disabled={off}
 			aria-label={label ? undefined : ariaLabel}
 			aria-haspopup="listbox"
 			aria-expanded={open}
@@ -158,7 +190,7 @@
 			class={cn(
 				"flex h-[38px] w-full items-center justify-between gap-2 rounded-md border border-border bg-bg px-3 text-sm text-fg transition-colors hover:border-border-strong focus-visible:outline-2 focus-visible:outline-accent",
 				open && "border-accent",
-				disabled && "cursor-not-allowed opacity-60",
+				off && "cursor-not-allowed opacity-60",
 			)}
 		>
 			<span class="truncate">{selectedLabel}</span>

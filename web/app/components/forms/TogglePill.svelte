@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Component } from "svelte";
 	import { cn } from "../../lib/cn";
+	import { readOnlyLock } from "../../lib/config.svelte";
 
 	type Props = {
 		checked: boolean;
@@ -24,6 +25,9 @@
 		disabled = false,
 	}: Props = $props();
 
+	const lock = readOnlyLock();
+	let off = $derived(disabled || lock());
+
 	const TONE = {
 		accent:
 			"text-fg-muted has-[:checked]:border-accent has-[:checked]:bg-accent-soft has-[:checked]:text-accent-text",
@@ -36,13 +40,13 @@
 	class={cn(
 		"inline-flex h-10 w-fit cursor-pointer items-center justify-center gap-1.5 rounded-md border border-border bg-bg-base px-3 text-xs font-medium transition hover:border-border-strong has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent",
 		TONE[tone],
-		disabled && "cursor-not-allowed opacity-50",
+		off && "cursor-not-allowed opacity-50",
 	)}
 >
 	<input
 		type="checkbox"
 		{name}
-		{disabled}
+		disabled={off}
 		{checked}
 		onchange={(e) => onChange((e.currentTarget as HTMLInputElement).checked)}
 		class="sr-only"

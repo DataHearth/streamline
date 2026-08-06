@@ -3,7 +3,7 @@
 	import {
 		Bookmark,
 		BookmarkX,
-		Search,
+		Radar,
 		SlidersHorizontal,
 		RefreshCw,
 		Trash2,
@@ -12,10 +12,15 @@
 	import { toast } from "../../lib/toast";
 	import { runBulk, plural } from "../../lib/bulk";
 	import BulkActionBar from "../shared/BulkActionBar.svelte";
+	import BulkTouchBar from "../shared/BulkTouchBar.svelte";
+	import type {
+		TouchAction,
+		TouchMenuRow,
+	} from "../shared/BulkTouchBar.svelte";
 	import KebabMenu from "../shared/KebabMenu.svelte";
 	import type { KebabItem } from "../shared/KebabMenu.svelte";
 	import QualityProfileModal from "../movies/QualityProfileModal.svelte";
-	import Dialog from "../modals/Dialog.svelte";
+	import DeleteTitleDialog from "../shared/DeleteTitleDialog.svelte";
 	import type { TVShow, QualityProfile } from "../../lib/types";
 
 	let {
@@ -38,10 +43,12 @@
 	let episodeCount = $derived(
 		picked.reduce((n, s) => n + (s.have_episodes ?? 0), 0),
 	);
-
+	let wantedCount = $derived(
+		picked.reduce((n, s) => n + (s.wanted_episodes ?? 0), 0),
+	);
+	let monitoredPicked = $derived(picked.filter((s) => s.monitored).length);
 	let qpOpen = $state(false);
 	let deleteOpen = $state(false);
-	let deleteWithFilesOpen = $state(false);
 	let busy = $state(false);
 
 	const qc = useQueryClient();
@@ -91,7 +98,7 @@
 	}
 	function searchNow() {
 		run("Search dispatched for", (s) =>
-			api(`/series/${s.id}/search-now`, { method: "POST" }),
+			api(`/series/${s.id}/search`, { method: "POST" }),
 		);
 	}
 	function refresh() {
@@ -111,7 +118,6 @@
 			() => {
 				qc.invalidateQueries({ queryKey: ["series", "counts"] });
 				deleteOpen = false;
-				deleteWithFilesOpen = false;
 			},
 		);
 	}
@@ -125,29 +131,80 @@
 		},
 		{
 			key: "delete",
-			label: "Remove from library",
+			label: "Remove from library…",
 			icon: Trash2,
 			danger: true,
 			dividerBefore: true,
 			onSelect: () => (deleteOpen = true),
 		},
-		{
-			key: "delete-with-files",
-			label: "Remove + delete files",
-			icon: Trash2,
-			danger: true,
-			disabled: episodeCount === 0,
-			title: episodeCount === 0 ? "No episodes on disk" : undefined,
-			onSelect: () => (deleteWithFilesOpen = true),
-		},
 	]);
 
 	const btn =
 		"inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border border-border bg-bg-elevated px-3 text-[12.5px] font-medium text-fg-muted transition hover:border-border-strong hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring disabled:cursor-not-allowed disabled:opacity-50";
+
+	let touchActions = $derived<TouchAction[]>([
+		{
+			key: "monitor",
+			label: "Monitor",
+			icon: Bookmark,
+			onSelect: () => setMonitored(true),
+		},
+		{ key: "search", label: "Search", icon: Radar, onSelect: searchNow },
+	]);
+
+	let touchMenu = $derived<TouchMenuRow[]>([
+		{
+			key: "monitor",
+			label: "Monitor",
+			icon: Bookmark,
+			line: `${monitoredPicked} of ${count} already monitored`,
+			onSelect: () => setMonitored(true),
+		},
+		{
+			key: "unmonitor",
+			label: "Stop monitoring",
+			icon: BookmarkX,
+			onSelect: () => setMonitored(false),
+		},
+		{
+			key: "search",
+			label: "Search for wanted episodes",
+			icon: Radar,
+			line: wantedCount
+				? `${plural(wantedCount, "episode")} wanted`
+				: "nothing wanted right now",
+			onSelect: searchNow,
+		},
+		{
+			key: "quality",
+			label: "Change quality profile",
+			icon: SlidersHorizontal,
+			onSelect: () => (qpOpen = true),
+		},
+		{
+			key: "refresh",
+			label: "Refresh metadata",
+			icon: RefreshCw,
+			onSelect: refresh,
+		},
+		{
+			key: "delete",
+			label: "Remove from library…",
+			icon: Trash2,
+			danger: true,
+			dividerBefore: true,
+			line:
+				episodeCount === 0
+					? "no episodes on disk"
+					: `${plural(episodeCount, "episode")} on disk`,
+			onSelect: () => (deleteOpen = true),
+		},
+	]);
 </script>
 
 {#if active}
-	<BulkActionBar
+	<div class="hidden md:block">
+		<BulkActionBar
 		{count}
 		{total}
 		{busy}
@@ -175,7 +232,7 @@
 			Unmonitor
 		</button>
 		<button type="button" disabled={busy} onclick={searchNow} class={btn}>
-			<Search size={14} aria-hidden="true" />
+			<Radar size={14} aria-hidden="true" />
 			Search
 		</button>
 		<button
@@ -189,6 +246,16 @@
 		</button>
 		<KebabMenu items={menuItems} variant="bar" />
 	</BulkActionBar>
+	</div>
+
+	<BulkTouchBar
+		{count}
+		{busy}
+		noun="series"
+		nounPlural="series"
+		actions={touchActions}
+		menu={touchMenu}
+	/>
 {/if}
 
 <QualityProfileModal
@@ -198,35 +265,14 @@
 	onClose={() => (qpOpen = false)}
 	onSave={saveProfile}
 />
-<Dialog
+<DeleteTitleDialog
 	open={deleteOpen}
 	title="Remove {count} series from your library?"
-	body="Files on disk will be kept."
+	body="The series leave your library. Files on disk are kept unless you say otherwise."
+	filesLabel="Also delete {plural(episodeCount, 'episode')} from disk"
+	filesNote="This cannot be undone."
+	canDeleteFiles={episodeCount > 0}
+	pending={busy}
 	onClose={() => (deleteOpen = false)}
-	actions={[
-		{ label: "Cancel", variant: "ghost", autofocus: true },
-		{
-			label: "Delete",
-			variant: "danger",
-			dismiss: false,
-			pending: busy,
-			onClick: () => remove(false),
-		},
-	]}
-/>
-<Dialog
-	open={deleteWithFilesOpen}
-	title="Remove {count} series and delete their files?"
-	body="{plural(episodeCount, 'episode')} will be deleted from disk. This cannot be undone."
-	onClose={() => (deleteWithFilesOpen = false)}
-	actions={[
-		{ label: "Cancel", variant: "ghost", autofocus: true },
-		{
-			label: "Delete + files",
-			variant: "danger",
-			dismiss: false,
-			pending: busy,
-			onClick: () => remove(true),
-		},
-	]}
+	onConfirm={(withFiles) => remove(withFiles)}
 />

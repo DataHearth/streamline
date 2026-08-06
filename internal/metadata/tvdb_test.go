@@ -13,6 +13,8 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
 
 var _ = Describe("TVDB provider", Label("unit", "metadata"), func() {
@@ -225,5 +227,21 @@ var _ = Describe("TVDB token handling", Label("unit", "metadata"), func() {
 		Expect(err).To(MatchError(ContainSubstring("unexpected status 401")))
 		Expect(logins.Load()).To(Equal(int32(2)))
 		Expect(snapshot()).To(Equal([]string{"token-1", "token-2"}))
+	})
+})
+
+var _ = Describe("TVDB hidden base_url override", Label("unit", "metadata"), func() {
+	It("honors metadata.tvdb.base_url from the hidden config key", func() {
+		configtest.Setup(map[string]any{
+			"metadata": map[string]any{
+				"tvdb": map[string]any{"base_url": "http://127.0.0.1:9"},
+			},
+		})
+		Expect(NewTVDB().BaseURL).To(Equal("http://127.0.0.1:9"))
+	})
+
+	It("falls back to the TVDB default when unset", func() {
+		configtest.Setup()
+		Expect(NewTVDB().BaseURL).To(Equal(tvdbBaseURL))
 	})
 })

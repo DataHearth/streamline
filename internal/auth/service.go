@@ -93,6 +93,8 @@ type Manager interface {
 		name string,
 	) (string, *ent.ApiKey, error)
 	RotateJWTSecret(ctx context.Context, callerID uint32) (string, error)
+	PrepareJWTRotation(ctx context.Context, callerID uint32) (string, error)
+	ConfirmJWTRotation(ctx context.Context, callerID uint32) (string, error)
 
 	// Account: profile + own credentials/keys
 	UpdateProfile(
@@ -182,6 +184,11 @@ type auth struct {
 	// tears down the DB. Without this, in-flight writes race DB.Close
 	// and can leave SQLite WAL/SHM files dangling.
 	bg sync.WaitGroup
+
+	// pendingRotations holds callerID -> pendingRotation for the read-only
+	// two-step rotate. Deliberately in-memory only: an unconfirmed candidate
+	// dying with the process is the correct outcome.
+	pendingRotations sync.Map
 }
 
 // New constructs a Manager using session credentials from the process-wide

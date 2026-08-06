@@ -95,6 +95,8 @@ var _ = Describe(
 						},
 					}, nil).
 					Once()
+				tvmeta.EXPECT().GetSeriesCast(mock.Anything, tvdbID).
+					Return(nil, nil).Once()
 
 				placeEpisode("Breaking Bad", "Breaking Bad S01E01.mkv")
 				placeEpisode("Breaking Bad", "Breaking Bad S01E02.mkv")
@@ -172,6 +174,48 @@ var _ = Describe(
 				Expect(err).NotTo(HaveOccurred())
 				Expect(string(refreshed.Status)).To(Equal("completed"))
 				Expect(refreshed.CommitSuccessCount).To(Equal(uint32(1)))
+
+				// Re-adopting the show with a different E01 file replaces the
+				// episode's tracked file instead of double-linking it.
+				oldPath := mf.Path
+				placeEpisode("Breaking Bad", "Breaking Bad S01E01 REPACK.mkv")
+				scan2, err := store.CreateImportScan(ctx, db.CreateImportScanParams{
+					SourcePath: tmpDir,
+					Kind:       entimportscan.KindSeries,
+					Mode:       entimportscan.ModeInPlace,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(store.UpdateImportScanStatus(
+					ctx,
+					scan2.ID,
+					entimportscan.StatusAwaitingReview,
+					db.UpdateScanStatusOpts{},
+				)).To(Succeed())
+				Expect(store.BulkCreateImportScanShows(
+					ctx,
+					scan2.ID,
+					[]db.CreateImportScanShowParams{{
+						FolderPath:       filepath.Join(tmpDir, "Breaking Bad"),
+						ParsedTitle:      "Breaking Bad",
+						Classification:   entimportscanshow.ClassificationExisting,
+						ExistingTvshowID: &show.ID,
+						FileCount:        3,
+					}},
+				)).To(Succeed())
+
+				svc.runCommitSeries(ctx, scan2)
+
+				// E01 now tracks the repack; the old file is gone from disk.
+				// E02's file is re-scanned at its same path, so it is untouched.
+				mf2, err := store.FindMediaFileByEpisodeID(ctx, episodeID(full, 1))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(mf2.Path).To(Equal(filepath.Join(
+					tmpDir,
+					"Breaking Bad",
+					"Season 01",
+					"Breaking Bad S01E01 REPACK.mkv",
+				)))
+				Expect(oldPath).NotTo(BeAnExistingFile())
 			},
 		)
 	},
@@ -226,6 +270,8 @@ var _ = Describe(
 							{SeasonNumber: 1, Number: 1, Title: "Pilot"},
 						},
 					}, nil).Once()
+				tvmeta.EXPECT().GetSeriesCast(mock.Anything, tvdbID).
+					Return(nil, nil).Once()
 
 				scan, err := store.CreateImportScan(ctx, db.CreateImportScanParams{
 					SourcePath: srcDir,
