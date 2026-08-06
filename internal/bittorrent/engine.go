@@ -110,18 +110,6 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 	cc.Seed = true
 	cc.NoDHT = entry.DisableDHT
 	cc.Logger = analog.Default.WithFilterLevel(analog.Error)
-	// anacrolix v1.61 can lose a peer's request-update wakeup: the msg writer
-	// subscribes to its wake condition only after checking state
-	// (peer-conn-msg-writer.go run), and once that tickle is lost the
-	// needRequestUpdate guard swallows every retrigger, so the peer never
-	// requests — a download wedges with a live unchoked seeder. The writer's
-	// keepalive tick recovers it, so 5s shrinks most wedges that the 1m
-	// default stretches past every download wait. Not a guarantee: the timer
-	// only re-arms after a write, and a tick that finds the conn not yet
-	// useful (nothing pending, e.g. before file priorities land) writes
-	// nothing and kills the timer chain — such a conn can still wedge
-	// permanently. Remove when upstream subscribes before the check.
-	cc.KeepAliveTimeout = 5 * time.Second
 	if entry.ListenPort != 0 {
 		cc.ListenPort = int(entry.ListenPort)
 	}
