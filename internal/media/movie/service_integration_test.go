@@ -377,6 +377,8 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 			})
 			Expect(err).NotTo(HaveOccurred())
 
+			posters.EXPECT().Remove("movies", m.ID).Return(nil).Once()
+
 			Expect(svc.Delete(ctx, m.ID, DeleteOptions{DeleteFiles: true})).
 				To(Succeed())
 

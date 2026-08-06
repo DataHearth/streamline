@@ -48,6 +48,7 @@ type Manager interface {
 	Fetch(ctx context.Context, kind string, id uint32, src string) error
 	Serve(w http.ResponseWriter, r *http.Request, kind string, id uint32)
 	Path(kind string, id uint32) string
+	Remove(kind string, id uint32) error
 }
 
 type posters struct {
@@ -70,6 +71,20 @@ func (p *posters) Path(kind string, id uint32) string {
 		strconv.FormatUint(uint64(id), 10),
 		"poster.jpg",
 	)
+}
+
+// Remove drops a cached poster. SQLite reuses the rowid of a deleted record,
+// so a cache entry left behind outlives its media and is served — verbatim,
+// because Fetch short-circuits on an existing file — as the artwork of the
+// next movie or show that lands on the same id.
+func (p *posters) Remove(kind string, id uint32) error {
+	if _, ok := validKinds[kind]; !ok {
+		return fmt.Errorf("posters: invalid kind %q", kind)
+	}
+	if err := os.RemoveAll(filepath.Dir(p.Path(kind, id))); err != nil {
+		return fmt.Errorf("remove poster cache: %w", err)
+	}
+	return nil
 }
 
 // Fetch is idempotent: returns nil without a network call when dst already

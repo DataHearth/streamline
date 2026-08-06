@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"os"
 	"sort"
 	"strings"
 	"time"
@@ -17,6 +16,7 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/indexer"
+	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/posters"
@@ -587,10 +587,11 @@ func (s *Service) Delete(ctx context.Context, id uint32, opts DeleteOptions) err
 			}
 			return otelx.RecordSpanError(span, err)
 		}
+		root := config.Get().Library.SeriesPath
 		for _, se := range show.Edges.Seasons {
 			for _, e := range se.Edges.Episodes {
 				for _, f := range e.Edges.MediaFiles {
-					if err := os.Remove(f.Path); err != nil && !os.IsNotExist(err) {
+					if err := library.RemoveMediaFile(f.Path, root); err != nil {
 						slog.WarnContext(
 							ctx,
 							"delete tv file failed",
@@ -614,6 +615,12 @@ func (s *Service) Delete(ctx context.Context, id uint32, opts DeleteOptions) err
 			)
 		}
 		return otelx.RecordSpanError(span, err)
+	}
+	if s.posters != nil {
+		if err := s.posters.Remove("tvshows", id); err != nil {
+			slog.WarnContext(ctx, "poster cache eviction failed",
+				"tvshow.id", id, "error", err)
+		}
 	}
 	showsDeleted.Add(ctx, 1)
 	slog.InfoContext(
@@ -655,7 +662,9 @@ func (s *Service) DeleteEpisodeFile(
 		}
 		return otelx.RecordSpanError(span, fmt.Errorf("find media_file: %w", err))
 	}
-	if err := os.Remove(mf.Path); err != nil && !os.IsNotExist(err) {
+	if err := library.RemoveMediaFile(
+		mf.Path, config.Get().Library.SeriesPath,
+	); err != nil {
 		slog.WarnContext(ctx, "delete episode file from disk failed",
 			"path", mf.Path, "error", err)
 	}
@@ -868,8 +877,9 @@ func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.TVShow, error
 	if err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
+	seriesRoot := config.Get().Library.SeriesPath
 	for _, path := range removed {
-		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+		if err := library.RemoveMediaFile(path, seriesRoot); err != nil {
 			slog.WarnContext(ctx, "remove pruned episode file failed",
 				"tvshow.id", id, "path", path, "error", err)
 		}

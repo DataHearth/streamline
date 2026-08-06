@@ -251,8 +251,9 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 		Expect(svc.SetSeasonMonitored(ctx, 3, false)).To(Succeed())
 	})
 
-	It("Delete removes the show", func() {
+	It("Delete removes the show and evicts the cached poster", func() {
 		storeMk.DeleteTVShow(mock.Anything, uint32(7)).Return(nil).Once()
+		postMk.Remove("tvshows", uint32(7)).Return(nil).Once()
 		Expect(svc.Delete(ctx, 7, DeleteOptions{})).To(Succeed())
 	})
 

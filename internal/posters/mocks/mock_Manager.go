@@ -118,6 +118,53 @@ func (_c *MockManager_Path_Call) RunAndReturn(run func(string, uint32) string) *
 	return _c
 }
 
+// Remove provides a mock function with given fields: kind, id
+func (_m *MockManager) Remove(kind string, id uint32) error {
+	ret := _m.Called(kind, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Remove")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, uint32) error); ok {
+		r0 = rf(kind, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockManager_Remove_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Remove'
+type MockManager_Remove_Call struct {
+	*mock.Call
+}
+
+// Remove is a helper method to define mock.On call
+//   - kind string
+//   - id uint32
+func (_e *MockManager_Expecter) Remove(kind interface{}, id interface{}) *MockManager_Remove_Call {
+	return &MockManager_Remove_Call{Call: _e.mock.On("Remove", kind, id)}
+}
+
+func (_c *MockManager_Remove_Call) Run(run func(kind string, id uint32)) *MockManager_Remove_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string), args[1].(uint32))
+	})
+	return _c
+}
+
+func (_c *MockManager_Remove_Call) Return(_a0 error) *MockManager_Remove_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockManager_Remove_Call) RunAndReturn(run func(string, uint32) error) *MockManager_Remove_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Serve provides a mock function with given fields: w, r, kind, id
 func (_m *MockManager) Serve(w http.ResponseWriter, r *http.Request, kind string, id uint32) {
 	_m.Called(w, r, kind, id)

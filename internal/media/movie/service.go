@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"os"
 	"time"
 
 	"github.com/datahearth/streamline/ent"
@@ -13,6 +12,7 @@ import (
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/posters"
@@ -639,8 +639,9 @@ func (s *Service) Delete(
 			return otelx.RecordSpanError(span,
 				fmt.Errorf("list media_files: %w", err))
 		}
+		root := config.Get().Library.MoviePath
 		for _, f := range files {
-			if err := os.Remove(f.Path); err != nil && !os.IsNotExist(err) {
+			if err := library.RemoveMediaFile(f.Path, root); err != nil {
 				slog.WarnContext(ctx, "delete movie file failed",
 					"movie.id", id, "path", f.Path, "error", err)
 			}
@@ -652,6 +653,12 @@ func (s *Service) Delete(
 				fmt.Errorf("movie %d not found", id))
 		}
 		return otelx.RecordSpanError(span, fmt.Errorf("delete movie: %w", err))
+	}
+	if s.posters != nil {
+		if err := s.posters.Remove("movies", id); err != nil {
+			slog.WarnContext(ctx, "poster cache eviction failed",
+				"movie.id", id, "error", err)
+		}
 	}
 	moviesDeleted.Add(ctx, 1)
 	slog.InfoContext(ctx, "movie deleted",
@@ -688,8 +695,9 @@ func (s *Service) DeleteFile(
 		}
 		return otelx.RecordSpanError(span, fmt.Errorf("find media_file: %w", err))
 	}
-	// Remove the file only; leave the movie dir for the re-grab.
-	if err := os.Remove(mf.Path); err != nil && !os.IsNotExist(err) {
+	if err := library.RemoveMediaFile(
+		mf.Path, config.Get().Library.MoviePath,
+	); err != nil {
 		slog.WarnContext(ctx, "delete media file from disk failed",
 			"path", mf.Path, "error", err)
 	}

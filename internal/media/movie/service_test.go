@@ -519,8 +519,9 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 	})
 
 	Describe("Delete", func() {
-		It("calls store delete on success", func() {
+		It("calls store delete and evicts the cached poster", func() {
 			storeMock.DeleteMovie(mock.Anything, uint32(7)).Return(nil).Once()
+			fetchMock.Remove("movies", uint32(7)).Return(nil).Once()
 
 			Expect(svc.Delete(ctx, 7, DeleteOptions{})).To(Succeed())
 		})
