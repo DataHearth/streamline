@@ -10,6 +10,7 @@
 	import { auth } from "../../lib/auth.svelte";
 	import { toast } from "../../lib/toast";
 	import { pullRefresh } from "../../lib/pull-refresh";
+	import { fold } from "../../lib/text";
 	import {
 		TORRENT_SORT_CHIPS,
 		sortTorrents,
@@ -150,10 +151,10 @@
 		if (statusFilter.length)
 			out = out.filter((t) => statusFilter.includes(t.status));
 		if (search.trim()) {
-			const q = search.toLowerCase();
+			const q = fold(search);
 			out = out.filter(
 				(t) =>
-					t.name.toLowerCase().includes(q) || t.hash.toLowerCase().includes(q),
+					fold(t.name).includes(q) || fold(t.hash).includes(q),
 			);
 		}
 		return out;

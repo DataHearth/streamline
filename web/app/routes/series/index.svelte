@@ -5,6 +5,7 @@
 	import { api } from "../../lib/api";
 	import { formatRelative } from "../../lib/dates";
 	import { loadPref, savePref } from "../../lib/prefs";
+	import { fold } from "../../lib/text";
 	import { pageMeta } from "../../lib/page-meta.svelte";
 	import SeriesToolbar from "../../components/series/SeriesToolbar.svelte";
 	import type {
@@ -164,13 +165,13 @@
 		let list = allSeries.filter(passesTab);
 		if (typeFilter !== "all") list = list.filter((s) => s.type === typeFilter);
 		if (monitoredOnly) list = list.filter((s) => s.monitored);
-		const q = query.trim().toLowerCase();
+		const q = fold(query.trim());
 		if (q)
 			list = list.filter(
 				(s) =>
-					s.title.toLowerCase().includes(q) ||
-					(s.network ?? "").toLowerCase().includes(q) ||
-					(s.genres ?? []).join(" ").toLowerCase().includes(q),
+					fold(s.title).includes(q) ||
+					fold(s.network ?? "").includes(q) ||
+					fold((s.genres ?? []).join(" ")).includes(q),
 			);
 		const sorted = [...list];
 		sorted.sort((a, b) => {

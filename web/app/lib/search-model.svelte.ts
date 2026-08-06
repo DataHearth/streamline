@@ -27,6 +27,7 @@ import {
 } from "@lucide/svelte";
 import { api } from "./api";
 import { auth } from "./auth.svelte";
+import { fold } from "./text";
 import type { Movie, TVShow } from "./types";
 
 export type PageItem = {
@@ -141,11 +142,11 @@ export function createSearchModel(
 	}
 
 	let sections = $derived.by<SearchSection[]>(() => {
-		const q = getQuery().trim().toLowerCase();
+		const q = fold(getQuery().trim());
 		const movieHits: MovieItem[] =
 			q.length >= TITLE_MIN && moviesQuery.data
 				? moviesQuery.data.items
-						.filter((m) => m.title.toLowerCase().includes(q))
+						.filter((m) => fold(m.title).includes(q))
 						.slice(0, TITLE_LIMIT)
 						.map((m) => ({
 							kind: "movie",
@@ -157,7 +158,7 @@ export function createSearchModel(
 		const seriesHits: SeriesItem[] =
 			q.length >= TITLE_MIN && seriesQuery.data
 				? seriesQuery.data.items
-						.filter((s) => s.title.toLowerCase().includes(q))
+						.filter((s) => fold(s.title).includes(q))
 						.slice(0, TITLE_LIMIT)
 						.map((s) => ({
 							kind: "series",
@@ -166,12 +167,8 @@ export function createSearchModel(
 							year: s.year,
 						}))
 				: [];
-		const matchedPages = pages().filter((p) =>
-			p.label.toLowerCase().includes(q),
-		);
-		const matchedActions = actions().filter((a) =>
-			a.label.toLowerCase().includes(q),
-		);
+		const matchedPages = pages().filter((p) => fold(p.label).includes(q));
+		const matchedActions = actions().filter((a) => fold(a.label).includes(q));
 
 		const titles: SearchSection[] = [];
 		if (opts.compact) {

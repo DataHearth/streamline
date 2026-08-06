@@ -6,6 +6,7 @@
 	import { formatRelative } from "../../lib/dates";
 	import { formatBytes } from "../../lib/format";
 	import { movieStatus } from "../../lib/status";
+	import { fold } from "../../lib/text";
 	import { loadPref, savePref } from "../../lib/prefs";
 	import { pageMeta } from "../../lib/page-meta.svelte";
 	import MoviesToolbar from "../../components/movies/MoviesToolbar.svelte";
@@ -155,12 +156,11 @@
 	let visibleMovies = $derived.by(() => {
 		let list = allMovies.filter(passesTab);
 		if (monitoredOnly) list = list.filter((m) => m.monitored);
-		const q = query.trim().toLowerCase();
+		const q = fold(query.trim());
 		if (q)
 			list = list.filter(
 				(m) =>
-					m.title.toLowerCase().includes(q) ||
-					m.original_title.toLowerCase().includes(q),
+					fold(m.title).includes(q) || fold(m.original_title).includes(q),
 			);
 		const sorted = [...list];
 		sorted.sort((a, b) => {

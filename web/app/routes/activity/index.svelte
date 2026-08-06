@@ -12,6 +12,7 @@
 	import { toast } from "../../lib/toast";
 	import { pullRefresh } from "../../lib/pull-refresh";
 	import { formatEta, formatSpeed } from "../../lib/format";
+	import { fold } from "../../lib/text";
 	import type {
 		DownloadQueue,
 		DownloadHistory,
@@ -201,12 +202,12 @@
 		if (statusFilter.length)
 			out = out.filter((i) => statusFilter.includes(i.status));
 		if (search.trim()) {
-			const q = search.toLowerCase();
+			const q = fold(search);
 			out = out.filter(
 				(i) =>
-					i.title.toLowerCase().includes(q) ||
-					i.movie.title.toLowerCase().includes(q) ||
-					(i.episode?.show_title ?? "").toLowerCase().includes(q),
+					fold(i.title).includes(q) ||
+					fold(i.movie.title).includes(q) ||
+					fold(i.episode?.show_title ?? "").includes(q),
 			);
 		}
 		return out;
