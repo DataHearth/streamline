@@ -55,7 +55,15 @@ Open http://localhost:8080.
 
 ### First login
 
-An admin account is seeded on first boot. Set `auth.seed_admin.email` and `auth.seed_admin.password` (or `password_file`) in the config beforehand to choose the credentials. If you don't, Streamline creates `admin@streamline.local` with a generated password and writes it back into `auth.seed_admin` in your config file — read it from there, then change it.
+An admin account is seeded on first boot. Set `auth.seed_admin.email` and `auth.seed_admin.password` (or `password_file`) in the config beforehand to choose the credentials. If you don't, Streamline creates `admin@streamline.local` with a generated password and prints it **once**, to stdout, on that first boot:
+
+```bash
+docker logs streamline | grep -i "default admin"
+```
+
+Copy it right then and change it from Settings. It is not written to your config file and not sent to the log pipeline, so if you lose it the only way back is to wipe the data dir and re-seed — `auth.seed_admin` is applied against an empty database and ignored afterwards.
+
+If you're upgrading from a release that saved those credentials into `auth.seed_admin.password`, Streamline no longer reads or rewrites that value once the admin exists. It's your file: delete the leftover plaintext yourself.
 
 ## Install
 

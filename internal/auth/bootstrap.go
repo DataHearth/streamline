@@ -29,12 +29,15 @@ func (s *auth) IsFirstUser(ctx context.Context) (bool, error) {
 // fresh install always boots with a usable admin account.
 const defaultAdminEmail = "admin@streamline.local"
 
-// BootstrapSeedAdmin ensures an admin exists on a fresh install. When
-// auth.seed_admin.email is set it creates that admin from the configured
-// password/password_file. When no email is configured it mints a default admin
-// (defaultAdminEmail), generating a password if none was supplied and writing
-// the resulting credentials back to the config file so the operator can
-// retrieve them. No-op if any user already exists.
+// BootstrapSeedAdmin ensures an admin exists on a fresh install, from
+// auth.seed_admin. An unset email resolves to defaultAdminEmail; that account
+// gets a generated password, printed once to stdout, when neither password nor
+// password_file was configured. No-op if any user already exists — including
+// on auth.seed_admin itself, which BootstrapSeedAdmin never rewrites.
+//
+// A generated password is never written to the config file and never fed to
+// slog: the config file outlives the install (and every backup of it), and slog
+// records fan out to stderr *and* the OTLP logs pipeline.
 func (s *auth) BootstrapSeedAdmin(ctx context.Context) error {
 	seed := config.Get().Auth.SeedAdmin
 
@@ -55,25 +58,32 @@ func (s *auth) BootstrapSeedAdmin(ctx context.Context) error {
 		pw = strings.TrimSpace(string(b))
 	}
 
-	// No configured email: fall back to a default admin so the instance is
-	// usable out of the box, generating a password when none was provided.
-	defaulted := seed.Email == ""
-	email := seed.Email
-	if defaulted {
+	email := strings.ToLower(seed.Email)
+	if email == "" {
 		email = defaultAdminEmail
-		if pw == "" {
-			pw, err = generatePassword()
-			if err != nil {
-				return fmt.Errorf("generate default admin password: %w", err)
-			}
+	}
+	// The default admin is the out-of-the-box account, so it must always end up
+	// with a usable password, whether it got that email from an empty config or
+	// from an explicit declaration.
+	//
+	// Except when a password_file was configured and read back empty: the
+	// secret has not materialised yet (empty mount, whitespace-only file).
+	// Minting a random password there would create the admin and flip
+	// IsFirstUser, so the file the operator meant to use could never take
+	// effect on any later boot. Fall through to the skip-with-warning instead.
+	generated := email == defaultAdminEmail && pw == "" && seed.PasswordFile == ""
+	if generated {
+		pw, err = generatePassword()
+		if err != nil {
+			return fmt.Errorf("generate default admin password: %w", err)
 		}
 	}
-	email = strings.ToLower(email)
 
 	if pw == "" {
 		slog.WarnContext(ctx,
-			"seed admin email set without password/password_file; skipping",
+			"seed admin has no usable password; skipping",
 			"email", email,
+			"password_file", seed.PasswordFile,
 		)
 		return nil
 	}
@@ -91,39 +101,37 @@ func (s *auth) BootstrapSeedAdmin(ctx context.Context) error {
 		return fmt.Errorf("create seed admin: %w", err)
 	}
 
-	if !defaulted {
-		slog.InfoContext(ctx, "seed admin created", "email", email)
-		return nil
+	if generated {
+		printGeneratedCredentials(email, pw)
 	}
-
-	// Persist the default admin's credentials so the operator can read them
-	// from the config file. If the config can't be written (no backing file,
-	// read-only), surface the password in the log instead so the freshly
-	// created admin isn't unreachable.
-	if err := config.Update(ctx, func(c *config.Config) error {
-		c.Auth.SeedAdmin.Email = email
-		c.Auth.SeedAdmin.Password = pw
-		return nil
-	}); err != nil {
-		slog.WarnContext(
-			ctx,
-			"default admin created but credentials could not be saved to config; record this password now",
-			"email",
-			email,
-			"password",
-			pw,
-			"error",
-			err,
-		)
-		return nil
-	}
-	slog.WarnContext(
-		ctx,
-		"default admin created; credentials saved to auth.seed_admin in the config file — change this password",
-		"email",
-		email,
-	)
+	slog.InfoContext(ctx, "seed admin created", "email", email)
 	return nil
+}
+
+// printGeneratedCredentials writes the generated default-admin password to
+// stdout instead of the log. slog records reach stderr *and* the OTLP logs
+// exporter, which would park a working admin credential in whatever backend
+// collects them; stdout is what an operator reads once from the container's
+// first-run output.
+//
+// Email and password share one line, and that line carries the words "default
+// admin": the Helm NOTES tell operators to recover the credential with
+// `kubectl logs … | grep -i "default admin"`, which a multi-line layout would
+// filter down to nothing.
+func printGeneratedCredentials(email, password string) {
+	fmt.Printf(`
+================= streamline: admin account =================
+ No auth.seed_admin.email was configured, so an out-of-the-box
+ admin was created. Its password is SHOWN ONCE, here: it is
+ not sent to the log pipeline and not written to the config
+ file.
+
+ default admin credentials — email: %s   password: %s
+
+ Copy it now, then change it from Settings after logging in.
+=============================================================
+
+`, email, password)
 }
 
 // generatePassword returns a URL-safe random password (~22 chars from 16

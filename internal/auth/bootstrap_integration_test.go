@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -32,6 +33,69 @@ func seedAdminConfig(email, password, passwordFile string) {
 			},
 		},
 	})
+}
+
+// seedAdminFileConfig mirrors seedAdminConfig with a file-backed config so
+// specs can assert on what BootstrapSeedAdmin left on disk. Returns the path
+// of the config file, which configtest writes into the data dir.
+func seedAdminFileConfig(email, password string) string {
+	GinkgoHelper()
+	cfg := configtest.SetupFile(map[string]any{
+		"auth": map[string]any{
+			"session_secret": "test-secret-key-for-jwt",
+			"session_ttl":    "1h",
+			"seed_admin": map[string]any{
+				"email":    email,
+				"password": password,
+			},
+		},
+	})
+	return filepath.Join(cfg.DataDir, "config.yaml")
+}
+
+// captureStdout points os.Stdout at a temp file for the rest of the spec and
+// returns a func reading back what was written. fmt.Printf resolves os.Stdout
+// per call, so the swap catches the shown-once credentials banner.
+func captureStdout() func() string {
+	GinkgoHelper()
+	prev := os.Stdout
+	f, err := os.CreateTemp(GinkgoT().TempDir(), "stdout")
+	Expect(err).NotTo(HaveOccurred())
+	os.Stdout = f
+	DeferCleanup(func() {
+		os.Stdout = prev
+		f.Close()
+	})
+	return func() string {
+		GinkgoHelper()
+		out, err := os.ReadFile(f.Name())
+		Expect(err).NotTo(HaveOccurred())
+		return string(out)
+	}
+}
+
+// printedPassword pulls the credential out of the stdout banner so specs can
+// prove that exact string appears nowhere else.
+func printedPassword(stdout string) string {
+	GinkgoHelper()
+	_, after, found := strings.Cut(stdout, "password: ")
+	Expect(found).To(BeTrue(), "stdout carries the generated password")
+	pw, _, _ := strings.Cut(after, "\n")
+	Expect(pw).NotTo(BeEmpty())
+	return pw
+}
+
+// grepDefaultAdmin filters stdout the way the Helm NOTES tell operators to:
+// `kubectl logs … | grep -i "default admin"`. A banner that spreads the
+// credential over lines the filter drops leaves them with nothing.
+func grepDefaultAdmin(stdout string) []string {
+	var matched []string
+	for l := range strings.SplitSeq(stdout, "\n") {
+		if strings.Contains(strings.ToLower(l), "default admin") {
+			matched = append(matched, l)
+		}
+	}
+	return matched
 }
 
 var _ = Describe("Bootstrap end-to-end", Label("integration", "auth"), func() {
@@ -65,15 +129,10 @@ var _ = Describe("Bootstrap end-to-end", Label("integration", "auth"), func() {
 	})
 
 	It(
-		"mints a default admin and writes its credentials to the config file",
+		"mints a default admin whose password only ever reaches stdout",
 		func() {
-			// File-backed config so the credential write-back actually persists.
-			configtest.SetupFile(map[string]any{
-				"auth": map[string]any{
-					"session_secret": "test-secret-key-for-jwt",
-					"session_ttl":    "1h",
-				},
-			})
+			cfgPath := seedAdminFileConfig("", "")
+			stdout := captureStdout()
 			svc = newTestService(dbClient)
 
 			Expect(svc.BootstrapSeedAdmin(ctx)).To(Succeed())
@@ -83,14 +142,15 @@ var _ = Describe("Bootstrap end-to-end", Label("integration", "auth"), func() {
 			Expect(u.Email).To(Equal("admin@streamline.local"))
 			Expect(u.Role).To(Equal(user.RoleAdmin))
 
-			// The generated password was persisted back to auth.seed_admin and
-			// authenticates the new admin.
-			seed := config.Get().Auth.SeedAdmin
-			Expect(seed.Email).To(Equal("admin@streamline.local"))
-			Expect(seed.Password).ToNot(BeEmpty())
+			pw := printedPassword(stdout())
 			Expect(bcrypt.CompareHashAndPassword(
-				[]byte(u.PasswordHash), []byte(seed.Password),
+				[]byte(u.PasswordHash), []byte(pw),
 			)).To(Succeed())
+
+			Expect(config.Get().Auth.SeedAdmin.Password).To(BeEmpty())
+			persisted, err := os.ReadFile(cfgPath)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(string(persisted)).ToNot(ContainSubstring(pw))
 		},
 	)
 
