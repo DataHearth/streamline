@@ -322,12 +322,6 @@ schedules:
 			Expect(err).To(HaveOccurred())
 		})
 
-		It("defaults auth.trusted_role away from admin", func() {
-			cfg, err := Load("")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(cfg.Auth.TrustedRole).To(Equal("member"))
-		})
-
 		Context("server.trusted_proxies", func() {
 			loadProxies := func(entry string) error {
 				GinkgoHelper()

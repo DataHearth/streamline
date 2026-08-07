@@ -35,7 +35,8 @@ var (
 // list and for audit.
 type SessionMeta struct {
 	// IP is the originating client IP. Handlers should use the proxy-aware
-	// client IP (resolved by the chi ClientIPFrom* middleware), not RemoteAddr.
+	// client IP (httputil.ClientIPString, resolved once per request by
+	// httputil.ClientIPResolver), not RemoteAddr.
 	IP string
 
 	// UserAgent is the raw User-Agent header, truncated to 512 chars at the

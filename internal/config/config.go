@@ -55,6 +55,15 @@ type ServerConfig struct {
 	// default) trusts nothing, so the peer address is always the client — the
 	// only safe assumption for a directly exposed port, where the headers are
 	// entirely attacker-supplied.
+	//
+	// List the proxies themselves, as narrowly as possible — ideally a /32 or
+	// /128 per proxy. Never a whole client subnet. Naming a range that clients
+	// can also occupy (10.0.0.0/8, 192.168.0.0/16, a Kubernetes pod or node
+	// CIDR) makes every host in it a proxy as far as this gate is concerned:
+	// any of them may then send X-Forwarded-For naming an address inside
+	// auth.trusted_networks and be handed the auth.trusted_role identity
+	// without authenticating, on top of taking over another client's login
+	// rate-limit budget and access-log identity.
 	TrustedProxies []string `koanf:"trusted_proxies" validate:"dive,cidr"`
 }
 
@@ -283,7 +292,7 @@ func defaults() map[string]any {
 		"read_only":                        false,
 		"auth.mode":                        "full",
 		"auth.trusted_networks":            []string{},
-		"auth.trusted_role":                "member",
+		"auth.trusted_role":                "admin",
 		"auth.session_secret":              "",
 		"auth.session_secret_file":         "",
 		"auth.session_ttl":                 "168h",

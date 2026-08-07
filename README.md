@@ -169,11 +169,83 @@ Validate a config file:
 streamline config validate --config ~/.config/streamline/config.yaml
 ```
 
-Login is rate-limited per IP (5 attempts / 15 min). Clear a locked-out account:
+Login is rate-limited per client address: **5 attempts per 15 minutes**, counted
+as a sliding window, so no fifteen minutes anywhere on the clock ever contains
+more than five. Each attempt comes back to the budget exactly fifteen minutes
+after it was made, and refusals carry a `Retry-After` saying when — always at
+least one second. IPv6 clients are counted per `/64`, not per address: the
+smallest block an ISP routes to one subscriber is a `/64`, so counting single
+addresses would let one client step around its own throttle by picking the next
+address out of its allocation. Everything sharing a `/64` therefore shares one
+budget. IPv4 is counted per address.
+
+Attempts are recorded per address and nothing is ever dropped to make room, so
+no traffic from any number of addresses can hand a throttled client its attempts
+back early, and nobody who has made no attempts is ever refused. Up to 262,144
+addresses are tracked at once — about 41 MiB when full, which only a flood
+approaches; an ordinary install holds one entry per client. Past that, an
+address seen for the first time is allowed **without being counted** rather than
+turned away.
+
+That last sentence is the trade, so here is what it costs. 262,144 keys is a
+routed IPv6 `/44`; a `/48` — what a tunnel broker or cheap VPS hands out — is
+65,536 and stays fully metered, as does anything smaller. Measured at 20
+attempts from each of a million addresses, the limiter granted 5.00 per address
+up to the cap and 16.07 across the million, so an attacker who owns enough
+addresses to fill the table can go unmetered from the ones beyond it. Reaching
+that point means already holding 262,144 addresses that were each cut off at
+five, and every account behind them still locks after
+`auth.lockout.threshold` failed attempts. The table clears itself within thirty
+minutes of the flood stopping, with no restart.
+
+Clear a locked-out account:
 
 ```bash
 streamline auth unlock user@example.com
 ```
+
+### Running behind a reverse proxy
+
+`X-Forwarded-For` is believed only when the connecting peer is listed in
+`server.trusted_proxies`. The list is empty by default, so out of the box the
+TCP peer is always treated as the client:
+
+```yaml
+server:
+  trusted_proxies:
+    - 10.1.0.7/32     # the ingress
+    - 10.1.0.8/32     # its standby
+```
+
+The chain is read right to left: entries that are themselves listed in
+`server.trusted_proxies` are skipped and the first entry outside the list is the
+client. Any number of proxy hops may be skipped, so a deep chain — CDN, WAF,
+load balancer, ingress, sidecar — still resolves the real client. An entry that
+cannot be parsed as an address aborts the walk, leaving the connecting proxy as
+the client, and is warned about at most once a minute.
+
+> [!WARNING]
+> List the proxies themselves, as narrowly as you can — ideally one `/32` (or
+> `/128`) per proxy. **Never a whole client subnet.** Naming a range that
+> clients can also occupy — `10.0.0.0/8`, `192.168.0.0/16`, a Kubernetes pod or
+> node CIDR — makes every host in that range a trusted proxy: any of them can
+> then send `X-Forwarded-For` naming an address inside `auth.trusted_networks`
+> and be handed the `auth.trusted_role` identity without authenticating. One
+> forged entry is enough — there is no hop count or padding to get past.
+
+**Upgrade impact.** `server.trusted_proxies` is new, and defaulting it to empty
+changes behaviour for every install that already runs behind a reverse proxy —
+previously the last `X-Forwarded-For` entry was trusted unconditionally. Until
+you set it, every request is attributed to the proxy's own address:
+
+- access logs and the IP shown on each session record read as the proxy;
+- the login rate limit keys on the proxy, so **all** users behind it share one
+  5-attempt / 15-min budget and lock each other out;
+- `auth.mode: trusted-network` stops recognising LAN clients, because the
+  address compared against `auth.trusted_networks` is now the proxy's.
+
+Set `server.trusted_proxies` as part of the upgrade if a proxy sits in front.
+Direct-to-binary installs need no change.
 
 ## Supported integrations
 

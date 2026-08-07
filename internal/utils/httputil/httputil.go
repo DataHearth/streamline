@@ -13,7 +13,7 @@ func ClientIP(r *http.Request) net.IP {
 	if ip, ok := r.Context().Value(clientIPCtxKey).(netip.Addr); ok {
 		return net.IP(ip.AsSlice())
 	}
-	if ip, ok := parseAddr(peerHost(r)); ok {
+	if ip, ok := parseAddr(r.RemoteAddr); ok {
 		return net.IP(ip.AsSlice())
 	}
 	return nil

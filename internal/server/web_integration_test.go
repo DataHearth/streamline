@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/go-jose/go-jose/v4"
@@ -381,6 +382,9 @@ var _ = Describe("Webui + API auth", Label("integration", "auth"), func() {
 			})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(http.StatusTooManyRequests))
+			Expect(
+				strconv.Atoi(resp.Header.Get("Retry-After")),
+			).To(BeNumerically(">", 0))
 		})
 
 		It("authed GET / returns the SPA shell (no redirect)", func() {

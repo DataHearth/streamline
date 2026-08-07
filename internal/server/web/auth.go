@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -316,12 +317,11 @@ func (h *Handler) allowAttempt(w http.ResponseWriter, r *http.Request) bool {
 	if h.limiter == nil {
 		return true
 	}
-	ip := httputil.ClientIPString(r)
-	if h.limiter.Allow(ip) {
+	ok, wait := h.limiter.Allow(httputil.ClientIPString(r))
+	if ok {
 		return true
 	}
-	w.Header().Set("Retry-After",
-		strconv.FormatInt(int64(h.limiter.RetryAfter(ip).Seconds()), 10))
+	w.Header().Set("Retry-After", retryAfterSeconds(wait))
 	writeError(
 		w,
 		r,
@@ -330,6 +330,18 @@ func (h *Handler) allowAttempt(w http.ResponseWriter, r *http.Request) bool {
 		"rate_limited",
 	)
 	return false
+}
+
+// retryAfterSeconds renders a limiter wait for the Retry-After header. It
+// rounds up and floors at one second: anything under a second would render as
+// "0", which reads as "retry now" and invites a tight loop against an endpoint
+// that is refusing.
+func retryAfterSeconds(d time.Duration) string {
+	secs := int64(1)
+	if d > time.Second {
+		secs = int64(math.Ceil(d.Seconds()))
+	}
+	return strconv.FormatInt(secs, 10)
 }
 
 // userFacingRegisterError maps a service error to a message safe for display.

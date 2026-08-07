@@ -113,12 +113,14 @@ func New(cfg Config) *Server {
 		posters: cfg.Posters,
 	}
 
+	// RequestID first so every line the rest of the chain logs — including the
+	// access log and the resolver's own warnings — can be tied to a request.
+	s.router.Use(chimw.RequestID)
 	// Must precede everything that logs, rate-limits or authorises by IP.
 	s.router.Use(httputil.ClientIPResolver())
 	if cfg.HTTPLog != nil {
 		s.router.Use(cfg.HTTPLog)
 	}
-	s.router.Use(chimw.RequestID)
 	s.router.Use(middleware.Recoverer)
 	s.router.Use(middleware.RouteTagger)
 	if cfg.AuthMiddleware != nil {
