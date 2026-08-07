@@ -318,9 +318,6 @@ func (s *auth) LoginOIDC(
 	return u, tok, nil
 }
 
-// roleRank orders roles by privilege so the highest-privilege claim match wins.
-var roleRank = map[string]int{"request_only": 1, "member": 2, "admin": 3}
-
 // oidcRoleFromClaims maps the provider's configured role_claim values to a
 // Streamline role via its role_mapping. Returns ("", false) when the provider
 // has no role mapping configured or no claim value matches; otherwise the

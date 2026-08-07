@@ -122,7 +122,23 @@ var _ = Describe("REST API movies", Label("e2e"), func() {
 			Message string `json:"message"`
 		}
 		decode(resp, &body)
-		Expect(body.Message).To(ContainSubstring("request-only"))
+		Expect(body.Message).To(ContainSubstring("member role required"))
+	})
+
+	It("403s a grab for a request_only caller", func() {
+		resp := post("/api/v1/movies/1/grab", viewerAuth, map[string]any{
+			"title":        "x",
+			"download_url": "magnet:?xt=urn:btih:0",
+			"size":         1,
+		})
+		defer resp.Body.Close()
+		Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
+	})
+
+	It("403s a delete-with-files for a request_only caller", func() {
+		resp := del("/api/v1/movies/1?delete_files=true", viewerAuth, nil)
+		defer resp.Body.Close()
+		Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
 	})
 
 	Describe("unknown movie id", func() {

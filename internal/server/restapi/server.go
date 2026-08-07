@@ -102,7 +102,9 @@ func New(d Deps) *Server {
 }
 
 // Mount wires the /api/v1/* routes onto r using the generated strict
-// handler adapter.
+// handler adapter, with the default-deny role guard (rbac.go) in front of
+// every operation.
 func Mount(r chi.Router, s *Server) {
-	HandlerFromMuxWithBaseURL(NewStrictHandler(s, nil), r, "/api/v1")
+	handler := NewStrictHandler(s, []StrictMiddlewareFunc{roleGuard})
+	HandlerFromMuxWithBaseURL(handler, r, "/api/v1")
 }
