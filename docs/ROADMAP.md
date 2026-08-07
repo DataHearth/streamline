@@ -22,8 +22,10 @@ Music and books follow the same path as movies and TV: browse and organise your 
 | qBittorrent, Transmission, Deluge | Shipped |
 | Torznab indexers | Shipped |
 | Prowlarr | Shipped |
-| Built-in torrent client (no external download client needed) | In progress |
+| Built-in torrent client (no external download client needed) | Shipped |
 | Usenet (NZB indexers + SABnzbd/NZBGet) | Planned |
+
+The built-in client is the newest of these and still has a rough edge: a download can occasionally stall while a seeder is connected. It usually clears itself within seconds; one that doesn't can be nudged with pause and resume. If you already run qBittorrent, Transmission or Deluge, there's no need to switch.
 
 ## Playback
 
