@@ -67,7 +67,9 @@ podSecurityContext:
 #     to the binary defaults /media/movies and /media/series.
 # Fix either by pointing the path at a persistent volume that IS mounted, or by
 # setting readOnlyRootFilesystem: false to opt out. Setting this whole block to
-# null or {} drops the container securityContext entirely, which also opts out.
+# null also opts out — it drops the container securityContext entirely. `{}`
+# does NOT: Helm coalesces your map over the chart's, so the values below
+# survive an empty override and readOnlyRootFilesystem stays true.
 securityContext:
   allowPrivilegeEscalation: false
   readOnlyRootFilesystem: true
@@ -210,10 +212,10 @@ config:
   #   Field validation for 'DataDir' failed on the 'dir' tag
   # This has nothing to do with readOnlyRootFilesystem — it fails identically
   # with a fully writable root filesystem — so the writable-path guard is the
-  # wrong place to catch it and deliberately does not try. If you need a
-  # subdirectory, create it inside the volume first (an initContainer, or a
-  # subPath mount), or point data_dir at the mount root and let the app lay out
-  # its own files under it.
+  # wrong place to catch it and deliberately does not try. Keep data_dir at the
+  # mount root and let the app lay out its own files under it — this chart
+  # exposes no initContainer hook and no subPath knob, so pre-creating the
+  # subdirectory would mean patching the rendered manifest yourself.
   data_dir: /data
   # Declarative deploy: the app never writes config back (config.Update returns
   # ErrReadOnly). Change config through git, not the UI. Runtime-only values

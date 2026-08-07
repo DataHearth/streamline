@@ -35,15 +35,23 @@ import (
 //     deployments with none.
 //   - https, or http://localhost — a reverse-proxied install, or a browser on
 //     the host itself — gets Sec-Fetch-Site too and settles on it before
-//     Origin is consulted. It is the stronger signal where it exists: it
-//     reports the initiator relationship the browser computed, so it also
-//     catches the sibling-subdomain post that a host comparison waves through.
+//     Origin is consulted. It reports the initiator relationship the browser
+//     computed rather than a value we compare ourselves, so it needs no notion
+//     of which hosts we answer to — but it is not strictly stronger here:
+//     originMatchesServedHost is exact-host equality, so a sibling-subdomain
+//     post (evil.media.example against media.example) is refused either way.
 //
 // A request carrying neither header did not come from a browser, and a
 // non-browser client has no ambient cookie jar to abuse. Those requests are
-// let through: POST /auth/login is the only endpoint that issues a JWT (there
-// is none under /api/v1, and minting an API key already requires one), so
-// refusing them would leave curl, mobile and CLI clients no way in at all.
+// let through because POST /auth/login and POST /auth/register are the only
+// way a machine client can obtain a JWT (there is no token endpoint under
+// /api/v1, and minting an API key already requires one), so refusing them
+// would leave curl, mobile and CLI clients no way in at all.
+//
+// Note this guard does not cover every session-minting path: GET
+// /auth/oidc/{name}/callback also calls auth.SetSession. That is deliberate —
+// an IdP redirect is inherently cross-site, and it carries its own state,
+// nonce and PKCE cookies instead.
 func csrfGuard(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if crossSiteRequest(r) {
@@ -100,8 +108,12 @@ func crossSiteRequest(r *http.Request) bool {
 // plain http on the inside.
 func originMatchesServedHost(r *http.Request, origin string) bool {
 	u, err := url.Parse(origin)
-	// An opaque origin serialises to "null", which parses with an empty host —
-	// that is how a sandboxed iframe's post gets refused here.
+	// An opaque origin serialises to "null", which parses with an empty host,
+	// so it is refused here. Sandboxed iframes are the obvious source, but not
+	// the common one: Chrome's default referrer policy also sends "null" when
+	// an https initiator posts to a non-https target — i.e. an https attacker
+	// page against a plain-http LAN install, which is this app's likeliest
+	// real attack shape.
 	if err != nil || u.Host == "" {
 		return false
 	}

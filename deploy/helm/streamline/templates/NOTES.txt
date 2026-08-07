@@ -10,9 +10,11 @@ First-boot admin: seed_admin is applied ONCE, against an empty DB on first
 boot — setting or changing it later is ignored (the existing admin keeps its
 password; you'd have to wipe /data to re-seed). Unless you set
 config.auth.seed_admin, a default admin (admin@streamline.local) is created
-with a random password printed once to the pod logs (it can't be saved back to
-the read-only config):
+with a random password printed once to the pod's stdout — on every deploy, not
+just read-only ones; it is never written back to the config:
   kubectl --namespace {{ .Release.Namespace }} logs deploy/{{ include "streamline.fullname" . }} | grep -i "default admin"
+Anything scraping container stdout captured it too, so change it from Settings
+after your first login.
 {{- if .Values.config.auth }}
 {{- if and .Values.config.auth.oidc (not (or (eq (.Values.config.auth.registration_mode | default "disabled") "open") (eq (.Values.config.auth.registration_mode | default "disabled") "invite"))) }}
 

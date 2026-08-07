@@ -169,7 +169,7 @@
         "seed_admin": {
           "type": "object",
           "additionalProperties": false,
-          "description": "Optional bootstrap admin. No-op if email empty or users already exist.",
+          "description": "Optional bootstrap admin, applied only against an empty database. An empty email resolves to admin@streamline.local and, when no password and no password_file are configured, that account gets a generated password printed once to stdout.",
           "properties": {
             "email": { "type": "string" },
             "password": { "type": "string" },

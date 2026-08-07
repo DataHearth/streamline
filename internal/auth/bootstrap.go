@@ -121,10 +121,10 @@ func (s *auth) BootstrapSeedAdmin(ctx context.Context) error {
 func printGeneratedCredentials(email, password string) {
 	fmt.Printf(`
 ================= streamline: admin account =================
- No auth.seed_admin.email was configured, so an out-of-the-box
- admin was created. Its password is SHOWN ONCE, here: it is
- not sent to the log pipeline and not written to the config
- file.
+ No password was configured for the default admin, so one was
+ generated. It is SHOWN ONCE, here: it is not written to the
+ config file and not sent to the log pipeline. Anything that
+ scrapes this container's stdout captured it too.
 
  default admin credentials — email: %s   password: %s
 
