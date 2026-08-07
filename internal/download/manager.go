@@ -461,11 +461,6 @@ func (d *download) grab(
 		return nil, otelx.RecordSpanError(span, err)
 	}
 
-	if err := checkReleaseSource(result.Download); err != nil {
-		outcome = "untrusted_source"
-		return nil, otelx.RecordSpanError(span, err)
-	}
-
 	dc, ok := config.PickDownloadClient()
 	if !ok {
 		outcome = "no_client"
