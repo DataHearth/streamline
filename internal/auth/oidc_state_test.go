@@ -6,6 +6,8 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
 
 var _ = Describe("OIDC State Helpers", Label("unit", "auth"), func() {
@@ -31,16 +33,39 @@ var _ = Describe("OIDC State Helpers", Label("unit", "auth"), func() {
 			Expect(c.MaxAge).To(Equal(600))
 		})
 
-		It("sets Secure flag when request has X-Forwarded-Proto https", func() {
+		It(
+			"sets Secure when a trusted proxy reports X-Forwarded-Proto https",
+			func() {
+				configtest.Setup(map[string]any{
+					"server": map[string]any{
+						"trusted_proxies": []string{"192.0.2.1/32"},
+					},
+				})
+				w := httptest.NewRecorder()
+				r := httptest.NewRequest(
+					http.MethodGet,
+					"/auth/oidc/test/start",
+					nil,
+				)
+				r.Header.Set("X-Forwarded-Proto", "https")
+
+				SetTransientCookie(w, r, "_oidc_state", "val")
+
+				cookies := w.Result().Cookies()
+				Expect(cookies).To(HaveLen(1))
+				Expect(cookies[0].Secure).To(BeTrue())
+			},
+		)
+
+		It("ignores X-Forwarded-Proto from an untrusted peer", func() {
+			configtest.Setup()
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest(http.MethodGet, "/auth/oidc/test/start", nil)
 			r.Header.Set("X-Forwarded-Proto", "https")
 
 			SetTransientCookie(w, r, "_oidc_state", "val")
 
-			cookies := w.Result().Cookies()
-			Expect(cookies).To(HaveLen(1))
-			Expect(cookies[0].Secure).To(BeTrue())
+			Expect(w.Result().Cookies()[0].Secure).To(BeFalse())
 		})
 	})
 

@@ -416,14 +416,22 @@ func sanitizeNext(n string) string {
 // exposed on. The callback lands back on the same host, so /start and
 // /callback recompute the identical string OAuth requires. The IdP only honors
 // registered redirect_uris, so a spoofed Host simply fails there.
+// The X-Forwarded-* headers are believed only from a configured reverse proxy
+// (server.trusted_proxies); off one they are attacker-supplied, and while the
+// IdP's exact-match registration blocks the obvious abuse, a forged pair still
+// steers /start and /callback at a host the operator never configured.
 func oidcRedirectURI(r *http.Request, name string) string {
-	scheme := "http"
-	if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
+	scheme, host := "http", r.Host
+	if r.TLS != nil {
 		scheme = "https"
 	}
-	host := r.Header.Get("X-Forwarded-Host")
-	if host == "" {
-		host = r.Host
+	if httputil.TrustedPeer(r) {
+		if r.Header.Get("X-Forwarded-Proto") == "https" {
+			scheme = "https"
+		}
+		if fwd := r.Header.Get("X-Forwarded-Host"); fwd != "" {
+			host = fwd
+		}
 	}
 	return scheme + "://" + host + "/auth/oidc/" + name + "/callback"
 }
