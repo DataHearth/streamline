@@ -252,12 +252,20 @@
 				Resulting {ROOTS.find((r) => r.value === root)?.label.toLowerCase()} root
 			</span>
 			<output
-				class="flex h-[38px] w-full cursor-default items-center gap-2 overflow-hidden rounded-md border border-dashed border-border bg-surface/40 px-3 font-mono text-sm"
+				class="flex w-full cursor-default flex-col gap-1 overflow-hidden rounded-md border border-dashed border-border bg-surface/40 px-3 py-2 font-mono text-sm sm:h-[38px] sm:flex-row sm:items-center sm:gap-2 sm:py-0"
 			>
 				{#if resultRoot}
-					<span class="truncate text-fg-subtle">{configuredRoot}</span>
-					<ArrowRight size={13} class="shrink-0 text-fg-faint" aria-hidden="true" />
-					<span class="truncate font-medium text-fg">{resultRoot}</span>
+					<span class="break-all text-fg-subtle sm:truncate sm:break-normal"
+						>{configuredRoot}</span
+					>
+					<ArrowRight
+						size={13}
+						class="shrink-0 rotate-90 self-start text-fg-faint sm:rotate-0 sm:self-auto"
+						aria-hidden="true"
+					/>
+					<span class="break-all font-medium text-fg sm:truncate sm:break-normal"
+						>{resultRoot}</span
+					>
 					{#if rootUnchanged}
 						<span class="shrink-0 font-sans text-xs text-fg-faint">
 							unchanged
@@ -352,11 +360,11 @@
 				<p class="flex flex-wrap items-center gap-1.5 text-sm text-fg">
 					<span class="font-semibold">{preview.total}</span>
 					path{preview.total === 1 ? "" : "s"} under
-					<code class="rounded bg-surface px-1 py-0.5 font-mono text-xs">
+					<code class="break-all rounded bg-surface px-1 py-0.5 font-mono text-xs">
 						{preview.from}
 					</code>
 					<ArrowRight size={13} class="text-fg-faint" aria-hidden="true" />
-					<code class="rounded bg-surface px-1 py-0.5 font-mono text-xs">
+					<code class="break-all rounded bg-surface px-1 py-0.5 font-mono text-xs">
 						{preview.to}
 					</code>
 				</p>
@@ -380,12 +388,24 @@
 				{/if}
 
 				{#if preview.samples.length > 0}
-					<ul class="mt-2.5 space-y-1 border-t border-border pt-2.5">
+					<!-- One path pair per line only holds where the line is long enough;
+					     below sm each pair stacks so neither end is truncated away. -->
+					<ul class="mt-2.5 space-y-2 border-t border-border pt-2.5 sm:space-y-1">
 						{#each preview.samples as s (s.from)}
-							<li class="truncate font-mono text-[11px] text-fg-subtle">
-								{s.from}
-								<span class="text-fg-faint">→</span>
-								{s.to}
+							<li class="font-mono text-[11px] text-fg-subtle sm:truncate">
+								<span class="block break-all sm:inline sm:break-normal"
+									>{s.from}</span
+								>
+								<span class="hidden text-fg-faint sm:inline" aria-hidden="true"
+									>→</span
+								>
+								<span
+									class="mt-0.5 flex gap-1.5 break-all text-fg sm:mt-0 sm:inline sm:break-normal sm:text-fg-subtle"
+								>
+									<span class="shrink-0 text-fg-faint sm:hidden" aria-hidden="true"
+										>→</span
+									>{s.to}
+								</span>
 							</li>
 						{/each}
 					</ul>

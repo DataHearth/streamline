@@ -1,11 +1,12 @@
 <script lang="ts">
 	import { onMount } from "svelte";
 	import { activeRoute } from "@roxi/routify";
-	import { TriangleAlert } from "@lucide/svelte";
+	import { ChevronLeft } from "@lucide/svelte";
 	import { auth } from "../../lib/auth.svelte";
-	import { config } from "../../lib/config.svelte";
 	import { requireAdmin } from "../../lib/guards";
+	import { SETTINGS_TITLES } from "../../lib/settings-nav.svelte";
 	import SettingsSidebar from "../../components/settings/SettingsSidebar.svelte";
+	import ReadOnlyStrip from "../../components/settings/ReadOnlyStrip.svelte";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	$effect(() => {
@@ -27,6 +28,11 @@
 		}),
 	);
 	let bare = $derived(/^\/settings\/users\/[^/]+$/.test(pathname));
+
+	// /settings is the section list below lg; it is the top of the settings
+	// tree, so it gets no Back-to-settings link of its own.
+	let isIndex = $derived(pathname === "/settings" || pathname === "/settings/");
+	let sectionTitle = $derived(SETTINGS_TITLES[pathname]?.() ?? "");
 </script>
 
 {#if bare}
@@ -34,22 +40,23 @@
 	<!-- svelte-ignore slot_element_deprecated -->
 	<slot />
 {:else}
-	<div class="mx-auto w-full max-w-7xl px-4 py-6 md:px-8 md:py-7">
-		{#if config.readOnly}
-			<div
-				role="status"
-				class="mb-5 flex items-start gap-2.5 rounded-md border border-status-wanted/40 bg-status-wanted/10 p-3 text-xs text-status-wanted"
+	<ReadOnlyStrip />
+	<div
+		class="mx-auto w-full max-w-7xl px-4 pb-0 pt-6 md:px-8 md:pt-7 lg:pb-7"
+	>
+		{#if !isIndex}
+			<a
+				href="/settings"
+				class="mb-3 inline-flex items-center gap-1.5 rounded-md py-1 pr-2 text-[13px] text-fg-muted transition hover:text-fg lg:hidden"
 			>
-				<TriangleAlert size={14} class="mt-0.5 shrink-0" aria-hidden="true" />
-				<div>
-					<p class="font-medium">{i18n.settings_readonly_config()}</p>
-					<p class="mt-0.5 text-status-wanted/80">
-						{i18n.settings_readonly_banner()}
-					</p>
-				</div>
-			</div>
+				<ChevronLeft size={15} aria-hidden="true" />
+				{i18n.nav_settings()}
+				{#if sectionTitle}
+					<span class="sr-only">— {sectionTitle}</span>
+				{/if}
+			</a>
 		{/if}
-		<div class="grid gap-5 md:grid-cols-[220px_1fr] md:gap-8">
+		<div class="grid gap-5 lg:grid-cols-[220px_1fr] lg:gap-8">
 			<SettingsSidebar />
 			<section class="min-w-0">
 				<!-- svelte-ignore slot_element_deprecated -->

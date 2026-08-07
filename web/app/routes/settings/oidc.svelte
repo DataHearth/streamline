@@ -11,12 +11,11 @@
 	import { toast } from "../../lib/toast";
 	import { oidcProviderCreate } from "../../lib/schemas";
 	import type { OIDCProvider, OIDCProviderList } from "../../lib/types";
-	import Modal from "../../components/modals/Modal.svelte";
+	import ConfigFormShell from "../../components/modals/ConfigFormShell.svelte";
 	import Dialog from "../../components/modals/Dialog.svelte";
 	import OIDCProviderForm from "../../components/settings/forms/OIDCProviderForm.svelte";
 	import BrandLogo from "../../components/settings/BrandLogo.svelte";
 	import ReadOnlyFieldset from "../../components/settings/ReadOnlyFieldset.svelte";
-	import ConfigModalFooter from "../../components/settings/ConfigModalFooter.svelte";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	const qc = useQueryClient();
@@ -188,9 +187,14 @@
 	</div>
 </div>
 
-<Modal
+<ConfigFormShell
 	open={modalOpen}
 	title={i18n.oidc_add_provider_long()}
+	formId="oidc-provider-form"
+	submitLabel={form.state.isSubmitting
+		? i18n.action_adding()
+		: i18n.oidc_add_provider()}
+	submitDisabled={!form.state.canSubmit || form.state.isSubmitting}
 	onClose={() => (modalOpen = false)}
 >
 	<form
@@ -205,15 +209,7 @@
 		</ReadOnlyFieldset>
 	</form>
 
-	{#snippet footer()}
-		<ConfigModalFooter
-			formId="oidc-provider-form"
-			submitLabel={form.state.isSubmitting ? i18n.action_adding() : i18n.oidc_add_provider()}
-			submitDisabled={!form.state.canSubmit || form.state.isSubmitting}
-			onCancel={() => (modalOpen = false)}
-		/>
-	{/snippet}
-</Modal>
+</ConfigFormShell>
 
 <Dialog
 	open={deleting !== null}

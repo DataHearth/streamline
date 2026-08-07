@@ -15,14 +15,13 @@
 		DownloadClientType,
 		DownloadClientAuth,
 	} from "../../lib/types";
-	import Modal from "../../components/modals/Modal.svelte";
+	import ConfigFormShell from "../../components/modals/ConfigFormShell.svelte";
 	import Dialog from "../../components/modals/Dialog.svelte";
 	import DownloadClientForm from "../../components/settings/forms/DownloadClientForm.svelte";
 	import BuiltinClientForm from "../../components/settings/forms/BuiltinClientForm.svelte";
 	import TestConnectionButton from "../../components/settings/TestConnectionButton.svelte";
 	import BrandLogo from "../../components/settings/BrandLogo.svelte";
 	import ReadOnlyFieldset from "../../components/settings/ReadOnlyFieldset.svelte";
-	import ConfigModalFooter from "../../components/settings/ConfigModalFooter.svelte";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	type Values = {
@@ -486,49 +485,49 @@
 							</div>
 						</div>
 					</button>
-					<div
-						class="mt-1 flex items-center justify-between gap-1 border-t border-border pt-3"
+					<TestConnectionButton
+						endpoint="/download-clients/{encodeURIComponent(c.name)}/test"
+						variant="card"
 					>
-						<TestConnectionButton
-							endpoint="/download-clients/{encodeURIComponent(c.name)}/test"
-						/>
-						<div class="flex items-center gap-1">
-							{#if config.readOnly}
-								<button
-									type="button"
-									onclick={() => openEdit(c)}
-									class="rounded-md p-1.5 text-fg-muted transition hover:bg-surface hover:text-fg"
-									aria-label={i18n.dlclient_view_short()}
-								>
-									<Eye size={16} aria-hidden="true" />
-								</button>
-							{:else}
-								<button
-									type="button"
-									onclick={() => openEdit(c)}
-									class="rounded-md p-1.5 text-fg-muted transition hover:bg-surface hover:text-fg"
-									aria-label={i18n.dlclient_edit_short()}
-								>
-									<Pencil size={16} aria-hidden="true" />
-								</button>
-								<button
-									type="button"
-									onclick={() => onDelete(c)}
-									class="rounded-md p-1.5 text-fg-muted transition hover:bg-status-failed/10 hover:text-status-failed"
-									aria-label={i18n.dlclient_delete()}
-								>
-									<Trash2 size={16} aria-hidden="true" />
-								</button>
-							{/if}
-						</div>
-					</div>
+						{#snippet trailing()}
+							<div class="flex shrink-0 items-center gap-1">
+								{#if config.readOnly}
+									<button
+										type="button"
+										onclick={() => openEdit(c)}
+										class="grid h-9 w-9 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg"
+										aria-label={i18n.dlclient_view_short()}
+									>
+										<Eye size={16} aria-hidden="true" />
+									</button>
+								{:else}
+									<button
+										type="button"
+										onclick={() => openEdit(c)}
+										class="grid h-9 w-9 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg"
+										aria-label={i18n.dlclient_edit_short()}
+									>
+										<Pencil size={16} aria-hidden="true" />
+									</button>
+									<button
+										type="button"
+										onclick={() => onDelete(c)}
+										class="grid h-9 w-9 place-items-center rounded-md text-fg-muted transition hover:bg-status-failed/10 hover:text-status-failed"
+										aria-label={i18n.dlclient_delete()}
+									>
+										<Trash2 size={16} aria-hidden="true" />
+									</button>
+								{/if}
+							</div>
+						{/snippet}
+					</TestConnectionButton>
 				</div>
 			{/each}
 		{/if}
 	</div>
 </div>
 
-<Modal
+<ConfigFormShell
 	open={modalOpen}
 	title={config.readOnly
 		? i18n.dlclient_view()
@@ -536,6 +535,13 @@
 			? i18n.dlclient_edit()
 			: i18n.dlclient_add_long()}
 	size="xl"
+	formId="download-client-form"
+	submitLabel={form.state.isSubmitting
+		? i18n.common_saving()
+		: editing
+			? i18n.common_save_changes()
+			: i18n.dlclient_add()}
+	submitDisabled={!form.state.canSubmit || form.state.isSubmitting}
 	onClose={() => (modalOpen = false)}
 >
 	<form
@@ -550,39 +556,26 @@
 		</ReadOnlyFieldset>
 	</form>
 
-	{#snippet footer()}
-		<ConfigModalFooter
-			formId="download-client-form"
-			submitLabel={form.state.isSubmitting
-				? i18n.common_saving()
-				: editing
-					? i18n.common_save_changes()
-					: i18n.dlclient_add()}
-			submitDisabled={!form.state.canSubmit || form.state.isSubmitting}
-			onCancel={() => (modalOpen = false)}
-		>
-			{#snippet left()}
-				<div class="sm:mr-auto">
-					{#if editing}
-						<TestConnectionButton
-							endpoint="/download-clients/{encodeURIComponent(editing.name)}/test"
-							size="md"
-						/>
-					{:else}
-						<TestConnectionButton
-							endpoint="/download-clients/test"
-							body={() => form.state.values}
-							size="md"
-						/>
-					{/if}
-				</div>
-			{/snippet}
-		</ConfigModalFooter>
+	{#snippet test(variant)}
+		{#if editing}
+			<TestConnectionButton
+				endpoint="/download-clients/{encodeURIComponent(editing.name)}/test"
+				size="md"
+				{variant}
+			/>
+		{:else}
+			<TestConnectionButton
+				endpoint="/download-clients/test"
+				body={() => form.state.values}
+				size="md"
+				{variant}
+			/>
+		{/if}
 	{/snippet}
-</Modal>
+</ConfigFormShell>
 
 <!-- Built-in engine modal: no host/port/auth, no Test connection. -->
-<Modal
+<ConfigFormShell
 	open={builtinModalOpen}
 	title={config.readOnly
 		? i18n.builtin_view()
@@ -590,6 +583,14 @@
 			? i18n.builtin_client()
 			: i18n.builtin_enable()}
 	size="xl"
+	formId="builtin-client-form"
+	submitLabel={builtinForm.state.isSubmitting
+		? i18n.common_saving()
+		: builtinIsEdit
+			? i18n.common_save_changes()
+			: i18n.dlclient_enable()}
+	submitDisabled={!builtinForm.state.canSubmit ||
+		builtinForm.state.isSubmitting}
 	onClose={() => (builtinModalOpen = false)}
 >
 	<form
@@ -604,27 +605,13 @@
 		</ReadOnlyFieldset>
 	</form>
 
-	{#snippet footer()}
-		<ConfigModalFooter
-			formId="builtin-client-form"
-			submitLabel={builtinForm.state.isSubmitting
-				? i18n.common_saving()
-				: builtinIsEdit
-					? i18n.common_save_changes()
-					: i18n.dlclient_enable()}
-			submitDisabled={!builtinForm.state.canSubmit ||
-				builtinForm.state.isSubmitting}
-			onCancel={() => (builtinModalOpen = false)}
-		>
-			{#snippet left()}
-				<div class="mr-auto flex items-center gap-1.5 text-xs text-fg-subtle">
-					<Info size={13} aria-hidden="true" />
-					<span>{i18n.settings_changes_after_restart()}</span>
-				</div>
-			{/snippet}
-		</ConfigModalFooter>
+	{#snippet note()}
+		<div class="flex items-center gap-1.5 text-xs text-fg-subtle sm:mr-auto">
+			<Info size={13} aria-hidden="true" />
+			<span>{i18n.settings_changes_after_restart()}</span>
+		</div>
 	{/snippet}
-</Modal>
+</ConfigFormShell>
 
 <Dialog
 	open={deleting !== null}

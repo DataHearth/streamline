@@ -5,6 +5,11 @@
 	import { cubicOut } from "svelte/easing";
 	import { X } from "@lucide/svelte";
 	import { lockScroll, unlockScroll } from "../../lib/scrollLock";
+	import {
+		initialFocusTarget,
+		portal,
+		trapFocus,
+	} from "../../lib/focus-trap";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	type Props = {
@@ -21,58 +26,6 @@
 	let modalRoot = $state<HTMLDivElement | null>(null);
 	let lastFocused: HTMLElement | null = null;
 	let titleId = `modal-title-${Math.random().toString(36).slice(2, 10)}`;
-
-	const FOCUSABLE =
-		'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
-	function focusableIn(node: HTMLElement): HTMLElement[] {
-		return Array.from(node.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
-			(el) => el.offsetParent !== null || el === document.activeElement,
-		);
-	}
-
-	// Initial-focus priority: [data-autofocus] (explicit opt-in for non-input
-	// targets like a Dialog's Cancel) → first form field → first focusable.
-	function initialFocusTarget(node: HTMLElement): HTMLElement | null {
-		const explicit = node.querySelector<HTMLElement>(
-			"[data-autofocus]:not([disabled])",
-		);
-		if (explicit) return explicit;
-		// Readonly fields are skipped too: on a read-only instance every field
-		// is one, and focusing it plants a caret and a focus ring on something
-		// that can't be typed into.
-		const field = node.querySelector<HTMLElement>(
-			"input:not([disabled]):not([readonly]), select:not([disabled]), textarea:not([disabled]):not([readonly])",
-		);
-		return field ?? focusableIn(node)[0] ?? null;
-	}
-
-	function trapFocus(node: HTMLElement) {
-		function onKeydown(e: KeyboardEvent) {
-			if (e.key !== "Tab") return;
-			const els = focusableIn(node);
-			if (els.length === 0) return;
-			const first = els[0];
-			const last = els[els.length - 1];
-			const active = document.activeElement as HTMLElement | null;
-			if (e.shiftKey && (active === first || !node.contains(active))) {
-				e.preventDefault();
-				last.focus();
-			} else if (
-				!e.shiftKey &&
-				(active === last || !node.contains(active))
-			) {
-				e.preventDefault();
-				first.focus();
-			}
-		}
-		node.addEventListener("keydown", onKeydown);
-		return {
-			destroy() {
-				node.removeEventListener("keydown", onKeydown);
-			},
-		};
-	}
 
 	$effect(() => {
 		if (!open) {
@@ -108,15 +61,6 @@
 	// Re-home the overlay on <body> so the fixed backdrop is never clipped or
 	// neutralised by a transformed / pointer-events-none ancestor (e.g. a card's
 	// hover overlay). Lets a dialog be declared anywhere in the tree.
-	function portal(node: HTMLElement) {
-		document.body.appendChild(node);
-		return {
-			destroy() {
-				node.parentNode?.removeChild(node);
-			},
-		};
-	}
-
 	function modalIn(_node: Element, params: { duration?: number } = {}) {
 		const duration = params.duration ?? 180;
 		return {

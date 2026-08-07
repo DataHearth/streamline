@@ -5,6 +5,7 @@
 	import { cn } from "../../lib/cn";
 	import { config, READONLY_HINT } from "../../lib/config.svelte";
 	import { toast } from "../../lib/toast";
+	import { createScheduleActions } from "../../lib/schedule-actions.svelte";
 	import { formatRelative, formatDateTime } from "../../lib/dates";
 	import type { Schedule, ScheduleList } from "../../lib/types";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
@@ -17,50 +18,23 @@
 
 	let { row, description, onEdit }: Props = $props();
 
-	const qc = useQueryClient();
-
-	const SUCCESS_MESSAGE: Record<"pause" | "resume" | "run", string> = {
-		pause: i18n.status_paused(),
-		resume: i18n.schedule_resumed(),
-		run: i18n.schedule_triggered(),
-	};
-
-	function action(verb: "pause" | "resume" | "run") {
-		return createMutation<Schedule, Error, void>(() => ({
-			mutationFn: () =>
-				api<Schedule>(
-					`/schedules/${encodeURIComponent(row.name)}/${verb}`,
-					{ method: "POST" },
-				),
-			onSuccess: (resp) => {
-				qc.setQueryData(
-					["schedules"],
-					(prev: ScheduleList | undefined) => ({
-						items: (prev?.items ?? []).map((s) =>
-							s.name === resp.name ? resp : s,
-						),
-					}),
-				);
-				toast.info(`${SUCCESS_MESSAGE[verb]} ${resp.name}`);
-			},
-			onError: (err) => toast.err(errorText(err)),
-		}));
-	}
-
-	const pause = action("pause");
-	const resume = action("resume");
-	const run = action("run");
+	// Shared with the touch action sheet so both patch the schedules cache the
+	// same way; see lib/schedule-actions.
+	const actions = createScheduleActions();
+	const pause = actions.pause;
+	const resume = actions.resume;
+	const run = actions.run;
 
 	const toggle = $derived(
 		row.paused
 			? {
-					mutate: () => resume.mutate(),
+					mutate: () => resume.mutate(row.name),
 					pending: resume.isPending,
 					label: i18n.schedule_resume(),
 					cls: "border-status-available/40 text-status-available hover:border-status-available hover:bg-status-available/10",
 				}
 			: {
-					mutate: () => pause.mutate(),
+					mutate: () => pause.mutate(row.name),
 					pending: pause.isPending,
 					label: i18n.schedule_pause(),
 					cls: "border-status-wanted/40 text-status-wanted hover:border-status-wanted hover:bg-status-wanted/10",
@@ -156,7 +130,7 @@
 				<button
 					type="button"
 					disabled={row.running || run.isPending}
-					onclick={() => run.mutate()}
+					onclick={() => run.mutate(row.name)}
 					class="inline-flex h-7 w-7 items-center justify-center rounded border border-accent/40 text-accent transition hover:border-accent hover:bg-accent/10 disabled:cursor-not-allowed disabled:opacity-40"
 					title={i18n.schedule_run_now()}
 				>

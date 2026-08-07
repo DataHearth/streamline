@@ -13,6 +13,8 @@
 	import type { Schedule, ScheduleList } from "../../lib/types";
 	import Modal from "../../components/modals/Modal.svelte";
 	import ScheduleRow from "../../components/settings/ScheduleRow.svelte";
+	import ScheduleTouchList from "../../components/settings/ScheduleTouchList.svelte";
+	import ScheduleActionSheet from "../../components/settings/ScheduleActionSheet.svelte";
 	import TextField from "../../components/forms/TextField.svelte";
 	import ReadOnlyFieldset from "../../components/settings/ReadOnlyFieldset.svelte";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
@@ -49,6 +51,9 @@
 
 	let editing = $state<Schedule | null>(null);
 	let modalOpen = $state(false);
+	// Touch: the row's trailing ⋯ opens this instead of carrying three 28px
+	// buttons. See ScheduleActionSheet.
+	let menuJob = $state<Schedule | null>(null);
 
 	const save = createMutation<Schedule, Error, { interval: string }>(() => ({
 		mutationFn: (body) => {
@@ -108,6 +113,15 @@
 	{:else if items.length === 0}
 		<p class="mt-6 text-sm text-fg-muted">{i18n.schedule_none()}</p>
 	{:else}
+		<ScheduleTouchList
+			{items}
+			descriptions={JOB_DESCRIPTIONS}
+			onMenu={(s) => (menuJob = s)}
+		/>
+
+		<!-- The six-column table needs ~680px; below lg the settings content column
+		     never has it (at 834 the old md sidebar left 430px), so it does not try. -->
+		<div class="hidden lg:block">
 		<div
 			class="mt-6 overflow-x-auto rounded-lg border border-border bg-bg-elevated"
 		>
@@ -182,6 +196,7 @@
 				</table>
 			</div>
 		{/if}
+		</div>
 	{/if}
 
 	<p class="mt-3 text-xs text-fg-subtle">
@@ -197,6 +212,12 @@
 		>{i18n.schedule_tip_suffix()}
 	</p>
 </div>
+
+<ScheduleActionSheet
+	job={menuJob}
+	onClose={() => (menuJob = null)}
+	onEditInterval={openEdit}
+/>
 
 <Modal
 	open={modalOpen}

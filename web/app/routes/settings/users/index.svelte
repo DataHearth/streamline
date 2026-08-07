@@ -7,7 +7,7 @@
 	} from "@tanstack/svelte-query";
 	import { createForm } from "@tanstack/svelte-form";
 	import * as v from "valibot";
-	import { Users, Search, UserPlus } from "@lucide/svelte";
+	import { Users, Search, UserPlus, SlidersHorizontal } from "@lucide/svelte";
 	import { api, errorText } from "../../../lib/api";
 	import { auth } from "../../../lib/auth.svelte";
 	import { toast } from "../../../lib/toast";
@@ -16,6 +16,8 @@
 	import { email, password, displayName, userRole } from "../../../lib/schemas";
 	import type { User, UserList, UserRole } from "../../../lib/types";
 	import UserRow from "../../../components/users/UserRow.svelte";
+	import UserTouchList from "../../../components/users/UserTouchList.svelte";
+	import UserFilterSheet from "../../../components/users/UserFilterSheet.svelte";
 	import InvitesCard from "../../../components/users/InvitesCard.svelte";
 	import TextField from "../../../components/forms/TextField.svelte";
 	import Select from "../../../components/forms/Select.svelte";
@@ -33,6 +35,9 @@
 	let offset = $state(0);
 	let sort = $state<SortKey>("created");
 	let order = $state<SortDir>("desc");
+	// Touch: the sort control was the table header, so it moves into a sheet
+	// alongside the role filter. See UserFilterSheet.
+	let sheetOpen = $state(false);
 
 	const qc = useQueryClient();
 
@@ -164,6 +169,17 @@
 	let to = $derived(offset + items.length);
 	let hasPrev = $derived(offset > 0);
 	let hasNext = $derived(offset + LIMIT < total);
+
+	// Badge count on the touch filter button: a role filter, and a sort that is
+	// no longer the default. Search has its own visible field and never counts.
+	let activeFilters = $derived(
+		(role !== "" ? 1 : 0) + (sort !== "created" || order !== "desc" ? 1 : 0),
+	);
+	function resetFilters() {
+		role = "";
+		sort = "created";
+		order = "desc";
+	}
 </script>
 
 <header class="flex flex-wrap items-end justify-between gap-3">
@@ -183,7 +199,7 @@
 	<button
 		type="button"
 		onclick={() => (creating = true)}
-		class="inline-flex items-center gap-1.5 rounded-md bg-accent px-3.5 py-2 text-sm font-medium text-fg-on-accent transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
+		class="inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-accent px-3.5 py-2.5 text-sm font-medium text-fg-on-accent transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 sm:w-auto sm:py-2"
 	>
 		<UserPlus size={16} aria-hidden="true" />
 		{i18n.users_new()}
@@ -191,33 +207,54 @@
 </header>
 
 <section
-	class="mt-6 rounded-lg border border-border bg-bg-elevated p-5 md:p-6"
+	class="mt-6 lg:rounded-lg lg:border lg:border-border lg:bg-bg-elevated lg:p-6"
 >
 	<form
-		class="grid gap-3 sm:grid-cols-[1fr_220px_auto] sm:items-end"
+		class="grid gap-3 lg:grid-cols-[1fr_220px_auto] lg:items-end"
 		onsubmit={(e) => e.preventDefault()}
 	>
-		<label class="block">
-			<span class="mb-1 block text-xs font-medium text-fg-muted">{i18n.common_search()}</span>
-			<span
-				class="relative flex items-center rounded-md border border-border bg-bg focus-within:border-accent"
+		<div class="flex items-end gap-2.5">
+			<label class="block min-w-0 flex-1">
+				<span class="mb-1 block text-xs font-medium text-fg-muted"
+					>{i18n.common_search()}</span
+				>
+				<span
+					class="relative flex items-center rounded-md border border-border bg-bg focus-within:border-accent"
+				>
+					<Search
+						size={16}
+						class="absolute left-3 text-fg-faint"
+						aria-hidden="true"
+					/>
+					<input
+						type="search"
+						bind:value={q}
+						placeholder={i18n.field_email_or_name()}
+						autocomplete="off"
+						class="w-full rounded-md bg-transparent py-2 pl-9 pr-3 text-sm text-fg placeholder:text-fg-faint focus:outline-none"
+					/>
+				</span>
+			</label>
+			<button
+				type="button"
+				onclick={() => (sheetOpen = true)}
+				aria-label={i18n.users_filter_sort()}
+				class="relative grid h-[38px] w-[38px] shrink-0 place-items-center rounded-md border border-border text-fg-muted transition active:bg-bg-hover lg:hidden"
 			>
-				<Search
-					size={16}
-					class="absolute left-3 text-fg-faint"
-					aria-hidden="true"
-				/>
-				<input
-					type="search"
-					bind:value={q}
-					placeholder={i18n.field_email_or_name()}
-					autocomplete="off"
-					class="w-full rounded-md bg-transparent py-2 pl-9 pr-3 text-sm text-fg placeholder:text-fg-faint focus:outline-none"
-				/>
-			</span>
-		</label>
-		<div class="block">
-			<span class="mb-1 block text-xs font-medium text-fg-muted">{i18n.common_role()}</span>
+				<SlidersHorizontal size={17} aria-hidden="true" />
+				{#if activeFilters > 0}
+					<span
+						class="absolute -right-1.5 -top-1.5 grid h-[17px] min-w-[17px] place-items-center rounded-full bg-accent px-1 font-mono text-[9.5px] font-bold text-fg-on-accent"
+					>
+						{activeFilters}
+					</span>
+				{/if}
+			</button>
+		</div>
+		<div class="hidden lg:block">
+			<span class="mb-1 block text-xs font-medium text-fg-muted"
+				>{i18n.common_role()}</span
+			>
 			<Select
 				ariaLabel="Filter by role"
 				value={role}
@@ -258,7 +295,11 @@
 				</p>
 			</div>
 		{:else}
-			<div class="overflow-x-auto rounded-md border border-border">
+			<UserTouchList users={items} selfId={auth.user?.id} />
+
+			<!-- min-w-[560px] in a horizontal scroller inside a vertically scrolling
+			     page: available from lg, where the column is finally wide enough. -->
+			<div class="hidden overflow-x-auto rounded-md border border-border lg:block">
 				<table class="w-full min-w-[560px] text-sm">
 					<thead
 						class="bg-surface text-left text-xs uppercase tracking-wider text-fg-muted"
@@ -315,6 +356,19 @@
 <section class="mt-6">
 	<InvitesCard />
 </section>
+
+<UserFilterSheet
+	open={sheetOpen}
+	onClose={() => (sheetOpen = false)}
+	{role}
+	onRoleChange={(r) => (role = r)}
+	{sort}
+	{order}
+	onSortChange={toggleSort}
+	resultCount={total}
+	activeCount={activeFilters}
+	onReset={resetFilters}
+/>
 
 {#snippet sortHeader(key: SortKey, label: string)}
 	{@const active = sort === key}

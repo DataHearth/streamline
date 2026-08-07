@@ -3,6 +3,7 @@
 	import { Check } from "@lucide/svelte";
 	import { cn } from "../../lib/cn";
 	import { readOnlyLock } from "../../lib/config.svelte";
+	import FieldLock from "./FieldLock.svelte";
 
 	type Props = {
 		checked: boolean;
@@ -32,7 +33,8 @@
 	}: Props = $props();
 
 	const lock = readOnlyLock();
-	let off = $derived(disabled || lock());
+	let configLocked = $derived(lock());
+	let off = $derived(disabled || configLocked);
 </script>
 
 <label
@@ -73,10 +75,14 @@
 		{@render children()}
 	{:else if description}
 		<span class="flex-1">
-			<span class="block text-sm font-medium text-fg">{label}</span>
+			<span class="flex items-center gap-1.5 text-sm font-medium text-fg"
+				>{label}<FieldLock locked={configLocked} /></span
+			>
 			<span class="mt-0.5 block text-xs text-fg-muted">{description}</span>
 		</span>
 	{:else if label}
-		<span class="text-sm text-fg">{label}</span>
+		<span class="flex items-center gap-1.5 text-sm text-fg"
+			>{label}<FieldLock locked={configLocked} /></span
+		>
 	{/if}
 </label>

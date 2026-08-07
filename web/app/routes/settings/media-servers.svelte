@@ -11,13 +11,12 @@
 	import { toast } from "../../lib/toast";
 	import { mediaServerForm } from "../../lib/schemas";
 	import type { MediaServer, MediaServerType } from "../../lib/types";
-	import Modal from "../../components/modals/Modal.svelte";
+	import ConfigFormShell from "../../components/modals/ConfigFormShell.svelte";
 	import Dialog from "../../components/modals/Dialog.svelte";
 	import MediaServerForm from "../../components/settings/forms/MediaServerForm.svelte";
 	import TestConnectionButton from "../../components/settings/TestConnectionButton.svelte";
 	import BrandLogo from "../../components/settings/BrandLogo.svelte";
 	import ReadOnlyFieldset from "../../components/settings/ReadOnlyFieldset.svelte";
-	import ConfigModalFooter from "../../components/settings/ConfigModalFooter.svelte";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	type Values = {
@@ -238,49 +237,49 @@
 							<span class="truncate">Library: {s.library_section}</span>
 						</div>
 					{/if}
-					<div
-						class="mt-1 flex items-center justify-between gap-1 border-t border-border pt-3"
+					<TestConnectionButton
+						endpoint="/media-servers/{encodeURIComponent(s.name)}/test"
+						variant="card"
 					>
-						<TestConnectionButton
-							endpoint="/media-servers/{encodeURIComponent(s.name)}/test"
-						/>
-						<div class="flex items-center gap-1">
-							{#if config.readOnly}
-								<button
-									type="button"
-									onclick={() => openEdit(s)}
-									class="rounded-md p-1.5 text-fg-muted transition hover:bg-surface hover:text-fg"
-									aria-label={i18n.mediaserver_view_short()}
-								>
-									<Eye size={16} aria-hidden="true" />
-								</button>
-							{:else}
-								<button
-									type="button"
-									onclick={() => openEdit(s)}
-									class="rounded-md p-1.5 text-fg-muted transition hover:bg-surface hover:text-fg"
-									aria-label={i18n.mediaserver_edit_short()}
-								>
-									<Pencil size={16} aria-hidden="true" />
-								</button>
-								<button
-									type="button"
-									onclick={() => onDelete(s)}
-									class="rounded-md p-1.5 text-fg-muted transition hover:bg-status-failed/10 hover:text-status-failed"
-									aria-label={i18n.mediaserver_delete()}
-								>
-									<Trash2 size={16} aria-hidden="true" />
-								</button>
-							{/if}
-						</div>
-					</div>
+						{#snippet trailing()}
+							<div class="flex shrink-0 items-center gap-1">
+								{#if config.readOnly}
+									<button
+										type="button"
+										onclick={() => openEdit(s)}
+										class="grid h-9 w-9 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg"
+										aria-label={i18n.mediaserver_view_short()}
+									>
+										<Eye size={16} aria-hidden="true" />
+									</button>
+								{:else}
+									<button
+										type="button"
+										onclick={() => openEdit(s)}
+										class="grid h-9 w-9 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg"
+										aria-label={i18n.mediaserver_edit_short()}
+									>
+										<Pencil size={16} aria-hidden="true" />
+									</button>
+									<button
+										type="button"
+										onclick={() => onDelete(s)}
+										class="grid h-9 w-9 place-items-center rounded-md text-fg-muted transition hover:bg-status-failed/10 hover:text-status-failed"
+										aria-label={i18n.mediaserver_delete()}
+									>
+										<Trash2 size={16} aria-hidden="true" />
+									</button>
+								{/if}
+							</div>
+						{/snippet}
+					</TestConnectionButton>
 				</div>
 			{/each}
 		{/if}
 	</div>
 </div>
 
-<Modal
+<ConfigFormShell
 	open={modalOpen}
 	title={config.readOnly
 		? i18n.mediaserver_view()
@@ -288,6 +287,13 @@
 			? i18n.mediaserver_edit()
 			: i18n.mediaserver_add_long()}
 	size="xl"
+	formId="media-server-form"
+	submitLabel={form.state.isSubmitting
+		? i18n.common_saving()
+		: editing
+			? i18n.common_save_changes()
+			: i18n.mediaserver_add()}
+	submitDisabled={!form.state.canSubmit || form.state.isSubmitting}
 	onClose={() => (modalOpen = false)}
 >
 	<form
@@ -302,36 +308,23 @@
 		</ReadOnlyFieldset>
 	</form>
 
-	{#snippet footer()}
-		<ConfigModalFooter
-			formId="media-server-form"
-			submitLabel={form.state.isSubmitting
-				? i18n.common_saving()
-				: editing
-					? i18n.common_save_changes()
-					: i18n.mediaserver_add()}
-			submitDisabled={!form.state.canSubmit || form.state.isSubmitting}
-			onCancel={() => (modalOpen = false)}
-		>
-			{#snippet left()}
-				<div class="sm:mr-auto">
-					{#if editing}
-						<TestConnectionButton
-							endpoint="/media-servers/{encodeURIComponent(editing.name)}/test"
-							size="md"
-						/>
-					{:else}
-						<TestConnectionButton
-							endpoint="/media-servers/test"
-							body={() => form.state.values}
-							size="md"
-						/>
-					{/if}
-				</div>
-			{/snippet}
-		</ConfigModalFooter>
+	{#snippet test(variant)}
+		{#if editing}
+			<TestConnectionButton
+				endpoint="/media-servers/{encodeURIComponent(editing.name)}/test"
+				size="md"
+				{variant}
+			/>
+		{:else}
+			<TestConnectionButton
+				endpoint="/media-servers/test"
+				body={() => form.state.values}
+				size="md"
+				{variant}
+			/>
+		{/if}
 	{/snippet}
-</Modal>
+</ConfigFormShell>
 
 <Dialog
 	open={deleting !== null}

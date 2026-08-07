@@ -1,191 +1,28 @@
 <script lang="ts">
 	import { onMount } from "svelte";
-	import {
-		SlidersHorizontal,
-		Wrench,
-		Search,
-		Download,
-		Cast,
-		Gauge,
-		Tv,
-		Clock,
-		Shield,
-		KeyRound,
-		Users,
-	} from "@lucide/svelte";
-	import { isActive as routifyIsActive, goto } from "@roxi/routify";
-	import { createQuery } from "@tanstack/svelte-query";
-	import { auth } from "../../lib/auth.svelte";
-	import { api } from "../../lib/api";
+	import { SlidersHorizontal } from "@lucide/svelte";
+	import { isActive as routifyIsActive } from "@roxi/routify";
 	import { cn } from "../../lib/cn";
-	import Select from "../forms/Select.svelte";
-	import type { DownloadClient, Indexer, MediaServer } from "../../lib/types";
+	import { createSettingsNav } from "../../lib/settings-nav.svelte";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 
+	// Desktop only, from lg. Below that the section list is a page of its own
+	// (SettingsIndex at /settings) rather than a column competing with the
+	// content for the same width — at 834 the old md sidebar left the content
+	// 430px, which is less than a phone in landscape gets.
+	//
+	// The <Select> jumper this used to render below md is gone with it: it
+	// flattened five groups and eleven destinations into one native menu, and
+	// the index page shows the same structure the sidebar does.
 	type IsActiveFn = (path: string) => boolean;
 	let isActiveFn = $state<IsActiveFn>(() => false);
-	type GotoFn = (path: string) => void;
-	let gotoFn = $state<GotoFn>(() => {});
-	onMount(() => {
-		const unsubActive = routifyIsActive.subscribe((fn) => (isActiveFn = fn));
-		const unsubGoto = goto.subscribe((fn) => (gotoFn = fn));
-		return () => {
-			unsubActive();
-			unsubGoto();
-		};
-	});
+	onMount(() => routifyIsActive.subscribe((fn) => (isActiveFn = fn)));
 
-	let isAdmin = $derived(auth.user?.role === "admin");
-
-	const indexers = createQuery<Indexer[]>(() => ({
-		queryKey: ["indexers"],
-		queryFn: () => api<Indexer[]>("/indexers"),
-	}));
-	const downloadClients = createQuery<DownloadClient[]>(() => ({
-		queryKey: ["download-clients"],
-		queryFn: () => api<DownloadClient[]>("/download-clients"),
-	}));
-	const mediaServers = createQuery<{ items: MediaServer[] }>(() => ({
-		queryKey: ["media-servers"],
-		queryFn: () => api<{ items: MediaServer[] }>("/media-servers"),
-	}));
-
-	let indexerCount = $derived(indexers.data?.length);
-	let downloadClientCount = $derived(downloadClients.data?.length);
-	let mediaServerCount = $derived(mediaServers.data?.items.length);
-
-	type Item = {
-		path: string;
-		Icon: typeof SlidersHorizontal;
-		label: string;
-		count?: number | undefined;
-	};
-	type Group = { name: string; items: Item[] };
-
-	let groups: Group[] = $derived.by(() => {
-		const base: Group[] = [
-			{
-				name: i18n.settings_system(),
-				items: [
-					{
-						path: "/settings/general",
-						Icon: SlidersHorizontal,
-						label: i18n.settings_general(),
-					},
-					{
-						path: "/settings/advanced",
-						Icon: Wrench,
-						label: i18n.settings_advanced(),
-					},
-				],
-			},
-			{
-				name: i18n.nav_library(),
-				items: [
-					{
-						path: "/settings/quality-profiles",
-						Icon: Gauge,
-						label: i18n.settings_quality_profiles(),
-					},
-					{
-						path: "/settings/series",
-						Icon: Tv,
-						label: i18n.settings_series(),
-					},
-				],
-			},
-			{
-				name: i18n.settings_connections(),
-				items: [
-					{
-						path: "/settings/indexers",
-						Icon: Search,
-						label: i18n.settings_indexers(),
-						count: indexerCount,
-					},
-					{
-						path: "/settings/download-clients",
-						Icon: Download,
-						label: i18n.settings_download_clients(),
-						count: downloadClientCount,
-					},
-					{
-						path: "/settings/media-servers",
-						Icon: Cast,
-						label: i18n.settings_media_servers(),
-						count: mediaServerCount,
-					},
-				],
-			},
-			{
-				name: i18n.settings_automation(),
-				items: [
-					{
-						path: "/settings/schedules",
-						Icon: Clock,
-						label: i18n.settings_schedules(),
-					},
-				],
-			},
-		];
-		if (isAdmin) {
-			base.push({
-				name: i18n.settings_security(),
-				items: [
-					{
-						path: "/settings/auth",
-						Icon: Shield,
-						label: i18n.settings_authentication(),
-					},
-					{
-						path: "/settings/oidc",
-						Icon: KeyRound,
-						label: i18n.settings_sso(),
-					},
-					{
-						path: "/settings/users",
-						Icon: Users,
-						label: i18n.settings_users(),
-					},
-				],
-			});
-		}
-		return base;
-	});
-
-	// Flat option list for the mobile Select jumper (forms/Select has no groups).
-	let sectionOptions = $derived(
-		groups.flatMap((g) =>
-			g.items.map((it) => ({
-				value: it.path,
-				label: it.count !== undefined ? `${it.label} (${it.count})` : it.label,
-			})),
-		),
-	);
-
-	// Flat option list for the mobile <select> jumper.
-	let activePath = $derived.by(() => {
-		for (const g of groups) {
-			for (const it of g.items) {
-				if (isActiveFn(it.path)) return it.path;
-			}
-		}
-		return groups[0]?.items[0]?.path ?? "/settings/general";
-	});
+	const nav = createSettingsNav();
 </script>
 
-<!-- Mobile: Select jumper. Keeps the section list reachable in one tap. -->
-<div class="block md:hidden">
-	<Select
-		value={activePath}
-		options={sectionOptions}
-		onChange={(v) => gotoFn(v)}
-		ariaLabel="Settings section"
-	/>
-</div>
-
 <aside
-	class="hidden shrink-0 self-start md:sticky md:top-20 md:block md:w-56"
+	class="hidden shrink-0 self-start lg:sticky lg:top-20 lg:block lg:w-56"
 	aria-label={i18n.settings_sections()}
 >
 	<div class="mb-3.5 px-2">
@@ -199,7 +36,7 @@
 		</h2>
 	</div>
 	<nav class="space-y-3.5 text-sm">
-		{#each groups as g (g.name)}
+		{#each nav.groups as g (g.name)}
 			<div>
 				<div
 					class="px-2.5 pb-1.5 font-mono text-[9.5px] uppercase tracking-[0.14em] text-fg-faint"

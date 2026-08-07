@@ -4,6 +4,7 @@
 	import { cubicOut } from "svelte/easing";
 	import { cn } from "../../lib/cn";
 	import { readOnlyLock } from "../../lib/config.svelte";
+	import FieldLock from "./FieldLock.svelte";
 
 	// Expand/collapse from the trigger edge: fade + slide + subtle scaleY off
 	// transform-origin top. Honors prefers-reduced-motion.
@@ -45,7 +46,8 @@
 	}: Props = $props();
 
 	const lock = readOnlyLock();
-	let off = $derived(disabled || lock());
+	let configLocked = $derived(lock());
+	let off = $derived(disabled || configLocked);
 
 	let open = $state(false);
 	let triggerEl = $state<HTMLButtonElement | null>(null);
@@ -175,7 +177,9 @@
 
 <div class="block">
 	{#if label}
-		<span class="mb-1 block text-sm font-medium text-fg">{label}</span>
+		<span class="mb-1 flex items-center gap-1.5 text-sm font-medium text-fg"
+			>{label}<FieldLock locked={configLocked} /></span
+		>
 	{/if}
 	<div class="relative">
 		<button

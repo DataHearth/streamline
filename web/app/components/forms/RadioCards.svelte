@@ -1,6 +1,7 @@
 <script lang="ts" generics="T extends string">
 	import { cn } from "../../lib/cn";
 	import { readOnlyLock } from "../../lib/config.svelte";
+	import FieldLock from "./FieldLock.svelte";
 
 	type Option = { value: T; label: string; description?: string };
 
@@ -27,12 +28,15 @@
 	const COLS = { 2: "sm:grid-cols-2", 3: "sm:grid-cols-3" } as const;
 
 	const lock = readOnlyLock();
-	let off = $derived(disabled || lock());
+	let configLocked = $derived(lock());
+	let off = $derived(disabled || configLocked);
 </script>
 
 <fieldset disabled={off}>
 	{#if legend}
-		<legend class="mb-2 text-sm font-medium text-fg-muted">{legend}</legend>
+		<legend class="mb-2 flex items-center gap-1.5 text-sm font-medium text-fg-muted"
+			>{legend}<FieldLock locked={configLocked} /></legend
+		>
 	{/if}
 	<div class={cn("grid gap-2.5", COLS[columns])}>
 		{#each options as o (o.value)}

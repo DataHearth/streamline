@@ -3,6 +3,7 @@
 	import { cn } from "../../lib/cn";
 	import { fieldErrorMessages } from "../../lib/fieldErrors";
 	import { readOnlyLock } from "../../lib/config.svelte";
+	import FieldLock from "./FieldLock.svelte";
 
 	type Props = {
 		field: AnyFieldApi;
@@ -38,11 +39,14 @@
 	// readonly rather than disabled: an operator on a read-only instance still
 	// needs to select and copy what the values currently are.
 	const lock = readOnlyLock();
-	let locked = $derived(readonly || lock());
+	let configLocked = $derived(lock());
+	let locked = $derived(readonly || configLocked);
 </script>
 
 <label class={cn("block", floatError && "relative")}>
-	<span class="mb-1 block text-sm font-medium text-fg">{label}</span>
+	<span class="mb-1 flex items-center gap-1.5 text-sm font-medium text-fg"
+		>{label}<FieldLock locked={configLocked} /></span
+	>
 	<input
 		{type}
 		{autocomplete}

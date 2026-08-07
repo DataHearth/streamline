@@ -1,5 +1,6 @@
 <script lang="ts">
 	import IdentityHero from "../../components/account/IdentityHero.svelte";
+	import AccountIndex from "../../components/account/AccountIndex.svelte";
 	import ProfileCard from "../../components/account/ProfileCard.svelte";
 	import PasswordCard from "../../components/account/PasswordCard.svelte";
 	import APIKeysCard from "../../components/account/APIKeysCard.svelte";
@@ -17,32 +18,38 @@
 >
 	<IdentityHero />
 
-	{@render section(
-		i18n.account_section_identity(),
-		i18n.account_section_identity_sub(),
-		identitySection,
-	)}
+	<!-- Touch: the same sections as rows carrying their current value, each
+	     opening its card as a screen. Matches how settings reads on a phone. -->
+	<AccountIndex />
 
-	{@render section(
-		i18n.account_section_prefs(),
-		i18n.account_section_prefs_sub(),
-		prefsSection,
-	)}
-
-	{@render section(
-		i18n.account_section_devices(),
-		i18n.account_section_devices_sub(),
-		devicesSection,
-	)}
-
-	{#if isAdmin}
+	<div class="hidden space-y-8 lg:block">
 		{@render section(
-			i18n.account_section_danger(),
-			i18n.account_section_danger_sub(),
-			dangerSection,
-			true,
+			i18n.account_section_identity(),
+			i18n.account_section_identity_sub(),
+			identitySection,
 		)}
-	{/if}
+
+		{@render section(
+			i18n.account_section_prefs(),
+			i18n.account_section_prefs_sub(),
+			prefsSection,
+		)}
+
+		{@render section(
+			i18n.account_section_devices(),
+			i18n.account_section_devices_sub(),
+			devicesSection,
+		)}
+
+		{#if isAdmin}
+			{@render section(
+				i18n.account_section_danger(),
+				i18n.account_section_danger_sub(),
+				dangerSection,
+				true,
+			)}
+		{/if}
+	</div>
 </div>
 
 {#snippet section(
@@ -52,9 +59,7 @@
 	danger = false,
 )}
 	<section>
-		<header
-			class="mb-4 flex flex-wrap items-baseline gap-x-3 gap-y-1"
-		>
+		<header class="mb-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
 			<h2
 				class={[
 					"font-mono text-[11px] font-semibold uppercase tracking-[0.16em]",

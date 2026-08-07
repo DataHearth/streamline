@@ -11,11 +11,10 @@
 	import { toast } from "../../lib/toast";
 	import { qualityProfile } from "../../lib/schemas";
 	import type { QualityProfileFull, Resolution } from "../../lib/types";
-	import Modal from "../../components/modals/Modal.svelte";
+	import ConfigFormShell from "../../components/modals/ConfigFormShell.svelte";
 	import Dialog from "../../components/modals/Dialog.svelte";
 	import QualityProfileForm from "../../components/settings/forms/QualityProfileForm.svelte";
 	import ReadOnlyFieldset from "../../components/settings/ReadOnlyFieldset.svelte";
-	import ConfigModalFooter from "../../components/settings/ConfigModalFooter.svelte";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	type Values = {
@@ -225,7 +224,7 @@
 	</div>
 </div>
 
-<Modal
+<ConfigFormShell
 	open={modalOpen}
 	title={config.readOnly
 		? i18n.quality_view()
@@ -233,6 +232,13 @@
 			? i18n.quality_edit()
 			: i18n.quality_add_long()}
 	size="md"
+	formId="quality-profile-form"
+	submitLabel={form.state.isSubmitting
+		? i18n.common_saving()
+		: editing
+			? i18n.common_save_changes()
+			: i18n.quality_add()}
+	submitDisabled={!form.state.canSubmit || form.state.isSubmitting}
 	onClose={() => (modalOpen = false)}
 >
 	<form
@@ -247,19 +253,7 @@
 		</ReadOnlyFieldset>
 	</form>
 
-	{#snippet footer()}
-		<ConfigModalFooter
-			formId="quality-profile-form"
-			submitLabel={form.state.isSubmitting
-				? i18n.common_saving()
-				: editing
-					? i18n.common_save_changes()
-					: i18n.quality_add()}
-			submitDisabled={!form.state.canSubmit || form.state.isSubmitting}
-			onCancel={() => (modalOpen = false)}
-		/>
-	{/snippet}
-</Modal>
+</ConfigFormShell>
 
 <Dialog
 	open={deleting !== null}

@@ -11,13 +11,12 @@
 	import { toast } from "../../lib/toast";
 	import { indexerForm } from "../../lib/schemas";
 	import type { Indexer, IndexerProtocol } from "../../lib/types";
-	import Modal from "../../components/modals/Modal.svelte";
+	import ConfigFormShell from "../../components/modals/ConfigFormShell.svelte";
 	import Dialog from "../../components/modals/Dialog.svelte";
 	import IndexerForm from "../../components/settings/forms/IndexerForm.svelte";
 	import BrandLogo from "../../components/settings/BrandLogo.svelte";
 	import TestConnectionButton from "../../components/settings/TestConnectionButton.svelte";
 	import ReadOnlyFieldset from "../../components/settings/ReadOnlyFieldset.svelte";
-	import ConfigModalFooter from "../../components/settings/ConfigModalFooter.svelte";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	type Values = {
@@ -245,47 +244,49 @@
 							</div>
 						</div>
 					</button>
-					<div
-						class="mt-1 flex items-center justify-between gap-1 border-t border-border pt-3"
+					<TestConnectionButton
+						endpoint="/indexers/{encodeURIComponent(i.name)}/test"
+						variant="card"
 					>
-						<TestConnectionButton endpoint="/indexers/{encodeURIComponent(i.name)}/test" />
-						<div class="flex items-center gap-1">
-							{#if config.readOnly}
-								<button
-									type="button"
-									onclick={() => openEdit(i)}
-									class="rounded-md p-1.5 text-fg-muted transition hover:bg-surface hover:text-fg"
-									aria-label={i18n.indexer_view()}
-								>
-									<Eye size={16} aria-hidden="true" />
-								</button>
-							{:else}
-								<button
-									type="button"
-									onclick={() => openEdit(i)}
-									class="rounded-md p-1.5 text-fg-muted transition hover:bg-surface hover:text-fg"
-									aria-label={i18n.indexer_edit()}
-								>
-									<Pencil size={16} aria-hidden="true" />
-								</button>
-								<button
-									type="button"
-									onclick={() => onDelete(i)}
-									class="rounded-md p-1.5 text-fg-muted transition hover:bg-status-failed/10 hover:text-status-failed"
-									aria-label={i18n.indexer_delete()}
-								>
-									<Trash2 size={16} aria-hidden="true" />
-								</button>
-							{/if}
-						</div>
-					</div>
+						{#snippet trailing()}
+							<div class="flex shrink-0 items-center gap-1">
+								{#if config.readOnly}
+									<button
+										type="button"
+										onclick={() => openEdit(i)}
+										class="grid h-9 w-9 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg"
+										aria-label={i18n.indexer_view()}
+									>
+										<Eye size={16} aria-hidden="true" />
+									</button>
+								{:else}
+									<button
+										type="button"
+										onclick={() => openEdit(i)}
+										class="grid h-9 w-9 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg"
+										aria-label={i18n.indexer_edit()}
+									>
+										<Pencil size={16} aria-hidden="true" />
+									</button>
+									<button
+										type="button"
+										onclick={() => onDelete(i)}
+										class="grid h-9 w-9 place-items-center rounded-md text-fg-muted transition hover:bg-status-failed/10 hover:text-status-failed"
+										aria-label={i18n.indexer_delete()}
+									>
+										<Trash2 size={16} aria-hidden="true" />
+									</button>
+								{/if}
+							</div>
+						{/snippet}
+					</TestConnectionButton>
 				</div>
 			{/each}
 		{/if}
 	</div>
 </div>
 
-<Modal
+<ConfigFormShell
 	open={modalOpen}
 	title={config.readOnly
 		? i18n.indexer_view()
@@ -293,6 +294,13 @@
 			? i18n.indexer_edit()
 			: i18n.indexer_add()}
 	size="xl"
+	formId="indexer-form"
+	submitLabel={form.state.isSubmitting
+		? i18n.common_saving()
+		: editing
+			? i18n.common_save_changes()
+			: i18n.indexer_add()}
+	submitDisabled={!form.state.canSubmit || form.state.isSubmitting}
 	onClose={() => (modalOpen = false)}
 >
 	<form
@@ -307,36 +315,23 @@
 		</ReadOnlyFieldset>
 	</form>
 
-	{#snippet footer()}
-		<ConfigModalFooter
-			formId="indexer-form"
-			submitLabel={form.state.isSubmitting
-				? i18n.common_saving()
-				: editing
-					? i18n.common_save_changes()
-					: i18n.indexer_add()}
-			submitDisabled={!form.state.canSubmit || form.state.isSubmitting}
-			onCancel={() => (modalOpen = false)}
-		>
-			{#snippet left()}
-				<div class="sm:mr-auto">
-					{#if editing}
-						<TestConnectionButton
-							endpoint="/indexers/{encodeURIComponent(editing.name)}/test"
-							size="md"
-						/>
-					{:else}
-						<TestConnectionButton
-							endpoint="/indexers/test"
-							body={() => form.state.values}
-							size="md"
-						/>
-					{/if}
-				</div>
-			{/snippet}
-		</ConfigModalFooter>
+	{#snippet test(variant)}
+		{#if editing}
+			<TestConnectionButton
+				endpoint="/indexers/{encodeURIComponent(editing.name)}/test"
+				size="md"
+				{variant}
+			/>
+		{:else}
+			<TestConnectionButton
+				endpoint="/indexers/test"
+				body={() => form.state.values}
+				size="md"
+				{variant}
+			/>
+		{/if}
 	{/snippet}
-</Modal>
+</ConfigFormShell>
 
 <Dialog
 	open={deleting !== null}
