@@ -33,8 +33,8 @@ type Authenticator interface {
 // In "trusted-network" mode requests from trusted CIDRs are assigned the
 // configured role; others must authenticate. In "full" mode requests under
 // /api/v1/ must carry a valid Bearer token, X-API-Key header, or — for
-// same-origin browser requests (Sec-Fetch-Site: same-origin) — a valid
-// streamline_session cookie (401 on failure). All other paths must carry
+// requests a browser proves are same-origin (see sameOriginAPIRequest) — a
+// valid streamline_session cookie (401 on failure). All other paths must carry
 // a valid streamline_session cookie (302 redirect to /login on failure).
 func NewAuth(
 	svc Authenticator,
@@ -146,11 +146,19 @@ func authenticateAPI(
 		return
 	}
 	// Same-origin browser SPA: accept the session cookie on /api/v1 when the
-	// browser confirms the request originated from this site. SameSite=Lax on
-	// the cookie already blocks cross-origin POSTs; the Sec-Fetch-Site gate
-	// adds a second layer that also blocks cross-origin GET-via-fetch and
-	// fails closed when the header is absent (legacy/non-fetch contexts).
-	if r.Header.Get("Sec-Fetch-Site") == "same-origin" {
+	// request is confirmed same-origin. SameSite=Lax on the cookie already
+	// blocks cross-origin POSTs; this adds a second layer that also blocks
+	// cross-origin GET-via-fetch.
+	//
+	// Sec-Fetch-Site cannot be the only signal. Fetch Metadata is appended
+	// only for potentially-trustworthy URLs, so a browser on a plain-http LAN
+	// address — the default self-hosted shape — sends none of it, and gating
+	// on it alone 401s every SPA call there. Origin is the fallback: browsers
+	// attach it to cross-origin requests regardless of scheme, and it is a
+	// forbidden header name, so a page cannot forge one. Absent both, this
+	// fails closed — a machine client belongs on Bearer or X-API-Key, not on
+	// a cookie.
+	if sameOriginAPIRequest(r) {
 		if c, err := r.Cookie(auth.SessionCookie); err == nil {
 			claims, err := svc.ValidateToken(c.Value)
 			if err == nil {
@@ -228,4 +236,35 @@ func isTrusted(r *http.Request, nets []*net.IPNet) bool {
 		}
 	}
 	return false
+}
+
+// sameOriginAPIRequest reports whether a cookie-authenticated /api/v1 request
+// demonstrably came from this site.
+//
+// Sec-Fetch-Site settles it where the browser sends it, but Fetch Metadata is
+// only appended for potentially-trustworthy URLs, so a plain-http LAN install
+// never sees it. Origin covers that tier: browsers attach it to cross-origin
+// requests on any scheme, and scripts cannot set it. With neither header the
+// request is refused rather than trusted.
+func sameOriginAPIRequest(r *http.Request) bool {
+	switch r.Header.Get("Sec-Fetch-Site") {
+	case "same-origin":
+		return true
+	case "":
+		// Fall through to Origin below.
+	default:
+		// cross-site, same-site and none are all refused outright — a present
+		// header is authoritative, so Origin must not be able to override it.
+		return false
+	}
+
+	origins := r.Header.Values("Origin")
+	if len(origins) != 1 {
+		return false
+	}
+	u, err := url.Parse(origins[0])
+	if err != nil || u.Host == "" {
+		return false
+	}
+	return strings.EqualFold(u.Host, r.Host)
 }
