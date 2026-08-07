@@ -43,6 +43,73 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 		})
 	})
 
+	Describe("resolveTorrentSource", func() {
+		// One enabled indexer on the default HTTPS port plus one on an explicit
+		// port, so both the implied-port and explicit-port paths are covered.
+		BeforeEach(func() {
+			configtest.Setup(map[string]any{
+				"indexers": []map[string]any{
+					{
+						"name":     "public",
+						"host":     "tracker.example",
+						"port":     443,
+						"use_ssl":  true,
+						"api_key":  "k",
+						"protocol": "torznab",
+						"enabled":  true,
+					},
+					{
+						"name":     "lan",
+						"host":     "192.168.1.5",
+						"port":     9696,
+						"api_key":  "k",
+						"protocol": "prowlarr",
+						"enabled":  true,
+					},
+					{
+						"name":     "off",
+						"host":     "disabled.example",
+						"port":     80,
+						"api_key":  "k",
+						"protocol": "torznab",
+						"enabled":  false,
+					},
+				},
+			})
+		})
+
+		It("passes magnet links through without a fetch", func() {
+			src, err := resolveTorrentSource(ctx, "magnet:?xt=urn:btih:abc")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(src.Magnet).To(Equal("magnet:?xt=urn:btih:abc"))
+		})
+
+		DescribeTable("rejects URLs outside the configured indexers",
+			func(dl string) {
+				_, err := resolveTorrentSource(ctx, dl)
+				Expect(err).To(MatchError(ErrUntrustedSource))
+			},
+			Entry("cloud metadata", "http://169.254.169.254/latest/meta-data/"),
+			Entry("loopback", "http://127.0.0.1:8080/admin"),
+			Entry("an unconfigured LAN host", "http://192.168.1.9:9696/dl"),
+			Entry(
+				"another port on a configured host",
+				"http://192.168.1.5:8080/admin",
+			),
+			Entry("a disabled indexer", "http://disabled.example/dl"),
+			Entry("a non-HTTP scheme", "file:///etc/passwd"),
+			Entry("a scheme-relative URL", "//tracker.example/dl"),
+		)
+
+		It("accepts a link to a configured indexer", func() {
+			// Reaching the transport (and failing there) proves the guard let
+			// the URL through — resolution of a non-existent host cannot
+			// succeed, but it is no longer ErrUntrustedSource.
+			_, err := resolveTorrentSource(ctx, "https://tracker.example/dl?id=1")
+			Expect(err).NotTo(MatchError(ErrUntrustedSource))
+		})
+	})
+
 	Describe("GrabEpisode", func() {
 		When("no enabled download client exists", func() {
 			It("returns the no-client error", func() {

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	entmovie "github.com/datahearth/streamline/ent/movie"
+	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/library"
 	moviesvc "github.com/datahearth/streamline/internal/media/movie"
 	"github.com/datahearth/streamline/internal/metadata"
@@ -329,7 +330,12 @@ func (s *Server) GrabMovieRelease(
 		}, nil
 	}
 	rec, err := s.downloads.Grab(ctx, sr, m.ID)
-	if err != nil {
+	switch {
+	case errors.Is(err, download.ErrUntrustedSource):
+		return GrabMovieRelease422JSONResponse{
+			UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
+		}, nil
+	case err != nil:
 		return GrabMovieRelease500JSONResponse{
 			InternalErrorJSONResponse: errInternal(err.Error()),
 		}, nil

@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/media/tvshow"
 	"github.com/datahearth/streamline/internal/metadata"
@@ -407,7 +408,12 @@ func (s *Server) GrabEpisodeRelease(
 		}, nil
 	}
 	rec, err := s.downloads.GrabEpisode(ctx, sr, request.EpisodeId)
-	if err != nil {
+	switch {
+	case errors.Is(err, download.ErrUntrustedSource):
+		return GrabEpisodeRelease422JSONResponse{
+			UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
+		}, nil
+	case err != nil:
 		return GrabEpisodeRelease500JSONResponse{
 			InternalErrorJSONResponse: errInternal(err.Error()),
 		}, nil
@@ -468,9 +474,15 @@ func (s *Server) GrabSeasonRelease(
 			),
 		}, nil
 	}
-	if err := s.tvshows.GrabSeasonRelease(
+	err := s.tvshows.GrabSeasonRelease(
 		ctx, request.Id, request.Number, sr, replaceExisting(request.Body),
-	); err != nil {
+	)
+	switch {
+	case errors.Is(err, download.ErrUntrustedSource):
+		return GrabSeasonRelease422JSONResponse{
+			UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
+		}, nil
+	case err != nil:
 		return GrabSeasonRelease500JSONResponse{
 			InternalErrorJSONResponse: errInternal(err.Error()),
 		}, nil
@@ -520,9 +532,15 @@ func (s *Server) GrabSeriesRelease(
 			),
 		}, nil
 	}
-	if err := s.tvshows.GrabSeriesRelease(
+	err := s.tvshows.GrabSeriesRelease(
 		ctx, request.Id, sr, replaceExisting(request.Body),
-	); err != nil {
+	)
+	switch {
+	case errors.Is(err, download.ErrUntrustedSource):
+		return GrabSeriesRelease422JSONResponse{
+			UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
+		}, nil
+	case err != nil:
 		return GrabSeriesRelease500JSONResponse{
 			InternalErrorJSONResponse: errInternal(err.Error()),
 		}, nil

@@ -7,8 +7,10 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -40,6 +42,9 @@ var (
 	ErrUnexpectedStatus  = errors.New("download client returned unexpected status")
 	ErrBadResponse       = errors.New("download client returned malformed response")
 	ErrTorrentNotFound   = errors.New("torrent not found in download client")
+	ErrUntrustedSource   = errors.New(
+		"download URL does not belong to a configured indexer",
+	)
 	// ErrTorrentAlreadyExists is returned by AddTorrent when the download
 	// client refuses the add because the infohash is already present. The
 	// caller treats this as a soft skip — no grab_failures increment, no
@@ -451,6 +456,16 @@ func (d *download) grab(
 		grabCounter.Add(ctx, 1, attrs)
 	}()
 
+	if err := checkReleaseSource(result.Download); err != nil {
+		outcome = "untrusted_source"
+		return nil, otelx.RecordSpanError(span, err)
+	}
+
+	if err := checkReleaseSource(result.Download); err != nil {
+		outcome = "untrusted_source"
+		return nil, otelx.RecordSpanError(span, err)
+	}
+
 	dc, ok := config.PickDownloadClient()
 	if !ok {
 		outcome = "no_client"
@@ -824,6 +839,57 @@ func buildBaseURL(host string, port uint16, useSSL bool) string {
 	return fmt.Sprintf("%s://%s:%d", scheme, host, port)
 }
 
+// checkReleaseSource rejects a release link that is neither a magnet nor an
+// http(s) URL addressing a configured indexer. An empty link is not this
+// function's concern — resolveTorrentSource reports that with its own error.
+//
+// Called both at the top of grab, so a client-supplied URL is refused before
+// any other work, and inside resolveTorrentSource, so the guard also sits at
+// the fetch it protects.
+func checkReleaseSource(dl string) error {
+	if dl == "" || strings.HasPrefix(dl, "magnet:") {
+		return nil
+	}
+	u, err := url.Parse(dl)
+	if err != nil {
+		return fmt.Errorf("%w: unparseable URL", ErrUntrustedSource)
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return fmt.Errorf(
+			"%w: unsupported scheme %q", ErrUntrustedSource, u.Scheme,
+		)
+	}
+	if !fromConfiguredIndexer(u) {
+		return ErrUntrustedSource
+	}
+	return nil
+}
+
+// fromConfiguredIndexer reports whether u addresses one of the enabled
+// indexers. The grab body is client-supplied, so without this check an
+// authenticated caller picks any address the server can reach — LAN hosts,
+// loopback, cloud metadata. Blocking private ranges is not usable as the guard
+// here: in a self-hosted install the indexer is itself normally on a private
+// address, so the configured set is the trust boundary instead.
+func fromConfiguredIndexer(u *url.URL) bool {
+	port := u.Port()
+	if port == "" {
+		switch u.Scheme {
+		case "http":
+			port = "80"
+		case "https":
+			port = "443"
+		}
+	}
+	for _, ix := range config.EnabledIndexers() {
+		if strings.EqualFold(u.Hostname(), ix.Host) &&
+			port == strconv.Itoa(int(ix.Port)) {
+			return true
+		}
+	}
+	return false
+}
+
 // resolveTorrentSource turns an indexer download link into the payload
 // Client.AddTorrent expects. magnet: links pass through; http(s) URLs are
 // fetched in-process so download clients that can't reach the indexer
@@ -834,6 +900,9 @@ func resolveTorrentSource(ctx context.Context, dl string) (TorrentSource, error)
 	}
 	if strings.HasPrefix(dl, "magnet:") {
 		return TorrentSource{Magnet: dl}, nil
+	}
+	if err := checkReleaseSource(dl); err != nil {
+		return TorrentSource{}, err
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, dl, nil)
 	if err != nil {
@@ -846,7 +915,7 @@ func resolveTorrentSource(ctx context.Context, dl string) (TorrentSource, error)
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		return TorrentSource{}, fmt.Errorf(
-			"indexer returned status %d for %s", resp.StatusCode, dl,
+			"indexer returned status %d", resp.StatusCode,
 		)
 	}
 	body, err := io.ReadAll(io.LimitReader(resp.Body, maxTorrentFileSize+1))

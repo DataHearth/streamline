@@ -125,6 +125,37 @@ var _ = Describe("REST API movies", Label("e2e"), func() {
 		Expect(body.Message).To(ContainSubstring("member role required"))
 	})
 
+	It("422s a grab whose download URL is not a configured indexer", func() {
+		created := post("/api/v1/movies", adminAuth, map[string]any{
+			"tmdb_id": fakes.MovieTMDBID,
+		})
+		defer created.Body.Close()
+		Expect(created.StatusCode).To(Equal(http.StatusCreated))
+		var movie struct {
+			Id uint32 `json:"id"`
+		}
+		decode(created, &movie)
+		DeferCleanup(func() {
+			removed := del(
+				fmt.Sprintf("/api/v1/movies/%d", movie.Id),
+				adminAuth,
+				nil,
+			)
+			defer removed.Body.Close()
+		})
+
+		// releaseBody points at 127.0.0.1:1 — no indexer is configured there,
+		// so the grab is refused before anything is dialled.
+		resp := post(
+			fmt.Sprintf("/api/v1/movies/%d/grab", movie.Id),
+			adminAuth,
+			releaseBody,
+		)
+		defer resp.Body.Close()
+		Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+		Expect(bodyText(resp)).To(ContainSubstring("configured indexer"))
+	})
+
 	It("403s a grab for a request_only caller", func() {
 		resp := post("/api/v1/movies/1/grab", viewerAuth, map[string]any{
 			"title":        "x",
