@@ -39,12 +39,17 @@ const (
 	// already full, so its size is the question of how many distinct addresses
 	// an attacker must command before that begins. Keys are addresses or IPv6
 	// /64s (see ipv6Bucket): a routed /48, the cheapest block to rent, is 65,536
-	// of them, and a /44 is 1,048,576. This sits four times above the /48 and
-	// measures 41 MiB when full — a ceiling only a flood approaches, since a
-	// real deployment tracks its handful of clients and nothing else. Measured
-	// at 20 attempts from each of 1,000,000 addresses, an attacker past the cap
-	// averages 16.07 granted per address, against 5.00 at 262,144 addresses and
-	// 20.00 from the evicting map. Filling it also means holding 262,144
+	// of them, so this sits four times above it and measures 41 MiB when full —
+	// a ceiling only a flood approaches, since a real deployment tracks its
+	// handful of clients and nothing else. The exact break-even is a /46
+	// (2^(64-46) = 262,144); a /44 is four times more than needed.
+	//
+	// Past the cap the lapse is UNBOUNDED for any single address first seen
+	// while the table is full: it is never metered at all. The often-quoted
+	// 16.07-granted-per-address is an average over 1,000,000 addresses that
+	// mixes the 262,144 metered ones with the unmetered remainder — it is not a
+	// per-address bound. (5.00 at 262,144 addresses; 20.00 from the evicting map
+	// this replaced, which was already a total bypass.) Filling it means holding 262,144
 	// addresses that were each cut off at 5 first, and every account behind them
 	// still locks after auth.lockout.threshold failures.
 	maxKeys = 1 << 18

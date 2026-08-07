@@ -36,10 +36,12 @@ var HTTPClient = &http.Client{
 //
 // otelhttp records url.full straight from req.URL.String() and strips only the
 // userinfo (Transport.RoundTrip -> internal/semconv.HTTPClient.RequestTraceAttrs),
-// so the query survives verbatim on every span, successful or not. Callers here
-// routinely authenticate through the query string — torznab mandates `apikey`,
-// Plex takes `X-Plex-Token`, several trackers take a passkey — which would make
-// every trace export a credential dump for anyone who can read the OTLP backend.
+// so the query survives verbatim on every span, successful or not. Two callers
+// here authenticate through the query string and cannot do otherwise: torznab
+// mandates `apikey`, and Jackett/Prowlarr release-download links carry one
+// (Prowlarr's header auth does not extend to them). The rest — Plex, Jellyfin,
+// TMDB, TVDB, the torrent clients — authenticate by header or body, so they are
+// safe today for a reason no code enforces; redacting here covers them anyway.
 //
 // It has to run under otelhttp rather than in front of it: stripping the query
 // before otelhttp would strip it from the outbound request too. otelhttp instead
