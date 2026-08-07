@@ -3,11 +3,11 @@ package observability
 import (
 	"context"
 	"log/slog"
-	"net"
 	"net/http"
 	"time"
 
 	"github.com/datahearth/streamline/internal/auth"
+	"github.com/datahearth/streamline/internal/utils/httputil"
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"go.opentelemetry.io/otel/trace"
@@ -54,7 +54,7 @@ func (l *HTTPLogger) emit(
 		slog.Int("status", ww.Status()),
 		slog.Int64("bytes", int64(ww.BytesWritten())),
 		slog.Int64("duration_ms", dur.Milliseconds()),
-		slog.String("remote_ip", remoteIP(r)),
+		slog.String("remote_ip", httputil.ClientIPString(r)),
 		slog.String("user_agent", r.UserAgent()),
 		slog.String("referer", r.Referer()),
 	}
@@ -85,15 +85,4 @@ func routePattern(ctx context.Context) string {
 		}
 	}
 	return ""
-}
-
-func remoteIP(r *http.Request) string {
-	if ip := chimw.GetClientIP(r.Context()); ip != "" {
-		return ip
-	}
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return r.RemoteAddr
-	}
-	return host
 }

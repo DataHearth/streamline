@@ -11,7 +11,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/auth"
 	"github.com/datahearth/streamline/internal/config"
-	chimw "github.com/go-chi/chi/v5/middleware"
+	"github.com/datahearth/streamline/internal/utils/httputil"
 )
 
 // Authenticator is the minimum surface the middleware needs from the auth
@@ -218,7 +218,7 @@ func extractBearer(r *http.Request) string {
 }
 
 func isTrusted(r *http.Request, nets []*net.IPNet) bool {
-	ip := ClientIP(r)
+	ip := httputil.ClientIP(r)
 	if ip == nil {
 		return false
 	}
@@ -228,18 +228,4 @@ func isTrusted(r *http.Request, nets []*net.IPNet) bool {
 		}
 	}
 	return false
-}
-
-// ClientIP returns the client IP resolved by the chi ClientIPFrom* middleware
-// wired in the server, falling back to the connecting RemoteAddr when none was
-// set (no proxy in front, or the XFF chain too short to trust).
-func ClientIP(r *http.Request) net.IP {
-	if ip := chimw.GetClientIP(r.Context()); ip != "" {
-		return net.ParseIP(ip)
-	}
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return net.ParseIP(r.RemoteAddr)
-	}
-	return net.ParseIP(host)
 }

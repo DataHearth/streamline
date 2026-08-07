@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"maps"
+	"slices"
 	"sync"
 	"time"
 )
@@ -11,6 +13,13 @@ type Limiter interface {
 	Allow(key string) bool
 	RetryAfter(key string) time.Duration
 }
+
+// maxKeys caps how many distinct keys the limiter tracks at once. Login is
+// pre-auth, so the key space is whatever an unauthenticated caller can reach:
+// without a ceiling, a stream of one-shot attempts from unique addresses grows
+// the map until the process runs out of memory. Sized well above the number of
+// distinct clients any real deployment sees inside one window.
+const maxKeys = 10_000
 
 // limiter is a per-key sliding-window rate limiter intended for login and
 // OIDC callback protection. Not intended for high-throughput endpoints.
@@ -50,6 +59,46 @@ func (l *limiter) pruneLocked(key string) []time.Time {
 	return kept
 }
 
+// makeRoomLocked keeps the map at or below maxKeys before a new key is added.
+// It first sweeps every key whose window has fully aged out, then — only if
+// that many keys really are live at once — drops the least recently hit ones.
+// Evicting the coldest keys forgives attempts that were about to age out
+// anyway, so an attacker cannot use the overflow to reset a key that is
+// actively being throttled. Caller must hold mu.
+func (l *limiter) makeRoomLocked(key string) {
+	if _, ok := l.windows[key]; ok || len(l.windows) < maxKeys {
+		return
+	}
+
+	cutoff := time.Now().Add(-l.window)
+	for k, w := range l.windows {
+		if len(w) == 0 || !w[len(w)-1].After(cutoff) {
+			delete(l.windows, k)
+		}
+	}
+	if len(l.windows) < maxKeys {
+		return
+	}
+
+	coldest := slices.SortedFunc(
+		maps.Keys(l.windows),
+		func(a, b string) int { return l.lastHitLocked(a).Compare(l.lastHitLocked(b)) },
+	)
+	for _, k := range coldest[:len(l.windows)-maxKeys+1] {
+		delete(l.windows, k)
+	}
+}
+
+// lastHitLocked returns the most recent hit recorded for key; timestamps are
+// appended in order, so the newest is last. Caller must hold mu.
+func (l *limiter) lastHitLocked(key string) time.Time {
+	w := l.windows[key]
+	if len(w) == 0 {
+		return time.Time{}
+	}
+	return w[len(w)-1]
+}
+
 // Allow records a hit for key and reports whether it is within the limit.
 func (l *limiter) Allow(key string) bool {
 	l.mu.Lock()
@@ -59,6 +108,7 @@ func (l *limiter) Allow(key string) bool {
 	if len(w) >= int(l.limit) {
 		return false
 	}
+	l.makeRoomLocked(key)
 	l.windows[key] = append(w, time.Now())
 	return true
 }

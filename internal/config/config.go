@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -49,6 +50,12 @@ func (c Config) DatabasePath() string {
 type ServerConfig struct {
 	Host string `koanf:"host" validate:"required,ip|hostname"`
 	Port uint16 `koanf:"port" validate:"required,port"`
+	// TrustedProxies gates every X-Forwarded-* header: they are believed only
+	// when the immediate TCP peer falls inside one of these CIDRs. Empty (the
+	// default) trusts nothing, so the peer address is always the client — the
+	// only safe assumption for a directly exposed port, where the headers are
+	// entirely attacker-supplied.
+	TrustedProxies []string `koanf:"trusted_proxies" validate:"dive,cidr"`
 }
 
 type AuthConfig struct {
@@ -213,6 +220,22 @@ func (c *Config) Validate() error {
 	if err := validator.New().Struct(c); err != nil {
 		return err
 	}
+	// The proxy-trust gate compares peers with netip, which never matches a
+	// v4-mapped prefix against a plain v4 peer. The `cidr` tag accepts that
+	// form, so reject it here: it would otherwise look configured while
+	// silently trusting nobody.
+	for _, cidr := range c.Server.TrustedProxies {
+		p, err := netip.ParsePrefix(cidr)
+		if err != nil {
+			return fmt.Errorf("server.trusted_proxies %q: %w", cidr, err)
+		}
+		if p.Addr().Is4In6() {
+			return fmt.Errorf(
+				"server.trusted_proxies %q: write IPv4 ranges in plain IPv4 form",
+				cidr,
+			)
+		}
+	}
 	if len(c.QualityProfiles) > 0 {
 		found := false
 		for _, p := range c.QualityProfiles {
@@ -255,11 +278,12 @@ func defaults() map[string]any {
 	return map[string]any{
 		"server.host":                      "0.0.0.0",
 		"server.port":                      8080,
+		"server.trusted_proxies":           []string{},
 		"data_dir":                         "./data",
 		"read_only":                        false,
 		"auth.mode":                        "full",
 		"auth.trusted_networks":            []string{},
-		"auth.trusted_role":                "admin",
+		"auth.trusted_role":                "member",
 		"auth.session_secret":              "",
 		"auth.session_secret_file":         "",
 		"auth.session_ttl":                 "168h",

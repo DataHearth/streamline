@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"strconv"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -59,5 +60,47 @@ var _ = Describe("Limiter", Label("unit", "auth"), func() {
 		Expect(l.Allow("1.1.1.1")).To(BeTrue())
 		Expect(l.Allow("1.1.1.1")).To(BeFalse())
 		Expect(l.RetryAfter("1.1.1.1")).To(BeNumerically(">", 0))
+	})
+
+	It("sweeps aged-out keys once the map is full", func() {
+		l := NewLimiter(5, time.Minute).(*limiter)
+		stale := time.Now().Add(-2 * time.Minute)
+		for i := range maxKeys {
+			l.windows[strconv.Itoa(i)] = []time.Time{stale}
+		}
+
+		Expect(l.Allow("fresh")).To(BeTrue())
+		Expect(l.windows).To(HaveLen(1))
+	})
+
+	It("evicts the coldest key when every tracked key is live", func() {
+		l := NewLimiter(5, time.Minute).(*limiter)
+		now := time.Now()
+		for i := range maxKeys {
+			l.windows[strconv.Itoa(i)] = []time.Time{
+				now.Add(-time.Duration(i) * time.Millisecond),
+			}
+		}
+		coldest := strconv.Itoa(maxKeys - 1)
+
+		Expect(l.Allow("fresh")).To(BeTrue())
+		Expect(l.windows).To(HaveLen(maxKeys))
+		Expect(l.windows).NotTo(HaveKey(coldest))
+		Expect(l.windows).To(HaveKey("fresh"))
+	})
+
+	It("never grows past the cap under a flood of unique keys", func() {
+		l := NewLimiter(5, time.Minute).(*limiter)
+		now := time.Now()
+		for i := range maxKeys {
+			l.windows[strconv.Itoa(i)] = []time.Time{
+				now.Add(-time.Duration(i) * time.Millisecond),
+			}
+		}
+
+		for i := range 100 {
+			Expect(l.Allow("flood-" + strconv.Itoa(i))).To(BeTrue())
+			Expect(len(l.windows)).To(BeNumerically("<=", maxKeys))
+		}
 	})
 })

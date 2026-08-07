@@ -2,15 +2,27 @@
 package httputil
 
 import (
+	"net"
 	"net/http"
-
-	"github.com/datahearth/streamline/internal/server/middleware"
+	"net/netip"
 )
 
-// ClientIPString returns the client IP as a string, resolved via
-// middleware.ClientIP (the chi ClientIPFrom* middleware), or RemoteAddr.
+// ClientIP returns the client IP recorded by ClientIPResolver, falling back to
+// the connecting RemoteAddr when the resolver did not run.
+func ClientIP(r *http.Request) net.IP {
+	if ip, ok := r.Context().Value(clientIPCtxKey).(netip.Addr); ok {
+		return net.IP(ip.AsSlice())
+	}
+	if ip, ok := parseAddr(peerHost(r)); ok {
+		return net.IP(ip.AsSlice())
+	}
+	return nil
+}
+
+// ClientIPString returns the client IP as a string, or the raw RemoteAddr when
+// it cannot be parsed.
 func ClientIPString(r *http.Request) string {
-	ip := middleware.ClientIP(r)
+	ip := ClientIP(r)
 	if ip == nil {
 		return r.RemoteAddr
 	}

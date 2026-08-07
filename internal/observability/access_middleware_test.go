@@ -7,8 +7,9 @@ import (
 	"net/http/httptest"
 
 	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/testutil/configtest"
+	"github.com/datahearth/streamline/internal/utils/httputil"
 	"github.com/go-chi/chi/v5"
-	chimw "github.com/go-chi/chi/v5/middleware"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -128,26 +129,41 @@ var _ = Describe("HTTPLogger.Middleware", Label("unit", "observability"), func()
 		Expect(buf.String()).To(MatchRegexp(`"GET /x HTTP/1.1" 200 `))
 	})
 
-	It("populates remote_ip from the trusted X-Forwarded-For hop", func() {
+	logRemoteIP := func(remoteAddr, xff string) string {
+		GinkgoHelper()
 		l, buf := newLoggerWithBuf("json")
 
 		r := chi.NewRouter()
-		r.Use(chimw.ClientIPFromXFFTrustedProxies(1))
+		r.Use(httputil.ClientIPResolver())
 		r.Use(l.Middleware(nil))
 		r.Get(
 			"/x",
 			func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) },
 		)
 
-		// With one trusted proxy, the rightmost XFF entry (added by that proxy)
-		// is the client; the leftmost is attacker-controllable and ignored.
 		req := httptest.NewRequest("GET", "/x", nil)
-		req.Header.Set("X-Forwarded-For", "5.6.7.8, 9.10.11.12")
-		rec := httptest.NewRecorder()
-		r.ServeHTTP(rec, req)
+		req.RemoteAddr = remoteAddr
+		req.Header.Set("X-Forwarded-For", xff)
+		r.ServeHTTP(httptest.NewRecorder(), req)
 
 		var entry map[string]any
 		Expect(json.Unmarshal(bytes.TrimSpace(buf.Bytes()), &entry)).To(Succeed())
-		Expect(entry["remote_ip"]).To(Equal("9.10.11.12"))
+		return entry["remote_ip"].(string)
+	}
+
+	It("populates remote_ip from X-Forwarded-For behind a trusted proxy", func() {
+		configtest.Setup(map[string]any{
+			"server": map[string]any{
+				"trusted_proxies": []string{"10.1.0.0/16"},
+			},
+		})
+		Expect(logRemoteIP("10.1.0.5:9000", "9.10.11.12")).
+			To(Equal("9.10.11.12"))
+	})
+
+	It("logs the peer address when the header is not trusted", func() {
+		configtest.Setup()
+		Expect(logRemoteIP("9.10.11.12:1234", "5.6.7.8")).
+			To(Equal("9.10.11.12"))
 	})
 })

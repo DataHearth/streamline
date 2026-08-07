@@ -321,6 +321,45 @@ schedules:
 			_, err := Load(cfgFile)
 			Expect(err).To(HaveOccurred())
 		})
+
+		It("defaults auth.trusted_role away from admin", func() {
+			cfg, err := Load("")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(cfg.Auth.TrustedRole).To(Equal("member"))
+		})
+
+		Context("server.trusted_proxies", func() {
+			loadProxies := func(entry string) error {
+				GinkgoHelper()
+				dir := GinkgoT().TempDir()
+				cfgFile := filepath.Join(dir, "config.yaml")
+				dataDir := filepath.Join(dir, "data")
+				Expect(os.MkdirAll(dataDir, 0o755)).To(Succeed())
+				yaml := "data_dir: " + dataDir +
+					"\nserver:\n  trusted_proxies:\n    - \"" + entry + "\"\n"
+				Expect(os.WriteFile(cfgFile, []byte(yaml), 0o644)).To(Succeed())
+				_, err := Load(cfgFile)
+				return err
+			}
+
+			It("defaults to trusting nothing", func() {
+				cfg, err := Load("")
+				Expect(err).ToNot(HaveOccurred())
+				Expect(cfg.Server.TrustedProxies).To(BeEmpty())
+			})
+
+			It("accepts a plain CIDR", func() {
+				Expect(loadProxies("10.1.0.0/16")).To(Succeed())
+			})
+
+			It("rejects a non-CIDR entry", func() {
+				Expect(loadProxies("10.1.0.5")).To(HaveOccurred())
+			})
+
+			It("rejects an IPv4-mapped range that would never match", func() {
+				Expect(loadProxies("::ffff:10.1.0.0/112")).To(HaveOccurred())
+			})
+		})
 	})
 
 	Describe("DumpDefaults", func() {

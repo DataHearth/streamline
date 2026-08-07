@@ -27,6 +27,7 @@ import (
 	"github.com/datahearth/streamline/internal/server/middleware"
 	"github.com/datahearth/streamline/internal/server/restapi"
 	"github.com/datahearth/streamline/internal/server/web"
+	"github.com/datahearth/streamline/internal/utils/httputil"
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -112,11 +113,8 @@ func New(cfg Config) *Server {
 		posters: cfg.Posters,
 	}
 
-	// Resolve the client IP from X-Forwarded-For assuming exactly one trusted
-	// reverse proxy in front, before anything that logs or rate-limits by IP.
-	// ponytail: single-proxy default; make the strategy configurable if
-	// deployments run with 0 or N proxies.
-	s.router.Use(chimw.ClientIPFromXFFTrustedProxies(1))
+	// Must precede everything that logs, rate-limits or authorises by IP.
+	s.router.Use(httputil.ClientIPResolver())
 	if cfg.HTTPLog != nil {
 		s.router.Use(cfg.HTTPLog)
 	}
