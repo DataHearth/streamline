@@ -10,9 +10,11 @@ import (
 
 // registerWebMediaServerRoutes wires the cookie-authenticated Plex PIN
 // OAuth endpoints the settings SPA drives: a POST to begin the flow and a
-// GET the SPA polls until Plex fills in the auth token.
+// GET the SPA polls until Plex fills in the auth token. The POST rides the
+// session cookie and changes state at plex.tv, so it goes through csrfGuard
+// (see csrf.go) exactly like the /auth POSTs.
 func (h *Handler) registerWebMediaServerRoutes(r chi.Router) {
-	r.Post("/settings/media-servers/plex/pin", h.plexPinBegin)
+	r.With(csrfGuard).Post("/settings/media-servers/plex/pin", h.plexPinBegin)
 	r.Get("/settings/media-servers/plex/pin/{pinID}", h.plexPinPoll)
 }
 

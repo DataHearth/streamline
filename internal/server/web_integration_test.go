@@ -177,12 +177,15 @@ func clientNoRedirect() *http.Client {
 }
 
 // jsonPost helper sends a JSON body to the given URL and returns the response.
+// Sec-Fetch-Site stands in for the browser header the SPA's fetch sends; the
+// /auth POST routes reject anything that doesn't claim same-origin (csrfGuard).
 func jsonPost(url string, body any) (*http.Response, error) {
 	GinkgoHelper()
 	buf, err := json.Marshal(body)
 	Expect(err).ToNot(HaveOccurred())
 	req, _ := http.NewRequest(http.MethodPost, url, bytes.NewReader(buf))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Sec-Fetch-Site", "same-origin")
 	return clientNoRedirect().Do(req)
 }
 
@@ -306,6 +309,60 @@ var _ = Describe("Webui + API auth", Label("integration", "auth"), func() {
 			).To(HavePrefix("application/json"))
 		})
 
+		It("cross-site POST /auth/login mints no session", func() {
+			req, _ := http.NewRequest(
+				http.MethodPost,
+				app.httpSrv.URL+"/auth/login",
+				bytes.NewReader(
+					[]byte(`{"email":"admin@x.com","password":"hunter22pw"}`),
+				),
+			)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Sec-Fetch-Site", "cross-site")
+			resp, err := clientNoRedirect().Do(req)
+			Expect(err).ToNot(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
+			Expect(resp.Cookies()).To(BeEmpty())
+		})
+
+		// The curl/mobile/CLI shape: neither Sec-Fetch-Site nor Origin. It is
+		// the only route to a JWT, so the guard has to let it through and the
+		// token it yields has to work on /api/v1.
+		It("API-client POST /auth/login yields a usable Bearer token", func() {
+			req, _ := http.NewRequest(
+				http.MethodPost,
+				app.httpSrv.URL+"/auth/login",
+				bytes.NewReader(
+					[]byte(`{"email":"admin@x.com","password":"hunter22pw"}`),
+				),
+			)
+			req.Header.Set("Content-Type", "application/json")
+			resp, err := clientNoRedirect().Do(req)
+			Expect(err).ToNot(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
+
+			var tok string
+			for _, ck := range resp.Cookies() {
+				if ck.Name == auth.SessionCookie {
+					tok = ck.Value
+				}
+			}
+			Expect(tok).ToNot(BeEmpty())
+
+			me, _ := http.NewRequest(
+				http.MethodGet,
+				app.httpSrv.URL+"/api/v1/auth/me",
+				nil,
+			)
+			me.Header.Set("Authorization", "Bearer "+tok)
+			meResp, err := clientNoRedirect().Do(me)
+			Expect(err).ToNot(HaveOccurred())
+			defer meResp.Body.Close()
+			Expect(meResp.StatusCode).To(Equal(http.StatusOK))
+		})
+
 		It("6th bad login from same IP returns 429", func() {
 			for range 5 {
 				resp, err := jsonPost(
@@ -347,6 +404,7 @@ var _ = Describe("Webui + API auth", Label("integration", "auth"), func() {
 				nil,
 			)
 			req.AddCookie(&http.Cookie{Name: auth.SessionCookie, Value: tok})
+			req.Header.Set("Sec-Fetch-Site", "same-origin")
 			resp, err := c.Do(req)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(http.StatusNoContent))

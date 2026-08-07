@@ -2648,12 +2648,38 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: JWT token obtained from /auth/login or /auth/register
+      description: |
+        Session JWT. Obtain one from `POST /auth/login` or `POST /auth/register`
+        — both sit at the site root, outside this `/api/v1` base path. They take
+        a JSON body, answer `204`, and return the JWT in the `streamline_session`
+        cookie; send that value as `Authorization: Bearer <jwt>` here.
+
+        Those two endpoints are CSRF-guarded, which constrains non-browser
+        clients. Send `Content-Type: application/json` — a form content type is
+        refused with `415`. Send no `Sec-Fetch-Site` at all. `Origin` is
+        optional: omit it and the request is admitted as an API client, or send
+        one whose host is a host the deployment answers to (its `Host`, or its
+        configured public URL). Any other `Origin`, more than one `Origin`, or a
+        `Sec-Fetch-Site` other than `same-origin`, is refused with `403`.
+
+        Both are also rate-limited to 5 attempts per 15 minutes per client IP,
+        counting successes as well as failures and sharing one budget between
+        them. Past the limit the answer is `429` with a `Retry-After` header in
+        seconds — reuse the JWT for its full `session_ttl` rather than logging
+        in per request.
+
+        ```
+        curl -sS -i -X POST https://streamline.example/auth/login \
+          -H 'Content-Type: application/json' \
+          -d '{"email":"you@example.com","password":"..."}'
+        ```
     ApiKeyAuth:
       type: apiKey
       in: header
       name: X-API-Key
-      description: API key created via /users/me/api-keys
+      description: |
+        API key created via `POST /auth/me/api-keys`. That call itself needs a
+        JWT, so an API key cannot bootstrap a session — start at `/auth/login`.
 
   parameters:
     ResourceID:

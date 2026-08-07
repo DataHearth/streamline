@@ -32,6 +32,7 @@ var (
 
 // mintSessionJWT logs the seed admin in over plain HTTP and returns the session
 // cookie's value, which is the session JWT and doubles as an /api/v1 Bearer.
+// Sends no browser headers on purpose — the API-client shape csrfGuard admits.
 func mintSessionJWT() string {
 	GinkgoHelper()
 	body, err := json.Marshal(map[string]string{

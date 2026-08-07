@@ -29,16 +29,15 @@ const (
 // dance. The SPA owns all login/register UI; this layer just shuffles
 // credentials and cookies.
 //
-// CSRF posture: POST endpoints rely on SameSite=Lax cookies for CSRF
-// mitigation (see internal/auth/cookie.go). Adequate for a self-hosted
-// personal media manager; revisit if Streamline is ever deployed behind a
-// shared subdomain structure.
+// Every POST here mints or drops a session cookie, so each one goes through
+// csrfGuard (see csrf.go) — SameSite=Lax alone does not stop a cross-site
+// request from getting a *fresh* cookie set.
 func (h *Handler) registerWebAuthRoutes(r chi.Router) {
 	r.Get("/auth/config", h.authConfig)
 	r.Get("/auth/invite/{token}", h.authInvite)
-	r.Post("/auth/login", h.authLogin)
-	r.Post("/auth/register", h.authRegister)
-	r.Post("/auth/logout", h.authLogout)
+	r.With(csrfGuard).Post("/auth/login", h.authLogin)
+	r.With(csrfGuard).Post("/auth/register", h.authRegister)
+	r.With(csrfGuard).Post("/auth/logout", h.authLogout)
 	r.Get("/auth/oidc/{name}/start", h.oidcStart)
 	r.Get("/auth/oidc/{name}/callback", h.oidcCallback)
 }

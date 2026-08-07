@@ -223,7 +223,9 @@ func currentUserID(id identity) uint32 {
 }
 
 // login posts to the web login endpoint and returns the session JWT, which
-// /api/v1 accepts as a Bearer token.
+// /api/v1 accepts as a Bearer token. Deliberately sends no browser headers:
+// this is the shape a curl/mobile/CLI client uses, and csrfGuard has to admit
+// it or there is no way for an API client to obtain a JWT at all.
 func login(email, password string) string {
 	GinkgoHelper()
 	resp := post("/auth/login", anon, map[string]string{
