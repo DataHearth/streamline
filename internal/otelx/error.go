@@ -64,6 +64,12 @@ type redactedError struct {
 func (e *redactedError) Error() string { return e.msg }
 func (e *redactedError) Unwrap() error { return e.err }
 
+// maxUnwrapDepth stops a cyclic Unwrap chain from overflowing the stack, which
+// is a fatal runtime error that recover cannot catch. Nothing in net/http
+// builds one, but this helper is the boundary for errors of unknown
+// provenance, so it cannot assume its input is well-formed.
+const maxUnwrapDepth = 100
+
 // urlErrors returns the outermost *url.Error on every branch of err's tree.
 // The walk is hand-rolled because errors.As stops at the first match, which
 // leaves the second half of an errors.Join unredacted. It also stops at each
@@ -73,22 +79,25 @@ func (e *redactedError) Unwrap() error { return e.err }
 //nolint:errorlint // The single-level assertions are the point; see above.
 func urlErrors(err error) []*url.Error {
 	var found []*url.Error
-	var walk func(error)
-	walk = func(e error) {
+	var walk func(error, int)
+	walk = func(e error, depth int) {
+		if depth > maxUnwrapDepth {
+			return
+		}
 		switch t := e.(type) {
 		case nil:
 			return
 		case *url.Error:
 			found = append(found, t)
 		case interface{ Unwrap() error }:
-			walk(t.Unwrap())
+			walk(t.Unwrap(), depth+1)
 		case interface{ Unwrap() []error }:
 			for _, sub := range t.Unwrap() {
-				walk(sub)
+				walk(sub, depth+1)
 			}
 		}
 	}
-	walk(err)
+	walk(err, 0)
 	return found
 }
 
