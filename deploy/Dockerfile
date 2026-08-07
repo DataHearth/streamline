@@ -25,7 +25,13 @@ RUN mkdir -p /tmp/bundle web/static/dist && \
     mv /tmp/bundle/docs.min.js web/static/js/docs.min.js && \
     mv /tmp/bundle/docs.min.css web/static/css/docs.min.css
 
-RUN pnpm exec routify build && \
+# Keep in sync with the `build:js` task — paraglide writes its own `.gitignore`
+# into the outdir, so `web/app/lib/paraglide/` never reaches the build context.
+RUN pnpm exec paraglide-js compile --project ./web/app/project.inlang \
+      --outdir ./web/app/lib/paraglide --is-server false \
+      --emit-ts-declarations \
+      --strategy localStorage preferredLanguage baseLocale && \
+    pnpm exec routify build && \
     node web/app/esbuild.config.mjs
 
 RUN pnpm exec tailwindcss \
