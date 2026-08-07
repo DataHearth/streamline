@@ -50,6 +50,28 @@
         "className": { "type": "string" }
       }
     },
+    "networkPolicy": {
+      "type": "object",
+      "description": "Optional NetworkPolicy. Egress is a separate switch because an allowlist that misses an indexer fails as a silent timeout.",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "ingress": {
+          "type": "object",
+          "properties": {
+            "from": { "type": "array" }
+          }
+        },
+        "egress": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "allowExternal": { "type": "boolean" },
+            "nodeLocalDNS": { "type": "array", "items": { "type": "string" } },
+            "to": { "type": "array" }
+          }
+        }
+      }
+    },
     "gateway": {
       "type": "object",
       "properties": {

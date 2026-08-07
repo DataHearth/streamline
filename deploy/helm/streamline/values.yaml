@@ -23,7 +23,58 @@ podSecurityContext:
   runAsGroup: 1000
   fsGroup: 1000
   runAsNonRoot: true
-securityContext: {}
+# readOnlyRootFilesystem holds only as long as every path the app writes to is a
+# mount — it is a property of your values, not of the chart, because the paths
+# are yours to set. The mounts are /data (PVC), the library volumes, and /tmp
+# (64Mi emptyDir, for sqlite temp spills only).
+#
+# The chart refuses to render rather than let a bad path crashloop, but that
+# check reaches EXACTLY as far as the `config:` block below and no further.
+#
+# CHECKED — the chart fails the render if any of these is not under a mount:
+#   * config.data_dir            — the app mkdirs <data_dir>/posters
+#   * config.library.movie_path, config.library.series_path
+#   * config.download_clients[].download_dir, for an ENABLED builtin client
+#     (client_type: builtin) — it mkdirs <download_dir>/.streamline-session
+#     before the library roots, so it is the first thing to fail. Note the
+#     networkPolicy block below tells you to declare that entry for its peer
+#     port; declaring it does NOT mount its download_dir.
+#   * config.log.app.output, config.log.http.output, when absolute. These fail
+#     SILENTLY at runtime rather than loudly — the log file is opened lazily and
+#     the error is discarded, so the pod looks healthy and emits nothing — which
+#     is why the chart stops them at render time. A relative value resolves
+#     under data_dir, so it is covered by the data_dir check.
+# Pointing any of the above at /tmp is rejected too: /tmp IS a mount, but it is
+# capped at 64Mi and wiped on restart, so the kubelet evicts the pod once the
+# database, poster cache or rotated logs breach sizeLimit.
+#
+# NOT CHECKED — these render clean and can still kill the pod:
+#   * anything you inject through extraEnv or secrets. koanf applies STREAMLINE_*
+#     env AFTER the config file, so env WINS over everything the chart renders
+#     into the ConfigMap, and the chart cannot see the value it lost to. e.g.
+#     `extraEnv: [{name: STREAMLINE_LIBRARY__MOVIE_PATH, value: /var/movies}]`
+#     renders fine and the pod dies on "mkdir /var/movies: read-only file
+#     system". If you redirect a path with env, you own checking it is mounted.
+#   * config.data_dir pointing at a SUBDIRECTORY of a mount — see the note on
+#     config.data_dir below. That one fails for an unrelated reason and fails
+#     with readOnlyRootFilesystem: false just the same.
+#
+# Two ways to trip the checked set without touching config at all:
+#   * persistence.enabled: false while config.data_dir still points at /data,
+#     which is then a plain directory in the image.
+#   * library.shared.enabled: false with neither library.media nor
+#     library.downloads on, which drops config.library.{movie,series}_path back
+#     to the binary defaults /media/movies and /media/series.
+# Fix either by pointing the path at a persistent volume that IS mounted, or by
+# setting readOnlyRootFilesystem: false to opt out. Setting this whole block to
+# null or {} drops the container securityContext entirely, which also opts out.
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: [ALL]
+  seccompProfile:
+    type: RuntimeDefault
 
 resources:
   requests:
@@ -46,6 +97,91 @@ service:
   type: ClusterIP
   port: 8080
 
+# Off by default: a NetworkPolicy is only enforced if the CNI implements it, and
+# on a cluster that does, a wrong rule fails as a silent timeout rather than an
+# error. Opt in, then check the pod can still reach its indexers.
+#
+# With observability.enabled, helm prints two `coalesce.go ... alloy.networkPolicy
+# is a table` warnings — a key-name collision with the upstream alloy chart's own
+# networkPolicy values. Cosmetic: alloy's manifests render byte-identical either way.
+networkPolicy:
+  enabled: false
+  ingress:
+    # NetworkPolicyPeer list allowed to reach service.port. Empty = any source,
+    # which still narrows the pod to that one port. Restrict it to the ingress
+    # controller once you know its namespace, e.g.
+    #   from: [{ namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: ingress-nginx } } }]
+    #
+    # TRAP: the ingress controller is not the only thing that opens this port,
+    # and the other two are easy to forget because neither is an app client:
+    #   * the kubelet's liveness/readiness httpGet on the SAME port. Its source
+    #     is the NODE IP, not a pod, so no namespaceSelector/podSelector matches
+    #     it. Whether a namespace-only `from` still admits it is CNI-dependent —
+    #     Calico ships a "failsafe" for host traffic, Cilium needs
+    #     `- toEntities: [host]`-equivalent ingress (`fromEntities: [host]`) in a
+    #     CiliumNetworkPolicy. Get it wrong and probes fail, the pod is marked
+    #     NotReady and restarted: a crashloop that looks like an app bug.
+    #   * the `helm test` pod (templates/tests/test-health.yaml), which curls
+    #     http://<release>:8080/health from the SAME namespace. A `from` naming
+    #     only the ingress namespace makes `helm test` hang and fail.
+    # Add an explicit peer for each rather than assuming they are exempt, e.g.
+    #   from:
+    #     - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: ingress-nginx } }
+    #     - podSelector: {}            # same-namespace, covers `helm test`
+    #     - ipBlock: { cidr: <node-cidr> }   # kubelet probes, if your CNI needs it
+    #
+    # This gates the HTTP port ONLY. A builtin download client
+    # (config.download_clients[].client_type: builtin) also needs its peer port
+    # reachable from the whole internet — the chart opens TCP+UDP on that
+    # entry's listen_port (42069 when unset) as its own unrestricted rule, so
+    # tightening `from` here can't strand the torrent client. Peer traffic
+    # needs the same port published at the edge (hostPort/LoadBalancer/port
+    # forward); a NetworkPolicy only stops dropping it, it does not route it.
+    from: []
+  egress:
+    # Separate switch: streamline dials indexers, trackers, download clients,
+    # media servers and metadata APIs, so an allowlist that misses one breaks
+    # grabs in ways that look like an upstream outage.
+    #
+    # DNS to the kube-system namespace is always allowed when this is on.
+    # That is NOT the same as "DNS always works": NodeLocal DNSCache serves
+    # from a hostNetwork DaemonSet on a link-local VIP, and hostNetwork pods
+    # are not reliably matched by a namespaceSelector. See nodeLocalDNS below.
+    enabled: false
+    # Everything else outbound over IPv4 and IPv6, minus the cloud
+    # instance-metadata endpoints (169.254.169.254, fd00:ec2::254) that an SSRF
+    # would mine for credentials. Turn it off and list destinations explicitly
+    # in `to` below.
+    #
+    # TRAP (Cilium): an ipBlock CIDR resolves to the `world` identity, which
+    # does not cover in-cluster endpoints. With allowExternal on but no matching
+    # rule in `to`, egress to a qBittorrent/Plex/indexer pod in ANOTHER
+    # namespace is still denied — it never leaves the cluster, so `world` never
+    # matches. Calico and the reference CNI do match pod IPs against ipBlock.
+    # Add an explicit namespaceSelector/podSelector rule in `to` either way.
+    allowExternal: true
+    # CIDRs allowed on port 53 on top of the kube-system rule. Needed when the
+    # cluster runs NodeLocal DNSCache, whose hostNetwork pods answer on a
+    # link-local VIP: 169.254.20.10 upstream, 169.254.25.10 on kubespray.
+    # `kubectl -n kube-system get cm nodelocaldns -o yaml` shows the address in
+    # use. Leaving this empty on such a cluster is the silent-timeout failure
+    # this whole block warns about.
+    #
+    # TRAP (Cilium): this knob does NOT fix that failure on Cilium. The cache
+    # answers from a hostNetwork DaemonSet, and Cilium classifies anything
+    # destined for the node itself as the reserved `host` identity — which
+    # ipBlock/CIDR rules never match, however exactly the CIDR is written. The
+    # rule renders, kubeconform passes, and DNS still times out silently: the
+    # very mode this knob exists to prevent. On Cilium you need a
+    # CiliumNetworkPolicy with `toEntities: [host]` instead (apply it alongside
+    # via extraManifests/kustomize; a v1 NetworkPolicy cannot express it).
+    # Calico and the reference CNI do match the VIP against ipBlock, so this
+    # knob is sufficient there.
+    nodeLocalDNS: [] # e.g. [169.254.20.10/32]
+    # Extra egress RULES (not bare peers), appended verbatim, e.g.
+    #   to: [{ to: [{ podSelector: { matchLabels: { app: qbittorrent } } }] }]
+    to: []
+
 ingress:
   enabled: false
   className: ""
@@ -63,7 +199,22 @@ gateway:
 # rest, so this can't silently drift from them. Override any other key by adding
 # it; koanf merges this file over defaults. See `streamline config validate`.
 config:
-  data_dir: /data # binary default ./data is relative; MUST pin to the PVC mount
+  # Binary default ./data is relative; MUST pin to the PVC mount.
+  #
+  # TRAP: keep this AT the mount, not in a subdirectory of it. data_dir is
+  # validated with `required,dir`, which demands the directory ALREADY EXIST at
+  # config load — and nothing creates it (posters mkdirs <data_dir>/posters, but
+  # only long after validation has run). A freshly provisioned PVC is empty, so
+  # `data_dir: /data/streamline` renders clean, passes the writable-path check
+  # above, and then the pod exits at startup with
+  #   Field validation for 'DataDir' failed on the 'dir' tag
+  # This has nothing to do with readOnlyRootFilesystem — it fails identically
+  # with a fully writable root filesystem — so the writable-path guard is the
+  # wrong place to catch it and deliberately does not try. If you need a
+  # subdirectory, create it inside the volume first (an initContainer, or a
+  # subPath mount), or point data_dir at the mount root and let the app lay out
+  # its own files under it.
+  data_dir: /data
   # Declarative deploy: the app never writes config back (config.Update returns
   # ErrReadOnly). Change config through git, not the UI. Runtime-only values
   # (session_secret, plex_client_id) must be supplied here or via secretFiles.

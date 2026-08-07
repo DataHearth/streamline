@@ -1,3 +1,4 @@
+{{- include "streamline.assertWritablePaths" . }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -81,6 +82,19 @@ spec:
             - name: config
               mountPath: /etc/streamline
               readOnly: true
+            {{- /* readOnlyRootFilesystem makes / unwritable and modernc's
+                   sqlite VFS falls back to $TMPDIR (then /tmp) for its
+                   temp-store spills — statement journals and large ORDER BY /
+                   GROUP BY sorts. Those are bounded by query size, which is
+                   what makes 64Mi enough; the app runs no VACUUM (which would
+                   need roughly DB-sized scratch) and sets no temp_store pragma,
+                   so nothing else lands here. NOT for config write-back: the
+                   chart ships read_only=true so Update never reaches the
+                   writer, and even without it the config volume is a readOnly
+                   ConfigMap, so the rename and its WriteFile fallback both
+                   fail. */}}
+            - name: tmp
+              mountPath: /tmp
             {{- if .Values.secretFiles.enabled }}
             - name: secret-files
               mountPath: {{ .Values.secretFiles.mountPath }}
@@ -104,6 +118,9 @@ spec:
         - name: config
           configMap:
             name: {{ include "streamline.fullname" . }}-config
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi
         {{- if .Values.secretFiles.enabled }}
         - name: secret-files
           secret:

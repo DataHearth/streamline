@@ -1,0 +1,100 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "streamline.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "streamline.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "streamline.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    {{- if .Values.networkPolicy.egress.enabled }}
+    - Egress
+    {{- end }}
+  ingress:
+    - ports:
+        - protocol: TCP
+          port: {{ .Values.service.port }}
+      {{- with .Values.networkPolicy.ingress.from }}
+      from:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- /* Builtin torrent client: anacrolix binds listen_port for TCP and uTP
+           peer conns and UDP DHT (internal/bittorrent/engine.go), falling back
+           to its own 42069 default when listen_port is unset. Inbound peers
+           arrive from the whole internet, so this MUST be its own rule with no
+           `from` — folded into the rule above, ingress.from (an ingress
+           controller namespace, say) would gate peer traffic too and the
+           client silently degrades to outbound-only, which reads as "slow
+           torrents", not as a policy error. */}}
+    {{- range .Values.config.download_clients | default list }}
+    {{- if eq (.client_type | default "") "builtin" }}
+    - ports:
+        - protocol: TCP
+          port: {{ .listen_port | default 42069 }}
+        - protocol: UDP
+          port: {{ .listen_port | default 42069 }}
+    {{- end }}
+    {{- end }}
+  {{- if .Values.networkPolicy.egress.enabled }}
+  egress:
+    {{- /* Namespace-scoped rather than podSelector k8s-app=kube-dns: the CoreDNS
+           pod labels vary by distribution, and a missed label silently breaks
+           every hostname the app resolves. Does NOT cover NodeLocal DNSCache —
+           see networkPolicy.egress.nodeLocalDNS below. */}}
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    {{- with .Values.networkPolicy.egress.nodeLocalDNS }}
+    - to:
+        {{- range . }}
+        - ipBlock:
+            cidr: {{ . }}
+        {{- end }}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    {{- end }}
+    {{- if .Values.observability.enabled }}
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Values.observability.namespace | default "observability" }}
+      ports:
+        - protocol: TCP
+          port: 4318
+    {{- end }}
+    {{- if .Values.networkPolicy.egress.allowExternal }}
+    {{- /* Both families: an ipBlock CIDR only matches its own address family,
+           so 0.0.0.0/0 alone denies every IPv6 destination on a dual-stack
+           cluster. The excepts are the cloud instance-metadata endpoints
+           (IMDS) whose credentials an SSRF would go after — narrowed from the
+           whole 169.254.0.0/16 link-local range, which also holds the NodeLocal
+           DNSCache VIP and so took DNS down with it. */}}
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 169.254.169.254/32
+        - ipBlock:
+            cidr: ::/0
+            except:
+              - fd00:ec2::254/128
+    {{- end }}
+    {{- with .Values.networkPolicy.egress.to }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- end }}
+{{- end }}

@@ -55,13 +55,16 @@ Open http://localhost:8080.
 
 ### First login
 
-An admin account is seeded on first boot. Set `auth.seed_admin.email` and `auth.seed_admin.password` (or `password_file`) in the config beforehand to choose the credentials. If you don't, Streamline creates `admin@streamline.local` with a generated password and prints it **once**, to stdout, on that first boot:
+An admin account is seeded on first boot. Set `auth.seed_admin.email` and `auth.seed_admin.password` (or `password_file`) in the config beforehand to choose the credentials.
+
+If you don't, Streamline creates `admin@streamline.local` with a generated password and prints it **once**, to stdout, on a single line mentioning `default admin`. Capture it before anything else scrolls past:
 
 ```bash
-docker logs streamline | grep -i "default admin"
+docker logs streamline 2>&1 | grep 'default admin'                              # Docker
+kubectl -n streamline logs deploy/streamline-streamline | grep 'default admin'  # Helm
 ```
 
-Copy it right then and change it from Settings. It is not written to your config file and not sent to the log pipeline, so if you lose it the only way back is to wipe the data dir and re-seed — `auth.seed_admin` is applied against an empty database and ignored afterwards.
+Copy it right then and change it from Settings. It is never written to your config file and never passed to the log pipeline, so if you lose it the only way back is to wipe the data dir and re-seed — `auth.seed_admin` is applied against an empty database and ignored afterwards. Anything scraping container stdout captured it too, so treat it as compromised until you rotate it.
 
 If you're upgrading from a release that saved those credentials into `auth.seed_admin.password`, Streamline no longer reads or rewrites that value once the admin exists. It's your file: delete the leftover plaintext yourself.
 
@@ -69,13 +72,19 @@ If you're upgrading from a release that saved those credentials into `auth.seed_
 
 ### Docker
 
+Generate a config first (the `config init` step from the Quick start above), then:
+
 ```bash
 docker run -d --name streamline \
   -p 8080:8080 \
   -v streamline-data:/data \
   -v "$PWD/config:/etc/streamline:ro" \
+  -v /path/to/media:/media \
+  -v /path/to/downloads:/downloads \
   ghcr.io/datahearth/streamline:latest
 ```
+
+The media and downloads mounts are **required**, not optional extras: Streamline creates `library.movie_path` and `library.series_path` at startup and exits if it cannot. They default to `/media/movies` and `/media/series`, so dropping those two `-v` flags stops the container with `create library path /media/movies: mkdir /media: permission denied`. Point them wherever you like — just set `library.movie_path` / `library.series_path` / `library.download_path` to match. Keep media and downloads on one filesystem so the default `hardlink` import mode works (`library.import_mode` also accepts `copy` and `move`).
 
 Tags: `latest`, `edge` (main branch), `vX.Y.Z`, `X.Y`, `X`, `sha-<short>`.
 
