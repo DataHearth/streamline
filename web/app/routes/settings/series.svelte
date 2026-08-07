@@ -38,7 +38,7 @@
 			api<ApplyResult>("/series/specials/apply", { method: "POST" }),
 		onSuccess: ({ seasons_updated: n, monitored }) => {
 			qc.invalidateQueries({ queryKey: ["series"] });
-			const verb = monitored ? "monitored" : "unmonitored";
+			const verb = monitored ? i18n.lc_monitored() : i18n.lc_not_monitored();
 			toast.ok(
 				n === 0
 					? i18n.series_specials_none()

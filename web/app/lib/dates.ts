@@ -1,3 +1,4 @@
+import { m as i18n } from "./paraglide/messages.js";
 import { getLocale } from "./paraglide/runtime.js";
 
 // Bound to the app locale, not the browser's: a French UI in an English
@@ -31,8 +32,10 @@ const DAY = 86_400_000;
 const MONTH = 30 * DAY;
 const YEAR = 365 * DAY;
 
-function unit(n: number, name: string): string {
-	return n === 0 ? "" : `${n} ${name}${n === 1 ? "" : "s"}`;
+type Plural = (inputs: { n: number }) => string;
+
+function unit(n: number, one: Plural, other: Plural): string {
+	return n === 0 ? "" : n === 1 ? one({ n }) : other({ n });
 }
 
 // The two largest non-zero units, so "1 year 2 days" keeps the days a
@@ -42,9 +45,9 @@ function unit(n: number, name: string): string {
 function span(abs: number): string {
 	const sub = abs % YEAR;
 	return [
-		unit(Math.floor(abs / YEAR), "year"),
-		unit(Math.floor(sub / MONTH), "month"),
-		unit(Math.floor((sub % MONTH) / DAY), "day"),
+		unit(Math.floor(abs / YEAR), i18n.rel_years_one, i18n.rel_years_other),
+		unit(Math.floor(sub / MONTH), i18n.rel_months_one, i18n.rel_months_other),
+		unit(Math.floor((sub % MONTH) / DAY), i18n.rel_days_one, i18n.rel_days_other),
 	]
 		.filter(Boolean)
 		.slice(0, 2)
@@ -59,6 +62,10 @@ export function formatRelative(iso: string | null | undefined): string {
 	if (abs < DAY) return rtf.format(Math.round(diffMs / HR), "hour");
 	if (abs < MONTH) return rtf.format(Math.round(diffMs / DAY), "day");
 	// Past a month, a single unit reads as noise ("5,066 days ago"), so build a
-	// two-part span instead of leaning on Intl.RelativeTimeFormat.
-	return diffMs < 0 ? `${span(abs)} ago` : `in ${span(abs)}`;
+	// two-part span instead of leaning on Intl.RelativeTimeFormat. Assembled
+	// from messages, not string literals — Intl covers the shorter ranges but
+	// not this one.
+	return diffMs < 0
+		? i18n.rel_ago({ span: span(abs) })
+		: i18n.rel_in({ span: span(abs) });
 }

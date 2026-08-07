@@ -7,7 +7,7 @@
 		pendingCount,
 		commitableCount,
 		commitNote,
-		noun = "file",
+		series = false,
 		skipBusy = false,
 		commitBusy = false,
 		onSkipAll,
@@ -16,8 +16,8 @@
 		pendingCount: number;
 		commitableCount: number;
 		commitNote: string;
-		// Row noun for a movie ("file") vs series ("show") scan.
-		noun?: string;
+		// Rows are shows on a series scan, files on a movie one.
+		series?: boolean;
 		skipBusy?: boolean;
 		commitBusy?: boolean;
 		onSkipAll: () => void;
@@ -25,6 +25,18 @@
 	} = $props();
 
 	let confirmSkipOpen = $state(false);
+
+	const noun = $derived(series ? i18n.lc_show() : i18n.lc_file());
+
+	const prefix = $derived(
+		series
+			? pendingCount === 1
+				? i18n.imports_skip_body_prefix_show_one
+				: i18n.imports_skip_body_prefix_show_other
+			: pendingCount === 1
+				? i18n.imports_skip_body_prefix_file_one
+				: i18n.imports_skip_body_prefix_file_other,
+	);
 </script>
 
 <div
@@ -81,7 +93,9 @@
 
 <Dialog
 	open={confirmSkipOpen}
-	title="Skip all unmatched {noun}s?"
+	title={series
+		? i18n.imports_skip_all_unmatched_shows()
+		: i18n.imports_skip_all_unmatched_files()}
 	onClose={() => (confirmSkipOpen = false)}
 	actions={[
 		{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },
@@ -89,8 +103,10 @@
 	]}
 >
 	<p class="text-sm text-fg-muted">
-		The {pendingCount} {noun}{pendingCount === 1 ? "" : "s"} still awaiting a decision
-		will be marked <span class="font-medium text-fg">skip</span> and left out of
-		the import. You can still change individual files afterward.
+		{prefix({ count: pendingCount })}
+		<span class="font-medium text-fg">{i18n.lc_skip()}</span>
+		{series
+			? i18n.imports_skip_body_suffix_show()
+			: i18n.imports_skip_body_suffix_file()}
 	</p>
 </Dialog>

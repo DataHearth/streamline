@@ -721,7 +721,7 @@
 				<DecisionStrip
 					pendingCount={stripPendingCount}
 					commitableCount={stripCommitableCount}
-					noun={isSeries ? "show" : "file"}
+					series={isSeries}
 					commitNote={commitNote(scan.mode, scan.import_mode)}
 					skipBusy={isSeries ? skipAllShows.isPending : skipAll.isPending}
 					commitBusy={commit.isPending}
