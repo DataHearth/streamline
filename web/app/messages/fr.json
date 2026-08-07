@@ -220,8 +220,21 @@
 	"calendar_next_month": "Mois suivant",
 	"calendar_nothing_this_day": "Rien ne sort ce jour-là.",
 	"calendar_previous_month": "Mois précédent",
-	"calendar_release_count_one": "{count} sortie",
-	"calendar_release_count_other": "{count} sorties",
+	"calendar_release_count": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural"
+			],
+			"selectors": [
+				"countPlural"
+			],
+			"match": {
+				"countPlural=one": "{count} sortie",
+				"countPlural=other": "{count} sorties"
+			}
+		}
+	],
 	"calendar_releases_on": "Sorties du {day}",
 	"calendar_view": "Vue du calendrier",
 	"cast_none": "Aucune information de distribution",
@@ -414,8 +427,21 @@
 	"dash_library_waiting": "Votre bibliothèque vous attend",
 	"dash_live_download_queue": "File de téléchargement en direct",
 	"dash_live_queue": "File en direct",
-	"dash_movie_count_one": "{count} film",
-	"dash_movie_count_other": "{count} films",
+	"dash_movie_count": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural"
+			],
+			"selectors": [
+				"countPlural"
+			],
+			"match": {
+				"countPlural=one": "{count} film",
+				"countPlural=other": "{count} films"
+			}
+		}
+	],
 	"dash_next_30_days": "30 prochains jours",
 	"dash_no_events": "Aucun événement pour l'instant",
 	"dash_no_movies_yet": "Aucun film. Ajoutez-en un pour le voir ici.",
@@ -423,10 +449,36 @@
 	"dash_open_activity": "Ouvrir l'activité →",
 	"dash_recently_added": "Ajouts récents",
 	"dash_search_nightly": "recherche chaque nuit",
-	"dash_series_count_one": "{count} série",
-	"dash_series_count_other": "{count} séries",
-	"dash_title_count_one": "{count} titre",
-	"dash_title_count_other": "{count} titres",
+	"dash_series_count": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural"
+			],
+			"selectors": [
+				"countPlural"
+			],
+			"match": {
+				"countPlural=one": "{count} série",
+				"countPlural=other": "{count} séries"
+			}
+		}
+	],
+	"dash_title_count": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural"
+			],
+			"selectors": [
+				"countPlural"
+			],
+			"match": {
+				"countPlural=one": "{count} titre",
+				"countPlural=other": "{count} titres"
+			}
+		}
+	],
 	"dash_titles": "Titres",
 	"dash_view_all": "Tout afficher →",
 	"dash_wanted_upcoming": "Souhaités et à venir",
@@ -533,8 +585,21 @@
 	"imports_adopt_in_place": "Adopter sur place",
 	"imports_adopt_in_place_label": "Adopter sur place",
 	"imports_all_classifications": "Toutes les classifications",
-	"imports_all_ready_one": "{count} entrée prête à être validée.",
-	"imports_all_ready_other": "Les {count} entrées sont prêtes à être validées.",
+	"imports_all_ready": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural"
+			],
+			"selectors": [
+				"countPlural"
+			],
+			"match": {
+				"countPlural=one": "{count} entrée prête à être validée.",
+				"countPlural=other": "Les {count} entrées sont prêtes à être validées."
+			}
+		}
+	],
 	"imports_already_matched_file": "Ce fichier est déjà associé à une entrée de la bibliothèque. La validation y rattache le fichier.",
 	"imports_already_matched_show": "Cette série est déjà associée à une entrée de la bibliothèque. La validation la relie à cette série.",
 	"imports_ambiguous": "Ambigu",
@@ -555,8 +620,22 @@
 	"imports_click_prefix": "Cliquez sur",
 	"imports_click_suffix": "pour en lancer une.",
 	"imports_commit": "Valider",
-	"imports_commit_count_one": "Valider {count} {noun}",
-	"imports_commit_count_other": "Valider {count} {noun}s",
+	"imports_commit_count": [
+		{
+			"declarations": [
+				"input count",
+				"input noun",
+				"local countPlural = count: plural"
+			],
+			"selectors": [
+				"countPlural"
+			],
+			"match": {
+				"countPlural=one": "Valider {count} {noun}",
+				"countPlural=other": "Valider {count} {noun}s"
+			}
+		}
+	],
 	"imports_commit_finished": "Validation terminée — {imported} importés, {failed} en échec",
 	"imports_commit_n": "Valider {count}",
 	"imports_commit_note_copy": "Les entrées confirmées seront copiées dans la bibliothèque.",
@@ -580,8 +659,21 @@
 	"imports_exclude_file": "Exclure ce fichier de l'import",
 	"imports_exclude_show": "Exclure cette série de l'import",
 	"imports_existing": "Existant",
-	"imports_file_count_one": "{count} fichier",
-	"imports_file_count_other": "{count} fichiers",
+	"imports_file_count": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural"
+			],
+			"selectors": [
+				"countPlural"
+			],
+			"match": {
+				"countPlural=one": "{count} fichier",
+				"countPlural=other": "{count} fichiers"
+			}
+		}
+	],
 	"imports_files_progress": "{done}/{total} fichiers",
 	"imports_filter_by_classification": "Filtrer par classification",
 	"imports_ignore_confirm": "Ignorer cette proposition ?",
@@ -601,8 +693,21 @@
 	"imports_mode_move": "Déplacement — destructif, libère le disque source",
 	"imports_mode_server_default": "Utiliser la valeur du serveur (library.import_mode)",
 	"imports_movie_exists": "Film déjà dans la bibliothèque — valider remplacera son fichier actuel",
-	"imports_needs_decision_one": "{count} entrée doit être décidée avant validation.",
-	"imports_needs_decision_other": "{count} entrées doivent être décidées avant validation.",
+	"imports_needs_decision": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural"
+			],
+			"selectors": [
+				"countPlural"
+			],
+			"match": {
+				"countPlural=one": "{count} entrée doit être décidée avant validation.",
+				"countPlural=other": "{count} entrées doivent être décidées avant validation."
+			}
+		}
+	],
 	"imports_new_scan": "Nouvelle analyse",
 	"imports_no_files_match": "Aucun fichier ne correspond à ce filtre.",
 	"imports_no_longer_review": "Cette analyse n'est plus en cours d'examen.",
@@ -648,10 +753,36 @@
 	"imports_skip_all": "Tout ignorer",
 	"imports_skip_all_unmatched_files": "Ignorer tous les fichiers sans correspondance ?",
 	"imports_skip_all_unmatched_shows": "Ignorer toutes les séries sans correspondance ?",
-	"imports_skip_body_prefix_file_one": "Le fichier encore en attente de décision sera marqué",
-	"imports_skip_body_prefix_file_other": "Les {count} fichiers encore en attente de décision seront marqués",
-	"imports_skip_body_prefix_show_one": "La série encore en attente de décision sera marquée",
-	"imports_skip_body_prefix_show_other": "Les {count} séries encore en attente de décision seront marquées",
+	"imports_skip_body_prefix_file": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural"
+			],
+			"selectors": [
+				"countPlural"
+			],
+			"match": {
+				"countPlural=one": "Le fichier encore en attente de décision sera marqué",
+				"countPlural=other": "Les {count} fichiers encore en attente de décision seront marqués"
+			}
+		}
+	],
+	"imports_skip_body_prefix_show": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural"
+			],
+			"selectors": [
+				"countPlural"
+			],
+			"match": {
+				"countPlural=one": "La série encore en attente de décision sera marquée",
+				"countPlural=other": "Les {count} séries encore en attente de décision seront marquées"
+			}
+		}
+	],
 	"imports_skip_body_suffix_file": "et exclu de l'import. Vous pourrez encore modifier chaque fichier ensuite.",
 	"imports_skip_body_suffix_show": "et exclue de l'import. Vous pourrez encore modifier chaque série ensuite.",
 	"imports_skip_partial_files": "{ok} ignorés, {fail} en échec — vérifiez les fichiers restants manuellement",
@@ -660,18 +791,57 @@
 	"imports_skip_this_file": "Ignorer ce fichier",
 	"imports_skip_this_show": "Ignorer cette série",
 	"imports_skip_unmatched": "Ignorer tout ce qui est sans correspondance",
-	"imports_skipped_file_one": "{count} fichier ignoré",
-	"imports_skipped_file_other": "{count} fichiers ignorés",
-	"imports_skipped_show_one": "{count} série ignorée",
-	"imports_skipped_show_other": "{count} séries ignorées",
+	"imports_skipped_file": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural"
+			],
+			"selectors": [
+				"countPlural"
+			],
+			"match": {
+				"countPlural=one": "{count} fichier ignoré",
+				"countPlural=other": "{count} fichiers ignorés"
+			}
+		}
+	],
+	"imports_skipped_show": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural"
+			],
+			"selectors": [
+				"countPlural"
+			],
+			"match": {
+				"countPlural=one": "{count} série ignorée",
+				"countPlural=other": "{count} séries ignorées"
+			}
+		}
+	],
 	"imports_source_path": "Chemin source",
 	"imports_start_new_scan": "Lancer une nouvelle analyse",
 	"imports_start_scan": "Lancer l'analyse",
 	"imports_step_import": "Import dans la bibliothèque",
 	"imports_step_indexing": "Indexation des fichiers",
 	"imports_step_resolve": "Résolution des correspondances",
-	"imports_still_need_decision_one": "{count} attend encore une décision",
-	"imports_still_need_decision_other": "{count} attendent encore une décision",
+	"imports_still_need_decision": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural"
+			],
+			"selectors": [
+				"countPlural"
+			],
+			"match": {
+				"countPlural=one": "{count} attend encore une décision",
+				"countPlural=other": "{count} attendent encore une décision"
+			}
+		}
+	],
 	"imports_succeeded_failed": "Réussis : {ok} · Échecs : {fail}",
 	"imports_transfer_mode": "Mode de transfert",
 	"imports_type_to_search": "Saisissez du texte pour rechercher sur {source}.",
@@ -881,13 +1051,52 @@
 	"quality_view": "Voir le profil de qualité",
 	"quality_view_short": "Voir le profil",
 	"rel_ago": "il y a {span}",
-	"rel_days_one": "{n} jour",
-	"rel_days_other": "{n} jours",
+	"rel_days": [
+		{
+			"declarations": [
+				"input n",
+				"local nPlural = n: plural"
+			],
+			"selectors": [
+				"nPlural"
+			],
+			"match": {
+				"nPlural=one": "{n} jour",
+				"nPlural=other": "{n} jours"
+			}
+		}
+	],
 	"rel_in": "dans {span}",
-	"rel_months_one": "{n} mois",
-	"rel_months_other": "{n} mois",
-	"rel_years_one": "{n} an",
-	"rel_years_other": "{n} ans",
+	"rel_months": [
+		{
+			"declarations": [
+				"input n",
+				"local nPlural = n: plural"
+			],
+			"selectors": [
+				"nPlural"
+			],
+			"match": {
+				"nPlural=one": "{n} mois",
+				"nPlural=other": "{n} mois"
+			}
+		}
+	],
+	"rel_years": [
+		{
+			"declarations": [
+				"input n",
+				"local nPlural = n: plural"
+			],
+			"selectors": [
+				"nPlural"
+			],
+			"match": {
+				"nPlural=one": "{n} an",
+				"nPlural=other": "{n} ans"
+			}
+		}
+	],
 	"rename_already_correct": "Tout est déjà correctement nommé.",
 	"rename_computing": "Calcul du plan de renommage…",
 	"rename_failed": "Échec du renommage",
@@ -1014,8 +1223,22 @@
 	"series_sections": "Sections de la série",
 	"series_shows_count": "{count} séries",
 	"series_specials": "Épisodes spéciaux",
-	"series_specials_applied_one": "Épisodes spéciaux {verb} sur {count} saison",
-	"series_specials_applied_other": "Épisodes spéciaux {verb} sur {count} saisons",
+	"series_specials_applied": [
+		{
+			"declarations": [
+				"input count",
+				"input verb",
+				"local countPlural = count: plural"
+			],
+			"selectors": [
+				"countPlural"
+			],
+			"match": {
+				"countPlural=one": "Épisodes spéciaux {verb} sur {count} saison",
+				"countPlural=other": "Épisodes spéciaux {verb} sur {count} saisons"
+			}
+		}
+	],
 	"series_specials_caps": "SPÉCIAUX",
 	"series_specials_help": "La saison 0 contient les résumés, OAV et bonus. Si l'option est désactivée, une nouvelle série arrive avec ses épisodes spéciaux non suivis — rien n'est recherché ni récupéré pour eux tant que vous n'activez pas la saison.",
 	"series_specials_none": "Aucune saison spéciale à mettre à jour",

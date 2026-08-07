@@ -325,12 +325,7 @@
 				qc.invalidateQueries({
 					queryKey: ["import", importId, "pending"],
 				});
-				if (fail === 0)
-					toast.ok(
-						ok === 1
-							? i18n.imports_skipped_file_one({ count: ok })
-							: i18n.imports_skipped_file_other({ count: ok }),
-					);
+				if (fail === 0) toast.ok(i18n.imports_skipped_file({ count: ok }));
 				else toast.err(i18n.imports_skip_partial_files({ ok, fail }));
 			},
 			onError: (err) => toast.err(err.message),
@@ -362,12 +357,7 @@
 				qc.invalidateQueries({
 					queryKey: ["import", importId, "pending-shows"],
 				});
-				if (fail === 0)
-					toast.ok(
-						ok === 1
-							? i18n.imports_skipped_show_one({ count: ok })
-							: i18n.imports_skipped_show_other({ count: ok }),
-					);
+				if (fail === 0) toast.ok(i18n.imports_skipped_show({ count: ok }));
 				else toast.err(i18n.imports_skip_partial_shows({ ok, fail }));
 			},
 			onError: (err) => toast.err(err.message),

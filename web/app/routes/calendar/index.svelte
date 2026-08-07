@@ -224,9 +224,7 @@
 					{/if}
 				</h2>
 				<span class="shrink-0 font-mono text-[10.5px] text-fg-faint">
-					{dayEvents.length === 1
-						? i18n.calendar_release_count_one({ count: dayEvents.length })
-						: i18n.calendar_release_count_other({ count: dayEvents.length })}
+					{i18n.calendar_release_count({ count: dayEvents.length })}
 				</span>
 			</div>
 			{#if dayEvents.length > 0}

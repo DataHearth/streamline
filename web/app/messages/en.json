@@ -220,8 +220,21 @@
 	"calendar_next_month": "Next month",
 	"calendar_nothing_this_day": "Nothing lands on this day.",
 	"calendar_previous_month": "Previous month",
-	"calendar_release_count_one": "{count} release",
-	"calendar_release_count_other": "{count} releases",
+	"calendar_release_count": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural"
+			],
+			"selectors": [
+				"countPlural"
+			],
+			"match": {
+				"countPlural=one": "{count} release",
+				"countPlural=other": "{count} releases"
+			}
+		}
+	],
 	"calendar_releases_on": "Releases on {day}",
 	"calendar_view": "Calendar view",
 	"cast_none": "No cast information",
@@ -414,8 +427,21 @@
 	"dash_library_waiting": "Your library is waiting",
 	"dash_live_download_queue": "Live download queue",
 	"dash_live_queue": "Live queue",
-	"dash_movie_count_one": "{count} movie",
-	"dash_movie_count_other": "{count} movies",
+	"dash_movie_count": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural"
+			],
+			"selectors": [
+				"countPlural"
+			],
+			"match": {
+				"countPlural=one": "{count} movie",
+				"countPlural=other": "{count} movies"
+			}
+		}
+	],
 	"dash_next_30_days": "Next 30 days",
 	"dash_no_events": "No events yet",
 	"dash_no_movies_yet": "No movies yet. Add one to see it here.",
@@ -423,10 +449,36 @@
 	"dash_open_activity": "Open Activity →",
 	"dash_recently_added": "Recently added",
 	"dash_search_nightly": "search nightly",
-	"dash_series_count_one": "{count} series",
-	"dash_series_count_other": "{count} series",
-	"dash_title_count_one": "{count} title",
-	"dash_title_count_other": "{count} titles",
+	"dash_series_count": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural"
+			],
+			"selectors": [
+				"countPlural"
+			],
+			"match": {
+				"countPlural=one": "{count} series",
+				"countPlural=other": "{count} series"
+			}
+		}
+	],
+	"dash_title_count": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural"
+			],
+			"selectors": [
+				"countPlural"
+			],
+			"match": {
+				"countPlural=one": "{count} title",
+				"countPlural=other": "{count} titles"
+			}
+		}
+	],
 	"dash_titles": "Titles",
 	"dash_view_all": "View all →",
 	"dash_wanted_upcoming": "Wanted and upcoming",
@@ -533,8 +585,21 @@
 	"imports_adopt_in_place": "Adopt in place",
 	"imports_adopt_in_place_label": "Adopt in place",
 	"imports_all_classifications": "All classifications",
-	"imports_all_ready_one": "All {count} entry ready to commit.",
-	"imports_all_ready_other": "All {count} entries ready to commit.",
+	"imports_all_ready": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural"
+			],
+			"selectors": [
+				"countPlural"
+			],
+			"match": {
+				"countPlural=one": "All {count} entry ready to commit.",
+				"countPlural=other": "All {count} entries ready to commit."
+			}
+		}
+	],
 	"imports_already_matched_file": "This file is already matched to a library entry. Committing attaches the file to it.",
 	"imports_already_matched_show": "This show is already matched to a library entry. Committing links it to that show.",
 	"imports_ambiguous": "Ambiguous",
@@ -555,8 +620,22 @@
 	"imports_click_prefix": "Click",
 	"imports_click_suffix": "to start one.",
 	"imports_commit": "Commit",
-	"imports_commit_count_one": "Commit {count} {noun}",
-	"imports_commit_count_other": "Commit {count} {noun}s",
+	"imports_commit_count": [
+		{
+			"declarations": [
+				"input count",
+				"input noun",
+				"local countPlural = count: plural"
+			],
+			"selectors": [
+				"countPlural"
+			],
+			"match": {
+				"countPlural=one": "Commit {count} {noun}",
+				"countPlural=other": "Commit {count} {noun}s"
+			}
+		}
+	],
 	"imports_commit_finished": "Commit finished — {imported} imported, {failed} failed",
 	"imports_commit_n": "Commit {count}",
 	"imports_commit_note_copy": "Confirmed entries will be copied into the library.",
@@ -580,8 +659,21 @@
 	"imports_exclude_file": "Exclude this file from the import",
 	"imports_exclude_show": "Exclude this show from the import",
 	"imports_existing": "Existing",
-	"imports_file_count_one": "{count} file",
-	"imports_file_count_other": "{count} files",
+	"imports_file_count": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural"
+			],
+			"selectors": [
+				"countPlural"
+			],
+			"match": {
+				"countPlural=one": "{count} file",
+				"countPlural=other": "{count} files"
+			}
+		}
+	],
 	"imports_files_progress": "{done}/{total} files",
 	"imports_filter_by_classification": "Filter by classification",
 	"imports_ignore_confirm": "Ignore this proposal?",
@@ -601,8 +693,21 @@
 	"imports_mode_move": "Move — destructive, frees source disk",
 	"imports_mode_server_default": "Use server default (library.import_mode)",
 	"imports_movie_exists": "Movie already in the library — committing replaces its current file",
-	"imports_needs_decision_one": "{count} entry needs a decision before commit.",
-	"imports_needs_decision_other": "{count} entries need a decision before commit.",
+	"imports_needs_decision": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural"
+			],
+			"selectors": [
+				"countPlural"
+			],
+			"match": {
+				"countPlural=one": "{count} entry needs a decision before commit.",
+				"countPlural=other": "{count} entries need a decision before commit."
+			}
+		}
+	],
 	"imports_new_scan": "New scan",
 	"imports_no_files_match": "No files match this filter.",
 	"imports_no_longer_review": "This scan is no longer under review.",
@@ -648,10 +753,36 @@
 	"imports_skip_all": "Skip all",
 	"imports_skip_all_unmatched_files": "Skip all unmatched files?",
 	"imports_skip_all_unmatched_shows": "Skip all unmatched shows?",
-	"imports_skip_body_prefix_file_one": "The {count} file still awaiting a decision will be marked",
-	"imports_skip_body_prefix_file_other": "The {count} files still awaiting a decision will be marked",
-	"imports_skip_body_prefix_show_one": "The {count} show still awaiting a decision will be marked",
-	"imports_skip_body_prefix_show_other": "The {count} shows still awaiting a decision will be marked",
+	"imports_skip_body_prefix_file": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural"
+			],
+			"selectors": [
+				"countPlural"
+			],
+			"match": {
+				"countPlural=one": "The {count} file still awaiting a decision will be marked",
+				"countPlural=other": "The {count} files still awaiting a decision will be marked"
+			}
+		}
+	],
+	"imports_skip_body_prefix_show": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural"
+			],
+			"selectors": [
+				"countPlural"
+			],
+			"match": {
+				"countPlural=one": "The {count} show still awaiting a decision will be marked",
+				"countPlural=other": "The {count} shows still awaiting a decision will be marked"
+			}
+		}
+	],
 	"imports_skip_body_suffix_file": "and left out of the import. You can still change individual files afterward.",
 	"imports_skip_body_suffix_show": "and left out of the import. You can still change individual shows afterward.",
 	"imports_skip_partial_files": "Skipped {ok}, failed on {fail} — review the remaining files manually",
@@ -660,18 +791,57 @@
 	"imports_skip_this_file": "Skip this file",
 	"imports_skip_this_show": "Skip this show",
 	"imports_skip_unmatched": "Skip all unmatched",
-	"imports_skipped_file_one": "Skipped {count} file",
-	"imports_skipped_file_other": "Skipped {count} files",
-	"imports_skipped_show_one": "Skipped {count} show",
-	"imports_skipped_show_other": "Skipped {count} shows",
+	"imports_skipped_file": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural"
+			],
+			"selectors": [
+				"countPlural"
+			],
+			"match": {
+				"countPlural=one": "Skipped {count} file",
+				"countPlural=other": "Skipped {count} files"
+			}
+		}
+	],
+	"imports_skipped_show": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural"
+			],
+			"selectors": [
+				"countPlural"
+			],
+			"match": {
+				"countPlural=one": "Skipped {count} show",
+				"countPlural=other": "Skipped {count} shows"
+			}
+		}
+	],
 	"imports_source_path": "Source path",
 	"imports_start_new_scan": "Start a new scan",
 	"imports_start_scan": "Start scan",
 	"imports_step_import": "Import into library",
 	"imports_step_indexing": "Indexing files",
 	"imports_step_resolve": "Resolve matches",
-	"imports_still_need_decision_one": "{count} still needs a decision",
-	"imports_still_need_decision_other": "{count} still need a decision",
+	"imports_still_need_decision": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural"
+			],
+			"selectors": [
+				"countPlural"
+			],
+			"match": {
+				"countPlural=one": "{count} still needs a decision",
+				"countPlural=other": "{count} still need a decision"
+			}
+		}
+	],
 	"imports_succeeded_failed": "{ok} succeeded · {fail} failed",
 	"imports_transfer_mode": "Transfer mode",
 	"imports_type_to_search": "Type to search {source}.",
@@ -881,13 +1051,52 @@
 	"quality_view": "View quality profile",
 	"quality_view_short": "View profile",
 	"rel_ago": "{span} ago",
-	"rel_days_one": "{n} day",
-	"rel_days_other": "{n} days",
+	"rel_days": [
+		{
+			"declarations": [
+				"input n",
+				"local nPlural = n: plural"
+			],
+			"selectors": [
+				"nPlural"
+			],
+			"match": {
+				"nPlural=one": "{n} day",
+				"nPlural=other": "{n} days"
+			}
+		}
+	],
 	"rel_in": "in {span}",
-	"rel_months_one": "{n} month",
-	"rel_months_other": "{n} months",
-	"rel_years_one": "{n} year",
-	"rel_years_other": "{n} years",
+	"rel_months": [
+		{
+			"declarations": [
+				"input n",
+				"local nPlural = n: plural"
+			],
+			"selectors": [
+				"nPlural"
+			],
+			"match": {
+				"nPlural=one": "{n} month",
+				"nPlural=other": "{n} months"
+			}
+		}
+	],
+	"rel_years": [
+		{
+			"declarations": [
+				"input n",
+				"local nPlural = n: plural"
+			],
+			"selectors": [
+				"nPlural"
+			],
+			"match": {
+				"nPlural=one": "{n} year",
+				"nPlural=other": "{n} years"
+			}
+		}
+	],
 	"rename_already_correct": "Everything is already named correctly.",
 	"rename_computing": "Computing rename plan…",
 	"rename_failed": "Rename failed",
@@ -1014,8 +1223,22 @@
 	"series_sections": "Series sections",
 	"series_shows_count": "{count} shows",
 	"series_specials": "Specials",
-	"series_specials_applied_one": "Specials {verb} on {count} season",
-	"series_specials_applied_other": "Specials {verb} on {count} seasons",
+	"series_specials_applied": [
+		{
+			"declarations": [
+				"input count",
+				"input verb",
+				"local countPlural = count: plural"
+			],
+			"selectors": [
+				"countPlural"
+			],
+			"match": {
+				"countPlural=one": "Specials {verb} on {count} season",
+				"countPlural=other": "Specials {verb} on {count} seasons"
+			}
+		}
+	],
 	"series_specials_caps": "SPECIALS",
 	"series_specials_help": "Season 0 holds recaps, OVAs and behind-the-scenes extras. Left off, a new series arrives with its specials unmonitored — nothing is searched or grabbed for them until you turn the season on.",
 	"series_specials_none": "No specials seasons to update",

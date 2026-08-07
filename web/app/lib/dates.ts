@@ -32,10 +32,8 @@ const DAY = 86_400_000;
 const MONTH = 30 * DAY;
 const YEAR = 365 * DAY;
 
-type Plural = (inputs: { n: number }) => string;
-
-function unit(n: number, one: Plural, other: Plural): string {
-	return n === 0 ? "" : n === 1 ? one({ n }) : other({ n });
+function unit(n: number, message: (inputs: { n: number }) => string): string {
+	return n === 0 ? "" : message({ n });
 }
 
 // The two largest non-zero units, so "1 year 2 days" keeps the days a
@@ -45,9 +43,9 @@ function unit(n: number, one: Plural, other: Plural): string {
 function span(abs: number): string {
 	const sub = abs % YEAR;
 	return [
-		unit(Math.floor(abs / YEAR), i18n.rel_years_one, i18n.rel_years_other),
-		unit(Math.floor(sub / MONTH), i18n.rel_months_one, i18n.rel_months_other),
-		unit(Math.floor((sub % MONTH) / DAY), i18n.rel_days_one, i18n.rel_days_other),
+		unit(Math.floor(abs / YEAR), i18n.rel_years),
+		unit(Math.floor(sub / MONTH), i18n.rel_months),
+		unit(Math.floor((sub % MONTH) / DAY), i18n.rel_days),
 	]
 		.filter(Boolean)
 		.slice(0, 2)

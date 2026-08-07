@@ -9,15 +9,9 @@
 	import type { MovieCounts, QueueEntry, DiskUsage } from "../../lib/types";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 
-	const movieCount = (n: number) =>
-		n === 1
-			? i18n.dash_movie_count_one({ count: n })
-			: i18n.dash_movie_count_other({ count: n });
+	const movieCount = (n: number) => i18n.dash_movie_count({ count: n });
 
-	const seriesCount = (n: number) =>
-		n === 1
-			? i18n.dash_series_count_one({ count: n })
-			: i18n.dash_series_count_other({ count: n });
+	const seriesCount = (n: number) => i18n.dash_series_count({ count: n });
 
 	let {
 		counts,

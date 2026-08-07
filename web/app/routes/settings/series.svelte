@@ -42,7 +42,7 @@
 			toast.ok(
 				n === 0
 					? i18n.series_specials_none()
-					: n === 1 ? i18n.series_specials_applied_one({ verb, count: n }) : i18n.series_specials_applied_other({ verb, count: n }),
+					: i18n.series_specials_applied({ verb, count: n }),
 			);
 		},
 		onError: (err) => toast.err(errorText(err)),

@@ -30,12 +30,8 @@
 
 	const prefix = $derived(
 		series
-			? pendingCount === 1
-				? i18n.imports_skip_body_prefix_show_one
-				: i18n.imports_skip_body_prefix_show_other
-			: pendingCount === 1
-				? i18n.imports_skip_body_prefix_file_one
-				: i18n.imports_skip_body_prefix_file_other,
+			? i18n.imports_skip_body_prefix_show
+			: i18n.imports_skip_body_prefix_file,
 	);
 </script>
 
@@ -49,9 +45,7 @@
 		</p>
 		<p class="mt-0.5 truncate font-mono text-[10.5px] text-fg-subtle">
 			{#if pendingCount > 0}
-				{pendingCount === 1
-					? i18n.imports_still_need_decision_one({ count: pendingCount })
-					: i18n.imports_still_need_decision_other({ count: pendingCount })}
+				{i18n.imports_still_need_decision({ count: pendingCount })}
 			{:else}
 				{commitSummary}
 			{/if}

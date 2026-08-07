@@ -98,10 +98,7 @@ export function showEntry(sh: ImportScanShow): TouchEntry {
 		heading: sh.parsed_title || basename(sh.folder_path),
 		headingWeak: !sh.parsed_title,
 		path: sh.folder_path,
-		sub:
-			sh.file_count === 1
-				? i18n.imports_file_count_one({ count: sh.file_count })
-				: i18n.imports_file_count_other({ count: sh.file_count }),
+		sub: i18n.imports_file_count({ count: sh.file_count }),
 		classification: sh.classification,
 		decision: sh.decision,
 		outcome: sh.outcome,

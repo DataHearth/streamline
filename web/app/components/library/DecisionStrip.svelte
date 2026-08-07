@@ -30,12 +30,8 @@
 
 	const prefix = $derived(
 		series
-			? pendingCount === 1
-				? i18n.imports_skip_body_prefix_show_one
-				: i18n.imports_skip_body_prefix_show_other
-			: pendingCount === 1
-				? i18n.imports_skip_body_prefix_file_one
-				: i18n.imports_skip_body_prefix_file_other,
+			? i18n.imports_skip_body_prefix_show
+			: i18n.imports_skip_body_prefix_file,
 	);
 </script>
 
@@ -52,13 +48,9 @@
 		<div class="min-w-0">
 			<p class="text-sm font-semibold text-fg">
 				{#if pendingCount > 0}
-					{pendingCount === 1
-						? i18n.imports_needs_decision_one({ count: pendingCount })
-						: i18n.imports_needs_decision_other({ count: pendingCount })}
+					{i18n.imports_needs_decision({ count: pendingCount })}
 				{:else}
-					{commitableCount === 1
-						? i18n.imports_all_ready_one({ count: commitableCount })
-						: i18n.imports_all_ready_other({ count: commitableCount })}
+					{i18n.imports_all_ready({ count: commitableCount })}
 				{/if}
 			</p>
 			<p class="mt-0.5 font-mono text-[10.5px] text-fg-subtle">
@@ -86,7 +78,7 @@
 			<CircleCheckBig size={14} aria-hidden="true" />
 			{commitBusy
 				? i18n.common_starting()
-				: commitableCount === 1 ? i18n.imports_commit_count_one({ count: commitableCount, noun }) : i18n.imports_commit_count_other({ count: commitableCount, noun })}
+				: i18n.imports_commit_count({ count: commitableCount, noun })}
 		</button>
 	</div>
 </div>
