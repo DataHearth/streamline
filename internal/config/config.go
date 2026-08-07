@@ -302,7 +302,7 @@ func defaults() map[string]any {
 		"read_only":                        false,
 		"auth.mode":                        "full",
 		"auth.trusted_networks":            []string{},
-		"auth.trusted_role":                "admin",
+		"auth.trusted_role":                "member",
 		"auth.session_secret":              "",
 		"auth.session_secret_file":         "",
 		"auth.session_ttl":                 "168h",

@@ -311,6 +311,14 @@ schedules:
 			},
 		)
 
+		It("defaults auth.trusted_role away from admin", func() {
+			// trusted-network mode hands this role out on an IP match with no
+			// credentials at all, so the default must not be admin.
+			cfg, err := Load("")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(cfg.Auth.TrustedRole).To(Equal("member"))
+		})
+
 		It("rejects invalid registration_mode", func() {
 			dir := GinkgoT().TempDir()
 			cfgFile := filepath.Join(dir, "config.yaml")
