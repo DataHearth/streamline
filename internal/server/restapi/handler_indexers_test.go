@@ -2,6 +2,8 @@ package restapi
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
 	"strings"
 
@@ -18,6 +20,13 @@ import (
 func indexerOverride(entries ...map[string]any) map[string]any {
 	return map[string]any{"indexers": entries}
 }
+
+// errLeakyProbe mimics an unredacted transport failure: a torznab request URL
+// carries the api key in its query string, so a handler that echoes the probe
+// error hands the key to the caller.
+var errLeakyProbe = fmt.Errorf("%w: Get %q: connection refused",
+	indexer.ErrUnreachable,
+	"http://idx.example:9117/api?t=caps&apikey=super-secret")
 
 var _ = Describe(
 	"Handler: Indexers",
@@ -156,6 +165,73 @@ var _ = Describe(
 				resp := app.do(req)
 				defer resp.Body.Close()
 				Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+			})
+
+			It("answers 422 with a fixed message, never the probe error", func() {
+				app.indexers.EXPECT().
+					TestByName(mock.Anything, "tz").
+					Return(errLeakyProbe).
+					Once()
+
+				req := app.req(http.MethodPost, "/api/v1/indexers/tz/test", "", nil)
+				resp := app.do(req)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+
+				raw, err := io.ReadAll(resp.Body)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(string(raw)).NotTo(ContainSubstring("super-secret"))
+				Expect(string(raw)).NotTo(ContainSubstring("apikey"))
+
+				var body struct {
+					Message string `json:"message"`
+				}
+				Expect(json.Unmarshal(raw, &body)).To(Succeed())
+				Expect(body.Message).To(Equal(indexer.ErrUnreachable.Error()))
+			})
+		})
+
+		Describe("TestDraftIndexer", func() {
+			const draftBody = `{"name":"draft","host":"idx.example","port":9117,` +
+				`"api_key":"super-secret","protocol":"torznab"}`
+
+			It("answers 422 with a fixed message, never the probe error", func() {
+				app.indexers.EXPECT().
+					Test(mock.Anything, mock.Anything).
+					Return(errLeakyProbe).
+					Once()
+
+				req := app.req(http.MethodPost, "/api/v1/indexers/test", "",
+					strings.NewReader(draftBody))
+				req.Header.Set("Content-Type", "application/json")
+				resp := app.do(req)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+
+				raw, err := io.ReadAll(resp.Body)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(string(raw)).NotTo(ContainSubstring("super-secret"))
+				Expect(string(raw)).NotTo(ContainSubstring("apikey"))
+
+				var body struct {
+					Message string `json:"message"`
+				}
+				Expect(json.Unmarshal(raw, &body)).To(Succeed())
+				Expect(body.Message).To(Equal(indexer.ErrUnreachable.Error()))
+			})
+
+			It("returns 200 when the draft credentials work", func() {
+				app.indexers.EXPECT().
+					Test(mock.Anything, mock.Anything).
+					Return(nil).
+					Once()
+
+				req := app.req(http.MethodPost, "/api/v1/indexers/test", "",
+					strings.NewReader(draftBody))
+				req.Header.Set("Content-Type", "application/json")
+				resp := app.do(req)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			})
 		})
 

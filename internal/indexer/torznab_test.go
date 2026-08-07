@@ -3,6 +3,7 @@ package indexer
 import (
 	"context"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -10,6 +11,9 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 )
 
 // Test helpers for building Torznab XML responses
@@ -89,6 +93,25 @@ func newTorznabServer(handler http.HandlerFunc) Client {
 	ts := httptest.NewServer(handler)
 	DeferCleanup(func() { ts.Close() })
 	return NewTorznab(ts.URL, "test-key")
+}
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) {
+	return f(r)
+}
+
+// newBrokenTorznab points a client at a transport that always fails: that is
+// what makes net/http mint the *url.Error carrying the full request URL, api
+// key query parameter included.
+func newBrokenTorznab(baseURL, apiKey string) *Torznab {
+	c := NewTorznab(baseURL, apiKey)
+	c.client = &http.Client{Transport: roundTripFunc(
+		func(*http.Request) (*http.Response, error) {
+			return nil, errors.New("connect: connection refused")
+		},
+	)}
+	return c
 }
 
 var _ = Describe("Torznab Client", Label("unit", "indexers"), func() {
@@ -339,6 +362,90 @@ var _ = Describe("Torznab Client", Label("unit", "indexers"), func() {
 
 			Expect(client.TestConnection(context.Background())).
 				To(MatchError(ErrBadResponse))
+		})
+	})
+
+	Describe("api key redaction", func() {
+		const key = "super-secret-key"
+		const base = "http://idx.example:9117/api"
+
+		It("keeps the key out of Search transport failures", func() {
+			_, err := newBrokenTorznab(base, key).
+				Search(context.Background(), SearchParams{Query: "x"})
+
+			Expect(err).To(MatchError(ErrUnreachable))
+			Expect(err.Error()).NotTo(ContainSubstring(key))
+			Expect(err.Error()).NotTo(ContainSubstring("apikey"))
+			Expect(err.Error()).To(ContainSubstring("idx.example:9117/api"))
+		})
+
+		It("keeps the key out of Feed transport failures", func() {
+			_, err := newBrokenTorznab(base, key).Feed(context.Background())
+
+			Expect(err).To(MatchError(ErrUnreachable))
+			Expect(err.Error()).NotTo(ContainSubstring(key))
+		})
+
+		It("keeps the key out of TestConnection transport failures", func() {
+			err := newBrokenTorznab(base, key).TestConnection(context.Background())
+
+			Expect(err).To(MatchError(ErrUnreachable))
+			Expect(err.Error()).NotTo(ContainSubstring(key))
+		})
+
+		It("keeps the key out of a real dial failure", func() {
+			ts := httptest.NewServer(
+				http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}),
+			)
+			client := NewTorznab(ts.URL, key)
+			ts.Close()
+
+			_, err := client.Search(context.Background(), SearchParams{Query: "x"})
+			Expect(err).To(MatchError(ErrUnreachable))
+			Expect(err.Error()).NotTo(ContainSubstring(key))
+		})
+
+		It("keeps the key out of request-build failures", func() {
+			err := NewTorznab("http://idx.example/%zz", key).
+				TestConnection(context.Background())
+
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).NotTo(ContainSubstring(key))
+		})
+
+		// The specs above swap the transport, which drops the otelhttp
+		// instrumentation with it. This one drives the real otelx.HTTPClient so
+		// the client span otelhttp emits per request is actually recorded — it
+		// carries url.full, built from the request URL the api key lives in.
+		It("keeps the key out of the exported spans of a real request", func() {
+			ts := httptest.NewServer(
+				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					Expect(r.URL.Query().Get("apikey")).To(Equal(key))
+					w.Header().Set("Content-Type", "application/xml")
+					_, err := w.Write([]byte(`<caps/>`))
+					Expect(err).NotTo(HaveOccurred())
+				}),
+			)
+			DeferCleanup(ts.Close)
+
+			rec := tracetest.NewSpanRecorder()
+			tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(rec))
+			DeferCleanup(func() {
+				Expect(tp.Shutdown(context.Background())).To(Succeed())
+			})
+
+			ctx, span := tp.Tracer("test").Start(context.Background(), "caller.op")
+			Expect(NewTorznab(ts.URL, key).TestConnection(ctx)).To(Succeed())
+			span.End()
+
+			spans := rec.Ended()
+			Expect(spans).To(HaveLen(2))
+			for _, s := range spans {
+				for _, kv := range s.Attributes() {
+					Expect(kv.Value.String()).NotTo(ContainSubstring(key))
+				}
+				Expect(s.Status().Description).NotTo(ContainSubstring(key))
+			}
 		})
 	})
 

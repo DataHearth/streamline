@@ -3,12 +3,19 @@ package download
 import (
 	"context"
 	"errors"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"strconv"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/stretchr/testify/mock"
+	"go.opentelemetry.io/otel"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
@@ -17,6 +24,55 @@ import (
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
+
+// downloadSpans captures everything the package tracer emits. It is installed
+// at package init rather than per-spec because otel binds an already-created
+// tracer to its delegate on the first SetTracerProvider call and never
+// re-binds: a provider installed inside a spec would reach a tracer that has
+// already resolved to the no-op default.
+var downloadSpans = func() *tracetest.SpanRecorder {
+	rec := tracetest.NewSpanRecorder()
+	otel.SetTracerProvider(
+		sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(rec)),
+	)
+	return rec
+}()
+
+func endedSpan(rec *tracetest.SpanRecorder, name string) sdktrace.ReadOnlySpan {
+	GinkgoHelper()
+
+	for _, s := range rec.Ended() {
+		if s.Name() == name {
+			return s
+		}
+	}
+	Fail("no " + name + " span was recorded")
+	return nil
+}
+
+func spanEvent(span sdktrace.ReadOnlySpan, name string) sdktrace.Event {
+	GinkgoHelper()
+
+	for _, ev := range span.Events() {
+		if ev.Name == name {
+			return ev
+		}
+	}
+	Fail("span " + span.Name() + " carries no " + name + " event")
+	return sdktrace.Event{}
+}
+
+func eventAttr(ev sdktrace.Event, key string) string {
+	GinkgoHelper()
+
+	for _, kv := range ev.Attributes {
+		if string(kv.Key) == key {
+			return kv.Value.AsString()
+		}
+	}
+	Fail("event " + ev.Name + " carries no " + key + " attribute")
+	return ""
+}
 
 var _ = Describe("Manager", Label("unit", "downloads"), func() {
 	var (
@@ -107,6 +163,74 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 			// succeed, but it is no longer ErrUntrustedSource.
 			_, err := resolveTorrentSource(ctx, "https://tracker.example/dl?id=1")
 			Expect(err).NotTo(MatchError(ErrUntrustedSource))
+		})
+	})
+
+	// Indexer release links authenticate through the query string — Jackett
+	// emits ?jackett_apikey=, Prowlarr ?apikey= (its header auth does not cover
+	// download links) — so the *url.Error a failed fetch produces carries the
+	// credential in its message. grab hands that error to RecordSpanError,
+	// which writes it to the span status and an exception event, both of which
+	// are exported to the OTLP backend.
+	Describe("grab telemetry", func() {
+		const key = "PASSKEYSECRET"
+
+		It("keeps the release link's credentials off the span", func() {
+			ts := httptest.NewServer(
+				http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}),
+			)
+			endpoint, err := url.Parse(ts.URL)
+			Expect(err).NotTo(HaveOccurred())
+			port, err := strconv.Atoi(endpoint.Port())
+			Expect(err).NotTo(HaveOccurred())
+			// Closed before the grab so the fetch fails in the transport, which
+			// is what produces the *url.Error under test.
+			ts.Close()
+
+			configtest.Setup(map[string]any{
+				"indexers": []map[string]any{
+					{
+						"name":     "tracker",
+						"host":     endpoint.Hostname(),
+						"port":     port,
+						"api_key":  key,
+						"protocol": "torznab",
+						"enabled":  true,
+					},
+				},
+				"download_clients": []map[string]any{
+					{
+						"name":        "qb",
+						"client_type": "qbittorrent",
+						"host":        "127.0.0.1",
+						"port":        8080,
+						"auth_method": "password",
+						"username":    "u",
+						"password":    "p",
+						"enabled":     true,
+					},
+				},
+			})
+
+			download := ts.URL + "/dl?apikey=" + key + "&id=99"
+			downloadSpans.Reset()
+			_, err = mgr.Grab(ctx, indexer.SearchResult{
+				Title:    "Some Movie 2160p",
+				Download: download,
+			}, 1)
+			Expect(err).To(HaveOccurred())
+
+			span := endedSpan(downloadSpans, "download.grab")
+
+			// Both carry the rendered error, so both have to be checked, and
+			// asserting the endpoint survives in each proves the check is
+			// reading the failure and not an empty string.
+			Expect(span.Status().Description).NotTo(ContainSubstring(key))
+			Expect(span.Status().Description).To(ContainSubstring(ts.URL + "/dl"))
+
+			message := eventAttr(spanEvent(span, "exception"), "exception.message")
+			Expect(message).NotTo(ContainSubstring(key))
+			Expect(message).To(ContainSubstring(ts.URL + "/dl"))
 		})
 	})
 

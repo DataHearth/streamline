@@ -350,7 +350,7 @@ func (i *indexer) searchAll(
 				queryCtx, childSpan := tracer.Start(ctx, "indexer.query",
 					trace.WithAttributes(
 						attribute.String("indexer.name", idx.Name),
-						attribute.String("indexer.url", baseURL),
+						attribute.String("indexer.url", redactURL(baseURL)),
 						attribute.String("query.title", title),
 					),
 				)
@@ -494,7 +494,7 @@ func (i *indexer) Feed(
 func (i *indexer) Test(ctx context.Context, p TestParams) error {
 	baseURL := buildBaseURL(p.Host, p.Port, p.Path, p.UseSSL)
 	ctx, span := tracer.Start(ctx, "indexer.test",
-		trace.WithAttributes(attribute.String("indexer.url", baseURL)),
+		trace.WithAttributes(attribute.String("indexer.url", redactURL(baseURL))),
 	)
 	defer span.End()
 

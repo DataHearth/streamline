@@ -904,13 +904,20 @@ func resolveTorrentSource(ctx context.Context, dl string) (TorrentSource, error)
 	if err := checkReleaseSource(dl); err != nil {
 		return TorrentSource{}, err
 	}
+	// Both errors below render the release link, which authenticates the
+	// download: Jackett puts a `jackett_apikey` query parameter on it and
+	// Prowlarr an `apikey` (its X-Api-Key header covers the search API, not the
+	// download links it hands back). grab records whatever comes out of here on
+	// the download.grab span, so an unredacted one exports the key.
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, dl, nil)
 	if err != nil {
-		return TorrentSource{}, err
+		return TorrentSource{}, otelx.RedactTransportError(err)
 	}
 	resp, err := otelx.HTTPClient.Do(req)
 	if err != nil {
-		return TorrentSource{}, fmt.Errorf("%w: %w", ErrUnreachable, err)
+		return TorrentSource{}, fmt.Errorf(
+			"%w: %w", ErrUnreachable, otelx.RedactTransportError(err),
+		)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {

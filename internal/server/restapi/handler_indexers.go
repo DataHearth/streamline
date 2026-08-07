@@ -138,19 +138,17 @@ func (s *Server) TestIndexer(
 		return TestIndexer403JSONResponse{ForbiddenJSONResponse: notAdminResp}, nil
 	}
 	err := s.indexers.TestByName(ctx, request.Name)
+	if msg, ok := indexerProbeFailure(err); ok {
+		return TestIndexer422JSONResponse{
+			UnprocessableEntityJSONResponse: errUnprocessable(msg),
+		}, nil
+	}
 	switch {
 	case err == nil:
 		return TestIndexer200Response{}, nil
 	case errors.Is(err, config.ErrIndexerNotFound):
 		return TestIndexer404JSONResponse{
 			NotFoundJSONResponse: errNotFound("indexer not found"),
-		}, nil
-	case errors.Is(err, indexer.ErrUnreachable),
-		errors.Is(err, indexer.ErrUnauthorized),
-		errors.Is(err, indexer.ErrUnexpectedStatus),
-		errors.Is(err, indexer.ErrBadResponse):
-		return TestIndexer422JSONResponse{
-			UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
 		}, nil
 	default:
 		return TestIndexer500JSONResponse{
@@ -185,19 +183,34 @@ func (s *Server) TestDraftIndexer(
 		p.UseSSL = *b.UseSsl
 	}
 
-	switch err := s.indexers.Test(ctx, p); {
-	case err == nil:
-		return TestDraftIndexer200Response{}, nil
-	case errors.Is(err, indexer.ErrUnreachable),
-		errors.Is(err, indexer.ErrUnauthorized),
-		errors.Is(err, indexer.ErrUnexpectedStatus),
-		errors.Is(err, indexer.ErrBadResponse):
+	err := s.indexers.Test(ctx, p)
+	if msg, ok := indexerProbeFailure(err); ok {
 		return TestDraftIndexer422JSONResponse{
-			UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
+			UnprocessableEntityJSONResponse: errUnprocessable(msg),
 		}, nil
-	default:
+	}
+	if err != nil {
 		return TestDraftIndexer500JSONResponse{
 			InternalErrorJSONResponse: errInternal(err.Error()),
 		}, nil
 	}
+	return TestDraftIndexer200Response{}, nil
+}
+
+// indexerProbeFailure reports the typed connection-test failure by its own
+// sentinel text. The probe error itself is never echoed to the caller: torznab
+// authenticates through an `apikey` query parameter, so a wrapped *url.Error
+// would hand the indexer's key to anyone who can reach the endpoint.
+func indexerProbeFailure(err error) (string, bool) {
+	for _, sentinel := range []error{
+		indexer.ErrUnreachable,
+		indexer.ErrUnauthorized,
+		indexer.ErrUnexpectedStatus,
+		indexer.ErrBadResponse,
+	} {
+		if errors.Is(err, sentinel) {
+			return sentinel.Error(), true
+		}
+	}
+	return "", false
 }

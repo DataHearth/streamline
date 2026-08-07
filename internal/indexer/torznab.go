@@ -141,12 +141,12 @@ func (t *Torznab) get(ctx context.Context, params url.Values, out any) error {
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
-		return err
+		return otelx.RedactTransportError(err)
 	}
 
 	resp, err := t.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("%w: %w", ErrUnreachable, err)
+		return fmt.Errorf("%w: %w", ErrUnreachable, otelx.RedactTransportError(err))
 	}
 	defer resp.Body.Close()
 
