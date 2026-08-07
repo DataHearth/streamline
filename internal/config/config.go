@@ -226,6 +226,16 @@ type MediaServerConfig struct {
 var bindInterfacePattern = regexp.MustCompile(`^[A-Za-z0-9._:-]+$`)
 
 func (c *Config) Validate() error {
+	// Create data_dir before the `dir` tag demands it exists. Nothing else
+	// makes it: the poster cache mkdirs <data_dir>/posters, long after this.
+	// So any data_dir below its volume's mount point — `/data/streamline` on a
+	// fresh, empty PVC — used to fail here with a validation error naming a
+	// tag rather than the missing directory.
+	if c.DataDir != "" {
+		if err := os.MkdirAll(c.DataDir, 0o700); err != nil {
+			return fmt.Errorf("data_dir %q: %w", c.DataDir, err)
+		}
+	}
 	if err := validator.New().Struct(c); err != nil {
 		return err
 	}
