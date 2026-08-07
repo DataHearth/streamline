@@ -192,6 +192,49 @@ var _ = Describe("csrfGuard", Label("unit", "server"), func() {
 		),
 	)
 
+	// An origin serialises as scheme "://" host [ ":" port ] and nothing else,
+	// so every one of these came from something that is not a browser. They
+	// matter because url.Parse still reports our host for each: a reader
+	// checking the comparison by eye sees the attacker's name and the code
+	// sees ours.
+	DescribeTable(
+		"rejects an Origin that is not a bare serialised origin",
+		func(origin string) {
+			req := jsonPost()
+			req.Header.Set("Origin", origin)
+
+			rr := serve(req)
+
+			Expect(rr.Code).To(Equal(http.StatusForbidden))
+			Expect(reached).To(BeFalse())
+		},
+		Entry(
+			"userinfo naming a foreign host",
+			"https://evil.example@streamline.example",
+		),
+		Entry("scheme-relative", "//streamline.example"),
+		Entry("a scheme no browser sends here", "foo://streamline.example"),
+		Entry("a path appended", "https://streamline.example/evil"),
+		Entry("a query appended", "https://streamline.example?evil"),
+	)
+
+	// PublicURL falls back to server.host, which defaults to the unspecified
+	// address, and that names no deployment: without this the guard answers to
+	// an Origin the operator never configured.
+	It("does not serve the unspecified bind address as a host of ours", func() {
+		configtest.Setup(map[string]any{
+			"server.host": "0.0.0.0",
+			"server.port": 8080,
+		})
+		req := jsonPost()
+		req.Header.Set("Origin", "http://0.0.0.0:8080")
+
+		rr := serve(req)
+
+		Expect(rr.Code).To(Equal(http.StatusForbidden))
+		Expect(reached).To(BeFalse())
+	})
+
 	DescribeTable("rejects a body an HTML form could have posted",
 		func(contentType string) {
 			req := jsonPost()

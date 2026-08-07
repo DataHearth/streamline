@@ -3,7 +3,9 @@ package web
 import (
 	"log/slog"
 	"mime"
+	"net"
 	"net/http"
+	"net/netip"
 	"net/url"
 	"strings"
 
@@ -76,6 +78,12 @@ func csrfGuard(next http.Handler) http.Handler {
 func crossSiteRequest(r *http.Request) bool {
 	site := r.Header.Get("Sec-Fetch-Site")
 	if site == "same-origin" {
+		// Settled without consulting Origin, deliberately. Demanding the two
+		// agree looks like strictly more checking but refuses every proxied
+		// install that leaves STREAMLINE_PUBLIC_URL unset: the browser reports
+		// same-origin for the hostname the user typed, while servedHosts sees
+		// only the internal name the proxy rewrote r.Host to, so the Origin
+		// comparison disagrees on exactly the deployments this branch serves.
 		return false
 	}
 	if site != "" {
@@ -117,6 +125,18 @@ func originMatchesServedHost(r *http.Request, origin string) bool {
 	if err != nil || u.Host == "" {
 		return false
 	}
+	// An origin serialises as scheme "://" host [ ":" port ] and nothing else.
+	// url.Parse is far more permissive, and each part it accepts beyond that
+	// shape still reports our host in u.Host while reading to a human as some
+	// other name: "https://evil.example@streamline.example" as the attacker's,
+	// "//streamline.example" and "foo://streamline.example" as neither. Origin
+	// is browser-generated, so nothing legitimate is turned away by demanding
+	// the exact shape — and this comparison stays as exact as it claims.
+	if (u.Scheme != "http" && u.Scheme != "https") ||
+		u.User != nil || u.Opaque != "" ||
+		u.Path != "" || u.RawQuery != "" || u.Fragment != "" {
+		return false
+	}
 	want := canonicalHost(u.Host, u.Scheme)
 	for _, h := range servedHosts(r) {
 		if h != "" && canonicalHost(h, u.Scheme) == want {
@@ -144,7 +164,22 @@ func servedHosts(r *http.Request) []string {
 	if err != nil {
 		pub = &url.URL{}
 	}
-	return []string{r.Host, pub.Host}
+	return []string{r.Host, namedHost(pub.Host)}
+}
+
+// namedHost drops a host that is only a bind address. PublicURL falls back to
+// server.host, which defaults to the unspecified address, and 0.0.0.0 names no
+// deployment — keeping it would answer to an Origin no operator configured. A
+// browser genuinely pointed at http://0.0.0.0:<port> matches on r.Host anyway.
+func namedHost(host string) string {
+	h := host
+	if hostOnly, _, err := net.SplitHostPort(host); err == nil {
+		h = hostOnly
+	}
+	if addr, err := netip.ParseAddr(h); err == nil && addr.IsUnspecified() {
+		return ""
+	}
+	return host
 }
 
 // canonicalHost lowercases a host and drops the port when it is the default
