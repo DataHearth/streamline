@@ -2017,15 +2017,14 @@ type Episode struct {
 	Overview       *string    `json:"overview,omitempty"`
 
 	// Path On-disk path of the episode's media file, when imported.
-	Path    *string       `json:"path,omitempty"`
-	Quality *string       `json:"quality,omitempty"`
-	Size    *int64        `json:"size,omitempty"`
-	Status  EpisodeStatus `json:"status"`
-	Title   *string       `json:"title,omitempty"`
-}
+	Path    *string `json:"path,omitempty"`
+	Quality *string `json:"quality,omitempty"`
+	Size    *int64  `json:"size,omitempty"`
 
-// EpisodeStatus defines model for Episode.Status.
-type EpisodeStatus string
+	// Status Presentation status of an episode. "unaired" is derived rather than stored: an episode with no file whose air date is still ahead.
+	Status EpisodeStatus `json:"status"`
+	Title  *string       `json:"title,omitempty"`
+}
 
 // EpisodeRef Show + S/E context for a TV download record (queue/history rows render
 // "<show> · SxxExx" from it). Absent on movie records.
@@ -2034,6 +2033,9 @@ type EpisodeRef struct {
 	Season    uint16 `json:"season"`
 	ShowTitle string `json:"show_title"`
 }
+
+// EpisodeStatus Presentation status of an episode. "unaired" is derived rather than stored: an episode with no file whose air date is still ahead.
+type EpisodeStatus string
 
 // Error defines model for Error.
 type Error struct {
@@ -3226,7 +3228,10 @@ type UpcomingEpisode struct {
 	Season      uint16    `json:"season"`
 	SeriesId    uint32    `json:"series_id"`
 	SeriesTitle string    `json:"series_title"`
-	Title       *string   `json:"title,omitempty"`
+
+	// Status Presentation status of an episode. "unaired" is derived rather than stored: an episode with no file whose air date is still ahead.
+	Status EpisodeStatus `json:"status"`
+	Title  *string       `json:"title,omitempty"`
 }
 
 // UpcomingList defines model for UpcomingList.

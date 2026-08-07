@@ -4152,6 +4152,13 @@ components:
           items:
             $ref: "#/components/schemas/Episode"
 
+    EpisodeStatus:
+      type: string
+      description: >-
+        Presentation status of an episode. "unaired" is derived rather than
+        stored: an episode with no file whose air date is still ahead.
+      enum: [wanted, downloading, paused, available, unaired, skipped]
+
     Episode:
       type: object
       required: [id, number, status, monitored]
@@ -4174,8 +4181,7 @@ components:
           format: date-time
           nullable: true
         status:
-          type: string
-          enum: [wanted, downloading, paused, available, unaired, skipped]
+          $ref: "#/components/schemas/EpisodeStatus"
         monitored:
           type: boolean
         quality:
@@ -5886,7 +5892,7 @@ components:
 
     UpcomingEpisode:
       type: object
-      required: [series_id, series_title, season, episode, air_date]
+      required: [series_id, series_title, season, episode, air_date, status]
       properties:
         series_id:
           type: integer
@@ -5904,6 +5910,8 @@ components:
         air_date:
           type: string
           format: date-time
+        status:
+          $ref: "#/components/schemas/EpisodeStatus"
         monitored:
           type: boolean
 

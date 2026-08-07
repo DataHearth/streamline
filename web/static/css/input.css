@@ -87,6 +87,11 @@
 	--status-completed: #94a3b8;
 	--status-stalled: #f97316;
 	--status-fetching: #818cf8;
+	/* Episode-only states. Aliases, not new hues: an episode nobody can have
+	   yet reads like anything else that is absent, and skipped reads like
+	   paused. Matches the season-progress and episode-modal mappings. */
+	--status-unaired: var(--status-missing);
+	--status-skipped: var(--status-paused);
 
 	/* Shadows */
 	--shadow-1: 0 1px 2px rgb(0 0 0 / 0.4);
@@ -164,6 +169,8 @@
 	--color-status-completed: var(--status-completed);
 	--color-status-stalled: var(--status-stalled);
 	--color-status-fetching: var(--status-fetching);
+	--color-status-unaired: var(--status-unaired);
+	--color-status-skipped: var(--status-skipped);
 
 	--radius-sm: var(--radius-sm);
 	--radius-md: var(--radius-md);

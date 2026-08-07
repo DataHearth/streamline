@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/datahearth/streamline/ent"
+	entepisode "github.com/datahearth/streamline/ent/episode"
 	entmovie "github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/movieevent"
 	"github.com/datahearth/streamline/internal/db"
@@ -134,6 +135,50 @@ var _ = Describe(
 				Expect(body.Episodes[0].SeriesTitle).To(Equal("Show"))
 				Expect(body.Episodes[0].Season).To(Equal(uint16(2)))
 				Expect(body.Episodes[0].Episode).To(Equal(uint16(3)))
+				// No file and an air date still ahead — the calendar pill must
+				// read "unaired", not the stored enum value.
+				Expect(body.Episodes[0].Status).To(Equal(EpisodeStatusUnaired))
+			})
+
+			It("reports an already-downloaded episode by its real status", func() {
+				now := time.Now().UTC()
+				future := now.Add(3 * 24 * time.Hour)
+
+				app.store.EXPECT().
+					UpcomingReleases(mock.Anything, mock.AnythingOfType("time.Time"), mock.AnythingOfType("time.Time")).
+					Return([]*ent.Movie{}, nil).
+					Once()
+
+				ep := &ent.Episode{
+					ID:        5,
+					Number:    3,
+					AirDate:   future,
+					Monitored: true,
+					Status:    entepisode.StatusDownloading,
+				}
+				season := &ent.Season{Number: 2}
+				season.Edges.TvShow = &ent.TVShow{ID: 7, Title: "Show"}
+				ep.Edges.Season = season
+				ep.Edges.MediaFiles = []*ent.MediaFile{{ID: 1}}
+				app.store.EXPECT().
+					ListUpcomingEpisodes(mock.Anything, mock.AnythingOfType("time.Time"), mock.AnythingOfType("time.Time")).
+					Return([]*ent.Episode{ep}, nil).
+					Once()
+
+				q := url.Values{}
+				q.Set("from", now.Format(time.RFC3339))
+				q.Set("to", now.Add(7*24*time.Hour).Format(time.RFC3339))
+				resp, err := http.Get(
+					app.srv.URL + "/api/v1/calendar/upcoming?" + q.Encode(),
+				)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+
+				var body UpcomingList
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				Expect(body.Episodes).To(HaveLen(1))
+				Expect(body.Episodes[0].Status).
+					To(Equal(EpisodeStatusDownloading))
 			})
 
 			It("400s when from is after to", func() {

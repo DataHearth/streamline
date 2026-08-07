@@ -11,7 +11,9 @@
 		| "seeding"
 		| "completed"
 		| "fetching"
-		| "stalled";
+		| "stalled"
+		| "unaired"
+		| "skipped";
 
 	const LABELS: Record<StatusKind, string> = {
 		downloading: i18n.status_downloading(),
@@ -25,6 +27,8 @@
 		completed: i18n.status_completed(),
 		fetching: i18n.status_fetching_metadata(),
 		stalled: i18n.status_stalled(),
+		unaired: i18n.status_unaired(),
+		skipped: i18n.status_skipped(),
 	};
 </script>
 

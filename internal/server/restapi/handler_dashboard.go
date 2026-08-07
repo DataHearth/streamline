@@ -3,6 +3,7 @@ package restapi
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/datahearth/streamline/ent/movieevent"
 	"github.com/datahearth/streamline/internal/db"
@@ -93,8 +94,9 @@ func (s *Server) ListUpcomingReleases(
 	for _, m := range movies {
 		out.Movies = append(out.Movies, toUpcomingMovie(m))
 	}
+	now := time.Now()
 	for _, e := range episodes {
-		out.Episodes = append(out.Episodes, toUpcomingEpisode(e))
+		out.Episodes = append(out.Episodes, toUpcomingEpisode(e, now))
 	}
 	return ListUpcomingReleases200JSONResponse{
 		UpcomingListJSONResponse: UpcomingListJSONResponse(out),

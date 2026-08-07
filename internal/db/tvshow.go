@@ -644,6 +644,7 @@ func (db *DB) ListUpcomingEpisodes(
 			episode.AirDateLTE(to),
 		).
 		WithSeason(func(q *ent.SeasonQuery) { q.WithTvShow() }).
+		WithMediaFiles().
 		Order(ent.Asc(episode.FieldAirDate)).
 		All(ctx)
 }

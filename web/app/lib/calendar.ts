@@ -1,16 +1,21 @@
 import { posterUrl, tvPosterUrl } from "./posters";
-import type { UpcomingEpisode, UpcomingList, UpcomingMovie } from "./types";
+import type {
+	EpisodeStatus,
+	UpcomingEpisode,
+	UpcomingList,
+	UpcomingMovie,
+} from "./types";
 import { getLocale } from "./paraglide/runtime.js";
 import { m as i18n } from "./paraglide/messages.js";
 
 export type CalendarKind = "movie" | "episode";
 
 // A calendar event is either a wanted-movie digital release or an upcoming
-// episode air-date. `status` drives the dot colour (movies = wanted/amber,
-// episodes = grabbing/purple, matching the filter chips); the rest of the
-// fields let one row renderer serve both kinds. `subtitle` / `time` / `detail`
-// are the three segments of the meta line, in that order — a movie fills only
-// the last one.
+// episode air-date. `status` is the item's real state and is only ever shown
+// with its label next to it (a pill), never as colour alone. Dots encode
+// `kind` instead — see dotToken. The rest of the fields let one row renderer
+// serve both kinds. `subtitle` / `time` / `detail` are the three segments of
+// the meta line, in that order — a movie fills only the last one.
 export type CalendarEvent = {
 	id: string;
 	kind: CalendarKind;
@@ -21,8 +26,16 @@ export type CalendarEvent = {
 	poster: string;
 	href: string;
 	date: Date;
-	status: "wanted" | "grabbing";
+	// Movies reach this list only while wanted; episodes carry their own.
+	status: EpisodeStatus;
 };
+
+// Dots are a bare colour with no label, so they may only encode the one thing
+// the calendar legend and filter chips already name: movie (amber) vs episode
+// (purple). Real state goes on a pill, which carries text.
+export function dotToken(e: CalendarEvent): "wanted" | "grabbing" {
+	return e.kind === "movie" ? "wanted" : "grabbing";
+}
 
 export type GridCell = { date: Date; inMonth: boolean };
 
@@ -71,7 +84,7 @@ export function episodesToCalendarEvents(
 		poster: tvPosterUrl(e.series_id),
 		href: `/series/${e.series_id}`,
 		date: new Date(e.air_date),
-		status: "grabbing",
+		status: e.status,
 	}));
 }
 

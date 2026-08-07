@@ -366,9 +366,10 @@ func toActivityEvent(e *ent.MovieEvent) ActivityEvent {
 	return out
 }
 
-func toUpcomingEpisode(e *ent.Episode) UpcomingEpisode {
+func toUpcomingEpisode(e *ent.Episode, now time.Time) UpcomingEpisode {
 	out := UpcomingEpisode{
 		Episode:   e.Number,
+		Status:    episodeStatus(e, now),
 		Monitored: &e.Monitored,
 	}
 	if !e.AirDate.IsZero() {
@@ -723,19 +724,24 @@ func seasonToAPI(se *ent.Season, v tvshow.SeasonView, now time.Time) Season {
 	return out
 }
 
-// episodeToAPI maps an episode to the API shape. The "unaired" status is
-// derived (the ent enum has no such value): an episode with no file whose
-// air_date is in the future surfaces as unaired.
+// episodeStatus derives the presentation status. "unaired" has no ent enum
+// value: it is an episode with no file whose air_date is still ahead. Callers
+// must have eager-loaded the media-files edge, or a stored file reads as
+// unaired.
+func episodeStatus(e *ent.Episode, now time.Time) EpisodeStatus {
+	if len(e.Edges.MediaFiles) == 0 &&
+		!e.AirDate.IsZero() && e.AirDate.After(now) {
+		return EpisodeStatusUnaired
+	}
+	return EpisodeStatus(e.Status)
+}
+
 func episodeToAPI(e *ent.Episode, now time.Time) Episode {
 	out := Episode{
 		Id:        e.ID,
 		Number:    e.Number,
-		Status:    EpisodeStatus(e.Status),
+		Status:    episodeStatus(e, now),
 		Monitored: e.Monitored,
-	}
-	if len(e.Edges.MediaFiles) == 0 &&
-		!e.AirDate.IsZero() && e.AirDate.After(now) {
-		out.Status = EpisodeStatusUnaired
 	}
 	if e.AbsoluteNumber > 0 {
 		out.AbsoluteNumber = &e.AbsoluteNumber

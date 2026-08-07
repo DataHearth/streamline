@@ -317,6 +317,7 @@ export type UpcomingEpisode = {
 	episode: number;
 	title?: string;
 	air_date: string;
+	status: EpisodeStatus;
 	monitored?: boolean;
 };
 

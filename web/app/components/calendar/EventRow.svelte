@@ -3,7 +3,7 @@
 	import { cn } from "../../lib/cn";
 	import Poster from "../movies/Poster.svelte";
 	import EventDot from "./EventDot.svelte";
-	import type { CalendarEvent } from "../../lib/calendar";
+	import { dotToken, type CalendarEvent } from "../../lib/calendar";
 
 	let {
 		event,
@@ -54,8 +54,8 @@
 
 	<!-- One treatment for both kinds. This used to be a "Wanted" pill on movies
 	     and a bare dot on episodes, so the trailing column meant status on some
-	     rows and kind on others. Status is redundant here — everything on the
-	     calendar is wanted and unreleased — so the dot is the only reading, and
-	     it is the same amber/purple the filter switch and the grid chips use. -->
-	<EventDot status={event.status} size="md" />
+	     rows and kind on others. The dot is kind only — the same amber/purple
+	     the filter switch and the grid chips use. A bare colour cannot carry
+	     state without a label; the Upcoming list's pill does that. -->
+	<EventDot status={dotToken(event)} size="md" />
 </a>
