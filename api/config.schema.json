@@ -196,12 +196,21 @@
               "client_secret_file": { "type": "string" },
               "role_claim": {
                 "type": "string",
-                "description": "ID-token claim (e.g. \"groups\") used for role mapping."
+                "description": "ID-token claim (e.g. \"groups\") used for role mapping. Accepts a dotted path into nested claims, e.g. \"realm_access.roles\" for Keycloak."
               },
               "role_mapping": {
                 "type": "object",
-                "description": "Maps a role_claim value to a Streamline role. Highest-privilege match wins; authoritative when set.",
+                "description": "Maps a role_claim value to a Streamline role. Highest-privilege match wins, capped by the provider's allow_admin ceiling; authoritative when set, except on the login that adopts an existing local account by email, which never changes the role.",
                 "additionalProperties": { "$ref": "#/definitions/role" }
+              },
+              "email_linking": {
+                "type": "string",
+                "enum": ["disabled", "non_admin", "all"],
+                "description": "Whether a federated identity this provider has never presented before may sign in as an existing account because the email addresses match. Default disabled: the provider's email claim is not proof of account ownership, so it adopts nothing. non_admin is the migration setting — it adopts non-admin accounts, so turn it on, have everyone sign in once to bind their identities, then turn it back off. all adopts any account, admin included. It gates the adoption, not its result: a login matching an identity an adoption already linked never reads this key, so setting it back to disabled keeps every account adopted while it was open reachable. Governs adoption only; roles are allow_admin's business."
+              },
+              "allow_admin": {
+                "type": "boolean",
+                "description": "Whether this provider may put an account on the admin role. Default false, in which case no role it confers is ever admin — not the claim-mapped role, not the auth.oidc_default_role a provisioning login falls back to, and not the role carried by an invite consumed through SSO. Independent of email_linking, so no change to either setting can raise capability on the other axis."
               }
             }
           }

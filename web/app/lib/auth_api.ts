@@ -62,6 +62,8 @@ export function oidcErrorMessage(code: string | null): string {
 			return i18n.auth_oidc_registration_disabled();
 		case "oidc_no_invite":
 			return i18n.auth_oidc_no_invite();
+		case "oidc_link_not_allowed":
+			return i18n.auth_oidc_link_not_allowed();
 		case "oidc_provider_error":
 			return i18n.auth_oidc_provider_error();
 		default:

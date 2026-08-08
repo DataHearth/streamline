@@ -14,6 +14,16 @@ import (
 // leafKoanfPaths walks a config struct and returns the dotted koanf path of
 // every leaf field (basic types and slices). Nested structs are recursed;
 // fields without a koanf tag (e.g. the unexported pinned map) are skipped.
+//
+// A slice is a leaf even when its elements are structs, and deliberately: a
+// list's default is the empty list, and its elements have no koanf path until
+// an operator writes one, so there is no auth.oidc.allow_admin for defaults()
+// to seed. The consequence is that the "seeds a default for every config field"
+// spec below asserts nothing about any per-element key — auth.oidc[],
+// indexers[], download_clients[], quality_profiles[] and
+// media_server.servers[] are covered instead by "declares every field of every
+// config list element" in schema_test.go, which walks the same structs against
+// api/config.schema.json.
 func leafKoanfPaths(t reflect.Type, prefix string) []string {
 	var paths []string
 	for _, f := range reflect.VisibleFields(t) {
@@ -317,6 +327,162 @@ schedules:
 			cfg, err := Load("")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(cfg.Auth.TrustedRole).To(Equal("member"))
+		})
+
+		// The two OIDC trust axes both have to default closed, and separately.
+		Describe("auth.oidc trust axes", func() {
+			loadProvider := func(extra string) *Config {
+				GinkgoHelper()
+				dir := GinkgoT().TempDir()
+				dataDir := filepath.Join(dir, "data")
+				Expect(os.MkdirAll(dataDir, 0o755)).To(Succeed())
+				cfgFile := filepath.Join(dir, "config.yaml")
+				Expect(os.WriteFile(cfgFile, []byte("data_dir: "+dataDir+`
+auth:
+  oidc:
+    - name: kc
+      issuer: https://kc.example.com
+      client_id: streamline
+      client_secret: secret
+`+extra), 0o600)).To(Succeed())
+				cfg, err := Load(cfgFile)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(cfg.Auth.OIDC).To(HaveLen(1))
+				return cfg
+			}
+
+			It("defaults a provider to no adoption and no admin", func() {
+				cfg := loadProvider("")
+				Expect(cfg.Auth.OIDC[0].EmailLinking).
+					To(Equal(OIDCEmailLinkingDisabled))
+				Expect(cfg.Auth.OIDC[0].AllowAdmin).To(BeFalse())
+			})
+
+			It("keeps allow_admin independent of the adoption tier", func() {
+				cfg := loadProvider("      allow_admin: true\n")
+				Expect(cfg.Auth.OIDC[0].EmailLinking).
+					To(Equal(OIDCEmailLinkingDisabled))
+				Expect(cfg.Auth.OIDC[0].AllowAdmin).To(BeTrue())
+			})
+
+			It("leaves allow_admin off for the loosest adoption tier", func() {
+				cfg := loadProvider("      email_linking: all\n")
+				Expect(cfg.Auth.OIDC[0].EmailLinking).
+					To(Equal(OIDCEmailLinkingAll))
+				Expect(cfg.Auth.OIDC[0].AllowAdmin).To(BeFalse())
+			})
+		})
+
+		// Two entries sharing a name split the settings that authenticate a
+		// token from the settings that bound what it may become: findOIDCProvider
+		// reads the first match, oidcManager.Init keyed the map so the last write
+		// won. A token from the second entry's issuer was then capped by the
+		// first entry's allow_admin.
+		Describe("duplicate names in name-keyed lists", func() {
+			loadWith := func(body string) error {
+				GinkgoHelper()
+				dir := GinkgoT().TempDir()
+				dataDir := filepath.Join(dir, "data")
+				Expect(os.MkdirAll(dataDir, 0o755)).To(Succeed())
+				cfgFile := filepath.Join(dir, "config.yaml")
+				Expect(os.WriteFile(
+					cfgFile,
+					[]byte("data_dir: "+dataDir+"\n"+body),
+					0o600,
+				)).To(Succeed())
+				_, err := Load(cfgFile)
+				return err
+			}
+
+			It("rejects two auth.oidc providers sharing a name", func() {
+				err := loadWith(`auth:
+  oidc:
+    - name: kc
+      issuer: https://strong.example.com
+      client_id: streamline
+      client_secret: secret
+      allow_admin: true
+    - name: kc
+      issuer: https://weak.example.com
+      client_id: streamline
+      client_secret: secret
+`)
+				Expect(err).To(MatchError(ContainSubstring("kc")))
+				Expect(err).To(MatchError(ContainSubstring("auth.oidc")))
+			})
+
+			It("accepts two providers with distinct names", func() {
+				Expect(loadWith(`auth:
+  oidc:
+    - name: kc
+      issuer: https://strong.example.com
+      client_id: streamline
+      client_secret: secret
+    - name: authentik
+      issuer: https://weak.example.com
+      client_id: streamline
+      client_secret: secret
+`)).To(Succeed())
+			})
+
+			// The other four lists carry a `unique=Name` tag. Asserting on the
+			// tag name keeps these from passing on some unrelated validation
+			// error in the fixture instead of on the duplicate.
+			It("rejects two indexers sharing a name", func() {
+				Expect(loadWith(`indexers:
+  - name: nzb
+    host: a.example.com
+    port: 443
+    api_key: a
+    protocol: torznab
+  - name: nzb
+    host: b.example.com
+    port: 443
+    api_key: b
+    protocol: torznab
+`)).To(MatchError(ContainSubstring("'unique' tag")))
+			})
+
+			It("rejects two download clients sharing a name", func() {
+				Expect(loadWith(`download_clients:
+  - name: qb
+    client_type: qbittorrent
+    host: a.example.com
+    port: 8080
+    auth_method: password
+  - name: qb
+    client_type: qbittorrent
+    host: b.example.com
+    port: 8080
+    auth_method: password
+`)).To(MatchError(ContainSubstring("'unique' tag")))
+			})
+
+			It("rejects two quality profiles sharing a name", func() {
+				Expect(loadWith(`quality_default_profile: default
+quality_profiles:
+  - name: default
+    preferred_resolution: 1080p
+    min_resolution: 1080p
+  - name: default
+    preferred_resolution: 720p
+    min_resolution: 720p
+`)).To(MatchError(ContainSubstring("'unique' tag")))
+			})
+
+			It("rejects two media servers sharing a name", func() {
+				Expect(loadWith(`media_server:
+  servers:
+    - name: plex
+      server_type: plex
+      host: a.example.com
+      api_key: a
+    - name: plex
+      server_type: plex
+      host: b.example.com
+      api_key: b
+`)).To(MatchError(ContainSubstring("'unique' tag")))
+			})
 		})
 
 		It("rejects invalid registration_mode", func() {

@@ -155,6 +155,7 @@
 	"auth_oidc_default_role": "Rôle OIDC par défaut",
 	"auth_oidc_email_unverified": "Votre adresse e-mail n'est pas vérifiée auprès du fournisseur.",
 	"auth_oidc_failed": "Échec de la connexion.",
+	"auth_oidc_link_not_allowed": "Un compte utilise déjà cette adresse e-mail. Connectez-vous avec votre mot de passe, puis demandez à un administrateur d'activer la liaison de comptes pour ce fournisseur.",
 	"auth_oidc_no_invite": "Une invitation est requise pour s'inscrire.",
 	"auth_oidc_provider_error": "Le fournisseur d'identité a renvoyé une erreur.",
 	"auth_oidc_registration_disabled": "Les inscriptions sont désactivées.",

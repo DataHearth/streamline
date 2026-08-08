@@ -228,6 +228,59 @@ config:
       format: json # binary default text; deploy wants structured logs
   otel:
     endpoint: "" # auto-set to the subchart alloy service when observability.enabled=true
+  # Single sign-on. How far a provider is trusted is two separate questions,
+  # one key each, both defaulting closed.
+  #
+  # auth.oidc[].email_linking — which existing accounts it may ADOPT, i.e. sign
+  # in as because the email addresses match:
+  #   disabled (default) — none.
+  #   non_admin — non-admin accounts only. This is the migration setting: turn
+  #     it on, have each user sign in once to bind their identity, turn it off.
+  #   all — any account, admin included.
+  # It gates the adoption only. The identity an adoption links stays linked, and
+  # later logins match on it without reading this key, so a provider set back to
+  # disabled keeps signing in as every account it adopted while it was open.
+  # There is no unlink: deleting the user is what drops the identity.
+  #
+  # auth.oidc[].allow_admin — whether it may put an account on the admin ROLE:
+  #   false (default) — no login through this provider ever yields admin, with
+  #     no exception: not a claim mapped to admin by role_mapping, not an
+  #     auth.oidc_default_role of admin, not the role an invite carries. A
+  #     per-request check would not do: the attacker chooses which groups each
+  #     login carries, so they present a harmless one first and the admin group
+  #     after the link exists.
+  #   true — the provider decides who administers Streamline.
+  #
+  # The keys are independent on purpose. While one key meant both, tightening
+  # the adoption tier could RAISE the role ceiling — an account of federated
+  # origin adopted at non_admin became promotable the moment the operator set
+  # the provider back to disabled.
+  #
+  # Names must be unique: the pod refuses to start on a duplicate rather than
+  # let one entry's issuer validate the token while another entry's allow_admin
+  # bounds it. A templating loop that emits the same name twice fails at boot,
+  # not silently.
+  #
+  # UPGRADE: earlier releases adopted a matching account unconditionally and let
+  # role_mapping grant admin freely. With the defaults, users who relied on
+  # adoption start failing SSO with oidc_link_not_allowed (bind them with the
+  # non_admin pass above), and providers that granted admin stop until you set
+  # allow_admin: true. See README "Single sign-on (OIDC)".
+  #
+  # auth:
+  #   oidc:
+  #     - name: keycloak
+  #       issuer: https://sso.example.com/realms/main
+  #       client_id: streamline
+  #       # Mount the secret via secretFiles below rather than inlining it.
+  #       client_secret_file: /etc/streamline/secrets/oidc-client-secret
+  #       email_linking: disabled
+  #       allow_admin: false
+  #       # role_claim takes a dotted path into nested claims.
+  #       role_claim: realm_access.roles
+  #       role_mapping:
+  #         streamline-admins: admin
+  #         streamline-users: member
 
 # Rendered into a Secret, mounted via envFrom with STREAMLINE_ prefix preserved
 # (koanf STREAMLINE_* env overrides file config). Good for scalar secrets;

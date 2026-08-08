@@ -114,12 +114,77 @@ type OIDCConfig struct {
 	// RoleClaim is the ID-token claim (e.g. "groups", "roles") consulted for
 	// claim-based role mapping; RoleMapping maps a claim value to a Streamline
 	// role. When both are set and a value matches, the mapped role is
-	// authoritative — applied at signup and re-synced on every login (the
-	// highest-privilege role wins if several values map). Leave empty to give
-	// OIDC users auth.oidc_default_role.
+	// authoritative — applied at signup and re-synced on every login of an
+	// already-linked identity (the highest-privilege role wins if several
+	// values map), subject to the AllowAdmin ceiling. Adopting an existing
+	// local account by email is the one login that does not apply it, so
+	// establishing a link can never also promote. Leave empty to give OIDC
+	// users auth.oidc_default_role.
+	//
+	// RoleClaim may name a nested claim with a dotted path — Keycloak's roles
+	// live at realm_access.roles, not at the top level. A claim whose literal
+	// name contains a dot still wins over the path interpretation.
 	RoleClaim   string            `koanf:"role_claim"`
 	RoleMapping map[string]string `koanf:"role_mapping" validate:"omitempty,dive,oneof=admin member request_only"`
+	// EmailLinking decides whether a federated identity this provider has
+	// never presented before (a new (provider, subject) pair) may be adopted
+	// into an account that merely shares its email address. Enabling it makes
+	// the provider's email claim proof of account ownership: any IdP where a
+	// user can self-assert a verified address — Keycloak with open
+	// self-registration, a misconfigured Authentik/Authelia — can then mint a
+	// login for any local user, and with several providers configured the
+	// weakest one speaks for accounts belonging to the strongest.
+	//
+	// It governs adoption and nothing else. Roles are AllowAdmin's business:
+	// while one key meant both, tightening the adoption tier could raise the
+	// role ceiling (an account of federated origin adopted at non_admin became
+	// promotable the moment the operator set the provider back to disabled),
+	// and loosening it could lower it. Two keys make each axis monotone —
+	// no move on one can add capability on the other.
+	//
+	// Empty is OIDCEmailLinkingDisabled, spelled out at load by
+	// normalizeOIDCEmailLinking.
+	EmailLinking string `koanf:"email_linking" validate:"omitempty,oneof=disabled non_admin all"`
+	// AllowAdmin is the provider's admin ceiling: with it false — the default,
+	// including for a provider added through the REST API, which does not
+	// expose the key — no role this provider confers may be admin. That covers
+	// every source, not just the claims: the claim-mapped role, the
+	// auth.oidc_default_role a provisioning login falls back to, and the role
+	// carried by an invite consumed through SSO.
+	//
+	// It reads no claim of the request being served, deliberately. A ceiling
+	// that moved with the claims would be beaten by presenting the harmless set
+	// first and the admin group one request later, once the link exists.
+	AllowAdmin bool `koanf:"allow_admin"`
 }
+
+// Accepted OIDCConfig.EmailLinking values. Disabled is the zero value, so a
+// provider that never names the key — including one added through the REST
+// API, which does not expose it — cannot adopt existing accounts by email.
+//
+// "Adopt" is a federated identity the provider has never presented before
+// signing in as an existing account because the email addresses match:
+//
+//   - disabled — adopts nothing.
+//   - non_admin — may adopt non-admin accounts. This is the migration setting:
+//     turn it on, have everyone sign in once so their identities bind, then
+//     turn it back off.
+//   - all — adopts any account, admin included. The only way to migrate an
+//     admin, at the cost of exposing the account that can rewrite the whole
+//     config — prefer moving the admin over during a maintenance window.
+//
+// The tier gates the adoption, not what it leaves behind. An adopted identity
+// stays linked, and the login that matches it consults no tier at all — so a
+// provider back at disabled still signs in as every account it adopted while it
+// was open, local-password accounts it never created included. Undoing that
+// means deleting the user; there is no unlink.
+//
+// None of them says anything about roles; that is OIDCConfig.AllowAdmin.
+const (
+	OIDCEmailLinkingDisabled = "disabled"
+	OIDCEmailLinkingNonAdmin = "non_admin"
+	OIDCEmailLinkingAll      = "all"
+)
 
 type LibraryConfig struct {
 	MoviePath    string `koanf:"movie_path"    validate:"required"`
@@ -230,11 +295,31 @@ type MediaServerConfig struct {
 // not config load.
 var bindInterfacePattern = regexp.MustCompile(`^[A-Za-z0-9._:-]+$`)
 
+// normalizeOIDCEmailLinking spells out the zero value as the tier it already
+// means. The write-back marshals the whole struct, zero fields included, so a
+// provider that never named the key used to be rewritten as
+// `email_linking: ""` — which the Go loader accepts (omitempty) but
+// api/config.schema.json rejects, leaving streamline emitting a config its own
+// published schema fails. Writing the word also makes the file say which tier
+// is in force instead of leaving it to the reader.
+//
+// Validate is where this hangs because it is the one funnel both entry points
+// share: finalize calls it on load, and Update calls it on the clone before
+// writeYAMLAtomic, which is what catches a provider added through the REST API
+// (that path never revisits finalize).
+func (c *Config) normalizeOIDCEmailLinking() {
+	for i := range c.Auth.OIDC {
+		if c.Auth.OIDC[i].EmailLinking == "" {
+			c.Auth.OIDC[i].EmailLinking = OIDCEmailLinkingDisabled
+		}
+	}
+}
+
 // Validate reports whether these values are a config the process can run on.
-// It only reads c. Creating directories is ensureDataDir's job, so a caller
-// asking a question rather than booting — config.Update, deciding whether the
-// file it is about to write would still load — leaves nothing behind on the
-// filesystem when the answer is no.
+// Beyond normalising the OIDC linking tier onto c, it only reads c. Creating
+// directories is ensureDataDir's job, so a caller asking a question rather than
+// booting — config.Update, deciding whether the file it is about to write would
+// still load — leaves nothing behind on the filesystem when the answer is no.
 //
 // The answer carries every rule broken, joined: the struct tags and the
 // invariants both, however many of each. Returning at the tags read as a
@@ -243,6 +328,7 @@ var bindInterfacePattern = regexp.MustCompile(`^[A-Za-z0-9._:-]+$`)
 // tags already fail would have had every invariant it broke hidden behind
 // them, and the write saved.
 func (c *Config) Validate() error {
+	c.normalizeOIDCEmailLinking()
 	return errors.Join(validator.New().Struct(c), c.checkInvariants())
 }
 
@@ -291,6 +377,24 @@ func (c *Config) checkInvariants() error {
 				cidr,
 			))
 		}
+	}
+	// The other name-keyed lists get this from a `unique=Name` tag; auth.oidc
+	// is spelled out because a duplicate there is a privilege split rather than
+	// a config typo, and the operator needs the offending name. The provider a
+	// callback authenticates against is oidcManager's map entry — last write
+	// wins — while every trust decision reads findOIDCProvider's first match,
+	// so two entries sharing a name let a token minted by one issuer be capped
+	// by the other's allow_admin.
+	seenOIDC := map[string]bool{}
+	for _, p := range c.Auth.OIDC {
+		if seenOIDC[p.Name] {
+			errs = append(
+				errs,
+				fmt.Errorf("auth.oidc: duplicate provider name %q", p.Name),
+			)
+			continue
+		}
+		seenOIDC[p.Name] = true
 	}
 	if len(c.QualityProfiles) > 0 {
 		found := false

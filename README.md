@@ -204,6 +204,103 @@ Clear a locked-out account:
 streamline auth unlock user@example.com
 ```
 
+### Single sign-on (OIDC)
+
+Providers are configured under `auth.oidc[]`. How far Streamline trusts one is
+two independent questions, and each has its own key: `email_linking` says which
+existing accounts it may take over, `allow_admin` says whether it may hand out
+the `admin` role. Both default closed.
+
+`name` identifies the provider everywhere — in the callback URL, in the trust
+lookup, in the discovered-verifier cache — so two entries may not share one.
+Streamline refuses to start on a duplicate rather than let the entry that
+validates a token differ from the entry whose `allow_admin` bounds it.
+
+```yaml
+auth:
+  oidc:
+    - name: keycloak
+      issuer: https://sso.example.com/realms/main
+      client_id: streamline
+      client_secret_file: /run/secrets/oidc
+      email_linking: disabled          # disabled (default) | non_admin | all
+      allow_admin: false               # default — no login here yields admin
+      role_claim: realm_access.roles   # dotted paths reach nested claims
+      role_mapping:
+        streamline-admins: admin
+        streamline-users: member
+```
+
+**`email_linking` — which accounts it may adopt.** "Adopt" means a federated
+identity the provider has never presented before signing in as an existing
+account **because the email addresses match**. That is only safe where nobody
+can choose their own address at the IdP: anywhere they can — an IdP with open
+self-registration, or one that marks an unchecked address verified — a matching
+email would otherwise mint a login for any local user, the seeded admin
+included.
+
+| `email_linking` | May adopt an existing account |
+| --- | --- |
+| `disabled` (default) | no |
+| `non_admin` | non-admin accounts only |
+| `all` | any account, `admin` included |
+
+The setting gates the adoption, not what the adoption leaves behind. An
+adoption links the federated identity to the account permanently, and every
+later login matches on that identity without consulting `email_linking` at all
+— so a provider back at `disabled` still signs in as each account it adopted
+while it was open, local password and all. That is what makes the migration
+procedure below work, and it is the same reason the pass has to be a short one:
+Streamline has no unlink, so the only way to undo a binding is to delete the
+user, which cascades the identity away with it.
+
+**`allow_admin` — whether it may grant `admin`.** With it `false` (the default)
+**no login through this provider ever puts an account on `admin`**, with no
+exception: not a claim mapped to `admin` by `role_mapping`, not an
+`auth.oidc_default_role` of `admin` a signup falls back to, and not the role
+carried by an invite consumed through SSO. A user in both an admin group and a
+member group lands on member; one in an admin group alone keeps whatever role
+they already had. Set `allow_admin: true` for a provider that really is allowed
+to decide who administers Streamline.
+
+The two keys are deliberately separate. While one key meant both, tightening
+the adoption tier could *raise* the role ceiling — an account of federated
+origin, adopted while the provider was at `non_admin`, became promotable to
+admin the moment the operator set that provider back to `disabled`. Splitting
+them makes each axis monotone: no move on one can add capability on the other.
+
+> [!IMPORTANT]
+> **Upgrade impact.** Two defaults changed, both closing something earlier
+> releases left open.
+>
+> *Adoption.* Earlier releases adopted a matching account unconditionally, and
+> `email_linking` defaults to `disabled`. Any user whose local account was being
+> reached that way — rather than by an identity already linked from a previous
+> SSO login — starts failing at the login screen with *"this SSO account is not
+> linked to a Streamline user"* (`oidc_link_not_allowed`). To bind those
+> identities, open the provider up for one pass and close it again:
+>
+> 1. set `email_linking: non_admin` on the provider and restart;
+> 2. have each affected user sign in through SSO once — that login links the
+>    identity permanently;
+> 3. set `email_linking: disabled` again and restart.
+>
+> Admin accounts are not covered by `non_admin`. Either move them during a
+> maintenance window with `email_linking: all`, or leave them on password login.
+> The pass does not touch roles: an adoption never writes one, `allow_admin`
+> alone decides how high a role can go, and none of the three steps changes it.
+>
+> *Roles.* `allow_admin` defaults to `false`, so a provider whose `role_mapping`
+> grants `admin` stops doing so until you set it. An existing admin whose claims
+> map only to `admin` keeps the role — the barred mapping is dropped, not
+> downgraded, so nothing is written. One whose claims *also* map to a lower role
+> is demoted to it on the next login, that being the highest role the provider
+> may now confer. Set `allow_admin: true` on the providers you want back in
+> charge of admin.
+>
+> Nothing else changes for users who already signed in through SSO, or for
+> password-only installs.
+
 ### Running behind a reverse proxy
 
 `X-Forwarded-For` is believed only when the connecting peer is listed in

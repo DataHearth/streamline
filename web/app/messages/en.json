@@ -155,6 +155,7 @@
 	"auth_oidc_default_role": "OIDC default role",
 	"auth_oidc_email_unverified": "Your email address is not verified with the provider.",
 	"auth_oidc_failed": "Sign-in failed.",
+	"auth_oidc_link_not_allowed": "An account already uses this email address. Sign in with your password, then ask an administrator to enable account linking for this provider.",
 	"auth_oidc_no_invite": "An invite is required to register.",
 	"auth_oidc_provider_error": "The identity provider returned an error.",
 	"auth_oidc_registration_disabled": "Registration is disabled.",

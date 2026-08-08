@@ -124,6 +124,22 @@ var _ = Describe("Config mutate", Label("unit", "config"), func() {
 			})
 			Expect(errors.Is(err, config.ErrOIDCDiscoveryFailed)).To(BeTrue())
 		})
+
+		// Neither trust axis is on the REST surface, so a provider added by an
+		// admin over the API arrives adopting nothing and granting no admin —
+		// opening either one is a deliberate edit to the config file.
+		It("adds a provider closed on both trust axes", func() {
+			Expect(config.AddOIDCProvider(context.Background(),
+				config.OIDCConfig{
+					Name:         "closed",
+					Issuer:       srv.URL,
+					ClientID:     "cid",
+					ClientSecret: "secret",
+				})).To(Succeed())
+			added := config.Get().Auth.OIDC[0]
+			Expect(added.EmailLinking).To(Equal(config.OIDCEmailLinkingDisabled))
+			Expect(added.AllowAdmin).To(BeFalse())
+		})
 	})
 
 	Describe("UpdateOIDCProvider", func() {
@@ -154,6 +170,30 @@ var _ = Describe("Config mutate", Label("unit", "config"), func() {
 			got := config.Get().Auth.OIDC[0]
 			Expect(got.ClientID).To(Equal("new-cid"))
 			Expect(got.ClientSecret).To(Equal("secret"))
+		})
+
+		// The patch is applied in place, so what the file set on either trust
+		// axis survives an API edit that never mentions it. Losing allow_admin
+		// here would silently strip the operator's admin grant on the next
+		// unrelated client_id change; gaining it would be worse.
+		It("preserves both trust axes across an unrelated patch", func() {
+			Expect(config.Update(context.Background(), func(c *config.Config) error {
+				c.Auth.OIDC[0].EmailLinking = config.OIDCEmailLinkingNonAdmin
+				c.Auth.OIDC[0].AllowAdmin = true
+				return nil
+			})).To(Succeed())
+
+			newID := "patched-cid"
+			Expect(config.UpdateOIDCProvider(
+				context.Background(),
+				"acme",
+				config.OIDCProviderPatch{ClientID: &newID},
+			)).To(Succeed())
+
+			got := config.Get().Auth.OIDC[0]
+			Expect(got.ClientID).To(Equal("patched-cid"))
+			Expect(got.EmailLinking).To(Equal(config.OIDCEmailLinkingNonAdmin))
+			Expect(got.AllowAdmin).To(BeTrue())
 		})
 
 		It("rejects not-found name", func() {
