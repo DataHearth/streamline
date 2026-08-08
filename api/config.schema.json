@@ -117,7 +117,7 @@
   "properties": {
     "data_dir": {
       "type": "string",
-      "description": "Directory holding runtime data. Must exist on disk."
+      "description": "Directory holding runtime data. Created at boot if missing."
     },
     "read_only": {
       "type": "boolean",
@@ -392,12 +392,12 @@
     },
     "quality_profiles": {
       "type": "array",
-      "description": "Named quality profiles.",
+      "description": "Named quality profiles. Setting this to an empty list leaves every movie without a resolvable profile, and is not rejected: the check that quality_default_profile names a real profile only runs on a non-empty list.",
       "items": { "$ref": "#/definitions/qualityProfileEntry" }
     },
     "quality_default_profile": {
       "type": "string",
-      "description": "Name of the quality profile used when a movie names none."
+      "description": "Name of the quality profile used when a movie names none. Must name an entry in quality_profiles whenever that list has any."
     }
   }
 }

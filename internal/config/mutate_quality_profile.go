@@ -70,6 +70,12 @@ func UpdateQualityProfile(
 
 func DeleteQualityProfile(ctx context.Context, name string) error {
 	return Update(ctx, func(c *Config) error {
+		// Also what keeps the list from being emptied while
+		// quality_default_profile still names a profile: checkInvariants only
+		// checks that name against a non-empty list, so a config in that state
+		// validates, saves, loads — and ResolveQualityProfile then matches
+		// nothing at all. Relaxing this into "delete it and clear the default"
+		// needs that check to cover the empty list first.
 		if name == c.QualityDefaultProfile {
 			return ErrQualityProfileInUseAsDefault
 		}

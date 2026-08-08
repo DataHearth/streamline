@@ -402,3 +402,250 @@ schedules:
 		})
 	})
 })
+
+// Nothing written to the config file can make an environment-supplied setting
+// outlive its variable, so Load says out loud what the environment owns while
+// it still holds it — and shouts on the boot where a setting that decides where
+// data goes fell back to the built-in default, which is the boot where an
+// install that lost STREAMLINE_DATA_DIR comes up on an empty database.
+var _ = Describe("Load provenance signals", Label("unit", "config"), func() {
+	var logs bytes.Buffer
+
+	BeforeEach(func() {
+		ResetForTest()
+		DeferCleanup(ResetForTest)
+		logs.Reset()
+		GinkgoWriter.TeeTo(&logs)
+		DeferCleanup(GinkgoWriter.ClearTeeWriters)
+	})
+
+	// data_dir resolves to ./data relative to this package's directory.
+	expectDefaultDataDir := func() {
+		GinkgoHelper()
+		DeferCleanup(func() {
+			Expect(os.RemoveAll("./data")).To(Succeed())
+		})
+	}
+
+	It(
+		"warns when data_dir comes from neither the file nor the environment",
+		func() {
+			expectDefaultDataDir()
+
+			Expect(LoadReader(strings.NewReader("auth:\n  mode: disabled\n"))).
+				To(Succeed())
+
+			Expect(logs.String()).To(ContainSubstring("data_dir=./data"))
+			Expect(logs.String()).To(ContainSubstring("database.path"))
+		},
+	)
+
+	It("stays quiet about data_dir when the environment supplies it", func() {
+		GinkgoT().Setenv("STREAMLINE_DATA_DIR", GinkgoT().TempDir())
+
+		Expect(LoadReader(strings.NewReader("auth:\n  mode: disabled\n"))).
+			To(Succeed())
+
+		Expect(logs.String()).ToNot(ContainSubstring("data_dir="))
+		Expect(logs.String()).ToNot(ContainSubstring("database.path"))
+	})
+
+	It("stays quiet about data_dir when the file supplies it", func() {
+		raw := "data_dir: " + GinkgoT().TempDir() + "\n"
+
+		Expect(LoadReader(strings.NewReader(raw))).To(Succeed())
+
+		Expect(logs.String()).ToNot(ContainSubstring("data_dir="))
+		Expect(logs.String()).ToNot(ContainSubstring("database.path"))
+	})
+
+	// An env-only setting that is simply gone at the next boot leaves no trace
+	// of ever having been set, so the warning has to come from the one thing
+	// that boot can still see: the value it is actually running on being the
+	// built-in default.
+	It(
+		"warns for every watched setting that fell back to its default, not just data_dir",
+		func() {
+			raw := "data_dir: " + GinkgoT().TempDir() + "\n"
+
+			Expect(LoadReader(strings.NewReader(raw))).To(Succeed())
+
+			Expect(logs.String()).
+				To(ContainSubstring("library.movie_path=/media/movies"))
+			Expect(logs.String()).
+				To(ContainSubstring("library.download_path=/downloads"))
+			Expect(logs.String()).To(ContainSubstring("auth.session_ttl=168h"))
+		},
+	)
+
+	It("stays quiet about a watched setting the file supplies", func() {
+		raw := "data_dir: " + GinkgoT().TempDir() +
+			"\nlibrary:\n  movie_path: /mnt/bigdisk/movies\n"
+
+		Expect(LoadReader(strings.NewReader(raw))).To(Succeed())
+
+		Expect(logs.String()).ToNot(ContainSubstring("library.movie_path="))
+	})
+
+	// The file carrying its own value is the case warnDefaultedKeys can never
+	// catch: with the variable gone that boot looks exactly like an install
+	// that was always configured that way, so the only boot that can say
+	// anything is this one.
+	It("warns when the environment shadows a value the file also sets", func() {
+		dir := GinkgoT().TempDir()
+		fileDir := filepath.Join(dir, "filedir")
+		envDir := filepath.Join(dir, "envdir")
+		Expect(os.MkdirAll(fileDir, 0o755)).To(Succeed())
+		Expect(os.MkdirAll(envDir, 0o755)).To(Succeed())
+		GinkgoT().Setenv("STREAMLINE_DATA_DIR", envDir)
+
+		Expect(LoadReader(strings.NewReader("data_dir: " + fileDir + "\n"))).
+			To(Succeed())
+		Expect(Get().DataDir).To(Equal(envDir))
+
+		Expect(logs.String()).To(ContainSubstring("config.file.shadowed"))
+		Expect(logs.String()).To(ContainSubstring("data_dir=" + fileDir))
+	})
+
+	It("stays quiet when the environment and the file agree", func() {
+		dataDir := GinkgoT().TempDir()
+		GinkgoT().Setenv("STREAMLINE_DATA_DIR", dataDir)
+
+		Expect(LoadReader(strings.NewReader("data_dir: " + dataDir + "\n"))).
+			To(Succeed())
+
+		Expect(logs.String()).ToNot(ContainSubstring("config.file.shadowed"))
+	})
+
+	It("names the keys the environment supplied, never their values", func() {
+		GinkgoT().Setenv("STREAMLINE_METADATA__TMDB_API_KEY", "env-only-tmdb-key")
+		raw := "data_dir: " + GinkgoT().TempDir() + "\n"
+
+		Expect(LoadReader(strings.NewReader(raw))).To(Succeed())
+
+		Expect(logs.String()).To(ContainSubstring("metadata.tmdb_api_key"))
+		Expect(logs.String()).ToNot(ContainSubstring("env-only-tmdb-key"))
+	})
+
+	It("leaves out STREAMLINE_ variables that name no config key", func() {
+		GinkgoT().Setenv("STREAMLINE_PUBLIC_URL", "https://stream.example.com")
+		GinkgoT().Setenv("STREAMLINE_E2E_CONTAINERS", "1")
+		GinkgoT().Setenv("STREAMLINE_METADATA__TMDB__BASE_URL", "http://127.0.0.1:9")
+		raw := "data_dir: " + GinkgoT().TempDir() + "\n"
+
+		Expect(LoadReader(strings.NewReader(raw))).To(Succeed())
+
+		Expect(logs.String()).ToNot(ContainSubstring("public_url"))
+		Expect(logs.String()).ToNot(ContainSubstring("e2e_containers"))
+		Expect(logs.String()).ToNot(ContainSubstring("metadata.tmdb.base_url"))
+	})
+
+	// The keys a deprecated alias expands to are appended while ranging over a
+	// map, so the list came out in a different order on every run — and named
+	// the deprecated key itself, which is no config key at all.
+	It("names the environment's keys in a stable order", func() {
+		GinkgoT().Setenv("STREAMLINE_SCHEDULES__MISSING_SEARCH", "3h")
+		GinkgoT().Setenv("STREAMLINE_SCHEDULES__ORPHAN_SCAN", "9h")
+		raw := "data_dir: " + GinkgoT().TempDir() + "\n"
+
+		Expect(LoadReader(strings.NewReader(raw))).To(Succeed())
+
+		Expect(logs.String()).To(ContainSubstring(
+			"schedules.movie_missing_search, schedules.movie_orphan_scan, " +
+				"schedules.tv_missing_search, schedules.tv_orphan_scan",
+		))
+	})
+
+	// The environment is always a string and the file holds a list as []any, so
+	// rendering both and comparing the text reported a key as shadowed by the
+	// value it already had — on every boot, for a setting nothing was overriding.
+	It("stays quiet when a list the file sets matches the environment", func() {
+		GinkgoT().
+			Setenv("STREAMLINE_LIBRARY__ALLOWED_DOWNLOAD_ROOTS", "/downloads")
+		raw := "data_dir: " + GinkgoT().TempDir() +
+			"\nlibrary:\n  allowed_download_roots:\n    - /downloads\n"
+
+		Expect(LoadReader(strings.NewReader(raw))).To(Succeed())
+		Expect(Get().Library.AllowedDownloadRoots).To(ConsistOf("/downloads"))
+
+		Expect(logs.String()).ToNot(ContainSubstring("config.file.shadowed"))
+	})
+
+	It("still warns when a list the file sets differs from the environment", func() {
+		GinkgoT().
+			Setenv("STREAMLINE_LIBRARY__ALLOWED_DOWNLOAD_ROOTS", "/mnt/other")
+		raw := "data_dir: " + GinkgoT().TempDir() +
+			"\nlibrary:\n  allowed_download_roots:\n    - /downloads\n"
+
+		Expect(LoadReader(strings.NewReader(raw))).To(Succeed())
+
+		Expect(logs.String()).To(ContainSubstring("config.file.shadowed"))
+		Expect(logs.String()).
+			To(ContainSubstring("library.allowed_download_roots=[/downloads]"))
+	})
+
+	// A file that only loads because a variable fills a gap starts every boot
+	// one dropped variable away from not starting at all. The write-back is not
+	// what put it in that state and does not report it to whoever is watching
+	// the logs at boot, so Load says it too.
+	It("warns when the file does not load without the environment", func() {
+		GinkgoT().Setenv("STREAMLINE_QUALITY_DEFAULT_PROFILE", "uhd-remux")
+		raw := "data_dir: " + GinkgoT().TempDir() + `
+quality_profiles:
+  - name: uhd-remux
+    preferred_resolution: 2160p
+    min_resolution: 2160p
+    upgrade_allowed: true
+`
+
+		Expect(LoadReader(strings.NewReader(raw))).To(Succeed())
+
+		Expect(logs.String()).
+			To(ContainSubstring("does not load without the environment"))
+		Expect(logs.String()).To(ContainSubstring("quality_default_profile"))
+	})
+
+	It("stays quiet when the file loads on its own", func() {
+		GinkgoT().Setenv("STREAMLINE_METADATA__TMDB_API_KEY", "env-only-tmdb-key")
+		raw := "data_dir: " + GinkgoT().TempDir() + "\n"
+
+		Expect(LoadReader(strings.NewReader(raw))).To(Succeed())
+
+		Expect(logs.String()).
+			ToNot(ContainSubstring("does not load without the environment"))
+	})
+
+	// The boot that loses STREAMLINE_DATA_DIR is the one that comes up on an
+	// empty database, and it is also the one that cannot name where the old one
+	// went. What it can do is look at the data_dirs its own config names.
+	It("warns when a database sits outside the configured data_dir", func() {
+		dir := GinkgoT().TempDir()
+		fileDir := filepath.Join(dir, "filedir")
+		envDir := filepath.Join(dir, "envdir")
+		Expect(os.MkdirAll(fileDir, 0o755)).To(Succeed())
+		Expect(os.MkdirAll(envDir, 0o755)).To(Succeed())
+		Expect(os.WriteFile(
+			filepath.Join(fileDir, "streamline.db"), []byte("db"), 0o600,
+		)).To(Succeed())
+		GinkgoT().Setenv("STREAMLINE_DATA_DIR", envDir)
+
+		Expect(LoadReader(strings.NewReader("data_dir: " + fileDir + "\n"))).
+			To(Succeed())
+
+		Expect(logs.String()).To(ContainSubstring("database.elsewhere"))
+		Expect(logs.String()).
+			To(ContainSubstring(filepath.Join(fileDir, "streamline.db")))
+	})
+
+	It("stays quiet when the configured data_dir holds the database", func() {
+		dir := GinkgoT().TempDir()
+		Expect(os.WriteFile(
+			filepath.Join(dir, "streamline.db"), []byte("db"), 0o600,
+		)).To(Succeed())
+
+		Expect(LoadReader(strings.NewReader("data_dir: " + dir + "\n"))).
+			To(Succeed())
+
+		Expect(logs.String()).ToNot(ContainSubstring("database.elsewhere"))
+	})
+})

@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -9,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"sync/atomic"
 
@@ -21,8 +23,11 @@ import (
 )
 
 type Config struct {
-	Server  ServerConfig `koanf:"server"   validate:"required"`
-	DataDir string       `koanf:"data_dir" validate:"required,dir"`
+	Server ServerConfig `koanf:"server" validate:"required"`
+	// Not tagged `dir`: ensureDataDir creates it at boot, and demanding it
+	// already exist made Validate — which config.Update asks questions with,
+	// about a config it may never store — depend on this host's filesystem.
+	DataDir string `koanf:"data_dir" validate:"required"`
 	// ReadOnly rejects every config.Update write-back with ErrReadOnly. For
 	// declarative/GitOps deploys where config is mounted read-only and changes
 	// flow through git, not the UI.
@@ -225,20 +230,49 @@ type MediaServerConfig struct {
 // not config load.
 var bindInterfacePattern = regexp.MustCompile(`^[A-Za-z0-9._:-]+$`)
 
+// Validate reports whether these values are a config the process can run on.
+// It only reads c. Creating directories is ensureDataDir's job, so a caller
+// asking a question rather than booting — config.Update, deciding whether the
+// file it is about to write would still load — leaves nothing behind on the
+// filesystem when the answer is no.
+//
+// The answer carries every rule broken, joined: the struct tags and the
+// invariants both, however many of each. Returning at the tags read as a
+// config with one flaw in it, and config.Update compares two of these answers
+// to tell a flaw it is introducing from one it inherited — an install whose
+// tags already fail would have had every invariant it broke hidden behind
+// them, and the write saved.
 func (c *Config) Validate() error {
-	// Create data_dir before the `dir` tag demands it exists. Nothing else
-	// makes it: the poster cache mkdirs <data_dir>/posters, long after this.
-	// So any data_dir below its volume's mount point — `/data/streamline` on a
-	// fresh, empty PVC — used to fail here with a validation error naming a
-	// tag rather than the missing directory.
-	if c.DataDir != "" {
-		if err := os.MkdirAll(c.DataDir, 0o700); err != nil {
-			return fmt.Errorf("data_dir %q: %w", c.DataDir, err)
-		}
+	return errors.Join(validator.New().Struct(c), c.checkInvariants())
+}
+
+// ensureDataDir creates data_dir. Nothing else makes it: the poster cache
+// mkdirs <data_dir>/posters, long after this. So any data_dir below its
+// volume's mount point — `/data/streamline` on a fresh, empty PVC — used to
+// fail validation with a message naming a tag rather than the missing
+// directory.
+//
+// A boot step, not a validation step: the database this process serves from is
+// opened out of this directory once, at startup. A config.Update that changes
+// data_dir writes the key and leaves the directory to the restart that will
+// actually use it.
+func ensureDataDir(c *Config) error {
+	if err := os.MkdirAll(c.DataDir, 0o700); err != nil {
+		return fmt.Errorf("data_dir %q: %w", c.DataDir, err)
 	}
-	if err := validator.New().Struct(c); err != nil {
-		return err
-	}
+	return nil
+}
+
+// checkInvariants holds the rules the struct tags cannot express: relations
+// between fields, and formats the tags accept but the code cannot use.
+//
+// It reports all of them, joined, rather than stopping at the first. Update
+// tells the reasons it is introducing from the ones it inherited by comparing
+// two of these answers reason by reason, and an answer that stops early makes
+// every rule behind the stopping one read the same on both sides — present
+// nowhere, so introduced nowhere, so saved.
+func (c *Config) checkInvariants() error {
+	var errs []error
 	// The proxy-trust gate compares peers with netip, which never matches a
 	// v4-mapped prefix against a plain v4 peer. The `cidr` tag accepts that
 	// form, so reject it here: it would otherwise look configured while
@@ -246,13 +280,16 @@ func (c *Config) Validate() error {
 	for _, cidr := range c.Server.TrustedProxies {
 		p, err := netip.ParsePrefix(cidr)
 		if err != nil {
-			return fmt.Errorf("server.trusted_proxies %q: %w", cidr, err)
+			errs = append(
+				errs, fmt.Errorf("server.trusted_proxies %q: %w", cidr, err),
+			)
+			continue
 		}
 		if p.Addr().Is4In6() {
-			return fmt.Errorf(
+			errs = append(errs, fmt.Errorf(
 				"server.trusted_proxies %q: write IPv4 ranges in plain IPv4 form",
 				cidr,
-			)
+			))
 		}
 	}
 	if len(c.QualityProfiles) > 0 {
@@ -264,10 +301,10 @@ func (c *Config) Validate() error {
 			}
 		}
 		if !found {
-			return fmt.Errorf(
+			errs = append(errs, fmt.Errorf(
 				"quality_default_profile %q names no profile in quality_profiles",
 				c.QualityDefaultProfile,
-			)
+			))
 		}
 	}
 	builtin := 0
@@ -277,18 +314,18 @@ func (c *Config) Validate() error {
 		}
 		if dc.BindInterface != "" &&
 			!bindInterfacePattern.MatchString(dc.BindInterface) {
-			return fmt.Errorf(
+			errs = append(errs, fmt.Errorf(
 				"download client %q: invalid bind_interface %q",
 				dc.Name, dc.BindInterface,
-			)
+			))
 		}
 	}
 	if builtin > 1 {
-		return fmt.Errorf(
+		errs = append(errs, fmt.Errorf(
 			"at most one builtin download client is allowed, found %d", builtin,
-		)
+		))
 	}
-	return nil
+	return errors.Join(errs...)
 }
 
 // defaults returns the canonical default values for all config keys.
@@ -400,16 +437,20 @@ func LoadReader(r io.Reader) error {
 		return err
 	}
 	k := newDefaultsKoanf()
+	fileK := koanf.New(".")
 	if len(raw) > 0 {
-		if err := k.Load(rawbytes.Provider(raw), yaml.Parser()); err != nil {
+		if err := fileK.Load(rawbytes.Provider(raw), yaml.Parser()); err != nil {
+			return err
+		}
+		if err := k.Merge(fileK); err != nil {
 			return err
 		}
 	}
-	cfg, err := finalize(k)
+	cfg, layer, err := finalize(k, fileK)
 	if err != nil {
 		return err
 	}
-	store(cfg, "", k)
+	store(cfg, "", k, layer)
 	return nil
 }
 
@@ -443,39 +484,37 @@ var renamedScheduleKeys = map[string][]string{
 
 // applyRenamedScheduleKeys copies a value still set under a pre-media-split
 // schedules key onto its replacements, skipping any replacement the operator
-// already set themselves. Without it an old config keeps parsing — koanf drops
-// keys the struct no longer has — while every renamed job silently reverts to
-// its default interval.
+// already set themselves, and returns the replacements it actually wrote keyed
+// by the deprecated key they came from. Without it an old config keeps parsing
+// — koanf drops keys the struct no longer has — while every renamed job
+// silently reverts to its default interval.
 //
-// "Already set themselves" is read as "differs from the default", since the
-// defaults layer is merged into k before the file and env layers.
-func applyRenamedScheduleKeys(k *koanf.Koanf) error {
+// "Already set themselves" is read as "carries a value that differs from the
+// default", which covers both layer shapes this runs against: the merged koanf,
+// where the defaults are always present, and the file-only koanf, where a key
+// the operator did not write is simply absent.
+func applyRenamedScheduleKeys(k *koanf.Koanf) (map[string][]string, error) {
 	d := defaults()
+	applied := map[string][]string{}
 	for old, replacements := range renamedScheduleKeys {
 		if !k.Exists(old) {
 			continue
 		}
 		val := k.String(old)
 		for _, key := range replacements {
-			if def, _ := d[key].(string); k.String(key) != def {
+			if def, _ := d[key].(string); k.Exists(key) && k.String(key) != def {
 				continue
 			}
 			if err := k.Set(key, val); err != nil {
-				return err
+				return nil, err
 			}
+			applied[old] = append(applied[old], key)
 		}
-		slog.WarnContext(
-			context.Background(),
-			"config: schedules key was renamed; still honouring the old one",
-			"deprecated.key", old,
-			"replacement.keys", strings.Join(replacements, ", "),
-			"interval", val,
-		)
 	}
-	return nil
+	return applied, nil
 }
 
-func finalize(k *koanf.Koanf) (*Config, error) {
+func finalize(k, fileK *koanf.Koanf) (*Config, *envLayer, error) {
 	// Double-underscore is the path separator; a single underscore is literal
 	// so keys with underscore segments (data_dir, session_secret, tmdb_api_key)
 	// stay reachable: STREAMLINE_AUTH__SESSION_SECRET -> auth.session_secret.
@@ -483,27 +522,305 @@ func finalize(k *koanf.Koanf) (*Config, error) {
 		key := strings.ToLower(strings.TrimPrefix(s, "STREAMLINE_"))
 		return strings.ReplaceAll(key, "__", ".")
 	})
-	if err := k.Load(envProvider, nil); err != nil {
-		return nil, err
+	envK := koanf.New(".")
+	if err := envK.Load(envProvider, nil); err != nil {
+		return nil, nil, err
 	}
-	if err := applyRenamedScheduleKeys(k); err != nil {
-		return nil, err
+	if err := k.Merge(envK); err != nil {
+		return nil, nil, err
+	}
+
+	// The file layer gets the same expansion, so a file that still names a
+	// deprecated schedules key owns the replacement too and keeps its own
+	// cadence when write-back reverts an environment-supplied one.
+	if _, err := applyRenamedScheduleKeys(fileK); err != nil {
+		return nil, nil, err
+	}
+	applied, err := applyRenamedScheduleKeys(k)
+	if err != nil {
+		return nil, nil, err
+	}
+	envKeys := envK.Keys()
+	for old, written := range applied {
+		slog.WarnContext(
+			context.Background(),
+			"config: schedules key was renamed; still honouring the old one",
+			"deprecated.key", old,
+			"replacement.keys", strings.Join(written, ", "),
+			"interval", k.String(old),
+		)
+		// The alias lands environment data on a key the environment never
+		// named. Unless the replacement joins the env key set, write-back reads
+		// it as the file's own and copies it to disk.
+		if envK.Exists(old) {
+			envKeys = append(envKeys, written...)
+		}
 	}
 
 	var cfg Config
 	if err := k.Unmarshal("", &cfg); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if err := cfg.Validate(); err != nil {
-		return nil, err
+		return nil, nil, err
+	}
+	if err := ensureDataDir(&cfg); err != nil {
+		return nil, nil, err
 	}
 	m, err := loadSecretFiles(&cfg)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	secretFiles.Store(&m)
-	return &cfg, nil
+
+	structK, err := flatten(&cfg)
+	if err != nil {
+		return nil, nil, err
+	}
+	envKeys = configKeys(envKeys, structK)
+
+	announceEnvLayer(envKeys)
+	warnDefaultedKeys(&cfg, k, fileK, envK)
+	warnEnvShadowsFile(fileK, envK)
+	warnFileNeedsEnv(fileK)
+	warnDatabaseElsewhere(&cfg, fileK, envK)
+	return &cfg, &envLayer{file: fileK, keys: envKeys}, nil
+}
+
+// configKeys drops the STREAMLINE_* variables that name no config key at all —
+// STREAMLINE_PUBLIC_URL, the hidden e2e seams, anything else in the process
+// environment that happens to share the prefix — then sorts and dedupes what
+// is left.
+//
+// Write-back already ignores them, since they never reach the struct-shaped
+// koanf it strips. This is about what Load claims out loud, and what the
+// withheld-keys warning lists: "these settings come from the environment" has
+// to be true of every key it names, in the same order on every run. Ranging
+// over the environment map gave neither.
+func configKeys(keys []string, structK *koanf.Koanf) []string {
+	out := make([]string, 0, len(keys))
+	for _, key := range keys {
+		if structK.Exists(key) {
+			out = append(out, key)
+		}
+	}
+	slices.Sort(out)
+	return slices.Compact(out)
+}
+
+// announceEnvLayer names, once per boot, the settings this process took from
+// the environment. Write-back never records their values (see envLayer), so
+// this line — from the boot where they still hold — is what an operator has to
+// compare against when a setting silently changes after a variable is dropped.
+// Keys only: several of them are secrets.
+func announceEnvLayer(envKeys []string) {
+	if len(envKeys) == 0 {
+		return
+	}
+	slog.InfoContext(
+		context.Background(),
+		"these settings come from the environment and are never written to the config file",
+		"config.env.keys",
+		strings.Join(envKeys, ", "),
+	)
+}
+
+// provenanceWatchKeys are the settings whose built-in default silently
+// redirects real work instead of failing closed: where the database, the
+// library and the downloads live, whether imports are fenced to known roots,
+// where telemetry goes, how long a session lasts. Losing
+// STREAMLINE_LIBRARY__MOVIE_PATH does not stop the importer — it starts filing
+// films into /media/movies instead, and nothing else in the process has a word
+// to say about it.
+//
+// Keys whose default fails closed stay off the list on purpose:
+// auth.trusted_networks and server.trusted_proxies revert to trusting nobody,
+// which surfaces as an outage rather than as data going quietly to the wrong
+// place. So does the rest of the config — a defaulted log format or schedule
+// interval is not a loss worth a warning every boot.
+//
+// Nothing here is a secret, so these warnings may print values.
+var provenanceWatchKeys = []string{
+	"auth.session_ttl",
+	"data_dir",
+	"library.allowed_download_roots",
+	"library.download_path",
+	"library.movie_path",
+	"library.series_path",
+	"otel.endpoint",
+}
+
+// warnDefaultedKeys fires on a boot where a watched key came from neither the
+// file nor the environment, so the built-in default decides.
+//
+// Nothing else catches this. data_dir's default is a relative path, Validate
+// creates it, and SQLite opens a fresh empty database inside it without
+// complaint — an install whose STREAMLINE_DATA_DIR went away comes up looking
+// wiped. That boot is where the loss lands, so that is where it has to be
+// audible: the withheld-keys warning at write-back happens long before, on a
+// run that is still working.
+//
+// It stays a warning and the boot continues, so an operator running at
+// log.app.level: error sees nothing. That is the accepted cost. Refusing to
+// start is not available — running on the defaults is a supported
+// configuration, and the shipped config.example.yaml is DumpDefaults output
+// naming every one of these keys, so only an under-specified install reaches
+// this line at all. Raising it to error would cry wolf on every one of those
+// installs. The write path returns errors where it can instead of logging —
+// ErrEnvOwned for a change the environment would discard, and
+// ErrWriteBackUnloadable for one that would leave the file unloadable — but
+// not for a file that already needed the environment before the update, which
+// Update states its reasons for saving anyway.
+func warnDefaultedKeys(c *Config, merged, fileK, envK *koanf.Koanf) {
+	var pairs []string
+	defaultedDataDir := false
+	for _, key := range provenanceWatchKeys {
+		if fileK.Exists(key) || envK.Exists(key) {
+			continue
+		}
+		pairs = append(pairs, fmt.Sprintf("%s=%v", key, merged.Get(key)))
+		if key == "data_dir" {
+			defaultedDataDir = true
+		}
+	}
+	if len(pairs) == 0 {
+		return
+	}
+	attrs := []any{"config.defaulted", strings.Join(pairs, ", ")}
+	if defaultedDataDir {
+		attrs = append(attrs, "database.path", c.DatabasePath())
+	}
+	slog.WarnContext(
+		context.Background(),
+		"these settings are named in neither the config file nor the environment, so the built-in default decides where this instance reads and writes — if one of them used to come from the environment, it is looking somewhere else now",
+		attrs...,
+	)
+}
+
+// warnEnvShadowsFile fires on a boot where the environment overrides a watched
+// key the config file also sets, naming the value the file would fall back to.
+//
+// Only this boot can see it. With the variable gone the next one reads the
+// file's value and is indistinguishable from an install that was always
+// configured that way, so warnDefaultedKeys has nothing to catch: dropping
+// STREAMLINE_DATA_DIR moves the process onto whatever data_dir the file names —
+// a different, probably empty database — in silence.
+func warnEnvShadowsFile(fileK, envK *koanf.Koanf) {
+	var pairs []string
+	for _, key := range provenanceWatchKeys {
+		if !fileK.Exists(key) || !envK.Exists(key) {
+			continue
+		}
+		if slices.Equal(
+			settingValues(fileK.Get(key)),
+			settingValues(envK.Get(key)),
+		) {
+			continue
+		}
+		pairs = append(pairs, fmt.Sprintf("%s=%v", key, fileK.Get(key)))
+	}
+	if len(pairs) == 0 {
+		return
+	}
+	slog.WarnContext(
+		context.Background(),
+		"the environment is overriding settings the config file also names — drop those variables and this instance moves to the file's values",
+		"config.file.shadowed",
+		strings.Join(pairs, ", "),
+	)
+}
+
+// settingValues renders a koanf value as the list of values the setting
+// resolves to, so two layers can be compared for what they mean rather than
+// for how they print. An environment variable is always one string while the
+// file holds a list as []any, and every scalar arrives typed on one side and
+// as text on the other: rendering both whole reported
+// library.allowed_download_roots: ["/downloads"] as shadowed by
+// STREAMLINE_LIBRARY__ALLOWED_DOWNLOAD_ROOTS=/downloads, which is the same
+// setting.
+func settingValues(v any) []string {
+	switch t := v.(type) {
+	case nil:
+		return nil
+	case []any:
+		out := make([]string, 0, len(t))
+		for _, e := range t {
+			out = append(out, fmt.Sprint(e))
+		}
+		return out
+	case []string:
+		return t
+	default:
+		return []string{fmt.Sprint(v)}
+	}
+}
+
+// warnFileNeedsEnv fires when the config file, on its own, is not a config
+// this process would start on — the environment is filling a gap in it, and
+// the boot that loses that variable stops here instead of running.
+//
+// The write-back reports the same thing (see config.Update), but only when
+// something saves, and only to whoever reads the response. This is the boot
+// that can still be fixed before a restart proves it.
+func warnFileNeedsEnv(fileK *koanf.Koanf) {
+	if len(fileK.Keys()) == 0 {
+		return
+	}
+	err := checkLoadable(fileK)
+	if err == nil {
+		return
+	}
+	slog.WarnContext(
+		context.Background(),
+		"the config file does not load without the environment — with these variables gone, the next boot stops here instead of starting",
+		"error",
+		err,
+	)
+}
+
+// warnDatabaseElsewhere fires when the data_dir this boot resolved holds no
+// database while another data_dir the same config names does. That is the boot
+// where an instance comes up looking wiped, and the one that can still say so:
+// the write-back warnings all happened on the previous run, whose logs went
+// with the container that was replaced.
+//
+// It only sees the data_dirs this config names — the file's, the
+// environment's, the built-in default. A variable that pointed somewhere else
+// entirely and was then dropped leaves nothing here to compare against; that
+// direction is warnEnvShadowsFile's to announce, one boot early.
+func warnDatabaseElsewhere(c *Config, fileK, envK *koanf.Koanf) {
+	if _, err := os.Stat(c.DatabasePath()); err == nil {
+		return
+	}
+	configured := filepath.Clean(c.DataDir)
+	seen := map[string]bool{configured: true}
+	var found []string
+	for _, dir := range []string{
+		fileK.String("data_dir"),
+		envK.String("data_dir"),
+		fmt.Sprint(defaults()["data_dir"]),
+	} {
+		if dir == "" || seen[filepath.Clean(dir)] {
+			continue
+		}
+		seen[filepath.Clean(dir)] = true
+		db := filepath.Join(dir, "streamline.db")
+		if _, err := os.Stat(db); err == nil {
+			found = append(found, db)
+		}
+	}
+	if len(found) == 0 {
+		return
+	}
+	slog.WarnContext(
+		context.Background(),
+		"this instance is starting on an empty database while a database sits under a data_dir this config also names — check data_dir before anything writes to the new one",
+		"database.missing",
+		c.DatabasePath(),
+		"database.elsewhere",
+		strings.Join(found, ", "),
+	)
 }
 
 // secretFiles caches the trimmed contents of every *_file secret reference,
@@ -526,71 +843,68 @@ func SecretValue(inline, file string) string {
 }
 
 // loadSecretFiles reads every *_file path referenced by c into a path->content
-// map. Fails fast if any referenced file is unreadable.
+// map, and returns nothing but the joined error when any of them is
+// unreadable.
+//
+// It reports every unreadable path rather than the first, so an operator
+// materialising secrets learns about all of them in one boot — and so
+// config.Update can tell a path this update broke from one that was already
+// broken, which it cannot do when a single failure stands for the whole set.
 func loadSecretFiles(c *Config) (map[string]string, error) {
 	m := map[string]string{}
-	read := func(path string) error {
-		if path == "" {
-			return nil
+	seen := map[string]bool{}
+	var errs []error
+	read := func(path string) {
+		if path == "" || seen[path] {
+			return
 		}
-		if _, ok := m[path]; ok {
-			return nil
-		}
+		seen[path] = true
 		b, err := os.ReadFile(path)
 		if err != nil {
-			return fmt.Errorf("read secret file %q: %w", path, err)
+			errs = append(errs, fmt.Errorf("read secret file %q: %w", path, err))
+			return
 		}
 		m[path] = strings.TrimSpace(string(b))
-		return nil
 	}
 
-	for _, p := range []string{
-		c.Auth.SessionSecretFile,
-		c.Metadata.TMDBAPIKeyFile,
-		c.Metadata.TVDBAPIKeyFile,
-	} {
-		if err := read(p); err != nil {
-			return nil, err
-		}
-	}
+	read(c.Auth.SessionSecretFile)
+	read(c.Metadata.TMDBAPIKeyFile)
+	read(c.Metadata.TVDBAPIKeyFile)
 	for _, o := range c.Auth.OIDC {
-		if err := read(o.ClientSecretFile); err != nil {
-			return nil, err
-		}
+		read(o.ClientSecretFile)
 	}
 	for _, x := range c.Indexers {
-		if err := read(x.APIKeyFile); err != nil {
-			return nil, err
-		}
+		read(x.APIKeyFile)
 	}
 	for _, d := range c.DownloadClients {
-		if err := read(d.PasswordFile); err != nil {
-			return nil, err
-		}
-		if err := read(d.APIKeyFile); err != nil {
-			return nil, err
-		}
+		read(d.PasswordFile)
+		read(d.APIKeyFile)
 	}
 	for _, s := range c.MediaServer.Servers {
-		if err := read(s.APIKeyFile); err != nil {
-			return nil, err
-		}
+		read(s.APIKeyFile)
+	}
+	if len(errs) > 0 {
+		return nil, errors.Join(errs...)
 	}
 	return m, nil
 }
 
 func Load(cfgFile string) (*Config, error) {
 	k := newDefaultsKoanf()
+	fileK := koanf.New(".")
 
 	if cfgFile != "" {
-		if err := k.Load(file.Provider(cfgFile), yaml.Parser()); err != nil {
+		if err := fileK.Load(file.Provider(cfgFile), yaml.Parser()); err != nil {
+			return nil, err
+		}
+		if err := k.Merge(fileK); err != nil {
 			return nil, err
 		}
 	}
-	cfg, err := finalize(k)
+	cfg, layer, err := finalize(k, fileK)
 	if err != nil {
 		return nil, err
 	}
-	store(cfg, cfgFile, k)
+	store(cfg, cfgFile, k, layer)
 	return cfg, nil
 }
