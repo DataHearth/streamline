@@ -35,4 +35,22 @@ var _ = Describe("Server", Label("unit", "server"), func() {
 			Expect(body["status"]).To(Equal("healthy"))
 		})
 	})
+
+	// /health is registered before the auth middleware and answers without a
+	// session, so it proves the headers come from the chain rather than from
+	// any one handler.
+	Describe("security headers", func() {
+		It("should stamp every response, including pre-auth routes", func() {
+			resp, err := http.Get(ts.URL + "/health")
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+
+			Expect(resp.Header.Get("Content-Security-Policy")).
+				To(ContainSubstring("frame-ancestors 'none'"))
+			Expect(resp.Header.Get("X-Frame-Options")).To(Equal("DENY"))
+			Expect(resp.Header.Get("X-Content-Type-Options")).To(Equal("nosniff"))
+			Expect(resp.Header.Get("Referrer-Policy")).To(Equal("same-origin"))
+			Expect(resp.Header.Get("Strict-Transport-Security")).To(BeEmpty())
+		})
+	})
 })
