@@ -36,16 +36,20 @@ var (
 	// ErrUserNotFound is returned when the target user does not exist.
 	// Handlers map to 404.
 	ErrUserNotFound = errors.New("user not found")
-
-	// ErrAccountLocked is the sentinel callers compare against using errors.As
-	// (errors.Is also works because Unwrap is not defined). The runtime value
-	// returned by Login carries the auto-expiry time in LockedUntil.
-	ErrAccountLocked = ErrAccountLockedT{}
 )
 
 // ErrAccountLockedT is returned by Login when the account has been locked
-// after too many failed attempts. LockedUntil reports when the lockout
-// auto-expires; handlers surface this to users via Retry-After / banner.
+// after too many failed attempts, and LockedUntil is when that expires.
+//
+// Nothing discriminates on it. POST /auth/login answers a lock with the same
+// status, body and headers as a wrong password and an unknown address, and
+// Login spends equalizeLoginCost before returning this so the timing matches
+// too — distinguishing the three is how an attacker learns which addresses
+// have accounts. So LockedUntil reaches the span and the log and stops there,
+// and a "try again in N minutes" banner or a Retry-After derived from it
+// reopens the oracle both of those close. The type survives its own
+// unreachable message because Login still records it as the span's error,
+// which is where the distinction is wanted.
 type ErrAccountLockedT struct {
 	LockedUntil time.Time
 }

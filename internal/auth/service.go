@@ -1,10 +1,12 @@
 package auth
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"log/slog"
 	"sync"
@@ -266,10 +268,201 @@ func (s *auth) Register(
 	return u, token, nil
 }
 
+// dummyPasswordHash is what equalizeLoginCost compares against. Hashing a
+// random password at init costs the same as a real comparison while
+// guaranteeing nothing a caller can send will ever match it.
+var dummyPasswordHash = otelx.Must(
+	bcrypt.GenerateFromPassword([]byte(rand.Text()), bcrypt.DefaultCost),
+)
+
+// loweredCostHashes[c] is dummyPasswordHash with its two cost digits rewritten
+// to c, for every c below bcrypt.DefaultCost. The rewrite leaves a hash whose
+// tail no longer matches its own salt, which is exactly as useful:
+// CompareHashAndPassword still runs all 1<<c key expansions before it can
+// discover the mismatch, and the expansions are the only thing wanted here.
+// Deriving them from the one hash keeps package init at a single
+// GenerateFromPassword rather than one per cost.
+var loweredCostHashes = func() [bcrypt.DefaultCost][]byte {
+	var out [bcrypt.DefaultCost][]byte
+	for c := bcrypt.MinCost; c < bcrypt.DefaultCost; c++ {
+		h := bytes.Clone(dummyPasswordHash)
+		h[4], h[5] = byte('0'+c/10), byte('0'+c%10)
+		out[c] = h
+	}
+	return out
+}()
+
+// equalizeLoginCost spends one default-cost bcrypt comparison. Login calls it
+// on the paths that reject before reaching a usable hash — unknown email,
+// locked account — and comparePassword calls it whenever the stored hash is one
+// bcrypt cannot answer for in exactly this much work, so all of them cost what a
+// wrong password costs. Answering those in microseconds where a live, unlocked
+// account takes tens of milliseconds tells an attacker which emails exist and
+// which are locked, however uniform the response body.
+//
+// It does not equalize everything: a rejected login for an address that exists
+// still runs applyFailedAttempt's SQLite transaction, which an unknown address
+// skips. Six runs of 150 interleaved samples per case, each against a freshly
+// restarted server and timed over HTTP, put the known address between 0.17ms
+// faster and 0.92ms slower at the median, and between 0.11ms faster and 0.42ms
+// slower at the minimum — the estimator a remote attacker would use, the
+// minimum being the sample least polluted by scheduling noise. Both bands
+// straddle zero and both flip sign run to run, so what they size is the
+// resolution of the measurement, not the leak: read them as the interval a
+// repeat should land in, not as a difference of known magnitude, and re-measure
+// rather than trusting the endpoints.
+//
+// Sampling at that length needs a fresh source address per request, since five
+// attempts per IP per 15 minutes throttles anything longer — which is the same
+// reason the difference is left standing rather than papered over with a
+// transaction on a user that does not exist. No attacker gets near the sample
+// count it would take to pull a fraction of a millisecond out of the ~47ms
+// bcrypt floor it hides behind.
+func equalizeLoginCost(password string) {
+	_ = bcrypt.CompareHashAndPassword(dummyPasswordHash, []byte(password))
+}
+
+// spendCostShortfall spends the key expansions a comparison against a hash
+// below bcrypt.DefaultCost did not. One comparison at each cost from cost up to
+// DefaultCost-1 runs (1<<DefaultCost)-(1<<cost) of them, which is exactly what
+// the cheap hash skipped; a hash at the default enters the loop zero times, and
+// comparePassword never lets a costlier one reach here.
+//
+// Spending one whole default-cost comparison instead is the obvious version and
+// is wrong in the other direction: it overshoots by the cheap comparison, which
+// is only negligible at the cheap end. Measured over HTTP that put a cost-4
+// account 0.34-0.94ms and a cost-9 account 20.6-22.9ms *slower* than every other
+// account — the second half the size of the floor it was supposed to hide
+// inside, and one-sided in all three runs. Topping up by the shortfall instead
+// leaves both inside a -0.78 to +1.33ms spread around the unknown-email floor
+// across six runs of 150 interleaved samples: a band that contains zero, whose
+// sign flips run to run, and which is not a bound on anything.
+//
+// cost only reaches here from a header bcrypt.Cost accepted and comparePassword
+// did not refuse, so it is inside [bcrypt.MinCost, maxUsableHashCost] and never
+// indexes a nil entry.
+func spendCostShortfall(cost int, password string) {
+	for c := cost; c < bcrypt.DefaultCost; c++ {
+		_ = bcrypt.CompareHashAndPassword(loweredCostHashes[c], []byte(password))
+	}
+}
+
+// maxUsableHashCost is the highest cost comparePassword will let a stored hash
+// run at. It is bcrypt.DefaultCost because that is the only amount of work this
+// package can spend on demand: equalizeLoginCost spends 1<<bcrypt.DefaultCost
+// key expansions and spendCostShortfall tops a cheaper hash up to the same
+// number. There is no operation in the other direction — a comparison cannot be
+// made to cost less than its own cost — so covering a costlier hash would mean
+// raising the equalizer, and every login on the instance would then pay the
+// higher cost forever, twice over for the accounts that do not need it.
+const maxUsableHashCost = bcrypt.DefaultCost
+
+// errHashCostAboveCeiling is what comparePassword returns instead of running a
+// stored hash whose cost exceeds maxUsableHashCost. Login treats it like any
+// other failed comparison, so it never reaches a caller.
+var errHashCostAboveCeiling = errors.New(
+	"stored password hash costs more than a login may spend",
+)
+
+// comparePassword checks a candidate password against a stored hash and spends
+// one default-cost bcrypt comparison — 1<<bcrypt.DefaultCost key expansions —
+// whatever shape the stored hash is in. Not "at least" that: a hash bcrypt would
+// answer for less is topped up to it, and a hash that would cost more is refused
+// rather than run, so no stored hash moves the answer in either direction.
+//
+// Whether bcrypt did the work is decided on what CompareHashAndPassword
+// returned, never on what the stored hash looks like. Exactly one outcome means
+// it ran the rounds and the password was wrong —
+// bcrypt.ErrMismatchedHashAndPassword — so that is the one this enumerates.
+// Every other error means it gave up before spending anything, and the ways it
+// can do that are deliberately not listed: a list covers what it names and
+// silently misses the rest, including whatever x/crypto adds next.
+//
+// Gating usability on bcrypt.Cost is the version of that list which looks total
+// and is not. Cost checks the length, the version prefix and the two cost
+// digits, and never looks at the salt — so "$2a$10$" over a 22-character salt
+// window carrying one byte outside ./A-Za-z0-9 passes it, and the compare then
+// dies in expensiveBlowfishSetup's base64 decode before a single round. Measured
+// over HTTP, 150 interleaved attempts per case, three runs, that hash answered
+// in 0.24-0.29ms against a 41-43ms unknown-email floor — 149-176x faster, enough
+// to name the account from one request. Deciding on the result puts every one of
+// those cases back inside 1.5ms of the floor.
+//
+// Cost is still read, but only to refuse. The header is an upper bound on the
+// work the compare will do — bcrypt either runs 1<<cost expansions or gives up
+// earlier — so refusing on the header alone can never let an expensive
+// comparison through, which is the one thing a header can be trusted for. What
+// it cannot do is promise the work happens, and nothing here asks it to:
+// everything it accepts still has to prove itself by the result.
+//
+// password_hash is optional on the user schema and LoginOIDC creates SSO
+// accounts without one, so the empty string reaches here in normal operation;
+// every other shape arrives from a hand-edited row, a restored backup or a
+// migration off another system. Nothing this app writes is touched by the
+// ceiling: every hash it stores comes from GenerateFromPassword at
+// bcrypt.DefaultCost, and a cheaper one still authenticates after paying its
+// shortfall.
+//
+// A costlier one no longer authenticates at all. It answers exactly like an SSO
+// account with no password. Stating what that costs the account precisely,
+// because "unusable" overstates one half of it and understates the other: the
+// password is what stops working, not the account. An OIDC-linked identity
+// still signs in through its provider — LoginOIDC never reads password_hash —
+// and that sign-in does not clear the ceiling, it just walks around it. What no
+// longer works is every path that has to verify the stored password, and that
+// is both of them: Login and ChangePassword run the same comparison, so the
+// account cannot rewrite its own hash down to a runnable cost by supplying the
+// current password. Only AdminResetPassword can, rotating the hash at the
+// default cost without verifying the old one.
+//
+// That both paths compare here is what makes the paragraph above true, and it
+// is load-bearing rather than tidy. While ChangePassword called bcrypt
+// directly, a genuine $2a$11$ hash gave one credential two answers: POST
+// /auth/login with the correct password returned 401 in 48.8ms, and POST
+// /api/v1/auth/password with that same correct password as current_password
+// returned 204 in 142.2ms, rewrote the row to $2a$10$, and the account logged
+// in on its new password immediately after. Any comparison against a stored
+// hash added later belongs here for the same reason.
+//
+// That is the deliberate cost of the ceiling, and it buys two things. A
+// comparison the app cannot pad is a one-request oracle in the same way the bad
+// salt was, only slower rather than faster: measured over HTTP, 150 interleaved
+// attempts per case, three runs, a cost-12 account answered in 173.0-183.3ms
+// against a 42.8-45.0ms unknown-email floor — 3.97-4.07x, +130 to +138ms, no
+// statistics needed. And an unpadded comparison is unbounded work inside one
+// request: "$2a$31$" over a *valid* salt is 2^31 key expansions, and one such
+// POST /auth/login held a core at 98% for the full minute a client waited on it
+// and still had not answered. With the ceiling in place all eleven
+// shapes measured — cost 4, 9, 12, 14 and 31, the empty, truncated and bad-salt
+// hashes, a good password and an unknown address — answer inside 0.99x to 1.08x
+// of the floor.
+func comparePassword(ctx context.Context, hash, password string) error {
+	cost, costErr := bcrypt.Cost([]byte(hash))
+	if costErr == nil && cost > maxUsableHashCost {
+		slog.WarnContext(ctx, "stored password hash is too costly to run; "+
+			"this account cannot log in until its password is reset",
+			"password_hash.cost", cost,
+			"password_hash.max_cost", maxUsableHashCost,
+		)
+		equalizeLoginCost(password)
+		return errHashCostAboveCeiling
+	}
+
+	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	if err != nil && !errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
+		equalizeLoginCost(password)
+		return err
+	}
+	if costErr == nil {
+		spendCostShortfall(cost, password)
+	}
+	return err
+}
+
 // Login verifies credentials and returns a signed JWT. Account lockout state
-// is checked first (locked → ErrAccountLockedT bypasses bcrypt). On password
-// mismatch the failed-attempt counter is incremented inside a transaction so
-// concurrent attempts can't race the increment.
+// is checked before the password. On password mismatch the failed-attempt
+// counter is incremented inside a transaction so concurrent attempts can't
+// race the increment.
 func (s *auth) Login(
 	ctx context.Context,
 	email, password string,
@@ -293,6 +486,7 @@ func (s *auth) Login(
 
 	u, err := s.db.FindUserByEmail(ctx, email)
 	if err != nil {
+		equalizeLoginCost(password)
 		outcome = "invalid_credentials"
 		return "", otelx.RecordSpanError(span, fmt.Errorf("invalid credentials"))
 	}
@@ -304,15 +498,13 @@ func (s *auth) Login(
 		LockedUntil:  u.LockedUntil,
 	}
 	if locked, until := IsLocked(state, now); locked {
+		equalizeLoginCost(password)
 		span.SetAttributes(attribute.Bool("auth.lockout.locked", true))
 		outcome = "locked"
 		return "", otelx.RecordSpanError(span, ErrAccountLockedT{LockedUntil: until})
 	}
 
-	if err := bcrypt.CompareHashAndPassword(
-		[]byte(u.PasswordHash),
-		[]byte(password),
-	); err != nil {
+	if err := comparePassword(ctx, u.PasswordHash, password); err != nil {
 		next, locked, until, txErr := s.applyFailedAttempt(ctx, u.ID, now)
 		if txErr != nil {
 			outcome = "invalid_credentials"

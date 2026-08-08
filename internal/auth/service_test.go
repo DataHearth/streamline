@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 	entuser "github.com/datahearth/streamline/ent/user"
 	"github.com/datahearth/streamline/internal/db"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
+	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/testutil"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
@@ -403,6 +405,243 @@ var _ = Describe("Login lockout", Label("unit", "auth"), func() {
 		_, err = svc.Login(ctx, "x@example.com", "wrong", SessionMeta{})
 		var locked ErrAccountLockedT
 		Expect(errors.As(err, &locked)).To(BeTrue())
+	})
+})
+
+var _ = Describe("Login enumeration resistance", Label("unit", "auth"), func() {
+	var (
+		ctx       context.Context
+		storeMock *dbmocks.MockStore_Expecter
+		svc       *auth
+	)
+
+	BeforeEach(func() {
+		ctx = context.Background()
+		store := dbmocks.NewMockStore(GinkgoT())
+		storeMock = store.EXPECT()
+		m, err := New(store)
+		Expect(err).NotTo(HaveOccurred())
+		svc = m.(*auth)
+	})
+
+	// bcryptCost times one real comparison so the assertions below scale with
+	// whatever cost the build uses instead of a hardcoded floor. Every bound is
+	// a lower one: a loaded machine only ever makes bcrypt slower.
+	bcryptCost := func() time.Duration {
+		start := time.Now()
+		_ = bcrypt.CompareHashAndPassword(dummyPasswordHash, []byte("nope"))
+		return time.Since(start)
+	}
+
+	It("spends a password comparison on an email that does not exist", func() {
+		reference := bcryptCost()
+		storeMock.FindUserByEmail(mock.Anything, "ghost@example.com").
+			Return(nil, &ent.NotFoundError{}).Once()
+
+		start := time.Now()
+		_, err := svc.Login(ctx, "ghost@example.com", "hunter2", SessionMeta{})
+		elapsed := time.Since(start)
+
+		Expect(err).To(MatchError("invalid credentials"))
+		Expect(elapsed).To(BeNumerically(">", reference/2))
+	})
+
+	It("spends a password comparison on a locked account", func() {
+		reference := bcryptCost()
+		future := time.Now().Add(10 * time.Minute)
+		storeMock.FindUserByEmail(mock.Anything, "locked@example.com").
+			Return(&ent.User{
+				ID:           1,
+				Email:        "locked@example.com",
+				PasswordHash: "irrelevant",
+				LockedUntil:  &future,
+			}, nil).Once()
+
+		start := time.Now()
+		_, err := svc.Login(ctx, "locked@example.com", "hunter2", SessionMeta{})
+		elapsed := time.Since(start)
+
+		var locked ErrAccountLockedT
+		Expect(errors.As(err, &locked)).To(BeTrue())
+		Expect(elapsed).To(BeNumerically(">", reference/2))
+	})
+
+	// expectFailedAttempt mocks the transaction Login runs after a mismatch, so
+	// the specs below cost what a wrong password costs end to end.
+	expectFailedAttempt := func(id uint32) {
+		GinkgoHelper()
+		tx := dbmocks.NewMockTx(GinkgoT())
+		storeMock.Tx(mock.Anything).Return(tx, nil).Once()
+		tx.EXPECT().FindUserByID(mock.Anything, id).
+			Return(&ent.User{ID: id}, nil).Once()
+		tx.EXPECT().UpdateUser(mock.Anything, id,
+			mock.AnythingOfType("db.UpdateUserParams")).
+			Return(&ent.User{ID: id}, nil).Once()
+		tx.EXPECT().Commit().Return(nil).Once()
+	}
+
+	// wellFormed is a genuine default-cost hash, spliced below into the shapes
+	// bcrypt parses but cannot finish.
+	wellFormed := string(otelx.Must(bcrypt.GenerateFromPassword(
+		[]byte("some other password"), bcrypt.DefaultCost,
+	)))
+
+	// encodedSaltLen is the base64 salt window bcrypt writes between the cost
+	// digits and the hash tail. x/crypto keeps the constant unexported.
+	const encodedSaltLen = 22
+
+	// corruptSalt puts a byte outside bcrypt's ./A-Za-z0-9 salt alphabet at
+	// index idx of the salt window, which starts at offset 7,
+	// right after "$2a$10$". bcrypt.Cost never looks at the salt, so the hash
+	// still reports its cost; base64Decode inside expensiveBlowfishSetup
+	// rejects it before the 1<<cost rounds run.
+	corruptSalt := func(hash string, idx int) string {
+		GinkgoHelper()
+		Expect(len(hash)).To(BeNumerically(">", 7+idx))
+		return hash[:7+idx] + "!" + hash[8+idx:]
+	}
+
+	// atCost rewrites the two cost digits and leaves the salt intact, so the
+	// compare really would run 1<<c key expansions. Generating a cost-14 hash
+	// for real costs 0.7s and a cost-31 one is not reachable in a test's
+	// lifetime; only the expansions the compare is asked for matter here, and
+	// the tail no longer matching its own salt does not change how many.
+	atCost := func(hash string, c int) string {
+		return hash[:4] + fmt.Sprintf("%02d", c) + hash[6:]
+	}
+
+	// FlakeAttempts because both bounds below are wall-clock: a login that loses
+	// its core to something else on the machine reads slow through no fault of
+	// the code, and one such reading was seen while writing this. Retrying
+	// re-times the reference too, so a busy machine costs a repeat rather than a
+	// wider band. The regressions this is here for are 16x and up and fail every
+	// attempt.
+	DescribeTable(
+		"answers for one default-cost comparison whatever the stored hash costs",
+		FlakeAttempts(3),
+		func(stored string) {
+			reference := bcryptCost()
+			storeMock.FindUserByEmail(mock.Anything, "sso@example.com").
+				Return(&ent.User{
+					ID:           7,
+					Email:        "sso@example.com",
+					PasswordHash: stored,
+				}, nil).Once()
+			expectFailedAttempt(7)
+
+			start := time.Now()
+			_, err := svc.Login(ctx, "sso@example.com", "hunter2", SessionMeta{})
+			elapsed := time.Since(start)
+
+			Expect(err).To(MatchError("invalid credentials"))
+			Expect(elapsed).To(BeNumerically(">", reference/2))
+			// The ceiling half: a hash the app cannot pad down to the floor has
+			// to be refused, not run. Four times the reference is the widest
+			// band that still catches cost 14 and cost 31. It is too wide to
+			// catch the boundary, which is only twice the floor — that one is
+			// pinned by the refusal spec below, which needs no clock.
+			Expect(elapsed).To(BeNumerically("<", 4*reference))
+		},
+		// An SSO-only account: ent's password_hash is Optional and the OIDC
+		// login path creates users without one.
+		Entry("no password at all", ""),
+		Entry("truncated bcrypt hash", "$2a$10$abcdefghijklmnop"),
+		Entry("not bcrypt at all", "plaintext-password"),
+		Entry(
+			"bcrypt hash cheaper than the default cost",
+			string(otelx.Must(bcrypt.GenerateFromPassword(
+				[]byte("some other password"), bcrypt.MinCost,
+			))),
+		),
+		// The three below all satisfy bcrypt.Cost and fail inside the compare,
+		// so nothing gated on the hash prefix sees them coming.
+		Entry(
+			"well-formed prefix over an unparseable salt",
+			corruptSalt(wellFormed, 0),
+		),
+		Entry(
+			"unparseable byte at the very end of the salt window",
+			corruptSalt(wellFormed, encodedSaltLen-1),
+		),
+		Entry(
+			"cost 31 over an unparseable salt",
+			"$2a$31$"+corruptSalt(wellFormed, 0)[7:],
+		),
+		// The three below have valid salts, so the compare would run every one
+		// of the expansions their header asks for. Nothing tops those down.
+		Entry(
+			"one cost above the ceiling, over a valid salt",
+			atCost(wellFormed, maxUsableHashCost+1),
+		),
+		Entry(
+			"cost 14 over a valid salt",
+			atCost(wellFormed, 14),
+		),
+		// 2^31 expansions is days of CPU inside one unauthenticated request.
+		Entry(
+			"cost 31 over a valid salt",
+			atCost(wellFormed, bcrypt.MaxCost),
+		),
+	)
+
+	// The ceiling is a refusal, not a slow path: the account stops
+	// authenticating even for the password its hash was made from, exactly like
+	// an SSO account with no hash at all.
+	It("refuses a hash costlier than the ceiling, right password included", func() {
+		hash := string(otelx.Must(bcrypt.GenerateFromPassword(
+			[]byte("legacy"), maxUsableHashCost+1,
+		)))
+
+		Expect(comparePassword(ctx, hash, "legacy")).
+			To(MatchError(errHashCostAboveCeiling))
+	})
+
+	It("still authenticates a hash written at a lower cost", func() {
+		hash := otelx.Must(
+			bcrypt.GenerateFromPassword([]byte("legacy"), bcrypt.MinCost),
+		)
+		storeMock.FindUserByEmail(mock.Anything, "old@example.com").
+			Return(&ent.User{
+				ID:           8,
+				Email:        "old@example.com",
+				PasswordHash: string(hash),
+			}, nil).Once()
+		storeMock.CreateSession(mock.Anything,
+			mock.AnythingOfType("db.CreateSessionParams")).
+			Return(&ent.Session{ID: 1}, nil).Once()
+
+		token, err := svc.Login(ctx, "old@example.com", "legacy", SessionMeta{})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(token).NotTo(BeEmpty())
+	})
+
+	It("hashes the dummy at the same cost a stored password uses", func() {
+		cost, err := bcrypt.Cost(dummyPasswordHash)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(cost).To(Equal(bcrypt.DefaultCost))
+	})
+
+	// spendCostShortfall's arithmetic only holds if each spliced dummy really
+	// runs the cost it is filed under. bcrypt.Cost alone cannot say so — it
+	// reports the header of a hash that dies in base64Decode before a single
+	// round, which is the hole this whole area was fixed for. Only a compare
+	// that comes back ErrMismatchedHashAndPassword proves the rounds ran, and
+	// only then does the header it ran under mean anything.
+	It("files a lowered-cost dummy under the cost it actually runs", func() {
+		for c := bcrypt.MinCost; c < bcrypt.DefaultCost; c++ {
+			Expect(bcrypt.CompareHashAndPassword(
+				loweredCostHashes[c], []byte("nope"),
+			)).To(MatchError(bcrypt.ErrMismatchedHashAndPassword))
+			Expect(bcrypt.Cost(loweredCostHashes[c])).To(Equal(c))
+		}
+	})
+
+	It("cannot be matched by a supplied password", func() {
+		Expect(
+			bcrypt.CompareHashAndPassword(dummyPasswordHash, nil),
+		).To(HaveOccurred())
+		Expect(bcrypt.CompareHashAndPassword(dummyPasswordHash, []byte(""))).
+			To(HaveOccurred())
 	})
 })
 

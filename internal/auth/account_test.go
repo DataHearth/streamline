@@ -3,6 +3,8 @@ package auth
 import (
 	"context"
 	"errors"
+	"fmt"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -12,6 +14,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/db"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
+	"github.com/datahearth/streamline/internal/otelx"
 )
 
 var _ = Describe("Account service unit", Label("unit", "auth"), func() {
@@ -112,6 +115,88 @@ var _ = Describe("Account service unit", Label("unit", "auth"), func() {
 				svc.ChangePassword(ctx, 1, "oldpassword", "newpassw0rd!", "keep"),
 			).
 				To(MatchError(ContainSubstring("update password")))
+		})
+
+		// The ceiling belongs to the comparison, not to POST /auth/login. This
+		// endpoint authenticates on a session or an API key, and the restored
+		// backup that carries a costlier hash carries those with it, so the
+		// same stored hash arrives here — with no per-IP limiter in front of
+		// /api/v1 to slow a repeat.
+		Describe("the maxUsableHashCost ceiling", func() {
+			// atCost rewrites the two cost digits and leaves the salt intact,
+			// so the compare really would run 1<<c key expansions. Generating a
+			// cost-31 hash is not reachable in a test's lifetime, and only the
+			// expansions the compare is asked for matter here.
+			atCost := func(hash string, c int) string {
+				return hash[:4] + fmt.Sprintf("%02d", c) + hash[6:]
+			}
+
+			wellFormed := string(otelx.Must(bcrypt.GenerateFromPassword(
+				[]byte("legacy"), bcrypt.DefaultCost,
+			)))
+
+			// A costlier hash must fail for the password it was actually made
+			// from, or the account walks the ceiling off by rotating its own
+			// password: before this comparison went through comparePassword,
+			// this call returned 204 and rewrote the row at the default cost,
+			// which is the one thing the ceiling exists to prevent. Leaving
+			// UpdateUserPassword unmocked is the assertion that it never runs.
+			It(
+				"refuses a hash costlier than the ceiling, right password included",
+				func() {
+					hash := string(otelx.Must(bcrypt.GenerateFromPassword(
+						[]byte("legacy"), maxUsableHashCost+1,
+					)))
+					storeMock.FindUserByID(mock.AnythingOfType(ctxType), uint32(1)).
+						Return(&ent.User{ID: 1, PasswordHash: hash}, nil).Once()
+
+					Expect(
+						svc.ChangePassword(ctx, 1, "legacy", "newpassw0rd!", "keep"),
+					).
+						To(MatchError(ErrPasswordInvalid))
+				},
+			)
+
+			// FlakeAttempts for the same reason the login table carries it: the
+			// bound is wall-clock, and a spec that loses its core to something
+			// else on the machine reads slow through no fault of the code. The
+			// regression this catches is 15x and up.
+			DescribeTable(
+				"answers in one default-cost comparison whatever the stored hash costs",
+				FlakeAttempts(3),
+				func(stored string) {
+					start := time.Now()
+					_ = bcrypt.CompareHashAndPassword(
+						dummyPasswordHash,
+						[]byte("nope"),
+					)
+					reference := time.Since(start)
+
+					storeMock.FindUserByID(mock.AnythingOfType(ctxType), uint32(1)).
+						Return(&ent.User{ID: 1, PasswordHash: stored}, nil).Once()
+
+					start = time.Now()
+					err := svc.ChangePassword(
+						ctx,
+						1,
+						"legacy",
+						"newpassw0rd!",
+						"keep",
+					)
+					elapsed := time.Since(start)
+
+					Expect(err).To(MatchError(ErrPasswordInvalid))
+					Expect(elapsed).To(BeNumerically("<", 4*reference))
+				},
+				// 15x the reference before the fix.
+				Entry("cost 14 over a valid salt", atCost(wellFormed, 14)),
+				// 2^31 expansions: this one never answered at all, and held a
+				// core at 100% long after the client had given up.
+				Entry(
+					"cost 31 over a valid salt",
+					atCost(wellFormed, bcrypt.MaxCost),
+				),
+			)
 		})
 
 		It("succeeds when RevokeOtherSessions fails (best-effort)", func() {

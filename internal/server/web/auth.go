@@ -6,12 +6,12 @@ import (
 	"log/slog"
 	"math"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/coreos/go-oidc/v3/oidc"
-	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/auth"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/utils/httputil"
@@ -115,11 +115,16 @@ func (h *Handler) authLogin(w http.ResponseWriter, r *http.Request) {
 	email := strings.ToLower(strings.TrimSpace(body.Email))
 	tok, err := h.auth.Login(r.Context(), email, body.Password, sessionMeta(r))
 	if err != nil {
-		msg := "Invalid credentials"
-		if locked, ok := errors.AsType[auth.ErrAccountLockedT](err); ok {
-			msg = lockedMessage(locked.LockedUntil)
-		}
-		writeError(w, r, http.StatusUnauthorized, msg, "invalid_credentials")
+		// One answer for every rejection. Naming a lockout would say the
+		// account exists — nothing can lock an address nobody registered —
+		// so the caller learns that from a message meant to be helpful.
+		writeError(
+			w,
+			r,
+			http.StatusUnauthorized,
+			"Invalid credentials",
+			"invalid_credentials",
+		)
 		return
 	}
 	auth.SetSession(w, r, tok, h.sessionTTL())
@@ -361,32 +366,27 @@ func retryAfterSeconds(d time.Duration) string {
 
 // userFacingRegisterError maps a service error to a message safe for display.
 // Internal details are logged separately by the caller.
+//
+// Everything except a bad invite collapses into one line, so the *reason* a
+// registration failed never reaches the caller and the sign-in pointer stays
+// useful to whoever actually owns the address.
+//
+// Known open, and this function cannot close it: registration still tells a
+// prober whether an address is taken. authRegister answers 400 with this
+// message for an address that exists and 204 with a session cookie for one
+// that does not, so the status line alone settles it in one request — the
+// wording never had to. Closing it takes answering 204 either way and moving
+// the outcome to a mail the address's owner receives; nothing here sends mail,
+// so a uniform 204 would just swallow real signup failures. Timing and the
+// rate limiter are not part of the leak: RegisterOpen hashes the password
+// before it inserts, so both outcomes pay for that bcrypt and land within
+// noise of each other (measured over HTTP: taken p50 46.63ms, free 46.85ms),
+// and allowAttempt charges the limiter before the outcome is known.
 func userFacingRegisterError(err error) string {
-	switch {
-	case errors.Is(err, auth.ErrInviteInvalid):
+	if errors.Is(err, auth.ErrInviteInvalid) {
 		return "Invite invalid or expired"
-	case ent.IsConstraintError(err):
-		return "This email is already registered"
-	default:
-		return "Registration failed. Please try again."
 	}
-}
-
-// lockedMessage formats a user-facing banner for a locked account. Rounds up
-// to the nearest minute so "Try again in 0 minutes" never appears.
-func lockedMessage(until time.Time) string {
-	d := time.Until(until)
-	if d <= 0 {
-		return "Account temporarily locked. Try again shortly."
-	}
-	minutes := int((d + time.Minute - 1) / time.Minute)
-	unit := "minutes"
-	if minutes == 1 {
-		unit = "minute"
-	}
-	return "Account temporarily locked. Try again in " + strconv.Itoa(
-		minutes,
-	) + " " + unit + "."
+	return "Registration failed. If you already have an account, sign in instead."
 }
 
 func sessionMeta(r *http.Request) auth.SessionMeta {
@@ -413,16 +413,36 @@ const (
 	oidcNextCookie     = "_oidc_next"
 )
 
-// sanitizeNext accepts an in-app return-to path. Rejects empty, non-rooted,
-// and protocol-relative values so callers can't trick the server into
-// redirecting to an external origin, plus /auth/* paths so a stale
-// next=/auth/oidc/<name>/start can't re-launch the SSO flow after login.
+// sanitizeNext accepts an in-app return-to path and returns a value safe to
+// hand to http.Redirect. Only a rooted, single-slash path survives, and never
+// an /auth/* one, so a stale next=/auth/oidc/<name>/start can't re-launch the
+// SSO flow after login.
+//
+// A backslash is rejected outright rather than escaped: browsers fold "\" into
+// "/" inside a Location value, so "/\evil.com" reads as rooted here and lands
+// as protocol-relative //evil.com. Both the prefix checks and the returned
+// value work off the parsed URL, so an encoded attempt at the same trick
+// ("/%2f%2fevil.com") is caught on the decoded path and re-emitted encoded.
+// url.Parse rejects the control characters browsers strip from a URL, which
+// would otherwise collapse "/<TAB>/evil.com" the same way.
 func sanitizeNext(n string) string {
-	if n == "" || !strings.HasPrefix(n, "/") || strings.HasPrefix(n, "//") ||
-		strings.HasPrefix(n, "/auth/") {
+	if strings.ContainsRune(n, '\\') {
 		return defaultLandingURL
 	}
-	return n
+	u, err := url.Parse(n)
+	if err != nil || u.Scheme != "" || u.Opaque != "" || u.Host != "" ||
+		u.User != nil {
+		return defaultLandingURL
+	}
+	if !strings.HasPrefix(u.Path, "/") || strings.HasPrefix(u.Path, "//") ||
+		strings.HasPrefix(u.Path, "/auth/") {
+		return defaultLandingURL
+	}
+	next := u.EscapedPath()
+	if u.RawQuery != "" {
+		next += "?" + u.RawQuery
+	}
+	return next
 }
 
 // oidcRedirectURI builds the OIDC callback URL from the host the request

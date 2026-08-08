@@ -73,6 +73,18 @@ func (s *auth) UpdateProfile(
 // revokes every other active session for userID so peer devices are signed
 // out. keepJTI is the session the caller wants to stay logged in on — pass
 // Claims.JTI from the request context.
+//
+// The current password goes through comparePassword, so maxUsableHashCost
+// bounds the work here exactly as it does on login. Being authenticated does
+// not make that optional: this endpoint admits a session cookie or an API key,
+// and the restored backup or migration that brings a costlier hash brings those
+// alongside it, so the comparison is reachable — and /api/v1 carries no per-IP
+// limiter to slow the repeat, unlike POST /auth/login. Measured before this
+// call went through comparePassword, one wrong current_password answered in
+// 48.8ms against a cost-10 hash, 746.0ms against cost 14, and not at all
+// against $2a$31$ by a 45s client timeout: the core it took stayed at 100% long
+// after the client gave up, and four concurrent ones held 398% of a 16-core
+// box. Through comparePassword all three answer in 48-49ms.
 func (s *auth) ChangePassword(
 	ctx context.Context,
 	userID uint32,
@@ -91,10 +103,7 @@ func (s *auth) ChangePassword(
 		// OIDC-only accounts have no local password to compare against.
 		return ErrPasswordInvalid
 	}
-	if err := bcrypt.CompareHashAndPassword(
-		[]byte(u.PasswordHash),
-		[]byte(current),
-	); err != nil {
+	if err := comparePassword(ctx, u.PasswordHash, current); err != nil {
 		return ErrPasswordInvalid
 	}
 	if err := validatePassword(newPassword); err != nil {

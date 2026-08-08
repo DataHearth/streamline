@@ -105,3 +105,111 @@ var _ = Describe("authLogin rate limiting", Label("unit", "server"), func() {
 		Expect(post("wrong").Code).To(Equal(http.StatusTooManyRequests))
 	})
 })
+
+var _ = Describe("authLogin", Label("unit", "server"), func() {
+	// login drives the handler with a Login that fails the given way and
+	// returns everything a caller could observe about the rejection.
+	login := func(email string, loginErr error) *httptest.ResponseRecorder {
+		GinkgoHelper()
+		mgr := authmocks.NewMockManager(GinkgoT())
+		mgr.EXPECT().
+			Login(mock.Anything, email, "hunter2", mock.Anything).
+			Return("", loginErr).
+			Once()
+		h := New(Deps{Auth: mgr})
+
+		req := httptest.NewRequest(
+			http.MethodPost,
+			"/auth/login",
+			strings.NewReader(`{"email":"`+email+`","password":"hunter2"}`),
+		)
+		rr := httptest.NewRecorder()
+		h.authLogin(rr, req)
+		return rr
+	}
+
+	It(
+		"answers identically for an unknown user, a wrong password and a lock",
+		func() {
+			unknown := login("ghost@example.com", errInvalidCreds)
+			wrong := login("real@example.com", errInvalidCreds)
+			locked := login("locked@example.com", auth.ErrAccountLockedT{
+				LockedUntil: time.Now().Add(13 * time.Minute),
+			})
+
+			Expect(unknown.Code).To(Equal(http.StatusUnauthorized))
+			Expect(wrong.Code).To(Equal(unknown.Code))
+			Expect(locked.Code).To(Equal(unknown.Code))
+
+			Expect(wrong.Body.String()).To(Equal(unknown.Body.String()))
+			Expect(locked.Body.String()).To(Equal(unknown.Body.String()))
+
+			Expect(wrong.Header()).To(Equal(unknown.Header()))
+			Expect(locked.Header()).To(Equal(unknown.Header()))
+		},
+	)
+
+	It("never hints at the lockout in the body it returns", func() {
+		body := login("locked@example.com", auth.ErrAccountLockedT{
+			LockedUntil: time.Now().Add(13 * time.Minute),
+		}).Body.String()
+
+		Expect(body).To(ContainSubstring("Invalid credentials"))
+		Expect(strings.ToLower(body)).NotTo(ContainSubstring("lock"))
+		Expect(body).NotTo(ContainSubstring("13"))
+	})
+})
+
+var _ = Describe("sanitizeNext", Label("unit", "server"), func() {
+	DescribeTable("passes an in-app path through unchanged",
+		func(next string) {
+			Expect(sanitizeNext(next)).To(Equal(next))
+		},
+		Entry("a rooted path", "/movies"),
+		Entry("a nested path", "/movies/12/files"),
+		Entry("a path with a query", "/movies?page=2&sort=title"),
+		Entry("a path with an encoded segment", "/movies/the%20thing"),
+	)
+
+	DescribeTable("falls back to the landing page",
+		func(next string) {
+			Expect(sanitizeNext(next)).To(Equal(defaultLandingURL))
+		},
+		Entry("empty", ""),
+		Entry("relative", "movies"),
+		Entry("protocol-relative", "//evil.com"),
+		Entry("absolute http", "http://evil.com/x"),
+		Entry("absolute https", "https://evil.com/x"),
+		Entry("scheme-only opaque", "javascript:alert(1)"),
+		Entry("userinfo", "https://user@evil.com/"),
+		Entry("an /auth/ path", "/auth/oidc/google/start"),
+
+		// Browsers fold "\" into "/" inside a Location value, so every one of
+		// these reaches the wire as protocol-relative //evil.com.
+		Entry("backslash after the leading slash", `/\evil.com`),
+		Entry("double backslash", `\\evil.com`),
+		Entry("mixed slash then backslash", `/\/evil.com`),
+		Entry("mixed backslash then slash", `\/evil.com`),
+		Entry("backslash mid-path", `/movies\..\..\evil.com`),
+		Entry("backslash in the query", `/movies?next=\\evil.com`),
+		Entry("backslash behind a scheme", `https:/\evil.com`),
+
+		// Browsers strip these from a URL before resolving it, collapsing the
+		// value into the protocol-relative form.
+		Entry("tab", "/\t/evil.com"),
+		Entry("newline", "/\n/evil.com"),
+		Entry("carriage return", "/\r/evil.com"),
+
+		// Decodes to "//evil.com", so the prefix checks run on the decoded path.
+		Entry("encoded protocol-relative", "/%2f%2fevil.com"),
+		Entry("encoded auth path", "/%61uth/oidc/google/start"),
+	)
+
+	It("never emits a backslash, whatever it is handed", func() {
+		for _, next := range []string{
+			`/\evil.com`, `/a\b`, `/%5cevil.com`, `/x?y=\z`, `\`,
+		} {
+			Expect(sanitizeNext(next)).NotTo(ContainSubstring(`\`))
+		}
+	})
+})
