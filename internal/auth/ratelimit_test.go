@@ -116,6 +116,73 @@ var _ = Describe("Limiter", Label("unit", "auth"), func() {
 		Expect(wait).To(BeNumerically(">", 0))
 	})
 
+	Describe("Refund", func() {
+		It("returns the refunded attempt to the budget", func() {
+			l := NewLimiter(3, time.Minute)
+			Expect(saturate(l, "1.1.1.1")).To(Equal(3))
+
+			l.Refund("1.1.1.1")
+
+			Expect(allowed(l, "1.1.1.1")).To(BeTrue())
+			Expect(allowed(l, "1.1.1.1")).To(BeFalse())
+		})
+
+		// The case that motivated it: an address that only ever succeeds is
+		// never throttled, however many times it comes back.
+		It("never throttles a key whose every attempt is refunded", func() {
+			l := NewLimiter(3, time.Minute)
+			for range 20 {
+				Expect(allowed(l, "1.1.1.1")).To(BeTrue())
+				l.Refund("1.1.1.1")
+			}
+		})
+
+		It("lends nothing to a key that has spent nothing", func() {
+			l := NewLimiter(1, time.Minute)
+			l.Refund("1.1.1.1")
+
+			Expect(allowed(l, "1.1.1.1")).To(BeTrue())
+			Expect(allowed(l, "1.1.1.1")).To(BeFalse())
+		})
+
+		It("refunds only the calling key", func() {
+			l := NewLimiter(1, time.Minute)
+			Expect(allowed(l, "1.1.1.1")).To(BeTrue())
+			Expect(allowed(l, "2.2.2.2")).To(BeTrue())
+
+			l.Refund("1.1.1.1")
+
+			Expect(allowed(l, "1.1.1.1")).To(BeTrue())
+			Expect(allowed(l, "2.2.2.2")).To(BeFalse())
+		})
+
+		It(
+			"folds an IPv6 refund onto the same /64 the attempt was charged to",
+			func() {
+				l := NewLimiter(1, time.Minute)
+				Expect(allowed(l, "2001:db8::1")).To(BeTrue())
+
+				l.Refund("2001:db8::2")
+
+				Expect(allowed(l, "2001:db8::3")).To(BeTrue())
+			},
+		)
+
+		// Allow leaves the key in cur; a rotation between the two calls moves it
+		// to prev, and the refund still has to find it there.
+		It("finds the attempt after a rotation has retired it", func() {
+			l := NewLimiter(2, 15*time.Minute).(*limiter)
+			Expect(allowed(l, "1.1.1.1")).To(BeTrue())
+
+			rewind(l, 15*time.Minute)
+			Expect(allowed(l, "9.9.9.9")).To(BeTrue()) // forces the rotation
+			l.Refund("1.1.1.1")
+
+			Expect(l.cur["1.1.1.1"]).To(BeEmpty())
+			Expect(l.prev["1.1.1.1"]).To(BeEmpty())
+		})
+	})
+
 	It("allows again once every recorded attempt has aged out", func() {
 		l := NewLimiter(5, 15*time.Minute).(*limiter)
 		Expect(saturate(l, "1.1.1.1")).To(Equal(5))

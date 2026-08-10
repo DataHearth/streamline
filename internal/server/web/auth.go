@@ -123,6 +123,7 @@ func (h *Handler) authLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	auth.SetSession(w, r, tok, h.sessionTTL())
+	h.refundAttempt(r)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -330,6 +331,20 @@ func (h *Handler) allowAttempt(w http.ResponseWriter, r *http.Request) bool {
 		"rate_limited",
 	)
 	return false
+}
+
+// refundAttempt hands back the attempt allowAttempt charged, for a caller that
+// went on to authenticate. The charge has to happen first — checking without
+// recording would let an unauthenticated caller spend a bcrypt per request —
+// so the ceiling only measures guessing if success is returned here.
+//
+// Registration deliberately does not refund: an accepted registration is
+// exactly the thing worth rate-limiting on an instance in `open` mode.
+func (h *Handler) refundAttempt(r *http.Request) {
+	if h.limiter == nil {
+		return
+	}
+	h.limiter.Refund(httputil.ClientIPString(r))
 }
 
 // retryAfterSeconds renders a limiter wait for the Retry-After header. It
@@ -599,6 +614,7 @@ func (h *Handler) oidcCallback(w http.ResponseWriter, r *http.Request) {
 
 	clearAll()
 	auth.SetSession(w, r, sessTok, h.sessionTTL())
+	h.refundAttempt(r)
 	http.Redirect(w, r, sanitizeNext(cookies[oidcNextCookie]), http.StatusFound)
 }
 

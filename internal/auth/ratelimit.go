@@ -15,6 +15,20 @@ type Limiter interface {
 	// otherwise. It is returned from the same locked decision so a caller
 	// cannot observe a refusal alongside a stale "retry now".
 	Allow(key string) (bool, time.Duration)
+
+	// Refund returns the most recent attempt recorded under key to the budget.
+	//
+	// Credential endpoints have to charge before they know whether the
+	// credentials were good — checking first would let an unauthenticated caller
+	// spend the server's bcrypt time without limit — so a caller that turns out
+	// to have been legitimate hands its attempt back here. Without it the
+	// ceiling meters use rather than guessing: five successful logins from one
+	// address lock out the sixth, and behind a reverse proxy whose address is
+	// not in server.trusted_proxies every user shares that one budget.
+	//
+	// A no-op when the key holds nothing, so an unmatched call cannot lend
+	// anyone an attempt they never spent.
+	Refund(key string)
 }
 
 const (
@@ -210,4 +224,21 @@ func (l *limiter) Allow(key string) (bool, time.Duration) {
 	}
 	l.cur[key] = append(w, now)
 	return true, 0
+}
+
+func (l *limiter) Refund(key string) {
+	key = bucketKey(key)
+
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	// Allow leaves the key in cur, but a rotation landing between the two calls
+	// moves it to prev, so both generations are checked. The newest attempt is
+	// last: Allow appends, and insideWindow only drops from the front.
+	for _, gen := range []map[string][]time.Duration{l.cur, l.prev} {
+		if w, ok := gen[key]; ok && len(w) > 0 {
+			gen[key] = w[:len(w)-1]
+			return
+		}
+	}
 }
