@@ -21,17 +21,29 @@
 	let nextParam = $state("/dashboard");
 	let oidcError = $state("");
 
+	// Resolving against our own origin defers to the browser's URL parser, which
+	// is the thing that decides where assign() actually lands. Prefix checks miss
+	// what it folds: "\" becomes "/" and tab/newline are stripped, so both
+	// "/\evil.example" and "/<TAB>/evil.example" read as rooted paths and leave
+	// the site. URLSearchParams has already percent-decoded, so "%2F%5C" arrives
+	// here as "/\" too. Comparing the resolved origin catches all of them without
+	// enumerating any. /auth/* is rejected so a stale next=/auth/oidc/<name>/start
+	// can't bounce a local login straight back into the SSO flow.
+	const isSafeNext = (n: string) => {
+		try {
+			const u = new URL(n, window.location.origin);
+			return (
+				u.origin === window.location.origin && !u.pathname.startsWith("/auth/")
+			);
+		} catch {
+			return false;
+		}
+	};
+
 	onMount(() => {
 		const q = new URLSearchParams(window.location.search);
 		const next = q.get("next");
-		// Reject /auth/* so a stale next=/auth/oidc/<name>/start can't bounce a
-		// local login straight back into the SSO flow.
-		if (
-			next &&
-			next.startsWith("/") &&
-			!next.startsWith("//") &&
-			!next.startsWith("/auth/")
-		) {
+		if (next && isSafeNext(next)) {
 			nextParam = next;
 		}
 		oidcError = oidcErrorMessage(q.get("error"));

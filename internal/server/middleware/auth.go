@@ -201,21 +201,15 @@ func authenticateWeb(
 }
 
 func redirectToLogin(w http.ResponseWriter, r *http.Request) {
-	next := r.URL.Path
+	raw := r.URL.Path
 	if r.URL.RawQuery != "" {
-		next += "?" + r.URL.RawQuery
+		raw += "?" + r.URL.RawQuery
 	}
-	if !isSafeNext(next) {
+	next, ok := httputil.SafeNextPath(raw)
+	if !ok {
 		next = "/"
 	}
 	http.Redirect(w, r, "/login?next="+url.QueryEscape(next), http.StatusFound)
-}
-
-func isSafeNext(n string) bool {
-	if n == "" || !strings.HasPrefix(n, "/") || strings.HasPrefix(n, "//") {
-		return false
-	}
-	return true
 }
 
 func extractBearer(r *http.Request) string {

@@ -3,6 +3,8 @@ package middleware
 import (
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"strings"
 
 	g "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -207,4 +209,37 @@ var _ = g.Describe("NewAuth in trusted-network mode", g.Label("unit"), func() {
 		Expect(code).To(Equal(http.StatusOK))
 		Expect(role).To(Equal("admin"))
 	})
+})
+
+var _ = g.Describe("redirectToLogin", g.Label("unit"), func() {
+	// The SPA reads next back through URLSearchParams (which percent-decodes)
+	// and hands it to window.location.assign, so a next that resolves off-site
+	// is an open redirect however it was spelled on the way in.
+	g.DescribeTable("never sends an off-site next to the login page",
+		func(target string) {
+			g.GinkgoHelper()
+			req := httptest.NewRequest(http.MethodGet, target, nil)
+			rr := httptest.NewRecorder()
+
+			redirectToLogin(rr, req)
+
+			Expect(rr.Code).To(Equal(http.StatusFound))
+			loc, err := url.Parse(rr.Header().Get("Location"))
+			Expect(err).NotTo(HaveOccurred())
+
+			next := loc.Query().Get("next")
+			resolved, err := url.Parse("http://victim.local/login")
+			Expect(err).NotTo(HaveOccurred())
+			ref, err := url.Parse(strings.ReplaceAll(next, `\`, "/"))
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(resolved.ResolveReference(ref).Host).To(Equal("victim.local"))
+		},
+		g.Entry("an ordinary path", "/movies"),
+		g.Entry("a backslash after the root", `/\evil.example`),
+		g.Entry("an encoded backslash", "/%5Cevil.example"),
+		g.Entry("a double backslash", `/\\evil.example`),
+		g.Entry("a backslash after a valid path", `/movies\evil.example`),
+		g.Entry("an encoded double slash", "/%2f%2fevil.example"),
+	)
 })
