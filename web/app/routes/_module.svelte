@@ -5,20 +5,28 @@
 	import { config } from "../lib/config.svelte.js";
 	import AppShell from "../components/layout/AppShell.svelte";
 
-	type IsActiveFn = (path: string) => boolean;
-	let isActiveFn = $state<IsActiveFn>(() => false);
-	onMount(() => routifyIsActive.subscribe((fn) => (isActiveFn = fn)));
-
 	// Auth + error pages are full-bleed: no sidebar, no nav, no user hydration.
 	// Anything else gets the shell.
-	let bare = $derived(
-		isActiveFn("/login") ||
-			isActiveFn("/register") ||
-			isActiveFn("/forbidden"),
+	const BARE = ["/login", "/register", "/forbidden"];
+	const isBare = (p: string) =>
+		BARE.some((b) => p === b || p.startsWith(`${b}/`));
+
+	// The pathname, not Routify's isActive, decides this. isActive answers false
+	// for every route until Routify resolves the active one a tick after mount,
+	// so a `bare` derived from it starts false even on /login — long enough for
+	// AppShell to mount and its children to fire eight authenticated queries that
+	// all 401 before the shell is torn down again. location.pathname is correct
+	// synchronously on the first render; the subscription below is used only as a
+	// "navigation happened" signal to re-read it.
+	let path = $state(window.location.pathname);
+	onMount(() =>
+		routifyIsActive.subscribe(() => (path = window.location.pathname)),
 	);
 
+	let bare = $derived(isBare(path));
+
 	onMount(() => {
-		if (!bare) {
+		if (!isBare(window.location.pathname)) {
 			auth.hydrate();
 			config.hydrate();
 		}
