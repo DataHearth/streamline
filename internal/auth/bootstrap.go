@@ -13,6 +13,7 @@ import (
 	"github.com/datahearth/streamline/ent/user"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
+	approle "github.com/datahearth/streamline/internal/role"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -95,7 +96,7 @@ func (s *auth) BootstrapSeedAdmin(ctx context.Context) error {
 	if _, err := s.db.CreateUser(ctx, db.CreateUserParams{
 		Email:        email,
 		PasswordHash: string(hash),
-		Role:         user.RoleAdmin,
+		Role:         approle.Seed(user.RoleAdmin),
 		AuthMethod:   user.AuthMethodLocal,
 	}); err != nil {
 		return fmt.Errorf("create seed admin: %w", err)
@@ -159,7 +160,7 @@ func (s *auth) RegisterOpen(
 		Email:        strings.ToLower(email),
 		DisplayName:  displayName,
 		PasswordHash: string(hash),
-		Role:         user.Role(defaultRole),
+		Role:         approle.SelfRegistered(user.Role(defaultRole)),
 		AuthMethod:   user.AuthMethodLocal,
 	})
 	if err != nil {

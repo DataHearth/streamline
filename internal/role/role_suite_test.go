@@ -1,4 +1,4 @@
-package oidcrole
+package role
 
 import (
 	"testing"
@@ -9,9 +9,9 @@ import (
 	"github.com/datahearth/streamline/internal/testutil"
 )
 
-func TestOIDCRole(t *testing.T) {
+func TestRole(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "OIDC Role Suite")
+	RunSpecs(t, "Role Suite")
 }
 
 var _ = BeforeSuite(func() {

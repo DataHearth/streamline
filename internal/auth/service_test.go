@@ -42,7 +42,7 @@ var _ = Describe("AuthService unit", Label("unit", "auth"), func() {
 		It("hashes password, creates user, and returns a JWT", func() {
 			storeMock.CreateUser(mock.AnythingOfType(ctxType), mock.MatchedBy(func(p db.CreateUserParams) bool {
 				return p.Email == "a@x.com" &&
-					p.Role == entuser.RoleAdmin &&
+					p.Role.String() == string(entuser.RoleAdmin) &&
 					p.AuthMethod == entuser.AuthMethodLocal &&
 					p.PasswordHash != "" && p.PasswordHash != "pw"
 			})).

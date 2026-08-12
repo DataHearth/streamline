@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 
+	"github.com/datahearth/streamline/ent/user"
+	"github.com/datahearth/streamline/internal/role"
+
 	"github.com/DATA-DOG/go-sqlmock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -44,7 +47,7 @@ var _ = Describe("User store driver-error paths", Label("unit", "db"), func() {
 			mock.ExpectQuery(`INSERT INTO .users.`).
 				WillReturnError(driverErr)
 			_, err := store.CreateUser(ctx, CreateUserParams{
-				Email: "a@b", Role: "admin", AuthMethod: "local",
+				Email: "a@b", Role: role.Seed(user.RoleAdmin), AuthMethod: "local",
 			})
 			Expect(err).To(MatchError(driverErr))
 		})

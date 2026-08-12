@@ -4,6 +4,9 @@ import (
 	"context"
 	"time"
 
+	"github.com/datahearth/streamline/ent/user"
+	"github.com/datahearth/streamline/internal/role"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -27,7 +30,9 @@ var _ = Describe("Session store", Label("integration", "db"), func() {
 		store = New(client)
 
 		u, err := store.CreateUser(ctx, CreateUserParams{
-			Email: "owner@example.com", Role: "admin", AuthMethod: "local",
+			Email:      "owner@example.com",
+			Role:       role.Seed(user.RoleAdmin),
+			AuthMethod: "local",
 		})
 		Expect(err).NotTo(HaveOccurred())
 		userID = u.ID

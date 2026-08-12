@@ -3,6 +3,8 @@ package db
 import (
 	"context"
 
+	"github.com/datahearth/streamline/internal/role"
+
 	"github.com/datahearth/streamline/ent/request"
 	"github.com/datahearth/streamline/ent/user"
 	. "github.com/onsi/ginkgo/v2"
@@ -25,12 +27,16 @@ var _ = Describe("Request store", Label("unit", "db"), func() {
 		store = New(client)
 
 		u, err := store.CreateUser(ctx, CreateUserParams{
-			Email: "u@x.io", Role: user.RoleMember, AuthMethod: user.AuthMethodLocal,
+			Email:      "u@x.io",
+			Role:       role.Seed(user.RoleMember),
+			AuthMethod: user.AuthMethodLocal,
 		})
 		Expect(err).NotTo(HaveOccurred())
 		userID = u.ID
 		a, err := store.CreateUser(ctx, CreateUserParams{
-			Email: "a@x.io", Role: user.RoleAdmin, AuthMethod: user.AuthMethodLocal,
+			Email:      "a@x.io",
+			Role:       role.Seed(user.RoleAdmin),
+			AuthMethod: user.AuthMethodLocal,
 		})
 		Expect(err).NotTo(HaveOccurred())
 		adminID = a.ID
@@ -116,7 +122,9 @@ var _ = Describe("Request store", Label("unit", "db"), func() {
 			MediaType: "movie", MediaID: 1, Title: "A", RequesterID: userID,
 		})
 		other, _ := store.CreateUser(ctx, CreateUserParams{
-			Email: "o@x.io", Role: user.RoleMember, AuthMethod: user.AuthMethodLocal,
+			Email:      "o@x.io",
+			Role:       role.Seed(user.RoleMember),
+			AuthMethod: user.AuthMethodLocal,
 		})
 		_, _ = store.CreateRequest(ctx, CreateRequestParams{
 			MediaType: "movie", MediaID: 2, Title: "B", RequesterID: other.ID,

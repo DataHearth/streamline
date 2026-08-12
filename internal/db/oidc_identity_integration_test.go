@@ -3,6 +3,9 @@ package db
 import (
 	"context"
 
+	"github.com/datahearth/streamline/ent/user"
+	"github.com/datahearth/streamline/internal/role"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -26,7 +29,9 @@ var _ = Describe("OIDC identity store", Label("integration", "db"), func() {
 		store = New(client)
 
 		u, err := store.CreateUser(ctx, CreateUserParams{
-			Email: "owner@example.com", Role: "admin", AuthMethod: "oidc",
+			Email:      "owner@example.com",
+			Role:       role.Seed(user.RoleAdmin),
+			AuthMethod: "oidc",
 		})
 		Expect(err).NotTo(HaveOccurred())
 		userID = u.ID

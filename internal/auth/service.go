@@ -16,6 +16,7 @@ import (
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/otelx"
+	approle "github.com/datahearth/streamline/internal/role"
 	"github.com/golang-jwt/jwt/v5"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -243,7 +244,7 @@ func (s *auth) Register(
 	u, err := s.db.CreateUser(ctx, db.CreateUserParams{
 		Email:        email,
 		PasswordHash: string(hash),
-		Role:         user.Role(role),
+		Role:         approle.SelfRegistered(user.Role(role)),
 		AuthMethod:   user.AuthMethodLocal,
 	})
 	if err != nil {

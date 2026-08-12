@@ -12,6 +12,7 @@ import (
 	"github.com/datahearth/streamline/ent/user"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/otelx"
+	approle "github.com/datahearth/streamline/internal/role"
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 	"go.opentelemetry.io/otel/trace"
@@ -132,7 +133,7 @@ func (s *auth) CreateUserDirect(
 		Email:        email,
 		DisplayName:  strings.TrimSpace(displayName),
 		PasswordHash: string(hash),
-		Role:         user.Role(role),
+		Role:         approle.Operator(user.Role(role)),
 		AuthMethod:   user.AuthMethodLocal,
 	})
 	if err != nil {
@@ -207,7 +208,7 @@ func (s *auth) UpdateUser(
 
 	params := db.UpdateUserParams{}
 	if p.Role != nil {
-		r := user.Role(*p.Role)
+		r := approle.Operator(user.Role(*p.Role))
 		params.Role = &r
 	}
 	if p.AuthMethod != nil {

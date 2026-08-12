@@ -18,10 +18,10 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	entuser "github.com/datahearth/streamline/ent/user"
-	"github.com/datahearth/streamline/internal/auth/oidcrole"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/otelx"
+	approle "github.com/datahearth/streamline/internal/role"
 )
 
 // OIDC sentinel errors translated to user-facing messages by the webui.
@@ -110,7 +110,7 @@ func (m *oidcManager) Get(name string) (*OIDCProvider, bool) {
 // LoginOIDC applies the linking + onboarding policy and returns a JWT for the
 // resulting user. Flow:
 //  1. Existing identity (provider, subject) → log that user in, re-syncing the
-//     claim-mapped role through oidcrole.Cap.
+//     claim-mapped role through approle.Federated.
 //  2. Reject if email is unverified by the provider.
 //  3. Existing user by email → adopt the account only where the provider's
 //     email_linking setting permits it for the role that account holds, then
@@ -123,8 +123,8 @@ func (m *oidcManager) Get(name string) (*OIDCProvider, bool) {
 //     provisioning never burns the invite.
 //
 // Every role this function can put on an account — claim-mapped, invite-carried
-// or oidc_default_role — is decided by oidcrole.Cap and carried as an
-// oidcrole.Role, a type only that package can fill in. Nothing here reads the
+// or oidc_default_role — is decided by approle.Federated and carried as an
+// approle.Value, a type only that package can fill in. Nothing here reads the
 // account's auth_method to rank it: the shape an adoption leaves behind
 // describes how the row was reached, not how far the provider is trusted, and
 // three rounds of this fix died to gates that confused the two.
@@ -200,7 +200,7 @@ func (s *auth) LoginOIDC(
 		u = s.syncOIDCRole(
 			ctx,
 			u,
-			oidcrole.Cap(provider, "", oidcClaimRoles(pc, claims)...),
+			approle.Federated(provider, "", oidcClaimRoles(pc, claims)...),
 		)
 		tok, err := s.issueToken(ctx, u, meta)
 		if err != nil {
@@ -310,7 +310,7 @@ func (s *auth) LoginOIDC(
 	// arrives over a channel the provider controls the far end of, and the
 	// documented promise for a provider without allow_admin is that no login
 	// through it yields admin, with no exception to read past.
-	role := oidcrole.Cap(provider, fallbackRole, oidcClaimRoles(pc, claims)...)
+	role := approle.Federated(provider, fallbackRole, oidcClaimRoles(pc, claims)...)
 	span.SetAttributes(
 		attribute.String("oidc.outcome", "new_user"),
 		semconv.UserRoles(role.String()),
@@ -324,7 +324,7 @@ func (s *auth) LoginOIDC(
 	u, err := tx.CreateUser(ctx, db.CreateUserParams{
 		Email:       email,
 		DisplayName: displayName,
-		Role:        role.EntRole(),
+		Role:        role,
 		AuthMethod:  entuser.AuthMethodOidc,
 	})
 	if err != nil {
@@ -399,7 +399,7 @@ func findOIDCProvider(
 // guess and the account can rewrite auth config, including this setting.
 //
 // Adoption is all this decides. What role the adopted account may afterwards
-// be moved to is oidcrole.Cap's business, so no move of this setting — in
+// be moved to is approle.Federated's business, so no move of this setting — in
 // either direction — can change a role outcome.
 func emailLinkingAllowed(mode string, role entuser.Role) bool {
 	switch mode {
@@ -413,7 +413,7 @@ func emailLinkingAllowed(mode string, role entuser.Role) bool {
 }
 
 // oidcClaimRoles returns every Streamline role the provider's role_mapping
-// matches in this request's claims, unranked and uncapped — oidcrole.Cap ranks
+// matches in this request's claims, unranked and uncapped — approle.Federated ranks
 // them and applies the ceiling. Empty when the provider configures no mapping
 // or nothing matches.
 func oidcClaimRoles(pc config.OIDCConfig, claims map[string]any) []string {
@@ -477,14 +477,14 @@ func claimStrings(raw any) []string {
 // succeeds.
 //
 // Only the already-linked path calls this: adopting an account by email is not
-// an occasion to re-rank it. Taking an oidcrole.Role rather than a string is
+// an occasion to re-rank it. Taking an approle.Value rather than a string is
 // what makes the ceiling unskippable — the type has no exported way to hold a
-// role oidcrole.Cap did not put there, so there is no value to call this with
+// role approle.Federated did not put there, so there is no value to call this with
 // that skipped the ceiling.
 func (s *auth) syncOIDCRole(
 	ctx context.Context,
 	u *ent.User,
-	mapped oidcrole.Role,
+	mapped approle.Value,
 ) *ent.User {
 	if mapped.Empty() || u.Role.String() == mapped.String() {
 		return u
@@ -492,7 +492,7 @@ func (s *auth) syncOIDCRole(
 	updated, err := s.db.UpdateUser(
 		ctx,
 		u.ID,
-		db.UpdateUserParams{Role: mapped.EntRolePtr()},
+		db.UpdateUserParams{Role: &mapped},
 	)
 	if err != nil {
 		slog.WarnContext(ctx, "auth.oidc_role_sync_failed",

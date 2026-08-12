@@ -1,4 +1,4 @@
-package oidcrole
+package role
 
 import (
 	. "github.com/onsi/ginkgo/v2"
@@ -35,17 +35,17 @@ func seedAdopting(allowAdmin bool) {
 	seedProvider(config.OIDCEmailLinkingAll, allowAdmin)
 }
 
-// There is deliberately no spec here for "a Role built without Cap": the field
+// There is deliberately no spec here for "a Value built without Cap": the field
 // is unexported and this package hands out no setter, so every such spelling —
 // a composite literal, an assignment, a params type invented later — is a
 // compile error rather than a test failure. What these cover is the ceiling Cap
-// applies and the inertness of the one Role another package *can* name, its
+// applies and the inertness of the one Value another package *can* name, its
 // zero value.
 var _ = Describe("Cap", Label("unit", "auth"), func() {
 	DescribeTable("picks the highest candidate the provider may confer",
 		func(allowAdmin bool, fallback string, candidates []string, want string) {
 			seedAdopting(allowAdmin)
-			Expect(Cap("kc", fallback, candidates...).String()).To(Equal(want))
+			Expect(Federated("kc", fallback, candidates...).String()).To(Equal(want))
 		},
 		Entry("allow_admin takes the admin candidate",
 			true, "", []string{"member", "admin"}, "admin"),
@@ -75,8 +75,8 @@ var _ = Describe("Cap", Label("unit", "auth"), func() {
 
 	It("reports the zero value as empty", func() {
 		seedAdopting(false)
-		Expect(Role{}.Empty()).To(BeTrue())
-		Expect(Cap("kc", "member").Empty()).To(BeFalse())
+		Expect(Value{}.Empty()).To(BeTrue())
+		Expect(Federated("kc", "member").Empty()).To(BeFalse())
 	})
 
 	// The zero value is what a caller outside this package can still name, so
@@ -84,16 +84,16 @@ var _ = Describe("Cap", Label("unit", "auth"), func() {
 	// write path skips rather than a role it applies.
 	It("leaves an undecidable role inert rather than privileged", func() {
 		seedAdopting(true)
-		r := Cap("kc", "superuser")
-		Expect(r).To(Equal(Role{}))
+		r := Federated("kc", "superuser")
+		Expect(r).To(Equal(Value{}))
 		Expect(r.Empty()).To(BeTrue())
-		Expect(r.EntRole()).To(BeEmpty())
+		Expect(r.Ent()).To(BeEmpty())
 	})
 
 	It("converts to the ent role the store writes", func() {
 		seedAdopting(true)
-		Expect(Cap("kc", "", "admin").EntRole()).To(Equal(entuser.RoleAdmin))
-		Expect(*Cap("kc", "", "admin").EntRolePtr()).To(Equal(entuser.RoleAdmin))
+		Expect(Federated("kc", "", "admin").Ent()).To(Equal(entuser.RoleAdmin))
+		Expect(*Federated("kc", "", "admin").EntPtr()).To(Equal(entuser.RoleAdmin))
 	})
 
 	// Monotonicity: email_linking moves the adoption axis only. A provider
@@ -102,9 +102,9 @@ var _ = Describe("Cap", Label("unit", "auth"), func() {
 	DescribeTable("ignores email_linking entirely",
 		func(mode string) {
 			seedProvider(mode, false)
-			Expect(Cap("kc", "admin", "admin").String()).To(Equal("member"))
+			Expect(Federated("kc", "admin", "admin").String()).To(Equal("member"))
 			seedProvider(mode, true)
-			Expect(Cap("kc", "admin", "admin").String()).To(Equal("admin"))
+			Expect(Federated("kc", "admin", "admin").String()).To(Equal("admin"))
 		},
 		Entry("unset", ""),
 		Entry("disabled", config.OIDCEmailLinkingDisabled),
@@ -117,12 +117,12 @@ var _ = Describe("Cap", Label("unit", "auth"), func() {
 	// resolves it here rather than accepting a config value from the caller.
 	It("refuses admin for a provider that is not configured at all", func() {
 		seedAdopting(true)
-		Expect(Cap("ghost", "admin", "admin").String()).To(Equal("member"))
+		Expect(Federated("ghost", "admin", "admin").String()).To(Equal("member"))
 	})
 
 	It("refuses admin when no config has been loaded", func() {
 		config.ResetForTest()
-		Expect(Cap("kc", "admin", "admin").String()).To(Equal("member"))
+		Expect(Federated("kc", "admin", "admin").String()).To(Equal("member"))
 	})
 })
 
@@ -138,4 +138,38 @@ var _ = Describe("AtLeast", Label("unit", "auth"), func() {
 		Entry("an unrecognised minimum is satisfied by nobody",
 			"admin", "superuser", false),
 	)
+})
+
+var _ = Describe("the non-federated constructors", Label("unit"), func() {
+	// The point of the type: db.CreateUserParams.Role takes a Value, so a bare
+	// entuser.Role does not compile into it. These four are the only other ways
+	// to fill one, and each names the authority that decided the role.
+	DescribeTable("wrap a role the caller vouched for",
+		func(v Value, want string) {
+			Expect(v.String()).To(Equal(want))
+			Expect(v.Ent()).To(Equal(entuser.Role(want)))
+		},
+		Entry("operator", Operator(entuser.RoleAdmin), "admin"),
+		Entry("seed", Seed(entuser.RoleAdmin), "admin"),
+		Entry("invited", Invited(entuser.RoleMember), "member"),
+		Entry("self-registered", SelfRegistered(entuser.RoleMember), "member"),
+	)
+
+	// A role this build cannot rank would reach the column and then satisfy no
+	// RBAC comparison, because AtLeast fails closed on both sides.
+	DescribeTable("refuse a role this build does not rank",
+		func(v Value) {
+			Expect(v.Empty()).To(BeTrue())
+		},
+		Entry("operator", Operator("superuser")),
+		Entry("seed", Seed("")),
+		Entry("invited", Invited("root")),
+		Entry("self-registered", SelfRegistered("Admin")),
+	)
+
+	It("gives a zero Value that decides nothing", func() {
+		var v Value
+		Expect(v.Empty()).To(BeTrue())
+		Expect(v.String()).To(BeEmpty())
+	})
 })

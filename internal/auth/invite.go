@@ -14,6 +14,7 @@ import (
 	entuser "github.com/datahearth/streamline/ent/user"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
+	approle "github.com/datahearth/streamline/internal/role"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -135,7 +136,7 @@ func (s *auth) RegisterWithInvite(
 		Email:        strings.ToLower(email),
 		DisplayName:  displayName,
 		PasswordHash: string(hash),
-		Role:         entuser.Role(inv.Role.String()),
+		Role:         approle.Invited(entuser.Role(inv.Role.String())),
 		AuthMethod:   entuser.AuthMethodLocal,
 	})
 	if err != nil {

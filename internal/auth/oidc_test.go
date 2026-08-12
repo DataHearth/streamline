@@ -106,7 +106,7 @@ type roleWrite struct {
 	pos  string
 	what string
 	// ok reports that the compiler, not the spelling, vouches for the value:
-	// either a capped oidcrole.Role on its way out, or a role read back off a
+	// either a capped role.Value on its way out, or a role read back off a
 	// user row. Everything else is for the allow-list to explain.
 	ok bool
 }
@@ -130,11 +130,19 @@ func roleWritesIn(writes []roleWrite, fn string) int {
 }
 
 // roleWriters are the functions that decide a user's role without asking
-// oidcrole.Cap, each because no OIDC login reaches it. Adding a name here
+// role.Federated, each because no OIDC login reaches it. Adding a name here
 // asserts that, and the reachability spec below is what checks the assertion
 // rather than taking it — round 5's allow-list carried the same claim in prose
 // and an injected `s.UpdateUser(ctx, u.ID, UserPatch{Role: &esc})` inside
 // LoginOIDC escalated to admin with every spec green.
+// roleWriters is now read by the REACHABILITY spec alone, and it matters more
+// there than it used to. The shape walker stopped flagging what these functions
+// do internally, because db's params take a role.Value and the compiler vouches
+// every one of them — but each still calls a non-OIDC constructor in
+// internal/role, and Go cannot express "only this package may call that". So
+// the residue the type change leaves is exactly "code on an OIDC login's path
+// calls role.Operator/Seed/Invited/SelfRegistered instead of role.Federated",
+// and keeping an OIDC login out of these functions is what closes it.
 var roleWriters = map[string]string{
 	"BootstrapSeedAdmin": "seeds the admin against an empty database, before any login exists",
 	"RegisterOpen":       "local registration; the role is auth.oidc_default_role's peer, not a claim",
@@ -142,7 +150,7 @@ var roleWriters = map[string]string{
 	"RegisterWithInvite": "local registration; the invite's role, reached only with a password",
 	"CreateUserDirect":   "admin-created account, over an authenticated admin session",
 	"UpdateUser":         "admin role change, over an authenticated admin session",
-	"CreateInvite":       "the invite's own role, over an authenticated admin session; it reaches a user through RegisterWithInvite or, over SSO, through oidcrole.Cap",
+	"CreateInvite":       "the invite's own role, over an authenticated admin session; it reaches a user through RegisterWithInvite or, over SSO, through role.Federated",
 }
 
 // roleCarriers name a role field without deciding one a login can raise. They
@@ -164,18 +172,18 @@ var roleCarriers = map[string]string{
 }
 
 const (
-	authPkgPath     = "github.com/datahearth/streamline/internal/auth"
-	oidcrolePkgPath = authPkgPath + "/oidcrole"
-	entPkgPath      = "github.com/datahearth/streamline/ent"
+	authPkgPath = "github.com/datahearth/streamline/internal/auth"
+	rolePkgPath = "github.com/datahearth/streamline/internal/role"
+	entPkgPath  = "github.com/datahearth/streamline/ent"
 )
 
 // The guard type-checks package auth instead of parsing it, because a name is
 // not a type. Round 6's walker trusted any expression spelled
-// `<x>.EntRolePtr()` whatever `<x>` turned out to be, so
+// `<x>.EntPtr()` whatever `<x>` turned out to be, so
 //
 //	type shadowRole struct{ r entuser.Role }
 //	func (f shadowRole) EntRolePtr() *entuser.Role { return &f.r }
-//	params.Role = shadowRole{r: entuser.RoleAdmin}.EntRolePtr()
+//	params.Role = shadowRole{r: entuser.RoleAdmin}.EntPtr()
 //
 // dropped into syncOIDCProfile — not allow-listed, and on an OIDC login's path
 // — landed an admin row, an admin JWT and an admin session with all thirteen
@@ -248,7 +256,7 @@ type authScan struct {
 // scanAuth parses and type-checks every non-test file of package auth, with
 // patches applied.
 //
-// Subdirectories are not in the pattern, so oidcrole is not scanned. It is the
+// Subdirectories are not in the pattern, so role is not scanned. It is the
 // trusted core rather than an oversight: it is the one package allowed to
 // decide a role, it is small enough to read in full, and its own specs cover
 // the ceiling. Scanning it would only report Cap's own Role{role: best}.
@@ -263,9 +271,9 @@ func scanAuth(patches ...patch) *authScan {
 			imports[path] = imp.Types
 		}
 	}
-	Expect(imports).To(HaveKey(oidcrolePkgPath))
+	Expect(imports).To(HaveKey(rolePkgPath))
 	Expect(imports).To(HaveKey(entPkgPath))
-	roleObj := imports[oidcrolePkgPath].Scope().Lookup("Role")
+	roleObj := imports[rolePkgPath].Scope().Lookup("Value")
 	userObj := imports[entPkgPath].Scope().Lookup("User")
 	Expect(roleObj).NotTo(BeNil())
 	Expect(userObj).NotTo(BeNil())
@@ -420,10 +428,10 @@ func (a *authScan) vouched(e ast.Expr) bool {
 	return a.cappedRole(e) || a.rowRole(e)
 }
 
-// cappedRole reports whether e is <x>.EntRole() or <x>.EntRolePtr() called on
-// an oidcrole.Role — the two exits from the ceiling, one per field shape.
+// cappedRole reports whether e is <x>.Ent() or <x>.EntPtr() called on
+// an role.Value — the two exits from the ceiling, one per field shape.
 //
-// What is checked is the receiver's type, not its spelling. oidcrole.Role's
+// What is checked is the receiver's type, not its spelling. role.Value's
 // field is unexported and its package exports no constructor but Cap, so —
 // short of the unsafe write the uncovered table below leaves open — every
 // expression of that type is either Cap's output or the zero value, and the
@@ -435,20 +443,25 @@ func (a *authScan) vouched(e ast.Expr) bool {
 // spelled EntRolePtr() and escalated an OIDC login to admin with every spec
 // green. The claim is worth what the compiler backs, and it is the type
 // identity here that makes the compiler back it.
+// cappedRole reports whether e already IS a role.Value — the type db's params
+// now take, and one only internal/role can fill in.
+//
+// It asks the type checker rather than matching a spelling. Earlier rounds
+// looked for a call to `.EntRole()`/`.EntRolePtr()`, which was a name and not a
+// type: a five-line shadow struct carrying a method of that name satisfied it
+// and landed an admin row. Asking what the expression IS cannot be spelled
+// around, because the only way to obtain a non-zero role.Value is a constructor
+// in that package.
+//
+// The compiler now rejects a raw entuser.Role at these sites on its own, so
+// this is a backstop for what remains string-typed — the Claims role in the JWT
+// — rather than the thing holding the ceiling up.
 func (a *authScan) cappedRole(e ast.Expr) bool {
-	call, ok := e.(*ast.CallExpr)
-	if !ok {
+	tv, ok := a.info.Types[e]
+	if !ok || tv.Type == nil {
 		return false
 	}
-	sel, ok := call.Fun.(*ast.SelectorExpr)
-	if !ok || (sel.Sel.Name != "EntRole" && sel.Sel.Name != "EntRolePtr") {
-		return false
-	}
-	selection := a.info.Selections[sel]
-	if selection == nil || selection.Kind() != types.MethodVal {
-		return false
-	}
-	return types.Identical(deref(selection.Recv()), a.roleType)
+	return types.Identical(deref(tv.Type), a.roleType)
 }
 
 // rowRole reports whether e is string(<x>.Role) for an *ent.User: a role read
@@ -553,8 +566,8 @@ const (
 	loginOIDCAnchor       = "\temail = strings.ToLower(strings.TrimSpace(email))"
 )
 
-// The ceiling is unskippable because oidcrole.Role has no exported way to hold
-// a role oidcrole.Cap did not put there — that part the compiler enforces, in
+// The ceiling is unskippable because role.Value has no exported way to hold
+// a role role.Federated did not put there — that part the compiler enforces, in
 // this package and every other, and no test can be blind to it. What the
 // compiler does not cover is a raw entuser.Role written straight into a db
 // params struct, which is what these specs scan for, and a login reaching one
@@ -571,14 +584,14 @@ const (
 var _ = Describe("OIDC role writes", Label("unit", "auth"), func() {
 	// A type error anywhere in the package leaves the checker guessing, and a
 	// guess resolves an EntRolePtr() receiver to invalid rather than to
-	// oidcrole.Role. That direction fails closed — the write gets reported —
+	// role.Value. That direction fails closed — the write gets reported —
 	// but a package that stopped type-checking is a reason to stop reading the
 	// report, not to trust it.
 	It("type-check package auth before believing anything below", func() {
 		Expect(scanAuth().errs).To(BeEmpty())
 	})
 
-	It("route every role write outside the allow-list through oidcrole.Cap",
+	It("route every role write outside the allow-list through role.Federated",
 		func() {
 			var offenders []string
 			for _, w := range scanAuth().roleWrites() {
@@ -594,23 +607,24 @@ var _ = Describe("OIDC role writes", Label("unit", "auth"), func() {
 
 	// Without this the guard above passes just as well when the walker has gone
 	// blind — a renamed params type, a moved file, a shape it stopped matching.
-	// The allow-listed functions are the fixed point it has to keep seeing.
-	It("still see every role write the allow-list covers", func() {
-		allowed := map[string]string{}
-		maps.Copy(allowed, roleWriters)
-		maps.Copy(allowed, roleCarriers)
+	// These are the writes it has to keep seeing.
+	//
+	// The list is two entries rather than the nine it was, and that shrinkage is
+	// the point: db's params take a role.Value now, so every write the six
+	// user-creating functions make is vouched by the compiler and no longer
+	// reaches this walker at all. What is left is what the type change did not
+	// reach — an invite's own role, and the JWT's role string.
+	It("still see the role writes no type vouches for", func() {
+		want := []string{"CreateInvite", "ListUsers"}
 
 		found := map[string]bool{}
 		for _, w := range scanAuth().roleWrites() {
 			if w.ok {
 				continue
 			}
-			if _, ok := allowed[w.fn]; ok {
-				found[w.fn] = true
-			}
+			found[w.fn] = true
 		}
-		Expect(slices.Sorted(maps.Keys(found))).
-			To(Equal(slices.Sorted(maps.Keys(allowed))))
+		Expect(slices.Sorted(maps.Keys(found))).To(Equal(want))
 	})
 
 	// And the same fixed point for the one write vouched for by shape rather
@@ -662,7 +676,7 @@ var _ = Describe("OIDC role writes", Label("unit", "auth"), func() {
 	// spliced back into the function it was landed in and replayed against the
 	// walker that now has to see it. The one shape missing is round 5's
 	// `var esc oidcRole; esc.role = …`, which no longer parses to anything
-	// meaningful: oidcrole.Role's field is unexported, so that spelling is a
+	// meaningful: role.Value's field is unexported, so that spelling is a
 	// compile error in package auth rather than a write this can catch.
 	DescribeTable(
 		"catch a role write injected into an OIDC path",
@@ -693,12 +707,12 @@ var _ = Describe("OIDC role writes", Label("unit", "auth"), func() {
 		Entry("ent builder",
 			"\ts.db.User.UpdateOne(nil).SetRole(entuser.RoleAdmin)", ""),
 		Entry("round 6's bypass: a foreign type spelling the blessed exit",
-			"\tparams.Role = shadowRole{r: entuser.RoleAdmin}.EntRolePtr()",
+			"\tparams.Role = shadowRole{r: entuser.RoleAdmin}.EntPtr()",
 			"type shadowRole struct{ r entuser.Role }\n\n"+
 				"func (f shadowRole) EntRolePtr() *entuser.Role { return &f.r }"),
 		Entry(
 			"the same trick on the other exit, into a create",
-			"\t_ = db.CreateUserParams{Role: shadowRole{r: entuser.RoleAdmin}.EntRole()}",
+			"\t_ = db.CreateUserParams{Role: shadowRole{r: entuser.RoleAdmin}.Ent()}",
 			"type shadowRole struct{ r entuser.Role }\n\n"+
 				"func (f shadowRole) EntRole() entuser.Role { return f.r }",
 		),
@@ -775,18 +789,19 @@ var _ = Describe("OIDC role writes", Label("unit", "auth"), func() {
 		Entry("a role forged through unsafe",
 			patch{
 				anchor: syncOIDCProfileAnchor,
-				stmts: "\tvar esc oidcrole.Role\n" +
+				stmts: "\tvar esc approle.Value\n" +
 					"\t*(*string)(unsafe.Pointer(&esc)) = \"admin\"\n" +
-					"\tparams.Role = esc.EntRolePtr()",
+					"\tparams.Role = &esc",
 				imports: "import \"unsafe\"",
 			},
 			"syncOIDCProfile", "unsafe"),
 		// Cap named with a provider the request is not authenticating against
 		// is capped by that provider's ceiling rather than by none.
-		Entry("oidcrole.Cap named with a foreign provider",
+		Entry("role.Federated named with a foreign provider",
 			patch{
 				anchor: syncOIDCProfileAnchor,
-				stmts:  "\tparams.Role = oidcrole.Cap(\"some-other-provider\", \"admin\").EntRolePtr()",
+				stmts: "\tesc := approle.Federated(\"some-other-provider\", \"admin\")\n" +
+					"\tparams.Role = &esc",
 			},
 			"syncOIDCProfile", "a Cap naming another provider"),
 		// A roleCarriers entry is exempt by name, and nothing checks that a
@@ -1598,7 +1613,8 @@ var _ = Describe("LoginOIDC unit", Label("unit", "auth"), func() {
 			tx := newUserTx()
 			tx.EXPECT().
 				CreateUser(mock.AnythingOfType(ctxType), mock.MatchedBy(func(p db.CreateUserParams) bool {
-					return p.Email == "u@x.com" && p.Role == entuser.RoleMember &&
+					return p.Email == "u@x.com" &&
+						p.Role.String() == string(entuser.RoleMember) &&
 						p.AuthMethod == entuser.AuthMethodOidc
 				})).
 				Return(&ent.User{ID: 1, Email: "u@x.com"}, nil).
@@ -1706,7 +1722,7 @@ var _ = Describe("LoginOIDC unit", Label("unit", "auth"), func() {
 			tx := newUserTx()
 			tx.EXPECT().
 				CreateUser(mock.AnythingOfType(ctxType), mock.MatchedBy(func(p db.CreateUserParams) bool {
-					return p.Role == want
+					return p.Role.String() == string(want)
 				})).
 				Return(&ent.User{ID: 1, Role: want}, nil).
 				Once()

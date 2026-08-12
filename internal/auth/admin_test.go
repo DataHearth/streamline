@@ -83,7 +83,9 @@ var _ = Describe("Admin service unit", Label("unit", "auth"), func() {
 				Return(nil, &ent.NotFoundError{}).Once()
 			storeMock.CreateUser(mock.AnythingOfType(ctxType), mock.MatchedBy(func(p db.CreateUserParams) bool {
 				return p.Email == "a@x.com" && p.DisplayName == "Alice" &&
-					p.Role == user.RoleMember && p.AuthMethod == user.AuthMethodLocal
+					p.Role.String() == string(
+						user.RoleMember,
+					) && p.AuthMethod == user.AuthMethodLocal
 			})).
 				Return(&ent.User{ID: 7, Email: "a@x.com"}, nil).
 				Once()
@@ -228,7 +230,7 @@ var _ = Describe("Admin service unit", Label("unit", "auth"), func() {
 			storeMock.CountUsersByRole(mock.AnythingOfType(ctxType), user.RoleAdmin).
 				Return(2, nil).Once()
 			storeMock.UpdateUser(mock.AnythingOfType(ctxType), uint32(1), mock.MatchedBy(func(p db.UpdateUserParams) bool {
-				return p.Role != nil && *p.Role == user.RoleMember
+				return p.Role != nil && p.Role.String() == string(user.RoleMember)
 			})).
 				Return(&ent.User{ID: 1, Role: user.RoleMember}, nil).
 				Once()

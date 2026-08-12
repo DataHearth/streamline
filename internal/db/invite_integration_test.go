@@ -4,6 +4,9 @@ import (
 	"context"
 	"time"
 
+	"github.com/datahearth/streamline/ent/user"
+	"github.com/datahearth/streamline/internal/role"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -28,7 +31,9 @@ var _ = Describe("Invite store", Label("integration", "db"), func() {
 		store = New(client)
 
 		admin, err := store.CreateUser(ctx, CreateUserParams{
-			Email: "admin@example.com", Role: "admin", AuthMethod: "local",
+			Email:      "admin@example.com",
+			Role:       role.Seed(user.RoleAdmin),
+			AuthMethod: "local",
 		})
 		Expect(err).NotTo(HaveOccurred())
 		adminID = admin.ID
@@ -96,7 +101,9 @@ var _ = Describe("Invite store", Label("integration", "db"), func() {
 
 		BeforeEach(func() {
 			consumer, err := store.CreateUser(ctx, CreateUserParams{
-				Email: "g@example.com", Role: "member", AuthMethod: "local",
+				Email:      "g@example.com",
+				Role:       role.Seed(user.RoleMember),
+				AuthMethod: "local",
 			})
 			Expect(err).NotTo(HaveOccurred())
 			consumerID = consumer.ID
@@ -123,7 +130,9 @@ var _ = Describe("Invite store", Label("integration", "db"), func() {
 				To(Succeed())
 
 			other, err := store.CreateUser(ctx, CreateUserParams{
-				Email: "other@example.com", Role: "member", AuthMethod: "local",
+				Email:      "other@example.com",
+				Role:       role.Seed(user.RoleMember),
+				AuthMethod: "local",
 			})
 			Expect(err).NotTo(HaveOccurred())
 

@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"time"
 
+	approle "github.com/datahearth/streamline/internal/role"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -32,8 +34,11 @@ var _ = Describe("User store CRUD", Label("integration", "db"), func() {
 	create := func(email, role string) *ent.User {
 		GinkgoHelper()
 		u, err := store.CreateUser(ctx, CreateUserParams{
-			Email: email, Role: user.Role(role), AuthMethod: user.AuthMethodLocal,
-			DisplayName: "Disp", PasswordHash: "h",
+			Email:        email,
+			Role:         approle.Seed(user.Role(role)),
+			AuthMethod:   user.AuthMethodLocal,
+			DisplayName:  "Disp",
+			PasswordHash: "h",
 		})
 		Expect(err).NotTo(HaveOccurred())
 		return u
@@ -51,7 +56,7 @@ var _ = Describe("User store CRUD", Label("integration", "db"), func() {
 				create("dup@example.com", "admin")
 				_, err := store.CreateUser(ctx, CreateUserParams{
 					Email:      "dup@example.com",
-					Role:       user.RoleMember,
+					Role:       approle.Seed(user.RoleMember),
 					AuthMethod: user.AuthMethodLocal,
 				})
 				Expect(err).To(HaveOccurred())
@@ -86,7 +91,7 @@ var _ = Describe("User store CRUD", Label("integration", "db"), func() {
 	Describe("UpdateUser", func() {
 		It("applies every non-nil field", func() {
 			u := create("a@example.com", "member")
-			role := user.RoleAdmin
+			role := approle.Operator(user.RoleAdmin)
 			authMethod := user.AuthMethodBoth
 			displayName := "Renamed"
 			updated, err := store.UpdateUser(ctx, u.ID, UpdateUserParams{
@@ -164,7 +169,7 @@ var _ = Describe("User store CRUD", Label("integration", "db"), func() {
 
 			creator, err := migratedStore.CreateUser(ctx, CreateUserParams{
 				Email:      "creator@example.com",
-				Role:       user.RoleAdmin,
+				Role:       approle.Seed(user.RoleAdmin),
 				AuthMethod: user.AuthMethodLocal,
 			})
 			Expect(err).NotTo(HaveOccurred())

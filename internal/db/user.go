@@ -6,13 +6,18 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/user"
+	"github.com/datahearth/streamline/internal/role"
 )
 
+// Role is a role.Value rather than a user.Role so a write has to name the
+// authority that decided it. A bare user.Role can be spelled anywhere; a
+// role.Value can only come out of internal/role, which is where the OIDC admin
+// ceiling lives.
 type CreateUserParams struct {
 	Email        string
 	DisplayName  string
 	PasswordHash string
-	Role         user.Role
+	Role         role.Value
 	AuthMethod   user.AuthMethod
 }
 
@@ -52,7 +57,7 @@ type ListUsersParams struct {
 // from "clear to nil"; setting both ClearLockedUntil and a non-nil
 // LockedUntil is a programmer error and the non-nil pointer wins.
 type UpdateUserParams struct {
-	Role                   *user.Role
+	Role                   *role.Value
 	AuthMethod             *user.AuthMethod
 	DisplayName            *string
 	Email                  *string
@@ -81,7 +86,7 @@ func (db *DB) CreateUser(
 ) (*ent.User, error) {
 	b := db.client.User.Create().
 		SetEmail(p.Email).
-		SetRole(p.Role).
+		SetRole(p.Role.Ent()).
 		SetAuthMethod(p.AuthMethod)
 	if p.PasswordHash != "" {
 		b.SetPasswordHash(p.PasswordHash)
@@ -166,7 +171,7 @@ func (db *DB) UpdateUser(
 ) (*ent.User, error) {
 	upd := db.client.User.UpdateOneID(id)
 	if p.Role != nil {
-		upd = upd.SetRole(*p.Role)
+		upd = upd.SetRole(p.Role.Ent())
 	}
 	if p.AuthMethod != nil {
 		upd = upd.SetAuthMethod(*p.AuthMethod)

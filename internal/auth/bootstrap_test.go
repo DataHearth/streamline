@@ -66,7 +66,7 @@ var _ = Describe("Bootstrap service unit", Label("unit", "auth"), func() {
 			storeMock.CountUsers(ctx).Return(0, nil).Once()
 			storeMock.CreateUser(ctx, mock.MatchedBy(func(p db.CreateUserParams) bool {
 				return p.Email == "admin@streamline.local" &&
-					p.Role == user.RoleAdmin
+					p.Role.String() == string(user.RoleAdmin)
 			})).
 				Return(&ent.User{ID: 1, Email: "admin@streamline.local"}, nil).
 				Once()
@@ -218,7 +218,8 @@ var _ = Describe("Bootstrap service unit", Label("unit", "auth"), func() {
 			seedAdminConfig("admin@x.com", "", pwPath)
 			storeMock.CountUsers(ctx).Return(0, nil).Once()
 			storeMock.CreateUser(ctx, mock.MatchedBy(func(p db.CreateUserParams) bool {
-				return p.Email == "admin@x.com" && p.Role == user.RoleAdmin
+				return p.Email == "admin@x.com" &&
+					p.Role.String() == string(user.RoleAdmin)
 			})).
 				Return(&ent.User{ID: 1}, nil).
 				Once()
@@ -281,7 +282,7 @@ var _ = Describe("Bootstrap service unit", Label("unit", "auth"), func() {
 		It("creates user with given role and returns token", func() {
 			storeMock.CreateUser(ctx, mock.MatchedBy(func(p db.CreateUserParams) bool {
 				return p.Email == "a@x.com" && p.DisplayName == "Alice" &&
-					p.Role == user.RoleMember
+					p.Role.String() == string(user.RoleMember)
 			})).
 				Return(&ent.User{ID: 1, Email: "a@x.com"}, nil).
 				Once()
