@@ -31,21 +31,35 @@ const metadataImageCDNs = "https://image.tmdb.org https://artworks.thetvdb.com"
 //
 // script-src stays 'self'. Do not add 'unsafe-eval' to make a console message
 // go away — that message is the policy working. The SPA bundle contains no
-// eval and no Function constructor, but the Scalar docs bundle does: zod v4
-// carries a memoized JIT-capability probe (util.allowsEval, compiled down to
-// `try{let e=Function;return new e(""),!0}catch{return!1}`) that decides
-// whether its object validators may be code-generated. Every /api/docs load
-// therefore reports one enforced violation:
+// eval and no Function constructor. The Scalar docs bundle contains two, and
+// only one of them ever runs:
 //
-//	{directive: 'script-src', blockedURI: 'eval',
-//	 sourceFile: '/static/js/docs.min.js', disposition: 'enforce'}
+//   - zod v4's memoized JIT-capability probe (util.allowsEval, compiled to
+//     `try{let e=Function;return new e(""),!0}catch{return!1}`), which decides
+//     whether its object validators may be code-generated. It is the only one
+//     that can run, and it is wrapped: refused, it caches false and the page
+//     carries on.
 //
-// Refusing it is the intended outcome, not a breakage to route around. The
-// probe is inside a try/catch, so the refusal is caught and memoized as false,
-// and zod takes its interpreted parse path instead of the generated one —
-// identical validation results down a path nobody can perceive on a docs page.
-// Granting 'unsafe-eval' to silence one line of console output would hand the
-// entire app the one primitive this policy exists to deny.
+//     When it runs is zod's business, not this policy's. Re-measured in
+//     headless Chrome 147 against this bundle — loading /api/docs, opening the
+//     search palette, walking the endpoint list — it never ran: zero eval
+//     violations, zero console errors. So a clean console here is not evidence
+//     the policy is unenforced; on the same page an induced
+//     setTimeout("…") is blocked and logged, as are an off-origin <img> and
+//     <script>.
+//
+//   - zod's Doc.compile (`let t=Function; … return new t(...)`), which is NOT
+//     wrapped in a try/catch and would throw outright.
+//
+// The second is unreachable whichever way the first goes, because zod gates the
+// code-generated parser on the probe's cached answer and under this policy that
+// answer cannot be true: unrun or refused, Doc.compile is never entered and the
+// interpreted parse path runs instead — identical validation results down a path
+// nobody can perceive on a docs page. That gating is the whole reason a blocked
+// eval would be harmless here, so do not "fix" a console line by granting
+// 'unsafe-eval': it would hand the entire app the one primitive this policy
+// exists to deny, and it would also switch on an unguarded Function call that
+// currently never executes.
 //
 // img-src carries metadataImageCDNs and font-src carries nothing, and the two
 // decisions only look inconsistent. What separates them is whether the browser
@@ -70,6 +84,11 @@ const metadataImageCDNs = "https://image.tmdb.org https://artworks.thetvdb.com"
 // families over the copies web/static/fonts already ships for the SPA. Same
 // faces, same origin, and fourteen fewer console errors to read past when a
 // real violation turns up.
+//
+// That is true of requests, not of bytes: the string fonts.scalar.com still
+// appears fourteen times in docs.min.js, in the default theme's stylesheet that
+// withDefaultFonts switches off. Nothing injects it, so nothing fetches it — but
+// grepping the bundle for the host will find it, and that is not a regression.
 //
 // So: do not "tighten" img-src back to 'self'. It does not harden anything the
 // SPA was not already doing, and it silently guts the add-media flow.

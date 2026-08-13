@@ -327,6 +327,14 @@ func (c *Config) normalizeOIDCEmailLinking() {
 // to tell a flaw it is introducing from one it inherited — an install whose
 // tags already fail would have had every invariant it broke hidden behind
 // them, and the write saved.
+//
+// "However many" is across fields, not within one: validator stops at a
+// field's first failing tag, so anything behind it — a dive into the
+// elements, most of all — never evaluates. Two quality profiles sharing a
+// name, one of them carrying a bad preferred_resolution, report the list's
+// unique and the invariant and never the element's oneof; that oneof surfaces
+// on the next answer, once the name clash is gone. The same shape reaches
+// Update, which can only compare the reasons it was told about.
 func (c *Config) Validate() error {
 	c.normalizeOIDCEmailLinking()
 	return errors.Join(validator.New().Struct(c), c.checkInvariants())

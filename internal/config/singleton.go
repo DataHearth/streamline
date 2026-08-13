@@ -217,7 +217,10 @@ func stripEnvLayerLocked(k *koanf.Koanf) ([]string, error) {
 //
 // That trade is struck one reason at a time, not one file at a time — and a
 // reason is one rule broken, a struct tag or an invariant or an unreadable
-// secret file, not a phase and not a file. The reasons the file already had
+// secret file, not a phase and not a file. One rule broken among the ones that
+// ran: a field whose first tag fails hides its later tags from both sides of
+// the comparison (see Config.Validate), so this compares the reasons it can
+// see rather than every reason the two files have. The reasons the file already had
 // are warned about and saved through; a reason only the proposed file has is
 // this update's doing and refuses it, however many others the file was already
 // carrying and whichever rule found them. An install propped up in one place
@@ -380,6 +383,13 @@ func envOwnedWritesLocked(next *koanf.Koanf) error {
 // on its message, which names the offending value: two rejected values of one
 // key are two ids, so an update moving between them reads as introducing a
 // reason and is refused. That is the direction with a way out.
+//
+// The struct-tag half is value-blind, and that is the asymmetry: re-pointing
+// one field at a second value the same tag rejects keeps the id, so it reads as
+// inherited and saves where the message-keyed half would refuse. Nothing
+// reaches it — a tag failure the write-back has and the loaded file does not
+// needs an env-owned key, and changing one of those hits ErrEnvOwned first —
+// so it is recorded, not fixed.
 type loadIssue struct {
 	id  string
 	err error
@@ -406,8 +416,16 @@ type loadIssue struct {
 // stopped early put the same inherited reason at the head of both lists, and
 // Update saved a write it would otherwise have refused.
 //
-// The one thing that can still speak alone is keys that will not assemble into
-// a Config at all, which leaves nothing to ask the later phases about.
+// Within a phase that holds field by field, not rule by rule: validator stops
+// at a field's first failing tag, so a rule behind it does not run and is not
+// among the reasons until the one in front of it is fixed (see Config.Validate).
+// So this reports every reason it can see, which is not always every reason
+// the file has.
+//
+// loadableConfig can still speak alone, in principle, on keys that will not
+// assemble into a Config at all. Nothing reaches that today: both of its early
+// returns are koanf merges, which only fail under StrictMerge or a custom merge
+// func, and this package configures neither.
 func loadIssues(fileKeys *koanf.Koanf) []loadIssue {
 	c, issues := loadableConfig(fileKeys)
 	if c == nil {
@@ -433,7 +451,10 @@ func loadIssues(fileKeys *koanf.Koanf) []loadIssue {
 // like the first.
 //
 // The config is nil only when the keys will not assemble at all, which is the
-// one reason there is to report.
+// one reason there is to report — a branch nothing currently reaches, since
+// both merges below funnel into koanf's merge and it only errors under
+// StrictMerge or a custom merge func. Kept because that is a koanf option away,
+// not because it fires.
 func loadableConfig(fileKeys *koanf.Koanf) (*Config, []loadIssue) {
 	k := newDefaultsKoanf()
 	if err := k.Merge(fileKeys); err != nil {

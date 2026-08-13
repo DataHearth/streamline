@@ -316,8 +316,15 @@ var loweredCostHashes = func() [bcrypt.DefaultCost][]byte {
 // attempts per IP per 15 minutes throttles anything longer — which is the same
 // reason the difference is left standing rather than papered over with a
 // transaction on a user that does not exist. No attacker gets near the sample
-// count it would take to pull a fraction of a millisecond out of the ~47ms
-// bcrypt floor it hides behind.
+// count it would take to pull a fraction of a millisecond out of the bcrypt
+// floor it hides behind — ~47ms in that run.
+//
+// Every absolute figure in this file is the machine that sampled it, not a
+// constant: comparePassword's runs put the same floor at 41-43ms and at
+// 42.8-45.0ms, and a different host moves all three together. What carries
+// across hardware is the ratio to the floor — the 149-176x, the 3.97-4.07x,
+// the 0.99x-1.08x — so re-measure the floor on the box in front of you rather
+// than reading the milliseconds here as a target.
 func equalizeLoginCost(password string) {
 	_ = bcrypt.CompareHashAndPassword(dummyPasswordHash, []byte(password))
 }
