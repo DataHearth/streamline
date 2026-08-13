@@ -1,10 +1,12 @@
 package middleware
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
+	"time"
 
 	g "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -63,7 +65,7 @@ var _ = g.Describe("authenticateAPI", g.Label("unit"), func() {
 			req.Header.Set("Sec-Fetch-Site", "same-origin")
 			rr := httptest.NewRecorder()
 
-			authenticateAPI(svc, next, rr, req)
+			authenticateAPI(svc, nil, next, rr, req)
 
 			Expect(rr.Code).To(Equal(http.StatusOK))
 		})
@@ -76,7 +78,7 @@ var _ = g.Describe("authenticateAPI", g.Label("unit"), func() {
 			req.Header.Set("Sec-Fetch-Site", "cross-site")
 			rr := httptest.NewRecorder()
 
-			authenticateAPI(svc, next, rr, req)
+			authenticateAPI(svc, nil, next, rr, req)
 
 			Expect(rr.Code).To(Equal(http.StatusUnauthorized))
 		})
@@ -88,7 +90,7 @@ var _ = g.Describe("authenticateAPI", g.Label("unit"), func() {
 			)
 			rr := httptest.NewRecorder()
 
-			authenticateAPI(svc, next, rr, req)
+			authenticateAPI(svc, nil, next, rr, req)
 
 			Expect(rr.Code).To(Equal(http.StatusUnauthorized))
 		})
@@ -107,7 +109,7 @@ var _ = g.Describe("authenticateAPI", g.Label("unit"), func() {
 			req.Header.Set("Sec-Fetch-Site", "same-origin")
 			rr := httptest.NewRecorder()
 
-			authenticateAPI(svc, next, rr, req)
+			authenticateAPI(svc, nil, next, rr, req)
 
 			Expect(rr.Code).To(Equal(http.StatusUnauthorized))
 		})
@@ -123,7 +125,7 @@ var _ = g.Describe("authenticateAPI", g.Label("unit"), func() {
 			req.Header.Set("Authorization", "Bearer "+bearerToken)
 			rr := httptest.NewRecorder()
 
-			authenticateAPI(svc, next, rr, req)
+			authenticateAPI(svc, nil, next, rr, req)
 
 			Expect(rr.Code).To(Equal(http.StatusOK))
 		})
@@ -138,7 +140,7 @@ var _ = g.Describe("authenticateAPI", g.Label("unit"), func() {
 			req.Header.Set("X-API-Key", apiKey)
 			rr := httptest.NewRecorder()
 
-			authenticateAPI(svc, next, rr, req)
+			authenticateAPI(svc, nil, next, rr, req)
 
 			Expect(rr.Code).To(Equal(http.StatusOK))
 		})
@@ -147,10 +149,105 @@ var _ = g.Describe("authenticateAPI", g.Label("unit"), func() {
 			req := httptest.NewRequest(http.MethodGet, "/api/v1/movies", nil)
 			rr := httptest.NewRecorder()
 
-			authenticateAPI(svc, next, rr, req)
+			authenticateAPI(svc, nil, next, rr, req)
 
 			Expect(rr.Code).To(Equal(http.StatusUnauthorized))
 		})
+	})
+})
+
+var _ = g.Describe("api credential throttling", g.Label("unit"), func() {
+	const apiKey = "wrong-key"
+
+	var (
+		svc     *mocks.MockAuthenticator
+		limiter auth.Limiter
+		next    http.Handler
+	)
+
+	// attempt sends one X-API-Key request from addr and reports the status.
+	attempt := func(addr, key string) *httptest.ResponseRecorder {
+		g.GinkgoHelper()
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/movies", nil)
+		req.RemoteAddr = addr
+		req.Header.Set("X-API-Key", key)
+		rr := httptest.NewRecorder()
+		authenticateAPI(svc, limiter, next, rr, req)
+		return rr
+	}
+
+	g.BeforeEach(func() {
+		svc = mocks.NewMockAuthenticator(g.GinkgoT())
+		limiter = auth.NewLimiter(3, 15*time.Minute)
+		next = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		})
+	})
+
+	g.It("answers 429 once an address has spent its failures", func() {
+		// Four: the throttled request is still validated before rejectAPI
+		// refuses it — the limiter sits at the rejection, not at the door.
+		svc.EXPECT().
+			ValidateAPIKey(mock.Anything, apiKey).
+			Return(nil, errors.New("nope")).
+			Times(4)
+
+		for range 3 {
+			Expect(attempt("203.0.113.5:4000", apiKey).Code).
+				To(Equal(http.StatusUnauthorized))
+		}
+
+		rr := attempt("203.0.113.5:4000", apiKey)
+		Expect(rr.Code).To(Equal(http.StatusTooManyRequests))
+		Expect(rr.Header().Get("Retry-After")).To(Equal("900"))
+	})
+
+	g.It("charges the failing address only", func() {
+		svc.EXPECT().
+			ValidateAPIKey(mock.Anything, apiKey).
+			Return(nil, errors.New("nope")).
+			Times(4)
+
+		for range 3 {
+			attempt("203.0.113.5:4000", apiKey)
+		}
+
+		Expect(attempt("203.0.113.9:4000", apiKey).Code).
+			To(Equal(http.StatusUnauthorized))
+	})
+
+	g.It("never charges a request that authenticates", func() {
+		good := &ent.User{ID: 1, Email: "u@example.com", Role: entuser.Role("admin")}
+		svc.EXPECT().
+			ValidateAPIKey(mock.Anything, "good-key").
+			Return(good, nil).
+			Times(10)
+		svc.EXPECT().
+			ValidateAPIKey(mock.Anything, apiKey).
+			Return(nil, errors.New("nope")).
+			Once()
+
+		for range 10 {
+			Expect(attempt("203.0.113.5:4000", "good-key").Code).
+				To(Equal(http.StatusOK))
+		}
+
+		Expect(attempt("203.0.113.5:4000", apiKey).Code).
+			To(Equal(http.StatusUnauthorized))
+	})
+
+	g.It("leaves the web transport unmetered", func() {
+		serve := func() int {
+			req := httptest.NewRequest(http.MethodGet, "/movies", nil)
+			req.RemoteAddr = "203.0.113.5:4000"
+			rr := httptest.NewRecorder()
+			authenticateWeb(svc, next, rr, req)
+			return rr.Code
+		}
+
+		for range 5 {
+			Expect(serve()).To(Equal(http.StatusFound))
+		}
 	})
 })
 
@@ -177,7 +274,7 @@ var _ = g.Describe("NewAuth in trusted-network mode", g.Label("unit"), func() {
 			w.WriteHeader(http.StatusOK)
 		})
 		h := httputil.ClientIPResolver()(
-			NewAuth(mocks.NewMockAuthenticator(g.GinkgoT()), nil)(inner),
+			NewAuth(mocks.NewMockAuthenticator(g.GinkgoT()), nil, nil)(inner),
 		)
 
 		req := httptest.NewRequest(http.MethodGet, "/movies", nil)

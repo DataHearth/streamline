@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -253,7 +254,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 	limiter := auth.NewLimiter(5, 15*time.Minute)
 
 	// 8. Middleware
-	authMW := middleware.NewAuth(authSvc, []string{
+	authMW := middleware.NewAuth(authSvc, apiFailureLimiter(), []string{
 		"/health",
 		"/api/docs",
 		"/api/v1/openapi.yaml",
@@ -435,6 +436,32 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		HTTPLogger: httpLogger,
 		Torrents:   torrentEngine,
 	}, nil
+}
+
+// apiFailureLimiter returns the budget /api/v1 credential failures are metered
+// against, per client address. It is separate from the login limiter so a
+// browser fumbling a password cannot throttle the same operator's API client,
+// and wider than it because one expired session fires every query on the page
+// at once and each of those 401s is charged.
+//
+// The hidden auth.api_failure_limit key overrides the count, and 0 turns
+// metering off entirely (e2e seam). The sweep that asserts all 131 API routes
+// refuse an anonymous caller is, by construction, exactly the traffic this
+// limiter exists to stop: metered, it would prove the limiter works and stop
+// proving what it was written to prove. No default and no schema entry, so an
+// install can only run on the value below.
+func apiFailureLimiter() auth.Limiter {
+	limit := uint64(20)
+	if raw := config.HiddenString("auth.api_failure_limit"); raw != "" {
+		parsed, err := strconv.ParseUint(raw, 10, 8)
+		if err == nil {
+			limit = parsed
+		}
+	}
+	if limit == 0 {
+		return nil
+	}
+	return auth.NewLimiter(uint8(limit), 15*time.Minute)
 }
 
 // generateSessionSecret returns 64 bytes of crypto/rand encoded as base64.

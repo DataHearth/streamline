@@ -2,10 +2,25 @@
 package httputil
 
 import (
+	"math"
 	"net"
 	"net/http"
 	"net/netip"
+	"strconv"
+	"time"
 )
+
+// RetryAfterSeconds renders a rate-limiter wait for the Retry-After header. It
+// rounds up and floors at one second: anything under a second would render as
+// "0", which reads as "retry now" and invites a tight loop against an endpoint
+// that is refusing.
+func RetryAfterSeconds(d time.Duration) string {
+	secs := int64(1)
+	if d > time.Second {
+		secs = int64(math.Ceil(d.Seconds()))
+	}
+	return strconv.FormatInt(secs, 10)
+}
 
 // ClientIP returns the client IP recorded by ClientIPResolver, falling back to
 // the connecting RemoteAddr when the resolver did not run.

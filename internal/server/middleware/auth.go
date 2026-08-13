@@ -29,6 +29,9 @@ type Authenticator interface {
 // auth.trusted_networks, auth.trusted_role). excludePaths bypass auth
 // entirely (e.g. "/health"); paths ending in "/" match as prefix.
 //
+// apiLimiter meters /api/v1 credential failures per client address; nil turns
+// that off (tests, and any caller that has not wired one).
+//
 // In "disabled" mode all requests pass through without auth.
 // In "trusted-network" mode requests from trusted CIDRs are assigned the
 // configured role; others must authenticate. In "full" mode requests under
@@ -38,6 +41,7 @@ type Authenticator interface {
 // a valid streamline_session cookie (302 redirect to /login on failure).
 func NewAuth(
 	svc Authenticator,
+	apiLimiter auth.Limiter,
 	excludePaths []string,
 ) func(http.Handler) http.Handler {
 	cfg := config.Get()
@@ -76,7 +80,7 @@ func NewAuth(
 			}
 
 			if strings.HasPrefix(r.URL.Path, "/api/v1/") {
-				authenticateAPI(svc, next, w, r)
+				authenticateAPI(svc, apiLimiter, next, w, r)
 				return
 			}
 			authenticateWeb(svc, next, w, r)
@@ -86,6 +90,7 @@ func NewAuth(
 
 func authenticateAPI(
 	svc Authenticator,
+	limiter auth.Limiter,
 	next http.Handler,
 	w http.ResponseWriter,
 	r *http.Request,
@@ -102,7 +107,7 @@ func authenticateAPI(
 				"auth.method",
 				"api_key",
 			)
-			http.Error(w, "invalid API key", http.StatusUnauthorized)
+			rejectAPI(limiter, w, r, "invalid API key")
 			return
 		}
 		ctx := auth.ContextWithClaims(ctx, &auth.Claims{
@@ -125,7 +130,7 @@ func authenticateAPI(
 				"auth.method",
 				"bearer",
 			)
-			http.Error(w, "invalid token", http.StatusUnauthorized)
+			rejectAPI(limiter, w, r, "invalid token")
 			return
 		}
 		if err := svc.ValidateSession(ctx, claims.JTI); err != nil {
@@ -137,7 +142,7 @@ func authenticateAPI(
 				"auth.method",
 				"bearer",
 			)
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			rejectAPI(limiter, w, r, "unauthorized")
 			return
 		}
 		svc.TouchSessionAsync(claims.JTI)
@@ -172,7 +177,52 @@ func authenticateAPI(
 		}
 	}
 	slog.InfoContext(ctx, "api auth rejected", "reason", "no credentials")
-	http.Error(w, "unauthorized", http.StatusUnauthorized)
+	rejectAPI(limiter, w, r, "unauthorized")
+}
+
+// rejectAPI answers an /api/v1 request that failed to authenticate, and meters
+// the failure per client address so credential guessing against the API costs
+// the same as guessing against /auth/login.
+//
+// Only failures are charged, so a caller holding a working key is never metered
+// and needs no exemption: a bulk consumer, an e2e run and the SPA's own polling
+// all pass through untouched. That is also what makes the ceiling generous
+// enough to be safe — an expired session fires every query on the page at once,
+// and each of those 401s is charged, so a limit as tight as login's five would
+// turn one stale tab into a throttled address.
+//
+// Charging here rather than on the way in is what buys that, and it costs the
+// credential check itself: a request that is already over budget has had its key
+// hashed and looked up before this refuses it. That is affordable precisely
+// because nothing on the API path is bcrypt — ValidateAPIKey is a sha256 and one
+// indexed row, ValidateToken an HMAC verify — which is the whole reason
+// /auth/login could not be metered this way and needed the charge-then-refund
+// dance instead.
+//
+// A refused request never reaches the handler. It does not bound work by an
+// *authenticated* caller: anyone holding a valid key can still make requests as
+// fast as the server answers them, which is the same trust the API's RBAC
+// already extends. Metering that too is a per-user quota, not this.
+func rejectAPI(
+	limiter auth.Limiter,
+	w http.ResponseWriter,
+	r *http.Request,
+	msg string,
+) {
+	if limiter == nil {
+		http.Error(w, msg, http.StatusUnauthorized)
+		return
+	}
+	if ok, wait := limiter.Allow(httputil.ClientIPString(r)); !ok {
+		w.Header().Set("Retry-After", httputil.RetryAfterSeconds(wait))
+		http.Error(
+			w,
+			"too many failed attempts",
+			http.StatusTooManyRequests,
+		)
+		return
+	}
+	http.Error(w, msg, http.StatusUnauthorized)
 }
 
 func authenticateWeb(
