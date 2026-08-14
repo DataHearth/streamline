@@ -6,6 +6,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/download"
 )
 
@@ -47,5 +48,38 @@ var _ = Describe("resolveBindIP", Label("unit", "bittorrent"), func() {
 	It("fails start when the named interface does not exist", func() {
 		_, err := resolveBindIP("streamline-no-such-iface0")
 		Expect(err).To(HaveOccurred())
+	})
+})
+
+var _ = Describe("newClientConfig", Label("unit", "bittorrent"), func() {
+	It("disables WebTorrent for an unbound engine", func() {
+		cc := newClientConfig(
+			config.DownloadClientEntry{DownloadDir: "/tmp/streamline-dl"},
+			nil, nil,
+		)
+		Expect(cc.DisableWebtorrent).To(BeTrue())
+	})
+
+	It("disables WebTorrent when bound to an interface", func() {
+		cc := newClientConfig(
+			config.DownloadClientEntry{DownloadDir: "/tmp/streamline-dl"},
+			net.ParseIP("10.11.12.13"), nil,
+		)
+		Expect(cc.DisableWebtorrent).To(BeTrue())
+		Expect(cc.DialForPeerConns).To(BeFalse())
+		Expect(cc.DisableIPv6).To(BeTrue())
+		Expect(cc.NoDefaultPortForwarding).To(BeTrue())
+	})
+
+	It("carries the entry's transport knobs through", func() {
+		entry := config.DownloadClientEntry{
+			DownloadDir: "/tmp/streamline-dl",
+			DisableDHT:  true,
+			ListenPort:  12345,
+		}
+		cc := newClientConfig(entry, nil, nil)
+		Expect(cc.NoDHT).To(BeTrue())
+		Expect(cc.ListenPort).To(Equal(12345))
+		Expect(cc.DataDir).To(Equal(entry.DownloadDir))
 	})
 })
