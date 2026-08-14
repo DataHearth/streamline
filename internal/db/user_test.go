@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 
 	"github.com/datahearth/streamline/ent/user"
@@ -87,5 +88,30 @@ var _ = Describe("User store driver-error paths", Label("unit", "db"), func() {
 				Expect(err).To(MatchError(driverErr))
 			})
 		})
+	})
+})
+
+// Guards against password_hash and token_hash leaking through fmt/json on a
+// raw ent row (e.g. a stray slog.Any or %+v) the way ApiKey.key_hash is
+// already guarded via field.Sensitive().
+var _ = Describe("hash field redaction", Label("unit", "db"), func() {
+	It("omits User.password_hash from String() and JSON", func() {
+		u := &ent.User{PasswordHash: "bcrypt$secret-hash"}
+		Expect(u.String()).NotTo(ContainSubstring("secret-hash"))
+
+		data, err := json.Marshal(u)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(string(data)).NotTo(ContainSubstring("secret-hash"))
+		Expect(string(data)).NotTo(ContainSubstring("password_hash"))
+	})
+
+	It("omits Invite.token_hash from String() and JSON", func() {
+		inv := &ent.Invite{TokenHash: "sha256-secret-token"}
+		Expect(inv.String()).NotTo(ContainSubstring("secret-token"))
+
+		data, err := json.Marshal(inv)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(string(data)).NotTo(ContainSubstring("secret-token"))
+		Expect(string(data)).NotTo(ContainSubstring("token_hash"))
 	})
 })

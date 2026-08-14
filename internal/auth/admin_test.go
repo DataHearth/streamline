@@ -202,34 +202,34 @@ var _ = Describe("Admin service unit", Label("unit", "auth"), func() {
 			Expect(err).To(MatchError(ContainSubstring("load user")))
 		})
 
-		It("returns ErrLastAdmin when demoting the only admin", func() {
+		It("returns ErrLastAdmin when the guarded write matches nothing", func() {
 			storeMock.FindUserByID(mock.AnythingOfType(ctxType), uint32(1)).
 				Return(&ent.User{ID: 1, Role: user.RoleAdmin}, nil).Once()
-			storeMock.CountUsersByRole(mock.AnythingOfType(ctxType), user.RoleAdmin).
-				Return(1, nil).Once()
+			storeMock.UpdateUserUnlessLastAdmin(mock.AnythingOfType(ctxType), uint32(1), mock.AnythingOfType("db.UpdateUserParams")).
+				Return(nil, &ent.NotFoundError{}).
+				Once()
 
 			memberRole := "member"
 			err := svc.UpdateUser(ctx, 1, UserPatch{Role: &memberRole})
 			Expect(err).To(MatchError(ErrLastAdmin))
 		})
 
-		It("wraps CountUsersByRole errors", func() {
+		It("wraps guarded update errors", func() {
 			storeMock.FindUserByID(mock.AnythingOfType(ctxType), uint32(1)).
 				Return(&ent.User{ID: 1, Role: user.RoleAdmin}, nil).Once()
-			storeMock.CountUsersByRole(mock.AnythingOfType(ctxType), user.RoleAdmin).
-				Return(0, errors.New("count fail")).Once()
+			storeMock.UpdateUserUnlessLastAdmin(mock.AnythingOfType(ctxType), uint32(1), mock.AnythingOfType("db.UpdateUserParams")).
+				Return(nil, errors.New("update fail")).
+				Once()
 
 			memberRole := "member"
 			err := svc.UpdateUser(ctx, 1, UserPatch{Role: &memberRole})
-			Expect(err).To(MatchError(ContainSubstring("count admins")))
+			Expect(err).To(MatchError(ContainSubstring("update user")))
 		})
 
-		It("permits demotion when other admins exist", func() {
+		It("demotes an admin through the guarded write", func() {
 			storeMock.FindUserByID(mock.AnythingOfType(ctxType), uint32(1)).
 				Return(&ent.User{ID: 1, Role: user.RoleAdmin}, nil).Once()
-			storeMock.CountUsersByRole(mock.AnythingOfType(ctxType), user.RoleAdmin).
-				Return(2, nil).Once()
-			storeMock.UpdateUser(mock.AnythingOfType(ctxType), uint32(1), mock.MatchedBy(func(p db.UpdateUserParams) bool {
+			storeMock.UpdateUserUnlessLastAdmin(mock.AnythingOfType(ctxType), uint32(1), mock.MatchedBy(func(p db.UpdateUserParams) bool {
 				return p.Role != nil && p.Role.String() == string(user.RoleMember)
 			})).
 				Return(&ent.User{ID: 1, Role: user.RoleMember}, nil).
@@ -289,22 +289,33 @@ var _ = Describe("Admin service unit", Label("unit", "auth"), func() {
 			).To(MatchError(ContainSubstring("load user")))
 		})
 
-		It("returns ErrLastAdmin when deleting the only admin", func() {
+		It("returns ErrLastAdmin when the guarded delete matches nothing", func() {
 			storeMock.FindUserByID(mock.AnythingOfType(ctxType), uint32(1)).
 				Return(&ent.User{ID: 1, Role: user.RoleAdmin}, nil).Once()
-			storeMock.CountUsersByRole(mock.AnythingOfType(ctxType), user.RoleAdmin).
-				Return(1, nil).Once()
+			storeMock.DeleteUserUnlessLastAdmin(mock.AnythingOfType(ctxType), uint32(1)).
+				Return(0, nil).
+				Once()
 			Expect(svc.DeleteUser(ctx, 1, 2)).To(MatchError(ErrLastAdmin))
 		})
 
-		It("wraps CountUsersByRole errors", func() {
+		It("wraps guarded delete errors", func() {
 			storeMock.FindUserByID(mock.AnythingOfType(ctxType), uint32(1)).
 				Return(&ent.User{ID: 1, Role: user.RoleAdmin}, nil).Once()
-			storeMock.CountUsersByRole(mock.AnythingOfType(ctxType), user.RoleAdmin).
-				Return(0, errors.New("count fail")).Once()
+			storeMock.DeleteUserUnlessLastAdmin(mock.AnythingOfType(ctxType), uint32(1)).
+				Return(0, errors.New("delete fail")).
+				Once()
 			Expect(
 				svc.DeleteUser(ctx, 1, 2),
-			).To(MatchError(ContainSubstring("count admins")))
+			).To(MatchError(ContainSubstring("delete user")))
+		})
+
+		It("deletes an admin through the guarded delete", func() {
+			storeMock.FindUserByID(mock.AnythingOfType(ctxType), uint32(1)).
+				Return(&ent.User{ID: 1, Role: user.RoleAdmin}, nil).Once()
+			storeMock.DeleteUserUnlessLastAdmin(mock.AnythingOfType(ctxType), uint32(1)).
+				Return(1, nil).
+				Once()
+			Expect(svc.DeleteUser(ctx, 1, 2)).To(Succeed())
 		})
 
 		It("deletes the user when no invariants block", func() {
