@@ -57,7 +57,7 @@
 				{i18n.movies_more_like_this()}
 			</h3>
 		</header>
-		<div class="poster-scroll -mx-1 px-1 pb-1">
+		<div class="poster-scroll -m-2 p-2">
 			{#each recs as rec (rec.tmdb_id)}
 				{@const localId = libraryByTmdb.get(rec.tmdb_id)}
 				{#snippet poster()}
@@ -136,6 +136,8 @@
 		grid-auto-columns: 160px;
 		gap: 14px;
 		overflow-x: auto;
+		/* A scroll container clips its cross axis whatever this says, so the
+		   hovered card's growth lives in the track's padding instead. */
 		overflow-y: hidden;
 		scroll-snap-type: x mandatory;
 	}

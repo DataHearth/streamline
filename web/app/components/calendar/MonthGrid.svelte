@@ -32,7 +32,31 @@
 
 	let grid = $derived(buildMonthGrid(year, month0, weekStart));
 
-	const VISIBLE = 3;
+	// From lg the grid is height-clamped to the viewport (the page does not
+	// scroll), so how many chips a cell can hold is a measured quantity rather
+	// than a constant. Below that the cells keep their 92px minimum and three.
+	const MAX_VISIBLE = 3;
+	const CHIP_H = 26;
+	let weeksEl = $state<HTMLDivElement | null>(null);
+	let cellH = $state(0);
+
+	$effect(() => {
+		const first = weeksEl?.firstElementChild as HTMLElement | null;
+		if (!first) return;
+		const ro = new ResizeObserver(() => (cellH = first.clientHeight));
+		ro.observe(first);
+		cellH = first.clientHeight;
+		return () => ro.disconnect();
+	});
+
+	// Date row plus the cell's own padding come off the top before chips fit.
+	let capacity = $derived(
+		Math.min(MAX_VISIBLE, Math.max(1, Math.floor((cellH - 36) / CHIP_H))),
+	);
+	// A day with more than fits gives one slot back to the "+N" button.
+	function visibleFor(n: number): number {
+		return n <= capacity ? n : Math.max(1, capacity - 1);
+	}
 	const POP_W = 248;
 	const GAP = 6;
 
@@ -137,9 +161,11 @@
 
 <!-- md and up only: below that the phone renders DotGrid, so the small-screen
      variants this used to carry are gone. -->
-<div class="rounded-lg border border-border bg-bg-elevated p-2">
+<div
+	class="flex flex-col rounded-lg border border-border bg-bg-elevated p-2 lg:h-full lg:min-h-0"
+>
 	<div
-		class="grid grid-cols-7 gap-1.5 px-1 pb-2"
+		class="grid flex-none grid-cols-7 gap-1.5 px-1 pb-2"
 		aria-hidden="true"
 	>
 		{#each labels as label (label)}
@@ -151,20 +177,25 @@
 		{/each}
 	</div>
 
-	<div class="grid grid-cols-7 gap-1.5">
+	<div
+		bind:this={weeksEl}
+		class="weeks grid grid-cols-7 gap-1.5 lg:min-h-0 lg:flex-1"
+		style:--weeks={grid.length}
+	>
 		{#each grid as week, w (w)}
 			{#each week as cell (cell.date.toISOString())}
 				{@const evs = eventsForDay(events, cell.date)}
+				{@const vis = visibleFor(evs.length)}
 				{@const isToday = isSameDay(cell.date, today)}
 				{@const key = cell.date.toDateString()}
 				<div
 					class={cn(
-						"flex min-h-[92px] flex-col gap-1 rounded-md border border-border p-1.5",
+						"flex min-h-[92px] flex-col gap-1 overflow-hidden rounded-md border border-border p-1.5 lg:min-h-0",
 						!cell.inMonth && "opacity-40",
 						isToday && "ring-2 ring-inset ring-accent",
 					)}
 				>
-					<div class="flex items-center justify-between">
+					<div class="flex flex-none items-center justify-between">
 						<span
 							class={cn(
 								"font-mono text-[11px] font-semibold tabular",
@@ -181,18 +212,18 @@
 					     shortfall: every episode rendered one character. Kind is
 					     already the 2px coloured left border, and the episode number
 					     is in the tooltip, the +N popover and the day panel. -->
-					{#each evs.slice(0, VISIBLE) as e (e.id)}
+					{#each evs.slice(0, vis) as e (e.id)}
 						<a
 							href={e.href}
 							title={e.subtitle ? `${e.title} · ${e.subtitle}` : e.title}
 							style:--c="var(--status-{dotToken(e)})"
-							class="chip block truncate rounded bg-bg-card px-1.5 py-1 text-left text-[10.5px] font-medium text-fg transition-colors hover:bg-bg-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
+							class="chip block flex-none truncate rounded bg-bg-card px-1.5 py-1 text-left text-[10.5px] font-medium text-fg transition-colors hover:bg-bg-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
 						>
 							{e.title}
 						</a>
 					{/each}
 
-					{#if evs.length > VISIBLE}
+					{#if evs.length > vis}
 						<button
 							type="button"
 							aria-haspopup="dialog"
@@ -207,9 +238,9 @@
 									longDate.format(cell.date),
 									ev.currentTarget,
 								)}
-							class="rounded px-1.5 py-1 text-left font-mono text-[10px] text-fg-subtle transition-colors hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
+							class="flex-none rounded px-1.5 py-1 text-left font-mono text-[10px] text-fg-subtle transition-colors hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
 						>
-							{i18n.calendar_more_count({ count: evs.length - VISIBLE })}
+							{i18n.calendar_more_count({ count: evs.length - vis })}
 						</button>
 					{/if}
 				</div>
@@ -257,6 +288,13 @@
 {/if}
 
 <style>
+	/* Height-clamped from lg: the weeks share whatever the viewport leaves, so a
+	   five- and a six-week month both fit without the page scrolling. */
+	@media (min-width: 1024px) {
+		.weeks {
+			grid-template-rows: repeat(var(--weeks), minmax(0, 1fr));
+		}
+	}
 	.chip {
 		border: 1px solid var(--border);
 		border-left: 2px solid var(--c);

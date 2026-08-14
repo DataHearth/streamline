@@ -443,17 +443,20 @@
 			{/if}
 		</div>
 
-	<button
-		type="button"
-		onclick={() => onMonitoredChange(!monitoredOnly)}
-		aria-pressed={monitoredOnly}
-		class={cn(
-			"order-3 inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border px-3 text-[12.5px] font-medium transition lg:order-none",
-			monitoredOnly
-				? "border-accent bg-accent-soft text-accent-text"
-				: "border-border bg-bg-elevated text-fg-muted hover:border-border-strong hover:text-fg",
-		)}
-	>
+	<!-- Monitored and the Select pair get a line of their own: beside the search
+	     field they read as part of it rather than as filters over the grid. -->
+	<div class="order-3 flex w-full flex-wrap items-center gap-2 lg:order-none">
+		<button
+			type="button"
+			onclick={() => onMonitoredChange(!monitoredOnly)}
+			aria-pressed={monitoredOnly}
+			class={cn(
+				"inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border px-3 text-[12.5px] font-medium transition",
+				monitoredOnly
+					? "border-accent bg-accent-soft text-accent-text"
+					: "border-border bg-bg-elevated text-fg-muted hover:border-border-strong hover:text-fg",
+			)}
+		>
 			<Eye size={14} aria-hidden="true" />
 			{i18n.monitor_monitored()}
 			<span
@@ -466,10 +469,9 @@
 			</span>
 		</button>
 
-	<!-- List rows carry their own checkboxes (and a select-all in the header), so
-	     the toolbar's Select controls would be a second way to do the same thing. -->
-	{#if view === "grid"}
-		<div class="order-4 flex items-center gap-2 lg:order-none">
+		<!-- List rows carry their own checkboxes (and a select-all in the header), so
+		     the toolbar's Select controls would be a second way to do the same thing. -->
+		{#if view === "grid"}
 			<SelectionControls
 				active={selectMode}
 				count={selectedCount}
@@ -477,6 +479,6 @@
 				onActiveChange={onSelectModeChange}
 				{onSelectAll}
 			/>
-		</div>
-	{/if}
+		{/if}
+	</div>
 </div>

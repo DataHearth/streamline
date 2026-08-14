@@ -128,7 +128,7 @@
 		<div
 			bind:this={scrollEl}
 			onscroll={updateBounds}
-			class="poster-scroll -mx-1 px-1 pb-1.5"
+			class="poster-scroll -m-2 p-2"
 		>
 			{#each movies as movie (movie.href ?? movie.id)}
 				<div class="snap-start">
@@ -153,7 +153,10 @@
 <style>
 	/* 171px below md is the library grid's own poster width at 390px, so a
 	   poster is the same object on both screens. The ‹ › buttons are md-only —
-	   28px targets that duplicate a swipe — so touch scrolls the row itself. */
+	   28px targets that duplicate a swipe — so touch scrolls the row itself.
+	   An overflow-x scroller clips its cross axis too, which cut the top off a
+	   hovered card (1.02 scale plus a 2px ring): the padding above is the room
+	   that growth needs, and the negative margin keeps the row where it was. */
 	.poster-scroll {
 		display: grid;
 		grid-auto-flow: column;
