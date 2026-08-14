@@ -26,10 +26,7 @@ const xffHeader = "X-Forwarded-For"
 // This is the gate to consult before believing any X-Forwarded-* header. On a
 // direct connection — a port-forward, a LAN client, anyone who reaches the
 // listener without going through the proxy — those headers are entirely
-// client-supplied and must be ignored. It does not yet cover every reader:
-// the session cookie's Secure flag (internal/auth/cookie.go) and the OIDC
-// redirect URI (internal/server/web/auth.go) still read X-Forwarded-Proto and
-// X-Forwarded-Host without passing through here.
+// client-supplied and must be ignored.
 func TrustedPeer(r *http.Request) bool {
 	prefixes := trustedProxies()
 	if len(prefixes) == 0 {

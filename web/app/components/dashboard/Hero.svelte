@@ -219,6 +219,11 @@
 		column-gap: 14px;
 		row-gap: 14px;
 	}
+	/* The poster is taller than the words beside it. Left to auto rows, grid
+	   hands that surplus to every row the poster spans, which opened ~100px of
+	   dead space above and below the synopsis. A flexible spacer row takes the
+	   whole surplus instead, so head/body/actions keep their own 16px rhythm and
+	   the block starts at the top of the poster. */
 	@media (min-width: 768px) {
 		.hero-grid {
 			align-items: end;
@@ -226,15 +231,17 @@
 			grid-template-areas:
 				"poster head"
 				"poster body"
-				"poster actions";
+				"poster actions"
+				"poster .";
+			grid-template-rows: max-content max-content max-content 1fr;
 			column-gap: 32px;
 			row-gap: 16px;
 		}
 	}
 	@media (min-width: 1024px) {
 		.hero-grid {
-			grid-template-columns: 340px 1fr;
-			column-gap: 48px;
+			grid-template-columns: 240px 1fr;
+			column-gap: 44px;
 		}
 	}
 

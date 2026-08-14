@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { Calendar } from "@lucide/svelte";
 	import { cn } from "../../lib/cn";
-	import StatusPill from "./StatusPill.svelte";
-	import type { CalendarEvent } from "../../lib/calendar";
+	import { dotToken, type CalendarEvent } from "../../lib/calendar";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 	import { getLocale } from "../../lib/paraglide/runtime.js";
 
@@ -13,6 +12,7 @@
 		seeAllLabel = i18n.upcoming_see_all(),
 		emptyText = i18n.upcoming_empty_hint(),
 		stretch = false,
+		fill = false,
 	}: {
 		events: CalendarEvent[];
 		title: string;
@@ -22,6 +22,9 @@
 		// Fill the grid row instead of hugging its content — the dashboard pairs
 		// this with the Wanted rail and the two should square off.
 		stretch?: boolean;
+		// Take the height the container gives and scroll the list inside it, for a
+		// host that is itself clamped to the viewport (the calendar's side panel).
+		fill?: boolean;
 	} = $props();
 
 	const monthFmt = new Intl.DateTimeFormat(getLocale(), { month: "short" });
@@ -47,11 +50,15 @@
 <aside
 	class={cn(
 		"rounded-lg border border-border bg-bg-elevated p-4",
-		stretch ? "h-full" : "self-start",
+		fill
+			? "flex h-full min-h-0 flex-col"
+			: stretch
+				? "h-full"
+				: "self-start",
 	)}
 	aria-label={title}
 >
-	<header class="mb-3 flex items-baseline justify-between">
+	<header class="mb-3 flex flex-none items-baseline justify-between">
 		<h2 class="text-base font-semibold tracking-tight text-fg">{title}</h2>
 		{#if seeAllHref}
 			<a
@@ -72,13 +79,31 @@
 			<p class="text-xs text-fg-muted">{emptyText}</p>
 		</div>
 	{:else}
-		<ul class="flex flex-col gap-1">
+		<ul
+			class={cn(
+				"flex flex-col gap-1",
+				fill && "-mr-2 min-h-0 flex-1 overflow-y-auto pr-2",
+			)}
+		>
 			{#each events as ev (ev.id)}
 				{@const date = stamp(ev.date)}
 				{@const when = daysUntil(ev.date)}
+				<!-- The meta line, in falling order of value: the episode number, the
+				     episode's own title, then how far off it is. A movie has only its
+				     reason for being here. `when` sits last because it is the one
+				     segment the date stamp already states, so it is the one truncation
+				     should eat first. -->
+				{@const meta = [
+					ev.subtitle,
+					ev.detail ?? i18n.lc_digital_release(),
+					when,
+				]
+					.filter(Boolean)
+					.join(" · ")}
 				<li>
 					<a
 						href={ev.href}
+						title="{ev.title} · {meta}"
 						class="grid grid-cols-[44px_1fr_auto] items-center gap-3 rounded-md px-1.5 py-2.5 transition hover:bg-surface"
 					>
 						<span
@@ -95,14 +120,32 @@
 							<div class="truncate text-[13px] font-medium text-fg">
 								{ev.title}
 							</div>
-							<div class="mt-0.5 font-mono text-[10.5px] text-fg-subtle">
-								{ev.subtitle ?? i18n.lc_digital_release()}{when ? ` · ${when}` : ""}
+							<div class="mt-0.5 truncate font-mono text-[10.5px] text-fg-subtle">
+								{meta}
 							</div>
 						</div>
-						<StatusPill status={ev.status} size="sm" />
+						<!-- Kind, not status. Everything on this list is unreleased and
+						     wanted, so a status pill printed the same word down the whole
+						     panel; what the row does not otherwise say is whether it is a
+						     film or an episode. Amber/purple are the kind colours the
+						     calendar's dots and grid chips already use. -->
+						<span
+							class="kind-pill shrink-0 whitespace-nowrap rounded-full border px-1.5 py-[1px] text-[10px] font-semibold tracking-[0.02em]"
+							style:--c="var(--status-{dotToken(ev)})"
+						>
+							{ev.kind === "movie" ? i18n.common_movie() : i18n.common_episode()}
+						</span>
 					</a>
 				</li>
 			{/each}
 		</ul>
 	{/if}
 </aside>
+
+<style>
+	.kind-pill {
+		background-color: var(--c);
+		border-color: var(--c);
+		color: var(--bg-deep);
+	}
+</style>

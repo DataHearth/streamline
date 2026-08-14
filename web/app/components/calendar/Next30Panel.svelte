@@ -6,4 +6,4 @@
 	let { events }: { events: CalendarEvent[] } = $props();
 </script>
 
-<UpcomingList {events} title={i18n.dash_next_30_days()} />
+<UpcomingList {events} title={i18n.dash_next_30_days()} fill />

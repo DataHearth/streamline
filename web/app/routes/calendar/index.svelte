@@ -125,7 +125,7 @@
 </script>
 
 <div
-	class="flex flex-col px-4 py-5 md:px-6 md:py-6"
+	class="flex flex-col px-4 py-5 md:px-6 md:py-6 lg:h-[calc(100dvh-4rem)] lg:min-h-0 lg:overflow-hidden"
 	use:monthSwipe={{
 		onPrev: () => shift(-1),
 		onNext: () => shift(1),
@@ -246,10 +246,14 @@
 	</div>
 
 	<!-- Tablet and desktop: one grid. The tablet folds the agenda in below it;
-	     from lg the movies-only panel takes the second column instead. -->
-	<div class="mt-4 hidden gap-4 md:grid lg:grid-cols-[1fr_320px]">
+	     from lg the movies-only panel takes the second column instead — and the
+	     whole page is clamped to the viewport there, so the grid and the panel
+	     divide the leftover height rather than scrolling the page. -->
+	<div
+		class="mt-4 hidden gap-4 md:grid lg:min-h-0 lg:flex-1 lg:grid-cols-[1fr_320px]"
+	>
 		<MonthGrid {year} {month0} events={gridEvents} />
-		<div class="hidden lg:block">
+		<div class="hidden lg:grid lg:min-h-0">
 			<Next30Panel events={upcomingAll} />
 		</div>
 		<section class="mt-2 lg:hidden">

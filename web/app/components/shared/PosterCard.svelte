@@ -203,7 +203,7 @@
 
 		<div
 			class={cn(
-				"absolute left-2 top-2 transition",
+				"poster-pill absolute left-2 top-2 transition",
 				onSelect &&
 					(selectionActive
 						? "opacity-0"
@@ -286,3 +286,14 @@
 		{/if}
 	</div>
 </div>
+
+<style>
+	/* This pill sits on poster art, where StatusPill's translucent variant — 15%
+	   of the status colour over *transparent* — lets the artwork through and the
+	   label loses its contrast. Same tint, opaque base, so it reads like the
+	   pills that sit on cards elsewhere. */
+	.poster-pill :global(.pill[data-variant="translucent"]) {
+		background-color: color-mix(in srgb, var(--c) 15%, var(--bg-card));
+		border-color: color-mix(in srgb, var(--c) 25%, var(--bg-card));
+	}
+</style>
