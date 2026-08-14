@@ -63,7 +63,7 @@ jobs:
           task build:oci TAG=dev
 
       - name: Load image into kind
-        run: kind load docker-image datahearth/streamline:dev --name streamline-dev
+        run: kind load docker-image ghcr.io/datahearth/streamline:dev --name streamline-dev
 
       - name: Helm prep + install
         run: |
