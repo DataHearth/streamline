@@ -29,7 +29,7 @@ func (s *Server) ListMovies(
 	movies, total, err := s.movies.List(ctx, page, limit)
 	if err != nil {
 		return ListMovies500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 
@@ -53,7 +53,7 @@ func (s *Server) GetMovieCounts(
 	counts, err := s.movies.Counts(ctx)
 	if err != nil {
 		return GetMovieCounts500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 	trend := make([]uint32, len(counts.Trend))
@@ -109,7 +109,7 @@ func (s *Server) GetMovie(
 	files, err := s.store.ListMediaFilesByMovieID(ctx, m.ID)
 	if err != nil {
 		return GetMovie500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 	result := movieToAPI(m)
@@ -201,12 +201,12 @@ func (s *Server) SearchMovieNow(
 	}
 	if s.missingSearcher == nil {
 		return SearchMovieNow500JSONResponse{
-			InternalErrorJSONResponse: errInternal("search not configured"),
+			InternalErrorJSONResponse: errInternal(ctx, errSearchNotConfigured),
 		}, nil
 	}
 	if err := s.missingSearcher.SearchOne(ctx, m); err != nil {
 		return SearchMovieNow500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 	return SearchMovieNow202JSONResponse{
@@ -235,7 +235,7 @@ func (s *Server) SearchMovie(
 	)
 	if err != nil {
 		return SearchMovie500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 
@@ -288,6 +288,11 @@ func (s *Server) GetMoviePlayOnLinks(
 	ctx context.Context,
 	request GetMoviePlayOnLinksRequestObject,
 ) (GetMoviePlayOnLinksResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return GetMoviePlayOnLinks403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
 	m, err := s.movies.Get(ctx, request.Id)
 	if err != nil {
 		return GetMoviePlayOnLinks404JSONResponse{
@@ -296,9 +301,7 @@ func (s *Server) GetMoviePlayOnLinks(
 	}
 	if s.deepLinker == nil {
 		return GetMoviePlayOnLinks500JSONResponse{
-			InternalErrorJSONResponse: errInternal(
-				"play-on resolver not configured",
-			),
+			InternalErrorJSONResponse: errInternal(ctx, errPlayOnNotConfigured),
 		}, nil
 	}
 	results := s.deepLinker.Resolve(ctx, m.TmdbID, m.Title, m.Year)
@@ -337,7 +340,7 @@ func (s *Server) GrabMovieRelease(
 		}, nil
 	case err != nil:
 		return GrabMovieRelease500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 	if replaceExisting(request.Body) {
@@ -369,7 +372,7 @@ func (s *Server) RefreshMovieMetadata(
 		}, nil
 	case err != nil:
 		return RefreshMovieMetadata500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 	return RefreshMovieMetadata200JSONResponse{
@@ -383,7 +386,7 @@ func (s *Server) RenameMovieFiles(
 ) (RenameMovieFilesResponseObject, error) {
 	if s.renamer == nil {
 		return RenameMovieFiles500JSONResponse{
-			InternalErrorJSONResponse: errInternal("renamer not configured"),
+			InternalErrorJSONResponse: errInternal(ctx, errRenamerNotConfigured),
 		}, nil
 	}
 	preview := request.Params.Preview != nil && *request.Params.Preview
@@ -401,7 +404,7 @@ func (s *Server) RenameMovieFiles(
 		}, nil
 	case err != nil:
 		return RenameMovieFiles500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 	out := RenamePlan{
@@ -434,7 +437,7 @@ func (s *Server) GetMovieRecommendations(
 	results, err := s.metadata.Recommendations(ctx, m.TmdbID)
 	if err != nil {
 		return GetMovieRecommendations500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 
@@ -474,14 +477,14 @@ func (s *Server) SearchTMDBMovie(
 	results, err := s.metadata.SearchMovie(ctx, request.Params.Q, year)
 	if err != nil {
 		return SearchTMDBMovie500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 
 	annotated, err := s.movies.AnnotateTMDBResults(ctx, results)
 	if err != nil {
 		return SearchTMDBMovie500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 
@@ -516,7 +519,7 @@ func (s *Server) GetTMDBMovieDetail(
 	d, err := s.metadata.GetMovie(ctx, request.TmdbId)
 	if err != nil {
 		return GetTMDBMovieDetail500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 	return GetTMDBMovieDetail200JSONResponse{

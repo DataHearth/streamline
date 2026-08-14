@@ -220,6 +220,20 @@ var _ = Describe(
 				Expect(body.Message).To(Equal(indexer.ErrUnreachable.Error()))
 			})
 
+			// The mock carries no Test expectation, so a handler that probed
+			// the metadata service anyway fails the spec.
+			It("refuses a link-local target without probing it", func() {
+				body := `{"name":"draft","host":"169.254.169.254","port":80,` +
+					`"api_key":"k","protocol":"torznab"}`
+
+				req := app.req(http.MethodPost, "/api/v1/indexers/test", "",
+					strings.NewReader(body))
+				req.Header.Set("Content-Type", "application/json")
+				resp := app.do(req)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+			})
+
 			It("returns 200 when the draft credentials work", func() {
 				app.indexers.EXPECT().
 					Test(mock.Anything, mock.Anything).

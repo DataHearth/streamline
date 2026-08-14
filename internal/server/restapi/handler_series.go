@@ -39,7 +39,7 @@ func (s *Server) ListSeries(
 	rows, total, err := s.tvshows.FilterList(ctx, p)
 	if err != nil {
 		return ListSeries500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 	items := make([]TVShow, 0, len(rows))
@@ -78,7 +78,7 @@ func (s *Server) AddSeries(
 		})
 		if uerr != nil {
 			return AddSeries500JSONResponse{
-				InternalErrorJSONResponse: errInternal(uerr.Error()),
+				InternalErrorJSONResponse: errInternal(ctx, uerr),
 			}, nil
 		}
 		show = updated
@@ -95,7 +95,7 @@ func (s *Server) GetSeriesCounts(
 	c, err := s.tvshows.Counts(ctx)
 	if err != nil {
 		return GetSeriesCounts500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 	return GetSeriesCounts200JSONResponse{
@@ -115,7 +115,7 @@ func (s *Server) LookupSeries(
 	results, err := s.metadataTV.SearchSeries(ctx, request.Params.Query)
 	if err != nil {
 		return LookupSeries500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 	out := make([]SeriesLookupResult, 0, len(results))
@@ -153,7 +153,7 @@ func (s *Server) GetSeriesLookupDetail(
 	d, err := s.seriesWithCast(ctx, request.TvdbId)
 	if err != nil {
 		return GetSeriesLookupDetail500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 	return GetSeriesLookupDetail200JSONResponse{
@@ -224,7 +224,7 @@ func (s *Server) PatchSeries(
 	show, err := s.tvshows.Update(ctx, request.Id, p)
 	if err != nil {
 		return PatchSeries500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 	return PatchSeries200JSONResponse{
@@ -248,7 +248,7 @@ func (s *Server) DeleteSeries(
 		tvshow.DeleteOptions{DeleteFiles: deleteFiles},
 	); err != nil {
 		return DeleteSeries500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 	return DeleteSeries204Response{}, nil
@@ -290,7 +290,7 @@ func (s *Server) PatchSeason(
 			request.Body.Monitored,
 		); err != nil {
 			return PatchSeason500JSONResponse{
-				InternalErrorJSONResponse: errInternal(err.Error()),
+				InternalErrorJSONResponse: errInternal(ctx, err),
 			}, nil
 		}
 		return PatchSeason204Response{}, nil
@@ -315,7 +315,7 @@ func (s *Server) PatchEpisode(
 		request.Body.Monitored,
 	); err != nil {
 		return PatchEpisode500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 	return PatchEpisode204Response{}, nil
@@ -332,12 +332,12 @@ func (s *Server) SearchSeries(
 	}
 	if s.tvSearcher == nil {
 		return SearchSeries500JSONResponse{
-			InternalErrorJSONResponse: errInternal("tv search not configured"),
+			InternalErrorJSONResponse: errInternal(ctx, errTVSearchNotConfigured),
 		}, nil
 	}
 	if err := s.tvSearcher.SearchShow(ctx, request.Id); err != nil {
 		return SearchSeries500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 	return SearchSeries202Response{}, nil
@@ -378,7 +378,7 @@ func (s *Server) BrowseEpisodeReleases(
 	)
 	if err != nil {
 		return BrowseEpisodeReleases500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 	items := make([]SearchResult, 0, len(results))
@@ -415,7 +415,7 @@ func (s *Server) GrabEpisodeRelease(
 		}, nil
 	case err != nil:
 		return GrabEpisodeRelease500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 	if replaceExisting(request.Body) {
@@ -445,7 +445,7 @@ func (s *Server) BrowseSeasonReleases(
 	)
 	if err != nil {
 		return BrowseSeasonReleases500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 	items := make([]SearchResult, 0, len(results))
@@ -484,7 +484,7 @@ func (s *Server) GrabSeasonRelease(
 		}, nil
 	case err != nil:
 		return GrabSeasonRelease500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 	return GrabSeasonRelease202Response{}, nil
@@ -503,7 +503,7 @@ func (s *Server) BrowseSeriesReleases(
 	results, err := s.indexers.SearchSeries(ctx, []string{show.Title}, show.TvdbID)
 	if err != nil {
 		return BrowseSeriesReleases500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 	items := make([]SearchResult, 0, len(results))
@@ -542,7 +542,7 @@ func (s *Server) GrabSeriesRelease(
 		}, nil
 	case err != nil:
 		return GrabSeriesRelease500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 	return GrabSeriesRelease202Response{}, nil
@@ -552,6 +552,11 @@ func (s *Server) GetSeriesPlayOnLinks(
 	ctx context.Context,
 	request GetSeriesPlayOnLinksRequestObject,
 ) (GetSeriesPlayOnLinksResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return GetSeriesPlayOnLinks403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
 	show, err := s.tvshows.Get(ctx, request.Id)
 	if err != nil {
 		return GetSeriesPlayOnLinks404JSONResponse{
@@ -560,9 +565,7 @@ func (s *Server) GetSeriesPlayOnLinks(
 	}
 	if s.deepLinker == nil {
 		return GetSeriesPlayOnLinks500JSONResponse{
-			InternalErrorJSONResponse: errInternal(
-				"play-on resolver not configured",
-			),
+			InternalErrorJSONResponse: errInternal(ctx, errPlayOnNotConfigured),
 		}, nil
 	}
 	results := s.deepLinker.ResolveTV(ctx, show.TvdbID, show.Title, show.Year)
@@ -590,7 +593,7 @@ func (s *Server) ApplySpecialsToExisting(
 	n, err := s.tvshows.ApplySpecialsToExisting(ctx)
 	if err != nil {
 		return ApplySpecialsToExisting500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 	return ApplySpecialsToExisting200JSONResponse{
@@ -613,7 +616,7 @@ func (s *Server) RefreshSeriesMetadata(
 	show, err := s.tvshows.RefreshOne(ctx, request.Id)
 	if err != nil {
 		return RefreshSeriesMetadata500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 	return RefreshSeriesMetadata200JSONResponse{
@@ -627,7 +630,7 @@ func (s *Server) RenameSeriesFiles(
 ) (RenameSeriesFilesResponseObject, error) {
 	if s.seriesRenamer == nil {
 		return RenameSeriesFiles500JSONResponse{
-			InternalErrorJSONResponse: errInternal("renamer not configured"),
+			InternalErrorJSONResponse: errInternal(ctx, errRenamerNotConfigured),
 		}, nil
 	}
 	preview := request.Params.Preview != nil && *request.Params.Preview
@@ -645,7 +648,7 @@ func (s *Server) RenameSeriesFiles(
 		}, nil
 	case err != nil:
 		return RenameSeriesFiles500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 	out := SeriesRenamePlan{

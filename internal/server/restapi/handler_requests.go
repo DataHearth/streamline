@@ -44,7 +44,7 @@ func (s *Server) ListRequests(
 	rows, total, err := s.requests.List(ctx, p)
 	if err != nil {
 		return ListRequests500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 	items := make([]Request, 0, len(rows))
@@ -97,7 +97,7 @@ func (s *Server) CreateRequest(
 	}
 	if err != nil {
 		return CreateRequest500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 	return CreateRequest201JSONResponse{
@@ -154,7 +154,7 @@ func (s *Server) ApproveRequest(
 		}, nil
 	case err != nil:
 		return ApproveRequest500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 	return ApproveRequest200JSONResponse{
@@ -184,7 +184,7 @@ func (s *Server) DenyRequest(
 		}, nil
 	case err != nil:
 		return DenyRequest500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 	return DenyRequest200JSONResponse{
@@ -209,7 +209,7 @@ func (s *Server) ReopenRequest(
 		}, nil
 	case err != nil:
 		return ReopenRequest500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 	return ReopenRequest200JSONResponse{
@@ -238,7 +238,7 @@ func (s *Server) GetRequestMetadata(
 	}
 	if err != nil {
 		return GetRequestMetadata500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 	if claims.Role == "request_only" {
@@ -255,7 +255,7 @@ func (s *Server) GetRequestMetadata(
 		d, err := s.metadata.GetMovie(ctx, r.MediaID)
 		if err != nil {
 			return GetRequestMetadata500JSONResponse{
-				InternalErrorJSONResponse: errInternal(err.Error()),
+				InternalErrorJSONResponse: errInternal(ctx, err),
 			}, nil
 		}
 		details = movieDetailsToRequestMedia(d)
@@ -263,7 +263,7 @@ func (s *Server) GetRequestMetadata(
 		d, err := s.seriesWithCast(ctx, r.MediaID)
 		if err != nil {
 			return GetRequestMetadata500JSONResponse{
-				InternalErrorJSONResponse: errInternal(err.Error()),
+				InternalErrorJSONResponse: errInternal(ctx, err),
 			}, nil
 		}
 		details = seriesDetailsToRequestMedia(d)

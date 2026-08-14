@@ -232,6 +232,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/MoviePlayOnLinks"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":
@@ -775,6 +777,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/SeriesPlayOnLinks"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":
@@ -877,6 +881,8 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Indexer"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalError"
     post:
@@ -996,6 +1002,8 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/DownloadClient"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalError"
     post:
@@ -1108,6 +1116,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/TorrentList"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
     post:
@@ -1136,6 +1146,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/TorrentDetails"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
     delete:
@@ -1216,6 +1228,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/MediaServerList"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalError"
     post:
@@ -1246,6 +1260,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/MediaServerOK"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":

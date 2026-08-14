@@ -13,6 +13,11 @@ func (s *Server) ListDownloadClients(
 	ctx context.Context,
 	_ ListDownloadClientsRequestObject,
 ) (ListDownloadClientsResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return ListDownloadClients403JSONResponse{
+			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
 	c := config.Get()
 	items := make([]DownloadClient, 0, len(c.DownloadClients))
 	for _, e := range c.DownloadClients {
@@ -209,7 +214,7 @@ func (s *Server) DeleteDownloadClient(
 		}, nil
 	case err != nil:
 		return DeleteDownloadClient500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 	if prev.ClientType == "builtin" {
@@ -245,7 +250,7 @@ func (s *Server) TestDownloadClient(
 		}, nil
 	default:
 		return TestDownloadClient500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 }
@@ -286,6 +291,14 @@ func (s *Server) TestDraftDownloadClient(
 		p.UseSSL = *b.UseSsl
 	}
 
+	if draftTargetRefused(ctx, p.Host) {
+		return TestDraftDownloadClient422JSONResponse{
+			UnprocessableEntityJSONResponse: errUnprocessable(
+				draftTargetRefusedMessage,
+			),
+		}, nil
+	}
+
 	switch err := s.downloads.Test(ctx, p); {
 	case err == nil:
 		return TestDraftDownloadClient200Response{}, nil
@@ -299,7 +312,7 @@ func (s *Server) TestDraftDownloadClient(
 		}, nil
 	default:
 		return TestDraftDownloadClient500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 }

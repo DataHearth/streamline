@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
 
+	"github.com/datahearth/streamline/internal/auth"
 	"github.com/datahearth/streamline/internal/bittorrent"
 	"github.com/datahearth/streamline/internal/download"
 )
@@ -114,10 +115,15 @@ var _ = Describe("Handler: Torrents", Label("unit", "server", "torrents"), func(
 	})
 
 	It("returns 404 when no builtin client is configured", func() {
-		// direct StrictServer call — no engine wired
+		// direct StrictServer call — no engine wired. The claims stand in for
+		// the middleware this call bypasses; without them the handler's own
+		// admin check answers 403 before it can reach the missing engine.
 		bare := New(Deps{})
-		resp, err := bare.ListTorrents(context.Background(),
-			ListTorrentsRequestObject{})
+		ctx := auth.ContextWithClaims(
+			context.Background(),
+			&auth.Claims{Role: roleAdmin},
+		)
+		resp, err := bare.ListTorrents(ctx, ListTorrentsRequestObject{})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp).To(BeAssignableToTypeOf(ListTorrents404JSONResponse{}))
 	})

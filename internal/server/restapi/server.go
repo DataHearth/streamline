@@ -4,6 +4,9 @@
 package restapi
 
 import (
+	"log/slog"
+	"net/http"
+
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/auth"
 	"github.com/datahearth/streamline/internal/bittorrent"
@@ -105,6 +108,36 @@ func New(d Deps) *Server {
 // handler adapter, with the default-deny role guard (rbac.go) in front of
 // every operation.
 func Mount(r chi.Router, s *Server) {
-	handler := NewStrictHandler(s, []StrictMiddlewareFunc{roleGuard})
+	handler := NewStrictHandlerWithOptions(
+		s,
+		[]StrictMiddlewareFunc{roleGuard},
+		StrictHTTPServerOptions{
+			// The generated default writes err.Error() as text/plain; a handler
+			// returning a non-nil error would hand the client the raw internal
+			// error. Bad requests keep echoing their own decode/binding failure,
+			// which is user input, not internal state.
+			RequestErrorHandlerFunc: func(
+				w http.ResponseWriter,
+				_ *http.Request,
+				err error,
+			) {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+			},
+			ResponseErrorHandlerFunc: func(
+				w http.ResponseWriter,
+				r *http.Request,
+				err error,
+			) {
+				ctx := r.Context()
+				slog.ErrorContext(ctx, "api handler returned an error", "error", err)
+				denyJSON(
+					ctx,
+					w,
+					http.StatusInternalServerError,
+					internalErrorMessage,
+				)
+			},
+		},
+	)
 	HandlerFromMuxWithBaseURL(handler, r, "/api/v1")
 }

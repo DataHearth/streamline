@@ -130,7 +130,7 @@ func (s *Server) DeleteQualityProfile(
 		}, nil
 	case err != nil:
 		return DeleteQualityProfile500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 	return DeleteQualityProfile204Response{}, nil

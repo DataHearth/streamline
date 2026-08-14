@@ -11644,6 +11644,15 @@ func (response ListDownloadClients200JSONResponse) VisitListDownloadClientsRespo
 	return json.NewEncoder(w).Encode(response)
 }
 
+type ListDownloadClients403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListDownloadClients403JSONResponse) VisitListDownloadClientsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type ListDownloadClients500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response ListDownloadClients500JSONResponse) VisitListDownloadClientsResponse(w http.ResponseWriter) error {
@@ -11916,6 +11925,15 @@ type ListIndexers200JSONResponse []Indexer
 func (response ListIndexers200JSONResponse) VisitListIndexersResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListIndexers403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListIndexers403JSONResponse) VisitListIndexersResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
 
 	return json.NewEncoder(w).Encode(response)
 }
@@ -12720,6 +12738,15 @@ func (response ListMediaServers200JSONResponse) VisitListMediaServersResponse(w 
 	return json.NewEncoder(w).Encode(response)
 }
 
+type ListMediaServers403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListMediaServers403JSONResponse) VisitListMediaServersResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type ListMediaServers500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response ListMediaServers500JSONResponse) VisitListMediaServersResponse(w http.ResponseWriter) error {
@@ -12931,6 +12958,15 @@ type GetMediaServer200JSONResponse struct{ MediaServerOKJSONResponse }
 func (response GetMediaServer200JSONResponse) VisitGetMediaServerResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetMediaServer403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetMediaServer403JSONResponse) VisitGetMediaServerResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
 
 	return json.NewEncoder(w).Encode(response)
 }
@@ -13362,6 +13398,15 @@ type GetMoviePlayOnLinks200JSONResponse struct{ MoviePlayOnLinksJSONResponse }
 func (response GetMoviePlayOnLinks200JSONResponse) VisitGetMoviePlayOnLinksResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetMoviePlayOnLinks403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetMoviePlayOnLinks403JSONResponse) VisitGetMoviePlayOnLinksResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
 
 	return json.NewEncoder(w).Encode(response)
 }
@@ -14944,6 +14989,15 @@ func (response GetSeriesPlayOnLinks200JSONResponse) VisitGetSeriesPlayOnLinksRes
 	return json.NewEncoder(w).Encode(response)
 }
 
+type GetSeriesPlayOnLinks403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetSeriesPlayOnLinks403JSONResponse) VisitGetSeriesPlayOnLinksResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type GetSeriesPlayOnLinks404JSONResponse struct{ NotFoundJSONResponse }
 
 func (response GetSeriesPlayOnLinks404JSONResponse) VisitGetSeriesPlayOnLinksResponse(w http.ResponseWriter) error {
@@ -15224,6 +15278,15 @@ func (response ListTorrents200JSONResponse) VisitListTorrentsResponse(w http.Res
 	return json.NewEncoder(w).Encode(response)
 }
 
+type ListTorrents403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListTorrents403JSONResponse) VisitListTorrentsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type ListTorrents404JSONResponse struct{ NotFoundJSONResponse }
 
 func (response ListTorrents404JSONResponse) VisitListTorrentsResponse(w http.ResponseWriter) error {
@@ -15326,6 +15389,15 @@ type GetTorrent200JSONResponse struct{ TorrentDetailsJSONResponse }
 func (response GetTorrent200JSONResponse) VisitGetTorrentResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetTorrent403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetTorrent403JSONResponse) VisitGetTorrentResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
 
 	return json.NewEncoder(w).Encode(response)
 }

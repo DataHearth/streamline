@@ -12,6 +12,9 @@ func (s *Server) ListIndexers(
 	ctx context.Context,
 	_ ListIndexersRequestObject,
 ) (ListIndexersResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return ListIndexers403JSONResponse{ForbiddenJSONResponse: notAdminResp}, nil
+	}
 	c := config.Get()
 	items := make([]Indexer, 0, len(c.Indexers))
 	for _, e := range c.Indexers {
@@ -124,7 +127,7 @@ func (s *Server) DeleteIndexer(
 		}, nil
 	case err != nil:
 		return DeleteIndexer500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 	return DeleteIndexer204Response{}, nil
@@ -152,7 +155,7 @@ func (s *Server) TestIndexer(
 		}, nil
 	default:
 		return TestIndexer500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 }
@@ -167,6 +170,13 @@ func (s *Server) TestDraftIndexer(
 		}, nil
 	}
 	b := request.Body
+	if draftTargetRefused(ctx, b.Host) {
+		return TestDraftIndexer422JSONResponse{
+			UnprocessableEntityJSONResponse: errUnprocessable(
+				draftTargetRefusedMessage,
+			),
+		}, nil
+	}
 	p := indexer.TestParams{
 		Protocol: "torznab",
 		Host:     b.Host,
@@ -191,7 +201,7 @@ func (s *Server) TestDraftIndexer(
 	}
 	if err != nil {
 		return TestDraftIndexer500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 	return TestDraftIndexer200Response{}, nil
