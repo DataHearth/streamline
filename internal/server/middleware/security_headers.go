@@ -108,6 +108,16 @@ const securityCSP = "default-src 'self'; " +
 // pinning those to https on its behalf is not its call to make.
 const securityHSTS = "max-age=31536000"
 
+// securityCOOP is "same-origin-allow-popups" rather than "same-origin". The
+// Plex PIN flow (web/app/lib/plex_pin.ts) opens https://app.plex.tv/auth with
+// window.open and keeps the returned handle: it checks `if (!popup)` for
+// popup-blocker detection and later calls closePopup(popup) to close it.
+// Plain "same-origin" severs that handle the instant the popup navigates
+// cross-origin, breaking both. same-origin-allow-popups still isolates this
+// origin's window from a popup's window.opener while leaving the opener's own
+// handle to the popup intact.
+const securityCOOP = "same-origin-allow-popups"
+
 // SecurityHeaders stamps the browser-facing hardening headers onto every
 // response.
 //
@@ -132,6 +142,16 @@ func SecurityHeaders(next http.Handler) http.Handler {
 		h.Set("X-Frame-Options", "DENY")
 		h.Set("X-Content-Type-Options", "nosniff")
 		h.Set("Referrer-Policy", "same-origin")
+		h.Set("Cross-Origin-Opener-Policy", securityCOOP)
+		// Default every response to no-store rather than opting each handler
+		// out individually: /api/v1 and the webui auth routes hand back
+		// bearer material (API keys, invite tokens, the Plex PIN's
+		// auth_token, the rotated JWT secret) and a missed spot would cache
+		// it silently. /static/* is the one exclusion — the embedded
+		// JS/CSS/fonts carry no secrets and need to stay cacheable.
+		if !strings.HasPrefix(r.URL.Path, "/static/") {
+			h.Set("Cache-Control", "no-store, private")
+		}
 		if servedOverTLS(r) {
 			h.Set("Strict-Transport-Security", securityHSTS)
 		}
