@@ -51,6 +51,41 @@ jobs:
             echo "❌ golangci-lint found issues" >> "$GITHUB_STEP_SUMMARY"
           fi
 
+  vulncheck:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Set up pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install Task
+        uses: arduino/setup-task@b91d5d2c96a56797b48ac1e0e89220bf64044611 # v2.0.0
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install frontend deps
+        run: pnpm install --frozen-lockfile
+      - name: Scan dependencies
+        run: task vulncheck
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Vulnerability Scan" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ govulncheck found no reachable vulnerabilities" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "❌ govulncheck reported vulnerabilities" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
   lint-frontend:
     runs-on: ubuntu-latest
     steps:
