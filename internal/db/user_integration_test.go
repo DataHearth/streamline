@@ -138,13 +138,48 @@ var _ = Describe("User store CRUD", Label("integration", "db"), func() {
 		)
 	})
 
-	Describe("CountUsersByRole", func() {
-		It("returns the count for the given role", func() {
-			create("admin@example.com", "admin")
-			create("alice@example.com", "member")
-			n, err := store.CountUsersByRole(ctx, user.RoleAdmin)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(n).To(Equal(1))
+	Describe("last-admin guarded writes", func() {
+		demote := func() UpdateUserParams {
+			r := approle.Operator(user.RoleMember)
+			return UpdateUserParams{Role: &r}
+		}
+
+		When("another admin exists", func() {
+			It("updates the target", func() {
+				a := create("admin1@example.com", "admin")
+				create("admin2@example.com", "admin")
+
+				got, err := store.UpdateUserUnlessLastAdmin(ctx, a.ID, demote())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(got.Role).To(Equal(user.RoleMember))
+			})
+
+			It("deletes the target", func() {
+				a := create("admin1@example.com", "admin")
+				create("admin2@example.com", "admin")
+
+				n, err := store.DeleteUserUnlessLastAdmin(ctx, a.ID)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(n).To(Equal(1))
+			})
+		})
+
+		When("the target is the only admin", func() {
+			It("writes nothing", func() {
+				a := create("solo@example.com", "admin")
+				create("member@example.com", "member")
+
+				_, err := store.UpdateUserUnlessLastAdmin(ctx, a.ID, demote())
+				Expect(ent.IsNotFound(err)).To(BeTrue())
+
+				n, err := store.DeleteUserUnlessLastAdmin(ctx, a.ID)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(n).To(BeZero())
+
+				still, err := store.FindUserByID(ctx, a.ID)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(still.Role).To(Equal(user.RoleAdmin))
+			})
 		})
 	})
 

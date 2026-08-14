@@ -195,20 +195,9 @@ func (s *auth) UpdateUser(
 		return otelx.RecordSpanError(span, fmt.Errorf("load user: %w", err))
 	}
 
-	if p.Role != nil && *p.Role != string(current.Role) {
-		if current.Role == user.RoleAdmin && *p.Role != string(user.RoleAdmin) {
-			n, err := s.db.CountUsersByRole(ctx, user.RoleAdmin)
-			if err != nil {
-				return otelx.RecordSpanError(
-					span,
-					fmt.Errorf("count admins: %w", err),
-				)
-			}
-			if n <= 1 {
-				return ErrLastAdmin
-			}
-		}
-	}
+	demotesAdmin := p.Role != nil &&
+		current.Role == user.RoleAdmin &&
+		*p.Role != string(user.RoleAdmin)
 
 	params := db.UpdateUserParams{}
 	if p.Role != nil {
@@ -240,7 +229,14 @@ func (s *auth) UpdateUser(
 		}
 	}
 
-	if _, err := s.db.UpdateUser(ctx, id, params); err != nil {
+	if demotesAdmin {
+		if _, err := s.db.UpdateUserUnlessLastAdmin(ctx, id, params); err != nil {
+			if ent.IsNotFound(err) {
+				return ErrLastAdmin
+			}
+			return otelx.RecordSpanError(span, fmt.Errorf("update user: %w", err))
+		}
+	} else if _, err := s.db.UpdateUser(ctx, id, params); err != nil {
 		return otelx.RecordSpanError(span, fmt.Errorf("update user: %w", err))
 	}
 
@@ -284,16 +280,14 @@ func (s *auth) DeleteUser(
 	}
 
 	if target.Role == user.RoleAdmin {
-		n, err := s.db.CountUsersByRole(ctx, user.RoleAdmin)
+		n, err := s.db.DeleteUserUnlessLastAdmin(ctx, id)
 		if err != nil {
-			return otelx.RecordSpanError(span, fmt.Errorf("count admins: %w", err))
+			return otelx.RecordSpanError(span, fmt.Errorf("delete user: %w", err))
 		}
-		if n <= 1 {
+		if n == 0 {
 			return ErrLastAdmin
 		}
-	}
-
-	if err := s.db.DeleteUser(ctx, id); err != nil {
+	} else if err := s.db.DeleteUser(ctx, id); err != nil {
 		return otelx.RecordSpanError(span, fmt.Errorf("delete user: %w", err))
 	}
 	slog.InfoContext(ctx, "user_deleted",

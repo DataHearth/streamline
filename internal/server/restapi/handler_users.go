@@ -26,7 +26,7 @@ func (s *Server) ListUsers(
 		f.Role = string(*req.Params.Role)
 	}
 	if req.Params.Limit != nil {
-		f.Limit = *req.Params.Limit
+		f.Limit = clampLimit(*req.Params.Limit, usersMaxLimit)
 	}
 	if req.Params.Offset != nil {
 		f.Offset = *req.Params.Offset

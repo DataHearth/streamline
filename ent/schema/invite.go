@@ -20,7 +20,7 @@ func (Invite) Mixin() []ent.Mixin {
 
 func (Invite) Fields() []ent.Field {
 	return []ent.Field{
-		field.String("token_hash").Unique().NotEmpty(),
+		field.String("token_hash").Unique().NotEmpty().Sensitive(),
 		field.String("email").Optional(),
 		field.Enum("role").
 			Values("admin", "member", "request_only").

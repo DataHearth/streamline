@@ -26,6 +26,17 @@ func (db *DB) CreateAPIKey(
 		Save(ctx)
 }
 
+// CountAPIKeysByUser returns how many API keys userID currently owns, for
+// enforcing a per-user creation quota before inserting another one.
+func (db *DB) CountAPIKeysByUser(
+	ctx context.Context,
+	userID uint32,
+) (int, error) {
+	return db.client.ApiKey.Query().
+		Where(apikey.HasOwnerWith(user.IDEQ(userID))).
+		Count(ctx)
+}
+
 func (db *DB) FindAPIKeyByHash(
 	ctx context.Context,
 	hash string,

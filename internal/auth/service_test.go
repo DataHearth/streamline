@@ -41,14 +41,17 @@ var _ = Describe("AuthService unit", Label("unit", "auth"), func() {
 	})
 
 	Describe("Register", func() {
+		// Registering yourself lands on member even when the role asked for is
+		// admin: the account is created for whoever made the request, so no
+		// authority behind it can vouch for admin.
 		It("hashes password, creates user, and returns a JWT", func() {
 			storeMock.CreateUser(mock.AnythingOfType(ctxType), mock.MatchedBy(func(p db.CreateUserParams) bool {
 				return p.Email == "a@x.com" &&
-					p.Role.String() == string(entuser.RoleAdmin) &&
+					p.Role.String() == string(entuser.RoleMember) &&
 					p.AuthMethod == entuser.AuthMethodLocal &&
 					p.PasswordHash != "" && p.PasswordHash != "pw"
 			})).
-				Return(&ent.User{ID: 1, Email: "a@x.com", Role: entuser.RoleAdmin}, nil).
+				Return(&ent.User{ID: 1, Email: "a@x.com", Role: entuser.RoleMember}, nil).
 				Once()
 			storeMock.CreateSession(mock.AnythingOfType(ctxType), mock.AnythingOfType("db.CreateSessionParams")).
 				Return(&ent.Session{ID: 1}, nil).
@@ -192,6 +195,7 @@ var _ = Describe("AuthService unit", Label("unit", "auth"), func() {
 
 	Describe("CreateAPIKey", func() {
 		It("persists hash and returns raw key + record", func() {
+			storeMock.CountAPIKeysByUser(ctx, uint32(7)).Return(0, nil).Once()
 			storeMock.CreateAPIKey(ctx, mock.MatchedBy(func(p db.CreateAPIKeyParams) bool {
 				return p.Name == "cli" && p.OwnerID == 7 && p.KeyHash != ""
 			})).
@@ -205,11 +209,21 @@ var _ = Describe("AuthService unit", Label("unit", "auth"), func() {
 		})
 
 		It("wraps store errors", func() {
+			storeMock.CountAPIKeysByUser(ctx, uint32(7)).Return(0, nil).Once()
 			storeMock.CreateAPIKey(ctx, mock.AnythingOfType("db.CreateAPIKeyParams")).
 				Return(nil, errors.New("insert fail")).
 				Once()
 			_, _, err := svc.CreateAPIKey(ctx, 7, "cli")
 			Expect(err).To(MatchError(ContainSubstring("create API key")))
+		})
+
+		It("returns ErrAPIKeyQuotaExceeded at the cap without inserting", func() {
+			storeMock.CountAPIKeysByUser(ctx, uint32(7)).
+				Return(maxAPIKeysPerUser, nil).
+				Once()
+
+			_, _, err := svc.CreateAPIKey(ctx, 7, "cli")
+			Expect(err).To(MatchError(ErrAPIKeyQuotaExceeded))
 		})
 	})
 
@@ -700,10 +714,21 @@ var _ = Describe("AuthService driver-level failures", Label("unit", "auth"), fun
 
 	It("CreateAPIKey surfaces the DB error", func() {
 		dbErr := errors.New("apikey insert blew up")
+		mock.ExpectQuery(`SELECT COUNT`).
+			WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
 		mock.ExpectQuery(`INSERT INTO .api_keys.`).WillReturnError(dbErr)
 
 		_, _, err := svc.CreateAPIKey(ctx, 1, "test-key")
 		Expect(err).To(MatchError(ContainSubstring("create API key")))
+		Expect(err).To(MatchError(dbErr))
+	})
+
+	It("CreateAPIKey surfaces the count-query error", func() {
+		dbErr := errors.New("count query blew up")
+		mock.ExpectQuery(`SELECT COUNT`).WillReturnError(dbErr)
+
+		_, _, err := svc.CreateAPIKey(ctx, 1, "test-key")
+		Expect(err).To(MatchError(ContainSubstring("count API keys")))
 		Expect(err).To(MatchError(dbErr))
 	})
 })

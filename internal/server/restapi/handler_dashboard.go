@@ -33,7 +33,7 @@ func (s *Server) ListActivity(
 		f.Before = &t
 	}
 	if req.Params.Limit != nil {
-		f.Limit = *req.Params.Limit
+		f.Limit = clampLimit(*req.Params.Limit, activityMaxLimit)
 	}
 	if req.Params.Cursor != nil {
 		f.Cursor = *req.Params.Cursor

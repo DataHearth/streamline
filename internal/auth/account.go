@@ -29,7 +29,16 @@ var (
 	// tuple — either the key does not exist or it belongs to another user.
 	// Handlers must not leak ownership information.
 	ErrAPIKeyNotFound = errors.New("api key not found")
+
+	// ErrAPIKeyQuotaExceeded is returned when a user tries to create an API
+	// key past maxAPIKeysPerUser. Handlers map to a 4xx.
+	ErrAPIKeyQuotaExceeded = errors.New("api key quota exceeded")
 )
+
+// maxAPIKeysPerUser bounds how many API keys a single account may hold, so
+// the lowest-privilege, roleRequestOnly CreateMyApiKey endpoint cannot grow
+// the table without bound.
+const maxAPIKeysPerUser = 20
 
 // minPasswordLen mirrors the OpenAPI minLength on ChangePasswordRequest.new_password.
 const minPasswordLen = 8

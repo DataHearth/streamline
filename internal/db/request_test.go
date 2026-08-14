@@ -5,6 +5,7 @@ import (
 
 	"github.com/datahearth/streamline/internal/role"
 
+	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/request"
 	"github.com/datahearth/streamline/ent/user"
 	. "github.com/onsi/ginkgo/v2"
@@ -103,6 +104,24 @@ var _ = Describe("Request store", Label("unit", "db"), func() {
 		Expect(got.Status).To(Equal(request.StatusPending))
 		Expect(got.Reason).To(BeEmpty())
 		Expect(got.Edges.ApprovedBy).To(BeNil())
+	})
+
+	It("rejects a second active row but allows a re-request after denial", func() {
+		first, err := store.CreateRequest(ctx, CreateRequestParams{
+			MediaType: "movie", MediaID: 42, Title: "Flick", RequesterID: userID,
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = store.CreateRequest(ctx, CreateRequestParams{
+			MediaType: "movie", MediaID: 42, Title: "Flick", RequesterID: userID,
+		})
+		Expect(ent.IsConstraintError(err)).To(BeTrue())
+
+		Expect(store.DenyRequest(ctx, first.ID, adminID, "no")).To(Succeed())
+		_, err = store.CreateRequest(ctx, CreateRequestParams{
+			MediaType: "movie", MediaID: 42, Title: "Flick", RequesterID: userID,
+		})
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	It("MarkRequestsAvailable flips approved → available", func() {

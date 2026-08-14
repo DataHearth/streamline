@@ -99,6 +99,46 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 		})
 	})
 
+	Describe("downloadSavePath", func() {
+		BeforeEach(func() {
+			configtest.Setup(map[string]any{
+				"library": map[string]any{"download_path": "/downloads"},
+			})
+		})
+
+		It("joins a plain torrent name under the download path", func() {
+			path, err := downloadSavePath("The.Batman.2022.1080p")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(path).To(Equal("/downloads/The.Batman.2022.1080p"))
+		})
+
+		It("rejects a traversing torrent name", func() {
+			_, err := downloadSavePath("../../etc/passwd")
+			Expect(err).To(MatchError(ErrUnsafeTorrentName))
+		})
+
+		It("rejects a name carrying a separator", func() {
+			_, err := downloadSavePath("sub/dir")
+			Expect(err).To(MatchError(ErrUnsafeTorrentName))
+		})
+
+		It("rejects a dot-dot name", func() {
+			_, err := downloadSavePath("..")
+			Expect(err).To(MatchError(ErrUnsafeTorrentName))
+		})
+	})
+
+	Describe("PathUnderRoot", func() {
+		It("accepts the root itself and its children", func() {
+			Expect(PathUnderRoot("/downloads", "/downloads")).To(BeTrue())
+			Expect(PathUnderRoot("/downloads/a/b", "/downloads")).To(BeTrue())
+		})
+
+		It("rejects a sibling sharing the root's prefix", func() {
+			Expect(PathUnderRoot("/downloads-evil/a", "/downloads")).To(BeFalse())
+		})
+	})
+
 	Describe("resolveTorrentSource", func() {
 		// One enabled indexer on the default HTTPS port plus one on an explicit
 		// port, so both the implied-port and explicit-port paths are covered.

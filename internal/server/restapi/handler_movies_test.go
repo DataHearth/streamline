@@ -32,6 +32,22 @@ var _ = Describe(
 		})
 
 		Describe("ListMovies", func() {
+			It("clamps a limit above the documented maximum", func() {
+				app.movies.EXPECT().
+					List(mock.Anything, uint16(1), uint16(moviesMaxLimit)).
+					Return([]*ent.Movie{}, uint32(0), nil).
+					Once()
+
+				resp := app.do(app.req(
+					http.MethodGet,
+					"/api/v1/movies?limit=65535",
+					app.adminKey,
+					nil,
+				))
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			})
+
 			It("returns paginated list when movies exist", func() {
 				app.movies.EXPECT().
 					List(mock.Anything, uint16(1), uint16(10)).

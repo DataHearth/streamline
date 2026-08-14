@@ -158,11 +158,8 @@ func authenticateAPI(
 	// Sec-Fetch-Site cannot be the only signal. Fetch Metadata is appended
 	// only for potentially-trustworthy URLs, so a browser on a plain-http LAN
 	// address — the default self-hosted shape — sends none of it, and gating
-	// on it alone 401s every SPA call there. Origin is the fallback: browsers
-	// attach it to cross-origin requests regardless of scheme, and it is a
-	// forbidden header name, so a page cannot forge one. Absent both, this
-	// fails closed — a machine client belongs on Bearer or X-API-Key, not on
-	// a cookie.
+	// on it alone 401s every SPA call there. Origin and (for GET/HEAD only)
+	// Referer are the fallbacks — see sameOriginAPIRequest.
 	if sameOriginAPIRequest(r) {
 		if c, err := r.Cookie(auth.SessionCookie); err == nil {
 			claims, err := svc.ValidateToken(c.Value)
@@ -287,9 +284,19 @@ func isTrusted(r *http.Request, nets []*net.IPNet) bool {
 //
 // Sec-Fetch-Site settles it where the browser sends it, but Fetch Metadata is
 // only appended for potentially-trustworthy URLs, so a plain-http LAN install
-// never sees it. Origin covers that tier: browsers attach it to cross-origin
-// requests on any scheme, and scripts cannot set it. With neither header the
-// request is refused rather than trusted.
+// never sees it. Origin covers most of that tier — browsers attach it to
+// cross-origin requests on any scheme, and scripts cannot set it — but not the
+// case that matters here: Fetch omits Origin on a same-origin GET, so on plain
+// http the SPA's every read arrives with neither header and Origin alone
+// refuses the deployment shape this project ships by default.
+//
+// Referer closes that hole for GET and HEAD only. Under the Referrer-Policy
+// this app sends ("same-origin", see security_headers.go) a same-origin GET
+// carries it and a cross-origin one does not, so a missing Referer is still a
+// refusal. That asymmetry is exactly why the fallback stays off state-changing
+// methods, where an attacker's page does send a Referer of its own: there the
+// absence of all three headers remains a refusal, and a machine client belongs
+// on Bearer or X-API-Key rather than on a cookie.
 func sameOriginAPIRequest(r *http.Request) bool {
 	switch r.Header.Get("Sec-Fetch-Site") {
 	case "same-origin":
@@ -302,11 +309,19 @@ func sameOriginAPIRequest(r *http.Request) bool {
 		return false
 	}
 
-	origins := r.Header.Values("Origin")
-	if len(origins) != 1 {
+	if origins := r.Header.Values("Origin"); len(origins) > 0 {
+		return len(origins) == 1 && hostMatchesRequest(r, origins[0])
+	}
+
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
 		return false
 	}
-	u, err := url.Parse(origins[0])
+	referers := r.Header.Values("Referer")
+	return len(referers) == 1 && hostMatchesRequest(r, referers[0])
+}
+
+func hostMatchesRequest(r *http.Request, rawURL string) bool {
+	u, err := url.Parse(rawURL)
 	if err != nil || u.Host == "" {
 		return false
 	}

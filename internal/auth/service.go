@@ -788,6 +788,14 @@ func (s *auth) CreateAPIKey(
 	userID uint32,
 	name string,
 ) (string, *ent.ApiKey, error) {
+	count, err := s.db.CountAPIKeysByUser(ctx, userID)
+	if err != nil {
+		return "", nil, fmt.Errorf("count API keys: %w", err)
+	}
+	if count >= maxAPIKeysPerUser {
+		return "", nil, ErrAPIKeyQuotaExceeded
+	}
+
 	key, err := generateToken(32)
 	if err != nil {
 		return "", nil, fmt.Errorf("generate API key: %w", err)

@@ -3,6 +3,7 @@
 package migrate
 
 import (
+	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/dialect/sql/schema"
 	"entgo.io/ent/schema/field"
 )
@@ -439,6 +440,16 @@ var (
 				Columns:    []*schema.Column{RequestsColumns[10]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "request_media_type_media_id",
+				Unique:  true,
+				Columns: []*schema.Column{RequestsColumns[3], RequestsColumns[4]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "status IN ('pending', 'approved', 'available')",
+				},
 			},
 		},
 	}

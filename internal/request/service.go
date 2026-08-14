@@ -87,13 +87,23 @@ func (s *Service) Create(
 			return nil, ErrDuplicate
 		}
 	}
-	return s.db.CreateRequest(ctx, db.CreateRequestParams{
+	row, err := s.db.CreateRequest(ctx, db.CreateRequestParams{
 		MediaType:      mediaType,
 		MediaID:        mediaID,
 		Title:          title,
 		RequesterID:    requesterID,
 		QualityProfile: qualityProfile,
 	})
+	if err != nil {
+		// The partial unique index over active (media_type, media_id) is the
+		// real dedup gate — the lookups above only save a round-trip and lose
+		// to a concurrent request that inserts between them and this write.
+		if ent.IsConstraintError(err) {
+			return nil, ErrDuplicate
+		}
+		return nil, err
+	}
+	return row, nil
 }
 
 // Approve adds the requested item to the library with qualityProfile (empty

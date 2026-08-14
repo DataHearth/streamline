@@ -167,6 +167,14 @@ var _ = Describe("the non-federated constructors", Label("unit"), func() {
 		Entry("self-registered", SelfRegistered("Admin")),
 	)
 
+	// auth.oidc_default_role is read on two paths and only the OIDC one has a
+	// provider ceiling behind it, so an anonymous registration must not outrank
+	// the federated login that shares the key.
+	It("clamps a self-registered admin to member", func() {
+		Expect(SelfRegistered(entuser.RoleAdmin).String()).
+			To(Equal(string(entuser.RoleMember)))
+	})
+
 	It("gives a zero Value that decides nothing", func() {
 		var v Value
 		Expect(v.Empty()).To(BeTrue())
