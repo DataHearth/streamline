@@ -24,6 +24,8 @@ import (
 
 	request "github.com/datahearth/streamline/ent/request"
 
+	role "github.com/datahearth/streamline/internal/role"
+
 	time "time"
 
 	tvshow "github.com/datahearth/streamline/ent/tvshow"
@@ -9199,6 +9201,66 @@ func (_c *MockStore_UpdateUserPassword_Call) Return(_a0 error) *MockStore_Update
 }
 
 func (_c *MockStore_UpdateUserPassword_Call) RunAndReturn(run func(context.Context, uint32, string) error) *MockStore_UpdateUserPassword_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UpdateUserRole provides a mock function with given fields: ctx, id, r
+func (_m *MockStore) UpdateUserRole(ctx context.Context, id uint32, r role.Value) (*ent.User, error) {
+	ret := _m.Called(ctx, id, r)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateUserRole")
+	}
+
+	var r0 *ent.User
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uint32, role.Value) (*ent.User, error)); ok {
+		return rf(ctx, id, r)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uint32, role.Value) *ent.User); ok {
+		r0 = rf(ctx, id, r)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ent.User)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uint32, role.Value) error); ok {
+		r1 = rf(ctx, id, r)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockStore_UpdateUserRole_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateUserRole'
+type MockStore_UpdateUserRole_Call struct {
+	*mock.Call
+}
+
+// UpdateUserRole is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - r role.Value
+func (_e *MockStore_Expecter) UpdateUserRole(ctx interface{}, id interface{}, r interface{}) *MockStore_UpdateUserRole_Call {
+	return &MockStore_UpdateUserRole_Call{Call: _e.mock.On("UpdateUserRole", ctx, id, r)}
+}
+
+func (_c *MockStore_UpdateUserRole_Call) Run(run func(ctx context.Context, id uint32, r role.Value)) *MockStore_UpdateUserRole_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(uint32), args[2].(role.Value))
+	})
+	return _c
+}
+
+func (_c *MockStore_UpdateUserRole_Call) Return(_a0 *ent.User, _a1 error) *MockStore_UpdateUserRole_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockStore_UpdateUserRole_Call) RunAndReturn(run func(context.Context, uint32, role.Value) (*ent.User, error)) *MockStore_UpdateUserRole_Call {
 	_c.Call.Return(run)
 	return _c
 }
