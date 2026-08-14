@@ -61,7 +61,35 @@ var _ = Describe("Account service unit", Label("unit", "auth"), func() {
 	Describe("ChangePassword", func() {
 		hash, _ := bcrypt.GenerateFromPassword([]byte("oldpassword"), bcrypt.MinCost)
 
-		It("updates password and revokes other sessions on success", func() {
+		It(
+			"updates password, revokes other sessions and deletes API keys on success",
+			func() {
+				storeMock.FindUserByID(mock.AnythingOfType(ctxType), uint32(1)).
+					Return(&ent.User{ID: 1, PasswordHash: string(hash)}, nil).Once()
+				storeMock.UpdateUserPassword(mock.AnythingOfType(ctxType), uint32(1), mock.AnythingOfType("string")).
+					Return(nil).
+					Once()
+				storeMock.RevokeOtherUserSessions(mock.AnythingOfType(ctxType), uint32(1), "keep", mock.AnythingOfType("time.Time")).
+					Return(nil).
+					Once()
+				storeMock.DeleteAPIKeysByUser(mock.AnythingOfType(ctxType), uint32(1)).
+					Return(2, nil).
+					Once()
+
+				Expect(
+					svc.ChangePassword(
+						ctx,
+						1,
+						"oldpassword",
+						"newpassw0rd!",
+						"keep",
+					),
+				).
+					To(Succeed())
+			},
+		)
+
+		It("succeeds when the API-key delete fails (best-effort)", func() {
 			storeMock.FindUserByID(mock.AnythingOfType(ctxType), uint32(1)).
 				Return(&ent.User{ID: 1, PasswordHash: string(hash)}, nil).Once()
 			storeMock.UpdateUserPassword(mock.AnythingOfType(ctxType), uint32(1), mock.AnythingOfType("string")).
@@ -69,6 +97,9 @@ var _ = Describe("Account service unit", Label("unit", "auth"), func() {
 				Once()
 			storeMock.RevokeOtherUserSessions(mock.AnythingOfType(ctxType), uint32(1), "keep", mock.AnythingOfType("time.Time")).
 				Return(nil).
+				Once()
+			storeMock.DeleteAPIKeysByUser(mock.AnythingOfType(ctxType), uint32(1)).
+				Return(0, errors.New("del fail")).
 				Once()
 
 			Expect(
@@ -207,6 +238,9 @@ var _ = Describe("Account service unit", Label("unit", "auth"), func() {
 				Once()
 			storeMock.RevokeOtherUserSessions(mock.AnythingOfType(ctxType), uint32(1), "keep", mock.AnythingOfType("time.Time")).
 				Return(errors.New("rev fail")).
+				Once()
+			storeMock.DeleteAPIKeysByUser(mock.AnythingOfType(ctxType), uint32(1)).
+				Return(0, nil).
 				Once()
 
 			Expect(

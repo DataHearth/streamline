@@ -29,8 +29,9 @@ func (s *Server) UpdateMe(
 	return UpdateMe200JSONResponse(toAPIUser(u)), nil
 }
 
-// ChangePassword verifies the current password, rotates to the new one, and
-// signs out every other active session for the caller.
+// ChangePassword verifies the current password, rotates to the new one, signs
+// out every other active session for the caller, and revokes all of their API
+// keys, including one used to authenticate this request.
 func (s *Server) ChangePassword(
 	ctx context.Context,
 	req ChangePasswordRequestObject,

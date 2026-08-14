@@ -106,8 +106,7 @@ var _ = Describe("REST API users", Label("e2e"), func() {
 	Describe("/users/{uid}", func() {
 		// Targets the admin, not the viewer: the admin is the identity holding
 		// a live session, so is_current is observable here. The viewer
-		// authenticates by API key and its session is revoked by the
-		// password-rotation spec.
+		// authenticates by API key, so it has no current session to observe.
 		It("returns the user detail block", func() {
 			resp := get(fmt.Sprintf("/api/v1/users/%d", adminUserID), adminAuth)
 			defer resp.Body.Close()

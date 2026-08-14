@@ -1992,6 +1992,63 @@ func (_c *MockStore_DeleteAPIKeyByID_Call) RunAndReturn(run func(context.Context
 	return _c
 }
 
+// DeleteAPIKeysByUser provides a mock function with given fields: ctx, userID
+func (_m *MockStore) DeleteAPIKeysByUser(ctx context.Context, userID uint32) (int, error) {
+	ret := _m.Called(ctx, userID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteAPIKeysByUser")
+	}
+
+	var r0 int
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uint32) (int, error)); ok {
+		return rf(ctx, userID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uint32) int); ok {
+		r0 = rf(ctx, userID)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+		r1 = rf(ctx, userID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockStore_DeleteAPIKeysByUser_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteAPIKeysByUser'
+type MockStore_DeleteAPIKeysByUser_Call struct {
+	*mock.Call
+}
+
+// DeleteAPIKeysByUser is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID uint32
+func (_e *MockStore_Expecter) DeleteAPIKeysByUser(ctx interface{}, userID interface{}) *MockStore_DeleteAPIKeysByUser_Call {
+	return &MockStore_DeleteAPIKeysByUser_Call{Call: _e.mock.On("DeleteAPIKeysByUser", ctx, userID)}
+}
+
+func (_c *MockStore_DeleteAPIKeysByUser_Call) Run(run func(ctx context.Context, userID uint32)) *MockStore_DeleteAPIKeysByUser_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(uint32))
+	})
+	return _c
+}
+
+func (_c *MockStore_DeleteAPIKeysByUser_Call) Return(_a0 int, _a1 error) *MockStore_DeleteAPIKeysByUser_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockStore_DeleteAPIKeysByUser_Call) RunAndReturn(run func(context.Context, uint32) (int, error)) *MockStore_DeleteAPIKeysByUser_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // DeleteAllCompletedDownloadRecords provides a mock function with given fields: ctx
 func (_m *MockStore) DeleteAllCompletedDownloadRecords(ctx context.Context) (int, error) {
 	ret := _m.Called(ctx)

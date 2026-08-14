@@ -101,6 +101,7 @@ type Store interface {
 	TouchAPIKey(ctx context.Context, id uint32, at time.Time) error
 	ListAPIKeysByUser(ctx context.Context, userID uint32) ([]*ent.ApiKey, error)
 	DeleteAPIKeyByID(ctx context.Context, userID, keyID uint32) (int, error)
+	DeleteAPIKeysByUser(ctx context.Context, userID uint32) (int, error)
 
 	// torrent sessions (builtin BitTorrent engine persistence)
 	CreateTorrentSession(
