@@ -440,16 +440,15 @@ func sanitizeNext(n string) string {
 // The X-Forwarded-* headers are believed only from a configured reverse proxy
 // (server.trusted_proxies); off one they are attacker-supplied, and while the
 // IdP's exact-match registration blocks the obvious abuse, a forged pair still
-// steers /start and /callback at a host the operator never configured.
+// steers /start and /callback at a host the operator never configured. Scheme
+// detection is httputil.ServedOverTLS, shared with the session cookie and HSTS,
+// so a proxy reporting https by any of its spellings yields an https callback.
 func oidcRedirectURI(r *http.Request, name string) string {
 	scheme, host := "http", r.Host
-	if r.TLS != nil {
+	if httputil.ServedOverTLS(r) {
 		scheme = "https"
 	}
 	if httputil.TrustedPeer(r) {
-		if r.Header.Get("X-Forwarded-Proto") == "https" {
-			scheme = "https"
-		}
 		if fwd := r.Header.Get("X-Forwarded-Host"); fwd != "" {
 			host = fwd
 		}
