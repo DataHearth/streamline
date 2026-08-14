@@ -52,7 +52,7 @@ var _ = Describe("AuthService end-to-end", Label("integration", "auth"), func() 
 			ctx,
 			"rt@x.com",
 			"password123",
-			"admin",
+			"member",
 			SessionMeta{},
 		)
 		Expect(err).NotTo(HaveOccurred())
@@ -66,6 +66,6 @@ var _ = Describe("AuthService end-to-end", Label("integration", "auth"), func() 
 		claims, err := svc.ValidateToken(token)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(claims.Email).To(Equal("rt@x.com"))
-		Expect(claims.Role).To(Equal("admin"))
+		Expect(claims.Role).To(Equal("member"))
 	})
 })

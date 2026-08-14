@@ -55,6 +55,7 @@ paths:
           schema:
             type: integer
             default: 20
+            maximum: 100
             x-go-type: uint16
       responses:
         "200":
@@ -231,6 +232,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/MoviePlayOnLinks"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":
@@ -774,6 +777,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/SeriesPlayOnLinks"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":
@@ -876,6 +881,8 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Indexer"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalError"
     post:
@@ -995,6 +1002,8 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/DownloadClient"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalError"
     post:
@@ -1107,6 +1116,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/TorrentList"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
     post:
@@ -1135,6 +1146,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/TorrentDetails"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
     delete:
@@ -1215,6 +1228,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/MediaServerList"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalError"
     post:
@@ -1245,6 +1260,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/MediaServerOK"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":
@@ -2517,8 +2534,8 @@ paths:
         media_type.
       tags: [requests]
       parameters:
-        - $ref: "#/components/parameters/RequestStatus"
-        - $ref: "#/components/parameters/RequestMediaType"
+        - $ref: "#/components/parameters/RequestStatusParam"
+        - $ref: "#/components/parameters/RequestMediaTypeParam"
         - $ref: "#/components/parameters/RequestPage"
         - $ref: "#/components/parameters/RequestLimit"
       responses:
@@ -2716,7 +2733,10 @@ components:
       schema:
         type: boolean
         default: false
-    RequestStatus:
+    # ...Param suffix: oapi-codegen names a parameter component's type after the
+    # component key, which collides with the Request schema's own status and
+    # media_type enums and aborts generation with "duplicate typename".
+    RequestStatusParam:
       name: status
       in: query
       required: false
@@ -2724,7 +2744,7 @@ components:
       schema:
         type: string
         enum: [pending, approved, denied, available]
-    RequestMediaType:
+    RequestMediaTypeParam:
       name: media_type
       in: query
       required: false
@@ -2747,6 +2767,7 @@ components:
         type: integer
         x-go-type: uint32
         default: 50
+        maximum: 100
     UserID:
       name: uid
       in: path
@@ -2949,6 +2970,7 @@ components:
       schema:
         type: integer
         default: 20
+        maximum: 100
         x-go-type: uint16
 
     SeriesStatus:

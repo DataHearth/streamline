@@ -17,7 +17,6 @@ import (
 	"github.com/datahearth/streamline/ent/request"
 	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/ent/tvshow"
-	"github.com/datahearth/streamline/ent/user"
 	"github.com/datahearth/streamline/internal/metadata"
 )
 
@@ -65,8 +64,13 @@ type Store interface {
 		ctx context.Context,
 		p ListUsersParams,
 	) ([]*ent.User, int, error)
-	CountUsersByRole(ctx context.Context, role user.Role) (int, error)
+	UpdateUserUnlessLastAdmin(
+		ctx context.Context,
+		id uint32,
+		p UpdateUserParams,
+	) (*ent.User, error)
 	DeleteUser(ctx context.Context, id uint32) error
+	DeleteUserUnlessLastAdmin(ctx context.Context, id uint32) (int, error)
 
 	// sessions
 	CreateSession(ctx context.Context, p CreateSessionParams) (*ent.Session, error)
@@ -92,6 +96,7 @@ type Store interface {
 
 	// api keys
 	CreateAPIKey(ctx context.Context, p CreateAPIKeyParams) (*ent.ApiKey, error)
+	CountAPIKeysByUser(ctx context.Context, userID uint32) (int, error)
 	FindAPIKeyByHash(ctx context.Context, hash string) (*ent.ApiKey, error)
 	TouchAPIKey(ctx context.Context, id uint32, at time.Time) error
 	ListAPIKeysByUser(ctx context.Context, userID uint32) ([]*ent.ApiKey, error)

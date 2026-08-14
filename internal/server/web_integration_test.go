@@ -95,6 +95,12 @@ type appOpts struct {
 
 func newWebAuthTestApp(opts appOpts) *testApp {
 	GinkgoHelper()
+	// An unset seed email resolves to the default admin, which mints a random
+	// password and prints the SHOWN-ONCE banner to the suite's stdout. Seed a
+	// known account instead: same seeded-admin state, no banner.
+	if opts.seedEmail == "" {
+		opts.seedEmail, opts.seedPassword = "admin@x.com", "hunter22pw"
+	}
 	dir := GinkgoT().TempDir()
 	dataDir := filepath.Join(dir, "data")
 	Expect(os.MkdirAll(dataDir, 0o755)).To(Succeed())

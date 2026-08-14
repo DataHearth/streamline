@@ -12,6 +12,11 @@ func (s *Server) ListMediaServers(
 	ctx context.Context,
 	_ ListMediaServersRequestObject,
 ) (ListMediaServersResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return ListMediaServers403JSONResponse{
+			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
 	servers := config.Get().MediaServer.Servers
 	items := make([]MediaServer, 0, len(servers))
 	for _, ms := range servers {
@@ -28,6 +33,11 @@ func (s *Server) GetMediaServer(
 	ctx context.Context,
 	request GetMediaServerRequestObject,
 ) (GetMediaServerResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return GetMediaServer403JSONResponse{
+			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
 	ms, ok := config.FindMediaServer(request.Name)
 	if !ok {
 		return GetMediaServer404JSONResponse{
@@ -142,7 +152,7 @@ func (s *Server) DeleteMediaServer(
 		}, nil
 	case err != nil:
 		return DeleteMediaServer500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 	return DeleteMediaServer204Response{}, nil
@@ -171,7 +181,7 @@ func (s *Server) TestMediaServer(
 		}, nil
 	default:
 		return TestMediaServer500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 }
@@ -183,6 +193,13 @@ func (s *Server) TestDraftMediaServer(
 	if err := requireAdmin(ctx); err != nil {
 		return TestDraftMediaServer403JSONResponse{
 			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
+	if draftTargetRefused(ctx, request.Body.Host) {
+		return TestDraftMediaServer422JSONResponse{
+			UnprocessableEntityJSONResponse: errUnprocessable(
+				draftTargetRefusedMessage,
+			),
 		}, nil
 	}
 	err := s.mediaServers.Test(ctx, mediaserver.TestParams{
@@ -200,7 +217,7 @@ func (s *Server) TestDraftMediaServer(
 		}, nil
 	default:
 		return TestDraftMediaServer500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 }
@@ -227,7 +244,7 @@ func (s *Server) DiscoverMediaServerSections(
 			}, nil
 		default:
 			return DiscoverMediaServerSections500JSONResponse{
-				InternalErrorJSONResponse: errInternal(err.Error()),
+				InternalErrorJSONResponse: errInternal(ctx, err),
 			}, nil
 		}
 	}

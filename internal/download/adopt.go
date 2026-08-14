@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"path/filepath"
 	"strings"
 
 	"github.com/datahearth/streamline/ent"
@@ -300,6 +299,10 @@ func (d *download) persistAdoption(
 	if dec.autoImport {
 		status = downloadrecord.StatusImporting
 	}
+	savePath, err := downloadSavePath(u.t.Name)
+	if err != nil {
+		return 0, err
+	}
 	rec, err := d.db.CreateDownloadRecord(ctx, db.CreateDownloadRecordParams{
 		Title:              u.t.Name,
 		Size:               u.t.Size,
@@ -308,12 +311,9 @@ func (d *download) persistAdoption(
 		MovieID:            dec.movieID,
 		EpisodeID:          dec.episodeID,
 		DownloadClientName: u.clientName,
-		SavePath: filepath.Join(
-			config.Get().Library.DownloadPath,
-			u.t.Name,
-		),
-		Quality:       dec.quality,
-		FailureReason: dec.reason,
+		SavePath:           savePath,
+		Quality:            dec.quality,
+		FailureReason:      dec.reason,
 	})
 	if err != nil {
 		return 0, err

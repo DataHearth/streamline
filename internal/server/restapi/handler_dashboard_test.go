@@ -67,6 +67,22 @@ var _ = Describe(
 				Expect(body.Events[0].Movie.Title).To(Equal("Anora"))
 			})
 
+			It("clamps a limit above the documented maximum", func() {
+				app.store.EXPECT().
+					RecentActivity(mock.Anything, mock.MatchedBy(func(f db.ActivityFilter) bool {
+						return f.Limit == activityMaxLimit
+					})).
+					Return(&db.ActivityResult{}, nil).
+					Once()
+
+				resp, err := http.Get(
+					app.srv.URL + "/api/v1/activity?limit=2147483647",
+				)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			})
+
 			It("400s on a malformed cursor", func() {
 				app.store.EXPECT().
 					RecentActivity(mock.Anything, mock.AnythingOfType("db.ActivityFilter")).

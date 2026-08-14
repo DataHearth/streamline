@@ -17,6 +17,9 @@ func (s *Server) ListTorrents(
 	ctx context.Context,
 	_ ListTorrentsRequestObject,
 ) (ListTorrentsResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return ListTorrents403JSONResponse{ForbiddenJSONResponse: notAdminResp}, nil
+	}
 	if s.torrents == nil {
 		return ListTorrents404JSONResponse{NotFoundJSONResponse: errNoBuiltin}, nil
 	}
@@ -74,6 +77,9 @@ func (s *Server) GetTorrent(
 	ctx context.Context,
 	request GetTorrentRequestObject,
 ) (GetTorrentResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return GetTorrent403JSONResponse{ForbiddenJSONResponse: notAdminResp}, nil
+	}
 	if s.torrents == nil {
 		return GetTorrent404JSONResponse{NotFoundJSONResponse: errNoBuiltin}, nil
 	}

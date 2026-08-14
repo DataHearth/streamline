@@ -1,6 +1,16 @@
 package restapi
 
-import "errors"
+import (
+	"context"
+	"errors"
+	"log/slog"
+)
+
+// internalErrorMessage is the only 500 body the API hands back. The real error
+// carries ent/SQLite fragments, filesystem paths and internal hostnames, so it
+// goes to the log — where the request id ties it back to this call — and never
+// to the client.
+const internalErrorMessage = "internal error"
 
 var (
 	// errNotAdmin is the canonical "caller is not an admin" sentinel returned by
@@ -16,14 +26,20 @@ var (
 	)
 	// requestOnlyResp is the shared 403 payload returned when requireNotRequestOnly rejects.
 	requestOnlyResp = ForbiddenJSONResponse{Message: errRequestOnly.Error()}
+
+	errSearchNotConfigured   = errors.New("search not configured")
+	errTVSearchNotConfigured = errors.New("tv search not configured")
+	errRenamerNotConfigured  = errors.New("renamer not configured")
+	errPlayOnNotConfigured   = errors.New("play-on resolver not configured")
 )
 
 func errBadRequest(msg string) BadRequestJSONResponse {
 	return BadRequestJSONResponse{Message: msg}
 }
 
-func errInternal(msg string) InternalErrorJSONResponse {
-	return InternalErrorJSONResponse{Message: msg}
+func errInternal(ctx context.Context, err error) InternalErrorJSONResponse {
+	slog.ErrorContext(ctx, "api request failed", "error", err)
+	return InternalErrorJSONResponse{Message: internalErrorMessage}
 }
 
 func errNotFound(msg string) NotFoundJSONResponse {
