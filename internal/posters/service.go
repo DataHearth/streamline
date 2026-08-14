@@ -35,6 +35,11 @@ func init() {
 	posterCache.Add(context.Background(), 0)
 }
 
+// maxPosterSize caps the fetched artwork. The TV path forwards whatever
+// TVDBArtworkURL returns — an arbitrary host — so a hostile or compromised
+// metadata provider must not be able to fill the data volume.
+const maxPosterSize = 20 * 1024 * 1024
+
 // validKinds doubles as a path-traversal guard: any kind outside this set
 // is rejected before touching the filesystem or the HTTP response.
 var validKinds = map[string]struct{}{
@@ -135,10 +140,19 @@ func (p *posters) Fetch(
 		return otelx.RecordSpanError(span, fmt.Errorf("create temp: %w", err))
 	}
 	tmpName := tmp.Name()
-	if _, err := io.Copy(tmp, resp.Body); err != nil {
+	n, err := io.Copy(tmp, io.LimitReader(resp.Body, maxPosterSize+1))
+	if err != nil {
 		tmp.Close()
 		_ = os.Remove(tmpName)
 		return otelx.RecordSpanError(span, fmt.Errorf("copy body: %w", err))
+	}
+	if n > maxPosterSize {
+		tmp.Close()
+		_ = os.Remove(tmpName)
+		return otelx.RecordSpanError(
+			span,
+			fmt.Errorf("poster exceeds %d byte cap", maxPosterSize),
+		)
 	}
 	if err := tmp.Close(); err != nil {
 		_ = os.Remove(tmpName)

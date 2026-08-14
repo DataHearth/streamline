@@ -92,6 +92,23 @@ var _ = Describe("posters.Manager", Label("unit", "posters"), func() {
 			Expect(os.IsNotExist(statErr)).To(BeTrue())
 		})
 
+		It(
+			"returns error and leaves no file when the source exceeds the size cap",
+			func() {
+				oversized := httptest.NewServer(
+					http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+						w.Header().Set("Content-Type", "image/jpeg")
+						_, _ = w.Write(make([]byte, maxPosterSize+1))
+					}),
+				)
+				DeferCleanup(oversized.Close)
+				err := svc.Fetch(context.Background(), "movies", 55, oversized.URL)
+				Expect(err).To(MatchError(ContainSubstring("exceeds")))
+				_, statErr := os.Stat(svc.Path("movies", 55))
+				Expect(os.IsNotExist(statErr)).To(BeTrue())
+			},
+		)
+
 		It("returns error on non-200 source and leaves no file", func() {
 			fail := httptest.NewServer(
 				http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
