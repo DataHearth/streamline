@@ -3,41 +3,19 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/datahearth/streamline/e2e/apptest"
+	"github.com/datahearth/streamline/internal/auth"
 )
 
-// createUser provisions a member user and schedules its removal. Cleanup is
-// registered before the first assertion so a later failure cannot leak the
-// entity; 404 covers specs that delete it themselves.
+// createUser provisions a member user and schedules its removal.
 func createUser(email string) uint32 {
 	GinkgoHelper()
-	resp := post("/api/v1/users", adminAuth, map[string]any{
-		"email":        email,
-		"password":     "e2e-Temp-Passw0rd!",
-		"role":         "member",
-		"display_name": "E2E Temp",
-	})
-	defer resp.Body.Close()
-	var user struct {
-		Id uint32 `json:"id"`
-	}
-	// The closure deliberately reads user.Id after decode below populates it —
-	// do not move this registration past the decode. A zero id (create failed
-	// before decode) deletes nothing and lands on the tolerated 404.
-	DeferCleanup(func() {
-		cleanup := del(fmt.Sprintf("/api/v1/users/%d", user.Id), adminAuth, nil)
-		defer cleanup.Body.Close()
-		Expect(cleanup.StatusCode).To(BeElementOf(
-			http.StatusNoContent, http.StatusNotFound,
-		))
-	})
-	Expect(resp.StatusCode).To(Equal(http.StatusCreated))
-	decode(resp, &user)
-	return user.Id
+	return createRoleUser(email, "member")
 }
 
 var _ = Describe("REST API users", Label("e2e"), func() {
@@ -345,5 +323,172 @@ var _ = Describe("REST API users", Label("e2e"), func() {
 		)
 		defer revokeSession.Body.Close()
 		Expect(revokeSession.StatusCode).To(Equal(http.StatusForbidden))
+	})
+})
+
+// createRoleUser provisions a user at an explicit role and schedules its
+// removal. The account is always created with rolePassword, so any spec that
+// logs in as it can authenticate with that literal.
+func createRoleUser(email, role string) uint32 {
+	GinkgoHelper()
+	resp := post("/api/v1/users", adminAuth, map[string]any{
+		"email":    email,
+		"password": rolePassword,
+		"role":     role,
+	})
+	defer resp.Body.Close()
+	var user struct {
+		Id uint32 `json:"id"`
+	}
+	// The closure deliberately reads user.Id after decode below populates it.
+	// Do not move this registration past the decode: cleanup must be armed
+	// before the first assertion so a later failure cannot leak the entity. A
+	// zero id (create failed before decode) deletes nothing and lands on the
+	// tolerated 404, which also covers specs that delete the user themselves.
+	DeferCleanup(func() {
+		cleanup := del(fmt.Sprintf("/api/v1/users/%d", user.Id), adminAuth, nil)
+		defer cleanup.Body.Close()
+		Expect(cleanup.StatusCode).To(BeElementOf(
+			http.StatusNoContent, http.StatusNotFound,
+		))
+	})
+	Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+	decode(resp, &user)
+	return user.Id
+}
+
+// cookieGet sends the session JWT the way the SPA does, as the session cookie
+// on a same-origin request, rather than as a Bearer token.
+func cookieGet(path, jwt string) *http.Response {
+	GinkgoHelper()
+	req, err := http.NewRequest(http.MethodGet, baseURL+path, nil)
+	Expect(err).NotTo(HaveOccurred())
+	req.AddCookie(&http.Cookie{Name: auth.SessionCookie, Value: jwt})
+	req.Header.Set("Sec-Fetch-Site", "same-origin")
+	resp, err := httpClient.Do(req)
+	Expect(err).NotTo(HaveOccurred())
+	return resp
+}
+
+// cookieGetNoRedirect is cookieGet against a web (non-API) path, where an
+// invalid session redirects instead of answering 401.
+func cookieGetNoRedirect(path, jwt string) *http.Response {
+	GinkgoHelper()
+	req, err := http.NewRequest(http.MethodGet, baseURL+path, nil)
+	Expect(err).NotTo(HaveOccurred())
+	req.AddCookie(&http.Cookie{Name: auth.SessionCookie, Value: jwt})
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+		CheckRedirect: func(*http.Request, []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+	resp, err := client.Do(req)
+	Expect(err).NotTo(HaveOccurred())
+	return resp
+}
+
+func setRole(id uint32, role string) {
+	GinkgoHelper()
+	resp := patch(
+		fmt.Sprintf("/api/v1/users/%d", id),
+		adminAuth,
+		map[string]any{"role": role},
+	)
+	defer resp.Body.Close()
+	Expect(resp.StatusCode).To(Equal(http.StatusOK), bodyText(resp))
+}
+
+const rolePassword = "e2e-Role-Passw0rd!"
+
+// Sessions carry the role they were issued with, so a role change that did not
+// revoke them would leave the old privileges live until session_ttl expires.
+// Successful logins are refunded against the per-IP login budget, so these
+// specs cost nothing there.
+var _ = Describe("role change session revocation", Label("e2e"), func() {
+	It("revokes a demoted user's bearer and cookie sessions", func() {
+		id := createRoleUser("e2e-demote-bearer@streamline.local", "admin")
+		jwt := login("e2e-demote-bearer@streamline.local", rolePassword)
+
+		before := get("/api/v1/users", identity{bearer: jwt})
+		defer before.Body.Close()
+		Expect(before.StatusCode).To(Equal(http.StatusOK))
+
+		cookieBefore := cookieGet("/api/v1/users", jwt)
+		defer cookieBefore.Body.Close()
+		Expect(cookieBefore.StatusCode).To(Equal(http.StatusOK))
+
+		setRole(id, "member")
+
+		// 401, not 403: the revoked session is rejected by ValidateSession in
+		// the middleware, before RBAC ever reads the stale admin claim.
+		after := get("/api/v1/users", identity{bearer: jwt})
+		defer after.Body.Close()
+		Expect(after.StatusCode).To(Equal(http.StatusUnauthorized))
+
+		cookieAfter := cookieGet("/api/v1/users", jwt)
+		defer cookieAfter.Body.Close()
+		Expect(cookieAfter.StatusCode).To(Equal(http.StatusUnauthorized))
+
+		web := cookieGetNoRedirect("/settings", jwt)
+		defer web.Body.Close()
+		Expect(web.StatusCode).To(Equal(http.StatusFound))
+		Expect(web.Header.Get("Location")).To(HavePrefix("/login"))
+	})
+
+	It("puts the demotion in force on the next login", func() {
+		id := createRoleUser("e2e-demote-relogin@streamline.local", "admin")
+		jwt := login("e2e-demote-relogin@streamline.local", rolePassword)
+
+		listed := get("/api/v1/users", identity{bearer: jwt})
+		defer listed.Body.Close()
+		Expect(listed.StatusCode).To(Equal(http.StatusOK))
+
+		setRole(id, "member")
+
+		fresh := identity{
+			bearer: login("e2e-demote-relogin@streamline.local", rolePassword),
+		}
+		me := get("/api/v1/auth/me", fresh)
+		defer me.Body.Close()
+		Expect(me.StatusCode).To(Equal(http.StatusOK))
+
+		denied := get("/api/v1/users", fresh)
+		defer denied.Body.Close()
+		Expect(denied.StatusCode).To(Equal(http.StatusForbidden))
+	})
+
+	It("revokes on promotion too", func() {
+		id := createRoleUser("e2e-promote@streamline.local", "member")
+		jwt := login("e2e-promote@streamline.local", rolePassword)
+
+		before := get("/api/v1/auth/me", identity{bearer: jwt})
+		defer before.Body.Close()
+		Expect(before.StatusCode).To(Equal(http.StatusOK))
+
+		setRole(id, "admin")
+
+		after := get("/api/v1/auth/me", identity{bearer: jwt})
+		defer after.Body.Close()
+		Expect(after.StatusCode).To(Equal(http.StatusUnauthorized))
+	})
+
+	It("keeps sessions alive when the patch repeats the current role", func() {
+		id := createRoleUser("e2e-same-role@streamline.local", "member")
+		jwt := login("e2e-same-role@streamline.local", rolePassword)
+
+		// The SPA's user-edit form always submits the full patch, role
+		// included, so a display-name save must not sign the target out.
+		resp := patch(
+			fmt.Sprintf("/api/v1/users/%d", id),
+			adminAuth,
+			map[string]any{"role": "member", "display_name": "Renamed"},
+		)
+		defer resp.Body.Close()
+		Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+		after := get("/api/v1/auth/me", identity{bearer: jwt})
+		defer after.Body.Close()
+		Expect(after.StatusCode).To(Equal(http.StatusOK))
 	})
 })

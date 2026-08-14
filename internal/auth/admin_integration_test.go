@@ -179,4 +179,36 @@ var _ = Describe("Admin end-to-end", Label("integration", "auth"), func() {
 		_, err = svc.Login(ctx, u.Email, "newpassword456", SessionMeta{})
 		Expect(err).NotTo(HaveOccurred())
 	})
+
+	It("UpdateUser role change revokes existing sessions end-to-end", func() {
+		seedUser("keeper@x.com", entuser.RoleAdmin)
+		target := seedUser("demoted@x.com", entuser.RoleAdmin)
+
+		token, err := svc.Login(ctx, target.Email, "password123", SessionMeta{})
+		Expect(err).NotTo(HaveOccurred())
+		claims, err := svc.ValidateToken(token)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(svc.ValidateSession(ctx, claims.JTI)).To(Succeed())
+
+		memberRole := string(entuser.RoleMember)
+		Expect(
+			svc.UpdateUser(ctx, target.ID, UserPatch{Role: &memberRole}),
+		).To(Succeed())
+		Expect(svc.ValidateSession(ctx, claims.JTI)).
+			To(MatchError(ErrSessionRevoked))
+
+		token, err = svc.Login(ctx, target.Email, "password123", SessionMeta{})
+		Expect(err).NotTo(HaveOccurred())
+		claims, err = svc.ValidateToken(token)
+		Expect(err).NotTo(HaveOccurred())
+
+		displayName := "Renamed"
+		Expect(svc.UpdateUser(ctx, target.ID, UserPatch{
+			Role: &memberRole, DisplayName: &displayName,
+		})).To(Succeed())
+		Expect(svc.ValidateSession(ctx, claims.JTI)).To(
+			Succeed(),
+			"a patch repeating the current role must not revoke",
+		)
+	})
 })
