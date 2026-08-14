@@ -64,6 +64,14 @@ type Worker struct {
 
 	mu       sync.Mutex
 	inFlight map[uint32]struct{}
+
+	// entityLocks holds one *sync.Mutex per import target. Queue dedup is by
+	// download-record ID, but two records can target one movie or show, and a
+	// destination path is derived from the target alone — concurrent consumers
+	// would race on it. Entries are never evicted: the key space is the
+	// library's, and deleting a mutex another goroutine is about to lock is
+	// how this bug comes back.
+	entityLocks sync.Map
 }
 
 func NewWorker(d Deps) *Worker {
@@ -166,6 +174,17 @@ func (w *Worker) consume(ctx context.Context) {
 	}
 }
 
+// lockEntity blocks until this import owns key and returns its release func.
+// It must be held across both the "already has a file" precondition read and
+// the transfer, or the read is stale by the time the file lands. Exactly one
+// key is taken per import — a second acquisition would be a deadlock.
+func (w *Worker) lockEntity(key string) func() {
+	v, _ := w.entityLocks.LoadOrStore(key, &sync.Mutex{})
+	mu := v.(*sync.Mutex)
+	mu.Lock()
+	return mu.Unlock
+}
+
 func (w *Worker) runImport(ctx context.Context, recordID uint32) error {
 	ctx, span := tracer.Start(ctx, "importer.run",
 		trace.WithAttributes(attribute.Int64("download_record.id", int64(recordID))),
@@ -191,7 +210,7 @@ func (w *Worker) runImport(ctx context.Context, recordID uint32) error {
 	if len(libCfg.AllowedDownloadRoots) > 0 {
 		allowed := false
 		for _, root := range libCfg.AllowedDownloadRoots {
-			if strings.HasPrefix(rec.SavePath, root) {
+			if download.PathUnderRoot(rec.SavePath, root) {
 				allowed = true
 				break
 			}
@@ -222,6 +241,7 @@ func (w *Worker) importMovieRecord(
 ) error {
 	m := rec.Edges.Movie
 	span.SetAttributes(attribute.Int64("movie.id", int64(m.ID)))
+	defer w.lockEntity(fmt.Sprintf("movie:%d", m.ID))()
 
 	// A movie holds at most one media file: a grab arriving while one exists
 	// either replaces it (record flagged via the manual-search toggle) or
@@ -332,6 +352,10 @@ func (w *Worker) importEpisodeRecord(
 		attribute.Int64("tvshow.id", int64(show.ID)),
 		attribute.Int64("episode.id", int64(ep.ID)),
 	)
+	// Keyed by the show, not the episode: a season-pack record imports into
+	// every episode of the show, so an episode key would let a pack run
+	// alongside a single-episode record aimed at one of its files.
+	defer w.lockEntity(fmt.Sprintf("tvshow:%d", show.ID))()
 
 	info, err := os.Stat(rec.SavePath)
 	if err != nil {
