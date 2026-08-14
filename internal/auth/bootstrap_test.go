@@ -330,3 +330,24 @@ var _ = Describe("Bootstrap service unit", Label("unit", "auth"), func() {
 		})
 	})
 })
+
+var _ = Describe("GeneratePassword", Label("unit", "auth"), func() {
+	It("returns a URL-safe password with the seed-admin entropy", func() {
+		pw, err := GeneratePassword()
+		Expect(err).ToNot(HaveOccurred())
+		Expect(len(pw)).To(BeNumerically(">=", 20))
+		Expect(pw).To(MatchRegexp(`^[A-Za-z0-9_-]+$`))
+	})
+
+	It("never repeats a password across calls", func() {
+		seen := make(map[string]struct{}, 100)
+		for range 100 {
+			pw, err := GeneratePassword()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(pw).ToNot(BeEmpty())
+			Expect(seen).ToNot(HaveKey(pw))
+			seen[pw] = struct{}{}
+		}
+		Expect(seen).To(HaveLen(100))
+	})
+})
