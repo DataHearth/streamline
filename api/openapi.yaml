@@ -2534,8 +2534,8 @@ paths:
         media_type.
       tags: [requests]
       parameters:
-        - $ref: "#/components/parameters/RequestStatus"
-        - $ref: "#/components/parameters/RequestMediaType"
+        - $ref: "#/components/parameters/RequestStatusParam"
+        - $ref: "#/components/parameters/RequestMediaTypeParam"
         - $ref: "#/components/parameters/RequestPage"
         - $ref: "#/components/parameters/RequestLimit"
       responses:
@@ -2733,7 +2733,10 @@ components:
       schema:
         type: boolean
         default: false
-    RequestStatus:
+    # ...Param suffix: oapi-codegen names a parameter component's type after the
+    # component key, which collides with the Request schema's own status and
+    # media_type enums and aborts generation with "duplicate typename".
+    RequestStatusParam:
       name: status
       in: query
       required: false
@@ -2741,7 +2744,7 @@ components:
       schema:
         type: string
         enum: [pending, approved, denied, available]
-    RequestMediaType:
+    RequestMediaTypeParam:
       name: media_type
       in: query
       required: false

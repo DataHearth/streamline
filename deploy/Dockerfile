@@ -10,8 +10,8 @@
 # Pinned, not floating `1.26-alpine`: a moving tag made grype's stdlib findings
 # drift between builds independently of our code. The cost is that stdlib CVE
 # fixes now require bumping this by hand — grype failing on `stdlib` is the signal.
-ARG GO_VERSION=1.26.5
-ARG GO_DIGEST=sha256:0178a641fbb4858c5f1b48e34bdaabe0350a330a1b1149aabd498d0699ff5fb2
+ARG GO_VERSION=1.26.6
+ARG GO_DIGEST=sha256:af8d6740070b8906d12eae1c3e3ea0957fb63f492051ea05e354c38ef9fe88df
 
 # --- Frontend assets (esbuild + TailwindCSS) ---
 FROM node:24-alpine@sha256:d32cdf619f63fe0471182d08996dd516c6275bb5fd31ae06e55a570bd9e1ad43 AS frontend

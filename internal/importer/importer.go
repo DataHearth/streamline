@@ -603,6 +603,7 @@ func (w *Worker) handleOutcome(ctx context.Context, recordID uint32, runErr erro
 		slog.ErrorContext(ctx, "record import failure write failed", "error", err)
 		return
 	}
+	//nolint:sloglint // LogAttrs takes slog.Attr by API design
 	slog.LogAttrs(ctx, slog.LevelWarn, "import failed",
 		slog.Int("record.id", int(rec.ID)),
 		slog.Int("attempts", int(attempts)),
