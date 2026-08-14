@@ -55,6 +55,7 @@ paths:
           schema:
             type: integer
             default: 20
+            maximum: 100
             x-go-type: uint16
       responses:
         "200":
@@ -2747,6 +2748,7 @@ components:
         type: integer
         x-go-type: uint32
         default: 50
+        maximum: 100
     UserID:
       name: uid
       in: path
@@ -2949,6 +2951,7 @@ components:
       schema:
         type: integer
         default: 20
+        maximum: 100
         x-go-type: uint16
 
     SeriesStatus:

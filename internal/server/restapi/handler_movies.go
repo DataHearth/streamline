@@ -23,7 +23,7 @@ func (s *Server) ListMovies(
 		page = uint16(*request.Params.Page)
 	}
 	if request.Params.Limit != nil {
-		limit = *request.Params.Limit
+		limit = clampLimit(*request.Params.Limit, moviesMaxLimit)
 	}
 
 	movies, total, err := s.movies.List(ctx, page, limit)

@@ -28,6 +28,24 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 	})
 
 	Describe("ListSeries", func() {
+		It("clamps a limit above the documented maximum", func() {
+			app.tvshows.EXPECT().
+				FilterList(mock.Anything, mock.MatchedBy(func(p tvshow.FilterParams) bool {
+					return p.Limit == seriesMaxLimit
+				})).
+				Return([]*ent.TVShow{}, uint32(0), nil).
+				Once()
+
+			resp := app.do(app.req(
+				http.MethodGet,
+				"/api/v1/series?limit=65535",
+				app.adminKey,
+				nil,
+			))
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+		})
+
 		It("returns a paginated list", func() {
 			app.tvshows.EXPECT().
 				FilterList(mock.Anything, mock.AnythingOfType("tvshow.FilterParams")).

@@ -31,7 +31,7 @@ func (s *Server) ListRequests(
 		p.MediaType = string(*req.Params.MediaType)
 	}
 	if req.Params.Limit != nil && *req.Params.Limit > 0 {
-		p.Limit = *req.Params.Limit
+		p.Limit = clampLimit(*req.Params.Limit, requestsMaxLimit)
 	}
 	if req.Params.Page != nil && *req.Params.Page > 1 {
 		p.Offset = (*req.Params.Page - 1) * p.Limit

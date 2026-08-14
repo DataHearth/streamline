@@ -79,7 +79,8 @@ func (s *Server) ListImports(
 	if err := requireAdmin(ctx); err != nil {
 		return ListImports403JSONResponse{ForbiddenJSONResponse: notAdminResp}, nil
 	}
-	page, limit := pageOr(req.Params.Page, 1), pageOr(req.Params.Limit, 20)
+	page := pageOr(req.Params.Page, 1)
+	limit := clampLimit(pageOr(req.Params.Limit, 20), importMaxLimit)
 	items, total, err := s.bulkImports.List(ctx, page, limit)
 	if err != nil {
 		return nil, err
@@ -183,7 +184,8 @@ func (s *Server) ListImportFiles(
 			ForbiddenJSONResponse: notAdminResp,
 		}, nil
 	}
-	page, limit := pageOr(req.Params.Page, 1), pageOr(req.Params.Limit, 50)
+	page := pageOr(req.Params.Page, 1)
+	limit := clampLimit(pageOr(req.Params.Limit, 50), importMaxLimit)
 	cls := entimportscanfile.Classification("")
 	if req.Params.Classification != nil {
 		cls = entimportscanfile.Classification(*req.Params.Classification)
@@ -268,7 +270,8 @@ func (s *Server) ListImportShows(
 		}
 		return nil, err
 	}
-	page, limit := pageOr(req.Params.Page, 1), pageOr(req.Params.Limit, 50)
+	page := pageOr(req.Params.Page, 1)
+	limit := clampLimit(pageOr(req.Params.Limit, 50), importMaxLimit)
 	cls := entimportscanshow.Classification("")
 	if req.Params.Classification != nil {
 		cls = entimportscanshow.Classification(*req.Params.Classification)

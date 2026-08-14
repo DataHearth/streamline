@@ -21,7 +21,7 @@ func (s *Server) ListSeries(
 		p.Page = uint16(*request.Params.Page)
 	}
 	if request.Params.Limit != nil {
-		p.Limit = *request.Params.Limit
+		p.Limit = clampLimit(*request.Params.Limit, seriesMaxLimit)
 	}
 	if request.Params.Status != nil {
 		p.Status = *request.Params.Status
