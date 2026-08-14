@@ -129,6 +129,11 @@ func New(cfg Config) *Server {
 	if cfg.AuthMiddleware != nil {
 		s.router.Use(cfg.AuthMiddleware)
 	}
+	// Last, so an anonymous caller still gets the 401/302 it gets today rather
+	// than learning the body ceiling before authenticating. Auth reads no body,
+	// so nothing is lost by deferring. /auth/login and /auth/register are only
+	// *excluded* from auth, not from the chain, so they are still capped.
+	s.router.Use(middleware.BodyLimit)
 
 	s.router.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
