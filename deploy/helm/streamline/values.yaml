@@ -12,6 +12,9 @@ serviceAccount:
   create: true
   name: ""
   annotations: {}
+  # Streamline talks to no Kubernetes API — mounting the token would only
+  # hand a credential to an SSRF or RCE.
+  automountServiceAccountToken: false
 
 podAnnotations: {}
 podLabels: {}
