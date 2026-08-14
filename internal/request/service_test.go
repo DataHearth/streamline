@@ -3,15 +3,35 @@ package request
 import (
 	"context"
 	"errors"
+	"sync"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/user"
 	"github.com/datahearth/streamline/internal/db"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	reqmocks "github.com/datahearth/streamline/internal/request/mocks"
+	"github.com/datahearth/streamline/internal/role"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
 )
+
+// barrierStore holds every insert until both callers have cleared the
+// duplicate pre-check, reproducing the interleaving the unique index has to
+// catch instead of leaving it to the scheduler.
+type barrierStore struct {
+	db.Store
+	gate *sync.WaitGroup
+}
+
+func (s barrierStore) CreateRequest(
+	ctx context.Context,
+	p db.CreateRequestParams,
+) (*ent.Request, error) {
+	s.gate.Done()
+	s.gate.Wait()
+	return s.Store.CreateRequest(ctx, p)
+}
 
 var _ = Describe("Request service", Label("unit", "request"), func() {
 	var (
@@ -83,6 +103,18 @@ var _ = Describe("Request service", Label("unit", "request"), func() {
 			Expect(err).To(MatchError(ErrDuplicate))
 		})
 
+		It("maps a unique-index violation to ErrDuplicate", func() {
+			storeMk.FindActiveRequest(mock.Anything, "movie", uint32(5)).
+				Return(nil, nil).Once()
+			movieMk.GetByTMDBID(mock.Anything, uint32(5)).
+				Return(nil, errors.New("not found")).Once()
+			storeMk.CreateRequest(mock.Anything, mock.Anything).
+				Return(nil, &ent.ConstraintError{}).Once()
+
+			_, err := svc.Create(ctx, "movie", 5, "Flick", 9, "")
+			Expect(err).To(MatchError(ErrDuplicate))
+		})
+
 		It("rejects when the show is already in the library", func() {
 			storeMk.FindActiveRequest(mock.Anything, "tvshow", uint32(8)).
 				Return(nil, nil).Once()
@@ -91,6 +123,47 @@ var _ = Describe("Request service", Label("unit", "request"), func() {
 
 			_, err := svc.Create(ctx, "tvshow", 8, "Show", 9, "")
 			Expect(err).To(MatchError(ErrDuplicate))
+		})
+	})
+
+	Describe("Create against a real store", func() {
+		It("lets only one of two concurrent creates through", func() {
+			client, err := db.Open(ctx, ":memory:")
+			Expect(err).NotTo(HaveOccurred())
+			DeferCleanup(func() { Expect(client.Close()).To(Succeed()) })
+			store := db.New(client)
+			u, err := store.CreateUser(ctx, db.CreateUserParams{
+				Email:      "u@x.io",
+				Role:       role.Seed(user.RoleMember),
+				AuthMethod: user.AuthMethodLocal,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			movies := reqmocks.NewMockMovieAdder(GinkgoT())
+			movies.EXPECT().GetByTMDBID(mock.Anything, uint32(5)).
+				Return(nil, errors.New("not found")).Twice()
+			gate := &sync.WaitGroup{}
+			gate.Add(2)
+			svc := NewService(
+				barrierStore{Store: store, gate: gate},
+				movies,
+				reqmocks.NewMockShowAdder(GinkgoT()),
+			)
+
+			errs := make([]error, 2)
+			var wg sync.WaitGroup
+			for i := range errs {
+				wg.Go(func() {
+					_, errs[i] = svc.Create(ctx, "movie", 5, "Flick", u.ID, "")
+				})
+			}
+			wg.Wait()
+
+			Expect(errs).To(ConsistOf(BeNil(), MatchError(ErrDuplicate)))
+			rows, total, err := store.ListRequests(ctx, db.ListRequestsParams{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(total).To(Equal(1))
+			Expect(rows).To(HaveLen(1))
 		})
 	})
 

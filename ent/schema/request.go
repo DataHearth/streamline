@@ -5,6 +5,7 @@ import (
 	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
+	"entgo.io/ent/schema/index"
 	"entgo.io/ent/schema/mixin"
 
 	"github.com/datahearth/streamline/ent/schema/mixins"
@@ -39,5 +40,18 @@ func (Request) Edges() []ent.Edge {
 		edge.To("approved_by", User.Type).
 			Unique().
 			Annotations(entsql.OnDelete(entsql.SetNull)),
+	}
+}
+
+func (Request) Indexes() []ent.Index {
+	return []ent.Index{
+		// Partial on purpose: the uniqueness only holds over the statuses
+		// FindActiveRequest treats as active, so a denied or superseded
+		// request never blocks a legitimate re-request of the same media.
+		index.Fields("media_type", "media_id").
+			Unique().
+			Annotations(entsql.IndexWhere(
+				"status IN ('pending', 'approved', 'available')",
+			)),
 	}
 }
