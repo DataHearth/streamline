@@ -27,7 +27,7 @@
 	// where every row here links. The touch row below keeps the full line: it has
 	// a line of its own for it.
 	const STATE_WORD: Partial<Record<QueueEntry["status"], string>> = {
-		importing: i18n.lc_importing(),
+		importing: i18n.activity_importing(),
 		paused: i18n.status_paused(),
 		completed: i18n.status_completed(),
 		error: i18n.status_failed(),
