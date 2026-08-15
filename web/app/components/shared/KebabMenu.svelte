@@ -20,7 +20,7 @@
 	import { onDestroy, tick } from "svelte";
 	import { fly } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
-	import { MoreHorizontal, MoreVertical } from "@lucide/svelte";
+	import { Ellipsis, EllipsisVertical } from "@lucide/svelte";
 	import { cn } from "../../lib/cn";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 
@@ -157,9 +157,9 @@
 	)}
 >
 	{#if variant === "card"}
-		<MoreVertical class="h-3.5 w-3.5" aria-hidden="true" />
+		<EllipsisVertical class="h-3.5 w-3.5" aria-hidden="true" />
 	{:else}
-		<MoreHorizontal class="h-4 w-4" aria-hidden="true" />
+		<Ellipsis class="h-4 w-4" aria-hidden="true" />
 	{/if}
 </button>
 
