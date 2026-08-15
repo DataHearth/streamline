@@ -10,10 +10,10 @@ importers:
     devDependencies:
       '@inlang/paraglide-js':
         specifier: ^2.23.1
-        version: 2.23.2(typescript@6.0.3)
+        version: 2.24.0(typescript@6.0.3)
       '@inlang/plugin-message-format':
         specifier: ^4.4.1
-        version: 4.4.1
+        version: 4.4.3
       '@lucide/svelte':
         specifier: ^1.14.0
         version: 1.31.0(svelte@5.56.9)
@@ -46,7 +46,7 @@ importers:
         version: 5.56.9
       svelte-sonner:
         specifier: ^1.1.1
-        version: 1.1.1(svelte@5.56.9)
+        version: 1.2.1(svelte@5.56.9)
       tailwind-merge:
         specifier: ^3.6.0
         version: 3.6.0
@@ -317,8 +317,8 @@ packages:
     peerDependencies:
       vue: ^3.2.0
 
-  '@inlang/paraglide-js@2.23.2':
-    resolution: {integrity: sha512-tzWnZ6DEQ3JRxpSM/lsmfUFSNXLymvlfUei4uX1lo/Qh3a8OfxZ5nchGrEM+p0aLX4m5ZMrVuMKfaD0qXJFeoA==}
+  '@inlang/paraglide-js@2.24.0':
+    resolution: {integrity: sha512-xI5nFnqcapa2CrSY0Z0VotC1Dt6+vBZEcb8zqR7mX6C+NP5CfztxxTccjBwdVmPZqm7OzmEY9auhRA7W54jibg==}
     hasBin: true
     peerDependencies:
       typescript: '>=5.6'
@@ -329,14 +329,14 @@ packages:
       vite:
         optional: true
 
-  '@inlang/plugin-message-format@4.4.1':
-    resolution: {integrity: sha512-gI918CgIbOzrSk8BdETtARYVo3WcojjD33ASmn+taeNunkgrN5U4TkEqpC3yDJ+G0tMZm1mhEzS3dn3JwJpQoA==}
+  '@inlang/plugin-message-format@4.4.3':
+    resolution: {integrity: sha512-jBOT0CKgG49mctJZZ3Ltz4o9xkxbCYM1xXhKXl+1dIRV+IedpS93q1jAdMKGSfexgGxcagFopdNbnLb7wq/OZg==}
 
   '@inlang/recommend-sherlock@0.2.1':
     resolution: {integrity: sha512-ckv8HvHy/iTqaVAEKrr+gnl+p3XFNwe5D2+6w6wJk2ORV2XkcRkKOJ/XsTUJbPSiyi4PI+p+T3bqbmNx/rDUlg==}
 
-  '@inlang/sdk@2.10.2':
-    resolution: {integrity: sha512-O1ki72SNK6LPagaGrvlioBb1mWKvump7cO7P85hfGZjdFTmDdn3icI0A6MvaBsB3P9KQHAjzyubnN1OslGufTw==}
+  '@inlang/sdk@3.0.1':
+    resolution: {integrity: sha512-QvyMYjCqF7CnrTp8ZaPiuwpmxsoQPIDgfqGeWfqi4FDxBREye4QdyaZS4DGwIlCZXybF/YMj0TtL2uBfbmajug==}
     engines: {node: '>=20.0.0'}
 
   '@internationalized/date@3.12.3':
@@ -388,12 +388,28 @@ packages:
   '@lezer/yaml@1.0.4':
     resolution: {integrity: sha512-2lrrHqxalACEbxIbsjhqGpSW8kWpUKuY6RHgnSAFZa6qK62wvnPxA8hGOwOoDbwHcOFs5M4o27mjGu+P7TvBmw==}
 
-  '@lix-js/sdk@0.4.10':
-    resolution: {integrity: sha512-0dMInAJK/67guTG5rRZaCEhvzC5cCXENOjaePA5AqMXrCE97kaY7SRor9e2vnoGsFIiGqXKlT0MCIoZj36G0gg==}
-    engines: {node: '>=18'}
+  '@lix-js/sdk-darwin-arm64@0.12.2':
+    resolution: {integrity: sha512-0mBRIfgZfaey1/d0mijv7fBIGPeaTIMCDOPr3s4RUlHy/j+llNmAyDS2iNlalFh9nQGys7JNzo2Hv3FQbdKmug==}
+    cpu: [arm64]
+    os: [darwin]
 
-  '@lix-js/server-protocol-schema@0.1.1':
-    resolution: {integrity: sha512-jBeALB6prAbtr5q4vTuxnRZZv1M2rKe8iNqRQhFJ4Tv7150unEa0vKyz0hs8Gl3fUGsWaNJBh3J8++fpbrpRBQ==}
+  '@lix-js/sdk-linux-arm64@0.12.2':
+    resolution: {integrity: sha512-817uJlC2KTIKDaqQvALTu03hEJpNxEA+9d33FNs8sOm9pAguOWiAK1zGA2SD0IgS9Q8NqQeABLb84OesW5/NCA==}
+    cpu: [arm64]
+    os: [linux]
+
+  '@lix-js/sdk-linux-x64@0.12.2':
+    resolution: {integrity: sha512-rA7lw1jBr6azBHR5Sh/RzOKSAlRcmVea7VeI4VQqpy0PZs+5tWoK9iVC41V4oCIKssRv2wrkbvyP3CqInhoknQ==}
+    cpu: [x64]
+    os: [linux]
+
+  '@lix-js/sdk-win32-x64@0.12.2':
+    resolution: {integrity: sha512-y9IikCdrYx6cFnfqeUvYKPw6KBY016U2F2wYDILYZDZndccK2xw7lJChX163w9PewMwY3GsC/UqRBi5yqFAJ2w==}
+    cpu: [x64]
+    os: [win32]
+
+  '@lix-js/sdk@0.12.2':
+    resolution: {integrity: sha512-sKGOPdVKdChS5q60F4VQE4ZTcf0B7ZJM3KGCVQFN2suVNKhHcllbsCiwRYuM5WL7Yu1ql7YexltJ2FCsDqKePg==}
 
   '@lucide/svelte@1.31.0':
     resolution: {integrity: sha512-pgPuLEJdF0UpsajG9eSw0YvqXVuDxB+/x58BRiC4xE/KEHiopOqT1id3KCUvRN/PUmQkN1F26sslcs/1jutlBQ==}
@@ -1044,14 +1060,6 @@ packages:
   decode-named-character-reference@1.3.0:
     resolution: {integrity: sha512-GtpQYB283KrPp6nRw50q3U9/VfOutZOe103qlN7BPP6Ad27xYnOIWv4lPzo8HCAL+mMZofJ9KEy30fq6MfaK6Q==}
 
-  dedent@1.5.1:
-    resolution: {integrity: sha512-+LxW+KLWxu3HW3M2w2ympwtqPrqYRzU8fqi6Fhd18fBALe15blJPI/I4+UHveMVG6lJqB4JNd4UG0S5cnVHwIg==}
-    peerDependencies:
-      babel-plugin-macros: ^3.1.0
-    peerDependenciesMeta:
-      babel-plugin-macros:
-        optional: true
-
   defu@6.1.7:
     resolution: {integrity: sha512-7z22QmUWiQ/2d0KkdYmANbRUVABpZ9SNYyH5vx6PZ+nE5bcC0l7uFvEfHlyld/HcGBFTL536ClDt3DEcSlEJAQ==}
 
@@ -1166,6 +1174,9 @@ packages:
   fetch-blob@3.2.0:
     resolution: {integrity: sha512-7yAQpD2UMJzLi1Dqv7qFYnPbaPx7ZfFK6PiIxQ4PfkGPyNyl2Ugx+a/umUonmKqjhM4DnfbMvdX6otXq83soQQ==}
     engines: {node: ^12.20 || >= 14.13}
+
+  fflate@0.8.3:
+    resolution: {integrity: sha512-tbZNuJrLwGUp3zshBtdy4W+ORxZuIh8a5ilyIEQDC5rY1f3U20JMry0Ll3WBzU58EZKsEuJFXhb5gwv8CsPvgA==}
 
   fill-range@7.1.1:
     resolution: {integrity: sha512-YsGpe3WHLK8ZYi4tWDg2Jy3ebRz2rXowDxnld4bkQB00cc/1Zw9AWnC0i9ztDJitivtQvaI9KaLyKrc+hBW0yg==}
@@ -1283,10 +1294,6 @@ packages:
   htmlparser2@10.1.0:
     resolution: {integrity: sha512-VTZkM9GWRAtEpveh7MSF6SjjrpNVNNVJfFup7xTY3UpFtm67foy9HDVXneLtFVt4pMz5kZtgNcvCniNFb1hlEQ==}
 
-  human-id@4.2.0:
-    resolution: {integrity: sha512-K3GbkIWqyvvlpfhBPlbEvD97TtqBpAYA4kt+cn2lD2x2HuohzZCibcA2nOlnJT6exqvJLggoB5nv2dNf192nEA==}
-    hasBin: true
-
   iconv-lite@0.6.3:
     resolution: {integrity: sha512-4fCk79wshMdzMp2rH06qWrJE4iolqLhCUH+OiuIgU++RB0+94NlDL81atO7GX55uUKueo0txHNtvEyI6D7WdMw==}
     engines: {node: '>=0.10.0'}
@@ -1336,9 +1343,6 @@ packages:
 
   js-base64@3.9.2:
     resolution: {integrity: sha512-6zayE8QlUdiweYI6cETD/XBSqFcoCUlufn/29PJR99r82x1yDnIprRca0YvAYpAW+ez0GuQkVBC6xG5QkD7OjA==}
-
-  js-sha256@0.11.1:
-    resolution: {integrity: sha512-o6WSo/LUvY2uC4j7mO50a2ms7E/EAdbP0swigLV+nzHKTTaYnaLIWJ02VdXrsJX0vGedDESQnLsOekr94ryfjg==}
 
   json-schema@0.4.0:
     resolution: {integrity: sha512-es94M3nTIfsEPisRafak+HDLfHXnKBhV3vU5eqPcS3flIWqcxJWgXHXiey3YrpaNsanY5ei1VoYEbOzijuq9BA==}
@@ -1764,8 +1768,8 @@ packages:
     resolution: {integrity: sha512-WHkws2ZflZe41zj6AolvvmaTrWds/VuyeYr9iPVv/oQeaIoVxMKaushfFWpOGDT+GuBrM/sVqF8KUCYQlSSTdQ==}
     engines: {node: '>=18'}
 
-  svelte-sonner@1.1.1:
-    resolution: {integrity: sha512-5cd3p7wa4cq0NsqslMwdlPb7x1JglEZ/GKrLePWNr5bCxR1nagAVrY01FRFrXfUGs41miLt3C327+8XJo5BzZw==}
+  svelte-sonner@1.2.1:
+    resolution: {integrity: sha512-N00LOWb60fjKXULbpngku+7E9Krb16KpNq4/Eax5Vu7o1Dpbca55QpaLPsB+yp82JIEdFhfJuv5cVXLoe0ZtVA==}
     peerDependencies:
       svelte: ^5.0.0
 
@@ -2204,10 +2208,10 @@ snapshots:
       '@tanstack/vue-virtual': 3.13.35(vue@3.5.41(typescript@6.0.3))
       vue: 3.5.41(typescript@6.0.3)
 
-  '@inlang/paraglide-js@2.23.2(typescript@6.0.3)':
+  '@inlang/paraglide-js@2.24.0(typescript@6.0.3)':
     dependencies:
       '@inlang/recommend-sherlock': 0.2.1
-      '@inlang/sdk': 2.10.2
+      '@inlang/sdk': 3.0.1
       commander: 11.1.0
       consola: 3.4.0
       json5: 2.2.3
@@ -2215,10 +2219,8 @@ snapshots:
       urlpattern-polyfill: 10.1.0
     optionalDependencies:
       typescript: 6.0.3
-    transitivePeerDependencies:
-      - babel-plugin-macros
 
-  '@inlang/plugin-message-format@4.4.1':
+  '@inlang/plugin-message-format@4.4.3':
     dependencies:
       flat: 6.0.1
 
@@ -2226,15 +2228,13 @@ snapshots:
     dependencies:
       comment-json: 4.6.2
 
-  '@inlang/sdk@2.10.2':
+  '@inlang/sdk@3.0.1':
     dependencies:
-      '@lix-js/sdk': 0.4.10
+      '@lix-js/sdk': 0.12.2
       '@sinclair/typebox': 0.31.30
       kysely: 0.28.17
       sqlite-wasm-kysely: 0.3.0(kysely@0.28.17)
       uuid: 14.0.1
-    transitivePeerDependencies:
-      - babel-plugin-macros
 
   '@internationalized/date@3.12.3':
     dependencies:
@@ -2309,19 +2309,26 @@ snapshots:
       '@lezer/highlight': 1.2.3
       '@lezer/lr': 1.4.10
 
-  '@lix-js/sdk@0.4.10':
-    dependencies:
-      '@lix-js/server-protocol-schema': 0.1.1
-      dedent: 1.5.1
-      human-id: 4.2.0
-      js-sha256: 0.11.1
-      kysely: 0.28.17
-      sqlite-wasm-kysely: 0.3.0(kysely@0.28.17)
-      uuid: 14.0.1
-    transitivePeerDependencies:
-      - babel-plugin-macros
+  '@lix-js/sdk-darwin-arm64@0.12.2':
+    optional: true
 
-  '@lix-js/server-protocol-schema@0.1.1': {}
+  '@lix-js/sdk-linux-arm64@0.12.2':
+    optional: true
+
+  '@lix-js/sdk-linux-x64@0.12.2':
+    optional: true
+
+  '@lix-js/sdk-win32-x64@0.12.2':
+    optional: true
+
+  '@lix-js/sdk@0.12.2':
+    dependencies:
+      fflate: 0.8.3
+    optionalDependencies:
+      '@lix-js/sdk-darwin-arm64': 0.12.2
+      '@lix-js/sdk-linux-arm64': 0.12.2
+      '@lix-js/sdk-linux-x64': 0.12.2
+      '@lix-js/sdk-win32-x64': 0.12.2
 
   '@lucide/svelte@1.31.0(svelte@5.56.9)':
     dependencies:
@@ -3122,8 +3129,6 @@ snapshots:
     dependencies:
       character-entities: 2.0.2
 
-  dedent@1.5.1: {}
-
   defu@6.1.7: {}
 
   dequal@2.0.3: {}
@@ -3235,6 +3240,8 @@ snapshots:
     dependencies:
       node-domexception: 1.0.0
       web-streams-polyfill: 3.3.3
+
+  fflate@0.8.3: {}
 
   fill-range@7.1.1:
     dependencies:
@@ -3419,8 +3426,6 @@ snapshots:
       domutils: 3.2.2
       entities: 7.0.1
 
-  human-id@4.2.0: {}
-
   iconv-lite@0.6.3:
     dependencies:
       safer-buffer: 2.1.2
@@ -3457,8 +3462,6 @@ snapshots:
   jiti@2.7.0: {}
 
   js-base64@3.9.2: {}
-
-  js-sha256@0.11.1: {}
 
   json-schema@0.4.0: {}
 
@@ -4071,7 +4074,7 @@ snapshots:
       make-asynchronous: 1.1.0
       time-span: 5.1.0
 
-  svelte-sonner@1.1.1(svelte@5.56.9):
+  svelte-sonner@1.2.1(svelte@5.56.9):
     dependencies:
       runed: 0.28.0(svelte@5.56.9)
       svelte: 5.56.9
