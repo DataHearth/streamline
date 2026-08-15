@@ -29,9 +29,7 @@
 	const STATE_WORD: Partial<Record<QueueEntry["status"], string>> = {
 		importing: i18n.activity_importing(),
 		paused: i18n.status_paused(),
-		completed: i18n.status_completed(),
 		error: i18n.status_failed(),
-		failed: i18n.status_failed(),
 	};
 
 	let active = $derived(queue.filter((q) => q.status === "downloading").length);
