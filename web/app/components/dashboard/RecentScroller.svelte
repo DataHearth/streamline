@@ -24,7 +24,6 @@
 		seeAllLabel = "See all",
 		countText,
 		emptyText = "No movies yet.",
-		pillVariant = "translucent",
 	}: {
 		title: string;
 		movies: ScrollerItem[];
@@ -32,7 +31,6 @@
 		seeAllLabel?: string;
 		countText?: string;
 		emptyText?: string;
-		pillVariant?: "solid" | "translucent";
 	} = $props();
 
 	let scrollEl = $state<HTMLDivElement | null>(null);
@@ -142,7 +140,6 @@
 						size="md"
 						href={movie.href}
 						posterSrc={movie.posterSrc}
-						{pillVariant}
 					/>
 				</div>
 			{/each}

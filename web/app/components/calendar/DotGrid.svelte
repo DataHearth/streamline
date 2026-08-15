@@ -81,7 +81,7 @@
 					</span>
 					<span class="flex h-[5px] items-center gap-[3px]">
 						{#each evs.slice(0, MAX_DOTS) as e (e.id)}
-							<EventDot status={dotToken(e)} />
+							<EventDot kind={dotToken(e)} />
 						{/each}
 						{#if evs.length > MAX_DOTS}
 							<span class="font-mono text-[8px] leading-none text-fg-faint">
