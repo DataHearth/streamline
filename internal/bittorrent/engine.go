@@ -113,6 +113,7 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 		}
 		return nil, fmt.Errorf("start torrent client: %w", err)
 	}
+	var bindAddr string
 	if bindIP != nil {
 		network := "tcp6"
 		if bindIP.To4() != nil {
@@ -122,9 +123,6 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 			Network: network,
 			Dialer:  &net.Dialer{LocalAddr: &net.TCPAddr{IP: bindIP}},
 		})
-	}
-	var bindAddr string
-	if bindIP != nil {
 		bindAddr = bindIP.String()
 	}
 	e := &Engine{
@@ -149,8 +147,9 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 	return e, nil
 }
 
-// newClientConfig builds the anacrolix client config for the enabled builtin
-// download-client entry. bindIP nil means "all interfaces".
+// newClientConfig builds the anacrolix client config. A nil bindIP means "all
+// interfaces"; a non-nil one only half-binds the client, and New must attach
+// the matching source-bound dialer for it to reach peers at all.
 func newClientConfig(
 	entry config.DownloadClientEntry,
 	bindIP net.IP,
@@ -161,10 +160,10 @@ func newClientConfig(
 	cc.DefaultStorage = st
 	cc.Seed = true
 	cc.NoDHT = entry.DisableDHT
-	// WebTorrent stays off unconditionally: streamline is a plain
-	// BitTorrent-over-TCP/uTP client, and disabling it keeps the whole pion
-	// WebRTC/DTLS/ICE stack out of the engine's runtime surface. ws:// and
-	// wss:// trackers in an announce list are skipped.
+	// The pion WebRTC/DTLS/ICE stack anacrolix links for webtorrent carries
+	// real CVEs and a plain BitTorrent-over-TCP/uTP client never needs it. No
+	// config key re-enables it; the only cost is that ws:// and wss:// trackers
+	// in an announce list are skipped.
 	cc.DisableWebtorrent = true
 	cc.Logger = analog.Default.WithFilterLevel(analog.Error)
 	// anacrolix v1.61 can lose a peer's request-update wakeup: the msg writer
@@ -197,10 +196,11 @@ func newClientConfig(
 		cc.ListenHost = func(string) string { return host }
 		// anacrolix pins uTP/DHT dials to the listen socket, but its TCP
 		// dialer is not source-bound (dialTcpFromListenPort is compiled off).
-		// Drop the default socket dialers and dial only through the
-		// source-bound dialer added below, so peer traffic cannot leave the
-		// bound interface. Constrain listeners to the bound address family so
-		// the mismatched family doesn't fail to bind.
+		// Drop the default socket dialers so peer traffic can only leave
+		// through the source-bound dialer New attaches to the client — this
+		// config on its own leaves the client unable to dial peers at all, so
+		// the two halves must stay together. Constrain listeners to the bound
+		// address family so the mismatched family doesn't fail to bind.
 		cc.DialForPeerConns = false
 		if bindIP.To4() != nil {
 			cc.DisableIPv6 = true

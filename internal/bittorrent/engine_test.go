@@ -52,34 +52,37 @@ var _ = Describe("resolveBindIP", Label("unit", "bittorrent"), func() {
 })
 
 var _ = Describe("newClientConfig", Label("unit", "bittorrent"), func() {
-	It("disables WebTorrent for an unbound engine", func() {
-		cc := newClientConfig(
-			config.DownloadClientEntry{DownloadDir: "/tmp/streamline-dl"},
-			nil, nil,
-		)
-		Expect(cc.DisableWebtorrent).To(BeTrue())
+	entry := config.DownloadClientEntry{DownloadDir: "/srv/media/downloads"}
+
+	It("disables WebTorrent whether bound or not", func() {
+		Expect(newClientConfig(entry, nil, nil).DisableWebtorrent).To(BeTrue())
+		Expect(newClientConfig(entry, net.ParseIP("10.11.12.13"), nil).
+			DisableWebtorrent).To(BeTrue())
 	})
 
-	It("disables WebTorrent when bound to an interface", func() {
-		cc := newClientConfig(
-			config.DownloadClientEntry{DownloadDir: "/tmp/streamline-dl"},
-			net.ParseIP("10.11.12.13"), nil,
-		)
-		Expect(cc.DisableWebtorrent).To(BeTrue())
+	It("leaves the default dialers alone when unbound", func() {
+		cc := newClientConfig(entry, nil, nil)
+		Expect(cc.DialForPeerConns).To(BeTrue())
+		Expect(cc.DisableIPv6).To(BeFalse())
+		Expect(cc.NoDefaultPortForwarding).To(BeFalse())
+	})
+
+	It("binds fail-closed when given an interface IP", func() {
+		cc := newClientConfig(entry, net.ParseIP("10.11.12.13"), nil)
 		Expect(cc.DialForPeerConns).To(BeFalse())
 		Expect(cc.DisableIPv6).To(BeTrue())
 		Expect(cc.NoDefaultPortForwarding).To(BeTrue())
 	})
 
-	It("carries the entry's transport knobs through", func() {
-		entry := config.DownloadClientEntry{
-			DownloadDir: "/tmp/streamline-dl",
+	It("carries the entry's knobs through", func() {
+		bound := config.DownloadClientEntry{
+			DownloadDir: entry.DownloadDir,
 			DisableDHT:  true,
 			ListenPort:  12345,
 		}
-		cc := newClientConfig(entry, nil, nil)
+		cc := newClientConfig(bound, nil, nil)
 		Expect(cc.NoDHT).To(BeTrue())
 		Expect(cc.ListenPort).To(Equal(12345))
-		Expect(cc.DataDir).To(Equal(entry.DownloadDir))
+		Expect(cc.DataDir).To(Equal(bound.DownloadDir))
 	})
 })
