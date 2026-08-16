@@ -76,7 +76,7 @@
               go
               gopls
               nodejs
-              pnpm
+              pnpm_11
               go-task
               openssl
               playwright-mcp
