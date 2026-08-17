@@ -9,6 +9,8 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	"github.com/datahearth/streamline/internal/auth"
 )
 
 const (
@@ -34,17 +36,35 @@ func (s *bodySink) handler() http.Handler {
 	})
 }
 
-// serveBody runs a request through BodyLimit with a declared Content-Length.
+// serveBody runs a request through BodyLimit with a declared Content-Length,
+// as an admin. Admin is the default because the torrent carve-out is only
+// granted to one, and every other spec is indifferent to the role.
 func serveBody(
 	sink *bodySink,
 	method, path string,
 	size int,
 ) *httptest.ResponseRecorder {
 	GinkgoHelper()
+	return serveBodyAs(sink, method, path, size, &auth.Claims{Role: "admin"})
+}
+
+// serveBodyAs is serveBody with an explicit caller. A nil claims argument is
+// the anonymous case, which reaches this middleware only on a route the auth
+// middleware excludes.
+func serveBodyAs(
+	sink *bodySink,
+	method, path string,
+	size int,
+	claims *auth.Claims,
+) *httptest.ResponseRecorder {
+	GinkgoHelper()
 	req := httptest.NewRequest(
 		method, path, bytes.NewReader(bytes.Repeat([]byte("a"), size)),
 	)
 	req.ContentLength = int64(size)
+	if claims != nil {
+		req = req.WithContext(auth.ContextWithClaims(req.Context(), claims))
+	}
 	rec := httptest.NewRecorder()
 	BodyLimit(sink.handler()).ServeHTTP(rec, req)
 	return rec
@@ -144,6 +164,47 @@ var _ = Describe("BodyLimit middleware", Label("unit", "server"), func() {
 
 			Expect(rec.Code).To(Equal(http.StatusRequestEntityTooLarge))
 			Expect(sink.called).To(BeFalse())
+		})
+
+		// AddTorrent is admin-only, but the generated strict handler decodes
+		// the body before roleGuard runs. Were the carve-out granted on the
+		// path alone, these callers could make the process buffer the JSON and
+		// its base64 decode before anything checked the role.
+		DescribeTable("does not extend the carve-out to a non-admin caller",
+			func(claims *auth.Claims) {
+				rec := serveBodyAs(
+					sink, http.MethodPost, torrentPath, betweenCaps, claims,
+				)
+
+				Expect(rec.Code).To(Equal(http.StatusRequestEntityTooLarge))
+				Expect(sink.called).To(BeFalse())
+			},
+			Entry("member", &auth.Claims{Role: "member"}),
+			Entry("request_only", &auth.Claims{Role: "request_only"}),
+			Entry("no claims", nil),
+		)
+
+		// chi routes on RawPath when the URL was escaped, so an escaped
+		// spelling reaches a 404 rather than AddTorrent. Matching the decoded
+		// path here would hand the raised cap to a request the router never
+		// sends to the torrent handler at all.
+		It("does not extend the carve-out to an escaped spelling", func() {
+			rec := serveBody(
+				sink, http.MethodPost, "/api/v1/%74orrents", betweenCaps,
+			)
+
+			Expect(rec.Code).To(Equal(http.StatusRequestEntityTooLarge))
+			Expect(sink.called).To(BeFalse())
+		})
+
+		It("still holds a non-admin to the default cap, not to nothing", func() {
+			rec := serveBodyAs(
+				sink, http.MethodPost, torrentPath, defaultMaxBody,
+				&auth.Claims{Role: "member"},
+			)
+
+			Expect(rec.Code).To(Equal(http.StatusOK))
+			Expect(sink.read).To(Equal(int64(defaultMaxBody)))
 		})
 	})
 })
