@@ -196,7 +196,7 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 				Page: 1, Limit: 2,
 			})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(total).To(Equal(uint32(3)))
+			Expect(total).To(Equal(3))
 			Expect(items).To(HaveLen(2))
 			Expect(items[0].Title).To(Equal("Alpha"))
 			Expect(items[1].Title).To(Equal("Beta"))
@@ -205,7 +205,7 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 		It("defaults page=1 limit=20 when zero", func() {
 			items, total, err := svc.FilterList(ctx, FilterParams{})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(total).To(Equal(uint32(4)))
+			Expect(total).To(Equal(4))
 			Expect(items).To(HaveLen(4))
 		})
 
@@ -216,7 +216,7 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 				Page: 2, Limit: 2,
 			})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(total).To(Equal(uint32(3)))
+			Expect(total).To(Equal(3))
 			Expect(items).To(HaveLen(1))
 			Expect(items[0].Title).To(Equal("Charlie"))
 		})
