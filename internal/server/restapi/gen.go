@@ -3432,7 +3432,7 @@ type RequestLimit = uint32
 type RequestMediaTypeParam string
 
 // RequestPage defines model for RequestPage.
-type RequestPage = uint32
+type RequestPage = uint16
 
 // RequestStatusParam defines model for RequestStatusParam.
 type RequestStatusParam string

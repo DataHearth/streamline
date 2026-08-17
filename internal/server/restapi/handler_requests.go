@@ -34,7 +34,7 @@ func (s *Server) ListRequests(
 		p.Limit = clampLimit(*req.Params.Limit, requestsMaxLimit)
 	}
 	if req.Params.Page != nil && *req.Params.Page > 1 {
-		p.Offset = (*req.Params.Page - 1) * p.Limit
+		p.Offset = uint32(*req.Params.Page-1) * p.Limit
 	}
 	// Reviewers (admin/member) see all requests; request_only sees only theirs.
 	if claims.Role == "request_only" {
@@ -53,7 +53,7 @@ func (s *Server) ListRequests(
 	}
 	page := uint32(1)
 	if req.Params.Page != nil && *req.Params.Page > 0 {
-		page = *req.Params.Page
+		page = uint32(*req.Params.Page)
 	}
 	return ListRequests200JSONResponse{
 		RequestsListJSONResponse: RequestsListJSONResponse{
