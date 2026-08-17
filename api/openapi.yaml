@@ -57,6 +57,7 @@ paths:
           schema:
             type: integer
             default: 20
+            minimum: 1
             maximum: 100
             x-go-type: uint16
       responses:
@@ -2085,6 +2086,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/ImportScanList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "403":
           $ref: "#/components/responses/Forbidden"
     post:
@@ -2174,6 +2177,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/ImportScanFileList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "403":
           $ref: "#/components/responses/Forbidden"
         "404":
@@ -2210,6 +2215,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/ImportScanShowList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "403":
           $ref: "#/components/responses/Forbidden"
         "404":
@@ -2777,6 +2784,7 @@ components:
         type: integer
         x-go-type: uint32
         default: 50
+        minimum: 1
         maximum: 100
     UserID:
       name: uid
@@ -2842,6 +2850,7 @@ components:
         type: integer
         x-go-type: uint16
         minimum: 1
+        maximum: 65535
         default: 1
     ImportLimit:
       name: limit
@@ -2982,6 +2991,7 @@ components:
       schema:
         type: integer
         default: 20
+        minimum: 1
         maximum: 100
         x-go-type: uint16
 

@@ -28,6 +28,30 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 	})
 
 	Describe("ListSeries", func() {
+		It("rejects an explicit page=0 with a JSON 400", func() {
+			resp := app.do(app.req(
+				http.MethodGet,
+				"/api/v1/series?page=0",
+				app.adminKey,
+				nil,
+			))
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+		})
+
+		It("rejects an out-of-range page with a JSON 400", func() {
+			resp := app.do(app.req(
+				http.MethodGet,
+				"/api/v1/series?page=70000",
+				app.adminKey,
+				nil,
+			))
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			Expect(resp.Header.Get("Content-Type")).
+				To(HavePrefix("application/json"))
+		})
+
 		It("clamps a limit above the documented maximum", func() {
 			app.tvshows.EXPECT().
 				FilterList(mock.Anything, mock.MatchedBy(func(p tvshow.FilterParams) bool {

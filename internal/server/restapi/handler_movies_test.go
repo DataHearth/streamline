@@ -32,12 +32,7 @@ var _ = Describe(
 		})
 
 		Describe("ListMovies", func() {
-			It("coerces page=0 to the first page instead of erroring", func() {
-				app.movies.EXPECT().
-					List(mock.Anything, uint16(1), uint16(20)).
-					Return([]*ent.Movie{}, 0, nil).
-					Once()
-
+			It("rejects an explicit page=0 with a JSON 400", func() {
 				resp := app.do(app.req(
 					http.MethodGet,
 					"/api/v1/movies?page=0",
@@ -45,7 +40,24 @@ var _ = Describe(
 					nil,
 				))
 				defer resp.Body.Close()
-				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+				var body Error
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				Expect(body.Message).To(Equal("page must be >= 1"))
+			})
+
+			It("rejects an explicit limit=0 with a JSON 400", func() {
+				resp := app.do(app.req(
+					http.MethodGet,
+					"/api/v1/movies?limit=0",
+					app.adminKey,
+					nil,
+				))
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+				var body Error
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				Expect(body.Message).To(Equal("limit must be >= 1"))
 			})
 
 			It("rejects an out-of-range page with a JSON 400", func() {

@@ -23,19 +23,26 @@ func (s *Server) ListRequests(
 		}, nil
 	}
 
-	p := db.ListRequestsParams{Limit: 50}
+	page, ok := positiveOr(req.Params.Page, uint16(1))
+	if !ok {
+		return ListRequests400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(msgZeroPage),
+		}, nil
+	}
+	limit, ok := positiveOr(req.Params.Limit, uint32(50))
+	if !ok {
+		return ListRequests400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(msgZeroLimit),
+		}, nil
+	}
+	p := db.ListRequestsParams{Limit: clampLimit(limit, requestsMaxLimit)}
 	if req.Params.Status != nil {
 		p.Status = string(*req.Params.Status)
 	}
 	if req.Params.MediaType != nil {
 		p.MediaType = string(*req.Params.MediaType)
 	}
-	if req.Params.Limit != nil && *req.Params.Limit > 0 {
-		p.Limit = clampLimit(*req.Params.Limit, requestsMaxLimit)
-	}
-	if req.Params.Page != nil && *req.Params.Page > 1 {
-		p.Offset = uint32(*req.Params.Page-1) * p.Limit
-	}
+	p.Offset = uint32(page-1) * p.Limit
 	// Reviewers (admin/member) see all requests; request_only sees only theirs.
 	if claims.Role == "request_only" {
 		p.RequesterID = claims.UserID
@@ -51,15 +58,11 @@ func (s *Server) ListRequests(
 	for _, r := range rows {
 		items = append(items, requestToAPI(r))
 	}
-	page := uint32(1)
-	if req.Params.Page != nil && *req.Params.Page > 0 {
-		page = uint32(*req.Params.Page)
-	}
 	return ListRequests200JSONResponse{
 		RequestsListJSONResponse: RequestsListJSONResponse{
 			Items: items,
 			Total: total,
-			Page:  page,
+			Page:  uint32(page),
 			Limit: p.Limit,
 		},
 	}, nil

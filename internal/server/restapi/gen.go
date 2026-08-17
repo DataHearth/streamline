@@ -12077,6 +12077,20 @@ func (response ListImports200JSONResponse) VisitListImportsResponse(w http.Respo
 	return err
 }
 
+type ListImports400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListImports400JSONResponse) VisitListImportsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListImports403JSONResponse struct{ ForbiddenJSONResponse }
 
 func (response ListImports403JSONResponse) VisitListImportsResponse(w http.ResponseWriter) error {
@@ -12414,6 +12428,20 @@ func (response ListImportFiles200JSONResponse) VisitListImportFilesResponse(w ht
 	return err
 }
 
+type ListImportFiles400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListImportFiles400JSONResponse) VisitListImportFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListImportFiles403JSONResponse struct{ ForbiddenJSONResponse }
 
 func (response ListImportFiles403JSONResponse) VisitListImportFilesResponse(w http.ResponseWriter) error {
@@ -12513,6 +12541,20 @@ func (response ListImportShows200JSONResponse) VisitListImportShowsResponse(w ht
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListImportShows400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListImportShows400JSONResponse) VisitListImportShowsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
 	_, err := buf.WriteTo(w)
 	return err
 }

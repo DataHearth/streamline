@@ -79,9 +79,23 @@ func (s *Server) ListImports(
 	if err := requireAdmin(ctx); err != nil {
 		return ListImports403JSONResponse{ForbiddenJSONResponse: notAdminResp}, nil
 	}
-	page := pageOr(req.Params.Page, 1)
-	limit := clampLimit(pageOr(req.Params.Limit, 20), importMaxLimit)
-	items, total, err := s.bulkImports.List(ctx, page, limit)
+	page, ok := positiveOr(req.Params.Page, uint16(1))
+	if !ok {
+		return ListImports400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(msgZeroPage),
+		}, nil
+	}
+	limit, ok := positiveOr(req.Params.Limit, uint16(20))
+	if !ok {
+		return ListImports400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(msgZeroLimit),
+		}, nil
+	}
+	items, total, err := s.bulkImports.List(
+		ctx,
+		page,
+		clampLimit(limit, importMaxLimit),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -184,8 +198,19 @@ func (s *Server) ListImportFiles(
 			ForbiddenJSONResponse: notAdminResp,
 		}, nil
 	}
-	page := pageOr(req.Params.Page, 1)
-	limit := clampLimit(pageOr(req.Params.Limit, 50), importMaxLimit)
+	page, ok := positiveOr(req.Params.Page, uint16(1))
+	if !ok {
+		return ListImportFiles400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(msgZeroPage),
+		}, nil
+	}
+	limit, ok := positiveOr(req.Params.Limit, uint16(50))
+	if !ok {
+		return ListImportFiles400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(msgZeroLimit),
+		}, nil
+	}
+	limit = clampLimit(limit, importMaxLimit)
 	cls := entimportscanfile.Classification("")
 	if req.Params.Classification != nil {
 		cls = entimportscanfile.Classification(*req.Params.Classification)
@@ -270,8 +295,19 @@ func (s *Server) ListImportShows(
 		}
 		return nil, err
 	}
-	page := pageOr(req.Params.Page, 1)
-	limit := clampLimit(pageOr(req.Params.Limit, 50), importMaxLimit)
+	page, ok := positiveOr(req.Params.Page, uint16(1))
+	if !ok {
+		return ListImportShows400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(msgZeroPage),
+		}, nil
+	}
+	limit, ok := positiveOr(req.Params.Limit, uint16(50))
+	if !ok {
+		return ListImportShows400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(msgZeroLimit),
+		}, nil
+	}
+	limit = clampLimit(limit, importMaxLimit)
 	cls := entimportscanshow.Classification("")
 	if req.Params.Classification != nil {
 		cls = entimportscanshow.Classification(*req.Params.Classification)
@@ -347,11 +383,4 @@ func (s *Server) UpdateImportShowDecision(
 			toAPIImportScanShow(row),
 		),
 	}, nil
-}
-
-func pageOr(v *uint16, def uint16) uint16 {
-	if v != nil && *v > 0 {
-		return *v
-	}
-	return def
 }

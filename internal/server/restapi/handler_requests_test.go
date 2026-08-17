@@ -23,6 +23,17 @@ var _ = Describe("Request handlers", Label("unit", "restapi"), func() {
 	})
 
 	Describe("GET /requests", func() {
+		It("rejects an explicit page=0 with a JSON 400", func() {
+			resp := app.do(app.req(
+				http.MethodGet,
+				"/api/v1/requests?page=0",
+				app.adminKey,
+				nil,
+			))
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+		})
+
 		It("401s without auth", func() {
 			resp, err := http.DefaultClient.Do(
 				app.req(http.MethodGet, "/api/v1/requests", "invalid-token", nil),

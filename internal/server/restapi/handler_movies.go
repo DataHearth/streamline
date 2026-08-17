@@ -18,12 +18,19 @@ func (s *Server) ListMovies(
 	ctx context.Context,
 	request ListMoviesRequestObject,
 ) (ListMoviesResponseObject, error) {
-	// The service coerces page=0 itself (like tvshow's), but pageOr keeps
-	// the response's echoed Page field at 1 rather than parroting the 0.
-	page, limit := pageOr(request.Params.Page, 1), uint16(20)
-	if request.Params.Limit != nil {
-		limit = clampLimit(*request.Params.Limit, moviesMaxLimit)
+	page, ok := positiveOr(request.Params.Page, uint16(1))
+	if !ok {
+		return ListMovies400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(msgZeroPage),
+		}, nil
 	}
+	limit, ok := positiveOr(request.Params.Limit, uint16(20))
+	if !ok {
+		return ListMovies400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(msgZeroLimit),
+		}, nil
+	}
+	limit = clampLimit(limit, moviesMaxLimit)
 
 	movies, total, err := s.movies.List(ctx, page, limit)
 	if err != nil {
