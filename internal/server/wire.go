@@ -184,6 +184,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		if p == "" {
 			continue
 		}
+		//nolint:gosec // 0755 on purpose: Plex/Jellyfin/Emby read the library from another uid
 		if err := os.MkdirAll(p, 0o755); err != nil {
 			dbClient.Close()
 			return nil, fmt.Errorf("create library path %s: %w", p, err)

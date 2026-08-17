@@ -345,6 +345,7 @@ func placeFile(
 	}
 	span.SetAttributes(attribute.String("dest.path", destPath))
 
+	//nolint:gosec // 0755 on purpose: Plex/Jellyfin/Emby read the library from another uid
 	if err := os.MkdirAll(filepath.Dir(destPath), 0o755); err != nil {
 		outcome = "mkdir_failed"
 		return ImportedFile{}, otelx.RecordSpanError(
@@ -411,6 +412,7 @@ func transferFile(src, dst, mode string) error {
 // half-written destination with it so no truncated media file is left behind
 // at a path the library considers valid.
 func MoveFile(ctx context.Context, src, dst string) error {
+	//nolint:gosec // 0755 on purpose: Plex/Jellyfin/Emby read the library from another uid
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 		return fmt.Errorf("mkdir %s: %w", filepath.Dir(dst), err)
 	}
@@ -429,12 +431,15 @@ func MoveFile(ctx context.Context, src, dst string) error {
 }
 
 func copyFile(src, dst string) error {
+	//nolint:gosec // src is a download-client path; dst was template-rendered
+	// through SanitizePath and the ErrUnsafePath root check in placeFile
 	in, err := os.Open(src)
 	if err != nil {
 		return err
 	}
 	defer in.Close()
 
+	//nolint:gosec // see above: dst cannot escape the library root
 	out, err := os.Create(dst)
 	if err != nil {
 		return err
