@@ -177,6 +177,14 @@ func (s *auth) GetUserDetail(
 // UpdateUser applies a partial patch (role, display name, auth method) to the
 // target user. Demoting the sole remaining admin is rejected with
 // ErrLastAdmin.
+//
+// A role that actually changes (in either direction) revokes every session the
+// target holds, forcing a re-login so the new role is in force immediately
+// rather than at the end of session_ttl. A patch repeating the current role
+// revokes nothing, which is what keeps the SPA's always-full user-edit patch
+// from signing the target out on a display-name save. An admin changing their
+// own role signs themselves out too, which is the intended containment
+// semantics.
 func (s *auth) UpdateUser(
 	ctx context.Context,
 	id uint32,
@@ -241,6 +249,22 @@ func (s *auth) UpdateUser(
 	}
 
 	if p.Role != nil && *p.Role != string(current.Role) {
+		// A session JWT carries the role it was issued with and the
+		// cookie/Bearer middleware never re-reads the user row, so a live
+		// session would keep the old role until session_ttl (default 168h)
+		// expires it. Revoking the target's sessions is what makes the change
+		// take effect now; the next login mints claims with the new role. API
+		// keys are untouched by design: ValidateAPIKey reloads the owner row
+		// on every request, so they are already role-fresh.
+		if err := s.RevokeAllUserSessions(ctx, id); err != nil {
+			// The role row is already committed. Returning the error would
+			// report failure for a change that persisted, and a retry would
+			// skip this branch because the role no longer differs, so the
+			// failure is surfaced in the log instead. The manual out is the
+			// per-session revoke on the admin user-detail page.
+			slog.ErrorContext(ctx, "role_change_session_revoke_failed",
+				"user.id", id, "error", err)
+		}
 		slog.InfoContext(ctx, "user_role_changed",
 			"user.id", id,
 			"old_role", string(current.Role),
@@ -296,9 +320,9 @@ func (s *auth) DeleteUser(
 }
 
 // AdminResetPassword rotates the target user's password without verifying the
-// old one and revokes every active session they hold. Returns ErrPasswordWeak
-// when the new password fails policy, ErrUserNotFound when the id does not
-// resolve.
+// old one, revokes every active session they hold, and deletes every API key
+// they own. Returns ErrPasswordWeak when the new password fails policy,
+// ErrUserNotFound when the id does not resolve.
 func (s *auth) AdminResetPassword(
 	ctx context.Context,
 	id uint32,
@@ -331,7 +355,16 @@ func (s *auth) AdminResetPassword(
 		slog.WarnContext(ctx, "revoke_all_sessions_failed",
 			"user.id", id, "error", err)
 	}
-	slog.InfoContext(ctx, "admin_password_reset", "user.id", id)
+	revoked, err := s.db.DeleteAPIKeysByUser(ctx, id)
+	if err != nil {
+		// Best-effort like the session revoke, but logged at ERROR: a key that
+		// survives the reset is a standing credential the reset was meant to
+		// cut.
+		slog.ErrorContext(ctx, "revoke_api_keys_failed",
+			"user.id", id, "error", err)
+	}
+	slog.InfoContext(ctx, "admin_password_reset",
+		"user.id", id, "api_keys_revoked", revoked)
 	return nil
 }
 

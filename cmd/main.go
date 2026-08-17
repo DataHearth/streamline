@@ -8,14 +8,11 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 
-	"github.com/datahearth/streamline/internal/auth"
 	"github.com/datahearth/streamline/internal/buildinfo"
 	"github.com/datahearth/streamline/internal/config"
-	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/observability"
 	"github.com/datahearth/streamline/internal/server"
 	"github.com/urfave/cli/v3"
@@ -57,13 +54,50 @@ func main() {
 		Commands: []*cli.Command{
 			{
 				Name:  "auth",
-				Usage: "auth maintenance commands",
+				Usage: "auth and user administration commands",
 				Commands: []*cli.Command{
 					{
 						Name:      "unlock",
 						Usage:     "clear lockout state on a user account",
 						ArgsUsage: "<email>",
 						Action:    authUnlock,
+					},
+					{
+						Name:  "list",
+						Usage: "list user accounts",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:  "role",
+								Usage: "only list users with this role",
+							},
+							&cli.UintFlag{
+								Name:  "limit",
+								Usage: "maximum number of users to print (default: all)",
+							},
+						},
+						Action: authList,
+					},
+					{
+						Name:      "set-role",
+						Usage:     "change a user's role",
+						ArgsUsage: "<email> <role>",
+						Action:    authSetRole,
+					},
+					{
+						Name:      "set-password",
+						Usage:     "set a user's password",
+						ArgsUsage: "<email>",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:  "password",
+								Usage: "new password (lands in shell history; prefer --generate)",
+							},
+							&cli.BoolFlag{
+								Name:  "generate",
+								Usage: "mint a random password and print it once to stdout",
+							},
+						},
+						Action: authSetPassword,
 					},
 				},
 			},
@@ -121,33 +155,6 @@ func configInit(_ context.Context, cmd *cli.Command) error {
 		return fmt.Errorf("write defaults: %w", err)
 	}
 	fmt.Fprintf(os.Stderr, "wrote default config to %s\n", out)
-	return nil
-}
-
-func authUnlock(ctx context.Context, cmd *cli.Command) error {
-	if cmd.NArg() != 1 {
-		return errors.New("usage: streamline auth unlock <email>")
-	}
-	email := strings.ToLower(strings.TrimSpace(cmd.Args().Get(0)))
-	if email == "" {
-		return errors.New("email is required")
-	}
-	if _, err := config.Load(cmd.String("config")); err != nil {
-		return fmt.Errorf("config: %w", err)
-	}
-	dbClient, err := db.Open(ctx, config.Get().DatabasePath())
-	if err != nil {
-		return fmt.Errorf("open db: %w", err)
-	}
-	defer dbClient.Close()
-	svc, err := auth.New(db.New(dbClient))
-	if err != nil {
-		return fmt.Errorf("auth: %w", err)
-	}
-	if err := svc.Unlock(ctx, email, auth.UnlockModeCLI); err != nil {
-		return fmt.Errorf("unlock %s: %w", email, err)
-	}
-	fmt.Fprintf(os.Stderr, "unlocked %s\n", email)
 	return nil
 }
 

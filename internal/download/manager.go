@@ -28,10 +28,12 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// maxTorrentFileSize caps the pre-fetched .torrent payload at 16 MiB —
-// well above any real-world metainfo file but small enough that a
-// misbehaving indexer can't stream us out of memory.
-const maxTorrentFileSize = 16 * 1024 * 1024
+// MaxTorrentFileSize caps a .torrent payload at 16 MiB — well above any
+// real-world metainfo file but small enough that a misbehaving indexer can't
+// stream us out of memory. Exported because the same ceiling has to hold for a
+// .torrent an operator uploads through the API, which never passes through the
+// fetch path below.
+const MaxTorrentFileSize = 16 * 1024 * 1024
 
 // Categorised download-client failures. Handlers map these to 422 with
 // friendly messages; anything not matching is a 500 internal error.
@@ -968,13 +970,13 @@ func resolveTorrentSource(ctx context.Context, dl string) (TorrentSource, error)
 			"indexer returned status %d", resp.StatusCode,
 		)
 	}
-	body, err := io.ReadAll(io.LimitReader(resp.Body, maxTorrentFileSize+1))
+	body, err := io.ReadAll(io.LimitReader(resp.Body, MaxTorrentFileSize+1))
 	if err != nil {
 		return TorrentSource{}, fmt.Errorf("read torrent body: %w", err)
 	}
-	if int64(len(body)) > maxTorrentFileSize {
+	if int64(len(body)) > MaxTorrentFileSize {
 		return TorrentSource{}, fmt.Errorf(
-			"torrent file exceeds %d byte cap", maxTorrentFileSize,
+			"torrent file exceeds %d byte cap", MaxTorrentFileSize,
 		)
 	}
 	if len(body) == 0 {

@@ -24,6 +24,7 @@ type Handler struct {
 	oidc         auth.OIDCManager
 	limiter      auth.Limiter
 	mediaServers mediaserver.Manager
+	plexFlows    *plexPinFlows
 }
 
 // Deps is the dependency set required by the web Handler.
@@ -41,6 +42,7 @@ func New(d Deps) *Handler {
 		oidc:         d.OIDC,
 		limiter:      d.Limiter,
 		mediaServers: d.MediaServers,
+		plexFlows:    newPlexPinFlows(),
 	}
 }
 

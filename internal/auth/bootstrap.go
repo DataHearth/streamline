@@ -74,7 +74,7 @@ func (s *auth) BootstrapSeedAdmin(ctx context.Context) error {
 	// effect on any later boot. Fall through to the skip-with-warning instead.
 	generated := email == defaultAdminEmail && pw == "" && seed.PasswordFile == ""
 	if generated {
-		pw, err = generatePassword()
+		pw, err = GeneratePassword()
 		if err != nil {
 			return fmt.Errorf("generate default admin password: %w", err)
 		}
@@ -135,9 +135,11 @@ func printGeneratedCredentials(email, password string) {
 `, email, password)
 }
 
-// generatePassword returns a URL-safe random password (~22 chars from 16
-// crypto/rand bytes) for a generated default admin.
-func generatePassword() (string, error) {
+// GeneratePassword returns a URL-safe random password (~22 chars from 16
+// crypto/rand bytes). Shared by the seed-admin bootstrap and the CLI's
+// `user set-password --generate`, so both mint credentials with the same
+// entropy and alphabet.
+func GeneratePassword() (string, error) {
 	b := make([]byte, 16)
 	if _, err := rand.Read(b); err != nil {
 		return "", err

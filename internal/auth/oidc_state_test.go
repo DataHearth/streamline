@@ -57,6 +57,27 @@ var _ = Describe("OIDC State Helpers", Label("unit", "auth"), func() {
 			},
 		)
 
+		// The state, nonce and PKCE cookies share isSecure with the session
+		// cookie, so every forwarded-scheme spelling has to reach them too.
+		It("sets Secure when a trusted proxy reports X-Forwarded-Ssl: on", func() {
+			configtest.Setup(map[string]any{
+				"server": map[string]any{
+					"trusted_proxies": []string{"192.0.2.1/32"},
+				},
+			})
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest(
+				http.MethodGet,
+				"/auth/oidc/test/start",
+				nil,
+			)
+			r.Header.Set("X-Forwarded-Ssl", "on")
+
+			SetTransientCookie(w, r, "_oidc_state", "val")
+
+			Expect(w.Result().Cookies()[0].Secure).To(BeTrue())
+		})
+
 		It("ignores X-Forwarded-Proto from an untrusted peer", func() {
 			configtest.Setup()
 			w := httptest.NewRecorder()

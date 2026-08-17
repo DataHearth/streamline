@@ -16,20 +16,19 @@ const SessionCookie = "streamline_session"
 // isSecure reports whether the browser reached us over https, so the session
 // cookie can carry Secure.
 //
-// A configured public https URL settles it on its own: it is the operator
-// stating the browser-facing scheme, and it covers the case that actually
-// bites — a TLS-terminating proxy that forwards no X-Forwarded-Proto at all,
-// which would otherwise emit the session JWT without Secure. The header is
-// believed only from a configured proxy, since off one it is attacker-supplied.
+// Transport detection is httputil.ServedOverTLS, shared with the HSTS decision
+// so every forwarded-scheme spelling a proxy may use is honored the same way in
+// both places. The configured public https URL is the one deliberate
+// difference: it is the operator stating the browser-facing scheme, and it
+// covers the case that actually bites, a TLS-terminating proxy that forwards no
+// scheme header at all, which would otherwise emit the session JWT without
+// Secure. HSTS must not pin a host for a year off configuration, so that
+// fallback lives here rather than in the shared helper.
 func isSecure(r *http.Request) bool {
-	if r.TLS != nil {
+	if httputil.ServedOverTLS(r) {
 		return true
 	}
-	if strings.HasPrefix(config.PublicURL(), "https://") {
-		return true
-	}
-	return httputil.TrustedPeer(r) &&
-		r.Header.Get("X-Forwarded-Proto") == "https"
+	return strings.HasPrefix(config.PublicURL(), "https://")
 }
 
 // SetSession writes the session cookie. Secure flag tracks the current

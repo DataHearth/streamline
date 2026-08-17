@@ -101,13 +101,7 @@ func (h *Handler) authLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	var body loginRequest
 	if err := decodeJSON(r, &body); err != nil {
-		writeError(
-			w,
-			r,
-			http.StatusBadRequest,
-			"Invalid request body",
-			"bad_request",
-		)
+		writeDecodeError(w, r, err)
 		return
 	}
 	email := strings.ToLower(strings.TrimSpace(body.Email))
@@ -144,13 +138,7 @@ func (h *Handler) authRegister(w http.ResponseWriter, r *http.Request) {
 	}
 	var body registerRequest
 	if err := decodeJSON(r, &body); err != nil {
-		writeError(
-			w,
-			r,
-			http.StatusBadRequest,
-			"Invalid request body",
-			"bad_request",
-		)
+		writeDecodeError(w, r, err)
 		return
 	}
 	email := strings.ToLower(strings.TrimSpace(body.Email))
@@ -392,6 +380,24 @@ func decodeJSON(r *http.Request, v any) error {
 	return dec.Decode(v)
 }
 
+// writeDecodeError separates a body middleware.BodyLimit cut short from a body
+// that was merely malformed. Only a chunked or under-declared request reaches
+// here as too-large; a declared over-limit Content-Length never gets to the
+// handler at all.
+func writeDecodeError(w http.ResponseWriter, r *http.Request, err error) {
+	if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
+		writeError(
+			w,
+			r,
+			http.StatusRequestEntityTooLarge,
+			"Request body too large",
+			"body_too_large",
+		)
+		return
+	}
+	writeError(w, r, http.StatusBadRequest, "Invalid request body", "bad_request")
+}
+
 const (
 	oidcStateCookie    = "_oidc_state"
 	oidcNonceCookie    = "_oidc_nonce"
@@ -440,16 +446,15 @@ func sanitizeNext(n string) string {
 // The X-Forwarded-* headers are believed only from a configured reverse proxy
 // (server.trusted_proxies); off one they are attacker-supplied, and while the
 // IdP's exact-match registration blocks the obvious abuse, a forged pair still
-// steers /start and /callback at a host the operator never configured.
+// steers /start and /callback at a host the operator never configured. Scheme
+// detection is httputil.ServedOverTLS, shared with the session cookie and HSTS,
+// so a proxy reporting https by any of its spellings yields an https callback.
 func oidcRedirectURI(r *http.Request, name string) string {
 	scheme, host := "http", r.Host
-	if r.TLS != nil {
+	if httputil.ServedOverTLS(r) {
 		scheme = "https"
 	}
 	if httputil.TrustedPeer(r) {
-		if r.Header.Get("X-Forwarded-Proto") == "https" {
-			scheme = "https"
-		}
 		if fwd := r.Header.Get("X-Forwarded-Host"); fwd != "" {
 			host = fwd
 		}

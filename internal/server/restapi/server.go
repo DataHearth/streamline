@@ -4,6 +4,7 @@
 package restapi
 
 import (
+	"errors"
 	"log/slog"
 	"net/http"
 
@@ -23,6 +24,7 @@ import (
 	"github.com/datahearth/streamline/internal/request"
 	"github.com/datahearth/streamline/internal/rss"
 	"github.com/datahearth/streamline/internal/scheduler"
+	"github.com/datahearth/streamline/internal/server/middleware"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -112,32 +114,8 @@ func Mount(r chi.Router, s *Server) {
 		s,
 		[]StrictMiddlewareFunc{roleGuard},
 		StrictHTTPServerOptions{
-			// The generated default writes err.Error() as text/plain; a handler
-			// returning a non-nil error would hand the client the raw internal
-			// error. Bad requests keep echoing their own decode/binding failure,
-			// which is user input, not internal state — but as the JSON error
-			// shape every other response on this API uses.
-			RequestErrorHandlerFunc: func(
-				w http.ResponseWriter,
-				r *http.Request,
-				err error,
-			) {
-				denyJSON(r.Context(), w, http.StatusBadRequest, err.Error())
-			},
-			ResponseErrorHandlerFunc: func(
-				w http.ResponseWriter,
-				r *http.Request,
-				err error,
-			) {
-				ctx := r.Context()
-				slog.ErrorContext(ctx, "api handler returned an error", "error", err)
-				denyJSON(
-					ctx,
-					w,
-					http.StatusInternalServerError,
-					internalErrorMessage,
-				)
-			},
+			RequestErrorHandlerFunc:  requestError,
+			ResponseErrorHandlerFunc: responseError,
 		},
 	)
 	HandlerWithOptions(handler, ChiServerOptions{
@@ -153,4 +131,39 @@ func Mount(r chi.Router, s *Server) {
 			denyJSON(r.Context(), w, http.StatusBadRequest, err.Error())
 		},
 	})
+}
+
+// requestError handles request decode failures. middleware.BodyLimit's
+// MaxBytesReader tripping mid-decode (which the generated code wraps with %w)
+// gets its 413; every other decode failure echoes as a 400 — echoing the
+// decode/binding failure is echoing user input, not internal state — in the
+// JSON error shape every other response on this API uses.
+func requestError(w http.ResponseWriter, r *http.Request, err error) {
+	if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusRequestEntityTooLarge)
+		if _, werr := w.Write(
+			[]byte(middleware.BodyTooLargeJSON),
+		); werr != nil {
+			slog.ErrorContext(
+				r.Context(), "body limit write failed", "error", werr,
+			)
+		}
+		return
+	}
+	denyJSON(r.Context(), w, http.StatusBadRequest, err.Error())
+}
+
+// responseError handles a handler returning a non-nil error. The generated
+// default writes err.Error() as text/plain, which would hand the client the
+// raw internal error; log it and return an opaque JSON 500 instead.
+func responseError(w http.ResponseWriter, r *http.Request, err error) {
+	ctx := r.Context()
+	slog.ErrorContext(ctx, "api handler returned an error", "error", err)
+	denyJSON(
+		ctx,
+		w,
+		http.StatusInternalServerError,
+		internalErrorMessage,
+	)
 }

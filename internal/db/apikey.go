@@ -77,3 +77,13 @@ func (db *DB) DeleteAPIKeyByID(
 		).
 		Exec(ctx)
 }
+
+// DeleteAPIKeysByUser deletes every API key owned by userID and returns the
+// number of rows deleted. Password rotation calls it: an API key carries no
+// expiry and no epoch marker, so a key minted before the rotation would
+// otherwise keep authenticating as the user for the lifetime of its row.
+func (db *DB) DeleteAPIKeysByUser(ctx context.Context, userID uint32) (int, error) {
+	return db.client.ApiKey.Delete().
+		Where(apikey.HasOwnerWith(user.IDEQ(userID))).
+		Exec(ctx)
+}
