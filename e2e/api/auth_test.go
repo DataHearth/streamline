@@ -92,16 +92,24 @@ var _ = Describe("REST API auth", Label("e2e"), func() {
 	})
 
 	Describe("PATCH /auth/me", func() {
+		It("refuses the mutation over an API key", func() {
+			resp := patch("/api/v1/auth/me", viewerAuth, map[string]any{
+				"display_name": "E2E Escalation",
+			})
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
+		})
+
 		It("updates the caller's display name", func() {
 			DeferCleanup(func() {
-				restore := patch("/api/v1/auth/me", viewerAuth, map[string]any{
+				restore := patch("/api/v1/auth/me", viewerSession, map[string]any{
 					"display_name": "",
 				})
 				defer restore.Body.Close()
 				Expect(restore.StatusCode).To(Equal(http.StatusOK))
 			})
 
-			resp := patch("/api/v1/auth/me", viewerAuth, map[string]any{
+			resp := patch("/api/v1/auth/me", viewerSession, map[string]any{
 				"display_name": "E2E Viewer",
 			})
 			defer resp.Body.Close()
@@ -117,7 +125,7 @@ var _ = Describe("REST API auth", Label("e2e"), func() {
 
 	Describe("POST /auth/password", func() {
 		It("rejects a wrong current password", func() {
-			resp := post("/api/v1/auth/password", viewerAuth, map[string]any{
+			resp := post("/api/v1/auth/password", viewerSession, map[string]any{
 				"current_password": "definitely-not-the-password",
 				"new_password":     "another-Passw0rd!",
 			})
@@ -126,7 +134,7 @@ var _ = Describe("REST API auth", Label("e2e"), func() {
 		})
 
 		It("rejects a new password below the policy floor", func() {
-			resp := post("/api/v1/auth/password", viewerAuth, map[string]any{
+			resp := post("/api/v1/auth/password", viewerSession, map[string]any{
 				"current_password": viewerPassword,
 				"new_password":     "short",
 			})

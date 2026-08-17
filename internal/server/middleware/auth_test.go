@@ -217,6 +217,67 @@ var _ = g.Describe("authenticateAPI", g.Label("unit"), func() {
 			Expect(rr.Code).To(Equal(http.StatusUnauthorized))
 		})
 	})
+
+	g.Context("identity endpoints via API key", func() {
+		keyed := func(method, path string) int {
+			g.GinkgoHelper()
+			svc.EXPECT().
+				ValidateAPIKey(mock.Anything, apiKey).
+				Return(user, nil).
+				Once()
+			req := httptest.NewRequest(method, path, nil)
+			req.Header.Set("X-API-Key", apiKey)
+			rr := httptest.NewRecorder()
+			authenticateAPI(svc, nil, next, rr, req)
+			return rr.Code
+		}
+
+		g.DescribeTable(
+			"mutations are refused with 403",
+			func(method, path string) {
+				Expect(keyed(method, path)).To(Equal(http.StatusForbidden))
+			},
+			g.Entry("profile patch", http.MethodPatch, "/api/v1/auth/me"),
+			g.Entry("key mint", http.MethodPost, "/api/v1/auth/me/api-keys"),
+			g.Entry("key revoke", http.MethodDelete, "/api/v1/auth/me/api-keys/3"),
+			g.Entry(
+				"session revoke",
+				http.MethodDelete,
+				"/api/v1/auth/me/sessions/2",
+			),
+			g.Entry("password change", http.MethodPost, "/api/v1/auth/password"),
+			g.Entry("invite create", http.MethodPost, "/api/v1/auth/invites"),
+			g.Entry("user admin", http.MethodPatch, "/api/v1/users/2"),
+			g.Entry("jwt rotate", http.MethodPost, "/api/v1/auth/jwt/rotate"),
+		)
+
+		g.DescribeTable("reads and non-identity mutations pass through",
+			func(method, path string) {
+				Expect(keyed(method, path)).To(Equal(http.StatusOK))
+			},
+			g.Entry("whoami", http.MethodGet, "/api/v1/auth/me"),
+			g.Entry("key list", http.MethodGet, "/api/v1/auth/me/api-keys"),
+			g.Entry("user list", http.MethodGet, "/api/v1/users"),
+			g.Entry("media mutation", http.MethodPost, "/api/v1/movies"),
+			g.Entry("prefix boundary", http.MethodPost, "/api/v1/userstats"),
+		)
+
+		g.It("allows the same mutation over Bearer", func() {
+			svc.EXPECT().ValidateToken(bearerToken).Return(claims, nil).Once()
+			svc.EXPECT().ValidateSession(mock.Anything, jti).Return(nil).Once()
+			svc.EXPECT().TouchSessionAsync(jti).Return().Once()
+
+			req := httptest.NewRequest(
+				http.MethodPost, "/api/v1/auth/me/api-keys", nil,
+			)
+			req.Header.Set("Authorization", "Bearer "+bearerToken)
+			rr := httptest.NewRecorder()
+
+			authenticateAPI(svc, nil, next, rr, req)
+
+			Expect(rr.Code).To(Equal(http.StatusOK))
+		})
+	})
 })
 
 var _ = g.Describe("api credential throttling", g.Label("unit"), func() {

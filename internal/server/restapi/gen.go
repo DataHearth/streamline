@@ -10602,6 +10602,20 @@ func (response UpdateMe401JSONResponse) VisitUpdateMeResponse(w http.ResponseWri
 	return err
 }
 
+type UpdateMe403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpdateMe403JSONResponse) VisitUpdateMeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type UpdateMe413JSONResponse struct{ PayloadTooLargeJSONResponse }
 
 func (response UpdateMe413JSONResponse) VisitUpdateMeResponse(w http.ResponseWriter) error {
@@ -10687,6 +10701,20 @@ func (response CreateMyApiKey401JSONResponse) VisitCreateMyApiKeyResponse(w http
 	return err
 }
 
+type CreateMyApiKey403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response CreateMyApiKey403JSONResponse) VisitCreateMyApiKeyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type CreateMyApiKey413JSONResponse struct{ PayloadTooLargeJSONResponse }
 
 func (response CreateMyApiKey413JSONResponse) VisitCreateMyApiKeyResponse(w http.ResponseWriter) error {
@@ -10727,6 +10755,20 @@ func (response DeleteMyApiKey401JSONResponse) VisitDeleteMyApiKeyResponse(w http
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteMyApiKey403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DeleteMyApiKey403JSONResponse) VisitDeleteMyApiKeyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -10810,6 +10852,20 @@ func (response DeleteMySession401JSONResponse) VisitDeleteMySessionResponse(w ht
 	return err
 }
 
+type DeleteMySession403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DeleteMySession403JSONResponse) VisitDeleteMySessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type DeleteMySession404JSONResponse struct{ NotFoundJSONResponse }
 
 func (response DeleteMySession404JSONResponse) VisitDeleteMySessionResponse(w http.ResponseWriter) error {
@@ -10850,6 +10906,20 @@ func (response ChangePassword401JSONResponse) VisitChangePasswordResponse(w http
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ChangePassword403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ChangePassword403JSONResponse) VisitChangePasswordResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
 	_, err := buf.WriteTo(w)
 	return err
 }

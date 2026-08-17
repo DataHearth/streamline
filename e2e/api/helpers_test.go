@@ -26,11 +26,12 @@ type identity struct {
 var (
 	anon identity
 
-	// adminAuth (seed admin, Bearer) and viewerAuth (request_only, X-API-Key)
+	// adminAuth (seed admin, Bearer), viewerAuth (request_only, X-API-Key) and
+	// viewerSession (same viewer, Bearer — identity mutations refuse API keys)
 	// are minted once in BeforeSuite. auth.Limiter allows 5 POST /auth/login
 	// attempts per 15 minutes per IP; bootstrapIdentities spends exactly 2, so
 	// specs must never log in themselves.
-	adminAuth, viewerAuth identity
+	adminAuth, viewerAuth, viewerSession identity
 
 	// adminUserID and viewerUserID back the /users/{uid} specs.
 	adminUserID, viewerUserID uint32
@@ -209,8 +210,8 @@ func bootstrapIdentities() {
 	decode(created, &viewer)
 	viewerUserID = viewer.Id
 
-	viewerBearer := identity{bearer: login(viewerEmail, viewerPassword)}
-	key := post("/api/v1/auth/me/api-keys", viewerBearer, map[string]any{
+	viewerSession = identity{bearer: login(viewerEmail, viewerPassword)}
+	key := post("/api/v1/auth/me/api-keys", viewerSession, map[string]any{
 		"name": "e2e-viewer",
 	})
 	defer key.Body.Close()
