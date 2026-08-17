@@ -33,6 +33,16 @@ func specFromSource(
 		}
 		return spec, src.Magnet, nil, nil
 	case len(src.Bytes) > 0:
+		// The same ceiling download.Manager applies to a .torrent it fetches
+		// from an indexer. Bytes arriving through the API skip that path, so
+		// without this their only bound is the transport body cap, which is
+		// sized in base64 and so lands a couple of MiB higher.
+		if len(src.Bytes) > download.MaxTorrentFileSize {
+			return nil, "", nil, fmt.Errorf(
+				"torrent file is %d bytes, over the %d byte cap",
+				len(src.Bytes), download.MaxTorrentFileSize,
+			)
+		}
 		mi, err := metainfo.Load(bytes.NewReader(src.Bytes))
 		if err != nil {
 			return nil, "", nil, fmt.Errorf("parse torrent file: %w", err)
