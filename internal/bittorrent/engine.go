@@ -104,11 +104,67 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 		storage.NewFileWithCompletion(entry.DownloadDir, pc),
 	)
 
+	cc := newClientConfig(entry, bindIP, st)
+
+	client, err := antorrent.NewClient(cc)
+	if err != nil {
+		if cerr := st.Close(); cerr != nil {
+			slog.WarnContext(ctx, "closing torrent storage failed", "error", cerr)
+		}
+		return nil, fmt.Errorf("start torrent client: %w", err)
+	}
+	var bindAddr string
+	if bindIP != nil {
+		network := "tcp6"
+		if bindIP.To4() != nil {
+			network = "tcp4"
+		}
+		client.AddDialer(antorrent.NetworkDialer{
+			Network: network,
+			Dialer:  &net.Dialer{LocalAddr: &net.TCPAddr{IP: bindIP}},
+		})
+		bindAddr = bindIP.String()
+	}
+	e := &Engine{
+		client:      client,
+		storageImpl: st,
+		store:       store,
+		downloadDir: entry.DownloadDir,
+		seedRatio:   entry.SeedRatio,
+		seedTime:    seedTime,
+		bindAddr:    bindAddr,
+		state:       map[string]*torrentState{},
+		sample:      map[string]speedSample{},
+		stop:        make(chan struct{}),
+	}
+	if err := e.restore(ctx); err != nil {
+		if cerr := e.Close(); cerr != nil {
+			slog.WarnContext(ctx, "engine close after failed restore", "error", cerr)
+		}
+		return nil, fmt.Errorf("restore torrent sessions: %w", err)
+	}
+	e.wg.Go(e.enforceSeedLimits)
+	return e, nil
+}
+
+// newClientConfig builds the anacrolix client config. A nil bindIP means "all
+// interfaces"; a non-nil one only half-binds the client, and New must attach
+// the matching source-bound dialer for it to reach peers at all.
+func newClientConfig(
+	entry config.DownloadClientEntry,
+	bindIP net.IP,
+	st storage.ClientImpl,
+) *antorrent.ClientConfig {
 	cc := antorrent.NewDefaultClientConfig()
 	cc.DataDir = entry.DownloadDir
 	cc.DefaultStorage = st
 	cc.Seed = true
 	cc.NoDHT = entry.DisableDHT
+	// The pion WebRTC/DTLS/ICE stack anacrolix links for webtorrent carries
+	// real CVEs and a plain BitTorrent-over-TCP/uTP client never needs it. No
+	// config key re-enables it; the only cost is that ws:// and wss:// trackers
+	// in an announce list are skipped.
+	cc.DisableWebtorrent = true
 	cc.Logger = analog.Default.WithFilterLevel(analog.Error)
 	// anacrolix v1.61 can lose a peer's request-update wakeup: the msg writer
 	// subscribes to its wake condition only after checking state
@@ -140,10 +196,11 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 		cc.ListenHost = func(string) string { return host }
 		// anacrolix pins uTP/DHT dials to the listen socket, but its TCP
 		// dialer is not source-bound (dialTcpFromListenPort is compiled off).
-		// Drop the default socket dialers and dial only through the
-		// source-bound dialer added below, so peer traffic cannot leave the
-		// bound interface. Constrain listeners to the bound address family so
-		// the mismatched family doesn't fail to bind.
+		// Drop the default socket dialers so peer traffic can only leave
+		// through the source-bound dialer New attaches to the client — this
+		// config on its own leaves the client unable to dial peers at all, so
+		// the two halves must stay together. Constrain listeners to the bound
+		// address family so the mismatched family doesn't fail to bind.
 		cc.DialForPeerConns = false
 		if bindIP.To4() != nil {
 			cc.DisableIPv6 = true
@@ -170,48 +227,7 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 		// forwarding, not the LAN router's.
 		cc.NoDefaultPortForwarding = true
 	}
-
-	client, err := antorrent.NewClient(cc)
-	if err != nil {
-		if cerr := st.Close(); cerr != nil {
-			slog.WarnContext(ctx, "closing torrent storage failed", "error", cerr)
-		}
-		return nil, fmt.Errorf("start torrent client: %w", err)
-	}
-	if bindIP != nil {
-		network := "tcp6"
-		if bindIP.To4() != nil {
-			network = "tcp4"
-		}
-		client.AddDialer(antorrent.NetworkDialer{
-			Network: network,
-			Dialer:  &net.Dialer{LocalAddr: &net.TCPAddr{IP: bindIP}},
-		})
-	}
-	var bindAddr string
-	if bindIP != nil {
-		bindAddr = bindIP.String()
-	}
-	e := &Engine{
-		client:      client,
-		storageImpl: st,
-		store:       store,
-		downloadDir: entry.DownloadDir,
-		seedRatio:   entry.SeedRatio,
-		seedTime:    seedTime,
-		bindAddr:    bindAddr,
-		state:       map[string]*torrentState{},
-		sample:      map[string]speedSample{},
-		stop:        make(chan struct{}),
-	}
-	if err := e.restore(ctx); err != nil {
-		if cerr := e.Close(); cerr != nil {
-			slog.WarnContext(ctx, "engine close after failed restore", "error", cerr)
-		}
-		return nil, fmt.Errorf("restore torrent sessions: %w", err)
-	}
-	e.wg.Go(e.enforceSeedLimits)
-	return e, nil
+	return cc
 }
 
 // resolveBindIP turns a bind_interface config value into the local IP the

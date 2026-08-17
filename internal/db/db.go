@@ -18,6 +18,7 @@ import (
 	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/internal/metadata"
+	"github.com/datahearth/streamline/internal/role"
 )
 
 // StoredCast converts provider cast into the JSON shape persisted on Movie and
@@ -59,6 +60,11 @@ type Store interface {
 		ctx context.Context,
 		id uint32,
 		p UpdateUserParams,
+	) (*ent.User, error)
+	UpdateUserRole(
+		ctx context.Context,
+		id uint32,
+		r role.Value,
 	) (*ent.User, error)
 	ListUsers(
 		ctx context.Context,

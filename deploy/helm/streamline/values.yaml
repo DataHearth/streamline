@@ -106,9 +106,10 @@ service:
 # on a cluster that does, a wrong rule fails as a silent timeout rather than an
 # error. Opt in, then check the pod can still reach its indexers.
 #
-# With observability.enabled, helm prints two `coalesce.go ... alloy.networkPolicy
-# is a table` warnings — a key-name collision with the upstream alloy chart's own
-# networkPolicy values. Cosmetic: alloy's manifests render byte-identical either way.
+# With observability.enabled, helm prints four `coalesce.go ... networkPolicy is a
+# table` warnings (alloy and victoriametrics, ingress and egress each) — a key-name
+# collision with those upstream charts' own networkPolicy values. Cosmetic: their
+# manifests render byte-identical either way.
 networkPolicy:
   enabled: false
   ingress:

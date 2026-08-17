@@ -481,6 +481,10 @@ func claimStrings(raw any) []string {
 // what makes the ceiling unskippable — the type has no exported way to hold a
 // role approle.Federated did not put there, so there is no value to call this with
 // that skipped the ceiling.
+//
+// The write goes through db.UpdateUserRole, whose guarded UPDATE refuses to
+// demote the last admin: a claim change at the IdP may lower a role, but it
+// cannot leave the instance with nobody able to administer it.
 func (s *auth) syncOIDCRole(
 	ctx context.Context,
 	u *ent.User,
@@ -489,12 +493,14 @@ func (s *auth) syncOIDCRole(
 	if mapped.Empty() || u.Role.String() == mapped.String() {
 		return u
 	}
-	updated, err := s.db.UpdateUser(
-		ctx,
-		u.ID,
-		db.UpdateUserParams{Role: &mapped},
-	)
+	updated, err := s.db.UpdateUserRole(ctx, u.ID, mapped)
 	if err != nil {
+		if errors.Is(err, db.ErrLastAdmin) {
+			slog.WarnContext(ctx, "auth.oidc_role_sync_refused_last_admin",
+				"user.id", u.ID, "user.role", string(u.Role),
+				"role", mapped.String())
+			return u
+		}
 		slog.WarnContext(ctx, "auth.oidc_role_sync_failed",
 			"user.id", u.ID, "role", mapped.String(), "error", err)
 		return u

@@ -27,11 +27,9 @@
 	// where every row here links. The touch row below keeps the full line: it has
 	// a line of its own for it.
 	const STATE_WORD: Partial<Record<QueueEntry["status"], string>> = {
-		importing: i18n.lc_importing(),
+		importing: i18n.activity_importing(),
 		paused: i18n.status_paused(),
-		completed: i18n.status_completed(),
 		error: i18n.status_failed(),
-		failed: i18n.status_failed(),
 	};
 
 	let active = $derived(queue.filter((q) => q.status === "downloading").length);
@@ -97,7 +95,7 @@
 				<li>
 					<a
 						href="/activity"
-						class="grid grid-cols-[1fr_1fr_168px] items-center gap-4 rounded-md px-3 py-3 transition hover:bg-surface"
+						class="grid grid-cols-[1fr_168px] items-center gap-4 rounded-md px-3 py-3 transition hover:bg-surface"
 					>
 						<div class="min-w-0">
 							<div class="truncate text-[13px] font-medium text-fg">
@@ -108,20 +106,24 @@
 							>
 								{q.title}
 							</div>
-						</div>
-						<div class="min-w-0">
-							<ProgressBar
-								value={progressOf(q)}
-								status={pillStatus(q.status)}
-								height={4}
-								shimmer={q.status === "downloading" ||
-									q.status === "importing"}
-							/>
+							<!-- Under the words rather than in a column of its own: the bar
+							     belongs to the title above it, and a middle column put a
+							     hairline of colour between two blocks of text that read as one
+							     unit. It also gets the full text width instead of half of it. -->
+							<div class="mt-2">
+								<ProgressBar
+									value={progressOf(q)}
+									status={pillStatus(q.status)}
+									height={4}
+									shimmer={q.status === "downloading" ||
+										q.status === "importing"}
+								/>
+							</div>
 						</div>
 						<!-- Fixed width, not `auto`: every row is its own grid, so an
-						     auto-sized meta column resolved per row and the bars beside
-						     them came out different lengths — a paused row's one word
-						     against "62% ↓ 4.2 MB/s 12m". 168px holds the widest
+						     auto-sized meta column resolved per row and the bars under the
+						     titles beside them came out different lengths — a paused row's
+						     one word against "62% ↓ 4.2 MB/s 12m". 168px holds the widest
 						     reading; short ones sit right-aligned in it. -->
 						<div
 							class="flex min-w-0 items-center justify-end gap-3 whitespace-nowrap font-mono text-[11px] tabular text-fg-muted"

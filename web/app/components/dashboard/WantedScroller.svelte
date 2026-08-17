@@ -21,5 +21,4 @@
 	{movies}
 	{countText}
 	emptyText={i18n.dash_nothing_wanted()}
-	pillVariant="solid"
 />

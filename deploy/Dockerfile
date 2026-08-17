@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.7
+# syntax=docker/dockerfile:1.26
 
 # Every base image is pinned by digest, not just by tag: a tag is mutable, so a
 # tag-only pin means the bytes that ship can change without a commit. Refresh one
@@ -94,7 +94,7 @@ RUN mkdir -p /out/data
 # and air dates), /etc/passwd and a world-writable /tmp. Everything the app
 # serves is baked into the binary via go:embed. Requires CGO_ENABLED=0 above.
 # The :nonroot tag keeps the default user non-root even if USER below is lost.
-FROM gcr.io/distroless/static-debian12:nonroot@sha256:f5b485ea962d9bd1186b2f6b3a061191539b905b82ec395de78cbfae51f20e35
+FROM gcr.io/distroless/static-debian12:nonroot@sha256:1b7b9f0f0e0a1d2155f531db587cc48ec26aaf97ab64364225f5bf18a054e66a
 
 # MUST stay. distroless sets WorkingDir=/home/nonroot (mode 0700, owned by
 # 65532) where debian-slim left it empty, i.e. `/`. The binary's default
