@@ -345,8 +345,7 @@ func placeFile(
 	}
 	span.SetAttributes(attribute.String("dest.path", destPath))
 
-	//nolint:gosec // 0755 on purpose: Plex/Jellyfin/Emby read the library from another uid
-	if err := os.MkdirAll(filepath.Dir(destPath), 0o755); err != nil {
+	if err := MkdirLibraryDir(filepath.Dir(destPath)); err != nil {
 		outcome = "mkdir_failed"
 		return ImportedFile{}, otelx.RecordSpanError(
 			span,
@@ -411,9 +410,16 @@ func transferFile(src, dst, mode string) error {
 // they don't, and the only way across is a full copy. A failed copy takes the
 // half-written destination with it so no truncated media file is left behind
 // at a path the library considers valid.
+// MkdirLibraryDir creates a media library directory. The mode is 0755 —
+// world-readable on purpose, and the one place that says so: Plex, Jellyfin
+// and Emby read the library from another uid, typically another container.
+func MkdirLibraryDir(path string) error {
+	//nolint:gosec // see above: media servers read the library from another uid
+	return os.MkdirAll(path, 0o755)
+}
+
 func MoveFile(ctx context.Context, src, dst string) error {
-	//nolint:gosec // 0755 on purpose: Plex/Jellyfin/Emby read the library from another uid
-	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+	if err := MkdirLibraryDir(filepath.Dir(dst)); err != nil {
 		return fmt.Errorf("mkdir %s: %w", filepath.Dir(dst), err)
 	}
 	err := os.Rename(src, dst)
