@@ -102,6 +102,15 @@ func (s *Server) CreateMyApiKey(
 			UnauthorizedJSONResponse: unauthorizedResp("unauthorized"),
 		}, nil
 	}
+	// API-key auth carries no JTI. Only a session may mint keys, so a leaked
+	// key cannot create replacements that would outlive its own revocation.
+	if claims.JTI == "" {
+		return CreateMyApiKey401JSONResponse{
+			UnauthorizedJSONResponse: unauthorizedResp(
+				"session authentication required to create API keys",
+			),
+		}, nil
+	}
 	raw, rec, err := s.auth.CreateAPIKey(ctx, claims.UserID, req.Body.Name)
 	if err != nil {
 		return nil, err

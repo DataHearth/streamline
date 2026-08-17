@@ -84,9 +84,11 @@ type apiKeyApp struct {
 	adminKey       string
 	memberKey      string
 	requestOnlyKey string
-	adminID        uint32
-	memberID       uint32
-	requestOnlyID  uint32
+	// adminAPIKey mimics API-key auth for the admin: same claims, no JTI.
+	adminAPIKey   string
+	adminID       uint32
+	memberID      uint32
+	requestOnlyID uint32
 }
 
 // newAPIKeyApp constructs the test harness. The caller receives cleanup
@@ -111,6 +113,7 @@ func newAPIKeyApp() *apiKeyApp {
 		renamer:        librarymocks.NewMockRenamer(t),
 		seriesRenamer:  librarymocks.NewMockRenamer(t),
 		adminKey:       "test-admin-token",
+		adminAPIKey:    "test-admin-apikey",
 		adminID:        1,
 		requestOnlyKey: "test-requestonly-token",
 		requestOnlyID:  3,
@@ -164,6 +167,12 @@ func (a *apiKeyApp) identityMiddleware() func(http.Handler) http.Handler {
 					Email:  "admin@test.com",
 					Role:   "admin",
 					JTI:    "admin-jti",
+				}
+			case key == a.adminAPIKey:
+				claims = &auth.Claims{
+					UserID: a.adminID,
+					Email:  "admin@test.com",
+					Role:   "admin",
 				}
 			case a.memberKey != "" && key == a.memberKey:
 				claims = &auth.Claims{

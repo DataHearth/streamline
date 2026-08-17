@@ -1491,10 +1491,12 @@ paths:
     post:
       operationId: createMyApiKey
       summary: Create a new API key for current user; raw_token shown once
+      description: >-
+        Requires session authentication (JWT); a request authenticated with an
+        API key is rejected with 401 so a leaked key cannot mint new keys.
       tags: [auth]
       security:
         - BearerAuth: []
-        - ApiKeyAuth: []
       requestBody:
         $ref: "#/components/requestBodies/CreateApiKey"
       responses:

@@ -206,6 +206,16 @@ var _ = Describe(
 				},
 			)
 
+			It("POST authenticated via API key returns 401", func() {
+				resp := postJSON(
+					app, app.adminAPIKey,
+					"/api/v1/auth/me/api-keys",
+					`{"name":"escalation"}`,
+				)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
+			})
+
 			It("DELETE for non-existent id returns 404", func() {
 				app.auth.EXPECT().
 					RevokeAPIKeyByID(mock.Anything, app.adminID, uint32(999999)).
