@@ -66,6 +66,7 @@ linters:
         text: "G(101|104|124|301|302|304|306|401|404|505)"
       - linters:
           - errcheck
+          - gosec
         source: .*\.Close\(\)
       - linters:
           - errcheck
@@ -80,11 +81,13 @@ linters:
       # when the caller logs and continues instead of returning.
       - linters:
           - errcheck
+          - gosec
         source: otelx\.RecordSpanError\(.*\)
       # tx.Rollback() inside db.Tx helper: the outer fn error is the one
       # we care about; a rollback error is not actionable and would shadow it.
       - linters:
           - errcheck
+          - gosec
         source: tx\.Rollback\(\)
       # testutil package is test-only infrastructure; dot imports of
       # ginkgo/gomega are idiomatic for Ginkgo test helpers.
