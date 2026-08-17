@@ -101,13 +101,7 @@ func (h *Handler) authLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	var body loginRequest
 	if err := decodeJSON(r, &body); err != nil {
-		writeError(
-			w,
-			r,
-			http.StatusBadRequest,
-			"Invalid request body",
-			"bad_request",
-		)
+		writeDecodeError(w, r, err)
 		return
 	}
 	email := strings.ToLower(strings.TrimSpace(body.Email))
@@ -144,13 +138,7 @@ func (h *Handler) authRegister(w http.ResponseWriter, r *http.Request) {
 	}
 	var body registerRequest
 	if err := decodeJSON(r, &body); err != nil {
-		writeError(
-			w,
-			r,
-			http.StatusBadRequest,
-			"Invalid request body",
-			"bad_request",
-		)
+		writeDecodeError(w, r, err)
 		return
 	}
 	email := strings.ToLower(strings.TrimSpace(body.Email))
@@ -390,6 +378,24 @@ func decodeJSON(r *http.Request, v any) error {
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 	return dec.Decode(v)
+}
+
+// writeDecodeError separates a body middleware.BodyLimit cut short from a body
+// that was merely malformed. Only a chunked or under-declared request reaches
+// here as too-large; a declared over-limit Content-Length never gets to the
+// handler at all.
+func writeDecodeError(w http.ResponseWriter, r *http.Request, err error) {
+	if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
+		writeError(
+			w,
+			r,
+			http.StatusRequestEntityTooLarge,
+			"Request body too large",
+			"body_too_large",
+		)
+		return
+	}
+	writeError(w, r, http.StatusBadRequest, "Invalid request body", "bad_request")
 }
 
 const (
