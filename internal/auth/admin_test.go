@@ -234,6 +234,59 @@ var _ = Describe("Admin service unit", Label("unit", "auth"), func() {
 			})).
 				Return(&ent.User{ID: 1, Role: user.RoleMember}, nil).
 				Once()
+			storeMock.RevokeAllUserSessions(mock.AnythingOfType(ctxType), uint32(1), mock.AnythingOfType("time.Time")).
+				Return(nil).
+				Once()
+
+			memberRole := "member"
+			err := svc.UpdateUser(ctx, 1, UserPatch{Role: &memberRole})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("revokes all sessions on promotion", func() {
+			storeMock.FindUserByID(mock.AnythingOfType(ctxType), uint32(1)).
+				Return(&ent.User{ID: 1, Role: user.RoleMember}, nil).Once()
+			storeMock.UpdateUser(mock.AnythingOfType(ctxType), uint32(1), mock.MatchedBy(func(p db.UpdateUserParams) bool {
+				return p.Role != nil && p.Role.String() == string(user.RoleAdmin)
+			})).
+				Return(&ent.User{ID: 1, Role: user.RoleAdmin}, nil).
+				Once()
+			storeMock.RevokeAllUserSessions(mock.AnythingOfType(ctxType), uint32(1), mock.AnythingOfType("time.Time")).
+				Return(nil).
+				Once()
+
+			adminRole := "admin"
+			err := svc.UpdateUser(ctx, 1, UserPatch{Role: &adminRole})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("does not revoke when the patched role equals the current role", func() {
+			storeMock.FindUserByID(mock.AnythingOfType(ctxType), uint32(1)).
+				Return(&ent.User{ID: 1, Role: user.RoleMember}, nil).Once()
+			storeMock.UpdateUser(mock.AnythingOfType(ctxType), uint32(1), mock.AnythingOfType("db.UpdateUserParams")).
+				Return(&ent.User{ID: 1, Role: user.RoleMember}, nil).
+				Once()
+
+			// The SPA always sends the full form, role included, so a
+			// display-name save must not sign the target out. The strict mock
+			// fails the spec if RevokeAllUserSessions is called at all.
+			memberRole := "member"
+			displayName := "Renamed"
+			err := svc.UpdateUser(ctx, 1, UserPatch{
+				Role: &memberRole, DisplayName: &displayName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("keeps the role change when the session revoke fails", func() {
+			storeMock.FindUserByID(mock.AnythingOfType(ctxType), uint32(1)).
+				Return(&ent.User{ID: 1, Role: user.RoleAdmin}, nil).Once()
+			storeMock.UpdateUserUnlessLastAdmin(mock.AnythingOfType(ctxType), uint32(1), mock.AnythingOfType("db.UpdateUserParams")).
+				Return(&ent.User{ID: 1, Role: user.RoleMember}, nil).
+				Once()
+			storeMock.RevokeAllUserSessions(mock.AnythingOfType(ctxType), uint32(1), mock.AnythingOfType("time.Time")).
+				Return(errors.New("rev fail")).
+				Once()
 
 			memberRole := "member"
 			err := svc.UpdateUser(ctx, 1, UserPatch{Role: &memberRole})
