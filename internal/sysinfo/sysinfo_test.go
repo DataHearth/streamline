@@ -34,6 +34,9 @@ var _ = Describe("diskUsage", Label("unit", "sysinfo"), func() {
 		Expect(du).NotTo(BeNil())
 		Expect(du.Pct).To(Equal(uint8(0)))
 		Expect(du.Kind).To(Equal("ok"))
+		// The badge string must clamp too, not just the percentage —
+		// otherwise it renders a nonsense negative byte figure.
+		Expect(du.Used).To(Equal("0 B"))
 	})
 
 	It("survives volumes where used*100 would overflow int64", func() {
