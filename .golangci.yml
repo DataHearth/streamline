@@ -61,8 +61,14 @@ linters:
         text: "G(101|104|124|301|302|304|306|401|404|505)"
       - linters:
           - errcheck
+        source: .*\.Close\(\)
+      # gosec's unhandled-error rule only: a different-rule finding (a G304
+      # open, a G204 exec) on a line that happens to also match one of these
+      # sources must still surface.
+      - linters:
           - gosec
         source: .*\.Close\(\)
+        text: "G104"
       - linters:
           - errcheck
         source: os\.Remove\(.*\)
@@ -76,14 +82,20 @@ linters:
       # when the caller logs and continues instead of returning.
       - linters:
           - errcheck
+        source: otelx\.RecordSpanError\(.*\)
+      - linters:
           - gosec
         source: otelx\.RecordSpanError\(.*\)
+        text: "G104"
       # tx.Rollback() inside db.Tx helper: the outer fn error is the one
       # we care about; a rollback error is not actionable and would shadow it.
       - linters:
           - errcheck
+        source: tx\.Rollback\(\)
+      - linters:
           - gosec
         source: tx\.Rollback\(\)
+        text: "G104"
       # testutil package is test-only infrastructure; dot imports of
       # ginkgo/gomega are idiomatic for Ginkgo test helpers.
       - linters:
