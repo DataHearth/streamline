@@ -158,12 +158,42 @@ var _ = Describe("SecurityHeaders middleware", Label("unit", "server"), func() {
 		})
 	})
 
+	Describe("Cache-Control", func() {
+		// Covers /api/v1, the webui auth routes and the SPA shell alike —
+		// every one of them can carry bearer material (API keys, invite
+		// tokens, a Plex PIN's auth_token, the rotated JWT secret), and none
+		// of them opts in individually.
+		It("defaults non-static responses to no-store", func() {
+			got := serve(nil).Header()
+
+			Expect(got.Get("Cache-Control")).To(Equal("no-store, private"))
+		})
+
+		It("leaves /static/* responses uncached by this middleware", func() {
+			got := serve(func(r *http.Request) {
+				r.URL.Path = "/static/dist/spa.min.js"
+			}).Header()
+
+			Expect(got.Get("Cache-Control")).To(BeEmpty())
+		})
+	})
+
 	It("sets the clickjacking, sniffing and referrer headers", func() {
 		got := serve(nil).Header()
 
 		Expect(got.Get("X-Frame-Options")).To(Equal("DENY"))
 		Expect(got.Get("X-Content-Type-Options")).To(Equal("nosniff"))
 		Expect(got.Get("Referrer-Policy")).To(Equal("same-origin"))
+	})
+
+	// same-origin-allow-popups rather than same-origin: the Plex PIN flow
+	// keeps the window.open handle to app.plex.tv/auth to detect popup
+	// blockers and to close the popup once linking finishes, and plain
+	// same-origin would sever that handle.
+	It("isolates the opener while still allowing popups", func() {
+		Expect(
+			serve(nil).Header().Get("Cross-Origin-Opener-Policy"),
+		).To(Equal("same-origin-allow-popups"))
 	})
 
 	It("stamps the headers on a response the handler never wrote", func() {

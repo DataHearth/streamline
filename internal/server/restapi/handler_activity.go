@@ -93,7 +93,7 @@ func (s *Server) ListDownloadHistory(
 ) (ListDownloadHistoryResponseObject, error) {
 	limit := 0
 	if request.Params.Limit != nil {
-		limit = *request.Params.Limit
+		limit = clampLimit(*request.Params.Limit, activityMaxLimit)
 	}
 	cursor := ""
 	if request.Params.Cursor != nil {

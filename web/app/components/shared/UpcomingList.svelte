@@ -127,11 +127,11 @@
 						<!-- Kind, not status. Everything on this list is unreleased and
 						     wanted, so a status pill printed the same word down the whole
 						     panel; what the row does not otherwise say is whether it is a
-						     film or an episode. Amber/purple are the kind colours the
-						     calendar's dots and grid chips already use. -->
+						     film or an episode. `--kind-*` are the calendar's own colours,
+						     deliberately outside the status ramp. -->
 						<span
 							class="kind-pill shrink-0 whitespace-nowrap rounded-full border px-1.5 py-[1px] text-[10px] font-semibold tracking-[0.02em]"
-							style:--c="var(--status-{dotToken(ev)})"
+							style:--c="var(--kind-{dotToken(ev)})"
 						>
 							{ev.kind === "movie" ? i18n.common_movie() : i18n.common_episode()}
 						</span>

@@ -4,6 +4,10 @@
 package restapi
 
 import (
+	"errors"
+	"log/slog"
+	"net/http"
+
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/auth"
 	"github.com/datahearth/streamline/internal/bittorrent"
@@ -20,6 +24,7 @@ import (
 	"github.com/datahearth/streamline/internal/request"
 	"github.com/datahearth/streamline/internal/rss"
 	"github.com/datahearth/streamline/internal/scheduler"
+	"github.com/datahearth/streamline/internal/server/middleware"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -105,6 +110,48 @@ func New(d Deps) *Server {
 // handler adapter, with the default-deny role guard (rbac.go) in front of
 // every operation.
 func Mount(r chi.Router, s *Server) {
-	handler := NewStrictHandler(s, []StrictMiddlewareFunc{roleGuard})
+	handler := NewStrictHandlerWithOptions(
+		s,
+		[]StrictMiddlewareFunc{roleGuard},
+		StrictHTTPServerOptions{
+			RequestErrorHandlerFunc:  requestError,
+			ResponseErrorHandlerFunc: responseError,
+		},
+	)
 	HandlerFromMuxWithBaseURL(handler, r, "/api/v1")
+}
+
+// requestError replaces the generated default only for the one error it can
+// now see: middleware.BodyLimit's MaxBytesReader tripping mid-decode, which the
+// generated code wraps with %w. Every other decode failure keeps the exact
+// plain-text 400 the default emitted — echoing the decode/binding failure is
+// echoing user input, not internal state — so no existing client sees a change.
+func requestError(w http.ResponseWriter, r *http.Request, err error) {
+	if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusRequestEntityTooLarge)
+		if _, werr := w.Write(
+			[]byte(middleware.BodyTooLargeJSON),
+		); werr != nil {
+			slog.ErrorContext(
+				r.Context(), "body limit write failed", "error", werr,
+			)
+		}
+		return
+	}
+	http.Error(w, err.Error(), http.StatusBadRequest)
+}
+
+// responseError handles a handler returning a non-nil error. The generated
+// default writes err.Error() as text/plain, which would hand the client the
+// raw internal error; log it and return an opaque JSON 500 instead.
+func responseError(w http.ResponseWriter, r *http.Request, err error) {
+	ctx := r.Context()
+	slog.ErrorContext(ctx, "api handler returned an error", "error", err)
+	denyJSON(
+		ctx,
+		w,
+		http.StatusInternalServerError,
+		internalErrorMessage,
+	)
 }

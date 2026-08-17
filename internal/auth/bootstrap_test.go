@@ -303,6 +303,31 @@ var _ = Describe("Bootstrap service unit", Label("unit", "auth"), func() {
 			Expect(tok).NotTo(BeEmpty())
 		})
 
+		// auth.oidc_default_role is legitimately admin for a provider carrying
+		// allow_admin; open registration reads the same key with no provider
+		// behind it, so it must land a member either way.
+		It("clamps an admin default role to member", func() {
+			storeMock.CreateUser(ctx, mock.MatchedBy(func(p db.CreateUserParams) bool {
+				return p.Role.String() == string(user.RoleMember)
+			})).
+				Return(&ent.User{ID: 1, Email: "a@x.com"}, nil).
+				Once()
+			storeMock.CreateSession(mock.AnythingOfType(ctxType), mock.AnythingOfType("db.CreateSessionParams")).
+				Return(&ent.Session{ID: 1}, nil).
+				Once()
+
+			u, _, err := svc.RegisterOpen(
+				ctx,
+				"a@x.com",
+				"password",
+				"",
+				string(user.RoleAdmin),
+				SessionMeta{},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(u.Email).To(Equal("a@x.com"))
+		})
+
 		It("wraps bcrypt failures", func() {
 			_, _, err := svc.RegisterOpen(
 				ctx,

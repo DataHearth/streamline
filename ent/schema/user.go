@@ -21,7 +21,7 @@ func (User) Mixin() []ent.Mixin {
 func (User) Fields() []ent.Field {
 	return []ent.Field{
 		field.String("email").Unique().NotEmpty(),
-		field.String("password_hash").Optional(),
+		field.String("password_hash").Optional().Sensitive(),
 		field.Enum("role").
 			Values("admin", "member", "request_only").
 			Default("member"),

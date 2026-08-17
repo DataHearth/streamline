@@ -32,6 +32,26 @@ var _ = Describe("Request handlers", Label("unit", "restapi"), func() {
 			Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
 		})
 
+		It("clamps a limit above the documented maximum", func() {
+			app.requests.EXPECT().
+				List(mock.Anything, mock.MatchedBy(func(p db.ListRequestsParams) bool {
+					return p.Limit == requestsMaxLimit
+				})).
+				Return([]*ent.Request{}, 0, nil).Once()
+
+			resp, err := http.DefaultClient.Do(
+				app.req(
+					http.MethodGet,
+					"/api/v1/requests?limit=4294967295",
+					app.adminKey,
+					nil,
+				),
+			)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+		})
+
 		It("admins see all (no requester scoping)", func() {
 			app.requests.EXPECT().
 				List(mock.Anything, mock.MatchedBy(func(p db.ListRequestsParams) bool {

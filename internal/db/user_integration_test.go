@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"errors"
 	"path/filepath"
 	"time"
 
@@ -113,6 +114,78 @@ var _ = Describe("User store CRUD", Label("integration", "db"), func() {
 		})
 	})
 
+	Describe("UpdateUserRole", func() {
+		It("demotes an admin while another admin remains", func() {
+			a := create("a@example.com", "admin")
+			create("b@example.com", "admin")
+
+			updated, err := store.UpdateUserRole(
+				ctx, a.ID, approle.Seed(user.RoleMember),
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(updated.Role).To(Equal(user.RoleMember))
+
+			got, err := store.FindUserByID(ctx, a.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.Role).To(Equal(user.RoleMember))
+		})
+
+		It("promotes a member without consulting the guard", func() {
+			m := create("m@example.com", "member")
+			updated, err := store.UpdateUserRole(
+				ctx, m.ID, approle.Seed(user.RoleAdmin),
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(updated.Role).To(Equal(user.RoleAdmin))
+		})
+
+		When("the target is the only admin left", func() {
+			It("refuses the demotion and leaves the row untouched", func() {
+				a := create("a@example.com", "admin")
+				create("m@example.com", "member")
+
+				_, err := store.UpdateUserRole(
+					ctx, a.ID, approle.Seed(user.RoleMember),
+				)
+				Expect(err).To(MatchError(ErrLastAdmin))
+
+				got, err := store.FindUserByID(ctx, a.ID)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(got.Role).To(Equal(user.RoleAdmin))
+			})
+		})
+
+		// The count is read by the UPDATE itself, so the second demotion sees
+		// the first one's effect rather than a value captured before it.
+		It("re-reads the admin count on every write", func() {
+			a := create("a@example.com", "admin")
+			b := create("b@example.com", "admin")
+
+			_, err := store.UpdateUserRole(
+				ctx, a.ID, approle.Seed(user.RoleMember),
+			)
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = store.UpdateUserRole(
+				ctx, b.ID, approle.Seed(user.RoleMember),
+			)
+			Expect(err).To(MatchError(ErrLastAdmin))
+			_, admins, err := store.ListUsers(ctx, ListUsersParams{
+				Role: user.RoleAdmin,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(admins).To(Equal(1))
+		})
+
+		It("reports an unknown id as NotFound, not as the guard", func() {
+			_, err := store.UpdateUserRole(
+				ctx, 99999, approle.Seed(user.RoleMember),
+			)
+			Expect(ent.IsNotFound(err)).To(BeTrue())
+			Expect(errors.Is(err, ErrLastAdmin)).To(BeFalse())
+		})
+	})
+
 	Describe("ListUsers", func() {
 		It(
 			"filters by query (email or display_name) and role, paginates newest first",
@@ -138,13 +211,48 @@ var _ = Describe("User store CRUD", Label("integration", "db"), func() {
 		)
 	})
 
-	Describe("CountUsersByRole", func() {
-		It("returns the count for the given role", func() {
-			create("admin@example.com", "admin")
-			create("alice@example.com", "member")
-			n, err := store.CountUsersByRole(ctx, user.RoleAdmin)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(n).To(Equal(1))
+	Describe("last-admin guarded writes", func() {
+		demote := func() UpdateUserParams {
+			r := approle.Operator(user.RoleMember)
+			return UpdateUserParams{Role: &r}
+		}
+
+		When("another admin exists", func() {
+			It("updates the target", func() {
+				a := create("admin1@example.com", "admin")
+				create("admin2@example.com", "admin")
+
+				got, err := store.UpdateUserUnlessLastAdmin(ctx, a.ID, demote())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(got.Role).To(Equal(user.RoleMember))
+			})
+
+			It("deletes the target", func() {
+				a := create("admin1@example.com", "admin")
+				create("admin2@example.com", "admin")
+
+				n, err := store.DeleteUserUnlessLastAdmin(ctx, a.ID)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(n).To(Equal(1))
+			})
+		})
+
+		When("the target is the only admin", func() {
+			It("writes nothing", func() {
+				a := create("solo@example.com", "admin")
+				create("member@example.com", "member")
+
+				_, err := store.UpdateUserUnlessLastAdmin(ctx, a.ID, demote())
+				Expect(ent.IsNotFound(err)).To(BeTrue())
+
+				n, err := store.DeleteUserUnlessLastAdmin(ctx, a.ID)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(n).To(BeZero())
+
+				still, err := store.FindUserByID(ctx, a.ID)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(still.Role).To(Equal(user.RoleAdmin))
+			})
 		})
 	})
 

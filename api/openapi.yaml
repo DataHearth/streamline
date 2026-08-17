@@ -55,6 +55,7 @@ paths:
           schema:
             type: integer
             default: 20
+            maximum: 100
             x-go-type: uint16
       responses:
         "200":
@@ -85,6 +86,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "409":
           $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -135,6 +138,8 @@ paths:
                 $ref: "#/components/schemas/Movie"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "500":
           $ref: "#/components/responses/InternalError"
     delete:
@@ -231,6 +236,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/MoviePlayOnLinks"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":
@@ -253,6 +260,8 @@ paths:
           $ref: "#/components/responses/MovieSearchAccepted"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
         "500":
@@ -310,6 +319,8 @@ paths:
           $ref: "#/components/responses/FileDeleted"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -396,6 +407,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "409":
           $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -497,6 +510,8 @@ paths:
           $ref: "#/components/responses/SeriesDetail"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "500":
           $ref: "#/components/responses/InternalError"
     delete:
@@ -531,6 +546,8 @@ paths:
           $ref: "#/components/responses/SeasonUpdated"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -578,6 +595,8 @@ paths:
           $ref: "#/components/responses/SeriesGrabAccepted"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
         "500":
@@ -598,6 +617,8 @@ paths:
           $ref: "#/components/responses/EpisodeUpdated"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -656,6 +677,8 @@ paths:
           $ref: "#/components/responses/SeriesGrabAccepted"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
         "500":
@@ -679,6 +702,8 @@ paths:
           $ref: "#/components/responses/SeriesGrabAccepted"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
         "500":
@@ -704,6 +729,8 @@ paths:
           $ref: "#/components/responses/FileDeleted"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -774,6 +801,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/SeriesPlayOnLinks"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":
@@ -815,6 +844,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "409":
           $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
         "500":
@@ -840,6 +871,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
         "500":
@@ -876,6 +909,8 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Indexer"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalError"
     post:
@@ -896,6 +931,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "409":
           $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
         "500":
@@ -921,6 +958,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
         "500":
@@ -974,6 +1013,8 @@ paths:
           $ref: "#/components/responses/ConnectionTestOK"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
         "500":
@@ -995,6 +1036,8 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/DownloadClient"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalError"
     post:
@@ -1015,6 +1058,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "409":
           $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
         "500":
@@ -1040,6 +1085,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
         "500":
@@ -1093,6 +1140,8 @@ paths:
           $ref: "#/components/responses/ConnectionTestOK"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
         "500":
@@ -1107,11 +1156,17 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/TorrentList"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
     post:
       operationId: addTorrent
       summary: Add a torrent by magnet link or .torrent file
+      description: |
+        The base64 `torrent` field raises this endpoint's body cap to 24 MiB,
+        sized from the 16 MiB ceiling the manager applies to a fetched
+        .torrent plus base64's 4/3 inflation. Larger bodies get `413`.
       tags: [torrents]
       requestBody:
         $ref: "#/components/requestBodies/AddTorrent"
@@ -1122,6 +1177,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
 
@@ -1135,6 +1192,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/TorrentDetails"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
     delete:
@@ -1202,6 +1261,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
 
@@ -1215,6 +1276,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/MediaServerList"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalError"
     post:
@@ -1230,6 +1293,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "409":
           $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
         "500":
@@ -1245,6 +1310,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/MediaServerOK"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":
@@ -1262,6 +1329,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
         "500":
@@ -1315,6 +1384,8 @@ paths:
           $ref: "#/components/responses/MediaServerDiscovered"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
         "500":
@@ -1335,6 +1406,8 @@ paths:
           $ref: "#/components/responses/MediaServerTestOK"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
         "500":
@@ -1375,6 +1448,8 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
   /auth/password:
     post:
       operationId: changePassword
@@ -1390,6 +1465,8 @@ paths:
           description: Password changed; other sessions revoked
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
 
@@ -1429,6 +1506,8 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
   /auth/me/api-keys/{id}:
     parameters:
       - $ref: "#/components/parameters/ResourceID"
@@ -1511,6 +1590,8 @@ paths:
           $ref: "#/components/responses/JWTRotated"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -1550,6 +1631,8 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
 
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
   /auth/invites/{id}:
     parameters:
       - $ref: "#/components/parameters/ResourceID"
@@ -1598,6 +1681,8 @@ paths:
           $ref: "#/components/responses/AuthConfig"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
 
@@ -1631,6 +1716,8 @@ paths:
           $ref: "#/components/responses/LibraryConfig"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
 
@@ -1669,6 +1756,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "409":
           $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
 
@@ -1709,6 +1798,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
     delete:
@@ -1785,6 +1876,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "409":
           $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
 
@@ -1832,6 +1925,8 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
     delete:
       operationId: deleteUser
       summary: Delete user (admin)
@@ -1878,6 +1973,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
 
@@ -1992,6 +2089,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
 
@@ -2076,6 +2175,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "409":
           $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
 
@@ -2173,6 +2274,8 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
   /library/imports/{id}/shows:
     parameters:
       - $ref: "#/components/parameters/ResourceID"
@@ -2209,6 +2312,8 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
   /library/path-migration:
     get:
       operationId: GetPathMigration
@@ -2239,6 +2344,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "409":
           $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
 
@@ -2270,6 +2377,8 @@ paths:
           $ref: "#/components/responses/PathMigrationPreview"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
 
@@ -2450,6 +2559,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -2469,6 +2580,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -2517,8 +2630,8 @@ paths:
         media_type.
       tags: [requests]
       parameters:
-        - $ref: "#/components/parameters/RequestStatus"
-        - $ref: "#/components/parameters/RequestMediaType"
+        - $ref: "#/components/parameters/RequestStatusParam"
+        - $ref: "#/components/parameters/RequestMediaTypeParam"
         - $ref: "#/components/parameters/RequestPage"
         - $ref: "#/components/parameters/RequestLimit"
       responses:
@@ -2541,6 +2654,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -2576,6 +2691,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -2618,6 +2735,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -2716,7 +2835,10 @@ components:
       schema:
         type: boolean
         default: false
-    RequestStatus:
+    # ...Param suffix: oapi-codegen names a parameter component's type after the
+    # component key, which collides with the Request schema's own status and
+    # media_type enums and aborts generation with "duplicate typename".
+    RequestStatusParam:
       name: status
       in: query
       required: false
@@ -2724,7 +2846,7 @@ components:
       schema:
         type: string
         enum: [pending, approved, denied, available]
-    RequestMediaType:
+    RequestMediaTypeParam:
       name: media_type
       in: query
       required: false
@@ -2747,6 +2869,7 @@ components:
         type: integer
         x-go-type: uint32
         default: 50
+        maximum: 100
     UserID:
       name: uid
       in: path
@@ -2949,6 +3072,7 @@ components:
       schema:
         type: integer
         default: 20
+        maximum: 100
         x-go-type: uint16
 
     SeriesStatus:
@@ -3302,6 +3426,13 @@ components:
 
     UnprocessableEntity:
       description: Validation or connection test failed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+    PayloadTooLarge:
+      description: Request body exceeded the size cap
       content:
         application/json:
           schema:

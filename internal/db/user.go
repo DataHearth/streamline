@@ -2,12 +2,20 @@ package db
 
 import (
 	"context"
+	"errors"
 	"time"
 
+	entsql "entgo.io/ent/dialect/sql"
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/predicate"
 	"github.com/datahearth/streamline/ent/user"
 	"github.com/datahearth/streamline/internal/role"
 )
+
+// ErrLastAdmin is returned by UpdateUserRole when the write would leave the
+// instance with no admin at all, a state no code path can recover from
+// (BootstrapSeedAdmin only re-seeds an empty user table).
+var ErrLastAdmin = errors.New("cannot demote the last admin")
 
 // Role is a role.Value rather than a user.Role so a write has to name the
 // authority that decided it. A bare user.Role can be spelled anywhere; a
@@ -40,8 +48,10 @@ const (
 )
 
 // ListUsersParams is the filter/pagination bundle for admin user listing.
-// All fields are optional; Limit defaults to 25 when zero, and is capped at
-// 100 by the caller. Sort/Order default to created/desc.
+// All fields are optional; Limit defaults to 25 when zero. The OpenAPI spec
+// documents a maximum of 100, but nothing in this call chain enforces it —
+// no code between the HTTP handler and this query clamps it. Sort/Order
+// default to created/desc.
 type ListUsersParams struct {
 	Q      string
 	Role   user.Role
@@ -156,10 +166,59 @@ func (db *DB) ListUsers(
 	return items, total, nil
 }
 
-// CountUsersByRole returns the number of users with the given role. Used to
-// protect the last-admin invariant.
-func (db *DB) CountUsersByRole(ctx context.Context, role user.Role) (int, error) {
-	return db.client.User.Query().Where(user.RoleEQ(role)).Count(ctx)
+// otherAdminExists matches while a user other than excludeID still holds the
+// admin role. Attached to the write itself, it re-checks the last-admin
+// invariant inside the statement that breaks it: a count read by an earlier
+// statement is stale the moment a concurrent request demotes or deletes a
+// different admin, and both requests then write a database with no admin left.
+func otherAdminExists(excludeID uint32) predicate.User {
+	return predicate.User(func(s *entsql.Selector) {
+		b := entsql.Dialect(s.Dialect())
+		t := b.Table(user.Table).As("other_admin")
+		s.Where(entsql.Exists(
+			b.Select(t.C(user.FieldID)).
+				From(t).
+				Where(entsql.And(
+					entsql.EQ(t.C(user.FieldRole), user.RoleAdmin),
+					entsql.NEQ(t.C(user.FieldID), excludeID),
+				)),
+		))
+	})
+}
+
+// UpdateUserRole sets the user's role, refusing the write when it would
+// demote the only remaining admin. The guard (otherAdminExists) lives in the
+// UPDATE's own WHERE clause rather than in a preceding SELECT, so two
+// demotions racing on two distinct admins cannot both observe a survivor:
+// SQLite applies a single statement atomically, and the loser matches no row.
+// Unlike UpdateUserUnlessLastAdmin, a write that keeps or grants admin is
+// never blocked, and the guard's refusal is a distinct sentinel (ErrLastAdmin)
+// so the OIDC sync can soft-fail it without confusing it with a missing row.
+func (db *DB) UpdateUserRole(
+	ctx context.Context,
+	id uint32,
+	r role.Value,
+) (*ent.User, error) {
+	upd := db.client.User.Update().
+		Where(user.IDEQ(id)).
+		SetRole(r.Ent())
+	if r.Ent() != user.RoleAdmin {
+		upd = upd.Where(user.Or(
+			user.RoleNEQ(user.RoleAdmin),
+			otherAdminExists(id),
+		))
+	}
+	n, err := upd.Save(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if n == 0 {
+		if _, gerr := db.client.User.Get(ctx, id); gerr != nil {
+			return nil, gerr
+		}
+		return nil, ErrLastAdmin
+	}
+	return db.client.User.Get(ctx, id)
 }
 
 // UpdateUser applies every non-nil field in p in a single SQL UPDATE, so
@@ -169,7 +228,38 @@ func (db *DB) UpdateUser(
 	id uint32,
 	p UpdateUserParams,
 ) (*ent.User, error) {
-	upd := db.client.User.UpdateOneID(id)
+	return applyUserUpdate(db.client.User.UpdateOneID(id), p).Save(ctx)
+}
+
+// UpdateUserUnlessLastAdmin is UpdateUser guarded by the last-admin
+// invariant: the row is written only while another admin exists, in one
+// statement that cannot be raced. Returns an *ent.NotFoundError when the guard
+// blocks the write, which is also what an already-deleted row returns.
+func (db *DB) UpdateUserUnlessLastAdmin(
+	ctx context.Context,
+	id uint32,
+	p UpdateUserParams,
+) (*ent.User, error) {
+	upd := db.client.User.UpdateOneID(id).Where(otherAdminExists(id))
+	return applyUserUpdate(upd, p).Save(ctx)
+}
+
+// DeleteUserUnlessLastAdmin is DeleteUser guarded by the last-admin
+// invariant, in one statement that cannot be raced. Reports the rows deleted;
+// zero means the guard blocked the delete (or the row was already gone).
+func (db *DB) DeleteUserUnlessLastAdmin(
+	ctx context.Context,
+	id uint32,
+) (int, error) {
+	return db.client.User.Delete().
+		Where(user.ID(id), otherAdminExists(id)).
+		Exec(ctx)
+}
+
+func applyUserUpdate(
+	upd *ent.UserUpdateOne,
+	p UpdateUserParams,
+) *ent.UserUpdateOne {
 	if p.Role != nil {
 		upd = upd.SetRole(p.Role.Ent())
 	}
@@ -195,7 +285,7 @@ func (db *DB) UpdateUser(
 	} else if p.ClearLockedUntil {
 		upd = upd.ClearLockedUntil()
 	}
-	return upd.Save(ctx)
+	return upd
 }
 
 // DeleteUser permanently removes the user and all dependent data (api keys,

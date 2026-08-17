@@ -701,7 +701,7 @@ export type SystemInfo = {
 };
 
 export type PlexPinBegin = {
-	pin_id: number;
+	flow_id: string;
 	auth_url: string;
 	client_id: string;
 };

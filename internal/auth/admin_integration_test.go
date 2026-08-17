@@ -2,6 +2,8 @@ package auth
 
 import (
 	"context"
+	"errors"
+	"sync"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -123,6 +125,45 @@ var _ = Describe("Admin end-to-end", Label("integration", "auth"), func() {
 		Expect(err).NotTo(HaveOccurred())
 		_, err = kept.QueryUsedBy().Only(ctx)
 		Expect(ent.IsNotFound(err)).To(BeTrue())
+	})
+
+	It("keeps an admin when two admins are demoted concurrently", func() {
+		a := seedUser("race-a@x.com", entuser.RoleAdmin)
+		b := seedUser("race-b@x.com", entuser.RoleAdmin)
+
+		member := string(entuser.RoleMember)
+		start := make(chan struct{})
+		errs := make(chan error, 2)
+		var wg sync.WaitGroup
+		for _, id := range []uint32{a.ID, b.ID} {
+			wg.Go(func() {
+				<-start
+				errs <- svc.UpdateUser(ctx, id, UserPatch{Role: &member})
+			})
+		}
+		close(start)
+		wg.Wait()
+		close(errs)
+
+		var demoted, rejected int
+		for err := range errs {
+			switch {
+			case err == nil:
+				demoted++
+			case errors.Is(err, ErrLastAdmin):
+				rejected++
+			default:
+				Fail("unexpected demotion error: " + err.Error())
+			}
+		}
+		Expect(demoted).To(Equal(1))
+		Expect(rejected).To(Equal(1))
+
+		admins, err := dbClient.User.Query().
+			Where(entuser.RoleEQ(entuser.RoleAdmin)).
+			Count(ctx)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(admins).To(Equal(1))
 	})
 
 	It("AdminResetPassword end-to-end revokes existing sessions", func() {

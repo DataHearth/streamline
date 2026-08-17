@@ -1,0 +1,50 @@
+{
+	"$schema": "https://docs.renovatebot.com/renovate-schema.json",
+	"extends": [
+		"config:recommended"
+	],
+	"schedule": [
+		"* 0-6 * * 1"
+	],
+	"prConcurrentLimit": 5,
+	"labels": ["dependencies"],
+	"reviewers": ["DataHearth"],
+	"packageRules": [
+		{
+			"matchManagers": ["gomod"],
+			"matchUpdateTypes": ["minor", "patch", "digest"],
+			"groupName": "go modules"
+		},
+		{
+			"matchManagers": ["npm"],
+			"matchUpdateTypes": ["minor", "patch", "digest"],
+			"groupName": "frontend deps"
+		},
+		{
+			"matchManagers": ["github-actions"],
+			"matchUpdateTypes": ["minor", "patch", "digest"],
+			"groupName": "github actions"
+		},
+		{
+			"matchManagers": ["github-actions"],
+			"addLabels": ["github_actions"]
+		},
+		{
+			"matchManagers": ["dockerfile", "docker-compose"],
+			"matchUpdateTypes": ["minor", "patch", "digest"],
+			"groupName": "docker images"
+		},
+		{
+			"matchManagers": ["helmv3", "helm-values"],
+			"matchUpdateTypes": ["minor", "patch", "digest"],
+			"groupName": "helm charts"
+		},
+		{
+			"matchUpdateTypes": ["major"],
+			"dependencyDashboardApproval": true
+		}
+	],
+	"vulnerabilityAlerts": {
+		"schedule": ["at any time"]
+	}
+}

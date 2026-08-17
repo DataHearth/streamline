@@ -47,7 +47,7 @@ func (s *Server) ImportPending(
 		ctx, request.Id, downloadrecord.StatusImporting,
 	); err != nil {
 		return ImportPending500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 	return ImportPending204Response{}, nil
@@ -89,7 +89,7 @@ func (s *Server) ReplacePending(
 		ctx, request.Id, downloadrecord.StatusImporting,
 	); err != nil {
 		return ReplacePending500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 	return ReplacePending204Response{}, nil
@@ -106,7 +106,7 @@ func (s *Server) clearExistingFile(
 		files, err := s.store.ListMediaFilesByMovieID(ctx, rec.Edges.Movie.ID)
 		if err != nil {
 			return ReplacePending500JSONResponse{
-				InternalErrorJSONResponse: errInternal(err.Error()),
+				InternalErrorJSONResponse: errInternal(ctx, err),
 			}
 		}
 		for _, f := range files {
@@ -114,7 +114,7 @@ func (s *Server) clearExistingFile(
 				ctx, rec.Edges.Movie.ID, f.ID, moviesvc.DeleteFileOptions{},
 			); err != nil {
 				return ReplacePending500JSONResponse{
-					InternalErrorJSONResponse: errInternal(err.Error()),
+					InternalErrorJSONResponse: errInternal(ctx, err),
 				}
 			}
 		}
@@ -125,14 +125,14 @@ func (s *Server) clearExistingFile(
 			return nil // no file to replace
 		} else if err != nil {
 			return ReplacePending500JSONResponse{
-				InternalErrorJSONResponse: errInternal(err.Error()),
+				InternalErrorJSONResponse: errInternal(ctx, err),
 			}
 		}
 		if err := s.tvshows.DeleteEpisodeFile(
 			ctx, rec.Edges.Episode.ID, tvshow.DeleteFileOptions{},
 		); err != nil {
 			return ReplacePending500JSONResponse{
-				InternalErrorJSONResponse: errInternal(err.Error()),
+				InternalErrorJSONResponse: errInternal(ctx, err),
 			}
 		}
 	}
@@ -196,7 +196,7 @@ func (s *Server) IgnorePending(
 		ctx, request.Id, downloadrecord.StatusDismissed,
 	); err != nil {
 		return IgnorePending500JSONResponse{
-			InternalErrorJSONResponse: errInternal(err.Error()),
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 	if request.Body != nil &&

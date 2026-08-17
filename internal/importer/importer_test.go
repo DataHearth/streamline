@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -156,6 +157,58 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 		w.handleOutcome(context.Background(), 1, err)
 	})
 
+	It("two records for one movie: only one of them transfers", func() {
+		srcA := filepath.Join(tmp, "dlA")
+		srcB := filepath.Join(tmp, "dlB")
+		for _, d := range []string{srcA, srcB} {
+			Expect(os.MkdirAll(d, 0o755)).To(Succeed())
+			seedMediaFile(d, "Flick.2024.1080p.mkv")
+		}
+
+		var mu sync.Mutex
+		var files []*ent.MediaFile
+
+		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+			Return(fixtureRecord(1, 10, srcA, 0), nil).Once()
+		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(2)).
+			Return(fixtureRecord(2, 10, srcB, 0), nil).Once()
+		storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+			RunAndReturn(func(context.Context, uint32) ([]*ent.MediaFile, error) {
+				mu.Lock()
+				defer mu.Unlock()
+				return files, nil
+			}).Twice()
+		storeMk.EXPECT().RecordImportSuccess(mock.Anything, mock.Anything).
+			RunAndReturn(func(_ context.Context, p db.RecordImportSuccessParams) error {
+				mu.Lock()
+				defer mu.Unlock()
+				files = append(files, &ent.MediaFile{ID: 5, Path: p.File.Path})
+				return nil
+			})
+		storeMk.EXPECT().
+			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		msMk.EXPECT().RefreshAll(mock.Anything, libDir).Return(nil)
+
+		errs := make(chan error, 2)
+		var wg sync.WaitGroup
+		for _, id := range []uint32{1, 2} {
+			wg.Go(func() { errs <- w.runImport(context.Background(), id) })
+		}
+		wg.Wait()
+		close(errs)
+
+		failed := 0
+		for err := range errs {
+			if err != nil {
+				Expect(err).To(MatchError(ErrMovieHasFile))
+				failed++
+			}
+		}
+		Expect(failed).To(Equal(1))
+		Expect(files).To(HaveLen(1))
+	})
+
 	It("retryable error increments attempts, does not flip movie to failed", func() {
 		rec := fixtureRecord(1, 10, filepath.Join(tmp, "nope"), 0)
 
@@ -264,6 +317,17 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 		err := w.runImport(context.Background(), 3)
 		Expect(err).To(MatchError(ErrPathNotAllowed))
 		w.handleOutcome(context.Background(), 3, err)
+	})
+
+	It("AllowedDownloadRoots: a sibling sharing the prefix is refused", func() {
+		config.Get().Library.AllowedDownloadRoots = []string{"/safe"}
+
+		rec := fixtureRecord(4, 12, "/safe-evil/path", 0)
+		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(4)).
+			Return(rec, nil).Once()
+
+		Expect(w.runImport(context.Background(), 4)).
+			To(MatchError(ErrPathNotAllowed))
 	})
 
 	It("Enqueue dedupe: in-flight IDs are dropped", func() {

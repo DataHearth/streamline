@@ -108,6 +108,16 @@ const securityCSP = "default-src 'self'; " +
 // pinning those to https on its behalf is not its call to make.
 const securityHSTS = "max-age=31536000"
 
+// securityCOOP is "same-origin-allow-popups" rather than "same-origin". The
+// Plex PIN flow (web/app/lib/plex_pin.ts) opens https://app.plex.tv/auth with
+// window.open and keeps the returned handle: it checks `if (!popup)` for
+// popup-blocker detection and later calls closePopup(popup) to close it.
+// Plain "same-origin" severs that handle the instant the popup navigates
+// cross-origin, breaking both. same-origin-allow-popups still isolates this
+// origin's window from a popup's window.opener while leaving the opener's own
+// handle to the popup intact.
+const securityCOOP = "same-origin-allow-popups"
+
 // SecurityHeaders stamps the browser-facing hardening headers onto every
 // response.
 //
@@ -132,95 +142,20 @@ func SecurityHeaders(next http.Handler) http.Handler {
 		h.Set("X-Frame-Options", "DENY")
 		h.Set("X-Content-Type-Options", "nosniff")
 		h.Set("Referrer-Policy", "same-origin")
-		if servedOverTLS(r) {
+		h.Set("Cross-Origin-Opener-Policy", securityCOOP)
+		// Default every response to no-store rather than opting each handler
+		// out individually: /api/v1 and the webui auth routes hand back
+		// bearer material (API keys, invite tokens, the Plex PIN's
+		// auth_token, the rotated JWT secret) and a missed spot would cache
+		// it silently. /static/* is the one exclusion — the embedded
+		// JS/CSS/fonts carry no secrets and need to stay cacheable.
+		if !strings.HasPrefix(r.URL.Path, "/static/") {
+			h.Set("Cache-Control", "no-store, private")
+		}
+		// HSTS reads only this request's transport, never configuration.
+		if httputil.ServedOverTLS(r) {
 			h.Set("Strict-Transport-Security", securityHSTS)
 		}
 		next.ServeHTTP(w, r)
 	})
-}
-
-// servedOverTLS reports whether the browser actually reached us over https.
-//
-// Deliberately stricter than auth.isSecure, which also accepts a configured
-// https public_url. That fallback is right for the session cookie, where the
-// failure it prevents is emitting a JWT without Secure — so guessing "secure"
-// is the safe error. HSTS biases the other way: emitted once over https it
-// pins the host for a year, and a LAN client reaching the same install over
-// plain http would be stranded. Only signals that describe *this* request's
-// transport count.
-//
-// It is also more liberal in one direction: auth.isSecure still exact-matches
-// X-Forwarded-Proto == "https", so behind a proxy that reports the scheme any
-// other way this arms HSTS while the session cookie goes out without Secure.
-// That gap is auth's to close, and closing it there is strictly a hardening.
-func servedOverTLS(r *http.Request) bool {
-	if r.TLS != nil {
-		return true
-	}
-	return httputil.TrustedPeer(r) && forwardedProto(r) == "https"
-}
-
-// forwardedProto reads the browser-facing scheme a reverse proxy reported,
-// lowercased, or "" when it reported none. The caller must have established
-// that the peer is trusted: every header read here is free-form client input
-// off one.
-//
-// Several spellings all mean https and all reach us in the wild, so an exact
-// match on X-Forwarded-Proto: https quietly disarms HSTS on an https-only
-// install. Traefik and HAProxy can emit RFC 7239 Forwarded instead; Apache
-// mod_ssl deployments and several appliances send X-Forwarded-Ssl: on; the
-// scheme token is case-insensitive, so "HTTPS" is legal; and a proxy that
-// appends rather than replaces leaves a chain like "https,http".
-//
-// Order is first-signal-wins, not any-signal-wins: RFC 7239 is the standard and
-// settles it alone, even when it says http and a stale X-Forwarded-* left by an
-// earlier hop disagrees. "Any header that says https" would instead let the
-// *most* stale signal arm a year-long pin.
-func forwardedProto(r *http.Request) string {
-	if proto := forwardedHeaderProto(r.Header.Get("Forwarded")); proto != "" {
-		return proto
-	}
-	if xfp := r.Header.Get("X-Forwarded-Proto"); xfp != "" {
-		return firstHop(xfp)
-	}
-	if strings.EqualFold(
-		strings.TrimSpace(r.Header.Get("X-Forwarded-Ssl")), "on",
-	) {
-		return "https"
-	}
-	return ""
-}
-
-// forwardedHeaderProto pulls proto out of the first element of an RFC 7239
-// Forwarded header. Parameter names are case-insensitive and the value may be
-// a quoted string.
-func forwardedHeaderProto(header string) string {
-	element, _, _ := strings.Cut(header, ",")
-	for param := range strings.SplitSeq(element, ";") {
-		name, value, ok := strings.Cut(param, "=")
-		if !ok || !strings.EqualFold(strings.TrimSpace(name), "proto") {
-			continue
-		}
-		return strings.ToLower(
-			strings.Trim(strings.TrimSpace(value), `"`),
-		)
-	}
-	return ""
-}
-
-// firstHop returns the leftmost entry of a comma-separated forwarded chain,
-// lowercased. Left is the hop nearest the browser — the same convention the
-// X-Forwarded-For walk in httputil reads the chain by — and the browser's own
-// scheme is the one HSTS is about. That walk cannot be reused: it identifies
-// the client by testing each entry against server.trusted_proxies, and a bare
-// scheme token carries no address to test.
-//
-// Behind a proxy that appends rather than replaces, the leftmost entry is
-// whatever the client sent. That does not widen the attack surface HSTS has:
-// the header only ever pins the requesting browser, so forging it pins nobody
-// but the forger. The header a client cannot forge is the one on some *other*
-// user's response, and nothing here reads across requests.
-func firstHop(chain string) string {
-	head, _, _ := strings.Cut(chain, ",")
-	return strings.ToLower(strings.TrimSpace(head))
 }

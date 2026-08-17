@@ -19,6 +19,12 @@ import (
 // produce the spec-declared 403 envelope for the route. This table is the
 // backstop that makes forgetting one non-exploitable, and it is authoritative
 // whenever it is stricter.
+//
+// Reading an infrastructure resource is an admin act here, not a harmless GET:
+// the download-client, indexer, media-server and torrent views carry hosts,
+// ports, usernames, download directories, library sections and every connected
+// peer's IP. request_only exists to file requests, so none of it is theirs to
+// see — the tier is the enforcement, not a field filter in convert.go.
 var minRole = map[string]string{
 	"ListActivity":          roleRequestOnly,
 	"ListDownloadHistory":   roleRequestOnly,
@@ -59,14 +65,14 @@ var minRole = map[string]string{
 	"UpdateOIDCProvider":  roleAdmin,
 	"DeleteOIDCProvider":  roleAdmin,
 
-	"ListDownloadClients":     roleRequestOnly,
+	"ListDownloadClients":     roleAdmin,
 	"CreateDownloadClient":    roleAdmin,
 	"UpdateDownloadClient":    roleAdmin,
 	"DeleteDownloadClient":    roleAdmin,
 	"TestDownloadClient":      roleAdmin,
 	"TestDraftDownloadClient": roleAdmin,
 
-	"ListIndexers":     roleRequestOnly,
+	"ListIndexers":     roleAdmin,
 	"CreateIndexer":    roleAdmin,
 	"UpdateIndexer":    roleAdmin,
 	"DeleteIndexer":    roleAdmin,
@@ -89,8 +95,8 @@ var minRole = map[string]string{
 	"StartPathMigration":    roleAdmin,
 	"PreviewPathMigration":  roleAdmin,
 
-	"ListMediaServers":            roleRequestOnly,
-	"GetMediaServer":              roleRequestOnly,
+	"ListMediaServers":            roleAdmin,
+	"GetMediaServer":              roleAdmin,
 	"CreateMediaServer":           roleAdmin,
 	"UpdateMediaServer":           roleAdmin,
 	"DeleteMediaServer":           roleAdmin,
@@ -102,7 +108,7 @@ var minRole = map[string]string{
 	"GetMovie":                roleRequestOnly,
 	"GetMovieCounts":          roleRequestOnly,
 	"GetMovieRecommendations": roleRequestOnly,
-	"GetMoviePlayOnLinks":     roleRequestOnly,
+	"GetMoviePlayOnLinks":     roleMember,
 	"AddMovie":                roleMember,
 	"PatchMovie":              roleMember,
 	"DeleteMovie":             roleMember,
@@ -141,7 +147,7 @@ var minRole = map[string]string{
 	"GetSeriesCounts":         roleRequestOnly,
 	"LookupSeries":            roleRequestOnly,
 	"GetSeriesLookupDetail":   roleRequestOnly,
-	"GetSeriesPlayOnLinks":    roleRequestOnly,
+	"GetSeriesPlayOnLinks":    roleMember,
 	"AddSeries":               roleMember,
 	"PatchSeries":             roleMember,
 	"DeleteSeries":            roleMember,
@@ -161,8 +167,8 @@ var minRole = map[string]string{
 
 	"GetSystemInfo": roleAdmin,
 
-	"ListTorrents":           roleRequestOnly,
-	"GetTorrent":             roleRequestOnly,
+	"ListTorrents":           roleAdmin,
+	"GetTorrent":             roleAdmin,
 	"AddTorrent":             roleAdmin,
 	"DeleteTorrent":          roleAdmin,
 	"PauseTorrent":           roleAdmin,
@@ -198,6 +204,7 @@ func roleGuard(f StrictHandlerFunc, operationID string) StrictHandlerFunc {
 	) (any, error) {
 		need, listed := minRole[operationID]
 		if !listed {
+			//nolint:sloglint // LogAttrs takes slog.Attr by API design
 			slog.LogAttrs(ctx, observability.LevelCritical,
 				"operation missing from the RBAC table, denying",
 				slog.String("operation", operationID))

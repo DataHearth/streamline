@@ -83,11 +83,74 @@ var _ = g.Describe("authenticateAPI", g.Label("unit"), func() {
 			Expect(rr.Code).To(Equal(http.StatusUnauthorized))
 		})
 
-		g.It("rejects a cookie when Sec-Fetch-Site is absent", func() {
+		g.It(
+			"rejects a POST cookie when Sec-Fetch-Site and Origin are absent",
+			func() {
+				req := httptest.NewRequest(http.MethodPost, "/api/v1/movies", nil)
+				req.AddCookie(
+					&http.Cookie{Name: auth.SessionCookie, Value: sessionToken},
+				)
+				rr := httptest.NewRecorder()
+
+				authenticateAPI(svc, nil, next, rr, req)
+
+				Expect(rr.Code).To(Equal(http.StatusUnauthorized))
+			},
+		)
+
+		// A plain-http LAN install gets no Sec-Fetch-*, and Fetch omits Origin
+		// on a same-origin GET, so the SPA's every read arrives with only a
+		// Referer to prove where it came from.
+		g.It("accepts a GET cookie on a same-origin Referer alone", func() {
+			svc.EXPECT().ValidateToken(sessionToken).Return(claims, nil).Once()
+			svc.EXPECT().ValidateSession(mock.Anything, jti).Return(nil).Once()
+			svc.EXPECT().TouchSessionAsync(jti).Return().Once()
+
+			req := httptest.NewRequest(http.MethodGet, "/api/v1/movies", nil)
+			req.AddCookie(
+				&http.Cookie{Name: auth.SessionCookie, Value: sessionToken},
+			)
+			req.Header.Set("Referer", "http://"+req.Host+"/movies")
+			rr := httptest.NewRecorder()
+
+			authenticateAPI(svc, nil, next, rr, req)
+
+			Expect(rr.Code).To(Equal(http.StatusOK))
+		})
+
+		g.It("rejects a GET cookie carrying a foreign Referer", func() {
+			req := httptest.NewRequest(http.MethodGet, "/api/v1/movies", nil)
+			req.AddCookie(
+				&http.Cookie{Name: auth.SessionCookie, Value: sessionToken},
+			)
+			req.Header.Set("Referer", "http://evil.example/movies")
+			rr := httptest.NewRecorder()
+
+			authenticateAPI(svc, nil, next, rr, req)
+
+			Expect(rr.Code).To(Equal(http.StatusUnauthorized))
+		})
+
+		g.It("rejects a POST cookie even with a same-origin Referer", func() {
 			req := httptest.NewRequest(http.MethodPost, "/api/v1/movies", nil)
 			req.AddCookie(
 				&http.Cookie{Name: auth.SessionCookie, Value: sessionToken},
 			)
+			req.Header.Set("Referer", "http://"+req.Host+"/movies")
+			rr := httptest.NewRecorder()
+
+			authenticateAPI(svc, nil, next, rr, req)
+
+			Expect(rr.Code).To(Equal(http.StatusUnauthorized))
+		})
+
+		g.It("keeps a present Sec-Fetch-Site authoritative over Referer", func() {
+			req := httptest.NewRequest(http.MethodGet, "/api/v1/movies", nil)
+			req.AddCookie(
+				&http.Cookie{Name: auth.SessionCookie, Value: sessionToken},
+			)
+			req.Header.Set("Sec-Fetch-Site", "cross-site")
+			req.Header.Set("Referer", "http://"+req.Host+"/movies")
 			rr := httptest.NewRecorder()
 
 			authenticateAPI(svc, nil, next, rr, req)

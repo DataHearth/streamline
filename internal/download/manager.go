@@ -28,10 +28,12 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// maxTorrentFileSize caps the pre-fetched .torrent payload at 16 MiB —
-// well above any real-world metainfo file but small enough that a
-// misbehaving indexer can't stream us out of memory.
-const maxTorrentFileSize = 16 * 1024 * 1024
+// MaxTorrentFileSize caps a .torrent payload at 16 MiB — well above any
+// real-world metainfo file but small enough that a misbehaving indexer can't
+// stream us out of memory. Exported because the same ceiling has to hold for a
+// .torrent an operator uploads through the API, which never passes through the
+// fetch path below.
+const MaxTorrentFileSize = 16 * 1024 * 1024
 
 // Categorised download-client failures. Handlers map these to 422 with
 // friendly messages; anything not matching is a 500 internal error.
@@ -50,7 +52,47 @@ var (
 	// caller treats this as a soft skip — no grab_failures increment, no
 	// new DownloadRecord — since state has drifted, not a real failure.
 	ErrTorrentAlreadyExists = errors.New("torrent already exists in download client")
+	// ErrUnsafeTorrentName is returned when a client-supplied torrent name
+	// would place the save path outside the configured download directory.
+	ErrUnsafeTorrentName = errors.New(
+		"torrent name escapes the download path",
+	)
 )
+
+// PathUnderRoot reports whether path resolves inside root, or is root itself.
+// The trailing separator is what makes it a containment test rather than a
+// string prefix: without it a root of "/downloads" also matches
+// "/downloads-evil".
+func PathUnderRoot(path, root string) bool {
+	absRoot, err := filepath.Abs(root)
+	if err != nil {
+		return false
+	}
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return false
+	}
+	return absPath == absRoot ||
+		strings.HasPrefix(absPath, absRoot+string(filepath.Separator))
+}
+
+// downloadSavePath joins a client-supplied torrent name onto the configured
+// download path. The name is attacker-controlled all the way from the tracker
+// and the result is later used as an import *source*, so both the name and the
+// joined result are checked: filepath.Join cleans as it joins, so a name like
+// "../../etc" would otherwise collapse the download root away entirely.
+func downloadSavePath(name string) (string, error) {
+	if name == "" || name == "." || name == ".." ||
+		strings.ContainsAny(name, `/\`) {
+		return "", fmt.Errorf("%w: %q", ErrUnsafeTorrentName, name)
+	}
+	root := config.Get().Library.DownloadPath
+	path := filepath.Join(root, name)
+	if !PathUnderRoot(path, root) {
+		return "", fmt.Errorf("%w: %q", ErrUnsafeTorrentName, name)
+	}
+	return path, nil
+}
 
 var (
 	tracer = otel.Tracer("github.com/datahearth/streamline/internal/download")
@@ -614,6 +656,17 @@ func (d *download) CheckStatus(ctx context.Context) ([]CompletedDownload, error)
 				return
 			}
 
+			contentPath, err := downloadSavePath(torrent.Name)
+			if err != nil {
+				slog.WarnContext(ctx,
+					"refusing torrent with unsafe name",
+					"id", record.ID,
+					"name", torrent.Name,
+					"error", err,
+				)
+				return
+			}
+
 			err = d.db.UpdateDownloadRecordStatus(
 				ctx,
 				record.ID,
@@ -627,9 +680,6 @@ func (d *download) CheckStatus(ctx context.Context) ([]CompletedDownload, error)
 				)
 				return
 			}
-			contentPath := filepath.Join(
-				config.Get().Library.DownloadPath, torrent.Name,
-			)
 			if err := d.db.SetDownloadRecordSavePath(
 				ctx,
 				record.ID,
@@ -920,13 +970,13 @@ func resolveTorrentSource(ctx context.Context, dl string) (TorrentSource, error)
 			"indexer returned status %d", resp.StatusCode,
 		)
 	}
-	body, err := io.ReadAll(io.LimitReader(resp.Body, maxTorrentFileSize+1))
+	body, err := io.ReadAll(io.LimitReader(resp.Body, MaxTorrentFileSize+1))
 	if err != nil {
 		return TorrentSource{}, fmt.Errorf("read torrent body: %w", err)
 	}
-	if int64(len(body)) > maxTorrentFileSize {
+	if int64(len(body)) > MaxTorrentFileSize {
 		return TorrentSource{}, fmt.Errorf(
-			"torrent file exceeds %d byte cap", maxTorrentFileSize,
+			"torrent file exceeds %d byte cap", MaxTorrentFileSize,
 		)
 	}
 	if len(body) == 0 {

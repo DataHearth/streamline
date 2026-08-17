@@ -213,10 +213,7 @@ func run(ctx context.Context, cmd *cli.Command) error {
 
 	// 6. Start HTTP server
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
-	httpSrv := &http.Server{
-		Addr:    addr,
-		Handler: app.Server.Router(),
-	}
+	httpSrv := server.NewHTTPServer(addr, app.Server.Router())
 
 	go func() {
 		logger.InfoContext(ctx, "server starting", "addr", addr)

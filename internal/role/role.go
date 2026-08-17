@@ -95,13 +95,12 @@ func (v Value) EntPtr() *entuser.Role {
 // Operator is a role an authenticated admin chose, through the users API.
 // Invited is the role an admin bound to an invite when they issued it. Seed is
 // the first-boot admin, decided by config before anyone can log in.
-// SelfRegistered is auth.oidc_default_role, applied when open registration
-// creates a local account.
 //
 // None of them caps anything: each names a decision the operator already made
-// directly, unlike a claim arriving from an IdP. They are separate functions
-// rather than one so a role write says in its own text where its authority came
-// from, and so the OIDC guard has names to check for rather than shapes.
+// directly about a specific account, unlike a claim arriving from an IdP. They
+// are separate functions rather than one so a role write says in its own text
+// where its authority came from, and so the OIDC guard has names to check for
+// rather than shapes.
 func Operator(r entuser.Role) Value { return known(string(r)) }
 
 // Seed is the first-boot admin. See Operator.
@@ -110,8 +109,22 @@ func Seed(r entuser.Role) Value { return known(string(r)) }
 // Invited is the role an invite carried. See Operator.
 func Invited(r entuser.Role) Value { return known(string(r)) }
 
-// SelfRegistered is the default role for an open registration. See Operator.
-func SelfRegistered(r entuser.Role) Value { return known(string(r)) }
+// SelfRegistered is the role an open registration lands on: auth.oidc_default_role,
+// applied to an account an anonymous request just created for itself.
+//
+// It clamps admin to member, exactly as Federated clamps that same key's admin
+// down for a provider without allow_admin. The key is read on two paths and
+// only the OIDC one has a provider whose allow_admin can vouch for admin, so
+// leaving it uncapped here would let an operator who set oidc_default_role:
+// admin for a provider they do trust hand admin to whoever posts /auth/register
+// first — the inversion where presenting no identity at all outranks a
+// federated login.
+func SelfRegistered(r entuser.Role) Value {
+	if r == entuser.RoleAdmin {
+		r = entuser.RoleMember
+	}
+	return known(string(r))
+}
 
 // known wraps a role the caller vouched for, refusing one this build does not
 // rank. An unranked string would otherwise reach the column and satisfy no

@@ -196,6 +196,19 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 			Expect(err).To(MatchError(ContainSubstring("db boom")))
 		})
 
+		It("refuses to persist an adoption with a traversing name", func() {
+			configtest.Setup(map[string]any{
+				"library": map[string]any{"download_path": "/downloads"},
+			})
+			d := &download{db: store}
+			_, err := d.persistAdoption(
+				ctx,
+				untrackedTorrent{t: Torrent{Name: "../../etc/passwd"}},
+				adoptDecision{},
+			)
+			Expect(err).To(MatchError(ErrUnsafeTorrentName))
+		})
+
 		It("no-ops when no download clients are configured", func() {
 			configtest.Setup()
 			store.EXPECT().AllDownloadRecordHashes(mock.Anything).
