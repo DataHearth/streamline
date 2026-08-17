@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ArrowDown, ArrowUp, Check, MoreHorizontal, Pause, X } from "@lucide/svelte";
+	import { ArrowDown, ArrowUp, Check, Ellipsis, Pause, X } from "@lucide/svelte";
 	import { ringReading } from "../../lib/activity-touch";
 	import type { StatusKind } from "../shared/StatusPill.svelte";
 
@@ -66,7 +66,7 @@
 			{:else if reading.glyph === "down"}
 				<ArrowDown size={GLYPH[size]} strokeWidth={2.6} aria-hidden="true" />
 			{:else}
-				<MoreHorizontal size={GLYPH[size]} strokeWidth={2.6} aria-hidden="true" />
+				<Ellipsis size={GLYPH[size]} strokeWidth={2.6} aria-hidden="true" />
 			{/if}
 		</span>
 	{/if}

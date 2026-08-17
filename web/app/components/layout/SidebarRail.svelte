@@ -77,11 +77,16 @@
 		};
 		const t = setTimeout(() => document.addEventListener("mousedown", onDoc));
 		document.addEventListener("keydown", onKey);
+		// Bound here rather than as onclick= on the menu: a click handler on a
+		// role="menu" div is an a11y warning, and the menuitems it delegates for
+		// are already keyboard-operable (Enter fires click).
+		node.addEventListener("click", closeFlyout);
 		return {
 			destroy() {
 				clearTimeout(t);
 				document.removeEventListener("mousedown", onDoc);
 				document.removeEventListener("keydown", onKey);
+				node.removeEventListener("click", closeFlyout);
 			},
 		};
 	}
@@ -179,7 +184,6 @@
 						role="menu"
 						aria-label={group.label}
 						transition:fly={{ x: -8, duration: 160, easing: cubicOut }}
-						onclick={closeFlyout}
 						class="absolute left-full top-0 z-50 ml-2.5 w-[272px] overflow-hidden rounded-xl border border-border-strong bg-bg-elevated p-1.5 shadow-4"
 					>
 						<div

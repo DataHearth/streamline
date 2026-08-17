@@ -3553,6 +3553,9 @@ type OIDCProviderCreated = OIDCProviderView
 // OIDCProviderList defines model for OIDCProviderList.
 type OIDCProviderList = OIDCProviderListView
 
+// PayloadTooLarge defines model for PayloadTooLarge.
+type PayloadTooLarge = Error
+
 // RequestCountsResponse defines model for RequestCountsResponse.
 type RequestCountsResponse = RequestCounts
 
@@ -9673,6 +9676,8 @@ type PathMigrationPreviewJSONResponse PathMigrationPreview
 
 type PathMigrationRootListJSONResponse PathMigrationRootList
 
+type PayloadTooLargeJSONResponse Error
+
 type PendingListJSONResponse PendingList
 
 type RequestCountsResponseJSONResponse RequestCounts
@@ -9984,6 +9989,20 @@ func (response IgnorePending404JSONResponse) VisitIgnorePendingResponse(w http.R
 	return err
 }
 
+type IgnorePending413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response IgnorePending413JSONResponse) VisitIgnorePendingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type IgnorePending500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response IgnorePending500JSONResponse) VisitIgnorePendingResponse(w http.ResponseWriter) error {
@@ -10095,6 +10114,20 @@ func (response ReplacePending404JSONResponse) VisitReplacePendingResponse(w http
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplacePending413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response ReplacePending413JSONResponse) VisitReplacePendingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -10376,6 +10409,20 @@ func (response CreateInvite403JSONResponse) VisitCreateInviteResponse(w http.Res
 	return err
 }
 
+type CreateInvite413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response CreateInvite413JSONResponse) VisitCreateInviteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type RevokeInviteRequestObject struct {
 	Id ResourceID `json:"id"`
 }
@@ -10452,6 +10499,20 @@ func (response RotateJWTSecret403JSONResponse) VisitRotateJWTSecretResponse(w ht
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RotateJWTSecret413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response RotateJWTSecret413JSONResponse) VisitRotateJWTSecretResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -10541,6 +10602,20 @@ func (response UpdateMe401JSONResponse) VisitUpdateMeResponse(w http.ResponseWri
 	return err
 }
 
+type UpdateMe413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response UpdateMe413JSONResponse) VisitUpdateMeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListMyApiKeysRequestObject struct {
 }
 
@@ -10608,6 +10683,20 @@ func (response CreateMyApiKey401JSONResponse) VisitCreateMyApiKeyResponse(w http
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateMyApiKey413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response CreateMyApiKey413JSONResponse) VisitCreateMyApiKeyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -10765,6 +10854,20 @@ func (response ChangePassword401JSONResponse) VisitChangePasswordResponse(w http
 	return err
 }
 
+type ChangePassword413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response ChangePassword413JSONResponse) VisitChangePasswordResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ChangePassword422JSONResponse struct {
 	UnprocessableEntityJSONResponse
 }
@@ -10888,6 +10991,20 @@ func (response UpdateConfigAuth403JSONResponse) VisitUpdateConfigAuthResponse(w 
 	return err
 }
 
+type UpdateConfigAuth413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response UpdateConfigAuth413JSONResponse) VisitUpdateConfigAuthResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type UpdateConfigAuth422JSONResponse struct {
 	UnprocessableEntityJSONResponse
 }
@@ -10971,6 +11088,20 @@ func (response UpdateConfigLibrary403JSONResponse) VisitUpdateConfigLibraryRespo
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateConfigLibrary413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response UpdateConfigLibrary413JSONResponse) VisitUpdateConfigLibraryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -11074,6 +11205,20 @@ func (response CreateOIDCProvider409JSONResponse) VisitCreateOIDCProviderRespons
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateOIDCProvider413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response CreateOIDCProvider413JSONResponse) VisitCreateOIDCProviderResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -11239,6 +11384,20 @@ func (response UpdateOIDCProvider404JSONResponse) VisitUpdateOIDCProviderRespons
 	return err
 }
 
+type UpdateOIDCProvider413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response UpdateOIDCProvider413JSONResponse) VisitUpdateOIDCProviderResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type UpdateOIDCProvider422JSONResponse struct {
 	UnprocessableEntityJSONResponse
 }
@@ -11354,6 +11513,20 @@ func (response CreateDownloadClient409JSONResponse) VisitCreateDownloadClientRes
 	return err
 }
 
+type CreateDownloadClient413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response CreateDownloadClient413JSONResponse) VisitCreateDownloadClientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type CreateDownloadClient422JSONResponse struct {
 	UnprocessableEntityJSONResponse
 }
@@ -11409,6 +11582,20 @@ func (response TestDraftDownloadClient403JSONResponse) VisitTestDraftDownloadCli
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type TestDraftDownloadClient413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response TestDraftDownloadClient413JSONResponse) VisitTestDraftDownloadClientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -11548,6 +11735,20 @@ func (response UpdateDownloadClient404JSONResponse) VisitUpdateDownloadClientRes
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateDownloadClient413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response UpdateDownloadClient413JSONResponse) VisitUpdateDownloadClientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -11754,6 +11955,20 @@ func (response CreateIndexer409JSONResponse) VisitCreateIndexerResponse(w http.R
 	return err
 }
 
+type CreateIndexer413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response CreateIndexer413JSONResponse) VisitCreateIndexerResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type CreateIndexer422JSONResponse struct {
 	UnprocessableEntityJSONResponse
 }
@@ -11809,6 +12024,20 @@ func (response TestDraftIndexer403JSONResponse) VisitTestDraftIndexerResponse(w 
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type TestDraftIndexer413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response TestDraftIndexer413JSONResponse) VisitTestDraftIndexerResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -11948,6 +12177,20 @@ func (response UpdateIndexer404JSONResponse) VisitUpdateIndexerResponse(w http.R
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateIndexer413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response UpdateIndexer413JSONResponse) VisitUpdateIndexerResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -12137,6 +12380,20 @@ func (response StartImport409JSONResponse) VisitStartImportResponse(w http.Respo
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type StartImport413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response StartImport413JSONResponse) VisitStartImportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -12494,6 +12751,20 @@ func (response UpdateImportFileDecision404JSONResponse) VisitUpdateImportFileDec
 	return err
 }
 
+type UpdateImportFileDecision413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response UpdateImportFileDecision413JSONResponse) VisitUpdateImportFileDecisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListImportShowsRequestObject struct {
 	Id     ResourceID `json:"id"`
 	Params ListImportShowsParams
@@ -12597,6 +12868,20 @@ func (response UpdateImportShowDecision404JSONResponse) VisitUpdateImportShowDec
 	return err
 }
 
+type UpdateImportShowDecision413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response UpdateImportShowDecision413JSONResponse) VisitUpdateImportShowDecisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetPathMigrationRequestObject struct {
 }
 
@@ -12682,6 +12967,20 @@ func (response StartPathMigration409JSONResponse) VisitStartPathMigrationRespons
 	return err
 }
 
+type StartPathMigration413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response StartPathMigration413JSONResponse) VisitStartPathMigrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type StartPathMigration422JSONResponse struct {
 	UnprocessableEntityJSONResponse
 }
@@ -12732,6 +13031,20 @@ func (response PreviewPathMigration403JSONResponse) VisitPreviewPathMigrationRes
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PreviewPathMigration413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response PreviewPathMigration413JSONResponse) VisitPreviewPathMigrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -12888,6 +13201,20 @@ func (response CreateMediaServer409JSONResponse) VisitCreateMediaServerResponse(
 	return err
 }
 
+type CreateMediaServer413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response CreateMediaServer413JSONResponse) VisitCreateMediaServerResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type CreateMediaServer422JSONResponse struct {
 	UnprocessableEntityJSONResponse
 }
@@ -12956,6 +13283,20 @@ func (response DiscoverMediaServerSections403JSONResponse) VisitDiscoverMediaSer
 	return err
 }
 
+type DiscoverMediaServerSections413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response DiscoverMediaServerSections413JSONResponse) VisitDiscoverMediaServerSectionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type DiscoverMediaServerSections422JSONResponse struct {
 	UnprocessableEntityJSONResponse
 }
@@ -13011,6 +13352,20 @@ func (response TestDraftMediaServer403JSONResponse) VisitTestDraftMediaServerRes
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type TestDraftMediaServer413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response TestDraftMediaServer413JSONResponse) VisitTestDraftMediaServerResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -13217,6 +13572,20 @@ func (response UpdateMediaServer404JSONResponse) VisitUpdateMediaServerResponse(
 	return err
 }
 
+type UpdateMediaServer413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response UpdateMediaServer413JSONResponse) VisitUpdateMediaServerResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type UpdateMediaServer422JSONResponse struct {
 	UnprocessableEntityJSONResponse
 }
@@ -13406,6 +13775,20 @@ func (response AddMovie409JSONResponse) VisitAddMovieResponse(w http.ResponseWri
 	return err
 }
 
+type AddMovie413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response AddMovie413JSONResponse) VisitAddMovieResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type AddMovie500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response AddMovie500JSONResponse) VisitAddMovieResponse(w http.ResponseWriter) error {
@@ -13589,6 +13972,20 @@ func (response PatchMovie404JSONResponse) VisitPatchMovieResponse(w http.Respons
 	return err
 }
 
+type PatchMovie413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response PatchMovie413JSONResponse) VisitPatchMovieResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type PatchMovie500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response PatchMovie500JSONResponse) VisitPatchMovieResponse(w http.ResponseWriter) error {
@@ -13630,6 +14027,20 @@ func (response DeleteMovieFile404JSONResponse) VisitDeleteMovieFileResponse(w ht
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteMovieFile413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response DeleteMovieFile413JSONResponse) VisitDeleteMovieFileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -13683,6 +14094,20 @@ func (response GrabMovieRelease404JSONResponse) VisitGrabMovieReleaseResponse(w 
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GrabMovieRelease413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response GrabMovieRelease413JSONResponse) VisitGrabMovieReleaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -14121,6 +14546,20 @@ func (response CreateQualityProfile409JSONResponse) VisitCreateQualityProfileRes
 	return err
 }
 
+type CreateQualityProfile413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response CreateQualityProfile413JSONResponse) VisitCreateQualityProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type CreateQualityProfile422JSONResponse struct {
 	UnprocessableEntityJSONResponse
 }
@@ -14274,6 +14713,20 @@ func (response UpdateQualityProfile404JSONResponse) VisitUpdateQualityProfileRes
 	return err
 }
 
+type UpdateQualityProfile413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response UpdateQualityProfile413JSONResponse) VisitUpdateQualityProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type UpdateQualityProfile422JSONResponse struct {
 	UnprocessableEntityJSONResponse
 }
@@ -14404,6 +14857,20 @@ func (response CreateRequest409JSONResponse) VisitCreateRequestResponse(w http.R
 	return err
 }
 
+type CreateRequest413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response CreateRequest413JSONResponse) VisitCreateRequestResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type CreateRequest500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response CreateRequest500JSONResponse) VisitCreateRequestResponse(w http.ResponseWriter) error {
@@ -14520,6 +14987,20 @@ func (response ApproveRequest404JSONResponse) VisitApproveRequestResponse(w http
 	return err
 }
 
+type ApproveRequest413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response ApproveRequest413JSONResponse) VisitApproveRequestResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ApproveRequest500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response ApproveRequest500JSONResponse) VisitApproveRequestResponse(w http.ResponseWriter) error {
@@ -14581,6 +15062,20 @@ func (response DenyRequest404JSONResponse) VisitDenyRequestResponse(w http.Respo
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DenyRequest413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response DenyRequest413JSONResponse) VisitDenyRequestResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -14917,6 +15412,20 @@ func (response UpdateSchedule404JSONResponse) VisitUpdateScheduleResponse(w http
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateSchedule413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response UpdateSchedule413JSONResponse) VisitUpdateScheduleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -15331,6 +15840,20 @@ func (response AddSeries409JSONResponse) VisitAddSeriesResponse(w http.ResponseW
 	return err
 }
 
+type AddSeries413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response AddSeries413JSONResponse) VisitAddSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type AddSeries500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response AddSeries500JSONResponse) VisitAddSeriesResponse(w http.ResponseWriter) error {
@@ -15638,6 +16161,20 @@ func (response PatchSeries404JSONResponse) VisitPatchSeriesResponse(w http.Respo
 	return err
 }
 
+type PatchSeries413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response PatchSeries413JSONResponse) VisitPatchSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type PatchSeries500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response PatchSeries500JSONResponse) VisitPatchSeriesResponse(w http.ResponseWriter) error {
@@ -15733,6 +16270,20 @@ func (response PatchEpisode404JSONResponse) VisitPatchEpisodeResponse(w http.Res
 	return err
 }
 
+type PatchEpisode413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response PatchEpisode413JSONResponse) VisitPatchEpisodeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type PatchEpisode500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response PatchEpisode500JSONResponse) VisitPatchEpisodeResponse(w http.ResponseWriter) error {
@@ -15778,6 +16329,20 @@ func (response DeleteEpisodeFile404JSONResponse) VisitDeleteEpisodeFileResponse(
 	return err
 }
 
+type DeleteEpisodeFile413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response DeleteEpisodeFile413JSONResponse) VisitDeleteEpisodeFileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type DeleteEpisodeFile500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response DeleteEpisodeFile500JSONResponse) VisitDeleteEpisodeFileResponse(w http.ResponseWriter) error {
@@ -15819,6 +16384,20 @@ func (response GrabEpisodeRelease404JSONResponse) VisitGrabEpisodeReleaseRespons
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GrabEpisodeRelease413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response GrabEpisodeRelease413JSONResponse) VisitGrabEpisodeReleaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -15930,6 +16509,20 @@ func (response GrabSeriesRelease404JSONResponse) VisitGrabSeriesReleaseResponse(
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GrabSeriesRelease413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response GrabSeriesRelease413JSONResponse) VisitGrabSeriesReleaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -16203,6 +16796,20 @@ func (response PatchSeason404JSONResponse) VisitPatchSeasonResponse(w http.Respo
 	return err
 }
 
+type PatchSeason413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response PatchSeason413JSONResponse) VisitPatchSeasonResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type PatchSeason500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response PatchSeason500JSONResponse) VisitPatchSeasonResponse(w http.ResponseWriter) error {
@@ -16244,6 +16851,20 @@ func (response GrabSeasonRelease404JSONResponse) VisitGrabSeasonReleaseResponse(
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GrabSeasonRelease413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response GrabSeasonRelease413JSONResponse) VisitGrabSeasonReleaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -16463,6 +17084,20 @@ func (response AddTorrent404JSONResponse) VisitAddTorrentResponse(w http.Respons
 	return err
 }
 
+type AddTorrent413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response AddTorrent413JSONResponse) VisitAddTorrentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type AddTorrent422JSONResponse struct {
 	UnprocessableEntityJSONResponse
 }
@@ -16614,6 +17249,20 @@ func (response SetTorrentFilePriority404JSONResponse) VisitSetTorrentFilePriorit
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetTorrentFilePriority413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response SetTorrentFilePriority413JSONResponse) VisitSetTorrentFilePriorityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -16838,6 +17487,20 @@ func (response CreateUser409JSONResponse) VisitCreateUserResponse(w http.Respons
 	return err
 }
 
+type CreateUser413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response CreateUser413JSONResponse) VisitCreateUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type CreateUser422JSONResponse struct {
 	UnprocessableEntityJSONResponse
 }
@@ -17026,6 +17689,20 @@ func (response UpdateUser409JSONResponse) VisitUpdateUserResponse(w http.Respons
 	return err
 }
 
+type UpdateUser413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response UpdateUser413JSONResponse) VisitUpdateUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type RevokeUserApiKeyRequestObject struct {
 	Uid UserID   `json:"uid"`
 	Kid ApiKeyID `json:"kid"`
@@ -17110,6 +17787,20 @@ func (response ResetUserPassword404JSONResponse) VisitResetUserPasswordResponse(
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ResetUserPassword413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response ResetUserPassword413JSONResponse) VisitResetUserPasswordResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
 	_, err := buf.WriteTo(w)
 	return err
 }

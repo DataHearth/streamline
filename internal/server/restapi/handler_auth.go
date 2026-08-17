@@ -197,8 +197,7 @@ func (s *Server) RevokeInvite(
 }
 
 func requireAdmin(ctx context.Context) error {
-	c := auth.ClaimsFromContext(ctx)
-	if c == nil || c.Role != "admin" {
+	if !auth.IsAdmin(ctx) {
 		return errNotAdmin
 	}
 	return nil

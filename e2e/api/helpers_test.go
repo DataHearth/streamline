@@ -91,6 +91,21 @@ func post(path string, id identity, body any) *http.Response {
 	return do(http.MethodPost, path, id, body)
 }
 
+// postRaw sends a body the caller built byte for byte, for the cases where the
+// bytes themselves are the subject and marshalling a Go value would hide them.
+func postRaw(path string, id identity, body []byte) *http.Response {
+	GinkgoHelper()
+	req, err := http.NewRequest(
+		http.MethodPost, baseURL+path, bytes.NewReader(body),
+	)
+	Expect(err).NotTo(HaveOccurred())
+	req.Header.Set("Content-Type", "application/json")
+	id.apply(req)
+	resp, err := httpClient.Do(req)
+	Expect(err).NotTo(HaveOccurred())
+	return resp
+}
+
 func put(path string, id identity, body any) *http.Response {
 	GinkgoHelper()
 	return do(http.MethodPut, path, id, body)

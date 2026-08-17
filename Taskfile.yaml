@@ -143,6 +143,12 @@ tasks:
     deps: [build:js, build:css]
     cmd: go tool golangci-lint run ./...
 
+  vulncheck:
+    desc: Scan dependencies for known vulnerabilities
+    # Same //go:embed constraint as lint:go — govulncheck loads the packages.
+    deps: [build:js, build:css]
+    cmd: go tool govulncheck ./...
+
   lint:frontend:
     desc: Lint JS/CSS (biome)
     cmds:
@@ -192,7 +198,7 @@ tasks:
       - rm -rf web/static/dist
 
   build:oci:
-    desc: Build the streamline OCI image (datahearth/streamline:{{.TAG}})
+    desc: Build the streamline OCI image (ghcr.io/datahearth/streamline:{{.TAG}})
     vars:
       TAG: '{{.TAG | default "dev"}}'
     cmds:
@@ -252,7 +258,8 @@ tasks:
   helm:kind:load:
     desc: Load streamline image into kind
     deps: [build:oci]
-    cmd: kind load docker-image datahearth/streamline:dev --name streamline-dev
+    cmd: kind load docker-image ghcr.io/datahearth/streamline:dev --name
+      streamline-dev
 
   helm:install:
     desc: Install chart into current kube context
@@ -260,7 +267,6 @@ tasks:
     cmd: |
       helm upgrade --install streamline deploy/helm/streamline \
         --namespace streamline --create-namespace \
-        --set image.repository=datahearth/streamline \
         --set image.tag=dev \
         --set image.pullPolicy=IfNotPresent \
         --set observability.enabled=true \
@@ -268,7 +274,7 @@ tasks:
 
   helm:test:
     desc: Run helm test hooks
-    cmd: helm test streamline --logs
+    cmd: helm test streamline --namespace streamline --logs
 
   helm:e2e:
     desc: Full kind-based e2e (build, load, install, test, teardown)

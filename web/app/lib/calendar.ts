@@ -31,10 +31,12 @@ export type CalendarEvent = {
 };
 
 // Dots are a bare colour with no label, so they may only encode the one thing
-// the calendar legend and filter chips already name: movie (amber) vs episode
-// (purple). Real state goes on a pill, which carries text.
-export function dotToken(e: CalendarEvent): "wanted" | "grabbing" {
-	return e.kind === "movie" ? "wanted" : "grabbing";
+// the calendar legend and filter chips already name: movie vs episode. Real
+// state goes on a pill, which carries text. The two colours come from
+// `--kind-*`, not `--status-*`: borrowing amber and violet made every movie
+// look Wanted and every episode look like it was importing.
+export function dotToken(e: CalendarEvent): CalendarKind {
+	return e.kind;
 }
 
 export type GridCell = { date: Date; inMonth: boolean };
