@@ -51,6 +51,19 @@ linters:
   exclusions:
     generated: lax
     rules:
+      # gosec in test code, scoped to the fixture-shaped rule classes — not a
+      # blanket exclusion, so the rest of gosec still runs over tests. The
+      # seeded e2e admin password (G101), 0644/0755 fixture files and dirs
+      # (G301/G306), a chmod whose whole point is to provoke a permission
+      # error (G302), reads of paths assembled under TempDir (G304), math/rand
+      # for picking a listen port (G404), crypto/sha1 in the torznab fake
+      # (G401/G505 — BitTorrent defines piece hashes as SHA-1), cookies built
+      # as request fixtures (G124), and discarded errors that errcheck already
+      # governs (G104) are each the test doing its job.
+      - linters:
+          - gosec
+        path: (_test\.go$|^e2e/|^internal/testutil/)
+        text: "G(101|104|124|301|302|304|306|401|404|505)"
       - linters:
           - errcheck
         source: .*\.Close\(\)
