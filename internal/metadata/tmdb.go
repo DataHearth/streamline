@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"math"
 	"net/http"
 	"net/url"
 	"sort"
@@ -226,9 +227,8 @@ func (t *TMDB) GetMovie(ctx context.Context, tmdbID uint32) (*MovieDetails, erro
 			Overview:      overview,
 			PosterPath:    resp.PosterPath,
 		},
-		Genres: genres,
-		//nolint:gosec // minutes from TMDB; uint16 mirrors the ent column
-		Runtime:          uint16(resp.Runtime),
+		Genres:           genres,
+		Runtime:          clampUint16(resp.Runtime),
 		Rating:           resp.VoteAverage,
 		VoteCount:        resp.VoteCount,
 		Cast:             cast,
@@ -434,6 +434,19 @@ func (t *TMDB) withLang(p url.Values, lang string) url.Values {
 	}
 	p.Set("language", lang)
 	return p
+}
+
+// clampUint16 saturates a third-party int into the uint16 that mirrors the
+// ent column, so a bad payload cannot wrap. The early-return shape is what
+// both gosec's range analysis and modernize's minmax check accept.
+func clampUint16(v int) uint16 {
+	if v <= 0 {
+		return 0
+	}
+	if v >= math.MaxUint16 {
+		return math.MaxUint16
+	}
+	return uint16(v)
 }
 
 func extractYear(releaseDate string) uint16 {
