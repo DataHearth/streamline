@@ -13342,6 +13342,20 @@ func (response ListMovies200JSONResponse) VisitListMoviesResponse(w http.Respons
 	return err
 }
 
+type ListMovies400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListMovies400JSONResponse) VisitListMoviesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListMovies500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response ListMovies500JSONResponse) VisitListMoviesResponse(w http.ResponseWriter) error {
@@ -14326,6 +14340,20 @@ func (response ListRequests200JSONResponse) VisitListRequestsResponse(w http.Res
 	return err
 }
 
+type ListRequests400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListRequests400JSONResponse) VisitListRequestsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListRequests401JSONResponse struct{ UnauthorizedJSONResponse }
 
 func (response ListRequests401JSONResponse) VisitListRequestsResponse(w http.ResponseWriter) error {
@@ -15263,6 +15291,20 @@ func (response ListSeries200JSONResponse) VisitListSeriesResponse(w http.Respons
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListSeries400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListSeries400JSONResponse) VisitListSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
 	_, err := buf.WriteTo(w)
 	return err
 }

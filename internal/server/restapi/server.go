@@ -115,13 +115,14 @@ func Mount(r chi.Router, s *Server) {
 			// The generated default writes err.Error() as text/plain; a handler
 			// returning a non-nil error would hand the client the raw internal
 			// error. Bad requests keep echoing their own decode/binding failure,
-			// which is user input, not internal state.
+			// which is user input, not internal state — but as the JSON error
+			// shape every other response on this API uses.
 			RequestErrorHandlerFunc: func(
 				w http.ResponseWriter,
-				_ *http.Request,
+				r *http.Request,
 				err error,
 			) {
-				http.Error(w, err.Error(), http.StatusBadRequest)
+				denyJSON(r.Context(), w, http.StatusBadRequest, err.Error())
 			},
 			ResponseErrorHandlerFunc: func(
 				w http.ResponseWriter,
@@ -139,5 +140,17 @@ func Mount(r chi.Router, s *Server) {
 			},
 		},
 	)
-	HandlerFromMuxWithBaseURL(handler, r, "/api/v1")
+	HandlerWithOptions(handler, ChiServerOptions{
+		BaseURL:    "/api/v1",
+		BaseRouter: r,
+		// Param-binding failures (e.g. ?page=70000 into a uint16) otherwise
+		// fall back to the generated text/plain http.Error on an all-JSON API.
+		ErrorHandlerFunc: func(
+			w http.ResponseWriter,
+			r *http.Request,
+			err error,
+		) {
+			denyJSON(r.Context(), w, http.StatusBadRequest, err.Error())
+		},
+	})
 }

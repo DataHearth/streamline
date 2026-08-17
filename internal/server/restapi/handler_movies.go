@@ -18,10 +18,10 @@ func (s *Server) ListMovies(
 	ctx context.Context,
 	request ListMoviesRequestObject,
 ) (ListMoviesResponseObject, error) {
-	page, limit := uint16(1), uint16(20)
-	if request.Params.Page != nil {
-		page = *request.Params.Page
-	}
+	// pageOr coerces page=0 to the default: the spec's minimum is not
+	// runtime-enforced, and /series and /requests already coerce — without
+	// this, the movie service's page>0 guard turns client input into a 500.
+	page, limit := pageOr(request.Params.Page, 1), uint16(20)
 	if request.Params.Limit != nil {
 		limit = clampLimit(*request.Params.Limit, moviesMaxLimit)
 	}
@@ -56,8 +56,6 @@ func (s *Server) GetMovieCounts(
 			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
-	trend := make([]int, len(counts.Trend))
-	copy(trend, counts.Trend)
 	return GetMovieCounts200JSONResponse{
 		MovieCountsResponseJSONResponse: MovieCountsResponseJSONResponse{
 			Total:       counts.Total,
@@ -65,7 +63,7 @@ func (s *Server) GetMovieCounts(
 			Downloading: counts.Downloading,
 			Available:   counts.Available,
 			Failed:      counts.Failed,
-			Trend:       trend,
+			Trend:       counts.Trend,
 		},
 	}, nil
 }

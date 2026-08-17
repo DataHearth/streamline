@@ -32,6 +32,38 @@ var _ = Describe(
 		})
 
 		Describe("ListMovies", func() {
+			It("coerces page=0 to the first page instead of erroring", func() {
+				app.movies.EXPECT().
+					List(mock.Anything, uint16(1), uint16(20)).
+					Return([]*ent.Movie{}, 0, nil).
+					Once()
+
+				resp := app.do(app.req(
+					http.MethodGet,
+					"/api/v1/movies?page=0",
+					app.adminKey,
+					nil,
+				))
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			})
+
+			It("rejects an out-of-range page with a JSON 400", func() {
+				resp := app.do(app.req(
+					http.MethodGet,
+					"/api/v1/movies?page=70000",
+					app.adminKey,
+					nil,
+				))
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+				Expect(resp.Header.Get("Content-Type")).
+					To(HavePrefix("application/json"))
+				var body Error
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				Expect(body.Message).To(ContainSubstring("page"))
+			})
+
 			It("clamps a limit above the documented maximum", func() {
 				app.movies.EXPECT().
 					List(mock.Anything, uint16(1), uint16(moviesMaxLimit)).

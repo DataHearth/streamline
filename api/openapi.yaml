@@ -66,6 +66,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PaginatedMovies"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "500":
           $ref: "#/components/responses/InternalError"
     post:
@@ -383,6 +385,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/SeriesList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "500":
           $ref: "#/components/responses/InternalError"
     post:
@@ -2543,6 +2547,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/RequestsList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "500":
