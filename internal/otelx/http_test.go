@@ -161,7 +161,7 @@ var _ = Describe("HTTPClient", Label("unit", "otelx"), func() {
 
 				_, err = otelx.HTTPClient.Do(
 					req,
-				) //nolint:bodyclose // the request never completes
+				)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring(key))
 			})
