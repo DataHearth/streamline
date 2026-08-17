@@ -18,9 +18,8 @@ func (s *Server) ListMovies(
 	ctx context.Context,
 	request ListMoviesRequestObject,
 ) (ListMoviesResponseObject, error) {
-	// pageOr coerces page=0 to the default: the spec's minimum is not
-	// runtime-enforced, and /series and /requests already coerce — without
-	// this, the movie service's page>0 guard turns client input into a 500.
+	// The service coerces page=0 itself (like tvshow's), but pageOr keeps
+	// the response's echoed Page field at 1 rather than parroting the 0.
 	page, limit := pageOr(request.Params.Page, 1), uint16(20)
 	if request.Params.Limit != nil {
 		limit = clampLimit(*request.Params.Limit, moviesMaxLimit)

@@ -253,11 +253,13 @@ func (s *Service) List(
 	)
 	defer span.End()
 
+	// Coerce like tvshow.Service.List: a zero page or limit is a client
+	// default, not an error.
 	if page == 0 {
-		return nil, 0, otelx.RecordSpanError(span, fmt.Errorf("page must be > 0"))
+		page = 1
 	}
 	if limit == 0 {
-		return nil, 0, otelx.RecordSpanError(span, fmt.Errorf("limit must be > 0"))
+		limit = 20
 	}
 
 	total, err := s.db.CountMovies(ctx)

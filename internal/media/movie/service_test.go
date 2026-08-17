@@ -182,14 +182,13 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 	})
 
 	Describe("List", func() {
-		It("rejects page=0", func() {
-			_, _, err := svc.List(ctx, 0, 10)
-			Expect(err).To(MatchError("page must be > 0"))
-		})
+		It("coerces page=0 and limit=0 to the defaults", func() {
+			storeMock.CountMovies(mock.Anything).Return(0, nil).Once()
+			storeMock.ListMovies(mock.Anything, uint32(0), uint32(20)).
+				Return([]*ent.Movie{}, nil).Once()
 
-		It("rejects limit=0", func() {
-			_, _, err := svc.List(ctx, 1, 0)
-			Expect(err).To(MatchError("limit must be > 0"))
+			_, _, err := svc.List(ctx, 0, 0)
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("wraps count errors", func() {
