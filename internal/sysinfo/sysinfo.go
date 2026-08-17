@@ -138,7 +138,14 @@ func diskUsage(total, free int64) *DiskUsage {
 	// unprivileged total (negative used), and a raced statfs could do the
 	// reverse — either would wrap uint8 into a nonsense badge percentage.
 	// Spelled as branches, not min/max, so gosec's range analysis can see it.
-	pctWide := used * 100 / total
+	// Divide before multiplying when total allows it: used*100 overflows
+	// int64 past ~92PB, and the clamp would misread the wrap as 0%.
+	var pctWide int64
+	if total >= 100 {
+		pctWide = used / (total / 100)
+	} else {
+		pctWide = used * 100 / total
+	}
 	if pctWide < 0 {
 		pctWide = 0
 	} else if pctWide > 100 {
