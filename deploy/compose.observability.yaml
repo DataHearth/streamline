@@ -1,6 +1,17 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/main/schema/compose-spec.json
 #
 # Reference observability stack: VictoriaMetrics + VictoriaLogs + VictoriaTraces + Grafana Alloy + Grafana.
+#
+# This stack is development-only. Every published port is bound to 127.0.0.1 on
+# purpose: the Victoria* backends and Alloy serve unauthenticated write and
+# admin APIs (/api/v1/write, /api/v1/admin/tsdb/delete_series, /insert/*), so
+# publishing them on a reachable interface lets anyone on the network read,
+# forge and delete telemetry. Do not widen the bindings to reach the stack
+# remotely; put it behind an authenticated TLS reverse proxy or a VPN instead.
+# Grafana keeps anonymous Viewer access on purpose so the demo dashboards open
+# without a sign-in; the loopback bindings and the reverse-proxy/VPN guidance
+# above are what keep the unauthenticated backends off the network.
+#
 # Usage: docker compose -f deploy/compose.observability.yaml up -d
 
 services:
@@ -9,7 +20,7 @@ services:
     container_name: streamline
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     volumes:
       - ./data:/data
       - ./config:/etc/streamline:ro
@@ -27,7 +38,7 @@ services:
       - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
     command: ["run", "/etc/alloy/config.alloy"]
     ports:
-      - "12345:12345" # Alloy UI
+      - "127.0.0.1:12345:12345" # Alloy UI
 
   victoriametrics:
     image: victoriametrics/victoria-metrics:latest
@@ -39,7 +50,7 @@ services:
     volumes:
       - vm-data:/victoria-metrics-data
     ports:
-      - "8428:8428"
+      - "127.0.0.1:8428:8428"
 
   victorialogs:
     image: victoriametrics/victoria-logs:latest
@@ -51,7 +62,7 @@ services:
     volumes:
       - vl-data:/victoria-logs-data
     ports:
-      - "9428:9428"
+      - "127.0.0.1:9428:9428"
 
   victoriatraces:
     image: victoriametrics/victoria-traces:latest
@@ -63,7 +74,7 @@ services:
     volumes:
       - vt-data:/victoria-traces-data
     ports:
-      - "10428:10428"
+      - "127.0.0.1:10428:10428"
 
   grafana:
     image: grafana/grafana:latest
@@ -83,7 +94,7 @@ services:
       - GF_SECURITY_DISABLE_GRAVATAR=true
       - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/var/lib/grafana/dashboards/streamline.json
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     depends_on:
       - victoriametrics
       - victorialogs

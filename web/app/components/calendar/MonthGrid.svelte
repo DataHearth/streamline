@@ -216,7 +216,7 @@
 						<a
 							href={e.href}
 							title={e.subtitle ? `${e.title} · ${e.subtitle}` : e.title}
-							style:--c="var(--status-{dotToken(e)})"
+							style:--c="var(--kind-{dotToken(e)})"
 							class="chip block flex-none truncate rounded bg-bg-card px-1.5 py-1 text-left text-[10.5px] font-medium text-fg transition-colors hover:bg-bg-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
 						>
 							{e.title}
@@ -271,10 +271,10 @@
 				<a
 					href={e.href}
 					title={e.subtitle ? `${e.title} · ${e.subtitle}` : e.title}
-					style:--c="var(--status-{dotToken(e)})"
+					style:--c="var(--kind-{dotToken(e)})"
 					class="chip flex items-center gap-2 overflow-hidden rounded bg-bg-card px-2 py-1.5 text-left text-[12px] text-fg transition-colors hover:bg-bg-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
 				>
-					<EventDot status={dotToken(e)} />
+					<EventDot kind={dotToken(e)} />
 					<span class="truncate font-medium">{e.title}</span>
 					{#if e.subtitle}
 						<span class="shrink-0 font-mono text-[10px] text-fg-faint">

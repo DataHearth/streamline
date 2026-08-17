@@ -120,6 +120,11 @@ grafana:
   enabled: true
   fullnameOverride: grafana
   namespaceOverride: observability
+  # namespaceOverride puts grafana's test pod in `observability`, but `helm test`
+  # looks for it in the release namespace and fails the whole run on the missing
+  # pod. templates/tests/test-health.yaml is the test that matters here.
+  testFramework:
+    enabled: false
   admin:
     existingSecret: ""
   grafana.ini:

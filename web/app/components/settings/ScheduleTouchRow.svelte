@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { MoreHorizontal, Lock } from "@lucide/svelte";
+	import { Ellipsis, Lock } from "@lucide/svelte";
 	import { cn } from "../../lib/cn";
 	import { formatRelative, formatDateTime } from "../../lib/dates";
 	import { scheduleState } from "../../lib/schedules-touch";
@@ -77,7 +77,7 @@
 			aria-label={i18n.schedule_actions_for({ name: row.name })}
 			class="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-fg-muted transition active:bg-bg-hover"
 		>
-			<MoreHorizontal size={18} aria-hidden="true" />
+			<Ellipsis size={18} aria-hidden="true" />
 		</button>
 	{/if}
 </div>

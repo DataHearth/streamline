@@ -16,7 +16,7 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/knadh/koanf/parsers/yaml"
-	"github.com/knadh/koanf/providers/env"
+	"github.com/knadh/koanf/providers/env/v2"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/providers/rawbytes"
 	"github.com/knadh/koanf/v2"
@@ -630,9 +630,12 @@ func finalize(k, fileK *koanf.Koanf) (*Config, *envLayer, error) {
 	// Double-underscore is the path separator; a single underscore is literal
 	// so keys with underscore segments (data_dir, session_secret, tmdb_api_key)
 	// stay reachable: STREAMLINE_AUTH__SESSION_SECRET -> auth.session_secret.
-	envProvider := env.Provider("STREAMLINE_", ".", func(s string) string {
-		key := strings.ToLower(strings.TrimPrefix(s, "STREAMLINE_"))
-		return strings.ReplaceAll(key, "__", ".")
+	envProvider := env.Provider(".", env.Opt{
+		Prefix: "STREAMLINE_",
+		TransformFunc: func(k, v string) (string, any) {
+			key := strings.ToLower(strings.TrimPrefix(k, "STREAMLINE_"))
+			return strings.ReplaceAll(key, "__", "."), v
+		},
 	})
 	envK := koanf.New(".")
 	if err := envK.Load(envProvider, nil); err != nil {

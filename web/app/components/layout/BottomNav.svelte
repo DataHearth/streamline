@@ -15,7 +15,7 @@
 		FolderInput,
 		Settings,
 		LogOut,
-		MoreHorizontal,
+		Ellipsis,
 		ChevronRight,
 		X,
 	} from "@lucide/svelte";
@@ -286,12 +286,17 @@
 		node.addEventListener("pointermove", onMove);
 		node.addEventListener("pointerup", onUp);
 		node.addEventListener("pointercancel", onCancel);
+		// Bound here rather than as onclick= on the sheet: a click handler on a
+		// plain div is an a11y warning, and the links it delegates for are
+		// already keyboard-operable (Enter fires click).
+		node.addEventListener("click", onSheetClick);
 		return {
 			destroy() {
 				node.removeEventListener("pointerdown", onDown);
 				node.removeEventListener("pointermove", onMove);
 				node.removeEventListener("pointerup", onUp);
 				node.removeEventListener("pointercancel", onCancel);
+				node.removeEventListener("click", onSheetClick);
 			},
 		};
 	}
@@ -359,7 +364,7 @@
 		class={cn(cellBase, moreOn ? cellOn : cellOff)}
 	>
 		<div class="relative">
-			<MoreHorizontal size={20} strokeWidth={moreOn ? 2 : 1.6} />
+			<Ellipsis size={20} strokeWidth={moreOn ? 2 : 1.6} />
 			{#if pendingRequests > 0 && sheet !== "More"}
 				<span
 					class="absolute -right-1.5 -top-1 h-1.5 w-1.5 rounded-full bg-status-wanted"
@@ -390,7 +395,6 @@
 		<div
 			use:swipeSheet
 			transition:fly={{ y: 420, duration: 300, easing: cubicOut }}
-			onclick={onSheetClick}
 			class="absolute inset-x-0 bottom-0 flex max-h-[85dvh] flex-col overflow-hidden rounded-t-2xl border-t border-border-strong bg-bg-elevated shadow-4"
 		>
 			<div
