@@ -24,13 +24,12 @@ func (s *Server) ListMovies(
 			BadRequestJSONResponse: errBadRequest(msgZeroPage),
 		}, nil
 	}
-	limit, ok := positiveOr(request.Params.Limit, uint16(20))
+	limit, ok := limitOr(request.Params.Limit, 20, moviesMaxLimit)
 	if !ok {
 		return ListMovies400JSONResponse{
-			BadRequestJSONResponse: errBadRequest(msgZeroLimit),
+			BadRequestJSONResponse: errBadRequest(limitRangeMsg(moviesMaxLimit)),
 		}, nil
 	}
-	limit = clampLimit(limit, moviesMaxLimit)
 
 	movies, total, err := s.movies.List(ctx, page, limit)
 	if err != nil {

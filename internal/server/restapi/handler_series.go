@@ -22,15 +22,15 @@ func (s *Server) ListSeries(
 			BadRequestJSONResponse: errBadRequest(msgZeroPage),
 		}, nil
 	}
-	limit, ok := positiveOr(request.Params.Limit, uint16(20))
+	limit, ok := limitOr(request.Params.Limit, 20, seriesMaxLimit)
 	if !ok {
 		return ListSeries400JSONResponse{
-			BadRequestJSONResponse: errBadRequest(msgZeroLimit),
+			BadRequestJSONResponse: errBadRequest(limitRangeMsg(seriesMaxLimit)),
 		}, nil
 	}
 	p := tvshow.FilterParams{
 		Page:  page,
-		Limit: clampLimit(limit, seriesMaxLimit),
+		Limit: limit,
 	}
 	if request.Params.Status != nil {
 		p.Status = *request.Params.Status

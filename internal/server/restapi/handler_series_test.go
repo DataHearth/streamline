@@ -52,14 +52,7 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 				To(HavePrefix("application/json"))
 		})
 
-		It("clamps a limit above the documented maximum", func() {
-			app.tvshows.EXPECT().
-				FilterList(mock.Anything, mock.MatchedBy(func(p tvshow.FilterParams) bool {
-					return p.Limit == seriesMaxLimit
-				})).
-				Return([]*ent.TVShow{}, 0, nil).
-				Once()
-
+		It("rejects a limit above the documented maximum", func() {
 			resp := app.do(app.req(
 				http.MethodGet,
 				"/api/v1/series?limit=65535",
@@ -67,7 +60,7 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 				nil,
 			))
 			defer resp.Body.Close()
-			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		})
 
 		It("returns a paginated list", func() {

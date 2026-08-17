@@ -29,13 +29,13 @@ func (s *Server) ListRequests(
 			BadRequestJSONResponse: errBadRequest(msgZeroPage),
 		}, nil
 	}
-	limit, ok := positiveOr(req.Params.Limit, uint32(50))
+	limit, ok := limitOr(req.Params.Limit, 50, requestsMaxLimit)
 	if !ok {
 		return ListRequests400JSONResponse{
-			BadRequestJSONResponse: errBadRequest(msgZeroLimit),
+			BadRequestJSONResponse: errBadRequest(limitRangeMsg(requestsMaxLimit)),
 		}, nil
 	}
-	p := db.ListRequestsParams{Limit: clampLimit(limit, requestsMaxLimit)}
+	p := db.ListRequestsParams{Limit: limit}
 	if req.Params.Status != nil {
 		p.Status = string(*req.Params.Status)
 	}

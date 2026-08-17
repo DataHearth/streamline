@@ -55,13 +55,6 @@ var _ = Describe(
 			})
 
 			It("clamps a limit above the documented maximum", func() {
-				app.auth.EXPECT().
-					ListUsers(mock.Anything, mock.MatchedBy(func(f auth.UserFilter) bool {
-						return f.Limit == usersMaxLimit
-					})).
-					Return([]*ent.User{}, 0, nil).
-					Once()
-
 				req := app.req(
 					http.MethodGet,
 					"/api/v1/users?limit=65535",
@@ -70,7 +63,7 @@ var _ = Describe(
 				)
 				resp := app.do(req)
 				defer resp.Body.Close()
-				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 		})
 

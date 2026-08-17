@@ -5,6 +5,7 @@ package restapi
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 
@@ -128,7 +129,7 @@ func Mount(r chi.Router, s *Server) {
 			r *http.Request,
 			err error,
 		) {
-			denyJSON(r.Context(), w, http.StatusBadRequest, err.Error())
+			denyJSON(r.Context(), w, http.StatusBadRequest, paramErrMessage(err))
 		},
 	})
 }
@@ -152,6 +153,22 @@ func requestError(w http.ResponseWriter, r *http.Request, err error) {
 		return
 	}
 	denyJSON(r.Context(), w, http.StatusBadRequest, err.Error())
+}
+
+// paramErrMessage keeps a binding failure's 400 body to the parameter's
+// name: the raw error spells out the Go type the value failed to fit
+// ("out of range for uint16"), which is internal detail, not API contract.
+func paramErrMessage(err error) string {
+	if e, ok := errors.AsType[*InvalidParamFormatError](err); ok {
+		return fmt.Sprintf("invalid value for parameter %s", e.ParamName)
+	}
+	if e, ok := errors.AsType[*UnmarshalingParamError](err); ok {
+		return fmt.Sprintf("invalid value for parameter %s", e.ParamName)
+	}
+	if e, ok := errors.AsType[*RequiredParamError](err); ok {
+		return fmt.Sprintf("missing required parameter %s", e.ParamName)
+	}
+	return "invalid request parameters"
 }
 
 // responseError handles a handler returning a non-nil error. The generated
