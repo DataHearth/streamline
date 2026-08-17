@@ -1,5 +1,13 @@
 version: "2"
 
+# Defaults cap the report at 3 findings per message text and 50 per linter,
+# which silently hides the tail: a repo-wide gosec run reported 38 issues under
+# the caps and 306 without them. A truncated report reads as a short todo list
+# and is not one — fix the head, and CI fails again at findings it never showed.
+issues:
+  max-same-issues: 0
+  max-issues-per-linter: 0
+
 formatters:
   enable:
     - gofumpt
