@@ -1453,7 +1453,7 @@ paths:
   /auth/password:
     post:
       operationId: changePassword
-      summary: Change current user's password; revokes all other sessions
+      summary: Change current user's password; revokes all other sessions and all API keys
       tags: [auth]
       security:
         - BearerAuth: []
@@ -1462,7 +1462,7 @@ paths:
         $ref: "#/components/requestBodies/ChangePassword"
       responses:
         "204":
-          description: Password changed; other sessions revoked
+          description: Password changed; other sessions and all API keys revoked
         "401":
           $ref: "#/components/responses/Unauthorized"
         "413":
@@ -1955,8 +1955,9 @@ paths:
       operationId: resetUserPassword
       summary: Reset user password (admin)
       description: |
-        Sets a new password for the target user without requiring the old one
-        and revokes all of the target's active sessions. Admin only.
+        Sets a new password for the target user without requiring the old one,
+        revokes all of the target's active sessions, and deletes all of their
+        API keys. Admin only.
       tags: [users, admin]
       security:
         - BearerAuth: []
