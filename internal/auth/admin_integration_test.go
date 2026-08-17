@@ -180,6 +180,25 @@ var _ = Describe("Admin end-to-end", Label("integration", "auth"), func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
+	It("AdminResetPassword end-to-end revokes API keys", func() {
+		u := seedUser("resetkeys@x.com", entuser.RoleMember)
+		raw, _, err := svc.CreateAPIKey(ctx, u.ID, "k1")
+		Expect(err).NotTo(HaveOccurred())
+
+		owner, err := svc.ValidateAPIKey(ctx, raw)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(owner.ID).To(Equal(u.ID))
+
+		Expect(svc.AdminResetPassword(ctx, u.ID, "newpassword456")).To(Succeed())
+
+		_, err = svc.ValidateAPIKey(ctx, raw)
+		Expect(err).To(HaveOccurred(), "key predating the reset is dead")
+
+		keys, err := svc.ListAPIKeys(ctx, u.ID)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(keys).To(BeEmpty())
+	})
+
 	It("UpdateUser role change revokes existing sessions end-to-end", func() {
 		seedUser("keeper@x.com", entuser.RoleAdmin)
 		target := seedUser("demoted@x.com", entuser.RoleAdmin)

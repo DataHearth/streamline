@@ -320,9 +320,9 @@ func (s *auth) DeleteUser(
 }
 
 // AdminResetPassword rotates the target user's password without verifying the
-// old one and revokes every active session they hold. Returns ErrPasswordWeak
-// when the new password fails policy, ErrUserNotFound when the id does not
-// resolve.
+// old one, revokes every active session they hold, and deletes every API key
+// they own. Returns ErrPasswordWeak when the new password fails policy,
+// ErrUserNotFound when the id does not resolve.
 func (s *auth) AdminResetPassword(
 	ctx context.Context,
 	id uint32,
@@ -355,7 +355,16 @@ func (s *auth) AdminResetPassword(
 		slog.WarnContext(ctx, "revoke_all_sessions_failed",
 			"user.id", id, "error", err)
 	}
-	slog.InfoContext(ctx, "admin_password_reset", "user.id", id)
+	revoked, err := s.db.DeleteAPIKeysByUser(ctx, id)
+	if err != nil {
+		// Best-effort like the session revoke, but logged at ERROR: a key that
+		// survives the reset is a standing credential the reset was meant to
+		// cut.
+		slog.ErrorContext(ctx, "revoke_api_keys_failed",
+			"user.id", id, "error", err)
+	}
+	slog.InfoContext(ctx, "admin_password_reset",
+		"user.id", id, "api_keys_revoked", revoked)
 	return nil
 }
 

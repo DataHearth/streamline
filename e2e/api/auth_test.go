@@ -134,15 +134,20 @@ var _ = Describe("REST API auth", Label("e2e"), func() {
 			Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
 		})
 
-		// A leaked rotation would break every other spec that authenticates
-		// with viewerPassword, so the restore is registered before the
-		// rotation is even issued. 401 means the rotation never landed.
-		It("rotates the caller's password", func() {
+		// Rotates the admin, not the viewer: the rotation deletes every API
+		// key of the caller, and viewerAuth is the X-API-Key identity most of
+		// the suite authenticates with. The admin holds a Bearer session,
+		// which survives its own rotation via keepJTI.
+		//
+		// A leaked rotation would break every later spec that authenticates as
+		// the admin, so the restore is registered before the rotation is even
+		// issued. 401 means the rotation never landed.
+		It("rotates the caller's password and revokes their API keys", func() {
 			const rotated = "e2e-Rotated-Passw0rd!"
 			DeferCleanup(func() {
-				back := post("/api/v1/auth/password", viewerAuth, map[string]any{
+				back := post("/api/v1/auth/password", adminAuth, map[string]any{
 					"current_password": rotated,
-					"new_password":     viewerPassword,
+					"new_password":     apptest.AdminPassword,
 				})
 				defer back.Body.Close()
 				Expect(back.StatusCode).To(BeElementOf(
@@ -150,12 +155,27 @@ var _ = Describe("REST API auth", Label("e2e"), func() {
 				))
 			})
 
-			resp := post("/api/v1/auth/password", viewerAuth, map[string]any{
-				"current_password": viewerPassword,
+			key := createOwnAPIKey("e2e-s04-revoked")
+
+			resp := post("/api/v1/auth/password", adminAuth, map[string]any{
+				"current_password": apptest.AdminPassword,
 				"new_password":     rotated,
 			})
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
+
+			probe := get("/api/v1/auth/me", identity{apiKey: key.RawToken})
+			defer probe.Body.Close()
+			Expect(probe.StatusCode).To(Equal(http.StatusUnauthorized))
+
+			listed := get("/api/v1/auth/me/api-keys", adminAuth)
+			defer listed.Body.Close()
+			Expect(listed.StatusCode).To(Equal(http.StatusOK))
+			var keys []struct {
+				Id uint32 `json:"id"`
+			}
+			decode(listed, &keys)
+			Expect(keys).NotTo(ContainElement(HaveField("Id", key.Id)))
 		})
 	})
 

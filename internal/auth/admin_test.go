@@ -412,17 +412,25 @@ var _ = Describe("Admin service unit", Label("unit", "auth"), func() {
 				To(MatchError(ContainSubstring("load user")))
 		})
 
-		It("rotates the password and revokes sessions on success", func() {
-			storeMock.FindUserByID(mock.AnythingOfType(ctxType), uint32(1)).
-				Return(&ent.User{ID: 1}, nil).Once()
-			storeMock.UpdateUserPassword(mock.AnythingOfType(ctxType), uint32(1), mock.AnythingOfType("string")).
-				Return(nil).
-				Once()
-			storeMock.RevokeAllUserSessions(mock.AnythingOfType(ctxType), uint32(1), mock.AnythingOfType("time.Time")).
-				Return(nil).
-				Once()
-			Expect(svc.AdminResetPassword(ctx, 1, "newpassword123")).To(Succeed())
-		})
+		It(
+			"rotates the password, revokes sessions and deletes API keys on success",
+			func() {
+				storeMock.FindUserByID(mock.AnythingOfType(ctxType), uint32(1)).
+					Return(&ent.User{ID: 1}, nil).Once()
+				storeMock.UpdateUserPassword(mock.AnythingOfType(ctxType), uint32(1), mock.AnythingOfType("string")).
+					Return(nil).
+					Once()
+				storeMock.RevokeAllUserSessions(mock.AnythingOfType(ctxType), uint32(1), mock.AnythingOfType("time.Time")).
+					Return(nil).
+					Once()
+				storeMock.DeleteAPIKeysByUser(mock.AnythingOfType(ctxType), uint32(1)).
+					Return(1, nil).
+					Once()
+				Expect(
+					svc.AdminResetPassword(ctx, 1, "newpassword123"),
+				).To(Succeed())
+			},
+		)
 
 		It("wraps UpdateUserPassword errors", func() {
 			storeMock.FindUserByID(mock.AnythingOfType(ctxType), uint32(1)).
@@ -442,6 +450,24 @@ var _ = Describe("Admin service unit", Label("unit", "auth"), func() {
 				Once()
 			storeMock.RevokeAllUserSessions(mock.AnythingOfType(ctxType), uint32(1), mock.AnythingOfType("time.Time")).
 				Return(errors.New("rev fail")).
+				Once()
+			storeMock.DeleteAPIKeysByUser(mock.AnythingOfType(ctxType), uint32(1)).
+				Return(0, nil).
+				Once()
+			Expect(svc.AdminResetPassword(ctx, 1, "newpassword123")).To(Succeed())
+		})
+
+		It("succeeds when the API-key delete fails (best-effort)", func() {
+			storeMock.FindUserByID(mock.AnythingOfType(ctxType), uint32(1)).
+				Return(&ent.User{ID: 1}, nil).Once()
+			storeMock.UpdateUserPassword(mock.AnythingOfType(ctxType), uint32(1), mock.AnythingOfType("string")).
+				Return(nil).
+				Once()
+			storeMock.RevokeAllUserSessions(mock.AnythingOfType(ctxType), uint32(1), mock.AnythingOfType("time.Time")).
+				Return(nil).
+				Once()
+			storeMock.DeleteAPIKeysByUser(mock.AnythingOfType(ctxType), uint32(1)).
+				Return(0, errors.New("del fail")).
 				Once()
 			Expect(svc.AdminResetPassword(ctx, 1, "newpassword123")).To(Succeed())
 		})

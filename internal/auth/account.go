@@ -78,10 +78,13 @@ func (s *auth) UpdateProfile(
 	return u, nil
 }
 
-// ChangePassword verifies the current password, applies the new one, and
-// revokes every other active session for userID so peer devices are signed
-// out. keepJTI is the session the caller wants to stay logged in on — pass
-// Claims.JTI from the request context.
+// ChangePassword verifies the current password, applies the new one, revokes
+// every other active session for userID so peer devices are signed out, and
+// deletes every API key the user owns. keepJTI is the session the caller wants
+// to stay logged in on — pass Claims.JTI from the request context. Key
+// revocation is unconditional: a caller who authenticates this request with
+// X-API-Key loses that key too, because rotating the password is meant to cut
+// every standing credential, not only the interactive ones.
 //
 // The current password goes through comparePassword, so maxUsableHashCost
 // bounds the work here exactly as it does on login. Being authenticated does
@@ -130,7 +133,16 @@ func (s *auth) ChangePassword(
 		// caller's own session stays usable even if the peer revoke races.
 		slog.WarnContext(ctx, "revoke_other_sessions_failed", "error", err)
 	}
-	slog.InfoContext(ctx, "auth_password_changed", "user.id", userID)
+	revoked, err := s.db.DeleteAPIKeysByUser(ctx, userID)
+	if err != nil {
+		// Best-effort like the session revoke, but logged at ERROR: a key that
+		// survives the rotation is a standing credential the rotation was
+		// meant to cut.
+		slog.ErrorContext(ctx, "revoke_api_keys_failed",
+			"user.id", userID, "error", err)
+	}
+	slog.InfoContext(ctx, "auth_password_changed",
+		"user.id", userID, "api_keys_revoked", revoked)
 	return nil
 }
 

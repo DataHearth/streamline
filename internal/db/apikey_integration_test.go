@@ -107,4 +107,44 @@ var _ = Describe("API key store", Label("integration", "db"), func() {
 			Expect(n).To(Equal(1))
 		})
 	})
+
+	Describe("DeleteAPIKeysByUser", func() {
+		It("deletes every key of the owner and leaves other owners alone", func() {
+			for _, h := range []string{"hm1", "hm2"} {
+				_, err := store.CreateAPIKey(ctx, CreateAPIKeyParams{
+					Name: h, KeyHash: h, OwnerID: userID,
+				})
+				Expect(err).NotTo(HaveOccurred())
+			}
+
+			other, err := store.CreateUser(ctx, CreateUserParams{
+				Email:      "keeper@example.com",
+				Role:       role.Seed(user.RoleMember),
+				AuthMethod: "local",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			_, err = store.CreateAPIKey(ctx, CreateAPIKeyParams{
+				Name: "keep", KeyHash: "hkeep", OwnerID: other.ID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			n, err := store.DeleteAPIKeysByUser(ctx, userID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(2))
+
+			keys, err := store.ListAPIKeysByUser(ctx, userID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(keys).To(BeEmpty())
+
+			kept, err := store.FindAPIKeyByHash(ctx, "hkeep")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(kept.Edges.Owner.ID).To(Equal(other.ID))
+		})
+
+		It("returns 0 for a user with no keys", func() {
+			n, err := store.DeleteAPIKeysByUser(ctx, userID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(0))
+		})
+	})
 })
