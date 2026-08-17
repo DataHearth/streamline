@@ -85,9 +85,11 @@ var _ = Describe("BodyLimit middleware", Label("unit", "server"), func() {
 			Expect(
 				rec.Header().Get("Content-Type"),
 			).To(Equal("application/json"))
-			Expect(
-				rec.Body.String(),
-			).To(Equal(`{"message":"request body too large"}`))
+			Expect(rec.Body.String()).To(Equal(BodyTooLargeJSON))
+			// Pinned literally, not via the constant alone: the SPA maps this
+			// code to its own sentence (web/app/lib/api.ts BY_CODE), so
+			// renaming it is an API change, not an internal one.
+			Expect(rec.Body.String()).To(ContainSubstring(`"code":"body_too_large"`))
 			Expect(sink.called).To(BeFalse())
 		})
 

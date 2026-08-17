@@ -97,9 +97,10 @@ var _ = Describe("Request body limits", Label("integration", "server"), func() {
 			Expect(
 				resp.Header.Get("Content-Type"),
 			).To(HavePrefix("application/json"))
-			Expect(decodeErrorBody(resp)).To(
+			Expect(decodeErrorBody(resp)).To(SatisfyAll(
 				HaveKeyWithValue("message", "request body too large"),
-			)
+				HaveKeyWithValue("code", "body_too_large"),
+			))
 
 			// The reject happens before the handler, so no attempt was charged
 			// and the very next valid login still succeeds.
@@ -134,9 +135,10 @@ var _ = Describe("Request body limits", Label("integration", "server"), func() {
 			)
 
 			Expect(resp.StatusCode).To(Equal(http.StatusRequestEntityTooLarge))
-			Expect(decodeErrorBody(resp)).To(
+			Expect(decodeErrorBody(resp)).To(SatisfyAll(
 				HaveKeyWithValue("message", "request body too large"),
-			)
+				HaveKeyWithValue("code", "body_too_large"),
+			))
 		})
 
 		It("refuses a chunked oversize body with 413 JSON", func() {
@@ -147,9 +149,10 @@ var _ = Describe("Request body limits", Label("integration", "server"), func() {
 			)
 
 			Expect(resp.StatusCode).To(Equal(http.StatusRequestEntityTooLarge))
-			Expect(decodeErrorBody(resp)).To(
+			Expect(decodeErrorBody(resp)).To(SatisfyAll(
 				HaveKeyWithValue("message", "request body too large"),
-			)
+				HaveKeyWithValue("code", "body_too_large"),
+			))
 		})
 
 		It("still accepts a normally-sized body", func() {

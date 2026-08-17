@@ -30,6 +30,14 @@ const torrentMaxBody = 24 << 20
 
 const addTorrentPath = "/api/v1/torrents"
 
+// BodyTooLargeJSON is the 413 body, shared with restapi so a caller sees the
+// same answer whichever half of the limit tripped. The code matters because
+// which half trips is a matter of framing, not of what the caller did wrong: a
+// declared Content-Length is refused here, an undeclared or chunked one is cut
+// mid-decode and answered downstream. A client branching on the reason must not
+// have to care which.
+const BodyTooLargeJSON = `{"message":"request body too large","code":"body_too_large"}`
+
 // BodyLimit bounds the request body at two points, because either one alone
 // leaves a hole: a declared Content-Length over the cap is refused outright
 // with 413 before any handler runs, and the body is wrapped in
@@ -55,7 +63,7 @@ func BodyLimit(next http.Handler) http.Handler {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusRequestEntityTooLarge)
 			if _, err := w.Write(
-				[]byte(`{"message":"request body too large"}`),
+				[]byte(BodyTooLargeJSON),
 			); err != nil {
 				slog.ErrorContext(
 					r.Context(), "body limit write failed", "error", err,

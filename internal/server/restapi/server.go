@@ -24,6 +24,7 @@ import (
 	"github.com/datahearth/streamline/internal/request"
 	"github.com/datahearth/streamline/internal/rss"
 	"github.com/datahearth/streamline/internal/scheduler"
+	"github.com/datahearth/streamline/internal/server/middleware"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -130,7 +131,7 @@ func requestError(w http.ResponseWriter, r *http.Request, err error) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusRequestEntityTooLarge)
 		if _, werr := w.Write(
-			[]byte(`{"message":"request body too large"}`),
+			[]byte(middleware.BodyTooLargeJSON),
 		); werr != nil {
 			slog.ErrorContext(
 				r.Context(), "body limit write failed", "error", werr,
