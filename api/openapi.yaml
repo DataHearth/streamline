@@ -5385,7 +5385,9 @@ components:
           nullable: true
         last_duration_ms:
           type: integer
+          format: int64
           minimum: 0
+          maximum: 4294967295
           x-go-type: uint32
         last_error:
           type: string
