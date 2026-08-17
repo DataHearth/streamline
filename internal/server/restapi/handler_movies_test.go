@@ -35,7 +35,7 @@ var _ = Describe(
 			It("clamps a limit above the documented maximum", func() {
 				app.movies.EXPECT().
 					List(mock.Anything, uint16(1), uint16(moviesMaxLimit)).
-					Return([]*ent.Movie{}, uint32(0), nil).
+					Return([]*ent.Movie{}, 0, nil).
 					Once()
 
 				resp := app.do(app.req(
@@ -66,7 +66,7 @@ var _ = Describe(
 							TmdbID: 101,
 							Status: movie.StatusWanted,
 						},
-					}, uint32(2), nil).
+					}, 2, nil).
 					Once()
 
 				resp, err := http.Get(app.srv.URL + "/api/v1/movies?page=1&limit=10")
@@ -95,7 +95,7 @@ var _ = Describe(
 							Status:         movie.StatusFailed,
 							QualityProfile: "uhd",
 						},
-					}, uint32(1), nil).
+					}, 1, nil).
 					Once()
 
 				resp, err := http.Get(app.srv.URL + "/api/v1/movies?page=1&limit=10")
@@ -116,7 +116,7 @@ var _ = Describe(
 			It("returns empty page when no movies exist", func() {
 				app.movies.EXPECT().
 					List(mock.Anything, uint16(1), uint16(10)).
-					Return(nil, uint32(0), nil).
+					Return(nil, 0, nil).
 					Once()
 
 				resp, err := http.Get(app.srv.URL + "/api/v1/movies?page=1&limit=10")
@@ -154,12 +154,12 @@ var _ = Describe(
 
 				var body MovieCounts
 				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
-				Expect(body.Total).To(Equal(uint32(10)))
-				Expect(body.Wanted).To(Equal(uint32(4)))
-				Expect(body.Downloading).To(Equal(uint32(2)))
-				Expect(body.Available).To(Equal(uint32(3)))
-				Expect(body.Failed).To(Equal(uint32(1)))
-				Expect(body.Trend).To(Equal([]uint32{9, 10}))
+				Expect(body.Total).To(Equal(10))
+				Expect(body.Wanted).To(Equal(4))
+				Expect(body.Downloading).To(Equal(2))
+				Expect(body.Available).To(Equal(3))
+				Expect(body.Failed).To(Equal(1))
+				Expect(body.Trend).To(Equal([]int{9, 10}))
 			})
 		})
 

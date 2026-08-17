@@ -33,7 +33,7 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 				FilterList(mock.Anything, mock.MatchedBy(func(p tvshow.FilterParams) bool {
 					return p.Limit == seriesMaxLimit
 				})).
-				Return([]*ent.TVShow{}, uint32(0), nil).
+				Return([]*ent.TVShow{}, 0, nil).
 				Once()
 
 			resp := app.do(app.req(
@@ -49,7 +49,7 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 		It("returns a paginated list", func() {
 			app.tvshows.EXPECT().
 				FilterList(mock.Anything, mock.AnythingOfType("tvshow.FilterParams")).
-				Return([]*ent.TVShow{{ID: 1, Title: "X", Year: 2020, TvdbID: 9}}, uint32(1), nil).
+				Return([]*ent.TVShow{{ID: 1, Title: "X", Year: 2020, TvdbID: 9}}, 1, nil).
 				Once()
 
 			resp := app.do(
@@ -78,7 +78,7 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 		It("500s when the service errors", func() {
 			app.tvshows.EXPECT().
 				FilterList(mock.Anything, mock.AnythingOfType("tvshow.FilterParams")).
-				Return(nil, uint32(0), errors.New("db down")).Once()
+				Return(nil, 0, errors.New("db down")).Once()
 
 			resp := app.do(
 				app.req(http.MethodGet, "/api/v1/series", app.adminKey, nil),

@@ -113,7 +113,7 @@ func Parse(filename string) ParseResult {
 	// Season pack: SXX present but no SXXEXX matched.
 	if r.Episode == 0 {
 		if m := seasonPackRe.FindStringSubmatch(filename); m != nil {
-			if s, err := strconv.Atoi(m[1]); err == nil {
+			if s, err := strconv.ParseUint(m[1], 10, 16); err == nil {
 				r.Season = uint16(s)
 				r.SeasonPack = true
 			}

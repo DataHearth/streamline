@@ -382,7 +382,7 @@ type Store interface {
 	ListImportScans(
 		ctx context.Context,
 		offset, limit uint32,
-	) ([]*ent.ImportScan, uint32, error)
+	) ([]*ent.ImportScan, int, error)
 	UpdateImportScanStatus(
 		ctx context.Context,
 		id uint32,
@@ -392,11 +392,11 @@ type Store interface {
 	IncrementImportScanProgress(
 		ctx context.Context,
 		id uint32,
-		processedDelta uint32,
+		processedDelta int,
 	) error
-	CountActiveImportScans(ctx context.Context) (uint32, error)
+	CountActiveImportScans(ctx context.Context) (int, error)
 	DeleteImportScan(ctx context.Context, id uint32) error
-	AbortInflightImportScans(ctx context.Context, reason string) (uint32, error)
+	AbortInflightImportScans(ctx context.Context, reason string) (int, error)
 
 	// bulk-import scan files
 	BulkCreateImportScanFiles(
@@ -407,7 +407,7 @@ type Store interface {
 	FilterImportScanFiles(
 		ctx context.Context,
 		p FilterImportScanFilesParams,
-	) ([]*ent.ImportScanFile, uint32, error)
+	) ([]*ent.ImportScanFile, int, error)
 	// FindImportScanFile returns the file with fileID scoped to scanID, or an
 	// ent NotFound error when no such row exists under that scan.
 	FindImportScanFile(
@@ -448,7 +448,7 @@ type Store interface {
 	ListImportScanShows(
 		ctx context.Context,
 		p ListImportScanShowsParams,
-	) ([]*ent.ImportScanShow, uint32, error)
+	) ([]*ent.ImportScanShow, int, error)
 	FindImportScanShow(
 		ctx context.Context,
 		scanID, showID uint32,

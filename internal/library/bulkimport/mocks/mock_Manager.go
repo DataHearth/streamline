@@ -41,22 +41,22 @@ func (_m *MockManager) EXPECT() *MockManager_Expecter {
 }
 
 // AbortInflight provides a mock function for the type MockManager
-func (_mock *MockManager) AbortInflight(ctx context.Context) (uint32, error) {
+func (_mock *MockManager) AbortInflight(ctx context.Context) (int, error) {
 	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for AbortInflight")
 	}
 
-	var r0 uint32
+	var r0 int
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context) (uint32, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context) (int, error)); ok {
 		return returnFunc(ctx)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context) uint32); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context) int); ok {
 		r0 = returnFunc(ctx)
 	} else {
-		r0 = ret.Get(0).(uint32)
+		r0 = ret.Get(0).(int)
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
 		r1 = returnFunc(ctx)
@@ -90,12 +90,12 @@ func (_c *MockManager_AbortInflight_Call) Run(run func(ctx context.Context)) *Mo
 	return _c
 }
 
-func (_c *MockManager_AbortInflight_Call) Return(v uint32, err error) *MockManager_AbortInflight_Call {
-	_c.Call.Return(v, err)
+func (_c *MockManager_AbortInflight_Call) Return(n int, err error) *MockManager_AbortInflight_Call {
+	_c.Call.Return(n, err)
 	return _c
 }
 
-func (_c *MockManager_AbortInflight_Call) RunAndReturn(run func(ctx context.Context) (uint32, error)) *MockManager_AbortInflight_Call {
+func (_c *MockManager_AbortInflight_Call) RunAndReturn(run func(ctx context.Context) (int, error)) *MockManager_AbortInflight_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -272,7 +272,7 @@ func (_c *MockManager_Delete_Call) RunAndReturn(run func(ctx context.Context, id
 }
 
 // Files provides a mock function for the type MockManager
-func (_mock *MockManager) Files(ctx context.Context, p bulkimport.FilesParams) ([]*ent.ImportScanFile, uint32, error) {
+func (_mock *MockManager) Files(ctx context.Context, p bulkimport.FilesParams) ([]*ent.ImportScanFile, int, error) {
 	ret := _mock.Called(ctx, p)
 
 	if len(ret) == 0 {
@@ -280,9 +280,9 @@ func (_mock *MockManager) Files(ctx context.Context, p bulkimport.FilesParams) (
 	}
 
 	var r0 []*ent.ImportScanFile
-	var r1 uint32
+	var r1 int
 	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, bulkimport.FilesParams) ([]*ent.ImportScanFile, uint32, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, bulkimport.FilesParams) ([]*ent.ImportScanFile, int, error)); ok {
 		return returnFunc(ctx, p)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, bulkimport.FilesParams) []*ent.ImportScanFile); ok {
@@ -292,10 +292,10 @@ func (_mock *MockManager) Files(ctx context.Context, p bulkimport.FilesParams) (
 			r0 = ret.Get(0).([]*ent.ImportScanFile)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, bulkimport.FilesParams) uint32); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, bulkimport.FilesParams) int); ok {
 		r1 = returnFunc(ctx, p)
 	} else {
-		r1 = ret.Get(1).(uint32)
+		r1 = ret.Get(1).(int)
 	}
 	if returnFunc, ok := ret.Get(2).(func(context.Context, bulkimport.FilesParams) error); ok {
 		r2 = returnFunc(ctx, p)
@@ -335,12 +335,12 @@ func (_c *MockManager_Files_Call) Run(run func(ctx context.Context, p bulkimport
 	return _c
 }
 
-func (_c *MockManager_Files_Call) Return(importScanFiles []*ent.ImportScanFile, v uint32, err error) *MockManager_Files_Call {
-	_c.Call.Return(importScanFiles, v, err)
+func (_c *MockManager_Files_Call) Return(importScanFiles []*ent.ImportScanFile, n int, err error) *MockManager_Files_Call {
+	_c.Call.Return(importScanFiles, n, err)
 	return _c
 }
 
-func (_c *MockManager_Files_Call) RunAndReturn(run func(ctx context.Context, p bulkimport.FilesParams) ([]*ent.ImportScanFile, uint32, error)) *MockManager_Files_Call {
+func (_c *MockManager_Files_Call) RunAndReturn(run func(ctx context.Context, p bulkimport.FilesParams) ([]*ent.ImportScanFile, int, error)) *MockManager_Files_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -488,7 +488,7 @@ func (_c *MockManager_GetFile_Call) RunAndReturn(run func(ctx context.Context, s
 }
 
 // List provides a mock function for the type MockManager
-func (_mock *MockManager) List(ctx context.Context, page uint16, limit uint16) ([]*ent.ImportScan, uint32, error) {
+func (_mock *MockManager) List(ctx context.Context, page uint16, limit uint16) ([]*ent.ImportScan, int, error) {
 	ret := _mock.Called(ctx, page, limit)
 
 	if len(ret) == 0 {
@@ -496,9 +496,9 @@ func (_mock *MockManager) List(ctx context.Context, page uint16, limit uint16) (
 	}
 
 	var r0 []*ent.ImportScan
-	var r1 uint32
+	var r1 int
 	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint16, uint16) ([]*ent.ImportScan, uint32, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint16, uint16) ([]*ent.ImportScan, int, error)); ok {
 		return returnFunc(ctx, page, limit)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, uint16, uint16) []*ent.ImportScan); ok {
@@ -508,10 +508,10 @@ func (_mock *MockManager) List(ctx context.Context, page uint16, limit uint16) (
 			r0 = ret.Get(0).([]*ent.ImportScan)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uint16, uint16) uint32); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint16, uint16) int); ok {
 		r1 = returnFunc(ctx, page, limit)
 	} else {
-		r1 = ret.Get(1).(uint32)
+		r1 = ret.Get(1).(int)
 	}
 	if returnFunc, ok := ret.Get(2).(func(context.Context, uint16, uint16) error); ok {
 		r2 = returnFunc(ctx, page, limit)
@@ -557,12 +557,12 @@ func (_c *MockManager_List_Call) Run(run func(ctx context.Context, page uint16, 
 	return _c
 }
 
-func (_c *MockManager_List_Call) Return(importScans []*ent.ImportScan, v uint32, err error) *MockManager_List_Call {
-	_c.Call.Return(importScans, v, err)
+func (_c *MockManager_List_Call) Return(importScans []*ent.ImportScan, n int, err error) *MockManager_List_Call {
+	_c.Call.Return(importScans, n, err)
 	return _c
 }
 
-func (_c *MockManager_List_Call) RunAndReturn(run func(ctx context.Context, page uint16, limit uint16) ([]*ent.ImportScan, uint32, error)) *MockManager_List_Call {
+func (_c *MockManager_List_Call) RunAndReturn(run func(ctx context.Context, page uint16, limit uint16) ([]*ent.ImportScan, int, error)) *MockManager_List_Call {
 	_c.Call.Return(run)
 	return _c
 }

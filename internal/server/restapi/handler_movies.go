@@ -56,17 +56,15 @@ func (s *Server) GetMovieCounts(
 			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
-	trend := make([]uint32, len(counts.Trend))
-	for i, v := range counts.Trend {
-		trend[i] = uint32(v)
-	}
+	trend := make([]int, len(counts.Trend))
+	copy(trend, counts.Trend)
 	return GetMovieCounts200JSONResponse{
 		MovieCountsResponseJSONResponse: MovieCountsResponseJSONResponse{
-			Total:       uint32(counts.Total),
-			Wanted:      uint32(counts.Wanted),
-			Downloading: uint32(counts.Downloading),
-			Available:   uint32(counts.Available),
-			Failed:      uint32(counts.Failed),
+			Total:       counts.Total,
+			Wanted:      counts.Wanted,
+			Downloading: counts.Downloading,
+			Available:   counts.Available,
+			Failed:      counts.Failed,
 			Trend:       trend,
 		},
 	}, nil

@@ -192,7 +192,7 @@ func (s *Service) Add(
 func (s *Service) List(
 	ctx context.Context,
 	page, limit uint16,
-) ([]*ent.TVShow, uint32, error) {
+) ([]*ent.TVShow, int, error) {
 	ctx, span := tracer.Start(ctx, "tvshow.list")
 	defer span.End()
 	if page == 0 {
@@ -209,7 +209,7 @@ func (s *Service) List(
 	if err != nil {
 		return nil, 0, otelx.RecordSpanError(span, err)
 	}
-	return rows, uint32(total), nil
+	return rows, total, nil
 }
 
 // FilterList applies status/type/query/sort to the full library in memory.
@@ -218,7 +218,7 @@ func (s *Service) List(
 func (s *Service) FilterList(
 	ctx context.Context,
 	p FilterParams,
-) ([]*ent.TVShow, uint32, error) {
+) ([]*ent.TVShow, int, error) {
 	ctx, span := tracer.Start(ctx, "tvshow.filter_list",
 		trace.WithAttributes(
 			attribute.String("filter.status", p.Status),
@@ -268,7 +268,7 @@ func (s *Service) FilterList(
 
 	sortShows(filtered, p.Sort, p.Order)
 
-	total := uint32(len(filtered))
+	total := len(filtered)
 	start := int(page-1) * int(limit)
 	if start >= len(filtered) {
 		return []*ent.TVShow{}, total, nil
@@ -930,8 +930,8 @@ type Manager interface {
 		tvdbID uint32,
 		qualityProfile string,
 	) (*ent.TVShow, error)
-	List(ctx context.Context, page, limit uint16) ([]*ent.TVShow, uint32, error)
-	FilterList(ctx context.Context, p FilterParams) ([]*ent.TVShow, uint32, error)
+	List(ctx context.Context, page, limit uint16) ([]*ent.TVShow, int, error)
+	FilterList(ctx context.Context, p FilterParams) ([]*ent.TVShow, int, error)
 	Get(ctx context.Context, id uint32) (*ent.TVShow, error)
 	Update(ctx context.Context, id uint32, p UpdateParams) (*ent.TVShow, error)
 	Delete(ctx context.Context, id uint32, opts DeleteOptions) error

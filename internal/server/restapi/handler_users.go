@@ -57,7 +57,7 @@ func (s *Server) ListUsers(
 	return ListUsers200JSONResponse{
 		UsersListJSONResponse: UsersListJSONResponse{
 			Items: out,
-			Total: uint32(total),
+			Total: total,
 		},
 	}, nil
 }

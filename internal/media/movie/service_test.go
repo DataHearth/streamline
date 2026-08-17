@@ -220,7 +220,7 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 
 			items, total, err := svc.List(ctx, 3, 10)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(total).To(Equal(uint32(42)))
+			Expect(total).To(Equal(42))
 			Expect(items).To(Equal(rows))
 		})
 	})
@@ -253,7 +253,7 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(items).To(HaveLen(1))
-			Expect(total).To(Equal(uint32(5)))
+			Expect(total).To(Equal(5))
 		})
 
 		It("wraps filter errors", func() {

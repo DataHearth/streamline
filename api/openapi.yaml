@@ -4058,7 +4058,6 @@ components:
             $ref: "#/components/schemas/Movie"
         total:
           type: integer
-          x-go-type: uint32
         page:
           type: integer
           x-go-type: uint32
@@ -4072,19 +4071,14 @@ components:
       properties:
         total:
           type: integer
-          x-go-type: uint32
         wanted:
           type: integer
-          x-go-type: uint32
         downloading:
           type: integer
-          x-go-type: uint32
         available:
           type: integer
-          x-go-type: uint32
         failed:
           type: integer
-          x-go-type: uint32
         trend:
           type: array
           description: |
@@ -4093,7 +4087,6 @@ components:
             when the library is empty.
           items:
             type: integer
-            x-go-type: uint32
 
     TVShow:
       type: object
@@ -4148,14 +4141,11 @@ components:
         have_episodes:
           type: integer
           description: Episodes with a media file. Rolled up across seasons.
-          x-go-type: uint32
         total_episodes:
           type: integer
-          x-go-type: uint32
         wanted_episodes:
           type: integer
           description: Aired/undated episodes without a file (the "missing" count).
-          x-go-type: uint32
         seasons:
           type: array
           nullable: true
@@ -4256,7 +4246,6 @@ components:
             $ref: "#/components/schemas/TVShow"
         total:
           type: integer
-          x-go-type: uint32
         page:
           type: integer
           x-go-type: uint32
@@ -5063,7 +5052,6 @@ components:
         total:
           type: integer
           description: Total number of users matching the filter.
-          x-go-type: uint32
 
     UserDetail:
       type: object
@@ -5699,7 +5687,6 @@ components:
             $ref: "#/components/schemas/ImportScan"
         total:
           type: integer
-          x-go-type: uint32
 
     ImportScanFileList:
       type: object
@@ -5711,7 +5698,6 @@ components:
             $ref: "#/components/schemas/ImportScanFile"
         total:
           type: integer
-          x-go-type: uint32
 
     ImportScanShowCandidate:
       type: object
@@ -5792,7 +5778,6 @@ components:
             $ref: "#/components/schemas/ImportScanShow"
         total:
           type: integer
-          x-go-type: uint32
 
     ImportScanShowDecisionRequest:
       type: object
@@ -6121,7 +6106,6 @@ components:
             $ref: "#/components/schemas/Request"
         total:
           type: integer
-          x-go-type: uint32
         page:
           type: integer
           x-go-type: uint32
@@ -6220,10 +6204,8 @@ components:
           type: string
         season_count:
           type: integer
-          x-go-type: uint16
         episode_count:
           type: integer
-          x-go-type: uint16
         status:
           type: string
 

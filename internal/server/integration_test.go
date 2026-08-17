@@ -188,7 +188,7 @@ var _ = Describe("Full Vertical Slice", Label("unit", "server", "movies"), func(
 			Once()
 		movies.EXPECT().
 			List(mock.Anything, uint16(1), uint16(10)).
-			Return([]*ent.Movie{fightClub}, uint32(1), nil).
+			Return([]*ent.Movie{fightClub}, 1, nil).
 			Once()
 		movies.EXPECT().
 			Get(mock.Anything, uint32(1)).
@@ -208,7 +208,7 @@ var _ = Describe("Full Vertical Slice", Label("unit", "server", "movies"), func(
 			Once()
 		movies.EXPECT().
 			List(mock.Anything, uint16(1), uint16(10)).
-			Return(nil, uint32(0), nil).
+			Return(nil, 0, nil).
 			Once()
 
 		By("Adding a movie via POST /api/v1/movies")

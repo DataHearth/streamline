@@ -58,7 +58,7 @@ func (s *Server) ListRequests(
 	return ListRequests200JSONResponse{
 		RequestsListJSONResponse: RequestsListJSONResponse{
 			Items: items,
-			Total: uint32(total),
+			Total: total,
 			Page:  page,
 			Limit: p.Limit,
 		},
@@ -360,10 +360,10 @@ func seriesDetailsToRequestMedia(d *metadata.TVDetails) RequestMediaDetails {
 	if cast := castToAPI(d.Cast); len(cast) != 0 {
 		out.Cast = &cast
 	}
-	if n := uint16(len(d.Seasons)); n != 0 {
+	if n := len(d.Seasons); n != 0 {
 		out.SeasonCount = &n
 	}
-	if n := uint16(len(d.Episodes)); n != 0 {
+	if n := len(d.Episodes); n != 0 {
 		out.EpisodeCount = &n
 	}
 	return out

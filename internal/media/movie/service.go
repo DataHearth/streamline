@@ -64,8 +64,8 @@ type Manager interface {
 		tmdbID uint32,
 		qualityProfile string,
 	) (*ent.Movie, string, error)
-	List(ctx context.Context, page, limit uint16) ([]*ent.Movie, uint32, error)
-	FilterList(ctx context.Context, p FilterParams) ([]*ent.Movie, uint32, error)
+	List(ctx context.Context, page, limit uint16) ([]*ent.Movie, int, error)
+	FilterList(ctx context.Context, p FilterParams) ([]*ent.Movie, int, error)
 	Get(ctx context.Context, id uint32) (*ent.Movie, error)
 	GetByTMDBID(ctx context.Context, tmdbID uint32) (*ent.Movie, error)
 	Update(ctx context.Context, id uint32, p UpdateParams) (*ent.Movie, error)
@@ -244,7 +244,7 @@ func (s *Service) Add(
 func (s *Service) List(
 	ctx context.Context,
 	page, limit uint16,
-) ([]*ent.Movie, uint32, error) {
+) ([]*ent.Movie, int, error) {
 	ctx, span := tracer.Start(ctx, "movie.list",
 		trace.WithAttributes(
 			attribute.Int("page", int(page)),
@@ -277,15 +277,13 @@ func (s *Service) List(
 	}
 	span.SetAttributes(attribute.Int64("results.total", int64(total)))
 
-	return movies, uint32(
-		total,
-	), nil //nolint:gosec // total from COUNT is non-negative
+	return movies, total, nil
 }
 
 func (s *Service) FilterList(
 	ctx context.Context,
 	p FilterParams,
-) ([]*ent.Movie, uint32, error) {
+) ([]*ent.Movie, int, error) {
 	ctx, span := tracer.Start(ctx, "movie.filter_list",
 		trace.WithAttributes(
 			attribute.String("filter.status", p.Status),
@@ -321,7 +319,7 @@ func (s *Service) FilterList(
 		)
 	}
 	span.SetAttributes(attribute.Int64("results.total", int64(total)))
-	return items, uint32(total), nil //nolint:gosec // total is non-negative
+	return items, total, nil
 }
 
 func (s *Service) Get(ctx context.Context, id uint32) (*ent.Movie, error) {

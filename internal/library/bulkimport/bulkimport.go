@@ -17,8 +17,8 @@ import (
 type Manager interface {
 	StartScan(ctx context.Context, p StartScanParams) (*ent.ImportScan, error)
 	Get(ctx context.Context, id uint32) (*ent.ImportScan, error)
-	List(ctx context.Context, page, limit uint16) ([]*ent.ImportScan, uint32, error)
-	Files(ctx context.Context, p FilesParams) ([]*ent.ImportScanFile, uint32, error)
+	List(ctx context.Context, page, limit uint16) ([]*ent.ImportScan, int, error)
+	Files(ctx context.Context, p FilesParams) ([]*ent.ImportScanFile, int, error)
 	GetFile(ctx context.Context, scanID, fileID uint32) (*ent.ImportScanFile, error)
 	UpdateFileDecision(
 		ctx context.Context,
@@ -29,7 +29,7 @@ type Manager interface {
 	Cancel(ctx context.Context, id uint32) error
 	Commit(ctx context.Context, id uint32) error
 	Delete(ctx context.Context, id uint32) error
-	AbortInflight(ctx context.Context) (uint32, error)
+	AbortInflight(ctx context.Context) (int, error)
 }
 
 // FilesParams is the input for Manager.Files.
@@ -87,7 +87,7 @@ func NewService(
 }
 
 // AbortInflight is the boot-time helper. Called from wire.go before the HTTP server starts.
-func (s *Service) AbortInflight(ctx context.Context) (uint32, error) {
+func (s *Service) AbortInflight(ctx context.Context) (int, error) {
 	return s.store.AbortInflightImportScans(ctx, failureMessageOnRestart)
 }
 
@@ -98,7 +98,7 @@ func (s *Service) Get(ctx context.Context, id uint32) (*ent.ImportScan, error) {
 func (s *Service) List(
 	ctx context.Context,
 	page, limit uint16,
-) ([]*ent.ImportScan, uint32, error) {
+) ([]*ent.ImportScan, int, error) {
 	if page == 0 {
 		page = 1
 	}
@@ -111,7 +111,7 @@ func (s *Service) List(
 func (s *Service) Files(
 	ctx context.Context,
 	p FilesParams,
-) ([]*ent.ImportScanFile, uint32, error) {
+) ([]*ent.ImportScanFile, int, error) {
 	if _, err := s.store.FindImportScan(ctx, p.ScanID); err != nil {
 		if ent.IsNotFound(err) {
 			return nil, 0, ErrScanNotFound
