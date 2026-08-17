@@ -34,14 +34,10 @@ type plexPinFlow struct {
 type plexPinFlows struct {
 	mu    sync.Mutex
 	flows map[string]plexPinFlow
-	now   func() time.Time
 }
 
 func newPlexPinFlows() *plexPinFlows {
-	return &plexPinFlows{
-		flows: make(map[string]plexPinFlow),
-		now:   time.Now,
-	}
+	return &plexPinFlows{flows: make(map[string]plexPinFlow)}
 }
 
 // begin records pinID against the caller's identity and returns the opaque id
@@ -62,26 +58,21 @@ func (p *plexPinFlows) begin(pinID uint64, c *auth.Claims) (string, error) {
 		pinID:     pinID,
 		userID:    c.UserID,
 		jti:       c.JTI,
-		expiresAt: p.now().Add(plexPinFlowTTL),
+		expiresAt: time.Now().Add(plexPinFlowTTL),
 	}
 	return id, nil
 }
 
 // take resolves flowID to its PIN for the session that began it. Every miss
 // (unknown, expired, or another session's) is reported identically so the
-// caller cannot tell them apart.
+// caller cannot tell them apart — which is also why the sweep runs first
+// rather than expiry being a branch of its own.
 func (p *plexPinFlows) take(flowID string, c *auth.Claims) (uint64, bool) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
+	p.sweepLocked()
 	f, ok := p.flows[flowID]
-	if !ok {
-		return 0, false
-	}
-	if !p.now().Before(f.expiresAt) {
-		delete(p.flows, flowID)
-		return 0, false
-	}
-	if f.userID != c.UserID || f.jti != c.JTI {
+	if !ok || f.userID != c.UserID || f.jti != c.JTI {
 		return 0, false
 	}
 	return f.pinID, true
@@ -97,7 +88,7 @@ func (p *plexPinFlows) consume(flowID string) {
 }
 
 func (p *plexPinFlows) sweepLocked() {
-	now := p.now()
+	now := time.Now()
 	for id, f := range p.flows {
 		if !now.Before(f.expiresAt) {
 			delete(p.flows, id)

@@ -20,6 +20,19 @@ import (
 
 var errPlexUnreachable = errors.New("plex unreachable")
 
+// expirePlexFlow backdates a begun flow past its TTL. The store is
+// package-private, so a spec can age a record directly instead of the
+// production type carrying an injectable clock for the test's benefit.
+func expirePlexFlow(p *plexPinFlows, id string) {
+	GinkgoHelper()
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	f, ok := p.flows[id]
+	Expect(ok).To(BeTrue(), "flow %q was never begun", id)
+	f.expiresAt = time.Now().Add(-time.Minute)
+	p.flows[id] = f
+}
+
 var _ = Describe("Plex PIN endpoints", Label("unit", "server"), func() {
 	const upstreamPinID = uint64(12345)
 
@@ -210,9 +223,7 @@ var _ = Describe("Plex PIN endpoints", Label("unit", "server"), func() {
 
 	It("refuses a flow whose TTL has passed", func() {
 		flowID := beginOK(adminA())
-		handler.plexFlows.now = func() time.Time {
-			return time.Now().Add(plexPinFlowTTL + time.Minute)
-		}
+		expirePlexFlow(handler.plexFlows, flowID)
 
 		Expect(poll(flowID, adminA()).Code).To(Equal(http.StatusNotFound))
 	})

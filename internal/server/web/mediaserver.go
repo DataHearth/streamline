@@ -23,14 +23,16 @@ func (h *Handler) registerWebMediaServerRoutes(r chi.Router) {
 	r.Get("/settings/media-servers/plex/pin/{flowID}", h.plexPinPoll)
 }
 
-// requireAdmin mirrors restapi.requireAdmin for the root-router web routes.
+// requireAdmin answers a non-admin caller and returns nil, or hands back the
+// claims. The test is auth.IsAdmin, shared with the REST role guard so the two
+// cannot drift on what admin means; only the refusal is this package's, since a
+// cookie-session route answers in the web error shape.
 func requireAdmin(w http.ResponseWriter, r *http.Request) *auth.Claims {
-	c := auth.ClaimsFromContext(r.Context())
-	if c == nil || !auth.RoleAtLeast(c.Role, "admin") {
+	if !auth.IsAdmin(r.Context()) {
 		writeError(w, r, http.StatusForbidden, "Admin role required.", "forbidden")
 		return nil
 	}
-	return c
+	return auth.ClaimsFromContext(r.Context())
 }
 
 type plexPinBeginResponse struct {
