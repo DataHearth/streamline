@@ -20,7 +20,7 @@ func (s *Server) ListMovies(
 ) (ListMoviesResponseObject, error) {
 	page, limit := uint16(1), uint16(20)
 	if request.Params.Page != nil {
-		page = uint16(*request.Params.Page)
+		page = *request.Params.Page
 	}
 	if request.Params.Limit != nil {
 		limit = clampLimit(*request.Params.Limit, moviesMaxLimit)

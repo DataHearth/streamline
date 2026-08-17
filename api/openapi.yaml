@@ -49,7 +49,9 @@ paths:
           schema:
             type: integer
             default: 1
-            x-go-type: uint32
+            minimum: 1
+            maximum: 65535
+            x-go-type: uint16
         - name: limit
           in: query
           schema:
@@ -2962,7 +2964,9 @@ components:
       schema:
         type: integer
         default: 1
-        x-go-type: uint32
+        minimum: 1
+        maximum: 65535
+        x-go-type: uint16
 
     SeriesLimit:
       name: limit
@@ -5375,8 +5379,8 @@ components:
           nullable: true
         last_duration_ms:
           type: integer
-          format: int32
           minimum: 0
+          x-go-type: uint32
         last_error:
           type: string
           nullable: true

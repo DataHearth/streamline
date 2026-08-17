@@ -18,7 +18,7 @@ func (s *Server) ListSeries(
 ) (ListSeriesResponseObject, error) {
 	p := tvshow.FilterParams{Page: 1, Limit: 20}
 	if request.Params.Page != nil {
-		p.Page = uint16(*request.Params.Page)
+		p.Page = *request.Params.Page
 	}
 	if request.Params.Limit != nil {
 		p.Limit = clampLimit(*request.Params.Limit, seriesMaxLimit)

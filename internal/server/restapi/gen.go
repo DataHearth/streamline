@@ -2921,7 +2921,7 @@ type Schedule struct {
 	//
 	// Example: 15m
 	Interval       string     `json:"interval"`
-	LastDurationMs int32      `json:"last_duration_ms"`
+	LastDurationMs uint32     `json:"last_duration_ms"`
 	LastError      *string    `json:"last_error,omitempty"`
 	LastFinishedAt *time.Time `json:"last_finished_at,omitempty"`
 	LastStartedAt  *time.Time `json:"last_started_at,omitempty"`
@@ -3456,7 +3456,7 @@ type SeriesLimit = uint16
 type SeriesLookupQuery = string
 
 // SeriesPage defines model for SeriesPage.
-type SeriesPage = uint32
+type SeriesPage = uint16
 
 // SeriesQuery defines model for SeriesQuery.
 type SeriesQuery = string
@@ -3765,7 +3765,7 @@ type ListImportShowsParamsClassification string
 
 // ListMoviesParams defines parameters for ListMovies.
 type ListMoviesParams struct {
-	Page  *uint32 `form:"page,omitempty" json:"page,omitempty"`
+	Page  *uint16 `form:"page,omitempty" json:"page,omitempty"`
 	Limit *uint16 `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
