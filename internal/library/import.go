@@ -437,15 +437,16 @@ func MoveFile(ctx context.Context, src, dst string) error {
 }
 
 func copyFile(src, dst string) error {
-	//nolint:gosec // src is a download-client path; dst was template-rendered
-	// through SanitizePath and the ErrUnsafePath root check in placeFile
+	//nolint:gosec // every caller hands it operator-scoped paths: placeFile
+	// renders dst through SanitizePath plus the ErrUnsafePath root check, and
+	// pathmigrate rewrites stored DB paths against operator-configured roots
 	in, err := os.Open(src)
 	if err != nil {
 		return err
 	}
 	defer in.Close()
 
-	//nolint:gosec // see above: dst cannot escape the library root
+	//nolint:gosec // see above: both callers constrain dst to operator roots
 	out, err := os.Create(dst)
 	if err != nil {
 		return err

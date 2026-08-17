@@ -488,8 +488,9 @@ func (h *Handler) oidcStart(w http.ResponseWriter, r *http.Request) {
 		oauth2.S256ChallengeOption(verifier),
 		oauth2.SetAuthURLParam("redirect_uri", oidcRedirectURI(r, name)),
 	)
-	//nolint:gosec // url is the configured provider's AuthCodeURL; the URL
-	// param only selects which configured provider, it never enters the URL
+	//nolint:gosec // url is AuthCodeURL for a provider h.oidc.Get validated
+	// above, so the name interpolated into redirect_uri can only be a
+	// configured one — and the IdP only honors registered redirect_uris
 	http.Redirect(w, r, url, http.StatusFound)
 }
 
