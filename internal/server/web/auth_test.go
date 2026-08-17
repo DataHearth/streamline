@@ -1,6 +1,7 @@
 package web
 
 import (
+	"crypto/tls"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -211,5 +212,81 @@ var _ = Describe("sanitizeNext", Label("unit", "server"), func() {
 		} {
 			Expect(sanitizeNext(next)).NotTo(ContainSubstring(`\`))
 		}
+	})
+})
+
+var _ = Describe("oidcRedirectURI", Label("unit", "server"), func() {
+	const provider = "keycloak"
+
+	// The default RemoteAddr httptest.NewRequest hands out (192.0.2.1) sits
+	// inside this range; untrustedRedirectPeer sits outside it.
+	trustProxies := func() {
+		GinkgoHelper()
+		configtest.Setup(map[string]any{
+			"server": map[string]any{
+				"trusted_proxies": []string{"192.0.2.0/24"},
+			},
+		})
+	}
+
+	request := func(headers map[string]string) *http.Request {
+		r := httptest.NewRequest(http.MethodGet, "/auth/oidc/keycloak/start", nil)
+		r.Host = "streamline.internal"
+		for k, v := range headers {
+			r.Header.Set(k, v)
+		}
+		return r
+	}
+
+	BeforeEach(func() { configtest.Setup() })
+
+	DescribeTable("builds an https callback off any forwarded TLS spelling",
+		func(header, value string) {
+			trustProxies()
+
+			Expect(oidcRedirectURI(request(map[string]string{
+				header: value,
+			}), provider)).To(Equal(
+				"https://streamline.internal/auth/oidc/keycloak/callback",
+			))
+		},
+		Entry("RFC 7239 Forwarded", "Forwarded", "proto=https"),
+		Entry("X-Forwarded-Ssl", "X-Forwarded-Ssl", "on"),
+		Entry("uppercased scheme", "X-Forwarded-Proto", "HTTPS"),
+	)
+
+	It("keeps honoring X-Forwarded-Host alongside the forwarded scheme", func() {
+		trustProxies()
+
+		Expect(oidcRedirectURI(request(map[string]string{
+			"Forwarded":        "proto=https",
+			"X-Forwarded-Host": "media.example",
+		}), provider)).To(Equal(
+			"https://media.example/auth/oidc/keycloak/callback",
+		))
+	})
+
+	It("ignores every forwarded header from an untrusted peer", func() {
+		trustProxies()
+		r := request(map[string]string{
+			"Forwarded":         "proto=https",
+			"X-Forwarded-Proto": "https",
+			"X-Forwarded-Ssl":   "on",
+			"X-Forwarded-Host":  "evil.example",
+		})
+		r.RemoteAddr = "198.51.100.7:5555"
+
+		Expect(oidcRedirectURI(r, provider)).To(Equal(
+			"http://streamline.internal/auth/oidc/keycloak/callback",
+		))
+	})
+
+	It("uses https when the request itself arrived over TLS", func() {
+		r := request(nil)
+		r.TLS = &tls.ConnectionState{}
+
+		Expect(oidcRedirectURI(r, provider)).To(Equal(
+			"https://streamline.internal/auth/oidc/keycloak/callback",
+		))
 	})
 })
