@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	entsql "entgo.io/ent/dialect/sql"
@@ -10,6 +11,11 @@ import (
 	"github.com/datahearth/streamline/ent/user"
 	"github.com/datahearth/streamline/internal/role"
 )
+
+// ErrLastAdmin is returned by UpdateUserRole when the write would leave the
+// instance with no admin at all, a state no code path can recover from
+// (BootstrapSeedAdmin only re-seeds an empty user table).
+var ErrLastAdmin = errors.New("cannot demote the last admin")
 
 // Role is a role.Value rather than a user.Role so a write has to name the
 // authority that decided it. A bare user.Role can be spelled anywhere; a
@@ -178,6 +184,41 @@ func otherAdminExists(excludeID uint32) predicate.User {
 				)),
 		))
 	})
+}
+
+// UpdateUserRole sets the user's role, refusing the write when it would
+// demote the only remaining admin. The guard (otherAdminExists) lives in the
+// UPDATE's own WHERE clause rather than in a preceding SELECT, so two
+// demotions racing on two distinct admins cannot both observe a survivor:
+// SQLite applies a single statement atomically, and the loser matches no row.
+// Unlike UpdateUserUnlessLastAdmin, a write that keeps or grants admin is
+// never blocked, and the guard's refusal is a distinct sentinel (ErrLastAdmin)
+// so the OIDC sync can soft-fail it without confusing it with a missing row.
+func (db *DB) UpdateUserRole(
+	ctx context.Context,
+	id uint32,
+	r role.Value,
+) (*ent.User, error) {
+	upd := db.client.User.Update().
+		Where(user.IDEQ(id)).
+		SetRole(r.Ent())
+	if r.Ent() != user.RoleAdmin {
+		upd = upd.Where(user.Or(
+			user.RoleNEQ(user.RoleAdmin),
+			otherAdminExists(id),
+		))
+	}
+	n, err := upd.Save(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if n == 0 {
+		if _, gerr := db.client.User.Get(ctx, id); gerr != nil {
+			return nil, gerr
+		}
+		return nil, ErrLastAdmin
+	}
+	return db.client.User.Get(ctx, id)
 }
 
 // UpdateUser applies every non-nil field in p in a single SQL UPDATE, so
