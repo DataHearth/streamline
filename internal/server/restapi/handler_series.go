@@ -16,9 +16,11 @@ func (s *Server) ListSeries(
 	ctx context.Context,
 	request ListSeriesRequestObject,
 ) (ListSeriesResponseObject, error) {
-	p := tvshow.FilterParams{Page: 1, Limit: 20}
-	if request.Params.Page != nil {
-		p.Page = *request.Params.Page
+	// The service coerces page=0 itself, but pageOr keeps the response's
+	// echoed Page field at 1 rather than parroting the 0 — same as /movies.
+	p := tvshow.FilterParams{
+		Page:  pageOr(request.Params.Page, 1),
+		Limit: 20,
 	}
 	if request.Params.Limit != nil {
 		p.Limit = clampLimit(*request.Params.Limit, seriesMaxLimit)
