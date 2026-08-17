@@ -253,8 +253,8 @@ func (s *Service) List(
 	)
 	defer span.End()
 
-	// Coerce like tvshow.Service.List: a zero page or limit is a client
-	// default, not an error.
+	// Defaults for in-process callers (the HTTP handlers 400 an explicit
+	// zero before this is reached), mirroring tvshow.Service.List.
 	if page == 0 {
 		page = 1
 	}

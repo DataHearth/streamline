@@ -91,10 +91,13 @@ func (s *Server) ListDownloadHistory(
 	ctx context.Context,
 	request ListDownloadHistoryRequestObject,
 ) (ListDownloadHistoryResponseObject, error) {
-	limit := 0
-	if request.Params.Limit != nil {
-		limit = clampLimit(*request.Params.Limit, activityMaxLimit)
+	limit, ok := positiveOr(request.Params.Limit, 0)
+	if !ok {
+		return ListDownloadHistory400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(msgZeroLimit),
+		}, nil
 	}
+	limit = clampLimit(limit, activityMaxLimit)
 	cursor := ""
 	if request.Params.Cursor != nil {
 		cursor = *request.Params.Cursor

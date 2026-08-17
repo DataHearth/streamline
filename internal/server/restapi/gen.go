@@ -17507,6 +17507,20 @@ func (response ListUsers200JSONResponse) VisitListUsersResponse(w http.ResponseW
 	return err
 }
 
+type ListUsers400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListUsers400JSONResponse) VisitListUsersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListUsers403JSONResponse struct{ ForbiddenJSONResponse }
 
 func (response ListUsers403JSONResponse) VisitListUsersResponse(w http.ResponseWriter) error {

@@ -29,11 +29,12 @@ func clampLimit[T ~int | ~uint16 | ~uint32](limit, max T) T {
 // positiveOr returns def when v is absent and *v otherwise. ok is false for
 // an explicit zero — the caller's cue to enforce the spec's minimum: 1 with
 // a 400 rather than silently serving a different page size than it echoes.
-func positiveOr[T ~uint16 | ~uint32](v *T, def T) (T, bool) {
+// The <= catches negatives too on the params bound as plain int.
+func positiveOr[T ~int | ~uint16 | ~uint32](v *T, def T) (T, bool) {
 	if v == nil {
 		return def, true
 	}
-	if *v == 0 {
+	if *v <= 0 {
 		return 0, false
 	}
 	return *v, true

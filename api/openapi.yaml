@@ -1849,7 +1849,8 @@ paths:
         - in: query
           name: limit
           description: Max items per page (1..100).
-          schema: { type: integer, default: 25, maximum: 100, x-go-type: uint16 }
+          schema:
+            { type: integer, default: 25, minimum: 1, maximum: 100, x-go-type: uint16 }
         - in: query
           name: offset
           description: Zero-based offset for pagination.
@@ -1859,6 +1860,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/UsersList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "403":
           $ref: "#/components/responses/Forbidden"
     post:

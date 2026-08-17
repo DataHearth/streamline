@@ -23,6 +23,19 @@ var _ = Describe("Request handlers", Label("unit", "restapi"), func() {
 	})
 
 	Describe("GET /requests", func() {
+		It("rejects an out-of-range page with a JSON 400", func() {
+			resp := app.do(app.req(
+				http.MethodGet,
+				"/api/v1/requests?page=70000",
+				app.adminKey,
+				nil,
+			))
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			Expect(resp.Header.Get("Content-Type")).
+				To(HavePrefix("application/json"))
+		})
+
 		It("rejects an explicit page=0 with a JSON 400", func() {
 			resp := app.do(app.req(
 				http.MethodGet,
