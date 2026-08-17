@@ -45,6 +45,7 @@ func Recoverer(next http.Handler) http.Handler {
 			span.RecordError(err, trace.WithStackTrace(true))
 			span.SetStatus(codes.Error, "panic recovered")
 
+			//nolint:sloglint // LogAttrs takes slog.Attr by API design
 			slog.LogAttrs(ctx, observability.LevelCritical,
 				"panic recovered in HTTP handler",
 				slog.String(string(semconv.HTTPRequestMethodKey), r.Method),

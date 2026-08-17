@@ -57,5 +57,5 @@
 	     rows and kind on others. The dot is kind only — the same amber/purple
 	     the filter switch and the grid chips use. A bare colour cannot carry
 	     state without a label; the Upcoming list's pill does that. -->
-	<EventDot status={dotToken(event)} size="md" />
+	<EventDot kind={dotToken(event)} size="md" />
 </a>

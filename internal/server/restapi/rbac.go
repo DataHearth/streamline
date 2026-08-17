@@ -204,6 +204,7 @@ func roleGuard(f StrictHandlerFunc, operationID string) StrictHandlerFunc {
 	) (any, error) {
 		need, listed := minRole[operationID]
 		if !listed {
+			//nolint:sloglint // LogAttrs takes slog.Attr by API design
 			slog.LogAttrs(ctx, observability.LevelCritical,
 				"operation missing from the RBAC table, denying",
 				slog.String("operation", operationID))

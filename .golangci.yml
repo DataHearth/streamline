@@ -25,8 +25,14 @@ linters:
     - spancheck
     - errorlint
     - bodyclose
+    - gosec
 
   settings:
+    # Scoped to G112 (Slowloris): an http.Server built without
+    # ReadHeaderTimeout. The rest of gosec's rule set is not enabled here.
+    gosec:
+      includes:
+        - G112
     unparam:
       check-exported: true
     sloglint:
@@ -69,8 +75,3 @@ linters:
           - staticcheck
         text: "ST1001"
         path: e2e/
-      # slog.LogAttrs only accepts slog.Attr by API design; it's the documented
-      # way to log at observability.LevelCritical, so kv-only can't apply.
-      - linters:
-          - sloglint
-        source: slog\.LogAttrs

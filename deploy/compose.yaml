@@ -7,6 +7,18 @@
 # gluetun runs the VPN tunnel + killswitch (no iptables, no
 # privileged); qbittorrent shares its netns. See the gluetun wiki for your
 # provider's WireGuard settings.
+#
+# Host port bindings: every admin surface here is published on 127.0.0.1 only.
+# qBittorrent's WebUI and Prowlarr's API expose credential-bearing admin
+# endpoints (indexer API keys, arbitrary save paths), and streamline's own UI is
+# the front door to all of it — published on a reachable interface, any of them
+# hands the stack to the network. Docker DNATs published ports ahead of the host
+# firewall, so a `ufw deny` does NOT cover this; the bind address is what
+# constrains it. Container-to-container traffic is unaffected — it resolves over
+# the `streamline` network by service name (gluetun:8090, prowlarr:9696,
+# plex:32400). Plex is bound too: this stack already advertises it as
+# ADVERTISE_IP=http://localhost:32400/, so LAN clients were never a supported
+# path here. 58946 is deliberately left wide — see the note on it below.
 services:
   streamline:
     build:
@@ -18,7 +30,7 @@ services:
     networks:
       - streamline
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     volumes:
       - ../tmp/data:/data
       - ../tmp/media:/media
@@ -50,7 +62,12 @@ services:
     ports:
       # qbittorrent webui — remapped to 8090 on host (8080 is streamline).
       # Reachable from other compose services as `gluetun:8090`.
-      - "8090:8090"
+      - "127.0.0.1:8090:8090"
+      # NOT loopback-bound: this is the BitTorrent peer port and has to accept
+      # inbound connections. It only carries traffic when VPN port forwarding is
+      # off — with VPN_PORT_FORWARDING on, the up-command below rewrites
+      # qBittorrent's listen_port to gluetun's forwarded port and peers arrive
+      # through the tunnel instead.
       - "58946:58946"
       - "58946:58946/udp"
     volumes:
@@ -111,7 +128,7 @@ services:
       - streamline
     restart: unless-stopped
     ports:
-      - "9696:9696"
+      - "127.0.0.1:9696:9696"
     volumes:
       - ../tmp/prowlarr/config:/config
     environment:
@@ -132,7 +149,7 @@ services:
     networks:
       - streamline
     ports:
-      - "32400:32400"
+      - "127.0.0.1:32400:32400"
     volumes:
       - ../tmp/plex/config:/config
       - ../tmp/plex/transcode:/transcode

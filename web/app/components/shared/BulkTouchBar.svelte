@@ -19,7 +19,7 @@
 <script lang="ts">
 	import { fly, fade } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
-	import { MoreHorizontal, X } from "@lucide/svelte";
+	import { Ellipsis, X } from "@lucide/svelte";
 	import { cn } from "../../lib/cn";
 	import { plural } from "../../lib/bulk";
 	import { bulkMode } from "../../lib/bulk-mode.svelte";
@@ -105,7 +105,7 @@
 		aria-expanded={sheet}
 		class={cn(cell, "text-fg-muted")}
 	>
-		<MoreHorizontal size={22} aria-hidden="true" />
+		<Ellipsis size={22} aria-hidden="true" />
 		{i18n.common_more()}
 	</button>
 </div>

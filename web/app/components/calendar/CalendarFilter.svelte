@@ -14,8 +14,8 @@
 
 	const CELLS: { value: CalendarFilter; label: string; dot?: string }[] = [
 		{ value: "all", label: i18n.common_all() },
-		{ value: "movies", label: i18n.movies_label(), dot: "var(--status-wanted)" },
-		{ value: "episodes", label: i18n.series_episodes(), dot: "var(--status-grabbing)" },
+		{ value: "movies", label: i18n.movies_label(), dot: "var(--kind-movie)" },
+		{ value: "episodes", label: i18n.series_episodes(), dot: "var(--kind-episode)" },
 	];
 
 	const cell =

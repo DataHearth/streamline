@@ -92,7 +92,7 @@ Tags: `latest`, `edge` (main branch), `vX.Y.Z`, `X.Y`, `X`, `sha-<short>`.
 
 The Quick start snippet above is the deployment template. [deploy/compose.yaml](deploy/compose.yaml) is the project's *local test stack* — it builds the image from source and wires up gluetun (VPN), qBittorrent, Prowlarr and Plex against `tmp/`. Useful as a wiring reference, not as a starting point for your own deployment.
 
-For a full observability stack (VictoriaMetrics + VictoriaLogs + VictoriaTraces + Grafana Alloy + Grafana), see [deploy/compose.observability.yaml](deploy/compose.observability.yaml).
+For a full observability stack (VictoriaMetrics + VictoriaLogs + VictoriaTraces + Grafana Alloy + Grafana), see [deploy/compose.observability.yaml](deploy/compose.observability.yaml). It is *development-only*: every port binds to `127.0.0.1`, because the Victoria\* backends serve unauthenticated write and admin APIs to anyone who can reach them. To use it from another machine, front it with an authenticated TLS reverse proxy or a VPN rather than widening the bindings.
 
 ### Helm
 
