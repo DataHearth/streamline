@@ -143,6 +143,12 @@ tasks:
     deps: [build:js, build:css]
     cmd: go tool golangci-lint run ./...
 
+  vulncheck:
+    desc: Scan dependencies for known vulnerabilities
+    # Same //go:embed constraint as lint:go — govulncheck loads the packages.
+    deps: [build:js, build:css]
+    cmd: go tool govulncheck ./...
+
   lint:frontend:
     desc: Lint JS/CSS (biome)
     cmds:
