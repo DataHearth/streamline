@@ -134,7 +134,17 @@ func diskUsage(total, free int64) *DiskUsage {
 		return nil
 	}
 	used := total - free
-	pct := uint8(used * 100 / total)
+	// Clamp before narrowing: root-reserved blocks can push free above the
+	// unprivileged total (negative used), and a raced statfs could do the
+	// reverse — either would wrap uint8 into a nonsense badge percentage.
+	// Spelled as branches, not min/max, so gosec's range analysis can see it.
+	pctWide := used * 100 / total
+	if pctWide < 0 {
+		pctWide = 0
+	} else if pctWide > 100 {
+		pctWide = 100
+	}
+	pct := uint8(pctWide)
 	kind := "ok"
 	switch {
 	case pct >= 90:
