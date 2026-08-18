@@ -237,10 +237,11 @@ tasks:
     deps: [helm:prep]
     cmds:
       - mkdir -p /tmp/streamline
-      - helm template streamline deploy/helm/streamline >
+      # image.tag has no default — the chart refuses to pick an app version.
+      - helm template streamline deploy/helm/streamline --set image.tag=dev >
         /tmp/streamline/helm-default.yaml
-      - helm template streamline deploy/helm/streamline --set
-        observability.enabled=true > /tmp/streamline/helm-obs.yaml
+      - helm template streamline deploy/helm/streamline --set image.tag=dev
+        --set observability.enabled=true > /tmp/streamline/helm-obs.yaml
 
   helm:kind:up:
     desc: Create kind cluster for e2e
@@ -331,14 +332,15 @@ tasks:
       # copy holds anything. Tag the bookmark that is actually being released.
       - git tag -a {{.VERSION}} main -m "{{.VERSION}}"
       - git push origin {{.VERSION}}
-      # The chart is NOT released here — it versions independently. Point it at
-      # this image by bumping appVersion + version in Chart.yaml, then: task chart:tag
+      # The chart is NOT released here — it versions independently. Operators
+      # deploy this image by setting image.tag in their values; the chart has
+      # no appVersion and never picks a tag for them.
 
   # --- Chart release ------------------------------------------------------
   # The chart has its own semver, independent of the app: a values/template fix
   # ships without an app release, and an app release ships without a chart bump.
-  # Chart.yaml is the source of truth for both numbers — chart:tag reads them,
-  # nothing stamps them at package time.
+  # Chart.yaml is the source of truth for the chart version — chart:tag reads
+  # it, nothing stamps it at package time.
 
   chart:tag:
     desc: Cut a chart release — tag main chart-v<Chart.yaml version> and push it, triggering .github/workflows/chart.yaml

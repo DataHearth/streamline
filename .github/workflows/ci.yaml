@@ -222,28 +222,6 @@ jobs:
           fi
           echo "chart version ${base_v} -> ${head_v}"
 
-      # imageRef defaults image.tag to .Chart.AppVersion, so a typo'd or
-      # v-prefixed appVersion ships a chart that ImagePullBackOffs on install.
-      - name: appVersion must reference a real image
-        if: steps.filter.outputs.helm == 'true'
-        run: |
-          chart=deploy/helm/streamline/Chart.yaml
-          app_version=$(sed -n 's/^appVersion: *//p' "$chart" | tr -d '"')
-          repo=$(sed -n 's|^  repository: *||p' deploy/helm/streamline/values.yaml | head -1)
-          path=${repo#ghcr.io/}
-
-          token=$(curl -fsSL "https://ghcr.io/token?scope=repository:${path}:pull&service=ghcr.io" | jq -r .token)
-          code=$(curl -sSL -o /dev/null -w '%{http_code}' \
-            -H "Authorization: Bearer ${token}" \
-            -H 'Accept: application/vnd.oci.image.index.v1+json,application/vnd.docker.distribution.manifest.list.v2+json' \
-            "https://ghcr.io/v2/${path}/manifests/${app_version}")
-
-          if [ "$code" != "200" ]; then
-            echo "::error file=${chart}::appVersion ${app_version} has no image at ${repo} (HTTP ${code}) — the chart would not install"
-            exit 1
-          fi
-          echo "${repo}:${app_version} exists"
-
       - name: Install Task
         if: steps.filter.outputs.helm == 'true'
         uses: arduino/setup-task@c0bc642852239c2689f73f4ea6459c29405f3c52 # v3.0.0
