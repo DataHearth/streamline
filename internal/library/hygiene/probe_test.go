@@ -1,8 +1,10 @@
 package hygiene
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -134,6 +136,79 @@ var _ = Describe("Service.RunMediaProbe", Label("unit", "hygiene"), func() {
 		store.EXPECT().StampMediaFileProbe(mock.Anything, uint32(2), mock.Anything).
 			Return(nil).Once()
 
+		var buf bytes.Buffer
+		GinkgoWriter.TeeTo(&buf)
+		DeferCleanup(GinkgoWriter.ClearTeeWriters)
+
 		Expect(svc.RunMediaProbe(ctx)).To(Succeed())
+		Expect(buf.String()).To(ContainSubstring("stamp media probe failed"))
 	})
+
+	It(
+		"does not log an error when the row was deleted concurrently between listing and stamping",
+		func() {
+			configtest.Setup(map[string]any{
+				"ffmpeg": map[string]any{
+					"enabled": true,
+				},
+			})
+
+			store.EXPECT().ListUnprobedMediaFiles(mock.Anything, probeBatchSize).
+				Return([]*ent.MediaFile{{ID: 9, Path: existingFile}}, nil).Once()
+			prober.EXPECT().Available().Return(true).Once()
+			prober.EXPECT().Probe(mock.Anything, existingFile).
+				Return(&ffmpeg.Info{VideoCodec: "h264"}, nil).Once()
+			// The drift-check job can delete the row between ListUnprobedMediaFiles
+			// and this StampMediaFileProbe call; that race is routine, not an error.
+			store.EXPECT().
+				StampMediaFileProbe(mock.Anything, uint32(9), mock.Anything).
+				Return(&ent.NotFoundError{}).
+				Once()
+
+			var buf bytes.Buffer
+			GinkgoWriter.TeeTo(&buf)
+			DeferCleanup(GinkgoWriter.ClearTeeWriters)
+
+			Expect(svc.RunMediaProbe(ctx)).To(Succeed())
+			Expect(buf.String()).NotTo(ContainSubstring("stamp media probe failed"))
+		},
+	)
+
+	It(
+		"does not let more skips than the batch size starve a probeable row behind them",
+		func() {
+			configtest.Setup(map[string]any{
+				"ffmpeg": map[string]any{
+					"enabled": true,
+				},
+			})
+
+			// 26 unreachable rows — one more than probeBatchSize — followed by a
+			// single probeable row. A naive single-fetch tick would see nothing
+			// but skips and never reach it.
+			skipRows := make([]*ent.MediaFile, 26)
+			for i := range skipRows {
+				skipRows[i] = &ent.MediaFile{
+					ID:   uint32(i + 1),
+					Path: filepath.Join(tmpDir, fmt.Sprintf("gone-%d.mkv", i)),
+				}
+			}
+			allRows := append(append([]*ent.MediaFile{}, skipRows...),
+				&ent.MediaFile{ID: 27, Path: existingFile})
+
+			store.EXPECT().ListUnprobedMediaFiles(mock.Anything, probeBatchSize).
+				Return(skipRows, nil).Once()
+			store.EXPECT().ListUnprobedMediaFiles(mock.Anything, probeBatchSize*2).
+				Return(allRows, nil).Once()
+			prober.EXPECT().Available().Return(true).Once()
+			prober.EXPECT().Probe(mock.Anything, existingFile).
+				Return(&ffmpeg.Info{VideoCodec: "h264"}, nil).Once()
+			store.EXPECT().
+				StampMediaFileProbe(mock.Anything, uint32(27), mock.Anything).
+				Return(nil).
+				Once()
+
+			Expect(svc.RunMediaProbe(ctx)).To(Succeed())
+		},
+	)
 })

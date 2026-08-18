@@ -359,7 +359,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		{
 			"media-probe",
 			cfg.Schedule.MediaProbe,
-			func(d time.Duration) scheduler.JobFunc { return jobs.MediaProbe(hygieneSvc) },
+			func(time.Duration) scheduler.JobFunc { return jobs.MediaProbe(hygieneSvc) },
 		},
 	}
 	for _, j := range jobsToRegister {
