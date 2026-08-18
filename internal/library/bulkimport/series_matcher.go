@@ -6,6 +6,7 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/metadata"
+	"github.com/datahearth/streamline/internal/utils/numeric"
 )
 
 const showCandidateLimit = 5
@@ -78,8 +79,7 @@ func BuildShowParams(
 		ParsedTitle:    p.Title,
 		Classification: c.Kind,
 		Candidates:     c.Candidates,
-		//nolint:gosec // a season folder holds far fewer than 65k video files
-		FileCount: uint16(fileCount),
+		FileCount:      numeric.SaturateU16(fileCount),
 	}
 	if p.Year != 0 {
 		year := p.Year

@@ -14,6 +14,7 @@ import (
 
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/otelx"
+	"github.com/datahearth/streamline/internal/utils/numeric"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -226,9 +227,8 @@ func (t *TMDB) GetMovie(ctx context.Context, tmdbID uint32) (*MovieDetails, erro
 			Overview:      overview,
 			PosterPath:    resp.PosterPath,
 		},
-		Genres: genres,
-		//nolint:gosec // minutes from TMDB; uint16 mirrors the ent column
-		Runtime:          uint16(resp.Runtime),
+		Genres:           genres,
+		Runtime:          numeric.SaturateU16(resp.Runtime),
 		Rating:           resp.VoteAverage,
 		VoteCount:        resp.VoteCount,
 		Cast:             cast,

@@ -14,6 +14,7 @@ import (
 	"github.com/datahearth/streamline/internal/auth"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/utils/numeric"
 	"github.com/urfave/cli/v3"
 )
 
@@ -133,7 +134,7 @@ func authList(ctx context.Context, cmd *cli.Command) error {
 		}
 		roleFilter = parsed
 	}
-	limit := uint32(cmd.Uint("limit"))
+	limit := numeric.SaturateU32(cmd.Uint("limit"))
 
 	return withAuthDeps(ctx, cmd, func(
 		ctx context.Context,
@@ -144,8 +145,8 @@ func authList(ctx context.Context, cmd *cli.Command) error {
 		var offset uint32
 		for {
 			page := uint32(userListPageSize)
-			if limit > 0 && limit-uint32(len(users)) < page {
-				page = limit - uint32(len(users))
+			if limit > 0 && limit-numeric.SaturateU32(len(users)) < page {
+				page = limit - numeric.SaturateU32(len(users))
 			}
 			items, total, err := store.ListUsers(ctx, db.ListUsersParams{
 				Role:   roleFilter,
@@ -158,11 +159,11 @@ func authList(ctx context.Context, cmd *cli.Command) error {
 				return fmt.Errorf("list users: %w", err)
 			}
 			users = append(users, items...)
-			offset += uint32(len(items))
+			offset += numeric.SaturateU32(len(items))
 			if len(items) == 0 || len(users) >= total {
 				break
 			}
-			if limit > 0 && uint32(len(users)) >= limit {
+			if limit > 0 && numeric.SaturateU32(len(users)) >= limit {
 				break
 			}
 		}
