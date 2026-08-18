@@ -11,7 +11,7 @@
 # drift between builds independently of our code. The cost is that stdlib CVE
 # fixes now require bumping this by hand — grype failing on `stdlib` is the signal.
 ARG GO_VERSION=1.26.6
-ARG GO_DIGEST=sha256:af8d6740070b8906d12eae1c3e3ea0957fb63f492051ea05e354c38ef9fe88df
+ARG GO_DIGEST=sha256:3889b425f035be855a72fb4755265311293b6d414521f0a519d819df32222d83
 
 # --- Frontend assets (esbuild + TailwindCSS) ---
 FROM node:24-alpine@sha256:d32cdf619f63fe0471182d08996dd516c6275bb5fd31ae06e55a570bd9e1ad43 AS frontend
