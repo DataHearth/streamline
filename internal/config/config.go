@@ -234,6 +234,7 @@ type ScheduleConfig struct {
 	ImportScan           string `koanf:"import_scan"            validate:"required"`
 	Cleanup              string `koanf:"cleanup"                validate:"required"`
 	DriftCheck           string `koanf:"drift_check"            validate:"required"`
+	MediaProbe           string `koanf:"media_probe"            validate:"required"`
 }
 
 type MetadataConfig struct {
@@ -498,6 +499,7 @@ func defaults() map[string]any {
 		"schedules.cleanup":                "24h",
 		"schedules.import_scan":            "60s",
 		"schedules.drift_check":            "15m",
+		"schedules.media_probe":            "15m",
 		"library.drift_grace_ticks":        3,
 		"metadata.tmdb_api_key":            "",
 		"metadata.tmdb_api_key_file":       "",

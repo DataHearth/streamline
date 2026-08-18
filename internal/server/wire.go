@@ -229,6 +229,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 	// Constructed once and kept: the media-probe backfill job and the
 	// health/system-info endpoint reuse this same prober.
 	prober := ffmpeg.NewCLI(cfg.FFmpeg.Path)
+	hygieneSvc.Probe = prober
 	imp := importer.NewWorker(importer.Deps{
 		DB:          store,
 		Library:     libSvc,
@@ -353,6 +354,11 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 			"drift-check",
 			cfg.Schedule.DriftCheck,
 			func(d time.Duration) scheduler.JobFunc { return jobs.DriftCheck(hygieneSvc, d) },
+		},
+		{
+			"media-probe",
+			cfg.Schedule.MediaProbe,
+			func(d time.Duration) scheduler.JobFunc { return jobs.MediaProbe(hygieneSvc) },
 		},
 	}
 	for _, j := range jobsToRegister {

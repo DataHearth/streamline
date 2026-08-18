@@ -30,3 +30,9 @@ func DriftCheck(s *hygiene.Service, interval time.Duration) scheduler.JobFunc {
 		return s.RunDriftCheck(ctx, interval)
 	}
 }
+
+// MediaProbe returns a JobFunc that backfills media info onto MediaFile rows
+// that have never been probed.
+func MediaProbe(s *hygiene.Service) scheduler.JobFunc {
+	return s.RunMediaProbe
+}

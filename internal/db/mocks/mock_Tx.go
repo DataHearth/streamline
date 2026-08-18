@@ -18,6 +18,7 @@ import (
 	"github.com/datahearth/streamline/ent/request"
 	"github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/role"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -7365,6 +7366,74 @@ func (_c *MockTx_ListTvShowsForAdoption_Call) RunAndReturn(run func(ctx context.
 	return _c
 }
 
+// ListUnprobedMediaFiles provides a mock function for the type MockTx
+func (_mock *MockTx) ListUnprobedMediaFiles(ctx context.Context, limit int) ([]*ent.MediaFile, error) {
+	ret := _mock.Called(ctx, limit)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListUnprobedMediaFiles")
+	}
+
+	var r0 []*ent.MediaFile
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int) ([]*ent.MediaFile, error)); ok {
+		return returnFunc(ctx, limit)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int) []*ent.MediaFile); ok {
+		r0 = returnFunc(ctx, limit)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ent.MediaFile)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int) error); ok {
+		r1 = returnFunc(ctx, limit)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_ListUnprobedMediaFiles_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListUnprobedMediaFiles'
+type MockTx_ListUnprobedMediaFiles_Call struct {
+	*mock.Call
+}
+
+// ListUnprobedMediaFiles is a helper method to define mock.On call
+//   - ctx context.Context
+//   - limit int
+func (_e *MockTx_Expecter) ListUnprobedMediaFiles(ctx any, limit any) *MockTx_ListUnprobedMediaFiles_Call {
+	return &MockTx_ListUnprobedMediaFiles_Call{Call: _e.mock.On("ListUnprobedMediaFiles", ctx, limit)}
+}
+
+func (_c *MockTx_ListUnprobedMediaFiles_Call) Run(run func(ctx context.Context, limit int)) *MockTx_ListUnprobedMediaFiles_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_ListUnprobedMediaFiles_Call) Return(mediaFiles []*ent.MediaFile, err error) *MockTx_ListUnprobedMediaFiles_Call {
+	_c.Call.Return(mediaFiles, err)
+	return _c
+}
+
+func (_c *MockTx_ListUnprobedMediaFiles_Call) RunAndReturn(run func(ctx context.Context, limit int) ([]*ent.MediaFile, error)) *MockTx_ListUnprobedMediaFiles_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListUpcomingEpisodes provides a mock function for the type MockTx
 func (_mock *MockTx) ListUpcomingEpisodes(ctx context.Context, from time.Time, to time.Time) ([]*ent.Episode, error) {
 	ret := _mock.Called(ctx, from, to)
@@ -9815,6 +9884,69 @@ func (_c *MockTx_SetTorrentSessionSeedStopped_Call) Return(err error) *MockTx_Se
 }
 
 func (_c *MockTx_SetTorrentSessionSeedStopped_Call) RunAndReturn(run func(ctx context.Context, infoHash string) error) *MockTx_SetTorrentSessionSeedStopped_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// StampMediaFileProbe provides a mock function for the type MockTx
+func (_mock *MockTx) StampMediaFileProbe(ctx context.Context, id uint32, info *ffmpeg.Info) error {
+	ret := _mock.Called(ctx, id, info)
+
+	if len(ret) == 0 {
+		panic("no return value specified for StampMediaFileProbe")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, *ffmpeg.Info) error); ok {
+		r0 = returnFunc(ctx, id, info)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTx_StampMediaFileProbe_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'StampMediaFileProbe'
+type MockTx_StampMediaFileProbe_Call struct {
+	*mock.Call
+}
+
+// StampMediaFileProbe is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - info *ffmpeg.Info
+func (_e *MockTx_Expecter) StampMediaFileProbe(ctx any, id any, info any) *MockTx_StampMediaFileProbe_Call {
+	return &MockTx_StampMediaFileProbe_Call{Call: _e.mock.On("StampMediaFileProbe", ctx, id, info)}
+}
+
+func (_c *MockTx_StampMediaFileProbe_Call) Run(run func(ctx context.Context, id uint32, info *ffmpeg.Info)) *MockTx_StampMediaFileProbe_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 *ffmpeg.Info
+		if args[2] != nil {
+			arg2 = args[2].(*ffmpeg.Info)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_StampMediaFileProbe_Call) Return(err error) *MockTx_StampMediaFileProbe_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTx_StampMediaFileProbe_Call) RunAndReturn(run func(ctx context.Context, id uint32, info *ffmpeg.Info) error) *MockTx_StampMediaFileProbe_Call {
 	_c.Call.Return(run)
 	return _c
 }

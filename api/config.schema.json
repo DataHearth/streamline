@@ -279,6 +279,7 @@
         "cleanup": { "$ref": "#/definitions/duration" },
         "import_scan": { "$ref": "#/definitions/duration" },
         "drift_check": { "$ref": "#/definitions/duration" },
+        "media_probe": { "$ref": "#/definitions/duration" },
         "rss_sync": {
           "$ref": "#/definitions/duration",
           "description": "Deprecated: renamed to movie_rss_sync. Still honoured, with a warning on boot."
