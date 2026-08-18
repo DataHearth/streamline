@@ -105,7 +105,7 @@
 		if (!info) return "healthy";
 		const kinds = [info.data_usage?.kind, info.db_usage?.kind];
 		if (kinds.includes("err")) return "down";
-		if (kinds.includes("warn") || info.https_warn) return "degraded";
+		if (kinds.includes("warn") || info.https_warn || info.ffmpeg_warn) return "degraded";
 		return "healthy";
 	});
 

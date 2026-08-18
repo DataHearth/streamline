@@ -64,12 +64,12 @@
 		saveFfmpeg.mutate({ path: next });
 	}
 
-	// Stored as a ratio (0.9), said out loud as a percentage (90%). The field is
+	// Stored as a ratio (0.5), said out loud as a percentage (50%). The field is
 	// the one place the two representations meet.
 	let ratioDraft = $state<string | null>(null);
 	let ratioPct = $derived(
 		ratioDraft ??
-			String(Math.round((library.data?.probe?.min_duration_ratio ?? 0.9) * 100)),
+			String(Math.round((library.data?.probe?.min_duration_ratio ?? 0.5) * 100)),
 	);
 
 	function commitRatio() {
@@ -79,7 +79,7 @@
 		const pct = Number(raw);
 		if (!Number.isFinite(pct)) return;
 		const ratio = Math.min(100, Math.max(1, Math.round(pct))) / 100;
-		if (ratio === (library.data.probe?.min_duration_ratio ?? 0.9)) return;
+		if (ratio === (library.data.probe?.min_duration_ratio ?? 0.5)) return;
 		saveLibrary.mutate({
 			probe: { ...library.data.probe, min_duration_ratio: ratio },
 		});
@@ -94,6 +94,10 @@
 	let missing = $derived(
 		Boolean(ffmpeg.data?.enabled) && ffmpeg.data?.found === false,
 	);
+	// setQueryData in saveFfmpeg's onSuccess keeps this current off the PATCH
+	// response itself, so the notice appears right after a path save — not
+	// only on the next page load.
+	let restartRequired = $derived(ffmpeg.data?.restart_required ?? false);
 </script>
 
 <div class="mx-auto max-w-4xl">
@@ -115,6 +119,20 @@
 			})}
 		</p>
 	{:else if ffmpeg.data && library.data}
+		{#if restartRequired}
+			<div
+				class="mt-6 flex items-start gap-2.5 rounded-md border border-status-wanted/40 bg-status-wanted/10 p-3 text-xs text-status-wanted"
+			>
+				<TriangleAlert size={14} class="mt-0.5 shrink-0" aria-hidden="true" />
+				<div>
+					<p class="font-medium">{i18n.settings_restart_required()}</p>
+					<p class="mt-0.5 text-status-wanted/80">
+						{i18n.settings_changes_after_restart()}
+					</p>
+				</div>
+			</div>
+		{/if}
+
 		<section class="mt-6 rounded-lg border border-border bg-bg-card p-4">
 			<h2 class="text-sm font-semibold text-fg">{i18n.probe_ffmpeg()}</h2>
 			<p class="mt-0.5 text-xs leading-relaxed text-fg-subtle">
@@ -143,7 +161,7 @@
 					autocomplete="off"
 					readonly={config.readOnly}
 					value={path}
-					placeholder="/usr/bin/ffmpeg"
+					placeholder="/usr/local/bin"
 					oninput={(e) => (pathDraft = (e.currentTarget as HTMLInputElement).value)}
 					onblur={commitPath}
 					onkeydown={(e) => {

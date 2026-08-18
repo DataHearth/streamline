@@ -553,6 +553,7 @@ export type FFmpegConfig = {
 	found?: boolean;
 	resolved_path?: string;
 	version?: string;
+	restart_required?: boolean;
 };
 
 export type OIDCProvider = {
@@ -759,6 +760,7 @@ export type SystemInfo = {
 	app_name: string;
 	public_url: string;
 	https_warn: boolean;
+	ffmpeg_warn?: boolean;
 	auth_mode: string;
 	data_dir: string;
 	data_usage?: DiskUsage;

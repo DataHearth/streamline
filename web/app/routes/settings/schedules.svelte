@@ -35,6 +35,7 @@
 		"download-monitor":
 			i18n.schedule_track_torrents(),
 		"import-scan": i18n.schedule_import_walk(),
+		"media-probe": i18n.schedule_media_probe(),
 		cleanup: i18n.schedule_purge_downloads(),
 		"purge-sessions": i18n.schedule_purge_sessions(),
 		"drift-check":
