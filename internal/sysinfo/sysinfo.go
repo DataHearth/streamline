@@ -145,10 +145,17 @@ func diskUsage(total, free int64) *DiskUsage {
 	// upper clamp stays an explicit branch so gosec's range analysis can
 	// see the uint8 narrowing is safe.
 	var pctWide int64
-	if used > math.MaxInt64/100 {
-		pctWide = used / (total / 100)
-	} else {
+	switch div := total / 100; {
+	case used <= math.MaxInt64/100:
 		pctWide = used * 100 / total
+	case div > 0:
+		pctWide = used / div
+	default:
+		// A volume under 100 bytes can only reach the overflow range when
+		// the reported free figure is itself nonsense (an unsigned Bavail
+		// that overflowed int64), which means used dwarfs total. Dividing
+		// by total/100 == 0 would panic; the honest answer is "full".
+		pctWide = 100
 	}
 	if pctWide > 100 {
 		pctWide = 100

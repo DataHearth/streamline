@@ -1,6 +1,8 @@
 package bulkimport
 
 import (
+	"math"
+
 	entimportscanshow "github.com/datahearth/streamline/ent/importscanshow"
 	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/internal/db"
@@ -78,8 +80,7 @@ func BuildShowParams(
 		ParsedTitle:    p.Title,
 		Classification: c.Kind,
 		Candidates:     c.Candidates,
-		//nolint:gosec // a season folder holds far fewer than 65k video files
-		FileCount: uint16(fileCount),
+		FileCount:      clampFileCount(fileCount),
 	}
 	if p.Year != 0 {
 		year := p.Year
@@ -94,4 +95,19 @@ func BuildShowParams(
 		params.ExistingTvshowID = &id
 	}
 	return params
+}
+
+// clampFileCount saturates a folder's video-file count into the uint16 that
+// mirrors the ent column. A wrapping conversion would turn a pathological
+// 65 536-file folder into "0 files" in the review UI; saturating keeps the
+// row readable and truthful about being at the ceiling. The early-return
+// shape is what gosec's range analysis accepts.
+func clampFileCount(n int) uint16 {
+	if n <= 0 {
+		return 0
+	}
+	if n >= math.MaxUint16 {
+		return math.MaxUint16
+	}
+	return uint16(n)
 }

@@ -21,8 +21,10 @@ const (
 
 const msgZeroPage = "page must be >= 1"
 
-// limitRangeMsg names the endpoint's documented bound in the 400 body.
-func limitRangeMsg[T ~int | ~uint16 | ~uint32](maxLimit T) string {
+// limitRangeMsg names the endpoint's documented bound in the 400 body. Every
+// call site passes one of the untyped ceiling constants above, so a plain int
+// takes them all.
+func limitRangeMsg(maxLimit int) string {
 	return fmt.Sprintf("limit must be between 1 and %d", maxLimit)
 }
 

@@ -61,6 +61,12 @@ func (s *Server) GetMovieCounts(
 			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
+	// trend is a required, non-nullable array in the spec, and the SPA maps
+	// over it unguarded — a nil slice would marshal as `null`.
+	trend := counts.Trend
+	if trend == nil {
+		trend = []int{}
+	}
 	return GetMovieCounts200JSONResponse{
 		MovieCountsResponseJSONResponse: MovieCountsResponseJSONResponse{
 			Total:       counts.Total,
@@ -68,7 +74,7 @@ func (s *Server) GetMovieCounts(
 			Downloading: counts.Downloading,
 			Available:   counts.Available,
 			Failed:      counts.Failed,
-			Trend:       counts.Trend,
+			Trend:       trend,
 		},
 	}, nil
 }

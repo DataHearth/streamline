@@ -1,6 +1,8 @@
 package sysinfo
 
 import (
+	"math"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -54,5 +56,13 @@ var _ = Describe("diskUsage", Label("unit", "sysinfo"), func() {
 		du := diskUsage(10, 5)
 		Expect(du).NotTo(BeNil())
 		Expect(du.Pct).To(Equal(uint8(50)))
+
+		// A tiny total *and* the overflow range at once: a filesystem
+		// reporting an unsigned Bavail that wrapped int64 hands us a
+		// negative free, so used lands past MaxInt64/100 while total/100
+		// is still 0. The divide-first path must not divide by it.
+		du = diskUsage(10, -math.MaxInt64/50)
+		Expect(du).NotTo(BeNil())
+		Expect(du.Pct).To(Equal(uint8(100)))
 	})
 })

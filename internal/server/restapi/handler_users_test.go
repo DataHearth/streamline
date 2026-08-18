@@ -54,7 +54,7 @@ var _ = Describe(
 				Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
 			})
 
-			It("clamps a limit above the documented maximum", func() {
+			It("rejects a limit above the documented maximum", func() {
 				req := app.req(
 					http.MethodGet,
 					"/api/v1/users?limit=65535",

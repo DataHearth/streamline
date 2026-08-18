@@ -282,14 +282,8 @@ func (s *Server) ListImportShows(
 			ForbiddenJSONResponse: notAdminResp,
 		}, nil
 	}
-	if _, err := s.store.FindImportScan(ctx, req.Id); err != nil {
-		if ent.IsNotFound(err) {
-			return ListImportShows404JSONResponse{
-				NotFoundJSONResponse: errNotFound("scan not found"),
-			}, nil
-		}
-		return nil, err
-	}
+	// Query bounds are checked before the scan lookup, so a malformed page or
+	// limit answers 400 here exactly as it does on the sibling /files listing.
 	page, ok := positiveOr(req.Params.Page, uint16(1))
 	if !ok {
 		return ListImportShows400JSONResponse{
@@ -301,6 +295,14 @@ func (s *Server) ListImportShows(
 		return ListImportShows400JSONResponse{
 			BadRequestJSONResponse: errBadRequest(limitRangeMsg(importMaxLimit)),
 		}, nil
+	}
+	if _, err := s.store.FindImportScan(ctx, req.Id); err != nil {
+		if ent.IsNotFound(err) {
+			return ListImportShows404JSONResponse{
+				NotFoundJSONResponse: errNotFound("scan not found"),
+			}, nil
+		}
+		return nil, err
 	}
 	cls := entimportscanshow.Classification("")
 	if req.Params.Classification != nil {
