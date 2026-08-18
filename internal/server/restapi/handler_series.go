@@ -16,12 +16,21 @@ func (s *Server) ListSeries(
 	ctx context.Context,
 	request ListSeriesRequestObject,
 ) (ListSeriesResponseObject, error) {
-	p := tvshow.FilterParams{Page: 1, Limit: 20}
-	if request.Params.Page != nil {
-		p.Page = uint16(*request.Params.Page)
+	page, ok := positiveOr(request.Params.Page, uint16(1))
+	if !ok {
+		return ListSeries400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(msgZeroPage),
+		}, nil
 	}
-	if request.Params.Limit != nil {
-		p.Limit = clampLimit(*request.Params.Limit, seriesMaxLimit)
+	limit, ok := limitOr(request.Params.Limit, 20, seriesMaxLimit)
+	if !ok {
+		return ListSeries400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(limitRangeMsg(seriesMaxLimit)),
+		}, nil
+	}
+	p := tvshow.FilterParams{
+		Page:  page,
+		Limit: limit,
 	}
 	if request.Params.Status != nil {
 		p.Status = *request.Params.Status

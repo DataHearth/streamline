@@ -25,9 +25,13 @@ func (s *Server) ListUsers(
 	if req.Params.Role != nil {
 		f.Role = string(*req.Params.Role)
 	}
-	if req.Params.Limit != nil {
-		f.Limit = clampLimit(*req.Params.Limit, usersMaxLimit)
+	limit, ok := limitOr(req.Params.Limit, 0, usersMaxLimit)
+	if !ok {
+		return ListUsers400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(limitRangeMsg(usersMaxLimit)),
+		}, nil
 	}
+	f.Limit = limit
 	if req.Params.Offset != nil {
 		f.Offset = *req.Params.Offset
 	}
@@ -57,7 +61,7 @@ func (s *Server) ListUsers(
 	return ListUsers200JSONResponse{
 		UsersListJSONResponse: UsersListJSONResponse{
 			Items: out,
-			Total: uint32(total),
+			Total: total,
 		},
 	}, nil
 }

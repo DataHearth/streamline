@@ -118,13 +118,13 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 
 			scans, total, err := store.ListImportScans(ctx, 0, 100)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(total).To(Equal(uint32(1)), "one review entry per directory")
+			Expect(total).To(Equal(1), "one review entry per directory")
 
 			_, fileCount, err := store.FilterImportScanFiles(
 				ctx, db.FilterImportScanFilesParams{ScanID: scans[0].ID},
 			)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(fileCount).To(Equal(uint32(2)), "both orphans in the one scan")
+			Expect(fileCount).To(Equal(2), "both orphans in the one scan")
 		},
 	)
 
@@ -333,12 +333,12 @@ var _ = Describe(
 
 			scans, total, err := store.ListImportScans(ctx, 0, 50)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(total).To(Equal(uint32(1)))
+			Expect(total).To(Equal(1))
 
 			shows, showTotal, err := store.ListImportScanShows(
 				ctx, db.ListImportScanShowsParams{ScanID: scans[0].ID})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(showTotal).To(Equal(uint32(2)))
+			Expect(showTotal).To(Equal(2))
 			Expect([]string{shows[0].FolderPath, shows[1].FolderPath}).To(ConsistOf(
 				filepath.Join(tmpDir, "Breaking Bad"),
 				filepath.Join(tmpDir, "The Wire"),

@@ -226,7 +226,8 @@ func (t *TMDB) GetMovie(ctx context.Context, tmdbID uint32) (*MovieDetails, erro
 			Overview:      overview,
 			PosterPath:    resp.PosterPath,
 		},
-		Genres:           genres,
+		Genres: genres,
+		//nolint:gosec // minutes from TMDB; uint16 mirrors the ent column
 		Runtime:          uint16(resp.Runtime),
 		Rating:           resp.VoteAverage,
 		VoteCount:        resp.VoteCount,

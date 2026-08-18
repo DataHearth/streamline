@@ -115,7 +115,7 @@ func applyImportScanFileFields(
 func (db *DB) FilterImportScanFiles(
 	ctx context.Context,
 	p FilterImportScanFilesParams,
-) ([]*ent.ImportScanFile, uint32, error) {
+) ([]*ent.ImportScanFile, int, error) {
 	q := db.client.ImportScanFile.Query().
 		Where(entimportscanfile.HasScanWith(entimportscan.ID(p.ScanID)))
 	if p.Classification != "" {
@@ -137,7 +137,7 @@ func (db *DB) FilterImportScanFiles(
 	if err != nil {
 		return nil, 0, fmt.Errorf("list import scan files: %w", err)
 	}
-	return rows, uint32(total), nil //nolint:gosec // count is non-negative
+	return rows, total, nil
 }
 
 func (db *DB) FindImportScanFile(

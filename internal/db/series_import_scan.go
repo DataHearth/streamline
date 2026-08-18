@@ -97,7 +97,7 @@ func (db *DB) BulkCreateImportScanShows(
 
 func (db *DB) ListImportScanShows(
 	ctx context.Context, p ListImportScanShowsParams,
-) ([]*ent.ImportScanShow, uint32, error) {
+) ([]*ent.ImportScanShow, int, error) {
 	q := db.client.ImportScanShow.Query().
 		Where(entimportscanshow.HasScanWith(entimportscan.ID(p.ScanID)))
 	if p.Classification != "" {
@@ -124,7 +124,7 @@ func (db *DB) ListImportScanShows(
 	if err != nil {
 		return nil, 0, fmt.Errorf("list import scan shows: %w", err)
 	}
-	return rows, uint32(total), nil //nolint:gosec // count is non-negative
+	return rows, total, nil
 }
 
 func (db *DB) FindImportScanShow(

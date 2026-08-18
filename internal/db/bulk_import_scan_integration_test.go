@@ -49,7 +49,7 @@ var _ = Describe("ImportScan store", Label("integration", "db"), func() {
 				},
 			)
 			Expect(err).ToNot(HaveOccurred())
-			total := uint32(42)
+			total := 42
 			now := time.Now()
 			Expect(
 				store.UpdateImportScanStatus(
@@ -99,7 +99,7 @@ var _ = Describe("ImportScan store", Label("integration", "db"), func() {
 
 			n, err := store.CountActiveImportScans(ctx)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(n).To(Equal(uint32(1)))
+			Expect(n).To(Equal(1))
 		})
 	})
 
@@ -132,7 +132,7 @@ var _ = Describe("ImportScan store", Label("integration", "db"), func() {
 
 			n, err := store.AbortInflightImportScans(ctx, "boot")
 			Expect(err).ToNot(HaveOccurred())
-			Expect(n).To(Equal(uint32(2)))
+			Expect(n).To(Equal(2))
 
 			rgot, err := store.FindImportScan(ctx, r.ID)
 			Expect(err).ToNot(HaveOccurred())
@@ -146,7 +146,7 @@ var _ = Describe("ImportScan store", Label("integration", "db"), func() {
 		It("returns 0 when no inflight rows", func() {
 			n, err := store.AbortInflightImportScans(ctx, "boot")
 			Expect(err).ToNot(HaveOccurred())
-			Expect(n).To(Equal(uint32(0)))
+			Expect(n).To(Equal(0))
 		})
 	})
 
@@ -184,7 +184,7 @@ var _ = Describe("ImportScan store", Label("integration", "db"), func() {
 				FilterImportScanFilesParams{ScanID: s.ID, Limit: 50},
 			)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(total).To(Equal(uint32(0)))
+			Expect(total).To(Equal(0))
 			Expect(items).To(BeEmpty())
 		})
 	})

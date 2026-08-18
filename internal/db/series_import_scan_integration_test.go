@@ -66,7 +66,7 @@ var _ = Describe("Series import scan store", Label("integration", "db"), func() 
 			ListImportScanShowsParams{ScanID: scan.ID},
 		)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(total).To(Equal(uint32(1)))
+		Expect(total).To(Equal(1))
 		Expect(shows).To(HaveLen(1))
 		Expect(shows[0].FolderPath).To(Equal("/tv/Breaking Bad"))
 		Expect(shows[0].FileCount).To(Equal(uint16(62)))

@@ -169,7 +169,7 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 			Return([]*ent.TVShow{{ID: 1}, {ID: 2}, {ID: 3}}, nil).Once()
 		items, total, err := svc.List(ctx, 1, 20)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(total).To(Equal(uint32(3)))
+		Expect(total).To(Equal(3))
 		Expect(items).To(HaveLen(3))
 	})
 
@@ -362,7 +362,7 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 
 			items, total, err := svc.FilterList(ctx, FilterParams{Status: "missing"})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(total).To(Equal(uint32(1)))
+			Expect(total).To(Equal(1))
 			Expect(items).To(HaveLen(1))
 		})
 

@@ -285,7 +285,7 @@ func buildSchedule(info scheduler.JobInfo, row *ent.ScheduledJob) Schedule {
 		out.Status = ScheduleStatus(row.LastStatus)
 		out.LastStartedAt = row.LastStartedAt
 		out.LastFinishedAt = row.LastFinishedAt
-		out.LastDurationMs = int32(row.LastDurationMs)
+		out.LastDurationMs = row.LastDurationMs
 		if row.LastError != "" {
 			msg := row.LastError
 			out.LastError = &msg
