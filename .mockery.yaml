@@ -25,6 +25,9 @@ packages:
       Cleaner: {}
       Client: {}
       Downloader: {}
+  github.com/datahearth/streamline/internal/ffmpeg:
+    interfaces:
+      Prober: {}
   github.com/datahearth/streamline/internal/importer:
     interfaces:
       Enqueuer: {}
