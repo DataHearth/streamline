@@ -20,6 +20,7 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/events"
+	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/importer"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/jobs"
@@ -225,11 +226,15 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		store, cfg.Library.SeriesPath, cfg.Library.SeriesNaming,
 	)
 	pathMigrations := pathmigrate.NewService(store)
+	// Constructed once and kept: the media-probe backfill job and the
+	// health/system-info endpoint reuse this same prober.
+	prober := ffmpeg.NewCLI(cfg.FFmpeg.Path)
 	imp := importer.NewWorker(importer.Deps{
 		DB:          store,
 		Library:     libSvc,
 		Download:    dlManager,
 		MediaServer: dispatcher,
+		Prober:      prober,
 	})
 	go imp.Start(ctx)
 

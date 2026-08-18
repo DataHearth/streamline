@@ -119,6 +119,13 @@ func findMediaFile(dir string) (string, error) {
 	}
 }
 
+// ResolveMediaFile resolves the single importable media file under pathOrDir
+// (or pathOrDir itself when it is a file), with findMediaFile's filters.
+// Lets the importer probe the source before the transfer decides anything.
+func ResolveMediaFile(pathOrDir string) (string, error) {
+	return findMediaFile(pathOrDir)
+}
+
 // ListVideoFiles returns every video file directly under dir that passes the
 // size + sample filters (same rules as findMediaFile). Used by the importer to
 // enumerate a season pack's individual episode files.

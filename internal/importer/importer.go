@@ -19,6 +19,7 @@ import (
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/otelx"
 	"go.opentelemetry.io/otel"
@@ -46,6 +47,7 @@ type Deps struct {
 	Library     *library.ImportService
 	Download    download.Downloader
 	MediaServer MediaServerDispatcher
+	Prober      ffmpeg.Prober
 }
 
 const (
@@ -54,10 +56,11 @@ const (
 )
 
 type Worker struct {
-	db  db.Store
-	lib *library.ImportService
-	dl  download.Downloader
-	ms  MediaServerDispatcher
+	db    db.Store
+	lib   *library.ImportService
+	dl    download.Downloader
+	ms    MediaServerDispatcher
+	probe ffmpeg.Prober
 
 	ch   chan uint32
 	stop chan struct{}
@@ -80,6 +83,7 @@ func NewWorker(d Deps) *Worker {
 		lib:      d.Library,
 		dl:       d.Download,
 		ms:       d.MediaServer,
+		probe:    d.Prober,
 		ch:       make(chan uint32, channelCap),
 		stop:     make(chan struct{}),
 		inFlight: make(map[uint32]struct{}),
@@ -233,6 +237,20 @@ func (w *Worker) runImport(ctx context.Context, recordID uint32) error {
 	}
 }
 
+// probeSource best-effort-probes a source media file before transfer. nil on
+// any failure — Phase 1 stores info, it never blocks an import.
+func (w *Worker) probeSource(ctx context.Context, path string) *ffmpeg.Info {
+	if !config.Get().FFmpeg.Enabled || w.probe == nil || !w.probe.Available() {
+		return nil
+	}
+	info, err := w.probe.Probe(ctx, path)
+	if err != nil {
+		slog.WarnContext(ctx, "media probe failed", "file", path, "error", err)
+		return nil
+	}
+	return info
+}
+
 func (w *Worker) importMovieRecord(
 	ctx context.Context,
 	span trace.Span,
@@ -258,6 +276,11 @@ func (w *Worker) importMovieRecord(
 			return otelx.RecordSpanError(span, err)
 		}
 	}
+	var probeInfo *ffmpeg.Info
+	if src, err := library.ResolveMediaFile(rec.SavePath); err == nil {
+		probeInfo = w.probeSource(ctx, src)
+	}
+
 	imported, err := w.lib.ImportMovie(ctx, rec.SavePath, m, "")
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
@@ -272,6 +295,7 @@ func (w *Worker) importMovieRecord(
 			Quality:      imported.Parsed.Resolution,
 			Format:       imported.Parsed.Extension,
 			ReleaseGroup: imported.Parsed.Group,
+			Probe:        probeInfo,
 		},
 	}); err != nil {
 		return otelx.RecordSpanError(
@@ -419,6 +443,7 @@ func (w *Worker) importEpisodeRecord(
 				continue
 			}
 		}
+		probeInfo := w.probeSource(ctx, f)
 		imported, err := w.lib.ImportEpisode(ctx, f, show, tSeason, target)
 		if err != nil {
 			slog.WarnContext(ctx, "season pack file import failed",
@@ -436,6 +461,7 @@ func (w *Worker) importEpisodeRecord(
 					Quality:      imported.Parsed.Resolution,
 					Format:       imported.Parsed.Extension,
 					ReleaseGroup: imported.Parsed.Group,
+					Probe:        probeInfo,
 				},
 			},
 		); err != nil {
@@ -488,6 +514,11 @@ func (w *Worker) importSingleEpisode(
 			return otelx.RecordSpanError(span, rErr)
 		}
 	}
+	var probeInfo *ffmpeg.Info
+	if src, err := library.ResolveMediaFile(rec.SavePath); err == nil {
+		probeInfo = w.probeSource(ctx, src)
+	}
+
 	imported, err := w.lib.ImportEpisode(ctx, rec.SavePath, show, seasonNumber, ep)
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
@@ -503,6 +534,7 @@ func (w *Worker) importSingleEpisode(
 				Quality:      imported.Parsed.Resolution,
 				Format:       imported.Parsed.Extension,
 				ReleaseGroup: imported.Parsed.Group,
+				Probe:        probeInfo,
 			},
 		},
 	); err != nil {

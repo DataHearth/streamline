@@ -18,6 +18,8 @@ import (
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	mockdb "github.com/datahearth/streamline/internal/db/mocks"
+	"github.com/datahearth/streamline/internal/ffmpeg"
+	mockffmpeg "github.com/datahearth/streamline/internal/ffmpeg/mocks"
 	mockimp "github.com/datahearth/streamline/internal/importer/mocks"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
@@ -105,6 +107,122 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 		msMk.EXPECT().RefreshAll(mock.Anything, libDir).Return(nil).Once()
 
 		Expect(w.runImport(context.Background(), 1)).To(Succeed())
+	})
+
+	It("attaches probe info to the movie media file row", func() {
+		src := filepath.Join(tmp, "dl")
+		Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+		seedMediaFile(src, "Flick.2024.1080p.mkv")
+		rec := fixtureRecord(1, 10, src, 0)
+
+		prober := mockffmpeg.NewMockProber(GinkgoT())
+		prober.EXPECT().Available().Return(true).Once()
+		prober.EXPECT().Probe(mock.Anything, mock.Anything).
+			Return(&ffmpeg.Info{
+				VideoCodec:  "h264",
+				Width:       1920,
+				Height:      1080,
+				DurationSec: 5400,
+				Container:   "matroska",
+			}, nil).Once()
+		wp := NewWorker(Deps{
+			DB: storeMk, Library: libSvc, MediaServer: msMk, Prober: prober,
+		})
+
+		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+			Return(rec, nil).Once()
+		storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+			Return(nil, nil).Once()
+		storeMk.EXPECT().
+			RecordImportSuccess(mock.Anything, mock.MatchedBy(func(p db.RecordImportSuccessParams) bool {
+				return p.RecordID == 1 && p.MovieID == 10 &&
+					p.File.Probe != nil && p.File.Probe.VideoCodec == "h264"
+			})).
+			Return(nil).
+			Once()
+		storeMk.EXPECT().
+			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
+			Return(nil).Once()
+		msMk.EXPECT().RefreshAll(mock.Anything, libDir).Return(nil).Once()
+
+		Expect(wp.runImport(context.Background(), 1)).To(Succeed())
+	})
+
+	It("imports normally when probing fails", func() {
+		src := filepath.Join(tmp, "dl")
+		Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+		seedMediaFile(src, "Flick.2024.1080p.mkv")
+		rec := fixtureRecord(1, 10, src, 0)
+
+		prober := mockffmpeg.NewMockProber(GinkgoT())
+		prober.EXPECT().Available().Return(true).Once()
+		prober.EXPECT().Probe(mock.Anything, mock.Anything).
+			Return(nil, ffmpeg.ErrUnreadable).Once()
+		wp := NewWorker(Deps{
+			DB: storeMk, Library: libSvc, MediaServer: msMk, Prober: prober,
+		})
+
+		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+			Return(rec, nil).Once()
+		storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+			Return(nil, nil).Once()
+		storeMk.EXPECT().
+			RecordImportSuccess(mock.Anything, mock.MatchedBy(func(p db.RecordImportSuccessParams) bool {
+				return p.RecordID == 1 && p.MovieID == 10 && p.File.Probe == nil
+			})).
+			Return(nil).
+			Once()
+		storeMk.EXPECT().
+			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
+			Return(nil).Once()
+		msMk.EXPECT().RefreshAll(mock.Anything, libDir).Return(nil).Once()
+
+		Expect(wp.runImport(context.Background(), 1)).To(Succeed())
+	})
+
+	It("skips probing when ffmpeg is disabled", func() {
+		configtest.Setup(map[string]any{
+			"library": map[string]any{
+				"movie_path":           libDir,
+				"import_mode":          "copy",
+				"import_max_attempts":  3,
+				"keep_torrent_seeding": true,
+				"movie_naming":         "{title} ({year})/{title}.{ext}",
+				"series_path":          libDir,
+				"series_naming":        "{title}/{title} S{season}E{episode}.{ext}",
+			},
+			"ffmpeg": map[string]any{
+				"enabled": false,
+			},
+		})
+		src := filepath.Join(tmp, "dl")
+		Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+		seedMediaFile(src, "Flick.2024.1080p.mkv")
+		rec := fixtureRecord(1, 10, src, 0)
+
+		// No expectations set: mockery fails the spec if Probe or Available
+		// is called while probing is disabled.
+		prober := mockffmpeg.NewMockProber(GinkgoT())
+		wp := NewWorker(Deps{
+			DB: storeMk, Library: libSvc, MediaServer: msMk, Prober: prober,
+		})
+
+		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+			Return(rec, nil).Once()
+		storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+			Return(nil, nil).Once()
+		storeMk.EXPECT().
+			RecordImportSuccess(mock.Anything, mock.MatchedBy(func(p db.RecordImportSuccessParams) bool {
+				return p.RecordID == 1 && p.MovieID == 10 && p.File.Probe == nil
+			})).
+			Return(nil).
+			Once()
+		storeMk.EXPECT().
+			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
+			Return(nil).Once()
+		msMk.EXPECT().RefreshAll(mock.Anything, libDir).Return(nil).Once()
+
+		Expect(wp.runImport(context.Background(), 1)).To(Succeed())
 	})
 
 	It("existing file + replace flag: old file replaced, import succeeds", func() {
