@@ -34,13 +34,14 @@ linters:
     - errorlint
     - bodyclose
     - gosec
+    - nolintlint
 
   settings:
-    # Scoped to G112 (Slowloris): an http.Server built without
-    # ReadHeaderTimeout. The rest of gosec's rule set is not enabled here.
-    gosec:
-      includes:
-        - G112
+    # Keep suppressions honest: every nolint must name its linter and carry a
+    # reason, and unused ones fail the run instead of rotting in place.
+    nolintlint:
+      require-explanation: true
+      require-specific: true
     unparam:
       check-exported: true
     sloglint:
