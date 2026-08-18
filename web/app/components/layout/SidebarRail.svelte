@@ -93,7 +93,7 @@
 
 	let libraryActive = $derived(["/movies", "/series"].some((p) => isActiveFn(p)));
 	let activityActive = $derived(isActiveFn("/activity"));
-	let dashActive = $derived(isActiveFn("/dashboard"));
+	let dashActive = $derived(isActiveFn("/", {}, { recursive: false }));
 
 	// Dot badges ride the icon: the rail has no room for a number, but it can
 	// say "something here wants you". Requests is pending approvals; Imports is
@@ -143,7 +143,7 @@
 	aria-label={i18n.nav_primary_navigation()}
 >
 	<a
-		href="/dashboard"
+		href="/"
 		aria-label={i18n.nav_home_dashboard()}
 		class="mb-3 rounded-md transition hover:opacity-90"
 	>
@@ -156,7 +156,7 @@
 
 	<nav aria-label={i18n.nav_primary()} class="flex flex-col items-center gap-1">
 		<a
-			href="/dashboard"
+			href="/"
 			aria-current={dashActive ? "page" : undefined}
 			class={cn(itemBase, dashActive ? itemActive : itemInactive)}
 		>

@@ -26,9 +26,11 @@
 	let pathname = $state(
 		typeof window !== "undefined" ? window.location.pathname : "/",
 	);
+	// Routify reports the root index route's url as "" — a truthy guard on
+	// r.url would keep the previous page's path when navigating home.
 	onMount(() =>
 		activeRoute.subscribe((r) => {
-			if (r?.url) pathname = r.url.split("?")[0] ?? r.url;
+			if (r) pathname = (r.url ?? "").split("?")[0] || "/";
 		}),
 	);
 
@@ -37,7 +39,7 @@
 	// the topbar — only breadcrumbs appear when the user is on a detail page.
 	const TITLELESS_PREFIXES = new Set(["/account", "/settings"]);
 	const SECTIONS: { prefix: string; label: string }[] = [
-		{ prefix: "/dashboard", label: "Streamline" },
+		{ prefix: "/", label: i18n.nav_dashboard() },
 		{ prefix: "/movies", label: i18n.movies_label() },
 		{ prefix: "/series", label: i18n.settings_series() },
 		{ prefix: "/activity", label: i18n.nav_activity() },

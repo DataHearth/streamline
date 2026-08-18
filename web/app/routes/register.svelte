@@ -49,7 +49,7 @@
 	const register = createMutation<null, Error, RegisterInput>(() => ({
 		mutationFn: postRegister,
 		onSuccess: () => {
-			window.location.assign("/dashboard");
+			window.location.assign("/");
 		},
 		onError: (err) => {
 			errorMsg = errorText(err, i18n.auth_register_failed());

@@ -23,7 +23,7 @@
 	// have no audience there. Requests is the reverse: it is where a member or a
 	// request_only member goes to ask for something, while for an admin it is a
 	// queue of other people's asks and the work there is deciding them.
-	const OPEN_ROUTES = ["/dashboard", "/movies", "/series"];
+	const OPEN_ROUTES = ["/", "/movies", "/series"];
 
 	let pathname = $state(
 		typeof window !== "undefined" ? window.location.pathname : "/",
@@ -37,8 +37,10 @@
 	let resolved = false;
 	onMount(() =>
 		activeRoute.subscribe((r) => {
-			if (!r?.url) return;
-			const next = r.url.split("?")[0] ?? r.url;
+			// Routify reports the root index route's url as "" — a truthy guard
+			// would leave the previous page's path in place when navigating home.
+			if (!r) return;
+			const next = (r.url ?? "").split("?")[0] || "/";
 			if (resolved && next !== pathname) open = false;
 			resolved = true;
 			pathname = next;

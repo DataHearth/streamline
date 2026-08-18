@@ -11,11 +11,10 @@ import (
 
 var _ = Describe("Shell navigation", Label("e2e"), func() {
 	It("renders the app shell for an authenticated admin", func() {
-		page := newSessionPage("/dashboard")
+		page := newSessionPage("/")
 		sidebar := visibleElement(page, `aside[aria-label="Primary navigation"]`)
-		// The topbar names the dashboard after the app, not the route.
-		Expect(page.MustElementR("h1", "^Streamline$").MustText()).
-			To(Equal("Streamline"))
+		Expect(page.MustElementR("h1", "^Dashboard$").MustText()).
+			To(Equal("Dashboard"))
 		// The identity block shows the display name when one is set, so assert
 		// on the role line — it doesn't move when a profile spec edits the name.
 		Expect(sidebar.MustElement(`a[aria-label="Account settings"]`).MustText()).
@@ -26,7 +25,7 @@ var _ = Describe("Shell navigation", Label("e2e"), func() {
 	})
 
 	It("walks the sidebar through every primary section", func() {
-		page := newSessionPage("/dashboard")
+		page := newSessionPage("/")
 		page.MustElement(`aside[aria-label="Primary navigation"]`)
 		// The Activity group is a collapsed disclosure until one of its routes is
 		// current, so its links aren't in the DOM to click yet.
@@ -41,7 +40,7 @@ var _ = Describe("Shell navigation", Label("e2e"), func() {
 			{"/activity/torrents", "Torrents"},
 			{"/calendar", "Calendar"},
 			{"/requests", "Requests"},
-			{"/dashboard", "Streamline"},
+			{"/", "Dashboard"},
 		} {
 			By("navigating to " + section.href)
 			// Per-hop budget: six hops each allowing expectPath its own 5s of
@@ -69,7 +68,7 @@ var _ = Describe("Shell navigation", Label("e2e"), func() {
 	})
 
 	It("opens settings from the sidebar and lands on general", func() {
-		page := newSessionPage("/dashboard")
+		page := newSessionPage("/")
 		page.MustElement(
 			`aside[aria-label="Primary navigation"] a[href="/settings"]`,
 		).MustClick()
@@ -82,7 +81,7 @@ var _ = Describe("Shell navigation", Label("e2e"), func() {
 	})
 
 	It("opens the account page from the sidebar identity link", func() {
-		page := newSessionPage("/dashboard")
+		page := newSessionPage("/")
 		page.MustElement(`a[aria-label="Account settings"]`).MustClick()
 		Expect(page.MustElementR("h3", "^Profile$").MustText()).To(Equal("Profile"))
 		Expect(page.MustElement(`main`).MustText()).

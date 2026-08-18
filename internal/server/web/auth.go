@@ -21,7 +21,7 @@ import (
 const (
 	defaultSessionTTL = 168 * time.Hour
 	unknownUserAgent  = "unknown"
-	defaultLandingURL = "/dashboard"
+	defaultLandingURL = "/"
 )
 
 // registerWebAuthRoutes wires the JSON auth endpoints and the OIDC redirect

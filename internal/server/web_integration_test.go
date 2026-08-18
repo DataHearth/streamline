@@ -570,12 +570,12 @@ var _ = Describe("Webui + API auth", Label("integration", "auth"), func() {
 
 		// Smoke-test: authenticated browsers visiting the SPA root land on the
 		// shell, no double-redirect through the auth middleware.
-		It("authed GET /dashboard returns SPA shell", func() {
+		It("authed GET / returns SPA shell", func() {
 			tok := loginAsSeedAdmin(app, "admin@x.com", "hunter22pw")
 			c := clientNoRedirect()
 			req, _ := http.NewRequest(
 				http.MethodGet,
-				app.httpSrv.URL+"/dashboard",
+				app.httpSrv.URL+"/",
 				nil,
 			)
 			req.AddCookie(&http.Cookie{Name: auth.SessionCookie, Value: tok})

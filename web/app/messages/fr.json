@@ -920,7 +920,6 @@
 	"role_member": "Membre",
 	"role_request_only": "Demandes uniquement",
 	"role_request_only_hyphen": "Demandes uniquement",
-	"root_redirecting": "Redirection vers le tableau de bord…",
 	"schedule_actions_for": "Actions pour {name}",
 	"schedule_currently": "Actuellement {interval}",
 	"schedule_edit_interval": "Modifier l'intervalle",

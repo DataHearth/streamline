@@ -69,7 +69,7 @@ const TITLE_MIN = 2;
 const TITLE_LIMIT = 5;
 
 const PAGES: PageItem[] = [
-	{ kind: "page", label: i18n.nav_dashboard(), path: "/dashboard", icon: LayoutDashboard },
+	{ kind: "page", label: i18n.nav_dashboard(), path: "/", icon: LayoutDashboard },
 	{ kind: "page", label: i18n.movies_label(), path: "/movies", icon: Film },
 	{ kind: "page", label: i18n.settings_series(), path: "/series", icon: Tv },
 	{ kind: "page", label: i18n.requests_label(), path: "/requests", icon: Inbox },

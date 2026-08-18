@@ -78,7 +78,7 @@
 	let pendingAdoptions = $derived(pendingQuery.data?.items.length ?? 0);
 
 	const libraryItems = [
-		{ label: i18n.nav_dashboard(), href: "/dashboard", icon: LayoutDashboard },
+		{ label: i18n.nav_dashboard(), href: "/", icon: LayoutDashboard },
 		{ label: i18n.movies_label(), href: "/movies", icon: Film },
 		{ label: i18n.settings_series(), href: "/series", icon: Tv },
 	];
@@ -139,7 +139,7 @@
 >
 	<div class="px-2 pb-2 pt-1">
 		<a
-			href="/dashboard"
+			href="/"
 			aria-label={i18n.nav_home_dashboard()}
 			class="flex items-center gap-3 rounded-md transition hover:opacity-90"
 		>
@@ -170,7 +170,10 @@
 		</div>
 		<ul class="flex flex-col gap-px pb-3">
 			{#each libraryItems as item (item.href)}
-				{@const active = isActiveFn(item.href)}
+				{@const active =
+					item.href === "/"
+						? isActiveFn("/", {}, { recursive: false })
+						: isActiveFn(item.href)}
 				<li>
 					<a
 						href={item.href}
