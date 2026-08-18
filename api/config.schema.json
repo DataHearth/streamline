@@ -110,7 +110,12 @@
         "name": { "type": "string" },
         "preferred_resolution": { "$ref": "#/definitions/resolution" },
         "min_resolution": { "$ref": "#/definitions/resolution" },
-        "upgrade_allowed": { "type": "boolean" }
+        "upgrade_allowed": { "type": "boolean" },
+        "allowed_codecs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "ffprobe video codec names (\"hevc\", \"av1\", \"h264\"). A grab whose probed codec isn't in this list is held. Empty means any codec."
+        }
       }
     }
   },
@@ -259,6 +264,23 @@
           "minimum": 1,
           "maximum": 20,
           "description": "Consecutive drift_check ticks a MediaFile may be missing before its row is deleted."
+        },
+        "probe": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Import-time verification against ffprobe results. Stored for the Phase 2 verifier to read.",
+          "properties": {
+            "always_ask": {
+              "type": "boolean",
+              "description": "Hold every import for a decision, even when every check passes."
+            },
+            "min_duration_ratio": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1,
+              "description": "Hold an import whose probed duration is less than this share of the known runtime."
+            }
+          }
         }
       }
     },

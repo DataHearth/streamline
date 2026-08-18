@@ -2050,8 +2050,12 @@ type Episode struct {
 	AirDate        *time.Time `json:"air_date,omitempty"`
 	Id             uint32     `json:"id"`
 
-	// MediaInfo Technical details probed from the file with ffprobe. Absent until the
-	// file has been probed (or when probing is disabled).
+	// MediaInfo Technical details probed from the file with ffprobe. Absent when the
+	// file hasn't been probed yet, probing is disabled, or the probe was
+	// attempted and failed — probed_at is stamped internally on a failed
+	// probe so the file isn't retried, so null here does not imply this
+	// will populate on its own. Fall back to the record's parsed_* fields
+	// when this is null.
 	MediaInfo *MediaInfo `json:"media_info,omitempty"`
 	Monitored bool       `json:"monitored"`
 	Number    uint16     `json:"number"`
@@ -2111,6 +2115,11 @@ type FFmpegConfigView struct {
 
 	// ResolvedPath Absolute path the prober resolved, when found is true.
 	ResolvedPath *string `json:"resolved_path,omitempty"`
+
+	// RestartRequired True when a path change is pending a process restart. The same
+	// process-wide flag OIDC provider mutations set — see
+	// OIDCProviderListView.restart_required.
+	RestartRequired bool `json:"restart_required"`
 }
 
 // HistoryEntry defines model for HistoryEntry.
@@ -2393,6 +2402,11 @@ type JWTRotated struct {
 // LibraryConfigPatch Only provided fields are applied.
 type LibraryConfigPatch struct {
 	MonitorSpecials *bool `json:"monitor_specials,omitempty"`
+
+	// Probe Import-time verification against ffprobe results. Stored for the
+	// Phase 2 verifier to read; when patched, only provided fields are
+	// applied.
+	Probe *ProbeConfig `json:"probe,omitempty"`
 }
 
 // LibraryConfigView defines model for LibraryConfigView.
@@ -2400,6 +2414,11 @@ type LibraryConfigView struct {
 	// MonitorSpecials Monitor season 0 (specials) when a series is added or a refresh
 	// discovers the season. Applies to newly seeded seasons only.
 	MonitorSpecials bool `json:"monitor_specials"`
+
+	// Probe Import-time verification against ffprobe results. Stored for the
+	// Phase 2 verifier to read; when patched, only provided fields are
+	// applied.
+	Probe *ProbeConfig `json:"probe,omitempty"`
 }
 
 // LookupDetail Everything a provider knows about one lookup result beyond what the
@@ -2433,8 +2452,12 @@ type MediaFile struct {
 	Format *string `json:"format,omitempty"`
 	Id     uint32  `json:"id"`
 
-	// MediaInfo Technical details probed from the file with ffprobe. Absent until the
-	// file has been probed (or when probing is disabled).
+	// MediaInfo Technical details probed from the file with ffprobe. Absent when the
+	// file hasn't been probed yet, probing is disabled, or the probe was
+	// attempted and failed — probed_at is stamped internally on a failed
+	// probe so the file isn't retried, so null here does not imply this
+	// will populate on its own. Fall back to the record's parsed_* fields
+	// when this is null.
 	MediaInfo *MediaInfo `json:"media_info,omitempty"`
 
 	// ParsedCodec Video codec (x264/HEVC/AV1/…) parsed from the file's basename at response time.
@@ -2451,8 +2474,12 @@ type MediaFile struct {
 	Size         int64   `json:"size"`
 }
 
-// MediaInfo Technical details probed from the file with ffprobe. Absent until the
-// file has been probed (or when probing is disabled).
+// MediaInfo Technical details probed from the file with ffprobe. Absent when the
+// file hasn't been probed yet, probing is disabled, or the probe was
+// attempted and failed — probed_at is stamped internally on a failed
+// probe so the file isn't retried, so null here does not imply this
+// will populate on its own. Fall back to the record's parsed_* fields
+// when this is null.
 type MediaInfo struct {
 	// AudioChannels Example: 6
 	AudioChannels *int `json:"audio_channels,omitempty"`
@@ -2824,8 +2851,23 @@ type PlayOnLinkList struct {
 	Items []PlayOnLink `json:"items"`
 }
 
+// ProbeConfig Import-time verification against ffprobe results. Stored for the
+// Phase 2 verifier to read; when patched, only provided fields are
+// applied.
+type ProbeConfig struct {
+	// AlwaysAsk Hold every import for a decision, even when every check passes.
+	AlwaysAsk *bool `json:"always_ask,omitempty"`
+
+	// MinDurationRatio A file shorter than this share of the expected runtime fails the
+	// duration check.
+	MinDurationRatio *float64 `json:"min_duration_ratio,omitempty"`
+}
+
 // QualityProfile defines model for QualityProfile.
 type QualityProfile struct {
+	// AllowedCodecs ffprobe video codec names ("hevc", "av1"). A grab whose file uses
+	// anything else is held for a decision. Empty means any codec.
+	AllowedCodecs       *[]string                         `json:"allowed_codecs,omitempty"`
 	MinResolution       QualityProfileMinResolution       `json:"min_resolution"`
 	Name                string                            `json:"name"`
 	PreferredResolution QualityProfilePreferredResolution `json:"preferred_resolution"`
@@ -2840,6 +2882,10 @@ type QualityProfilePreferredResolution string
 
 // QualityProfileCreate defines model for QualityProfileCreate.
 type QualityProfileCreate struct {
+	// AllowedCodecs ffprobe video codec names ("hevc", "av1"). Empty means any codec.
+	// On update, omitting this field leaves the existing list
+	// untouched.
+	AllowedCodecs       *[]string                               `json:"allowed_codecs,omitempty"`
 	MinResolution       *QualityProfileCreateMinResolution      `json:"min_resolution,omitempty"`
 	Name                string                                  `json:"name"`
 	PreferredResolution QualityProfileCreatePreferredResolution `json:"preferred_resolution"`

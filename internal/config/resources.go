@@ -63,6 +63,11 @@ type QualityProfileEntry struct {
 	PreferredResolution string `koanf:"preferred_resolution" validate:"required,oneof=720p 1080p 2160p"`
 	MinResolution       string `koanf:"min_resolution"       validate:"required,oneof=720p 1080p 2160p"`
 	UpgradeAllowed      bool   `koanf:"upgrade_allowed"`
+	// AllowedCodecs holds a grab for a decision when the probed video codec
+	// isn't in this list. ffprobe codec names ("hevc", "av1", "h264"), not
+	// validated against a fixed set — ffprobe's namespace is larger than any
+	// list this package could keep in sync. Empty means any codec.
+	AllowedCodecs []string `koanf:"allowed_codecs"`
 }
 
 // ResolveQualityProfile returns the profile named by name, falling back to

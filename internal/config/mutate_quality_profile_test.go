@@ -49,4 +49,59 @@ var _ = Describe("Quality profile CRUD", Label("unit", "config"), func() {
 		Expect(config.DeleteQualityProfile(context.Background(), "default")).
 			To(MatchError(config.ErrQualityProfileInUseAsDefault))
 	})
+
+	Describe("allowed_codecs", func() {
+		It("defaults to empty, meaning any codec", func() {
+			ctx := context.Background()
+			e := entry("codecs")
+			Expect(config.AddQualityProfile(ctx, e)).To(Succeed())
+			got, _ := config.ResolveQualityProfile("codecs")
+			Expect(got.AllowedCodecs).To(BeEmpty())
+		})
+
+		It("round-trips a non-empty list through update", func() {
+			ctx := context.Background()
+			Expect(config.AddQualityProfile(ctx, entry("codecs"))).To(Succeed())
+
+			codecs := []string{"hevc", "av1"}
+			Expect(config.UpdateQualityProfile(ctx, "codecs",
+				config.QualityProfilePatch{AllowedCodecs: &codecs})).To(Succeed())
+
+			got, _ := config.ResolveQualityProfile("codecs")
+			Expect(got.AllowedCodecs).To(Equal([]string{"hevc", "av1"}))
+		})
+
+		It("clears the list back to empty when patched with []", func() {
+			ctx := context.Background()
+			e := entry("codecs")
+			e.AllowedCodecs = []string{"hevc"}
+			Expect(config.AddQualityProfile(ctx, e)).To(Succeed())
+
+			empty := []string{}
+			Expect(config.UpdateQualityProfile(ctx, "codecs",
+				config.QualityProfilePatch{AllowedCodecs: &empty})).To(Succeed())
+
+			got, _ := config.ResolveQualityProfile("codecs")
+			Expect(got.AllowedCodecs).To(BeEmpty())
+		})
+
+		It("leaves allowed_codecs untouched when the patch omits it", func() {
+			ctx := context.Background()
+			e := entry("codecs")
+			e.AllowedCodecs = []string{"hevc"}
+			Expect(config.AddQualityProfile(ctx, e)).To(Succeed())
+
+			pref := "1080p"
+			Expect(config.UpdateQualityProfile(
+				ctx,
+				"codecs",
+				config.QualityProfilePatch{
+					PreferredResolution: &pref,
+				},
+			)).To(Succeed())
+
+			got, _ := config.ResolveQualityProfile("codecs")
+			Expect(got.AllowedCodecs).To(Equal([]string{"hevc"}))
+		})
+	})
 })

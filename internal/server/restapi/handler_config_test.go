@@ -135,6 +135,88 @@ var _ = Describe("Handler: Config API", Label("unit", "server", "config"), func(
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
 		})
+
+		It("GET reflects the stored probe defaults, never null", func() {
+			get := app.do(
+				app.req(http.MethodGet, "/api/v1/config/library", app.adminKey, nil),
+			)
+			defer get.Body.Close()
+			Expect(get.StatusCode).To(Equal(http.StatusOK))
+			var got LibraryConfigView
+			Expect(json.NewDecoder(get.Body).Decode(&got)).To(Succeed())
+			Expect(got.Probe).NotTo(BeNil())
+			Expect(got.Probe.AlwaysAsk).NotTo(BeNil())
+			Expect(*got.Probe.AlwaysAsk).To(BeFalse())
+			Expect(got.Probe.MinDurationRatio).NotTo(BeNil())
+			Expect(*got.Probe.MinDurationRatio).To(Equal(0.5))
+		})
+
+		It("applies a probe-only patch without disturbing monitor_specials", func() {
+			specialsBody := strings.NewReader(`{"monitor_specials":true}`)
+			specialsResp := app.do(
+				jsonReq(
+					app,
+					http.MethodPatch,
+					"/api/v1/config/library",
+					specialsBody,
+				),
+			)
+			specialsResp.Body.Close()
+			Expect(specialsResp.StatusCode).To(Equal(http.StatusOK))
+
+			body := strings.NewReader(`{"probe":{"always_ask":true}}`)
+			resp := app.do(
+				jsonReq(app, http.MethodPatch, "/api/v1/config/library", body),
+			)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+			var got LibraryConfigView
+			Expect(json.NewDecoder(resp.Body).Decode(&got)).To(Succeed())
+			Expect(got.MonitorSpecials).To(BeTrue())
+			Expect(*got.Probe.AlwaysAsk).To(BeTrue())
+			Expect(*got.Probe.MinDurationRatio).To(Equal(0.5))
+		})
+
+		It(
+			"applies a probe patch naming only one field without resetting the other",
+			func() {
+				first := strings.NewReader(`{"probe":{"always_ask":true}}`)
+				firstResp := app.do(
+					jsonReq(app, http.MethodPatch, "/api/v1/config/library", first),
+				)
+				firstResp.Body.Close()
+				Expect(firstResp.StatusCode).To(Equal(http.StatusOK))
+
+				ratioOnly := strings.NewReader(
+					`{"probe":{"min_duration_ratio":0.75}}`,
+				)
+				resp := app.do(
+					jsonReq(
+						app,
+						http.MethodPatch,
+						"/api/v1/config/library",
+						ratioOnly,
+					),
+				)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				var got LibraryConfigView
+				Expect(json.NewDecoder(resp.Body).Decode(&got)).To(Succeed())
+				Expect(*got.Probe.MinDurationRatio).To(Equal(0.75))
+				Expect(*got.Probe.AlwaysAsk).To(BeTrue())
+			},
+		)
+
+		It("returns 422 for a min_duration_ratio above 1", func() {
+			body := strings.NewReader(`{"probe":{"min_duration_ratio":1.5}}`)
+			resp := app.do(
+				jsonReq(app, http.MethodPatch, "/api/v1/config/library", body),
+			)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+		})
 	})
 
 	Describe("Config ffmpeg", func() {
@@ -155,6 +237,7 @@ var _ = Describe("Handler: Config API", Label("unit", "server", "config"), func(
 			Expect(patched.Enabled).To(BeTrue())
 			Expect(patched.Found).NotTo(BeNil())
 			Expect(*patched.Found).To(BeFalse())
+			Expect(patched.RestartRequired).To(BeFalse())
 
 			app.prober.EXPECT().Available().Return(true).Once()
 			app.prober.EXPECT().ResolvedPath().Return("/usr/bin/ffprobe").Once()
@@ -189,6 +272,37 @@ var _ = Describe("Handler: Config API", Label("unit", "server", "config"), func(
 				Expect(config.Get().FFmpeg.Path).To(Equal(dir))
 				Expect(config.Get().FFmpeg.Enabled).To(BeTrue())
 				Expect(restart.Pending()).To(BeTrue())
+
+				var got FFmpegConfigView
+				Expect(json.NewDecoder(resp.Body).Decode(&got)).To(Succeed())
+				Expect(got.RestartRequired).To(BeTrue())
+			},
+		)
+
+		It(
+			"does NOT mark a restart when the patch re-sends the current path unchanged",
+			func() {
+				dir := GinkgoT().TempDir()
+
+				app.prober.EXPECT().Available().Return(true).Once()
+				app.prober.EXPECT().ResolvedPath().Return("/usr/bin/ffprobe").Once()
+				first := app.do(
+					jsonReq(app, http.MethodPatch, "/api/v1/config/ffmpeg",
+						strings.NewReader(`{"path":"`+dir+`"}`)),
+				)
+				first.Body.Close()
+				Expect(first.StatusCode).To(Equal(http.StatusOK))
+				restart.ResetForTest()
+
+				app.prober.EXPECT().Available().Return(true).Once()
+				app.prober.EXPECT().ResolvedPath().Return("/usr/bin/ffprobe").Once()
+				resp := app.do(
+					jsonReq(app, http.MethodPatch, "/api/v1/config/ffmpeg",
+						strings.NewReader(`{"path":"`+dir+`"}`)),
+				)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				Expect(restart.Pending()).To(BeFalse())
 			},
 		)
 

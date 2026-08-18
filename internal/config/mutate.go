@@ -28,6 +28,17 @@ type LibraryPatch struct {
 	MoviePath       *string
 	SeriesPath      *string
 	DownloadPath    *string
+	// Probe is itself optional-partial: a nil Probe leaves the whole section
+	// untouched, and a non-nil Probe with only one field set leaves the
+	// other alone.
+	Probe *ProbePatch
+}
+
+// ProbePatch carries optional field updates to the library.probe section.
+// Nil fields are left untouched.
+type ProbePatch struct {
+	AlwaysAsk        *bool
+	MinDurationRatio *float64
 }
 
 // FFmpegPatch carries optional field updates to the ffmpeg section. Nil
@@ -107,6 +118,14 @@ func UpdateLibrary(ctx context.Context, patch LibraryPatch) (LibraryConfig, erro
 		}
 		if patch.DownloadPath != nil {
 			c.Library.DownloadPath = *patch.DownloadPath
+		}
+		if patch.Probe != nil {
+			if patch.Probe.AlwaysAsk != nil {
+				c.Library.Probe.AlwaysAsk = *patch.Probe.AlwaysAsk
+			}
+			if patch.Probe.MinDurationRatio != nil {
+				c.Library.Probe.MinDurationRatio = *patch.Probe.MinDurationRatio
+			}
 		}
 		out = c.Library
 		return nil

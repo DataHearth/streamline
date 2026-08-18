@@ -216,6 +216,21 @@ type LibraryConfig struct {
 	// owning movie reverts to "wanted". Bounded to give operators a knob
 	// for noisy mounts without unbounded patience.
 	DriftGraceTicks uint8 `koanf:"drift_grace_ticks" validate:"required,min=1,max=20"`
+	// Probe governs import-time verification against ffprobe results. Phase 1
+	// only stores these values — internal/library/hygiene's importer
+	// verification (Phase 2) is the intended reader.
+	Probe ProbeConfig `koanf:"probe"`
+}
+
+// ProbeConfig governs import-time verification against ffprobe results.
+type ProbeConfig struct {
+	// AlwaysAsk holds every import for a decision, even when every check
+	// passes.
+	AlwaysAsk bool `koanf:"always_ask"`
+	// MinDurationRatio holds an import whose probed duration is less than
+	// this share of the known runtime. A ratio in (0, 1] — a value typed as
+	// a percentage (90) is rejected rather than silently stored.
+	MinDurationRatio float64 `koanf:"min_duration_ratio" validate:"gt=0,lte=1"`
 }
 
 // ScheduleConfig carries one interval per registered job. Media-scoped jobs
@@ -501,6 +516,8 @@ func defaults() map[string]any {
 		"schedules.drift_check":            "15m",
 		"schedules.media_probe":            "15m",
 		"library.drift_grace_ticks":        3,
+		"library.probe.always_ask":         false,
+		"library.probe.min_duration_ratio": 0.5,
 		"metadata.tmdb_api_key":            "",
 		"metadata.tmdb_api_key_file":       "",
 		"metadata.tvdb_api_key":            "",

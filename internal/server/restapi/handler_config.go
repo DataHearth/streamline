@@ -99,9 +99,15 @@ func (s *Server) UpdateConfigLibrary(
 		}, nil
 	}
 
-	updated, err := config.UpdateLibrary(ctx, config.LibraryPatch{
-		MonitorSpecials: req.Body.MonitorSpecials,
-	})
+	patch := config.LibraryPatch{MonitorSpecials: req.Body.MonitorSpecials}
+	if req.Body.Probe != nil {
+		patch.Probe = &config.ProbePatch{
+			AlwaysAsk:        req.Body.Probe.AlwaysAsk,
+			MinDurationRatio: req.Body.Probe.MinDurationRatio,
+		}
+	}
+
+	updated, err := config.UpdateLibrary(ctx, patch)
 	if configLocked(err) {
 		return UpdateConfigLibrary403JSONResponse{
 			ForbiddenJSONResponse: forbiddenResp(err.Error()),
@@ -152,6 +158,8 @@ func (s *Server) UpdateConfigFfmpeg(
 		}, nil
 	}
 
+	prevPath := config.Get().FFmpeg.Path
+
 	updated, err := config.UpdateFFmpeg(ctx, config.FFmpegPatch{
 		Enabled: req.Body.Enabled,
 		Path:    req.Body.Path,
@@ -166,7 +174,9 @@ func (s *Server) UpdateConfigFfmpeg(
 			UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
 		}, nil
 	}
-	if req.Body.Path != nil {
+	// A client re-sending the current path must not raise the flag — only an
+	// actual change does.
+	if req.Body.Path != nil && *req.Body.Path != prevPath {
 		restart.Mark()
 	}
 	slog.InfoContext(ctx, "ffmpeg config updated",
@@ -377,20 +387,35 @@ func authConfigView(a config.AuthConfig) AuthConfigJSONResponse {
 
 // libraryConfigView maps config.LibraryConfig into the generated view. Only
 // runtime-editable knobs are exposed — paths and naming patterns stay
-// file-only.
+// file-only. probe is always populated (never null) so the settings page
+// reflects the stored values instead of falling back to a client-side guess.
 func libraryConfigView(l config.LibraryConfig) LibraryConfigJSONResponse {
-	return LibraryConfigJSONResponse{MonitorSpecials: l.MonitorSpecials}
+	alwaysAsk := l.Probe.AlwaysAsk
+	minDurationRatio := l.Probe.MinDurationRatio
+	return LibraryConfigJSONResponse{
+		MonitorSpecials: l.MonitorSpecials,
+		Probe: &ProbeConfig{
+			AlwaysAsk:        &alwaysAsk,
+			MinDurationRatio: &minDurationRatio,
+		},
+	}
 }
 
 // ffmpegConfigView maps config.FFmpegConfig into the generated view, adding
 // the live probe result off prober. found/resolved_path describe this
 // process's prober, which was built from the path at boot — they lag a path
 // change until the next restart even though enabled applies immediately.
+// restart_required mirrors the same process-wide flag ListOIDCProviders
+// reports, so a path fix surfaces here instead of only on the OIDC page.
 func ffmpegConfigView(
 	f config.FFmpegConfig,
 	prober ffmpeg.Prober,
 ) FFmpegConfigJSONResponse {
-	out := FFmpegConfigJSONResponse{Enabled: f.Enabled, Path: f.Path}
+	out := FFmpegConfigJSONResponse{
+		Enabled:         f.Enabled,
+		Path:            f.Path,
+		RestartRequired: restart.Pending(),
+	}
 	found := prober.Available()
 	out.Found = &found
 	if found {

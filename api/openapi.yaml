@@ -4186,8 +4186,12 @@ components:
     MediaInfo:
       type: object
       description: |
-        Technical details probed from the file with ffprobe. Absent until the
-        file has been probed (or when probing is disabled).
+        Technical details probed from the file with ffprobe. Absent when the
+        file hasn't been probed yet, probing is disabled, or the probe was
+        attempted and failed — probed_at is stamped internally on a failed
+        probe so the file isn't retried, so null here does not imply this
+        will populate on its own. Fall back to the record's parsed_* fields
+        when this is null.
       required: [container, video_codec, width, height, duration_seconds, probed_at]
       properties:
         container:
@@ -4722,6 +4726,13 @@ components:
           enum: ["720p", "1080p", "2160p"]
         upgrade_allowed:
           type: boolean
+        allowed_codecs:
+          type: array
+          items:
+            type: string
+          description: |
+            ffprobe video codec names ("hevc", "av1"). A grab whose file uses
+            anything else is held for a decision. Empty means any codec.
 
     QualityProfileCreate:
       type: object
@@ -4737,6 +4748,14 @@ components:
           enum: ["720p", "1080p", "2160p"]
         upgrade_allowed:
           type: boolean
+        allowed_codecs:
+          type: array
+          items:
+            type: string
+          description: |
+            ffprobe video codec names ("hevc", "av1"). Empty means any codec.
+            On update, omitting this field leaves the existing list
+            untouched.
 
     Indexer:
       type: object
@@ -5370,6 +5389,8 @@ components:
           description: |
             Monitor season 0 (specials) when a series is added or a refresh
             discovers the season. Applies to newly seeded seasons only.
+        probe:
+          $ref: "#/components/schemas/ProbeConfig"
 
     LibraryConfigPatch:
       type: object
@@ -5377,10 +5398,31 @@ components:
       properties:
         monitor_specials:
           type: boolean
+        probe:
+          $ref: "#/components/schemas/ProbeConfig"
+
+    ProbeConfig:
+      type: object
+      description: |
+        Import-time verification against ffprobe results. Stored for the
+        Phase 2 verifier to read; when patched, only provided fields are
+        applied.
+      properties:
+        always_ask:
+          type: boolean
+          description: Hold every import for a decision, even when every check passes.
+        min_duration_ratio:
+          type: number
+          format: double
+          exclusiveMinimum: 0
+          maximum: 1
+          description: |
+            A file shorter than this share of the expected runtime fails the
+            duration check.
 
     FFmpegConfigView:
       type: object
-      required: [enabled, path]
+      required: [enabled, path, restart_required]
       properties:
         enabled:
           type: boolean
@@ -5399,6 +5441,12 @@ components:
           type: string
           description: |
             Absolute path the prober resolved, when found is true.
+        restart_required:
+          type: boolean
+          description: |
+            True when a path change is pending a process restart. The same
+            process-wide flag OIDC provider mutations set — see
+            OIDCProviderListView.restart_required.
 
     FFmpegConfigPatch:
       type: object
