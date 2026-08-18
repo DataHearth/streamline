@@ -134,28 +134,26 @@ func diskUsage(total, free int64) *DiskUsage {
 	if total <= 0 {
 		return nil
 	}
+	// Clamp the reported free figure into [0, total] before anything is
+	// derived from it, so every number the badge shows agrees with the
+	// others. Root-reserved blocks can push free above the unprivileged
+	// total, and an unsigned Bavail that overflowed int64 arrives negative;
+	// either way, rendering the raw value produces a nonsense "-524288000 B"
+	// or a Free larger than Total, and the used it implies wraps the
+	// percentage. Clamping once here is what keeps used + free == total.
+	free = min(max(free, 0), total)
 	used := total - free
-	// Root-reserved blocks can push free above the unprivileged total; a
-	// negative used would both wrap the percentage and render a nonsense
-	// "-524288000 B" badge figure, so clamp it before any use.
-	used = max(used, 0)
 	// used*100 overflows int64 past ~92PB and the wrap would read as 0% on
 	// a nearly-full volume; only that range takes the divide-first
-	// approximation, so ordinary volumes keep the exact arithmetic. The
-	// upper clamp stays an explicit branch so gosec's range analysis can
-	// see the uint8 narrowing is safe.
+	// approximation, so ordinary volumes keep the exact arithmetic. used is
+	// now bounded by total, so reaching that range implies total/100 > 0 and
+	// the division is safe. The upper clamp stays an explicit branch so
+	// gosec's range analysis can see the uint8 narrowing is safe.
 	var pctWide int64
-	switch div := total / 100; {
-	case used <= math.MaxInt64/100:
+	if used <= math.MaxInt64/100 {
 		pctWide = used * 100 / total
-	case div > 0:
-		pctWide = used / div
-	default:
-		// A volume under 100 bytes can only reach the overflow range when
-		// the reported free figure is itself nonsense (an unsigned Bavail
-		// that overflowed int64), which means used dwarfs total. Dividing
-		// by total/100 == 0 would panic; the honest answer is "full".
-		pctWide = 100
+	} else {
+		pctWide = used / (total / 100)
 	}
 	if pctWide > 100 {
 		pctWide = 100

@@ -36,9 +36,12 @@ var _ = Describe("diskUsage", Label("unit", "sysinfo"), func() {
 		Expect(du).NotTo(BeNil())
 		Expect(du.Pct).To(Equal(uint8(0)))
 		Expect(du.Kind).To(Equal("ok"))
-		// The badge string must clamp too, not just the percentage —
-		// otherwise it renders a nonsense negative byte figure.
+		// The badge strings must clamp too, not just the percentage —
+		// otherwise they render a nonsense negative byte figure, or a Free
+		// larger than the Total sitting next to it.
 		Expect(du.Used).To(Equal("0 B"))
+		Expect(du.Free).To(Equal("1000 B"))
+		Expect(du.FreeBytes).To(Equal(int64(1000)))
 	})
 
 	It("survives volumes where used*100 would overflow int64", func() {
@@ -57,12 +60,13 @@ var _ = Describe("diskUsage", Label("unit", "sysinfo"), func() {
 		Expect(du).NotTo(BeNil())
 		Expect(du.Pct).To(Equal(uint8(50)))
 
-		// A tiny total *and* the overflow range at once: a filesystem
+		// A tiny total *and* a nonsense free at once: a filesystem
 		// reporting an unsigned Bavail that wrapped int64 hands us a
-		// negative free, so used lands past MaxInt64/100 while total/100
-		// is still 0. The divide-first path must not divide by it.
+		// negative free. Clamping free to 0 keeps used at the total, so the
+		// honest answer is "full" and total/100 == 0 is never divided by.
 		du = diskUsage(10, -math.MaxInt64/50)
 		Expect(du).NotTo(BeNil())
 		Expect(du.Pct).To(Equal(uint8(100)))
+		Expect(du.FreeBytes).To(BeZero())
 	})
 })
