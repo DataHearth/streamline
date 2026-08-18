@@ -40,6 +40,7 @@ type Config struct {
 	OTel        OTelConfig        `koanf:"otel"`
 	MediaServer MediaServerConfig `koanf:"media_server"`
 	Events      EventsConfig      `koanf:"events"       validate:"required"`
+	FFmpeg      FFmpegConfig      `koanf:"ffmpeg"`
 
 	DownloadClients       []DownloadClientEntry `koanf:"download_clients"        validate:"unique=Name,dive"`
 	Indexers              []IndexerEntry        `koanf:"indexers"                validate:"unique=Name,dive"`
@@ -248,6 +249,15 @@ type MetadataConfig struct {
 // by the cleanup job after Retention.
 type EventsConfig struct {
 	Retention string `koanf:"retention" validate:"required"`
+}
+
+// FFmpegConfig owns the ffmpeg-suite dependency (ffprobe today, the player's
+// transcoder later). Enabled=false makes probing and everything built on it
+// inert. Path is a directory holding the binaries; empty resolves via $PATH.
+// Enabled is runtime-toggleable through config.Update; Path is read at boot.
+type FFmpegConfig struct {
+	Enabled bool   `koanf:"enabled"`
+	Path    string `koanf:"path"    validate:"omitempty,dir"`
 }
 
 type LogConfig struct {
@@ -510,6 +520,8 @@ func defaults() map[string]any {
 		},
 		"quality_default_profile":      "default",
 		"events.retention":             "2160h",
+		"ffmpeg.enabled":               true,
+		"ffmpeg.path":                  "",
 		"log.app.enabled":              true,
 		"log.app.level":                "info",
 		"log.app.format":               "text",

@@ -322,6 +322,21 @@
         "retention": { "$ref": "#/definitions/duration" }
       }
     },
+    "ffmpeg": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "ffmpeg-suite dependency (ffprobe today, the player's transcoder later).",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "false makes probing and everything built on it inert."
+        },
+        "path": {
+          "type": "string",
+          "description": "Directory holding the ffmpeg/ffprobe binaries. Empty resolves via $PATH."
+        }
+      }
+    },
     "log": {
       "type": "object",
       "additionalProperties": false,
