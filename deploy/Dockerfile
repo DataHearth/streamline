@@ -13,6 +13,12 @@
 ARG GO_VERSION=1.26.6
 ARG GO_DIGEST=sha256:af8d6740070b8906d12eae1c3e3ea0957fb63f492051ea05e354c38ef9fe88df
 
+# static-ffmpeg publishes hardened static PIE builds with no external deps,
+# which is what lets a bare COPY of the binaries into distroless (no package
+# manager, no libc to link against) work at all.
+ARG FFMPEG_VERSION=9.0
+ARG FFMPEG_DIGEST=sha256:b90574a4e2ae62b763c39c384526689e7eb435da6398f4fb3f6c3f1c6a14ce33
+
 # --- Frontend assets (esbuild + TailwindCSS) ---
 FROM node:24-alpine@sha256:d32cdf619f63fe0471182d08996dd516c6275bb5fd31ae06e55a570bd9e1ad43 AS frontend
 WORKDIR /app
@@ -65,6 +71,13 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     go tool oapi-codegen --config api/oapi-codegen.yaml api/openapi.yaml && \
     go generate ./ent
 
+# --- ffprobe (media probe) ---
+# The runtime stage below is distroless static: no shell, no package manager,
+# so there's nothing to `apk add`/`apt install` ffmpeg into — see FFMPEG_DIGEST
+# above. Pinned by digest like every other base image; bump the tag AND digest
+# together.
+FROM docker.io/mwader/static-ffmpeg:${FFMPEG_VERSION}@${FFMPEG_DIGEST} AS ffmpeg
+
 # --- Go binary ---
 FROM golang:${GO_VERSION}-alpine@${GO_DIGEST} AS builder
 WORKDIR /app
@@ -108,6 +121,10 @@ WORKDIR /
 
 COPY --from=builder --chown=1000:1000 /out/data /data
 COPY --from=builder /out/streamline /usr/local/bin/streamline
+
+# /usr/local/bin is on distroless' default PATH, so this satisfies
+# ffmpeg.path's default (empty = resolve via $PATH) with no config needed.
+COPY --from=ffmpeg /ffmpeg /ffprobe /usr/local/bin/
 
 EXPOSE 8080
 VOLUME ["/data"]
