@@ -2049,9 +2049,13 @@ type Episode struct {
 	AbsoluteNumber *uint16    `json:"absolute_number,omitempty"`
 	AirDate        *time.Time `json:"air_date,omitempty"`
 	Id             uint32     `json:"id"`
-	Monitored      bool       `json:"monitored"`
-	Number         uint16     `json:"number"`
-	Overview       *string    `json:"overview,omitempty"`
+
+	// MediaInfo Technical details probed from the file with ffprobe. Absent until the
+	// file has been probed (or when probing is disabled).
+	MediaInfo *MediaInfo `json:"media_info,omitempty"`
+	Monitored bool       `json:"monitored"`
+	Number    uint16     `json:"number"`
+	Overview  *string    `json:"overview,omitempty"`
 
 	// Path On-disk path of the episode's media file, when imported.
 	Path    *string `json:"path,omitempty"`
@@ -2406,6 +2410,10 @@ type MediaFile struct {
 	Format *string `json:"format,omitempty"`
 	Id     uint32  `json:"id"`
 
+	// MediaInfo Technical details probed from the file with ffprobe. Absent until the
+	// file has been probed (or when probing is disabled).
+	MediaInfo *MediaInfo `json:"media_info,omitempty"`
+
 	// ParsedCodec Video codec (x264/HEVC/AV1/…) parsed from the file's basename at response time.
 	ParsedCodec *string `json:"parsed_codec,omitempty"`
 
@@ -2418,6 +2426,37 @@ type MediaFile struct {
 	Quality      *string `json:"quality,omitempty"`
 	ReleaseGroup *string `json:"release_group,omitempty"`
 	Size         int64   `json:"size"`
+}
+
+// MediaInfo Technical details probed from the file with ffprobe. Absent until the
+// file has been probed (or when probing is disabled).
+type MediaInfo struct {
+	// AudioChannels Example: 6
+	AudioChannels *int `json:"audio_channels,omitempty"`
+
+	// AudioCodec Example: eac3
+	AudioCodec *string `json:"audio_codec,omitempty"`
+
+	// Bitrate Overall bitrate in bits per second.
+	//
+	// Example: 24500000
+	Bitrate *int `json:"bitrate,omitempty"`
+
+	// Container Example: matroska
+	Container string `json:"container"`
+
+	// DurationSeconds Example: 8130
+	DurationSeconds int `json:"duration_seconds"`
+
+	// Height Example: 1608
+	Height   int       `json:"height"`
+	ProbedAt time.Time `json:"probed_at"`
+
+	// VideoCodec Example: hevc
+	VideoCodec string `json:"video_codec"`
+
+	// Width Example: 3840
+	Width int `json:"width"`
 }
 
 // MediaServer defines model for MediaServer.

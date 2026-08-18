@@ -4129,6 +4129,44 @@ components:
         parsed_codec:
           type: string
           description: Video codec (x264/HEVC/AV1/…) parsed from the file's basename at response time.
+        media_info:
+          $ref: "#/components/schemas/MediaInfo"
+
+    MediaInfo:
+      type: object
+      description: |
+        Technical details probed from the file with ffprobe. Absent until the
+        file has been probed (or when probing is disabled).
+      required: [container, video_codec, width, height, duration_seconds, probed_at]
+      properties:
+        container:
+          type: string
+          example: matroska
+        video_codec:
+          type: string
+          example: hevc
+        width:
+          type: integer
+          example: 3840
+        height:
+          type: integer
+          example: 1608
+        duration_seconds:
+          type: integer
+          example: 8130
+        audio_codec:
+          type: string
+          example: eac3
+        audio_channels:
+          type: integer
+          example: 6
+        bitrate:
+          type: integer
+          description: Overall bitrate in bits per second.
+          example: 24500000
+        probed_at:
+          type: string
+          format: date-time
 
     AddMovieRequest:
       type: object
@@ -4353,6 +4391,8 @@ components:
         path:
           type: string
           description: On-disk path of the episode's media file, when imported.
+        media_info:
+          $ref: "#/components/schemas/MediaInfo"
 
     PaginatedTVShows:
       type: object

@@ -281,6 +281,34 @@ func mediaFileToAPI(f *ent.MediaFile) MediaFile {
 		pc := parsed.Codec
 		out.ParsedCodec = &pc
 	}
+	out.MediaInfo = mediaInfoToAPI(f)
+	return out
+}
+
+func mediaInfoToAPI(f *ent.MediaFile) *MediaInfo {
+	if f.ProbedAt == nil || f.VideoCodec == "" {
+		return nil
+	}
+	out := &MediaInfo{
+		Container:       f.Container,
+		VideoCodec:      f.VideoCodec,
+		Width:           int(f.Width),
+		Height:          int(f.Height),
+		DurationSeconds: int(f.DurationSeconds),
+		ProbedAt:        *f.ProbedAt,
+	}
+	if f.AudioCodec != "" {
+		ac := f.AudioCodec
+		out.AudioCodec = &ac
+	}
+	if f.AudioChannels != 0 {
+		ch := int(f.AudioChannels)
+		out.AudioChannels = &ch
+	}
+	if f.Bitrate != 0 {
+		b := int(f.Bitrate)
+		out.Bitrate = &b
+	}
 	return out
 }
 
@@ -762,6 +790,7 @@ func episodeToAPI(e *ent.Episode, now time.Time) Episode {
 		out.Path = &f.Path
 		sz := f.Size
 		out.Size = &sz
+		out.MediaInfo = mediaInfoToAPI(f)
 	}
 	return out
 }
