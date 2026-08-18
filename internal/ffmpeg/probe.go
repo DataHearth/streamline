@@ -49,11 +49,17 @@ func (c *CLI) Probe(ctx context.Context, path string) (*Info, error) {
 }
 
 type probeStream struct {
-	CodecType string `json:"codec_type"`
-	CodecName string `json:"codec_name"`
-	Width     uint16 `json:"width"`
-	Height    uint16 `json:"height"`
-	Channels  uint8  `json:"channels"`
+	CodecType   string          `json:"codec_type"`
+	CodecName   string          `json:"codec_name"`
+	Width       uint16          `json:"width"`
+	Height      uint16          `json:"height"`
+	Channels    uint8           `json:"channels"`
+	Duration    string          `json:"duration"`
+	Disposition probeStreamDisp `json:"disposition"`
+}
+
+type probeStreamDisp struct {
+	AttachedPic int `json:"attached_pic"`
 }
 
 type probeFormat struct {
@@ -83,12 +89,20 @@ func parseProbeOutput(raw []byte) (*Info, error) {
 	if b, err := strconv.ParseUint(out.Format.BitRate, 10, 32); err == nil {
 		info.BitrateBPS = uint32(b)
 	}
+	var videoStreamDuration string
 	for _, s := range out.Streams {
 		switch s.CodecType {
 		case "video":
+			// Embedded cover art (mjpeg/png thumbnail) is a video stream too;
+			// ffprobe flags it via disposition.attached_pic so it never gets
+			// mistaken for the real video track.
+			if s.Disposition.AttachedPic != 0 {
+				continue
+			}
 			if info.VideoCodec == "" {
 				info.VideoCodec = s.CodecName
 				info.Width, info.Height = s.Width, s.Height
+				videoStreamDuration = s.Duration
 			}
 		case "audio":
 			if info.AudioCodec == "" {
@@ -99,6 +113,14 @@ func parseProbeOutput(raw []byte) (*Info, error) {
 	}
 	if info.VideoCodec == "" {
 		return nil, ErrNoVideoStream
+	}
+	// Some containers (MPEG-TS, some remuxes) carry no format.duration; the
+	// selected video stream's own duration field is the same decimal-seconds
+	// format and is the next best source before giving up on the file.
+	if info.DurationSec == 0 {
+		if d, err := strconv.ParseFloat(videoStreamDuration, 64); err == nil {
+			info.DurationSec = uint32(d)
+		}
 	}
 	if info.DurationSec == 0 {
 		return nil, ErrZeroDuration

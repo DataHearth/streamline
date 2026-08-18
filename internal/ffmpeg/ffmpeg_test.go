@@ -30,6 +30,11 @@ var _ = Describe("CLI", Label("unit", "ffmpeg"), func() {
 EOF`)
 		c := NewCLI(dir)
 		Expect(c.Available()).To(BeTrue())
+		// ResolvedPath must be exec.LookPath's own return value, not the
+		// dir/ffprobe path NewCLI joined to build the lookup — on unix these
+		// happen to match once the file exists, but the code must not rely
+		// on that (see NewCLI: it stores LookPath's result, not the join).
+		Expect(c.ResolvedPath()).To(Equal(filepath.Join(dir, "ffprobe")))
 		info, err := c.Probe(context.Background(), "/any.mkv")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(info.VideoCodec).To(Equal("h264"))

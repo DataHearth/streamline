@@ -50,14 +50,15 @@ type CLI struct {
 
 func NewCLI(dir string) *CLI {
 	if dir != "" {
-		p := filepath.Join(dir, "ffprobe")
-		if _, err := exec.LookPath(p); err == nil {
-			return &CLI{ffprobe: p}
+		if resolved, err := exec.LookPath(
+			filepath.Join(dir, "ffprobe"),
+		); err == nil {
+			return &CLI{ffprobe: resolved}
 		}
 		return &CLI{}
 	}
-	if p, err := exec.LookPath("ffprobe"); err == nil {
-		return &CLI{ffprobe: p}
+	if resolved, err := exec.LookPath("ffprobe"); err == nil {
+		return &CLI{ffprobe: resolved}
 	}
 	return &CLI{}
 }

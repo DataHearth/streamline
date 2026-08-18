@@ -50,4 +50,53 @@ var _ = Describe("parseProbeOutput", Label("unit", "ffmpeg"), func() {
 		_, err := parseProbeOutput([]byte(`not json`))
 		Expect(err).To(MatchError(ErrUnreadable))
 	})
+
+	It(
+		"falls back to the video stream's own duration when format.duration is absent",
+		func() {
+			info, err := parseProbeOutput(
+				[]byte(
+					`{"streams":[{"codec_type":"video","codec_name":"h264","width":1920,"height":1080,"duration":"120.500000"}],"format":{"format_name":"mpegts"}}`,
+				),
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(info.DurationSec).To(Equal(uint32(120)))
+		},
+	)
+
+	It(
+		"still rejects zero duration when both format and stream durations are absent",
+		func() {
+			_, err := parseProbeOutput(
+				[]byte(
+					`{"streams":[{"codec_type":"video","codec_name":"h264","width":1920,"height":1080}],"format":{"format_name":"mpegts"}}`,
+				),
+			)
+			Expect(err).To(MatchError(ErrZeroDuration))
+		},
+	)
+
+	It("skips an embedded cover art stream ordered before the real video", func() {
+		info, err := parseProbeOutput(
+			[]byte(
+				`{"streams":[` +
+					`{"codec_type":"video","codec_name":"mjpeg","width":300,"height":300,"disposition":{"attached_pic":1}},` +
+					`{"codec_type":"video","codec_name":"h264","width":1920,"height":1080}` +
+					`],"format":{"format_name":"matroska","duration":"100.0"}}`,
+			),
+		)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(info.VideoCodec).To(Equal("h264"))
+		Expect(info.Width).To(Equal(uint16(1920)))
+		Expect(info.Height).To(Equal(uint16(1080)))
+	})
+
+	It("rejects a file whose only video streams are attached pics", func() {
+		_, err := parseProbeOutput(
+			[]byte(
+				`{"streams":[{"codec_type":"video","codec_name":"mjpeg","width":300,"height":300,"disposition":{"attached_pic":1}}],"format":{"format_name":"matroska","duration":"100.0"}}`,
+			),
+		)
+		Expect(err).To(MatchError(ErrNoVideoStream))
+	})
 })
