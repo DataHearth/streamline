@@ -21,6 +21,7 @@
 		onPause,
 		onResume,
 		onRemove,
+		onResolve,
 	}: {
 		view: "queue" | "history";
 		rows: (QueueEntry | HistoryEntry)[];
@@ -35,6 +36,7 @@
 		onPause: (id: number) => void;
 		onResume: (id: number) => void;
 		onRemove: (id: number) => void;
+		onResolve?: (item: QueueEntry) => void;
 	} = $props();
 
 	const COLSPAN = 6;
@@ -148,6 +150,7 @@
 						{view}
 						expanded={expandedId === row.id}
 						onToggle={toggle}
+						{onResolve}
 					/>
 					{#if expandedId === row.id}
 						<ExpandedRowDetail

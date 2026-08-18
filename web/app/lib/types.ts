@@ -31,6 +31,7 @@ export type Episode = {
 	quality?: string;
 	size?: number | null;
 	path?: string;
+	media_info?: MediaInfo | null;
 };
 
 export type Season = {
@@ -156,6 +157,45 @@ export type Movie = {
 	rating?: number;
 };
 
+// What ffprobe read off the file. Null until the file has been probed, and
+// still null when probing is disabled — every consumer falls back to the
+// parsed_* fields per field. See lib/media-info.ts.
+export type MediaInfo = {
+	container?: string;
+	video_codec?: string;
+	width?: number;
+	height?: number;
+	duration_seconds?: number;
+	// The default (or first) audio track, flattened. Kept alongside audio_tracks:
+	// it is what the brief's contract carries, and a file whose streams could not
+	// be enumerated may still report this much.
+	audio_codec?: string;
+	audio_channels?: number;
+	bitrate?: number;
+	probed_at?: string;
+	// Every audio and subtitle stream ffprobe found. Languages are ISO 639-2/B
+	// as ffprobe reports them ("eng", "fra", "und").
+	audio_tracks?: AudioTrack[];
+	subtitles?: SubtitleTrack[];
+};
+
+export type AudioTrack = {
+	language?: string;
+	codec?: string;
+	channels?: number;
+	default?: boolean;
+	// ffprobe's stream title, when the muxer set one ("Surround", "Commentary").
+	title?: string;
+};
+
+export type SubtitleTrack = {
+	language?: string;
+	codec?: string;
+	forced?: boolean;
+	hearing_impaired?: boolean;
+	default?: boolean;
+};
+
 export type MediaFile = {
 	id: number;
 	path: string;
@@ -166,6 +206,7 @@ export type MediaFile = {
 	parsed_source?: string;
 	parsed_resolution?: string;
 	parsed_codec?: string;
+	media_info?: MediaInfo | null;
 };
 
 export type SearchResult = {
@@ -356,9 +397,21 @@ export type EpisodeRef = {
 	episode: number;
 };
 
+export type HoldCheck = "resolution" | "corrupt" | "duration" | "codec";
+
+export type HoldReason = {
+	file: string;
+	check: HoldCheck;
+	expected?: string;
+	actual?: string;
+};
+
 export type QueueEntry = {
 	id: number;
-	status: "downloading" | "importing" | "paused" | "error";
+	// "held": the download finished and failed verification, so it is waiting on
+	// a decision rather than on the network. The only queue state whose next move
+	// belongs to a person.
+	status: "downloading" | "importing" | "paused" | "error" | "held";
 	title: string;
 	quality?: string;
 	release_group?: string;
@@ -371,6 +424,7 @@ export type QueueEntry = {
 	download_speed?: number;
 	eta?: number;
 	failure_reason?: string;
+	hold_reasons?: HoldReason[];
 	created_at: string;
 };
 export type DownloadQueue = { items: QueueEntry[]; refreshed_at: string };
@@ -479,6 +533,26 @@ export type AuthConfig = {
 
 export type LibraryConfig = {
 	monitor_specials: boolean;
+	probe?: ProbeConfig;
+};
+
+export type ProbeConfig = {
+	// Hold every import for a decision, even when every check passes.
+	always_ask?: boolean;
+	// A file shorter than this share of the expected runtime fails the duration
+	// check. Stored as a ratio (0.9); the settings field shows it as a percentage.
+	min_duration_ratio?: number;
+};
+
+// The ffmpeg suite, not just ffprobe — the same block serves playback later.
+// `found` is what the settings page warns on and what the TopBar health pill's
+// new reason string comes from.
+export type FFmpegConfig = {
+	enabled: boolean;
+	path: string;
+	found?: boolean;
+	resolved_path?: string;
+	version?: string;
 };
 
 export type OIDCProvider = {
@@ -500,6 +574,8 @@ export type QualityProfileFull = {
 	preferred_resolution: Resolution;
 	min_resolution: Resolution;
 	upgrade_allowed: boolean;
+	// ffprobe codec names ("hevc", "av1"). Empty means any codec.
+	allowed_codecs?: string[];
 };
 
 // "torznab" covers plain Torznab endpoints and Jackett (its /indexers/all

@@ -8,6 +8,7 @@
 	} from "./EpisodeDetailModal.svelte";
 	import { formatDateShort, formatRelative } from "../../lib/dates";
 	import { formatBytes } from "../../lib/format";
+	import { episodeMedia, isProbed } from "../../lib/media-info";
 	import type { Episode, SeriesType } from "../../lib/types";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 
@@ -68,9 +69,9 @@
 				<th scope="col" class="w-28 px-3 py-2.5 text-left font-medium">{i18n.common_status()}</th>
 				<th
 					scope="col"
-					class="hidden w-24 px-3 py-2.5 text-left font-medium @lg:table-cell"
+					class="hidden w-40 px-3 py-2.5 text-left font-medium @lg:table-cell"
 				>
-					{i18n.common_quality()}
+					{i18n.file_media()}
 				</th>
 				<th
 					scope="col"
@@ -156,9 +157,12 @@
 						</span>
 					</td>
 					<td
-						class="hidden px-3 py-2.5 font-mono text-xs text-fg-muted @lg:table-cell"
+						class={cn(
+							"hidden whitespace-nowrap px-3 py-2.5 font-mono text-xs @lg:table-cell",
+							isProbed(ep) ? "text-fg-muted" : "text-fg-subtle",
+						)}
 					>
-						{ep.quality || "—"}
+						{episodeMedia(ep) || "—"}
 					</td>
 					<td
 						class="hidden px-3 py-2.5 text-right font-mono text-xs tabular text-fg-muted @lg:table-cell"

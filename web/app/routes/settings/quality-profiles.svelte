@@ -22,6 +22,7 @@
 		preferred_resolution: Resolution;
 		min_resolution: Resolution;
 		upgrade_allowed: boolean;
+		allowed_codecs: string[];
 	};
 
 	const qc = useQueryClient();
@@ -73,6 +74,7 @@
 		preferred_resolution: "1080p",
 		min_resolution: "720p",
 		upgrade_allowed: true,
+		allowed_codecs: [],
 	};
 
 	const form = createForm(() => ({
@@ -94,6 +96,7 @@
 			preferred_resolution: p.preferred_resolution,
 			min_resolution: p.min_resolution,
 			upgrade_allowed: p.upgrade_allowed,
+			allowed_codecs: p.allowed_codecs ?? [],
 		});
 		modalOpen = true;
 	}

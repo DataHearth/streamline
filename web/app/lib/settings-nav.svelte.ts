@@ -6,6 +6,7 @@ import {
 	Cast,
 	Gauge,
 	Tv,
+	Film,
 	Clock,
 	Shield,
 	KeyRound,
@@ -40,6 +41,7 @@ export const SETTINGS_TITLES: Record<string, () => string> = {
 	"/settings/advanced": () => i18n.settings_advanced(),
 	"/settings/quality-profiles": () => i18n.settings_quality_profiles(),
 	"/settings/series": () => i18n.settings_series(),
+	"/settings/media-probe": () => i18n.settings_media_probe(),
 	"/settings/indexers": () => i18n.settings_indexers(),
 	"/settings/download-clients": () => i18n.settings_download_clients(),
 	"/settings/media-servers": () => i18n.settings_media_servers(),
@@ -123,6 +125,14 @@ export function createSettingsNav(withCounts = true) {
 						path: "/settings/series",
 						Icon: Tv,
 						label: i18n.settings_series(),
+					},
+					// Probing is what happens to files entering the library, so it
+					// belongs here rather than under Connections — there is no host to
+					// reach and nothing to test a connection to.
+					{
+						path: "/settings/media-probe",
+						Icon: Film,
+						label: i18n.settings_media_probe(),
 					},
 				],
 			},

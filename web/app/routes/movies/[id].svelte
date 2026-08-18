@@ -263,10 +263,10 @@
 		</div>
 	</nav>
 
-	<div class="w-full px-4 py-6 md:px-8">
+	<div class="w-full px-4 pb-24 pt-6 md:px-8 md:pb-6">
 		{#if tab === "overview"}
 			<div
-				class="grid grid-cols-1 gap-6 md:grid-cols-[1fr_260px] md:gap-7 lg:grid-cols-[1fr_320px] lg:gap-10"
+				class="grid grid-cols-1 gap-6 md:grid-cols-[1fr_260px] md:grid-rows-[auto_1fr] md:items-start md:gap-7 lg:grid-cols-[1fr_320px] lg:gap-10"
 			>
 				<DetailAbout
 					overview={movie.overview}
@@ -274,16 +274,20 @@
 					onViewAllCast={() => (tab = "cast")}
 				/>
 				<MovieDetailInfo {movie} qualityProfileName={qpName} />
+				<!-- Similar is the left column's second row, and the aside spans both:
+				     the overview's left content is short enough that one row left ~330px
+				     of the 320px column's height with nothing beside it. DOM order stays
+				     About → Info → Similar so the one-column phone layout is unchanged;
+				     the placement only applies from md. -->
+				<div class="min-w-0 md:col-start-1 md:row-start-2">
+					<MovieDetailSimilar movieId={movie.id} />
+				</div>
 			</div>
 		{:else if tab === "history"}
 			<MovieDetailHistory movieId={movie.id} />
 		{:else if tab === "cast"}
 			<MovieDetailCast cast={movie.cast ?? []} />
 		{/if}
-	</div>
-
-	<div class="w-full px-4 pb-24 md:px-8 md:pb-6">
-		<MovieDetailSimilar movieId={movie.id} />
 	</div>
 
 	<!-- Phone: the action row the hero gives up, pinned above the bottom nav so

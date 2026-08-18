@@ -11,7 +11,7 @@
 import type { StatusKind } from "../components/shared/StatusPill.svelte";
 import { formatBytes, formatEta, formatRatio, formatSpeed } from "./format";
 import { formatRelative } from "./dates";
-import type { HistoryEntry, QueueEntry, Torrent } from "./types";
+import type { HistoryEntry, HoldReason, QueueEntry, Torrent } from "./types";
 import { m as i18n } from "./paraglide/messages.js";
 
 const episodeTokenRe = /S\d{1,2}E\d{1,2}/i;
@@ -34,7 +34,15 @@ export function entryHeading(item: QueueEntry | HistoryEntry): string {
 	return `${ep.show_title} · ${season}`;
 }
 
-export type RingGlyph = "check" | "cross" | "pause" | "up" | "down" | "dots" | null;
+export type RingGlyph =
+	| "check"
+	| "cross"
+	| "pause"
+	| "up"
+	| "down"
+	| "dots"
+	| "alert"
+	| null;
 export type RingReading = {
 	// arc: the sweep is the progress. spin: indeterminate, rotates. full: a
 	// complete circle the item may or may not have earned (failure included).
@@ -52,6 +60,10 @@ export function ringReading(status: StatusKind): RingReading {
 			return { mode: "arc", glyph: "pause" };
 		case "failed":
 			return { mode: "full", glyph: "cross" };
+		case "held":
+			// The arc is complete because the download is. The glyph says it went
+			// nowhere: the file is on disk and nothing has been imported.
+			return { mode: "full", glyph: "alert" };
 		case "available":
 		case "completed":
 			return { mode: "full", glyph: "check" };
@@ -65,11 +77,41 @@ export function ringReading(status: StatusKind): RingReading {
 
 export type MetaLine = { text: string; color?: string };
 
+// Which checks a held download failed, deduplicated across its files. A season
+// pack holds whole and itemises per file, so the same check usually appears
+// several times and the row has room for the list once.
+export function holdChecks(item: QueueEntry): string[] {
+	const seen = new Set<string>();
+	for (const r of item.hold_reasons ?? []) seen.add(r.check);
+	return [...seen];
+}
+
+// The row's own words for a hold. Not the findings themselves — those need the
+// expected value beside them to mean anything, and that is the dialog's job.
+export function holdSummary(item: QueueEntry): string {
+	const checks = holdChecks(item);
+	if (checks.length === 0) return i18n.hold_failed_verification();
+	return checks.join(", ");
+}
+
+// How many files are implicated, for the dialog's title.
+export function holdFileCount(reasons: HoldReason[] | undefined): number {
+	const files = new Set<string>();
+	for (const r of reasons ?? []) files.add(r.file);
+	return files.size;
+}
+
 export function queueMeta(item: QueueEntry): MetaLine {
 	if (item.status === "error") {
 		return {
 			text: item.failure_reason || "Download failed",
 			color: "var(--status-failed)",
+		};
+	}
+	if (item.status === "held") {
+		return {
+			text: joinDot([i18n.status_held().toLowerCase(), holdSummary(item)]),
+			color: "var(--status-held)",
 		};
 	}
 	if (item.status === "importing") {

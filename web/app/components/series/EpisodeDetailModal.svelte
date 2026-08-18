@@ -26,6 +26,19 @@
 	import Modal from "../modals/Modal.svelte";
 	import { formatDateTime, formatRelative } from "../../lib/dates";
 	import { formatBytes } from "../../lib/format";
+	import {
+		audioLabel,
+		audioTracks,
+		channelLayout,
+		codecLabel,
+		formatBitrate,
+		formatDuration,
+		langName,
+		probeOf,
+		resolutionBucket,
+		subtitleFlags,
+		subtitleTracks,
+	} from "../../lib/media-info";
 	import type { Episode } from "../../lib/types";
 
 	// Lifted out of EpisodeTable so the phone accordion opens the same sheet the
@@ -44,6 +57,40 @@
 		onDeleteFile: (ep: Episode) => void;
 	} = $props();
 
+	let probe = $derived(episode ? probeOf(episode) : null);
+	let audioList = $derived(audioTracks(probe));
+	let subList = $derived(subtitleTracks(probe));
+	// Only when the streams could not be enumerated: otherwise the track list
+	// below says the same thing per language.
+	let flatAudio = $derived(audioList.length === 0 ? audioLabel(probe) : undefined);
+
+	// Aliased for the same reason as MovieDetailInfo's TrackToggle: a snippet's
+	// parameter list cannot carry an inline object type.
+	type TrackListRow = {
+		name: string;
+		note?: string;
+		flags: string[];
+		value: string;
+	};
+	type TrackListRows = TrackListRow[];
+	// Only rows the probe actually carries: an audio-less remux has no Audio row
+	// rather than a dash.
+	let probeRows = $derived(
+		probe
+			? [
+					{ label: i18n.file_container(), value: probe.container?.toUpperCase() },
+					{ label: i18n.file_video(), value: codecLabel(probe.video_codec) },
+					{
+						label: i18n.file_resolution(),
+						value: resolutionBucket(probe.width, probe.height),
+					},
+					{ label: i18n.file_duration(), value: formatDuration(probe.duration_seconds) },
+					{ label: i18n.file_audio(), value: flatAudio },
+					{ label: i18n.file_bitrate(), value: formatBitrate(probe.bitrate) },
+				].filter((r) => Boolean(r.value))
+			: [],
+	);
+
 	let rows = $derived(
 		episode
 			? [
@@ -60,6 +107,41 @@
 			: [],
 	);
 </script>
+
+{#snippet trackList(
+	heading: string,
+	rows: TrackListRows,
+)}
+	<div class="mt-3.5">
+		<h5
+			class="font-mono text-[10px] uppercase tracking-[0.12em] text-fg-faint"
+		>
+			{heading}
+		</h5>
+		<div class="mt-1 divide-y divide-border border-y border-border">
+			{#each rows as row, k (k)}
+				<div class="flex items-baseline justify-between gap-3 py-1.5 text-sm">
+					<span class="min-w-0 truncate text-fg-muted">
+						{row.name}
+						{#if row.note}
+							<span class="text-fg-faint">· {row.note}</span>
+						{/if}
+						{#each row.flags as flag (flag)}
+							<span
+								class="ml-1 text-[10px] uppercase tracking-[0.1em] text-fg-faint"
+							>
+								{flag}
+							</span>
+						{/each}
+					</span>
+					<span class="shrink-0 font-mono text-xs text-fg-subtle">
+						{row.value}
+					</span>
+				</div>
+			{/each}
+		</div>
+	</div>
+{/snippet}
 
 {#if episode}
 	{@const meta = STATUS_META[episodeStatus(episode)]}
@@ -96,6 +178,57 @@
 				</dd>
 			{/each}
 		</dl>
+
+		{#if probeRows.length > 0}
+			<div class="mt-4 border-t border-border pt-3">
+				<div class="flex items-center gap-2">
+					<h4
+						class="font-mono text-[11px] uppercase tracking-[0.14em] text-fg-faint"
+					>
+						{i18n.file_media()}
+					</h4>
+					<span
+						class="rounded-full border border-status-available/30 bg-status-available/10 px-1.5 py-px font-mono text-[9px] font-semibold uppercase tracking-[0.1em] text-status-available"
+					>
+						{i18n.file_probed()}
+					</span>
+				</div>
+				<dl class="mt-2.5 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
+					{#each probeRows as row (row.label)}
+						<dt class="text-fg-subtle">{row.label}</dt>
+						<dd class="text-right font-mono text-xs tabular text-fg-muted">
+							{row.value}
+						</dd>
+					{/each}
+				</dl>
+
+				{#if audioList.length > 0}
+					{@render trackList(
+						i18n.file_audio_tracks({ count: audioList.length }),
+						audioList.map((t) => ({
+							name: langName(t.language),
+							note: t.title,
+							flags: t.default ? [i18n.track_default()] : [],
+							value:
+								[codecLabel(t.codec), channelLayout(t.channels)]
+									.filter(Boolean)
+									.join(" · ") || "—",
+						})),
+					)}
+				{/if}
+				{#if subList.length > 0}
+					{@render trackList(
+						i18n.file_subtitle_tracks({ count: subList.length }),
+						subList.map((t) => ({
+							name: langName(t.language),
+							note: undefined,
+							flags: subtitleFlags(t),
+							value: codecLabel(t.codec) ?? "—",
+						})),
+					)}
+				{/if}
+			</div>
+		{/if}
 
 		{#if episode.path}
 			<dl class="mt-4 border-t border-border pt-3">

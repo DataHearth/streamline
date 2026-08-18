@@ -30,6 +30,7 @@
 	import ActivityDetailSheet from "../../components/activity/ActivityDetailSheet.svelte";
 	import ActivityFilterSheet from "../../components/activity/ActivityFilterSheet.svelte";
 	import PendingSheet from "../../components/activity/PendingSheet.svelte";
+	import ResolveDialog from "../../components/activity/ResolveDialog.svelte";
 	import TouchStatLine from "../../components/activity/TouchStatLine.svelte";
 	import LiveStrip from "../../components/activity/LiveStrip.svelte";
 	import PendingRow from "../../components/pending/PendingRow.svelte";
@@ -100,6 +101,35 @@
 		onSuccess: invalidate,
 		onError: (e) => toast.err(errorText(e)),
 	}));
+	// A held download is waiting on a person, so the dialog tracks an id: the
+	// queue repolls every 2 s and holding the object would show a stale finding
+	// list after a refetch.
+	let resolveId = $state<number | null>(null);
+	let heldItem = $derived(
+		queueItems.find((q) => q.id === resolveId) ?? null,
+	);
+
+	const resolve = createMutation<
+		unknown,
+		Error,
+		{ id: number; action: "import" | "regrab" | "delete" }
+	>(() => ({
+		mutationFn: ({ id, action }) =>
+			api(`/downloads/${id}/resolve`, { method: "POST", body: { action } }),
+		onSuccess: (_r, { action }) => {
+			invalidate();
+			resolveId = null;
+			toast.ok(
+				action === "import"
+					? i18n.hold_imported()
+					: action === "regrab"
+						? i18n.hold_searching_again()
+						: i18n.hold_deleted(),
+			);
+		},
+		onError: (e) => toast.err(errorText(e)),
+	}));
+
 	const removeHistory = createMutation<unknown, Error, number>(() => ({
 		mutationFn: (id) => api(`/activity/history/${id}`, { method: "DELETE" }),
 		onSuccess: () => {
@@ -245,6 +275,11 @@
 	let activeCount = $derived(
 		queueItems.filter((i) => i.status === "downloading").length,
 	);
+	// Its own figure, not part of "active": a held download is not transferring,
+	// and folding it in would make the number mean two things.
+	let heldCount = $derived(
+		queueItems.filter((i) => i.status === "held").length,
+	);
 
 	function resetFilters() {
 		statusFilter = [];
@@ -351,6 +386,15 @@
 	<TouchStatLine
 		stats={[
 			{ value: String(activeCount), label: i18n.common_active() },
+			...(heldCount > 0
+				? [
+						{
+							value: String(heldCount),
+							label: i18n.status_held(),
+							color: "var(--status-held)",
+						},
+					]
+				: []),
 			{
 				value: formatSpeed(aggregate) || "—",
 				label: i18n.torrent_aggregate_down(),
@@ -426,6 +470,7 @@
 		onPause={(id) => pause.mutate(id)}
 		onResume={(id) => resume.mutate(id)}
 		onRemove={(id) => removeHistory.mutate(id)}
+		onResolve={auth.isAdmin ? (item) => (resolveId = item.id) : undefined}
 	/>
 
 	<ActivityTouchList
@@ -437,6 +482,7 @@
 		loadingMore={history.isFetchingNextPage}
 		onLoadMore={() => history.fetchNextPage()}
 		onOpen={(item) => (detailId = item.id)}
+		onResolve={auth.isAdmin ? (item) => (resolveId = item.id) : undefined}
 	/>
 </div>
 
@@ -459,6 +505,14 @@
 	onImport={(id) => importPending.mutate(id)}
 	onReplace={(id, removeOld) => replacePending.mutate({ id, removeOld })}
 	onIgnore={(id, removeTorrent) => ignorePending.mutate({ id, removeTorrent })}
+/>
+
+<ResolveDialog
+	item={heldItem}
+	pending={resolve.isPending}
+	onResolve={(action) =>
+		resolveId !== null && resolve.mutate({ id: resolveId, action })}
+	onClose={() => (resolveId = null)}
 />
 
 <ActivityDetailSheet

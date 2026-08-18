@@ -7,6 +7,7 @@
 	import { cn } from "../../lib/cn";
 	import { episodeStatus, missingEpisodes } from "../../lib/status";
 	import { formatBytes } from "../../lib/format";
+	import { episodeMedia } from "../../lib/media-info";
 	import { formatDateShort } from "../../lib/dates";
 	import type { Episode, Season, SeriesType } from "../../lib/types";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
@@ -125,7 +126,7 @@
 	function epLine(ep: Episode): string {
 		const st = episodeStatus(ep);
 		if (st === "available") {
-			const parts = [ep.quality, formatBytes(ep.size, "")].filter(Boolean);
+			const parts = [episodeMedia(ep), formatBytes(ep.size, "")].filter(Boolean);
 			return parts.join(" · ") || "available";
 		}
 		if (st === "downloading") return "downloading";

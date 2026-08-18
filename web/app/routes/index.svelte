@@ -3,6 +3,7 @@
 	import { api } from "../lib/api";
 	import { posterUrl, tvPosterUrl } from "../lib/posters";
 	import { formatBytes } from "../lib/format";
+	import { codecOf, fileMetaLine, resolutionOf } from "../lib/media-info";
 	import type {
 		ActivityList,
 		DiskUsage,
@@ -113,11 +114,9 @@
 			runtime: m.runtime,
 			rating: m.rating,
 			status: m.status,
-			resolution: f?.parsed_resolution,
-			codec: f?.parsed_codec,
-			fileMeta: [formatBytes(f?.size, ""), f?.parsed_resolution, f?.parsed_source]
-				.filter(Boolean)
-				.join(" · "),
+			resolution: f ? resolutionOf(f) : undefined,
+			codec: f ? codecOf(f) : undefined,
+			fileMeta: fileMetaLine(f, formatBytes(f?.size, "")),
 			posterSrc: posterUrl(m),
 			href: `/movies/${m.id}`,
 		};

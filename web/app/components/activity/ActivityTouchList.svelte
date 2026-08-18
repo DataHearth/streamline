@@ -19,6 +19,7 @@
 		loadingMore = false,
 		onLoadMore,
 		onOpen,
+		onResolve,
 	}: {
 		view: "queue" | "history";
 		rows: (QueueEntry | HistoryEntry)[];
@@ -28,6 +29,7 @@
 		loadingMore?: boolean;
 		onLoadMore: () => void;
 		onOpen: (item: QueueEntry | HistoryEntry) => void;
+		onResolve?: (item: QueueEntry) => void;
 	} = $props();
 
 	// Same contract as the table's sentinel: it only exists in the history view,
@@ -88,6 +90,8 @@
 	{:else}
 		<div class="overflow-hidden rounded-xl border border-border bg-bg-elevated">
 			{#each rows as row (row.id)}
+				{@const held =
+					view === "queue" && (row as QueueEntry).status === "held"}
 				<TouchRow
 					status={pillStatus(row.status)}
 					progress={progressOf(row)}
@@ -97,6 +101,10 @@
 						? queueMeta(row as QueueEntry)
 						: historyMeta(row as HistoryEntry)}
 					onOpen={() => onOpen(row)}
+					onResolve={held && onResolve
+						? () => onResolve(row as QueueEntry)
+						: undefined}
+					resolveLabel={i18n.action_resolve()}
 				/>
 			{/each}
 		</div>
