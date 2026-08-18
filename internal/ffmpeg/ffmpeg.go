@@ -36,6 +36,9 @@ type Info struct {
 type Prober interface {
 	Available() bool
 	Probe(ctx context.Context, path string) (*Info, error)
+	// ResolvedPath returns the absolute ffprobe path this process resolved at
+	// construction, or "" when Available() is false.
+	ResolvedPath() string
 }
 
 // CLI probes through the ffprobe executable. ffprobe is resolved once at
@@ -60,5 +63,7 @@ func NewCLI(dir string) *CLI {
 }
 
 func (c *CLI) Available() bool { return c.ffprobe != "" }
+
+func (c *CLI) ResolvedPath() string { return c.ffprobe }
 
 var _ Prober = (*CLI)(nil)

@@ -2090,6 +2090,29 @@ type Error struct {
 	Message string `json:"message"`
 }
 
+// FFmpegConfigPatch Only provided fields are applied. found and resolved_path are derived and read-only — sending them has no effect.
+type FFmpegConfigPatch struct {
+	Enabled *bool   `json:"enabled,omitempty"`
+	Path    *string `json:"path,omitempty"`
+}
+
+// FFmpegConfigView defines model for FFmpegConfigView.
+type FFmpegConfigView struct {
+	Enabled bool `json:"enabled"`
+
+	// Found Whether ffprobe actually resolves in this process right now.
+	// Reflects the path this process booted with, not any value from a
+	// PATCH that has not yet been picked up by a restart.
+	Found *bool `json:"found,omitempty"`
+
+	// Path Directory holding the ffmpeg-suite binaries; empty resolves via
+	// $PATH.
+	Path string `json:"path"`
+
+	// ResolvedPath Absolute path the prober resolved, when found is true.
+	ResolvedPath *string `json:"resolved_path,omitempty"`
+}
+
 // HistoryEntry defines model for HistoryEntry.
 type HistoryEntry struct {
 	CreatedAt      time.Time `json:"created_at"`
@@ -3093,10 +3116,14 @@ type SystemInfo struct {
 	DbPath    string     `json:"db_path"`
 
 	// DbSize Human-readable file size, empty when stat fails.
-	DbSize    *string    `json:"db_size,omitempty"`
-	DbUsage   *DiskUsage `json:"db_usage,omitempty"`
-	GoOsArch  string     `json:"go_os_arch"`
-	GoVersion string     `json:"go_version"`
+	DbSize  *string    `json:"db_size,omitempty"`
+	DbUsage *DiskUsage `json:"db_usage,omitempty"`
+
+	// FfmpegWarn True when ffmpeg.enabled is true and ffprobe was not found.
+	// Absent when ffmpeg is disabled — the operator opted out.
+	FfmpegWarn *bool  `json:"ffmpeg_warn,omitempty"`
+	GoOsArch   string `json:"go_os_arch"`
+	GoVersion  string `json:"go_version"`
 
 	// HttpsWarn True when public_url is plain http://.
 	HttpsWarn bool `json:"https_warn"`
@@ -3542,6 +3569,9 @@ type BadRequest = Error
 // Conflict defines model for Conflict.
 type Conflict = Error
 
+// FFmpegConfig defines model for FFmpegConfig.
+type FFmpegConfig = FFmpegConfigView
+
 // Forbidden defines model for Forbidden.
 type Forbidden = Error
 
@@ -3729,6 +3759,9 @@ type StartPathMigration = PathMigrationRequest
 
 // UpdateAuthConfig Only provided fields are applied.
 type UpdateAuthConfig = AuthConfigPatch
+
+// UpdateFFmpegConfig Only provided fields are applied. found and resolved_path are derived and read-only — sending them has no effect.
+type UpdateFFmpegConfig = FFmpegConfigPatch
 
 // UpdateImportFileDecision defines model for UpdateImportFileDecision.
 type UpdateImportFileDecision = ImportScanFileDecisionRequest
@@ -3939,6 +3972,9 @@ type ChangePasswordJSONRequestBody = ChangePasswordRequest
 // UpdateConfigAuthJSONRequestBody defines body for UpdateConfigAuth for application/json ContentType.
 type UpdateConfigAuthJSONRequestBody = AuthConfigPatch
 
+// UpdateConfigFfmpegJSONRequestBody defines body for UpdateConfigFfmpeg for application/json ContentType.
+type UpdateConfigFfmpegJSONRequestBody = FFmpegConfigPatch
+
 // UpdateConfigLibraryJSONRequestBody defines body for UpdateConfigLibrary for application/json ContentType.
 type UpdateConfigLibraryJSONRequestBody = LibraryConfigPatch
 
@@ -4145,6 +4181,12 @@ type ServerInterface interface {
 	// UpdateConfigAuth Patch auth configuration (admin)
 	// (PATCH /config/auth)
 	UpdateConfigAuth(w http.ResponseWriter, r *http.Request)
+	// GetConfigFfmpeg Get ffmpeg configuration (admin)
+	// (GET /config/ffmpeg)
+	GetConfigFfmpeg(w http.ResponseWriter, r *http.Request)
+	// UpdateConfigFfmpeg Patch ffmpeg configuration (admin)
+	// (PATCH /config/ffmpeg)
+	UpdateConfigFfmpeg(w http.ResponseWriter, r *http.Request)
 	// GetConfigLibrary Get library configuration (admin)
 	// (GET /config/library)
 	GetConfigLibrary(w http.ResponseWriter, r *http.Request)
@@ -4649,6 +4691,18 @@ func (_ Unimplemented) GetConfigAuth(w http.ResponseWriter, r *http.Request) {
 // UpdateConfigAuth Patch auth configuration (admin)
 // (PATCH /config/auth)
 func (_ Unimplemented) UpdateConfigAuth(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetConfigFfmpeg Get ffmpeg configuration (admin)
+// (GET /config/ffmpeg)
+func (_ Unimplemented) GetConfigFfmpeg(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// UpdateConfigFfmpeg Patch ffmpeg configuration (admin)
+// (PATCH /config/ffmpeg)
+func (_ Unimplemented) UpdateConfigFfmpeg(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -5966,6 +6020,34 @@ func (siw *ServerInterfaceWrapper) UpdateConfigAuth(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateConfigAuth(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetConfigFfmpeg operation middleware
+func (siw *ServerInterfaceWrapper) GetConfigFfmpeg(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetConfigFfmpeg(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateConfigFfmpeg operation middleware
+func (siw *ServerInterfaceWrapper) UpdateConfigFfmpeg(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateConfigFfmpeg(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -9450,6 +9532,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Patch(options.BaseURL+"/config/library", wrapper.UpdateConfigLibrary)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/config/ffmpeg", wrapper.GetConfigFfmpeg)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/config/ffmpeg", wrapper.UpdateConfigFfmpeg)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/config/oidc", wrapper.ListOIDCProviders)
 	})
 	r.Group(func(r chi.Router) {
@@ -9637,6 +9725,8 @@ type DownloadQueueJSONResponse DownloadQueue
 
 type EpisodeUpdatedResponse struct {
 }
+
+type FFmpegConfigJSONResponse FFmpegConfigView
 
 type FileDeletedResponse struct {
 }
@@ -11119,6 +11209,107 @@ type UpdateConfigAuth422JSONResponse struct {
 }
 
 func (response UpdateConfigAuth422JSONResponse) VisitUpdateConfigAuthResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetConfigFfmpegRequestObject struct {
+}
+
+type GetConfigFfmpegResponseObject interface {
+	VisitGetConfigFfmpegResponse(w http.ResponseWriter) error
+}
+
+type GetConfigFfmpeg200JSONResponse struct{ FFmpegConfigJSONResponse }
+
+func (response GetConfigFfmpeg200JSONResponse) VisitGetConfigFfmpegResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetConfigFfmpeg403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetConfigFfmpeg403JSONResponse) VisitGetConfigFfmpegResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateConfigFfmpegRequestObject struct {
+	Body *UpdateConfigFfmpegJSONRequestBody
+}
+
+type UpdateConfigFfmpegResponseObject interface {
+	VisitUpdateConfigFfmpegResponse(w http.ResponseWriter) error
+}
+
+type UpdateConfigFfmpeg200JSONResponse struct{ FFmpegConfigJSONResponse }
+
+func (response UpdateConfigFfmpeg200JSONResponse) VisitUpdateConfigFfmpegResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateConfigFfmpeg403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpdateConfigFfmpeg403JSONResponse) VisitUpdateConfigFfmpegResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateConfigFfmpeg413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response UpdateConfigFfmpeg413JSONResponse) VisitUpdateConfigFfmpegResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateConfigFfmpeg422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response UpdateConfigFfmpeg422JSONResponse) VisitUpdateConfigFfmpegResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -18100,6 +18291,12 @@ type StrictServerInterface interface {
 	// UpdateConfigAuth Patch auth configuration (admin)
 	// (PATCH /config/auth)
 	UpdateConfigAuth(ctx context.Context, request UpdateConfigAuthRequestObject) (UpdateConfigAuthResponseObject, error)
+	// GetConfigFfmpeg Get ffmpeg configuration (admin)
+	// (GET /config/ffmpeg)
+	GetConfigFfmpeg(ctx context.Context, request GetConfigFfmpegRequestObject) (GetConfigFfmpegResponseObject, error)
+	// UpdateConfigFfmpeg Patch ffmpeg configuration (admin)
+	// (PATCH /config/ffmpeg)
+	UpdateConfigFfmpeg(ctx context.Context, request UpdateConfigFfmpegRequestObject) (UpdateConfigFfmpegResponseObject, error)
 	// GetConfigLibrary Get library configuration (admin)
 	// (GET /config/library)
 	GetConfigLibrary(ctx context.Context, request GetConfigLibraryRequestObject) (GetConfigLibraryResponseObject, error)
@@ -19212,6 +19409,61 @@ func (sh *strictHandler) UpdateConfigAuth(w http.ResponseWriter, r *http.Request
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateConfigAuthResponseObject); ok {
 		if err := validResponse.VisitUpdateConfigAuthResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetConfigFfmpeg operation middleware
+func (sh *strictHandler) GetConfigFfmpeg(w http.ResponseWriter, r *http.Request) {
+	var request GetConfigFfmpegRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetConfigFfmpeg(ctx, request.(GetConfigFfmpegRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetConfigFfmpeg")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetConfigFfmpegResponseObject); ok {
+		if err := validResponse.VisitGetConfigFfmpegResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateConfigFfmpeg operation middleware
+func (sh *strictHandler) UpdateConfigFfmpeg(w http.ResponseWriter, r *http.Request) {
+	var request UpdateConfigFfmpegRequestObject
+
+	var body UpdateConfigFfmpegJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateConfigFfmpeg(ctx, request.(UpdateConfigFfmpegRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateConfigFfmpeg")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateConfigFfmpegResponseObject); ok {
+		if err := validResponse.VisitUpdateConfigFfmpegResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

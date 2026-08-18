@@ -59,6 +59,8 @@ var minRole = map[string]string{
 	"UpdateConfigAuth":    roleAdmin,
 	"GetConfigLibrary":    roleAdmin,
 	"UpdateConfigLibrary": roleAdmin,
+	"GetConfigFfmpeg":     roleAdmin,
+	"UpdateConfigFfmpeg":  roleAdmin,
 	"ListOIDCProviders":   roleAdmin,
 	"CreateOIDCProvider":  roleAdmin,
 	"GetOIDCProvider":     roleAdmin,

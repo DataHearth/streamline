@@ -227,7 +227,8 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 	)
 	pathMigrations := pathmigrate.NewService(store)
 	// Constructed once and kept: the media-probe backfill job and the
-	// health/system-info endpoint reuse this same prober.
+	// restapi Server (system-info + config/ffmpeg endpoints) reuse this same
+	// prober.
 	prober := ffmpeg.NewCLI(cfg.FFmpeg.Path)
 	hygieneSvc.Probe = prober
 	imp := importer.NewWorker(importer.Deps{
@@ -432,6 +433,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		Posters:         postersSvc,
 		Torrents:        torrentsAPI,
 		PathMigrations:  pathMigrations,
+		Prober:          prober,
 		AuthMiddleware:  authMW,
 		HTTPLog:         httpLogger.Middleware(httpAccessSkip),
 	})

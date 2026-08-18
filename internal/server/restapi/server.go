@@ -13,6 +13,7 @@ import (
 	"github.com/datahearth/streamline/internal/bittorrent"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/library/bulkimport"
@@ -52,6 +53,7 @@ type Server struct {
 	store           db.Store
 	ent             *ent.Client
 	publicURL       string
+	prober          ffmpeg.Prober
 }
 
 // Deps is the dependency set required by restapi handlers.
@@ -77,6 +79,7 @@ type Deps struct {
 	Store           db.Store
 	Ent             *ent.Client
 	PublicURL       string
+	Prober          ffmpeg.Prober
 }
 
 // New constructs a Server from the given Deps.
@@ -103,6 +106,7 @@ func New(d Deps) *Server {
 		store:           d.Store,
 		ent:             d.Ent,
 		publicURL:       d.PublicURL,
+		prober:          d.Prober,
 	}
 }
 

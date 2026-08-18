@@ -12,6 +12,7 @@ import (
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/library/bulkimport"
@@ -69,6 +70,7 @@ type Config struct {
 	Posters         posters.Manager
 	Torrents        bittorrent.Manager
 	PathMigrations  *pathmigrate.Service
+	Prober          ffmpeg.Prober
 	AuthMiddleware  func(http.Handler) http.Handler
 	HTTPLog         func(http.Handler) http.Handler
 }
@@ -104,6 +106,7 @@ func New(cfg Config) *Server {
 		Store:           cfg.DB,
 		Ent:             cfg.Ent,
 		PublicURL:       config.PublicURL(),
+		Prober:          cfg.Prober,
 	})
 
 	s := &Server{

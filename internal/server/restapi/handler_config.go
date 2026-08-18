@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/restart"
 )
 
@@ -116,6 +117,64 @@ func (s *Server) UpdateConfigLibrary(
 	)
 	return UpdateConfigLibrary200JSONResponse{
 		LibraryConfigJSONResponse: libraryConfigView(updated),
+	}, nil
+}
+
+// GetConfigFfmpeg returns the ffmpeg configuration plus the current
+// process's live probe result. Admin only.
+func (s *Server) GetConfigFfmpeg(
+	ctx context.Context,
+	_ GetConfigFfmpegRequestObject,
+) (GetConfigFfmpegResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return GetConfigFfmpeg403JSONResponse{
+			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
+	return GetConfigFfmpeg200JSONResponse{
+		FFmpegConfigJSONResponse: ffmpegConfigView(config.Get().FFmpeg, s.prober),
+	}, nil
+}
+
+// UpdateConfigFfmpeg applies a partial update to the ffmpeg config. Admin
+// only. enabled takes effect immediately; path is read once at boot into the
+// long-lived Prober (ffmpeg.NewCLI in wire.go), so a path change flips the
+// process-wide restart flag — the probe result echoed back keeps describing
+// the process's current prober until that restart, per UpdateFFmpeg's doc
+// comment.
+func (s *Server) UpdateConfigFfmpeg(
+	ctx context.Context,
+	req UpdateConfigFfmpegRequestObject,
+) (UpdateConfigFfmpegResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return UpdateConfigFfmpeg403JSONResponse{
+			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
+
+	updated, err := config.UpdateFFmpeg(ctx, config.FFmpegPatch{
+		Enabled: req.Body.Enabled,
+		Path:    req.Body.Path,
+	})
+	if configLocked(err) {
+		return UpdateConfigFfmpeg403JSONResponse{
+			ForbiddenJSONResponse: forbiddenResp(err.Error()),
+		}, nil
+	}
+	if err != nil {
+		return UpdateConfigFfmpeg422JSONResponse{
+			UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
+		}, nil
+	}
+	if req.Body.Path != nil {
+		restart.Mark()
+	}
+	slog.InfoContext(ctx, "ffmpeg config updated",
+		"enabled", updated.Enabled,
+		"path", updated.Path,
+	)
+	return UpdateConfigFfmpeg200JSONResponse{
+		FFmpegConfigJSONResponse: ffmpegConfigView(updated, s.prober),
 	}, nil
 }
 
@@ -321,6 +380,24 @@ func authConfigView(a config.AuthConfig) AuthConfigJSONResponse {
 // file-only.
 func libraryConfigView(l config.LibraryConfig) LibraryConfigJSONResponse {
 	return LibraryConfigJSONResponse{MonitorSpecials: l.MonitorSpecials}
+}
+
+// ffmpegConfigView maps config.FFmpegConfig into the generated view, adding
+// the live probe result off prober. found/resolved_path describe this
+// process's prober, which was built from the path at boot — they lag a path
+// change until the next restart even though enabled applies immediately.
+func ffmpegConfigView(
+	f config.FFmpegConfig,
+	prober ffmpeg.Prober,
+) FFmpegConfigJSONResponse {
+	out := FFmpegConfigJSONResponse{Enabled: f.Enabled, Path: f.Path}
+	found := prober.Available()
+	out.Found = &found
+	if found {
+		resolved := prober.ResolvedPath()
+		out.ResolvedPath = &resolved
+	}
+	return out
 }
 
 // oidcProviderView maps config.OIDCConfig into the generated OIDCProviderView.

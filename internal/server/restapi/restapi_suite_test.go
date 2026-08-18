@@ -16,6 +16,7 @@ import (
 	bittorrentmocks "github.com/datahearth/streamline/internal/bittorrent/mocks"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	downloadmocks "github.com/datahearth/streamline/internal/download/mocks"
+	ffmpegmocks "github.com/datahearth/streamline/internal/ffmpeg/mocks"
 	indexermocks "github.com/datahearth/streamline/internal/indexer/mocks"
 	bulkimportmocks "github.com/datahearth/streamline/internal/library/bulkimport/mocks"
 	librarymocks "github.com/datahearth/streamline/internal/library/mocks"
@@ -79,6 +80,7 @@ type apiKeyApp struct {
 	store         *dbmocks.MockStore
 	renamer       *librarymocks.MockRenamer
 	seriesRenamer *librarymocks.MockRenamer
+	prober        *ffmpegmocks.MockProber
 
 	// Identity tokens consumed by the synthetic auth middleware.
 	adminKey       string
@@ -112,6 +114,7 @@ func newAPIKeyApp() *apiKeyApp {
 		store:          dbmocks.NewMockStore(t),
 		renamer:        librarymocks.NewMockRenamer(t),
 		seriesRenamer:  librarymocks.NewMockRenamer(t),
+		prober:         ffmpegmocks.NewMockProber(t),
 		adminKey:       "test-admin-token",
 		adminAPIKey:    "test-admin-apikey",
 		adminID:        1,
@@ -135,6 +138,7 @@ func newAPIKeyApp() *apiKeyApp {
 		Renamer:        a.renamer,
 		SeriesRenamer:  a.seriesRenamer,
 		PathMigrations: pathmigrate.NewService(a.store),
+		Prober:         a.prober,
 	})
 
 	r := chi.NewRouter()

@@ -1724,6 +1724,43 @@ paths:
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
 
+  /config/ffmpeg:
+    get:
+      operationId: getConfigFfmpeg
+      summary: Get ffmpeg configuration (admin)
+      description: |
+        Returns the runtime-editable ffmpeg configuration plus the current
+        process's probe result (found, resolved_path). path takes effect only
+        on the next process start — the prober is constructed once at boot,
+        so found/resolved_path keep describing the old path until a restart.
+      tags: [config, admin]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        "200":
+          $ref: "#/components/responses/FFmpegConfig"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    patch:
+      operationId: updateConfigFfmpeg
+      summary: Patch ffmpeg configuration (admin)
+      tags: [config, admin]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      requestBody:
+        $ref: "#/components/requestBodies/UpdateFFmpegConfig"
+      responses:
+        "200":
+          $ref: "#/components/responses/FFmpegConfig"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
   /config/oidc:
     get:
       operationId: listOIDCProviders
@@ -3286,6 +3323,13 @@ components:
           schema:
             $ref: "#/components/schemas/LibraryConfigPatch"
 
+    UpdateFFmpegConfig:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/FFmpegConfigPatch"
+
     CreateOIDCProvider:
       required: true
       content:
@@ -3690,6 +3734,13 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/LibraryConfigView"
+
+    FFmpegConfig:
+      description: Current ffmpeg configuration plus the live probe result.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/FFmpegConfigView"
 
     OIDCProvider:
       description: OIDC provider detail.
@@ -5327,6 +5378,38 @@ components:
         monitor_specials:
           type: boolean
 
+    FFmpegConfigView:
+      type: object
+      required: [enabled, path]
+      properties:
+        enabled:
+          type: boolean
+        path:
+          type: string
+          description: |
+            Directory holding the ffmpeg-suite binaries; empty resolves via
+            $PATH.
+        found:
+          type: boolean
+          description: |
+            Whether ffprobe actually resolves in this process right now.
+            Reflects the path this process booted with, not any value from a
+            PATCH that has not yet been picked up by a restart.
+        resolved_path:
+          type: string
+          description: |
+            Absolute path the prober resolved, when found is true.
+
+    FFmpegConfigPatch:
+      type: object
+      description: Only provided fields are applied. found and resolved_path
+        are derived and read-only — sending them has no effect.
+      properties:
+        enabled:
+          type: boolean
+        path:
+          type: string
+
     OIDCProviderView:
       type: object
       required: [name, issuer, client_id, client_secret_set]
@@ -6148,6 +6231,11 @@ components:
         https_warn:
           type: boolean
           description: True when public_url is plain http://.
+        ffmpeg_warn:
+          type: boolean
+          description: |
+            True when ffmpeg.enabled is true and ffprobe was not found.
+            Absent when ffmpeg is disabled — the operator opted out.
         auth_mode:
           type: string
         data_dir:

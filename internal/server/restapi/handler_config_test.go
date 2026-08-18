@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -130,6 +131,153 @@ var _ = Describe("Handler: Config API", Label("unit", "server", "config"), func(
 					app.memberKey,
 					nil,
 				),
+			)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
+		})
+	})
+
+	Describe("Config ffmpeg", func() {
+		It("round-trips an enabled patch and reports the live probe result", func() {
+			app.prober.EXPECT().Available().Return(false).Once()
+
+			body := strings.NewReader(`{"enabled":true}`)
+			resp := app.do(
+				jsonReq(app, http.MethodPatch, "/api/v1/config/ffmpeg", body),
+			)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(config.Get().FFmpeg.Enabled).To(BeTrue())
+			Expect(restart.Pending()).To(BeFalse())
+
+			var patched FFmpegConfigView
+			Expect(json.NewDecoder(resp.Body).Decode(&patched)).To(Succeed())
+			Expect(patched.Enabled).To(BeTrue())
+			Expect(patched.Found).NotTo(BeNil())
+			Expect(*patched.Found).To(BeFalse())
+
+			app.prober.EXPECT().Available().Return(true).Once()
+			app.prober.EXPECT().ResolvedPath().Return("/usr/bin/ffprobe").Once()
+			get := app.do(
+				app.req(http.MethodGet, "/api/v1/config/ffmpeg", app.adminKey, nil),
+			)
+			defer get.Body.Close()
+			Expect(get.StatusCode).To(Equal(http.StatusOK))
+			var got FFmpegConfigView
+			Expect(json.NewDecoder(get.Body).Decode(&got)).To(Succeed())
+			Expect(got.Enabled).To(BeTrue())
+			Expect(got.Found).NotTo(BeNil())
+			Expect(*got.Found).To(BeTrue())
+			Expect(got.ResolvedPath).NotTo(BeNil())
+			Expect(*got.ResolvedPath).To(Equal("/usr/bin/ffprobe"))
+		})
+
+		It(
+			"accepts a path-only partial patch, leaving enabled untouched, and marks a restart",
+			func() {
+				app.prober.EXPECT().Available().Return(true).Once()
+				app.prober.EXPECT().ResolvedPath().Return("/usr/bin/ffprobe").Once()
+
+				// ffmpeg.enabled defaults to true — this patch must not flip it.
+				dir := GinkgoT().TempDir()
+				body := strings.NewReader(`{"path":"` + dir + `"}`)
+				resp := app.do(
+					jsonReq(app, http.MethodPatch, "/api/v1/config/ffmpeg", body),
+				)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				Expect(config.Get().FFmpeg.Path).To(Equal(dir))
+				Expect(config.Get().FFmpeg.Enabled).To(BeTrue())
+				Expect(restart.Pending()).To(BeTrue())
+			},
+		)
+
+		It(
+			"preserves an existing non-default path on an enabled-only patch",
+			func() {
+				app.prober.EXPECT().Available().Return(true).Once()
+				app.prober.EXPECT().ResolvedPath().Return("/usr/bin/ffprobe").Once()
+
+				dir := GinkgoT().TempDir()
+				pathBody := strings.NewReader(`{"path":"` + dir + `"}`)
+				pathResp := app.do(
+					jsonReq(
+						app,
+						http.MethodPatch,
+						"/api/v1/config/ffmpeg",
+						pathBody,
+					),
+				)
+				pathResp.Body.Close()
+				Expect(pathResp.StatusCode).To(Equal(http.StatusOK))
+				restart.ResetForTest()
+
+				app.prober.EXPECT().Available().Return(true).Once()
+				app.prober.EXPECT().ResolvedPath().Return("/usr/bin/ffprobe").Once()
+				enabledBody := strings.NewReader(`{"enabled":false}`)
+				resp := app.do(
+					jsonReq(
+						app,
+						http.MethodPatch,
+						"/api/v1/config/ffmpeg",
+						enabledBody,
+					),
+				)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				Expect(config.Get().FFmpeg.Path).To(Equal(dir))
+				Expect(config.Get().FFmpeg.Enabled).To(BeFalse())
+				Expect(restart.Pending()).To(BeFalse())
+			},
+		)
+
+		It("ignores found and resolved_path sent in the patch body", func() {
+			app.prober.EXPECT().Available().Return(false).Once()
+
+			body := strings.NewReader(
+				`{"enabled":true,"found":true,"resolved_path":"/usr/bin/ffprobe"}`,
+			)
+			resp := app.do(
+				jsonReq(app, http.MethodPatch, "/api/v1/config/ffmpeg", body),
+			)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+			var got FFmpegConfigView
+			Expect(json.NewDecoder(resp.Body).Decode(&got)).To(Succeed())
+			Expect(got.Found).NotTo(BeNil())
+			Expect(*got.Found).To(BeFalse())
+		})
+
+		It("returns 422 for a path that isn't a directory", func() {
+			body := strings.NewReader(`{"path":"/does/not/exist"}`)
+			resp := app.do(
+				jsonReq(app, http.MethodPatch, "/api/v1/config/ffmpeg", body),
+			)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+			Expect(restart.Pending()).To(BeFalse())
+		})
+
+		It(
+			"returns 422 for a path that exists but is a file, not a directory",
+			func() {
+				file := GinkgoT().TempDir() + "/ffprobe"
+				Expect(os.WriteFile(file, []byte(""), 0o644)).To(Succeed())
+
+				body := strings.NewReader(`{"path":"` + file + `"}`)
+				resp := app.do(
+					jsonReq(app, http.MethodPatch, "/api/v1/config/ffmpeg", body),
+				)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+				Expect(restart.Pending()).To(BeFalse())
+			},
+		)
+
+		It("rejects a non-admin with 403", func() {
+			resp := app.do(
+				app.req(http.MethodGet, "/api/v1/config/ffmpeg", app.memberKey, nil),
 			)
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusForbidden))

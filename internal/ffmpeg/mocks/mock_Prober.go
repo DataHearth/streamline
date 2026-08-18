@@ -149,3 +149,47 @@ func (_c *MockProber_Probe_Call) RunAndReturn(run func(ctx context.Context, path
 	_c.Call.Return(run)
 	return _c
 }
+
+// ResolvedPath provides a mock function for the type MockProber
+func (_mock *MockProber) ResolvedPath() string {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for ResolvedPath")
+	}
+
+	var r0 string
+	if returnFunc, ok := ret.Get(0).(func() string); ok {
+		r0 = returnFunc()
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	return r0
+}
+
+// MockProber_ResolvedPath_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ResolvedPath'
+type MockProber_ResolvedPath_Call struct {
+	*mock.Call
+}
+
+// ResolvedPath is a helper method to define mock.On call
+func (_e *MockProber_Expecter) ResolvedPath() *MockProber_ResolvedPath_Call {
+	return &MockProber_ResolvedPath_Call{Call: _e.mock.On("ResolvedPath")}
+}
+
+func (_c *MockProber_ResolvedPath_Call) Run(run func()) *MockProber_ResolvedPath_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *MockProber_ResolvedPath_Call) Return(s string) *MockProber_ResolvedPath_Call {
+	_c.Call.Return(s)
+	return _c
+}
+
+func (_c *MockProber_ResolvedPath_Call) RunAndReturn(run func() string) *MockProber_ResolvedPath_Call {
+	_c.Call.Return(run)
+	return _c
+}
