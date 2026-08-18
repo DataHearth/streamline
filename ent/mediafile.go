@@ -37,6 +37,24 @@ type MediaFile struct {
 	Source mediafile.Source `json:"source,omitempty"`
 	// LastSeenAt holds the value of the "last_seen_at" field.
 	LastSeenAt *time.Time `json:"last_seen_at,omitempty"`
+	// Container holds the value of the "container" field.
+	Container string `json:"container,omitempty"`
+	// DurationSeconds holds the value of the "duration_seconds" field.
+	DurationSeconds uint32 `json:"duration_seconds,omitempty"`
+	// VideoCodec holds the value of the "video_codec" field.
+	VideoCodec string `json:"video_codec,omitempty"`
+	// Width holds the value of the "width" field.
+	Width uint16 `json:"width,omitempty"`
+	// Height holds the value of the "height" field.
+	Height uint16 `json:"height,omitempty"`
+	// AudioCodec holds the value of the "audio_codec" field.
+	AudioCodec string `json:"audio_codec,omitempty"`
+	// AudioChannels holds the value of the "audio_channels" field.
+	AudioChannels uint8 `json:"audio_channels,omitempty"`
+	// Bitrate holds the value of the "bitrate" field.
+	Bitrate uint32 `json:"bitrate,omitempty"`
+	// ProbedAt holds the value of the "probed_at" field.
+	ProbedAt *time.Time `json:"probed_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the MediaFileQuery when eager-loading is set.
 	Edges               MediaFileEdges `json:"edges"`
@@ -83,11 +101,11 @@ func (*MediaFile) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case mediafile.FieldID, mediafile.FieldSize:
+		case mediafile.FieldID, mediafile.FieldSize, mediafile.FieldDurationSeconds, mediafile.FieldWidth, mediafile.FieldHeight, mediafile.FieldAudioChannels, mediafile.FieldBitrate:
 			values[i] = new(sql.NullInt64)
-		case mediafile.FieldPath, mediafile.FieldQuality, mediafile.FieldFormat, mediafile.FieldReleaseGroup, mediafile.FieldSource:
+		case mediafile.FieldPath, mediafile.FieldQuality, mediafile.FieldFormat, mediafile.FieldReleaseGroup, mediafile.FieldSource, mediafile.FieldContainer, mediafile.FieldVideoCodec, mediafile.FieldAudioCodec:
 			values[i] = new(sql.NullString)
-		case mediafile.FieldCreateTime, mediafile.FieldUpdateTime, mediafile.FieldLastSeenAt:
+		case mediafile.FieldCreateTime, mediafile.FieldUpdateTime, mediafile.FieldLastSeenAt, mediafile.FieldProbedAt:
 			values[i] = new(sql.NullTime)
 		case mediafile.ForeignKeys[0]: // episode_media_files
 			values[i] = new(sql.NullInt64)
@@ -168,6 +186,61 @@ func (_m *MediaFile) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.LastSeenAt = new(time.Time)
 				*_m.LastSeenAt = value.Time
+			}
+		case mediafile.FieldContainer:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field container", values[i])
+			} else if value.Valid {
+				_m.Container = value.String
+			}
+		case mediafile.FieldDurationSeconds:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field duration_seconds", values[i])
+			} else if value.Valid {
+				_m.DurationSeconds = uint32(value.Int64)
+			}
+		case mediafile.FieldVideoCodec:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field video_codec", values[i])
+			} else if value.Valid {
+				_m.VideoCodec = value.String
+			}
+		case mediafile.FieldWidth:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field width", values[i])
+			} else if value.Valid {
+				_m.Width = uint16(value.Int64)
+			}
+		case mediafile.FieldHeight:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field height", values[i])
+			} else if value.Valid {
+				_m.Height = uint16(value.Int64)
+			}
+		case mediafile.FieldAudioCodec:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field audio_codec", values[i])
+			} else if value.Valid {
+				_m.AudioCodec = value.String
+			}
+		case mediafile.FieldAudioChannels:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field audio_channels", values[i])
+			} else if value.Valid {
+				_m.AudioChannels = uint8(value.Int64)
+			}
+		case mediafile.FieldBitrate:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field bitrate", values[i])
+			} else if value.Valid {
+				_m.Bitrate = uint32(value.Int64)
+			}
+		case mediafile.FieldProbedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field probed_at", values[i])
+			} else if value.Valid {
+				_m.ProbedAt = new(time.Time)
+				*_m.ProbedAt = value.Time
 			}
 		case mediafile.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -255,6 +328,35 @@ func (_m *MediaFile) String() string {
 	builder.WriteString(", ")
 	if v := _m.LastSeenAt; v != nil {
 		builder.WriteString("last_seen_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
+	builder.WriteString("container=")
+	builder.WriteString(_m.Container)
+	builder.WriteString(", ")
+	builder.WriteString("duration_seconds=")
+	builder.WriteString(fmt.Sprintf("%v", _m.DurationSeconds))
+	builder.WriteString(", ")
+	builder.WriteString("video_codec=")
+	builder.WriteString(_m.VideoCodec)
+	builder.WriteString(", ")
+	builder.WriteString("width=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Width))
+	builder.WriteString(", ")
+	builder.WriteString("height=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Height))
+	builder.WriteString(", ")
+	builder.WriteString("audio_codec=")
+	builder.WriteString(_m.AudioCodec)
+	builder.WriteString(", ")
+	builder.WriteString("audio_channels=")
+	builder.WriteString(fmt.Sprintf("%v", _m.AudioChannels))
+	builder.WriteString(", ")
+	builder.WriteString("bitrate=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Bitrate))
+	builder.WriteString(", ")
+	if v := _m.ProbedAt; v != nil {
+		builder.WriteString("probed_at=")
 		builder.WriteString(v.Format(time.ANSIC))
 	}
 	builder.WriteByte(')')

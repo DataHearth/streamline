@@ -279,6 +279,15 @@ var (
 		{Name: "release_group", Type: field.TypeString, Nullable: true},
 		{Name: "source", Type: field.TypeEnum, Enums: []string{"wizard", "orphan", "auto"}, Default: "auto"},
 		{Name: "last_seen_at", Type: field.TypeTime, Nullable: true},
+		{Name: "container", Type: field.TypeString, Nullable: true},
+		{Name: "duration_seconds", Type: field.TypeUint32, Nullable: true},
+		{Name: "video_codec", Type: field.TypeString, Nullable: true},
+		{Name: "width", Type: field.TypeUint16, Nullable: true},
+		{Name: "height", Type: field.TypeUint16, Nullable: true},
+		{Name: "audio_codec", Type: field.TypeString, Nullable: true},
+		{Name: "audio_channels", Type: field.TypeUint8, Nullable: true},
+		{Name: "bitrate", Type: field.TypeUint32, Nullable: true},
+		{Name: "probed_at", Type: field.TypeTime, Nullable: true},
 		{Name: "episode_media_files", Type: field.TypeUint32, Nullable: true},
 		{Name: "movie_media_files", Type: field.TypeUint32, Nullable: true},
 	}
@@ -290,13 +299,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "media_files_episodes_media_files",
-				Columns:    []*schema.Column{MediaFilesColumns[10]},
+				Columns:    []*schema.Column{MediaFilesColumns[19]},
 				RefColumns: []*schema.Column{EpisodesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "media_files_movies_media_files",
-				Columns:    []*schema.Column{MediaFilesColumns[11]},
+				Columns:    []*schema.Column{MediaFilesColumns[20]},
 				RefColumns: []*schema.Column{MoviesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},

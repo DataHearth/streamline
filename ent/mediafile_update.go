@@ -165,6 +165,221 @@ func (_u *MediaFileUpdate) ClearLastSeenAt() *MediaFileUpdate {
 	return _u
 }
 
+// SetContainer sets the "container" field.
+func (_u *MediaFileUpdate) SetContainer(v string) *MediaFileUpdate {
+	_u.mutation.SetContainer(v)
+	return _u
+}
+
+// SetNillableContainer sets the "container" field if the given value is not nil.
+func (_u *MediaFileUpdate) SetNillableContainer(v *string) *MediaFileUpdate {
+	if v != nil {
+		_u.SetContainer(*v)
+	}
+	return _u
+}
+
+// ClearContainer clears the value of the "container" field.
+func (_u *MediaFileUpdate) ClearContainer() *MediaFileUpdate {
+	_u.mutation.ClearContainer()
+	return _u
+}
+
+// SetDurationSeconds sets the "duration_seconds" field.
+func (_u *MediaFileUpdate) SetDurationSeconds(v uint32) *MediaFileUpdate {
+	_u.mutation.ResetDurationSeconds()
+	_u.mutation.SetDurationSeconds(v)
+	return _u
+}
+
+// SetNillableDurationSeconds sets the "duration_seconds" field if the given value is not nil.
+func (_u *MediaFileUpdate) SetNillableDurationSeconds(v *uint32) *MediaFileUpdate {
+	if v != nil {
+		_u.SetDurationSeconds(*v)
+	}
+	return _u
+}
+
+// AddDurationSeconds adds value to the "duration_seconds" field.
+func (_u *MediaFileUpdate) AddDurationSeconds(v int32) *MediaFileUpdate {
+	_u.mutation.AddDurationSeconds(v)
+	return _u
+}
+
+// ClearDurationSeconds clears the value of the "duration_seconds" field.
+func (_u *MediaFileUpdate) ClearDurationSeconds() *MediaFileUpdate {
+	_u.mutation.ClearDurationSeconds()
+	return _u
+}
+
+// SetVideoCodec sets the "video_codec" field.
+func (_u *MediaFileUpdate) SetVideoCodec(v string) *MediaFileUpdate {
+	_u.mutation.SetVideoCodec(v)
+	return _u
+}
+
+// SetNillableVideoCodec sets the "video_codec" field if the given value is not nil.
+func (_u *MediaFileUpdate) SetNillableVideoCodec(v *string) *MediaFileUpdate {
+	if v != nil {
+		_u.SetVideoCodec(*v)
+	}
+	return _u
+}
+
+// ClearVideoCodec clears the value of the "video_codec" field.
+func (_u *MediaFileUpdate) ClearVideoCodec() *MediaFileUpdate {
+	_u.mutation.ClearVideoCodec()
+	return _u
+}
+
+// SetWidth sets the "width" field.
+func (_u *MediaFileUpdate) SetWidth(v uint16) *MediaFileUpdate {
+	_u.mutation.ResetWidth()
+	_u.mutation.SetWidth(v)
+	return _u
+}
+
+// SetNillableWidth sets the "width" field if the given value is not nil.
+func (_u *MediaFileUpdate) SetNillableWidth(v *uint16) *MediaFileUpdate {
+	if v != nil {
+		_u.SetWidth(*v)
+	}
+	return _u
+}
+
+// AddWidth adds value to the "width" field.
+func (_u *MediaFileUpdate) AddWidth(v int16) *MediaFileUpdate {
+	_u.mutation.AddWidth(v)
+	return _u
+}
+
+// ClearWidth clears the value of the "width" field.
+func (_u *MediaFileUpdate) ClearWidth() *MediaFileUpdate {
+	_u.mutation.ClearWidth()
+	return _u
+}
+
+// SetHeight sets the "height" field.
+func (_u *MediaFileUpdate) SetHeight(v uint16) *MediaFileUpdate {
+	_u.mutation.ResetHeight()
+	_u.mutation.SetHeight(v)
+	return _u
+}
+
+// SetNillableHeight sets the "height" field if the given value is not nil.
+func (_u *MediaFileUpdate) SetNillableHeight(v *uint16) *MediaFileUpdate {
+	if v != nil {
+		_u.SetHeight(*v)
+	}
+	return _u
+}
+
+// AddHeight adds value to the "height" field.
+func (_u *MediaFileUpdate) AddHeight(v int16) *MediaFileUpdate {
+	_u.mutation.AddHeight(v)
+	return _u
+}
+
+// ClearHeight clears the value of the "height" field.
+func (_u *MediaFileUpdate) ClearHeight() *MediaFileUpdate {
+	_u.mutation.ClearHeight()
+	return _u
+}
+
+// SetAudioCodec sets the "audio_codec" field.
+func (_u *MediaFileUpdate) SetAudioCodec(v string) *MediaFileUpdate {
+	_u.mutation.SetAudioCodec(v)
+	return _u
+}
+
+// SetNillableAudioCodec sets the "audio_codec" field if the given value is not nil.
+func (_u *MediaFileUpdate) SetNillableAudioCodec(v *string) *MediaFileUpdate {
+	if v != nil {
+		_u.SetAudioCodec(*v)
+	}
+	return _u
+}
+
+// ClearAudioCodec clears the value of the "audio_codec" field.
+func (_u *MediaFileUpdate) ClearAudioCodec() *MediaFileUpdate {
+	_u.mutation.ClearAudioCodec()
+	return _u
+}
+
+// SetAudioChannels sets the "audio_channels" field.
+func (_u *MediaFileUpdate) SetAudioChannels(v uint8) *MediaFileUpdate {
+	_u.mutation.ResetAudioChannels()
+	_u.mutation.SetAudioChannels(v)
+	return _u
+}
+
+// SetNillableAudioChannels sets the "audio_channels" field if the given value is not nil.
+func (_u *MediaFileUpdate) SetNillableAudioChannels(v *uint8) *MediaFileUpdate {
+	if v != nil {
+		_u.SetAudioChannels(*v)
+	}
+	return _u
+}
+
+// AddAudioChannels adds value to the "audio_channels" field.
+func (_u *MediaFileUpdate) AddAudioChannels(v int8) *MediaFileUpdate {
+	_u.mutation.AddAudioChannels(v)
+	return _u
+}
+
+// ClearAudioChannels clears the value of the "audio_channels" field.
+func (_u *MediaFileUpdate) ClearAudioChannels() *MediaFileUpdate {
+	_u.mutation.ClearAudioChannels()
+	return _u
+}
+
+// SetBitrate sets the "bitrate" field.
+func (_u *MediaFileUpdate) SetBitrate(v uint32) *MediaFileUpdate {
+	_u.mutation.ResetBitrate()
+	_u.mutation.SetBitrate(v)
+	return _u
+}
+
+// SetNillableBitrate sets the "bitrate" field if the given value is not nil.
+func (_u *MediaFileUpdate) SetNillableBitrate(v *uint32) *MediaFileUpdate {
+	if v != nil {
+		_u.SetBitrate(*v)
+	}
+	return _u
+}
+
+// AddBitrate adds value to the "bitrate" field.
+func (_u *MediaFileUpdate) AddBitrate(v int32) *MediaFileUpdate {
+	_u.mutation.AddBitrate(v)
+	return _u
+}
+
+// ClearBitrate clears the value of the "bitrate" field.
+func (_u *MediaFileUpdate) ClearBitrate() *MediaFileUpdate {
+	_u.mutation.ClearBitrate()
+	return _u
+}
+
+// SetProbedAt sets the "probed_at" field.
+func (_u *MediaFileUpdate) SetProbedAt(v time.Time) *MediaFileUpdate {
+	_u.mutation.SetProbedAt(v)
+	return _u
+}
+
+// SetNillableProbedAt sets the "probed_at" field if the given value is not nil.
+func (_u *MediaFileUpdate) SetNillableProbedAt(v *time.Time) *MediaFileUpdate {
+	if v != nil {
+		_u.SetProbedAt(*v)
+	}
+	return _u
+}
+
+// ClearProbedAt clears the value of the "probed_at" field.
+func (_u *MediaFileUpdate) ClearProbedAt() *MediaFileUpdate {
+	_u.mutation.ClearProbedAt()
+	return _u
+}
+
 // SetMovieID sets the "movie" edge to the Movie entity by ID.
 func (_u *MediaFileUpdate) SetMovieID(id uint32) *MediaFileUpdate {
 	_u.mutation.SetMovieID(id)
@@ -321,6 +536,75 @@ func (_u *MediaFileUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.LastSeenAtCleared() {
 		_spec.ClearField(mediafile.FieldLastSeenAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.Container(); ok {
+		_spec.SetField(mediafile.FieldContainer, field.TypeString, value)
+	}
+	if _u.mutation.ContainerCleared() {
+		_spec.ClearField(mediafile.FieldContainer, field.TypeString)
+	}
+	if value, ok := _u.mutation.DurationSeconds(); ok {
+		_spec.SetField(mediafile.FieldDurationSeconds, field.TypeUint32, value)
+	}
+	if value, ok := _u.mutation.AddedDurationSeconds(); ok {
+		_spec.AddField(mediafile.FieldDurationSeconds, field.TypeUint32, value)
+	}
+	if _u.mutation.DurationSecondsCleared() {
+		_spec.ClearField(mediafile.FieldDurationSeconds, field.TypeUint32)
+	}
+	if value, ok := _u.mutation.VideoCodec(); ok {
+		_spec.SetField(mediafile.FieldVideoCodec, field.TypeString, value)
+	}
+	if _u.mutation.VideoCodecCleared() {
+		_spec.ClearField(mediafile.FieldVideoCodec, field.TypeString)
+	}
+	if value, ok := _u.mutation.Width(); ok {
+		_spec.SetField(mediafile.FieldWidth, field.TypeUint16, value)
+	}
+	if value, ok := _u.mutation.AddedWidth(); ok {
+		_spec.AddField(mediafile.FieldWidth, field.TypeUint16, value)
+	}
+	if _u.mutation.WidthCleared() {
+		_spec.ClearField(mediafile.FieldWidth, field.TypeUint16)
+	}
+	if value, ok := _u.mutation.Height(); ok {
+		_spec.SetField(mediafile.FieldHeight, field.TypeUint16, value)
+	}
+	if value, ok := _u.mutation.AddedHeight(); ok {
+		_spec.AddField(mediafile.FieldHeight, field.TypeUint16, value)
+	}
+	if _u.mutation.HeightCleared() {
+		_spec.ClearField(mediafile.FieldHeight, field.TypeUint16)
+	}
+	if value, ok := _u.mutation.AudioCodec(); ok {
+		_spec.SetField(mediafile.FieldAudioCodec, field.TypeString, value)
+	}
+	if _u.mutation.AudioCodecCleared() {
+		_spec.ClearField(mediafile.FieldAudioCodec, field.TypeString)
+	}
+	if value, ok := _u.mutation.AudioChannels(); ok {
+		_spec.SetField(mediafile.FieldAudioChannels, field.TypeUint8, value)
+	}
+	if value, ok := _u.mutation.AddedAudioChannels(); ok {
+		_spec.AddField(mediafile.FieldAudioChannels, field.TypeUint8, value)
+	}
+	if _u.mutation.AudioChannelsCleared() {
+		_spec.ClearField(mediafile.FieldAudioChannels, field.TypeUint8)
+	}
+	if value, ok := _u.mutation.Bitrate(); ok {
+		_spec.SetField(mediafile.FieldBitrate, field.TypeUint32, value)
+	}
+	if value, ok := _u.mutation.AddedBitrate(); ok {
+		_spec.AddField(mediafile.FieldBitrate, field.TypeUint32, value)
+	}
+	if _u.mutation.BitrateCleared() {
+		_spec.ClearField(mediafile.FieldBitrate, field.TypeUint32)
+	}
+	if value, ok := _u.mutation.ProbedAt(); ok {
+		_spec.SetField(mediafile.FieldProbedAt, field.TypeTime, value)
+	}
+	if _u.mutation.ProbedAtCleared() {
+		_spec.ClearField(mediafile.FieldProbedAt, field.TypeTime)
 	}
 	if _u.mutation.MovieCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -535,6 +819,221 @@ func (_u *MediaFileUpdateOne) ClearLastSeenAt() *MediaFileUpdateOne {
 	return _u
 }
 
+// SetContainer sets the "container" field.
+func (_u *MediaFileUpdateOne) SetContainer(v string) *MediaFileUpdateOne {
+	_u.mutation.SetContainer(v)
+	return _u
+}
+
+// SetNillableContainer sets the "container" field if the given value is not nil.
+func (_u *MediaFileUpdateOne) SetNillableContainer(v *string) *MediaFileUpdateOne {
+	if v != nil {
+		_u.SetContainer(*v)
+	}
+	return _u
+}
+
+// ClearContainer clears the value of the "container" field.
+func (_u *MediaFileUpdateOne) ClearContainer() *MediaFileUpdateOne {
+	_u.mutation.ClearContainer()
+	return _u
+}
+
+// SetDurationSeconds sets the "duration_seconds" field.
+func (_u *MediaFileUpdateOne) SetDurationSeconds(v uint32) *MediaFileUpdateOne {
+	_u.mutation.ResetDurationSeconds()
+	_u.mutation.SetDurationSeconds(v)
+	return _u
+}
+
+// SetNillableDurationSeconds sets the "duration_seconds" field if the given value is not nil.
+func (_u *MediaFileUpdateOne) SetNillableDurationSeconds(v *uint32) *MediaFileUpdateOne {
+	if v != nil {
+		_u.SetDurationSeconds(*v)
+	}
+	return _u
+}
+
+// AddDurationSeconds adds value to the "duration_seconds" field.
+func (_u *MediaFileUpdateOne) AddDurationSeconds(v int32) *MediaFileUpdateOne {
+	_u.mutation.AddDurationSeconds(v)
+	return _u
+}
+
+// ClearDurationSeconds clears the value of the "duration_seconds" field.
+func (_u *MediaFileUpdateOne) ClearDurationSeconds() *MediaFileUpdateOne {
+	_u.mutation.ClearDurationSeconds()
+	return _u
+}
+
+// SetVideoCodec sets the "video_codec" field.
+func (_u *MediaFileUpdateOne) SetVideoCodec(v string) *MediaFileUpdateOne {
+	_u.mutation.SetVideoCodec(v)
+	return _u
+}
+
+// SetNillableVideoCodec sets the "video_codec" field if the given value is not nil.
+func (_u *MediaFileUpdateOne) SetNillableVideoCodec(v *string) *MediaFileUpdateOne {
+	if v != nil {
+		_u.SetVideoCodec(*v)
+	}
+	return _u
+}
+
+// ClearVideoCodec clears the value of the "video_codec" field.
+func (_u *MediaFileUpdateOne) ClearVideoCodec() *MediaFileUpdateOne {
+	_u.mutation.ClearVideoCodec()
+	return _u
+}
+
+// SetWidth sets the "width" field.
+func (_u *MediaFileUpdateOne) SetWidth(v uint16) *MediaFileUpdateOne {
+	_u.mutation.ResetWidth()
+	_u.mutation.SetWidth(v)
+	return _u
+}
+
+// SetNillableWidth sets the "width" field if the given value is not nil.
+func (_u *MediaFileUpdateOne) SetNillableWidth(v *uint16) *MediaFileUpdateOne {
+	if v != nil {
+		_u.SetWidth(*v)
+	}
+	return _u
+}
+
+// AddWidth adds value to the "width" field.
+func (_u *MediaFileUpdateOne) AddWidth(v int16) *MediaFileUpdateOne {
+	_u.mutation.AddWidth(v)
+	return _u
+}
+
+// ClearWidth clears the value of the "width" field.
+func (_u *MediaFileUpdateOne) ClearWidth() *MediaFileUpdateOne {
+	_u.mutation.ClearWidth()
+	return _u
+}
+
+// SetHeight sets the "height" field.
+func (_u *MediaFileUpdateOne) SetHeight(v uint16) *MediaFileUpdateOne {
+	_u.mutation.ResetHeight()
+	_u.mutation.SetHeight(v)
+	return _u
+}
+
+// SetNillableHeight sets the "height" field if the given value is not nil.
+func (_u *MediaFileUpdateOne) SetNillableHeight(v *uint16) *MediaFileUpdateOne {
+	if v != nil {
+		_u.SetHeight(*v)
+	}
+	return _u
+}
+
+// AddHeight adds value to the "height" field.
+func (_u *MediaFileUpdateOne) AddHeight(v int16) *MediaFileUpdateOne {
+	_u.mutation.AddHeight(v)
+	return _u
+}
+
+// ClearHeight clears the value of the "height" field.
+func (_u *MediaFileUpdateOne) ClearHeight() *MediaFileUpdateOne {
+	_u.mutation.ClearHeight()
+	return _u
+}
+
+// SetAudioCodec sets the "audio_codec" field.
+func (_u *MediaFileUpdateOne) SetAudioCodec(v string) *MediaFileUpdateOne {
+	_u.mutation.SetAudioCodec(v)
+	return _u
+}
+
+// SetNillableAudioCodec sets the "audio_codec" field if the given value is not nil.
+func (_u *MediaFileUpdateOne) SetNillableAudioCodec(v *string) *MediaFileUpdateOne {
+	if v != nil {
+		_u.SetAudioCodec(*v)
+	}
+	return _u
+}
+
+// ClearAudioCodec clears the value of the "audio_codec" field.
+func (_u *MediaFileUpdateOne) ClearAudioCodec() *MediaFileUpdateOne {
+	_u.mutation.ClearAudioCodec()
+	return _u
+}
+
+// SetAudioChannels sets the "audio_channels" field.
+func (_u *MediaFileUpdateOne) SetAudioChannels(v uint8) *MediaFileUpdateOne {
+	_u.mutation.ResetAudioChannels()
+	_u.mutation.SetAudioChannels(v)
+	return _u
+}
+
+// SetNillableAudioChannels sets the "audio_channels" field if the given value is not nil.
+func (_u *MediaFileUpdateOne) SetNillableAudioChannels(v *uint8) *MediaFileUpdateOne {
+	if v != nil {
+		_u.SetAudioChannels(*v)
+	}
+	return _u
+}
+
+// AddAudioChannels adds value to the "audio_channels" field.
+func (_u *MediaFileUpdateOne) AddAudioChannels(v int8) *MediaFileUpdateOne {
+	_u.mutation.AddAudioChannels(v)
+	return _u
+}
+
+// ClearAudioChannels clears the value of the "audio_channels" field.
+func (_u *MediaFileUpdateOne) ClearAudioChannels() *MediaFileUpdateOne {
+	_u.mutation.ClearAudioChannels()
+	return _u
+}
+
+// SetBitrate sets the "bitrate" field.
+func (_u *MediaFileUpdateOne) SetBitrate(v uint32) *MediaFileUpdateOne {
+	_u.mutation.ResetBitrate()
+	_u.mutation.SetBitrate(v)
+	return _u
+}
+
+// SetNillableBitrate sets the "bitrate" field if the given value is not nil.
+func (_u *MediaFileUpdateOne) SetNillableBitrate(v *uint32) *MediaFileUpdateOne {
+	if v != nil {
+		_u.SetBitrate(*v)
+	}
+	return _u
+}
+
+// AddBitrate adds value to the "bitrate" field.
+func (_u *MediaFileUpdateOne) AddBitrate(v int32) *MediaFileUpdateOne {
+	_u.mutation.AddBitrate(v)
+	return _u
+}
+
+// ClearBitrate clears the value of the "bitrate" field.
+func (_u *MediaFileUpdateOne) ClearBitrate() *MediaFileUpdateOne {
+	_u.mutation.ClearBitrate()
+	return _u
+}
+
+// SetProbedAt sets the "probed_at" field.
+func (_u *MediaFileUpdateOne) SetProbedAt(v time.Time) *MediaFileUpdateOne {
+	_u.mutation.SetProbedAt(v)
+	return _u
+}
+
+// SetNillableProbedAt sets the "probed_at" field if the given value is not nil.
+func (_u *MediaFileUpdateOne) SetNillableProbedAt(v *time.Time) *MediaFileUpdateOne {
+	if v != nil {
+		_u.SetProbedAt(*v)
+	}
+	return _u
+}
+
+// ClearProbedAt clears the value of the "probed_at" field.
+func (_u *MediaFileUpdateOne) ClearProbedAt() *MediaFileUpdateOne {
+	_u.mutation.ClearProbedAt()
+	return _u
+}
+
 // SetMovieID sets the "movie" edge to the Movie entity by ID.
 func (_u *MediaFileUpdateOne) SetMovieID(id uint32) *MediaFileUpdateOne {
 	_u.mutation.SetMovieID(id)
@@ -721,6 +1220,75 @@ func (_u *MediaFileUpdateOne) sqlSave(ctx context.Context) (_node *MediaFile, er
 	}
 	if _u.mutation.LastSeenAtCleared() {
 		_spec.ClearField(mediafile.FieldLastSeenAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.Container(); ok {
+		_spec.SetField(mediafile.FieldContainer, field.TypeString, value)
+	}
+	if _u.mutation.ContainerCleared() {
+		_spec.ClearField(mediafile.FieldContainer, field.TypeString)
+	}
+	if value, ok := _u.mutation.DurationSeconds(); ok {
+		_spec.SetField(mediafile.FieldDurationSeconds, field.TypeUint32, value)
+	}
+	if value, ok := _u.mutation.AddedDurationSeconds(); ok {
+		_spec.AddField(mediafile.FieldDurationSeconds, field.TypeUint32, value)
+	}
+	if _u.mutation.DurationSecondsCleared() {
+		_spec.ClearField(mediafile.FieldDurationSeconds, field.TypeUint32)
+	}
+	if value, ok := _u.mutation.VideoCodec(); ok {
+		_spec.SetField(mediafile.FieldVideoCodec, field.TypeString, value)
+	}
+	if _u.mutation.VideoCodecCleared() {
+		_spec.ClearField(mediafile.FieldVideoCodec, field.TypeString)
+	}
+	if value, ok := _u.mutation.Width(); ok {
+		_spec.SetField(mediafile.FieldWidth, field.TypeUint16, value)
+	}
+	if value, ok := _u.mutation.AddedWidth(); ok {
+		_spec.AddField(mediafile.FieldWidth, field.TypeUint16, value)
+	}
+	if _u.mutation.WidthCleared() {
+		_spec.ClearField(mediafile.FieldWidth, field.TypeUint16)
+	}
+	if value, ok := _u.mutation.Height(); ok {
+		_spec.SetField(mediafile.FieldHeight, field.TypeUint16, value)
+	}
+	if value, ok := _u.mutation.AddedHeight(); ok {
+		_spec.AddField(mediafile.FieldHeight, field.TypeUint16, value)
+	}
+	if _u.mutation.HeightCleared() {
+		_spec.ClearField(mediafile.FieldHeight, field.TypeUint16)
+	}
+	if value, ok := _u.mutation.AudioCodec(); ok {
+		_spec.SetField(mediafile.FieldAudioCodec, field.TypeString, value)
+	}
+	if _u.mutation.AudioCodecCleared() {
+		_spec.ClearField(mediafile.FieldAudioCodec, field.TypeString)
+	}
+	if value, ok := _u.mutation.AudioChannels(); ok {
+		_spec.SetField(mediafile.FieldAudioChannels, field.TypeUint8, value)
+	}
+	if value, ok := _u.mutation.AddedAudioChannels(); ok {
+		_spec.AddField(mediafile.FieldAudioChannels, field.TypeUint8, value)
+	}
+	if _u.mutation.AudioChannelsCleared() {
+		_spec.ClearField(mediafile.FieldAudioChannels, field.TypeUint8)
+	}
+	if value, ok := _u.mutation.Bitrate(); ok {
+		_spec.SetField(mediafile.FieldBitrate, field.TypeUint32, value)
+	}
+	if value, ok := _u.mutation.AddedBitrate(); ok {
+		_spec.AddField(mediafile.FieldBitrate, field.TypeUint32, value)
+	}
+	if _u.mutation.BitrateCleared() {
+		_spec.ClearField(mediafile.FieldBitrate, field.TypeUint32)
+	}
+	if value, ok := _u.mutation.ProbedAt(); ok {
+		_spec.SetField(mediafile.FieldProbedAt, field.TypeTime, value)
+	}
+	if _u.mutation.ProbedAtCleared() {
+		_spec.ClearField(mediafile.FieldProbedAt, field.TypeTime)
 	}
 	if _u.mutation.MovieCleared() {
 		edge := &sqlgraph.EdgeSpec{

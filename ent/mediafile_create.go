@@ -132,6 +132,132 @@ func (_c *MediaFileCreate) SetNillableLastSeenAt(v *time.Time) *MediaFileCreate 
 	return _c
 }
 
+// SetContainer sets the "container" field.
+func (_c *MediaFileCreate) SetContainer(v string) *MediaFileCreate {
+	_c.mutation.SetContainer(v)
+	return _c
+}
+
+// SetNillableContainer sets the "container" field if the given value is not nil.
+func (_c *MediaFileCreate) SetNillableContainer(v *string) *MediaFileCreate {
+	if v != nil {
+		_c.SetContainer(*v)
+	}
+	return _c
+}
+
+// SetDurationSeconds sets the "duration_seconds" field.
+func (_c *MediaFileCreate) SetDurationSeconds(v uint32) *MediaFileCreate {
+	_c.mutation.SetDurationSeconds(v)
+	return _c
+}
+
+// SetNillableDurationSeconds sets the "duration_seconds" field if the given value is not nil.
+func (_c *MediaFileCreate) SetNillableDurationSeconds(v *uint32) *MediaFileCreate {
+	if v != nil {
+		_c.SetDurationSeconds(*v)
+	}
+	return _c
+}
+
+// SetVideoCodec sets the "video_codec" field.
+func (_c *MediaFileCreate) SetVideoCodec(v string) *MediaFileCreate {
+	_c.mutation.SetVideoCodec(v)
+	return _c
+}
+
+// SetNillableVideoCodec sets the "video_codec" field if the given value is not nil.
+func (_c *MediaFileCreate) SetNillableVideoCodec(v *string) *MediaFileCreate {
+	if v != nil {
+		_c.SetVideoCodec(*v)
+	}
+	return _c
+}
+
+// SetWidth sets the "width" field.
+func (_c *MediaFileCreate) SetWidth(v uint16) *MediaFileCreate {
+	_c.mutation.SetWidth(v)
+	return _c
+}
+
+// SetNillableWidth sets the "width" field if the given value is not nil.
+func (_c *MediaFileCreate) SetNillableWidth(v *uint16) *MediaFileCreate {
+	if v != nil {
+		_c.SetWidth(*v)
+	}
+	return _c
+}
+
+// SetHeight sets the "height" field.
+func (_c *MediaFileCreate) SetHeight(v uint16) *MediaFileCreate {
+	_c.mutation.SetHeight(v)
+	return _c
+}
+
+// SetNillableHeight sets the "height" field if the given value is not nil.
+func (_c *MediaFileCreate) SetNillableHeight(v *uint16) *MediaFileCreate {
+	if v != nil {
+		_c.SetHeight(*v)
+	}
+	return _c
+}
+
+// SetAudioCodec sets the "audio_codec" field.
+func (_c *MediaFileCreate) SetAudioCodec(v string) *MediaFileCreate {
+	_c.mutation.SetAudioCodec(v)
+	return _c
+}
+
+// SetNillableAudioCodec sets the "audio_codec" field if the given value is not nil.
+func (_c *MediaFileCreate) SetNillableAudioCodec(v *string) *MediaFileCreate {
+	if v != nil {
+		_c.SetAudioCodec(*v)
+	}
+	return _c
+}
+
+// SetAudioChannels sets the "audio_channels" field.
+func (_c *MediaFileCreate) SetAudioChannels(v uint8) *MediaFileCreate {
+	_c.mutation.SetAudioChannels(v)
+	return _c
+}
+
+// SetNillableAudioChannels sets the "audio_channels" field if the given value is not nil.
+func (_c *MediaFileCreate) SetNillableAudioChannels(v *uint8) *MediaFileCreate {
+	if v != nil {
+		_c.SetAudioChannels(*v)
+	}
+	return _c
+}
+
+// SetBitrate sets the "bitrate" field.
+func (_c *MediaFileCreate) SetBitrate(v uint32) *MediaFileCreate {
+	_c.mutation.SetBitrate(v)
+	return _c
+}
+
+// SetNillableBitrate sets the "bitrate" field if the given value is not nil.
+func (_c *MediaFileCreate) SetNillableBitrate(v *uint32) *MediaFileCreate {
+	if v != nil {
+		_c.SetBitrate(*v)
+	}
+	return _c
+}
+
+// SetProbedAt sets the "probed_at" field.
+func (_c *MediaFileCreate) SetProbedAt(v time.Time) *MediaFileCreate {
+	_c.mutation.SetProbedAt(v)
+	return _c
+}
+
+// SetNillableProbedAt sets the "probed_at" field if the given value is not nil.
+func (_c *MediaFileCreate) SetNillableProbedAt(v *time.Time) *MediaFileCreate {
+	if v != nil {
+		_c.SetProbedAt(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *MediaFileCreate) SetID(v uint32) *MediaFileCreate {
 	_c.mutation.SetID(v)
@@ -323,6 +449,42 @@ func (_c *MediaFileCreate) createSpec() (*MediaFile, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.LastSeenAt(); ok {
 		_spec.SetField(mediafile.FieldLastSeenAt, field.TypeTime, value)
 		_node.LastSeenAt = &value
+	}
+	if value, ok := _c.mutation.Container(); ok {
+		_spec.SetField(mediafile.FieldContainer, field.TypeString, value)
+		_node.Container = value
+	}
+	if value, ok := _c.mutation.DurationSeconds(); ok {
+		_spec.SetField(mediafile.FieldDurationSeconds, field.TypeUint32, value)
+		_node.DurationSeconds = value
+	}
+	if value, ok := _c.mutation.VideoCodec(); ok {
+		_spec.SetField(mediafile.FieldVideoCodec, field.TypeString, value)
+		_node.VideoCodec = value
+	}
+	if value, ok := _c.mutation.Width(); ok {
+		_spec.SetField(mediafile.FieldWidth, field.TypeUint16, value)
+		_node.Width = value
+	}
+	if value, ok := _c.mutation.Height(); ok {
+		_spec.SetField(mediafile.FieldHeight, field.TypeUint16, value)
+		_node.Height = value
+	}
+	if value, ok := _c.mutation.AudioCodec(); ok {
+		_spec.SetField(mediafile.FieldAudioCodec, field.TypeString, value)
+		_node.AudioCodec = value
+	}
+	if value, ok := _c.mutation.AudioChannels(); ok {
+		_spec.SetField(mediafile.FieldAudioChannels, field.TypeUint8, value)
+		_node.AudioChannels = value
+	}
+	if value, ok := _c.mutation.Bitrate(); ok {
+		_spec.SetField(mediafile.FieldBitrate, field.TypeUint32, value)
+		_node.Bitrate = value
+	}
+	if value, ok := _c.mutation.ProbedAt(); ok {
+		_spec.SetField(mediafile.FieldProbedAt, field.TypeTime, value)
+		_node.ProbedAt = &value
 	}
 	if nodes := _c.mutation.MovieIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

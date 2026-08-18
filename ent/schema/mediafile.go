@@ -33,6 +33,15 @@ func (MediaFile) Fields() []ent.Field {
 			Optional().
 			Nillable().
 			Default(time.Now),
+		field.String("container").Optional(),
+		field.Uint32("duration_seconds").Optional(),
+		field.String("video_codec").Optional(),
+		field.Uint16("width").Optional(),
+		field.Uint16("height").Optional(),
+		field.String("audio_codec").Optional(),
+		field.Uint8("audio_channels").Optional(),
+		field.Uint32("bitrate").Optional(),
+		field.Time("probed_at").Optional().Nillable(),
 	}
 }
 

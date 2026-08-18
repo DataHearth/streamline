@@ -8927,27 +8927,41 @@ func (m *InviteMutation) ResetEdge(name string) error {
 // MediaFileMutation represents an operation that mutates the MediaFile nodes in the graph.
 type MediaFileMutation struct {
 	config
-	op             Op
-	typ            string
-	id             *uint32
-	create_time    *time.Time
-	update_time    *time.Time
-	_path          *string
-	size           *int64
-	addsize        *int64
-	quality        *string
-	format         *string
-	release_group  *string
-	source         *mediafile.Source
-	last_seen_at   *time.Time
-	clearedFields  map[string]struct{}
-	movie          *uint32
-	clearedmovie   bool
-	episode        *uint32
-	clearedepisode bool
-	done           bool
-	oldValue       func(context.Context) (*MediaFile, error)
-	predicates     []predicate.MediaFile
+	op                  Op
+	typ                 string
+	id                  *uint32
+	create_time         *time.Time
+	update_time         *time.Time
+	_path               *string
+	size                *int64
+	addsize             *int64
+	quality             *string
+	format              *string
+	release_group       *string
+	source              *mediafile.Source
+	last_seen_at        *time.Time
+	container           *string
+	duration_seconds    *uint32
+	addduration_seconds *int32
+	video_codec         *string
+	width               *uint16
+	addwidth            *int16
+	height              *uint16
+	addheight           *int16
+	audio_codec         *string
+	audio_channels      *uint8
+	addaudio_channels   *int8
+	bitrate             *uint32
+	addbitrate          *int32
+	probed_at           *time.Time
+	clearedFields       map[string]struct{}
+	movie               *uint32
+	clearedmovie        bool
+	episode             *uint32
+	clearedepisode      bool
+	done                bool
+	oldValue            func(context.Context) (*MediaFile, error)
+	predicates          []predicate.MediaFile
 }
 
 var _ ent.Mutation = (*MediaFileMutation)(nil)
@@ -9450,6 +9464,552 @@ func (m *MediaFileMutation) ResetLastSeenAt() {
 	delete(m.clearedFields, mediafile.FieldLastSeenAt)
 }
 
+// SetContainer sets the "container" field.
+func (m *MediaFileMutation) SetContainer(s string) {
+	m.container = &s
+}
+
+// Container returns the value of the "container" field in the mutation.
+func (m *MediaFileMutation) Container() (r string, exists bool) {
+	v := m.container
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldContainer returns the old "container" field's value of the MediaFile entity.
+// If the MediaFile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaFileMutation) OldContainer(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldContainer is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldContainer requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldContainer: %w", err)
+	}
+	return oldValue.Container, nil
+}
+
+// ClearContainer clears the value of the "container" field.
+func (m *MediaFileMutation) ClearContainer() {
+	m.container = nil
+	m.clearedFields[mediafile.FieldContainer] = struct{}{}
+}
+
+// ContainerCleared returns if the "container" field was cleared in this mutation.
+func (m *MediaFileMutation) ContainerCleared() bool {
+	_, ok := m.clearedFields[mediafile.FieldContainer]
+	return ok
+}
+
+// ResetContainer resets all changes to the "container" field.
+func (m *MediaFileMutation) ResetContainer() {
+	m.container = nil
+	delete(m.clearedFields, mediafile.FieldContainer)
+}
+
+// SetDurationSeconds sets the "duration_seconds" field.
+func (m *MediaFileMutation) SetDurationSeconds(u uint32) {
+	m.duration_seconds = &u
+	m.addduration_seconds = nil
+}
+
+// DurationSeconds returns the value of the "duration_seconds" field in the mutation.
+func (m *MediaFileMutation) DurationSeconds() (r uint32, exists bool) {
+	v := m.duration_seconds
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDurationSeconds returns the old "duration_seconds" field's value of the MediaFile entity.
+// If the MediaFile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaFileMutation) OldDurationSeconds(ctx context.Context) (v uint32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDurationSeconds is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDurationSeconds requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDurationSeconds: %w", err)
+	}
+	return oldValue.DurationSeconds, nil
+}
+
+// AddDurationSeconds adds u to the "duration_seconds" field.
+func (m *MediaFileMutation) AddDurationSeconds(u int32) {
+	if m.addduration_seconds != nil {
+		*m.addduration_seconds += u
+	} else {
+		m.addduration_seconds = &u
+	}
+}
+
+// AddedDurationSeconds returns the value that was added to the "duration_seconds" field in this mutation.
+func (m *MediaFileMutation) AddedDurationSeconds() (r int32, exists bool) {
+	v := m.addduration_seconds
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearDurationSeconds clears the value of the "duration_seconds" field.
+func (m *MediaFileMutation) ClearDurationSeconds() {
+	m.duration_seconds = nil
+	m.addduration_seconds = nil
+	m.clearedFields[mediafile.FieldDurationSeconds] = struct{}{}
+}
+
+// DurationSecondsCleared returns if the "duration_seconds" field was cleared in this mutation.
+func (m *MediaFileMutation) DurationSecondsCleared() bool {
+	_, ok := m.clearedFields[mediafile.FieldDurationSeconds]
+	return ok
+}
+
+// ResetDurationSeconds resets all changes to the "duration_seconds" field.
+func (m *MediaFileMutation) ResetDurationSeconds() {
+	m.duration_seconds = nil
+	m.addduration_seconds = nil
+	delete(m.clearedFields, mediafile.FieldDurationSeconds)
+}
+
+// SetVideoCodec sets the "video_codec" field.
+func (m *MediaFileMutation) SetVideoCodec(s string) {
+	m.video_codec = &s
+}
+
+// VideoCodec returns the value of the "video_codec" field in the mutation.
+func (m *MediaFileMutation) VideoCodec() (r string, exists bool) {
+	v := m.video_codec
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldVideoCodec returns the old "video_codec" field's value of the MediaFile entity.
+// If the MediaFile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaFileMutation) OldVideoCodec(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldVideoCodec is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldVideoCodec requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldVideoCodec: %w", err)
+	}
+	return oldValue.VideoCodec, nil
+}
+
+// ClearVideoCodec clears the value of the "video_codec" field.
+func (m *MediaFileMutation) ClearVideoCodec() {
+	m.video_codec = nil
+	m.clearedFields[mediafile.FieldVideoCodec] = struct{}{}
+}
+
+// VideoCodecCleared returns if the "video_codec" field was cleared in this mutation.
+func (m *MediaFileMutation) VideoCodecCleared() bool {
+	_, ok := m.clearedFields[mediafile.FieldVideoCodec]
+	return ok
+}
+
+// ResetVideoCodec resets all changes to the "video_codec" field.
+func (m *MediaFileMutation) ResetVideoCodec() {
+	m.video_codec = nil
+	delete(m.clearedFields, mediafile.FieldVideoCodec)
+}
+
+// SetWidth sets the "width" field.
+func (m *MediaFileMutation) SetWidth(u uint16) {
+	m.width = &u
+	m.addwidth = nil
+}
+
+// Width returns the value of the "width" field in the mutation.
+func (m *MediaFileMutation) Width() (r uint16, exists bool) {
+	v := m.width
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldWidth returns the old "width" field's value of the MediaFile entity.
+// If the MediaFile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaFileMutation) OldWidth(ctx context.Context) (v uint16, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldWidth is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldWidth requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldWidth: %w", err)
+	}
+	return oldValue.Width, nil
+}
+
+// AddWidth adds u to the "width" field.
+func (m *MediaFileMutation) AddWidth(u int16) {
+	if m.addwidth != nil {
+		*m.addwidth += u
+	} else {
+		m.addwidth = &u
+	}
+}
+
+// AddedWidth returns the value that was added to the "width" field in this mutation.
+func (m *MediaFileMutation) AddedWidth() (r int16, exists bool) {
+	v := m.addwidth
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearWidth clears the value of the "width" field.
+func (m *MediaFileMutation) ClearWidth() {
+	m.width = nil
+	m.addwidth = nil
+	m.clearedFields[mediafile.FieldWidth] = struct{}{}
+}
+
+// WidthCleared returns if the "width" field was cleared in this mutation.
+func (m *MediaFileMutation) WidthCleared() bool {
+	_, ok := m.clearedFields[mediafile.FieldWidth]
+	return ok
+}
+
+// ResetWidth resets all changes to the "width" field.
+func (m *MediaFileMutation) ResetWidth() {
+	m.width = nil
+	m.addwidth = nil
+	delete(m.clearedFields, mediafile.FieldWidth)
+}
+
+// SetHeight sets the "height" field.
+func (m *MediaFileMutation) SetHeight(u uint16) {
+	m.height = &u
+	m.addheight = nil
+}
+
+// Height returns the value of the "height" field in the mutation.
+func (m *MediaFileMutation) Height() (r uint16, exists bool) {
+	v := m.height
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldHeight returns the old "height" field's value of the MediaFile entity.
+// If the MediaFile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaFileMutation) OldHeight(ctx context.Context) (v uint16, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldHeight is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldHeight requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldHeight: %w", err)
+	}
+	return oldValue.Height, nil
+}
+
+// AddHeight adds u to the "height" field.
+func (m *MediaFileMutation) AddHeight(u int16) {
+	if m.addheight != nil {
+		*m.addheight += u
+	} else {
+		m.addheight = &u
+	}
+}
+
+// AddedHeight returns the value that was added to the "height" field in this mutation.
+func (m *MediaFileMutation) AddedHeight() (r int16, exists bool) {
+	v := m.addheight
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearHeight clears the value of the "height" field.
+func (m *MediaFileMutation) ClearHeight() {
+	m.height = nil
+	m.addheight = nil
+	m.clearedFields[mediafile.FieldHeight] = struct{}{}
+}
+
+// HeightCleared returns if the "height" field was cleared in this mutation.
+func (m *MediaFileMutation) HeightCleared() bool {
+	_, ok := m.clearedFields[mediafile.FieldHeight]
+	return ok
+}
+
+// ResetHeight resets all changes to the "height" field.
+func (m *MediaFileMutation) ResetHeight() {
+	m.height = nil
+	m.addheight = nil
+	delete(m.clearedFields, mediafile.FieldHeight)
+}
+
+// SetAudioCodec sets the "audio_codec" field.
+func (m *MediaFileMutation) SetAudioCodec(s string) {
+	m.audio_codec = &s
+}
+
+// AudioCodec returns the value of the "audio_codec" field in the mutation.
+func (m *MediaFileMutation) AudioCodec() (r string, exists bool) {
+	v := m.audio_codec
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAudioCodec returns the old "audio_codec" field's value of the MediaFile entity.
+// If the MediaFile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaFileMutation) OldAudioCodec(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAudioCodec is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAudioCodec requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAudioCodec: %w", err)
+	}
+	return oldValue.AudioCodec, nil
+}
+
+// ClearAudioCodec clears the value of the "audio_codec" field.
+func (m *MediaFileMutation) ClearAudioCodec() {
+	m.audio_codec = nil
+	m.clearedFields[mediafile.FieldAudioCodec] = struct{}{}
+}
+
+// AudioCodecCleared returns if the "audio_codec" field was cleared in this mutation.
+func (m *MediaFileMutation) AudioCodecCleared() bool {
+	_, ok := m.clearedFields[mediafile.FieldAudioCodec]
+	return ok
+}
+
+// ResetAudioCodec resets all changes to the "audio_codec" field.
+func (m *MediaFileMutation) ResetAudioCodec() {
+	m.audio_codec = nil
+	delete(m.clearedFields, mediafile.FieldAudioCodec)
+}
+
+// SetAudioChannels sets the "audio_channels" field.
+func (m *MediaFileMutation) SetAudioChannels(u uint8) {
+	m.audio_channels = &u
+	m.addaudio_channels = nil
+}
+
+// AudioChannels returns the value of the "audio_channels" field in the mutation.
+func (m *MediaFileMutation) AudioChannels() (r uint8, exists bool) {
+	v := m.audio_channels
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAudioChannels returns the old "audio_channels" field's value of the MediaFile entity.
+// If the MediaFile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaFileMutation) OldAudioChannels(ctx context.Context) (v uint8, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAudioChannels is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAudioChannels requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAudioChannels: %w", err)
+	}
+	return oldValue.AudioChannels, nil
+}
+
+// AddAudioChannels adds u to the "audio_channels" field.
+func (m *MediaFileMutation) AddAudioChannels(u int8) {
+	if m.addaudio_channels != nil {
+		*m.addaudio_channels += u
+	} else {
+		m.addaudio_channels = &u
+	}
+}
+
+// AddedAudioChannels returns the value that was added to the "audio_channels" field in this mutation.
+func (m *MediaFileMutation) AddedAudioChannels() (r int8, exists bool) {
+	v := m.addaudio_channels
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearAudioChannels clears the value of the "audio_channels" field.
+func (m *MediaFileMutation) ClearAudioChannels() {
+	m.audio_channels = nil
+	m.addaudio_channels = nil
+	m.clearedFields[mediafile.FieldAudioChannels] = struct{}{}
+}
+
+// AudioChannelsCleared returns if the "audio_channels" field was cleared in this mutation.
+func (m *MediaFileMutation) AudioChannelsCleared() bool {
+	_, ok := m.clearedFields[mediafile.FieldAudioChannels]
+	return ok
+}
+
+// ResetAudioChannels resets all changes to the "audio_channels" field.
+func (m *MediaFileMutation) ResetAudioChannels() {
+	m.audio_channels = nil
+	m.addaudio_channels = nil
+	delete(m.clearedFields, mediafile.FieldAudioChannels)
+}
+
+// SetBitrate sets the "bitrate" field.
+func (m *MediaFileMutation) SetBitrate(u uint32) {
+	m.bitrate = &u
+	m.addbitrate = nil
+}
+
+// Bitrate returns the value of the "bitrate" field in the mutation.
+func (m *MediaFileMutation) Bitrate() (r uint32, exists bool) {
+	v := m.bitrate
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBitrate returns the old "bitrate" field's value of the MediaFile entity.
+// If the MediaFile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaFileMutation) OldBitrate(ctx context.Context) (v uint32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBitrate is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBitrate requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBitrate: %w", err)
+	}
+	return oldValue.Bitrate, nil
+}
+
+// AddBitrate adds u to the "bitrate" field.
+func (m *MediaFileMutation) AddBitrate(u int32) {
+	if m.addbitrate != nil {
+		*m.addbitrate += u
+	} else {
+		m.addbitrate = &u
+	}
+}
+
+// AddedBitrate returns the value that was added to the "bitrate" field in this mutation.
+func (m *MediaFileMutation) AddedBitrate() (r int32, exists bool) {
+	v := m.addbitrate
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearBitrate clears the value of the "bitrate" field.
+func (m *MediaFileMutation) ClearBitrate() {
+	m.bitrate = nil
+	m.addbitrate = nil
+	m.clearedFields[mediafile.FieldBitrate] = struct{}{}
+}
+
+// BitrateCleared returns if the "bitrate" field was cleared in this mutation.
+func (m *MediaFileMutation) BitrateCleared() bool {
+	_, ok := m.clearedFields[mediafile.FieldBitrate]
+	return ok
+}
+
+// ResetBitrate resets all changes to the "bitrate" field.
+func (m *MediaFileMutation) ResetBitrate() {
+	m.bitrate = nil
+	m.addbitrate = nil
+	delete(m.clearedFields, mediafile.FieldBitrate)
+}
+
+// SetProbedAt sets the "probed_at" field.
+func (m *MediaFileMutation) SetProbedAt(t time.Time) {
+	m.probed_at = &t
+}
+
+// ProbedAt returns the value of the "probed_at" field in the mutation.
+func (m *MediaFileMutation) ProbedAt() (r time.Time, exists bool) {
+	v := m.probed_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldProbedAt returns the old "probed_at" field's value of the MediaFile entity.
+// If the MediaFile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaFileMutation) OldProbedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldProbedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldProbedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldProbedAt: %w", err)
+	}
+	return oldValue.ProbedAt, nil
+}
+
+// ClearProbedAt clears the value of the "probed_at" field.
+func (m *MediaFileMutation) ClearProbedAt() {
+	m.probed_at = nil
+	m.clearedFields[mediafile.FieldProbedAt] = struct{}{}
+}
+
+// ProbedAtCleared returns if the "probed_at" field was cleared in this mutation.
+func (m *MediaFileMutation) ProbedAtCleared() bool {
+	_, ok := m.clearedFields[mediafile.FieldProbedAt]
+	return ok
+}
+
+// ResetProbedAt resets all changes to the "probed_at" field.
+func (m *MediaFileMutation) ResetProbedAt() {
+	m.probed_at = nil
+	delete(m.clearedFields, mediafile.FieldProbedAt)
+}
+
 // SetMovieID sets the "movie" edge to the Movie entity by id.
 func (m *MediaFileMutation) SetMovieID(id uint32) {
 	m.movie = &id
@@ -9562,7 +10122,7 @@ func (m *MediaFileMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *MediaFileMutation) Fields() []string {
-	fields := make([]string, 0, 9)
+	fields := make([]string, 0, 18)
 	if m.create_time != nil {
 		fields = append(fields, mediafile.FieldCreateTime)
 	}
@@ -9590,6 +10150,33 @@ func (m *MediaFileMutation) Fields() []string {
 	if m.last_seen_at != nil {
 		fields = append(fields, mediafile.FieldLastSeenAt)
 	}
+	if m.container != nil {
+		fields = append(fields, mediafile.FieldContainer)
+	}
+	if m.duration_seconds != nil {
+		fields = append(fields, mediafile.FieldDurationSeconds)
+	}
+	if m.video_codec != nil {
+		fields = append(fields, mediafile.FieldVideoCodec)
+	}
+	if m.width != nil {
+		fields = append(fields, mediafile.FieldWidth)
+	}
+	if m.height != nil {
+		fields = append(fields, mediafile.FieldHeight)
+	}
+	if m.audio_codec != nil {
+		fields = append(fields, mediafile.FieldAudioCodec)
+	}
+	if m.audio_channels != nil {
+		fields = append(fields, mediafile.FieldAudioChannels)
+	}
+	if m.bitrate != nil {
+		fields = append(fields, mediafile.FieldBitrate)
+	}
+	if m.probed_at != nil {
+		fields = append(fields, mediafile.FieldProbedAt)
+	}
 	return fields
 }
 
@@ -9616,6 +10203,24 @@ func (m *MediaFileMutation) Field(name string) (ent.Value, bool) {
 		return m.Source()
 	case mediafile.FieldLastSeenAt:
 		return m.LastSeenAt()
+	case mediafile.FieldContainer:
+		return m.Container()
+	case mediafile.FieldDurationSeconds:
+		return m.DurationSeconds()
+	case mediafile.FieldVideoCodec:
+		return m.VideoCodec()
+	case mediafile.FieldWidth:
+		return m.Width()
+	case mediafile.FieldHeight:
+		return m.Height()
+	case mediafile.FieldAudioCodec:
+		return m.AudioCodec()
+	case mediafile.FieldAudioChannels:
+		return m.AudioChannels()
+	case mediafile.FieldBitrate:
+		return m.Bitrate()
+	case mediafile.FieldProbedAt:
+		return m.ProbedAt()
 	}
 	return nil, false
 }
@@ -9643,6 +10248,24 @@ func (m *MediaFileMutation) OldField(ctx context.Context, name string) (ent.Valu
 		return m.OldSource(ctx)
 	case mediafile.FieldLastSeenAt:
 		return m.OldLastSeenAt(ctx)
+	case mediafile.FieldContainer:
+		return m.OldContainer(ctx)
+	case mediafile.FieldDurationSeconds:
+		return m.OldDurationSeconds(ctx)
+	case mediafile.FieldVideoCodec:
+		return m.OldVideoCodec(ctx)
+	case mediafile.FieldWidth:
+		return m.OldWidth(ctx)
+	case mediafile.FieldHeight:
+		return m.OldHeight(ctx)
+	case mediafile.FieldAudioCodec:
+		return m.OldAudioCodec(ctx)
+	case mediafile.FieldAudioChannels:
+		return m.OldAudioChannels(ctx)
+	case mediafile.FieldBitrate:
+		return m.OldBitrate(ctx)
+	case mediafile.FieldProbedAt:
+		return m.OldProbedAt(ctx)
 	}
 	return nil, fmt.Errorf("unknown MediaFile field %s", name)
 }
@@ -9715,6 +10338,69 @@ func (m *MediaFileMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetLastSeenAt(v)
 		return nil
+	case mediafile.FieldContainer:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetContainer(v)
+		return nil
+	case mediafile.FieldDurationSeconds:
+		v, ok := value.(uint32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDurationSeconds(v)
+		return nil
+	case mediafile.FieldVideoCodec:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetVideoCodec(v)
+		return nil
+	case mediafile.FieldWidth:
+		v, ok := value.(uint16)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetWidth(v)
+		return nil
+	case mediafile.FieldHeight:
+		v, ok := value.(uint16)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetHeight(v)
+		return nil
+	case mediafile.FieldAudioCodec:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAudioCodec(v)
+		return nil
+	case mediafile.FieldAudioChannels:
+		v, ok := value.(uint8)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAudioChannels(v)
+		return nil
+	case mediafile.FieldBitrate:
+		v, ok := value.(uint32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBitrate(v)
+		return nil
+	case mediafile.FieldProbedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetProbedAt(v)
+		return nil
 	}
 	return fmt.Errorf("unknown MediaFile field %s", name)
 }
@@ -9726,6 +10412,21 @@ func (m *MediaFileMutation) AddedFields() []string {
 	if m.addsize != nil {
 		fields = append(fields, mediafile.FieldSize)
 	}
+	if m.addduration_seconds != nil {
+		fields = append(fields, mediafile.FieldDurationSeconds)
+	}
+	if m.addwidth != nil {
+		fields = append(fields, mediafile.FieldWidth)
+	}
+	if m.addheight != nil {
+		fields = append(fields, mediafile.FieldHeight)
+	}
+	if m.addaudio_channels != nil {
+		fields = append(fields, mediafile.FieldAudioChannels)
+	}
+	if m.addbitrate != nil {
+		fields = append(fields, mediafile.FieldBitrate)
+	}
 	return fields
 }
 
@@ -9736,6 +10437,16 @@ func (m *MediaFileMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
 	case mediafile.FieldSize:
 		return m.AddedSize()
+	case mediafile.FieldDurationSeconds:
+		return m.AddedDurationSeconds()
+	case mediafile.FieldWidth:
+		return m.AddedWidth()
+	case mediafile.FieldHeight:
+		return m.AddedHeight()
+	case mediafile.FieldAudioChannels:
+		return m.AddedAudioChannels()
+	case mediafile.FieldBitrate:
+		return m.AddedBitrate()
 	}
 	return nil, false
 }
@@ -9751,6 +10462,41 @@ func (m *MediaFileMutation) AddField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddSize(v)
+		return nil
+	case mediafile.FieldDurationSeconds:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddDurationSeconds(v)
+		return nil
+	case mediafile.FieldWidth:
+		v, ok := value.(int16)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddWidth(v)
+		return nil
+	case mediafile.FieldHeight:
+		v, ok := value.(int16)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddHeight(v)
+		return nil
+	case mediafile.FieldAudioChannels:
+		v, ok := value.(int8)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddAudioChannels(v)
+		return nil
+	case mediafile.FieldBitrate:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddBitrate(v)
 		return nil
 	}
 	return fmt.Errorf("unknown MediaFile numeric field %s", name)
@@ -9771,6 +10517,33 @@ func (m *MediaFileMutation) ClearedFields() []string {
 	}
 	if m.FieldCleared(mediafile.FieldLastSeenAt) {
 		fields = append(fields, mediafile.FieldLastSeenAt)
+	}
+	if m.FieldCleared(mediafile.FieldContainer) {
+		fields = append(fields, mediafile.FieldContainer)
+	}
+	if m.FieldCleared(mediafile.FieldDurationSeconds) {
+		fields = append(fields, mediafile.FieldDurationSeconds)
+	}
+	if m.FieldCleared(mediafile.FieldVideoCodec) {
+		fields = append(fields, mediafile.FieldVideoCodec)
+	}
+	if m.FieldCleared(mediafile.FieldWidth) {
+		fields = append(fields, mediafile.FieldWidth)
+	}
+	if m.FieldCleared(mediafile.FieldHeight) {
+		fields = append(fields, mediafile.FieldHeight)
+	}
+	if m.FieldCleared(mediafile.FieldAudioCodec) {
+		fields = append(fields, mediafile.FieldAudioCodec)
+	}
+	if m.FieldCleared(mediafile.FieldAudioChannels) {
+		fields = append(fields, mediafile.FieldAudioChannels)
+	}
+	if m.FieldCleared(mediafile.FieldBitrate) {
+		fields = append(fields, mediafile.FieldBitrate)
+	}
+	if m.FieldCleared(mediafile.FieldProbedAt) {
+		fields = append(fields, mediafile.FieldProbedAt)
 	}
 	return fields
 }
@@ -9797,6 +10570,33 @@ func (m *MediaFileMutation) ClearField(name string) error {
 		return nil
 	case mediafile.FieldLastSeenAt:
 		m.ClearLastSeenAt()
+		return nil
+	case mediafile.FieldContainer:
+		m.ClearContainer()
+		return nil
+	case mediafile.FieldDurationSeconds:
+		m.ClearDurationSeconds()
+		return nil
+	case mediafile.FieldVideoCodec:
+		m.ClearVideoCodec()
+		return nil
+	case mediafile.FieldWidth:
+		m.ClearWidth()
+		return nil
+	case mediafile.FieldHeight:
+		m.ClearHeight()
+		return nil
+	case mediafile.FieldAudioCodec:
+		m.ClearAudioCodec()
+		return nil
+	case mediafile.FieldAudioChannels:
+		m.ClearAudioChannels()
+		return nil
+	case mediafile.FieldBitrate:
+		m.ClearBitrate()
+		return nil
+	case mediafile.FieldProbedAt:
+		m.ClearProbedAt()
 		return nil
 	}
 	return fmt.Errorf("unknown MediaFile nullable field %s", name)
@@ -9832,6 +10632,33 @@ func (m *MediaFileMutation) ResetField(name string) error {
 		return nil
 	case mediafile.FieldLastSeenAt:
 		m.ResetLastSeenAt()
+		return nil
+	case mediafile.FieldContainer:
+		m.ResetContainer()
+		return nil
+	case mediafile.FieldDurationSeconds:
+		m.ResetDurationSeconds()
+		return nil
+	case mediafile.FieldVideoCodec:
+		m.ResetVideoCodec()
+		return nil
+	case mediafile.FieldWidth:
+		m.ResetWidth()
+		return nil
+	case mediafile.FieldHeight:
+		m.ResetHeight()
+		return nil
+	case mediafile.FieldAudioCodec:
+		m.ResetAudioCodec()
+		return nil
+	case mediafile.FieldAudioChannels:
+		m.ResetAudioChannels()
+		return nil
+	case mediafile.FieldBitrate:
+		m.ResetBitrate()
+		return nil
+	case mediafile.FieldProbedAt:
+		m.ResetProbedAt()
 		return nil
 	}
 	return fmt.Errorf("unknown MediaFile field %s", name)
