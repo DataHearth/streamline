@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -184,7 +183,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		if p == "" {
 			continue
 		}
-		if err := os.MkdirAll(p, 0o755); err != nil {
+		if err := library.MkdirLibraryDir(p); err != nil {
 			dbClient.Close()
 			return nil, fmt.Errorf("create library path %s: %w", p, err)
 		}

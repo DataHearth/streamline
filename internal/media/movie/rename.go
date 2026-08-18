@@ -63,7 +63,7 @@ func (r *RenameService) Apply(
 		return library.RenamePlan{}, otelx.RecordSpanError(span, err)
 	}
 	for _, op := range plan.Operations {
-		if err := os.MkdirAll(filepath.Dir(op.To), 0o755); err != nil {
+		if err := library.MkdirLibraryDir(filepath.Dir(op.To)); err != nil {
 			return library.RenamePlan{}, otelx.RecordSpanError(span,
 				fmt.Errorf("mkdir %s: %w", filepath.Dir(op.To), err))
 		}
