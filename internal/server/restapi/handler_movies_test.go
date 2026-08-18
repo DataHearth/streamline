@@ -57,7 +57,7 @@ var _ = Describe(
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 				var body Error
 				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
-				Expect(body.Message).To(Equal("limit must be between 1 and 100"))
+				Expect(body.Message).To(Equal("limit must be between 1 and 500"))
 			})
 
 			It("rejects an out-of-range page with a JSON 400", func() {
@@ -87,7 +87,7 @@ var _ = Describe(
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 				var body Error
 				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
-				Expect(body.Message).To(Equal("limit must be between 1 and 100"))
+				Expect(body.Message).To(Equal("limit must be between 1 and 500"))
 			})
 
 			It("returns paginated list when movies exist", func() {
