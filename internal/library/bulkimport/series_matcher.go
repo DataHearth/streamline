@@ -71,14 +71,15 @@ func BuildShowParams(
 	folder string,
 	p library.ParseResult,
 	c ShowClassification,
-	fileCount uint16,
+	fileCount int,
 ) db.CreateImportScanShowParams {
 	params := db.CreateImportScanShowParams{
 		FolderPath:     folder,
 		ParsedTitle:    p.Title,
 		Classification: c.Kind,
 		Candidates:     c.Candidates,
-		FileCount:      fileCount,
+		//nolint:gosec // a season folder holds far fewer than 65k video files
+		FileCount: uint16(fileCount),
 	}
 	if p.Year != 0 {
 		year := p.Year

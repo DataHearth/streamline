@@ -133,7 +133,7 @@ var _ = Describe("Service file decisions", Label("unit", "bulkimport"), func() {
 						return p.ScanID == 3
 					},
 				)).
-				Return([]*ent.ImportScanFile{}, uint32(0), nil).
+				Return([]*ent.ImportScanFile{}, 0, nil).
 				Once()
 
 			items, total, err := svc.Files(ctx, FilesParams{ScanID: 3, Limit: 50})

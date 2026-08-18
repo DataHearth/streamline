@@ -682,13 +682,13 @@ func tvShowToAPI(s *ent.TVShow) TVShow {
 
 	now := time.Now()
 	views := tvshow.DeriveSeasonViews(s, now)
-	var have, total, wanted uint32
+	var have, total, wanted int
 	seasons := make([]Season, 0, len(s.Edges.Seasons))
 	for i, se := range s.Edges.Seasons {
 		v := views[i]
-		have += uint32(v.Available)
-		total += uint32(v.Total)
-		wanted += uint32(v.Missing)
+		have += v.Available
+		total += v.Total
+		wanted += v.Missing
 		seasons = append(seasons, seasonToAPI(se, v, now))
 	}
 	out.HaveEpisodes = &have

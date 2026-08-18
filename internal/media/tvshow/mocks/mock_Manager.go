@@ -361,7 +361,7 @@ func (_c *MockManager_DeleteEpisodeFile_Call) RunAndReturn(run func(ctx context.
 }
 
 // FilterList provides a mock function for the type MockManager
-func (_mock *MockManager) FilterList(ctx context.Context, p tvshow.FilterParams) ([]*ent.TVShow, uint32, error) {
+func (_mock *MockManager) FilterList(ctx context.Context, p tvshow.FilterParams) ([]*ent.TVShow, int, error) {
 	ret := _mock.Called(ctx, p)
 
 	if len(ret) == 0 {
@@ -369,9 +369,9 @@ func (_mock *MockManager) FilterList(ctx context.Context, p tvshow.FilterParams)
 	}
 
 	var r0 []*ent.TVShow
-	var r1 uint32
+	var r1 int
 	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, tvshow.FilterParams) ([]*ent.TVShow, uint32, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, tvshow.FilterParams) ([]*ent.TVShow, int, error)); ok {
 		return returnFunc(ctx, p)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, tvshow.FilterParams) []*ent.TVShow); ok {
@@ -381,10 +381,10 @@ func (_mock *MockManager) FilterList(ctx context.Context, p tvshow.FilterParams)
 			r0 = ret.Get(0).([]*ent.TVShow)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, tvshow.FilterParams) uint32); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, tvshow.FilterParams) int); ok {
 		r1 = returnFunc(ctx, p)
 	} else {
-		r1 = ret.Get(1).(uint32)
+		r1 = ret.Get(1).(int)
 	}
 	if returnFunc, ok := ret.Get(2).(func(context.Context, tvshow.FilterParams) error); ok {
 		r2 = returnFunc(ctx, p)
@@ -424,12 +424,12 @@ func (_c *MockManager_FilterList_Call) Run(run func(ctx context.Context, p tvsho
 	return _c
 }
 
-func (_c *MockManager_FilterList_Call) Return(tVShows []*ent.TVShow, v uint32, err error) *MockManager_FilterList_Call {
-	_c.Call.Return(tVShows, v, err)
+func (_c *MockManager_FilterList_Call) Return(tVShows []*ent.TVShow, n int, err error) *MockManager_FilterList_Call {
+	_c.Call.Return(tVShows, n, err)
 	return _c
 }
 
-func (_c *MockManager_FilterList_Call) RunAndReturn(run func(ctx context.Context, p tvshow.FilterParams) ([]*ent.TVShow, uint32, error)) *MockManager_FilterList_Call {
+func (_c *MockManager_FilterList_Call) RunAndReturn(run func(ctx context.Context, p tvshow.FilterParams) ([]*ent.TVShow, int, error)) *MockManager_FilterList_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -647,7 +647,7 @@ func (_c *MockManager_GrabSeriesRelease_Call) RunAndReturn(run func(ctx context.
 }
 
 // List provides a mock function for the type MockManager
-func (_mock *MockManager) List(ctx context.Context, page uint16, limit uint16) ([]*ent.TVShow, uint32, error) {
+func (_mock *MockManager) List(ctx context.Context, page uint16, limit uint16) ([]*ent.TVShow, int, error) {
 	ret := _mock.Called(ctx, page, limit)
 
 	if len(ret) == 0 {
@@ -655,9 +655,9 @@ func (_mock *MockManager) List(ctx context.Context, page uint16, limit uint16) (
 	}
 
 	var r0 []*ent.TVShow
-	var r1 uint32
+	var r1 int
 	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint16, uint16) ([]*ent.TVShow, uint32, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint16, uint16) ([]*ent.TVShow, int, error)); ok {
 		return returnFunc(ctx, page, limit)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, uint16, uint16) []*ent.TVShow); ok {
@@ -667,10 +667,10 @@ func (_mock *MockManager) List(ctx context.Context, page uint16, limit uint16) (
 			r0 = ret.Get(0).([]*ent.TVShow)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uint16, uint16) uint32); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint16, uint16) int); ok {
 		r1 = returnFunc(ctx, page, limit)
 	} else {
-		r1 = ret.Get(1).(uint32)
+		r1 = ret.Get(1).(int)
 	}
 	if returnFunc, ok := ret.Get(2).(func(context.Context, uint16, uint16) error); ok {
 		r2 = returnFunc(ctx, page, limit)
@@ -716,12 +716,12 @@ func (_c *MockManager_List_Call) Run(run func(ctx context.Context, page uint16, 
 	return _c
 }
 
-func (_c *MockManager_List_Call) Return(tVShows []*ent.TVShow, v uint32, err error) *MockManager_List_Call {
-	_c.Call.Return(tVShows, v, err)
+func (_c *MockManager_List_Call) Return(tVShows []*ent.TVShow, n int, err error) *MockManager_List_Call {
+	_c.Call.Return(tVShows, n, err)
 	return _c
 }
 
-func (_c *MockManager_List_Call) RunAndReturn(run func(ctx context.Context, page uint16, limit uint16) ([]*ent.TVShow, uint32, error)) *MockManager_List_Call {
+func (_c *MockManager_List_Call) RunAndReturn(run func(ctx context.Context, page uint16, limit uint16) ([]*ent.TVShow, int, error)) *MockManager_List_Call {
 	_c.Call.Return(run)
 	return _c
 }

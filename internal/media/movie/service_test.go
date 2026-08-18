@@ -182,14 +182,13 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 	})
 
 	Describe("List", func() {
-		It("rejects page=0", func() {
-			_, _, err := svc.List(ctx, 0, 10)
-			Expect(err).To(MatchError("page must be > 0"))
-		})
+		It("coerces page=0 and limit=0 to the defaults", func() {
+			storeMock.CountMovies(mock.Anything).Return(0, nil).Once()
+			storeMock.ListMovies(mock.Anything, uint32(0), uint32(20)).
+				Return([]*ent.Movie{}, nil).Once()
 
-		It("rejects limit=0", func() {
-			_, _, err := svc.List(ctx, 1, 0)
-			Expect(err).To(MatchError("limit must be > 0"))
+			_, _, err := svc.List(ctx, 0, 0)
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("wraps count errors", func() {
@@ -220,7 +219,7 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 
 			items, total, err := svc.List(ctx, 3, 10)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(total).To(Equal(uint32(42)))
+			Expect(total).To(Equal(42))
 			Expect(items).To(Equal(rows))
 		})
 	})
@@ -253,7 +252,7 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(items).To(HaveLen(1))
-			Expect(total).To(Equal(uint32(5)))
+			Expect(total).To(Equal(5))
 		})
 
 		It("wraps filter errors", func() {

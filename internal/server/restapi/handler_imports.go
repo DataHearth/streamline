@@ -79,8 +79,18 @@ func (s *Server) ListImports(
 	if err := requireAdmin(ctx); err != nil {
 		return ListImports403JSONResponse{ForbiddenJSONResponse: notAdminResp}, nil
 	}
-	page := pageOr(req.Params.Page, 1)
-	limit := clampLimit(pageOr(req.Params.Limit, 20), importMaxLimit)
+	page, ok := positiveOr(req.Params.Page, uint16(1))
+	if !ok {
+		return ListImports400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(msgZeroPage),
+		}, nil
+	}
+	limit, ok := limitOr(req.Params.Limit, 20, importMaxLimit)
+	if !ok {
+		return ListImports400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(limitRangeMsg(importMaxLimit)),
+		}, nil
+	}
 	items, total, err := s.bulkImports.List(ctx, page, limit)
 	if err != nil {
 		return nil, err
@@ -184,8 +194,18 @@ func (s *Server) ListImportFiles(
 			ForbiddenJSONResponse: notAdminResp,
 		}, nil
 	}
-	page := pageOr(req.Params.Page, 1)
-	limit := clampLimit(pageOr(req.Params.Limit, 50), importMaxLimit)
+	page, ok := positiveOr(req.Params.Page, uint16(1))
+	if !ok {
+		return ListImportFiles400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(msgZeroPage),
+		}, nil
+	}
+	limit, ok := limitOr(req.Params.Limit, 50, importMaxLimit)
+	if !ok {
+		return ListImportFiles400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(limitRangeMsg(importMaxLimit)),
+		}, nil
+	}
 	cls := entimportscanfile.Classification("")
 	if req.Params.Classification != nil {
 		cls = entimportscanfile.Classification(*req.Params.Classification)
@@ -262,6 +282,20 @@ func (s *Server) ListImportShows(
 			ForbiddenJSONResponse: notAdminResp,
 		}, nil
 	}
+	// Query bounds are checked before the scan lookup, so a malformed page or
+	// limit answers 400 here exactly as it does on the sibling /files listing.
+	page, ok := positiveOr(req.Params.Page, uint16(1))
+	if !ok {
+		return ListImportShows400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(msgZeroPage),
+		}, nil
+	}
+	limit, ok := limitOr(req.Params.Limit, 50, importMaxLimit)
+	if !ok {
+		return ListImportShows400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(limitRangeMsg(importMaxLimit)),
+		}, nil
+	}
 	if _, err := s.store.FindImportScan(ctx, req.Id); err != nil {
 		if ent.IsNotFound(err) {
 			return ListImportShows404JSONResponse{
@@ -270,8 +304,6 @@ func (s *Server) ListImportShows(
 		}
 		return nil, err
 	}
-	page := pageOr(req.Params.Page, 1)
-	limit := clampLimit(pageOr(req.Params.Limit, 50), importMaxLimit)
 	cls := entimportscanshow.Classification("")
 	if req.Params.Classification != nil {
 		cls = entimportscanshow.Classification(*req.Params.Classification)
@@ -347,11 +379,4 @@ func (s *Server) UpdateImportShowDecision(
 			toAPIImportScanShow(row),
 		),
 	}, nil
-}
-
-func pageOr(v *uint16, def uint16) uint16 {
-	if v != nil && *v > 0 {
-		return *v
-	}
-	return def
 }

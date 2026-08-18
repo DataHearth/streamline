@@ -18,12 +18,17 @@ func (s *Server) ListMovies(
 	ctx context.Context,
 	request ListMoviesRequestObject,
 ) (ListMoviesResponseObject, error) {
-	page, limit := uint16(1), uint16(20)
-	if request.Params.Page != nil {
-		page = uint16(*request.Params.Page)
+	page, ok := positiveOr(request.Params.Page, uint16(1))
+	if !ok {
+		return ListMovies400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(msgZeroPage),
+		}, nil
 	}
-	if request.Params.Limit != nil {
-		limit = clampLimit(*request.Params.Limit, moviesMaxLimit)
+	limit, ok := limitOr(request.Params.Limit, 20, moviesMaxLimit)
+	if !ok {
+		return ListMovies400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(limitRangeMsg(moviesMaxLimit)),
+		}, nil
 	}
 
 	movies, total, err := s.movies.List(ctx, page, limit)
@@ -56,17 +61,19 @@ func (s *Server) GetMovieCounts(
 			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
-	trend := make([]uint32, len(counts.Trend))
-	for i, v := range counts.Trend {
-		trend[i] = uint32(v)
+	// trend is a required, non-nullable array in the spec, and the SPA maps
+	// over it unguarded — a nil slice would marshal as `null`.
+	trend := counts.Trend
+	if trend == nil {
+		trend = []int{}
 	}
 	return GetMovieCounts200JSONResponse{
 		MovieCountsResponseJSONResponse: MovieCountsResponseJSONResponse{
-			Total:       uint32(counts.Total),
-			Wanted:      uint32(counts.Wanted),
-			Downloading: uint32(counts.Downloading),
-			Available:   uint32(counts.Available),
-			Failed:      uint32(counts.Failed),
+			Total:       counts.Total,
+			Wanted:      counts.Wanted,
+			Downloading: counts.Downloading,
+			Available:   counts.Available,
+			Failed:      counts.Failed,
 			Trend:       trend,
 		},
 	}, nil
