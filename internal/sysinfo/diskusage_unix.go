@@ -19,5 +19,6 @@ func DiskUsageFor(path string) *DiskUsage {
 	}
 	//nolint:unconvert // Bsize is int64 on linux (where the linter runs) but uint32 on darwin/openbsd; the conversion is required to cross-compile.
 	bsize := int64(st.Bsize)
+	//nolint:gosec // Blocks/Bavail are unsigned on linux but int64 on freebsd; any real volume fits int64
 	return diskUsage(int64(st.Blocks)*bsize, int64(st.Bavail)*bsize)
 }

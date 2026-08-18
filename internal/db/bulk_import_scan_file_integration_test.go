@@ -73,7 +73,7 @@ var _ = Describe("ImportScanFile store", Label("integration", "db"), func() {
 				FilterImportScanFilesParams{ScanID: scanID, Limit: 50},
 			)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(total).To(Equal(uint32(3)))
+			Expect(total).To(Equal(3))
 			Expect(items).To(HaveLen(3))
 		})
 
@@ -87,7 +87,7 @@ var _ = Describe("ImportScanFile store", Label("integration", "db"), func() {
 				},
 			)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(total).To(Equal(uint32(1)))
+			Expect(total).To(Equal(1))
 		})
 
 		It("filters by filename query (case-insensitive substring)", func() {
@@ -98,7 +98,7 @@ var _ = Describe("ImportScanFile store", Label("integration", "db"), func() {
 				},
 			)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(total).To(Equal(uint32(1)))
+			Expect(total).To(Equal(1))
 		})
 	})
 

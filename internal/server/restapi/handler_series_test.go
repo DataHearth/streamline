@@ -28,14 +28,31 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 	})
 
 	Describe("ListSeries", func() {
-		It("clamps a limit above the documented maximum", func() {
-			app.tvshows.EXPECT().
-				FilterList(mock.Anything, mock.MatchedBy(func(p tvshow.FilterParams) bool {
-					return p.Limit == seriesMaxLimit
-				})).
-				Return([]*ent.TVShow{}, uint32(0), nil).
-				Once()
+		It("rejects an explicit page=0 with a JSON 400", func() {
+			resp := app.do(app.req(
+				http.MethodGet,
+				"/api/v1/series?page=0",
+				app.adminKey,
+				nil,
+			))
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+		})
 
+		It("rejects an out-of-range page with a JSON 400", func() {
+			resp := app.do(app.req(
+				http.MethodGet,
+				"/api/v1/series?page=70000",
+				app.adminKey,
+				nil,
+			))
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			Expect(resp.Header.Get("Content-Type")).
+				To(HavePrefix("application/json"))
+		})
+
+		It("rejects a limit above the documented maximum", func() {
 			resp := app.do(app.req(
 				http.MethodGet,
 				"/api/v1/series?limit=65535",
@@ -43,13 +60,13 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 				nil,
 			))
 			defer resp.Body.Close()
-			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		})
 
 		It("returns a paginated list", func() {
 			app.tvshows.EXPECT().
 				FilterList(mock.Anything, mock.AnythingOfType("tvshow.FilterParams")).
-				Return([]*ent.TVShow{{ID: 1, Title: "X", Year: 2020, TvdbID: 9}}, uint32(1), nil).
+				Return([]*ent.TVShow{{ID: 1, Title: "X", Year: 2020, TvdbID: 9}}, 1, nil).
 				Once()
 
 			resp := app.do(
@@ -78,7 +95,7 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 		It("500s when the service errors", func() {
 			app.tvshows.EXPECT().
 				FilterList(mock.Anything, mock.AnythingOfType("tvshow.FilterParams")).
-				Return(nil, uint32(0), errors.New("db down")).Once()
+				Return(nil, 0, errors.New("db down")).Once()
 
 			resp := app.do(
 				app.req(http.MethodGet, "/api/v1/series", app.adminKey, nil),

@@ -50,22 +50,22 @@ func (_m *MockTx) EXPECT() *MockTx_Expecter {
 }
 
 // AbortInflightImportScans provides a mock function for the type MockTx
-func (_mock *MockTx) AbortInflightImportScans(ctx context.Context, reason string) (uint32, error) {
+func (_mock *MockTx) AbortInflightImportScans(ctx context.Context, reason string) (int, error) {
 	ret := _mock.Called(ctx, reason)
 
 	if len(ret) == 0 {
 		panic("no return value specified for AbortInflightImportScans")
 	}
 
-	var r0 uint32
+	var r0 int
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (uint32, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (int, error)); ok {
 		return returnFunc(ctx, reason)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) uint32); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) int); ok {
 		r0 = returnFunc(ctx, reason)
 	} else {
-		r0 = ret.Get(0).(uint32)
+		r0 = ret.Get(0).(int)
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
 		r1 = returnFunc(ctx, reason)
@@ -105,12 +105,12 @@ func (_c *MockTx_AbortInflightImportScans_Call) Run(run func(ctx context.Context
 	return _c
 }
 
-func (_c *MockTx_AbortInflightImportScans_Call) Return(v uint32, err error) *MockTx_AbortInflightImportScans_Call {
-	_c.Call.Return(v, err)
+func (_c *MockTx_AbortInflightImportScans_Call) Return(n int, err error) *MockTx_AbortInflightImportScans_Call {
+	_c.Call.Return(n, err)
 	return _c
 }
 
-func (_c *MockTx_AbortInflightImportScans_Call) RunAndReturn(run func(ctx context.Context, reason string) (uint32, error)) *MockTx_AbortInflightImportScans_Call {
+func (_c *MockTx_AbortInflightImportScans_Call) RunAndReturn(run func(ctx context.Context, reason string) (int, error)) *MockTx_AbortInflightImportScans_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -795,22 +795,22 @@ func (_c *MockTx_CountAPIKeysByUser_Call) RunAndReturn(run func(ctx context.Cont
 }
 
 // CountActiveImportScans provides a mock function for the type MockTx
-func (_mock *MockTx) CountActiveImportScans(ctx context.Context) (uint32, error) {
+func (_mock *MockTx) CountActiveImportScans(ctx context.Context) (int, error) {
 	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CountActiveImportScans")
 	}
 
-	var r0 uint32
+	var r0 int
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context) (uint32, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context) (int, error)); ok {
 		return returnFunc(ctx)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context) uint32); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context) int); ok {
 		r0 = returnFunc(ctx)
 	} else {
-		r0 = ret.Get(0).(uint32)
+		r0 = ret.Get(0).(int)
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
 		r1 = returnFunc(ctx)
@@ -844,12 +844,12 @@ func (_c *MockTx_CountActiveImportScans_Call) Run(run func(ctx context.Context))
 	return _c
 }
 
-func (_c *MockTx_CountActiveImportScans_Call) Return(v uint32, err error) *MockTx_CountActiveImportScans_Call {
-	_c.Call.Return(v, err)
+func (_c *MockTx_CountActiveImportScans_Call) Return(n int, err error) *MockTx_CountActiveImportScans_Call {
+	_c.Call.Return(n, err)
 	return _c
 }
 
-func (_c *MockTx_CountActiveImportScans_Call) RunAndReturn(run func(ctx context.Context) (uint32, error)) *MockTx_CountActiveImportScans_Call {
+func (_c *MockTx_CountActiveImportScans_Call) RunAndReturn(run func(ctx context.Context) (int, error)) *MockTx_CountActiveImportScans_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -3351,7 +3351,7 @@ func (_c *MockTx_DenyRequest_Call) RunAndReturn(run func(ctx context.Context, id
 }
 
 // FilterImportScanFiles provides a mock function for the type MockTx
-func (_mock *MockTx) FilterImportScanFiles(ctx context.Context, p db.FilterImportScanFilesParams) ([]*ent.ImportScanFile, uint32, error) {
+func (_mock *MockTx) FilterImportScanFiles(ctx context.Context, p db.FilterImportScanFilesParams) ([]*ent.ImportScanFile, int, error) {
 	ret := _mock.Called(ctx, p)
 
 	if len(ret) == 0 {
@@ -3359,9 +3359,9 @@ func (_mock *MockTx) FilterImportScanFiles(ctx context.Context, p db.FilterImpor
 	}
 
 	var r0 []*ent.ImportScanFile
-	var r1 uint32
+	var r1 int
 	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, db.FilterImportScanFilesParams) ([]*ent.ImportScanFile, uint32, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.FilterImportScanFilesParams) ([]*ent.ImportScanFile, int, error)); ok {
 		return returnFunc(ctx, p)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, db.FilterImportScanFilesParams) []*ent.ImportScanFile); ok {
@@ -3371,10 +3371,10 @@ func (_mock *MockTx) FilterImportScanFiles(ctx context.Context, p db.FilterImpor
 			r0 = ret.Get(0).([]*ent.ImportScanFile)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, db.FilterImportScanFilesParams) uint32); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.FilterImportScanFilesParams) int); ok {
 		r1 = returnFunc(ctx, p)
 	} else {
-		r1 = ret.Get(1).(uint32)
+		r1 = ret.Get(1).(int)
 	}
 	if returnFunc, ok := ret.Get(2).(func(context.Context, db.FilterImportScanFilesParams) error); ok {
 		r2 = returnFunc(ctx, p)
@@ -3414,12 +3414,12 @@ func (_c *MockTx_FilterImportScanFiles_Call) Run(run func(ctx context.Context, p
 	return _c
 }
 
-func (_c *MockTx_FilterImportScanFiles_Call) Return(importScanFiles []*ent.ImportScanFile, v uint32, err error) *MockTx_FilterImportScanFiles_Call {
-	_c.Call.Return(importScanFiles, v, err)
+func (_c *MockTx_FilterImportScanFiles_Call) Return(importScanFiles []*ent.ImportScanFile, n int, err error) *MockTx_FilterImportScanFiles_Call {
+	_c.Call.Return(importScanFiles, n, err)
 	return _c
 }
 
-func (_c *MockTx_FilterImportScanFiles_Call) RunAndReturn(run func(ctx context.Context, p db.FilterImportScanFilesParams) ([]*ent.ImportScanFile, uint32, error)) *MockTx_FilterImportScanFiles_Call {
+func (_c *MockTx_FilterImportScanFiles_Call) RunAndReturn(run func(ctx context.Context, p db.FilterImportScanFilesParams) ([]*ent.ImportScanFile, int, error)) *MockTx_FilterImportScanFiles_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -5150,7 +5150,7 @@ func (_c *MockTx_IncrementEpisodeGrabFailures_Call) RunAndReturn(run func(ctx co
 }
 
 // IncrementImportScanProgress provides a mock function for the type MockTx
-func (_mock *MockTx) IncrementImportScanProgress(ctx context.Context, id uint32, processedDelta uint32) error {
+func (_mock *MockTx) IncrementImportScanProgress(ctx context.Context, id uint32, processedDelta int) error {
 	ret := _mock.Called(ctx, id, processedDelta)
 
 	if len(ret) == 0 {
@@ -5158,7 +5158,7 @@ func (_mock *MockTx) IncrementImportScanProgress(ctx context.Context, id uint32,
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, int) error); ok {
 		r0 = returnFunc(ctx, id, processedDelta)
 	} else {
 		r0 = ret.Error(0)
@@ -5174,12 +5174,12 @@ type MockTx_IncrementImportScanProgress_Call struct {
 // IncrementImportScanProgress is a helper method to define mock.On call
 //   - ctx context.Context
 //   - id uint32
-//   - processedDelta uint32
+//   - processedDelta int
 func (_e *MockTx_Expecter) IncrementImportScanProgress(ctx any, id any, processedDelta any) *MockTx_IncrementImportScanProgress_Call {
 	return &MockTx_IncrementImportScanProgress_Call{Call: _e.mock.On("IncrementImportScanProgress", ctx, id, processedDelta)}
 }
 
-func (_c *MockTx_IncrementImportScanProgress_Call) Run(run func(ctx context.Context, id uint32, processedDelta uint32)) *MockTx_IncrementImportScanProgress_Call {
+func (_c *MockTx_IncrementImportScanProgress_Call) Run(run func(ctx context.Context, id uint32, processedDelta int)) *MockTx_IncrementImportScanProgress_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -5189,9 +5189,9 @@ func (_c *MockTx_IncrementImportScanProgress_Call) Run(run func(ctx context.Cont
 		if args[1] != nil {
 			arg1 = args[1].(uint32)
 		}
-		var arg2 uint32
+		var arg2 int
 		if args[2] != nil {
-			arg2 = args[2].(uint32)
+			arg2 = args[2].(int)
 		}
 		run(
 			arg0,
@@ -5207,7 +5207,7 @@ func (_c *MockTx_IncrementImportScanProgress_Call) Return(err error) *MockTx_Inc
 	return _c
 }
 
-func (_c *MockTx_IncrementImportScanProgress_Call) RunAndReturn(run func(ctx context.Context, id uint32, processedDelta uint32) error) *MockTx_IncrementImportScanProgress_Call {
+func (_c *MockTx_IncrementImportScanProgress_Call) RunAndReturn(run func(ctx context.Context, id uint32, processedDelta int) error) *MockTx_IncrementImportScanProgress_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -6086,7 +6086,7 @@ func (_c *MockTx_ListImportScanFilesForCommit_Call) RunAndReturn(run func(ctx co
 }
 
 // ListImportScanShows provides a mock function for the type MockTx
-func (_mock *MockTx) ListImportScanShows(ctx context.Context, p db.ListImportScanShowsParams) ([]*ent.ImportScanShow, uint32, error) {
+func (_mock *MockTx) ListImportScanShows(ctx context.Context, p db.ListImportScanShowsParams) ([]*ent.ImportScanShow, int, error) {
 	ret := _mock.Called(ctx, p)
 
 	if len(ret) == 0 {
@@ -6094,9 +6094,9 @@ func (_mock *MockTx) ListImportScanShows(ctx context.Context, p db.ListImportSca
 	}
 
 	var r0 []*ent.ImportScanShow
-	var r1 uint32
+	var r1 int
 	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ListImportScanShowsParams) ([]*ent.ImportScanShow, uint32, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ListImportScanShowsParams) ([]*ent.ImportScanShow, int, error)); ok {
 		return returnFunc(ctx, p)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ListImportScanShowsParams) []*ent.ImportScanShow); ok {
@@ -6106,10 +6106,10 @@ func (_mock *MockTx) ListImportScanShows(ctx context.Context, p db.ListImportSca
 			r0 = ret.Get(0).([]*ent.ImportScanShow)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, db.ListImportScanShowsParams) uint32); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.ListImportScanShowsParams) int); ok {
 		r1 = returnFunc(ctx, p)
 	} else {
-		r1 = ret.Get(1).(uint32)
+		r1 = ret.Get(1).(int)
 	}
 	if returnFunc, ok := ret.Get(2).(func(context.Context, db.ListImportScanShowsParams) error); ok {
 		r2 = returnFunc(ctx, p)
@@ -6149,12 +6149,12 @@ func (_c *MockTx_ListImportScanShows_Call) Run(run func(ctx context.Context, p d
 	return _c
 }
 
-func (_c *MockTx_ListImportScanShows_Call) Return(importScanShows []*ent.ImportScanShow, v uint32, err error) *MockTx_ListImportScanShows_Call {
-	_c.Call.Return(importScanShows, v, err)
+func (_c *MockTx_ListImportScanShows_Call) Return(importScanShows []*ent.ImportScanShow, n int, err error) *MockTx_ListImportScanShows_Call {
+	_c.Call.Return(importScanShows, n, err)
 	return _c
 }
 
-func (_c *MockTx_ListImportScanShows_Call) RunAndReturn(run func(ctx context.Context, p db.ListImportScanShowsParams) ([]*ent.ImportScanShow, uint32, error)) *MockTx_ListImportScanShows_Call {
+func (_c *MockTx_ListImportScanShows_Call) RunAndReturn(run func(ctx context.Context, p db.ListImportScanShowsParams) ([]*ent.ImportScanShow, int, error)) *MockTx_ListImportScanShows_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -6228,7 +6228,7 @@ func (_c *MockTx_ListImportScanShowsForCommit_Call) RunAndReturn(run func(ctx co
 }
 
 // ListImportScans provides a mock function for the type MockTx
-func (_mock *MockTx) ListImportScans(ctx context.Context, offset uint32, limit uint32) ([]*ent.ImportScan, uint32, error) {
+func (_mock *MockTx) ListImportScans(ctx context.Context, offset uint32, limit uint32) ([]*ent.ImportScan, int, error) {
 	ret := _mock.Called(ctx, offset, limit)
 
 	if len(ret) == 0 {
@@ -6236,9 +6236,9 @@ func (_mock *MockTx) ListImportScans(ctx context.Context, offset uint32, limit u
 	}
 
 	var r0 []*ent.ImportScan
-	var r1 uint32
+	var r1 int
 	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32) ([]*ent.ImportScan, uint32, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32) ([]*ent.ImportScan, int, error)); ok {
 		return returnFunc(ctx, offset, limit)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32) []*ent.ImportScan); ok {
@@ -6248,10 +6248,10 @@ func (_mock *MockTx) ListImportScans(ctx context.Context, offset uint32, limit u
 			r0 = ret.Get(0).([]*ent.ImportScan)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, uint32) uint32); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, uint32) int); ok {
 		r1 = returnFunc(ctx, offset, limit)
 	} else {
-		r1 = ret.Get(1).(uint32)
+		r1 = ret.Get(1).(int)
 	}
 	if returnFunc, ok := ret.Get(2).(func(context.Context, uint32, uint32) error); ok {
 		r2 = returnFunc(ctx, offset, limit)
@@ -6297,12 +6297,12 @@ func (_c *MockTx_ListImportScans_Call) Run(run func(ctx context.Context, offset 
 	return _c
 }
 
-func (_c *MockTx_ListImportScans_Call) Return(importScans []*ent.ImportScan, v uint32, err error) *MockTx_ListImportScans_Call {
-	_c.Call.Return(importScans, v, err)
+func (_c *MockTx_ListImportScans_Call) Return(importScans []*ent.ImportScan, n int, err error) *MockTx_ListImportScans_Call {
+	_c.Call.Return(importScans, n, err)
 	return _c
 }
 
-func (_c *MockTx_ListImportScans_Call) RunAndReturn(run func(ctx context.Context, offset uint32, limit uint32) ([]*ent.ImportScan, uint32, error)) *MockTx_ListImportScans_Call {
+func (_c *MockTx_ListImportScans_Call) RunAndReturn(run func(ctx context.Context, offset uint32, limit uint32) ([]*ent.ImportScan, int, error)) *MockTx_ListImportScans_Call {
 	_c.Call.Return(run)
 	return _c
 }

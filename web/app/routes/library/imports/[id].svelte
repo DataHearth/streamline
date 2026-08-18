@@ -112,7 +112,8 @@
 	let q = $state("");
 	let debouncedQ = $state("");
 	let classification = $state<ImportFileClassification | "">("");
-	const FILE_LIMIT = 200;
+	// The import file/show listings cap limit at 100 per page.
+	const FILE_LIMIT = 100;
 
 	// q feeds the query key, so every keystroke would otherwise be its own cache
 	// entry — a fresh request plus a drop back to the loading state per letter.

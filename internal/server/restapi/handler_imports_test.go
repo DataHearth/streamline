@@ -36,7 +36,7 @@ var _ = Describe("Handler: Import scan shows",
 					Decision:       entimportscanshow.DecisionPending,
 					Outcome:        entimportscanshow.OutcomePending,
 				},
-			}, uint32(1), nil).Once()
+			}, 1, nil).Once()
 
 			resp := app.do(app.req(http.MethodGet,
 				"/api/v1/library/imports/5/shows", app.adminKey, nil))
@@ -44,7 +44,7 @@ var _ = Describe("Handler: Import scan shows",
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			var body ImportScanShowList
 			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
-			Expect(body.Total).To(Equal(uint32(1)))
+			Expect(body.Total).To(Equal(1))
 			Expect(body.Items).To(HaveLen(1))
 			Expect(body.Items[0].FolderPath).To(Equal("/tv/Breaking Bad"))
 		})
@@ -57,7 +57,7 @@ var _ = Describe("Handler: Import scan shows",
 				app.store.EXPECT().ListImportScanShows(mock.Anything,
 					mock.MatchedBy(func(p db.ListImportScanShowsParams) bool {
 						return p.ScanID == 5
-					})).Return([]*ent.ImportScanShow{}, uint32(0), nil).Once()
+					})).Return([]*ent.ImportScanShow{}, 0, nil).Once()
 
 				resp := app.do(app.req(http.MethodGet,
 					"/api/v1/library/imports/5/shows", app.adminKey, nil))
@@ -168,7 +168,7 @@ var _ = Describe("Handler: Import scan files",
 				mock.MatchedBy(func(p bulkimport.FilesParams) bool {
 					return p.ScanID == 999999
 				})).
-				Return(nil, uint32(0), bulkimport.ErrScanNotFound).Once()
+				Return(nil, 0, bulkimport.ErrScanNotFound).Once()
 
 			resp := app.do(app.req(http.MethodGet,
 				"/api/v1/library/imports/999999/files", app.adminKey, nil))

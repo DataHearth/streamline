@@ -194,12 +194,12 @@ func (s *Service) runScan(ctx context.Context, scan *ent.ImportScan) {
 		}
 		return
 	}
-	totalU32 := uint32(len(candidates))
+	total := len(candidates)
 	if err := s.store.UpdateImportScanStatus(
 		ctx,
 		scan.ID,
 		entimportscan.StatusRunning,
-		db.UpdateScanStatusOpts{TotalCount: &totalU32},
+		db.UpdateScanStatusOpts{TotalCount: &total},
 	); err != nil {
 		slog.WarnContext(ctx, "bulk import: failed to set total_count",
 			"scan.id", scan.ID, "error", err)
@@ -240,7 +240,7 @@ func (s *Service) runScan(ctx context.Context, scan *ent.ImportScan) {
 		"scan.outcome",
 		"awaiting_review",
 		"scan.total_count",
-		totalU32,
+		total,
 	)
 }
 
@@ -326,7 +326,7 @@ func (s *Service) runMatchPhase(
 		if err := s.store.IncrementImportScanProgress(
 			ctx,
 			scan.ID,
-			uint32(len(toFlush)),
+			len(toFlush),
 		); err != nil {
 			slog.WarnContext(ctx, "bulk import: failed to increment progress",
 				"scan.id", scan.ID, "delta", len(toFlush), "error", err)

@@ -974,6 +974,7 @@ func loadSecretFiles(c *Config) (map[string]string, error) {
 			return
 		}
 		seen[path] = true
+		//nolint:gosec // path is an operator-configured *_file secret location
 		b, err := os.ReadFile(path)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("read secret file %q: %w", path, err))

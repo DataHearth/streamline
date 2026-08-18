@@ -2226,13 +2226,13 @@ type ImportScanFileDecisionRequestDecision string
 // ImportScanFileList defines model for ImportScanFileList.
 type ImportScanFileList struct {
 	Items []ImportScanFile `json:"items"`
-	Total uint32           `json:"total"`
+	Total int              `json:"total"`
 }
 
 // ImportScanList defines model for ImportScanList.
 type ImportScanList struct {
 	Items []ImportScan `json:"items"`
-	Total uint32       `json:"total"`
+	Total int          `json:"total"`
 }
 
 // ImportScanShow defines model for ImportScanShow.
@@ -2283,7 +2283,7 @@ type ImportScanShowDecisionRequestDecision string
 // ImportScanShowList defines model for ImportScanShowList.
 type ImportScanShowList struct {
 	Items []ImportScanShow `json:"items"`
-	Total uint32           `json:"total"`
+	Total int              `json:"total"`
 }
 
 // Indexer defines model for Indexer.
@@ -2380,7 +2380,7 @@ type LibraryConfigView struct {
 // runtime/release_date/tmdb_id, series fill network/season_count/status.
 type LookupDetail struct {
 	Cast             *[]CastMember `json:"cast,omitempty"`
-	EpisodeCount     *uint16       `json:"episode_count,omitempty"`
+	EpisodeCount     *int          `json:"episode_count,omitempty"`
 	Genres           *[]string     `json:"genres,omitempty"`
 	ImdbId           *string       `json:"imdb_id,omitempty"`
 	Network          *string       `json:"network,omitempty"`
@@ -2393,7 +2393,7 @@ type LookupDetail struct {
 
 	// Runtime Feature length for a movie, average episode length for a series.
 	Runtime     *uint16 `json:"runtime,omitempty"`
-	SeasonCount *uint16 `json:"season_count,omitempty"`
+	SeasonCount *int    `json:"season_count,omitempty"`
 	Status      *string `json:"status,omitempty"`
 	Tagline     *string `json:"tagline,omitempty"`
 	TmdbId      *uint32 `json:"tmdb_id,omitempty"`
@@ -2538,16 +2538,16 @@ type MovieStatus string
 
 // MovieCounts defines model for MovieCounts.
 type MovieCounts struct {
-	Available   uint32 `json:"available"`
-	Downloading uint32 `json:"downloading"`
-	Failed      uint32 `json:"failed"`
-	Total       uint32 `json:"total"`
+	Available   int `json:"available"`
+	Downloading int `json:"downloading"`
+	Failed      int `json:"failed"`
+	Total       int `json:"total"`
 
 	// Trend Cumulative library size at the end of each day over the last 30
 	// days, oldest first. The final element equals `total`. All zeros
 	// when the library is empty.
-	Trend  []uint32 `json:"trend"`
-	Wanted uint32   `json:"wanted"`
+	Trend  []int `json:"trend"`
+	Wanted int   `json:"wanted"`
 }
 
 // MovieRecommendations defines model for MovieRecommendations.
@@ -2600,7 +2600,7 @@ type PaginatedMovies struct {
 	Items []Movie `json:"items"`
 	Limit uint16  `json:"limit"`
 	Page  uint32  `json:"page"`
-	Total uint32  `json:"total"`
+	Total int     `json:"total"`
 }
 
 // PaginatedRequests defines model for PaginatedRequests.
@@ -2608,7 +2608,7 @@ type PaginatedRequests struct {
 	Items []Request `json:"items"`
 	Limit uint32    `json:"limit"`
 	Page  uint32    `json:"page"`
-	Total uint32    `json:"total"`
+	Total int       `json:"total"`
 }
 
 // PaginatedTVShows defines model for PaginatedTVShows.
@@ -2616,7 +2616,7 @@ type PaginatedTVShows struct {
 	Items []TVShow `json:"items"`
 	Limit uint16   `json:"limit"`
 	Page  uint32   `json:"page"`
-	Total uint32   `json:"total"`
+	Total int      `json:"total"`
 }
 
 // PatchSeriesRequest defines model for PatchSeriesRequest.
@@ -2872,7 +2872,7 @@ type RequestCounts struct {
 // RequestMediaDetails defines model for RequestMediaDetails.
 type RequestMediaDetails struct {
 	Cast             *[]CastMember `json:"cast,omitempty"`
-	EpisodeCount     *uint16       `json:"episode_count,omitempty"`
+	EpisodeCount     *int          `json:"episode_count,omitempty"`
 	Genres           *[]string     `json:"genres,omitempty"`
 	ImdbId           *string       `json:"imdb_id,omitempty"`
 	Network          *string       `json:"network,omitempty"`
@@ -2886,7 +2886,7 @@ type RequestMediaDetails struct {
 
 	// Runtime Feature length for a movie, average episode length for a series.
 	Runtime     *uint16 `json:"runtime,omitempty"`
-	SeasonCount *uint16 `json:"season_count,omitempty"`
+	SeasonCount *int    `json:"season_count,omitempty"`
 	Status      *string `json:"status,omitempty"`
 	Tagline     *string `json:"tagline,omitempty"`
 	TmdbId      *uint32 `json:"tmdb_id,omitempty"`
@@ -2921,7 +2921,7 @@ type Schedule struct {
 	//
 	// Example: 15m
 	Interval       string     `json:"interval"`
-	LastDurationMs int32      `json:"last_duration_ms"`
+	LastDurationMs uint32     `json:"last_duration_ms"`
 	LastError      *string    `json:"last_error,omitempty"`
 	LastFinishedAt *time.Time `json:"last_finished_at,omitempty"`
 	LastStartedAt  *time.Time `json:"last_started_at,omitempty"`
@@ -3100,7 +3100,7 @@ type TVShow struct {
 	Genres  *[]string     `json:"genres,omitempty"`
 
 	// HaveEpisodes Episodes with a media file. Rolled up across seasons.
-	HaveEpisodes *uint32 `json:"have_episodes,omitempty"`
+	HaveEpisodes *int    `json:"have_episodes,omitempty"`
 	Id           uint32  `json:"id"`
 	Monitored    bool    `json:"monitored"`
 	Network      *string `json:"network,omitempty"`
@@ -3122,13 +3122,13 @@ type TVShow struct {
 	Seasons       *[]Season          `json:"seasons,omitempty"`
 	SeriesStatus  TVShowSeriesStatus `json:"series_status"`
 	Title         string             `json:"title"`
-	TotalEpisodes *uint32            `json:"total_episodes,omitempty"`
+	TotalEpisodes *int               `json:"total_episodes,omitempty"`
 	TvdbId        uint32             `json:"tvdb_id"`
 	Type          TVShowType         `json:"type"`
 
 	// WantedEpisodes Aired/undated episodes without a file (the "missing" count).
-	WantedEpisodes *uint32 `json:"wanted_episodes,omitempty"`
-	Year           uint16  `json:"year"`
+	WantedEpisodes *int   `json:"wanted_episodes,omitempty"`
+	Year           uint16 `json:"year"`
 }
 
 // TVShowSeriesStatus defines model for TVShow.SeriesStatus.
@@ -3353,7 +3353,7 @@ type UserList struct {
 	Items []User `json:"items"`
 
 	// Total Total number of users matching the filter.
-	Total uint32 `json:"total"`
+	Total int `json:"total"`
 }
 
 // ActivityBefore defines model for ActivityBefore.
@@ -3432,7 +3432,7 @@ type RequestLimit = uint32
 type RequestMediaTypeParam string
 
 // RequestPage defines model for RequestPage.
-type RequestPage = uint32
+type RequestPage = uint16
 
 // RequestStatusParam defines model for RequestStatusParam.
 type RequestStatusParam string
@@ -3456,7 +3456,7 @@ type SeriesLimit = uint16
 type SeriesLookupQuery = string
 
 // SeriesPage defines model for SeriesPage.
-type SeriesPage = uint32
+type SeriesPage = uint16
 
 // SeriesQuery defines model for SeriesQuery.
 type SeriesQuery = string
@@ -3768,7 +3768,7 @@ type ListImportShowsParamsClassification string
 
 // ListMoviesParams defines parameters for ListMovies.
 type ListMoviesParams struct {
-	Page  *uint32 `form:"page,omitempty" json:"page,omitempty"`
+	Page  *uint16 `form:"page,omitempty" json:"page,omitempty"`
 	Limit *uint16 `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -12390,6 +12390,20 @@ func (response ListImports200JSONResponse) VisitListImportsResponse(w http.Respo
 	return err
 }
 
+type ListImports400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListImports400JSONResponse) VisitListImportsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListImports403JSONResponse struct{ ForbiddenJSONResponse }
 
 func (response ListImports403JSONResponse) VisitListImportsResponse(w http.ResponseWriter) error {
@@ -12741,6 +12755,20 @@ func (response ListImportFiles200JSONResponse) VisitListImportFilesResponse(w ht
 	return err
 }
 
+type ListImportFiles400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListImportFiles400JSONResponse) VisitListImportFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListImportFiles403JSONResponse struct{ ForbiddenJSONResponse }
 
 func (response ListImportFiles403JSONResponse) VisitListImportFilesResponse(w http.ResponseWriter) error {
@@ -12854,6 +12882,20 @@ func (response ListImportShows200JSONResponse) VisitListImportShowsResponse(w ht
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListImportShows400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListImportShows400JSONResponse) VisitListImportShowsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -13777,6 +13819,20 @@ func (response ListMovies200JSONResponse) VisitListMoviesResponse(w http.Respons
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListMovies400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListMovies400JSONResponse) VisitListMoviesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -14849,6 +14905,20 @@ func (response ListRequests200JSONResponse) VisitListRequestsResponse(w http.Res
 	return err
 }
 
+type ListRequests400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListRequests400JSONResponse) VisitListRequestsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListRequests401JSONResponse struct{ UnauthorizedJSONResponse }
 
 func (response ListRequests401JSONResponse) VisitListRequestsResponse(w http.ResponseWriter) error {
@@ -15842,6 +15912,20 @@ func (response ListSeries200JSONResponse) VisitListSeriesResponse(w http.Respons
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListSeries400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListSeries400JSONResponse) VisitListSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -17489,6 +17573,20 @@ func (response ListUsers200JSONResponse) VisitListUsersResponse(w http.ResponseW
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListUsers400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListUsers400JSONResponse) VisitListUsersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
 	_, err := buf.WriteTo(w)
 	return err
 }

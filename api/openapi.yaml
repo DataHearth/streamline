@@ -49,13 +49,16 @@ paths:
           schema:
             type: integer
             default: 1
-            x-go-type: uint32
+            minimum: 1
+            maximum: 65535
+            x-go-type: uint16
         - name: limit
           in: query
           schema:
             type: integer
             default: 20
-            maximum: 100
+            minimum: 1
+            maximum: 500
             x-go-type: uint16
       responses:
         "200":
@@ -64,6 +67,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PaginatedMovies"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "500":
           $ref: "#/components/responses/InternalError"
     post:
@@ -389,6 +394,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/SeriesList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "500":
           $ref: "#/components/responses/InternalError"
     post:
@@ -1845,7 +1852,8 @@ paths:
         - in: query
           name: limit
           description: Max items per page (1..100).
-          schema: { type: integer, default: 25, maximum: 100, x-go-type: uint16 }
+          schema:
+            { type: integer, default: 25, minimum: 1, maximum: 100, x-go-type: uint16 }
         - in: query
           name: offset
           description: Zero-based offset for pagination.
@@ -1855,6 +1863,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/UsersList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "403":
           $ref: "#/components/responses/Forbidden"
     post:
@@ -2158,6 +2168,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/ImportScanList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "403":
           $ref: "#/components/responses/Forbidden"
     post:
@@ -2249,6 +2261,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/ImportScanFileList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "403":
           $ref: "#/components/responses/Forbidden"
         "404":
@@ -2287,6 +2301,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/ImportScanShowList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "403":
           $ref: "#/components/responses/Forbidden"
         "404":
@@ -2634,6 +2650,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/RequestsList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "500":
@@ -2862,8 +2880,10 @@ components:
       required: false
       schema:
         type: integer
-        x-go-type: uint32
+        x-go-type: uint16
         default: 1
+        minimum: 1
+        maximum: 65535
     RequestLimit:
       name: limit
       in: query
@@ -2872,7 +2892,8 @@ components:
         type: integer
         x-go-type: uint32
         default: 50
-        maximum: 100
+        minimum: 1
+        maximum: 500
     UserID:
       name: uid
       in: path
@@ -2937,6 +2958,7 @@ components:
         type: integer
         x-go-type: uint16
         minimum: 1
+        maximum: 65535
         default: 1
     ImportLimit:
       name: limit
@@ -3067,7 +3089,9 @@ components:
       schema:
         type: integer
         default: 1
-        x-go-type: uint32
+        minimum: 1
+        maximum: 65535
+        x-go-type: uint16
 
     SeriesLimit:
       name: limit
@@ -3075,7 +3099,8 @@ components:
       schema:
         type: integer
         default: 20
-        maximum: 100
+        minimum: 1
+        maximum: 500
         x-go-type: uint16
 
     SeriesStatus:
@@ -4166,7 +4191,6 @@ components:
             $ref: "#/components/schemas/Movie"
         total:
           type: integer
-          x-go-type: uint32
         page:
           type: integer
           x-go-type: uint32
@@ -4180,19 +4204,14 @@ components:
       properties:
         total:
           type: integer
-          x-go-type: uint32
         wanted:
           type: integer
-          x-go-type: uint32
         downloading:
           type: integer
-          x-go-type: uint32
         available:
           type: integer
-          x-go-type: uint32
         failed:
           type: integer
-          x-go-type: uint32
         trend:
           type: array
           description: |
@@ -4201,7 +4220,6 @@ components:
             when the library is empty.
           items:
             type: integer
-            x-go-type: uint32
 
     TVShow:
       type: object
@@ -4256,14 +4274,11 @@ components:
         have_episodes:
           type: integer
           description: Episodes with a media file. Rolled up across seasons.
-          x-go-type: uint32
         total_episodes:
           type: integer
-          x-go-type: uint32
         wanted_episodes:
           type: integer
           description: Aired/undated episodes without a file (the "missing" count).
-          x-go-type: uint32
         seasons:
           type: array
           nullable: true
@@ -4364,7 +4379,6 @@ components:
             $ref: "#/components/schemas/TVShow"
         total:
           type: integer
-          x-go-type: uint32
         page:
           type: integer
           x-go-type: uint32
@@ -5171,7 +5185,6 @@ components:
         total:
           type: integer
           description: Total number of users matching the filter.
-          x-go-type: uint32
 
     UserDetail:
       type: object
@@ -5487,8 +5500,10 @@ components:
           nullable: true
         last_duration_ms:
           type: integer
-          format: int32
+          format: int64
           minimum: 0
+          maximum: 4294967295
+          x-go-type: uint32
         last_error:
           type: string
           nullable: true
@@ -5807,7 +5822,6 @@ components:
             $ref: "#/components/schemas/ImportScan"
         total:
           type: integer
-          x-go-type: uint32
 
     ImportScanFileList:
       type: object
@@ -5819,7 +5833,6 @@ components:
             $ref: "#/components/schemas/ImportScanFile"
         total:
           type: integer
-          x-go-type: uint32
 
     ImportScanShowCandidate:
       type: object
@@ -5900,7 +5913,6 @@ components:
             $ref: "#/components/schemas/ImportScanShow"
         total:
           type: integer
-          x-go-type: uint32
 
     ImportScanShowDecisionRequest:
       type: object
@@ -6229,7 +6241,6 @@ components:
             $ref: "#/components/schemas/Request"
         total:
           type: integer
-          x-go-type: uint32
         page:
           type: integer
           x-go-type: uint32
@@ -6328,10 +6339,8 @@ components:
           type: string
         season_count:
           type: integer
-          x-go-type: uint16
         episode_count:
           type: integer
-          x-go-type: uint16
         status:
           type: string
 

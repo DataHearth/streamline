@@ -77,8 +77,8 @@ func (s *Service) RunSeriesOrphanScan(ctx context.Context) error {
 		c := bulkimport.ClassifyShow(p.Title, p.Year, hits, trackedByTVDB)
 		queue = append(
 			queue,
-			bulkimport.BuildShowParams(folder, p, c, uint16(len(files))),
-		) //nolint:gosec // file count is bounded
+			bulkimport.BuildShowParams(folder, p, c, len(files)),
+		)
 	}
 
 	if len(queue) == 0 {

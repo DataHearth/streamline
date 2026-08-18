@@ -345,7 +345,7 @@ func placeFile(
 	}
 	span.SetAttributes(attribute.String("dest.path", destPath))
 
-	if err := os.MkdirAll(filepath.Dir(destPath), 0o755); err != nil {
+	if err := MkdirLibraryDir(filepath.Dir(destPath)); err != nil {
 		outcome = "mkdir_failed"
 		return ImportedFile{}, otelx.RecordSpanError(
 			span,
@@ -405,13 +405,21 @@ func transferFile(src, dst, mode string) error {
 	}
 }
 
+// MkdirLibraryDir creates a media library directory. The mode is 0755 —
+// world-readable on purpose, and the one place that says so: Plex, Jellyfin
+// and Emby read the library from another uid, typically another container.
+func MkdirLibraryDir(path string) error {
+	//nolint:gosec // see above: media servers read the library from another uid
+	return os.MkdirAll(path, 0o755)
+}
+
 // MoveFile relocates src to dst, creating dst's parent first. os.Rename does
 // it in a single metadata op when both sides share a filesystem; EXDEV means
 // they don't, and the only way across is a full copy. A failed copy takes the
 // half-written destination with it so no truncated media file is left behind
 // at a path the library considers valid.
 func MoveFile(ctx context.Context, src, dst string) error {
-	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+	if err := MkdirLibraryDir(filepath.Dir(dst)); err != nil {
 		return fmt.Errorf("mkdir %s: %w", filepath.Dir(dst), err)
 	}
 	err := os.Rename(src, dst)
@@ -429,12 +437,16 @@ func MoveFile(ctx context.Context, src, dst string) error {
 }
 
 func copyFile(src, dst string) error {
+	//nolint:gosec // every caller hands it operator-scoped paths: placeFile
+	// renders dst through SanitizePath plus the ErrUnsafePath root check, and
+	// pathmigrate rewrites stored DB paths against operator-configured roots
 	in, err := os.Open(src)
 	if err != nil {
 		return err
 	}
 	defer in.Close()
 
+	//nolint:gosec // see above: both callers constrain dst to operator roots
 	out, err := os.Create(dst)
 	if err != nil {
 		return err

@@ -6,6 +6,7 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/metadata"
+	"github.com/datahearth/streamline/internal/utils/numeric"
 )
 
 const showCandidateLimit = 5
@@ -71,14 +72,14 @@ func BuildShowParams(
 	folder string,
 	p library.ParseResult,
 	c ShowClassification,
-	fileCount uint16,
+	fileCount int,
 ) db.CreateImportScanShowParams {
 	params := db.CreateImportScanShowParams{
 		FolderPath:     folder,
 		ParsedTitle:    p.Title,
 		Classification: c.Kind,
 		Candidates:     c.Candidates,
-		FileCount:      fileCount,
+		FileCount:      numeric.SaturateU16(fileCount),
 	}
 	if p.Year != 0 {
 		year := p.Year

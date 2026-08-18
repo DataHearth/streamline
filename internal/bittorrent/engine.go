@@ -93,7 +93,7 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 		return nil, err
 	}
 	sessionDir := filepath.Join(entry.DownloadDir, sessionDirName)
-	if err := os.MkdirAll(sessionDir, 0o755); err != nil {
+	if err := os.MkdirAll(sessionDir, 0o750); err != nil {
 		return nil, fmt.Errorf("create session dir: %w", err)
 	}
 	pc, err := storage.NewBoltPieceCompletion(sessionDir)
