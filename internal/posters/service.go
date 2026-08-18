@@ -62,7 +62,7 @@ type posters struct {
 }
 
 func New(dataDir string) (Manager, error) {
-	if err := os.MkdirAll(filepath.Join(dataDir, "posters"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(dataDir, "posters"), 0o750); err != nil {
 		return nil, fmt.Errorf("create posters dir: %w", err)
 	}
 	return &posters{dataDir: dataDir, client: otelx.HTTPClient}, nil
@@ -115,7 +115,7 @@ func (p *posters) Fetch(
 	if st, err := os.Stat(dst); err == nil && st.Size() > 0 {
 		return nil
 	}
-	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(dst), 0o750); err != nil {
 		return otelx.RecordSpanError(span, fmt.Errorf("mkdir poster dir: %w", err))
 	}
 
