@@ -11,6 +11,7 @@ import (
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/season"
+	"github.com/datahearth/streamline/internal/ffmpeg"
 )
 
 // withEpisodeContext eager-loads the Episode edge of an importing record along
@@ -233,6 +234,7 @@ type MediaFileRow struct {
 	Quality      string
 	Format       string
 	ReleaseGroup string
+	Probe        *ffmpeg.Info // nil leaves probed_at NULL for the backfill
 }
 
 type RecordImportFailureParams struct {
@@ -288,14 +290,17 @@ func (db *DB) RecordImportSuccess(
 		return err
 	}
 
-	if _, err := tx.MediaFile.Create().
+	mc := tx.MediaFile.Create().
 		SetPath(p.File.Path).
 		SetSize(p.File.Size).
 		SetQuality(p.File.Quality).
 		SetFormat(p.File.Format).
 		SetReleaseGroup(p.File.ReleaseGroup).
-		SetMovieID(p.MovieID).
-		Save(ctx); err != nil {
+		SetMovieID(p.MovieID)
+	if p.File.Probe != nil {
+		mc = applyProbe(mc, p.File.Probe)
+	}
+	if _, err := mc.Save(ctx); err != nil {
 		tx.Rollback()
 		return fmt.Errorf("create media file: %w", err)
 	}
@@ -335,14 +340,17 @@ func (db *DB) RecordEpisodeImportSuccess(
 	if err != nil {
 		return err
 	}
-	if _, err := tx.MediaFile.Create().
+	ec := tx.MediaFile.Create().
 		SetPath(p.File.Path).
 		SetSize(p.File.Size).
 		SetQuality(p.File.Quality).
 		SetFormat(p.File.Format).
 		SetReleaseGroup(p.File.ReleaseGroup).
-		SetEpisodeID(p.EpisodeID).
-		Save(ctx); err != nil {
+		SetEpisodeID(p.EpisodeID)
+	if p.File.Probe != nil {
+		ec = applyProbe(ec, p.File.Probe)
+	}
+	if _, err := ec.Save(ctx); err != nil {
 		tx.Rollback()
 		return fmt.Errorf("create media file: %w", err)
 	}

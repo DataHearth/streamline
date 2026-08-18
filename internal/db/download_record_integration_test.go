@@ -11,6 +11,7 @@ import (
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
 	entmovie "github.com/datahearth/streamline/ent/movie"
+	"github.com/datahearth/streamline/internal/ffmpeg"
 )
 
 var _ = Describe("Download record store", Label("integration", "db"), func() {
@@ -199,6 +200,56 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 				Expect(count).To(Equal(0))
 			})
 		})
+
+		It(
+			"persists probe columns and stamps probed_at when File.Probe is set",
+			func() {
+				rec := createRec("abc", downloadrecord.StatusImporting)
+				err := store.RecordImportSuccess(ctx, RecordImportSuccessParams{
+					RecordID: rec.ID, MovieID: movieID,
+					File: MediaFileRow{
+						Path: "/lib/dune.mkv", Size: 1024,
+						Quality: "1080p", Format: "mkv", ReleaseGroup: "GROUP",
+						Probe: &ffmpeg.Info{
+							Container: "matroska", DurationSec: 5400,
+							VideoCodec: "h264", Width: 1920, Height: 1080,
+							AudioCodec: "aac", AudioChannels: 2,
+							BitrateBPS: 8_000_000,
+						},
+					},
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				mf, err := client.MediaFile.Query().Only(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(mf.Container).To(Equal("matroska"))
+				Expect(mf.DurationSeconds).To(Equal(uint32(5400)))
+				Expect(mf.VideoCodec).To(Equal("h264"))
+				Expect(mf.Width).To(Equal(uint16(1920)))
+				Expect(mf.Height).To(Equal(uint16(1080)))
+				Expect(mf.AudioCodec).To(Equal("aac"))
+				Expect(mf.AudioChannels).To(Equal(uint8(2)))
+				Expect(mf.Bitrate).To(Equal(uint32(8_000_000)))
+				Expect(mf.ProbedAt).NotTo(BeNil())
+			},
+		)
+
+		It("leaves probed_at nil when File.Probe is nil", func() {
+			rec := createRec("abc", downloadrecord.StatusImporting)
+			err := store.RecordImportSuccess(ctx, RecordImportSuccessParams{
+				RecordID: rec.ID, MovieID: movieID,
+				File: MediaFileRow{
+					Path: "/lib/dune.mkv", Size: 1024,
+					Quality: "1080p", Format: "mkv", ReleaseGroup: "GROUP",
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			mf, err := client.MediaFile.Query().Only(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(mf.ProbedAt).To(BeNil())
+			Expect(mf.VideoCodec).To(BeEmpty())
+		})
 	})
 
 	Describe("RecordImportFailure", func() {
@@ -240,6 +291,96 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 				Expect(m.Status).To(Equal(entmovie.StatusFailed))
 				Expect(m.FailureReason).To(Equal("bad file"))
 			})
+		})
+	})
+
+	Describe("RecordEpisodeImportSuccess", func() {
+		createEpisode := func(tvdb uint32) uint32 {
+			GinkgoHelper()
+			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "The Black Sea", Year: 2024, TvdbID: tvdb,
+				Seasons: []SeasonSeed{{
+					Number:   1,
+					Episodes: []EpisodeSeed{{Number: 1, Title: "Pilot"}},
+				}},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			return show.Edges.Seasons[0].Edges.Episodes[0].ID
+		}
+
+		It(
+			"persists probe columns and stamps probed_at when File.Probe is set",
+			func() {
+				episodeID := createEpisode(9101)
+				rec, err := store.CreateDownloadRecord(
+					ctx,
+					CreateDownloadRecordParams{
+						Title: "t", Size: 1, TorrentHash: "tv",
+						Status:             downloadrecord.StatusImporting,
+						EpisodeID:          episodeID,
+						DownloadClientName: clientName,
+					},
+				)
+				Expect(err).NotTo(HaveOccurred())
+
+				err = store.RecordEpisodeImportSuccess(
+					ctx,
+					RecordEpisodeImportSuccessParams{
+						RecordID: rec.ID, EpisodeID: episodeID,
+						File: MediaFileRow{
+							Path: "/lib/bear.mkv", Size: 1024,
+							Quality: "1080p", Format: "mkv", ReleaseGroup: "GROUP",
+							Probe: &ffmpeg.Info{
+								Container: "matroska", DurationSec: 1500,
+								VideoCodec: "hevc", Width: 1920, Height: 1080,
+								AudioCodec: "aac", AudioChannels: 2,
+								BitrateBPS: 6_000_000,
+							},
+						},
+					},
+				)
+				Expect(err).NotTo(HaveOccurred())
+
+				mf, err := client.MediaFile.Query().Only(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(mf.Container).To(Equal("matroska"))
+				Expect(mf.DurationSeconds).To(Equal(uint32(1500)))
+				Expect(mf.VideoCodec).To(Equal("hevc"))
+				Expect(mf.Width).To(Equal(uint16(1920)))
+				Expect(mf.Height).To(Equal(uint16(1080)))
+				Expect(mf.AudioCodec).To(Equal("aac"))
+				Expect(mf.AudioChannels).To(Equal(uint8(2)))
+				Expect(mf.Bitrate).To(Equal(uint32(6_000_000)))
+				Expect(mf.ProbedAt).NotTo(BeNil())
+			},
+		)
+
+		It("leaves probed_at nil when File.Probe is nil", func() {
+			episodeID := createEpisode(9102)
+			rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "t", Size: 1, TorrentHash: "tv2",
+				Status:             downloadrecord.StatusImporting,
+				EpisodeID:          episodeID,
+				DownloadClientName: clientName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			err = store.RecordEpisodeImportSuccess(
+				ctx,
+				RecordEpisodeImportSuccessParams{
+					RecordID: rec.ID, EpisodeID: episodeID,
+					File: MediaFileRow{
+						Path: "/lib/bear.mkv", Size: 1024,
+						Quality: "1080p", Format: "mkv", ReleaseGroup: "GROUP",
+					},
+				},
+			)
+			Expect(err).NotTo(HaveOccurred())
+
+			mf, err := client.MediaFile.Query().Only(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(mf.ProbedAt).To(BeNil())
+			Expect(mf.VideoCodec).To(BeEmpty())
 		})
 	})
 

@@ -9,6 +9,7 @@ import (
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
+	"github.com/datahearth/streamline/internal/ffmpeg"
 )
 
 type CreateMediaFileParams struct {
@@ -20,6 +21,35 @@ type CreateMediaFileParams struct {
 	MovieID      uint32 // set for movie files; mutually exclusive with EpisodeID
 	EpisodeID    uint32 // set for episode files (e.g. series adoption)
 	Source       mediafile.Source
+	Probe        *ffmpeg.Info // set to stamp probed_at at create time; nil leaves probed_at NULL for the backfill
+}
+
+// applyProbe copies probe info onto a MediaFile create/update builder. One
+// place, because three write paths and the backfill job all set these fields.
+// A nil info still stamps probed_at, so a failed probe is not retried forever.
+func applyProbe[T interface {
+	SetContainer(string) T
+	SetDurationSeconds(uint32) T
+	SetVideoCodec(string) T
+	SetWidth(uint16) T
+	SetHeight(uint16) T
+	SetAudioCodec(string) T
+	SetAudioChannels(uint8) T
+	SetBitrate(uint32) T
+	SetProbedAt(time.Time) T
+}](q T, info *ffmpeg.Info) T {
+	q = q.SetProbedAt(time.Now())
+	if info == nil {
+		return q
+	}
+	return q.SetContainer(info.Container).
+		SetDurationSeconds(info.DurationSec).
+		SetVideoCodec(info.VideoCodec).
+		SetWidth(info.Width).
+		SetHeight(info.Height).
+		SetAudioCodec(info.AudioCodec).
+		SetAudioChannels(info.AudioChannels).
+		SetBitrate(info.BitrateBPS)
 }
 
 func (db *DB) CreateMediaFile(
@@ -41,7 +71,41 @@ func (db *DB) CreateMediaFile(
 	if p.Source != "" {
 		q = q.SetSource(p.Source)
 	}
+	if p.Probe != nil {
+		q = applyProbe(q, p.Probe)
+	}
 	return q.Save(ctx)
+}
+
+// ListUnprobedMediaFiles returns up to limit rows that have never been probed
+// (probed_at IS NULL), oldest-first, for the backfill job to work through.
+func (db *DB) ListUnprobedMediaFiles(
+	ctx context.Context,
+	limit int,
+) ([]*ent.MediaFile, error) {
+	rows, err := db.client.MediaFile.Query().
+		Where(mediafile.ProbedAtIsNil()).
+		Order(ent.Asc(mediafile.FieldID)).
+		Limit(limit).
+		All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list unprobed media_files: %w", err)
+	}
+	return rows, nil
+}
+
+// StampMediaFileProbe records a probe attempt's result. A nil info (failed
+// probe) still sets probed_at, so ListUnprobedMediaFiles never re-selects it.
+func (db *DB) StampMediaFileProbe(
+	ctx context.Context,
+	id uint32,
+	info *ffmpeg.Info,
+) error {
+	if err := applyProbe(db.client.MediaFile.UpdateOneID(id), info).
+		Exec(ctx); err != nil {
+		return fmt.Errorf("stamp probe on media_file %d: %w", id, err)
+	}
+	return nil
 }
 
 // FindMediaFileByID returns a single MediaFile by ID, or ent NotFound.
