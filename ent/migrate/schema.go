@@ -41,7 +41,7 @@ var (
 		{Name: "title", Type: field.TypeString},
 		{Name: "quality", Type: field.TypeString, Nullable: true},
 		{Name: "size", Type: field.TypeInt64, Nullable: true},
-		{Name: "status", Type: field.TypeEnum, Enums: []string{"downloading", "importing", "completed", "failed", "pending", "dismissed"}, Default: "downloading"},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"downloading", "importing", "completed", "failed", "pending", "dismissed", "held"}, Default: "downloading"},
 		{Name: "torrent_hash", Type: field.TypeString, Nullable: true},
 		{Name: "release_group", Type: field.TypeString, Nullable: true},
 		{Name: "save_path", Type: field.TypeString, Nullable: true},
@@ -51,6 +51,8 @@ var (
 		{Name: "indexer_name", Type: field.TypeString, Nullable: true},
 		{Name: "download_client_name", Type: field.TypeString, Nullable: true},
 		{Name: "replace_existing", Type: field.TypeBool, Default: false},
+		{Name: "hold_reasons", Type: field.TypeJSON, Nullable: true},
+		{Name: "verification_bypassed", Type: field.TypeBool, Default: false},
 		{Name: "episode_download_records", Type: field.TypeUint32, Nullable: true},
 		{Name: "movie_download_records", Type: field.TypeUint32, Nullable: true},
 	}
@@ -62,13 +64,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "download_records_episodes_download_records",
-				Columns:    []*schema.Column{DownloadRecordsColumns[16]},
+				Columns:    []*schema.Column{DownloadRecordsColumns[18]},
 				RefColumns: []*schema.Column{EpisodesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "download_records_movies_download_records",
-				Columns:    []*schema.Column{DownloadRecordsColumns[17]},
+				Columns:    []*schema.Column{DownloadRecordsColumns[19]},
 				RefColumns: []*schema.Column{MoviesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},

@@ -10,11 +10,13 @@ import (
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"entgo.io/ent/dialect/sql/sqljson"
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/predicate"
+	"github.com/datahearth/streamline/ent/schema"
 )
 
 // DownloadRecordUpdate is the builder for updating DownloadRecord entities.
@@ -286,6 +288,38 @@ func (_u *DownloadRecordUpdate) SetNillableReplaceExisting(v *bool) *DownloadRec
 	return _u
 }
 
+// SetHoldReasons sets the "hold_reasons" field.
+func (_u *DownloadRecordUpdate) SetHoldReasons(v []schema.HoldReason) *DownloadRecordUpdate {
+	_u.mutation.SetHoldReasons(v)
+	return _u
+}
+
+// AppendHoldReasons appends value to the "hold_reasons" field.
+func (_u *DownloadRecordUpdate) AppendHoldReasons(v []schema.HoldReason) *DownloadRecordUpdate {
+	_u.mutation.AppendHoldReasons(v)
+	return _u
+}
+
+// ClearHoldReasons clears the value of the "hold_reasons" field.
+func (_u *DownloadRecordUpdate) ClearHoldReasons() *DownloadRecordUpdate {
+	_u.mutation.ClearHoldReasons()
+	return _u
+}
+
+// SetVerificationBypassed sets the "verification_bypassed" field.
+func (_u *DownloadRecordUpdate) SetVerificationBypassed(v bool) *DownloadRecordUpdate {
+	_u.mutation.SetVerificationBypassed(v)
+	return _u
+}
+
+// SetNillableVerificationBypassed sets the "verification_bypassed" field if the given value is not nil.
+func (_u *DownloadRecordUpdate) SetNillableVerificationBypassed(v *bool) *DownloadRecordUpdate {
+	if v != nil {
+		_u.SetVerificationBypassed(*v)
+	}
+	return _u
+}
+
 // SetMovieID sets the "movie" edge to the Movie entity by ID.
 func (_u *DownloadRecordUpdate) SetMovieID(id uint32) *DownloadRecordUpdate {
 	_u.mutation.SetMovieID(id)
@@ -478,6 +512,20 @@ func (_u *DownloadRecordUpdate) sqlSave(ctx context.Context) (_node int, err err
 	}
 	if value, ok := _u.mutation.ReplaceExisting(); ok {
 		_spec.SetField(downloadrecord.FieldReplaceExisting, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.HoldReasons(); ok {
+		_spec.SetField(downloadrecord.FieldHoldReasons, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedHoldReasons(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, downloadrecord.FieldHoldReasons, value)
+		})
+	}
+	if _u.mutation.HoldReasonsCleared() {
+		_spec.ClearField(downloadrecord.FieldHoldReasons, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.VerificationBypassed(); ok {
+		_spec.SetField(downloadrecord.FieldVerificationBypassed, field.TypeBool, value)
 	}
 	if _u.mutation.MovieCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -813,6 +861,38 @@ func (_u *DownloadRecordUpdateOne) SetNillableReplaceExisting(v *bool) *Download
 	return _u
 }
 
+// SetHoldReasons sets the "hold_reasons" field.
+func (_u *DownloadRecordUpdateOne) SetHoldReasons(v []schema.HoldReason) *DownloadRecordUpdateOne {
+	_u.mutation.SetHoldReasons(v)
+	return _u
+}
+
+// AppendHoldReasons appends value to the "hold_reasons" field.
+func (_u *DownloadRecordUpdateOne) AppendHoldReasons(v []schema.HoldReason) *DownloadRecordUpdateOne {
+	_u.mutation.AppendHoldReasons(v)
+	return _u
+}
+
+// ClearHoldReasons clears the value of the "hold_reasons" field.
+func (_u *DownloadRecordUpdateOne) ClearHoldReasons() *DownloadRecordUpdateOne {
+	_u.mutation.ClearHoldReasons()
+	return _u
+}
+
+// SetVerificationBypassed sets the "verification_bypassed" field.
+func (_u *DownloadRecordUpdateOne) SetVerificationBypassed(v bool) *DownloadRecordUpdateOne {
+	_u.mutation.SetVerificationBypassed(v)
+	return _u
+}
+
+// SetNillableVerificationBypassed sets the "verification_bypassed" field if the given value is not nil.
+func (_u *DownloadRecordUpdateOne) SetNillableVerificationBypassed(v *bool) *DownloadRecordUpdateOne {
+	if v != nil {
+		_u.SetVerificationBypassed(*v)
+	}
+	return _u
+}
+
 // SetMovieID sets the "movie" edge to the Movie entity by ID.
 func (_u *DownloadRecordUpdateOne) SetMovieID(id uint32) *DownloadRecordUpdateOne {
 	_u.mutation.SetMovieID(id)
@@ -1035,6 +1115,20 @@ func (_u *DownloadRecordUpdateOne) sqlSave(ctx context.Context) (_node *Download
 	}
 	if value, ok := _u.mutation.ReplaceExisting(); ok {
 		_spec.SetField(downloadrecord.FieldReplaceExisting, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.HoldReasons(); ok {
+		_spec.SetField(downloadrecord.FieldHoldReasons, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedHoldReasons(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, downloadrecord.FieldHoldReasons, value)
+		})
+	}
+	if _u.mutation.HoldReasonsCleared() {
+		_spec.ClearField(downloadrecord.FieldHoldReasons, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.VerificationBypassed(); ok {
+		_spec.SetField(downloadrecord.FieldVerificationBypassed, field.TypeBool, value)
 	}
 	if _u.mutation.MovieCleared() {
 		edge := &sqlgraph.EdgeSpec{

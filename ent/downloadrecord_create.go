@@ -13,6 +13,7 @@ import (
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/movie"
+	"github.com/datahearth/streamline/ent/schema"
 )
 
 // DownloadRecordCreate is the builder for creating a DownloadRecord entity.
@@ -224,6 +225,26 @@ func (_c *DownloadRecordCreate) SetNillableReplaceExisting(v *bool) *DownloadRec
 	return _c
 }
 
+// SetHoldReasons sets the "hold_reasons" field.
+func (_c *DownloadRecordCreate) SetHoldReasons(v []schema.HoldReason) *DownloadRecordCreate {
+	_c.mutation.SetHoldReasons(v)
+	return _c
+}
+
+// SetVerificationBypassed sets the "verification_bypassed" field.
+func (_c *DownloadRecordCreate) SetVerificationBypassed(v bool) *DownloadRecordCreate {
+	_c.mutation.SetVerificationBypassed(v)
+	return _c
+}
+
+// SetNillableVerificationBypassed sets the "verification_bypassed" field if the given value is not nil.
+func (_c *DownloadRecordCreate) SetNillableVerificationBypassed(v *bool) *DownloadRecordCreate {
+	if v != nil {
+		_c.SetVerificationBypassed(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *DownloadRecordCreate) SetID(v uint32) *DownloadRecordCreate {
 	_c.mutation.SetID(v)
@@ -323,6 +344,10 @@ func (_c *DownloadRecordCreate) defaults() {
 		v := downloadrecord.DefaultReplaceExisting
 		_c.mutation.SetReplaceExisting(v)
 	}
+	if _, ok := _c.mutation.VerificationBypassed(); !ok {
+		v := downloadrecord.DefaultVerificationBypassed
+		_c.mutation.SetVerificationBypassed(v)
+	}
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -354,6 +379,9 @@ func (_c *DownloadRecordCreate) check() error {
 	}
 	if _, ok := _c.mutation.ReplaceExisting(); !ok {
 		return &ValidationError{Name: "replace_existing", err: errors.New(`ent: missing required field "DownloadRecord.replace_existing"`)}
+	}
+	if _, ok := _c.mutation.VerificationBypassed(); !ok {
+		return &ValidationError{Name: "verification_bypassed", err: errors.New(`ent: missing required field "DownloadRecord.verification_bypassed"`)}
 	}
 	return nil
 }
@@ -446,6 +474,14 @@ func (_c *DownloadRecordCreate) createSpec() (*DownloadRecord, *sqlgraph.CreateS
 	if value, ok := _c.mutation.ReplaceExisting(); ok {
 		_spec.SetField(downloadrecord.FieldReplaceExisting, field.TypeBool, value)
 		_node.ReplaceExisting = value
+	}
+	if value, ok := _c.mutation.HoldReasons(); ok {
+		_spec.SetField(downloadrecord.FieldHoldReasons, field.TypeJSON, value)
+		_node.HoldReasons = value
+	}
+	if value, ok := _c.mutation.VerificationBypassed(); ok {
+		_spec.SetField(downloadrecord.FieldVerificationBypassed, field.TypeBool, value)
+		_node.VerificationBypassed = value
 	}
 	if nodes := _c.mutation.MovieIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

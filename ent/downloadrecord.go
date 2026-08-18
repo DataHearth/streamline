@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/movie"
+	"github.com/datahearth/streamline/ent/schema"
 )
 
 // DownloadRecord is the model entity for the DownloadRecord schema.
@@ -49,6 +51,10 @@ type DownloadRecord struct {
 	DownloadClientName string `json:"download_client_name,omitempty"`
 	// ReplaceExisting holds the value of the "replace_existing" field.
 	ReplaceExisting bool `json:"replace_existing,omitempty"`
+	// HoldReasons holds the value of the "hold_reasons" field.
+	HoldReasons []schema.HoldReason `json:"hold_reasons,omitempty"`
+	// VerificationBypassed holds the value of the "verification_bypassed" field.
+	VerificationBypassed bool `json:"verification_bypassed,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the DownloadRecordQuery when eager-loading is set.
 	Edges                    DownloadRecordEdges `json:"edges"`
@@ -95,7 +101,9 @@ func (*DownloadRecord) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case downloadrecord.FieldReplaceExisting:
+		case downloadrecord.FieldHoldReasons:
+			values[i] = new([]byte)
+		case downloadrecord.FieldReplaceExisting, downloadrecord.FieldVerificationBypassed:
 			values[i] = new(sql.NullBool)
 		case downloadrecord.FieldID, downloadrecord.FieldSize, downloadrecord.FieldImportAttempts:
 			values[i] = new(sql.NullInt64)
@@ -219,6 +227,20 @@ func (_m *DownloadRecord) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.ReplaceExisting = value.Bool
 			}
+		case downloadrecord.FieldHoldReasons:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field hold_reasons", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.HoldReasons); err != nil {
+					return fmt.Errorf("unmarshal field hold_reasons: %w", err)
+				}
+			}
+		case downloadrecord.FieldVerificationBypassed:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field verification_bypassed", values[i])
+			} else if value.Valid {
+				_m.VerificationBypassed = value.Bool
+			}
 		case downloadrecord.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for edge-field episode_download_records", value)
@@ -325,6 +347,12 @@ func (_m *DownloadRecord) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("replace_existing=")
 	builder.WriteString(fmt.Sprintf("%v", _m.ReplaceExisting))
+	builder.WriteString(", ")
+	builder.WriteString("hold_reasons=")
+	builder.WriteString(fmt.Sprintf("%v", _m.HoldReasons))
+	builder.WriteString(", ")
+	builder.WriteString("verification_bypassed=")
+	builder.WriteString(fmt.Sprintf("%v", _m.VerificationBypassed))
 	builder.WriteByte(')')
 	return builder.String()
 }

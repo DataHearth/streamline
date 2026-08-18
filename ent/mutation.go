@@ -702,34 +702,37 @@ func (m *ApiKeyMutation) ResetEdge(name string) error {
 // DownloadRecordMutation represents an operation that mutates the DownloadRecord nodes in the graph.
 type DownloadRecordMutation struct {
 	config
-	op                   Op
-	typ                  string
-	id                   *uint32
-	create_time          *time.Time
-	update_time          *time.Time
-	title                *string
-	quality              *string
-	size                 *int64
-	addsize              *int64
-	status               *downloadrecord.Status
-	torrent_hash         *string
-	release_group        *string
-	save_path            *string
-	import_attempts      *uint8
-	addimport_attempts   *int8
-	failure_reason       *string
-	imported_at          *time.Time
-	indexer_name         *string
-	download_client_name *string
-	replace_existing     *bool
-	clearedFields        map[string]struct{}
-	movie                *uint32
-	clearedmovie         bool
-	episode              *uint32
-	clearedepisode       bool
-	done                 bool
-	oldValue             func(context.Context) (*DownloadRecord, error)
-	predicates           []predicate.DownloadRecord
+	op                    Op
+	typ                   string
+	id                    *uint32
+	create_time           *time.Time
+	update_time           *time.Time
+	title                 *string
+	quality               *string
+	size                  *int64
+	addsize               *int64
+	status                *downloadrecord.Status
+	torrent_hash          *string
+	release_group         *string
+	save_path             *string
+	import_attempts       *uint8
+	addimport_attempts    *int8
+	failure_reason        *string
+	imported_at           *time.Time
+	indexer_name          *string
+	download_client_name  *string
+	replace_existing      *bool
+	hold_reasons          *[]schema.HoldReason
+	appendhold_reasons    []schema.HoldReason
+	verification_bypassed *bool
+	clearedFields         map[string]struct{}
+	movie                 *uint32
+	clearedmovie          bool
+	episode               *uint32
+	clearedepisode        bool
+	done                  bool
+	oldValue              func(context.Context) (*DownloadRecord, error)
+	predicates            []predicate.DownloadRecord
 }
 
 var _ ent.Mutation = (*DownloadRecordMutation)(nil)
@@ -1534,6 +1537,107 @@ func (m *DownloadRecordMutation) ResetReplaceExisting() {
 	m.replace_existing = nil
 }
 
+// SetHoldReasons sets the "hold_reasons" field.
+func (m *DownloadRecordMutation) SetHoldReasons(sr []schema.HoldReason) {
+	m.hold_reasons = &sr
+	m.appendhold_reasons = nil
+}
+
+// HoldReasons returns the value of the "hold_reasons" field in the mutation.
+func (m *DownloadRecordMutation) HoldReasons() (r []schema.HoldReason, exists bool) {
+	v := m.hold_reasons
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldHoldReasons returns the old "hold_reasons" field's value of the DownloadRecord entity.
+// If the DownloadRecord object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *DownloadRecordMutation) OldHoldReasons(ctx context.Context) (v []schema.HoldReason, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldHoldReasons is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldHoldReasons requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldHoldReasons: %w", err)
+	}
+	return oldValue.HoldReasons, nil
+}
+
+// AppendHoldReasons adds sr to the "hold_reasons" field.
+func (m *DownloadRecordMutation) AppendHoldReasons(sr []schema.HoldReason) {
+	m.appendhold_reasons = append(m.appendhold_reasons, sr...)
+}
+
+// AppendedHoldReasons returns the list of values that were appended to the "hold_reasons" field in this mutation.
+func (m *DownloadRecordMutation) AppendedHoldReasons() ([]schema.HoldReason, bool) {
+	if len(m.appendhold_reasons) == 0 {
+		return nil, false
+	}
+	return m.appendhold_reasons, true
+}
+
+// ClearHoldReasons clears the value of the "hold_reasons" field.
+func (m *DownloadRecordMutation) ClearHoldReasons() {
+	m.hold_reasons = nil
+	m.appendhold_reasons = nil
+	m.clearedFields[downloadrecord.FieldHoldReasons] = struct{}{}
+}
+
+// HoldReasonsCleared returns if the "hold_reasons" field was cleared in this mutation.
+func (m *DownloadRecordMutation) HoldReasonsCleared() bool {
+	_, ok := m.clearedFields[downloadrecord.FieldHoldReasons]
+	return ok
+}
+
+// ResetHoldReasons resets all changes to the "hold_reasons" field.
+func (m *DownloadRecordMutation) ResetHoldReasons() {
+	m.hold_reasons = nil
+	m.appendhold_reasons = nil
+	delete(m.clearedFields, downloadrecord.FieldHoldReasons)
+}
+
+// SetVerificationBypassed sets the "verification_bypassed" field.
+func (m *DownloadRecordMutation) SetVerificationBypassed(b bool) {
+	m.verification_bypassed = &b
+}
+
+// VerificationBypassed returns the value of the "verification_bypassed" field in the mutation.
+func (m *DownloadRecordMutation) VerificationBypassed() (r bool, exists bool) {
+	v := m.verification_bypassed
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldVerificationBypassed returns the old "verification_bypassed" field's value of the DownloadRecord entity.
+// If the DownloadRecord object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *DownloadRecordMutation) OldVerificationBypassed(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldVerificationBypassed is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldVerificationBypassed requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldVerificationBypassed: %w", err)
+	}
+	return oldValue.VerificationBypassed, nil
+}
+
+// ResetVerificationBypassed resets all changes to the "verification_bypassed" field.
+func (m *DownloadRecordMutation) ResetVerificationBypassed() {
+	m.verification_bypassed = nil
+}
+
 // SetMovieID sets the "movie" edge to the Movie entity by id.
 func (m *DownloadRecordMutation) SetMovieID(id uint32) {
 	m.movie = &id
@@ -1646,7 +1750,7 @@ func (m *DownloadRecordMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *DownloadRecordMutation) Fields() []string {
-	fields := make([]string, 0, 15)
+	fields := make([]string, 0, 17)
 	if m.create_time != nil {
 		fields = append(fields, downloadrecord.FieldCreateTime)
 	}
@@ -1692,6 +1796,12 @@ func (m *DownloadRecordMutation) Fields() []string {
 	if m.replace_existing != nil {
 		fields = append(fields, downloadrecord.FieldReplaceExisting)
 	}
+	if m.hold_reasons != nil {
+		fields = append(fields, downloadrecord.FieldHoldReasons)
+	}
+	if m.verification_bypassed != nil {
+		fields = append(fields, downloadrecord.FieldVerificationBypassed)
+	}
 	return fields
 }
 
@@ -1730,6 +1840,10 @@ func (m *DownloadRecordMutation) Field(name string) (ent.Value, bool) {
 		return m.DownloadClientName()
 	case downloadrecord.FieldReplaceExisting:
 		return m.ReplaceExisting()
+	case downloadrecord.FieldHoldReasons:
+		return m.HoldReasons()
+	case downloadrecord.FieldVerificationBypassed:
+		return m.VerificationBypassed()
 	}
 	return nil, false
 }
@@ -1769,6 +1883,10 @@ func (m *DownloadRecordMutation) OldField(ctx context.Context, name string) (ent
 		return m.OldDownloadClientName(ctx)
 	case downloadrecord.FieldReplaceExisting:
 		return m.OldReplaceExisting(ctx)
+	case downloadrecord.FieldHoldReasons:
+		return m.OldHoldReasons(ctx)
+	case downloadrecord.FieldVerificationBypassed:
+		return m.OldVerificationBypassed(ctx)
 	}
 	return nil, fmt.Errorf("unknown DownloadRecord field %s", name)
 }
@@ -1883,6 +2001,20 @@ func (m *DownloadRecordMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetReplaceExisting(v)
 		return nil
+	case downloadrecord.FieldHoldReasons:
+		v, ok := value.([]schema.HoldReason)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetHoldReasons(v)
+		return nil
+	case downloadrecord.FieldVerificationBypassed:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetVerificationBypassed(v)
+		return nil
 	}
 	return fmt.Errorf("unknown DownloadRecord field %s", name)
 }
@@ -1967,6 +2099,9 @@ func (m *DownloadRecordMutation) ClearedFields() []string {
 	if m.FieldCleared(downloadrecord.FieldDownloadClientName) {
 		fields = append(fields, downloadrecord.FieldDownloadClientName)
 	}
+	if m.FieldCleared(downloadrecord.FieldHoldReasons) {
+		fields = append(fields, downloadrecord.FieldHoldReasons)
+	}
 	return fields
 }
 
@@ -2007,6 +2142,9 @@ func (m *DownloadRecordMutation) ClearField(name string) error {
 		return nil
 	case downloadrecord.FieldDownloadClientName:
 		m.ClearDownloadClientName()
+		return nil
+	case downloadrecord.FieldHoldReasons:
+		m.ClearHoldReasons()
 		return nil
 	}
 	return fmt.Errorf("unknown DownloadRecord nullable field %s", name)
@@ -2060,6 +2198,12 @@ func (m *DownloadRecordMutation) ResetField(name string) error {
 		return nil
 	case downloadrecord.FieldReplaceExisting:
 		m.ResetReplaceExisting()
+		return nil
+	case downloadrecord.FieldHoldReasons:
+		m.ResetHoldReasons()
+		return nil
+	case downloadrecord.FieldVerificationBypassed:
+		m.ResetVerificationBypassed()
 		return nil
 	}
 	return fmt.Errorf("unknown DownloadRecord field %s", name)

@@ -45,6 +45,10 @@ const (
 	FieldDownloadClientName = "download_client_name"
 	// FieldReplaceExisting holds the string denoting the replace_existing field in the database.
 	FieldReplaceExisting = "replace_existing"
+	// FieldHoldReasons holds the string denoting the hold_reasons field in the database.
+	FieldHoldReasons = "hold_reasons"
+	// FieldVerificationBypassed holds the string denoting the verification_bypassed field in the database.
+	FieldVerificationBypassed = "verification_bypassed"
 	// EdgeMovie holds the string denoting the movie edge name in mutations.
 	EdgeMovie = "movie"
 	// EdgeEpisode holds the string denoting the episode edge name in mutations.
@@ -85,6 +89,8 @@ var Columns = []string{
 	FieldIndexerName,
 	FieldDownloadClientName,
 	FieldReplaceExisting,
+	FieldHoldReasons,
+	FieldVerificationBypassed,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "download_records"
@@ -122,6 +128,8 @@ var (
 	DefaultImportAttempts uint8
 	// DefaultReplaceExisting holds the default value on creation for the "replace_existing" field.
 	DefaultReplaceExisting bool
+	// DefaultVerificationBypassed holds the default value on creation for the "verification_bypassed" field.
+	DefaultVerificationBypassed bool
 )
 
 // Status defines the type for the "status" enum field.
@@ -138,6 +146,7 @@ const (
 	StatusFailed      Status = "failed"
 	StatusPending     Status = "pending"
 	StatusDismissed   Status = "dismissed"
+	StatusHeld        Status = "held"
 )
 
 func (s Status) String() string {
@@ -147,7 +156,7 @@ func (s Status) String() string {
 // StatusValidator is a validator for the "status" field enum values. It is called by the builders before save.
 func StatusValidator(s Status) error {
 	switch s {
-	case StatusDownloading, StatusImporting, StatusCompleted, StatusFailed, StatusPending, StatusDismissed:
+	case StatusDownloading, StatusImporting, StatusCompleted, StatusFailed, StatusPending, StatusDismissed, StatusHeld:
 		return nil
 	default:
 		return fmt.Errorf("downloadrecord: invalid enum value for status field: %q", s)
@@ -235,6 +244,11 @@ func ByDownloadClientName(opts ...sql.OrderTermOption) OrderOption {
 // ByReplaceExisting orders the results by the replace_existing field.
 func ByReplaceExisting(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldReplaceExisting, opts...).ToFunc()
+}
+
+// ByVerificationBypassed orders the results by the verification_bypassed field.
+func ByVerificationBypassed(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldVerificationBypassed, opts...).ToFunc()
 }
 
 // ByMovieField orders the results by movie field.
