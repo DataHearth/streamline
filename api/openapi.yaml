@@ -5433,9 +5433,8 @@ components:
     ProbeConfig:
       type: object
       description: |
-        Import-time verification against ffprobe results. Stored for the
-        Phase 2 verifier to read; when patched, only provided fields are
-        applied.
+        Import-time verification against ffprobe results; when patched, only
+        provided fields are applied.
       properties:
         always_ask:
           type: boolean

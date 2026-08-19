@@ -216,9 +216,8 @@ type LibraryConfig struct {
 	// owning movie reverts to "wanted". Bounded to give operators a knob
 	// for noisy mounts without unbounded patience.
 	DriftGraceTicks uint8 `koanf:"drift_grace_ticks" validate:"required,min=1,max=20"`
-	// Probe governs import-time verification against ffprobe results. Phase 1
-	// only stores these values — internal/library/hygiene's importer
-	// verification (Phase 2) is the intended reader.
+	// Probe governs import-time verification against ffprobe results, read by
+	// the importer's verifier before a transfer.
 	Probe ProbeConfig `koanf:"probe"`
 }
 

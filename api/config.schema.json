@@ -268,7 +268,7 @@
         "probe": {
           "type": "object",
           "additionalProperties": false,
-          "description": "Import-time verification against ffprobe results. Stored for the Phase 2 verifier to read.",
+          "description": "Import-time verification against ffprobe results.",
           "properties": {
             "always_ask": {
               "type": "boolean",

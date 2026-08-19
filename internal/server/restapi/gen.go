@@ -2465,9 +2465,8 @@ type JWTRotated struct {
 type LibraryConfigPatch struct {
 	MonitorSpecials *bool `json:"monitor_specials,omitempty"`
 
-	// Probe Import-time verification against ffprobe results. Stored for the
-	// Phase 2 verifier to read; when patched, only provided fields are
-	// applied.
+	// Probe Import-time verification against ffprobe results; when patched, only
+	// provided fields are applied.
 	Probe *ProbeConfig `json:"probe,omitempty"`
 }
 
@@ -2477,9 +2476,8 @@ type LibraryConfigView struct {
 	// discovers the season. Applies to newly seeded seasons only.
 	MonitorSpecials bool `json:"monitor_specials"`
 
-	// Probe Import-time verification against ffprobe results. Stored for the
-	// Phase 2 verifier to read; when patched, only provided fields are
-	// applied.
+	// Probe Import-time verification against ffprobe results; when patched, only
+	// provided fields are applied.
 	Probe *ProbeConfig `json:"probe,omitempty"`
 }
 
@@ -2913,9 +2911,8 @@ type PlayOnLinkList struct {
 	Items []PlayOnLink `json:"items"`
 }
 
-// ProbeConfig Import-time verification against ffprobe results. Stored for the
-// Phase 2 verifier to read; when patched, only provided fields are
-// applied.
+// ProbeConfig Import-time verification against ffprobe results; when patched, only
+// provided fields are applied.
 type ProbeConfig struct {
 	// AlwaysAsk Hold every import for a decision, even when every check passes.
 	AlwaysAsk *bool `json:"always_ask,omitempty"`
