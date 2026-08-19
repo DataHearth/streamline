@@ -10,6 +10,7 @@ import (
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
+	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/ent/season"
 	"github.com/datahearth/streamline/internal/ffmpeg"
 )
@@ -277,6 +278,97 @@ func (db *DB) FindImportingDownloadRecordByID(
 		WithMovie().
 		WithEpisode(withEpisodeContext).
 		Only(ctx)
+}
+
+// HoldDownloadRecord flips an importing record to held with the reasons the
+// verifier produced, stopping the import until a user resolves it.
+func (db *DB) HoldDownloadRecord(
+	ctx context.Context,
+	id uint32,
+	reasons []schema.HoldReason,
+) error {
+	return db.client.DownloadRecord.UpdateOneID(id).
+		SetStatus(downloadrecord.StatusHeld).
+		SetHoldReasons(reasons).
+		Exec(ctx)
+}
+
+// FindHeldDownloadRecordByID fetches a single held record by ID with its Movie
+// and Episode context eager-loaded. Returns ent.NotFound when the record is
+// absent or no longer held.
+func (db *DB) FindHeldDownloadRecordByID(
+	ctx context.Context,
+	id uint32,
+) (*ent.DownloadRecord, error) {
+	return db.client.DownloadRecord.Query().
+		Where(
+			downloadrecord.ID(id),
+			downloadrecord.StatusEQ(downloadrecord.StatusHeld),
+		).
+		WithMovie().
+		WithEpisode(withEpisodeContext).
+		Only(ctx)
+}
+
+// ReleaseHeldDownloadRecord flips a held record back to importing with
+// verification bypassed, so the importer's re-run imports it as-is.
+func (db *DB) ReleaseHeldDownloadRecord(ctx context.Context, id uint32) error {
+	return db.client.DownloadRecord.UpdateOneID(id).
+		SetStatus(downloadrecord.StatusImporting).
+		SetVerificationBypassed(true).
+		ClearHoldReasons().
+		Exec(ctx)
+}
+
+// FailHeldDownloadRecord finalizes a held record the user rejected. requeue
+// reverts the movie to wanted so a search finds a replacement; without it the
+// movie stays failed, the user having judged the release themselves. Episodes
+// revert to wanted either way, mirroring RecordImportFailure.
+func (db *DB) FailHeldDownloadRecord(
+	ctx context.Context,
+	id uint32,
+	reason string,
+	requeue bool,
+) error {
+	rec, err := db.FindHeldDownloadRecordByID(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	tx, err := db.client.Tx(ctx)
+	if err != nil {
+		return err
+	}
+	if err := tx.DownloadRecord.UpdateOneID(id).
+		SetStatus(downloadrecord.StatusFailed).
+		SetFailureReason(reason).
+		ClearHoldReasons().
+		Exec(ctx); err != nil {
+		tx.Rollback()
+		return fmt.Errorf("update download record: %w", err)
+	}
+	if rec.Edges.Movie != nil {
+		status := movie.StatusFailed
+		if requeue {
+			status = movie.StatusWanted
+		}
+		if err := tx.Movie.UpdateOneID(rec.Edges.Movie.ID).
+			SetStatus(status).
+			SetFailureReason(reason).
+			Exec(ctx); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("update movie: %w", err)
+		}
+	}
+	if rec.Edges.Episode != nil {
+		if err := tx.Episode.UpdateOneID(rec.Edges.Episode.ID).
+			SetStatus(episode.StatusWanted).
+			Exec(ctx); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("update episode: %w", err)
+		}
+	}
+	return tx.Commit()
 }
 
 // RecordImportSuccess writes MediaFile row, flips DownloadRecord to completed,

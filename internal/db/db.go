@@ -248,6 +248,22 @@ type Store interface {
 		ctx context.Context,
 		id uint32,
 	) (*ent.DownloadRecord, error)
+	HoldDownloadRecord(
+		ctx context.Context,
+		id uint32,
+		reasons []schema.HoldReason,
+	) error
+	FindHeldDownloadRecordByID(
+		ctx context.Context,
+		id uint32,
+	) (*ent.DownloadRecord, error)
+	ReleaseHeldDownloadRecord(ctx context.Context, id uint32) error
+	FailHeldDownloadRecord(
+		ctx context.Context,
+		id uint32,
+		reason string,
+		requeue bool,
+	) error
 	RecordImportSuccess(ctx context.Context, p RecordImportSuccessParams) error
 	RecordEpisodeImportSuccess(
 		ctx context.Context,

@@ -11,6 +11,7 @@ import (
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
 	entmovie "github.com/datahearth/streamline/ent/movie"
+	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/internal/ffmpeg"
 )
 
@@ -783,6 +784,110 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 				Expect(err).NotTo(HaveOccurred())
 			},
 		)
+	})
+
+	Describe("the hold lifecycle", func() {
+		reasons := []schema.HoldReason{{
+			File: "/dl/f.mkv", Check: "codec",
+			Expected: "hevc", Actual: "h264",
+		}}
+
+		createEpisodeRec := func(tvdb uint32) (*ent.DownloadRecord, uint32) {
+			GinkgoHelper()
+			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "Hold", Year: 2024, TvdbID: tvdb,
+				Seasons: []SeasonSeed{{
+					Number:   1,
+					Episodes: []EpisodeSeed{{Number: 1, Title: "Pilot"}},
+				}},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			epID := show.Edges.Seasons[0].Edges.Episodes[0].ID
+			rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "t", Size: 1, TorrentHash: "eh",
+				Status:    downloadrecord.StatusImporting,
+				EpisodeID: epID, DownloadClientName: clientName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			return rec, epID
+		}
+
+		It("holds an importing record with its reasons", func() {
+			rec := createRec("h1", downloadrecord.StatusImporting)
+			Expect(store.HoldDownloadRecord(ctx, rec.ID, reasons)).To(Succeed())
+
+			got, err := client.DownloadRecord.Get(ctx, rec.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.Status).To(Equal(downloadrecord.StatusHeld))
+			Expect(got.HoldReasons).To(Equal(reasons))
+		})
+
+		It("finds a held record by id with its owner loaded", func() {
+			rec := createRec("h2", downloadrecord.StatusImporting)
+			Expect(store.HoldDownloadRecord(ctx, rec.ID, reasons)).To(Succeed())
+
+			got, err := store.FindHeldDownloadRecordByID(ctx, rec.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.Edges.Movie).NotTo(BeNil())
+
+			other := createRec("h3", downloadrecord.StatusImporting)
+			_, err = store.FindHeldDownloadRecordByID(ctx, other.ID)
+			Expect(ent.IsNotFound(err)).To(BeTrue())
+		})
+
+		It("releases a held record for a bypassed re-import", func() {
+			rec := createRec("h4", downloadrecord.StatusImporting)
+			Expect(store.HoldDownloadRecord(ctx, rec.ID, reasons)).To(Succeed())
+			Expect(store.ReleaseHeldDownloadRecord(ctx, rec.ID)).To(Succeed())
+
+			got, err := client.DownloadRecord.Get(ctx, rec.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.Status).To(Equal(downloadrecord.StatusImporting))
+			Expect(got.VerificationBypassed).To(BeTrue())
+			Expect(got.HoldReasons).To(BeEmpty())
+		})
+
+		It("fails a rejected movie record back to wanted when requeued", func() {
+			rec := createRec("h5", downloadrecord.StatusImporting)
+			Expect(store.HoldDownloadRecord(ctx, rec.ID, reasons)).To(Succeed())
+			Expect(store.FailHeldDownloadRecord(ctx, rec.ID, "re-grab", true)).
+				To(Succeed())
+
+			got, err := client.DownloadRecord.Get(ctx, rec.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.Status).To(Equal(downloadrecord.StatusFailed))
+			Expect(got.FailureReason).To(Equal("re-grab"))
+			m, err := client.Movie.Get(ctx, movieID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(m.Status).To(Equal(entmovie.StatusWanted))
+		})
+
+		It("leaves a rejected movie failed when not requeued", func() {
+			rec := createRec("h6", downloadrecord.StatusImporting)
+			Expect(store.HoldDownloadRecord(ctx, rec.ID, reasons)).To(Succeed())
+			Expect(store.FailHeldDownloadRecord(ctx, rec.ID, "rejected", false)).
+				To(Succeed())
+
+			m, err := client.Movie.Get(ctx, movieID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(m.Status).To(Equal(entmovie.StatusFailed))
+			Expect(m.FailureReason).To(Equal("rejected"))
+		})
+
+		It("reverts a rejected episode to wanted on either path", func() {
+			for i, requeue := range []bool{true, false} {
+				rec, epID := createEpisodeRec(9200 + uint32(i))
+				Expect(store.HoldDownloadRecord(ctx, rec.ID, reasons)).To(Succeed())
+				Expect(
+					store.FailHeldDownloadRecord(ctx, rec.ID, "rejected", requeue),
+				).
+					To(Succeed())
+
+				e, err := client.Episode.Get(ctx, epID)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(e.Status).To(Equal(episode.StatusWanted))
+			}
+		})
 	})
 
 	Describe("ListPendingDownloadRecords / FindPendingDownloadRecordByID", func() {
