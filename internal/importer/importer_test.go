@@ -14,6 +14,7 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
@@ -148,11 +149,12 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 		Expect(wp.runImport(context.Background(), 1)).To(Succeed())
 	})
 
-	It("imports normally when probing fails", func() {
+	It("imports with no probe row when probing fails and is bypassed", func() {
 		src := filepath.Join(tmp, "dl")
 		Expect(os.MkdirAll(src, 0o755)).To(Succeed())
 		seedMediaFile(src, "Flick.2024.1080p.mkv")
 		rec := fixtureRecord(1, 10, src, 0)
+		rec.VerificationBypassed = true
 
 		prober := mockffmpeg.NewMockProber(GinkgoT())
 		prober.EXPECT().Available().Return(true).Once()
@@ -636,6 +638,145 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 		msMk.EXPECT().RefreshAll(mock.Anything, libDir).Return(nil).Once()
 
 		Expect(w.runImport(context.Background(), 2)).To(Succeed())
+	})
+
+	Describe("import verification", func() {
+		// probing returns info for every file the worker hands it; a Times(n)
+		// per file would just restate len(files).
+		proberReturning := func(info *ffmpeg.Info, err error) *Worker {
+			GinkgoHelper()
+			prober := mockffmpeg.NewMockProber(GinkgoT())
+			prober.EXPECT().Available().Return(true)
+			prober.EXPECT().Probe(mock.Anything, mock.Anything).Return(info, err)
+			return NewWorker(Deps{
+				DB: storeMk, Library: libSvc, MediaServer: msMk, Prober: prober,
+			})
+		}
+		probed := func(width uint16, codec string) *ffmpeg.Info {
+			return &ffmpeg.Info{
+				VideoCodec: codec, Width: width, Height: 800,
+				DurationSec: 5400, Container: "matroska",
+			}
+		}
+
+		It("holds a movie whose file is below the claimed resolution", func() {
+			src := filepath.Join(tmp, "dl")
+			Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+			seedMediaFile(src, "Flick.2024.1080p.mkv")
+			rec := fixtureRecord(1, 10, src, 0)
+			wp := proberReturning(probed(1280, "h264"), nil)
+
+			storeMk.EXPECT().
+				FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+				Return(rec, nil).Once()
+			storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+				Return(nil, nil).Once()
+			storeMk.EXPECT().
+				HoldDownloadRecord(mock.Anything, uint32(1), mock.MatchedBy(
+					func(rs []schema.HoldReason) bool {
+						return len(rs) == 1 && rs[0].Check == "resolution"
+					})).
+				Return(nil).Once()
+
+			Expect(wp.runImport(context.Background(), 1)).To(Succeed())
+		})
+
+		It("holds a movie whose file will not probe", func() {
+			src := filepath.Join(tmp, "dl-corrupt")
+			Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+			seedMediaFile(src, "Flick.2024.1080p.mkv")
+			rec := fixtureRecord(1, 10, src, 0)
+			wp := proberReturning(nil, ffmpeg.ErrUnreadable)
+
+			storeMk.EXPECT().
+				FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+				Return(rec, nil).Once()
+			storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+				Return(nil, nil).Once()
+			storeMk.EXPECT().
+				HoldDownloadRecord(mock.Anything, uint32(1), mock.MatchedBy(
+					func(rs []schema.HoldReason) bool {
+						return len(rs) == 1 && rs[0].Check == "corrupt"
+					})).
+				Return(nil).Once()
+
+			Expect(wp.runImport(context.Background(), 1)).To(Succeed())
+		})
+
+		It("imports a rejected file once verification is bypassed", func() {
+			src := filepath.Join(tmp, "dl-bypass")
+			Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+			seedMediaFile(src, "Flick.2024.1080p.mkv")
+			rec := fixtureRecord(1, 10, src, 0)
+			rec.VerificationBypassed = true
+			wp := proberReturning(probed(1280, "h264"), nil)
+
+			storeMk.EXPECT().
+				FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+				Return(rec, nil).Once()
+			storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+				Return(nil, nil).Once()
+			storeMk.EXPECT().
+				RecordImportSuccess(mock.Anything, mock.Anything).
+				Return(nil).Once()
+			storeMk.EXPECT().
+				MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
+				Return(nil).Once()
+			msMk.EXPECT().RefreshAll(mock.Anything, libDir).Return(nil).Once()
+
+			Expect(wp.runImport(context.Background(), 1)).To(Succeed())
+		})
+
+		It("holds a clean movie when always_ask is on, without a prober", func() {
+			configtest.Setup(map[string]any{
+				"library": map[string]any{
+					"movie_path":   libDir,
+					"import_mode":  "copy",
+					"movie_naming": "{title} ({year})/{title}.{ext}",
+					"probe":        map[string]any{"always_ask": true},
+				},
+			})
+			src := filepath.Join(tmp, "dl-ask")
+			Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+			seedMediaFile(src, "Flick.2024.1080p.mkv")
+			rec := fixtureRecord(1, 10, src, 0)
+
+			storeMk.EXPECT().
+				FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+				Return(rec, nil).Once()
+			storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+				Return(nil, nil).Once()
+			storeMk.EXPECT().
+				HoldDownloadRecord(mock.Anything, uint32(1), mock.MatchedBy(
+					func(rs []schema.HoldReason) bool {
+						return len(rs) == 1 && rs[0].Check == "always_ask"
+					})).
+				Return(nil).Once()
+
+			Expect(w.runImport(context.Background(), 1)).To(Succeed())
+		})
+
+		It("holds a whole season pack when one file fails", func() {
+			season, eps := buildShow()
+			src := filepath.Join(tmp, "pack-held")
+			Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+			seedMediaFile(src, "Show.S01E01.1080p.mkv")
+			seedMediaFile(src, "Show.S01E02.1080p.mkv")
+			rec := episodeRecord(2, src, season, eps[0])
+			wp := proberReturning(probed(1280, "h264"), nil)
+
+			storeMk.EXPECT().
+				FindImportingDownloadRecordByID(mock.Anything, uint32(2)).
+				Return(rec, nil).Once()
+			storeMk.EXPECT().
+				HoldDownloadRecord(mock.Anything, uint32(2), mock.MatchedBy(
+					func(rs []schema.HoldReason) bool {
+						return len(rs) == 2 && rs[0].Check == "resolution"
+					})).
+				Return(nil).Once()
+
+			Expect(wp.runImport(context.Background(), 2)).To(Succeed())
+		})
 	})
 })
 
