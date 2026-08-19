@@ -378,6 +378,33 @@ func (e HistoryEntryStatus) Valid() bool {
 	}
 }
 
+// Defines values for HoldReasonCheck.
+const (
+	HoldReasonCheckAlwaysAsk  HoldReasonCheck = "always_ask"
+	HoldReasonCheckCodec      HoldReasonCheck = "codec"
+	HoldReasonCheckCorrupt    HoldReasonCheck = "corrupt"
+	HoldReasonCheckDuration   HoldReasonCheck = "duration"
+	HoldReasonCheckResolution HoldReasonCheck = "resolution"
+)
+
+// Valid indicates whether the value is a known member of the HoldReasonCheck enum.
+func (e HoldReasonCheck) Valid() bool {
+	switch e {
+	case HoldReasonCheckAlwaysAsk:
+		return true
+	case HoldReasonCheckCodec:
+		return true
+	case HoldReasonCheckCorrupt:
+		return true
+	case HoldReasonCheckDuration:
+		return true
+	case HoldReasonCheckResolution:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ImportScanImportMode.
 const (
 	ImportScanImportModeCopy     ImportScanImportMode = "copy"
@@ -1129,6 +1156,7 @@ func (e QualityProfileCreatePreferredResolution) Valid() bool {
 const (
 	QueueEntryStatusDownloading QueueEntryStatus = "downloading"
 	QueueEntryStatusError       QueueEntryStatus = "error"
+	QueueEntryStatusHeld        QueueEntryStatus = "held"
 	QueueEntryStatusImporting   QueueEntryStatus = "importing"
 	QueueEntryStatusPaused      QueueEntryStatus = "paused"
 )
@@ -1139,6 +1167,8 @@ func (e QueueEntryStatus) Valid() bool {
 	case QueueEntryStatusDownloading:
 		return true
 	case QueueEntryStatusError:
+		return true
+	case QueueEntryStatusHeld:
 		return true
 	case QueueEntryStatusImporting:
 		return true
@@ -1185,6 +1215,27 @@ func (e RequestStatus) Valid() bool {
 	case RequestStatusDenied:
 		return true
 	case RequestStatusPending:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ResolveHeldRequestAction.
+const (
+	ResolveHeldRequestActionDelete ResolveHeldRequestAction = "delete"
+	ResolveHeldRequestActionImport ResolveHeldRequestAction = "import"
+	ResolveHeldRequestActionRegrab ResolveHeldRequestAction = "regrab"
+)
+
+// Valid indicates whether the value is a known member of the ResolveHeldRequestAction enum.
+func (e ResolveHeldRequestAction) Valid() bool {
+	switch e {
+	case ResolveHeldRequestActionDelete:
+		return true
+	case ResolveHeldRequestActionImport:
+		return true
+	case ResolveHeldRequestActionRegrab:
 		return true
 	default:
 		return false
@@ -2146,6 +2197,17 @@ type HistoryEntry struct {
 // HistoryEntryStatus defines model for HistoryEntry.Status.
 type HistoryEntryStatus string
 
+// HoldReason One import verification check a held download failed.
+type HoldReason struct {
+	Actual   *string         `json:"actual,omitempty"`
+	Check    HoldReasonCheck `json:"check"`
+	Expected *string         `json:"expected,omitempty"`
+	File     string          `json:"file"`
+}
+
+// HoldReasonCheck defines model for HoldReason.Check.
+type HoldReasonCheck string
+
 // IgnorePendingRequest defines model for IgnorePendingRequest.
 type IgnorePendingRequest struct {
 	// RemoveTorrent When true, also remove the proposed torrent from its download
@@ -2906,21 +2968,28 @@ type QueueEntry struct {
 
 	// Episode Show + S/E context for a TV download record (queue/history rows render
 	// "<show> · SxxExx" from it). Absent on movie records.
-	Episode       *EpisodeRef      `json:"episode,omitempty"`
-	Eta           *int64           `json:"eta,omitempty"`
-	FailureReason *string          `json:"failure_reason,omitempty"`
-	Id            uint32           `json:"id"`
-	Indexer       *string          `json:"indexer,omitempty"`
-	Movie         Movie            `json:"movie"`
-	Progress      float64          `json:"progress"`
-	Quality       *string          `json:"quality,omitempty"`
-	ReleaseGroup  *string          `json:"release_group,omitempty"`
-	Size          int64            `json:"size"`
-	Status        QueueEntryStatus `json:"status"`
-	Title         string           `json:"title"`
+	Episode       *EpisodeRef `json:"episode,omitempty"`
+	Eta           *int64      `json:"eta,omitempty"`
+	FailureReason *string     `json:"failure_reason,omitempty"`
+
+	// HoldReasons Present only on a held entry, one item per failed check.
+	HoldReasons  *[]HoldReason `json:"hold_reasons,omitempty"`
+	Id           uint32        `json:"id"`
+	Indexer      *string       `json:"indexer,omitempty"`
+	Movie        Movie         `json:"movie"`
+	Progress     float64       `json:"progress"`
+	Quality      *string       `json:"quality,omitempty"`
+	ReleaseGroup *string       `json:"release_group,omitempty"`
+	Size         int64         `json:"size"`
+
+	// Status "held" means the download finished but failed import verification
+	// and is waiting on a decision (POST /downloads/{id}/resolve).
+	Status QueueEntryStatus `json:"status"`
+	Title  string           `json:"title"`
 }
 
-// QueueEntryStatus defines model for QueueEntry.Status.
+// QueueEntryStatus "held" means the download finished but failed import verification
+// and is waiting on a decision (POST /downloads/{id}/resolve).
 type QueueEntryStatus string
 
 // RenameOperation defines model for RenameOperation.
@@ -3015,6 +3084,16 @@ type ResetPasswordRequest struct {
 	// NewPassword Replacement password. Must meet the local password policy.
 	NewPassword string `json:"new_password"`
 }
+
+// ResolveHeldRequest How to release a held download. "import" imports it as-is (skipping
+// verification on the re-run), "regrab" deletes it and re-searches,
+// "delete" deletes it and leaves the media alone.
+type ResolveHeldRequest struct {
+	Action ResolveHeldRequestAction `json:"action"`
+}
+
+// ResolveHeldRequestAction defines model for ResolveHeldRequest.Action.
+type ResolveHeldRequestAction string
 
 // RotateJWTSecretRequest defines model for RotateJWTSecretRequest.
 type RotateJWTSecretRequest struct {
@@ -4039,6 +4118,9 @@ type TestDraftDownloadClientJSONRequestBody = DownloadClientCreate
 // UpdateDownloadClientJSONRequestBody defines body for UpdateDownloadClient for application/json ContentType.
 type UpdateDownloadClientJSONRequestBody = DownloadClientCreate
 
+// ResolveHeldDownloadJSONRequestBody defines body for ResolveHeldDownload for application/json ContentType.
+type ResolveHeldDownloadJSONRequestBody = ResolveHeldRequest
+
 // CreateIndexerJSONRequestBody defines body for CreateIndexer for application/json ContentType.
 type CreateIndexerJSONRequestBody = IndexerCreate
 
@@ -4272,6 +4354,9 @@ type ServerInterface interface {
 	// TestDownloadClient Test download client connection
 	// (POST /download-clients/{name}/test)
 	TestDownloadClient(w http.ResponseWriter, r *http.Request, name ResourceName)
+	// ResolveHeldDownload Release a download held by import verification.
+	// (POST /downloads/{id}/resolve)
+	ResolveHeldDownload(w http.ResponseWriter, r *http.Request, id ResourceID)
 	// ListIndexers List configured indexers
 	// (GET /indexers)
 	ListIndexers(w http.ResponseWriter, r *http.Request)
@@ -4827,6 +4912,12 @@ func (_ Unimplemented) UpdateDownloadClient(w http.ResponseWriter, r *http.Reque
 // TestDownloadClient Test download client connection
 // (POST /download-clients/{name}/test)
 func (_ Unimplemented) TestDownloadClient(w http.ResponseWriter, r *http.Request, name ResourceName) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ResolveHeldDownload Release a download held by import verification.
+// (POST /downloads/{id}/resolve)
+func (_ Unimplemented) ResolveHeldDownload(w http.ResponseWriter, r *http.Request, id ResourceID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -6348,6 +6439,32 @@ func (siw *ServerInterfaceWrapper) TestDownloadClient(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.TestDownloadClient(w, r, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ResolveHeldDownload operation middleware
+func (siw *ServerInterfaceWrapper) ResolveHeldDownload(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ResolveHeldDownload(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -9701,6 +9818,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/activity/queue/{id}/resume", wrapper.ResumeQueueItem)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/downloads/{id}/resolve", wrapper.ResolveHeldDownload)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/activity/history", wrapper.ListDownloadHistory)
 	})
 	r.Group(func(r chi.Router) {
@@ -12191,6 +12311,78 @@ func (response TestDownloadClient422JSONResponse) VisitTestDownloadClientRespons
 type TestDownloadClient500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response TestDownloadClient500JSONResponse) VisitTestDownloadClientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ResolveHeldDownloadRequestObject struct {
+	Id   ResourceID `json:"id"`
+	Body *ResolveHeldDownloadJSONRequestBody
+}
+
+type ResolveHeldDownloadResponseObject interface {
+	VisitResolveHeldDownloadResponse(w http.ResponseWriter) error
+}
+
+type ResolveHeldDownload204Response = NoContentResponse
+
+func (response ResolveHeldDownload204Response) VisitResolveHeldDownloadResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type ResolveHeldDownload403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ResolveHeldDownload403JSONResponse) VisitResolveHeldDownloadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ResolveHeldDownload404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ResolveHeldDownload404JSONResponse) VisitResolveHeldDownloadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ResolveHeldDownload409JSONResponse struct{ ConflictJSONResponse }
+
+func (response ResolveHeldDownload409JSONResponse) VisitResolveHeldDownloadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ResolveHeldDownload500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ResolveHeldDownload500JSONResponse) VisitResolveHeldDownloadResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -18382,6 +18574,9 @@ type StrictServerInterface interface {
 	// TestDownloadClient Test download client connection
 	// (POST /download-clients/{name}/test)
 	TestDownloadClient(ctx context.Context, request TestDownloadClientRequestObject) (TestDownloadClientResponseObject, error)
+	// ResolveHeldDownload Release a download held by import verification.
+	// (POST /downloads/{id}/resolve)
+	ResolveHeldDownload(ctx context.Context, request ResolveHeldDownloadRequestObject) (ResolveHeldDownloadResponseObject, error)
 	// ListIndexers List configured indexers
 	// (GET /indexers)
 	ListIndexers(ctx context.Context, request ListIndexersRequestObject) (ListIndexersResponseObject, error)
@@ -19876,6 +20071,39 @@ func (sh *strictHandler) TestDownloadClient(w http.ResponseWriter, r *http.Reque
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(TestDownloadClientResponseObject); ok {
 		if err := validResponse.VisitTestDownloadClientResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ResolveHeldDownload operation middleware
+func (sh *strictHandler) ResolveHeldDownload(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request ResolveHeldDownloadRequestObject
+
+	request.Id = id
+
+	var body ResolveHeldDownloadJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ResolveHeldDownload(ctx, request.(ResolveHeldDownloadRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ResolveHeldDownload")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ResolveHeldDownloadResponseObject); ok {
+		if err := validResponse.VisitResolveHeldDownloadResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

@@ -476,16 +476,16 @@ func (_c *MockDownloader_ReconcileEpisodeStatuses_Call) RunAndReturn(run func(ct
 }
 
 // RemoveTorrent provides a mock function for the type MockDownloader
-func (_mock *MockDownloader) RemoveTorrent(ctx context.Context, downloadClientName string, torrentHash string) error {
-	ret := _mock.Called(ctx, downloadClientName, torrentHash)
+func (_mock *MockDownloader) RemoveTorrent(ctx context.Context, downloadClientName string, torrentHash string, deleteFiles bool) error {
+	ret := _mock.Called(ctx, downloadClientName, torrentHash, deleteFiles)
 
 	if len(ret) == 0 {
 		panic("no return value specified for RemoveTorrent")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) error); ok {
-		r0 = returnFunc(ctx, downloadClientName, torrentHash)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, bool) error); ok {
+		r0 = returnFunc(ctx, downloadClientName, torrentHash, deleteFiles)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -501,11 +501,12 @@ type MockDownloader_RemoveTorrent_Call struct {
 //   - ctx context.Context
 //   - downloadClientName string
 //   - torrentHash string
-func (_e *MockDownloader_Expecter) RemoveTorrent(ctx any, downloadClientName any, torrentHash any) *MockDownloader_RemoveTorrent_Call {
-	return &MockDownloader_RemoveTorrent_Call{Call: _e.mock.On("RemoveTorrent", ctx, downloadClientName, torrentHash)}
+//   - deleteFiles bool
+func (_e *MockDownloader_Expecter) RemoveTorrent(ctx any, downloadClientName any, torrentHash any, deleteFiles any) *MockDownloader_RemoveTorrent_Call {
+	return &MockDownloader_RemoveTorrent_Call{Call: _e.mock.On("RemoveTorrent", ctx, downloadClientName, torrentHash, deleteFiles)}
 }
 
-func (_c *MockDownloader_RemoveTorrent_Call) Run(run func(ctx context.Context, downloadClientName string, torrentHash string)) *MockDownloader_RemoveTorrent_Call {
+func (_c *MockDownloader_RemoveTorrent_Call) Run(run func(ctx context.Context, downloadClientName string, torrentHash string, deleteFiles bool)) *MockDownloader_RemoveTorrent_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -519,10 +520,15 @@ func (_c *MockDownloader_RemoveTorrent_Call) Run(run func(ctx context.Context, d
 		if args[2] != nil {
 			arg2 = args[2].(string)
 		}
+		var arg3 bool
+		if args[3] != nil {
+			arg3 = args[3].(bool)
+		}
 		run(
 			arg0,
 			arg1,
 			arg2,
+			arg3,
 		)
 	})
 	return _c
@@ -533,7 +539,7 @@ func (_c *MockDownloader_RemoveTorrent_Call) Return(err error) *MockDownloader_R
 	return _c
 }
 
-func (_c *MockDownloader_RemoveTorrent_Call) RunAndReturn(run func(ctx context.Context, downloadClientName string, torrentHash string) error) *MockDownloader_RemoveTorrent_Call {
+func (_c *MockDownloader_RemoveTorrent_Call) RunAndReturn(run func(ctx context.Context, downloadClientName string, torrentHash string, deleteFiles bool) error) *MockDownloader_RemoveTorrent_Call {
 	_c.Call.Return(run)
 	return _c
 }

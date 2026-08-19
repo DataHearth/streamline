@@ -3735,6 +3735,74 @@ func (_c *MockStore_FindActiveRequest_Call) RunAndReturn(run func(ctx context.Co
 	return _c
 }
 
+// FindDownloadRecordByID provides a mock function for the type MockStore
+func (_mock *MockStore) FindDownloadRecordByID(ctx context.Context, id uint32) (*ent.DownloadRecord, error) {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindDownloadRecordByID")
+	}
+
+	var r0 *ent.DownloadRecord
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (*ent.DownloadRecord, error)); ok {
+		return returnFunc(ctx, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) *ent.DownloadRecord); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ent.DownloadRecord)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+		r1 = returnFunc(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_FindDownloadRecordByID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindDownloadRecordByID'
+type MockStore_FindDownloadRecordByID_Call struct {
+	*mock.Call
+}
+
+// FindDownloadRecordByID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+func (_e *MockStore_Expecter) FindDownloadRecordByID(ctx any, id any) *MockStore_FindDownloadRecordByID_Call {
+	return &MockStore_FindDownloadRecordByID_Call{Call: _e.mock.On("FindDownloadRecordByID", ctx, id)}
+}
+
+func (_c *MockStore_FindDownloadRecordByID_Call) Run(run func(ctx context.Context, id uint32)) *MockStore_FindDownloadRecordByID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_FindDownloadRecordByID_Call) Return(downloadRecord *ent.DownloadRecord, err error) *MockStore_FindDownloadRecordByID_Call {
+	_c.Call.Return(downloadRecord, err)
+	return _c
+}
+
+func (_c *MockStore_FindDownloadRecordByID_Call) RunAndReturn(run func(ctx context.Context, id uint32) (*ent.DownloadRecord, error)) *MockStore_FindDownloadRecordByID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // FindHeldDownloadRecordByID provides a mock function for the type MockStore
 func (_mock *MockStore) FindHeldDownloadRecordByID(ctx context.Context, id uint32) (*ent.DownloadRecord, error) {
 	ret := _mock.Called(ctx, id)

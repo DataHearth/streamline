@@ -2,9 +2,11 @@ package restapi
 
 import (
 	"context"
+	"log/slog"
 	"strings"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/downloadrecord"
 )
 
 func (s *Server) GetDownloadQueue(
@@ -161,4 +163,61 @@ func (s *Server) ClearCompletedHistory(
 			ClearCompletedResult{Deleted: n},
 		),
 	}, nil
+}
+
+// ResolveHeldDownload releases a download held by import verification. import
+// re-runs the import with verification bypassed; regrab and delete both remove
+// the torrent with its files, differing only in whether the media goes back to
+// wanted for another search.
+func (s *Server) ResolveHeldDownload(
+	ctx context.Context,
+	request ResolveHeldDownloadRequestObject,
+) (ResolveHeldDownloadResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return ResolveHeldDownload403JSONResponse{
+			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
+	rec, err := s.store.FindDownloadRecordByID(ctx, request.Id)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return ResolveHeldDownload404JSONResponse{
+				NotFoundJSONResponse: errNotFound("download record not found"),
+			}, nil
+		}
+		return nil, err
+	}
+	if rec.Status != downloadrecord.StatusHeld {
+		return ResolveHeldDownload409JSONResponse{
+			ConflictJSONResponse: errConflict("download record is not held"),
+		}, nil
+	}
+
+	if request.Body.Action == ResolveHeldRequestActionImport {
+		if err := s.store.ReleaseHeldDownloadRecord(ctx, rec.ID); err != nil {
+			return nil, err
+		}
+		s.importer.Enqueue(rec.ID)
+		return ResolveHeldDownload204Response{}, nil
+	}
+
+	if rec.TorrentHash != "" {
+		if err := s.downloads.RemoveTorrent(
+			ctx, rec.DownloadClientName, rec.TorrentHash, true,
+		); err != nil {
+			slog.WarnContext(ctx, "resolve held: remove torrent failed",
+				"hash", rec.TorrentHash, "error", err)
+		}
+	}
+	requeue := request.Body.Action == ResolveHeldRequestActionRegrab
+	reason := "rejected by user"
+	if requeue {
+		reason = "rejected by user (re-grab)"
+	}
+	if err := s.store.FailHeldDownloadRecord(
+		ctx, rec.ID, reason, requeue,
+	); err != nil {
+		return nil, err
+	}
+	return ResolveHeldDownload204Response{}, nil
 }

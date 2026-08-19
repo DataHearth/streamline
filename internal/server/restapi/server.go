@@ -14,6 +14,7 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/ffmpeg"
+	"github.com/datahearth/streamline/internal/importer"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/library/bulkimport"
@@ -50,6 +51,7 @@ type Server struct {
 	requests        request.Manager
 	torrents        bittorrent.Manager
 	pathMigrations  *pathmigrate.Service
+	importer        importer.Enqueuer
 	store           db.Store
 	ent             *ent.Client
 	publicURL       string
@@ -76,6 +78,7 @@ type Deps struct {
 	Requests        request.Manager
 	Torrents        bittorrent.Manager
 	PathMigrations  *pathmigrate.Service
+	Importer        importer.Enqueuer
 	Store           db.Store
 	Ent             *ent.Client
 	PublicURL       string
@@ -103,6 +106,7 @@ func New(d Deps) *Server {
 		requests:        d.Requests,
 		torrents:        d.Torrents,
 		pathMigrations:  d.PathMigrations,
+		importer:        d.Importer,
 		store:           d.Store,
 		ent:             d.Ent,
 		publicURL:       d.PublicURL,

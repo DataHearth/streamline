@@ -568,6 +568,18 @@ func toQueueEntry(e download.QueueEntry) QueueEntry {
 	if e.FailureReason != "" {
 		out.FailureReason = &e.FailureReason
 	}
+	if len(e.HoldReasons) > 0 {
+		reasons := make([]HoldReason, 0, len(e.HoldReasons))
+		for _, r := range e.HoldReasons {
+			reasons = append(reasons, HoldReason{
+				File:     r.File,
+				Check:    HoldReasonCheck(r.Check),
+				Expected: &r.Expected,
+				Actual:   &r.Actual,
+			})
+		}
+		out.HoldReasons = &reasons
+	}
 	return out
 }
 

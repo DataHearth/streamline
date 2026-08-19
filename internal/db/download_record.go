@@ -280,6 +280,15 @@ func (db *DB) FindImportingDownloadRecordByID(
 		Only(ctx)
 }
 
+// FindDownloadRecordByID returns one record by ID whatever its status, so a
+// caller can tell "no such record" from "wrong state for this action".
+func (db *DB) FindDownloadRecordByID(
+	ctx context.Context,
+	id uint32,
+) (*ent.DownloadRecord, error) {
+	return db.client.DownloadRecord.Get(ctx, id)
+}
+
 // HoldDownloadRecord flips an importing record to held with the reasons the
 // verifier produced, stopping the import until a user resolves it.
 func (db *DB) HoldDownloadRecord(
@@ -573,6 +582,9 @@ func (db *DB) ListActiveDownloadRecords(
 		Where(downloadrecord.StatusIn(
 			downloadrecord.StatusDownloading,
 			downloadrecord.StatusImporting,
+			// Held records are finished downloading but not done: the queue is
+			// where a user is told one is waiting on them.
+			downloadrecord.StatusHeld,
 		)).
 		WithMovie().
 		WithEpisode(func(q *ent.EpisodeQuery) {

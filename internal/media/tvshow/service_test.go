@@ -392,7 +392,9 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 				storeMk.LatestImportedRecordForEpisode(mock.Anything, uint32(9)).
 					Return(&ent.DownloadRecord{TorrentHash: "H", DownloadClientName: "qb"}, nil).
 					Once()
-				dlMk.RemoveTorrent(mock.Anything, "qb", "H").Return(nil).Once()
+				dlMk.RemoveTorrent(mock.Anything, "qb", "H", false).
+					Return(nil).
+					Once()
 
 				err := svc.DeleteEpisodeFile(
 					ctx,

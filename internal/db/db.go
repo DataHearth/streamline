@@ -248,6 +248,10 @@ type Store interface {
 		ctx context.Context,
 		id uint32,
 	) (*ent.DownloadRecord, error)
+	FindDownloadRecordByID(
+		ctx context.Context,
+		id uint32,
+	) (*ent.DownloadRecord, error)
 	HoldDownloadRecord(
 		ctx context.Context,
 		id uint32,

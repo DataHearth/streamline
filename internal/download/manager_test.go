@@ -332,7 +332,7 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 			It("returns a not-found error", func() {
 				configtest.Setup()
 				Expect(
-					mgr.RemoveTorrent(ctx, "ghost", "abc"),
+					mgr.RemoveTorrent(ctx, "ghost", "abc", false),
 				).To(MatchError(ContainSubstring("not found")))
 			})
 		})

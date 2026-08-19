@@ -2505,6 +2505,35 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /downloads/{id}/resolve:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: resolveHeldDownload
+      summary: Release a download held by import verification.
+      description: |
+        Imports the held files as-is, or deletes them from the client and
+        either re-searches (regrab) or stops (delete). 409 when the record
+        exists but is not held.
+      tags: [activity]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResolveHeldRequest"
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /activity/history:
     get:
       operationId: listDownloadHistory
@@ -6142,7 +6171,10 @@ components:
         id: { type: integer, x-go-type: uint32 }
         status:
           type: string
-          enum: [downloading, importing, paused, error]
+          description: |
+            "held" means the download finished but failed import verification
+            and is waiting on a decision (POST /downloads/{id}/resolve).
+          enum: [downloading, importing, paused, error, held]
         title: { type: string }
         quality: { type: string }
         release_group: { type: string }
@@ -6155,7 +6187,35 @@ components:
         download_speed: { type: integer, format: int64 }
         eta: { type: integer, format: int64 }
         failure_reason: { type: string }
+        hold_reasons:
+          type: array
+          description: Present only on a held entry, one item per failed check.
+          items: { $ref: "#/components/schemas/HoldReason" }
         created_at: { type: string, format: date-time }
+
+    HoldReason:
+      type: object
+      required: [file, check]
+      description: One import verification check a held download failed.
+      properties:
+        file: { type: string }
+        check:
+          type: string
+          enum: [corrupt, resolution, duration, codec, always_ask]
+        expected: { type: string }
+        actual: { type: string }
+
+    ResolveHeldRequest:
+      type: object
+      required: [action]
+      description: |
+        How to release a held download. "import" imports it as-is (skipping
+        verification on the re-run), "regrab" deletes it and re-searches,
+        "delete" deletes it and leaves the media alone.
+      properties:
+        action:
+          type: string
+          enum: [import, regrab, delete]
 
     DownloadQueue:
       type: object

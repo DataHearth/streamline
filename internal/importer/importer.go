@@ -680,6 +680,7 @@ func (w *Worker) cleanupTorrent(
 		ctx,
 		rec.DownloadClientName,
 		rec.TorrentHash,
+		false,
 	); err != nil {
 		slog.WarnContext(ctx, "remove torrent failed",
 			"hash", rec.TorrentHash, "error", err)

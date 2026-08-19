@@ -690,7 +690,7 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 				storeMock.LatestImportedRecordForMovie(mock.Anything, uint32(3)).
 					Return(&ent.DownloadRecord{TorrentHash: "H", DownloadClientName: "qb"}, nil).
 					Once()
-				downloadMock.RemoveTorrent(mock.Anything, "qb", "H").
+				downloadMock.RemoveTorrent(mock.Anything, "qb", "H", false).
 					Return(nil).
 					Once()
 

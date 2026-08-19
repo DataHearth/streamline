@@ -433,6 +433,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		Posters:         postersSvc,
 		Torrents:        torrentsAPI,
 		PathMigrations:  pathMigrations,
+		Importer:        imp,
 		Prober:          prober,
 		AuthMiddleware:  authMW,
 		HTTPLog:         httpLogger.Middleware(httpAccessSkip),

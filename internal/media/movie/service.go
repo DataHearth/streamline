@@ -728,7 +728,7 @@ func (s *Service) removeSourceTorrent(ctx context.Context, movieID uint32) {
 		return
 	}
 	if err := s.download.RemoveTorrent(
-		ctx, rec.DownloadClientName, rec.TorrentHash,
+		ctx, rec.DownloadClientName, rec.TorrentHash, false,
 	); err != nil {
 		slog.WarnContext(ctx, "remove source torrent failed",
 			"hash", rec.TorrentHash, "error", err)

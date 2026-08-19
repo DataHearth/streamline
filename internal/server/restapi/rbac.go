@@ -38,6 +38,7 @@ var minRole = map[string]string{
 	"CancelQueueItem":       roleAdmin,
 	"PauseQueueItem":        roleAdmin,
 	"ResumeQueueItem":       roleAdmin,
+	"ResolveHeldDownload":   roleAdmin,
 
 	"ListInvites":     roleAdmin,
 	"CreateInvite":    roleAdmin,

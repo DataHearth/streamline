@@ -356,7 +356,7 @@ var _ = Describe("Manager.RemoveTorrent", Label("integration", "downloads"), fun
 		qbitClientConfig("qbit-rm", host, port)
 
 		mgr := New(db.New(dbClient), nil)
-		Expect(mgr.RemoveTorrent(ctx, "qbit-rm", "abc123")).To(Succeed())
+		Expect(mgr.RemoveTorrent(ctx, "qbit-rm", "abc123", false)).To(Succeed())
 		Expect(gotHashes).To(Equal("abc123"))
 		Expect(gotDeleteFiles).To(Equal("false"))
 	})

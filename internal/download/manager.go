@@ -18,6 +18,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/movie"
+	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/indexer"
@@ -184,6 +185,7 @@ type Downloader interface {
 		ctx context.Context,
 		downloadClientName string,
 		torrentHash string,
+		deleteFiles bool,
 	) error
 	Queue(ctx context.Context) (QueueSnapshot, error)
 	CancelQueueItem(ctx context.Context, recordID uint32) error
@@ -244,8 +246,11 @@ const queueRefreshTTL = 2 * time.Second
 
 // QueueEntry is one in-flight download enriched with live client telemetry.
 type QueueEntry struct {
-	RecordID     uint32
-	Status       string // downloading | importing | paused | error
+	RecordID uint32
+	Status   string // downloading | importing | paused | error | held
+	// HoldReasons is set only on a held entry: the checks import verification
+	// failed, which is what the resolve dialog shows.
+	HoldReasons  []schema.HoldReason
 	Title        string
 	Quality      string
 	ReleaseGroup string
@@ -356,9 +361,14 @@ func baseQueueEntry(rec *ent.DownloadRecord) QueueEntry {
 		FailureReason: rec.FailureReason,
 		CreatedAt:     rec.CreateTime,
 	}
-	if rec.Status == downloadrecord.StatusImporting {
+	switch rec.Status {
+	case downloadrecord.StatusImporting:
 		e.Status = "importing"
 		e.Progress = 1.0
+	case downloadrecord.StatusHeld:
+		e.Status = "held"
+		e.Progress = 1.0
+		e.HoldReasons = rec.HoldReasons
 	}
 	e.Indexer = rec.IndexerName
 	e.DownloadClient = rec.DownloadClientName
@@ -849,13 +859,15 @@ func (d *download) PurgeOrphanedTorrents(ctx context.Context) error {
 }
 
 // RemoveTorrent wraps the download client's remove call. Used by importer.Worker
-// when KeepTorrentSeeding=false after a successful import. Files are never
-// deleted from the client's side — the library already holds the copy/hardlink
-// and the torrent contents are the source.
+// when KeepTorrentSeeding=false after a successful import, where deleteFiles is
+// false — the library already holds the copy/hardlink and the torrent contents
+// are the source. A rejected hold passes true: nothing was imported, so leaving
+// the files behind would just orphan them.
 func (d *download) RemoveTorrent(
 	ctx context.Context,
 	clientName string,
 	hash string,
+	deleteFiles bool,
 ) error {
 	ctx, span := tracer.Start(ctx, "download.remove_torrent",
 		trace.WithAttributes(attribute.String("torrent.hash", hash)))
