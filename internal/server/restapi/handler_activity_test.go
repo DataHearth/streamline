@@ -192,4 +192,17 @@ var _ = Describe("Handler: resolve held downloads",
 
 			Expect(post(9, "import").StatusCode).To(Equal(http.StatusNotFound))
 		})
+
+		It("400s an unrecognised action instead of deleting", func() {
+			Expect(post(5, "cancel").StatusCode).To(Equal(http.StatusBadRequest))
+		})
+
+		It("400s a body with no action at all", func() {
+			resp, err := http.Post(
+				app.srv.URL+"/api/v1/downloads/6/resolve",
+				"application/json", strings.NewReader(`{}`))
+			Expect(err).NotTo(HaveOccurred())
+			DeferCleanup(resp.Body.Close)
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+		})
 	})

@@ -178,6 +178,21 @@ func (s *Server) ResolveHeldDownload(
 			ForbiddenJSONResponse: notAdminResp,
 		}, nil
 	}
+	// The generated wrapper only json-decodes, so an unknown or absent action
+	// arrives here as a value no branch below claims — and the tail of this
+	// function is the destructive one.
+	switch request.Body.Action {
+	case ResolveHeldRequestActionImport,
+		ResolveHeldRequestActionRegrab,
+		ResolveHeldRequestActionDelete:
+	default:
+		return ResolveHeldDownload400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(
+				"action must be one of import, regrab, delete",
+			),
+		}, nil
+	}
+
 	rec, err := s.store.FindDownloadRecordByID(ctx, request.Id)
 	if err != nil {
 		if ent.IsNotFound(err) {

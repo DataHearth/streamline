@@ -2513,8 +2513,8 @@ paths:
       summary: Release a download held by import verification.
       description: |
         Imports the held files as-is, or deletes them from the client and
-        either re-searches (regrab) or stops (delete). 409 when the record
-        exists but is not held.
+        either re-searches (regrab) or stops (delete). 400 when the action is
+        missing or unrecognised, 409 when the record exists but is not held.
       tags: [activity]
       requestBody:
         required: true
@@ -2525,6 +2525,8 @@ paths:
       responses:
         "204":
           $ref: "#/components/responses/NoContent"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "403":
           $ref: "#/components/responses/Forbidden"
         "404":
