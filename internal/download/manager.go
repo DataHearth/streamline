@@ -884,7 +884,7 @@ func (d *download) RemoveTorrent(
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
 	}
-	return client.RemoveTorrent(ctx, hash, false)
+	return client.RemoveTorrent(ctx, hash, deleteFiles)
 }
 
 // buildBaseURL composes scheme://host:port for download client requests.
