@@ -283,8 +283,14 @@ export function formatBitrate(bps?: number): string | undefined {
 export function formatDuration(seconds?: number): string | undefined {
 	if (!seconds || seconds <= 0) return undefined;
 	const total = Math.round(seconds);
-	const h = Math.floor(total / 3600);
-	const m = Math.round((total % 3600) / 60);
+	let h = Math.floor(total / 3600);
+	// Rounding the remainder can reach 60 — anything in the last half-minute of
+	// an hour — and "1h 60m" is not a duration.
+	let m = Math.round((total % 3600) / 60);
+	if (m === 60) {
+		h += 1;
+		m = 0;
+	}
 	if (h > 0) return `${h}h ${String(m).padStart(2, "0")}m`;
 	if (m > 0) return `${m}m`;
 	return `${total}s`;
