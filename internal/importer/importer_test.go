@@ -681,6 +681,30 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 			Expect(wp.runImport(context.Background(), 1)).To(Succeed())
 		})
 
+		It("falls back to the release title for the resolution claim", func() {
+			src := filepath.Join(tmp, "dl-generic")
+			Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+			seedMediaFile(src, "movie.mkv")
+			rec := fixtureRecord(1, 10, src, 0)
+			rec.Title = "Flick.2024.2160p.WEB-DL.x265-GRP"
+			wp := proberReturning(probed(1280, "h264"), nil)
+
+			storeMk.EXPECT().
+				FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+				Return(rec, nil).Once()
+			storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+				Return(nil, nil).Once()
+			storeMk.EXPECT().
+				HoldDownloadRecord(mock.Anything, uint32(1), mock.MatchedBy(
+					func(rs []schema.HoldReason) bool {
+						return len(rs) == 1 && rs[0].Check == "resolution" &&
+							rs[0].Expected == "2160p" && rs[0].Actual == "720p"
+					})).
+				Return(nil).Once()
+
+			Expect(wp.runImport(context.Background(), 1)).To(Succeed())
+		})
+
 		It("holds a movie whose file will not probe", func() {
 			src := filepath.Join(tmp, "dl-corrupt")
 			Expect(os.MkdirAll(src, 0o755)).To(Succeed())

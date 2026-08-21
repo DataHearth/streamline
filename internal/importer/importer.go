@@ -262,6 +262,7 @@ func (w *Worker) probeSource(
 // holds even with ffmpeg off.
 func (w *Worker) verdict(
 	file string,
+	releaseTitle string,
 	info *ffmpeg.Info,
 	probeErr error,
 	runtimeMinutes uint16,
@@ -272,9 +273,16 @@ func (w *Worker) verdict(
 	if profile, ok := config.ResolveQualityProfile(qualityProfile); ok {
 		allowedCodecs = profile.AllowedCodecs
 	}
+	parsed := library.Parse(filepath.Base(file))
+	if parsed.Resolution == "" {
+		// A generically named payload ("movie.mkv") carries no claim of its
+		// own, so the check would silently pass. The release title the grab
+		// was made against always states one.
+		parsed.Resolution = library.Parse(releaseTitle).Resolution
+	}
 	reasons := verifyFile(
 		file,
-		library.Parse(filepath.Base(file)),
+		parsed,
 		info,
 		probeErr,
 		uint32(runtimeMinutes),
@@ -340,7 +348,9 @@ func (w *Worker) importMovieRecord(
 	// path: a hold that ran after the replace would already have destroyed the
 	// only copy on disk while the new release sits unimported.
 	if !rec.VerificationBypassed {
-		reasons := w.verdict(src, probeInfo, probeErr, m.Runtime, m.QualityProfile)
+		reasons := w.verdict(
+			src, rec.Title, probeInfo, probeErr, m.Runtime, m.QualityProfile,
+		)
 		if len(reasons) > 0 {
 			return w.hold(ctx, span, rec, reasons)
 		}
@@ -484,7 +494,7 @@ func (w *Worker) importEpisodeRecord(
 		probed[f] = info
 		if !rec.VerificationBypassed {
 			reasons = append(reasons, w.verdict(
-				f, info, err, show.Runtime, show.QualityProfile,
+				f, rec.Title, info, err, show.Runtime, show.QualityProfile,
 			)...)
 		}
 	}
@@ -608,7 +618,7 @@ func (w *Worker) importSingleEpisode(
 	// only copy on disk while the new release sits unimported.
 	if !rec.VerificationBypassed {
 		reasons := w.verdict(
-			src, probeInfo, probeErr, show.Runtime, show.QualityProfile,
+			src, rec.Title, probeInfo, probeErr, show.Runtime, show.QualityProfile,
 		)
 		if len(reasons) > 0 {
 			return w.hold(ctx, span, rec, reasons)
