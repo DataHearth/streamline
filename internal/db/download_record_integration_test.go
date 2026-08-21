@@ -614,6 +614,28 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 			}
 		})
 
+		It("spares the whole season while its record is held", func() {
+			ids := seedDownloadingSeason(7004, 3)
+			rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "pack", Size: 1, TorrentHash: "held-h",
+				Status:             downloadrecord.StatusImporting,
+				EpisodeID:          ids[0],
+				DownloadClientName: clientName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(store.HoldDownloadRecord(ctx, rec.ID, []schema.HoldReason{
+				{File: "/dl/e1.mkv", Check: "resolution"},
+			})).To(Succeed())
+
+			n, err := store.RevertOrphanedDownloadingEpisodes(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(0))
+			for _, id := range ids {
+				e, _ := client.Episode.Get(ctx, id)
+				Expect(e.Status).To(Equal(episode.StatusDownloading))
+			}
+		})
+
 		It("never reverts an episode that already has a media file", func() {
 			ids := seedDownloadingSeason(7003, 2)
 			_, err := client.MediaFile.Create().

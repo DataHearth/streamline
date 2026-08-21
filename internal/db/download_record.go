@@ -709,7 +709,7 @@ func (db *DB) RevertMovieToWantedIfNoFile(
 
 // RevertOrphanedDownloadingEpisodes flips back to "wanted" every episode stuck
 // in "downloading" that has no media file and whose season has no active
-// (downloading/importing) download record. This reconciles the season-pack
+// (downloading/importing/held) download record. This reconciles the season-pack
 // fan-out: a pack marks every episode downloading but links only one record, so
 // cancelling or losing that record leaves the rest stranded. Granularity is the
 // season — an episode is spared while any download in its season is still
@@ -727,6 +727,10 @@ func (db *DB) RevertOrphanedDownloadingEpisodes(
 						downloadrecord.StatusIn(
 							downloadrecord.StatusDownloading,
 							downloadrecord.StatusImporting,
+							// A held record awaits a decision; reverting its
+							// episodes would let the missing-search grab a
+							// duplicate release while it pends.
+							downloadrecord.StatusHeld,
 						),
 					),
 				),
