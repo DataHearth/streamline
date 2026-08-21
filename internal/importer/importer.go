@@ -326,24 +326,28 @@ func (w *Worker) importMovieRecord(
 	if err != nil {
 		return otelx.RecordSpanError(span, fmt.Errorf("list movie files: %w", err))
 	}
-	if len(existing) > 0 {
-		if !rec.ReplaceExisting {
-			return otelx.RecordSpanError(span, ErrMovieHasFile)
-		}
-		if err := w.replaceMovieFiles(ctx, m.ID, existing); err != nil {
-			return otelx.RecordSpanError(span, err)
-		}
+	if len(existing) > 0 && !rec.ReplaceExisting {
+		return otelx.RecordSpanError(span, ErrMovieHasFile)
 	}
+
 	var probeInfo *ffmpeg.Info
 	var probeErr error
 	src, srcErr := library.ResolveMediaFile(rec.SavePath)
 	if srcErr == nil {
 		probeInfo, probeErr = w.probeSource(ctx, src)
 	}
+	// Verified before the existing file is replaced, mirroring the season-pack
+	// path: a hold that ran after the replace would already have destroyed the
+	// only copy on disk while the new release sits unimported.
 	if !rec.VerificationBypassed {
 		reasons := w.verdict(src, probeInfo, probeErr, m.Runtime, m.QualityProfile)
 		if len(reasons) > 0 {
 			return w.hold(ctx, span, rec, reasons)
+		}
+	}
+	if len(existing) > 0 {
+		if err := w.replaceMovieFiles(ctx, m.ID, existing); err != nil {
+			return otelx.RecordSpanError(span, err)
 		}
 	}
 
@@ -589,26 +593,30 @@ func (w *Worker) importSingleEpisode(
 	if err != nil && !ent.IsNotFound(err) {
 		return otelx.RecordSpanError(span, fmt.Errorf("find episode file: %w", err))
 	}
-	if mf != nil {
-		if !rec.ReplaceExisting {
-			return otelx.RecordSpanError(span, ErrEpisodeHasFile)
-		}
-		if rErr := w.replaceEpisodeFile(ctx, ep.ID, mf); rErr != nil {
-			return otelx.RecordSpanError(span, rErr)
-		}
+	if mf != nil && !rec.ReplaceExisting {
+		return otelx.RecordSpanError(span, ErrEpisodeHasFile)
 	}
+
 	var probeInfo *ffmpeg.Info
 	var probeErr error
 	src, srcErr := library.ResolveMediaFile(rec.SavePath)
 	if srcErr == nil {
 		probeInfo, probeErr = w.probeSource(ctx, src)
 	}
+	// Verified before the existing file is replaced, mirroring the season-pack
+	// path: a hold that ran after the replace would already have destroyed the
+	// only copy on disk while the new release sits unimported.
 	if !rec.VerificationBypassed {
 		reasons := w.verdict(
 			src, probeInfo, probeErr, show.Runtime, show.QualityProfile,
 		)
 		if len(reasons) > 0 {
 			return w.hold(ctx, span, rec, reasons)
+		}
+	}
+	if mf != nil {
+		if rErr := w.replaceEpisodeFile(ctx, ep.ID, mf); rErr != nil {
+			return otelx.RecordSpanError(span, rErr)
 		}
 	}
 

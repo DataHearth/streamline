@@ -703,6 +703,59 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 			Expect(wp.runImport(context.Background(), 1)).To(Succeed())
 		})
 
+		It("keeps the existing movie file when the replacement is held", func() {
+			src := filepath.Join(tmp, "dl-replace-held")
+			Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+			seedMediaFile(src, "Flick.2024.1080p.mkv")
+			old := filepath.Join(libDir, "old.mkv")
+			Expect(os.WriteFile(old, []byte("old"), 0o644)).To(Succeed())
+			rec := fixtureRecord(1, 10, src, 0)
+			rec.ReplaceExisting = true
+			wp := proberReturning(probed(720, "h264"), nil)
+
+			storeMk.EXPECT().
+				FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+				Return(rec, nil).Once()
+			storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+				Return([]*ent.MediaFile{{ID: 5, Path: old}}, nil).Once()
+			storeMk.EXPECT().
+				HoldDownloadRecord(mock.Anything, uint32(1), mock.Anything).
+				Return(nil).Once()
+
+			Expect(wp.runImport(context.Background(), 1)).To(Succeed())
+			Expect(old).To(BeAnExistingFile())
+		})
+
+		It("keeps the existing episode file when the replacement is held", func() {
+			season, eps := buildShow()
+			src := filepath.Join(tmp, "ep-replace-held")
+			Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+			seedMediaFile(src, "Show.S01E01.1080p.mkv")
+			old := filepath.Join(libDir, "old-ep.mkv")
+			Expect(os.WriteFile(old, []byte("old"), 0o644)).To(Succeed())
+			rec := episodeRecord(
+				1,
+				filepath.Join(src, "Show.S01E01.1080p.mkv"),
+				season,
+				eps[0],
+			)
+			rec.ReplaceExisting = true
+			wp := proberReturning(probed(1280, "hevc"), nil)
+
+			storeMk.EXPECT().
+				FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+				Return(rec, nil).Once()
+			storeMk.EXPECT().
+				FindMediaFileByEpisodeID(mock.Anything, eps[0].ID).
+				Return(&ent.MediaFile{ID: 8, Path: old}, nil).Once()
+			storeMk.EXPECT().
+				HoldDownloadRecord(mock.Anything, uint32(1), mock.Anything).
+				Return(nil).Once()
+
+			Expect(wp.runImport(context.Background(), 1)).To(Succeed())
+			Expect(old).To(BeAnExistingFile())
+		})
+
 		It("imports a rejected file once verification is bypassed", func() {
 			src := filepath.Join(tmp, "dl-bypass")
 			Expect(os.MkdirAll(src, 0o755)).To(Succeed())
