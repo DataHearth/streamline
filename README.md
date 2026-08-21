@@ -10,16 +10,12 @@ Self-hosted unified media manager. Replaces the \*arr stack (Radarr, Sonarr, Lid
 
 ![Streamline in motion](docs/assets/tour.gif)
 
-## Screenshots
-
 |  |  |
 | --- | --- |
-| [![Dashboard](docs/assets/dashboard.png)](docs/assets/dashboard.png)<br>**Dashboard** — library at a glance, live queue, free space | [![Movies](docs/assets/movies.png)](docs/assets/movies.png)<br>**Movies** — poster grid with per-title status |
-| [![Movie detail](docs/assets/movie-detail.png)](docs/assets/movie-detail.png)<br>**Movie detail** — cast, artwork, and ffprobe media info | [![Series](docs/assets/series-episodes.png)](docs/assets/series-episodes.png)<br>**Series** — seasons, episodes, per-file quality |
-| [![Activity](docs/assets/activity-queue.png)](docs/assets/activity-queue.png)<br>**Activity** — live progress, speed and ETA per download | [![Import verification](docs/assets/import-verification.png)](docs/assets/import-verification.png)<br>**Import verification** — a mismatched file is held, not imported |
-| [![Manual search](docs/assets/manual-search.png)](docs/assets/manual-search.png)<br>**Manual search** — every release from every indexer, one grab away | [![Library import](docs/assets/library-import.png)](docs/assets/library-import.png)<br>**Library import** — adopt an existing library under review |
-| [![Requests](docs/assets/requests.png)](docs/assets/requests.png)<br>**Requests** — a built-in Seerr, no second service | [![Calendar](docs/assets/calendar.png)](docs/assets/calendar.png)<br>**Calendar** — what lands this month |
-| [![History](docs/assets/history.png)](docs/assets/history.png)<br>**History** — every grab, where it came from, what it cost | [![Settings](docs/assets/settings.png)](docs/assets/settings.png)<br>**Settings** — read-only runtime snapshot; the config file stays the source of truth |
+| [![Dashboard](docs/assets/dashboard.png)](docs/assets/dashboard.png) | [![Activity](docs/assets/activity-queue.png)](docs/assets/activity-queue.png) |
+| **Dashboard** — the whole library at a glance | **Activity** — live progress, speed and ETA per download |
+
+*[More screenshots](#screenshots) at the bottom.*
 
 ## Features
 
@@ -400,3 +396,14 @@ Found a vulnerability? Don't open an issue — see [SECURITY.md](SECURITY.md).
 - Releases: https://github.com/datahearth/streamline/releases
 - Changelog: [CHANGELOG.md](CHANGELOG.md)
 - Roadmap: [docs/ROADMAP.md](docs/ROADMAP.md)
+
+## Screenshots
+
+|  |  |
+| --- | --- |
+| [![Movies](docs/assets/movies.png)](docs/assets/movies.png)<br>**Movies** — poster grid with per-title status | [![Movie detail](docs/assets/movie-detail.png)](docs/assets/movie-detail.png)<br>**Movie detail** — cast, artwork, and ffprobe media info |
+| [![Series](docs/assets/series.png)](docs/assets/series.png)<br>**Series** — every show, monitored and missing counts | [![Episodes](docs/assets/series-episodes.png)](docs/assets/series-episodes.png)<br>**Episodes** — seasons, air dates, per-file quality |
+| [![Import verification](docs/assets/import-verification.png)](docs/assets/import-verification.png)<br>**Import verification** — a mismatched file is held, not imported | [![History](docs/assets/history.png)](docs/assets/history.png)<br>**History** — every grab, where it came from, what it cost |
+| [![Manual search](docs/assets/manual-search.png)](docs/assets/manual-search.png)<br>**Manual search** — every release from every indexer, one grab away | [![Library import](docs/assets/library-import.png)](docs/assets/library-import.png)<br>**Library import** — adopt an existing library under review |
+| [![Requests](docs/assets/requests.png)](docs/assets/requests.png)<br>**Requests** — a built-in Seerr, no second service | [![Calendar](docs/assets/calendar.png)](docs/assets/calendar.png)<br>**Calendar** — what lands this month |
+| [![Sign in](docs/assets/login.png)](docs/assets/login.png)<br>**Sign in** — local accounts, or SSO through any OIDC provider | [![Settings](docs/assets/settings.png)](docs/assets/settings.png)<br>**Settings** — read-only runtime snapshot; the config file stays the source of truth |
