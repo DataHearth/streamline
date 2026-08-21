@@ -833,6 +833,29 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 			Expect(w.runImport(context.Background(), 1)).To(Succeed())
 		})
 
+		It("fails, never holds, when the source file is missing", func() {
+			configtest.Setup(map[string]any{
+				"library": map[string]any{
+					"movie_path":   libDir,
+					"import_mode":  "copy",
+					"movie_naming": "{title} ({year})/{title}.{ext}",
+					"probe":        map[string]any{"always_ask": true},
+				},
+			})
+			src := filepath.Join(tmp, "dl-empty")
+			Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+			rec := fixtureRecord(1, 10, src, 0)
+
+			storeMk.EXPECT().
+				FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+				Return(rec, nil).Once()
+			storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+				Return(nil, nil).Once()
+
+			Expect(w.runImport(context.Background(), 1)).
+				To(MatchError(library.ErrNoMedia))
+		})
+
 		It("holds a whole season pack when one file fails", func() {
 			season, eps := buildShow()
 			src := filepath.Join(tmp, "pack-held")

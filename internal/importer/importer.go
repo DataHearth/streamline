@@ -346,8 +346,10 @@ func (w *Worker) importMovieRecord(
 	}
 	// Verified before the existing file is replaced, mirroring the season-pack
 	// path: a hold that ran after the replace would already have destroyed the
-	// only copy on disk while the new release sits unimported.
-	if !rec.VerificationBypassed {
+	// only copy on disk while the new release sits unimported. srcErr means
+	// there is nothing to verify at all, so the import call below reports the
+	// real ErrNoMedia as a counted failure instead of a blank-file hold.
+	if srcErr == nil && !rec.VerificationBypassed {
 		reasons := w.verdict(
 			src, rec.Title, probeInfo, probeErr, m.Runtime, m.QualityProfile,
 		)
@@ -615,8 +617,10 @@ func (w *Worker) importSingleEpisode(
 	}
 	// Verified before the existing file is replaced, mirroring the season-pack
 	// path: a hold that ran after the replace would already have destroyed the
-	// only copy on disk while the new release sits unimported.
-	if !rec.VerificationBypassed {
+	// only copy on disk while the new release sits unimported. srcErr means
+	// there is nothing to verify at all, so the import call below reports the
+	// real ErrNoMedia as a counted failure instead of a blank-file hold.
+	if srcErr == nil && !rec.VerificationBypassed {
 		reasons := w.verdict(
 			src, rec.Title, probeInfo, probeErr, show.Runtime, show.QualityProfile,
 		)
