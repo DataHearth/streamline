@@ -10502,6 +10502,20 @@ func (response CancelQueueItem404JSONResponse) VisitCancelQueueItemResponse(w ht
 	return err
 }
 
+type CancelQueueItem409JSONResponse struct{ ConflictJSONResponse }
+
+func (response CancelQueueItem409JSONResponse) VisitCancelQueueItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type CancelQueueItem500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response CancelQueueItem500JSONResponse) VisitCancelQueueItemResponse(w http.ResponseWriter) error {
@@ -10559,6 +10573,20 @@ func (response PauseQueueItem404JSONResponse) VisitPauseQueueItemResponse(w http
 	return err
 }
 
+type PauseQueueItem409JSONResponse struct{ ConflictJSONResponse }
+
+func (response PauseQueueItem409JSONResponse) VisitPauseQueueItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type PauseQueueItem500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response PauseQueueItem500JSONResponse) VisitPauseQueueItemResponse(w http.ResponseWriter) error {
@@ -10612,6 +10640,20 @@ func (response ResumeQueueItem404JSONResponse) VisitResumeQueueItemResponse(w ht
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ResumeQueueItem409JSONResponse struct{ ConflictJSONResponse }
+
+func (response ResumeQueueItem409JSONResponse) VisitResumeQueueItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -12333,6 +12375,20 @@ type ResolveHeldDownload204Response = NoContentResponse
 func (response ResolveHeldDownload204Response) VisitResolveHeldDownloadResponse(w http.ResponseWriter) error {
 	w.WriteHeader(204)
 	return nil
+}
+
+type ResolveHeldDownload400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ResolveHeldDownload400JSONResponse) VisitResolveHeldDownloadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
 }
 
 type ResolveHeldDownload403JSONResponse struct{ ForbiddenJSONResponse }
