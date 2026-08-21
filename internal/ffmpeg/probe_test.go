@@ -91,6 +91,88 @@ var _ = Describe("parseProbeOutput", Label("unit", "ffmpeg"), func() {
 		Expect(info.Height).To(Equal(uint16(1080)))
 	})
 
+	// Matroska does not carry the attached_pic disposition — cover art muxed
+	// into an mkv as a stream arrives unflagged, so size is the only thing
+	// separating it from the feature.
+	It("picks the largest video stream when cover art is unflagged", func() {
+		info, err := parseProbeOutput(
+			[]byte(
+				`{"streams":[` +
+					`{"codec_type":"video","codec_name":"png","width":320,"height":240},` +
+					`{"codec_type":"video","codec_name":"h264","width":1920,"height":800},` +
+					`{"codec_type":"audio","codec_name":"aac","channels":6}` +
+					`],"format":{"format_name":"matroska,webm","duration":"3.023000"}}`,
+			),
+		)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(info.VideoCodec).To(Equal("h264"))
+		Expect(info.Width).To(Equal(uint16(1920)))
+		Expect(info.Height).To(Equal(uint16(800)))
+	})
+
+	It("keeps the first of two equally sized video streams", func() {
+		info, err := parseProbeOutput(
+			[]byte(
+				`{"streams":[` +
+					`{"codec_type":"video","codec_name":"h264","width":1920,"height":1080},` +
+					`{"codec_type":"video","codec_name":"hevc","width":1920,"height":1080}` +
+					`],"format":{"format_name":"matroska","duration":"100.0"}}`,
+			),
+		)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(info.VideoCodec).To(Equal("h264"))
+	})
+
+	It("takes the duration of the stream it selected, not the first", func() {
+		info, err := parseProbeOutput(
+			[]byte(
+				`{"streams":[` +
+					`{"codec_type":"video","codec_name":"png","width":320,"height":240,"duration":"0.040000"},` +
+					`{"codec_type":"video","codec_name":"h264","width":1920,"height":800,"duration":"5400.000000"}` +
+					`],"format":{"format_name":"mpegts"}}`,
+			),
+		)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(info.DurationSec).To(Equal(uint32(5400)))
+	})
+
+	It("still selects a video stream that reports no dimensions", func() {
+		info, err := parseProbeOutput(
+			[]byte(
+				`{"streams":[{"codec_type":"video","codec_name":"h264"}],` +
+					`"format":{"format_name":"matroska","duration":"100.0"}}`,
+			),
+		)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(info.VideoCodec).To(Equal("h264"))
+	})
+
+	It("accepts a video stream that reports no codec name", func() {
+		info, err := parseProbeOutput(
+			[]byte(
+				`{"streams":[{"codec_type":"video","width":1920,"height":1080}],` +
+					`"format":{"format_name":"matroska","duration":"100.0"}}`,
+			),
+		)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(info.VideoCodec).To(BeEmpty())
+		Expect(info.Width).To(Equal(uint16(1920)))
+	})
+
+	It("keeps a selected codec-less stream over smaller cover art", func() {
+		info, err := parseProbeOutput(
+			[]byte(
+				`{"streams":[` +
+					`{"codec_type":"video","width":1920,"height":1080},` +
+					`{"codec_type":"video","codec_name":"mjpeg","width":300,"height":300}],` +
+					`"format":{"format_name":"matroska","duration":"100.0"}}`,
+			),
+		)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(info.VideoCodec).To(BeEmpty())
+		Expect(info.Width).To(Equal(uint16(1920)))
+	})
+
 	It("rejects a file whose only video streams are attached pics", func() {
 		_, err := parseProbeOutput(
 			[]byte(

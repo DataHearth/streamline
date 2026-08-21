@@ -89,21 +89,37 @@ func parseProbeOutput(raw []byte) (*Info, error) {
 	if b, err := strconv.ParseUint(out.Format.BitRate, 10, 32); err == nil {
 		info.BitrateBPS = uint32(b)
 	}
-	var videoStreamDuration string
+	var (
+		videoStreamDuration string
+		videoPixels         uint32
+		// ffprobe omits codec_name for codecs without a descriptor, so
+		// VideoCodec cannot double as the stream-chosen sentinel.
+		videoFound bool
+	)
 	for _, s := range out.Streams {
 		switch s.CodecType {
 		case "video":
-			// Embedded cover art (mjpeg/png thumbnail) is a video stream too;
-			// ffprobe flags it via disposition.attached_pic so it never gets
-			// mistaken for the real video track.
+			// Embedded cover art (mjpeg/png thumbnail) is a video stream too.
+			// disposition.attached_pic flags it — but only the MP4 family sets
+			// that: Matroska treats artwork as an attachment, and a cover muxed
+			// into an mkv as a stream arrives unflagged. So the feature is
+			// chosen by size as well, which is what stops a 320x240 png ordered
+			// ahead of the film from being read as the video track.
 			if s.Disposition.AttachedPic != 0 {
 				continue
 			}
-			if info.VideoCodec == "" {
-				info.VideoCodec = s.CodecName
-				info.Width, info.Height = s.Width, s.Height
-				videoStreamDuration = s.Duration
+			pixels := uint32(s.Width) * uint32(s.Height)
+			// Ties keep the earlier stream, so a multi-angle release still
+			// reports its first track. A stream reporting no dimensions still
+			// wins when it is the only candidate.
+			if videoFound && pixels <= videoPixels {
+				continue
 			}
+			info.VideoCodec = s.CodecName
+			info.Width, info.Height = s.Width, s.Height
+			videoStreamDuration = s.Duration
+			videoPixels = pixels
+			videoFound = true
 		case "audio":
 			if info.AudioCodec == "" {
 				info.AudioCodec = s.CodecName
@@ -111,7 +127,7 @@ func parseProbeOutput(raw []byte) (*Info, error) {
 			}
 		}
 	}
-	if info.VideoCodec == "" {
+	if !videoFound {
 		return nil, ErrNoVideoStream
 	}
 	// Some containers (MPEG-TS, some remuxes) carry no format.duration; the
