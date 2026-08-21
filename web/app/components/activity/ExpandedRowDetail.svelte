@@ -34,6 +34,10 @@
 	let confirmRemove = $state(false);
 
 	let isPaused = $derived(view === "queue" && item.status === "paused");
+	// A held record is off the network — pause and cancel reach the download
+	// client for a torrent that is already done, and the backend refuses them.
+	// Resolve is the only move, and the row itself carries that button.
+	let isHeld = $derived(view === "queue" && item.status === "held");
 
 	type KV = { label: string; value: string };
 	let rows = $derived.by<KV[]>(() => {
@@ -90,7 +94,7 @@
 				{/if}
 			</dl>
 
-			{#if canControl}
+			{#if canControl && !isHeld}
 			<div class="flex items-start gap-2">
 				{#if view === "queue"}
 					{#if isPaused}

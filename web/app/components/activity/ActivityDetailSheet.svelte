@@ -58,6 +58,10 @@
 	let queue = $derived(item as QueueEntry | null);
 	let history = $derived(item as HistoryEntry | null);
 	let isPaused = $derived(view === "queue" && item?.status === "paused");
+	// A held record is off the network — pause and cancel reach the download
+	// client for a torrent that is already done, and the backend refuses them.
+	// Resolve is the only move, and it lives on the row this sheet opened from.
+	let isHeld = $derived(view === "queue" && item?.status === "held");
 	let progress = $derived(
 		view === "history" ? 1 : queue?.status === "importing" ? 1 : (queue?.progress ?? 0),
 	);
@@ -197,7 +201,7 @@
 				</dl>
 			</div>
 
-			{#if canControl}
+			{#if canControl && !isHeld}
 				<div
 					class="flex items-center gap-2.5 border-t border-border px-5 pb-[max(env(safe-area-inset-bottom),14px)] pt-3.5"
 				>
@@ -244,7 +248,9 @@
 				<div
 					class="border-t border-border px-5 pb-[max(env(safe-area-inset-bottom),14px)] pt-3.5 text-center text-xs text-fg-subtle"
 				>
-					{i18n.activity_readonly_downloads()}
+					{canControl
+						? i18n.activity_held_resolve_hint()
+						: i18n.activity_readonly_downloads()}
 				</div>
 			{/if}
 		</div>

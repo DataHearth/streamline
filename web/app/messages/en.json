@@ -110,6 +110,7 @@
 	"activity_filter": "Filter activity",
 	"activity_filter_placeholder": "Filter name or hash…",
 	"activity_filter_title_movie": "Filter title or movie…",
+	"activity_held_resolve_hint": "Held for review — close this and use Resolve on the queue row.",
 	"activity_history_help": "Grabs, imports, and drift events will appear here.",
 	"activity_imported": "Imported",
 	"activity_importing": "Importing",

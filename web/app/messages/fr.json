@@ -110,6 +110,7 @@
 	"activity_filter": "Filtrer l'activité",
 	"activity_filter_placeholder": "Filtrer par nom ou hash…",
 	"activity_filter_title_movie": "Filtrer par titre ou film…",
+	"activity_held_resolve_hint": "En attente de validation — fermez cette fiche et utilisez Résoudre sur la ligne de la file.",
 	"activity_history_help": "Les récupérations, imports et écarts détectés apparaîtront ici.",
 	"activity_imported": "Importé",
 	"activity_importing": "Import en cours",
