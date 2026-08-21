@@ -272,7 +272,7 @@ type EventsConfig struct {
 // Enabled is runtime-toggleable through config.Update; Path is read at boot.
 type FFmpegConfig struct {
 	Enabled bool   `koanf:"enabled"`
-	Path    string `koanf:"path"    validate:"omitempty,dir"`
+	Path    string `koanf:"path"`
 }
 
 type LogConfig struct {

@@ -5,7 +5,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -363,31 +362,28 @@ var _ = Describe("Handler: Config API", Label("unit", "server", "config"), func(
 			Expect(*got.Found).To(BeFalse())
 		})
 
-		It("returns 422 for a path that isn't a directory", func() {
+		// The path deliberately isn't validated for existence: ffmpeg being
+		// absent is a graceful degrade surfaced by the live prober as
+		// found=false, and an existence check here would also poison every
+		// unrelated config.Update while the directory is unavailable.
+		It("stores a path that doesn't exist and reports found=false", func() {
+			app.prober.EXPECT().Available().Return(false).Once()
+
 			body := strings.NewReader(`{"path":"/does/not/exist"}`)
 			resp := app.do(
 				jsonReq(app, http.MethodPatch, "/api/v1/config/ffmpeg", body),
 			)
 			defer resp.Body.Close()
-			Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
-			Expect(restart.Pending()).To(BeFalse())
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+			var got FFmpegConfigView
+			Expect(json.NewDecoder(resp.Body).Decode(&got)).To(Succeed())
+			Expect(got.Found).NotTo(BeNil())
+			Expect(*got.Found).To(BeFalse())
+			Expect(config.Get().FFmpeg.Path).To(Equal("/does/not/exist"))
+			Expect(restart.Pending()).To(BeTrue())
+			restart.ResetForTest()
 		})
-
-		It(
-			"returns 422 for a path that exists but is a file, not a directory",
-			func() {
-				file := GinkgoT().TempDir() + "/ffprobe"
-				Expect(os.WriteFile(file, []byte(""), 0o644)).To(Succeed())
-
-				body := strings.NewReader(`{"path":"` + file + `"}`)
-				resp := app.do(
-					jsonReq(app, http.MethodPatch, "/api/v1/config/ffmpeg", body),
-				)
-				defer resp.Body.Close()
-				Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
-				Expect(restart.Pending()).To(BeFalse())
-			},
-		)
 
 		It("rejects a non-admin with 403", func() {
 			resp := app.do(
