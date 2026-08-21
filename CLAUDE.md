@@ -142,7 +142,8 @@ Convention for landing a batch of independent fixes (audit findings, review comm
 
 ## Docs & Spec Upkeep
 - Any change to `/api/v1` behavior — routes, auth/authz, status codes, security schemes, request/response shapes — updates `api/openapi.yaml` in the same change, then `task generate` (gen.go embeds the spec). A handler and its spec entry must never disagree.
-- When a feature or behavior changes, update the affected CLAUDE.md section **and the GitHub wiki** (`DataHearth/streamline.wiki.git` — user-facing pages like REST-API, Authentication-and-SSO) in the same task — stale docs describing the old behavior are worse than none. Wiki pushes need explicit approval like any push.
+- When a feature or behavior changes, update the affected CLAUDE.md section **and the wiki** (`docs/wiki/` — user-facing pages like `REST-API.md`, `Authentication-and-SSO.md`) in the same change — stale docs describing the old behavior are worse than none.
+- `docs/wiki/` is the source of truth for the GitHub wiki; `.github/workflows/wiki.yaml` mirrors it to `DataHearth/streamline.wiki.git` on every push to `main` touching it. Filename = page title (dashes become spaces), `_Sidebar.md` is the nav. Never edit through the wiki UI — the next sync overwrites it.
 
 ## Code Generation
 - API: `go tool oapi-codegen --config api/oapi-codegen.yaml api/openapi.yaml` → `internal/server/restapi/gen.go` (package `restapi`) — regenerate after spec changes
