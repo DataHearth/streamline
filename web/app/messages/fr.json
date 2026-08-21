@@ -544,6 +544,7 @@
 	"health_system": "Système {state}",
 	"hold_body_one": "Le téléchargement est terminé, mais un fichier ne correspond pas à ce qu'annonçait la release. Rien n'a encore été importé.",
 	"hold_body_other": "Le téléchargement est terminé, mais {count} fichiers ne correspondent pas à ce qu'annonçait la release. Rien n'a encore été importé.",
+	"hold_check_always_ask": "validation manuelle",
 	"hold_check_codec": "codec",
 	"hold_check_corrupt": "corrompu",
 	"hold_check_duration": "durée",

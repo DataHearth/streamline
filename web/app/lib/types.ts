@@ -397,7 +397,14 @@ export type EpisodeRef = {
 	episode: number;
 };
 
-export type HoldCheck = "resolution" | "corrupt" | "duration" | "codec";
+export type HoldCheck =
+	| "resolution"
+	| "corrupt"
+	| "duration"
+	| "codec"
+	// Not a failed check: `library.probe.always_ask` holds an otherwise-clean
+	// import so a person signs off on it, so it carries no expected/actual pair.
+	| "always_ask";
 
 export type HoldReason = {
 	file: string;

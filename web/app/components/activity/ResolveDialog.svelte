@@ -40,7 +40,12 @@
 		duration: () => i18n.hold_check_duration(),
 		codec: () => i18n.hold_check_codec(),
 		corrupt: () => i18n.hold_check_corrupt(),
+		always_ask: () => i18n.hold_check_always_ask(),
 	};
+
+	// `always_ask` holds a file nothing is wrong with, so it has no claim to
+	// contrast against — rendering the pair would read as a fifth failure.
+	const hasExpectation = (r: HoldReason) => r.check !== "always_ask";
 
 	// The hold is on the download; the reasons are itemised per file. A season
 	// pack therefore lists several files, each with its own findings.
@@ -118,11 +123,13 @@
 							<dd
 								class="flex items-baseline justify-end gap-2 text-right font-mono text-xs"
 							>
-								{#if f.expected}
-									<span class="text-fg-subtle line-through">{f.expected}</span>
-									<span class="text-fg-faint" aria-hidden="true">→</span>
+								{#if hasExpectation(f)}
+									{#if f.expected}
+										<span class="text-fg-subtle line-through">{f.expected}</span>
+										<span class="text-fg-faint" aria-hidden="true">→</span>
+									{/if}
+									<span style:color="var(--status-held)">{f.actual || "—"}</span>
 								{/if}
-								<span style:color="var(--status-held)">{f.actual || "—"}</span>
 							</dd>
 						</div>
 					{/each}

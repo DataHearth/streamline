@@ -544,6 +544,7 @@
 	"health_system": "System {state}",
 	"hold_body_one": "The download finished, but one file disagrees with what the release claimed. Nothing has been imported yet.",
 	"hold_body_other": "The download finished, but {count} files disagree with what the release claimed. Nothing has been imported yet.",
+	"hold_check_always_ask": "manual review",
 	"hold_check_codec": "codec",
 	"hold_check_corrupt": "corrupt",
 	"hold_check_duration": "duration",
