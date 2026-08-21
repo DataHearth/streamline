@@ -30,6 +30,11 @@
 				api<FFmpegConfig>("/config/ffmpeg", { method: "PATCH", body }),
 			onSuccess: (resp) => {
 				qc.setQueryData(["config", "ffmpeg"], resp);
+				// enabled feeds SystemInfo.ffmpeg_warn, which is what draws the notice
+				// on Settings -> General and turns the top-bar health pill amber. That
+				// lives under a different key, and the top bar never remounts, so
+				// without this it keeps answering with the pre-toggle state.
+				qc.invalidateQueries({ queryKey: ["system", "info"] });
 				toast.ok(i18n.probe_saved());
 			},
 			onError: (err) => toast.err(errorText(err)),
