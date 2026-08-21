@@ -58,6 +58,10 @@ var (
 	ErrUnsafeTorrentName = errors.New(
 		"torrent name escapes the download path",
 	)
+	// ErrRecordHeld is returned by the queue verbs for a record parked by
+	// import verification. Its download is finished, so pause/resume/cancel
+	// have nothing to act on — POST /downloads/{id}/resolve owns it.
+	ErrRecordHeld = errors.New("download record is held for review")
 )
 
 // PathUnderRoot reports whether path resolves inside root, or is root itself.
@@ -388,11 +392,15 @@ func liveQueueStatus(s TorrentStatus) string {
 
 // CancelQueueItem removes the torrent (and its partial files) from the
 // client, deletes the record, and reverts the movie to "wanted" when it has
-// no file. A NotFound record propagates so the handler can 404.
+// no file. A NotFound record propagates so the handler can 404, a held one
+// yields ErrRecordHeld so it can 409.
 func (d *download) CancelQueueItem(ctx context.Context, recordID uint32) error {
 	rec, err := d.db.FindActiveDownloadRecordByID(ctx, recordID)
 	if err != nil {
 		return err
+	}
+	if rec.Status == downloadrecord.StatusHeld {
+		return ErrRecordHeld
 	}
 	if dc, ok := config.FindDownloadClient(
 		rec.DownloadClientName,
@@ -426,7 +434,8 @@ func (d *download) ResumeQueueItem(ctx context.Context, recordID uint32) error {
 }
 
 // queueClientAction loads an in-flight record and applies a torrent-level
-// client verb (pause/resume) to it. NotFound propagates for the handler 404.
+// client verb (pause/resume) to it. NotFound propagates for the handler 404,
+// ErrRecordHeld for its 409.
 func (d *download) queueClientAction(
 	ctx context.Context,
 	recordID uint32,
@@ -435,6 +444,9 @@ func (d *download) queueClientAction(
 	rec, err := d.db.FindActiveDownloadRecordByID(ctx, recordID)
 	if err != nil {
 		return err
+	}
+	if rec.Status == downloadrecord.StatusHeld {
+		return ErrRecordHeld
 	}
 	dc, ok := config.FindDownloadClient(rec.DownloadClientName)
 	if !ok || rec.TorrentHash == "" {

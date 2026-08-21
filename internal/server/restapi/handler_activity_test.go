@@ -66,6 +66,39 @@ var _ = Describe("Handler: Activity queue/history",
 			Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
 		})
 
+		It("DELETE /activity/queue/{id} 409s a held record", func() {
+			app.downloads.EXPECT().CancelQueueItem(mock.Anything, uint32(7)).
+				Return(download.ErrRecordHeld).Once()
+			req, _ := http.NewRequest(http.MethodDelete,
+				app.srv.URL+"/api/v1/activity/queue/7", nil)
+			resp, err := http.DefaultClient.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusConflict))
+		})
+
+		It("POST /activity/queue/{id}/pause 409s a held record", func() {
+			app.downloads.EXPECT().PauseQueueItem(mock.Anything, uint32(7)).
+				Return(download.ErrRecordHeld).Once()
+			resp, err := http.Post(
+				app.srv.URL+"/api/v1/activity/queue/7/pause",
+				"application/json", nil)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusConflict))
+		})
+
+		It("POST /activity/queue/{id}/resume 409s a held record", func() {
+			app.downloads.EXPECT().ResumeQueueItem(mock.Anything, uint32(7)).
+				Return(download.ErrRecordHeld).Once()
+			resp, err := http.Post(
+				app.srv.URL+"/api/v1/activity/queue/7/resume",
+				"application/json", nil)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusConflict))
+		})
+
 		It("POST /activity/history/clear-completed returns the count", func() {
 			app.store.EXPECT().DeleteAllCompletedDownloadRecords(mock.Anything).
 				Return(4, nil).Once()

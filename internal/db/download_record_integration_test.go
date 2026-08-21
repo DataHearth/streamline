@@ -466,6 +466,17 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 			_, err := store.FindActiveDownloadRecordByID(ctx, rec.ID)
 			Expect(ent.IsNotFound(err)).To(BeTrue())
 		})
+
+		It("finds a held record so the queue verbs can 409 it", func() {
+			rec := createRec("held", downloadrecord.StatusImporting)
+			Expect(store.HoldDownloadRecord(ctx, rec.ID, []schema.HoldReason{
+				{File: "/dl/f.mkv", Check: "resolution"},
+			})).To(Succeed())
+
+			got, err := store.FindActiveDownloadRecordByID(ctx, rec.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.Status).To(Equal(downloadrecord.StatusHeld))
+		})
 	})
 
 	Describe("ListDownloadHistory", func() {

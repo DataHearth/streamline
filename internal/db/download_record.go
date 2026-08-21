@@ -595,6 +595,8 @@ func (db *DB) ListActiveDownloadRecords(
 
 // FindActiveDownloadRecordByID fetches an in-flight record by ID with movie +
 // download_client edges. Returns ent.NotFound when absent or already terminal.
+// Held records match: the queue shows them, so the queue verbs have to be able
+// to tell a held row apart from a missing one.
 func (db *DB) FindActiveDownloadRecordByID(
 	ctx context.Context,
 	id uint32,
@@ -605,6 +607,7 @@ func (db *DB) FindActiveDownloadRecordByID(
 			downloadrecord.StatusIn(
 				downloadrecord.StatusDownloading,
 				downloadrecord.StatusImporting,
+				downloadrecord.StatusHeld,
 			),
 		).
 		WithMovie().

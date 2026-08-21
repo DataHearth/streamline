@@ -2,11 +2,13 @@ package restapi
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"strings"
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/internal/download"
 )
 
 func (s *Server) GetDownloadQueue(
@@ -44,6 +46,13 @@ func (s *Server) CancelQueueItem(
 				NotFoundJSONResponse: errNotFound(err.Error()),
 			}, nil
 		}
+		if errors.Is(err, download.ErrRecordHeld) {
+			return CancelQueueItem409JSONResponse{
+				ConflictJSONResponse: errConflict(
+					"download is held; resolve it via POST /downloads/{id}/resolve",
+				),
+			}, nil
+		}
 		return nil, err
 	}
 	return CancelQueueItem204Response{}, nil
@@ -64,6 +73,13 @@ func (s *Server) PauseQueueItem(
 				NotFoundJSONResponse: errNotFound(err.Error()),
 			}, nil
 		}
+		if errors.Is(err, download.ErrRecordHeld) {
+			return PauseQueueItem409JSONResponse{
+				ConflictJSONResponse: errConflict(
+					"download is held; resolve it via POST /downloads/{id}/resolve",
+				),
+			}, nil
+		}
 		return nil, err
 	}
 	return PauseQueueItem204Response{}, nil
@@ -82,6 +98,13 @@ func (s *Server) ResumeQueueItem(
 		if ent.IsNotFound(err) {
 			return ResumeQueueItem404JSONResponse{
 				NotFoundJSONResponse: errNotFound(err.Error()),
+			}, nil
+		}
+		if errors.Is(err, download.ErrRecordHeld) {
+			return ResumeQueueItem409JSONResponse{
+				ConflictJSONResponse: errConflict(
+					"download is held; resolve it via POST /downloads/{id}/resolve",
+				),
 			}, nil
 		}
 		return nil, err

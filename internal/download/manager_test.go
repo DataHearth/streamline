@@ -469,6 +469,15 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 				Return(nil).Once()
 			Expect(mgr.CancelQueueItem(ctx, 3)).To(Succeed())
 		})
+
+		It("refuses a held record without touching it", func() {
+			store.EXPECT().
+				FindActiveDownloadRecordByID(mock.Anything, uint32(4)).
+				Return(&ent.DownloadRecord{
+					ID: 4, Status: downloadrecord.StatusHeld,
+				}, nil).Once()
+			Expect(mgr.CancelQueueItem(ctx, 4)).To(MatchError(ErrRecordHeld))
+		})
 	})
 
 	Describe("PauseQueueItem", func() {
@@ -477,6 +486,15 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 				FindActiveDownloadRecordByID(mock.Anything, uint32(1)).
 				Return(nil, &ent.NotFoundError{}).Once()
 			Expect(ent.IsNotFound(mgr.PauseQueueItem(ctx, 1))).To(BeTrue())
+		})
+
+		It("refuses a held record", func() {
+			store.EXPECT().
+				FindActiveDownloadRecordByID(mock.Anything, uint32(2)).
+				Return(&ent.DownloadRecord{
+					ID: 2, Status: downloadrecord.StatusHeld,
+				}, nil).Once()
+			Expect(mgr.PauseQueueItem(ctx, 2)).To(MatchError(ErrRecordHeld))
 		})
 	})
 })

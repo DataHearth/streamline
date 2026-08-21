@@ -2460,6 +2460,8 @@ paths:
       description: |
         Removes the torrent (and its partial files) from the client, deletes
         the record, and reverts the movie to "wanted" when it has no file.
+        409 when the download is held by import verification — resolve it via
+        POST /downloads/{id}/resolve instead.
       tags: [activity]
       responses:
         "204":
@@ -2468,6 +2470,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -2477,6 +2481,9 @@ paths:
     post:
       operationId: pauseQueueItem
       summary: Pause an in-flight download.
+      description: |
+        409 when the download is held by import verification — it has finished
+        downloading and is resolved via POST /downloads/{id}/resolve.
       tags: [activity]
       responses:
         "204":
@@ -2485,6 +2492,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -2494,6 +2503,9 @@ paths:
     post:
       operationId: resumeQueueItem
       summary: Resume a paused download.
+      description: |
+        409 when the download is held by import verification — it has finished
+        downloading and is resolved via POST /downloads/{id}/resolve.
       tags: [activity]
       responses:
         "204":
@@ -2502,6 +2514,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
         "500":
           $ref: "#/components/responses/InternalError"
 
