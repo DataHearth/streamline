@@ -2,11 +2,14 @@
 
 Streamline is a single binary with no external dependencies — no database server, no runtime, no CGO. Pick whichever install method matches how you already run things.
 
+A couple of features are gated behind the `ffmpeg`/`ffprobe` binaries, but they are opt-in extras and never a requirement: without them Streamline installs, boots and runs the same, just without media info and import verification. See [Optional: ffmpeg](#optional-ffmpeg).
+
 - [Before you start: the folder rule](#before-you-start-the-folder-rule)
 - [Docker Compose](#docker-compose) — recommended for most people
 - [Plain binary](#plain-binary)
 - [Unraid, Synology, TrueNAS](#unraid-synology-truenas)
 - [Kubernetes / Helm](#kubernetes--helm)
+- [Optional: ffmpeg](#optional-ffmpeg)
 - [Verifying what you downloaded](#verifying-what-you-downloaded)
 
 ---
@@ -46,6 +49,8 @@ If you genuinely can't put them on one filesystem, set `library.import_mode` to 
 ---
 
 ## Docker Compose
+
+The image is self-contained: Streamline plus static `ffmpeg` and `ffprobe` binaries in `/usr/local/bin`, so the [optional media features](#optional-ffmpeg) work out of the box with no extra config and no second container.
 
 ### 1. Create the config
 
@@ -110,7 +115,7 @@ Pin to `vX.Y.Z` or at least `X.Y` for anything you care about.
 
 ## Plain binary
 
-Requires nothing but the binary itself. Grab it from the [Releases page](https://github.com/datahearth/streamline/releases/latest) — Linux, macOS and Windows, amd64 and arm64.
+Requires nothing but the binary itself — no runtime, no database server, and no ffmpeg unless you want the [optional extras](#optional-ffmpeg). Grab it from the [Releases page](https://github.com/datahearth/streamline/releases/latest) — Linux, macOS and Windows, amd64 and arm64.
 
 ```bash
 # Linux amd64 — substitute the real version number
@@ -200,6 +205,46 @@ Two things about the chart that surprise people:
 
 - **`replicaCount` is 1 and must stay 1.** Streamline stores state in SQLite, which is a single-writer database. A second replica will corrupt it.
 - **The chart defaults to `read_only: true`.** Config changes flow through git, not the web UI; the settings pages will reject writes. This is deliberate for declarative deploys — see [GitOps and Kubernetes](GitOps-and-Kubernetes) for the full treatment, including how to supply the secrets the app would normally generate for itself.
+
+---
+
+## Optional: ffmpeg
+
+Streamline runs perfectly well with no `ffmpeg` or `ffprobe` anywhere on the machine. Two features
+are gated behind them, and only those two:
+
+| Feature | What you lose without ffprobe |
+| --- | --- |
+| **Media info** | Resolution, codecs, duration, channels and bitrate on files and episodes. The rest of the page is unaffected |
+| **Import verification** | Downloads are imported on the strength of the release name alone. With ffprobe, a file whose real resolution, duration or codec contradicts the claim is *held* for you to resolve instead of landing in your library |
+
+Everything else — searching, grabbing, importing, renaming, requests, notifications — works
+identically either way. Missing binaries are a **graceful degrade, never a boot error**: nothing
+fails, nothing is retried forever, and imports simply fall back to filename parsing.
+
+**Where the binaries come from:**
+
+- **Docker / Helm** — already there, nothing to do. The official image copies static `ffmpeg` and
+  `ffprobe` binaries into `/usr/local/bin` from a digest-pinned
+  [`mwader/static-ffmpeg`](https://hub.docker.com/r/mwader/static-ffmpeg) stage, so the default
+  `ffmpeg.path: ""` finds them on `$PATH`
+- **Plain binary / from source** — install them however your OS does (`apt install ffmpeg`,
+  `brew install ffmpeg`, `pacman -S ffmpeg`, …), or drop the two static binaries in a directory of
+  your choosing
+
+**Turning it off, or pointing it elsewhere** — two keys, both in [Configuration
+Reference](Configuration-Reference#ffmpeg):
+
+```yaml
+ffmpeg:
+  enabled: true    # false disables probing entirely; runtime-editable, no restart
+  path: ""         # a DIRECTORY holding ffmpeg/ffprobe. Empty resolves via $PATH. Read at boot
+```
+
+If probing is enabled but ffprobe can't be found, `GET /api/v1/system/info` returns
+`ffmpeg_warn: true`, Settings → General shows a notice, and the header health pill goes amber.
+That's the signal that `path` is wrong or the binaries aren't installed. With `enabled: false` the
+key is absent: you opted out, so it isn't a warning.
 
 ---
 

@@ -57,6 +57,21 @@ The canonical, always-current version of this table is [`docs/ROADMAP.md`](https
 
 ---
 
+## About the screenshots, and about what you do with this
+
+**Every library shown in a screenshot, GIF or example on this wiki and in the repository is
+fabricated.** Titles, posters and metadata are pulled from public metadata providers to make the
+interface legible; there are no files behind them. Nothing depicted is a real download, a real
+release, or an endorsement of one.
+
+Streamline is a library manager. It indexes metadata, talks to indexers and download clients you
+configure yourself, and organises files that already exist on your disk. It hosts nothing and
+distributes nothing. It does not endorse copyright infringement or any other unlawful use, and the
+authors accept no responsibility for how you choose to use it — making sure you have the right to
+the content you acquire is entirely on you.
+
+---
+
 ## Getting help
 
 - **Bug or feature request** — [open an issue](https://github.com/datahearth/streamline/issues)
