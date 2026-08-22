@@ -8,7 +8,7 @@
 
 Self-hosted unified media manager. Replaces the \*arr stack (Radarr, Sonarr, Lidarr, Readarr) and Seerr with a single binary.
 
-![Streamline in motion](docs/assets/tour.gif)
+https://github.com/user-attachments/assets/9116fb45-1a25-414d-b79e-5fe83df25f6b
 
 |  |  |
 | --- | --- |
@@ -421,7 +421,7 @@ Found a vulnerability? Don't open an issue — see [SECURITY.md](SECURITY.md).
 
 ## Screenshots
 
-> **The library shown in every screenshot and in the demo GIF is fabricated.** Titles, posters and
+> **The library shown in every screenshot and in the demo video is fabricated.** Titles, posters and
 > metadata come from public metadata providers; the "files" behind them do not exist. Streamline is a
 > library manager — it neither hosts nor distributes media. It does not endorse copyright
 > infringement or any other unlawful use, and the authors accept no responsibility for how you use
