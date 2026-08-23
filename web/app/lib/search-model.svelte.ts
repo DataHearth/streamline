@@ -25,7 +25,7 @@ import {
 	Users,
 	LogOut,
 } from "@lucide/svelte";
-import { api } from "./api";
+import { api, apiAllPages } from "./api";
 import { auth } from "./auth.svelte";
 import { fold } from "./text";
 import type { Movie, TVShow } from "./types";
@@ -107,13 +107,13 @@ export function createSearchModel(
 ) {
 	const moviesQuery = createQuery(() => ({
 		queryKey: ["movies"],
-		queryFn: () => api<{ items: Movie[] }>("/movies?page=1&limit=500"),
+		queryFn: () => apiAllPages<Movie>("/movies"),
 		staleTime: 30_000,
 	}));
 
 	const seriesQuery = createQuery(() => ({
 		queryKey: ["series"],
-		queryFn: () => api<{ items: TVShow[] }>("/series?page=1&limit=500"),
+		queryFn: () => apiAllPages<TVShow>("/series"),
 		staleTime: 30_000,
 	}));
 

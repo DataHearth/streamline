@@ -19,7 +19,7 @@
 	} from "@lucide/svelte";
 	import { fly } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
-	import { api, errorText } from "../../lib/api";
+	import { api, apiAllPages, errorText, type Paginated } from "../../lib/api";
 	import { toast } from "../../lib/toast";
 	import { auth } from "../../lib/auth.svelte";
 	import { formatBytes } from "../../lib/format";
@@ -30,8 +30,6 @@
 		AddSeriesRequest,
 		LookupDetail,
 		Movie,
-		PaginatedMovies,
-		PaginatedTVShows,
 		QualityProfile,
 		SeriesLookupResultList,
 		TMDBMovieResult,
@@ -116,10 +114,10 @@
 		enabled: open,
 	}));
 
-	const libraryQuery = createQuery<PaginatedMovies | PaginatedTVShows>(() => ({
+	const libraryQuery = createQuery<Paginated<Movie | TVShow>>(() => ({
 		queryKey: isMovie ? ["movies"] : ["series"],
 		queryFn: () =>
-			api(isMovie ? "/movies?page=1&limit=500" : "/series?page=1&limit=500"),
+			apiAllPages<Movie | TVShow>(isMovie ? "/movies" : "/series"),
 		enabled: open,
 	}));
 

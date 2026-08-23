@@ -98,3 +98,39 @@ var _ = Describe("ClassifyShow", Label("unit", "bulkimport"), func() {
 		Expect(c.TVDBID).To(Equal(uint32(311072)))
 	})
 })
+
+var _ = Describe(
+	"ClassifyShow with same-titled tracked shows",
+	Label("unit", "bulkimport"),
+	func() {
+		// Two library rows normalise to "Spiral": TVDB writes the 2017 entry's
+		// year inside its title. Picking the first tracked candidate reported the
+		// 2005 folder as `existing` against the 2017 row and adopted 76 files
+		// into it.
+		hits := []metadata.TVResult{
+			{TVDBID: 82152, Title: "Spiral", Year: 2005},
+			{TVDBID: 333715, Title: "Spiral (2017)", Year: 2017},
+		}
+		tracked := map[uint32]uint32{82152: 15, 333715: 127}
+
+		It("resolves the year-carrying folder to its own row", func() {
+			c := ClassifyShow(
+				"/srv/streamline/tv/Spiral (2005)", "Spiral", 2005, hits, tracked,
+			)
+			Expect(c.Kind).To(Equal(entimportscanshow.ClassificationExisting))
+			Expect(c.ExistingTvshowID).To(Equal(uint32(15)))
+		})
+
+		It("refuses to guess when the folder carries no year", func() {
+			c := ClassifyShow(
+				"/srv/streamline/tv/Spiral",
+				"Spiral",
+				0,
+				hits,
+				tracked,
+			)
+			Expect(c.Kind).To(Equal(entimportscanshow.ClassificationAmbiguous))
+			Expect(c.ExistingTvshowID).To(BeZero())
+		})
+	},
+)

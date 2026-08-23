@@ -13,6 +13,12 @@ var templateTokenRe = regexp.MustCompile(`\{(\w+)(?::(\d+))?\}`)
 // with values from the provided map. Format spec {key:02} zero-pads
 // numeric values to the given width. Unknown tokens render as empty —
 // keeps optional segments like {imdb_id} clean when not populated.
+//
+// Substituted values are run through SanitizePath. The rendered string is a
+// path whose "/" are structural, and callers split on them: a title carrying
+// one of its own ("In/Spectre", "Face/Off") would otherwise become two
+// directories, which sanitising the split segments afterwards can no longer
+// see.
 func ApplyTemplate(tpl string, vars map[string]string) string {
 	return templateTokenRe.ReplaceAllStringFunc(tpl, func(match string) string {
 		parts := templateTokenRe.FindStringSubmatch(match)
@@ -31,7 +37,7 @@ func ApplyTemplate(tpl string, vars map[string]string) string {
 			}
 		}
 
-		return val
+		return SanitizePath(val)
 	})
 }
 

@@ -16,14 +16,13 @@
 		X,
 	} from "@lucide/svelte";
 	import { fade } from "svelte/transition";
-	import { api, errorText } from "../../lib/api";
+	import { api, apiAllPages, errorText, type Paginated } from "../../lib/api";
 	import { toast } from "../../lib/toast";
 	import { auth } from "../../lib/auth.svelte";
 	import type {
 		AddSeriesRequest,
 		LookupDetail,
 		MonitoringPreset,
-		PaginatedTVShows,
 		QualityProfile,
 		SeriesLookupResult,
 		SeriesLookupResultList,
@@ -113,9 +112,9 @@
 		enabled: open && mode === "add",
 	}));
 
-	const seriesListQuery = createQuery<PaginatedTVShows>(() => ({
+	const seriesListQuery = createQuery<Paginated<TVShow>>(() => ({
 		queryKey: ["series"],
-		queryFn: () => api<PaginatedTVShows>("/series?page=1&limit=500"),
+		queryFn: () => apiAllPages<TVShow>("/series"),
 		enabled: open && mode === "add",
 	}));
 

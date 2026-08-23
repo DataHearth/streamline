@@ -2,7 +2,7 @@
 	import { untrack } from "svelte";
 	import { onMount } from "svelte";
 	import { createQuery } from "@tanstack/svelte-query";
-	import { api, errorText } from "../../lib/api";
+	import { api, apiAllPages, errorText, type Paginated } from "../../lib/api";
 	import { formatRelative } from "../../lib/dates";
 	import { formatBytes } from "../../lib/format";
 	import { movieStatus } from "../../lib/status";
@@ -17,7 +17,6 @@
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 	import type {
 		Movie,
-		PaginatedMovies,
 		ScheduleList,
 	} from "../../lib/types";
 
@@ -115,9 +114,9 @@
 		}
 	});
 
-	const moviesQuery = createQuery<PaginatedMovies>(() => ({
+	const moviesQuery = createQuery<Paginated<Movie>>(() => ({
 		queryKey: ["movies"],
-		queryFn: () => api<PaginatedMovies>("/movies?page=1&limit=500"),
+		queryFn: () => apiAllPages<Movie>("/movies"),
 	}));
 
 	const schedulesQuery = createQuery<ScheduleList>(() => ({

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { createQuery } from "@tanstack/svelte-query";
-	import { api } from "../lib/api";
+	import { api, apiAllPages, type Paginated } from "../lib/api";
 	import { posterUrl, tvPosterUrl } from "../lib/posters";
 	import { formatBytes } from "../lib/format";
 	import { codecOf, fileMetaLine, resolutionOf } from "../lib/media-info";
@@ -10,8 +10,6 @@
 		DownloadQueue,
 		MovieCounts,
 		Movie,
-		PaginatedMovies,
-		PaginatedTVShows,
 		SystemInfo,
 		TVShow,
 		TVShowCounts,
@@ -27,14 +25,14 @@
 	import { upcomingEvents } from "../lib/calendar";
 	import { m as i18n } from "../lib/paraglide/messages.js";
 
-	const moviesQuery = createQuery<PaginatedMovies>(() => ({
+	const moviesQuery = createQuery<Paginated<Movie>>(() => ({
 		queryKey: ["movies"],
-		queryFn: () => api<PaginatedMovies>("/movies?page=1&limit=500"),
+		queryFn: () => apiAllPages<Movie>("/movies"),
 	}));
 
-	const seriesQuery = createQuery<PaginatedTVShows>(() => ({
+	const seriesQuery = createQuery<Paginated<TVShow>>(() => ({
 		queryKey: ["series"],
-		queryFn: () => api<PaginatedTVShows>("/series?page=1&limit=500"),
+		queryFn: () => apiAllPages<TVShow>("/series"),
 	}));
 
 	const countsQuery = createQuery<MovieCounts>(() => ({

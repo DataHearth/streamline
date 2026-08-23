@@ -70,13 +70,6 @@ export type TVShow = {
 	cast?: CastMember[];
 };
 
-export type PaginatedTVShows = {
-	items: TVShow[];
-	total: number;
-	page: number;
-	limit: number;
-};
-
 export type TVShowCounts = {
 	total: number;
 	continuing: number;
@@ -255,13 +248,6 @@ export type SeriesRenamePlan = {
 	operations: RenameOperation[];
 };
 
-export type PaginatedMovies = {
-	items: Movie[];
-	total: number;
-	page: number;
-	limit: number;
-};
-
 export type TMDBMovieResult = {
 	tmdb_id: number;
 	title: string;
@@ -308,13 +294,6 @@ export type MediaRequest = {
 	approved_by?: RequestUser;
 	created_at: string;
 	updated_at: string;
-};
-
-export type PaginatedRequests = {
-	items: MediaRequest[];
-	total: number;
-	page: number;
-	limit: number;
 };
 
 export type RequestCounts = {
@@ -875,14 +854,9 @@ export type ImportScanFile = {
 	updated_at: string;
 };
 
-export type ImportScanFileList = {
-	items: ImportScanFile[];
-	total: number;
-};
-
 // Series import scans carry per-show rows instead of per-file rows. Shows reuse
 // the file classification/decision enums; outcomes are a shorter set.
-export type ImportShowOutcome = "pending" | "created" | "failed";
+export type ImportShowOutcome = "pending" | "created" | "attached" | "failed";
 
 export type ImportScanShowCandidate = {
 	tvdb_id: number;
@@ -907,11 +881,6 @@ export type ImportScanShow = {
 	created_tvshow_id?: number | null;
 	created_at: string;
 	updated_at: string;
-};
-
-export type ImportScanShowList = {
-	items: ImportScanShow[];
-	total: number;
 };
 
 export type ImportStartRequest = {

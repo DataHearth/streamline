@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { createQuery } from "@tanstack/svelte-query";
 	import { Film } from "@lucide/svelte";
-	import { api } from "../../lib/api";
+	import { api, apiAllPages, type Paginated } from "../../lib/api";
 	import Poster from "./Poster.svelte";
 	import AddRecommendationModal from "./AddRecommendationModal.svelte";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 	import type {
+		Movie,
 		MovieRecommendations,
-		PaginatedMovies,
 		TMDBMovieResult,
 	} from "../../lib/types";
 
@@ -23,9 +23,9 @@
 
 	// Library lookup so an already-added recommendation links straight to
 	// its detail page instead of re-opening the add modal.
-	const libQuery = createQuery<PaginatedMovies>(() => ({
+	const libQuery = createQuery<Paginated<Movie>>(() => ({
 		queryKey: ["movies"],
-		queryFn: () => api<PaginatedMovies>("/movies?page=1&limit=500"),
+		queryFn: () => apiAllPages<Movie>("/movies"),
 	}));
 	let libraryByTmdb = $derived.by(() => {
 		const map = new Map<number, number>();

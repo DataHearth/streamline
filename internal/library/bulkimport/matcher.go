@@ -43,31 +43,31 @@ func Classify(
 		pickerCandidateLimit,
 	)
 
-	for _, c := range cands {
-		if movieID, hit := alreadyAdded[c.TMDBID]; hit {
-			return Classification{
-				Kind:            entimportscanfile.ClassificationExisting,
-				TMDBID:          c.TMDBID,
-				ExistingMovieID: movieID,
-				Candidates:      cands,
-			}
-		}
-	}
-
 	// Scan every candidate, not only the top one: TMDB frequently ranks a
 	// same-titled decoy first ("Fantasia" 1940 above "Fantasia 2000"), and the
-	// year is what tells them apart.
-	if match, ok := soleMatch(cands, parsed.Title, parsed.Year); ok {
+	// year is what tells them apart. Identifying the movie comes first and the
+	// existing-library map is consulted only afterwards — picking the first
+	// tracked candidate instead would let a decoy that happens to be in the
+	// library resolve an ambiguity the reviewer never saw.
+	match, ok := soleMatch(cands, parsed.Title, parsed.Year)
+	if !ok {
 		return Classification{
-			Kind:       entimportscanfile.ClassificationConfirmed,
-			TMDBID:     match.TMDBID,
-			Candidates: []schema.ScannedCandidate{match},
+			Kind:       entimportscanfile.ClassificationAmbiguous,
+			Candidates: cands,
 		}
 	}
-
+	if movieID, hit := alreadyAdded[match.TMDBID]; hit {
+		return Classification{
+			Kind:            entimportscanfile.ClassificationExisting,
+			TMDBID:          match.TMDBID,
+			ExistingMovieID: movieID,
+			Candidates:      []schema.ScannedCandidate{match},
+		}
+	}
 	return Classification{
-		Kind:       entimportscanfile.ClassificationAmbiguous,
-		Candidates: cands,
+		Kind:       entimportscanfile.ClassificationConfirmed,
+		TMDBID:     match.TMDBID,
+		Candidates: []schema.ScannedCandidate{match},
 	}
 }
 

@@ -15,7 +15,7 @@
 		Trash2,
 		TriangleAlert,
 	} from "@lucide/svelte";
-	import { api, errorText } from "../../../lib/api";
+	import { api, apiAllPages, errorText, type Paginated } from "../../../lib/api";
 	import { cn } from "../../../lib/cn";
 	import { formatDateTime, formatRelative } from "../../../lib/dates";
 	import {
@@ -30,9 +30,7 @@
 		ImportFileDecision,
 		ImportScan,
 		ImportScanFile,
-		ImportScanFileList,
 		ImportScanShow,
-		ImportScanShowList,
 		SeriesLookupResult,
 		TMDBMovieResult,
 	} from "../../../lib/types";
@@ -112,7 +110,7 @@
 	let q = $state("");
 	let debouncedQ = $state("");
 	let classification = $state<ImportFileClassification | "">("");
-	const FILE_LIMIT = 200;
+
 
 	// q feeds the query key, so every keystroke would otherwise be its own cache
 	// entry — a fresh request plus a drop back to the loading state per letter.
@@ -124,16 +122,13 @@
 		return () => clearTimeout(debounceTimer);
 	});
 
-	const filesQuery = createQuery<ImportScanFileList>(() => ({
+	const filesQuery = createQuery<Paginated<ImportScanFile>>(() => ({
 		queryKey: ["import", importId, "files", { q: debouncedQ, classification }],
 		queryFn: () => {
-			const sp = new URLSearchParams({
-				page: "1",
-				limit: String(FILE_LIMIT),
-			});
+			const sp = new URLSearchParams();
 			if (debouncedQ) sp.set("q", debouncedQ);
 			if (classification) sp.set("classification", classification);
-			return api<ImportScanFileList>(
+			return apiAllPages<ImportScanFile>(
 				`/library/imports/${importId}/files?${sp}`,
 			);
 		},
@@ -149,15 +144,11 @@
 	// Separate, unfiltered query that backs the DecisionStrip count + bulk
 	// skip target. Stays in sync with the user's table filter only via cache
 	// invalidation after mutations.
-	const pendingQuery = createQuery<ImportScanFileList>(() => ({
+	const pendingQuery = createQuery<Paginated<ImportScanFile>>(() => ({
 		queryKey: ["import", importId, "pending"],
 		queryFn: () => {
-			const sp = new URLSearchParams({
-				page: "1",
-				limit: String(FILE_LIMIT),
-			});
-			return api<ImportScanFileList>(
-				`/library/imports/${importId}/files?${sp}`,
+			return apiAllPages<ImportScanFile>(
+				`/library/imports/${importId}/files`,
 			);
 		},
 		enabled:
@@ -169,16 +160,13 @@
 
 	// Series scans render per-show rows instead of files. The two queries mirror
 	// filesQuery / pendingQuery but hit the /shows endpoint.
-	const showsQuery = createQuery<ImportScanShowList>(() => ({
+	const showsQuery = createQuery<Paginated<ImportScanShow>>(() => ({
 		queryKey: ["import", importId, "shows", { q: debouncedQ, classification }],
 		queryFn: () => {
-			const sp = new URLSearchParams({
-				page: "1",
-				limit: String(FILE_LIMIT),
-			});
+			const sp = new URLSearchParams();
 			if (debouncedQ) sp.set("q", debouncedQ);
 			if (classification) sp.set("classification", classification);
-			return api<ImportScanShowList>(
+			return apiAllPages<ImportScanShow>(
 				`/library/imports/${importId}/shows?${sp}`,
 			);
 		},
@@ -191,15 +179,11 @@
 			scan.status !== "committing",
 	}));
 
-	const pendingShowsQuery = createQuery<ImportScanShowList>(() => ({
+	const pendingShowsQuery = createQuery<Paginated<ImportScanShow>>(() => ({
 		queryKey: ["import", importId, "pending-shows"],
 		queryFn: () => {
-			const sp = new URLSearchParams({
-				page: "1",
-				limit: String(FILE_LIMIT),
-			});
-			return api<ImportScanShowList>(
-				`/library/imports/${importId}/shows?${sp}`,
+			return apiAllPages<ImportScanShow>(
+				`/library/imports/${importId}/shows`,
 			);
 		},
 		enabled:
@@ -232,8 +216,8 @@
 
 	// commitableCount mirrors what the prototype shows on the "Commit N files"
 	// button: confirmed/existing matches plus explicit accept decisions, minus
-	// anything the reviewer marked skip. Capped at FILE_LIMIT because that's
-	// what pendingQuery loads.
+	// anything the reviewer marked skip. Counted over every row pendingQuery
+	// loaded, which is the whole scan.
 	let commitableCount = $derived(
 		(pendingQuery.data?.items ?? []).filter(
 			(f) =>

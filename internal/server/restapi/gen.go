@@ -689,14 +689,17 @@ func (e ImportScanShowDecision) Valid() bool {
 
 // Defines values for ImportScanShowOutcome.
 const (
-	ImportScanShowOutcomeCreated ImportScanShowOutcome = "created"
-	ImportScanShowOutcomeFailed  ImportScanShowOutcome = "failed"
-	ImportScanShowOutcomePending ImportScanShowOutcome = "pending"
+	ImportScanShowOutcomeAttached ImportScanShowOutcome = "attached"
+	ImportScanShowOutcomeCreated  ImportScanShowOutcome = "created"
+	ImportScanShowOutcomeFailed   ImportScanShowOutcome = "failed"
+	ImportScanShowOutcomePending  ImportScanShowOutcome = "pending"
 )
 
 // Valid indicates whether the value is a known member of the ImportScanShowOutcome enum.
 func (e ImportScanShowOutcome) Valid() bool {
 	switch e {
+	case ImportScanShowOutcomeAttached:
+		return true
 	case ImportScanShowOutcomeCreated:
 		return true
 	case ImportScanShowOutcomeFailed:

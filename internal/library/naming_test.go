@@ -1,6 +1,7 @@
 package library
 
 import (
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -175,5 +176,27 @@ var _ = Describe("Naming Templates", Label("unit", "library"), func() {
 			Expect(vars["absolute"]).To(Equal("18"))
 			Expect(vars["air_date"]).To(Equal("2024-05-12"))
 		})
+	})
+})
+
+var _ = Describe("ApplyTemplate path safety", Label("unit", "library"), func() {
+	It("keeps a slash in a title from becoming a directory separator", func() {
+		out := ApplyTemplate(
+			"{title} ({year})/Season {season:02}",
+			map[string]string{
+				"title": "In/Spectre", "year": "2020", "season": "1",
+			},
+		)
+		Expect(out).To(Equal("In-Spectre (2020)/Season 01"))
+		Expect(strings.Split(out, "/")).To(HaveLen(2))
+	})
+
+	It("still splits on the template's own separators", func() {
+		out := ApplyTemplate("{title}/{title}.{ext}", map[string]string{
+			"title": "Rambo: Last Blood", "ext": "mkv",
+		})
+		Expect(strings.Split(out, "/")).To(Equal([]string{
+			"Rambo - Last Blood", "Rambo - Last Blood.mkv",
+		}))
 	})
 })

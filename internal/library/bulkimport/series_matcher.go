@@ -48,34 +48,39 @@ func ClassifyShow(
 		})
 	}
 
-	for _, c := range cands {
-		if id, ok := trackedByTVDB[c.TVDBID]; ok {
-			return ShowClassification{
-				Kind:             entimportscanshow.ClassificationExisting,
-				TVDBID:           c.TVDBID,
-				ExistingTvshowID: id,
-				Candidates:       cands,
-			}
-		}
-	}
-
 	// Series folders are conventionally named without a year ("Foundation",
 	// "Breaking Bad"), so requiring one left every tidy library ambiguous. Match
 	// on title across all candidates instead, and let a year — when the folder
 	// carries one — break a tie between same-titled shows.
-	if m, ok := soleShowMatch(ranked[:len(cands)], title, year); ok {
+	//
+	// Identification comes first and a tracked candidate is only consulted
+	// afterwards. Scanning the candidates for a tracked id up front resolved the
+	// ambiguity by whichever tracked show happened to rank higher: two library
+	// rows named "Spiral (2005)" and "Spiral (2017)" both normalise to "Spiral",
+	// and the 2005 folder was reported `existing` — with full confidence —
+	// against the 2017 row.
+	m, ok := soleShowMatch(ranked[:len(cands)], title, year)
+	if !ok {
 		return ShowClassification{
-			Kind:   entimportscanshow.ClassificationConfirmed,
-			TVDBID: m.TVDBID,
-			Candidates: []schema.ScannedShowCandidate{
-				{TVDBID: m.TVDBID, Title: m.Title, Year: m.Year},
-			},
+			Kind:       entimportscanshow.ClassificationAmbiguous,
+			Candidates: cands,
 		}
 	}
-
+	only := []schema.ScannedShowCandidate{
+		{TVDBID: m.TVDBID, Title: m.Title, Year: m.Year},
+	}
+	if id, tracked := trackedByTVDB[m.TVDBID]; tracked {
+		return ShowClassification{
+			Kind:             entimportscanshow.ClassificationExisting,
+			TVDBID:           m.TVDBID,
+			ExistingTvshowID: id,
+			Candidates:       only,
+		}
+	}
 	return ShowClassification{
-		Kind:       entimportscanshow.ClassificationAmbiguous,
-		Candidates: cands,
+		Kind:       entimportscanshow.ClassificationConfirmed,
+		TVDBID:     m.TVDBID,
+		Candidates: only,
 	}
 }
 

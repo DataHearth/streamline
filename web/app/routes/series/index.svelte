@@ -2,7 +2,7 @@
 	import { untrack } from "svelte";
 	import { onMount } from "svelte";
 	import { createQuery } from "@tanstack/svelte-query";
-	import { api, errorText } from "../../lib/api";
+	import { api, apiAllPages, errorText, type Paginated } from "../../lib/api";
 	import { formatRelative } from "../../lib/dates";
 	import { loadPref, savePref } from "../../lib/prefs";
 	import { fold } from "../../lib/text";
@@ -18,7 +18,7 @@
 	import SeriesList from "../../components/series/SeriesList.svelte";
 	import SeriesEmpty from "../../components/series/SeriesEmpty.svelte";
 	import SeriesBulkActions from "../../components/series/SeriesBulkActions.svelte";
-	import type { PaginatedTVShows, ScheduleList, TVShow } from "../../lib/types";
+	import type { ScheduleList, TVShow } from "../../lib/types";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	type View = "grid" | "list";
@@ -125,9 +125,9 @@
 		}
 	});
 
-	const seriesQuery = createQuery<PaginatedTVShows>(() => ({
+	const seriesQuery = createQuery<Paginated<TVShow>>(() => ({
 		queryKey: ["series"],
-		queryFn: () => api<PaginatedTVShows>("/series?page=1&limit=500"),
+		queryFn: () => apiAllPages<TVShow>("/series"),
 	}));
 
 	const schedulesQuery = createQuery<ScheduleList>(() => ({

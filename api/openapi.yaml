@@ -6091,7 +6091,7 @@ components:
           nullable: true
         outcome:
           type: string
-          enum: [pending, created, failed]
+          enum: [pending, created, attached, failed]
         outcome_message:
           type: string
         created_tvshow_id:

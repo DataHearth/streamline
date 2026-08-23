@@ -205,7 +205,7 @@ var (
 		{Name: "file_count", Type: field.TypeUint16, Default: 0},
 		{Name: "decision", Type: field.TypeEnum, Enums: []string{"pending", "accept", "skip"}, Default: "pending"},
 		{Name: "decision_tvdb_id", Type: field.TypeUint32, Nullable: true},
-		{Name: "outcome", Type: field.TypeEnum, Enums: []string{"pending", "created", "failed"}, Default: "pending"},
+		{Name: "outcome", Type: field.TypeEnum, Enums: []string{"pending", "created", "attached", "failed"}, Default: "pending"},
 		{Name: "outcome_message", Type: field.TypeString, Nullable: true},
 		{Name: "created_tvshow_id", Type: field.TypeUint32, Nullable: true},
 		{Name: "import_scan_shows", Type: field.TypeUint32},
