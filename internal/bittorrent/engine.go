@@ -16,7 +16,6 @@ import (
 	"sync"
 	"time"
 
-	analog "github.com/anacrolix/log"
 	antorrent "github.com/anacrolix/torrent"
 	"github.com/anacrolix/torrent/metainfo"
 	"github.com/anacrolix/torrent/storage"
@@ -165,7 +164,7 @@ func newClientConfig(
 	// config key re-enables it; the only cost is that ws:// and wss:// trackers
 	// in an announce list are skipped.
 	cc.DisableWebtorrent = true
-	cc.Logger = analog.Default.WithFilterLevel(analog.Error)
+	cc.Slogger = engineSlogger()
 	if entry.ListenPort != 0 {
 		cc.ListenPort = int(entry.ListenPort)
 	}

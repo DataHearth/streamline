@@ -105,7 +105,7 @@ func newSeederOfSize(dir string, size int, pieceLen int64) ([]byte, int) {
 	cc.DisablePEX = true
 	cc.NoDefaultPortForwarding = true
 	cc.ListenPort = 0
-	cc.Logger = analog.Default.WithFilterLevel(analog.Error)
+	cc.Slogger = engineSlogger()
 	seeder, err := antorrent.NewClient(cc)
 	Expect(err).NotTo(HaveOccurred())
 	DeferCleanup(func() { Expect(seeder.Close()).To(BeEmpty()) })
@@ -179,9 +179,10 @@ func (s *logSink) String() string {
 }
 
 // teeEngineLogs routes both log streams the engine can fail through into sink:
-// slog (the engine's own) and anacrolix's package logger, which the engine
-// snapshots from analog.Default and which otherwise writes straight to stderr,
-// bypassing GinkgoWriter entirely.
+// slog, which now carries the embedded client's records as well as streamline's
+// own, and anacrolix's package logger, which anything logging through
+// analog.Default rather than the client config would otherwise write straight
+// to stderr, bypassing GinkgoWriter entirely.
 func teeEngineLogs(sink *logSink) {
 	GinkgoHelper()
 	GinkgoWriter.TeeTo(sink)
