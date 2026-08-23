@@ -224,3 +224,31 @@ func (db *DB) ListImportScanFilesForCommit(
 		).
 		All(ctx)
 }
+
+// BulkUpdateImportScanFileDecisions sets one decision across a scan's files,
+// narrowed by classification and/or an explicit id list, and returns how many
+// rows changed. It never writes decision_tmdb_id: a bulk action applies to rows
+// the reviewer has not individually picked a match for, so the scan-time match
+// stands.
+func (db *DB) BulkUpdateImportScanFileDecisions(
+	ctx context.Context,
+	scanID uint32,
+	decision entimportscanfile.Decision,
+	classification entimportscanfile.Classification,
+	ids []uint32,
+) (int, error) {
+	u := db.client.ImportScanFile.Update().
+		Where(entimportscanfile.HasScanWith(entimportscan.ID(scanID))).
+		SetDecision(decision)
+	if classification != "" {
+		u = u.Where(entimportscanfile.ClassificationEQ(classification))
+	}
+	if len(ids) > 0 {
+		u = u.Where(entimportscanfile.IDIn(ids...))
+	}
+	n, err := u.Save(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("bulk update import scan file decisions: %w", err)
+	}
+	return n, nil
+}

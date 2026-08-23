@@ -245,3 +245,30 @@ var _ = Describe("TVDB hidden base_url override", Label("unit", "metadata"), fun
 		Expect(NewTVDB().BaseURL).To(Equal(tvdbBaseURL))
 	})
 })
+
+var _ = Describe("inferAnime", Label("unit", "metadata"), func() {
+	DescribeTable("series type inference",
+		func(genres []string, lang, country string, want bool) {
+			Expect(inferAnime(genres, lang, country)).To(Equal(want))
+		},
+		Entry("explicit anime genre wins alone",
+			[]string{"Comedy", "Anime"}, "", "", true),
+		Entry(
+			"animation plus japanese origin",
+			[]string{
+				"Fantasy",
+				"Comedy",
+				"Animation",
+				"Adventure",
+			},
+			"jpn",
+			"jpn",
+			true,
+		),
+		Entry("animation alone is not enough",
+			[]string{"Animation", "Comedy"}, "eng", "usa", false),
+		Entry("japanese origin alone is not enough",
+			[]string{"Drama"}, "jpn", "jpn", false),
+		Entry("no signal at all", []string{"Comedy"}, "eng", "gbr", false),
+	)
+})

@@ -69,6 +69,12 @@ function byStatus(status: number): string {
 export function errorText(err: unknown, fallback?: string): string {
 	if (err instanceof ApiError) {
 		const code = err.body?.code;
+		// A connection test's message is a diagnostic the server composed
+		// ("plex: unexpected status 401"), not a leaked driver string, and it is
+		// the only place the upstream status appears. Rendering it as a plain 422
+		// ("some of those values weren't accepted") blames credentials that are
+		// usually fine and hides the real cause.
+		if (code === "connection_failed" && err.message) return err.message;
 		if (code && BY_CODE[code]) return BY_CODE[code]();
 		return byStatus(err.status);
 	}

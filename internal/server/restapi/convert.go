@@ -796,6 +796,8 @@ func episodeToAPI(e *ent.Episode, now time.Time) Episode {
 		ad := e.AirDate
 		out.AirDate = &ad
 	}
+	hasFile := len(e.Edges.MediaFiles) > 0
+	out.HasFile = &hasFile
 	if len(e.Edges.MediaFiles) > 0 {
 		f := e.Edges.MediaFiles[0]
 		out.Quality = &f.Quality

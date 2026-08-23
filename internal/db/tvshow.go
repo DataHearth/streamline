@@ -59,6 +59,7 @@ type CreateTVShowParams struct {
 type UpdateTVShowParams struct {
 	Monitored      *bool
 	QualityProfile *string
+	Type           *tvshow.Type
 }
 
 // UpdateTVShowMetadataParams carries the provider-sourced fields refreshed from
@@ -71,7 +72,6 @@ type UpdateTVShowMetadataParams struct {
 	Network       string
 	Creator       string
 	SeriesStatus  string
-	Type          string
 	Runtime       uint16
 	Rating        float64
 	Genres        []string
@@ -104,9 +104,10 @@ func (db *DB) UpdateTVShowMetadata(
 	if p.SeriesStatus != "" {
 		u = u.SetSeriesStatus(tvshow.SeriesStatus(p.SeriesStatus))
 	}
-	if p.Type != "" {
-		u = u.SetType(tvshow.Type(p.Type))
-	}
+	// Type is deliberately not refreshed. It is inferred from genres and origin,
+	// it decides whether episodes match by absolute number, and it is the one
+	// piece of show metadata an operator can correct by hand — re-deriving it on
+	// every refresh would silently undo that correction.
 	return u.Exec(ctx)
 }
 
@@ -403,6 +404,9 @@ func (db *DB) UpdateTVShow(
 	}
 	if p.QualityProfile != nil {
 		u = u.SetQualityProfile(*p.QualityProfile)
+	}
+	if p.Type != nil {
+		u = u.SetType(*p.Type)
 	}
 	if _, err := u.Save(ctx); err != nil {
 		return nil, err

@@ -246,7 +246,7 @@ func (s *Server) TestDownloadClient(
 		errors.Is(err, download.ErrUnexpectedStatus),
 		errors.Is(err, download.ErrBadResponse):
 		return TestDownloadClient422JSONResponse{
-			UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
+			UnprocessableEntityJSONResponse: errConnectionFailed(err.Error()),
 		}, nil
 	default:
 		return TestDownloadClient500JSONResponse{
@@ -308,7 +308,7 @@ func (s *Server) TestDraftDownloadClient(
 		errors.Is(err, download.ErrUnexpectedStatus),
 		errors.Is(err, download.ErrBadResponse):
 		return TestDraftDownloadClient422JSONResponse{
-			UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
+			UnprocessableEntityJSONResponse: errConnectionFailed(err.Error()),
 		}, nil
 	default:
 		return TestDraftDownloadClient500JSONResponse{

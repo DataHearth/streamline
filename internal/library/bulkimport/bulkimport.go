@@ -7,10 +7,14 @@ import (
 	"github.com/datahearth/streamline/ent"
 	entimportscan "github.com/datahearth/streamline/ent/importscan"
 	entimportscanfile "github.com/datahearth/streamline/ent/importscanfile"
+	entimportscanshow "github.com/datahearth/streamline/ent/importscanshow"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/media/movie"
 	"github.com/datahearth/streamline/internal/metadata"
+	"github.com/datahearth/streamline/internal/otelx"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // Manager is the consumer-facing interface for the bulk-import service.
@@ -29,6 +33,7 @@ type Manager interface {
 	Cancel(ctx context.Context, id uint32) error
 	Commit(ctx context.Context, id uint32) error
 	Delete(ctx context.Context, id uint32) error
+	BulkDecide(ctx context.Context, p BulkDecisionParams) (int, error)
 	AbortInflight(ctx context.Context) (uint32, error)
 }
 
@@ -203,4 +208,57 @@ func (s *Service) Delete(ctx context.Context, id uint32) error {
 		return ErrScanNotDeletable
 	}
 	return s.store.DeleteImportScan(ctx, id)
+}
+
+// BulkDecisionParams narrows a bulk decision. An empty Classification and no
+// IDs means every row in the scan.
+type BulkDecisionParams struct {
+	ScanID         uint32
+	Decision       string
+	Classification string
+	IDs            []uint32
+}
+
+// BulkDecide applies one decision across a scan's rows and returns how many
+// changed. It dispatches on the scan's kind, so one call serves both movie
+// files and series shows — reviewing a 465-file scan through the per-row
+// endpoint took 465 requests.
+func (s *Service) BulkDecide(
+	ctx context.Context,
+	p BulkDecisionParams,
+) (int, error) {
+	ctx, span := tracer.Start(ctx, "bulkimport.bulk_decide",
+		trace.WithAttributes(
+			attribute.Int64("scan.id", int64(p.ScanID)),
+			attribute.String("decision", p.Decision),
+		))
+	defer span.End()
+
+	scan, err := s.store.FindImportScan(ctx, p.ScanID)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return 0, otelx.RecordSpanError(span, ErrScanNotFound)
+		}
+		return 0, otelx.RecordSpanError(span, err)
+	}
+	if scan.Status != entimportscan.StatusAwaitingReview {
+		return 0, otelx.RecordSpanError(span, ErrScanNotReviewable)
+	}
+
+	if scan.Kind == entimportscan.KindSeries {
+		n, err := s.store.BulkUpdateImportScanShowDecisions(
+			ctx, p.ScanID,
+			entimportscanshow.Decision(p.Decision),
+			entimportscanshow.Classification(p.Classification),
+			p.IDs,
+		)
+		return n, otelx.RecordSpanError(span, err)
+	}
+	n, err := s.store.BulkUpdateImportScanFileDecisions(
+		ctx, p.ScanID,
+		entimportscanfile.Decision(p.Decision),
+		entimportscanfile.Classification(p.Classification),
+		p.IDs,
+	)
+	return n, otelx.RecordSpanError(span, err)
 }

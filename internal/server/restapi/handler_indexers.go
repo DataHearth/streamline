@@ -143,7 +143,7 @@ func (s *Server) TestIndexer(
 	err := s.indexers.TestByName(ctx, request.Name)
 	if msg, ok := indexerProbeFailure(err); ok {
 		return TestIndexer422JSONResponse{
-			UnprocessableEntityJSONResponse: errUnprocessable(msg),
+			UnprocessableEntityJSONResponse: errConnectionFailed(msg),
 		}, nil
 	}
 	switch {
@@ -196,7 +196,7 @@ func (s *Server) TestDraftIndexer(
 	err := s.indexers.Test(ctx, p)
 	if msg, ok := indexerProbeFailure(err); ok {
 		return TestDraftIndexer422JSONResponse{
-			UnprocessableEntityJSONResponse: errUnprocessable(msg),
+			UnprocessableEntityJSONResponse: errConnectionFailed(msg),
 		}, nil
 	}
 	if err != nil {

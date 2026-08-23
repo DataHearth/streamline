@@ -459,6 +459,17 @@ type Store interface {
 		decision importscanfile.Decision,
 		tmdbID *uint32,
 	) error
+	// BulkUpdateImportScanFileDecisions applies one decision across a scan,
+	// narrowed by classification and/or an explicit id list, returning the
+	// number of rows changed. An empty classification and no ids means every
+	// file in the scan.
+	BulkUpdateImportScanFileDecisions(
+		ctx context.Context,
+		scanID uint32,
+		decision importscanfile.Decision,
+		classification importscanfile.Classification,
+		ids []uint32,
+	) (int, error)
 	UpdateImportScanFileOutcome(
 		ctx context.Context,
 		id uint32,
@@ -498,6 +509,15 @@ type Store interface {
 		decision importscanshow.Decision,
 		tvdbID *uint32,
 	) error
+	// BulkUpdateImportScanShowDecisions is the per-show counterpart of
+	// BulkUpdateImportScanFileDecisions.
+	BulkUpdateImportScanShowDecisions(
+		ctx context.Context,
+		scanID uint32,
+		decision importscanshow.Decision,
+		classification importscanshow.Classification,
+		ids []uint32,
+	) (int, error)
 	ListImportScanShowsForCommit(
 		ctx context.Context,
 		scanID uint32,

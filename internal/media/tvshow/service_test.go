@@ -204,6 +204,23 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
+	It("Update overrides the series type", func() {
+		anime := "anime"
+		storeMk.UpdateTVShow(mock.Anything, uint32(7), mock.MatchedBy(func(p db.UpdateTVShowParams) bool {
+			return p.Type != nil && *p.Type == enttvshow.TypeAnime
+		})).
+			Return(&ent.TVShow{ID: 7}, nil).
+			Once()
+		_, err := svc.Update(ctx, 7, UpdateParams{Type: &anime})
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("Update rejects an unknown series type", func() {
+		bogus := "cartoon"
+		_, err := svc.Update(ctx, 7, UpdateParams{Type: &bogus})
+		Expect(err).To(MatchError(ErrInvalidSeriesType))
+	})
+
 	It("Update applies the 'all' monitoring preset to seasons and episodes", func() {
 		show := withWantedEpisodes(2)
 		storeMk.FindTVShowByID(mock.Anything, uint32(1)).Return(show, nil).Twice()

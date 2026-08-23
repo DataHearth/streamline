@@ -270,16 +270,20 @@ func (s *Service) resolveShow(
 	// classification: a reviewer pointing an unmatched folder at a show that is
 	// already in the library — the normal way to fix a bad match — would
 	// otherwise collide on tv_shows.tvdb_id and fail the whole entry.
-	if existing, err := s.store.FindTVShowByTVDBID(ctx, tvdbID); err == nil {
+	// FindTVShowByTVDBID reports "no such show" as a nil row with a nil error,
+	// so the row has to be checked, not just the error.
+	existing, err := s.store.FindTVShowByTVDBID(ctx, tvdbID)
+	if err != nil {
+		o, m, id := commitShowFail("look up show", err, 0)
+		return nil, false, o, m, id
+	}
+	if existing != nil {
 		found, ferr := s.store.FindTVShowByID(ctx, existing.ID)
 		if ferr != nil {
 			o, m, id := commitShowFail("load existing show", ferr, existing.ID)
 			return nil, false, o, m, id
 		}
 		return found, true, "", "", 0
-	} else if !ent.IsNotFound(err) {
-		o, m, id := commitShowFail("look up show", err, 0)
-		return nil, false, o, m, id
 	}
 
 	created, err := s.seriesAdder.Add(ctx, tvdbID, "")

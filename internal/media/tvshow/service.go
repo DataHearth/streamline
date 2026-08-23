@@ -58,8 +58,9 @@ func init() {
 }
 
 var (
-	ErrNoQualityProfile = errors.New("no quality profile configured")
-	ErrSeriesNotFound   = errors.New("series not found")
+	ErrNoQualityProfile  = errors.New("no quality profile configured")
+	ErrSeriesNotFound    = errors.New("series not found")
+	ErrInvalidSeriesType = errors.New("invalid series type")
 )
 
 // metadataMinRefreshInterval bounds the TVDB call rate of the metadata-refresh
@@ -438,7 +439,15 @@ func (s *Service) Update(
 			return nil, otelx.RecordSpanError(span, err)
 		}
 	}
-	if p.Monitored == nil && p.QualityProfile == nil {
+	var showType *enttvshow.Type
+	if p.Type != nil {
+		t := enttvshow.Type(*p.Type)
+		if err := enttvshow.TypeValidator(t); err != nil {
+			return nil, otelx.RecordSpanError(span, ErrInvalidSeriesType)
+		}
+		showType = &t
+	}
+	if p.Monitored == nil && p.QualityProfile == nil && showType == nil {
 		show, err := s.db.FindTVShowByID(ctx, id)
 		if err != nil {
 			return nil, otelx.RecordSpanError(span, err)
@@ -459,6 +468,7 @@ func (s *Service) Update(
 		db.UpdateTVShowParams{
 			Monitored:      p.Monitored,
 			QualityProfile: p.QualityProfile,
+			Type:           showType,
 		},
 	)
 	if err != nil {
@@ -861,7 +871,6 @@ func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.TVShow, error
 		Network:       d.Network,
 		Creator:       d.Creator,
 		SeriesStatus:  d.Status,
-		Type:          string(d.Type),
 		Runtime:       d.Runtime,
 		Rating:        float64(d.Rating),
 		Genres:        d.Genres,
@@ -965,6 +974,10 @@ type DeleteOptions struct{ DeleteFiles bool }
 type UpdateParams struct {
 	Monitored      *bool
 	QualityProfile *string
+	// Type overrides the provider-inferred series type. It decides whether
+	// episodes match by absolute number, so a wrong inference silently
+	// mis-matches every file until an operator corrects it here.
+	Type *string
 	// Preset, when set, bulk-applies a monitoring preset to season/episode toggles.
 	Preset string // "" | "all" | "future" | "missing" | "existing" | "pilot" | "none"
 }

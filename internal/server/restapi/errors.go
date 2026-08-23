@@ -53,3 +53,17 @@ func errConflict(msg string) ConflictJSONResponse {
 func errUnprocessable(msg string) UnprocessableEntityJSONResponse {
 	return UnprocessableEntityJSONResponse{Message: msg}
 }
+
+// codeConnectionFailed marks a 422 whose message is an upstream connection
+// diagnostic ("plex: unexpected status 401") rather than input validation.
+// Without it the SPA renders every 422 as "some of those values weren't
+// accepted", which points at the credentials when the credentials are fine.
+const codeConnectionFailed = "connection_failed"
+
+// errConnectionFailed is errUnprocessable for a connection test. The message is
+// composed by our own client code, not a raw driver string, so it is safe to
+// show verbatim — and it is the only place the upstream status appears.
+func errConnectionFailed(msg string) UnprocessableEntityJSONResponse {
+	code := codeConnectionFailed
+	return UnprocessableEntityJSONResponse{Message: msg, Code: &code}
+}

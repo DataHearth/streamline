@@ -226,6 +226,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		store, cfg.Library.SeriesPath, cfg.Library.SeriesNaming,
 	)
 	pathMigrations := pathmigrate.NewService(store)
+	pathMigrations.WarnOnDrift(ctx)
 	// Constructed once and kept: the media-probe backfill job and the
 	// restapi Server (system-info + config/ffmpeg endpoints) reuse this same
 	// prober.

@@ -285,14 +285,16 @@ func (t *TVDB) GetSeries(ctx context.Context, tvdbID uint32) (*TVDetails, error)
 
 	var ext struct {
 		Data struct {
-			ID             uint32 `json:"id"`
-			Name           string `json:"name"`
-			Year           string `json:"year"`
-			Overview       string `json:"overview"`
-			AverageRuntime uint16 `json:"averageRuntime"`
-			Image          string `json:"image"`
-			FirstAired     string `json:"firstAired"`
-			Status         struct {
+			ID               uint32 `json:"id"`
+			Name             string `json:"name"`
+			Year             string `json:"year"`
+			Overview         string `json:"overview"`
+			AverageRuntime   uint16 `json:"averageRuntime"`
+			OriginalCountry  string `json:"originalCountry"`
+			OriginalLanguage string `json:"originalLanguage"`
+			Image            string `json:"image"`
+			FirstAired       string `json:"firstAired"`
+			Status           struct {
 				Name string `json:"name"`
 			} `json:"status"`
 			RemoteIDs []struct {
@@ -361,9 +363,9 @@ func (t *TVDB) GetSeries(ctx context.Context, tvdbID uint32) (*TVDetails, error)
 	}
 	for _, g := range ext.Data.Genres {
 		d.Genres = append(d.Genres, g.Name)
-		if strings.EqualFold(g.Name, "anime") {
-			d.Type = SeriesAnime
-		}
+	}
+	if inferAnime(d.Genres, ext.Data.OriginalLanguage, ext.Data.OriginalCountry) {
+		d.Type = SeriesAnime
 	}
 	for _, s := range ext.Data.Seasons {
 		if s.Type.Type == "official" || s.Type.Type == "" {
@@ -528,4 +530,31 @@ func parseAirDate(s string) *time.Time {
 		return nil
 	}
 	return &t
+}
+
+// animeOriginLanguages/Countries are the TVDB origin codes that, combined with
+// an animation genre, mark a show as anime.
+var (
+	animeOriginLanguages = map[string]bool{"jpn": true, "ja": true, "jp": true}
+	animeOriginCountries = map[string]bool{"jpn": true, "jp": true}
+)
+
+// inferAnime decides SeriesAnime from a show's TVDB metadata. The literal
+// "anime" genre alone missed most of the catalogue — TVDB tags Drifters
+// "Comedy" and Nanana's Buried Treasure "Animation" — and the type drives
+// absolute-number episode matching, so a miss silently mis-matches files.
+// Animation plus a Japanese origin is the signal TVDB actually carries.
+func inferAnime(genres []string, originalLanguage, originalCountry string) bool {
+	animated := false
+	for _, g := range genres {
+		switch strings.ToLower(g) {
+		case "anime":
+			return true
+		case "animation", "animated":
+			animated = true
+		}
+	}
+	return animated &&
+		(animeOriginLanguages[strings.ToLower(originalLanguage)] ||
+			animeOriginCountries[strings.ToLower(originalCountry)])
 }

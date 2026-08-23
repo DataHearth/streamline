@@ -100,6 +100,72 @@ func (_c *MockManager_AbortInflight_Call) RunAndReturn(run func(ctx context.Cont
 	return _c
 }
 
+// BulkDecide provides a mock function for the type MockManager
+func (_mock *MockManager) BulkDecide(ctx context.Context, p bulkimport.BulkDecisionParams) (int, error) {
+	ret := _mock.Called(ctx, p)
+
+	if len(ret) == 0 {
+		panic("no return value specified for BulkDecide")
+	}
+
+	var r0 int
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, bulkimport.BulkDecisionParams) (int, error)); ok {
+		return returnFunc(ctx, p)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, bulkimport.BulkDecisionParams) int); ok {
+		r0 = returnFunc(ctx, p)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, bulkimport.BulkDecisionParams) error); ok {
+		r1 = returnFunc(ctx, p)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockManager_BulkDecide_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BulkDecide'
+type MockManager_BulkDecide_Call struct {
+	*mock.Call
+}
+
+// BulkDecide is a helper method to define mock.On call
+//   - ctx context.Context
+//   - p bulkimport.BulkDecisionParams
+func (_e *MockManager_Expecter) BulkDecide(ctx any, p any) *MockManager_BulkDecide_Call {
+	return &MockManager_BulkDecide_Call{Call: _e.mock.On("BulkDecide", ctx, p)}
+}
+
+func (_c *MockManager_BulkDecide_Call) Run(run func(ctx context.Context, p bulkimport.BulkDecisionParams)) *MockManager_BulkDecide_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 bulkimport.BulkDecisionParams
+		if args[1] != nil {
+			arg1 = args[1].(bulkimport.BulkDecisionParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_BulkDecide_Call) Return(n int, err error) *MockManager_BulkDecide_Call {
+	_c.Call.Return(n, err)
+	return _c
+}
+
+func (_c *MockManager_BulkDecide_Call) RunAndReturn(run func(ctx context.Context, p bulkimport.BulkDecisionParams) (int, error)) *MockManager_BulkDecide_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Cancel provides a mock function for the type MockManager
 func (_mock *MockManager) Cancel(ctx context.Context, id uint32) error {
 	ret := _mock.Called(ctx, id)

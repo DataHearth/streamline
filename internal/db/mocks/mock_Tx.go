@@ -368,6 +368,174 @@ func (_c *MockTx_BulkCreateImportScanShows_Call) RunAndReturn(run func(ctx conte
 	return _c
 }
 
+// BulkUpdateImportScanFileDecisions provides a mock function for the type MockTx
+func (_mock *MockTx) BulkUpdateImportScanFileDecisions(ctx context.Context, scanID uint32, decision importscanfile.Decision, classification importscanfile.Classification, ids []uint32) (int, error) {
+	ret := _mock.Called(ctx, scanID, decision, classification, ids)
+
+	if len(ret) == 0 {
+		panic("no return value specified for BulkUpdateImportScanFileDecisions")
+	}
+
+	var r0 int
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, importscanfile.Decision, importscanfile.Classification, []uint32) (int, error)); ok {
+		return returnFunc(ctx, scanID, decision, classification, ids)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, importscanfile.Decision, importscanfile.Classification, []uint32) int); ok {
+		r0 = returnFunc(ctx, scanID, decision, classification, ids)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, importscanfile.Decision, importscanfile.Classification, []uint32) error); ok {
+		r1 = returnFunc(ctx, scanID, decision, classification, ids)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_BulkUpdateImportScanFileDecisions_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BulkUpdateImportScanFileDecisions'
+type MockTx_BulkUpdateImportScanFileDecisions_Call struct {
+	*mock.Call
+}
+
+// BulkUpdateImportScanFileDecisions is a helper method to define mock.On call
+//   - ctx context.Context
+//   - scanID uint32
+//   - decision importscanfile.Decision
+//   - classification importscanfile.Classification
+//   - ids []uint32
+func (_e *MockTx_Expecter) BulkUpdateImportScanFileDecisions(ctx any, scanID any, decision any, classification any, ids any) *MockTx_BulkUpdateImportScanFileDecisions_Call {
+	return &MockTx_BulkUpdateImportScanFileDecisions_Call{Call: _e.mock.On("BulkUpdateImportScanFileDecisions", ctx, scanID, decision, classification, ids)}
+}
+
+func (_c *MockTx_BulkUpdateImportScanFileDecisions_Call) Run(run func(ctx context.Context, scanID uint32, decision importscanfile.Decision, classification importscanfile.Classification, ids []uint32)) *MockTx_BulkUpdateImportScanFileDecisions_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 importscanfile.Decision
+		if args[2] != nil {
+			arg2 = args[2].(importscanfile.Decision)
+		}
+		var arg3 importscanfile.Classification
+		if args[3] != nil {
+			arg3 = args[3].(importscanfile.Classification)
+		}
+		var arg4 []uint32
+		if args[4] != nil {
+			arg4 = args[4].([]uint32)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_BulkUpdateImportScanFileDecisions_Call) Return(n int, err error) *MockTx_BulkUpdateImportScanFileDecisions_Call {
+	_c.Call.Return(n, err)
+	return _c
+}
+
+func (_c *MockTx_BulkUpdateImportScanFileDecisions_Call) RunAndReturn(run func(ctx context.Context, scanID uint32, decision importscanfile.Decision, classification importscanfile.Classification, ids []uint32) (int, error)) *MockTx_BulkUpdateImportScanFileDecisions_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// BulkUpdateImportScanShowDecisions provides a mock function for the type MockTx
+func (_mock *MockTx) BulkUpdateImportScanShowDecisions(ctx context.Context, scanID uint32, decision importscanshow.Decision, classification importscanshow.Classification, ids []uint32) (int, error) {
+	ret := _mock.Called(ctx, scanID, decision, classification, ids)
+
+	if len(ret) == 0 {
+		panic("no return value specified for BulkUpdateImportScanShowDecisions")
+	}
+
+	var r0 int
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, importscanshow.Decision, importscanshow.Classification, []uint32) (int, error)); ok {
+		return returnFunc(ctx, scanID, decision, classification, ids)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, importscanshow.Decision, importscanshow.Classification, []uint32) int); ok {
+		r0 = returnFunc(ctx, scanID, decision, classification, ids)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, importscanshow.Decision, importscanshow.Classification, []uint32) error); ok {
+		r1 = returnFunc(ctx, scanID, decision, classification, ids)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_BulkUpdateImportScanShowDecisions_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BulkUpdateImportScanShowDecisions'
+type MockTx_BulkUpdateImportScanShowDecisions_Call struct {
+	*mock.Call
+}
+
+// BulkUpdateImportScanShowDecisions is a helper method to define mock.On call
+//   - ctx context.Context
+//   - scanID uint32
+//   - decision importscanshow.Decision
+//   - classification importscanshow.Classification
+//   - ids []uint32
+func (_e *MockTx_Expecter) BulkUpdateImportScanShowDecisions(ctx any, scanID any, decision any, classification any, ids any) *MockTx_BulkUpdateImportScanShowDecisions_Call {
+	return &MockTx_BulkUpdateImportScanShowDecisions_Call{Call: _e.mock.On("BulkUpdateImportScanShowDecisions", ctx, scanID, decision, classification, ids)}
+}
+
+func (_c *MockTx_BulkUpdateImportScanShowDecisions_Call) Run(run func(ctx context.Context, scanID uint32, decision importscanshow.Decision, classification importscanshow.Classification, ids []uint32)) *MockTx_BulkUpdateImportScanShowDecisions_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 importscanshow.Decision
+		if args[2] != nil {
+			arg2 = args[2].(importscanshow.Decision)
+		}
+		var arg3 importscanshow.Classification
+		if args[3] != nil {
+			arg3 = args[3].(importscanshow.Classification)
+		}
+		var arg4 []uint32
+		if args[4] != nil {
+			arg4 = args[4].([]uint32)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_BulkUpdateImportScanShowDecisions_Call) Return(n int, err error) *MockTx_BulkUpdateImportScanShowDecisions_Call {
+	_c.Call.Return(n, err)
+	return _c
+}
+
+func (_c *MockTx_BulkUpdateImportScanShowDecisions_Call) RunAndReturn(run func(ctx context.Context, scanID uint32, decision importscanshow.Decision, classification importscanshow.Classification, ids []uint32) (int, error)) *MockTx_BulkUpdateImportScanShowDecisions_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // BumpMediaFileLastSeen provides a mock function for the type MockTx
 func (_mock *MockTx) BumpMediaFileLastSeen(ctx context.Context, id uint32) error {
 	ret := _mock.Called(ctx, id)

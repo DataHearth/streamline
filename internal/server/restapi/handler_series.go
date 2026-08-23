@@ -221,8 +221,17 @@ func (s *Server) PatchSeries(
 	if request.Body.Preset != nil {
 		p.Preset = string(*request.Body.Preset)
 	}
+	if request.Body.Type != nil {
+		t := string(*request.Body.Type)
+		p.Type = &t
+	}
 	show, err := s.tvshows.Update(ctx, request.Id, p)
 	if err != nil {
+		if errors.Is(err, tvshow.ErrInvalidSeriesType) {
+			return PatchSeries422JSONResponse{
+				UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
+			}, nil
+		}
 		return PatchSeries500JSONResponse{
 			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil

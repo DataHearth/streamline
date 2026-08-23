@@ -405,6 +405,51 @@ func (e HoldReasonCheck) Valid() bool {
 	}
 }
 
+// Defines values for ImportBulkDecisionRequestClassification.
+const (
+	ImportBulkDecisionRequestClassificationAmbiguous ImportBulkDecisionRequestClassification = "ambiguous"
+	ImportBulkDecisionRequestClassificationConfirmed ImportBulkDecisionRequestClassification = "confirmed"
+	ImportBulkDecisionRequestClassificationExisting  ImportBulkDecisionRequestClassification = "existing"
+	ImportBulkDecisionRequestClassificationUnmatched ImportBulkDecisionRequestClassification = "unmatched"
+)
+
+// Valid indicates whether the value is a known member of the ImportBulkDecisionRequestClassification enum.
+func (e ImportBulkDecisionRequestClassification) Valid() bool {
+	switch e {
+	case ImportBulkDecisionRequestClassificationAmbiguous:
+		return true
+	case ImportBulkDecisionRequestClassificationConfirmed:
+		return true
+	case ImportBulkDecisionRequestClassificationExisting:
+		return true
+	case ImportBulkDecisionRequestClassificationUnmatched:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ImportBulkDecisionRequestDecision.
+const (
+	ImportBulkDecisionRequestDecisionAccept  ImportBulkDecisionRequestDecision = "accept"
+	ImportBulkDecisionRequestDecisionPending ImportBulkDecisionRequestDecision = "pending"
+	ImportBulkDecisionRequestDecisionSkip    ImportBulkDecisionRequestDecision = "skip"
+)
+
+// Valid indicates whether the value is a known member of the ImportBulkDecisionRequestDecision enum.
+func (e ImportBulkDecisionRequestDecision) Valid() bool {
+	switch e {
+	case ImportBulkDecisionRequestDecisionAccept:
+		return true
+	case ImportBulkDecisionRequestDecisionPending:
+		return true
+	case ImportBulkDecisionRequestDecisionSkip:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ImportScanImportMode.
 const (
 	ImportScanImportModeCopy     ImportScanImportMode = "copy"
@@ -942,6 +987,27 @@ func (e PatchSeriesRequestPreset) Valid() bool {
 	case PatchSeriesRequestPresetNone:
 		return true
 	case PatchSeriesRequestPresetPilot:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PatchSeriesRequestType.
+const (
+	PatchSeriesRequestTypeAnime    PatchSeriesRequestType = "anime"
+	PatchSeriesRequestTypeDaily    PatchSeriesRequestType = "daily"
+	PatchSeriesRequestTypeStandard PatchSeriesRequestType = "standard"
+)
+
+// Valid indicates whether the value is a known member of the PatchSeriesRequestType enum.
+func (e PatchSeriesRequestType) Valid() bool {
+	switch e {
+	case PatchSeriesRequestTypeAnime:
+		return true
+	case PatchSeriesRequestTypeDaily:
+		return true
+	case PatchSeriesRequestTypeStandard:
 		return true
 	default:
 		return false
@@ -2102,7 +2168,12 @@ type DownloadQueue struct {
 type Episode struct {
 	AbsoluteNumber *uint16    `json:"absolute_number,omitempty"`
 	AirDate        *time.Time `json:"air_date,omitempty"`
-	Id             uint32     `json:"id"`
+
+	// HasFile Whether a media file is linked to this episode. Equivalent to a
+	// non-empty `path`, stated explicitly so clients do not have to infer
+	// presence from `path` or `status`.
+	HasFile *bool  `json:"has_file,omitempty"`
+	Id      uint32 `json:"id"`
 
 	// MediaInfo Technical details probed from the file with ffprobe. Absent when the
 	// file hasn't been probed yet, probing is disabled, or the probe was
@@ -2216,6 +2287,28 @@ type IgnorePendingRequest struct {
 	// RemoveTorrent When true, also remove the proposed torrent from its download
 	// client.
 	RemoveTorrent *bool `json:"remove_torrent,omitempty"`
+}
+
+// ImportBulkDecisionRequest defines model for ImportBulkDecisionRequest.
+type ImportBulkDecisionRequest struct {
+	// Classification Restrict to rows with this classification.
+	Classification *ImportBulkDecisionRequestClassification `json:"classification,omitempty"`
+	Decision       ImportBulkDecisionRequestDecision        `json:"decision"`
+
+	// Ids Restrict to these row ids. Combined with classification as AND.
+	Ids *[]uint32 `json:"ids,omitempty"`
+}
+
+// ImportBulkDecisionRequestClassification Restrict to rows with this classification.
+type ImportBulkDecisionRequestClassification string
+
+// ImportBulkDecisionRequestDecision defines model for ImportBulkDecisionRequest.Decision.
+type ImportBulkDecisionRequestDecision string
+
+// ImportBulkDecisionResult defines model for ImportBulkDecisionResult.
+type ImportBulkDecisionResult struct {
+	// Updated Number of rows whose decision was set.
+	Updated int `json:"updated"`
 }
 
 // ImportScan defines model for ImportScan.
@@ -2776,10 +2869,22 @@ type PatchSeriesRequest struct {
 	Monitored      *bool                     `json:"monitored,omitempty"`
 	Preset         *PatchSeriesRequestPreset `json:"preset,omitempty"`
 	QualityProfile *string                   `json:"quality_profile,omitempty"`
+
+	// Type Overrides the provider-inferred series type. The type decides
+	// whether episode files match by season/episode or by absolute
+	// number, so a wrong inference mis-matches every file. Set here it
+	// survives a metadata refresh.
+	Type *PatchSeriesRequestType `json:"type,omitempty"`
 }
 
 // PatchSeriesRequestPreset defines model for PatchSeriesRequest.Preset.
 type PatchSeriesRequestPreset string
+
+// PatchSeriesRequestType Overrides the provider-inferred series type. The type decides
+// whether episode files match by season/episode or by absolute
+// number, so a wrong inference mis-matches every file. Set here it
+// survives a metadata refresh.
+type PatchSeriesRequestType string
 
 // PathMigration defines model for PathMigration.
 type PathMigration struct {
@@ -3816,6 +3921,9 @@ type AddTorrent = AddTorrentRequest
 // ApproveRequest defines model for ApproveRequest.
 type ApproveRequest = ApproveRequestRequest
 
+// BulkUpdateImportDecisions defines model for BulkUpdateImportDecisions.
+type BulkUpdateImportDecisions = ImportBulkDecisionRequest
+
 // ChangePassword defines model for ChangePassword.
 type ChangePassword = ChangePasswordRequest
 
@@ -4133,6 +4241,9 @@ type UpdateIndexerJSONRequestBody = IndexerCreate
 // StartImportJSONRequestBody defines body for StartImport for application/json ContentType.
 type StartImportJSONRequestBody = ImportScanCreateRequest
 
+// BulkUpdateImportDecisionsJSONRequestBody defines body for BulkUpdateImportDecisions for application/json ContentType.
+type BulkUpdateImportDecisionsJSONRequestBody = ImportBulkDecisionRequest
+
 // UpdateImportFileDecisionJSONRequestBody defines body for UpdateImportFileDecision for application/json ContentType.
 type UpdateImportFileDecisionJSONRequestBody = ImportScanFileDecisionRequest
 
@@ -4393,6 +4504,9 @@ type ServerInterface interface {
 
 	// (POST /library/imports/{id}/commit)
 	CommitImport(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// BulkUpdateImportDecisions Apply one decision across a scan
+	// (POST /library/imports/{id}/decisions)
+	BulkUpdateImportDecisions(w http.ResponseWriter, r *http.Request, id ResourceID)
 
 	// (GET /library/imports/{id}/files)
 	ListImportFiles(w http.ResponseWriter, r *http.Request, id ResourceID, params ListImportFilesParams)
@@ -4984,6 +5098,12 @@ func (_ Unimplemented) CancelImport(w http.ResponseWriter, r *http.Request, id R
 
 // (POST /library/imports/{id}/commit)
 func (_ Unimplemented) CommitImport(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// BulkUpdateImportDecisions Apply one decision across a scan
+// (POST /library/imports/{id}/decisions)
+func (_ Unimplemented) BulkUpdateImportDecisions(w http.ResponseWriter, r *http.Request, id ResourceID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -6749,6 +6869,32 @@ func (siw *ServerInterfaceWrapper) CommitImport(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CommitImport(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// BulkUpdateImportDecisions operation middleware
+func (siw *ServerInterfaceWrapper) BulkUpdateImportDecisions(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.BulkUpdateImportDecisions(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -9791,6 +9937,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Patch(options.BaseURL+"/library/imports/{id}/shows/{showId}", wrapper.UpdateImportShowDecision)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/library/imports/{id}/decisions", wrapper.BulkUpdateImportDecisions)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/library/path-migration", wrapper.GetPathMigration)
 	})
 	r.Group(func(r chi.Router) {
@@ -9898,6 +10047,8 @@ type FileDeletedResponse struct {
 }
 
 type ForbiddenJSONResponse Error
+
+type ImportBulkDecisionResultJSONResponse ImportBulkDecisionResult
 
 type ImportCancelledResponse struct {
 }
@@ -13231,6 +13382,89 @@ type CommitImport422JSONResponse struct {
 }
 
 func (response CommitImport422JSONResponse) VisitCommitImportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BulkUpdateImportDecisionsRequestObject struct {
+	Id   ResourceID `json:"id"`
+	Body *BulkUpdateImportDecisionsJSONRequestBody
+}
+
+type BulkUpdateImportDecisionsResponseObject interface {
+	VisitBulkUpdateImportDecisionsResponse(w http.ResponseWriter) error
+}
+
+type BulkUpdateImportDecisions200JSONResponse struct {
+	ImportBulkDecisionResultJSONResponse
+}
+
+func (response BulkUpdateImportDecisions200JSONResponse) VisitBulkUpdateImportDecisionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BulkUpdateImportDecisions403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response BulkUpdateImportDecisions403JSONResponse) VisitBulkUpdateImportDecisionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BulkUpdateImportDecisions404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response BulkUpdateImportDecisions404JSONResponse) VisitBulkUpdateImportDecisionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BulkUpdateImportDecisions413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response BulkUpdateImportDecisions413JSONResponse) VisitBulkUpdateImportDecisionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BulkUpdateImportDecisions422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response BulkUpdateImportDecisions422JSONResponse) VisitBulkUpdateImportDecisionsResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -16769,6 +17003,22 @@ func (response PatchSeries413JSONResponse) VisitPatchSeriesResponse(w http.Respo
 	return err
 }
 
+type PatchSeries422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response PatchSeries422JSONResponse) VisitPatchSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type PatchSeries500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response PatchSeries500JSONResponse) VisitPatchSeriesResponse(w http.ResponseWriter) error {
@@ -18669,6 +18919,9 @@ type StrictServerInterface interface {
 
 	// (POST /library/imports/{id}/commit)
 	CommitImport(ctx context.Context, request CommitImportRequestObject) (CommitImportResponseObject, error)
+	// BulkUpdateImportDecisions Apply one decision across a scan
+	// (POST /library/imports/{id}/decisions)
+	BulkUpdateImportDecisions(ctx context.Context, request BulkUpdateImportDecisionsRequestObject) (BulkUpdateImportDecisionsResponseObject, error)
 
 	// (GET /library/imports/{id}/files)
 	ListImportFiles(ctx context.Context, request ListImportFilesRequestObject) (ListImportFilesResponseObject, error)
@@ -20492,6 +20745,39 @@ func (sh *strictHandler) CommitImport(w http.ResponseWriter, r *http.Request, id
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(CommitImportResponseObject); ok {
 		if err := validResponse.VisitCommitImportResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// BulkUpdateImportDecisions operation middleware
+func (sh *strictHandler) BulkUpdateImportDecisions(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request BulkUpdateImportDecisionsRequestObject
+
+	request.Id = id
+
+	var body BulkUpdateImportDecisionsJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.BulkUpdateImportDecisions(ctx, request.(BulkUpdateImportDecisionsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "BulkUpdateImportDecisions")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(BulkUpdateImportDecisionsResponseObject); ok {
+		if err := validResponse.VisitBulkUpdateImportDecisionsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

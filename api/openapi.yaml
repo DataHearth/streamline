@@ -500,8 +500,9 @@ paths:
       operationId: patchSeries
       summary: Patch a series
       description: |
-        Partially updates series properties (monitored, quality profile) and
-        optionally applies a one-shot monitoring preset to its episodes.
+        Partially updates series properties (monitored, quality profile,
+        type) and optionally applies a one-shot monitoring preset to its
+        episodes.
       tags: [series]
       requestBody:
         $ref: "#/components/requestBodies/PatchSeries"
@@ -512,6 +513,8 @@ paths:
           $ref: "#/components/responses/NotFound"
         "413":
           $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
         "500":
           $ref: "#/components/responses/InternalError"
     delete:
@@ -2348,6 +2351,35 @@ paths:
 
         "413":
           $ref: "#/components/responses/PayloadTooLarge"
+  /library/imports/{id}/decisions:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: BulkUpdateImportDecisions
+      summary: Apply one decision across a scan
+      description: |
+        Sets `decision` on every row of the scan, optionally narrowed by
+        `classification` and/or an explicit `ids` list. Dispatches on the
+        scan's kind, so it covers movie files and series shows alike.
+
+        With neither filter it applies to the whole scan. This is the bulk
+        form of the per-row PATCH endpoints, which otherwise cost one
+        request per row.
+      tags: [library]
+      requestBody:
+        $ref: "#/components/requestBodies/BulkUpdateImportDecisions"
+      responses:
+        "200":
+          $ref: "#/components/responses/ImportBulkDecisionResult"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
   /library/path-migration:
     get:
       operationId: GetPathMigration
@@ -3445,6 +3477,13 @@ components:
           schema:
             $ref: "#/components/schemas/ImportScanShowDecisionRequest"
 
+    BulkUpdateImportDecisions:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ImportBulkDecisionRequest"
+
     GrabMovieRelease:
       required: true
       content:
@@ -3879,6 +3918,13 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ImportScanFile"
+
+    ImportBulkDecisionResult:
+      description: How many rows the bulk decision changed.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ImportBulkDecisionResult"
 
     ImportScanFileList:
       description: Paginated list of import scan files.
@@ -4488,6 +4534,12 @@ components:
           type: integer
           format: int64
           nullable: true
+        has_file:
+          description: |
+            Whether a media file is linked to this episode. Equivalent to a
+            non-empty `path`, stated explicitly so clients do not have to infer
+            presence from `path` or `status`.
+          type: boolean
         path:
           type: string
           description: On-disk path of the episode's media file, when imported.
@@ -4550,6 +4602,14 @@ components:
         preset:
           type: string
           enum: [all, future, missing, existing, pilot, none]
+        type:
+          description: |
+            Overrides the provider-inferred series type. The type decides
+            whether episode files match by season/episode or by absolute
+            number, so a wrong inference mis-matches every file. Set here it
+            survives a metadata refresh.
+          type: string
+          enum: [standard, anime, daily]
 
     MonitorToggleRequest:
       type: object
@@ -6011,6 +6071,33 @@ components:
         tmdb_id:
           type: integer
           x-go-type: uint32
+
+    ImportBulkDecisionRequest:
+      type: object
+      required: [decision]
+      properties:
+        decision:
+          type: string
+          enum: [pending, accept, skip]
+        classification:
+          description: Restrict to rows with this classification.
+          type: string
+          enum: [confirmed, ambiguous, unmatched, existing]
+        ids:
+          description: Restrict to these row ids. Combined with classification as AND.
+          type: array
+          items:
+            type: integer
+            x-go-type: uint32
+
+    ImportBulkDecisionResult:
+      type: object
+      required: [updated]
+      properties:
+        updated:
+          description: Number of rows whose decision was set.
+          type: integer
+          x-go-type: int
 
     ImportScanList:
       type: object

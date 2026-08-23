@@ -21,6 +21,7 @@ import (
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/observability"
 	"github.com/datahearth/streamline/internal/otelx"
 )
 
@@ -521,4 +522,32 @@ func rewrite(path, from, to string) string {
 	}
 	rel := strings.TrimPrefix(path, from+string(filepath.Separator))
 	return filepath.Join(to, rel)
+}
+
+// WarnOnDrift logs a CRITICAL line for every root whose stored paths all sit
+// somewhere other than where the config now points. Nothing else notices that
+// situation: the records still exist, but every path dangles, and drift-check
+// deletes them once drift_grace_ticks elapses. Remounting a claim under a new
+// prefix is the ordinary way to reach it, and the fix — POST
+// /library/path-migration — is only reachable by an operator who knows to look.
+func (s *Service) WarnOnDrift(ctx context.Context) {
+	roots, err := s.Roots(ctx)
+	if err != nil {
+		slog.WarnContext(ctx, "could not check library paths against stored records",
+			"error", err)
+		return
+	}
+	for _, r := range roots {
+		if r.Total == 0 || r.Tracked > 0 {
+			continue
+		}
+		//nolint:sloglint // LogAttrs takes slog.Attr by API design
+		slog.LogAttrs(ctx, observability.LevelCritical,
+			"library root does not match any stored path — records will be pruned",
+			slog.String("library.root", string(r.Root)),
+			slog.String("library.path", r.Path),
+			slog.Int("records.total", r.Total),
+			slog.String("remedy", "POST /api/v1/library/path-migration to re-root"),
+		)
+	}
 }

@@ -30,6 +30,7 @@ export type Episode = {
 	monitored: boolean;
 	quality?: string;
 	size?: number | null;
+	has_file?: boolean;
 	path?: string;
 	media_info?: MediaInfo | null;
 };

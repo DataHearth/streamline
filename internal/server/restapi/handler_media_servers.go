@@ -177,7 +177,7 @@ func (s *Server) TestMediaServer(
 		}, nil
 	case errors.Is(err, mediaserver.ErrTestFailed):
 		return TestMediaServer422JSONResponse{
-			UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
+			UnprocessableEntityJSONResponse: errConnectionFailed(err.Error()),
 		}, nil
 	default:
 		return TestMediaServer500JSONResponse{
@@ -213,7 +213,7 @@ func (s *Server) TestDraftMediaServer(
 	case errors.Is(err, mediaserver.ErrInvalidServerType),
 		errors.Is(err, mediaserver.ErrTestFailed):
 		return TestDraftMediaServer422JSONResponse{
-			UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
+			UnprocessableEntityJSONResponse: errConnectionFailed(err.Error()),
 		}, nil
 	default:
 		return TestDraftMediaServer500JSONResponse{
