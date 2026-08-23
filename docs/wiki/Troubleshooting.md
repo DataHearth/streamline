@@ -190,6 +190,43 @@ Failing that, media servers have their own scan schedules and will find the file
 
 ---
 
+## My library emptied itself after a remount
+
+Streamline stores absolute paths. If the mount moves — the claim was at
+`/mnt/media-shared` and is now at `/srv`, a bind mount changed, a chart value
+was edited — every stored path dangles. The files are fine; the records point
+at nothing. The `drift-check` job then removes those records once
+`drift_grace_ticks` elapses, so left alone this becomes real data loss.
+
+Streamline logs a `CRITICAL` line at boot when a configured root matches none
+of the paths stored for it:
+
+```
+CRITICAL library root does not match any stored path — records will be pruned
+         library.root=movies library.path=/srv/streamline/movies records.total=621
+```
+
+Fix it by re-rooting rather than re-importing. Check what the server sees:
+
+```bash
+curl -sS -H "X-API-Key: $KEY" "$SL/api/v1/library/path-migration/roots"
+```
+
+`tracked: 0` with a non-zero `total` is the divergence. Preview, then run:
+
+```bash
+curl -sS -X POST -H "X-API-Key: $KEY" -H 'Content-Type: application/json' \
+  -d '{"root":"movies","from":"/mnt/media-shared/movies","to":"/srv/streamline/movies"}' \
+  "$SL/api/v1/library/path-migration/preview"
+```
+
+Drop `/preview` to apply. Add `"move_files": true` only if the files also need
+relocating; without it Streamline expects them to already be at the new path
+and just rewrites the records. Nothing on the server remembers the old prefix,
+so you have to name it yourself.
+
+---
+
 ## Database is locked
 
 Streamline uses SQLite, which allows exactly one writer.

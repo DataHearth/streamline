@@ -77,6 +77,18 @@ For anything non-interactive, use an API key instead.
 { "items": [ ... ], "total": 137, "page": 1, "limit": 20 }
 ```
 
+`limit` is **capped at 100** on every collection endpoint (200 for activity). A larger value is clamped silently — you get 100 items and a `200`, with nothing in the response saying the limit was reduced. Paginate against `total`, not against "fewer items came back than I asked for", or you will read the first page and stop.
+
+```bash
+# wrong: reads 100 of 621 and thinks it is done
+curl ".../movies?page=1&limit=500"
+
+# right: walk pages until you have `total`
+curl ".../movies?page=1&limit=100"   # -> total: 621
+curl ".../movies?page=2&limit=100"
+# ...
+```
+
 Activity feeds use cursor pagination instead (`?cursor=`, `?limit=`), since they're append-only and time-ordered.
 
 **Name-keyed resources.** Config-backed resources are addressed by name, not numeric ID:
@@ -179,6 +191,7 @@ Everything database-backed (movies, series, requests, users, imports) uses numer
 | `POST` | `/library/imports/{id}/cancel` · `/commit` |
 | `GET` | `/library/imports/{id}/files` · `/shows` |
 | `PATCH` | `/library/imports/{id}/files/{fileId}` · `/shows/{showId}` |
+| `POST` | `/library/imports/{id}/decisions` — bulk decision |
 | `GET` `POST` | `/library/path-migration` |
 | `GET` | `/library/path-migration/roots` |
 | `POST` | `/library/path-migration/preview` |
@@ -304,6 +317,24 @@ api -X POST -d '{"tvdb_id":81189,"preset":"missing"}' "$SL/api/v1/series"
 
 `preset` is one of `all`, `future`, `missing`, `existing`, `pilot`, `none`, and is applied once at add time to the season/episode tree.
 
+**Correcting a show's type:**
+
+A series' `type` (`standard`, `anime`, `daily`) is inferred from its TVDB genres
+and origin, and it decides how episode files are matched — `anime` matches on
+absolute number, everything else on season + episode. A wrong inference
+mis-matches every file in the show, so it can be overridden:
+
+```bash
+api -X PATCH -d '{"type":"anime"}' "$SL/api/v1/series/86"
+```
+
+The override is durable: a metadata refresh no longer re-derives `type`, so it
+will not be silently undone. `422` for a value outside the three.
+
+**Does an episode have a file?** `Episode` carries a `has_file` boolean
+alongside `path`, so presence does not have to be inferred from an empty string
+or from `status`.
+
 **Approve every pending request:**
 
 ```bash
@@ -360,6 +391,52 @@ above, `409` when the record exists but is not held. A held record also answers
 `409` to the queue verbs (pause, resume, `DELETE /activity/queue/{id}`) — its
 download is finished, so resolving is the only action it accepts. There is no
 release blocklist yet, so a `regrab` may find the same release again.
+
+### Driving a bulk import from the API
+
+Start a scan, wait for `awaiting_review`, then decide in bulk rather than one
+row at a time:
+
+```bash
+scan=$(api -X POST -d '{"source_path":"/srv/Films","mode":"rename","import_mode":"hardlink"}' \
+  "$SL/api/v1/library/imports" | jq -r .id)
+
+# poll until awaiting_review
+until [ "$(api "$SL/api/v1/library/imports/$scan" | jq -r .status)" = awaiting_review ]; do sleep 5; done
+
+# see the shape of the review
+for c in confirmed ambiguous existing unmatched; do
+  printf '%s=%s\n' "$c" "$(api "$SL/api/v1/library/imports/$scan/files?limit=1&classification=$c" | jq -r .total)"
+done
+
+# accept every confident match in one call
+api -X POST -d '{"decision":"accept","classification":"confirmed"}' \
+  "$SL/api/v1/library/imports/$scan/decisions"
+
+# park the ones with no match so they do not block the commit
+api -X POST -d '{"decision":"skip","classification":"unmatched"}' \
+  "$SL/api/v1/library/imports/$scan/decisions"
+
+api -X POST "$SL/api/v1/library/imports/$scan/commit"
+```
+
+`POST .../decisions` returns `{"updated": N}` and dispatches on the scan's kind,
+so the same call covers movie files and series shows. Omit `classification` to
+hit the whole scan, or pass `ids` to name specific rows; both together are an
+AND. The ambiguous rows are the ones that still need a human — resolve those
+with the per-row `PATCH`, supplying `tmdb_id`/`tvdb_id`.
+
+**Finding files that sit outside your library roots:**
+
+`POST /movies/{id}/rename` is a safe probe — it returns
+`{"movie_id":N,"operations":[]}` when the file is already where the naming
+template says it belongs, and a non-empty `operations` array (having moved it)
+when it was not. It is currently the only way to discover a file that was
+attached in place under some other root.
+
+```bash
+api -X POST "$SL/api/v1/movies/105/rename" | jq '.operations | length'
+```
 
 **Add an indexer:**
 

@@ -120,3 +120,23 @@ var _ = Describe("Classify", Label("unit", "bulkimport"), func() {
 		})
 	})
 })
+
+var _ = Describe("Classify across languages", Label("unit", "bulkimport"), func() {
+	It("matches an English folder against a translated TMDB title", func() {
+		// metadata.language=fr answers with the French title and nothing else;
+		// only the original title can equal the folder.
+		c := Classify(
+			"/srv/Films/2001 A Space Odyssey (1968)/x.mkv",
+			library.ParseResult{Title: "2001 A Space Odyssey", Year: 1968},
+			[]metadata.MovieResult{{
+				TMDBID:        62,
+				Title:         "2001 : L'Odyssée de l'espace",
+				OriginalTitle: "2001: A Space Odyssey",
+				Year:          1968,
+			}},
+			map[uint32]uint32{},
+		)
+		Expect(c.Kind).To(Equal(entimportscanfile.ClassificationConfirmed))
+		Expect(c.TMDBID).To(Equal(uint32(62)))
+	})
+})

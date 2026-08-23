@@ -38,10 +38,8 @@ func Classify(
 		return Classification{Kind: entimportscanfile.ClassificationUnmatched}
 	}
 
-	cands := topNCandidates(
-		rankMovieHits(hits, parsed.Title, parsed.Year),
-		pickerCandidateLimit,
-	)
+	ranked := rankMovieHits(hits, parsed.Title, parsed.Year)
+	cands := topNCandidates(ranked, pickerCandidateLimit)
 
 	// Scan every candidate, not only the top one: TMDB frequently ranks a
 	// same-titled decoy first ("Fantasia" 1940 above "Fantasia 2000"), and the
@@ -49,7 +47,7 @@ func Classify(
 	// existing-library map is consulted only afterwards — picking the first
 	// tracked candidate instead would let a decoy that happens to be in the
 	// library resolve an ambiguity the reviewer never saw.
-	match, ok := soleMatch(cands, parsed.Title, parsed.Year)
+	match, ok := soleMatch(ranked[:len(cands)], parsed.Title, parsed.Year)
 	if !ok {
 		return Classification{
 			Kind:       entimportscanfile.ClassificationAmbiguous,
@@ -71,41 +69,49 @@ func Classify(
 	}
 }
 
-// soleMatch returns the one candidate the parsed title and year single out, if
-// there is exactly one. With a year it must agree; without one, a single
-// title match is enough — insisting on a year is what left every year-less
-// name ambiguous.
+// soleMatch returns the one hit the parsed title and year single out, if there
+// is exactly one. With a year it must agree; without one, a single title match
+// is enough — insisting on a year is what left every year-less name ambiguous.
+//
+// The original title counts as a match too. TMDB answers in metadata.language,
+// so a French install looking at an English-named folder is offered
+// "2001 : L'Odyssée de l'espace" and nothing else — the right film, under a
+// title the folder can never equal.
 func soleMatch(
-	cands []schema.ScannedCandidate,
+	hits []metadata.MovieResult,
 	title string,
 	year uint16,
 ) (schema.ScannedCandidate, bool) {
-	var titleMatches []schema.ScannedCandidate
-	for _, c := range cands {
-		if library.TitleMatches(title, c.Title) {
-			titleMatches = append(titleMatches, c)
+	var titleMatches []metadata.MovieResult
+	for _, h := range hits {
+		if library.TitleMatchesAny(title, h.Title, []string{h.OriginalTitle}) {
+			titleMatches = append(titleMatches, h)
 		}
 	}
 	if len(titleMatches) == 0 {
 		return schema.ScannedCandidate{}, false
 	}
 	if year != 0 {
-		var byYear []schema.ScannedCandidate
-		for _, c := range titleMatches {
-			if c.Year == year {
-				byYear = append(byYear, c)
+		var byYear []metadata.MovieResult
+		for _, h := range titleMatches {
+			if h.Year == year {
+				byYear = append(byYear, h)
 			}
 		}
 		if len(byYear) == 1 {
-			return byYear[0], true
+			return asCandidate(byYear[0]), true
 		}
 		// A year that agrees with nothing is more likely mis-parsed than
 		// authoritative, so fall through to the title-only decision.
 	}
 	if len(titleMatches) == 1 {
-		return titleMatches[0], true
+		return asCandidate(titleMatches[0]), true
 	}
 	return schema.ScannedCandidate{}, false
+}
+
+func asCandidate(h metadata.MovieResult) schema.ScannedCandidate {
+	return schema.ScannedCandidate{TMDBID: h.TMDBID, Title: h.Title, Year: h.Year}
 }
 
 // classifyByTMDBID resolves a path-embedded id without consulting the parsed
@@ -148,7 +154,7 @@ func rankMovieHits(
 	year uint16,
 ) []metadata.MovieResult {
 	return rankByScore(hits, func(h metadata.MovieResult) int {
-		return matchScore(title, year, h.Title, nil, h.Year)
+		return matchScore(title, year, h.Title, []string{h.OriginalTitle}, h.Year)
 	})
 }
 

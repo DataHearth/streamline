@@ -245,20 +245,25 @@ func (s *Service) BulkDecide(
 		return 0, otelx.RecordSpanError(span, ErrScanNotReviewable)
 	}
 
+	var n int
 	if scan.Kind == entimportscan.KindSeries {
-		n, err := s.store.BulkUpdateImportScanShowDecisions(
+		n, err = s.store.BulkUpdateImportScanShowDecisions(
 			ctx, p.ScanID,
 			entimportscanshow.Decision(p.Decision),
 			entimportscanshow.Classification(p.Classification),
 			p.IDs,
 		)
-		return n, otelx.RecordSpanError(span, err)
+	} else {
+		n, err = s.store.BulkUpdateImportScanFileDecisions(
+			ctx, p.ScanID,
+			entimportscanfile.Decision(p.Decision),
+			entimportscanfile.Classification(p.Classification),
+			p.IDs,
+		)
 	}
-	n, err := s.store.BulkUpdateImportScanFileDecisions(
-		ctx, p.ScanID,
-		entimportscanfile.Decision(p.Decision),
-		entimportscanfile.Classification(p.Classification),
-		p.IDs,
-	)
-	return n, otelx.RecordSpanError(span, err)
+	if err != nil {
+		return 0, otelx.RecordSpanError(span, err)
+	}
+	span.SetAttributes(attribute.Int("rows.updated", n))
+	return n, nil
 }

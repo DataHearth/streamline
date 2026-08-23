@@ -23,7 +23,15 @@ func Must[T any](v T, err error) T {
 //	if err != nil {
 //	    return nil, otelx.RecordSpanError(span, fmt.Errorf("..."))
 //	}
+//
+// A nil err leaves the span untouched. Marking a span failed with no error is
+// meaningless, and the alternative — dereferencing it for SetStatus — turns a
+// missing `if err != nil` into a panic, which the caller's handler reports as a
+// 500 nowhere near the mistake.
 func RecordSpanError(span trace.Span, err error) error {
+	if err == nil {
+		return nil
+	}
 	span.RecordError(err)
 	span.SetStatus(codes.Error, err.Error())
 	return err
