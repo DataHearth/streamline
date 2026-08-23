@@ -143,24 +143,30 @@ func Parse(filename string) ParseResult {
 		r.Codec = normalizeCodec(m)
 	}
 
-	// Extract year — find all matches, use the one that appears
-	// before S##E## or before technical tokens
-	if matches := yearRe.FindAllStringSubmatchIndex(filename, -1); len(matches) > 0 {
-		// Use the first year that isn't part of a season/episode pattern
-		for _, match := range matches {
-			if y, err := strconv.ParseUint(
-				filename[match[2]:match[3]],
-				10,
-				16,
-			); err == nil {
-				r.Year = uint16(y)
-				break
-			}
+	// Extract year — take the *last* year token, and never one that opens the
+	// name. A numeric title ("1917 - 2019", "2001 A Space Odyssey - 1968") or a
+	// year-like suffix ("Blade Runner 2049 - 2017", "Fantasia 2000 (2000)")
+	// otherwise loses to the title's own digits, and since the title is cut at
+	// the year the release is left with an empty title and no candidates at all.
+	// A name whose only year leads it ("1917.mkv") keeps the digits as its title
+	// and reports no year.
+	yearIdx := -1
+	for _, match := range yearRe.FindAllStringSubmatchIndex(filename, -1) {
+		if match[2] == 0 {
+			continue
+		}
+		if y, err := strconv.ParseUint(
+			filename[match[2]:match[3]],
+			10,
+			16,
+		); err == nil {
+			r.Year = uint16(y)
+			yearIdx = match[2]
 		}
 	}
 
 	// Title = everything before the first matched token
-	r.Title = extractTitle(filename, r)
+	r.Title = extractTitle(filename, r, yearIdx)
 
 	return r
 }
@@ -212,14 +218,18 @@ func IsWholeSeriesPack(name string) bool {
 	return seasonRangeRe.MatchString(name) || completePackRe.MatchString(name)
 }
 
-func extractTitle(filename string, r ParseResult) string {
+// extractTitle returns the name up to its first technical token. yearIdx is the
+// byte offset of the year Parse settled on, or -1 for none — searching for the
+// year's *text* instead would find the title's own digits first ("Fantasia 2000
+// (2000)" would cut at the title).
+func extractTitle(filename string, r ParseResult, yearIdx int) string {
 	// Find the position of the first technical token
 	cutPos := len(filename)
+	if yearIdx >= 0 && yearIdx < cutPos {
+		cutPos = yearIdx
+	}
 
 	markers := []string{}
-	if r.Year > 0 {
-		markers = append(markers, strconv.FormatUint(uint64(r.Year), 10))
-	}
 	if r.Season > 0 {
 		markers = append(markers, seasonEpRe.FindString(filename))
 	}
@@ -292,4 +302,36 @@ func normalizeSource(s string) string {
 	default:
 		return s
 	}
+}
+
+// embeddedIDRe matches a provider id Streamline's own naming template writes
+// into a path — "Fantasia 2000 (2000) {tmdb-49948}". Both brace and bracket
+// forms are accepted since other tools in the *arr ecosystem use brackets.
+var embeddedIDRe = regexp.MustCompile(`(?i)[{\[](tmdb|tvdb)-(\d{1,9})[}\]]`)
+
+// EmbeddedIDs are provider ids lifted from a path. A zero field means the path
+// carried no id for that provider.
+type EmbeddedIDs struct {
+	TMDB uint32
+	TVDB uint32
+}
+
+// ParseEmbeddedIDs lifts {tmdb-N} / {tvdb-N} out of a path. Such an id is
+// authoritative: the path was rendered *from* it, so re-deriving a title from
+// the filename and searching a provider for it can only lose information.
+func ParseEmbeddedIDs(path string) EmbeddedIDs {
+	var ids EmbeddedIDs
+	for _, m := range embeddedIDRe.FindAllStringSubmatch(path, -1) {
+		n, err := strconv.ParseUint(m[2], 10, 32)
+		if err != nil || n == 0 {
+			continue
+		}
+		switch strings.ToLower(m[1]) {
+		case "tmdb":
+			ids.TMDB = uint32(n)
+		case "tvdb":
+			ids.TVDB = uint32(n)
+		}
+	}
+	return ids
 }

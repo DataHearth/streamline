@@ -74,7 +74,7 @@ func (s *Service) RunSeriesOrphanScan(ctx context.Context) error {
 			slog.WarnContext(ctx, "series tvdb lookup failed",
 				"folder", e.Name(), "error", herr)
 		}
-		c := bulkimport.ClassifyShow(p.Title, p.Year, hits, trackedByTVDB)
+		c := bulkimport.ClassifyShow(folder, p.Title, p.Year, hits, trackedByTVDB)
 		queue = append(
 			queue,
 			bulkimport.BuildShowParams(folder, p, c, uint16(len(files))),

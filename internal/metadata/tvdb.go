@@ -238,6 +238,7 @@ func (t *TVDB) SearchSeries(ctx context.Context, query string) ([]TVResult, erro
 			Network      string            `json:"network"`
 			Overview     string            `json:"overview"`
 			ImageURL     string            `json:"image_url"`
+			Aliases      []string          `json:"aliases"`
 			Translations map[string]string `json:"translations"` // lang -> name
 			Overviews    map[string]string `json:"overviews"`    // lang -> overview
 		} `json:"data"`
@@ -256,13 +257,22 @@ func (t *TVDB) SearchSeries(ctx context.Context, query string) ([]TVResult, erro
 		if v := r.Overviews[t.language]; t.language != "" && v != "" {
 			overview = v
 		}
+		// Every translated name is an alias for matching purposes: a folder is
+		// as likely to carry the romaji or the original-language title as the
+		// English one, and TVDB returns both lists.
+		aliases := append([]string(nil), r.Aliases...)
+		for _, v := range r.Translations {
+			aliases = append(aliases, v)
+		}
 		out = append(out, TVResult{
-			TVDBID:     atou32(r.TVDBID),
-			Title:      title,
-			Year:       atou16(r.Year),
-			Network:    r.Network,
-			Overview:   overview,
-			PosterPath: r.ImageURL,
+			TVDBID:        atou32(r.TVDBID),
+			Title:         title,
+			OriginalTitle: r.Name,
+			Year:          atou16(r.Year),
+			Network:       r.Network,
+			Overview:      overview,
+			PosterPath:    r.ImageURL,
+			Aliases:       aliases,
 		})
 	}
 	return out, nil

@@ -84,6 +84,10 @@ type TVResult struct {
 	Network       string
 	Overview      string
 	PosterPath    string
+	// Aliases are TVDB's alternate names for the show. A folder named in romaji
+	// ("Kimetsu no Yaiba", "Shingeki no Kyojin") only ever equals the entry
+	// through one of these, so matchers compare against them as well as Title.
+	Aliases []string
 }
 
 // EpisodeInfo is one episode as TVDB reports it.

@@ -223,6 +223,31 @@ var _ = Describe("Filename Parser", Label("unit", "library"), func() {
 			},
 		),
 		Entry(
+			"numeric title keeps its digits and takes the trailing year",
+			"1917 - 2019 ",
+			ParseResult{Title: "1917", Year: 2019},
+		),
+		Entry(
+			"title opening with a year-like number",
+			"2001 A Space Odyssey - 1968 ",
+			ParseResult{Title: "2001 A Space Odyssey", Year: 1968},
+		),
+		Entry(
+			"year-like suffix is not eaten as the release year",
+			"Blade Runner 2049 - 2017 ",
+			ParseResult{Title: "Blade Runner 2049", Year: 2017},
+		),
+		Entry(
+			"repeated year keeps the title's own copy",
+			"Fantasia 2000 (2000) [1080p]",
+			ParseResult{Title: "Fantasia 2000", Year: 2000, Resolution: "1080p"},
+		),
+		Entry(
+			"a leading year with nothing after it stays in the title",
+			"1917.mkv",
+			ParseResult{Title: "1917", Year: 0},
+		),
+		Entry(
 			"episode with year in title",
 			"The.Fall.Guy.2024.S01E05.1080p.WEB.H.265-SuccessfulCrab",
 			ParseResult{

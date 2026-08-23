@@ -172,7 +172,7 @@ func (s *Service) classifyOrphan(
 	}
 	// alreadyAdded is empty for the orphan path: MovieHasMediaFile covers the
 	// "already tracked" gate explicitly inside handleOrphan.
-	classified := bulkimport.Classify(parsed, hits, map[uint32]uint32{})
+	classified := bulkimport.Classify(path, parsed, hits, map[uint32]uint32{})
 	return orphanCandidate{Path: path, Size: size, Parsed: parsed}, classified, nil
 }
 

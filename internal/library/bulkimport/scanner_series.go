@@ -90,7 +90,7 @@ func (s *Service) runScanSeries(ctx context.Context, scan *ent.ImportScan) {
 			slog.WarnContext(ctx, "series scan: tvdb lookup failed",
 				"folder", e.Name(), "error", herr)
 		}
-		c := ClassifyShow(p.Title, p.Year, hits, trackedByTVDB)
+		c := ClassifyShow(folder, p.Title, p.Year, hits, trackedByTVDB)
 		//nolint:gosec // a folder holds far fewer than 65k episode files
 		queue = append(queue, BuildShowParams(folder, p, c, uint16(len(files))))
 

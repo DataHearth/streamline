@@ -375,7 +375,7 @@ func (s *Service) classifyOne(
 		slog.WarnContext(ctx, "bulk import tmdb lookup failed",
 			"file.basename", filepath.Base(c.path), "error", err)
 	}
-	cls := Classify(parsed, hits, alreadyAdded)
+	cls := Classify(c.path, parsed, hits, alreadyAdded)
 
 	row := db.CreateImportScanFileParams{
 		SourcePath:         c.path,
