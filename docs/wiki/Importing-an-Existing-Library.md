@@ -64,6 +64,8 @@ So for TV, point the scan at the directory *containing* your show folders — `/
 
 > **A note on folder depth:** the scanner does not recurse infinitely. For films, keep your files at a sane depth under the scan root rather than buried many levels down.
 
+Very small files are skipped as junk before anything is matched, along with anything whose name contains `sample`. The floor is **50 MB for a film** and **5 MB for an episode** — episodes get the lower one because short-form series are real (a three-minute episode is a few tens of MB, well under a film's floor). A show folder whose file count looks far too low in the review list is the symptom of files falling under it.
+
 You can cancel a running scan at any time. It stops; nothing has been changed yet.
 
 ---

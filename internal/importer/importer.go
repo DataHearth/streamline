@@ -611,7 +611,7 @@ func (w *Worker) importSingleEpisode(
 
 	var probeInfo *ffmpeg.Info
 	var probeErr error
-	src, srcErr := library.ResolveMediaFile(rec.SavePath)
+	src, srcErr := library.ResolveEpisodeFile(rec.SavePath)
 	if srcErr == nil {
 		probeInfo, probeErr = w.probeSource(ctx, src)
 	}

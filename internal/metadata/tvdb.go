@@ -225,10 +225,51 @@ func atou32(s string) uint32 {
 	return uint32(n)
 }
 
+// SearchSeries queries TVDB, retrying with each half of the query when the
+// full one comes back empty. TVDB's relevance scorer returns nothing for a
+// show's own complete title while returning that show for substrings of it —
+// "Zom 100 Bucket List of the Dead" finds nothing, "Zom 100 Bucket List" and
+// "Bucket List of the Dead" both find it. No rule separates the substrings
+// that work, so both halves are tried and the first non-empty answer wins.
 func (t *TVDB) SearchSeries(ctx context.Context, query string) ([]TVResult, error) {
 	ctx, span := tracer.Start(ctx, "metadata.tvdb.search_series",
 		trace.WithAttributes(attribute.String("query", query)))
 	defer span.End()
+
+	out, err := t.searchSeries(ctx, query)
+	if err != nil || len(out) > 0 {
+		return out, err
+	}
+	for _, alt := range queryHalves(query) {
+		out, err = t.searchSeries(ctx, alt)
+		if err != nil {
+			return nil, err
+		}
+		if len(out) > 0 {
+			span.SetAttributes(attribute.String("query.fallback", alt))
+			return out, nil
+		}
+	}
+	return out, nil
+}
+
+// queryHalves splits query into its leading and trailing half, both rounded up
+// so a 6-word query yields two 3-word ones. Returns nil for a query too short
+// for the halves to carry a title.
+func queryHalves(query string) []string {
+	words := strings.Fields(query)
+	if len(words) < 4 {
+		return nil
+	}
+	h := (len(words) + 1) / 2
+	return []string{
+		strings.Join(words[:h], " "),
+		strings.Join(words[len(words)-h:], " "),
+	}
+}
+
+func (t *TVDB) searchSeries(ctx context.Context, query string) ([]TVResult, error) {
+	span := trace.SpanFromContext(ctx)
 
 	var resp struct {
 		Data []struct {

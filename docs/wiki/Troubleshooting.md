@@ -31,6 +31,8 @@ metadata:
 
 Restart afterwards. Keys are free — see [First-Run Setup](First-Run-Setup#2-get-metadata-api-keys).
 
+**One long title finds nothing while part of it finds the show.** TVDB's search scores a show's own full title badly enough to return nothing at all — "Zom 100 Bucket List of the Dead" comes back empty, "Zom 100 Bucket List" returns the show. Streamline retries an empty search with each half of what you typed, which covers most of these, but a title that survives both halves needs help: type fewer words, add the year ("Baki 2018"), or search the original-language title, which TVDB ranks best of all.
+
 ---
 
 ## Nothing ever gets grabbed
@@ -83,6 +85,8 @@ Fix the mounts (one parent mount, per [the folder rule](Installation#before-you-
 **`save_path not in allowed download roots`.** You've set `library.allowed_download_roots` and the torrent's save path isn't under any of them. This is a safety fence — it stops a compromised or misconfigured download client persuading Streamline to import from arbitrary paths. Add the correct root, or clear the list to disable the check.
 
 **Season pack matched no episodes.** A pack was downloaded but Streamline couldn't map its files onto episodes you're missing — usually non-standard episode numbering. Import the files by hand via an [import scan](Importing-an-Existing-Library).
+
+**An import scan entry fails with `only N of M files matched an episode`.** The folder is refused rather than adopted into the wrong show. Two things cause it. Either the folder really is a different show — accept a different match in the review list. Or the filenames carry numbering the show doesn't have: `S02E23` for a season with 22 episodes is a re-numbered DVD rip, and the guard is right to refuse it. Check the season and episode numbers on the series page against the filenames before treating it as a bug.
 
 ---
 

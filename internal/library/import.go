@@ -63,19 +63,20 @@ type ImportedFile struct {
 	Parsed ParseResult
 }
 
-// findMediaFile scans dir for video files above 50MB, skipping any whose
-// basename matches \bsample\b. Returns the absolute path to the sole
-// candidate. Errors: ErrNoMedia (none found, none filtered), ErrSampleOnly
-// (all candidates were samples), ErrMultipleMedia (>1 candidate after
-// filtering). When dir is a single file, it is returned directly provided it
-// passes the same filters.
-func findMediaFile(dir string) (string, error) {
+// findMediaFile scans dir for video files of at least minSize (MinMediaSize
+// for a feature, MinEpisodeSize for an episode), skipping any whose basename
+// matches \bsample\b. Returns the absolute path to the sole candidate.
+// Errors: ErrNoMedia (none found, none filtered), ErrSampleOnly (all
+// candidates were samples), ErrMultipleMedia (>1 candidate after filtering).
+// When dir is a single file, it is returned directly provided it passes the
+// same filters.
+func findMediaFile(dir string, minSize int64) (string, error) {
 	info, err := os.Stat(dir)
 	if err != nil {
 		return "", err
 	}
 	if !info.IsDir() {
-		if !MediaExts[filepath.Ext(dir)] || info.Size() < MinMediaSize ||
+		if !MediaExts[filepath.Ext(dir)] || info.Size() < minSize ||
 			SampleRe.MatchString(filepath.Base(dir)) {
 			return "", ErrNoMedia
 		}
@@ -98,7 +99,7 @@ func findMediaFile(dir string) (string, error) {
 			continue
 		}
 		info, err := e.Info()
-		if err != nil || info.Size() < MinMediaSize {
+		if err != nil || info.Size() < minSize {
 			continue
 		}
 		if SampleRe.MatchString(name) {
@@ -119,16 +120,21 @@ func findMediaFile(dir string) (string, error) {
 	}
 }
 
-// ResolveMediaFile resolves the single importable media file under pathOrDir
-// (or pathOrDir itself when it is a file), with findMediaFile's filters.
-// Lets the importer probe the source before the transfer decides anything.
+// ResolveMediaFile resolves the single importable feature under pathOrDir (or
+// pathOrDir itself when it is a file), with findMediaFile's filters. Lets the
+// importer probe the source before the transfer decides anything.
 func ResolveMediaFile(pathOrDir string) (string, error) {
-	return findMediaFile(pathOrDir)
+	return findMediaFile(pathOrDir, MinMediaSize)
+}
+
+// ResolveEpisodeFile is ResolveMediaFile against the episode size floor.
+func ResolveEpisodeFile(pathOrDir string) (string, error) {
+	return findMediaFile(pathOrDir, MinEpisodeSize)
 }
 
 // ListVideoFiles returns every video file directly under dir that passes the
-// size + sample filters (same rules as findMediaFile). Used by the importer to
-// enumerate a season pack's individual episode files.
+// episode size + sample filters. Used by the importer to enumerate a season
+// pack's individual episode files.
 func ListVideoFiles(dir string) ([]string, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -144,7 +150,7 @@ func ListVideoFiles(dir string) ([]string, error) {
 			continue
 		}
 		info, err := e.Info()
-		if err != nil || info.Size() < MinMediaSize {
+		if err != nil || info.Size() < MinEpisodeSize {
 			continue
 		}
 		if SampleRe.MatchString(name) {
@@ -176,7 +182,7 @@ func ListVideoFilesRecursive(dir string) ([]string, error) {
 			return nil
 		}
 		info, err := d.Info()
-		if err != nil || info.Size() < MinMediaSize {
+		if err != nil || info.Size() < MinEpisodeSize {
 			return nil
 		}
 		if SampleRe.MatchString(filepath.Base(p)) {
@@ -225,11 +231,12 @@ func (s *ImportService) ImportMovieWithMode(
 	defer span.End()
 
 	return placeFile(ctx, span, placement{
-		kind:   "movie",
-		src:    srcDir,
-		root:   s.config.MoviePath,
-		naming: s.config.MovieNaming,
-		mode:   mode,
+		kind:    "movie",
+		src:     srcDir,
+		minSize: MinMediaSize,
+		root:    s.config.MoviePath,
+		naming:  s.config.MovieNaming,
+		mode:    mode,
 		buildVars: func(parsed ParseResult) map[string]string {
 			return BuildMovieVars(m.Title, m.Year, m.TmdbID, imdbID, parsed)
 		},
@@ -277,11 +284,12 @@ func (s *ImportService) ImportEpisodeWithMode(
 	defer span.End()
 
 	return placeFile(ctx, span, placement{
-		kind:   "episode",
-		src:    srcFile,
-		root:   s.config.SeriesPath,
-		naming: s.config.SeriesNaming,
-		mode:   mode,
+		kind:    "episode",
+		src:     srcFile,
+		minSize: MinEpisodeSize,
+		root:    s.config.SeriesPath,
+		naming:  s.config.SeriesNaming,
+		mode:    mode,
 		buildVars: func(parsed ParseResult) map[string]string {
 			return BuildEpisodeVars(
 				show.Title,
@@ -301,6 +309,7 @@ func (s *ImportService) ImportEpisodeWithMode(
 type placement struct {
 	kind      string // movie | episode — metric dimension
 	src       string // a file, or a directory holding exactly one media file
+	minSize   int64  // size floor the source file must clear
 	root      string // library root the destination must stay inside
 	naming    string
 	mode      string
@@ -330,7 +339,7 @@ func placeFile(
 		imports.Add(ctx, 1, attrs)
 	}()
 
-	srcFile, err := findMediaFile(p.src)
+	srcFile, err := findMediaFile(p.src, p.minSize)
 	if err != nil {
 		outcome = "no_media"
 		return ImportedFile{}, otelx.RecordSpanError(span, err)
