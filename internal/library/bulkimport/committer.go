@@ -2,6 +2,7 @@ package bulkimport
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -19,6 +20,7 @@ import (
 	entmediafile "github.com/datahearth/streamline/ent/mediafile"
 	entmovie "github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/media/movie"
 	"github.com/datahearth/streamline/internal/otelx"
 )
 
@@ -167,7 +169,7 @@ func (s *Service) commitOne(
 
 	switch f.Classification {
 	case entimportscanfile.ClassificationExisting:
-		return s.commitAttach(ctx, f)
+		return s.commitAttach(ctx, scan, f)
 	default:
 		tmdbID := f.DecisionTmdbID
 		if tmdbID == 0 {
@@ -178,6 +180,28 @@ func (s *Service) commitOne(
 		}
 		return s.commitRename(ctx, scan, f, tmdbID)
 	}
+}
+
+// addOrFindMovie adds the movie, or returns the existing row when another scan
+// (or another file in this one) added it while this scan sat in review. The
+// desired end state — the movie is in the library — is already true, so
+// failing the file would strand a real file over a race.
+func (s *Service) addOrFindMovie(
+	ctx context.Context,
+	tmdbID uint32,
+) (*ent.Movie, error) {
+	m, _, err := s.movieSvc.Add(ctx, tmdbID, "")
+	if err == nil {
+		return m, nil
+	}
+	if !errors.Is(err, movie.ErrMovieExists) {
+		return nil, err
+	}
+	existing, ferr := s.store.FindMovieByTMDBID(ctx, tmdbID)
+	if ferr != nil {
+		return nil, err
+	}
+	return existing, nil
 }
 
 func (s *Service) markScanFailed(ctx context.Context, scanID uint32, reason string) {
@@ -238,6 +262,7 @@ func (s *Service) linkAndMarkAvailable(
 
 func (s *Service) commitAttach(
 	ctx context.Context,
+	scan *ent.ImportScan,
 	f *ent.ImportScanFile,
 ) (entimportscanfile.Outcome, string, uint32) {
 	existing, err := s.store.ListMediaFilesByMovieID(ctx, f.ExistingMovieID)
@@ -260,14 +285,40 @@ func (s *Service) commitAttach(
 			return commitFail("delete replaced file", err, 0)
 		}
 	}
-	return s.linkAndMarkAvailable(ctx, db.CreateMediaFileParams{
+	// A rename scan relocates everything it accepts, existing rows included —
+	// attaching this one where it lies would leave the library split across the
+	// source root and the configured one, which only an inode sweep can find.
+	params := db.CreateMediaFileParams{
 		MovieID:      f.ExistingMovieID,
 		Path:         f.SourcePath,
 		Size:         f.Size,
 		Quality:      f.ParsedQuality,
 		ReleaseGroup: f.ParsedReleaseGroup,
 		Source:       entmediafile.SourceWizard,
-	}, entimportscanfile.OutcomeAttached, 0)
+	}
+	if scan.Mode == entimportscan.ModeRename {
+		m, err := s.store.FindMovieByID(ctx, f.ExistingMovieID)
+		if err != nil {
+			return commitFail("find movie", err, 0)
+		}
+		imported, err := s.importSvc.ImportMovieWithMode(
+			ctx,
+			filepath.Dir(f.SourcePath),
+			m,
+			"",
+			string(scan.ImportMode),
+		)
+		if err != nil {
+			return commitFail("import movie", err, 0)
+		}
+		params.Path = imported.Path
+		params.Size = imported.Size
+		params.Quality = imported.Parsed.Resolution
+		params.ReleaseGroup = imported.Parsed.Group
+	}
+	return s.linkAndMarkAvailable(
+		ctx, params, entimportscanfile.OutcomeAttached, 0,
+	)
 }
 
 func (s *Service) commitAdoptInPlace(
@@ -275,7 +326,7 @@ func (s *Service) commitAdoptInPlace(
 	f *ent.ImportScanFile,
 	tmdbID uint32,
 ) (entimportscanfile.Outcome, string, uint32) {
-	m, _, err := s.movieSvc.Add(ctx, tmdbID, "")
+	m, err := s.addOrFindMovie(ctx, tmdbID)
 	if err != nil {
 		return commitFail("add movie", err, 0)
 	}
@@ -295,7 +346,7 @@ func (s *Service) commitRename(
 	f *ent.ImportScanFile,
 	tmdbID uint32,
 ) (entimportscanfile.Outcome, string, uint32) {
-	m, _, err := s.movieSvc.Add(ctx, tmdbID, "")
+	m, err := s.addOrFindMovie(ctx, tmdbID)
 	if err != nil {
 		return commitFail("add movie", err, 0)
 	}

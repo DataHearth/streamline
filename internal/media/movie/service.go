@@ -56,6 +56,10 @@ func init() {
 var (
 	ErrNoQualityProfile = errors.New("no quality profile configured")
 	ErrMovieNotFound    = errors.New("movie not found")
+	// ErrMovieExists means the tmdb id is already in the library. Callers that
+	// only want the movie to exist — a bulk-import commit racing another scan —
+	// treat it as success and look the row up.
+	ErrMovieExists = errors.New("movie already exists")
 )
 
 type Manager interface {
@@ -202,7 +206,7 @@ func (s *Service) Add(
 		if ent.IsConstraintError(err) {
 			return nil, "", otelx.RecordSpanError(
 				span,
-				fmt.Errorf("movie with tmdb_id %d already exists", tmdbID),
+				fmt.Errorf("%w: tmdb_id %d", ErrMovieExists, tmdbID),
 			)
 		}
 		return nil, "", otelx.RecordSpanError(
