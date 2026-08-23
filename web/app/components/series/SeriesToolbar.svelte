@@ -435,6 +435,11 @@
 		</button>
 	</div>
 
+	<!-- Flex line breaks: wrapping alone packs everything onto the first line on a
+	     wide screen. These pin the three rows — status tabs, type, then search and
+	     the selection controls — at every width from lg up. -->
+	<div class="hidden w-full lg:block"></div>
+
 	<div
 		class="hidden max-w-full shrink-0 items-center gap-0.5 overflow-x-auto rounded-md border border-border bg-bg-elevated p-[3px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:inline-flex"
 		role="group"
@@ -457,6 +462,8 @@
 				</button>
 			{/each}
 		</div>
+
+	<div class="hidden w-full lg:block"></div>
 
 	<!-- Below lg the field takes the rest of the tabs' line, which puts everything
 	     else on the second one — the same two rows as Movies, whose tab strip is
@@ -484,9 +491,9 @@
 			{/if}
 		</div>
 
-	<!-- Monitored and the Select pair get a line of their own: beside the search
-	     field they read as part of it rather than as filters over the grid. -->
-	<div class="order-3 flex w-full flex-wrap items-center gap-2 lg:order-none">
+	<div
+		class="order-3 flex w-full flex-wrap items-center gap-2 lg:order-none lg:w-auto"
+	>
 		<button
 			type="button"
 			onclick={() => onMonitoredChange(!monitoredOnly)}

@@ -483,10 +483,8 @@
 				{/if}
 
 				{#if show.overview}
-					<!-- The synopsis has a home in the Overview tab; on a phone the header
-					     spends its height on state instead. -->
 					<p
-						class="mt-4 hidden max-w-[680px] text-sm leading-relaxed text-fg-muted md:line-clamp-3 md:block [text-wrap:pretty]"
+						class="mt-4 line-clamp-3 max-w-[680px] text-sm leading-relaxed text-fg-muted [text-wrap:pretty]"
 					>
 						{show.overview}
 					</p>
