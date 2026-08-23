@@ -102,18 +102,32 @@ func BuildEpisodeVars(
 	return vars
 }
 
+// pathReplacer maps characters that are invalid in filenames. Package-level
+// because strings.Replacer is safe for concurrent use and builds a lookup
+// table once.
+var pathReplacer = strings.NewReplacer(
+	":", " -",
+	"/", "-",
+	"\\", "-",
+	"<", "",
+	">", "",
+	"\"", "",
+	"|", "",
+	"?", "",
+	"*", "",
+)
+
+// pathSpaceRun matches the whitespace runs the replacements leave behind.
+var pathSpaceRun = regexp.MustCompile(`\s{2,}`)
+
 // SanitizePath removes characters that are invalid in filenames.
+//
+// Runs of whitespace are collapsed afterwards: ":" expands to " -" and the
+// deleted characters vanish outright, so either one doubles a space it already
+// had beside it — "2001 : L'Odyssée" would otherwise land as "2001  - L'Odyssée"
+// and "A | B" as "A  B".
 func SanitizePath(s string) string {
-	replacer := strings.NewReplacer(
-		":", " -",
-		"/", "-",
-		"\\", "-",
-		"<", "",
-		">", "",
-		"\"", "",
-		"|", "",
-		"?", "",
-		"*", "",
-	)
-	return replacer.Replace(s)
+	s = pathReplacer.Replace(s)
+	s = pathSpaceRun.ReplaceAllString(s, " ")
+	return strings.TrimSpace(s)
 }

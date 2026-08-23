@@ -93,6 +93,30 @@ var _ = Describe("RenameService", Label("unit", "movies"), func() {
 		Expect(statErr).NotTo(HaveOccurred())
 	})
 
+	It("prunes the directory the file left behind", func() {
+		store := dbmocks.NewMockStore(GinkgoT())
+		svc := NewRenameService(store, tmp, naming)
+		movie := &ent.Movie{ID: 1, Title: "Dune", Year: 2021, TmdbID: 438631}
+		// The old layout of the same movie: renaming out of it empties it, which
+		// is what a colon-collapsing re-rename does to every affected title.
+		oldDir := filepath.Join(tmp, "Dune  - Part One (2021)")
+		Expect(os.MkdirAll(oldDir, 0o755)).To(Succeed())
+		src := filepath.Join(oldDir, "Dune.mkv")
+		Expect(os.WriteFile(src, []byte("x"), 0o644)).To(Succeed())
+		store.EXPECT().FindMovieByID(mock.Anything, uint32(1)).
+			Return(movie, nil).Once()
+		store.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(1)).
+			Return([]*ent.MediaFile{{ID: 10, Path: src}}, nil).Once()
+		store.EXPECT().UpdateMediaFilePath(
+			mock.Anything, uint32(10), mock.AnythingOfType("string"),
+		).Return(nil).Once()
+
+		_, err := svc.Apply(ctx, 1)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(oldDir).NotTo(BeADirectory())
+		Expect(tmp).To(BeADirectory())
+	})
+
 	It("maps NotFound to ErrMovieNotFound on preview", func() {
 		store := dbmocks.NewMockStore(GinkgoT())
 		svc := NewRenameService(store, "/library/movies", naming)

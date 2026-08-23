@@ -200,3 +200,18 @@ var _ = Describe("ApplyTemplate path safety", Label("unit", "library"), func() {
 		}))
 	})
 })
+
+var _ = Describe("SanitizePath", Label("unit", "library"), func() {
+	DescribeTable("invalid characters",
+		func(in, want string) { Expect(SanitizePath(in)).To(Equal(want)) },
+		Entry("colon already spaced does not double the space",
+			"2001 : L'Odyssée de l'espace", "2001 - L'Odyssée de l'espace"),
+		Entry("colon without a space still gains one",
+			"Rambo: Last Blood", "Rambo - Last Blood"),
+		Entry("deleted characters do not leave a gap",
+			"Who | What", "Who What"),
+		Entry("slash becomes a dash", "In/Spectre", "In-Spectre"),
+		Entry("trailing space is trimmed", "Movie: ", "Movie -"),
+		Entry("plain title is untouched", "Breaking Bad", "Breaking Bad"),
+	)
+})

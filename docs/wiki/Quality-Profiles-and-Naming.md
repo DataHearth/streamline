@@ -183,7 +183,20 @@ Rendered paths are sanitised for filesystem safety:
 | `/` `\` | `-` |
 | `<` `>` `"` `\|` `?` `*` | *removed* |
 
-So `Alien: Romulus` becomes `Alien - Romulus`.
+Runs of whitespace are then collapsed and the ends trimmed, so a title that
+already had a space beside the character doesn't end up with two: `Alien:
+Romulus` becomes `Alien - Romulus`, and `Mission : Impossible` — which is how
+TMDB writes it in some languages — becomes `Mission - Impossible`, not
+`Mission  - Impossible`.
+
+Sanitisation applies to the **values** substituted into the template, not to the
+rendered path, so a `/` inside a title (`In/Spectre`, `Face/Off`) becomes a dash
+rather than a directory separator. The `/` in the template itself still marks a
+directory.
+
+> If you are upgrading, existing folders keep their old spelling until you
+> re-run a rename. `POST /movies/{id}/rename` moves the file and removes the
+> directory it emptied.
 
 ### Examples
 
