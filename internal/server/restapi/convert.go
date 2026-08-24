@@ -76,6 +76,15 @@ func movieToAPI(m *ent.Movie) Movie {
 		rt := m.Runtime
 		mov.Runtime = &rt
 	}
+	// The detail handler attaches files from its own query, so an unloaded
+	// edge here is not an empty library — only the list path eager-loads.
+	if len(m.Edges.MediaFiles) > 0 {
+		files := make([]MediaFile, 0, len(m.Edges.MediaFiles))
+		for _, f := range m.Edges.MediaFiles {
+			files = append(files, mediaFileToAPI(f))
+		}
+		mov.MediaFiles = &files
+	}
 	return mov
 }
 

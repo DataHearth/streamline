@@ -4305,8 +4305,8 @@ components:
           type: array
           nullable: true
           description: |
-            Files attached to this movie. Only populated by GET /movies/{id};
-            absent in list responses.
+            Files attached to this movie. Populated by GET /movies and
+            GET /movies/{id}; absent when the movie has no files on disk.
           items:
             $ref: "#/components/schemas/MediaFile"
         cast:

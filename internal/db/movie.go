@@ -93,7 +93,9 @@ func (db *DB) MovieCreateTimesSince(
 	return out, nil
 }
 
-// ListMovies returns a page of movies newest first.
+// ListMovies returns a page of movies newest first, with their media files
+// attached — the library grid renders size and quality per card, and the
+// footer sums the page's bytes.
 func (db *DB) ListMovies(
 	ctx context.Context,
 	offset, limit uint32,
@@ -102,6 +104,7 @@ func (db *DB) ListMovies(
 		Offset(int(offset)).
 		Limit(int(limit)).
 		Order(ent.Desc(movie.FieldCreateTime)).
+		WithMediaFiles().
 		All(ctx)
 }
 

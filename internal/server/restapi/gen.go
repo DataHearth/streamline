@@ -2807,8 +2807,8 @@ type Movie struct {
 	Genres *[]string `json:"genres,omitempty"`
 	Id     uint32    `json:"id"`
 
-	// MediaFiles Files attached to this movie. Only populated by GET /movies/{id};
-	// absent in list responses.
+	// MediaFiles Files attached to this movie. Populated by GET /movies and
+	// GET /movies/{id}; absent when the movie has no files on disk.
 	MediaFiles *[]MediaFile `json:"media_files,omitempty"`
 
 	// Monitored Whether Streamline auto-searches and upgrades this title.
