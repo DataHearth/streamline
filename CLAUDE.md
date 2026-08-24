@@ -159,6 +159,8 @@ Unified media management platform replacing the *arr stack (Radarr, Sonarr, Lida
 - `orderByEpisodeCount` counts what `EpisodeCounts.Total` counts — monitored **or** on disk. Ranking raw provider rows put a daily soap with 2012 episode rows above shows the card said were bigger, because the card was showing its scoped 26: the order and the number disagreed on the same screen.
 - The global search box gates both library queries on the typed threshold (`search-model.svelte.ts`). `SearchField` lives in the global layout, so ungated it pulled the whole library on **every** route for a panel that stays closed until you type.
 - ent runs with the `sql/modifier` feature so `Modify` is available for the lean count projection.
+- The tree's foreign keys are **explicitly indexed** (`index.Edges(...)` on `Season`/`Episode`/`MediaFile`, migration `20260824093713`). SQLite indexes no FK on its own, so `episodeCounts`' per-episode `EXISTS` over `media_files` was a full scan each: the homelab's series list took 3.9s with the SQL push-down already in place. Any new edge the list path traverses needs the same.
+- Posters are cached at TMDB `w500`, not `original` — `original` is 1.5–2 MB a card, ~150 MB for a movies page. `posters.Fetch` short-circuits on an existing file, so changing the size only affects new fetches; an existing install has to drop `<data>/posters` to pick it up.
 
 ## Testing
 - Framework: Ginkgo (Describe/Context/It/By) + Gomega assertions

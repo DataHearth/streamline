@@ -6,6 +6,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
+	"entgo.io/ent/schema/index"
 	"entgo.io/ent/schema/mixin"
 
 	"github.com/datahearth/streamline/ent/schema/mixins"
@@ -55,4 +56,11 @@ func (MediaFile) Edges() []ent.Edge {
 		edge.From("movie", Movie.Type).Ref("media_files").Unique(),
 		edge.From("episode", Episode.Type).Ref("media_files").Unique(),
 	}
+}
+
+// SQLite does not index a foreign key on its own, so every episode->file
+// lookup was a full media_files scan. The series list runs one per episode row
+// of the page: 3.9s for 20 shows on a real library.
+func (MediaFile) Indexes() []ent.Index {
+	return []ent.Index{index.Edges("episode"), index.Edges("movie")}
 }

@@ -105,6 +105,13 @@ var (
 				OnDelete:   schema.Cascade,
 			},
 		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "episode_season_episodes",
+				Unique:  false,
+				Columns: []*schema.Column{EpisodesColumns[12]},
+			},
+		},
 	}
 	// ImportScansColumns holds the columns for the "import_scans" table.
 	ImportScansColumns = []*schema.Column{
@@ -377,6 +384,18 @@ var (
 				OnDelete:   schema.Cascade,
 			},
 		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "mediafile_episode_media_files",
+				Unique:  false,
+				Columns: []*schema.Column{MediaFilesColumns[20]},
+			},
+			{
+				Name:    "mediafile_movie_media_files",
+				Unique:  false,
+				Columns: []*schema.Column{MediaFilesColumns[21]},
+			},
+		},
 	}
 	// MoviesColumns holds the columns for the "movies" table.
 	MoviesColumns = []*schema.Column{
@@ -527,6 +546,13 @@ var (
 				Columns:    []*schema.Column{SeasonsColumns[6]},
 				RefColumns: []*schema.Column{TvShowsColumns[0]},
 				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "season_tv_show_seasons",
+				Unique:  false,
+				Columns: []*schema.Column{SeasonsColumns[6]},
 			},
 		},
 	}

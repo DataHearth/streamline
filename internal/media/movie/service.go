@@ -498,7 +498,9 @@ func (s *Service) fetchPoster(ctx context.Context, id uint32, posterPath string)
 		return
 	}
 	bg := context.WithoutCancel(ctx)
-	src := metadata.PosterURL(posterPath, "original")
+	// w500 is the widest size the card grid renders. "original" shipped 1.5-2 MB
+	// per poster; a full movies page was ~150 MB of images.
+	src := metadata.PosterURL(posterPath, "w500")
 	go func() {
 		if err := s.posters.Fetch(bg, "movies", id, src); err != nil {
 			slog.WarnContext(bg, "poster fetch failed",
