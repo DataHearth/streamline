@@ -23,6 +23,7 @@
 	import QualityProfileModal from "../../components/movies/QualityProfileModal.svelte";
 	import RenameMoviePreviewModal from "../../components/movies/RenameMoviePreviewModal.svelte";
 	import DeleteTitleDialog from "../../components/shared/DeleteTitleDialog.svelte";
+	import ReidentifyDialog from "../../components/shared/ReidentifyDialog.svelte";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	type Tab = "overview" | "history" | "cast";
@@ -82,6 +83,7 @@
 	let qpOpen = $state(false);
 	let renameOpen = $state(false);
 	let deleteOpen = $state(false);
+	let reidentifyOpen = $state(false);
 
 	const qc = useQueryClient();
 	const refresh = createMutation(() => ({
@@ -149,6 +151,7 @@
 		else if (a === "quality") qpOpen = true;
 		else if (a === "rename") renameOpen = true;
 		else if (a === "refresh") refresh.mutate();
+		else if (a === "reidentify") reidentifyOpen = true;
 		else if (a === "delete") deleteOpen = true;
 	}
 </script>
@@ -359,6 +362,14 @@
 		movieId={movie.id}
 		onClose={() => (renameOpen = false)}
 	/>
+	<ReidentifyDialog
+		open={reidentifyOpen}
+		kind="movie"
+		id={movie.id}
+		currentTitle={movie.title}
+		onClose={() => (reidentifyOpen = false)}
+	/>
+
 	<DeleteTitleDialog
 		open={deleteOpen}
 		title="Remove '{movie.title}' from your library?"

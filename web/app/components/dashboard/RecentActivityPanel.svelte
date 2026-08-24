@@ -6,8 +6,10 @@
 		X,
 		GitBranch,
 		ShieldCheck,
+		Radar,
 	} from "@lucide/svelte";
 	import { formatRelative, formatDateTime } from "../../lib/dates";
+	import { eventSubject } from "../../lib/activity-event";
 	import type { ActivityEvent, ActivityType } from "../../lib/types";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 
@@ -63,6 +65,12 @@
 			fg: "text-status-wanted",
 			label: i18n.dash_evt_drift_confirmed(),
 		},
+		searched: {
+			icon: Radar,
+			bg: "bg-surface-2",
+			fg: "text-fg-muted",
+			label: i18n.dash_evt_searched(),
+		},
 	};
 
 	function release(payload: Record<string, unknown> | undefined): string {
@@ -111,10 +119,14 @@
 					fg: "text-fg-muted",
 					label: event.type,
 				}}
+				{@const subject = eventSubject(event)}
 				<li>
-					<a
-						href="/movies/{event.movie.id}"
-						class="grid grid-cols-[26px_1fr_auto] items-start gap-2.5 rounded-md px-2 py-2.5 transition hover:bg-surface"
+					<svelte:element
+						this={subject.href ? "a" : "div"}
+						href={subject.href}
+						class="grid grid-cols-[26px_1fr_auto] items-start gap-2.5 rounded-md px-2 py-2.5 transition {subject.href
+							? 'hover:bg-surface'
+							: ''}"
 					>
 						<span
 							class={`grid h-[22px] w-[22px] place-items-center rounded-sm ${mark.bg} ${mark.fg}`}
@@ -124,7 +136,12 @@
 						<div class="min-w-0">
 							<div class="flex items-baseline justify-between gap-2">
 								<span class="truncate text-[12.5px] font-medium text-fg">
-									{event.movie.title}
+									{subject.title}
+									{#if subject.detail}
+										<span class="ml-1 font-mono text-[10.5px] font-normal text-fg-subtle"
+											>· {subject.detail}</span
+										>
+									{/if}
 								</span>
 								<time
 									datetime={event.created_at}
@@ -143,7 +160,7 @@
 								{size(event.payload)}
 							</span>
 						{/if}
-					</a>
+					</svelte:element>
 				</li>
 			{/each}
 		</ul>

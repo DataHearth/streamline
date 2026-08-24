@@ -1,6 +1,14 @@
 <script lang="ts">
-	import { Radar, Gauge, FileEdit, RefreshCw, Trash2 } from "@lucide/svelte";
+	import {
+		Radar,
+		Gauge,
+		FileEdit,
+		RefreshCw,
+		Replace,
+		Trash2,
+	} from "@lucide/svelte";
 	import KebabMenu, { type KebabItem } from "../shared/KebabMenu.svelte";
+	import { auth } from "../../lib/auth.svelte";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	type Action =
@@ -8,6 +16,7 @@
 		| "quality"
 		| "rename"
 		| "refresh"
+		| "reidentify"
 		| "delete";
 
 	let {
@@ -51,6 +60,18 @@
 			icon: RefreshCw,
 			onSelect: () => onPick("refresh"),
 		},
+		// Admin-only: the endpoint refuses anyone else, so offering it would be
+		// a menu entry that always fails.
+		...(auth.isAdmin
+			? [
+					{
+						key: "reidentify",
+						label: i18n.action_change_match_ellipsis(),
+						icon: Replace,
+						onSelect: () => onPick("reidentify"),
+					},
+				]
+			: []),
 		{
 			// Deleting the files is a checkbox in the confirm, not a second entry
 			// one row below the safe one.

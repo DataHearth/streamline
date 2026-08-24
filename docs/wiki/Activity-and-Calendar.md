@@ -3,6 +3,7 @@
 Where to look when you want to know what Streamline is doing, what it did, and what's coming.
 
 - [Dashboard](#dashboard)
+- [The event feed](#the-event-feed)
 - [The queue](#the-queue)
 - [History](#history)
 - [Adopted torrents](#adopted-torrents)
@@ -16,6 +17,39 @@ Where to look when you want to know what Streamline is doing, what it did, and w
 The landing page. A summary of library counts, what's downloading right now, recent activity, and anything needing your attention.
 
 The health indicator in the top bar reflects real state — disk usage on your data and media volumes, and whether you're serving over plain HTTP. If it's not green, something on the [Troubleshooting](Troubleshooting) page probably applies.
+
+---
+
+## The event feed
+
+The **Recent activity** panel on the dashboard, and `GET /api/v1/activity` behind it,
+is the history of what happened to each title. Events cover movies, episodes and
+series:
+
+| Event | When it fires |
+| --- | --- |
+| `grabbed` | A release was sent to the download client |
+| `download_completed` / `download_failed` | That download finished or failed |
+| `imported` | A file landed in the library |
+| `import_failed` | A bulk-import entry failed |
+| `drift_detected` | A tracked file went missing from disk |
+| `drift_confirmed` | It stayed missing past the grace window and the row was reverted |
+| `searched` | A search-and-grab pass ran |
+
+Every event names exactly one owner — `movie`, `episode` or `series`. Episode rows
+render as *Show · S01E03*.
+
+**`searched` is recorded once per search, not once per episode.** Asking Streamline
+to search a series writes one event for the whole pass, with the seasons it
+touched, how many episodes it searched and how many it grabbed in the payload.
+A pass over one season reads as *Show · Season 3*. Without that, a
+`tv-missing-search` tick over a large library would write thousands of rows an hour.
+
+Browsing releases in the manual-grab dialog records nothing — no grab happened,
+and the results are already on screen. The grab that follows still fires
+`grabbed`.
+
+Rows are purged by the `cleanup` job after `events.retention` (default 90 days).
 
 ---
 

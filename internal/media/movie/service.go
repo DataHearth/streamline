@@ -224,28 +224,11 @@ func (s *Service) Add(
 			"movie.id", m.ID, "movie.tmdb_id", m.TmdbID, "error", err)
 	}
 
-	posterPath := details.PosterPath
-	if posterPath != "" && s.posters != nil {
-		bg := context.WithoutCancel(ctx)
-		movieID := m.ID
-		src := metadata.PosterURL(posterPath, "original")
-		go func() {
-			if err := s.posters.Fetch(bg, "movies", movieID, src); err != nil {
-				slog.WarnContext(
-					bg,
-					"poster fetch failed",
-					"movie_id",
-					movieID,
-					"error",
-					err,
-				)
-			}
-		}()
-	}
+	s.fetchPoster(ctx, m.ID, details.PosterPath)
 
 	moviesAdded.Add(ctx, 1)
 	slog.InfoContext(ctx, "movie added", "title", m.Title, "tmdb_id", m.TmdbID)
-	return m, posterPath, nil
+	return m, details.PosterPath, nil
 }
 
 func (s *Service) List(
@@ -508,6 +491,22 @@ func (s *Service) Update(
 	return m, nil
 }
 
+// fetchPoster caches the movie's poster in the background. Best-effort: a
+// missing poster is cosmetic and must not fail the operation that asked for it.
+func (s *Service) fetchPoster(ctx context.Context, id uint32, posterPath string) {
+	if posterPath == "" || s.posters == nil {
+		return
+	}
+	bg := context.WithoutCancel(ctx)
+	src := metadata.PosterURL(posterPath, "original")
+	go func() {
+		if err := s.posters.Fetch(bg, "movies", id, src); err != nil {
+			slog.WarnContext(bg, "poster fetch failed",
+				"movie.id", id, "error", err)
+		}
+	}()
+}
+
 // Reidentify points the row at a different TMDB title and refreshes its
 // metadata from there. The row keeps its id, so its files, download history
 // and requests survive the repair — only the provider identity changes.
@@ -556,10 +555,21 @@ func (s *Service) Reidentify(
 	// The row now carries the new id with the old title. A failed refresh would
 	// leave it that way, so report it rather than swallowing it.
 	m.TmdbID = tmdbID
-	if err := s.refreshOne(ctx, m); err != nil {
+	details, err := s.metadata.GetMovie(ctx, tmdbID)
+	if err != nil {
 		return nil, otelx.RecordSpanError(span,
 			fmt.Errorf("refresh after re-identify: %w", err))
 	}
+	if err := s.applyMetadata(ctx, id, details); err != nil {
+		return nil, otelx.RecordSpanError(span,
+			fmt.Errorf("refresh after re-identify: %w", err))
+	}
+	if err := s.fetchDigitalRelease(ctx, m); err != nil {
+		return nil, otelx.RecordSpanError(span, err)
+	}
+	// The cached poster is keyed by row id, so it still shows the old title
+	// until it is replaced.
+	s.fetchPoster(ctx, id, details.PosterPath)
 	return s.db.FindMovieByID(ctx, id)
 }
 
@@ -610,7 +620,23 @@ func (s *Service) refreshOne(ctx context.Context, m *ent.Movie) error {
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
 	}
-	if err := s.db.UpdateMovieMetadata(ctx, m.ID, db.UpdateMovieMetadataParams{
+	if err := s.applyMetadata(ctx, m.ID, details); err != nil {
+		return otelx.RecordSpanError(span, err)
+	}
+
+	if err := s.fetchDigitalRelease(ctx, m); err != nil {
+		return otelx.RecordSpanError(span, err)
+	}
+	return nil
+}
+
+// applyMetadata persists the TMDB-sourced fields onto an existing row.
+func (s *Service) applyMetadata(
+	ctx context.Context,
+	id uint32,
+	details *metadata.MovieDetails,
+) error {
+	return s.db.UpdateMovieMetadata(ctx, id, db.UpdateMovieMetadataParams{
 		Title:         details.Title,
 		OriginalTitle: details.OriginalTitle,
 		Overview:      details.Overview,
@@ -619,14 +645,7 @@ func (s *Service) refreshOne(ctx context.Context, m *ent.Movie) error {
 		Rating:        float64(details.Rating),
 		Genres:        details.Genres,
 		Cast:          db.StoredCast(details.Cast),
-	}); err != nil {
-		return otelx.RecordSpanError(span, err)
-	}
-
-	if err := s.fetchDigitalRelease(ctx, m); err != nil {
-		return otelx.RecordSpanError(span, err)
-	}
-	return nil
+	})
 }
 
 // fetchDigitalRelease persists m's configured-region digital (TMDB type-4)

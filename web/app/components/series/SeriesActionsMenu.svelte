@@ -11,6 +11,7 @@
 	import QualityProfileModal from "../movies/QualityProfileModal.svelte";
 	import SeriesRenamePreviewModal from "./SeriesRenamePreviewModal.svelte";
 	import DeleteTitleDialog from "../shared/DeleteTitleDialog.svelte";
+	import ReidentifyDialog from "../shared/ReidentifyDialog.svelte";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	let { show, variant = "card" }: { show: TVShow; variant?: "card" | "toolbar" } =
@@ -21,6 +22,7 @@
 	let qpOpen = $state(false);
 	let renameOpen = $state(false);
 	let deleteOpen = $state(false);
+	let reidentifyOpen = $state(false);
 
 	const qc = useQueryClient();
 
@@ -81,6 +83,7 @@
 		else if (a === "quality") qpOpen = true;
 		else if (a === "rename") renameOpen = true;
 		else if (a === "refresh") refresh.mutate();
+		else if (a === "reidentify") reidentifyOpen = true;
 		else if (a === "delete") deleteOpen = true;
 	}
 </script>
@@ -104,6 +107,14 @@
 	open={renameOpen}
 	seriesId={show.id}
 	onClose={() => (renameOpen = false)}
+/>
+
+<ReidentifyDialog
+	open={reidentifyOpen}
+	kind="series"
+	id={show.id}
+	currentTitle={show.title}
+	onClose={() => (reidentifyOpen = false)}
 />
 
 <DeleteTitleDialog

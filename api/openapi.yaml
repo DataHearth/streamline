@@ -424,6 +424,7 @@ paths:
         - $ref: "#/components/parameters/SeriesType"
         - $ref: "#/components/parameters/SeriesQuery"
         - $ref: "#/components/parameters/SeriesSort"
+        - $ref: "#/components/parameters/SeriesOrder"
       responses:
         "200":
           $ref: "#/components/responses/SeriesList"
@@ -3310,6 +3311,17 @@ components:
       description: Sort key (recent/title/year/rating/episodes).
       schema:
         type: string
+
+    SeriesOrder:
+      name: order
+      in: query
+      required: false
+      description: |
+        Sort direction. Omitted, each key uses the direction its name implies:
+        `title` ascending, everything else descending (newest, highest, most).
+      schema:
+        type: string
+        enum: [asc, desc]
 
     SeriesLookupQuery:
       name: query

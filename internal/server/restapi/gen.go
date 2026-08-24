@@ -1656,6 +1656,24 @@ func (e RequestStatusParam) Valid() bool {
 	}
 }
 
+// Defines values for SeriesOrder.
+const (
+	SeriesOrderAsc  SeriesOrder = "asc"
+	SeriesOrderDesc SeriesOrder = "desc"
+)
+
+// Valid indicates whether the value is a known member of the SeriesOrder enum.
+func (e SeriesOrder) Valid() bool {
+	switch e {
+	case SeriesOrderAsc:
+		return true
+	case SeriesOrderDesc:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UsersOrder.
 const (
 	UsersOrderAsc  UsersOrder = "asc"
@@ -1818,6 +1836,24 @@ func (e ListRequestsParamsMediaType) Valid() bool {
 	case ListRequestsParamsMediaTypeMovie:
 		return true
 	case ListRequestsParamsMediaTypeTvshow:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListSeriesParamsOrder.
+const (
+	ListSeriesParamsOrderAsc  ListSeriesParamsOrder = "asc"
+	ListSeriesParamsOrderDesc ListSeriesParamsOrder = "desc"
+)
+
+// Valid indicates whether the value is a known member of the ListSeriesParamsOrder enum.
+func (e ListSeriesParamsOrder) Valid() bool {
+	switch e {
+	case ListSeriesParamsOrderAsc:
+		return true
+	case ListSeriesParamsOrderDesc:
 		return true
 	default:
 		return false
@@ -3796,6 +3832,9 @@ type SeriesLimit = uint16
 // SeriesLookupQuery defines model for SeriesLookupQuery.
 type SeriesLookupQuery = string
 
+// SeriesOrder defines model for SeriesOrder.
+type SeriesOrder string
+
 // SeriesPage defines model for SeriesPage.
 type SeriesPage = uint32
 
@@ -4179,7 +4218,14 @@ type ListSeriesParams struct {
 
 	// Sort Sort key (recent/title/year/rating/episodes).
 	Sort *SeriesSort `form:"sort,omitempty" json:"sort,omitempty"`
+
+	// Order Sort direction. Omitted, each key uses the direction its name implies:
+	// `title` ascending, everything else descending (newest, highest, most).
+	Order *ListSeriesParamsOrder `form:"order,omitempty" json:"order,omitempty"`
 }
+
+// ListSeriesParamsOrder defines parameters for ListSeries.
+type ListSeriesParamsOrder string
 
 // LookupSeriesParams defines parameters for LookupSeries.
 type LookupSeriesParams struct {
@@ -8457,6 +8503,19 @@ func (siw *ServerInterfaceWrapper) ListSeries(w http.ResponseWriter, r *http.Req
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "sort"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sort", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "order" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "order", r.URL.Query(), &params.Order, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "order"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "order", Err: err})
 		}
 		return
 	}

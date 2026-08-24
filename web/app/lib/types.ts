@@ -354,14 +354,25 @@ export type ActivityType =
 	| "imported"
 	| "import_failed"
 	| "drift_detected"
-	| "drift_confirmed";
+	| "drift_confirmed"
+	| "searched";
 
+export type SeriesRef = {
+	id: number;
+	title: string;
+};
+
+// Exactly one of movie / episode / series is set — what the event happened to.
+// series carries only what belongs to no single episode (a search issued at
+// series or season scope); per-episode outcomes use episode.
 export type ActivityEvent = {
 	id: number;
 	type: ActivityType;
 	created_at: string;
 	payload?: Record<string, unknown>;
-	movie: Movie;
+	movie?: Movie;
+	episode?: EpisodeRef;
+	series?: SeriesRef;
 };
 
 export type ActivityList = {
@@ -375,6 +386,7 @@ export type EpisodeRef = {
 	show_title: string;
 	season: number;
 	episode: number;
+	series_id?: number;
 };
 
 export type HoldCheck =
@@ -939,4 +951,14 @@ export type PathMigration = {
 	error?: string;
 	started_at?: string;
 	finished_at?: string;
+};
+
+// POST /{movies,series}/{id}/reidentify — the repaired entry plus what moved.
+export type ReidentifyResult = {
+	id: number;
+	title: string;
+	renamed: number;
+	// Series only: paths still on disk whose season/episode number has no
+	// counterpart in the new show.
+	unmatched?: string[];
 };

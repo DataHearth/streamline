@@ -862,11 +862,15 @@ func (s *Service) Reidentify(
 	if show.TvdbID == tvdbID {
 		return nil, nil, otelx.RecordSpanError(span, ErrSameTVDBID)
 	}
-	if _, err := s.db.FindTVShowByTVDBID(ctx, tvdbID); err == nil {
-		return nil, nil, otelx.RecordSpanError(span, ErrSeriesExists)
-	} else if !ent.IsNotFound(err) {
+	// Unlike its movie twin, FindTVShowByTVDBID reports "not in the library" as
+	// a nil row with a nil error — testing err alone would refuse every target.
+	existing, err := s.db.FindTVShowByTVDBID(ctx, tvdbID)
+	if err != nil {
 		return nil, nil, otelx.RecordSpanError(span,
 			fmt.Errorf("lookup target: %w", err))
+	}
+	if existing != nil {
+		return nil, nil, otelx.RecordSpanError(span, ErrSeriesExists)
 	}
 
 	// Fetched before anything is mutated: a bad id or an unreachable TVDB

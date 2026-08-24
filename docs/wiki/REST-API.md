@@ -105,13 +105,15 @@ Everything database-backed (movies, series, requests, users, imports) uses numer
 
 **Secrets are never returned.** Read views expose booleans — `api_key_set`, `password_set`, `client_secret_set` — instead of values. On update, sending a blank secret **preserves** the existing one rather than clearing it, so you can round-trip a config object without leaking or destroying credentials.
 
+**Sort direction follows the key.** `GET /series?sort=` defaults to the direction the key implies — `title` ascending, `year`, `rating`, `episodes` and `recent` descending, so "most episodes" means most. Pass `?order=asc|desc` to override. `sort=episodes` ranks by the same episode count the list response reports in `total_episodes` (monitored, or already on disk), not by every row the provider lists.
+
 **Errors** are `{"message": "..."}` with a conventional status: `400` bad request, `401` unauthenticated, `403` forbidden (usually not an admin), `404`, `409` conflict (already exists), `422` unprocessable, `500`.
 
 ---
 
 ## Endpoint map
 
-109 paths. Grouped, with admin-only marked 🔒.
+111 paths. Grouped, with admin-only marked 🔒.
 
 ### Movies
 
@@ -121,6 +123,7 @@ Everything database-backed (movies, series, requests, users, imports) uses numer
 | `GET` | `/movies/counts` |
 | `GET` `PATCH` `DELETE` | `/movies/{id}` |
 | `POST` | `/movies/{id}/search` · `/search-now` · `/grab` · `/refresh-metadata` · `/rename` · `/play-on` |
+| `POST` | `/movies/{id}/reidentify` 🔒 — point the entry at a different TMDB title |
 | `GET` | `/movies/{id}/recommendations` |
 | `DELETE` | `/movies/{id}/files/{fileId}` |
 | `GET` | `/search/movie` · `/search/movie/{tmdb_id}` — TMDB lookup |
@@ -129,12 +132,13 @@ Everything database-backed (movies, series, requests, users, imports) uses numer
 
 | Method | Path |
 | --- | --- |
-| `GET` `POST` | `/series` |
+| `GET` `POST` | `/series` — list takes `?status=`, `?type=`, `?query=`, `?sort=`, `?order=` |
 | `GET` | `/series/counts` · `/series/lookup` · `/series/lookup/{tvdb_id}` |
 | `POST` | `/series/specials/apply` |
 | `GET` `PATCH` `DELETE` | `/series/{id}` |
 | `GET` | `/series/{id}/browse` |
 | `POST` | `/series/{id}/search` · `/grab` · `/refresh-metadata` · `/rename` · `/play-on` |
+| `POST` | `/series/{id}/reidentify` 🔒 — point the entry at a different TVDB show |
 | `PATCH` | `/series/{id}/seasons/{number}` |
 | `POST` | `/series/{id}/seasons/{number}/search` · `/grab` |
 | `GET` `PATCH` | `/series/{id}/episodes/{episodeId}` |
@@ -145,7 +149,7 @@ Everything database-backed (movies, series, requests, users, imports) uses numer
 
 | Method | Path |
 | --- | --- |
-| `GET` | `/activity` — event feed |
+| `GET` | `/activity` — event feed (movies, episodes and series; filter with `?movie_id=` or `?series_id=`) |
 | `GET` | `/activity/queue` · `/activity/history` |
 | `DELETE` | `/activity/queue/{id}` · `/activity/history/{id}` |
 | `POST` | `/activity/queue/{id}/pause` · `/resume` · `/activity/history/clear-completed` |

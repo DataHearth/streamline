@@ -8,6 +8,7 @@ How a title gets from "I'd like to watch that" to a file on disk.
 - [How automatic grabbing works](#how-automatic-grabbing-works)
 - [Searching manually](#searching-manually)
 - [Monitoring and unmonitoring](#monitoring-and-unmonitoring)
+- [Fixing a wrong match](#fixing-a-wrong-match)
 - [Renaming and deleting](#renaming-and-deleting)
 
 ---
@@ -107,6 +108,39 @@ Monitoring is Streamline's on/off switch for automation. Unmonitored things are 
 Unmonitor a film you've decided you don't want after all, and it stops appearing in searches without you having to delete it. For shows, monitoring cascades down the tree: unmonitor a season and its episodes go with it.
 
 This is the right tool for "I have seasons 1-3 and don't want 4 onwards" — unmonitor season 4, and Streamline stops hunting for it.
+
+---
+
+## Fixing a wrong match
+
+Sometimes a title ends up pointing at the wrong entry — an import matched
+*The Matrix* to *The Matrix Reloaded*, or a series folder landed on the wrong
+show. **Change match…** in the actions menu repairs it without losing anything.
+Admin only.
+
+Pick the correct title from the same TMDB/TVDB search the add flow uses, confirm,
+and the entry is repointed **in place**: it keeps its id, its files, its download
+history and any requests attached to it. Only the provider identity changes.
+Metadata is refreshed from the new entry and the files are renamed into the new
+title's folder.
+
+**For a series** the season and episode list is rebuilt from the new show, and
+each file is re-attached to the episode with the same season and episode number.
+Files whose numbering has no counterpart in the new show are **left on disk** and
+listed back to you — a provider numbering seasons differently is not evidence the
+media is unwanted. Their database rows are dropped, so an orphan scan can re-adopt
+them once you have decided where they belong.
+
+Re-identifying a series also re-infers its **type** (standard/anime/daily). That is
+the one case where an override you set by hand is deliberately discarded: it was
+about the old show.
+
+There is no undo, because none is needed — changing the match back is the same
+action in reverse, files and all.
+
+**You cannot re-identify onto a title already in your library.** `tmdb_id` and
+`tvdb_id` are unique, and merging two entries is a different operation than this
+one. Delete the wrong entry first.
 
 ---
 

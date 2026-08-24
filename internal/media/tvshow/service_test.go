@@ -618,7 +618,7 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 			storeMk.FindTVShowByID(mock.Anything, uint32(5)).
 				Return(&ent.TVShow{ID: 5, TvdbID: 111}, nil).Once()
 			storeMk.FindTVShowByTVDBID(mock.Anything, uint32(999)).
-				Return(nil, &ent.NotFoundError{}).Once()
+				Return(nil, nil).Once()
 			metaMk.GetSeries(mock.Anything, uint32(999)).
 				Return(nil, errors.New("tvdb down")).Once()
 
@@ -634,7 +634,7 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 					Return(&ent.TVShow{ID: 5, TvdbID: 111, Title: "Wrong Show"}, nil).
 					Once()
 				storeMk.FindTVShowByTVDBID(mock.Anything, uint32(999)).
-					Return(nil, &ent.NotFoundError{}).Once()
+					Return(nil, nil).Once()
 				metaMk.GetSeries(mock.Anything, uint32(999)).
 					Return(newShow(), nil).
 					Once()

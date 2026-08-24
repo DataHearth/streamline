@@ -35,6 +35,9 @@ func (s *Server) ListSeries(
 	if request.Params.Sort != nil {
 		p.Sort = *request.Params.Sort
 	}
+	if request.Params.Order != nil {
+		p.Order = string(*request.Params.Order)
+	}
 
 	rows, counts, total, err := s.tvshows.FilterList(ctx, p)
 	if err != nil {
