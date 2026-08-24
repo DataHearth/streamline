@@ -22,8 +22,9 @@ import (
 // DownloadRecordUpdate is the builder for updating DownloadRecord entities.
 type DownloadRecordUpdate struct {
 	config
-	hooks    []Hook
-	mutation *DownloadRecordMutation
+	hooks     []Hook
+	mutation  *DownloadRecordMutation
+	modifiers []func(*sql.UpdateBuilder)
 }
 
 // Where appends a list predicates to the DownloadRecordUpdate builder.
@@ -426,6 +427,12 @@ func (_u *DownloadRecordUpdate) check() error {
 	return nil
 }
 
+// Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
+func (_u *DownloadRecordUpdate) Modify(modifiers ...func(u *sql.UpdateBuilder)) *DownloadRecordUpdate {
+	_u.modifiers = append(_u.modifiers, modifiers...)
+	return _u
+}
+
 func (_u *DownloadRecordUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
@@ -585,6 +592,7 @@ func (_u *DownloadRecordUpdate) sqlSave(ctx context.Context) (_node int, err err
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{downloadrecord.Label}
@@ -600,9 +608,10 @@ func (_u *DownloadRecordUpdate) sqlSave(ctx context.Context) (_node int, err err
 // DownloadRecordUpdateOne is the builder for updating a single DownloadRecord entity.
 type DownloadRecordUpdateOne struct {
 	config
-	fields   []string
-	hooks    []Hook
-	mutation *DownloadRecordMutation
+	fields    []string
+	hooks     []Hook
+	mutation  *DownloadRecordMutation
+	modifiers []func(*sql.UpdateBuilder)
 }
 
 // SetUpdateTime sets the "update_time" field.
@@ -1012,6 +1021,12 @@ func (_u *DownloadRecordUpdateOne) check() error {
 	return nil
 }
 
+// Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
+func (_u *DownloadRecordUpdateOne) Modify(modifiers ...func(u *sql.UpdateBuilder)) *DownloadRecordUpdateOne {
+	_u.modifiers = append(_u.modifiers, modifiers...)
+	return _u
+}
+
 func (_u *DownloadRecordUpdateOne) sqlSave(ctx context.Context) (_node *DownloadRecord, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
@@ -1188,6 +1203,7 @@ func (_u *DownloadRecordUpdateOne) sqlSave(ctx context.Context) (_node *Download
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	_spec.AddModifiers(_u.modifiers...)
 	_node = &DownloadRecord{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues

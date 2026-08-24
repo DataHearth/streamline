@@ -21,8 +21,9 @@ import (
 // MediaEventUpdate is the builder for updating MediaEvent entities.
 type MediaEventUpdate struct {
 	config
-	hooks    []Hook
-	mutation *MediaEventMutation
+	hooks     []Hook
+	mutation  *MediaEventMutation
+	modifiers []func(*sql.UpdateBuilder)
 }
 
 // Where appends a list predicates to the MediaEventUpdate builder.
@@ -189,6 +190,12 @@ func (_u *MediaEventUpdate) check() error {
 	return nil
 }
 
+// Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
+func (_u *MediaEventUpdate) Modify(modifiers ...func(u *sql.UpdateBuilder)) *MediaEventUpdate {
+	_u.modifiers = append(_u.modifiers, modifiers...)
+	return _u
+}
+
 func (_u *MediaEventUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
@@ -300,6 +307,7 @@ func (_u *MediaEventUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{mediaevent.Label}
@@ -315,9 +323,10 @@ func (_u *MediaEventUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 // MediaEventUpdateOne is the builder for updating a single MediaEvent entity.
 type MediaEventUpdateOne struct {
 	config
-	fields   []string
-	hooks    []Hook
-	mutation *MediaEventMutation
+	fields    []string
+	hooks     []Hook
+	mutation  *MediaEventMutation
+	modifiers []func(*sql.UpdateBuilder)
 }
 
 // SetUpdateTime sets the "update_time" field.
@@ -491,6 +500,12 @@ func (_u *MediaEventUpdateOne) check() error {
 	return nil
 }
 
+// Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
+func (_u *MediaEventUpdateOne) Modify(modifiers ...func(u *sql.UpdateBuilder)) *MediaEventUpdateOne {
+	_u.modifiers = append(_u.modifiers, modifiers...)
+	return _u
+}
+
 func (_u *MediaEventUpdateOne) sqlSave(ctx context.Context) (_node *MediaEvent, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
@@ -619,6 +634,7 @@ func (_u *MediaEventUpdateOne) sqlSave(ctx context.Context) (_node *MediaEvent, 
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	_spec.AddModifiers(_u.modifiers...)
 	_node = &MediaEvent{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues

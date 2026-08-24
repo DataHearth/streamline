@@ -9,6 +9,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
@@ -708,7 +709,10 @@ func toPendingItem(r *ent.DownloadRecord) PendingItem {
 // to the API shape, rolling up per-season availability into show totals via
 // tvshow.DeriveSeasonViews. Seasons/episodes are only present when the show
 // was loaded with those edges (GET /series/{id}); list responses omit them.
-func tvShowToAPI(s *ent.TVShow) TVShow {
+// tvShowBaseToAPI maps the row's own columns. The episode rollup is left to
+// the caller: the detail view derives it from the loaded tree, the list view
+// takes it from SQL.
+func tvShowBaseToAPI(s *ent.TVShow) TVShow {
 	out := TVShow{
 		Id:           s.ID,
 		Title:        s.Title,
@@ -745,6 +749,11 @@ func tvShowToAPI(s *ent.TVShow) TVShow {
 	if s.QualityProfile != "" {
 		out.QualityProfile = &s.QualityProfile
 	}
+	return out
+}
+
+func tvShowToAPI(s *ent.TVShow) TVShow {
+	out := tvShowBaseToAPI(s)
 
 	now := time.Now()
 	views := tvshow.DeriveSeasonViews(s, now)
@@ -763,6 +772,19 @@ func tvShowToAPI(s *ent.TVShow) TVShow {
 	if len(seasons) > 0 {
 		out.Seasons = &seasons
 	}
+	return out
+}
+
+// tvShowListToAPI renders a list row. The rollup arrives pre-aggregated from
+// SQL because the list query deliberately leaves the season/episode tree
+// unloaded — serializing it was 121 KB per show. `seasons` stays absent here;
+// the detail view (tvShowToAPI) is what carries it.
+func tvShowListToAPI(s *ent.TVShow, c db.EpisodeCounts) TVShow {
+	out := tvShowBaseToAPI(s)
+	have, total, wanted := c.Have, c.Total, c.Wanted
+	out.HaveEpisodes = &have
+	out.TotalEpisodes = &total
+	out.WantedEpisodes = &wanted
 	return out
 }
 

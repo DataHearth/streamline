@@ -18,8 +18,9 @@ import (
 // TorrentSessionUpdate is the builder for updating TorrentSession entities.
 type TorrentSessionUpdate struct {
 	config
-	hooks    []Hook
-	mutation *TorrentSessionMutation
+	hooks     []Hook
+	mutation  *TorrentSessionMutation
+	modifiers []func(*sql.UpdateBuilder)
 }
 
 // Where appends a list predicates to the TorrentSessionUpdate builder.
@@ -218,6 +219,12 @@ func (_u *TorrentSessionUpdate) check() error {
 	return nil
 }
 
+// Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
+func (_u *TorrentSessionUpdate) Modify(modifiers ...func(u *sql.UpdateBuilder)) *TorrentSessionUpdate {
+	_u.modifiers = append(_u.modifiers, modifiers...)
+	return _u
+}
+
 func (_u *TorrentSessionUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
@@ -269,6 +276,7 @@ func (_u *TorrentSessionUpdate) sqlSave(ctx context.Context) (_node int, err err
 	if value, ok := _u.mutation.SeedStopped(); ok {
 		_spec.SetField(torrentsession.FieldSeedStopped, field.TypeBool, value)
 	}
+	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{torrentsession.Label}
@@ -284,9 +292,10 @@ func (_u *TorrentSessionUpdate) sqlSave(ctx context.Context) (_node int, err err
 // TorrentSessionUpdateOne is the builder for updating a single TorrentSession entity.
 type TorrentSessionUpdateOne struct {
 	config
-	fields   []string
-	hooks    []Hook
-	mutation *TorrentSessionMutation
+	fields    []string
+	hooks     []Hook
+	mutation  *TorrentSessionMutation
+	modifiers []func(*sql.UpdateBuilder)
 }
 
 // SetUpdateTime sets the "update_time" field.
@@ -492,6 +501,12 @@ func (_u *TorrentSessionUpdateOne) check() error {
 	return nil
 }
 
+// Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
+func (_u *TorrentSessionUpdateOne) Modify(modifiers ...func(u *sql.UpdateBuilder)) *TorrentSessionUpdateOne {
+	_u.modifiers = append(_u.modifiers, modifiers...)
+	return _u
+}
+
 func (_u *TorrentSessionUpdateOne) sqlSave(ctx context.Context) (_node *TorrentSession, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
@@ -560,6 +575,7 @@ func (_u *TorrentSessionUpdateOne) sqlSave(ctx context.Context) (_node *TorrentS
 	if value, ok := _u.mutation.SeedStopped(); ok {
 		_spec.SetField(torrentsession.FieldSeedStopped, field.TypeBool, value)
 	}
+	_spec.AddModifiers(_u.modifiers...)
 	_node = &TorrentSession{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues

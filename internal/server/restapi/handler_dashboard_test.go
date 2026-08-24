@@ -14,8 +14,8 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	entepisode "github.com/datahearth/streamline/ent/episode"
-	entmovie "github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/mediaevent"
+	entmovie "github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/internal/db"
 )
 

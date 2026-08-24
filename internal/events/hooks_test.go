@@ -9,6 +9,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/importscanfile"
+	"github.com/datahearth/streamline/ent/importscanshow"
 	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/internal/db"
 )
@@ -181,7 +182,7 @@ var _ = Describe("hooks via Register", Label("integration", "events"), func() {
 		Expect(count).To(Equal(0))
 	})
 
-	It("does not error or emit on an episode-linked record status change", func() {
+	It("records an episode-linked record against its episode", func() {
 		show := client.TVShow.Create().
 			SetTitle("The Bear").SetYear(2022).SetTvdbID(9999).SaveX(ctx)
 		season := client.Season.Create().
@@ -191,12 +192,62 @@ var _ = Describe("hooks via Register", Label("integration", "events"), func() {
 		dl := client.DownloadRecord.Create().
 			SetEpisodeID(ep.ID).SetTitle("The.Bear.S01E02").SaveX(ctx)
 
-		// Previously the hook's QueryMovie().OnlyID errored (no movie edge),
-		// failing the update. SaveX panics if the hook returns an error.
 		client.DownloadRecord.UpdateOne(dl).
 			SetStatus(downloadrecord.StatusCompleted).SaveX(ctx)
 
-		Expect(client.MediaEvent.Query().CountX(ctx)).To(Equal(0))
+		Expect(allEventTypes(ctx, client)).To(Equal([]mediaevent.Type{
+			mediaevent.Type(TypeGrabbed),
+			mediaevent.Type(TypeDownloadCompleted),
+		}))
+		// Every row hangs off the episode, never the movie edge.
+		rows := client.MediaEvent.Query().WithEpisode().WithMovie().AllX(ctx)
+		for _, r := range rows {
+			Expect(r.Edges.Episode).NotTo(BeNil())
+			Expect(r.Edges.Episode.ID).To(Equal(ep.ID))
+			Expect(r.Edges.Movie).To(BeNil())
+		}
+	})
+
+	It("records an episode import against its episode", func() {
+		show := client.TVShow.Create().
+			SetTitle("Severance").SetYear(2022).SetTvdbID(8888).SaveX(ctx)
+		season := client.Season.Create().
+			SetNumber(1).SetTvShowID(show.ID).SaveX(ctx)
+		ep := client.Episode.Create().
+			SetNumber(1).SetSeasonID(season.ID).SaveX(ctx)
+
+		client.MediaFile.Create().
+			SetPath("/tv/Severance/S01E01.mkv").
+			SetSize(1).
+			SetEpisodeID(ep.ID).
+			SaveX(ctx)
+
+		Expect(allEventTypes(ctx, client)).To(Equal([]mediaevent.Type{
+			mediaevent.Type(TypeImported),
+		}))
+	})
+
+	It("records a failed series import against the series", func() {
+		show := client.TVShow.Create().
+			SetTitle("Andor").SetYear(2022).SetTvdbID(7777).SaveX(ctx)
+		scan := client.ImportScan.Create().
+			SetSourcePath("/import").
+			SetMode("in_place").
+			SaveX(ctx)
+		row := client.ImportScanShow.Create().
+			SetFolderPath("/import/Andor").
+			SetScan(scan).
+			SetExistingTvshowID(show.ID).
+			SaveX(ctx)
+
+		client.ImportScanShow.UpdateOne(row).
+			SetOutcome(importscanshow.OutcomeFailed).
+			SaveX(ctx)
+
+		rows := client.MediaEvent.Query().WithTvShow().AllX(ctx)
+		Expect(rows).To(HaveLen(1))
+		Expect(rows[0].Type).To(Equal(mediaevent.Type(TypeImportFailed)))
+		Expect(rows[0].Edges.TvShow.ID).To(Equal(show.ID))
 	})
 })
 

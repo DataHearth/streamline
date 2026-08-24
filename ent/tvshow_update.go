@@ -22,8 +22,9 @@ import (
 // TVShowUpdate is the builder for updating TVShow entities.
 type TVShowUpdate struct {
 	config
-	hooks    []Hook
-	mutation *TVShowMutation
+	hooks     []Hook
+	mutation  *TVShowMutation
+	modifiers []func(*sql.UpdateBuilder)
 }
 
 // Where appends a list predicates to the TVShowUpdate builder.
@@ -499,6 +500,12 @@ func (_u *TVShowUpdate) check() error {
 	return nil
 }
 
+// Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
+func (_u *TVShowUpdate) Modify(modifiers ...func(u *sql.UpdateBuilder)) *TVShowUpdate {
+	_u.modifiers = append(_u.modifiers, modifiers...)
+	return _u
+}
+
 func (_u *TVShowUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
@@ -710,6 +717,7 @@ func (_u *TVShowUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{tvshow.Label}
@@ -725,9 +733,10 @@ func (_u *TVShowUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 // TVShowUpdateOne is the builder for updating a single TVShow entity.
 type TVShowUpdateOne struct {
 	config
-	fields   []string
-	hooks    []Hook
-	mutation *TVShowMutation
+	fields    []string
+	hooks     []Hook
+	mutation  *TVShowMutation
+	modifiers []func(*sql.UpdateBuilder)
 }
 
 // SetUpdateTime sets the "update_time" field.
@@ -1210,6 +1219,12 @@ func (_u *TVShowUpdateOne) check() error {
 	return nil
 }
 
+// Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
+func (_u *TVShowUpdateOne) Modify(modifiers ...func(u *sql.UpdateBuilder)) *TVShowUpdateOne {
+	_u.modifiers = append(_u.modifiers, modifiers...)
+	return _u
+}
+
 func (_u *TVShowUpdateOne) sqlSave(ctx context.Context) (_node *TVShow, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
@@ -1438,6 +1453,7 @@ func (_u *TVShowUpdateOne) sqlSave(ctx context.Context) (_node *TVShow, err erro
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	_spec.AddModifiers(_u.modifiers...)
 	_node = &TVShow{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues

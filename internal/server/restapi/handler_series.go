@@ -36,7 +36,7 @@ func (s *Server) ListSeries(
 		p.Sort = *request.Params.Sort
 	}
 
-	rows, total, err := s.tvshows.FilterList(ctx, p)
+	rows, counts, total, err := s.tvshows.FilterList(ctx, p)
 	if err != nil {
 		return ListSeries500JSONResponse{
 			InternalErrorJSONResponse: errInternal(ctx, err),
@@ -44,7 +44,7 @@ func (s *Server) ListSeries(
 	}
 	items := make([]TVShow, 0, len(rows))
 	for _, r := range rows {
-		items = append(items, tvShowToAPI(r))
+		items = append(items, tvShowListToAPI(r, counts[r.ID]))
 	}
 	return ListSeries200JSONResponse{SeriesListJSONResponse: SeriesListJSONResponse{
 		Items: items,

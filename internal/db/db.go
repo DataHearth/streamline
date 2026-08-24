@@ -562,6 +562,13 @@ type Store interface {
 		p UpdateTVShowMetadataParams,
 	) error
 	SetTVShowRefreshedAt(ctx context.Context, id uint32, when time.Time) error
+	// FilterTVShows applies filter, sort and page in SQL and returns the page's
+	// shows without their season/episode tree, plus the per-show episode
+	// rollup the list view renders in its place.
+	FilterTVShows(
+		ctx context.Context,
+		p FilterTVShowsParams,
+	) ([]*ent.TVShow, map[uint32]EpisodeCounts, uint32, error)
 	// SetTVShowTVDBID repoints a row at a different TVDB show. The episode tree
 	// still describes the old show until the caller reconciles it.
 	SetTVShowTVDBID(ctx context.Context, id, tvdbID uint32) error
@@ -595,7 +602,8 @@ type Store interface {
 	SetEpisodeLastSearchAt(ctx context.Context, id uint32, when time.Time) error
 	IncrementEpisodeGrabFailures(ctx context.Context, id uint32) error
 	ResetEpisodeGrabFailures(ctx context.Context, id uint32) error
-	ListWantedEpisodes(ctx context.Context) ([]*ent.TVShow, error)
+	// CountWantedEpisodes counts monitored, wanted episodes library-wide.
+	CountWantedEpisodes(ctx context.Context) (int, error)
 	ListEligibleEpisodesForSync(
 		ctx context.Context,
 		maxGrabFailures uint8,

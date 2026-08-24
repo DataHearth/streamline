@@ -8,6 +8,7 @@ import (
 	"context"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/media/tvshow"
 	mock "github.com/stretchr/testify/mock"
@@ -361,7 +362,7 @@ func (_c *MockManager_DeleteEpisodeFile_Call) RunAndReturn(run func(ctx context.
 }
 
 // FilterList provides a mock function for the type MockManager
-func (_mock *MockManager) FilterList(ctx context.Context, p tvshow.FilterParams) ([]*ent.TVShow, uint32, error) {
+func (_mock *MockManager) FilterList(ctx context.Context, p tvshow.FilterParams) ([]*ent.TVShow, map[uint32]db.EpisodeCounts, uint32, error) {
 	ret := _mock.Called(ctx, p)
 
 	if len(ret) == 0 {
@@ -369,9 +370,10 @@ func (_mock *MockManager) FilterList(ctx context.Context, p tvshow.FilterParams)
 	}
 
 	var r0 []*ent.TVShow
-	var r1 uint32
-	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, tvshow.FilterParams) ([]*ent.TVShow, uint32, error)); ok {
+	var r1 map[uint32]db.EpisodeCounts
+	var r2 uint32
+	var r3 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, tvshow.FilterParams) ([]*ent.TVShow, map[uint32]db.EpisodeCounts, uint32, error)); ok {
 		return returnFunc(ctx, p)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, tvshow.FilterParams) []*ent.TVShow); ok {
@@ -381,17 +383,24 @@ func (_mock *MockManager) FilterList(ctx context.Context, p tvshow.FilterParams)
 			r0 = ret.Get(0).([]*ent.TVShow)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, tvshow.FilterParams) uint32); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, tvshow.FilterParams) map[uint32]db.EpisodeCounts); ok {
 		r1 = returnFunc(ctx, p)
 	} else {
-		r1 = ret.Get(1).(uint32)
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(map[uint32]db.EpisodeCounts)
+		}
 	}
-	if returnFunc, ok := ret.Get(2).(func(context.Context, tvshow.FilterParams) error); ok {
+	if returnFunc, ok := ret.Get(2).(func(context.Context, tvshow.FilterParams) uint32); ok {
 		r2 = returnFunc(ctx, p)
 	} else {
-		r2 = ret.Error(2)
+		r2 = ret.Get(2).(uint32)
 	}
-	return r0, r1, r2
+	if returnFunc, ok := ret.Get(3).(func(context.Context, tvshow.FilterParams) error); ok {
+		r3 = returnFunc(ctx, p)
+	} else {
+		r3 = ret.Error(3)
+	}
+	return r0, r1, r2, r3
 }
 
 // MockManager_FilterList_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FilterList'
@@ -424,12 +433,12 @@ func (_c *MockManager_FilterList_Call) Run(run func(ctx context.Context, p tvsho
 	return _c
 }
 
-func (_c *MockManager_FilterList_Call) Return(tVShows []*ent.TVShow, v uint32, err error) *MockManager_FilterList_Call {
-	_c.Call.Return(tVShows, v, err)
+func (_c *MockManager_FilterList_Call) Return(tVShows []*ent.TVShow, uint32ToEpisodeCounts map[uint32]db.EpisodeCounts, v uint32, err error) *MockManager_FilterList_Call {
+	_c.Call.Return(tVShows, uint32ToEpisodeCounts, v, err)
 	return _c
 }
 
-func (_c *MockManager_FilterList_Call) RunAndReturn(run func(ctx context.Context, p tvshow.FilterParams) ([]*ent.TVShow, uint32, error)) *MockManager_FilterList_Call {
+func (_c *MockManager_FilterList_Call) RunAndReturn(run func(ctx context.Context, p tvshow.FilterParams) ([]*ent.TVShow, map[uint32]db.EpisodeCounts, uint32, error)) *MockManager_FilterList_Call {
 	_c.Call.Return(run)
 	return _c
 }

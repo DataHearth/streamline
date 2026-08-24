@@ -617,27 +617,6 @@ func (db *DB) ResetEpisodeGrabFailures(ctx context.Context, id uint32) error {
 	return db.client.Episode.UpdateOneID(id).SetGrabFailures(0).Exec(ctx)
 }
 
-// ListWantedEpisodes returns shows (with seasons+episodes eager-loaded) that
-// have at least one monitored, wanted episode. The episode edges are filtered
-// to only those wanted+monitored rows. This is the raw backlog view (counts,
-// dashboards) — the searcher wants ListEligibleEpisodesForSync.
-func (db *DB) ListWantedEpisodes(ctx context.Context) ([]*ent.TVShow, error) {
-	return db.client.TVShow.Query().
-		Where(tvshow.HasSeasonsWith(
-			season.HasEpisodesWith(
-				episode.MonitoredEQ(true),
-				episode.StatusEQ(episode.StatusWanted),
-			),
-		)).
-		WithSeasons(func(q *ent.SeasonQuery) {
-			q.WithEpisodes(func(eq *ent.EpisodeQuery) {
-				eq.Where(episode.MonitoredEQ(true), episode.StatusEQ(episode.StatusWanted)).
-					WithMediaFiles()
-			})
-		}).
-		All(ctx)
-}
-
 // ListEligibleEpisodesForSync is the TV twin of ListEligibleMoviesForSync:
 // shows whose episode edges are narrowed to the rows a missing-search pass
 // may act on — wanted, monitored, under the failure cap, past their cooldown

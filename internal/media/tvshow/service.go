@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"sort"
 	"strings"
 	"time"
 
@@ -216,13 +215,12 @@ func (s *Service) List(
 	return rows, uint32(total), nil
 }
 
-// FilterList applies status/type/query/sort to the full library in memory.
-// The dataset is small enough that a single fetch + in-Go filter is adequate;
-// a later optimization can push the predicates into SQL.
+// FilterList returns one page of series with the episode rollup the list view
+// renders, leaving the season/episode tree unloaded — see db.FilterTVShows.
 func (s *Service) FilterList(
 	ctx context.Context,
 	p FilterParams,
-) ([]*ent.TVShow, uint32, error) {
+) ([]*ent.TVShow, map[uint32]db.EpisodeCounts, uint32, error) {
 	ctx, span := tracer.Start(ctx, "tvshow.filter_list",
 		trace.WithAttributes(
 			attribute.String("filter.status", p.Status),
@@ -241,44 +239,20 @@ func (s *Service) FilterList(
 		limit = 20
 	}
 
-	rows, err := s.db.ListTVShows(ctx, 0, 10000)
+	rows, counts, total, err := s.db.FilterTVShows(ctx, db.FilterTVShowsParams{
+		Status: p.Status,
+		Type:   p.Type,
+		Query:  strings.TrimSpace(p.Query),
+		Sort:   p.Sort,
+		Order:  p.Order,
+		Offset: uint32(page-1) * uint32(limit),
+		Limit:  limit,
+		Now:    time.Now(),
+	})
 	if err != nil {
-		return nil, 0, otelx.RecordSpanError(span, err)
+		return nil, nil, 0, otelx.RecordSpanError(span, err)
 	}
-
-	now := time.Now()
-	query := strings.ToLower(strings.TrimSpace(p.Query))
-	filtered := make([]*ent.TVShow, 0, len(rows))
-	for _, sh := range rows {
-		if p.Type != "" && string(sh.Type) != p.Type {
-			continue
-		}
-		switch p.Status {
-		case "", "all":
-		case "missing":
-			if !hasMissingEpisode(sh, now) {
-				continue
-			}
-		default:
-			if string(sh.SeriesStatus) != p.Status {
-				continue
-			}
-		}
-		if query != "" && !strings.Contains(strings.ToLower(sh.Title), query) {
-			continue
-		}
-		filtered = append(filtered, sh)
-	}
-
-	sortShows(filtered, p.Sort, p.Order)
-
-	total := uint32(len(filtered))
-	start := int(page-1) * int(limit)
-	if start >= len(filtered) {
-		return []*ent.TVShow{}, total, nil
-	}
-	end := min(start+int(limit), len(filtered))
-	return filtered[start:end], total, nil
+	return rows, counts, total, nil
 }
 
 func (s *Service) Get(ctx context.Context, id uint32) (*ent.TVShow, error) {
@@ -316,15 +290,9 @@ func (s *Service) Counts(ctx context.Context) (Counts, error) {
 	if err != nil {
 		return Counts{}, otelx.RecordSpanError(span, err)
 	}
-	wantedShows, err := s.db.ListWantedEpisodes(ctx)
+	wanted, err := s.db.CountWantedEpisodes(ctx)
 	if err != nil {
 		return Counts{}, otelx.RecordSpanError(span, err)
-	}
-	wanted := 0
-	for _, sh := range wantedShows {
-		for _, se := range sh.Edges.Seasons {
-			wanted += len(se.Edges.Episodes)
-		}
 	}
 	return Counts{
 		Total:          total,
@@ -373,51 +341,6 @@ func DeriveSeasonViews(show *ent.TVShow, now time.Time) []SeasonView {
 		views = append(views, v)
 	}
 	return views
-}
-
-// hasMissingEpisode reports whether the show has any aired/undated monitored
-// episode without a media file (drives the "missing" status filter).
-func hasMissingEpisode(show *ent.TVShow, now time.Time) bool {
-	for _, v := range DeriveSeasonViews(show, now) {
-		if v.Missing > 0 {
-			return true
-		}
-	}
-	return false
-}
-
-func sortShows(shows []*ent.TVShow, sortKey, order string) {
-	less := func(i, j int) bool { return shows[i].CreateTime.After(shows[j].CreateTime) }
-	switch sortKey {
-	case "title":
-		less = func(i, j int) bool {
-			return strings.ToLower(shows[i].Title) < strings.ToLower(shows[j].Title)
-		}
-	case "year":
-		less = func(i, j int) bool { return shows[i].Year < shows[j].Year }
-	case "rating":
-		less = func(i, j int) bool { return shows[i].Rating < shows[j].Rating }
-	case "episodes":
-		less = func(i, j int) bool { return episodeCount(shows[i]) < episodeCount(shows[j]) }
-	}
-	sort.SliceStable(shows, less)
-	if order == "desc" {
-		reverse(shows)
-	}
-}
-
-func episodeCount(show *ent.TVShow) int {
-	n := 0
-	for _, se := range show.Edges.Seasons {
-		n += len(se.Edges.Episodes)
-	}
-	return n
-}
-
-func reverse(shows []*ent.TVShow) {
-	for i, j := 0, len(shows)-1; i < j; i, j = i+1, j-1 {
-		shows[i], shows[j] = shows[j], shows[i]
-	}
 }
 
 func (s *Service) Update(
@@ -1120,7 +1043,10 @@ type Manager interface {
 		qualityProfile string,
 	) (*ent.TVShow, error)
 	List(ctx context.Context, page, limit uint16) ([]*ent.TVShow, uint32, error)
-	FilterList(ctx context.Context, p FilterParams) ([]*ent.TVShow, uint32, error)
+	FilterList(
+		ctx context.Context,
+		p FilterParams,
+	) ([]*ent.TVShow, map[uint32]db.EpisodeCounts, uint32, error)
 	Get(ctx context.Context, id uint32) (*ent.TVShow, error)
 	Update(ctx context.Context, id uint32, p UpdateParams) (*ent.TVShow, error)
 	Delete(ctx context.Context, id uint32, opts DeleteOptions) error

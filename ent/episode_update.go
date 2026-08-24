@@ -22,8 +22,9 @@ import (
 // EpisodeUpdate is the builder for updating Episode entities.
 type EpisodeUpdate struct {
 	config
-	hooks    []Hook
-	mutation *EpisodeMutation
+	hooks     []Hook
+	mutation  *EpisodeMutation
+	modifiers []func(*sql.UpdateBuilder)
 }
 
 // Where appends a list predicates to the EpisodeUpdate builder.
@@ -394,6 +395,12 @@ func (_u *EpisodeUpdate) check() error {
 	return nil
 }
 
+// Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
+func (_u *EpisodeUpdate) Modify(modifiers ...func(u *sql.UpdateBuilder)) *EpisodeUpdate {
+	_u.modifiers = append(_u.modifiers, modifiers...)
+	return _u
+}
+
 func (_u *EpisodeUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
@@ -624,6 +631,7 @@ func (_u *EpisodeUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{episode.Label}
@@ -639,9 +647,10 @@ func (_u *EpisodeUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 // EpisodeUpdateOne is the builder for updating a single Episode entity.
 type EpisodeUpdateOne struct {
 	config
-	fields   []string
-	hooks    []Hook
-	mutation *EpisodeMutation
+	fields    []string
+	hooks     []Hook
+	mutation  *EpisodeMutation
+	modifiers []func(*sql.UpdateBuilder)
 }
 
 // SetUpdateTime sets the "update_time" field.
@@ -1019,6 +1028,12 @@ func (_u *EpisodeUpdateOne) check() error {
 	return nil
 }
 
+// Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
+func (_u *EpisodeUpdateOne) Modify(modifiers ...func(u *sql.UpdateBuilder)) *EpisodeUpdateOne {
+	_u.modifiers = append(_u.modifiers, modifiers...)
+	return _u
+}
+
 func (_u *EpisodeUpdateOne) sqlSave(ctx context.Context) (_node *Episode, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
@@ -1266,6 +1281,7 @@ func (_u *EpisodeUpdateOne) sqlSave(ctx context.Context) (_node *Episode, err er
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	_spec.AddModifiers(_u.modifiers...)
 	_node = &Episode{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues

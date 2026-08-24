@@ -14,6 +14,7 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/schema"
+	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/media/tvshow"
@@ -33,7 +34,7 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 				FilterList(mock.Anything, mock.MatchedBy(func(p tvshow.FilterParams) bool {
 					return p.Limit == seriesMaxLimit
 				})).
-				Return([]*ent.TVShow{}, uint32(0), nil).
+				Return([]*ent.TVShow{}, nil, uint32(0), nil).
 				Once()
 
 			resp := app.do(app.req(
@@ -49,7 +50,12 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 		It("returns a paginated list", func() {
 			app.tvshows.EXPECT().
 				FilterList(mock.Anything, mock.AnythingOfType("tvshow.FilterParams")).
-				Return([]*ent.TVShow{{ID: 1, Title: "X", Year: 2020, TvdbID: 9}}, uint32(1), nil).
+				Return(
+					[]*ent.TVShow{{ID: 1, Title: "X", Year: 2020, TvdbID: 9}},
+					map[uint32]db.EpisodeCounts{1: {Total: 10, Have: 4, Wanted: 6}},
+					uint32(1),
+					nil,
+				).
 				Once()
 
 			resp := app.do(
@@ -66,19 +72,27 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 			var body struct {
 				Total int `json:"total"`
 				Items []struct {
-					Title string `json:"title"`
+					Title          string  `json:"title"`
+					HaveEpisodes   *uint32 `json:"have_episodes"`
+					WantedEpisodes *uint32 `json:"wanted_episodes"`
+					Seasons        *[]any  `json:"seasons"`
 				} `json:"items"`
 			}
 			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
 			Expect(body.Total).To(Equal(1))
 			Expect(body.Items).To(HaveLen(1))
 			Expect(body.Items[0].Title).To(Equal("X"))
+			// The rollup comes from SQL; the tree it used to be derived from
+			// is deliberately absent from a list row.
+			Expect(*body.Items[0].HaveEpisodes).To(Equal(uint32(4)))
+			Expect(*body.Items[0].WantedEpisodes).To(Equal(uint32(6)))
+			Expect(body.Items[0].Seasons).To(BeNil())
 		})
 
 		It("500s when the service errors", func() {
 			app.tvshows.EXPECT().
 				FilterList(mock.Anything, mock.AnythingOfType("tvshow.FilterParams")).
-				Return(nil, uint32(0), errors.New("db down")).Once()
+				Return(nil, nil, uint32(0), errors.New("db down")).Once()
 
 			resp := app.do(
 				app.req(http.MethodGet, "/api/v1/series", app.adminKey, nil),
