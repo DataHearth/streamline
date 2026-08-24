@@ -247,6 +247,8 @@
 	"common_apply": "Appliquer",
 	"common_applying": "Application…",
 	"common_approved": "Approuvé",
+	"conn_badge_failed": "connexion échouée",
+	"conn_badge_ok": "connexion ok",
 	"common_awaiting_review": "En attente de validation",
 	"common_browser": "Navigateur",
 	"common_calendar": "Calendrier",

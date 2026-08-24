@@ -95,6 +95,45 @@
 	let items = $derived(list.data?.items ?? []);
 	let userItems = $derived(items.filter((s) => !s.system));
 	let systemItems = $derived(items.filter((s) => s.system));
+
+	// Fourteen jobs sorted by name interleave the two libraries — movie-rss-sync
+	// sits between movie-orphan-scan and tv-metadata-refresh, so reading "what
+	// runs for my series" means scanning the whole table. The name prefix is the
+	// grouping the jobs already have; this just shows it.
+	const JOB_GROUPS: { key: string; label: string; match: (n: string) => boolean }[] =
+		[
+			{
+				key: "movies",
+				label: i18n.movies_label(),
+				match: (n) => n.startsWith("movie-"),
+			},
+			{
+				key: "series",
+				label: i18n.settings_series(),
+				match: (n) => n.startsWith("tv-"),
+			},
+			{
+				key: "downloads",
+				label: i18n.schedules_group_downloads(),
+				match: (n) => n === "download-monitor" || n === "import-scan",
+			},
+			{
+				key: "maintenance",
+				label: i18n.schedules_group_maintenance(),
+				match: () => true,
+			},
+		];
+
+	function groupSchedules(rows: Schedule[]) {
+		return JOB_GROUPS.map((g, i) => ({
+			...g,
+			rows: rows.filter(
+				(s) => JOB_GROUPS.findIndex((c) => c.match(s.name)) === i,
+			),
+		})).filter((g) => g.rows.length > 0);
+	}
+
+	let userGroups = $derived(groupSchedules(userItems));
 </script>
 
 <div>
@@ -139,15 +178,26 @@
 						<th class="px-4 py-2.5 text-right font-semibold">{i18n.common_actions()}</th>
 					</tr>
 				</thead>
-				<tbody class="divide-y divide-border">
-					{#each userItems as s (s.name)}
-						<ScheduleRow
-							row={s}
-							description={JOB_DESCRIPTIONS[s.name]}
-							onEdit={openEdit}
-						/>
-					{/each}
-				</tbody>
+				{#each userGroups as g (g.key)}
+					<tbody class="divide-y divide-border border-t border-border">
+						<tr class="bg-surface/50">
+							<th
+								colspan="6"
+								scope="colgroup"
+								class="px-4 py-1.5 text-left font-mono text-[10px] uppercase tracking-[0.16em] text-fg-faint"
+							>
+								{g.label}
+							</th>
+						</tr>
+						{#each g.rows as s (s.name)}
+							<ScheduleRow
+								row={s}
+								description={JOB_DESCRIPTIONS[s.name]}
+								onEdit={openEdit}
+							/>
+						{/each}
+					</tbody>
+				{/each}
 			</table>
 		</div>
 

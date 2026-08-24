@@ -3,6 +3,8 @@
 	import { createMutation } from "@tanstack/svelte-query";
 	import { Plug, CircleCheck, CircleX, TriangleAlert } from "@lucide/svelte";
 	import { api, errorText } from "../../lib/api";
+	import { cn } from "../../lib/cn";
+	import { toast } from "../../lib/toast";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	type Props = {
@@ -10,14 +12,17 @@
 		label?: string;
 		size?: "sm" | "md";
 		// "block" is the touch form's layout: a full-width button with the failure
-		// reason rendered underneath it. "card" is the same idea inside a config
-		// card's footer — the button fills the row rather than leaving a gap
-		// between itself and the trailing icon buttons, and the result gets its own
-		// line below. The inline variant puts that reason in a title attribute,
-		// which a touch device has no way to show.
+		// reason rendered underneath it. "card" is a config card's footer: the
+		// reason goes to a toast and only a verdict badge stays behind, sharing
+		// the button's own row. A result panel under the button cost the card a
+		// permanent empty reservation or a shove of the grid below it, and a badge
+		// up among the card's status pills wrapped that row onto a second line —
+		// the row is the one place in the card with spare width. The inline
+		// variant puts the reason in a title attribute, which a touch device has
+		// no way to show.
 		variant?: "inline" | "block" | "card";
 		// card only: the row's trailing controls (edit / delete). Passed in so the
-		// component owns the whole footer and can put the result under it.
+		// component owns the whole footer.
 		trailing?: Snippet;
 		// When set, the connection test POSTs these values instead of hitting a
 		// saved row — used by the create form to probe a draft. Read lazily so
@@ -36,6 +41,14 @@
 
 	const test = createMutation<null, Error, void>(() => ({
 		mutationFn: () => api<null>(endpoint, { method: "POST", body: body?.() }),
+		onSuccess: () => {
+			if (variant === "card") toast.ok(i18n.test_connection_ok());
+		},
+		onError: (e) => {
+			// The upstream status only ever appears in this message, so it is the
+			// toast's body rather than a generic failure line.
+			if (variant === "card") toast.err(errorText(e));
+		},
 	}));
 
 	const sizing = $derived(
@@ -55,30 +68,27 @@
 				<Plug size={13} aria-hidden="true" />
 				{test.isPending ? i18n.common_testing() : label}
 			</button>
+			{#if test.isSuccess || test.isError}
+				<span
+					class={cn(
+						"inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+						test.isSuccess
+							? "bg-status-available/10 text-status-available"
+							: "bg-status-failed/10 text-status-failed",
+					)}
+					title={test.isError ? errorText(test.error) : undefined}
+				>
+					{#if test.isSuccess}
+						<CircleCheck size={11} aria-hidden="true" />
+						{i18n.conn_badge_ok()}
+					{:else}
+						<CircleX size={11} aria-hidden="true" />
+						{i18n.conn_badge_failed()}
+					{/if}
+				</span>
+			{/if}
 			{@render trailing?.()}
 		</div>
-		{#if test.isSuccess}
-			<div
-				class="mt-2.5 flex gap-2 rounded-md border border-status-available/35 bg-status-available/[0.07] px-2.5 py-2 text-status-available"
-			>
-				<CircleCheck size={13} class="mt-px shrink-0" aria-hidden="true" />
-				<p class="text-[12px] font-medium">{i18n.test_connection_ok()}</p>
-			</div>
-		{:else if test.isError}
-			<div
-				class="mt-2.5 flex gap-2 rounded-md border border-status-failed/35 bg-status-failed/[0.07] px-2.5 py-2 text-status-failed"
-			>
-				<TriangleAlert size={13} class="mt-px shrink-0" aria-hidden="true" />
-				<div class="min-w-0">
-					<p class="text-[12px] font-semibold">{i18n.test_connection_failed()}</p>
-					<p
-						class="mt-0.5 break-words text-[11.5px] leading-relaxed text-status-failed/80"
-					>
-						{errorText(test.error)}
-					</p>
-				</div>
-			</div>
-		{/if}
 	</div>
 {:else if variant === "block"}
 	<div>

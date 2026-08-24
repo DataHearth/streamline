@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { createQuery } from "@tanstack/svelte-query";
-	import { Film } from "@lucide/svelte";
+	import { Film, ChevronLeft, ChevronRight } from "@lucide/svelte";
 	import { api, apiAllPages, type Paginated } from "../../lib/api";
 	import Poster from "./Poster.svelte";
 	import AddRecommendationModal from "./AddRecommendationModal.svelte";
@@ -45,19 +45,83 @@
 		selected = rec;
 		addOpen = true;
 	}
+
+	let scrollEl = $state<HTMLDivElement | null>(null);
+	let atStart = $state(true);
+	let atEnd = $state(true);
+
+	function updateBounds() {
+		if (!scrollEl) return;
+		const { scrollLeft, scrollWidth, clientWidth } = scrollEl;
+		// The row is inset by its own p-2 gutter, and scroll-snap parks the first
+		// poster at that offset — a "far left" row rests at scrollLeft 8, not 0.
+		const cs = getComputedStyle(scrollEl);
+		const padL = parseFloat(cs.paddingLeft) || 0;
+		const padR = parseFloat(cs.paddingRight) || 0;
+		atStart = scrollLeft <= padL + 1;
+		atEnd = scrollLeft + clientWidth >= scrollWidth - padR - 1;
+	}
+
+	$effect(() => {
+		recs;
+		if (!scrollEl) return;
+		updateBounds();
+		const ro = new ResizeObserver(updateBounds);
+		ro.observe(scrollEl);
+		return () => ro.disconnect();
+	});
+
+	function page(dir: 1 | -1) {
+		if (!scrollEl) return;
+		scrollEl.scrollBy({
+			left: dir * scrollEl.clientWidth * 0.82,
+			behavior: "smooth",
+		});
+	}
+
+	const navBtn =
+		"grid h-7 w-7 place-items-center rounded-md border border-border text-fg-muted transition-colors hover:border-border-strong hover:bg-surface hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring disabled:pointer-events-none disabled:opacity-40";
 </script>
 
 {#if recs.length > 0}
 	<section class="min-w-0" aria-labelledby="similar-label">
-		<header class="mb-3 flex items-baseline justify-between">
+		<header class="mb-3 flex items-baseline justify-between gap-3">
 			<h3
 				id="similar-label"
 				class="font-mono text-[11px] uppercase tracking-[0.14em] text-fg-faint"
 			>
 				{i18n.movies_more_like_this()}
 			</h3>
+			<div
+				class="hidden items-center gap-1 md:flex"
+				role="group"
+				aria-label={i18n.movies_more_like_this()}
+			>
+				<button
+					type="button"
+					class={navBtn}
+					aria-label={i18n.common_scroll_left()}
+					disabled={atStart}
+					onclick={() => page(-1)}
+				>
+					<ChevronLeft size={14} aria-hidden="true" />
+				</button>
+				<button
+					type="button"
+					class={navBtn}
+					aria-label={i18n.common_scroll_right()}
+					disabled={atEnd}
+					onclick={() => page(1)}
+				>
+					<ChevronRight size={14} aria-hidden="true" />
+				</button>
+			</div>
 		</header>
-		<div class="poster-scroll -m-2 p-2">
+		<div
+			bind:this={scrollEl}
+			onscroll={updateBounds}
+			class="poster-scroll -m-2 p-2"
+		>
 			{#each recs as rec (rec.tmdb_id)}
 				{@const localId = libraryByTmdb.get(rec.tmdb_id)}
 				{#snippet poster()}
@@ -140,5 +204,11 @@
 		   hovered card's growth lives in the track's padding instead. */
 		overflow-y: hidden;
 		scroll-snap-type: x mandatory;
+		/* The ‹ › buttons are the affordance; the native bar just adds a rule
+		   under the posters. */
+		scrollbar-width: none;
+	}
+	.poster-scroll::-webkit-scrollbar {
+		display: none;
 	}
 </style>

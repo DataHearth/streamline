@@ -122,11 +122,16 @@
 							<span class="text-fg-faint">· #{ep.absolute_number}</span>
 						{/if}
 					</td>
-					<td class="min-w-0 px-3 py-2.5">
+					<!-- max-w-0 + w-full, not min-w-0: the table lays out auto, where a
+					     cell sizes to its content and min-width is ignored, so a long
+					     title widened the column and scrolled the whole table sideways.
+					     Zero max-width leaves the cell taking only what the fixed
+					     columns don't, which is what lets truncate engage. -->
+					<td class="w-full max-w-0 px-3 py-2.5">
 						<button
 							type="button"
 							onclick={() => (detail = ep)}
-							title={i18n.series_episode_details()}
+							title={ep.title || i18n.series_episode_details()}
 							class="block max-w-full truncate rounded-sm text-left text-fg transition hover:text-accent-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
 						>
 							{ep.title || "TBA"}
