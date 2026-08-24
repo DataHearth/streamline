@@ -27,6 +27,7 @@ const (
 	ActivityEventTypeGrabbed           ActivityEventType = "grabbed"
 	ActivityEventTypeImportFailed      ActivityEventType = "import_failed"
 	ActivityEventTypeImported          ActivityEventType = "imported"
+	ActivityEventTypeSearched          ActivityEventType = "searched"
 )
 
 // Valid indicates whether the value is a known member of the ActivityEventType enum.
@@ -45,6 +46,8 @@ func (e ActivityEventType) Valid() bool {
 	case ActivityEventTypeImportFailed:
 		return true
 	case ActivityEventTypeImported:
+		return true
+	case ActivityEventTypeSearched:
 		return true
 	default:
 		return false
@@ -1704,6 +1707,7 @@ const (
 	ListActivityParamsTypeGrabbed           ListActivityParamsType = "grabbed"
 	ListActivityParamsTypeImportFailed      ListActivityParamsType = "import_failed"
 	ListActivityParamsTypeImported          ListActivityParamsType = "imported"
+	ListActivityParamsTypeSearched          ListActivityParamsType = "searched"
 )
 
 // Valid indicates whether the value is a known member of the ListActivityParamsType enum.
@@ -1722,6 +1726,8 @@ func (e ListActivityParamsType) Valid() bool {
 	case ListActivityParamsTypeImportFailed:
 		return true
 	case ListActivityParamsTypeImported:
+		return true
+	case ListActivityParamsTypeSearched:
 		return true
 	default:
 		return false
@@ -1881,13 +1887,24 @@ func (e ListUsersParamsOrder) Valid() bool {
 	}
 }
 
-// ActivityEvent defines model for ActivityEvent.
+// ActivityEvent Exactly one of movie / episode / series is set, naming what the event
+// happened to. `series` carries only what belongs to no single episode —
+// a search issued at series or season scope; per-episode outcomes use
+// `episode`.
 type ActivityEvent struct {
-	CreatedAt time.Time               `json:"created_at"`
-	Id        uint32                  `json:"id"`
-	Movie     Movie                   `json:"movie"`
-	Payload   *map[string]interface{} `json:"payload,omitempty"`
-	Type      ActivityEventType       `json:"type"`
+	CreatedAt time.Time `json:"created_at"`
+
+	// Episode Show + S/E context for a TV download record (queue/history rows render
+	// "<show> · SxxExx" from it). Absent on movie records.
+	Episode *EpisodeRef             `json:"episode,omitempty"`
+	Id      uint32                  `json:"id"`
+	Movie   *Movie                  `json:"movie,omitempty"`
+	Payload *map[string]interface{} `json:"payload,omitempty"`
+
+	// Series Minimal series identity for feed rows. Deliberately not the full TVShow
+	// schema, which carries the whole season/episode tree.
+	Series *SeriesRef        `json:"series,omitempty"`
+	Type   ActivityEventType `json:"type"`
 }
 
 // ActivityEventType defines model for ActivityEvent.Type.
@@ -2199,9 +2216,12 @@ type Episode struct {
 // EpisodeRef Show + S/E context for a TV download record (queue/history rows render
 // "<show> · SxxExx" from it). Absent on movie records.
 type EpisodeRef struct {
-	Episode   uint16 `json:"episode"`
-	Season    uint16 `json:"season"`
-	ShowTitle string `json:"show_title"`
+	Episode uint16 `json:"episode"`
+	Season  uint16 `json:"season"`
+
+	// SeriesId Set where the row links back to the series page.
+	SeriesId  *uint32 `json:"series_id,omitempty"`
+	ShowTitle string  `json:"show_title"`
 }
 
 // EpisodeStatus Presentation status of an episode. "unaired" is derived rather than stored: an episode with no file whose air date is still ahead.
@@ -3097,6 +3117,21 @@ type QueueEntry struct {
 // and is waiting on a decision (POST /downloads/{id}/resolve).
 type QueueEntryStatus string
 
+// ReidentifyResult defines model for ReidentifyResult.
+type ReidentifyResult struct {
+	Id uint32 `json:"id"`
+
+	// Renamed Number of files moved into the new title's path.
+	Renamed int `json:"renamed"`
+
+	// Title Title as it stands after the metadata refresh.
+	Title string `json:"title"`
+
+	// Unmatched Series only. Paths still on disk whose season/episode number has no
+	// counterpart in the new show; their database rows were dropped.
+	Unmatched *[]string `json:"unmatched,omitempty"`
+}
+
 // RenameOperation defines model for RenameOperation.
 type RenameOperation struct {
 	From        string `json:"from"`
@@ -3307,6 +3342,13 @@ type SeriesLookupResult struct {
 // SeriesLookupResultList defines model for SeriesLookupResultList.
 type SeriesLookupResultList struct {
 	Items []SeriesLookupResult `json:"items"`
+}
+
+// SeriesRef Minimal series identity for feed rows. Deliberately not the full TVShow
+// schema, which carries the whole season/episode tree.
+type SeriesRef struct {
+	Id    uint32 `json:"id"`
+	Title string `json:"title"`
 }
 
 // SeriesRenamePlan defines model for SeriesRenamePlan.
@@ -3663,6 +3705,9 @@ type ActivityLimit = int
 
 // ActivityMovieID defines model for ActivityMovieID.
 type ActivityMovieID = uint32
+
+// ActivitySeriesID defines model for ActivitySeriesID.
+type ActivitySeriesID = uint32
 
 // ActivitySince defines model for ActivitySince.
 type ActivitySince = time.Time
@@ -4022,10 +4067,13 @@ type UpdateOIDCProvider = OIDCProviderPatch
 type ListActivityParams struct {
 	Type    *ActivityType    `form:"type,omitempty" json:"type,omitempty"`
 	MovieId *ActivityMovieID `form:"movie_id,omitempty" json:"movie_id,omitempty"`
-	Since   *ActivitySince   `form:"since,omitempty" json:"since,omitempty"`
-	Before  *ActivityBefore  `form:"before,omitempty" json:"before,omitempty"`
-	Limit   *ActivityLimit   `form:"limit,omitempty" json:"limit,omitempty"`
-	Cursor  *ActivityCursor  `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// SeriesId Matches both the series' own events and those of its episodes.
+	SeriesId *ActivitySeriesID `form:"series_id,omitempty" json:"series_id,omitempty"`
+	Since    *ActivitySince    `form:"since,omitempty" json:"since,omitempty"`
+	Before   *ActivityBefore   `form:"before,omitempty" json:"before,omitempty"`
+	Limit    *ActivityLimit    `form:"limit,omitempty" json:"limit,omitempty"`
+	Cursor   *ActivityCursor   `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
 // ListActivityParamsType defines parameters for ListActivity.
@@ -4083,6 +4131,11 @@ type DeleteMovieParams struct {
 	DeleteFiles *DeleteMovieFiles `form:"delete_files,omitempty" json:"delete_files,omitempty"`
 }
 
+// ReidentifyMovieJSONBody defines parameters for ReidentifyMovie.
+type ReidentifyMovieJSONBody struct {
+	TmdbId uint32 `json:"tmdb_id"`
+}
+
 // RenameMovieFilesParams defines parameters for RenameMovieFiles.
 type RenameMovieFilesParams struct {
 	// Preview When true, returns the rename plan without applying it.
@@ -4138,6 +4191,11 @@ type LookupSeriesParams struct {
 type DeleteSeriesParams struct {
 	// DeleteFiles When true, also delete attached media files from disk.
 	DeleteFiles *DeleteSeriesFiles `form:"delete_files,omitempty" json:"delete_files,omitempty"`
+}
+
+// ReidentifySeriesJSONBody defines parameters for ReidentifySeries.
+type ReidentifySeriesJSONBody struct {
+	TvdbId uint32 `json:"tvdb_id"`
 }
 
 // RenameSeriesFilesParams defines parameters for RenameSeriesFiles.
@@ -4280,6 +4338,9 @@ type DeleteMovieFileJSONRequestBody = DeleteFileRequest
 // GrabMovieReleaseJSONRequestBody defines body for GrabMovieRelease for application/json ContentType.
 type GrabMovieReleaseJSONRequestBody = SearchResult
 
+// ReidentifyMovieJSONRequestBody defines body for ReidentifyMovie for application/json ContentType.
+type ReidentifyMovieJSONRequestBody ReidentifyMovieJSONBody
+
 // CreateQualityProfileJSONRequestBody defines body for CreateQualityProfile for application/json ContentType.
 type CreateQualityProfileJSONRequestBody = QualityProfileCreate
 
@@ -4315,6 +4376,9 @@ type GrabEpisodeReleaseJSONRequestBody = SearchResult
 
 // GrabSeriesReleaseJSONRequestBody defines body for GrabSeriesRelease for application/json ContentType.
 type GrabSeriesReleaseJSONRequestBody = SearchResult
+
+// ReidentifySeriesJSONRequestBody defines body for ReidentifySeries for application/json ContentType.
+type ReidentifySeriesJSONRequestBody ReidentifySeriesJSONBody
 
 // PatchSeasonJSONRequestBody defines body for PatchSeason for application/json ContentType.
 type PatchSeasonJSONRequestBody = MonitorToggleRequest
@@ -4588,6 +4652,9 @@ type ServerInterface interface {
 	// RefreshMovieMetadata Re-fetch TMDB metadata for one movie
 	// (POST /movies/{id}/refresh-metadata)
 	RefreshMovieMetadata(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// ReidentifyMovie Point this movie at a different TMDB title
+	// (POST /movies/{id}/reidentify)
+	ReidentifyMovie(w http.ResponseWriter, r *http.Request, id ResourceID)
 	// RenameMovieFiles Rename movie files to match the library naming pattern
 	// (POST /movies/{id}/rename)
 	RenameMovieFiles(w http.ResponseWriter, r *http.Request, id ResourceID, params RenameMovieFilesParams)
@@ -4705,6 +4772,9 @@ type ServerInterface interface {
 	// RefreshSeriesMetadata Re-fetch TVDB metadata for one series
 	// (POST /series/{id}/refresh-metadata)
 	RefreshSeriesMetadata(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// ReidentifySeries Point this series at a different TVDB show
+	// (POST /series/{id}/reidentify)
+	ReidentifySeries(w http.ResponseWriter, r *http.Request, id ResourceID)
 	// RenameSeriesFiles Rename series episode files to match the library naming pattern
 	// (POST /series/{id}/rename)
 	RenameSeriesFiles(w http.ResponseWriter, r *http.Request, id ResourceID, params RenameSeriesFilesParams)
@@ -5265,6 +5335,12 @@ func (_ Unimplemented) RefreshMovieMetadata(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// ReidentifyMovie Point this movie at a different TMDB title
+// (POST /movies/{id}/reidentify)
+func (_ Unimplemented) ReidentifyMovie(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // RenameMovieFiles Rename movie files to match the library naming pattern
 // (POST /movies/{id}/rename)
 func (_ Unimplemented) RenameMovieFiles(w http.ResponseWriter, r *http.Request, id ResourceID, params RenameMovieFilesParams) {
@@ -5499,6 +5575,12 @@ func (_ Unimplemented) RefreshSeriesMetadata(w http.ResponseWriter, r *http.Requ
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// ReidentifySeries Point this series at a different TVDB show
+// (POST /series/{id}/reidentify)
+func (_ Unimplemented) ReidentifySeries(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // RenameSeriesFiles Rename series episode files to match the library naming pattern
 // (POST /series/{id}/rename)
 func (_ Unimplemented) RenameSeriesFiles(w http.ResponseWriter, r *http.Request, id ResourceID, params RenameSeriesFilesParams) {
@@ -5671,6 +5753,19 @@ func (siw *ServerInterfaceWrapper) ListActivity(w http.ResponseWriter, r *http.R
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "movie_id"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "movie_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "series_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "series_id", r.URL.Query(), &params.SeriesId, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "series_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "series_id", Err: err})
 		}
 		return
 	}
@@ -7659,6 +7754,32 @@ func (siw *ServerInterfaceWrapper) RefreshMovieMetadata(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// ReidentifyMovie operation middleware
+func (siw *ServerInterfaceWrapper) ReidentifyMovie(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReidentifyMovie(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // RenameMovieFiles operation middleware
 func (siw *ServerInterfaceWrapper) RenameMovieFiles(w http.ResponseWriter, r *http.Request) {
 
@@ -8790,6 +8911,32 @@ func (siw *ServerInterfaceWrapper) RefreshSeriesMetadata(w http.ResponseWriter, 
 	handler.ServeHTTP(w, r)
 }
 
+// ReidentifySeries operation middleware
+func (siw *ServerInterfaceWrapper) ReidentifySeries(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReidentifySeries(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // RenameSeriesFiles operation middleware
 func (siw *ServerInterfaceWrapper) RenameSeriesFiles(w http.ResponseWriter, r *http.Request) {
 
@@ -9610,6 +9757,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/movies/{id}/search-now", wrapper.SearchMovieNow)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/movies/{id}/reidentify", wrapper.ReidentifyMovie)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/movies/{id}/recommendations", wrapper.GetMovieRecommendations)
 	})
 	r.Group(func(r chi.Router) {
@@ -9674,6 +9824,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/series/{id}/search", wrapper.SearchSeries)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/series/{id}/reidentify", wrapper.ReidentifySeries)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/series/{id}/browse", wrapper.BrowseSeriesReleases)
@@ -10125,6 +10278,8 @@ type PathMigrationRootListJSONResponse PathMigrationRootList
 type PayloadTooLargeJSONResponse Error
 
 type PendingListJSONResponse PendingList
+
+type ReidentifyResultJSONResponse ReidentifyResult
 
 type RequestCountsResponseJSONResponse RequestCounts
 
@@ -15136,6 +15291,99 @@ func (response RefreshMovieMetadata500JSONResponse) VisitRefreshMovieMetadataRes
 	return err
 }
 
+type ReidentifyMovieRequestObject struct {
+	Id   ResourceID `json:"id"`
+	Body *ReidentifyMovieJSONRequestBody
+}
+
+type ReidentifyMovieResponseObject interface {
+	VisitReidentifyMovieResponse(w http.ResponseWriter) error
+}
+
+type ReidentifyMovie200JSONResponse struct{ ReidentifyResultJSONResponse }
+
+func (response ReidentifyMovie200JSONResponse) VisitReidentifyMovieResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReidentifyMovie400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ReidentifyMovie400JSONResponse) VisitReidentifyMovieResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReidentifyMovie403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ReidentifyMovie403JSONResponse) VisitReidentifyMovieResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReidentifyMovie404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ReidentifyMovie404JSONResponse) VisitReidentifyMovieResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReidentifyMovie409JSONResponse struct{ ConflictJSONResponse }
+
+func (response ReidentifyMovie409JSONResponse) VisitReidentifyMovieResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReidentifyMovie500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ReidentifyMovie500JSONResponse) VisitReidentifyMovieResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type RenameMovieFilesRequestObject struct {
 	Id     ResourceID `json:"id"`
 	Params RenameMovieFilesParams
@@ -17515,6 +17763,99 @@ func (response RefreshSeriesMetadata500JSONResponse) VisitRefreshSeriesMetadataR
 	return err
 }
 
+type ReidentifySeriesRequestObject struct {
+	Id   ResourceID `json:"id"`
+	Body *ReidentifySeriesJSONRequestBody
+}
+
+type ReidentifySeriesResponseObject interface {
+	VisitReidentifySeriesResponse(w http.ResponseWriter) error
+}
+
+type ReidentifySeries200JSONResponse struct{ ReidentifyResultJSONResponse }
+
+func (response ReidentifySeries200JSONResponse) VisitReidentifySeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReidentifySeries400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ReidentifySeries400JSONResponse) VisitReidentifySeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReidentifySeries403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ReidentifySeries403JSONResponse) VisitReidentifySeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReidentifySeries404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ReidentifySeries404JSONResponse) VisitReidentifySeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReidentifySeries409JSONResponse struct{ ConflictJSONResponse }
+
+func (response ReidentifySeries409JSONResponse) VisitReidentifySeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReidentifySeries500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ReidentifySeries500JSONResponse) VisitReidentifySeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type RenameSeriesFilesRequestObject struct {
 	Id     ResourceID `json:"id"`
 	Params RenameSeriesFilesParams
@@ -19003,6 +19344,9 @@ type StrictServerInterface interface {
 	// RefreshMovieMetadata Re-fetch TMDB metadata for one movie
 	// (POST /movies/{id}/refresh-metadata)
 	RefreshMovieMetadata(ctx context.Context, request RefreshMovieMetadataRequestObject) (RefreshMovieMetadataResponseObject, error)
+	// ReidentifyMovie Point this movie at a different TMDB title
+	// (POST /movies/{id}/reidentify)
+	ReidentifyMovie(ctx context.Context, request ReidentifyMovieRequestObject) (ReidentifyMovieResponseObject, error)
 	// RenameMovieFiles Rename movie files to match the library naming pattern
 	// (POST /movies/{id}/rename)
 	RenameMovieFiles(ctx context.Context, request RenameMovieFilesRequestObject) (RenameMovieFilesResponseObject, error)
@@ -19120,6 +19464,9 @@ type StrictServerInterface interface {
 	// RefreshSeriesMetadata Re-fetch TVDB metadata for one series
 	// (POST /series/{id}/refresh-metadata)
 	RefreshSeriesMetadata(ctx context.Context, request RefreshSeriesMetadataRequestObject) (RefreshSeriesMetadataResponseObject, error)
+	// ReidentifySeries Point this series at a different TVDB show
+	// (POST /series/{id}/reidentify)
+	ReidentifySeries(ctx context.Context, request ReidentifySeriesRequestObject) (ReidentifySeriesResponseObject, error)
 	// RenameSeriesFiles Rename series episode files to match the library naming pattern
 	// (POST /series/{id}/rename)
 	RenameSeriesFiles(ctx context.Context, request RenameSeriesFilesRequestObject) (RenameSeriesFilesResponseObject, error)
@@ -21560,6 +21907,39 @@ func (sh *strictHandler) RefreshMovieMetadata(w http.ResponseWriter, r *http.Req
 	}
 }
 
+// ReidentifyMovie operation middleware
+func (sh *strictHandler) ReidentifyMovie(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request ReidentifyMovieRequestObject
+
+	request.Id = id
+
+	var body ReidentifyMovieJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ReidentifyMovie(ctx, request.(ReidentifyMovieRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ReidentifyMovie")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ReidentifyMovieResponseObject); ok {
+		if err := validResponse.VisitReidentifyMovieResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // RenameMovieFiles operation middleware
 func (sh *strictHandler) RenameMovieFiles(w http.ResponseWriter, r *http.Request, id ResourceID, params RenameMovieFilesParams) {
 	var request RenameMovieFilesRequestObject
@@ -22647,6 +23027,39 @@ func (sh *strictHandler) RefreshSeriesMetadata(w http.ResponseWriter, r *http.Re
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(RefreshSeriesMetadataResponseObject); ok {
 		if err := validResponse.VisitRefreshSeriesMetadataResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ReidentifySeries operation middleware
+func (sh *strictHandler) ReidentifySeries(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request ReidentifySeriesRequestObject
+
+	request.Id = id
+
+	var body ReidentifySeriesJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ReidentifySeries(ctx, request.(ReidentifySeriesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ReidentifySeries")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ReidentifySeriesResponseObject); ok {
+		if err := validResponse.VisitReidentifySeriesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

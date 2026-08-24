@@ -55,9 +55,11 @@ type EpisodeEdges struct {
 	DownloadRecords []*DownloadRecord `json:"download_records,omitempty"`
 	// MediaFiles holds the value of the media_files edge.
 	MediaFiles []*MediaFile `json:"media_files,omitempty"`
+	// Events holds the value of the events edge.
+	Events []*MediaEvent `json:"events,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [3]bool
+	loadedTypes [4]bool
 }
 
 // SeasonOrErr returns the Season value or an error if the edge
@@ -87,6 +89,15 @@ func (e EpisodeEdges) MediaFilesOrErr() ([]*MediaFile, error) {
 		return e.MediaFiles, nil
 	}
 	return nil, &NotLoadedError{edge: "media_files"}
+}
+
+// EventsOrErr returns the Events value or an error if the edge
+// was not loaded in eager-loading.
+func (e EpisodeEdges) EventsOrErr() ([]*MediaEvent, error) {
+	if e.loadedTypes[3] {
+		return e.Events, nil
+	}
+	return nil, &NotLoadedError{edge: "events"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -225,6 +236,11 @@ func (_m *Episode) QueryDownloadRecords() *DownloadRecordQuery {
 // QueryMediaFiles queries the "media_files" edge of the Episode entity.
 func (_m *Episode) QueryMediaFiles() *MediaFileQuery {
 	return NewEpisodeClient(_m.config).QueryMediaFiles(_m)
+}
+
+// QueryEvents queries the "events" edge of the Episode entity.
+func (_m *Episode) QueryEvents() *MediaEventQuery {
+	return NewEpisodeClient(_m.config).QueryEvents(_m)
 }
 
 // Update returns a builder for updating this Episode.

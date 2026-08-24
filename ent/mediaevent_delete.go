@@ -8,30 +8,30 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/datahearth/streamline/ent/movieevent"
+	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/predicate"
 )
 
-// MovieEventDelete is the builder for deleting a MovieEvent entity.
-type MovieEventDelete struct {
+// MediaEventDelete is the builder for deleting a MediaEvent entity.
+type MediaEventDelete struct {
 	config
 	hooks    []Hook
-	mutation *MovieEventMutation
+	mutation *MediaEventMutation
 }
 
-// Where appends a list predicates to the MovieEventDelete builder.
-func (_d *MovieEventDelete) Where(ps ...predicate.MovieEvent) *MovieEventDelete {
+// Where appends a list predicates to the MediaEventDelete builder.
+func (_d *MediaEventDelete) Where(ps ...predicate.MediaEvent) *MediaEventDelete {
 	_d.mutation.Where(ps...)
 	return _d
 }
 
 // Exec executes the deletion query and returns how many vertices were deleted.
-func (_d *MovieEventDelete) Exec(ctx context.Context) (int, error) {
+func (_d *MediaEventDelete) Exec(ctx context.Context) (int, error) {
 	return withHooks(ctx, _d.sqlExec, _d.mutation, _d.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (_d *MovieEventDelete) ExecX(ctx context.Context) int {
+func (_d *MediaEventDelete) ExecX(ctx context.Context) int {
 	n, err := _d.Exec(ctx)
 	if err != nil {
 		panic(err)
@@ -39,8 +39,8 @@ func (_d *MovieEventDelete) ExecX(ctx context.Context) int {
 	return n
 }
 
-func (_d *MovieEventDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := sqlgraph.NewDeleteSpec(movieevent.Table, sqlgraph.NewFieldSpec(movieevent.FieldID, field.TypeUint32))
+func (_d *MediaEventDelete) sqlExec(ctx context.Context) (int, error) {
+	_spec := sqlgraph.NewDeleteSpec(mediaevent.Table, sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32))
 	if ps := _d.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -56,32 +56,32 @@ func (_d *MovieEventDelete) sqlExec(ctx context.Context) (int, error) {
 	return affected, err
 }
 
-// MovieEventDeleteOne is the builder for deleting a single MovieEvent entity.
-type MovieEventDeleteOne struct {
-	_d *MovieEventDelete
+// MediaEventDeleteOne is the builder for deleting a single MediaEvent entity.
+type MediaEventDeleteOne struct {
+	_d *MediaEventDelete
 }
 
-// Where appends a list predicates to the MovieEventDelete builder.
-func (_d *MovieEventDeleteOne) Where(ps ...predicate.MovieEvent) *MovieEventDeleteOne {
+// Where appends a list predicates to the MediaEventDelete builder.
+func (_d *MediaEventDeleteOne) Where(ps ...predicate.MediaEvent) *MediaEventDeleteOne {
 	_d._d.mutation.Where(ps...)
 	return _d
 }
 
 // Exec executes the deletion query.
-func (_d *MovieEventDeleteOne) Exec(ctx context.Context) error {
+func (_d *MediaEventDeleteOne) Exec(ctx context.Context) error {
 	n, err := _d._d.Exec(ctx)
 	switch {
 	case err != nil:
 		return err
 	case n == 0:
-		return &NotFoundError{movieevent.Label}
+		return &NotFoundError{mediaevent.Label}
 	default:
 		return nil
 	}
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (_d *MovieEventDeleteOne) ExecX(ctx context.Context) {
+func (_d *MediaEventDeleteOne) ExecX(ctx context.Context) {
 	if err := _d.Exec(ctx); err != nil {
 		panic(err)
 	}

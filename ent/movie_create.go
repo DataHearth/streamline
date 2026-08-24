@@ -11,9 +11,9 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
-	"github.com/datahearth/streamline/ent/movieevent"
 	"github.com/datahearth/streamline/ent/schema"
 )
 
@@ -278,14 +278,14 @@ func (_c *MovieCreate) AddMediaFiles(v ...*MediaFile) *MovieCreate {
 	return _c.AddMediaFileIDs(ids...)
 }
 
-// AddEventIDs adds the "events" edge to the MovieEvent entity by IDs.
+// AddEventIDs adds the "events" edge to the MediaEvent entity by IDs.
 func (_c *MovieCreate) AddEventIDs(ids ...uint32) *MovieCreate {
 	_c.mutation.AddEventIDs(ids...)
 	return _c
 }
 
-// AddEvents adds the "events" edges to the MovieEvent entity.
-func (_c *MovieCreate) AddEvents(v ...*MovieEvent) *MovieCreate {
+// AddEvents adds the "events" edges to the MediaEvent entity.
+func (_c *MovieCreate) AddEvents(v ...*MediaEvent) *MovieCreate {
 	ids := make([]uint32, len(v))
 	for i := range v {
 		ids[i] = v[i].ID
@@ -550,7 +550,7 @@ func (_c *MovieCreate) createSpec() (*Movie, *sqlgraph.CreateSpec) {
 			Columns: []string{movie.EventsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(movieevent.FieldID, field.TypeUint32),
+				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

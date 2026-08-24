@@ -313,6 +313,13 @@ func (db *DB) UpdateMovieMetadata(
 		Exec(ctx)
 }
 
+// SetMovieTMDBID repoints a row at a different TMDB title. Everything else on
+// the row — files, history, requests, quality profile — is left alone; the
+// caller refreshes metadata afterwards so title/year stop contradicting the id.
+func (db *DB) SetMovieTMDBID(ctx context.Context, id, tmdbID uint32) error {
+	return db.client.Movie.UpdateOneID(id).SetTmdbID(tmdbID).Exec(ctx)
+}
+
 // SetMovieDigitalReleaseDate sets or clears digital_release_date based on
 // whether `date` is non-nil. Used by metadata-refresh after the TMDB
 // release_dates lookup.

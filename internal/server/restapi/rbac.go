@@ -120,6 +120,7 @@ var minRole = map[string]string{
 	"GrabMovieRelease":        roleMember,
 	"RefreshMovieMetadata":    roleMember,
 	"RenameMovieFiles":        roleMember,
+	"ReidentifyMovie":         roleAdmin,
 	"SearchMovie":             roleMember,
 	"SearchMovieNow":          roleMember,
 
@@ -166,6 +167,7 @@ var minRole = map[string]string{
 	"BrowseEpisodeReleases":   roleMember,
 	"RefreshSeriesMetadata":   roleMember,
 	"RenameSeriesFiles":       roleMember,
+	"ReidentifySeries":        roleAdmin,
 	"SearchSeries":            roleMember,
 	"ApplySpecialsToExisting": roleAdmin,
 

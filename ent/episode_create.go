@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
+	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/season"
 )
@@ -214,6 +215,21 @@ func (_c *EpisodeCreate) AddMediaFiles(v ...*MediaFile) *EpisodeCreate {
 		ids[i] = v[i].ID
 	}
 	return _c.AddMediaFileIDs(ids...)
+}
+
+// AddEventIDs adds the "events" edge to the MediaEvent entity by IDs.
+func (_c *EpisodeCreate) AddEventIDs(ids ...uint32) *EpisodeCreate {
+	_c.mutation.AddEventIDs(ids...)
+	return _c
+}
+
+// AddEvents adds the "events" edges to the MediaEvent entity.
+func (_c *EpisodeCreate) AddEvents(v ...*MediaEvent) *EpisodeCreate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddEventIDs(ids...)
 }
 
 // Mutation returns the EpisodeMutation object of the builder.
@@ -423,6 +439,22 @@ func (_c *EpisodeCreate) createSpec() (*Episode, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(mediafile.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.EventsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   episode.EventsTable,
+			Columns: []string{episode.EventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

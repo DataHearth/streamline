@@ -794,6 +794,88 @@ func (_c *MockManager_RefreshOne_Call) RunAndReturn(run func(ctx context.Context
 	return _c
 }
 
+// Reidentify provides a mock function for the type MockManager
+func (_mock *MockManager) Reidentify(ctx context.Context, id uint32, tvdbID uint32) (*ent.TVShow, []string, error) {
+	ret := _mock.Called(ctx, id, tvdbID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Reidentify")
+	}
+
+	var r0 *ent.TVShow
+	var r1 []string
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32) (*ent.TVShow, []string, error)); ok {
+		return returnFunc(ctx, id, tvdbID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32) *ent.TVShow); ok {
+		r0 = returnFunc(ctx, id, tvdbID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ent.TVShow)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, uint32) []string); ok {
+		r1 = returnFunc(ctx, id, tvdbID)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).([]string)
+		}
+	}
+	if returnFunc, ok := ret.Get(2).(func(context.Context, uint32, uint32) error); ok {
+		r2 = returnFunc(ctx, id, tvdbID)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
+}
+
+// MockManager_Reidentify_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Reidentify'
+type MockManager_Reidentify_Call struct {
+	*mock.Call
+}
+
+// Reidentify is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - tvdbID uint32
+func (_e *MockManager_Expecter) Reidentify(ctx any, id any, tvdbID any) *MockManager_Reidentify_Call {
+	return &MockManager_Reidentify_Call{Call: _e.mock.On("Reidentify", ctx, id, tvdbID)}
+}
+
+func (_c *MockManager_Reidentify_Call) Run(run func(ctx context.Context, id uint32, tvdbID uint32)) *MockManager_Reidentify_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 uint32
+		if args[2] != nil {
+			arg2 = args[2].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_Reidentify_Call) Return(tVShow *ent.TVShow, strings []string, err error) *MockManager_Reidentify_Call {
+	_c.Call.Return(tVShow, strings, err)
+	return _c
+}
+
+func (_c *MockManager_Reidentify_Call) RunAndReturn(run func(ctx context.Context, id uint32, tvdbID uint32) (*ent.TVShow, []string, error)) *MockManager_Reidentify_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SetEpisodeMonitored provides a mock function for the type MockManager
 func (_mock *MockManager) SetEpisodeMonitored(ctx context.Context, id uint32, monitored bool) error {
 	ret := _mock.Called(ctx, id, monitored)

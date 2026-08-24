@@ -242,6 +242,69 @@ func (_c *MockTx_ApproveRequest_Call) RunAndReturn(run func(ctx context.Context,
 	return _c
 }
 
+// AttachMediaFileToEpisode provides a mock function for the type MockTx
+func (_mock *MockTx) AttachMediaFileToEpisode(ctx context.Context, mediaFileID uint32, episodeID uint32) error {
+	ret := _mock.Called(ctx, mediaFileID, episodeID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AttachMediaFileToEpisode")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32) error); ok {
+		r0 = returnFunc(ctx, mediaFileID, episodeID)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTx_AttachMediaFileToEpisode_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AttachMediaFileToEpisode'
+type MockTx_AttachMediaFileToEpisode_Call struct {
+	*mock.Call
+}
+
+// AttachMediaFileToEpisode is a helper method to define mock.On call
+//   - ctx context.Context
+//   - mediaFileID uint32
+//   - episodeID uint32
+func (_e *MockTx_Expecter) AttachMediaFileToEpisode(ctx any, mediaFileID any, episodeID any) *MockTx_AttachMediaFileToEpisode_Call {
+	return &MockTx_AttachMediaFileToEpisode_Call{Call: _e.mock.On("AttachMediaFileToEpisode", ctx, mediaFileID, episodeID)}
+}
+
+func (_c *MockTx_AttachMediaFileToEpisode_Call) Run(run func(ctx context.Context, mediaFileID uint32, episodeID uint32)) *MockTx_AttachMediaFileToEpisode_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 uint32
+		if args[2] != nil {
+			arg2 = args[2].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_AttachMediaFileToEpisode_Call) Return(err error) *MockTx_AttachMediaFileToEpisode_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTx_AttachMediaFileToEpisode_Call) RunAndReturn(run func(ctx context.Context, mediaFileID uint32, episodeID uint32) error) *MockTx_AttachMediaFileToEpisode_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // BulkCreateImportScanFiles provides a mock function for the type MockTx
 func (_mock *MockTx) BulkCreateImportScanFiles(ctx context.Context, scanID uint32, files []db.CreateImportScanFileParams) error {
 	ret := _mock.Called(ctx, scanID, files)
@@ -3516,6 +3579,74 @@ func (_c *MockTx_DenyRequest_Call) Return(err error) *MockTx_DenyRequest_Call {
 }
 
 func (_c *MockTx_DenyRequest_Call) RunAndReturn(run func(ctx context.Context, id uint32, adminID uint32, reason string) error) *MockTx_DenyRequest_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// DetachEpisodeMediaFiles provides a mock function for the type MockTx
+func (_mock *MockTx) DetachEpisodeMediaFiles(ctx context.Context, showID uint32) ([]*ent.MediaFile, error) {
+	ret := _mock.Called(ctx, showID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DetachEpisodeMediaFiles")
+	}
+
+	var r0 []*ent.MediaFile
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) ([]*ent.MediaFile, error)); ok {
+		return returnFunc(ctx, showID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) []*ent.MediaFile); ok {
+		r0 = returnFunc(ctx, showID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ent.MediaFile)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+		r1 = returnFunc(ctx, showID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_DetachEpisodeMediaFiles_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DetachEpisodeMediaFiles'
+type MockTx_DetachEpisodeMediaFiles_Call struct {
+	*mock.Call
+}
+
+// DetachEpisodeMediaFiles is a helper method to define mock.On call
+//   - ctx context.Context
+//   - showID uint32
+func (_e *MockTx_Expecter) DetachEpisodeMediaFiles(ctx any, showID any) *MockTx_DetachEpisodeMediaFiles_Call {
+	return &MockTx_DetachEpisodeMediaFiles_Call{Call: _e.mock.On("DetachEpisodeMediaFiles", ctx, showID)}
+}
+
+func (_c *MockTx_DetachEpisodeMediaFiles_Call) Run(run func(ctx context.Context, showID uint32)) *MockTx_DetachEpisodeMediaFiles_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_DetachEpisodeMediaFiles_Call) Return(mediaFiles []*ent.MediaFile, err error) *MockTx_DetachEpisodeMediaFiles_Call {
+	_c.Call.Return(mediaFiles, err)
+	return _c
+}
+
+func (_c *MockTx_DetachEpisodeMediaFiles_Call) RunAndReturn(run func(ctx context.Context, showID uint32) ([]*ent.MediaFile, error)) *MockTx_DetachEpisodeMediaFiles_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -8268,6 +8399,72 @@ func (_c *MockTx_MarkDownloadRecordReplaceExisting_Call) RunAndReturn(run func(c
 	return _c
 }
 
+// MarkMediaFileMissing provides a mock function for the type MockTx
+func (_mock *MockTx) MarkMediaFileMissing(ctx context.Context, id uint32) (bool, error) {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for MarkMediaFileMissing")
+	}
+
+	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (bool, error)); ok {
+		return returnFunc(ctx, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) bool); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+		r1 = returnFunc(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_MarkMediaFileMissing_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'MarkMediaFileMissing'
+type MockTx_MarkMediaFileMissing_Call struct {
+	*mock.Call
+}
+
+// MarkMediaFileMissing is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+func (_e *MockTx_Expecter) MarkMediaFileMissing(ctx any, id any) *MockTx_MarkMediaFileMissing_Call {
+	return &MockTx_MarkMediaFileMissing_Call{Call: _e.mock.On("MarkMediaFileMissing", ctx, id)}
+}
+
+func (_c *MockTx_MarkMediaFileMissing_Call) Run(run func(ctx context.Context, id uint32)) *MockTx_MarkMediaFileMissing_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_MarkMediaFileMissing_Call) Return(b bool, err error) *MockTx_MarkMediaFileMissing_Call {
+	_c.Call.Return(b, err)
+	return _c
+}
+
+func (_c *MockTx_MarkMediaFileMissing_Call) RunAndReturn(run func(ctx context.Context, id uint32) (bool, error)) *MockTx_MarkMediaFileMissing_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // MarkRequestsAvailable provides a mock function for the type MockTx
 func (_mock *MockTx) MarkRequestsAvailable(ctx context.Context, mediaType string, mediaID uint32) error {
 	ret := _mock.Called(ctx, mediaType, mediaID)
@@ -9947,6 +10144,69 @@ func (_c *MockTx_SetMovieLastSearchAt_Call) RunAndReturn(run func(ctx context.Co
 	return _c
 }
 
+// SetMovieTMDBID provides a mock function for the type MockTx
+func (_mock *MockTx) SetMovieTMDBID(ctx context.Context, id uint32, tmdbID uint32) error {
+	ret := _mock.Called(ctx, id, tmdbID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetMovieTMDBID")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32) error); ok {
+		r0 = returnFunc(ctx, id, tmdbID)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTx_SetMovieTMDBID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetMovieTMDBID'
+type MockTx_SetMovieTMDBID_Call struct {
+	*mock.Call
+}
+
+// SetMovieTMDBID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - tmdbID uint32
+func (_e *MockTx_Expecter) SetMovieTMDBID(ctx any, id any, tmdbID any) *MockTx_SetMovieTMDBID_Call {
+	return &MockTx_SetMovieTMDBID_Call{Call: _e.mock.On("SetMovieTMDBID", ctx, id, tmdbID)}
+}
+
+func (_c *MockTx_SetMovieTMDBID_Call) Run(run func(ctx context.Context, id uint32, tmdbID uint32)) *MockTx_SetMovieTMDBID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 uint32
+		if args[2] != nil {
+			arg2 = args[2].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_SetMovieTMDBID_Call) Return(err error) *MockTx_SetMovieTMDBID_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTx_SetMovieTMDBID_Call) RunAndReturn(run func(ctx context.Context, id uint32, tmdbID uint32) error) *MockTx_SetMovieTMDBID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SetSeasonMonitored provides a mock function for the type MockTx
 func (_mock *MockTx) SetSeasonMonitored(ctx context.Context, id uint32, monitored bool) error {
 	ret := _mock.Called(ctx, id, monitored)
@@ -10069,6 +10329,69 @@ func (_c *MockTx_SetTVShowRefreshedAt_Call) Return(err error) *MockTx_SetTVShowR
 }
 
 func (_c *MockTx_SetTVShowRefreshedAt_Call) RunAndReturn(run func(ctx context.Context, id uint32, when time.Time) error) *MockTx_SetTVShowRefreshedAt_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetTVShowTVDBID provides a mock function for the type MockTx
+func (_mock *MockTx) SetTVShowTVDBID(ctx context.Context, id uint32, tvdbID uint32) error {
+	ret := _mock.Called(ctx, id, tvdbID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetTVShowTVDBID")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32) error); ok {
+		r0 = returnFunc(ctx, id, tvdbID)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTx_SetTVShowTVDBID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetTVShowTVDBID'
+type MockTx_SetTVShowTVDBID_Call struct {
+	*mock.Call
+}
+
+// SetTVShowTVDBID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - tvdbID uint32
+func (_e *MockTx_Expecter) SetTVShowTVDBID(ctx any, id any, tvdbID any) *MockTx_SetTVShowTVDBID_Call {
+	return &MockTx_SetTVShowTVDBID_Call{Call: _e.mock.On("SetTVShowTVDBID", ctx, id, tvdbID)}
+}
+
+func (_c *MockTx_SetTVShowTVDBID_Call) Run(run func(ctx context.Context, id uint32, tvdbID uint32)) *MockTx_SetTVShowTVDBID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 uint32
+		if args[2] != nil {
+			arg2 = args[2].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_SetTVShowTVDBID_Call) Return(err error) *MockTx_SetTVShowTVDBID_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTx_SetTVShowTVDBID_Call) RunAndReturn(run func(ctx context.Context, id uint32, tvdbID uint32) error) *MockTx_SetTVShowTVDBID_Call {
 	_c.Call.Return(run)
 	return _c
 }

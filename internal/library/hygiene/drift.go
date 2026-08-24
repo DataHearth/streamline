@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/otelx"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -71,6 +72,17 @@ func (s *Service) handleMissing(
 ) {
 	driftDrifted.Add(ctx, 1)
 
+	first, err := s.store.MarkMediaFileMissing(ctx, row.ID)
+	if err != nil {
+		slog.WarnContext(ctx, "mark missing failed",
+			"media_file.id", row.ID, "error", err)
+	}
+	if first {
+		s.recordDrift(ctx, row, events.TypeDriftDetected, map[string]any{
+			"path": row.Path,
+		})
+	}
+
 	// First-tick free pass: NULL last_seen_at → start grace clock.
 	if row.LastSeenAt == nil {
 		if err := s.store.BumpMediaFileLastSeen(ctx, row.ID); err != nil {
@@ -83,6 +95,11 @@ func (s *Service) handleMissing(
 		return
 	}
 
+	s.recordDrift(ctx, row, events.TypeDriftConfirmed, map[string]any{
+		"path":          row.Path,
+		"missing_since": row.LastSeenAt.UTC(),
+	})
+
 	switch {
 	case row.Edges.Movie != nil:
 		s.revertMovie(ctx, row.ID, row.Edges.Movie.ID)
@@ -90,6 +107,30 @@ func (s *Service) handleMissing(
 		s.revertEpisode(ctx, row.ID, row.Edges.Episode.ID)
 	default:
 		s.deleteOrphan(ctx, row)
+	}
+}
+
+// recordDrift attributes a drift event to the row's owner. An ownerless row
+// (a legacy orphan, reaped below) has nobody to tell, so it is skipped.
+func (s *Service) recordDrift(
+	ctx context.Context,
+	row *ent.MediaFile,
+	t events.Type,
+	payload map[string]any,
+) {
+	var scope events.Scope
+	var id uint32
+	switch {
+	case row.Edges.Movie != nil:
+		scope, id = events.ScopeMovie, row.Edges.Movie.ID
+	case row.Edges.Episode != nil:
+		scope, id = events.ScopeEpisode, row.Edges.Episode.ID
+	default:
+		return
+	}
+	if err := events.Record(ctx, nil, t, scope, id, payload); err != nil {
+		slog.WarnContext(ctx, "record drift event failed",
+			"media_file.id", row.ID, "event.type", string(t), "error", err)
 	}
 }
 

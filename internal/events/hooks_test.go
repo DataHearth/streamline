@@ -9,7 +9,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/importscanfile"
-	"github.com/datahearth/streamline/ent/movieevent"
+	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/internal/db"
 )
 
@@ -45,9 +45,9 @@ var _ = Describe("hooks via Register", Label("integration", "events"), func() {
 			SetSize(4_000_000_000).
 			SaveX(ctx)
 
-		evs := client.MovieEvent.Query().AllX(ctx)
+		evs := client.MediaEvent.Query().AllX(ctx)
 		Expect(evs).To(HaveLen(1))
-		Expect(evs[0].Type).To(Equal(movieevent.Type(TypeGrabbed)))
+		Expect(evs[0].Type).To(Equal(mediaevent.Type(TypeGrabbed)))
 		Expect(
 			evs[0].Payload,
 		).To(HaveKeyWithValue("release_title", "Fight.Club.1999.1080p.BluRay-X"))
@@ -72,8 +72,8 @@ var _ = Describe("hooks via Register", Label("integration", "events"), func() {
 
 		types := allEventTypes(ctx, client)
 		Expect(types).To(ConsistOf(
-			movieevent.Type(TypeGrabbed),
-			movieevent.Type(TypeDownloadCompleted),
+			mediaevent.Type(TypeGrabbed),
+			mediaevent.Type(TypeDownloadCompleted),
 		))
 	})
 
@@ -95,8 +95,8 @@ var _ = Describe("hooks via Register", Label("integration", "events"), func() {
 			SetFailureReason("seed timeout").
 			SaveX(ctx)
 
-		failed, err := client.MovieEvent.Query().
-			Where(movieevent.TypeEQ(movieevent.Type(TypeDownloadFailed))).
+		failed, err := client.MediaEvent.Query().
+			Where(mediaevent.TypeEQ(mediaevent.Type(TypeDownloadFailed))).
 			Only(ctx)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(failed.Payload).To(HaveKeyWithValue("reason", "seed timeout"))
@@ -117,9 +117,9 @@ var _ = Describe("hooks via Register", Label("integration", "events"), func() {
 			SetSource("orphan").
 			SaveX(ctx)
 
-		evs := client.MovieEvent.Query().AllX(ctx)
+		evs := client.MediaEvent.Query().AllX(ctx)
 		Expect(evs).To(HaveLen(1))
-		Expect(evs[0].Type).To(Equal(movieevent.Type(TypeImported)))
+		Expect(evs[0].Type).To(Equal(mediaevent.Type(TypeImported)))
 		Expect(evs[0].Payload).To(HaveKeyWithValue("source", "orphan"))
 	})
 
@@ -150,8 +150,8 @@ var _ = Describe("hooks via Register", Label("integration", "events"), func() {
 				SetOutcomeMessage("hardlink rejected").
 				SaveX(ctx)
 
-			failed, err := client.MovieEvent.Query().
-				Where(movieevent.TypeEQ(movieevent.Type(TypeImportFailed))).
+			failed, err := client.MediaEvent.Query().
+				Where(mediaevent.TypeEQ(mediaevent.Type(TypeImportFailed))).
 				Only(ctx)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(failed.Payload).To(HaveKeyWithValue("error", "hardlink rejected"))
@@ -174,8 +174,8 @@ var _ = Describe("hooks via Register", Label("integration", "events"), func() {
 			SetOutcome(importscanfile.OutcomeFailed).
 			SaveX(ctx)
 
-		count, err := client.MovieEvent.Query().
-			Where(movieevent.TypeEQ(movieevent.Type(TypeImportFailed))).
+		count, err := client.MediaEvent.Query().
+			Where(mediaevent.TypeEQ(mediaevent.Type(TypeImportFailed))).
 			Count(ctx)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(count).To(Equal(0))
@@ -196,17 +196,17 @@ var _ = Describe("hooks via Register", Label("integration", "events"), func() {
 		client.DownloadRecord.UpdateOne(dl).
 			SetStatus(downloadrecord.StatusCompleted).SaveX(ctx)
 
-		Expect(client.MovieEvent.Query().CountX(ctx)).To(Equal(0))
+		Expect(client.MediaEvent.Query().CountX(ctx)).To(Equal(0))
 	})
 })
 
-func allEventTypes(ctx context.Context, c *ent.Client) []movieevent.Type {
+func allEventTypes(ctx context.Context, c *ent.Client) []mediaevent.Type {
 	GinkgoHelper()
-	rows, err := c.MovieEvent.Query().
-		Order(ent.Asc(movieevent.FieldCreateTime)).
+	rows, err := c.MediaEvent.Query().
+		Order(ent.Asc(mediaevent.FieldCreateTime)).
 		All(ctx)
 	Expect(err).NotTo(HaveOccurred())
-	out := make([]movieevent.Type, 0, len(rows))
+	out := make([]mediaevent.Type, 0, len(rows))
 	for _, r := range rows {
 		out = append(out, r.Type)
 	}

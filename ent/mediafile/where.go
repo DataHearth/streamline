@@ -95,6 +95,11 @@ func LastSeenAt(v time.Time) predicate.MediaFile {
 	return predicate.MediaFile(sql.FieldEQ(FieldLastSeenAt, v))
 }
 
+// MissingSince applies equality check predicate on the "missing_since" field. It's identical to MissingSinceEQ.
+func MissingSince(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldMissingSince, v))
+}
+
 // Container applies equality check predicate on the "container" field. It's identical to ContainerEQ.
 func Container(v string) predicate.MediaFile {
 	return predicate.MediaFile(sql.FieldEQ(FieldContainer, v))
@@ -618,6 +623,56 @@ func LastSeenAtIsNil() predicate.MediaFile {
 // LastSeenAtNotNil applies the NotNil predicate on the "last_seen_at" field.
 func LastSeenAtNotNil() predicate.MediaFile {
 	return predicate.MediaFile(sql.FieldNotNull(FieldLastSeenAt))
+}
+
+// MissingSinceEQ applies the EQ predicate on the "missing_since" field.
+func MissingSinceEQ(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldMissingSince, v))
+}
+
+// MissingSinceNEQ applies the NEQ predicate on the "missing_since" field.
+func MissingSinceNEQ(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNEQ(FieldMissingSince, v))
+}
+
+// MissingSinceIn applies the In predicate on the "missing_since" field.
+func MissingSinceIn(vs ...time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIn(FieldMissingSince, vs...))
+}
+
+// MissingSinceNotIn applies the NotIn predicate on the "missing_since" field.
+func MissingSinceNotIn(vs ...time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotIn(FieldMissingSince, vs...))
+}
+
+// MissingSinceGT applies the GT predicate on the "missing_since" field.
+func MissingSinceGT(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGT(FieldMissingSince, v))
+}
+
+// MissingSinceGTE applies the GTE predicate on the "missing_since" field.
+func MissingSinceGTE(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGTE(FieldMissingSince, v))
+}
+
+// MissingSinceLT applies the LT predicate on the "missing_since" field.
+func MissingSinceLT(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLT(FieldMissingSince, v))
+}
+
+// MissingSinceLTE applies the LTE predicate on the "missing_since" field.
+func MissingSinceLTE(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLTE(FieldMissingSince, v))
+}
+
+// MissingSinceIsNil applies the IsNil predicate on the "missing_since" field.
+func MissingSinceIsNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIsNull(FieldMissingSince))
+}
+
+// MissingSinceNotNil applies the NotNil predicate on the "missing_since" field.
+func MissingSinceNotNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotNull(FieldMissingSince))
 }
 
 // ContainerEQ applies the EQ predicate on the "container" field.

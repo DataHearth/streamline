@@ -67,9 +67,11 @@ type TVShow struct {
 type TVShowEdges struct {
 	// Seasons holds the value of the seasons edge.
 	Seasons []*Season `json:"seasons,omitempty"`
+	// Events holds the value of the events edge.
+	Events []*MediaEvent `json:"events,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
+	loadedTypes [2]bool
 }
 
 // SeasonsOrErr returns the Seasons value or an error if the edge
@@ -79,6 +81,15 @@ func (e TVShowEdges) SeasonsOrErr() ([]*Season, error) {
 		return e.Seasons, nil
 	}
 	return nil, &NotLoadedError{edge: "seasons"}
+}
+
+// EventsOrErr returns the Events value or an error if the edge
+// was not loaded in eager-loading.
+func (e TVShowEdges) EventsOrErr() ([]*MediaEvent, error) {
+	if e.loadedTypes[1] {
+		return e.Events, nil
+	}
+	return nil, &NotLoadedError{edge: "events"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -254,6 +265,11 @@ func (_m *TVShow) Value(name string) (ent.Value, error) {
 // QuerySeasons queries the "seasons" edge of the TVShow entity.
 func (_m *TVShow) QuerySeasons() *SeasonQuery {
 	return NewTVShowClient(_m.config).QuerySeasons(_m)
+}
+
+// QueryEvents queries the "events" edge of the TVShow entity.
+func (_m *TVShow) QueryEvents() *MediaEventQuery {
+	return NewTVShowClient(_m.config).QueryEvents(_m)
 }
 
 // Update returns a builder for updating this TVShow.

@@ -105,16 +105,24 @@ export function createSearchModel(
 	getQuery: () => string,
 	opts: { compact?: boolean } = {},
 ) {
+	// SearchField sits in the global layout, so this model is constructed on
+	// every route. Ungated, each mount pulled the whole movie and series
+	// libraries for a panel that stays closed until the user types — on a
+	// 23-show library that was 2.8 MB and ~2.6s of the /movies page load.
+	const enabled = $derived(getQuery().trim().length >= TITLE_MIN);
+
 	const moviesQuery = createQuery(() => ({
 		queryKey: ["movies"],
 		queryFn: () => apiAllPages<Movie>("/movies"),
 		staleTime: 30_000,
+		enabled,
 	}));
 
 	const seriesQuery = createQuery(() => ({
 		queryKey: ["series"],
 		queryFn: () => apiAllPages<TVShow>("/series"),
 		staleTime: 30_000,
+		enabled,
 	}));
 
 	function pages(): PageItem[] {
@@ -199,9 +207,9 @@ export function createSearchModel(
 	let titleHits = $derived(
 		flat.filter((i) => i.kind === "movie" || i.kind === "series").length,
 	);
-	// What search actually looks at, not what the library holds: both queries
-	// take one page of 500. Above that the hint understates, which is the safe
-	// direction for a line that exists to say "there is more behind this".
+	// What search actually looks at, not what the library holds. Null until the
+	// query passes TITLE_MIN and the fetch lands, so the hint stays absent
+	// rather than claiming zero while the panel is still closed.
 	let searchable = $derived.by<number | null>(() => {
 		const m = moviesQuery.data?.items.length ?? null;
 		const s = seriesQuery.data?.items.length ?? null;

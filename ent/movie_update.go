@@ -13,9 +13,9 @@ import (
 	"entgo.io/ent/dialect/sql/sqljson"
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
-	"github.com/datahearth/streamline/ent/movieevent"
 	"github.com/datahearth/streamline/ent/predicate"
 	"github.com/datahearth/streamline/ent/schema"
 )
@@ -398,14 +398,14 @@ func (_u *MovieUpdate) AddMediaFiles(v ...*MediaFile) *MovieUpdate {
 	return _u.AddMediaFileIDs(ids...)
 }
 
-// AddEventIDs adds the "events" edge to the MovieEvent entity by IDs.
+// AddEventIDs adds the "events" edge to the MediaEvent entity by IDs.
 func (_u *MovieUpdate) AddEventIDs(ids ...uint32) *MovieUpdate {
 	_u.mutation.AddEventIDs(ids...)
 	return _u
 }
 
-// AddEvents adds the "events" edges to the MovieEvent entity.
-func (_u *MovieUpdate) AddEvents(v ...*MovieEvent) *MovieUpdate {
+// AddEvents adds the "events" edges to the MediaEvent entity.
+func (_u *MovieUpdate) AddEvents(v ...*MediaEvent) *MovieUpdate {
 	ids := make([]uint32, len(v))
 	for i := range v {
 		ids[i] = v[i].ID
@@ -460,20 +460,20 @@ func (_u *MovieUpdate) RemoveMediaFiles(v ...*MediaFile) *MovieUpdate {
 	return _u.RemoveMediaFileIDs(ids...)
 }
 
-// ClearEvents clears all "events" edges to the MovieEvent entity.
+// ClearEvents clears all "events" edges to the MediaEvent entity.
 func (_u *MovieUpdate) ClearEvents() *MovieUpdate {
 	_u.mutation.ClearEvents()
 	return _u
 }
 
-// RemoveEventIDs removes the "events" edge to MovieEvent entities by IDs.
+// RemoveEventIDs removes the "events" edge to MediaEvent entities by IDs.
 func (_u *MovieUpdate) RemoveEventIDs(ids ...uint32) *MovieUpdate {
 	_u.mutation.RemoveEventIDs(ids...)
 	return _u
 }
 
-// RemoveEvents removes "events" edges to MovieEvent entities.
-func (_u *MovieUpdate) RemoveEvents(v ...*MovieEvent) *MovieUpdate {
+// RemoveEvents removes "events" edges to MediaEvent entities.
+func (_u *MovieUpdate) RemoveEvents(v ...*MediaEvent) *MovieUpdate {
 	ids := make([]uint32, len(v))
 	for i := range v {
 		ids[i] = v[i].ID
@@ -756,7 +756,7 @@ func (_u *MovieUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Columns: []string{movie.EventsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(movieevent.FieldID, field.TypeUint32),
+				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -769,7 +769,7 @@ func (_u *MovieUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Columns: []string{movie.EventsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(movieevent.FieldID, field.TypeUint32),
+				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {
@@ -785,7 +785,7 @@ func (_u *MovieUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Columns: []string{movie.EventsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(movieevent.FieldID, field.TypeUint32),
+				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {
@@ -1178,14 +1178,14 @@ func (_u *MovieUpdateOne) AddMediaFiles(v ...*MediaFile) *MovieUpdateOne {
 	return _u.AddMediaFileIDs(ids...)
 }
 
-// AddEventIDs adds the "events" edge to the MovieEvent entity by IDs.
+// AddEventIDs adds the "events" edge to the MediaEvent entity by IDs.
 func (_u *MovieUpdateOne) AddEventIDs(ids ...uint32) *MovieUpdateOne {
 	_u.mutation.AddEventIDs(ids...)
 	return _u
 }
 
-// AddEvents adds the "events" edges to the MovieEvent entity.
-func (_u *MovieUpdateOne) AddEvents(v ...*MovieEvent) *MovieUpdateOne {
+// AddEvents adds the "events" edges to the MediaEvent entity.
+func (_u *MovieUpdateOne) AddEvents(v ...*MediaEvent) *MovieUpdateOne {
 	ids := make([]uint32, len(v))
 	for i := range v {
 		ids[i] = v[i].ID
@@ -1240,20 +1240,20 @@ func (_u *MovieUpdateOne) RemoveMediaFiles(v ...*MediaFile) *MovieUpdateOne {
 	return _u.RemoveMediaFileIDs(ids...)
 }
 
-// ClearEvents clears all "events" edges to the MovieEvent entity.
+// ClearEvents clears all "events" edges to the MediaEvent entity.
 func (_u *MovieUpdateOne) ClearEvents() *MovieUpdateOne {
 	_u.mutation.ClearEvents()
 	return _u
 }
 
-// RemoveEventIDs removes the "events" edge to MovieEvent entities by IDs.
+// RemoveEventIDs removes the "events" edge to MediaEvent entities by IDs.
 func (_u *MovieUpdateOne) RemoveEventIDs(ids ...uint32) *MovieUpdateOne {
 	_u.mutation.RemoveEventIDs(ids...)
 	return _u
 }
 
-// RemoveEvents removes "events" edges to MovieEvent entities.
-func (_u *MovieUpdateOne) RemoveEvents(v ...*MovieEvent) *MovieUpdateOne {
+// RemoveEvents removes "events" edges to MediaEvent entities.
+func (_u *MovieUpdateOne) RemoveEvents(v ...*MediaEvent) *MovieUpdateOne {
 	ids := make([]uint32, len(v))
 	for i := range v {
 		ids[i] = v[i].ID
@@ -1566,7 +1566,7 @@ func (_u *MovieUpdateOne) sqlSave(ctx context.Context) (_node *Movie, err error)
 			Columns: []string{movie.EventsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(movieevent.FieldID, field.TypeUint32),
+				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -1579,7 +1579,7 @@ func (_u *MovieUpdateOne) sqlSave(ctx context.Context) (_node *Movie, err error)
 			Columns: []string{movie.EventsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(movieevent.FieldID, field.TypeUint32),
+				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {
@@ -1595,7 +1595,7 @@ func (_u *MovieUpdateOne) sqlSave(ctx context.Context) (_node *Movie, err error)
 			Columns: []string{movie.EventsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(movieevent.FieldID, field.TypeUint32),
+				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

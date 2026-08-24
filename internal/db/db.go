@@ -199,6 +199,9 @@ type Store interface {
 		p UpdateMovieMetadataParams,
 	) error
 	UpdateMovieStatus(ctx context.Context, id uint32, status movie.Status) error
+	// SetMovieTMDBID repoints a row at a different TMDB title, leaving files
+	// and history in place. The caller refreshes metadata afterwards.
+	SetMovieTMDBID(ctx context.Context, id, tmdbID uint32) error
 	SetMovieLastSearchAt(ctx context.Context, id uint32, when time.Time) error
 	SetMovieDigitalReleaseDate(
 		ctx context.Context,
@@ -364,8 +367,12 @@ type Store interface {
 		ctx context.Context,
 		movieID uint32,
 	) ([]*ent.MediaFile, error)
-	// BumpMediaFileLastSeen sets last_seen_at = now for the given row.
+	// BumpMediaFileLastSeen sets last_seen_at = now for the given row and
+	// clears any missing_since stamp.
 	BumpMediaFileLastSeen(ctx context.Context, id uint32) error
+	// MarkMediaFileMissing stamps missing_since, reporting true only when this
+	// call set it — the first drift tick that could not stat the file.
+	MarkMediaFileMissing(ctx context.Context, id uint32) (bool, error)
 	// CountMovieMediaFiles / CountEpisodeMediaFiles split the shared
 	// media_files table by owner, so the path migration can tell "this root
 	// holds nothing because the library is empty" apart from "…because the
@@ -555,6 +562,20 @@ type Store interface {
 		p UpdateTVShowMetadataParams,
 	) error
 	SetTVShowRefreshedAt(ctx context.Context, id uint32, when time.Time) error
+	// SetTVShowTVDBID repoints a row at a different TVDB show. The episode tree
+	// still describes the old show until the caller reconciles it.
+	SetTVShowTVDBID(ctx context.Context, id, tvdbID uint32) error
+	// DetachEpisodeMediaFiles clears the episode edge on every media file under
+	// the show and returns the detached rows, each carrying its former episode
+	// and season so the caller can re-match by number.
+	DetachEpisodeMediaFiles(
+		ctx context.Context,
+		showID uint32,
+	) ([]*ent.MediaFile, error)
+	AttachMediaFileToEpisode(
+		ctx context.Context,
+		mediaFileID, episodeID uint32,
+	) error
 	ReconcileEpisodes(
 		ctx context.Context,
 		showID uint32,

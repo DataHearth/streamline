@@ -10,21 +10,25 @@ import (
 	"time"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/episode"
+	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/movie"
-	"github.com/datahearth/streamline/ent/movieevent"
+	"github.com/datahearth/streamline/ent/season"
+	"github.com/datahearth/streamline/ent/tvshow"
 )
 
 type ActivityFilter struct {
-	Types   []movieevent.Type
-	MovieID *uint32
-	Since   *time.Time
-	Before  *time.Time
-	Limit   int
-	Cursor  string
+	Types    []mediaevent.Type
+	MovieID  *uint32
+	SeriesID *uint32
+	Since    *time.Time
+	Before   *time.Time
+	Limit    int
+	Cursor   string
 }
 
 type ActivityResult struct {
-	Events     []*ent.MovieEvent
+	Events     []*ent.MediaEvent
 	NextCursor string
 }
 
@@ -39,21 +43,37 @@ func (db *DB) RecentActivity(
 		limit = defaultActivityLimit
 	}
 
-	q := db.client.MovieEvent.Query().
-		Order(ent.Desc(movieevent.FieldCreateTime), ent.Desc(movieevent.FieldID)).
-		WithMovie()
+	// An episode row renders as "Show — S01E03", so the season and its show
+	// come along with it; without them the feed can only name a number.
+	q := db.client.MediaEvent.Query().
+		Order(ent.Desc(mediaevent.FieldCreateTime), ent.Desc(mediaevent.FieldID)).
+		WithMovie().
+		WithTvShow().
+		WithEpisode(func(eq *ent.EpisodeQuery) {
+			eq.WithSeason(func(sq *ent.SeasonQuery) { sq.WithTvShow() })
+		})
 
 	if len(f.Types) > 0 {
-		q = q.Where(movieevent.TypeIn(f.Types...))
+		q = q.Where(mediaevent.TypeIn(f.Types...))
 	}
 	if f.MovieID != nil {
-		q = q.Where(movieevent.HasMovieWith(movie.ID(*f.MovieID)))
+		q = q.Where(mediaevent.HasMovieWith(movie.ID(*f.MovieID)))
+	}
+	// A series' history is split across the show itself (season-scoped
+	// searches) and its episodes, so both sides are matched.
+	if f.SeriesID != nil {
+		q = q.Where(mediaevent.Or(
+			mediaevent.HasTvShowWith(tvshow.ID(*f.SeriesID)),
+			mediaevent.HasEpisodeWith(
+				episode.HasSeasonWith(season.HasTvShowWith(tvshow.ID(*f.SeriesID))),
+			),
+		))
 	}
 	if f.Since != nil {
-		q = q.Where(movieevent.CreateTimeGTE(*f.Since))
+		q = q.Where(mediaevent.CreateTimeGTE(*f.Since))
 	}
 	if f.Before != nil {
-		q = q.Where(movieevent.CreateTimeLT(*f.Before))
+		q = q.Where(mediaevent.CreateTimeLT(*f.Before))
 	}
 	if f.Cursor != "" {
 		ts, id, err := decodeActivityCursor(f.Cursor)
@@ -61,11 +81,11 @@ func (db *DB) RecentActivity(
 			return nil, fmt.Errorf("recent activity: decode cursor: %w", err)
 		}
 		q = q.Where(
-			movieevent.Or(
-				movieevent.CreateTimeLT(ts),
-				movieevent.And(
-					movieevent.CreateTimeEQ(ts),
-					movieevent.IDLT(id),
+			mediaevent.Or(
+				mediaevent.CreateTimeLT(ts),
+				mediaevent.And(
+					mediaevent.CreateTimeEQ(ts),
+					mediaevent.IDLT(id),
 				),
 			),
 		)

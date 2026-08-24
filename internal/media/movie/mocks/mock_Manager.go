@@ -738,6 +738,80 @@ func (_c *MockManager_RefreshOne_Call) RunAndReturn(run func(ctx context.Context
 	return _c
 }
 
+// Reidentify provides a mock function for the type MockManager
+func (_mock *MockManager) Reidentify(ctx context.Context, id uint32, tmdbID uint32) (*ent.Movie, error) {
+	ret := _mock.Called(ctx, id, tmdbID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Reidentify")
+	}
+
+	var r0 *ent.Movie
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32) (*ent.Movie, error)); ok {
+		return returnFunc(ctx, id, tmdbID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32) *ent.Movie); ok {
+		r0 = returnFunc(ctx, id, tmdbID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ent.Movie)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, uint32) error); ok {
+		r1 = returnFunc(ctx, id, tmdbID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockManager_Reidentify_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Reidentify'
+type MockManager_Reidentify_Call struct {
+	*mock.Call
+}
+
+// Reidentify is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - tmdbID uint32
+func (_e *MockManager_Expecter) Reidentify(ctx any, id any, tmdbID any) *MockManager_Reidentify_Call {
+	return &MockManager_Reidentify_Call{Call: _e.mock.On("Reidentify", ctx, id, tmdbID)}
+}
+
+func (_c *MockManager_Reidentify_Call) Run(run func(ctx context.Context, id uint32, tmdbID uint32)) *MockManager_Reidentify_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 uint32
+		if args[2] != nil {
+			arg2 = args[2].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_Reidentify_Call) Return(movie1 *ent.Movie, err error) *MockManager_Reidentify_Call {
+	_c.Call.Return(movie1, err)
+	return _c
+}
+
+func (_c *MockManager_Reidentify_Call) RunAndReturn(run func(ctx context.Context, id uint32, tmdbID uint32) (*ent.Movie, error)) *MockManager_Reidentify_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Update provides a mock function for the type MockManager
 func (_mock *MockManager) Update(ctx context.Context, id uint32, p movie.UpdateParams) (*ent.Movie, error) {
 	ret := _mock.Called(ctx, id, p)

@@ -33,6 +33,11 @@ func (MediaFile) Fields() []ent.Field {
 			Optional().
 			Nillable().
 			Default(time.Now),
+		// Set on the first drift tick that cannot stat the file, cleared the
+		// moment it is seen again. last_seen_at alone cannot tell the first
+		// missing tick from the fifth — it just stops advancing — and that
+		// edge is what the drift_detected event fires on.
+		field.Time("missing_since").Optional().Nillable(),
 		field.String("container").Optional(),
 		field.Uint32("duration_seconds").Optional(),
 		field.String("video_codec").Optional(),

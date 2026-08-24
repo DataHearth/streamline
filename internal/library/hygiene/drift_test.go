@@ -75,6 +75,10 @@ var _ = Describe("Service.RunDriftCheck", Label("unit", "hygiene"), func() {
 				Return(rows, nil).
 				Once()
 			store.EXPECT().
+				MarkMediaFileMissing(mock.Anything, uint32(7)).
+				Return(true, nil).
+				Once()
+			store.EXPECT().
 				BumpMediaFileLastSeen(mock.Anything, uint32(7)).
 				Return(nil).
 				Once()
@@ -94,6 +98,10 @@ var _ = Describe("Service.RunDriftCheck", Label("unit", "hygiene"), func() {
 			ListAllMediaFilesWithOwners(mock.Anything).
 			Return(rows, nil).
 			Once()
+		store.EXPECT().
+			MarkMediaFileMissing(mock.Anything, uint32(11)).
+			Return(true, nil).
+			Once()
 
 		Expect(svc.RunDriftCheck(ctx, 15*time.Minute)).To(Succeed())
 	})
@@ -111,6 +119,10 @@ var _ = Describe("Service.RunDriftCheck", Label("unit", "hygiene"), func() {
 		store.EXPECT().
 			ListAllMediaFilesWithOwners(mock.Anything).
 			Return(rows, nil).
+			Once()
+		store.EXPECT().
+			MarkMediaFileMissing(mock.Anything, uint32(99)).
+			Return(true, nil).
 			Once()
 		store.EXPECT().
 			DeleteMediaFileAndRevertMovie(mock.Anything, uint32(99), uint32(88)).
@@ -135,6 +147,10 @@ var _ = Describe("Service.RunDriftCheck", Label("unit", "hygiene"), func() {
 			Return(rows, nil).
 			Once()
 		store.EXPECT().
+			MarkMediaFileMissing(mock.Anything, uint32(21)).
+			Return(true, nil).
+			Once()
+		store.EXPECT().
 			DeleteMediaFileAndRevertEpisode(mock.Anything, uint32(21), uint32(33)).
 			Return(nil).
 			Once()
@@ -152,6 +168,10 @@ var _ = Describe("Service.RunDriftCheck", Label("unit", "hygiene"), func() {
 		store.EXPECT().
 			ListAllMediaFilesWithOwners(mock.Anything).
 			Return(rows, nil).
+			Once()
+		store.EXPECT().
+			MarkMediaFileMissing(mock.Anything, uint32(64)).
+			Return(true, nil).
 			Once()
 		store.EXPECT().
 			DeleteMediaFile(mock.Anything, uint32(64)).

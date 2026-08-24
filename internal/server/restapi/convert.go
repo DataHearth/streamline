@@ -378,7 +378,7 @@ func toAPIImportScan(s *ent.ImportScan) ImportScan {
 	return out
 }
 
-func toActivityEvent(e *ent.MovieEvent) ActivityEvent {
+func toActivityEvent(e *ent.MediaEvent) ActivityEvent {
 	out := ActivityEvent{
 		Id:        e.ID,
 		Type:      ActivityEventType(e.Type),
@@ -388,10 +388,36 @@ func toActivityEvent(e *ent.MovieEvent) ActivityEvent {
 		p := e.Payload
 		out.Payload = &p
 	}
-	if e.Edges.Movie != nil {
-		out.Movie = movieToAPI(e.Edges.Movie)
+	switch {
+	case e.Edges.Movie != nil:
+		m := movieToAPI(e.Edges.Movie)
+		out.Movie = &m
+	case e.Edges.Episode != nil:
+		out.Episode = episodeRefFor(e.Edges.Episode)
+	case e.Edges.TvShow != nil:
+		out.Series = &SeriesRef{
+			Id:    e.Edges.TvShow.ID,
+			Title: e.Edges.TvShow.Title,
+		}
 	}
 	return out
+}
+
+// episodeRefFor renders "<show> · SxxExx" context from an episode loaded with
+// its season and show. A row missing either edge would show a bare number, so
+// it degrades to nil rather than half a label.
+func episodeRefFor(ep *ent.Episode) *EpisodeRef {
+	se := ep.Edges.Season
+	if se == nil || se.Edges.TvShow == nil {
+		return nil
+	}
+	show := se.Edges.TvShow
+	return &EpisodeRef{
+		ShowTitle: show.Title,
+		Season:    se.Number,
+		Episode:   ep.Number,
+		SeriesId:  &show.ID,
+	}
 }
 
 func toUpcomingEpisode(e *ent.Episode, now time.Time) UpcomingEpisode {

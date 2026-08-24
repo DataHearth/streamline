@@ -59,7 +59,9 @@ var (
 	// ErrMovieExists means the tmdb id is already in the library. Callers that
 	// only want the movie to exist — a bulk-import commit racing another scan —
 	// treat it as success and look the row up.
-	ErrMovieExists = errors.New("movie already exists")
+	ErrMovieExists   = errors.New("movie already exists")
+	ErrInvalidTMDBID = errors.New("tmdb id must be non-zero")
+	ErrSameTMDBID    = errors.New("movie already points at that tmdb id")
 )
 
 type Manager interface {
@@ -80,6 +82,7 @@ type Manager interface {
 		opts DeleteFileOptions,
 	) error
 	RefreshOne(ctx context.Context, id uint32) (*ent.Movie, error)
+	Reidentify(ctx context.Context, id, tmdbID uint32) (*ent.Movie, error)
 	Counts(ctx context.Context) (Counts, error)
 	AnnotateTMDBResults(
 		ctx context.Context,
@@ -503,6 +506,61 @@ func (s *Service) Update(
 	}
 	moviesUpdated.Add(ctx, 1)
 	return m, nil
+}
+
+// Reidentify points the row at a different TMDB title and refreshes its
+// metadata from there. The row keeps its id, so its files, download history
+// and requests survive the repair — only the provider identity changes.
+//
+// Renaming the files into the new title's path is the caller's next step: the
+// rename service is a separate type, and a caller that only wants the metadata
+// corrected (a re-identify to fix a wrong year, say) should not be forced to
+// move files.
+func (s *Service) Reidentify(
+	ctx context.Context,
+	id, tmdbID uint32,
+) (*ent.Movie, error) {
+	ctx, span := tracer.Start(ctx, "movie.reidentify",
+		trace.WithAttributes(
+			attribute.Int64("movie.id", int64(id)),
+			attribute.Int64("movie.tmdb_id", int64(tmdbID)),
+		),
+	)
+	defer span.End()
+
+	if tmdbID == 0 {
+		return nil, otelx.RecordSpanError(span, ErrInvalidTMDBID)
+	}
+	m, err := s.db.FindMovieByID(ctx, id)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, otelx.RecordSpanError(span,
+				fmt.Errorf("movie %d: %w", id, ErrMovieNotFound))
+		}
+		return nil, otelx.RecordSpanError(span, fmt.Errorf("get movie: %w", err))
+	}
+	if m.TmdbID == tmdbID {
+		return nil, otelx.RecordSpanError(span, ErrSameTMDBID)
+	}
+	// tmdb_id is unique, so the write below would fail on a constraint the
+	// caller cannot act on. Check first and say what is actually wrong.
+	if _, err := s.db.FindMovieByTMDBID(ctx, tmdbID); err == nil {
+		return nil, otelx.RecordSpanError(span, ErrMovieExists)
+	} else if !ent.IsNotFound(err) {
+		return nil, otelx.RecordSpanError(span, fmt.Errorf("lookup target: %w", err))
+	}
+
+	if err := s.db.SetMovieTMDBID(ctx, id, tmdbID); err != nil {
+		return nil, otelx.RecordSpanError(span, fmt.Errorf("set tmdb id: %w", err))
+	}
+	// The row now carries the new id with the old title. A failed refresh would
+	// leave it that way, so report it rather than swallowing it.
+	m.TmdbID = tmdbID
+	if err := s.refreshOne(ctx, m); err != nil {
+		return nil, otelx.RecordSpanError(span,
+			fmt.Errorf("refresh after re-identify: %w", err))
+	}
+	return s.db.FindMovieByID(ctx, id)
 }
 
 // RefreshStale re-fetches TMDB metadata for movies whose update_time is older

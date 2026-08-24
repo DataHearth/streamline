@@ -8,6 +8,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/otelx"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -60,10 +61,7 @@ func (s *EpisodeMissingSearcher) Run(ctx context.Context) error {
 		return nil
 	}
 	for _, show := range shows {
-		titles := []string{show.Title}
-		for _, se := range show.Edges.Seasons {
-			s.processSeason(ctx, show, se, titles)
-		}
+		s.searchShow(ctx, show)
 	}
 	return nil
 }
@@ -90,12 +88,58 @@ func (s *EpisodeMissingSearcher) SearchShow(
 		if show.ID != showID {
 			continue
 		}
-		titles := []string{show.Title}
-		for _, se := range show.Edges.Seasons {
-			s.processSeason(ctx, show, se, titles)
-		}
+		s.searchShow(ctx, show)
 	}
 	return nil
+}
+
+// searchTally is what one series-scoped search pass did, aggregated across the
+// seasons it touched. It becomes the payload of the single `searched` event.
+type searchTally struct {
+	seasons  []uint16
+	episodes int
+	grabbed  int
+	packs    int
+}
+
+func (t *searchTally) add(seasonNumber uint16, s searchTally) {
+	if s.episodes == 0 {
+		return
+	}
+	t.seasons = append(t.seasons, seasonNumber)
+	t.episodes += s.episodes
+	t.grabbed += s.grabbed
+	t.packs += s.packs
+}
+
+// searchShow runs the pass over every season with wanted episodes and records
+// one `searched` event for the whole invocation. Recording per episode would
+// write a row per wanted episode per tick; the operator asked for a search of
+// this series, so that is what the history shows — with the seasons actually
+// touched in the payload, so a single-season pass still reads as one.
+func (s *EpisodeMissingSearcher) searchShow(ctx context.Context, show *ent.TVShow) {
+	titles := []string{show.Title}
+	var tally searchTally
+	for _, se := range show.Edges.Seasons {
+		tally.add(se.Number, s.processSeason(ctx, show, se, titles))
+	}
+	if tally.episodes == 0 {
+		return
+	}
+	payload := map[string]any{
+		"seasons":           tally.seasons,
+		"episodes_searched": tally.episodes,
+		"grabbed":           tally.grabbed,
+	}
+	if tally.packs > 0 {
+		payload["packs"] = tally.packs
+	}
+	if err := events.Record(
+		ctx, nil, events.TypeSearched, events.ScopeSeries, show.ID, payload,
+	); err != nil {
+		slog.WarnContext(ctx, "tv missing-search: record searched event failed",
+			"tvshow.id", show.ID, "error", err)
+	}
 }
 
 func (s *EpisodeMissingSearcher) eligibleShows(
@@ -120,22 +164,30 @@ func (s *EpisodeMissingSearcher) processSeason(
 	show *ent.TVShow,
 	se *ent.Season,
 	titles []string,
-) {
+) searchTally {
 	wanted := se.Edges.Episodes
 	if len(wanted) == 0 {
-		return
+		return searchTally{}
 	}
 	quality := qualityFor(ctx, show.QualityProfile)
 
 	// Prefer a season pack when the whole season (2+ episodes) is wanted.
 	if len(wanted) >= 2 &&
 		s.grabSeasonPack(ctx, show, se, titles, wanted, quality) {
-		return
+		return searchTally{
+			episodes: len(wanted),
+			grabbed:  len(wanted),
+			packs:    1,
+		}
 	}
 
+	t := searchTally{episodes: len(wanted)}
 	for _, e := range wanted {
-		s.grabEpisode(ctx, show, se, e, titles, quality)
+		if s.grabEpisode(ctx, show, se, e, titles, quality) {
+			t.grabbed++
+		}
 	}
+	return t
 }
 
 // grabSeasonPack searches for a season pack and, on the first acceptable
@@ -189,6 +241,7 @@ func (s *EpisodeMissingSearcher) grabSeasonPack(
 // grabEpisode searches for a single episode and grabs the first acceptable
 // result, bumping/resetting grab_failures accordingly. last_search_at is
 // stamped whenever the indexer responds so the cooldown counter advances.
+// Reports whether a release was grabbed.
 func (s *EpisodeMissingSearcher) grabEpisode(
 	ctx context.Context,
 	show *ent.TVShow,
@@ -196,7 +249,7 @@ func (s *EpisodeMissingSearcher) grabEpisode(
 	e *ent.Episode,
 	titles []string,
 	quality QualityConfig,
-) {
+) bool {
 	results, err := s.indexers.SearchEpisode(
 		ctx, titles, show.TvdbID, se.Number, e.Number,
 	)
@@ -204,7 +257,7 @@ func (s *EpisodeMissingSearcher) grabEpisode(
 		slog.WarnContext(ctx, "tv missing-search: episode search failed",
 			"show", show.Title, "season", se.Number, "episode", e.Number,
 			"error", err)
-		return
+		return false
 	}
 
 	for _, r := range results {
@@ -238,10 +291,11 @@ func (s *EpisodeMissingSearcher) grabEpisode(
 		slog.InfoContext(ctx, "tv missing-search: grabbed episode",
 			"show", show.Title, "season", se.Number, "episode", e.Number,
 			"release", r.Title)
-		return
+		return true
 	}
 	// No acceptable release: still advance the cooldown counter.
 	stampEpisodeSearch(ctx, s.store, e.ID, time.Now())
+	return false
 }
 
 // markEpisodeDownloading flips an episode to downloading and stamps

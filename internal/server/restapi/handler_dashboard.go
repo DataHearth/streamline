@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/datahearth/streamline/ent/movieevent"
+	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/internal/db"
 )
 
@@ -17,7 +17,7 @@ func (s *Server) ListActivity(
 
 	if req.Params.Type != nil {
 		for _, t := range *req.Params.Type {
-			f.Types = append(f.Types, movieevent.Type(t))
+			f.Types = append(f.Types, mediaevent.Type(t))
 		}
 	}
 	if req.Params.MovieId != nil {

@@ -664,6 +664,29 @@ func HasMediaFilesWith(preds ...predicate.MediaFile) predicate.Episode {
 	})
 }
 
+// HasEvents applies the HasEdge predicate on the "events" edge.
+func HasEvents() predicate.Episode {
+	return predicate.Episode(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, EventsTable, EventsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasEventsWith applies the HasEdge predicate on the "events" edge with a given conditions (other predicates).
+func HasEventsWith(preds ...predicate.MediaEvent) predicate.Episode {
+	return predicate.Episode(func(s *sql.Selector) {
+		step := newEventsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.Episode) predicate.Episode {
 	return predicate.Episode(sql.AndPredicates(predicates...))

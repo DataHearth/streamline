@@ -70,7 +70,7 @@ type MovieEdges struct {
 	// MediaFiles holds the value of the media_files edge.
 	MediaFiles []*MediaFile `json:"media_files,omitempty"`
 	// Events holds the value of the events edge.
-	Events []*MovieEvent `json:"events,omitempty"`
+	Events []*MediaEvent `json:"events,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [3]bool
@@ -96,7 +96,7 @@ func (e MovieEdges) MediaFilesOrErr() ([]*MediaFile, error) {
 
 // EventsOrErr returns the Events value or an error if the edge
 // was not loaded in eager-loading.
-func (e MovieEdges) EventsOrErr() ([]*MovieEvent, error) {
+func (e MovieEdges) EventsOrErr() ([]*MediaEvent, error) {
 	if e.loadedTypes[2] {
 		return e.Events, nil
 	}
@@ -286,7 +286,7 @@ func (_m *Movie) QueryMediaFiles() *MediaFileQuery {
 }
 
 // QueryEvents queries the "events" edge of the Movie entity.
-func (_m *Movie) QueryEvents() *MovieEventQuery {
+func (_m *Movie) QueryEvents() *MediaEventQuery {
 	return NewMovieClient(_m.config).QueryEvents(_m)
 }
 

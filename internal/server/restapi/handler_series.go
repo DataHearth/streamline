@@ -499,6 +499,57 @@ func (s *Server) GrabSeasonRelease(
 	return GrabSeasonRelease202Response{}, nil
 }
 
+func (s *Server) ReidentifySeries(
+	ctx context.Context,
+	request ReidentifySeriesRequestObject,
+) (ReidentifySeriesResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return ReidentifySeries403JSONResponse{
+			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
+	show, unmatched, err := s.tvshows.Reidentify(
+		ctx, request.Id, request.Body.TvdbId,
+	)
+	switch {
+	case errors.Is(err, tvshow.ErrSeriesNotFound):
+		return ReidentifySeries404JSONResponse{
+			NotFoundJSONResponse: errNotFound("series not found"),
+		}, nil
+	case errors.Is(err, tvshow.ErrInvalidTVDBID),
+		errors.Is(err, tvshow.ErrSameTVDBID):
+		return ReidentifySeries400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(err.Error()),
+		}, nil
+	case errors.Is(err, tvshow.ErrSeriesExists):
+		return ReidentifySeries409JSONResponse{
+			ConflictJSONResponse: errConflict(
+				"that series is already in the library; delete it first",
+			),
+		}, nil
+	case err != nil:
+		return ReidentifySeries500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+
+	out := ReidentifyResult{Id: show.ID, Title: show.Title}
+	if len(unmatched) > 0 {
+		out.Unmatched = &unmatched
+	}
+	if s.seriesRenamer != nil {
+		plan, err := s.seriesRenamer.Apply(ctx, show.ID)
+		if err != nil {
+			slog.WarnContext(ctx, "rename after re-identify failed",
+				"tvshow.id", show.ID, "error", err)
+		}
+		out.Renamed = len(plan.Operations)
+	}
+	return ReidentifySeries200JSONResponse{
+		ReidentifyResultJSONResponse: ReidentifyResultJSONResponse(out),
+	}, nil
+}
+
 func (s *Server) BrowseSeriesReleases(
 	ctx context.Context,
 	request BrowseSeriesReleasesRequestObject,

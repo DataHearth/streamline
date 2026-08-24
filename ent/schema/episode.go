@@ -41,5 +41,7 @@ func (Episode) Edges() []ent.Edge {
 			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("media_files", MediaFile.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),
+		edge.To("events", MediaEvent.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
 }

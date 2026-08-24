@@ -8,7 +8,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/datahearth/streamline/ent"
-	"github.com/datahearth/streamline/ent/movieevent"
+	"github.com/datahearth/streamline/ent/mediaevent"
 )
 
 var _ = Describe("Store.RecentActivity", Label("integration", "db"), func() {
@@ -35,9 +35,9 @@ var _ = Describe("Store.RecentActivity", Label("integration", "db"), func() {
 		return m.ID
 	}
 
-	createEvent := func(movieID uint32, t movieevent.Type, ago time.Duration) {
+	createEvent := func(movieID uint32, t mediaevent.Type, ago time.Duration) {
 		GinkgoHelper()
-		client.MovieEvent.Create().
+		client.MediaEvent.Create().
 			SetMovieID(movieID).
 			SetType(t).
 			SetCreateTime(time.Now().Add(-ago)).
@@ -52,7 +52,7 @@ var _ = Describe("Store.RecentActivity", Label("integration", "db"), func() {
 		res, err := store.RecentActivity(ctx, ActivityFilter{})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(res.Events).To(HaveLen(2))
-		Expect(res.Events[0].Type).To(Equal(movieevent.Type("imported")))
+		Expect(res.Events[0].Type).To(Equal(mediaevent.Type("imported")))
 		Expect(res.Events[0].Edges.Movie).NotTo(BeNil())
 		Expect(res.Events[0].Edges.Movie.Title).To(Equal("Fight Club"))
 		Expect(res.NextCursor).To(BeEmpty())
@@ -65,11 +65,11 @@ var _ = Describe("Store.RecentActivity", Label("integration", "db"), func() {
 		createEvent(mid, "imported", 1*time.Minute)
 
 		res, err := store.RecentActivity(ctx, ActivityFilter{
-			Types: []movieevent.Type{"drift_detected"},
+			Types: []mediaevent.Type{"drift_detected"},
 		})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(res.Events).To(HaveLen(1))
-		Expect(res.Events[0].Type).To(Equal(movieevent.Type("drift_detected")))
+		Expect(res.Events[0].Type).To(Equal(mediaevent.Type("drift_detected")))
 	})
 
 	It("filters by movie id", func() {
@@ -103,7 +103,7 @@ var _ = Describe("Store.RecentActivity", Label("integration", "db"), func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(page2.Events).To(HaveLen(2))
 
-		ids := func(rs []*ent.MovieEvent) []uint32 {
+		ids := func(rs []*ent.MediaEvent) []uint32 {
 			out := make([]uint32, 0, len(rs))
 			for _, r := range rs {
 				out = append(out, r.ID)

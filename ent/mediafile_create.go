@@ -132,6 +132,20 @@ func (_c *MediaFileCreate) SetNillableLastSeenAt(v *time.Time) *MediaFileCreate 
 	return _c
 }
 
+// SetMissingSince sets the "missing_since" field.
+func (_c *MediaFileCreate) SetMissingSince(v time.Time) *MediaFileCreate {
+	_c.mutation.SetMissingSince(v)
+	return _c
+}
+
+// SetNillableMissingSince sets the "missing_since" field if the given value is not nil.
+func (_c *MediaFileCreate) SetNillableMissingSince(v *time.Time) *MediaFileCreate {
+	if v != nil {
+		_c.SetMissingSince(*v)
+	}
+	return _c
+}
+
 // SetContainer sets the "container" field.
 func (_c *MediaFileCreate) SetContainer(v string) *MediaFileCreate {
 	_c.mutation.SetContainer(v)
@@ -449,6 +463,10 @@ func (_c *MediaFileCreate) createSpec() (*MediaFile, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.LastSeenAt(); ok {
 		_spec.SetField(mediafile.FieldLastSeenAt, field.TypeTime, value)
 		_node.LastSeenAt = &value
+	}
+	if value, ok := _c.mutation.MissingSince(); ok {
+		_spec.SetField(mediafile.FieldMissingSince, field.TypeTime, value)
+		_node.MissingSince = &value
 	}
 	if value, ok := _c.mutation.Container(); ok {
 		_spec.SetField(mediafile.FieldContainer, field.TypeString, value)

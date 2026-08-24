@@ -22,9 +22,9 @@ import (
 	"github.com/datahearth/streamline/ent/importscanfile"
 	"github.com/datahearth/streamline/ent/importscanshow"
 	"github.com/datahearth/streamline/ent/invite"
+	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
-	"github.com/datahearth/streamline/ent/movieevent"
 	"github.com/datahearth/streamline/ent/oidcidentity"
 	"github.com/datahearth/streamline/ent/request"
 	"github.com/datahearth/streamline/ent/scheduledjob"
@@ -54,12 +54,12 @@ type Client struct {
 	ImportScanShow *ImportScanShowClient
 	// Invite is the client for interacting with the Invite builders.
 	Invite *InviteClient
+	// MediaEvent is the client for interacting with the MediaEvent builders.
+	MediaEvent *MediaEventClient
 	// MediaFile is the client for interacting with the MediaFile builders.
 	MediaFile *MediaFileClient
 	// Movie is the client for interacting with the Movie builders.
 	Movie *MovieClient
-	// MovieEvent is the client for interacting with the MovieEvent builders.
-	MovieEvent *MovieEventClient
 	// OIDCIdentity is the client for interacting with the OIDCIdentity builders.
 	OIDCIdentity *OIDCIdentityClient
 	// Request is the client for interacting with the Request builders.
@@ -94,9 +94,9 @@ func (c *Client) init() {
 	c.ImportScanFile = NewImportScanFileClient(c.config)
 	c.ImportScanShow = NewImportScanShowClient(c.config)
 	c.Invite = NewInviteClient(c.config)
+	c.MediaEvent = NewMediaEventClient(c.config)
 	c.MediaFile = NewMediaFileClient(c.config)
 	c.Movie = NewMovieClient(c.config)
-	c.MovieEvent = NewMovieEventClient(c.config)
 	c.OIDCIdentity = NewOIDCIdentityClient(c.config)
 	c.Request = NewRequestClient(c.config)
 	c.ScheduledJob = NewScheduledJobClient(c.config)
@@ -204,9 +204,9 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		ImportScanFile: NewImportScanFileClient(cfg),
 		ImportScanShow: NewImportScanShowClient(cfg),
 		Invite:         NewInviteClient(cfg),
+		MediaEvent:     NewMediaEventClient(cfg),
 		MediaFile:      NewMediaFileClient(cfg),
 		Movie:          NewMovieClient(cfg),
-		MovieEvent:     NewMovieEventClient(cfg),
 		OIDCIdentity:   NewOIDCIdentityClient(cfg),
 		Request:        NewRequestClient(cfg),
 		ScheduledJob:   NewScheduledJobClient(cfg),
@@ -241,9 +241,9 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		ImportScanFile: NewImportScanFileClient(cfg),
 		ImportScanShow: NewImportScanShowClient(cfg),
 		Invite:         NewInviteClient(cfg),
+		MediaEvent:     NewMediaEventClient(cfg),
 		MediaFile:      NewMediaFileClient(cfg),
 		Movie:          NewMovieClient(cfg),
-		MovieEvent:     NewMovieEventClient(cfg),
 		OIDCIdentity:   NewOIDCIdentityClient(cfg),
 		Request:        NewRequestClient(cfg),
 		ScheduledJob:   NewScheduledJobClient(cfg),
@@ -282,7 +282,7 @@ func (c *Client) Close() error {
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.ApiKey, c.DownloadRecord, c.Episode, c.ImportScan, c.ImportScanFile,
-		c.ImportScanShow, c.Invite, c.MediaFile, c.Movie, c.MovieEvent, c.OIDCIdentity,
+		c.ImportScanShow, c.Invite, c.MediaEvent, c.MediaFile, c.Movie, c.OIDCIdentity,
 		c.Request, c.ScheduledJob, c.Season, c.Session, c.TVShow, c.TorrentSession,
 		c.User,
 	} {
@@ -295,7 +295,7 @@ func (c *Client) Use(hooks ...Hook) {
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.ApiKey, c.DownloadRecord, c.Episode, c.ImportScan, c.ImportScanFile,
-		c.ImportScanShow, c.Invite, c.MediaFile, c.Movie, c.MovieEvent, c.OIDCIdentity,
+		c.ImportScanShow, c.Invite, c.MediaEvent, c.MediaFile, c.Movie, c.OIDCIdentity,
 		c.Request, c.ScheduledJob, c.Season, c.Session, c.TVShow, c.TorrentSession,
 		c.User,
 	} {
@@ -320,12 +320,12 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.ImportScanShow.mutate(ctx, m)
 	case *InviteMutation:
 		return c.Invite.mutate(ctx, m)
+	case *MediaEventMutation:
+		return c.MediaEvent.mutate(ctx, m)
 	case *MediaFileMutation:
 		return c.MediaFile.mutate(ctx, m)
 	case *MovieMutation:
 		return c.Movie.mutate(ctx, m)
-	case *MovieEventMutation:
-		return c.MovieEvent.mutate(ctx, m)
 	case *OIDCIdentityMutation:
 		return c.OIDCIdentity.mutate(ctx, m)
 	case *RequestMutation:
@@ -810,6 +810,22 @@ func (c *EpisodeClient) QueryMediaFiles(_m *Episode) *MediaFileQuery {
 			sqlgraph.From(episode.Table, episode.FieldID, id),
 			sqlgraph.To(mediafile.Table, mediafile.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, episode.MediaFilesTable, episode.MediaFilesColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryEvents queries the events edge of a Episode.
+func (c *EpisodeClient) QueryEvents(_m *Episode) *MediaEventQuery {
+	query := (&MediaEventClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(episode.Table, episode.FieldID, id),
+			sqlgraph.To(mediaevent.Table, mediaevent.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, episode.EventsTable, episode.EventsColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -1470,6 +1486,187 @@ func (c *InviteClient) mutate(ctx context.Context, m *InviteMutation) (Value, er
 	}
 }
 
+// MediaEventClient is a client for the MediaEvent schema.
+type MediaEventClient struct {
+	config
+}
+
+// NewMediaEventClient returns a client for the MediaEvent from the given config.
+func NewMediaEventClient(c config) *MediaEventClient {
+	return &MediaEventClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `mediaevent.Hooks(f(g(h())))`.
+func (c *MediaEventClient) Use(hooks ...Hook) {
+	c.hooks.MediaEvent = append(c.hooks.MediaEvent, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `mediaevent.Intercept(f(g(h())))`.
+func (c *MediaEventClient) Intercept(interceptors ...Interceptor) {
+	c.inters.MediaEvent = append(c.inters.MediaEvent, interceptors...)
+}
+
+// Create returns a builder for creating a MediaEvent entity.
+func (c *MediaEventClient) Create() *MediaEventCreate {
+	mutation := newMediaEventMutation(c.config, OpCreate)
+	return &MediaEventCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of MediaEvent entities.
+func (c *MediaEventClient) CreateBulk(builders ...*MediaEventCreate) *MediaEventCreateBulk {
+	return &MediaEventCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *MediaEventClient) MapCreateBulk(slice any, setFunc func(*MediaEventCreate, int)) *MediaEventCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &MediaEventCreateBulk{err: fmt.Errorf("calling to MediaEventClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*MediaEventCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &MediaEventCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for MediaEvent.
+func (c *MediaEventClient) Update() *MediaEventUpdate {
+	mutation := newMediaEventMutation(c.config, OpUpdate)
+	return &MediaEventUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *MediaEventClient) UpdateOne(_m *MediaEvent) *MediaEventUpdateOne {
+	mutation := newMediaEventMutation(c.config, OpUpdateOne, withMediaEvent(_m))
+	return &MediaEventUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *MediaEventClient) UpdateOneID(id uint32) *MediaEventUpdateOne {
+	mutation := newMediaEventMutation(c.config, OpUpdateOne, withMediaEventID(id))
+	return &MediaEventUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for MediaEvent.
+func (c *MediaEventClient) Delete() *MediaEventDelete {
+	mutation := newMediaEventMutation(c.config, OpDelete)
+	return &MediaEventDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *MediaEventClient) DeleteOne(_m *MediaEvent) *MediaEventDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *MediaEventClient) DeleteOneID(id uint32) *MediaEventDeleteOne {
+	builder := c.Delete().Where(mediaevent.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &MediaEventDeleteOne{builder}
+}
+
+// Query returns a query builder for MediaEvent.
+func (c *MediaEventClient) Query() *MediaEventQuery {
+	return &MediaEventQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeMediaEvent},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a MediaEvent entity by its id.
+func (c *MediaEventClient) Get(ctx context.Context, id uint32) (*MediaEvent, error) {
+	return c.Query().Where(mediaevent.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *MediaEventClient) GetX(ctx context.Context, id uint32) *MediaEvent {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryMovie queries the movie edge of a MediaEvent.
+func (c *MediaEventClient) QueryMovie(_m *MediaEvent) *MovieQuery {
+	query := (&MovieClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(mediaevent.Table, mediaevent.FieldID, id),
+			sqlgraph.To(movie.Table, movie.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, mediaevent.MovieTable, mediaevent.MovieColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryEpisode queries the episode edge of a MediaEvent.
+func (c *MediaEventClient) QueryEpisode(_m *MediaEvent) *EpisodeQuery {
+	query := (&EpisodeClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(mediaevent.Table, mediaevent.FieldID, id),
+			sqlgraph.To(episode.Table, episode.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, mediaevent.EpisodeTable, mediaevent.EpisodeColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryTvShow queries the tv_show edge of a MediaEvent.
+func (c *MediaEventClient) QueryTvShow(_m *MediaEvent) *TVShowQuery {
+	query := (&TVShowClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(mediaevent.Table, mediaevent.FieldID, id),
+			sqlgraph.To(tvshow.Table, tvshow.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, mediaevent.TvShowTable, mediaevent.TvShowColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *MediaEventClient) Hooks() []Hook {
+	return c.hooks.MediaEvent
+}
+
+// Interceptors returns the client interceptors.
+func (c *MediaEventClient) Interceptors() []Interceptor {
+	return c.inters.MediaEvent
+}
+
+func (c *MediaEventClient) mutate(ctx context.Context, m *MediaEventMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&MediaEventCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&MediaEventUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&MediaEventUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&MediaEventDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown MediaEvent mutation op: %q", m.Op())
+	}
+}
+
 // MediaFileClient is a client for the MediaFile schema.
 type MediaFileClient struct {
 	config
@@ -1776,13 +1973,13 @@ func (c *MovieClient) QueryMediaFiles(_m *Movie) *MediaFileQuery {
 }
 
 // QueryEvents queries the events edge of a Movie.
-func (c *MovieClient) QueryEvents(_m *Movie) *MovieEventQuery {
-	query := (&MovieEventClient{config: c.config}).Query()
+func (c *MovieClient) QueryEvents(_m *Movie) *MediaEventQuery {
+	query := (&MediaEventClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := _m.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(movie.Table, movie.FieldID, id),
-			sqlgraph.To(movieevent.Table, movieevent.FieldID),
+			sqlgraph.To(mediaevent.Table, mediaevent.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, movie.EventsTable, movie.EventsColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
@@ -1813,155 +2010,6 @@ func (c *MovieClient) mutate(ctx context.Context, m *MovieMutation) (Value, erro
 		return (&MovieDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown Movie mutation op: %q", m.Op())
-	}
-}
-
-// MovieEventClient is a client for the MovieEvent schema.
-type MovieEventClient struct {
-	config
-}
-
-// NewMovieEventClient returns a client for the MovieEvent from the given config.
-func NewMovieEventClient(c config) *MovieEventClient {
-	return &MovieEventClient{config: c}
-}
-
-// Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `movieevent.Hooks(f(g(h())))`.
-func (c *MovieEventClient) Use(hooks ...Hook) {
-	c.hooks.MovieEvent = append(c.hooks.MovieEvent, hooks...)
-}
-
-// Intercept adds a list of query interceptors to the interceptors stack.
-// A call to `Intercept(f, g, h)` equals to `movieevent.Intercept(f(g(h())))`.
-func (c *MovieEventClient) Intercept(interceptors ...Interceptor) {
-	c.inters.MovieEvent = append(c.inters.MovieEvent, interceptors...)
-}
-
-// Create returns a builder for creating a MovieEvent entity.
-func (c *MovieEventClient) Create() *MovieEventCreate {
-	mutation := newMovieEventMutation(c.config, OpCreate)
-	return &MovieEventCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// CreateBulk returns a builder for creating a bulk of MovieEvent entities.
-func (c *MovieEventClient) CreateBulk(builders ...*MovieEventCreate) *MovieEventCreateBulk {
-	return &MovieEventCreateBulk{config: c.config, builders: builders}
-}
-
-// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
-// a builder and applies setFunc on it.
-func (c *MovieEventClient) MapCreateBulk(slice any, setFunc func(*MovieEventCreate, int)) *MovieEventCreateBulk {
-	rv := reflect.ValueOf(slice)
-	if rv.Kind() != reflect.Slice {
-		return &MovieEventCreateBulk{err: fmt.Errorf("calling to MovieEventClient.MapCreateBulk with wrong type %T, need slice", slice)}
-	}
-	builders := make([]*MovieEventCreate, rv.Len())
-	for i := 0; i < rv.Len(); i++ {
-		builders[i] = c.Create()
-		setFunc(builders[i], i)
-	}
-	return &MovieEventCreateBulk{config: c.config, builders: builders}
-}
-
-// Update returns an update builder for MovieEvent.
-func (c *MovieEventClient) Update() *MovieEventUpdate {
-	mutation := newMovieEventMutation(c.config, OpUpdate)
-	return &MovieEventUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOne returns an update builder for the given entity.
-func (c *MovieEventClient) UpdateOne(_m *MovieEvent) *MovieEventUpdateOne {
-	mutation := newMovieEventMutation(c.config, OpUpdateOne, withMovieEvent(_m))
-	return &MovieEventUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOneID returns an update builder for the given id.
-func (c *MovieEventClient) UpdateOneID(id uint32) *MovieEventUpdateOne {
-	mutation := newMovieEventMutation(c.config, OpUpdateOne, withMovieEventID(id))
-	return &MovieEventUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// Delete returns a delete builder for MovieEvent.
-func (c *MovieEventClient) Delete() *MovieEventDelete {
-	mutation := newMovieEventMutation(c.config, OpDelete)
-	return &MovieEventDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// DeleteOne returns a builder for deleting the given entity.
-func (c *MovieEventClient) DeleteOne(_m *MovieEvent) *MovieEventDeleteOne {
-	return c.DeleteOneID(_m.ID)
-}
-
-// DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *MovieEventClient) DeleteOneID(id uint32) *MovieEventDeleteOne {
-	builder := c.Delete().Where(movieevent.ID(id))
-	builder.mutation.id = &id
-	builder.mutation.op = OpDeleteOne
-	return &MovieEventDeleteOne{builder}
-}
-
-// Query returns a query builder for MovieEvent.
-func (c *MovieEventClient) Query() *MovieEventQuery {
-	return &MovieEventQuery{
-		config: c.config,
-		ctx:    &QueryContext{Type: TypeMovieEvent},
-		inters: c.Interceptors(),
-	}
-}
-
-// Get returns a MovieEvent entity by its id.
-func (c *MovieEventClient) Get(ctx context.Context, id uint32) (*MovieEvent, error) {
-	return c.Query().Where(movieevent.ID(id)).Only(ctx)
-}
-
-// GetX is like Get, but panics if an error occurs.
-func (c *MovieEventClient) GetX(ctx context.Context, id uint32) *MovieEvent {
-	obj, err := c.Get(ctx, id)
-	if err != nil {
-		panic(err)
-	}
-	return obj
-}
-
-// QueryMovie queries the movie edge of a MovieEvent.
-func (c *MovieEventClient) QueryMovie(_m *MovieEvent) *MovieQuery {
-	query := (&MovieClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(movieevent.Table, movieevent.FieldID, id),
-			sqlgraph.To(movie.Table, movie.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, movieevent.MovieTable, movieevent.MovieColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// Hooks returns the client hooks.
-func (c *MovieEventClient) Hooks() []Hook {
-	return c.hooks.MovieEvent
-}
-
-// Interceptors returns the client interceptors.
-func (c *MovieEventClient) Interceptors() []Interceptor {
-	return c.inters.MovieEvent
-}
-
-func (c *MovieEventClient) mutate(ctx context.Context, m *MovieEventMutation) (Value, error) {
-	switch m.Op() {
-	case OpCreate:
-		return (&MovieEventCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdate:
-		return (&MovieEventUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdateOne:
-		return (&MovieEventUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpDelete, OpDeleteOne:
-		return (&MovieEventDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
-	default:
-		return nil, fmt.Errorf("ent: unknown MovieEvent mutation op: %q", m.Op())
 	}
 }
 
@@ -2850,6 +2898,22 @@ func (c *TVShowClient) QuerySeasons(_m *TVShow) *SeasonQuery {
 	return query
 }
 
+// QueryEvents queries the events edge of a TVShow.
+func (c *TVShowClient) QueryEvents(_m *TVShow) *MediaEventQuery {
+	query := (&MediaEventClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(tvshow.Table, tvshow.FieldID, id),
+			sqlgraph.To(mediaevent.Table, mediaevent.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, tvshow.EventsTable, tvshow.EventsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *TVShowClient) Hooks() []Hook {
 	return c.hooks.TVShow
@@ -3209,12 +3273,12 @@ func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error)
 type (
 	hooks struct {
 		ApiKey, DownloadRecord, Episode, ImportScan, ImportScanFile, ImportScanShow,
-		Invite, MediaFile, Movie, MovieEvent, OIDCIdentity, Request, ScheduledJob,
+		Invite, MediaEvent, MediaFile, Movie, OIDCIdentity, Request, ScheduledJob,
 		Season, Session, TVShow, TorrentSession, User []ent.Hook
 	}
 	inters struct {
 		ApiKey, DownloadRecord, Episode, ImportScan, ImportScanFile, ImportScanShow,
-		Invite, MediaFile, Movie, MovieEvent, OIDCIdentity, Request, ScheduledJob,
+		Invite, MediaEvent, MediaFile, Movie, OIDCIdentity, Request, ScheduledJob,
 		Season, Session, TVShow, TorrentSession, User []ent.Interceptor
 	}
 )

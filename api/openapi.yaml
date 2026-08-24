@@ -202,6 +202,44 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /movies/{id}/reidentify:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: reidentifyMovie
+      summary: Point this movie at a different TMDB title
+      description: |
+        Repairs a wrong match without losing the row: the entry keeps its id,
+        files, download history and requests, and only its provider identity
+        changes. Metadata is refreshed from the new TMDB id and the files are
+        renamed into the new title's path.
+
+        Conflicts (409) when the target TMDB id is already in the library —
+        tmdb_id is unique, and merging two entries is not what this does.
+      tags: [movies]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tmdb_id]
+              properties:
+                tmdb_id: { type: integer, x-go-type: uint32 }
+      responses:
+        "200":
+          $ref: "#/components/responses/ReidentifyResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /movies/{id}/recommendations:
     parameters:
       - $ref: "#/components/parameters/ResourceID"
@@ -640,6 +678,48 @@ paths:
           $ref: "#/components/responses/SeriesSearchAccepted"
         "404":
           $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /series/{id}/reidentify:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: reidentifySeries
+      summary: Point this series at a different TVDB show
+      description: |
+        The series keeps its id and its files; its provider identity, metadata
+        and season/episode tree are replaced from the new TVDB id, and each
+        existing file is re-attached to the episode with the same season and
+        episode number, then renamed.
+
+        Files whose season/episode does not exist in the new show are reported
+        in `unmatched` and **left on disk** — a provider numbering seasons
+        differently is not evidence the media is unwanted. Their database rows
+        are dropped, so a library scan can re-adopt them.
+
+        Conflicts (409) when the target TVDB id is already in the library.
+      tags: [series]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tvdb_id]
+              properties:
+                tvdb_id: { type: integer, x-go-type: uint32 }
+      responses:
+        "200":
+          $ref: "#/components/responses/ReidentifyResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -2453,12 +2533,13 @@ paths:
       operationId: listActivity
       summary: Library activity events.
       description: |
-        Reverse-chronological feed of MovieEvent rows. Supports cursor
-        pagination and optional filtering by event type, movie id, and a
-        time window.
+        Reverse-chronological feed of media events across movies, episodes and
+        series. Supports cursor pagination and optional filtering by event
+        type, movie id, series id, and a time window.
       parameters:
         - $ref: "#/components/parameters/ActivityType"
         - $ref: "#/components/parameters/ActivityMovieID"
+        - $ref: "#/components/parameters/ActivitySeriesID"
         - $ref: "#/components/parameters/ActivitySince"
         - $ref: "#/components/parameters/ActivityBefore"
         - $ref: "#/components/parameters/ActivityLimit"
@@ -3113,6 +3194,7 @@ components:
               import_failed,
               drift_detected,
               drift_confirmed,
+              searched,
             ]
       style: form
       explode: true
@@ -3120,6 +3202,15 @@ components:
       name: movie_id
       in: query
       required: false
+      schema:
+        type: integer
+        x-go-type: uint32
+    ActivitySeriesID:
+      name: series_id
+      in: query
+      required: false
+      description: |
+        Matches both the series' own events and those of its episodes.
       schema:
         type: integer
         x-go-type: uint32
@@ -3667,6 +3758,13 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/Movie"
+
+    ReidentifyResult:
+      description: The re-identified entry plus what the repair moved.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ReidentifyResult"
 
     MovieRenamePlan:
       description: Rename plan (preview or applied).
@@ -6217,7 +6315,12 @@ components:
 
     ActivityEvent:
       type: object
-      required: [id, type, created_at, movie]
+      required: [id, type, created_at]
+      description: |
+        Exactly one of movie / episode / series is set, naming what the event
+        happened to. `series` carries only what belongs to no single episode —
+        a search issued at series or season scope; per-episode outcomes use
+        `episode`.
       properties:
         id:
           type: integer
@@ -6233,6 +6336,7 @@ components:
               import_failed,
               drift_detected,
               drift_confirmed,
+              searched,
             ]
         created_at:
           type: string
@@ -6242,6 +6346,38 @@ components:
           additionalProperties: true
         movie:
           $ref: "#/components/schemas/Movie"
+        episode:
+          $ref: "#/components/schemas/EpisodeRef"
+        series:
+          $ref: "#/components/schemas/SeriesRef"
+
+    ReidentifyResult:
+      type: object
+      required: [id, title, renamed]
+      properties:
+        id: { type: integer, x-go-type: uint32 }
+        title:
+          type: string
+          description: Title as it stands after the metadata refresh.
+        renamed:
+          type: integer
+          description: Number of files moved into the new title's path.
+        unmatched:
+          type: array
+          description: |
+            Series only. Paths still on disk whose season/episode number has no
+            counterpart in the new show; their database rows were dropped.
+          items: { type: string }
+
+    SeriesRef:
+      type: object
+      required: [id, title]
+      description: |
+        Minimal series identity for feed rows. Deliberately not the full TVShow
+        schema, which carries the whole season/episode tree.
+      properties:
+        id: { type: integer, x-go-type: uint32 }
+        title: { type: string }
 
     ActivityList:
       type: object
@@ -6265,6 +6401,10 @@ components:
         show_title: { type: string }
         season: { type: integer, x-go-type: uint16 }
         episode: { type: integer, x-go-type: uint16 }
+        series_id:
+          type: integer
+          x-go-type: uint32
+          description: Set where the row links back to the series page.
 
     QueueEntry:
       type: object

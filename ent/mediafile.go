@@ -37,6 +37,8 @@ type MediaFile struct {
 	Source mediafile.Source `json:"source,omitempty"`
 	// LastSeenAt holds the value of the "last_seen_at" field.
 	LastSeenAt *time.Time `json:"last_seen_at,omitempty"`
+	// MissingSince holds the value of the "missing_since" field.
+	MissingSince *time.Time `json:"missing_since,omitempty"`
 	// Container holds the value of the "container" field.
 	Container string `json:"container,omitempty"`
 	// DurationSeconds holds the value of the "duration_seconds" field.
@@ -105,7 +107,7 @@ func (*MediaFile) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullInt64)
 		case mediafile.FieldPath, mediafile.FieldQuality, mediafile.FieldFormat, mediafile.FieldReleaseGroup, mediafile.FieldSource, mediafile.FieldContainer, mediafile.FieldVideoCodec, mediafile.FieldAudioCodec:
 			values[i] = new(sql.NullString)
-		case mediafile.FieldCreateTime, mediafile.FieldUpdateTime, mediafile.FieldLastSeenAt, mediafile.FieldProbedAt:
+		case mediafile.FieldCreateTime, mediafile.FieldUpdateTime, mediafile.FieldLastSeenAt, mediafile.FieldMissingSince, mediafile.FieldProbedAt:
 			values[i] = new(sql.NullTime)
 		case mediafile.ForeignKeys[0]: // episode_media_files
 			values[i] = new(sql.NullInt64)
@@ -186,6 +188,13 @@ func (_m *MediaFile) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.LastSeenAt = new(time.Time)
 				*_m.LastSeenAt = value.Time
+			}
+		case mediafile.FieldMissingSince:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field missing_since", values[i])
+			} else if value.Valid {
+				_m.MissingSince = new(time.Time)
+				*_m.MissingSince = value.Time
 			}
 		case mediafile.FieldContainer:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -328,6 +337,11 @@ func (_m *MediaFile) String() string {
 	builder.WriteString(", ")
 	if v := _m.LastSeenAt; v != nil {
 		builder.WriteString("last_seen_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
+	if v := _m.MissingSince; v != nil {
+		builder.WriteString("missing_since=")
 		builder.WriteString(v.Format(time.ANSIC))
 	}
 	builder.WriteString(", ")

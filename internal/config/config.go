@@ -260,7 +260,7 @@ type MetadataConfig struct {
 	TMDBRegion     string `koanf:"tmdb_region"       validate:"omitempty,len=2,uppercase"`
 }
 
-// EventsConfig governs the MovieEvent retention window. Old rows are deleted
+// EventsConfig governs the MediaEvent retention window. Old rows are deleted
 // by the cleanup job after Retention.
 type EventsConfig struct {
 	Retention string `koanf:"retention" validate:"required"`

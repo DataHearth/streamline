@@ -4,7 +4,6 @@ package ent
 
 import (
 	"context"
-	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -12,62 +11,63 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/mediaevent"
-	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/predicate"
+	"github.com/datahearth/streamline/ent/tvshow"
 )
 
-// MovieQuery is the builder for querying Movie entities.
-type MovieQuery struct {
+// MediaEventQuery is the builder for querying MediaEvent entities.
+type MediaEventQuery struct {
 	config
-	ctx                 *QueryContext
-	order               []movie.OrderOption
-	inters              []Interceptor
-	predicates          []predicate.Movie
-	withDownloadRecords *DownloadRecordQuery
-	withMediaFiles      *MediaFileQuery
-	withEvents          *MediaEventQuery
+	ctx         *QueryContext
+	order       []mediaevent.OrderOption
+	inters      []Interceptor
+	predicates  []predicate.MediaEvent
+	withMovie   *MovieQuery
+	withEpisode *EpisodeQuery
+	withTvShow  *TVShowQuery
+	withFKs     bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
 }
 
-// Where adds a new predicate for the MovieQuery builder.
-func (_q *MovieQuery) Where(ps ...predicate.Movie) *MovieQuery {
+// Where adds a new predicate for the MediaEventQuery builder.
+func (_q *MediaEventQuery) Where(ps ...predicate.MediaEvent) *MediaEventQuery {
 	_q.predicates = append(_q.predicates, ps...)
 	return _q
 }
 
 // Limit the number of records to be returned by this query.
-func (_q *MovieQuery) Limit(limit int) *MovieQuery {
+func (_q *MediaEventQuery) Limit(limit int) *MediaEventQuery {
 	_q.ctx.Limit = &limit
 	return _q
 }
 
 // Offset to start from.
-func (_q *MovieQuery) Offset(offset int) *MovieQuery {
+func (_q *MediaEventQuery) Offset(offset int) *MediaEventQuery {
 	_q.ctx.Offset = &offset
 	return _q
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
-func (_q *MovieQuery) Unique(unique bool) *MovieQuery {
+func (_q *MediaEventQuery) Unique(unique bool) *MediaEventQuery {
 	_q.ctx.Unique = &unique
 	return _q
 }
 
 // Order specifies how the records should be ordered.
-func (_q *MovieQuery) Order(o ...movie.OrderOption) *MovieQuery {
+func (_q *MediaEventQuery) Order(o ...mediaevent.OrderOption) *MediaEventQuery {
 	_q.order = append(_q.order, o...)
 	return _q
 }
 
-// QueryDownloadRecords chains the current query on the "download_records" edge.
-func (_q *MovieQuery) QueryDownloadRecords() *DownloadRecordQuery {
-	query := (&DownloadRecordClient{config: _q.config}).Query()
+// QueryMovie chains the current query on the "movie" edge.
+func (_q *MediaEventQuery) QueryMovie() *MovieQuery {
+	query := (&MovieClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -77,9 +77,9 @@ func (_q *MovieQuery) QueryDownloadRecords() *DownloadRecordQuery {
 			return nil, err
 		}
 		step := sqlgraph.NewStep(
-			sqlgraph.From(movie.Table, movie.FieldID, selector),
-			sqlgraph.To(downloadrecord.Table, downloadrecord.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, movie.DownloadRecordsTable, movie.DownloadRecordsColumn),
+			sqlgraph.From(mediaevent.Table, mediaevent.FieldID, selector),
+			sqlgraph.To(movie.Table, movie.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, mediaevent.MovieTable, mediaevent.MovieColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -87,9 +87,9 @@ func (_q *MovieQuery) QueryDownloadRecords() *DownloadRecordQuery {
 	return query
 }
 
-// QueryMediaFiles chains the current query on the "media_files" edge.
-func (_q *MovieQuery) QueryMediaFiles() *MediaFileQuery {
-	query := (&MediaFileClient{config: _q.config}).Query()
+// QueryEpisode chains the current query on the "episode" edge.
+func (_q *MediaEventQuery) QueryEpisode() *EpisodeQuery {
+	query := (&EpisodeClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -99,9 +99,9 @@ func (_q *MovieQuery) QueryMediaFiles() *MediaFileQuery {
 			return nil, err
 		}
 		step := sqlgraph.NewStep(
-			sqlgraph.From(movie.Table, movie.FieldID, selector),
-			sqlgraph.To(mediafile.Table, mediafile.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, movie.MediaFilesTable, movie.MediaFilesColumn),
+			sqlgraph.From(mediaevent.Table, mediaevent.FieldID, selector),
+			sqlgraph.To(episode.Table, episode.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, mediaevent.EpisodeTable, mediaevent.EpisodeColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -109,9 +109,9 @@ func (_q *MovieQuery) QueryMediaFiles() *MediaFileQuery {
 	return query
 }
 
-// QueryEvents chains the current query on the "events" edge.
-func (_q *MovieQuery) QueryEvents() *MediaEventQuery {
-	query := (&MediaEventClient{config: _q.config}).Query()
+// QueryTvShow chains the current query on the "tv_show" edge.
+func (_q *MediaEventQuery) QueryTvShow() *TVShowQuery {
+	query := (&TVShowClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -121,9 +121,9 @@ func (_q *MovieQuery) QueryEvents() *MediaEventQuery {
 			return nil, err
 		}
 		step := sqlgraph.NewStep(
-			sqlgraph.From(movie.Table, movie.FieldID, selector),
-			sqlgraph.To(mediaevent.Table, mediaevent.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, movie.EventsTable, movie.EventsColumn),
+			sqlgraph.From(mediaevent.Table, mediaevent.FieldID, selector),
+			sqlgraph.To(tvshow.Table, tvshow.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, mediaevent.TvShowTable, mediaevent.TvShowColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -131,21 +131,21 @@ func (_q *MovieQuery) QueryEvents() *MediaEventQuery {
 	return query
 }
 
-// First returns the first Movie entity from the query.
-// Returns a *NotFoundError when no Movie was found.
-func (_q *MovieQuery) First(ctx context.Context) (*Movie, error) {
+// First returns the first MediaEvent entity from the query.
+// Returns a *NotFoundError when no MediaEvent was found.
+func (_q *MediaEventQuery) First(ctx context.Context) (*MediaEvent, error) {
 	nodes, err := _q.Limit(1).All(setContextOp(ctx, _q.ctx, ent.OpQueryFirst))
 	if err != nil {
 		return nil, err
 	}
 	if len(nodes) == 0 {
-		return nil, &NotFoundError{movie.Label}
+		return nil, &NotFoundError{mediaevent.Label}
 	}
 	return nodes[0], nil
 }
 
 // FirstX is like First, but panics if an error occurs.
-func (_q *MovieQuery) FirstX(ctx context.Context) *Movie {
+func (_q *MediaEventQuery) FirstX(ctx context.Context) *MediaEvent {
 	node, err := _q.First(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -153,22 +153,22 @@ func (_q *MovieQuery) FirstX(ctx context.Context) *Movie {
 	return node
 }
 
-// FirstID returns the first Movie ID from the query.
-// Returns a *NotFoundError when no Movie ID was found.
-func (_q *MovieQuery) FirstID(ctx context.Context) (id uint32, err error) {
+// FirstID returns the first MediaEvent ID from the query.
+// Returns a *NotFoundError when no MediaEvent ID was found.
+func (_q *MediaEventQuery) FirstID(ctx context.Context) (id uint32, err error) {
 	var ids []uint32
 	if ids, err = _q.Limit(1).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryFirstID)); err != nil {
 		return
 	}
 	if len(ids) == 0 {
-		err = &NotFoundError{movie.Label}
+		err = &NotFoundError{mediaevent.Label}
 		return
 	}
 	return ids[0], nil
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (_q *MovieQuery) FirstIDX(ctx context.Context) uint32 {
+func (_q *MediaEventQuery) FirstIDX(ctx context.Context) uint32 {
 	id, err := _q.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -176,10 +176,10 @@ func (_q *MovieQuery) FirstIDX(ctx context.Context) uint32 {
 	return id
 }
 
-// Only returns a single Movie entity found by the query, ensuring it only returns one.
-// Returns a *NotSingularError when more than one Movie entity is found.
-// Returns a *NotFoundError when no Movie entities are found.
-func (_q *MovieQuery) Only(ctx context.Context) (*Movie, error) {
+// Only returns a single MediaEvent entity found by the query, ensuring it only returns one.
+// Returns a *NotSingularError when more than one MediaEvent entity is found.
+// Returns a *NotFoundError when no MediaEvent entities are found.
+func (_q *MediaEventQuery) Only(ctx context.Context) (*MediaEvent, error) {
 	nodes, err := _q.Limit(2).All(setContextOp(ctx, _q.ctx, ent.OpQueryOnly))
 	if err != nil {
 		return nil, err
@@ -188,14 +188,14 @@ func (_q *MovieQuery) Only(ctx context.Context) (*Movie, error) {
 	case 1:
 		return nodes[0], nil
 	case 0:
-		return nil, &NotFoundError{movie.Label}
+		return nil, &NotFoundError{mediaevent.Label}
 	default:
-		return nil, &NotSingularError{movie.Label}
+		return nil, &NotSingularError{mediaevent.Label}
 	}
 }
 
 // OnlyX is like Only, but panics if an error occurs.
-func (_q *MovieQuery) OnlyX(ctx context.Context) *Movie {
+func (_q *MediaEventQuery) OnlyX(ctx context.Context) *MediaEvent {
 	node, err := _q.Only(ctx)
 	if err != nil {
 		panic(err)
@@ -203,10 +203,10 @@ func (_q *MovieQuery) OnlyX(ctx context.Context) *Movie {
 	return node
 }
 
-// OnlyID is like Only, but returns the only Movie ID in the query.
-// Returns a *NotSingularError when more than one Movie ID is found.
+// OnlyID is like Only, but returns the only MediaEvent ID in the query.
+// Returns a *NotSingularError when more than one MediaEvent ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (_q *MovieQuery) OnlyID(ctx context.Context) (id uint32, err error) {
+func (_q *MediaEventQuery) OnlyID(ctx context.Context) (id uint32, err error) {
 	var ids []uint32
 	if ids, err = _q.Limit(2).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryOnlyID)); err != nil {
 		return
@@ -215,15 +215,15 @@ func (_q *MovieQuery) OnlyID(ctx context.Context) (id uint32, err error) {
 	case 1:
 		id = ids[0]
 	case 0:
-		err = &NotFoundError{movie.Label}
+		err = &NotFoundError{mediaevent.Label}
 	default:
-		err = &NotSingularError{movie.Label}
+		err = &NotSingularError{mediaevent.Label}
 	}
 	return
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (_q *MovieQuery) OnlyIDX(ctx context.Context) uint32 {
+func (_q *MediaEventQuery) OnlyIDX(ctx context.Context) uint32 {
 	id, err := _q.OnlyID(ctx)
 	if err != nil {
 		panic(err)
@@ -231,18 +231,18 @@ func (_q *MovieQuery) OnlyIDX(ctx context.Context) uint32 {
 	return id
 }
 
-// All executes the query and returns a list of Movies.
-func (_q *MovieQuery) All(ctx context.Context) ([]*Movie, error) {
+// All executes the query and returns a list of MediaEvents.
+func (_q *MediaEventQuery) All(ctx context.Context) ([]*MediaEvent, error) {
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryAll)
 	if err := _q.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	qr := querierAll[[]*Movie, *MovieQuery]()
-	return withInterceptors[[]*Movie](ctx, _q, qr, _q.inters)
+	qr := querierAll[[]*MediaEvent, *MediaEventQuery]()
+	return withInterceptors[[]*MediaEvent](ctx, _q, qr, _q.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
-func (_q *MovieQuery) AllX(ctx context.Context) []*Movie {
+func (_q *MediaEventQuery) AllX(ctx context.Context) []*MediaEvent {
 	nodes, err := _q.All(ctx)
 	if err != nil {
 		panic(err)
@@ -250,20 +250,20 @@ func (_q *MovieQuery) AllX(ctx context.Context) []*Movie {
 	return nodes
 }
 
-// IDs executes the query and returns a list of Movie IDs.
-func (_q *MovieQuery) IDs(ctx context.Context) (ids []uint32, err error) {
+// IDs executes the query and returns a list of MediaEvent IDs.
+func (_q *MediaEventQuery) IDs(ctx context.Context) (ids []uint32, err error) {
 	if _q.ctx.Unique == nil && _q.path != nil {
 		_q.Unique(true)
 	}
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryIDs)
-	if err = _q.Select(movie.FieldID).Scan(ctx, &ids); err != nil {
+	if err = _q.Select(mediaevent.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (_q *MovieQuery) IDsX(ctx context.Context) []uint32 {
+func (_q *MediaEventQuery) IDsX(ctx context.Context) []uint32 {
 	ids, err := _q.IDs(ctx)
 	if err != nil {
 		panic(err)
@@ -272,16 +272,16 @@ func (_q *MovieQuery) IDsX(ctx context.Context) []uint32 {
 }
 
 // Count returns the count of the given query.
-func (_q *MovieQuery) Count(ctx context.Context) (int, error) {
+func (_q *MediaEventQuery) Count(ctx context.Context) (int, error) {
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryCount)
 	if err := _q.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return withInterceptors[int](ctx, _q, querierCount[*MovieQuery](), _q.inters)
+	return withInterceptors[int](ctx, _q, querierCount[*MediaEventQuery](), _q.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
-func (_q *MovieQuery) CountX(ctx context.Context) int {
+func (_q *MediaEventQuery) CountX(ctx context.Context) int {
 	count, err := _q.Count(ctx)
 	if err != nil {
 		panic(err)
@@ -290,7 +290,7 @@ func (_q *MovieQuery) CountX(ctx context.Context) int {
 }
 
 // Exist returns true if the query has elements in the graph.
-func (_q *MovieQuery) Exist(ctx context.Context) (bool, error) {
+func (_q *MediaEventQuery) Exist(ctx context.Context) (bool, error) {
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryExist)
 	switch _, err := _q.FirstID(ctx); {
 	case IsNotFound(err):
@@ -303,7 +303,7 @@ func (_q *MovieQuery) Exist(ctx context.Context) (bool, error) {
 }
 
 // ExistX is like Exist, but panics if an error occurs.
-func (_q *MovieQuery) ExistX(ctx context.Context) bool {
+func (_q *MediaEventQuery) ExistX(ctx context.Context) bool {
 	exist, err := _q.Exist(ctx)
 	if err != nil {
 		panic(err)
@@ -311,57 +311,57 @@ func (_q *MovieQuery) ExistX(ctx context.Context) bool {
 	return exist
 }
 
-// Clone returns a duplicate of the MovieQuery builder, including all associated steps. It can be
+// Clone returns a duplicate of the MediaEventQuery builder, including all associated steps. It can be
 // used to prepare common query builders and use them differently after the clone is made.
-func (_q *MovieQuery) Clone() *MovieQuery {
+func (_q *MediaEventQuery) Clone() *MediaEventQuery {
 	if _q == nil {
 		return nil
 	}
-	return &MovieQuery{
-		config:              _q.config,
-		ctx:                 _q.ctx.Clone(),
-		order:               append([]movie.OrderOption{}, _q.order...),
-		inters:              append([]Interceptor{}, _q.inters...),
-		predicates:          append([]predicate.Movie{}, _q.predicates...),
-		withDownloadRecords: _q.withDownloadRecords.Clone(),
-		withMediaFiles:      _q.withMediaFiles.Clone(),
-		withEvents:          _q.withEvents.Clone(),
+	return &MediaEventQuery{
+		config:      _q.config,
+		ctx:         _q.ctx.Clone(),
+		order:       append([]mediaevent.OrderOption{}, _q.order...),
+		inters:      append([]Interceptor{}, _q.inters...),
+		predicates:  append([]predicate.MediaEvent{}, _q.predicates...),
+		withMovie:   _q.withMovie.Clone(),
+		withEpisode: _q.withEpisode.Clone(),
+		withTvShow:  _q.withTvShow.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
 	}
 }
 
-// WithDownloadRecords tells the query-builder to eager-load the nodes that are connected to
-// the "download_records" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *MovieQuery) WithDownloadRecords(opts ...func(*DownloadRecordQuery)) *MovieQuery {
-	query := (&DownloadRecordClient{config: _q.config}).Query()
+// WithMovie tells the query-builder to eager-load the nodes that are connected to
+// the "movie" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *MediaEventQuery) WithMovie(opts ...func(*MovieQuery)) *MediaEventQuery {
+	query := (&MovieClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	_q.withDownloadRecords = query
+	_q.withMovie = query
 	return _q
 }
 
-// WithMediaFiles tells the query-builder to eager-load the nodes that are connected to
-// the "media_files" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *MovieQuery) WithMediaFiles(opts ...func(*MediaFileQuery)) *MovieQuery {
-	query := (&MediaFileClient{config: _q.config}).Query()
+// WithEpisode tells the query-builder to eager-load the nodes that are connected to
+// the "episode" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *MediaEventQuery) WithEpisode(opts ...func(*EpisodeQuery)) *MediaEventQuery {
+	query := (&EpisodeClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	_q.withMediaFiles = query
+	_q.withEpisode = query
 	return _q
 }
 
-// WithEvents tells the query-builder to eager-load the nodes that are connected to
-// the "events" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *MovieQuery) WithEvents(opts ...func(*MediaEventQuery)) *MovieQuery {
-	query := (&MediaEventClient{config: _q.config}).Query()
+// WithTvShow tells the query-builder to eager-load the nodes that are connected to
+// the "tv_show" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *MediaEventQuery) WithTvShow(opts ...func(*TVShowQuery)) *MediaEventQuery {
+	query := (&TVShowClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	_q.withEvents = query
+	_q.withTvShow = query
 	return _q
 }
 
@@ -375,15 +375,15 @@ func (_q *MovieQuery) WithEvents(opts ...func(*MediaEventQuery)) *MovieQuery {
 //		Count int `json:"count,omitempty"`
 //	}
 //
-//	client.Movie.Query().
-//		GroupBy(movie.FieldCreateTime).
+//	client.MediaEvent.Query().
+//		GroupBy(mediaevent.FieldCreateTime).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-func (_q *MovieQuery) GroupBy(field string, fields ...string) *MovieGroupBy {
+func (_q *MediaEventQuery) GroupBy(field string, fields ...string) *MediaEventGroupBy {
 	_q.ctx.Fields = append([]string{field}, fields...)
-	grbuild := &MovieGroupBy{build: _q}
+	grbuild := &MediaEventGroupBy{build: _q}
 	grbuild.flds = &_q.ctx.Fields
-	grbuild.label = movie.Label
+	grbuild.label = mediaevent.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
 }
@@ -397,23 +397,23 @@ func (_q *MovieQuery) GroupBy(field string, fields ...string) *MovieGroupBy {
 //		CreateTime time.Time `json:"create_time,omitempty"`
 //	}
 //
-//	client.Movie.Query().
-//		Select(movie.FieldCreateTime).
+//	client.MediaEvent.Query().
+//		Select(mediaevent.FieldCreateTime).
 //		Scan(ctx, &v)
-func (_q *MovieQuery) Select(fields ...string) *MovieSelect {
+func (_q *MediaEventQuery) Select(fields ...string) *MediaEventSelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
-	sbuild := &MovieSelect{MovieQuery: _q}
-	sbuild.label = movie.Label
+	sbuild := &MediaEventSelect{MediaEventQuery: _q}
+	sbuild.label = mediaevent.Label
 	sbuild.flds, sbuild.scan = &_q.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
-// Aggregate returns a MovieSelect configured with the given aggregations.
-func (_q *MovieQuery) Aggregate(fns ...AggregateFunc) *MovieSelect {
+// Aggregate returns a MediaEventSelect configured with the given aggregations.
+func (_q *MediaEventQuery) Aggregate(fns ...AggregateFunc) *MediaEventSelect {
 	return _q.Select().Aggregate(fns...)
 }
 
-func (_q *MovieQuery) prepareQuery(ctx context.Context) error {
+func (_q *MediaEventQuery) prepareQuery(ctx context.Context) error {
 	for _, inter := range _q.inters {
 		if inter == nil {
 			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
@@ -425,7 +425,7 @@ func (_q *MovieQuery) prepareQuery(ctx context.Context) error {
 		}
 	}
 	for _, f := range _q.ctx.Fields {
-		if !movie.ValidColumn(f) {
+		if !mediaevent.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
 	}
@@ -439,21 +439,28 @@ func (_q *MovieQuery) prepareQuery(ctx context.Context) error {
 	return nil
 }
 
-func (_q *MovieQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Movie, error) {
+func (_q *MediaEventQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*MediaEvent, error) {
 	var (
-		nodes       = []*Movie{}
+		nodes       = []*MediaEvent{}
+		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
 		loadedTypes = [3]bool{
-			_q.withDownloadRecords != nil,
-			_q.withMediaFiles != nil,
-			_q.withEvents != nil,
+			_q.withMovie != nil,
+			_q.withEpisode != nil,
+			_q.withTvShow != nil,
 		}
 	)
+	if _q.withMovie != nil || _q.withEpisode != nil || _q.withTvShow != nil {
+		withFKs = true
+	}
+	if withFKs {
+		_spec.Node.Columns = append(_spec.Node.Columns, mediaevent.ForeignKeys...)
+	}
 	_spec.ScanValues = func(columns []string) ([]any, error) {
-		return (*Movie).scanValues(nil, columns)
+		return (*MediaEvent).scanValues(nil, columns)
 	}
 	_spec.Assign = func(columns []string, values []any) error {
-		node := &Movie{config: _q.config}
+		node := &MediaEvent{config: _q.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
@@ -467,125 +474,125 @@ func (_q *MovieQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Movie,
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := _q.withDownloadRecords; query != nil {
-		if err := _q.loadDownloadRecords(ctx, query, nodes,
-			func(n *Movie) { n.Edges.DownloadRecords = []*DownloadRecord{} },
-			func(n *Movie, e *DownloadRecord) { n.Edges.DownloadRecords = append(n.Edges.DownloadRecords, e) }); err != nil {
+	if query := _q.withMovie; query != nil {
+		if err := _q.loadMovie(ctx, query, nodes, nil,
+			func(n *MediaEvent, e *Movie) { n.Edges.Movie = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := _q.withMediaFiles; query != nil {
-		if err := _q.loadMediaFiles(ctx, query, nodes,
-			func(n *Movie) { n.Edges.MediaFiles = []*MediaFile{} },
-			func(n *Movie, e *MediaFile) { n.Edges.MediaFiles = append(n.Edges.MediaFiles, e) }); err != nil {
+	if query := _q.withEpisode; query != nil {
+		if err := _q.loadEpisode(ctx, query, nodes, nil,
+			func(n *MediaEvent, e *Episode) { n.Edges.Episode = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := _q.withEvents; query != nil {
-		if err := _q.loadEvents(ctx, query, nodes,
-			func(n *Movie) { n.Edges.Events = []*MediaEvent{} },
-			func(n *Movie, e *MediaEvent) { n.Edges.Events = append(n.Edges.Events, e) }); err != nil {
+	if query := _q.withTvShow; query != nil {
+		if err := _q.loadTvShow(ctx, query, nodes, nil,
+			func(n *MediaEvent, e *TVShow) { n.Edges.TvShow = e }); err != nil {
 			return nil, err
 		}
 	}
 	return nodes, nil
 }
 
-func (_q *MovieQuery) loadDownloadRecords(ctx context.Context, query *DownloadRecordQuery, nodes []*Movie, init func(*Movie), assign func(*Movie, *DownloadRecord)) error {
-	fks := make([]driver.Value, 0, len(nodes))
-	nodeids := make(map[uint32]*Movie)
+func (_q *MediaEventQuery) loadMovie(ctx context.Context, query *MovieQuery, nodes []*MediaEvent, init func(*MediaEvent), assign func(*MediaEvent, *Movie)) error {
+	ids := make([]uint32, 0, len(nodes))
+	nodeids := make(map[uint32][]*MediaEvent)
 	for i := range nodes {
-		fks = append(fks, nodes[i].ID)
-		nodeids[nodes[i].ID] = nodes[i]
-		if init != nil {
-			init(nodes[i])
+		if nodes[i].movie_events == nil {
+			continue
 		}
+		fk := *nodes[i].movie_events
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
-	query.withFKs = true
-	query.Where(predicate.DownloadRecord(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(movie.DownloadRecordsColumn), fks...))
-	}))
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(movie.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.movie_download_records
-		if fk == nil {
-			return fmt.Errorf(`foreign-key "movie_download_records" is nil for node %v`, n.ID)
-		}
-		node, ok := nodeids[*fk]
+		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "movie_download_records" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "movie_events" returned %v`, n.ID)
 		}
-		assign(node, n)
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
 	}
 	return nil
 }
-func (_q *MovieQuery) loadMediaFiles(ctx context.Context, query *MediaFileQuery, nodes []*Movie, init func(*Movie), assign func(*Movie, *MediaFile)) error {
-	fks := make([]driver.Value, 0, len(nodes))
-	nodeids := make(map[uint32]*Movie)
+func (_q *MediaEventQuery) loadEpisode(ctx context.Context, query *EpisodeQuery, nodes []*MediaEvent, init func(*MediaEvent), assign func(*MediaEvent, *Episode)) error {
+	ids := make([]uint32, 0, len(nodes))
+	nodeids := make(map[uint32][]*MediaEvent)
 	for i := range nodes {
-		fks = append(fks, nodes[i].ID)
-		nodeids[nodes[i].ID] = nodes[i]
-		if init != nil {
-			init(nodes[i])
+		if nodes[i].episode_events == nil {
+			continue
 		}
+		fk := *nodes[i].episode_events
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
-	query.withFKs = true
-	query.Where(predicate.MediaFile(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(movie.MediaFilesColumn), fks...))
-	}))
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(episode.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.movie_media_files
-		if fk == nil {
-			return fmt.Errorf(`foreign-key "movie_media_files" is nil for node %v`, n.ID)
-		}
-		node, ok := nodeids[*fk]
+		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "movie_media_files" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "episode_events" returned %v`, n.ID)
 		}
-		assign(node, n)
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
 	}
 	return nil
 }
-func (_q *MovieQuery) loadEvents(ctx context.Context, query *MediaEventQuery, nodes []*Movie, init func(*Movie), assign func(*Movie, *MediaEvent)) error {
-	fks := make([]driver.Value, 0, len(nodes))
-	nodeids := make(map[uint32]*Movie)
+func (_q *MediaEventQuery) loadTvShow(ctx context.Context, query *TVShowQuery, nodes []*MediaEvent, init func(*MediaEvent), assign func(*MediaEvent, *TVShow)) error {
+	ids := make([]uint32, 0, len(nodes))
+	nodeids := make(map[uint32][]*MediaEvent)
 	for i := range nodes {
-		fks = append(fks, nodes[i].ID)
-		nodeids[nodes[i].ID] = nodes[i]
-		if init != nil {
-			init(nodes[i])
+		if nodes[i].tv_show_events == nil {
+			continue
 		}
+		fk := *nodes[i].tv_show_events
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
-	query.withFKs = true
-	query.Where(predicate.MediaEvent(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(movie.EventsColumn), fks...))
-	}))
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(tvshow.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.movie_events
-		if fk == nil {
-			return fmt.Errorf(`foreign-key "movie_events" is nil for node %v`, n.ID)
-		}
-		node, ok := nodeids[*fk]
+		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "movie_events" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "tv_show_events" returned %v`, n.ID)
 		}
-		assign(node, n)
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
 	}
 	return nil
 }
 
-func (_q *MovieQuery) sqlCount(ctx context.Context) (int, error) {
+func (_q *MediaEventQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := _q.querySpec()
 	_spec.Node.Columns = _q.ctx.Fields
 	if len(_q.ctx.Fields) > 0 {
@@ -594,8 +601,8 @@ func (_q *MovieQuery) sqlCount(ctx context.Context) (int, error) {
 	return sqlgraph.CountNodes(ctx, _q.driver, _spec)
 }
 
-func (_q *MovieQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := sqlgraph.NewQuerySpec(movie.Table, movie.Columns, sqlgraph.NewFieldSpec(movie.FieldID, field.TypeUint32))
+func (_q *MediaEventQuery) querySpec() *sqlgraph.QuerySpec {
+	_spec := sqlgraph.NewQuerySpec(mediaevent.Table, mediaevent.Columns, sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32))
 	_spec.From = _q.sql
 	if unique := _q.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
@@ -604,9 +611,9 @@ func (_q *MovieQuery) querySpec() *sqlgraph.QuerySpec {
 	}
 	if fields := _q.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
-		_spec.Node.Columns = append(_spec.Node.Columns, movie.FieldID)
+		_spec.Node.Columns = append(_spec.Node.Columns, mediaevent.FieldID)
 		for i := range fields {
-			if fields[i] != movie.FieldID {
+			if fields[i] != mediaevent.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
 		}
@@ -634,12 +641,12 @@ func (_q *MovieQuery) querySpec() *sqlgraph.QuerySpec {
 	return _spec
 }
 
-func (_q *MovieQuery) sqlQuery(ctx context.Context) *sql.Selector {
+func (_q *MediaEventQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(_q.driver.Dialect())
-	t1 := builder.Table(movie.Table)
+	t1 := builder.Table(mediaevent.Table)
 	columns := _q.ctx.Fields
 	if len(columns) == 0 {
-		columns = movie.Columns
+		columns = mediaevent.Columns
 	}
 	selector := builder.Select(t1.Columns(columns...)...).From(t1)
 	if _q.sql != nil {
@@ -666,28 +673,28 @@ func (_q *MovieQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	return selector
 }
 
-// MovieGroupBy is the group-by builder for Movie entities.
-type MovieGroupBy struct {
+// MediaEventGroupBy is the group-by builder for MediaEvent entities.
+type MediaEventGroupBy struct {
 	selector
-	build *MovieQuery
+	build *MediaEventQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
-func (_g *MovieGroupBy) Aggregate(fns ...AggregateFunc) *MovieGroupBy {
+func (_g *MediaEventGroupBy) Aggregate(fns ...AggregateFunc) *MediaEventGroupBy {
 	_g.fns = append(_g.fns, fns...)
 	return _g
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (_g *MovieGroupBy) Scan(ctx context.Context, v any) error {
+func (_g *MediaEventGroupBy) Scan(ctx context.Context, v any) error {
 	ctx = setContextOp(ctx, _g.build.ctx, ent.OpQueryGroupBy)
 	if err := _g.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*MovieQuery, *MovieGroupBy](ctx, _g.build, _g, _g.build.inters, v)
+	return scanWithInterceptors[*MediaEventQuery, *MediaEventGroupBy](ctx, _g.build, _g, _g.build.inters, v)
 }
 
-func (_g *MovieGroupBy) sqlScan(ctx context.Context, root *MovieQuery, v any) error {
+func (_g *MediaEventGroupBy) sqlScan(ctx context.Context, root *MediaEventQuery, v any) error {
 	selector := root.sqlQuery(ctx).Select()
 	aggregation := make([]string, 0, len(_g.fns))
 	for _, fn := range _g.fns {
@@ -714,28 +721,28 @@ func (_g *MovieGroupBy) sqlScan(ctx context.Context, root *MovieQuery, v any) er
 	return sql.ScanSlice(rows, v)
 }
 
-// MovieSelect is the builder for selecting fields of Movie entities.
-type MovieSelect struct {
-	*MovieQuery
+// MediaEventSelect is the builder for selecting fields of MediaEvent entities.
+type MediaEventSelect struct {
+	*MediaEventQuery
 	selector
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
-func (_s *MovieSelect) Aggregate(fns ...AggregateFunc) *MovieSelect {
+func (_s *MediaEventSelect) Aggregate(fns ...AggregateFunc) *MediaEventSelect {
 	_s.fns = append(_s.fns, fns...)
 	return _s
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (_s *MovieSelect) Scan(ctx context.Context, v any) error {
+func (_s *MediaEventSelect) Scan(ctx context.Context, v any) error {
 	ctx = setContextOp(ctx, _s.ctx, ent.OpQuerySelect)
 	if err := _s.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*MovieQuery, *MovieSelect](ctx, _s.MovieQuery, _s, _s.inters, v)
+	return scanWithInterceptors[*MediaEventQuery, *MediaEventSelect](ctx, _s.MediaEventQuery, _s, _s.inters, v)
 }
 
-func (_s *MovieSelect) sqlScan(ctx context.Context, root *MovieQuery, v any) error {
+func (_s *MediaEventSelect) sqlScan(ctx context.Context, root *MediaEventQuery, v any) error {
 	selector := root.sqlQuery(ctx)
 	aggregation := make([]string, 0, len(_s.fns))
 	for _, fn := range _s.fns {

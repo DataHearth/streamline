@@ -7,7 +7,18 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/importscanfile"
+	"github.com/datahearth/streamline/ent/importscanshow"
 )
+
+// owner is the resolved (scope, id) pair an event hangs off. A zero id means
+// "nothing to attribute this to" — the hook returns without recording rather
+// than writing an ownerless row.
+type owner struct {
+	scope Scope
+	id    uint32
+}
+
+func (o owner) ok() bool { return o.id != 0 }
 
 // Register installs runtime mutation hooks on the supplied client and
 // captures it as the package default for tx-less Record calls.
@@ -17,6 +28,7 @@ func Register(client *ent.Client) {
 	client.DownloadRecord.Use(downloadRecordHook())
 	client.MediaFile.Use(mediaFileHook())
 	client.ImportScanFile.Use(importScanFileHook())
+	client.ImportScanShow.Use(importScanShowHook())
 }
 
 func downloadRecordHook() ent.Hook {
@@ -34,15 +46,21 @@ func downloadRecordHook() ent.Hook {
 				c := dm.Client()
 				switch dm.Op() {
 				case ent.OpCreate:
-					movieID, ok := dm.MovieID()
-					if !ok {
+					o, err := downloadRecordOwner(ctx, c, dm)
+					if err != nil {
+						return val, fmt.Errorf(
+							"events.downloadRecordHook: resolve owner: %w", err,
+						)
+					}
+					if !o.ok() {
 						return val, nil
 					}
 					if err := Record(
 						ctx,
 						c,
 						TypeGrabbed,
-						movieID,
+						o.scope,
+						o.id,
 						downloadCreatePayload(dm),
 					); err != nil {
 						return val, err
@@ -55,37 +73,28 @@ func downloadRecordHook() ent.Hook {
 					if !changed {
 						return val, nil
 					}
-					movieID, err := downloadRecordMovieID(ctx, c, dm)
+					o, err := downloadRecordOwner(ctx, c, dm)
 					if err != nil {
 						return val, fmt.Errorf(
-							"events.downloadRecordHook: load movie id: %w",
-							err,
+							"events.downloadRecordHook: resolve owner: %w", err,
 						)
 					}
-					if movieID == 0 {
+					if !o.ok() {
 						return val, nil
 					}
+					var t Type
 					switch status {
 					case downloadrecord.StatusCompleted:
-						if err := Record(
-							ctx,
-							c,
-							TypeDownloadCompleted,
-							movieID,
-							downloadStatusPayload(dm),
-						); err != nil {
-							return val, err
-						}
+						t = TypeDownloadCompleted
 					case downloadrecord.StatusFailed:
-						if err := Record(
-							ctx,
-							c,
-							TypeDownloadFailed,
-							movieID,
-							downloadStatusPayload(dm),
-						); err != nil {
-							return val, err
-						}
+						t = TypeDownloadFailed
+					default:
+						return val, nil
+					}
+					if err := Record(
+						ctx, c, t, o.scope, o.id, downloadStatusPayload(dm),
+					); err != nil {
+						return val, err
 					}
 				}
 				return val, nil
@@ -109,16 +118,21 @@ func mediaFileHook() ent.Hook {
 				if !mf.Op().Is(ent.OpCreate) {
 					return val, nil
 				}
-				movieID, ok := mf.MovieID()
-				if !ok {
+				var o owner
+				switch {
+				case hasID(mf.MovieID):
+					o = owner{ScopeMovie, mustID(mf.MovieID)}
+				case hasID(mf.EpisodeID):
+					o = owner{ScopeEpisode, mustID(mf.EpisodeID)}
+				default:
 					return val, nil
 				}
-				c := mf.Client()
 				if err := Record(
 					ctx,
-					c,
+					mf.Client(),
 					TypeImported,
-					movieID,
+					o.scope,
+					o.id,
 					mediaFileCreatePayload(mf),
 				); err != nil {
 					return val, err
@@ -163,8 +177,59 @@ func importScanFileHook() ent.Hook {
 					ctx,
 					c,
 					TypeImportFailed,
+					ScopeMovie,
 					movieID,
 					importScanFilePayload(isf),
+				); err != nil {
+					return val, err
+				}
+				return val, nil
+			},
+		)
+	}
+}
+
+// importScanShowHook is the series twin of importScanFileHook. A failed show
+// entry is recorded against the series it was meant to land in; a failure with
+// no series resolved yet (an unmatched folder) has nowhere to hang and is
+// left to the scan's own outcome_message.
+func importScanShowHook() ent.Hook {
+	return func(next ent.Mutator) ent.Mutator {
+		return ent.MutateFunc(
+			func(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+				iss, ok := m.(*ent.ImportScanShowMutation)
+				if !ok {
+					return next.Mutate(ctx, m)
+				}
+				val, err := next.Mutate(ctx, m)
+				if err != nil {
+					return val, err
+				}
+				if !iss.Op().Is(ent.OpUpdate | ent.OpUpdateOne) {
+					return val, nil
+				}
+				outcome, changed := iss.Outcome()
+				if !changed || outcome != importscanshow.OutcomeFailed {
+					return val, nil
+				}
+				c := iss.Client()
+				showID, err := importScanShowTVShowID(ctx, c, iss)
+				if err != nil {
+					return val, fmt.Errorf(
+						"events.importScanShowHook: load tv show id: %w",
+						err,
+					)
+				}
+				if showID == 0 {
+					return val, nil
+				}
+				if err := Record(
+					ctx,
+					c,
+					TypeImportFailed,
+					ScopeSeries,
+					showID,
+					importScanShowPayload(iss),
 				); err != nil {
 					return val, err
 				}
@@ -224,33 +289,66 @@ func importScanFilePayload(m *ent.ImportScanFileMutation) map[string]any {
 	return p
 }
 
-func downloadRecordMovieID(
+func importScanShowPayload(m *ent.ImportScanShowMutation) map[string]any {
+	p := map[string]any{}
+	if v, ok := m.FolderPath(); ok {
+		p["path"] = v
+	}
+	if v, ok := m.OutcomeMessage(); ok && v != "" {
+		p["error"] = v
+	}
+	return p
+}
+
+func hasID(f func() (uint32, bool)) bool {
+	id, ok := f()
+	return ok && id != 0
+}
+
+func mustID(f func() (uint32, bool)) uint32 {
+	id, _ := f()
+	return id
+}
+
+// downloadRecordOwner resolves the movie or episode a record belongs to. On a
+// create the mutation carries the edge; on an update it usually does not, so
+// the row is queried back — movie first, then episode.
+func downloadRecordOwner(
 	ctx context.Context,
 	c *ent.Client,
 	m *ent.DownloadRecordMutation,
-) (uint32, error) {
-	if id, ok := m.MovieID(); ok {
-		return id, nil
+) (owner, error) {
+	if hasID(m.MovieID) {
+		return owner{ScopeMovie, mustID(m.MovieID)}, nil
+	}
+	if hasID(m.EpisodeID) {
+		return owner{ScopeEpisode, mustID(m.EpisodeID)}, nil
 	}
 	ids, err := m.IDs(ctx)
 	if err != nil {
-		return 0, err
+		return owner{}, err
 	}
 	if len(ids) == 0 {
-		return 0, nil
+		return owner{}, nil
 	}
-	mid, err := c.DownloadRecord.Query().
+	row, err := c.DownloadRecord.Query().
 		Where(downloadrecord.IDEQ(ids[0])).
-		QueryMovie().
-		OnlyID(ctx)
+		WithMovie().
+		WithEpisode().
+		Only(ctx)
 	if ent.IsNotFound(err) {
-		// Episode-linked record (no movie edge): no movie event to record.
-		return 0, nil
+		return owner{}, nil
 	}
 	if err != nil {
-		return 0, err
+		return owner{}, err
 	}
-	return mid, nil
+	switch {
+	case row.Edges.Movie != nil:
+		return owner{ScopeMovie, row.Edges.Movie.ID}, nil
+	case row.Edges.Episode != nil:
+		return owner{ScopeEpisode, row.Edges.Episode.ID}, nil
+	}
+	return owner{}, nil
 }
 
 func importScanFileMovieID(
@@ -282,4 +380,41 @@ func importScanFileMovieID(
 		return row.CreatedMovieID, nil
 	}
 	return row.ExistingMovieID, nil
+}
+
+func importScanShowTVShowID(
+	ctx context.Context,
+	c *ent.Client,
+	m *ent.ImportScanShowMutation,
+) (uint32, error) {
+	if id, ok := m.CreatedTvshowID(); ok && id != 0 {
+		return id, nil
+	}
+	if id, ok := m.ExistingTvshowID(); ok && id != 0 {
+		return id, nil
+	}
+	ids, err := m.IDs(ctx)
+	if err != nil {
+		return 0, err
+	}
+	if len(ids) == 0 {
+		return 0, nil
+	}
+	row, err := c.ImportScanShow.Query().
+		Where(importscanshow.IDIn(ids...)).
+		Select(
+			importscanshow.FieldCreatedTvshowID,
+			importscanshow.FieldExistingTvshowID,
+		).
+		First(ctx)
+	if err != nil {
+		return 0, err
+	}
+	if row.CreatedTvshowID != nil && *row.CreatedTvshowID != 0 {
+		return *row.CreatedTvshowID, nil
+	}
+	if row.ExistingTvshowID != nil {
+		return *row.ExistingTvshowID, nil
+	}
+	return 0, nil
 }

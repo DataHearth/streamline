@@ -423,6 +423,54 @@ func (s *Server) RenameMovieFiles(
 	}, nil
 }
 
+func (s *Server) ReidentifyMovie(
+	ctx context.Context,
+	request ReidentifyMovieRequestObject,
+) (ReidentifyMovieResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return ReidentifyMovie403JSONResponse{
+			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
+	m, err := s.movies.Reidentify(ctx, request.Id, request.Body.TmdbId)
+	switch {
+	case errors.Is(err, moviesvc.ErrMovieNotFound):
+		return ReidentifyMovie404JSONResponse{
+			NotFoundJSONResponse: errNotFound("movie not found"),
+		}, nil
+	case errors.Is(err, moviesvc.ErrInvalidTMDBID),
+		errors.Is(err, moviesvc.ErrSameTMDBID):
+		return ReidentifyMovie400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(err.Error()),
+		}, nil
+	case errors.Is(err, moviesvc.ErrMovieExists):
+		return ReidentifyMovie409JSONResponse{
+			ConflictJSONResponse: errConflict(
+				"that title is already in the library; delete it first",
+			),
+		}, nil
+	case err != nil:
+		return ReidentifyMovie500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+
+	out := ReidentifyResult{Id: m.ID, Title: m.Title}
+	// The identity is already repaired; a rename failure leaves the files where
+	// they were, which is recoverable from the movie's own rename action.
+	if s.renamer != nil {
+		plan, err := s.renamer.Apply(ctx, m.ID)
+		if err != nil {
+			slog.WarnContext(ctx, "rename after re-identify failed",
+				"movie.id", m.ID, "error", err)
+		}
+		out.Renamed = len(plan.Operations)
+	}
+	return ReidentifyMovie200JSONResponse{
+		ReidentifyResultJSONResponse: ReidentifyResultJSONResponse(out),
+	}, nil
+}
+
 func (s *Server) GetMovieRecommendations(
 	ctx context.Context,
 	request GetMovieRecommendationsRequestObject,

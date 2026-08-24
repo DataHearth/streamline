@@ -12,9 +12,9 @@ import (
 	"github.com/datahearth/streamline/ent/importscanfile"
 	"github.com/datahearth/streamline/ent/importscanshow"
 	"github.com/datahearth/streamline/ent/invite"
+	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
-	"github.com/datahearth/streamline/ent/movieevent"
 	"github.com/datahearth/streamline/ent/oidcidentity"
 	"github.com/datahearth/streamline/ent/request"
 	"github.com/datahearth/streamline/ent/scheduledjob"
@@ -207,6 +207,21 @@ func init() {
 	inviteDescTokenHash := inviteFields[0].Descriptor()
 	// invite.TokenHashValidator is a validator for the "token_hash" field. It is called by the builders before save.
 	invite.TokenHashValidator = inviteDescTokenHash.Validators[0].(func(string) error)
+	mediaeventMixin := schema.MediaEvent{}.Mixin()
+	mediaeventMixinFields1 := mediaeventMixin[1].Fields()
+	_ = mediaeventMixinFields1
+	mediaeventFields := schema.MediaEvent{}.Fields()
+	_ = mediaeventFields
+	// mediaeventDescCreateTime is the schema descriptor for create_time field.
+	mediaeventDescCreateTime := mediaeventMixinFields1[0].Descriptor()
+	// mediaevent.DefaultCreateTime holds the default value on creation for the create_time field.
+	mediaevent.DefaultCreateTime = mediaeventDescCreateTime.Default.(func() time.Time)
+	// mediaeventDescUpdateTime is the schema descriptor for update_time field.
+	mediaeventDescUpdateTime := mediaeventMixinFields1[1].Descriptor()
+	// mediaevent.DefaultUpdateTime holds the default value on creation for the update_time field.
+	mediaevent.DefaultUpdateTime = mediaeventDescUpdateTime.Default.(func() time.Time)
+	// mediaevent.UpdateDefaultUpdateTime holds the default value on update for the update_time field.
+	mediaevent.UpdateDefaultUpdateTime = mediaeventDescUpdateTime.UpdateDefault.(func() time.Time)
 	mediafileMixin := schema.MediaFile{}.Mixin()
 	mediafileMixinFields1 := mediafileMixin[1].Fields()
 	_ = mediafileMixinFields1
@@ -269,21 +284,6 @@ func init() {
 	movieDescRating := movieFields[13].Descriptor()
 	// movie.DefaultRating holds the default value on creation for the rating field.
 	movie.DefaultRating = movieDescRating.Default.(float64)
-	movieeventMixin := schema.MovieEvent{}.Mixin()
-	movieeventMixinFields1 := movieeventMixin[1].Fields()
-	_ = movieeventMixinFields1
-	movieeventFields := schema.MovieEvent{}.Fields()
-	_ = movieeventFields
-	// movieeventDescCreateTime is the schema descriptor for create_time field.
-	movieeventDescCreateTime := movieeventMixinFields1[0].Descriptor()
-	// movieevent.DefaultCreateTime holds the default value on creation for the create_time field.
-	movieevent.DefaultCreateTime = movieeventDescCreateTime.Default.(func() time.Time)
-	// movieeventDescUpdateTime is the schema descriptor for update_time field.
-	movieeventDescUpdateTime := movieeventMixinFields1[1].Descriptor()
-	// movieevent.DefaultUpdateTime holds the default value on creation for the update_time field.
-	movieevent.DefaultUpdateTime = movieeventDescUpdateTime.Default.(func() time.Time)
-	// movieevent.UpdateDefaultUpdateTime holds the default value on update for the update_time field.
-	movieevent.UpdateDefaultUpdateTime = movieeventDescUpdateTime.UpdateDefault.(func() time.Time)
 	oidcidentityMixin := schema.OIDCIdentity{}.Mixin()
 	oidcidentityMixinFields1 := oidcidentityMixin[1].Fields()
 	_ = oidcidentityMixinFields1

@@ -213,10 +213,28 @@ func (db *DB) UpdateMediaFilePath(
 func (db *DB) BumpMediaFileLastSeen(ctx context.Context, id uint32) error {
 	if err := db.client.MediaFile.UpdateOneID(id).
 		SetLastSeenAt(time.Now()).
+		ClearMissingSince().
 		Exec(ctx); err != nil {
 		return fmt.Errorf("bump last_seen_at for media_file %d: %w", id, err)
 	}
 	return nil
+}
+
+// MarkMediaFileMissing stamps missing_since, reporting whether this call was
+// the one that set it. Only the first missing tick returns true, which is the
+// edge the drift_detected event hangs off.
+func (db *DB) MarkMediaFileMissing(
+	ctx context.Context,
+	id uint32,
+) (bool, error) {
+	n, err := db.client.MediaFile.Update().
+		Where(mediafile.ID(id), mediafile.MissingSinceIsNil()).
+		SetMissingSince(time.Now()).
+		Save(ctx)
+	if err != nil {
+		return false, fmt.Errorf("mark media_file %d missing: %w", id, err)
+	}
+	return n > 0, nil
 }
 
 // DeleteMediaFile removes a MediaFile row without touching any owner. Used by

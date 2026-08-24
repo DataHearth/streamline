@@ -8,6 +8,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
+	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/predicate"
 	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/ent/season"
@@ -420,6 +421,57 @@ func (db *DB) SetTVShowRefreshedAt(
 	when time.Time,
 ) error {
 	return db.client.TVShow.UpdateOneID(id).SetLastRefreshedAt(when).Exec(ctx)
+}
+
+// SetTVShowTVDBID repoints a row at a different TVDB show. The season/episode
+// tree still describes the old show until the caller reconciles it, so this is
+// never useful on its own — see tvshow.Service.Reidentify.
+func (db *DB) SetTVShowTVDBID(ctx context.Context, id, tvdbID uint32) error {
+	return db.client.TVShow.UpdateOneID(id).SetTvdbID(tvdbID).Exec(ctx)
+}
+
+// DetachEpisodeMediaFiles clears the episode edge on every media file under
+// show, returning the detached rows. Used by re-identify to lift the files out
+// of the way before the episode tree is replaced: ReconcileEpisodes deletes
+// episodes the new provider entry does not report and hands back their paths
+// for deletion from disk, which for a *different* show is every file there is.
+func (db *DB) DetachEpisodeMediaFiles(
+	ctx context.Context,
+	showID uint32,
+) ([]*ent.MediaFile, error) {
+	rows, err := db.client.MediaFile.Query().
+		Where(mediafile.HasEpisodeWith(
+			episode.HasSeasonWith(season.HasTvShowWith(tvshow.ID(showID))),
+		)).
+		WithEpisode(func(eq *ent.EpisodeQuery) { eq.WithSeason() }).
+		All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("query episode media files: %w", err)
+	}
+	if len(rows) == 0 {
+		return nil, nil
+	}
+	ids := make([]uint32, 0, len(rows))
+	for _, r := range rows {
+		ids = append(ids, r.ID)
+	}
+	if err := db.client.MediaFile.Update().
+		Where(mediafile.IDIn(ids...)).
+		ClearEpisode().
+		Exec(ctx); err != nil {
+		return nil, fmt.Errorf("detach episode media files: %w", err)
+	}
+	return rows, nil
+}
+
+// AttachMediaFileToEpisode re-points a detached media file at an episode.
+func (db *DB) AttachMediaFileToEpisode(
+	ctx context.Context,
+	mediaFileID, episodeID uint32,
+) error {
+	return db.client.MediaFile.UpdateOneID(mediaFileID).
+		SetEpisodeID(episodeID).
+		Exec(ctx)
 }
 
 func (db *DB) DeleteTVShow(ctx context.Context, id uint32) error {

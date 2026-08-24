@@ -93,6 +93,18 @@ func (f InviteFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, erro
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.InviteMutation", m)
 }
 
+// The MediaEventFunc type is an adapter to allow the use of ordinary
+// function as MediaEvent mutator.
+type MediaEventFunc func(context.Context, *ent.MediaEventMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f MediaEventFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.MediaEventMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.MediaEventMutation", m)
+}
+
 // The MediaFileFunc type is an adapter to allow the use of ordinary
 // function as MediaFile mutator.
 type MediaFileFunc func(context.Context, *ent.MediaFileMutation) (ent.Value, error)
@@ -115,18 +127,6 @@ func (f MovieFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.MovieMutation", m)
-}
-
-// The MovieEventFunc type is an adapter to allow the use of ordinary
-// function as MovieEvent mutator.
-type MovieEventFunc func(context.Context, *ent.MovieEventMutation) (ent.Value, error)
-
-// Mutate calls f(ctx, m).
-func (f MovieEventFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.MovieEventMutation); ok {
-		return f(ctx, mv)
-	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.MovieEventMutation", m)
 }
 
 // The OIDCIdentityFunc type is an adapter to allow the use of ordinary
