@@ -210,12 +210,16 @@ func (db *DB) UpdateMediaFilePath(
 	return nil
 }
 
-func (db *DB) BumpMediaFileLastSeen(ctx context.Context, id uint32) error {
+// StartMediaFileGraceClock stamps last_seen_at for a row that never had one,
+// so a missing file gets a full grace window instead of instant deletion. It
+// deliberately leaves missing_since alone: clearing it here made the next
+// tick's MarkMediaFileMissing report "first" again and drift_detected fired
+// twice for one disappearance.
+func (db *DB) StartMediaFileGraceClock(ctx context.Context, id uint32) error {
 	if err := db.client.MediaFile.UpdateOneID(id).
 		SetLastSeenAt(time.Now()).
-		ClearMissingSince().
 		Exec(ctx); err != nil {
-		return fmt.Errorf("bump last_seen_at for media_file %d: %w", id, err)
+		return fmt.Errorf("start grace clock for media_file %d: %w", id, err)
 	}
 	return nil
 }

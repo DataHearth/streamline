@@ -81,7 +81,7 @@ var _ = Describe("Service.RunDriftCheck", Label("unit", "hygiene"), func() {
 				Return(true, nil).
 				Once()
 			store.EXPECT().
-				BumpMediaFileLastSeen(mock.Anything, uint32(7)).
+				StartMediaFileGraceClock(mock.Anything, uint32(7)).
 				Return(nil).
 				Once()
 

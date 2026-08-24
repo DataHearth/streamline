@@ -599,63 +599,6 @@ func (_c *MockTx_BulkUpdateImportScanShowDecisions_Call) RunAndReturn(run func(c
 	return _c
 }
 
-// BumpMediaFileLastSeen provides a mock function for the type MockTx
-func (_mock *MockTx) BumpMediaFileLastSeen(ctx context.Context, id uint32) error {
-	ret := _mock.Called(ctx, id)
-
-	if len(ret) == 0 {
-		panic("no return value specified for BumpMediaFileLastSeen")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) error); ok {
-		r0 = returnFunc(ctx, id)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// MockTx_BumpMediaFileLastSeen_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BumpMediaFileLastSeen'
-type MockTx_BumpMediaFileLastSeen_Call struct {
-	*mock.Call
-}
-
-// BumpMediaFileLastSeen is a helper method to define mock.On call
-//   - ctx context.Context
-//   - id uint32
-func (_e *MockTx_Expecter) BumpMediaFileLastSeen(ctx any, id any) *MockTx_BumpMediaFileLastSeen_Call {
-	return &MockTx_BumpMediaFileLastSeen_Call{Call: _e.mock.On("BumpMediaFileLastSeen", ctx, id)}
-}
-
-func (_c *MockTx_BumpMediaFileLastSeen_Call) Run(run func(ctx context.Context, id uint32)) *MockTx_BumpMediaFileLastSeen_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 uint32
-		if args[1] != nil {
-			arg1 = args[1].(uint32)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *MockTx_BumpMediaFileLastSeen_Call) Return(err error) *MockTx_BumpMediaFileLastSeen_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *MockTx_BumpMediaFileLastSeen_Call) RunAndReturn(run func(ctx context.Context, id uint32) error) *MockTx_BumpMediaFileLastSeen_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // BumpMediaFilesLastSeen provides a mock function for the type MockTx
 func (_mock *MockTx) BumpMediaFilesLastSeen(ctx context.Context, ids []uint32) error {
 	ret := _mock.Called(ctx, ids)
@@ -10901,6 +10844,63 @@ func (_c *MockTx_StampMediaFileProbe_Call) Return(err error) *MockTx_StampMediaF
 }
 
 func (_c *MockTx_StampMediaFileProbe_Call) RunAndReturn(run func(ctx context.Context, id uint32, info *ffmpeg.Info) error) *MockTx_StampMediaFileProbe_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// StartMediaFileGraceClock provides a mock function for the type MockTx
+func (_mock *MockTx) StartMediaFileGraceClock(ctx context.Context, id uint32) error {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for StartMediaFileGraceClock")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) error); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTx_StartMediaFileGraceClock_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'StartMediaFileGraceClock'
+type MockTx_StartMediaFileGraceClock_Call struct {
+	*mock.Call
+}
+
+// StartMediaFileGraceClock is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+func (_e *MockTx_Expecter) StartMediaFileGraceClock(ctx any, id any) *MockTx_StartMediaFileGraceClock_Call {
+	return &MockTx_StartMediaFileGraceClock_Call{Call: _e.mock.On("StartMediaFileGraceClock", ctx, id)}
+}
+
+func (_c *MockTx_StartMediaFileGraceClock_Call) Run(run func(ctx context.Context, id uint32)) *MockTx_StartMediaFileGraceClock_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_StartMediaFileGraceClock_Call) Return(err error) *MockTx_StartMediaFileGraceClock_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTx_StartMediaFileGraceClock_Call) RunAndReturn(run func(ctx context.Context, id uint32) error) *MockTx_StartMediaFileGraceClock_Call {
 	_c.Call.Return(run)
 	return _c
 }

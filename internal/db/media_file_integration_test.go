@@ -133,6 +133,30 @@ var _ = Describe("MediaFile store", Label("integration", "db"), func() {
 		)
 	})
 
+	Describe("StartMediaFileGraceClock", func() {
+		// The grace-start write leaving missing_since alone is what keeps
+		// MarkMediaFileMissing from reporting "first" twice — and each
+		// "first" is a drift_detected event.
+		It("does not re-arm MarkMediaFileMissing", func() {
+			mf := createMovieFile()
+
+			first, err := store.MarkMediaFileMissing(ctx, mf.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(first).To(BeTrue())
+
+			Expect(store.StartMediaFileGraceClock(ctx, mf.ID)).To(Succeed())
+
+			again, err := store.MarkMediaFileMissing(ctx, mf.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(again).To(BeFalse())
+
+			row, err := client.MediaFile.Get(ctx, mf.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(row.LastSeenAt).NotTo(BeNil())
+			Expect(row.MissingSince).NotTo(BeNil())
+		})
+	})
+
 	Describe("StampMediaFileProbe", func() {
 		It("stores probe info and stamps probed_at", func() {
 			mf := createMovieFile()

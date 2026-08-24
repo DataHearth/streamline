@@ -95,10 +95,12 @@ func (s *Service) handleMissing(
 		})
 	}
 
-	// First-tick free pass: NULL last_seen_at → start grace clock.
+	// First-tick free pass: NULL last_seen_at → start grace clock. The write
+	// must leave missing_since in place or the next tick re-detects the same
+	// disappearance.
 	if row.LastSeenAt == nil {
-		if err := s.store.BumpMediaFileLastSeen(ctx, row.ID); err != nil {
-			slog.WarnContext(ctx, "bump last_seen_at (grace start) failed",
+		if err := s.store.StartMediaFileGraceClock(ctx, row.ID); err != nil {
+			slog.WarnContext(ctx, "start grace clock failed",
 				"media_file_id", row.ID, "error", err)
 		}
 		return
