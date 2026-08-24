@@ -18,6 +18,7 @@
 	import MovieBulkActions from "../../components/movies/MovieBulkActions.svelte";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 	import type {
+		MonitorFilter,
 		Movie,
 		ScheduleList,
 	} from "../../lib/types";
@@ -48,13 +49,20 @@
 		const rawSort = p.get("sort") ?? stored[0] ?? "title";
 		const rawOrder = p.get("order") ?? stored[1] ?? "asc";
 		const rawView = p.get("view") ?? "grid";
+		// ?monitored=1 predates the unmonitored side of the filter, so it keeps
+		// meaning what it did and 0 is the new opposite.
+		const rawMonitored = p.get("monitored");
 		return {
 			tab: VALID_TABS.has(rawTab) ? rawTab : "all",
 			query: p.get("q") ?? "",
 			sort: (rawSort === "year" ? "year" : "title") as SortKey,
 			order: (rawOrder === "desc" ? "desc" : "asc") as SortOrder,
 			view: (rawView === "list" ? "list" : "grid") as View,
-			monitoredOnly: p.get("monitored") === "1",
+			monitorFilter: (rawMonitored === "1"
+				? "monitored"
+				: rawMonitored === "0"
+					? "unmonitored"
+					: "all") as MonitorFilter,
 		};
 	}
 
@@ -64,7 +72,7 @@
 	let sort = $state<SortKey>(initial.sort);
 	let order = $state<SortOrder>(initial.order);
 	let view = $state<View>(initial.view);
-	let monitoredOnly = $state(initial.monitoredOnly);
+	let monitorFilter = $state<MonitorFilter>(initial.monitorFilter);
 	// A phone has no width for the list table — seven columns at 390px is not a
 	// readable row. Below md the library is posters only, whatever the URL or the
 	// last-used view says, and the sheet stops offering the choice.
@@ -95,7 +103,8 @@
 		const p = new URLSearchParams();
 		if (tab !== "all") p.set("status", tab);
 		if (query) p.set("q", query);
-		if (monitoredOnly) p.set("monitored", "1");
+		if (monitorFilter !== "all")
+			p.set("monitored", monitorFilter === "monitored" ? "1" : "0");
 		if (sort !== "title") p.set("sort", sort);
 		if (order !== "asc") p.set("order", order);
 		if (view !== "grid") p.set("view", view);
@@ -149,6 +158,7 @@
 	// Unmonitored fileless movies resolve to "missing", which has no tab — they
 	// stay reachable under All rather than padding the Wanted queue.
 	let monitoredCount = $derived(allMovies.filter((m) => m.monitored).length);
+	let unmonitoredCount = $derived(allMovies.length - monitoredCount);
 
 	function passesTab(m: Movie): boolean {
 		if (tab === "all") return true;
@@ -157,7 +167,8 @@
 
 	let visibleMovies = $derived.by(() => {
 		let list = allMovies.filter(passesTab);
-		if (monitoredOnly) list = list.filter((m) => m.monitored);
+		if (monitorFilter !== "all")
+			list = list.filter((m) => m.monitored === (monitorFilter === "monitored"));
 		const q = fold(query.trim());
 		if (q)
 			list = list.filter(
@@ -178,7 +189,10 @@
 	});
 
 	let libraryEmpty = $derived(
-		tab === "all" && !query && !monitoredOnly && allMovies.length === 0,
+		tab === "all" &&
+			!query &&
+			monitorFilter === "all" &&
+			allMovies.length === 0,
 	);
 
 	// Only the rendered slice is budgeted; counts, selection and bulk actions
@@ -187,7 +201,7 @@
 	$effect(() => {
 		void tab;
 		void query;
-		void monitoredOnly;
+		void monitorFilter;
 		void sort;
 		void order;
 		rendered.reset();
@@ -214,7 +228,7 @@
 	function clearFilters() {
 		tab = "all";
 		query = "";
-		monitoredOnly = false;
+		monitorFilter = "all";
 	}
 
 	// Below md the page gives up its own count line and the topbar carries it
@@ -274,7 +288,7 @@
 	$effect(() => {
 		tab;
 		query;
-		monitoredOnly;
+		monitorFilter;
 		untrack(clearSelection);
 	});
 </script>
@@ -305,14 +319,15 @@
 			{order}
 			view={shownView}
 			{counts}
-			{monitoredOnly}
+			{monitorFilter}
 			{monitoredCount}
+			{unmonitoredCount}
 			{selectMode}
 			selectedCount={selected.size}
 			visibleCount={visibleMovies.length}
 			onTabChange={(t) => (tab = t)}
 			onQueryChange={(q) => (query = q)}
-			onMonitoredChange={(v) => (monitoredOnly = v)}
+			onMonitorFilterChange={(v) => (monitorFilter = v)}
 			onSortChange={setSort}
 			onViewChange={(v) => (view = v)}
 			onClearFilters={clearFilters}

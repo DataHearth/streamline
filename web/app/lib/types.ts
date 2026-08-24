@@ -19,6 +19,10 @@ export type MonitoringPreset =
 	| "pilot"
 	| "none";
 
+// Library-list monitoring filter. Client-side only — both list endpoints
+// return every row and the SPA narrows the set.
+export type MonitorFilter = "all" | "monitored" | "unmonitored";
+
 export type Episode = {
 	id: number;
 	number: number;
