@@ -75,7 +75,7 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 				done := make(chan struct{})
 				posters.EXPECT().
 					Fetch(mock.Anything, "movies", mock.AnythingOfType("uint32"),
-						"https://image.tmdb.org/t/p/w500/abc.jpg").
+						"https://image.tmdb.org/t/p/w780/abc.jpg").
 					RunAndReturn(func(_ context.Context, _ string, _ uint32, _ string) error {
 						close(done)
 						return nil

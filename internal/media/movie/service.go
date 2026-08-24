@@ -498,9 +498,11 @@ func (s *Service) fetchPoster(ctx context.Context, id uint32, posterPath string)
 		return
 	}
 	bg := context.WithoutCancel(ctx)
-	// w500 is the widest size the card grid renders. "original" shipped 1.5-2 MB
-	// per poster; a full movies page was ~150 MB of images.
-	src := metadata.PosterURL(posterPath, "w500")
+	// One cached size serves every render, so it is sized for the largest sharp
+	// one: the detail hero's 260px column at DPR 3 = 780px. The two full-bleed
+	// backdrops are blur-md, so they do not raise the bar. "original" is ~1.9 MB
+	// against w780's ~360 KB, and the cards only ever needed ~400px.
+	src := metadata.PosterURL(posterPath, "w780")
 	go func() {
 		if err := s.posters.Fetch(bg, "movies", id, src); err != nil {
 			slog.WarnContext(bg, "poster fetch failed",
@@ -629,6 +631,11 @@ func (s *Service) refreshOne(ctx context.Context, m *ent.Movie) error {
 	if err := s.fetchDigitalRelease(ctx, m); err != nil {
 		return otelx.RecordSpanError(span, err)
 	}
+	// Fetch is a no-op when the file is already cached, so this costs nothing
+	// on a populated cache and is the only thing that refills a cleared one —
+	// the series path already does it, and without it dropping the poster
+	// directory left movies with placeholders permanently.
+	s.fetchPoster(ctx, m.ID, details.PosterPath)
 	return nil
 }
 

@@ -122,7 +122,7 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 
 				done := make(chan struct{})
 				fetchMock.Fetch(mock.Anything, "movies", uint32(11),
-					"https://image.tmdb.org/t/p/w500/abc.jpg").
+					"https://image.tmdb.org/t/p/w780/abc.jpg").
 					RunAndReturn(func(_ context.Context, _ string, _ uint32, _ string) error {
 						close(done)
 						return nil
@@ -152,7 +152,7 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 
 					done := make(chan struct{})
 					fetchMock.Fetch(mock.Anything, "movies", uint32(11),
-						"https://image.tmdb.org/t/p/w500/abc.jpg").
+						"https://image.tmdb.org/t/p/w780/abc.jpg").
 						RunAndReturn(func(_ context.Context, _ string, _ uint32, _ string) error {
 							close(done)
 							return errors.New("network blew up")
