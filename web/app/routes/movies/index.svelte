@@ -12,6 +12,8 @@
 	import MoviesToolbar from "../../components/movies/MoviesToolbar.svelte";
 	import MovieGrid from "../../components/movies/MovieGrid.svelte";
 	import MovieList from "../../components/movies/MovieList.svelte";
+	import RenderSentinel from "../../components/shared/RenderSentinel.svelte";
+	import { IncrementalList } from "../../lib/incremental-list.svelte";
 	import MoviesEmpty from "../../components/movies/MoviesEmpty.svelte";
 	import MovieBulkActions from "../../components/movies/MovieBulkActions.svelte";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
@@ -179,6 +181,18 @@
 		tab === "all" && !query && !monitoredOnly && allMovies.length === 0,
 	);
 
+	// Only the rendered slice is budgeted; counts, selection and bulk actions
+	// keep operating on the full filtered set.
+	const rendered = new IncrementalList(() => visibleMovies);
+	$effect(() => {
+		void tab;
+		void query;
+		void monitoredOnly;
+		void sort;
+		void order;
+		rendered.reset();
+	});
+
 	let monitoredSize = $derived.by(() => {
 		let total = 0;
 		for (const m of allMovies)
@@ -345,7 +359,7 @@
 				/>
 			{:else if shownView === "list"}
 				<MovieList
-					movies={visibleMovies}
+					movies={rendered.items}
 					{sort}
 					{order}
 					onSortChange={setSort}
@@ -355,13 +369,14 @@
 				/>
 			{:else}
 				<MovieGrid
-					movies={visibleMovies}
+					movies={rendered.items}
 					{selected}
 					{selectMode}
 					onToggle={toggle}
 					onLongPress={beginLongPress}
 				/>
 			{/if}
+			<RenderSentinel list={rendered} />
 		</div>
 
 		<MovieBulkActions

@@ -16,6 +16,8 @@
 	} from "../../components/series/SeriesToolbar.svelte";
 	import SeriesGrid from "../../components/series/SeriesGrid.svelte";
 	import SeriesList from "../../components/series/SeriesList.svelte";
+	import RenderSentinel from "../../components/shared/RenderSentinel.svelte";
+	import { IncrementalList } from "../../lib/incremental-list.svelte";
 	import SeriesEmpty from "../../components/series/SeriesEmpty.svelte";
 	import SeriesBulkActions from "../../components/series/SeriesBulkActions.svelte";
 	import type { ScheduleList, TVShow } from "../../lib/types";
@@ -211,6 +213,18 @@
 			allSeries.length === 0,
 	);
 
+	// Only the rendered slice is budgeted; counts, selection and bulk actions
+	// keep operating on the full filtered set.
+	const rendered = new IncrementalList(() => visibleSeries);
+	$effect(() => {
+		void tab;
+		void typeFilter;
+		void query;
+		void monitoredOnly;
+		void sort;
+		rendered.reset();
+	});
+
 	let lastScan = $derived.by(() => {
 		const items = schedulesQuery.data?.items ?? [];
 		let mostRecent: string | null = null;
@@ -381,20 +395,21 @@
 				/>
 			{:else if shownView === "list"}
 				<SeriesList
-					series={visibleSeries}
+					series={rendered.items}
 					{selected}
 					onToggle={toggle}
 					onToggleAll={toggleAll}
 				/>
 			{:else}
 				<SeriesGrid
-					series={visibleSeries}
+					series={rendered.items}
 					{selected}
 					{selectMode}
 					onToggle={toggle}
 					onLongPress={beginLongPress}
 				/>
 			{/if}
+			<RenderSentinel list={rendered} />
 		</div>
 
 		<SeriesBulkActions
