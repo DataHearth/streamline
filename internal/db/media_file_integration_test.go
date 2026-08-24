@@ -110,6 +110,29 @@ var _ = Describe("MediaFile store", Label("integration", "db"), func() {
 		})
 	})
 
+	Describe("BumpMediaFilesLastSeen", func() {
+		It(
+			"stamps last_seen_at and clears missing_since for the whole batch",
+			func() {
+				a, b := createMovieFile(), createMovieFile()
+				first, err := store.MarkMediaFileMissing(ctx, a.ID)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(first).To(BeTrue())
+
+				Expect(store.BumpMediaFilesLastSeen(
+					ctx, []uint32{a.ID, b.ID},
+				)).To(Succeed())
+
+				for _, id := range []uint32{a.ID, b.ID} {
+					row, err := client.MediaFile.Get(ctx, id)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(row.LastSeenAt).NotTo(BeNil())
+					Expect(row.MissingSince).To(BeNil())
+				}
+			},
+		)
+	})
+
 	Describe("StampMediaFileProbe", func() {
 		It("stores probe info and stamps probed_at", func() {
 			mf := createMovieFile()

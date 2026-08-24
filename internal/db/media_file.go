@@ -220,6 +220,29 @@ func (db *DB) BumpMediaFileLastSeen(ctx context.Context, id uint32) error {
 	return nil
 }
 
+// BumpMediaFilesLastSeen is BumpMediaFileLastSeen over a batch. drift-check
+// verifies the whole library every tick; issuing the bumps row by row held
+// SQLite's single connection through thousands of UPDATEs and every API
+// request queued behind them. Chunked so the IN list stays well under
+// SQLite's bound-variable cap.
+func (db *DB) BumpMediaFilesLastSeen(ctx context.Context, ids []uint32) error {
+	const chunkSize = 500
+	now := time.Now()
+	for start := 0; start < len(ids); start += chunkSize {
+		chunk := ids[start:min(start+chunkSize, len(ids))]
+		if err := db.client.MediaFile.Update().
+			Where(mediafile.IDIn(chunk...)).
+			SetLastSeenAt(now).
+			ClearMissingSince().
+			Exec(ctx); err != nil {
+			return fmt.Errorf(
+				"bump last_seen_at for %d media_files: %w", len(chunk), err,
+			)
+		}
+	}
+	return nil
+}
+
 // MarkMediaFileMissing stamps missing_since, reporting whether this call was
 // the one that set it. Only the first missing tick returns true, which is the
 // edge the drift_detected event hangs off.

@@ -31,29 +31,40 @@ func (s *Service) RunDriftCheck(ctx context.Context, interval time.Duration) err
 	}
 	span.SetAttributes(attribute.Int("rows", len(rows)))
 
+	// Present files only need their grace clock advanced, so their bumps are
+	// collected and written as one batch after the walk. Issuing them row by
+	// row put thousands of UPDATEs on SQLite's single connection every tick,
+	// and every API request queued behind them for seconds.
+	present := make([]uint32, 0, len(rows))
 	for _, row := range rows {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		s.checkDrift(ctx, row, graceWindow)
+		if s.checkDrift(ctx, row, graceWindow) {
+			present = append(present, row.ID)
+		}
+	}
+	if len(present) > 0 {
+		if err := s.store.BumpMediaFilesLastSeen(ctx, present); err != nil {
+			return otelx.RecordSpanError(span, err)
+		}
+		driftVerified.Add(ctx, int64(len(present)))
 	}
 	return nil
 }
 
+// checkDrift reports whether the row's file is present on disk; the caller
+// batches the last_seen bookkeeping for present rows. Missing and erroring
+// rows are handled here and report false.
 func (s *Service) checkDrift(
 	ctx context.Context,
 	row *ent.MediaFile,
 	graceWindow time.Duration,
-) {
+) bool {
 	_, statErr := os.Stat(row.Path)
 	switch {
 	case statErr == nil:
-		if err := s.store.BumpMediaFileLastSeen(ctx, row.ID); err != nil {
-			slog.WarnContext(ctx, "bump last_seen_at failed",
-				"media_file_id", row.ID, "error", err)
-			return
-		}
-		driftVerified.Add(ctx, 1)
+		return true
 	case errors.Is(statErr, fs.ErrNotExist):
 		s.handleMissing(ctx, row, graceWindow)
 	default:
@@ -63,6 +74,7 @@ func (s *Service) checkDrift(
 			attribute.String("error_kind", classifyStatErr(statErr)),
 		))
 	}
+	return false
 }
 
 func (s *Service) handleMissing(

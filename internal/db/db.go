@@ -370,6 +370,9 @@ type Store interface {
 	// BumpMediaFileLastSeen sets last_seen_at = now for the given row and
 	// clears any missing_since stamp.
 	BumpMediaFileLastSeen(ctx context.Context, id uint32) error
+	// BumpMediaFilesLastSeen is BumpMediaFileLastSeen over a batch, in a
+	// bounded number of UPDATE statements rather than one per row.
+	BumpMediaFilesLastSeen(ctx context.Context, ids []uint32) error
 	// MarkMediaFileMissing stamps missing_since, reporting true only when this
 	// call set it — the first drift tick that could not stat the file.
 	MarkMediaFileMissing(ctx context.Context, id uint32) (bool, error)
