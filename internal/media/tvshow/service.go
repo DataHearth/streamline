@@ -822,6 +822,10 @@ func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.TVShow, error
 	if err := s.db.SetTVShowRefreshedAt(ctx, id, time.Now()); err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
+	// Add and Reidentify fetched the poster, refresh did not — so a cleared
+	// cache stayed cleared for every show already in the library. Fetch
+	// no-ops when the file is present, so this is free on a warm cache.
+	s.fetchPoster(ctx, id, d.PosterPath)
 	return s.db.FindTVShowByID(ctx, id)
 }
 
