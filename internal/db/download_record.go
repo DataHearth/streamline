@@ -550,10 +550,22 @@ func (db *DB) SetDownloadRecordSavePath(
 	return db.client.DownloadRecord.UpdateOneID(id).SetSavePath(path).Exec(ctx)
 }
 
-func (db *DB) CountDownloadRecords(ctx context.Context) (int, error) {
-	n, err := db.client.DownloadRecord.Query().Count(ctx)
+// CountLiveDownloadRecords counts records whose save_path something will
+// still read: in-flight downloads and pending adoption proposals. Terminal
+// rows (completed, failed, dismissed) keep the path they were created with
+// forever, so counting them would hold the boot drift warning on long after
+// the download root legitimately moved.
+func (db *DB) CountLiveDownloadRecords(ctx context.Context) (int, error) {
+	n, err := db.client.DownloadRecord.Query().
+		Where(downloadrecord.StatusIn(
+			downloadrecord.StatusDownloading,
+			downloadrecord.StatusImporting,
+			downloadrecord.StatusHeld,
+			downloadrecord.StatusPending,
+		)).
+		Count(ctx)
 	if err != nil {
-		return 0, fmt.Errorf("count download_records: %w", err)
+		return 0, fmt.Errorf("count live download_records: %w", err)
 	}
 	return n, nil
 }

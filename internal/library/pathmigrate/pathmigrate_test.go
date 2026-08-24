@@ -1,6 +1,7 @@
 package pathmigrate
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"path/filepath"
@@ -64,7 +65,7 @@ var _ = Describe("Service", Label("unit", "library"), func() {
 			store.EXPECT().
 				ListTorrentSessionsByPathPrefix(mock.Anything, mock.Anything).
 				Return(nil, nil).Once()
-			store.EXPECT().CountDownloadRecords(mock.Anything).
+			store.EXPECT().CountLiveDownloadRecords(mock.Anything).
 				Return(0, nil).Once()
 			store.EXPECT().CountTorrentSessions(mock.Anything).
 				Return(0, nil).Once()
@@ -99,6 +100,62 @@ var _ = Describe("Service", Label("unit", "library"), func() {
 			Expect(states[2].Root).To(Equal(RootDownloads))
 			Expect(states[2].Tracked).To(BeZero())
 			Expect(states[2].Total).To(BeZero())
+		})
+	})
+
+	Describe("WarnOnDrift", func() {
+		// expectDrift stubs Roots so only the named root drifts: rows exist
+		// for it, none of them under the configured path.
+		expectDrift := func(drifted Root) {
+			GinkgoHelper()
+			movieTotal, downloadTotal := 0, 0
+			if drifted == RootMovies {
+				movieTotal = 2
+			} else {
+				downloadTotal = 2
+			}
+			store.EXPECT().
+				ListMediaFilesByPathPrefix(mock.Anything, mock.Anything).
+				Return(nil, nil).Twice()
+			store.EXPECT().CountMovieMediaFiles(mock.Anything).
+				Return(movieTotal, nil).Once()
+			store.EXPECT().CountEpisodeMediaFiles(mock.Anything).
+				Return(0, nil).Once()
+			store.EXPECT().
+				ListDownloadRecordsByPathPrefix(mock.Anything, mock.Anything).
+				Return(nil, nil).Once()
+			store.EXPECT().
+				ListTorrentSessionsByPathPrefix(mock.Anything, mock.Anything).
+				Return(nil, nil).Once()
+			store.EXPECT().CountLiveDownloadRecords(mock.Anything).
+				Return(downloadTotal, nil).Once()
+			store.EXPECT().CountTorrentSessions(mock.Anything).
+				Return(0, nil).Once()
+		}
+
+		It("warns that a drifted media root will be pruned", func() {
+			expectDrift(RootMovies)
+
+			var buf bytes.Buffer
+			GinkgoWriter.TeeTo(&buf)
+			DeferCleanup(GinkgoWriter.ClearTeeWriters)
+
+			svc.WarnOnDrift(ctx)
+			Expect(buf.String()).To(ContainSubstring("records will be pruned"))
+		})
+
+		// Download rows are never pruned on drift — hygiene walks media files
+		// only — so the media-root message would be a false alarm here.
+		It("warns about imports, not pruning, for a drifted download root", func() {
+			expectDrift(RootDownloads)
+
+			var buf bytes.Buffer
+			GinkgoWriter.TeeTo(&buf)
+			DeferCleanup(GinkgoWriter.ClearTeeWriters)
+
+			svc.WarnOnDrift(ctx)
+			Expect(buf.String()).To(ContainSubstring("downloads cannot import"))
+			Expect(buf.String()).NotTo(ContainSubstring("records will be pruned"))
 		})
 	})
 

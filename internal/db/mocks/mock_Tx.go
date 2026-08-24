@@ -1087,66 +1087,6 @@ func (_c *MockTx_CountActiveImportScans_Call) RunAndReturn(run func(ctx context.
 	return _c
 }
 
-// CountDownloadRecords provides a mock function for the type MockTx
-func (_mock *MockTx) CountDownloadRecords(ctx context.Context) (int, error) {
-	ret := _mock.Called(ctx)
-
-	if len(ret) == 0 {
-		panic("no return value specified for CountDownloadRecords")
-	}
-
-	var r0 int
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context) (int, error)); ok {
-		return returnFunc(ctx)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context) int); ok {
-		r0 = returnFunc(ctx)
-	} else {
-		r0 = ret.Get(0).(int)
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = returnFunc(ctx)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// MockTx_CountDownloadRecords_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CountDownloadRecords'
-type MockTx_CountDownloadRecords_Call struct {
-	*mock.Call
-}
-
-// CountDownloadRecords is a helper method to define mock.On call
-//   - ctx context.Context
-func (_e *MockTx_Expecter) CountDownloadRecords(ctx any) *MockTx_CountDownloadRecords_Call {
-	return &MockTx_CountDownloadRecords_Call{Call: _e.mock.On("CountDownloadRecords", ctx)}
-}
-
-func (_c *MockTx_CountDownloadRecords_Call) Run(run func(ctx context.Context)) *MockTx_CountDownloadRecords_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		run(
-			arg0,
-		)
-	})
-	return _c
-}
-
-func (_c *MockTx_CountDownloadRecords_Call) Return(n int, err error) *MockTx_CountDownloadRecords_Call {
-	_c.Call.Return(n, err)
-	return _c
-}
-
-func (_c *MockTx_CountDownloadRecords_Call) RunAndReturn(run func(ctx context.Context) (int, error)) *MockTx_CountDownloadRecords_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // CountEpisodeMediaFiles provides a mock function for the type MockTx
 func (_mock *MockTx) CountEpisodeMediaFiles(ctx context.Context) (int, error) {
 	ret := _mock.Called(ctx)
@@ -1203,6 +1143,66 @@ func (_c *MockTx_CountEpisodeMediaFiles_Call) Return(n int, err error) *MockTx_C
 }
 
 func (_c *MockTx_CountEpisodeMediaFiles_Call) RunAndReturn(run func(ctx context.Context) (int, error)) *MockTx_CountEpisodeMediaFiles_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CountLiveDownloadRecords provides a mock function for the type MockTx
+func (_mock *MockTx) CountLiveDownloadRecords(ctx context.Context) (int, error) {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CountLiveDownloadRecords")
+	}
+
+	var r0 int
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) (int, error)); ok {
+		return returnFunc(ctx)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context) int); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = returnFunc(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_CountLiveDownloadRecords_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CountLiveDownloadRecords'
+type MockTx_CountLiveDownloadRecords_Call struct {
+	*mock.Call
+}
+
+// CountLiveDownloadRecords is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockTx_Expecter) CountLiveDownloadRecords(ctx any) *MockTx_CountLiveDownloadRecords_Call {
+	return &MockTx_CountLiveDownloadRecords_Call{Call: _e.mock.On("CountLiveDownloadRecords", ctx)}
+}
+
+func (_c *MockTx_CountLiveDownloadRecords_Call) Run(run func(ctx context.Context)) *MockTx_CountLiveDownloadRecords_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_CountLiveDownloadRecords_Call) Return(n int, err error) *MockTx_CountLiveDownloadRecords_Call {
+	_c.Call.Return(n, err)
+	return _c
+}
+
+func (_c *MockTx_CountLiveDownloadRecords_Call) RunAndReturn(run func(ctx context.Context) (int, error)) *MockTx_CountLiveDownloadRecords_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -278,7 +278,7 @@ type Store interface {
 	) error
 	RecordImportFailure(ctx context.Context, p RecordImportFailureParams) error
 	SetDownloadRecordSavePath(ctx context.Context, id uint32, path string) error
-	CountDownloadRecords(ctx context.Context) (int, error)
+	CountLiveDownloadRecords(ctx context.Context) (int, error)
 	// ListDownloadRecordsByPathPrefix returns records whose save_path sits
 	// under prefix. Used by the library path migration.
 	ListDownloadRecordsByPathPrefix(

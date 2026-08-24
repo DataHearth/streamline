@@ -229,6 +229,12 @@ relocating; without it Streamline expects them to already be at the new path
 and just rewrites the records. Nothing on the server remembers the old prefix,
 so you have to name it yourself.
 
+The `downloads` root is the softer case: nothing prunes download records on
+drift, so its warning reads `downloads cannot import` instead — the risk is
+in-flight downloads failing to import, not data loss. Only live rows
+(downloading, importing, held, pending adoption proposals) count toward it;
+finished history can't hold the warning on after the root legitimately moved.
+
 ---
 
 ## Database is locked

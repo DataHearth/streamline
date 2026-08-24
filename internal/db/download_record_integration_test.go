@@ -52,6 +52,22 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 		return rec
 	}
 
+	Describe("CountLiveDownloadRecords", func() {
+		It("counts in-flight and pending rows, not terminal ones", func() {
+			createRec("live-dl", downloadrecord.StatusDownloading)
+			createRec("live-imp", downloadrecord.StatusImporting)
+			createRec("live-held", downloadrecord.StatusHeld)
+			createRec("live-pend", downloadrecord.StatusPending)
+			createRec("dead-comp", downloadrecord.StatusCompleted)
+			createRec("dead-fail", downloadrecord.StatusFailed)
+			createRec("dead-dism", downloadrecord.StatusDismissed)
+
+			n, err := store.CountLiveDownloadRecords(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(4))
+		})
+	})
+
 	Describe("CreateDownloadRecord", func() {
 		It("persists with the given edges", func() {
 			rec := createRec("abc", downloadrecord.StatusDownloading)

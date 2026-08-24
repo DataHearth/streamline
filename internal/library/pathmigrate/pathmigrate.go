@@ -176,7 +176,11 @@ func (s *Service) countAll(ctx context.Context, r Root) (int, error) {
 	case RootSeries:
 		return s.store.CountEpisodeMediaFiles(ctx)
 	case RootDownloads:
-		records, err := s.store.CountDownloadRecords(ctx)
+		// Live rows only: terminal records (completed, failed, dismissed
+		// adoption tombstones) keep their creation-time save_path forever, so
+		// counting them keeps WarnOnDrift firing long after the root
+		// legitimately moved and nothing reads those paths anymore.
+		records, err := s.store.CountLiveDownloadRecords(ctx)
 		if err != nil {
 			return 0, err
 		}
@@ -526,10 +530,11 @@ func rewrite(path, from, to string) string {
 
 // WarnOnDrift logs a CRITICAL line for every root whose stored paths all sit
 // somewhere other than where the config now points. Nothing else notices that
-// situation: the records still exist, but every path dangles, and drift-check
-// deletes them once drift_grace_ticks elapses. Remounting a claim under a new
-// prefix is the ordinary way to reach it, and the fix — POST
-// /library/path-migration — is only reachable by an operator who knows to look.
+// situation, and the fix — POST /library/path-migration — is only reachable
+// by an operator who knows to look. The consequence differs by root:
+// drift-check walks media files only, so movie/series records are deleted
+// once drift_grace_ticks elapses, while download rows are never pruned on
+// drift — there the dangling paths break importing instead.
 func (s *Service) WarnOnDrift(ctx context.Context) {
 	roots, err := s.Roots(ctx)
 	if err != nil {
@@ -541,9 +546,12 @@ func (s *Service) WarnOnDrift(ctx context.Context) {
 		if r.Total == 0 || r.Tracked > 0 {
 			continue
 		}
+		msg := "library root does not match any stored path — records will be pruned"
+		if r.Root == RootDownloads {
+			msg = "download root does not match any stored path — downloads cannot import"
+		}
 		//nolint:sloglint // LogAttrs takes slog.Attr by API design
-		slog.LogAttrs(ctx, observability.LevelCritical,
-			"library root does not match any stored path — records will be pruned",
+		slog.LogAttrs(ctx, observability.LevelCritical, msg,
 			slog.String("library.root", string(r.Root)),
 			slog.String("library.path", r.Path),
 			slog.Int("records.total", r.Total),

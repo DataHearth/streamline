@@ -59,7 +59,7 @@ var _ = Describe("Handler: Library path migration",
 			app.store.EXPECT().
 				ListTorrentSessionsByPathPrefix(mock.Anything, mock.Anything).
 				Return(nil, nil).Once()
-			app.store.EXPECT().CountDownloadRecords(mock.Anything).
+			app.store.EXPECT().CountLiveDownloadRecords(mock.Anything).
 				Return(0, nil).Once()
 			app.store.EXPECT().CountTorrentSessions(mock.Anything).
 				Return(0, nil).Once()
