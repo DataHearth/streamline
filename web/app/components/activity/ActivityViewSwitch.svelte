@@ -1,11 +1,16 @@
+<script lang="ts" module>
+	export type ActivitySwitchView = "queue" | "history" | "events";
+</script>
+
 <script lang="ts">
 	import { cn } from "../../lib/cn";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 
-	// Queue and History are two readings of one page, so this switches between them
-	// in place. Torrents is NOT a third cell: it's a separate route, and the nav
-	// (sidebar from md, the Activity sheet on phone) is where you go between pages.
-	type View = "queue" | "history";
+	// Queue, History and Events are three readings of one page, so this switches
+	// between them in place. Torrents is NOT a fourth cell: it's a separate route,
+	// and the nav (sidebar from md, the Activity sheet on phone) is where you go
+	// between pages.
+	type View = ActivitySwitchView;
 
 	let {
 		view = "queue",
@@ -13,9 +18,15 @@
 		onViewChange,
 	}: {
 		view?: View;
-		counts: { queue?: number; history?: number };
+		counts: { queue?: number; history?: number; events?: number };
 		onViewChange: (v: View) => void;
 	} = $props();
+
+	let cells = $derived<{ key: View; label: string; count?: number }[]>([
+		{ key: "queue", label: i18n.activity_queue(), count: counts.queue },
+		{ key: "history", label: i18n.activity_history(), count: counts.history },
+		{ key: "events", label: i18n.activity_events(), count: counts.events },
+	]);
 
 	const cell =
 		"inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-sm px-2.5 py-1.5 text-[12.5px] font-medium transition md:px-3";
@@ -29,30 +40,19 @@
 	role="group"
 	aria-label={i18n.activity_view()}
 >
-	<button
-		type="button"
-		onclick={() => onViewChange("queue")}
-		aria-pressed={view === "queue"}
-		class={cn(cell, view === "queue" ? on : off)}
-	>
-		Queue
-		{#if counts.queue !== undefined}
-			<span class={cn(num, view === "queue" ? "opacity-80" : "text-fg-faint")}>
-				{counts.queue}
-			</span>
-		{/if}
-	</button>
-	<button
-		type="button"
-		onclick={() => onViewChange("history")}
-		aria-pressed={view === "history"}
-		class={cn(cell, view === "history" ? on : off)}
-	>
-		History
-		{#if counts.history !== undefined}
-			<span class={cn(num, view === "history" ? "opacity-80" : "text-fg-faint")}>
-				{counts.history}
-			</span>
-		{/if}
-	</button>
+	{#each cells as c (c.key)}
+		<button
+			type="button"
+			onclick={() => onViewChange(c.key)}
+			aria-pressed={view === c.key}
+			class={cn(cell, view === c.key ? on : off)}
+		>
+			{c.label}
+			{#if c.count !== undefined}
+				<span class={cn(num, view === c.key ? "opacity-80" : "text-fg-faint")}>
+					{c.count}
+				</span>
+			{/if}
+		</button>
+	{/each}
 </div>

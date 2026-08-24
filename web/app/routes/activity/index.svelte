@@ -14,6 +14,7 @@
 	import { formatEta, formatSpeed } from "../../lib/format";
 	import { fold } from "../../lib/text";
 	import type {
+		ActivityList,
 		DownloadQueue,
 		DownloadHistory,
 		QueueEntry,
@@ -34,19 +35,20 @@
 	import TouchStatLine from "../../components/activity/TouchStatLine.svelte";
 	import LiveStrip from "../../components/activity/LiveStrip.svelte";
 	import PendingRow from "../../components/pending/PendingRow.svelte";
+	import EventList from "../../components/activity/EventList.svelte";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	// Torrents live on their own route (/activity/torrents); this page is the
-	// queue/history pair the switch above the toolbar swaps between.
-	type View = "queue" | "history";
+	// queue/history/events trio the switch above the toolbar swaps between.
+	type View = "queue" | "history" | "events";
 
-	// The switch is page state, not a route, so nothing links straight to History.
-	// `?view=history` is still honoured for a link someone typed or bookmarked.
+	// The switch is page state, not a route, but ?view is honoured — the
+	// dashboard's Recent activity panel links straight to the events feed it
+	// samples, which used to land on the queue instead.
 	function initialView(): View {
 		if (typeof window === "undefined") return "queue";
-		return new URLSearchParams(window.location.search).get("view") === "history"
-			? "history"
-			: "queue";
+		const v = new URLSearchParams(window.location.search).get("view");
+		return v === "history" || v === "events" ? v : "queue";
 	}
 
 	let view = $state<View>(initialView());
@@ -77,6 +79,54 @@
 		initialPageParam: null,
 		getNextPageParam: (last) => last.next_cursor ?? undefined,
 	}));
+
+	const events = createInfiniteQuery<
+		ActivityList,
+		Error,
+		{ pages: ActivityList[]; pageParams: (string | null)[] },
+		readonly ["activity", "events"],
+		string | null
+	>(() => ({
+		queryKey: ["activity", "events"] as const,
+		queryFn: ({ pageParam }) => {
+			const p = new URLSearchParams({ limit: String(PAGE) });
+			if (pageParam) p.set("cursor", pageParam);
+			return api<ActivityList>(`/activity?${p.toString()}`);
+		},
+		initialPageParam: null,
+		getNextPageParam: (last) => last.next_cursor ?? undefined,
+		enabled: view === "events",
+	}));
+
+	let eventItems = $derived(
+		(events.data?.pages ?? []).flatMap((p) => p.events),
+	);
+
+	function switchView(v: View) {
+		view = v;
+		statusFilter = [];
+		detailId = null;
+	}
+
+	// Same shape as ActivityTable's: the sentinel mounts and unmounts with the
+	// view, so the effect keys on the binding to re-observe, and reads the query
+	// flags inside the callback to keep them out of its dependencies.
+	let eventSentinel = $state<HTMLDivElement | null>(null);
+	$effect(() => {
+		const el = eventSentinel;
+		if (!el) return;
+		const io = new IntersectionObserver((entries) => {
+			if (
+				entries[0]?.isIntersecting &&
+				events.hasNextPage &&
+				!events.isFetchingNextPage
+			) {
+				events.fetchNextPage();
+			}
+		});
+		io.observe(el);
+		return () => io.disconnect();
+	});
 
 	function invalidate() {
 		qc.invalidateQueries({ queryKey: ["activity", "queue"] });
@@ -220,6 +270,12 @@
 		return null;
 	});
 
+	// The table, its sheets and the toolbar only ever deal in download records;
+	// the events feed is its own branch below and never reaches them.
+	let tableView = $derived<"queue" | "history">(
+		view === "history" ? "history" : "queue",
+	);
+
 	let queueItems = $derived<QueueEntry[]>(queue.data?.items ?? []);
 	let historyItems = $derived<HistoryEntry[]>(
 		(history.data?.pages ?? []).flatMap((p) => p.items),
@@ -322,10 +378,16 @@
 
 	<header class="mb-1">
 		<h1 class="text-2xl font-bold tracking-tight text-fg">
-			{i18n.activity_queue_and_history()}
+			{view === "events"
+				? i18n.activity_events()
+				: i18n.activity_queue_and_history()}
 		</h1>
 		<p class="mt-1 text-sm text-fg-muted">
-			{queueItems.length} active · {historyItems.length} in history
+			{#if view === "events"}
+				{i18n.activity_events_subtitle()}
+			{:else}
+				{queueItems.length} active · {historyItems.length} in history
+			{/if}
 		</p>
 	</header>
 
@@ -404,8 +466,49 @@
 		]}
 	/>
 
+	{#if view === "events"}
+		<!-- The events feed is the dashboard panel's "View all" target: media
+		     events across the library, not download records, so it carries no
+		     status chips and shares only the view switch. -->
+		<div class="mt-2 flex items-center gap-2">
+			<ActivityViewSwitch
+				{view}
+				counts={{ queue: queueItems.length, history: historyItems.length }}
+				onViewChange={switchView}
+			/>
+		</div>
+
+		<div
+			class="mt-3 overflow-hidden rounded-lg border border-border bg-bg-elevated"
+		>
+			{#if events.isPending}
+				<p class="px-5 py-10 text-center text-sm text-fg-subtle">
+					{i18n.common_loading()}
+				</p>
+			{:else if events.isError}
+				<p class="px-5 py-10 text-center text-sm text-status-failed">
+					{errorText(events.error)}
+				</p>
+			{:else if eventItems.length === 0}
+				<p class="px-5 py-10 text-center text-sm text-fg-muted">
+					{i18n.activity_events_empty()}
+				</p>
+			{:else}
+				<EventList events={eventItems} />
+				{#if events.hasNextPage}
+					<div bind:this={eventSentinel} class="h-10">
+						{#if events.isFetchingNextPage}
+							<p class="py-3 text-center text-xs text-fg-subtle">
+								{i18n.common_loading()}
+							</p>
+						{/if}
+					</div>
+				{/if}
+			{/if}
+		</div>
+	{:else}
 	<ActivityToolbar
-		{view}
+		view={tableView}
 		{statusFilter}
 		{search}
 		{activeFilters}
@@ -419,11 +522,7 @@
 			<ActivityViewSwitch
 				{view}
 				counts={{ queue: queueItems.length, history: historyItems.length }}
-				onViewChange={(v) => {
-					view = v;
-					statusFilter = [];
-					detailId = null;
-				}}
+				onViewChange={switchView}
 			/>
 		{/snippet}
 	</ActivityToolbar>
@@ -457,7 +556,7 @@
 	{/if}
 
 	<ActivityTable
-		{view}
+		view={tableView}
 		{rows}
 		{busyId}
 		loading={view === "queue" ? queue.isPending : history.isPending}
@@ -474,7 +573,7 @@
 	/>
 
 	<ActivityTouchList
-		{view}
+		view={tableView}
 		{rows}
 		loading={view === "queue" ? queue.isPending : history.isPending}
 		error={view === "queue" ? (queue.error ?? null) : (history.error ?? null)}
@@ -484,6 +583,7 @@
 		onOpen={(item) => (detailId = item.id)}
 		onResolve={auth.isAdmin ? (item) => (resolveId = item.id) : undefined}
 	/>
+	{/if}
 </div>
 
 <ActivityFilterSheet
@@ -517,7 +617,7 @@
 
 <ActivityDetailSheet
 	item={detailItem}
-	{view}
+	view={tableView}
 	busy={detailId !== null && busyId === detailId}
 	canControl={auth.isAdmin}
 	onClose={() => (detailId = null)}
