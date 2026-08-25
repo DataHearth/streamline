@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/internal/indexer"
 )
@@ -83,5 +84,9 @@ type EligibleEpisodeLister interface {
 type TVFeedStore interface {
 	EligibleEpisodeLister
 	ListUpgradeCandidateShows(ctx context.Context) ([]*ent.TVShow, error)
-	MarkDownloadRecordReplaceExisting(ctx context.Context, id uint32) error
+	SetDownloadRecordReplaceMode(
+		ctx context.Context,
+		id uint32,
+		mode downloadrecord.ReplaceMode,
+	) error
 }

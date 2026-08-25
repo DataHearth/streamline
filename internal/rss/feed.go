@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/indexer"
@@ -211,7 +212,9 @@ func (s *FeedScanner) tryUpgrade(
 	}
 	// Without the flag the importer refuses the transfer with ErrDestExists, so
 	// the upgrade this run just grabbed can never land: actionable, not noise.
-	if err := s.store.MarkDownloadRecordReplaceExisting(ctx, rec.ID); err != nil {
+	if err := s.store.SetDownloadRecordReplaceMode(
+		ctx, rec.ID, downloadrecord.ReplaceModeAll,
+	); err != nil {
 		slog.ErrorContext(ctx, "feed-scan: mark replace_existing failed",
 			"movie", m.Title, "record.id", rec.ID, "error", err)
 	}

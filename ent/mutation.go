@@ -721,7 +721,7 @@ type DownloadRecordMutation struct {
 	imported_at           *time.Time
 	indexer_name          *string
 	download_client_name  *string
-	replace_existing      *bool
+	replace_mode          *downloadrecord.ReplaceMode
 	hold_reasons          *[]schema.HoldReason
 	appendhold_reasons    []schema.HoldReason
 	verification_bypassed *bool
@@ -1501,40 +1501,40 @@ func (m *DownloadRecordMutation) ResetDownloadClientName() {
 	delete(m.clearedFields, downloadrecord.FieldDownloadClientName)
 }
 
-// SetReplaceExisting sets the "replace_existing" field.
-func (m *DownloadRecordMutation) SetReplaceExisting(b bool) {
-	m.replace_existing = &b
+// SetReplaceMode sets the "replace_mode" field.
+func (m *DownloadRecordMutation) SetReplaceMode(dm downloadrecord.ReplaceMode) {
+	m.replace_mode = &dm
 }
 
-// ReplaceExisting returns the value of the "replace_existing" field in the mutation.
-func (m *DownloadRecordMutation) ReplaceExisting() (r bool, exists bool) {
-	v := m.replace_existing
+// ReplaceMode returns the value of the "replace_mode" field in the mutation.
+func (m *DownloadRecordMutation) ReplaceMode() (r downloadrecord.ReplaceMode, exists bool) {
+	v := m.replace_mode
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldReplaceExisting returns the old "replace_existing" field's value of the DownloadRecord entity.
+// OldReplaceMode returns the old "replace_mode" field's value of the DownloadRecord entity.
 // If the DownloadRecord object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *DownloadRecordMutation) OldReplaceExisting(ctx context.Context) (v bool, err error) {
+func (m *DownloadRecordMutation) OldReplaceMode(ctx context.Context) (v downloadrecord.ReplaceMode, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldReplaceExisting is only allowed on UpdateOne operations")
+		return v, errors.New("OldReplaceMode is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldReplaceExisting requires an ID field in the mutation")
+		return v, errors.New("OldReplaceMode requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldReplaceExisting: %w", err)
+		return v, fmt.Errorf("querying old value for OldReplaceMode: %w", err)
 	}
-	return oldValue.ReplaceExisting, nil
+	return oldValue.ReplaceMode, nil
 }
 
-// ResetReplaceExisting resets all changes to the "replace_existing" field.
-func (m *DownloadRecordMutation) ResetReplaceExisting() {
-	m.replace_existing = nil
+// ResetReplaceMode resets all changes to the "replace_mode" field.
+func (m *DownloadRecordMutation) ResetReplaceMode() {
+	m.replace_mode = nil
 }
 
 // SetHoldReasons sets the "hold_reasons" field.
@@ -1793,8 +1793,8 @@ func (m *DownloadRecordMutation) Fields() []string {
 	if m.download_client_name != nil {
 		fields = append(fields, downloadrecord.FieldDownloadClientName)
 	}
-	if m.replace_existing != nil {
-		fields = append(fields, downloadrecord.FieldReplaceExisting)
+	if m.replace_mode != nil {
+		fields = append(fields, downloadrecord.FieldReplaceMode)
 	}
 	if m.hold_reasons != nil {
 		fields = append(fields, downloadrecord.FieldHoldReasons)
@@ -1838,8 +1838,8 @@ func (m *DownloadRecordMutation) Field(name string) (ent.Value, bool) {
 		return m.IndexerName()
 	case downloadrecord.FieldDownloadClientName:
 		return m.DownloadClientName()
-	case downloadrecord.FieldReplaceExisting:
-		return m.ReplaceExisting()
+	case downloadrecord.FieldReplaceMode:
+		return m.ReplaceMode()
 	case downloadrecord.FieldHoldReasons:
 		return m.HoldReasons()
 	case downloadrecord.FieldVerificationBypassed:
@@ -1881,8 +1881,8 @@ func (m *DownloadRecordMutation) OldField(ctx context.Context, name string) (ent
 		return m.OldIndexerName(ctx)
 	case downloadrecord.FieldDownloadClientName:
 		return m.OldDownloadClientName(ctx)
-	case downloadrecord.FieldReplaceExisting:
-		return m.OldReplaceExisting(ctx)
+	case downloadrecord.FieldReplaceMode:
+		return m.OldReplaceMode(ctx)
 	case downloadrecord.FieldHoldReasons:
 		return m.OldHoldReasons(ctx)
 	case downloadrecord.FieldVerificationBypassed:
@@ -1994,12 +1994,12 @@ func (m *DownloadRecordMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetDownloadClientName(v)
 		return nil
-	case downloadrecord.FieldReplaceExisting:
-		v, ok := value.(bool)
+	case downloadrecord.FieldReplaceMode:
+		v, ok := value.(downloadrecord.ReplaceMode)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetReplaceExisting(v)
+		m.SetReplaceMode(v)
 		return nil
 	case downloadrecord.FieldHoldReasons:
 		v, ok := value.([]schema.HoldReason)
@@ -2196,8 +2196,8 @@ func (m *DownloadRecordMutation) ResetField(name string) error {
 	case downloadrecord.FieldDownloadClientName:
 		m.ResetDownloadClientName()
 		return nil
-	case downloadrecord.FieldReplaceExisting:
-		m.ResetReplaceExisting()
+	case downloadrecord.FieldReplaceMode:
+		m.ResetReplaceMode()
 		return nil
 	case downloadrecord.FieldHoldReasons:
 		m.ResetHoldReasons()

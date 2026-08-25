@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/downloadrecord"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/rss/mocks"
@@ -285,7 +286,9 @@ var _ = Describe("FeedScanner.Run", Label("unit", "rss"), func() {
 		grabber.EXPECT().Grab(mock.Anything, mock.Anything, uint32(9)).
 			Return(&ent.DownloadRecord{ID: 55}, nil).Once()
 		store.EXPECT().
-			MarkDownloadRecordReplaceExisting(mock.Anything, uint32(55)).
+			SetDownloadRecordReplaceMode(
+				mock.Anything, uint32(55), downloadrecord.ReplaceModeAll,
+			).
 			Return(nil).Once()
 		store.EXPECT().ResetMovieGrabFailures(mock.Anything, uint32(9)).
 			Return(nil).Once()
@@ -337,7 +340,9 @@ var _ = Describe("FeedScanner.Run", Label("unit", "rss"), func() {
 		grabber.EXPECT().Grab(mock.Anything, mock.Anything, uint32(9)).
 			Return(&ent.DownloadRecord{ID: 55}, nil).Once()
 		store.EXPECT().
-			MarkDownloadRecordReplaceExisting(mock.Anything, uint32(55)).
+			SetDownloadRecordReplaceMode(
+				mock.Anything, uint32(55), downloadrecord.ReplaceModeAll,
+			).
 			Return(nil).Once()
 		store.EXPECT().ResetMovieGrabFailures(mock.Anything, uint32(9)).
 			Return(nil).Once()
@@ -398,7 +403,9 @@ var _ = Describe("FeedScanner.Run", Label("unit", "rss"), func() {
 		grabber.EXPECT().Grab(mock.Anything, mock.Anything, uint32(9)).
 			Return(&ent.DownloadRecord{ID: 55}, nil).Once()
 		store.EXPECT().
-			MarkDownloadRecordReplaceExisting(mock.Anything, uint32(55)).
+			SetDownloadRecordReplaceMode(
+				mock.Anything, uint32(55), downloadrecord.ReplaceModeAll,
+			).
 			Return(nil).Once()
 		store.EXPECT().ResetMovieGrabFailures(mock.Anything, uint32(9)).
 			Return(nil).Once()

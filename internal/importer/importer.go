@@ -15,6 +15,7 @@ import (
 	"sync"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/internal/config"
@@ -334,7 +335,7 @@ func (w *Worker) importMovieRecord(
 	if err != nil {
 		return otelx.RecordSpanError(span, fmt.Errorf("list movie files: %w", err))
 	}
-	if len(existing) > 0 && !rec.ReplaceExisting {
+	if len(existing) > 0 && rec.ReplaceMode == downloadrecord.ReplaceModeNone {
 		return otelx.RecordSpanError(span, ErrMovieHasFile)
 	}
 
@@ -524,7 +525,7 @@ func (w *Worker) importEpisodeRecord(
 			continue
 		}
 		if mf != nil {
-			if !rec.ReplaceExisting {
+			if rec.ReplaceMode == downloadrecord.ReplaceModeNone {
 				skippedExisting++
 				slog.InfoContext(
 					ctx,
@@ -605,7 +606,7 @@ func (w *Worker) importSingleEpisode(
 	if err != nil && !ent.IsNotFound(err) {
 		return otelx.RecordSpanError(span, fmt.Errorf("find episode file: %w", err))
 	}
-	if mf != nil && !rec.ReplaceExisting {
+	if mf != nil && rec.ReplaceMode == downloadrecord.ReplaceModeNone {
 		return otelx.RecordSpanError(span, ErrEpisodeHasFile)
 	}
 

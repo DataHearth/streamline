@@ -76,10 +76,6 @@ func init() {
 	downloadrecordDescImportAttempts := downloadrecordFields[7].Descriptor()
 	// downloadrecord.DefaultImportAttempts holds the default value on creation for the import_attempts field.
 	downloadrecord.DefaultImportAttempts = downloadrecordDescImportAttempts.Default.(uint8)
-	// downloadrecordDescReplaceExisting is the schema descriptor for replace_existing field.
-	downloadrecordDescReplaceExisting := downloadrecordFields[12].Descriptor()
-	// downloadrecord.DefaultReplaceExisting holds the default value on creation for the replace_existing field.
-	downloadrecord.DefaultReplaceExisting = downloadrecordDescReplaceExisting.Default.(bool)
 	// downloadrecordDescVerificationBypassed is the schema descriptor for verification_bypassed field.
 	downloadrecordDescVerificationBypassed := downloadrecordFields[14].Descriptor()
 	// downloadrecord.DefaultVerificationBypassed holds the default value on creation for the verification_bypassed field.

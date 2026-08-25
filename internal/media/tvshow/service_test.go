@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
 	enttvshow "github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/internal/db"
@@ -512,8 +513,9 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 			dlMk.GrabEpisode(mock.Anything,
 				mock.AnythingOfType("indexer.SearchResult"), uint32(10)).
 				Return(&ent.DownloadRecord{ID: 7}, nil).Once()
-			storeMk.MarkDownloadRecordReplaceExisting(mock.Anything, uint32(7)).
-				Return(nil).Once()
+			storeMk.SetDownloadRecordReplaceMode(
+				mock.Anything, uint32(7), downloadrecord.ReplaceModeAll,
+			).Return(nil).Once()
 			storeMk.SetEpisodeStatus(mock.Anything, uint32(10), episode.StatusDownloading).
 				Return(nil).
 				Once()

@@ -41,9 +41,13 @@ func (DownloadRecord) Fields() []ent.Field {
 		field.Time("imported_at").Optional().Nillable(),
 		field.String("indexer_name").Optional(),
 		field.String("download_client_name").Optional(),
-		// Set when a manual grab requested overwriting already-present files;
-		// the importer clears the existing file(s) before re-importing.
-		field.Bool("replace_existing").Default(false),
+		// How the importer treats episodes that already have a file. `all` is
+		// an operator's explicit overwrite (manual grab); `upgrades` is the
+		// scanner saying "replace what this release beats", decided per
+		// episode at import time.
+		field.Enum("replace_mode").
+			Values("none", "upgrades", "all").
+			Default("none"),
 		// Why the importer stopped and asked; empty on every other status.
 		field.JSON("hold_reasons", []HoldReason{}).Optional(),
 		// Set by a resolve-import so the re-run skips verification.

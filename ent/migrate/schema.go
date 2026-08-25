@@ -50,7 +50,7 @@ var (
 		{Name: "imported_at", Type: field.TypeTime, Nullable: true},
 		{Name: "indexer_name", Type: field.TypeString, Nullable: true},
 		{Name: "download_client_name", Type: field.TypeString, Nullable: true},
-		{Name: "replace_existing", Type: field.TypeBool, Default: false},
+		{Name: "replace_mode", Type: field.TypeEnum, Enums: []string{"none", "upgrades", "all"}, Default: "none"},
 		{Name: "hold_reasons", Type: field.TypeJSON, Nullable: true},
 		{Name: "verification_bypassed", Type: field.TypeBool, Default: false},
 		{Name: "episode_download_records", Type: field.TypeUint32, Nullable: true},

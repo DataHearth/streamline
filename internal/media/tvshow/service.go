@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
 	enttvshow "github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/internal/config"
@@ -725,7 +726,9 @@ func (s *Service) grabPackAndMark(
 		return otelx.RecordSpanError(span, fmt.Errorf("grab pack: %w", err))
 	}
 	if replaceExisting {
-		if err := s.db.MarkDownloadRecordReplaceExisting(ctx, rec.ID); err != nil {
+		if err := s.db.SetDownloadRecordReplaceMode(
+			ctx, rec.ID, downloadrecord.ReplaceModeAll,
+		); err != nil {
 			slog.WarnContext(ctx, "grab pack: mark replace-existing failed",
 				"download_record.id", rec.ID, "error", err)
 		}

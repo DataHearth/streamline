@@ -49,8 +49,8 @@ type DownloadRecord struct {
 	IndexerName string `json:"indexer_name,omitempty"`
 	// DownloadClientName holds the value of the "download_client_name" field.
 	DownloadClientName string `json:"download_client_name,omitempty"`
-	// ReplaceExisting holds the value of the "replace_existing" field.
-	ReplaceExisting bool `json:"replace_existing,omitempty"`
+	// ReplaceMode holds the value of the "replace_mode" field.
+	ReplaceMode downloadrecord.ReplaceMode `json:"replace_mode,omitempty"`
 	// HoldReasons holds the value of the "hold_reasons" field.
 	HoldReasons []schema.HoldReason `json:"hold_reasons,omitempty"`
 	// VerificationBypassed holds the value of the "verification_bypassed" field.
@@ -103,11 +103,11 @@ func (*DownloadRecord) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case downloadrecord.FieldHoldReasons:
 			values[i] = new([]byte)
-		case downloadrecord.FieldReplaceExisting, downloadrecord.FieldVerificationBypassed:
+		case downloadrecord.FieldVerificationBypassed:
 			values[i] = new(sql.NullBool)
 		case downloadrecord.FieldID, downloadrecord.FieldSize, downloadrecord.FieldImportAttempts:
 			values[i] = new(sql.NullInt64)
-		case downloadrecord.FieldTitle, downloadrecord.FieldQuality, downloadrecord.FieldStatus, downloadrecord.FieldTorrentHash, downloadrecord.FieldReleaseGroup, downloadrecord.FieldSavePath, downloadrecord.FieldFailureReason, downloadrecord.FieldIndexerName, downloadrecord.FieldDownloadClientName:
+		case downloadrecord.FieldTitle, downloadrecord.FieldQuality, downloadrecord.FieldStatus, downloadrecord.FieldTorrentHash, downloadrecord.FieldReleaseGroup, downloadrecord.FieldSavePath, downloadrecord.FieldFailureReason, downloadrecord.FieldIndexerName, downloadrecord.FieldDownloadClientName, downloadrecord.FieldReplaceMode:
 			values[i] = new(sql.NullString)
 		case downloadrecord.FieldCreateTime, downloadrecord.FieldUpdateTime, downloadrecord.FieldImportedAt:
 			values[i] = new(sql.NullTime)
@@ -221,11 +221,11 @@ func (_m *DownloadRecord) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.DownloadClientName = value.String
 			}
-		case downloadrecord.FieldReplaceExisting:
-			if value, ok := values[i].(*sql.NullBool); !ok {
-				return fmt.Errorf("unexpected type %T for field replace_existing", values[i])
+		case downloadrecord.FieldReplaceMode:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field replace_mode", values[i])
 			} else if value.Valid {
-				_m.ReplaceExisting = value.Bool
+				_m.ReplaceMode = downloadrecord.ReplaceMode(value.String)
 			}
 		case downloadrecord.FieldHoldReasons:
 			if value, ok := values[i].(*[]byte); !ok {
@@ -345,8 +345,8 @@ func (_m *DownloadRecord) String() string {
 	builder.WriteString("download_client_name=")
 	builder.WriteString(_m.DownloadClientName)
 	builder.WriteString(", ")
-	builder.WriteString("replace_existing=")
-	builder.WriteString(fmt.Sprintf("%v", _m.ReplaceExisting))
+	builder.WriteString("replace_mode=")
+	builder.WriteString(fmt.Sprintf("%v", _m.ReplaceMode))
 	builder.WriteString(", ")
 	builder.WriteString("hold_reasons=")
 	builder.WriteString(fmt.Sprintf("%v", _m.HoldReasons))

@@ -43,8 +43,8 @@ const (
 	FieldIndexerName = "indexer_name"
 	// FieldDownloadClientName holds the string denoting the download_client_name field in the database.
 	FieldDownloadClientName = "download_client_name"
-	// FieldReplaceExisting holds the string denoting the replace_existing field in the database.
-	FieldReplaceExisting = "replace_existing"
+	// FieldReplaceMode holds the string denoting the replace_mode field in the database.
+	FieldReplaceMode = "replace_mode"
 	// FieldHoldReasons holds the string denoting the hold_reasons field in the database.
 	FieldHoldReasons = "hold_reasons"
 	// FieldVerificationBypassed holds the string denoting the verification_bypassed field in the database.
@@ -88,7 +88,7 @@ var Columns = []string{
 	FieldImportedAt,
 	FieldIndexerName,
 	FieldDownloadClientName,
-	FieldReplaceExisting,
+	FieldReplaceMode,
 	FieldHoldReasons,
 	FieldVerificationBypassed,
 }
@@ -126,8 +126,6 @@ var (
 	TitleValidator func(string) error
 	// DefaultImportAttempts holds the default value on creation for the "import_attempts" field.
 	DefaultImportAttempts uint8
-	// DefaultReplaceExisting holds the default value on creation for the "replace_existing" field.
-	DefaultReplaceExisting bool
 	// DefaultVerificationBypassed holds the default value on creation for the "verification_bypassed" field.
 	DefaultVerificationBypassed bool
 )
@@ -160,6 +158,33 @@ func StatusValidator(s Status) error {
 		return nil
 	default:
 		return fmt.Errorf("downloadrecord: invalid enum value for status field: %q", s)
+	}
+}
+
+// ReplaceMode defines the type for the "replace_mode" enum field.
+type ReplaceMode string
+
+// ReplaceModeNone is the default value of the ReplaceMode enum.
+const DefaultReplaceMode = ReplaceModeNone
+
+// ReplaceMode values.
+const (
+	ReplaceModeNone     ReplaceMode = "none"
+	ReplaceModeUpgrades ReplaceMode = "upgrades"
+	ReplaceModeAll      ReplaceMode = "all"
+)
+
+func (rm ReplaceMode) String() string {
+	return string(rm)
+}
+
+// ReplaceModeValidator is a validator for the "replace_mode" field enum values. It is called by the builders before save.
+func ReplaceModeValidator(rm ReplaceMode) error {
+	switch rm {
+	case ReplaceModeNone, ReplaceModeUpgrades, ReplaceModeAll:
+		return nil
+	default:
+		return fmt.Errorf("downloadrecord: invalid enum value for replace_mode field: %q", rm)
 	}
 }
 
@@ -241,9 +266,9 @@ func ByDownloadClientName(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldDownloadClientName, opts...).ToFunc()
 }
 
-// ByReplaceExisting orders the results by the replace_existing field.
-func ByReplaceExisting(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldReplaceExisting, opts...).ToFunc()
+// ByReplaceMode orders the results by the replace_mode field.
+func ByReplaceMode(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldReplaceMode, opts...).ToFunc()
 }
 
 // ByVerificationBypassed orders the results by the verification_bypassed field.

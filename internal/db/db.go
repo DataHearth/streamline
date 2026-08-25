@@ -247,9 +247,13 @@ type Store interface {
 		id uint32,
 		status downloadrecord.Status,
 	) error
-	// MarkDownloadRecordReplaceExisting flags a record so the importer
-	// overwrites already-present file(s) instead of skipping them.
-	MarkDownloadRecordReplaceExisting(ctx context.Context, id uint32) error
+	// SetDownloadRecordReplaceMode sets how the importer treats episodes
+	// that already have a file for this record.
+	SetDownloadRecordReplaceMode(
+		ctx context.Context,
+		id uint32,
+		mode downloadrecord.ReplaceMode,
+	) error
 	ListImportingDownloadRecords(ctx context.Context) ([]*ent.DownloadRecord, error)
 	FindImportingDownloadRecordByID(
 		ctx context.Context,

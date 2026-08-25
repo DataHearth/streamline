@@ -120,11 +120,6 @@ func DownloadClientName(v string) predicate.DownloadRecord {
 	return predicate.DownloadRecord(sql.FieldEQ(FieldDownloadClientName, v))
 }
 
-// ReplaceExisting applies equality check predicate on the "replace_existing" field. It's identical to ReplaceExistingEQ.
-func ReplaceExisting(v bool) predicate.DownloadRecord {
-	return predicate.DownloadRecord(sql.FieldEQ(FieldReplaceExisting, v))
-}
-
 // VerificationBypassed applies equality check predicate on the "verification_bypassed" field. It's identical to VerificationBypassedEQ.
 func VerificationBypassed(v bool) predicate.DownloadRecord {
 	return predicate.DownloadRecord(sql.FieldEQ(FieldVerificationBypassed, v))
@@ -960,14 +955,24 @@ func DownloadClientNameContainsFold(v string) predicate.DownloadRecord {
 	return predicate.DownloadRecord(sql.FieldContainsFold(FieldDownloadClientName, v))
 }
 
-// ReplaceExistingEQ applies the EQ predicate on the "replace_existing" field.
-func ReplaceExistingEQ(v bool) predicate.DownloadRecord {
-	return predicate.DownloadRecord(sql.FieldEQ(FieldReplaceExisting, v))
+// ReplaceModeEQ applies the EQ predicate on the "replace_mode" field.
+func ReplaceModeEQ(v ReplaceMode) predicate.DownloadRecord {
+	return predicate.DownloadRecord(sql.FieldEQ(FieldReplaceMode, v))
 }
 
-// ReplaceExistingNEQ applies the NEQ predicate on the "replace_existing" field.
-func ReplaceExistingNEQ(v bool) predicate.DownloadRecord {
-	return predicate.DownloadRecord(sql.FieldNEQ(FieldReplaceExisting, v))
+// ReplaceModeNEQ applies the NEQ predicate on the "replace_mode" field.
+func ReplaceModeNEQ(v ReplaceMode) predicate.DownloadRecord {
+	return predicate.DownloadRecord(sql.FieldNEQ(FieldReplaceMode, v))
+}
+
+// ReplaceModeIn applies the In predicate on the "replace_mode" field.
+func ReplaceModeIn(vs ...ReplaceMode) predicate.DownloadRecord {
+	return predicate.DownloadRecord(sql.FieldIn(FieldReplaceMode, vs...))
+}
+
+// ReplaceModeNotIn applies the NotIn predicate on the "replace_mode" field.
+func ReplaceModeNotIn(vs ...ReplaceMode) predicate.DownloadRecord {
+	return predicate.DownloadRecord(sql.FieldNotIn(FieldReplaceMode, vs...))
 }
 
 // HoldReasonsIsNil applies the IsNil predicate on the "hold_reasons" field.

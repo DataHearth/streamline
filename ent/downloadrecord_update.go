@@ -275,16 +275,16 @@ func (_u *DownloadRecordUpdate) ClearDownloadClientName() *DownloadRecordUpdate 
 	return _u
 }
 
-// SetReplaceExisting sets the "replace_existing" field.
-func (_u *DownloadRecordUpdate) SetReplaceExisting(v bool) *DownloadRecordUpdate {
-	_u.mutation.SetReplaceExisting(v)
+// SetReplaceMode sets the "replace_mode" field.
+func (_u *DownloadRecordUpdate) SetReplaceMode(v downloadrecord.ReplaceMode) *DownloadRecordUpdate {
+	_u.mutation.SetReplaceMode(v)
 	return _u
 }
 
-// SetNillableReplaceExisting sets the "replace_existing" field if the given value is not nil.
-func (_u *DownloadRecordUpdate) SetNillableReplaceExisting(v *bool) *DownloadRecordUpdate {
+// SetNillableReplaceMode sets the "replace_mode" field if the given value is not nil.
+func (_u *DownloadRecordUpdate) SetNillableReplaceMode(v *downloadrecord.ReplaceMode) *DownloadRecordUpdate {
 	if v != nil {
-		_u.SetReplaceExisting(*v)
+		_u.SetReplaceMode(*v)
 	}
 	return _u
 }
@@ -424,6 +424,11 @@ func (_u *DownloadRecordUpdate) check() error {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "DownloadRecord.status": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.ReplaceMode(); ok {
+		if err := downloadrecord.ReplaceModeValidator(v); err != nil {
+			return &ValidationError{Name: "replace_mode", err: fmt.Errorf(`ent: validator failed for field "DownloadRecord.replace_mode": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -517,8 +522,8 @@ func (_u *DownloadRecordUpdate) sqlSave(ctx context.Context) (_node int, err err
 	if _u.mutation.DownloadClientNameCleared() {
 		_spec.ClearField(downloadrecord.FieldDownloadClientName, field.TypeString)
 	}
-	if value, ok := _u.mutation.ReplaceExisting(); ok {
-		_spec.SetField(downloadrecord.FieldReplaceExisting, field.TypeBool, value)
+	if value, ok := _u.mutation.ReplaceMode(); ok {
+		_spec.SetField(downloadrecord.FieldReplaceMode, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.HoldReasons(); ok {
 		_spec.SetField(downloadrecord.FieldHoldReasons, field.TypeJSON, value)
@@ -856,16 +861,16 @@ func (_u *DownloadRecordUpdateOne) ClearDownloadClientName() *DownloadRecordUpda
 	return _u
 }
 
-// SetReplaceExisting sets the "replace_existing" field.
-func (_u *DownloadRecordUpdateOne) SetReplaceExisting(v bool) *DownloadRecordUpdateOne {
-	_u.mutation.SetReplaceExisting(v)
+// SetReplaceMode sets the "replace_mode" field.
+func (_u *DownloadRecordUpdateOne) SetReplaceMode(v downloadrecord.ReplaceMode) *DownloadRecordUpdateOne {
+	_u.mutation.SetReplaceMode(v)
 	return _u
 }
 
-// SetNillableReplaceExisting sets the "replace_existing" field if the given value is not nil.
-func (_u *DownloadRecordUpdateOne) SetNillableReplaceExisting(v *bool) *DownloadRecordUpdateOne {
+// SetNillableReplaceMode sets the "replace_mode" field if the given value is not nil.
+func (_u *DownloadRecordUpdateOne) SetNillableReplaceMode(v *downloadrecord.ReplaceMode) *DownloadRecordUpdateOne {
 	if v != nil {
-		_u.SetReplaceExisting(*v)
+		_u.SetReplaceMode(*v)
 	}
 	return _u
 }
@@ -1018,6 +1023,11 @@ func (_u *DownloadRecordUpdateOne) check() error {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "DownloadRecord.status": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.ReplaceMode(); ok {
+		if err := downloadrecord.ReplaceModeValidator(v); err != nil {
+			return &ValidationError{Name: "replace_mode", err: fmt.Errorf(`ent: validator failed for field "DownloadRecord.replace_mode": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -1128,8 +1138,8 @@ func (_u *DownloadRecordUpdateOne) sqlSave(ctx context.Context) (_node *Download
 	if _u.mutation.DownloadClientNameCleared() {
 		_spec.ClearField(downloadrecord.FieldDownloadClientName, field.TypeString)
 	}
-	if value, ok := _u.mutation.ReplaceExisting(); ok {
-		_spec.SetField(downloadrecord.FieldReplaceExisting, field.TypeBool, value)
+	if value, ok := _u.mutation.ReplaceMode(); ok {
+		_spec.SetField(downloadrecord.FieldReplaceMode, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.HoldReasons(); ok {
 		_spec.SetField(downloadrecord.FieldHoldReasons, field.TypeJSON, value)

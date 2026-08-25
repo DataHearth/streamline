@@ -48,6 +48,7 @@ func fixtureRecord(
 		ImportAttempts:     attempts,
 		Status:             downloadrecord.StatusImporting,
 		DownloadClientName: "qbit",
+		ReplaceMode:        downloadrecord.ReplaceModeNone,
 	}
 	r.Edges.Movie = m
 	return r
@@ -234,7 +235,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 		old := filepath.Join(libDir, "old.mkv")
 		Expect(os.WriteFile(old, []byte("old"), 0o644)).To(Succeed())
 		rec := fixtureRecord(1, 10, src, 0)
-		rec.ReplaceExisting = true
+		rec.ReplaceMode = downloadrecord.ReplaceModeAll
 
 		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
 			Return(rec, nil).Once()
@@ -532,7 +533,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 			season,
 			eps[0],
 		)
-		rec.ReplaceExisting = true
+		rec.ReplaceMode = downloadrecord.ReplaceModeAll
 
 		storeMk.EXPECT().
 			FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
@@ -734,7 +735,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 			old := filepath.Join(libDir, "old.mkv")
 			Expect(os.WriteFile(old, []byte("old"), 0o644)).To(Succeed())
 			rec := fixtureRecord(1, 10, src, 0)
-			rec.ReplaceExisting = true
+			rec.ReplaceMode = downloadrecord.ReplaceModeAll
 			wp := proberReturning(probed(720, "h264"), nil)
 
 			storeMk.EXPECT().
@@ -763,7 +764,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 				season,
 				eps[0],
 			)
-			rec.ReplaceExisting = true
+			rec.ReplaceMode = downloadrecord.ReplaceModeAll
 			wp := proberReturning(probed(1280, "hevc"), nil)
 
 			storeMk.EXPECT().
@@ -907,6 +908,7 @@ func episodeRecord(
 		SavePath:           savePath,
 		Status:             downloadrecord.StatusImporting,
 		DownloadClientName: "qbit",
+		ReplaceMode:        downloadrecord.ReplaceModeNone,
 	}
 	r.Edges.Episode = ep
 	_ = season

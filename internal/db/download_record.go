@@ -214,12 +214,13 @@ func (db *DB) UpdateDownloadRecordStatus(
 	return db.client.DownloadRecord.UpdateOneID(id).SetStatus(status).Exec(ctx)
 }
 
-func (db *DB) MarkDownloadRecordReplaceExisting(
+func (db *DB) SetDownloadRecordReplaceMode(
 	ctx context.Context,
 	id uint32,
+	mode downloadrecord.ReplaceMode,
 ) error {
 	return db.client.DownloadRecord.UpdateOneID(id).
-		SetReplaceExisting(true).
+		SetReplaceMode(mode).
 		Exec(ctx)
 }
 

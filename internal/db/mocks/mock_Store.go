@@ -8502,63 +8502,6 @@ func (_c *MockStore_ListWantedMovies_Call) RunAndReturn(run func(ctx context.Con
 	return _c
 }
 
-// MarkDownloadRecordReplaceExisting provides a mock function for the type MockStore
-func (_mock *MockStore) MarkDownloadRecordReplaceExisting(ctx context.Context, id uint32) error {
-	ret := _mock.Called(ctx, id)
-
-	if len(ret) == 0 {
-		panic("no return value specified for MarkDownloadRecordReplaceExisting")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) error); ok {
-		r0 = returnFunc(ctx, id)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// MockStore_MarkDownloadRecordReplaceExisting_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'MarkDownloadRecordReplaceExisting'
-type MockStore_MarkDownloadRecordReplaceExisting_Call struct {
-	*mock.Call
-}
-
-// MarkDownloadRecordReplaceExisting is a helper method to define mock.On call
-//   - ctx context.Context
-//   - id uint32
-func (_e *MockStore_Expecter) MarkDownloadRecordReplaceExisting(ctx any, id any) *MockStore_MarkDownloadRecordReplaceExisting_Call {
-	return &MockStore_MarkDownloadRecordReplaceExisting_Call{Call: _e.mock.On("MarkDownloadRecordReplaceExisting", ctx, id)}
-}
-
-func (_c *MockStore_MarkDownloadRecordReplaceExisting_Call) Run(run func(ctx context.Context, id uint32)) *MockStore_MarkDownloadRecordReplaceExisting_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 uint32
-		if args[1] != nil {
-			arg1 = args[1].(uint32)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *MockStore_MarkDownloadRecordReplaceExisting_Call) Return(err error) *MockStore_MarkDownloadRecordReplaceExisting_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *MockStore_MarkDownloadRecordReplaceExisting_Call) RunAndReturn(run func(ctx context.Context, id uint32) error) *MockStore_MarkDownloadRecordReplaceExisting_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // MarkMediaFileMissing provides a mock function for the type MockStore
 func (_mock *MockStore) MarkMediaFileMissing(ctx context.Context, id uint32) (bool, error) {
 	ret := _mock.Called(ctx, id)
@@ -9878,6 +9821,69 @@ func (_c *MockStore_RevokeUserSessionByID_Call) Return(n int, err error) *MockSt
 }
 
 func (_c *MockStore_RevokeUserSessionByID_Call) RunAndReturn(run func(ctx context.Context, userID uint32, sessionID uint32, when time.Time) (int, error)) *MockStore_RevokeUserSessionByID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetDownloadRecordReplaceMode provides a mock function for the type MockStore
+func (_mock *MockStore) SetDownloadRecordReplaceMode(ctx context.Context, id uint32, mode downloadrecord.ReplaceMode) error {
+	ret := _mock.Called(ctx, id, mode)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetDownloadRecordReplaceMode")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, downloadrecord.ReplaceMode) error); ok {
+		r0 = returnFunc(ctx, id, mode)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStore_SetDownloadRecordReplaceMode_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetDownloadRecordReplaceMode'
+type MockStore_SetDownloadRecordReplaceMode_Call struct {
+	*mock.Call
+}
+
+// SetDownloadRecordReplaceMode is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - mode downloadrecord.ReplaceMode
+func (_e *MockStore_Expecter) SetDownloadRecordReplaceMode(ctx any, id any, mode any) *MockStore_SetDownloadRecordReplaceMode_Call {
+	return &MockStore_SetDownloadRecordReplaceMode_Call{Call: _e.mock.On("SetDownloadRecordReplaceMode", ctx, id, mode)}
+}
+
+func (_c *MockStore_SetDownloadRecordReplaceMode_Call) Run(run func(ctx context.Context, id uint32, mode downloadrecord.ReplaceMode)) *MockStore_SetDownloadRecordReplaceMode_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 downloadrecord.ReplaceMode
+		if args[2] != nil {
+			arg2 = args[2].(downloadrecord.ReplaceMode)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_SetDownloadRecordReplaceMode_Call) Return(err error) *MockStore_SetDownloadRecordReplaceMode_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStore_SetDownloadRecordReplaceMode_Call) RunAndReturn(run func(ctx context.Context, id uint32, mode downloadrecord.ReplaceMode) error) *MockStore_SetDownloadRecordReplaceMode_Call {
 	_c.Call.Return(run)
 	return _c
 }

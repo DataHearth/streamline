@@ -346,7 +346,7 @@ var _ = Describe("Import pipeline", Label("integration", "importer"), func() {
 				SetSavePath(savePath).
 				SetMovieID(m.ID).
 				SetDownloadClientName("stub").
-				SetReplaceExisting(true).
+				SetReplaceMode(entdr.ReplaceModeAll).
 				Save(ctx)
 			Expect(err).NotTo(HaveOccurred())
 

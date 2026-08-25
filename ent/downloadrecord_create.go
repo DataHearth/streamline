@@ -211,16 +211,16 @@ func (_c *DownloadRecordCreate) SetNillableDownloadClientName(v *string) *Downlo
 	return _c
 }
 
-// SetReplaceExisting sets the "replace_existing" field.
-func (_c *DownloadRecordCreate) SetReplaceExisting(v bool) *DownloadRecordCreate {
-	_c.mutation.SetReplaceExisting(v)
+// SetReplaceMode sets the "replace_mode" field.
+func (_c *DownloadRecordCreate) SetReplaceMode(v downloadrecord.ReplaceMode) *DownloadRecordCreate {
+	_c.mutation.SetReplaceMode(v)
 	return _c
 }
 
-// SetNillableReplaceExisting sets the "replace_existing" field if the given value is not nil.
-func (_c *DownloadRecordCreate) SetNillableReplaceExisting(v *bool) *DownloadRecordCreate {
+// SetNillableReplaceMode sets the "replace_mode" field if the given value is not nil.
+func (_c *DownloadRecordCreate) SetNillableReplaceMode(v *downloadrecord.ReplaceMode) *DownloadRecordCreate {
 	if v != nil {
-		_c.SetReplaceExisting(*v)
+		_c.SetReplaceMode(*v)
 	}
 	return _c
 }
@@ -340,9 +340,9 @@ func (_c *DownloadRecordCreate) defaults() {
 		v := downloadrecord.DefaultImportAttempts
 		_c.mutation.SetImportAttempts(v)
 	}
-	if _, ok := _c.mutation.ReplaceExisting(); !ok {
-		v := downloadrecord.DefaultReplaceExisting
-		_c.mutation.SetReplaceExisting(v)
+	if _, ok := _c.mutation.ReplaceMode(); !ok {
+		v := downloadrecord.DefaultReplaceMode
+		_c.mutation.SetReplaceMode(v)
 	}
 	if _, ok := _c.mutation.VerificationBypassed(); !ok {
 		v := downloadrecord.DefaultVerificationBypassed
@@ -377,8 +377,13 @@ func (_c *DownloadRecordCreate) check() error {
 	if _, ok := _c.mutation.ImportAttempts(); !ok {
 		return &ValidationError{Name: "import_attempts", err: errors.New(`ent: missing required field "DownloadRecord.import_attempts"`)}
 	}
-	if _, ok := _c.mutation.ReplaceExisting(); !ok {
-		return &ValidationError{Name: "replace_existing", err: errors.New(`ent: missing required field "DownloadRecord.replace_existing"`)}
+	if _, ok := _c.mutation.ReplaceMode(); !ok {
+		return &ValidationError{Name: "replace_mode", err: errors.New(`ent: missing required field "DownloadRecord.replace_mode"`)}
+	}
+	if v, ok := _c.mutation.ReplaceMode(); ok {
+		if err := downloadrecord.ReplaceModeValidator(v); err != nil {
+			return &ValidationError{Name: "replace_mode", err: fmt.Errorf(`ent: validator failed for field "DownloadRecord.replace_mode": %w`, err)}
+		}
 	}
 	if _, ok := _c.mutation.VerificationBypassed(); !ok {
 		return &ValidationError{Name: "verification_bypassed", err: errors.New(`ent: missing required field "DownloadRecord.verification_bypassed"`)}
@@ -471,9 +476,9 @@ func (_c *DownloadRecordCreate) createSpec() (*DownloadRecord, *sqlgraph.CreateS
 		_spec.SetField(downloadrecord.FieldDownloadClientName, field.TypeString, value)
 		_node.DownloadClientName = value
 	}
-	if value, ok := _c.mutation.ReplaceExisting(); ok {
-		_spec.SetField(downloadrecord.FieldReplaceExisting, field.TypeBool, value)
-		_node.ReplaceExisting = value
+	if value, ok := _c.mutation.ReplaceMode(); ok {
+		_spec.SetField(downloadrecord.FieldReplaceMode, field.TypeEnum, value)
+		_node.ReplaceMode = value
 	}
 	if value, ok := _c.mutation.HoldReasons(); ok {
 		_spec.SetField(downloadrecord.FieldHoldReasons, field.TypeJSON, value)

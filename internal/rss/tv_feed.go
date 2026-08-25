@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/indexer"
@@ -319,7 +320,9 @@ func (s *TVFeedScanner) grabUpgrade(
 	}
 	// Without the flag the importer skips every episode that already has a file,
 	// so the upgrade this run just grabbed can never land: actionable, not noise.
-	if err := s.store.MarkDownloadRecordReplaceExisting(ctx, rec.ID); err != nil {
+	if err := s.store.SetDownloadRecordReplaceMode(
+		ctx, rec.ID, downloadrecord.ReplaceModeAll,
+	); err != nil {
 		slog.ErrorContext(ctx, "tv feed-scan: mark replace_existing failed",
 			"show", us.show.Title, "record.id", rec.ID, "error", err)
 	}

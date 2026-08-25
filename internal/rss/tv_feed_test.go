@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/tvshow"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
@@ -308,7 +309,9 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 				GrabEpisode(mock.Anything, mock.Anything, uint32(11)).
 				Return(&ent.DownloadRecord{ID: 55}, nil).Once()
 			store.EXPECT().
-				MarkDownloadRecordReplaceExisting(mock.Anything, uint32(55)).
+				SetDownloadRecordReplaceMode(
+					mock.Anything, uint32(55), downloadrecord.ReplaceModeAll,
+				).
 				Return(nil).Once()
 			expectDownloading(11)
 			Expect(scanner.Run(ctx)).To(Succeed())
@@ -328,7 +331,9 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 				GrabEpisode(mock.Anything, mock.Anything, uint32(11)).
 				Return(&ent.DownloadRecord{ID: 55}, nil).Once()
 			store.EXPECT().
-				MarkDownloadRecordReplaceExisting(mock.Anything, uint32(55)).
+				SetDownloadRecordReplaceMode(
+					mock.Anything, uint32(55), downloadrecord.ReplaceModeAll,
+				).
 				Return(nil).Once()
 			expectDownloading(11)
 			expectDownloading(12)

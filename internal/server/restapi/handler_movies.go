@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/datahearth/streamline/ent/downloadrecord"
 	entmovie "github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/library"
@@ -309,9 +310,10 @@ func (s *Server) GrabMovieRelease(
 		}, nil
 	}
 	if replaceExisting(request.Body) {
-		if err := s.store.MarkDownloadRecordReplaceExisting(
+		if err := s.store.SetDownloadRecordReplaceMode(
 			ctx,
 			rec.ID,
+			downloadrecord.ReplaceModeAll,
 		); err != nil {
 			slog.WarnContext(ctx, "grab movie: mark replace-existing failed",
 				"download_record.id", rec.ID, "error", err)
