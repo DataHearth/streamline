@@ -27,7 +27,9 @@
 		path: string;
 		use_ssl: boolean;
 		api_key: string;
-		priority: number;
+		// See IndexerForm.svelte: undefined represents a cleared input, distinct
+		// from the 0 that Number("") would otherwise produce.
+		priority: number | undefined;
 		enabled: boolean;
 	};
 

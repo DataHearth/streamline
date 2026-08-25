@@ -154,6 +154,12 @@ tasks:
     cmds:
       - biome lint web/static/js web/static/css
 
+  lint:ts:
+    desc: Typecheck the SPA (svelte-check)
+    # Not wired into `lint` yet — the app still carries pre-existing errors this
+    # would fail on. Wire it in once the count reaches zero.
+    cmd: pnpm exec svelte-check --tsconfig web/app/tsconfig.json {{.CLI_ARGS}}
+
   fmt:
     desc: Format all code
     cmds:

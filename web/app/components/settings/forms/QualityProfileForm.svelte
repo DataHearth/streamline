@@ -75,7 +75,6 @@
 </script>
 
 <script lang="ts">
-	import type { FormApi } from "@tanstack/svelte-form";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { Plus, Trash2, Wand2 } from "@lucide/svelte";
 	import TextField from "../../forms/TextField.svelte";
@@ -88,10 +87,11 @@
 	import FieldLock from "../../forms/FieldLock.svelte";
 	import { VIDEO_CODECS } from "../../../lib/media-info";
 	import type { CustomFormat } from "../../../lib/types";
+	import type { AppForm } from "../../../lib/form";
 	import { m as i18n } from "../../../lib/paraglide/messages.js";
 
 	type Props = {
-		form: FormApi<QualityProfileValues, undefined>;
+		form: AppForm<QualityProfileValues>;
 		// Presets prefill a profile that does not exist yet; on an edit they would
 		// silently discard scores the operator tuned.
 		isCreate?: boolean;

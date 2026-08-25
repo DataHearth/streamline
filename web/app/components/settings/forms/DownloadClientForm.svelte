@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { untrack } from "svelte";
-	import type { FormApi } from "@tanstack/svelte-form";
 	import { Lock } from "@lucide/svelte";
 	import TextField from "../../forms/TextField.svelte";
 	import { fieldErrorMessages } from "../../../lib/fieldErrors";
@@ -8,6 +7,7 @@
 	import TypePicker from "../../forms/TypePicker.svelte";
 	import BrandLogo from "../BrandLogo.svelte";
 	import { readOnlyLock } from "../../../lib/config.svelte";
+	import type { AppForm } from "../../../lib/form";
 	import type { DownloadClientType, DownloadClientAuth } from "../../../lib/types";
 	import { m as i18n } from "../../../lib/paraglide/messages.js";
 
@@ -21,12 +21,15 @@
 		password: string;
 		api_key: string;
 		use_ssl: boolean;
-		priority: number;
+		// Undefined (not 0) while the field is cleared: Number("") is 0, a value
+		// the schema accepts, so clearing the input has to produce something the
+		// "Priority required" check still rejects.
+		priority: number | undefined;
 		enabled: boolean;
 	};
 
 	type Props = {
-		form: FormApi<Values, undefined>;
+		form: AppForm<Values>;
 		isEdit?: boolean;
 	};
 
@@ -40,7 +43,10 @@
 		{ type: "deluge", label: "Deluge" },
 	];
 
-	const PRESETS: Record<DownloadClientType, { name: string; port: number }> = {
+	// No "builtin" entry: the built-in engine has its own form (BuiltinClientForm)
+	// and is never a selectable TYPES option here, so client_type can't reach
+	// applyPreset as "builtin" — Partial (rather than a dummy entry) says so.
+	const PRESETS: Partial<Record<DownloadClientType, { name: string; port: number }>> = {
 		qbittorrent: { name: "qBittorrent", port: 8080 },
 		transmission: { name: "Transmission", port: 9091 },
 		deluge: { name: "Deluge", port: 8112 },
@@ -50,9 +56,11 @@
 	// still holds a blank or another preset's value so manual edits survive.
 	function applyPreset(t: DownloadClientType) {
 		const preset = PRESETS[t];
+		if (!preset) return;
+		const known = Object.values(PRESETS).filter((p) => p !== undefined);
 		const cur = form.state.values;
-		const presetNames = new Set(Object.values(PRESETS).map((p) => p.name));
-		const presetPorts = new Set(Object.values(PRESETS).map((p) => p.port));
+		const presetNames = new Set(known.map((p) => p.name));
+		const presetPorts = new Set(known.map((p) => p.port));
 		if (!cur.name || presetNames.has(cur.name)) {
 			form.setFieldValue("name", preset.name);
 		}

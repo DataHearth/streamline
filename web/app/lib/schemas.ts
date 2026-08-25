@@ -70,16 +70,19 @@ export const qualityProfile = v.object({
 	upgrade_allowed: v.boolean(),
 	replace_whole_season: v.boolean(),
 	// Empty means any codec, which is how every profile that predates the media
-	// probe behaves — so there is no minLength here on purpose.
-	allowed_codecs: v.optional(v.array(v.string()), []),
+	// probe behaves — so there is no minLength here on purpose. Not v.optional:
+	// QualityProfileForm's defaultValues and openEdit both always populate this
+	// as an array, never undefined, so the schema's input type must say the
+	// same or it stops matching FormApi's onChange validator type.
+	allowed_codecs: v.array(v.string()),
 	// A format name is checked for presence only: which names resolve is the
 	// server's table (built-ins plus the config's custom formats), and it
 	// answers 422 for one that doesn't.
-	formats: v.optional(v.array(qualityProfileFormatScore), []),
+	formats: v.array(qualityProfileFormatScore),
 	// Both thresholds are signed: a negative min_score is a profile that still
 	// grabs a release the junk formats scored down.
-	min_score: v.optional(score, 0),
-	upgrade_until_score: v.optional(score, 0),
+	min_score: score,
+	upgrade_until_score: score,
 });
 
 export const customFormatConditionType = v.picklist(

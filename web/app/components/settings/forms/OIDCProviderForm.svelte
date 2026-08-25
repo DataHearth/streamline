@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { FormApi } from "@tanstack/svelte-form";
 	import TextField from "../../forms/TextField.svelte";
+	import type { AppForm } from "../../../lib/form";
 	import { m as i18n } from "../../../lib/paraglide/messages.js";
 
 	type Values = {
@@ -10,7 +10,7 @@
 		client_secret: string;
 	};
 
-	type Props = { form: FormApi<Values, undefined> };
+	type Props = { form: AppForm<Values> };
 	let { form }: Props = $props();
 </script>
 

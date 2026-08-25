@@ -34,7 +34,9 @@
 		password: string;
 		api_key: string;
 		use_ssl: boolean;
-		priority: number;
+		// See DownloadClientForm.svelte: undefined represents a cleared input,
+		// distinct from the 0 that Number("") would otherwise produce.
+		priority: number | undefined;
 		enabled: boolean;
 	};
 

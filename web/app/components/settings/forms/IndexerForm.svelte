@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { untrack } from "svelte";
-	import type { FormApi } from "@tanstack/svelte-form";
 	import { Lock, Rss } from "@lucide/svelte";
 	import TextField from "../../forms/TextField.svelte";
 	import { fieldErrorMessages } from "../../../lib/fieldErrors";
@@ -8,6 +7,7 @@
 	import BrandLogo from "../BrandLogo.svelte";
 	import { cn } from "../../../lib/cn";
 	import { readOnlyLock } from "../../../lib/config.svelte";
+	import type { AppForm } from "../../../lib/form";
 	import type { IndexerProtocol } from "../../../lib/types";
 	import { m as i18n } from "../../../lib/paraglide/messages.js";
 
@@ -19,12 +19,15 @@
 		path: string;
 		use_ssl: boolean;
 		api_key: string;
-		priority: number;
+		// Undefined (not 0) while the field is cleared: Number("") is 0, a value
+		// the schema accepts, so clearing the input has to produce something the
+		// "Priority required" check still rejects.
+		priority: number | undefined;
 		enabled: boolean;
 	};
 
 	type Props = {
-		form: FormApi<Values, undefined>;
+		form: AppForm<Values>;
 		isEdit?: boolean;
 	};
 

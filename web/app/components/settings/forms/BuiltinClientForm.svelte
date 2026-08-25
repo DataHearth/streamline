@@ -1,9 +1,9 @@
 <script lang="ts">
-	import type { FormApi } from "@tanstack/svelte-form";
 	import { Zap, Folder, Gauge, Globe } from "@lucide/svelte";
 	import TextField from "../../forms/TextField.svelte";
 	import Select from "../../forms/Select.svelte";
 	import TogglePill from "../../forms/TogglePill.svelte";
+	import type { AppForm } from "../../../lib/form";
 	import { m as i18n } from "../../../lib/paraglide/messages.js";
 
 	type Values = {
@@ -19,7 +19,7 @@
 	};
 
 	type Props = {
-		form: FormApi<Values, undefined>;
+		form: AppForm<Values>;
 		isEdit?: boolean;
 	};
 

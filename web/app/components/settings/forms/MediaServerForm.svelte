@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { untrack } from "svelte";
-	import type { FormApi } from "@tanstack/svelte-form";
 	import { Search } from "@lucide/svelte";
 	import { createMutation } from "@tanstack/svelte-query";
 	import TextField from "../../forms/TextField.svelte";
@@ -12,6 +11,7 @@
 	import { api, errorText } from "../../../lib/api";
 	import { readOnlyLock } from "../../../lib/config.svelte";
 	import { toast } from "../../../lib/toast";
+	import type { AppForm } from "../../../lib/form";
 	import { m as i18n } from "../../../lib/paraglide/messages.js";
 	import type {
 		MediaServerType,
@@ -28,7 +28,7 @@
 	};
 
 	type Props = {
-		form: FormApi<Values, undefined>;
+		form: AppForm<Values>;
 		isEdit?: boolean;
 	};
 
