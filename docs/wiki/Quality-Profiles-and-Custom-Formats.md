@@ -151,16 +151,19 @@ Each feed tick, for every monitored movie or episode that already has a file (`u
 2. **The current file's resolution must be in-band** (`Profile.UpgradableFrom`) — at or below `preferred_resolution`, and not unresolvable. A file *above* the band, or one whose resolution can't be determined at all, is never touched: both cases score `0` for the same mechanical reason (the band rejected them before any format was summed), and `0` is not evidence the file is bad — it's evidence the file is untouchable. Replacing it would delete exactly what the profile was protecting.
 3. **The current file's score must be below `upgrade_until_score`** (or the cap is `0`, meaning no cap), and the new release's score must be strictly higher.
 
-Only then does Streamline grab the replacement, mark the new download record `replace_existing`, and let the existing import-verification/replace flow do the rest — the same path a manual "replace" grab uses. No new download states, no separate upgrade queue.
+Only then does Streamline grab the replacement, mark the new download record's replace mode `upgrades`, and let the existing import-verification/replace flow do the rest — the same path a manual "replace" grab uses. No new download states, no separate upgrade queue.
 
 ### Series, seasons and episodes
 
-Episodes upgrade by the same three rules. Two things are specific to series:
+Episodes upgrade by the same three rules, but a season pack is judged **episode by episode** against each episode's own file, not against the season as a whole:
 
-- **A season pack is judged against the season's best file.** A pack is a single download standing in for many episodes, and once it lands there's no per-episode veto — so it has to beat the *strongest* file it would replace, not the weakest. One episode in the season sitting above `preferred_resolution` (or with an unreadable resolution) blocks the pack outright, for the same reason a single file above the band is never touched. Upgrade one episode at a time if you want finer control: a single-episode release is judged against that episode alone.
-- **Filling a gap wins over upgrading.** If a pack covers episodes you're missing, it's grabbed to fill them and the episodes you already have keep their files. It is not re-evaluated as an upgrade in the same tick — re-run it once the season is complete if you want the whole season replaced.
+- **Each episode in the pack is compared to its own file.** A release that beats episode 3 but not episode 7 replaces episode 3 and leaves episode 7 alone — there's no season-wide veto, so one strong episode no longer blocks a pack that would improve the rest. At least one episode has to qualify for the pack to be grabbed at all.
+- **Filling a gap and upgrading happen in the same grab.** If a pack covers episodes you're missing, it's grabbed to fill them, and any episode you already have that the release beats is replaced in that same download — you don't need to re-run it once the season is complete.
+- **Want the old "whole season or nothing" behavior instead?** Set `replace_whole_season: true` on the profile (see [Configuration Reference](Configuration-Reference)). The pack then has to beat the season's *strongest* file — one episode above `preferred_resolution`, or with an unreadable resolution, blocks the whole pack — and only then is every episode replaced together. This is for libraries that want a matched encode across a season (same release group/source throughout) more than they want each episode individually maximised; a mix of sources from independent per-episode upgrades is a preference tradeoff, not a bug.
 
-Series upgrades reuse the identical import path: the record is marked `replace_existing`, verification runs before anything on disk is touched, and a pack is verified as a whole.
+Either way, a single-episode release is judged against that one episode alone.
+
+Series upgrades reuse the identical import path: verification runs before anything on disk is touched, scoped to the episodes the import actually plans to replace (see [Import verification](Configuration-Reference#import-verification)) — a season pack under the default per-episode mode no longer verifies episodes it isn't going to touch.
 
 **On-disk scores are never stored.** Every comparison rebuilds a `ReleaseContext` from the file's row on demand — basename parsed the same way a release title is, resolution from the probed width (falling back to the filename parse), codec from the probe, size from the row. Editing a profile re-ranks your whole library instantly, with no migration and no cached score to invalidate.
 
@@ -227,4 +230,3 @@ Three, all a consequence of moving from "first release that passes" to score-the
 - **No active backlog search for upgrade-eligible items.** Upgrades happen when the RSS feed happens to see a better release; there's no scheduled sweep that goes looking for one after you retune a profile. Re-run search manually on items you want re-evaluated right away.
 - **No per-file score caching.** Every score above is computed on the fly; that's fine at today's cost, but means there's no SQL-queryable "show me everything below its upgrade cap" view yet.
 - **No community format import/sync** (TRaSH Guides, Dictionarry, etc.). Custom formats here are entirely local.
-- **No per-episode veto inside a season pack.** A pack is accepted or rejected whole; there's no "take these three episodes from it". See [Upgrades](#upgrades).

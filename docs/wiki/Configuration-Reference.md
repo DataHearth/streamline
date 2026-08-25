@@ -355,6 +355,7 @@ Built-in engine only (ignored for external clients):
 | `preferred_resolution` | ✅ | `720p` \| `1080p` \| `2160p` — hard ceiling of the accepted band |
 | `min_resolution` | ✅ | Same set — hard floor |
 | `upgrade_allowed` | | Whether a file already on disk can be replaced by a higher-scoring release. See [Quality Profiles and Naming](Quality-Profiles-and-Naming) |
+| `replace_whole_season` | | Off by default: a season pack replaces only the episodes it individually beats. On: the pack must beat the season's *best* file, and only then replaces the whole season at once — for libraries that want a matched encode across a season more than per-episode maximisation. See [Quality Profiles and Custom Formats](Quality-Profiles-and-Custom-Formats#series-seasons-and-episodes) |
 | `allowed_codecs` | | ffprobe codec names (`hevc`, `av1`, `h264`, `vp9`, `mpeg2video`). Empty — the default — means any codec. A finished download whose video codec isn't listed is [held](#import-verification) for a decision rather than imported |
 | `formats` | | `[{name, score}]` — custom formats (built-in or `custom_formats`) scored for this profile. See [Quality Profiles and Custom Formats](Quality-Profiles-and-Custom-Formats) |
 | `min_score` | | Minimum total matched-format score a release needs to be grabbed. Default `0` |
