@@ -334,10 +334,14 @@ func (s *TVFeedScanner) grabUpgrade(
 		slog.ErrorContext(ctx, "tv feed-scan: set replace mode failed",
 			"show", us.show.Title, "record.id", rec.ID, "error", err)
 	}
-	now := time.Now()
+	// selected episodes already have a file — this grab replaces it, it does
+	// not fill a gap — so status stays "available" and last_search_at (a
+	// missing-search cooldown input, meaningless once status leaves "wanted")
+	// is left alone. grabbed still records the attempt, which is what keeps a
+	// second indexer's copy of this release from grabbing the same episode
+	// twice in one tick.
 	for _, e := range selected {
 		pass.grabbed[e.ID] = struct{}{}
-		markEpisodeDownloading(ctx, s.store, e.ID, now)
 	}
 	slog.InfoContext(ctx, "tv feed-scan: grabbed upgrade",
 		"show", us.show.Title, "release", item.Title,
@@ -410,10 +414,10 @@ func (s *TVFeedScanner) grabWholeSeasonUpgrade(
 		slog.ErrorContext(ctx, "tv feed-scan: set replace mode failed",
 			"show", us.show.Title, "record.id", rec.ID, "error", err)
 	}
-	now := time.Now()
+	// Every target already has a file this grab is replacing, per the
+	// grabUpgrade comment above.
 	for _, e := range targets {
 		pass.grabbed[e.ID] = struct{}{}
-		markEpisodeDownloading(ctx, s.store, e.ID, now)
 	}
 	slog.InfoContext(ctx, "tv feed-scan: grabbed upgrade",
 		"show", us.show.Title, "release", item.Title, "episodes", len(targets),

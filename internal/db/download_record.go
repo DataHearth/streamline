@@ -10,6 +10,7 @@ import (
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
+	"github.com/datahearth/streamline/ent/predicate"
 	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/ent/season"
 	"github.com/datahearth/streamline/internal/ffmpeg"
@@ -243,7 +244,9 @@ type RecordImportFailureParams struct {
 	RecordID uint32
 	// Exactly one of MovieID / EpisodeID is set, identifying the media this
 	// record imports. On terminal failure the movie flips to failed; the
-	// episode flips back to wanted so the next search re-grabs it.
+	// episode flips back to wanted so the next search re-grabs it — unless it
+	// already holds a media file, in which case "wanted" would be a lie and
+	// the episode is left as-is.
 	MovieID   uint32
 	EpisodeID uint32
 	Terminal  bool
@@ -502,11 +505,25 @@ func (db *DB) RecordImportFailure(
 		}
 	}
 	if p.Terminal && p.EpisodeID != 0 {
-		if err := tx.Episode.UpdateOneID(p.EpisodeID).
-			SetStatus(episode.StatusWanted).
-			Exec(ctx); err != nil {
+		// wanted means "we do not have this" — an episode a failed grab was
+		// meant to replace still has its prior file, so it stays available
+		// instead (this is how ErrEpisodeHasFile reaches here: the importer
+		// declined every episode the release selected, but each one already
+		// holds a file).
+		hasFile, err := tx.MediaFile.Query().
+			Where(mediafile.HasEpisodeWith(episode.ID(p.EpisodeID))).
+			Exist(ctx)
+		if err != nil {
 			tx.Rollback()
-			return fmt.Errorf("update episode: %w", err)
+			return fmt.Errorf("check episode media files: %w", err)
+		}
+		if !hasFile {
+			if err := tx.Episode.UpdateOneID(p.EpisodeID).
+				SetStatus(episode.StatusWanted).
+				Exec(ctx); err != nil {
+				tx.Rollback()
+				return fmt.Errorf("update episode: %w", err)
+			}
 		}
 	}
 	return tx.Commit()
@@ -723,37 +740,61 @@ func (db *DB) RevertMovieToWantedIfNoFile(
 		Exec(ctx)
 }
 
-// RevertOrphanedDownloadingEpisodes flips back to "wanted" every episode stuck
-// in "downloading" that has no media file and whose season has no active
-// (downloading/importing/held) download record. This reconciles the season-pack
-// fan-out: a pack marks every episode downloading but links only one record, so
-// cancelling or losing that record leaves the rest stranded. Granularity is the
-// season — an episode is spared while any download in its season is still
-// active, so it self-heals once that download settles. Returns rows reverted.
+// noActiveSeasonRecord excludes an episode whose season has a download record
+// still in flight. Shared by both RevertOrphanedDownloadingEpisodes arms — the
+// held-record case applies equally to both: a held record awaits a decision,
+// so reverting its episodes would let the missing-search grab a duplicate
+// release while it pends.
+func noActiveSeasonRecord() predicate.Episode {
+	return episode.Not(episode.HasSeasonWith(
+		season.HasEpisodesWith(
+			episode.HasDownloadRecordsWith(
+				downloadrecord.StatusIn(
+					downloadrecord.StatusDownloading,
+					downloadrecord.StatusImporting,
+					downloadrecord.StatusHeld,
+				),
+			),
+		),
+	))
+}
+
+// RevertOrphanedDownloadingEpisodes reconciles episodes stuck in "downloading"
+// with no active download record behind them — the season-pack fan-out marks
+// every episode in a pack downloading but links only one record, so cancelling
+// or losing that record (or, historically, an upgrade grab that never
+// resolved) leaves the rest stranded. Granularity is the season — an episode
+// is spared while any download in its season is still active, so it
+// self-heals once that download settles.
+//
+// Two arms, not one query: an episode with no media file has never had
+// anything, so it goes back to "wanted"; an episode that already has a file
+// (an upgrade target left stranded by a since-fixed bug that marked it
+// downloading) goes back to "available" instead — "wanted" would claim we
+// don't have it. Returns rows reverted across both.
 func (db *DB) RevertOrphanedDownloadingEpisodes(
 	ctx context.Context,
 ) (int, error) {
-	return db.client.Episode.Update().
+	toWanted, err := db.client.Episode.Update().
 		Where(
 			episode.StatusEQ(episode.StatusDownloading),
 			episode.Not(episode.HasMediaFiles()),
-			episode.Not(episode.HasSeasonWith(
-				season.HasEpisodesWith(
-					episode.HasDownloadRecordsWith(
-						downloadrecord.StatusIn(
-							downloadrecord.StatusDownloading,
-							downloadrecord.StatusImporting,
-							// A held record awaits a decision; reverting its
-							// episodes would let the missing-search grab a
-							// duplicate release while it pends.
-							downloadrecord.StatusHeld,
-						),
-					),
-				),
-			)),
+			noActiveSeasonRecord(),
 		).
 		SetStatus(episode.StatusWanted).
 		Save(ctx)
+	if err != nil {
+		return toWanted, err
+	}
+	toAvailable, err := db.client.Episode.Update().
+		Where(
+			episode.StatusEQ(episode.StatusDownloading),
+			episode.HasMediaFiles(),
+			noActiveSeasonRecord(),
+		).
+		SetStatus(episode.StatusAvailable).
+		Save(ctx)
+	return toWanted + toAvailable, err
 }
 
 // SyncSeasonDownloadStateForRecord reflects a download's live torrent state onto

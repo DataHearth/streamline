@@ -308,6 +308,88 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 				Expect(m.Status).To(Equal(entmovie.StatusFailed))
 				Expect(m.FailureReason).To(Equal("bad file"))
 			})
+
+			// Both episode cases below cover the ErrEpisodeHasFile path: the
+			// importer declines every episode a season-pack upgrade selected
+			// because each already holds a file, and the record fails as
+			// terminal — but "wanted" would claim the episode is missing when
+			// it is not.
+			It(
+				"leaves an episode with a media file alone instead of "+
+					"reverting it to wanted",
+				func() {
+					show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+						Title: "The Black Sea", Year: 2024, TvdbID: 9201,
+						Seasons: []SeasonSeed{{
+							Number:   1,
+							Episodes: []EpisodeSeed{{Number: 1, Title: "Pilot"}},
+						}},
+					})
+					Expect(err).NotTo(HaveOccurred())
+					episodeID := show.Edges.Seasons[0].Edges.Episodes[0].ID
+					_, err = client.Episode.UpdateOneID(episodeID).
+						SetStatus(episode.StatusAvailable).Save(ctx)
+					Expect(err).NotTo(HaveOccurred())
+					_, err = client.MediaFile.Create().
+						SetPath("/lib/pilot.mkv").SetSize(10).
+						SetEpisodeID(episodeID).Save(ctx)
+					Expect(err).NotTo(HaveOccurred())
+					rec, err := store.CreateDownloadRecord(
+						ctx, CreateDownloadRecordParams{
+							Title: "t", Size: 1, TorrentHash: "tv-hasfile",
+							Status:             downloadrecord.StatusImporting,
+							EpisodeID:          episodeID,
+							DownloadClientName: clientName,
+						},
+					)
+					Expect(err).NotTo(HaveOccurred())
+
+					err = store.RecordImportFailure(ctx, RecordImportFailureParams{
+						RecordID: rec.ID, EpisodeID: episodeID,
+						Terminal: true, Reason: "already have it", Attempts: 1,
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					e, _ := client.Episode.Get(ctx, episodeID)
+					Expect(e.Status).To(Equal(episode.StatusAvailable))
+
+					got, _ := client.DownloadRecord.Get(ctx, rec.ID)
+					Expect(got.Status).To(Equal(downloadrecord.StatusFailed))
+				},
+			)
+
+			It("still reverts a fileless episode to wanted", func() {
+				show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+					Title: "The Black Sea", Year: 2024, TvdbID: 9202,
+					Seasons: []SeasonSeed{{
+						Number:   1,
+						Episodes: []EpisodeSeed{{Number: 1, Title: "Pilot"}},
+					}},
+				})
+				Expect(err).NotTo(HaveOccurred())
+				episodeID := show.Edges.Seasons[0].Edges.Episodes[0].ID
+				_, err = client.Episode.UpdateOneID(episodeID).
+					SetStatus(episode.StatusDownloading).Save(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				rec, err := store.CreateDownloadRecord(
+					ctx, CreateDownloadRecordParams{
+						Title: "t", Size: 1, TorrentHash: "tv-nofile",
+						Status:             downloadrecord.StatusImporting,
+						EpisodeID:          episodeID,
+						DownloadClientName: clientName,
+					},
+				)
+				Expect(err).NotTo(HaveOccurred())
+
+				err = store.RecordImportFailure(ctx, RecordImportFailureParams{
+					RecordID: rec.ID, EpisodeID: episodeID,
+					Terminal: true, Reason: "corrupt", Attempts: 1,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				e, _ := client.Episode.Get(ctx, episodeID)
+				Expect(e.Status).To(Equal(episode.StatusWanted))
+			})
 		})
 	})
 
@@ -663,21 +745,59 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 			}
 		})
 
-		It("never reverts an episode that already has a media file", func() {
-			ids := seedDownloadingSeason(7003, 2)
-			_, err := client.MediaFile.Create().
-				SetPath("/lib/e1.mkv").SetSize(10).
-				SetEpisodeID(ids[0]).Save(ctx)
-			Expect(err).NotTo(HaveOccurred())
+		It(
+			"spares a stranded episode with a file too, while its season's "+
+				"record is held",
+			func() {
+				ids := seedDownloadingSeason(7005, 2)
+				_, err := client.MediaFile.Create().
+					SetPath("/lib/e1.mkv").SetSize(10).
+					SetEpisodeID(ids[0]).Save(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				rec, err := store.CreateDownloadRecord(
+					ctx,
+					CreateDownloadRecordParams{
+						Title: "pack", Size: 1, TorrentHash: "held-h2",
+						Status:             downloadrecord.StatusImporting,
+						EpisodeID:          ids[1],
+						DownloadClientName: clientName,
+					},
+				)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(store.HoldDownloadRecord(ctx, rec.ID, []schema.HoldReason{
+					{File: "/dl/e2.mkv", Check: "resolution"},
+				})).To(Succeed())
 
-			n, err := store.RevertOrphanedDownloadingEpisodes(ctx)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(n).To(Equal(1)) // only the file-less episode reverts
-			withFile, _ := client.Episode.Get(ctx, ids[0])
-			fileless, _ := client.Episode.Get(ctx, ids[1])
-			Expect(withFile.Status).To(Equal(episode.StatusDownloading))
-			Expect(fileless.Status).To(Equal(episode.StatusWanted))
-		})
+				n, err := store.RevertOrphanedDownloadingEpisodes(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(n).To(Equal(0))
+				for _, id := range ids {
+					e, _ := client.Episode.Get(ctx, id)
+					Expect(e.Status).To(Equal(episode.StatusDownloading))
+				}
+			},
+		)
+
+		It(
+			"reverts a stranded episode with a media file to available, not wanted",
+			func() {
+				// A stranded upgrade target: it has a file, so "wanted" would
+				// wrongly claim it's missing.
+				ids := seedDownloadingSeason(7003, 2)
+				_, err := client.MediaFile.Create().
+					SetPath("/lib/e1.mkv").SetSize(10).
+					SetEpisodeID(ids[0]).Save(ctx)
+				Expect(err).NotTo(HaveOccurred())
+
+				n, err := store.RevertOrphanedDownloadingEpisodes(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(n).To(Equal(2)) // both revert, to different statuses
+				withFile, _ := client.Episode.Get(ctx, ids[0])
+				fileless, _ := client.Episode.Get(ctx, ids[1])
+				Expect(withFile.Status).To(Equal(episode.StatusAvailable))
+				Expect(fileless.Status).To(Equal(episode.StatusWanted))
+			},
+		)
 	})
 
 	Describe("SyncSeasonDownloadStateForRecord", func() {

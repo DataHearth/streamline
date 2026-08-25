@@ -281,6 +281,15 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 			betterPack = "The.Black.Sea.S03.2160p.BluRay.REMUX.HDR.x265-GRP"
 			// remux only: ties the 200 a remux file already scores.
 			tiedPack = "The.Black.Sea.S03.1080p.BluRay.REMUX.x264-GRP"
+			// betterEp's E02 twin. Fed as a second item in the same tick to turn
+			// "which episodes ended up in `selected`/`targets`" into an
+			// observable: GrabEpisode always fires against the pack's first
+			// episode regardless of how many episodes it actually covers, so
+			// asserting on that call alone can't tell a correct selection from a
+			// regressed one. This release, offered on its own, only gets grabbed
+			// if E02 is still up for grabs — i.e. wasn't already claimed by the
+			// pack this tick (`pass.grabbed`).
+			betterEp2 = "The.Black.Sea.S03E02.2160p.BluRay.REMUX.HDR.x265-GRP"
 		)
 
 		// epWithFile builds an upgrade candidate episode: one on disk, 1080p by
@@ -317,7 +326,9 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 					mock.Anything, uint32(55), downloadrecord.ReplaceModeUpgrades,
 				).
 				Return(nil).Once()
-			expectDownloading(11)
+			// The target already has a file, so the grab stays a background
+			// replacement: no SetEpisodeStatus/SetEpisodeLastSearchAt stub is
+			// registered, and the strict mock fails the test if either fires.
 			Expect(scanner.Run(ctx)).To(Succeed())
 		})
 
@@ -328,8 +339,16 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 				epWithFile(11, 1, plainEpFile),
 				epWithFile(12, 2, remuxEpFile),
 			)})
+			// betterEp2 rides along in the same feed: GrabEpisode always fires
+			// against the pack's first episode regardless of how many episodes
+			// it covers, so that call alone can't prove E02 was included too.
+			// No grabber/store expectation is registered for it — if the pack's
+			// selection silently dropped E02, betterEp2 would find it still up
+			// for grabs and the strict mock would fail on the unexpected call.
 			feeder.EXPECT().Feed(mock.Anything, "a").
-				Return([]indexer.SearchResult{{Title: betterPack}}, nil).Once()
+				Return([]indexer.SearchResult{
+					{Title: betterPack}, {Title: betterEp2},
+				}, nil).Once()
 			// One record, against the first episode of the season.
 			grabber.EXPECT().
 				GrabEpisode(mock.Anything, mock.Anything, uint32(11)).
@@ -339,8 +358,7 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 					mock.Anything, uint32(55), downloadrecord.ReplaceModeUpgrades,
 				).
 				Return(nil).Once()
-			expectDownloading(11)
-			expectDownloading(12)
+			// Both targets already have files; see the single-episode case above.
 			Expect(scanner.Run(ctx)).To(Succeed())
 		})
 
@@ -351,8 +369,16 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 				epWithFile(11, 1, plainEpFile),
 				epWithFile(12, 2, remuxEpFile),
 			)})
+			// betterEp2 rides along in the same feed as the real assertion that
+			// E02 was "left": GrabEpisode(...,11) fires identically whether the
+			// pack's selection was {E01} or {E01, E02} (it always grabs against
+			// selected[0]), so that call can't tell "leaves the rest" from
+			// "replaces the whole season". betterEp2 only gets grabbed if E02 is
+			// still up for grabs, i.e. the tied pack didn't select it.
 			feeder.EXPECT().Feed(mock.Anything, "a").
-				Return([]indexer.SearchResult{{Title: tiedPack}}, nil).Once()
+				Return([]indexer.SearchResult{
+					{Title: tiedPack}, {Title: betterEp2},
+				}, nil).Once()
 			grabber.EXPECT().
 				GrabEpisode(mock.Anything, mock.Anything, uint32(11)).
 				Return(&ent.DownloadRecord{ID: 55}, nil).Once()
@@ -360,8 +386,14 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 				SetDownloadRecordReplaceMode(
 					mock.Anything, uint32(55), downloadrecord.ReplaceModeUpgrades,
 				).Return(nil).Once()
-			// E01 is the only episode the pack beats, so it is the only one marked.
-			expectDownloading(11)
+			grabber.EXPECT().
+				GrabEpisode(mock.Anything, mock.Anything, uint32(12)).
+				Return(&ent.DownloadRecord{ID: 66}, nil).Once()
+			store.EXPECT().
+				SetDownloadRecordReplaceMode(
+					mock.Anything, uint32(66), downloadrecord.ReplaceModeUpgrades,
+				).Return(nil).Once()
+			// Neither episode gets a status write; both already have files.
 			Expect(scanner.Run(ctx)).To(Succeed())
 		})
 
@@ -426,8 +458,14 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 						epWithFile(12, 2, remuxEpFile),
 					))},
 				)
+				// betterEp2 rides along as the same observable used above: no
+				// grabber/store expectation is registered for it, so the strict
+				// mock fails if E02 were left ungrabbed by the pack (which would
+				// leave it available for betterEp2 to claim).
 				feeder.EXPECT().Feed(mock.Anything, "a").
-					Return([]indexer.SearchResult{{Title: betterPack}}, nil).Once()
+					Return([]indexer.SearchResult{
+						{Title: betterPack}, {Title: betterEp2},
+					}, nil).Once()
 				grabber.EXPECT().
 					GrabEpisode(mock.Anything, mock.Anything, uint32(11)).
 					Return(&ent.DownloadRecord{ID: 55}, nil).Once()
@@ -436,8 +474,8 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 						mock.Anything, uint32(55), downloadrecord.ReplaceModeAll,
 					).
 					Return(nil).Once()
-				expectDownloading(11)
-				expectDownloading(12)
+				// Both targets already have files; see the single-episode
+				// upgrade case above.
 				Expect(scanner.Run(ctx)).To(Succeed())
 			},
 		)
