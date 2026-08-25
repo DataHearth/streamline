@@ -7,6 +7,7 @@
 		"* 0-6 * * 1"
 	],
 	"prConcurrentLimit": 5,
+	"minimumReleaseAge": "3 days",
 	"labels": ["dependencies"],
 	"reviewers": ["DataHearth"],
 	"packageRules": [
