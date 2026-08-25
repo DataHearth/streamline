@@ -455,11 +455,21 @@ type packFile struct {
 // filling a gap. Under ReplaceModeUpgrades each episode is compared against
 // its own file, which is what lets one pack fill holes and upgrade what it
 // beats without touching anything it doesn't.
+//
+// A pack member's basename ("Show.S01E01.1080p.mkv") carries none of the
+// release-level markers (remux, HDR, multi-audio, dubbed, source, group) that
+// the scanner scored against the pack's own release title — so the incoming
+// context is built the way w.verdict falls back to the release title for the
+// resolution claim: keep whatever the basename states, fill whatever it
+// doesn't from recordTitle. Without this, a member named plainly under a
+// release titled ...REMUX... scores 200 at the scanner and 0 here, and the
+// importer silently declines every episode the scanner just selected.
 func takesPackFile(
 	pf packFile,
 	mode downloadrecord.ReplaceMode,
 	profile quality.Profile,
 	hasProfile bool,
+	recordTitle string,
 ) bool {
 	if pf.existing == nil {
 		return true
@@ -484,6 +494,28 @@ func takesPackFile(
 		incoming := qualityctx.ContextFromFile(
 			filepath.Base(pf.path), pf.size, width, codec,
 		)
+		fromTitle := library.Parse(recordTitle)
+		if incoming.Source == "" {
+			incoming.Source = fromTitle.Source
+		}
+		if incoming.Group == "" {
+			incoming.Group = fromTitle.Group
+		}
+		// release_title conditions match the whole raw string, so there is no
+		// single field to test for "does the basename carry it" — appending
+		// the release title adds whatever the basename lacks without ever
+		// dropping what the basename itself already states.
+		incoming.Title += " " + recordTitle
+		// Evaluate(incoming).Score is 0 both for "matched nothing" and for
+		// "rejected outright" (e.g. above preferred_resolution, which the
+		// probe can legitimately reveal even when the release claimed lower).
+		// ReplacesFile takes that 0 at face value, and 0 beats any
+		// "never grab this" negative score — the scanner never reaches this
+		// case because it pre-rejects via evaluateRelease, but this path
+		// does not.
+		if quality.Evaluate(profile, incoming).Rejected {
+			return false
+		}
 		return quality.ReplacesFile(profile, existing, incoming)
 	default:
 		return false
@@ -570,7 +602,13 @@ func (w *Worker) importEpisodeRecord(
 				"file", filepath.Base(f), "error", sErr)
 		}
 		pf.info, pf.probeErr = w.probeSource(ctx, f)
-		pf.willImport = takesPackFile(pf, rec.ReplaceMode, profile, hasProfile)
+		pf.willImport = takesPackFile(
+			pf,
+			rec.ReplaceMode,
+			profile,
+			hasProfile,
+			rec.Title,
+		)
 		plan = append(plan, pf)
 	}
 

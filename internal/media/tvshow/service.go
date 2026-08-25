@@ -729,7 +729,7 @@ func (s *Service) grabPackAndMark(
 		if err := s.db.SetDownloadRecordReplaceMode(
 			ctx, rec.ID, downloadrecord.ReplaceModeAll,
 		); err != nil {
-			slog.WarnContext(ctx, "grab pack: mark replace-existing failed",
+			slog.WarnContext(ctx, "grab pack: set replace mode failed",
 				"download_record.id", rec.ID, "error", err)
 		}
 	}

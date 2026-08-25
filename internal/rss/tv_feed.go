@@ -152,7 +152,7 @@ func (s *TVFeedScanner) processItems(
 				"reason", res.RejectReason)
 			continue
 		}
-		if n := s.grabWanted(ctx, ws, parsed, item, pass); n > 0 {
+		if n := s.grabWanted(ctx, ws, parsed, item, p, pass); n > 0 {
 			matched += n
 			continue
 		}
@@ -180,13 +180,14 @@ func (s *TVFeedScanner) grabWanted(
 	ws *wantedShow,
 	parsed library.ParseResult,
 	item indexer.SearchResult,
+	p quality.Profile,
 	pass *tvPass,
 ) int {
 	if ws == nil {
 		return 0
 	}
 	if parsed.SeasonPack {
-		return s.grabPack(ctx, ws, parsed.Season, item, pass.grabbed)
+		return s.grabPack(ctx, ws, parsed.Season, item, p, pass.grabbed)
 	}
 	e := ws.lookup(parsed)
 	if e == nil {
@@ -211,6 +212,7 @@ func (s *TVFeedScanner) grabPack(
 	ws *wantedShow,
 	season uint16,
 	item indexer.SearchResult,
+	p quality.Profile,
 	grabbed map[uint32]struct{},
 ) int {
 	wanted := make([]*ent.Episode, 0, len(ws.seasons[season]))
@@ -230,10 +232,19 @@ func (s *TVFeedScanner) grabPack(
 		return 0
 	}
 	// The pack is grabbed for the gap, but it may also beat files already on
-	// disk. The importer decides that per episode; without the mode it would
-	// skip every episode that has one.
+	// disk. Under the default per-episode rule the importer decides that per
+	// episode, so upgrades is what lets it. A profile that opted into
+	// replace_whole_season wants no per-episode veto here either — writing
+	// upgrades would let this gap-filling grab quietly replace whatever
+	// individual files it beats, exactly the mixed-source patchwork the key
+	// exists to prevent, so it gets none instead: the files already on disk
+	// are left alone, matching the old bool-based behaviour.
+	mode := downloadrecord.ReplaceModeUpgrades
+	if p.ReplaceWholeSeason {
+		mode = downloadrecord.ReplaceModeNone
+	}
 	if err := s.store.SetDownloadRecordReplaceMode(
-		ctx, rec.ID, downloadrecord.ReplaceModeUpgrades,
+		ctx, rec.ID, mode,
 	); err != nil {
 		slog.ErrorContext(ctx, "tv feed-scan: set replace mode failed",
 			"show", ws.show.Title, "record.id", rec.ID, "error", err)
@@ -396,7 +407,7 @@ func (s *TVFeedScanner) grabWholeSeasonUpgrade(
 	if err := s.store.SetDownloadRecordReplaceMode(
 		ctx, rec.ID, downloadrecord.ReplaceModeAll,
 	); err != nil {
-		slog.ErrorContext(ctx, "tv feed-scan: mark replace_existing failed",
+		slog.ErrorContext(ctx, "tv feed-scan: set replace mode failed",
 			"show", us.show.Title, "record.id", rec.ID, "error", err)
 	}
 	now := time.Now()

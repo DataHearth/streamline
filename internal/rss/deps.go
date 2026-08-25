@@ -79,8 +79,8 @@ type EligibleEpisodeLister interface {
 }
 
 // TVFeedStore is what rss.TVFeedScanner needs on top of the missing-search
-// surface: the episodes already on disk, and the flag that lets an upgrade's
-// import overwrite one.
+// surface: the episodes already on disk, and the replace mode that tells an
+// upgrade's import which of them it may overwrite.
 type TVFeedStore interface {
 	EligibleEpisodeLister
 	ListUpgradeCandidateShows(ctx context.Context) ([]*ent.TVShow, error)

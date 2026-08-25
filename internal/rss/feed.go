@@ -215,7 +215,7 @@ func (s *FeedScanner) tryUpgrade(
 	if err := s.store.SetDownloadRecordReplaceMode(
 		ctx, rec.ID, downloadrecord.ReplaceModeAll,
 	); err != nil {
-		slog.ErrorContext(ctx, "feed-scan: mark replace_existing failed",
+		slog.ErrorContext(ctx, "feed-scan: set replace mode failed",
 			"movie", m.Title, "record.id", rec.ID, "error", err)
 	}
 	s.markSearched(ctx, m)

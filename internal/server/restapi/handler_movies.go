@@ -315,7 +315,7 @@ func (s *Server) GrabMovieRelease(
 			rec.ID,
 			downloadrecord.ReplaceModeAll,
 		); err != nil {
-			slog.WarnContext(ctx, "grab movie: mark replace-existing failed",
+			slog.WarnContext(ctx, "grab movie: set replace mode failed",
 				"download_record.id", rec.ID, "error", err)
 		}
 	}
