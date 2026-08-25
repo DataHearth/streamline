@@ -34,17 +34,19 @@ func indexerConfig(names ...string) map[string]any {
 }
 
 const (
-	upgradableProfile = "upgradable"
-	cappedProfile     = "capped"
-	lockedProfile     = "locked"
-	hdOnlyProfile     = "hdonly"
+	upgradableProfile  = "upgradable"
+	cappedProfile      = "capped"
+	lockedProfile      = "locked"
+	hdOnlyProfile      = "hdonly"
+	wholeSeasonProfile = "wholeseason"
 )
 
-// upgradeConfig swaps the profile set for four: three differing only in
-// upgrade policy — permissive, capped at 100, upgrades off — plus one whose
-// band is 1080p..1080p, so a spec can pin exactly which rule stopped a grab.
-// hdr is scored alongside remux so a release can outscore a remux file
-// without leaving the band.
+// upgradeConfig swaps the profile set for five: three differing only in
+// upgrade policy — permissive, capped at 100, upgrades off — one whose band
+// is 1080p..1080p, so a spec can pin exactly which rule stopped a grab, and
+// one with replace_whole_season on for the season-pack aggregate rule. hdr is
+// scored alongside remux so a release can outscore a remux file without
+// leaving the band.
 func upgradeConfig(names ...string) map[string]any {
 	profile := func(name string, extra map[string]any) map[string]any {
 		p := map[string]any{
@@ -67,6 +69,7 @@ func upgradeConfig(names ...string) map[string]any {
 		profile(cappedProfile, map[string]any{"upgrade_until_score": 100}),
 		profile(lockedProfile, map[string]any{"upgrade_allowed": false}),
 		profile(hdOnlyProfile, map[string]any{"preferred_resolution": "1080p"}),
+		profile(wholeSeasonProfile, map[string]any{"replace_whole_season": true}),
 	}
 	return cfg
 }

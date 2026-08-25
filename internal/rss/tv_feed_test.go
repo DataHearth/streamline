@@ -142,7 +142,11 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 			// One record, against the first wanted episode.
 			grabber.EXPECT().
 				GrabEpisode(mock.Anything, mock.Anything, uint32(11)).
-				Return(&ent.DownloadRecord{}, nil).Once()
+				Return(&ent.DownloadRecord{ID: 55}, nil).Once()
+			store.EXPECT().
+				SetDownloadRecordReplaceMode(
+					mock.Anything, uint32(55), downloadrecord.ReplaceModeUpgrades,
+				).Return(nil).Once()
 			expectDownloading(11)
 			expectDownloading(12)
 			Expect(scanner.Run(ctx)).To(Succeed())
@@ -310,7 +314,7 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 				Return(&ent.DownloadRecord{ID: 55}, nil).Once()
 			store.EXPECT().
 				SetDownloadRecordReplaceMode(
-					mock.Anything, uint32(55), downloadrecord.ReplaceModeAll,
+					mock.Anything, uint32(55), downloadrecord.ReplaceModeUpgrades,
 				).
 				Return(nil).Once()
 			expectDownloading(11)
@@ -332,7 +336,7 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 				Return(&ent.DownloadRecord{ID: 55}, nil).Once()
 			store.EXPECT().
 				SetDownloadRecordReplaceMode(
-					mock.Anything, uint32(55), downloadrecord.ReplaceModeAll,
+					mock.Anything, uint32(55), downloadrecord.ReplaceModeUpgrades,
 				).
 				Return(nil).Once()
 			expectDownloading(11)
@@ -340,19 +344,44 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 			Expect(scanner.Run(ctx)).To(Succeed())
 		})
 
-		It("leaves the season alone when the pack only ties its best file", func() {
+		It("replaces the episodes a tied pack beats and leaves the rest", func() {
 			configtest.Setup(upgradeConfig("a"))
 			newScanner()
-			// E01 alone would be upgraded by this pack; E02's remux is what
-			// stops it, and a pack has no per-episode veto.
 			expectQueries(nil, []*ent.TVShow{showWith(
 				epWithFile(11, 1, plainEpFile),
 				epWithFile(12, 2, remuxEpFile),
 			)})
 			feeder.EXPECT().Feed(mock.Anything, "a").
 				Return([]indexer.SearchResult{{Title: tiedPack}}, nil).Once()
+			grabber.EXPECT().
+				GrabEpisode(mock.Anything, mock.Anything, uint32(11)).
+				Return(&ent.DownloadRecord{ID: 55}, nil).Once()
+			store.EXPECT().
+				SetDownloadRecordReplaceMode(
+					mock.Anything, uint32(55), downloadrecord.ReplaceModeUpgrades,
+				).Return(nil).Once()
+			// E01 is the only episode the pack beats, so it is the only one marked.
+			expectDownloading(11)
 			Expect(scanner.Run(ctx)).To(Succeed())
 		})
+
+		It(
+			"leaves the season alone when a whole-season profile's pack only ties its best file",
+			func() {
+				configtest.Setup(upgradeConfig("a"))
+				newScanner()
+				expectQueries(
+					nil,
+					[]*ent.TVShow{onProfile(wholeSeasonProfile, showWith(
+						epWithFile(11, 1, plainEpFile),
+						epWithFile(12, 2, remuxEpFile),
+					))},
+				)
+				feeder.EXPECT().Feed(mock.Anything, "a").
+					Return([]indexer.SearchResult{{Title: tiedPack}}, nil).Once()
+				Expect(scanner.Run(ctx)).To(Succeed())
+			},
+		)
 
 		It("never upgrades under a profile with upgrade_allowed false", func() {
 			configtest.Setup(upgradeConfig("a"))
@@ -365,11 +394,9 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 			Expect(scanner.Run(ctx)).To(Succeed())
 		})
 
-		It("fills a wanted episode rather than upgrading the season", func() {
+		It("fills a wanted episode and replaces what the pack beats", func() {
 			configtest.Setup(upgradeConfig("a"))
 			newScanner()
-			// Same show in both listings: E01 missing, E02 on disk. The pack is
-			// grabbed for the hole, and the file it doesn't beat stays put.
 			expectQueries(
 				[]*ent.TVShow{showWith(&ent.Episode{ID: 11, Number: 1})},
 				[]*ent.TVShow{showWith(epWithFile(12, 2, remuxEpFile))},
@@ -379,7 +406,23 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 			grabber.EXPECT().
 				GrabEpisode(mock.Anything, mock.Anything, uint32(11)).
 				Return(&ent.DownloadRecord{ID: 55}, nil).Once()
+			store.EXPECT().
+				SetDownloadRecordReplaceMode(
+					mock.Anything, uint32(55), downloadrecord.ReplaceModeUpgrades,
+				).Return(nil).Once()
 			expectDownloading(11)
+			Expect(scanner.Run(ctx)).To(Succeed())
+		})
+
+		It("does not grab a pack that beats nothing and fills nothing", func() {
+			configtest.Setup(upgradeConfig("a"))
+			newScanner()
+			expectQueries(nil, []*ent.TVShow{showWith(
+				epWithFile(11, 1, remuxEpFile),
+				epWithFile(12, 2, remuxEpFile),
+			)})
+			feeder.EXPECT().Feed(mock.Anything, "a").
+				Return([]indexer.SearchResult{{Title: tiedPack}}, nil).Once()
 			Expect(scanner.Run(ctx)).To(Succeed())
 		})
 	})

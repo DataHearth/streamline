@@ -222,11 +222,21 @@ func (s *TVFeedScanner) grabPack(
 	if len(wanted) == 0 {
 		return 0
 	}
-	if _, err := s.downloads.GrabEpisode(ctx, item, wanted[0].ID); err != nil {
+	rec, err := s.downloads.GrabEpisode(ctx, item, wanted[0].ID)
+	if err != nil {
 		slog.WarnContext(ctx, "tv feed-scan: season-pack grab failed",
 			"show", ws.show.Title, "season", season,
 			"release", item.Title, "error", err)
 		return 0
+	}
+	// The pack is grabbed for the gap, but it may also beat files already on
+	// disk. The importer decides that per episode; without the mode it would
+	// skip every episode that has one.
+	if err := s.store.SetDownloadRecordReplaceMode(
+		ctx, rec.ID, downloadrecord.ReplaceModeUpgrades,
+	); err != nil {
+		slog.ErrorContext(ctx, "tv feed-scan: set replace mode failed",
+			"show", ws.show.Title, "record.id", rec.ID, "error", err)
 	}
 	now := time.Now()
 	for _, e := range wanted {
@@ -239,10 +249,12 @@ func (s *TVFeedScanner) grabPack(
 	return len(wanted)
 }
 
-// grabUpgrade grabs item as a replacement for the files the release covers —
-// one episode, or every episode of a season for a pack — when it outscores
-// them under the show's profile, flagging the record so the importer
-// overwrites instead of skipping. Reports how many episodes it covered.
+// grabUpgrade grabs item as a replacement for the files it beats, flagging
+// the record so the importer overwrites instead of skipping. A pack is
+// judged per episode by default — only the episodes the release actually
+// outscores are grabbed and marked; see grabWholeSeasonUpgrade for the
+// all-or-nothing rule a profile can opt into. Reports how many episodes it
+// covered.
 func (s *TVFeedScanner) grabUpgrade(
 	ctx context.Context,
 	us *wantedShow,
@@ -270,10 +282,71 @@ func (s *TVFeedScanner) grabUpgrade(
 	if len(targets) == 0 {
 		return 0
 	}
-	// A pack is one grab standing in for N files, so the bar is the *best* of
-	// them: beating the season's worst file would replace every other episode
-	// with something worse, and there is no per-episode veto once the pack is
-	// grabbed.
+	if p.ReplaceWholeSeason {
+		return s.grabWholeSeasonUpgrade(ctx, us, targets, item, p, rel, pass)
+	}
+	release := qualityctx.ContextFromRelease(item.Title, item.Size, item.Seeders)
+	var selected []*ent.Episode
+	for _, e := range targets {
+		if len(e.Edges.MediaFiles) == 0 {
+			continue
+		}
+		mf := e.Edges.MediaFiles[0]
+		file := qualityctx.ContextFromFile(
+			filepath.Base(mf.Path), mf.Size, int(mf.Width), mf.VideoCodec,
+		)
+		if quality.ReplacesFile(p, file, release) {
+			selected = append(selected, e)
+		}
+	}
+	if len(selected) == 0 {
+		return 0
+	}
+
+	rec, err := s.downloads.GrabEpisode(ctx, item, selected[0].ID)
+	if err != nil {
+		slog.WarnContext(ctx, "tv feed-scan: upgrade grab failed",
+			"show", us.show.Title, "release", item.Title, "error", err)
+		if ierr := s.store.IncrementEpisodeGrabFailures(
+			ctx, selected[0].ID,
+		); ierr != nil {
+			slog.WarnContext(ctx, "tv feed-scan: bump episode grab_failures failed",
+				"episode.id", selected[0].ID, "error", ierr)
+		}
+		return 0
+	}
+	// Without the flag the importer skips every episode that already has a file,
+	// so the upgrade this run just grabbed can never land: actionable, not noise.
+	if err := s.store.SetDownloadRecordReplaceMode(
+		ctx, rec.ID, downloadrecord.ReplaceModeUpgrades,
+	); err != nil {
+		slog.ErrorContext(ctx, "tv feed-scan: set replace mode failed",
+			"show", us.show.Title, "record.id", rec.ID, "error", err)
+	}
+	now := time.Now()
+	for _, e := range selected {
+		pass.grabbed[e.ID] = struct{}{}
+		markEpisodeDownloading(ctx, s.store, e.ID, now)
+	}
+	slog.InfoContext(ctx, "tv feed-scan: grabbed upgrade",
+		"show", us.show.Title, "release", item.Title,
+		"episodes", len(selected), "considered", len(targets))
+	return len(selected)
+}
+
+// grabWholeSeasonUpgrade is the ReplaceWholeSeason escape hatch: a pack must
+// beat the season's *best* file, since there is no per-episode veto once it
+// is grabbed, and beating the worst would replace every other episode with
+// something worse. Reports how many episodes it covered.
+func (s *TVFeedScanner) grabWholeSeasonUpgrade(
+	ctx context.Context,
+	us *wantedShow,
+	targets []*ent.Episode,
+	item indexer.SearchResult,
+	p quality.Profile,
+	rel quality.Result,
+	pass *tvPass,
+) int {
 	best := 0
 	for _, e := range targets {
 		if len(e.Edges.MediaFiles) == 0 {
