@@ -129,6 +129,13 @@ var minRole = map[string]string{
 	"UpdateQualityProfile": roleAdmin,
 	"DeleteQualityProfile": roleAdmin,
 
+	"ListCustomFormats":  roleRequestOnly,
+	"GetCustomFormat":    roleRequestOnly,
+	"CreateCustomFormat": roleAdmin,
+	"UpdateCustomFormat": roleAdmin,
+	"DeleteCustomFormat": roleAdmin,
+	"TestCustomFormat":   roleAdmin,
+
 	"ListRequests":       roleRequestOnly,
 	"CreateRequest":      roleRequestOnly,
 	"GetRequestCounts":   roleRequestOnly,

@@ -16,6 +16,8 @@ tags:
     description: Movie library management and TMDB search
   - name: quality-profiles
     description: Quality profile configuration for media downloads
+  - name: custom-formats
+    description: Custom-format scoring rules for release quality
   - name: indexers
     description: Torznab indexer management and testing
   - name: download-clients
@@ -974,6 +976,143 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ── Custom Formats ──────────────────────────────────────
+  /custom-formats:
+    get:
+      operationId: listCustomFormats
+      summary: List custom formats
+      description: >-
+        Returns built-in and user-defined custom formats. Built-in entries
+        carry builtin: true and cannot be updated or deleted.
+      tags: [custom-formats]
+      responses:
+        "200":
+          description: Custom format list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CustomFormat"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      operationId: createCustomFormat
+      summary: Create a custom format
+      description: Creates a new user-defined custom format.
+      tags: [custom-formats]
+      requestBody:
+        $ref: "#/components/requestBodies/CreateCustomFormat"
+      responses:
+        "201":
+          description: Custom format created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomFormat"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /custom-formats/{name}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceName"
+    get:
+      operationId: getCustomFormat
+      summary: Get a custom format
+      tags: [custom-formats]
+      responses:
+        "200":
+          description: Custom format
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomFormat"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    put:
+      operationId: updateCustomFormat
+      summary: Update a custom format
+      description: >-
+        Replaces a user-defined custom format's conditions. Built-in
+        formats cannot be updated.
+      tags: [custom-formats]
+      requestBody:
+        $ref: "#/components/requestBodies/CreateCustomFormat"
+      responses:
+        "200":
+          description: Custom format updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomFormat"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      operationId: deleteCustomFormat
+      summary: Delete a custom format
+      description: >-
+        Built-in formats and formats still referenced by a quality profile
+        cannot be deleted.
+      tags: [custom-formats]
+      responses:
+        "204":
+          description: Custom format deleted
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /custom-formats/test:
+    post:
+      operationId: testCustomFormat
+      summary: Test a custom format against a sample release
+      description: >-
+        Evaluates a draft (possibly unsaved) set of conditions against a
+        synthetic release and reports which conditions matched. Used by the
+        create/edit form before the format exists.
+      tags: [custom-formats]
+      requestBody:
+        $ref: "#/components/requestBodies/TestCustomFormat"
+      responses:
+        "200":
+          description: Test result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomFormatTestResult"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -3433,6 +3572,20 @@ components:
           schema:
             $ref: "#/components/schemas/QualityProfileCreate"
 
+    CreateCustomFormat:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/CustomFormatCreate"
+
+    TestCustomFormat:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/CustomFormatTestRequest"
+
     CreateIndexer:
       required: true
       content:
@@ -4840,6 +4993,32 @@ components:
             Grab requests only: delete already-present file(s) for the
             covered media before importing (manual overwrite). Unset/false
             keeps existing files. Ignored in search-result responses.
+        score:
+          type: integer
+          description: >-
+            Total matched-format score against the queried item's quality
+            profile. Relative to that profile only — comparing scores
+            across items with different profiles is meaningless. Ignored
+            on grab request bodies.
+        rejected:
+          type: boolean
+          description: >-
+            True when the release fails the queried item's quality profile
+            (resolution outside its band, or score below min_score).
+            Ignored on grab request bodies.
+        reject_reason:
+          type: string
+          description: >-
+            Human-readable reason set when rejected is true. Ignored on
+            grab request bodies.
+        matched_formats:
+          type: array
+          items:
+            type: string
+          description: >-
+            Names of the custom formats that matched, relative to the
+            queried item's quality profile. Ignored on grab request
+            bodies.
 
     PlayOnLinkList:
       type: object
@@ -4948,6 +5127,25 @@ components:
           description: |
             ffprobe video codec names ("hevc", "av1"). A grab whose file uses
             anything else is held for a decision. Empty means any codec.
+        formats:
+          type: array
+          items:
+            $ref: "#/components/schemas/QualityProfileFormatScore"
+          description: |
+            Custom formats (built-in or user-defined) scored for this
+            profile. Each name must resolve to a built-in format or a
+            custom_formats entry.
+        min_score:
+          type: integer
+          description: |
+            Minimum total matched-format score a release needs to be
+            grabbed.
+        upgrade_until_score:
+          type: integer
+          description: |
+            Stop upgrading once the current file's score reaches this
+            value. 0 (or unset) upgrades whenever a higher-scoring release
+            is found, subject to upgrade_allowed.
 
     QualityProfileCreate:
       type: object
@@ -4971,6 +5169,168 @@ components:
             ffprobe video codec names ("hevc", "av1"). Empty means any codec.
             On update, omitting this field leaves the existing list
             untouched.
+        formats:
+          type: array
+          items:
+            $ref: "#/components/schemas/QualityProfileFormatScore"
+          description: |
+            Custom formats (built-in or user-defined) scored for this
+            profile. Each name must resolve to a built-in format or a
+            custom_formats entry. On update, omitting this field leaves the
+            existing list untouched.
+        min_score:
+          type: integer
+          description: |
+            Minimum total matched-format score a release needs to be
+            grabbed.
+        upgrade_until_score:
+          type: integer
+          description: |
+            Stop upgrading once the current file's score reaches this
+            value. 0 (or unset) upgrades whenever a higher-scoring release
+            is found, subject to upgrade_allowed.
+
+    QualityProfileFormatScore:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          description: |
+            A built-in format name or a custom_formats entry name; either
+            namespace is accepted.
+        score:
+          type: integer
+          description: Added to the release's total when this format matches.
+
+    CustomFormatCondition:
+      type: object
+      required: [type]
+      properties:
+        type:
+          type: string
+          enum:
+            [
+              release_title,
+              resolution,
+              source,
+              release_group,
+              codec,
+              size,
+              seeders,
+            ]
+        pattern:
+          type: string
+          description: >-
+            Regular expression. Required for release_title and
+            release_group.
+        value:
+          type: string
+          description: Exact match value. Required for resolution, source and codec.
+        min_gb:
+          type: number
+          format: double
+          description: Lower bound (inclusive) for a size condition. 0 means unbounded.
+        max_gb:
+          type: number
+          format: double
+          description: Upper bound (inclusive) for a size condition. 0 means unbounded.
+        min:
+          type: integer
+          description: Minimum seeders for a seeders condition.
+        required:
+          type: boolean
+          description: >-
+            When true, this condition must pass for the format to match.
+            When false, the format matches if any non-required condition
+            passes (Radarr custom-format semantics).
+        negate:
+          type: boolean
+          description: Invert this condition's result before it's combined.
+
+    CustomFormat:
+      type: object
+      required: [name, conditions]
+      properties:
+        name:
+          type: string
+        builtin:
+          type: boolean
+          readOnly: true
+          description: >-
+            True for the shipped format library. Built-in formats cannot
+            be updated or deleted.
+        conditions:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/CustomFormatCondition"
+
+    CustomFormatCreate:
+      type: object
+      required: [name, conditions]
+      properties:
+        name:
+          type: string
+        conditions:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/CustomFormatCondition"
+
+    CustomFormatTestSample:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+        size:
+          type: integer
+          format: int64
+        seeders:
+          type: integer
+          x-go-type: uint32
+
+    CustomFormatTestRequest:
+      type: object
+      required: [conditions, sample]
+      properties:
+        conditions:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/CustomFormatCondition"
+        sample:
+          $ref: "#/components/schemas/CustomFormatTestSample"
+
+    CustomFormatConditionResult:
+      type: object
+      required: [index, passed]
+      properties:
+        index:
+          type: integer
+          description: Position of the condition in the request's conditions array.
+        passed:
+          type: boolean
+
+    CustomFormatTestResult:
+      type: object
+      required: [matched, conditions]
+      properties:
+        matched:
+          type: boolean
+          description: Whether the format as a whole matches the sample.
+        score_context:
+          type: object
+          nullable: true
+          additionalProperties: true
+          description: >-
+            Reserved for future per-condition scoring detail; always null
+            in this release.
+        conditions:
+          type: array
+          items:
+            $ref: "#/components/schemas/CustomFormatConditionResult"
 
     Indexer:
       type: object

@@ -228,6 +228,39 @@ func (e CreateUserRequestRole) Valid() bool {
 	}
 }
 
+// Defines values for CustomFormatConditionType.
+const (
+	CustomFormatConditionTypeCodec        CustomFormatConditionType = "codec"
+	CustomFormatConditionTypeReleaseGroup CustomFormatConditionType = "release_group"
+	CustomFormatConditionTypeReleaseTitle CustomFormatConditionType = "release_title"
+	CustomFormatConditionTypeResolution   CustomFormatConditionType = "resolution"
+	CustomFormatConditionTypeSeeders      CustomFormatConditionType = "seeders"
+	CustomFormatConditionTypeSize         CustomFormatConditionType = "size"
+	CustomFormatConditionTypeSource       CustomFormatConditionType = "source"
+)
+
+// Valid indicates whether the value is a known member of the CustomFormatConditionType enum.
+func (e CustomFormatConditionType) Valid() bool {
+	switch e {
+	case CustomFormatConditionTypeCodec:
+		return true
+	case CustomFormatConditionTypeReleaseGroup:
+		return true
+	case CustomFormatConditionTypeReleaseTitle:
+		return true
+	case CustomFormatConditionTypeResolution:
+		return true
+	case CustomFormatConditionTypeSeeders:
+		return true
+	case CustomFormatConditionTypeSize:
+		return true
+	case CustomFormatConditionTypeSource:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DiskUsageKind.
 const (
 	DiskUsageKindErr  DiskUsageKind = "err"
@@ -2104,6 +2137,79 @@ type CreateUserRequest struct {
 // CreateUserRequestRole defines model for CreateUserRequest.Role.
 type CreateUserRequestRole string
 
+// CustomFormat defines model for CustomFormat.
+type CustomFormat struct {
+	// Builtin True for the shipped format library. Built-in formats cannot be updated or deleted.
+	Builtin    *bool                   `json:"builtin,omitempty"`
+	Conditions []CustomFormatCondition `json:"conditions"`
+	Name       string                  `json:"name"`
+}
+
+// CustomFormatCondition defines model for CustomFormatCondition.
+type CustomFormatCondition struct {
+	// MaxGb Upper bound (inclusive) for a size condition. 0 means unbounded.
+	MaxGb *float64 `json:"max_gb,omitempty"`
+
+	// Min Minimum seeders for a seeders condition.
+	Min *int `json:"min,omitempty"`
+
+	// MinGb Lower bound (inclusive) for a size condition. 0 means unbounded.
+	MinGb *float64 `json:"min_gb,omitempty"`
+
+	// Negate Invert this condition's result before it's combined.
+	Negate *bool `json:"negate,omitempty"`
+
+	// Pattern Regular expression. Required for release_title and release_group.
+	Pattern *string `json:"pattern,omitempty"`
+
+	// Required When true, this condition must pass for the format to match. When false, the format matches if any non-required condition passes (Radarr custom-format semantics).
+	Required *bool                     `json:"required,omitempty"`
+	Type     CustomFormatConditionType `json:"type"`
+
+	// Value Exact match value. Required for resolution, source and codec.
+	Value *string `json:"value,omitempty"`
+}
+
+// CustomFormatConditionType defines model for CustomFormatCondition.Type.
+type CustomFormatConditionType string
+
+// CustomFormatConditionResult defines model for CustomFormatConditionResult.
+type CustomFormatConditionResult struct {
+	// Index Position of the condition in the request's conditions array.
+	Index  int  `json:"index"`
+	Passed bool `json:"passed"`
+}
+
+// CustomFormatCreate defines model for CustomFormatCreate.
+type CustomFormatCreate struct {
+	Conditions []CustomFormatCondition `json:"conditions"`
+	Name       string                  `json:"name"`
+}
+
+// CustomFormatTestRequest defines model for CustomFormatTestRequest.
+type CustomFormatTestRequest struct {
+	Conditions []CustomFormatCondition `json:"conditions"`
+	Sample     CustomFormatTestSample  `json:"sample"`
+}
+
+// CustomFormatTestResult defines model for CustomFormatTestResult.
+type CustomFormatTestResult struct {
+	Conditions []CustomFormatConditionResult `json:"conditions"`
+
+	// Matched Whether the format as a whole matches the sample.
+	Matched bool `json:"matched"`
+
+	// ScoreContext Reserved for future per-condition scoring detail; always null in this release.
+	ScoreContext *map[string]interface{} `json:"score_context,omitempty"`
+}
+
+// CustomFormatTestSample defines model for CustomFormatTestSample.
+type CustomFormatTestSample struct {
+	Seeders *uint32 `json:"seeders,omitempty"`
+	Size    *int64  `json:"size,omitempty"`
+	Title   string  `json:"title"`
+}
+
 // DeleteFileRequest defines model for DeleteFileRequest.
 type DeleteFileRequest struct {
 	// RemoveTorrent When true, also remove the source torrent from its download
@@ -3090,11 +3196,25 @@ type ProbeConfig struct {
 type QualityProfile struct {
 	// AllowedCodecs ffprobe video codec names ("hevc", "av1"). A grab whose file uses
 	// anything else is held for a decision. Empty means any codec.
-	AllowedCodecs       *[]string                         `json:"allowed_codecs,omitempty"`
-	MinResolution       QualityProfileMinResolution       `json:"min_resolution"`
+	AllowedCodecs *[]string `json:"allowed_codecs,omitempty"`
+
+	// Formats Custom formats (built-in or user-defined) scored for this
+	// profile. Each name must resolve to a built-in format or a
+	// custom_formats entry.
+	Formats       *[]QualityProfileFormatScore `json:"formats,omitempty"`
+	MinResolution QualityProfileMinResolution  `json:"min_resolution"`
+
+	// MinScore Minimum total matched-format score a release needs to be
+	// grabbed.
+	MinScore            *int                              `json:"min_score,omitempty"`
 	Name                string                            `json:"name"`
 	PreferredResolution QualityProfilePreferredResolution `json:"preferred_resolution"`
 	UpgradeAllowed      bool                              `json:"upgrade_allowed"`
+
+	// UpgradeUntilScore Stop upgrading once the current file's score reaches this
+	// value. 0 (or unset) upgrades whenever a higher-scoring release
+	// is found, subject to upgrade_allowed.
+	UpgradeUntilScore *int `json:"upgrade_until_score,omitempty"`
 }
 
 // QualityProfileMinResolution defines model for QualityProfile.MinResolution.
@@ -3108,11 +3228,26 @@ type QualityProfileCreate struct {
 	// AllowedCodecs ffprobe video codec names ("hevc", "av1"). Empty means any codec.
 	// On update, omitting this field leaves the existing list
 	// untouched.
-	AllowedCodecs       *[]string                               `json:"allowed_codecs,omitempty"`
-	MinResolution       *QualityProfileCreateMinResolution      `json:"min_resolution,omitempty"`
+	AllowedCodecs *[]string `json:"allowed_codecs,omitempty"`
+
+	// Formats Custom formats (built-in or user-defined) scored for this
+	// profile. Each name must resolve to a built-in format or a
+	// custom_formats entry. On update, omitting this field leaves the
+	// existing list untouched.
+	Formats       *[]QualityProfileFormatScore       `json:"formats,omitempty"`
+	MinResolution *QualityProfileCreateMinResolution `json:"min_resolution,omitempty"`
+
+	// MinScore Minimum total matched-format score a release needs to be
+	// grabbed.
+	MinScore            *int                                    `json:"min_score,omitempty"`
 	Name                string                                  `json:"name"`
 	PreferredResolution QualityProfileCreatePreferredResolution `json:"preferred_resolution"`
 	UpgradeAllowed      *bool                                   `json:"upgrade_allowed,omitempty"`
+
+	// UpgradeUntilScore Stop upgrading once the current file's score reaches this
+	// value. 0 (or unset) upgrades whenever a higher-scoring release
+	// is found, subject to upgrade_allowed.
+	UpgradeUntilScore *int `json:"upgrade_until_score,omitempty"`
 }
 
 // QualityProfileCreateMinResolution defines model for QualityProfileCreate.MinResolution.
@@ -3120,6 +3255,16 @@ type QualityProfileCreateMinResolution string
 
 // QualityProfileCreatePreferredResolution defines model for QualityProfileCreate.PreferredResolution.
 type QualityProfileCreatePreferredResolution string
+
+// QualityProfileFormatScore defines model for QualityProfileFormatScore.
+type QualityProfileFormatScore struct {
+	// Name A built-in format name or a custom_formats entry name; either
+	// namespace is accepted.
+	Name string `json:"name"`
+
+	// Score Added to the release's total when this format matches.
+	Score *int `json:"score,omitempty"`
+}
 
 // QueueEntry defines model for QueueEntry.
 type QueueEntry struct {
@@ -3320,21 +3465,33 @@ type ScheduleUpdate struct {
 
 // SearchResult defines model for SearchResult.
 type SearchResult struct {
-	Codec        *string    `json:"codec,omitempty"`
-	DownloadUrl  string     `json:"download_url"`
-	Indexer      *string    `json:"indexer,omitempty"`
-	InfoUrl      *string    `json:"info_url,omitempty"`
-	Leechers     *uint32    `json:"leechers,omitempty"`
-	PublishedAt  *time.Time `json:"published_at,omitempty"`
-	ReleaseGroup *string    `json:"release_group,omitempty"`
+	Codec       *string `json:"codec,omitempty"`
+	DownloadUrl string  `json:"download_url"`
+	Indexer     *string `json:"indexer,omitempty"`
+	InfoUrl     *string `json:"info_url,omitempty"`
+	Leechers    *uint32 `json:"leechers,omitempty"`
+
+	// MatchedFormats Names of the custom formats that matched, relative to the queried item's quality profile. Ignored on grab request bodies.
+	MatchedFormats *[]string  `json:"matched_formats,omitempty"`
+	PublishedAt    *time.Time `json:"published_at,omitempty"`
+
+	// RejectReason Human-readable reason set when rejected is true. Ignored on grab request bodies.
+	RejectReason *string `json:"reject_reason,omitempty"`
+
+	// Rejected True when the release fails the queried item's quality profile (resolution outside its band, or score below min_score). Ignored on grab request bodies.
+	Rejected     *bool   `json:"rejected,omitempty"`
+	ReleaseGroup *string `json:"release_group,omitempty"`
 
 	// ReplaceExisting Grab requests only: delete already-present file(s) for the covered media before importing (manual overwrite). Unset/false keeps existing files. Ignored in search-result responses.
 	ReplaceExisting *bool   `json:"replace_existing,omitempty"`
 	Resolution      *string `json:"resolution,omitempty"`
-	Seeders         uint32  `json:"seeders"`
-	Size            int64   `json:"size"`
-	Source          *string `json:"source,omitempty"`
-	Title           string  `json:"title"`
+
+	// Score Total matched-format score against the queried item's quality profile. Relative to that profile only — comparing scores across items with different profiles is meaningless. Ignored on grab request bodies.
+	Score   *int    `json:"score,omitempty"`
+	Seeders uint32  `json:"seeders"`
+	Size    int64   `json:"size"`
+	Source  *string `json:"source,omitempty"`
+	Title   string  `json:"title"`
 }
 
 // SearchResultList defines model for SearchResultList.
@@ -4014,6 +4171,9 @@ type ChangePassword = ChangePasswordRequest
 // CreateApiKey defines model for CreateApiKey.
 type CreateApiKey = CreateApiKeyRequest
 
+// CreateCustomFormat defines model for CreateCustomFormat.
+type CreateCustomFormat = CustomFormatCreate
+
 // CreateDownloadClient defines model for CreateDownloadClient.
 type CreateDownloadClient = DownloadClientCreate
 
@@ -4073,6 +4233,9 @@ type StartImport = ImportScanCreateRequest
 
 // StartPathMigration defines model for StartPathMigration.
 type StartPathMigration = PathMigrationRequest
+
+// TestCustomFormat defines model for TestCustomFormat.
+type TestCustomFormat = CustomFormatTestRequest
 
 // UpdateAuthConfig Only provided fields are applied.
 type UpdateAuthConfig = AuthConfigPatch
@@ -4321,6 +4484,15 @@ type CreateOIDCProviderJSONRequestBody = OIDCProviderCreate
 // UpdateOIDCProviderJSONRequestBody defines body for UpdateOIDCProvider for application/json ContentType.
 type UpdateOIDCProviderJSONRequestBody = OIDCProviderPatch
 
+// CreateCustomFormatJSONRequestBody defines body for CreateCustomFormat for application/json ContentType.
+type CreateCustomFormatJSONRequestBody = CustomFormatCreate
+
+// TestCustomFormatJSONRequestBody defines body for TestCustomFormat for application/json ContentType.
+type TestCustomFormatJSONRequestBody = CustomFormatTestRequest
+
+// UpdateCustomFormatJSONRequestBody defines body for UpdateCustomFormat for application/json ContentType.
+type UpdateCustomFormatJSONRequestBody = CustomFormatCreate
+
 // CreateDownloadClientJSONRequestBody defines body for CreateDownloadClient for application/json ContentType.
 type CreateDownloadClientJSONRequestBody = DownloadClientCreate
 
@@ -4557,6 +4729,24 @@ type ServerInterface interface {
 	// UpdateOIDCProvider Update an OIDC provider (admin)
 	// (PATCH /config/oidc/{name})
 	UpdateOIDCProvider(w http.ResponseWriter, r *http.Request, name OIDCProviderName)
+	// ListCustomFormats List custom formats
+	// (GET /custom-formats)
+	ListCustomFormats(w http.ResponseWriter, r *http.Request)
+	// CreateCustomFormat Create a custom format
+	// (POST /custom-formats)
+	CreateCustomFormat(w http.ResponseWriter, r *http.Request)
+	// TestCustomFormat Test a custom format against a sample release
+	// (POST /custom-formats/test)
+	TestCustomFormat(w http.ResponseWriter, r *http.Request)
+	// DeleteCustomFormat Delete a custom format
+	// (DELETE /custom-formats/{name})
+	DeleteCustomFormat(w http.ResponseWriter, r *http.Request, name ResourceName)
+	// GetCustomFormat Get a custom format
+	// (GET /custom-formats/{name})
+	GetCustomFormat(w http.ResponseWriter, r *http.Request, name ResourceName)
+	// UpdateCustomFormat Update a custom format
+	// (PUT /custom-formats/{name})
+	UpdateCustomFormat(w http.ResponseWriter, r *http.Request, name ResourceName)
 	// ListDownloadClients List download clients
 	// (GET /download-clients)
 	ListDownloadClients(w http.ResponseWriter, r *http.Request)
@@ -5106,6 +5296,42 @@ func (_ Unimplemented) GetOIDCProvider(w http.ResponseWriter, r *http.Request, n
 // UpdateOIDCProvider Update an OIDC provider (admin)
 // (PATCH /config/oidc/{name})
 func (_ Unimplemented) UpdateOIDCProvider(w http.ResponseWriter, r *http.Request, name OIDCProviderName) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ListCustomFormats List custom formats
+// (GET /custom-formats)
+func (_ Unimplemented) ListCustomFormats(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// CreateCustomFormat Create a custom format
+// (POST /custom-formats)
+func (_ Unimplemented) CreateCustomFormat(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// TestCustomFormat Test a custom format against a sample release
+// (POST /custom-formats/test)
+func (_ Unimplemented) TestCustomFormat(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// DeleteCustomFormat Delete a custom format
+// (DELETE /custom-formats/{name})
+func (_ Unimplemented) DeleteCustomFormat(w http.ResponseWriter, r *http.Request, name ResourceName) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetCustomFormat Get a custom format
+// (GET /custom-formats/{name})
+func (_ Unimplemented) GetCustomFormat(w http.ResponseWriter, r *http.Request, name ResourceName) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// UpdateCustomFormat Update a custom format
+// (PUT /custom-formats/{name})
+func (_ Unimplemented) UpdateCustomFormat(w http.ResponseWriter, r *http.Request, name ResourceName) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -6580,6 +6806,126 @@ func (siw *ServerInterfaceWrapper) UpdateOIDCProvider(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateOIDCProvider(w, r, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListCustomFormats operation middleware
+func (siw *ServerInterfaceWrapper) ListCustomFormats(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListCustomFormats(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateCustomFormat operation middleware
+func (siw *ServerInterfaceWrapper) CreateCustomFormat(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateCustomFormat(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// TestCustomFormat operation middleware
+func (siw *ServerInterfaceWrapper) TestCustomFormat(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.TestCustomFormat(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteCustomFormat operation middleware
+func (siw *ServerInterfaceWrapper) DeleteCustomFormat(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "name" -------------
+	var name ResourceName
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", chi.URLParam(r, "name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteCustomFormat(w, r, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetCustomFormat operation middleware
+func (siw *ServerInterfaceWrapper) GetCustomFormat(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "name" -------------
+	var name ResourceName
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", chi.URLParam(r, "name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCustomFormat(w, r, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateCustomFormat operation middleware
+func (siw *ServerInterfaceWrapper) UpdateCustomFormat(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "name" -------------
+	var name ResourceName
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", chi.URLParam(r, "name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateCustomFormat(w, r, name)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -9924,6 +10270,24 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Put(options.BaseURL+"/quality-profiles/{name}", wrapper.UpdateQualityProfile)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/custom-formats", wrapper.ListCustomFormats)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/custom-formats", wrapper.CreateCustomFormat)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/custom-formats/{name}", wrapper.DeleteCustomFormat)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/custom-formats/{name}", wrapper.GetCustomFormat)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/custom-formats/{name}", wrapper.UpdateCustomFormat)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/custom-formats/test", wrapper.TestCustomFormat)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/indexers", wrapper.ListIndexers)
 	})
 	r.Group(func(r chi.Router) {
@@ -12283,6 +12647,446 @@ func (response UpdateOIDCProvider422JSONResponse) VisitUpdateOIDCProviderRespons
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCustomFormatsRequestObject struct {
+}
+
+type ListCustomFormatsResponseObject interface {
+	VisitListCustomFormatsResponse(w http.ResponseWriter) error
+}
+
+type ListCustomFormats200JSONResponse []CustomFormat
+
+func (response ListCustomFormats200JSONResponse) VisitListCustomFormatsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCustomFormats500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListCustomFormats500JSONResponse) VisitListCustomFormatsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCustomFormatRequestObject struct {
+	Body *CreateCustomFormatJSONRequestBody
+}
+
+type CreateCustomFormatResponseObject interface {
+	VisitCreateCustomFormatResponse(w http.ResponseWriter) error
+}
+
+type CreateCustomFormat201JSONResponse CustomFormat
+
+func (response CreateCustomFormat201JSONResponse) VisitCreateCustomFormatResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCustomFormat403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response CreateCustomFormat403JSONResponse) VisitCreateCustomFormatResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCustomFormat409JSONResponse struct{ ConflictJSONResponse }
+
+func (response CreateCustomFormat409JSONResponse) VisitCreateCustomFormatResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCustomFormat413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response CreateCustomFormat413JSONResponse) VisitCreateCustomFormatResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCustomFormat422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response CreateCustomFormat422JSONResponse) VisitCreateCustomFormatResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCustomFormat500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response CreateCustomFormat500JSONResponse) VisitCreateCustomFormatResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type TestCustomFormatRequestObject struct {
+	Body *TestCustomFormatJSONRequestBody
+}
+
+type TestCustomFormatResponseObject interface {
+	VisitTestCustomFormatResponse(w http.ResponseWriter) error
+}
+
+type TestCustomFormat200JSONResponse CustomFormatTestResult
+
+func (response TestCustomFormat200JSONResponse) VisitTestCustomFormatResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type TestCustomFormat403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response TestCustomFormat403JSONResponse) VisitTestCustomFormatResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type TestCustomFormat413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response TestCustomFormat413JSONResponse) VisitTestCustomFormatResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type TestCustomFormat422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response TestCustomFormat422JSONResponse) VisitTestCustomFormatResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type TestCustomFormat500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response TestCustomFormat500JSONResponse) VisitTestCustomFormatResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteCustomFormatRequestObject struct {
+	Name ResourceName `json:"name"`
+}
+
+type DeleteCustomFormatResponseObject interface {
+	VisitDeleteCustomFormatResponse(w http.ResponseWriter) error
+}
+
+type DeleteCustomFormat204Response struct {
+}
+
+func (response DeleteCustomFormat204Response) VisitDeleteCustomFormatResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteCustomFormat403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DeleteCustomFormat403JSONResponse) VisitDeleteCustomFormatResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteCustomFormat404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response DeleteCustomFormat404JSONResponse) VisitDeleteCustomFormatResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteCustomFormat409JSONResponse struct{ ConflictJSONResponse }
+
+func (response DeleteCustomFormat409JSONResponse) VisitDeleteCustomFormatResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteCustomFormat500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response DeleteCustomFormat500JSONResponse) VisitDeleteCustomFormatResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCustomFormatRequestObject struct {
+	Name ResourceName `json:"name"`
+}
+
+type GetCustomFormatResponseObject interface {
+	VisitGetCustomFormatResponse(w http.ResponseWriter) error
+}
+
+type GetCustomFormat200JSONResponse CustomFormat
+
+func (response GetCustomFormat200JSONResponse) VisitGetCustomFormatResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCustomFormat404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetCustomFormat404JSONResponse) VisitGetCustomFormatResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCustomFormat500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetCustomFormat500JSONResponse) VisitGetCustomFormatResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCustomFormatRequestObject struct {
+	Name ResourceName `json:"name"`
+	Body *UpdateCustomFormatJSONRequestBody
+}
+
+type UpdateCustomFormatResponseObject interface {
+	VisitUpdateCustomFormatResponse(w http.ResponseWriter) error
+}
+
+type UpdateCustomFormat200JSONResponse CustomFormat
+
+func (response UpdateCustomFormat200JSONResponse) VisitUpdateCustomFormatResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCustomFormat403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpdateCustomFormat403JSONResponse) VisitUpdateCustomFormatResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCustomFormat404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UpdateCustomFormat404JSONResponse) VisitUpdateCustomFormatResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCustomFormat409JSONResponse struct{ ConflictJSONResponse }
+
+func (response UpdateCustomFormat409JSONResponse) VisitUpdateCustomFormatResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCustomFormat413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response UpdateCustomFormat413JSONResponse) VisitUpdateCustomFormatResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCustomFormat422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response UpdateCustomFormat422JSONResponse) VisitUpdateCustomFormatResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCustomFormat500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response UpdateCustomFormat500JSONResponse) VisitUpdateCustomFormatResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -19262,6 +20066,24 @@ type StrictServerInterface interface {
 	// UpdateOIDCProvider Update an OIDC provider (admin)
 	// (PATCH /config/oidc/{name})
 	UpdateOIDCProvider(ctx context.Context, request UpdateOIDCProviderRequestObject) (UpdateOIDCProviderResponseObject, error)
+	// ListCustomFormats List custom formats
+	// (GET /custom-formats)
+	ListCustomFormats(ctx context.Context, request ListCustomFormatsRequestObject) (ListCustomFormatsResponseObject, error)
+	// CreateCustomFormat Create a custom format
+	// (POST /custom-formats)
+	CreateCustomFormat(ctx context.Context, request CreateCustomFormatRequestObject) (CreateCustomFormatResponseObject, error)
+	// TestCustomFormat Test a custom format against a sample release
+	// (POST /custom-formats/test)
+	TestCustomFormat(ctx context.Context, request TestCustomFormatRequestObject) (TestCustomFormatResponseObject, error)
+	// DeleteCustomFormat Delete a custom format
+	// (DELETE /custom-formats/{name})
+	DeleteCustomFormat(ctx context.Context, request DeleteCustomFormatRequestObject) (DeleteCustomFormatResponseObject, error)
+	// GetCustomFormat Get a custom format
+	// (GET /custom-formats/{name})
+	GetCustomFormat(ctx context.Context, request GetCustomFormatRequestObject) (GetCustomFormatResponseObject, error)
+	// UpdateCustomFormat Update a custom format
+	// (PUT /custom-formats/{name})
+	UpdateCustomFormat(ctx context.Context, request UpdateCustomFormatRequestObject) (UpdateCustomFormatResponseObject, error)
 	// ListDownloadClients List download clients
 	// (GET /download-clients)
 	ListDownloadClients(ctx context.Context, request ListDownloadClientsRequestObject) (ListDownloadClientsResponseObject, error)
@@ -20615,6 +21437,177 @@ func (sh *strictHandler) UpdateOIDCProvider(w http.ResponseWriter, r *http.Reque
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateOIDCProviderResponseObject); ok {
 		if err := validResponse.VisitUpdateOIDCProviderResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListCustomFormats operation middleware
+func (sh *strictHandler) ListCustomFormats(w http.ResponseWriter, r *http.Request) {
+	var request ListCustomFormatsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListCustomFormats(ctx, request.(ListCustomFormatsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListCustomFormats")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListCustomFormatsResponseObject); ok {
+		if err := validResponse.VisitListCustomFormatsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateCustomFormat operation middleware
+func (sh *strictHandler) CreateCustomFormat(w http.ResponseWriter, r *http.Request) {
+	var request CreateCustomFormatRequestObject
+
+	var body CreateCustomFormatJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateCustomFormat(ctx, request.(CreateCustomFormatRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateCustomFormat")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateCustomFormatResponseObject); ok {
+		if err := validResponse.VisitCreateCustomFormatResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// TestCustomFormat operation middleware
+func (sh *strictHandler) TestCustomFormat(w http.ResponseWriter, r *http.Request) {
+	var request TestCustomFormatRequestObject
+
+	var body TestCustomFormatJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.TestCustomFormat(ctx, request.(TestCustomFormatRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "TestCustomFormat")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(TestCustomFormatResponseObject); ok {
+		if err := validResponse.VisitTestCustomFormatResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteCustomFormat operation middleware
+func (sh *strictHandler) DeleteCustomFormat(w http.ResponseWriter, r *http.Request, name ResourceName) {
+	var request DeleteCustomFormatRequestObject
+
+	request.Name = name
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteCustomFormat(ctx, request.(DeleteCustomFormatRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteCustomFormat")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteCustomFormatResponseObject); ok {
+		if err := validResponse.VisitDeleteCustomFormatResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetCustomFormat operation middleware
+func (sh *strictHandler) GetCustomFormat(w http.ResponseWriter, r *http.Request, name ResourceName) {
+	var request GetCustomFormatRequestObject
+
+	request.Name = name
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetCustomFormat(ctx, request.(GetCustomFormatRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetCustomFormat")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetCustomFormatResponseObject); ok {
+		if err := validResponse.VisitGetCustomFormatResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateCustomFormat operation middleware
+func (sh *strictHandler) UpdateCustomFormat(w http.ResponseWriter, r *http.Request, name ResourceName) {
+	var request UpdateCustomFormatRequestObject
+
+	request.Name = name
+
+	var body UpdateCustomFormatJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateCustomFormat(ctx, request.(UpdateCustomFormatRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateCustomFormat")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateCustomFormatResponseObject); ok {
+		if err := validResponse.VisitUpdateCustomFormatResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
