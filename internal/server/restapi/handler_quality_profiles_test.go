@@ -119,6 +119,43 @@ var _ = Describe(
 				Expect(raw["allowed_codecs"]).To(Equal([]any{}))
 			})
 
+			It(
+				"stores formats/min_score/upgrade_until_score and returns them in the create response",
+				func() {
+					body := `{"name": "uhd", "preferred_resolution": "2160p",` +
+						` "min_resolution": "1080p",` +
+						` "formats": [{"name": "remux", "score": 10}],` +
+						` "min_score": 5, "upgrade_until_score": 20}`
+					resp, err := http.Post(
+						app.srv.URL+"/api/v1/quality-profiles",
+						"application/json",
+						strings.NewReader(body),
+					)
+					Expect(err).NotTo(HaveOccurred())
+					defer resp.Body.Close()
+					Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+
+					var qp QualityProfile
+					Expect(json.NewDecoder(resp.Body).Decode(&qp)).To(Succeed())
+					Expect(qp.Formats).NotTo(BeNil())
+					Expect(*qp.Formats).To(HaveLen(1))
+					Expect((*qp.Formats)[0].Name).To(Equal("remux"))
+					Expect(*(*qp.Formats)[0].Score).To(Equal(10))
+					Expect(*qp.MinScore).To(Equal(5))
+					Expect(*qp.UpgradeUntilScore).To(Equal(20))
+
+					got, ok := config.ResolveQualityProfile("uhd")
+					Expect(ok).To(BeTrue())
+					Expect(got.Formats).To(Equal(
+						[]config.QualityProfileFormatScore{
+							{Name: "remux", Score: 10},
+						},
+					))
+					Expect(got.MinScore).To(Equal(5))
+					Expect(got.UpgradeUntilScore).To(Equal(20))
+				},
+			)
+
 			It("returns 409 on duplicate name", func() {
 				configtest.SetupFile(qualityProfileOverride(
 					map[string]any{
@@ -138,6 +175,39 @@ var _ = Describe(
 		})
 
 		Describe("UpdateQualityProfile", func() {
+			It("round-trips formats/min_score/upgrade_until_score", func() {
+				configtest.SetupFile(qualityProfileOverride(
+					map[string]any{
+						"name": "hd", "preferred_resolution": "1080p",
+						"min_resolution": "720p",
+					}))
+
+				body := `{"name": "hd", "preferred_resolution": "1080p",` +
+					` "min_resolution": "720p",` +
+					` "formats": [{"name": "hdr", "score": 15}],` +
+					` "min_score": 3, "upgrade_until_score": 12}`
+				req := app.req(http.MethodPut, "/api/v1/quality-profiles/hd", "",
+					strings.NewReader(body))
+				req.Header.Set("Content-Type", "application/json")
+				resp := app.do(req)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				var qp QualityProfile
+				Expect(json.NewDecoder(resp.Body).Decode(&qp)).To(Succeed())
+				Expect(*qp.Formats).To(HaveLen(1))
+				Expect((*qp.Formats)[0].Name).To(Equal("hdr"))
+				Expect(*qp.MinScore).To(Equal(3))
+				Expect(*qp.UpgradeUntilScore).To(Equal(12))
+
+				got, _ := config.ResolveQualityProfile("hd")
+				Expect(got.Formats).To(Equal(
+					[]config.QualityProfileFormatScore{{Name: "hdr", Score: 15}},
+				))
+				Expect(got.MinScore).To(Equal(3))
+				Expect(got.UpgradeUntilScore).To(Equal(12))
+			})
+
 			It("updates fields and returns 200", func() {
 				configtest.SetupFile(qualityProfileOverride(
 					map[string]any{

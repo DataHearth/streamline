@@ -8,14 +8,15 @@ import (
 )
 
 // qualityProfileToAPI maps config.QualityProfileEntry into the generated
-// view. AllowedCodecs is always a non-nil slice so the field serializes as
-// [] rather than null when no codec restriction is set.
+// view. AllowedCodecs and Formats are always non-nil slices so the fields
+// serialize as [] rather than null when unset.
 func qualityProfileToAPI(e config.QualityProfileEntry) QualityProfile {
 	codecs := e.AllowedCodecs
 	if codecs == nil {
 		codecs = []string{}
 	}
-	return QualityProfile{
+	formats := formatScoresToAPI(e.Formats)
+	out := QualityProfile{
 		Name: e.Name,
 		PreferredResolution: QualityProfilePreferredResolution(
 			e.PreferredResolution,
@@ -23,7 +24,46 @@ func qualityProfileToAPI(e config.QualityProfileEntry) QualityProfile {
 		MinResolution:  QualityProfileMinResolution(e.MinResolution),
 		UpgradeAllowed: e.UpgradeAllowed,
 		AllowedCodecs:  &codecs,
+		Formats:        &formats,
 	}
+	if e.MinScore != 0 {
+		v := e.MinScore
+		out.MinScore = &v
+	}
+	if e.UpgradeUntilScore != 0 {
+		v := e.UpgradeUntilScore
+		out.UpgradeUntilScore = &v
+	}
+	return out
+}
+
+// formatScoresToAPI maps a profile's scored-format list into the generated
+// view.
+func formatScoresToAPI(
+	scores []config.QualityProfileFormatScore,
+) []QualityProfileFormatScore {
+	out := make([]QualityProfileFormatScore, len(scores))
+	for i, fs := range scores {
+		score := fs.Score
+		out[i] = QualityProfileFormatScore{Name: fs.Name, Score: &score}
+	}
+	return out
+}
+
+// formatScoresFromAPI is the inverse of formatScoresToAPI, used by create/
+// update requests.
+func formatScoresFromAPI(
+	scores []QualityProfileFormatScore,
+) []config.QualityProfileFormatScore {
+	out := make([]config.QualityProfileFormatScore, len(scores))
+	for i, fs := range scores {
+		var score int
+		if fs.Score != nil {
+			score = *fs.Score
+		}
+		out[i] = config.QualityProfileFormatScore{Name: fs.Name, Score: score}
+	}
+	return out
 }
 
 func (s *Server) ListQualityProfiles(
@@ -61,6 +101,15 @@ func (s *Server) CreateQualityProfile(
 	}
 	if request.Body.AllowedCodecs != nil {
 		e.AllowedCodecs = *request.Body.AllowedCodecs
+	}
+	if request.Body.Formats != nil {
+		e.Formats = formatScoresFromAPI(*request.Body.Formats)
+	}
+	if request.Body.MinScore != nil {
+		e.MinScore = *request.Body.MinScore
+	}
+	if request.Body.UpgradeUntilScore != nil {
+		e.UpgradeUntilScore = *request.Body.UpgradeUntilScore
 	}
 
 	switch err := config.AddQualityProfile(ctx, e); {
@@ -100,6 +149,16 @@ func (s *Server) UpdateQualityProfile(
 	}
 	if request.Body.AllowedCodecs != nil {
 		patch.AllowedCodecs = request.Body.AllowedCodecs
+	}
+	if request.Body.Formats != nil {
+		fs := formatScoresFromAPI(*request.Body.Formats)
+		patch.Formats = &fs
+	}
+	if request.Body.MinScore != nil {
+		patch.MinScore = request.Body.MinScore
+	}
+	if request.Body.UpgradeUntilScore != nil {
+		patch.UpgradeUntilScore = request.Body.UpgradeUntilScore
 	}
 
 	switch err := config.UpdateQualityProfile(ctx, request.Name, patch); {
