@@ -111,6 +111,10 @@
         "preferred_resolution": { "$ref": "#/definitions/resolution" },
         "min_resolution": { "$ref": "#/definitions/resolution" },
         "upgrade_allowed": { "type": "boolean" },
+        "replace_whole_season": {
+          "type": "boolean",
+          "description": "Take a season pack whole when it beats the season's best file, instead of replacing only the episodes it outscores. Off by default."
+        },
         "allowed_codecs": {
           "type": "array",
           "items": { "type": "string" },

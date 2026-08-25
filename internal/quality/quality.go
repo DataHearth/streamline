@@ -54,12 +54,17 @@ type ScoredFormat struct {
 }
 
 type Profile struct {
-	MinResolution     string
-	MaxResolution     string
-	UpgradeAllowed    bool
-	MinScore          int
-	UpgradeUntilScore int
-	Formats           []ScoredFormat
+	MinResolution  string
+	MaxResolution  string
+	UpgradeAllowed bool
+	// ReplaceWholeSeason keeps the season-level upgrade rule: a pack must beat
+	// the season's best file and is then taken whole, rather than each episode
+	// being judged against its own. A matched encode across a season, at the
+	// cost of one strong file freezing the rest.
+	ReplaceWholeSeason bool
+	MinScore           int
+	UpgradeUntilScore  int
+	Formats            []ScoredFormat
 }
 
 type Result struct {
