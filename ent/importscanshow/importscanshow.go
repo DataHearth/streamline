@@ -175,9 +175,10 @@ const DefaultOutcome = OutcomePending
 
 // Outcome values.
 const (
-	OutcomePending Outcome = "pending"
-	OutcomeCreated Outcome = "created"
-	OutcomeFailed  Outcome = "failed"
+	OutcomePending  Outcome = "pending"
+	OutcomeCreated  Outcome = "created"
+	OutcomeAttached Outcome = "attached"
+	OutcomeFailed   Outcome = "failed"
 )
 
 func (o Outcome) String() string {
@@ -187,7 +188,7 @@ func (o Outcome) String() string {
 // OutcomeValidator is a validator for the "outcome" field enum values. It is called by the builders before save.
 func OutcomeValidator(o Outcome) error {
 	switch o {
-	case OutcomePending, OutcomeCreated, OutcomeFailed:
+	case OutcomePending, OutcomeCreated, OutcomeAttached, OutcomeFailed:
 		return nil
 	default:
 		return fmt.Errorf("importscanshow: invalid enum value for outcome field: %q", o)

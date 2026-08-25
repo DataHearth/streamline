@@ -15,3 +15,10 @@ var SampleRe = regexp.MustCompile(`(?i)\bsample\b`)
 
 // MinMediaSize is the minimum file size to consider a candidate media file (50 MiB).
 const MinMediaSize = 50 * 1024 * 1024
+
+// MinEpisodeSize is MinMediaSize for episodes (5 MiB). A feature under 50 MiB
+// is junk, but an episode need not be: Kaamelott's first four seasons are
+// 3-minute shorts, and the movie floor hid 228 of a 248-file folder from the
+// scanner — reported as a 20-file folder that then failed to match a single
+// episode.
+const MinEpisodeSize = 5 * 1024 * 1024

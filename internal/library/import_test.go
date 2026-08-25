@@ -16,6 +16,27 @@ import (
 	"github.com/datahearth/streamline/internal/config"
 )
 
+var _ = Describe("ListVideoFilesRecursive", Label("unit", "library"), func() {
+	It("lists short-form episodes across season folders", func() {
+		root := GinkgoT().TempDir()
+		seasons := []string{"Saison 1", "Saison 2"}
+		want := make([]string, 0, len(seasons))
+		for _, season := range seasons {
+			dir := filepath.Join(root, season)
+			Expect(os.MkdirAll(dir, 0o755)).To(Succeed())
+			// A Kaamelott episode is 3 minutes long and lands well under the
+			// feature floor, which used to hide the whole folder.
+			want = append(want, writeSizedFile(dir, season+" ep.mkv", 30<<20))
+		}
+		writeSizedFile(root, "thumb.mkv", 1<<20)
+		writeSizedFile(root, "sample.mkv", 30<<20)
+
+		got, err := ListVideoFilesRecursive(root)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(got).To(ConsistOf(want))
+	})
+})
+
 var _ = Describe("ImportService", Label("unit", "library"), func() {
 	Describe("ImportMovie", func() {
 		var (

@@ -2,7 +2,7 @@
 	import { untrack } from "svelte";
 	import { onMount } from "svelte";
 	import { createQuery } from "@tanstack/svelte-query";
-	import { api, errorText } from "../../lib/api";
+	import { api, apiAllPages, errorText, type Paginated } from "../../lib/api";
 	import { formatRelative } from "../../lib/dates";
 	import { loadPref, savePref } from "../../lib/prefs";
 	import { fold } from "../../lib/text";
@@ -16,9 +16,11 @@
 	} from "../../components/series/SeriesToolbar.svelte";
 	import SeriesGrid from "../../components/series/SeriesGrid.svelte";
 	import SeriesList from "../../components/series/SeriesList.svelte";
+	import RenderSentinel from "../../components/shared/RenderSentinel.svelte";
+	import { IncrementalList } from "../../lib/incremental-list.svelte";
 	import SeriesEmpty from "../../components/series/SeriesEmpty.svelte";
 	import SeriesBulkActions from "../../components/series/SeriesBulkActions.svelte";
-	import type { PaginatedTVShows, ScheduleList, TVShow } from "../../lib/types";
+	import type { MonitorFilter, ScheduleList, TVShow } from "../../lib/types";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	type View = "grid" | "list";
@@ -59,13 +61,20 @@
 			loadPref(SORT_PREF) ??
 			"title") as SeriesSort;
 		const rawView = p.get("view") ?? "grid";
+		// ?monitored=1 predates the unmonitored side of the filter, so it keeps
+		// meaning what it did and 0 is the new opposite.
+		const rawMonitored = p.get("monitored");
 		return {
 			tab: VALID_TABS.has(rawTab) ? rawTab : "all",
 			typeFilter: VALID_TYPES.has(rawType) ? rawType : "all",
 			query: p.get("q") ?? "",
 			sort: VALID_SORTS.has(rawSort) ? rawSort : "title",
 			view: (rawView === "list" ? "list" : "grid") as View,
-			monitoredOnly: p.get("monitored") === "1",
+			monitorFilter: (rawMonitored === "1"
+				? "monitored"
+				: rawMonitored === "0"
+					? "unmonitored"
+					: "all") as MonitorFilter,
 		};
 	}
 
@@ -75,7 +84,7 @@
 	let query = $state(initial.query);
 	let sort = $state<SeriesSort>(initial.sort);
 	let view = $state<View>(initial.view);
-	let monitoredOnly = $state(initial.monitoredOnly);
+	let monitorFilter = $state<MonitorFilter>(initial.monitorFilter);
 	// A phone has no width for the list table, so below md the library is posters
 	// only — whatever the URL or the last-used view says.
 	let narrow = $state(false);
@@ -105,7 +114,8 @@
 		if (tab !== "all") p.set("status", tab);
 		if (typeFilter !== "all") p.set("type", typeFilter);
 		if (query) p.set("q", query);
-		if (monitoredOnly) p.set("monitored", "1");
+		if (monitorFilter !== "all")
+			p.set("monitored", monitorFilter === "monitored" ? "1" : "0");
 		if (sort !== "title") p.set("sort", sort);
 		if (view !== "grid") p.set("view", view);
 		const search = p.toString();
@@ -125,9 +135,9 @@
 		}
 	});
 
-	const seriesQuery = createQuery<PaginatedTVShows>(() => ({
+	const seriesQuery = createQuery<Paginated<TVShow>>(() => ({
 		queryKey: ["series"],
-		queryFn: () => api<PaginatedTVShows>("/series?page=1&limit=500"),
+		queryFn: () => apiAllPages<TVShow>("/series"),
 	}));
 
 	const schedulesQuery = createQuery<ScheduleList>(() => ({
@@ -155,6 +165,7 @@
 	});
 
 	let monitoredCount = $derived(allSeries.filter((s) => s.monitored).length);
+	let unmonitoredCount = $derived(allSeries.length - monitoredCount);
 
 	function passesTab(s: TVShow): boolean {
 		if (tab === "all") return true;
@@ -165,7 +176,8 @@
 	let visibleSeries = $derived.by(() => {
 		let list = allSeries.filter(passesTab);
 		if (typeFilter !== "all") list = list.filter((s) => s.type === typeFilter);
-		if (monitoredOnly) list = list.filter((s) => s.monitored);
+		if (monitorFilter !== "all")
+			list = list.filter((s) => s.monitored === (monitorFilter === "monitored"));
 		const q = fold(query.trim());
 		if (q)
 			list = list.filter(
@@ -207,9 +219,21 @@
 		tab === "all" &&
 			typeFilter === "all" &&
 			!query &&
-			!monitoredOnly &&
+			monitorFilter === "all" &&
 			allSeries.length === 0,
 	);
+
+	// Only the rendered slice is budgeted; counts, selection and bulk actions
+	// keep operating on the full filtered set.
+	const rendered = new IncrementalList(() => visibleSeries);
+	$effect(() => {
+		void tab;
+		void typeFilter;
+		void query;
+		void monitorFilter;
+		void sort;
+		rendered.reset();
+	});
 
 	let lastScan = $derived.by(() => {
 		const items = schedulesQuery.data?.items ?? [];
@@ -226,7 +250,7 @@
 		tab = "all";
 		typeFilter = "all";
 		query = "";
-		monitoredOnly = false;
+		monitorFilter = "all";
 	}
 
 	// Below md the topbar carries this under the title and the page's own count
@@ -288,7 +312,7 @@
 		tab;
 		typeFilter;
 		query;
-		monitoredOnly;
+		monitorFilter;
 		untrack(clearSelection);
 	});
 </script>
@@ -319,15 +343,16 @@
 			{sort}
 			view={shownView}
 			{counts}
-			{monitoredOnly}
+			{monitorFilter}
 			{monitoredCount}
+			{unmonitoredCount}
 			{selectMode}
 			selectedCount={selected.size}
 			visibleCount={visibleSeries.length}
 			onTabChange={(t) => (tab = t)}
 			onTypeChange={(t) => (typeFilter = t)}
 			onQueryChange={(q) => (query = q)}
-			onMonitoredChange={(v) => (monitoredOnly = v)}
+			onMonitorFilterChange={(v) => (monitorFilter = v)}
 			onSortChange={setSort}
 			onViewChange={(v) => (view = v)}
 			onClearFilters={clearFilters}
@@ -381,20 +406,21 @@
 				/>
 			{:else if shownView === "list"}
 				<SeriesList
-					series={visibleSeries}
+					series={rendered.items}
 					{selected}
 					onToggle={toggle}
 					onToggleAll={toggleAll}
 				/>
 			{:else}
 				<SeriesGrid
-					series={visibleSeries}
+					series={rendered.items}
 					{selected}
 					{selectMode}
 					onToggle={toggle}
 					onLongPress={beginLongPress}
 				/>
 			{/if}
+			<RenderSentinel list={rendered} />
 		</div>
 
 		<SeriesBulkActions

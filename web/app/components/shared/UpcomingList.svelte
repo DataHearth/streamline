@@ -93,9 +93,14 @@
 				     reason for being here. `when` sits last because it is the one
 				     segment the date stamp already states, so it is the one truncation
 				     should eat first. -->
+				<!-- The fallback is the movie's reason for being here, so it is the
+				     movie's alone: an episode TVDB has not titled yet has no detail
+				     either, and inheriting this one billed it as a digital release. -->
 				{@const meta = [
 					ev.subtitle,
-					ev.detail ?? i18n.lc_digital_release(),
+					ev.kind === "movie"
+						? (ev.detail ?? i18n.lc_digital_release())
+						: ev.detail,
 					when,
 				]
 					.filter(Boolean)

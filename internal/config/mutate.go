@@ -28,6 +28,24 @@ type LibraryPatch struct {
 	MoviePath       *string
 	SeriesPath      *string
 	DownloadPath    *string
+	// Probe is itself optional-partial: a nil Probe leaves the whole section
+	// untouched, and a non-nil Probe with only one field set leaves the
+	// other alone.
+	Probe *ProbePatch
+}
+
+// ProbePatch carries optional field updates to the library.probe section.
+// Nil fields are left untouched.
+type ProbePatch struct {
+	AlwaysAsk        *bool
+	MinDurationRatio *float64
+}
+
+// FFmpegPatch carries optional field updates to the ffmpeg section. Nil
+// fields are left untouched.
+type FFmpegPatch struct {
+	Enabled *bool
+	Path    *string
 }
 
 // OIDCProviderPatch carries optional field updates to a single OIDC provider.
@@ -101,11 +119,44 @@ func UpdateLibrary(ctx context.Context, patch LibraryPatch) (LibraryConfig, erro
 		if patch.DownloadPath != nil {
 			c.Library.DownloadPath = *patch.DownloadPath
 		}
+		if patch.Probe != nil {
+			if patch.Probe.AlwaysAsk != nil {
+				c.Library.Probe.AlwaysAsk = *patch.Probe.AlwaysAsk
+			}
+			if patch.Probe.MinDurationRatio != nil {
+				c.Library.Probe.MinDurationRatio = *patch.Probe.MinDurationRatio
+			}
+		}
 		out = c.Library
 		return nil
 	})
 	if err != nil {
 		return LibraryConfig{}, err
+	}
+	return out, nil
+}
+
+// UpdateFFmpeg merges the patch into the ffmpeg section and persists it.
+// Returns the resulting FFmpegConfig so callers can echo the new state back.
+//
+// Path takes effect only on the next process start: the Prober handed to the
+// importer, hygiene backfill job, and restapi Server is constructed once at
+// boot from the old path, so a changed path here doesn't move what those
+// already resolved.
+func UpdateFFmpeg(ctx context.Context, patch FFmpegPatch) (FFmpegConfig, error) {
+	var out FFmpegConfig
+	err := Update(ctx, func(c *Config) error {
+		if patch.Enabled != nil {
+			c.FFmpeg.Enabled = *patch.Enabled
+		}
+		if patch.Path != nil {
+			c.FFmpeg.Path = *patch.Path
+		}
+		out = c.FFmpeg
+		return nil
+	})
+	if err != nil {
+		return FFmpegConfig{}, err
 	}
 	return out, nil
 }

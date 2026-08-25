@@ -18,9 +18,9 @@ import (
 	"github.com/datahearth/streamline/ent/importscanfile"
 	"github.com/datahearth/streamline/ent/importscanshow"
 	"github.com/datahearth/streamline/ent/invite"
+	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
-	"github.com/datahearth/streamline/ent/movieevent"
 	"github.com/datahearth/streamline/ent/oidcidentity"
 	"github.com/datahearth/streamline/ent/predicate"
 	"github.com/datahearth/streamline/ent/request"
@@ -49,9 +49,9 @@ const (
 	TypeImportScanFile = "ImportScanFile"
 	TypeImportScanShow = "ImportScanShow"
 	TypeInvite         = "Invite"
+	TypeMediaEvent     = "MediaEvent"
 	TypeMediaFile      = "MediaFile"
 	TypeMovie          = "Movie"
-	TypeMovieEvent     = "MovieEvent"
 	TypeOIDCIdentity   = "OIDCIdentity"
 	TypeRequest        = "Request"
 	TypeScheduledJob   = "ScheduledJob"
@@ -702,34 +702,37 @@ func (m *ApiKeyMutation) ResetEdge(name string) error {
 // DownloadRecordMutation represents an operation that mutates the DownloadRecord nodes in the graph.
 type DownloadRecordMutation struct {
 	config
-	op                   Op
-	typ                  string
-	id                   *uint32
-	create_time          *time.Time
-	update_time          *time.Time
-	title                *string
-	quality              *string
-	size                 *int64
-	addsize              *int64
-	status               *downloadrecord.Status
-	torrent_hash         *string
-	release_group        *string
-	save_path            *string
-	import_attempts      *uint8
-	addimport_attempts   *int8
-	failure_reason       *string
-	imported_at          *time.Time
-	indexer_name         *string
-	download_client_name *string
-	replace_existing     *bool
-	clearedFields        map[string]struct{}
-	movie                *uint32
-	clearedmovie         bool
-	episode              *uint32
-	clearedepisode       bool
-	done                 bool
-	oldValue             func(context.Context) (*DownloadRecord, error)
-	predicates           []predicate.DownloadRecord
+	op                    Op
+	typ                   string
+	id                    *uint32
+	create_time           *time.Time
+	update_time           *time.Time
+	title                 *string
+	quality               *string
+	size                  *int64
+	addsize               *int64
+	status                *downloadrecord.Status
+	torrent_hash          *string
+	release_group         *string
+	save_path             *string
+	import_attempts       *uint8
+	addimport_attempts    *int8
+	failure_reason        *string
+	imported_at           *time.Time
+	indexer_name          *string
+	download_client_name  *string
+	replace_existing      *bool
+	hold_reasons          *[]schema.HoldReason
+	appendhold_reasons    []schema.HoldReason
+	verification_bypassed *bool
+	clearedFields         map[string]struct{}
+	movie                 *uint32
+	clearedmovie          bool
+	episode               *uint32
+	clearedepisode        bool
+	done                  bool
+	oldValue              func(context.Context) (*DownloadRecord, error)
+	predicates            []predicate.DownloadRecord
 }
 
 var _ ent.Mutation = (*DownloadRecordMutation)(nil)
@@ -1534,6 +1537,107 @@ func (m *DownloadRecordMutation) ResetReplaceExisting() {
 	m.replace_existing = nil
 }
 
+// SetHoldReasons sets the "hold_reasons" field.
+func (m *DownloadRecordMutation) SetHoldReasons(sr []schema.HoldReason) {
+	m.hold_reasons = &sr
+	m.appendhold_reasons = nil
+}
+
+// HoldReasons returns the value of the "hold_reasons" field in the mutation.
+func (m *DownloadRecordMutation) HoldReasons() (r []schema.HoldReason, exists bool) {
+	v := m.hold_reasons
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldHoldReasons returns the old "hold_reasons" field's value of the DownloadRecord entity.
+// If the DownloadRecord object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *DownloadRecordMutation) OldHoldReasons(ctx context.Context) (v []schema.HoldReason, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldHoldReasons is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldHoldReasons requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldHoldReasons: %w", err)
+	}
+	return oldValue.HoldReasons, nil
+}
+
+// AppendHoldReasons adds sr to the "hold_reasons" field.
+func (m *DownloadRecordMutation) AppendHoldReasons(sr []schema.HoldReason) {
+	m.appendhold_reasons = append(m.appendhold_reasons, sr...)
+}
+
+// AppendedHoldReasons returns the list of values that were appended to the "hold_reasons" field in this mutation.
+func (m *DownloadRecordMutation) AppendedHoldReasons() ([]schema.HoldReason, bool) {
+	if len(m.appendhold_reasons) == 0 {
+		return nil, false
+	}
+	return m.appendhold_reasons, true
+}
+
+// ClearHoldReasons clears the value of the "hold_reasons" field.
+func (m *DownloadRecordMutation) ClearHoldReasons() {
+	m.hold_reasons = nil
+	m.appendhold_reasons = nil
+	m.clearedFields[downloadrecord.FieldHoldReasons] = struct{}{}
+}
+
+// HoldReasonsCleared returns if the "hold_reasons" field was cleared in this mutation.
+func (m *DownloadRecordMutation) HoldReasonsCleared() bool {
+	_, ok := m.clearedFields[downloadrecord.FieldHoldReasons]
+	return ok
+}
+
+// ResetHoldReasons resets all changes to the "hold_reasons" field.
+func (m *DownloadRecordMutation) ResetHoldReasons() {
+	m.hold_reasons = nil
+	m.appendhold_reasons = nil
+	delete(m.clearedFields, downloadrecord.FieldHoldReasons)
+}
+
+// SetVerificationBypassed sets the "verification_bypassed" field.
+func (m *DownloadRecordMutation) SetVerificationBypassed(b bool) {
+	m.verification_bypassed = &b
+}
+
+// VerificationBypassed returns the value of the "verification_bypassed" field in the mutation.
+func (m *DownloadRecordMutation) VerificationBypassed() (r bool, exists bool) {
+	v := m.verification_bypassed
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldVerificationBypassed returns the old "verification_bypassed" field's value of the DownloadRecord entity.
+// If the DownloadRecord object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *DownloadRecordMutation) OldVerificationBypassed(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldVerificationBypassed is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldVerificationBypassed requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldVerificationBypassed: %w", err)
+	}
+	return oldValue.VerificationBypassed, nil
+}
+
+// ResetVerificationBypassed resets all changes to the "verification_bypassed" field.
+func (m *DownloadRecordMutation) ResetVerificationBypassed() {
+	m.verification_bypassed = nil
+}
+
 // SetMovieID sets the "movie" edge to the Movie entity by id.
 func (m *DownloadRecordMutation) SetMovieID(id uint32) {
 	m.movie = &id
@@ -1646,7 +1750,7 @@ func (m *DownloadRecordMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *DownloadRecordMutation) Fields() []string {
-	fields := make([]string, 0, 15)
+	fields := make([]string, 0, 17)
 	if m.create_time != nil {
 		fields = append(fields, downloadrecord.FieldCreateTime)
 	}
@@ -1692,6 +1796,12 @@ func (m *DownloadRecordMutation) Fields() []string {
 	if m.replace_existing != nil {
 		fields = append(fields, downloadrecord.FieldReplaceExisting)
 	}
+	if m.hold_reasons != nil {
+		fields = append(fields, downloadrecord.FieldHoldReasons)
+	}
+	if m.verification_bypassed != nil {
+		fields = append(fields, downloadrecord.FieldVerificationBypassed)
+	}
 	return fields
 }
 
@@ -1730,6 +1840,10 @@ func (m *DownloadRecordMutation) Field(name string) (ent.Value, bool) {
 		return m.DownloadClientName()
 	case downloadrecord.FieldReplaceExisting:
 		return m.ReplaceExisting()
+	case downloadrecord.FieldHoldReasons:
+		return m.HoldReasons()
+	case downloadrecord.FieldVerificationBypassed:
+		return m.VerificationBypassed()
 	}
 	return nil, false
 }
@@ -1769,6 +1883,10 @@ func (m *DownloadRecordMutation) OldField(ctx context.Context, name string) (ent
 		return m.OldDownloadClientName(ctx)
 	case downloadrecord.FieldReplaceExisting:
 		return m.OldReplaceExisting(ctx)
+	case downloadrecord.FieldHoldReasons:
+		return m.OldHoldReasons(ctx)
+	case downloadrecord.FieldVerificationBypassed:
+		return m.OldVerificationBypassed(ctx)
 	}
 	return nil, fmt.Errorf("unknown DownloadRecord field %s", name)
 }
@@ -1883,6 +2001,20 @@ func (m *DownloadRecordMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetReplaceExisting(v)
 		return nil
+	case downloadrecord.FieldHoldReasons:
+		v, ok := value.([]schema.HoldReason)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetHoldReasons(v)
+		return nil
+	case downloadrecord.FieldVerificationBypassed:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetVerificationBypassed(v)
+		return nil
 	}
 	return fmt.Errorf("unknown DownloadRecord field %s", name)
 }
@@ -1967,6 +2099,9 @@ func (m *DownloadRecordMutation) ClearedFields() []string {
 	if m.FieldCleared(downloadrecord.FieldDownloadClientName) {
 		fields = append(fields, downloadrecord.FieldDownloadClientName)
 	}
+	if m.FieldCleared(downloadrecord.FieldHoldReasons) {
+		fields = append(fields, downloadrecord.FieldHoldReasons)
+	}
 	return fields
 }
 
@@ -2007,6 +2142,9 @@ func (m *DownloadRecordMutation) ClearField(name string) error {
 		return nil
 	case downloadrecord.FieldDownloadClientName:
 		m.ClearDownloadClientName()
+		return nil
+	case downloadrecord.FieldHoldReasons:
+		m.ClearHoldReasons()
 		return nil
 	}
 	return fmt.Errorf("unknown DownloadRecord nullable field %s", name)
@@ -2060,6 +2198,12 @@ func (m *DownloadRecordMutation) ResetField(name string) error {
 		return nil
 	case downloadrecord.FieldReplaceExisting:
 		m.ResetReplaceExisting()
+		return nil
+	case downloadrecord.FieldHoldReasons:
+		m.ResetHoldReasons()
+		return nil
+	case downloadrecord.FieldVerificationBypassed:
+		m.ResetVerificationBypassed()
 		return nil
 	}
 	return fmt.Errorf("unknown DownloadRecord field %s", name)
@@ -2186,6 +2330,9 @@ type EpisodeMutation struct {
 	media_files             map[uint32]struct{}
 	removedmedia_files      map[uint32]struct{}
 	clearedmedia_files      bool
+	events                  map[uint32]struct{}
+	removedevents           map[uint32]struct{}
+	clearedevents           bool
 	done                    bool
 	oldValue                func(context.Context) (*Episode, error)
 	predicates              []predicate.Episode
@@ -2964,6 +3111,60 @@ func (m *EpisodeMutation) ResetMediaFiles() {
 	m.removedmedia_files = nil
 }
 
+// AddEventIDs adds the "events" edge to the MediaEvent entity by ids.
+func (m *EpisodeMutation) AddEventIDs(ids ...uint32) {
+	if m.events == nil {
+		m.events = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		m.events[ids[i]] = struct{}{}
+	}
+}
+
+// ClearEvents clears the "events" edge to the MediaEvent entity.
+func (m *EpisodeMutation) ClearEvents() {
+	m.clearedevents = true
+}
+
+// EventsCleared reports if the "events" edge to the MediaEvent entity was cleared.
+func (m *EpisodeMutation) EventsCleared() bool {
+	return m.clearedevents
+}
+
+// RemoveEventIDs removes the "events" edge to the MediaEvent entity by IDs.
+func (m *EpisodeMutation) RemoveEventIDs(ids ...uint32) {
+	if m.removedevents == nil {
+		m.removedevents = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		delete(m.events, ids[i])
+		m.removedevents[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedEvents returns the removed IDs of the "events" edge to the MediaEvent entity.
+func (m *EpisodeMutation) RemovedEventsIDs() (ids []uint32) {
+	for id := range m.removedevents {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// EventsIDs returns the "events" edge IDs in the mutation.
+func (m *EpisodeMutation) EventsIDs() (ids []uint32) {
+	for id := range m.events {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetEvents resets all changes to the "events" edge.
+func (m *EpisodeMutation) ResetEvents() {
+	m.events = nil
+	m.clearedevents = false
+	m.removedevents = nil
+}
+
 // Where appends a list predicates to the EpisodeMutation builder.
 func (m *EpisodeMutation) Where(ps ...predicate.Episode) {
 	m.predicates = append(m.predicates, ps...)
@@ -3339,7 +3540,7 @@ func (m *EpisodeMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *EpisodeMutation) AddedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.season != nil {
 		edges = append(edges, episode.EdgeSeason)
 	}
@@ -3348,6 +3549,9 @@ func (m *EpisodeMutation) AddedEdges() []string {
 	}
 	if m.media_files != nil {
 		edges = append(edges, episode.EdgeMediaFiles)
+	}
+	if m.events != nil {
+		edges = append(edges, episode.EdgeEvents)
 	}
 	return edges
 }
@@ -3372,18 +3576,27 @@ func (m *EpisodeMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case episode.EdgeEvents:
+		ids := make([]ent.Value, 0, len(m.events))
+		for id := range m.events {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *EpisodeMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.removeddownload_records != nil {
 		edges = append(edges, episode.EdgeDownloadRecords)
 	}
 	if m.removedmedia_files != nil {
 		edges = append(edges, episode.EdgeMediaFiles)
+	}
+	if m.removedevents != nil {
+		edges = append(edges, episode.EdgeEvents)
 	}
 	return edges
 }
@@ -3404,13 +3617,19 @@ func (m *EpisodeMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case episode.EdgeEvents:
+		ids := make([]ent.Value, 0, len(m.removedevents))
+		for id := range m.removedevents {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *EpisodeMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.clearedseason {
 		edges = append(edges, episode.EdgeSeason)
 	}
@@ -3419,6 +3638,9 @@ func (m *EpisodeMutation) ClearedEdges() []string {
 	}
 	if m.clearedmedia_files {
 		edges = append(edges, episode.EdgeMediaFiles)
+	}
+	if m.clearedevents {
+		edges = append(edges, episode.EdgeEvents)
 	}
 	return edges
 }
@@ -3433,6 +3655,8 @@ func (m *EpisodeMutation) EdgeCleared(name string) bool {
 		return m.cleareddownload_records
 	case episode.EdgeMediaFiles:
 		return m.clearedmedia_files
+	case episode.EdgeEvents:
+		return m.clearedevents
 	}
 	return false
 }
@@ -3460,6 +3684,9 @@ func (m *EpisodeMutation) ResetEdge(name string) error {
 		return nil
 	case episode.EdgeMediaFiles:
 		m.ResetMediaFiles()
+		return nil
+	case episode.EdgeEvents:
+		m.ResetEvents()
 		return nil
 	}
 	return fmt.Errorf("unknown Episode edge %s", name)
@@ -8924,30 +9151,746 @@ func (m *InviteMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown Invite edge %s", name)
 }
 
-// MediaFileMutation represents an operation that mutates the MediaFile nodes in the graph.
-type MediaFileMutation struct {
+// MediaEventMutation represents an operation that mutates the MediaEvent nodes in the graph.
+type MediaEventMutation struct {
 	config
 	op             Op
 	typ            string
 	id             *uint32
 	create_time    *time.Time
 	update_time    *time.Time
-	_path          *string
-	size           *int64
-	addsize        *int64
-	quality        *string
-	format         *string
-	release_group  *string
-	source         *mediafile.Source
-	last_seen_at   *time.Time
+	_type          *mediaevent.Type
+	payload        *map[string]interface{}
 	clearedFields  map[string]struct{}
 	movie          *uint32
 	clearedmovie   bool
 	episode        *uint32
 	clearedepisode bool
+	tv_show        *uint32
+	clearedtv_show bool
 	done           bool
-	oldValue       func(context.Context) (*MediaFile, error)
-	predicates     []predicate.MediaFile
+	oldValue       func(context.Context) (*MediaEvent, error)
+	predicates     []predicate.MediaEvent
+}
+
+var _ ent.Mutation = (*MediaEventMutation)(nil)
+
+// mediaeventOption allows management of the mutation configuration using functional options.
+type mediaeventOption func(*MediaEventMutation)
+
+// newMediaEventMutation creates new mutation for the MediaEvent entity.
+func newMediaEventMutation(c config, op Op, opts ...mediaeventOption) *MediaEventMutation {
+	m := &MediaEventMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeMediaEvent,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withMediaEventID sets the ID field of the mutation.
+func withMediaEventID(id uint32) mediaeventOption {
+	return func(m *MediaEventMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *MediaEvent
+		)
+		m.oldValue = func(ctx context.Context) (*MediaEvent, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().MediaEvent.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withMediaEvent sets the old MediaEvent of the mutation.
+func withMediaEvent(node *MediaEvent) mediaeventOption {
+	return func(m *MediaEventMutation) {
+		m.oldValue = func(context.Context) (*MediaEvent, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m MediaEventMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m MediaEventMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of MediaEvent entities.
+func (m *MediaEventMutation) SetID(id uint32) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *MediaEventMutation) ID() (id uint32, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *MediaEventMutation) IDs(ctx context.Context) ([]uint32, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uint32{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().MediaEvent.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreateTime sets the "create_time" field.
+func (m *MediaEventMutation) SetCreateTime(t time.Time) {
+	m.create_time = &t
+}
+
+// CreateTime returns the value of the "create_time" field in the mutation.
+func (m *MediaEventMutation) CreateTime() (r time.Time, exists bool) {
+	v := m.create_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreateTime returns the old "create_time" field's value of the MediaEvent entity.
+// If the MediaEvent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaEventMutation) OldCreateTime(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreateTime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreateTime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreateTime: %w", err)
+	}
+	return oldValue.CreateTime, nil
+}
+
+// ResetCreateTime resets all changes to the "create_time" field.
+func (m *MediaEventMutation) ResetCreateTime() {
+	m.create_time = nil
+}
+
+// SetUpdateTime sets the "update_time" field.
+func (m *MediaEventMutation) SetUpdateTime(t time.Time) {
+	m.update_time = &t
+}
+
+// UpdateTime returns the value of the "update_time" field in the mutation.
+func (m *MediaEventMutation) UpdateTime() (r time.Time, exists bool) {
+	v := m.update_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdateTime returns the old "update_time" field's value of the MediaEvent entity.
+// If the MediaEvent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaEventMutation) OldUpdateTime(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdateTime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdateTime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdateTime: %w", err)
+	}
+	return oldValue.UpdateTime, nil
+}
+
+// ResetUpdateTime resets all changes to the "update_time" field.
+func (m *MediaEventMutation) ResetUpdateTime() {
+	m.update_time = nil
+}
+
+// SetType sets the "type" field.
+func (m *MediaEventMutation) SetType(value mediaevent.Type) {
+	m._type = &value
+}
+
+// GetType returns the value of the "type" field in the mutation.
+func (m *MediaEventMutation) GetType() (r mediaevent.Type, exists bool) {
+	v := m._type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldType returns the old "type" field's value of the MediaEvent entity.
+// If the MediaEvent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaEventMutation) OldType(ctx context.Context) (v mediaevent.Type, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldType: %w", err)
+	}
+	return oldValue.Type, nil
+}
+
+// ResetType resets all changes to the "type" field.
+func (m *MediaEventMutation) ResetType() {
+	m._type = nil
+}
+
+// SetPayload sets the "payload" field.
+func (m *MediaEventMutation) SetPayload(value map[string]interface{}) {
+	m.payload = &value
+}
+
+// Payload returns the value of the "payload" field in the mutation.
+func (m *MediaEventMutation) Payload() (r map[string]interface{}, exists bool) {
+	v := m.payload
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPayload returns the old "payload" field's value of the MediaEvent entity.
+// If the MediaEvent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaEventMutation) OldPayload(ctx context.Context) (v map[string]interface{}, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPayload is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPayload requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPayload: %w", err)
+	}
+	return oldValue.Payload, nil
+}
+
+// ClearPayload clears the value of the "payload" field.
+func (m *MediaEventMutation) ClearPayload() {
+	m.payload = nil
+	m.clearedFields[mediaevent.FieldPayload] = struct{}{}
+}
+
+// PayloadCleared returns if the "payload" field was cleared in this mutation.
+func (m *MediaEventMutation) PayloadCleared() bool {
+	_, ok := m.clearedFields[mediaevent.FieldPayload]
+	return ok
+}
+
+// ResetPayload resets all changes to the "payload" field.
+func (m *MediaEventMutation) ResetPayload() {
+	m.payload = nil
+	delete(m.clearedFields, mediaevent.FieldPayload)
+}
+
+// SetMovieID sets the "movie" edge to the Movie entity by id.
+func (m *MediaEventMutation) SetMovieID(id uint32) {
+	m.movie = &id
+}
+
+// ClearMovie clears the "movie" edge to the Movie entity.
+func (m *MediaEventMutation) ClearMovie() {
+	m.clearedmovie = true
+}
+
+// MovieCleared reports if the "movie" edge to the Movie entity was cleared.
+func (m *MediaEventMutation) MovieCleared() bool {
+	return m.clearedmovie
+}
+
+// MovieID returns the "movie" edge ID in the mutation.
+func (m *MediaEventMutation) MovieID() (id uint32, exists bool) {
+	if m.movie != nil {
+		return *m.movie, true
+	}
+	return
+}
+
+// MovieIDs returns the "movie" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// MovieID instead. It exists only for internal usage by the builders.
+func (m *MediaEventMutation) MovieIDs() (ids []uint32) {
+	if id := m.movie; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetMovie resets all changes to the "movie" edge.
+func (m *MediaEventMutation) ResetMovie() {
+	m.movie = nil
+	m.clearedmovie = false
+}
+
+// SetEpisodeID sets the "episode" edge to the Episode entity by id.
+func (m *MediaEventMutation) SetEpisodeID(id uint32) {
+	m.episode = &id
+}
+
+// ClearEpisode clears the "episode" edge to the Episode entity.
+func (m *MediaEventMutation) ClearEpisode() {
+	m.clearedepisode = true
+}
+
+// EpisodeCleared reports if the "episode" edge to the Episode entity was cleared.
+func (m *MediaEventMutation) EpisodeCleared() bool {
+	return m.clearedepisode
+}
+
+// EpisodeID returns the "episode" edge ID in the mutation.
+func (m *MediaEventMutation) EpisodeID() (id uint32, exists bool) {
+	if m.episode != nil {
+		return *m.episode, true
+	}
+	return
+}
+
+// EpisodeIDs returns the "episode" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// EpisodeID instead. It exists only for internal usage by the builders.
+func (m *MediaEventMutation) EpisodeIDs() (ids []uint32) {
+	if id := m.episode; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetEpisode resets all changes to the "episode" edge.
+func (m *MediaEventMutation) ResetEpisode() {
+	m.episode = nil
+	m.clearedepisode = false
+}
+
+// SetTvShowID sets the "tv_show" edge to the TVShow entity by id.
+func (m *MediaEventMutation) SetTvShowID(id uint32) {
+	m.tv_show = &id
+}
+
+// ClearTvShow clears the "tv_show" edge to the TVShow entity.
+func (m *MediaEventMutation) ClearTvShow() {
+	m.clearedtv_show = true
+}
+
+// TvShowCleared reports if the "tv_show" edge to the TVShow entity was cleared.
+func (m *MediaEventMutation) TvShowCleared() bool {
+	return m.clearedtv_show
+}
+
+// TvShowID returns the "tv_show" edge ID in the mutation.
+func (m *MediaEventMutation) TvShowID() (id uint32, exists bool) {
+	if m.tv_show != nil {
+		return *m.tv_show, true
+	}
+	return
+}
+
+// TvShowIDs returns the "tv_show" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// TvShowID instead. It exists only for internal usage by the builders.
+func (m *MediaEventMutation) TvShowIDs() (ids []uint32) {
+	if id := m.tv_show; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetTvShow resets all changes to the "tv_show" edge.
+func (m *MediaEventMutation) ResetTvShow() {
+	m.tv_show = nil
+	m.clearedtv_show = false
+}
+
+// Where appends a list predicates to the MediaEventMutation builder.
+func (m *MediaEventMutation) Where(ps ...predicate.MediaEvent) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the MediaEventMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *MediaEventMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.MediaEvent, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *MediaEventMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *MediaEventMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (MediaEvent).
+func (m *MediaEventMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *MediaEventMutation) Fields() []string {
+	fields := make([]string, 0, 4)
+	if m.create_time != nil {
+		fields = append(fields, mediaevent.FieldCreateTime)
+	}
+	if m.update_time != nil {
+		fields = append(fields, mediaevent.FieldUpdateTime)
+	}
+	if m._type != nil {
+		fields = append(fields, mediaevent.FieldType)
+	}
+	if m.payload != nil {
+		fields = append(fields, mediaevent.FieldPayload)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *MediaEventMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case mediaevent.FieldCreateTime:
+		return m.CreateTime()
+	case mediaevent.FieldUpdateTime:
+		return m.UpdateTime()
+	case mediaevent.FieldType:
+		return m.GetType()
+	case mediaevent.FieldPayload:
+		return m.Payload()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *MediaEventMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case mediaevent.FieldCreateTime:
+		return m.OldCreateTime(ctx)
+	case mediaevent.FieldUpdateTime:
+		return m.OldUpdateTime(ctx)
+	case mediaevent.FieldType:
+		return m.OldType(ctx)
+	case mediaevent.FieldPayload:
+		return m.OldPayload(ctx)
+	}
+	return nil, fmt.Errorf("unknown MediaEvent field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *MediaEventMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case mediaevent.FieldCreateTime:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreateTime(v)
+		return nil
+	case mediaevent.FieldUpdateTime:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdateTime(v)
+		return nil
+	case mediaevent.FieldType:
+		v, ok := value.(mediaevent.Type)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetType(v)
+		return nil
+	case mediaevent.FieldPayload:
+		v, ok := value.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPayload(v)
+		return nil
+	}
+	return fmt.Errorf("unknown MediaEvent field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *MediaEventMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *MediaEventMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *MediaEventMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown MediaEvent numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *MediaEventMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(mediaevent.FieldPayload) {
+		fields = append(fields, mediaevent.FieldPayload)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *MediaEventMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *MediaEventMutation) ClearField(name string) error {
+	switch name {
+	case mediaevent.FieldPayload:
+		m.ClearPayload()
+		return nil
+	}
+	return fmt.Errorf("unknown MediaEvent nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *MediaEventMutation) ResetField(name string) error {
+	switch name {
+	case mediaevent.FieldCreateTime:
+		m.ResetCreateTime()
+		return nil
+	case mediaevent.FieldUpdateTime:
+		m.ResetUpdateTime()
+		return nil
+	case mediaevent.FieldType:
+		m.ResetType()
+		return nil
+	case mediaevent.FieldPayload:
+		m.ResetPayload()
+		return nil
+	}
+	return fmt.Errorf("unknown MediaEvent field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *MediaEventMutation) AddedEdges() []string {
+	edges := make([]string, 0, 3)
+	if m.movie != nil {
+		edges = append(edges, mediaevent.EdgeMovie)
+	}
+	if m.episode != nil {
+		edges = append(edges, mediaevent.EdgeEpisode)
+	}
+	if m.tv_show != nil {
+		edges = append(edges, mediaevent.EdgeTvShow)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *MediaEventMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case mediaevent.EdgeMovie:
+		if id := m.movie; id != nil {
+			return []ent.Value{*id}
+		}
+	case mediaevent.EdgeEpisode:
+		if id := m.episode; id != nil {
+			return []ent.Value{*id}
+		}
+	case mediaevent.EdgeTvShow:
+		if id := m.tv_show; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *MediaEventMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 3)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *MediaEventMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *MediaEventMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 3)
+	if m.clearedmovie {
+		edges = append(edges, mediaevent.EdgeMovie)
+	}
+	if m.clearedepisode {
+		edges = append(edges, mediaevent.EdgeEpisode)
+	}
+	if m.clearedtv_show {
+		edges = append(edges, mediaevent.EdgeTvShow)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *MediaEventMutation) EdgeCleared(name string) bool {
+	switch name {
+	case mediaevent.EdgeMovie:
+		return m.clearedmovie
+	case mediaevent.EdgeEpisode:
+		return m.clearedepisode
+	case mediaevent.EdgeTvShow:
+		return m.clearedtv_show
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *MediaEventMutation) ClearEdge(name string) error {
+	switch name {
+	case mediaevent.EdgeMovie:
+		m.ClearMovie()
+		return nil
+	case mediaevent.EdgeEpisode:
+		m.ClearEpisode()
+		return nil
+	case mediaevent.EdgeTvShow:
+		m.ClearTvShow()
+		return nil
+	}
+	return fmt.Errorf("unknown MediaEvent unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *MediaEventMutation) ResetEdge(name string) error {
+	switch name {
+	case mediaevent.EdgeMovie:
+		m.ResetMovie()
+		return nil
+	case mediaevent.EdgeEpisode:
+		m.ResetEpisode()
+		return nil
+	case mediaevent.EdgeTvShow:
+		m.ResetTvShow()
+		return nil
+	}
+	return fmt.Errorf("unknown MediaEvent edge %s", name)
+}
+
+// MediaFileMutation represents an operation that mutates the MediaFile nodes in the graph.
+type MediaFileMutation struct {
+	config
+	op                  Op
+	typ                 string
+	id                  *uint32
+	create_time         *time.Time
+	update_time         *time.Time
+	_path               *string
+	size                *int64
+	addsize             *int64
+	quality             *string
+	format              *string
+	release_group       *string
+	source              *mediafile.Source
+	last_seen_at        *time.Time
+	missing_since       *time.Time
+	container           *string
+	duration_seconds    *uint32
+	addduration_seconds *int32
+	video_codec         *string
+	width               *uint16
+	addwidth            *int16
+	height              *uint16
+	addheight           *int16
+	audio_codec         *string
+	audio_channels      *uint8
+	addaudio_channels   *int8
+	bitrate             *uint32
+	addbitrate          *int32
+	probed_at           *time.Time
+	clearedFields       map[string]struct{}
+	movie               *uint32
+	clearedmovie        bool
+	episode             *uint32
+	clearedepisode      bool
+	done                bool
+	oldValue            func(context.Context) (*MediaFile, error)
+	predicates          []predicate.MediaFile
 }
 
 var _ ent.Mutation = (*MediaFileMutation)(nil)
@@ -9450,6 +10393,601 @@ func (m *MediaFileMutation) ResetLastSeenAt() {
 	delete(m.clearedFields, mediafile.FieldLastSeenAt)
 }
 
+// SetMissingSince sets the "missing_since" field.
+func (m *MediaFileMutation) SetMissingSince(t time.Time) {
+	m.missing_since = &t
+}
+
+// MissingSince returns the value of the "missing_since" field in the mutation.
+func (m *MediaFileMutation) MissingSince() (r time.Time, exists bool) {
+	v := m.missing_since
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMissingSince returns the old "missing_since" field's value of the MediaFile entity.
+// If the MediaFile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaFileMutation) OldMissingSince(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMissingSince is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMissingSince requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMissingSince: %w", err)
+	}
+	return oldValue.MissingSince, nil
+}
+
+// ClearMissingSince clears the value of the "missing_since" field.
+func (m *MediaFileMutation) ClearMissingSince() {
+	m.missing_since = nil
+	m.clearedFields[mediafile.FieldMissingSince] = struct{}{}
+}
+
+// MissingSinceCleared returns if the "missing_since" field was cleared in this mutation.
+func (m *MediaFileMutation) MissingSinceCleared() bool {
+	_, ok := m.clearedFields[mediafile.FieldMissingSince]
+	return ok
+}
+
+// ResetMissingSince resets all changes to the "missing_since" field.
+func (m *MediaFileMutation) ResetMissingSince() {
+	m.missing_since = nil
+	delete(m.clearedFields, mediafile.FieldMissingSince)
+}
+
+// SetContainer sets the "container" field.
+func (m *MediaFileMutation) SetContainer(s string) {
+	m.container = &s
+}
+
+// Container returns the value of the "container" field in the mutation.
+func (m *MediaFileMutation) Container() (r string, exists bool) {
+	v := m.container
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldContainer returns the old "container" field's value of the MediaFile entity.
+// If the MediaFile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaFileMutation) OldContainer(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldContainer is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldContainer requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldContainer: %w", err)
+	}
+	return oldValue.Container, nil
+}
+
+// ClearContainer clears the value of the "container" field.
+func (m *MediaFileMutation) ClearContainer() {
+	m.container = nil
+	m.clearedFields[mediafile.FieldContainer] = struct{}{}
+}
+
+// ContainerCleared returns if the "container" field was cleared in this mutation.
+func (m *MediaFileMutation) ContainerCleared() bool {
+	_, ok := m.clearedFields[mediafile.FieldContainer]
+	return ok
+}
+
+// ResetContainer resets all changes to the "container" field.
+func (m *MediaFileMutation) ResetContainer() {
+	m.container = nil
+	delete(m.clearedFields, mediafile.FieldContainer)
+}
+
+// SetDurationSeconds sets the "duration_seconds" field.
+func (m *MediaFileMutation) SetDurationSeconds(u uint32) {
+	m.duration_seconds = &u
+	m.addduration_seconds = nil
+}
+
+// DurationSeconds returns the value of the "duration_seconds" field in the mutation.
+func (m *MediaFileMutation) DurationSeconds() (r uint32, exists bool) {
+	v := m.duration_seconds
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDurationSeconds returns the old "duration_seconds" field's value of the MediaFile entity.
+// If the MediaFile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaFileMutation) OldDurationSeconds(ctx context.Context) (v uint32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDurationSeconds is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDurationSeconds requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDurationSeconds: %w", err)
+	}
+	return oldValue.DurationSeconds, nil
+}
+
+// AddDurationSeconds adds u to the "duration_seconds" field.
+func (m *MediaFileMutation) AddDurationSeconds(u int32) {
+	if m.addduration_seconds != nil {
+		*m.addduration_seconds += u
+	} else {
+		m.addduration_seconds = &u
+	}
+}
+
+// AddedDurationSeconds returns the value that was added to the "duration_seconds" field in this mutation.
+func (m *MediaFileMutation) AddedDurationSeconds() (r int32, exists bool) {
+	v := m.addduration_seconds
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearDurationSeconds clears the value of the "duration_seconds" field.
+func (m *MediaFileMutation) ClearDurationSeconds() {
+	m.duration_seconds = nil
+	m.addduration_seconds = nil
+	m.clearedFields[mediafile.FieldDurationSeconds] = struct{}{}
+}
+
+// DurationSecondsCleared returns if the "duration_seconds" field was cleared in this mutation.
+func (m *MediaFileMutation) DurationSecondsCleared() bool {
+	_, ok := m.clearedFields[mediafile.FieldDurationSeconds]
+	return ok
+}
+
+// ResetDurationSeconds resets all changes to the "duration_seconds" field.
+func (m *MediaFileMutation) ResetDurationSeconds() {
+	m.duration_seconds = nil
+	m.addduration_seconds = nil
+	delete(m.clearedFields, mediafile.FieldDurationSeconds)
+}
+
+// SetVideoCodec sets the "video_codec" field.
+func (m *MediaFileMutation) SetVideoCodec(s string) {
+	m.video_codec = &s
+}
+
+// VideoCodec returns the value of the "video_codec" field in the mutation.
+func (m *MediaFileMutation) VideoCodec() (r string, exists bool) {
+	v := m.video_codec
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldVideoCodec returns the old "video_codec" field's value of the MediaFile entity.
+// If the MediaFile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaFileMutation) OldVideoCodec(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldVideoCodec is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldVideoCodec requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldVideoCodec: %w", err)
+	}
+	return oldValue.VideoCodec, nil
+}
+
+// ClearVideoCodec clears the value of the "video_codec" field.
+func (m *MediaFileMutation) ClearVideoCodec() {
+	m.video_codec = nil
+	m.clearedFields[mediafile.FieldVideoCodec] = struct{}{}
+}
+
+// VideoCodecCleared returns if the "video_codec" field was cleared in this mutation.
+func (m *MediaFileMutation) VideoCodecCleared() bool {
+	_, ok := m.clearedFields[mediafile.FieldVideoCodec]
+	return ok
+}
+
+// ResetVideoCodec resets all changes to the "video_codec" field.
+func (m *MediaFileMutation) ResetVideoCodec() {
+	m.video_codec = nil
+	delete(m.clearedFields, mediafile.FieldVideoCodec)
+}
+
+// SetWidth sets the "width" field.
+func (m *MediaFileMutation) SetWidth(u uint16) {
+	m.width = &u
+	m.addwidth = nil
+}
+
+// Width returns the value of the "width" field in the mutation.
+func (m *MediaFileMutation) Width() (r uint16, exists bool) {
+	v := m.width
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldWidth returns the old "width" field's value of the MediaFile entity.
+// If the MediaFile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaFileMutation) OldWidth(ctx context.Context) (v uint16, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldWidth is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldWidth requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldWidth: %w", err)
+	}
+	return oldValue.Width, nil
+}
+
+// AddWidth adds u to the "width" field.
+func (m *MediaFileMutation) AddWidth(u int16) {
+	if m.addwidth != nil {
+		*m.addwidth += u
+	} else {
+		m.addwidth = &u
+	}
+}
+
+// AddedWidth returns the value that was added to the "width" field in this mutation.
+func (m *MediaFileMutation) AddedWidth() (r int16, exists bool) {
+	v := m.addwidth
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearWidth clears the value of the "width" field.
+func (m *MediaFileMutation) ClearWidth() {
+	m.width = nil
+	m.addwidth = nil
+	m.clearedFields[mediafile.FieldWidth] = struct{}{}
+}
+
+// WidthCleared returns if the "width" field was cleared in this mutation.
+func (m *MediaFileMutation) WidthCleared() bool {
+	_, ok := m.clearedFields[mediafile.FieldWidth]
+	return ok
+}
+
+// ResetWidth resets all changes to the "width" field.
+func (m *MediaFileMutation) ResetWidth() {
+	m.width = nil
+	m.addwidth = nil
+	delete(m.clearedFields, mediafile.FieldWidth)
+}
+
+// SetHeight sets the "height" field.
+func (m *MediaFileMutation) SetHeight(u uint16) {
+	m.height = &u
+	m.addheight = nil
+}
+
+// Height returns the value of the "height" field in the mutation.
+func (m *MediaFileMutation) Height() (r uint16, exists bool) {
+	v := m.height
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldHeight returns the old "height" field's value of the MediaFile entity.
+// If the MediaFile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaFileMutation) OldHeight(ctx context.Context) (v uint16, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldHeight is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldHeight requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldHeight: %w", err)
+	}
+	return oldValue.Height, nil
+}
+
+// AddHeight adds u to the "height" field.
+func (m *MediaFileMutation) AddHeight(u int16) {
+	if m.addheight != nil {
+		*m.addheight += u
+	} else {
+		m.addheight = &u
+	}
+}
+
+// AddedHeight returns the value that was added to the "height" field in this mutation.
+func (m *MediaFileMutation) AddedHeight() (r int16, exists bool) {
+	v := m.addheight
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearHeight clears the value of the "height" field.
+func (m *MediaFileMutation) ClearHeight() {
+	m.height = nil
+	m.addheight = nil
+	m.clearedFields[mediafile.FieldHeight] = struct{}{}
+}
+
+// HeightCleared returns if the "height" field was cleared in this mutation.
+func (m *MediaFileMutation) HeightCleared() bool {
+	_, ok := m.clearedFields[mediafile.FieldHeight]
+	return ok
+}
+
+// ResetHeight resets all changes to the "height" field.
+func (m *MediaFileMutation) ResetHeight() {
+	m.height = nil
+	m.addheight = nil
+	delete(m.clearedFields, mediafile.FieldHeight)
+}
+
+// SetAudioCodec sets the "audio_codec" field.
+func (m *MediaFileMutation) SetAudioCodec(s string) {
+	m.audio_codec = &s
+}
+
+// AudioCodec returns the value of the "audio_codec" field in the mutation.
+func (m *MediaFileMutation) AudioCodec() (r string, exists bool) {
+	v := m.audio_codec
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAudioCodec returns the old "audio_codec" field's value of the MediaFile entity.
+// If the MediaFile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaFileMutation) OldAudioCodec(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAudioCodec is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAudioCodec requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAudioCodec: %w", err)
+	}
+	return oldValue.AudioCodec, nil
+}
+
+// ClearAudioCodec clears the value of the "audio_codec" field.
+func (m *MediaFileMutation) ClearAudioCodec() {
+	m.audio_codec = nil
+	m.clearedFields[mediafile.FieldAudioCodec] = struct{}{}
+}
+
+// AudioCodecCleared returns if the "audio_codec" field was cleared in this mutation.
+func (m *MediaFileMutation) AudioCodecCleared() bool {
+	_, ok := m.clearedFields[mediafile.FieldAudioCodec]
+	return ok
+}
+
+// ResetAudioCodec resets all changes to the "audio_codec" field.
+func (m *MediaFileMutation) ResetAudioCodec() {
+	m.audio_codec = nil
+	delete(m.clearedFields, mediafile.FieldAudioCodec)
+}
+
+// SetAudioChannels sets the "audio_channels" field.
+func (m *MediaFileMutation) SetAudioChannels(u uint8) {
+	m.audio_channels = &u
+	m.addaudio_channels = nil
+}
+
+// AudioChannels returns the value of the "audio_channels" field in the mutation.
+func (m *MediaFileMutation) AudioChannels() (r uint8, exists bool) {
+	v := m.audio_channels
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAudioChannels returns the old "audio_channels" field's value of the MediaFile entity.
+// If the MediaFile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaFileMutation) OldAudioChannels(ctx context.Context) (v uint8, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAudioChannels is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAudioChannels requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAudioChannels: %w", err)
+	}
+	return oldValue.AudioChannels, nil
+}
+
+// AddAudioChannels adds u to the "audio_channels" field.
+func (m *MediaFileMutation) AddAudioChannels(u int8) {
+	if m.addaudio_channels != nil {
+		*m.addaudio_channels += u
+	} else {
+		m.addaudio_channels = &u
+	}
+}
+
+// AddedAudioChannels returns the value that was added to the "audio_channels" field in this mutation.
+func (m *MediaFileMutation) AddedAudioChannels() (r int8, exists bool) {
+	v := m.addaudio_channels
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearAudioChannels clears the value of the "audio_channels" field.
+func (m *MediaFileMutation) ClearAudioChannels() {
+	m.audio_channels = nil
+	m.addaudio_channels = nil
+	m.clearedFields[mediafile.FieldAudioChannels] = struct{}{}
+}
+
+// AudioChannelsCleared returns if the "audio_channels" field was cleared in this mutation.
+func (m *MediaFileMutation) AudioChannelsCleared() bool {
+	_, ok := m.clearedFields[mediafile.FieldAudioChannels]
+	return ok
+}
+
+// ResetAudioChannels resets all changes to the "audio_channels" field.
+func (m *MediaFileMutation) ResetAudioChannels() {
+	m.audio_channels = nil
+	m.addaudio_channels = nil
+	delete(m.clearedFields, mediafile.FieldAudioChannels)
+}
+
+// SetBitrate sets the "bitrate" field.
+func (m *MediaFileMutation) SetBitrate(u uint32) {
+	m.bitrate = &u
+	m.addbitrate = nil
+}
+
+// Bitrate returns the value of the "bitrate" field in the mutation.
+func (m *MediaFileMutation) Bitrate() (r uint32, exists bool) {
+	v := m.bitrate
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBitrate returns the old "bitrate" field's value of the MediaFile entity.
+// If the MediaFile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaFileMutation) OldBitrate(ctx context.Context) (v uint32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBitrate is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBitrate requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBitrate: %w", err)
+	}
+	return oldValue.Bitrate, nil
+}
+
+// AddBitrate adds u to the "bitrate" field.
+func (m *MediaFileMutation) AddBitrate(u int32) {
+	if m.addbitrate != nil {
+		*m.addbitrate += u
+	} else {
+		m.addbitrate = &u
+	}
+}
+
+// AddedBitrate returns the value that was added to the "bitrate" field in this mutation.
+func (m *MediaFileMutation) AddedBitrate() (r int32, exists bool) {
+	v := m.addbitrate
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearBitrate clears the value of the "bitrate" field.
+func (m *MediaFileMutation) ClearBitrate() {
+	m.bitrate = nil
+	m.addbitrate = nil
+	m.clearedFields[mediafile.FieldBitrate] = struct{}{}
+}
+
+// BitrateCleared returns if the "bitrate" field was cleared in this mutation.
+func (m *MediaFileMutation) BitrateCleared() bool {
+	_, ok := m.clearedFields[mediafile.FieldBitrate]
+	return ok
+}
+
+// ResetBitrate resets all changes to the "bitrate" field.
+func (m *MediaFileMutation) ResetBitrate() {
+	m.bitrate = nil
+	m.addbitrate = nil
+	delete(m.clearedFields, mediafile.FieldBitrate)
+}
+
+// SetProbedAt sets the "probed_at" field.
+func (m *MediaFileMutation) SetProbedAt(t time.Time) {
+	m.probed_at = &t
+}
+
+// ProbedAt returns the value of the "probed_at" field in the mutation.
+func (m *MediaFileMutation) ProbedAt() (r time.Time, exists bool) {
+	v := m.probed_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldProbedAt returns the old "probed_at" field's value of the MediaFile entity.
+// If the MediaFile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaFileMutation) OldProbedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldProbedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldProbedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldProbedAt: %w", err)
+	}
+	return oldValue.ProbedAt, nil
+}
+
+// ClearProbedAt clears the value of the "probed_at" field.
+func (m *MediaFileMutation) ClearProbedAt() {
+	m.probed_at = nil
+	m.clearedFields[mediafile.FieldProbedAt] = struct{}{}
+}
+
+// ProbedAtCleared returns if the "probed_at" field was cleared in this mutation.
+func (m *MediaFileMutation) ProbedAtCleared() bool {
+	_, ok := m.clearedFields[mediafile.FieldProbedAt]
+	return ok
+}
+
+// ResetProbedAt resets all changes to the "probed_at" field.
+func (m *MediaFileMutation) ResetProbedAt() {
+	m.probed_at = nil
+	delete(m.clearedFields, mediafile.FieldProbedAt)
+}
+
 // SetMovieID sets the "movie" edge to the Movie entity by id.
 func (m *MediaFileMutation) SetMovieID(id uint32) {
 	m.movie = &id
@@ -9562,7 +11100,7 @@ func (m *MediaFileMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *MediaFileMutation) Fields() []string {
-	fields := make([]string, 0, 9)
+	fields := make([]string, 0, 19)
 	if m.create_time != nil {
 		fields = append(fields, mediafile.FieldCreateTime)
 	}
@@ -9590,6 +11128,36 @@ func (m *MediaFileMutation) Fields() []string {
 	if m.last_seen_at != nil {
 		fields = append(fields, mediafile.FieldLastSeenAt)
 	}
+	if m.missing_since != nil {
+		fields = append(fields, mediafile.FieldMissingSince)
+	}
+	if m.container != nil {
+		fields = append(fields, mediafile.FieldContainer)
+	}
+	if m.duration_seconds != nil {
+		fields = append(fields, mediafile.FieldDurationSeconds)
+	}
+	if m.video_codec != nil {
+		fields = append(fields, mediafile.FieldVideoCodec)
+	}
+	if m.width != nil {
+		fields = append(fields, mediafile.FieldWidth)
+	}
+	if m.height != nil {
+		fields = append(fields, mediafile.FieldHeight)
+	}
+	if m.audio_codec != nil {
+		fields = append(fields, mediafile.FieldAudioCodec)
+	}
+	if m.audio_channels != nil {
+		fields = append(fields, mediafile.FieldAudioChannels)
+	}
+	if m.bitrate != nil {
+		fields = append(fields, mediafile.FieldBitrate)
+	}
+	if m.probed_at != nil {
+		fields = append(fields, mediafile.FieldProbedAt)
+	}
 	return fields
 }
 
@@ -9616,6 +11184,26 @@ func (m *MediaFileMutation) Field(name string) (ent.Value, bool) {
 		return m.Source()
 	case mediafile.FieldLastSeenAt:
 		return m.LastSeenAt()
+	case mediafile.FieldMissingSince:
+		return m.MissingSince()
+	case mediafile.FieldContainer:
+		return m.Container()
+	case mediafile.FieldDurationSeconds:
+		return m.DurationSeconds()
+	case mediafile.FieldVideoCodec:
+		return m.VideoCodec()
+	case mediafile.FieldWidth:
+		return m.Width()
+	case mediafile.FieldHeight:
+		return m.Height()
+	case mediafile.FieldAudioCodec:
+		return m.AudioCodec()
+	case mediafile.FieldAudioChannels:
+		return m.AudioChannels()
+	case mediafile.FieldBitrate:
+		return m.Bitrate()
+	case mediafile.FieldProbedAt:
+		return m.ProbedAt()
 	}
 	return nil, false
 }
@@ -9643,6 +11231,26 @@ func (m *MediaFileMutation) OldField(ctx context.Context, name string) (ent.Valu
 		return m.OldSource(ctx)
 	case mediafile.FieldLastSeenAt:
 		return m.OldLastSeenAt(ctx)
+	case mediafile.FieldMissingSince:
+		return m.OldMissingSince(ctx)
+	case mediafile.FieldContainer:
+		return m.OldContainer(ctx)
+	case mediafile.FieldDurationSeconds:
+		return m.OldDurationSeconds(ctx)
+	case mediafile.FieldVideoCodec:
+		return m.OldVideoCodec(ctx)
+	case mediafile.FieldWidth:
+		return m.OldWidth(ctx)
+	case mediafile.FieldHeight:
+		return m.OldHeight(ctx)
+	case mediafile.FieldAudioCodec:
+		return m.OldAudioCodec(ctx)
+	case mediafile.FieldAudioChannels:
+		return m.OldAudioChannels(ctx)
+	case mediafile.FieldBitrate:
+		return m.OldBitrate(ctx)
+	case mediafile.FieldProbedAt:
+		return m.OldProbedAt(ctx)
 	}
 	return nil, fmt.Errorf("unknown MediaFile field %s", name)
 }
@@ -9715,6 +11323,76 @@ func (m *MediaFileMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetLastSeenAt(v)
 		return nil
+	case mediafile.FieldMissingSince:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMissingSince(v)
+		return nil
+	case mediafile.FieldContainer:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetContainer(v)
+		return nil
+	case mediafile.FieldDurationSeconds:
+		v, ok := value.(uint32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDurationSeconds(v)
+		return nil
+	case mediafile.FieldVideoCodec:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetVideoCodec(v)
+		return nil
+	case mediafile.FieldWidth:
+		v, ok := value.(uint16)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetWidth(v)
+		return nil
+	case mediafile.FieldHeight:
+		v, ok := value.(uint16)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetHeight(v)
+		return nil
+	case mediafile.FieldAudioCodec:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAudioCodec(v)
+		return nil
+	case mediafile.FieldAudioChannels:
+		v, ok := value.(uint8)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAudioChannels(v)
+		return nil
+	case mediafile.FieldBitrate:
+		v, ok := value.(uint32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBitrate(v)
+		return nil
+	case mediafile.FieldProbedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetProbedAt(v)
+		return nil
 	}
 	return fmt.Errorf("unknown MediaFile field %s", name)
 }
@@ -9726,6 +11404,21 @@ func (m *MediaFileMutation) AddedFields() []string {
 	if m.addsize != nil {
 		fields = append(fields, mediafile.FieldSize)
 	}
+	if m.addduration_seconds != nil {
+		fields = append(fields, mediafile.FieldDurationSeconds)
+	}
+	if m.addwidth != nil {
+		fields = append(fields, mediafile.FieldWidth)
+	}
+	if m.addheight != nil {
+		fields = append(fields, mediafile.FieldHeight)
+	}
+	if m.addaudio_channels != nil {
+		fields = append(fields, mediafile.FieldAudioChannels)
+	}
+	if m.addbitrate != nil {
+		fields = append(fields, mediafile.FieldBitrate)
+	}
 	return fields
 }
 
@@ -9736,6 +11429,16 @@ func (m *MediaFileMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
 	case mediafile.FieldSize:
 		return m.AddedSize()
+	case mediafile.FieldDurationSeconds:
+		return m.AddedDurationSeconds()
+	case mediafile.FieldWidth:
+		return m.AddedWidth()
+	case mediafile.FieldHeight:
+		return m.AddedHeight()
+	case mediafile.FieldAudioChannels:
+		return m.AddedAudioChannels()
+	case mediafile.FieldBitrate:
+		return m.AddedBitrate()
 	}
 	return nil, false
 }
@@ -9751,6 +11454,41 @@ func (m *MediaFileMutation) AddField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddSize(v)
+		return nil
+	case mediafile.FieldDurationSeconds:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddDurationSeconds(v)
+		return nil
+	case mediafile.FieldWidth:
+		v, ok := value.(int16)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddWidth(v)
+		return nil
+	case mediafile.FieldHeight:
+		v, ok := value.(int16)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddHeight(v)
+		return nil
+	case mediafile.FieldAudioChannels:
+		v, ok := value.(int8)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddAudioChannels(v)
+		return nil
+	case mediafile.FieldBitrate:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddBitrate(v)
 		return nil
 	}
 	return fmt.Errorf("unknown MediaFile numeric field %s", name)
@@ -9771,6 +11509,36 @@ func (m *MediaFileMutation) ClearedFields() []string {
 	}
 	if m.FieldCleared(mediafile.FieldLastSeenAt) {
 		fields = append(fields, mediafile.FieldLastSeenAt)
+	}
+	if m.FieldCleared(mediafile.FieldMissingSince) {
+		fields = append(fields, mediafile.FieldMissingSince)
+	}
+	if m.FieldCleared(mediafile.FieldContainer) {
+		fields = append(fields, mediafile.FieldContainer)
+	}
+	if m.FieldCleared(mediafile.FieldDurationSeconds) {
+		fields = append(fields, mediafile.FieldDurationSeconds)
+	}
+	if m.FieldCleared(mediafile.FieldVideoCodec) {
+		fields = append(fields, mediafile.FieldVideoCodec)
+	}
+	if m.FieldCleared(mediafile.FieldWidth) {
+		fields = append(fields, mediafile.FieldWidth)
+	}
+	if m.FieldCleared(mediafile.FieldHeight) {
+		fields = append(fields, mediafile.FieldHeight)
+	}
+	if m.FieldCleared(mediafile.FieldAudioCodec) {
+		fields = append(fields, mediafile.FieldAudioCodec)
+	}
+	if m.FieldCleared(mediafile.FieldAudioChannels) {
+		fields = append(fields, mediafile.FieldAudioChannels)
+	}
+	if m.FieldCleared(mediafile.FieldBitrate) {
+		fields = append(fields, mediafile.FieldBitrate)
+	}
+	if m.FieldCleared(mediafile.FieldProbedAt) {
+		fields = append(fields, mediafile.FieldProbedAt)
 	}
 	return fields
 }
@@ -9797,6 +11565,36 @@ func (m *MediaFileMutation) ClearField(name string) error {
 		return nil
 	case mediafile.FieldLastSeenAt:
 		m.ClearLastSeenAt()
+		return nil
+	case mediafile.FieldMissingSince:
+		m.ClearMissingSince()
+		return nil
+	case mediafile.FieldContainer:
+		m.ClearContainer()
+		return nil
+	case mediafile.FieldDurationSeconds:
+		m.ClearDurationSeconds()
+		return nil
+	case mediafile.FieldVideoCodec:
+		m.ClearVideoCodec()
+		return nil
+	case mediafile.FieldWidth:
+		m.ClearWidth()
+		return nil
+	case mediafile.FieldHeight:
+		m.ClearHeight()
+		return nil
+	case mediafile.FieldAudioCodec:
+		m.ClearAudioCodec()
+		return nil
+	case mediafile.FieldAudioChannels:
+		m.ClearAudioChannels()
+		return nil
+	case mediafile.FieldBitrate:
+		m.ClearBitrate()
+		return nil
+	case mediafile.FieldProbedAt:
+		m.ClearProbedAt()
 		return nil
 	}
 	return fmt.Errorf("unknown MediaFile nullable field %s", name)
@@ -9832,6 +11630,36 @@ func (m *MediaFileMutation) ResetField(name string) error {
 		return nil
 	case mediafile.FieldLastSeenAt:
 		m.ResetLastSeenAt()
+		return nil
+	case mediafile.FieldMissingSince:
+		m.ResetMissingSince()
+		return nil
+	case mediafile.FieldContainer:
+		m.ResetContainer()
+		return nil
+	case mediafile.FieldDurationSeconds:
+		m.ResetDurationSeconds()
+		return nil
+	case mediafile.FieldVideoCodec:
+		m.ResetVideoCodec()
+		return nil
+	case mediafile.FieldWidth:
+		m.ResetWidth()
+		return nil
+	case mediafile.FieldHeight:
+		m.ResetHeight()
+		return nil
+	case mediafile.FieldAudioCodec:
+		m.ResetAudioCodec()
+		return nil
+	case mediafile.FieldAudioChannels:
+		m.ResetAudioChannels()
+		return nil
+	case mediafile.FieldBitrate:
+		m.ResetBitrate()
+		return nil
+	case mediafile.FieldProbedAt:
+		m.ResetProbedAt()
 		return nil
 	}
 	return fmt.Errorf("unknown MediaFile field %s", name)
@@ -11136,7 +12964,7 @@ func (m *MovieMutation) ResetMediaFiles() {
 	m.removedmedia_files = nil
 }
 
-// AddEventIDs adds the "events" edge to the MovieEvent entity by ids.
+// AddEventIDs adds the "events" edge to the MediaEvent entity by ids.
 func (m *MovieMutation) AddEventIDs(ids ...uint32) {
 	if m.events == nil {
 		m.events = make(map[uint32]struct{})
@@ -11146,17 +12974,17 @@ func (m *MovieMutation) AddEventIDs(ids ...uint32) {
 	}
 }
 
-// ClearEvents clears the "events" edge to the MovieEvent entity.
+// ClearEvents clears the "events" edge to the MediaEvent entity.
 func (m *MovieMutation) ClearEvents() {
 	m.clearedevents = true
 }
 
-// EventsCleared reports if the "events" edge to the MovieEvent entity was cleared.
+// EventsCleared reports if the "events" edge to the MediaEvent entity was cleared.
 func (m *MovieMutation) EventsCleared() bool {
 	return m.clearedevents
 }
 
-// RemoveEventIDs removes the "events" edge to the MovieEvent entity by IDs.
+// RemoveEventIDs removes the "events" edge to the MediaEvent entity by IDs.
 func (m *MovieMutation) RemoveEventIDs(ids ...uint32) {
 	if m.removedevents == nil {
 		m.removedevents = make(map[uint32]struct{})
@@ -11167,7 +12995,7 @@ func (m *MovieMutation) RemoveEventIDs(ids ...uint32) {
 	}
 }
 
-// RemovedEvents returns the removed IDs of the "events" edge to the MovieEvent entity.
+// RemovedEvents returns the removed IDs of the "events" edge to the MediaEvent entity.
 func (m *MovieMutation) RemovedEventsIDs() (ids []uint32) {
 	for id := range m.removedevents {
 		ids = append(ids, id)
@@ -11887,589 +13715,6 @@ func (m *MovieMutation) ResetEdge(name string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown Movie edge %s", name)
-}
-
-// MovieEventMutation represents an operation that mutates the MovieEvent nodes in the graph.
-type MovieEventMutation struct {
-	config
-	op            Op
-	typ           string
-	id            *uint32
-	create_time   *time.Time
-	update_time   *time.Time
-	_type         *movieevent.Type
-	payload       *map[string]interface{}
-	clearedFields map[string]struct{}
-	movie         *uint32
-	clearedmovie  bool
-	done          bool
-	oldValue      func(context.Context) (*MovieEvent, error)
-	predicates    []predicate.MovieEvent
-}
-
-var _ ent.Mutation = (*MovieEventMutation)(nil)
-
-// movieeventOption allows management of the mutation configuration using functional options.
-type movieeventOption func(*MovieEventMutation)
-
-// newMovieEventMutation creates new mutation for the MovieEvent entity.
-func newMovieEventMutation(c config, op Op, opts ...movieeventOption) *MovieEventMutation {
-	m := &MovieEventMutation{
-		config:        c,
-		op:            op,
-		typ:           TypeMovieEvent,
-		clearedFields: make(map[string]struct{}),
-	}
-	for _, opt := range opts {
-		opt(m)
-	}
-	return m
-}
-
-// withMovieEventID sets the ID field of the mutation.
-func withMovieEventID(id uint32) movieeventOption {
-	return func(m *MovieEventMutation) {
-		var (
-			err   error
-			once  sync.Once
-			value *MovieEvent
-		)
-		m.oldValue = func(ctx context.Context) (*MovieEvent, error) {
-			once.Do(func() {
-				if m.done {
-					err = errors.New("querying old values post mutation is not allowed")
-				} else {
-					value, err = m.Client().MovieEvent.Get(ctx, id)
-				}
-			})
-			return value, err
-		}
-		m.id = &id
-	}
-}
-
-// withMovieEvent sets the old MovieEvent of the mutation.
-func withMovieEvent(node *MovieEvent) movieeventOption {
-	return func(m *MovieEventMutation) {
-		m.oldValue = func(context.Context) (*MovieEvent, error) {
-			return node, nil
-		}
-		m.id = &node.ID
-	}
-}
-
-// Client returns a new `ent.Client` from the mutation. If the mutation was
-// executed in a transaction (ent.Tx), a transactional client is returned.
-func (m MovieEventMutation) Client() *Client {
-	client := &Client{config: m.config}
-	client.init()
-	return client
-}
-
-// Tx returns an `ent.Tx` for mutations that were executed in transactions;
-// it returns an error otherwise.
-func (m MovieEventMutation) Tx() (*Tx, error) {
-	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, errors.New("ent: mutation is not running in a transaction")
-	}
-	tx := &Tx{config: m.config}
-	tx.init()
-	return tx, nil
-}
-
-// SetID sets the value of the id field. Note that this
-// operation is only accepted on creation of MovieEvent entities.
-func (m *MovieEventMutation) SetID(id uint32) {
-	m.id = &id
-}
-
-// ID returns the ID value in the mutation. Note that the ID is only available
-// if it was provided to the builder or after it was returned from the database.
-func (m *MovieEventMutation) ID() (id uint32, exists bool) {
-	if m.id == nil {
-		return
-	}
-	return *m.id, true
-}
-
-// IDs queries the database and returns the entity ids that match the mutation's predicate.
-// That means, if the mutation is applied within a transaction with an isolation level such
-// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
-// or updated by the mutation.
-func (m *MovieEventMutation) IDs(ctx context.Context) ([]uint32, error) {
-	switch {
-	case m.op.Is(OpUpdateOne | OpDeleteOne):
-		id, exists := m.ID()
-		if exists {
-			return []uint32{id}, nil
-		}
-		fallthrough
-	case m.op.Is(OpUpdate | OpDelete):
-		return m.Client().MovieEvent.Query().Where(m.predicates...).IDs(ctx)
-	default:
-		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
-	}
-}
-
-// SetCreateTime sets the "create_time" field.
-func (m *MovieEventMutation) SetCreateTime(t time.Time) {
-	m.create_time = &t
-}
-
-// CreateTime returns the value of the "create_time" field in the mutation.
-func (m *MovieEventMutation) CreateTime() (r time.Time, exists bool) {
-	v := m.create_time
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldCreateTime returns the old "create_time" field's value of the MovieEvent entity.
-// If the MovieEvent object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *MovieEventMutation) OldCreateTime(ctx context.Context) (v time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldCreateTime is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldCreateTime requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldCreateTime: %w", err)
-	}
-	return oldValue.CreateTime, nil
-}
-
-// ResetCreateTime resets all changes to the "create_time" field.
-func (m *MovieEventMutation) ResetCreateTime() {
-	m.create_time = nil
-}
-
-// SetUpdateTime sets the "update_time" field.
-func (m *MovieEventMutation) SetUpdateTime(t time.Time) {
-	m.update_time = &t
-}
-
-// UpdateTime returns the value of the "update_time" field in the mutation.
-func (m *MovieEventMutation) UpdateTime() (r time.Time, exists bool) {
-	v := m.update_time
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldUpdateTime returns the old "update_time" field's value of the MovieEvent entity.
-// If the MovieEvent object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *MovieEventMutation) OldUpdateTime(ctx context.Context) (v time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldUpdateTime is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldUpdateTime requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldUpdateTime: %w", err)
-	}
-	return oldValue.UpdateTime, nil
-}
-
-// ResetUpdateTime resets all changes to the "update_time" field.
-func (m *MovieEventMutation) ResetUpdateTime() {
-	m.update_time = nil
-}
-
-// SetType sets the "type" field.
-func (m *MovieEventMutation) SetType(value movieevent.Type) {
-	m._type = &value
-}
-
-// GetType returns the value of the "type" field in the mutation.
-func (m *MovieEventMutation) GetType() (r movieevent.Type, exists bool) {
-	v := m._type
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldType returns the old "type" field's value of the MovieEvent entity.
-// If the MovieEvent object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *MovieEventMutation) OldType(ctx context.Context) (v movieevent.Type, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldType is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldType requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldType: %w", err)
-	}
-	return oldValue.Type, nil
-}
-
-// ResetType resets all changes to the "type" field.
-func (m *MovieEventMutation) ResetType() {
-	m._type = nil
-}
-
-// SetPayload sets the "payload" field.
-func (m *MovieEventMutation) SetPayload(value map[string]interface{}) {
-	m.payload = &value
-}
-
-// Payload returns the value of the "payload" field in the mutation.
-func (m *MovieEventMutation) Payload() (r map[string]interface{}, exists bool) {
-	v := m.payload
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldPayload returns the old "payload" field's value of the MovieEvent entity.
-// If the MovieEvent object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *MovieEventMutation) OldPayload(ctx context.Context) (v map[string]interface{}, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldPayload is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldPayload requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldPayload: %w", err)
-	}
-	return oldValue.Payload, nil
-}
-
-// ClearPayload clears the value of the "payload" field.
-func (m *MovieEventMutation) ClearPayload() {
-	m.payload = nil
-	m.clearedFields[movieevent.FieldPayload] = struct{}{}
-}
-
-// PayloadCleared returns if the "payload" field was cleared in this mutation.
-func (m *MovieEventMutation) PayloadCleared() bool {
-	_, ok := m.clearedFields[movieevent.FieldPayload]
-	return ok
-}
-
-// ResetPayload resets all changes to the "payload" field.
-func (m *MovieEventMutation) ResetPayload() {
-	m.payload = nil
-	delete(m.clearedFields, movieevent.FieldPayload)
-}
-
-// SetMovieID sets the "movie" edge to the Movie entity by id.
-func (m *MovieEventMutation) SetMovieID(id uint32) {
-	m.movie = &id
-}
-
-// ClearMovie clears the "movie" edge to the Movie entity.
-func (m *MovieEventMutation) ClearMovie() {
-	m.clearedmovie = true
-}
-
-// MovieCleared reports if the "movie" edge to the Movie entity was cleared.
-func (m *MovieEventMutation) MovieCleared() bool {
-	return m.clearedmovie
-}
-
-// MovieID returns the "movie" edge ID in the mutation.
-func (m *MovieEventMutation) MovieID() (id uint32, exists bool) {
-	if m.movie != nil {
-		return *m.movie, true
-	}
-	return
-}
-
-// MovieIDs returns the "movie" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// MovieID instead. It exists only for internal usage by the builders.
-func (m *MovieEventMutation) MovieIDs() (ids []uint32) {
-	if id := m.movie; id != nil {
-		ids = append(ids, *id)
-	}
-	return
-}
-
-// ResetMovie resets all changes to the "movie" edge.
-func (m *MovieEventMutation) ResetMovie() {
-	m.movie = nil
-	m.clearedmovie = false
-}
-
-// Where appends a list predicates to the MovieEventMutation builder.
-func (m *MovieEventMutation) Where(ps ...predicate.MovieEvent) {
-	m.predicates = append(m.predicates, ps...)
-}
-
-// WhereP appends storage-level predicates to the MovieEventMutation builder. Using this method,
-// users can use type-assertion to append predicates that do not depend on any generated package.
-func (m *MovieEventMutation) WhereP(ps ...func(*sql.Selector)) {
-	p := make([]predicate.MovieEvent, len(ps))
-	for i := range ps {
-		p[i] = ps[i]
-	}
-	m.Where(p...)
-}
-
-// Op returns the operation name.
-func (m *MovieEventMutation) Op() Op {
-	return m.op
-}
-
-// SetOp allows setting the mutation operation.
-func (m *MovieEventMutation) SetOp(op Op) {
-	m.op = op
-}
-
-// Type returns the node type of this mutation (MovieEvent).
-func (m *MovieEventMutation) Type() string {
-	return m.typ
-}
-
-// Fields returns all fields that were changed during this mutation. Note that in
-// order to get all numeric fields that were incremented/decremented, call
-// AddedFields().
-func (m *MovieEventMutation) Fields() []string {
-	fields := make([]string, 0, 4)
-	if m.create_time != nil {
-		fields = append(fields, movieevent.FieldCreateTime)
-	}
-	if m.update_time != nil {
-		fields = append(fields, movieevent.FieldUpdateTime)
-	}
-	if m._type != nil {
-		fields = append(fields, movieevent.FieldType)
-	}
-	if m.payload != nil {
-		fields = append(fields, movieevent.FieldPayload)
-	}
-	return fields
-}
-
-// Field returns the value of a field with the given name. The second boolean
-// return value indicates that this field was not set, or was not defined in the
-// schema.
-func (m *MovieEventMutation) Field(name string) (ent.Value, bool) {
-	switch name {
-	case movieevent.FieldCreateTime:
-		return m.CreateTime()
-	case movieevent.FieldUpdateTime:
-		return m.UpdateTime()
-	case movieevent.FieldType:
-		return m.GetType()
-	case movieevent.FieldPayload:
-		return m.Payload()
-	}
-	return nil, false
-}
-
-// OldField returns the old value of the field from the database. An error is
-// returned if the mutation operation is not UpdateOne, or the query to the
-// database failed.
-func (m *MovieEventMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
-	switch name {
-	case movieevent.FieldCreateTime:
-		return m.OldCreateTime(ctx)
-	case movieevent.FieldUpdateTime:
-		return m.OldUpdateTime(ctx)
-	case movieevent.FieldType:
-		return m.OldType(ctx)
-	case movieevent.FieldPayload:
-		return m.OldPayload(ctx)
-	}
-	return nil, fmt.Errorf("unknown MovieEvent field %s", name)
-}
-
-// SetField sets the value of a field with the given name. It returns an error if
-// the field is not defined in the schema, or if the type mismatched the field
-// type.
-func (m *MovieEventMutation) SetField(name string, value ent.Value) error {
-	switch name {
-	case movieevent.FieldCreateTime:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetCreateTime(v)
-		return nil
-	case movieevent.FieldUpdateTime:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetUpdateTime(v)
-		return nil
-	case movieevent.FieldType:
-		v, ok := value.(movieevent.Type)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetType(v)
-		return nil
-	case movieevent.FieldPayload:
-		v, ok := value.(map[string]interface{})
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetPayload(v)
-		return nil
-	}
-	return fmt.Errorf("unknown MovieEvent field %s", name)
-}
-
-// AddedFields returns all numeric fields that were incremented/decremented during
-// this mutation.
-func (m *MovieEventMutation) AddedFields() []string {
-	return nil
-}
-
-// AddedField returns the numeric value that was incremented/decremented on a field
-// with the given name. The second boolean return value indicates that this field
-// was not set, or was not defined in the schema.
-func (m *MovieEventMutation) AddedField(name string) (ent.Value, bool) {
-	return nil, false
-}
-
-// AddField adds the value to the field with the given name. It returns an error if
-// the field is not defined in the schema, or if the type mismatched the field
-// type.
-func (m *MovieEventMutation) AddField(name string, value ent.Value) error {
-	switch name {
-	}
-	return fmt.Errorf("unknown MovieEvent numeric field %s", name)
-}
-
-// ClearedFields returns all nullable fields that were cleared during this
-// mutation.
-func (m *MovieEventMutation) ClearedFields() []string {
-	var fields []string
-	if m.FieldCleared(movieevent.FieldPayload) {
-		fields = append(fields, movieevent.FieldPayload)
-	}
-	return fields
-}
-
-// FieldCleared returns a boolean indicating if a field with the given name was
-// cleared in this mutation.
-func (m *MovieEventMutation) FieldCleared(name string) bool {
-	_, ok := m.clearedFields[name]
-	return ok
-}
-
-// ClearField clears the value of the field with the given name. It returns an
-// error if the field is not defined in the schema.
-func (m *MovieEventMutation) ClearField(name string) error {
-	switch name {
-	case movieevent.FieldPayload:
-		m.ClearPayload()
-		return nil
-	}
-	return fmt.Errorf("unknown MovieEvent nullable field %s", name)
-}
-
-// ResetField resets all changes in the mutation for the field with the given name.
-// It returns an error if the field is not defined in the schema.
-func (m *MovieEventMutation) ResetField(name string) error {
-	switch name {
-	case movieevent.FieldCreateTime:
-		m.ResetCreateTime()
-		return nil
-	case movieevent.FieldUpdateTime:
-		m.ResetUpdateTime()
-		return nil
-	case movieevent.FieldType:
-		m.ResetType()
-		return nil
-	case movieevent.FieldPayload:
-		m.ResetPayload()
-		return nil
-	}
-	return fmt.Errorf("unknown MovieEvent field %s", name)
-}
-
-// AddedEdges returns all edge names that were set/added in this mutation.
-func (m *MovieEventMutation) AddedEdges() []string {
-	edges := make([]string, 0, 1)
-	if m.movie != nil {
-		edges = append(edges, movieevent.EdgeMovie)
-	}
-	return edges
-}
-
-// AddedIDs returns all IDs (to other nodes) that were added for the given edge
-// name in this mutation.
-func (m *MovieEventMutation) AddedIDs(name string) []ent.Value {
-	switch name {
-	case movieevent.EdgeMovie:
-		if id := m.movie; id != nil {
-			return []ent.Value{*id}
-		}
-	}
-	return nil
-}
-
-// RemovedEdges returns all edge names that were removed in this mutation.
-func (m *MovieEventMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 1)
-	return edges
-}
-
-// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
-// the given name in this mutation.
-func (m *MovieEventMutation) RemovedIDs(name string) []ent.Value {
-	return nil
-}
-
-// ClearedEdges returns all edge names that were cleared in this mutation.
-func (m *MovieEventMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 1)
-	if m.clearedmovie {
-		edges = append(edges, movieevent.EdgeMovie)
-	}
-	return edges
-}
-
-// EdgeCleared returns a boolean which indicates if the edge with the given name
-// was cleared in this mutation.
-func (m *MovieEventMutation) EdgeCleared(name string) bool {
-	switch name {
-	case movieevent.EdgeMovie:
-		return m.clearedmovie
-	}
-	return false
-}
-
-// ClearEdge clears the value of the edge with the given name. It returns an error
-// if that edge is not defined in the schema.
-func (m *MovieEventMutation) ClearEdge(name string) error {
-	switch name {
-	case movieevent.EdgeMovie:
-		m.ClearMovie()
-		return nil
-	}
-	return fmt.Errorf("unknown MovieEvent unique edge %s", name)
-}
-
-// ResetEdge resets all changes to the edge with the given name in this mutation.
-// It returns an error if the edge is not defined in the schema.
-func (m *MovieEventMutation) ResetEdge(name string) error {
-	switch name {
-	case movieevent.EdgeMovie:
-		m.ResetMovie()
-		return nil
-	}
-	return fmt.Errorf("unknown MovieEvent edge %s", name)
 }
 
 // OIDCIdentityMutation represents an operation that mutates the OIDCIdentity nodes in the graph.
@@ -16423,6 +17668,9 @@ type TVShowMutation struct {
 	seasons           map[uint32]struct{}
 	removedseasons    map[uint32]struct{}
 	clearedseasons    bool
+	events            map[uint32]struct{}
+	removedevents     map[uint32]struct{}
+	clearedevents     bool
 	done              bool
 	oldValue          func(context.Context) (*TVShow, error)
 	predicates        []predicate.TVShow
@@ -17527,6 +18775,60 @@ func (m *TVShowMutation) ResetSeasons() {
 	m.removedseasons = nil
 }
 
+// AddEventIDs adds the "events" edge to the MediaEvent entity by ids.
+func (m *TVShowMutation) AddEventIDs(ids ...uint32) {
+	if m.events == nil {
+		m.events = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		m.events[ids[i]] = struct{}{}
+	}
+}
+
+// ClearEvents clears the "events" edge to the MediaEvent entity.
+func (m *TVShowMutation) ClearEvents() {
+	m.clearedevents = true
+}
+
+// EventsCleared reports if the "events" edge to the MediaEvent entity was cleared.
+func (m *TVShowMutation) EventsCleared() bool {
+	return m.clearedevents
+}
+
+// RemoveEventIDs removes the "events" edge to the MediaEvent entity by IDs.
+func (m *TVShowMutation) RemoveEventIDs(ids ...uint32) {
+	if m.removedevents == nil {
+		m.removedevents = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		delete(m.events, ids[i])
+		m.removedevents[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedEvents returns the removed IDs of the "events" edge to the MediaEvent entity.
+func (m *TVShowMutation) RemovedEventsIDs() (ids []uint32) {
+	for id := range m.removedevents {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// EventsIDs returns the "events" edge IDs in the mutation.
+func (m *TVShowMutation) EventsIDs() (ids []uint32) {
+	for id := range m.events {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetEvents resets all changes to the "events" edge.
+func (m *TVShowMutation) ResetEvents() {
+	m.events = nil
+	m.clearedevents = false
+	m.removedevents = nil
+}
+
 // Where appends a list predicates to the TVShowMutation builder.
 func (m *TVShowMutation) Where(ps ...predicate.TVShow) {
 	m.predicates = append(m.predicates, ps...)
@@ -18086,9 +19388,12 @@ func (m *TVShowMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *TVShowMutation) AddedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m.seasons != nil {
 		edges = append(edges, tvshow.EdgeSeasons)
+	}
+	if m.events != nil {
+		edges = append(edges, tvshow.EdgeEvents)
 	}
 	return edges
 }
@@ -18103,15 +19408,24 @@ func (m *TVShowMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case tvshow.EdgeEvents:
+		ids := make([]ent.Value, 0, len(m.events))
+		for id := range m.events {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *TVShowMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m.removedseasons != nil {
 		edges = append(edges, tvshow.EdgeSeasons)
+	}
+	if m.removedevents != nil {
+		edges = append(edges, tvshow.EdgeEvents)
 	}
 	return edges
 }
@@ -18126,15 +19440,24 @@ func (m *TVShowMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case tvshow.EdgeEvents:
+		ids := make([]ent.Value, 0, len(m.removedevents))
+		for id := range m.removedevents {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *TVShowMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m.clearedseasons {
 		edges = append(edges, tvshow.EdgeSeasons)
+	}
+	if m.clearedevents {
+		edges = append(edges, tvshow.EdgeEvents)
 	}
 	return edges
 }
@@ -18145,6 +19468,8 @@ func (m *TVShowMutation) EdgeCleared(name string) bool {
 	switch name {
 	case tvshow.EdgeSeasons:
 		return m.clearedseasons
+	case tvshow.EdgeEvents:
+		return m.clearedevents
 	}
 	return false
 }
@@ -18163,6 +19488,9 @@ func (m *TVShowMutation) ResetEdge(name string) error {
 	switch name {
 	case tvshow.EdgeSeasons:
 		m.ResetSeasons()
+		return nil
+	case tvshow.EdgeEvents:
+		m.ResetEvents()
 		return nil
 	}
 	return fmt.Errorf("unknown TVShow edge %s", name)

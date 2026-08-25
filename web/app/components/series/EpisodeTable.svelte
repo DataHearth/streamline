@@ -8,6 +8,7 @@
 	} from "./EpisodeDetailModal.svelte";
 	import { formatDateShort, formatRelative } from "../../lib/dates";
 	import { formatBytes } from "../../lib/format";
+	import { episodeMedia, isProbed } from "../../lib/media-info";
 	import type { Episode, SeriesType } from "../../lib/types";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 
@@ -68,9 +69,9 @@
 				<th scope="col" class="w-28 px-3 py-2.5 text-left font-medium">{i18n.common_status()}</th>
 				<th
 					scope="col"
-					class="hidden w-24 px-3 py-2.5 text-left font-medium @lg:table-cell"
+					class="hidden w-40 px-3 py-2.5 text-left font-medium @lg:table-cell"
 				>
-					{i18n.common_quality()}
+					{i18n.file_media()}
 				</th>
 				<th
 					scope="col"
@@ -121,11 +122,16 @@
 							<span class="text-fg-faint">· #{ep.absolute_number}</span>
 						{/if}
 					</td>
-					<td class="min-w-0 px-3 py-2.5">
+					<!-- max-w-0 + w-full, not min-w-0: the table lays out auto, where a
+					     cell sizes to its content and min-width is ignored, so a long
+					     title widened the column and scrolled the whole table sideways.
+					     Zero max-width leaves the cell taking only what the fixed
+					     columns don't, which is what lets truncate engage. -->
+					<td class="w-full max-w-0 px-3 py-2.5">
 						<button
 							type="button"
 							onclick={() => (detail = ep)}
-							title={i18n.series_episode_details()}
+							title={ep.title || i18n.series_episode_details()}
 							class="block max-w-full truncate rounded-sm text-left text-fg transition hover:text-accent-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
 						>
 							{ep.title || "TBA"}
@@ -156,9 +162,12 @@
 						</span>
 					</td>
 					<td
-						class="hidden px-3 py-2.5 font-mono text-xs text-fg-muted @lg:table-cell"
+						class={cn(
+							"hidden whitespace-nowrap px-3 py-2.5 font-mono text-xs @lg:table-cell",
+							isProbed(ep) ? "text-fg-muted" : "text-fg-subtle",
+						)}
 					>
-						{ep.quality || "—"}
+						{episodeMedia(ep) || "—"}
 					</td>
 					<td
 						class="hidden px-3 py-2.5 text-right font-mono text-xs tabular text-fg-muted @lg:table-cell"

@@ -21,6 +21,7 @@ import (
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/observability"
 	"github.com/datahearth/streamline/internal/otelx"
 )
 
@@ -175,7 +176,11 @@ func (s *Service) countAll(ctx context.Context, r Root) (int, error) {
 	case RootSeries:
 		return s.store.CountEpisodeMediaFiles(ctx)
 	case RootDownloads:
-		records, err := s.store.CountDownloadRecords(ctx)
+		// Live rows only: terminal records (completed, failed, dismissed
+		// adoption tombstones) keep their creation-time save_path forever, so
+		// counting them keeps WarnOnDrift firing long after the root
+		// legitimately moved and nothing reads those paths anymore.
+		records, err := s.store.CountLiveDownloadRecords(ctx)
 		if err != nil {
 			return 0, err
 		}
@@ -521,4 +526,36 @@ func rewrite(path, from, to string) string {
 	}
 	rel := strings.TrimPrefix(path, from+string(filepath.Separator))
 	return filepath.Join(to, rel)
+}
+
+// WarnOnDrift logs a CRITICAL line for every root whose stored paths all sit
+// somewhere other than where the config now points. Nothing else notices that
+// situation, and the fix — POST /library/path-migration — is only reachable
+// by an operator who knows to look. The consequence differs by root:
+// drift-check walks media files only, so movie/series records are deleted
+// once drift_grace_ticks elapses, while download rows are never pruned on
+// drift — there the dangling paths break importing instead.
+func (s *Service) WarnOnDrift(ctx context.Context) {
+	roots, err := s.Roots(ctx)
+	if err != nil {
+		slog.WarnContext(ctx, "could not check library paths against stored records",
+			"error", err)
+		return
+	}
+	for _, r := range roots {
+		if r.Total == 0 || r.Tracked > 0 {
+			continue
+		}
+		msg := "library root does not match any stored path — records will be pruned"
+		if r.Root == RootDownloads {
+			msg = "download root does not match any stored path — downloads cannot import"
+		}
+		//nolint:sloglint // LogAttrs takes slog.Attr by API design
+		slog.LogAttrs(ctx, observability.LevelCritical, msg,
+			slog.String("library.root", string(r.Root)),
+			slog.String("library.path", r.Path),
+			slog.Int("records.total", r.Total),
+			slog.String("remedy", "POST /api/v1/library/path-migration to re-root"),
+		)
+	}
 }

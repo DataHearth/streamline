@@ -58,11 +58,20 @@ type DiskUsage struct {
 // no caller prefixes a "v" of its own: goreleaser injects a bare semver
 // ("1.3.0") while the image build passes the tag through ("v1.3.0"), and a
 // plain go build leaves it empty.
+//
+// The "v" is only for a release. docker/metadata-action resolves its version
+// output to the BRANCH NAME on a branch push, so every image built off main
+// carries "main" — dressing that up as "vmain" reads like a release that does
+// not exist. Anything not starting with a digit is shown as injected.
 func displayVersion(v string) string {
 	if v == "" {
 		return "dev"
 	}
-	return "v" + strings.TrimPrefix(v, "v")
+	bare := strings.TrimPrefix(v, "v")
+	if bare == "" || bare[0] < '0' || bare[0] > '9' {
+		return v
+	}
+	return "v" + bare
 }
 
 // Collect returns the current environment snapshot.

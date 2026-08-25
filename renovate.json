@@ -8,6 +8,8 @@
 	],
 	"prConcurrentLimit": 5,
 	"minimumReleaseAge": "3 days",
+	"labels": ["dependencies"],
+	"reviewers": ["DataHearth"],
 	"packageRules": [
 		{
 			"matchManagers": ["gomod"],
@@ -23,6 +25,10 @@
 			"matchManagers": ["github-actions"],
 			"matchUpdateTypes": ["minor", "patch", "digest"],
 			"groupName": "github actions"
+		},
+		{
+			"matchManagers": ["github-actions"],
+			"addLabels": ["github_actions"]
 		},
 		{
 			"matchManagers": ["dockerfile", "docker-compose"],

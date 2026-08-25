@@ -119,7 +119,7 @@ var _ = Describe("Handler: Pending", Label("unit", "server", "activity"), func()
 					downloadrecord.StatusDismissed).
 				Return(nil).Once()
 			app.downloads.EXPECT().
-				RemoveTorrent(mock.Anything, "qb", "H").Return(nil).Once()
+				RemoveTorrent(mock.Anything, "qb", "H", false).Return(nil).Once()
 
 			req := app.req(
 				http.MethodPost, "/api/v1/activity/pending/1/ignore",

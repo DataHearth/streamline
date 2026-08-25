@@ -18,6 +18,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/movie"
+	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/indexer"
@@ -28,10 +29,12 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// maxTorrentFileSize caps the pre-fetched .torrent payload at 16 MiB —
-// well above any real-world metainfo file but small enough that a
-// misbehaving indexer can't stream us out of memory.
-const maxTorrentFileSize = 16 * 1024 * 1024
+// MaxTorrentFileSize caps a .torrent payload at 16 MiB — well above any
+// real-world metainfo file but small enough that a misbehaving indexer can't
+// stream us out of memory. Exported because the same ceiling has to hold for a
+// .torrent an operator uploads through the API, which never passes through the
+// fetch path below.
+const MaxTorrentFileSize = 16 * 1024 * 1024
 
 // Categorised download-client failures. Handlers map these to 422 with
 // friendly messages; anything not matching is a 500 internal error.
@@ -55,6 +58,10 @@ var (
 	ErrUnsafeTorrentName = errors.New(
 		"torrent name escapes the download path",
 	)
+	// ErrRecordHeld is returned by the queue verbs for a record parked by
+	// import verification. Its download is finished, so pause/resume/cancel
+	// have nothing to act on — POST /downloads/{id}/resolve owns it.
+	ErrRecordHeld = errors.New("download record is held for review")
 )
 
 // PathUnderRoot reports whether path resolves inside root, or is root itself.
@@ -182,6 +189,7 @@ type Downloader interface {
 		ctx context.Context,
 		downloadClientName string,
 		torrentHash string,
+		deleteFiles bool,
 	) error
 	Queue(ctx context.Context) (QueueSnapshot, error)
 	CancelQueueItem(ctx context.Context, recordID uint32) error
@@ -242,8 +250,11 @@ const queueRefreshTTL = 2 * time.Second
 
 // QueueEntry is one in-flight download enriched with live client telemetry.
 type QueueEntry struct {
-	RecordID     uint32
-	Status       string // downloading | importing | paused | error
+	RecordID uint32
+	Status   string // downloading | importing | paused | error | held
+	// HoldReasons is set only on a held entry: the checks import verification
+	// failed, which is what the resolve dialog shows.
+	HoldReasons  []schema.HoldReason
 	Title        string
 	Quality      string
 	ReleaseGroup string
@@ -354,9 +365,14 @@ func baseQueueEntry(rec *ent.DownloadRecord) QueueEntry {
 		FailureReason: rec.FailureReason,
 		CreatedAt:     rec.CreateTime,
 	}
-	if rec.Status == downloadrecord.StatusImporting {
+	switch rec.Status {
+	case downloadrecord.StatusImporting:
 		e.Status = "importing"
 		e.Progress = 1.0
+	case downloadrecord.StatusHeld:
+		e.Status = "held"
+		e.Progress = 1.0
+		e.HoldReasons = rec.HoldReasons
 	}
 	e.Indexer = rec.IndexerName
 	e.DownloadClient = rec.DownloadClientName
@@ -376,11 +392,15 @@ func liveQueueStatus(s TorrentStatus) string {
 
 // CancelQueueItem removes the torrent (and its partial files) from the
 // client, deletes the record, and reverts the movie to "wanted" when it has
-// no file. A NotFound record propagates so the handler can 404.
+// no file. A NotFound record propagates so the handler can 404, a held one
+// yields ErrRecordHeld so it can 409.
 func (d *download) CancelQueueItem(ctx context.Context, recordID uint32) error {
 	rec, err := d.db.FindActiveDownloadRecordByID(ctx, recordID)
 	if err != nil {
 		return err
+	}
+	if rec.Status == downloadrecord.StatusHeld {
+		return ErrRecordHeld
 	}
 	if dc, ok := config.FindDownloadClient(
 		rec.DownloadClientName,
@@ -414,7 +434,8 @@ func (d *download) ResumeQueueItem(ctx context.Context, recordID uint32) error {
 }
 
 // queueClientAction loads an in-flight record and applies a torrent-level
-// client verb (pause/resume) to it. NotFound propagates for the handler 404.
+// client verb (pause/resume) to it. NotFound propagates for the handler 404,
+// ErrRecordHeld for its 409.
 func (d *download) queueClientAction(
 	ctx context.Context,
 	recordID uint32,
@@ -423,6 +444,9 @@ func (d *download) queueClientAction(
 	rec, err := d.db.FindActiveDownloadRecordByID(ctx, recordID)
 	if err != nil {
 		return err
+	}
+	if rec.Status == downloadrecord.StatusHeld {
+		return ErrRecordHeld
 	}
 	dc, ok := config.FindDownloadClient(rec.DownloadClientName)
 	if !ok || rec.TorrentHash == "" {
@@ -847,13 +871,15 @@ func (d *download) PurgeOrphanedTorrents(ctx context.Context) error {
 }
 
 // RemoveTorrent wraps the download client's remove call. Used by importer.Worker
-// when KeepTorrentSeeding=false after a successful import. Files are never
-// deleted from the client's side — the library already holds the copy/hardlink
-// and the torrent contents are the source.
+// when KeepTorrentSeeding=false after a successful import, where deleteFiles is
+// false — the library already holds the copy/hardlink and the torrent contents
+// are the source. A rejected hold passes true: nothing was imported, so leaving
+// the files behind would just orphan them.
 func (d *download) RemoveTorrent(
 	ctx context.Context,
 	clientName string,
 	hash string,
+	deleteFiles bool,
 ) error {
 	ctx, span := tracer.Start(ctx, "download.remove_torrent",
 		trace.WithAttributes(attribute.String("torrent.hash", hash)))
@@ -870,7 +896,7 @@ func (d *download) RemoveTorrent(
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
 	}
-	return client.RemoveTorrent(ctx, hash, false)
+	return client.RemoveTorrent(ctx, hash, deleteFiles)
 }
 
 // buildBaseURL composes scheme://host:port for download client requests.
@@ -968,13 +994,13 @@ func resolveTorrentSource(ctx context.Context, dl string) (TorrentSource, error)
 			"indexer returned status %d", resp.StatusCode,
 		)
 	}
-	body, err := io.ReadAll(io.LimitReader(resp.Body, maxTorrentFileSize+1))
+	body, err := io.ReadAll(io.LimitReader(resp.Body, MaxTorrentFileSize+1))
 	if err != nil {
 		return TorrentSource{}, fmt.Errorf("read torrent body: %w", err)
 	}
-	if int64(len(body)) > maxTorrentFileSize {
+	if int64(len(body)) > MaxTorrentFileSize {
 		return TorrentSource{}, fmt.Errorf(
-			"torrent file exceeds %d byte cap", maxTorrentFileSize,
+			"torrent file exceeds %d byte cap", MaxTorrentFileSize,
 		)
 	}
 	if len(body) == 0 {

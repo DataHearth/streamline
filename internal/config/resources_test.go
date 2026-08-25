@@ -67,6 +67,14 @@ var _ = Describe("Library quality globals", Label("unit", "config"), func() {
 	})
 })
 
+var _ = Describe("FFmpeg config", Label("unit", "config"), func() {
+	It("defaults ffmpeg to enabled with PATH lookup", func() {
+		c := configtest.Setup()
+		Expect(c.FFmpeg.Enabled).To(BeTrue())
+		Expect(c.FFmpeg.Path).To(BeEmpty())
+	})
+})
+
 var _ = Describe(
 	"quality_default_profile validation",
 	Label("unit", "config"),

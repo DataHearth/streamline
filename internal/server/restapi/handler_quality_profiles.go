@@ -7,7 +7,14 @@ import (
 	"github.com/datahearth/streamline/internal/config"
 )
 
+// qualityProfileToAPI maps config.QualityProfileEntry into the generated
+// view. AllowedCodecs is always a non-nil slice so the field serializes as
+// [] rather than null when no codec restriction is set.
 func qualityProfileToAPI(e config.QualityProfileEntry) QualityProfile {
+	codecs := e.AllowedCodecs
+	if codecs == nil {
+		codecs = []string{}
+	}
 	return QualityProfile{
 		Name: e.Name,
 		PreferredResolution: QualityProfilePreferredResolution(
@@ -15,6 +22,7 @@ func qualityProfileToAPI(e config.QualityProfileEntry) QualityProfile {
 		),
 		MinResolution:  QualityProfileMinResolution(e.MinResolution),
 		UpgradeAllowed: e.UpgradeAllowed,
+		AllowedCodecs:  &codecs,
 	}
 }
 
@@ -51,6 +59,9 @@ func (s *Server) CreateQualityProfile(
 	if request.Body.UpgradeAllowed != nil {
 		e.UpgradeAllowed = *request.Body.UpgradeAllowed
 	}
+	if request.Body.AllowedCodecs != nil {
+		e.AllowedCodecs = *request.Body.AllowedCodecs
+	}
 
 	switch err := config.AddQualityProfile(ctx, e); {
 	case errors.Is(err, config.ErrQualityProfileExists):
@@ -86,6 +97,9 @@ func (s *Server) UpdateQualityProfile(
 	if request.Body.MinResolution != nil {
 		mr := string(*request.Body.MinResolution)
 		patch.MinResolution = &mr
+	}
+	if request.Body.AllowedCodecs != nil {
+		patch.AllowedCodecs = request.Body.AllowedCodecs
 	}
 
 	switch err := config.UpdateQualityProfile(ctx, request.Name, patch); {

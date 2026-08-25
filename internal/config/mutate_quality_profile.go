@@ -16,11 +16,14 @@ var (
 	)
 )
 
-// QualityProfilePatch carries optional field updates.
+// QualityProfilePatch carries optional field updates. A nil AllowedCodecs
+// leaves the list untouched; a non-nil-but-empty slice clears it back to
+// "any codec".
 type QualityProfilePatch struct {
 	PreferredResolution *string
 	MinResolution       *string
 	UpgradeAllowed      *bool
+	AllowedCodecs       *[]string
 }
 
 func AddQualityProfile(ctx context.Context, e QualityProfileEntry) error {
@@ -61,6 +64,9 @@ func UpdateQualityProfile(
 		}
 		if p.UpgradeAllowed != nil {
 			e.UpgradeAllowed = *p.UpgradeAllowed
+		}
+		if p.AllowedCodecs != nil {
+			e.AllowedCodecs = *p.AllowedCodecs
 		}
 		c.QualityProfiles[idx] = e
 		slog.InfoContext(ctx, "quality profile updated", "name", name)

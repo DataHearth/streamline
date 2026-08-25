@@ -1,7 +1,7 @@
 # Container image for streamline.
 image:
   repository: ghcr.io/datahearth/streamline
-  tag: "" # defaults to .Chart.AppVersion when empty
+  tag: "" # required — set to the release you want to deploy (upgrades are your call, not the chart's)
   pullPolicy: IfNotPresent
 imagePullSecrets: []
 

@@ -27,14 +27,14 @@ type ImportScanShow func(*sql.Selector)
 // Invite is the predicate function for invite builders.
 type Invite func(*sql.Selector)
 
+// MediaEvent is the predicate function for mediaevent builders.
+type MediaEvent func(*sql.Selector)
+
 // MediaFile is the predicate function for mediafile builders.
 type MediaFile func(*sql.Selector)
 
 // Movie is the predicate function for movie builders.
 type Movie func(*sql.Selector)
-
-// MovieEvent is the predicate function for movieevent builders.
-type MovieEvent func(*sql.Selector)
 
 // OIDCIdentity is the predicate function for oidcidentity builders.
 type OIDCIdentity func(*sql.Selector)

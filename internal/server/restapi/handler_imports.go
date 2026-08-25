@@ -355,3 +355,44 @@ func pageOr(v *uint16, def uint16) uint16 {
 	}
 	return def
 }
+
+func (s *Server) BulkUpdateImportDecisions(
+	ctx context.Context,
+	req BulkUpdateImportDecisionsRequestObject,
+) (BulkUpdateImportDecisionsResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return BulkUpdateImportDecisions403JSONResponse{
+			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
+	p := bulkimport.BulkDecisionParams{
+		ScanID:   req.Id,
+		Decision: string(req.Body.Decision),
+	}
+	if req.Body.Classification != nil {
+		p.Classification = string(*req.Body.Classification)
+	}
+	if req.Body.Ids != nil {
+		p.IDs = *req.Body.Ids
+	}
+	n, err := s.bulkImports.BulkDecide(ctx, p)
+	if err != nil {
+		switch {
+		case errors.Is(err, bulkimport.ErrScanNotFound):
+			return BulkUpdateImportDecisions404JSONResponse{
+				NotFoundJSONResponse: errNotFound(err.Error()),
+			}, nil
+		case errors.Is(err, bulkimport.ErrScanNotReviewable):
+			return BulkUpdateImportDecisions422JSONResponse{
+				UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
+			}, nil
+		default:
+			return nil, err
+		}
+	}
+	return BulkUpdateImportDecisions200JSONResponse{
+		ImportBulkDecisionResultJSONResponse: ImportBulkDecisionResultJSONResponse{
+			Updated: n,
+		},
+	}, nil
+}

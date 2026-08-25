@@ -27,6 +27,7 @@ const (
 	ActivityEventTypeGrabbed           ActivityEventType = "grabbed"
 	ActivityEventTypeImportFailed      ActivityEventType = "import_failed"
 	ActivityEventTypeImported          ActivityEventType = "imported"
+	ActivityEventTypeSearched          ActivityEventType = "searched"
 )
 
 // Valid indicates whether the value is a known member of the ActivityEventType enum.
@@ -45,6 +46,8 @@ func (e ActivityEventType) Valid() bool {
 	case ActivityEventTypeImportFailed:
 		return true
 	case ActivityEventTypeImported:
+		return true
+	case ActivityEventTypeSearched:
 		return true
 	default:
 		return false
@@ -378,6 +381,78 @@ func (e HistoryEntryStatus) Valid() bool {
 	}
 }
 
+// Defines values for HoldReasonCheck.
+const (
+	HoldReasonCheckAlwaysAsk  HoldReasonCheck = "always_ask"
+	HoldReasonCheckCodec      HoldReasonCheck = "codec"
+	HoldReasonCheckCorrupt    HoldReasonCheck = "corrupt"
+	HoldReasonCheckDuration   HoldReasonCheck = "duration"
+	HoldReasonCheckResolution HoldReasonCheck = "resolution"
+)
+
+// Valid indicates whether the value is a known member of the HoldReasonCheck enum.
+func (e HoldReasonCheck) Valid() bool {
+	switch e {
+	case HoldReasonCheckAlwaysAsk:
+		return true
+	case HoldReasonCheckCodec:
+		return true
+	case HoldReasonCheckCorrupt:
+		return true
+	case HoldReasonCheckDuration:
+		return true
+	case HoldReasonCheckResolution:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ImportBulkDecisionRequestClassification.
+const (
+	ImportBulkDecisionRequestClassificationAmbiguous ImportBulkDecisionRequestClassification = "ambiguous"
+	ImportBulkDecisionRequestClassificationConfirmed ImportBulkDecisionRequestClassification = "confirmed"
+	ImportBulkDecisionRequestClassificationExisting  ImportBulkDecisionRequestClassification = "existing"
+	ImportBulkDecisionRequestClassificationUnmatched ImportBulkDecisionRequestClassification = "unmatched"
+)
+
+// Valid indicates whether the value is a known member of the ImportBulkDecisionRequestClassification enum.
+func (e ImportBulkDecisionRequestClassification) Valid() bool {
+	switch e {
+	case ImportBulkDecisionRequestClassificationAmbiguous:
+		return true
+	case ImportBulkDecisionRequestClassificationConfirmed:
+		return true
+	case ImportBulkDecisionRequestClassificationExisting:
+		return true
+	case ImportBulkDecisionRequestClassificationUnmatched:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ImportBulkDecisionRequestDecision.
+const (
+	ImportBulkDecisionRequestDecisionAccept  ImportBulkDecisionRequestDecision = "accept"
+	ImportBulkDecisionRequestDecisionPending ImportBulkDecisionRequestDecision = "pending"
+	ImportBulkDecisionRequestDecisionSkip    ImportBulkDecisionRequestDecision = "skip"
+)
+
+// Valid indicates whether the value is a known member of the ImportBulkDecisionRequestDecision enum.
+func (e ImportBulkDecisionRequestDecision) Valid() bool {
+	switch e {
+	case ImportBulkDecisionRequestDecisionAccept:
+		return true
+	case ImportBulkDecisionRequestDecisionPending:
+		return true
+	case ImportBulkDecisionRequestDecisionSkip:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ImportScanImportMode.
 const (
 	ImportScanImportModeCopy     ImportScanImportMode = "copy"
@@ -662,14 +737,17 @@ func (e ImportScanShowDecision) Valid() bool {
 
 // Defines values for ImportScanShowOutcome.
 const (
-	ImportScanShowOutcomeCreated ImportScanShowOutcome = "created"
-	ImportScanShowOutcomeFailed  ImportScanShowOutcome = "failed"
-	ImportScanShowOutcomePending ImportScanShowOutcome = "pending"
+	ImportScanShowOutcomeAttached ImportScanShowOutcome = "attached"
+	ImportScanShowOutcomeCreated  ImportScanShowOutcome = "created"
+	ImportScanShowOutcomeFailed   ImportScanShowOutcome = "failed"
+	ImportScanShowOutcomePending  ImportScanShowOutcome = "pending"
 )
 
 // Valid indicates whether the value is a known member of the ImportScanShowOutcome enum.
 func (e ImportScanShowOutcome) Valid() bool {
 	switch e {
+	case ImportScanShowOutcomeAttached:
+		return true
 	case ImportScanShowOutcomeCreated:
 		return true
 	case ImportScanShowOutcomeFailed:
@@ -918,6 +996,27 @@ func (e PatchSeriesRequestPreset) Valid() bool {
 	}
 }
 
+// Defines values for PatchSeriesRequestType.
+const (
+	PatchSeriesRequestTypeAnime    PatchSeriesRequestType = "anime"
+	PatchSeriesRequestTypeDaily    PatchSeriesRequestType = "daily"
+	PatchSeriesRequestTypeStandard PatchSeriesRequestType = "standard"
+)
+
+// Valid indicates whether the value is a known member of the PatchSeriesRequestType enum.
+func (e PatchSeriesRequestType) Valid() bool {
+	switch e {
+	case PatchSeriesRequestTypeAnime:
+		return true
+	case PatchSeriesRequestTypeDaily:
+		return true
+	case PatchSeriesRequestTypeStandard:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PathMigrationPreviewRoot.
 const (
 	PathMigrationPreviewRootDownloads PathMigrationPreviewRoot = "downloads"
@@ -1129,6 +1228,7 @@ func (e QualityProfileCreatePreferredResolution) Valid() bool {
 const (
 	QueueEntryStatusDownloading QueueEntryStatus = "downloading"
 	QueueEntryStatusError       QueueEntryStatus = "error"
+	QueueEntryStatusHeld        QueueEntryStatus = "held"
 	QueueEntryStatusImporting   QueueEntryStatus = "importing"
 	QueueEntryStatusPaused      QueueEntryStatus = "paused"
 )
@@ -1139,6 +1239,8 @@ func (e QueueEntryStatus) Valid() bool {
 	case QueueEntryStatusDownloading:
 		return true
 	case QueueEntryStatusError:
+		return true
+	case QueueEntryStatusHeld:
 		return true
 	case QueueEntryStatusImporting:
 		return true
@@ -1185,6 +1287,27 @@ func (e RequestStatus) Valid() bool {
 	case RequestStatusDenied:
 		return true
 	case RequestStatusPending:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ResolveHeldRequestAction.
+const (
+	ResolveHeldRequestActionDelete ResolveHeldRequestAction = "delete"
+	ResolveHeldRequestActionImport ResolveHeldRequestAction = "import"
+	ResolveHeldRequestActionRegrab ResolveHeldRequestAction = "regrab"
+)
+
+// Valid indicates whether the value is a known member of the ResolveHeldRequestAction enum.
+func (e ResolveHeldRequestAction) Valid() bool {
+	switch e {
+	case ResolveHeldRequestActionDelete:
+		return true
+	case ResolveHeldRequestActionImport:
+		return true
+	case ResolveHeldRequestActionRegrab:
 		return true
 	default:
 		return false
@@ -1533,6 +1656,24 @@ func (e RequestStatusParam) Valid() bool {
 	}
 }
 
+// Defines values for SeriesOrder.
+const (
+	SeriesOrderAsc  SeriesOrder = "asc"
+	SeriesOrderDesc SeriesOrder = "desc"
+)
+
+// Valid indicates whether the value is a known member of the SeriesOrder enum.
+func (e SeriesOrder) Valid() bool {
+	switch e {
+	case SeriesOrderAsc:
+		return true
+	case SeriesOrderDesc:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UsersOrder.
 const (
 	UsersOrderAsc  UsersOrder = "asc"
@@ -1584,6 +1725,7 @@ const (
 	ListActivityParamsTypeGrabbed           ListActivityParamsType = "grabbed"
 	ListActivityParamsTypeImportFailed      ListActivityParamsType = "import_failed"
 	ListActivityParamsTypeImported          ListActivityParamsType = "imported"
+	ListActivityParamsTypeSearched          ListActivityParamsType = "searched"
 )
 
 // Valid indicates whether the value is a known member of the ListActivityParamsType enum.
@@ -1602,6 +1744,8 @@ func (e ListActivityParamsType) Valid() bool {
 	case ListActivityParamsTypeImportFailed:
 		return true
 	case ListActivityParamsTypeImported:
+		return true
+	case ListActivityParamsTypeSearched:
 		return true
 	default:
 		return false
@@ -1698,6 +1842,24 @@ func (e ListRequestsParamsMediaType) Valid() bool {
 	}
 }
 
+// Defines values for ListSeriesParamsOrder.
+const (
+	ListSeriesParamsOrderAsc  ListSeriesParamsOrder = "asc"
+	ListSeriesParamsOrderDesc ListSeriesParamsOrder = "desc"
+)
+
+// Valid indicates whether the value is a known member of the ListSeriesParamsOrder enum.
+func (e ListSeriesParamsOrder) Valid() bool {
+	switch e {
+	case ListSeriesParamsOrderAsc:
+		return true
+	case ListSeriesParamsOrderDesc:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListUsersParamsRole.
 const (
 	ListUsersParamsRoleAdmin       ListUsersParamsRole = "admin"
@@ -1761,13 +1923,24 @@ func (e ListUsersParamsOrder) Valid() bool {
 	}
 }
 
-// ActivityEvent defines model for ActivityEvent.
+// ActivityEvent Exactly one of movie / episode / series is set, naming what the event
+// happened to. `series` carries only what belongs to no single episode —
+// a search issued at series or season scope; per-episode outcomes use
+// `episode`.
 type ActivityEvent struct {
-	CreatedAt time.Time               `json:"created_at"`
-	Id        uint32                  `json:"id"`
-	Movie     Movie                   `json:"movie"`
-	Payload   *map[string]interface{} `json:"payload,omitempty"`
-	Type      ActivityEventType       `json:"type"`
+	CreatedAt time.Time `json:"created_at"`
+
+	// Episode Show + S/E context for a TV download record (queue/history rows render
+	// "<show> · SxxExx" from it). Absent on movie records.
+	Episode *EpisodeRef             `json:"episode,omitempty"`
+	Id      uint32                  `json:"id"`
+	Movie   *Movie                  `json:"movie,omitempty"`
+	Payload *map[string]interface{} `json:"payload,omitempty"`
+
+	// Series Minimal series identity for feed rows. Deliberately not the full TVShow
+	// schema, which carries the whole season/episode tree.
+	Series *SeriesRef        `json:"series,omitempty"`
+	Type   ActivityEventType `json:"type"`
 }
 
 // ActivityEventType defines model for ActivityEvent.Type.
@@ -2048,10 +2221,23 @@ type DownloadQueue struct {
 type Episode struct {
 	AbsoluteNumber *uint16    `json:"absolute_number,omitempty"`
 	AirDate        *time.Time `json:"air_date,omitempty"`
-	Id             uint32     `json:"id"`
-	Monitored      bool       `json:"monitored"`
-	Number         uint16     `json:"number"`
-	Overview       *string    `json:"overview,omitempty"`
+
+	// HasFile Whether a media file is linked to this episode. Equivalent to a
+	// non-empty `path`, stated explicitly so clients do not have to infer
+	// presence from `path` or `status`.
+	HasFile *bool  `json:"has_file,omitempty"`
+	Id      uint32 `json:"id"`
+
+	// MediaInfo Technical details probed from the file with ffprobe. Absent when the
+	// file hasn't been probed yet, probing is disabled, or the probe was
+	// attempted and failed — probed_at is stamped internally on a failed
+	// probe so the file isn't retried, so null here does not imply this
+	// will populate on its own. Fall back to the record's parsed_* fields
+	// when this is null.
+	MediaInfo *MediaInfo `json:"media_info,omitempty"`
+	Monitored bool       `json:"monitored"`
+	Number    uint16     `json:"number"`
+	Overview  *string    `json:"overview,omitempty"`
 
 	// Path On-disk path of the episode's media file, when imported.
 	Path    *string `json:"path,omitempty"`
@@ -2066,9 +2252,12 @@ type Episode struct {
 // EpisodeRef Show + S/E context for a TV download record (queue/history rows render
 // "<show> · SxxExx" from it). Absent on movie records.
 type EpisodeRef struct {
-	Episode   uint16 `json:"episode"`
-	Season    uint16 `json:"season"`
-	ShowTitle string `json:"show_title"`
+	Episode uint16 `json:"episode"`
+	Season  uint16 `json:"season"`
+
+	// SeriesId Set where the row links back to the series page.
+	SeriesId  *uint32 `json:"series_id,omitempty"`
+	ShowTitle string  `json:"show_title"`
 }
 
 // EpisodeStatus Presentation status of an episode. "unaired" is derived rather than stored: an episode with no file whose air date is still ahead.
@@ -2084,6 +2273,34 @@ type Error struct {
 
 	// Message Human-readable, safe-to-display error message.
 	Message string `json:"message"`
+}
+
+// FFmpegConfigPatch Only provided fields are applied. found and resolved_path are derived and read-only — sending them has no effect.
+type FFmpegConfigPatch struct {
+	Enabled *bool   `json:"enabled,omitempty"`
+	Path    *string `json:"path,omitempty"`
+}
+
+// FFmpegConfigView defines model for FFmpegConfigView.
+type FFmpegConfigView struct {
+	Enabled bool `json:"enabled"`
+
+	// Found Whether ffprobe actually resolves in this process right now.
+	// Reflects the path this process booted with, not any value from a
+	// PATCH that has not yet been picked up by a restart.
+	Found *bool `json:"found,omitempty"`
+
+	// Path Directory holding the ffmpeg-suite binaries; empty resolves via
+	// $PATH.
+	Path string `json:"path"`
+
+	// ResolvedPath Absolute path the prober resolved, when found is true.
+	ResolvedPath *string `json:"resolved_path,omitempty"`
+
+	// RestartRequired True when a path change is pending a process restart. The same
+	// process-wide flag OIDC provider mutations set — see
+	// OIDCProviderListView.restart_required.
+	RestartRequired bool `json:"restart_required"`
 }
 
 // HistoryEntry defines model for HistoryEntry.
@@ -2110,11 +2327,44 @@ type HistoryEntry struct {
 // HistoryEntryStatus defines model for HistoryEntry.Status.
 type HistoryEntryStatus string
 
+// HoldReason One import verification check a held download failed.
+type HoldReason struct {
+	Actual   *string         `json:"actual,omitempty"`
+	Check    HoldReasonCheck `json:"check"`
+	Expected *string         `json:"expected,omitempty"`
+	File     string          `json:"file"`
+}
+
+// HoldReasonCheck defines model for HoldReason.Check.
+type HoldReasonCheck string
+
 // IgnorePendingRequest defines model for IgnorePendingRequest.
 type IgnorePendingRequest struct {
 	// RemoveTorrent When true, also remove the proposed torrent from its download
 	// client.
 	RemoveTorrent *bool `json:"remove_torrent,omitempty"`
+}
+
+// ImportBulkDecisionRequest defines model for ImportBulkDecisionRequest.
+type ImportBulkDecisionRequest struct {
+	// Classification Restrict to rows with this classification.
+	Classification *ImportBulkDecisionRequestClassification `json:"classification,omitempty"`
+	Decision       ImportBulkDecisionRequestDecision        `json:"decision"`
+
+	// Ids Restrict to these row ids. Combined with classification as AND.
+	Ids *[]uint32 `json:"ids,omitempty"`
+}
+
+// ImportBulkDecisionRequestClassification Restrict to rows with this classification.
+type ImportBulkDecisionRequestClassification string
+
+// ImportBulkDecisionRequestDecision defines model for ImportBulkDecisionRequest.Decision.
+type ImportBulkDecisionRequestDecision string
+
+// ImportBulkDecisionResult defines model for ImportBulkDecisionResult.
+type ImportBulkDecisionResult struct {
+	// Updated Number of rows whose decision was set.
+	Updated int `json:"updated"`
 }
 
 // ImportScan defines model for ImportScan.
@@ -2366,6 +2616,10 @@ type JWTRotated struct {
 // LibraryConfigPatch Only provided fields are applied.
 type LibraryConfigPatch struct {
 	MonitorSpecials *bool `json:"monitor_specials,omitempty"`
+
+	// Probe Import-time verification against ffprobe results; when patched, only
+	// provided fields are applied.
+	Probe *ProbeConfig `json:"probe,omitempty"`
 }
 
 // LibraryConfigView defines model for LibraryConfigView.
@@ -2373,6 +2627,10 @@ type LibraryConfigView struct {
 	// MonitorSpecials Monitor season 0 (specials) when a series is added or a refresh
 	// discovers the season. Applies to newly seeded seasons only.
 	MonitorSpecials bool `json:"monitor_specials"`
+
+	// Probe Import-time verification against ffprobe results; when patched, only
+	// provided fields are applied.
+	Probe *ProbeConfig `json:"probe,omitempty"`
 }
 
 // LookupDetail Everything a provider knows about one lookup result beyond what the
@@ -2406,6 +2664,14 @@ type MediaFile struct {
 	Format *string `json:"format,omitempty"`
 	Id     uint32  `json:"id"`
 
+	// MediaInfo Technical details probed from the file with ffprobe. Absent when the
+	// file hasn't been probed yet, probing is disabled, or the probe was
+	// attempted and failed — probed_at is stamped internally on a failed
+	// probe so the file isn't retried, so null here does not imply this
+	// will populate on its own. Fall back to the record's parsed_* fields
+	// when this is null.
+	MediaInfo *MediaInfo `json:"media_info,omitempty"`
+
 	// ParsedCodec Video codec (x264/HEVC/AV1/…) parsed from the file's basename at response time.
 	ParsedCodec *string `json:"parsed_codec,omitempty"`
 
@@ -2418,6 +2684,41 @@ type MediaFile struct {
 	Quality      *string `json:"quality,omitempty"`
 	ReleaseGroup *string `json:"release_group,omitempty"`
 	Size         int64   `json:"size"`
+}
+
+// MediaInfo Technical details probed from the file with ffprobe. Absent when the
+// file hasn't been probed yet, probing is disabled, or the probe was
+// attempted and failed — probed_at is stamped internally on a failed
+// probe so the file isn't retried, so null here does not imply this
+// will populate on its own. Fall back to the record's parsed_* fields
+// when this is null.
+type MediaInfo struct {
+	// AudioChannels Example: 6
+	AudioChannels *int `json:"audio_channels,omitempty"`
+
+	// AudioCodec Example: eac3
+	AudioCodec *string `json:"audio_codec,omitempty"`
+
+	// Bitrate Overall bitrate in bits per second.
+	//
+	// Example: 24500000
+	Bitrate *int `json:"bitrate,omitempty"`
+
+	// Container Example: matroska
+	Container string `json:"container"`
+
+	// DurationSeconds Example: 8130
+	DurationSeconds int `json:"duration_seconds"`
+
+	// Height Example: 1608
+	Height   int       `json:"height"`
+	ProbedAt time.Time `json:"probed_at"`
+
+	// VideoCodec Example: hevc
+	VideoCodec string `json:"video_codec"`
+
+	// Width Example: 3840
+	Width int `json:"width"`
 }
 
 // MediaServer defines model for MediaServer.
@@ -2506,8 +2807,8 @@ type Movie struct {
 	Genres *[]string `json:"genres,omitempty"`
 	Id     uint32    `json:"id"`
 
-	// MediaFiles Files attached to this movie. Only populated by GET /movies/{id};
-	// absent in list responses.
+	// MediaFiles Files attached to this movie. Populated by GET /movies and
+	// GET /movies/{id}; absent when the movie has no files on disk.
 	MediaFiles *[]MediaFile `json:"media_files,omitempty"`
 
 	// Monitored Whether Streamline auto-searches and upgrades this title.
@@ -2624,10 +2925,22 @@ type PatchSeriesRequest struct {
 	Monitored      *bool                     `json:"monitored,omitempty"`
 	Preset         *PatchSeriesRequestPreset `json:"preset,omitempty"`
 	QualityProfile *string                   `json:"quality_profile,omitempty"`
+
+	// Type Overrides the provider-inferred series type. The type decides
+	// whether episode files match by season/episode or by absolute
+	// number, so a wrong inference mis-matches every file. Set here it
+	// survives a metadata refresh.
+	Type *PatchSeriesRequestType `json:"type,omitempty"`
 }
 
 // PatchSeriesRequestPreset defines model for PatchSeriesRequest.Preset.
 type PatchSeriesRequestPreset string
+
+// PatchSeriesRequestType Overrides the provider-inferred series type. The type decides
+// whether episode files match by season/episode or by absolute
+// number, so a wrong inference mis-matches every file. Set here it
+// survives a metadata refresh.
+type PatchSeriesRequestType string
 
 // PathMigration defines model for PathMigration.
 type PathMigration struct {
@@ -2762,8 +3075,22 @@ type PlayOnLinkList struct {
 	Items []PlayOnLink `json:"items"`
 }
 
+// ProbeConfig Import-time verification against ffprobe results; when patched, only
+// provided fields are applied.
+type ProbeConfig struct {
+	// AlwaysAsk Hold every import for a decision, even when every check passes.
+	AlwaysAsk *bool `json:"always_ask,omitempty"`
+
+	// MinDurationRatio A file shorter than this share of the expected runtime fails the
+	// duration check.
+	MinDurationRatio *float64 `json:"min_duration_ratio,omitempty"`
+}
+
 // QualityProfile defines model for QualityProfile.
 type QualityProfile struct {
+	// AllowedCodecs ffprobe video codec names ("hevc", "av1"). A grab whose file uses
+	// anything else is held for a decision. Empty means any codec.
+	AllowedCodecs       *[]string                         `json:"allowed_codecs,omitempty"`
 	MinResolution       QualityProfileMinResolution       `json:"min_resolution"`
 	Name                string                            `json:"name"`
 	PreferredResolution QualityProfilePreferredResolution `json:"preferred_resolution"`
@@ -2778,6 +3105,10 @@ type QualityProfilePreferredResolution string
 
 // QualityProfileCreate defines model for QualityProfileCreate.
 type QualityProfileCreate struct {
+	// AllowedCodecs ffprobe video codec names ("hevc", "av1"). Empty means any codec.
+	// On update, omitting this field leaves the existing list
+	// untouched.
+	AllowedCodecs       *[]string                               `json:"allowed_codecs,omitempty"`
 	MinResolution       *QualityProfileCreateMinResolution      `json:"min_resolution,omitempty"`
 	Name                string                                  `json:"name"`
 	PreferredResolution QualityProfileCreatePreferredResolution `json:"preferred_resolution"`
@@ -2798,22 +3129,44 @@ type QueueEntry struct {
 
 	// Episode Show + S/E context for a TV download record (queue/history rows render
 	// "<show> · SxxExx" from it). Absent on movie records.
-	Episode       *EpisodeRef      `json:"episode,omitempty"`
-	Eta           *int64           `json:"eta,omitempty"`
-	FailureReason *string          `json:"failure_reason,omitempty"`
-	Id            uint32           `json:"id"`
-	Indexer       *string          `json:"indexer,omitempty"`
-	Movie         Movie            `json:"movie"`
-	Progress      float64          `json:"progress"`
-	Quality       *string          `json:"quality,omitempty"`
-	ReleaseGroup  *string          `json:"release_group,omitempty"`
-	Size          int64            `json:"size"`
-	Status        QueueEntryStatus `json:"status"`
-	Title         string           `json:"title"`
+	Episode       *EpisodeRef `json:"episode,omitempty"`
+	Eta           *int64      `json:"eta,omitempty"`
+	FailureReason *string     `json:"failure_reason,omitempty"`
+
+	// HoldReasons Present only on a held entry, one item per failed check.
+	HoldReasons  *[]HoldReason `json:"hold_reasons,omitempty"`
+	Id           uint32        `json:"id"`
+	Indexer      *string       `json:"indexer,omitempty"`
+	Movie        Movie         `json:"movie"`
+	Progress     float64       `json:"progress"`
+	Quality      *string       `json:"quality,omitempty"`
+	ReleaseGroup *string       `json:"release_group,omitempty"`
+	Size         int64         `json:"size"`
+
+	// Status "held" means the download finished but failed import verification
+	// and is waiting on a decision (POST /downloads/{id}/resolve).
+	Status QueueEntryStatus `json:"status"`
+	Title  string           `json:"title"`
 }
 
-// QueueEntryStatus defines model for QueueEntry.Status.
+// QueueEntryStatus "held" means the download finished but failed import verification
+// and is waiting on a decision (POST /downloads/{id}/resolve).
 type QueueEntryStatus string
+
+// ReidentifyResult defines model for ReidentifyResult.
+type ReidentifyResult struct {
+	Id uint32 `json:"id"`
+
+	// Renamed Number of files moved into the new title's path.
+	Renamed int `json:"renamed"`
+
+	// Title Title as it stands after the metadata refresh.
+	Title string `json:"title"`
+
+	// Unmatched Series only. Paths still on disk whose season/episode number has no
+	// counterpart in the new show; their database rows were dropped.
+	Unmatched *[]string `json:"unmatched,omitempty"`
+}
 
 // RenameOperation defines model for RenameOperation.
 type RenameOperation struct {
@@ -2907,6 +3260,16 @@ type ResetPasswordRequest struct {
 	// NewPassword Replacement password. Must meet the local password policy.
 	NewPassword string `json:"new_password"`
 }
+
+// ResolveHeldRequest How to release a held download. "import" imports it as-is (skipping
+// verification on the re-run), "regrab" deletes it and re-searches,
+// "delete" deletes it and leaves the media alone.
+type ResolveHeldRequest struct {
+	Action ResolveHeldRequestAction `json:"action"`
+}
+
+// ResolveHeldRequestAction defines model for ResolveHeldRequest.Action.
+type ResolveHeldRequestAction string
 
 // RotateJWTSecretRequest defines model for RotateJWTSecretRequest.
 type RotateJWTSecretRequest struct {
@@ -3017,6 +3380,13 @@ type SeriesLookupResultList struct {
 	Items []SeriesLookupResult `json:"items"`
 }
 
+// SeriesRef Minimal series identity for feed rows. Deliberately not the full TVShow
+// schema, which carries the whole season/episode tree.
+type SeriesRef struct {
+	Id    uint32 `json:"id"`
+	Title string `json:"title"`
+}
+
 // SeriesRenamePlan defines model for SeriesRenamePlan.
 type SeriesRenamePlan struct {
 	Operations []RenameOperation `json:"operations"`
@@ -3054,10 +3424,14 @@ type SystemInfo struct {
 	DbPath    string     `json:"db_path"`
 
 	// DbSize Human-readable file size, empty when stat fails.
-	DbSize    *string    `json:"db_size,omitempty"`
-	DbUsage   *DiskUsage `json:"db_usage,omitempty"`
-	GoOsArch  string     `json:"go_os_arch"`
-	GoVersion string     `json:"go_version"`
+	DbSize  *string    `json:"db_size,omitempty"`
+	DbUsage *DiskUsage `json:"db_usage,omitempty"`
+
+	// FfmpegWarn True when ffmpeg.enabled is true and ffprobe was not found.
+	// Absent when ffmpeg is disabled — the operator opted out.
+	FfmpegWarn *bool  `json:"ffmpeg_warn,omitempty"`
+	GoOsArch   string `json:"go_os_arch"`
+	GoVersion  string `json:"go_version"`
 
 	// HttpsWarn True when public_url is plain http://.
 	HttpsWarn bool `json:"https_warn"`
@@ -3368,6 +3742,9 @@ type ActivityLimit = int
 // ActivityMovieID defines model for ActivityMovieID.
 type ActivityMovieID = uint32
 
+// ActivitySeriesID defines model for ActivitySeriesID.
+type ActivitySeriesID = uint32
+
 // ActivitySince defines model for ActivitySince.
 type ActivitySince = time.Time
 
@@ -3455,6 +3832,9 @@ type SeriesLimit = uint16
 // SeriesLookupQuery defines model for SeriesLookupQuery.
 type SeriesLookupQuery = string
 
+// SeriesOrder defines model for SeriesOrder.
+type SeriesOrder string
+
 // SeriesPage defines model for SeriesPage.
 type SeriesPage = uint32
 
@@ -3502,6 +3882,9 @@ type BadRequest = Error
 
 // Conflict defines model for Conflict.
 type Conflict = Error
+
+// FFmpegConfig defines model for FFmpegConfig.
+type FFmpegConfig = FFmpegConfigView
 
 // Forbidden defines model for Forbidden.
 type Forbidden = Error
@@ -3552,6 +3935,9 @@ type OIDCProviderCreated = OIDCProviderView
 
 // OIDCProviderList defines model for OIDCProviderList.
 type OIDCProviderList = OIDCProviderListView
+
+// PayloadTooLarge defines model for PayloadTooLarge.
+type PayloadTooLarge = Error
 
 // RequestCountsResponse defines model for RequestCountsResponse.
 type RequestCountsResponse = RequestCounts
@@ -3618,6 +4004,9 @@ type AddTorrent = AddTorrentRequest
 
 // ApproveRequest defines model for ApproveRequest.
 type ApproveRequest = ApproveRequestRequest
+
+// BulkUpdateImportDecisions defines model for BulkUpdateImportDecisions.
+type BulkUpdateImportDecisions = ImportBulkDecisionRequest
 
 // ChangePassword defines model for ChangePassword.
 type ChangePassword = ChangePasswordRequest
@@ -3688,6 +4077,9 @@ type StartPathMigration = PathMigrationRequest
 // UpdateAuthConfig Only provided fields are applied.
 type UpdateAuthConfig = AuthConfigPatch
 
+// UpdateFFmpegConfig Only provided fields are applied. found and resolved_path are derived and read-only — sending them has no effect.
+type UpdateFFmpegConfig = FFmpegConfigPatch
+
 // UpdateImportFileDecision defines model for UpdateImportFileDecision.
 type UpdateImportFileDecision = ImportScanFileDecisionRequest
 
@@ -3714,10 +4106,13 @@ type UpdateOIDCProvider = OIDCProviderPatch
 type ListActivityParams struct {
 	Type    *ActivityType    `form:"type,omitempty" json:"type,omitempty"`
 	MovieId *ActivityMovieID `form:"movie_id,omitempty" json:"movie_id,omitempty"`
-	Since   *ActivitySince   `form:"since,omitempty" json:"since,omitempty"`
-	Before  *ActivityBefore  `form:"before,omitempty" json:"before,omitempty"`
-	Limit   *ActivityLimit   `form:"limit,omitempty" json:"limit,omitempty"`
-	Cursor  *ActivityCursor  `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// SeriesId Matches both the series' own events and those of its episodes.
+	SeriesId *ActivitySeriesID `form:"series_id,omitempty" json:"series_id,omitempty"`
+	Since    *ActivitySince    `form:"since,omitempty" json:"since,omitempty"`
+	Before   *ActivityBefore   `form:"before,omitempty" json:"before,omitempty"`
+	Limit    *ActivityLimit    `form:"limit,omitempty" json:"limit,omitempty"`
+	Cursor   *ActivityCursor   `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
 // ListActivityParamsType defines parameters for ListActivity.
@@ -3775,6 +4170,11 @@ type DeleteMovieParams struct {
 	DeleteFiles *DeleteMovieFiles `form:"delete_files,omitempty" json:"delete_files,omitempty"`
 }
 
+// ReidentifyMovieJSONBody defines parameters for ReidentifyMovie.
+type ReidentifyMovieJSONBody struct {
+	TmdbId uint32 `json:"tmdb_id"`
+}
+
 // RenameMovieFilesParams defines parameters for RenameMovieFiles.
 type RenameMovieFilesParams struct {
 	// Preview When true, returns the rename plan without applying it.
@@ -3818,7 +4218,14 @@ type ListSeriesParams struct {
 
 	// Sort Sort key (recent/title/year/rating/episodes).
 	Sort *SeriesSort `form:"sort,omitempty" json:"sort,omitempty"`
+
+	// Order Sort direction. Omitted, each key uses the direction its name implies:
+	// `title` ascending, everything else descending (newest, highest, most).
+	Order *ListSeriesParamsOrder `form:"order,omitempty" json:"order,omitempty"`
 }
+
+// ListSeriesParamsOrder defines parameters for ListSeries.
+type ListSeriesParamsOrder string
 
 // LookupSeriesParams defines parameters for LookupSeries.
 type LookupSeriesParams struct {
@@ -3830,6 +4237,11 @@ type LookupSeriesParams struct {
 type DeleteSeriesParams struct {
 	// DeleteFiles When true, also delete attached media files from disk.
 	DeleteFiles *DeleteSeriesFiles `form:"delete_files,omitempty" json:"delete_files,omitempty"`
+}
+
+// ReidentifySeriesJSONBody defines parameters for ReidentifySeries.
+type ReidentifySeriesJSONBody struct {
+	TvdbId uint32 `json:"tvdb_id"`
 }
 
 // RenameSeriesFilesParams defines parameters for RenameSeriesFiles.
@@ -3897,6 +4309,9 @@ type ChangePasswordJSONRequestBody = ChangePasswordRequest
 // UpdateConfigAuthJSONRequestBody defines body for UpdateConfigAuth for application/json ContentType.
 type UpdateConfigAuthJSONRequestBody = AuthConfigPatch
 
+// UpdateConfigFfmpegJSONRequestBody defines body for UpdateConfigFfmpeg for application/json ContentType.
+type UpdateConfigFfmpegJSONRequestBody = FFmpegConfigPatch
+
 // UpdateConfigLibraryJSONRequestBody defines body for UpdateConfigLibrary for application/json ContentType.
 type UpdateConfigLibraryJSONRequestBody = LibraryConfigPatch
 
@@ -3915,6 +4330,9 @@ type TestDraftDownloadClientJSONRequestBody = DownloadClientCreate
 // UpdateDownloadClientJSONRequestBody defines body for UpdateDownloadClient for application/json ContentType.
 type UpdateDownloadClientJSONRequestBody = DownloadClientCreate
 
+// ResolveHeldDownloadJSONRequestBody defines body for ResolveHeldDownload for application/json ContentType.
+type ResolveHeldDownloadJSONRequestBody = ResolveHeldRequest
+
 // CreateIndexerJSONRequestBody defines body for CreateIndexer for application/json ContentType.
 type CreateIndexerJSONRequestBody = IndexerCreate
 
@@ -3926,6 +4344,9 @@ type UpdateIndexerJSONRequestBody = IndexerCreate
 
 // StartImportJSONRequestBody defines body for StartImport for application/json ContentType.
 type StartImportJSONRequestBody = ImportScanCreateRequest
+
+// BulkUpdateImportDecisionsJSONRequestBody defines body for BulkUpdateImportDecisions for application/json ContentType.
+type BulkUpdateImportDecisionsJSONRequestBody = ImportBulkDecisionRequest
 
 // UpdateImportFileDecisionJSONRequestBody defines body for UpdateImportFileDecision for application/json ContentType.
 type UpdateImportFileDecisionJSONRequestBody = ImportScanFileDecisionRequest
@@ -3963,6 +4384,9 @@ type DeleteMovieFileJSONRequestBody = DeleteFileRequest
 // GrabMovieReleaseJSONRequestBody defines body for GrabMovieRelease for application/json ContentType.
 type GrabMovieReleaseJSONRequestBody = SearchResult
 
+// ReidentifyMovieJSONRequestBody defines body for ReidentifyMovie for application/json ContentType.
+type ReidentifyMovieJSONRequestBody ReidentifyMovieJSONBody
+
 // CreateQualityProfileJSONRequestBody defines body for CreateQualityProfile for application/json ContentType.
 type CreateQualityProfileJSONRequestBody = QualityProfileCreate
 
@@ -3998,6 +4422,9 @@ type GrabEpisodeReleaseJSONRequestBody = SearchResult
 
 // GrabSeriesReleaseJSONRequestBody defines body for GrabSeriesRelease for application/json ContentType.
 type GrabSeriesReleaseJSONRequestBody = SearchResult
+
+// ReidentifySeriesJSONRequestBody defines body for ReidentifySeries for application/json ContentType.
+type ReidentifySeriesJSONRequestBody ReidentifySeriesJSONBody
 
 // PatchSeasonJSONRequestBody defines body for PatchSeason for application/json ContentType.
 type PatchSeasonJSONRequestBody = MonitorToggleRequest
@@ -4091,7 +4518,7 @@ type ServerInterface interface {
 	// DeleteMySession Revoke a session owned by current user
 	// (DELETE /auth/me/sessions/{id})
 	DeleteMySession(w http.ResponseWriter, r *http.Request, id ResourceID)
-	// ChangePassword Change current user's password; revokes all other sessions
+	// ChangePassword Change current user's password; revokes all other sessions and all API keys
 	// (POST /auth/password)
 	ChangePassword(w http.ResponseWriter, r *http.Request)
 	// ListUpcomingReleases Upcoming wanted-movie digital releases in [from, to).
@@ -4103,6 +4530,12 @@ type ServerInterface interface {
 	// UpdateConfigAuth Patch auth configuration (admin)
 	// (PATCH /config/auth)
 	UpdateConfigAuth(w http.ResponseWriter, r *http.Request)
+	// GetConfigFfmpeg Get ffmpeg configuration (admin)
+	// (GET /config/ffmpeg)
+	GetConfigFfmpeg(w http.ResponseWriter, r *http.Request)
+	// UpdateConfigFfmpeg Patch ffmpeg configuration (admin)
+	// (PATCH /config/ffmpeg)
+	UpdateConfigFfmpeg(w http.ResponseWriter, r *http.Request)
 	// GetConfigLibrary Get library configuration (admin)
 	// (GET /config/library)
 	GetConfigLibrary(w http.ResponseWriter, r *http.Request)
@@ -4142,6 +4575,9 @@ type ServerInterface interface {
 	// TestDownloadClient Test download client connection
 	// (POST /download-clients/{name}/test)
 	TestDownloadClient(w http.ResponseWriter, r *http.Request, name ResourceName)
+	// ResolveHeldDownload Release a download held by import verification.
+	// (POST /downloads/{id}/resolve)
+	ResolveHeldDownload(w http.ResponseWriter, r *http.Request, id ResourceID)
 	// ListIndexers List configured indexers
 	// (GET /indexers)
 	ListIndexers(w http.ResponseWriter, r *http.Request)
@@ -4178,6 +4614,9 @@ type ServerInterface interface {
 
 	// (POST /library/imports/{id}/commit)
 	CommitImport(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// BulkUpdateImportDecisions Apply one decision across a scan
+	// (POST /library/imports/{id}/decisions)
+	BulkUpdateImportDecisions(w http.ResponseWriter, r *http.Request, id ResourceID)
 
 	// (GET /library/imports/{id}/files)
 	ListImportFiles(w http.ResponseWriter, r *http.Request, id ResourceID, params ListImportFilesParams)
@@ -4259,6 +4698,9 @@ type ServerInterface interface {
 	// RefreshMovieMetadata Re-fetch TMDB metadata for one movie
 	// (POST /movies/{id}/refresh-metadata)
 	RefreshMovieMetadata(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// ReidentifyMovie Point this movie at a different TMDB title
+	// (POST /movies/{id}/reidentify)
+	ReidentifyMovie(w http.ResponseWriter, r *http.Request, id ResourceID)
 	// RenameMovieFiles Rename movie files to match the library naming pattern
 	// (POST /movies/{id}/rename)
 	RenameMovieFiles(w http.ResponseWriter, r *http.Request, id ResourceID, params RenameMovieFilesParams)
@@ -4376,6 +4818,9 @@ type ServerInterface interface {
 	// RefreshSeriesMetadata Re-fetch TVDB metadata for one series
 	// (POST /series/{id}/refresh-metadata)
 	RefreshSeriesMetadata(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// ReidentifySeries Point this series at a different TVDB show
+	// (POST /series/{id}/reidentify)
+	ReidentifySeries(w http.ResponseWriter, r *http.Request, id ResourceID)
 	// RenameSeriesFiles Rename series episode files to match the library naming pattern
 	// (POST /series/{id}/rename)
 	RenameSeriesFiles(w http.ResponseWriter, r *http.Request, id ResourceID, params RenameSeriesFilesParams)
@@ -4586,7 +5031,7 @@ func (_ Unimplemented) DeleteMySession(w http.ResponseWriter, r *http.Request, i
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// ChangePassword Change current user's password; revokes all other sessions
+// ChangePassword Change current user's password; revokes all other sessions and all API keys
 // (POST /auth/password)
 func (_ Unimplemented) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -4607,6 +5052,18 @@ func (_ Unimplemented) GetConfigAuth(w http.ResponseWriter, r *http.Request) {
 // UpdateConfigAuth Patch auth configuration (admin)
 // (PATCH /config/auth)
 func (_ Unimplemented) UpdateConfigAuth(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetConfigFfmpeg Get ffmpeg configuration (admin)
+// (GET /config/ffmpeg)
+func (_ Unimplemented) GetConfigFfmpeg(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// UpdateConfigFfmpeg Patch ffmpeg configuration (admin)
+// (PATCH /config/ffmpeg)
+func (_ Unimplemented) UpdateConfigFfmpeg(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -4688,6 +5145,12 @@ func (_ Unimplemented) TestDownloadClient(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// ResolveHeldDownload Release a download held by import verification.
+// (POST /downloads/{id}/resolve)
+func (_ Unimplemented) ResolveHeldDownload(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // ListIndexers List configured indexers
 // (GET /indexers)
 func (_ Unimplemented) ListIndexers(w http.ResponseWriter, r *http.Request) {
@@ -4751,6 +5214,12 @@ func (_ Unimplemented) CancelImport(w http.ResponseWriter, r *http.Request, id R
 
 // (POST /library/imports/{id}/commit)
 func (_ Unimplemented) CommitImport(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// BulkUpdateImportDecisions Apply one decision across a scan
+// (POST /library/imports/{id}/decisions)
+func (_ Unimplemented) BulkUpdateImportDecisions(w http.ResponseWriter, r *http.Request, id ResourceID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -4909,6 +5378,12 @@ func (_ Unimplemented) GetMovieRecommendations(w http.ResponseWriter, r *http.Re
 // RefreshMovieMetadata Re-fetch TMDB metadata for one movie
 // (POST /movies/{id}/refresh-metadata)
 func (_ Unimplemented) RefreshMovieMetadata(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ReidentifyMovie Point this movie at a different TMDB title
+// (POST /movies/{id}/reidentify)
+func (_ Unimplemented) ReidentifyMovie(w http.ResponseWriter, r *http.Request, id ResourceID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -5146,6 +5621,12 @@ func (_ Unimplemented) RefreshSeriesMetadata(w http.ResponseWriter, r *http.Requ
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// ReidentifySeries Point this series at a different TVDB show
+// (POST /series/{id}/reidentify)
+func (_ Unimplemented) ReidentifySeries(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // RenameSeriesFiles Rename series episode files to match the library naming pattern
 // (POST /series/{id}/rename)
 func (_ Unimplemented) RenameSeriesFiles(w http.ResponseWriter, r *http.Request, id ResourceID, params RenameSeriesFilesParams) {
@@ -5318,6 +5799,19 @@ func (siw *ServerInterfaceWrapper) ListActivity(w http.ResponseWriter, r *http.R
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "movie_id"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "movie_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "series_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "series_id", r.URL.Query(), &params.SeriesId, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "series_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "series_id", Err: err})
 		}
 		return
 	}
@@ -5933,6 +6427,34 @@ func (siw *ServerInterfaceWrapper) UpdateConfigAuth(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// GetConfigFfmpeg operation middleware
+func (siw *ServerInterfaceWrapper) GetConfigFfmpeg(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetConfigFfmpeg(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateConfigFfmpeg operation middleware
+func (siw *ServerInterfaceWrapper) UpdateConfigFfmpeg(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateConfigFfmpeg(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetConfigLibrary operation middleware
 func (siw *ServerInterfaceWrapper) GetConfigLibrary(w http.ResponseWriter, r *http.Request) {
 
@@ -6178,6 +6700,32 @@ func (siw *ServerInterfaceWrapper) TestDownloadClient(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.TestDownloadClient(w, r, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ResolveHeldDownload operation middleware
+func (siw *ServerInterfaceWrapper) ResolveHeldDownload(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ResolveHeldDownload(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -6462,6 +7010,32 @@ func (siw *ServerInterfaceWrapper) CommitImport(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CommitImport(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// BulkUpdateImportDecisions operation middleware
+func (siw *ServerInterfaceWrapper) BulkUpdateImportDecisions(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.BulkUpdateImportDecisions(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -7226,6 +7800,32 @@ func (siw *ServerInterfaceWrapper) RefreshMovieMetadata(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// ReidentifyMovie operation middleware
+func (siw *ServerInterfaceWrapper) ReidentifyMovie(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReidentifyMovie(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // RenameMovieFiles operation middleware
 func (siw *ServerInterfaceWrapper) RenameMovieFiles(w http.ResponseWriter, r *http.Request) {
 
@@ -7907,6 +8507,19 @@ func (siw *ServerInterfaceWrapper) ListSeries(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	// ------------- Optional query parameter "order" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "order", r.URL.Query(), &params.Order, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "order"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "order", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListSeries(w, r, params)
 	}))
@@ -8348,6 +8961,32 @@ func (siw *ServerInterfaceWrapper) RefreshSeriesMetadata(w http.ResponseWriter, 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RefreshSeriesMetadata(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReidentifySeries operation middleware
+func (siw *ServerInterfaceWrapper) ReidentifySeries(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReidentifySeries(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -9177,6 +9816,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/movies/{id}/search-now", wrapper.SearchMovieNow)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/movies/{id}/reidentify", wrapper.ReidentifyMovie)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/movies/{id}/recommendations", wrapper.GetMovieRecommendations)
 	})
 	r.Group(func(r chi.Router) {
@@ -9241,6 +9883,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/series/{id}/search", wrapper.SearchSeries)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/series/{id}/reidentify", wrapper.ReidentifySeries)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/series/{id}/browse", wrapper.BrowseSeriesReleases)
@@ -9408,6 +10053,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Patch(options.BaseURL+"/config/library", wrapper.UpdateConfigLibrary)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/config/ffmpeg", wrapper.GetConfigFfmpeg)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/config/ffmpeg", wrapper.UpdateConfigFfmpeg)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/config/oidc", wrapper.ListOIDCProviders)
 	})
 	r.Group(func(r chi.Router) {
@@ -9498,6 +10149,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Patch(options.BaseURL+"/library/imports/{id}/shows/{showId}", wrapper.UpdateImportShowDecision)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/library/imports/{id}/decisions", wrapper.BulkUpdateImportDecisions)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/library/path-migration", wrapper.GetPathMigration)
 	})
 	r.Group(func(r chi.Router) {
@@ -9523,6 +10177,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/activity/queue/{id}/resume", wrapper.ResumeQueueItem)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/downloads/{id}/resolve", wrapper.ResolveHeldDownload)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/activity/history", wrapper.ListDownloadHistory)
@@ -9596,10 +10253,14 @@ type DownloadQueueJSONResponse DownloadQueue
 type EpisodeUpdatedResponse struct {
 }
 
+type FFmpegConfigJSONResponse FFmpegConfigView
+
 type FileDeletedResponse struct {
 }
 
 type ForbiddenJSONResponse Error
+
+type ImportBulkDecisionResultJSONResponse ImportBulkDecisionResult
 
 type ImportCancelledResponse struct {
 }
@@ -9673,7 +10334,11 @@ type PathMigrationPreviewJSONResponse PathMigrationPreview
 
 type PathMigrationRootListJSONResponse PathMigrationRootList
 
+type PayloadTooLargeJSONResponse Error
+
 type PendingListJSONResponse PendingList
+
+type ReidentifyResultJSONResponse ReidentifyResult
 
 type RequestCountsResponseJSONResponse RequestCounts
 
@@ -9984,6 +10649,20 @@ func (response IgnorePending404JSONResponse) VisitIgnorePendingResponse(w http.R
 	return err
 }
 
+type IgnorePending413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response IgnorePending413JSONResponse) VisitIgnorePendingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type IgnorePending500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response IgnorePending500JSONResponse) VisitIgnorePendingResponse(w http.ResponseWriter) error {
@@ -10099,6 +10778,20 @@ func (response ReplacePending404JSONResponse) VisitReplacePendingResponse(w http
 	return err
 }
 
+type ReplacePending413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response ReplacePending413JSONResponse) VisitReplacePendingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ReplacePending500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response ReplacePending500JSONResponse) VisitReplacePendingResponse(w http.ResponseWriter) error {
@@ -10177,6 +10870,20 @@ func (response CancelQueueItem404JSONResponse) VisitCancelQueueItemResponse(w ht
 	return err
 }
 
+type CancelQueueItem409JSONResponse struct{ ConflictJSONResponse }
+
+func (response CancelQueueItem409JSONResponse) VisitCancelQueueItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type CancelQueueItem500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response CancelQueueItem500JSONResponse) VisitCancelQueueItemResponse(w http.ResponseWriter) error {
@@ -10234,6 +10941,20 @@ func (response PauseQueueItem404JSONResponse) VisitPauseQueueItemResponse(w http
 	return err
 }
 
+type PauseQueueItem409JSONResponse struct{ ConflictJSONResponse }
+
+func (response PauseQueueItem409JSONResponse) VisitPauseQueueItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type PauseQueueItem500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response PauseQueueItem500JSONResponse) VisitPauseQueueItemResponse(w http.ResponseWriter) error {
@@ -10287,6 +11008,20 @@ func (response ResumeQueueItem404JSONResponse) VisitResumeQueueItemResponse(w ht
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ResumeQueueItem409JSONResponse struct{ ConflictJSONResponse }
+
+func (response ResumeQueueItem409JSONResponse) VisitResumeQueueItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -10376,6 +11111,20 @@ func (response CreateInvite403JSONResponse) VisitCreateInviteResponse(w http.Res
 	return err
 }
 
+type CreateInvite413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response CreateInvite413JSONResponse) VisitCreateInviteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type RevokeInviteRequestObject struct {
 	Id ResourceID `json:"id"`
 }
@@ -10452,6 +11201,20 @@ func (response RotateJWTSecret403JSONResponse) VisitRotateJWTSecretResponse(w ht
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RotateJWTSecret413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response RotateJWTSecret413JSONResponse) VisitRotateJWTSecretResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -10541,6 +11304,34 @@ func (response UpdateMe401JSONResponse) VisitUpdateMeResponse(w http.ResponseWri
 	return err
 }
 
+type UpdateMe403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpdateMe403JSONResponse) VisitUpdateMeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateMe413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response UpdateMe413JSONResponse) VisitUpdateMeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListMyApiKeysRequestObject struct {
 }
 
@@ -10612,6 +11403,34 @@ func (response CreateMyApiKey401JSONResponse) VisitCreateMyApiKeyResponse(w http
 	return err
 }
 
+type CreateMyApiKey403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response CreateMyApiKey403JSONResponse) VisitCreateMyApiKeyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateMyApiKey413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response CreateMyApiKey413JSONResponse) VisitCreateMyApiKeyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type DeleteMyApiKeyRequestObject struct {
 	Id ResourceID `json:"id"`
 }
@@ -10638,6 +11457,20 @@ func (response DeleteMyApiKey401JSONResponse) VisitDeleteMyApiKeyResponse(w http
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteMyApiKey403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DeleteMyApiKey403JSONResponse) VisitDeleteMyApiKeyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -10721,6 +11554,20 @@ func (response DeleteMySession401JSONResponse) VisitDeleteMySessionResponse(w ht
 	return err
 }
 
+type DeleteMySession403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DeleteMySession403JSONResponse) VisitDeleteMySessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type DeleteMySession404JSONResponse struct{ NotFoundJSONResponse }
 
 func (response DeleteMySession404JSONResponse) VisitDeleteMySessionResponse(w http.ResponseWriter) error {
@@ -10761,6 +11608,34 @@ func (response ChangePassword401JSONResponse) VisitChangePasswordResponse(w http
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ChangePassword403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ChangePassword403JSONResponse) VisitChangePasswordResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ChangePassword413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response ChangePassword413JSONResponse) VisitChangePasswordResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -10888,11 +11763,126 @@ func (response UpdateConfigAuth403JSONResponse) VisitUpdateConfigAuthResponse(w 
 	return err
 }
 
+type UpdateConfigAuth413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response UpdateConfigAuth413JSONResponse) VisitUpdateConfigAuthResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type UpdateConfigAuth422JSONResponse struct {
 	UnprocessableEntityJSONResponse
 }
 
 func (response UpdateConfigAuth422JSONResponse) VisitUpdateConfigAuthResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetConfigFfmpegRequestObject struct {
+}
+
+type GetConfigFfmpegResponseObject interface {
+	VisitGetConfigFfmpegResponse(w http.ResponseWriter) error
+}
+
+type GetConfigFfmpeg200JSONResponse struct{ FFmpegConfigJSONResponse }
+
+func (response GetConfigFfmpeg200JSONResponse) VisitGetConfigFfmpegResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetConfigFfmpeg403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetConfigFfmpeg403JSONResponse) VisitGetConfigFfmpegResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateConfigFfmpegRequestObject struct {
+	Body *UpdateConfigFfmpegJSONRequestBody
+}
+
+type UpdateConfigFfmpegResponseObject interface {
+	VisitUpdateConfigFfmpegResponse(w http.ResponseWriter) error
+}
+
+type UpdateConfigFfmpeg200JSONResponse struct{ FFmpegConfigJSONResponse }
+
+func (response UpdateConfigFfmpeg200JSONResponse) VisitUpdateConfigFfmpegResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateConfigFfmpeg403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpdateConfigFfmpeg403JSONResponse) VisitUpdateConfigFfmpegResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateConfigFfmpeg413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response UpdateConfigFfmpeg413JSONResponse) VisitUpdateConfigFfmpegResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateConfigFfmpeg422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response UpdateConfigFfmpeg422JSONResponse) VisitUpdateConfigFfmpegResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -10971,6 +11961,20 @@ func (response UpdateConfigLibrary403JSONResponse) VisitUpdateConfigLibraryRespo
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateConfigLibrary413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response UpdateConfigLibrary413JSONResponse) VisitUpdateConfigLibraryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -11074,6 +12078,20 @@ func (response CreateOIDCProvider409JSONResponse) VisitCreateOIDCProviderRespons
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateOIDCProvider413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response CreateOIDCProvider413JSONResponse) VisitCreateOIDCProviderResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -11239,6 +12257,20 @@ func (response UpdateOIDCProvider404JSONResponse) VisitUpdateOIDCProviderRespons
 	return err
 }
 
+type UpdateOIDCProvider413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response UpdateOIDCProvider413JSONResponse) VisitUpdateOIDCProviderResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type UpdateOIDCProvider422JSONResponse struct {
 	UnprocessableEntityJSONResponse
 }
@@ -11354,6 +12386,20 @@ func (response CreateDownloadClient409JSONResponse) VisitCreateDownloadClientRes
 	return err
 }
 
+type CreateDownloadClient413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response CreateDownloadClient413JSONResponse) VisitCreateDownloadClientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type CreateDownloadClient422JSONResponse struct {
 	UnprocessableEntityJSONResponse
 }
@@ -11409,6 +12455,20 @@ func (response TestDraftDownloadClient403JSONResponse) VisitTestDraftDownloadCli
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type TestDraftDownloadClient413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response TestDraftDownloadClient413JSONResponse) VisitTestDraftDownloadClientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -11552,6 +12612,20 @@ func (response UpdateDownloadClient404JSONResponse) VisitUpdateDownloadClientRes
 	return err
 }
 
+type UpdateDownloadClient413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response UpdateDownloadClient413JSONResponse) VisitUpdateDownloadClientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type UpdateDownloadClient422JSONResponse struct {
 	UnprocessableEntityJSONResponse
 }
@@ -11644,6 +12718,92 @@ func (response TestDownloadClient422JSONResponse) VisitTestDownloadClientRespons
 type TestDownloadClient500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response TestDownloadClient500JSONResponse) VisitTestDownloadClientResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ResolveHeldDownloadRequestObject struct {
+	Id   ResourceID `json:"id"`
+	Body *ResolveHeldDownloadJSONRequestBody
+}
+
+type ResolveHeldDownloadResponseObject interface {
+	VisitResolveHeldDownloadResponse(w http.ResponseWriter) error
+}
+
+type ResolveHeldDownload204Response = NoContentResponse
+
+func (response ResolveHeldDownload204Response) VisitResolveHeldDownloadResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type ResolveHeldDownload400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ResolveHeldDownload400JSONResponse) VisitResolveHeldDownloadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ResolveHeldDownload403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ResolveHeldDownload403JSONResponse) VisitResolveHeldDownloadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ResolveHeldDownload404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ResolveHeldDownload404JSONResponse) VisitResolveHeldDownloadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ResolveHeldDownload409JSONResponse struct{ ConflictJSONResponse }
+
+func (response ResolveHeldDownload409JSONResponse) VisitResolveHeldDownloadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ResolveHeldDownload500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ResolveHeldDownload500JSONResponse) VisitResolveHeldDownloadResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -11754,6 +12914,20 @@ func (response CreateIndexer409JSONResponse) VisitCreateIndexerResponse(w http.R
 	return err
 }
 
+type CreateIndexer413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response CreateIndexer413JSONResponse) VisitCreateIndexerResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type CreateIndexer422JSONResponse struct {
 	UnprocessableEntityJSONResponse
 }
@@ -11809,6 +12983,20 @@ func (response TestDraftIndexer403JSONResponse) VisitTestDraftIndexerResponse(w 
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type TestDraftIndexer413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response TestDraftIndexer413JSONResponse) VisitTestDraftIndexerResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -11948,6 +13136,20 @@ func (response UpdateIndexer404JSONResponse) VisitUpdateIndexerResponse(w http.R
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateIndexer413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response UpdateIndexer413JSONResponse) VisitUpdateIndexerResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -12137,6 +13339,20 @@ func (response StartImport409JSONResponse) VisitStartImportResponse(w http.Respo
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type StartImport413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response StartImport413JSONResponse) VisitStartImportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -12391,6 +13607,89 @@ func (response CommitImport422JSONResponse) VisitCommitImportResponse(w http.Res
 	return err
 }
 
+type BulkUpdateImportDecisionsRequestObject struct {
+	Id   ResourceID `json:"id"`
+	Body *BulkUpdateImportDecisionsJSONRequestBody
+}
+
+type BulkUpdateImportDecisionsResponseObject interface {
+	VisitBulkUpdateImportDecisionsResponse(w http.ResponseWriter) error
+}
+
+type BulkUpdateImportDecisions200JSONResponse struct {
+	ImportBulkDecisionResultJSONResponse
+}
+
+func (response BulkUpdateImportDecisions200JSONResponse) VisitBulkUpdateImportDecisionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BulkUpdateImportDecisions403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response BulkUpdateImportDecisions403JSONResponse) VisitBulkUpdateImportDecisionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BulkUpdateImportDecisions404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response BulkUpdateImportDecisions404JSONResponse) VisitBulkUpdateImportDecisionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BulkUpdateImportDecisions413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response BulkUpdateImportDecisions413JSONResponse) VisitBulkUpdateImportDecisionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BulkUpdateImportDecisions422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response BulkUpdateImportDecisions422JSONResponse) VisitBulkUpdateImportDecisionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListImportFilesRequestObject struct {
 	Id     ResourceID `json:"id"`
 	Params ListImportFilesParams
@@ -12490,6 +13789,20 @@ func (response UpdateImportFileDecision404JSONResponse) VisitUpdateImportFileDec
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateImportFileDecision413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response UpdateImportFileDecision413JSONResponse) VisitUpdateImportFileDecisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -12597,6 +13910,20 @@ func (response UpdateImportShowDecision404JSONResponse) VisitUpdateImportShowDec
 	return err
 }
 
+type UpdateImportShowDecision413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response UpdateImportShowDecision413JSONResponse) VisitUpdateImportShowDecisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetPathMigrationRequestObject struct {
 }
 
@@ -12682,6 +14009,20 @@ func (response StartPathMigration409JSONResponse) VisitStartPathMigrationRespons
 	return err
 }
 
+type StartPathMigration413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response StartPathMigration413JSONResponse) VisitStartPathMigrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type StartPathMigration422JSONResponse struct {
 	UnprocessableEntityJSONResponse
 }
@@ -12732,6 +14073,20 @@ func (response PreviewPathMigration403JSONResponse) VisitPreviewPathMigrationRes
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PreviewPathMigration413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response PreviewPathMigration413JSONResponse) VisitPreviewPathMigrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -12888,6 +14243,20 @@ func (response CreateMediaServer409JSONResponse) VisitCreateMediaServerResponse(
 	return err
 }
 
+type CreateMediaServer413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response CreateMediaServer413JSONResponse) VisitCreateMediaServerResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type CreateMediaServer422JSONResponse struct {
 	UnprocessableEntityJSONResponse
 }
@@ -12956,6 +14325,20 @@ func (response DiscoverMediaServerSections403JSONResponse) VisitDiscoverMediaSer
 	return err
 }
 
+type DiscoverMediaServerSections413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response DiscoverMediaServerSections413JSONResponse) VisitDiscoverMediaServerSectionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type DiscoverMediaServerSections422JSONResponse struct {
 	UnprocessableEntityJSONResponse
 }
@@ -13011,6 +14394,20 @@ func (response TestDraftMediaServer403JSONResponse) VisitTestDraftMediaServerRes
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type TestDraftMediaServer413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response TestDraftMediaServer413JSONResponse) VisitTestDraftMediaServerResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -13217,6 +14614,20 @@ func (response UpdateMediaServer404JSONResponse) VisitUpdateMediaServerResponse(
 	return err
 }
 
+type UpdateMediaServer413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response UpdateMediaServer413JSONResponse) VisitUpdateMediaServerResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type UpdateMediaServer422JSONResponse struct {
 	UnprocessableEntityJSONResponse
 }
@@ -13406,6 +14817,20 @@ func (response AddMovie409JSONResponse) VisitAddMovieResponse(w http.ResponseWri
 	return err
 }
 
+type AddMovie413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response AddMovie413JSONResponse) VisitAddMovieResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type AddMovie500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response AddMovie500JSONResponse) VisitAddMovieResponse(w http.ResponseWriter) error {
@@ -13589,6 +15014,20 @@ func (response PatchMovie404JSONResponse) VisitPatchMovieResponse(w http.Respons
 	return err
 }
 
+type PatchMovie413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response PatchMovie413JSONResponse) VisitPatchMovieResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type PatchMovie500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response PatchMovie500JSONResponse) VisitPatchMovieResponse(w http.ResponseWriter) error {
@@ -13630,6 +15069,20 @@ func (response DeleteMovieFile404JSONResponse) VisitDeleteMovieFileResponse(w ht
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteMovieFile413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response DeleteMovieFile413JSONResponse) VisitDeleteMovieFileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -13683,6 +15136,20 @@ func (response GrabMovieRelease404JSONResponse) VisitGrabMovieReleaseResponse(w 
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GrabMovieRelease413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response GrabMovieRelease413JSONResponse) VisitGrabMovieReleaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -13872,6 +15339,99 @@ func (response RefreshMovieMetadata404JSONResponse) VisitRefreshMovieMetadataRes
 type RefreshMovieMetadata500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response RefreshMovieMetadata500JSONResponse) VisitRefreshMovieMetadataResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReidentifyMovieRequestObject struct {
+	Id   ResourceID `json:"id"`
+	Body *ReidentifyMovieJSONRequestBody
+}
+
+type ReidentifyMovieResponseObject interface {
+	VisitReidentifyMovieResponse(w http.ResponseWriter) error
+}
+
+type ReidentifyMovie200JSONResponse struct{ ReidentifyResultJSONResponse }
+
+func (response ReidentifyMovie200JSONResponse) VisitReidentifyMovieResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReidentifyMovie400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ReidentifyMovie400JSONResponse) VisitReidentifyMovieResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReidentifyMovie403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ReidentifyMovie403JSONResponse) VisitReidentifyMovieResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReidentifyMovie404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ReidentifyMovie404JSONResponse) VisitReidentifyMovieResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReidentifyMovie409JSONResponse struct{ ConflictJSONResponse }
+
+func (response ReidentifyMovie409JSONResponse) VisitReidentifyMovieResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReidentifyMovie500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ReidentifyMovie500JSONResponse) VisitReidentifyMovieResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -14121,6 +15681,20 @@ func (response CreateQualityProfile409JSONResponse) VisitCreateQualityProfileRes
 	return err
 }
 
+type CreateQualityProfile413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response CreateQualityProfile413JSONResponse) VisitCreateQualityProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type CreateQualityProfile422JSONResponse struct {
 	UnprocessableEntityJSONResponse
 }
@@ -14274,6 +15848,20 @@ func (response UpdateQualityProfile404JSONResponse) VisitUpdateQualityProfileRes
 	return err
 }
 
+type UpdateQualityProfile413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response UpdateQualityProfile413JSONResponse) VisitUpdateQualityProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type UpdateQualityProfile422JSONResponse struct {
 	UnprocessableEntityJSONResponse
 }
@@ -14404,6 +15992,20 @@ func (response CreateRequest409JSONResponse) VisitCreateRequestResponse(w http.R
 	return err
 }
 
+type CreateRequest413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response CreateRequest413JSONResponse) VisitCreateRequestResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type CreateRequest500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response CreateRequest500JSONResponse) VisitCreateRequestResponse(w http.ResponseWriter) error {
@@ -14520,6 +16122,20 @@ func (response ApproveRequest404JSONResponse) VisitApproveRequestResponse(w http
 	return err
 }
 
+type ApproveRequest413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response ApproveRequest413JSONResponse) VisitApproveRequestResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ApproveRequest500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response ApproveRequest500JSONResponse) VisitApproveRequestResponse(w http.ResponseWriter) error {
@@ -14581,6 +16197,20 @@ func (response DenyRequest404JSONResponse) VisitDenyRequestResponse(w http.Respo
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DenyRequest413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response DenyRequest413JSONResponse) VisitDenyRequestResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -14917,6 +16547,20 @@ func (response UpdateSchedule404JSONResponse) VisitUpdateScheduleResponse(w http
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateSchedule413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response UpdateSchedule413JSONResponse) VisitUpdateScheduleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -15331,6 +16975,20 @@ func (response AddSeries409JSONResponse) VisitAddSeriesResponse(w http.ResponseW
 	return err
 }
 
+type AddSeries413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response AddSeries413JSONResponse) VisitAddSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type AddSeries500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response AddSeries500JSONResponse) VisitAddSeriesResponse(w http.ResponseWriter) error {
@@ -15638,6 +17296,36 @@ func (response PatchSeries404JSONResponse) VisitPatchSeriesResponse(w http.Respo
 	return err
 }
 
+type PatchSeries413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response PatchSeries413JSONResponse) VisitPatchSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchSeries422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response PatchSeries422JSONResponse) VisitPatchSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type PatchSeries500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response PatchSeries500JSONResponse) VisitPatchSeriesResponse(w http.ResponseWriter) error {
@@ -15733,6 +17421,20 @@ func (response PatchEpisode404JSONResponse) VisitPatchEpisodeResponse(w http.Res
 	return err
 }
 
+type PatchEpisode413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response PatchEpisode413JSONResponse) VisitPatchEpisodeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type PatchEpisode500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response PatchEpisode500JSONResponse) VisitPatchEpisodeResponse(w http.ResponseWriter) error {
@@ -15778,6 +17480,20 @@ func (response DeleteEpisodeFile404JSONResponse) VisitDeleteEpisodeFileResponse(
 	return err
 }
 
+type DeleteEpisodeFile413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response DeleteEpisodeFile413JSONResponse) VisitDeleteEpisodeFileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type DeleteEpisodeFile500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response DeleteEpisodeFile500JSONResponse) VisitDeleteEpisodeFileResponse(w http.ResponseWriter) error {
@@ -15819,6 +17535,20 @@ func (response GrabEpisodeRelease404JSONResponse) VisitGrabEpisodeReleaseRespons
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GrabEpisodeRelease413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response GrabEpisodeRelease413JSONResponse) VisitGrabEpisodeReleaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -15930,6 +17660,20 @@ func (response GrabSeriesRelease404JSONResponse) VisitGrabSeriesReleaseResponse(
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GrabSeriesRelease413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response GrabSeriesRelease413JSONResponse) VisitGrabSeriesReleaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -16078,6 +17822,99 @@ func (response RefreshSeriesMetadata500JSONResponse) VisitRefreshSeriesMetadataR
 	return err
 }
 
+type ReidentifySeriesRequestObject struct {
+	Id   ResourceID `json:"id"`
+	Body *ReidentifySeriesJSONRequestBody
+}
+
+type ReidentifySeriesResponseObject interface {
+	VisitReidentifySeriesResponse(w http.ResponseWriter) error
+}
+
+type ReidentifySeries200JSONResponse struct{ ReidentifyResultJSONResponse }
+
+func (response ReidentifySeries200JSONResponse) VisitReidentifySeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReidentifySeries400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ReidentifySeries400JSONResponse) VisitReidentifySeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReidentifySeries403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ReidentifySeries403JSONResponse) VisitReidentifySeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReidentifySeries404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ReidentifySeries404JSONResponse) VisitReidentifySeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReidentifySeries409JSONResponse struct{ ConflictJSONResponse }
+
+func (response ReidentifySeries409JSONResponse) VisitReidentifySeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReidentifySeries500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ReidentifySeries500JSONResponse) VisitReidentifySeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type RenameSeriesFilesRequestObject struct {
 	Id     ResourceID `json:"id"`
 	Params RenameSeriesFilesParams
@@ -16203,6 +18040,20 @@ func (response PatchSeason404JSONResponse) VisitPatchSeasonResponse(w http.Respo
 	return err
 }
 
+type PatchSeason413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response PatchSeason413JSONResponse) VisitPatchSeasonResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type PatchSeason500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response PatchSeason500JSONResponse) VisitPatchSeasonResponse(w http.ResponseWriter) error {
@@ -16244,6 +18095,20 @@ func (response GrabSeasonRelease404JSONResponse) VisitGrabSeasonReleaseResponse(
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GrabSeasonRelease413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response GrabSeasonRelease413JSONResponse) VisitGrabSeasonReleaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -16463,6 +18328,20 @@ func (response AddTorrent404JSONResponse) VisitAddTorrentResponse(w http.Respons
 	return err
 }
 
+type AddTorrent413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response AddTorrent413JSONResponse) VisitAddTorrentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type AddTorrent422JSONResponse struct {
 	UnprocessableEntityJSONResponse
 }
@@ -16614,6 +18493,20 @@ func (response SetTorrentFilePriority404JSONResponse) VisitSetTorrentFilePriorit
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetTorrentFilePriority413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response SetTorrentFilePriority413JSONResponse) VisitSetTorrentFilePriorityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -16838,6 +18731,20 @@ func (response CreateUser409JSONResponse) VisitCreateUserResponse(w http.Respons
 	return err
 }
 
+type CreateUser413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response CreateUser413JSONResponse) VisitCreateUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type CreateUser422JSONResponse struct {
 	UnprocessableEntityJSONResponse
 }
@@ -17026,6 +18933,20 @@ func (response UpdateUser409JSONResponse) VisitUpdateUserResponse(w http.Respons
 	return err
 }
 
+type UpdateUser413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response UpdateUser413JSONResponse) VisitUpdateUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type RevokeUserApiKeyRequestObject struct {
 	Uid UserID   `json:"uid"`
 	Kid ApiKeyID `json:"kid"`
@@ -17110,6 +19031,20 @@ func (response ResetUserPassword404JSONResponse) VisitResetUserPasswordResponse(
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ResetUserPassword413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response ResetUserPassword413JSONResponse) VisitResetUserPasswordResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -17288,7 +19223,7 @@ type StrictServerInterface interface {
 	// DeleteMySession Revoke a session owned by current user
 	// (DELETE /auth/me/sessions/{id})
 	DeleteMySession(ctx context.Context, request DeleteMySessionRequestObject) (DeleteMySessionResponseObject, error)
-	// ChangePassword Change current user's password; revokes all other sessions
+	// ChangePassword Change current user's password; revokes all other sessions and all API keys
 	// (POST /auth/password)
 	ChangePassword(ctx context.Context, request ChangePasswordRequestObject) (ChangePasswordResponseObject, error)
 	// ListUpcomingReleases Upcoming wanted-movie digital releases in [from, to).
@@ -17300,6 +19235,12 @@ type StrictServerInterface interface {
 	// UpdateConfigAuth Patch auth configuration (admin)
 	// (PATCH /config/auth)
 	UpdateConfigAuth(ctx context.Context, request UpdateConfigAuthRequestObject) (UpdateConfigAuthResponseObject, error)
+	// GetConfigFfmpeg Get ffmpeg configuration (admin)
+	// (GET /config/ffmpeg)
+	GetConfigFfmpeg(ctx context.Context, request GetConfigFfmpegRequestObject) (GetConfigFfmpegResponseObject, error)
+	// UpdateConfigFfmpeg Patch ffmpeg configuration (admin)
+	// (PATCH /config/ffmpeg)
+	UpdateConfigFfmpeg(ctx context.Context, request UpdateConfigFfmpegRequestObject) (UpdateConfigFfmpegResponseObject, error)
 	// GetConfigLibrary Get library configuration (admin)
 	// (GET /config/library)
 	GetConfigLibrary(ctx context.Context, request GetConfigLibraryRequestObject) (GetConfigLibraryResponseObject, error)
@@ -17339,6 +19280,9 @@ type StrictServerInterface interface {
 	// TestDownloadClient Test download client connection
 	// (POST /download-clients/{name}/test)
 	TestDownloadClient(ctx context.Context, request TestDownloadClientRequestObject) (TestDownloadClientResponseObject, error)
+	// ResolveHeldDownload Release a download held by import verification.
+	// (POST /downloads/{id}/resolve)
+	ResolveHeldDownload(ctx context.Context, request ResolveHeldDownloadRequestObject) (ResolveHeldDownloadResponseObject, error)
 	// ListIndexers List configured indexers
 	// (GET /indexers)
 	ListIndexers(ctx context.Context, request ListIndexersRequestObject) (ListIndexersResponseObject, error)
@@ -17375,6 +19319,9 @@ type StrictServerInterface interface {
 
 	// (POST /library/imports/{id}/commit)
 	CommitImport(ctx context.Context, request CommitImportRequestObject) (CommitImportResponseObject, error)
+	// BulkUpdateImportDecisions Apply one decision across a scan
+	// (POST /library/imports/{id}/decisions)
+	BulkUpdateImportDecisions(ctx context.Context, request BulkUpdateImportDecisionsRequestObject) (BulkUpdateImportDecisionsResponseObject, error)
 
 	// (GET /library/imports/{id}/files)
 	ListImportFiles(ctx context.Context, request ListImportFilesRequestObject) (ListImportFilesResponseObject, error)
@@ -17456,6 +19403,9 @@ type StrictServerInterface interface {
 	// RefreshMovieMetadata Re-fetch TMDB metadata for one movie
 	// (POST /movies/{id}/refresh-metadata)
 	RefreshMovieMetadata(ctx context.Context, request RefreshMovieMetadataRequestObject) (RefreshMovieMetadataResponseObject, error)
+	// ReidentifyMovie Point this movie at a different TMDB title
+	// (POST /movies/{id}/reidentify)
+	ReidentifyMovie(ctx context.Context, request ReidentifyMovieRequestObject) (ReidentifyMovieResponseObject, error)
 	// RenameMovieFiles Rename movie files to match the library naming pattern
 	// (POST /movies/{id}/rename)
 	RenameMovieFiles(ctx context.Context, request RenameMovieFilesRequestObject) (RenameMovieFilesResponseObject, error)
@@ -17573,6 +19523,9 @@ type StrictServerInterface interface {
 	// RefreshSeriesMetadata Re-fetch TVDB metadata for one series
 	// (POST /series/{id}/refresh-metadata)
 	RefreshSeriesMetadata(ctx context.Context, request RefreshSeriesMetadataRequestObject) (RefreshSeriesMetadataResponseObject, error)
+	// ReidentifySeries Point this series at a different TVDB show
+	// (POST /series/{id}/reidentify)
+	ReidentifySeries(ctx context.Context, request ReidentifySeriesRequestObject) (ReidentifySeriesResponseObject, error)
 	// RenameSeriesFiles Rename series episode files to match the library naming pattern
 	// (POST /series/{id}/rename)
 	RenameSeriesFiles(ctx context.Context, request RenameSeriesFilesRequestObject) (RenameSeriesFilesResponseObject, error)
@@ -18419,6 +20372,61 @@ func (sh *strictHandler) UpdateConfigAuth(w http.ResponseWriter, r *http.Request
 	}
 }
 
+// GetConfigFfmpeg operation middleware
+func (sh *strictHandler) GetConfigFfmpeg(w http.ResponseWriter, r *http.Request) {
+	var request GetConfigFfmpegRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetConfigFfmpeg(ctx, request.(GetConfigFfmpegRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetConfigFfmpeg")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetConfigFfmpegResponseObject); ok {
+		if err := validResponse.VisitGetConfigFfmpegResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateConfigFfmpeg operation middleware
+func (sh *strictHandler) UpdateConfigFfmpeg(w http.ResponseWriter, r *http.Request) {
+	var request UpdateConfigFfmpegRequestObject
+
+	var body UpdateConfigFfmpegJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateConfigFfmpeg(ctx, request.(UpdateConfigFfmpegRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateConfigFfmpeg")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateConfigFfmpegResponseObject); ok {
+		if err := validResponse.VisitUpdateConfigFfmpegResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetConfigLibrary operation middleware
 func (sh *strictHandler) GetConfigLibrary(w http.ResponseWriter, r *http.Request) {
 	var request GetConfigLibraryRequestObject
@@ -18785,6 +20793,39 @@ func (sh *strictHandler) TestDownloadClient(w http.ResponseWriter, r *http.Reque
 	}
 }
 
+// ResolveHeldDownload operation middleware
+func (sh *strictHandler) ResolveHeldDownload(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request ResolveHeldDownloadRequestObject
+
+	request.Id = id
+
+	var body ResolveHeldDownloadJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ResolveHeldDownload(ctx, request.(ResolveHeldDownloadRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ResolveHeldDownload")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ResolveHeldDownloadResponseObject); ok {
+		if err := validResponse.VisitResolveHeldDownloadResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListIndexers operation middleware
 func (sh *strictHandler) ListIndexers(w http.ResponseWriter, r *http.Request) {
 	var request ListIndexersRequestObject
@@ -19110,6 +21151,39 @@ func (sh *strictHandler) CommitImport(w http.ResponseWriter, r *http.Request, id
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(CommitImportResponseObject); ok {
 		if err := validResponse.VisitCommitImportResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// BulkUpdateImportDecisions operation middleware
+func (sh *strictHandler) BulkUpdateImportDecisions(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request BulkUpdateImportDecisionsRequestObject
+
+	request.Id = id
+
+	var body BulkUpdateImportDecisionsJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.BulkUpdateImportDecisions(ctx, request.(BulkUpdateImportDecisionsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "BulkUpdateImportDecisions")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(BulkUpdateImportDecisionsResponseObject); ok {
+		if err := validResponse.VisitBulkUpdateImportDecisionsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -19885,6 +21959,39 @@ func (sh *strictHandler) RefreshMovieMetadata(w http.ResponseWriter, r *http.Req
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(RefreshMovieMetadataResponseObject); ok {
 		if err := validResponse.VisitRefreshMovieMetadataResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ReidentifyMovie operation middleware
+func (sh *strictHandler) ReidentifyMovie(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request ReidentifyMovieRequestObject
+
+	request.Id = id
+
+	var body ReidentifyMovieJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ReidentifyMovie(ctx, request.(ReidentifyMovieRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ReidentifyMovie")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ReidentifyMovieResponseObject); ok {
+		if err := validResponse.VisitReidentifyMovieResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -20979,6 +23086,39 @@ func (sh *strictHandler) RefreshSeriesMetadata(w http.ResponseWriter, r *http.Re
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(RefreshSeriesMetadataResponseObject); ok {
 		if err := validResponse.VisitRefreshSeriesMetadataResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ReidentifySeries operation middleware
+func (sh *strictHandler) ReidentifySeries(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request ReidentifySeriesRequestObject
+
+	request.Id = id
+
+	var body ReidentifySeriesJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ReidentifySeries(ctx, request.(ReidentifySeriesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ReidentifySeries")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ReidentifySeriesResponseObject); ok {
+		if err := validResponse.VisitReidentifySeriesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

@@ -225,10 +225,51 @@ func atou32(s string) uint32 {
 	return uint32(n)
 }
 
+// SearchSeries queries TVDB, retrying with each half of the query when the
+// full one comes back empty. TVDB's relevance scorer returns nothing for a
+// show's own complete title while returning that show for substrings of it —
+// "Zom 100 Bucket List of the Dead" finds nothing, "Zom 100 Bucket List" and
+// "Bucket List of the Dead" both find it. No rule separates the substrings
+// that work, so both halves are tried and the first non-empty answer wins.
 func (t *TVDB) SearchSeries(ctx context.Context, query string) ([]TVResult, error) {
 	ctx, span := tracer.Start(ctx, "metadata.tvdb.search_series",
 		trace.WithAttributes(attribute.String("query", query)))
 	defer span.End()
+
+	out, err := t.searchSeries(ctx, query)
+	if err != nil || len(out) > 0 {
+		return out, err
+	}
+	for _, alt := range queryHalves(query) {
+		out, err = t.searchSeries(ctx, alt)
+		if err != nil {
+			return nil, err
+		}
+		if len(out) > 0 {
+			span.SetAttributes(attribute.String("query.fallback", alt))
+			return out, nil
+		}
+	}
+	return out, nil
+}
+
+// queryHalves splits query into its leading and trailing half, both rounded up
+// so a 6-word query yields two 3-word ones. Returns nil for a query too short
+// for the halves to carry a title.
+func queryHalves(query string) []string {
+	words := strings.Fields(query)
+	if len(words) < 4 {
+		return nil
+	}
+	h := (len(words) + 1) / 2
+	return []string{
+		strings.Join(words[:h], " "),
+		strings.Join(words[len(words)-h:], " "),
+	}
+}
+
+func (t *TVDB) searchSeries(ctx context.Context, query string) ([]TVResult, error) {
+	span := trace.SpanFromContext(ctx)
 
 	var resp struct {
 		Data []struct {
@@ -238,6 +279,7 @@ func (t *TVDB) SearchSeries(ctx context.Context, query string) ([]TVResult, erro
 			Network      string            `json:"network"`
 			Overview     string            `json:"overview"`
 			ImageURL     string            `json:"image_url"`
+			Aliases      []string          `json:"aliases"`
 			Translations map[string]string `json:"translations"` // lang -> name
 			Overviews    map[string]string `json:"overviews"`    // lang -> overview
 		} `json:"data"`
@@ -256,13 +298,22 @@ func (t *TVDB) SearchSeries(ctx context.Context, query string) ([]TVResult, erro
 		if v := r.Overviews[t.language]; t.language != "" && v != "" {
 			overview = v
 		}
+		// Every translated name is an alias for matching purposes: a folder is
+		// as likely to carry the romaji or the original-language title as the
+		// English one, and TVDB returns both lists.
+		aliases := append([]string(nil), r.Aliases...)
+		for _, v := range r.Translations {
+			aliases = append(aliases, v)
+		}
 		out = append(out, TVResult{
-			TVDBID:     atou32(r.TVDBID),
-			Title:      title,
-			Year:       atou16(r.Year),
-			Network:    r.Network,
-			Overview:   overview,
-			PosterPath: r.ImageURL,
+			TVDBID:        atou32(r.TVDBID),
+			Title:         title,
+			OriginalTitle: r.Name,
+			Year:          atou16(r.Year),
+			Network:       r.Network,
+			Overview:      overview,
+			PosterPath:    r.ImageURL,
+			Aliases:       aliases,
 		})
 	}
 	return out, nil
@@ -275,14 +326,16 @@ func (t *TVDB) GetSeries(ctx context.Context, tvdbID uint32) (*TVDetails, error)
 
 	var ext struct {
 		Data struct {
-			ID             uint32 `json:"id"`
-			Name           string `json:"name"`
-			Year           string `json:"year"`
-			Overview       string `json:"overview"`
-			AverageRuntime uint16 `json:"averageRuntime"`
-			Image          string `json:"image"`
-			FirstAired     string `json:"firstAired"`
-			Status         struct {
+			ID               uint32 `json:"id"`
+			Name             string `json:"name"`
+			Year             string `json:"year"`
+			Overview         string `json:"overview"`
+			AverageRuntime   uint16 `json:"averageRuntime"`
+			OriginalCountry  string `json:"originalCountry"`
+			OriginalLanguage string `json:"originalLanguage"`
+			Image            string `json:"image"`
+			FirstAired       string `json:"firstAired"`
+			Status           struct {
 				Name string `json:"name"`
 			} `json:"status"`
 			RemoteIDs []struct {
@@ -351,9 +404,9 @@ func (t *TVDB) GetSeries(ctx context.Context, tvdbID uint32) (*TVDetails, error)
 	}
 	for _, g := range ext.Data.Genres {
 		d.Genres = append(d.Genres, g.Name)
-		if strings.EqualFold(g.Name, "anime") {
-			d.Type = SeriesAnime
-		}
+	}
+	if inferAnime(d.Genres, ext.Data.OriginalLanguage, ext.Data.OriginalCountry) {
+		d.Type = SeriesAnime
 	}
 	for _, s := range ext.Data.Seasons {
 		if s.Type.Type == "official" || s.Type.Type == "" {
@@ -518,4 +571,31 @@ func parseAirDate(s string) *time.Time {
 		return nil
 	}
 	return &t
+}
+
+// animeOriginLanguages/Countries are the TVDB origin codes that, combined with
+// an animation genre, mark a show as anime.
+var (
+	animeOriginLanguages = map[string]bool{"jpn": true, "ja": true, "jp": true}
+	animeOriginCountries = map[string]bool{"jpn": true, "jp": true}
+)
+
+// inferAnime decides SeriesAnime from a show's TVDB metadata. The literal
+// "anime" genre alone missed most of the catalogue — TVDB tags Drifters
+// "Comedy" and Nanana's Buried Treasure "Animation" — and the type drives
+// absolute-number episode matching, so a miss silently mis-matches files.
+// Animation plus a Japanese origin is the signal TVDB actually carries.
+func inferAnime(genres []string, originalLanguage, originalCountry string) bool {
+	animated := false
+	for _, g := range genres {
+		switch strings.ToLower(g) {
+		case "anime":
+			return true
+		case "animation", "animated":
+			animated = true
+		}
+	}
+	return animated &&
+		(animeOriginLanguages[strings.ToLower(originalLanguage)] ||
+			animeOriginCountries[strings.ToLower(originalCountry)])
 }

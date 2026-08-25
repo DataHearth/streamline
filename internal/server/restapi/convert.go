@@ -9,6 +9,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
@@ -74,6 +75,15 @@ func movieToAPI(m *ent.Movie) Movie {
 	if m.Runtime != 0 {
 		rt := m.Runtime
 		mov.Runtime = &rt
+	}
+	// The detail handler attaches files from its own query, so an unloaded
+	// edge here is not an empty library — only the list path eager-loads.
+	if len(m.Edges.MediaFiles) > 0 {
+		files := make([]MediaFile, 0, len(m.Edges.MediaFiles))
+		for _, f := range m.Edges.MediaFiles {
+			files = append(files, mediaFileToAPI(f))
+		}
+		mov.MediaFiles = &files
 	}
 	return mov
 }
@@ -281,6 +291,34 @@ func mediaFileToAPI(f *ent.MediaFile) MediaFile {
 		pc := parsed.Codec
 		out.ParsedCodec = &pc
 	}
+	out.MediaInfo = mediaInfoToAPI(f)
+	return out
+}
+
+func mediaInfoToAPI(f *ent.MediaFile) *MediaInfo {
+	if f.ProbedAt == nil || f.VideoCodec == "" {
+		return nil
+	}
+	out := &MediaInfo{
+		Container:       f.Container,
+		VideoCodec:      f.VideoCodec,
+		Width:           int(f.Width),
+		Height:          int(f.Height),
+		DurationSeconds: int(f.DurationSeconds),
+		ProbedAt:        *f.ProbedAt,
+	}
+	if f.AudioCodec != "" {
+		ac := f.AudioCodec
+		out.AudioCodec = &ac
+	}
+	if f.AudioChannels != 0 {
+		ch := int(f.AudioChannels)
+		out.AudioChannels = &ch
+	}
+	if f.Bitrate != 0 {
+		b := int(f.Bitrate)
+		out.Bitrate = &b
+	}
 	return out
 }
 
@@ -350,7 +388,7 @@ func toAPIImportScan(s *ent.ImportScan) ImportScan {
 	return out
 }
 
-func toActivityEvent(e *ent.MovieEvent) ActivityEvent {
+func toActivityEvent(e *ent.MediaEvent) ActivityEvent {
 	out := ActivityEvent{
 		Id:        e.ID,
 		Type:      ActivityEventType(e.Type),
@@ -360,10 +398,36 @@ func toActivityEvent(e *ent.MovieEvent) ActivityEvent {
 		p := e.Payload
 		out.Payload = &p
 	}
-	if e.Edges.Movie != nil {
-		out.Movie = movieToAPI(e.Edges.Movie)
+	switch {
+	case e.Edges.Movie != nil:
+		m := movieToAPI(e.Edges.Movie)
+		out.Movie = &m
+	case e.Edges.Episode != nil:
+		out.Episode = episodeRefFor(e.Edges.Episode)
+	case e.Edges.TvShow != nil:
+		out.Series = &SeriesRef{
+			Id:    e.Edges.TvShow.ID,
+			Title: e.Edges.TvShow.Title,
+		}
 	}
 	return out
+}
+
+// episodeRefFor renders "<show> · SxxExx" context from an episode loaded with
+// its season and show. A row missing either edge would show a bare number, so
+// it degrades to nil rather than half a label.
+func episodeRefFor(ep *ent.Episode) *EpisodeRef {
+	se := ep.Edges.Season
+	if se == nil || se.Edges.TvShow == nil {
+		return nil
+	}
+	show := se.Edges.TvShow
+	return &EpisodeRef{
+		ShowTitle: show.Title,
+		Season:    se.Number,
+		Episode:   ep.Number,
+		SeriesId:  &show.ID,
+	}
 }
 
 func toUpcomingEpisode(e *ent.Episode, now time.Time) UpcomingEpisode {
@@ -540,6 +604,18 @@ func toQueueEntry(e download.QueueEntry) QueueEntry {
 	if e.FailureReason != "" {
 		out.FailureReason = &e.FailureReason
 	}
+	if len(e.HoldReasons) > 0 {
+		reasons := make([]HoldReason, 0, len(e.HoldReasons))
+		for _, r := range e.HoldReasons {
+			reasons = append(reasons, HoldReason{
+				File:     r.File,
+				Check:    HoldReasonCheck(r.Check),
+				Expected: &r.Expected,
+				Actual:   &r.Actual,
+			})
+		}
+		out.HoldReasons = &reasons
+	}
 	return out
 }
 
@@ -642,7 +718,10 @@ func toPendingItem(r *ent.DownloadRecord) PendingItem {
 // to the API shape, rolling up per-season availability into show totals via
 // tvshow.DeriveSeasonViews. Seasons/episodes are only present when the show
 // was loaded with those edges (GET /series/{id}); list responses omit them.
-func tvShowToAPI(s *ent.TVShow) TVShow {
+// tvShowBaseToAPI maps the row's own columns. The episode rollup is left to
+// the caller: the detail view derives it from the loaded tree, the list view
+// takes it from SQL.
+func tvShowBaseToAPI(s *ent.TVShow) TVShow {
 	out := TVShow{
 		Id:           s.ID,
 		Title:        s.Title,
@@ -679,6 +758,11 @@ func tvShowToAPI(s *ent.TVShow) TVShow {
 	if s.QualityProfile != "" {
 		out.QualityProfile = &s.QualityProfile
 	}
+	return out
+}
+
+func tvShowToAPI(s *ent.TVShow) TVShow {
+	out := tvShowBaseToAPI(s)
 
 	now := time.Now()
 	views := tvshow.DeriveSeasonViews(s, now)
@@ -697,6 +781,19 @@ func tvShowToAPI(s *ent.TVShow) TVShow {
 	if len(seasons) > 0 {
 		out.Seasons = &seasons
 	}
+	return out
+}
+
+// tvShowListToAPI renders a list row. The rollup arrives pre-aggregated from
+// SQL because the list query deliberately leaves the season/episode tree
+// unloaded — serializing it was 121 KB per show. `seasons` stays absent here;
+// the detail view (tvShowToAPI) is what carries it.
+func tvShowListToAPI(s *ent.TVShow, c db.EpisodeCounts) TVShow {
+	out := tvShowBaseToAPI(s)
+	have, total, wanted := c.Have, c.Total, c.Wanted
+	out.HaveEpisodes = &have
+	out.TotalEpisodes = &total
+	out.WantedEpisodes = &wanted
 	return out
 }
 
@@ -756,12 +853,15 @@ func episodeToAPI(e *ent.Episode, now time.Time) Episode {
 		ad := e.AirDate
 		out.AirDate = &ad
 	}
+	hasFile := len(e.Edges.MediaFiles) > 0
+	out.HasFile = &hasFile
 	if len(e.Edges.MediaFiles) > 0 {
 		f := e.Edges.MediaFiles[0]
 		out.Quality = &f.Quality
 		out.Path = &f.Path
 		sz := f.Size
 		out.Size = &sz
+		out.MediaInfo = mediaInfoToAPI(f)
 	}
 	return out
 }

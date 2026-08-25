@@ -19,6 +19,10 @@ export type MonitoringPreset =
 	| "pilot"
 	| "none";
 
+// Library-list monitoring filter. Client-side only — both list endpoints
+// return every row and the SPA narrows the set.
+export type MonitorFilter = "all" | "monitored" | "unmonitored";
+
 export type Episode = {
 	id: number;
 	number: number;
@@ -30,7 +34,9 @@ export type Episode = {
 	monitored: boolean;
 	quality?: string;
 	size?: number | null;
+	has_file?: boolean;
 	path?: string;
+	media_info?: MediaInfo | null;
 };
 
 export type Season = {
@@ -67,13 +73,6 @@ export type TVShow = {
 	// Only populated by GET /series/{id}; absent in list responses.
 	seasons?: Season[];
 	cast?: CastMember[];
-};
-
-export type PaginatedTVShows = {
-	items: TVShow[];
-	total: number;
-	page: number;
-	limit: number;
 };
 
 export type TVShowCounts = {
@@ -156,6 +155,45 @@ export type Movie = {
 	rating?: number;
 };
 
+// What ffprobe read off the file. Null until the file has been probed, and
+// still null when probing is disabled — every consumer falls back to the
+// parsed_* fields per field. See lib/media-info.ts.
+export type MediaInfo = {
+	container?: string;
+	video_codec?: string;
+	width?: number;
+	height?: number;
+	duration_seconds?: number;
+	// The default (or first) audio track, flattened. Kept alongside audio_tracks:
+	// it is what the brief's contract carries, and a file whose streams could not
+	// be enumerated may still report this much.
+	audio_codec?: string;
+	audio_channels?: number;
+	bitrate?: number;
+	probed_at?: string;
+	// Every audio and subtitle stream ffprobe found. Languages are ISO 639-2/B
+	// as ffprobe reports them ("eng", "fra", "und").
+	audio_tracks?: AudioTrack[];
+	subtitles?: SubtitleTrack[];
+};
+
+export type AudioTrack = {
+	language?: string;
+	codec?: string;
+	channels?: number;
+	default?: boolean;
+	// ffprobe's stream title, when the muxer set one ("Surround", "Commentary").
+	title?: string;
+};
+
+export type SubtitleTrack = {
+	language?: string;
+	codec?: string;
+	forced?: boolean;
+	hearing_impaired?: boolean;
+	default?: boolean;
+};
+
 export type MediaFile = {
 	id: number;
 	path: string;
@@ -166,6 +204,7 @@ export type MediaFile = {
 	parsed_source?: string;
 	parsed_resolution?: string;
 	parsed_codec?: string;
+	media_info?: MediaInfo | null;
 };
 
 export type SearchResult = {
@@ -214,13 +253,6 @@ export type SeriesRenamePlan = {
 	operations: RenameOperation[];
 };
 
-export type PaginatedMovies = {
-	items: Movie[];
-	total: number;
-	page: number;
-	limit: number;
-};
-
 export type TMDBMovieResult = {
 	tmdb_id: number;
 	title: string;
@@ -267,13 +299,6 @@ export type MediaRequest = {
 	approved_by?: RequestUser;
 	created_at: string;
 	updated_at: string;
-};
-
-export type PaginatedRequests = {
-	items: MediaRequest[];
-	total: number;
-	page: number;
-	limit: number;
 };
 
 export type RequestCounts = {
@@ -333,14 +358,25 @@ export type ActivityType =
 	| "imported"
 	| "import_failed"
 	| "drift_detected"
-	| "drift_confirmed";
+	| "drift_confirmed"
+	| "searched";
 
+export type SeriesRef = {
+	id: number;
+	title: string;
+};
+
+// Exactly one of movie / episode / series is set — what the event happened to.
+// series carries only what belongs to no single episode (a search issued at
+// series or season scope); per-episode outcomes use episode.
 export type ActivityEvent = {
 	id: number;
 	type: ActivityType;
 	created_at: string;
 	payload?: Record<string, unknown>;
-	movie: Movie;
+	movie?: Movie;
+	episode?: EpisodeRef;
+	series?: SeriesRef;
 };
 
 export type ActivityList = {
@@ -354,11 +390,31 @@ export type EpisodeRef = {
 	show_title: string;
 	season: number;
 	episode: number;
+	series_id?: number;
+};
+
+export type HoldCheck =
+	| "resolution"
+	| "corrupt"
+	| "duration"
+	| "codec"
+	// Not a failed check: `library.probe.always_ask` holds an otherwise-clean
+	// import so a person signs off on it, so it carries no expected/actual pair.
+	| "always_ask";
+
+export type HoldReason = {
+	file: string;
+	check: HoldCheck;
+	expected?: string;
+	actual?: string;
 };
 
 export type QueueEntry = {
 	id: number;
-	status: "downloading" | "importing" | "paused" | "error";
+	// "held": the download finished and failed verification, so it is waiting on
+	// a decision rather than on the network. The only queue state whose next move
+	// belongs to a person.
+	status: "downloading" | "importing" | "paused" | "error" | "held";
 	title: string;
 	quality?: string;
 	release_group?: string;
@@ -371,6 +427,7 @@ export type QueueEntry = {
 	download_speed?: number;
 	eta?: number;
 	failure_reason?: string;
+	hold_reasons?: HoldReason[];
 	created_at: string;
 };
 export type DownloadQueue = { items: QueueEntry[]; refreshed_at: string };
@@ -479,6 +536,27 @@ export type AuthConfig = {
 
 export type LibraryConfig = {
 	monitor_specials: boolean;
+	probe?: ProbeConfig;
+};
+
+export type ProbeConfig = {
+	// Hold every import for a decision, even when every check passes.
+	always_ask?: boolean;
+	// A file shorter than this share of the expected runtime fails the duration
+	// check. Stored as a ratio (0.9); the settings field shows it as a percentage.
+	min_duration_ratio?: number;
+};
+
+// The ffmpeg suite, not just ffprobe — the same block serves playback later.
+// `found` is what the settings page warns on and what the TopBar health pill's
+// new reason string comes from.
+export type FFmpegConfig = {
+	enabled: boolean;
+	path: string;
+	found?: boolean;
+	resolved_path?: string;
+	version?: string;
+	restart_required?: boolean;
 };
 
 export type OIDCProvider = {
@@ -500,6 +578,8 @@ export type QualityProfileFull = {
 	preferred_resolution: Resolution;
 	min_resolution: Resolution;
 	upgrade_allowed: boolean;
+	// ffprobe codec names ("hevc", "av1"). Empty means any codec.
+	allowed_codecs?: string[];
 };
 
 // "torznab" covers plain Torznab endpoints and Jackett (its /indexers/all
@@ -683,6 +763,7 @@ export type SystemInfo = {
 	app_name: string;
 	public_url: string;
 	https_warn: boolean;
+	ffmpeg_warn?: boolean;
 	auth_mode: string;
 	data_dir: string;
 	data_usage?: DiskUsage;
@@ -701,7 +782,7 @@ export type SystemInfo = {
 };
 
 export type PlexPinBegin = {
-	pin_id: number;
+	flow_id: string;
 	auth_url: string;
 	client_id: string;
 };
@@ -790,14 +871,9 @@ export type ImportScanFile = {
 	updated_at: string;
 };
 
-export type ImportScanFileList = {
-	items: ImportScanFile[];
-	total: number;
-};
-
 // Series import scans carry per-show rows instead of per-file rows. Shows reuse
 // the file classification/decision enums; outcomes are a shorter set.
-export type ImportShowOutcome = "pending" | "created" | "failed";
+export type ImportShowOutcome = "pending" | "created" | "attached" | "failed";
 
 export type ImportScanShowCandidate = {
 	tvdb_id: number;
@@ -822,11 +898,6 @@ export type ImportScanShow = {
 	created_tvshow_id?: number | null;
 	created_at: string;
 	updated_at: string;
-};
-
-export type ImportScanShowList = {
-	items: ImportScanShow[];
-	total: number;
 };
 
 export type ImportStartRequest = {
@@ -884,4 +955,14 @@ export type PathMigration = {
 	error?: string;
 	started_at?: string;
 	finished_at?: string;
+};
+
+// POST /{movies,series}/{id}/reidentify — the repaired entry plus what moved.
+export type ReidentifyResult = {
+	id: number;
+	title: string;
+	renamed: number;
+	// Series only: paths still on disk whose season/episode number has no
+	// counterpart in the new show.
+	unmatched?: string[];
 };

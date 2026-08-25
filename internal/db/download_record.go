@@ -10,7 +10,9 @@ import (
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
+	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/ent/season"
+	"github.com/datahearth/streamline/internal/ffmpeg"
 )
 
 // withEpisodeContext eager-loads the Episode edge of an importing record along
@@ -233,6 +235,7 @@ type MediaFileRow struct {
 	Quality      string
 	Format       string
 	ReleaseGroup string
+	Probe        *ffmpeg.Info // nil leaves probed_at NULL for the backfill
 }
 
 type RecordImportFailureParams struct {
@@ -277,6 +280,106 @@ func (db *DB) FindImportingDownloadRecordByID(
 		Only(ctx)
 }
 
+// FindDownloadRecordByID returns one record by ID whatever its status, so a
+// caller can tell "no such record" from "wrong state for this action".
+func (db *DB) FindDownloadRecordByID(
+	ctx context.Context,
+	id uint32,
+) (*ent.DownloadRecord, error) {
+	return db.client.DownloadRecord.Get(ctx, id)
+}
+
+// HoldDownloadRecord flips an importing record to held with the reasons the
+// verifier produced, stopping the import until a user resolves it.
+func (db *DB) HoldDownloadRecord(
+	ctx context.Context,
+	id uint32,
+	reasons []schema.HoldReason,
+) error {
+	return db.client.DownloadRecord.UpdateOneID(id).
+		SetStatus(downloadrecord.StatusHeld).
+		SetHoldReasons(reasons).
+		Exec(ctx)
+}
+
+// FindHeldDownloadRecordByID fetches a single held record by ID with its Movie
+// and Episode context eager-loaded. Returns ent.NotFound when the record is
+// absent or no longer held.
+func (db *DB) FindHeldDownloadRecordByID(
+	ctx context.Context,
+	id uint32,
+) (*ent.DownloadRecord, error) {
+	return db.client.DownloadRecord.Query().
+		Where(
+			downloadrecord.ID(id),
+			downloadrecord.StatusEQ(downloadrecord.StatusHeld),
+		).
+		WithMovie().
+		WithEpisode(withEpisodeContext).
+		Only(ctx)
+}
+
+// ReleaseHeldDownloadRecord flips a held record back to importing with
+// verification bypassed, so the importer's re-run imports it as-is.
+func (db *DB) ReleaseHeldDownloadRecord(ctx context.Context, id uint32) error {
+	return db.client.DownloadRecord.UpdateOneID(id).
+		SetStatus(downloadrecord.StatusImporting).
+		SetVerificationBypassed(true).
+		ClearHoldReasons().
+		Exec(ctx)
+}
+
+// FailHeldDownloadRecord finalizes a held record the user rejected. requeue
+// reverts the movie to wanted so a search finds a replacement; without it the
+// movie stays failed, the user having judged the release themselves. Episodes
+// revert to wanted either way, mirroring RecordImportFailure.
+func (db *DB) FailHeldDownloadRecord(
+	ctx context.Context,
+	id uint32,
+	reason string,
+	requeue bool,
+) error {
+	rec, err := db.FindHeldDownloadRecordByID(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	tx, err := db.client.Tx(ctx)
+	if err != nil {
+		return err
+	}
+	if err := tx.DownloadRecord.UpdateOneID(id).
+		SetStatus(downloadrecord.StatusFailed).
+		SetFailureReason(reason).
+		ClearHoldReasons().
+		Exec(ctx); err != nil {
+		tx.Rollback()
+		return fmt.Errorf("update download record: %w", err)
+	}
+	if rec.Edges.Movie != nil {
+		status := movie.StatusFailed
+		if requeue {
+			status = movie.StatusWanted
+		}
+		if err := tx.Movie.UpdateOneID(rec.Edges.Movie.ID).
+			SetStatus(status).
+			SetFailureReason(reason).
+			Exec(ctx); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("update movie: %w", err)
+		}
+	}
+	if rec.Edges.Episode != nil {
+		if err := tx.Episode.UpdateOneID(rec.Edges.Episode.ID).
+			SetStatus(episode.StatusWanted).
+			Exec(ctx); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("update episode: %w", err)
+		}
+	}
+	return tx.Commit()
+}
+
 // RecordImportSuccess writes MediaFile row, flips DownloadRecord to completed,
 // flips Movie to available — all in one tx. On error, caller retries.
 func (db *DB) RecordImportSuccess(
@@ -288,14 +391,17 @@ func (db *DB) RecordImportSuccess(
 		return err
 	}
 
-	if _, err := tx.MediaFile.Create().
+	mc := tx.MediaFile.Create().
 		SetPath(p.File.Path).
 		SetSize(p.File.Size).
 		SetQuality(p.File.Quality).
 		SetFormat(p.File.Format).
 		SetReleaseGroup(p.File.ReleaseGroup).
-		SetMovieID(p.MovieID).
-		Save(ctx); err != nil {
+		SetMovieID(p.MovieID)
+	if p.File.Probe != nil {
+		mc = applyProbe(mc, p.File.Probe)
+	}
+	if _, err := mc.Save(ctx); err != nil {
 		tx.Rollback()
 		return fmt.Errorf("create media file: %w", err)
 	}
@@ -335,14 +441,17 @@ func (db *DB) RecordEpisodeImportSuccess(
 	if err != nil {
 		return err
 	}
-	if _, err := tx.MediaFile.Create().
+	ec := tx.MediaFile.Create().
 		SetPath(p.File.Path).
 		SetSize(p.File.Size).
 		SetQuality(p.File.Quality).
 		SetFormat(p.File.Format).
 		SetReleaseGroup(p.File.ReleaseGroup).
-		SetEpisodeID(p.EpisodeID).
-		Save(ctx); err != nil {
+		SetEpisodeID(p.EpisodeID)
+	if p.File.Probe != nil {
+		ec = applyProbe(ec, p.File.Probe)
+	}
+	if _, err := ec.Save(ctx); err != nil {
 		tx.Rollback()
 		return fmt.Errorf("create media file: %w", err)
 	}
@@ -441,10 +550,22 @@ func (db *DB) SetDownloadRecordSavePath(
 	return db.client.DownloadRecord.UpdateOneID(id).SetSavePath(path).Exec(ctx)
 }
 
-func (db *DB) CountDownloadRecords(ctx context.Context) (int, error) {
-	n, err := db.client.DownloadRecord.Query().Count(ctx)
+// CountLiveDownloadRecords counts records whose save_path something will
+// still read: in-flight downloads and pending adoption proposals. Terminal
+// rows (completed, failed, dismissed) keep the path they were created with
+// forever, so counting them would hold the boot drift warning on long after
+// the download root legitimately moved.
+func (db *DB) CountLiveDownloadRecords(ctx context.Context) (int, error) {
+	n, err := db.client.DownloadRecord.Query().
+		Where(downloadrecord.StatusIn(
+			downloadrecord.StatusDownloading,
+			downloadrecord.StatusImporting,
+			downloadrecord.StatusHeld,
+			downloadrecord.StatusPending,
+		)).
+		Count(ctx)
 	if err != nil {
-		return 0, fmt.Errorf("count download_records: %w", err)
+		return 0, fmt.Errorf("count live download_records: %w", err)
 	}
 	return n, nil
 }
@@ -473,6 +594,9 @@ func (db *DB) ListActiveDownloadRecords(
 		Where(downloadrecord.StatusIn(
 			downloadrecord.StatusDownloading,
 			downloadrecord.StatusImporting,
+			// Held records are finished downloading but not done: the queue is
+			// where a user is told one is waiting on them.
+			downloadrecord.StatusHeld,
 		)).
 		WithMovie().
 		WithEpisode(func(q *ent.EpisodeQuery) {
@@ -483,6 +607,8 @@ func (db *DB) ListActiveDownloadRecords(
 
 // FindActiveDownloadRecordByID fetches an in-flight record by ID with movie +
 // download_client edges. Returns ent.NotFound when absent or already terminal.
+// Held records match: the queue shows them, so the queue verbs have to be able
+// to tell a held row apart from a missing one.
 func (db *DB) FindActiveDownloadRecordByID(
 	ctx context.Context,
 	id uint32,
@@ -493,6 +619,7 @@ func (db *DB) FindActiveDownloadRecordByID(
 			downloadrecord.StatusIn(
 				downloadrecord.StatusDownloading,
 				downloadrecord.StatusImporting,
+				downloadrecord.StatusHeld,
 			),
 		).
 		WithMovie().
@@ -597,7 +724,7 @@ func (db *DB) RevertMovieToWantedIfNoFile(
 
 // RevertOrphanedDownloadingEpisodes flips back to "wanted" every episode stuck
 // in "downloading" that has no media file and whose season has no active
-// (downloading/importing) download record. This reconciles the season-pack
+// (downloading/importing/held) download record. This reconciles the season-pack
 // fan-out: a pack marks every episode downloading but links only one record, so
 // cancelling or losing that record leaves the rest stranded. Granularity is the
 // season — an episode is spared while any download in its season is still
@@ -615,6 +742,10 @@ func (db *DB) RevertOrphanedDownloadingEpisodes(
 						downloadrecord.StatusIn(
 							downloadrecord.StatusDownloading,
 							downloadrecord.StatusImporting,
+							// A held record awaits a decision; reverting its
+							// episodes would let the missing-search grab a
+							// duplicate release while it pends.
+							downloadrecord.StatusHeld,
 						),
 					),
 				),

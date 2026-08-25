@@ -41,7 +41,7 @@ var (
 		{Name: "title", Type: field.TypeString},
 		{Name: "quality", Type: field.TypeString, Nullable: true},
 		{Name: "size", Type: field.TypeInt64, Nullable: true},
-		{Name: "status", Type: field.TypeEnum, Enums: []string{"downloading", "importing", "completed", "failed", "pending", "dismissed"}, Default: "downloading"},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"downloading", "importing", "completed", "failed", "pending", "dismissed", "held"}, Default: "downloading"},
 		{Name: "torrent_hash", Type: field.TypeString, Nullable: true},
 		{Name: "release_group", Type: field.TypeString, Nullable: true},
 		{Name: "save_path", Type: field.TypeString, Nullable: true},
@@ -51,6 +51,8 @@ var (
 		{Name: "indexer_name", Type: field.TypeString, Nullable: true},
 		{Name: "download_client_name", Type: field.TypeString, Nullable: true},
 		{Name: "replace_existing", Type: field.TypeBool, Default: false},
+		{Name: "hold_reasons", Type: field.TypeJSON, Nullable: true},
+		{Name: "verification_bypassed", Type: field.TypeBool, Default: false},
 		{Name: "episode_download_records", Type: field.TypeUint32, Nullable: true},
 		{Name: "movie_download_records", Type: field.TypeUint32, Nullable: true},
 	}
@@ -62,13 +64,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "download_records_episodes_download_records",
-				Columns:    []*schema.Column{DownloadRecordsColumns[16]},
+				Columns:    []*schema.Column{DownloadRecordsColumns[18]},
 				RefColumns: []*schema.Column{EpisodesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "download_records_movies_download_records",
-				Columns:    []*schema.Column{DownloadRecordsColumns[17]},
+				Columns:    []*schema.Column{DownloadRecordsColumns[19]},
 				RefColumns: []*schema.Column{MoviesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -101,6 +103,13 @@ var (
 				Columns:    []*schema.Column{EpisodesColumns[12]},
 				RefColumns: []*schema.Column{SeasonsColumns[0]},
 				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "episode_season_episodes",
+				Unique:  false,
+				Columns: []*schema.Column{EpisodesColumns[12]},
 			},
 		},
 	}
@@ -203,7 +212,7 @@ var (
 		{Name: "file_count", Type: field.TypeUint16, Default: 0},
 		{Name: "decision", Type: field.TypeEnum, Enums: []string{"pending", "accept", "skip"}, Default: "pending"},
 		{Name: "decision_tvdb_id", Type: field.TypeUint32, Nullable: true},
-		{Name: "outcome", Type: field.TypeEnum, Enums: []string{"pending", "created", "failed"}, Default: "pending"},
+		{Name: "outcome", Type: field.TypeEnum, Enums: []string{"pending", "created", "attached", "failed"}, Default: "pending"},
 		{Name: "outcome_message", Type: field.TypeString, Nullable: true},
 		{Name: "created_tvshow_id", Type: field.TypeUint32, Nullable: true},
 		{Name: "import_scan_shows", Type: field.TypeUint32},
@@ -267,6 +276,70 @@ var (
 			},
 		},
 	}
+	// MediaEventsColumns holds the columns for the "media_events" table.
+	MediaEventsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUint32, Increment: true},
+		{Name: "create_time", Type: field.TypeTime},
+		{Name: "update_time", Type: field.TypeTime},
+		{Name: "type", Type: field.TypeEnum, Enums: []string{"grabbed", "download_completed", "download_failed", "imported", "import_failed", "drift_detected", "drift_confirmed", "searched"}},
+		{Name: "payload", Type: field.TypeJSON, Nullable: true},
+		{Name: "episode_events", Type: field.TypeUint32, Nullable: true},
+		{Name: "movie_events", Type: field.TypeUint32, Nullable: true},
+		{Name: "tv_show_events", Type: field.TypeUint32, Nullable: true},
+	}
+	// MediaEventsTable holds the schema information for the "media_events" table.
+	MediaEventsTable = &schema.Table{
+		Name:       "media_events",
+		Columns:    MediaEventsColumns,
+		PrimaryKey: []*schema.Column{MediaEventsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "media_events_episodes_events",
+				Columns:    []*schema.Column{MediaEventsColumns[5]},
+				RefColumns: []*schema.Column{EpisodesColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "media_events_movies_events",
+				Columns:    []*schema.Column{MediaEventsColumns[6]},
+				RefColumns: []*schema.Column{MoviesColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "media_events_tv_shows_events",
+				Columns:    []*schema.Column{MediaEventsColumns[7]},
+				RefColumns: []*schema.Column{TvShowsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "mediaevent_create_time",
+				Unique:  false,
+				Columns: []*schema.Column{MediaEventsColumns[1]},
+			},
+			{
+				Name:    "mediaevent_type_create_time",
+				Unique:  false,
+				Columns: []*schema.Column{MediaEventsColumns[3], MediaEventsColumns[1]},
+			},
+			{
+				Name:    "mediaevent_create_time_movie_events",
+				Unique:  false,
+				Columns: []*schema.Column{MediaEventsColumns[1], MediaEventsColumns[6]},
+			},
+			{
+				Name:    "mediaevent_create_time_episode_events",
+				Unique:  false,
+				Columns: []*schema.Column{MediaEventsColumns[1], MediaEventsColumns[5]},
+			},
+			{
+				Name:    "mediaevent_create_time_tv_show_events",
+				Unique:  false,
+				Columns: []*schema.Column{MediaEventsColumns[1], MediaEventsColumns[7]},
+			},
+		},
+	}
 	// MediaFilesColumns holds the columns for the "media_files" table.
 	MediaFilesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUint32, Increment: true},
@@ -279,6 +352,16 @@ var (
 		{Name: "release_group", Type: field.TypeString, Nullable: true},
 		{Name: "source", Type: field.TypeEnum, Enums: []string{"wizard", "orphan", "auto"}, Default: "auto"},
 		{Name: "last_seen_at", Type: field.TypeTime, Nullable: true},
+		{Name: "missing_since", Type: field.TypeTime, Nullable: true},
+		{Name: "container", Type: field.TypeString, Nullable: true},
+		{Name: "duration_seconds", Type: field.TypeUint32, Nullable: true},
+		{Name: "video_codec", Type: field.TypeString, Nullable: true},
+		{Name: "width", Type: field.TypeUint16, Nullable: true},
+		{Name: "height", Type: field.TypeUint16, Nullable: true},
+		{Name: "audio_codec", Type: field.TypeString, Nullable: true},
+		{Name: "audio_channels", Type: field.TypeUint8, Nullable: true},
+		{Name: "bitrate", Type: field.TypeUint32, Nullable: true},
+		{Name: "probed_at", Type: field.TypeTime, Nullable: true},
 		{Name: "episode_media_files", Type: field.TypeUint32, Nullable: true},
 		{Name: "movie_media_files", Type: field.TypeUint32, Nullable: true},
 	}
@@ -290,15 +373,27 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "media_files_episodes_media_files",
-				Columns:    []*schema.Column{MediaFilesColumns[10]},
+				Columns:    []*schema.Column{MediaFilesColumns[20]},
 				RefColumns: []*schema.Column{EpisodesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "media_files_movies_media_files",
-				Columns:    []*schema.Column{MediaFilesColumns[11]},
+				Columns:    []*schema.Column{MediaFilesColumns[21]},
 				RefColumns: []*schema.Column{MoviesColumns[0]},
 				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "mediafile_episode_media_files",
+				Unique:  false,
+				Columns: []*schema.Column{MediaFilesColumns[20]},
+			},
+			{
+				Name:    "mediafile_movie_media_files",
+				Unique:  false,
+				Columns: []*schema.Column{MediaFilesColumns[21]},
 			},
 		},
 	}
@@ -335,46 +430,6 @@ var (
 				Name:    "movie_digital_release_date",
 				Unique:  false,
 				Columns: []*schema.Column{MoviesColumns[12]},
-			},
-		},
-	}
-	// MovieEventsColumns holds the columns for the "movie_events" table.
-	MovieEventsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeUint32, Increment: true},
-		{Name: "create_time", Type: field.TypeTime},
-		{Name: "update_time", Type: field.TypeTime},
-		{Name: "type", Type: field.TypeEnum, Enums: []string{"grabbed", "download_completed", "download_failed", "imported", "import_failed", "drift_detected", "drift_confirmed", "searched"}},
-		{Name: "payload", Type: field.TypeJSON, Nullable: true},
-		{Name: "movie_events", Type: field.TypeUint32},
-	}
-	// MovieEventsTable holds the schema information for the "movie_events" table.
-	MovieEventsTable = &schema.Table{
-		Name:       "movie_events",
-		Columns:    MovieEventsColumns,
-		PrimaryKey: []*schema.Column{MovieEventsColumns[0]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "movie_events_movies_events",
-				Columns:    []*schema.Column{MovieEventsColumns[5]},
-				RefColumns: []*schema.Column{MoviesColumns[0]},
-				OnDelete:   schema.Cascade,
-			},
-		},
-		Indexes: []*schema.Index{
-			{
-				Name:    "movieevent_create_time",
-				Unique:  false,
-				Columns: []*schema.Column{MovieEventsColumns[1]},
-			},
-			{
-				Name:    "movieevent_type_create_time",
-				Unique:  false,
-				Columns: []*schema.Column{MovieEventsColumns[3], MovieEventsColumns[1]},
-			},
-			{
-				Name:    "movieevent_create_time_movie_events",
-				Unique:  false,
-				Columns: []*schema.Column{MovieEventsColumns[1], MovieEventsColumns[5]},
 			},
 		},
 	}
@@ -493,6 +548,13 @@ var (
 				OnDelete:   schema.Cascade,
 			},
 		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "season_tv_show_seasons",
+				Unique:  false,
+				Columns: []*schema.Column{SeasonsColumns[6]},
+			},
+		},
 	}
 	// SessionsColumns holds the columns for the "sessions" table.
 	SessionsColumns = []*schema.Column{
@@ -599,9 +661,9 @@ var (
 		ImportScanFilesTable,
 		ImportScanShowsTable,
 		InvitesTable,
+		MediaEventsTable,
 		MediaFilesTable,
 		MoviesTable,
-		MovieEventsTable,
 		OidcIdentitiesTable,
 		RequestsTable,
 		ScheduledJobsTable,
@@ -622,9 +684,11 @@ func init() {
 	ImportScanShowsTable.ForeignKeys[0].RefTable = ImportScansTable
 	InvitesTable.ForeignKeys[0].RefTable = UsersTable
 	InvitesTable.ForeignKeys[1].RefTable = UsersTable
+	MediaEventsTable.ForeignKeys[0].RefTable = EpisodesTable
+	MediaEventsTable.ForeignKeys[1].RefTable = MoviesTable
+	MediaEventsTable.ForeignKeys[2].RefTable = TvShowsTable
 	MediaFilesTable.ForeignKeys[0].RefTable = EpisodesTable
 	MediaFilesTable.ForeignKeys[1].RefTable = MoviesTable
-	MovieEventsTable.ForeignKeys[0].RefTable = MoviesTable
 	OidcIdentitiesTable.ForeignKeys[0].RefTable = UsersTable
 	RequestsTable.ForeignKeys[0].RefTable = UsersTable
 	RequestsTable.ForeignKeys[1].RefTable = UsersTable

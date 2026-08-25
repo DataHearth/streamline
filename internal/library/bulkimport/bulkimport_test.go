@@ -8,7 +8,9 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/datahearth/streamline/ent"
+	entimportscan "github.com/datahearth/streamline/ent/importscan"
 	entimportscanfile "github.com/datahearth/streamline/ent/importscanfile"
+	entimportscanshow "github.com/datahearth/streamline/ent/importscanshow"
 	"github.com/datahearth/streamline/internal/db"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 )
@@ -141,5 +143,72 @@ var _ = Describe("Service file decisions", Label("unit", "bulkimport"), func() {
 			Expect(items).To(BeEmpty())
 			Expect(total).To(BeZero())
 		})
+	})
+})
+
+var _ = Describe("Service.BulkDecide", Label("unit", "bulkimport"), func() {
+	var (
+		ctx   context.Context
+		store *dbmocks.MockStore
+		svc   *Service
+	)
+
+	BeforeEach(func() {
+		ctx = context.Background()
+		store = dbmocks.NewMockStore(GinkgoT())
+		svc = NewService(store, nil, nil, nil, nil, nil, "/lib", "/lib-tv")
+	})
+
+	It("applies a classification-filtered decision to a movie scan", func() {
+		store.EXPECT().FindImportScan(mock.Anything, uint32(1)).
+			Return(&ent.ImportScan{
+				ID:     1,
+				Kind:   entimportscan.KindMovie,
+				Status: entimportscan.StatusAwaitingReview,
+			}, nil).Once()
+		store.EXPECT().BulkUpdateImportScanFileDecisions(
+			mock.Anything, uint32(1),
+			entimportscanfile.DecisionAccept,
+			entimportscanfile.ClassificationConfirmed,
+			[]uint32(nil),
+		).Return(436, nil).Once()
+
+		n, err := svc.BulkDecide(ctx, BulkDecisionParams{
+			ScanID: 1, Decision: "accept", Classification: "confirmed",
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(n).To(Equal(436))
+	})
+
+	It("routes a series scan to the show rows", func() {
+		store.EXPECT().FindImportScan(mock.Anything, uint32(2)).
+			Return(&ent.ImportScan{
+				ID:     2,
+				Kind:   entimportscan.KindSeries,
+				Status: entimportscan.StatusAwaitingReview,
+			}, nil).Once()
+		store.EXPECT().BulkUpdateImportScanShowDecisions(
+			mock.Anything, uint32(2),
+			entimportscanshow.DecisionSkip,
+			entimportscanshow.Classification(""),
+			[]uint32{7, 9},
+		).Return(2, nil).Once()
+
+		n, err := svc.BulkDecide(ctx, BulkDecisionParams{
+			ScanID: 2, Decision: "skip", IDs: []uint32{7, 9},
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(n).To(Equal(2))
+	})
+
+	It("refuses a scan that is not awaiting review", func() {
+		store.EXPECT().FindImportScan(mock.Anything, uint32(3)).
+			Return(&ent.ImportScan{
+				ID: 3, Status: entimportscan.StatusCompleted,
+			}, nil).Once()
+		_, err := svc.BulkDecide(ctx, BulkDecisionParams{
+			ScanID: 3, Decision: "accept",
+		})
+		Expect(err).To(MatchError(ErrScanNotReviewable))
 	})
 })

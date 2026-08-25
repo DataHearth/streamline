@@ -76,10 +76,10 @@ const (
 	// MediaFilesColumn is the table column denoting the media_files relation/edge.
 	MediaFilesColumn = "movie_media_files"
 	// EventsTable is the table that holds the events relation/edge.
-	EventsTable = "movie_events"
-	// EventsInverseTable is the table name for the MovieEvent entity.
-	// It exists in this package in order to avoid circular dependency with the "movieevent" package.
-	EventsInverseTable = "movie_events"
+	EventsTable = "media_events"
+	// EventsInverseTable is the table name for the MediaEvent entity.
+	// It exists in this package in order to avoid circular dependency with the "mediaevent" package.
+	EventsInverseTable = "media_events"
 	// EventsColumn is the table column denoting the events relation/edge.
 	EventsColumn = "movie_events"
 )

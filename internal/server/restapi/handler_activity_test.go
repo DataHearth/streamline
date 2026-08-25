@@ -2,7 +2,9 @@ package restapi
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -10,6 +12,7 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
 )
@@ -63,6 +66,39 @@ var _ = Describe("Handler: Activity queue/history",
 			Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
 		})
 
+		It("DELETE /activity/queue/{id} 409s a held record", func() {
+			app.downloads.EXPECT().CancelQueueItem(mock.Anything, uint32(7)).
+				Return(download.ErrRecordHeld).Once()
+			req, _ := http.NewRequest(http.MethodDelete,
+				app.srv.URL+"/api/v1/activity/queue/7", nil)
+			resp, err := http.DefaultClient.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusConflict))
+		})
+
+		It("POST /activity/queue/{id}/pause 409s a held record", func() {
+			app.downloads.EXPECT().PauseQueueItem(mock.Anything, uint32(7)).
+				Return(download.ErrRecordHeld).Once()
+			resp, err := http.Post(
+				app.srv.URL+"/api/v1/activity/queue/7/pause",
+				"application/json", nil)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusConflict))
+		})
+
+		It("POST /activity/queue/{id}/resume 409s a held record", func() {
+			app.downloads.EXPECT().ResumeQueueItem(mock.Anything, uint32(7)).
+				Return(download.ErrRecordHeld).Once()
+			resp, err := http.Post(
+				app.srv.URL+"/api/v1/activity/queue/7/resume",
+				"application/json", nil)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusConflict))
+		})
+
 		It("POST /activity/history/clear-completed returns the count", func() {
 			app.store.EXPECT().DeleteAllCompletedDownloadRecords(mock.Anything).
 				Return(4, nil).Once()
@@ -111,5 +147,95 @@ var _ = Describe("Handler: Activity queue/history",
 			Expect(err).NotTo(HaveOccurred())
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+		})
+	})
+
+var _ = Describe("Handler: resolve held downloads",
+	Label("unit", "server", "activity"), func() {
+		var app *apiKeyApp
+		BeforeEach(func() { app = newAPIKeyApp() })
+
+		held := func(id uint32) *ent.DownloadRecord {
+			return &ent.DownloadRecord{
+				ID:                 id,
+				Status:             downloadrecord.StatusHeld,
+				TorrentHash:        "H",
+				DownloadClientName: "qb",
+			}
+		}
+
+		post := func(id uint32, action string) *http.Response {
+			GinkgoHelper()
+			body := strings.NewReader(`{"action":"` + action + `"}`)
+			resp, err := http.Post(
+				fmt.Sprintf("%s/api/v1/downloads/%d/resolve", app.srv.URL, id),
+				"application/json", body)
+			Expect(err).NotTo(HaveOccurred())
+			DeferCleanup(resp.Body.Close)
+			return resp
+		}
+
+		It("import releases the record and re-enqueues it", func() {
+			app.store.EXPECT().FindDownloadRecordByID(mock.Anything, uint32(1)).
+				Return(held(1), nil).Once()
+			app.store.EXPECT().
+				ReleaseHeldDownloadRecord(mock.Anything, uint32(1)).
+				Return(nil).Once()
+			app.importer.EXPECT().Enqueue(uint32(1)).Once()
+
+			Expect(post(1, "import").StatusCode).To(Equal(http.StatusNoContent))
+		})
+
+		It("regrab deletes the torrent with its data and requeues", func() {
+			app.store.EXPECT().FindDownloadRecordByID(mock.Anything, uint32(2)).
+				Return(held(2), nil).Once()
+			app.downloads.EXPECT().
+				RemoveTorrent(mock.Anything, "qb", "H", true).Return(nil).Once()
+			app.store.EXPECT().
+				FailHeldDownloadRecord(mock.Anything, uint32(2), mock.Anything, true).
+				Return(nil).Once()
+
+			Expect(post(2, "regrab").StatusCode).To(Equal(http.StatusNoContent))
+		})
+
+		It("delete removes the torrent without requeueing", func() {
+			app.store.EXPECT().FindDownloadRecordByID(mock.Anything, uint32(3)).
+				Return(held(3), nil).Once()
+			app.downloads.EXPECT().
+				RemoveTorrent(mock.Anything, "qb", "H", true).Return(nil).Once()
+			app.store.EXPECT().
+				FailHeldDownloadRecord(mock.Anything, uint32(3), mock.Anything, false).
+				Return(nil).Once()
+
+			Expect(post(3, "delete").StatusCode).To(Equal(http.StatusNoContent))
+		})
+
+		It("409s a record that is not held", func() {
+			rec := held(4)
+			rec.Status = downloadrecord.StatusCompleted
+			app.store.EXPECT().FindDownloadRecordByID(mock.Anything, uint32(4)).
+				Return(rec, nil).Once()
+
+			Expect(post(4, "import").StatusCode).To(Equal(http.StatusConflict))
+		})
+
+		It("404s an unknown record", func() {
+			app.store.EXPECT().FindDownloadRecordByID(mock.Anything, uint32(9)).
+				Return(nil, &ent.NotFoundError{}).Once()
+
+			Expect(post(9, "import").StatusCode).To(Equal(http.StatusNotFound))
+		})
+
+		It("400s an unrecognised action instead of deleting", func() {
+			Expect(post(5, "cancel").StatusCode).To(Equal(http.StatusBadRequest))
+		})
+
+		It("400s a body with no action at all", func() {
+			resp, err := http.Post(
+				app.srv.URL+"/api/v1/downloads/6/resolve",
+				"application/json", strings.NewReader(`{}`))
+			Expect(err).NotTo(HaveOccurred())
+			DeferCleanup(resp.Body.Close)
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		})
 	})

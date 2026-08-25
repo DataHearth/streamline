@@ -159,6 +159,13 @@
 				<CircleCheckBig size={13} aria-hidden="true" />
 				{i18n.common_created()}
 			</span>
+		{:else if show.outcome === "attached"}
+			<span
+				class="inline-flex items-center gap-1 text-xs font-semibold text-status-available"
+			>
+				<Link2 size={13} aria-hidden="true" />
+				{i18n.imports_attached()}
+			</span>
 		{:else if show.outcome === "failed"}
 			<span
 				class="inline-flex items-center gap-1 text-xs font-semibold text-status-failed"

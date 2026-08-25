@@ -11,6 +11,8 @@ import (
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
 	entmovie "github.com/datahearth/streamline/ent/movie"
+	"github.com/datahearth/streamline/ent/schema"
+	"github.com/datahearth/streamline/internal/ffmpeg"
 )
 
 var _ = Describe("Download record store", Label("integration", "db"), func() {
@@ -49,6 +51,22 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 		Expect(err).NotTo(HaveOccurred())
 		return rec
 	}
+
+	Describe("CountLiveDownloadRecords", func() {
+		It("counts in-flight and pending rows, not terminal ones", func() {
+			createRec("live-dl", downloadrecord.StatusDownloading)
+			createRec("live-imp", downloadrecord.StatusImporting)
+			createRec("live-held", downloadrecord.StatusHeld)
+			createRec("live-pend", downloadrecord.StatusPending)
+			createRec("dead-comp", downloadrecord.StatusCompleted)
+			createRec("dead-fail", downloadrecord.StatusFailed)
+			createRec("dead-dism", downloadrecord.StatusDismissed)
+
+			n, err := store.CountLiveDownloadRecords(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(4))
+		})
+	})
 
 	Describe("CreateDownloadRecord", func() {
 		It("persists with the given edges", func() {
@@ -199,6 +217,56 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 				Expect(count).To(Equal(0))
 			})
 		})
+
+		It(
+			"persists probe columns and stamps probed_at when File.Probe is set",
+			func() {
+				rec := createRec("abc", downloadrecord.StatusImporting)
+				err := store.RecordImportSuccess(ctx, RecordImportSuccessParams{
+					RecordID: rec.ID, MovieID: movieID,
+					File: MediaFileRow{
+						Path: "/lib/dune.mkv", Size: 1024,
+						Quality: "1080p", Format: "mkv", ReleaseGroup: "GROUP",
+						Probe: &ffmpeg.Info{
+							Container: "matroska", DurationSec: 5400,
+							VideoCodec: "h264", Width: 1920, Height: 1080,
+							AudioCodec: "aac", AudioChannels: 2,
+							BitrateBPS: 8_000_000,
+						},
+					},
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				mf, err := client.MediaFile.Query().Only(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(mf.Container).To(Equal("matroska"))
+				Expect(mf.DurationSeconds).To(Equal(uint32(5400)))
+				Expect(mf.VideoCodec).To(Equal("h264"))
+				Expect(mf.Width).To(Equal(uint16(1920)))
+				Expect(mf.Height).To(Equal(uint16(1080)))
+				Expect(mf.AudioCodec).To(Equal("aac"))
+				Expect(mf.AudioChannels).To(Equal(uint8(2)))
+				Expect(mf.Bitrate).To(Equal(uint32(8_000_000)))
+				Expect(mf.ProbedAt).NotTo(BeNil())
+			},
+		)
+
+		It("leaves probed_at nil when File.Probe is nil", func() {
+			rec := createRec("abc", downloadrecord.StatusImporting)
+			err := store.RecordImportSuccess(ctx, RecordImportSuccessParams{
+				RecordID: rec.ID, MovieID: movieID,
+				File: MediaFileRow{
+					Path: "/lib/dune.mkv", Size: 1024,
+					Quality: "1080p", Format: "mkv", ReleaseGroup: "GROUP",
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			mf, err := client.MediaFile.Query().Only(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(mf.ProbedAt).To(BeNil())
+			Expect(mf.VideoCodec).To(BeEmpty())
+		})
 	})
 
 	Describe("RecordImportFailure", func() {
@@ -240,6 +308,96 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 				Expect(m.Status).To(Equal(entmovie.StatusFailed))
 				Expect(m.FailureReason).To(Equal("bad file"))
 			})
+		})
+	})
+
+	Describe("RecordEpisodeImportSuccess", func() {
+		createEpisode := func(tvdb uint32) uint32 {
+			GinkgoHelper()
+			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "The Black Sea", Year: 2024, TvdbID: tvdb,
+				Seasons: []SeasonSeed{{
+					Number:   1,
+					Episodes: []EpisodeSeed{{Number: 1, Title: "Pilot"}},
+				}},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			return show.Edges.Seasons[0].Edges.Episodes[0].ID
+		}
+
+		It(
+			"persists probe columns and stamps probed_at when File.Probe is set",
+			func() {
+				episodeID := createEpisode(9101)
+				rec, err := store.CreateDownloadRecord(
+					ctx,
+					CreateDownloadRecordParams{
+						Title: "t", Size: 1, TorrentHash: "tv",
+						Status:             downloadrecord.StatusImporting,
+						EpisodeID:          episodeID,
+						DownloadClientName: clientName,
+					},
+				)
+				Expect(err).NotTo(HaveOccurred())
+
+				err = store.RecordEpisodeImportSuccess(
+					ctx,
+					RecordEpisodeImportSuccessParams{
+						RecordID: rec.ID, EpisodeID: episodeID,
+						File: MediaFileRow{
+							Path: "/lib/bear.mkv", Size: 1024,
+							Quality: "1080p", Format: "mkv", ReleaseGroup: "GROUP",
+							Probe: &ffmpeg.Info{
+								Container: "matroska", DurationSec: 1500,
+								VideoCodec: "hevc", Width: 1920, Height: 1080,
+								AudioCodec: "aac", AudioChannels: 2,
+								BitrateBPS: 6_000_000,
+							},
+						},
+					},
+				)
+				Expect(err).NotTo(HaveOccurred())
+
+				mf, err := client.MediaFile.Query().Only(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(mf.Container).To(Equal("matroska"))
+				Expect(mf.DurationSeconds).To(Equal(uint32(1500)))
+				Expect(mf.VideoCodec).To(Equal("hevc"))
+				Expect(mf.Width).To(Equal(uint16(1920)))
+				Expect(mf.Height).To(Equal(uint16(1080)))
+				Expect(mf.AudioCodec).To(Equal("aac"))
+				Expect(mf.AudioChannels).To(Equal(uint8(2)))
+				Expect(mf.Bitrate).To(Equal(uint32(6_000_000)))
+				Expect(mf.ProbedAt).NotTo(BeNil())
+			},
+		)
+
+		It("leaves probed_at nil when File.Probe is nil", func() {
+			episodeID := createEpisode(9102)
+			rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "t", Size: 1, TorrentHash: "tv2",
+				Status:             downloadrecord.StatusImporting,
+				EpisodeID:          episodeID,
+				DownloadClientName: clientName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			err = store.RecordEpisodeImportSuccess(
+				ctx,
+				RecordEpisodeImportSuccessParams{
+					RecordID: rec.ID, EpisodeID: episodeID,
+					File: MediaFileRow{
+						Path: "/lib/bear.mkv", Size: 1024,
+						Quality: "1080p", Format: "mkv", ReleaseGroup: "GROUP",
+					},
+				},
+			)
+			Expect(err).NotTo(HaveOccurred())
+
+			mf, err := client.MediaFile.Query().Only(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(mf.ProbedAt).To(BeNil())
+			Expect(mf.VideoCodec).To(BeEmpty())
 		})
 	})
 
@@ -323,6 +481,17 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 			rec := createRec("done", downloadrecord.StatusCompleted)
 			_, err := store.FindActiveDownloadRecordByID(ctx, rec.ID)
 			Expect(ent.IsNotFound(err)).To(BeTrue())
+		})
+
+		It("finds a held record so the queue verbs can 409 it", func() {
+			rec := createRec("held", downloadrecord.StatusImporting)
+			Expect(store.HoldDownloadRecord(ctx, rec.ID, []schema.HoldReason{
+				{File: "/dl/f.mkv", Check: "resolution"},
+			})).To(Succeed())
+
+			got, err := store.FindActiveDownloadRecordByID(ctx, rec.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.Status).To(Equal(downloadrecord.StatusHeld))
 		})
 	})
 
@@ -462,6 +631,28 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 				DownloadClientName: clientName,
 			})
 			Expect(err).NotTo(HaveOccurred())
+
+			n, err := store.RevertOrphanedDownloadingEpisodes(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(0))
+			for _, id := range ids {
+				e, _ := client.Episode.Get(ctx, id)
+				Expect(e.Status).To(Equal(episode.StatusDownloading))
+			}
+		})
+
+		It("spares the whole season while its record is held", func() {
+			ids := seedDownloadingSeason(7004, 3)
+			rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "pack", Size: 1, TorrentHash: "held-h",
+				Status:             downloadrecord.StatusImporting,
+				EpisodeID:          ids[0],
+				DownloadClientName: clientName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(store.HoldDownloadRecord(ctx, rec.ID, []schema.HoldReason{
+				{File: "/dl/e1.mkv", Check: "resolution"},
+			})).To(Succeed())
 
 			n, err := store.RevertOrphanedDownloadingEpisodes(ctx)
 			Expect(err).NotTo(HaveOccurred())
@@ -642,6 +833,110 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 				Expect(err).NotTo(HaveOccurred())
 			},
 		)
+	})
+
+	Describe("the hold lifecycle", func() {
+		reasons := []schema.HoldReason{{
+			File: "/dl/f.mkv", Check: "codec",
+			Expected: "hevc", Actual: "h264",
+		}}
+
+		createEpisodeRec := func(tvdb uint32) (*ent.DownloadRecord, uint32) {
+			GinkgoHelper()
+			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "Hold", Year: 2024, TvdbID: tvdb,
+				Seasons: []SeasonSeed{{
+					Number:   1,
+					Episodes: []EpisodeSeed{{Number: 1, Title: "Pilot"}},
+				}},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			epID := show.Edges.Seasons[0].Edges.Episodes[0].ID
+			rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "t", Size: 1, TorrentHash: "eh",
+				Status:    downloadrecord.StatusImporting,
+				EpisodeID: epID, DownloadClientName: clientName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			return rec, epID
+		}
+
+		It("holds an importing record with its reasons", func() {
+			rec := createRec("h1", downloadrecord.StatusImporting)
+			Expect(store.HoldDownloadRecord(ctx, rec.ID, reasons)).To(Succeed())
+
+			got, err := client.DownloadRecord.Get(ctx, rec.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.Status).To(Equal(downloadrecord.StatusHeld))
+			Expect(got.HoldReasons).To(Equal(reasons))
+		})
+
+		It("finds a held record by id with its owner loaded", func() {
+			rec := createRec("h2", downloadrecord.StatusImporting)
+			Expect(store.HoldDownloadRecord(ctx, rec.ID, reasons)).To(Succeed())
+
+			got, err := store.FindHeldDownloadRecordByID(ctx, rec.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.Edges.Movie).NotTo(BeNil())
+
+			other := createRec("h3", downloadrecord.StatusImporting)
+			_, err = store.FindHeldDownloadRecordByID(ctx, other.ID)
+			Expect(ent.IsNotFound(err)).To(BeTrue())
+		})
+
+		It("releases a held record for a bypassed re-import", func() {
+			rec := createRec("h4", downloadrecord.StatusImporting)
+			Expect(store.HoldDownloadRecord(ctx, rec.ID, reasons)).To(Succeed())
+			Expect(store.ReleaseHeldDownloadRecord(ctx, rec.ID)).To(Succeed())
+
+			got, err := client.DownloadRecord.Get(ctx, rec.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.Status).To(Equal(downloadrecord.StatusImporting))
+			Expect(got.VerificationBypassed).To(BeTrue())
+			Expect(got.HoldReasons).To(BeEmpty())
+		})
+
+		It("fails a rejected movie record back to wanted when requeued", func() {
+			rec := createRec("h5", downloadrecord.StatusImporting)
+			Expect(store.HoldDownloadRecord(ctx, rec.ID, reasons)).To(Succeed())
+			Expect(store.FailHeldDownloadRecord(ctx, rec.ID, "re-grab", true)).
+				To(Succeed())
+
+			got, err := client.DownloadRecord.Get(ctx, rec.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.Status).To(Equal(downloadrecord.StatusFailed))
+			Expect(got.FailureReason).To(Equal("re-grab"))
+			m, err := client.Movie.Get(ctx, movieID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(m.Status).To(Equal(entmovie.StatusWanted))
+		})
+
+		It("leaves a rejected movie failed when not requeued", func() {
+			rec := createRec("h6", downloadrecord.StatusImporting)
+			Expect(store.HoldDownloadRecord(ctx, rec.ID, reasons)).To(Succeed())
+			Expect(store.FailHeldDownloadRecord(ctx, rec.ID, "rejected", false)).
+				To(Succeed())
+
+			m, err := client.Movie.Get(ctx, movieID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(m.Status).To(Equal(entmovie.StatusFailed))
+			Expect(m.FailureReason).To(Equal("rejected"))
+		})
+
+		It("reverts a rejected episode to wanted on either path", func() {
+			for i, requeue := range []bool{true, false} {
+				rec, epID := createEpisodeRec(9200 + uint32(i))
+				Expect(store.HoldDownloadRecord(ctx, rec.ID, reasons)).To(Succeed())
+				Expect(
+					store.FailHeldDownloadRecord(ctx, rec.ID, "rejected", requeue),
+				).
+					To(Succeed())
+
+				e, err := client.Episode.Get(ctx, epID)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(e.Status).To(Equal(episode.StatusWanted))
+			}
+		})
 	})
 
 	Describe("ListPendingDownloadRecords / FindPendingDownloadRecordByID", func() {

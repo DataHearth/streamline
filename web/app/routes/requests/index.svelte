@@ -10,7 +10,7 @@
 		Film,
 		Tv,
 	} from "@lucide/svelte";
-	import { api } from "../../lib/api";
+	import { api, apiAllPages, type Paginated } from "../../lib/api";
 	import { toast } from "../../lib/toast";
 	import { cn } from "../../lib/cn";
 	import { formatRelative } from "../../lib/dates";
@@ -35,7 +35,6 @@
 	} from "../../lib/requests-touch";
 	import type {
 		MediaRequest,
-		PaginatedRequests,
 		RequestCounts,
 		RequestMediaDetails,
 		QualityProfile,
@@ -79,9 +78,9 @@
 	}
 
 	const qc = useQueryClient();
-	const requestsQuery = createQuery<PaginatedRequests>(() => ({
+	const requestsQuery = createQuery<Paginated<MediaRequest>>(() => ({
 		queryKey: ["requests"],
-		queryFn: () => api<PaginatedRequests>("/requests?page=1&limit=500"),
+		queryFn: () => apiAllPages<MediaRequest>("/requests"),
 	}));
 	const countsQuery = createQuery<RequestCounts>(() => ({
 		queryKey: ["requests", "counts"],

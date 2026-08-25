@@ -21,8 +21,9 @@ import (
 // ImportScanShowUpdate is the builder for updating ImportScanShow entities.
 type ImportScanShowUpdate struct {
 	config
-	hooks    []Hook
-	mutation *ImportScanShowMutation
+	hooks     []Hook
+	mutation  *ImportScanShowMutation
+	modifiers []func(*sql.UpdateBuilder)
 }
 
 // Where appends a list predicates to the ImportScanShowUpdate builder.
@@ -393,6 +394,12 @@ func (_u *ImportScanShowUpdate) check() error {
 	return nil
 }
 
+// Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
+func (_u *ImportScanShowUpdate) Modify(modifiers ...func(u *sql.UpdateBuilder)) *ImportScanShowUpdate {
+	_u.modifiers = append(_u.modifiers, modifiers...)
+	return _u
+}
+
 func (_u *ImportScanShowUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
@@ -523,6 +530,7 @@ func (_u *ImportScanShowUpdate) sqlSave(ctx context.Context) (_node int, err err
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{importscanshow.Label}
@@ -538,9 +546,10 @@ func (_u *ImportScanShowUpdate) sqlSave(ctx context.Context) (_node int, err err
 // ImportScanShowUpdateOne is the builder for updating a single ImportScanShow entity.
 type ImportScanShowUpdateOne struct {
 	config
-	fields   []string
-	hooks    []Hook
-	mutation *ImportScanShowMutation
+	fields    []string
+	hooks     []Hook
+	mutation  *ImportScanShowMutation
+	modifiers []func(*sql.UpdateBuilder)
 }
 
 // SetUpdateTime sets the "update_time" field.
@@ -918,6 +927,12 @@ func (_u *ImportScanShowUpdateOne) check() error {
 	return nil
 }
 
+// Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
+func (_u *ImportScanShowUpdateOne) Modify(modifiers ...func(u *sql.UpdateBuilder)) *ImportScanShowUpdateOne {
+	_u.modifiers = append(_u.modifiers, modifiers...)
+	return _u
+}
+
 func (_u *ImportScanShowUpdateOne) sqlSave(ctx context.Context) (_node *ImportScanShow, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
@@ -1065,6 +1080,7 @@ func (_u *ImportScanShowUpdateOne) sqlSave(ctx context.Context) (_node *ImportSc
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	_spec.AddModifiers(_u.modifiers...)
 	_node = &ImportScanShow{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues

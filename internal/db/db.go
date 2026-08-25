@@ -17,7 +17,9 @@ import (
 	"github.com/datahearth/streamline/ent/request"
 	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/ent/tvshow"
+	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/metadata"
+	"github.com/datahearth/streamline/internal/role"
 )
 
 // StoredCast converts provider cast into the JSON shape persisted on Movie and
@@ -60,6 +62,11 @@ type Store interface {
 		id uint32,
 		p UpdateUserParams,
 	) (*ent.User, error)
+	UpdateUserRole(
+		ctx context.Context,
+		id uint32,
+		r role.Value,
+	) (*ent.User, error)
 	ListUsers(
 		ctx context.Context,
 		p ListUsersParams,
@@ -101,6 +108,7 @@ type Store interface {
 	TouchAPIKey(ctx context.Context, id uint32, at time.Time) error
 	ListAPIKeysByUser(ctx context.Context, userID uint32) ([]*ent.ApiKey, error)
 	DeleteAPIKeyByID(ctx context.Context, userID, keyID uint32) (int, error)
+	DeleteAPIKeysByUser(ctx context.Context, userID uint32) (int, error)
 
 	// torrent sessions (builtin BitTorrent engine persistence)
 	CreateTorrentSession(
@@ -191,6 +199,9 @@ type Store interface {
 		p UpdateMovieMetadataParams,
 	) error
 	UpdateMovieStatus(ctx context.Context, id uint32, status movie.Status) error
+	// SetMovieTMDBID repoints a row at a different TMDB title, leaving files
+	// and history in place. The caller refreshes metadata afterwards.
+	SetMovieTMDBID(ctx context.Context, id, tmdbID uint32) error
 	SetMovieLastSearchAt(ctx context.Context, id uint32, when time.Time) error
 	SetMovieDigitalReleaseDate(
 		ctx context.Context,
@@ -240,6 +251,26 @@ type Store interface {
 		ctx context.Context,
 		id uint32,
 	) (*ent.DownloadRecord, error)
+	FindDownloadRecordByID(
+		ctx context.Context,
+		id uint32,
+	) (*ent.DownloadRecord, error)
+	HoldDownloadRecord(
+		ctx context.Context,
+		id uint32,
+		reasons []schema.HoldReason,
+	) error
+	FindHeldDownloadRecordByID(
+		ctx context.Context,
+		id uint32,
+	) (*ent.DownloadRecord, error)
+	ReleaseHeldDownloadRecord(ctx context.Context, id uint32) error
+	FailHeldDownloadRecord(
+		ctx context.Context,
+		id uint32,
+		reason string,
+		requeue bool,
+	) error
 	RecordImportSuccess(ctx context.Context, p RecordImportSuccessParams) error
 	RecordEpisodeImportSuccess(
 		ctx context.Context,
@@ -247,7 +278,7 @@ type Store interface {
 	) error
 	RecordImportFailure(ctx context.Context, p RecordImportFailureParams) error
 	SetDownloadRecordSavePath(ctx context.Context, id uint32, path string) error
-	CountDownloadRecords(ctx context.Context) (int, error)
+	CountLiveDownloadRecords(ctx context.Context) (int, error)
 	// ListDownloadRecordsByPathPrefix returns records whose save_path sits
 	// under prefix. Used by the library path migration.
 	ListDownloadRecordsByPathPrefix(
@@ -336,8 +367,16 @@ type Store interface {
 		ctx context.Context,
 		movieID uint32,
 	) ([]*ent.MediaFile, error)
-	// BumpMediaFileLastSeen sets last_seen_at = now for the given row.
-	BumpMediaFileLastSeen(ctx context.Context, id uint32) error
+	// BumpMediaFilesLastSeen sets last_seen_at = now and clears any
+	// missing_since stamp for the given rows, in a bounded number of UPDATE
+	// statements rather than one per row.
+	BumpMediaFilesLastSeen(ctx context.Context, ids []uint32) error
+	// StartMediaFileGraceClock stamps last_seen_at for a row that never had
+	// one, without touching missing_since.
+	StartMediaFileGraceClock(ctx context.Context, id uint32) error
+	// MarkMediaFileMissing stamps missing_since, reporting true only when this
+	// call set it — the first drift tick that could not stat the file.
+	MarkMediaFileMissing(ctx context.Context, id uint32) (bool, error)
 	// CountMovieMediaFiles / CountEpisodeMediaFiles split the shared
 	// media_files table by owner, so the path migration can tell "this root
 	// holds nothing because the library is empty" apart from "…because the
@@ -350,6 +389,14 @@ type Store interface {
 		ctx context.Context,
 		prefix string,
 	) ([]*ent.MediaFile, error)
+	// ListUnprobedMediaFiles returns up to limit rows that have never been
+	// probed (probed_at IS NULL), oldest-first, for the media-probe backfill
+	// job to work through.
+	ListUnprobedMediaFiles(ctx context.Context, limit int) ([]*ent.MediaFile, error)
+	// StampMediaFileProbe records a probe attempt's result. A nil info
+	// (failed probe) still sets probed_at, so ListUnprobedMediaFiles never
+	// re-selects it.
+	StampMediaFileProbe(ctx context.Context, id uint32, info *ffmpeg.Info) error
 	// UpdateMediaFilePath rewrites a MediaFile's path (used by rename).
 	UpdateMediaFilePath(ctx context.Context, id uint32, path string) error
 	// DeleteMediaFile removes a MediaFile row and leaves owners untouched.
@@ -423,6 +470,17 @@ type Store interface {
 		decision importscanfile.Decision,
 		tmdbID *uint32,
 	) error
+	// BulkUpdateImportScanFileDecisions applies one decision across a scan,
+	// narrowed by classification and/or an explicit id list, returning the
+	// number of rows changed. An empty classification and no ids means every
+	// file in the scan.
+	BulkUpdateImportScanFileDecisions(
+		ctx context.Context,
+		scanID uint32,
+		decision importscanfile.Decision,
+		classification importscanfile.Classification,
+		ids []uint32,
+	) (int, error)
 	UpdateImportScanFileOutcome(
 		ctx context.Context,
 		id uint32,
@@ -462,6 +520,15 @@ type Store interface {
 		decision importscanshow.Decision,
 		tvdbID *uint32,
 	) error
+	// BulkUpdateImportScanShowDecisions is the per-show counterpart of
+	// BulkUpdateImportScanFileDecisions.
+	BulkUpdateImportScanShowDecisions(
+		ctx context.Context,
+		scanID uint32,
+		decision importscanshow.Decision,
+		classification importscanshow.Classification,
+		ids []uint32,
+	) (int, error)
 	ListImportScanShowsForCommit(
 		ctx context.Context,
 		scanID uint32,
@@ -499,6 +566,27 @@ type Store interface {
 		p UpdateTVShowMetadataParams,
 	) error
 	SetTVShowRefreshedAt(ctx context.Context, id uint32, when time.Time) error
+	// FilterTVShows applies filter, sort and page in SQL and returns the page's
+	// shows without their season/episode tree, plus the per-show episode
+	// rollup the list view renders in its place.
+	FilterTVShows(
+		ctx context.Context,
+		p FilterTVShowsParams,
+	) ([]*ent.TVShow, map[uint32]EpisodeCounts, uint32, error)
+	// SetTVShowTVDBID repoints a row at a different TVDB show. The episode tree
+	// still describes the old show until the caller reconciles it.
+	SetTVShowTVDBID(ctx context.Context, id, tvdbID uint32) error
+	// DetachEpisodeMediaFiles clears the episode edge on every media file under
+	// the show and returns the detached rows, each carrying its former episode
+	// and season so the caller can re-match by number.
+	DetachEpisodeMediaFiles(
+		ctx context.Context,
+		showID uint32,
+	) ([]*ent.MediaFile, error)
+	AttachMediaFileToEpisode(
+		ctx context.Context,
+		mediaFileID, episodeID uint32,
+	) error
 	ReconcileEpisodes(
 		ctx context.Context,
 		showID uint32,
@@ -518,7 +606,8 @@ type Store interface {
 	SetEpisodeLastSearchAt(ctx context.Context, id uint32, when time.Time) error
 	IncrementEpisodeGrabFailures(ctx context.Context, id uint32) error
 	ResetEpisodeGrabFailures(ctx context.Context, id uint32) error
-	ListWantedEpisodes(ctx context.Context) ([]*ent.TVShow, error)
+	// CountWantedEpisodes counts monitored, wanted episodes library-wide.
+	CountWantedEpisodes(ctx context.Context) (int, error)
 	ListEligibleEpisodesForSync(
 		ctx context.Context,
 		maxGrabFailures uint8,

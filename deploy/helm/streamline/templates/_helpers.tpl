@@ -14,7 +14,7 @@
 {{- define "streamline.labels" -}}
 app.kubernetes.io/name: {{ include "streamline.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
-app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+app.kubernetes.io/version: {{ .Values.image.tag | quote }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end -}}
@@ -33,7 +33,7 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
 
 {{- define "streamline.imageRef" -}}
-{{ printf "%s:%s" .Values.image.repository (default .Chart.AppVersion .Values.image.tag) }}
+{{ printf "%s:%s" .Values.image.repository (required "image.tag is required — set it to the streamline release you want to deploy" .Values.image.tag) }}
 {{- end -}}
 
 {{- /* SCOPE — read before extending this. The guard checks the write paths set

@@ -321,45 +321,51 @@ var _ = Describe("Manager.CheckStatus orphan reconciliation",
 	})
 
 var _ = Describe("Manager.RemoveTorrent", Label("integration", "downloads"), func() {
-	It("delegates to the download client with deleteFiles=false", func() {
-		ctx := context.Background()
+	DescribeTable("forwards deleteFiles to the download client",
+		func(deleteFiles bool, want string) {
+			ctx := context.Background()
 
-		var (
-			gotHashes      string
-			gotDeleteFiles string
-		)
-		mux := http.NewServeMux()
-		mux.HandleFunc(
-			"/api/v2/auth/login",
-			func(w http.ResponseWriter, _ *http.Request) {
-				http.SetCookie(w, &http.Cookie{Name: "SID", Value: "sess"})
-				w.WriteHeader(http.StatusOK)
-			},
-		)
-		mux.HandleFunc(
-			"/api/v2/torrents/delete",
-			func(w http.ResponseWriter, r *http.Request) {
-				Expect(r.ParseForm()).To(Succeed())
-				gotHashes = r.Form.Get("hashes")
-				gotDeleteFiles = r.Form.Get("deleteFiles")
-				w.WriteHeader(http.StatusOK)
-			},
-		)
-		ts := httptest.NewServer(mux)
-		DeferCleanup(ts.Close)
+			var (
+				gotHashes      string
+				gotDeleteFiles string
+			)
+			mux := http.NewServeMux()
+			mux.HandleFunc(
+				"/api/v2/auth/login",
+				func(w http.ResponseWriter, _ *http.Request) {
+					http.SetCookie(w, &http.Cookie{Name: "SID", Value: "sess"})
+					w.WriteHeader(http.StatusOK)
+				},
+			)
+			mux.HandleFunc(
+				"/api/v2/torrents/delete",
+				func(w http.ResponseWriter, r *http.Request) {
+					Expect(r.ParseForm()).To(Succeed())
+					gotHashes = r.Form.Get("hashes")
+					gotDeleteFiles = r.Form.Get("deleteFiles")
+					w.WriteHeader(http.StatusOK)
+				},
+			)
+			ts := httptest.NewServer(mux)
+			DeferCleanup(ts.Close)
 
-		dbClient, err := db.Open(ctx, ":memory:")
-		Expect(err).NotTo(HaveOccurred())
-		DeferCleanup(func() { dbClient.Close() })
+			dbClient, err := db.Open(ctx, ":memory:")
+			Expect(err).NotTo(HaveOccurred())
+			DeferCleanup(func() { dbClient.Close() })
 
-		host, port := splitHostPort(ts.URL)
-		qbitClientConfig("qbit-rm", host, port)
+			host, port := splitHostPort(ts.URL)
+			qbitClientConfig("qbit-rm", host, port)
 
-		mgr := New(db.New(dbClient), nil)
-		Expect(mgr.RemoveTorrent(ctx, "qbit-rm", "abc123")).To(Succeed())
-		Expect(gotHashes).To(Equal("abc123"))
-		Expect(gotDeleteFiles).To(Equal("false"))
-	})
+			mgr := New(db.New(dbClient), nil)
+			Expect(
+				mgr.RemoveTorrent(ctx, "qbit-rm", "abc123", deleteFiles),
+			).To(Succeed())
+			Expect(gotHashes).To(Equal("abc123"))
+			Expect(gotDeleteFiles).To(Equal(want))
+		},
+		Entry("seeding cleanup keeps the files", false, "false"),
+		Entry("a rejected hold takes the files with it", true, "true"),
+	)
 })
 
 var _ = Describe("Manager.CheckStatus logging",

@@ -1048,7 +1048,7 @@ func HasEvents() predicate.Movie {
 }
 
 // HasEventsWith applies the HasEdge predicate on the "events" edge with a given conditions (other predicates).
-func HasEventsWith(preds ...predicate.MovieEvent) predicate.Movie {
+func HasEventsWith(preds ...predicate.MediaEvent) predicate.Movie {
 	return predicate.Movie(func(s *sql.Selector) {
 		step := newEventsStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {

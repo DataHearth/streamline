@@ -15,6 +15,8 @@
 		Magnet,
 	} from "@lucide/svelte";
 	import { isActive as routifyIsActive } from "@roxi/routify";
+	import { slide } from "svelte/transition";
+	import { cubicOut } from "svelte/easing";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { api } from "../../lib/api";
 	import { auth } from "../../lib/auth.svelte";
@@ -25,6 +27,7 @@
 		activityCurrent,
 		type IsActiveFn,
 	} from "../../lib/activity-nav";
+	import { navCountsQuery, type NavDot } from "../../lib/nav-counts";
 	import type {
 		MovieCounts,
 		TVShowCounts,
@@ -78,7 +81,7 @@
 	let pendingAdoptions = $derived(pendingQuery.data?.items.length ?? 0);
 
 	const libraryItems = [
-		{ label: i18n.nav_dashboard(), href: "/dashboard", icon: LayoutDashboard },
+		{ label: i18n.nav_dashboard(), href: "/", icon: LayoutDashboard },
 		{ label: i18n.movies_label(), href: "/movies", icon: Film },
 		{ label: i18n.settings_series(), href: "/series", icon: Tv },
 	];
@@ -105,6 +108,65 @@
 		activityOpen = activityActive;
 	});
 	const torrentCounts = torrentCountsQuery();
+	// Shares the page keys the other nav surfaces already ride, so the pills
+	// cost no poll of their own.
+	const navCounts = navCountsQuery();
+
+	let torrentTotal = $derived(
+		TORRENT_PILLS.reduce(
+			(sum, p) => sum + (torrentCounts.counts[p.key] ?? 0),
+			0,
+		),
+	);
+	let queueTotal = $derived(
+		navCounts.queueDots.reduce((sum, d) => sum + d.count, 0),
+	);
+
+	// Folded, the group has to answer for both its routes, so each contributes
+	// one pill; unfolded, the rows carry their own per-status ones and repeating
+	// them up here would double-count what is already on screen.
+	let activityPills = $derived<NavDot[]>(
+		[
+			{
+				key: "queue",
+				label: i18n.activity_queue_history(),
+				count: queueTotal,
+				dot: "downloading",
+			},
+			{
+				key: "torrents",
+				label: i18n.torrent_label(),
+				count: torrentTotal,
+				dot: "seeding",
+			},
+		].filter((p) => p.count > 0),
+	);
+
+	let torrentPills = $derived<NavDot[]>(
+		TORRENT_PILLS.map((p) => ({
+			key: p.key,
+			label: p.key,
+			count: torrentCounts.counts[p.key] ?? 0,
+			dot: p.dot,
+		})).filter((p) => p.count > 0),
+	);
+
+	let importPills = $derived<NavDot[]>(
+		[
+			{
+				key: "running",
+				label: i18n.lc_running(),
+				count: navCounts.imports?.running ?? 0,
+				dot: "downloading",
+			},
+			{
+				key: "awaiting_review",
+				label: i18n.common_awaiting_review(),
+				count: navCounts.imports?.awaiting_review ?? 0,
+				dot: "wanted",
+			},
+		].filter((p) => p.count > 0),
+	);
 
 	let roleLabel = $derived.by(() => {
 		const r = auth.user?.role;
@@ -133,13 +195,36 @@
 
 </script>
 
+<!-- One vocabulary for every nav count: a status dot and its number, omitted
+     when zero, so a settled row stays quiet. Declared before the nav that
+     renders it — a snippet is not hoisted, and one defined below its
+     {@render} throws "dotPills is not defined" at mount. -->
+{#snippet dotPills(pills: NavDot[])}
+	{#if pills.length > 0}
+		<span
+			class="flex shrink-0 items-center gap-1.5 font-mono text-[10px] tabular-nums leading-none text-fg-subtle"
+		>
+			{#each pills as p (p.key)}
+				<span class="flex items-center gap-[3px]" title="{p.count} {p.label}">
+					<span
+						class="h-[5px] w-[5px] rounded-full"
+						style:background-color="var(--status-{p.dot})"
+					></span>
+					{p.count}
+				</span>
+			{/each}
+		</span>
+	{/if}
+{/snippet}
+
+
 <aside
 	class="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-3.5 border-r border-border bg-bg-elevated px-3.5 pb-5 pt-5 lg:flex"
 	aria-label={i18n.nav_primary_navigation()}
 >
 	<div class="px-2 pb-2 pt-1">
 		<a
-			href="/dashboard"
+			href="/"
 			aria-label={i18n.nav_home_dashboard()}
 			class="flex items-center gap-3 rounded-md transition hover:opacity-90"
 		>
@@ -170,7 +255,10 @@
 		</div>
 		<ul class="flex flex-col gap-px pb-3">
 			{#each libraryItems as item (item.href)}
-				{@const active = isActiveFn(item.href)}
+				{@const active =
+					item.href === "/"
+						? isActiveFn("/", {}, { recursive: false })
+						: isActiveFn(item.href)}
 				<li>
 					<a
 						href={item.href}
@@ -222,6 +310,9 @@
 				>
 					<Activity size={18} class="shrink-0" />
 					<span class="flex-1 truncate text-left">{i18n.nav_activity()}</span>
+					{#if !activityOpen}
+						{@render dotPills(activityPills)}
+					{/if}
 					<ChevronDown
 						size={14}
 						class={cn(
@@ -233,6 +324,11 @@
 				</button>
 			</li>
 			{#if activityOpen}
+				<li>
+				<ul
+					class="flex flex-col gap-px"
+					transition:slide={{ duration: 180, easing: cubicOut }}
+				>
 				{#each activityLinks as link (link.href)}
 					{@const current = activityCurrent(isActiveFn, link.href)}
 					<li class="ml-[11px] border-l border-border pl-2">
@@ -248,37 +344,25 @@
 						>
 							<link.icon size={15} class="shrink-0" />
 							<span class="min-w-0 flex-1 truncate">{link.label}</span>
-							{#if link.href === "/activity" && pendingAdoptions > 0}
-								<span
-									class="shrink-0 rounded-full bg-status-wanted/20 px-1.5 py-px font-mono text-[10.5px] tabular-nums text-status-wanted"
-									title={i18n.nav_adopted_needs_attention()}
-								>
-									{pendingAdoptions.toLocaleString()}
-								</span>
+							{#if link.href === "/activity"}
+								{#if pendingAdoptions > 0}
+									<span
+										class="shrink-0 rounded-full bg-status-wanted/20 px-1.5 py-px font-mono text-[10.5px] tabular-nums text-status-wanted"
+										title={i18n.nav_adopted_needs_attention()}
+									>
+										{pendingAdoptions.toLocaleString()}
+									</span>
+								{/if}
+								{@render dotPills(navCounts.queueDots)}
 							{/if}
 							{#if link.href === "/activity/torrents"}
-								<span
-									class="flex shrink-0 items-center gap-1.5 font-mono text-[10px] tabular-nums leading-none text-fg-subtle"
-								>
-									{#each TORRENT_PILLS as p (p.key)}
-										{#if (torrentCounts.counts[p.key] ?? 0) > 0}
-											<span
-												class="flex items-center gap-[3px]"
-												title="{torrentCounts.counts[p.key]} {p.key}"
-											>
-												<span
-													class="h-[5px] w-[5px] rounded-full"
-													style:background-color="var(--status-{p.dot})"
-												></span>
-												{torrentCounts.counts[p.key]}
-											</span>
-										{/if}
-									{/each}
-								</span>
+								{@render dotPills(torrentPills)}
 							{/if}
 						</a>
 					</li>
 				{/each}
+				</ul>
+				</li>
 			{/if}
 			{#each opsItems as item (item.href)}
 				{@const active = isActiveFn(item.href)}
@@ -290,6 +374,9 @@
 					>
 						<item.icon size={18} class="shrink-0" />
 						<span class="flex-1 truncate">{item.label}</span>
+						{#if item.href === "/library/imports"}
+							{@render dotPills(importPills)}
+						{/if}
 						{#if item.href === "/requests" && pendingRequests > 0}
 							<span
 								class="shrink-0 rounded-full bg-status-wanted/20 px-1.5 py-px font-mono text-[10.5px] tabular-nums text-status-wanted"

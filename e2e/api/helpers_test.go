@@ -26,11 +26,12 @@ type identity struct {
 var (
 	anon identity
 
-	// adminAuth (seed admin, Bearer) and viewerAuth (request_only, X-API-Key)
+	// adminAuth (seed admin, Bearer), viewerAuth (request_only, X-API-Key) and
+	// viewerSession (same viewer, Bearer — identity mutations refuse API keys)
 	// are minted once in BeforeSuite. auth.Limiter allows 5 POST /auth/login
 	// attempts per 15 minutes per IP; bootstrapIdentities spends exactly 2, so
 	// specs must never log in themselves.
-	adminAuth, viewerAuth identity
+	adminAuth, viewerAuth, viewerSession identity
 
 	// adminUserID and viewerUserID back the /users/{uid} specs.
 	adminUserID, viewerUserID uint32
@@ -89,6 +90,21 @@ func get(path string, id identity) *http.Response {
 func post(path string, id identity, body any) *http.Response {
 	GinkgoHelper()
 	return do(http.MethodPost, path, id, body)
+}
+
+// postRaw sends a body the caller built byte for byte, for the cases where the
+// bytes themselves are the subject and marshalling a Go value would hide them.
+func postRaw(path string, id identity, body []byte) *http.Response {
+	GinkgoHelper()
+	req, err := http.NewRequest(
+		http.MethodPost, baseURL+path, bytes.NewReader(body),
+	)
+	Expect(err).NotTo(HaveOccurred())
+	req.Header.Set("Content-Type", "application/json")
+	id.apply(req)
+	resp, err := httpClient.Do(req)
+	Expect(err).NotTo(HaveOccurred())
+	return resp
 }
 
 func put(path string, id identity, body any) *http.Response {
@@ -194,8 +210,8 @@ func bootstrapIdentities() {
 	decode(created, &viewer)
 	viewerUserID = viewer.Id
 
-	viewerBearer := identity{bearer: login(viewerEmail, viewerPassword)}
-	key := post("/api/v1/auth/me/api-keys", viewerBearer, map[string]any{
+	viewerSession = identity{bearer: login(viewerEmail, viewerPassword)}
+	key := post("/api/v1/auth/me/api-keys", viewerSession, map[string]any{
 		"name": "e2e-viewer",
 	})
 	defer key.Body.Close()

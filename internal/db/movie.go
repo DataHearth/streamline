@@ -93,7 +93,9 @@ func (db *DB) MovieCreateTimesSince(
 	return out, nil
 }
 
-// ListMovies returns a page of movies newest first.
+// ListMovies returns a page of movies newest first, with their media files
+// attached — the library grid renders size and quality per card, and the
+// footer sums the page's bytes.
 func (db *DB) ListMovies(
 	ctx context.Context,
 	offset, limit uint32,
@@ -102,6 +104,7 @@ func (db *DB) ListMovies(
 		Offset(int(offset)).
 		Limit(int(limit)).
 		Order(ent.Desc(movie.FieldCreateTime)).
+		WithMediaFiles().
 		All(ctx)
 }
 
@@ -311,6 +314,13 @@ func (db *DB) UpdateMovieMetadata(
 		SetCast(p.Cast).
 		SetLastRefreshedAt(time.Now()).
 		Exec(ctx)
+}
+
+// SetMovieTMDBID repoints a row at a different TMDB title. Everything else on
+// the row — files, history, requests, quality profile — is left alone; the
+// caller refreshes metadata afterwards so title/year stop contradicting the id.
+func (db *DB) SetMovieTMDBID(ctx context.Context, id, tmdbID uint32) error {
+	return db.client.Movie.UpdateOneID(id).SetTmdbID(tmdbID).Exec(ctx)
 }
 
 // SetMovieDigitalReleaseDate sets or clears digital_release_date based on

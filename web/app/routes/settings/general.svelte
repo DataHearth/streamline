@@ -28,6 +28,16 @@
 	<p class="mt-1 max-w-2xl text-sm text-fg-muted">
 		{i18n.settings_general_intro()}
 	</p>
+	{#if info.data?.ffmpeg_warn}
+		<p class="mt-3 flex items-center gap-2">
+			<span
+				class="inline-flex items-center gap-1.5 rounded-full bg-status-wanted/14 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-status-wanted"
+			>
+				{i18n.settings_ffmpeg_missing()}
+			</span>
+			<span class="text-xs text-fg-muted">{i18n.probe_not_found()}</span>
+		</p>
+	{/if}
 </header>
 
 {#if info.isPending}

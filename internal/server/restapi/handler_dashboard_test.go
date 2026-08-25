@@ -14,8 +14,8 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	entepisode "github.com/datahearth/streamline/ent/episode"
+	"github.com/datahearth/streamline/ent/mediaevent"
 	entmovie "github.com/datahearth/streamline/ent/movie"
-	"github.com/datahearth/streamline/ent/movieevent"
 	"github.com/datahearth/streamline/internal/db"
 )
 
@@ -35,13 +35,13 @@ var _ = Describe(
 					ID: 1, Title: "Anora", Year: 2024, TmdbID: 1064213,
 				}
 				now := time.Now()
-				e1 := &ent.MovieEvent{
-					ID: 1, Type: movieevent.TypeGrabbed, CreateTime: now,
+				e1 := &ent.MediaEvent{
+					ID: 1, Type: mediaevent.TypeGrabbed, CreateTime: now,
 				}
 				e1.Edges.Movie = m
-				e2 := &ent.MovieEvent{
+				e2 := &ent.MediaEvent{
 					ID:         2,
-					Type:       movieevent.TypeImported,
+					Type:       mediaevent.TypeImported,
 					CreateTime: now.Add(time.Second),
 				}
 				e2.Edges.Movie = m
@@ -49,7 +49,7 @@ var _ = Describe(
 				app.store.EXPECT().
 					RecentActivity(mock.Anything, mock.AnythingOfType("db.ActivityFilter")).
 					Return(&db.ActivityResult{
-						Events: []*ent.MovieEvent{e2, e1},
+						Events: []*ent.MediaEvent{e2, e1},
 					}, nil).
 					Once()
 

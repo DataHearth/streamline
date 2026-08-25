@@ -3,6 +3,7 @@ package restapi
 import (
 	"context"
 
+	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/sysinfo"
 )
 
@@ -18,8 +19,14 @@ func (s *Server) GetSystemInfo(
 		}, nil
 	}
 	snap := sysinfo.Collect()
+	out := snapshotToAPI(snap)
+	// Disabled ffmpeg means the operator opted out — no warning either way.
+	if config.Get().FFmpeg.Enabled && !s.prober.Available() {
+		warn := true
+		out.FfmpegWarn = &warn
+	}
 	return GetSystemInfo200JSONResponse{
-		SystemInfoJSONResponse: SystemInfoJSONResponse(snapshotToAPI(snap)),
+		SystemInfoJSONResponse: SystemInfoJSONResponse(out),
 	}, nil
 }
 

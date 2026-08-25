@@ -32,6 +32,9 @@ const IMPORT_SCAN_WINDOW = 100;
 const QUEUE_DOTS = [
 	{ key: "downloading", label: i18n.lc_downloading(), dot: "downloading" },
 	{ key: "importing", label: i18n.lc_importing(), dot: "grabbing" },
+	// Held leads the states that are not moving on their own: it is the only one
+	// waiting on a person, and this sheet is the phone's entry point to the queue.
+	{ key: "held", label: i18n.lc_held(), dot: "held" },
 	{ key: "paused", label: i18n.lc_paused(), dot: "paused" },
 	{ key: "error", label: i18n.lc_failed(), dot: "failed" },
 ] as const;
@@ -109,7 +112,7 @@ export function navCountsQuery() {
 			if (!items.length) return "Nothing in the queue";
 			const by: Record<string, number> = {};
 			for (const i of items) by[i.status] = (by[i.status] ?? 0) + 1;
-			return (["downloading", "importing", "paused", "error"] as const)
+			return (["downloading", "importing", "held", "paused", "error"] as const)
 				.filter((s) => by[s])
 				.map((s) => `${n(by[s])} ${s === "error" ? "failed" : s}`)
 				.join(" · ");

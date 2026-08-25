@@ -3,18 +3,19 @@ name: streamline
 description: Unified media management platform (arr stack replacement).
 type: application
 # Chart version is independent of the app: bump it for any chart change.
-# appVersion is the app release the chart deploys — it is the image tag.
+# There is no appVersion: the deployed release is whatever `image.tag` the
+# operator sets — the chart never picks an app version for you.
 #
 # 2.0.0 is a MAJOR bump because upgrading changes running pods and can reject
 # values that 1.x accepted: securityContext went from `{}` to a hardened block
-# (readOnlyRootFilesystem, dropped capabilities, RuntimeDefault seccomp), and
-# the chart now refuses to render when a write path set under `config:` falls
-# outside a persistent mount. Both are the point of the release, but an
-# operator on 1.x meets them as a failed `helm upgrade`, not a silent no-op.
-# That check covers the `config:` block only — see the securityContext comment
-# in values.yaml for what it cannot see.
-version: 2.1.0
-appVersion: "1.0.0"
+# (readOnlyRootFilesystem, dropped capabilities, RuntimeDefault seccomp), the
+# chart now refuses to render when a write path set under `config:` falls
+# outside a persistent mount, and image.tag is required (no appVersion
+# fallback). All are the point of the release, but an operator on 1.x meets
+# them as a failed `helm upgrade`, not a silent no-op. The write-path check
+# covers the `config:` block only — see the securityContext comment in
+# values.yaml for what it cannot see.
+version: 2.0.0
 kubeVersion: ">=1.27.0-0"
 home: https://github.com/DataHearth/streamline
 sources:

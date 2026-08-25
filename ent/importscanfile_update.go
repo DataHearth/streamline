@@ -21,8 +21,9 @@ import (
 // ImportScanFileUpdate is the builder for updating ImportScanFile entities.
 type ImportScanFileUpdate struct {
 	config
-	hooks    []Hook
-	mutation *ImportScanFileMutation
+	hooks     []Hook
+	mutation  *ImportScanFileMutation
+	modifiers []func(*sql.UpdateBuilder)
 }
 
 // Where appends a list predicates to the ImportScanFileUpdate builder.
@@ -433,6 +434,12 @@ func (_u *ImportScanFileUpdate) check() error {
 	return nil
 }
 
+// Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
+func (_u *ImportScanFileUpdate) Modify(modifiers ...func(u *sql.UpdateBuilder)) *ImportScanFileUpdate {
+	_u.modifiers = append(_u.modifiers, modifiers...)
+	return _u
+}
+
 func (_u *ImportScanFileUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
@@ -575,6 +582,7 @@ func (_u *ImportScanFileUpdate) sqlSave(ctx context.Context) (_node int, err err
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{importscanfile.Label}
@@ -590,9 +598,10 @@ func (_u *ImportScanFileUpdate) sqlSave(ctx context.Context) (_node int, err err
 // ImportScanFileUpdateOne is the builder for updating a single ImportScanFile entity.
 type ImportScanFileUpdateOne struct {
 	config
-	fields   []string
-	hooks    []Hook
-	mutation *ImportScanFileMutation
+	fields    []string
+	hooks     []Hook
+	mutation  *ImportScanFileMutation
+	modifiers []func(*sql.UpdateBuilder)
 }
 
 // SetUpdateTime sets the "update_time" field.
@@ -1010,6 +1019,12 @@ func (_u *ImportScanFileUpdateOne) check() error {
 	return nil
 }
 
+// Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
+func (_u *ImportScanFileUpdateOne) Modify(modifiers ...func(u *sql.UpdateBuilder)) *ImportScanFileUpdateOne {
+	_u.modifiers = append(_u.modifiers, modifiers...)
+	return _u
+}
+
 func (_u *ImportScanFileUpdateOne) sqlSave(ctx context.Context) (_node *ImportScanFile, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
@@ -1169,6 +1184,7 @@ func (_u *ImportScanFileUpdateOne) sqlSave(ctx context.Context) (_node *ImportSc
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	_spec.AddModifiers(_u.modifiers...)
 	_node = &ImportScanFile{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues

@@ -13,6 +13,12 @@ var templateTokenRe = regexp.MustCompile(`\{(\w+)(?::(\d+))?\}`)
 // with values from the provided map. Format spec {key:02} zero-pads
 // numeric values to the given width. Unknown tokens render as empty —
 // keeps optional segments like {imdb_id} clean when not populated.
+//
+// Substituted values are run through SanitizePath. The rendered string is a
+// path whose "/" are structural, and callers split on them: a title carrying
+// one of its own ("In/Spectre", "Face/Off") would otherwise become two
+// directories, which sanitising the split segments afterwards can no longer
+// see.
 func ApplyTemplate(tpl string, vars map[string]string) string {
 	return templateTokenRe.ReplaceAllStringFunc(tpl, func(match string) string {
 		parts := templateTokenRe.FindStringSubmatch(match)
@@ -31,7 +37,7 @@ func ApplyTemplate(tpl string, vars map[string]string) string {
 			}
 		}
 
-		return val
+		return SanitizePath(val)
 	})
 }
 
@@ -96,18 +102,32 @@ func BuildEpisodeVars(
 	return vars
 }
 
+// pathReplacer maps characters that are invalid in filenames. Package-level
+// because strings.Replacer is safe for concurrent use and builds a lookup
+// table once.
+var pathReplacer = strings.NewReplacer(
+	":", " -",
+	"/", "-",
+	"\\", "-",
+	"<", "",
+	">", "",
+	"\"", "",
+	"|", "",
+	"?", "",
+	"*", "",
+)
+
+// pathSpaceRun matches the whitespace runs the replacements leave behind.
+var pathSpaceRun = regexp.MustCompile(`\s{2,}`)
+
 // SanitizePath removes characters that are invalid in filenames.
+//
+// Runs of whitespace are collapsed afterwards: ":" expands to " -" and the
+// deleted characters vanish outright, so either one doubles a space it already
+// had beside it — "2001 : L'Odyssée" would otherwise land as "2001  - L'Odyssée"
+// and "A | B" as "A  B".
 func SanitizePath(s string) string {
-	replacer := strings.NewReplacer(
-		":", " -",
-		"/", "-",
-		"\\", "-",
-		"<", "",
-		">", "",
-		"\"", "",
-		"|", "",
-		"?", "",
-		"*", "",
-	)
-	return replacer.Replace(s)
+	s = pathReplacer.Replace(s)
+	s = pathSpaceRun.ReplaceAllString(s, " ")
+	return strings.TrimSpace(s)
 }

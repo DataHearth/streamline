@@ -19,7 +19,6 @@
 		ChevronDown,
 		Plus,
 		X,
-		Eye,
 		SlidersHorizontal,
 	} from "@lucide/svelte";
 	import { fly } from "svelte/transition";
@@ -29,6 +28,8 @@
 	import SelectionControls from "../shared/SelectionControls.svelte";
 	import SelectionTopBar from "../shared/SelectionTopBar.svelte";
 	import MediaFilterSheet from "../shared/MediaFilterSheet.svelte";
+	import MonitorFilterTabs from "../shared/MonitorFilterTabs.svelte";
+	import type { MonitorFilter } from "../../lib/types";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	type View = "grid" | "list";
@@ -40,15 +41,16 @@
 		sort,
 		view,
 		counts,
-		monitoredOnly,
+		monitorFilter,
 		monitoredCount,
+		unmonitoredCount,
 		selectMode,
 		selectedCount,
 		visibleCount,
 		onTabChange,
 		onTypeChange,
 		onQueryChange,
-		onMonitoredChange,
+		onMonitorFilterChange,
 		onSortChange,
 		onViewChange,
 		onClearFilters,
@@ -62,15 +64,16 @@
 		sort: SeriesSort;
 		view: View;
 		counts: SeriesTabCounts;
-		monitoredOnly: boolean;
+		monitorFilter: MonitorFilter;
 		monitoredCount: number;
+		unmonitoredCount: number;
 		selectMode: boolean;
 		selectedCount: number;
 		visibleCount: number;
 		onTabChange: (t: SeriesTab) => void;
 		onTypeChange: (t: SeriesTypeFilter) => void;
 		onQueryChange: (q: string) => void;
-		onMonitoredChange: (v: boolean) => void;
+		onMonitorFilterChange: (v: MonitorFilter) => void;
 		onSortChange: (s: SeriesSort) => void;
 		onViewChange: (v: View) => void;
 		onClearFilters: () => void;
@@ -154,7 +157,7 @@
 	let selecting = $derived(selectMode || selectedCount > 0);
 	let activeFilters = $derived(
 		(query ? 1 : 0) +
-			(monitoredOnly ? 1 : 0) +
+			(monitorFilter !== "all" ? 1 : 0) +
 			(tab !== "all" ? 1 : 0) +
 			(typeFilter !== "all" ? 1 : 0),
 	);
@@ -257,9 +260,10 @@
 	sortOptions={sortOptions}
 	{sort}
 	onSortChange={(k) => selectSort(k as SeriesSort)}
-	{monitoredOnly}
+	{monitorFilter}
 	{monitoredCount}
-	{onMonitoredChange}
+	{unmonitoredCount}
+	{onMonitorFilterChange}
 	{view}
 	{onViewChange}
 	onSelectMode={() => onSelectModeChange(true)}
@@ -435,6 +439,11 @@
 		</button>
 	</div>
 
+	<!-- Flex line breaks: wrapping alone packs everything onto the first line on a
+	     wide screen. These pin the three rows — status tabs, type, then search and
+	     the selection controls — at every width from lg up. -->
+	<div class="hidden w-full lg:block"></div>
+
 	<div
 		class="hidden max-w-full shrink-0 items-center gap-0.5 overflow-x-auto rounded-md border border-border bg-bg-elevated p-[3px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:inline-flex"
 		role="group"
@@ -457,6 +466,8 @@
 				</button>
 			{/each}
 		</div>
+
+	<div class="hidden w-full lg:block"></div>
 
 	<!-- Below lg the field takes the rest of the tabs' line, which puts everything
 	     else on the second one — the same two rows as Movies, whose tab strip is
@@ -484,31 +495,15 @@
 			{/if}
 		</div>
 
-	<!-- Monitored and the Select pair get a line of their own: beside the search
-	     field they read as part of it rather than as filters over the grid. -->
-	<div class="order-3 flex w-full flex-wrap items-center gap-2 lg:order-none">
-		<button
-			type="button"
-			onclick={() => onMonitoredChange(!monitoredOnly)}
-			aria-pressed={monitoredOnly}
-			class={cn(
-				"inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border px-3 text-[12.5px] font-medium transition",
-				monitoredOnly
-					? "border-accent bg-accent-soft text-accent-text"
-					: "border-border bg-bg-elevated text-fg-muted hover:border-border-strong hover:text-fg",
-			)}
-		>
-			<Eye size={14} aria-hidden="true" />
-			{i18n.monitor_monitored()}
-			<span
-				class={cn(
-					"rounded-sm bg-white/[0.04] px-1.5 py-px font-mono text-[10px] tabular",
-					monitoredOnly ? "text-accent-text" : "text-fg-faint",
-				)}
-			>
-				{monitoredCount}
-			</span>
-		</button>
+	<div
+		class="order-3 flex w-full flex-wrap items-center gap-2 lg:order-none lg:w-auto"
+	>
+		<MonitorFilterTabs
+			value={monitorFilter}
+			{monitoredCount}
+			{unmonitoredCount}
+			onChange={onMonitorFilterChange}
+		/>
 
 		<!-- List rows carry their own checkboxes (and a select-all in the header), so
 		     the toolbar's Select controls would be a second way to do the same thing. -->

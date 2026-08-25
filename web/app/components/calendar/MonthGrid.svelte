@@ -36,7 +36,12 @@
 	// scroll), so how many chips a cell can hold is a measured quantity rather
 	// than a constant. Below that the cells keep their 92px minimum and three.
 	const MAX_VISIBLE = 3;
+	// Measured, not guessed: a chip is 21.75px tall plus the 4px flex gap, the
+	// "+N" button 19px plus its own gap, and the header is the cell's 12px of
+	// padding plus a 16.5px date row.
 	const CHIP_H = 26;
+	const MORE_H = 23;
+	const HEAD_H = 29;
 	let weeksEl = $state<HTMLDivElement | null>(null);
 	let cellH = $state(0);
 
@@ -50,12 +55,17 @@
 	});
 
 	// Date row plus the cell's own padding come off the top before chips fit.
-	let capacity = $derived(
-		Math.min(MAX_VISIBLE, Math.max(1, Math.floor((cellH - 36) / CHIP_H))),
-	);
-	// A day with more than fits gives one slot back to the "+N" button.
+	let chipRoom = $derived(Math.max(0, cellH - HEAD_H));
+	// The "+N" button is shorter than a chip, so a day that overflows loses that
+	// much room rather than a whole chip slot — costing a title the cell had the
+	// pixels for, which is how a two-release day showed one and "+1 more".
 	function visibleFor(n: number): number {
-		return n <= capacity ? n : Math.max(1, capacity - 1);
+		const fits = Math.min(MAX_VISIBLE, Math.floor(chipRoom / CHIP_H));
+		if (n <= fits) return n;
+		return Math.max(
+			1,
+			Math.min(MAX_VISIBLE, Math.floor((chipRoom - MORE_H) / CHIP_H)),
+		);
 	}
 	const POP_W = 248;
 	const GAP = 6;
@@ -217,7 +227,7 @@
 							href={e.href}
 							title={e.subtitle ? `${e.title} · ${e.subtitle}` : e.title}
 							style:--c="var(--kind-{dotToken(e)})"
-							class="chip block flex-none truncate rounded bg-bg-card px-1.5 py-1 text-left text-[10.5px] font-medium text-fg transition-colors hover:bg-bg-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
+							class="chip block flex-none truncate rounded bg-bg-card px-1.5 py-0.5 text-left text-[10.5px] font-medium text-fg transition-colors hover:bg-bg-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
 						>
 							{e.title}
 						</a>
@@ -238,7 +248,7 @@
 									longDate.format(cell.date),
 									ev.currentTarget,
 								)}
-							class="flex-none rounded px-1.5 py-1 text-left font-mono text-[10px] text-fg-subtle transition-colors hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
+							class="flex-none rounded px-1.5 py-0.5 text-left font-mono text-[10px] text-fg-subtle transition-colors hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
 						>
 							{i18n.calendar_more_count({ count: evs.length - vis })}
 						</button>

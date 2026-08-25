@@ -161,7 +161,7 @@
 	let moreOn = $derived(moreActive || sheet === "More");
 
 	const primary = [
-		{ label: i18n.nav_dashboard(), href: "/dashboard", icon: LayoutDashboard },
+		{ label: i18n.nav_dashboard(), href: "/", icon: LayoutDashboard },
 		{ label: i18n.nav_library(), icon: Library, section: "Library" as const },
 		{ label: i18n.nav_activity(), icon: Activity, section: "Activity" as const },
 	];
@@ -343,7 +343,10 @@
 				<span>{tab.label}</span>
 			</button>
 		{:else}
-			{@const active = isActiveFn(tab.href ?? "")}
+			{@const active =
+				tab.href === "/"
+					? isActiveFn("/", {}, { recursive: false })
+					: isActiveFn(tab.href ?? "")}
 			<a
 				href={tab.href}
 				aria-current={active ? "page" : undefined}

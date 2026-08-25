@@ -33,6 +33,26 @@ const (
 	FieldSource = "source"
 	// FieldLastSeenAt holds the string denoting the last_seen_at field in the database.
 	FieldLastSeenAt = "last_seen_at"
+	// FieldMissingSince holds the string denoting the missing_since field in the database.
+	FieldMissingSince = "missing_since"
+	// FieldContainer holds the string denoting the container field in the database.
+	FieldContainer = "container"
+	// FieldDurationSeconds holds the string denoting the duration_seconds field in the database.
+	FieldDurationSeconds = "duration_seconds"
+	// FieldVideoCodec holds the string denoting the video_codec field in the database.
+	FieldVideoCodec = "video_codec"
+	// FieldWidth holds the string denoting the width field in the database.
+	FieldWidth = "width"
+	// FieldHeight holds the string denoting the height field in the database.
+	FieldHeight = "height"
+	// FieldAudioCodec holds the string denoting the audio_codec field in the database.
+	FieldAudioCodec = "audio_codec"
+	// FieldAudioChannels holds the string denoting the audio_channels field in the database.
+	FieldAudioChannels = "audio_channels"
+	// FieldBitrate holds the string denoting the bitrate field in the database.
+	FieldBitrate = "bitrate"
+	// FieldProbedAt holds the string denoting the probed_at field in the database.
+	FieldProbedAt = "probed_at"
 	// EdgeMovie holds the string denoting the movie edge name in mutations.
 	EdgeMovie = "movie"
 	// EdgeEpisode holds the string denoting the episode edge name in mutations.
@@ -67,6 +87,16 @@ var Columns = []string{
 	FieldReleaseGroup,
 	FieldSource,
 	FieldLastSeenAt,
+	FieldMissingSince,
+	FieldContainer,
+	FieldDurationSeconds,
+	FieldVideoCodec,
+	FieldWidth,
+	FieldHeight,
+	FieldAudioCodec,
+	FieldAudioChannels,
+	FieldBitrate,
+	FieldProbedAt,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "media_files"
@@ -182,6 +212,56 @@ func BySource(opts ...sql.OrderTermOption) OrderOption {
 // ByLastSeenAt orders the results by the last_seen_at field.
 func ByLastSeenAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldLastSeenAt, opts...).ToFunc()
+}
+
+// ByMissingSince orders the results by the missing_since field.
+func ByMissingSince(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMissingSince, opts...).ToFunc()
+}
+
+// ByContainer orders the results by the container field.
+func ByContainer(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldContainer, opts...).ToFunc()
+}
+
+// ByDurationSeconds orders the results by the duration_seconds field.
+func ByDurationSeconds(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDurationSeconds, opts...).ToFunc()
+}
+
+// ByVideoCodec orders the results by the video_codec field.
+func ByVideoCodec(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldVideoCodec, opts...).ToFunc()
+}
+
+// ByWidth orders the results by the width field.
+func ByWidth(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldWidth, opts...).ToFunc()
+}
+
+// ByHeight orders the results by the height field.
+func ByHeight(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldHeight, opts...).ToFunc()
+}
+
+// ByAudioCodec orders the results by the audio_codec field.
+func ByAudioCodec(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAudioCodec, opts...).ToFunc()
+}
+
+// ByAudioChannels orders the results by the audio_channels field.
+func ByAudioChannels(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAudioChannels, opts...).ToFunc()
+}
+
+// ByBitrate orders the results by the bitrate field.
+func ByBitrate(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBitrate, opts...).ToFunc()
+}
+
+// ByProbedAt orders the results by the probed_at field.
+func ByProbedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldProbedAt, opts...).ToFunc()
 }
 
 // ByMovieField orders the results by movie field.

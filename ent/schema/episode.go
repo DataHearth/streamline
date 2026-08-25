@@ -5,6 +5,7 @@ import (
 	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
+	"entgo.io/ent/schema/index"
 	"entgo.io/ent/schema/mixin"
 
 	"github.com/datahearth/streamline/ent/schema/mixins"
@@ -41,5 +42,11 @@ func (Episode) Edges() []ent.Edge {
 			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("media_files", MediaFile.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),
+		edge.To("events", MediaEvent.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
+}
+
+func (Episode) Indexes() []ent.Index {
+	return []ent.Index{index.Edges("season")}
 }

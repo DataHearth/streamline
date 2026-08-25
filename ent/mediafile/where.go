@@ -95,6 +95,56 @@ func LastSeenAt(v time.Time) predicate.MediaFile {
 	return predicate.MediaFile(sql.FieldEQ(FieldLastSeenAt, v))
 }
 
+// MissingSince applies equality check predicate on the "missing_since" field. It's identical to MissingSinceEQ.
+func MissingSince(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldMissingSince, v))
+}
+
+// Container applies equality check predicate on the "container" field. It's identical to ContainerEQ.
+func Container(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldContainer, v))
+}
+
+// DurationSeconds applies equality check predicate on the "duration_seconds" field. It's identical to DurationSecondsEQ.
+func DurationSeconds(v uint32) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldDurationSeconds, v))
+}
+
+// VideoCodec applies equality check predicate on the "video_codec" field. It's identical to VideoCodecEQ.
+func VideoCodec(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldVideoCodec, v))
+}
+
+// Width applies equality check predicate on the "width" field. It's identical to WidthEQ.
+func Width(v uint16) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldWidth, v))
+}
+
+// Height applies equality check predicate on the "height" field. It's identical to HeightEQ.
+func Height(v uint16) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldHeight, v))
+}
+
+// AudioCodec applies equality check predicate on the "audio_codec" field. It's identical to AudioCodecEQ.
+func AudioCodec(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldAudioCodec, v))
+}
+
+// AudioChannels applies equality check predicate on the "audio_channels" field. It's identical to AudioChannelsEQ.
+func AudioChannels(v uint8) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldAudioChannels, v))
+}
+
+// Bitrate applies equality check predicate on the "bitrate" field. It's identical to BitrateEQ.
+func Bitrate(v uint32) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldBitrate, v))
+}
+
+// ProbedAt applies equality check predicate on the "probed_at" field. It's identical to ProbedAtEQ.
+func ProbedAt(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldProbedAt, v))
+}
+
 // CreateTimeEQ applies the EQ predicate on the "create_time" field.
 func CreateTimeEQ(v time.Time) predicate.MediaFile {
 	return predicate.MediaFile(sql.FieldEQ(FieldCreateTime, v))
@@ -573,6 +623,581 @@ func LastSeenAtIsNil() predicate.MediaFile {
 // LastSeenAtNotNil applies the NotNil predicate on the "last_seen_at" field.
 func LastSeenAtNotNil() predicate.MediaFile {
 	return predicate.MediaFile(sql.FieldNotNull(FieldLastSeenAt))
+}
+
+// MissingSinceEQ applies the EQ predicate on the "missing_since" field.
+func MissingSinceEQ(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldMissingSince, v))
+}
+
+// MissingSinceNEQ applies the NEQ predicate on the "missing_since" field.
+func MissingSinceNEQ(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNEQ(FieldMissingSince, v))
+}
+
+// MissingSinceIn applies the In predicate on the "missing_since" field.
+func MissingSinceIn(vs ...time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIn(FieldMissingSince, vs...))
+}
+
+// MissingSinceNotIn applies the NotIn predicate on the "missing_since" field.
+func MissingSinceNotIn(vs ...time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotIn(FieldMissingSince, vs...))
+}
+
+// MissingSinceGT applies the GT predicate on the "missing_since" field.
+func MissingSinceGT(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGT(FieldMissingSince, v))
+}
+
+// MissingSinceGTE applies the GTE predicate on the "missing_since" field.
+func MissingSinceGTE(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGTE(FieldMissingSince, v))
+}
+
+// MissingSinceLT applies the LT predicate on the "missing_since" field.
+func MissingSinceLT(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLT(FieldMissingSince, v))
+}
+
+// MissingSinceLTE applies the LTE predicate on the "missing_since" field.
+func MissingSinceLTE(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLTE(FieldMissingSince, v))
+}
+
+// MissingSinceIsNil applies the IsNil predicate on the "missing_since" field.
+func MissingSinceIsNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIsNull(FieldMissingSince))
+}
+
+// MissingSinceNotNil applies the NotNil predicate on the "missing_since" field.
+func MissingSinceNotNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotNull(FieldMissingSince))
+}
+
+// ContainerEQ applies the EQ predicate on the "container" field.
+func ContainerEQ(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldContainer, v))
+}
+
+// ContainerNEQ applies the NEQ predicate on the "container" field.
+func ContainerNEQ(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNEQ(FieldContainer, v))
+}
+
+// ContainerIn applies the In predicate on the "container" field.
+func ContainerIn(vs ...string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIn(FieldContainer, vs...))
+}
+
+// ContainerNotIn applies the NotIn predicate on the "container" field.
+func ContainerNotIn(vs ...string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotIn(FieldContainer, vs...))
+}
+
+// ContainerGT applies the GT predicate on the "container" field.
+func ContainerGT(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGT(FieldContainer, v))
+}
+
+// ContainerGTE applies the GTE predicate on the "container" field.
+func ContainerGTE(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGTE(FieldContainer, v))
+}
+
+// ContainerLT applies the LT predicate on the "container" field.
+func ContainerLT(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLT(FieldContainer, v))
+}
+
+// ContainerLTE applies the LTE predicate on the "container" field.
+func ContainerLTE(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLTE(FieldContainer, v))
+}
+
+// ContainerContains applies the Contains predicate on the "container" field.
+func ContainerContains(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldContains(FieldContainer, v))
+}
+
+// ContainerHasPrefix applies the HasPrefix predicate on the "container" field.
+func ContainerHasPrefix(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldHasPrefix(FieldContainer, v))
+}
+
+// ContainerHasSuffix applies the HasSuffix predicate on the "container" field.
+func ContainerHasSuffix(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldHasSuffix(FieldContainer, v))
+}
+
+// ContainerIsNil applies the IsNil predicate on the "container" field.
+func ContainerIsNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIsNull(FieldContainer))
+}
+
+// ContainerNotNil applies the NotNil predicate on the "container" field.
+func ContainerNotNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotNull(FieldContainer))
+}
+
+// ContainerEqualFold applies the EqualFold predicate on the "container" field.
+func ContainerEqualFold(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEqualFold(FieldContainer, v))
+}
+
+// ContainerContainsFold applies the ContainsFold predicate on the "container" field.
+func ContainerContainsFold(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldContainsFold(FieldContainer, v))
+}
+
+// DurationSecondsEQ applies the EQ predicate on the "duration_seconds" field.
+func DurationSecondsEQ(v uint32) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldDurationSeconds, v))
+}
+
+// DurationSecondsNEQ applies the NEQ predicate on the "duration_seconds" field.
+func DurationSecondsNEQ(v uint32) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNEQ(FieldDurationSeconds, v))
+}
+
+// DurationSecondsIn applies the In predicate on the "duration_seconds" field.
+func DurationSecondsIn(vs ...uint32) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIn(FieldDurationSeconds, vs...))
+}
+
+// DurationSecondsNotIn applies the NotIn predicate on the "duration_seconds" field.
+func DurationSecondsNotIn(vs ...uint32) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotIn(FieldDurationSeconds, vs...))
+}
+
+// DurationSecondsGT applies the GT predicate on the "duration_seconds" field.
+func DurationSecondsGT(v uint32) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGT(FieldDurationSeconds, v))
+}
+
+// DurationSecondsGTE applies the GTE predicate on the "duration_seconds" field.
+func DurationSecondsGTE(v uint32) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGTE(FieldDurationSeconds, v))
+}
+
+// DurationSecondsLT applies the LT predicate on the "duration_seconds" field.
+func DurationSecondsLT(v uint32) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLT(FieldDurationSeconds, v))
+}
+
+// DurationSecondsLTE applies the LTE predicate on the "duration_seconds" field.
+func DurationSecondsLTE(v uint32) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLTE(FieldDurationSeconds, v))
+}
+
+// DurationSecondsIsNil applies the IsNil predicate on the "duration_seconds" field.
+func DurationSecondsIsNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIsNull(FieldDurationSeconds))
+}
+
+// DurationSecondsNotNil applies the NotNil predicate on the "duration_seconds" field.
+func DurationSecondsNotNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotNull(FieldDurationSeconds))
+}
+
+// VideoCodecEQ applies the EQ predicate on the "video_codec" field.
+func VideoCodecEQ(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldVideoCodec, v))
+}
+
+// VideoCodecNEQ applies the NEQ predicate on the "video_codec" field.
+func VideoCodecNEQ(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNEQ(FieldVideoCodec, v))
+}
+
+// VideoCodecIn applies the In predicate on the "video_codec" field.
+func VideoCodecIn(vs ...string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIn(FieldVideoCodec, vs...))
+}
+
+// VideoCodecNotIn applies the NotIn predicate on the "video_codec" field.
+func VideoCodecNotIn(vs ...string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotIn(FieldVideoCodec, vs...))
+}
+
+// VideoCodecGT applies the GT predicate on the "video_codec" field.
+func VideoCodecGT(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGT(FieldVideoCodec, v))
+}
+
+// VideoCodecGTE applies the GTE predicate on the "video_codec" field.
+func VideoCodecGTE(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGTE(FieldVideoCodec, v))
+}
+
+// VideoCodecLT applies the LT predicate on the "video_codec" field.
+func VideoCodecLT(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLT(FieldVideoCodec, v))
+}
+
+// VideoCodecLTE applies the LTE predicate on the "video_codec" field.
+func VideoCodecLTE(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLTE(FieldVideoCodec, v))
+}
+
+// VideoCodecContains applies the Contains predicate on the "video_codec" field.
+func VideoCodecContains(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldContains(FieldVideoCodec, v))
+}
+
+// VideoCodecHasPrefix applies the HasPrefix predicate on the "video_codec" field.
+func VideoCodecHasPrefix(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldHasPrefix(FieldVideoCodec, v))
+}
+
+// VideoCodecHasSuffix applies the HasSuffix predicate on the "video_codec" field.
+func VideoCodecHasSuffix(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldHasSuffix(FieldVideoCodec, v))
+}
+
+// VideoCodecIsNil applies the IsNil predicate on the "video_codec" field.
+func VideoCodecIsNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIsNull(FieldVideoCodec))
+}
+
+// VideoCodecNotNil applies the NotNil predicate on the "video_codec" field.
+func VideoCodecNotNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotNull(FieldVideoCodec))
+}
+
+// VideoCodecEqualFold applies the EqualFold predicate on the "video_codec" field.
+func VideoCodecEqualFold(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEqualFold(FieldVideoCodec, v))
+}
+
+// VideoCodecContainsFold applies the ContainsFold predicate on the "video_codec" field.
+func VideoCodecContainsFold(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldContainsFold(FieldVideoCodec, v))
+}
+
+// WidthEQ applies the EQ predicate on the "width" field.
+func WidthEQ(v uint16) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldWidth, v))
+}
+
+// WidthNEQ applies the NEQ predicate on the "width" field.
+func WidthNEQ(v uint16) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNEQ(FieldWidth, v))
+}
+
+// WidthIn applies the In predicate on the "width" field.
+func WidthIn(vs ...uint16) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIn(FieldWidth, vs...))
+}
+
+// WidthNotIn applies the NotIn predicate on the "width" field.
+func WidthNotIn(vs ...uint16) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotIn(FieldWidth, vs...))
+}
+
+// WidthGT applies the GT predicate on the "width" field.
+func WidthGT(v uint16) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGT(FieldWidth, v))
+}
+
+// WidthGTE applies the GTE predicate on the "width" field.
+func WidthGTE(v uint16) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGTE(FieldWidth, v))
+}
+
+// WidthLT applies the LT predicate on the "width" field.
+func WidthLT(v uint16) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLT(FieldWidth, v))
+}
+
+// WidthLTE applies the LTE predicate on the "width" field.
+func WidthLTE(v uint16) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLTE(FieldWidth, v))
+}
+
+// WidthIsNil applies the IsNil predicate on the "width" field.
+func WidthIsNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIsNull(FieldWidth))
+}
+
+// WidthNotNil applies the NotNil predicate on the "width" field.
+func WidthNotNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotNull(FieldWidth))
+}
+
+// HeightEQ applies the EQ predicate on the "height" field.
+func HeightEQ(v uint16) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldHeight, v))
+}
+
+// HeightNEQ applies the NEQ predicate on the "height" field.
+func HeightNEQ(v uint16) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNEQ(FieldHeight, v))
+}
+
+// HeightIn applies the In predicate on the "height" field.
+func HeightIn(vs ...uint16) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIn(FieldHeight, vs...))
+}
+
+// HeightNotIn applies the NotIn predicate on the "height" field.
+func HeightNotIn(vs ...uint16) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotIn(FieldHeight, vs...))
+}
+
+// HeightGT applies the GT predicate on the "height" field.
+func HeightGT(v uint16) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGT(FieldHeight, v))
+}
+
+// HeightGTE applies the GTE predicate on the "height" field.
+func HeightGTE(v uint16) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGTE(FieldHeight, v))
+}
+
+// HeightLT applies the LT predicate on the "height" field.
+func HeightLT(v uint16) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLT(FieldHeight, v))
+}
+
+// HeightLTE applies the LTE predicate on the "height" field.
+func HeightLTE(v uint16) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLTE(FieldHeight, v))
+}
+
+// HeightIsNil applies the IsNil predicate on the "height" field.
+func HeightIsNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIsNull(FieldHeight))
+}
+
+// HeightNotNil applies the NotNil predicate on the "height" field.
+func HeightNotNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotNull(FieldHeight))
+}
+
+// AudioCodecEQ applies the EQ predicate on the "audio_codec" field.
+func AudioCodecEQ(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldAudioCodec, v))
+}
+
+// AudioCodecNEQ applies the NEQ predicate on the "audio_codec" field.
+func AudioCodecNEQ(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNEQ(FieldAudioCodec, v))
+}
+
+// AudioCodecIn applies the In predicate on the "audio_codec" field.
+func AudioCodecIn(vs ...string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIn(FieldAudioCodec, vs...))
+}
+
+// AudioCodecNotIn applies the NotIn predicate on the "audio_codec" field.
+func AudioCodecNotIn(vs ...string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotIn(FieldAudioCodec, vs...))
+}
+
+// AudioCodecGT applies the GT predicate on the "audio_codec" field.
+func AudioCodecGT(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGT(FieldAudioCodec, v))
+}
+
+// AudioCodecGTE applies the GTE predicate on the "audio_codec" field.
+func AudioCodecGTE(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGTE(FieldAudioCodec, v))
+}
+
+// AudioCodecLT applies the LT predicate on the "audio_codec" field.
+func AudioCodecLT(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLT(FieldAudioCodec, v))
+}
+
+// AudioCodecLTE applies the LTE predicate on the "audio_codec" field.
+func AudioCodecLTE(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLTE(FieldAudioCodec, v))
+}
+
+// AudioCodecContains applies the Contains predicate on the "audio_codec" field.
+func AudioCodecContains(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldContains(FieldAudioCodec, v))
+}
+
+// AudioCodecHasPrefix applies the HasPrefix predicate on the "audio_codec" field.
+func AudioCodecHasPrefix(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldHasPrefix(FieldAudioCodec, v))
+}
+
+// AudioCodecHasSuffix applies the HasSuffix predicate on the "audio_codec" field.
+func AudioCodecHasSuffix(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldHasSuffix(FieldAudioCodec, v))
+}
+
+// AudioCodecIsNil applies the IsNil predicate on the "audio_codec" field.
+func AudioCodecIsNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIsNull(FieldAudioCodec))
+}
+
+// AudioCodecNotNil applies the NotNil predicate on the "audio_codec" field.
+func AudioCodecNotNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotNull(FieldAudioCodec))
+}
+
+// AudioCodecEqualFold applies the EqualFold predicate on the "audio_codec" field.
+func AudioCodecEqualFold(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEqualFold(FieldAudioCodec, v))
+}
+
+// AudioCodecContainsFold applies the ContainsFold predicate on the "audio_codec" field.
+func AudioCodecContainsFold(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldContainsFold(FieldAudioCodec, v))
+}
+
+// AudioChannelsEQ applies the EQ predicate on the "audio_channels" field.
+func AudioChannelsEQ(v uint8) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldAudioChannels, v))
+}
+
+// AudioChannelsNEQ applies the NEQ predicate on the "audio_channels" field.
+func AudioChannelsNEQ(v uint8) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNEQ(FieldAudioChannels, v))
+}
+
+// AudioChannelsIn applies the In predicate on the "audio_channels" field.
+func AudioChannelsIn(vs ...uint8) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIn(FieldAudioChannels, vs...))
+}
+
+// AudioChannelsNotIn applies the NotIn predicate on the "audio_channels" field.
+func AudioChannelsNotIn(vs ...uint8) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotIn(FieldAudioChannels, vs...))
+}
+
+// AudioChannelsGT applies the GT predicate on the "audio_channels" field.
+func AudioChannelsGT(v uint8) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGT(FieldAudioChannels, v))
+}
+
+// AudioChannelsGTE applies the GTE predicate on the "audio_channels" field.
+func AudioChannelsGTE(v uint8) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGTE(FieldAudioChannels, v))
+}
+
+// AudioChannelsLT applies the LT predicate on the "audio_channels" field.
+func AudioChannelsLT(v uint8) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLT(FieldAudioChannels, v))
+}
+
+// AudioChannelsLTE applies the LTE predicate on the "audio_channels" field.
+func AudioChannelsLTE(v uint8) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLTE(FieldAudioChannels, v))
+}
+
+// AudioChannelsIsNil applies the IsNil predicate on the "audio_channels" field.
+func AudioChannelsIsNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIsNull(FieldAudioChannels))
+}
+
+// AudioChannelsNotNil applies the NotNil predicate on the "audio_channels" field.
+func AudioChannelsNotNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotNull(FieldAudioChannels))
+}
+
+// BitrateEQ applies the EQ predicate on the "bitrate" field.
+func BitrateEQ(v uint32) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldBitrate, v))
+}
+
+// BitrateNEQ applies the NEQ predicate on the "bitrate" field.
+func BitrateNEQ(v uint32) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNEQ(FieldBitrate, v))
+}
+
+// BitrateIn applies the In predicate on the "bitrate" field.
+func BitrateIn(vs ...uint32) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIn(FieldBitrate, vs...))
+}
+
+// BitrateNotIn applies the NotIn predicate on the "bitrate" field.
+func BitrateNotIn(vs ...uint32) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotIn(FieldBitrate, vs...))
+}
+
+// BitrateGT applies the GT predicate on the "bitrate" field.
+func BitrateGT(v uint32) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGT(FieldBitrate, v))
+}
+
+// BitrateGTE applies the GTE predicate on the "bitrate" field.
+func BitrateGTE(v uint32) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGTE(FieldBitrate, v))
+}
+
+// BitrateLT applies the LT predicate on the "bitrate" field.
+func BitrateLT(v uint32) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLT(FieldBitrate, v))
+}
+
+// BitrateLTE applies the LTE predicate on the "bitrate" field.
+func BitrateLTE(v uint32) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLTE(FieldBitrate, v))
+}
+
+// BitrateIsNil applies the IsNil predicate on the "bitrate" field.
+func BitrateIsNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIsNull(FieldBitrate))
+}
+
+// BitrateNotNil applies the NotNil predicate on the "bitrate" field.
+func BitrateNotNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotNull(FieldBitrate))
+}
+
+// ProbedAtEQ applies the EQ predicate on the "probed_at" field.
+func ProbedAtEQ(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldProbedAt, v))
+}
+
+// ProbedAtNEQ applies the NEQ predicate on the "probed_at" field.
+func ProbedAtNEQ(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNEQ(FieldProbedAt, v))
+}
+
+// ProbedAtIn applies the In predicate on the "probed_at" field.
+func ProbedAtIn(vs ...time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIn(FieldProbedAt, vs...))
+}
+
+// ProbedAtNotIn applies the NotIn predicate on the "probed_at" field.
+func ProbedAtNotIn(vs ...time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotIn(FieldProbedAt, vs...))
+}
+
+// ProbedAtGT applies the GT predicate on the "probed_at" field.
+func ProbedAtGT(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGT(FieldProbedAt, v))
+}
+
+// ProbedAtGTE applies the GTE predicate on the "probed_at" field.
+func ProbedAtGTE(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGTE(FieldProbedAt, v))
+}
+
+// ProbedAtLT applies the LT predicate on the "probed_at" field.
+func ProbedAtLT(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLT(FieldProbedAt, v))
+}
+
+// ProbedAtLTE applies the LTE predicate on the "probed_at" field.
+func ProbedAtLTE(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLTE(FieldProbedAt, v))
+}
+
+// ProbedAtIsNil applies the IsNil predicate on the "probed_at" field.
+func ProbedAtIsNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIsNull(FieldProbedAt))
+}
+
+// ProbedAtNotNil applies the NotNil predicate on the "probed_at" field.
+func ProbedAtNotNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotNull(FieldProbedAt))
 }
 
 // HasMovie applies the HasEdge predicate on the "movie" edge.

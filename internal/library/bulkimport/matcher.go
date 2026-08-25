@@ -17,44 +17,145 @@ type Classification struct {
 	ExistingMovieID uint32
 }
 
-// Classify decides how a parsed filename + TMDB hits + existing-library lookup
-// fall into one of the four buckets. Existing-row collision wins over confirmed
-// or ambiguous because attaching to an existing row beats creating a duplicate.
+// Classify decides how a path + parsed filename + TMDB hits + existing-library
+// lookup fall into one of the four buckets. Existing-row collision wins over
+// confirmed or ambiguous because attaching to an existing row beats creating a
+// duplicate.
 func Classify(
+	path string,
 	parsed library.ParseResult,
 	hits []metadata.MovieResult,
 	alreadyAdded map[uint32]uint32,
 ) Classification {
+	// An id Streamline's own naming template wrote into the path outranks
+	// anything re-derived from the filename: the path was rendered *from* that
+	// id, so a title parsed back out of it can only lose information.
+	if embedded := library.ParseEmbeddedIDs(path).TMDB; embedded != 0 {
+		return classifyByTMDBID(embedded, hits, alreadyAdded)
+	}
+
 	if len(hits) == 0 {
 		return Classification{Kind: entimportscanfile.ClassificationUnmatched}
 	}
 
-	cands := topNCandidates(hits, pickerCandidateLimit)
+	ranked := rankMovieHits(hits, parsed.Title, parsed.Year)
+	cands := topNCandidates(ranked, pickerCandidateLimit)
 
-	for _, c := range cands {
-		if movieID, hit := alreadyAdded[c.TMDBID]; hit {
-			return Classification{
-				Kind:            entimportscanfile.ClassificationExisting,
-				TMDBID:          c.TMDBID,
-				ExistingMovieID: movieID,
-				Candidates:      cands,
+	// Scan every candidate, not only the top one: TMDB frequently ranks a
+	// same-titled decoy first ("Fantasia" 1940 above "Fantasia 2000"), and the
+	// year is what tells them apart. Identifying the movie comes first and the
+	// existing-library map is consulted only afterwards — picking the first
+	// tracked candidate instead would let a decoy that happens to be in the
+	// library resolve an ambiguity the reviewer never saw.
+	match, ok := soleMatch(ranked[:len(cands)], parsed.Title, parsed.Year)
+	if !ok {
+		return Classification{
+			Kind:       entimportscanfile.ClassificationAmbiguous,
+			Candidates: cands,
+		}
+	}
+	if movieID, hit := alreadyAdded[match.TMDBID]; hit {
+		return Classification{
+			Kind:            entimportscanfile.ClassificationExisting,
+			TMDBID:          match.TMDBID,
+			ExistingMovieID: movieID,
+			Candidates:      []schema.ScannedCandidate{match},
+		}
+	}
+	return Classification{
+		Kind:       entimportscanfile.ClassificationConfirmed,
+		TMDBID:     match.TMDBID,
+		Candidates: []schema.ScannedCandidate{match},
+	}
+}
+
+// soleMatch returns the one hit the parsed title and year single out, if there
+// is exactly one. With a year it must agree; without one, a single title match
+// is enough — insisting on a year is what left every year-less name ambiguous.
+//
+// The original title counts as a match too. TMDB answers in metadata.language,
+// so a French install looking at an English-named folder is offered
+// "2001 : L'Odyssée de l'espace" and nothing else — the right film, under a
+// title the folder can never equal.
+func soleMatch(
+	hits []metadata.MovieResult,
+	title string,
+	year uint16,
+) (schema.ScannedCandidate, bool) {
+	var titleMatches []metadata.MovieResult
+	for _, h := range hits {
+		if library.TitleMatchesAny(title, h.Title, []string{h.OriginalTitle}) {
+			titleMatches = append(titleMatches, h)
+		}
+	}
+	if len(titleMatches) == 0 {
+		return schema.ScannedCandidate{}, false
+	}
+	if year != 0 {
+		var byYear []metadata.MovieResult
+		for _, h := range titleMatches {
+			if h.Year == year {
+				byYear = append(byYear, h)
 			}
 		}
+		if len(byYear) == 1 {
+			return asCandidate(byYear[0]), true
+		}
+		// A year that agrees with nothing is more likely mis-parsed than
+		// authoritative, so fall through to the title-only decision.
 	}
+	if len(titleMatches) == 1 {
+		return asCandidate(titleMatches[0]), true
+	}
+	return schema.ScannedCandidate{}, false
+}
 
-	if parsed.Year != 0 && cands[0].Year == parsed.Year &&
-		library.TitleMatches(parsed.Title, cands[0].Title) {
-		return Classification{
-			Kind:       entimportscanfile.ClassificationConfirmed,
-			TMDBID:     cands[0].TMDBID,
-			Candidates: cands[:1],
+func asCandidate(h metadata.MovieResult) schema.ScannedCandidate {
+	return schema.ScannedCandidate{TMDBID: h.TMDBID, Title: h.Title, Year: h.Year}
+}
+
+// classifyByTMDBID resolves a path-embedded id without consulting the parsed
+// title. The id decides; the hits only supply a display title when one of them
+// happens to be the same movie.
+func classifyByTMDBID(
+	tmdbID uint32,
+	hits []metadata.MovieResult,
+	alreadyAdded map[uint32]uint32,
+) Classification {
+	var cands []schema.ScannedCandidate
+	for _, h := range hits {
+		if h.TMDBID == tmdbID {
+			cands = append(cands, schema.ScannedCandidate{
+				TMDBID: h.TMDBID, Title: h.Title, Year: h.Year,
+			})
+			break
 		}
 	}
-
+	if movieID, hit := alreadyAdded[tmdbID]; hit {
+		return Classification{
+			Kind:            entimportscanfile.ClassificationExisting,
+			TMDBID:          tmdbID,
+			ExistingMovieID: movieID,
+			Candidates:      cands,
+		}
+	}
 	return Classification{
-		Kind:       entimportscanfile.ClassificationAmbiguous,
+		Kind:       entimportscanfile.ClassificationConfirmed,
+		TMDBID:     tmdbID,
 		Candidates: cands,
 	}
+}
+
+// rankMovieHits reorders TMDB's results so title and year agreement outrank
+// provider relevance, then leaves the provider's order to break ties.
+func rankMovieHits(
+	hits []metadata.MovieResult,
+	title string,
+	year uint16,
+) []metadata.MovieResult {
+	return rankByScore(hits, func(h metadata.MovieResult) int {
+		return matchScore(title, year, h.Title, []string{h.OriginalTitle}, h.Year)
+	})
 }
 
 func topNCandidates(hits []metadata.MovieResult, n int) []schema.ScannedCandidate {

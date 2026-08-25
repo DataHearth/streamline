@@ -185,4 +185,53 @@ var _ = Describe("convert", Label("unit", "server"), func() {
 			Expect(api.ApiKeySet).To(BeTrue())
 		})
 	})
+
+	Describe("mediaFileToAPI", func() {
+		It("maps probed fields into media_info", func() {
+			now := time.Now()
+			f := &ent.MediaFile{
+				ID: 1, Path: "/m/Movie (2020)/Movie.mkv", Size: 100,
+				Container: "matroska", VideoCodec: "hevc", Width: 3840, Height: 1608,
+				DurationSeconds: 8130, AudioCodec: "eac3", AudioChannels: 6,
+				Bitrate: 24500000, ProbedAt: &now,
+			}
+			out := mediaFileToAPI(f)
+			Expect(out.MediaInfo).NotTo(BeNil())
+			Expect(out.MediaInfo.VideoCodec).To(Equal("hevc"))
+			Expect(out.MediaInfo.Width).To(Equal(3840))
+		})
+
+		It("omits media_info when never probed", func() {
+			f := &ent.MediaFile{ID: 1, Path: "/m/x.mkv", Size: 1}
+			Expect(mediaFileToAPI(f).MediaInfo).To(BeNil())
+		})
+	})
+
+	Describe("episodeToAPI", func() {
+		It("maps media_info from the eager-loaded media file", func() {
+			now := time.Now()
+			e := &ent.Episode{ID: 1, Number: 1, Status: "available", Monitored: true}
+			e.Edges.MediaFiles = []*ent.MediaFile{{
+				ID: 1, Path: "/m/Show/S01E01.mkv", Size: 100,
+				Container: "matroska", VideoCodec: "hevc", Width: 1920, Height: 1080,
+				DurationSeconds: 1200, ProbedAt: &now,
+			}}
+			out := episodeToAPI(e, now)
+			Expect(out.MediaInfo).NotTo(BeNil())
+			Expect(out.MediaInfo.VideoCodec).To(Equal("hevc"))
+		})
+
+		It("omits media_info when the episode's file was never probed", func() {
+			e := &ent.Episode{ID: 1, Number: 1, Status: "available", Monitored: true}
+			e.Edges.MediaFiles = []*ent.MediaFile{
+				{ID: 1, Path: "/m/Show/S01E01.mkv", Size: 100},
+			}
+			Expect(episodeToAPI(e, time.Now()).MediaInfo).To(BeNil())
+		})
+
+		It("omits media_info when the episode has no file", func() {
+			e := &ent.Episode{ID: 1, Number: 1, Status: "wanted", Monitored: true}
+			Expect(episodeToAPI(e, time.Now()).MediaInfo).To(BeNil())
+		})
+	})
 })

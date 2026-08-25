@@ -53,9 +53,12 @@ export function pillStatus(
 		| "paused"
 		| "error"
 		| "completed"
-		| "failed",
+		| "failed"
+		| "held",
 ): StatusKind {
 	switch (status) {
+		case "held":
+			return "held";
 		case "importing":
 			return "grabbing";
 		case "error":

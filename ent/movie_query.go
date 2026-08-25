@@ -13,9 +13,9 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
-	"github.com/datahearth/streamline/ent/movieevent"
 	"github.com/datahearth/streamline/ent/predicate"
 )
 
@@ -28,7 +28,8 @@ type MovieQuery struct {
 	predicates          []predicate.Movie
 	withDownloadRecords *DownloadRecordQuery
 	withMediaFiles      *MediaFileQuery
-	withEvents          *MovieEventQuery
+	withEvents          *MediaEventQuery
+	modifiers           []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -110,8 +111,8 @@ func (_q *MovieQuery) QueryMediaFiles() *MediaFileQuery {
 }
 
 // QueryEvents chains the current query on the "events" edge.
-func (_q *MovieQuery) QueryEvents() *MovieEventQuery {
-	query := (&MovieEventClient{config: _q.config}).Query()
+func (_q *MovieQuery) QueryEvents() *MediaEventQuery {
+	query := (&MediaEventClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -122,7 +123,7 @@ func (_q *MovieQuery) QueryEvents() *MovieEventQuery {
 		}
 		step := sqlgraph.NewStep(
 			sqlgraph.From(movie.Table, movie.FieldID, selector),
-			sqlgraph.To(movieevent.Table, movieevent.FieldID),
+			sqlgraph.To(mediaevent.Table, mediaevent.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, movie.EventsTable, movie.EventsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
@@ -327,8 +328,9 @@ func (_q *MovieQuery) Clone() *MovieQuery {
 		withMediaFiles:      _q.withMediaFiles.Clone(),
 		withEvents:          _q.withEvents.Clone(),
 		// clone intermediate query.
-		sql:  _q.sql.Clone(),
-		path: _q.path,
+		sql:       _q.sql.Clone(),
+		path:      _q.path,
+		modifiers: append([]func(*sql.Selector){}, _q.modifiers...),
 	}
 }
 
@@ -356,8 +358,8 @@ func (_q *MovieQuery) WithMediaFiles(opts ...func(*MediaFileQuery)) *MovieQuery 
 
 // WithEvents tells the query-builder to eager-load the nodes that are connected to
 // the "events" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *MovieQuery) WithEvents(opts ...func(*MovieEventQuery)) *MovieQuery {
-	query := (&MovieEventClient{config: _q.config}).Query()
+func (_q *MovieQuery) WithEvents(opts ...func(*MediaEventQuery)) *MovieQuery {
+	query := (&MediaEventClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -458,6 +460,9 @@ func (_q *MovieQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Movie,
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
+	if len(_q.modifiers) > 0 {
+		_spec.Modifiers = _q.modifiers
+	}
 	for i := range hooks {
 		hooks[i](ctx, _spec)
 	}
@@ -483,8 +488,8 @@ func (_q *MovieQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Movie,
 	}
 	if query := _q.withEvents; query != nil {
 		if err := _q.loadEvents(ctx, query, nodes,
-			func(n *Movie) { n.Edges.Events = []*MovieEvent{} },
-			func(n *Movie, e *MovieEvent) { n.Edges.Events = append(n.Edges.Events, e) }); err != nil {
+			func(n *Movie) { n.Edges.Events = []*MediaEvent{} },
+			func(n *Movie, e *MediaEvent) { n.Edges.Events = append(n.Edges.Events, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -553,7 +558,7 @@ func (_q *MovieQuery) loadMediaFiles(ctx context.Context, query *MediaFileQuery,
 	}
 	return nil
 }
-func (_q *MovieQuery) loadEvents(ctx context.Context, query *MovieEventQuery, nodes []*Movie, init func(*Movie), assign func(*Movie, *MovieEvent)) error {
+func (_q *MovieQuery) loadEvents(ctx context.Context, query *MediaEventQuery, nodes []*Movie, init func(*Movie), assign func(*Movie, *MediaEvent)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uint32]*Movie)
 	for i := range nodes {
@@ -564,7 +569,7 @@ func (_q *MovieQuery) loadEvents(ctx context.Context, query *MovieEventQuery, no
 		}
 	}
 	query.withFKs = true
-	query.Where(predicate.MovieEvent(func(s *sql.Selector) {
+	query.Where(predicate.MediaEvent(func(s *sql.Selector) {
 		s.Where(sql.InValues(s.C(movie.EventsColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
@@ -587,6 +592,9 @@ func (_q *MovieQuery) loadEvents(ctx context.Context, query *MovieEventQuery, no
 
 func (_q *MovieQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := _q.querySpec()
+	if len(_q.modifiers) > 0 {
+		_spec.Modifiers = _q.modifiers
+	}
 	_spec.Node.Columns = _q.ctx.Fields
 	if len(_q.ctx.Fields) > 0 {
 		_spec.Unique = _q.ctx.Unique != nil && *_q.ctx.Unique
@@ -649,6 +657,9 @@ func (_q *MovieQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	if _q.ctx.Unique != nil && *_q.ctx.Unique {
 		selector.Distinct()
 	}
+	for _, m := range _q.modifiers {
+		m(selector)
+	}
 	for _, p := range _q.predicates {
 		p(selector)
 	}
@@ -664,6 +675,12 @@ func (_q *MovieQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector.Limit(*limit)
 	}
 	return selector
+}
+
+// Modify adds a query modifier for attaching custom logic to queries.
+func (_q *MovieQuery) Modify(modifiers ...func(s *sql.Selector)) *MovieSelect {
+	_q.modifiers = append(_q.modifiers, modifiers...)
+	return _q.Select()
 }
 
 // MovieGroupBy is the group-by builder for Movie entities.
@@ -754,4 +771,10 @@ func (_s *MovieSelect) sqlScan(ctx context.Context, root *MovieQuery, v any) err
 	}
 	defer rows.Close()
 	return sql.ScanSlice(rows, v)
+}
+
+// Modify adds a query modifier for attaching custom logic to queries.
+func (_s *MovieSelect) Modify(modifiers ...func(s *sql.Selector)) *MovieSelect {
+	_s.modifiers = append(_s.modifiers, modifiers...)
+	return _s
 }

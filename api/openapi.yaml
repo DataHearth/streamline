@@ -86,6 +86,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "409":
           $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -136,6 +138,8 @@ paths:
                 $ref: "#/components/schemas/Movie"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "500":
           $ref: "#/components/responses/InternalError"
     delete:
@@ -198,6 +202,44 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /movies/{id}/reidentify:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: reidentifyMovie
+      summary: Point this movie at a different TMDB title
+      description: |
+        Repairs a wrong match without losing the row: the entry keeps its id,
+        files, download history and requests, and only its provider identity
+        changes. Metadata is refreshed from the new TMDB id and the files are
+        renamed into the new title's path.
+
+        Conflicts (409) when the target TMDB id is already in the library —
+        tmdb_id is unique, and merging two entries is not what this does.
+      tags: [movies]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tmdb_id]
+              properties:
+                tmdb_id: { type: integer, x-go-type: uint32 }
+      responses:
+        "200":
+          $ref: "#/components/responses/ReidentifyResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /movies/{id}/recommendations:
     parameters:
       - $ref: "#/components/parameters/ResourceID"
@@ -256,6 +298,8 @@ paths:
           $ref: "#/components/responses/MovieSearchAccepted"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
         "500":
@@ -313,6 +357,8 @@ paths:
           $ref: "#/components/responses/FileDeleted"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -378,6 +424,7 @@ paths:
         - $ref: "#/components/parameters/SeriesType"
         - $ref: "#/components/parameters/SeriesQuery"
         - $ref: "#/components/parameters/SeriesSort"
+        - $ref: "#/components/parameters/SeriesOrder"
       responses:
         "200":
           $ref: "#/components/responses/SeriesList"
@@ -399,6 +446,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "409":
           $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -490,8 +539,9 @@ paths:
       operationId: patchSeries
       summary: Patch a series
       description: |
-        Partially updates series properties (monitored, quality profile) and
-        optionally applies a one-shot monitoring preset to its episodes.
+        Partially updates series properties (monitored, quality profile,
+        type) and optionally applies a one-shot monitoring preset to its
+        episodes.
       tags: [series]
       requestBody:
         $ref: "#/components/requestBodies/PatchSeries"
@@ -500,6 +550,10 @@ paths:
           $ref: "#/components/responses/SeriesDetail"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
         "500":
           $ref: "#/components/responses/InternalError"
     delete:
@@ -534,6 +588,8 @@ paths:
           $ref: "#/components/responses/SeasonUpdated"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -581,6 +637,8 @@ paths:
           $ref: "#/components/responses/SeriesGrabAccepted"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
         "500":
@@ -601,6 +659,8 @@ paths:
           $ref: "#/components/responses/EpisodeUpdated"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -619,6 +679,48 @@ paths:
           $ref: "#/components/responses/SeriesSearchAccepted"
         "404":
           $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /series/{id}/reidentify:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: reidentifySeries
+      summary: Point this series at a different TVDB show
+      description: |
+        The series keeps its id and its files; its provider identity, metadata
+        and season/episode tree are replaced from the new TVDB id, and each
+        existing file is re-attached to the episode with the same season and
+        episode number, then renamed.
+
+        Files whose season/episode does not exist in the new show are reported
+        in `unmatched` and **left on disk** — a provider numbering seasons
+        differently is not evidence the media is unwanted. Their database rows
+        are dropped, so a library scan can re-adopt them.
+
+        Conflicts (409) when the target TVDB id is already in the library.
+      tags: [series]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tvdb_id]
+              properties:
+                tvdb_id: { type: integer, x-go-type: uint32 }
+      responses:
+        "200":
+          $ref: "#/components/responses/ReidentifyResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -659,6 +761,8 @@ paths:
           $ref: "#/components/responses/SeriesGrabAccepted"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
         "500":
@@ -682,6 +786,8 @@ paths:
           $ref: "#/components/responses/SeriesGrabAccepted"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
         "500":
@@ -707,6 +813,8 @@ paths:
           $ref: "#/components/responses/FileDeleted"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -820,6 +928,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "409":
           $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
         "500":
@@ -845,6 +955,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
         "500":
@@ -903,6 +1015,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "409":
           $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
         "500":
@@ -928,6 +1042,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
         "500":
@@ -981,6 +1097,8 @@ paths:
           $ref: "#/components/responses/ConnectionTestOK"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
         "500":
@@ -1024,6 +1142,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "409":
           $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
         "500":
@@ -1049,6 +1169,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
         "500":
@@ -1102,6 +1224,8 @@ paths:
           $ref: "#/components/responses/ConnectionTestOK"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
         "500":
@@ -1123,6 +1247,10 @@ paths:
     post:
       operationId: addTorrent
       summary: Add a torrent by magnet link or .torrent file
+      description: |
+        The base64 `torrent` field raises this endpoint's body cap to 24 MiB,
+        sized from the 16 MiB ceiling the manager applies to a fetched
+        .torrent plus base64's 4/3 inflation. Larger bodies get `413`.
       tags: [torrents]
       requestBody:
         $ref: "#/components/requestBodies/AddTorrent"
@@ -1133,6 +1261,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
 
@@ -1215,6 +1345,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
 
@@ -1245,6 +1377,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "409":
           $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
         "500":
@@ -1279,6 +1413,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
         "500":
@@ -1332,6 +1468,8 @@ paths:
           $ref: "#/components/responses/MediaServerDiscovered"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
         "500":
@@ -1352,6 +1490,8 @@ paths:
           $ref: "#/components/responses/MediaServerTestOK"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
         "500":
@@ -1380,7 +1520,6 @@ paths:
       tags: [auth]
       security:
         - BearerAuth: []
-        - ApiKeyAuth: []
       requestBody:
         $ref: "#/components/requestBodies/UpdateMe"
       responses:
@@ -1391,22 +1530,28 @@ paths:
               schema: { $ref: "#/components/schemas/User" }
         "401":
           $ref: "#/components/responses/Unauthorized"
-
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
   /auth/password:
     post:
       operationId: changePassword
-      summary: Change current user's password; revokes all other sessions
+      summary: Change current user's password; revokes all other sessions and all API keys
       tags: [auth]
       security:
         - BearerAuth: []
-        - ApiKeyAuth: []
       requestBody:
         $ref: "#/components/requestBodies/ChangePassword"
       responses:
         "204":
-          description: Password changed; other sessions revoked
+          description: Password changed; other sessions and all API keys revoked
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
 
@@ -1431,10 +1576,12 @@ paths:
     post:
       operationId: createMyApiKey
       summary: Create a new API key for current user; raw_token shown once
+      description: >-
+        Requires session authentication (JWT); a request authenticated with an
+        API key is rejected with 403 so a leaked key cannot mint new keys.
       tags: [auth]
       security:
         - BearerAuth: []
-        - ApiKeyAuth: []
       requestBody:
         $ref: "#/components/requestBodies/CreateApiKey"
       responses:
@@ -1445,7 +1592,10 @@ paths:
               schema: { $ref: "#/components/schemas/ApiKeyCreated" }
         "401":
           $ref: "#/components/responses/Unauthorized"
-
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
   /auth/me/api-keys/{id}:
     parameters:
       - $ref: "#/components/parameters/ResourceID"
@@ -1455,12 +1605,13 @@ paths:
       tags: [auth]
       security:
         - BearerAuth: []
-        - ApiKeyAuth: []
       responses:
         "204":
           description: Revoked
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -1492,12 +1643,13 @@ paths:
       tags: [auth]
       security:
         - BearerAuth: []
-        - ApiKeyAuth: []
       responses:
         "204":
           description: Revoked
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -1520,7 +1672,6 @@ paths:
       tags: [auth, admin]
       security:
         - BearerAuth: []
-        - ApiKeyAuth: []
       requestBody:
         $ref: "#/components/requestBodies/RotateJWTSecret"
       responses:
@@ -1528,6 +1679,8 @@ paths:
           $ref: "#/components/responses/JWTRotated"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -1555,7 +1708,6 @@ paths:
       tags: [auth]
       security:
         - BearerAuth: []
-        - ApiKeyAuth: []
       requestBody:
         $ref: "#/components/requestBodies/CreateInvite"
       responses:
@@ -1567,6 +1719,8 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
 
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
   /auth/invites/{id}:
     parameters:
       - $ref: "#/components/parameters/ResourceID"
@@ -1576,7 +1730,6 @@ paths:
       tags: [auth]
       security:
         - BearerAuth: []
-        - ApiKeyAuth: []
       responses:
         "204":
           description: Revoked
@@ -1615,6 +1768,8 @@ paths:
           $ref: "#/components/responses/AuthConfig"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
 
@@ -1648,6 +1803,45 @@ paths:
           $ref: "#/components/responses/LibraryConfig"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /config/ffmpeg:
+    get:
+      operationId: getConfigFfmpeg
+      summary: Get ffmpeg configuration (admin)
+      description: |
+        Returns the runtime-editable ffmpeg configuration plus the current
+        process's probe result (found, resolved_path). path takes effect only
+        on the next process start — the prober is constructed once at boot,
+        so found/resolved_path keep describing the old path until a restart.
+      tags: [config, admin]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        "200":
+          $ref: "#/components/responses/FFmpegConfig"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    patch:
+      operationId: updateConfigFfmpeg
+      summary: Patch ffmpeg configuration (admin)
+      tags: [config, admin]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      requestBody:
+        $ref: "#/components/requestBodies/UpdateFFmpegConfig"
+      responses:
+        "200":
+          $ref: "#/components/responses/FFmpegConfig"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
 
@@ -1686,6 +1880,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "409":
           $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
 
@@ -1726,6 +1922,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
     delete:
@@ -1789,7 +1987,6 @@ paths:
       tags: [users, admin]
       security:
         - BearerAuth: []
-        - ApiKeyAuth: []
       requestBody:
         required: true
         content:
@@ -1802,6 +1999,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "409":
           $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
 
@@ -1834,7 +2033,6 @@ paths:
       tags: [users, admin]
       security:
         - BearerAuth: []
-        - ApiKeyAuth: []
       requestBody:
         required: true
         content:
@@ -1849,6 +2047,8 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
     delete:
       operationId: deleteUser
       summary: Delete user (admin)
@@ -1859,7 +2059,6 @@ paths:
       tags: [users, admin]
       security:
         - BearerAuth: []
-        - ApiKeyAuth: []
       responses:
         "204":
           $ref: "#/components/responses/UserDeleted"
@@ -1877,12 +2076,12 @@ paths:
       operationId: resetUserPassword
       summary: Reset user password (admin)
       description: |
-        Sets a new password for the target user without requiring the old one
-        and revokes all of the target's active sessions. Admin only.
+        Sets a new password for the target user without requiring the old one,
+        revokes all of the target's active sessions, and deletes all of their
+        API keys. Admin only.
       tags: [users, admin]
       security:
         - BearerAuth: []
-        - ApiKeyAuth: []
       requestBody:
         required: true
         content:
@@ -1895,6 +2094,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
 
@@ -1910,7 +2111,6 @@ paths:
       tags: [users, admin]
       security:
         - BearerAuth: []
-        - ApiKeyAuth: []
       responses:
         "204":
           $ref: "#/components/responses/UserUnlocked"
@@ -1932,7 +2132,6 @@ paths:
       tags: [users, admin]
       security:
         - BearerAuth: []
-        - ApiKeyAuth: []
       responses:
         "204":
           $ref: "#/components/responses/UserApiKeyRevoked"
@@ -1955,7 +2154,6 @@ paths:
       tags: [users, admin]
       security:
         - BearerAuth: []
-        - ApiKeyAuth: []
       responses:
         "204":
           $ref: "#/components/responses/UserSessionRevoked"
@@ -2009,6 +2207,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
 
@@ -2093,6 +2293,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "409":
           $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
 
@@ -2190,6 +2392,8 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
   /library/imports/{id}/shows:
     parameters:
       - $ref: "#/components/parameters/ResourceID"
@@ -2226,6 +2430,37 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+  /library/imports/{id}/decisions:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: BulkUpdateImportDecisions
+      summary: Apply one decision across a scan
+      description: |
+        Sets `decision` on every row of the scan, optionally narrowed by
+        `classification` and/or an explicit `ids` list. Dispatches on the
+        scan's kind, so it covers movie files and series shows alike.
+
+        With neither filter it applies to the whole scan. This is the bulk
+        form of the per-row PATCH endpoints, which otherwise cost one
+        request per row.
+      tags: [library]
+      requestBody:
+        $ref: "#/components/requestBodies/BulkUpdateImportDecisions"
+      responses:
+        "200":
+          $ref: "#/components/responses/ImportBulkDecisionResult"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
   /library/path-migration:
     get:
       operationId: GetPathMigration
@@ -2256,6 +2491,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "409":
           $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
 
@@ -2287,6 +2524,8 @@ paths:
           $ref: "#/components/responses/PathMigrationPreview"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
 
@@ -2295,12 +2534,13 @@ paths:
       operationId: listActivity
       summary: Library activity events.
       description: |
-        Reverse-chronological feed of MovieEvent rows. Supports cursor
-        pagination and optional filtering by event type, movie id, and a
-        time window.
+        Reverse-chronological feed of media events across movies, episodes and
+        series. Supports cursor pagination and optional filtering by event
+        type, movie id, series id, and a time window.
       parameters:
         - $ref: "#/components/parameters/ActivityType"
         - $ref: "#/components/parameters/ActivityMovieID"
+        - $ref: "#/components/parameters/ActivitySeriesID"
         - $ref: "#/components/parameters/ActivitySince"
         - $ref: "#/components/parameters/ActivityBefore"
         - $ref: "#/components/parameters/ActivityLimit"
@@ -2334,6 +2574,8 @@ paths:
       description: |
         Removes the torrent (and its partial files) from the client, deletes
         the record, and reverts the movie to "wanted" when it has no file.
+        409 when the download is held by import verification — resolve it via
+        POST /downloads/{id}/resolve instead.
       tags: [activity]
       responses:
         "204":
@@ -2342,6 +2584,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -2351,6 +2595,9 @@ paths:
     post:
       operationId: pauseQueueItem
       summary: Pause an in-flight download.
+      description: |
+        409 when the download is held by import verification — it has finished
+        downloading and is resolved via POST /downloads/{id}/resolve.
       tags: [activity]
       responses:
         "204":
@@ -2359,6 +2606,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -2368,6 +2617,9 @@ paths:
     post:
       operationId: resumeQueueItem
       summary: Resume a paused download.
+      description: |
+        409 when the download is held by import verification — it has finished
+        downloading and is resolved via POST /downloads/{id}/resolve.
       tags: [activity]
       responses:
         "204":
@@ -2376,6 +2628,39 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /downloads/{id}/resolve:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: resolveHeldDownload
+      summary: Release a download held by import verification.
+      description: |
+        Imports the held files as-is, or deletes them from the client and
+        either re-searches (regrab) or stops (delete). 400 when the action is
+        missing or unrecognised, 409 when the record exists but is not held.
+      tags: [activity]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResolveHeldRequest"
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -2467,6 +2752,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -2486,6 +2773,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -2558,6 +2847,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -2593,6 +2884,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -2635,6 +2928,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -2697,6 +2992,12 @@ components:
       description: |
         API key created via `POST /auth/me/api-keys`. That call itself needs a
         JWT, so an API key cannot bootstrap a session — start at `/auth/login`.
+
+        API keys may read the identity endpoints but never mutate them: any
+        non-GET request under `/auth/me`, `/auth/password`, `/auth/invites`,
+        `/auth/jwt`, or `/users` is refused with `403` — those actions require
+        session authentication (JWT or cookie). Media and configuration
+        endpoints are unaffected.
 
   parameters:
     ResourceID:
@@ -2894,6 +3195,7 @@ components:
               import_failed,
               drift_detected,
               drift_confirmed,
+              searched,
             ]
       style: form
       explode: true
@@ -2901,6 +3203,15 @@ components:
       name: movie_id
       in: query
       required: false
+      schema:
+        type: integer
+        x-go-type: uint32
+    ActivitySeriesID:
+      name: series_id
+      in: query
+      required: false
+      description: |
+        Matches both the series' own events and those of its episodes.
       schema:
         type: integer
         x-go-type: uint32
@@ -3000,6 +3311,17 @@ components:
       description: Sort key (recent/title/year/rating/episodes).
       schema:
         type: string
+
+    SeriesOrder:
+      name: order
+      in: query
+      required: false
+      description: |
+        Sort direction. Omitted, each key uses the direction its name implies:
+        `title` ascending, everything else descending (newest, highest, most).
+      schema:
+        type: string
+        enum: [asc, desc]
 
     SeriesLookupQuery:
       name: query
@@ -3181,6 +3503,13 @@ components:
           schema:
             $ref: "#/components/schemas/LibraryConfigPatch"
 
+    UpdateFFmpegConfig:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/FFmpegConfigPatch"
+
     CreateOIDCProvider:
       required: true
       content:
@@ -3250,6 +3579,13 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ImportScanShowDecisionRequest"
+
+    BulkUpdateImportDecisions:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ImportBulkDecisionRequest"
 
     GrabMovieRelease:
       required: true
@@ -3324,6 +3660,13 @@ components:
 
     UnprocessableEntity:
       description: Validation or connection test failed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+    PayloadTooLarge:
+      description: Request body exceeded the size cap
       content:
         application/json:
           schema:
@@ -3427,6 +3770,13 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/Movie"
+
+    ReidentifyResult:
+      description: The re-identified entry plus what the repair moved.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ReidentifyResult"
 
     MovieRenamePlan:
       description: Rename plan (preview or applied).
@@ -3579,6 +3929,13 @@ components:
           schema:
             $ref: "#/components/schemas/LibraryConfigView"
 
+    FFmpegConfig:
+      description: Current ffmpeg configuration plus the live probe result.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/FFmpegConfigView"
+
     OIDCProvider:
       description: OIDC provider detail.
       content:
@@ -3671,6 +4028,13 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ImportScanFile"
+
+    ImportBulkDecisionResult:
+      description: How many rows the bulk decision changed.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ImportBulkDecisionResult"
 
     ImportScanFileList:
       description: Paginated list of import scan files.
@@ -3941,8 +4305,8 @@ components:
           type: array
           nullable: true
           description: |
-            Files attached to this movie. Only populated by GET /movies/{id};
-            absent in list responses.
+            Files attached to this movie. Populated by GET /movies and
+            GET /movies/{id}; absent when the movie has no files on disk.
           items:
             $ref: "#/components/schemas/MediaFile"
         cast:
@@ -4017,6 +4381,48 @@ components:
         parsed_codec:
           type: string
           description: Video codec (x264/HEVC/AV1/…) parsed from the file's basename at response time.
+        media_info:
+          $ref: "#/components/schemas/MediaInfo"
+
+    MediaInfo:
+      type: object
+      description: |
+        Technical details probed from the file with ffprobe. Absent when the
+        file hasn't been probed yet, probing is disabled, or the probe was
+        attempted and failed — probed_at is stamped internally on a failed
+        probe so the file isn't retried, so null here does not imply this
+        will populate on its own. Fall back to the record's parsed_* fields
+        when this is null.
+      required: [container, video_codec, width, height, duration_seconds, probed_at]
+      properties:
+        container:
+          type: string
+          example: matroska
+        video_codec:
+          type: string
+          example: hevc
+        width:
+          type: integer
+          example: 3840
+        height:
+          type: integer
+          example: 1608
+        duration_seconds:
+          type: integer
+          example: 8130
+        audio_codec:
+          type: string
+          example: eac3
+        audio_channels:
+          type: integer
+          example: 6
+        bitrate:
+          type: integer
+          description: Overall bitrate in bits per second.
+          example: 24500000
+        probed_at:
+          type: string
+          format: date-time
 
     AddMovieRequest:
       type: object
@@ -4238,9 +4644,17 @@ components:
           type: integer
           format: int64
           nullable: true
+        has_file:
+          description: |
+            Whether a media file is linked to this episode. Equivalent to a
+            non-empty `path`, stated explicitly so clients do not have to infer
+            presence from `path` or `status`.
+          type: boolean
         path:
           type: string
           description: On-disk path of the episode's media file, when imported.
+        media_info:
+          $ref: "#/components/schemas/MediaInfo"
 
     PaginatedTVShows:
       type: object
@@ -4298,6 +4712,14 @@ components:
         preset:
           type: string
           enum: [all, future, missing, existing, pilot, none]
+        type:
+          description: |
+            Overrides the provider-inferred series type. The type decides
+            whether episode files match by season/episode or by absolute
+            number, so a wrong inference mis-matches every file. Set here it
+            survives a metadata refresh.
+          type: string
+          enum: [standard, anime, daily]
 
     MonitorToggleRequest:
       type: object
@@ -4519,6 +4941,13 @@ components:
           enum: ["720p", "1080p", "2160p"]
         upgrade_allowed:
           type: boolean
+        allowed_codecs:
+          type: array
+          items:
+            type: string
+          description: |
+            ffprobe video codec names ("hevc", "av1"). A grab whose file uses
+            anything else is held for a decision. Empty means any codec.
 
     QualityProfileCreate:
       type: object
@@ -4534,6 +4963,14 @@ components:
           enum: ["720p", "1080p", "2160p"]
         upgrade_allowed:
           type: boolean
+        allowed_codecs:
+          type: array
+          items:
+            type: string
+          description: |
+            ffprobe video codec names ("hevc", "av1"). Empty means any codec.
+            On update, omitting this field leaves the existing list
+            untouched.
 
     Indexer:
       type: object
@@ -5167,6 +5604,8 @@ components:
           description: |
             Monitor season 0 (specials) when a series is added or a refresh
             discovers the season. Applies to newly seeded seasons only.
+        probe:
+          $ref: "#/components/schemas/ProbeConfig"
 
     LibraryConfigPatch:
       type: object
@@ -5174,6 +5613,64 @@ components:
       properties:
         monitor_specials:
           type: boolean
+        probe:
+          $ref: "#/components/schemas/ProbeConfig"
+
+    ProbeConfig:
+      type: object
+      description: |
+        Import-time verification against ffprobe results; when patched, only
+        provided fields are applied.
+      properties:
+        always_ask:
+          type: boolean
+          description: Hold every import for a decision, even when every check passes.
+        min_duration_ratio:
+          type: number
+          format: double
+          exclusiveMinimum: 0
+          maximum: 1
+          description: |
+            A file shorter than this share of the expected runtime fails the
+            duration check.
+
+    FFmpegConfigView:
+      type: object
+      required: [enabled, path, restart_required]
+      properties:
+        enabled:
+          type: boolean
+        path:
+          type: string
+          description: |
+            Directory holding the ffmpeg-suite binaries; empty resolves via
+            $PATH.
+        found:
+          type: boolean
+          description: |
+            Whether ffprobe actually resolves in this process right now.
+            Reflects the path this process booted with, not any value from a
+            PATCH that has not yet been picked up by a restart.
+        resolved_path:
+          type: string
+          description: |
+            Absolute path the prober resolved, when found is true.
+        restart_required:
+          type: boolean
+          description: |
+            True when a path change is pending a process restart. The same
+            process-wide flag OIDC provider mutations set — see
+            OIDCProviderListView.restart_required.
+
+    FFmpegConfigPatch:
+      type: object
+      description: Only provided fields are applied. found and resolved_path
+        are derived and read-only — sending them has no effect.
+      properties:
+        enabled:
+          type: boolean
+        path:
+          type: string
 
     OIDCProviderView:
       type: object
@@ -5685,6 +6182,33 @@ components:
           type: integer
           x-go-type: uint32
 
+    ImportBulkDecisionRequest:
+      type: object
+      required: [decision]
+      properties:
+        decision:
+          type: string
+          enum: [pending, accept, skip]
+        classification:
+          description: Restrict to rows with this classification.
+          type: string
+          enum: [confirmed, ambiguous, unmatched, existing]
+        ids:
+          description: Restrict to these row ids. Combined with classification as AND.
+          type: array
+          items:
+            type: integer
+            x-go-type: uint32
+
+    ImportBulkDecisionResult:
+      type: object
+      required: [updated]
+      properties:
+        updated:
+          description: Number of rows whose decision was set.
+          type: integer
+          x-go-type: int
+
     ImportScanList:
       type: object
       required: [items, total]
@@ -5764,7 +6288,7 @@ components:
           nullable: true
         outcome:
           type: string
-          enum: [pending, created, failed]
+          enum: [pending, created, attached, failed]
         outcome_message:
           type: string
         created_tvshow_id:
@@ -5803,7 +6327,12 @@ components:
 
     ActivityEvent:
       type: object
-      required: [id, type, created_at, movie]
+      required: [id, type, created_at]
+      description: |
+        Exactly one of movie / episode / series is set, naming what the event
+        happened to. `series` carries only what belongs to no single episode —
+        a search issued at series or season scope; per-episode outcomes use
+        `episode`.
       properties:
         id:
           type: integer
@@ -5819,6 +6348,7 @@ components:
               import_failed,
               drift_detected,
               drift_confirmed,
+              searched,
             ]
         created_at:
           type: string
@@ -5828,6 +6358,38 @@ components:
           additionalProperties: true
         movie:
           $ref: "#/components/schemas/Movie"
+        episode:
+          $ref: "#/components/schemas/EpisodeRef"
+        series:
+          $ref: "#/components/schemas/SeriesRef"
+
+    ReidentifyResult:
+      type: object
+      required: [id, title, renamed]
+      properties:
+        id: { type: integer, x-go-type: uint32 }
+        title:
+          type: string
+          description: Title as it stands after the metadata refresh.
+        renamed:
+          type: integer
+          description: Number of files moved into the new title's path.
+        unmatched:
+          type: array
+          description: |
+            Series only. Paths still on disk whose season/episode number has no
+            counterpart in the new show; their database rows were dropped.
+          items: { type: string }
+
+    SeriesRef:
+      type: object
+      required: [id, title]
+      description: |
+        Minimal series identity for feed rows. Deliberately not the full TVShow
+        schema, which carries the whole season/episode tree.
+      properties:
+        id: { type: integer, x-go-type: uint32 }
+        title: { type: string }
 
     ActivityList:
       type: object
@@ -5851,6 +6413,10 @@ components:
         show_title: { type: string }
         season: { type: integer, x-go-type: uint16 }
         episode: { type: integer, x-go-type: uint16 }
+        series_id:
+          type: integer
+          x-go-type: uint32
+          description: Set where the row links back to the series page.
 
     QueueEntry:
       type: object
@@ -5859,7 +6425,10 @@ components:
         id: { type: integer, x-go-type: uint32 }
         status:
           type: string
-          enum: [downloading, importing, paused, error]
+          description: |
+            "held" means the download finished but failed import verification
+            and is waiting on a decision (POST /downloads/{id}/resolve).
+          enum: [downloading, importing, paused, error, held]
         title: { type: string }
         quality: { type: string }
         release_group: { type: string }
@@ -5872,7 +6441,35 @@ components:
         download_speed: { type: integer, format: int64 }
         eta: { type: integer, format: int64 }
         failure_reason: { type: string }
+        hold_reasons:
+          type: array
+          description: Present only on a held entry, one item per failed check.
+          items: { $ref: "#/components/schemas/HoldReason" }
         created_at: { type: string, format: date-time }
+
+    HoldReason:
+      type: object
+      required: [file, check]
+      description: One import verification check a held download failed.
+      properties:
+        file: { type: string }
+        check:
+          type: string
+          enum: [corrupt, resolution, duration, codec, always_ask]
+        expected: { type: string }
+        actual: { type: string }
+
+    ResolveHeldRequest:
+      type: object
+      required: [action]
+      description: |
+        How to release a held download. "import" imports it as-is (skipping
+        verification on the re-run), "regrab" deletes it and re-searches,
+        "delete" deletes it and leaves the media alone.
+      properties:
+        action:
+          type: string
+          enum: [import, regrab, delete]
 
     DownloadQueue:
       type: object
@@ -5996,6 +6593,11 @@ components:
         https_warn:
           type: boolean
           description: True when public_url is plain http://.
+        ffmpeg_warn:
+          type: boolean
+          description: |
+            True when ffmpeg.enabled is true and ffprobe was not found.
+            Absent when ffmpeg is disabled — the operator opted out.
         auth_mode:
           type: string
         data_dir:

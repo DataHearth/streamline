@@ -83,6 +83,74 @@ var _ = Describe("Config mutate", Label("unit", "config"), func() {
 		})
 	})
 
+	Describe("UpdateLibrary probe patch", func() {
+		It("defaults always_ask=false and min_duration_ratio=0.5", func() {
+			Expect(config.Get().Library.Probe.AlwaysAsk).To(BeFalse())
+			Expect(config.Get().Library.Probe.MinDurationRatio).To(Equal(0.5))
+		})
+
+		It("applies always_ask without disturbing min_duration_ratio", func() {
+			t := true
+			got, err := config.UpdateLibrary(
+				context.Background(),
+				config.LibraryPatch{
+					Probe: &config.ProbePatch{AlwaysAsk: &t},
+				},
+			)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(got.Probe.AlwaysAsk).To(BeTrue())
+			Expect(got.Probe.MinDurationRatio).To(Equal(0.5))
+		})
+
+		It("applies min_duration_ratio without disturbing always_ask", func() {
+			t := true
+			_, err := config.UpdateLibrary(context.Background(), config.LibraryPatch{
+				Probe: &config.ProbePatch{AlwaysAsk: &t},
+			})
+			Expect(err).ToNot(HaveOccurred())
+
+			ratio := 0.75
+			got, err := config.UpdateLibrary(
+				context.Background(),
+				config.LibraryPatch{
+					Probe: &config.ProbePatch{MinDurationRatio: &ratio},
+				},
+			)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(got.Probe.MinDurationRatio).To(Equal(0.75))
+			Expect(got.Probe.AlwaysAsk).To(BeTrue())
+		})
+
+		It("leaves probe untouched when the patch names no probe fields", func() {
+			specials := true
+			got, err := config.UpdateLibrary(
+				context.Background(),
+				config.LibraryPatch{
+					MonitorSpecials: &specials,
+				},
+			)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(got.Probe.MinDurationRatio).To(Equal(0.5))
+			Expect(got.MonitorSpecials).To(BeTrue())
+		})
+
+		It("rejects a min_duration_ratio above 1", func() {
+			ratio := 1.5
+			_, err := config.UpdateLibrary(context.Background(), config.LibraryPatch{
+				Probe: &config.ProbePatch{MinDurationRatio: &ratio},
+			})
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("rejects a min_duration_ratio of 0", func() {
+			ratio := 0.0
+			_, err := config.UpdateLibrary(context.Background(), config.LibraryPatch{
+				Probe: &config.ProbePatch{MinDurationRatio: &ratio},
+			})
+			Expect(err).To(HaveOccurred())
+		})
+	})
+
 	Describe("AddOIDCProvider", func() {
 		var srv *httptest.Server
 

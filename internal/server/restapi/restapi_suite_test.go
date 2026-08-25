@@ -16,6 +16,8 @@ import (
 	bittorrentmocks "github.com/datahearth/streamline/internal/bittorrent/mocks"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	downloadmocks "github.com/datahearth/streamline/internal/download/mocks"
+	ffmpegmocks "github.com/datahearth/streamline/internal/ffmpeg/mocks"
+	importermocks "github.com/datahearth/streamline/internal/importer/mocks"
 	indexermocks "github.com/datahearth/streamline/internal/indexer/mocks"
 	bulkimportmocks "github.com/datahearth/streamline/internal/library/bulkimport/mocks"
 	librarymocks "github.com/datahearth/streamline/internal/library/mocks"
@@ -79,14 +81,18 @@ type apiKeyApp struct {
 	store         *dbmocks.MockStore
 	renamer       *librarymocks.MockRenamer
 	seriesRenamer *librarymocks.MockRenamer
+	prober        *ffmpegmocks.MockProber
+	importer      *importermocks.MockEnqueuer
 
 	// Identity tokens consumed by the synthetic auth middleware.
 	adminKey       string
 	memberKey      string
 	requestOnlyKey string
-	adminID        uint32
-	memberID       uint32
-	requestOnlyID  uint32
+	// adminAPIKey mimics API-key auth for the admin: same claims, no JTI.
+	adminAPIKey   string
+	adminID       uint32
+	memberID      uint32
+	requestOnlyID uint32
 }
 
 // newAPIKeyApp constructs the test harness. The caller receives cleanup
@@ -110,7 +116,10 @@ func newAPIKeyApp() *apiKeyApp {
 		store:          dbmocks.NewMockStore(t),
 		renamer:        librarymocks.NewMockRenamer(t),
 		seriesRenamer:  librarymocks.NewMockRenamer(t),
+		prober:         ffmpegmocks.NewMockProber(t),
+		importer:       importermocks.NewMockEnqueuer(t),
 		adminKey:       "test-admin-token",
+		adminAPIKey:    "test-admin-apikey",
 		adminID:        1,
 		requestOnlyKey: "test-requestonly-token",
 		requestOnlyID:  3,
@@ -132,6 +141,8 @@ func newAPIKeyApp() *apiKeyApp {
 		Renamer:        a.renamer,
 		SeriesRenamer:  a.seriesRenamer,
 		PathMigrations: pathmigrate.NewService(a.store),
+		Prober:         a.prober,
+		Importer:       a.importer,
 	})
 
 	r := chi.NewRouter()
@@ -164,6 +175,12 @@ func (a *apiKeyApp) identityMiddleware() func(http.Handler) http.Handler {
 					Email:  "admin@test.com",
 					Role:   "admin",
 					JTI:    "admin-jti",
+				}
+			case key == a.adminAPIKey:
+				claims = &auth.Claims{
+					UserID: a.adminID,
+					Email:  "admin@test.com",
+					Role:   "admin",
 				}
 			case a.memberKey != "" && key == a.memberKey:
 				claims = &auth.Claims{

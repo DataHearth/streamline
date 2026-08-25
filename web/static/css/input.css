@@ -93,6 +93,13 @@
 	--status-unaired: var(--status-missing);
 	--status-skipped: var(--status-paused);
 
+	/* A download that finished, failed verification and waits on a person. Amber
+	   because it is the same "needs something from you" family as wanted — an
+	   alias rather than a reuse of the name, so StatusPill's
+	   var(--status-{status}) lookup resolves and one line moves it if held ever
+	   earns its own hue. */
+	--status-held: var(--status-wanted);
+
 	/* Calendar event kinds — deliberately outside the status ramp. A dot or chip
 	   on the calendar answers "movie or episode?", not "what state is it in?",
 	   and reusing amber/violet made a movie read as Wanted and an episode as
@@ -180,6 +187,7 @@
 	--color-status-fetching: var(--status-fetching);
 	--color-status-unaired: var(--status-unaired);
 	--color-status-skipped: var(--status-skipped);
+	--color-status-held: var(--status-held);
 
 	--radius-sm: var(--radius-sm);
 	--radius-md: var(--radius-md);

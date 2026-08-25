@@ -28,6 +28,7 @@
 	import Checkbox from "../../components/forms/Checkbox.svelte";
 	import Dialog from "../../components/modals/Dialog.svelte";
 	import DeleteTitleDialog from "../../components/shared/DeleteTitleDialog.svelte";
+	import ReidentifyDialog from "../../components/shared/ReidentifyDialog.svelte";
 	import SeasonStrip from "../../components/series/SeasonStrip.svelte";
 	import SeasonAccordion from "../../components/series/SeasonAccordion.svelte";
 	import EpisodeTable from "../../components/series/EpisodeTable.svelte";
@@ -184,6 +185,7 @@
 	let presetValue = $state<MonitoringPreset>("all");
 
 	let deleteOpen = $state(false);
+	let reidentifyOpen = $state(false);
 	let manualOpen = $state(false);
 	let manualEpisode = $state<Episode | null>(null);
 	let packSearchOpen = $state(false);
@@ -342,6 +344,7 @@
 	function onKebabPick(a: SeriesAction) {
 		if (a === "search") searchSeries.mutate();
 		else if (a === "refresh") refresh.mutate();
+		else if (a === "reidentify") reidentifyOpen = true;
 		else if (a === "delete") deleteOpen = true;
 		else if (a === "delete-files") openDeleteFiles("this series", seriesFileEpisodes);
 	}
@@ -483,10 +486,8 @@
 				{/if}
 
 				{#if show.overview}
-					<!-- The synopsis has a home in the Overview tab; on a phone the header
-					     spends its height on state instead. -->
 					<p
-						class="mt-4 hidden max-w-[680px] text-sm leading-relaxed text-fg-muted md:line-clamp-3 md:block [text-wrap:pretty]"
+						class="mt-4 line-clamp-3 max-w-[680px] text-sm leading-relaxed text-fg-muted [text-wrap:pretty]"
 					>
 						{show.overview}
 					</p>
@@ -917,6 +918,14 @@
 			<MovieDetailCast cast={show.cast ?? []} />
 		{/if}
 	</div>
+
+	<ReidentifyDialog
+		open={reidentifyOpen}
+		kind="series"
+		id={show.id}
+		currentTitle={show.title}
+		onClose={() => (reidentifyOpen = false)}
+	/>
 
 	<DeleteTitleDialog
 		open={deleteOpen}

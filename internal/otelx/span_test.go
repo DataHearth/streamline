@@ -41,4 +41,19 @@ var _ = Describe("RecordSpanError", Label("unit", "otelx"), func() {
 		Expect(spans[0].Status().Description).To(Equal("boom"))
 		Expect(spans[0].Events()).NotTo(BeEmpty())
 	})
+
+	It("leaves the span untouched on a nil error", func() {
+		recorder := tracetest.NewSpanRecorder()
+		tp := trace.NewTracerProvider(trace.WithSpanProcessor(recorder))
+		tracer := tp.Tracer("test")
+		_, span := tracer.Start(GinkgoT().Context(), "test.op")
+
+		Expect(otelx.RecordSpanError(span, nil)).To(Succeed())
+		span.End()
+
+		spans := recorder.Ended()
+		Expect(spans).To(HaveLen(1))
+		Expect(spans[0].Status().Code).NotTo(Equal(codes.Error))
+		Expect(spans[0].Events()).To(BeEmpty())
+	})
 })

@@ -16,7 +16,7 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/knadh/koanf/parsers/yaml"
-	"github.com/knadh/koanf/providers/env"
+	"github.com/knadh/koanf/providers/env/v2"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/providers/rawbytes"
 	"github.com/knadh/koanf/v2"
@@ -40,6 +40,7 @@ type Config struct {
 	OTel        OTelConfig        `koanf:"otel"`
 	MediaServer MediaServerConfig `koanf:"media_server"`
 	Events      EventsConfig      `koanf:"events"       validate:"required"`
+	FFmpeg      FFmpegConfig      `koanf:"ffmpeg"`
 
 	DownloadClients       []DownloadClientEntry `koanf:"download_clients"        validate:"unique=Name,dive"`
 	Indexers              []IndexerEntry        `koanf:"indexers"                validate:"unique=Name,dive"`
@@ -215,6 +216,20 @@ type LibraryConfig struct {
 	// owning movie reverts to "wanted". Bounded to give operators a knob
 	// for noisy mounts without unbounded patience.
 	DriftGraceTicks uint8 `koanf:"drift_grace_ticks" validate:"required,min=1,max=20"`
+	// Probe governs import-time verification against ffprobe results, read by
+	// the importer's verifier before a transfer.
+	Probe ProbeConfig `koanf:"probe"`
+}
+
+// ProbeConfig governs import-time verification against ffprobe results.
+type ProbeConfig struct {
+	// AlwaysAsk holds every import for a decision, even when every check
+	// passes.
+	AlwaysAsk bool `koanf:"always_ask"`
+	// MinDurationRatio holds an import whose probed duration is less than
+	// this share of the known runtime. A ratio in (0, 1] — a value typed as
+	// a percentage (90) is rejected rather than silently stored.
+	MinDurationRatio float64 `koanf:"min_duration_ratio" validate:"gt=0,lte=1"`
 }
 
 // ScheduleConfig carries one interval per registered job. Media-scoped jobs
@@ -233,6 +248,7 @@ type ScheduleConfig struct {
 	ImportScan           string `koanf:"import_scan"            validate:"required"`
 	Cleanup              string `koanf:"cleanup"                validate:"required"`
 	DriftCheck           string `koanf:"drift_check"            validate:"required"`
+	MediaProbe           string `koanf:"media_probe"            validate:"required"`
 }
 
 type MetadataConfig struct {
@@ -244,10 +260,19 @@ type MetadataConfig struct {
 	TMDBRegion     string `koanf:"tmdb_region"       validate:"omitempty,len=2,uppercase"`
 }
 
-// EventsConfig governs the MovieEvent retention window. Old rows are deleted
+// EventsConfig governs the MediaEvent retention window. Old rows are deleted
 // by the cleanup job after Retention.
 type EventsConfig struct {
 	Retention string `koanf:"retention" validate:"required"`
+}
+
+// FFmpegConfig owns the ffmpeg-suite dependency (ffprobe today, the player's
+// transcoder later). Enabled=false makes probing and everything built on it
+// inert. Path is a directory holding the binaries; empty resolves via $PATH.
+// Enabled is runtime-toggleable through config.Update; Path is read at boot.
+type FFmpegConfig struct {
+	Enabled bool   `koanf:"enabled"`
+	Path    string `koanf:"path"`
 }
 
 type LogConfig struct {
@@ -488,7 +513,10 @@ func defaults() map[string]any {
 		"schedules.cleanup":                "24h",
 		"schedules.import_scan":            "60s",
 		"schedules.drift_check":            "15m",
+		"schedules.media_probe":            "15m",
 		"library.drift_grace_ticks":        3,
+		"library.probe.always_ask":         false,
+		"library.probe.min_duration_ratio": 0.5,
 		"metadata.tmdb_api_key":            "",
 		"metadata.tmdb_api_key_file":       "",
 		"metadata.tvdb_api_key":            "",
@@ -510,6 +538,8 @@ func defaults() map[string]any {
 		},
 		"quality_default_profile":      "default",
 		"events.retention":             "2160h",
+		"ffmpeg.enabled":               true,
+		"ffmpeg.path":                  "",
 		"log.app.enabled":              true,
 		"log.app.level":                "info",
 		"log.app.format":               "text",
@@ -630,9 +660,12 @@ func finalize(k, fileK *koanf.Koanf) (*Config, *envLayer, error) {
 	// Double-underscore is the path separator; a single underscore is literal
 	// so keys with underscore segments (data_dir, session_secret, tmdb_api_key)
 	// stay reachable: STREAMLINE_AUTH__SESSION_SECRET -> auth.session_secret.
-	envProvider := env.Provider("STREAMLINE_", ".", func(s string) string {
-		key := strings.ToLower(strings.TrimPrefix(s, "STREAMLINE_"))
-		return strings.ReplaceAll(key, "__", ".")
+	envProvider := env.Provider(".", env.Opt{
+		Prefix: "STREAMLINE_",
+		TransformFunc: func(k, v string) (string, any) {
+			key := strings.ToLower(strings.TrimPrefix(k, "STREAMLINE_"))
+			return strings.ReplaceAll(key, "__", "."), v
+		},
 	})
 	envK := koanf.New(".")
 	if err := envK.Load(envProvider, nil); err != nil {

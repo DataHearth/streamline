@@ -15,6 +15,7 @@ import (
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/otelx"
 	"go.opentelemetry.io/otel"
@@ -252,10 +253,18 @@ func (s *MissingSearcher) SearchOne(ctx context.Context, m *ent.Movie) error {
 	defer span.End()
 
 	movieOutcome := "grabbed"
+	resultCount := 0
 	defer func() {
 		moviesProcessed.Add(ctx, 1,
 			metric.WithAttributes(attribute.String("outcome", movieOutcome)),
 		)
+		if err := events.Record(
+			ctx, nil, events.TypeSearched, events.ScopeMovie, m.ID,
+			map[string]any{"outcome": movieOutcome, "results": resultCount},
+		); err != nil {
+			slog.WarnContext(ctx, "missing-search: record searched event failed",
+				"movie.id", m.ID, "error", err)
+		}
 	}()
 
 	results, err := s.indexers.SearchMovie(
@@ -271,6 +280,7 @@ func (s *MissingSearcher) SearchOne(ctx context.Context, m *ent.Movie) error {
 		)
 	}
 
+	resultCount = len(results)
 	match, ok := pickBest(qualityFor(ctx, m.QualityProfile), results)
 	if e := s.db.SetMovieLastSearchAt(ctx, m.ID, time.Now()); e != nil {
 		slog.WarnContext(ctx,

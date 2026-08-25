@@ -25,7 +25,7 @@ export async function startPlexPin({
 	onDone,
 }: StartPlexPinOptions) {
 	toast.info("Starting Plex sign-in…");
-	let pinID = 0;
+	let flowID = "";
 	let authURL = "";
 	let clientID = "";
 	try {
@@ -35,7 +35,7 @@ export async function startPlexPin({
 		});
 		if (!res.ok) throw new Error(await res.text());
 		const body = (await res.json()) as PlexPinBegin;
-		pinID = body.pin_id;
+		flowID = body.flow_id;
 		authURL = body.auth_url;
 		clientID = body.client_id;
 		onClientId?.(clientID);
@@ -64,7 +64,7 @@ export async function startPlexPin({
 			return;
 		}
 		try {
-			const res = await fetch(`/settings/media-servers/plex/pin/${pinID}`, {
+			const res = await fetch(`/settings/media-servers/plex/pin/${flowID}`, {
 				credentials: "same-origin",
 			});
 			if (res.ok) {

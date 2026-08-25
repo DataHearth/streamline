@@ -18,8 +18,9 @@ import (
 // ScheduledJobUpdate is the builder for updating ScheduledJob entities.
 type ScheduledJobUpdate struct {
 	config
-	hooks    []Hook
-	mutation *ScheduledJobMutation
+	hooks     []Hook
+	mutation  *ScheduledJobMutation
+	modifiers []func(*sql.UpdateBuilder)
 }
 
 // Where appends a list predicates to the ScheduledJobUpdate builder.
@@ -179,6 +180,12 @@ func (_u *ScheduledJobUpdate) check() error {
 	return nil
 }
 
+// Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
+func (_u *ScheduledJobUpdate) Modify(modifiers ...func(u *sql.UpdateBuilder)) *ScheduledJobUpdate {
+	_u.modifiers = append(_u.modifiers, modifiers...)
+	return _u
+}
+
 func (_u *ScheduledJobUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
@@ -221,6 +228,7 @@ func (_u *ScheduledJobUpdate) sqlSave(ctx context.Context) (_node int, err error
 	if value, ok := _u.mutation.AddedLastDurationMs(); ok {
 		_spec.AddField(scheduledjob.FieldLastDurationMs, field.TypeUint32, value)
 	}
+	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{scheduledjob.Label}
@@ -236,9 +244,10 @@ func (_u *ScheduledJobUpdate) sqlSave(ctx context.Context) (_node int, err error
 // ScheduledJobUpdateOne is the builder for updating a single ScheduledJob entity.
 type ScheduledJobUpdateOne struct {
 	config
-	fields   []string
-	hooks    []Hook
-	mutation *ScheduledJobMutation
+	fields    []string
+	hooks     []Hook
+	mutation  *ScheduledJobMutation
+	modifiers []func(*sql.UpdateBuilder)
 }
 
 // SetPaused sets the "paused" field.
@@ -405,6 +414,12 @@ func (_u *ScheduledJobUpdateOne) check() error {
 	return nil
 }
 
+// Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
+func (_u *ScheduledJobUpdateOne) Modify(modifiers ...func(u *sql.UpdateBuilder)) *ScheduledJobUpdateOne {
+	_u.modifiers = append(_u.modifiers, modifiers...)
+	return _u
+}
+
 func (_u *ScheduledJobUpdateOne) sqlSave(ctx context.Context) (_node *ScheduledJob, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
@@ -464,6 +479,7 @@ func (_u *ScheduledJobUpdateOne) sqlSave(ctx context.Context) (_node *ScheduledJ
 	if value, ok := _u.mutation.AddedLastDurationMs(); ok {
 		_spec.AddField(scheduledjob.FieldLastDurationMs, field.TypeUint32, value)
 	}
+	_spec.AddModifiers(_u.modifiers...)
 	_node = &ScheduledJob{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues

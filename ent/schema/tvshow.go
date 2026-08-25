@@ -60,5 +60,7 @@ func (TVShow) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.To("seasons", Season.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),
+		edge.To("events", MediaEvent.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
 }

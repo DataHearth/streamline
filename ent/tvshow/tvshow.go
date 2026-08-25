@@ -55,6 +55,8 @@ const (
 	FieldQualityProfile = "quality_profile"
 	// EdgeSeasons holds the string denoting the seasons edge name in mutations.
 	EdgeSeasons = "seasons"
+	// EdgeEvents holds the string denoting the events edge name in mutations.
+	EdgeEvents = "events"
 	// Table holds the table name of the tvshow in the database.
 	Table = "tv_shows"
 	// SeasonsTable is the table that holds the seasons relation/edge.
@@ -64,6 +66,13 @@ const (
 	SeasonsInverseTable = "seasons"
 	// SeasonsColumn is the table column denoting the seasons relation/edge.
 	SeasonsColumn = "tv_show_seasons"
+	// EventsTable is the table that holds the events relation/edge.
+	EventsTable = "media_events"
+	// EventsInverseTable is the table name for the MediaEvent entity.
+	// It exists in this package in order to avoid circular dependency with the "mediaevent" package.
+	EventsInverseTable = "media_events"
+	// EventsColumn is the table column denoting the events relation/edge.
+	EventsColumn = "tv_show_events"
 )
 
 // Columns holds all SQL columns for tvshow fields.
@@ -277,10 +286,31 @@ func BySeasons(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newSeasonsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByEventsCount orders the results by events count.
+func ByEventsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newEventsStep(), opts...)
+	}
+}
+
+// ByEvents orders the results by events terms.
+func ByEvents(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newEventsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newSeasonsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(SeasonsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, SeasonsTable, SeasonsColumn),
+	)
+}
+func newEventsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(EventsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, EventsTable, EventsColumn),
 	)
 }

@@ -33,7 +33,7 @@
 
 	<div class="flex flex-col gap-2">
 		<a
-			href="/dashboard"
+			href="/"
 			class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-accent text-sm font-semibold text-fg-on-accent transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
 		>
 			<House size={16} aria-hidden="true" />

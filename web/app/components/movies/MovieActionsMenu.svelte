@@ -11,6 +11,7 @@
 	import QualityProfileModal from "./QualityProfileModal.svelte";
 	import RenameMoviePreviewModal from "./RenameMoviePreviewModal.svelte";
 	import DeleteTitleDialog from "../shared/DeleteTitleDialog.svelte";
+	import ReidentifyDialog from "../shared/ReidentifyDialog.svelte";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	let { movie, variant = "card" }: { movie: Movie; variant?: "card" | "toolbar" } =
@@ -21,6 +22,7 @@
 	let qpOpen = $state(false);
 	let renameOpen = $state(false);
 	let deleteOpen = $state(false);
+	let reidentifyOpen = $state(false);
 	let fileCount = $derived(movie.media_files?.length ?? 0);
 
 	const qc = useQueryClient();
@@ -83,6 +85,7 @@
 		else if (a === "quality") qpOpen = true;
 		else if (a === "rename") renameOpen = true;
 		else if (a === "refresh") refresh.mutate();
+		else if (a === "reidentify") reidentifyOpen = true;
 		else if (a === "delete") deleteOpen = true;
 	}
 </script>
@@ -105,6 +108,13 @@
 	open={renameOpen}
 	movieId={movie.id}
 	onClose={() => (renameOpen = false)}
+/>
+<ReidentifyDialog
+	open={reidentifyOpen}
+	kind="movie"
+	id={movie.id}
+	currentTitle={movie.title}
+	onClose={() => (reidentifyOpen = false)}
 />
 <DeleteTitleDialog
 	open={deleteOpen}

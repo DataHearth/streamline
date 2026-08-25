@@ -8,6 +8,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
+	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/predicate"
 	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/ent/season"
@@ -59,6 +60,7 @@ type CreateTVShowParams struct {
 type UpdateTVShowParams struct {
 	Monitored      *bool
 	QualityProfile *string
+	Type           *tvshow.Type
 }
 
 // UpdateTVShowMetadataParams carries the provider-sourced fields refreshed from
@@ -71,7 +73,6 @@ type UpdateTVShowMetadataParams struct {
 	Network       string
 	Creator       string
 	SeriesStatus  string
-	Type          string
 	Runtime       uint16
 	Rating        float64
 	Genres        []string
@@ -104,9 +105,10 @@ func (db *DB) UpdateTVShowMetadata(
 	if p.SeriesStatus != "" {
 		u = u.SetSeriesStatus(tvshow.SeriesStatus(p.SeriesStatus))
 	}
-	if p.Type != "" {
-		u = u.SetType(tvshow.Type(p.Type))
-	}
+	// Type is deliberately not refreshed. It is inferred from genres and origin,
+	// it decides whether episodes match by absolute number, and it is the one
+	// piece of show metadata an operator can correct by hand — re-deriving it on
+	// every refresh would silently undo that correction.
 	return u.Exec(ctx)
 }
 
@@ -404,6 +406,9 @@ func (db *DB) UpdateTVShow(
 	if p.QualityProfile != nil {
 		u = u.SetQualityProfile(*p.QualityProfile)
 	}
+	if p.Type != nil {
+		u = u.SetType(*p.Type)
+	}
 	if _, err := u.Save(ctx); err != nil {
 		return nil, err
 	}
@@ -416,6 +421,57 @@ func (db *DB) SetTVShowRefreshedAt(
 	when time.Time,
 ) error {
 	return db.client.TVShow.UpdateOneID(id).SetLastRefreshedAt(when).Exec(ctx)
+}
+
+// SetTVShowTVDBID repoints a row at a different TVDB show. The season/episode
+// tree still describes the old show until the caller reconciles it, so this is
+// never useful on its own — see tvshow.Service.Reidentify.
+func (db *DB) SetTVShowTVDBID(ctx context.Context, id, tvdbID uint32) error {
+	return db.client.TVShow.UpdateOneID(id).SetTvdbID(tvdbID).Exec(ctx)
+}
+
+// DetachEpisodeMediaFiles clears the episode edge on every media file under
+// show, returning the detached rows. Used by re-identify to lift the files out
+// of the way before the episode tree is replaced: ReconcileEpisodes deletes
+// episodes the new provider entry does not report and hands back their paths
+// for deletion from disk, which for a *different* show is every file there is.
+func (db *DB) DetachEpisodeMediaFiles(
+	ctx context.Context,
+	showID uint32,
+) ([]*ent.MediaFile, error) {
+	rows, err := db.client.MediaFile.Query().
+		Where(mediafile.HasEpisodeWith(
+			episode.HasSeasonWith(season.HasTvShowWith(tvshow.ID(showID))),
+		)).
+		WithEpisode(func(eq *ent.EpisodeQuery) { eq.WithSeason() }).
+		All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("query episode media files: %w", err)
+	}
+	if len(rows) == 0 {
+		return nil, nil
+	}
+	ids := make([]uint32, 0, len(rows))
+	for _, r := range rows {
+		ids = append(ids, r.ID)
+	}
+	if err := db.client.MediaFile.Update().
+		Where(mediafile.IDIn(ids...)).
+		ClearEpisode().
+		Exec(ctx); err != nil {
+		return nil, fmt.Errorf("detach episode media files: %w", err)
+	}
+	return rows, nil
+}
+
+// AttachMediaFileToEpisode re-points a detached media file at an episode.
+func (db *DB) AttachMediaFileToEpisode(
+	ctx context.Context,
+	mediaFileID, episodeID uint32,
+) error {
+	return db.client.MediaFile.UpdateOneID(mediaFileID).
+		SetEpisodeID(episodeID).
+		Exec(ctx)
 }
 
 func (db *DB) DeleteTVShow(ctx context.Context, id uint32) error {
@@ -559,27 +615,6 @@ func (db *DB) IncrementEpisodeGrabFailures(ctx context.Context, id uint32) error
 
 func (db *DB) ResetEpisodeGrabFailures(ctx context.Context, id uint32) error {
 	return db.client.Episode.UpdateOneID(id).SetGrabFailures(0).Exec(ctx)
-}
-
-// ListWantedEpisodes returns shows (with seasons+episodes eager-loaded) that
-// have at least one monitored, wanted episode. The episode edges are filtered
-// to only those wanted+monitored rows. This is the raw backlog view (counts,
-// dashboards) — the searcher wants ListEligibleEpisodesForSync.
-func (db *DB) ListWantedEpisodes(ctx context.Context) ([]*ent.TVShow, error) {
-	return db.client.TVShow.Query().
-		Where(tvshow.HasSeasonsWith(
-			season.HasEpisodesWith(
-				episode.MonitoredEQ(true),
-				episode.StatusEQ(episode.StatusWanted),
-			),
-		)).
-		WithSeasons(func(q *ent.SeasonQuery) {
-			q.WithEpisodes(func(eq *ent.EpisodeQuery) {
-				eq.Where(episode.MonitoredEQ(true), episode.StatusEQ(episode.StatusWanted)).
-					WithMediaFiles()
-			})
-		}).
-		All(ctx)
 }
 
 // ListEligibleEpisodesForSync is the TV twin of ListEligibleMoviesForSync:

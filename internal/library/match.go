@@ -10,12 +10,17 @@ import (
 var (
 	titleNonAlnum    = regexp.MustCompile(`[^a-z0-9]+`)
 	titleArticleHead = regexp.MustCompile(`^(the|a|an)`)
+	// TVDB disambiguates same-named shows inside the title string itself
+	// ("Foundation (2021)"), so the year has to come off before comparing or
+	// the disambiguated entry never equals the folder it belongs to.
+	titleYearSuffix = regexp.MustCompile(`\s*\((?:19|20)\d{2}\)\s*$`)
 )
 
 // normalizeTitle lowercases, strips non-alphanumerics, and strips a leading
 // article ("the"/"a"/"an") for tolerant title comparison (e.g. "The Batman" vs
 // "the.batman" vs "Batman").
 func normalizeTitle(s string) string {
+	s = titleYearSuffix.ReplaceAllString(s, "")
 	s = strings.ToLower(s)
 	s = titleNonAlnum.ReplaceAllString(s, "")
 	s = titleArticleHead.ReplaceAllString(s, "")
@@ -24,6 +29,33 @@ func normalizeTitle(s string) string {
 
 // TitleMatches reports whether two titles are equal after normalization.
 func TitleMatches(a, b string) bool { return normalizeTitle(a) == normalizeTitle(b) }
+
+// TitleMatchesAny reports whether title equals name or any of alts after
+// normalization. alts are alternate names for the same work (TVDB aliases and
+// translations), which is the only way a romaji folder name reaches an entry
+// TVDB stores under its English title.
+func TitleMatchesAny(title, name string, alts []string) bool {
+	if TitleMatches(title, name) {
+		return true
+	}
+	for _, a := range alts {
+		if TitleMatches(title, a) {
+			return true
+		}
+	}
+	return false
+}
+
+// TitlePrefixMatches reports whether one normalized title starts with the
+// other, both being non-empty. It is a weaker signal than TitleMatches and is
+// only used to rank candidates, never to confirm one.
+func TitlePrefixMatches(a, b string) bool {
+	na, nb := normalizeTitle(a), normalizeTitle(b)
+	if na == "" || nb == "" {
+		return false
+	}
+	return strings.HasPrefix(na, nb) || strings.HasPrefix(nb, na)
+}
 
 // MatchEpisode resolves a parsed release to an episode within the show's
 // seasons. Anime packs match on absolute number; everything else on

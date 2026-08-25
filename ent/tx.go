@@ -26,12 +26,12 @@ type Tx struct {
 	ImportScanShow *ImportScanShowClient
 	// Invite is the client for interacting with the Invite builders.
 	Invite *InviteClient
+	// MediaEvent is the client for interacting with the MediaEvent builders.
+	MediaEvent *MediaEventClient
 	// MediaFile is the client for interacting with the MediaFile builders.
 	MediaFile *MediaFileClient
 	// Movie is the client for interacting with the Movie builders.
 	Movie *MovieClient
-	// MovieEvent is the client for interacting with the MovieEvent builders.
-	MovieEvent *MovieEventClient
 	// OIDCIdentity is the client for interacting with the OIDCIdentity builders.
 	OIDCIdentity *OIDCIdentityClient
 	// Request is the client for interacting with the Request builders.
@@ -186,9 +186,9 @@ func (tx *Tx) init() {
 	tx.ImportScanFile = NewImportScanFileClient(tx.config)
 	tx.ImportScanShow = NewImportScanShowClient(tx.config)
 	tx.Invite = NewInviteClient(tx.config)
+	tx.MediaEvent = NewMediaEventClient(tx.config)
 	tx.MediaFile = NewMediaFileClient(tx.config)
 	tx.Movie = NewMovieClient(tx.config)
-	tx.MovieEvent = NewMovieEventClient(tx.config)
 	tx.OIDCIdentity = NewOIDCIdentityClient(tx.config)
 	tx.Request = NewRequestClient(tx.config)
 	tx.ScheduledJob = NewScheduledJobClient(tx.config)

@@ -18,7 +18,7 @@
 	import AuthCard from "../components/auth/AuthCard.svelte";
 	import BrandLogo from "../components/settings/BrandLogo.svelte";
 
-	let nextParam = $state("/dashboard");
+	let nextParam = $state("/");
 	let oidcError = $state("");
 
 	// Resolving against our own origin defers to the browser's URL parser, which

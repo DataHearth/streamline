@@ -69,6 +69,12 @@ function byStatus(status: number): string {
 export function errorText(err: unknown, fallback?: string): string {
 	if (err instanceof ApiError) {
 		const code = err.body?.code;
+		// A connection test's message is a diagnostic the server composed
+		// ("plex: unexpected status 401"), not a leaked driver string, and it is
+		// the only place the upstream status appears. Rendering it as a plain 422
+		// ("some of those values weren't accepted") blames credentials that are
+		// usually fine and hides the real cause.
+		if (code === "connection_failed" && err.message) return err.message;
 		if (code && BY_CODE[code]) return BY_CODE[code]();
 		return byStatus(err.status);
 	}
@@ -156,4 +162,37 @@ export async function authFetch<T = unknown>(
 	const { parsed, text } = await readBody(res);
 	if (!res.ok) throw errorFrom(res, parsed, text);
 	return parsed as T;
+}
+
+// PAGE_LIMIT is the largest page every paginated list endpoint will serve; the
+// spec declares `maximum: 100` on each limit param and the handlers clamp to it
+// silently. Asking for more returns 100 with no indication it was reduced, so a
+// caller that wants the whole set has to walk pages against `total`.
+export const PAGE_LIMIT = 100;
+
+// Paginated is the aggregate apiAllPages returns: every item plus the server-
+// reported total. It deliberately drops the envelope's page/limit, which mean
+// nothing once the pages are merged.
+export type Paginated<T> = { items: T[]; total: number };
+
+// apiAllPages walks a paginated endpoint until it has collected `total` items.
+// Pages that count, filter, search and sort client-side need the whole set;
+// with a single oversized request they silently showed only the first 100 rows.
+// `path` may already carry a query string — page and limit are appended.
+export async function apiAllPages<T>(path: string): Promise<Paginated<T>> {
+	const sep = path.includes("?") ? "&" : "?";
+	const fetchPage = (page: number) =>
+		api<Paginated<T>>(`${path}${sep}page=${page}&limit=${PAGE_LIMIT}`);
+
+	const first = await fetchPage(1);
+	const total = first.total ?? first.items.length;
+	const pages = Math.ceil(total / PAGE_LIMIT);
+	if (pages <= 1) return { items: first.items, total };
+
+	// Pages 2..n in parallel: they are independent reads, and a library of a few
+	// thousand rows is a handful of requests rather than a serial chain.
+	const rest = await Promise.all(
+		Array.from({ length: pages - 1 }, (_, i) => fetchPage(i + 2)),
+	);
+	return { items: [...first.items, ...rest.flatMap((r) => r.items)], total };
 }

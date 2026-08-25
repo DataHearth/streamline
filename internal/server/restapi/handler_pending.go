@@ -169,7 +169,7 @@ func (s *Server) removeOldTorrent(ctx context.Context, pending *ent.DownloadReco
 		return
 	}
 	if err := s.downloads.RemoveTorrent(
-		ctx, old.DownloadClientName, old.TorrentHash,
+		ctx, old.DownloadClientName, old.TorrentHash, false,
 	); err != nil {
 		slog.WarnContext(ctx, "replace pending: remove old torrent failed",
 			"hash", old.TorrentHash, "error", err)
@@ -204,7 +204,7 @@ func (s *Server) IgnorePending(
 		*request.Body.RemoveTorrent &&
 		rec.TorrentHash != "" && rec.DownloadClientName != "" {
 		if err := s.downloads.RemoveTorrent(
-			ctx, rec.DownloadClientName, rec.TorrentHash,
+			ctx, rec.DownloadClientName, rec.TorrentHash, false,
 		); err != nil {
 			slog.WarnContext(ctx, "ignore pending: remove torrent failed",
 				"hash", rec.TorrentHash, "error", err)

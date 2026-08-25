@@ -61,6 +61,9 @@ export const qualityProfile = v.object({
 	preferred_resolution: resolution,
 	min_resolution: resolution,
 	upgrade_allowed: v.boolean(),
+	// Empty means any codec, which is how every profile that predates the media
+	// probe behaves — so there is no minLength here on purpose.
+	allowed_codecs: v.optional(v.array(v.string()), []),
 });
 
 const port = v.pipe(

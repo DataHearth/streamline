@@ -122,7 +122,7 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 
 				done := make(chan struct{})
 				fetchMock.Fetch(mock.Anything, "movies", uint32(11),
-					"https://image.tmdb.org/t/p/original/abc.jpg").
+					"https://image.tmdb.org/t/p/w780/abc.jpg").
 					RunAndReturn(func(_ context.Context, _ string, _ uint32, _ string) error {
 						close(done)
 						return nil
@@ -152,7 +152,7 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 
 					done := make(chan struct{})
 					fetchMock.Fetch(mock.Anything, "movies", uint32(11),
-						"https://image.tmdb.org/t/p/original/abc.jpg").
+						"https://image.tmdb.org/t/p/w780/abc.jpg").
 						RunAndReturn(func(_ context.Context, _ string, _ uint32, _ string) error {
 							close(done)
 							return errors.New("network blew up")
@@ -624,6 +624,87 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 		})
 	})
 
+	Describe("Reidentify", func() {
+		It("rejects a zero tmdb id before touching the store", func() {
+			_, err := svc.Reidentify(ctx, 7, 0)
+			Expect(err).To(MatchError(ErrInvalidTMDBID))
+		})
+
+		It("rejects re-identifying onto the id the row already has", func() {
+			storeMock.FindMovieByID(mock.Anything, uint32(7)).
+				Return(&ent.Movie{ID: 7, TmdbID: 603}, nil).Once()
+
+			_, err := svc.Reidentify(ctx, 7, 603)
+			Expect(err).To(MatchError(ErrSameTMDBID))
+		})
+
+		It("refuses when the target title is already in the library", func() {
+			storeMock.FindMovieByID(mock.Anything, uint32(7)).
+				Return(&ent.Movie{ID: 7, TmdbID: 603}, nil).Once()
+			storeMock.FindMovieByTMDBID(mock.Anything, uint32(604)).
+				Return(&ent.Movie{ID: 40, TmdbID: 604}, nil).Once()
+
+			_, err := svc.Reidentify(ctx, 7, 604)
+			Expect(err).To(MatchError(ErrMovieExists))
+		})
+
+		It("swaps the id and refreshes metadata from the new title", func() {
+			storeMock.FindMovieByID(mock.Anything, uint32(7)).
+				Return(&ent.Movie{ID: 7, TmdbID: 603, Title: "The Matrix"}, nil).
+				Once()
+			storeMock.FindMovieByTMDBID(mock.Anything, uint32(604)).
+				Return(nil, &ent.NotFoundError{}).Once()
+			storeMock.SetMovieTMDBID(mock.Anything, uint32(7), uint32(604)).
+				Return(nil).Once()
+			// Proves the refresh reads the *new* id, not the one the row was
+			// loaded with — the whole point of the swap.
+			metaMock.GetMovie(mock.Anything, uint32(604)).
+				Return(&metadata.MovieDetails{
+					MovieResult: metadata.MovieResult{
+						TMDBID:        604,
+						Title:         "The Matrix Reloaded",
+						OriginalTitle: "The Matrix Reloaded",
+						Year:          2003,
+					},
+				}, nil).Once()
+			storeMock.UpdateMovieMetadata(
+				mock.Anything, uint32(7), db.UpdateMovieMetadataParams{
+					Title:         "The Matrix Reloaded",
+					OriginalTitle: "The Matrix Reloaded",
+					Year:          2003,
+				},
+			).Return(nil).Once()
+			storeMock.FindMovieByID(mock.Anything, uint32(7)).
+				Return(&ent.Movie{
+					ID: 7, TmdbID: 604, Title: "The Matrix Reloaded", Year: 2003,
+				}, nil).Once()
+
+			m, err := svc.Reidentify(ctx, 7, 604)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(m.TmdbID).To(Equal(uint32(604)))
+			Expect(m.Title).To(Equal("The Matrix Reloaded"))
+		})
+
+		It(
+			"surfaces a failed refresh rather than leaving the row half-repaired",
+			func() {
+				storeMock.FindMovieByID(mock.Anything, uint32(7)).
+					Return(&ent.Movie{ID: 7, TmdbID: 603}, nil).Once()
+				storeMock.FindMovieByTMDBID(mock.Anything, uint32(604)).
+					Return(nil, &ent.NotFoundError{}).Once()
+				storeMock.SetMovieTMDBID(mock.Anything, uint32(7), uint32(604)).
+					Return(nil).Once()
+				metaMock.GetMovie(mock.Anything, uint32(604)).
+					Return(nil, errors.New("tmdb down")).Once()
+
+				_, err := svc.Reidentify(ctx, 7, 604)
+				Expect(
+					err,
+				).To(MatchError(ContainSubstring("refresh after re-identify")))
+			},
+		)
+	})
+
 	Describe("RefreshOne", func() {
 		It("maps NotFound to ErrMovieNotFound", func() {
 			storeMock.FindMovieByID(mock.Anything, uint32(99)).
@@ -690,7 +771,7 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 				storeMock.LatestImportedRecordForMovie(mock.Anything, uint32(3)).
 					Return(&ent.DownloadRecord{TorrentHash: "H", DownloadClientName: "qb"}, nil).
 					Once()
-				downloadMock.RemoveTorrent(mock.Anything, "qb", "H").
+				downloadMock.RemoveTorrent(mock.Anything, "qb", "H", false).
 					Return(nil).
 					Once()
 

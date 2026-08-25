@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"sort"
 	"strings"
 	"time"
 
@@ -58,8 +57,12 @@ func init() {
 }
 
 var (
-	ErrNoQualityProfile = errors.New("no quality profile configured")
-	ErrSeriesNotFound   = errors.New("series not found")
+	ErrNoQualityProfile  = errors.New("no quality profile configured")
+	ErrSeriesNotFound    = errors.New("series not found")
+	ErrInvalidSeriesType = errors.New("invalid series type")
+	ErrInvalidTVDBID     = errors.New("tvdb id must be non-zero")
+	ErrSameTVDBID        = errors.New("series already points at that tvdb id")
+	ErrSeriesExists      = errors.New("series already exists")
 )
 
 // metadataMinRefreshInterval bounds the TVDB call rate of the metadata-refresh
@@ -159,23 +162,7 @@ func (s *Service) Add(
 		return nil, fmt.Errorf("create tv show: %w", err)
 	}
 
-	if d.PosterPath != "" && s.posters != nil {
-		bg := context.WithoutCancel(ctx)
-		id := show.ID
-		src := metadata.TVDBArtworkURL(d.PosterPath)
-		go func() {
-			if err := s.posters.Fetch(bg, "tvshows", id, src); err != nil {
-				slog.WarnContext(
-					bg,
-					"tv poster fetch failed",
-					"tvshow.id",
-					id,
-					"error",
-					err,
-				)
-			}
-		}()
-	}
+	s.fetchPoster(ctx, show.ID, d.PosterPath)
 
 	showsAdded.Add(ctx, 1)
 	slog.InfoContext(
@@ -187,6 +174,22 @@ func (s *Service) Add(
 		show.TvdbID,
 	)
 	return show, nil
+}
+
+// fetchPoster caches the show's poster in the background. Best-effort: a
+// missing poster is cosmetic and must not fail the operation that asked for it.
+func (s *Service) fetchPoster(ctx context.Context, id uint32, posterPath string) {
+	if posterPath == "" || s.posters == nil {
+		return
+	}
+	bg := context.WithoutCancel(ctx)
+	src := metadata.TVDBArtworkURL(posterPath)
+	go func() {
+		if err := s.posters.Fetch(bg, "tvshows", id, src); err != nil {
+			slog.WarnContext(bg, "tv poster fetch failed",
+				"tvshow.id", id, "error", err)
+		}
+	}()
 }
 
 func (s *Service) List(
@@ -212,13 +215,12 @@ func (s *Service) List(
 	return rows, uint32(total), nil
 }
 
-// FilterList applies status/type/query/sort to the full library in memory.
-// The dataset is small enough that a single fetch + in-Go filter is adequate;
-// a later optimization can push the predicates into SQL.
+// FilterList returns one page of series with the episode rollup the list view
+// renders, leaving the season/episode tree unloaded — see db.FilterTVShows.
 func (s *Service) FilterList(
 	ctx context.Context,
 	p FilterParams,
-) ([]*ent.TVShow, uint32, error) {
+) ([]*ent.TVShow, map[uint32]db.EpisodeCounts, uint32, error) {
 	ctx, span := tracer.Start(ctx, "tvshow.filter_list",
 		trace.WithAttributes(
 			attribute.String("filter.status", p.Status),
@@ -237,44 +239,20 @@ func (s *Service) FilterList(
 		limit = 20
 	}
 
-	rows, err := s.db.ListTVShows(ctx, 0, 10000)
+	rows, counts, total, err := s.db.FilterTVShows(ctx, db.FilterTVShowsParams{
+		Status: p.Status,
+		Type:   p.Type,
+		Query:  strings.TrimSpace(p.Query),
+		Sort:   p.Sort,
+		Order:  p.Order,
+		Offset: uint32(page-1) * uint32(limit),
+		Limit:  limit,
+		Now:    time.Now(),
+	})
 	if err != nil {
-		return nil, 0, otelx.RecordSpanError(span, err)
+		return nil, nil, 0, otelx.RecordSpanError(span, err)
 	}
-
-	now := time.Now()
-	query := strings.ToLower(strings.TrimSpace(p.Query))
-	filtered := make([]*ent.TVShow, 0, len(rows))
-	for _, sh := range rows {
-		if p.Type != "" && string(sh.Type) != p.Type {
-			continue
-		}
-		switch p.Status {
-		case "", "all":
-		case "missing":
-			if !hasMissingEpisode(sh, now) {
-				continue
-			}
-		default:
-			if string(sh.SeriesStatus) != p.Status {
-				continue
-			}
-		}
-		if query != "" && !strings.Contains(strings.ToLower(sh.Title), query) {
-			continue
-		}
-		filtered = append(filtered, sh)
-	}
-
-	sortShows(filtered, p.Sort, p.Order)
-
-	total := uint32(len(filtered))
-	start := int(page-1) * int(limit)
-	if start >= len(filtered) {
-		return []*ent.TVShow{}, total, nil
-	}
-	end := min(start+int(limit), len(filtered))
-	return filtered[start:end], total, nil
+	return rows, counts, total, nil
 }
 
 func (s *Service) Get(ctx context.Context, id uint32) (*ent.TVShow, error) {
@@ -312,15 +290,9 @@ func (s *Service) Counts(ctx context.Context) (Counts, error) {
 	if err != nil {
 		return Counts{}, otelx.RecordSpanError(span, err)
 	}
-	wantedShows, err := s.db.ListWantedEpisodes(ctx)
+	wanted, err := s.db.CountWantedEpisodes(ctx)
 	if err != nil {
 		return Counts{}, otelx.RecordSpanError(span, err)
-	}
-	wanted := 0
-	for _, sh := range wantedShows {
-		for _, se := range sh.Edges.Seasons {
-			wanted += len(se.Edges.Episodes)
-		}
 	}
 	return Counts{
 		Total:          total,
@@ -371,51 +343,6 @@ func DeriveSeasonViews(show *ent.TVShow, now time.Time) []SeasonView {
 	return views
 }
 
-// hasMissingEpisode reports whether the show has any aired/undated monitored
-// episode without a media file (drives the "missing" status filter).
-func hasMissingEpisode(show *ent.TVShow, now time.Time) bool {
-	for _, v := range DeriveSeasonViews(show, now) {
-		if v.Missing > 0 {
-			return true
-		}
-	}
-	return false
-}
-
-func sortShows(shows []*ent.TVShow, sortKey, order string) {
-	less := func(i, j int) bool { return shows[i].CreateTime.After(shows[j].CreateTime) }
-	switch sortKey {
-	case "title":
-		less = func(i, j int) bool {
-			return strings.ToLower(shows[i].Title) < strings.ToLower(shows[j].Title)
-		}
-	case "year":
-		less = func(i, j int) bool { return shows[i].Year < shows[j].Year }
-	case "rating":
-		less = func(i, j int) bool { return shows[i].Rating < shows[j].Rating }
-	case "episodes":
-		less = func(i, j int) bool { return episodeCount(shows[i]) < episodeCount(shows[j]) }
-	}
-	sort.SliceStable(shows, less)
-	if order == "desc" {
-		reverse(shows)
-	}
-}
-
-func episodeCount(show *ent.TVShow) int {
-	n := 0
-	for _, se := range show.Edges.Seasons {
-		n += len(se.Edges.Episodes)
-	}
-	return n
-}
-
-func reverse(shows []*ent.TVShow) {
-	for i, j := 0, len(shows)-1; i < j; i, j = i+1, j-1 {
-		shows[i], shows[j] = shows[j], shows[i]
-	}
-}
-
 func (s *Service) Update(
 	ctx context.Context,
 	id uint32,
@@ -438,7 +365,15 @@ func (s *Service) Update(
 			return nil, otelx.RecordSpanError(span, err)
 		}
 	}
-	if p.Monitored == nil && p.QualityProfile == nil {
+	var showType *enttvshow.Type
+	if p.Type != nil {
+		t := enttvshow.Type(*p.Type)
+		if err := enttvshow.TypeValidator(t); err != nil {
+			return nil, otelx.RecordSpanError(span, ErrInvalidSeriesType)
+		}
+		showType = &t
+	}
+	if p.Monitored == nil && p.QualityProfile == nil && showType == nil {
 		show, err := s.db.FindTVShowByID(ctx, id)
 		if err != nil {
 			return nil, otelx.RecordSpanError(span, err)
@@ -459,6 +394,7 @@ func (s *Service) Update(
 		db.UpdateTVShowParams{
 			Monitored:      p.Monitored,
 			QualityProfile: p.QualityProfile,
+			Type:           showType,
 		},
 	)
 	if err != nil {
@@ -697,7 +633,7 @@ func (s *Service) removeEpisodeSourceTorrent(ctx context.Context, episodeID uint
 		return
 	}
 	if err := s.download.RemoveTorrent(
-		ctx, rec.DownloadClientName, rec.TorrentHash,
+		ctx, rec.DownloadClientName, rec.TorrentHash, false,
 	); err != nil {
 		slog.WarnContext(ctx, "remove source torrent failed",
 			"hash", rec.TorrentHash, "error", err)
@@ -861,7 +797,6 @@ func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.TVShow, error
 		Network:       d.Network,
 		Creator:       d.Creator,
 		SeriesStatus:  d.Status,
-		Type:          string(d.Type),
 		Runtime:       d.Runtime,
 		Rating:        float64(d.Rating),
 		Genres:        d.Genres,
@@ -887,7 +822,192 @@ func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.TVShow, error
 	if err := s.db.SetTVShowRefreshedAt(ctx, id, time.Now()); err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
+	// Add and Reidentify fetched the poster, refresh did not — so a cleared
+	// cache stayed cleared for every show already in the library. Fetch
+	// no-ops when the file is present, so this is free on a warm cache.
+	s.fetchPoster(ctx, id, d.PosterPath)
 	return s.db.FindTVShowByID(ctx, id)
+}
+
+// Reidentify points the series at a different TVDB show: metadata and the
+// whole season/episode tree are replaced, and each existing file is re-attached
+// to the episode carrying the same season and episode number. Files whose
+// numbering has no counterpart in the new show are left on disk and returned
+// so the caller can report them.
+//
+// The files are detached *before* the tree is replaced, and that ordering is
+// the whole point. ReconcileEpisodes deletes seasons and episodes the provider
+// no longer reports and hands their paths back for deletion from disk — with a
+// swapped tvdb id that is every episode of the old show, so refreshing in place
+// would wipe the library it was asked to repair.
+func (s *Service) Reidentify(
+	ctx context.Context,
+	id, tvdbID uint32,
+) (*ent.TVShow, []string, error) {
+	ctx, span := tracer.Start(ctx, "tvshow.reidentify",
+		trace.WithAttributes(
+			attribute.Int64("tvshow.id", int64(id)),
+			attribute.Int64("tvshow.tvdb_id", int64(tvdbID)),
+		),
+	)
+	defer span.End()
+
+	if tvdbID == 0 {
+		return nil, nil, otelx.RecordSpanError(span, ErrInvalidTVDBID)
+	}
+	show, err := s.db.FindTVShowByID(ctx, id)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, nil, otelx.RecordSpanError(span,
+				fmt.Errorf("series %d: %w", id, ErrSeriesNotFound))
+		}
+		return nil, nil, otelx.RecordSpanError(span, err)
+	}
+	if show.TvdbID == tvdbID {
+		return nil, nil, otelx.RecordSpanError(span, ErrSameTVDBID)
+	}
+	// Unlike its movie twin, FindTVShowByTVDBID reports "not in the library" as
+	// a nil row with a nil error — testing err alone would refuse every target.
+	existing, err := s.db.FindTVShowByTVDBID(ctx, tvdbID)
+	if err != nil {
+		return nil, nil, otelx.RecordSpanError(span,
+			fmt.Errorf("lookup target: %w", err))
+	}
+	if existing != nil {
+		return nil, nil, otelx.RecordSpanError(span, ErrSeriesExists)
+	}
+
+	// Fetched before anything is mutated: a bad id or an unreachable TVDB
+	// leaves the series exactly as it was.
+	d, err := s.metadata.GetSeries(ctx, tvdbID)
+	if err != nil {
+		return nil, nil, otelx.RecordSpanError(span,
+			fmt.Errorf("tvdb get series: %w", err))
+	}
+
+	detached, err := s.db.DetachEpisodeMediaFiles(ctx, id)
+	if err != nil {
+		return nil, nil, otelx.RecordSpanError(span, err)
+	}
+	span.SetAttributes(attribute.Int("files.detached", len(detached)))
+
+	if err := s.db.SetTVShowTVDBID(ctx, id, tvdbID); err != nil {
+		return nil, nil, otelx.RecordSpanError(span, err)
+	}
+	cast := s.seriesCast(ctx, tvdbID)
+	if err := s.db.UpdateTVShowMetadata(ctx, id, db.UpdateTVShowMetadataParams{
+		Title:         d.Title,
+		OriginalTitle: d.OriginalTitle,
+		Year:          d.Year,
+		Overview:      d.Overview,
+		Network:       d.Network,
+		Creator:       d.Creator,
+		SeriesStatus:  d.Status,
+		Runtime:       d.Runtime,
+		Rating:        float64(d.Rating),
+		Genres:        d.Genres,
+		Cast:          db.StoredCast(cast),
+	}); err != nil {
+		return nil, nil, otelx.RecordSpanError(span, err)
+	}
+	// A metadata refresh deliberately preserves `type` because an operator may
+	// have corrected it. Re-identify is the exception: this is a different show,
+	// so the correction was about the old one and re-inferring is right.
+	newType := enttvshow.Type(d.Type)
+	if _, err := s.db.UpdateTVShow(ctx, id, db.UpdateTVShowParams{
+		Type: &newType,
+	}); err != nil {
+		return nil, nil, otelx.RecordSpanError(span, err)
+	}
+	if _, err := s.db.ReconcileEpisodes(ctx, id, seedSeasons(d)); err != nil {
+		return nil, nil, otelx.RecordSpanError(span, err)
+	}
+
+	unmatched, err := s.reattachFiles(ctx, id, detached)
+	if err != nil {
+		return nil, nil, otelx.RecordSpanError(span, err)
+	}
+	span.SetAttributes(attribute.Int("files.unmatched", len(unmatched)))
+
+	if err := s.db.SetTVShowRefreshedAt(ctx, id, time.Now()); err != nil {
+		return nil, nil, otelx.RecordSpanError(span, err)
+	}
+	s.fetchPoster(ctx, id, d.PosterPath)
+
+	refreshed, err := s.db.FindTVShowByID(ctx, id)
+	if err != nil {
+		return nil, nil, otelx.RecordSpanError(span, err)
+	}
+	slog.InfoContext(
+		ctx,
+		"series re-identified",
+		"tvshow.id",
+		id,
+		"title",
+		refreshed.Title,
+		"tvdb_id",
+		tvdbID,
+		"files_kept",
+		len(detached)-len(unmatched),
+		"files_unmatched",
+		len(unmatched),
+	)
+	return refreshed, unmatched, nil
+}
+
+// reattachFiles re-points each detached file at the new show's episode with the
+// same season and episode number, flipping that episode to available. A file
+// with no counterpart keeps its place on disk and loses only its row — a
+// library scan can re-adopt it, which deleting the media could not undo.
+func (s *Service) reattachFiles(
+	ctx context.Context,
+	showID uint32,
+	detached []*ent.MediaFile,
+) ([]string, error) {
+	if len(detached) == 0 {
+		return nil, nil
+	}
+	show, err := s.db.FindTVShowByID(ctx, showID)
+	if err != nil {
+		return nil, err
+	}
+	type slot struct{ season, episode uint16 }
+	byNumber := make(map[slot]uint32)
+	for _, se := range show.Edges.Seasons {
+		for _, ep := range se.Edges.Episodes {
+			byNumber[slot{se.Number, ep.Number}] = ep.ID
+		}
+	}
+
+	var unmatched []string
+	for _, mf := range detached {
+		oldEp := mf.Edges.Episode
+		if oldEp == nil || oldEp.Edges.Season == nil {
+			unmatched = append(unmatched, mf.Path)
+			continue
+		}
+		epID, ok := byNumber[slot{oldEp.Edges.Season.Number, oldEp.Number}]
+		if !ok {
+			unmatched = append(unmatched, mf.Path)
+			if err := s.db.DeleteMediaFile(ctx, mf.ID); err != nil {
+				return nil, fmt.Errorf(
+					"drop unmatched media file %d: %w",
+					mf.ID,
+					err,
+				)
+			}
+			continue
+		}
+		if err := s.db.AttachMediaFileToEpisode(ctx, mf.ID, epID); err != nil {
+			return nil, fmt.Errorf("attach media file %d: %w", mf.ID, err)
+		}
+		if err := s.db.SetEpisodeStatus(
+			ctx, epID, episode.StatusAvailable,
+		); err != nil {
+			return nil, fmt.Errorf("mark episode %d available: %w", epID, err)
+		}
+	}
+	return unmatched, nil
 }
 
 // RefreshStale re-pulls TVDB metadata for shows not refreshed within
@@ -931,7 +1051,10 @@ type Manager interface {
 		qualityProfile string,
 	) (*ent.TVShow, error)
 	List(ctx context.Context, page, limit uint16) ([]*ent.TVShow, uint32, error)
-	FilterList(ctx context.Context, p FilterParams) ([]*ent.TVShow, uint32, error)
+	FilterList(
+		ctx context.Context,
+		p FilterParams,
+	) ([]*ent.TVShow, map[uint32]db.EpisodeCounts, uint32, error)
 	Get(ctx context.Context, id uint32) (*ent.TVShow, error)
 	Update(ctx context.Context, id uint32, p UpdateParams) (*ent.TVShow, error)
 	Delete(ctx context.Context, id uint32, opts DeleteOptions) error
@@ -955,6 +1078,10 @@ type Manager interface {
 	) error
 	Counts(ctx context.Context) (Counts, error)
 	RefreshOne(ctx context.Context, id uint32) (*ent.TVShow, error)
+	Reidentify(
+		ctx context.Context,
+		id, tvdbID uint32,
+	) (*ent.TVShow, []string, error)
 	SetSeasonMonitored(ctx context.Context, id uint32, monitored bool) error
 	SetEpisodeMonitored(ctx context.Context, id uint32, monitored bool) error
 	ApplySpecialsToExisting(ctx context.Context) (int, error)
@@ -965,6 +1092,10 @@ type DeleteOptions struct{ DeleteFiles bool }
 type UpdateParams struct {
 	Monitored      *bool
 	QualityProfile *string
+	// Type overrides the provider-inferred series type. It decides whether
+	// episodes match by absolute number, so a wrong inference silently
+	// mis-matches every file until an operator corrects it here.
+	Type *string
 	// Preset, when set, bulk-applies a monitoring preset to season/episode toggles.
 	Preset string // "" | "all" | "future" | "missing" | "existing" | "pilot" | "none"
 }

@@ -20,6 +20,7 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/events"
+	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/importer"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/jobs"
@@ -225,11 +226,18 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		store, cfg.Library.SeriesPath, cfg.Library.SeriesNaming,
 	)
 	pathMigrations := pathmigrate.NewService(store)
+	pathMigrations.WarnOnDrift(ctx)
+	// Constructed once and kept: the media-probe backfill job and the
+	// restapi Server (system-info + config/ffmpeg endpoints) reuse this same
+	// prober.
+	prober := ffmpeg.NewCLI(cfg.FFmpeg.Path)
+	hygieneSvc.Probe = prober
 	imp := importer.NewWorker(importer.Deps{
 		DB:          store,
 		Library:     libSvc,
 		Download:    dlManager,
 		MediaServer: dispatcher,
+		Prober:      prober,
 	})
 	go imp.Start(ctx)
 
@@ -349,6 +357,11 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 			cfg.Schedule.DriftCheck,
 			func(d time.Duration) scheduler.JobFunc { return jobs.DriftCheck(hygieneSvc, d) },
 		},
+		{
+			"media-probe",
+			cfg.Schedule.MediaProbe,
+			func(time.Duration) scheduler.JobFunc { return jobs.MediaProbe(hygieneSvc) },
+		},
 	}
 	for _, j := range jobsToRegister {
 		d, err := time.ParseDuration(j.interval)
@@ -421,6 +434,8 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		Posters:         postersSvc,
 		Torrents:        torrentsAPI,
 		PathMigrations:  pathMigrations,
+		Importer:        imp,
+		Prober:          prober,
 		AuthMiddleware:  authMW,
 		HTTPLog:         httpLogger.Middleware(httpAccessSkip),
 	})

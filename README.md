@@ -8,7 +8,14 @@
 
 Self-hosted unified media manager. Replaces the \*arr stack (Radarr, Sonarr, Lidarr, Readarr) and Seerr with a single binary.
 
-<!-- ![Screenshot](docs/screenshot.png) -->
+https://github.com/user-attachments/assets/9116fb45-1a25-414d-b79e-5fe83df25f6b
+
+|  |  |
+| --- | --- |
+| [![Dashboard](docs/assets/dashboard.png)](docs/assets/dashboard.png) | [![Activity](docs/assets/activity-queue.png)](docs/assets/activity-queue.png) |
+| **Dashboard** — the whole library at a glance | **Activity** — live progress, speed and ETA per download |
+
+*[More screenshots](#screenshots) at the bottom.*
 
 ## Features
 
@@ -24,7 +31,8 @@ Self-hosted unified media manager. Replaces the \*arr stack (Radarr, Sonarr, Lid
 - REST API (OpenAPI 3.0 spec)
 - OpenTelemetry traces, metrics, logs
 - GitOps-friendly: `read_only` config mode rejects runtime config writes
-- CGO-free SQLite — single-binary, zero external deps
+- CGO-free SQLite — single binary, no database server, no runtime, nothing to install alongside it
+- Optional `ffprobe`: unlocks media info and import verification; without it Streamline runs exactly as before, just without those two ([details](#optional-ffmpeg))
 
 ## Quick start (Docker Compose)
 
@@ -87,6 +95,8 @@ docker run -d --name streamline \
 The media and downloads mounts are **required**, not optional extras: Streamline creates `library.movie_path` and `library.series_path` at startup and exits if it cannot. They default to `/media/movies` and `/media/series`, so dropping those two `-v` flags stops the container with `create library path /media/movies: mkdir /media: permission denied`. Point them wherever you like — just set `library.movie_path` / `library.series_path` / `library.download_path` to match. Keep media and downloads on one filesystem so the default `hardlink` import mode works (`library.import_mode` also accepts `copy` and `move`).
 
 Tags: `latest`, `edge` (main branch), `vX.Y.Z`, `X.Y`, `X`, `sha-<short>`.
+
+The image ships static `ffmpeg` and `ffprobe` alongside the binary in `/usr/local/bin`, so the [optional media features](#optional-ffmpeg) work with no extra setup.
 
 ### Docker Compose
 
@@ -152,6 +162,25 @@ cd streamline
 task
 ./streamline
 ```
+
+### Optional: ffmpeg
+
+Streamline needs nothing but itself to run. Two features are gated behind the `ffmpeg`/`ffprobe`
+binaries, and both are opt-in extras rather than requirements:
+
+- **Media info** — resolution, codecs, duration and bitrate shown on files and episodes
+- **Import verification** — holding a finished download whose actual resolution, duration or codec
+  contradicts what the release claimed, instead of importing it blind
+
+With the binaries absent, or `ffmpeg.enabled: false` in the config, nothing errors and nothing is
+blocked: imports fall back to filename parsing exactly as they did before the feature existed, and
+`GET /api/v1/system/info` reports `ffmpeg_warn` so you know why the extras are missing.
+
+**The official Docker image ships both binaries** — static `ffmpeg` and `ffprobe` are copied into
+`/usr/local/bin` from a digest-pinned [`mwader/static-ffmpeg`](https://hub.docker.com/r/mwader/static-ffmpeg)
+stage, so Docker and Helm users get the extras with zero configuration. Binary and source installs
+use whatever `ffmpeg` your OS provides, resolved from `$PATH` or from the directory named by
+`ffmpeg.path`.
 
 ## Configuration
 
@@ -389,3 +418,20 @@ Found a vulnerability? Don't open an issue — see [SECURITY.md](SECURITY.md).
 - Releases: https://github.com/datahearth/streamline/releases
 - Changelog: [CHANGELOG.md](CHANGELOG.md)
 - Roadmap: [docs/ROADMAP.md](docs/ROADMAP.md)
+
+## Screenshots
+
+> **The library shown in every screenshot and in the demo video is fabricated.** Titles, posters and
+> metadata come from public metadata providers; the "files" behind them do not exist. Streamline is a
+> library manager — it neither hosts nor distributes media. It does not endorse copyright
+> infringement or any other unlawful use, and the authors accept no responsibility for how you use
+> it. Obtaining content you have the right to is your responsibility.
+
+|  |  |
+| --- | --- |
+| [![Movies](docs/assets/movies.png)](docs/assets/movies.png)<br>**Movies** — poster grid with per-title status | [![Movie detail](docs/assets/movie-detail.png)](docs/assets/movie-detail.png)<br>**Movie detail** — cast, artwork, and ffprobe media info |
+| [![Series](docs/assets/series.png)](docs/assets/series.png)<br>**Series** — every show, monitored and missing counts | [![Episodes](docs/assets/series-episodes.png)](docs/assets/series-episodes.png)<br>**Episodes** — seasons, air dates, per-file quality |
+| [![Import verification](docs/assets/import-verification.png)](docs/assets/import-verification.png)<br>**Import verification** — a mismatched file is held, not imported | [![History](docs/assets/history.png)](docs/assets/history.png)<br>**History** — every grab, where it came from, what it cost |
+| [![Manual search](docs/assets/manual-search.png)](docs/assets/manual-search.png)<br>**Manual search** — every release from every indexer, one grab away | [![Library import](docs/assets/library-import.png)](docs/assets/library-import.png)<br>**Library import** — adopt an existing library under review |
+| [![Requests](docs/assets/requests.png)](docs/assets/requests.png)<br>**Requests** — a built-in Seerr, no second service | [![Calendar](docs/assets/calendar.png)](docs/assets/calendar.png)<br>**Calendar** — what lands this month |
+| [![Sign in](docs/assets/login.png)](docs/assets/login.png)<br>**Sign in** — local accounts, or SSO through any OIDC provider | [![Settings](docs/assets/settings.png)](docs/assets/settings.png)<br>**Settings** — read-only runtime snapshot; the config file stays the source of truth |

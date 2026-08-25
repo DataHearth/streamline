@@ -2,9 +2,13 @@ package restapi
 
 import (
 	"context"
+	"errors"
+	"log/slog"
 	"strings"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/internal/download"
 )
 
 func (s *Server) GetDownloadQueue(
@@ -42,6 +46,13 @@ func (s *Server) CancelQueueItem(
 				NotFoundJSONResponse: errNotFound(err.Error()),
 			}, nil
 		}
+		if errors.Is(err, download.ErrRecordHeld) {
+			return CancelQueueItem409JSONResponse{
+				ConflictJSONResponse: errConflict(
+					"download is held; resolve it via POST /downloads/{id}/resolve",
+				),
+			}, nil
+		}
 		return nil, err
 	}
 	return CancelQueueItem204Response{}, nil
@@ -62,6 +73,13 @@ func (s *Server) PauseQueueItem(
 				NotFoundJSONResponse: errNotFound(err.Error()),
 			}, nil
 		}
+		if errors.Is(err, download.ErrRecordHeld) {
+			return PauseQueueItem409JSONResponse{
+				ConflictJSONResponse: errConflict(
+					"download is held; resolve it via POST /downloads/{id}/resolve",
+				),
+			}, nil
+		}
 		return nil, err
 	}
 	return PauseQueueItem204Response{}, nil
@@ -80,6 +98,13 @@ func (s *Server) ResumeQueueItem(
 		if ent.IsNotFound(err) {
 			return ResumeQueueItem404JSONResponse{
 				NotFoundJSONResponse: errNotFound(err.Error()),
+			}, nil
+		}
+		if errors.Is(err, download.ErrRecordHeld) {
+			return ResumeQueueItem409JSONResponse{
+				ConflictJSONResponse: errConflict(
+					"download is held; resolve it via POST /downloads/{id}/resolve",
+				),
 			}, nil
 		}
 		return nil, err
@@ -161,4 +186,76 @@ func (s *Server) ClearCompletedHistory(
 			ClearCompletedResult{Deleted: n},
 		),
 	}, nil
+}
+
+// ResolveHeldDownload releases a download held by import verification. import
+// re-runs the import with verification bypassed; regrab and delete both remove
+// the torrent with its files, differing only in whether the media goes back to
+// wanted for another search.
+func (s *Server) ResolveHeldDownload(
+	ctx context.Context,
+	request ResolveHeldDownloadRequestObject,
+) (ResolveHeldDownloadResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return ResolveHeldDownload403JSONResponse{
+			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
+	// The generated wrapper only json-decodes, so an unknown or absent action
+	// arrives here as a value no branch below claims — and the tail of this
+	// function is the destructive one.
+	switch request.Body.Action {
+	case ResolveHeldRequestActionImport,
+		ResolveHeldRequestActionRegrab,
+		ResolveHeldRequestActionDelete:
+	default:
+		return ResolveHeldDownload400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(
+				"action must be one of import, regrab, delete",
+			),
+		}, nil
+	}
+
+	rec, err := s.store.FindDownloadRecordByID(ctx, request.Id)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return ResolveHeldDownload404JSONResponse{
+				NotFoundJSONResponse: errNotFound("download record not found"),
+			}, nil
+		}
+		return nil, err
+	}
+	if rec.Status != downloadrecord.StatusHeld {
+		return ResolveHeldDownload409JSONResponse{
+			ConflictJSONResponse: errConflict("download record is not held"),
+		}, nil
+	}
+
+	if request.Body.Action == ResolveHeldRequestActionImport {
+		if err := s.store.ReleaseHeldDownloadRecord(ctx, rec.ID); err != nil {
+			return nil, err
+		}
+		s.importer.Enqueue(rec.ID)
+		return ResolveHeldDownload204Response{}, nil
+	}
+
+	if rec.TorrentHash != "" {
+		if err := s.downloads.RemoveTorrent(
+			ctx, rec.DownloadClientName, rec.TorrentHash, true,
+		); err != nil {
+			slog.WarnContext(ctx, "resolve held: remove torrent failed",
+				"hash", rec.TorrentHash, "error", err)
+		}
+	}
+	requeue := request.Body.Action == ResolveHeldRequestActionRegrab
+	reason := "rejected by user"
+	if requeue {
+		reason = "rejected by user (re-grab)"
+	}
+	if err := s.store.FailHeldDownloadRecord(
+		ctx, rec.ID, reason, requeue,
+	); err != nil {
+		return nil, err
+	}
+	return ResolveHeldDownload204Response{}, nil
 }

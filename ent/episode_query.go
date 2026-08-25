@@ -14,6 +14,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
+	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/predicate"
 	"github.com/datahearth/streamline/ent/season"
@@ -29,7 +30,9 @@ type EpisodeQuery struct {
 	withSeason          *SeasonQuery
 	withDownloadRecords *DownloadRecordQuery
 	withMediaFiles      *MediaFileQuery
+	withEvents          *MediaEventQuery
 	withFKs             bool
+	modifiers           []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -125,6 +128,28 @@ func (_q *EpisodeQuery) QueryMediaFiles() *MediaFileQuery {
 			sqlgraph.From(episode.Table, episode.FieldID, selector),
 			sqlgraph.To(mediafile.Table, mediafile.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, episode.MediaFilesTable, episode.MediaFilesColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryEvents chains the current query on the "events" edge.
+func (_q *EpisodeQuery) QueryEvents() *MediaEventQuery {
+	query := (&MediaEventClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(episode.Table, episode.FieldID, selector),
+			sqlgraph.To(mediaevent.Table, mediaevent.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, episode.EventsTable, episode.EventsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -327,9 +352,11 @@ func (_q *EpisodeQuery) Clone() *EpisodeQuery {
 		withSeason:          _q.withSeason.Clone(),
 		withDownloadRecords: _q.withDownloadRecords.Clone(),
 		withMediaFiles:      _q.withMediaFiles.Clone(),
+		withEvents:          _q.withEvents.Clone(),
 		// clone intermediate query.
-		sql:  _q.sql.Clone(),
-		path: _q.path,
+		sql:       _q.sql.Clone(),
+		path:      _q.path,
+		modifiers: append([]func(*sql.Selector){}, _q.modifiers...),
 	}
 }
 
@@ -363,6 +390,17 @@ func (_q *EpisodeQuery) WithMediaFiles(opts ...func(*MediaFileQuery)) *EpisodeQu
 		opt(query)
 	}
 	_q.withMediaFiles = query
+	return _q
+}
+
+// WithEvents tells the query-builder to eager-load the nodes that are connected to
+// the "events" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *EpisodeQuery) WithEvents(opts ...func(*MediaEventQuery)) *EpisodeQuery {
+	query := (&MediaEventClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withEvents = query
 	return _q
 }
 
@@ -445,10 +483,11 @@ func (_q *EpisodeQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Epis
 		nodes       = []*Episode{}
 		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
-		loadedTypes = [3]bool{
+		loadedTypes = [4]bool{
 			_q.withSeason != nil,
 			_q.withDownloadRecords != nil,
 			_q.withMediaFiles != nil,
+			_q.withEvents != nil,
 		}
 	)
 	if _q.withSeason != nil {
@@ -465,6 +504,9 @@ func (_q *EpisodeQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Epis
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
+	}
+	if len(_q.modifiers) > 0 {
+		_spec.Modifiers = _q.modifiers
 	}
 	for i := range hooks {
 		hooks[i](ctx, _spec)
@@ -492,6 +534,13 @@ func (_q *EpisodeQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Epis
 		if err := _q.loadMediaFiles(ctx, query, nodes,
 			func(n *Episode) { n.Edges.MediaFiles = []*MediaFile{} },
 			func(n *Episode, e *MediaFile) { n.Edges.MediaFiles = append(n.Edges.MediaFiles, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withEvents; query != nil {
+		if err := _q.loadEvents(ctx, query, nodes,
+			func(n *Episode) { n.Edges.Events = []*MediaEvent{} },
+			func(n *Episode, e *MediaEvent) { n.Edges.Events = append(n.Edges.Events, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -592,9 +641,43 @@ func (_q *EpisodeQuery) loadMediaFiles(ctx context.Context, query *MediaFileQuer
 	}
 	return nil
 }
+func (_q *EpisodeQuery) loadEvents(ctx context.Context, query *MediaEventQuery, nodes []*Episode, init func(*Episode), assign func(*Episode, *MediaEvent)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uint32]*Episode)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.MediaEvent(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(episode.EventsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.episode_events
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "episode_events" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "episode_events" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
 
 func (_q *EpisodeQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := _q.querySpec()
+	if len(_q.modifiers) > 0 {
+		_spec.Modifiers = _q.modifiers
+	}
 	_spec.Node.Columns = _q.ctx.Fields
 	if len(_q.ctx.Fields) > 0 {
 		_spec.Unique = _q.ctx.Unique != nil && *_q.ctx.Unique
@@ -657,6 +740,9 @@ func (_q *EpisodeQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	if _q.ctx.Unique != nil && *_q.ctx.Unique {
 		selector.Distinct()
 	}
+	for _, m := range _q.modifiers {
+		m(selector)
+	}
 	for _, p := range _q.predicates {
 		p(selector)
 	}
@@ -672,6 +758,12 @@ func (_q *EpisodeQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector.Limit(*limit)
 	}
 	return selector
+}
+
+// Modify adds a query modifier for attaching custom logic to queries.
+func (_q *EpisodeQuery) Modify(modifiers ...func(s *sql.Selector)) *EpisodeSelect {
+	_q.modifiers = append(_q.modifiers, modifiers...)
+	return _q.Select()
 }
 
 // EpisodeGroupBy is the group-by builder for Episode entities.
@@ -762,4 +854,10 @@ func (_s *EpisodeSelect) sqlScan(ctx context.Context, root *EpisodeQuery, v any)
 	}
 	defer rows.Close()
 	return sql.ScanSlice(rows, v)
+}
+
+// Modify adds a query modifier for attaching custom logic to queries.
+func (_s *EpisodeSelect) Modify(modifiers ...func(s *sql.Selector)) *EpisodeSelect {
+	_s.modifiers = append(_s.modifiers, modifiers...)
+	return _s
 }

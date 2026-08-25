@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/predicate"
 	"github.com/datahearth/streamline/ent/season"
 	"github.com/datahearth/streamline/ent/tvshow"
@@ -25,6 +26,8 @@ type TVShowQuery struct {
 	inters      []Interceptor
 	predicates  []predicate.TVShow
 	withSeasons *SeasonQuery
+	withEvents  *MediaEventQuery
+	modifiers   []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -76,6 +79,28 @@ func (_q *TVShowQuery) QuerySeasons() *SeasonQuery {
 			sqlgraph.From(tvshow.Table, tvshow.FieldID, selector),
 			sqlgraph.To(season.Table, season.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, tvshow.SeasonsTable, tvshow.SeasonsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryEvents chains the current query on the "events" edge.
+func (_q *TVShowQuery) QueryEvents() *MediaEventQuery {
+	query := (&MediaEventClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(tvshow.Table, tvshow.FieldID, selector),
+			sqlgraph.To(mediaevent.Table, mediaevent.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, tvshow.EventsTable, tvshow.EventsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -276,9 +301,11 @@ func (_q *TVShowQuery) Clone() *TVShowQuery {
 		inters:      append([]Interceptor{}, _q.inters...),
 		predicates:  append([]predicate.TVShow{}, _q.predicates...),
 		withSeasons: _q.withSeasons.Clone(),
+		withEvents:  _q.withEvents.Clone(),
 		// clone intermediate query.
-		sql:  _q.sql.Clone(),
-		path: _q.path,
+		sql:       _q.sql.Clone(),
+		path:      _q.path,
+		modifiers: append([]func(*sql.Selector){}, _q.modifiers...),
 	}
 }
 
@@ -290,6 +317,17 @@ func (_q *TVShowQuery) WithSeasons(opts ...func(*SeasonQuery)) *TVShowQuery {
 		opt(query)
 	}
 	_q.withSeasons = query
+	return _q
+}
+
+// WithEvents tells the query-builder to eager-load the nodes that are connected to
+// the "events" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *TVShowQuery) WithEvents(opts ...func(*MediaEventQuery)) *TVShowQuery {
+	query := (&MediaEventClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withEvents = query
 	return _q
 }
 
@@ -371,8 +409,9 @@ func (_q *TVShowQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*TVSho
 	var (
 		nodes       = []*TVShow{}
 		_spec       = _q.querySpec()
-		loadedTypes = [1]bool{
+		loadedTypes = [2]bool{
 			_q.withSeasons != nil,
+			_q.withEvents != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -383,6 +422,9 @@ func (_q *TVShowQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*TVSho
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
+	}
+	if len(_q.modifiers) > 0 {
+		_spec.Modifiers = _q.modifiers
 	}
 	for i := range hooks {
 		hooks[i](ctx, _spec)
@@ -397,6 +439,13 @@ func (_q *TVShowQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*TVSho
 		if err := _q.loadSeasons(ctx, query, nodes,
 			func(n *TVShow) { n.Edges.Seasons = []*Season{} },
 			func(n *TVShow, e *Season) { n.Edges.Seasons = append(n.Edges.Seasons, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withEvents; query != nil {
+		if err := _q.loadEvents(ctx, query, nodes,
+			func(n *TVShow) { n.Edges.Events = []*MediaEvent{} },
+			func(n *TVShow, e *MediaEvent) { n.Edges.Events = append(n.Edges.Events, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -434,9 +483,43 @@ func (_q *TVShowQuery) loadSeasons(ctx context.Context, query *SeasonQuery, node
 	}
 	return nil
 }
+func (_q *TVShowQuery) loadEvents(ctx context.Context, query *MediaEventQuery, nodes []*TVShow, init func(*TVShow), assign func(*TVShow, *MediaEvent)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uint32]*TVShow)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.MediaEvent(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(tvshow.EventsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.tv_show_events
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "tv_show_events" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "tv_show_events" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
 
 func (_q *TVShowQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := _q.querySpec()
+	if len(_q.modifiers) > 0 {
+		_spec.Modifiers = _q.modifiers
+	}
 	_spec.Node.Columns = _q.ctx.Fields
 	if len(_q.ctx.Fields) > 0 {
 		_spec.Unique = _q.ctx.Unique != nil && *_q.ctx.Unique
@@ -499,6 +582,9 @@ func (_q *TVShowQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	if _q.ctx.Unique != nil && *_q.ctx.Unique {
 		selector.Distinct()
 	}
+	for _, m := range _q.modifiers {
+		m(selector)
+	}
 	for _, p := range _q.predicates {
 		p(selector)
 	}
@@ -514,6 +600,12 @@ func (_q *TVShowQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector.Limit(*limit)
 	}
 	return selector
+}
+
+// Modify adds a query modifier for attaching custom logic to queries.
+func (_q *TVShowQuery) Modify(modifiers ...func(s *sql.Selector)) *TVShowSelect {
+	_q.modifiers = append(_q.modifiers, modifiers...)
+	return _q.Select()
 }
 
 // TVShowGroupBy is the group-by builder for TVShow entities.
@@ -604,4 +696,10 @@ func (_s *TVShowSelect) sqlScan(ctx context.Context, root *TVShowQuery, v any) e
 	}
 	defer rows.Close()
 	return sql.ScanSlice(rows, v)
+}
+
+// Modify adds a query modifier for attaching custom logic to queries.
+func (_s *TVShowSelect) Modify(modifiers ...func(s *sql.Selector)) *TVShowSelect {
+	_s.modifiers = append(_s.modifiers, modifiers...)
+	return _s
 }

@@ -220,3 +220,28 @@ func (db *DB) ListAllEpisodeMediaFilePaths(ctx context.Context) ([]string, error
 	}
 	return rows, nil
 }
+
+// BulkUpdateImportScanShowDecisions is BulkUpdateImportScanFileDecisions for
+// the per-show rows of a series scan.
+func (db *DB) BulkUpdateImportScanShowDecisions(
+	ctx context.Context,
+	scanID uint32,
+	decision entimportscanshow.Decision,
+	classification entimportscanshow.Classification,
+	ids []uint32,
+) (int, error) {
+	u := db.client.ImportScanShow.Update().
+		Where(entimportscanshow.HasScanWith(entimportscan.ID(scanID))).
+		SetDecision(decision)
+	if classification != "" {
+		u = u.Where(entimportscanshow.ClassificationEQ(classification))
+	}
+	if len(ids) > 0 {
+		u = u.Where(entimportscanshow.IDIn(ids...))
+	}
+	n, err := u.Save(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("bulk update import scan show decisions: %w", err)
+	}
+	return n, nil
+}

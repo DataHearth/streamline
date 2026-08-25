@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
+	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/predicate"
 	"github.com/datahearth/streamline/ent/season"
@@ -21,8 +22,9 @@ import (
 // EpisodeUpdate is the builder for updating Episode entities.
 type EpisodeUpdate struct {
 	config
-	hooks    []Hook
-	mutation *EpisodeMutation
+	hooks     []Hook
+	mutation  *EpisodeMutation
+	modifiers []func(*sql.UpdateBuilder)
 }
 
 // Where appends a list predicates to the EpisodeUpdate builder.
@@ -255,6 +257,21 @@ func (_u *EpisodeUpdate) AddMediaFiles(v ...*MediaFile) *EpisodeUpdate {
 	return _u.AddMediaFileIDs(ids...)
 }
 
+// AddEventIDs adds the "events" edge to the MediaEvent entity by IDs.
+func (_u *EpisodeUpdate) AddEventIDs(ids ...uint32) *EpisodeUpdate {
+	_u.mutation.AddEventIDs(ids...)
+	return _u
+}
+
+// AddEvents adds the "events" edges to the MediaEvent entity.
+func (_u *EpisodeUpdate) AddEvents(v ...*MediaEvent) *EpisodeUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddEventIDs(ids...)
+}
+
 // Mutation returns the EpisodeMutation object of the builder.
 func (_u *EpisodeUpdate) Mutation() *EpisodeMutation {
 	return _u.mutation
@@ -308,6 +325,27 @@ func (_u *EpisodeUpdate) RemoveMediaFiles(v ...*MediaFile) *EpisodeUpdate {
 	return _u.RemoveMediaFileIDs(ids...)
 }
 
+// ClearEvents clears all "events" edges to the MediaEvent entity.
+func (_u *EpisodeUpdate) ClearEvents() *EpisodeUpdate {
+	_u.mutation.ClearEvents()
+	return _u
+}
+
+// RemoveEventIDs removes the "events" edge to MediaEvent entities by IDs.
+func (_u *EpisodeUpdate) RemoveEventIDs(ids ...uint32) *EpisodeUpdate {
+	_u.mutation.RemoveEventIDs(ids...)
+	return _u
+}
+
+// RemoveEvents removes "events" edges to MediaEvent entities.
+func (_u *EpisodeUpdate) RemoveEvents(v ...*MediaEvent) *EpisodeUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveEventIDs(ids...)
+}
+
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (_u *EpisodeUpdate) Save(ctx context.Context) (int, error) {
 	_u.defaults()
@@ -355,6 +393,12 @@ func (_u *EpisodeUpdate) check() error {
 		return errors.New(`ent: clearing a required unique edge "Episode.season"`)
 	}
 	return nil
+}
+
+// Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
+func (_u *EpisodeUpdate) Modify(modifiers ...func(u *sql.UpdateBuilder)) *EpisodeUpdate {
+	_u.modifiers = append(_u.modifiers, modifiers...)
+	return _u
 }
 
 func (_u *EpisodeUpdate) sqlSave(ctx context.Context) (_node int, err error) {
@@ -542,6 +586,52 @@ func (_u *EpisodeUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if _u.mutation.EventsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   episode.EventsTable,
+			Columns: []string{episode.EventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedEventsIDs(); len(nodes) > 0 && !_u.mutation.EventsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   episode.EventsTable,
+			Columns: []string{episode.EventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.EventsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   episode.EventsTable,
+			Columns: []string{episode.EventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{episode.Label}
@@ -557,9 +647,10 @@ func (_u *EpisodeUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 // EpisodeUpdateOne is the builder for updating a single Episode entity.
 type EpisodeUpdateOne struct {
 	config
-	fields   []string
-	hooks    []Hook
-	mutation *EpisodeMutation
+	fields    []string
+	hooks     []Hook
+	mutation  *EpisodeMutation
+	modifiers []func(*sql.UpdateBuilder)
 }
 
 // SetUpdateTime sets the "update_time" field.
@@ -786,6 +877,21 @@ func (_u *EpisodeUpdateOne) AddMediaFiles(v ...*MediaFile) *EpisodeUpdateOne {
 	return _u.AddMediaFileIDs(ids...)
 }
 
+// AddEventIDs adds the "events" edge to the MediaEvent entity by IDs.
+func (_u *EpisodeUpdateOne) AddEventIDs(ids ...uint32) *EpisodeUpdateOne {
+	_u.mutation.AddEventIDs(ids...)
+	return _u
+}
+
+// AddEvents adds the "events" edges to the MediaEvent entity.
+func (_u *EpisodeUpdateOne) AddEvents(v ...*MediaEvent) *EpisodeUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddEventIDs(ids...)
+}
+
 // Mutation returns the EpisodeMutation object of the builder.
 func (_u *EpisodeUpdateOne) Mutation() *EpisodeMutation {
 	return _u.mutation
@@ -837,6 +943,27 @@ func (_u *EpisodeUpdateOne) RemoveMediaFiles(v ...*MediaFile) *EpisodeUpdateOne 
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveMediaFileIDs(ids...)
+}
+
+// ClearEvents clears all "events" edges to the MediaEvent entity.
+func (_u *EpisodeUpdateOne) ClearEvents() *EpisodeUpdateOne {
+	_u.mutation.ClearEvents()
+	return _u
+}
+
+// RemoveEventIDs removes the "events" edge to MediaEvent entities by IDs.
+func (_u *EpisodeUpdateOne) RemoveEventIDs(ids ...uint32) *EpisodeUpdateOne {
+	_u.mutation.RemoveEventIDs(ids...)
+	return _u
+}
+
+// RemoveEvents removes "events" edges to MediaEvent entities.
+func (_u *EpisodeUpdateOne) RemoveEvents(v ...*MediaEvent) *EpisodeUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveEventIDs(ids...)
 }
 
 // Where appends a list predicates to the EpisodeUpdate builder.
@@ -899,6 +1026,12 @@ func (_u *EpisodeUpdateOne) check() error {
 		return errors.New(`ent: clearing a required unique edge "Episode.season"`)
 	}
 	return nil
+}
+
+// Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
+func (_u *EpisodeUpdateOne) Modify(modifiers ...func(u *sql.UpdateBuilder)) *EpisodeUpdateOne {
+	_u.modifiers = append(_u.modifiers, modifiers...)
+	return _u
 }
 
 func (_u *EpisodeUpdateOne) sqlSave(ctx context.Context) (_node *Episode, err error) {
@@ -1103,6 +1236,52 @@ func (_u *EpisodeUpdateOne) sqlSave(ctx context.Context) (_node *Episode, err er
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if _u.mutation.EventsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   episode.EventsTable,
+			Columns: []string{episode.EventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedEventsIDs(); len(nodes) > 0 && !_u.mutation.EventsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   episode.EventsTable,
+			Columns: []string{episode.EventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.EventsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   episode.EventsTable,
+			Columns: []string{episode.EventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	_spec.AddModifiers(_u.modifiers...)
 	_node = &Episode{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues

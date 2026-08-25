@@ -570,6 +570,9 @@ var _ = Describe("LoginOIDC end-to-end", Label("integration", "auth"), func() {
 			SetProvider("kc").SetSubject("sub-b").SetEmail("b@x.com").
 			SetOwnerID(u.ID).Save(ctx)
 		Expect(err).ToNot(HaveOccurred())
+		// A second admin so the demotion is not refused by the last-admin
+		// guard, which the spec below covers on its own.
+		seedLocalUser(ctx, dbClient, "other-admin@x.com", entuser.RoleAdmin)
 		config.ResetForTest()
 		loadOIDCRoleMapConfig(config.OIDCEmailLinkingDisabled)
 
@@ -615,6 +618,8 @@ var _ = Describe("LoginOIDC end-to-end", Label("integration", "auth"), func() {
 		})
 
 		It("demotes to the highest role the provider may still confer", func() {
+			seedLocalUser(ctx, dbClient, "other-admin@x.com", entuser.RoleAdmin)
+
 			got, _, err := svc.LoginOIDC(ctx, "kc", "sub-boss", "boss@x.com", "",
 				true,
 				map[string]any{
@@ -623,6 +628,64 @@ var _ = Describe("LoginOIDC end-to-end", Label("integration", "auth"), func() {
 				SessionMeta{})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(got.Role).To(Equal(entuser.RoleMember))
+		})
+	})
+
+	// A claim change at the IdP must not be able to leave the instance with no
+	// admin: there is no promote CLI and BootstrapSeedAdmin only re-seeds an
+	// empty user table, so the demotion would be unrecoverable.
+	Describe("the last admin's claims map to a lower role", func() {
+		var admin *ent.User
+
+		BeforeEach(func() {
+			var err error
+			admin, err = dbClient.User.Create().
+				SetEmail("boss@x.com").SetPasswordHash("h").
+				SetRole(entuser.RoleAdmin).SetAuthMethod(entuser.AuthMethodBoth).
+				Save(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			_, err = dbClient.OIDCIdentity.Create().
+				SetProvider("kc").SetSubject("sub-boss").SetEmail("boss@x.com").
+				SetOwnerID(admin.ID).Save(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			config.ResetForTest()
+			loadOIDCRoleMapConfig(config.OIDCEmailLinkingDisabled)
+		})
+
+		It("preserves the sole admin and still logs them in", func() {
+			got, tok, err := svc.LoginOIDC(ctx, "kc", "sub-boss", "boss@x.com",
+				"", true,
+				map[string]any{"groups": []any{"streamline-staff"}},
+				SessionMeta{})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(got.Role).To(Equal(entuser.RoleAdmin))
+
+			reloaded, err := dbClient.User.Get(ctx, admin.ID)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(reloaded.Role).To(Equal(entuser.RoleAdmin))
+
+			Expect(tok).NotTo(BeEmpty())
+			claims, err := svc.ValidateToken(tok)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(svc.ValidateSession(ctx, claims.JTI)).To(Succeed())
+		})
+
+		It("resumes the demotion once another admin exists", func() {
+			seedLocalUser(ctx, dbClient, "other-admin@x.com", entuser.RoleAdmin)
+
+			got, _, err := svc.LoginOIDC(ctx, "kc", "sub-boss", "boss@x.com",
+				"", true,
+				map[string]any{"groups": []any{"streamline-staff"}},
+				SessionMeta{})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(got.Role).To(Equal(entuser.RoleMember))
+
+			reloaded, err := dbClient.User.Get(ctx, admin.ID)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(reloaded.Role).To(Equal(entuser.RoleMember))
+			Expect(dbClient.User.Query().
+				Where(entuser.RoleEQ(entuser.RoleAdmin)).Count(ctx)).
+				To(Equal(1))
 		})
 	})
 })

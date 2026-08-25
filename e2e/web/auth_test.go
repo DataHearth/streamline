@@ -22,7 +22,7 @@ var _ = Describe("Auth flows", Label("e2e"), func() {
 		page := newPage("/login")
 		loginAsAdmin(page)
 		page.MustElement(`button[aria-label="Sign out"]`)
-		Expect(page.MustInfo().URL).To(ContainSubstring("/dashboard"))
+		expectPath(page, "/")
 	})
 
 	It("shows an error on a wrong password", func() {

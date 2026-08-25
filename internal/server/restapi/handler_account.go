@@ -29,8 +29,9 @@ func (s *Server) UpdateMe(
 	return UpdateMe200JSONResponse(toAPIUser(u)), nil
 }
 
-// ChangePassword verifies the current password, rotates to the new one, and
-// signs out every other active session for the caller.
+// ChangePassword verifies the current password, rotates to the new one, signs
+// out every other active session for the caller, and revokes all of their API
+// keys, including one used to authenticate this request.
 func (s *Server) ChangePassword(
 	ctx context.Context,
 	req ChangePasswordRequestObject,
@@ -99,6 +100,15 @@ func (s *Server) CreateMyApiKey(
 	if claims == nil || claims.UserID == 0 {
 		return CreateMyApiKey401JSONResponse{
 			UnauthorizedJSONResponse: unauthorizedResp("unauthorized"),
+		}, nil
+	}
+	// API-key auth carries no JTI. Only a session may mint keys, so a leaked
+	// key cannot create replacements that would outlive its own revocation.
+	if claims.JTI == "" {
+		return CreateMyApiKey401JSONResponse{
+			UnauthorizedJSONResponse: unauthorizedResp(
+				"session authentication required to create API keys",
+			),
 		}, nil
 	}
 	raw, rec, err := s.auth.CreateAPIKey(ctx, claims.UserID, req.Body.Name)

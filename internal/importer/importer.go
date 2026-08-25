@@ -15,10 +15,12 @@ import (
 	"sync"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/otelx"
 	"go.opentelemetry.io/otel"
@@ -46,6 +48,7 @@ type Deps struct {
 	Library     *library.ImportService
 	Download    download.Downloader
 	MediaServer MediaServerDispatcher
+	Prober      ffmpeg.Prober
 }
 
 const (
@@ -54,10 +57,11 @@ const (
 )
 
 type Worker struct {
-	db  db.Store
-	lib *library.ImportService
-	dl  download.Downloader
-	ms  MediaServerDispatcher
+	db    db.Store
+	lib   *library.ImportService
+	dl    download.Downloader
+	ms    MediaServerDispatcher
+	probe ffmpeg.Prober
 
 	ch   chan uint32
 	stop chan struct{}
@@ -80,6 +84,7 @@ func NewWorker(d Deps) *Worker {
 		lib:      d.Library,
 		dl:       d.Download,
 		ms:       d.MediaServer,
+		probe:    d.Prober,
 		ch:       make(chan uint32, channelCap),
 		stop:     make(chan struct{}),
 		inFlight: make(map[uint32]struct{}),
@@ -233,6 +238,85 @@ func (w *Worker) runImport(ctx context.Context, recordID uint32) error {
 	}
 }
 
+// probeSource best-effort-probes a source media file before transfer. A nil
+// info with a nil error means probing is off or unavailable — never a bad
+// file, which is what tells verification to stay out of the way.
+func (w *Worker) probeSource(
+	ctx context.Context,
+	path string,
+) (*ffmpeg.Info, error) {
+	if !config.Get().FFmpeg.Enabled || w.probe == nil || !w.probe.Available() {
+		return nil, nil
+	}
+	info, err := w.probe.Probe(ctx, path)
+	if err != nil {
+		slog.WarnContext(ctx, "media probe failed", "file", path, "error", err)
+		return nil, err
+	}
+	return info, nil
+}
+
+// verdict verifies one probed source file against what the release claimed and
+// what the profile allows, returning the reasons to hold it. always_ask adds
+// its own reason only when nothing else objected — it needs no probe, so it
+// holds even with ffmpeg off.
+func (w *Worker) verdict(
+	file string,
+	releaseTitle string,
+	info *ffmpeg.Info,
+	probeErr error,
+	runtimeMinutes uint16,
+	qualityProfile string,
+) []schema.HoldReason {
+	cfg := config.Get()
+	var allowedCodecs []string
+	if profile, ok := config.ResolveQualityProfile(qualityProfile); ok {
+		allowedCodecs = profile.AllowedCodecs
+	}
+	parsed := library.Parse(filepath.Base(file))
+	if parsed.Resolution == "" {
+		// A generically named payload ("movie.mkv") carries no claim of its
+		// own, so the check would silently pass. The release title the grab
+		// was made against always states one.
+		parsed.Resolution = library.Parse(releaseTitle).Resolution
+	}
+	reasons := verifyFile(
+		file,
+		parsed,
+		info,
+		probeErr,
+		uint32(runtimeMinutes),
+		allowedCodecs,
+		cfg.Library.Probe.MinDurationRatio,
+	)
+	if len(reasons) == 0 && cfg.Library.Probe.AlwaysAsk {
+		reasons = append(reasons, schema.HoldReason{
+			File:     file,
+			Check:    "always_ask",
+			Expected: "manual approval",
+		})
+	}
+	return reasons
+}
+
+// hold stops the import and parks the record for a user decision. A hold is an
+// outcome, not a failure: it returns nil so the attempt counter stays put.
+func (w *Worker) hold(
+	ctx context.Context,
+	span trace.Span,
+	rec *ent.DownloadRecord,
+	reasons []schema.HoldReason,
+) error {
+	if err := w.db.HoldDownloadRecord(ctx, rec.ID, reasons); err != nil {
+		return otelx.RecordSpanError(span, fmt.Errorf("hold record: %w", err))
+	}
+	slog.InfoContext(ctx, "import held for review",
+		"download_record.id", rec.ID,
+		"reasons", len(reasons),
+		"check", reasons[0].Check)
+	return nil
+}
+
 func (w *Worker) importMovieRecord(
 	ctx context.Context,
 	span trace.Span,
@@ -250,14 +334,35 @@ func (w *Worker) importMovieRecord(
 	if err != nil {
 		return otelx.RecordSpanError(span, fmt.Errorf("list movie files: %w", err))
 	}
-	if len(existing) > 0 {
-		if !rec.ReplaceExisting {
-			return otelx.RecordSpanError(span, ErrMovieHasFile)
+	if len(existing) > 0 && !rec.ReplaceExisting {
+		return otelx.RecordSpanError(span, ErrMovieHasFile)
+	}
+
+	var probeInfo *ffmpeg.Info
+	var probeErr error
+	src, srcErr := library.ResolveMediaFile(rec.SavePath)
+	if srcErr == nil {
+		probeInfo, probeErr = w.probeSource(ctx, src)
+	}
+	// Verified before the existing file is replaced, mirroring the season-pack
+	// path: a hold that ran after the replace would already have destroyed the
+	// only copy on disk while the new release sits unimported. srcErr means
+	// there is nothing to verify at all, so the import call below reports the
+	// real ErrNoMedia as a counted failure instead of a blank-file hold.
+	if srcErr == nil && !rec.VerificationBypassed {
+		reasons := w.verdict(
+			src, rec.Title, probeInfo, probeErr, m.Runtime, m.QualityProfile,
+		)
+		if len(reasons) > 0 {
+			return w.hold(ctx, span, rec, reasons)
 		}
+	}
+	if len(existing) > 0 {
 		if err := w.replaceMovieFiles(ctx, m.ID, existing); err != nil {
 			return otelx.RecordSpanError(span, err)
 		}
 	}
+
 	imported, err := w.lib.ImportMovie(ctx, rec.SavePath, m, "")
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
@@ -272,6 +377,7 @@ func (w *Worker) importMovieRecord(
 			Quality:      imported.Parsed.Resolution,
 			Format:       imported.Parsed.Extension,
 			ReleaseGroup: imported.Parsed.Group,
+			Probe:        probeInfo,
 		},
 	}); err != nil {
 		return otelx.RecordSpanError(
@@ -381,6 +487,23 @@ func (w *Worker) importEpisodeRecord(
 		return w.importSingleEpisode(ctx, span, rec, show, season.Number, ep, libCfg)
 	}
 
+	// A pack is verified whole before anything moves: importing half of it and
+	// then holding would leave the season split across two states.
+	probed := make(map[string]*ffmpeg.Info, len(files))
+	var reasons []schema.HoldReason
+	for _, f := range files {
+		info, err := w.probeSource(ctx, f)
+		probed[f] = info
+		if !rec.VerificationBypassed {
+			reasons = append(reasons, w.verdict(
+				f, rec.Title, info, err, show.Runtime, show.QualityProfile,
+			)...)
+		}
+	}
+	if len(reasons) > 0 {
+		return w.hold(ctx, span, rec, reasons)
+	}
+
 	matched, skippedExisting := 0, 0
 	for _, f := range files {
 		parsed := library.Parse(filepath.Base(f))
@@ -419,6 +542,7 @@ func (w *Worker) importEpisodeRecord(
 				continue
 			}
 		}
+		probeInfo := probed[f]
 		imported, err := w.lib.ImportEpisode(ctx, f, show, tSeason, target)
 		if err != nil {
 			slog.WarnContext(ctx, "season pack file import failed",
@@ -436,6 +560,7 @@ func (w *Worker) importEpisodeRecord(
 					Quality:      imported.Parsed.Resolution,
 					Format:       imported.Parsed.Extension,
 					ReleaseGroup: imported.Parsed.Group,
+					Probe:        probeInfo,
 				},
 			},
 		); err != nil {
@@ -480,14 +605,35 @@ func (w *Worker) importSingleEpisode(
 	if err != nil && !ent.IsNotFound(err) {
 		return otelx.RecordSpanError(span, fmt.Errorf("find episode file: %w", err))
 	}
-	if mf != nil {
-		if !rec.ReplaceExisting {
-			return otelx.RecordSpanError(span, ErrEpisodeHasFile)
+	if mf != nil && !rec.ReplaceExisting {
+		return otelx.RecordSpanError(span, ErrEpisodeHasFile)
+	}
+
+	var probeInfo *ffmpeg.Info
+	var probeErr error
+	src, srcErr := library.ResolveEpisodeFile(rec.SavePath)
+	if srcErr == nil {
+		probeInfo, probeErr = w.probeSource(ctx, src)
+	}
+	// Verified before the existing file is replaced, mirroring the season-pack
+	// path: a hold that ran after the replace would already have destroyed the
+	// only copy on disk while the new release sits unimported. srcErr means
+	// there is nothing to verify at all, so the import call below reports the
+	// real ErrNoMedia as a counted failure instead of a blank-file hold.
+	if srcErr == nil && !rec.VerificationBypassed {
+		reasons := w.verdict(
+			src, rec.Title, probeInfo, probeErr, show.Runtime, show.QualityProfile,
+		)
+		if len(reasons) > 0 {
+			return w.hold(ctx, span, rec, reasons)
 		}
+	}
+	if mf != nil {
 		if rErr := w.replaceEpisodeFile(ctx, ep.ID, mf); rErr != nil {
 			return otelx.RecordSpanError(span, rErr)
 		}
 	}
+
 	imported, err := w.lib.ImportEpisode(ctx, rec.SavePath, show, seasonNumber, ep)
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
@@ -503,6 +649,7 @@ func (w *Worker) importSingleEpisode(
 				Quality:      imported.Parsed.Resolution,
 				Format:       imported.Parsed.Extension,
 				ReleaseGroup: imported.Parsed.Group,
+				Probe:        probeInfo,
 			},
 		},
 	); err != nil {
@@ -555,6 +702,7 @@ func (w *Worker) cleanupTorrent(
 		ctx,
 		rec.DownloadClientName,
 		rec.TorrentHash,
+		false,
 	); err != nil {
 		slog.WarnContext(ctx, "remove torrent failed",
 			"hash", rec.TorrentHash, "error", err)

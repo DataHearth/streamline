@@ -56,6 +56,12 @@ func init() {
 var (
 	ErrNoQualityProfile = errors.New("no quality profile configured")
 	ErrMovieNotFound    = errors.New("movie not found")
+	// ErrMovieExists means the tmdb id is already in the library. Callers that
+	// only want the movie to exist — a bulk-import commit racing another scan —
+	// treat it as success and look the row up.
+	ErrMovieExists   = errors.New("movie already exists")
+	ErrInvalidTMDBID = errors.New("tmdb id must be non-zero")
+	ErrSameTMDBID    = errors.New("movie already points at that tmdb id")
 )
 
 type Manager interface {
@@ -76,6 +82,7 @@ type Manager interface {
 		opts DeleteFileOptions,
 	) error
 	RefreshOne(ctx context.Context, id uint32) (*ent.Movie, error)
+	Reidentify(ctx context.Context, id, tmdbID uint32) (*ent.Movie, error)
 	Counts(ctx context.Context) (Counts, error)
 	AnnotateTMDBResults(
 		ctx context.Context,
@@ -202,7 +209,7 @@ func (s *Service) Add(
 		if ent.IsConstraintError(err) {
 			return nil, "", otelx.RecordSpanError(
 				span,
-				fmt.Errorf("movie with tmdb_id %d already exists", tmdbID),
+				fmt.Errorf("%w: tmdb_id %d", ErrMovieExists, tmdbID),
 			)
 		}
 		return nil, "", otelx.RecordSpanError(
@@ -217,28 +224,11 @@ func (s *Service) Add(
 			"movie.id", m.ID, "movie.tmdb_id", m.TmdbID, "error", err)
 	}
 
-	posterPath := details.PosterPath
-	if posterPath != "" && s.posters != nil {
-		bg := context.WithoutCancel(ctx)
-		movieID := m.ID
-		src := metadata.PosterURL(posterPath, "original")
-		go func() {
-			if err := s.posters.Fetch(bg, "movies", movieID, src); err != nil {
-				slog.WarnContext(
-					bg,
-					"poster fetch failed",
-					"movie_id",
-					movieID,
-					"error",
-					err,
-				)
-			}
-		}()
-	}
+	s.fetchPoster(ctx, m.ID, details.PosterPath)
 
 	moviesAdded.Add(ctx, 1)
 	slog.InfoContext(ctx, "movie added", "title", m.Title, "tmdb_id", m.TmdbID)
-	return m, posterPath, nil
+	return m, details.PosterPath, nil
 }
 
 func (s *Service) List(
@@ -501,6 +491,92 @@ func (s *Service) Update(
 	return m, nil
 }
 
+// fetchPoster caches the movie's poster in the background. Best-effort: a
+// missing poster is cosmetic and must not fail the operation that asked for it.
+func (s *Service) fetchPoster(ctx context.Context, id uint32, posterPath string) {
+	if posterPath == "" || s.posters == nil {
+		return
+	}
+	bg := context.WithoutCancel(ctx)
+	// One cached size serves every render, so it is sized for the largest sharp
+	// one: the detail hero's 260px column at DPR 3 = 780px. The two full-bleed
+	// backdrops are blur-md, so they do not raise the bar. "original" is ~1.9 MB
+	// against w780's ~360 KB, and the cards only ever needed ~400px.
+	src := metadata.PosterURL(posterPath, "w780")
+	go func() {
+		if err := s.posters.Fetch(bg, "movies", id, src); err != nil {
+			slog.WarnContext(bg, "poster fetch failed",
+				"movie.id", id, "error", err)
+		}
+	}()
+}
+
+// Reidentify points the row at a different TMDB title and refreshes its
+// metadata from there. The row keeps its id, so its files, download history
+// and requests survive the repair — only the provider identity changes.
+//
+// Renaming the files into the new title's path is the caller's next step: the
+// rename service is a separate type, and a caller that only wants the metadata
+// corrected (a re-identify to fix a wrong year, say) should not be forced to
+// move files.
+func (s *Service) Reidentify(
+	ctx context.Context,
+	id, tmdbID uint32,
+) (*ent.Movie, error) {
+	ctx, span := tracer.Start(ctx, "movie.reidentify",
+		trace.WithAttributes(
+			attribute.Int64("movie.id", int64(id)),
+			attribute.Int64("movie.tmdb_id", int64(tmdbID)),
+		),
+	)
+	defer span.End()
+
+	if tmdbID == 0 {
+		return nil, otelx.RecordSpanError(span, ErrInvalidTMDBID)
+	}
+	m, err := s.db.FindMovieByID(ctx, id)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, otelx.RecordSpanError(span,
+				fmt.Errorf("movie %d: %w", id, ErrMovieNotFound))
+		}
+		return nil, otelx.RecordSpanError(span, fmt.Errorf("get movie: %w", err))
+	}
+	if m.TmdbID == tmdbID {
+		return nil, otelx.RecordSpanError(span, ErrSameTMDBID)
+	}
+	// tmdb_id is unique, so the write below would fail on a constraint the
+	// caller cannot act on. Check first and say what is actually wrong.
+	if _, err := s.db.FindMovieByTMDBID(ctx, tmdbID); err == nil {
+		return nil, otelx.RecordSpanError(span, ErrMovieExists)
+	} else if !ent.IsNotFound(err) {
+		return nil, otelx.RecordSpanError(span, fmt.Errorf("lookup target: %w", err))
+	}
+
+	if err := s.db.SetMovieTMDBID(ctx, id, tmdbID); err != nil {
+		return nil, otelx.RecordSpanError(span, fmt.Errorf("set tmdb id: %w", err))
+	}
+	// The row now carries the new id with the old title. A failed refresh would
+	// leave it that way, so report it rather than swallowing it.
+	m.TmdbID = tmdbID
+	details, err := s.metadata.GetMovie(ctx, tmdbID)
+	if err != nil {
+		return nil, otelx.RecordSpanError(span,
+			fmt.Errorf("refresh after re-identify: %w", err))
+	}
+	if err := s.applyMetadata(ctx, id, details); err != nil {
+		return nil, otelx.RecordSpanError(span,
+			fmt.Errorf("refresh after re-identify: %w", err))
+	}
+	if err := s.fetchDigitalRelease(ctx, m); err != nil {
+		return nil, otelx.RecordSpanError(span, err)
+	}
+	// The cached poster is keyed by row id, so it still shows the old title
+	// until it is replaced.
+	s.fetchPoster(ctx, id, details.PosterPath)
+	return s.db.FindMovieByID(ctx, id)
+}
+
 // RefreshStale re-fetches TMDB metadata for movies whose update_time is older
 // than metadataMinRefreshInterval. Per-row failures are logged and skipped;
 // the tick returns nil unless the initial DB query fails.
@@ -548,7 +624,28 @@ func (s *Service) refreshOne(ctx context.Context, m *ent.Movie) error {
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
 	}
-	if err := s.db.UpdateMovieMetadata(ctx, m.ID, db.UpdateMovieMetadataParams{
+	if err := s.applyMetadata(ctx, m.ID, details); err != nil {
+		return otelx.RecordSpanError(span, err)
+	}
+
+	if err := s.fetchDigitalRelease(ctx, m); err != nil {
+		return otelx.RecordSpanError(span, err)
+	}
+	// Fetch is a no-op when the file is already cached, so this costs nothing
+	// on a populated cache and is the only thing that refills a cleared one —
+	// the series path already does it, and without it dropping the poster
+	// directory left movies with placeholders permanently.
+	s.fetchPoster(ctx, m.ID, details.PosterPath)
+	return nil
+}
+
+// applyMetadata persists the TMDB-sourced fields onto an existing row.
+func (s *Service) applyMetadata(
+	ctx context.Context,
+	id uint32,
+	details *metadata.MovieDetails,
+) error {
+	return s.db.UpdateMovieMetadata(ctx, id, db.UpdateMovieMetadataParams{
 		Title:         details.Title,
 		OriginalTitle: details.OriginalTitle,
 		Overview:      details.Overview,
@@ -557,14 +654,7 @@ func (s *Service) refreshOne(ctx context.Context, m *ent.Movie) error {
 		Rating:        float64(details.Rating),
 		Genres:        details.Genres,
 		Cast:          db.StoredCast(details.Cast),
-	}); err != nil {
-		return otelx.RecordSpanError(span, err)
-	}
-
-	if err := s.fetchDigitalRelease(ctx, m); err != nil {
-		return otelx.RecordSpanError(span, err)
-	}
-	return nil
+	})
 }
 
 // fetchDigitalRelease persists m's configured-region digital (TMDB type-4)
@@ -728,7 +818,7 @@ func (s *Service) removeSourceTorrent(ctx context.Context, movieID uint32) {
 		return
 	}
 	if err := s.download.RemoveTorrent(
-		ctx, rec.DownloadClientName, rec.TorrentHash,
+		ctx, rec.DownloadClientName, rec.TorrentHash, false,
 	); err != nil {
 		slog.WarnContext(ctx, "remove source torrent failed",
 			"hash", rec.TorrentHash, "error", err)

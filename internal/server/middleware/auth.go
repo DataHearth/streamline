@@ -110,6 +110,23 @@ func authenticateAPI(
 			rejectAPI(limiter, w, r, "invalid API key")
 			return
 		}
+		if identityMutationForAPIKey(r) {
+			slog.InfoContext(
+				ctx,
+				"api auth rejected",
+				"reason",
+				"identity mutation via api key",
+				"auth.method",
+				"api_key",
+			)
+			// Not metered: the credential is valid, this is authorization.
+			http.Error(
+				w,
+				"this action requires session authentication",
+				http.StatusForbidden,
+			)
+			return
+		}
 		ctx := auth.ContextWithClaims(ctx, &auth.Claims{
 			UserID:      u.ID,
 			Email:       u.Email,
@@ -175,6 +192,33 @@ func authenticateAPI(
 	}
 	slog.InfoContext(ctx, "api auth rejected", "reason", "no credentials")
 	rejectAPI(limiter, w, r, "unauthorized")
+}
+
+// identityPrefixes lists the /api/v1 subtrees where an API key may read but
+// never write: the endpoints managing credentials, sessions, invites, and
+// users. A leaked key could otherwise mint replacement credentials or reshape
+// accounts, outliving its own revocation. Reads stay open — GET /auth/me is
+// how a client identifies its key, and list responses carry no raw secrets.
+var identityPrefixes = []string{
+	"/api/v1/auth/me",
+	"/api/v1/auth/password",
+	"/api/v1/auth/invites",
+	// jwt/rotate re-issues a bearer token to the caller, so a key reaching it
+	// would bootstrap the very session credential this list denies it.
+	"/api/v1/auth/jwt",
+	"/api/v1/users",
+}
+
+func identityMutationForAPIKey(r *http.Request) bool {
+	if r.Method == http.MethodGet || r.Method == http.MethodHead {
+		return false
+	}
+	for _, p := range identityPrefixes {
+		if r.URL.Path == p || strings.HasPrefix(r.URL.Path, p+"/") {
+			return true
+		}
+	}
+	return false
 }
 
 // rejectAPI answers an /api/v1 request that failed to authenticate, and meters

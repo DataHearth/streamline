@@ -57,7 +57,7 @@ func (s *Service) runCommitSeries(ctx context.Context, scan *ent.ImportScan) {
 				"scan.id", scan.ID, "show.id", sh.ID, "error", uerr)
 		}
 		switch outcome {
-		case entimportscanshow.OutcomeCreated:
+		case entimportscanshow.OutcomeCreated, entimportscanshow.OutcomeAttached:
 			success++
 		case entimportscanshow.OutcomeFailed:
 			failed++
@@ -103,7 +103,7 @@ func (s *Service) commitShow(
 			attribute.String("show.folder", sc.FolderPath)))
 	defer span.End()
 
-	show, outcome, msg, id := s.resolveShow(ctx, sc)
+	show, reused, outcome, msg, id := s.resolveShow(ctx, sc)
 	if show == nil {
 		return outcome, msg, id
 	}
@@ -112,20 +112,27 @@ func (s *Service) commitShow(
 	if err != nil {
 		return commitShowFail("list folder", err, show.ID)
 	}
-	anime := show.Type == enttvshow.TypeAnime
+	// Match the whole folder before anything moves. A folder whose files mostly
+	// fail to match is far more likely bound to the wrong show than to be a show
+	// with missing metadata, and adopting it anyway wrote 7 of 76 files into a
+	// same-named series and counted it a success.
+	plan, unmatched := planEpisodes(show, files)
+	if len(plan) <= unmatched {
+		return entimportscanshow.OutcomeFailed, fmt.Sprintf(
+			"only %d of %d files matched an episode — folder likely belongs to another show",
+			len(plan),
+			len(files),
+		), show.ID
+	}
+
+	success := entimportscanshow.OutcomeCreated
+	if reused {
+		success = entimportscanshow.OutcomeAttached
+	}
 	matched := 0
-	for _, f := range files {
+	for _, m := range plan {
+		f, season, target := m.path, m.season, m.episode
 		parsed := library.Parse(filepath.Base(f))
-		season, target := library.MatchEpisodeInSeason(
-			parsed,
-			show.Edges.Seasons,
-			anime,
-		)
-		if target == nil {
-			slog.WarnContext(ctx, "series adopt: file matched no episode",
-				"file", filepath.Base(f), "tvshow.id", show.ID)
-			continue
-		}
 		// Stat before the replace check: a path this loop already removed while
 		// replacing (old copy + repack in one folder) must not tear down the
 		// record its replacement just created.
@@ -199,22 +206,53 @@ func (s *Service) commitShow(
 	}
 	slog.InfoContext(ctx, "series adopted",
 		"tvshow.id", show.ID, "matched", matched, "files", len(files))
-	return entimportscanshow.OutcomeCreated, "", show.ID
+	return success, "", show.ID
+}
+
+// episodeMatch is one folder file bound to the episode it belongs to.
+type episodeMatch struct {
+	path    string
+	season  uint16
+	episode *ent.Episode
+}
+
+// planEpisodes resolves every file in a show folder to an episode without
+// touching disk, so the caller can judge the folder as a whole before the first
+// transfer. Returns the matches plus how many files matched nothing.
+func planEpisodes(show *ent.TVShow, files []string) ([]episodeMatch, int) {
+	anime := show.Type == enttvshow.TypeAnime
+	var plan []episodeMatch
+	unmatched := 0
+	for _, f := range files {
+		parsed := library.Parse(filepath.Base(f))
+		season, target := library.MatchEpisodeInSeason(
+			parsed,
+			show.Edges.Seasons,
+			anime,
+		)
+		if target == nil {
+			unmatched++
+			continue
+		}
+		plan = append(plan, episodeMatch{path: f, season: season, episode: target})
+	}
+	return plan, unmatched
 }
 
 // resolveShow returns the eager-loaded show to adopt into, creating it from TVDB
-// when the row isn't linked to an existing show. On failure it returns a nil
-// show plus the outcome triple to record.
+// when no row for that tvdb id exists yet. reused reports that the show was
+// already in the library. On failure it returns a nil show plus the outcome
+// triple to record.
 func (s *Service) resolveShow(
 	ctx context.Context, sc *ent.ImportScanShow,
-) (*ent.TVShow, entimportscanshow.Outcome, string, uint32) {
+) (*ent.TVShow, bool, entimportscanshow.Outcome, string, uint32) {
 	if sc.ExistingTvshowID != nil {
-		show, err := s.store.FindTVShowByID(ctx, *sc.ExistingTvshowID)
+		found, err := s.store.FindTVShowByID(ctx, *sc.ExistingTvshowID)
 		if err != nil {
 			o, m, id := commitShowFail("load existing show", err, 0)
-			return nil, o, m, id
+			return nil, false, o, m, id
 		}
-		return show, "", "", 0
+		return found, true, "", "", 0
 	}
 
 	// Reviewer's pick wins over the classifier's top match.
@@ -225,20 +263,40 @@ func (s *Service) resolveShow(
 		tvdbID = *sc.TvdbID
 	}
 	if tvdbID == 0 {
-		return nil, entimportscanshow.OutcomeFailed, "no tvdb match to adopt", 0
+		return nil, false, entimportscanshow.OutcomeFailed, "no tvdb match to adopt", 0
+	}
+
+	// Resolve against current state rather than trusting the scan-time
+	// classification: a reviewer pointing an unmatched folder at a show that is
+	// already in the library — the normal way to fix a bad match — would
+	// otherwise collide on tv_shows.tvdb_id and fail the whole entry.
+	// FindTVShowByTVDBID reports "no such show" as a nil row with a nil error,
+	// so the row has to be checked, not just the error.
+	existing, err := s.store.FindTVShowByTVDBID(ctx, tvdbID)
+	if err != nil {
+		o, m, id := commitShowFail("look up show", err, 0)
+		return nil, false, o, m, id
+	}
+	if existing != nil {
+		found, ferr := s.store.FindTVShowByID(ctx, existing.ID)
+		if ferr != nil {
+			o, m, id := commitShowFail("load existing show", ferr, existing.ID)
+			return nil, false, o, m, id
+		}
+		return found, true, "", "", 0
 	}
 
 	created, err := s.seriesAdder.Add(ctx, tvdbID, "")
 	if err != nil {
 		o, m, id := commitShowFail("add show", err, 0)
-		return nil, o, m, id
+		return nil, false, o, m, id
 	}
-	show, err := s.store.FindTVShowByID(ctx, created.ID)
+	found, err := s.store.FindTVShowByID(ctx, created.ID)
 	if err != nil {
 		o, m, id := commitShowFail("load created show", err, created.ID)
-		return nil, o, m, id
+		return nil, false, o, m, id
 	}
-	return show, "", "", 0
+	return found, false, "", "", 0
 }
 
 func commitShowFail(

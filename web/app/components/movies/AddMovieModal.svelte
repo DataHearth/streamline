@@ -15,14 +15,13 @@
 		Gauge,
 	} from "@lucide/svelte";
 	import { fade } from "svelte/transition";
-	import { api, errorText } from "../../lib/api";
+	import { api, apiAllPages, errorText, type Paginated } from "../../lib/api";
 	import { toast } from "../../lib/toast";
 	import { auth } from "../../lib/auth.svelte";
 	import type {
 		AddMovieRequest,
 		LookupDetail,
 		Movie,
-		PaginatedMovies,
 		QualityProfile,
 		TMDBMovieResult,
 	} from "../../lib/types";
@@ -104,9 +103,9 @@
 		queryFn: () => api<QualityProfile[]>("/quality-profiles"),
 		enabled: open && mode === "add",
 	}));
-	const moviesQuery = createQuery<PaginatedMovies>(() => ({
+	const moviesQuery = createQuery<Paginated<Movie>>(() => ({
 		queryKey: ["movies"],
-		queryFn: () => api<PaginatedMovies>("/movies?page=1&limit=500"),
+		queryFn: () => apiAllPages<Movie>("/movies"),
 		enabled: open && mode === "add",
 	}));
 

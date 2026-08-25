@@ -45,7 +45,7 @@ func (ImportScanShow) Fields() []ent.Field {
 		field.Uint32("decision_tvdb_id").Optional().Nillable(),
 
 		field.Enum("outcome").
-			Values("pending", "created", "failed").
+			Values("pending", "created", "attached", "failed").
 			Default("pending"),
 		field.String("outcome_message").Optional(),
 		field.Uint32("created_tvshow_id").Optional().Nillable(),

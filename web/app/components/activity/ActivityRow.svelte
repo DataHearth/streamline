@@ -3,7 +3,7 @@
 	import StatusPill from "../shared/StatusPill.svelte";
 	import ProgressBar from "../shared/ProgressBar.svelte";
 	import { cn } from "../../lib/cn";
-	import { entryHeading } from "../../lib/activity-touch";
+	import { entryHeading, holdSummary } from "../../lib/activity-touch";
 	import { pillStatus, formatBytes, formatSpeed, formatEta } from "../../lib/format";
 	import { formatRelative, formatDateTime } from "../../lib/dates";
 	import type { QueueEntry, HistoryEntry } from "../../lib/types";
@@ -14,11 +14,13 @@
 		view,
 		expanded,
 		onToggle,
+		onResolve,
 	}: {
 		item: QueueEntry | HistoryEntry;
 		view: "queue" | "history";
 		expanded: boolean;
 		onToggle: (id: number) => void;
+		onResolve?: (item: QueueEntry) => void;
 	} = $props();
 
 	const pad = "py-3";
@@ -27,6 +29,7 @@
 	const tight = "w-px whitespace-nowrap";
 	let isActive = $derived(view === "queue" && item.status === "downloading");
 	let queue = $derived(item as QueueEntry);
+	let held = $derived(view === "queue" && queue.status === "held");
 	let history = $derived(item as HistoryEntry);
 
 	let speedEta = $derived.by(() => {
@@ -66,6 +69,14 @@
 
 	{#if view === "queue"}
 		<td class={cn("px-2", tight, pad)}>
+			{#if held}
+				<span
+					class="whitespace-nowrap font-mono text-xs"
+					style:color="var(--status-held)"
+				>
+					{holdSummary(queue)}
+				</span>
+			{:else}
 			<div class="flex items-center gap-2">
 				<div class="w-24 sm:w-28">
 					<ProgressBar
@@ -81,9 +92,10 @@
 					{Math.round((queue.progress ?? 0) * 100)}%
 				</span>
 			</div>
+			{/if}
 		</td>
 		<td class={cn("px-2 tabular-nums text-xs text-fg-muted", tight, pad)}>
-			{speedEta || "—"}
+			{held ? "—" : speedEta || "—"}
 		</td>
 		<td class={cn("hidden px-2 text-xs text-fg-subtle @3xl:table-cell", tight, pad)}>
 			{queue.download_client || "—"}
@@ -104,6 +116,19 @@
 	{/if}
 
 	<td class={cn("pr-4 pl-2 text-right", tight, pad)}>
+		{#if held && onResolve}
+			<button
+				type="button"
+				onclick={(e) => {
+					e.stopPropagation();
+					onResolve(queue);
+				}}
+				class="resolve inline-flex h-7 items-center rounded-md px-2.5 text-xs font-semibold transition"
+				style:--c="var(--status-held)"
+			>
+				{i18n.action_resolve()}
+			</button>
+		{:else}
 		<button
 			type="button"
 			aria-label={expanded ? i18n.action_collapse_details() : i18n.common_expand_details()}
@@ -123,5 +148,16 @@
 				aria-hidden="true"
 			/>
 		</button>
+		{/if}
 	</td>
 </tr>
+
+<style>
+	.resolve {
+		background-color: var(--c);
+		color: var(--bg-deep);
+	}
+	.resolve:hover {
+		filter: brightness(1.08);
+	}
+</style>

@@ -12,6 +12,8 @@ import (
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/ffmpeg"
+	"github.com/datahearth/streamline/internal/importer"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/library/bulkimport"
@@ -69,6 +71,8 @@ type Config struct {
 	Posters         posters.Manager
 	Torrents        bittorrent.Manager
 	PathMigrations  *pathmigrate.Service
+	Importer        importer.Enqueuer
+	Prober          ffmpeg.Prober
 	AuthMiddleware  func(http.Handler) http.Handler
 	HTTPLog         func(http.Handler) http.Handler
 }
@@ -101,9 +105,11 @@ func New(cfg Config) *Server {
 		MetadataTV:      cfg.MetadataTV,
 		Torrents:        cfg.Torrents,
 		PathMigrations:  cfg.PathMigrations,
+		Importer:        cfg.Importer,
 		Store:           cfg.DB,
 		Ent:             cfg.Ent,
 		PublicURL:       config.PublicURL(),
+		Prober:          cfg.Prober,
 	})
 
 	s := &Server{
@@ -129,6 +135,11 @@ func New(cfg Config) *Server {
 	if cfg.AuthMiddleware != nil {
 		s.router.Use(cfg.AuthMiddleware)
 	}
+	// Last, so an anonymous caller still gets the 401/302 it gets today rather
+	// than learning the body ceiling before authenticating. Auth reads no body,
+	// so nothing is lost by deferring. /auth/login and /auth/register are only
+	// *excluded* from auth, not from the chain, so they are still capped.
+	s.router.Use(middleware.BodyLimit)
 
 	s.router.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

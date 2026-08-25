@@ -230,6 +230,85 @@ var _ = Describe("TVDB token handling", Label("unit", "metadata"), func() {
 	})
 })
 
+var _ = Describe("TVDB search fallback", Label("unit", "metadata"), func() {
+	var (
+		client  *TVDB
+		ctx     context.Context
+		queried []string
+		hit     string
+	)
+
+	BeforeEach(func() {
+		ctx = context.Background()
+		queried = nil
+		mux := http.NewServeMux()
+		mux.HandleFunc("/login", func(w http.ResponseWriter, _ *http.Request) {
+			_, _ = w.Write([]byte(`{"data":{"token":"t"}}`))
+		})
+		mux.HandleFunc("/search", func(w http.ResponseWriter, r *http.Request) {
+			q := r.URL.Query().Get("query")
+			queried = append(queried, q)
+			if q != hit {
+				_, _ = w.Write([]byte(`{"data":[]}`))
+				return
+			}
+			_, _ = w.Write(
+				[]byte(`{"data":[{"tvdb_id":"429310","name":"Zom 100"}]}`),
+			)
+		})
+		srv := httptest.NewServer(mux)
+		DeferCleanup(srv.Close)
+
+		client = NewTVDB()
+		client.BaseURL = srv.URL
+		client.apiKey = "x"
+	})
+
+	It("retries with the leading half when the full title finds nothing", func() {
+		hit = "Zom 100 Bucket List"
+
+		res, err := client.SearchSeries(ctx, "Zom 100 Bucket List of the Dead")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(res).To(HaveLen(1))
+		Expect(res[0].TVDBID).To(Equal(uint32(429310)))
+		Expect(queried).To(Equal([]string{
+			"Zom 100 Bucket List of the Dead",
+			"Zom 100 Bucket List",
+		}))
+	})
+
+	It("retries with the trailing half when the leading one finds nothing", func() {
+		hit = "Spider So What"
+
+		res, err := client.SearchSeries(ctx, "So I'm a Spider So What")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(res).To(HaveLen(1))
+		Expect(queried).To(Equal([]string{
+			"So I'm a Spider So What",
+			"So I'm a",
+			"Spider So What",
+		}))
+	})
+
+	It("leaves a query the provider answers alone", func() {
+		hit = "Dororo"
+
+		res, err := client.SearchSeries(ctx, "Dororo")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(res).To(HaveLen(1))
+		Expect(queried).To(Equal([]string{"Dororo"}))
+	})
+
+	It("does not split a query too short to halve", func() {
+		hit = "nothing matches"
+
+		res, err := client.SearchSeries(ctx, "Baki 2018 anime")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(res).To(BeEmpty())
+		Expect(queried).To(Equal([]string{"Baki 2018 anime"}))
+	})
+})
+
 var _ = Describe("TVDB hidden base_url override", Label("unit", "metadata"), func() {
 	It("honors metadata.tvdb.base_url from the hidden config key", func() {
 		configtest.Setup(map[string]any{
@@ -244,4 +323,31 @@ var _ = Describe("TVDB hidden base_url override", Label("unit", "metadata"), fun
 		configtest.Setup()
 		Expect(NewTVDB().BaseURL).To(Equal(tvdbBaseURL))
 	})
+})
+
+var _ = Describe("inferAnime", Label("unit", "metadata"), func() {
+	DescribeTable("series type inference",
+		func(genres []string, lang, country string, want bool) {
+			Expect(inferAnime(genres, lang, country)).To(Equal(want))
+		},
+		Entry("explicit anime genre wins alone",
+			[]string{"Comedy", "Anime"}, "", "", true),
+		Entry(
+			"animation plus japanese origin",
+			[]string{
+				"Fantasy",
+				"Comedy",
+				"Animation",
+				"Adventure",
+			},
+			"jpn",
+			"jpn",
+			true,
+		),
+		Entry("animation alone is not enough",
+			[]string{"Animation", "Comedy"}, "eng", "usa", false),
+		Entry("japanese origin alone is not enough",
+			[]string{"Drama"}, "jpn", "jpn", false),
+		Entry("no signal at all", []string{"Comedy"}, "eng", "gbr", false),
+	)
 })

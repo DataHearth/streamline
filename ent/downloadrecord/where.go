@@ -125,6 +125,11 @@ func ReplaceExisting(v bool) predicate.DownloadRecord {
 	return predicate.DownloadRecord(sql.FieldEQ(FieldReplaceExisting, v))
 }
 
+// VerificationBypassed applies equality check predicate on the "verification_bypassed" field. It's identical to VerificationBypassedEQ.
+func VerificationBypassed(v bool) predicate.DownloadRecord {
+	return predicate.DownloadRecord(sql.FieldEQ(FieldVerificationBypassed, v))
+}
+
 // CreateTimeEQ applies the EQ predicate on the "create_time" field.
 func CreateTimeEQ(v time.Time) predicate.DownloadRecord {
 	return predicate.DownloadRecord(sql.FieldEQ(FieldCreateTime, v))
@@ -963,6 +968,26 @@ func ReplaceExistingEQ(v bool) predicate.DownloadRecord {
 // ReplaceExistingNEQ applies the NEQ predicate on the "replace_existing" field.
 func ReplaceExistingNEQ(v bool) predicate.DownloadRecord {
 	return predicate.DownloadRecord(sql.FieldNEQ(FieldReplaceExisting, v))
+}
+
+// HoldReasonsIsNil applies the IsNil predicate on the "hold_reasons" field.
+func HoldReasonsIsNil() predicate.DownloadRecord {
+	return predicate.DownloadRecord(sql.FieldIsNull(FieldHoldReasons))
+}
+
+// HoldReasonsNotNil applies the NotNil predicate on the "hold_reasons" field.
+func HoldReasonsNotNil() predicate.DownloadRecord {
+	return predicate.DownloadRecord(sql.FieldNotNull(FieldHoldReasons))
+}
+
+// VerificationBypassedEQ applies the EQ predicate on the "verification_bypassed" field.
+func VerificationBypassedEQ(v bool) predicate.DownloadRecord {
+	return predicate.DownloadRecord(sql.FieldEQ(FieldVerificationBypassed, v))
+}
+
+// VerificationBypassedNEQ applies the NEQ predicate on the "verification_bypassed" field.
+func VerificationBypassedNEQ(v bool) predicate.DownloadRecord {
+	return predicate.DownloadRecord(sql.FieldNEQ(FieldVerificationBypassed, v))
 }
 
 // HasMovie applies the HasEdge predicate on the "movie" edge.

@@ -19,8 +19,9 @@ import (
 // RequestUpdate is the builder for updating Request entities.
 type RequestUpdate struct {
 	config
-	hooks    []Hook
-	mutation *RequestMutation
+	hooks     []Hook
+	mutation  *RequestMutation
+	modifiers []func(*sql.UpdateBuilder)
 }
 
 // Where appends a list predicates to the RequestUpdate builder.
@@ -244,6 +245,12 @@ func (_u *RequestUpdate) check() error {
 	return nil
 }
 
+// Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
+func (_u *RequestUpdate) Modify(modifiers ...func(u *sql.UpdateBuilder)) *RequestUpdate {
+	_u.modifiers = append(_u.modifiers, modifiers...)
+	return _u
+}
+
 func (_u *RequestUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
@@ -344,6 +351,7 @@ func (_u *RequestUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{request.Label}
@@ -359,9 +367,10 @@ func (_u *RequestUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 // RequestUpdateOne is the builder for updating a single Request entity.
 type RequestUpdateOne struct {
 	config
-	fields   []string
-	hooks    []Hook
-	mutation *RequestMutation
+	fields    []string
+	hooks     []Hook
+	mutation  *RequestMutation
+	modifiers []func(*sql.UpdateBuilder)
 }
 
 // SetUpdateTime sets the "update_time" field.
@@ -592,6 +601,12 @@ func (_u *RequestUpdateOne) check() error {
 	return nil
 }
 
+// Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
+func (_u *RequestUpdateOne) Modify(modifiers ...func(u *sql.UpdateBuilder)) *RequestUpdateOne {
+	_u.modifiers = append(_u.modifiers, modifiers...)
+	return _u
+}
+
 func (_u *RequestUpdateOne) sqlSave(ctx context.Context) (_node *Request, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
@@ -709,6 +724,7 @@ func (_u *RequestUpdateOne) sqlSave(ctx context.Context) (_node *Request, err er
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	_spec.AddModifiers(_u.modifiers...)
 	_node = &Request{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues

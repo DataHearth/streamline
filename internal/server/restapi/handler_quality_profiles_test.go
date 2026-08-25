@@ -78,6 +78,47 @@ var _ = Describe(
 				Expect(got.PreferredResolution).To(Equal("2160p"))
 			})
 
+			It(
+				"stores allowed_codecs and returns them in the create response",
+				func() {
+					body := `{"name": "uhd", "preferred_resolution": "2160p",` +
+						` "min_resolution": "1080p", "allowed_codecs": ["hevc", "av1"]}`
+					resp, err := http.Post(
+						app.srv.URL+"/api/v1/quality-profiles",
+						"application/json",
+						strings.NewReader(body),
+					)
+					Expect(err).NotTo(HaveOccurred())
+					defer resp.Body.Close()
+					Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+
+					var qp QualityProfile
+					Expect(json.NewDecoder(resp.Body).Decode(&qp)).To(Succeed())
+					Expect(qp.AllowedCodecs).NotTo(BeNil())
+					Expect(*qp.AllowedCodecs).To(Equal([]string{"hevc", "av1"}))
+
+					got, _ := config.ResolveQualityProfile("uhd")
+					Expect(got.AllowedCodecs).To(Equal([]string{"hevc", "av1"}))
+				},
+			)
+
+			It("defaults allowed_codecs to [] (not null) when omitted", func() {
+				body := `{"name": "uhd", "preferred_resolution": "2160p", "min_resolution": "1080p"}`
+				resp, err := http.Post(
+					app.srv.URL+"/api/v1/quality-profiles",
+					"application/json",
+					strings.NewReader(body),
+				)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+
+				var raw map[string]any
+				Expect(json.NewDecoder(resp.Body).Decode(&raw)).To(Succeed())
+				Expect(raw).To(HaveKey("allowed_codecs"))
+				Expect(raw["allowed_codecs"]).To(Equal([]any{}))
+			})
+
 			It("returns 409 on duplicate name", func() {
 				configtest.SetupFile(qualityProfileOverride(
 					map[string]any{
@@ -126,6 +167,79 @@ var _ = Describe(
 				defer resp.Body.Close()
 				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 			})
+
+			It("round-trips allowed_codecs", func() {
+				configtest.SetupFile(qualityProfileOverride(
+					map[string]any{
+						"name": "hd", "preferred_resolution": "1080p",
+						"min_resolution": "720p",
+					}))
+
+				body := `{"name": "hd", "preferred_resolution": "1080p",` +
+					` "min_resolution": "720p", "allowed_codecs": ["hevc"]}`
+				req := app.req(http.MethodPut, "/api/v1/quality-profiles/hd", "",
+					strings.NewReader(body))
+				req.Header.Set("Content-Type", "application/json")
+				resp := app.do(req)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				var qp QualityProfile
+				Expect(json.NewDecoder(resp.Body).Decode(&qp)).To(Succeed())
+				Expect(*qp.AllowedCodecs).To(Equal([]string{"hevc"}))
+
+				got, _ := config.ResolveQualityProfile("hd")
+				Expect(got.AllowedCodecs).To(Equal([]string{"hevc"}))
+			})
+
+			It(
+				"leaves allowed_codecs untouched when the patch body omits it",
+				func() {
+					configtest.SetupFile(qualityProfileOverride(
+						map[string]any{
+							"name":                 "hd",
+							"preferred_resolution": "1080p",
+							"min_resolution":       "720p",
+							"allowed_codecs":       []string{"hevc"},
+						}))
+
+					body := `{"name": "hd", "preferred_resolution": "2160p", "min_resolution": "1080p"}`
+					req := app.req(http.MethodPut, "/api/v1/quality-profiles/hd", "",
+						strings.NewReader(body))
+					req.Header.Set("Content-Type", "application/json")
+					resp := app.do(req)
+					defer resp.Body.Close()
+					Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+					got, _ := config.ResolveQualityProfile("hd")
+					Expect(got.AllowedCodecs).To(Equal([]string{"hevc"}))
+				},
+			)
+
+			It(
+				"clears allowed_codecs back to [] when patched with an empty list",
+				func() {
+					configtest.SetupFile(qualityProfileOverride(
+						map[string]any{
+							"name":                 "hd",
+							"preferred_resolution": "1080p",
+							"min_resolution":       "720p",
+							"allowed_codecs":       []string{"hevc"},
+						}))
+
+					body := `{"name": "hd", "preferred_resolution": "1080p",` +
+						` "min_resolution": "720p", "allowed_codecs": []}`
+					req := app.req(http.MethodPut, "/api/v1/quality-profiles/hd", "",
+						strings.NewReader(body))
+					req.Header.Set("Content-Type", "application/json")
+					resp := app.do(req)
+					defer resp.Body.Close()
+					Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+					got, _ := config.ResolveQualityProfile("hd")
+					Expect(got.AllowedCodecs).To(BeEmpty())
+				},
+			)
 		})
 
 		Describe("DeleteQualityProfile", func() {

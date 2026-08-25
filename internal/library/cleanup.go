@@ -37,7 +37,7 @@ func RemoveMediaFile(path, root string) error {
 			return fmt.Errorf("remove %s: %w", name, err)
 		}
 	}
-	pruneEmptyDirs(dir, root)
+	PruneEmptyDirs(dir, root)
 	return nil
 }
 
@@ -57,11 +57,11 @@ func isSidecar(name, stem string) bool {
 	return rest[0] == '.' || rest[0] == '-'
 }
 
-// pruneEmptyDirs walks up from dir removing each directory until one refuses.
+// PruneEmptyDirs walks up from dir removing each directory until one refuses.
 // A non-empty directory is exactly what should stop the walk, and os.Remove
 // reporting ENOTEMPTY is how that shows up — the error is the exit condition,
-// not a failure.
-func pruneEmptyDirs(dir, root string) {
+// not a failure. root is never removed, nor is anything outside it.
+func PruneEmptyDirs(dir, root string) {
 	root = filepath.Clean(root)
 	prefix := root + string(filepath.Separator)
 	for dir = filepath.Clean(dir); strings.HasPrefix(dir, prefix); dir = filepath.Dir(dir) {

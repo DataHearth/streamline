@@ -501,7 +501,7 @@ var _ = Describe("TVShow store", Label("unit", "db"), func() {
 		},
 	)
 
-	It("lists shows with wanted monitored episodes", func() {
+	It("counts wanted monitored episodes", func() {
 		show, err := store.CreateTVShow(ctx, CreateTVShowParams{
 			Title:  "X",
 			Year:   2020,
@@ -514,21 +514,16 @@ var _ = Describe("TVShow store", Label("unit", "db"), func() {
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		shows, err := store.ListWantedEpisodes(ctx)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(shows).To(HaveLen(1))
-		Expect(shows[0].ID).To(Equal(show.ID))
-		Expect(shows[0].Edges.Seasons[0].Edges.Episodes).To(HaveLen(2))
+		Expect(store.CountWantedEpisodes(ctx)).To(Equal(2))
 
 		// Marking an episode available drops it from the wanted set.
-		epID := shows[0].Edges.Seasons[0].Edges.Episodes[0].ID
+		reloaded, err := store.FindTVShowByID(ctx, show.ID)
+		Expect(err).NotTo(HaveOccurred())
+		epID := reloaded.Edges.Seasons[0].Edges.Episodes[0].ID
 		Expect(
 			store.SetEpisodeStatus(ctx, epID, episode.StatusAvailable),
 		).To(Succeed())
-		shows2, err := store.ListWantedEpisodes(ctx)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(shows2).To(HaveLen(1))
-		Expect(shows2[0].Edges.Seasons[0].Edges.Episodes).To(HaveLen(1))
+		Expect(store.CountWantedEpisodes(ctx)).To(Equal(1))
 	})
 
 	Describe("ListEligibleEpisodesForSync", func() {
