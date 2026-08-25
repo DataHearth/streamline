@@ -4534,6 +4534,15 @@ components:
         parsed_codec:
           type: string
           description: Video codec (x264/HEVC/AV1/…) parsed from the file's basename at response time.
+        file_score:
+          type: integer
+          description: >-
+            Total matched-format score of this file, computed at response
+            time against the owning item's quality profile. Detail
+            responses only — list responses omit it. A file whose
+            resolution falls outside the profile's band scores 0, the
+            same number the upgrade decision works from. Absent when no
+            quality profile is configured at all.
         media_info:
           $ref: "#/components/schemas/MediaInfo"
 

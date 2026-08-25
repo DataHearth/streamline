@@ -19,6 +19,7 @@ import (
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/media/tvshow"
 	"github.com/datahearth/streamline/internal/metadata"
+	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
 
 var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
@@ -394,6 +395,119 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
 			Expect(body.Items).To(HaveLen(1))
 			Expect(body.Items[0].Title).To(Equal("BB Complete 1080p"))
+		})
+	})
+
+	Describe("browse-release scoring", func() {
+		results := []indexer.SearchResult{
+			{Title: "BB.S01.1080p.WEB-DL.x264", Download: "magnet:a", Seeders: 30},
+			{
+				Title:    "BB.S01.1080p.BluRay.Remux.x265",
+				Download: "magnet:b",
+				Seeders:  4,
+			},
+			{Title: "BB.S01.480p.WEB-DL.x264", Download: "magnet:c", Seeders: 99},
+		}
+		show := &ent.TVShow{
+			ID:             3,
+			Title:          "Breaking Bad",
+			TvdbID:         81189,
+			QualityProfile: "default",
+		}
+
+		BeforeEach(func() {
+			configtest.Setup(map[string]any{
+				"quality_profiles": []map[string]any{
+					{
+						"name":                 "default",
+						"min_resolution":       "720p",
+						"preferred_resolution": "1080p",
+						"formats": []map[string]any{
+							{"name": "remux", "score": 50},
+							{"name": "x265", "score": 10},
+						},
+					},
+				},
+				"quality_default_profile": "default",
+			})
+		})
+
+		// expectScored asserts the shared annotation contract: best-first
+		// order, matched formats on the winner, and the out-of-band release
+		// still listed with its reason.
+		expectScored := func(resp *http.Response) {
+			GinkgoHelper()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			var body SearchResultList
+			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+			Expect(body.Items).To(HaveLen(3))
+
+			Expect(body.Items[0].Title).
+				To(Equal("BB.S01.1080p.BluRay.Remux.x265"))
+			Expect(body.Items[0].Score).To(HaveValue(Equal(60)))
+			Expect(body.Items[0].MatchedFormats).
+				To(HaveValue(ConsistOf("remux", "x265")))
+			Expect(body.Items[0].Rejected).To(HaveValue(BeFalse()))
+
+			Expect(body.Items[1].Title).To(Equal("BB.S01.1080p.WEB-DL.x264"))
+			Expect(body.Items[1].Score).To(HaveValue(Equal(0)))
+
+			Expect(body.Items[2].Title).To(Equal("BB.S01.480p.WEB-DL.x264"))
+			Expect(body.Items[2].Rejected).To(HaveValue(BeTrue()))
+			Expect(body.Items[2].RejectReason).
+				To(HaveValue(ContainSubstring("resolution")))
+		}
+
+		It("annotates whole-series results", func() {
+			app.tvshows.EXPECT().Get(mock.Anything, uint32(3)).
+				Return(show, nil).Once()
+			app.indexers.EXPECT().
+				SearchSeries(mock.Anything, []string{"Breaking Bad"},
+					uint32(81189)).
+				Return(results, nil).Once()
+
+			resp := app.do(app.req(http.MethodPost,
+				"/api/v1/series/3/browse", app.adminKey, nil))
+			defer resp.Body.Close()
+			expectScored(resp)
+		})
+
+		It("annotates season-pack results", func() {
+			app.tvshows.EXPECT().Get(mock.Anything, uint32(3)).
+				Return(show, nil).Once()
+			app.indexers.EXPECT().
+				SearchSeason(mock.Anything, []string{"Breaking Bad"},
+					uint32(81189), uint16(1)).
+				Return(results, nil).Once()
+
+			resp := app.do(app.req(http.MethodPost,
+				"/api/v1/series/3/seasons/1/search", app.adminKey, nil))
+			defer resp.Body.Close()
+			expectScored(resp)
+		})
+
+		It("annotates episode results", func() {
+			withTree := *show
+			withTree.Edges.Seasons = []*ent.Season{
+				{
+					ID:     10,
+					Number: 1,
+					Edges: ent.SeasonEdges{
+						Episodes: []*ent.Episode{{ID: 100, Number: 2}},
+					},
+				},
+			}
+			app.tvshows.EXPECT().Get(mock.Anything, uint32(3)).
+				Return(&withTree, nil).Once()
+			app.indexers.EXPECT().
+				SearchEpisode(mock.Anything, []string{"Breaking Bad"},
+					uint32(81189), uint16(1), uint16(2)).
+				Return(results, nil).Once()
+
+			resp := app.do(app.req(http.MethodPost,
+				"/api/v1/series/3/episodes/100/search", app.adminKey, nil))
+			defer resp.Body.Close()
+			expectScored(resp)
 		})
 	})
 

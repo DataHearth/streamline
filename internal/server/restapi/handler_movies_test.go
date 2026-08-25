@@ -19,6 +19,7 @@ import (
 	"github.com/datahearth/streamline/internal/library"
 	moviesvc "github.com/datahearth/streamline/internal/media/movie"
 	"github.com/datahearth/streamline/internal/metadata"
+	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
 
 var _ = Describe(
@@ -268,6 +269,94 @@ var _ = Describe(
 			})
 		})
 
+		Describe("SearchMovie scoring", func() {
+			BeforeEach(func() {
+				configtest.Setup(map[string]any{
+					"quality_profiles": []map[string]any{
+						{
+							"name":                 "default",
+							"min_resolution":       "720p",
+							"preferred_resolution": "1080p",
+							"formats": []map[string]any{
+								{"name": "remux", "score": 50},
+								{"name": "x265", "score": 10},
+							},
+						},
+					},
+					"quality_default_profile": "default",
+				})
+			})
+
+			It("scores, flags and orders the browsed releases", func() {
+				app.movies.EXPECT().
+					Get(mock.Anything, uint32(5)).
+					Return(&ent.Movie{
+						ID:             5,
+						Title:          "Fight Club",
+						Year:           1999,
+						TmdbID:         550,
+						Status:         movie.StatusWanted,
+						QualityProfile: "default",
+					}, nil).
+					Once()
+				app.indexers.EXPECT().
+					SearchMovie(mock.Anything, []string{"Fight Club", ""}, uint32(550)).
+					Return([]indexer.SearchResult{
+						{
+							Title:    "Fight.Club.1999.1080p.WEB-DL.x264",
+							Download: "magnet:a",
+							Size:     4_000_000_000,
+							Seeders:  10,
+						},
+						{
+							Title:    "Fight.Club.1999.1080p.BluRay.Remux.x265",
+							Download: "magnet:b",
+							Size:     40_000_000_000,
+							Seeders:  5,
+						},
+						{
+							Title:    "Fight.Club.1999.480p.WEB-DL.x264",
+							Download: "magnet:c",
+							Size:     700_000_000,
+							Seeders:  99,
+						},
+					}, nil).
+					Once()
+
+				resp := app.do(app.req(
+					http.MethodPost,
+					"/api/v1/movies/5/search",
+					app.adminKey,
+					nil,
+				))
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				var results []SearchResult
+				Expect(json.NewDecoder(resp.Body).Decode(&results)).To(Succeed())
+				Expect(results).To(HaveLen(3))
+
+				Expect(results[0].Title).
+					To(Equal("Fight.Club.1999.1080p.BluRay.Remux.x265"))
+				Expect(results[0].Score).To(HaveValue(Equal(60)))
+				Expect(results[0].MatchedFormats).
+					To(HaveValue(ConsistOf("remux", "x265")))
+				Expect(results[0].Rejected).To(HaveValue(BeFalse()))
+
+				Expect(results[1].Title).
+					To(Equal("Fight.Club.1999.1080p.WEB-DL.x264"))
+				Expect(results[1].Score).To(HaveValue(Equal(0)))
+
+				// A rejected release stays in the list: the operator may
+				// still grab it by hand.
+				Expect(results[2].Title).
+					To(Equal("Fight.Club.1999.480p.WEB-DL.x264"))
+				Expect(results[2].Rejected).To(HaveValue(BeTrue()))
+				Expect(results[2].RejectReason).
+					To(HaveValue(ContainSubstring("resolution")))
+			})
+		})
+
 		Describe("SearchTMDBMovie", func() {
 			It("flags results already in the library", func() {
 				results := []metadata.MovieResult{
@@ -401,6 +490,109 @@ var _ = Describe(
 				var body map[string]any
 				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
 				_, present := body["media_files"]
+				Expect(present).To(BeFalse())
+			})
+		})
+
+		Describe("file_score on media files", func() {
+			const movieID uint32 = 44
+			const filePath = "/data/movies/Some Movie (2020)/" +
+				"Some.Movie.2020.1080p.BluRay.Remux.x265-GRP.mkv"
+
+			BeforeEach(func() {
+				configtest.Setup(map[string]any{
+					"quality_profiles": []map[string]any{
+						{
+							"name":                 "default",
+							"min_resolution":       "720p",
+							"preferred_resolution": "1080p",
+							"formats": []map[string]any{
+								{"name": "remux", "score": 50},
+								{"name": "x265", "score": 10},
+							},
+						},
+					},
+					"quality_default_profile": "default",
+				})
+			})
+
+			It("scores the file on the detail view", func() {
+				app.movies.EXPECT().
+					Get(mock.Anything, movieID).
+					Return(&ent.Movie{
+						ID:             movieID,
+						Title:          "Some Movie",
+						Year:           2020,
+						TmdbID:         44,
+						Status:         movie.StatusAvailable,
+						QualityProfile: "default",
+					}, nil).
+					Once()
+				app.store.EXPECT().
+					ListMediaFilesByMovieID(mock.Anything, movieID).
+					Return([]*ent.MediaFile{
+						{ID: 1, Path: filePath, Size: 8_400_000_000},
+					}, nil).
+					Once()
+
+				resp, err := http.Get(
+					fmt.Sprintf("%s/api/v1/movies/%d", app.srv.URL, movieID),
+				)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				var body map[string]any
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				files, ok := body["media_files"].([]any)
+				Expect(ok).To(BeTrue())
+				Expect(files).To(HaveLen(1))
+				Expect(files[0].(map[string]any)["file_score"]).
+					To(BeEquivalentTo(60))
+			})
+
+			It("leaves the list view unscored", func() {
+				app.movies.EXPECT().
+					List(mock.Anything, uint16(1), uint16(10)).
+					Return([]*ent.Movie{
+						{
+							ID:             movieID,
+							Title:          "Some Movie",
+							Year:           2020,
+							TmdbID:         44,
+							Status:         movie.StatusAvailable,
+							QualityProfile: "default",
+							Edges: ent.MovieEdges{
+								MediaFiles: []*ent.MediaFile{
+									{
+										ID:   1,
+										Path: filePath,
+										Size: 8_400_000_000,
+									},
+								},
+							},
+						},
+					}, uint32(1), nil).
+					Once()
+
+				resp := app.do(app.req(
+					http.MethodGet,
+					"/api/v1/movies?limit=10",
+					app.adminKey,
+					nil,
+				))
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				var body struct {
+					Items []map[string]any `json:"items"`
+				}
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				Expect(body.Items).To(HaveLen(1))
+				files, ok := body.Items[0]["media_files"].([]any)
+				Expect(ok).To(BeTrue())
+				Expect(files).To(HaveLen(1))
+				_, present := files[0].(map[string]any)["file_score"]
 				Expect(present).To(BeFalse())
 			})
 		})

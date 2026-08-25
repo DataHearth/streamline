@@ -2767,8 +2767,10 @@ type LookupDetail struct {
 
 // MediaFile defines model for MediaFile.
 type MediaFile struct {
-	Format *string `json:"format,omitempty"`
-	Id     uint32  `json:"id"`
+	// FileScore Total matched-format score of this file, computed at response time against the owning item's quality profile. Detail responses only — list responses omit it. A file whose resolution falls outside the profile's band scores 0, the same number the upgrade decision works from. Absent when no quality profile is configured at all.
+	FileScore *int    `json:"file_score,omitempty"`
+	Format    *string `json:"format,omitempty"`
+	Id        uint32  `json:"id"`
 
 	// MediaInfo Technical details probed from the file with ffprobe. Absent when the
 	// file hasn't been probed yet, probing is disabled, or the probe was

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"log/slog"
-	"path/filepath"
 	"time"
 
 	entmovie "github.com/datahearth/streamline/ent/movie"
@@ -116,7 +115,9 @@ func (s *Server) GetMovie(
 	if len(files) > 0 {
 		apiFiles := make([]MediaFile, 0, len(files))
 		for _, f := range files {
-			apiFiles = append(apiFiles, mediaFileToAPI(f))
+			af := mediaFileToAPI(f)
+			af.FileScore = mediaFileScore(m.QualityProfile, f)
+			apiFiles = append(apiFiles, af)
 		}
 		result.MediaFiles = &apiFiles
 	}
@@ -241,45 +242,9 @@ func (s *Server) SearchMovie(
 
 	items := make([]SearchResult, 0, len(results))
 	for _, r := range results {
-		item := SearchResult{
-			Title:       r.Title,
-			DownloadUrl: r.Download,
-			Size:        r.Size,
-			Seeders:     r.Seeders,
-		}
-		parsed := library.Parse(filepath.Base(r.Title))
-		if r.InfoURL != "" {
-			item.InfoUrl = &r.InfoURL
-		}
-		if r.Leechers > 0 {
-			item.Leechers = &r.Leechers
-		}
-		if !r.PublishDate.IsZero() {
-			pub := r.PublishDate
-			item.PublishedAt = &pub
-		}
-		if r.Indexer != "" {
-			idx := r.Indexer
-			item.Indexer = &idx
-		}
-		if parsed.Group != "" {
-			g := parsed.Group
-			item.ReleaseGroup = &g
-		}
-		if parsed.Resolution != "" {
-			res := parsed.Resolution
-			item.Resolution = &res
-		}
-		if parsed.Source != "" {
-			src := parsed.Source
-			item.Source = &src
-		}
-		if parsed.Codec != "" {
-			cdc := parsed.Codec
-			item.Codec = &cdc
-		}
-		items = append(items, item)
+		items = append(items, toSearchResult(r))
 	}
+	annotateResults(m.QualityProfile, items)
 
 	return SearchMovie200JSONResponse(items), nil
 }

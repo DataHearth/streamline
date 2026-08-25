@@ -1,9 +1,11 @@
 package restapi
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"path/filepath"
+	"slices"
 	"time"
 
 	"github.com/datahearth/streamline/ent"
@@ -16,6 +18,8 @@ import (
 	"github.com/datahearth/streamline/internal/media/tvshow"
 	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/metadata"
+	"github.com/datahearth/streamline/internal/quality"
+	"github.com/datahearth/streamline/internal/quality/qualityctx"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
@@ -941,6 +945,52 @@ func toSearchResult(r indexer.SearchResult) SearchResult {
 		item.Codec = &cdc
 	}
 	return item
+}
+
+// annotateResults scores every browsed release against the queried item's
+// quality profile, then reorders the slice best-first so each client sees the
+// same ranking. Rejected releases keep their place in the list — the operator
+// may still grab one by hand — and carry the reason instead.
+//
+// With no quality profile configured at all the annotation is skipped
+// entirely: the zero profile's empty resolution band rejects every release,
+// which is the right call when grabbing automatically (internal/rss) and a
+// lie on screen.
+func annotateResults(profileName string, items []SearchResult) {
+	p, ok := config.ResolveScoredProfile(profileName)
+	if !ok {
+		return
+	}
+	for i := range items {
+		res := quality.Evaluate(p, qualityctx.ContextFromRelease(
+			items[i].Title, items[i].Size, items[i].Seeders,
+		))
+		items[i].Score = &res.Score
+		items[i].Rejected = &res.Rejected
+		if res.RejectReason != "" {
+			items[i].RejectReason = &res.RejectReason
+		}
+		if len(res.Matched) > 0 {
+			items[i].MatchedFormats = &res.Matched
+		}
+	}
+	slices.SortStableFunc(items, func(a, b SearchResult) int {
+		return cmp.Compare(*b.Score, *a.Score)
+	})
+}
+
+// mediaFileScore scores a file already on disk against profileName, for the
+// detail views only. A file outside the profile's resolution band scores 0 —
+// the same number the upgrade decision reads — rather than being hidden.
+func mediaFileScore(profileName string, f *ent.MediaFile) *int {
+	p, ok := config.ResolveScoredProfile(profileName)
+	if !ok {
+		return nil
+	}
+	res := quality.Evaluate(p, qualityctx.ContextFromFile(
+		filepath.Base(f.Path), f.Size, int(f.Width), f.VideoCodec,
+	))
+	return &res.Score
 }
 
 // toIndexerResult validates a grab request body (title + download_url required)
