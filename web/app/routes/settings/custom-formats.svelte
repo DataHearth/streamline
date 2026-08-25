@@ -35,7 +35,11 @@
 
 	const save = createMutation<CustomFormat, Error, CustomFormatDraft>(() => ({
 		mutationFn: (d) => {
-			const body = { name: d.name.trim(), conditions: toConditions(d.conditions) };
+			const body = {
+				name: d.name.trim(),
+				description: d.description.trim() || undefined,
+				conditions: toConditions(d.conditions),
+			};
 			if (editing) {
 				return api<CustomFormat>(
 					`/custom-formats/${encodeURIComponent(editing.name)}`,
@@ -159,12 +163,16 @@
 										{f.name}
 									</span>
 									<div class="mt-1 truncate text-xs text-fg-muted">
-										{f.conditions.length === 1
-											? i18n.cf_conditions_count_one({ count: 1 })
-											: i18n.cf_conditions_count_other({
-													count: f.conditions.length,
-												})}
-										<span class="text-fg-faint">· {summary(f)}</span>
+										{#if f.description}
+											{f.description}
+										{:else}
+											{f.conditions.length === 1
+												? i18n.cf_conditions_count_one({ count: 1 })
+												: i18n.cf_conditions_count_other({
+														count: f.conditions.length,
+													})}
+											<span class="text-fg-faint">· {summary(f)}</span>
+										{/if}
 									</div>
 								</div>
 							</button>

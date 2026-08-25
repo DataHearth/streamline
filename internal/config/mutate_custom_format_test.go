@@ -43,6 +43,34 @@ var _ = Describe("Custom format CRUD", Label("unit", "config"), func() {
 		Expect(ok).To(BeFalse())
 	})
 
+	It(
+		"carries a description through add and update, full-replace on update",
+		func() {
+			ctx := context.Background()
+			withDesc := entry("french-vf")
+			withDesc.Description = "French VF audio track"
+			Expect(config.AddCustomFormat(ctx, withDesc)).To(Succeed())
+			got, ok := config.FindCustomFormat("french-vf")
+			Expect(ok).To(BeTrue())
+			Expect(got.Description).To(Equal("French VF audio track"))
+
+			reworded := entry("french-vf")
+			reworded.Description = "Detects French dubbed audio"
+			Expect(
+				config.UpdateCustomFormat(ctx, "french-vf", reworded),
+			).To(Succeed())
+			got, _ = config.FindCustomFormat("french-vf")
+			Expect(got.Description).To(Equal("Detects French dubbed audio"))
+
+			cleared := entry("french-vf")
+			Expect(
+				config.UpdateCustomFormat(ctx, "french-vf", cleared),
+			).To(Succeed())
+			got, _ = config.FindCustomFormat("french-vf")
+			Expect(got.Description).To(BeEmpty())
+		},
+	)
+
 	It("rejects adding a format named like a built-in", func() {
 		Expect(config.AddCustomFormat(context.Background(), entry("x265"))).
 			To(MatchError(config.ErrCustomFormatBuiltin))

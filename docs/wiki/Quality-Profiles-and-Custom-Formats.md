@@ -24,12 +24,15 @@ Config-backed like indexers and download clients: a top-level `custom_formats[]`
 ```yaml
 custom_formats:
   - name: no-scene-junk
+    description: Rejects cam/telesync/screener releases
     conditions:
       - type: release_title
         pattern: '(?i)\b(cam(rip)?|hdcam|telesync|screener)\b'
         required: true
         negate: true
 ```
+
+`description` is optional free text — it has no effect on matching, but shows on the format's row in **Settings → Custom formats** and as a hint wherever the format is scored in a quality profile, the same way a built-in's fixed description does.
 
 | Condition type | Fields | Evaluated against |
 | --- | --- | --- |

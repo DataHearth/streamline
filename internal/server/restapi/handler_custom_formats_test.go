@@ -133,10 +133,41 @@ var _ = Describe(
 				Expect(json.NewDecoder(resp.Body).Decode(&cf)).To(Succeed())
 				Expect(cf.Name).To(Equal("my-format"))
 				Expect(cf.Conditions).To(HaveLen(1))
+				Expect(cf.Description).To(BeNil())
 
 				got, ok := config.FindCustomFormat("my-format")
 				Expect(ok).To(BeTrue())
 				Expect(got.Conditions).To(HaveLen(1))
+			})
+
+			It("creates a format with a description, echoed on GET", func() {
+				body := `{"name": "my-format", "description": "Detects mine",` +
+					` "conditions": [` +
+					`{"type": "release_title", "pattern": "(?i)mine", "required": true}]}`
+				resp, err := http.Post(
+					app.srv.URL+"/api/v1/custom-formats",
+					"application/json",
+					strings.NewReader(body),
+				)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+
+				var created CustomFormat
+				Expect(json.NewDecoder(resp.Body).Decode(&created)).To(Succeed())
+				Expect(created.Description).NotTo(BeNil())
+				Expect(*created.Description).To(Equal("Detects mine"))
+
+				getResp, err := http.Get(
+					app.srv.URL + "/api/v1/custom-formats/my-format",
+				)
+				Expect(err).NotTo(HaveOccurred())
+				defer getResp.Body.Close()
+
+				var got CustomFormat
+				Expect(json.NewDecoder(getResp.Body).Decode(&got)).To(Succeed())
+				Expect(got.Description).NotTo(BeNil())
+				Expect(*got.Description).To(Equal("Detects mine"))
 			})
 
 			It("returns 409 when the name collides with a builtin", func() {

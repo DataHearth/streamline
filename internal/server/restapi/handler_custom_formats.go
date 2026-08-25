@@ -68,16 +68,16 @@ func customFormatConditionsFromEntries(
 	return out
 }
 
-// customFormatToAPI maps a user-defined config entry. User formats are
-// never builtin and never carry a description.
+// customFormatToAPI maps a user-defined config entry, including its
+// optional description when set.
 func customFormatToAPI(e config.CustomFormatEntry) CustomFormat {
-	return customFormatToAPIWithDescription(e, false, "")
+	return customFormatToAPIWithDescription(e, false, e.Description)
 }
 
 // customFormatToAPIWithDescription is customFormatToAPI plus the builtin
-// flag and a builtin's human-readable description. User formats never
-// carry one, so the empty string leaves CustomFormat.Description absent
-// rather than "".
+// flag and a description — a builtin's fixed one, or a user format's
+// optional one. An empty description leaves CustomFormat.Description
+// absent rather than "".
 func customFormatToAPIWithDescription(
 	e config.CustomFormatEntry, builtin bool, description string,
 ) CustomFormat {
@@ -122,6 +122,10 @@ func builtinEntry(f quality.Format) config.CustomFormatEntry {
 // name+conditions shape as CustomFormat, modulo the read-only builtin field)
 // into a config entry ready for ToFormat/AddCustomFormat/UpdateCustomFormat.
 func customFormatFromAPI(b CustomFormat) config.CustomFormatEntry {
+	var description string
+	if b.Description != nil {
+		description = *b.Description
+	}
 	conds := make([]config.CustomFormatConditionEntry, len(b.Conditions))
 	for i, c := range b.Conditions {
 		e := config.CustomFormatConditionEntry{Type: string(c.Type)}
@@ -148,7 +152,9 @@ func customFormatFromAPI(b CustomFormat) config.CustomFormatEntry {
 		}
 		conds[i] = e
 	}
-	return config.CustomFormatEntry{Name: b.Name, Conditions: conds}
+	return config.CustomFormatEntry{
+		Name: b.Name, Description: description, Conditions: conds,
+	}
 }
 
 func (s *Server) ListCustomFormats(
@@ -194,7 +200,9 @@ func (s *Server) CreateCustomFormat(
 		}, nil
 	}
 	e := customFormatFromAPI(CustomFormat{
-		Name: request.Body.Name, Conditions: request.Body.Conditions,
+		Name:        request.Body.Name,
+		Description: request.Body.Description,
+		Conditions:  request.Body.Conditions,
 	})
 	// Compiled here rather than left to config's own invariant check so the
 	// body carries the coded, condition-naming message the SPA renders
@@ -232,7 +240,9 @@ func (s *Server) UpdateCustomFormat(
 		}, nil
 	}
 	e := customFormatFromAPI(CustomFormat{
-		Name: request.Body.Name, Conditions: request.Body.Conditions,
+		Name:        request.Body.Name,
+		Description: request.Body.Description,
+		Conditions:  request.Body.Conditions,
 	})
 	if _, err := e.ToFormat(); err != nil {
 		return UpdateCustomFormat422JSONResponse{

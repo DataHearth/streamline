@@ -631,7 +631,8 @@ export type CustomFormat = {
 	name: string;
 	// Set only on the shipped library, which cannot be edited or deleted.
 	builtin?: boolean;
-	// Human-readable explanation, set only on the shipped library.
+	// Human-readable explanation. Fixed on the shipped library; optional and
+	// author-set on your own formats.
 	description?: string;
 	conditions: CustomFormatCondition[];
 };

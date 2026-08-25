@@ -51,6 +51,7 @@
 
 	export type CustomFormatDraft = {
 		name: string;
+		description: string;
 		conditions: ConditionDraft[];
 	};
 
@@ -68,9 +69,10 @@
 	}
 
 	export function draftFrom(f: CustomFormat | null): CustomFormatDraft {
-		if (!f) return { name: "", conditions: [newCondition()] };
+		if (!f) return { name: "", description: "", conditions: [newCondition()] };
 		return {
 			name: f.name,
+			description: f.description ?? "",
 			conditions: f.conditions.map((c) => ({
 				...newCondition(),
 				type: c.type,
@@ -270,6 +272,23 @@
 		<p class="mt-1 text-xs text-fg-muted">
 			{isEdit ? i18n.cf_name_locked() : i18n.cf_name_help()}
 		</p>
+	</label>
+
+	<label class="block">
+		<span class="mb-1 flex items-center gap-1.5 text-sm font-medium text-fg">
+			{i18n.cf_description()}
+			<FieldLock locked={locked} />
+		</span>
+		<input
+			type="text"
+			readonly={locked}
+			value={draft.description}
+			placeholder={i18n.cf_description_placeholder()}
+			oninput={(e) =>
+				(draft.description = (e.currentTarget as HTMLInputElement).value)}
+			class={inputClass}
+		/>
+		<p class="mt-1 text-xs text-fg-muted">{i18n.cf_description_help()}</p>
 	</label>
 
 	<div>

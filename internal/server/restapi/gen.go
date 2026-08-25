@@ -2143,7 +2143,7 @@ type CustomFormat struct {
 	Builtin    *bool                   `json:"builtin,omitempty"`
 	Conditions []CustomFormatCondition `json:"conditions"`
 
-	// Description Human-readable explanation of what the format detects and why you'd score it. Only set on built-in formats; absent on user-defined ones.
+	// Description Human-readable explanation of what the format detects and why you'd score it. Fixed and server-authored on built-in formats; optional and authored by you on your own formats. Absent when not set.
 	Description *string `json:"description,omitempty"`
 	Name        string  `json:"name"`
 }
@@ -2185,8 +2185,9 @@ type CustomFormatConditionResult struct {
 
 // CustomFormatCreate defines model for CustomFormatCreate.
 type CustomFormatCreate struct {
-	Conditions []CustomFormatCondition `json:"conditions"`
-	Name       string                  `json:"name"`
+	Conditions  []CustomFormatCondition `json:"conditions"`
+	Description *string                 `json:"description,omitempty"`
+	Name        string                  `json:"name"`
 }
 
 // CustomFormatTestRequest defines model for CustomFormatTestRequest.

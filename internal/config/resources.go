@@ -102,8 +102,9 @@ type CustomFormatConditionEntry struct {
 // CustomFormatEntry is a user-defined quality.Format, name-keyed like the
 // other config-backed resources.
 type CustomFormatEntry struct {
-	Name       string                       `koanf:"name"       validate:"required"`
-	Conditions []CustomFormatConditionEntry `koanf:"conditions" validate:"min=1,dive"`
+	Name        string                       `koanf:"name"        validate:"required"`
+	Description string                       `koanf:"description"`
+	Conditions  []CustomFormatConditionEntry `koanf:"conditions"  validate:"min=1,dive"`
 }
 
 // ToFormat compiles e into a quality.Format. Condition-shape validation
@@ -124,7 +125,12 @@ func (e CustomFormatEntry) ToFormat() (quality.Format, error) {
 			Negate:   c.Negate,
 		}
 	}
-	return quality.NewFormat(e.Name, conds)
+	f, err := quality.NewFormat(e.Name, conds)
+	if err != nil {
+		return quality.Format{}, err
+	}
+	f.Description = e.Description
+	return f, nil
 }
 
 // FindCustomFormat returns the user-defined format named name.
