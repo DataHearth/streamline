@@ -5137,7 +5137,14 @@ components:
 
     QualityProfile:
       type: object
-      required: [name, preferred_resolution, min_resolution, upgrade_allowed]
+      required:
+        [
+          name,
+          preferred_resolution,
+          min_resolution,
+          upgrade_allowed,
+          replace_whole_season,
+        ]
       properties:
         name:
           type: string
@@ -5149,6 +5156,12 @@ components:
           enum: ["720p", "1080p", "2160p"]
         upgrade_allowed:
           type: boolean
+        replace_whole_season:
+          type: boolean
+          description: |
+            Take a season pack whole when it beats the season's best file,
+            instead of replacing only the episodes it outscores. Off by
+            default.
         allowed_codecs:
           type: array
           items:
@@ -5190,6 +5203,12 @@ components:
           enum: ["720p", "1080p", "2160p"]
         upgrade_allowed:
           type: boolean
+        replace_whole_season:
+          type: boolean
+          description: |
+            Take a season pack whole when it beats the season's best file,
+            instead of replacing only the episodes it outscores. Off by
+            default.
         allowed_codecs:
           type: array
           items:

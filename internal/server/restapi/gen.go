@@ -3216,7 +3216,12 @@ type QualityProfile struct {
 	MinScore            *int                              `json:"min_score,omitempty"`
 	Name                string                            `json:"name"`
 	PreferredResolution QualityProfilePreferredResolution `json:"preferred_resolution"`
-	UpgradeAllowed      bool                              `json:"upgrade_allowed"`
+
+	// ReplaceWholeSeason Take a season pack whole when it beats the season's best file,
+	// instead of replacing only the episodes it outscores. Off by
+	// default.
+	ReplaceWholeSeason bool `json:"replace_whole_season"`
+	UpgradeAllowed     bool `json:"upgrade_allowed"`
 
 	// UpgradeUntilScore Stop upgrading once the current file's score reaches this
 	// value. 0 (or unset) upgrades whenever a higher-scoring release
@@ -3249,7 +3254,12 @@ type QualityProfileCreate struct {
 	MinScore            *int                                    `json:"min_score,omitempty"`
 	Name                string                                  `json:"name"`
 	PreferredResolution QualityProfileCreatePreferredResolution `json:"preferred_resolution"`
-	UpgradeAllowed      *bool                                   `json:"upgrade_allowed,omitempty"`
+
+	// ReplaceWholeSeason Take a season pack whole when it beats the season's best file,
+	// instead of replacing only the episodes it outscores. Off by
+	// default.
+	ReplaceWholeSeason *bool `json:"replace_whole_season,omitempty"`
+	UpgradeAllowed     *bool `json:"upgrade_allowed,omitempty"`
 
 	// UpgradeUntilScore Stop upgrading once the current file's score reaches this
 	// value. 0 (or unset) upgrades whenever a higher-scoring release

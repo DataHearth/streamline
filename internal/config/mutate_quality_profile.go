@@ -23,6 +23,7 @@ type QualityProfilePatch struct {
 	PreferredResolution *string
 	MinResolution       *string
 	UpgradeAllowed      *bool
+	ReplaceWholeSeason  *bool
 	AllowedCodecs       *[]string
 	Formats             *[]QualityProfileFormatScore
 	MinScore            *int
@@ -67,6 +68,9 @@ func UpdateQualityProfile(
 		}
 		if p.UpgradeAllowed != nil {
 			e.UpgradeAllowed = *p.UpgradeAllowed
+		}
+		if p.ReplaceWholeSeason != nil {
+			e.ReplaceWholeSeason = *p.ReplaceWholeSeason
 		}
 		if p.AllowedCodecs != nil {
 			e.AllowedCodecs = *p.AllowedCodecs

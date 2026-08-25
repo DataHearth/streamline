@@ -21,10 +21,11 @@ func qualityProfileToAPI(e config.QualityProfileEntry) QualityProfile {
 		PreferredResolution: QualityProfilePreferredResolution(
 			e.PreferredResolution,
 		),
-		MinResolution:  QualityProfileMinResolution(e.MinResolution),
-		UpgradeAllowed: e.UpgradeAllowed,
-		AllowedCodecs:  &codecs,
-		Formats:        &formats,
+		MinResolution:      QualityProfileMinResolution(e.MinResolution),
+		UpgradeAllowed:     e.UpgradeAllowed,
+		ReplaceWholeSeason: e.ReplaceWholeSeason,
+		AllowedCodecs:      &codecs,
+		Formats:            &formats,
 	}
 	if e.MinScore != 0 {
 		v := e.MinScore
@@ -99,6 +100,9 @@ func (s *Server) CreateQualityProfile(
 	if request.Body.UpgradeAllowed != nil {
 		e.UpgradeAllowed = *request.Body.UpgradeAllowed
 	}
+	if request.Body.ReplaceWholeSeason != nil {
+		e.ReplaceWholeSeason = *request.Body.ReplaceWholeSeason
+	}
 	if request.Body.AllowedCodecs != nil {
 		e.AllowedCodecs = *request.Body.AllowedCodecs
 	}
@@ -142,6 +146,7 @@ func (s *Server) UpdateQualityProfile(
 	patch := config.QualityProfilePatch{
 		PreferredResolution: &pref,
 		UpgradeAllowed:      request.Body.UpgradeAllowed,
+		ReplaceWholeSeason:  request.Body.ReplaceWholeSeason,
 	}
 	if request.Body.MinResolution != nil {
 		mr := string(*request.Body.MinResolution)
