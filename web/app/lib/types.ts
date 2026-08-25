@@ -204,6 +204,10 @@ export type MediaFile = {
 	parsed_source?: string;
 	parsed_resolution?: string;
 	parsed_codec?: string;
+	// Matched-format total against the owning item's quality profile. Detail
+	// responses only — list responses omit it, and it is absent altogether when
+	// no quality profile resolves. 0 is a real score, not "unknown".
+	file_score?: number;
 	media_info?: MediaInfo | null;
 };
 
@@ -220,6 +224,13 @@ export type SearchResult = {
 	codec?: string;
 	indexer?: string;
 	published_at?: string;
+	// Scoring against the queried item's quality profile. Absent when no profile
+	// resolves; comparing scores across items on different profiles is
+	// meaningless. The API returns rows already sorted score-descending.
+	score?: number;
+	rejected?: boolean;
+	reject_reason?: string;
+	matched_formats?: string[];
 };
 
 export type PlayOnStatus = "resolved" | "fallback" | "unavailable";
@@ -573,6 +584,12 @@ export type OIDCProviderList = {
 
 export type Resolution = "720p" | "1080p" | "2160p";
 
+export type QualityProfileFormatScore = {
+	// A built-in format name or a custom_formats entry name.
+	name: string;
+	score?: number;
+};
+
 export type QualityProfileFull = {
 	name: string;
 	preferred_resolution: Resolution;
@@ -580,6 +597,11 @@ export type QualityProfileFull = {
 	upgrade_allowed: boolean;
 	// ffprobe codec names ("hevc", "av1"). Empty means any codec.
 	allowed_codecs?: string[];
+	formats?: QualityProfileFormatScore[];
+	// The API omits both when they are 0, so absent reads as 0: no minimum, and
+	// no upgrade ceiling.
+	min_score?: number;
+	upgrade_until_score?: number;
 };
 
 export type CustomFormatConditionType =

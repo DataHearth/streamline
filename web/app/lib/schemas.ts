@@ -56,6 +56,13 @@ export const resolution = v.picklist(
 	"Invalid resolution",
 );
 
+export const qualityProfileFormatScore = v.object({
+	name: v.pipe(v.string(), v.minLength(1, "Pick a format")),
+	score: v.pipe(v.number("Score required"), v.integer("Whole numbers only")),
+});
+
+const score = v.pipe(v.number("Number required"), v.integer("Whole numbers only"));
+
 export const qualityProfile = v.object({
 	name: v.pipe(v.string(), v.minLength(1, "Required")),
 	preferred_resolution: resolution,
@@ -64,6 +71,14 @@ export const qualityProfile = v.object({
 	// Empty means any codec, which is how every profile that predates the media
 	// probe behaves — so there is no minLength here on purpose.
 	allowed_codecs: v.optional(v.array(v.string()), []),
+	// A format name is checked for presence only: which names resolve is the
+	// server's table (built-ins plus the config's custom formats), and it
+	// answers 422 for one that doesn't.
+	formats: v.optional(v.array(qualityProfileFormatScore), []),
+	// Both thresholds are signed: a negative min_score is a profile that still
+	// grabs a release the junk formats scored down.
+	min_score: v.optional(score, 0),
+	upgrade_until_score: v.optional(score, 0),
 });
 
 export const customFormatConditionType = v.picklist(

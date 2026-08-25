@@ -166,6 +166,22 @@
 						{probe ? i18n.file_probed() : i18n.file_not_probed()}
 					</span>
 				{/if}
+				{#if primary?.file_score !== undefined}
+					<span
+						class={cn(
+							"shrink-0 rounded-full border px-1.5 py-px font-mono text-[9px] font-semibold uppercase tracking-[0.1em]",
+							primary.file_score > 0
+								? "border-status-available/30 bg-status-available/10 text-status-available"
+								: primary.file_score < 0
+									? "border-status-failed/30 bg-status-failed/10 text-status-failed"
+									: "border-border-strong text-fg-subtle",
+						)}
+						title={i18n.file_score_help()}
+					>
+						{i18n.file_score()}
+						{primary.file_score}
+					</span>
+				{/if}
 			</div>
 			{#if primary && auth.canAddDirectly}
 				<button

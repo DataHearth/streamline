@@ -10,20 +10,14 @@
 	import { config, READONLY_HINT } from "../../lib/config.svelte";
 	import { toast } from "../../lib/toast";
 	import { qualityProfile } from "../../lib/schemas";
-	import type { QualityProfileFull, Resolution } from "../../lib/types";
+	import type { QualityProfileFull } from "../../lib/types";
 	import ConfigFormShell from "../../components/modals/ConfigFormShell.svelte";
 	import Dialog from "../../components/modals/Dialog.svelte";
-	import QualityProfileForm from "../../components/settings/forms/QualityProfileForm.svelte";
+	import QualityProfileForm, {
+		type QualityProfileValues as Values,
+	} from "../../components/settings/forms/QualityProfileForm.svelte";
 	import ReadOnlyFieldset from "../../components/settings/ReadOnlyFieldset.svelte";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
-
-	type Values = {
-		name: string;
-		preferred_resolution: Resolution;
-		min_resolution: Resolution;
-		upgrade_allowed: boolean;
-		allowed_codecs: string[];
-	};
 
 	const qc = useQueryClient();
 
@@ -75,6 +69,9 @@
 		min_resolution: "720p",
 		upgrade_allowed: true,
 		allowed_codecs: [],
+		formats: [],
+		min_score: 0,
+		upgrade_until_score: 0,
 	};
 
 	const form = createForm(() => ({
@@ -97,6 +94,13 @@
 			min_resolution: p.min_resolution,
 			upgrade_allowed: p.upgrade_allowed,
 			allowed_codecs: p.allowed_codecs ?? [],
+			// The API omits a zero threshold, so absent is 0 rather than unset.
+			formats: (p.formats ?? []).map((f) => ({
+				name: f.name,
+				score: f.score ?? 0,
+			})),
+			min_score: p.min_score ?? 0,
+			upgrade_until_score: p.upgrade_until_score ?? 0,
 		});
 		modalOpen = true;
 	}
@@ -189,6 +193,18 @@
 									>{p.preferred_resolution}</span
 								> · Min
 								<span class="font-mono text-fg">{p.min_resolution}</span>
+								{#if (p.formats?.length ?? 0) > 0}
+									·
+									{p.formats?.length === 1
+										? i18n.quality_formats_count_one({ count: 1 })
+										: i18n.quality_formats_count_other({
+												count: p.formats?.length ?? 0,
+											})}
+								{/if}
+								{#if (p.min_score ?? 0) !== 0}
+									· {i18n.quality_min_score()}
+									<span class="font-mono text-fg">{p.min_score}</span>
+								{/if}
 							</div>
 						</div>
 					</button>
@@ -234,7 +250,7 @@
 		: editing
 			? i18n.quality_edit()
 			: i18n.quality_add_long()}
-	size="md"
+	size="xl"
 	formId="quality-profile-form"
 	submitLabel={form.state.isSubmitting
 		? i18n.common_saving()
@@ -252,7 +268,7 @@
 		}}
 	>
 		<ReadOnlyFieldset>
-			<QualityProfileForm {form} />
+			<QualityProfileForm {form} isCreate={editing === null} />
 		</ReadOnlyFieldset>
 	</form>
 

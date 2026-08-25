@@ -23,7 +23,8 @@
 		| "codec"
 		| "group"
 		| "indexer"
-		| "published";
+		| "published"
+		| "score";
 	type Dir = "asc" | "desc";
 
 	let {
@@ -48,6 +49,10 @@
 
 	let sortField = $state<Field>("seeders");
 	let sortDir = $state<Dir>("desc");
+	// The API already ranks scored results best-first, so a scored search lands
+	// on score-descending — but only until the operator picks a column, or the
+	// arriving page would keep yanking their sort back.
+	let sortPicked = $state(false);
 	let groupFilter = $state<string>("");
 	let indexerFilter = $state<string>("");
 	let errMsg = $state<string | null>(null);
@@ -85,7 +90,26 @@
 				return r.indexer ?? "";
 			case "published":
 				return r.published_at ? Date.parse(r.published_at) : 0;
+			case "score":
+				return r.score ?? 0;
 		}
+	}
+
+	// Scores are absent wholesale when no quality profile resolves for the item,
+	// so one row carrying one is what turns the column on.
+	let scored = $derived((q.data ?? []).some((r) => r.score !== undefined));
+
+	$effect(() => {
+		if (scored && !sortPicked) {
+			sortField = "score";
+			sortDir = "desc";
+		}
+	});
+
+	function scoreClass(n: number): string {
+		if (n > 0) return "text-status-available";
+		if (n < 0) return "text-status-failed";
+		return "text-fg-muted";
 	}
 
 	// Distinct values present in the current results, for the filter dropdowns.
@@ -180,6 +204,7 @@
 	}
 
 	function toggle(f: Field) {
+		sortPicked = true;
 		if (sortField === f) sortDir = sortDir === "asc" ? "desc" : "asc";
 		else {
 			sortField = f;
@@ -291,12 +316,41 @@
 			{#each rows as r (r.download_url)}
 				{@const pending = pendingId === r.download_url}
 				<li
-					class="rounded-lg border border-border bg-bg-elevated p-3"
+					class={cn(
+						"rounded-lg border border-border bg-bg-elevated p-3",
+						r.rejected && "opacity-60",
+					)}
 				>
 					<div class="break-all font-mono text-[12px] leading-snug text-fg [text-wrap:pretty]">
 						{r.title}
 					</div>
+					{#if r.rejected}
+						<p class="mt-1 text-[11px] text-status-failed">
+							{i18n.release_rejected()}{r.reject_reason
+								? ` · ${r.reject_reason}`
+								: ""}
+						</p>
+					{/if}
 					<div class="mt-1.5 flex flex-wrap gap-1">
+						{#if r.score !== undefined}
+							<span
+								class={cn(
+									"rounded-sm bg-bg-card px-1.5 py-px font-mono text-[10px] tabular font-semibold",
+									scoreClass(r.score),
+								)}
+								title={i18n.release_score_help()}
+							>
+								{i18n.release_score()}
+								{r.score}
+							</span>
+						{/if}
+						{#each r.matched_formats ?? [] as f (f)}
+							<span
+								class="rounded-sm bg-accent-soft px-1.5 py-px font-mono text-[10px] text-accent-text"
+							>
+								{f}
+							</span>
+						{/each}
 						{#if r.resolution}
 							<span class="rounded-sm bg-bg-card px-1.5 py-px font-mono text-[10px] text-fg-muted">
 								{r.resolution}
@@ -357,7 +411,12 @@
 		<div
 			class="hidden max-h-[60vh] overflow-auto rounded-lg border border-border bg-bg-elevated md:block"
 		>
-			<table class="w-full min-w-[680px] table-fixed text-sm">
+			<table
+				class={cn(
+					"w-full table-fixed text-sm",
+					scored ? "min-w-[760px]" : "min-w-[680px]",
+				)}
+			>
 				<thead
 					class="sticky top-0 z-10 bg-bg-elevated text-[10px] uppercase tracking-[0.12em] text-fg-faint [&_th]:bg-surface"
 				>
@@ -418,6 +477,23 @@
 								{@render sortIcon("published")}
 							</button>
 						</th>
+						{#if scored}
+							<th
+								scope="col"
+								aria-sort={ariaSort("score")}
+								class="w-20 px-3 py-2.5 text-right font-medium"
+							>
+								<button
+									type="button"
+									onclick={() => toggle("score")}
+									title={i18n.release_score_help()}
+									class="inline-flex items-center gap-1 uppercase tracking-[0.12em] transition hover:text-fg"
+								>
+									{i18n.release_score()}
+									{@render sortIcon("score")}
+								</button>
+							</th>
+						{/if}
 						<th
 							scope="col"
 							aria-sort={ariaSort("size")}
@@ -457,7 +533,12 @@
 				<tbody>
 					{#each rows as r (r.download_url)}
 						{@const pending = pendingId === r.download_url}
-						<tr class="border-b border-border last:border-b-0 transition hover:bg-surface">
+						<tr
+							class={cn(
+								"border-b border-border last:border-b-0 transition hover:bg-surface",
+								r.rejected && "opacity-60",
+							)}
+						>
 							<td class="min-w-0 px-4 py-2.5">
 								<div
 									class="truncate font-mono text-[12px] text-fg"
@@ -465,7 +546,24 @@
 								>
 									{r.title}
 								</div>
+								{#if r.rejected}
+									<div
+										class="mt-0.5 truncate text-[11px] text-status-failed"
+										title={r.reject_reason ?? i18n.release_rejected()}
+									>
+										{i18n.release_rejected()}{r.reject_reason
+											? ` · ${r.reject_reason}`
+											: ""}
+									</div>
+								{/if}
 								<div class="mt-1 flex flex-wrap gap-1">
+									{#each r.matched_formats ?? [] as f (f)}
+										<span
+											class="rounded-sm bg-accent-soft px-1.5 py-px font-mono text-[10px] text-accent-text"
+										>
+											{f}
+										</span>
+									{/each}
 									{#if r.resolution}
 										<span class="rounded-sm bg-bg-card px-1.5 py-px font-mono text-[10px] text-fg-muted">
 											{r.resolution}
@@ -499,6 +597,16 @@
 							>
 								{fmtAge(r.published_at)}
 							</td>
+							{#if scored}
+								<td
+									class={cn(
+										"whitespace-nowrap px-3 py-2.5 text-right font-mono text-[11.5px] tabular font-medium",
+										scoreClass(r.score ?? 0),
+									)}
+								>
+									{r.score ?? 0}
+								</td>
+							{/if}
 							<td
 								class="whitespace-nowrap px-3 py-2.5 text-right font-mono text-[11.5px] tabular text-fg-muted"
 							>
