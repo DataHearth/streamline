@@ -124,3 +124,72 @@ var _ = Describe("CompareResolutions", Label("unit", "quality"), func() {
 		Expect(quality.CompareResolutions("360p", "")).To(Equal(0))
 	})
 })
+
+var _ = Describe("ReplacesFile", Label("unit", "quality"), func() {
+	var p quality.Profile
+	BeforeEach(func() {
+		remux, err := quality.NewFormat("remux", []quality.Condition{
+			{
+				Type:     quality.ConditionReleaseTitle,
+				Pattern:  `(?i)\bremux\b`,
+				Required: true,
+			},
+		})
+		Expect(err).NotTo(HaveOccurred())
+		p = quality.Profile{
+			MinResolution: "720p", MaxResolution: "1080p", UpgradeAllowed: true,
+			Formats: []quality.ScoredFormat{{Format: remux, Score: 200}},
+		}
+	})
+
+	ctxFor := func(title string) quality.ReleaseContext {
+		return quality.ReleaseContext{Title: title, Resolution: "1080p"}
+	}
+
+	It("replaces a plain file with a higher-scoring release", func() {
+		Expect(quality.ReplacesFile(p,
+			ctxFor("Show.S01E01.1080p.WEB-DL.x264-GRP"),
+			ctxFor("Show.S01E01.1080p.BluRay.REMUX.x264-GRP"),
+		)).To(BeTrue())
+	})
+
+	It("leaves a file the release only ties", func() {
+		Expect(quality.ReplacesFile(p,
+			ctxFor("Show.S01E02.1080p.BluRay.REMUX.x264-GRP"),
+			ctxFor("Show.S01E02.1080p.BluRay.REMUX.x264-OTHER"),
+		)).To(BeFalse())
+	})
+
+	It("never replaces when the profile forbids upgrades", func() {
+		p.UpgradeAllowed = false
+		Expect(quality.ReplacesFile(p,
+			ctxFor("Show.S01E01.1080p.WEB-DL.x264-GRP"),
+			ctxFor("Show.S01E01.1080p.BluRay.REMUX.x264-GRP"),
+		)).To(BeFalse())
+	})
+
+	It("never replaces a file above the profile ceiling", func() {
+		existing := quality.ReleaseContext{
+			Title: "Show.S01E01.2160p.BluRay.REMUX.x265-GRP", Resolution: "2160p",
+		}
+		Expect(quality.ReplacesFile(p, existing,
+			ctxFor("Show.S01E01.1080p.BluRay.REMUX.x264-GRP"),
+		)).To(BeFalse())
+	})
+
+	It("replaces a file whose resolution is below the band", func() {
+		existing := quality.ReleaseContext{
+			Title: "Show.S01E01.480p.WEB-DL.x264-GRP", Resolution: "480p",
+		}
+		Expect(quality.ReplacesFile(p, existing,
+			ctxFor("Show.S01E01.1080p.BluRay.REMUX.x264-GRP"),
+		)).To(BeTrue())
+	})
+
+	It("never replaces a file whose resolution cannot be determined", func() {
+		Expect(quality.ReplacesFile(p,
+			quality.ReleaseContext{Title: "episode1.mkv"},
+			ctxFor("Show.S01E01.1080p.BluRay.REMUX.x264-GRP"),
+		)).To(BeFalse())
+	})
+})

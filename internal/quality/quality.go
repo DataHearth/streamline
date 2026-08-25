@@ -115,6 +115,17 @@ func (p Profile) UpgradableFrom(res string) bool {
 	return got > 0 && got <= resolutionRank(p.MaxResolution)
 }
 
+// ReplacesFile reports whether incoming should replace existing under p.
+// The band guard runs before the score comparison because a file below the
+// band and a file above it both score 0, and only the first is worth
+// replacing — see UpgradableFrom.
+func ReplacesFile(p Profile, existing, incoming ReleaseContext) bool {
+	if !p.UpgradeAllowed || !p.UpgradableFrom(existing.Resolution) {
+		return false
+	}
+	return p.ShouldUpgrade(Evaluate(p, existing).Score, Evaluate(p, incoming).Score)
+}
+
 // CompareResolutions orders two resolution buckets the way the profile band
 // does: negative when a sits below b, zero when they are the same bucket,
 // positive when a sits above it. An unrecognised value ranks below every
