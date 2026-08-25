@@ -108,6 +108,7 @@
 	"activity_evt_grabbed": "RÉCUPÉRÉ",
 	"activity_evt_import_failed": "ÉCHEC DE L'IMPORT",
 	"activity_evt_imported": "IMPORTÉ",
+	"activity_evt_searched": "RECHERCHÉ",
 	"activity_filter": "Filtrer l'activité",
 	"activity_filter_placeholder": "Filtrer par nom ou hash…",
 	"activity_filter_title_movie": "Filtrer par titre ou film…",

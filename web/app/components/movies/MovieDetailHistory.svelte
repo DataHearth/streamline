@@ -7,6 +7,7 @@
 		X,
 		GitBranch,
 		ShieldCheck,
+		Search,
 	} from "@lucide/svelte";
 	import { api, errorText } from "../../lib/api";
 	import { formatRelative, formatDateTime } from "../../lib/dates";
@@ -74,6 +75,12 @@
 			bg: "bg-status-wanted/15",
 			fg: "text-status-wanted",
 			label: i18n.activity_evt_drift_confirmed(),
+		},
+		searched: {
+			icon: Search,
+			bg: "bg-accent/15",
+			fg: "text-accent",
+			label: i18n.activity_evt_searched(),
 		},
 	};
 

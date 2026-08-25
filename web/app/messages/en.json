@@ -108,6 +108,7 @@
 	"activity_evt_grabbed": "GRABBED",
 	"activity_evt_import_failed": "IMPORT FAILED",
 	"activity_evt_imported": "IMPORTED",
+	"activity_evt_searched": "SEARCHED",
 	"activity_filter": "Filter activity",
 	"activity_filter_placeholder": "Filter name or hash…",
 	"activity_filter_title_movie": "Filter title or movie…",
