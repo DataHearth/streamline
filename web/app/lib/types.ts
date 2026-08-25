@@ -582,6 +582,48 @@ export type QualityProfileFull = {
 	allowed_codecs?: string[];
 };
 
+export type CustomFormatConditionType =
+	| "release_title"
+	| "resolution"
+	| "source"
+	| "release_group"
+	| "codec"
+	| "size"
+	| "seeders";
+
+// Only the fields its `type` reads are meaningful; the API omits the rest and
+// the editor keeps them around so switching a row's type back restores what
+// was typed. min_gb/max_gb of 0 mean "unbounded", not "0 GB".
+export type CustomFormatCondition = {
+	type: CustomFormatConditionType;
+	pattern?: string;
+	value?: string;
+	min_gb?: number;
+	max_gb?: number;
+	min?: number;
+	required?: boolean;
+	negate?: boolean;
+};
+
+export type CustomFormat = {
+	name: string;
+	// Set only on the shipped library, which cannot be edited or deleted.
+	builtin?: boolean;
+	conditions: CustomFormatCondition[];
+};
+
+export type CustomFormatTestSample = {
+	title: string;
+	// Bytes, as the API takes them — the editor asks for GB.
+	size?: number;
+	seeders?: number;
+};
+
+export type CustomFormatTestResult = {
+	matched: boolean;
+	conditions: { index: number; passed: boolean }[];
+};
+
 // "torznab" covers plain Torznab endpoints and Jackett (its /indexers/all
 // aggregate feed is standard Torznab). "prowlarr" uses Prowlarr's native JSON
 // search API, the only way to query all of Prowlarr's indexers at once.

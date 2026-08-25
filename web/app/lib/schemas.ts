@@ -66,6 +66,82 @@ export const qualityProfile = v.object({
 	allowed_codecs: v.optional(v.array(v.string()), []),
 });
 
+export const customFormatConditionType = v.picklist(
+	[
+		"release_title",
+		"resolution",
+		"source",
+		"release_group",
+		"codec",
+		"size",
+		"seeders",
+	] as const,
+	"Pick a condition type",
+);
+
+// Which fields a condition type actually reads. The editor keeps every field
+// on every row so a type switch is reversible, so the checks below have to be
+// scoped by type rather than run over the whole row.
+export const PATTERN_CONDITIONS = ["release_title", "release_group"] as const;
+export const VALUE_CONDITIONS = ["resolution", "source", "codec"] as const;
+
+// A pattern's *syntax* is deliberately not validated here. The backend compiles
+// Go RE2, which JS RegExp cannot stand in for: `(?i)` — the inline flag this
+// app's own help text recommends and every built-in format uses — is a syntax
+// error to `new RegExp`, so a local check rejected patterns the server accepts
+// and made every case-insensitive format un-editable and un-testable. The
+// server is the validator: the tester round-trips POST /custom-formats/test and
+// a save surfaces the 422.
+export const customFormatCondition = v.pipe(
+	v.object({
+		type: customFormatConditionType,
+		pattern: v.string(),
+		value: v.string(),
+		min_gb: v.number(),
+		max_gb: v.number(),
+		min: v.number(),
+		required: v.boolean(),
+		negate: v.boolean(),
+	}),
+	v.check(
+		(c) =>
+			!(PATTERN_CONDITIONS as readonly string[]).includes(c.type) ||
+			c.pattern.trim().length > 0,
+		"Pattern required",
+	),
+	v.check(
+		(c) =>
+			!(VALUE_CONDITIONS as readonly string[]).includes(c.type) ||
+			c.value.trim().length > 0,
+		"Value required",
+	),
+	v.check(
+		(c) => c.type !== "resolution" || ["720p", "1080p", "2160p"].includes(c.value),
+		"Pick a resolution",
+	),
+	v.check(
+		(c) => c.type !== "size" || c.min_gb > 0 || c.max_gb > 0,
+		"Set a minimum, a maximum, or both",
+	),
+	v.check(
+		(c) => c.type !== "size" || c.max_gb === 0 || c.max_gb >= c.min_gb,
+		"Maximum must not be below the minimum",
+	),
+	v.check((c) => c.type !== "seeders" || c.min > 0, "Minimum seeders required"),
+);
+
+export const customFormat = v.object({
+	name: v.pipe(
+		v.string(),
+		v.minLength(1, "Required"),
+		v.maxLength(64, "Too long"),
+	),
+	conditions: v.pipe(
+		v.array(customFormatCondition),
+		v.minLength(1, "Add at least one condition"),
+	),
+});
+
 const port = v.pipe(
 	v.number("Port required"),
 	v.integer(),

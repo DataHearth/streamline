@@ -5,6 +5,7 @@ import {
 	Download,
 	Cast,
 	Gauge,
+	Tags,
 	Tv,
 	Film,
 	Clock,
@@ -16,6 +17,7 @@ import { createQuery } from "@tanstack/svelte-query";
 import { auth } from "./auth.svelte";
 import { api } from "./api";
 import type {
+	CustomFormat,
 	DownloadClient,
 	Indexer,
 	MediaServer,
@@ -40,6 +42,7 @@ export const SETTINGS_TITLES: Record<string, () => string> = {
 	"/settings/general": () => i18n.settings_general(),
 	"/settings/advanced": () => i18n.settings_advanced(),
 	"/settings/quality-profiles": () => i18n.settings_quality_profiles(),
+	"/settings/custom-formats": () => i18n.settings_custom_formats(),
 	"/settings/series": () => i18n.settings_series(),
 	"/settings/media-probe": () => i18n.settings_media_probe(),
 	"/settings/indexers": () => i18n.settings_indexers(),
@@ -82,6 +85,11 @@ export function createSettingsNav(withCounts = true) {
 		queryFn: () => api<QualityProfileFull[]>("/quality-profiles"),
 		enabled: withCounts,
 	}));
+	const customFormats = createQuery<CustomFormat[]>(() => ({
+		queryKey: ["custom-formats"],
+		queryFn: () => api<CustomFormat[]>("/custom-formats"),
+		enabled: withCounts,
+	}));
 	const schedules = createQuery<ScheduleList>(() => ({
 		queryKey: ["schedules"],
 		queryFn: () => api<ScheduleList>("/schedules"),
@@ -120,6 +128,15 @@ export function createSettingsNav(withCounts = true) {
 						Icon: Gauge,
 						label: i18n.settings_quality_profiles(),
 						count: profiles.data?.length,
+					},
+					// Counts what the operator can act on: the shipped library is a
+					// constant, so including builtins would show the same 13 on every
+					// install and never move.
+					{
+						path: "/settings/custom-formats",
+						Icon: Tags,
+						label: i18n.settings_custom_formats(),
+						count: customFormats.data?.filter((f) => !f.builtin).length,
 					},
 					{
 						path: "/settings/series",
