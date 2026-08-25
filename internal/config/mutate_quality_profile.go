@@ -24,6 +24,9 @@ type QualityProfilePatch struct {
 	MinResolution       *string
 	UpgradeAllowed      *bool
 	AllowedCodecs       *[]string
+	Formats             *[]QualityProfileFormatScore
+	MinScore            *int
+	UpgradeUntilScore   *int
 }
 
 func AddQualityProfile(ctx context.Context, e QualityProfileEntry) error {
@@ -67,6 +70,15 @@ func UpdateQualityProfile(
 		}
 		if p.AllowedCodecs != nil {
 			e.AllowedCodecs = *p.AllowedCodecs
+		}
+		if p.Formats != nil {
+			e.Formats = *p.Formats
+		}
+		if p.MinScore != nil {
+			e.MinScore = *p.MinScore
+		}
+		if p.UpgradeUntilScore != nil {
+			e.UpgradeUntilScore = *p.UpgradeUntilScore
 		}
 		c.QualityProfiles[idx] = e
 		slog.InfoContext(ctx, "quality profile updated", "name", name)

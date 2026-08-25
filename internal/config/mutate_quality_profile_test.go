@@ -104,4 +104,75 @@ var _ = Describe("Quality profile CRUD", Label("unit", "config"), func() {
 			Expect(got.AllowedCodecs).To(Equal([]string{"hevc"}))
 		})
 	})
+
+	Describe("formats, min_score, upgrade_until_score", func() {
+		It("round-trips through update", func() {
+			ctx := context.Background()
+			Expect(config.AddQualityProfile(ctx, entry("scored"))).To(Succeed())
+
+			formats := []config.QualityProfileFormatScore{
+				{Name: "x265", Score: 100},
+			}
+			minScore := 50
+			upgradeUntil := 200
+			Expect(config.UpdateQualityProfile(ctx, "scored",
+				config.QualityProfilePatch{
+					Formats:           &formats,
+					MinScore:          &minScore,
+					UpgradeUntilScore: &upgradeUntil,
+				})).To(Succeed())
+
+			got, _ := config.ResolveQualityProfile("scored")
+			Expect(got.Formats).To(Equal(formats))
+			Expect(got.MinScore).To(Equal(50))
+			Expect(got.UpgradeUntilScore).To(Equal(200))
+		})
+
+		It(
+			"leaves formats, min_score, upgrade_until_score untouched when the patch omits them",
+			func() {
+				ctx := context.Background()
+				e := entry("scored")
+				e.Formats = []config.QualityProfileFormatScore{
+					{Name: "hdr", Score: 10},
+				}
+				e.MinScore = 5
+				e.UpgradeUntilScore = 20
+				Expect(config.AddQualityProfile(ctx, e)).To(Succeed())
+
+				pref := "1080p"
+				Expect(config.UpdateQualityProfile(
+					ctx,
+					"scored",
+					config.QualityProfilePatch{
+						PreferredResolution: &pref,
+					},
+				)).To(Succeed())
+
+				got, _ := config.ResolveQualityProfile("scored")
+				Expect(got.Formats).To(Equal(e.Formats))
+				Expect(got.MinScore).To(Equal(5))
+				Expect(got.UpgradeUntilScore).To(Equal(20))
+			},
+		)
+
+		It(
+			"rejects a patched format naming neither a built-in nor a user format",
+			func() {
+				ctx := context.Background()
+				Expect(config.AddQualityProfile(ctx, entry("scored"))).To(Succeed())
+
+				formats := []config.QualityProfileFormatScore{
+					{Name: "ghost", Score: 1},
+				}
+				Expect(config.UpdateQualityProfile(
+					ctx,
+					"scored",
+					config.QualityProfilePatch{
+						Formats: &formats,
+					},
+				)).To(HaveOccurred())
+			},
+		)
+	})
 })
