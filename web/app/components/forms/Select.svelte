@@ -21,7 +21,9 @@
 		};
 	}
 
-	type Option = { value: T; label: string };
+	// title is an optional tooltip shown on hover — used e.g. to surface a
+	// custom format's description without rebuilding the menu row layout.
+	type Option = { value: T; label: string; title?: string };
 
 	type Props = {
 		label?: string;
@@ -227,6 +229,7 @@
 						type="button"
 						role="option"
 						aria-selected={value === o.value}
+						title={o.title}
 						onclick={() => pick(o.value)}
 						class={cn(
 							"flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm transition-colors hover:bg-bg-hover",

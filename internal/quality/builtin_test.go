@@ -16,6 +16,11 @@ var _ = Describe("Builtins", Label("unit", "quality"), func() {
 			seen[f.Name] = true
 		}
 	})
+	It("gives every builtin a non-empty description", func() {
+		for _, f := range quality.Builtins() {
+			Expect(f.Description).NotTo(BeEmpty(), f.Name)
+		}
+	})
 	DescribeTable("matching",
 		func(name, title string, want bool) {
 			f, ok := quality.BuiltinByName(name)

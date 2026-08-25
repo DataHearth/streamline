@@ -2142,7 +2142,10 @@ type CustomFormat struct {
 	// Builtin True for the shipped format library. Built-in formats cannot be updated or deleted.
 	Builtin    *bool                   `json:"builtin,omitempty"`
 	Conditions []CustomFormatCondition `json:"conditions"`
-	Name       string                  `json:"name"`
+
+	// Description Human-readable explanation of what the format detects and why you'd score it. Only set on built-in formats; absent on user-defined ones.
+	Description *string `json:"description,omitempty"`
+	Name        string  `json:"name"`
 }
 
 // CustomFormatCondition defines model for CustomFormatCondition.

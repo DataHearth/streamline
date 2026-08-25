@@ -106,9 +106,14 @@
 	// keeping its name in the options is what lets the row still render its own
 	// value instead of reading as an empty select.
 	function optionsFor(picked: string[]) {
-		const known = (formats.data ?? []).map((f) => f.name);
-		const extra = picked.filter((n) => n && !known.includes(n));
-		return [...known, ...extra].map((n) => ({ value: n, label: n }));
+		const byName = new Map((formats.data ?? []).map((f) => [f.name, f]));
+		const known = [...byName.keys()];
+		const extra = picked.filter((n) => n && !byName.has(n));
+		return [...known, ...extra].map((n) => ({
+			value: n,
+			label: n,
+			title: byName.get(n)?.description,
+		}));
 	}
 
 	function toggleCodec(current: string[], value: string): string[] {

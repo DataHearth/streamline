@@ -12,8 +12,9 @@ type ReleaseContext struct {
 }
 
 type Format struct {
-	Name       string
-	Conditions []Condition
+	Name        string
+	Description string
+	Conditions  []Condition
 }
 
 // Matches implements Radarr custom-format semantics: every required

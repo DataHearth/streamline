@@ -5270,6 +5270,13 @@ components:
           description: >-
             True for the shipped format library. Built-in formats cannot
             be updated or deleted.
+        description:
+          type: string
+          readOnly: true
+          description: >-
+            Human-readable explanation of what the format detects and why
+            you'd score it. Only set on built-in formats; absent on
+            user-defined ones.
         conditions:
           type: array
           minItems: 1

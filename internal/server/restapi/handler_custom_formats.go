@@ -68,7 +68,19 @@ func customFormatConditionsFromEntries(
 	return out
 }
 
-func customFormatToAPI(e config.CustomFormatEntry, builtin bool) CustomFormat {
+// customFormatToAPI maps a user-defined config entry. User formats are
+// never builtin and never carry a description.
+func customFormatToAPI(e config.CustomFormatEntry) CustomFormat {
+	return customFormatToAPIWithDescription(e, false, "")
+}
+
+// customFormatToAPIWithDescription is customFormatToAPI plus the builtin
+// flag and a builtin's human-readable description. User formats never
+// carry one, so the empty string leaves CustomFormat.Description absent
+// rather than "".
+func customFormatToAPIWithDescription(
+	e config.CustomFormatEntry, builtin bool, description string,
+) CustomFormat {
 	conds := customFormatConditionsFromEntries(e.Conditions)
 	apiConds := make([]CustomFormatCondition, len(conds))
 	for i, c := range conds {
@@ -78,6 +90,10 @@ func customFormatToAPI(e config.CustomFormatEntry, builtin bool) CustomFormat {
 	if builtin {
 		b := true
 		out.Builtin = &b
+	}
+	if description != "" {
+		d := description
+		out.Description = &d
 	}
 	return out
 }
@@ -141,11 +157,13 @@ func (s *Server) ListCustomFormats(
 	builtins := quality.Builtins()
 	items := make([]CustomFormat, 0, len(builtins))
 	for _, f := range builtins {
-		items = append(items, customFormatToAPI(builtinEntry(f), true))
+		items = append(items, customFormatToAPIWithDescription(
+			builtinEntry(f), true, f.Description,
+		))
 	}
 	c := config.Get()
 	for _, e := range c.CustomFormats {
-		items = append(items, customFormatToAPI(e, false))
+		items = append(items, customFormatToAPI(e))
 	}
 	return ListCustomFormats200JSONResponse(items), nil
 }
@@ -155,7 +173,7 @@ func (s *Server) GetCustomFormat(
 ) (GetCustomFormatResponseObject, error) {
 	if f, ok := quality.BuiltinByName(request.Name); ok {
 		return GetCustomFormat200JSONResponse(
-			customFormatToAPI(builtinEntry(f), true),
+			customFormatToAPIWithDescription(builtinEntry(f), true, f.Description),
 		), nil
 	}
 	e, ok := config.FindCustomFormat(request.Name)
@@ -164,7 +182,7 @@ func (s *Server) GetCustomFormat(
 			NotFoundJSONResponse: errNotFound("custom format not found"),
 		}, nil
 	}
-	return GetCustomFormat200JSONResponse(customFormatToAPI(e, false)), nil
+	return GetCustomFormat200JSONResponse(customFormatToAPI(e)), nil
 }
 
 func (s *Server) CreateCustomFormat(
@@ -194,7 +212,7 @@ func (s *Server) CreateCustomFormat(
 			UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
 		}, nil
 	}
-	return CreateCustomFormat201JSONResponse(customFormatToAPI(e, false)), nil
+	return CreateCustomFormat201JSONResponse(customFormatToAPI(e)), nil
 }
 
 func (s *Server) UpdateCustomFormat(
@@ -228,7 +246,7 @@ func (s *Server) UpdateCustomFormat(
 			UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
 		}, nil
 	}
-	return UpdateCustomFormat200JSONResponse(customFormatToAPI(e, false)), nil
+	return UpdateCustomFormat200JSONResponse(customFormatToAPI(e)), nil
 }
 
 func (s *Server) DeleteCustomFormat(

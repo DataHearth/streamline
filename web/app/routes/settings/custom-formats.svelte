@@ -222,8 +222,11 @@
 								{i18n.cf_builtin_badge()}
 							</span>
 						</div>
-						<p class="mt-1 truncate text-[11px] text-fg-subtle">
-							{summary(f)}
+						<p
+							class="mt-1 line-clamp-2 text-[11px] text-fg-subtle"
+							title={summary(f)}
+						>
+							{f.description ?? summary(f)}
 						</p>
 					</div>
 				{/each}

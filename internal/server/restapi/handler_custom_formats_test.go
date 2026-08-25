@@ -57,10 +57,13 @@ var _ = Describe(
 					Expect(items[i].Name).To(Equal(b.Name))
 					Expect(items[i].Builtin).NotTo(BeNil())
 					Expect(*items[i].Builtin).To(BeTrue())
+					Expect(items[i].Description).NotTo(BeNil())
+					Expect(*items[i].Description).To(Equal(b.Description))
 				}
 				last := items[len(items)-1]
 				Expect(last.Name).To(Equal("my-format"))
 				Expect(last.Builtin).To(BeNil())
+				Expect(last.Description).To(BeNil())
 			})
 		})
 
@@ -76,9 +79,11 @@ var _ = Describe(
 				Expect(cf.Name).To(Equal("remux"))
 				Expect(cf.Builtin).NotTo(BeNil())
 				Expect(*cf.Builtin).To(BeTrue())
+				Expect(cf.Description).NotTo(BeNil())
+				Expect(*cf.Description).NotTo(BeEmpty())
 			})
 
-			It("returns a user format unflagged", func() {
+			It("returns a user format unflagged and without a description", func() {
 				configtest.SetupFile(customFormatOverride(map[string]any{
 					"name": "my-format",
 					"conditions": []map[string]any{
@@ -100,6 +105,7 @@ var _ = Describe(
 				var cf CustomFormat
 				Expect(json.NewDecoder(resp.Body).Decode(&cf)).To(Succeed())
 				Expect(cf.Builtin).To(BeNil())
+				Expect(cf.Description).To(BeNil())
 			})
 
 			It("returns 404 for an unknown name", func() {
