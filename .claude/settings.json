@@ -30,26 +30,13 @@
   },
   "enabledPlugins": {
     "superpowers@superpowers-marketplace": true,
-    "gopls-lsp@claude-plugins-official": true,
-    "static-analysis@trailofbits": true,
-    "differential-review@trailofbits": true,
-    "insecure-defaults@trailofbits": true,
-    "supply-chain-risk-auditor@trailofbits": true,
-    "sharp-edges@trailofbits": true,
-    "variant-analysis@trailofbits": true,
-    "semgrep-rule-creator@trailofbits": true
+    "gopls-lsp@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
     "obra/superpowers-marketplace": {
       "source": {
         "source": "github",
         "repo": "obra/superpowers-marketplace"
-      }
-    },
-    "trailofbits/skills": {
-      "source": {
-        "source": "github",
-        "repo": "trailofbits/skills"
       }
     }
   }
