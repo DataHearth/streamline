@@ -169,7 +169,8 @@ paths:
       summary: Search indexers for a movie
       description: |
         Triggers an interactive search across all enabled indexers for the
-        specified movie. Returns ranked results sorted by seeders.
+        specified movie. Returns ranked results sorted by quality-profile
+        score, ties broken by seeders.
       tags: [movies]
       responses:
         "200":

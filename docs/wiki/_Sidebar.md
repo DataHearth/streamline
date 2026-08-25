@@ -15,6 +15,7 @@
 - [Configuration Reference](Configuration-Reference)
 - [Authentication and SSO](Authentication-and-SSO)
 - [Quality Profiles and Naming](Quality-Profiles-and-Naming)
+- [Quality Profiles and Custom Formats](Quality-Profiles-and-Custom-Formats)
 - [Scheduled Jobs](Scheduled-Jobs)
 - [REST API](REST-API)
 - [Observability and Logging](Observability-and-Logging)

@@ -34,22 +34,25 @@ The consequence worth remembering: **anything the parser can't read, Streamline 
 
 ## Quality profiles
 
-A profile is three fields. There is no scoring, no ranked custom-format system, no preferred-words list.
+A profile's core is three fields, all resolution-driven:
 
 | Field | Meaning |
 | --- | --- |
-| `preferred_resolution` | What you want |
+| `preferred_resolution` | Hard ceiling of the accepted band |
 | `min_resolution` | Hard floor |
-| `upgrade_allowed` | Whether anything above the floor is acceptable |
+| `upgrade_allowed` | Whether a file already on disk can be replaced by a better release |
+
+Profiles also carry a custom-format scoring layer — matched formats, a minimum score, an upgrade cutoff — covered in full on [Quality Profiles and Custom Formats](Quality-Profiles-and-Custom-Formats). This page sticks to resolution and naming; that one covers "which release wins" and "when does Streamline replace a file you already have".
 
 Resolutions rank:
 
 | Resolution | Rank |
 | --- | --- |
 | *(unparseable)* | 0 |
-| `720p` | 1 |
-| `1080p` | 2 |
-| `2160p` / `4K` | 3 |
+| `480p` | 1 |
+| `720p` | 2 |
+| `1080p` | 3 |
+| `2160p` / `4K` | 4 |
 
 ```yaml
 quality_profiles:
@@ -79,28 +82,27 @@ Profiles are resolved **per item at search time**, not cached at add time — so
 
 ## The acceptance rule
 
-In full:
+The resolution part, in full:
 
 ```
 parsed = Parse(releaseTitle)
 
-if parsed.Resolution is empty          → REJECT
-if rank(parsed) == 0                   → REJECT
-if rank(parsed) < rank(min_resolution) → REJECT
-if not upgrade_allowed
-   and rank(parsed) != rank(preferred) → REJECT
-otherwise                              → ACCEPT
+if parsed.Resolution is empty              → REJECT
+if rank(parsed) == 0                       → REJECT
+if rank(parsed) < rank(min_resolution)     → REJECT
+if rank(parsed) > rank(preferred_resolution) → REJECT
+otherwise                                  → continue to custom-format scoring
 ```
 
-Three consequences that account for nearly every "why won't it grab this" question:
+Three consequences that account for most "why won't it grab this" questions:
 
 **1. No resolution in the title means rejection.** Not a downgrade, not a warning — a refusal.
 
-**2. `upgrade_allowed: false` rejects things *above* your preference too.** It means "exactly this resolution", not "at most this resolution". A 2160p release fails a 1080p-preferred profile with upgrades off.
+**2. `preferred_resolution` is a ceiling, not a target.** A release above it is rejected regardless of `upgrade_allowed` — that switch only governs whether an already-downloaded file can be *replaced*, not which resolutions are acceptable to grab in the first place. Everything from `min_resolution` through `preferred_resolution` is fair game.
 
 **3. With no profiles configured at all, everything is rejected.** `qualityFor` logs `no quality profile configured, rejecting every release` and returns a zero-value filter that nothing satisfies.
 
-Source and codec are parsed and stored, and are available for naming — but they are **not** part of the acceptance decision. There is currently no way to express "prefer BluRay over WEBRip" declaratively; use manual search when you want a specific release.
+A release that survives the resolution band is then scored against the profile's custom formats — that part, plus source/codec preference, upgrade behaviour and the whole scoring model, is [Quality Profiles and Custom Formats](Quality-Profiles-and-Custom-Formats).
 
 **Manual grabs bypass the profile entirely.** That's the escape hatch.
 

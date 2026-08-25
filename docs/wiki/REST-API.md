@@ -7,6 +7,7 @@ Streamline's API is the same one its own web UI uses — there's no privileged i
 - [Conventions](#conventions)
 - [Endpoint map](#endpoint-map)
 - [Media probe](#media-probe)
+- [Quality scoring](#quality-scoring)
 - [Worked examples](#worked-examples)
 - [Generating a client](#generating-a-client)
 
@@ -113,7 +114,7 @@ Everything database-backed (movies, series, requests, users, imports) uses numer
 
 ## Endpoint map
 
-111 paths. Grouped, with admin-only marked 🔒.
+115 paths. Grouped, with admin-only marked 🔒.
 
 ### Movies
 
@@ -170,13 +171,16 @@ Everything database-backed (movies, series, requests, users, imports) uses numer
 
 | Method | Path |
 | --- | --- |
-| `GET` `POST` | `/indexers` · `/download-clients` · `/media-servers` · `/quality-profiles` |
+| `GET` `POST` | `/indexers` · `/download-clients` · `/media-servers` · `/quality-profiles` · `/custom-formats` |
 | `GET` `DELETE` | `/{resource}/{name}` |
-| `PUT` | `/indexers/{name}` · `/download-clients/{name}` · `/quality-profiles/{name}` |
+| `PUT` | `/indexers/{name}` · `/download-clients/{name}` · `/quality-profiles/{name}` · `/custom-formats/{name}` |
 | `PATCH` | `/media-servers/{name}` |
 | `POST` | `/{resource}/test` — test an unsaved config |
 | `POST` | `/{resource}/{name}/test` — test a saved one |
+| `POST` | `/custom-formats/test` — evaluate a draft condition set against a sample release |
 | `GET` | `/media-servers/discover` — list libraries/sections |
+
+Built-in custom formats are listed alongside user-defined ones (`builtin: true`); `PUT`/`DELETE` against a built-in, or a delete of a format still scored by a quality profile, is `409`. See [Quality Profiles and Custom Formats](Quality-Profiles-and-Custom-Formats).
 
 ### Torrents 🔒 (built-in client)
 
@@ -284,6 +288,49 @@ api -X PATCH -d '{"enabled":false}' "$SL/api/v1/config/ffmpeg"
 `found` and `resolved_path` are derived from the current process's live prober, not the config file — read-only, sending them in the `PATCH` body has no effect. `path` only takes effect on the next restart, since the prober is built once at boot: a `PATCH` that changes it comes back with `restart_required: true`, and `found` in that same response still describes the old path. Re-sending the path it already has changes nothing and does not raise the flag.
 
 **Import verification** reads the probe result before an import happens: `library.probe.always_ask` and `library.probe.min_duration_ratio` (via `GET`/`PATCH /config/library`) and `allowed_codecs` on a quality profile decide whether a finished download is imported or [held](#resolving-a-held-download) for a decision. See [Configuration Reference](Configuration-Reference#import-verification) for the checks.
+
+---
+
+## Quality scoring
+
+Full mental model, condition types and the built-in format library: [Quality Profiles and Custom Formats](Quality-Profiles-and-Custom-Formats). This section is the API shape only.
+
+**`QualityProfile`** gained four fields alongside the pre-existing `preferred_resolution`/`min_resolution`/`upgrade_allowed`/`allowed_codecs`:
+
+```json
+{
+  "name": "default",
+  "preferred_resolution": "2160p",
+  "min_resolution": "1080p",
+  "upgrade_allowed": true,
+  "formats": [
+    { "name": "x265", "score": 100 },
+    { "name": "scene-junk", "score": -1000 }
+  ],
+  "min_score": 0,
+  "upgrade_until_score": 500
+}
+```
+
+`formats[].name` accepts either a built-in name or a `custom_formats` entry name; an unresolvable name is `422`. `min_score` is **omitted from the response when it's `0`** — the handler only sets the field when the value is non-zero (`*int`), not a signal it's unset; absent reads as `0`.
+
+**Browse-releases responses** (`POST /movies/{id}/search`, the series browse endpoints) annotate each `SearchResult` with the item's own profile:
+
+```json
+{
+  "title": "Movie.Title.2024.2160p.UHD.BluRay.REMUX-GROUP",
+  "seeders": 40,
+  "score": 300,
+  "rejected": false,
+  "matched_formats": ["remux", "hdr"]
+}
+```
+
+Results are sorted `score` descending, ties broken by seeders — not by seeders alone. `rejected: true` releases (resolution outside the profile band, or score below `min_score`) are still returned with a `reject_reason`, so an operator can grab one deliberately; `score`/`rejected`/`reject_reason`/`matched_formats` are all ignored if sent back on a grab request body.
+
+**`MediaFile.file_score`** is the file's computed score against its movie's current profile — **movie detail responses only**, omitted from list responses same as the rest of that eager-loaded shape. A file outside the profile's band, or below `min_score`, reports `file_score: 0` — the same number the automatic-upgrade decision reads, and there's no separate `rejected` flag on a file. The key is absent entirely when no quality profile is configured at all. `Episode` carries no `file_score` — episode upgrades aren't built yet (see the wiki page).
+
+**`/custom-formats/test`** evaluates an unsaved condition set against a synthetic sample — `POST /api/v1/custom-formats/test` with `{conditions, sample: {title, size, seeders}}`. Worked example: [Quality Profiles and Custom Formats § The tester](Quality-Profiles-and-Custom-Formats#the-tester).
 
 ---
 

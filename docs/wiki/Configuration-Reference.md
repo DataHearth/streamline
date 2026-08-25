@@ -9,7 +9,7 @@ Every configuration key, its default, and where it can be changed from.
 - [CLI](#cli)
 - [Reference](#reference)
   - [Top level](#top-level) · [server](#server) · [auth](#auth) · [library](#library) · [schedules](#schedules) · [metadata](#metadata) · [ffmpeg](#ffmpeg) · [log](#log) · [otel](#otel) · [events](#events)
-  - [media_server](#media_server) · [download_clients](#download_clients) · [indexers](#indexers) · [quality_profiles](#quality_profiles)
+  - [media_server](#media_server) · [download_clients](#download_clients) · [indexers](#indexers) · [quality_profiles](#quality_profiles) · [custom_formats](#custom_formats)
 
 ---
 
@@ -52,7 +52,7 @@ Prefix `STREAMLINE_`. **A double underscore (`__`) is the path separator; a sing
 | `otel.endpoint` | `STREAMLINE_OTEL__ENDPOINT` |
 | `library.import_mode` | `STREAMLINE_LIBRARY__IMPORT_MODE` |
 
-Arrays (`indexers`, `download_clients`, `auth.oidc`, `quality_profiles`) can't be expressed sensibly as environment variables. Put them in the file and use [`_file` secret references](#secrets) for the sensitive parts.
+Arrays (`indexers`, `download_clients`, `auth.oidc`, `quality_profiles`, `custom_formats`) can't be expressed sensibly as environment variables. Put them in the file and use [`_file` secret references](#secrets) for the sensitive parts.
 
 One non-prefixed variable is also read: **`STREAMLINE_PUBLIC_URL`** sets the canonical external base URL, used for OIDC redirect URIs and invite links. Without it, Streamline derives a base from `http://<server.host>:<server.port>`.
 
@@ -352,11 +352,23 @@ Built-in engine only (ignored for external clients):
 | Field | Required | Notes |
 | --- | --- | --- |
 | `name` | ✅ | Referenced by `quality_default_profile` and per-title |
-| `preferred_resolution` | ✅ | `720p` \| `1080p` \| `2160p` |
-| `min_resolution` | ✅ | Same set |
-| `upgrade_allowed` | | See [Quality Profiles and Naming](Quality-Profiles-and-Naming) |
+| `preferred_resolution` | ✅ | `720p` \| `1080p` \| `2160p` — hard ceiling of the accepted band |
+| `min_resolution` | ✅ | Same set — hard floor |
+| `upgrade_allowed` | | Whether a file already on disk can be replaced by a higher-scoring release. See [Quality Profiles and Naming](Quality-Profiles-and-Naming) |
 | `allowed_codecs` | | ffprobe codec names (`hevc`, `av1`, `h264`, `vp9`, `mpeg2video`). Empty — the default — means any codec. A finished download whose video codec isn't listed is [held](#import-verification) for a decision rather than imported |
+| `formats` | | `[{name, score}]` — custom formats (built-in or `custom_formats`) scored for this profile. See [Quality Profiles and Custom Formats](Quality-Profiles-and-Custom-Formats) |
+| `min_score` | | Minimum total matched-format score a release needs to be grabbed. Default `0` |
+| `upgrade_until_score` | | Stop upgrading once the current file's score reaches this value. `0` (default) means no cap |
 
-One profile named `default` (1080p/1080p, upgrades allowed) ships out of the box.
+One profile named `default` (1080p/1080p, upgrades allowed, no formats) ships out of the box.
 
 > **Configuring more than nothing:** with *no* profiles configured at all, every release is rejected. Grabbing at an unknown quality bar is treated as worse than grabbing nothing.
+
+### custom_formats
+
+| Field | Required | Notes |
+| --- | --- | --- |
+| `name` | ✅ | Must not collide with a built-in format name |
+| `conditions` | ✅ | At least one `{type, ...}` condition. Full type reference and matching semantics: [Quality Profiles and Custom Formats](Quality-Profiles-and-Custom-Formats) |
+
+Thirteen formats (x265, x264, av1, remux, hdr, resolution tiers, scene-junk/bad-group, re-encode, multi-audio, dubbed) ship compiled into the binary and need no config entry — `custom_formats` is only for your own.
