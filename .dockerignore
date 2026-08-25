@@ -12,6 +12,7 @@
 # Frontend
 !package.json
 !pnpm-lock.yaml
+!pnpm-workspace.yaml
 !routify.config.js
 !web/
 
