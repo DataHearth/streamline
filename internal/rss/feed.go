@@ -209,8 +209,10 @@ func (s *FeedScanner) tryUpgrade(
 		}
 		return false
 	}
+	// Without the flag the importer refuses the transfer with ErrDestExists, so
+	// the upgrade this run just grabbed can never land: actionable, not noise.
 	if err := s.store.MarkDownloadRecordReplaceExisting(ctx, rec.ID); err != nil {
-		slog.WarnContext(ctx, "feed-scan: mark replace_existing failed",
+		slog.ErrorContext(ctx, "feed-scan: mark replace_existing failed",
 			"movie", m.Title, "record.id", rec.ID, "error", err)
 	}
 	s.markSearched(ctx, m)

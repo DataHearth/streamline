@@ -5,6 +5,10 @@ import (
 	"github.com/datahearth/streamline/internal/quality"
 )
 
+// ContextFromRelease scores an indexer result. Torznab leaves Seeders at 0
+// when the attribute is absent, which is indistinguishable from a real zero,
+// so unknown is reported as HasSeeders=false: a negated seeders condition
+// would otherwise score every silent indexer's results as confirmed-low.
 func ContextFromRelease(
 	title string,
 	size int64,
@@ -13,7 +17,7 @@ func ContextFromRelease(
 	p := library.Parse(title)
 	return quality.ReleaseContext{
 		Title: title, Size: size,
-		Seeders: int(seeders), HasSeeders: true,
+		Seeders: int(seeders), HasSeeders: seeders > 0,
 		Resolution: p.Resolution, Source: p.Source,
 		Group: p.Group, Codec: p.Codec,
 	}

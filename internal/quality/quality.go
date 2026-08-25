@@ -1,5 +1,7 @@
 package quality
 
+import "cmp"
+
 type ReleaseContext struct {
 	Title      string
 	Size       int64
@@ -111,6 +113,14 @@ func (p Profile) ShouldUpgrade(current, candidate int) bool {
 func (p Profile) UpgradableFrom(res string) bool {
 	got := resolutionRank(res)
 	return got > 0 && got <= resolutionRank(p.MaxResolution)
+}
+
+// CompareResolutions orders two resolution buckets the way the profile band
+// does: negative when a sits below b, zero when they are the same bucket,
+// positive when a sits above it. An unrecognised value ranks below every
+// known bucket, and two of them compare equal.
+func CompareResolutions(a, b string) int {
+	return cmp.Compare(resolutionRank(a), resolutionRank(b))
 }
 
 func resolutionRank(r string) uint8 {

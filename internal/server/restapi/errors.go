@@ -67,3 +67,17 @@ func errConnectionFailed(msg string) UnprocessableEntityJSONResponse {
 	code := codeConnectionFailed
 	return UnprocessableEntityJSONResponse{Message: msg, Code: &code}
 }
+
+// codeInvalidCondition marks a 422 whose message names the custom-format
+// condition that failed to compile. The SPA has no client-side regex gate — it
+// renders this message verbatim, which is the only place the offending
+// condition's index and the regexp package's diagnostic appear.
+const codeInvalidCondition = "invalid_condition"
+
+// errInvalidCondition is errUnprocessable for a condition-compile failure. The
+// message comes from quality.NewFormat — a condition index plus a regexp/enum
+// diagnostic, all of it derived from the caller's own request body.
+func errInvalidCondition(msg string) UnprocessableEntityJSONResponse {
+	code := codeInvalidCondition
+	return UnprocessableEntityJSONResponse{Message: msg, Code: &code}
+}

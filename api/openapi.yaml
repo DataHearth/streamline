@@ -1003,7 +1003,11 @@ paths:
     post:
       operationId: createCustomFormat
       summary: Create a custom format
-      description: Creates a new user-defined custom format.
+      description: >-
+        Creates a new user-defined custom format. A condition that does not
+        compile — an uncompilable regex, an unknown type, a resolution outside
+        the known buckets — is rejected with 422 invalid_condition, whose
+        message names the offending condition and is safe to display verbatim.
       tags: [custom-formats]
       requestBody:
         $ref: "#/components/requestBodies/CreateCustomFormat"
@@ -1048,7 +1052,9 @@ paths:
       summary: Update a custom format
       description: >-
         Replaces a user-defined custom format's conditions. Built-in
-        formats cannot be updated.
+        formats cannot be updated. A condition that does not compile is
+        rejected with 422 invalid_condition, whose message names the offending
+        condition and is safe to display verbatim.
       tags: [custom-formats]
       requestBody:
         $ref: "#/components/requestBodies/CreateCustomFormat"
@@ -1097,7 +1103,10 @@ paths:
       description: >-
         Evaluates a draft (possibly unsaved) set of conditions against a
         synthetic release and reports which conditions matched. Used by the
-        create/edit form before the format exists.
+        create/edit form before the format exists. A condition that does not
+        compile is rejected with 422 invalid_condition, whose message names the
+        offending condition and is safe to display verbatim; the draft has no
+        name yet, so the message names only the condition's index.
       tags: [custom-formats]
       requestBody:
         $ref: "#/components/requestBodies/TestCustomFormat"
@@ -4330,7 +4339,8 @@ components:
           type: string
           description: |
             Stable machine-readable error code (e.g. last_admin,
-            self_delete_forbidden, email_exists). Present for domain errors
+            self_delete_forbidden, email_exists, connection_failed,
+            invalid_condition). Present for domain errors
             where the caller needs to branch on the specific reason; absent
             for generic errors where the message is sufficient.
 
@@ -5337,13 +5347,6 @@ components:
         matched:
           type: boolean
           description: Whether the format as a whole matches the sample.
-        score_context:
-          type: object
-          nullable: true
-          additionalProperties: true
-          description: >-
-            Reserved for future per-condition scoring detail; always null
-            in this release.
         conditions:
           type: array
           items:

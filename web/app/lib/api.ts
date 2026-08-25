@@ -75,6 +75,11 @@ export function errorText(err: unknown, fallback?: string): string {
 		// ("some of those values weren't accepted") blames credentials that are
 		// usually fine and hides the real cause.
 		if (code === "connection_failed" && err.message) return err.message;
+		// Same deal for a custom-format condition that would not compile: the
+		// form has no client-side regex gate, so this message — a condition
+		// index plus the regexp diagnostic, all derived from what was typed —
+		// is the only thing that says which condition is wrong and why.
+		if (code === "invalid_condition" && err.message) return err.message;
 		if (code && BY_CODE[code]) return BY_CODE[code]();
 		return byStatus(err.status);
 	}

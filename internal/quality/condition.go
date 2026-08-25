@@ -37,16 +37,15 @@ type Condition struct {
 func NewFormat(name string, conds []Condition) (Format, error) {
 	f := Format{Name: name, Conditions: make([]Condition, len(conds))}
 	for i, c := range conds {
+		where := conditionRef(name, i)
 		switch c.Type {
 		case ConditionReleaseTitle, ConditionReleaseGroup:
 			if c.Pattern == "" {
-				return Format{}, fmt.Errorf(
-					"format %q condition %d: pattern required", name, i)
+				return Format{}, fmt.Errorf("%s: pattern required", where)
 			}
 			re, err := regexp.Compile(c.Pattern)
 			if err != nil {
-				return Format{}, fmt.Errorf(
-					"format %q condition %d: %w", name, i, err)
+				return Format{}, fmt.Errorf("%s: %w", where, err)
 			}
 			c.re = re
 		case ConditionResolution:
@@ -54,22 +53,31 @@ func NewFormat(name string, conds []Condition) (Format, error) {
 			case "720p", "1080p", "2160p":
 			default:
 				return Format{}, fmt.Errorf(
-					"format %q condition %d: invalid resolution %q",
-					name, i, c.Value)
+					"%s: invalid resolution %q", where, c.Value)
 			}
 		case ConditionSource, ConditionCodec:
 			if c.Value == "" {
-				return Format{}, fmt.Errorf(
-					"format %q condition %d: value required", name, i)
+				return Format{}, fmt.Errorf("%s: value required", where)
 			}
 		case ConditionSize, ConditionSeeders:
 		default:
-			return Format{}, fmt.Errorf("format %q condition %d: %w %q",
-				name, i, errUnknownConditionType, c.Type)
+			return Format{}, fmt.Errorf(
+				"%s: %w %q", where, errUnknownConditionType, c.Type)
 		}
 		f.Conditions[i] = c
 	}
 	return f, nil
+}
+
+// conditionRef locates a condition in an error message. The format tester
+// compiles an unsaved draft that has no name yet, and a `format ""` prefix
+// shown to the operator quotes nothing — so an unnamed format is located by
+// its condition index alone.
+func conditionRef(name string, i int) string {
+	if name == "" {
+		return fmt.Sprintf("condition %d", i)
+	}
+	return fmt.Sprintf("format %q condition %d", name, i)
 }
 
 func (c Condition) eval(r ReleaseContext) bool {

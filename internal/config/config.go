@@ -477,6 +477,19 @@ func (c *Config) checkInvariants() error {
 		}
 	}
 	for _, p := range c.QualityProfiles {
+		// preferred_resolution is the band's hard ceiling (it becomes
+		// quality.Profile.MaxResolution), so a min above it leaves an empty
+		// band that rejects every release with a reason naming neither key.
+		if quality.CompareResolutions(p.MinResolution, p.PreferredResolution) > 0 {
+			errs = append(errs, fmt.Errorf(
+				"quality profile %q: min_resolution %q is above "+
+					"preferred_resolution %q, the band's ceiling — "+
+					"no release can satisfy both",
+				p.Name,
+				p.MinResolution,
+				p.PreferredResolution,
+			))
+		}
 		for _, fs := range p.Formats {
 			if quality.IsBuiltinName(fs.Name) {
 				continue

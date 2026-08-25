@@ -2201,9 +2201,6 @@ type CustomFormatTestResult struct {
 
 	// Matched Whether the format as a whole matches the sample.
 	Matched bool `json:"matched"`
-
-	// ScoreContext Reserved for future per-condition scoring detail; always null in this release.
-	ScoreContext *map[string]interface{} `json:"score_context,omitempty"`
 }
 
 // CustomFormatTestSample defines model for CustomFormatTestSample.
@@ -2375,7 +2372,8 @@ type EpisodeStatus string
 // Error defines model for Error.
 type Error struct {
 	// Code Stable machine-readable error code (e.g. last_admin,
-	// self_delete_forbidden, email_exists). Present for domain errors
+	// self_delete_forbidden, email_exists, connection_failed,
+	// invalid_condition). Present for domain errors
 	// where the caller needs to branch on the specific reason; absent
 	// for generic errors where the message is sufficient.
 	Code *string `json:"code,omitempty"`

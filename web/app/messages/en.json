@@ -983,7 +983,7 @@
 	"quality_formats_none": "No formats scored — every release totals 0.",
 	"quality_intro": "Resolution ranges Streamline accepts when grabbing releases.",
 	"quality_min_score": "Minimum score",
-	"quality_min_score_help": "Releases totalling less than this are never grabbed. 0 = no cap.",
+	"quality_min_score_help": "Releases totalling less than this are never grabbed — at 0, negative-scoring releases are still rejected.",
 	"quality_minimum_help": "Releases below this resolution are skipped.",
 	"quality_minimum_resolution": "Minimum resolution",
 	"quality_no_preference": "No preference",

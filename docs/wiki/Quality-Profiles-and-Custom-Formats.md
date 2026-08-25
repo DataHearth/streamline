@@ -103,6 +103,8 @@ quality_default_profile: default
 
 **`preferred_resolution` changed meaning.** It used to be the exact target when upgrades were off. It's now the ceiling of the accepted `min_resolution`..`preferred_resolution` band — resolution *preference* inside that band is expressed by scoring the built-in `resolution-*` formats instead. A release outside the band (too low, or above `preferred_resolution`) is rejected before any format is even evaluated.
 
+Because it is the ceiling, a `min_resolution` *above* `preferred_resolution` describes an empty band that rejects every release. Config validation refuses it outright rather than letting the profile look configured while grabbing nothing.
+
 ---
 
 ## The scoring mental model
@@ -161,7 +163,7 @@ curl -X POST -H "X-API-Key: $KEY" -H 'Content-Type: application/json' \
 { "matched": true, "conditions": [{ "index": 0, "passed": true }] }
 ```
 
-An empty or otherwise invalid `conditions` array is `422`.
+An empty `conditions` array is `422`. A condition that does not compile — an uncompilable regex, an unknown `type`, a resolution outside the three buckets — is `422` with `code: invalid_condition`, and the same code comes back from creating or updating a format. Its `message` names the offending condition ("condition 0: error parsing regexp: …") and the UI shows it verbatim, so it is the only place the regexp diagnostic appears.
 
 ---
 

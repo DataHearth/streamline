@@ -21,6 +21,18 @@ var _ = Describe("ContextFromRelease", Label("unit", "quality"), func() {
 		Expect(r.Codec).To(Equal("HEVC"))
 		Expect(r.Group).To(Equal("GRP"))
 	})
+
+	It("reports a seeder count of 0 as unknown, not as zero seeders", func() {
+		r := qualityctx.ContextFromRelease("Movie.2024.1080p.WEB", 1<<30, 0)
+		Expect(r.Seeders).To(Equal(0))
+		Expect(r.HasSeeders).To(BeFalse())
+	})
+
+	It("reports a single seeder as present", func() {
+		r := qualityctx.ContextFromRelease("Movie.2024.1080p.WEB", 1<<30, 1)
+		Expect(r.Seeders).To(Equal(1))
+		Expect(r.HasSeeders).To(BeTrue())
+	})
 })
 
 var _ = Describe("ContextFromFile", Label("unit", "quality"), func() {

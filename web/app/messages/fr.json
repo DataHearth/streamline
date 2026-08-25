@@ -983,7 +983,7 @@
 	"quality_formats_none": "Aucun format noté — chaque release totalise 0.",
 	"quality_intro": "Plages de résolution acceptées par Streamline lors des téléchargements.",
 	"quality_min_score": "Score minimum",
-	"quality_min_score_help": "Les releases totalisant moins ne sont jamais récupérées. 0 = aucune limite.",
+	"quality_min_score_help": "Les releases totalisant moins que cette valeur ne sont jamais récupérées — à 0, les releases au score négatif restent rejetées.",
 	"quality_minimum_help": "Les releases sous cette résolution sont ignorées.",
 	"quality_minimum_resolution": "Résolution minimale",
 	"quality_no_preference": "Aucune préférence",

@@ -152,7 +152,7 @@ var _ = Describe(
 				Expect(resp.StatusCode).To(Equal(http.StatusConflict))
 			})
 
-			It("returns 422 for an invalid condition", func() {
+			It("returns 422 invalid_condition naming the condition", func() {
 				body := `{"name": "my-format", "conditions": [` +
 					`{"type": "release_title"}]}`
 				resp, err := http.Post(
@@ -163,6 +163,14 @@ var _ = Describe(
 				Expect(err).NotTo(HaveOccurred())
 				defer resp.Body.Close()
 				Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+
+				var e Error
+				Expect(json.NewDecoder(resp.Body).Decode(&e)).To(Succeed())
+				Expect(e.Code).NotTo(BeNil())
+				Expect(*e.Code).To(Equal("invalid_condition"))
+				Expect(
+					e.Message,
+				).To(ContainSubstring(`format "my-format" condition 0`))
 			})
 
 			It("returns 403 for a non-admin caller", func() {
@@ -218,6 +226,40 @@ var _ = Describe(
 				resp := app.do(req)
 				defer resp.Body.Close()
 				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+			})
+
+			It("returns 422 invalid_condition naming the condition", func() {
+				configtest.SetupFile(customFormatOverride(map[string]any{
+					"name": "my-format",
+					"conditions": []map[string]any{
+						{
+							"type":     "release_title",
+							"pattern":  "(?i)mine",
+							"required": true,
+						},
+					},
+				}))
+
+				body := `{"name": "my-format", "conditions": [` +
+					`{"type": "release_title", "pattern": "("}]}`
+				req := app.req(
+					http.MethodPut,
+					"/api/v1/custom-formats/my-format",
+					"",
+					strings.NewReader(body),
+				)
+				req.Header.Set("Content-Type", "application/json")
+				resp := app.do(req)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+
+				var e Error
+				Expect(json.NewDecoder(resp.Body).Decode(&e)).To(Succeed())
+				Expect(e.Code).NotTo(BeNil())
+				Expect(*e.Code).To(Equal("invalid_condition"))
+				Expect(
+					e.Message,
+				).To(ContainSubstring(`format "my-format" condition 0`))
 			})
 
 			It("returns 409 when targeting a builtin name", func() {
@@ -330,18 +372,29 @@ var _ = Describe(
 				Expect(result.Conditions[1].Passed).To(BeFalse())
 			})
 
-			It("returns 422 for an invalid condition", func() {
-				body := `{"conditions": [{"type": "release_title"}],` +
-					` "sample": {"title": "Movie.2020.1080p"}}`
-				resp, err := http.Post(
-					app.srv.URL+"/api/v1/custom-formats/test",
-					"application/json",
-					strings.NewReader(body),
-				)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-				Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
-			})
+			It(
+				"returns 422 invalid_condition without an empty-name prefix",
+				func() {
+					body := `{"conditions": [{"type": "release_title"}],` +
+						` "sample": {"title": "Movie.2020.1080p"}}`
+					resp, err := http.Post(
+						app.srv.URL+"/api/v1/custom-formats/test",
+						"application/json",
+						strings.NewReader(body),
+					)
+					Expect(err).NotTo(HaveOccurred())
+					defer resp.Body.Close()
+					Expect(resp.StatusCode).
+						To(Equal(http.StatusUnprocessableEntity))
+
+					var e Error
+					Expect(json.NewDecoder(resp.Body).Decode(&e)).To(Succeed())
+					Expect(e.Code).NotTo(BeNil())
+					Expect(*e.Code).To(Equal("invalid_condition"))
+					Expect(e.Message).To(ContainSubstring("condition 0"))
+					Expect(e.Message).NotTo(ContainSubstring(`format ""`))
+				},
+			)
 
 			It(
 				"returns 422 for an empty conditions list instead of a vacuous match",

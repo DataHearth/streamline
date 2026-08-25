@@ -332,27 +332,16 @@ func (s *MissingSearcher) SearchOne(ctx context.Context, m *ent.Movie) error {
 	return nil
 }
 
-// scoreBest returns the highest-scoring result p accepts, ties broken by
-// seeders. Indexer order carries no quality signal, so the whole set is
-// scored rather than stopping at the first acceptable release.
+// scoreBest returns the head of rankAccepted — the highest-scoring result p
+// accepts, ties broken by seeders. Indexer order carries no quality signal, so
+// the whole set is scored rather than stopping at the first acceptable
+// release. Callers that want the fallbacks take rankAccepted directly.
 func scoreBest(
 	p quality.Profile,
 	results []indexer.SearchResult,
 ) (indexer.SearchResult, bool) {
-	bestIdx := -1
-	var bestScore int
-	for i, r := range results {
-		res := evaluateRelease(p, r)
-		if res.Rejected {
-			continue
-		}
-		if bestIdx < 0 || res.Score > bestScore ||
-			(res.Score == bestScore && r.Seeders > results[bestIdx].Seeders) {
-			bestIdx, bestScore = i, res.Score
-		}
+	if ranked := rankAccepted(p, results); len(ranked) > 0 {
+		return ranked[0], true
 	}
-	if bestIdx < 0 {
-		return indexer.SearchResult{}, false
-	}
-	return results[bestIdx], true
+	return indexer.SearchResult{}, false
 }

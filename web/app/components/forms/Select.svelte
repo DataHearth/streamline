@@ -21,9 +21,11 @@
 		};
 	}
 
-	// title is an optional tooltip shown on hover — used e.g. to surface a
-	// custom format's description without rebuilding the menu row layout.
-	type Option = { value: T; label: string; title?: string };
+	// hint renders as a muted second line under the option's label in the
+	// dropdown — used e.g. to surface a custom format's description. It is
+	// never shown in the closed (selected-value) trigger, which stays
+	// label-only.
+	type Option = { value: T; label: string; hint?: string };
 
 	type Props = {
 		label?: string;
@@ -229,18 +231,27 @@
 						type="button"
 						role="option"
 						aria-selected={value === o.value}
-						title={o.title}
+						title={o.hint}
 						onclick={() => pick(o.value)}
 						class={cn(
-							"flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm transition-colors hover:bg-bg-hover",
+							"flex w-full items-start justify-between gap-2 px-3 py-1.5 text-left text-sm transition-colors hover:bg-bg-hover",
 							value === o.value && "text-accent",
 						)}
 					>
-						<span class="min-w-0 flex-1">{o.label}</span>
+						<span class="min-w-0 flex-1">
+							<span class="block truncate">{o.label}</span>
+							{#if o.hint}
+								<span
+									class="mt-0.5 line-clamp-2 block text-xs font-normal text-fg-subtle"
+								>
+									{o.hint}
+								</span>
+							{/if}
+						</span>
 						{#if value === o.value}
 							<Check
 								size={14}
-								class="text-accent"
+								class="mt-0.5 shrink-0 text-accent"
 								aria-hidden="true"
 							/>
 						{/if}

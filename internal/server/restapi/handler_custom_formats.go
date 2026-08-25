@@ -196,6 +196,14 @@ func (s *Server) CreateCustomFormat(
 	e := customFormatFromAPI(CustomFormat{
 		Name: request.Body.Name, Conditions: request.Body.Conditions,
 	})
+	// Compiled here rather than left to config's own invariant check so the
+	// body carries the coded, condition-naming message the SPA renders
+	// verbatim, instead of the same error wrapped in a config-key path.
+	if _, err := e.ToFormat(); err != nil {
+		return CreateCustomFormat422JSONResponse{
+			UnprocessableEntityJSONResponse: errInvalidCondition(err.Error()),
+		}, nil
+	}
 
 	switch err := config.AddCustomFormat(ctx, e); {
 	case errors.Is(err, config.ErrCustomFormatExists),
@@ -226,6 +234,11 @@ func (s *Server) UpdateCustomFormat(
 	e := customFormatFromAPI(CustomFormat{
 		Name: request.Body.Name, Conditions: request.Body.Conditions,
 	})
+	if _, err := e.ToFormat(); err != nil {
+		return UpdateCustomFormat422JSONResponse{
+			UnprocessableEntityJSONResponse: errInvalidCondition(err.Error()),
+		}, nil
+	}
 
 	switch err := config.UpdateCustomFormat(ctx, request.Name, e); {
 	case errors.Is(err, config.ErrCustomFormatNotFound):
@@ -302,7 +315,7 @@ func (s *Server) TestCustomFormat(
 	f, err := e.ToFormat()
 	if err != nil {
 		return TestCustomFormat422JSONResponse{
-			UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
+			UnprocessableEntityJSONResponse: errInvalidCondition(err.Error()),
 		}, nil
 	}
 

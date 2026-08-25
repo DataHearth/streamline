@@ -105,3 +105,22 @@ var _ = Describe("UpgradableFrom", Label("unit", "quality"), func() {
 		Expect(q.UpgradableFrom("4K")).To(BeTrue())
 	})
 })
+
+var _ = Describe("CompareResolutions", Label("unit", "quality"), func() {
+	It("orders the buckets", func() {
+		Expect(quality.CompareResolutions("1080p", "720p")).To(BeNumerically(">", 0))
+		Expect(quality.CompareResolutions("720p", "1080p")).To(BeNumerically("<", 0))
+		Expect(
+			quality.CompareResolutions("2160p", "1080p"),
+		).To(BeNumerically(">", 0))
+	})
+	It("reports equal buckets as equal, 4K included", func() {
+		Expect(quality.CompareResolutions("1080p", "1080p")).To(Equal(0))
+		Expect(quality.CompareResolutions("4K", "2160p")).To(Equal(0))
+	})
+	It("ranks an unknown value below every known bucket", func() {
+		Expect(quality.CompareResolutions("", "480p")).To(BeNumerically("<", 0))
+		Expect(quality.CompareResolutions("360p", "720p")).To(BeNumerically("<", 0))
+		Expect(quality.CompareResolutions("360p", "")).To(Equal(0))
+	})
+})

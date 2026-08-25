@@ -112,7 +112,7 @@
 		return [...known, ...extra].map((n) => ({
 			value: n,
 			label: n,
-			title: byName.get(n)?.description,
+			hint: byName.get(n)?.description,
 		}));
 	}
 

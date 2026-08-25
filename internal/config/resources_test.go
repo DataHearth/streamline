@@ -94,6 +94,38 @@ var _ = Describe(
 	},
 )
 
+var _ = Describe(
+	"quality profile resolution band validation",
+	Label("unit", "config"),
+	func() {
+		It("rejects a min_resolution above preferred_resolution", func() {
+			c := configtest.Setup()
+			Expect(c.QualityProfiles).NotTo(BeEmpty())
+			c.QualityProfiles[0].MinResolution = "1080p"
+			c.QualityProfiles[0].PreferredResolution = "720p"
+
+			err := c.Validate()
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("min_resolution"))
+			Expect(err.Error()).To(ContainSubstring("preferred_resolution"))
+		})
+
+		It("accepts an equal min and preferred", func() {
+			c := configtest.Setup()
+			c.QualityProfiles[0].MinResolution = "1080p"
+			c.QualityProfiles[0].PreferredResolution = "1080p"
+			Expect(c.Validate()).To(Succeed())
+		})
+
+		It("accepts a min below preferred", func() {
+			c := configtest.Setup()
+			c.QualityProfiles[0].MinResolution = "720p"
+			c.QualityProfiles[0].PreferredResolution = "2160p"
+			Expect(c.Validate()).To(Succeed())
+		})
+	},
+)
+
 var _ = Describe("ResolveQualityProfile", Label("unit", "config"), func() {
 	BeforeEach(func() {
 		configtest.Setup(map[string]any{

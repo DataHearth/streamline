@@ -64,7 +64,8 @@ var builtins = []Format{
 		}),
 	mustFormat(
 		"scene-junk",
-		"Cam and telesync rips recorded in a theater — near-universally worth blocking.",
+		"Cam/telesync recordings, screeners and other low-quality "+
+			"pre-release rips — near-universally worth blocking.",
 		Condition{
 			Type:     ConditionReleaseTitle,
 			Pattern:  `(?i)\b(cam(rip)?|hdcam|hdts|telesync|ts[- .]?rip|telecine|dvdscr|screener|workprint)\b`,

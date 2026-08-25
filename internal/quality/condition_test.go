@@ -195,4 +195,19 @@ var _ = Describe("NewFormat validation", Label("unit", "quality"), func() {
 		}})
 		Expect(err).To(HaveOccurred())
 	})
+
+	It("locates the condition by name when the format has one", func() {
+		_, err := quality.NewFormat("t", []quality.Condition{{
+			Type: quality.ConditionReleaseTitle, Pattern: "([",
+		}})
+		Expect(err).To(MatchError(ContainSubstring(`format "t" condition 0`)))
+	})
+
+	It("omits the empty name prefix for an unnamed draft", func() {
+		_, err := quality.NewFormat("", []quality.Condition{{
+			Type: quality.ConditionReleaseTitle, Pattern: "([",
+		}})
+		Expect(err).To(MatchError(ContainSubstring("condition 0")))
+		Expect(err.Error()).NotTo(ContainSubstring("format"))
+	})
 })
