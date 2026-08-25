@@ -596,6 +596,7 @@ export type QualityProfileFull = {
 	preferred_resolution: Resolution;
 	min_resolution: Resolution;
 	upgrade_allowed: boolean;
+	replace_whole_season: boolean;
 	// ffprobe codec names ("hevc", "av1"). Empty means any codec.
 	allowed_codecs?: string[];
 	formats?: QualityProfileFormatScore[];

@@ -9,6 +9,7 @@
 		preferred_resolution: Resolution;
 		min_resolution: Resolution;
 		upgrade_allowed: boolean;
+		replace_whole_season: boolean;
 		allowed_codecs: string[];
 		formats: QualityProfileFormatScore[];
 		min_score: number;
@@ -394,6 +395,18 @@
 				onChange={(v) => field.handleChange(v)}
 				label={i18n.quality_allow_upgrades()}
 				description={i18n.quality_upgrades_help()}
+			/>
+		{/snippet}
+	</form.Field>
+
+	<form.Field name="replace_whole_season">
+		{#snippet children(field)}
+			<Checkbox
+				name={field.name}
+				checked={field.state.value}
+				onChange={(v) => field.handleChange(v)}
+				label={i18n.quality_replace_whole_season()}
+				description={i18n.quality_replace_whole_season_help()}
 			/>
 		{/snippet}
 	</form.Field>
