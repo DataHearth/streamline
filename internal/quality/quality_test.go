@@ -79,3 +79,29 @@ var _ = Describe("ShouldUpgrade", Label("unit", "quality"), func() {
 		Expect(q.ShouldUpgrade(0, 999)).To(BeFalse())
 	})
 })
+
+var _ = Describe("UpgradableFrom", Label("unit", "quality"), func() {
+	p := quality.Profile{MinResolution: "1080p", MaxResolution: "1080p"}
+
+	It("allows an in-band file", func() {
+		Expect(p.UpgradableFrom("1080p")).To(BeTrue())
+	})
+	It("allows a file below the band", func() {
+		Expect(p.UpgradableFrom("720p")).To(BeTrue())
+		Expect(p.UpgradableFrom("480p")).To(BeTrue())
+	})
+	It("refuses a file above the band", func() {
+		Expect(p.UpgradableFrom("2160p")).To(BeFalse())
+	})
+	It("refuses an unknown resolution", func() {
+		Expect(p.UpgradableFrom("")).To(BeFalse())
+		Expect(p.UpgradableFrom("360p")).To(BeFalse())
+	})
+	It("refuses everything under a profile with no band", func() {
+		Expect(quality.Profile{}.UpgradableFrom("1080p")).To(BeFalse())
+	})
+	It("treats 4K as its 2160p bucket", func() {
+		q := quality.Profile{MinResolution: "1080p", MaxResolution: "2160p"}
+		Expect(q.UpgradableFrom("4K")).To(BeTrue())
+	})
+})

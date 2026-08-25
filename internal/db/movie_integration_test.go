@@ -318,6 +318,59 @@ var _ = Describe("Movie filter + lookup", Label("integration", "db"), func() {
 		})
 	})
 
+	Describe("ListUpgradeCandidateMovies", func() {
+		It("returns monitored movies that have a file, with files loaded", func() {
+			withFile := seed("has-file", 2020, 1201, entmovie.StatusAvailable)
+			_, err := store.CreateMediaFile(ctx, CreateMediaFileParams{
+				Path:    "/media/has-file/has-file.mkv",
+				Size:    1234,
+				MovieID: withFile.ID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			seed("no-file", 2021, 1202, entmovie.StatusWanted)
+
+			items, err := store.ListUpgradeCandidateMovies(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(items).To(HaveLen(1))
+			Expect(items[0].Title).To(Equal("has-file"))
+			Expect(items[0].Edges.MediaFiles).To(HaveLen(1))
+			Expect(items[0].Edges.MediaFiles[0].Path).
+				To(Equal("/media/has-file/has-file.mkv"))
+		})
+
+		It("excludes a movie whose upgrade is already downloading", func() {
+			m := seed(
+				"downloading-with-file", 2020, 1204, entmovie.StatusDownloading,
+			)
+			_, err := store.CreateMediaFile(ctx, CreateMediaFileParams{
+				Path:    "/media/downloading/file.mkv",
+				Size:    42,
+				MovieID: m.ID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			items, err := store.ListUpgradeCandidateMovies(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(items).To(BeEmpty())
+		})
+
+		It("excludes unmonitored movies even when they have a file", func() {
+			m := seed("unmonitored-with-file", 2020, 1203, entmovie.StatusAvailable)
+			_, err := store.CreateMediaFile(ctx, CreateMediaFileParams{
+				Path:    "/media/unmonitored/file.mkv",
+				Size:    99,
+				MovieID: m.ID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			_, err = client.Movie.UpdateOneID(m.ID).SetMonitored(false).Save(ctx)
+			Expect(err).NotTo(HaveOccurred())
+
+			items, err := store.ListUpgradeCandidateMovies(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(items).To(BeEmpty())
+		})
+	})
+
 	Describe("ListMoviesStaleSince", func() {
 		It("returns movies last refreshed before cutoff", func() {
 			stale := seed("stale", 2020, 1101, entmovie.StatusAvailable)

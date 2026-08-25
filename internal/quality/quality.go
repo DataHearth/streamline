@@ -99,6 +99,19 @@ func (p Profile) ShouldUpgrade(current, candidate int) bool {
 	return candidate > current
 }
 
+// UpgradableFrom reports whether a file at resolution res may be replaced by a
+// higher-scoring release. In-band files qualify — their score is the whole
+// comparison. A file *below* the band qualifies too, and its Evaluate score of
+// 0 is honest: the band rejected it before any format was summed, which is
+// exactly the case an upgrade exists for. A file ABOVE the band, or one whose
+// resolution could not be determined, never qualifies: it scores 0 for the
+// same mechanical reason while being the better file, so replacing it deletes
+// what the profile was protecting.
+func (p Profile) UpgradableFrom(res string) bool {
+	got := resolutionRank(res)
+	return got > 0 && got <= resolutionRank(p.MaxResolution)
+}
+
 func resolutionRank(r string) uint8 {
 	switch r {
 	case "480p":

@@ -120,6 +120,25 @@ func (db *DB) ListWantedMovies(ctx context.Context) ([]*ent.Movie, error) {
 		All(ctx)
 }
 
+// ListUpgradeCandidateMovies returns every monitored movie that already has a
+// file on disk, with those files loaded. The rss feed scanner scores each
+// file against incoming releases to decide whether to grab an upgrade.
+func (db *DB) ListUpgradeCandidateMovies(
+	ctx context.Context,
+) ([]*ent.Movie, error) {
+	return db.client.Movie.Query().
+		Where(
+			movie.MonitoredEQ(true),
+			movie.HasMediaFiles(),
+			// A movie whose replacement is already in flight would be
+			// re-grabbed every tick, and each failed re-grab bumps
+			// grab_failures on a healthy movie.
+			movie.StatusNEQ(movie.StatusDownloading),
+		).
+		WithMediaFiles().
+		All(ctx)
+}
+
 // UpcomingReleases returns wanted movies whose digital_release_date falls in
 // [from, to), ordered by release date ascending. Used by the dashboard
 // calendar modal.

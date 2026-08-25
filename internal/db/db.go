@@ -183,6 +183,10 @@ type Store interface {
 		notSearchedSince time.Time,
 	) ([]*ent.Movie, error)
 	ListWantedMovies(ctx context.Context) ([]*ent.Movie, error)
+	// ListUpgradeCandidateMovies returns monitored movies that already have a
+	// file, with the files loaded — the feed scanner scores them to decide an
+	// upgrade grab.
+	ListUpgradeCandidateMovies(ctx context.Context) ([]*ent.Movie, error)
 	ListMoviesStaleSince(
 		ctx context.Context,
 		cutoff time.Time,

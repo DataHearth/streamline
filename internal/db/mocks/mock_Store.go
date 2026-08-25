@@ -8174,6 +8174,68 @@ func (_c *MockStore_ListUpcomingEpisodes_Call) RunAndReturn(run func(ctx context
 	return _c
 }
 
+// ListUpgradeCandidateMovies provides a mock function for the type MockStore
+func (_mock *MockStore) ListUpgradeCandidateMovies(ctx context.Context) ([]*ent.Movie, error) {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListUpgradeCandidateMovies")
+	}
+
+	var r0 []*ent.Movie
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) ([]*ent.Movie, error)); ok {
+		return returnFunc(ctx)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context) []*ent.Movie); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ent.Movie)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = returnFunc(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_ListUpgradeCandidateMovies_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListUpgradeCandidateMovies'
+type MockStore_ListUpgradeCandidateMovies_Call struct {
+	*mock.Call
+}
+
+// ListUpgradeCandidateMovies is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockStore_Expecter) ListUpgradeCandidateMovies(ctx any) *MockStore_ListUpgradeCandidateMovies_Call {
+	return &MockStore_ListUpgradeCandidateMovies_Call{Call: _e.mock.On("ListUpgradeCandidateMovies", ctx)}
+}
+
+func (_c *MockStore_ListUpgradeCandidateMovies_Call) Run(run func(ctx context.Context)) *MockStore_ListUpgradeCandidateMovies_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_ListUpgradeCandidateMovies_Call) Return(movies []*ent.Movie, err error) *MockStore_ListUpgradeCandidateMovies_Call {
+	_c.Call.Return(movies, err)
+	return _c
+}
+
+func (_c *MockStore_ListUpgradeCandidateMovies_Call) RunAndReturn(run func(ctx context.Context) ([]*ent.Movie, error)) *MockStore_ListUpgradeCandidateMovies_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListUserSessions provides a mock function for the type MockStore
 func (_mock *MockStore) ListUserSessions(ctx context.Context, userID uint32) ([]*ent.Session, error) {
 	ret := _mock.Called(ctx, userID)

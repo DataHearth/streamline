@@ -14,6 +14,7 @@ import (
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/otelx"
+	"github.com/datahearth/streamline/internal/quality"
 
 	"go.opentelemetry.io/otel/attribute"
 )
@@ -75,6 +76,7 @@ func (s *TVFeedScanner) Run(ctx context.Context) error {
 	}
 
 	index := buildEpisodeIndex(shows)
+	profiles := resolveShowProfiles(ctx, shows)
 	// grabbed tracks episode IDs already attempted this tick so a second indexer
 	// carrying the same release doesn't double-grab.
 	grabbed := make(map[uint32]struct{})
@@ -86,7 +88,7 @@ func (s *TVFeedScanner) Run(ctx context.Context) error {
 				"indexer", idx.Name, "error", err)
 			continue
 		}
-		matched += s.processItems(ctx, items, index, grabbed)
+		matched += s.processItems(ctx, items, index, profiles, grabbed)
 	}
 
 	span.SetAttributes(
@@ -102,6 +104,7 @@ func (s *TVFeedScanner) processItems(
 	ctx context.Context,
 	items []indexer.SearchResult,
 	index map[string]*wantedShow,
+	profiles map[string]quality.Profile,
 	grabbed map[uint32]struct{},
 ) int {
 	matched := 0
@@ -116,11 +119,12 @@ func (s *TVFeedScanner) processItems(
 		if ws == nil {
 			continue
 		}
-		if evaluateRelease(
-			qualityFor(ctx, ws.show.QualityProfile), item,
-		).Rejected {
+		if res := evaluateRelease(
+			profiles[ws.show.QualityProfile], item,
+		); res.Rejected {
 			slog.DebugContext(ctx, "tv feed-scan: quality rejected",
-				"show", ws.show.Title, "release", item.Title)
+				"show", ws.show.Title, "release", item.Title,
+				"reason", res.RejectReason)
 			continue
 		}
 		if parsed.SeasonPack {
@@ -295,4 +299,21 @@ func releaseShowKey(p library.ParseResult) string {
 		k = strings.TrimSuffix(k, fmt.Sprintf(" %d", p.AbsoluteNumber))
 	}
 	return strings.TrimSpace(k)
+}
+
+// resolveShowProfiles resolves each distinct profile name once per tick, for
+// the same reason resolveProfiles does on the movie side: a per-item lookup
+// recompiles every custom format's regex for every item in every feed.
+func resolveShowProfiles(
+	ctx context.Context,
+	shows []*ent.TVShow,
+) map[string]quality.Profile {
+	profiles := make(map[string]quality.Profile)
+	for _, show := range shows {
+		if _, ok := profiles[show.QualityProfile]; ok {
+			continue
+		}
+		profiles[show.QualityProfile] = qualityFor(ctx, show.QualityProfile)
+	}
+	return profiles
 }
