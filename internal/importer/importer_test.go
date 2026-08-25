@@ -659,6 +659,23 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 				DurationSec: 5400, Container: "matroska",
 			}
 		}
+		// proberFailingFor probes every file clean except basename, which reports
+		// ErrUnreadable — for asserting a hold is scoped to one bad file.
+		proberFailingFor := func(basename string) *Worker {
+			GinkgoHelper()
+			prober := mockffmpeg.NewMockProber(GinkgoT())
+			prober.EXPECT().Available().Return(true)
+			prober.EXPECT().Probe(mock.Anything, mock.Anything).
+				RunAndReturn(func(_ context.Context, path string) (*ffmpeg.Info, error) {
+					if filepath.Base(path) == basename {
+						return nil, ffmpeg.ErrUnreadable
+					}
+					return probed(1920, "h264"), nil
+				})
+			return NewWorker(Deps{
+				DB: storeMk, Library: libSvc, MediaServer: msMk, Prober: prober,
+			})
+		}
 
 		It("holds a movie whose file is below the claimed resolution", func() {
 			src := filepath.Join(tmp, "dl")
@@ -869,6 +886,8 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 			storeMk.EXPECT().
 				FindImportingDownloadRecordByID(mock.Anything, uint32(2)).
 				Return(rec, nil).Once()
+			storeMk.EXPECT().FindMediaFileByEpisodeID(mock.Anything, mock.Anything).
+				Return(nil, &ent.NotFoundError{}).Twice()
 			storeMk.EXPECT().
 				HoldDownloadRecord(mock.Anything, uint32(2), mock.MatchedBy(
 					func(rs []schema.HoldReason) bool {
@@ -878,6 +897,182 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 
 			Expect(wp.runImport(context.Background(), 2)).To(Succeed())
 		})
+
+		packProfileConfig := func() map[string]any {
+			return map[string]any{
+				"library": map[string]any{
+					"movie_path":    libDir,
+					"import_mode":   "copy",
+					"series_path":   libDir,
+					"series_naming": "{title}/{title} S{season}E{episode}.{ext}",
+				},
+				"quality_default_profile": "hd",
+				"quality_profiles": []map[string]any{{
+					"name":                 "hd",
+					"preferred_resolution": "1080p",
+					"min_resolution":       "720p",
+					"upgrade_allowed":      true,
+					"formats": []map[string]any{
+						{"name": "remux", "score": 200},
+					},
+				}},
+			}
+		}
+
+		It("season pack replaces only the episodes it outscores", func() {
+			configtest.Setup(packProfileConfig())
+			season, eps := buildShow()
+			src := filepath.Join(tmp, "pack-upgrades")
+			Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+			seedMediaFile(src, "Show.S01E01.1080p.BluRay.REMUX.x264-GRP.mkv")
+			seedMediaFile(src, "Show.S01E02.1080p.BluRay.REMUX.x264-GRP.mkv")
+			rec := episodeRecord(2, src, season, eps[0])
+			rec.ReplaceMode = downloadrecord.ReplaceModeUpgrades
+
+			storeMk.EXPECT().
+				FindImportingDownloadRecordByID(mock.Anything, uint32(2)).
+				Return(rec, nil).
+				Once()
+			// E01 holds a plain WEB-DL the pack's remux beats; E02 already holds one.
+			storeMk.EXPECT().FindMediaFileByEpisodeID(mock.Anything, eps[0].ID).
+				Return(&ent.MediaFile{
+					ID: 8,
+					Path: filepath.Join(
+						libDir,
+						"Show.S01E01.1080p.WEB-DL.x264-GRP.mkv",
+					),
+					Width: 1920,
+				}, nil).Once()
+			storeMk.EXPECT().FindMediaFileByEpisodeID(mock.Anything, eps[1].ID).
+				Return(&ent.MediaFile{
+					ID: 9,
+					Path: filepath.Join(
+						libDir,
+						"Show.S01E02.1080p.BluRay.REMUX.x264-GRP.mkv",
+					),
+					Width: 1920,
+				}, nil).Once()
+			// Only E01's row is cleared, and only E01 is re-recorded.
+			storeMk.EXPECT().
+				DeleteMediaFileAndRevertEpisode(mock.Anything, uint32(8), eps[0].ID).
+				Return(nil).Once()
+			storeMk.EXPECT().
+				RecordEpisodeImportSuccess(mock.Anything, mock.MatchedBy(
+					func(p db.RecordEpisodeImportSuccessParams) bool {
+						return p.EpisodeID == eps[0].ID
+					})).
+				Return(nil).Once()
+			storeMk.EXPECT().
+				MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
+				Return(nil).Once()
+			msMk.EXPECT().RefreshAll(mock.Anything, libDir).Return(nil).Once()
+
+			Expect(w.runImport(context.Background(), 2)).To(Succeed())
+		})
+
+		It("season pack holds only on files it planned to import", func() {
+			configtest.Setup(packProfileConfig())
+			season, eps := buildShow()
+			src := filepath.Join(tmp, "pack-hold-scope")
+			Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+			seedMediaFile(src, "Show.S01E01.1080p.BluRay.REMUX.x264-GRP.mkv")
+			seedMediaFile(src, "Show.S01E02.1080p.BluRay.REMUX.x264-GRP.mkv")
+			rec := episodeRecord(2, src, season, eps[0])
+			rec.ReplaceMode = downloadrecord.ReplaceModeUpgrades
+			// E02 is the corrupt one, and E02 is the episode already holding a
+			// remux — so nothing this import touches is bad.
+			wp := proberFailingFor("Show.S01E02.1080p.BluRay.REMUX.x264-GRP.mkv")
+
+			storeMk.EXPECT().
+				FindImportingDownloadRecordByID(mock.Anything, uint32(2)).
+				Return(rec, nil).
+				Once()
+			storeMk.EXPECT().FindMediaFileByEpisodeID(mock.Anything, eps[0].ID).
+				Return(&ent.MediaFile{
+					ID: 8,
+					Path: filepath.Join(
+						libDir,
+						"Show.S01E01.1080p.WEB-DL.x264-GRP.mkv",
+					),
+					Width: 1920,
+				}, nil).Once()
+			storeMk.EXPECT().FindMediaFileByEpisodeID(mock.Anything, eps[1].ID).
+				Return(&ent.MediaFile{
+					ID: 9,
+					Path: filepath.Join(
+						libDir,
+						"Show.S01E02.1080p.BluRay.REMUX.x264-GRP.mkv",
+					),
+					Width: 1920,
+				}, nil).Once()
+			storeMk.EXPECT().
+				DeleteMediaFileAndRevertEpisode(mock.Anything, uint32(8), eps[0].ID).
+				Return(nil).Once()
+			storeMk.EXPECT().
+				RecordEpisodeImportSuccess(mock.Anything, mock.Anything).
+				Return(nil).Once()
+			storeMk.EXPECT().
+				MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
+				Return(nil).Once()
+			msMk.EXPECT().RefreshAll(mock.Anything, libDir).Return(nil).Once()
+
+			// No HoldDownloadRecord expectation: the mock fails the spec if it fires.
+			Expect(wp.runImport(context.Background(), 2)).To(Succeed())
+		})
+
+		It(
+			"season pack leaves existing files alone when no profile resolves",
+			func() {
+				// quality_profiles is set to empty explicitly: the config loader
+				// otherwise defaults it to a built-in "default" profile, which
+				// would resolve and defeat the point of this spec.
+				configtest.Setup(map[string]any{
+					"library": map[string]any{
+						"movie_path":    libDir,
+						"import_mode":   "copy",
+						"series_path":   libDir,
+						"series_naming": "{title}/{title} S{season}E{episode}.{ext}",
+					},
+					"quality_profiles": []map[string]any{},
+				})
+				season, eps := buildShow()
+				src := filepath.Join(tmp, "pack-no-profile")
+				Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+				seedMediaFile(src, "Show.S01E01.1080p.BluRay.REMUX.x264-GRP.mkv")
+				seedMediaFile(src, "Show.S01E02.1080p.BluRay.REMUX.x264-GRP.mkv")
+				rec := episodeRecord(2, src, season, eps[0])
+				rec.ReplaceMode = downloadrecord.ReplaceModeUpgrades
+
+				storeMk.EXPECT().
+					FindImportingDownloadRecordByID(mock.Anything, uint32(2)).
+					Return(rec, nil).
+					Once()
+				storeMk.EXPECT().FindMediaFileByEpisodeID(mock.Anything, eps[0].ID).
+					Return(&ent.MediaFile{
+						ID: 8,
+						Path: filepath.Join(
+							libDir,
+							"Show.S01E01.1080p.WEB-DL.x264-GRP.mkv",
+						),
+						Width: 1920,
+					}, nil).Once()
+				storeMk.EXPECT().FindMediaFileByEpisodeID(mock.Anything, eps[1].ID).
+					Return(&ent.MediaFile{
+						ID: 9,
+						Path: filepath.Join(
+							libDir,
+							"Show.S01E02.1080p.BluRay.REMUX.x264-GRP.mkv",
+						),
+						Width: 1920,
+					}, nil).Once()
+
+				// No DeleteMediaFileAndRevertEpisode, no RecordEpisodeImportSuccess:
+				// the mock fails the spec if either fires with no profile resolved.
+				Expect(
+					w.runImport(context.Background(), 2),
+				).To(MatchError(ErrEpisodeHasFile))
+			},
+		)
 	})
 })
 

@@ -24,6 +24,8 @@ import (
 	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/otelx"
+	"github.com/datahearth/streamline/internal/quality"
+	"github.com/datahearth/streamline/internal/quality/qualityctx"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -435,6 +437,59 @@ func (w *Worker) replaceEpisodeFile(
 	return w.db.DeleteMediaFileAndRevertEpisode(ctx, mf.ID, episodeID)
 }
 
+// packFile is one pack member resolved against the library: which episode it
+// belongs to, what is already there, and whether this import will take it.
+type packFile struct {
+	path       string
+	size       int64
+	season     uint16
+	episode    *ent.Episode
+	existing   *ent.MediaFile
+	info       *ffmpeg.Info
+	probeErr   error
+	willImport bool
+}
+
+// takesPackFile reports whether this import replaces or fills the episode the
+// file belongs to. An episode with no file is always taken — the pack is
+// filling a gap. Under ReplaceModeUpgrades each episode is compared against
+// its own file, which is what lets one pack fill holes and upgrade what it
+// beats without touching anything it doesn't.
+func takesPackFile(
+	pf packFile,
+	mode downloadrecord.ReplaceMode,
+	profile quality.Profile,
+	hasProfile bool,
+) bool {
+	if pf.existing == nil {
+		return true
+	}
+	switch mode {
+	case downloadrecord.ReplaceModeAll:
+		return true
+	case downloadrecord.ReplaceModeUpgrades:
+		if !hasProfile {
+			return false
+		}
+		existing := qualityctx.ContextFromFile(
+			filepath.Base(pf.existing.Path), pf.existing.Size,
+			int(pf.existing.Width), pf.existing.VideoCodec,
+		)
+		// The probe wins over the filename when there is one — the same
+		// degrade path an ffmpeg-disabled install takes everywhere else.
+		width, codec := 0, ""
+		if pf.info != nil {
+			width, codec = int(pf.info.Width), pf.info.VideoCodec
+		}
+		incoming := qualityctx.ContextFromFile(
+			filepath.Base(pf.path), pf.size, width, codec,
+		)
+		return quality.ReplacesFile(profile, existing, incoming)
+	default:
+		return false
+	}
+}
+
 // importEpisodeRecord links a completed TV download to its episode(s). A
 // single-episode record imports the one file; a season-pack record (a
 // directory of multiple video files) matches each file to an episode and
@@ -488,16 +543,49 @@ func (w *Worker) importEpisodeRecord(
 		return w.importSingleEpisode(ctx, span, rec, show, season.Number, ep, libCfg)
 	}
 
-	// A pack is verified whole before anything moves: importing half of it and
-	// then holding would leave the season split across two states.
-	probed := make(map[string]*ffmpeg.Info, len(files))
-	var reasons []schema.HoldReason
+	profile, hasProfile := config.ResolveScoredProfile(show.QualityProfile)
+	plan := make([]packFile, 0, len(files))
 	for _, f := range files {
-		info, err := w.probeSource(ctx, f)
-		probed[f] = info
-		if !rec.VerificationBypassed {
+		pf := packFile{path: f}
+		parsed := library.Parse(filepath.Base(f))
+		pf.season, pf.episode = library.MatchEpisodeInSeason(
+			parsed, show.Edges.Seasons, anime,
+		)
+		if pf.episode == nil {
+			slog.WarnContext(ctx, "season pack file matched no episode",
+				"file", filepath.Base(f), "tvshow.id", show.ID)
+			continue
+		}
+		mf, err := w.db.FindMediaFileByEpisodeID(ctx, pf.episode.ID)
+		if err != nil && !ent.IsNotFound(err) {
+			slog.WarnContext(ctx, "season pack: media file lookup failed",
+				"episode.id", pf.episode.ID, "error", err)
+			continue
+		}
+		pf.existing = mf
+		if st, sErr := os.Stat(f); sErr == nil {
+			pf.size = st.Size()
+		} else {
+			slog.WarnContext(ctx, "season pack: stat failed",
+				"file", filepath.Base(f), "error", sErr)
+		}
+		pf.info, pf.probeErr = w.probeSource(ctx, f)
+		pf.willImport = takesPackFile(pf, rec.ReplaceMode, profile, hasProfile)
+		plan = append(plan, pf)
+	}
+
+	// Verified before anything moves, and scoped to what will move: a corrupt
+	// file belonging to an episode this import was never going to touch is not
+	// this record's problem.
+	var reasons []schema.HoldReason
+	if !rec.VerificationBypassed {
+		for _, pf := range plan {
+			if !pf.willImport {
+				continue
+			}
 			reasons = append(reasons, w.verdict(
-				f, rec.Title, info, err, show.Runtime, show.QualityProfile,
+				pf.path, rec.Title, pf.info, pf.probeErr,
+				show.Runtime, show.QualityProfile,
 			)...)
 		}
 	}
@@ -506,62 +594,48 @@ func (w *Worker) importEpisodeRecord(
 	}
 
 	matched, skippedExisting := 0, 0
-	for _, f := range files {
-		parsed := library.Parse(filepath.Base(f))
-		tSeason, target := library.MatchEpisodeInSeason(
-			parsed,
-			show.Edges.Seasons,
-			anime,
-		)
-		if target == nil {
-			slog.WarnContext(ctx, "season pack file matched no episode",
-				"file", filepath.Base(f), "tvshow.id", show.ID)
+	for _, pf := range plan {
+		if !pf.willImport {
+			skippedExisting++
+			slog.InfoContext(ctx, "season pack: leaving episode's file in place",
+				"episode.id", pf.episode.ID, "file", filepath.Base(pf.path))
 			continue
 		}
-		mf, err := w.db.FindMediaFileByEpisodeID(ctx, target.ID)
-		if err != nil && !ent.IsNotFound(err) {
-			slog.WarnContext(ctx, "season pack: media file lookup failed",
-				"episode.id", target.ID, "error", err)
-			continue
-		}
-		if mf != nil {
-			if rec.ReplaceMode == downloadrecord.ReplaceModeNone {
-				skippedExisting++
-				slog.InfoContext(
-					ctx,
-					"season pack: episode already has a file, skipping",
-					"episode.id",
-					target.ID,
-					"file",
-					filepath.Base(f),
-				)
-				continue
-			}
-			if rErr := w.replaceEpisodeFile(ctx, target.ID, mf); rErr != nil {
+		if pf.existing != nil {
+			if rErr := w.replaceEpisodeFile(
+				ctx,
+				pf.episode.ID,
+				pf.existing,
+			); rErr != nil {
 				slog.WarnContext(ctx, "season pack replace: clear existing failed",
-					"episode.id", target.ID, "error", rErr)
+					"episode.id", pf.episode.ID, "error", rErr)
 				continue
 			}
 		}
-		probeInfo := probed[f]
-		imported, err := w.lib.ImportEpisode(ctx, f, show, tSeason, target)
+		imported, err := w.lib.ImportEpisode(
+			ctx,
+			pf.path,
+			show,
+			pf.season,
+			pf.episode,
+		)
 		if err != nil {
 			slog.WarnContext(ctx, "season pack file import failed",
-				"file", filepath.Base(f), "error", err)
+				"file", filepath.Base(pf.path), "error", err)
 			continue
 		}
 		if err := w.db.RecordEpisodeImportSuccess(
 			ctx,
 			db.RecordEpisodeImportSuccessParams{
 				RecordID:  rec.ID,
-				EpisodeID: target.ID,
+				EpisodeID: pf.episode.ID,
 				File: db.MediaFileRow{
 					Path:         imported.Path,
 					Size:         imported.Size,
 					Quality:      imported.Parsed.Resolution,
 					Format:       imported.Parsed.Extension,
 					ReleaseGroup: imported.Parsed.Group,
-					Probe:        probeInfo,
+					Probe:        pf.info,
 				},
 			},
 		); err != nil {
