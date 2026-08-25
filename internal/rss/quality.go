@@ -1,75 +1,77 @@
 package rss
 
 import (
+	"cmp"
 	"context"
 	"log/slog"
+	"slices"
 
 	"github.com/datahearth/streamline/internal/config"
-	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/indexer"
+	"github.com/datahearth/streamline/internal/quality"
+	"github.com/datahearth/streamline/internal/quality/qualityctx"
 )
 
-// QualityConfig drives release filtering. It is resolved per item at search
-// time from the movie's or show's quality_profile, so a run picks up profile
-// edits and per-item overrides without a restart.
-type QualityConfig struct {
-	PreferredResolution string
-	MinResolution       string
-	UpgradeAllowed      bool
-}
-
-// qualityFor resolves a quality_profile name into a filter, falling back to
-// the configured default when the name is empty or unknown. With no profiles
-// configured at all it returns the zero value, which rejects every release —
+// qualityFor resolves a quality_profile name into a scored profile, falling
+// back to the configured default when the name is empty or unknown. It is
+// resolved per item at search time, so a run picks up profile edits and
+// per-item overrides without a restart. With no profiles configured at all it
+// returns the zero value, whose empty resolution band rejects every release —
 // grabbing at an unknown quality bar is worse than grabbing nothing.
-func qualityFor(ctx context.Context, name string) QualityConfig {
-	p, ok := config.ResolveQualityProfile(name)
+func qualityFor(ctx context.Context, name string) quality.Profile {
+	p, ok := config.ResolveScoredProfile(name)
 	if !ok {
 		slog.WarnContext(ctx,
 			"no quality profile configured, rejecting every release",
 			"quality_profile", name,
 		)
-		return QualityConfig{}
+		return quality.Profile{}
 	}
-	return QualityConfig{
-		PreferredResolution: p.PreferredResolution,
-		MinResolution:       p.MinResolution,
-		UpgradeAllowed:      p.UpgradeAllowed,
-	}
+	return p
 }
 
-// Accepts reports whether a release title meets the quality bar.
-// Unparseable titles are rejected (conservative).
-func (q QualityConfig) Accepts(releaseTitle string) bool {
-	parsed := library.Parse(releaseTitle)
-	if parsed.Resolution == "" {
-		return false
-	}
-
-	got := resolutionRank(parsed.Resolution)
-	minR := resolutionRank(q.MinResolution)
-	pref := resolutionRank(q.PreferredResolution)
-
-	// Unknown ranks as 0 — rejects vs any valid min (>=1) and vs any valid pref when upgrade disabled.
-	if got == 0 || got < minR {
-		return false
-	}
-	if !q.UpgradeAllowed && got != pref {
-		return false
-	}
-	return true
+// evaluateRelease scores one indexer result against p.
+func evaluateRelease(
+	p quality.Profile,
+	r indexer.SearchResult,
+) quality.Result {
+	return quality.Evaluate(
+		p,
+		qualityctx.ContextFromRelease(r.Title, r.Size, r.Seeders),
+	)
 }
 
-// resolutionRank maps a resolution string to a sortable uint8.
-// 0 = unknown, 1 = 720p, 2 = 1080p, 3 = 2160p/4K.
-func resolutionRank(r string) uint8 {
-	switch r {
-	case "720p":
-		return 1
-	case "1080p":
-		return 2
-	case "2160p", "4K":
-		return 3
-	default:
-		return 0
+// rankAccepted drops the results p rejects and returns the rest best-first:
+// highest score, ties broken by seeders. Callers walk the whole slice so a
+// grab that fails falls through to the next-best release instead of ending
+// the attempt.
+func rankAccepted(
+	p quality.Profile,
+	results []indexer.SearchResult,
+) []indexer.SearchResult {
+	type scored struct {
+		result indexer.SearchResult
+		score  int
 	}
+
+	accepted := make([]scored, 0, len(results))
+	for _, r := range results {
+		res := evaluateRelease(p, r)
+		if res.Rejected {
+			continue
+		}
+		accepted = append(accepted, scored{result: r, score: res.Score})
+	}
+	slices.SortStableFunc(accepted, func(a, b scored) int {
+		if c := cmp.Compare(b.score, a.score); c != 0 {
+			return c
+		}
+		return cmp.Compare(b.result.Seeders, a.result.Seeders)
+	})
+
+	ranked := make([]indexer.SearchResult, len(accepted))
+	for i, s := range accepted {
+		ranked[i] = s.result
+	}
+	return ranked
 }

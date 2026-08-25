@@ -250,6 +250,107 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 		})
 	})
 
+	When("several season packs clear the quality bar", func() {
+		It("grabs the highest-scoring pack, not the first listed", func() {
+			ep1 := &ent.Episode{ID: 11, Number: 1}
+			ep2 := &ent.Episode{ID: 12, Number: 2}
+			show := showWith(ep1, ep2)
+			show.QualityProfile = scoredProfile
+			expectEligible([]*ent.TVShow{show}, nil)
+
+			remuxPack := indexer.SearchResult{
+				Title:   "The.Black.Sea.S03.2160p.BluRay.REMUX.x265-GRP",
+				Seeders: 2,
+			}
+			indexerM.EXPECT().
+				SearchSeason(mock.Anything, []string{"The Black Sea"}, uint32(9001), uint16(3)).
+				Return([]indexer.SearchResult{
+					{Title: acceptablePack, Seeders: 500},
+					remuxPack,
+				}, nil).Once()
+			dlM.EXPECT().
+				GrabEpisode(mock.Anything, remuxPack, uint32(11)).
+				Return(&ent.DownloadRecord{}, nil).Once()
+			for _, id := range []uint32{11, 12} {
+				store.EXPECT().
+					SetEpisodeStatus(mock.Anything, id, episode.StatusDownloading).
+					Return(nil).Once()
+				store.EXPECT().
+					SetEpisodeLastSearchAt(mock.Anything, id, mock.AnythingOfType("time.Time")).
+					Return(nil).Once()
+			}
+
+			Expect(searcher.Run(ctx)).To(Succeed())
+		})
+
+		It("falls through to the next-best pack when the grab fails", func() {
+			ep1 := &ent.Episode{ID: 11, Number: 1}
+			ep2 := &ent.Episode{ID: 12, Number: 2}
+			show := showWith(ep1, ep2)
+			show.QualityProfile = scoredProfile
+			expectEligible([]*ent.TVShow{show}, nil)
+
+			remuxPack := indexer.SearchResult{
+				Title:   "The.Black.Sea.S03.2160p.BluRay.REMUX.x265-GRP",
+				Seeders: 2,
+			}
+			runnerUp := indexer.SearchResult{Title: acceptablePack, Seeders: 500}
+			indexerM.EXPECT().
+				SearchSeason(mock.Anything, []string{"The Black Sea"}, uint32(9001), uint16(3)).
+				Return([]indexer.SearchResult{runnerUp, remuxPack}, nil).Once()
+			dlM.EXPECT().
+				GrabEpisode(mock.Anything, remuxPack, uint32(11)).
+				Return(nil, context.DeadlineExceeded).Once()
+			dlM.EXPECT().
+				GrabEpisode(mock.Anything, runnerUp, uint32(11)).
+				Return(&ent.DownloadRecord{}, nil).Once()
+			for _, id := range []uint32{11, 12} {
+				store.EXPECT().
+					SetEpisodeStatus(mock.Anything, id, episode.StatusDownloading).
+					Return(nil).Once()
+				store.EXPECT().
+					SetEpisodeLastSearchAt(mock.Anything, id, mock.AnythingOfType("time.Time")).
+					Return(nil).Once()
+			}
+
+			Expect(searcher.Run(ctx)).To(Succeed())
+		})
+	})
+
+	When("several episode releases clear the quality bar", func() {
+		It("grabs the highest-scoring release, not the first listed", func() {
+			ep1 := &ent.Episode{ID: 11, Number: 1}
+			show := showWith(ep1)
+			show.QualityProfile = scoredProfile
+			expectEligible([]*ent.TVShow{show}, nil)
+
+			remuxEp := indexer.SearchResult{
+				Title:   "The.Black.Sea.S03E01.2160p.BluRay.REMUX.x265-GRP",
+				Seeders: 2,
+			}
+			indexerM.EXPECT().
+				SearchEpisode(mock.Anything, []string{"The Black Sea"}, uint32(9001), uint16(3), uint16(1)).
+				Return([]indexer.SearchResult{
+					{Title: acceptableEp, Seeders: 500},
+					remuxEp,
+				}, nil).Once()
+			dlM.EXPECT().
+				GrabEpisode(mock.Anything, remuxEp, uint32(11)).
+				Return(&ent.DownloadRecord{}, nil).Once()
+			store.EXPECT().
+				SetEpisodeStatus(mock.Anything, uint32(11), episode.StatusDownloading).
+				Return(nil).Once()
+			store.EXPECT().
+				ResetEpisodeGrabFailures(mock.Anything, uint32(11)).
+				Return(nil).Once()
+			store.EXPECT().
+				SetEpisodeLastSearchAt(mock.Anything, uint32(11), mock.AnythingOfType("time.Time")).
+				Return(nil).Once()
+
+			Expect(searcher.Run(ctx)).To(Succeed())
+		})
+	})
+
 	When("the show pins a quality profile the release misses", func() {
 		It("rejects the release and only stamps last_search_at", func() {
 			ep1 := &ent.Episode{ID: 11, Number: 1}

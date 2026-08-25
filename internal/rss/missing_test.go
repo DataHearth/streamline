@@ -363,6 +363,63 @@ var _ = Describe("MissingSearcher.SearchOne", Label("unit", "rss"), func() {
 			To(MatchError(ContainSubstring("qbit down")))
 	})
 
+	Context("when several results clear the quality bar", func() {
+		It("grabs the highest-scoring release, not the first listed", func() {
+			movie.QualityProfile = scoredProfile
+			remux := indexer.SearchResult{
+				Title:   "Fight.Club.1999.2160p.BluRay.REMUX.x265-GROUP",
+				Seeders: 3,
+			}
+			indexerM.EXPECT().
+				SearchMovie(mock.AnythingOfType(ctxType), []string{"Fight Club", ""}, uint32(550)).
+				Return([]indexer.SearchResult{
+					{
+						Title:   "Fight.Club.1999.1080p.WEB-DL.x264-GROUP",
+						Seeders: 900,
+					},
+					remux,
+				}, nil).Once()
+			store.EXPECT().
+				SetMovieLastSearchAt(mock.AnythingOfType(ctxType), uint32(7), mock.AnythingOfType("time.Time")).
+				Return(nil).Once()
+			dlM.EXPECT().
+				Grab(mock.AnythingOfType(ctxType), remux, uint32(7)).
+				Return(&ent.DownloadRecord{}, nil).Once()
+			store.EXPECT().
+				ResetMovieGrabFailures(mock.AnythingOfType(ctxType), uint32(7)).
+				Return(nil).Once()
+
+			Expect(syncer.SearchOne(ctx, movie)).To(Succeed())
+		})
+
+		It("breaks a score tie on seeders, whatever the indexer order", func() {
+			seeded := indexer.SearchResult{
+				Title:   "Fight.Club.1999.1080p.BluRay.x264-OTHER",
+				Seeders: 400,
+			}
+			indexerM.EXPECT().
+				SearchMovie(mock.AnythingOfType(ctxType), []string{"Fight Club", ""}, uint32(550)).
+				Return([]indexer.SearchResult{
+					{
+						Title:   "Fight.Club.1999.1080p.BluRay.x264-GROUP",
+						Seeders: 5,
+					},
+					seeded,
+				}, nil).Once()
+			store.EXPECT().
+				SetMovieLastSearchAt(mock.AnythingOfType(ctxType), uint32(7), mock.AnythingOfType("time.Time")).
+				Return(nil).Once()
+			dlM.EXPECT().
+				Grab(mock.AnythingOfType(ctxType), seeded, uint32(7)).
+				Return(&ent.DownloadRecord{}, nil).Once()
+			store.EXPECT().
+				ResetMovieGrabFailures(mock.AnythingOfType(ctxType), uint32(7)).
+				Return(nil).Once()
+
+			Expect(syncer.SearchOne(ctx, movie)).To(Succeed())
+		})
+	})
+
 	Context("when the movie pins a quality profile", func() {
 		BeforeEach(func() { movie.QualityProfile = uhdProfile })
 
@@ -382,7 +439,7 @@ var _ = Describe("MissingSearcher.SearchOne", Label("unit", "rss"), func() {
 			Expect(syncer.SearchOne(ctx, movie)).To(MatchError(ErrNoEligibleRelease))
 		})
 
-		It("grabs the first release clearing the pinned floor", func() {
+		It("grabs the release clearing the pinned floor", func() {
 			uhd := indexer.SearchResult{
 				Title:   "Fight.Club.1999.2160p.BluRay.x265-GROUP",
 				Seeders: 5,

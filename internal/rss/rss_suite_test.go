@@ -28,11 +28,16 @@ var _ = BeforeEach(func() {
 	configtest.Setup(defaultRSSConfig())
 })
 
-const uhdProfile = "uhd"
+const (
+	uhdProfile    = "uhd"
+	scoredProfile = "scored"
+)
 
 // defaultRSSConfig returns the quality + library overlay the rss specs run
-// against: a 720p-floor default profile plus a 2160p-floor "uhd" profile so
-// per-item profile resolution is exercised against a real second profile.
+// against: a 720p-floor default profile, a 2160p-floor "uhd" profile so
+// per-item profile resolution is exercised against a real second profile, and
+// a "scored" profile whose band accepts both 1080p and 2160p so only the
+// remux score separates two otherwise-eligible releases.
 // An enabled download client is part of the baseline — the missing-search
 // passes skip themselves without one, so its absence would make every grab
 // spec silently test nothing.
@@ -65,6 +70,15 @@ func defaultRSSConfig() map[string]any {
 				"preferred_resolution": "2160p",
 				"min_resolution":       "2160p",
 				"upgrade_allowed":      true,
+			},
+			{
+				"name":                 scoredProfile,
+				"preferred_resolution": "2160p",
+				"min_resolution":       "1080p",
+				"upgrade_allowed":      true,
+				"formats": []map[string]any{
+					{"name": "remux", "score": 200},
+				},
 			},
 		},
 	}

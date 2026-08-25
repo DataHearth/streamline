@@ -10,6 +10,7 @@ import (
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/otelx"
+	"github.com/datahearth/streamline/internal/quality"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -169,11 +170,11 @@ func (s *EpisodeMissingSearcher) processSeason(
 	if len(wanted) == 0 {
 		return searchTally{}
 	}
-	quality := qualityFor(ctx, show.QualityProfile)
+	profile := qualityFor(ctx, show.QualityProfile)
 
 	// Prefer a season pack when the whole season (2+ episodes) is wanted.
 	if len(wanted) >= 2 &&
-		s.grabSeasonPack(ctx, show, se, titles, wanted, quality) {
+		s.grabSeasonPack(ctx, show, se, titles, wanted, profile) {
 		return searchTally{
 			episodes: len(wanted),
 			grabbed:  len(wanted),
@@ -183,23 +184,24 @@ func (s *EpisodeMissingSearcher) processSeason(
 
 	t := searchTally{episodes: len(wanted)}
 	for _, e := range wanted {
-		if s.grabEpisode(ctx, show, se, e, titles, quality) {
+		if s.grabEpisode(ctx, show, se, e, titles, profile) {
 			t.grabbed++
 		}
 	}
 	return t
 }
 
-// grabSeasonPack searches for a season pack and, on the first acceptable
-// result, grabs it against the first wanted episode and marks every wanted
-// episode in the season as downloading. Reports whether a pack was grabbed.
+// grabSeasonPack searches for a season pack and, working down the scored
+// packs best-first, grabs one against the first wanted episode and marks
+// every wanted episode in the season as downloading. Reports whether a pack
+// was grabbed.
 func (s *EpisodeMissingSearcher) grabSeasonPack(
 	ctx context.Context,
 	show *ent.TVShow,
 	se *ent.Season,
 	titles []string,
 	wanted []*ent.Episode,
-	quality QualityConfig,
+	profile quality.Profile,
 ) bool {
 	ctx, span := tracer.Start(ctx, "rss.tv_season_pack",
 		trace.WithAttributes(
@@ -215,10 +217,7 @@ func (s *EpisodeMissingSearcher) grabSeasonPack(
 			"show", show.Title, "season", se.Number, "error", err)
 		return false
 	}
-	for _, r := range packs {
-		if !quality.Accepts(r.Title) {
-			continue
-		}
+	for _, r := range rankAccepted(profile, packs) {
 		if _, err := s.downloads.GrabEpisode(ctx, r, wanted[0].ID); err != nil {
 			slog.WarnContext(ctx, "tv missing-search: season-pack grab failed",
 				"show", show.Title, "season", se.Number,
@@ -238,17 +237,17 @@ func (s *EpisodeMissingSearcher) grabSeasonPack(
 	return false
 }
 
-// grabEpisode searches for a single episode and grabs the first acceptable
-// result, bumping/resetting grab_failures accordingly. last_search_at is
-// stamped whenever the indexer responds so the cooldown counter advances.
-// Reports whether a release was grabbed.
+// grabEpisode searches for a single episode and grabs the best-scoring
+// acceptable result, bumping/resetting grab_failures accordingly.
+// last_search_at is stamped whenever the indexer responds so the cooldown
+// counter advances. Reports whether a release was grabbed.
 func (s *EpisodeMissingSearcher) grabEpisode(
 	ctx context.Context,
 	show *ent.TVShow,
 	se *ent.Season,
 	e *ent.Episode,
 	titles []string,
-	quality QualityConfig,
+	profile quality.Profile,
 ) bool {
 	results, err := s.indexers.SearchEpisode(
 		ctx, titles, show.TvdbID, se.Number, e.Number,
@@ -260,10 +259,7 @@ func (s *EpisodeMissingSearcher) grabEpisode(
 		return false
 	}
 
-	for _, r := range results {
-		if !quality.Accepts(r.Title) {
-			continue
-		}
+	for _, r := range rankAccepted(profile, results) {
 		if _, err := s.downloads.GrabEpisode(ctx, r, e.ID); err != nil {
 			slog.WarnContext(ctx, "tv missing-search: episode grab failed",
 				"show", show.Title, "season", se.Number, "episode", e.Number,

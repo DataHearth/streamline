@@ -18,6 +18,7 @@ import (
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/otelx"
+	"github.com/datahearth/streamline/internal/quality"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -236,8 +237,8 @@ func (s *MissingSearcher) Run(ctx context.Context) error {
 	return nil
 }
 
-// SearchOne runs one indexer query for movie m, applies the quality filter,
-// and dispatches a grab on the first acceptable result.
+// SearchOne runs one indexer query for movie m, scores every result against
+// its quality profile, and dispatches a grab on the highest-scoring one.
 //
 // Returns nil on a successful grab, ErrNoEligibleRelease when nothing matches
 // the quality bar, or a wrapped error on indexer / downloader failure.
@@ -281,7 +282,7 @@ func (s *MissingSearcher) SearchOne(ctx context.Context, m *ent.Movie) error {
 	}
 
 	resultCount = len(results)
-	match, ok := pickBest(qualityFor(ctx, m.QualityProfile), results)
+	match, ok := scoreBest(qualityFor(ctx, m.QualityProfile), results)
 	if e := s.db.SetMovieLastSearchAt(ctx, m.ID, time.Now()); e != nil {
 		slog.WarnContext(ctx,
 			"missing-search: failed to update last_search_at",
@@ -331,17 +332,27 @@ func (s *MissingSearcher) SearchOne(ctx context.Context, m *ent.Movie) error {
 	return nil
 }
 
-// pickBest returns the first result that passes the quality filter.
-// Results are assumed to be sorted by seeders desc by the caller
-// (indexer.Service already does this).
-func pickBest(
-	quality QualityConfig,
+// scoreBest returns the highest-scoring result p accepts, ties broken by
+// seeders. Indexer order carries no quality signal, so the whole set is
+// scored rather than stopping at the first acceptable release.
+func scoreBest(
+	p quality.Profile,
 	results []indexer.SearchResult,
 ) (indexer.SearchResult, bool) {
-	for _, r := range results {
-		if quality.Accepts(r.Title) {
-			return r, true
+	bestIdx := -1
+	var bestScore int
+	for i, r := range results {
+		res := evaluateRelease(p, r)
+		if res.Rejected {
+			continue
+		}
+		if bestIdx < 0 || res.Score > bestScore ||
+			(res.Score == bestScore && r.Seeders > results[bestIdx].Seeders) {
+			bestIdx, bestScore = i, res.Score
 		}
 	}
-	return indexer.SearchResult{}, false
+	if bestIdx < 0 {
+		return indexer.SearchResult{}, false
+	}
+	return results[bestIdx], true
 }

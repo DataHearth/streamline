@@ -111,7 +111,7 @@ func (s *FeedScanner) processItems(
 		if _, already := grabbed[m.ID]; already {
 			continue
 		}
-		if !qualityFor(ctx, m.QualityProfile).Accepts(item.Title) {
+		if evaluateRelease(qualityFor(ctx, m.QualityProfile), item).Rejected {
 			slog.DebugContext(ctx, "feed-scan: quality rejected",
 				"movie", m.Title, "release", item.Title)
 			continue

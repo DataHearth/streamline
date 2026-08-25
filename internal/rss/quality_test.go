@@ -1,97 +1,190 @@
 package rss
 
 import (
+	"context"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	"github.com/datahearth/streamline/internal/indexer"
+	"github.com/datahearth/streamline/internal/quality"
 )
 
-var _ = Describe("QualityConfig.Accepts", Label("unit", "rss"), func() {
-	base := func() QualityConfig {
-		return QualityConfig{
-			PreferredResolution: "1080p",
-			MinResolution:       "720p",
-			UpgradeAllowed:      true,
-		}
+var _ = Describe("qualityFor", Label("unit", "rss"), func() {
+	var ctx context.Context
+
+	BeforeEach(func() { ctx = context.Background() })
+
+	accepts := func(profile, title string) bool {
+		return !evaluateRelease(
+			qualityFor(ctx, profile),
+			indexer.SearchResult{Title: title},
+		).Rejected
 	}
 
 	DescribeTable(
-		"upgrade_allowed=true (default config)",
+		"the default profile's band is min_resolution..preferred_resolution",
 		func(title string, want bool) {
-			Expect(base().Accepts(title)).To(Equal(want))
+			Expect(accepts("", title)).To(Equal(want))
 		},
 		Entry(
-			"1080p matches preferred",
-			"Fight.Club.1999.1080p.BluRay.x264-GROUP",
-			true,
-		),
-		Entry(
-			"720p at min accepted",
+			"720p sits on the floor",
 			"Fight.Club.1999.720p.BluRay.x264-GROUP",
 			true,
 		),
 		Entry(
-			"2160p above preferred accepted",
-			"Fight.Club.1999.2160p.BluRay.x265-GROUP",
+			"1080p sits on the ceiling",
+			"Fight.Club.1999.1080p.BluRay.x264-GROUP",
 			true,
+		),
+		Entry(
+			"2160p is above the ceiling",
+			"Fight.Club.1999.2160p.BluRay.x265-GROUP",
+			false,
 		),
 		Entry("unparseable title rejected", "some.random.garbage.title", false),
 	)
 
-	DescribeTable("MinResolution=1080p rejects anything lower",
-		func(title string, want bool) {
-			q := base()
-			q.MinResolution = "1080p"
-			Expect(q.Accepts(title)).To(Equal(want))
-		},
-		Entry("720p below min", "Fight.Club.1999.720p.BluRay.x264-GROUP", false),
-		Entry("1080p at min", "Fight.Club.1999.1080p.BluRay.x264-GROUP", true),
-		Entry("2160p above min", "Fight.Club.1999.2160p.BluRay.x265-GROUP", true),
-	)
-
 	DescribeTable(
-		"unknown configured resolutions rank as 0",
-		func(title, minRes, prefRes string, upgradeAllowed, want bool) {
-			q := base()
-			q.MinResolution = minRes
-			q.PreferredResolution = prefRes
-			q.UpgradeAllowed = upgradeAllowed
-			Expect(q.Accepts(title)).To(Equal(want))
-		},
-		Entry(
-			"unknown MinResolution: any known res ranks 1080p=2 >= 0 so accepted with upgrade",
-			"Fight.Club.1999.1080p.BluRay.x264-GROUP",
-			"1440p",
-			"1080p",
-			true,
-			true,
-		),
-		Entry(
-			"unknown PreferredResolution + upgrade off rejects any real res",
-			"Fight.Club.1999.1080p.BluRay.x264-GROUP",
-			"720p", "1440p", false, false),
-	)
-
-	DescribeTable(
-		"UpgradeAllowed=false, only preferred passes",
+		"a pinned profile narrows the band",
 		func(title string, want bool) {
-			q := base()
-			q.UpgradeAllowed = false
-			Expect(q.Accepts(title)).To(Equal(want))
+			Expect(accepts(uhdProfile, title)).To(Equal(want))
 		},
 		Entry(
-			"720p below preferred",
+			"720p below the floor",
 			"Fight.Club.1999.720p.BluRay.x264-GROUP",
 			false,
 		),
 		Entry(
-			"1080p equals preferred",
+			"1080p below the floor",
 			"Fight.Club.1999.1080p.BluRay.x264-GROUP",
-			true,
-		),
-		Entry(
-			"2160p above preferred",
-			"Fight.Club.1999.2160p.BluRay.x265-GROUP",
 			false,
 		),
+		Entry(
+			"2160p inside the band",
+			"Fight.Club.1999.2160p.BluRay.x265-GROUP",
+			true,
+		),
+	)
+
+	It("resolves an unknown name to the configured default", func() {
+		Expect(
+			accepts("no-such-profile", "Fight.Club.1999.1080p.BluRay.x264-GROUP"),
+		).
+			To(BeTrue())
+	})
+
+	// The zero profile is what qualityFor returns once nothing resolves. Its
+	// band is empty, so it must reject rather than wave everything through.
+	DescribeTable("the zero profile rejects every release",
+		func(title string) {
+			Expect(evaluateRelease(
+				quality.Profile{},
+				indexer.SearchResult{Title: title},
+			).Rejected).To(BeTrue())
+		},
+		Entry("720p", "Fight.Club.1999.720p.BluRay.x264-GROUP"),
+		Entry("1080p", "Fight.Club.1999.1080p.BluRay.x264-GROUP"),
+		Entry("2160p", "Fight.Club.1999.2160p.BluRay.x265-GROUP"),
+		Entry("unparseable", "some.random.garbage.title"),
 	)
 })
+
+var _ = Describe("rankAccepted", Label("unit", "rss"), func() {
+	It("orders accepted releases by score then seeders, dropping rejects", func() {
+		p := scoringTestProfile(0)
+		ranked := rankAccepted(p, []indexer.SearchResult{
+			{Title: "Movie.2024.1080p.WEB-DL.x264", Seeders: 5},
+			{Title: "Movie.2024.720p.WEB-DL.x264", Seeders: 900},
+			{Title: "Movie.2024.1080p.WEB-DL.x264-OTHER", Seeders: 50},
+			{Title: "Movie.2024.2160p.BluRay.REMUX.HDR", Seeders: 1},
+		})
+
+		titles := make([]string, len(ranked))
+		for i, r := range ranked {
+			titles[i] = r.Title
+		}
+		Expect(titles).To(Equal([]string{
+			"Movie.2024.2160p.BluRay.REMUX.HDR",
+			"Movie.2024.1080p.WEB-DL.x264-OTHER",
+			"Movie.2024.1080p.WEB-DL.x264",
+		}))
+	})
+})
+
+var _ = Describe("scoreBest", Label("unit", "rss"), func() {
+	It("picks the highest total, not the first acceptable", func() {
+		results := []indexer.SearchResult{
+			{Title: "Movie.2024.1080p.WEB-DL.x264", Seeders: 900},
+			{Title: "Movie.2024.2160p.BluRay.REMUX.HDR", Seeders: 10},
+		}
+
+		got, ok := scoreBest(scoringTestProfile(0), results)
+		Expect(ok).To(BeTrue())
+		Expect(got.Title).To(ContainSubstring("REMUX"))
+	})
+
+	It("breaks score ties by seeders", func() {
+		results := []indexer.SearchResult{
+			{Title: "Movie.2024.1080p.WEB-DL.x264", Seeders: 5},
+			{Title: "Movie.2024.1080p.WEB-DL.x264-OTHER", Seeders: 50},
+		}
+
+		got, ok := scoreBest(scoringTestProfile(0), results)
+		Expect(ok).To(BeTrue())
+		Expect(got.Seeders).To(Equal(uint32(50)))
+	})
+
+	It("returns false when every release is outside the band", func() {
+		results := []indexer.SearchResult{
+			{Title: "Movie.2024.720p.WEB-DL.x264", Seeders: 900},
+			{Title: "Movie.2024.DVDRip.x264", Seeders: 900},
+		}
+
+		_, ok := scoreBest(scoringTestProfile(0), results)
+		Expect(ok).To(BeFalse())
+	})
+
+	It("returns false when every release is below min_score", func() {
+		results := []indexer.SearchResult{
+			{Title: "Movie.2024.1080p.WEB-DL.x264", Seeders: 900},
+			{Title: "Movie.2024.2160p.WEB-DL.HDR", Seeders: 900},
+		}
+
+		_, ok := scoreBest(scoringTestProfile(250), results)
+		Expect(ok).To(BeFalse())
+	})
+
+	It("returns false for an empty result set", func() {
+		_, ok := scoreBest(scoringTestProfile(0), nil)
+		Expect(ok).To(BeFalse())
+	})
+})
+
+// scoringTestProfile is a 1080p..2160p band scoring remux 200 and HDR 100, so
+// a spec can tell a scored pick apart from a first-acceptable one.
+func scoringTestProfile(minScore int) quality.Profile {
+	GinkgoHelper()
+	remux, err := quality.NewFormat("remux", []quality.Condition{{
+		Type:     quality.ConditionReleaseTitle,
+		Pattern:  `(?i)\bremux\b`,
+		Required: true,
+	}})
+	Expect(err).NotTo(HaveOccurred())
+	hdr, err := quality.NewFormat("hdr", []quality.Condition{{
+		Type:     quality.ConditionReleaseTitle,
+		Pattern:  `(?i)\bhdr\b`,
+		Required: true,
+	}})
+	Expect(err).NotTo(HaveOccurred())
+
+	return quality.Profile{
+		MinResolution: "1080p",
+		MaxResolution: "2160p",
+		MinScore:      minScore,
+		Formats: []quality.ScoredFormat{
+			{Format: remux, Score: 200},
+			{Format: hdr, Score: 100},
+		},
+	}
+}

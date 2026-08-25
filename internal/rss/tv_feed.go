@@ -116,7 +116,9 @@ func (s *TVFeedScanner) processItems(
 		if ws == nil {
 			continue
 		}
-		if !qualityFor(ctx, ws.show.QualityProfile).Accepts(item.Title) {
+		if evaluateRelease(
+			qualityFor(ctx, ws.show.QualityProfile), item,
+		).Rejected {
 			slog.DebugContext(ctx, "tv feed-scan: quality rejected",
 				"show", ws.show.Title, "release", item.Title)
 			continue
