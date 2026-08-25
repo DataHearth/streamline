@@ -20,6 +20,8 @@ import (
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/providers/rawbytes"
 	"github.com/knadh/koanf/v2"
+
+	"github.com/datahearth/streamline/internal/quality"
 )
 
 type Config struct {
@@ -46,6 +48,7 @@ type Config struct {
 	Indexers              []IndexerEntry        `koanf:"indexers"                validate:"unique=Name,dive"`
 	QualityProfiles       []QualityProfileEntry `koanf:"quality_profiles"        validate:"unique=Name,dive"`
 	QualityDefaultProfile string                `koanf:"quality_default_profile"`
+	CustomFormats         []CustomFormatEntry   `koanf:"custom_formats"          validate:"unique=Name,dive"`
 }
 
 // DatabasePath is the SQLite database location, derived from DataDir.
@@ -462,7 +465,50 @@ func (c *Config) checkInvariants() error {
 			"at most one builtin download client is allowed, found %d", builtin,
 		))
 	}
+	for _, e := range c.CustomFormats {
+		if quality.IsBuiltinName(e.Name) {
+			errs = append(errs, fmt.Errorf(
+				"custom_formats %q: name collides with a built-in format",
+				e.Name,
+			))
+		}
+		if _, err := e.ToFormat(); err != nil {
+			errs = append(errs, fmt.Errorf("custom_formats %q: %w", e.Name, err))
+		}
+	}
+	for _, p := range c.QualityProfiles {
+		for _, fs := range p.Formats {
+			if quality.IsBuiltinName(fs.Name) {
+				continue
+			}
+			if _, ok := findCustomFormatEntry(c.CustomFormats, fs.Name); ok {
+				continue
+			}
+			errs = append(errs, fmt.Errorf(
+				"quality profile %q: formats[].name %q names neither a built-in nor a user format",
+				p.Name,
+				fs.Name,
+			))
+		}
+	}
 	return errors.Join(errs...)
+}
+
+// findCustomFormatEntry mirrors FindCustomFormat but reads from an explicit
+// list rather than the singleton — checkInvariants runs on a *Config before
+// it is stored, both at boot (finalize) and inside config.Update (a clone
+// being validated before write-back), so Get() would answer with the
+// previous config or nil.
+func findCustomFormatEntry(
+	formats []CustomFormatEntry,
+	name string,
+) (CustomFormatEntry, bool) {
+	for _, e := range formats {
+		if e.Name == name {
+			return e, true
+		}
+	}
+	return CustomFormatEntry{}, false
 }
 
 // defaults returns the canonical default values for all config keys.
@@ -537,6 +583,7 @@ func defaults() map[string]any {
 			},
 		},
 		"quality_default_profile":      "default",
+		"custom_formats":               []any{},
 		"events.retention":             "2160h",
 		"ffmpeg.enabled":               true,
 		"ffmpeg.path":                  "",

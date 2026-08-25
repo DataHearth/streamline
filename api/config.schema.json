@@ -115,6 +115,82 @@
           "type": "array",
           "items": { "type": "string" },
           "description": "ffprobe video codec names (\"hevc\", \"av1\", \"h264\"). A grab whose probed codec isn't in this list is held. Empty means any codec."
+        },
+        "formats": {
+          "type": "array",
+          "description": "Scored formats evaluated against a candidate release. Each name must resolve to either a built-in format or an entry in custom_formats.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name"],
+            "properties": {
+              "name": { "type": "string" },
+              "score": {
+                "type": "integer",
+                "description": "May be negative, to penalize a matched format (e.g. scene-junk, bad-group)."
+              }
+            }
+          }
+        },
+        "min_score": {
+          "type": "integer",
+          "description": "Minimum total matched-format score a release must reach to be accepted."
+        },
+        "upgrade_until_score": {
+          "type": "integer",
+          "description": "Stops upgrade-seeking once the current score reaches this value. 0 means no cap."
+        }
+      }
+    },
+    "customFormatConditionEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "release_title",
+            "resolution",
+            "source",
+            "release_group",
+            "codec",
+            "size",
+            "seeders"
+          ],
+          "description": "Condition kind. release_title/release_group match pattern as a regex against the release title/group. resolution/source/codec match value case-insensitively (resolution accepts 720p/1080p/2160p only). size checks the release size against min_gb/max_gb. seeders checks the seeder count against min."
+        },
+        "pattern": {
+          "type": "string",
+          "description": "Regex pattern. Required for release_title and release_group."
+        },
+        "value": {
+          "type": "string",
+          "description": "Exact match value. Required for resolution, source and codec."
+        },
+        "min_gb": { "type": "number", "minimum": 0 },
+        "max_gb": { "type": "number", "minimum": 0 },
+        "min": { "type": "integer", "minimum": 0 },
+        "required": {
+          "type": "boolean",
+          "description": "When true, this condition must pass for the format to match. When false (the default), it joins the optional group: at least one optional condition must pass for the format to match."
+        },
+        "negate": { "type": "boolean" }
+      }
+    },
+    "customFormatEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "conditions"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Must not collide with a built-in format name (see internal/quality Builtins())."
+        },
+        "conditions": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/customFormatConditionEntry" }
         }
       }
     }
@@ -445,6 +521,11 @@
     "quality_default_profile": {
       "type": "string",
       "description": "Name of the quality profile used when a movie names none. Must name an entry in quality_profiles whenever that list has any."
+    },
+    "custom_formats": {
+      "type": "array",
+      "description": "User-defined quality formats, scored per quality profile via quality_profiles[].formats.",
+      "items": { "$ref": "#/definitions/customFormatEntry" }
     }
   }
 }

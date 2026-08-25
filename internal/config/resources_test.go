@@ -265,3 +265,209 @@ var _ = Describe("builtin download client", Label("unit", "config"), func() {
 		Expect(ok).To(BeFalse())
 	})
 })
+
+var _ = Describe("Custom formats", Label("unit", "config"), func() {
+	It("loads a valid custom_formats entry and finds it by name", func() {
+		configtest.Setup(map[string]any{
+			"custom_formats": []map[string]any{
+				{
+					"name": "french-vf",
+					"conditions": []map[string]any{
+						{
+							"type":     "release_title",
+							"pattern":  `(?i)\bVFF\b`,
+							"required": true,
+						},
+					},
+				},
+			},
+		})
+		e, ok := config.FindCustomFormat("french-vf")
+		Expect(ok).To(BeTrue())
+		Expect(e.Conditions).To(HaveLen(1))
+		Expect(e.Conditions[0].Type).To(Equal("release_title"))
+
+		_, ok = config.FindCustomFormat("ghost")
+		Expect(ok).To(BeFalse())
+	})
+
+	It("rejects duplicate custom format names", func() {
+		c := configtest.Setup()
+		c.CustomFormats = []config.CustomFormatEntry{
+			{
+				Name: "dup",
+				Conditions: []config.CustomFormatConditionEntry{
+					{Type: "release_title", Pattern: "a", Required: true},
+				},
+			},
+			{
+				Name: "dup",
+				Conditions: []config.CustomFormatConditionEntry{
+					{Type: "release_title", Pattern: "b", Required: true},
+				},
+			},
+		}
+		Expect(c.Validate()).To(HaveOccurred())
+	})
+
+	It("rejects a user format named like a built-in", func() {
+		c := configtest.Setup()
+		c.CustomFormats = []config.CustomFormatEntry{
+			{
+				Name: "x265",
+				Conditions: []config.CustomFormatConditionEntry{
+					{Type: "release_title", Pattern: "a", Required: true},
+				},
+			},
+		}
+		err := c.Validate()
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("x265"))
+	})
+
+	It("rejects an uncompilable regex pattern", func() {
+		c := configtest.Setup()
+		c.CustomFormats = []config.CustomFormatEntry{
+			{
+				Name: "bad-regex",
+				Conditions: []config.CustomFormatConditionEntry{
+					{Type: "release_title", Pattern: "(", Required: true},
+				},
+			},
+		}
+		Expect(c.Validate()).To(HaveOccurred())
+	})
+
+	It("rejects a condition with an unknown type", func() {
+		c := configtest.Setup()
+		c.CustomFormats = []config.CustomFormatEntry{
+			{
+				Name: "unknown-type",
+				Conditions: []config.CustomFormatConditionEntry{
+					{Type: "bogus", Required: true},
+				},
+			},
+		}
+		Expect(c.Validate()).To(HaveOccurred())
+	})
+
+	It("rejects a resolution condition with a bad value", func() {
+		c := configtest.Setup()
+		c.CustomFormats = []config.CustomFormatEntry{
+			{
+				Name: "bad-res",
+				Conditions: []config.CustomFormatConditionEntry{
+					{Type: "resolution", Value: "8K", Required: true},
+				},
+			},
+		}
+		Expect(c.Validate()).To(HaveOccurred())
+	})
+
+	It("rejects a format with zero conditions", func() {
+		c := configtest.Setup()
+		c.CustomFormats = []config.CustomFormatEntry{
+			{Name: "empty", Conditions: nil},
+		}
+		Expect(c.Validate()).To(HaveOccurred())
+	})
+
+	It(
+		"rejects a profile format reference naming neither a built-in nor a user format",
+		func() {
+			c := configtest.Setup()
+			c.QualityProfiles = []config.QualityProfileEntry{
+				{
+					Name:                "default",
+					PreferredResolution: "1080p",
+					MinResolution:       "720p",
+					Formats: []config.QualityProfileFormatScore{
+						{Name: "nonexistent", Score: 10},
+					},
+				},
+			}
+			c.QualityDefaultProfile = "default"
+			err := c.Validate()
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("nonexistent"))
+		},
+	)
+
+	It(
+		"still validates a config with no custom_formats or scored-profile fields",
+		func() {
+			c := configtest.Setup()
+			Expect(c.Validate()).To(Succeed())
+			Expect(c.CustomFormats).To(BeEmpty())
+		},
+	)
+})
+
+var _ = Describe("ResolveScoredProfile", Label("unit", "config"), func() {
+	BeforeEach(func() {
+		configtest.Setup(map[string]any{
+			"custom_formats": []map[string]any{
+				{
+					"name": "french-vf",
+					"conditions": []map[string]any{
+						{
+							"type":     "release_title",
+							"pattern":  `(?i)\bVFF\b`,
+							"required": true,
+						},
+					},
+				},
+			},
+			"quality_profiles": []map[string]any{
+				{
+					"name":                 "default",
+					"preferred_resolution": "1080p",
+					"min_resolution":       "720p",
+					"upgrade_allowed":      true,
+					"min_score":            5,
+					"upgrade_until_score":  100,
+					"formats": []map[string]any{
+						{"name": "x265", "score": 10},
+						{"name": "french-vf", "score": 20},
+					},
+				},
+			},
+			"quality_default_profile": "default",
+		})
+	})
+
+	It(
+		"resolves min/max resolution, thresholds, and scored formats",
+		func() {
+			p, ok := config.ResolveScoredProfile("default")
+			Expect(ok).To(BeTrue())
+			Expect(p.MinResolution).To(Equal("720p"))
+			Expect(p.MaxResolution).To(Equal("1080p"))
+			Expect(p.UpgradeAllowed).To(BeTrue())
+			Expect(p.MinScore).To(Equal(5))
+			Expect(p.UpgradeUntilScore).To(Equal(100))
+			Expect(p.Formats).To(HaveLen(2))
+
+			scores := map[string]int{}
+			for _, sf := range p.Formats {
+				scores[sf.Format.Name] = sf.Score
+			}
+			Expect(scores).To(HaveKeyWithValue("x265", 10))
+			Expect(scores).To(HaveKeyWithValue("french-vf", 20))
+		},
+	)
+
+	It("falls back to the default profile for an unknown name", func() {
+		p, ok := config.ResolveScoredProfile("nope")
+		Expect(ok).To(BeTrue())
+		Expect(p.MaxResolution).To(Equal("1080p"))
+	})
+
+	It("reports ok=false when no profiles are configured", func() {
+		c := config.Get()
+		c.QualityProfiles = nil
+		c.QualityDefaultProfile = ""
+		_, ok := config.ResolveScoredProfile("anything")
+		Expect(ok).To(BeFalse())
+	})
+})

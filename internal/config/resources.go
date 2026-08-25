@@ -1,5 +1,7 @@
 package config
 
+import "github.com/datahearth/streamline/internal/quality"
+
 // MediaServerEntry is one media-server integration. Secrets (api_key) are
 // stored plaintext in YAML, consistent with auth.oidc[].client_secret.
 type MediaServerEntry struct {
@@ -68,6 +70,111 @@ type QualityProfileEntry struct {
 	// validated against a fixed set — ffprobe's namespace is larger than any
 	// list this package could keep in sync. Empty means any codec.
 	AllowedCodecs []string `koanf:"allowed_codecs"`
+	// Formats scores built-in and custom_formats entries by name; each
+	// name must resolve via quality.IsBuiltinName or FindCustomFormat
+	// (checked in checkInvariants).
+	Formats           []QualityProfileFormatScore `koanf:"formats"             validate:"dive"`
+	MinScore          int                         `koanf:"min_score"`
+	UpgradeUntilScore int                         `koanf:"upgrade_until_score"`
+}
+
+// QualityProfileFormatScore attaches a score to a format named by name,
+// resolved against either the built-in library or CustomFormats.
+type QualityProfileFormatScore struct {
+	Name  string `koanf:"name"  validate:"required"`
+	Score int    `koanf:"score"`
+}
+
+// CustomFormatConditionEntry is one quality.Condition as read from config.
+// Which of Pattern/Value/MinGB/MaxGB/Min apply depends on Type; ToFormat (via
+// quality.NewFormat) is where that is validated and compiled.
+type CustomFormatConditionEntry struct {
+	Type     string  `koanf:"type"     validate:"required"`
+	Pattern  string  `koanf:"pattern"`
+	Value    string  `koanf:"value"`
+	MinGB    float64 `koanf:"min_gb"   validate:"min=0"`
+	MaxGB    float64 `koanf:"max_gb"   validate:"min=0"`
+	Min      int     `koanf:"min"      validate:"min=0"`
+	Required bool    `koanf:"required"`
+	Negate   bool    `koanf:"negate"`
+}
+
+// CustomFormatEntry is a user-defined quality.Format, name-keyed like the
+// other config-backed resources.
+type CustomFormatEntry struct {
+	Name       string                       `koanf:"name"       validate:"required"`
+	Conditions []CustomFormatConditionEntry `koanf:"conditions" validate:"min=1,dive"`
+}
+
+// ToFormat compiles e into a quality.Format. Condition-shape validation
+// (regex compilation, resolution value, condition type) happens here, inside
+// quality.NewFormat, in the one place that does both validation and
+// compilation.
+func (e CustomFormatEntry) ToFormat() (quality.Format, error) {
+	conds := make([]quality.Condition, len(e.Conditions))
+	for i, c := range e.Conditions {
+		conds[i] = quality.Condition{
+			Type:     quality.ConditionType(c.Type),
+			Pattern:  c.Pattern,
+			Value:    c.Value,
+			MinGB:    c.MinGB,
+			MaxGB:    c.MaxGB,
+			Min:      c.Min,
+			Required: c.Required,
+			Negate:   c.Negate,
+		}
+	}
+	return quality.NewFormat(e.Name, conds)
+}
+
+// FindCustomFormat returns the user-defined format named name.
+func FindCustomFormat(name string) (CustomFormatEntry, bool) {
+	c := Get()
+	if c == nil {
+		return CustomFormatEntry{}, false
+	}
+	for _, e := range c.CustomFormats {
+		if e.Name == name {
+			return e, true
+		}
+	}
+	return CustomFormatEntry{}, false
+}
+
+// ResolveScoredProfile mirrors ResolveQualityProfile's fallback semantics
+// (name falls back to the configured default; ok is false only when no
+// profiles are configured at all) while assembling a quality.Profile with
+// its formats resolved and scored.
+func ResolveScoredProfile(name string) (quality.Profile, bool) {
+	e, ok := ResolveQualityProfile(name)
+	if !ok {
+		return quality.Profile{}, false
+	}
+	p := quality.Profile{
+		MinResolution:     e.MinResolution,
+		MaxResolution:     e.PreferredResolution,
+		UpgradeAllowed:    e.UpgradeAllowed,
+		MinScore:          e.MinScore,
+		UpgradeUntilScore: e.UpgradeUntilScore,
+	}
+	for _, fs := range e.Formats {
+		f, found := quality.BuiltinByName(fs.Name)
+		if !found {
+			ce, ok := FindCustomFormat(fs.Name)
+			if !ok {
+				continue // validated at load; a race with a delete just drops the format
+			}
+			var err error
+			if f, err = ce.ToFormat(); err != nil {
+				continue
+			}
+		}
+		p.Formats = append(
+			p.Formats,
+			quality.ScoredFormat{Format: f, Score: fs.Score},
+		)
+	}
+	return p, true
 }
 
 // ResolveQualityProfile returns the profile named by name, falling back to
