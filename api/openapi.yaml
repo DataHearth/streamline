@@ -4826,6 +4826,15 @@ components:
         path:
           type: string
           description: On-disk path of the episode's media file, when imported.
+        file_score:
+          type: integer
+          description: >-
+            Total matched-format score of this episode's file, computed at
+            response time against the series' quality profile. Series detail
+            only — the list response carries no episodes at all. A file whose
+            resolution falls outside the profile's band scores 0, the same
+            number the upgrade decision works from. Absent when no quality
+            profile is configured at all, or when the episode has no file.
         media_info:
           $ref: "#/components/schemas/MediaInfo"
 

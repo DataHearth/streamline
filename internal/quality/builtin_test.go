@@ -21,6 +21,20 @@ var _ = Describe("Builtins", Label("unit", "quality"), func() {
 			Expect(f.Description).NotTo(BeEmpty(), f.Name)
 		}
 	})
+	It("ships only descriptive formats, never curated opinions", func() {
+		names := make([]string, 0, len(quality.Builtins()))
+		for _, f := range quality.Builtins() {
+			names = append(names, f.Name)
+		}
+		Expect(names).To(ConsistOf(
+			"remux", "x265", "x264", "av1", "hdr",
+			"resolution-2160p", "resolution-1080p", "resolution-720p",
+			"multi-audio", "dubbed",
+		))
+		for _, name := range []string{"bad-group", "re-encode", "scene-junk"} {
+			Expect(quality.IsBuiltinName(name)).To(BeFalse(), name)
+		}
+	})
 	DescribeTable("matching",
 		func(name, title string, want bool) {
 			f, ok := quality.BuiltinByName(name)
@@ -36,10 +50,6 @@ var _ = Describe("Builtins", Label("unit", "quality"), func() {
 		Entry(nil, "hdr", "Movie.2024.2160p.HDR10.WEB-GRP", true),
 		Entry(nil, "hdr", "Movie.2024.2160p.Dolby.Vision.WEB-GRP", true),
 		Entry(nil, "hdr", "Movie.2024.1080p.DVDRip-GRP", false),
-		Entry(nil, "scene-junk", "Movie.2024.1080p.HDCAM-GRP", true),
-		Entry(nil, "scene-junk", "Movie.2024.1080p.BluRay-GRP", false),
-		Entry(nil, "bad-group", "Movie.2024.1080p.WEB.x264-YIFY", true),
-		Entry(nil, "bad-group", "Movie.2024.1080p.WEB.x264-GOODGRP", false),
 		Entry(nil, "resolution-2160p", "Movie.2024.2160p.WEB-GRP", true),
 		Entry(nil, "resolution-2160p", "Movie.2024.1080p.WEB-GRP", false),
 		Entry(nil, "x264", "Movie.2024.1080p.WEB.x264-GRP", true),
@@ -50,8 +60,6 @@ var _ = Describe("Builtins", Label("unit", "quality"), func() {
 		Entry(nil, "resolution-1080p", "Movie.2024.720p.WEB-GRP", false),
 		Entry(nil, "resolution-720p", "Movie.2024.720p.WEB-GRP", true),
 		Entry(nil, "resolution-720p", "Movie.2024.1080p.WEB-GRP", false),
-		Entry(nil, "re-encode", "Movie.2024.1080p.BluRay.RE-ENCODE-GRP", true),
-		Entry(nil, "re-encode", "Movie.2024.1080p.BluRay-GRP", false),
 		Entry(nil, "multi-audio", "Movie.2024.1080p.BluRay.MULTi-GRP", true),
 		Entry(nil, "multi-audio", "Movie.2024.1080p.BluRay-GRP", false),
 		Entry(nil, "dubbed", "Movie.2024.1080p.WEB.DUBBED-GRP", true),

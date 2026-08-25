@@ -305,7 +305,7 @@ Full mental model, condition types and the built-in format library: [Quality Pro
   "upgrade_allowed": true,
   "formats": [
     { "name": "x265", "score": 100 },
-    { "name": "scene-junk", "score": -1000 }
+    { "name": "hdr", "score": 50 }
   ],
   "min_score": 0,
   "upgrade_until_score": 500
@@ -328,7 +328,7 @@ Full mental model, condition types and the built-in format library: [Quality Pro
 
 Results are sorted `score` descending, ties broken by seeders — not by seeders alone. `rejected: true` releases (resolution outside the profile band, or score below `min_score`) are still returned with a `reject_reason`, so an operator can grab one deliberately; `score`/`rejected`/`reject_reason`/`matched_formats` are all ignored if sent back on a grab request body.
 
-**`MediaFile.file_score`** is the file's computed score against its movie's current profile — **movie detail responses only**, omitted from list responses same as the rest of that eager-loaded shape. A file outside the profile's band, or below `min_score`, reports `file_score: 0` — the same number the automatic-upgrade decision reads, and there's no separate `rejected` flag on a file. The key is absent entirely when no quality profile is configured at all. `Episode` carries no `file_score` — episode upgrades aren't built yet (see the wiki page).
+**`MediaFile.file_score`** is the file's computed score against its movie's current profile — **movie detail responses only**, omitted from list responses same as the rest of that eager-loaded shape. A file outside the profile's band, or below `min_score`, reports `file_score: 0` — the same number the automatic-upgrade decision reads, and there's no separate `rejected` flag on a file. The key is absent entirely when no quality profile is configured at all. `Episode` carries the same field flat (`Episode.file_score`), against the series' profile, on `GET /series/{id}` — the series list response has no `seasons`/`episodes` at all.
 
 **`/custom-formats/test`** evaluates an unsaved condition set against a synthetic sample — `POST /api/v1/custom-formats/test` with `{conditions, sample: {title, size, seeders}}`. Worked example: [Quality Profiles and Custom Formats § The tester](Quality-Profiles-and-Custom-Formats#the-tester).
 

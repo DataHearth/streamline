@@ -36,6 +36,7 @@ export type Episode = {
 	size?: number | null;
 	has_file?: boolean;
 	path?: string;
+	file_score?: number;
 	media_info?: MediaInfo | null;
 };
 

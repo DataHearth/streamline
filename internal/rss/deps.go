@@ -76,3 +76,12 @@ type EligibleEpisodeLister interface {
 	IncrementEpisodeGrabFailures(ctx context.Context, id uint32) error
 	ResetEpisodeGrabFailures(ctx context.Context, id uint32) error
 }
+
+// TVFeedStore is what rss.TVFeedScanner needs on top of the missing-search
+// surface: the episodes already on disk, and the flag that lets an upgrade's
+// import overwrite one.
+type TVFeedStore interface {
+	EligibleEpisodeLister
+	ListUpgradeCandidateShows(ctx context.Context) ([]*ent.TVShow, error)
+	MarkDownloadRecordReplaceExisting(ctx context.Context, id uint32) error
+}

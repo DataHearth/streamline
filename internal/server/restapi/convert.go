@@ -777,7 +777,7 @@ func tvShowToAPI(s *ent.TVShow) TVShow {
 		have += uint32(v.Available)
 		total += uint32(v.Total)
 		wanted += uint32(v.Missing)
-		seasons = append(seasons, seasonToAPI(se, v, now))
+		seasons = append(seasons, seasonToAPI(se, v, now, s.QualityProfile))
 	}
 	out.HaveEpisodes = &have
 	out.TotalEpisodes = &total
@@ -801,7 +801,12 @@ func tvShowListToAPI(s *ent.TVShow, c db.EpisodeCounts) TVShow {
 	return out
 }
 
-func seasonToAPI(se *ent.Season, v tvshow.SeasonView, now time.Time) Season {
+func seasonToAPI(
+	se *ent.Season,
+	v tvshow.SeasonView,
+	now time.Time,
+	profile string,
+) Season {
 	avail, miss, un, tot := v.Available, v.Missing, v.Unaired, v.Total
 	out := Season{
 		Id:        se.ID,
@@ -817,7 +822,7 @@ func seasonToAPI(se *ent.Season, v tvshow.SeasonView, now time.Time) Season {
 	}
 	eps := make([]Episode, 0, len(se.Edges.Episodes))
 	for _, e := range se.Edges.Episodes {
-		eps = append(eps, episodeToAPI(e, now))
+		eps = append(eps, episodeToAPI(e, now, profile))
 	}
 	if len(eps) > 0 {
 		out.Episodes = &eps
@@ -837,7 +842,7 @@ func episodeStatus(e *ent.Episode, now time.Time) EpisodeStatus {
 	return EpisodeStatus(e.Status)
 }
 
-func episodeToAPI(e *ent.Episode, now time.Time) Episode {
+func episodeToAPI(e *ent.Episode, now time.Time, profile string) Episode {
 	out := Episode{
 		Id:        e.ID,
 		Number:    e.Number,
@@ -865,6 +870,7 @@ func episodeToAPI(e *ent.Episode, now time.Time) Episode {
 		out.Path = &f.Path
 		sz := f.Size
 		out.Size = &sz
+		out.FileScore = mediaFileScore(profile, f)
 		out.MediaInfo = mediaInfoToAPI(f)
 	}
 	return out

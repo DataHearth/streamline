@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/quality"
+	"github.com/datahearth/streamline/internal/quality/qualityctx"
 
 	"go.opentelemetry.io/otel/attribute"
 )
@@ -23,15 +25,16 @@ import (
 // forward-feed once per tick and grabs items matching wanted episodes. Without
 // it a newly aired episode waits for the next tv-missing-search pass (12h by
 // default) while a movie in the same library is grabbed within the feed
-// interval.
+// interval. Episodes already on disk are matched too, and grabbed as an
+// upgrade when the release outscores what is there.
 type TVFeedScanner struct {
-	store     EligibleEpisodeLister
+	store     TVFeedStore
 	indexers  IndexerFeeder
 	downloads EpisodeGrabber
 }
 
 func NewTVFeedScanner(
-	store EligibleEpisodeLister,
+	store TVFeedStore,
 	indexers IndexerFeeder,
 	downloads EpisodeGrabber,
 ) *TVFeedScanner {
@@ -75,11 +78,20 @@ func (s *TVFeedScanner) Run(ctx context.Context) error {
 		return nil
 	}
 
-	index := buildEpisodeIndex(shows)
-	profiles := resolveShowProfiles(ctx, shows)
-	// grabbed tracks episode IDs already attempted this tick so a second indexer
-	// carrying the same release doesn't double-grab.
-	grabbed := make(map[uint32]struct{})
+	upgradable, err := s.store.ListUpgradeCandidateShows(ctx)
+	if err != nil {
+		return otelx.RecordSpanError(span, err)
+	}
+
+	pass := &tvPass{
+		wanted:   buildEpisodeIndex(shows),
+		upgrades: buildEpisodeIndex(upgradable),
+		profiles: resolveShowProfiles(ctx, shows, upgradable),
+		// grabbed tracks episode IDs already attempted this tick so a second
+		// indexer carrying the same release doesn't double-grab, and so a wanted
+		// grab and an upgrade grab never both fire for one episode.
+		grabbed: make(map[uint32]struct{}),
+	}
 	var matched int
 	for _, idx := range indexers {
 		items, err := s.indexers.Feed(ctx, idx.Name)
@@ -88,7 +100,7 @@ func (s *TVFeedScanner) Run(ctx context.Context) error {
 				"indexer", idx.Name, "error", err)
 			continue
 		}
-		matched += s.processItems(ctx, items, index, profiles, grabbed)
+		matched += s.processItems(ctx, items, pass)
 	}
 
 	span.SetAttributes(
@@ -100,12 +112,20 @@ func (s *TVFeedScanner) Run(ctx context.Context) error {
 	return nil
 }
 
+// tvPass carries one tick's state: the two show indexes items are matched
+// against, the profiles resolved for the shows in them, and the episode IDs
+// already grabbed.
+type tvPass struct {
+	wanted   map[string]*wantedShow
+	upgrades map[string]*wantedShow
+	profiles map[string]quality.Profile
+	grabbed  map[uint32]struct{}
+}
+
 func (s *TVFeedScanner) processItems(
 	ctx context.Context,
 	items []indexer.SearchResult,
-	index map[string]*wantedShow,
-	profiles map[string]quality.Profile,
-	grabbed map[uint32]struct{},
+	pass *tvPass,
 ) int {
 	matched := 0
 	for _, item := range items {
@@ -115,35 +135,70 @@ func (s *TVFeedScanner) processItems(
 			continue
 		}
 		parsed := library.Parse(item.Title)
-		ws := index[releaseShowKey(parsed)]
-		if ws == nil {
+		key := releaseShowKey(parsed)
+		ws, us := pass.wanted[key], pass.upgrades[key]
+		// Both indexes hold the same row for a show with wanted *and* on-disk
+		// episodes, so the profile is one lookup either way.
+		show := indexedShow(ws, us)
+		if show == nil {
 			continue
 		}
-		if res := evaluateRelease(
-			profiles[ws.show.QualityProfile], item,
-		); res.Rejected {
+		p := pass.profiles[show.QualityProfile]
+		res := evaluateRelease(p, item)
+		if res.Rejected {
 			slog.DebugContext(ctx, "tv feed-scan: quality rejected",
-				"show", ws.show.Title, "release", item.Title,
+				"show", show.Title, "release", item.Title,
 				"reason", res.RejectReason)
 			continue
 		}
-		if parsed.SeasonPack {
-			matched += s.grabPack(ctx, ws, parsed.Season, item, grabbed)
+		if n := s.grabWanted(ctx, ws, parsed, item, pass); n > 0 {
+			matched += n
 			continue
 		}
-		e := ws.lookup(parsed)
-		if e == nil {
-			continue
-		}
-		if _, already := grabbed[e.ID]; already {
-			continue
-		}
-		grabbed[e.ID] = struct{}{}
-		if s.grabOne(ctx, ws.show, e, item) {
-			matched++
-		}
+		// The wanted branch reports 0 both for "no such episode here" and for
+		// "the grab failed"; either way the file on disk, if any, is still the
+		// one to beat, and the upgrade branch re-checks `grabbed` itself.
+		matched += s.grabUpgrade(ctx, us, parsed, item, p, res, pass)
 	}
 	return matched
+}
+
+func indexedShow(indexes ...*wantedShow) *ent.TVShow {
+	for _, w := range indexes {
+		if w != nil {
+			return w.show
+		}
+	}
+	return nil
+}
+
+// grabWanted grabs item for the episodes of ws it fills, as a pack or a single
+// episode. Reports how many episodes it covered.
+func (s *TVFeedScanner) grabWanted(
+	ctx context.Context,
+	ws *wantedShow,
+	parsed library.ParseResult,
+	item indexer.SearchResult,
+	pass *tvPass,
+) int {
+	if ws == nil {
+		return 0
+	}
+	if parsed.SeasonPack {
+		return s.grabPack(ctx, ws, parsed.Season, item, pass.grabbed)
+	}
+	e := ws.lookup(parsed)
+	if e == nil {
+		return 0
+	}
+	if _, already := pass.grabbed[e.ID]; already {
+		return 0
+	}
+	pass.grabbed[e.ID] = struct{}{}
+	if !s.grabOne(ctx, ws.show, e, item) {
+		return 0
+	}
+	return 1
 }
 
 // grabPack grabs a season pack against the season's first wanted episode and
@@ -181,6 +236,102 @@ func (s *TVFeedScanner) grabPack(
 		"show", ws.show.Title, "season", season,
 		"release", item.Title, "episodes", len(wanted))
 	return len(wanted)
+}
+
+// grabUpgrade grabs item as a replacement for the files the release covers —
+// one episode, or every episode of a season for a pack — when it outscores
+// them under the show's profile, flagging the record so the importer
+// overwrites instead of skipping. Reports how many episodes it covered.
+func (s *TVFeedScanner) grabUpgrade(
+	ctx context.Context,
+	us *wantedShow,
+	parsed library.ParseResult,
+	item indexer.SearchResult,
+	p quality.Profile,
+	rel quality.Result,
+	pass *tvPass,
+) int {
+	if us == nil || !p.UpgradeAllowed {
+		return 0
+	}
+	var targets []*ent.Episode
+	if parsed.SeasonPack {
+		for _, e := range us.seasons[parsed.Season] {
+			if _, already := pass.grabbed[e.ID]; !already {
+				targets = append(targets, e)
+			}
+		}
+	} else if e := us.lookup(parsed); e != nil {
+		if _, already := pass.grabbed[e.ID]; !already {
+			targets = append(targets, e)
+		}
+	}
+	if len(targets) == 0 {
+		return 0
+	}
+	// A pack is one grab standing in for N files, so the bar is the *best* of
+	// them: beating the season's worst file would replace every other episode
+	// with something worse, and there is no per-episode veto once the pack is
+	// grabbed.
+	best := 0
+	for _, e := range targets {
+		if len(e.Edges.MediaFiles) == 0 {
+			return 0
+		}
+		mf := e.Edges.MediaFiles[0]
+		file := qualityctx.ContextFromFile(
+			filepath.Base(mf.Path), mf.Size, int(mf.Width), mf.VideoCodec,
+		)
+		if !p.UpgradableFrom(file.Resolution) {
+			slog.DebugContext(
+				ctx,
+				"tv feed-scan: upgrade skipped, file outside band",
+				"show",
+				us.show.Title,
+				"episode.id",
+				e.ID,
+				"file.resolution",
+				file.Resolution,
+				"release",
+				item.Title,
+			)
+			return 0
+		}
+		if score := quality.Evaluate(p, file).Score; score > best {
+			best = score
+		}
+	}
+	if !p.ShouldUpgrade(best, rel.Score) {
+		return 0
+	}
+
+	rec, err := s.downloads.GrabEpisode(ctx, item, targets[0].ID)
+	if err != nil {
+		slog.WarnContext(ctx, "tv feed-scan: upgrade grab failed",
+			"show", us.show.Title, "release", item.Title, "error", err)
+		if ierr := s.store.IncrementEpisodeGrabFailures(
+			ctx, targets[0].ID,
+		); ierr != nil {
+			slog.WarnContext(ctx, "tv feed-scan: bump episode grab_failures failed",
+				"episode.id", targets[0].ID, "error", ierr)
+		}
+		return 0
+	}
+	// Without the flag the importer skips every episode that already has a file,
+	// so the upgrade this run just grabbed can never land: actionable, not noise.
+	if err := s.store.MarkDownloadRecordReplaceExisting(ctx, rec.ID); err != nil {
+		slog.ErrorContext(ctx, "tv feed-scan: mark replace_existing failed",
+			"show", us.show.Title, "record.id", rec.ID, "error", err)
+	}
+	now := time.Now()
+	for _, e := range targets {
+		pass.grabbed[e.ID] = struct{}{}
+		markEpisodeDownloading(ctx, s.store, e.ID, now)
+	}
+	slog.InfoContext(ctx, "tv feed-scan: grabbed upgrade",
+		"show", us.show.Title, "release", item.Title, "episodes", len(targets),
+		"file_score", best, "release_score", rel.Score)
+	return len(targets)
 }
 
 func (s *TVFeedScanner) grabOne(
@@ -306,14 +457,16 @@ func releaseShowKey(p library.ParseResult) string {
 // recompiles every custom format's regex for every item in every feed.
 func resolveShowProfiles(
 	ctx context.Context,
-	shows []*ent.TVShow,
+	lists ...[]*ent.TVShow,
 ) map[string]quality.Profile {
 	profiles := make(map[string]quality.Profile)
-	for _, show := range shows {
-		if _, ok := profiles[show.QualityProfile]; ok {
-			continue
+	for _, list := range lists {
+		for _, show := range list {
+			if _, ok := profiles[show.QualityProfile]; ok {
+				continue
+			}
+			profiles[show.QualityProfile] = qualityFor(ctx, show.QualityProfile)
 		}
-		profiles[show.QualityProfile] = qualityFor(ctx, show.QualityProfile)
 	}
 	return profiles
 }

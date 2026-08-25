@@ -47,7 +47,61 @@
 		min: number;
 		required: boolean;
 		negate: boolean;
+		// Editor-only, never sent: a release_group row whose pattern the chip
+		// compiler could not have written is edited as raw regex instead.
+		groupRaw: boolean;
 	};
+
+	// The chip compiler's alphabet. A group name is a literal, so every RE2
+	// metacharacter in one is escaped on the way out and has to come back
+	// escaped on the way in — an unescaped one means the pattern is somebody's
+	// own regex, not a list we rendered.
+	const REGEX_META = /[.*+?^${}()|[\]\\]/;
+	const GROUP_PATTERN = /^\(\?i\)\^\((.*)\)\$$/;
+
+	function escapeGroupName(name: string): string {
+		return name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+	}
+
+	// Compiles chips to the anchored, case-insensitive alternation the
+	// release_group condition matches against. No chips means no pattern, which
+	// the row's own "Pattern required" check then reports.
+	export function groupsToPattern(names: string[]): string {
+		const clean = names.map((n) => n.trim()).filter((n) => n !== "");
+		if (clean.length === 0) return "";
+		return `(?i)^(${clean.map(escapeGroupName).join("|")})$`;
+	}
+
+	// The inverse, and deliberately strict: anything it cannot prove it could
+	// have emitted returns null so the row falls back to the regex input rather
+	// than rendering a lossy chip list over a pattern it would then overwrite.
+	export function parseGroupPattern(pattern: string): string[] | null {
+		const m = GROUP_PATTERN.exec(pattern.trim());
+		if (!m) return null;
+		const body = m[1];
+		const names: string[] = [];
+		let cur = "";
+		for (let i = 0; i < body.length; i++) {
+			const ch = body[i];
+			if (ch === "\\") {
+				const next = body[i + 1];
+				// \d, \b, \w and friends are classes, not escaped literals.
+				if (next === undefined || /[a-zA-Z0-9]/.test(next)) return null;
+				cur += next;
+				i++;
+				continue;
+			}
+			if (ch === "|") {
+				names.push(cur);
+				cur = "";
+				continue;
+			}
+			if (REGEX_META.test(ch)) return null;
+			cur += ch;
+		}
+		names.push(cur);
+		return names.every((n) => n !== "") ? names : null;
+	}
 
 	export type CustomFormatDraft = {
 		name: string;
@@ -65,6 +119,7 @@
 			min: 0,
 			required: true,
 			negate: false,
+			groupRaw: false,
 		};
 	}
 
@@ -73,17 +128,24 @@
 		return {
 			name: f.name,
 			description: f.description ?? "",
-			conditions: f.conditions.map((c) => ({
-				...newCondition(),
-				type: c.type,
-				pattern: c.pattern ?? "",
-				value: c.value ?? "",
-				min_gb: c.min_gb ?? 0,
-				max_gb: c.max_gb ?? 0,
-				min: c.min ?? 0,
-				required: c.required ?? false,
-				negate: c.negate ?? false,
-			})),
+			conditions: f.conditions.map((c) => {
+				const pattern = c.pattern ?? "";
+				return {
+					...newCondition(),
+					type: c.type,
+					pattern,
+					value: c.value ?? "",
+					min_gb: c.min_gb ?? 0,
+					max_gb: c.max_gb ?? 0,
+					min: c.min ?? 0,
+					required: c.required ?? false,
+					negate: c.negate ?? false,
+					groupRaw:
+						c.type === "release_group" &&
+						pattern !== "" &&
+						parseGroupPattern(pattern) === null,
+				};
+			}),
 		};
 	}
 
@@ -173,6 +235,59 @@
 		if (t === "resolution" && !RESOLUTIONS.includes(c.value as Resolution)) {
 			c.value = "1080p";
 		}
+		// Switching a typed release_title regex over to release_group must not
+		// land on an empty chip row that overwrites it on the first chip.
+		if (t === "release_group") {
+			c.groupRaw = c.pattern !== "" && parseGroupPattern(c.pattern) === null;
+		}
+	}
+
+	// ── Release-group chips ───────────────────────────────────
+	// Keyed by row index, like the {#each} itself: the pending text is DOM state
+	// of the row at that position, and Svelte reuses the row's DOM the same way.
+	let pendingGroup = $state<Record<number, string>>({});
+
+	function groupChips(c: ConditionDraft): string[] {
+		return parseGroupPattern(c.pattern) ?? [];
+	}
+
+	function commitGroups(c: ConditionDraft, i: number) {
+		const names = groupChips(c);
+		for (const part of (pendingGroup[i] ?? "").split(",")) {
+			const n = part.trim();
+			if (n !== "" && !names.includes(n)) names.push(n);
+		}
+		pendingGroup[i] = "";
+		c.pattern = groupsToPattern(names);
+	}
+
+	function removeGroup(c: ConditionDraft, at: number) {
+		const names = groupChips(c);
+		names.splice(at, 1);
+		c.pattern = groupsToPattern(names);
+	}
+
+	function onGroupKey(e: KeyboardEvent, c: ConditionDraft, i: number) {
+		const pending = pendingGroup[i] ?? "";
+		if (e.key === "Enter") {
+			// The editor sits inside a <form>; Enter here means "add this chip".
+			e.preventDefault();
+			commitGroups(c, i);
+		} else if (e.key === "Backspace" && pending === "") {
+			const names = groupChips(c);
+			if (names.length > 0) removeGroup(c, names.length - 1);
+		}
+	}
+
+	// required and negate are orthogonal: negate flips this condition's own
+	// verdict, required decides whether that verdict joins the all-must-pass
+	// group or the at-least-one group. The four combinations are four rules,
+	// which the two toggle labels alone don't say.
+	function ruleText(c: ConditionDraft): string {
+		if (c.required) {
+			return c.negate ? i18n.cf_rule_must_not() : i18n.cf_rule_must();
+		}
+		return c.negate ? i18n.cf_rule_any_not() : i18n.cf_rule_any();
 	}
 
 	function rowError(c: ConditionDraft): string | null {
@@ -333,7 +448,52 @@
 							/>
 						</div>
 
-						{#if c.type === "release_title" || c.type === "release_group"}
+						{#if c.type === "release_group" && !c.groupRaw}
+							{@const chips = groupChips(c)}
+							<div
+								class={cn(
+									"flex min-w-48 flex-1 flex-wrap items-center gap-1.5 rounded-md border border-border bg-bg px-2 py-1.5 focus-within:ring-2 focus-within:ring-accent",
+									locked && "cursor-not-allowed opacity-70",
+								)}
+							>
+								{#each chips as name, k (name)}
+									<span
+										class="inline-flex items-center gap-1 rounded-full border border-accent-line bg-accent-soft py-0.5 pl-2.5 pr-1 text-xs font-medium text-accent-text"
+									>
+										<span class="font-mono leading-none">{name}</span>
+										<button
+											type="button"
+											disabled={locked}
+											onclick={() => removeGroup(c, k)}
+											class="grid h-4 w-4 place-items-center rounded-full text-accent-text/70 transition hover:bg-accent-line hover:text-accent-text disabled:cursor-not-allowed disabled:opacity-40"
+											aria-label={i18n.cf_group_remove()}
+										>
+											<X size={11} aria-hidden="true" />
+										</button>
+									</span>
+								{/each}
+								<input
+									type="text"
+									spellcheck="false"
+									autocapitalize="off"
+									autocomplete="off"
+									readonly={locked}
+									value={pendingGroup[i] ?? ""}
+									placeholder={chips.length === 0
+										? i18n.cf_group_placeholder()
+										: ""}
+									aria-label={i18n.cf_groups()}
+									oninput={(e) => {
+										const raw = (e.currentTarget as HTMLInputElement).value;
+										pendingGroup[i] = raw;
+										if (raw.includes(",")) commitGroups(c, i);
+									}}
+									onkeydown={(e) => onGroupKey(e, c, i)}
+									onblur={() => commitGroups(c, i)}
+									class="min-w-32 flex-1 bg-transparent py-0.5 text-sm text-fg placeholder:text-fg-faint focus:outline-none read-only:cursor-not-allowed"
+								/>
+							</div>
+						{:else if c.type === "release_title" || c.type === "release_group"}
 							<input
 								type="text"
 								spellcheck="false"
@@ -475,10 +635,28 @@
 							i18n.cf_negate(),
 							Ban,
 						)}
+						<span class="text-[11px] font-medium text-fg-muted">
+							{ruleText(c)}
+						</span>
 						{#if c.type === "size"}
 							<span class="text-[11px] text-fg-subtle">{i18n.cf_size_help()}</span
 							>
-						{:else if c.type === "release_title" || c.type === "release_group"}
+						{:else if c.type === "release_group"}
+							<span class="text-[11px] text-fg-subtle">
+								{c.groupRaw ? i18n.cf_pattern_help() : i18n.cf_group_help()}
+							</span>
+							{#if !c.groupRaw || c.pattern === "" || parseGroupPattern(c.pattern) !== null}
+								<button
+									type="button"
+									onclick={() => (c.groupRaw = !c.groupRaw)}
+									class="text-[11px] font-medium text-accent-text underline-offset-2 transition hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
+								>
+									{c.groupRaw
+										? i18n.cf_group_use_chips()
+										: i18n.cf_group_edit_regex()}
+								</button>
+							{/if}
+						{:else if c.type === "release_title"}
 							<span class="text-[11px] text-fg-subtle"
 								>{i18n.cf_pattern_help()}</span
 							>

@@ -127,7 +127,7 @@
               "name": { "type": "string" },
               "score": {
                 "type": "integer",
-                "description": "May be negative, to penalize a matched format (e.g. scene-junk, bad-group)."
+                "description": "May be negative, to penalize a matched format."
               }
             }
           }

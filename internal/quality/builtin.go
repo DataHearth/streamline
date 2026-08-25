@@ -62,31 +62,6 @@ var builtins = []Format{
 		Condition{
 			Type: ConditionResolution, Value: "720p", Required: true,
 		}),
-	mustFormat(
-		"scene-junk",
-		"Cam/telesync recordings, screeners and other low-quality "+
-			"pre-release rips — near-universally worth blocking.",
-		Condition{
-			Type:     ConditionReleaseTitle,
-			Pattern:  `(?i)\b(cam(rip)?|hdcam|hdts|telesync|ts[- .]?rip|telecine|dvdscr|screener|workprint)\b`,
-			Required: true,
-		},
-	),
-	mustFormat("bad-group",
-		"Release groups known for low-bitrate re-encodes (YIFY, YTS, aXXo, …).",
-		Condition{
-			Type:     ConditionReleaseGroup,
-			Pattern:  `(?i)^(yify|yts([ ._-]?(mx|ag|am|lt))?|axxo|msd|fgt|stuttershit)$`,
-			Required: true,
-		}),
-	mustFormat(
-		"re-encode",
-		"Releases marked as re-encoded from another release, usually a further quality loss.",
-		Condition{
-			Type: ConditionReleaseTitle, Pattern: `(?i)\bre-?encoded?\b`,
-			Required: true,
-		},
-	),
 	mustFormat("multi-audio",
 		"Releases carrying more than one audio language.",
 		Condition{

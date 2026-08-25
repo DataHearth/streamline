@@ -17,6 +17,10 @@
 
 	export type ProfilePreset = {
 		label: string;
+		preferred_resolution: Resolution;
+		min_resolution: Resolution;
+		// Empty means any codec — the same thing an empty chip row means.
+		allowed_codecs: readonly string[];
 		formats: readonly { readonly name: string; readonly score: number }[];
 		min_score: number;
 		upgrade_until_score: number;
@@ -24,37 +28,44 @@
 
 	// Starting points, not policy: applying one fills the create form and the
 	// operator edits from there. Every name here is a built-in format, so a
-	// preset saves against a fresh install with no custom formats defined.
+	// preset saves against a fresh install with no custom formats defined —
+	// which is also why none of them scores a group blocklist or a junk-source
+	// rule: those are the operator's own custom formats, not ours to assume.
+	// Codec values are ffprobe's, matching lib/media-info VIDEO_CODECS.
 	export const PROFILE_PRESETS = [
 		{
 			label: "Quality first",
+			preferred_resolution: "2160p",
+			min_resolution: "1080p",
+			allowed_codecs: [],
 			formats: [
 				{ name: "remux", score: 200 },
 				{ name: "hdr", score: 100 },
-				{ name: "scene-junk", score: -1000 },
-				{ name: "bad-group", score: -1000 },
 			],
 			min_score: 0,
 			upgrade_until_score: 300,
 		},
 		{
 			label: "Space saver",
+			preferred_resolution: "1080p",
+			min_resolution: "720p",
+			allowed_codecs: ["hevc", "av1"],
 			formats: [
 				{ name: "x265", score: 100 },
 				{ name: "av1", score: 80 },
 				{ name: "remux", score: -100 },
-				{ name: "scene-junk", score: -1000 },
-				{ name: "bad-group", score: -1000 },
 			],
 			min_score: 0,
 			upgrade_until_score: 100,
 		},
 		{
 			label: "x265 only",
+			preferred_resolution: "1080p",
+			min_resolution: "720p",
+			allowed_codecs: ["hevc"],
 			formats: [
 				{ name: "x265", score: 100 },
 				{ name: "x264", score: -1000 },
-				{ name: "scene-junk", score: -1000 },
 			],
 			min_score: 0,
 			upgrade_until_score: 100,
@@ -123,6 +134,10 @@
 	}
 
 	function applyPreset(p: ProfilePreset) {
+		form.setFieldValue("name", p.label);
+		form.setFieldValue("preferred_resolution", p.preferred_resolution);
+		form.setFieldValue("min_resolution", p.min_resolution);
+		form.setFieldValue("allowed_codecs", [...p.allowed_codecs]);
 		form.setFieldValue(
 			"formats",
 			p.formats.map((f) => ({ ...f })),

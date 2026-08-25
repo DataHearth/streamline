@@ -643,6 +643,91 @@ var _ = Describe("TVShow store", Label("unit", "db"), func() {
 		})
 	})
 
+	Describe("ListUpgradeCandidateShows", func() {
+		var eps map[uint16]*ent.Episode
+
+		// One show, season 1, episodes 1 and 2 — only episode 1 has a file, so
+		// the baseline already asserts the has-a-file narrowing.
+		BeforeEach(func() {
+			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "X", Year: 2020, TvdbID: 42,
+				Seasons: []SeasonSeed{
+					{Number: 1, Episodes: []EpisodeSeed{
+						{Number: 1, Title: "A"}, {Number: 2, Title: "B"},
+					}},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			eps = map[uint16]*ent.Episode{}
+			for _, e := range show.Edges.Seasons[0].Edges.Episodes {
+				eps[e.Number] = e
+			}
+			_, err = store.CreateMediaFile(ctx, CreateMediaFileParams{
+				Path: "/tv/X/S01E01.mkv", Size: 1234, EpisodeID: eps[1].ID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		candidates := func() []uint16 {
+			GinkgoHelper()
+			shows, err := store.ListUpgradeCandidateShows(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			var nums []uint16
+			for _, sh := range shows {
+				for _, se := range sh.Edges.Seasons {
+					for _, e := range se.Edges.Episodes {
+						nums = append(nums, e.Number)
+					}
+				}
+			}
+			return nums
+		}
+
+		It("returns only episodes that have a file, with the file loaded", func() {
+			shows, err := store.ListUpgradeCandidateShows(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(shows).To(HaveLen(1))
+			found := shows[0].Edges.Seasons[0].Edges.Episodes
+			Expect(found).To(HaveLen(1))
+			Expect(found[0].Number).To(Equal(uint16(1)))
+			Expect(found[0].Edges.MediaFiles).To(HaveLen(1))
+			Expect(found[0].Edges.MediaFiles[0].Path).To(Equal("/tv/X/S01E01.mkv"))
+		})
+
+		It("excludes an unmonitored episode", func() {
+			Expect(store.SetEpisodeMonitored(ctx, eps[1].ID, false)).To(Succeed())
+			Expect(candidates()).To(BeEmpty())
+		})
+
+		It("excludes an episode whose replacement is already in flight", func() {
+			for _, status := range []downloadrecord.Status{
+				downloadrecord.StatusDownloading,
+				downloadrecord.StatusImporting,
+			} {
+				rec, err := store.CreateDownloadRecord(
+					ctx,
+					CreateDownloadRecordParams{
+						Title: "rel", Status: status, EpisodeID: eps[1].ID,
+					},
+				)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(candidates()).To(BeEmpty())
+				Expect(
+					client.DownloadRecord.DeleteOneID(rec.ID).Exec(ctx),
+				).To(Succeed())
+			}
+		})
+
+		It("keeps an episode whose only record already finished", func() {
+			_, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "rel", Status: downloadrecord.StatusCompleted,
+				EpisodeID: eps[1].ID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(candidates()).To(ConsistOf(uint16(1)))
+		})
+	})
+
 	It("cascade-deletes seasons, episodes, and episode-linked records", func() {
 		show, err := store.CreateTVShow(ctx, CreateTVShowParams{
 			Title: "X", Year: 2020, TvdbID: 1,

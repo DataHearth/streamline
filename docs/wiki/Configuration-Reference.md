@@ -372,4 +372,4 @@ One profile named `default` (1080p/1080p, upgrades allowed, no formats) ships ou
 | `description` | | Optional free text, shown on the format's row and as a hint wherever it's scored. No effect on matching |
 | `conditions` | ✅ | At least one `{type, ...}` condition. Full type reference and matching semantics: [Quality Profiles and Custom Formats](Quality-Profiles-and-Custom-Formats) |
 
-Thirteen formats (x265, x264, av1, remux, hdr, resolution tiers, scene-junk/bad-group, re-encode, multi-audio, dubbed) ship compiled into the binary and need no config entry — `custom_formats` is only for your own.
+Ten formats (x265, x264, av1, remux, hdr, resolution tiers, multi-audio, dubbed) ship compiled into the binary and need no config entry — `custom_formats` is only for your own. They all *describe* a release and none of them judges one: group blocklists and rip-source opinions are preference, so they're yours to write here rather than ours to ship.

@@ -618,6 +618,9 @@ type Store interface {
 		notSearchedSince time.Time,
 		airedBefore time.Time,
 	) ([]*ent.TVShow, error)
+	// ListUpgradeCandidateShows returns shows whose episode edges hold the
+	// rows already on disk that an upgrade may replace, files loaded.
+	ListUpgradeCandidateShows(ctx context.Context) ([]*ent.TVShow, error)
 
 	// requests
 	CreateRequest(ctx context.Context, p CreateRequestParams) (*ent.Request, error)

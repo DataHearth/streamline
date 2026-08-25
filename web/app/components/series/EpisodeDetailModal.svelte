@@ -164,6 +164,22 @@
 					{formatRelative(episode.air_date)}
 				</span>
 			{/if}
+			{#if episode.file_score !== undefined}
+				<span
+					class={cn(
+						"shrink-0 rounded-full border px-1.5 py-px font-mono text-[9px] font-semibold uppercase tracking-[0.1em]",
+						episode.file_score > 0
+							? "border-status-available/30 bg-status-available/10 text-status-available"
+							: episode.file_score < 0
+								? "border-status-failed/30 bg-status-failed/10 text-status-failed"
+								: "border-border-strong text-fg-subtle",
+					)}
+					title={i18n.file_score_help()}
+				>
+					{i18n.file_score()}
+					{episode.file_score}
+				</span>
+			{/if}
 		</div>
 
 		{#if episode.overview}

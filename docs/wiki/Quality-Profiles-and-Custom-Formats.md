@@ -23,14 +23,22 @@ Config-backed like indexers and download clients: a top-level `custom_formats[]`
 
 ```yaml
 custom_formats:
-  - name: no-scene-junk
-    description: Rejects cam/telesync/screener releases
+  - name: scene-junk
+    description: Cam/telesync/screener rips
     conditions:
       - type: release_title
         pattern: '(?i)\b(cam(rip)?|hdcam|telesync|screener)\b'
         required: true
-        negate: true
+
+  - name: bad-group
+    description: Groups I don't want
+    conditions:
+      - type: release_group
+        pattern: '(?i)^(yify|yts|axxo)$'
+        required: true
 ```
+
+Both of these are *examples*, not defaults — nothing like them ships built in, deliberately (see [The built-in library](#the-built-in-library)). Score either one very negative in a profile and it becomes a blocklist. The release-group editor in **Settings → Custom formats** writes that second pattern for you: type group names as chips and it compiles the anchored alternation.
 
 `description` is optional free text — it has no effect on matching, but shows on the format's row in **Settings → Custom formats** and as a hint wherever the format is scored in a quality profile, the same way a built-in's fixed description does.
 
@@ -39,10 +47,16 @@ custom_formats:
 | `release_title` | `pattern` (regex) | The raw release title |
 | `resolution` | `value` (`720p`\|`1080p`\|`2160p`) | Parsed resolution, or probed width for on-disk files |
 | `source` | `value` | Parsed source (`bluray`, `web`, `web-dl`, `hdtv`, ...) — matched case-insensitively but not otherwise fuzzed, so it must equal the parser's normalized spelling (`WEB-DL`, not `webdl`) |
-| `release_group` | `pattern` (regex) | Parsed release group |
+| `release_group` | `pattern` (regex) | Parsed release group — the UI edits this one as a chip list, see below |
 | `codec` | `value` | Parsed codec, or probed video codec for on-disk files |
 | `size` | `min_gb` / `max_gb` | Indexer size, or the file's size on disk |
 | `seeders` | `min` | Indexer seeders — always absent for an on-disk file, so this condition can never match a file |
+
+### Release groups without the regex
+
+A `release_group` row in **Settings → Custom formats** is a chip list, not a text box: type a group name and press Enter (or type several separated by commas), click a chip's × to drop it. The editor compiles the chips to `(?i)^(name1|name2)$` — anchored, so `YTS` never matches `YTSAGAIN`, case-insensitive, and every name regex-escaped, so a group called `YTS.MX` matches that literal and not "YTS" plus any character. Score the format **negative to exclude** those groups and **positive to prefer** them; there is no separate blocklist, the arithmetic is the blocklist.
+
+Nothing is hidden from you: **Edit as regex** switches the row back to the raw pattern, and an existing pattern the chip list could not have written (anything that is not exactly that anchored alternation of literals) opens as raw regex on its own, so a hand-written pattern is never silently rewritten. A raw pattern that *does* match the chip shape shows as chips again.
 
 **Matching semantics are Radarr-compatible:** every `required` condition must pass, and if the format has any non-required conditions, at least one of those must also pass (a format that is all-required needs nothing else — "at least one of zero" is vacuously true). `negate` inverts a single condition's result before it's combined. A condition whose input is missing — seeders on a file, a release group nobody could parse — evaluates false, negated or not.
 
@@ -60,7 +74,7 @@ matches a release that says "x265" in the title *or* one whose probed codec is `
 
 ## The built-in library
 
-Thirteen formats compiled into the binary — not seeded into YAML, so they can't be half-edited and stay current across upgrades. They're always available to score in a profile, they're read-only through the API (`builtin: true`; `PUT`/`DELETE` against one is `409`), and a `custom_formats` entry may not reuse a built-in name (`config.Validate` rejects the collision).
+Ten formats compiled into the binary — not seeded into YAML, so they can't be half-edited and stay current across upgrades. They're always available to score in a profile, they're read-only through the API (`builtin: true`; `PUT`/`DELETE` against one is `409`), and a `custom_formats` entry may not reuse a built-in name (`config.Validate` rejects the collision).
 
 | Name | Catches |
 | --- | --- |
@@ -70,11 +84,10 @@ Thirteen formats compiled into the binary — not seeded into YAML, so they can'
 | `av1` | "av1" in the title, or probed codec `av1` |
 | `hdr` | HDR10/HDR10+/HDR/DV/Dolby Vision in the title |
 | `resolution-2160p` / `-1080p` / `-720p` | Parsed resolution equals that exact tier |
-| `scene-junk` | CAM/HDCAM/telesync/telecine/DVDScr/screener/workprint |
-| `bad-group` | A short list of known bad release groups |
-| `re-encode` | "re-encode(d)" in the title |
 | `multi-audio` | "multi" or "dual audio" in the title |
 | `dubbed` | "dubbed" in the title |
+
+Every built-in *describes* a release — what codec, what resolution, what source. None of them judges one. Opinions about which release groups or which rip sources you'll accept are yours to write as `custom_formats`, because they don't generalize: the group list one person blocks is the group list another prefers, and a screener is worthless to most people and the only available copy to some. The `scene-junk` and `bad-group` examples above, and the release-group chips in **Settings → Custom formats**, are there to make writing your own a two-minute job.
 
 `GET /api/v1/custom-formats` returns both libraries in one list; check `builtin` to tell them apart.
 
@@ -94,8 +107,7 @@ quality_profiles:
     formats:                      # NEW: score per format, by name
       - { name: x265, score: 100 }
       - { name: hdr, score: 50 }
-      - { name: scene-junk, score: -1000 }
-      - { name: bad-group, score: -1000 }
+      - { name: scene-junk, score: -1000 }   # a custom_formats entry of your own
     min_score: 0                  # NEW: total below this -> release rejected
     upgrade_until_score: 500      # NEW: stop upgrading once the current file reaches this
 
@@ -120,7 +132,7 @@ For one release against one profile:
 
 Two idioms fall out of this:
 
-- **"Never grab this"** is a very negative score (`-1000`) on a format like `scene-junk` combined with `min_score: 0` — there's no separate blocklist feature, the arithmetic *is* the blocklist.
+- **"Never grab this"** is a very negative score (`-1000`) on a custom format like the `scene-junk` example above, combined with `min_score: 0` — there's no separate blocklist feature, the arithmetic *is* the blocklist.
 - **`upgrade_until_score` is "the score I'd be happy to stop at"**, not a target to aim for. `0` means no cap — any strictly higher-scoring release keeps upgrading. A cap nothing can reach just means upgrades never turn off for that profile; see [Upgrades](#upgrades).
 
 **Selection**, among the releases that pass both checks: highest total score wins. Ties are broken by seeders.
@@ -133,7 +145,7 @@ Scores are relative order *within one profile* — there is no global scale, and
 
 A profile can replace a file already on disk with a better release, but only through one path: the **RSS feed scanner**, not the interactive search. Interactive search only ever fills a `wanted` item.
 
-Each feed tick, for every monitored movie that already has a file (`upgrade_allowed` on, not currently `downloading` — a movie mid-re-grab isn't re-grabbed again every tick), an incoming release is graded against the movie's current file:
+Each feed tick, for every monitored movie or episode that already has a file (`upgrade_allowed` on, nothing already in flight for it — an item mid-re-grab isn't re-grabbed again every tick), an incoming release is graded against the current file:
 
 1. The release must pass the profile's band + minimum checks like any other candidate.
 2. **The current file's resolution must be in-band** (`Profile.UpgradableFrom`) — at or below `preferred_resolution`, and not unresolvable. A file *above* the band, or one whose resolution can't be determined at all, is never touched: both cases score `0` for the same mechanical reason (the band rejected them before any format was summed), and `0` is not evidence the file is bad — it's evidence the file is untouchable. Replacing it would delete exactly what the profile was protecting.
@@ -141,7 +153,14 @@ Each feed tick, for every monitored movie that already has a file (`upgrade_allo
 
 Only then does Streamline grab the replacement, mark the new download record `replace_existing`, and let the existing import-verification/replace flow do the rest — the same path a manual "replace" grab uses. No new download states, no separate upgrade queue.
 
-**Movies only, in this phase.** The TV feed scanner grabs new episodes but does not evaluate upgrades for episodes already on disk — the scanner has no access to download records from that path, and a season pack is one download record standing in for many episodes, which makes "replace this one episode" a season-level design question that hasn't been answered yet.
+### Series, seasons and episodes
+
+Episodes upgrade by the same three rules. Two things are specific to series:
+
+- **A season pack is judged against the season's best file.** A pack is a single download standing in for many episodes, and once it lands there's no per-episode veto — so it has to beat the *strongest* file it would replace, not the weakest. One episode in the season sitting above `preferred_resolution` (or with an unreadable resolution) blocks the pack outright, for the same reason a single file above the band is never touched. Upgrade one episode at a time if you want finer control: a single-episode release is judged against that episode alone.
+- **Filling a gap wins over upgrading.** If a pack covers episodes you're missing, it's grabbed to fill them and the episodes you already have keep their files. It is not re-evaluated as an upgrade in the same tick — re-run it once the season is complete if you want the whole season replaced.
+
+Series upgrades reuse the identical import path: the record is marked `replace_existing`, verification runs before anything on disk is touched, and a pack is verified as a whole.
 
 **On-disk scores are never stored.** Every comparison rebuilds a `ReleaseContext` from the file's row on demand — basename parsed the same way a release title is, resolution from the probed width (falling back to the filename parse), codec from the probe, size from the row. Editing a profile re-ranks your whole library instantly, with no migration and no cached score to invalidate.
 
@@ -172,15 +191,15 @@ An empty `conditions` array is `422`. A condition that does not compile — an u
 
 ## Presets
 
-The new-profile dialog offers three starting points — SPA-side templates, no server involved, prefilling the form so you edit from there:
+The new-profile dialog offers three starting points — SPA-side templates, no server involved, prefilling the *whole* form (name, both resolutions, allowed codecs, scores and thresholds) so you edit from there:
 
-| Preset | Formats | `min_score` | `upgrade_until_score` |
-| --- | --- | --- | --- |
-| **Quality first** | remux +200, hdr +100, scene-junk −1000, bad-group −1000 | 0 | 300 |
-| **Space saver** | x265 +100, av1 +80, remux −100, scene-junk −1000, bad-group −1000 | 0 | 100 |
-| **x265 only** | x265 +100, x264 −1000, scene-junk −1000 | 0 | 100 |
+| Preset | Name | Resolution band | Allowed codecs | Formats | `min_score` | `upgrade_until_score` |
+| --- | --- | --- | --- | --- | --- | --- |
+| **Quality first** | `Quality first` | 1080p – 2160p | any | remux +200, hdr +100 | 0 | 300 |
+| **Space saver** | `Space saver` | 720p – 1080p | HEVC, AV1 | x265 +100, av1 +80, remux −100 | 0 | 100 |
+| **x265 only** | `x265 only` | 720p – 1080p | HEVC | x265 +100, x264 −1000 | 0 | 100 |
 
-Every name in a preset is a built-in, so a preset applies cleanly to a fresh install with no `custom_formats` defined yet.
+Applying one never saves — it fills the form and you edit from there, including the name it suggests. Every format name in a preset is a built-in, so a preset applies cleanly to a fresh install with no `custom_formats` defined yet; that is also why no preset carries a group blocklist or a junk-source penalty, which would have to name a format only you can write.
 
 ---
 
@@ -188,7 +207,7 @@ Every name in a preset is a built-in, so a preset applies cleanly to a fresh ins
 
 - **Browse releases** (`/movies/{id}/search`, the series browse endpoints, and the RSS/missing-search paths that feed them) sort by score descending, ties by seeders — not by seeders alone. Every `SearchResult` carries `score`, `rejected`, `reject_reason`, and `matched_formats`, all relative to the queried item's own profile. Rejected releases are still listed (the SPA mutes them) — an operator can grab one deliberately; `score`/`rejected`/etc. are ignored if present on a grab request body.
 - **Movie detail** (`GET /movies/{id}`) reports `file_score` on each entry of `media_files` — the file's score against the movie's current profile, computed at response time. It's list-response-omitted (the same eager-loaded `media_files` edge that also carries file size and quality elsewhere), and absent entirely when no quality profile is configured at all. There's no `rejected` flag on a file — a file outside the band or below `min_score` simply shows `file_score: 0`, the same number the upgrade decision reads.
-- **Episodes carry no `file_score`** — deliberately out of scope alongside the rest of the upgrade-side TV gap (see [Upgrades](#upgrades)).
+- **Series detail** (`GET /series/{id}`) reports `file_score` on each episode that has a file, against the series' profile, on the same terms. The series *list* never carries episodes at all, so there is no list/detail split to think about there.
 - `min_score` is omitted from API responses when it's `0` — the handler only sets the pointer when the value is non-zero, not a signal that the profile has no minimum. Absent means `0`.
 
 ---
@@ -208,4 +227,4 @@ Three, all a consequence of moving from "first release that passes" to score-the
 - **No active backlog search for upgrade-eligible items.** Upgrades happen when the RSS feed happens to see a better release; there's no scheduled sweep that goes looking for one after you retune a profile. Re-run search manually on items you want re-evaluated right away.
 - **No per-file score caching.** Every score above is computed on the fly; that's fine at today's cost, but means there's no SQL-queryable "show me everything below its upgrade cap" view yet.
 - **No community format import/sync** (TRaSH Guides, Dictionarry, etc.). Custom formats here are entirely local.
-- **No episode upgrades.** See [Upgrades](#upgrades).
+- **No per-episode veto inside a season pack.** A pack is accepted or rejected whole; there's no "take these three episodes from it". See [Upgrades](#upgrades).

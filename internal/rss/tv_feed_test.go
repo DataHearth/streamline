@@ -64,6 +64,15 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 			Return(shows, err).Once()
 	}
 
+	// expectQueries stubs both per-tick listings: the wanted backlog, and the
+	// episodes already on disk an upgrade may replace. Every pass that gets
+	// past the download-client check runs both.
+	expectQueries := func(wanted, upgradable []*ent.TVShow) {
+		expectEligible(wanted, nil)
+		store.EXPECT().ListUpgradeCandidateShows(mock.Anything).
+			Return(upgradable, nil).Once()
+	}
+
 	// expectDownloading stubs the two writes every successful grab performs.
 	expectDownloading := func(id uint32) {
 		store.EXPECT().
@@ -96,7 +105,7 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 	It("continues to the next indexer on per-indexer error", func() {
 		configtest.Setup(indexerConfig("a", "b"))
 		newScanner()
-		expectEligible(nil, nil)
+		expectQueries(nil, nil)
 		feeder.EXPECT().Feed(mock.Anything, "a").
 			Return(nil, errors.New("boom")).Once()
 		feeder.EXPECT().Feed(mock.Anything, "b").Return(nil, nil).Once()
@@ -106,7 +115,7 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 	It("grabs a single episode matched by season+episode number", func() {
 		configtest.Setup(indexerConfig("a"))
 		newScanner()
-		expectEligible([]*ent.TVShow{showWith(&ent.Episode{ID: 11, Number: 1})}, nil)
+		expectQueries([]*ent.TVShow{showWith(&ent.Episode{ID: 11, Number: 1})}, nil)
 		feeder.EXPECT().Feed(mock.Anything, "a").
 			Return([]indexer.SearchResult{{Title: acceptableEp}}, nil).Once()
 		grabber.EXPECT().
@@ -123,7 +132,7 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 		func() {
 			configtest.Setup(indexerConfig("a"))
 			newScanner()
-			expectEligible([]*ent.TVShow{showWith(
+			expectQueries([]*ent.TVShow{showWith(
 				&ent.Episode{ID: 11, Number: 1},
 				&ent.Episode{ID: 12, Number: 2},
 			)}, nil)
@@ -142,7 +151,7 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 	It("skips whole-series packs", func() {
 		configtest.Setup(indexerConfig("a"))
 		newScanner()
-		expectEligible([]*ent.TVShow{showWith(&ent.Episode{ID: 11, Number: 1})}, nil)
+		expectQueries([]*ent.TVShow{showWith(&ent.Episode{ID: 11, Number: 1})}, nil)
 		feeder.EXPECT().Feed(mock.Anything, "a").
 			Return([]indexer.SearchResult{
 				{Title: "The.Black.Sea.S01-S05.COMPLETE.1080p.WEB-DL.x265-GRP"},
@@ -155,7 +164,7 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 		newScanner()
 		show := showWith(&ent.Episode{ID: 11, Number: 1})
 		show.QualityProfile = uhdProfile
-		expectEligible([]*ent.TVShow{show}, nil)
+		expectQueries([]*ent.TVShow{show}, nil)
 		// 1080p clears the default profile but not the show's 2160p floor.
 		feeder.EXPECT().Feed(mock.Anything, "a").
 			Return([]indexer.SearchResult{{Title: acceptableEp}}, nil).Once()
@@ -165,7 +174,7 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 	It("ignores an episode the show doesn't want", func() {
 		configtest.Setup(indexerConfig("a"))
 		newScanner()
-		expectEligible([]*ent.TVShow{showWith(&ent.Episode{ID: 11, Number: 1})}, nil)
+		expectQueries([]*ent.TVShow{showWith(&ent.Episode{ID: 11, Number: 1})}, nil)
 		feeder.EXPECT().Feed(mock.Anything, "a").
 			Return([]indexer.SearchResult{
 				{Title: "The.Black.Sea.S03E09.1080p.WEB-DL.x265-GRP"},
@@ -176,7 +185,7 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 	It("bumps grab_failures when the grab errors", func() {
 		configtest.Setup(indexerConfig("a"))
 		newScanner()
-		expectEligible([]*ent.TVShow{showWith(&ent.Episode{ID: 11, Number: 1})}, nil)
+		expectQueries([]*ent.TVShow{showWith(&ent.Episode{ID: 11, Number: 1})}, nil)
 		feeder.EXPECT().Feed(mock.Anything, "a").
 			Return([]indexer.SearchResult{{Title: acceptableEp}}, nil).Once()
 		grabber.EXPECT().
@@ -190,7 +199,7 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 	It("only grabs once when two indexers carry the same episode", func() {
 		configtest.Setup(indexerConfig("a", "b"))
 		newScanner()
-		expectEligible([]*ent.TVShow{showWith(&ent.Episode{ID: 11, Number: 1})}, nil)
+		expectQueries([]*ent.TVShow{showWith(&ent.Episode{ID: 11, Number: 1})}, nil)
 		for _, name := range []string{"a", "b"} {
 			feeder.EXPECT().Feed(mock.Anything, name).
 				Return([]indexer.SearchResult{{Title: acceptableEp}}, nil).Once()
@@ -210,7 +219,7 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 		show := showWith(&ent.Episode{ID: 11, Number: 1, AbsoluteNumber: 18})
 		show.Title = "Blue Lock"
 		show.Type = tvshow.TypeAnime
-		expectEligible([]*ent.TVShow{show}, nil)
+		expectQueries([]*ent.TVShow{show}, nil)
 		feeder.EXPECT().Feed(mock.Anything, "a").
 			Return([]indexer.SearchResult{
 				{Title: "[SubGrp] Blue Lock - 18 [1080p][HEVC]"},
@@ -231,7 +240,7 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 		show := showWith(&ent.Episode{ID: 11, Number: 1, AirDate: aired})
 		show.Title = "The Daily Show"
 		show.Type = tvshow.TypeDaily
-		expectEligible([]*ent.TVShow{show}, nil)
+		expectQueries([]*ent.TVShow{show}, nil)
 		feeder.EXPECT().Feed(mock.Anything, "a").
 			Return([]indexer.SearchResult{
 				{Title: "The.Daily.Show.2026.07.14.1080p.WEB-DL.x265-GRP"},
@@ -248,7 +257,7 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 	It("does not absolute-match a standard show", func() {
 		configtest.Setup(indexerConfig("a"))
 		newScanner()
-		expectEligible([]*ent.TVShow{showWith(
+		expectQueries([]*ent.TVShow{showWith(
 			&ent.Episode{ID: 11, Number: 1, AbsoluteNumber: 18},
 		)}, nil)
 		feeder.EXPECT().Feed(mock.Anything, "a").
@@ -256,5 +265,117 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 				{Title: "The Black Sea - 18 [1080p][HEVC]"},
 			}, nil).Once()
 		Expect(scanner.Run(ctx)).To(Succeed())
+	})
+
+	Context("upgrades", func() {
+		const (
+			plainEpFile = "The.Black.Sea.S03E01.1080p.WEB-DL.x264-GRP.mkv"
+			remuxEpFile = "The.Black.Sea.S03E02.1080p.BluRay.REMUX.x264-GRP.mkv"
+
+			betterEp   = "The.Black.Sea.S03E01.2160p.BluRay.REMUX.HDR.x265-GRP"
+			betterPack = "The.Black.Sea.S03.2160p.BluRay.REMUX.HDR.x265-GRP"
+			// remux only: ties the 200 a remux file already scores.
+			tiedPack = "The.Black.Sea.S03.1080p.BluRay.REMUX.x264-GRP"
+		)
+
+		// epWithFile builds an upgrade candidate episode: one on disk, 1080p by
+		// both its name and its probed width.
+		epWithFile := func(id uint32, number uint16, basename string) *ent.Episode {
+			e := &ent.Episode{ID: id, Number: number}
+			e.Edges.MediaFiles = []*ent.MediaFile{{
+				Path:       "/tv/The Black Sea/Season 03/" + basename,
+				Size:       4_000_000_000,
+				Width:      1920,
+				VideoCodec: "h264",
+			}}
+			return e
+		}
+
+		onProfile := func(name string, show *ent.TVShow) *ent.TVShow {
+			show.QualityProfile = name
+			return show
+		}
+
+		It("grabs an episode upgrade and flags the record replace_existing", func() {
+			configtest.Setup(upgradeConfig("a"))
+			newScanner()
+			expectQueries(nil, []*ent.TVShow{
+				showWith(epWithFile(11, 1, plainEpFile)),
+			})
+			feeder.EXPECT().Feed(mock.Anything, "a").
+				Return([]indexer.SearchResult{{Title: betterEp}}, nil).Once()
+			grabber.EXPECT().
+				GrabEpisode(mock.Anything, mock.Anything, uint32(11)).
+				Return(&ent.DownloadRecord{ID: 55}, nil).Once()
+			store.EXPECT().
+				MarkDownloadRecordReplaceExisting(mock.Anything, uint32(55)).
+				Return(nil).Once()
+			expectDownloading(11)
+			Expect(scanner.Run(ctx)).To(Succeed())
+		})
+
+		It("upgrades a whole season against its best file", func() {
+			configtest.Setup(upgradeConfig("a"))
+			newScanner()
+			expectQueries(nil, []*ent.TVShow{showWith(
+				epWithFile(11, 1, plainEpFile),
+				epWithFile(12, 2, remuxEpFile),
+			)})
+			feeder.EXPECT().Feed(mock.Anything, "a").
+				Return([]indexer.SearchResult{{Title: betterPack}}, nil).Once()
+			// One record, against the first episode of the season.
+			grabber.EXPECT().
+				GrabEpisode(mock.Anything, mock.Anything, uint32(11)).
+				Return(&ent.DownloadRecord{ID: 55}, nil).Once()
+			store.EXPECT().
+				MarkDownloadRecordReplaceExisting(mock.Anything, uint32(55)).
+				Return(nil).Once()
+			expectDownloading(11)
+			expectDownloading(12)
+			Expect(scanner.Run(ctx)).To(Succeed())
+		})
+
+		It("leaves the season alone when the pack only ties its best file", func() {
+			configtest.Setup(upgradeConfig("a"))
+			newScanner()
+			// E01 alone would be upgraded by this pack; E02's remux is what
+			// stops it, and a pack has no per-episode veto.
+			expectQueries(nil, []*ent.TVShow{showWith(
+				epWithFile(11, 1, plainEpFile),
+				epWithFile(12, 2, remuxEpFile),
+			)})
+			feeder.EXPECT().Feed(mock.Anything, "a").
+				Return([]indexer.SearchResult{{Title: tiedPack}}, nil).Once()
+			Expect(scanner.Run(ctx)).To(Succeed())
+		})
+
+		It("never upgrades under a profile with upgrade_allowed false", func() {
+			configtest.Setup(upgradeConfig("a"))
+			newScanner()
+			expectQueries(nil, []*ent.TVShow{
+				onProfile(lockedProfile, showWith(epWithFile(11, 1, plainEpFile))),
+			})
+			feeder.EXPECT().Feed(mock.Anything, "a").
+				Return([]indexer.SearchResult{{Title: betterEp}}, nil).Once()
+			Expect(scanner.Run(ctx)).To(Succeed())
+		})
+
+		It("fills a wanted episode rather than upgrading the season", func() {
+			configtest.Setup(upgradeConfig("a"))
+			newScanner()
+			// Same show in both listings: E01 missing, E02 on disk. The pack is
+			// grabbed for the hole, and the file it doesn't beat stays put.
+			expectQueries(
+				[]*ent.TVShow{showWith(&ent.Episode{ID: 11, Number: 1})},
+				[]*ent.TVShow{showWith(epWithFile(12, 2, remuxEpFile))},
+			)
+			feeder.EXPECT().Feed(mock.Anything, "a").
+				Return([]indexer.SearchResult{{Title: tiedPack}}, nil).Once()
+			grabber.EXPECT().
+				GrabEpisode(mock.Anything, mock.Anything, uint32(11)).
+				Return(&ent.DownloadRecord{ID: 55}, nil).Once()
+			expectDownloading(11)
+			Expect(scanner.Run(ctx)).To(Succeed())
+		})
 	})
 })

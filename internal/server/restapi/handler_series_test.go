@@ -178,6 +178,60 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
 			Expect(body).NotTo(HaveKey("cast"))
 		})
+
+		It("scores each episode's file against the series profile", func() {
+			configtest.Setup(map[string]any{
+				"quality_profiles": []map[string]any{{
+					"name":                 "default",
+					"min_resolution":       "720p",
+					"preferred_resolution": "1080p",
+					"formats": []map[string]any{
+						{"name": "remux", "score": 50},
+						{"name": "x265", "score": 10},
+					},
+				}},
+				"quality_default_profile": "default",
+			})
+			ep := &ent.Episode{
+				ID:        7,
+				Number:    1,
+				Status:    "available",
+				Monitored: true,
+			}
+			ep.Edges.MediaFiles = []*ent.MediaFile{{
+				ID: 3, Size: 4_000_000_000,
+				Path: "/tv/Breaking Bad/Season 01/" +
+					"Breaking.Bad.S01E01.1080p.BluRay.Remux.x265-GRP.mkv",
+			}}
+			season := &ent.Season{ID: 2, Number: 1, Monitored: true}
+			season.Edges.Episodes = []*ent.Episode{ep}
+			show := &ent.TVShow{
+				ID: 1, Title: "Breaking Bad", Year: 2008, TvdbID: 81189,
+				QualityProfile: "default",
+			}
+			show.Edges.Seasons = []*ent.Season{season}
+			app.tvshows.EXPECT().Get(mock.Anything, uint32(1)).
+				Return(show, nil).Once()
+
+			resp := app.do(
+				app.req(http.MethodGet, "/api/v1/series/1", app.adminKey, nil),
+			)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+			var body struct {
+				Seasons []struct {
+					Episodes []struct {
+						FileScore *int `json:"file_score"`
+					} `json:"episodes"`
+				} `json:"seasons"`
+			}
+			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+			Expect(body.Seasons).To(HaveLen(1))
+			Expect(body.Seasons[0].Episodes).To(HaveLen(1))
+			Expect(body.Seasons[0].Episodes[0].FileScore).
+				To(HaveValue(Equal(60)))
+		})
 	})
 
 	Describe("GetSeriesCounts", func() {

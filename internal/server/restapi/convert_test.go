@@ -216,7 +216,7 @@ var _ = Describe("convert", Label("unit", "server"), func() {
 				Container: "matroska", VideoCodec: "hevc", Width: 1920, Height: 1080,
 				DurationSeconds: 1200, ProbedAt: &now,
 			}}
-			out := episodeToAPI(e, now)
+			out := episodeToAPI(e, now, "")
 			Expect(out.MediaInfo).NotTo(BeNil())
 			Expect(out.MediaInfo.VideoCodec).To(Equal("hevc"))
 		})
@@ -226,12 +226,12 @@ var _ = Describe("convert", Label("unit", "server"), func() {
 			e.Edges.MediaFiles = []*ent.MediaFile{
 				{ID: 1, Path: "/m/Show/S01E01.mkv", Size: 100},
 			}
-			Expect(episodeToAPI(e, time.Now()).MediaInfo).To(BeNil())
+			Expect(episodeToAPI(e, time.Now(), "").MediaInfo).To(BeNil())
 		})
 
 		It("omits media_info when the episode has no file", func() {
 			e := &ent.Episode{ID: 1, Number: 1, Status: "wanted", Monitored: true}
-			Expect(episodeToAPI(e, time.Now()).MediaInfo).To(BeNil())
+			Expect(episodeToAPI(e, time.Now(), "").MediaInfo).To(BeNil())
 		})
 	})
 })
