@@ -188,16 +188,19 @@ func (s *FeedScanner) tryUpgrade(
 	file := qualityctx.ContextFromFile(
 		filepath.Base(mf.Path), mf.Size, int(mf.Width), mf.VideoCodec,
 	)
-	if !p.UpgradableFrom(file.Resolution) {
-		slog.DebugContext(ctx, "feed-scan: upgrade skipped, file outside band",
-			"movie", m.Title, "file.resolution", file.Resolution,
-			"release", item.Title)
+	release := qualityctx.ContextFromRelease(item.Title, item.Size, item.Seeders)
+	if !quality.ReplacesFile(p, file, release) {
+		// Evaluate again here (cheap, pure) so the log can tell a band refusal
+		// from a tie or an upgrade_until_score cap apart, rather than naming
+		// only the first of ReplacesFile's three guards.
+		slog.DebugContext(ctx, "feed-scan: upgrade skipped",
+			"movie", m.Title, "release", item.Title,
+			"file.resolution", file.Resolution,
+			"file_score", quality.Evaluate(p, file).Score,
+			"release_score", quality.Evaluate(p, release).Score)
 		return false
 	}
 	cur := quality.Evaluate(p, file)
-	if !p.ShouldUpgrade(cur.Score, rel.Score) {
-		return false
-	}
 
 	pass.grabbed[m.ID] = struct{}{}
 	rec, err := s.grabber.Grab(ctx, item, m.ID)

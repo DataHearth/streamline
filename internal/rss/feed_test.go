@@ -312,6 +312,18 @@ var _ = Describe("FeedScanner.Run", Label("unit", "rss"), func() {
 		Expect(scanner.Run(ctx)).To(Succeed())
 	})
 
+	It("leaves the file alone when the release only ties its score", func() {
+		configtest.Setup(upgradeConfig("a"))
+		newScanner()
+		upgradeCandidates(movieWithFile(upgradableProfile, remuxFile))
+		// remuxHDRelease is the same 1080p remux-only match as the file
+		// already on disk: 200 == 200, and ShouldUpgrade requires strictly
+		// greater.
+		feeder.EXPECT().Feed(mock.Anything, "a").
+			Return([]indexer.SearchResult{{Title: remuxHDRelease}}, nil).Once()
+		Expect(scanner.Run(ctx)).To(Succeed())
+	})
+
 	It("stops upgrading once the file is at the profile's cap", func() {
 		configtest.Setup(upgradeConfig("a"))
 		newScanner()
