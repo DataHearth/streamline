@@ -9,7 +9,7 @@ export async function readTorrentFile(file: File): Promise<TorrentFileRead> {
 	}
 	const bytes = new Uint8Array(await file.arrayBuffer());
 	let binary = "";
-	for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+	for (const b of bytes) binary += String.fromCharCode(b);
 	return { name: file.name, base64: btoa(binary) };
 }
 

@@ -46,13 +46,17 @@ export function pullRefresh(node: HTMLElement, params: Params) {
 	const onStart = (e: TouchEvent) => {
 		if (opts.disabled || refreshing || e.touches.length !== 1) return;
 		if ((scroller?.scrollTop ?? 0) > 0) return;
-		startY = e.touches[0].clientY;
+		const touch = e.touches[0];
+		if (!touch) return;
+		startY = touch.clientY;
 		active = true;
 	};
 
 	const onMove = (e: TouchEvent) => {
 		if (!active) return;
-		const dy = e.touches[0].clientY - startY;
+		const touch = e.touches[0];
+		if (!touch) return;
+		const dy = touch.clientY - startY;
 		if (dy <= 0) {
 			// Turned into a scroll up; hand the gesture back.
 			if (pull > 0) clear();

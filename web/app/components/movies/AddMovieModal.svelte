@@ -196,8 +196,9 @@
 			if (selectedTmdbId !== null) selectedTmdbId = null;
 			return;
 		}
-		if (!list.some((r) => r.tmdb_id === selectedTmdbId)) {
-			selectedTmdbId = list[0].tmdb_id;
+		const [first] = list;
+		if (first && !list.some((r) => r.tmdb_id === selectedTmdbId)) {
+			selectedTmdbId = first.tmdb_id;
 		}
 	});
 

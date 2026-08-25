@@ -46,8 +46,9 @@
 	<!-- svelte-ignore slot_element_deprecated -->
 	<slot />
 {:else}
-	<AppShell>
+	{#snippet shellChildren()}
 		<!-- svelte-ignore slot_element_deprecated -->
 		<slot />
-	</AppShell>
+	{/snippet}
+	<AppShell children={shellChildren} />
 {/if}

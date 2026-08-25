@@ -113,8 +113,9 @@ export function navCountsQuery() {
 			const by: Record<string, number> = {};
 			for (const i of items) by[i.status] = (by[i.status] ?? 0) + 1;
 			return (["downloading", "importing", "held", "paused", "error"] as const)
-				.filter((s) => by[s])
-				.map((s) => `${n(by[s])} ${s === "error" ? "failed" : s}`)
+				.map((s) => ({ s, count: by[s] ?? 0 }))
+				.filter(({ count }) => count > 0)
+				.map(({ s, count }) => `${n(count)} ${s === "error" ? "failed" : s}`)
 				.join(" · ");
 		},
 		get queueDots(): NavDot[] {
@@ -122,10 +123,9 @@ export function navCountsQuery() {
 			if (!items?.length) return [];
 			const by: Record<string, number> = {};
 			for (const i of items) by[i.status] = (by[i.status] ?? 0) + 1;
-			return QUEUE_DOTS.filter((s) => by[s.key]).map((s) => ({
-				...s,
-				count: by[s.key],
-			}));
+			return QUEUE_DOTS.map((s) => ({ ...s, count: by[s.key] ?? 0 })).filter(
+				(s) => s.count > 0,
+			);
 		},
 		get importsLine(): string {
 			const d = imports.data;

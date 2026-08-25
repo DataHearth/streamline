@@ -1,7 +1,7 @@
 <script lang="ts">
 	let { email = "", name = "", size = 32 } = $props();
 
-	function emailHue(e) {
+	function emailHue(e: string) {
 		let h = 0;
 		for (let i = 0; i < e.length; i++) {
 			h = ((h << 5) - h + e.charCodeAt(i)) | 0;
@@ -9,7 +9,7 @@
 		return Math.abs(h) % 360;
 	}
 
-	function computeInitials(n, e) {
+	function computeInitials(n: string, e: string) {
 		const source = (n?.trim() || e || "").split(/[\s@]+/).filter(Boolean);
 		const first = source[0]?.[0] ?? "";
 		const second = source[1]?.[0] ?? "";

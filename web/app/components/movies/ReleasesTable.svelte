@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { createQuery, createMutation } from "@tanstack/svelte-query";
 	import {
-		AlertTriangle,
+		TriangleAlert,
 		ChevronDown,
 		ChevronUp,
 		Download,
@@ -238,7 +238,7 @@
 		role="alert"
 		class="mb-3 flex items-start gap-2 rounded-md border border-status-failed/40 bg-status-failed/10 p-2 text-xs text-status-failed"
 	>
-		<AlertTriangle class="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+		<TriangleAlert class="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
 		{errMsg}
 	</div>
 {/if}

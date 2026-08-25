@@ -45,7 +45,9 @@
 			? states.indexOf("current")
 			: Math.max(0, states.lastIndexOf("done")),
 	);
-	let current = $derived(STEPS[currentIndex]);
+	// currentIndex is always within [0, STEPS.length): indexOf/lastIndexOf over
+	// `states`, which is derived 1:1 from STEPS, clamped to 0 by Math.max.
+	let current = $derived(STEPS[currentIndex]!);
 </script>
 
 <!-- Below md the four labels are single unbreakable words that overflow a 358px

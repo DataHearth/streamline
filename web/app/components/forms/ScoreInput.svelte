@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { untrack } from "svelte";
+
 	type Props = {
 		value: number;
 		onChange: (n: number) => void;
@@ -19,8 +21,10 @@
 	// reached one keystroke at a time, and "-" — the first of them — parses to
 	// NaN: coercing it to 0 and writing that back re-rendered the input and ate
 	// the minus, so "-1000" could only ever be pasted, never typed.
-	let text = $state(String(value));
-	let committed = $state(value);
+	// untrack: only the initial `value` seeds local state — later prop changes
+	// are picked up by the $effect below, not by re-running this initializer.
+	let text = $state(untrack(() => String(value)));
+	let committed = $state(untrack(() => value));
 
 	// Only an outside write (a preset, an edit dialog reopening) re-renders the
 	// field; reading `text` here would let the incomplete-string case above

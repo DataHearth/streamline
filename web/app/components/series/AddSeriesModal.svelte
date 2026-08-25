@@ -213,8 +213,9 @@
 			if (selectedTvdbId !== null) selectedTvdbId = null;
 			return;
 		}
-		if (!list.some((r) => r.tvdb_id === selectedTvdbId)) {
-			selectedTvdbId = list[0].tvdb_id;
+		const [first] = list;
+		if (first && !list.some((r) => r.tvdb_id === selectedTvdbId)) {
+			selectedTvdbId = first.tvdb_id;
 		}
 	});
 

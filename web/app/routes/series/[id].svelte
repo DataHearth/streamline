@@ -530,7 +530,7 @@
 						>
 							<Search size={15} aria-hidden="true" />
 							{(show.wanted_episodes ?? 0) > 0
-								? i18n.series_search_wanted({ count: show.wanted_episodes })
+								? i18n.series_search_wanted({ count: show.wanted_episodes ?? 0 })
 								: i18n.action_manual_search()}
 						</button>
 						<PlayOnMenu

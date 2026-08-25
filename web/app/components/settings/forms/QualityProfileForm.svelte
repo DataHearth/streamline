@@ -76,7 +76,7 @@
 
 <script lang="ts">
 	import { createQuery } from "@tanstack/svelte-query";
-	import { Plus, Trash2, Wand2 } from "@lucide/svelte";
+	import { Plus, Trash2, WandSparkles } from "@lucide/svelte";
 	import TextField from "../../forms/TextField.svelte";
 	import Select from "../../forms/Select.svelte";
 	import Checkbox from "../../forms/Checkbox.svelte";
@@ -152,7 +152,7 @@
 	{#if isCreate && !locked}
 		<div class="rounded-lg border border-border bg-bg-card p-3">
 			<span class="flex items-center gap-1.5 text-sm font-medium text-fg">
-				<Wand2 size={14} class="text-fg-muted" aria-hidden="true" />
+				<WandSparkles size={14} class="text-fg-muted" aria-hidden="true" />
 				{i18n.quality_presets()}
 			</span>
 			<p class="mt-0.5 text-xs leading-relaxed text-fg-muted">

@@ -69,8 +69,8 @@
 		}
 	}
 
-	const clientType = untrack(() => form.useStore((s) => s.values.client_type));
-	const authMethod = untrack(() => form.useStore((s) => s.values.auth_method));
+	const clientType = untrack(() => form.useSelector((s) => s.values.client_type));
+	const authMethod = untrack(() => form.useSelector((s) => s.values.auth_method));
 </script>
 
 <div class="space-y-5">

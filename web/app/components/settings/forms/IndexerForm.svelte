@@ -84,7 +84,7 @@
 		if (p.port) form.setFieldValue("port", p.port);
 	}
 
-	const protocol = untrack(() => form.useStore((s) => s.values.protocol));
+	const protocol = untrack(() => form.useSelector((s) => s.values.protocol));
 
 	const PROTOCOL_META: Record<
 		IndexerProtocol,

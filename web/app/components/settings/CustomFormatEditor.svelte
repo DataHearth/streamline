@@ -79,10 +79,14 @@
 		const m = GROUP_PATTERN.exec(pattern.trim());
 		if (!m) return null;
 		const body = m[1];
+		// GROUP_PATTERN's one capture group is unconditional (not inside `?:` or
+		// an alternation), so a match always populates it.
+		if (body === undefined) return null;
 		const names: string[] = [];
 		let cur = "";
 		for (let i = 0; i < body.length; i++) {
-			const ch = body[i];
+			// i < body.length, so the index is always in range.
+			const ch = body[i]!;
 			if (ch === "\\") {
 				const next = body[i + 1];
 				// \d, \b, \w and friends are classes, not escaped literals.

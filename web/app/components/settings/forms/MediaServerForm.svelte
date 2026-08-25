@@ -36,8 +36,8 @@
 
 	const lock = readOnlyLock();
 
-	const serverType = untrack(() => form.useStore((s) => s.values.server_type));
-	const apiKey = untrack(() => form.useStore((s) => s.values.api_key));
+	const serverType = untrack(() => form.useSelector((s) => s.values.server_type));
+	const apiKey = untrack(() => form.useSelector((s) => s.values.api_key));
 
 	const TYPES: { type: MediaServerType; label: string }[] = [
 		{ type: "plex", label: "Plex" },

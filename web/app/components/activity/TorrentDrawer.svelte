@@ -121,7 +121,7 @@
 		torrent && (torrent.status === "downloading" || torrent.status === "seeding" || torrent.status === "fetching" || torrent.status === "stalled"),
 	);
 	let active = $derived(
-		torrent && (torrent.status === "downloading" || torrent.status === "seeding" || torrent.status === "fetching"),
+		torrent !== null && (torrent.status === "downloading" || torrent.status === "seeding" || torrent.status === "fetching"),
 	);
 
 	const TABS: { key: Tab; label: string }[] = [

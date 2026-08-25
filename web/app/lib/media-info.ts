@@ -171,9 +171,9 @@ export function langName(code?: string): string {
 export function audioTracks(info: MediaInfo | null): AudioTrack[] {
 	const tracks = info?.audio_tracks ?? [];
 	if (tracks.length < 2) return [...tracks];
-	const i = tracks.findIndex((t) => t.default);
-	if (i <= 0) return [...tracks];
-	return [tracks[i], ...tracks.filter((_, k) => k !== i)];
+	const def = tracks.find((t) => t.default);
+	if (!def) return [...tracks];
+	return [def, ...tracks.filter((t) => t !== def)];
 }
 
 export function subtitleTracks(info: MediaInfo | null): SubtitleTrack[] {
@@ -212,6 +212,7 @@ export function audioSummary(
 	}
 	if (tracks.length === 1) {
 		const t = tracks[0];
+		if (!t) return undefined;
 		return {
 			text: joinDot([
 				langShort(t.language),
@@ -240,6 +241,7 @@ export function subtitleSummary(
 	if (subs.length === 0) return undefined;
 	if (subs.length === 1) {
 		const s = subs[0];
+		if (!s) return undefined;
 		return {
 			text: joinDot([langShort(s.language), codecLabel(s.codec)]),
 			hidden: 0,

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { AnyFieldApi } from "@tanstack/form-core";
+	import type { HTMLInputAttributes } from "svelte/elements";
 	import { cn } from "../../lib/cn";
 	import { fieldErrorMessages } from "../../lib/fieldErrors";
 	import { readOnlyLock } from "../../lib/config.svelte";
@@ -9,7 +10,7 @@
 		field: AnyFieldApi;
 		label: string;
 		type?: "text" | "email" | "password" | "number";
-		autocomplete?: string;
+		autocomplete?: HTMLInputAttributes["autocomplete"];
 		placeholder?: string;
 		readonly?: boolean;
 		help?: string;

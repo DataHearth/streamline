@@ -153,11 +153,9 @@
 	}));
 	// A held download is waiting on a person, so the dialog tracks an id: the
 	// queue repolls every 2 s and holding the object would show a stale finding
-	// list after a refetch.
+	// list after a refetch. heldItem itself is declared below queueItems, which
+	// it reads.
 	let resolveId = $state<number | null>(null);
-	let heldItem = $derived(
-		queueItems.find((q) => q.id === resolveId) ?? null,
-	);
 
 	const resolve = createMutation<
 		unknown,
@@ -277,6 +275,9 @@
 	);
 
 	let queueItems = $derived<QueueEntry[]>(queue.data?.items ?? []);
+	let heldItem = $derived(
+		queueItems.find((q) => q.id === resolveId) ?? null,
+	);
 	let historyItems = $derived<HistoryEntry[]>(
 		(history.data?.pages ?? []).flatMap((p) => p.items),
 	);

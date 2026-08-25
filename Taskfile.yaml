@@ -135,6 +135,7 @@ tasks:
     cmds:
       - task: lint:go
       - task: lint:frontend
+      - task: lint:ts
 
   lint:go:
     desc: Lint Go code
@@ -156,8 +157,9 @@ tasks:
 
   lint:ts:
     desc: Typecheck the SPA (svelte-check)
-    # Not wired into `lint` yet — the app still carries pre-existing errors this
-    # would fail on. Wire it in once the count reaches zero.
+    # esbuild strips types without checking them, so nothing else in the build
+    # would catch a type error in web/app.
+    deps: [build:js]
     cmd: pnpm exec svelte-check --tsconfig web/app/tsconfig.json {{.CLI_ARGS}}
 
   fmt:

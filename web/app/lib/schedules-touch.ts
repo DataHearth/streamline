@@ -72,7 +72,11 @@ export function groupSchedules(items: Schedule[]): ScheduleGroup[] {
 	const system = items.filter((s) => s.system);
 	const running = user.filter((s) => s.running);
 	const scheduled = user.filter((s) => !s.running);
-	return [
+	// Typed here, not inferred through the `.filter()` below: contextual typing
+	// from the function's return type doesn't flow through a method call, so
+	// each `key` would otherwise widen to `string` and fail against
+	// `ScheduleGroupKey`.
+	const groups: ScheduleGroup[] = [
 		{
 			key: "running",
 			label: i18n.schedule_group_running(),
@@ -91,5 +95,6 @@ export function groupSchedules(items: Schedule[]): ScheduleGroup[] {
 			rows: system,
 			count: false,
 		},
-	].filter((g) => g.rows.length > 0);
+	];
+	return groups.filter((g) => g.rows.length > 0);
 }

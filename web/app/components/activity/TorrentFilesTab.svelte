@@ -188,10 +188,9 @@
 	function folderPriority(path: string): TorrentFilePriority | null {
 		const node = nodeAt(path);
 		if (!node) return null;
-		const all = filesUnder(node);
-		if (all.length === 0) return null;
-		const first = all[0].priority;
-		return all.every((f) => f.priority === first) ? first : null;
+		const [first, ...rest] = filesUnder(node);
+		if (!first) return null;
+		return rest.every((f) => f.priority === first.priority) ? first.priority : null;
 	}
 	function setFolderPriority(path: string, priority: TorrentFilePriority) {
 		const node = nodeAt(path);
