@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Modal from "../modals/Modal.svelte";
-	import ReleasesTable from "../movies/ReleasesTable.svelte";
-	import ReplaceExistingToggle from "../movies/ReplaceExistingToggle.svelte";
+	import ReleasesTable from "../shared/ReleasesTable.svelte";
+	import ReplaceExistingToggle from "../shared/ReplaceExistingToggle.svelte";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	let {
