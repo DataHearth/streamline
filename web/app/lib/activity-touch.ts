@@ -220,6 +220,11 @@ export const TORRENT_STATUS_RANK: Record<string, number> = {
 	completed: 4,
 };
 
+// Every key ends on the hash, so no two distinct torrents ever compare equal.
+// Without it the sort is stable over an order that isn't: the list refetches
+// every two seconds and the engine returns its torrents from a map, so any two
+// rows that tie — every completed one, sharing a status and a progress of 1 —
+// swapped places on each poll.
 export function compareTorrents(
 	a: Torrent,
 	b: Torrent,
@@ -228,10 +233,15 @@ export function compareTorrents(
 	if (sort === "status") {
 		const d = (TORRENT_STATUS_RANK[a.status] ?? 9) - (TORRENT_STATUS_RANK[b.status] ?? 9);
 		if (d !== 0) return d;
-		return (b.progress ?? 0) - (a.progress ?? 0);
+		const p = (b.progress ?? 0) - (a.progress ?? 0);
+		return p !== 0 ? p : a.hash.localeCompare(b.hash);
 	}
-	if (sort === "name") return a.name.localeCompare(b.name);
-	return ((a[sort] as number) ?? 0) - ((b[sort] as number) ?? 0);
+	if (sort === "name") {
+		const d = a.name.localeCompare(b.name);
+		return d !== 0 ? d : a.hash.localeCompare(b.hash);
+	}
+	const d = ((a[sort] as number) ?? 0) - ((b[sort] as number) ?? 0);
+	return d !== 0 ? d : a.hash.localeCompare(b.hash);
 }
 
 export function sortTorrents(

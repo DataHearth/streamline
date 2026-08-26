@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
+	"strings"
 	"time"
 
 	antorrent "github.com/anacrolix/torrent"
@@ -101,7 +103,24 @@ func (e *Engine) ListViews(ctx context.Context) []TorrentView {
 	for _, t := range live {
 		out = append(out, e.torrentView(t, tracked))
 	}
+	sortViews(out)
 	return out
+}
+
+// sortViews imposes a stable order on the list. anacrolix keeps torrents in a
+// map, so Torrents() hands them back in a different sequence on every call —
+// and the SPA polls this endpoint every two seconds. Its own comparator ties
+// on any two rows sharing a status and a progress, which is every completed
+// torrent, and a stable sort then preserves whatever arbitrary order arrived:
+// the rows visibly shuffle on each poll. Oldest first, hash breaking the tie
+// so two torrents added in the same instant still can't swap.
+func sortViews(views []TorrentView) {
+	slices.SortFunc(views, func(a, b TorrentView) int {
+		if c := a.AddedAt.Compare(b.AddedAt); c != 0 {
+			return c
+		}
+		return strings.Compare(a.Hash, b.Hash)
+	})
 }
 
 // torrentView maps one live snapshot onto the management view.
