@@ -127,17 +127,17 @@ var _ = Describe("FilterTVShows", Label("unit", "db"), func() {
 		})
 
 		It(
-			"keeps an undated episode — no air date is not evidence it is unreleased",
+			"drops an undated episode — a dateless placeholder is unaired",
 			func() {
 				seedShow("Undated", 4, []EpisodeSeed{
-					{Number: 1, Title: "A"},
+					{Number: 1, Title: "TBA"},
 				}, true)
 
 				_, _, total, err := store.FilterTVShows(ctx, FilterTVShowsParams{
 					Status: "missing", Limit: 20, Now: now,
 				})
 				Expect(err).NotTo(HaveOccurred())
-				Expect(total).To(Equal(uint32(1)))
+				Expect(total).To(BeZero())
 			},
 		)
 
@@ -170,6 +170,7 @@ var _ = Describe("FilterTVShows", Label("unit", "db"), func() {
 					{Number: 2, Title: "wanted", AirDate: &aired},
 					{Number: 3, Title: "unaired", AirDate: &future},
 					{Number: 4, Title: "skipped", AirDate: &aired},
+					{Number: 5, Title: "TBA"},
 				}, true)
 				eps := show.Edges.Seasons[0].Edges.Episodes
 				attachFile(eps[0].ID, "/tv/m/S01E01.mkv")
@@ -183,10 +184,11 @@ var _ = Describe("FilterTVShows", Label("unit", "db"), func() {
 				Expect(err).NotTo(HaveOccurred())
 				c := counts[show.ID]
 				// The unmonitored, file-less episode is out of scope entirely.
-				Expect(c.Total).To(Equal(uint32(3)))
+				Expect(c.Total).To(Equal(uint32(4)))
 				Expect(c.Have).To(Equal(uint32(1)))
 				Expect(c.Wanted).To(Equal(uint32(1)))
-				Expect(c.Unaired).To(Equal(uint32(1)))
+				// Both the future-dated and the dateless "TBA" row are unaired.
+				Expect(c.Unaired).To(Equal(uint32(2)))
 			},
 		)
 

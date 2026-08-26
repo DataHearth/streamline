@@ -317,9 +317,14 @@ type SeasonView struct {
 // user opted out of never inflates the missing counts, but one that was
 // downloaded before being unmonitored still counts as something the library
 // has — so a fully-unmonitored season of downloaded files still reads as
-// available. available = episode has a media_file; unaired = air_date in the
-// future; missing = aired or undated without a file. Available + Missing +
+// available. available = episode has a media_file; unaired = air_date missing
+// or in the future; missing = aired without a file. Available + Missing +
 // Unaired therefore equals Total.
+//
+// An undated episode counts as unaired, not missing: providers announce a
+// future season as dateless placeholders (often literally titled "TBA"), and
+// treating "no date" as "aired" made every one of them a permanent gap the
+// missing search re-ran against forever.
 func DeriveSeasonViews(show *ent.TVShow, now time.Time) []SeasonView {
 	views := make([]SeasonView, 0, len(show.Edges.Seasons))
 	for _, se := range show.Edges.Seasons {
@@ -333,7 +338,7 @@ func DeriveSeasonViews(show *ent.TVShow, now time.Time) []SeasonView {
 			switch {
 			case hasFile:
 				v.Available++
-			case !e.AirDate.IsZero() && e.AirDate.After(now):
+			case e.AirDate.IsZero() || e.AirDate.After(now):
 				v.Unaired++
 			default:
 				v.Missing++

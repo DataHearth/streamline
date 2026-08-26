@@ -2354,7 +2354,7 @@ type Episode struct {
 	Quality *string `json:"quality,omitempty"`
 	Size    *int64  `json:"size,omitempty"`
 
-	// Status Presentation status of an episode. "unaired" is derived rather than stored: an episode with no file whose air date is still ahead.
+	// Status Presentation status of an episode. "unaired" is derived rather than stored: an episode with no file whose air date is still ahead or is not yet known (a provider announces a future season as dateless "TBA" placeholders).
 	Status EpisodeStatus `json:"status"`
 	Title  *string       `json:"title,omitempty"`
 }
@@ -2370,7 +2370,7 @@ type EpisodeRef struct {
 	ShowTitle string  `json:"show_title"`
 }
 
-// EpisodeStatus Presentation status of an episode. "unaired" is derived rather than stored: an episode with no file whose air date is still ahead.
+// EpisodeStatus Presentation status of an episode. "unaired" is derived rather than stored: an episode with no file whose air date is still ahead or is not yet known (a provider announces a future season as dateless "TBA" placeholders).
 type EpisodeStatus string
 
 // Error defines model for Error.
@@ -3523,14 +3523,14 @@ type Season struct {
 	Episodes  *[]Episode `json:"episodes,omitempty"`
 	Id        uint32     `json:"id"`
 
-	// Missing Aired/undated episodes without a file.
+	// Missing Aired episodes without a file.
 	Missing   *int    `json:"missing,omitempty"`
 	Monitored bool    `json:"monitored"`
 	Name      *string `json:"name,omitempty"`
 	Number    uint16  `json:"number"`
 	Total     *int    `json:"total,omitempty"`
 
-	// Unaired Episodes whose air_date is in the future.
+	// Unaired Episodes whose air_date is in the future or unknown.
 	Unaired *int `json:"unaired,omitempty"`
 }
 
@@ -3818,7 +3818,7 @@ type UpcomingEpisode struct {
 	SeriesId    uint32    `json:"series_id"`
 	SeriesTitle string    `json:"series_title"`
 
-	// Status Presentation status of an episode. "unaired" is derived rather than stored: an episode with no file whose air date is still ahead.
+	// Status Presentation status of an episode. "unaired" is derived rather than stored: an episode with no file whose air date is still ahead or is not yet known (a provider announces a future season as dateless "TBA" placeholders).
 	Status EpisodeStatus `json:"status"`
 	Title  *string       `json:"title,omitempty"`
 }

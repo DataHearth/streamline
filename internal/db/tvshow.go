@@ -621,8 +621,9 @@ func (db *DB) ResetEpisodeGrabFailures(ctx context.Context, id uint32) error {
 // shows whose episode edges are narrowed to the rows a missing-search pass
 // may act on — wanted, monitored, under the failure cap, past their cooldown
 // window (or never searched), already aired, and with no in-flight
-// download_record. Episodes without an air date are kept: an unknown air date
-// is not evidence the episode is unreleased.
+// download_record. Episodes without an air date are excluded: a provider
+// announces a future season as dateless placeholders, so "no date" reliably
+// means "not out yet" and searching for one burns a slot every tick forever.
 func (db *DB) ListEligibleEpisodesForSync(
 	ctx context.Context,
 	maxGrabFailures uint8,
@@ -637,10 +638,8 @@ func (db *DB) ListEligibleEpisodesForSync(
 			episode.LastSearchAtIsNil(),
 			episode.LastSearchAtLT(notSearchedSince),
 		),
-		episode.Or(
-			episode.AirDateIsNil(),
-			episode.AirDateLTE(airedBefore),
-		),
+		episode.AirDateNotNil(),
+		episode.AirDateLTE(airedBefore),
 		episode.Not(episode.HasDownloadRecordsWith(
 			downloadrecord.StatusIn(
 				downloadrecord.StatusDownloading,

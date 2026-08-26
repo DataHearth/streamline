@@ -831,12 +831,13 @@ func seasonToAPI(
 }
 
 // episodeStatus derives the presentation status. "unaired" has no ent enum
-// value: it is an episode with no file whose air_date is still ahead. Callers
-// must have eager-loaded the media-files edge, or a stored file reads as
-// unaired.
+// value: it is an episode with no file whose air_date is still ahead or is
+// missing entirely — a provider announces a future season as dateless "TBA"
+// placeholders. Callers must have eager-loaded the media-files edge, or a
+// stored file reads as unaired.
 func episodeStatus(e *ent.Episode, now time.Time) EpisodeStatus {
 	if len(e.Edges.MediaFiles) == 0 &&
-		!e.AirDate.IsZero() && e.AirDate.After(now) {
+		(e.AirDate.IsZero() || e.AirDate.After(now)) {
 		return EpisodeStatusUnaired
 	}
 	return EpisodeStatus(e.Status)

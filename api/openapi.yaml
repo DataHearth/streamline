@@ -4767,10 +4767,10 @@ components:
           description: Episodes in this season that have a media file.
         missing:
           type: integer
-          description: Aired/undated episodes without a file.
+          description: Aired episodes without a file.
         unaired:
           type: integer
-          description: Episodes whose air_date is in the future.
+          description: Episodes whose air_date is in the future or unknown.
         total:
           type: integer
         episodes:
@@ -4783,7 +4783,9 @@ components:
       type: string
       description: >-
         Presentation status of an episode. "unaired" is derived rather than
-        stored: an episode with no file whose air date is still ahead.
+        stored: an episode with no file whose air date is still ahead or is
+        not yet known (a provider announces a future season as dateless "TBA"
+        placeholders).
       enum: [wanted, downloading, paused, available, unaired, skipped]
 
     Episode:

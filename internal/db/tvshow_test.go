@@ -533,15 +533,17 @@ var _ = Describe("TVShow store", Label("unit", "db"), func() {
 		)
 
 		// One show, season 1, episodes 1 and 2 — both wanted, monitored,
-		// never searched, no air date. Every spec below makes exactly one of
-		// them ineligible and asserts the other survives.
+		// never searched, aired yesterday. Every spec below makes exactly one
+		// of them ineligible and asserts the other survives.
 		BeforeEach(func() {
 			var err error
+			aired := time.Now().Add(-24 * time.Hour)
 			show, err = store.CreateTVShow(ctx, CreateTVShowParams{
 				Title: "X", Year: 2020, TvdbID: 42,
 				Seasons: []SeasonSeed{
 					{Number: 1, Episodes: []EpisodeSeed{
-						{Number: 1, Title: "A"}, {Number: 2, Title: "B"},
+						{Number: 1, Title: "A", AirDate: &aired},
+						{Number: 2, Title: "B", AirDate: &aired},
 					}},
 				},
 			})
@@ -598,6 +600,12 @@ var _ = Describe("TVShow store", Label("unit", "db"), func() {
 		It("excludes episodes that have not aired yet", func() {
 			Expect(client.Episode.UpdateOneID(eps[1].ID).
 				SetAirDate(time.Now().Add(48 * time.Hour)).Exec(ctx)).To(Succeed())
+			Expect(eligible()).To(ConsistOf(uint16(2)))
+		})
+
+		It("excludes an episode with no air date", func() {
+			Expect(client.Episode.UpdateOneID(eps[1].ID).
+				ClearAirDate().Exec(ctx)).To(Succeed())
 			Expect(eligible()).To(ConsistOf(uint16(2)))
 		})
 

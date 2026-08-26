@@ -309,6 +309,19 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 			Expect(v.Total).To(Equal(1))
 		})
 
+		It("counts a monitored, dateless episode as unaired", func() {
+			show := &ent.TVShow{Edges: ent.TVShowEdges{Seasons: []*ent.Season{
+				{Number: 2, Edges: ent.SeasonEdges{Episodes: []*ent.Episode{
+					{ID: 1, Number: 1, Title: "TBA", Monitored: true},
+				}}},
+			}}}
+
+			v := DeriveSeasonViews(show, now)[0]
+			Expect(v.Unaired).To(Equal(1))
+			Expect(v.Missing).To(BeZero())
+			Expect(v.Total).To(Equal(1))
+		})
+
 		It("leaves a file-less unmonitored episode out of every count", func() {
 			show := &ent.TVShow{Edges: ent.TVShowEdges{Seasons: []*ent.Season{
 				{Number: 0, Edges: ent.SeasonEdges{Episodes: []*ent.Episode{

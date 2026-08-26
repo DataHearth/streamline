@@ -123,14 +123,16 @@ func descending(order string, naturally bool) bool {
 }
 
 // missingEpisode matches an episode the library wants but does not have: it is
-// monitored, has no file, and has either aired or carries no air date at all.
-// Mirrors DeriveSeasonViews' Missing bucket — the two must agree, or a show
-// appears under the "missing" filter with nothing missing on its page.
+// monitored, has no file, and has aired. Mirrors DeriveSeasonViews' Missing
+// bucket — the two must agree, or a show appears under the "missing" filter
+// with nothing missing on its page. An undated episode is unaired, not
+// missing.
 func missingEpisode(now time.Time) predicate.Episode {
 	return episode.And(
 		episode.MonitoredEQ(true),
 		episode.Not(episode.HasMediaFiles()),
-		episode.Or(episode.AirDateIsNil(), episode.AirDateLTE(now)),
+		episode.AirDateNotNil(),
+		episode.AirDateLTE(now),
 	)
 }
 
@@ -216,7 +218,7 @@ func (db *DB) episodeCounts(
 		switch {
 		case r.HasFile:
 			c.Have++
-		case !r.AirDate.IsZero() && r.AirDate.After(now):
+		case r.AirDate.IsZero() || r.AirDate.After(now):
 			c.Unaired++
 		default:
 			c.Wanted++
