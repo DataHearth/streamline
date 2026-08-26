@@ -244,6 +244,10 @@
 {/if}
 
 {#if q.isLoading}
+	<p class="mb-3 flex items-center gap-2 text-xs text-fg-muted">
+		<LoaderCircle size={13} class="animate-spin" aria-hidden="true" />
+		{i18n.common_searching()}
+	</p>
 	<ul aria-hidden="true" class="flex flex-col gap-2">
 		{#each Array(6) as _}
 			<li
