@@ -56,6 +56,33 @@ Arrays (`indexers`, `download_clients`, `auth.oidc`, `quality_profiles`, `custom
 
 One non-prefixed variable is also read: **`STREAMLINE_PUBLIC_URL`** sets the canonical external base URL, used for OIDC redirect URIs and invite links. Without it, Streamline derives a base from `http://<server.host>:<server.port>`.
 
+### torrent_listen_port
+
+A top-level key that overrides the built-in download client's own `listen_port`:
+
+```yaml
+torrent_listen_port: 61847
+```
+
+It is top-level, rather than another field on the `download_clients` entry, so that the environment can reach it — a single underscore is literal and `__` is the path separator, so **`STREAMLINE_TORRENT_LISTEN_PORT`** names it exactly, while nothing *inside* `download_clients[]` is addressable at all.
+
+That matters for one situation: peering through a commercial VPN that assigns a **forwarded port per session**. Such a port rotates on every reconnect or server change, so it cannot be written into a config file that git owns and mounts read-only.
+
+```yaml
+# gluetun sidecar, on every port reassignment
+VPN_PORT_FORWARDING: "on"
+VPN_PORT_FORWARDING_UP_COMMAND: '/bin/sh -c "... {{PORT}} ..."'
+```
+
+Behaviour worth knowing:
+
+- **It wins wherever it is set.** The entry's own `listen_port` is ignored — a forwarded port is the only value that can be right, and a file naming a different one is stale by construction. Leave it at `0` (the default) to use the entry's value.
+- **It is read once, at startup.** Changing it needs the process restarted; the engine builds its client config during wiring and does not rebind afterwards. A rotation therefore costs one container restart, which is what a gluetun UP command should trigger.
+- **It is validated like any port.** A value outside 1–65535 fails config validation at boot rather than being silently ignored.
+- **It applies to the built-in engine only.** External clients (qBittorrent, Transmission, Deluge) manage their own listening port; Streamline never sets it for them.
+
+Without a forwarded port, peering is outbound-only: downloads work, uploads stay at zero because nothing can open a connection to you.
+
 ---
 
 ## Secrets
@@ -141,6 +168,7 @@ Defaults shown are the built-in ones, as emitted by `streamline config init`.
 | --- | --- | --- | --- |
 | `data_dir` | string | `./data` | Runtime data (SQLite DB, posters). **Must already exist.** Pin it to an absolute path in containers |
 | `read_only` | bool | `false` | Reject all runtime config write-backs. For GitOps deploys |
+| `torrent_listen_port` | int | `0` | Overrides the builtin download client's `listen_port`. Top-level so `STREAMLINE_TORRENT_LISTEN_PORT` can reach it — see [torrent_listen_port](#torrent_listen_port) |
 | `quality_default_profile` | string | `default` | Profile used when an item names none |
 
 ### server
@@ -327,7 +355,7 @@ Built-in engine only (ignored for external clients):
 | Field | Required | Notes |
 | --- | --- | --- |
 | `download_dir` | ✅ for `builtin` | Where the engine writes |
-| `listen_port` | | Incoming BitTorrent port |
+| `listen_port` | | Incoming BitTorrent port. Overridden by [`torrent_listen_port`](#torrent_listen_port) when that is set — required if your VPN assigns a forwarded port per session, since such a port can't live in a file |
 | `max_upload_kbps`, `max_download_kbps` | | `0` = unlimited |
 | `seed_ratio` | | Stop seeding at this ratio |
 | `seed_time` | | Stop seeding after this duration |

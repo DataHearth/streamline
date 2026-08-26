@@ -10,6 +10,7 @@ Ordered roughly by how often each one bites people.
 - [Login loops back to the login page](#login-loops-back-to-the-login-page)
 - [Settings are greyed out](#settings-are-greyed-out)
 - [OIDC changes do nothing](#oidc-changes-do-nothing)
+- [Torrents seed forever but upload nothing](#torrents-seed-forever-but-upload-nothing)
 - [My media server doesn't notice new files](#my-media-server-doesnt-notice-new-files)
 - [Database is locked](#database-is-locked)
 - [Where the logs are](#where-the-logs-are)
@@ -179,6 +180,33 @@ The redirect URI to register at your IdP is:
 ```
 
 using the exact `name` you gave the provider.
+
+---
+
+## Torrents seed forever but upload nothing
+
+Downloads work, the built-in engine reports torrents as **Seeding**, and upload sits at `0 B/s` with **Aggregate ↑** showing `—`. Every seeding torrent shows 0 seeds and 0 peers.
+
+That combination — outbound fine, inbound dead — means **nothing can open a connection to you**. Your own dials build NAT state on the way out, so trackers and downloads are unaffected; incoming connections have no state to match and need an explicit forward.
+
+Behind a commercial VPN this is the usual cause, and it has a specific trap:
+
+- **The engine's port defaults to 42069** when `listen_port` is unset. No provider forwards that by coincidence, so a forward you set up elsewhere points at a port nothing is listening on.
+- **Both halves must agree.** A forward on port X does nothing while the engine listens on 42069, and setting the port does nothing without the forward.
+- **A per-session forwarded port can't live in the config file.** Providers reassign it on reconnect. Use [`torrent_listen_port`](Configuration-Reference#torrent_listen_port) and have your VPN sidecar write it and restart the container.
+
+Check what the engine actually bound:
+
+```bash
+curl -sS -H "X-API-Key: $KEY" "$SL/api/v1/download-clients" \
+  | jq '.[] | select(.client_type=="builtin") | {listen_port, port_bound, interface_bound}'
+```
+
+If `port_bound` is `42069` and `listen_port` is `0`, nothing ever told the engine which port is forwarded. If it reports the forwarded port and upload is still zero, the forward itself isn't reaching the tunnel address in `interface_bound` — verify from outside with `nc -vz <exit-ip> <port>`.
+
+Allow **both TCP and UDP** on that port: BitTorrent uses TCP, uTP and DHT use UDP, all on the same number. A TCP-only rule looks like it half-works. Most VPN sidecars that manage forwarding open both themselves.
+
+After a fix, give it 10–20 minutes — peers have to find you through tracker and DHT announces before they can connect.
 
 ---
 

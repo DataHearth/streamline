@@ -43,6 +43,15 @@ type Config struct {
 	MediaServer MediaServerConfig `koanf:"media_server"`
 	Events      EventsConfig      `koanf:"events"       validate:"required"`
 	FFmpeg      FFmpegConfig      `koanf:"ffmpeg"`
+	// TorrentListenPort overrides the builtin download client's own
+	// listen_port, and is a top-level scalar so the environment can reach it:
+	// STREAMLINE_TORRENT_LISTEN_PORT lands here, while nothing in
+	// download_clients[] is addressable that way — a single underscore is
+	// literal, "__" is the path separator, and neither can name a list
+	// element. That matters because the value it carries is authored by a VPN
+	// tunnel rather than by git: a per-session forwarded port rotates on every
+	// reconnect, so it cannot live in a read-only config file.
+	TorrentListenPort uint16 `koanf:"torrent_listen_port" validate:"omitempty,port"`
 
 	DownloadClients       []DownloadClientEntry `koanf:"download_clients"        validate:"unique=Name,dive"`
 	Indexers              []IndexerEntry        `koanf:"indexers"                validate:"unique=Name,dive"`
@@ -533,6 +542,7 @@ func defaults() map[string]any {
 		"server.trusted_proxies":           []string{},
 		"data_dir":                         "./data",
 		"read_only":                        false,
+		"torrent_listen_port":              0,
 		"auth.mode":                        "full",
 		"auth.trusted_networks":            []string{},
 		"auth.trusted_role":                "member",

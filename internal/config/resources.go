@@ -271,6 +271,15 @@ func BuiltinDownloadClient() (DownloadClientEntry, bool) {
 	}
 	for _, dc := range c.DownloadClients {
 		if dc.ClientType == "builtin" && dc.Enabled {
+			// torrent_listen_port wins where it is set. It exists so the
+			// environment can supply a port the config file cannot know — a
+			// VPN's per-session forward — so a file naming a different one is
+			// stale by construction. Resolved here rather than in the engine
+			// so the entry every caller sees already carries the effective
+			// port.
+			if c.TorrentListenPort != 0 {
+				dc.ListenPort = c.TorrentListenPort
+			}
 			return dc, true
 		}
 	}

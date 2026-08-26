@@ -212,6 +212,12 @@
       "type": "boolean",
       "description": "Reject all runtime config write-backs (config.Update). For declarative/GitOps deploys where config is mounted read-only; changes flow through git, not the UI."
     },
+    "torrent_listen_port": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 65535,
+      "description": "Overrides the builtin download client's listen_port. Top-level so STREAMLINE_TORRENT_LISTEN_PORT can reach it — nothing inside download_clients[] is addressable from the environment. Intended for a VPN that assigns a forwarded port per session, which rotates and so cannot be written into a git-owned config file."
+    },
     "server": {
       "type": "object",
       "additionalProperties": false,

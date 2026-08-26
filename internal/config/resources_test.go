@@ -298,6 +298,60 @@ var _ = Describe("builtin download client", Label("unit", "config"), func() {
 	})
 })
 
+var _ = Describe("torrent_listen_port", Label("unit", "config"), func() {
+	builtin := map[string]any{
+		"name": "embedded", "client_type": "builtin",
+		"download_dir": "/downloads", "enabled": true, "listen_port": 12345,
+	}
+
+	It("leaves the entry's own listen_port alone when unset", func() {
+		configtest.Setup(map[string]any{
+			"download_clients": []map[string]any{builtin},
+		})
+		e, ok := config.BuiltinDownloadClient()
+		Expect(ok).To(BeTrue())
+		Expect(e.ListenPort).To(Equal(uint16(12345)))
+	})
+
+	It("overrides the entry's listen_port when set", func() {
+		configtest.Setup(map[string]any{
+			"torrent_listen_port": 61847,
+			"download_clients":    []map[string]any{builtin},
+		})
+		e, ok := config.BuiltinDownloadClient()
+		Expect(ok).To(BeTrue())
+		Expect(e.ListenPort).To(Equal(uint16(61847)))
+	})
+
+	It("supplies a port when the entry names none", func() {
+		bare := map[string]any{
+			"name": "embedded", "client_type": "builtin",
+			"download_dir": "/downloads", "enabled": true,
+		}
+		configtest.Setup(map[string]any{
+			"torrent_listen_port": 61847,
+			"download_clients":    []map[string]any{bare},
+		})
+		e, ok := config.BuiltinDownloadClient()
+		Expect(ok).To(BeTrue())
+		Expect(e.ListenPort).To(Equal(uint16(61847)))
+	})
+
+	// The environment is the reason this key is top-level: a single underscore
+	// is literal and "__" is the path separator, so STREAMLINE_TORRENT_LISTEN_PORT
+	// names torrent_listen_port exactly. Nothing inside download_clients[] can
+	// be reached this way, which is what forced the key out of the array.
+	It("is reachable as STREAMLINE_TORRENT_LISTEN_PORT", func() {
+		GinkgoT().Setenv("STREAMLINE_TORRENT_LISTEN_PORT", "61847")
+		configtest.Setup(map[string]any{
+			"download_clients": []map[string]any{builtin},
+		})
+		e, ok := config.BuiltinDownloadClient()
+		Expect(ok).To(BeTrue())
+		Expect(e.ListenPort).To(Equal(uint16(61847)))
+	})
+})
+
 var _ = Describe("Custom formats", Label("unit", "config"), func() {
 	It("loads a valid custom_formats entry and finds it by name", func() {
 		configtest.Setup(map[string]any{
