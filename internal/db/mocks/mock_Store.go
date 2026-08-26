@@ -9825,6 +9825,74 @@ func (_c *MockStore_RevokeUserSessionByID_Call) RunAndReturn(run func(ctx contex
 	return _c
 }
 
+// SeasonEpisodeCounts provides a mock function for the type MockStore
+func (_mock *MockStore) SeasonEpisodeCounts(ctx context.Context, showIDs []uint32) (map[uint32]map[uint16]int, error) {
+	ret := _mock.Called(ctx, showIDs)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SeasonEpisodeCounts")
+	}
+
+	var r0 map[uint32]map[uint16]int
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []uint32) (map[uint32]map[uint16]int, error)); ok {
+		return returnFunc(ctx, showIDs)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []uint32) map[uint32]map[uint16]int); ok {
+		r0 = returnFunc(ctx, showIDs)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[uint32]map[uint16]int)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, []uint32) error); ok {
+		r1 = returnFunc(ctx, showIDs)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_SeasonEpisodeCounts_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SeasonEpisodeCounts'
+type MockStore_SeasonEpisodeCounts_Call struct {
+	*mock.Call
+}
+
+// SeasonEpisodeCounts is a helper method to define mock.On call
+//   - ctx context.Context
+//   - showIDs []uint32
+func (_e *MockStore_Expecter) SeasonEpisodeCounts(ctx any, showIDs any) *MockStore_SeasonEpisodeCounts_Call {
+	return &MockStore_SeasonEpisodeCounts_Call{Call: _e.mock.On("SeasonEpisodeCounts", ctx, showIDs)}
+}
+
+func (_c *MockStore_SeasonEpisodeCounts_Call) Run(run func(ctx context.Context, showIDs []uint32)) *MockStore_SeasonEpisodeCounts_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 []uint32
+		if args[1] != nil {
+			arg1 = args[1].([]uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_SeasonEpisodeCounts_Call) Return(uint32ToUint16ToInt map[uint32]map[uint16]int, err error) *MockStore_SeasonEpisodeCounts_Call {
+	_c.Call.Return(uint32ToUint16ToInt, err)
+	return _c
+}
+
+func (_c *MockStore_SeasonEpisodeCounts_Call) RunAndReturn(run func(ctx context.Context, showIDs []uint32) (map[uint32]map[uint16]int, error)) *MockStore_SeasonEpisodeCounts_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SetDownloadRecordReplaceMode provides a mock function for the type MockStore
 func (_mock *MockStore) SetDownloadRecordReplaceMode(ctx context.Context, id uint32, mode downloadrecord.ReplaceMode) error {
 	ret := _mock.Called(ctx, id, mode)

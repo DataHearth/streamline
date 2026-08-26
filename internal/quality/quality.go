@@ -11,6 +11,25 @@ type ReleaseContext struct {
 	Source     string
 	Group      string
 	Codec      string
+	// EpisodeCount is how many episodes the release carries, and it scales
+	// every size bound: a season pack is compared against MinGB/MaxGB times
+	// this, so one threshold reads the same for an episode, a season and a
+	// whole-series pack. Zero means unknown and is treated as 1 — the count
+	// comes from the library, not from the release, so a show whose episodes
+	// aren't tracked yet must not have its releases judged on a divisor we
+	// guessed. Indexers never report a torrent's file count; it is only
+	// knowable after the grab, which is too late to gate one.
+	EpisodeCount int
+}
+
+// episodeScale is the multiplier a size bound is measured in. It never
+// returns 0, so an unknown count degrades to a plain whole-release bound
+// instead of collapsing every threshold to zero and rejecting everything.
+func (r ReleaseContext) episodeScale() float64 {
+	if r.EpisodeCount < 1 {
+		return 1
+	}
+	return float64(r.EpisodeCount)
 }
 
 type Format struct {

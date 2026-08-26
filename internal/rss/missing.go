@@ -340,7 +340,7 @@ func scoreBest(
 	p quality.Profile,
 	results []indexer.SearchResult,
 ) (indexer.SearchResult, bool) {
-	if ranked := rankAccepted(p, results); len(ranked) > 0 {
+	if ranked := rankAccepted(p, results, singleRelease); len(ranked) > 0 {
 		return ranked[0], true
 	}
 	return indexer.SearchResult{}, false

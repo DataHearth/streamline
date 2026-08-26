@@ -218,6 +218,30 @@
 
 	let locked = $derived(config.readOnly);
 
+	// EXAMPLE_EPISODES is the season length the size hint reasons about. The
+	// bounds are typed per episode and multiplied at match time, so the number
+	// that actually gates a pack is one the operator never sees — this spells
+	// the multiplication out against a plausible season rather than leaving it
+	// as arithmetic they have to do in their head.
+	const EXAMPLE_EPISODES = 12;
+
+	function roundGB(n: number): string {
+		return String(Math.round(n * 10) / 10);
+	}
+
+	// sizeScaleHint renders what a pack of EXAMPLE_EPISODES would be measured
+	// against, or null while neither bound is set and there is nothing to scale.
+	function sizeScaleHint(c: ConditionDraft): string | null {
+		const lo = c.min_gb > 0 ? c.min_gb * EXAMPLE_EPISODES : 0;
+		const hi = c.max_gb > 0 ? c.max_gb * EXAMPLE_EPISODES : 0;
+		if (lo <= 0 && hi <= 0) return null;
+		let range: string;
+		if (lo > 0 && hi > 0) range = `${roundGB(lo)}–${roundGB(hi)} GB`;
+		else if (hi > 0) range = i18n.cf_size_at_most({ gb: roundGB(hi) });
+		else range = i18n.cf_size_at_least({ gb: roundGB(lo) });
+		return i18n.cf_size_scale({ episodes: EXAMPLE_EPISODES, range });
+	}
+
 	const TYPES = CONDITION_TYPES.map((t) => ({
 		value: t,
 		label: conditionTypeLabel(t),
@@ -315,10 +339,18 @@
 	let sampleTitle = $state("");
 	let sampleSizeGB = $state("");
 	let sampleSeeders = $state("");
+	// Size bounds are multiplied by this, so a pack can be tested against the
+	// same per-episode threshold the real search would use.
+	let sampleEpisodes = $state("");
 
 	type TestPayload = {
 		conditions: CustomFormatCondition[];
-		sample: { title: string; size?: number; seeders?: number };
+		sample: {
+			title: string;
+			size?: number;
+			seeders?: number;
+			episodes?: number;
+		};
 	};
 
 	let livePayload = $derived.by<TestPayload | null>(() => {
@@ -333,6 +365,10 @@
 		const seeders = Number(sampleSeeders);
 		if (sampleSeeders !== "" && Number.isFinite(seeders) && seeders >= 0) {
 			sample.seeders = Math.round(seeders);
+		}
+		const episodes = Number(sampleEpisodes);
+		if (sampleEpisodes !== "" && Number.isFinite(episodes) && episodes > 0) {
+			sample.episodes = Math.round(episodes);
 		}
 		return {
 			conditions: toConditions($state.snapshot(draft).conditions),
@@ -645,6 +681,11 @@
 						{#if c.type === "size"}
 							<span class="text-[11px] text-fg-subtle">{i18n.cf_size_help()}</span
 							>
+							{#if sizeScaleHint(c)}
+								<span class="text-[11px] text-accent-text">
+									{sizeScaleHint(c)}
+								</span>
+							{/if}
 						{:else if c.type === "release_group"}
 							<span class="text-[11px] text-fg-subtle">
 								{c.groupRaw ? i18n.cf_pattern_help() : i18n.cf_group_help()}
@@ -743,7 +784,25 @@
 					class="{inputClass} font-mono tabular"
 				/>
 			</label>
+			<label class="w-28">
+				<span class="mb-1 block text-[11px] font-medium text-fg-muted">
+					{i18n.cf_sample_episodes()}
+				</span>
+				<input
+					type="number"
+					min="1"
+					inputmode="numeric"
+					placeholder="1"
+					value={sampleEpisodes}
+					oninput={(e) =>
+						(sampleEpisodes = (e.currentTarget as HTMLInputElement).value)}
+					class="{inputClass} font-mono tabular"
+				/>
+			</label>
 		</div>
+		<p class="mt-1.5 text-[11px] text-fg-subtle">
+			{i18n.cf_sample_episodes_help()}
+		</p>
 
 		{#if !sampleTitle.trim()}
 			<p class="mt-2 text-xs text-fg-subtle">{i18n.cf_tester_idle()}</p>

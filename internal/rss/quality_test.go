@@ -19,6 +19,7 @@ var _ = Describe("qualityFor", Label("unit", "rss"), func() {
 		return !evaluateRelease(
 			qualityFor(ctx, profile),
 			indexer.SearchResult{Title: title},
+			singleRelease,
 		).Rejected
 	}
 
@@ -81,6 +82,7 @@ var _ = Describe("qualityFor", Label("unit", "rss"), func() {
 			Expect(evaluateRelease(
 				quality.Profile{},
 				indexer.SearchResult{Title: title},
+				singleRelease,
 			).Rejected).To(BeTrue())
 		},
 		Entry("720p", "Fight.Club.1999.720p.BluRay.x264-GROUP"),
@@ -98,7 +100,7 @@ var _ = Describe("rankAccepted", Label("unit", "rss"), func() {
 			{Title: "Movie.2024.720p.WEB-DL.x264", Seeders: 900},
 			{Title: "Movie.2024.1080p.WEB-DL.x264-OTHER", Seeders: 50},
 			{Title: "Movie.2024.2160p.BluRay.REMUX.HDR", Seeders: 1},
-		})
+		}, singleRelease)
 
 		titles := make([]string, len(ranked))
 		for i, r := range ranked {

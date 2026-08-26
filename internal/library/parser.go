@@ -247,6 +247,70 @@ func IsWholeSeriesPack(name string) bool {
 	return seasonRangeRe.MatchString(name) || completePackRe.MatchString(name)
 }
 
+// seasonRangeBoundsRe captures the two season numbers IsWholeSeriesPack only
+// detects, so a span can name the seasons rather than just report that there
+// are several.
+var seasonRangeBoundsRe = regexp.MustCompile(`(?i)S(\d{1,2})[-. ]+S(\d{1,2})`)
+
+// SeasonSpan is which seasons a release covers. It exists to size a pack: the
+// release names its scope but never how many files it holds, and no indexer
+// reports a torrent's file count either, so the episode total has to be looked
+// up per season against the library.
+type SeasonSpan struct {
+	// Complete spans every season the show has, from a "COMPLETE"/"INTEGRALE"
+	// tag. From and To are meaningless when it is set.
+	Complete bool
+	// From and To are inclusive and equal for a single-season pack. Both zero
+	// means the release covers no whole season — a single episode, or a name
+	// nothing could be read out of.
+	From, To uint16
+}
+
+// ParseSeasonSpan reads a release name's season scope. A season range wins over
+// a plain SXX, which wins over nothing: "S01-S03" is three seasons even though
+// the first token alone would parse as season 1.
+func ParseSeasonSpan(name string) SeasonSpan {
+	if completePackRe.MatchString(name) {
+		return SeasonSpan{Complete: true}
+	}
+	if m := seasonRangeBoundsRe.FindStringSubmatch(name); m != nil {
+		from, err1 := strconv.ParseUint(m[1], 10, 16)
+		to, err2 := strconv.ParseUint(m[2], 10, 16)
+		if err1 == nil && err2 == nil {
+			if from > to {
+				from, to = to, from
+			}
+			return SeasonSpan{From: uint16(from), To: uint16(to)}
+		}
+	}
+	if p := Parse(name); p.SeasonPack {
+		return SeasonSpan{From: p.Season, To: p.Season}
+	}
+	return SeasonSpan{}
+}
+
+// EpisodeCount totals the episodes the span covers, given the show's per-season
+// totals. Zero means "the library cannot say" — an untracked season, or a name
+// that named no season at all — and callers must read it as unknown rather than
+// as an empty pack.
+func (s SeasonSpan) EpisodeCount(perSeason map[uint16]int) int {
+	if s.Complete {
+		total := 0
+		for _, n := range perSeason {
+			total += n
+		}
+		return total
+	}
+	if s.From == 0 && s.To == 0 {
+		return 0
+	}
+	total := 0
+	for n := s.From; n <= s.To; n++ {
+		total += perSeason[n]
+	}
+	return total
+}
+
 // extractTitle returns the name up to its first technical token. yearIdx is the
 // byte offset of the year Parse settled on, or -1 for none — searching for the
 // year's *text* instead would find the title's own digits first ("Fantasia 2000

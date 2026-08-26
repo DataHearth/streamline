@@ -94,10 +94,14 @@ func (c Condition) eval(r ReleaseContext) bool {
 	case ConditionCodec:
 		ok = r.Codec != "" && strings.EqualFold(r.Codec, c.Value)
 	case ConditionSize:
+		// Both bounds scale with the episode count rather than the size being
+		// divided by it: same predicate, but the threshold stays the number the
+		// operator typed, which is what a per-episode budget means.
+		n := r.episodeScale()
 		gb := float64(r.Size) / (1 << 30)
 		ok = r.Size > 0 &&
-			(c.MinGB == 0 || gb >= c.MinGB) &&
-			(c.MaxGB == 0 || gb <= c.MaxGB)
+			(c.MinGB == 0 || gb >= c.MinGB*n) &&
+			(c.MaxGB == 0 || gb <= c.MaxGB*n)
 	case ConditionSeeders:
 		ok = r.HasSeeders && r.Seeders >= c.Min
 	}

@@ -32,6 +32,12 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 		store = dbmocks.NewMockStore(GinkgoT())
 		indexerM = mocks.NewMockTVIndexerSearcher(GinkgoT())
 		dlM = mocks.NewMockEpisodeGrabber(GinkgoT())
+		// Season lengths are looked up once per pass to size packs; the specs
+		// below assert grab behaviour, not the arithmetic, so a permissive stub
+		// keeps them focused. condition_test.go covers the scaling itself.
+		store.EXPECT().
+			SeasonEpisodeCounts(mock.Anything, mock.Anything).
+			Return(map[uint32]map[uint16]int{}, nil).Maybe()
 
 		searcher = NewEpisodeMissingSearcher(store, indexerM, dlM)
 	})

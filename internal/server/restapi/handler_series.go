@@ -398,7 +398,7 @@ func (s *Server) BrowseEpisodeReleases(
 	for _, r := range results {
 		items = append(items, toSearchResult(r))
 	}
-	annotateResults(show.QualityProfile, items)
+	annotateResults(show.QualityProfile, items, singleReleaseEpisodes)
 	return BrowseEpisodeReleases200JSONResponse{
 		SearchResultsJSONResponse: SearchResultsJSONResponse{Items: items},
 	}, nil
@@ -467,7 +467,11 @@ func (s *Server) BrowseSeasonReleases(
 	for _, r := range results {
 		items = append(items, toSearchResult(r))
 	}
-	annotateResults(show.QualityProfile, items)
+	annotateResults(
+		show.QualityProfile,
+		items,
+		spanEpisodes(s.seasonLengths(ctx, show.ID)),
+	)
 	return BrowseSeasonReleases200JSONResponse{
 		SearchResultsJSONResponse: SearchResultsJSONResponse{Items: items},
 	}, nil
@@ -577,7 +581,11 @@ func (s *Server) BrowseSeriesReleases(
 	for _, r := range results {
 		items = append(items, toSearchResult(r))
 	}
-	annotateResults(show.QualityProfile, items)
+	annotateResults(
+		show.QualityProfile,
+		items,
+		spanEpisodes(s.seasonLengths(ctx, show.ID)),
+	)
 	return BrowseSeriesReleases200JSONResponse{
 		SearchResultsJSONResponse: SearchResultsJSONResponse{Items: items},
 	}, nil

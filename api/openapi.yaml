@@ -5349,6 +5349,13 @@ components:
         seeders:
           type: integer
           x-go-type: uint32
+        episodes:
+          type: integer
+          minimum: 1
+          description: |
+            How many episodes the sample carries. Size bounds are multiplied by
+            it, so a season pack is judged against the same per-episode
+            threshold as a single file. Defaults to 1.
 
     CustomFormatTestRequest:
       type: object

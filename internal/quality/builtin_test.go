@@ -39,7 +39,7 @@ var _ = Describe("Builtins", Label("unit", "quality"), func() {
 		func(name, title string, want bool) {
 			f, ok := quality.BuiltinByName(name)
 			Expect(ok).To(BeTrue())
-			Expect(f.Matches(qualityctx.ContextFromRelease(title, 0, 0))).
+			Expect(f.Matches(qualityctx.ContextFromRelease(title, 0, 0, 1))).
 				To(Equal(want))
 		},
 		Entry(nil, "remux", "Movie.2024.2160p.BluRay.REMUX-GRP", true),

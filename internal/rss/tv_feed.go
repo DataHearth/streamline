@@ -84,10 +84,22 @@ func (s *TVFeedScanner) Run(ctx context.Context) error {
 		return otelx.RecordSpanError(span, err)
 	}
 
+	// Unfiltered season lengths: the two indexes above are narrowed to the
+	// episodes this pass cares about, and a pack costs us every episode it
+	// holds regardless. A failure here only unscales the size bounds, which is
+	// how they behaved before they scaled at all, so the tick continues.
+	seasonCounts, err := s.store.SeasonEpisodeCounts(ctx, showIDs(shows, upgradable))
+	if err != nil {
+		slog.WarnContext(ctx, "tv feed-scan: season counts unavailable",
+			"error", err)
+		seasonCounts = nil
+	}
+
 	pass := &tvPass{
-		wanted:   buildEpisodeIndex(shows),
-		upgrades: buildEpisodeIndex(upgradable),
-		profiles: resolveShowProfiles(ctx, shows, upgradable),
+		wanted:       buildEpisodeIndex(shows),
+		upgrades:     buildEpisodeIndex(upgradable),
+		profiles:     resolveShowProfiles(ctx, shows, upgradable),
+		seasonCounts: seasonCounts,
 		// grabbed tracks episode IDs already attempted this tick so a second
 		// indexer carrying the same release doesn't double-grab, and so a wanted
 		// grab and an upgrade grab never both fire for one episode.
@@ -120,7 +132,11 @@ type tvPass struct {
 	wanted   map[string]*wantedShow
 	upgrades map[string]*wantedShow
 	profiles map[string]quality.Profile
-	grabbed  map[uint32]struct{}
+	// seasonCounts is show id -> season number -> episode total, unfiltered.
+	// Sizes a pack; nil when the lookup failed, which leaves size bounds
+	// unscaled rather than blocking the tick.
+	seasonCounts map[uint32]map[uint16]int
+	grabbed      map[uint32]struct{}
 }
 
 func (s *TVFeedScanner) processItems(
@@ -145,7 +161,11 @@ func (s *TVFeedScanner) processItems(
 			continue
 		}
 		p := pass.profiles[show.QualityProfile]
-		res := evaluateRelease(p, item)
+		res := evaluateRelease(
+			p,
+			item,
+			releaseEpisodes(item.Title, show.ID, pass.seasonCounts),
+		)
 		if res.Rejected {
 			slog.DebugContext(ctx, "tv feed-scan: quality rejected",
 				"show", show.Title, "release", item.Title,
@@ -296,7 +316,10 @@ func (s *TVFeedScanner) grabUpgrade(
 	if p.ReplaceWholeSeason {
 		return s.grabWholeSeasonUpgrade(ctx, us, targets, item, p, rel, pass)
 	}
-	release := qualityctx.ContextFromRelease(item.Title, item.Size, item.Seeders)
+	release := qualityctx.ContextFromRelease(
+		item.Title, item.Size, item.Seeders,
+		releaseEpisodes(item.Title, us.show.ID, pass.seasonCounts),
+	)
 	var selected []*ent.Episode
 	for _, e := range targets {
 		if len(e.Edges.MediaFiles) == 0 {

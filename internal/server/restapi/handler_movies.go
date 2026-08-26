@@ -245,7 +245,7 @@ func (s *Server) SearchMovie(
 	for _, r := range results {
 		items = append(items, toSearchResult(r))
 	}
-	annotateResults(m.QualityProfile, items)
+	annotateResults(m.QualityProfile, items, singleReleaseEpisodes)
 
 	return SearchMovie200JSONResponse(items), nil
 }

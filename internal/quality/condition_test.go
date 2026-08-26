@@ -143,6 +143,54 @@ var _ = Describe("condition evaluation per type", Label("unit", "quality"), func
 		Expect(upper.Matches(quality.ReleaseContext{Size: 20 << 30})).To(BeFalse())
 	})
 
+	It("scales both size bounds by the episode count", func() {
+		f := mk(quality.Condition{
+			Type:     quality.ConditionSize,
+			MinGB:    1,
+			MaxGB:    5,
+			Required: true,
+		})
+		// One episode reads the bounds as typed.
+		Expect(f.Matches(quality.ReleaseContext{
+			Size: 3 << 30, EpisodeCount: 1,
+		})).To(BeTrue())
+		Expect(f.Matches(quality.ReleaseContext{
+			Size: 20 << 30, EpisodeCount: 1,
+		})).To(BeFalse())
+
+		// A 12-episode pack gets a 12..60 GB band from the same numbers: the
+		// season at 17 GB fits, the remux at 155 GB does not.
+		Expect(f.Matches(quality.ReleaseContext{
+			Size: 17 << 30, EpisodeCount: 12,
+		})).To(BeTrue())
+		Expect(f.Matches(quality.ReleaseContext{
+			Size: 155 << 30, EpisodeCount: 12,
+		})).To(BeFalse())
+		// And the lower bound scales too: one episode's worth of bytes is
+		// suspiciously small for twelve of them.
+		Expect(f.Matches(quality.ReleaseContext{
+			Size: 3 << 30, EpisodeCount: 12,
+		})).To(BeFalse())
+	})
+
+	It("leaves size bounds unscaled when the episode count is unknown", func() {
+		f := mk(quality.Condition{
+			Type:     quality.ConditionSize,
+			MaxGB:    5,
+			Required: true,
+		})
+		// Zero and negative both mean "the library could not say", and must
+		// read as a plain whole-release bound rather than collapsing it.
+		for _, n := range []int{0, -1} {
+			Expect(f.Matches(quality.ReleaseContext{
+				Size: 3 << 30, EpisodeCount: n,
+			})).To(BeTrue())
+			Expect(f.Matches(quality.ReleaseContext{
+				Size: 20 << 30, EpisodeCount: n,
+			})).To(BeFalse())
+		}
+	})
+
 	It("requires seeders >= Min only when HasSeeders", func() {
 		c := quality.Condition{
 			Type:     quality.ConditionSeeders,

@@ -334,6 +334,9 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 				Return([]indexer.SearchResult{
 					{Title: "BB S01 1080p", Download: "magnet:x", Seeders: 20},
 				}, nil).Once()
+			app.store.EXPECT().
+				SeasonEpisodeCounts(mock.Anything, []uint32{3}).
+				Return(map[uint32]map[uint16]int{3: {1: 7}}, nil).Once()
 
 			resp := app.do(app.req(http.MethodPost,
 				"/api/v1/series/3/seasons/1/search", app.adminKey, nil))
@@ -435,6 +438,9 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 				Return([]indexer.SearchResult{
 					{Title: "BB Complete 1080p", Download: "magnet:y", Seeders: 42},
 				}, nil).Once()
+			app.store.EXPECT().
+				SeasonEpisodeCounts(mock.Anything, []uint32{3}).
+				Return(map[uint32]map[uint16]int{3: {1: 7}}, nil).Once()
 
 			resp := app.do(app.req(http.MethodPost,
 				"/api/v1/series/3/browse", app.adminKey, nil))
@@ -519,6 +525,9 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 				SearchSeries(mock.Anything, []string{"Breaking Bad"},
 					uint32(81189)).
 				Return(results, nil).Once()
+			app.store.EXPECT().
+				SeasonEpisodeCounts(mock.Anything, []uint32{3}).
+				Return(map[uint32]map[uint16]int{3: {1: 7}}, nil).Once()
 
 			resp := app.do(app.req(http.MethodPost,
 				"/api/v1/series/3/browse", app.adminKey, nil))
@@ -533,6 +542,9 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 				SearchSeason(mock.Anything, []string{"Breaking Bad"},
 					uint32(81189), uint16(1)).
 				Return(results, nil).Once()
+			app.store.EXPECT().
+				SeasonEpisodeCounts(mock.Anything, []uint32{3}).
+				Return(map[uint32]map[uint16]int{3: {1: 7}}, nil).Once()
 
 			resp := app.do(app.req(http.MethodPost,
 				"/api/v1/series/3/seasons/1/search", app.adminKey, nil))

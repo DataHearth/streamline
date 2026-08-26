@@ -2206,9 +2206,13 @@ type CustomFormatTestResult struct {
 
 // CustomFormatTestSample defines model for CustomFormatTestSample.
 type CustomFormatTestSample struct {
-	Seeders *uint32 `json:"seeders,omitempty"`
-	Size    *int64  `json:"size,omitempty"`
-	Title   string  `json:"title"`
+	// Episodes How many episodes the sample carries. Size bounds are multiplied by
+	// it, so a season pack is judged against the same per-episode
+	// threshold as a single file. Defaults to 1.
+	Episodes *int    `json:"episodes,omitempty"`
+	Seeders  *uint32 `json:"seeders,omitempty"`
+	Size     *int64  `json:"size,omitempty"`
+	Title    string  `json:"title"`
 }
 
 // DeleteFileRequest defines model for DeleteFileRequest.

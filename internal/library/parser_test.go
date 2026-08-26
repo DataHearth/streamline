@@ -299,3 +299,42 @@ var _ = Describe("Filename Parser", Label("unit", "library"), func() {
 		})
 	})
 })
+
+var _ = Describe("season spans", Label("unit", "library"), func() {
+	DescribeTable("scope read from a release name",
+		func(input string, want SeasonSpan) {
+			Expect(ParseSeasonSpan(input)).To(Equal(want))
+		},
+		Entry("single episode covers no whole season",
+			"Breaking.Bad.S01E05.1080p.WEB-GRP", SeasonSpan{}),
+		Entry("season pack", "Breaking.Bad.S03.1080p.BluRay-GRP",
+			SeasonSpan{From: 3, To: 3}),
+		Entry("season range", "Breaking.Bad.S01-S05.1080p-GRP",
+			SeasonSpan{From: 1, To: 5}),
+		Entry("range wins over the leading season token",
+			"Breaking.Bad.S01.S02.1080p-GRP", SeasonSpan{From: 1, To: 2}),
+		Entry("reversed range is normalised",
+			"Show.S05-S02.1080p-GRP", SeasonSpan{From: 2, To: 5}),
+		Entry("complete tag spans everything",
+			"Breaking.Bad.COMPLETE.MULTI.1080p-GRP", SeasonSpan{Complete: true}),
+		Entry("integrale is the same tag in French",
+			"Kaamelott.INTEGRALE.1080p-GRP", SeasonSpan{Complete: true}),
+	)
+
+	counts := map[uint16]int{1: 7, 2: 13, 3: 13}
+
+	DescribeTable("episodes totalled against the library's season lengths",
+		func(span SeasonSpan, want int) {
+			Expect(span.EpisodeCount(counts)).To(Equal(want))
+		},
+		Entry("one season", SeasonSpan{From: 2, To: 2}, 13),
+		Entry("a range sums its seasons", SeasonSpan{From: 1, To: 3}, 33),
+		Entry("complete sums every season", SeasonSpan{Complete: true}, 33),
+		// Zero is "the library cannot say", which callers read as unknown and
+		// degrade to an unscaled bound — never as an empty pack.
+		Entry("no season named", SeasonSpan{}, 0),
+		Entry("season the library does not track", SeasonSpan{From: 9, To: 9}, 0),
+		Entry("range partly tracked counts what it knows",
+			SeasonSpan{From: 3, To: 9}, 13),
+	)
+})

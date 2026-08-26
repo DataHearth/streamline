@@ -76,6 +76,13 @@ type EligibleEpisodeLister interface {
 	SetEpisodeLastSearchAt(ctx context.Context, id uint32, when time.Time) error
 	IncrementEpisodeGrabFailures(ctx context.Context, id uint32) error
 	ResetEpisodeGrabFailures(ctx context.Context, id uint32) error
+	// SeasonEpisodeCounts sizes a season pack: the episode edges above are
+	// filtered to what a pass may act on, and a pack costs every episode it
+	// holds.
+	SeasonEpisodeCounts(
+		ctx context.Context,
+		showIDs []uint32,
+	) (map[uint32]map[uint16]int, error)
 }
 
 // TVFeedStore is what rss.TVFeedScanner needs on top of the missing-search

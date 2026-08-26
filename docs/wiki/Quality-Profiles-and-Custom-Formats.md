@@ -49,8 +49,37 @@ Both of these are *examples*, not defaults — nothing like them ships built in,
 | `source` | `value` | Parsed source (`bluray`, `web`, `web-dl`, `hdtv`, ...) — matched case-insensitively but not otherwise fuzzed, so it must equal the parser's normalized spelling (`WEB-DL`, not `webdl`) |
 | `release_group` | `pattern` (regex) | Parsed release group — the UI edits this one as a chip list, see below |
 | `codec` | `value` | Parsed codec, or probed video codec for on-disk files |
-| `size` | `min_gb` / `max_gb` | Indexer size, or the file's size on disk |
+| `size` | `min_gb` / `max_gb` | Indexer size, or the file's size on disk — **per episode**, see below |
 | `seeders` | `min` | Indexer seeders — always absent for an on-disk file, so this condition can never match a file |
+
+### Size is per episode, not per release
+
+`min_gb` and `max_gb` are budgets **for one episode**. Streamline multiplies both by the number of episodes the release carries, so a single threshold means the same thing whether the release is one episode, a season pack, or a whole-series integral:
+
+```yaml
+# custom_formats[]
+- name: oversized
+  conditions:
+    - { type: size, min_gb: 5, required: true }   # 5 GB *per episode*
+```
+
+| Release | Size | Episodes | Measured against | Matches `min_gb: 5` |
+| --- | --- | --- | --- | --- |
+| `Show.S03E01.1080p.WEB` | 1.4 GB | 1 | 5 GB | no |
+| `Show.S03.1080p.WEB` (12 ep) | 17 GB | 12 | 60 GB | no |
+| `Show.S03.1080p.BluRay.REMUX` (12 ep) | 155 GB | 12 | 60 GB | **yes** |
+| `Show.COMPLETE.1080p.WEB` (60 ep) | 84 GB | 60 | 300 GB | no |
+
+Score that format very negative (`-5000`) and the remux is rejected at every scope, while the ordinary season and series packs pass untouched. Without the scaling you would have to pick between a cap that lets the remux through and one that rejects every legitimate pack.
+
+**Where the episode count comes from.** It is looked up in *your library*, per season, from the scope the release name claims — `S03` is season 3, `S01-S05` is those five seasons summed, `COMPLETE`/`INTEGRALE` is every season the show has. It is **not** the torrent's file count: no indexer reports that, and the torrent's contents are only knowable after grabbing it, which is too late to reject anything.
+
+Two consequences worth knowing:
+
+- **A season Streamline tracks no episodes for scales by nothing.** The bound is then applied to the whole release, exactly as it behaved before. Better a bound that is too generous than one invented from a count we don't have.
+- **Movies always count 1**, so a `size` condition on a movie profile is unchanged by any of this.
+
+The condition editor spells the arithmetic out as you type it — enter `1` and `5` and it tells you a 12-episode pack is judged against 12–60 GB. The format tester takes an **Episodes** field for the same reason: leave it at 1 to test a single file, set it to a season's length to see how a pack would score.
 
 ### Release groups without the regex
 

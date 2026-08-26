@@ -11,7 +11,7 @@ import (
 var _ = Describe("ContextFromRelease", Label("unit", "quality"), func() {
 	It("fills parsed fields and marks seeders present", func() {
 		title := "Movie.2024.2160p.BluRay.REMUX.HDR.x265-GRP"
-		r := qualityctx.ContextFromRelease(title, 8<<30, 50)
+		r := qualityctx.ContextFromRelease(title, 8<<30, 50, 1)
 		Expect(r.Title).To(Equal(title))
 		Expect(r.Size).To(Equal(int64(8 << 30)))
 		Expect(r.Seeders).To(Equal(50))
@@ -23,13 +23,13 @@ var _ = Describe("ContextFromRelease", Label("unit", "quality"), func() {
 	})
 
 	It("reports a seeder count of 0 as unknown, not as zero seeders", func() {
-		r := qualityctx.ContextFromRelease("Movie.2024.1080p.WEB", 1<<30, 0)
+		r := qualityctx.ContextFromRelease("Movie.2024.1080p.WEB", 1<<30, 0, 1)
 		Expect(r.Seeders).To(Equal(0))
 		Expect(r.HasSeeders).To(BeFalse())
 	})
 
 	It("reports a single seeder as present", func() {
-		r := qualityctx.ContextFromRelease("Movie.2024.1080p.WEB", 1<<30, 1)
+		r := qualityctx.ContextFromRelease("Movie.2024.1080p.WEB", 1<<30, 1, 1)
 		Expect(r.Seeders).To(Equal(1))
 		Expect(r.HasSeeders).To(BeTrue())
 	})

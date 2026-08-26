@@ -2,8 +2,10 @@ package restapi
 
 import (
 	"cmp"
+	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"path/filepath"
 	"slices"
 	"time"
@@ -963,14 +965,60 @@ func toSearchResult(r indexer.SearchResult) SearchResult {
 // entirely: the zero profile's empty resolution band rejects every release,
 // which is the right call when grabbing automatically (internal/rss) and a
 // lie on screen.
-func annotateResults(profileName string, items []SearchResult) {
+// seasonLengths is one show's real per-season episode totals, for sizing a
+// pack. A lookup failure degrades to a nil map, which leaves every size bound
+// unscaled — annotating a search with slightly generous scores beats failing
+// the browse over a count.
+func (s *Server) seasonLengths(ctx context.Context, showID uint32) map[uint16]int {
+	counts, err := s.store.SeasonEpisodeCounts(ctx, []uint32{showID})
+	if err != nil {
+		slog.WarnContext(ctx, "season counts unavailable, size bounds unscaled",
+			"tvshow.id", showID, "error", err)
+		return nil
+	}
+	return counts[showID]
+}
+
+// singleReleaseEpisodes is the count for a scope that carries one thing: a
+// movie, or one episode. Size bounds are multiplied by the count, so this
+// leaves them reading exactly as the operator typed them.
+func singleReleaseEpisodes(SearchResult) int { return 1 }
+
+// spanEpisodes sizes each result by the seasons its own name claims, against
+// the show's real per-season lengths. A season browse and a series browse both
+// use it: the latter's results are the mixed ones, where "S01-S03" and a lone
+// season sit in the same list and cannot share a count.
+//
+// A season the library tracks no episodes for contributes nothing, and a
+// result that resolves to nothing at all falls back to 1 — an unscaled bound,
+// which is how these behaved before they scaled, rather than a tighter one
+// invented from a partial count.
+func spanEpisodes(perSeason map[uint16]int) func(SearchResult) int {
+	return func(r SearchResult) int {
+		if n := library.ParseSeasonSpan(r.Title).EpisodeCount(perSeason); n > 0 {
+			return n
+		}
+		return 1
+	}
+}
+
+// episodes reports how many episodes each result carries, which scales the
+// profile's size bounds. Pass singleReleaseEpisodes for a movie or an episode
+// scope; a series or season browse hands in the show's real season lengths,
+// since a whole-series pack costs every episode it holds and the release
+// itself only names its scope, never its file count.
+func annotateResults(
+	profileName string,
+	items []SearchResult,
+	episodes func(SearchResult) int,
+) {
 	p, ok := config.ResolveScoredProfile(profileName)
 	if !ok {
 		return
 	}
 	for i := range items {
 		res := quality.Evaluate(p, qualityctx.ContextFromRelease(
-			items[i].Title, items[i].Size, items[i].Seeders,
+			items[i].Title, items[i].Size, items[i].Seeders, episodes(items[i]),
 		))
 		items[i].Score = &res.Score
 		items[i].Rejected = &res.Rejected

@@ -120,9 +120,18 @@ func (t *searchTally) add(seasonNumber uint16, s searchTally) {
 // touched in the payload, so a single-season pass still reads as one.
 func (s *EpisodeMissingSearcher) searchShow(ctx context.Context, show *ent.TVShow) {
 	titles := []string{show.Title}
+	// Unfiltered season lengths, for sizing a pack. The season edges below are
+	// narrowed to searchable episodes, and a pack costs the whole season. A
+	// failure here only leaves the size bounds unscaled.
+	counts, err := s.store.SeasonEpisodeCounts(ctx, []uint32{show.ID})
+	if err != nil {
+		slog.WarnContext(ctx, "tv missing-search: season counts unavailable",
+			"tvshow.id", show.ID, "error", err)
+	}
+	perSeason := counts[show.ID]
 	var tally searchTally
 	for _, se := range show.Edges.Seasons {
-		tally.add(se.Number, s.processSeason(ctx, show, se, titles))
+		tally.add(se.Number, s.processSeason(ctx, show, se, titles, perSeason))
 	}
 	if tally.episodes == 0 {
 		return
@@ -165,6 +174,7 @@ func (s *EpisodeMissingSearcher) processSeason(
 	show *ent.TVShow,
 	se *ent.Season,
 	titles []string,
+	perSeason map[uint16]int,
 ) searchTally {
 	wanted := se.Edges.Episodes
 	if len(wanted) == 0 {
@@ -174,7 +184,7 @@ func (s *EpisodeMissingSearcher) processSeason(
 
 	// Prefer a season pack when the whole season (2+ episodes) is wanted.
 	if len(wanted) >= 2 &&
-		s.grabSeasonPack(ctx, show, se, titles, wanted, profile) {
+		s.grabSeasonPack(ctx, show, se, titles, wanted, profile, perSeason) {
 		return searchTally{
 			episodes: len(wanted),
 			grabbed:  len(wanted),
@@ -202,6 +212,7 @@ func (s *EpisodeMissingSearcher) grabSeasonPack(
 	titles []string,
 	wanted []*ent.Episode,
 	profile quality.Profile,
+	perSeason map[uint16]int,
 ) bool {
 	ctx, span := tracer.Start(ctx, "rss.tv_season_pack",
 		trace.WithAttributes(
@@ -217,7 +228,13 @@ func (s *EpisodeMissingSearcher) grabSeasonPack(
 			"show", show.Title, "season", se.Number, "error", err)
 		return false
 	}
-	for _, r := range rankAccepted(profile, packs) {
+	// Every result here is scoped to this one season: filterToSeason drops the
+	// multi-season and complete packs, so one count covers the whole list.
+	episodes := perSeason[se.Number]
+	if episodes < 1 {
+		episodes = singleRelease
+	}
+	for _, r := range rankAccepted(profile, packs, episodes) {
 		if _, err := s.downloads.GrabEpisode(ctx, r, wanted[0].ID); err != nil {
 			slog.WarnContext(ctx, "tv missing-search: season-pack grab failed",
 				"show", show.Title, "season", se.Number,
@@ -259,7 +276,7 @@ func (s *EpisodeMissingSearcher) grabEpisode(
 		return false
 	}
 
-	for _, r := range rankAccepted(profile, results) {
+	for _, r := range rankAccepted(profile, results, singleRelease) {
 		if _, err := s.downloads.GrabEpisode(ctx, r, e.ID); err != nil {
 			slog.WarnContext(ctx, "tv missing-search: episode grab failed",
 				"show", show.Title, "season", se.Number, "episode", e.Number,

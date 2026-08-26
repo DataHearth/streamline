@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	entsql "entgo.io/ent/dialect/sql"
+
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
@@ -689,6 +691,53 @@ func (db *DB) ListUpgradeCandidateShows(ctx context.Context) ([]*ent.TVShow, err
 				})
 		}).
 		All(ctx)
+}
+
+// SeasonEpisodeCounts totals every season's episodes for the given shows,
+// unfiltered. It is the denominator a pack's size is measured against: a
+// season pack makes us download all of it whether or not we wanted every
+// episode, so the bound has to be the season's real length. The scanners'
+// own episode indexes are filtered to what a pass cares about — monitored,
+// missing, upgrade-eligible — and are the wrong number for this.
+//
+// A season absent from the map is one the library tracks no episodes for;
+// callers must read that as unknown, not as zero-length.
+func (db *DB) SeasonEpisodeCounts(
+	ctx context.Context,
+	showIDs []uint32,
+) (map[uint32]map[uint16]int, error) {
+	out := make(map[uint32]map[uint16]int, len(showIDs))
+	if len(showIDs) == 0 {
+		return out, nil
+	}
+	var rows []struct {
+		ShowID uint32 `sql:"show_id"`
+		Number uint16 `sql:"number"`
+		Total  int    `sql:"total"`
+	}
+	err := db.client.Episode.Query().
+		Where(episode.HasSeasonWith(season.HasTvShowWith(tvshow.IDIn(showIDs...)))).
+		Modify(func(s *entsql.Selector) {
+			b := entsql.Dialect(s.Dialect())
+			se := b.Table(season.Table).As("cnt_season")
+			s.Join(se).On(s.C(episode.SeasonColumn), se.C(season.FieldID))
+			s.Select(
+				entsql.As(se.C(season.TvShowColumn), "show_id"),
+				entsql.As(se.C(season.FieldNumber), "number"),
+				entsql.As("COUNT(*)", "total"),
+			).GroupBy(se.C(season.TvShowColumn), se.C(season.FieldNumber))
+		}).
+		Scan(ctx, &rows)
+	if err != nil {
+		return nil, fmt.Errorf("season episode counts: %w", err)
+	}
+	for _, r := range rows {
+		if out[r.ShowID] == nil {
+			out[r.ShowID] = make(map[uint16]int)
+		}
+		out[r.ShowID][r.Number] = r.Total
+	}
+	return out, nil
 }
 
 func orDefault(s, d string) string {

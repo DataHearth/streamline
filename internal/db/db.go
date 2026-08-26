@@ -625,6 +625,12 @@ type Store interface {
 	// ListUpgradeCandidateShows returns shows whose episode edges hold the
 	// rows already on disk that an upgrade may replace, files loaded.
 	ListUpgradeCandidateShows(ctx context.Context) ([]*ent.TVShow, error)
+	// SeasonEpisodeCounts totals every season's episodes for the given shows,
+	// unfiltered — the denominator a pack's size bounds are measured in.
+	SeasonEpisodeCounts(
+		ctx context.Context,
+		showIDs []uint32,
+	) (map[uint32]map[uint16]int, error)
 
 	// requests
 	CreateRequest(ctx context.Context, p CreateRequestParams) (*ent.Request, error)

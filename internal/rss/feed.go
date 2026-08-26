@@ -128,7 +128,11 @@ func (s *FeedScanner) processItems(
 			if _, already := pass.grabbed[m.ID]; already {
 				continue
 			}
-			res := evaluateRelease(pass.profiles[m.QualityProfile], item)
+			res := evaluateRelease(
+				pass.profiles[m.QualityProfile],
+				item,
+				singleRelease,
+			)
 			if res.Rejected {
 				slog.DebugContext(ctx, "feed-scan: quality rejected",
 					"movie", m.Title, "release", item.Title,
@@ -177,7 +181,7 @@ func (s *FeedScanner) tryUpgrade(
 	if !p.UpgradeAllowed || len(m.Edges.MediaFiles) == 0 {
 		return false
 	}
-	rel := evaluateRelease(p, item)
+	rel := evaluateRelease(p, item, singleRelease)
 	if rel.Rejected {
 		slog.DebugContext(ctx, "feed-scan: quality rejected",
 			"movie", m.Title, "release", item.Title,
@@ -188,7 +192,9 @@ func (s *FeedScanner) tryUpgrade(
 	file := qualityctx.ContextFromFile(
 		filepath.Base(mf.Path), mf.Size, int(mf.Width), mf.VideoCodec,
 	)
-	release := qualityctx.ContextFromRelease(item.Title, item.Size, item.Seeders)
+	release := qualityctx.ContextFromRelease(
+		item.Title, item.Size, item.Seeders, singleRelease,
+	)
 	if !quality.ReplacesFile(p, file, release) {
 		// Evaluate again here (cheap, pure) so the log can tell a band refusal
 		// from a tie or an upgrade_until_score cap apart, rather than naming
