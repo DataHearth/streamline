@@ -2,6 +2,7 @@ package library
 
 import (
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -35,6 +36,9 @@ var (
 	// Group after the last dash. Allows internal whitespace (some P2P groups
 	// like "MAN OF STYLE") but must start with an alphanumeric so a " - Title"
 	// separator (whitespace right after the dash) is not taken as a group.
+	// The whitespace allowance is what makes cleanGroup necessary: in a
+	// space-separated name the last dash is usually inside "Blu-Ray", so the
+	// match swallows every tag after it.
 	groupRe = regexp.MustCompile(`-([A-Za-z0-9][A-Za-z0-9\s]*)$`)
 	// Some P2P groups append their tag after the codec/quality with a dot
 	// instead of a dash (e.g. "x265.RamirouHD", "1080p.PopHD"). dotGroupRe
@@ -61,15 +65,9 @@ var (
 func Parse(filename string) ParseResult {
 	var r ParseResult
 
-	// Strip known media file extensions
-	knownExts := map[string]bool{
-		"mkv": true, "mp4": true, "avi": true, "wmv": true,
-		"flv": true, "mov": true, "m4v": true, "ts": true,
-		"webm": true, "mpg": true, "mpeg": true,
-	}
 	if idx := strings.LastIndex(filename, "."); idx > 0 {
 		ext := strings.ToLower(filename[idx+1:])
-		if knownExts[ext] {
+		if mediaExtensions[ext] {
 			r.Extension = ext
 			filename = filename[:idx]
 		}
@@ -79,10 +77,15 @@ func Parse(filename string) ParseResult {
 	// after the codec/quality. Accept a trailing dot-token only when it isn't a
 	// known technical tag and the rest still looks like a release, so a plain
 	// title's last word ("The.Office") is never taken as a group.
-	if m := groupRe.FindStringSubmatch(filename); m != nil {
-		r.Group = strings.TrimSpace(m[1])
+	if m := groupRe.FindStringSubmatch(
+		filename,
+	); m != nil &&
+		cleanGroup(m[1]) != "" {
+		r.Group = cleanGroup(m[1])
 		filename = filename[:len(filename)-len(m[0])]
-	} else if m := dotGroupRe.FindStringSubmatch(filename); m != nil {
+	} else if m := dotGroupRe.FindStringSubmatch(
+		filename,
+	); m != nil {
 		rest := filename[:len(filename)-len(m[0])]
 		if !isNonGroupTag(m[1]) && looksLikeRelease(rest) {
 			r.Group = m[1]
@@ -171,6 +174,12 @@ func Parse(filename string) ParseResult {
 	return r
 }
 
+var mediaExtensions = map[string]bool{
+	"mkv": true, "mp4": true, "avi": true, "wmv": true,
+	"flv": true, "mov": true, "m4v": true, "ts": true,
+	"webm": true, "mpg": true, "mpeg": true,
+}
+
 // nonGroupTags are trailing dot-tokens that are quality/language/edition
 // descriptors, not release groups. Kept lowercase for case-insensitive lookup.
 var nonGroupTags = map[string]bool{
@@ -186,6 +195,9 @@ var nonGroupTags = map[string]bool{
 	"repack": true, "extended": true, "remastered": true, "uncut": true,
 	"complete": true, "integral": true, "integrale": true, "collection": true,
 	"series": true, "limited": true, "internal": true,
+	// tails of hyphenated source tags ("Blu-Ray", "WEB-DL"), which groupRe
+	// captures when the name is space-separated.
+	"ray": true, "dl": true,
 }
 
 // isNonGroupTag reports whether a trailing dot-token is a known technical/
@@ -200,6 +212,23 @@ func isNonGroupTag(tok string) bool {
 	return resolutionRe.MatchString(tok) ||
 		sourceRe.MatchString(tok) ||
 		codecRe.MatchString(tok)
+}
+
+// cleanGroup validates a dash-captured group candidate, returning "" when it is
+// really trailing metadata. A space-separated release name puts the last dash
+// inside "Blu-Ray", so groupRe's whitespace allowance captures the whole tail
+// ("Ray HEVC x265 10Bit DDP5 1 Subs KINGDOM"). A container extension is dropped
+// as noise ("Slay3R mkv"); any other technical word means the candidate is not
+// a group at all.
+func cleanGroup(s string) string {
+	words := strings.Fields(s)
+	if n := len(words); n > 0 && mediaExtensions[strings.ToLower(words[n-1])] {
+		words = words[:n-1]
+	}
+	if slices.ContainsFunc(words, isNonGroupTag) {
+		return ""
+	}
+	return strings.Join(words, " ")
 }
 
 // looksLikeRelease reports whether s carries at least one release token,

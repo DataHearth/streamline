@@ -125,6 +125,18 @@ var _ = Describe("Filename Parser", Label("unit", "library"), func() {
 		Entry("trailing MULTI tag is not a group",
 			"Breaking.Bad.S01.1080p.WEB.MULTI", ""),
 		Entry("plain title last word is not a group", "The.Office", ""),
+		Entry(
+			"Blu-Ray tail is not a group",
+			"Hellboy The Crooked Man 2024 1080p Blu-Ray HEVC x265 10Bit DDP5 1 Subs KINGDOM",
+			"",
+		),
+		Entry("bare Blu-Ray tail is not a group",
+			"Hellboy 2004 DC 1080p Blu-Ray", ""),
+		Entry("WEB-DL tail is not a group", "Hellboy 2019 FRENCH 1080p WEB-DL", ""),
+		Entry("trailing container extension is dropped",
+			"Hellboy 2019 FRENCH 1080p WEB-DL x264-Slay3R mkv", "Slay3R"),
+		Entry("bare container extension is not a group",
+			"Hellboy 2019 1080p WEB x264-mp4", ""),
 	)
 
 	DescribeTable(
