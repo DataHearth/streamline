@@ -2,13 +2,88 @@ package bittorrent
 
 import (
 	"net"
+	"os"
+	"path/filepath"
 
+	analog "github.com/anacrolix/log"
+	antorrent "github.com/anacrolix/torrent"
+	"github.com/anacrolix/torrent/bencode"
+	"github.com/anacrolix/torrent/metainfo"
+	"github.com/anacrolix/torrent/types"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/download"
 )
+
+// newTestTorrent builds a real single-piece, three-file torrent whose data
+// already sits in the client's own DataDir, so it never needs a peer or a
+// seeder: applyFilePriorities only reads/writes Torrent.Files(), and a
+// locally-satisfied torrent resolves Info synchronously off the metainfo it
+// was added with.
+func newTestTorrent() *antorrent.Torrent {
+	GinkgoHelper()
+	dir := GinkgoT().TempDir()
+	for i, name := range []string{"a.bin", "b.bin", "c.bin"} {
+		Expect(os.WriteFile(
+			filepath.Join(dir, name), []byte{byte(i), byte(i), byte(i)}, 0o644,
+		)).To(Succeed())
+	}
+	info := metainfo.Info{PieceLength: 1 << 20, Name: "applyFilePriorities-fixture"}
+	Expect(info.BuildFromFilePath(dir)).To(Succeed())
+	ib, err := bencode.Marshal(info)
+	Expect(err).NotTo(HaveOccurred())
+	mi := metainfo.MetaInfo{InfoBytes: ib}
+
+	cc := antorrent.NewDefaultClientConfig()
+	cc.DataDir = dir
+	cc.NoDHT = true
+	cc.DisableTrackers = true
+	cc.DisablePEX = true
+	cc.NoDefaultPortForwarding = true
+	cc.ListenPort = 0
+	cc.Logger = analog.Default.WithFilterLevel(analog.Error)
+	client, err := antorrent.NewClient(cc)
+	Expect(err).NotTo(HaveOccurred())
+	DeferCleanup(func() { Expect(client.Close()).To(BeEmpty()) })
+
+	t, err := client.AddTorrent(&mi)
+	Expect(err).NotTo(HaveOccurred())
+	<-t.GotInfo()
+	return t
+}
+
+var _ = Describe("applyFilePriorities", Label("unit", "bittorrent"), func() {
+	var t *antorrent.Torrent
+
+	BeforeEach(func() {
+		t = newTestTorrent()
+		Expect(t.Files()).To(HaveLen(3))
+	})
+
+	It("mode all bumps every undecided file", func() {
+		applyFilePriorities(t, "all", nil)
+		for _, f := range t.Files() {
+			Expect(f.Priority()).To(Equal(types.PiecePriorityNormal))
+		}
+	})
+
+	It("mode pending bumps nothing", func() {
+		applyFilePriorities(t, "pending", nil)
+		for _, f := range t.Files() {
+			Expect(f.Priority()).To(Equal(types.PiecePriorityNone))
+		}
+	})
+
+	It("mode explicit wants exactly the listed files, twice in a row", func() {
+		applyFilePriorities(t, "explicit", []int{1})
+		applyFilePriorities(t, "explicit", []int{1}) // the restart re-run
+		Expect(t.Files()[0].Priority()).To(Equal(types.PiecePriorityNone))
+		Expect(t.Files()[1].Priority()).To(Equal(types.PiecePriorityNormal))
+		Expect(t.Files()[2].Priority()).To(Equal(types.PiecePriorityNone))
+	})
+})
 
 var _ = Describe("parseHash", Label("unit", "bittorrent"), func() {
 	It("parses a 40-char hex hash", func() {

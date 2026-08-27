@@ -45,6 +45,12 @@ type torrentState struct {
 	// starts at zero every boot, so ratio has to be read off base + counter or
 	// a restart silently forgives whatever the torrent already gave back.
 	uploadedBase int64
+	// selectionMode and wantedFiles mirror the persisted file-selection
+	// columns, consulted by applyFilePriorities every time startWhenReady
+	// runs — including the metadata-resolve re-run after a restore, so a
+	// restart can't erase a skip the way the old unconditional bump did.
+	selectionMode string
+	wantedFiles   []int
 }
 
 type speedSample struct {
@@ -356,10 +362,12 @@ func (e *Engine) restore(ctx context.Context) error {
 			continue
 		}
 		st := &torrentState{
-			paused:       s.Paused,
-			seedStopped:  s.SeedStopped,
-			addedAt:      s.CreateTime,
-			uploadedBase: s.Uploaded,
+			paused:        s.Paused,
+			seedStopped:   s.SeedStopped,
+			addedAt:       s.CreateTime,
+			uploadedBase:  s.Uploaded,
+			selectionMode: string(s.SelectionMode),
+			wantedFiles:   s.WantedFiles,
 		}
 		if s.CompletedAt != nil {
 			st.completedAt = *s.CompletedAt
@@ -394,8 +402,9 @@ func (e *Engine) startWhenReady(t *antorrent.Torrent, seedStopped bool) {
 		if seedStopped {
 			t.DisallowDataUpload()
 		}
-		wantFilesByDefault(t)
 		hash := t.InfoHash().HexString()
+		st := e.getState(hash)
+		applyFilePriorities(t, st.selectionMode, st.wantedFiles)
 		if err := e.store.SetTorrentSessionName(
 			context.Background(), hash, t.Name(),
 		); err != nil {
@@ -406,16 +415,44 @@ func (e *Engine) startWhenReady(t *antorrent.Torrent, seedStopped bool) {
 	})
 }
 
-// wantFilesByDefault bumps every still-unprioritized file from anacrolix's
-// None default to Normal. File priorities are the engine's single demand
-// source — never DownloadAll, whose piece-level demand is max()-merged and
-// can't be retracted by a later per-file skip — so fresh files must be
-// bumped or nothing downloads. Files the user already prioritized are left
-// untouched.
-func wantFilesByDefault(t *antorrent.Torrent) {
-	for _, f := range t.Files() {
-		if f.Priority() == types.PiecePriorityNone {
-			f.SetPriority(types.PiecePriorityNormal)
+// applyFilePriorities sets every file's priority from the persisted
+// selection, and runs every time startWhenReady does — including the
+// metadata-resolve re-run after a restore. File priorities are the engine's
+// single demand source — never DownloadAll, whose piece-level demand is
+// max()-merged and can't be retracted by a later per-file skip — so this is
+// the only place demand is decided.
+//
+// mode "all" (also the zero value, so an unrecorded state behaves exactly
+// like a session created before selection existed) bumps every
+// still-unprioritized file from anacrolix's None default to Normal, and
+// leaves a file the user already prioritized untouched. mode "pending" is a
+// selective grab whose keep-set isn't known yet: bump nothing, so a magnet
+// fetches metadata (priority-independent) but no data piece. mode "explicit"
+// wants exactly wanted's indexes and skips the rest — unconditionally,
+// unlike "all", so a repeat run (the restart case this fixes) reproduces the
+// same skip instead of the old code's unconditional bump erasing it.
+func applyFilePriorities(t *antorrent.Torrent, mode string, wanted []int) {
+	switch mode {
+	case "pending":
+	case "explicit":
+		keep := make(map[int]struct{}, len(wanted))
+		for _, i := range wanted {
+			keep[i] = struct{}{}
+		}
+		for i, f := range t.Files() {
+			if _, ok := keep[i]; ok {
+				if f.Priority() == types.PiecePriorityNone {
+					f.SetPriority(types.PiecePriorityNormal)
+				}
+			} else {
+				f.SetPriority(types.PiecePriorityNone)
+			}
+		}
+	default: // "all"
+		for _, f := range t.Files() {
+			if f.Priority() == types.PiecePriorityNone {
+				f.SetPriority(types.PiecePriorityNormal)
+			}
 		}
 	}
 }
