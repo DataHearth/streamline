@@ -29,11 +29,21 @@
 	// `copied` holds the label of the last-copied field, for the checkmark swap.
 	let copied = $state("");
 
-	let movies = $derived(sections.filter((s) => s.type === "movie"));
-	let shows = $derived(sections.filter((s) => s.type === "show"));
+	// Only what the operator picked. A library commonly holds more than one
+	// section of a type — a streamline one beside an existing Radarr/Sonarr one —
+	// and listing the rejects here is what made an earlier version read as though
+	// both were going into config.
+	let movieSection = $derived(
+		sections.find((s) => s.type === "movie" && s.key === selectedMovie),
+	);
+	let showSection = $derived(
+		sections.find((s) => s.type === "show" && s.key === selectedShow),
+	);
 
-	let movieKey = $derived(selectedMovie || movies[0]?.key || "<movie-section-key>");
-	let showKey = $derived(selectedShow || shows[0]?.key || "<tv-section-key>");
+	// No fallback to the first of a type: guessing is what put a section the
+	// operator never chose into a snippet they were about to commit.
+	let movieKey = $derived(movieSection?.key ?? "<movie-section-key>");
+	let showKey = $derived(showSection?.key ?? "<tv-section-key>");
 
 	let snippet = $derived(
 		`media_server:
@@ -74,34 +84,31 @@
 			</p>
 		</div>
 
-		{#each [{ heading: i18n.mediaserver_library_section(), key: "library_section", list: movies }, { heading: i18n.mediaserver_library_section_tv(), key: "library_section_tv", list: shows }] as group (group.key)}
+		{#each [{ key: "library_section", section: movieSection }, { key: "library_section_tv", section: showSection }] as group (group.key)}
 			<div>
 				<div class="mb-1 text-[11px] font-medium text-fg-muted">
 					{group.key}
 				</div>
-				{#if group.list.length === 0}
-					<p class="text-xs text-fg-faint">{i18n.plex_sections_none()}</p>
+				{#if !group.section}
+					<p class="text-xs text-fg-faint">{i18n.plex_sections_unpicked()}</p>
 				{:else}
-					<div class="space-y-2">
-						{#each group.list as s (s.key)}
-							<div class="flex items-center gap-2">
-								<code
-									class="min-w-0 flex-1 truncate rounded-md border border-border bg-bg-base px-2.5 py-1.5 font-mono text-xs text-fg"
-								>{s.key} · {s.name}{s.locations.length ? ` — ${s.locations.join(", ")}` : ""}</code>
-								<button
-									type="button"
-									onclick={() => copy(s.key, `${group.key}:${s.key}`)}
-									aria-label="Copy {s.name} section key"
-									class="inline-flex shrink-0 items-center rounded-md border border-border p-2 text-fg-muted transition hover:bg-surface hover:text-fg"
-								>
-									{#if copied === `${group.key}:${s.key}`}
-										<Check size={14} class="text-status-available" aria-hidden="true" />
-									{:else}
-										<Copy size={14} aria-hidden="true" />
-									{/if}
-								</button>
-							</div>
-						{/each}
+					{@const sec = group.section}
+					<div class="flex items-center gap-2">
+						<code
+							class="min-w-0 flex-1 truncate rounded-md border border-border bg-bg-base px-2.5 py-1.5 font-mono text-xs text-fg"
+						>{sec.key} · {sec.name}{sec.locations.length ? ` — ${sec.locations.join(", ")}` : ""}</code>
+						<button
+							type="button"
+							onclick={() => copy(sec.key, group.key)}
+							aria-label="Copy {sec.name} section key"
+							class="inline-flex shrink-0 items-center rounded-md border border-border p-2 text-fg-muted transition hover:bg-surface hover:text-fg"
+						>
+							{#if copied === group.key}
+								<Check size={14} class="text-status-available" aria-hidden="true" />
+							{:else}
+								<Copy size={14} aria-hidden="true" />
+							{/if}
+						</button>
 					</div>
 				{/if}
 			</div>

@@ -40,6 +40,17 @@
 
 	const serverType = untrack(() => form.useSelector((s) => s.values.server_type));
 	const apiKey = untrack(() => form.useSelector((s) => s.values.api_key));
+	// Read through selectors, not form.state.values: the latter is not reactive
+	// when handed to a child as a prop, so the snippet modal rendered whatever
+	// the previous render happened to see — a section the operator had just
+	// changed away from, or none at all for a field they had only just picked.
+	const serverName = untrack(() => form.useSelector((s) => s.values.name));
+	const movieSection = untrack(() =>
+		form.useSelector((s) => s.values.library_section),
+	);
+	const tvSection = untrack(() =>
+		form.useSelector((s) => s.values.library_section_tv),
+	);
 
 	const TYPES: { type: MediaServerType; label: string }[] = [
 		{ type: "plex", label: "Plex" },
@@ -292,9 +303,9 @@
 
 <PlexSectionsModal
 	open={sectionsOpen}
-	serverName={form.state.values.name}
+	serverName={serverName.current}
 	{sections}
-	selectedMovie={form.state.values.library_section}
-	selectedShow={form.state.values.library_section_tv}
+	selectedMovie={movieSection.current}
+	selectedShow={tvSection.current}
 	onClose={() => (sectionsOpen = false)}
 />
