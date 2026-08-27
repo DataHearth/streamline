@@ -17,9 +17,13 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 
+	"github.com/anacrolix/torrent/metainfo"
+
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/db"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
@@ -278,7 +282,12 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 		When("no enabled download client exists", func() {
 			It("returns the no-client error", func() {
 				configtest.Setup()
-				_, err := mgr.GrabEpisode(ctx, indexer.SearchResult{Title: "x"}, 1)
+				_, err := mgr.GrabEpisode(
+					ctx,
+					indexer.SearchResult{Title: "x"},
+					1,
+					nil,
+				)
 				Expect(
 					err,
 				).To(MatchError(ContainSubstring("no enabled download client")))
@@ -575,4 +584,211 @@ var _ = Describe("buildClient builtin", Label("unit", "downloads"), func() {
 		Expect(err).To(MatchError(ErrUnsupportedClient))
 		Expect(err.Error()).To(ContainSubstring("restart"))
 	})
+})
+
+// fakeSelectiveClient is a spy Client recording AddTorrent/SetWantedFiles
+// calls for the selective-grab specs below — a hand-rolled fake instead of
+// download/mocks for the same import-cycle reason as stubClient.
+type fakeSelectiveClient struct {
+	stubClient
+	addTorrentCalls int
+	addTorrentSrc   TorrentSource
+	addHash         string
+	addErr          error
+	setWantedCalls  int
+	setWantedHash   string
+	setWantedFiles  []int
+	setWantedErr    error
+}
+
+func (f *fakeSelectiveClient) AddTorrent(
+	_ context.Context, src TorrentSource,
+) (string, error) {
+	f.addTorrentCalls++
+	f.addTorrentSrc = src
+	if f.addErr != nil {
+		return "", f.addErr
+	}
+	return f.addHash, nil
+}
+
+func (f *fakeSelectiveClient) SetWantedFiles(
+	_ context.Context, hash string, wanted []int,
+) error {
+	f.setWantedCalls++
+	f.setWantedHash = hash
+	f.setWantedFiles = wanted
+	return f.setWantedErr
+}
+
+var _ = Describe("GrabEpisode selective files", Label("unit", "downloads"), func() {
+	var (
+		ctx    context.Context
+		store  *dbmocks.MockStore
+		mgr    Downloader
+		client *fakeSelectiveClient
+		srv    *httptest.Server
+	)
+
+	// twoEpisodeRelease serves a 2-file torrent (S01E01, S01E02, both above the
+	// episode floor) over an httptest server addressed by one enabled indexer,
+	// with a builtin download client wired to the fake, and returns the
+	// release plus a show whose season holds the two matching episodes
+	// (21, 22). resolveTorrentSource has to actually fetch bytes for Flow A to
+	// engage (it gates on len(src.Bytes) > 0), which is why this fetches for
+	// real instead of stubbing TorrentSource directly.
+	twoEpisodeRelease := func(selectiveFiles bool) (indexer.SearchResult, *ent.TVShow) {
+		raw := buildTorrentBytes(metainfo.Info{
+			Name: "Show",
+			Files: []metainfo.FileInfo{
+				{Path: []string{"Show.S01E01.mkv"}, Length: aboveFloor},
+				{Path: []string{"Show.S01E02.mkv"}, Length: aboveFloor},
+			},
+		})
+		srv = httptest.NewServer(http.HandlerFunc(
+			func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write(raw) },
+		))
+		DeferCleanup(srv.Close)
+		endpoint, err := url.Parse(srv.URL)
+		Expect(err).NotTo(HaveOccurred())
+		port, err := strconv.Atoi(endpoint.Port())
+		Expect(err).NotTo(HaveOccurred())
+		configtest.Setup(map[string]any{
+			"download": map[string]any{"selective_files": selectiveFiles},
+			"indexers": []map[string]any{{
+				"name": "tracker", "host": endpoint.Hostname(), "port": port,
+				"api_key": "k", "protocol": "torznab", "enabled": true,
+			}},
+			"download_clients": []map[string]any{{
+				"name": "embedded", "client_type": "builtin",
+				"download_dir": "/downloads", "enabled": true,
+			}},
+		})
+		show := &ent.TVShow{
+			ID:   1,
+			Type: tvshow.TypeStandard,
+			Edges: ent.TVShowEdges{Seasons: []*ent.Season{{
+				Number: 1,
+				Edges: ent.SeasonEdges{Episodes: []*ent.Episode{
+					{ID: 21, Number: 1},
+					{ID: 22, Number: 2},
+				}},
+			}}},
+		}
+		result := indexer.SearchResult{
+			Title: "Show S01", Download: srv.URL + "/dl",
+		}
+		return result, show
+	}
+
+	BeforeEach(func() {
+		ctx = context.Background()
+		store = dbmocks.NewMockStore(GinkgoT())
+		client = &fakeSelectiveClient{addHash: "abc123"}
+		mgr = New(store, client)
+	})
+
+	It("zero matches: never calls AddTorrent, error wraps ErrNoWantedFiles", func() {
+		result, show := twoEpisodeRelease(true)
+		// Wanted episode 999 doesn't exist on the season, so nothing matches.
+		store.EXPECT().
+			TVShowForEpisode(mock.Anything, uint32(21)).
+			Return(show, nil).Once()
+
+		_, err := mgr.GrabEpisode(ctx, result, 21, []uint32{999})
+
+		Expect(errors.Is(err, ErrNoWantedFiles)).To(BeTrue())
+		Expect(client.addTorrentCalls).To(Equal(0))
+	})
+
+	It(
+		"partial match: AddTorrent gets the keep-set, record applied, SetWantedFiles confirmed",
+		func() {
+			result, show := twoEpisodeRelease(true)
+			store.EXPECT().
+				TVShowForEpisode(mock.Anything, uint32(21)).
+				Return(show, nil).Once()
+			store.EXPECT().CreateDownloadRecord(mock.Anything, mock.MatchedBy(
+				func(p db.CreateDownloadRecordParams) bool {
+					return p.EpisodeID == 21 &&
+						p.SelectionState == downloadrecord.SelectionStateApplied &&
+						len(p.WantedEpisodes) == 1 && p.WantedEpisodes[0] == 21
+				},
+			)).Return(&ent.DownloadRecord{ID: 42}, nil).Once()
+			store.EXPECT().SetDownloadRecordSelection(
+				mock.Anything, uint32(42), downloadrecord.SelectionStateApplied,
+				[]int{0}, aboveFloor,
+			).Return(nil).Once()
+
+			_, err := mgr.GrabEpisode(ctx, result, 21, []uint32{21})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(client.addTorrentCalls).To(Equal(1))
+			Expect(client.addTorrentSrc.Selective).To(BeTrue())
+			Expect(client.addTorrentSrc.WantedFiles).To(Equal([]int{0}))
+			Expect(client.setWantedCalls).To(Equal(1))
+			Expect(client.setWantedHash).To(Equal("abc123"))
+			Expect(client.setWantedFiles).To(Equal([]int{0}))
+		},
+	)
+
+	It(
+		"SetWantedFiles ErrNotSupported flips the record unsupported; grab still succeeds",
+		func() {
+			result, show := twoEpisodeRelease(true)
+			client.setWantedErr = ErrNotSupported
+			store.EXPECT().
+				TVShowForEpisode(mock.Anything, uint32(21)).
+				Return(show, nil).Once()
+			store.EXPECT().
+				CreateDownloadRecord(mock.Anything, mock.Anything).
+				Return(&ent.DownloadRecord{ID: 42}, nil).Once()
+			store.EXPECT().SetDownloadRecordSelection(
+				mock.Anything, uint32(42),
+				downloadrecord.SelectionStateUnsupported, []int(nil), int64(0),
+			).Return(nil).Once()
+
+			_, err := mgr.GrabEpisode(ctx, result, 21, []uint32{21})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(client.setWantedCalls).To(Equal(1))
+		},
+	)
+
+	It(
+		"nil wantedEpisodes: no decode, no SetWantedFiles, whole-torrent grab",
+		func() {
+			result, _ := twoEpisodeRelease(true)
+			store.EXPECT().CreateDownloadRecord(mock.Anything, mock.MatchedBy(
+				func(p db.CreateDownloadRecordParams) bool {
+					return len(p.WantedEpisodes) == 0 && p.SelectionState == ""
+				},
+			)).Return(&ent.DownloadRecord{ID: 42}, nil).Once()
+
+			_, err := mgr.GrabEpisode(ctx, result, 21, nil)
+
+			Expect(err).NotTo(HaveOccurred())
+			// TVShowForEpisode carries no expectation above: calling it would
+			// panic the mock, so reaching here proves the gate never opened.
+			Expect(client.addTorrentSrc.Selective).To(BeFalse())
+			Expect(client.addTorrentSrc.WantedFiles).To(BeNil())
+			Expect(client.setWantedCalls).To(Equal(0))
+		},
+	)
+
+	It(
+		"selective_files off: identical to a nil wanted set even with one present",
+		func() {
+			result, _ := twoEpisodeRelease(false)
+			store.EXPECT().
+				CreateDownloadRecord(mock.Anything, mock.Anything).
+				Return(&ent.DownloadRecord{ID: 42}, nil).Once()
+
+			_, err := mgr.GrabEpisode(ctx, result, 21, []uint32{21})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(client.addTorrentSrc.Selective).To(BeFalse())
+			Expect(client.setWantedCalls).To(Equal(0))
+		},
+	)
 })

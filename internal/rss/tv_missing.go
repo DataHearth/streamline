@@ -234,8 +234,17 @@ func (s *EpisodeMissingSearcher) grabSeasonPack(
 	if episodes < 1 {
 		episodes = singleRelease
 	}
+	wantedIDs := make([]uint32, len(wanted))
+	for i, e := range wanted {
+		wantedIDs[i] = e.ID
+	}
 	for _, r := range rankAccepted(profile, packs, episodes) {
-		if _, err := s.downloads.GrabEpisode(ctx, r, wanted[0].ID); err != nil {
+		if _, err := s.downloads.GrabEpisode(
+			ctx,
+			r,
+			wanted[0].ID,
+			wantedIDs,
+		); err != nil {
 			slog.WarnContext(ctx, "tv missing-search: season-pack grab failed",
 				"show", show.Title, "season", se.Number,
 				"release", r.Title, "error", err)
@@ -277,7 +286,12 @@ func (s *EpisodeMissingSearcher) grabEpisode(
 	}
 
 	for _, r := range rankAccepted(profile, results, singleRelease) {
-		if _, err := s.downloads.GrabEpisode(ctx, r, e.ID); err != nil {
+		if _, err := s.downloads.GrabEpisode(
+			ctx,
+			r,
+			e.ID,
+			[]uint32{e.ID},
+		); err != nil {
 			slog.WarnContext(ctx, "tv missing-search: episode grab failed",
 				"show", show.Title, "season", se.Number, "episode", e.Number,
 				"release", r.Title, "error", err)

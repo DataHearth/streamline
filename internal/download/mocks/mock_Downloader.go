@@ -234,8 +234,8 @@ func (_c *MockDownloader_Grab_Call) RunAndReturn(run func(ctx context.Context, r
 }
 
 // GrabEpisode provides a mock function for the type MockDownloader
-func (_mock *MockDownloader) GrabEpisode(ctx context.Context, result indexer.SearchResult, episodeID uint32) (*ent.DownloadRecord, error) {
-	ret := _mock.Called(ctx, result, episodeID)
+func (_mock *MockDownloader) GrabEpisode(ctx context.Context, result indexer.SearchResult, episodeID uint32, wantedEpisodes []uint32) (*ent.DownloadRecord, error) {
+	ret := _mock.Called(ctx, result, episodeID, wantedEpisodes)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GrabEpisode")
@@ -243,18 +243,18 @@ func (_mock *MockDownloader) GrabEpisode(ctx context.Context, result indexer.Sea
 
 	var r0 *ent.DownloadRecord
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, indexer.SearchResult, uint32) (*ent.DownloadRecord, error)); ok {
-		return returnFunc(ctx, result, episodeID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, indexer.SearchResult, uint32, []uint32) (*ent.DownloadRecord, error)); ok {
+		return returnFunc(ctx, result, episodeID, wantedEpisodes)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, indexer.SearchResult, uint32) *ent.DownloadRecord); ok {
-		r0 = returnFunc(ctx, result, episodeID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, indexer.SearchResult, uint32, []uint32) *ent.DownloadRecord); ok {
+		r0 = returnFunc(ctx, result, episodeID, wantedEpisodes)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*ent.DownloadRecord)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, indexer.SearchResult, uint32) error); ok {
-		r1 = returnFunc(ctx, result, episodeID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, indexer.SearchResult, uint32, []uint32) error); ok {
+		r1 = returnFunc(ctx, result, episodeID, wantedEpisodes)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -270,11 +270,12 @@ type MockDownloader_GrabEpisode_Call struct {
 //   - ctx context.Context
 //   - result indexer.SearchResult
 //   - episodeID uint32
-func (_e *MockDownloader_Expecter) GrabEpisode(ctx any, result any, episodeID any) *MockDownloader_GrabEpisode_Call {
-	return &MockDownloader_GrabEpisode_Call{Call: _e.mock.On("GrabEpisode", ctx, result, episodeID)}
+//   - wantedEpisodes []uint32
+func (_e *MockDownloader_Expecter) GrabEpisode(ctx any, result any, episodeID any, wantedEpisodes any) *MockDownloader_GrabEpisode_Call {
+	return &MockDownloader_GrabEpisode_Call{Call: _e.mock.On("GrabEpisode", ctx, result, episodeID, wantedEpisodes)}
 }
 
-func (_c *MockDownloader_GrabEpisode_Call) Run(run func(ctx context.Context, result indexer.SearchResult, episodeID uint32)) *MockDownloader_GrabEpisode_Call {
+func (_c *MockDownloader_GrabEpisode_Call) Run(run func(ctx context.Context, result indexer.SearchResult, episodeID uint32, wantedEpisodes []uint32)) *MockDownloader_GrabEpisode_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -288,10 +289,15 @@ func (_c *MockDownloader_GrabEpisode_Call) Run(run func(ctx context.Context, res
 		if args[2] != nil {
 			arg2 = args[2].(uint32)
 		}
+		var arg3 []uint32
+		if args[3] != nil {
+			arg3 = args[3].([]uint32)
+		}
 		run(
 			arg0,
 			arg1,
 			arg2,
+			arg3,
 		)
 	})
 	return _c
@@ -302,7 +308,7 @@ func (_c *MockDownloader_GrabEpisode_Call) Return(downloadRecord *ent.DownloadRe
 	return _c
 }
 
-func (_c *MockDownloader_GrabEpisode_Call) RunAndReturn(run func(ctx context.Context, result indexer.SearchResult, episodeID uint32) (*ent.DownloadRecord, error)) *MockDownloader_GrabEpisode_Call {
+func (_c *MockDownloader_GrabEpisode_Call) RunAndReturn(run func(ctx context.Context, result indexer.SearchResult, episodeID uint32, wantedEpisodes []uint32) (*ent.DownloadRecord, error)) *MockDownloader_GrabEpisode_Call {
 	_c.Call.Return(run)
 	return _c
 }

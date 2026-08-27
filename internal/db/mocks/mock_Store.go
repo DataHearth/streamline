@@ -11601,6 +11601,74 @@ func (_c *MockStore_SyncSeasonDownloadStateForRecord_Call) RunAndReturn(run func
 	return _c
 }
 
+// TVShowForEpisode provides a mock function for the type MockStore
+func (_mock *MockStore) TVShowForEpisode(ctx context.Context, episodeID uint32) (*ent.TVShow, error) {
+	ret := _mock.Called(ctx, episodeID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for TVShowForEpisode")
+	}
+
+	var r0 *ent.TVShow
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (*ent.TVShow, error)); ok {
+		return returnFunc(ctx, episodeID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) *ent.TVShow); ok {
+		r0 = returnFunc(ctx, episodeID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ent.TVShow)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+		r1 = returnFunc(ctx, episodeID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_TVShowForEpisode_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'TVShowForEpisode'
+type MockStore_TVShowForEpisode_Call struct {
+	*mock.Call
+}
+
+// TVShowForEpisode is a helper method to define mock.On call
+//   - ctx context.Context
+//   - episodeID uint32
+func (_e *MockStore_Expecter) TVShowForEpisode(ctx any, episodeID any) *MockStore_TVShowForEpisode_Call {
+	return &MockStore_TVShowForEpisode_Call{Call: _e.mock.On("TVShowForEpisode", ctx, episodeID)}
+}
+
+func (_c *MockStore_TVShowForEpisode_Call) Run(run func(ctx context.Context, episodeID uint32)) *MockStore_TVShowForEpisode_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_TVShowForEpisode_Call) Return(tVShow *ent.TVShow, err error) *MockStore_TVShowForEpisode_Call {
+	_c.Call.Return(tVShow, err)
+	return _c
+}
+
+func (_c *MockStore_TVShowForEpisode_Call) RunAndReturn(run func(ctx context.Context, episodeID uint32) (*ent.TVShow, error)) *MockStore_TVShowForEpisode_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // TouchAPIKey provides a mock function for the type MockStore
 func (_mock *MockStore) TouchAPIKey(ctx context.Context, id uint32, at time.Time) error {
 	ret := _mock.Called(ctx, id, at)

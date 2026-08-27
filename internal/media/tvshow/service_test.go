@@ -495,9 +495,12 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 				}},
 			}}
 			storeMk.FindTVShowByID(mock.Anything, uint32(3)).Return(show, nil).Once()
-			// Anchored on the season's first episode regardless of its status.
+			// Anchored on the season's first episode regardless of its status;
+			// the wanted set carries only the wanted+aired one (11 is available,
+			// 12 hasn't aired).
 			dlMk.GrabEpisode(mock.Anything,
-				mock.AnythingOfType("indexer.SearchResult"), uint32(10)).
+				mock.AnythingOfType("indexer.SearchResult"), uint32(10),
+				[]uint32{10}).
 				Return(&ent.DownloadRecord{ID: 1}, nil).Once()
 			// Only the wanted+aired episode flips; available and future ones don't.
 			storeMk.SetEpisodeStatus(mock.Anything, uint32(10), episode.StatusDownloading).
@@ -523,8 +526,11 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 				}},
 			}}
 			storeMk.FindTVShowByID(mock.Anything, uint32(3)).Return(show, nil).Once()
+			// replaceExisting: the wanted set is every episode in the pack,
+			// regardless of status.
 			dlMk.GrabEpisode(mock.Anything,
-				mock.AnythingOfType("indexer.SearchResult"), uint32(10)).
+				mock.AnythingOfType("indexer.SearchResult"), uint32(10),
+				[]uint32{10}).
 				Return(&ent.DownloadRecord{ID: 7}, nil).Once()
 			storeMk.SetDownloadRecordReplaceMode(
 				mock.Anything, uint32(7), downloadrecord.ReplaceModeAll,
@@ -537,6 +543,62 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 				indexer.SearchResult{Title: "BB S01", Download: "magnet:x"}, true)
 			Expect(err).NotTo(HaveOccurred())
 		})
+
+		It(
+			"replaceExisting: wanted set carries the unaired episode too, but only the aired one is marked",
+			func() {
+				past := time.Now().Add(-24 * time.Hour)
+				future := time.Now().Add(720 * time.Hour)
+				show := &ent.TVShow{ID: 3, Edges: ent.TVShowEdges{
+					Seasons: []*ent.Season{{
+						Number: 1,
+						Edges: ent.SeasonEdges{Episodes: []*ent.Episode{
+							{
+								ID:      10,
+								Number:  1,
+								Status:  episode.StatusWanted,
+								AirDate: past,
+							},
+							{
+								ID:      11,
+								Number:  2,
+								Status:  episode.StatusWanted,
+								AirDate: future,
+							},
+						}},
+					}},
+				}}
+				storeMk.FindTVShowByID(mock.Anything, uint32(3)).
+					Return(show, nil).
+					Once()
+				// The GrabEpisode wanted-set is the whole replace target (both
+				// episodes) — replaceExisting is about the selective-download
+				// keep-set — but the pack can't contain the unaired episode, so
+				// only the aired one is ever marked downloading.
+				dlMk.GrabEpisode(mock.Anything,
+					mock.AnythingOfType("indexer.SearchResult"), uint32(10),
+					[]uint32{10, 11}).
+					Return(&ent.DownloadRecord{ID: 8}, nil).Once()
+				storeMk.SetDownloadRecordReplaceMode(
+					mock.Anything, uint32(8), downloadrecord.ReplaceModeAll,
+				).Return(nil).Once()
+				storeMk.SetEpisodeStatus(mock.Anything, uint32(10), episode.StatusDownloading).
+					Return(nil).
+					Once()
+
+				err := svc.GrabSeasonRelease(
+					ctx,
+					3,
+					1,
+					indexer.SearchResult{
+						Title:    "BB S01",
+						Download: "magnet:x",
+					},
+					true,
+				)
+				Expect(err).NotTo(HaveOccurred())
+			},
+		)
 
 		It("errors when the season has no episodes", func() {
 			show := &ent.TVShow{ID: 3, Edges: ent.TVShowEdges{
@@ -580,8 +642,10 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 				storeMk.FindTVShowByID(mock.Anything, uint32(3)).
 					Return(show, nil).
 					Once()
+				// Both episodes are wanted+aired, across both seasons.
 				dlMk.GrabEpisode(mock.Anything,
-					mock.AnythingOfType("indexer.SearchResult"), uint32(10)).
+					mock.AnythingOfType("indexer.SearchResult"), uint32(10),
+					[]uint32{10, 20}).
 					Return(&ent.DownloadRecord{ID: 1}, nil).Once()
 				storeMk.SetEpisodeStatus(mock.Anything, uint32(10), episode.StatusDownloading).
 					Return(nil).

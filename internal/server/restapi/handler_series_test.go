@@ -15,6 +15,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/media/tvshow"
@@ -426,6 +427,44 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
 		})
+	})
+
+	Describe("GrabEpisodeRelease", func() {
+		It(
+			"maps a zero-match selective grab to 422 with the message verbatim",
+			func() {
+				app.tvshows.EXPECT().Get(mock.Anything, uint32(3)).
+					Return(&ent.TVShow{ID: 3}, nil).Once()
+				grabErr := fmt.Errorf(
+					"%w: %s",
+					download.ErrNoWantedFiles,
+					"BB S01E01",
+				)
+				app.downloads.EXPECT().
+					GrabEpisode(mock.Anything, mock.AnythingOfType("indexer.SearchResult"),
+						uint32(5), mock.Anything).
+					Return(nil, grabErr).Once()
+
+				req := app.req(
+					http.MethodPost,
+					"/api/v1/series/3/episodes/5/grab",
+					app.adminKey,
+					strings.NewReader(
+						`{"title":"BB S01E01","download_url":"magnet:x","size":1,"seeders":1}`,
+					),
+				)
+				req.Header.Set("Content-Type", "application/json")
+				resp := app.do(req)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+
+				var body struct {
+					Message string `json:"message"`
+				}
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				Expect(body.Message).To(Equal(grabErr.Error()))
+			},
+		)
 	})
 
 	Describe("BrowseSeriesReleases", func() {

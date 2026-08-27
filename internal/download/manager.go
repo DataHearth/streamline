@@ -19,6 +19,7 @@ import (
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/schema"
+	"github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/indexer"
@@ -65,6 +66,12 @@ var (
 	// ErrNotSupported is returned by ListFiles/SetWantedFiles on a download
 	// client that has no notion of per-file selection.
 	ErrNotSupported = errors.New("file selection not supported")
+	// ErrNoWantedFiles is returned by grab when a selective download's
+	// keep-set resolves to zero matched episodes — the release's file names
+	// share nothing with the wanted episodes, so grabbing it would waste
+	// bandwidth on a torrent that can never fill the gap. Raised before the
+	// download client is contacted.
+	ErrNoWantedFiles = errors.New("release contains no wanted episode file")
 )
 
 // PathUnderRoot reports whether path resolves inside root, or is root itself.
@@ -185,6 +192,7 @@ type Downloader interface {
 		ctx context.Context,
 		result indexer.SearchResult,
 		episodeID uint32,
+		wantedEpisodes []uint32,
 	) (*ent.DownloadRecord, error)
 	CheckStatus(ctx context.Context) ([]CompletedDownload, error)
 	ReconcileEpisodeStatuses(ctx context.Context) error
@@ -471,18 +479,28 @@ func (d *download) Grab(
 	result indexer.SearchResult,
 	movieID uint32,
 ) (*ent.DownloadRecord, error) {
-	return d.grab(ctx, result, movieID, 0)
+	return d.grab(ctx, result, movieID, 0, nil)
 }
 
 // GrabEpisode mirrors Grab for a TV episode. Episode status transitions are
 // owned by the caller (the TV missing searcher), so this does not touch episode
-// rows.
+// rows. wantedEpisodes is the set of episode IDs this release is grabbed to
+// fill/replace — nil or empty means non-selective (grab everything). It
+// gates the Flow A keep-set resolution in grab.
 func (d *download) GrabEpisode(
 	ctx context.Context,
 	result indexer.SearchResult,
 	episodeID uint32,
+	wantedEpisodes []uint32,
 ) (*ent.DownloadRecord, error) {
-	return d.grab(ctx, result, 0, episodeID)
+	return d.grab(ctx, result, 0, episodeID, wantedEpisodes)
+}
+
+// pendingSelection carries Flow A's resolved keep-set from resolveTorrentSource
+// through CreateDownloadRecord to the post-add SetWantedFiles confirmation.
+type pendingSelection struct {
+	files []int
+	bytes int64
 }
 
 // grab is the shared torrent-grab path. Exactly one of movieID/episodeID is
@@ -492,6 +510,7 @@ func (d *download) grab(
 	ctx context.Context,
 	result indexer.SearchResult,
 	movieID, episodeID uint32,
+	wantedEpisodes []uint32,
 ) (*ent.DownloadRecord, error) {
 	spanName, mediaAttr := "download.grab", attribute.Int64(
 		"movie.id",
@@ -557,6 +576,57 @@ func (d *download) grab(
 			fmt.Errorf("fetch torrent: %w", err),
 		)
 	}
+	// Flow A (spec §4.2): resolve which files the release actually needs to
+	// serve wantedEpisodes before the torrent is ever added. Decode/lookup
+	// errors fall through to a whole-torrent grab — selection is an
+	// optimization, never the reason a grab fails; only a zero match is (it
+	// means the release cannot fill the gap at all, so grabbing it wastes
+	// bandwidth with zero client contact).
+	var selection *pendingSelection
+	if config.Get().Download.SelectiveFiles &&
+		len(wantedEpisodes) > 0 && len(src.Bytes) > 0 {
+		files, ferr := decodeTorrentFiles(src.Bytes)
+		if ferr != nil {
+			slog.DebugContext(
+				ctx,
+				"grab: decode torrent files failed; whole-torrent grab",
+				"title",
+				result.Title,
+				"error",
+				ferr,
+			)
+		} else {
+			show, serr := d.db.TVShowForEpisode(ctx, episodeID)
+			if serr != nil {
+				slog.DebugContext(
+					ctx,
+					"grab: tv show lookup failed; whole-torrent grab",
+					"episode.id",
+					episodeID,
+					"error",
+					serr,
+				)
+			} else {
+				keep, keptBytes, matched := computeKeepSet(
+					files, show.Edges.Seasons, show.Type == tvshow.TypeAnime,
+					wantedEpisodes,
+				)
+				videoTotal := countVideoCandidates(files)
+				switch {
+				case matched == 0:
+					outcome = "no_wanted_files"
+					return nil, otelx.RecordSpanError(span, fmt.Errorf(
+						"%w: %s", ErrNoWantedFiles, result.Title))
+				case len(keep) == len(files) || matched == videoTotal:
+					// Every candidate serves a wanted episode: not selective.
+				default:
+					src.WantedFiles, src.Selective = keep, true
+					selection = &pendingSelection{files: keep, bytes: keptBytes}
+				}
+			}
+		}
+	}
+
 	hash, err := client.AddTorrent(ctx, src)
 	if err != nil {
 		if errors.Is(err, ErrTorrentAlreadyExists) {
@@ -568,7 +638,7 @@ func (d *download) grab(
 	}
 	span.SetAttributes(attribute.String("torrent.hash", hash))
 
-	record, err := d.db.CreateDownloadRecord(ctx, db.CreateDownloadRecordParams{
+	recordParams := db.CreateDownloadRecordParams{
 		Title:              result.Title,
 		Size:               result.Size,
 		TorrentHash:        hash,
@@ -577,13 +647,46 @@ func (d *download) grab(
 		EpisodeID:          episodeID,
 		DownloadClientName: dc.Name,
 		IndexerName:        result.Indexer,
-	})
+		WantedEpisodes:     wantedEpisodes,
+	}
+	if selection != nil {
+		recordParams.SelectionState = downloadrecord.SelectionStateApplied
+	}
+	record, err := d.db.CreateDownloadRecord(ctx, recordParams)
 	if err != nil {
 		outcome = "db_record_failed"
 		return nil, otelx.RecordSpanError(
 			span,
 			fmt.Errorf("create download record: %w", err),
 		)
+	}
+
+	// Uniform post-add confirmation (spec §4.4): the builtin engine's re-set
+	// is harmless and idempotent, qBittorrent reads its own selection back.
+	// ErrNotSupported flips the record so the SPA stops promising a selective
+	// download the client can't honour; any other error leaves it applied —
+	// the add-time selection already took, this call only confirms it.
+	if selection != nil {
+		switch serr := client.SetWantedFiles(ctx, hash, selection.files); {
+		case errors.Is(serr, ErrNotSupported):
+			if uerr := d.db.SetDownloadRecordSelection(
+				ctx, record.ID, downloadrecord.SelectionStateUnsupported, nil, 0,
+			); uerr != nil {
+				slog.WarnContext(ctx, "grab: mark selection unsupported failed",
+					"record.id", record.ID, "error", uerr)
+			}
+		case serr != nil:
+			slog.WarnContext(ctx, "grab: confirm selected files failed",
+				"record.id", record.ID, "hash", hash, "error", serr)
+		default:
+			if uerr := d.db.SetDownloadRecordSelection(
+				ctx, record.ID, downloadrecord.SelectionStateApplied,
+				selection.files, selection.bytes,
+			); uerr != nil {
+				slog.WarnContext(ctx, "grab: confirm selection failed",
+					"record.id", record.ID, "error", uerr)
+			}
+		}
 	}
 
 	if movieID != 0 {

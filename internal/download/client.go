@@ -38,6 +38,12 @@ type Torrent struct {
 type TorrentSource struct {
 	Bytes  []byte // raw .torrent file contents
 	Magnet string // magnet:?xt=urn:btih:... URI
+	// WantedFiles selects which files to download, by metainfo index. nil means
+	// every file. Ignored for a magnet source.
+	WantedFiles []int
+	// Selective marks a grab carrying a wanted set even when WantedFiles is nil
+	// (a magnet) — the signal not to start downloading everything (spec §4.3).
+	Selective bool
 }
 
 // TorrentFile is one file inside a torrent. Index is the client's own

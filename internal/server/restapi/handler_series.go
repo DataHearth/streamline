@@ -421,9 +421,12 @@ func (s *Server) GrabEpisodeRelease(
 			),
 		}, nil
 	}
-	rec, err := s.downloads.GrabEpisode(ctx, sr, request.EpisodeId)
+	rec, err := s.downloads.GrabEpisode(
+		ctx, sr, request.EpisodeId, []uint32{request.EpisodeId},
+	)
 	switch {
-	case errors.Is(err, download.ErrUntrustedSource):
+	case errors.Is(err, download.ErrUntrustedSource),
+		errors.Is(err, download.ErrNoWantedFiles):
 		return GrabEpisodeRelease422JSONResponse{
 			UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
 		}, nil

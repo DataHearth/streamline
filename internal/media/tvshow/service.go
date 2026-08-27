@@ -714,6 +714,24 @@ func (s *Service) GrabSeriesRelease(
 	return s.grabPackAndMark(ctx, span, result, eps, replaceExisting)
 }
 
+// wantedAiredEpisodes narrows eps to the ones grabPackAndMark's status-marking
+// loop would actually flip: still wanted and already aired. Shared between the
+// GrabEpisode wanted-set and the marking loop so the two never disagree on
+// what this grab is "for".
+func wantedAiredEpisodes(eps []*ent.Episode, now time.Time) []*ent.Episode {
+	var wanted []*ent.Episode
+	for _, e := range eps {
+		if e.Status != episode.StatusWanted {
+			continue
+		}
+		if !e.AirDate.IsZero() && e.AirDate.After(now) {
+			continue
+		}
+		wanted = append(wanted, e)
+	}
+	return wanted
+}
+
 // grabPackAndMark grabs one multi-episode release linked to the first episode
 // and flips every wanted, aired episode in the set to "downloading". Anchoring
 // the download record to a single episode matches the automatic season-pack
@@ -726,7 +744,23 @@ func (s *Service) grabPackAndMark(
 	eps []*ent.Episode,
 	replaceExisting bool,
 ) error {
-	rec, err := s.download.GrabEpisode(ctx, result, eps[0].ID)
+	now := time.Now()
+	// airedWanted is what the marking loop below may ever flip to
+	// downloading, in both modes: the pack can't contain an unaired episode
+	// regardless of what the operator asked to replace. The GrabEpisode
+	// wanted-set is wider under replaceExisting — an explicit overwrite of
+	// the whole set (manual replace grab) — since that mode is about the
+	// selective-download keep-set, not about which episodes get marked.
+	airedWanted := wantedAiredEpisodes(eps, now)
+	wanted := airedWanted
+	if replaceExisting {
+		wanted = eps
+	}
+	wantedIDs := make([]uint32, len(wanted))
+	for i, e := range wanted {
+		wantedIDs[i] = e.ID
+	}
+	rec, err := s.download.GrabEpisode(ctx, result, eps[0].ID, wantedIDs)
 	if err != nil {
 		return otelx.RecordSpanError(span, fmt.Errorf("grab pack: %w", err))
 	}
@@ -738,13 +772,9 @@ func (s *Service) grabPackAndMark(
 				"download_record.id", rec.ID, "error", err)
 		}
 	}
-	now := time.Now()
 	marked := 0
-	for _, e := range eps {
+	for _, e := range airedWanted {
 		if e.Status != episode.StatusWanted {
-			continue
-		}
-		if !e.AirDate.IsZero() && e.AirDate.After(now) {
 			continue
 		}
 		if err := s.db.SetEpisodeStatus(

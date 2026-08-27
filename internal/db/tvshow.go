@@ -352,6 +352,23 @@ func (db *DB) FindTVShowByTVDBID(
 	return row, err
 }
 
+// TVShowForEpisode returns the show owning episodeID, found via the episode's
+// season edge and eager-loaded the same way the importer reaches the tree
+// (withEpisodeContext) — every season and its episodes, for matching a
+// torrent's file names back to episode rows.
+func (db *DB) TVShowForEpisode(
+	ctx context.Context,
+	episodeID uint32,
+) (*ent.TVShow, error) {
+	q := db.client.Episode.Query().Where(episode.ID(episodeID))
+	withEpisodeContext(q)
+	ep, err := q.Only(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("find episode %d: %w", episodeID, err)
+	}
+	return ep.Edges.Season.Edges.TvShow, nil
+}
+
 // ListTVShowsStaleSince returns shows never refreshed, or last refreshed
 // before cutoff. Mirrors ListMoviesStaleSince: keyed on last_refreshed_at, not
 // update_time, because that column moves on every write (episode import,

@@ -60,6 +60,7 @@ type EpisodeGrabber interface {
 		ctx context.Context,
 		result indexer.SearchResult,
 		episodeID uint32,
+		wantedEpisodes []uint32,
 	) (*ent.DownloadRecord, error)
 }
 

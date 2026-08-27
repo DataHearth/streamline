@@ -126,7 +126,7 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 		feeder.EXPECT().Feed(mock.Anything, "a").
 			Return([]indexer.SearchResult{{Title: acceptableEp}}, nil).Once()
 		grabber.EXPECT().
-			GrabEpisode(mock.Anything, mock.Anything, uint32(11)).
+			GrabEpisode(mock.Anything, mock.Anything, uint32(11), mock.Anything).
 			Return(&ent.DownloadRecord{}, nil).Once()
 		store.EXPECT().ResetEpisodeGrabFailures(mock.Anything, uint32(11)).
 			Return(nil).Once()
@@ -147,7 +147,7 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 				Return([]indexer.SearchResult{{Title: acceptablePack}}, nil).Once()
 			// One record, against the first wanted episode.
 			grabber.EXPECT().
-				GrabEpisode(mock.Anything, mock.Anything, uint32(11)).
+				GrabEpisode(mock.Anything, mock.Anything, uint32(11), mock.Anything).
 				Return(&ent.DownloadRecord{ID: 55}, nil).Once()
 			store.EXPECT().
 				SetDownloadRecordReplaceMode(
@@ -200,7 +200,7 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 		feeder.EXPECT().Feed(mock.Anything, "a").
 			Return([]indexer.SearchResult{{Title: acceptableEp}}, nil).Once()
 		grabber.EXPECT().
-			GrabEpisode(mock.Anything, mock.Anything, uint32(11)).
+			GrabEpisode(mock.Anything, mock.Anything, uint32(11), mock.Anything).
 			Return(nil, errors.New("client offline")).Once()
 		store.EXPECT().IncrementEpisodeGrabFailures(mock.Anything, uint32(11)).
 			Return(nil).Once()
@@ -216,7 +216,7 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 				Return([]indexer.SearchResult{{Title: acceptableEp}}, nil).Once()
 		}
 		grabber.EXPECT().
-			GrabEpisode(mock.Anything, mock.Anything, uint32(11)).
+			GrabEpisode(mock.Anything, mock.Anything, uint32(11), mock.Anything).
 			Return(&ent.DownloadRecord{}, nil).Once()
 		store.EXPECT().ResetEpisodeGrabFailures(mock.Anything, uint32(11)).
 			Return(nil).Once()
@@ -236,7 +236,7 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 				{Title: "[SubGrp] Blue Lock - 18 [1080p][HEVC]"},
 			}, nil).Once()
 		grabber.EXPECT().
-			GrabEpisode(mock.Anything, mock.Anything, uint32(11)).
+			GrabEpisode(mock.Anything, mock.Anything, uint32(11), mock.Anything).
 			Return(&ent.DownloadRecord{}, nil).Once()
 		store.EXPECT().ResetEpisodeGrabFailures(mock.Anything, uint32(11)).
 			Return(nil).Once()
@@ -257,7 +257,7 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 				{Title: "The.Daily.Show.2026.07.14.1080p.WEB-DL.x265-GRP"},
 			}, nil).Once()
 		grabber.EXPECT().
-			GrabEpisode(mock.Anything, mock.Anything, uint32(11)).
+			GrabEpisode(mock.Anything, mock.Anything, uint32(11), mock.Anything).
 			Return(&ent.DownloadRecord{}, nil).Once()
 		store.EXPECT().ResetEpisodeGrabFailures(mock.Anything, uint32(11)).
 			Return(nil).Once()
@@ -325,7 +325,7 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 			feeder.EXPECT().Feed(mock.Anything, "a").
 				Return([]indexer.SearchResult{{Title: betterEp}}, nil).Once()
 			grabber.EXPECT().
-				GrabEpisode(mock.Anything, mock.Anything, uint32(11)).
+				GrabEpisode(mock.Anything, mock.Anything, uint32(11), mock.Anything).
 				Return(&ent.DownloadRecord{ID: 55}, nil).Once()
 			store.EXPECT().
 				SetDownloadRecordReplaceMode(
@@ -357,7 +357,7 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 				}, nil).Once()
 			// One record, against the first episode of the season.
 			grabber.EXPECT().
-				GrabEpisode(mock.Anything, mock.Anything, uint32(11)).
+				GrabEpisode(mock.Anything, mock.Anything, uint32(11), mock.Anything).
 				Return(&ent.DownloadRecord{ID: 55}, nil).Once()
 			store.EXPECT().
 				SetDownloadRecordReplaceMode(
@@ -386,14 +386,14 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 					{Title: tiedPack}, {Title: betterEp2},
 				}, nil).Once()
 			grabber.EXPECT().
-				GrabEpisode(mock.Anything, mock.Anything, uint32(11)).
+				GrabEpisode(mock.Anything, mock.Anything, uint32(11), mock.Anything).
 				Return(&ent.DownloadRecord{ID: 55}, nil).Once()
 			store.EXPECT().
 				SetDownloadRecordReplaceMode(
 					mock.Anything, uint32(55), downloadrecord.ReplaceModeUpgrades,
 				).Return(nil).Once()
 			grabber.EXPECT().
-				GrabEpisode(mock.Anything, mock.Anything, uint32(12)).
+				GrabEpisode(mock.Anything, mock.Anything, uint32(12), mock.Anything).
 				Return(&ent.DownloadRecord{ID: 66}, nil).Once()
 			store.EXPECT().
 				SetDownloadRecordReplaceMode(
@@ -424,7 +424,7 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 			feeder.EXPECT().Feed(mock.Anything, "a").
 				Return([]indexer.SearchResult{{Title: tiedPack}}, nil).Once()
 			grabber.EXPECT().
-				GrabEpisode(mock.Anything, mock.Anything, uint32(11)).
+				GrabEpisode(mock.Anything, mock.Anything, uint32(11), mock.Anything).
 				Return(&ent.DownloadRecord{ID: 55}, nil).Once()
 			store.EXPECT().
 				SetDownloadRecordReplaceMode(

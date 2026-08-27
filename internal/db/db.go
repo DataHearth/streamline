@@ -586,6 +586,10 @@ type Store interface {
 	CreateTVShow(ctx context.Context, p CreateTVShowParams) (*ent.TVShow, error)
 	FindTVShowByID(ctx context.Context, id uint32) (*ent.TVShow, error)
 	FindTVShowByTVDBID(ctx context.Context, tvdbID uint32) (*ent.TVShow, error)
+	// TVShowForEpisode returns the show owning episodeID, with every season
+	// and its episodes eager-loaded — the tree a selective-download keep-set
+	// resolution matches a torrent's file names back to episode rows against.
+	TVShowForEpisode(ctx context.Context, episodeID uint32) (*ent.TVShow, error)
 	ListTVShows(ctx context.Context, offset, limit uint32) ([]*ent.TVShow, error)
 	ListTVShowsStaleSince(
 		ctx context.Context,

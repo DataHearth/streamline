@@ -242,7 +242,11 @@ func (s *TVFeedScanner) grabPack(
 	if len(wanted) == 0 {
 		return 0
 	}
-	rec, err := s.downloads.GrabEpisode(ctx, item, wanted[0].ID)
+	wantedIDs := make([]uint32, len(wanted))
+	for i, e := range wanted {
+		wantedIDs[i] = e.ID
+	}
+	rec, err := s.downloads.GrabEpisode(ctx, item, wanted[0].ID, wantedIDs)
 	if err != nil {
 		slog.WarnContext(ctx, "tv feed-scan: season-pack grab failed",
 			"show", ws.show.Title, "season", season,
@@ -320,7 +324,11 @@ func (s *TVFeedScanner) grabUpgrade(
 		return 0
 	}
 
-	rec, err := s.downloads.GrabEpisode(ctx, item, selected[0].ID)
+	selectedIDs := make([]uint32, len(selected))
+	for i, e := range selected {
+		selectedIDs[i] = e.ID
+	}
+	rec, err := s.downloads.GrabEpisode(ctx, item, selected[0].ID, selectedIDs)
 	if err != nil {
 		slog.WarnContext(ctx, "tv feed-scan: upgrade grab failed",
 			"show", us.show.Title, "release", item.Title, "error", err)
@@ -361,7 +369,12 @@ func (s *TVFeedScanner) grabOne(
 	e *ent.Episode,
 	item indexer.SearchResult,
 ) bool {
-	if _, err := s.downloads.GrabEpisode(ctx, item, e.ID); err != nil {
+	if _, err := s.downloads.GrabEpisode(
+		ctx,
+		item,
+		e.ID,
+		[]uint32{e.ID},
+	); err != nil {
 		slog.WarnContext(ctx, "tv feed-scan: episode grab failed",
 			"show", show.Title, "episode.id", e.ID,
 			"release", item.Title, "error", err)

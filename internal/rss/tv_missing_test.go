@@ -97,9 +97,11 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 					Return([]indexer.SearchResult{{Title: acceptablePack, Seeders: 10}}, nil).
 					Once()
 
-				// Grabbed once, against the first wanted episode.
+				// Grabbed once, against the first wanted episode, carrying both
+				// wanted episode IDs.
 				dlM.EXPECT().
-					GrabEpisode(mock.Anything, mock.AnythingOfType("indexer.SearchResult"), uint32(11)).
+					GrabEpisode(mock.Anything, mock.AnythingOfType("indexer.SearchResult"),
+						uint32(11), []uint32{11, 12}).
 					Return(&ent.DownloadRecord{}, nil).Once()
 
 				// Every wanted episode flipped to downloading + stamped.
@@ -131,7 +133,8 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 				Return([]indexer.SearchResult{{Title: acceptableEp, Seeders: 10}}, nil).
 				Once()
 			dlM.EXPECT().
-				GrabEpisode(mock.Anything, mock.AnythingOfType("indexer.SearchResult"), uint32(11)).
+				GrabEpisode(mock.Anything, mock.AnythingOfType("indexer.SearchResult"),
+					uint32(11), []uint32{11}).
 				Return(&ent.DownloadRecord{}, nil).Once()
 			store.EXPECT().
 				SetEpisodeStatus(mock.Anything, uint32(11), episode.StatusDownloading).
@@ -183,7 +186,8 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 			}
 			for _, id := range []uint32{11, 12} {
 				dlM.EXPECT().
-					GrabEpisode(mock.Anything, mock.AnythingOfType("indexer.SearchResult"), id).
+					GrabEpisode(mock.Anything, mock.AnythingOfType("indexer.SearchResult"),
+						id, []uint32{id}).
 					Return(&ent.DownloadRecord{}, nil).Once()
 				store.EXPECT().
 					SetEpisodeStatus(mock.Anything, id, episode.StatusDownloading).
@@ -275,7 +279,7 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 					remuxPack,
 				}, nil).Once()
 			dlM.EXPECT().
-				GrabEpisode(mock.Anything, remuxPack, uint32(11)).
+				GrabEpisode(mock.Anything, remuxPack, uint32(11), []uint32{11, 12}).
 				Return(&ent.DownloadRecord{}, nil).Once()
 			for _, id := range []uint32{11, 12} {
 				store.EXPECT().
@@ -305,10 +309,10 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 				SearchSeason(mock.Anything, []string{"The Black Sea"}, uint32(9001), uint16(3)).
 				Return([]indexer.SearchResult{runnerUp, remuxPack}, nil).Once()
 			dlM.EXPECT().
-				GrabEpisode(mock.Anything, remuxPack, uint32(11)).
+				GrabEpisode(mock.Anything, remuxPack, uint32(11), []uint32{11, 12}).
 				Return(nil, context.DeadlineExceeded).Once()
 			dlM.EXPECT().
-				GrabEpisode(mock.Anything, runnerUp, uint32(11)).
+				GrabEpisode(mock.Anything, runnerUp, uint32(11), []uint32{11, 12}).
 				Return(&ent.DownloadRecord{}, nil).Once()
 			for _, id := range []uint32{11, 12} {
 				store.EXPECT().
@@ -341,7 +345,7 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 					remuxEp,
 				}, nil).Once()
 			dlM.EXPECT().
-				GrabEpisode(mock.Anything, remuxEp, uint32(11)).
+				GrabEpisode(mock.Anything, remuxEp, uint32(11), []uint32{11}).
 				Return(&ent.DownloadRecord{}, nil).Once()
 			store.EXPECT().
 				SetEpisodeStatus(mock.Anything, uint32(11), episode.StatusDownloading).
@@ -396,7 +400,7 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 				Once()
 			// The higher-seeded 1080p pack is skipped for the pinned floor.
 			dlM.EXPECT().
-				GrabEpisode(mock.Anything, uhdPack, uint32(11)).
+				GrabEpisode(mock.Anything, uhdPack, uint32(11), []uint32{11, 12}).
 				Return(&ent.DownloadRecord{}, nil).Once()
 			for _, id := range []uint32{11, 12} {
 				store.EXPECT().
