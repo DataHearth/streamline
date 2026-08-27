@@ -736,6 +736,76 @@ var _ = Describe("TVShow store", Label("unit", "db"), func() {
 		})
 	})
 
+	Describe("UpgradeCandidateShow", func() {
+		It("loads one show's replaceable episodes only", func() {
+			showA, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "A", Year: 2021, TvdbID: 100,
+				Seasons: []SeasonSeed{
+					{Number: 1, Episodes: []EpisodeSeed{
+						{Number: 1, Title: "A1"},
+						{Number: 2, Title: "A2"},
+						{Number: 3, Title: "A3"},
+					}},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			epsA := map[uint16]*ent.Episode{}
+			for _, e := range showA.Edges.Seasons[0].Edges.Episodes {
+				epsA[e.Number] = e
+			}
+			_, err = store.CreateMediaFile(ctx, CreateMediaFileParams{
+				Path: "/tv/A/S01E01.mkv", Size: 1234, EpisodeID: epsA[1].ID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			_, err = store.CreateMediaFile(ctx, CreateMediaFileParams{
+				Path: "/tv/A/S01E02.mkv", Size: 1234, EpisodeID: epsA[2].ID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			// ep2 has a file too, but its replacement is already in flight.
+			_, err = store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "rel", Status: downloadrecord.StatusDownloading,
+				EpisodeID: epsA[2].ID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			showB, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "B", Year: 2022, TvdbID: 200,
+				Seasons: []SeasonSeed{
+					{Number: 1, Episodes: []EpisodeSeed{{Number: 1, Title: "B1"}}},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			_, err = store.CreateMediaFile(ctx, CreateMediaFileParams{
+				Path: "/tv/B/S01E01.mkv", Size: 1234,
+				EpisodeID: showB.Edges.Seasons[0].Edges.Episodes[0].ID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			row, err := store.UpgradeCandidateShow(ctx, showA.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(row).NotTo(BeNil())
+			Expect(row.Edges.Seasons).To(HaveLen(1))
+			eps := row.Edges.Seasons[0].Edges.Episodes
+			Expect(eps).To(HaveLen(1))
+			Expect(eps[0].Number).To(Equal(uint16(1)))
+			Expect(eps[0].Edges.MediaFiles).ToNot(BeEmpty())
+		})
+
+		It("returns nil for a show with no candidates", func() {
+			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "C", Year: 2020, TvdbID: 300,
+				Seasons: []SeasonSeed{
+					{Number: 1, Episodes: []EpisodeSeed{{Number: 1, Title: "C1"}}},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			row, err := store.UpgradeCandidateShow(ctx, show.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(row).To(BeNil())
+		})
+	})
+
 	It("cascade-deletes seasons, episodes, and episode-linked records", func() {
 		show, err := store.CreateTVShow(ctx, CreateTVShowParams{
 			Title: "X", Year: 2020, TvdbID: 1,

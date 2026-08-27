@@ -675,6 +675,9 @@ type Store interface {
 	// ListUpgradeCandidateShows returns shows whose episode edges hold the
 	// rows already on disk that an upgrade may replace, files loaded.
 	ListUpgradeCandidateShows(ctx context.Context) ([]*ent.TVShow, error)
+	// UpgradeCandidateShow is ListUpgradeCandidateShows for one show, for a
+	// missing-search pass immediately before a pack grab.
+	UpgradeCandidateShow(ctx context.Context, showID uint32) (*ent.TVShow, error)
 	// SeasonEpisodeCounts totals every season's episodes for the given shows,
 	// unfiltered — the denominator a pack's size bounds are measured in.
 	SeasonEpisodeCounts(

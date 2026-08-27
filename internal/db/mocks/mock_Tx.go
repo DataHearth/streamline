@@ -13312,6 +13312,74 @@ func (_c *MockTx_UpdateUserUnlessLastAdmin_Call) RunAndReturn(run func(ctx conte
 	return _c
 }
 
+// UpgradeCandidateShow provides a mock function for the type MockTx
+func (_mock *MockTx) UpgradeCandidateShow(ctx context.Context, showID uint32) (*ent.TVShow, error) {
+	ret := _mock.Called(ctx, showID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpgradeCandidateShow")
+	}
+
+	var r0 *ent.TVShow
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (*ent.TVShow, error)); ok {
+		return returnFunc(ctx, showID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) *ent.TVShow); ok {
+		r0 = returnFunc(ctx, showID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ent.TVShow)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+		r1 = returnFunc(ctx, showID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_UpgradeCandidateShow_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpgradeCandidateShow'
+type MockTx_UpgradeCandidateShow_Call struct {
+	*mock.Call
+}
+
+// UpgradeCandidateShow is a helper method to define mock.On call
+//   - ctx context.Context
+//   - showID uint32
+func (_e *MockTx_Expecter) UpgradeCandidateShow(ctx any, showID any) *MockTx_UpgradeCandidateShow_Call {
+	return &MockTx_UpgradeCandidateShow_Call{Call: _e.mock.On("UpgradeCandidateShow", ctx, showID)}
+}
+
+func (_c *MockTx_UpgradeCandidateShow_Call) Run(run func(ctx context.Context, showID uint32)) *MockTx_UpgradeCandidateShow_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_UpgradeCandidateShow_Call) Return(tVShow *ent.TVShow, err error) *MockTx_UpgradeCandidateShow_Call {
+	_c.Call.Return(tVShow, err)
+	return _c
+}
+
+func (_c *MockTx_UpgradeCandidateShow_Call) RunAndReturn(run func(ctx context.Context, showID uint32) (*ent.TVShow, error)) *MockTx_UpgradeCandidateShow_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // UserSessionExists provides a mock function for the type MockTx
 func (_mock *MockTx) UserSessionExists(ctx context.Context, userID uint32, sessionID uint32) (bool, error) {
 	ret := _mock.Called(ctx, userID, sessionID)

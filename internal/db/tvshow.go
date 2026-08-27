@@ -675,17 +675,15 @@ func (db *DB) ListEligibleEpisodesForSync(
 		All(ctx)
 }
 
-// ListUpgradeCandidateShows is the TV twin of ListUpgradeCandidateMovies:
-// shows whose episode edges are narrowed to the rows an upgrade may replace —
-// monitored, already holding a file, and with nothing in flight. The media
-// files come loaded, since the feed scanner scores what is on disk against
-// the incoming release. An episode mid-grab is excluded by its download
-// record rather than by episode.status, matching the sibling
-// ListEligibleEpisodesForSync: the status write after a grab is best-effort
-// (markEpisodeDownloading logs and continues), so a status-only filter would
-// re-grab an episode every tick once that one write had failed.
-func (db *DB) ListUpgradeCandidateShows(ctx context.Context) ([]*ent.TVShow, error) {
-	candidates := []predicate.Episode{
+// upgradeCandidateEpisodes is the one definition of "episode whose file an
+// automatic pass may replace": monitored, holding a file, and not mid-flight.
+// An episode mid-grab is excluded by its download record rather than by
+// episode.status, matching the sibling ListEligibleEpisodesForSync: the
+// status write after a grab is best-effort (markEpisodeDownloading logs and
+// continues), so a status-only filter would re-grab an episode every tick
+// once that one write had failed.
+func upgradeCandidateEpisodes() []predicate.Episode {
+	return []predicate.Episode{
 		episode.MonitoredEQ(true),
 		episode.HasMediaFiles(),
 		episode.Not(episode.HasDownloadRecordsWith(
@@ -695,17 +693,56 @@ func (db *DB) ListUpgradeCandidateShows(ctx context.Context) ([]*ent.TVShow, err
 			),
 		)),
 	}
+}
+
+// upgradeCandidateSeasons is the shared WithSeasons eager-load for both
+// ListUpgradeCandidateShows and UpgradeCandidateShow: seasons in order,
+// narrowed to the candidate episodes with their media files loaded — the
+// feed scanner scores what is on disk against the incoming release.
+func upgradeCandidateSeasons(candidates []predicate.Episode) func(*ent.SeasonQuery) {
+	return func(q *ent.SeasonQuery) {
+		q.Order(ent.Asc(season.FieldNumber)).
+			WithEpisodes(func(eq *ent.EpisodeQuery) {
+				eq.Where(candidates...).
+					Order(ent.Asc(episode.FieldNumber)).
+					WithMediaFiles()
+			})
+	}
+}
+
+// ListUpgradeCandidateShows is the TV twin of ListUpgradeCandidateMovies:
+// shows whose episode edges are narrowed to upgradeCandidateEpisodes.
+func (db *DB) ListUpgradeCandidateShows(ctx context.Context) ([]*ent.TVShow, error) {
+	candidates := upgradeCandidateEpisodes()
 	return db.client.TVShow.Query().
 		Where(tvshow.HasSeasonsWith(season.HasEpisodesWith(candidates...))).
-		WithSeasons(func(q *ent.SeasonQuery) {
-			q.Order(ent.Asc(season.FieldNumber)).
-				WithEpisodes(func(eq *ent.EpisodeQuery) {
-					eq.Where(candidates...).
-						Order(ent.Asc(episode.FieldNumber)).
-						WithMediaFiles()
-				})
-		}).
+		WithSeasons(upgradeCandidateSeasons(candidates)).
 		All(ctx)
+}
+
+// UpgradeCandidateShow loads one show the way ListUpgradeCandidateShows loads
+// many, for a missing-search pass that only needs one show's context
+// immediately before a pack grab. Nil with a nil error when the show has no
+// candidate episodes (mirrors FindTVShowByTVDBID's absent convention).
+func (db *DB) UpgradeCandidateShow(
+	ctx context.Context,
+	showID uint32,
+) (*ent.TVShow, error) {
+	candidates := upgradeCandidateEpisodes()
+	row, err := db.client.TVShow.Query().
+		Where(
+			tvshow.IDEQ(showID),
+			tvshow.HasSeasonsWith(season.HasEpisodesWith(candidates...)),
+		).
+		WithSeasons(upgradeCandidateSeasons(candidates)).
+		First(ctx)
+	if ent.IsNotFound(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("upgrade candidate show: %w", err)
+	}
+	return row, nil
 }
 
 // SeasonEpisodeCounts totals every season's episodes for the given shows,
