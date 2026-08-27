@@ -178,20 +178,20 @@ var _ = Describe("newClientConfig", Label("unit", "bittorrent"), func() {
 	entry := config.DownloadClientEntry{DownloadDir: "/srv/media/downloads"}
 
 	It("disables WebTorrent whether bound or not", func() {
-		Expect(newClientConfig(entry, nil, nil).DisableWebtorrent).To(BeTrue())
-		Expect(newClientConfig(entry, net.ParseIP("10.11.12.13"), nil).
+		Expect(newClientConfig(entry, nil, nil, nil).DisableWebtorrent).To(BeTrue())
+		Expect(newClientConfig(entry, net.ParseIP("10.11.12.13"), nil, nil).
 			DisableWebtorrent).To(BeTrue())
 	})
 
 	It("leaves the default dialers alone when unbound", func() {
-		cc := newClientConfig(entry, nil, nil)
+		cc := newClientConfig(entry, nil, nil, nil)
 		Expect(cc.DialForPeerConns).To(BeTrue())
 		Expect(cc.DisableIPv6).To(BeFalse())
 		Expect(cc.NoDefaultPortForwarding).To(BeFalse())
 	})
 
 	It("binds fail-closed when given an interface IP", func() {
-		cc := newClientConfig(entry, net.ParseIP("10.11.12.13"), nil)
+		cc := newClientConfig(entry, net.ParseIP("10.11.12.13"), nil, nil)
 		Expect(cc.DialForPeerConns).To(BeFalse())
 		Expect(cc.DisableIPv6).To(BeTrue())
 		Expect(cc.NoDefaultPortForwarding).To(BeTrue())
@@ -203,9 +203,82 @@ var _ = Describe("newClientConfig", Label("unit", "bittorrent"), func() {
 			DisableDHT:  true,
 			ListenPort:  12345,
 		}
-		cc := newClientConfig(bound, nil, nil)
+		cc := newClientConfig(bound, nil, nil, nil)
 		Expect(cc.NoDHT).To(BeTrue())
 		Expect(cc.ListenPort).To(Equal(12345))
 		Expect(cc.DataDir).To(Equal(bound.DownloadDir))
+	})
+})
+
+var _ = Describe(
+	"newClientConfig peer sockets",
+	Label("unit", "bittorrent"),
+	func() {
+		It("stops anacrolix creating its own TCP socket", func() {
+			cc := newClientConfig(
+				config.DownloadClientEntry{DownloadDir: GinkgoT().TempDir()},
+				nil, nil, nil,
+			)
+			// The engine registers its own rebindable TCP listener instead, so a
+			// socket anacrolix made would sit ahead of it in cl.listeners and
+			// LocalPort would report a port the engine cannot move.
+			Expect(cc.DisableTCP).To(BeTrue())
+		})
+
+		It("leaves uTP and DHT riding on the engine's packet conn", func() {
+			pc, err := newRebindablePacketConn(net.IPv4(127, 0, 0, 1), 0)
+			Expect(err).NotTo(HaveOccurred())
+			DeferCleanup(func() {
+				Expect(pc.Close()).To(Succeed())
+			})
+			cc := newClientConfig(
+				config.DownloadClientEntry{DownloadDir: GinkgoT().TempDir()},
+				net.IPv4(127, 0, 0, 1), nil, pc,
+			)
+			Expect(cc.DisableUTP).To(BeFalse())
+			Expect(cc.ListenPacket).NotTo(BeNil())
+		})
+
+		It("binds the packet conn to the requested port", func() {
+			pc, err := newRebindablePacketConn(net.IPv4(127, 0, 0, 1), 0)
+			Expect(err).NotTo(HaveOccurred())
+			DeferCleanup(func() {
+				Expect(pc.Close()).To(Succeed())
+			})
+			cc := newClientConfig(
+				config.DownloadClientEntry{DownloadDir: GinkgoT().TempDir()},
+				net.IPv4(127, 0, 0, 1), nil, pc,
+			)
+			got, err := cc.ListenPacket("udp", "")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got).To(BeIdenticalTo(pc))
+		})
+	},
+)
+
+var _ = Describe("newPeerSockets", Label("unit", "bittorrent"), func() {
+	It("binds both sockets to the same port when the requested port is 0", func() {
+		pc, ln, err := newPeerSockets(net.IPv4(127, 0, 0, 1), 0)
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() {
+			Expect(pc.Close()).To(Succeed())
+			Expect(ln.Close()).To(Succeed())
+		})
+		pcPort := pc.LocalAddr().(*net.UDPAddr).Port
+		lnPort := ln.Addr().(*net.TCPAddr).Port
+		Expect(pcPort).NotTo(BeZero())
+		Expect(lnPort).To(Equal(pcPort))
+	})
+
+	It("binds both sockets to the requested port directly", func() {
+		port := reserveListenPort()
+		pc, ln, err := newPeerSockets(net.IPv4(127, 0, 0, 1), port)
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() {
+			Expect(pc.Close()).To(Succeed())
+			Expect(ln.Close()).To(Succeed())
+		})
+		Expect(pc.LocalAddr().(*net.UDPAddr).Port).To(Equal(int(port)))
+		Expect(ln.Addr().(*net.TCPAddr).Port).To(Equal(int(port)))
 	})
 })

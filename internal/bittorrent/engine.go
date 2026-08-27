@@ -71,6 +71,11 @@ type Engine struct {
 	// bindAddr is the resolved interface/IP the engine actually bound to
 	// (empty = all interfaces); surfaced in the download-client read view.
 	bindAddr string
+	// listener and packetConn are the engine's own peer sockets. Owning them
+	// is what makes SetListenPort possible: anacrolix can neither retire a
+	// listener nor change the port it announces.
+	listener   *rebindableListener
+	packetConn *rebindablePacketConn
 
 	mu     sync.Mutex
 	state  map[string]*torrentState
@@ -113,15 +118,40 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 		storage.NewFileWithCompletion(entry.DownloadDir, pc),
 	)
 
-	cc := newClientConfig(entry, bindIP, st)
+	packetConn, listener, err := newPeerSockets(bindIP, entry.ListenPort)
+	if err != nil {
+		if cerr := st.Close(); cerr != nil {
+			slog.WarnContext(ctx, "closing torrent storage failed", "error", cerr)
+		}
+		return nil, err
+	}
+
+	cc := newClientConfig(entry, bindIP, st, packetConn)
 
 	client, err := antorrent.NewClient(cc)
 	if err != nil {
 		if cerr := st.Close(); cerr != nil {
 			slog.WarnContext(ctx, "closing torrent storage failed", "error", cerr)
 		}
+		if cerr := listener.Close(); cerr != nil {
+			slog.WarnContext(
+				ctx,
+				"closing listener after client failure",
+				"error",
+				cerr,
+			)
+		}
+		if cerr := packetConn.Close(); cerr != nil {
+			slog.WarnContext(
+				ctx,
+				"closing packet conn after client failure",
+				"error",
+				cerr,
+			)
+		}
 		return nil, fmt.Errorf("start torrent client: %w", err)
 	}
+	client.AddListener(listener)
 	var bindAddr string
 	if bindIP != nil {
 		network := "tcp6"
@@ -142,6 +172,8 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 		seedRatio:   entry.SeedRatio,
 		seedTime:    seedTime,
 		bindAddr:    bindAddr,
+		listener:    listener,
+		packetConn:  packetConn,
 		state:       map[string]*torrentState{},
 		sample:      map[string]speedSample{},
 		stop:        make(chan struct{}),
@@ -156,6 +188,82 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 	return e, nil
 }
 
+// maxPeerSocketBindAttempts bounds the retry newPeerSockets runs when the
+// requested port is 0: the UDP port the OS hands out can already be taken on
+// the independent TCP port space, so a collision is retried rather than
+// failing the engine outright.
+const maxPeerSocketBindAttempts = 5
+
+// newPeerSockets binds the engine's UDP (uTP/DHT) and TCP (peer) sockets.
+//
+// Client.LocalPort reads only the first entry in cl.listeners — the uTP
+// socket riding the packet conn — and that is the port every tracker
+// announce carries. An inbound TCP peer dials whatever port the announce
+// named, so the TCP listener has to answer on that same number or it is
+// unreachable despite "working" from the engine's own point of view. A
+// configured port binds both directly; port 0 asks the OS for a UDP port
+// first and then binds TCP to the number it got, retrying the pair if that
+// second bind loses a race for the port.
+func newPeerSockets(
+	bindIP net.IP, port uint16,
+) (*rebindablePacketConn, *rebindableListener, error) {
+	if port != 0 {
+		pc, err := newRebindablePacketConn(bindIP, port)
+		if err != nil {
+			return nil, nil, err
+		}
+		ln, err := newRebindableListener(bindIP, port)
+		if err != nil {
+			if cerr := pc.Close(); cerr != nil {
+				slog.WarnContext(context.Background(),
+					"closing packet conn after listener failure", "error", cerr)
+			}
+			return nil, nil, err
+		}
+		return pc, ln, nil
+	}
+
+	var lastErr error
+	for range maxPeerSocketBindAttempts {
+		pc, err := newRebindablePacketConn(bindIP, 0)
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		addr, ok := pc.LocalAddr().(*net.UDPAddr)
+		if !ok {
+			lastErr = fmt.Errorf(
+				"unexpected packet conn local address type %T", pc.LocalAddr())
+			if cerr := pc.Close(); cerr != nil {
+				slog.WarnContext(
+					context.Background(),
+					"closing packet conn after address lookup failure",
+					"error",
+					cerr,
+				)
+			}
+			continue
+		}
+		ln, err := newRebindableListener(bindIP, uint16(addr.Port))
+		if err != nil {
+			lastErr = err
+			if cerr := pc.Close(); cerr != nil {
+				slog.WarnContext(
+					context.Background(),
+					"closing packet conn after listener retry failure",
+					"error",
+					cerr,
+				)
+			}
+			continue
+		}
+		return pc, ln, nil
+	}
+	return nil, nil, fmt.Errorf(
+		"bind matching peer sockets after %d attempts: %w",
+		maxPeerSocketBindAttempts, lastErr)
+}
+
 // newClientConfig builds the anacrolix client config. A nil bindIP means "all
 // interfaces"; a non-nil one only half-binds the client, and New must attach
 // the matching source-bound dialer for it to reach peers at all.
@@ -163,6 +271,7 @@ func newClientConfig(
 	entry config.DownloadClientEntry,
 	bindIP net.IP,
 	st storage.ClientImpl,
+	pc *rebindablePacketConn,
 ) *antorrent.ClientConfig {
 	cc := antorrent.NewDefaultClientConfig()
 	cc.DataDir = entry.DownloadDir
@@ -177,6 +286,17 @@ func newClientConfig(
 	cc.Slogger = engineSlogger()
 	if entry.ListenPort != 0 {
 		cc.ListenPort = int(entry.ListenPort)
+	}
+	// The engine registers its own rebindable TCP listener and supplies the
+	// uTP/DHT packet conn, so both report a port it can move. A socket
+	// anacrolix created would sit at cl.listeners[0] — the entry LocalPort
+	// reads, and the port every tracker announce carries — with no way to
+	// retire it: AddListener only appends.
+	cc.DisableTCP = true
+	if pc != nil {
+		cc.ListenPacket = func(string, string) (net.PacketConn, error) {
+			return pc, nil
+		}
 	}
 	if entry.MaxUploadKbps > 0 {
 		cc.UploadRateLimiter = rate.NewLimiter(
@@ -293,6 +413,15 @@ func (e *Engine) Close() error {
 	// A custom DefaultStorage is not closed by client.Close (only the
 	// fallback file storage is); close it explicitly.
 	if err := e.storageImpl.Close(); err != nil {
+		errs = append(errs, err)
+	}
+	// client.Close only closes sockets it created itself; a listener
+	// registered via AddListener is ours to close (anacrolix's own doc on
+	// AddListener says so).
+	if err := e.listener.Close(); err != nil {
+		errs = append(errs, err)
+	}
+	if err := e.packetConn.Close(); err != nil {
 		errs = append(errs, err)
 	}
 	return errors.Join(errs...)
