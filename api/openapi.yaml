@@ -1605,6 +1605,30 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /media-servers/{name}/discover:
+    parameters:
+      - $ref: "#/components/parameters/ResourceName"
+    post:
+      operationId: discoverSavedMediaServerSections
+      summary: Discover library sections for a saved media server
+      description: |
+        Runs discovery against the server's stored credentials. A saved
+        server's token is never sent to the browser (only `api_key_set`), so
+        the edit form cannot supply one to the draft endpoint. Jellyfin / Emby
+        return an empty list.
+      tags: [media-servers]
+      responses:
+        "200":
+          $ref: "#/components/responses/MediaServerDiscovered"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /media-servers/discover:
     post:
       operationId: discoverMediaServerSections

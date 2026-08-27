@@ -166,6 +166,74 @@ func (_c *MockManager_DiscoverSections_Call) RunAndReturn(run func(ctx context.C
 	return _c
 }
 
+// DiscoverSectionsByName provides a mock function for the type MockManager
+func (_mock *MockManager) DiscoverSectionsByName(ctx context.Context, name string) ([]mediaserver.Section, error) {
+	ret := _mock.Called(ctx, name)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DiscoverSectionsByName")
+	}
+
+	var r0 []mediaserver.Section
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) ([]mediaserver.Section, error)); ok {
+		return returnFunc(ctx, name)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) []mediaserver.Section); ok {
+		r0 = returnFunc(ctx, name)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]mediaserver.Section)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, name)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockManager_DiscoverSectionsByName_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DiscoverSectionsByName'
+type MockManager_DiscoverSectionsByName_Call struct {
+	*mock.Call
+}
+
+// DiscoverSectionsByName is a helper method to define mock.On call
+//   - ctx context.Context
+//   - name string
+func (_e *MockManager_Expecter) DiscoverSectionsByName(ctx any, name any) *MockManager_DiscoverSectionsByName_Call {
+	return &MockManager_DiscoverSectionsByName_Call{Call: _e.mock.On("DiscoverSectionsByName", ctx, name)}
+}
+
+func (_c *MockManager_DiscoverSectionsByName_Call) Run(run func(ctx context.Context, name string)) *MockManager_DiscoverSectionsByName_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_DiscoverSectionsByName_Call) Return(sections []mediaserver.Section, err error) *MockManager_DiscoverSectionsByName_Call {
+	_c.Call.Return(sections, err)
+	return _c
+}
+
+func (_c *MockManager_DiscoverSectionsByName_Call) RunAndReturn(run func(ctx context.Context, name string) ([]mediaserver.Section, error)) *MockManager_DiscoverSectionsByName_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // PollPlexPin provides a mock function for the type MockManager
 func (_mock *MockManager) PollPlexPin(ctx context.Context, pinID uint64) (mediaserver.PlexPinResult, error) {
 	ret := _mock.Called(ctx, pinID)

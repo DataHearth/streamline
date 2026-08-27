@@ -43,6 +43,7 @@ type Manager interface {
 	Test(ctx context.Context, p TestParams) error
 	TestByName(ctx context.Context, name string) error
 	DiscoverSections(ctx context.Context, p TestParams) ([]Section, error)
+	DiscoverSectionsByName(ctx context.Context, name string) ([]Section, error)
 	// BeginPlexPin starts a Plex PIN OAuth flow. Caller opens PlexPin.AuthURL
 	// in a browser popup; admin authenticates with Plex; caller polls
 	// PollPlexPin(pin.ID) until AuthToken is non-empty (5-minute window).
@@ -96,6 +97,25 @@ func (s *service) DiscoverSections(
 		return nil, ErrInvalidServerType
 	}
 	return NewPlex(p.Host, p.APIKey).ListSections(ctx)
+}
+
+// DiscoverSectionsByName runs discovery against a saved server's stored
+// credentials. The edit form cannot use the draft endpoint: a saved server's
+// token never leaves the process (the read view exposes only api_key_set), so
+// the browser has no key to send.
+func (s *service) DiscoverSectionsByName(
+	ctx context.Context,
+	name string,
+) ([]Section, error) {
+	ms, ok := config.FindMediaServer(name)
+	if !ok {
+		return nil, ErrServerNotFound
+	}
+	return s.DiscoverSections(ctx, TestParams{
+		ServerType: ms.ServerType,
+		Host:       ms.Host,
+		APIKey:     config.SecretValue(ms.APIKey, ms.APIKeyFile),
+	})
 }
 
 func isValidServerType(t string) bool {

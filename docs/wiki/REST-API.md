@@ -178,7 +178,8 @@ Everything database-backed (movies, series, requests, users, imports) uses numer
 | `POST` | `/{resource}/test` — test an unsaved config |
 | `POST` | `/{resource}/{name}/test` — test a saved one |
 | `POST` | `/custom-formats/test` — evaluate a draft condition set against a sample release |
-| `GET` | `/media-servers/discover` — list libraries/sections |
+| `POST` | `/media-servers/discover` — list libraries/sections for a draft (body carries the token) |
+| `POST` | `/media-servers/{name}/discover` — same, for a saved server, using its stored token |
 
 Built-in custom formats are listed alongside user-defined ones (`builtin: true`); `PUT`/`DELETE` against a built-in, or a delete of a format still scored by a quality profile, is `409`. See [Quality Profiles and Custom Formats](Quality-Profiles-and-Custom-Formats).
 

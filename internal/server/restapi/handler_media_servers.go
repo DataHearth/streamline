@@ -251,6 +251,48 @@ func (s *Server) DiscoverMediaServerSections(
 		}
 	}
 
+	return DiscoverMediaServerSections200JSONResponse{
+		MediaServerDiscoveredJSONResponse: MediaServerDiscoveredJSONResponse{
+			Sections: sectionsToAPI(sections),
+		},
+	}, nil
+}
+
+func (s *Server) DiscoverSavedMediaServerSections(
+	ctx context.Context,
+	request DiscoverSavedMediaServerSectionsRequestObject,
+) (DiscoverSavedMediaServerSectionsResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return DiscoverSavedMediaServerSections403JSONResponse{
+			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
+	sections, err := s.mediaServers.DiscoverSectionsByName(ctx, request.Name)
+	if err != nil {
+		switch {
+		case errors.Is(err, mediaserver.ErrServerNotFound):
+			return DiscoverSavedMediaServerSections404JSONResponse{
+				NotFoundJSONResponse: errNotFound("media server not found"),
+			}, nil
+		case errors.Is(err, mediaserver.ErrInvalidServerType):
+			return DiscoverSavedMediaServerSections422JSONResponse{
+				UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
+			}, nil
+		default:
+			return DiscoverSavedMediaServerSections500JSONResponse{
+				InternalErrorJSONResponse: errInternal(ctx, err),
+			}, nil
+		}
+	}
+
+	return DiscoverSavedMediaServerSections200JSONResponse{
+		MediaServerDiscoveredJSONResponse: MediaServerDiscoveredJSONResponse{
+			Sections: sectionsToAPI(sections),
+		},
+	}, nil
+}
+
+func sectionsToAPI(sections []mediaserver.Section) []MediaServerSection {
 	out := make([]MediaServerSection, 0, len(sections))
 	for _, sec := range sections {
 		out = append(out, MediaServerSection{
@@ -260,10 +302,5 @@ func (s *Server) DiscoverMediaServerSections(
 			Locations: sec.Locations,
 		})
 	}
-
-	return DiscoverMediaServerSections200JSONResponse{
-		MediaServerDiscoveredJSONResponse: MediaServerDiscoveredJSONResponse{
-			Sections: out,
-		},
-	}, nil
+	return out
 }

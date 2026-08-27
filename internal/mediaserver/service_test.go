@@ -137,4 +137,70 @@ var _ = Describe("Manager", Label("unit", "mediaserver"), func() {
 			Expect(errors.Is(err, ErrTestFailed)).To(BeTrue())
 		})
 	})
+
+	Describe("DiscoverSectionsByName", func() {
+		It("discovers against the entry's stored token", func() {
+			var gotToken string
+			ts := httptest.NewServer(
+				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					gotToken = r.Header.Get("X-Plex-Token")
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = w.Write([]byte(
+						`{"MediaContainer":{"Directory":[` +
+							`{"key":"1","title":"Movies","type":"movie"}]}}`,
+					))
+				}),
+			)
+			defer ts.Close()
+
+			configtest.Setup(mediaServerConfig(map[string]any{
+				"name": "home", "server_type": "plex",
+				"host": ts.URL, "api_key": "stored-token", "enabled": true,
+			}))
+
+			got, err := mgr.DiscoverSectionsByName(context.Background(), "home")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got).To(HaveLen(1))
+			Expect(got[0].Key).To(Equal("1"))
+			// The browser never receives a saved server's token, so the stored one
+			// is the only thing that can authenticate this call.
+			Expect(gotToken).To(Equal("stored-token"))
+		})
+
+		It("returns ErrServerNotFound when entry missing", func() {
+			configtest.Setup()
+			_, err := mgr.DiscoverSectionsByName(context.Background(), "ghost")
+			Expect(errors.Is(err, ErrServerNotFound)).To(BeTrue())
+		})
+
+		It("returns nothing for a non-plex entry", func() {
+			configtest.Setup(mediaServerConfig(map[string]any{
+				"name": "jelly", "server_type": "jellyfin",
+				"host": "http://jf", "api_key": "k", "enabled": true,
+			}))
+
+			got, err := mgr.DiscoverSectionsByName(context.Background(), "jelly")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got).To(BeNil())
+		})
+	})
+
+	Describe("TestByName errors", func() {
+		It("wraps client errors as ErrTestFailed", func() {
+			ts := httptest.NewServer(
+				http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+					w.WriteHeader(http.StatusForbidden)
+				}),
+			)
+			defer ts.Close()
+
+			configtest.Setup(mediaServerConfig(map[string]any{
+				"name": "jelly", "server_type": "jellyfin",
+				"host": ts.URL, "api_key": "k", "enabled": true,
+			}))
+
+			err := mgr.TestByName(context.Background(), "jelly")
+			Expect(errors.Is(err, ErrTestFailed)).To(BeTrue())
+		})
+	})
 })

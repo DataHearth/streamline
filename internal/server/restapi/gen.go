@@ -4941,6 +4941,9 @@ type ServerInterface interface {
 	// UpdateMediaServer Update a media server
 	// (PATCH /media-servers/{name})
 	UpdateMediaServer(w http.ResponseWriter, r *http.Request, name ResourceName)
+	// DiscoverSavedMediaServerSections Discover library sections for a saved media server
+	// (POST /media-servers/{name}/discover)
+	DiscoverSavedMediaServerSections(w http.ResponseWriter, r *http.Request, name ResourceName)
 	// TestMediaServer Run a connection test against a saved media server
 	// (POST /media-servers/{name}/test)
 	TestMediaServer(w http.ResponseWriter, r *http.Request, name ResourceName)
@@ -5621,6 +5624,12 @@ func (_ Unimplemented) GetMediaServer(w http.ResponseWriter, r *http.Request, na
 // UpdateMediaServer Update a media server
 // (PATCH /media-servers/{name})
 func (_ Unimplemented) UpdateMediaServer(w http.ResponseWriter, r *http.Request, name ResourceName) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// DiscoverSavedMediaServerSections Discover library sections for a saved media server
+// (POST /media-servers/{name}/discover)
+func (_ Unimplemented) DiscoverSavedMediaServerSections(w http.ResponseWriter, r *http.Request, name ResourceName) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -7893,6 +7902,32 @@ func (siw *ServerInterfaceWrapper) UpdateMediaServer(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateMediaServer(w, r, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DiscoverSavedMediaServerSections operation middleware
+func (siw *ServerInterfaceWrapper) DiscoverSavedMediaServerSections(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "name" -------------
+	var name ResourceName
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", chi.URLParam(r, "name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DiscoverSavedMediaServerSections(w, r, name)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -10450,6 +10485,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/media-servers/{name}/test", wrapper.TestMediaServer)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/media-servers/{name}/discover", wrapper.DiscoverSavedMediaServerSections)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/media-servers/discover", wrapper.DiscoverMediaServerSections)
@@ -15551,6 +15589,88 @@ func (response UpdateMediaServer500JSONResponse) VisitUpdateMediaServerResponse(
 	return err
 }
 
+type DiscoverSavedMediaServerSectionsRequestObject struct {
+	Name ResourceName `json:"name"`
+}
+
+type DiscoverSavedMediaServerSectionsResponseObject interface {
+	VisitDiscoverSavedMediaServerSectionsResponse(w http.ResponseWriter) error
+}
+
+type DiscoverSavedMediaServerSections200JSONResponse struct {
+	MediaServerDiscoveredJSONResponse
+}
+
+func (response DiscoverSavedMediaServerSections200JSONResponse) VisitDiscoverSavedMediaServerSectionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DiscoverSavedMediaServerSections403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DiscoverSavedMediaServerSections403JSONResponse) VisitDiscoverSavedMediaServerSectionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DiscoverSavedMediaServerSections404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response DiscoverSavedMediaServerSections404JSONResponse) VisitDiscoverSavedMediaServerSectionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DiscoverSavedMediaServerSections422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response DiscoverSavedMediaServerSections422JSONResponse) VisitDiscoverSavedMediaServerSectionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DiscoverSavedMediaServerSections500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response DiscoverSavedMediaServerSections500JSONResponse) VisitDiscoverSavedMediaServerSectionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type TestMediaServerRequestObject struct {
 	Name ResourceName `json:"name"`
 }
@@ -20278,6 +20398,9 @@ type StrictServerInterface interface {
 	// UpdateMediaServer Update a media server
 	// (PATCH /media-servers/{name})
 	UpdateMediaServer(ctx context.Context, request UpdateMediaServerRequestObject) (UpdateMediaServerResponseObject, error)
+	// DiscoverSavedMediaServerSections Discover library sections for a saved media server
+	// (POST /media-servers/{name}/discover)
+	DiscoverSavedMediaServerSections(ctx context.Context, request DiscoverSavedMediaServerSectionsRequestObject) (DiscoverSavedMediaServerSectionsResponseObject, error)
 	// TestMediaServer Run a connection test against a saved media server
 	// (POST /media-servers/{name}/test)
 	TestMediaServer(ctx context.Context, request TestMediaServerRequestObject) (TestMediaServerResponseObject, error)
@@ -22700,6 +22823,32 @@ func (sh *strictHandler) UpdateMediaServer(w http.ResponseWriter, r *http.Reques
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateMediaServerResponseObject); ok {
 		if err := validResponse.VisitUpdateMediaServerResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DiscoverSavedMediaServerSections operation middleware
+func (sh *strictHandler) DiscoverSavedMediaServerSections(w http.ResponseWriter, r *http.Request, name ResourceName) {
+	var request DiscoverSavedMediaServerSectionsRequestObject
+
+	request.Name = name
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DiscoverSavedMediaServerSections(ctx, request.(DiscoverSavedMediaServerSectionsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DiscoverSavedMediaServerSections")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DiscoverSavedMediaServerSectionsResponseObject); ok {
+		if err := validResponse.VisitDiscoverSavedMediaServerSectionsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

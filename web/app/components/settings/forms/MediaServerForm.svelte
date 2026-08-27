@@ -8,6 +8,7 @@
 	import TypePicker from "../../forms/TypePicker.svelte";
 	import BrandLogo from "../BrandLogo.svelte";
 	import PlexPINFlow from "../PlexPINFlow.svelte";
+	import PlexSectionsModal from "../PlexSectionsModal.svelte";
 	import { api, errorText } from "../../../lib/api";
 	import { readOnlyLock } from "../../../lib/config.svelte";
 	import { toast } from "../../../lib/toast";
@@ -74,6 +75,7 @@
 	}
 
 	let sections = $state<MediaServerSection[]>([]);
+	let sectionsOpen = $state(false);
 
 	const discover = createMutation<
 		{ sections: MediaServerSection[] },
@@ -82,6 +84,16 @@
 	>(() => ({
 		mutationFn: () => {
 			const v = form.state.values;
+			// A saved server's token never reaches the browser (the read view
+			// carries only api_key_set), so the draft endpoint would be handed an
+			// empty key. Discovery for an existing row runs against the stored
+			// secret server-side instead.
+			if (isEdit && !v.api_key) {
+				return api<{ sections: MediaServerSection[] }>(
+					`/media-servers/${encodeURIComponent(v.name)}/discover`,
+					{ method: "POST" },
+				);
+			}
 			return api<{ sections: MediaServerSection[] }>(
 				"/media-servers/discover",
 				{
@@ -96,7 +108,14 @@
 		},
 		onSuccess: (resp) => {
 			sections = resp.sections ?? [];
-			if (sections.length === 0) toast.warn("No sections returned");
+			if (sections.length === 0) {
+				toast.warn("No sections returned");
+				return;
+			}
+			// Read-only can't save the picked section, so the picker is a dead end:
+			// surface the keys and a paste-ready snippet instead, as the Plex PIN
+			// flow does for the token.
+			if (lock()) sectionsOpen = true;
 		},
 		onError: (err) => toast.err(i18n.mediaserver_discover_failed({ error: errorText(err) })),
 	}));
@@ -242,7 +261,7 @@
 				<div class="flex flex-wrap items-center gap-3">
 					<button
 						type="button"
-						disabled={discover.isPending || !apiKey.current}
+						disabled={discover.isPending || (!apiKey.current && !isEdit)}
 						onclick={() => discover.mutate()}
 						class="inline-flex h-8 items-center gap-1.5 rounded-md border border-border-strong bg-surface px-3 text-xs font-medium text-fg-muted transition hover:bg-surface-2 hover:text-fg disabled:cursor-not-allowed disabled:opacity-50"
 					>
@@ -255,7 +274,7 @@
 							Discover sections
 						{/if}
 					</button>
-					{#if !apiKey.current}
+					{#if !apiKey.current && !isEdit}
 						<span class="font-mono text-[10.5px] text-fg-faint">
 							{i18n.mediaserver_plex_signin_first()}
 						</span>
@@ -265,3 +284,10 @@
 		{/if}
 	</div>
 </div>
+
+<PlexSectionsModal
+	open={sectionsOpen}
+	serverName={form.state.values.name}
+	{sections}
+	onClose={() => (sectionsOpen = false)}
+/>
