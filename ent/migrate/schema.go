@@ -89,7 +89,7 @@ var (
 		{Name: "absolute_number", Type: field.TypeUint16, Nullable: true, Default: 0},
 		{Name: "grab_failures", Type: field.TypeUint8, Default: 0},
 		{Name: "last_search_at", Type: field.TypeTime, Nullable: true},
-		{Name: "status", Type: field.TypeEnum, Enums: []string{"wanted", "downloading", "paused", "available", "skipped"}, Default: "wanted"},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"wanted", "downloading", "importing", "paused", "available", "skipped"}, Default: "wanted"},
 		{Name: "season_episodes", Type: field.TypeUint32},
 	}
 	// EpisodesTable holds the schema information for the "episodes" table.

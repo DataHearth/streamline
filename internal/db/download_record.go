@@ -740,6 +740,15 @@ func (db *DB) RevertMovieToWantedIfNoFile(
 		Exec(ctx)
 }
 
+// inFlightEpisodeStatuses are the states an episode only holds while a grab is
+// still running, so a sweep that finds one with no live record behind it knows
+// the row is stranded. "paused" is in flight too: the torrent still exists.
+var inFlightEpisodeStatuses = []episode.Status{
+	episode.StatusDownloading,
+	episode.StatusImporting,
+	episode.StatusPaused,
+}
+
 // noActiveSeasonRecord excludes an episode whose season has a download record
 // still in flight. Shared by both RevertOrphanedDownloadingEpisodes arms — the
 // held-record case applies equally to both: a held record awaits a decision,
@@ -777,7 +786,7 @@ func (db *DB) RevertOrphanedDownloadingEpisodes(
 ) (int, error) {
 	toWanted, err := db.client.Episode.Update().
 		Where(
-			episode.StatusEQ(episode.StatusDownloading),
+			episode.StatusIn(inFlightEpisodeStatuses...),
 			episode.Not(episode.HasMediaFiles()),
 			noActiveSeasonRecord(),
 		).
@@ -788,13 +797,70 @@ func (db *DB) RevertOrphanedDownloadingEpisodes(
 	}
 	toAvailable, err := db.client.Episode.Update().
 		Where(
-			episode.StatusEQ(episode.StatusDownloading),
+			episode.StatusIn(inFlightEpisodeStatuses...),
 			episode.HasMediaFiles(),
 			noActiveSeasonRecord(),
 		).
 		SetStatus(episode.StatusAvailable).
 		Save(ctx)
 	return toWanted + toAvailable, err
+}
+
+// MarkEpisodeDownloading flips one episode to "downloading" after a grab, and
+// only from "wanted": an episode that already has a file is a replace target,
+// and claiming it is downloading would strand it as "wanted" — file and all —
+// if the grab is later reverted. Reports whether the row moved.
+func (db *DB) MarkEpisodeDownloading(
+	ctx context.Context,
+	id uint32,
+) (bool, error) {
+	n, err := db.client.Episode.Update().
+		Where(
+			episode.ID(id),
+			episode.StatusEQ(episode.StatusWanted),
+		).
+		SetStatus(episode.StatusDownloading).
+		Save(ctx)
+	if err != nil {
+		return false, fmt.Errorf("mark episode %d downloading: %w", id, err)
+	}
+	return n > 0, nil
+}
+
+// MarkRecordEpisodesImporting moves a record's in-flight episodes to
+// "importing" as the download hands off to the importer. Season-scoped like
+// SyncSeasonDownloadStateForRecord, since a pack imports the whole season
+// behind its single episode link, and it only moves rows already in
+// downloading/paused — an episode that is available (a replace target) or
+// wanted (never part of this grab) is none of this record's business.
+func (db *DB) MarkRecordEpisodesImporting(
+	ctx context.Context,
+	recordID uint32,
+) error {
+	seasonID, err := db.client.Season.Query().
+		Where(season.HasEpisodesWith(
+			episode.HasDownloadRecordsWith(downloadrecord.ID(recordID)),
+		)).
+		FirstID(ctx)
+	if ent.IsNotFound(err) {
+		return nil // movie record or no episode link
+	}
+	if err != nil {
+		return fmt.Errorf("find record season: %w", err)
+	}
+	if _, err := db.client.Episode.Update().
+		Where(
+			episode.HasSeasonWith(season.ID(seasonID)),
+			episode.StatusIn(
+				episode.StatusDownloading,
+				episode.StatusPaused,
+			),
+		).
+		SetStatus(episode.StatusImporting).
+		Save(ctx); err != nil {
+		return fmt.Errorf("mark record episodes importing: %w", err)
+	}
+	return nil
 }
 
 // SyncSeasonDownloadStateForRecord reflects a download's live torrent state onto

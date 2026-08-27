@@ -702,6 +702,13 @@ func (d *download) CheckStatus(ctx context.Context) ([]CompletedDownload, error)
 				)
 				return
 			}
+			if err := d.db.MarkRecordEpisodesImporting(
+				ctx, record.ID,
+			); err != nil {
+				slog.WarnContext(ctx,
+					"mark episodes importing failed",
+					"id", record.ID, "error", err)
+			}
 			if err := d.db.SetDownloadRecordSavePath(
 				ctx,
 				record.ID,

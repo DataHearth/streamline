@@ -19,6 +19,7 @@
 			return [
 				{ key: "available", count: n("available"), token: "available", label: i18n.lc_available() },
 				{ key: "downloading", count: n("downloading"), token: "downloading", label: i18n.lc_downloading() },
+				{ key: "importing", count: n("importing"), token: "grabbing", label: i18n.lc_importing() },
 				{ key: "paused", count: n("paused"), token: "paused", label: i18n.lc_paused() },
 				{ key: "wanted", count: n("wanted"), token: "wanted", label: i18n.lc_wanted() },
 				{ key: "missing", count: n("missing"), token: "missing", label: i18n.lc_missing() },

@@ -370,6 +370,7 @@ func (e DownloadClientCreateClientType) Valid() bool {
 const (
 	EpisodeStatusAvailable   EpisodeStatus = "available"
 	EpisodeStatusDownloading EpisodeStatus = "downloading"
+	EpisodeStatusImporting   EpisodeStatus = "importing"
 	EpisodeStatusPaused      EpisodeStatus = "paused"
 	EpisodeStatusSkipped     EpisodeStatus = "skipped"
 	EpisodeStatusUnaired     EpisodeStatus = "unaired"
@@ -382,6 +383,8 @@ func (e EpisodeStatus) Valid() bool {
 	case EpisodeStatusAvailable:
 		return true
 	case EpisodeStatusDownloading:
+		return true
+	case EpisodeStatusImporting:
 		return true
 	case EpisodeStatusPaused:
 		return true
@@ -2353,10 +2356,16 @@ type Episode struct {
 	Number    uint16     `json:"number"`
 	Overview  *string    `json:"overview,omitempty"`
 
+	// ParsedSource Source tag (BluRay/Remux/WEB-DL/…) parsed from the file's basename at response time.
+	ParsedSource *string `json:"parsed_source,omitempty"`
+
 	// Path On-disk path of the episode's media file, when imported.
 	Path    *string `json:"path,omitempty"`
 	Quality *string `json:"quality,omitempty"`
-	Size    *int64  `json:"size,omitempty"`
+
+	// ReleaseGroup Release group recorded on the episode's media file.
+	ReleaseGroup *string `json:"release_group,omitempty"`
+	Size         *int64  `json:"size,omitempty"`
 
 	// Status Presentation status of an episode. "unaired" is derived rather than stored: an episode with no file whose air date is still ahead or is not yet known (a provider announces a future season as dateless "TBA" placeholders).
 	Status EpisodeStatus `json:"status"`

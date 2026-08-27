@@ -611,6 +611,8 @@ type Store interface {
 	) error
 	CascadeSpecialsMonitored(ctx context.Context, monitored bool) (int, error)
 	SetEpisodeStatus(ctx context.Context, id uint32, status episode.Status) error
+	MarkEpisodeDownloading(ctx context.Context, id uint32) (bool, error)
+	MarkRecordEpisodesImporting(ctx context.Context, recordID uint32) error
 	SetEpisodeLastSearchAt(ctx context.Context, id uint32, when time.Time) error
 	IncrementEpisodeGrabFailures(ctx context.Context, id uint32) error
 	ResetEpisodeGrabFailures(ctx context.Context, id uint32) error

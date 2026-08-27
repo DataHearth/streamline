@@ -442,6 +442,14 @@ func (s *Server) GrabEpisodeRelease(
 				"download_record.id", rec.ID, "error", err)
 		}
 	}
+	// The pack and RSS paths mark their episodes; a single manual grab is the
+	// one that didn't, so the row sat on "Wanted" until the import landed.
+	if _, err := s.store.MarkEpisodeDownloading(
+		ctx, request.EpisodeId,
+	); err != nil {
+		slog.WarnContext(ctx, "grab episode: mark downloading failed",
+			"episode.id", request.EpisodeId, "error", err)
+	}
 	return GrabEpisodeRelease202Response{}, nil
 }
 

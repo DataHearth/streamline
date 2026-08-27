@@ -130,6 +130,7 @@
 			return parts.join(" · ") || "available";
 		}
 		if (st === "downloading") return "downloading";
+		if (st === "importing") return "importing";
 		if (st === "unaired")
 			return ep.air_date ? `airs ${formatDateShort(ep.air_date)}` : "unaired";
 		if (st === "skipped") return "not monitored";
@@ -142,6 +143,7 @@
 		wanted: "bg-status-wanted",
 		missing: "bg-status-missing",
 		downloading: "bg-status-downloading",
+		importing: "bg-status-grabbing",
 		paused: "bg-status-paused",
 		unaired: "bg-fg-faint",
 		skipped: "bg-status-paused",

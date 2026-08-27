@@ -1228,6 +1228,7 @@
 	"status_fetching_metadata": "Fetching metadata",
 	"status_grabbing": "Grabbing",
 	"status_held": "Held",
+	"status_importing": "Importing",
 	"status_in_library": "In library",
 	"status_missing": "Missing",
 	"status_paused": "Paused",

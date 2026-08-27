@@ -30,7 +30,14 @@ func (Episode) Fields() []ent.Field {
 		field.Uint8("grab_failures").Default(0),
 		field.Time("last_search_at").Optional().Nillable(),
 		field.Enum("status").
-			Values("wanted", "downloading", "paused", "available", "skipped").
+			Values(
+				"wanted",
+				"downloading",
+				"importing",
+				"paused",
+				"available",
+				"skipped",
+			).
 			Default("wanted"),
 	}
 }

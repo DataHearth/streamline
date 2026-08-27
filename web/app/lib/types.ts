@@ -5,6 +5,7 @@ export type SeriesType = "standard" | "anime" | "daily";
 export type EpisodeStatus =
 	| "wanted"
 	| "downloading"
+	| "importing"
 	| "paused"
 	| "available"
 	| "unaired"
@@ -36,6 +37,8 @@ export type Episode = {
 	size?: number | null;
 	has_file?: boolean;
 	path?: string;
+	release_group?: string;
+	parsed_source?: string;
 	file_score?: number;
 	media_info?: MediaInfo | null;
 };

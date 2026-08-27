@@ -13,6 +13,9 @@
 		wanted: { label: i18n.status_wanted(), token: "wanted" },
 		missing: { label: i18n.status_missing(), token: "missing" },
 		downloading: { label: i18n.status_downloading(), token: "downloading", live: true },
+		// grabbing, not a hue of its own — the same alias pillStatus uses for a
+		// download record that reached the importer.
+		importing: { label: i18n.status_importing(), token: "grabbing", live: true },
 		paused: { label: i18n.status_paused(), token: "paused" },
 		unaired: { label: i18n.series_unaired(), token: "missing" },
 		skipped: { label: i18n.common_skipped(), token: "paused" },
@@ -102,6 +105,11 @@
 					{ label: i18n.series_air_date(), value: formatDateTime(episode.air_date) || "—" },
 					{ label: i18n.monitor_monitored(), value: episode.monitored ? i18n.common_yes() : i18n.common_no() },
 					{ label: i18n.common_quality(), value: episode.quality || "—" },
+					{ label: i18n.file_source(), value: episode.parsed_source || "—" },
+					{
+						label: i18n.cf_type_release_group(),
+						value: episode.release_group || "—",
+					},
 					{ label: i18n.common_size(), value: formatBytes(episode.size) },
 				]
 			: [],

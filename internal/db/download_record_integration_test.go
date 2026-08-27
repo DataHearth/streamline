@@ -393,6 +393,43 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 		})
 	})
 
+	Describe("MarkEpisodeDownloading", func() {
+		newEpisode := func(tvdb uint32) uint32 {
+			GinkgoHelper()
+			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "Marked", Year: 2024, TvdbID: tvdb,
+				Seasons: []SeasonSeed{{
+					Number:   1,
+					Episodes: []EpisodeSeed{{Number: 1, Title: "Pilot"}},
+				}},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			return show.Edges.Seasons[0].Edges.Episodes[0].ID
+		}
+
+		It("moves a wanted episode", func() {
+			id := newEpisode(9301)
+			moved, err := store.MarkEpisodeDownloading(ctx, id)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(moved).To(BeTrue())
+			e, _ := client.Episode.Get(ctx, id)
+			Expect(e.Status).To(Equal(episode.StatusDownloading))
+		})
+
+		It("leaves an episode that already has a file alone", func() {
+			id := newEpisode(9302)
+			_, err := client.Episode.UpdateOneID(id).
+				SetStatus(episode.StatusAvailable).Save(ctx)
+			Expect(err).NotTo(HaveOccurred())
+
+			moved, err := store.MarkEpisodeDownloading(ctx, id)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(moved).To(BeFalse())
+			e, _ := client.Episode.Get(ctx, id)
+			Expect(e.Status).To(Equal(episode.StatusAvailable))
+		})
+	})
+
 	Describe("RecordEpisodeImportSuccess", func() {
 		createEpisode := func(tvdb uint32) uint32 {
 			GinkgoHelper()

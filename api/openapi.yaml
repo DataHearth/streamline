@@ -4786,7 +4786,7 @@ components:
         stored: an episode with no file whose air date is still ahead or is
         not yet known (a provider announces a future season as dateless "TBA"
         placeholders).
-      enum: [wanted, downloading, paused, available, unaired, skipped]
+      enum: [wanted, downloading, importing, paused, available, unaired, skipped]
 
     Episode:
       type: object
@@ -4828,6 +4828,12 @@ components:
         path:
           type: string
           description: On-disk path of the episode's media file, when imported.
+        release_group:
+          type: string
+          description: Release group recorded on the episode's media file.
+        parsed_source:
+          type: string
+          description: Source tag (BluRay/Remux/WEB-DL/…) parsed from the file's basename at response time.
         file_score:
           type: integer
           description: >-

@@ -875,6 +875,16 @@ func episodeToAPI(e *ent.Episode, now time.Time, profile string) Episode {
 		out.Size = &sz
 		out.FileScore = mediaFileScore(profile, f)
 		out.MediaInfo = mediaInfoToAPI(f)
+		if f.ReleaseGroup != "" {
+			rg := f.ReleaseGroup
+			out.ReleaseGroup = &rg
+		}
+		// Parsed rather than stored, exactly as MediaFile does it for movies.
+		// Only the source: resolution and codec come off the probe here, which
+		// measured them instead of reading them off a filename.
+		if src := library.Parse(filepath.Base(f.Path)).Source; src != "" {
+			out.ParsedSource = &src
+		}
 	}
 	return out
 }

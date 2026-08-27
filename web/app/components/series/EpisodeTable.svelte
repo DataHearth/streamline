@@ -8,7 +8,6 @@
 	} from "./EpisodeDetailModal.svelte";
 	import { formatDateShort, formatRelative } from "../../lib/dates";
 	import { formatBytes } from "../../lib/format";
-	import { episodeMedia, isProbed } from "../../lib/media-info";
 	import type { Episode, SeriesType } from "../../lib/types";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 
@@ -67,12 +66,6 @@
 					{i18n.series_air_date()}
 				</th>
 				<th scope="col" class="w-28 px-3 py-2.5 text-left font-medium">{i18n.common_status()}</th>
-				<th
-					scope="col"
-					class="hidden w-40 px-3 py-2.5 text-left font-medium @lg:table-cell"
-				>
-					{i18n.file_media()}
-				</th>
 				<th
 					scope="col"
 					class="hidden w-20 px-3 py-2.5 text-right font-medium @lg:table-cell"
@@ -160,14 +153,6 @@
 							></span>
 							{meta.label}
 						</span>
-					</td>
-					<td
-						class={cn(
-							"hidden whitespace-nowrap px-3 py-2.5 font-mono text-xs @lg:table-cell",
-							isProbed(ep) ? "text-fg-muted" : "text-fg-subtle",
-						)}
-					>
-						{episodeMedia(ep) || "—"}
 					</td>
 					<td
 						class="hidden px-3 py-2.5 text-right font-mono text-xs tabular text-fg-muted @lg:table-cell"
