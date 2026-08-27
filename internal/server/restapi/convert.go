@@ -71,6 +71,7 @@ func movieToAPI(m *ent.Movie) Movie {
 		Status:        MovieStatus(m.Status),
 		Monitored:     m.Monitored,
 		TmdbId:        m.TmdbID,
+		AddedAt:       &m.CreateTime,
 	}
 	if m.Overview != "" {
 		mov.Overview = &m.Overview
@@ -749,6 +750,7 @@ func tvShowBaseToAPI(s *ent.TVShow) TVShow {
 		Type:         TVShowType(s.Type),
 		Monitored:    s.Monitored,
 		TvdbId:       s.TvdbID,
+		AddedAt:      &s.CreateTime,
 	}
 	if s.OriginalTitle != "" {
 		out.OriginalTitle = &s.OriginalTitle

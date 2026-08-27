@@ -2962,6 +2962,9 @@ type MonitorToggleRequest struct {
 
 // Movie defines model for Movie.
 type Movie struct {
+	// AddedAt When the movie was added to the library.
+	AddedAt *time.Time `json:"added_at,omitempty"`
+
 	// Cast Top-billed cast from TMDB. Only populated by GET /movies/{id};
 	// absent in list responses.
 	Cast *[]CastMember `json:"cast,omitempty"`
@@ -3703,6 +3706,9 @@ type TMDBMovieResult struct {
 
 // TVShow defines model for TVShow.
 type TVShow struct {
+	// AddedAt When the series was added to the library.
+	AddedAt *time.Time `json:"added_at,omitempty"`
+
 	// Cast Top-billed cast from TVDB. Only populated by GET /series/{id};
 	// absent in list responses.
 	Cast    *[]CastMember `json:"cast,omitempty"`

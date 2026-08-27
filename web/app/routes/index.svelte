@@ -17,7 +17,10 @@
 	} from "../lib/types";
 	import Hero, { type HeroItem } from "../components/dashboard/Hero.svelte";
 	import StatStrip from "../components/dashboard/StatStrip.svelte";
-	import RecentScroller from "../components/dashboard/RecentScroller.svelte";
+	import RecentScroller, {
+		type ScrollerItem,
+	} from "../components/dashboard/RecentScroller.svelte";
+	import type { StatusKind } from "../components/shared/StatusPill.svelte";
 	import LiveQueuePanel from "../components/dashboard/LiveQueuePanel.svelte";
 	import RecentActivityPanel from "../components/dashboard/RecentActivityPanel.svelte";
 	import WantedScroller from "../components/dashboard/WantedScroller.svelte";
@@ -150,25 +153,59 @@
 				? seriesToHero(featuredSeries)
 				: undefined,
 	);
+	// Both rows mix movies and series, so they sort on added_at rather than on
+	// each list's own order: /movies and /series are newest-first within their
+	// own kind, which says nothing about how the two interleave.
+	type DatedItem = ScrollerItem & { added: number };
+	const addedAt = (iso?: string) => (iso ? Date.parse(iso) : 0);
+	const byNewest = (a: DatedItem, b: DatedItem) => b.added - a.added;
+
+	function movieItem(m: Movie, status: StatusKind): DatedItem {
+		return {
+			id: m.id,
+			title: m.title,
+			year: m.year,
+			status,
+			added: addedAt(m.added_at),
+		};
+	}
+	function seriesItem(s: TVShow, status: StatusKind): DatedItem {
+		return {
+			id: s.id,
+			title: s.title,
+			year: s.year,
+			status,
+			href: `/series/${s.id}`,
+			posterSrc: tvPosterUrl(s.id),
+			added: addedAt(s.added_at),
+		};
+	}
+
 	let recent = $derived(
-		allMovies.filter((m) => m.status === "available").slice(0, 8),
+		[
+			...allMovies
+				.filter((m) => m.status === "available")
+				.map((m) => movieItem(m, "available")),
+			...allSeries
+				.filter((s) => (s.have_episodes ?? 0) > 0)
+				.map((s) => seriesItem(s, "available")),
+		]
+			.sort(byNewest)
+			.slice(0, 8),
 	);
 	let wanted = $derived(
 		[
 			// Unmonitored titles stay "wanted" server-side even though nothing is
 			// searching for them, so the row would advertise work that never runs.
-			...allMovies.filter((m) => m.status === "wanted" && m.monitored),
+			...allMovies
+				.filter((m) => m.status === "wanted" && m.monitored)
+				.map((m) => movieItem(m, "wanted")),
 			...allSeries
 				.filter((s) => s.monitored && (s.wanted_episodes ?? 0) > 0)
-				.map((s) => ({
-					id: s.id,
-					title: s.title,
-					year: s.year,
-					status: "wanted" as const,
-					href: `/series/${s.id}`,
-					posterSrc: tvPosterUrl(s.id),
-				})),
-		].slice(0, 6),
+				.map((s) => seriesItem(s, "wanted")),
+		]
+			.sort(byNewest)
+			.slice(0, 6),
 	);
 	let events = $derived(activityQuery.data?.events ?? []);
 	let upcoming = $derived(upcomingEvents(upcomingQuery.data));

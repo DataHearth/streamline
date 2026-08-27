@@ -78,6 +78,7 @@ export type TVShow = {
 	// Only populated by GET /series/{id}; absent in list responses.
 	seasons?: Season[];
 	cast?: CastMember[];
+	added_at?: string;
 };
 
 export type TVShowCounts = {
@@ -158,6 +159,7 @@ export type Movie = {
 	cast?: CastMember[];
 	genres?: string[];
 	rating?: number;
+	added_at?: string;
 };
 
 // What ffprobe read off the file. Null until the file has been probed, and

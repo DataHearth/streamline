@@ -4550,6 +4550,10 @@ components:
           description: |
             TMDB vote average (0–10). Only populated by GET /movies/{id}
             and omitted when TMDB has no votes.
+        added_at:
+          type: string
+          format: date-time
+          description: When the movie was added to the library.
 
     CastMember:
       type: object
@@ -4801,6 +4805,10 @@ components:
             absent in list responses.
           items:
             $ref: "#/components/schemas/CastMember"
+        added_at:
+          type: string
+          format: date-time
+          description: When the series was added to the library.
 
     Season:
       type: object
