@@ -56,7 +56,22 @@
 	let lastFocused: HTMLElement | null = null;
 	let titleId = `config-form-${Math.random().toString(36).slice(2, 10)}`;
 
-	let fullScreen = $derived(open && !desktop());
+	// The two layouts below render children() in different places, so flipping
+	// between them mid-dialog destroys and recreates the whole form and loses any
+	// state a child was holding. The Plex PIN modal died exactly this way: opening
+	// a dialog toggles the page scrollbar, and on a window sitting near the lg
+	// breakpoint that width shift crossed it, taking the client id and the pending
+	// token with it seconds after the sign-in popup appeared. So the breakpoint is
+	// read once, when the dialog opens, and a resize while it is open keeps the
+	// chrome it opened with; the next open picks the right layout again.
+	let fullScreenLatched = $state(false);
+	let wasOpen = false;
+	$effect(() => {
+		if (open && !wasOpen) fullScreenLatched = !desktop();
+		wasOpen = open;
+	});
+
+	let fullScreen = $derived(open && fullScreenLatched);
 
 	$effect(() => {
 		if (!fullScreen) {
