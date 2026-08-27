@@ -115,6 +115,18 @@ func (t *Transmission) AddTorrent(
 	} else {
 		args["metainfo"] = base64.StdEncoding.EncodeToString(src.Bytes)
 	}
+	if len(src.WantedFiles) > 0 && len(src.Bytes) > 0 {
+		files, ferr := decodeTorrentFiles(src.Bytes)
+		if ferr != nil {
+			return "", fmt.Errorf("transmission add: %w", ferr)
+		}
+		// An empty files-unwanted means "everything" per the RPC spec, so the
+		// key is only set when there is something to actually skip.
+		skipped := complementIndexes(len(files), src.WantedFiles)
+		if len(skipped) > 0 {
+			args["files-unwanted"] = skipped
+		}
+	}
 
 	raw, err := t.call(ctx, "torrent-add", args)
 	if err != nil {
@@ -250,19 +262,117 @@ func (t *Transmission) TestConnection(ctx context.Context) error {
 	return err
 }
 
+// trFile and trFileStat are the torrent-get subfields for "files" and
+// "fileStats" respectively — parallel arrays indexed by array position.
+type trFile struct {
+	Name   string `json:"name"`
+	Length int64  `json:"length"`
+}
+
+type trFileStat struct {
+	Wanted bool `json:"wanted"`
+}
+
 func (t *Transmission) ListFiles(
 	ctx context.Context,
 	hash string,
 ) ([]TorrentFile, error) {
-	return nil, ErrNotSupported
+	raw, err := t.call(ctx, "torrent-get", map[string]any{
+		"ids":    []string{hash},
+		"fields": []string{"files", "fileStats"},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("transmission files: %w", err)
+	}
+	var out struct {
+		Torrents []struct {
+			Files     []trFile     `json:"files"`
+			FileStats []trFileStat `json:"fileStats"`
+		} `json:"torrents"`
+	}
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return nil, fmt.Errorf("transmission files: %w: %w", ErrBadResponse, err)
+	}
+	// A magnet whose metadata hasn't resolved yet, or an unknown hash,
+	// reports no torrent at all — same "not ready" outcome as an empty
+	// files array, so both collapse to the same empty result.
+	if len(out.Torrents) == 0 {
+		return []TorrentFile{}, nil
+	}
+
+	tr := out.Torrents[0]
+	files := make([]TorrentFile, 0, len(tr.Files))
+	for i, f := range tr.Files {
+		wanted := true
+		if i < len(tr.FileStats) {
+			wanted = tr.FileStats[i].Wanted
+		}
+		files = append(files, TorrentFile{
+			Index:  i,
+			Path:   f.Name,
+			Size:   f.Length,
+			Wanted: wanted,
+		})
+	}
+	return files, nil
 }
 
+// SetWantedFiles makes wanted downloaded and skips everything else.
+// Skip-everything is refused up front — a selective record never wants zero
+// files — before any RPC is made, matching the qBittorrent/builtin behavior.
+// The file count comes from ListFiles rather than the source bytes (which
+// this method never sees); an empty result means metadata hasn't resolved
+// yet, so the caller gets a plain, retryable error.
 func (t *Transmission) SetWantedFiles(
 	ctx context.Context,
 	hash string,
 	wanted []int,
 ) error {
-	return ErrNotSupported
+	if len(wanted) == 0 {
+		return fmt.Errorf(
+			"transmission set wanted files: refusing to skip every file",
+		)
+	}
+
+	files, err := t.ListFiles(ctx, hash)
+	if err != nil {
+		return fmt.Errorf("transmission set wanted files: %w", err)
+	}
+	if len(files) == 0 {
+		return fmt.Errorf(
+			"transmission set wanted files: no files reported yet",
+		)
+	}
+
+	args := map[string]any{
+		"ids":          []string{hash},
+		"files-wanted": wanted,
+	}
+	// An empty files-unwanted means "everything" per the RPC spec, so the
+	// key is only set when there is something to actually skip.
+	if skipped := complementIndexes(len(files), wanted); len(skipped) > 0 {
+		args["files-unwanted"] = skipped
+	}
+
+	if _, err := t.call(ctx, "torrent-set", args); err != nil {
+		return fmt.Errorf("transmission set wanted files: %w", err)
+	}
+	return nil
+}
+
+// complementIndexes returns every index in [0, total) absent from wanted.
+func complementIndexes(total int, wanted []int) []int {
+	keep := make(map[int]bool, len(wanted))
+	for _, idx := range wanted {
+		keep[idx] = true
+	}
+	var skipped []int
+	for i := range total {
+		if !keep[i] {
+			skipped = append(skipped, i)
+		}
+	}
+	return skipped
 }
 
 // mapTransmissionState maps the numeric torrent status to a TorrentStatus.

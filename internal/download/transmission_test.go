@@ -1,12 +1,15 @@
 package download
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 
+	"github.com/anacrolix/torrent/bencode"
+	"github.com/anacrolix/torrent/metainfo"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -123,6 +126,191 @@ var _ = Describe("Transmission Client", Label("unit", "downloads"), func() {
 				context.Background(),
 				TorrentSource{Magnet: "magnet:?xt=urn:btih:dup"})
 			Expect(err).To(MatchError(ErrTorrentAlreadyExists))
+		})
+
+		It(
+			"sends files-unwanted as the complement of WantedFiles and"+
+				" omits files-wanted",
+			func() {
+				var gotArgs json.RawMessage
+				srv := trServer(
+					func(method string, args json.RawMessage) (string, any) {
+						if method == "torrent-add" {
+							gotArgs = args
+						}
+						return "success", map[string]any{
+							"torrent-added": map[string]any{"hashString": "abc"},
+						}
+					},
+				)
+				DeferCleanup(srv.Close)
+
+				info, err := bencode.Marshal(metainfo.Info{
+					Files: []metainfo.FileInfo{
+						{Path: []string{"a.mkv"}, Length: 4},
+						{Path: []string{"b.mkv"}, Length: 4},
+						{Path: []string{"c.mkv"}, Length: 4},
+					},
+					PieceLength: 32768,
+					Pieces:      make([]byte, 20),
+				})
+				Expect(err).NotTo(HaveOccurred())
+				mi := metainfo.MetaInfo{InfoBytes: info}
+				var torrent bytes.Buffer
+				Expect(mi.Write(&torrent)).To(Succeed())
+
+				_, err = NewTransmission(srv.URL, "", "").AddTorrent(
+					context.Background(),
+					TorrentSource{
+						Bytes:       torrent.Bytes(),
+						WantedFiles: []int{0},
+						Selective:   true,
+					},
+				)
+				Expect(err).NotTo(HaveOccurred())
+
+				var a map[string]any
+				Expect(json.Unmarshal(gotArgs, &a)).To(Succeed())
+				Expect(a).NotTo(HaveKey("files-wanted"))
+				Expect(a["files-unwanted"]).To(ConsistOf(float64(1), float64(2)))
+			},
+		)
+	})
+
+	Describe("ListFiles", func() {
+		It("maps files and fileStats, with the wanted flag from fileStats",
+			func() {
+				srv := trServer(
+					func(method string, _ json.RawMessage) (string, any) {
+						Expect(method).To(Equal("torrent-get"))
+						return "success", map[string]any{
+							"torrents": []map[string]any{{
+								"files": []map[string]any{
+									{"name": "a.mkv", "length": int64(100)},
+									{"name": "b.mkv", "length": int64(200)},
+								},
+								"fileStats": []map[string]any{
+									{
+										"bytesCompleted": int64(100),
+										"wanted":         true,
+										"priority":       0,
+									},
+									{
+										"bytesCompleted": int64(0),
+										"wanted":         false,
+										"priority":       0,
+									},
+								},
+							}},
+						}
+					},
+				)
+				DeferCleanup(srv.Close)
+
+				files, err := NewTransmission(srv.URL, "", "").
+					ListFiles(context.Background(), "abc")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(files).To(Equal([]TorrentFile{
+					{Index: 0, Path: "a.mkv", Size: 100, Wanted: true},
+					{Index: 1, Path: "b.mkv", Size: 200, Wanted: false},
+				}))
+			},
+		)
+
+		It("returns an empty slice for a magnet with unresolved metadata",
+			func() {
+				srv := trServer(
+					func(method string, _ json.RawMessage) (string, any) {
+						Expect(method).To(Equal("torrent-get"))
+						return "success", map[string]any{
+							"torrents": []map[string]any{{
+								"files":     []any{},
+								"fileStats": []any{},
+							}},
+						}
+					},
+				)
+				DeferCleanup(srv.Close)
+
+				files, err := NewTransmission(srv.URL, "", "").
+					ListFiles(context.Background(), "abc")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(files).To(Equal([]TorrentFile{}))
+			},
+		)
+	})
+
+	Describe("SetWantedFiles", func() {
+		It("sends files-wanted without files-unwanted when every file is wanted",
+			func() {
+				var gotArgs json.RawMessage
+				srv := trServer(
+					func(method string, args json.RawMessage) (string, any) {
+						switch method {
+						case "torrent-get":
+							return "success", map[string]any{
+								"torrents": []map[string]any{{
+									"files": []map[string]any{
+										{"name": "a.mkv", "length": int64(4)},
+										{"name": "b.mkv", "length": int64(4)},
+										{"name": "c.mkv", "length": int64(4)},
+									},
+									"fileStats": []map[string]any{
+										{
+											"bytesCompleted": int64(0),
+											"wanted":         true,
+											"priority":       0,
+										},
+										{
+											"bytesCompleted": int64(0),
+											"wanted":         true,
+											"priority":       0,
+										},
+										{
+											"bytesCompleted": int64(0),
+											"wanted":         true,
+											"priority":       0,
+										},
+									},
+								}},
+							}
+						case "torrent-set":
+							gotArgs = args
+							return "success", map[string]any{}
+						default:
+							Fail("unexpected method " + method)
+							return "success", map[string]any{}
+						}
+					},
+				)
+				DeferCleanup(srv.Close)
+
+				err := NewTransmission(srv.URL, "", "").SetWantedFiles(
+					context.Background(), "abc", []int{0, 1, 2},
+				)
+				Expect(err).NotTo(HaveOccurred())
+
+				var a map[string]any
+				Expect(json.Unmarshal(gotArgs, &a)).To(Succeed())
+				Expect(a).NotTo(HaveKey("files-unwanted"))
+				Expect(a["files-wanted"]).To(
+					ConsistOf(float64(0), float64(1), float64(2)),
+				)
+			},
+		)
+
+		It("rejects a skip-everything call before issuing any RPC", func() {
+			called := false
+			srv := trServer(func(_ string, _ json.RawMessage) (string, any) {
+				called = true
+				return "success", map[string]any{}
+			})
+			DeferCleanup(srv.Close)
+
+			err := NewTransmission(srv.URL, "", "").
+				SetWantedFiles(context.Background(), "abc", nil)
+			Expect(err).To(HaveOccurred())
+			Expect(called).To(BeFalse())
 		})
 	})
 
