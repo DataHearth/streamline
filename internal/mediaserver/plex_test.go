@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -89,9 +90,15 @@ var _ = Describe("Plex Client", Label("unit", "mediaserver"), func() {
 			Expect(err).To(MatchError(ContainSubstring("plex sections decode")))
 		})
 
-		It("returns error when no section matches the library path", func() {
+		It("refreshes every section when none matches the library path", func() {
+			var refreshed []string
 			ts := httptest.NewServer(
-				http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					if strings.HasSuffix(r.URL.Path, "/refresh") {
+						refreshed = append(refreshed, r.URL.Path)
+						w.WriteHeader(http.StatusOK)
+						return
+					}
 					w.Header().Set("Content-Type", "application/json")
 					w.WriteHeader(http.StatusOK)
 					_, _ = w.Write(jsonBytes(map[string]any{
@@ -103,6 +110,12 @@ var _ = Describe("Plex Client", Label("unit", "mediaserver"), func() {
 										{"path": "/somewhere/else"},
 									},
 								},
+								{
+									"key": "2",
+									"Location": []map[string]any{
+										{"path": "/somewhere/other"},
+									},
+								},
 							},
 						},
 					}))
@@ -111,10 +124,13 @@ var _ = Describe("Plex Client", Label("unit", "mediaserver"), func() {
 			defer ts.Close()
 
 			client := NewPlex(ts.URL, "test-token")
-			err := client.RefreshLibrary(context.Background(), "/media/movies", "")
 			Expect(
-				err,
-			).To(MatchError(ContainSubstring("no section found for path /media/movies")))
+				client.RefreshLibrary(context.Background(), "/media/movies", ""),
+			).To(Succeed())
+			Expect(refreshed).To(ConsistOf(
+				"/library/sections/1/refresh",
+				"/library/sections/2/refresh",
+			))
 		})
 
 		It("returns error when refresh endpoint returns 5xx", func() {

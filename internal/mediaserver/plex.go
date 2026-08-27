@@ -3,6 +3,7 @@ package mediaserver
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -56,15 +57,42 @@ func (p *Plex) RefreshLibrary(
 	ctx context.Context,
 	libraryPath, sectionKey string,
 ) error {
-	key := sectionKey
-	if key == "" {
-		k, err := p.findSection(ctx, libraryPath)
-		if err != nil {
-			return err
-		}
-		key = k
+	if sectionKey != "" {
+		return p.refreshSection(ctx, sectionKey, libraryPath)
 	}
 
+	// Plex reports its *own* mount paths, which in any containerised install
+	// differ from ours (/srv/streamline/movies here, /data/movies there), so
+	// the path match usually finds nothing. Refreshing every section is what
+	// Jellyfin already does and beats importing a file nobody ever sees;
+	// configure library_section to scope it back down to one.
+	key, err := p.findSection(ctx, libraryPath)
+	if err == nil {
+		return p.refreshSection(ctx, key, libraryPath)
+	}
+	slog.WarnContext(
+		ctx,
+		"plex: no section matches the library path, refreshing all sections",
+		"path",
+		libraryPath,
+		"error",
+		err,
+	)
+
+	sections, err := p.ListSections(ctx)
+	if err != nil {
+		return err
+	}
+	var errs []error
+	for _, s := range sections {
+		if err := p.refreshSection(ctx, s.Key, libraryPath); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errors.Join(errs...)
+}
+
+func (p *Plex) refreshSection(ctx context.Context, key, libraryPath string) error {
 	req, err := http.NewRequestWithContext(
 		ctx, http.MethodGet,
 		fmt.Sprintf("%s/library/sections/%s/refresh", p.baseURL, key),
