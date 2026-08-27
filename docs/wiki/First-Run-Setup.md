@@ -129,6 +129,23 @@ download_clients:
 
 Live torrents get their own page at **Activity → Torrents**, with per-file control. This is the newest part of Streamline — if you have a working qBittorrent, there's no urgency to switch.
 
+### Selective file download
+
+Off by default (`download.selective_files: false`, runtime-editable). Grabbing an episode-scoped release that happens to be a whole-series pack normally downloads the entire pack for one episode. With this on, Streamline downloads only the files an episode grab actually needs — the rest of the torrent's files are skipped at the protocol level, not deleted after the fact.
+
+Once turned on, it applies automatically to every episode grab; there's no per-grab toggle. Every client behaves slightly differently:
+
+| Client | Behavior |
+| --- | --- |
+| Built-in engine | Selects at add time for a `.torrent` release; a magnet downloads nothing until Streamline knows what's inside, then selects |
+| qBittorrent | Adds the torrent stopped, applies the selection, then starts it — qBittorrent refuses to accept a file selection in the same request as a `.torrent` upload. A magnet is added with a stop-after-metadata flag, selected, then started |
+| Deluge | Resolves a magnet's file list *before* admitting it to the session, so it can select on the very first add — no waste either way |
+| Transmission | Selects immediately for a `.torrent` release. For a magnet, Transmission has no way to defer, so it downloads normally until Streamline's next selection pass (every 5 seconds by default) catches up and trims it — a small, bounded amount of extra data rather than the whole torrent |
+
+If nothing in a release actually matches what's wanted, the grab is dropped rather than downloading a pack that would help nobody — for a `.torrent` source before it's even sent to the client, for a magnet by removing the torrent once that becomes clear. A selection that hasn't resolved after 10 minutes (`download.selection_grace`) gives up and downloads the release whole rather than leaving it stuck.
+
+The torrent drawer (**Activity → Torrents**) still shows every file with its priority and lets you flip one back on manually before the download finishes — the same control that existed before this feature, now driven automatically as well.
+
 ---
 
 ## 5. Add an indexer

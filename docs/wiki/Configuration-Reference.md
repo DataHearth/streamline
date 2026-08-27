@@ -129,6 +129,7 @@ Some config is hot — changed through the UI or API, applied immediately, persi
 | `library.probe.*` | ✅ Applies to the next import — see [Import verification](#import-verification) |
 | `ffmpeg.enabled` | ✅ |
 | `ffmpeg.path` | ⚠️ Accepted immediately, but only picked up by the process's prober on the next restart |
+| `download.selective_files` | ✅ |
 | OIDC providers | ⚠️ CRUD works, but only loaded at startup — restart required |
 | Everything else | ❌ File only, restart required |
 
@@ -256,7 +257,7 @@ Go duration strings. All are runtime-editable, pausable and runnable on demand �
 | `schedules.tv_rss_sync` | `15m` | | `schedules.cleanup` | `24h` |
 | `schedules.movie_missing_search` | `12h` | | `schedules.movie_metadata_refresh` | `24h` |
 | `schedules.tv_missing_search` | `12h` | | `schedules.tv_metadata_refresh` | `24h` |
-| `schedules.media_probe` | `15m` | | | |
+| `schedules.media_probe` | `15m` | | `schedules.file_selection` | `5s` |
 
 **Deprecated aliases**, still honoured with a warning at boot: `rss_sync` (→ `movie_rss_sync`), `missing_search`, `metadata_refresh` and `orphan_scan` (each → both the `movie_*` and `tv_*` keys).
 
@@ -337,6 +338,15 @@ Per entry:
 | `enabled` | | |
 | `library_section` | | Section holding movies |
 | `library_section_tv` | | Section holding TV |
+
+### download
+
+Governs [selective file download](First-Run-Setup#selective-file-download) — grabbing an episode-scoped pack downloads only the files that episode needs.
+
+| Key | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `download.selective_files` | bool | `false` | Off is bit-for-bit today's whole-torrent grab, and the rollback path. **Runtime-editable** |
+| `download.selection_grace` | duration | `10m` | How long a magnet-sourced selection may sit unresolved before giving up and downloading the release whole |
 
 ### download_clients
 

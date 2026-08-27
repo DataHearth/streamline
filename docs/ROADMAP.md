@@ -26,9 +26,12 @@ Music and books follow the same path as movies and TV: browse and organise your 
 | Media info from ffprobe (codec, resolution, duration, bitrate) | Shipped |
 | Import verification — hold a download that doesn't match what it claimed | Shipped |
 | Custom-format quality scoring (Radarr-style profiles, RSS-driven movie upgrades) | Shipped |
+| Selective file download (grab a pack, download only the episode you need) | In progress |
 | Usenet (NZB indexers + SABnzbd/NZBGet) | Planned |
 
 The built-in client is the newest of these and still has a rough edge: a download can occasionally stall while a seeder is connected. It usually clears itself within seconds; one that doesn't can be nudged with pause and resume. If you already run qBittorrent, Transmission or Deluge, there's no need to switch.
+
+Selective file download is implemented for all four clients but ships behind `download.selective_files`, off by default until it's run in anger; flip it on to try it today.
 
 ## Playback
 
