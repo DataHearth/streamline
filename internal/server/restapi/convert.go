@@ -622,6 +622,16 @@ func toQueueEntry(e download.QueueEntry) QueueEntry {
 		}
 		out.HoldReasons = &reasons
 	}
+	if e.SelectionState != "" && e.SelectionState != "skipped" {
+		state := QueueEntrySelectionState(e.SelectionState)
+		out.SelectionState = &state
+	}
+	if e.SelectionState == "applied" {
+		count := len(e.SelectedFiles)
+		out.SelectedFilesCount = &count
+		bytes := e.SelectedBytes
+		out.SelectedBytes = &bytes
+	}
 	return out
 }
 

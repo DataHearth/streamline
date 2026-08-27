@@ -293,6 +293,12 @@ type QueueEntry struct {
 	ETA            int64
 	FailureReason  string
 	CreatedAt      time.Time
+	// SelectionState mirrors download_record.selection_state.
+	SelectionState string
+	// SelectedFiles is the kept indexes when SelectionState is "applied"; nil
+	// otherwise.
+	SelectedFiles []int
+	SelectedBytes int64
 }
 
 // QueueSnapshot is the cached live-queue view with its capture time.
@@ -377,16 +383,19 @@ func (d *download) refreshQueue(ctx context.Context) ([]QueueEntry, error) {
 
 func baseQueueEntry(rec *ent.DownloadRecord) QueueEntry {
 	e := QueueEntry{
-		RecordID:      rec.ID,
-		Status:        "downloading",
-		Title:         rec.Title,
-		Quality:       rec.Quality,
-		ReleaseGroup:  rec.ReleaseGroup,
-		Movie:         rec.Edges.Movie,
-		Episode:       rec.Edges.Episode,
-		Size:          rec.Size,
-		FailureReason: rec.FailureReason,
-		CreatedAt:     rec.CreateTime,
+		RecordID:       rec.ID,
+		Status:         "downloading",
+		Title:          rec.Title,
+		Quality:        rec.Quality,
+		ReleaseGroup:   rec.ReleaseGroup,
+		Movie:          rec.Edges.Movie,
+		Episode:        rec.Edges.Episode,
+		Size:           rec.Size,
+		FailureReason:  rec.FailureReason,
+		CreatedAt:      rec.CreateTime,
+		SelectionState: string(rec.SelectionState),
+		SelectedFiles:  rec.SelectedFiles,
+		SelectedBytes:  rec.SelectedBytes,
 	}
 	switch rec.Status {
 	case downloadrecord.StatusImporting:

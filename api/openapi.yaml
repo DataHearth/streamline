@@ -5642,7 +5642,7 @@ components:
 
     TorrentFile:
       type: object
-      required: [index, path, size, downloaded, priority]
+      required: [index, path, size, downloaded, priority, wanted]
       properties:
         index:
           type: integer
@@ -5657,6 +5657,9 @@ components:
         priority:
           type: string
           enum: [skip, normal, high]
+        wanted:
+          type: boolean
+          description: True unless priority is "skip".
 
     TorrentPeer:
       type: object
@@ -6875,6 +6878,24 @@ components:
           type: array
           description: Present only on a held entry, one item per failed check.
           items: { $ref: "#/components/schemas/HoldReason" }
+        selection_state:
+          type: string
+          description: |
+            File-selection outcome for this grab. Omitted when "skipped" — no
+            selection was ever applied, and the whole torrent downloads.
+          enum: [pending, applied, unsupported, skipped]
+        selected_files_count:
+          type: integer
+          description: |
+            Number of files kept by the selection. Present only when
+            selection_state is "applied".
+        selected_bytes:
+          type: integer
+          format: int64
+          description: |
+            Bytes covered by the kept files. Present only when
+            selection_state is "applied". Compare against size for
+            "X of Y selected".
         created_at: { type: string, format: date-time }
 
     HoldReason:

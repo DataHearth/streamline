@@ -44,6 +44,61 @@ var _ = Describe("Handler: Activity queue/history",
 			Expect(body.Items[0].Status).To(Equal(QueueEntryStatus("downloading")))
 		})
 
+		It("carries selection fields for an applied selection", func() {
+			app.downloads.EXPECT().Queue(mock.Anything).Return(
+				download.QueueSnapshot{
+					RefreshedAt: time.Now(),
+					Items: []download.QueueEntry{{
+						RecordID: 1, Status: "downloading", Title: "rel",
+						Movie:          &ent.Movie{ID: 2, Title: "Dune"},
+						Progress:       0.5,
+						Size:           1000,
+						SelectionState: string(downloadrecord.SelectionStateApplied),
+						SelectedFiles:  []int{0, 2},
+						SelectedBytes:  600,
+					}},
+				}, nil).Once()
+
+			resp, err := http.Get(app.srv.URL + "/api/v1/activity/queue")
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			var body DownloadQueue
+			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+			Expect(body.Items).To(HaveLen(1))
+			entry := body.Items[0]
+			Expect(*entry.SelectionState).To(Equal(QueueEntrySelectionStateApplied))
+			Expect(*entry.SelectedFilesCount).To(Equal(2))
+			Expect(*entry.SelectedBytes).To(Equal(int64(600)))
+			Expect(entry.Size).To(Equal(int64(1000)))
+		})
+
+		It("omits selection fields when the selection was skipped", func() {
+			app.downloads.EXPECT().Queue(mock.Anything).Return(
+				download.QueueSnapshot{
+					RefreshedAt: time.Now(),
+					Items: []download.QueueEntry{{
+						RecordID: 1, Status: "downloading", Title: "rel",
+						Movie:          &ent.Movie{ID: 2, Title: "Dune"},
+						Progress:       0.5,
+						Size:           1000,
+						SelectionState: string(downloadrecord.SelectionStateSkipped),
+					}},
+				}, nil).Once()
+
+			resp, err := http.Get(app.srv.URL + "/api/v1/activity/queue")
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			var body DownloadQueue
+			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+			Expect(body.Items).To(HaveLen(1))
+			entry := body.Items[0]
+			Expect(entry.SelectionState).To(BeNil())
+			Expect(entry.SelectedFilesCount).To(BeNil())
+			Expect(entry.SelectedBytes).To(BeNil())
+		})
+
 		It("DELETE /activity/queue/{id} 404s when not found", func() {
 			app.downloads.EXPECT().CancelQueueItem(mock.Anything, uint32(9)).
 				Return(&ent.NotFoundError{}).Once()

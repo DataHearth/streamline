@@ -238,6 +238,7 @@ func torrentDetailsToAPI(d bittorrent.TorrentDetails) TorrentDetails {
 			Size:       f.Size,
 			Downloaded: f.Downloaded,
 			Priority:   TorrentFilePriority(f.Priority),
+			Wanted:     f.Priority != "skip",
 		})
 	}
 	peers := make([]TorrentPeer, 0, len(d.Peers))

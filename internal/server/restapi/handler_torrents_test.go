@@ -89,6 +89,27 @@ var _ = Describe("Handler: Torrents", Label("unit", "server", "torrents"), func(
 		Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 	})
 
+	It("reports wanted per file from its priority", func() {
+		app.torrents.EXPECT().Details(mock.Anything, testHash).
+			Return(bittorrent.TorrentDetails{
+				TorrentView: bittorrent.TorrentView{Hash: testHash, Name: "Test"},
+				Files: []bittorrent.FileView{
+					{Index: 0, Path: "a", Priority: "normal"},
+					{Index: 1, Path: "b", Priority: "skip"},
+				},
+			}, nil).Once()
+
+		resp, err := http.Get(app.srv.URL + "/api/v1/torrents/" + testHash)
+		Expect(err).NotTo(HaveOccurred())
+		defer resp.Body.Close()
+		Expect(resp.StatusCode).To(Equal(http.StatusOK))
+		var details TorrentDetails
+		Expect(json.NewDecoder(resp.Body).Decode(&details)).To(Succeed())
+		Expect(details.Files).To(HaveLen(2))
+		Expect(details.Files[0].Wanted).To(BeTrue())
+		Expect(details.Files[1].Wanted).To(BeFalse())
+	})
+
 	It("pauses a torrent via its pause subresource", func() {
 		app.torrents.EXPECT().PauseTorrent(mock.Anything, testHash).
 			Return(nil).Once()

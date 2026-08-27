@@ -1260,6 +1260,30 @@ func (e QualityProfileCreatePreferredResolution) Valid() bool {
 	}
 }
 
+// Defines values for QueueEntrySelectionState.
+const (
+	QueueEntrySelectionStateApplied     QueueEntrySelectionState = "applied"
+	QueueEntrySelectionStatePending     QueueEntrySelectionState = "pending"
+	QueueEntrySelectionStateSkipped     QueueEntrySelectionState = "skipped"
+	QueueEntrySelectionStateUnsupported QueueEntrySelectionState = "unsupported"
+)
+
+// Valid indicates whether the value is a known member of the QueueEntrySelectionState enum.
+func (e QueueEntrySelectionState) Valid() bool {
+	switch e {
+	case QueueEntrySelectionStateApplied:
+		return true
+	case QueueEntrySelectionStatePending:
+		return true
+	case QueueEntrySelectionStateSkipped:
+		return true
+	case QueueEntrySelectionStateUnsupported:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for QueueEntryStatus.
 const (
 	QueueEntryStatusDownloading QueueEntryStatus = "downloading"
@@ -3310,13 +3334,30 @@ type QueueEntry struct {
 	Progress     float64       `json:"progress"`
 	Quality      *string       `json:"quality,omitempty"`
 	ReleaseGroup *string       `json:"release_group,omitempty"`
-	Size         int64         `json:"size"`
+
+	// SelectedBytes Bytes covered by the kept files. Present only when
+	// selection_state is "applied". Compare against size for
+	// "X of Y selected".
+	SelectedBytes *int64 `json:"selected_bytes,omitempty"`
+
+	// SelectedFilesCount Number of files kept by the selection. Present only when
+	// selection_state is "applied".
+	SelectedFilesCount *int `json:"selected_files_count,omitempty"`
+
+	// SelectionState File-selection outcome for this grab. Omitted when "skipped" — no
+	// selection was ever applied, and the whole torrent downloads.
+	SelectionState *QueueEntrySelectionState `json:"selection_state,omitempty"`
+	Size           int64                     `json:"size"`
 
 	// Status "held" means the download finished but failed import verification
 	// and is waiting on a decision (POST /downloads/{id}/resolve).
 	Status QueueEntryStatus `json:"status"`
 	Title  string           `json:"title"`
 }
+
+// QueueEntrySelectionState File-selection outcome for this grab. Omitted when "skipped" — no
+// selection was ever applied, and the whole torrent downloads.
+type QueueEntrySelectionState string
 
 // QueueEntryStatus "held" means the download finished but failed import verification
 // and is waiting on a decision (POST /downloads/{id}/resolve).
@@ -3760,6 +3801,9 @@ type TorrentFile struct {
 	Path       string              `json:"path"`
 	Priority   TorrentFilePriority `json:"priority"`
 	Size       int64               `json:"size"`
+
+	// Wanted True unless priority is "skip".
+	Wanted bool `json:"wanted"`
 }
 
 // TorrentFilePriority defines model for TorrentFile.Priority.
