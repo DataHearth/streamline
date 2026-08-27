@@ -34,7 +34,9 @@ import (
 var tracer = otel.Tracer("github.com/datahearth/streamline/internal/importer")
 
 type MediaServerDispatcher interface {
-	RefreshAll(ctx context.Context, libraryPath string) error
+	// kind is "movie" or "series" — Plex scopes its rescan to one section and
+	// keys them separately, so the path alone does not say which to poke.
+	RefreshAll(ctx context.Context, kind, libraryPath string) error
 }
 
 // Enqueuer is the consumer-facing queue surface. download_monitor accepts it
@@ -395,7 +397,7 @@ func (w *Worker) importMovieRecord(
 	)
 
 	w.markRequestsAvailable(ctx, "movie", m.TmdbID)
-	w.refreshMediaServers(ctx, libCfg.MoviePath)
+	w.refreshMediaServers(ctx, "movie", libCfg.MoviePath)
 	w.cleanupTorrent(ctx, rec, libCfg)
 	return nil
 }
@@ -697,7 +699,7 @@ func (w *Worker) importEpisodeRecord(
 		"tvshow.id", show.ID, "matched", matched, "files", len(files))
 
 	w.markRequestsAvailable(ctx, "tvshow", show.TvdbID)
-	w.refreshMediaServers(ctx, libCfg.SeriesPath)
+	w.refreshMediaServers(ctx, "series", libCfg.SeriesPath)
 	w.cleanupTorrent(ctx, rec, libCfg)
 	return nil
 }
@@ -776,16 +778,16 @@ func (w *Worker) importSingleEpisode(
 		"tvshow.id", show.ID, "episode.id", ep.ID)
 
 	w.markRequestsAvailable(ctx, "tvshow", show.TvdbID)
-	w.refreshMediaServers(ctx, libCfg.SeriesPath)
+	w.refreshMediaServers(ctx, "series", libCfg.SeriesPath)
 	w.cleanupTorrent(ctx, rec, libCfg)
 	return nil
 }
 
-func (w *Worker) refreshMediaServers(ctx context.Context, libraryPath string) {
+func (w *Worker) refreshMediaServers(ctx context.Context, kind, libraryPath string) {
 	if w.ms == nil {
 		return
 	}
-	if err := w.ms.RefreshAll(ctx, libraryPath); err != nil {
+	if err := w.ms.RefreshAll(ctx, kind, libraryPath); err != nil {
 		slog.WarnContext(ctx, "media server refresh reported errors", "error", err)
 	}
 }

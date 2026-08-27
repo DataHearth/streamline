@@ -21,7 +21,7 @@ var _ = Describe("Dispatcher", Label("unit", "mediaserver"), func() {
 
 	It("returns nil when no enabled servers", func() {
 		configtest.Setup()
-		Expect(d.RefreshAll(context.Background(), "/lib")).To(Succeed())
+		Expect(d.RefreshAll(context.Background(), "movie", "/lib")).To(Succeed())
 	})
 
 	It("calls RefreshLibrary on each enabled server and joins errors", func() {
@@ -52,7 +52,7 @@ var _ = Describe("Dispatcher", Label("unit", "mediaserver"), func() {
 			},
 		))
 
-		err := d.RefreshAll(context.Background(), "/lib")
+		err := d.RefreshAll(context.Background(), "movie", "/lib")
 		Expect(err).To(MatchError(ContainSubstring("jf")))
 		Expect(
 			err,
@@ -78,7 +78,7 @@ var _ = Describe("Dispatcher", Label("unit", "mediaserver"), func() {
 			"library_section": "42",
 		}))
 
-		Expect(d.RefreshAll(context.Background(), "/lib")).To(Succeed())
+		Expect(d.RefreshAll(context.Background(), "movie", "/lib")).To(Succeed())
 		Expect(refreshedKey).To(Equal("42"))
 	})
 
@@ -118,8 +118,28 @@ var _ = Describe("Dispatcher", Label("unit", "mediaserver"), func() {
 			"host": ts2.URL, "api_key": "tok", "enabled": true,
 		}))
 
-		Expect(d.RefreshAll(context.Background(), "/lib")).To(Succeed())
+		Expect(d.RefreshAll(context.Background(), "movie", "/lib")).To(Succeed())
 		Expect(refreshedKey).To(Equal("9"))
+	})
+
+	It("refreshes the TV section for a series import", func() {
+		var refreshedKey string
+		ts2 := httptest.NewServer(
+			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				refreshedKey = r.URL.Path[len("/library/sections/") : len(r.URL.Path)-len("/refresh")]
+				w.WriteHeader(http.StatusOK)
+			}),
+		)
+		defer ts2.Close()
+
+		configtest.Setup(mediaServerConfig(map[string]any{
+			"name": "plex", "server_type": "plex",
+			"host": ts2.URL, "api_key": "tok", "enabled": true,
+			"library_section": "1", "library_section_tv": "4",
+		}))
+
+		Expect(d.RefreshAll(context.Background(), "series", "/tv")).To(Succeed())
+		Expect(refreshedKey).To(Equal("4"))
 	})
 
 	It("aggregates errors when all servers fail", func() {
@@ -146,7 +166,7 @@ var _ = Describe("Dispatcher", Label("unit", "mediaserver"), func() {
 				"host": jf2.URL, "api_key": "tok", "enabled": true,
 			},
 		))
-		err := d.RefreshAll(context.Background(), "/lib")
+		err := d.RefreshAll(context.Background(), "movie", "/lib")
 		Expect(err).To(MatchError(ContainSubstring("jf1")))
 		Expect(err).To(MatchError(ContainSubstring("jf2")))
 	})
@@ -165,7 +185,7 @@ var _ = Describe("Dispatcher", Label("unit", "mediaserver"), func() {
 
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
-		err := d.RefreshAll(ctx, "/lib")
+		err := d.RefreshAll(ctx, "movie", "/lib")
 		Expect(err).To(MatchError(ContainSubstring("context canceled")))
 	})
 })

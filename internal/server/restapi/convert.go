@@ -339,6 +339,9 @@ func mediaServerToAPI(e config.MediaServerEntry) MediaServer {
 	if e.LibrarySection != nil {
 		out.LibrarySection = e.LibrarySection
 	}
+	if e.LibrarySectionTV != nil {
+		out.LibrarySectionTv = e.LibrarySectionTV
+	}
 	return out
 }
 

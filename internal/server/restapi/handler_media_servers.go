@@ -59,11 +59,12 @@ func (s *Server) CreateMediaServer(
 		}, nil
 	}
 	e := config.MediaServerEntry{
-		Name:           request.Body.Name,
-		ServerType:     string(request.Body.ServerType),
-		Host:           request.Body.Host,
-		APIKey:         request.Body.ApiKey,
-		LibrarySection: request.Body.LibrarySection,
+		Name:             request.Body.Name,
+		ServerType:       string(request.Body.ServerType),
+		Host:             request.Body.Host,
+		APIKey:           request.Body.ApiKey,
+		LibrarySection:   request.Body.LibrarySection,
+		LibrarySectionTV: request.Body.LibrarySectionTv,
 	}
 	if request.Body.Enabled != nil {
 		e.Enabled = *request.Body.Enabled
@@ -102,10 +103,11 @@ func (s *Server) UpdateMediaServer(
 		}, nil
 	}
 	patch := config.MediaServerPatch{
-		Host:           request.Body.Host,
-		APIKey:         request.Body.ApiKey,
-		Enabled:        request.Body.Enabled,
-		LibrarySection: request.Body.LibrarySection,
+		Host:             request.Body.Host,
+		APIKey:           request.Body.ApiKey,
+		Enabled:          request.Body.Enabled,
+		LibrarySection:   request.Body.LibrarySection,
+		LibrarySectionTV: request.Body.LibrarySectionTv,
 	}
 	if request.Body.ServerType != nil {
 		st := string(*request.Body.ServerType)

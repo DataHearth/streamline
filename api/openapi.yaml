@@ -6182,7 +6182,11 @@ components:
         library_section:
           type: string
           nullable: true
-          description: Plex section key. Null on Jellyfin / Emby.
+          description: Plex section key holding movies. Null on Jellyfin / Emby.
+        library_section_tv:
+          type: string
+          nullable: true
+          description: Plex section key holding TV. Null on Jellyfin / Emby.
         enabled:
           type: boolean
         api_key_set:
@@ -6205,6 +6209,9 @@ components:
         library_section:
           type: string
           nullable: true
+        library_section_tv:
+          type: string
+          nullable: true
         enabled:
           type: boolean
 
@@ -6221,6 +6228,9 @@ components:
         api_key:
           type: string
         library_section:
+          type: string
+          nullable: true
+        library_section_tv:
           type: string
           nullable: true
         enabled:

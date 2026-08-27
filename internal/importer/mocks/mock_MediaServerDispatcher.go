@@ -38,16 +38,16 @@ func (_m *MockMediaServerDispatcher) EXPECT() *MockMediaServerDispatcher_Expecte
 }
 
 // RefreshAll provides a mock function for the type MockMediaServerDispatcher
-func (_mock *MockMediaServerDispatcher) RefreshAll(ctx context.Context, libraryPath string) error {
-	ret := _mock.Called(ctx, libraryPath)
+func (_mock *MockMediaServerDispatcher) RefreshAll(ctx context.Context, kind string, libraryPath string) error {
+	ret := _mock.Called(ctx, kind, libraryPath)
 
 	if len(ret) == 0 {
 		panic("no return value specified for RefreshAll")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) error); ok {
-		r0 = returnFunc(ctx, libraryPath)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) error); ok {
+		r0 = returnFunc(ctx, kind, libraryPath)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -61,12 +61,13 @@ type MockMediaServerDispatcher_RefreshAll_Call struct {
 
 // RefreshAll is a helper method to define mock.On call
 //   - ctx context.Context
+//   - kind string
 //   - libraryPath string
-func (_e *MockMediaServerDispatcher_Expecter) RefreshAll(ctx any, libraryPath any) *MockMediaServerDispatcher_RefreshAll_Call {
-	return &MockMediaServerDispatcher_RefreshAll_Call{Call: _e.mock.On("RefreshAll", ctx, libraryPath)}
+func (_e *MockMediaServerDispatcher_Expecter) RefreshAll(ctx any, kind any, libraryPath any) *MockMediaServerDispatcher_RefreshAll_Call {
+	return &MockMediaServerDispatcher_RefreshAll_Call{Call: _e.mock.On("RefreshAll", ctx, kind, libraryPath)}
 }
 
-func (_c *MockMediaServerDispatcher_RefreshAll_Call) Run(run func(ctx context.Context, libraryPath string)) *MockMediaServerDispatcher_RefreshAll_Call {
+func (_c *MockMediaServerDispatcher_RefreshAll_Call) Run(run func(ctx context.Context, kind string, libraryPath string)) *MockMediaServerDispatcher_RefreshAll_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -76,9 +77,14 @@ func (_c *MockMediaServerDispatcher_RefreshAll_Call) Run(run func(ctx context.Co
 		if args[1] != nil {
 			arg1 = args[1].(string)
 		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -89,7 +95,7 @@ func (_c *MockMediaServerDispatcher_RefreshAll_Call) Return(err error) *MockMedi
 	return _c
 }
 
-func (_c *MockMediaServerDispatcher_RefreshAll_Call) RunAndReturn(run func(ctx context.Context, libraryPath string) error) *MockMediaServerDispatcher_RefreshAll_Call {
+func (_c *MockMediaServerDispatcher_RefreshAll_Call) RunAndReturn(run func(ctx context.Context, kind string, libraryPath string) error) *MockMediaServerDispatcher_RefreshAll_Call {
 	_c.Call.Return(run)
 	return _c
 }

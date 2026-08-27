@@ -13,7 +13,7 @@ var (
 	ErrMediaServerNotFound = errors.New("media server not found")
 
 	ErrLibrarySectionNotPlex = errors.New(
-		"library_section is only valid for Plex servers",
+		"library_section and library_section_tv are only valid for Plex servers",
 	)
 )
 
@@ -67,11 +67,12 @@ func EnsurePlexClientID(ctx context.Context) error {
 // MediaServerPatch carries optional field updates. A blank APIKey preserves
 // the existing token.
 type MediaServerPatch struct {
-	ServerType     *string
-	Host           *string
-	APIKey         *string
-	Enabled        *bool
-	LibrarySection *string
+	ServerType       *string
+	Host             *string
+	APIKey           *string
+	Enabled          *bool
+	LibrarySection   *string
+	LibrarySectionTV *string
 }
 
 // validateMediaServer enforces cross-field invariants on the resulting entry.
@@ -86,7 +87,11 @@ func validateMediaServer(e *MediaServerEntry) error {
 	if e.LibrarySection != nil && *e.LibrarySection == "" {
 		e.LibrarySection = nil
 	}
-	if e.LibrarySection != nil && e.ServerType != "plex" {
+	if e.LibrarySectionTV != nil && *e.LibrarySectionTV == "" {
+		e.LibrarySectionTV = nil
+	}
+	if (e.LibrarySection != nil || e.LibrarySectionTV != nil) &&
+		e.ServerType != "plex" {
 		return ErrLibrarySectionNotPlex
 	}
 	return nil
@@ -141,6 +146,9 @@ func UpdateMediaServer(ctx context.Context, name string, p MediaServerPatch) err
 		}
 		if p.LibrarySection != nil {
 			e.LibrarySection = p.LibrarySection
+		}
+		if p.LibrarySectionTV != nil {
+			e.LibrarySectionTV = p.LibrarySectionTV
 		}
 		if err := validateMediaServer(&e); err != nil {
 			return err

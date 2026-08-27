@@ -207,9 +207,18 @@ Full detail — including how 720p/1080p/2160p rank against each other — in [Q
 
 Streamline supports Plex, Jellyfin and Emby. On import it pokes the server to rescan the affected library, and it can deep-link you straight into playback.
 
-For **Plex**, authentication is a PIN pop-up rather than a pasted token — click **Connect**, approve at plex.tv, done. Then use **Discover** to list the server's libraries and pick which section holds your films and which holds your shows.
+For **Plex**, authentication is a PIN pop-up rather than a pasted token — click **Connect**, approve at plex.tv, done. Then click **Discover** and fill in the two section fields:
 
-For **Jellyfin/Emby**, generate an API key in that server's dashboard and paste it in.
+| Field | What it is |
+| --- | --- |
+| **Movie library section** | The Plex library holding your films |
+| **TV library section** | The Plex library holding your shows |
+
+Plex rescans one library at a time, so these are what let a film import poke only your film library and an episode import poke only your TV one. Each dropdown lists only sections of the matching type, so you can't pick a TV library as your movie one by accident.
+
+Both are optional. Left blank, Streamline tries to work the section out by matching your library path against the paths Plex reports — which only lines up when Plex sees the library at the same path Streamline does. In Docker or Kubernetes it usually doesn't (Streamline's `/srv/streamline/movies` is Plex's `/data/movies`), and Streamline falls back to rescanning **every** section. That works, but it means each import also kicks a scan of libraries that have nothing to do with Streamline. Fill the two fields in and it stops guessing.
+
+For **Jellyfin/Emby**, generate an API key in that server's dashboard and paste it in. Neither has a section concept — they take a single "rescan everything" call, so there is nothing to pick.
 
 ---
 

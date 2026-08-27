@@ -2878,10 +2878,13 @@ type MediaServer struct {
 	Enabled   bool   `json:"enabled"`
 	Host      string `json:"host"`
 
-	// LibrarySection Plex section key. Null on Jellyfin / Emby.
-	LibrarySection *string               `json:"library_section,omitempty"`
-	Name           string                `json:"name"`
-	ServerType     MediaServerServerType `json:"server_type"`
+	// LibrarySection Plex section key holding movies. Null on Jellyfin / Emby.
+	LibrarySection *string `json:"library_section,omitempty"`
+
+	// LibrarySectionTv Plex section key holding TV. Null on Jellyfin / Emby.
+	LibrarySectionTv *string               `json:"library_section_tv,omitempty"`
+	Name             string                `json:"name"`
+	ServerType       MediaServerServerType `json:"server_type"`
 }
 
 // MediaServerServerType defines model for MediaServer.ServerType.
@@ -2889,12 +2892,13 @@ type MediaServerServerType string
 
 // MediaServerCreate defines model for MediaServerCreate.
 type MediaServerCreate struct {
-	ApiKey         string                      `json:"api_key"`
-	Enabled        *bool                       `json:"enabled,omitempty"`
-	Host           string                      `json:"host"`
-	LibrarySection *string                     `json:"library_section,omitempty"`
-	Name           string                      `json:"name"`
-	ServerType     MediaServerCreateServerType `json:"server_type"`
+	ApiKey           string                      `json:"api_key"`
+	Enabled          *bool                       `json:"enabled,omitempty"`
+	Host             string                      `json:"host"`
+	LibrarySection   *string                     `json:"library_section,omitempty"`
+	LibrarySectionTv *string                     `json:"library_section_tv,omitempty"`
+	Name             string                      `json:"name"`
+	ServerType       MediaServerCreateServerType `json:"server_type"`
 }
 
 // MediaServerCreateServerType defines model for MediaServerCreate.ServerType.
@@ -2930,12 +2934,13 @@ type MediaServerSection struct {
 
 // MediaServerUpdate defines model for MediaServerUpdate.
 type MediaServerUpdate struct {
-	ApiKey         *string                      `json:"api_key,omitempty"`
-	Enabled        *bool                        `json:"enabled,omitempty"`
-	Host           *string                      `json:"host,omitempty"`
-	LibrarySection *string                      `json:"library_section,omitempty"`
-	Name           *string                      `json:"name,omitempty"`
-	ServerType     *MediaServerUpdateServerType `json:"server_type,omitempty"`
+	ApiKey           *string                      `json:"api_key,omitempty"`
+	Enabled          *bool                        `json:"enabled,omitempty"`
+	Host             *string                      `json:"host,omitempty"`
+	LibrarySection   *string                      `json:"library_section,omitempty"`
+	LibrarySectionTv *string                      `json:"library_section_tv,omitempty"`
+	Name             *string                      `json:"name,omitempty"`
+	ServerType       *MediaServerUpdateServerType `json:"server_type,omitempty"`
 }
 
 // MediaServerUpdateServerType defines model for MediaServerUpdate.ServerType.

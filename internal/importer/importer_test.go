@@ -106,7 +106,10 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 		storeMk.EXPECT().
 			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
 			Return(nil).Once()
-		msMk.EXPECT().RefreshAll(mock.Anything, libDir).Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, mock.Anything, libDir).
+			Return(nil).
+			Once()
 
 		Expect(w.runImport(context.Background(), 1)).To(Succeed())
 	})
@@ -145,7 +148,10 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 		storeMk.EXPECT().
 			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
 			Return(nil).Once()
-		msMk.EXPECT().RefreshAll(mock.Anything, libDir).Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, mock.Anything, libDir).
+			Return(nil).
+			Once()
 
 		Expect(wp.runImport(context.Background(), 1)).To(Succeed())
 	})
@@ -178,7 +184,10 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 		storeMk.EXPECT().
 			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
 			Return(nil).Once()
-		msMk.EXPECT().RefreshAll(mock.Anything, libDir).Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, mock.Anything, libDir).
+			Return(nil).
+			Once()
 
 		Expect(wp.runImport(context.Background(), 1)).To(Succeed())
 	})
@@ -223,7 +232,10 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 		storeMk.EXPECT().
 			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
 			Return(nil).Once()
-		msMk.EXPECT().RefreshAll(mock.Anything, libDir).Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, mock.Anything, libDir).
+			Return(nil).
+			Once()
 
 		Expect(wp.runImport(context.Background(), 1)).To(Succeed())
 	})
@@ -250,7 +262,10 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 		storeMk.EXPECT().
 			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
 			Return(nil).Once()
-		msMk.EXPECT().RefreshAll(mock.Anything, libDir).Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, mock.Anything, libDir).
+			Return(nil).
+			Once()
 
 		Expect(w.runImport(context.Background(), 1)).To(Succeed())
 		Expect(old).NotTo(BeAnExistingFile())
@@ -309,7 +324,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 		storeMk.EXPECT().
 			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
 			Return(nil)
-		msMk.EXPECT().RefreshAll(mock.Anything, libDir).Return(nil)
+		msMk.EXPECT().RefreshAll(mock.Anything, mock.Anything, libDir).Return(nil)
 
 		errs := make(chan error, 2)
 		var wg sync.WaitGroup
@@ -415,7 +430,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
 			Return(nil).Once()
 		msMk.EXPECT().
-			RefreshAll(mock.Anything, libDir).
+			RefreshAll(mock.Anything, mock.Anything, libDir).
 			Return(errors.New("boom")).
 			Once()
 
@@ -514,7 +529,10 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 			storeMk.EXPECT().
 				MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
 				Return(nil).Once()
-			msMk.EXPECT().RefreshAll(mock.Anything, libDir).Return(nil).Once()
+			msMk.EXPECT().
+				RefreshAll(mock.Anything, mock.Anything, libDir).
+				Return(nil).
+				Once()
 
 			Expect(w.runImport(context.Background(), 1)).To(Succeed())
 		},
@@ -550,7 +568,10 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 		storeMk.EXPECT().
 			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
 			Return(nil).Once()
-		msMk.EXPECT().RefreshAll(mock.Anything, libDir).Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, mock.Anything, libDir).
+			Return(nil).
+			Once()
 
 		Expect(w.runImport(context.Background(), 1)).To(Succeed())
 		Expect(old).NotTo(BeAnExistingFile())
@@ -607,7 +628,10 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 		storeMk.EXPECT().
 			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
 			Return(nil).Once()
-		msMk.EXPECT().RefreshAll(mock.Anything, libDir).Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, mock.Anything, libDir).
+			Return(nil).
+			Once()
 
 		Expect(w.runImport(context.Background(), 2)).To(Succeed())
 		Expect(recorded).To(HaveKey(eps[0].ID))
@@ -636,7 +660,10 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 		storeMk.EXPECT().
 			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
 			Return(nil).Once()
-		msMk.EXPECT().RefreshAll(mock.Anything, libDir).Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, mock.Anything, libDir).
+			Return(nil).
+			Once()
 
 		Expect(w.runImport(context.Background(), 2)).To(Succeed())
 	})
@@ -817,7 +844,10 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 			storeMk.EXPECT().
 				MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
 				Return(nil).Once()
-			msMk.EXPECT().RefreshAll(mock.Anything, libDir).Return(nil).Once()
+			msMk.EXPECT().
+				RefreshAll(mock.Anything, mock.Anything, libDir).
+				Return(nil).
+				Once()
 
 			Expect(wp.runImport(context.Background(), 1)).To(Succeed())
 		})
@@ -965,7 +995,10 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 			storeMk.EXPECT().
 				MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
 				Return(nil).Once()
-			msMk.EXPECT().RefreshAll(mock.Anything, libDir).Return(nil).Once()
+			msMk.EXPECT().
+				RefreshAll(mock.Anything, mock.Anything, libDir).
+				Return(nil).
+				Once()
 
 			Expect(w.runImport(context.Background(), 2)).To(Succeed())
 		})
@@ -1025,7 +1058,10 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 				storeMk.EXPECT().
 					MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
 					Return(nil).Once()
-				msMk.EXPECT().RefreshAll(mock.Anything, libDir).Return(nil).Once()
+				msMk.EXPECT().
+					RefreshAll(mock.Anything, mock.Anything, libDir).
+					Return(nil).
+					Once()
 
 				Expect(w.runImport(context.Background(), 2)).To(Succeed())
 				Expect(recorded).To(HaveKey(eps[0].ID))
@@ -1077,7 +1113,10 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 			storeMk.EXPECT().
 				MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
 				Return(nil).Once()
-			msMk.EXPECT().RefreshAll(mock.Anything, libDir).Return(nil).Once()
+			msMk.EXPECT().
+				RefreshAll(mock.Anything, mock.Anything, libDir).
+				Return(nil).
+				Once()
 
 			// No HoldDownloadRecord expectation: the mock fails the spec if it fires.
 			Expect(wp.runImport(context.Background(), 2)).To(Succeed())
@@ -1205,7 +1244,10 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 				storeMk.EXPECT().
 					MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
 					Return(nil).Once()
-				msMk.EXPECT().RefreshAll(mock.Anything, libDir).Return(nil).Once()
+				msMk.EXPECT().
+					RefreshAll(mock.Anything, mock.Anything, libDir).
+					Return(nil).
+					Once()
 
 				// No DeleteMediaFileAndRevertEpisode for E01: the mock fails the
 				// spec if its file is touched.

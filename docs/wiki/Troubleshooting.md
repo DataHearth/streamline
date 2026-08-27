@@ -215,8 +215,20 @@ After a fix, give it 10–20 minutes — peers have to find you through tracker 
 Streamline pokes Plex/Jellyfin/Emby to rescan on import. If nothing happens:
 
 - **Test the connection.** Settings → Media servers → Test.
-- **Check the library section is selected.** For Plex especially, use **Discover** and pick which section holds films and which holds shows. Without that, Streamline doesn't know what to refresh.
 - **Check your media server can see the files.** Streamline importing successfully doesn't mean Plex has the path mounted. They're separate containers with separate mounts.
+- **For Plex, set both section keys.** Settings → Media servers → **Discover**, then fill in **Movie library section** and **TV library section**. Left blank, Streamline falls back to rescanning every section — so the scan does happen, but it is broader than it needs to be, and a log line will say so:
+
+  ```
+  WARN plex: no section matches the library path, refreshing all sections
+  ```
+
+  That message is expected on any containerised install: Plex reports its *own* mount paths, which don't match Streamline's. Setting the two keys is the fix.
+
+Check the log for the import itself too. A refresh that failed outright logs at WARN and never stops the import, so the file lands on disk with nothing to show for it:
+
+```
+WARN media server refresh failed  name=plex  error=...
+```
 
 Failing that, media servers have their own scan schedules and will find the files eventually.
 

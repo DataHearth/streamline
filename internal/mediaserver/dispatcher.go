@@ -22,9 +22,18 @@ func NewDispatcher() *Dispatcher {
 	return &Dispatcher{}
 }
 
-func (d *Dispatcher) RefreshAll(ctx context.Context, libraryPath string) error {
+// RefreshAll fans a rescan across every enabled media server. kind is "movie"
+// or "series": Plex rescans one section at a time and the two are configured
+// separately, so an episode import must not poke the movie section.
+func (d *Dispatcher) RefreshAll(
+	ctx context.Context,
+	kind, libraryPath string,
+) error {
 	ctx, span := tracer.Start(ctx, "mediaserver.refresh_all",
-		trace.WithAttributes(attribute.String("library.path", libraryPath)))
+		trace.WithAttributes(
+			attribute.String("media.kind", kind),
+			attribute.String("library.path", libraryPath),
+		))
 	defer span.End()
 
 	servers := config.EnabledMediaServers()
@@ -43,9 +52,13 @@ func (d *Dispatcher) RefreshAll(ctx context.Context, libraryPath string) error {
 			errs = append(errs, fmt.Errorf("%s: %w", ms.Name, err))
 			continue
 		}
+		section := ms.LibrarySection
+		if kind == "series" {
+			section = ms.LibrarySectionTV
+		}
 		var sectionKey string
-		if ms.LibrarySection != nil {
-			sectionKey = *ms.LibrarySection
+		if section != nil {
+			sectionKey = *section
 		}
 		if err := client.RefreshLibrary(ctx, libraryPath, sectionKey); err != nil {
 			slog.WarnContext(

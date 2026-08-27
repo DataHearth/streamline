@@ -336,8 +336,10 @@ Per entry:
 | `host` | ✅ | Base URL |
 | `api_key` / `api_key_file` | | Plex uses the PIN flow instead |
 | `enabled` | | |
-| `library_section` | | Section holding movies |
-| `library_section_tv` | | Section holding TV |
+| `library_section` | | Plex section key holding movies |
+| `library_section_tv` | | Plex section key holding TV |
+
+Both section keys are Plex-only. Leave them unset and Streamline looks the section up by matching your library path against the paths Plex reports — which only works when Plex sees the library at the same path Streamline does. In Docker or Kubernetes it usually doesn't (Streamline's `/srv/streamline/movies` is Plex's `/data/movies`), so the lookup misses and Streamline falls back to rescanning **every** section. That works, but it is a bigger scan than you need: set the two keys to scope it. Settings → Media Servers lists the available sections (`POST /api/v1/media-servers/discover`).
 
 ### download
 
