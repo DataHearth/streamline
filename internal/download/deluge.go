@@ -10,8 +10,14 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/anacrolix/torrent/metainfo"
+
 	"github.com/datahearth/streamline/internal/otelx"
 )
+
+// delugePrefetchTimeout is the deadline (seconds) core.prefetch_magnet_metadata
+// itself enforces waiting on peers for the metadata exchange.
+const delugePrefetchTimeout = 30
 
 // delugeRPCPath is the Deluge Web UI JSON-RPC endpoint. streamline drives the
 // Web UI (port 8112 by default), not the native daemon RPC — it matches the
@@ -239,6 +245,50 @@ func (d *Deluge) AddTorrent(
 		return "", fmt.Errorf("deluge add: no hash returned")
 	}
 	return strings.ToLower(hash), nil
+}
+
+// FetchMagnetMetadata resolves a magnet's metainfo via
+// core.prefetch_magnet_metadata WITHOUT admitting the torrent into the
+// session — the RPC returns a (torrent_id, base64) pair where the base64
+// decodes to a bencoded info dict, not a full .torrent. It is wrapped into a
+// complete metainfo so the result can go through decodeTorrentFiles and
+// AddTorrent like any other .torrent-bytes source.
+func (d *Deluge) FetchMagnetMetadata(
+	ctx context.Context,
+	magnet string,
+) ([]byte, error) {
+	raw, err := d.call(
+		ctx, "core.prefetch_magnet_metadata", magnet, delugePrefetchTimeout,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("deluge prefetch magnet metadata: %w", err)
+	}
+	var result [2]string
+	if uerr := json.Unmarshal(raw, &result); uerr != nil {
+		return nil, fmt.Errorf(
+			"deluge prefetch magnet metadata: %w: %w", ErrBadResponse, uerr,
+		)
+	}
+	// A short/empty array or a null result unmarshals into [2]string without
+	// error, leaving result[1] at its zero value — json.Unmarshal treats a
+	// missing array element as "leave it zeroed", not a decode failure.
+	if result[1] == "" {
+		return nil, fmt.Errorf(
+			"%w: empty prefetch metadata response", ErrBadResponse,
+		)
+	}
+	infoBytes, derr := base64.StdEncoding.DecodeString(result[1])
+	if derr != nil {
+		return nil, fmt.Errorf(
+			"deluge prefetch magnet metadata: %w: %w", ErrBadResponse, derr,
+		)
+	}
+	mi := metainfo.MetaInfo{InfoBytes: infoBytes}
+	var buf bytes.Buffer
+	if werr := mi.Write(&buf); werr != nil {
+		return nil, fmt.Errorf("deluge prefetch magnet metadata: %w", werr)
+	}
+	return buf.Bytes(), nil
 }
 
 // delugeKeys are the get_torrent_status fields streamline reads.

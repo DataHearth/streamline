@@ -921,6 +921,158 @@ var _ = Describe("GrabEpisode selective files", Label("unit", "downloads"), func
 	)
 })
 
+// fakePrefetchClient adds a MagnetMetadataFetcher implementation on top of
+// fakeSelectiveClient. It is a separate type (rather than a method on
+// fakeSelectiveClient itself) so the existing magnet specs above, which use
+// a plain *fakeSelectiveClient, keep exercising a client that does NOT carry
+// the optional capability — client.(MagnetMetadataFetcher) must fail for them.
+type fakePrefetchClient struct {
+	fakeSelectiveClient
+	fetchCalls  int
+	fetchMagnet string
+	fetchBytes  []byte
+	fetchErr    error
+}
+
+func (f *fakePrefetchClient) FetchMagnetMetadata(
+	_ context.Context, magnet string,
+) ([]byte, error) {
+	f.fetchCalls++
+	f.fetchMagnet = magnet
+	return f.fetchBytes, f.fetchErr
+}
+
+var _ = Describe("GrabEpisode magnet prefetch", Label("unit", "downloads"), func() {
+	var (
+		ctx    context.Context
+		store  *dbmocks.MockStore
+		mgr    Downloader
+		client *fakePrefetchClient
+	)
+
+	BeforeEach(func() {
+		ctx = context.Background()
+		store = dbmocks.NewMockStore(GinkgoT())
+		client = &fakePrefetchClient{
+			fakeSelectiveClient: fakeSelectiveClient{addHash: "abc123"},
+		}
+		mgr = New(store, client)
+		// The §4.6 hash pre-check runs before Flow A on every grab.
+		store.EXPECT().
+			FindWidenableDownloadRecordByHash(mock.Anything, mock.Anything).
+			Return(nil, nil).Once()
+		configtest.Setup(map[string]any{
+			"download": map[string]any{"selective_files": true},
+			"download_clients": []map[string]any{{
+				"name": "embedded", "client_type": "builtin",
+				"download_dir": "/downloads", "enabled": true,
+			}},
+		})
+	})
+
+	magnetResult := func() indexer.SearchResult {
+		return indexer.SearchResult{
+			Title:    "Show S01",
+			Download: "magnet:?xt=urn:btih:deadbeef",
+		}
+	}
+
+	// twoEpisodeShow matches the two-file torrent both prefetch fixtures below
+	// hand back: S01E01 id=21, S01E02 id=22.
+	twoEpisodeShow := func() *ent.TVShow {
+		return &ent.TVShow{
+			ID:   1,
+			Type: tvshow.TypeStandard,
+			Edges: ent.TVShowEdges{Seasons: []*ent.Season{{
+				Number: 1,
+				Edges: ent.SeasonEdges{Episodes: []*ent.Episode{
+					{ID: 21, Number: 1},
+					{ID: 22, Number: 2},
+				}},
+			}}},
+		}
+	}
+
+	twoEpisodeMetainfo := func() []byte {
+		return buildTorrentBytes(metainfo.Info{
+			Name: "Show",
+			Files: []metainfo.FileInfo{
+				{Path: []string{"Show.S01E01.mkv"}, Length: aboveFloor},
+				{Path: []string{"Show.S01E02.mkv"}, Length: aboveFloor},
+			},
+		})
+	}
+
+	It(
+		"fetcher success: AddTorrent gets Bytes+WantedFiles, record applied immediately",
+		func() {
+			client.fetchBytes = twoEpisodeMetainfo()
+			show := twoEpisodeShow()
+			store.EXPECT().
+				TVShowForEpisode(mock.Anything, uint32(21)).
+				Return(show, nil).Once()
+			store.EXPECT().CreateDownloadRecord(mock.Anything, mock.MatchedBy(
+				func(p db.CreateDownloadRecordParams) bool {
+					return p.EpisodeID == 21 &&
+						p.SelectionState == downloadrecord.SelectionStateApplied
+				},
+			)).Return(&ent.DownloadRecord{ID: 42}, nil).Once()
+			store.EXPECT().SetDownloadRecordSelection(
+				mock.Anything, uint32(42), downloadrecord.SelectionStateApplied,
+				[]int{0}, aboveFloor,
+			).Return(nil).Once()
+
+			_, err := mgr.GrabEpisode(ctx, magnetResult(), 21, []uint32{21})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(client.fetchCalls).To(Equal(1))
+			Expect(client.fetchMagnet).To(Equal("magnet:?xt=urn:btih:deadbeef"))
+			Expect(client.addTorrentCalls).To(Equal(1))
+			Expect(client.addTorrentSrc.Magnet).To(BeEmpty())
+			Expect(client.addTorrentSrc.Bytes).NotTo(BeEmpty())
+			Expect(client.addTorrentSrc.WantedFiles).To(Equal([]int{0}))
+			Expect(client.setWantedCalls).To(Equal(1))
+		},
+	)
+
+	It("fetcher error: falls back to magnet add, record pending", func() {
+		client.fetchErr = errors.New("rpc timeout")
+		store.EXPECT().CreateDownloadRecord(mock.Anything, mock.MatchedBy(
+			func(p db.CreateDownloadRecordParams) bool {
+				return p.EpisodeID == 21 &&
+					p.SelectionState == downloadrecord.SelectionStatePending
+			},
+		)).Return(&ent.DownloadRecord{ID: 43}, nil).Once()
+
+		_, err := mgr.GrabEpisode(ctx, magnetResult(), 21, []uint32{21})
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(client.fetchCalls).To(Equal(1))
+		Expect(client.addTorrentCalls).To(Equal(1))
+		Expect(client.addTorrentSrc.Magnet).To(Equal("magnet:?xt=urn:btih:deadbeef"))
+		// TVShowForEpisode and SetWantedFiles carry no expectation above:
+		// calling either would panic the mock.
+		Expect(client.setWantedCalls).To(Equal(0))
+	})
+
+	It(
+		"zero match on prefetched bytes: fails wrapping ErrNoWantedFiles, no AddTorrent",
+		func() {
+			client.fetchBytes = twoEpisodeMetainfo()
+			show := twoEpisodeShow()
+			store.EXPECT().
+				TVShowForEpisode(mock.Anything, uint32(21)).
+				Return(show, nil).Once()
+
+			_, err := mgr.GrabEpisode(ctx, magnetResult(), 21, []uint32{999})
+
+			Expect(errors.Is(err, ErrNoWantedFiles)).To(BeTrue())
+			Expect(client.fetchCalls).To(Equal(1))
+			Expect(client.addTorrentCalls).To(Equal(0))
+		},
+	)
+})
+
 // widenShow is a two-episode show (S01E01 id=21, S01E02 id=22) matching the
 // file names widenSelection's mock ListFiles responses use below.
 func widenShow() *ent.TVShow {

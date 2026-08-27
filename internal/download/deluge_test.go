@@ -3,6 +3,7 @@ package download
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -396,6 +397,85 @@ var _ = Describe("Deluge Client", Label("unit", "downloads"), func() {
 			Expect(err).To(HaveOccurred())
 			Expect(called).To(BeFalse())
 		})
+	})
+
+	Describe("FetchMagnetMetadata", func() {
+		It(
+			"decodes the base64 info dict and returns loadable metainfo bytes",
+			func() {
+				info, err := bencode.Marshal(metainfo.Info{
+					Name: "Show",
+					Files: []metainfo.FileInfo{
+						{Path: []string{"a.mkv"}, Length: 4},
+						{Path: []string{"b.mkv"}, Length: 4},
+					},
+					PieceLength: 32768,
+					Pieces:      make([]byte, 20),
+				})
+				Expect(err).NotTo(HaveOccurred())
+				b64 := base64.StdEncoding.EncodeToString(info)
+
+				srv := delugeServer(
+					func(method string, params []json.RawMessage) (any, string) {
+						Expect(method).To(Equal("core.prefetch_magnet_metadata"))
+						Expect(params).To(HaveLen(2))
+						var magnet string
+						Expect(json.Unmarshal(params[0], &magnet)).To(Succeed())
+						Expect(magnet).To(Equal("magnet:?xt=urn:btih:deadbeef"))
+						var timeout int
+						Expect(json.Unmarshal(params[1], &timeout)).To(Succeed())
+						Expect(timeout).To(Equal(30))
+						return []any{"session-id", b64}, ""
+					},
+				)
+				DeferCleanup(srv.Close)
+
+				raw, err := NewDeluge(srv.URL, "pw").FetchMagnetMetadata(
+					context.Background(), "magnet:?xt=urn:btih:deadbeef",
+				)
+				Expect(err).NotTo(HaveOccurred())
+
+				mi, lerr := metainfo.Load(bytes.NewReader(raw))
+				Expect(lerr).NotTo(HaveOccurred())
+				got, uerr := mi.UnmarshalInfo()
+				Expect(uerr).NotTo(HaveOccurred())
+				Expect(got.Name).To(Equal("Show"))
+				Expect(got.Files).To(HaveLen(2))
+			},
+		)
+
+		It("propagates an RPC error", func() {
+			srv := delugeServer(func(string, []json.RawMessage) (any, string) {
+				return nil, "timed out"
+			})
+			DeferCleanup(srv.Close)
+
+			_, err := NewDeluge(srv.URL, "pw").FetchMagnetMetadata(
+				context.Background(), "magnet:?xt=urn:btih:deadbeef",
+			)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("timed out"))
+		})
+
+		DescribeTable(
+			"errors instead of succeeding on a malformed result — json.Unmarshal"+
+				" leaves a missing array element zeroed rather than failing",
+			func(result any) {
+				srv := delugeServer(func(string, []json.RawMessage) (any, string) {
+					return result, ""
+				})
+				DeferCleanup(srv.Close)
+
+				_, err := NewDeluge(srv.URL, "pw").FetchMagnetMetadata(
+					context.Background(), "magnet:?xt=urn:btih:deadbeef",
+				)
+				Expect(err).To(HaveOccurred())
+				Expect(err).To(MatchError(ErrBadResponse))
+			},
+			Entry("null result", nil),
+			Entry("one-element array (no b64)", []any{"session-id"}),
+			Entry("empty-string b64 element", []any{"session-id", ""}),
+		)
 	})
 })
 

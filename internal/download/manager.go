@@ -639,6 +639,23 @@ func (d *download) grab(
 	var selection *pendingSelection
 	selectivePending := false
 	if config.Get().Download.SelectiveFiles && len(wantedEpisodes) > 0 {
+		// A client that can resolve a magnet's metainfo without admitting the
+		// torrent (spec §4.2) lets a selective magnet grab take the exact
+		// .torrent path below instead of the pending fallback. Prefetch failure
+		// is not fatal — it's the same "fall through to today's behavior" rule
+		// as a decode failure just below.
+		if len(src.Bytes) == 0 && src.Magnet != "" {
+			if fetcher, ok := client.(MagnetMetadataFetcher); ok {
+				fetched, ferr := fetcher.FetchMagnetMetadata(ctx, src.Magnet)
+				if ferr != nil {
+					slog.WarnContext(ctx,
+						"grab: magnet metadata prefetch failed; pending selection",
+						"title", result.Title, "error", ferr)
+				} else {
+					src.Bytes, src.Magnet = fetched, ""
+				}
+			}
+		}
 		switch {
 		case len(src.Bytes) > 0:
 			files, ferr := decodeTorrentFiles(src.Bytes)
