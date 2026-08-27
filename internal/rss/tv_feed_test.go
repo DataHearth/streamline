@@ -403,24 +403,6 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 			Expect(scanner.Run(ctx)).To(Succeed())
 		})
 
-		It(
-			"leaves the season alone when a whole-season profile's pack only ties its best file",
-			func() {
-				configtest.Setup(upgradeConfig("a"))
-				newScanner()
-				expectQueries(
-					nil,
-					[]*ent.TVShow{onProfile(wholeSeasonProfile, showWith(
-						epWithFile(11, 1, plainEpFile),
-						epWithFile(12, 2, remuxEpFile),
-					))},
-				)
-				feeder.EXPECT().Feed(mock.Anything, "a").
-					Return([]indexer.SearchResult{{Title: tiedPack}}, nil).Once()
-				Expect(scanner.Run(ctx)).To(Succeed())
-			},
-		)
-
 		It("never upgrades under a profile with upgrade_allowed false", func() {
 			configtest.Setup(upgradeConfig("a"))
 			newScanner()
@@ -451,73 +433,6 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 			expectDownloading(11)
 			Expect(scanner.Run(ctx)).To(Succeed())
 		})
-
-		It(
-			"grabs a whole season upgrade when the pack beats the season's best file",
-			func() {
-				configtest.Setup(upgradeConfig("a"))
-				newScanner()
-				expectQueries(
-					nil,
-					[]*ent.TVShow{onProfile(wholeSeasonProfile, showWith(
-						epWithFile(11, 1, plainEpFile),
-						epWithFile(12, 2, remuxEpFile),
-					))},
-				)
-				// betterEp2 rides along as the same observable used above: no
-				// grabber/store expectation is registered for it, so the strict
-				// mock fails if E02 were left ungrabbed by the pack (which would
-				// leave it available for betterEp2 to claim).
-				feeder.EXPECT().Feed(mock.Anything, "a").
-					Return([]indexer.SearchResult{
-						{Title: betterPack}, {Title: betterEp2},
-					}, nil).Once()
-				grabber.EXPECT().
-					GrabEpisode(mock.Anything, mock.Anything, uint32(11)).
-					Return(&ent.DownloadRecord{ID: 55}, nil).Once()
-				store.EXPECT().
-					SetDownloadRecordReplaceMode(
-						mock.Anything, uint32(55), downloadrecord.ReplaceModeAll,
-					).
-					Return(nil).Once()
-				// Both targets already have files; see the single-episode
-				// upgrade case above.
-				Expect(scanner.Run(ctx)).To(Succeed())
-			},
-		)
-
-		It(
-			"writes replace mode none for a gap-filling pack on a whole-season profile",
-			func() {
-				configtest.Setup(upgradeConfig("a"))
-				newScanner()
-				expectQueries(
-					[]*ent.TVShow{onProfile(wholeSeasonProfile, showWith(
-						&ent.Episode{ID: 11, Number: 1},
-						&ent.Episode{ID: 12, Number: 2},
-					))},
-					nil,
-				)
-				feeder.EXPECT().Feed(mock.Anything, "a").
-					Return([]indexer.SearchResult{{Title: acceptablePack}}, nil).
-					Once()
-				grabber.EXPECT().
-					GrabEpisode(mock.Anything, mock.Anything, uint32(11)).
-					Return(&ent.DownloadRecord{ID: 55}, nil).Once()
-				// A whole-season profile's escape hatch has no per-episode veto,
-				// so a gap-filling grab must not carry replace_mode: upgrades
-				// here — that would let it replace individual files it beats,
-				// the exact patchwork the key exists to prevent.
-				store.EXPECT().
-					SetDownloadRecordReplaceMode(
-						mock.Anything, uint32(55), downloadrecord.ReplaceModeNone,
-					).
-					Return(nil).Once()
-				expectDownloading(11)
-				expectDownloading(12)
-				Expect(scanner.Run(ctx)).To(Succeed())
-			},
-		)
 
 		It("does not grab a pack that beats nothing and fills nothing", func() {
 			configtest.Setup(upgradeConfig("a"))

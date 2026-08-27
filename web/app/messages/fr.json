@@ -1016,8 +1016,6 @@
 	"quality_presets_help": "Remplit tout le formulaire ci-dessous. Tout reste modifiable avant l'enregistrement.",
 	"quality_profile": "Profil de qualité",
 	"quality_remove_format": "Retirer le format",
-	"quality_replace_whole_season": "Remplacer la saison entière",
-	"quality_replace_whole_season_help": "Juge un pack de saison par rapport à son meilleur fichier et remplace la saison entière d'un coup, plutôt qu'épisode par épisode. Garde des encodages homogènes sur toute la saison, au prix d'un épisode fort qui bloque toute amélioration.",
 	"quality_score": "Score",
 	"quality_server_default": "Valeur par défaut du serveur",
 	"quality_updated": "Profil mis à jour",

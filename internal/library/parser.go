@@ -38,8 +38,12 @@ var (
 	// separator (whitespace right after the dash) is not taken as a group.
 	// The whitespace allowance is what makes cleanGroup necessary: in a
 	// space-separated name the last dash is usually inside "Blu-Ray", so the
-	// match swallows every tag after it.
-	groupRe = regexp.MustCompile(`-([A-Za-z0-9][A-Za-z0-9\s]*)$`)
+	// match swallows every tag after it. A group may be followed by bracketed
+	// afterthoughts the group itself appends ("-Tsundere-Raws (CR)"), captured
+	// separately so they can be put back: they often hold the year.
+	groupRe = regexp.MustCompile(
+		`-([A-Za-z0-9][A-Za-z0-9\s]*?)((?:\s*[\(\[][^\)\]]*[\)\]])*)$`,
+	)
 	// Some P2P groups append their tag after the codec/quality with a dot
 	// instead of a dash (e.g. "x265.RamirouHD", "1080p.PopHD"). dotGroupRe
 	// grabs the trailing dot-token; isNonGroupTag rejects known technical tags
@@ -82,8 +86,10 @@ func Parse(filename string) ParseResult {
 	); m != nil &&
 		cleanGroup(m[1]) != "" {
 		r.Group = cleanGroup(m[1])
-		filename = filename[:len(filename)-len(m[0])]
-		r.Group, filename = expandHyphenatedGroup(r.Group, filename)
+		r.Group, filename = expandHyphenatedGroup(
+			r.Group, filename[:len(filename)-len(m[0])],
+		)
+		filename += m[2]
 	} else if m := dotGroupRe.FindStringSubmatch(
 		filename,
 	); m != nil {

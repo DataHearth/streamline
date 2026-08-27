@@ -65,7 +65,6 @@ type QualityProfileEntry struct {
 	PreferredResolution string `koanf:"preferred_resolution" validate:"required,oneof=720p 1080p 2160p"`
 	MinResolution       string `koanf:"min_resolution"       validate:"required,oneof=720p 1080p 2160p"`
 	UpgradeAllowed      bool   `koanf:"upgrade_allowed"`
-	ReplaceWholeSeason  bool   `koanf:"replace_whole_season"`
 	// AllowedCodecs holds a grab for a decision when the probed video codec
 	// isn't in this list. ffprobe codec names ("hevc", "av1", "h264"), not
 	// validated against a fixed set — ffprobe's namespace is larger than any
@@ -158,12 +157,11 @@ func ResolveScoredProfile(name string) (quality.Profile, bool) {
 		return quality.Profile{}, false
 	}
 	p := quality.Profile{
-		MinResolution:      e.MinResolution,
-		MaxResolution:      e.PreferredResolution,
-		UpgradeAllowed:     e.UpgradeAllowed,
-		ReplaceWholeSeason: e.ReplaceWholeSeason,
-		MinScore:           e.MinScore,
-		UpgradeUntilScore:  e.UpgradeUntilScore,
+		MinResolution:     e.MinResolution,
+		MaxResolution:     e.PreferredResolution,
+		UpgradeAllowed:    e.UpgradeAllowed,
+		MinScore:          e.MinScore,
+		UpgradeUntilScore: e.UpgradeUntilScore,
 	}
 	for _, fs := range e.Formats {
 		f, found := quality.BuiltinByName(fs.Name)

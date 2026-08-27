@@ -147,7 +147,18 @@ var _ = Describe("Filename Parser", Label("unit", "library"), func() {
 			"The.Elusive.Samurai.S02E05.1080p.WEB-DL.x264-tsundere-raws",
 			"tsundere-raws",
 		),
+		Entry(
+			"bracketed tail after the group",
+			"That Time I Got Reincarnated as a Slime S04E08 VOSTFR 1080p WEB x264 AAC -Tsundere-Raws (CR)",
+			"Tsundere-Raws",
+		),
 	)
+
+	It("keeps a bracketed year the group was appended after", func() {
+		r := Parse("Hellboy (2019) 1080p WEB-DL x264-Slay3R (FR)")
+		Expect(r.Group).To(Equal("Slay3R"))
+		Expect(r.Year).To(BeEquivalentTo(2019))
+	})
 
 	DescribeTable(
 		"whole-series / multi-season pack detection",

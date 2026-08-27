@@ -83,7 +83,7 @@
 </script>
 
 <div
-	class="sticky top-16 z-20 -mx-4 mb-1 flex flex-nowrap items-center gap-2 bg-bg-deep/85 px-4 pb-3 pt-3 backdrop-blur-md md:-mx-6 md:flex-wrap md:gap-3 md:px-6 lg:-mx-8 lg:px-8"
+	class="sticky top-16 z-20 -mx-4 mb-1 flex flex-nowrap items-center gap-2 bg-bg-deep/85 px-4 pb-3 pt-3 backdrop-blur-md md:-mx-6 md:flex-wrap md:gap-3 md:px-6"
 >
 	{@render leading?.()}
 

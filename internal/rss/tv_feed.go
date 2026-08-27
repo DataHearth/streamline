@@ -172,14 +172,14 @@ func (s *TVFeedScanner) processItems(
 				"reason", res.RejectReason)
 			continue
 		}
-		if n := s.grabWanted(ctx, ws, parsed, item, p, pass); n > 0 {
+		if n := s.grabWanted(ctx, ws, parsed, item, pass); n > 0 {
 			matched += n
 			continue
 		}
 		// The wanted branch reports 0 both for "no such episode here" and for
 		// "the grab failed"; either way the file on disk, if any, is still the
 		// one to beat, and the upgrade branch re-checks `grabbed` itself.
-		matched += s.grabUpgrade(ctx, us, parsed, item, p, res, pass)
+		matched += s.grabUpgrade(ctx, us, parsed, item, p, pass)
 	}
 	return matched
 }
@@ -200,14 +200,13 @@ func (s *TVFeedScanner) grabWanted(
 	ws *wantedShow,
 	parsed library.ParseResult,
 	item indexer.SearchResult,
-	p quality.Profile,
 	pass *tvPass,
 ) int {
 	if ws == nil {
 		return 0
 	}
 	if parsed.SeasonPack {
-		return s.grabPack(ctx, ws, parsed.Season, item, p, pass.grabbed)
+		return s.grabPack(ctx, ws, parsed.Season, item, pass.grabbed)
 	}
 	e := ws.lookup(parsed)
 	if e == nil {
@@ -232,7 +231,6 @@ func (s *TVFeedScanner) grabPack(
 	ws *wantedShow,
 	season uint16,
 	item indexer.SearchResult,
-	p quality.Profile,
 	grabbed map[uint32]struct{},
 ) int {
 	wanted := make([]*ent.Episode, 0, len(ws.seasons[season]))
@@ -252,19 +250,10 @@ func (s *TVFeedScanner) grabPack(
 		return 0
 	}
 	// The pack is grabbed for the gap, but it may also beat files already on
-	// disk. Under the default per-episode rule the importer decides that per
-	// episode, so upgrades is what lets it. A profile that opted into
-	// replace_whole_season wants no per-episode veto here either — writing
-	// upgrades would let this gap-filling grab quietly replace whatever
-	// individual files it beats, exactly the mixed-source patchwork the key
-	// exists to prevent, so it gets none instead: the files already on disk
-	// are left alone, matching the old bool-based behaviour.
-	mode := downloadrecord.ReplaceModeUpgrades
-	if p.ReplaceWholeSeason {
-		mode = downloadrecord.ReplaceModeNone
-	}
+	// disk. The importer decides that per episode, and upgrades is what lets
+	// it.
 	if err := s.store.SetDownloadRecordReplaceMode(
-		ctx, rec.ID, mode,
+		ctx, rec.ID, downloadrecord.ReplaceModeUpgrades,
 	); err != nil {
 		slog.ErrorContext(ctx, "tv feed-scan: set replace mode failed",
 			"show", ws.show.Title, "record.id", rec.ID, "error", err)
@@ -281,18 +270,15 @@ func (s *TVFeedScanner) grabPack(
 }
 
 // grabUpgrade grabs item as a replacement for the files it beats, flagging
-// the record so the importer overwrites instead of skipping. A pack is
-// judged per episode by default — only the episodes the release actually
-// outscores are grabbed and marked; see grabWholeSeasonUpgrade for the
-// all-or-nothing rule a profile can opt into. Reports how many episodes it
-// covered.
+// the record so the importer overwrites instead of skipping. A pack is judged
+// per episode: only the episodes the release actually outscores are grabbed
+// and marked. Reports how many episodes it covered.
 func (s *TVFeedScanner) grabUpgrade(
 	ctx context.Context,
 	us *wantedShow,
 	parsed library.ParseResult,
 	item indexer.SearchResult,
 	p quality.Profile,
-	rel quality.Result,
 	pass *tvPass,
 ) int {
 	if us == nil || !p.UpgradeAllowed {
@@ -312,9 +298,6 @@ func (s *TVFeedScanner) grabUpgrade(
 	}
 	if len(targets) == 0 {
 		return 0
-	}
-	if p.ReplaceWholeSeason {
-		return s.grabWholeSeasonUpgrade(ctx, us, targets, item, p, rel, pass)
 	}
 	release := qualityctx.ContextFromRelease(
 		item.Title, item.Size, item.Seeders,
@@ -370,82 +353,6 @@ func (s *TVFeedScanner) grabUpgrade(
 		"show", us.show.Title, "release", item.Title,
 		"episodes", len(selected), "considered", len(targets))
 	return len(selected)
-}
-
-// grabWholeSeasonUpgrade is the ReplaceWholeSeason escape hatch: a pack must
-// beat the season's *best* file, since there is no per-episode veto once it
-// is grabbed, and beating the worst would replace every other episode with
-// something worse. Reports how many episodes it covered.
-func (s *TVFeedScanner) grabWholeSeasonUpgrade(
-	ctx context.Context,
-	us *wantedShow,
-	targets []*ent.Episode,
-	item indexer.SearchResult,
-	p quality.Profile,
-	rel quality.Result,
-	pass *tvPass,
-) int {
-	best := 0
-	for _, e := range targets {
-		if len(e.Edges.MediaFiles) == 0 {
-			return 0
-		}
-		mf := e.Edges.MediaFiles[0]
-		file := qualityctx.ContextFromFile(
-			filepath.Base(mf.Path), mf.Size, int(mf.Width), mf.VideoCodec,
-		)
-		if !p.UpgradableFrom(file.Resolution) {
-			slog.DebugContext(
-				ctx,
-				"tv feed-scan: upgrade skipped, file outside band",
-				"show",
-				us.show.Title,
-				"episode.id",
-				e.ID,
-				"file.resolution",
-				file.Resolution,
-				"release",
-				item.Title,
-			)
-			return 0
-		}
-		if score := quality.Evaluate(p, file).Score; score > best {
-			best = score
-		}
-	}
-	if !p.ShouldUpgrade(best, rel.Score) {
-		return 0
-	}
-
-	rec, err := s.downloads.GrabEpisode(ctx, item, targets[0].ID)
-	if err != nil {
-		slog.WarnContext(ctx, "tv feed-scan: upgrade grab failed",
-			"show", us.show.Title, "release", item.Title, "error", err)
-		if ierr := s.store.IncrementEpisodeGrabFailures(
-			ctx, targets[0].ID,
-		); ierr != nil {
-			slog.WarnContext(ctx, "tv feed-scan: bump episode grab_failures failed",
-				"episode.id", targets[0].ID, "error", ierr)
-		}
-		return 0
-	}
-	// Without the flag the importer skips every episode that already has a file,
-	// so the upgrade this run just grabbed can never land: actionable, not noise.
-	if err := s.store.SetDownloadRecordReplaceMode(
-		ctx, rec.ID, downloadrecord.ReplaceModeAll,
-	); err != nil {
-		slog.ErrorContext(ctx, "tv feed-scan: set replace mode failed",
-			"show", us.show.Title, "record.id", rec.ID, "error", err)
-	}
-	// Every target already has a file this grab is replacing, per the
-	// grabUpgrade comment above.
-	for _, e := range targets {
-		pass.grabbed[e.ID] = struct{}{}
-	}
-	slog.InfoContext(ctx, "tv feed-scan: grabbed upgrade",
-		"show", us.show.Title, "release", item.Title, "episodes", len(targets),
-		"file_score", best, "release_score", rel.Score)
-	return len(targets)
 }
 
 func (s *TVFeedScanner) grabOne(

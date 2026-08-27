@@ -36,11 +36,9 @@
 	// scroll), so how many chips a cell can hold is a measured quantity rather
 	// than a constant. Below that the cells keep their 92px minimum and three.
 	const MAX_VISIBLE = 3;
-	// Measured, not guessed: a chip is 21.75px tall plus the 4px flex gap, the
-	// "+N" button 19px plus its own gap, and the header is the cell's 12px of
-	// padding plus a 16.5px date row.
+	// Measured, not guessed: a chip is 21.75px tall plus the 4px flex gap, and
+	// the header is the cell's 12px of padding plus a 16.5px date row.
 	const CHIP_H = 26;
-	const MORE_H = 23;
 	const HEAD_H = 29;
 	let weeksEl = $state<HTMLDivElement | null>(null);
 	let cellH = $state(0);
@@ -56,17 +54,12 @@
 
 	// Date row plus the cell's own padding come off the top before chips fit.
 	let chipRoom = $derived(Math.max(0, cellH - HEAD_H));
-	// The "+N" button is shorter than a chip, so a day that overflows loses that
-	// much room rather than a whole chip slot — costing a title the cell had the
-	// pixels for, which is how a two-release day showed one and "+1 more".
-	function visibleFor(n: number): number {
-		const fits = Math.min(MAX_VISIBLE, Math.floor(chipRoom / CHIP_H));
-		if (n <= fits) return n;
-		return Math.max(
-			1,
-			Math.min(MAX_VISIBLE, Math.floor((chipRoom - MORE_H) / CHIP_H)),
-		);
-	}
+	// An overflowing day spends one of these rows on the "+N" button (it is
+	// shorter than a chip, so a whole row is the conservative reservation): a
+	// cell with room for three shows two releases and "+N". Budgeting it as a
+	// height subtracted from the room was off by a slot — integer division turns
+	// any shortfall into a lost chip — so a two-chip cell showed one and "+1".
+	let fits = $derived(Math.min(MAX_VISIBLE, Math.floor(chipRoom / CHIP_H)));
 	const POP_W = 248;
 	const GAP = 6;
 
@@ -195,7 +188,8 @@
 		{#each grid as week, w (w)}
 			{#each week as cell (cell.date.toISOString())}
 				{@const evs = eventsForDay(events, cell.date)}
-				{@const vis = visibleFor(evs.length)}
+				{@const vis =
+					evs.length <= fits ? evs.length : Math.max(0, fits - 1)}
 				{@const isToday = isSameDay(cell.date, today)}
 				{@const key = cell.date.toDateString()}
 				<div
@@ -238,13 +232,12 @@
 							type="button"
 							aria-haspopup="dialog"
 							aria-expanded={openKey === key}
-							aria-label="Show all {evs.length} releases on {longDate.format(
-								cell.date,
-							)}"
+							aria-label="Show the {evs.length -
+								vis} remaining releases on {longDate.format(cell.date)}"
 							onclick={(ev) =>
 								open(
 									key,
-									evs,
+									evs.slice(vis),
 									longDate.format(cell.date),
 									ev.currentTarget,
 								)}

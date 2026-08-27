@@ -556,20 +556,4 @@ var _ = Describe("ResolveScoredProfile", Label("unit", "config"), func() {
 		_, ok := config.ResolveScoredProfile("anything")
 		Expect(ok).To(BeFalse())
 	})
-
-	It("carries replace_whole_season onto the scored profile", func() {
-		configtest.Setup(map[string]any{
-			"quality_profiles": []map[string]any{{
-				"name":                 "matched",
-				"preferred_resolution": "1080p",
-				"min_resolution":       "720p",
-				"upgrade_allowed":      true,
-				"replace_whole_season": true,
-			}},
-			"quality_default_profile": "matched",
-		})
-		p, ok := config.ResolveScoredProfile("matched")
-		Expect(ok).To(BeTrue())
-		Expect(p.ReplaceWholeSeason).To(BeTrue())
-	})
 })

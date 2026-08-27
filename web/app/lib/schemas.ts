@@ -68,7 +68,6 @@ export const qualityProfile = v.object({
 	preferred_resolution: resolution,
 	min_resolution: resolution,
 	upgrade_allowed: v.boolean(),
-	replace_whole_season: v.boolean(),
 	// Empty means any codec, which is how every profile that predates the media
 	// probe behaves — so there is no minLength here on purpose. Not v.optional:
 	// QualityProfileForm's defaultValues and openEdit both always populate this

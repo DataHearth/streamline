@@ -228,30 +228,6 @@ var _ = Describe(
 				Expect(got.UpgradeAllowed).To(BeTrue())
 			})
 
-			It("round-trips replace_whole_season", func() {
-				configtest.SetupFile(qualityProfileOverride(
-					map[string]any{
-						"name": "hd", "preferred_resolution": "1080p",
-						"min_resolution": "720p",
-					}))
-
-				body := `{"name": "hd", "preferred_resolution": "1080p",` +
-					` "min_resolution": "720p", "replace_whole_season": true}`
-				req := app.req(http.MethodPut, "/api/v1/quality-profiles/hd", "",
-					strings.NewReader(body))
-				req.Header.Set("Content-Type", "application/json")
-				resp := app.do(req)
-				defer resp.Body.Close()
-				Expect(resp.StatusCode).To(Equal(http.StatusOK))
-
-				var qp QualityProfile
-				Expect(json.NewDecoder(resp.Body).Decode(&qp)).To(Succeed())
-				Expect(qp.ReplaceWholeSeason).To(BeTrue())
-
-				got, _ := config.ResolveQualityProfile("hd")
-				Expect(got.ReplaceWholeSeason).To(BeTrue())
-			})
-
 			It("returns 404 for nonexistent profile", func() {
 				body := `{"name": "x", "preferred_resolution": "1080p", "min_resolution": "720p"}`
 				req := app.req(http.MethodPut, "/api/v1/quality-profiles/ghost", "",

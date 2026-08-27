@@ -1016,8 +1016,6 @@
 	"quality_presets_help": "Fills in the whole form below. Everything stays editable before you save.",
 	"quality_profile": "Quality profile",
 	"quality_remove_format": "Remove format",
-	"quality_replace_whole_season": "Replace whole season",
-	"quality_replace_whole_season_help": "Judge a season pack against its best file and replace the whole season at once instead of episode by episode. Keeps encodes matched across a season, at the cost of one strong episode blocking every upgrade.",
 	"quality_score": "Score",
 	"quality_server_default": "Server default",
 	"quality_updated": "Profile updated",

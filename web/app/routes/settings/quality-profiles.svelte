@@ -68,7 +68,6 @@
 		preferred_resolution: "1080p",
 		min_resolution: "720p",
 		upgrade_allowed: true,
-		replace_whole_season: false,
 		allowed_codecs: [],
 		formats: [],
 		min_score: 0,
@@ -94,7 +93,6 @@
 			preferred_resolution: p.preferred_resolution,
 			min_resolution: p.min_resolution,
 			upgrade_allowed: p.upgrade_allowed,
-			replace_whole_season: p.replace_whole_season,
 			allowed_codecs: p.allowed_codecs ?? [],
 			// The API omits a zero threshold, so absent is 0 rather than unset.
 			formats: (p.formats ?? []).map((f) => ({
