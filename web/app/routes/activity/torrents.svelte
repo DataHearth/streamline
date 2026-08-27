@@ -123,6 +123,9 @@
 			}),
 		onSuccess: () => {
 			invalidateTorrents();
+			// The server purges the download record tracking this torrent, so the
+			// queue on the Activity page is stale the moment this returns.
+			qc.invalidateQueries({ queryKey: ["activity", "queue"] });
 			selectedHash = null;
 			toast.ok("Torrent removed");
 		},

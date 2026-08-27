@@ -4708,6 +4708,74 @@ func (_c *MockTx_FindInviteByTokenHash_Call) RunAndReturn(run func(ctx context.C
 	return _c
 }
 
+// FindLiveDownloadRecordByHash provides a mock function for the type MockTx
+func (_mock *MockTx) FindLiveDownloadRecordByHash(ctx context.Context, hash string) (*ent.DownloadRecord, error) {
+	ret := _mock.Called(ctx, hash)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindLiveDownloadRecordByHash")
+	}
+
+	var r0 *ent.DownloadRecord
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (*ent.DownloadRecord, error)); ok {
+		return returnFunc(ctx, hash)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) *ent.DownloadRecord); ok {
+		r0 = returnFunc(ctx, hash)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ent.DownloadRecord)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, hash)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_FindLiveDownloadRecordByHash_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindLiveDownloadRecordByHash'
+type MockTx_FindLiveDownloadRecordByHash_Call struct {
+	*mock.Call
+}
+
+// FindLiveDownloadRecordByHash is a helper method to define mock.On call
+//   - ctx context.Context
+//   - hash string
+func (_e *MockTx_Expecter) FindLiveDownloadRecordByHash(ctx any, hash any) *MockTx_FindLiveDownloadRecordByHash_Call {
+	return &MockTx_FindLiveDownloadRecordByHash_Call{Call: _e.mock.On("FindLiveDownloadRecordByHash", ctx, hash)}
+}
+
+func (_c *MockTx_FindLiveDownloadRecordByHash_Call) Run(run func(ctx context.Context, hash string)) *MockTx_FindLiveDownloadRecordByHash_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_FindLiveDownloadRecordByHash_Call) Return(downloadRecord *ent.DownloadRecord, err error) *MockTx_FindLiveDownloadRecordByHash_Call {
+	_c.Call.Return(downloadRecord, err)
+	return _c
+}
+
+func (_c *MockTx_FindLiveDownloadRecordByHash_Call) RunAndReturn(run func(ctx context.Context, hash string) (*ent.DownloadRecord, error)) *MockTx_FindLiveDownloadRecordByHash_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // FindMediaFileByEpisodeID provides a mock function for the type MockTx
 func (_mock *MockTx) FindMediaFileByEpisodeID(ctx context.Context, episodeID uint32) (*ent.MediaFile, error) {
 	ret := _mock.Called(ctx, episodeID)

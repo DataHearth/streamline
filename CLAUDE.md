@@ -39,6 +39,7 @@ Unified media management platform replacing the *arr stack (Radarr, Sonarr, Lida
 - `/api/docs` — Scalar UI shell (`web.Handler.APIDocs`). `/api/v1/openapi.yaml` — embedded spec. REST API mounted via `restapi.Mount`.
 - SPA fallback: `s.router.NotFound` → `web.Handler.SPAShell`, which writes the embedded `web/app/index.html` for every non-API, non-static path; Routify owns client-side routing incl. its own 404. Static assets served at `/static/*` from `fs.Sub(web.Assets, "static")` (wired in `web.Mount`).
 - `/posters/{kind}/{id}/poster.jpg` — poster proxy via `s.posters.Serve`.
+- `DELETE /api/v1/torrents/{hash}` also calls `downloads.PurgeRecordForHash`, dropping the live download record behind that torrent and reverting its media. The monitor's orphan sweep would eventually do it, but only after `monitorOrphanGrace` (2 min) — a window that exists to tolerate a client that hasn't caught up with its own listing, which a removal issued through streamline is not. The Torrents page invalidates `["activity","queue"]` on success for the same reason.
 - Auth-middleware `ExcludePaths` is assembled in `internal/server/wire.go` (`/login`, `/register`, `/auth/login`, `/auth/register`, `/auth/oidc/`); matcher in `internal/server/middleware/auth.go`, paths ending `/` match as prefix.
 
 ## Auth & Sessions

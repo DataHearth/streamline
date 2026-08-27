@@ -306,6 +306,10 @@ type Store interface {
 		ctx context.Context,
 		id uint32,
 	) (*ent.DownloadRecord, error)
+	FindLiveDownloadRecordByHash(
+		ctx context.Context,
+		hash string,
+	) (*ent.DownloadRecord, error)
 	ListDownloadHistory(
 		ctx context.Context,
 		limit int,

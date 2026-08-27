@@ -1432,6 +1432,10 @@ paths:
     delete:
       operationId: deleteTorrent
       summary: Remove a torrent, optionally deleting its data
+      description: |
+        Also drops the in-flight download record tracking this torrent, if any,
+        reverting its media to wanted — the queue does not wait for the
+        monitor's orphan sweep to notice.
       tags: [torrents]
       parameters:
         - $ref: "#/components/parameters/DeleteFiles"

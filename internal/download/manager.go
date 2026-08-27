@@ -191,6 +191,7 @@ type Downloader interface {
 		torrentHash string,
 		deleteFiles bool,
 	) error
+	PurgeRecordForHash(ctx context.Context, torrentHash string) error
 	Queue(ctx context.Context) (QueueSnapshot, error)
 	CancelQueueItem(ctx context.Context, recordID uint32) error
 	PauseQueueItem(ctx context.Context, recordID uint32) error
@@ -764,6 +765,32 @@ func (d *download) purgeOrphanedRecord(
 				"movie.id", m.ID, "error", err)
 		}
 	}
+}
+
+// PurgeRecordForHash drops the live record tracking torrentHash, if any. It is
+// the deliberate counterpart to the monitor's orphan sweep: that one waits out
+// monitorOrphanGrace because a torrent missing from a client's listing may just
+// be a client that hasn't caught up, while a removal issued through streamline
+// itself is known to be final the moment it succeeds. No record for the hash is
+// not an error — a torrent added out-of-band has none.
+func (d *download) PurgeRecordForHash(
+	ctx context.Context,
+	torrentHash string,
+) error {
+	ctx, span := tracer.Start(ctx, "download.purge_record_for_hash")
+	defer span.End()
+
+	rec, err := d.db.FindLiveDownloadRecordByHash(ctx, torrentHash)
+	if err != nil {
+		return otelx.RecordSpanError(
+			span, fmt.Errorf("find record for %s: %w", torrentHash, err),
+		)
+	}
+	if rec == nil {
+		return nil
+	}
+	d.purgeOrphanedRecord(ctx, rec)
+	return d.ReconcileEpisodeStatuses(ctx)
 }
 
 // ReconcileEpisodeStatuses reverts episodes stranded in "downloading" with no

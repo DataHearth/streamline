@@ -480,6 +480,35 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 		})
 	})
 
+	Describe("PurgeRecordForHash", func() {
+		It("is a no-op when no record tracks the hash", func() {
+			store.EXPECT().
+				FindLiveDownloadRecordByHash(mock.Anything, "H").
+				Return(nil, nil).Once()
+			Expect(mgr.PurgeRecordForHash(ctx, "H")).To(Succeed())
+		})
+
+		It("deletes the record and reverts its movie", func() {
+			rec := &ent.DownloadRecord{
+				ID: 7, Status: downloadrecord.StatusDownloading, TorrentHash: "H",
+			}
+			rec.Edges.Movie = &ent.Movie{ID: 5}
+			store.EXPECT().
+				FindLiveDownloadRecordByHash(mock.Anything, "H").
+				Return(rec, nil).Once()
+			store.EXPECT().
+				DeleteDownloadRecord(mock.Anything, uint32(7)).
+				Return(nil).Once()
+			store.EXPECT().
+				RevertMovieToWantedIfNoFile(mock.Anything, uint32(5)).
+				Return(nil).Once()
+			store.EXPECT().
+				RevertOrphanedDownloadingEpisodes(mock.Anything).
+				Return(0, nil).Once()
+			Expect(mgr.PurgeRecordForHash(ctx, "H")).To(Succeed())
+		})
+	})
+
 	Describe("PauseQueueItem", func() {
 		It("propagates NotFound when the record is absent", func() {
 			store.EXPECT().

@@ -623,6 +623,33 @@ func (db *DB) ListActiveDownloadRecords(
 		All(ctx)
 }
 
+// FindLiveDownloadRecordByHash fetches the in-flight record tracking hash, with
+// its movie edge. Returns a nil row and a nil error when none matches — a
+// torrent the operator added out-of-band has no record, which is not a failure.
+func (db *DB) FindLiveDownloadRecordByHash(
+	ctx context.Context,
+	hash string,
+) (*ent.DownloadRecord, error) {
+	rec, err := db.client.DownloadRecord.Query().
+		Where(
+			downloadrecord.TorrentHashEQ(hash),
+			downloadrecord.StatusIn(
+				downloadrecord.StatusDownloading,
+				downloadrecord.StatusImporting,
+				downloadrecord.StatusHeld,
+			),
+		).
+		WithMovie().
+		First(ctx)
+	if ent.IsNotFound(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("find live download record by hash: %w", err)
+	}
+	return rec, nil
+}
+
 // FindActiveDownloadRecordByID fetches an in-flight record by ID with movie +
 // download_client edges. Returns ent.NotFound when absent or already terminal.
 // Held records match: the queue shows them, so the queue verbs have to be able
