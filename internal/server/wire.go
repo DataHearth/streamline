@@ -362,6 +362,13 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 			cfg.Schedule.MediaProbe,
 			func(time.Duration) scheduler.JobFunc { return jobs.MediaProbe(hygieneSvc) },
 		},
+		{
+			"file-selection",
+			cfg.Schedule.FileSelection,
+			func(time.Duration) scheduler.JobFunc {
+				return jobs.FileSelection(dlManager.(download.SelectionResolver))
+			},
+		},
 	}
 	for _, j := range jobsToRegister {
 		d, err := time.ParseDuration(j.interval)

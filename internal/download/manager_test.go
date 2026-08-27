@@ -334,6 +334,83 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 				Expect(completed).To(BeEmpty())
 			})
 		})
+
+		When(
+			"a client-paused torrent belongs to a pending-selection record",
+			func() {
+				// spec §4.2: qBittorrent reports "paused" while stopped at metadata
+				// during Flow B. A pending record must not flash the paused badge —
+				// that state is RunSelectionPass's window to resolve, not something
+				// the user did.
+				It("syncs season state as NOT paused", func() {
+					configtest.Setup(map[string]any{
+						"download_clients": []map[string]any{{
+							"name": "embedded", "client_type": "builtin",
+							"download_dir": "/downloads", "enabled": true,
+						}},
+					})
+					client := &fakePassClient{
+						torrent: &Torrent{Hash: "abc", Status: StatusPaused},
+					}
+					pendingMgr := New(store, client)
+					store.EXPECT().
+						ListDownloadingRecordsWithMovie(mock.Anything).
+						Return([]*ent.DownloadRecord{{
+							ID:                 7,
+							TorrentHash:        "abc",
+							DownloadClientName: "embedded",
+							SelectionState:     downloadrecord.SelectionStatePending,
+						}}, nil).Once()
+					store.EXPECT().
+						SyncSeasonDownloadStateForRecord(mock.Anything, uint32(7), false).
+						Return(nil).Once()
+
+					completed, err := pendingMgr.CheckStatus(ctx)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(completed).To(BeEmpty())
+				})
+			},
+		)
+
+		When(
+			"a client-paused torrent belongs to a resolved-selection record",
+			func() {
+				// Negative control for the spec above: only selection_state=pending
+				// suppresses the paused mirror. A record whose selection already
+				// resolved (applied here; skipped/unsupported take the same path)
+				// is paused exactly like any other in-flight record — hardcoding
+				// paused=false in CheckStatus would leave this green too.
+				It("syncs season state as paused=true", func() {
+					configtest.Setup(map[string]any{
+						"download_clients": []map[string]any{{
+							"name": "embedded", "client_type": "builtin",
+							"download_dir": "/downloads", "enabled": true,
+						}},
+					})
+					client := &fakePassClient{
+						torrent: &Torrent{Hash: "abc", Status: StatusPaused},
+					}
+					pendingMgr := New(store, client)
+					store.EXPECT().
+						ListDownloadingRecordsWithMovie(mock.Anything).
+						Return([]*ent.DownloadRecord{{
+							ID:                 8,
+							TorrentHash:        "abc",
+							DownloadClientName: "embedded",
+							SelectionState:     downloadrecord.SelectionStateApplied,
+						}}, nil).Once()
+					store.EXPECT().
+						SyncSeasonDownloadStateForRecord(mock.Anything, uint32(8), true).
+						Return(nil).Once()
+
+					completed, err := pendingMgr.CheckStatus(ctx)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(completed).To(BeEmpty())
+				})
+			},
+		)
 	})
 
 	Describe("RemoveTorrent", func() {
@@ -805,6 +882,40 @@ var _ = Describe("GrabEpisode selective files", Label("unit", "downloads"), func
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(client.addTorrentSrc.Selective).To(BeFalse())
+			Expect(client.setWantedCalls).To(Equal(0))
+		},
+	)
+
+	It(
+		"magnet: no bytes to inspect, record created pending, no SetWantedFiles",
+		func() {
+			configtest.Setup(map[string]any{
+				"download": map[string]any{"selective_files": true},
+				"download_clients": []map[string]any{{
+					"name": "embedded", "client_type": "builtin",
+					"download_dir": "/downloads", "enabled": true,
+				}},
+			})
+			result := indexer.SearchResult{
+				Title:    "Show S01",
+				Download: "magnet:?xt=urn:btih:deadbeef",
+			}
+			store.EXPECT().CreateDownloadRecord(mock.Anything, mock.MatchedBy(
+				func(p db.CreateDownloadRecordParams) bool {
+					return p.EpisodeID == 21 &&
+						p.SelectionState == downloadrecord.SelectionStatePending &&
+						len(p.WantedEpisodes) == 1 && p.WantedEpisodes[0] == 21
+				},
+			)).Return(&ent.DownloadRecord{ID: 43}, nil).Once()
+
+			_, err := mgr.GrabEpisode(ctx, result, 21, []uint32{21})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(client.addTorrentCalls).To(Equal(1))
+			Expect(client.addTorrentSrc.Selective).To(BeTrue())
+			Expect(client.addTorrentSrc.WantedFiles).To(BeNil())
+			// TVShowForEpisode and SetWantedFiles carry no expectation above:
+			// calling either would panic the mock — the pass owns resolution.
 			Expect(client.setWantedCalls).To(Equal(0))
 		},
 	)

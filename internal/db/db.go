@@ -287,6 +287,9 @@ type Store interface {
 	// ListPendingSelectionRecords returns records awaiting file-selection
 	// resolution, with episode context eager-loaded.
 	ListPendingSelectionRecords(ctx context.Context) ([]*ent.DownloadRecord, error)
+	// FailDownloadRecord finalizes a record whose torrent already exists in
+	// the client (unlike FailHeldDownloadRecord, no held-state precondition).
+	FailDownloadRecord(ctx context.Context, id uint32, reason string) error
 	ListImportingDownloadRecords(ctx context.Context) ([]*ent.DownloadRecord, error)
 	FindImportingDownloadRecordByID(
 		ctx context.Context,

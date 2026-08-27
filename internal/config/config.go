@@ -13,6 +13,7 @@ import (
 	"slices"
 	"strings"
 	"sync/atomic"
+	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/knadh/koanf/parsers/yaml"
@@ -262,6 +263,7 @@ type ScheduleConfig struct {
 	Cleanup              string `koanf:"cleanup"                validate:"required"`
 	DriftCheck           string `koanf:"drift_check"            validate:"required"`
 	MediaProbe           string `koanf:"media_probe"            validate:"required"`
+	FileSelection        string `koanf:"file_selection"         validate:"required"`
 }
 
 type MetadataConfig struct {
@@ -293,6 +295,16 @@ type FFmpegConfig struct {
 type DownloadConfig struct {
 	SelectiveFiles bool   `koanf:"selective_files"`
 	SelectionGrace string `koanf:"selection_grace" validate:"required"`
+}
+
+// SelectionGraceDuration parses SelectionGrace, falling back to 10 minutes
+// on an unparseable value — the same default as the field itself, so a
+// corrupted config never hangs a pending selection forever (spec §4.5).
+func (c DownloadConfig) SelectionGraceDuration() time.Duration {
+	if d, err := time.ParseDuration(c.SelectionGrace); err == nil {
+		return d
+	}
+	return 10 * time.Minute
 }
 
 type LogConfig struct {
@@ -591,6 +603,7 @@ func defaults() map[string]any {
 		"schedules.import_scan":            "60s",
 		"schedules.drift_check":            "15m",
 		"schedules.media_probe":            "15m",
+		"schedules.file_selection":         "5s",
 		"library.drift_grace_ticks":        3,
 		"library.probe.always_ask":         false,
 		"library.probe.min_duration_ratio": 0.5,

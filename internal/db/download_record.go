@@ -226,6 +226,23 @@ func (db *DB) UpdateDownloadRecordStatus(
 	return db.client.DownloadRecord.UpdateOneID(id).SetStatus(status).Exec(ctx)
 }
 
+// FailDownloadRecord finalizes a record that failed after the torrent was
+// already added to the client — the §6 magnet zero-match arm, where the
+// torrent is removed with its files and there is no held state to route
+// through FailHeldDownloadRecord. Episode/movie status is left alone: the
+// download-monitor reconcile sweep (RevertOrphanedDownloadingEpisodes) is
+// what un-strands it, same as any other record that goes away underneath it.
+func (db *DB) FailDownloadRecord(
+	ctx context.Context,
+	id uint32,
+	reason string,
+) error {
+	return db.client.DownloadRecord.UpdateOneID(id).
+		SetStatus(downloadrecord.StatusFailed).
+		SetFailureReason(reason).
+		Exec(ctx)
+}
+
 func (db *DB) SetDownloadRecordReplaceMode(
 	ctx context.Context,
 	id uint32,

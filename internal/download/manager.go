@@ -181,6 +181,14 @@ type Checker interface {
 	ReconcileEpisodeStatuses(ctx context.Context) error
 }
 
+// SelectionResolver is the consumer-facing surface for the file_selection
+// scheduler job: resolving magnet-sourced selective grabs (selection_state
+// pending) once the client reports the torrent's file list, or giving up
+// past the selection grace window.
+type SelectionResolver interface {
+	RunSelectionPass(ctx context.Context) error
+}
+
 // Downloader is the consumer-facing surface used by HTTP handlers and the
 // scheduler. Implemented by the unexported download struct.
 type Downloader interface {
@@ -629,47 +637,58 @@ func (d *download) grab(
 	// means the release cannot fill the gap at all, so grabbing it wastes
 	// bandwidth with zero client contact).
 	var selection *pendingSelection
-	if config.Get().Download.SelectiveFiles &&
-		len(wantedEpisodes) > 0 && len(src.Bytes) > 0 {
-		files, ferr := decodeTorrentFiles(src.Bytes)
-		if ferr != nil {
-			slog.DebugContext(
-				ctx,
-				"grab: decode torrent files failed; whole-torrent grab",
-				"title",
-				result.Title,
-				"error",
-				ferr,
-			)
-		} else {
-			show, serr := d.db.TVShowForEpisode(ctx, episodeID)
-			if serr != nil {
+	selectivePending := false
+	if config.Get().Download.SelectiveFiles && len(wantedEpisodes) > 0 {
+		switch {
+		case len(src.Bytes) > 0:
+			files, ferr := decodeTorrentFiles(src.Bytes)
+			if ferr != nil {
 				slog.DebugContext(
 					ctx,
-					"grab: tv show lookup failed; whole-torrent grab",
-					"episode.id",
-					episodeID,
+					"grab: decode torrent files failed; whole-torrent grab",
+					"title",
+					result.Title,
 					"error",
-					serr,
+					ferr,
 				)
 			} else {
-				keep, keptBytes, matched := computeKeepSet(
-					files, show.Edges.Seasons, show.Type == tvshow.TypeAnime,
-					wantedEpisodes,
-				)
-				videoTotal := countVideoCandidates(files)
-				switch {
-				case matched == 0:
-					outcome = "no_wanted_files"
-					return nil, otelx.RecordSpanError(span, fmt.Errorf(
-						"%w: %s", ErrNoWantedFiles, result.Title))
-				case len(keep) == len(files) || matched == videoTotal:
-					// Every candidate serves a wanted episode: not selective.
-				default:
-					src.WantedFiles, src.Selective = keep, true
-					selection = &pendingSelection{files: keep, bytes: keptBytes}
+				show, serr := d.db.TVShowForEpisode(ctx, episodeID)
+				if serr != nil {
+					slog.DebugContext(
+						ctx,
+						"grab: tv show lookup failed; whole-torrent grab",
+						"episode.id",
+						episodeID,
+						"error",
+						serr,
+					)
+				} else {
+					keep, keptBytes, matched := computeKeepSet(
+						files, show.Edges.Seasons, show.Type == tvshow.TypeAnime,
+						wantedEpisodes,
+					)
+					videoTotal := countVideoCandidates(files)
+					switch {
+					case matched == 0:
+						outcome = "no_wanted_files"
+						return nil, otelx.RecordSpanError(span, fmt.Errorf(
+							"%w: %s", ErrNoWantedFiles, result.Title))
+					case len(keep) == len(files) || matched == videoTotal:
+						// Every candidate serves a wanted episode: not selective.
+					default:
+						src.WantedFiles, src.Selective = keep, true
+						selection = &pendingSelection{files: keep, bytes: keptBytes}
+					}
 				}
 			}
+		default:
+			// Magnet: no bytes to inspect until the client resolves metadata,
+			// so the keep-set can't be computed here. Mark the grab selective
+			// (so no client starts pulling everything before that resolves)
+			// and park the record pending — RunSelectionPass (spec §4.5) owns
+			// the keep-set once the client's ListFiles has something to report.
+			src.Selective = true
+			selectivePending = true
 		}
 	}
 
@@ -695,8 +714,11 @@ func (d *download) grab(
 		IndexerName:        result.Indexer,
 		WantedEpisodes:     wantedEpisodes,
 	}
-	if selection != nil {
+	switch {
+	case selection != nil:
 		recordParams.SelectionState = downloadrecord.SelectionStateApplied
+	case selectivePending:
+		recordParams.SelectionState = downloadrecord.SelectionStatePending
 	}
 	record, err := d.db.CreateDownloadRecord(ctx, recordParams)
 	if err != nil {
@@ -1031,8 +1053,14 @@ func (d *download) CheckStatus(ctx context.Context) ([]CompletedDownload, error)
 			if torrent.Status != StatusSeeding && torrent.Status != StatusCompleted {
 				// Still in flight: mirror the torrent's paused state onto the
 				// episode badges (paused vs downloading) so the UI reflects it.
+				// A pending selection is never "paused" here even when the
+				// client reports it stopped at metadata (spec §4.2) — that's
+				// RunSelectionPass's window to resolve, not a state the user
+				// paused.
+				paused := torrent.Status == StatusPaused &&
+					record.SelectionState != downloadrecord.SelectionStatePending
 				if serr := d.db.SyncSeasonDownloadStateForRecord(
-					ctx, record.ID, torrent.Status == StatusPaused,
+					ctx, record.ID, paused,
 				); serr != nil {
 					slog.WarnContext(ctx, "sync paused episode state failed",
 						"record.id", record.ID, "error", serr)
