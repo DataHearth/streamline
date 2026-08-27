@@ -1,11 +1,14 @@
 package download
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 
+	"github.com/anacrolix/torrent/bencode"
+	"github.com/anacrolix/torrent/metainfo"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -128,6 +131,50 @@ var _ = Describe("Deluge Client", Label("unit", "downloads"), func() {
 				TorrentSource{Magnet: "magnet:?xt=urn:btih:deadbeef"})
 			Expect(err).To(MatchError(ErrTorrentAlreadyExists))
 		})
+
+		It(
+			"sends file_priorities as a full array, 4 (normal) for wanted"+
+				" and 0 (skip) for the rest — not 1",
+			func() {
+				info, err := bencode.Marshal(metainfo.Info{
+					Files: []metainfo.FileInfo{
+						{Path: []string{"a.mkv"}, Length: 4},
+						{Path: []string{"b.mkv"}, Length: 4},
+						{Path: []string{"c.mkv"}, Length: 4},
+					},
+					PieceLength: 32768,
+					Pieces:      make([]byte, 20),
+				})
+				Expect(err).NotTo(HaveOccurred())
+				mi := metainfo.MetaInfo{InfoBytes: info}
+				var torrent bytes.Buffer
+				Expect(mi.Write(&torrent)).To(Succeed())
+
+				srv := delugeServer(
+					func(method string, params []json.RawMessage) (any, string) {
+						Expect(method).To(Equal("core.add_torrent_file"))
+						Expect(params).To(HaveLen(3))
+						var options map[string]any
+						Expect(json.Unmarshal(params[2], &options)).To(Succeed())
+						Expect(options["file_priorities"]).To(
+							Equal([]any{4.0, 0.0, 0.0}),
+						)
+						return "abcdef", ""
+					},
+				)
+				DeferCleanup(srv.Close)
+
+				_, err = NewDeluge(srv.URL, "pw").AddTorrent(
+					context.Background(),
+					TorrentSource{
+						Bytes:       torrent.Bytes(),
+						WantedFiles: []int{0},
+						Selective:   true,
+					},
+				)
+				Expect(err).NotTo(HaveOccurred())
+			},
+		)
 	})
 
 	Describe("GetTorrent", func() {
@@ -188,6 +235,166 @@ var _ = Describe("Deluge Client", Label("unit", "downloads"), func() {
 
 			Expect(NewDeluge(srv.URL, "pw").
 				RemoveTorrent(context.Background(), "abc", true)).To(Succeed())
+		})
+	})
+
+	Describe("ListFiles", func() {
+		It(
+			"maps Deluge's file listing, Wanted from file_priorities[i] != 0",
+			func() {
+				srv := delugeServer(
+					func(method string, _ []json.RawMessage) (any, string) {
+						Expect(method).To(Equal("core.get_torrent_status"))
+						return map[string]any{
+							"files": []any{
+								map[string]any{
+									"index": 0,
+									"path":  "a.mkv",
+									"size":  4,
+								},
+								map[string]any{
+									"index": 1,
+									"path":  "b.mkv",
+									"size":  4,
+								},
+							},
+							"file_priorities": []any{4, 0},
+						}, ""
+					},
+				)
+				DeferCleanup(srv.Close)
+
+				files, err := NewDeluge(srv.URL, "pw").
+					ListFiles(context.Background(), "abc")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(files).To(HaveLen(2))
+				Expect(files[0]).To(Equal(TorrentFile{
+					Index: 0, Path: "a.mkv", Size: 4, Wanted: true,
+				}))
+				Expect(files[1]).To(Equal(TorrentFile{
+					Index: 1, Path: "b.mkv", Size: 4, Wanted: false,
+				}))
+			},
+		)
+
+		It(
+			"maps a pre-metadata empty files array to an empty, non-nil slice",
+			func() {
+				srv := delugeServer(func(string, []json.RawMessage) (any, string) {
+					return map[string]any{
+						"files": []any{}, "file_priorities": []any{},
+					}, ""
+				})
+				DeferCleanup(srv.Close)
+
+				files, err := NewDeluge(srv.URL, "pw").
+					ListFiles(context.Background(), "abc")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(files).NotTo(BeNil())
+				Expect(files).To(BeEmpty())
+			},
+		)
+	})
+
+	Describe("SetWantedFiles", func() {
+		It(
+			"lists files first, then sets the full priorities array on the hash",
+			func() {
+				var setCalls int
+				var gotHash []string
+				var gotPriorities []int
+				srv := delugeServer(
+					func(method string, params []json.RawMessage) (any, string) {
+						switch method {
+						case "core.get_torrent_status":
+							return map[string]any{
+								"files": []any{
+									map[string]any{
+										"index": 0,
+										"path":  "a.mkv",
+										"size":  4,
+									},
+									map[string]any{
+										"index": 1,
+										"path":  "b.mkv",
+										"size":  4,
+									},
+									map[string]any{
+										"index": 2,
+										"path":  "c.mkv",
+										"size":  4,
+									},
+								},
+								"file_priorities": []any{4, 4, 4},
+							}, ""
+						case "core.set_torrent_options":
+							setCalls++
+							Expect(json.Unmarshal(params[0], &gotHash)).To(Succeed())
+							var options map[string]any
+							Expect(json.Unmarshal(params[1], &options)).To(Succeed())
+							raw, merr := json.Marshal(options["file_priorities"])
+							Expect(merr).NotTo(HaveOccurred())
+							Expect(json.Unmarshal(raw, &gotPriorities)).To(Succeed())
+							return true, ""
+						default:
+							Fail("unexpected method " + method)
+							return nil, ""
+						}
+					},
+				)
+				DeferCleanup(srv.Close)
+
+				err := NewDeluge(srv.URL, "pw").
+					SetWantedFiles(context.Background(), "abc", []int{0})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(setCalls).To(Equal(1))
+				Expect(gotHash).To(Equal([]string{"abc"}))
+				Expect(gotPriorities).To(Equal([]int{4, 0, 0}))
+			},
+		)
+
+		It(
+			"makes no set_torrent_options call when ListFiles reports no"+
+				" files yet — the torrent.py pre-metadata trap",
+			func() {
+				var setCalls int
+				srv := delugeServer(
+					func(method string, _ []json.RawMessage) (any, string) {
+						switch method {
+						case "core.get_torrent_status":
+							return map[string]any{
+								"files": []any{}, "file_priorities": []any{},
+							}, ""
+						case "core.set_torrent_options":
+							setCalls++
+							return true, ""
+						default:
+							Fail("unexpected method " + method)
+							return nil, ""
+						}
+					},
+				)
+				DeferCleanup(srv.Close)
+
+				err := NewDeluge(srv.URL, "pw").
+					SetWantedFiles(context.Background(), "abc", []int{0})
+				Expect(err).To(HaveOccurred())
+				Expect(setCalls).To(Equal(0))
+			},
+		)
+
+		It("rejects a skip-everything call before issuing any RPC", func() {
+			called := false
+			srv := delugeServer(func(string, []json.RawMessage) (any, string) {
+				called = true
+				return nil, ""
+			})
+			DeferCleanup(srv.Close)
+
+			err := NewDeluge(srv.URL, "pw").
+				SetWantedFiles(context.Background(), "abc", nil)
+			Expect(err).To(HaveOccurred())
+			Expect(called).To(BeFalse())
 		})
 	})
 })

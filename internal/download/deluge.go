@@ -206,13 +206,24 @@ func (d *Deluge) AddTorrent(
 			map[string]any{},
 		)
 	} else {
+		options := map[string]any{}
+		if len(src.WantedFiles) > 0 {
+			files, ferr := decodeTorrentFiles(src.Bytes)
+			if ferr != nil {
+				return "", fmt.Errorf("deluge add: %w", ferr)
+			}
+			options["file_priorities"] = delugeFilePriorities(
+				len(files),
+				src.WantedFiles,
+			)
+		}
 		dump := base64.StdEncoding.EncodeToString(src.Bytes)
 		raw, err = d.call(
 			ctx,
 			"core.add_torrent_file",
 			"release.torrent",
 			dump,
-			map[string]any{},
+			options,
 		)
 	}
 	if err != nil {
@@ -327,19 +338,101 @@ func (d *Deluge) TestConnection(ctx context.Context) error {
 	return d.ensureSession(ctx)
 }
 
+// delugeFilePriorities builds the full positional array core.add_torrent_file
+// and core.set_torrent_options expect: libtorrent values, 4 (normal) for a
+// wanted index, 0 (skip) for everything else.
+func delugeFilePriorities(total int, wanted []int) []int {
+	keep := make(map[int]bool, len(wanted))
+	for _, idx := range wanted {
+		keep[idx] = true
+	}
+	priorities := make([]int, total)
+	for i := range priorities {
+		if keep[i] {
+			priorities[i] = 4
+		}
+	}
+	return priorities
+}
+
+type delugeFile struct {
+	Index int    `json:"index"`
+	Path  string `json:"path"`
+	Size  int64  `json:"size"`
+}
+
 func (d *Deluge) ListFiles(
 	ctx context.Context,
 	hash string,
 ) ([]TorrentFile, error) {
-	return nil, ErrNotSupported
+	raw, err := d.call(
+		ctx, "core.get_torrent_status", hash, []string{"files", "file_priorities"},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("deluge files: %w", err)
+	}
+	var st struct {
+		Files          []delugeFile `json:"files"`
+		FilePriorities []int        `json:"file_priorities"`
+	}
+	if err := json.Unmarshal(raw, &st); err != nil {
+		return nil, fmt.Errorf("deluge files: %w: %w", ErrBadResponse, err)
+	}
+	// A magnet whose metadata hasn't resolved yet reports an empty files
+	// array — same "not ready" outcome as an unknown hash.
+	if len(st.Files) == 0 {
+		return []TorrentFile{}, nil
+	}
+	files := make([]TorrentFile, 0, len(st.Files))
+	for _, f := range st.Files {
+		wanted := true
+		if f.Index < len(st.FilePriorities) {
+			wanted = st.FilePriorities[f.Index] != 0
+		}
+		files = append(files, TorrentFile{
+			Index:  f.Index,
+			Path:   f.Path,
+			Size:   f.Size,
+			Wanted: wanted,
+		})
+	}
+	return files, nil
 }
 
+// SetWantedFiles makes wanted downloaded and skips everything else.
+// Skip-everything is refused up front, before any RPC. ListFiles runs first
+// and its result sizes the priorities array: torrent.py's set_file_priorities
+// silently succeeds against pre-metadata torrents and downloads everything,
+// so an empty listing must never reach set_torrent_options.
 func (d *Deluge) SetWantedFiles(
 	ctx context.Context,
 	hash string,
 	wanted []int,
 ) error {
-	return ErrNotSupported
+	if len(wanted) == 0 {
+		return fmt.Errorf(
+			"deluge set wanted files: refusing to skip every file",
+		)
+	}
+
+	files, err := d.ListFiles(ctx, hash)
+	if err != nil {
+		return fmt.Errorf("deluge set wanted files: %w", err)
+	}
+	if len(files) == 0 {
+		return fmt.Errorf(
+			"deluge set wanted files: no files reported yet",
+		)
+	}
+
+	priorities := delugeFilePriorities(len(files), wanted)
+	if _, err := d.call(
+		ctx, "core.set_torrent_options",
+		[]string{hash}, map[string]any{"file_priorities": priorities},
+	); err != nil {
+		return fmt.Errorf("deluge set wanted files: %w", err)
+	}
+	return nil
 }
 
 // mapDelugeState maps a Deluge state string to a TorrentStatus. A finished
