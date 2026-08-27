@@ -1,6 +1,10 @@
 package library
 
-import "regexp"
+import (
+	"path/filepath"
+	"regexp"
+	"strings"
+)
 
 // MediaExts is the set of file extensions treated as candidate media files.
 // Extension comparison should be lowercase: callers must `strings.ToLower(filepath.Ext(path))` before lookup.
@@ -22,3 +26,11 @@ const MinMediaSize = 50 * 1024 * 1024
 // scanner — reported as a 20-file folder that then failed to match a single
 // episode.
 const MinEpisodeSize = 5 * 1024 * 1024
+
+// IsVideoPath reports whether p has an extension in MediaExts, matched
+// case-insensitively so callers (e.g. selective torrent file download,
+// matching against arbitrary-case metainfo paths) don't need to lowercase
+// first themselves.
+func IsVideoPath(p string) bool {
+	return MediaExts[strings.ToLower(filepath.Ext(p))]
+}
