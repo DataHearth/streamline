@@ -25,6 +25,7 @@
 		host: string;
 		api_key: string;
 		library_section: string;
+		library_section_tv: string;
 		enabled: boolean;
 	};
 
@@ -47,11 +48,10 @@
 				enabled: body.enabled,
 			};
 			if (body.api_key) payload.api_key = body.api_key;
-			if (body.library_section) {
-				payload.library_section = body.library_section;
-			} else if (editing) {
-				// "" is the clear-the-field signal; null means "unchanged" server-side.
-				payload.library_section = "";
+			// "" is the clear-the-field signal; null means "unchanged" server-side.
+			for (const k of ["library_section", "library_section_tv"] as const) {
+				if (body[k]) payload[k] = body[k];
+				else if (editing) payload[k] = "";
 			}
 			if (editing) {
 				return api<MediaServer>(
@@ -95,6 +95,7 @@
 		host: "https://plex.local:32400",
 		api_key: "",
 		library_section: "",
+		library_section_tv: "",
 		enabled: true,
 	};
 
@@ -118,6 +119,7 @@
 			host: s.host,
 			api_key: "",
 			library_section: s.library_section ?? "",
+			library_section_tv: s.library_section_tv ?? "",
 			enabled: s.enabled,
 		});
 		modalOpen = true;
@@ -231,10 +233,17 @@
 							</div>
 						</div>
 					</button>
-					{#if s.library_section}
+					{#if s.library_section || s.library_section_tv}
 						<div class="flex items-center gap-2 text-xs text-fg-muted">
 							<Folder size={14} aria-hidden="true" />
-							<span class="truncate">Library: {s.library_section}</span>
+							<span class="truncate">
+								{[
+									s.library_section && `Movies: ${s.library_section}`,
+									s.library_section_tv && `TV: ${s.library_section_tv}`,
+								]
+									.filter(Boolean)
+									.join(" · ")}
+							</span>
 						</div>
 					{/if}
 					<TestConnectionButton

@@ -269,6 +269,7 @@ export const mediaServerForm = v.object({
 	host: v.pipe(v.string(), v.minLength(1, "Required")),
 	api_key: v.string(),
 	library_section: v.string(),
+	library_section_tv: v.string(),
 	enabled: v.boolean(),
 });
 

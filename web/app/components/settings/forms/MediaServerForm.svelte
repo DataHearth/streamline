@@ -24,6 +24,7 @@
 		host: string;
 		api_key: string;
 		library_section: string;
+		library_section_tv: string;
 		enabled: boolean;
 	};
 
@@ -100,6 +101,51 @@
 		onError: (err) => toast.err(i18n.mediaserver_discover_failed({ error: errorText(err) })),
 	}));
 </script>
+
+<!-- Discovery reports each section's Plex type, so each picker offers only the
+     sections it could legitimately name. Picking a show section as the movie
+     one is silent: the rescan fires and touches the wrong library. -->
+{#snippet sectionField(
+	name: "library_section" | "library_section_tv",
+	label: string,
+	plexType: string,
+)}
+	<form.Field {name}>
+		{#snippet children(field)}
+			{@const opts = sections.filter(
+				(s: MediaServerSection) => s.type === plexType,
+			)}
+			{#if opts.length > 0}
+				<Select
+					{label}
+					value={field.state.value ?? ""}
+					options={[
+						{ value: "", label: i18n.mediaserver_pick_section() },
+						...opts.map((s: MediaServerSection) => ({
+							value: s.key,
+							label: `${s.name} — ${s.locations.join(", ")}`,
+						})),
+					]}
+					onChange={(v) => field.handleChange(v)}
+				/>
+			{:else}
+				<label class="block">
+					<span class="mb-1 block text-sm font-medium text-fg">{label}</span>
+					<input
+						type="text"
+						name={field.name}
+						value={field.state.value ?? ""}
+						oninput={(e) =>
+							field.handleChange((e.currentTarget as HTMLInputElement).value)}
+						placeholder={i18n.mediaserver_section_help()}
+						readonly={lock()}
+						class="h-10 w-full rounded-md border border-border bg-bg px-3 text-sm text-fg focus-visible:outline-2 focus-visible:outline-accent read-only:cursor-not-allowed read-only:opacity-70"
+					/>
+				</label>
+			{/if}
+		{/snippet}
+	</form.Field>
+{/snippet}
 
 <div class="space-y-5">
 	<form.Field name="server_type">
@@ -187,42 +233,12 @@
 
 		{#if serverType.current === "plex"}
 			<div class="space-y-2">
-				<form.Field name="library_section">
-					{#snippet children(field)}
-						{#if sections.length > 0}
-							<Select
-								label={i18n.mediaserver_library_section()}
-								value={field.state.value ?? ""}
-								options={[
-									{ value: "", label: i18n.mediaserver_pick_section() },
-									...sections.map((s: MediaServerSection) => ({
-										value: s.key,
-										label: `${s.name} — ${s.type}`,
-									})),
-								]}
-								onChange={(v) => field.handleChange(v)}
-							/>
-						{:else}
-							<label class="block">
-								<span class="mb-1 block text-sm font-medium text-fg">
-									{i18n.mediaserver_library_section()}
-								</span>
-								<input
-									type="text"
-									name={field.name}
-									value={field.state.value ?? ""}
-									oninput={(e) =>
-										field.handleChange(
-											(e.currentTarget as HTMLInputElement).value,
-										)}
-									placeholder={i18n.mediaserver_section_help()}
-									readonly={lock()}
-									class="h-10 w-full rounded-md border border-border bg-bg px-3 text-sm text-fg focus-visible:outline-2 focus-visible:outline-accent read-only:cursor-not-allowed read-only:opacity-70"
-								/>
-							</label>
-						{/if}
-					{/snippet}
-				</form.Field>
+				{@render sectionField("library_section", i18n.mediaserver_library_section(), "movie")}
+				{@render sectionField(
+					"library_section_tv",
+					i18n.mediaserver_library_section_tv(),
+					"show",
+				)}
 				<div class="flex flex-wrap items-center gap-3">
 					<button
 						type="button"

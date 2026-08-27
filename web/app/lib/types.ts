@@ -799,6 +799,7 @@ export type MediaServer = {
 	server_type: MediaServerType;
 	host: string;
 	library_section?: string | null;
+	library_section_tv?: string | null;
 	enabled: boolean;
 	api_key_set: boolean;
 };
