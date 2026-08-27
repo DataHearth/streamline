@@ -209,6 +209,7 @@ type liveStats struct {
 	eta            int64
 	seeds          int
 	activePeers    int
+	knownPeers     int
 	addedAt        time.Time
 	seedingStopped bool
 }
@@ -225,8 +226,10 @@ func (e *Engine) live(t *antorrent.Torrent) liveStats {
 		progress = float64(completed) / float64(size)
 	}
 	stats := t.Stats()
-	uploaded := stats.BytesWrittenData.Int64()
-	down, up := e.rates(hash, completed, uploaded)
+	// This process's counter only — rates works on deltas, and folding a
+	// constant base into it would change nothing but the first sample.
+	sessionUp := stats.BytesWrittenData.Int64()
+	down, up := e.rates(hash, completed, sessionUp)
 	var eta int64
 	if down > 0 && size > completed {
 		eta = (size - completed) / down
@@ -240,10 +243,11 @@ func (e *Engine) live(t *antorrent.Torrent) liveStats {
 		size:           size,
 		downloadSpeed:  down,
 		uploadSpeed:    up,
-		uploaded:       uploaded,
+		uploaded:       st.uploadedBase + sessionUp,
 		eta:            eta,
 		seeds:          stats.ConnectedSeeders,
 		activePeers:    stats.ActivePeers,
+		knownPeers:     stats.TotalPeers,
 		addedAt:        st.addedAt,
 		seedingStopped: st.seedStopped,
 	}

@@ -33,6 +33,8 @@ const (
 	FieldCompletedAt = "completed_at"
 	// FieldSeedStopped holds the string denoting the seed_stopped field in the database.
 	FieldSeedStopped = "seed_stopped"
+	// FieldUploaded holds the string denoting the uploaded field in the database.
+	FieldUploaded = "uploaded"
 	// Table holds the table name of the torrentsession in the database.
 	Table = "torrent_sessions"
 )
@@ -50,6 +52,7 @@ var Columns = []string{
 	FieldPaused,
 	FieldCompletedAt,
 	FieldSeedStopped,
+	FieldUploaded,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -77,6 +80,10 @@ var (
 	DefaultPaused bool
 	// DefaultSeedStopped holds the default value on creation for the "seed_stopped" field.
 	DefaultSeedStopped bool
+	// DefaultUploaded holds the default value on creation for the "uploaded" field.
+	DefaultUploaded int64
+	// UploadedValidator is a validator for the "uploaded" field. It is called by the builders before save.
+	UploadedValidator func(int64) error
 )
 
 // OrderOption defines the ordering options for the TorrentSession queries.
@@ -130,4 +137,9 @@ func ByCompletedAt(opts ...sql.OrderTermOption) OrderOption {
 // BySeedStopped orders the results by the seed_stopped field.
 func BySeedStopped(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldSeedStopped, opts...).ToFunc()
+}
+
+// ByUploaded orders the results by the uploaded field.
+func ByUploaded(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldUploaded, opts...).ToFunc()
 }

@@ -357,8 +357,8 @@ Built-in engine only (ignored for external clients):
 | `download_dir` | ✅ for `builtin` | Where the engine writes |
 | `listen_port` | | Incoming BitTorrent port. Overridden by [`torrent_listen_port`](#torrent_listen_port) when that is set — required if your VPN assigns a forwarded port per session, since such a port can't live in a file |
 | `max_upload_kbps`, `max_download_kbps` | | `0` = unlimited |
-| `seed_ratio` | | Stop seeding at this ratio |
-| `seed_time` | | Stop seeding after this duration |
+| `seed_ratio` | | Stop seeding at this ratio. Uploaded bytes are persisted per torrent and accumulate across restarts, so a restart doesn't hand a torrent back its ratio |
+| `seed_time` | | Stop seeding after this duration, measured from the persisted completion time |
 | `disable_dht` | | |
 | `bind_interface` | | Bind to one interface — useful for a VPN tunnel |
 

@@ -1246,6 +1246,8 @@
 	"toast_grabbed": "Grabbed: {title}",
 	"toast_requested": "Requested {title}",
 	"torrent_added": "Torrent added",
+	"torrent_known_peers": "{count} known",
+	"torrent_known_peers_help": "Peers the tracker and DHT know about. None are connected right now — an idle swarm, not an unreachable engine.",
 	"torrent_address": "Address",
 	"torrent_agg_down": "Agg ↓",
 	"torrent_agg_up": "Agg ↑",

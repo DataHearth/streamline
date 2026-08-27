@@ -440,6 +440,12 @@ func init() {
 	torrentsessionDescSeedStopped := torrentsessionFields[7].Descriptor()
 	// torrentsession.DefaultSeedStopped holds the default value on creation for the seed_stopped field.
 	torrentsession.DefaultSeedStopped = torrentsessionDescSeedStopped.Default.(bool)
+	// torrentsessionDescUploaded is the schema descriptor for uploaded field.
+	torrentsessionDescUploaded := torrentsessionFields[8].Descriptor()
+	// torrentsession.DefaultUploaded holds the default value on creation for the uploaded field.
+	torrentsession.DefaultUploaded = torrentsessionDescUploaded.Default.(int64)
+	// torrentsession.UploadedValidator is a validator for the "uploaded" field. It is called by the builders before save.
+	torrentsession.UploadedValidator = torrentsessionDescUploaded.Validators[0].(func(int64) error)
 	userMixin := schema.User{}.Mixin()
 	userMixinFields1 := userMixin[1].Fields()
 	_ = userMixinFields1

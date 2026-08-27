@@ -111,6 +111,20 @@ func (db *DB) SetTorrentSessionCompleted(
 	return err
 }
 
+// SetTorrentSessionUploaded stores a torrent's lifetime uploaded bytes — the
+// running total across every process, not this session's counter.
+func (db *DB) SetTorrentSessionUploaded(
+	ctx context.Context,
+	infoHash string,
+	uploaded int64,
+) error {
+	_, err := db.client.TorrentSession.Update().
+		Where(torrentsession.InfoHashEQ(infoHash)).
+		SetUploaded(uploaded).
+		Save(ctx)
+	return err
+}
+
 func (db *DB) SetTorrentSessionSeedStopped(
 	ctx context.Context,
 	infoHash string,

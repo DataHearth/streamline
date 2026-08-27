@@ -221,6 +221,7 @@ func torrentInfoToAPI(v bittorrent.TorrentView) TorrentInfo {
 		Eta:            v.ETA,
 		Seeds:          v.Seeds,
 		PeerCount:      v.PeerCount,
+		KnownPeers:     &v.KnownPeers,
 		SavePath:       v.SavePath,
 		AddedAt:        v.AddedAt,
 		SeedingStopped: v.SeedingStopped,

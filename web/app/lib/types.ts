@@ -7,6 +7,7 @@ export type EpisodeStatus =
 	| "downloading"
 	| "importing"
 	| "paused"
+
 	| "available"
 	| "unaired"
 	| "skipped";
@@ -743,6 +744,7 @@ export type Torrent = {
 	// Connected peers holding the complete torrent.
 	seeds: number;
 	peer_count: number;
+	known_peers?: number;
 	save_path: string;
 	added_at: string;
 	// True once the ratio/seed-time limit stopped seeding.

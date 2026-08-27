@@ -124,8 +124,17 @@
 		{fetching ? "—" : formatRatio(torrent.ratio)}
 	</td>
 	<td class={cn("hidden px-2 text-fg-muted @4xl:table-cell", num, pad)}>
+		<!-- seeds/peers are connections, so an idle swarm and an unreachable
+		     engine both read 0/0. known_peers is what separates them, shown as
+		     a third figure only when there is nobody connected to talk about. -->
 		{#if torrent.peer_count === 0 && torrent.seeds === 0}
-			—
+			{#if torrent.known_peers}
+				<span class="text-fg-faint" title={i18n.torrent_known_peers_help()}>
+					{i18n.torrent_known_peers({ count: torrent.known_peers })}
+				</span>
+			{:else}
+				—
+			{/if}
 		{:else}
 			<span class="text-fg-muted">{torrent.seeds}</span>
 			<span class="text-fg-faint"> / {torrent.peer_count}</span>

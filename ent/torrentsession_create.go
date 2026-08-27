@@ -136,6 +136,20 @@ func (_c *TorrentSessionCreate) SetNillableSeedStopped(v *bool) *TorrentSessionC
 	return _c
 }
 
+// SetUploaded sets the "uploaded" field.
+func (_c *TorrentSessionCreate) SetUploaded(v int64) *TorrentSessionCreate {
+	_c.mutation.SetUploaded(v)
+	return _c
+}
+
+// SetNillableUploaded sets the "uploaded" field if the given value is not nil.
+func (_c *TorrentSessionCreate) SetNillableUploaded(v *int64) *TorrentSessionCreate {
+	if v != nil {
+		_c.SetUploaded(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *TorrentSessionCreate) SetID(v uint32) *TorrentSessionCreate {
 	_c.mutation.SetID(v)
@@ -193,6 +207,10 @@ func (_c *TorrentSessionCreate) defaults() {
 		v := torrentsession.DefaultSeedStopped
 		_c.mutation.SetSeedStopped(v)
 	}
+	if _, ok := _c.mutation.Uploaded(); !ok {
+		v := torrentsession.DefaultUploaded
+		_c.mutation.SetUploaded(v)
+	}
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -224,6 +242,14 @@ func (_c *TorrentSessionCreate) check() error {
 	}
 	if _, ok := _c.mutation.SeedStopped(); !ok {
 		return &ValidationError{Name: "seed_stopped", err: errors.New(`ent: missing required field "TorrentSession.seed_stopped"`)}
+	}
+	if _, ok := _c.mutation.Uploaded(); !ok {
+		return &ValidationError{Name: "uploaded", err: errors.New(`ent: missing required field "TorrentSession.uploaded"`)}
+	}
+	if v, ok := _c.mutation.Uploaded(); ok {
+		if err := torrentsession.UploadedValidator(v); err != nil {
+			return &ValidationError{Name: "uploaded", err: fmt.Errorf(`ent: validator failed for field "TorrentSession.uploaded": %w`, err)}
+		}
 	}
 	return nil
 }
@@ -296,6 +322,10 @@ func (_c *TorrentSessionCreate) createSpec() (*TorrentSession, *sqlgraph.CreateS
 	if value, ok := _c.mutation.SeedStopped(); ok {
 		_spec.SetField(torrentsession.FieldSeedStopped, field.TypeBool, value)
 		_node.SeedStopped = value
+	}
+	if value, ok := _c.mutation.Uploaded(); ok {
+		_spec.SetField(torrentsession.FieldUploaded, field.TypeInt64, value)
+		_node.Uploaded = value
 	}
 	return _node, _spec
 }

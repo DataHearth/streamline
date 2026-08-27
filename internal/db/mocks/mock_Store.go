@@ -11086,6 +11086,69 @@ func (_c *MockStore_SetTorrentSessionSeedStopped_Call) RunAndReturn(run func(ctx
 	return _c
 }
 
+// SetTorrentSessionUploaded provides a mock function for the type MockStore
+func (_mock *MockStore) SetTorrentSessionUploaded(ctx context.Context, infoHash string, uploaded int64) error {
+	ret := _mock.Called(ctx, infoHash, uploaded)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetTorrentSessionUploaded")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, int64) error); ok {
+		r0 = returnFunc(ctx, infoHash, uploaded)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStore_SetTorrentSessionUploaded_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetTorrentSessionUploaded'
+type MockStore_SetTorrentSessionUploaded_Call struct {
+	*mock.Call
+}
+
+// SetTorrentSessionUploaded is a helper method to define mock.On call
+//   - ctx context.Context
+//   - infoHash string
+//   - uploaded int64
+func (_e *MockStore_Expecter) SetTorrentSessionUploaded(ctx any, infoHash any, uploaded any) *MockStore_SetTorrentSessionUploaded_Call {
+	return &MockStore_SetTorrentSessionUploaded_Call{Call: _e.mock.On("SetTorrentSessionUploaded", ctx, infoHash, uploaded)}
+}
+
+func (_c *MockStore_SetTorrentSessionUploaded_Call) Run(run func(ctx context.Context, infoHash string, uploaded int64)) *MockStore_SetTorrentSessionUploaded_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 int64
+		if args[2] != nil {
+			arg2 = args[2].(int64)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_SetTorrentSessionUploaded_Call) Return(err error) *MockStore_SetTorrentSessionUploaded_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStore_SetTorrentSessionUploaded_Call) RunAndReturn(run func(ctx context.Context, infoHash string, uploaded int64) error) *MockStore_SetTorrentSessionUploaded_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // StampMediaFileProbe provides a mock function for the type MockStore
 func (_mock *MockStore) StampMediaFileProbe(ctx context.Context, id uint32, info *ffmpeg.Info) error {
 	ret := _mock.Called(ctx, id, info)

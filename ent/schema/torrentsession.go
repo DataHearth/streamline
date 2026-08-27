@@ -30,5 +30,10 @@ func (TorrentSession) Fields() []ent.Field {
 		field.Bool("paused").Default(false),
 		field.Time("completed_at").Optional().Nillable(),
 		field.Bool("seed_stopped").Default(false),
+		// Bytes uploaded across every prior process. anacrolix counts from zero
+		// each boot, so a ratio read off its stats alone resets on restart and
+		// a seed_ratio limit could never be reached — completed_at made the
+		// seed-time limit survive, and this is its counterpart.
+		field.Int64("uploaded").NonNegative().Default(0),
 	}
 }

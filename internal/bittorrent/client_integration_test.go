@@ -405,6 +405,10 @@ var _ = Describe("Engine download flow", Label("integration", "bittorrent"), fun
 			return t.Status
 		}).WithTimeout(60 * time.Second).WithPolling(200 * time.Millisecond).
 			Should(Equal(download.StatusSeeding))
+		// A ratio built only from anacrolix's counter restarts at zero with the
+		// process, so a seed_ratio limit could never be met. Stand in for a
+		// prior life's upload and require the restored engine to carry it.
+		Expect(store.SetTorrentSessionUploaded(ctx, hash, 4096)).To(Succeed())
 		stopEngine()
 
 		// Second engine boots from the same store + download dir; the seeder
@@ -416,6 +420,11 @@ var _ = Describe("Engine download flow", Label("integration", "bittorrent"), fun
 			return t.Status
 		}).WithTimeout(30 * time.Second).WithPolling(200 * time.Millisecond).
 			Should(Equal(download.StatusSeeding))
+
+		views := engine.ListViews(ctx)
+		Expect(views).To(HaveLen(1))
+		Expect(views[0].Uploaded).To(BeNumerically(">=", int64(4096)))
+		Expect(views[0].Ratio).To(BeNumerically(">", 0))
 	})
 
 	// Starts 30 download cycles, which made it the loudest victim of the

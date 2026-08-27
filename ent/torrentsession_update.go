@@ -163,6 +163,27 @@ func (_u *TorrentSessionUpdate) SetNillableSeedStopped(v *bool) *TorrentSessionU
 	return _u
 }
 
+// SetUploaded sets the "uploaded" field.
+func (_u *TorrentSessionUpdate) SetUploaded(v int64) *TorrentSessionUpdate {
+	_u.mutation.ResetUploaded()
+	_u.mutation.SetUploaded(v)
+	return _u
+}
+
+// SetNillableUploaded sets the "uploaded" field if the given value is not nil.
+func (_u *TorrentSessionUpdate) SetNillableUploaded(v *int64) *TorrentSessionUpdate {
+	if v != nil {
+		_u.SetUploaded(*v)
+	}
+	return _u
+}
+
+// AddUploaded adds value to the "uploaded" field.
+func (_u *TorrentSessionUpdate) AddUploaded(v int64) *TorrentSessionUpdate {
+	_u.mutation.AddUploaded(v)
+	return _u
+}
+
 // Mutation returns the TorrentSessionMutation object of the builder.
 func (_u *TorrentSessionUpdate) Mutation() *TorrentSessionMutation {
 	return _u.mutation
@@ -214,6 +235,11 @@ func (_u *TorrentSessionUpdate) check() error {
 	if v, ok := _u.mutation.SavePath(); ok {
 		if err := torrentsession.SavePathValidator(v); err != nil {
 			return &ValidationError{Name: "save_path", err: fmt.Errorf(`ent: validator failed for field "TorrentSession.save_path": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Uploaded(); ok {
+		if err := torrentsession.UploadedValidator(v); err != nil {
+			return &ValidationError{Name: "uploaded", err: fmt.Errorf(`ent: validator failed for field "TorrentSession.uploaded": %w`, err)}
 		}
 	}
 	return nil
@@ -275,6 +301,12 @@ func (_u *TorrentSessionUpdate) sqlSave(ctx context.Context) (_node int, err err
 	}
 	if value, ok := _u.mutation.SeedStopped(); ok {
 		_spec.SetField(torrentsession.FieldSeedStopped, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.Uploaded(); ok {
+		_spec.SetField(torrentsession.FieldUploaded, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedUploaded(); ok {
+		_spec.AddField(torrentsession.FieldUploaded, field.TypeInt64, value)
 	}
 	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
@@ -432,6 +464,27 @@ func (_u *TorrentSessionUpdateOne) SetNillableSeedStopped(v *bool) *TorrentSessi
 	return _u
 }
 
+// SetUploaded sets the "uploaded" field.
+func (_u *TorrentSessionUpdateOne) SetUploaded(v int64) *TorrentSessionUpdateOne {
+	_u.mutation.ResetUploaded()
+	_u.mutation.SetUploaded(v)
+	return _u
+}
+
+// SetNillableUploaded sets the "uploaded" field if the given value is not nil.
+func (_u *TorrentSessionUpdateOne) SetNillableUploaded(v *int64) *TorrentSessionUpdateOne {
+	if v != nil {
+		_u.SetUploaded(*v)
+	}
+	return _u
+}
+
+// AddUploaded adds value to the "uploaded" field.
+func (_u *TorrentSessionUpdateOne) AddUploaded(v int64) *TorrentSessionUpdateOne {
+	_u.mutation.AddUploaded(v)
+	return _u
+}
+
 // Mutation returns the TorrentSessionMutation object of the builder.
 func (_u *TorrentSessionUpdateOne) Mutation() *TorrentSessionMutation {
 	return _u.mutation
@@ -496,6 +549,11 @@ func (_u *TorrentSessionUpdateOne) check() error {
 	if v, ok := _u.mutation.SavePath(); ok {
 		if err := torrentsession.SavePathValidator(v); err != nil {
 			return &ValidationError{Name: "save_path", err: fmt.Errorf(`ent: validator failed for field "TorrentSession.save_path": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Uploaded(); ok {
+		if err := torrentsession.UploadedValidator(v); err != nil {
+			return &ValidationError{Name: "uploaded", err: fmt.Errorf(`ent: validator failed for field "TorrentSession.uploaded": %w`, err)}
 		}
 	}
 	return nil
@@ -574,6 +632,12 @@ func (_u *TorrentSessionUpdateOne) sqlSave(ctx context.Context) (_node *TorrentS
 	}
 	if value, ok := _u.mutation.SeedStopped(); ok {
 		_spec.SetField(torrentsession.FieldSeedStopped, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.Uploaded(); ok {
+		_spec.SetField(torrentsession.FieldUploaded, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedUploaded(); ok {
+		_spec.AddField(torrentsession.FieldUploaded, field.TypeInt64, value)
 	}
 	_spec.AddModifiers(_u.modifiers...)
 	_node = &TorrentSession{config: _u.config}

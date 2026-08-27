@@ -104,6 +104,11 @@ func SeedStopped(v bool) predicate.TorrentSession {
 	return predicate.TorrentSession(sql.FieldEQ(FieldSeedStopped, v))
 }
 
+// Uploaded applies equality check predicate on the "uploaded" field. It's identical to UploadedEQ.
+func Uploaded(v int64) predicate.TorrentSession {
+	return predicate.TorrentSession(sql.FieldEQ(FieldUploaded, v))
+}
+
 // CreateTimeEQ applies the EQ predicate on the "create_time" field.
 func CreateTimeEQ(v time.Time) predicate.TorrentSession {
 	return predicate.TorrentSession(sql.FieldEQ(FieldCreateTime, v))
@@ -582,6 +587,46 @@ func SeedStoppedEQ(v bool) predicate.TorrentSession {
 // SeedStoppedNEQ applies the NEQ predicate on the "seed_stopped" field.
 func SeedStoppedNEQ(v bool) predicate.TorrentSession {
 	return predicate.TorrentSession(sql.FieldNEQ(FieldSeedStopped, v))
+}
+
+// UploadedEQ applies the EQ predicate on the "uploaded" field.
+func UploadedEQ(v int64) predicate.TorrentSession {
+	return predicate.TorrentSession(sql.FieldEQ(FieldUploaded, v))
+}
+
+// UploadedNEQ applies the NEQ predicate on the "uploaded" field.
+func UploadedNEQ(v int64) predicate.TorrentSession {
+	return predicate.TorrentSession(sql.FieldNEQ(FieldUploaded, v))
+}
+
+// UploadedIn applies the In predicate on the "uploaded" field.
+func UploadedIn(vs ...int64) predicate.TorrentSession {
+	return predicate.TorrentSession(sql.FieldIn(FieldUploaded, vs...))
+}
+
+// UploadedNotIn applies the NotIn predicate on the "uploaded" field.
+func UploadedNotIn(vs ...int64) predicate.TorrentSession {
+	return predicate.TorrentSession(sql.FieldNotIn(FieldUploaded, vs...))
+}
+
+// UploadedGT applies the GT predicate on the "uploaded" field.
+func UploadedGT(v int64) predicate.TorrentSession {
+	return predicate.TorrentSession(sql.FieldGT(FieldUploaded, v))
+}
+
+// UploadedGTE applies the GTE predicate on the "uploaded" field.
+func UploadedGTE(v int64) predicate.TorrentSession {
+	return predicate.TorrentSession(sql.FieldGTE(FieldUploaded, v))
+}
+
+// UploadedLT applies the LT predicate on the "uploaded" field.
+func UploadedLT(v int64) predicate.TorrentSession {
+	return predicate.TorrentSession(sql.FieldLT(FieldUploaded, v))
+}
+
+// UploadedLTE applies the LTE predicate on the "uploaded" field.
+func UploadedLTE(v int64) predicate.TorrentSession {
+	return predicate.TorrentSession(sql.FieldLTE(FieldUploaded, v))
 }
 
 // And groups predicates with the AND operator between them.

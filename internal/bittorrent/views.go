@@ -60,8 +60,13 @@ type TorrentView struct {
 	ETA           int64 // seconds; 0 = unknown
 	Seeds         int
 	PeerCount     int
-	SavePath      string
-	AddedAt       time.Time
+	// KnownPeers is every peer the tracker and DHT have named, connected or
+	// not. Seeds and PeerCount are *connections*, so a complete torrent nobody
+	// is currently pulling from reads 0/0 — the same thing an unreachable
+	// engine reads. This is the number that tells those two apart.
+	KnownPeers int
+	SavePath   string
+	AddedAt    time.Time
 	// SeedingStopped is set once the ratio/time limit stopped seeding.
 	SeedingStopped bool
 	// Tracked is false for arbitrary adds with no download_record.
@@ -143,6 +148,7 @@ func (e *Engine) torrentView(
 		ETA:            l.eta,
 		Seeds:          l.seeds,
 		PeerCount:      l.activePeers,
+		KnownPeers:     l.knownPeers,
 		SavePath:       e.downloadDir,
 		AddedAt:        l.addedAt,
 		SeedingStopped: l.seedingStopped,

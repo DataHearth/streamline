@@ -42,6 +42,10 @@ type torrentState struct {
 	seedStopped bool
 	completedAt time.Time
 	addedAt     time.Time
+	// uploadedBase is what prior processes uploaded. anacrolix's own counter
+	// starts at zero every boot, so ratio has to be read off base + counter or
+	// a restart silently forgives whatever the torrent already gave back.
+	uploadedBase int64
 }
 
 type speedSample struct {
@@ -365,9 +369,10 @@ func (e *Engine) restore(ctx context.Context) error {
 			continue
 		}
 		st := &torrentState{
-			paused:      s.Paused,
-			seedStopped: s.SeedStopped,
-			addedAt:     s.CreateTime,
+			paused:       s.Paused,
+			seedStopped:  s.SeedStopped,
+			addedAt:      s.CreateTime,
+			uploadedBase: s.Uploaded,
 		}
 		if s.CompletedAt != nil {
 			st.completedAt = *s.CompletedAt

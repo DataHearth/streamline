@@ -5633,6 +5633,14 @@ components:
           description: Connected peers holding the complete torrent.
         peer_count:
           type: integer
+          description: Currently connected peers.
+        known_peers:
+          type: integer
+          description: |
+            Peers the tracker and DHT have named, connected or not. seeds and
+            peer_count are connections, so a complete torrent nobody is
+            currently pulling from reads 0/0 — the same as one nothing can
+            reach. This separates an idle swarm from an unreachable engine.
         save_path:
           type: string
         added_at:

@@ -3723,10 +3723,18 @@ type TorrentDetails struct {
 	DownloadSpeed int64 `json:"download_speed"`
 
 	// Eta Seconds to completion; 0 = unknown.
-	Eta       int64         `json:"eta"`
-	Files     []TorrentFile `json:"files"`
-	Hash      string        `json:"hash"`
-	Name      string        `json:"name"`
+	Eta   int64         `json:"eta"`
+	Files []TorrentFile `json:"files"`
+	Hash  string        `json:"hash"`
+
+	// KnownPeers Peers the tracker and DHT have named, connected or not. seeds and
+	// peer_count are connections, so a complete torrent nobody is
+	// currently pulling from reads 0/0 — the same as one nothing can
+	// reach. This separates an idle swarm from an unreachable engine.
+	KnownPeers *int   `json:"known_peers,omitempty"`
+	Name       string `json:"name"`
+
+	// PeerCount Currently connected peers.
 	PeerCount int           `json:"peer_count"`
 	Peers     []TorrentPeer `json:"peers"`
 
@@ -3783,10 +3791,18 @@ type TorrentInfo struct {
 	DownloadSpeed int64 `json:"download_speed"`
 
 	// Eta Seconds to completion; 0 = unknown.
-	Eta       int64  `json:"eta"`
-	Hash      string `json:"hash"`
-	Name      string `json:"name"`
-	PeerCount int    `json:"peer_count"`
+	Eta  int64  `json:"eta"`
+	Hash string `json:"hash"`
+
+	// KnownPeers Peers the tracker and DHT have named, connected or not. seeds and
+	// peer_count are connections, so a complete torrent nobody is
+	// currently pulling from reads 0/0 — the same as one nothing can
+	// reach. This separates an idle swarm from an unreachable engine.
+	KnownPeers *int   `json:"known_peers,omitempty"`
+	Name       string `json:"name"`
+
+	// PeerCount Currently connected peers.
+	PeerCount int `json:"peer_count"`
 
 	// Progress Fraction complete, 0..1.
 	Progress float64 `json:"progress"`

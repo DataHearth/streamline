@@ -19512,6 +19512,8 @@ type TorrentSessionMutation struct {
 	paused         *bool
 	completed_at   *time.Time
 	seed_stopped   *bool
+	uploaded       *int64
+	adduploaded    *int64
 	clearedFields  map[string]struct{}
 	done           bool
 	oldValue       func(context.Context) (*TorrentSession, error)
@@ -20034,6 +20036,62 @@ func (m *TorrentSessionMutation) ResetSeedStopped() {
 	m.seed_stopped = nil
 }
 
+// SetUploaded sets the "uploaded" field.
+func (m *TorrentSessionMutation) SetUploaded(i int64) {
+	m.uploaded = &i
+	m.adduploaded = nil
+}
+
+// Uploaded returns the value of the "uploaded" field in the mutation.
+func (m *TorrentSessionMutation) Uploaded() (r int64, exists bool) {
+	v := m.uploaded
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUploaded returns the old "uploaded" field's value of the TorrentSession entity.
+// If the TorrentSession object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TorrentSessionMutation) OldUploaded(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUploaded is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUploaded requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUploaded: %w", err)
+	}
+	return oldValue.Uploaded, nil
+}
+
+// AddUploaded adds i to the "uploaded" field.
+func (m *TorrentSessionMutation) AddUploaded(i int64) {
+	if m.adduploaded != nil {
+		*m.adduploaded += i
+	} else {
+		m.adduploaded = &i
+	}
+}
+
+// AddedUploaded returns the value that was added to the "uploaded" field in this mutation.
+func (m *TorrentSessionMutation) AddedUploaded() (r int64, exists bool) {
+	v := m.adduploaded
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetUploaded resets all changes to the "uploaded" field.
+func (m *TorrentSessionMutation) ResetUploaded() {
+	m.uploaded = nil
+	m.adduploaded = nil
+}
+
 // Where appends a list predicates to the TorrentSessionMutation builder.
 func (m *TorrentSessionMutation) Where(ps ...predicate.TorrentSession) {
 	m.predicates = append(m.predicates, ps...)
@@ -20068,7 +20126,7 @@ func (m *TorrentSessionMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *TorrentSessionMutation) Fields() []string {
-	fields := make([]string, 0, 10)
+	fields := make([]string, 0, 11)
 	if m.create_time != nil {
 		fields = append(fields, torrentsession.FieldCreateTime)
 	}
@@ -20099,6 +20157,9 @@ func (m *TorrentSessionMutation) Fields() []string {
 	if m.seed_stopped != nil {
 		fields = append(fields, torrentsession.FieldSeedStopped)
 	}
+	if m.uploaded != nil {
+		fields = append(fields, torrentsession.FieldUploaded)
+	}
 	return fields
 }
 
@@ -20127,6 +20188,8 @@ func (m *TorrentSessionMutation) Field(name string) (ent.Value, bool) {
 		return m.CompletedAt()
 	case torrentsession.FieldSeedStopped:
 		return m.SeedStopped()
+	case torrentsession.FieldUploaded:
+		return m.Uploaded()
 	}
 	return nil, false
 }
@@ -20156,6 +20219,8 @@ func (m *TorrentSessionMutation) OldField(ctx context.Context, name string) (ent
 		return m.OldCompletedAt(ctx)
 	case torrentsession.FieldSeedStopped:
 		return m.OldSeedStopped(ctx)
+	case torrentsession.FieldUploaded:
+		return m.OldUploaded(ctx)
 	}
 	return nil, fmt.Errorf("unknown TorrentSession field %s", name)
 }
@@ -20235,6 +20300,13 @@ func (m *TorrentSessionMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetSeedStopped(v)
 		return nil
+	case torrentsession.FieldUploaded:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUploaded(v)
+		return nil
 	}
 	return fmt.Errorf("unknown TorrentSession field %s", name)
 }
@@ -20242,13 +20314,21 @@ func (m *TorrentSessionMutation) SetField(name string, value ent.Value) error {
 // AddedFields returns all numeric fields that were incremented/decremented during
 // this mutation.
 func (m *TorrentSessionMutation) AddedFields() []string {
-	return nil
+	var fields []string
+	if m.adduploaded != nil {
+		fields = append(fields, torrentsession.FieldUploaded)
+	}
+	return fields
 }
 
 // AddedField returns the numeric value that was incremented/decremented on a field
 // with the given name. The second boolean return value indicates that this field
 // was not set, or was not defined in the schema.
 func (m *TorrentSessionMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case torrentsession.FieldUploaded:
+		return m.AddedUploaded()
+	}
 	return nil, false
 }
 
@@ -20257,6 +20337,13 @@ func (m *TorrentSessionMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *TorrentSessionMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case torrentsession.FieldUploaded:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddUploaded(v)
+		return nil
 	}
 	return fmt.Errorf("unknown TorrentSession numeric field %s", name)
 }
@@ -20340,6 +20427,9 @@ func (m *TorrentSessionMutation) ResetField(name string) error {
 		return nil
 	case torrentsession.FieldSeedStopped:
 		m.ResetSeedStopped()
+		return nil
+	case torrentsession.FieldUploaded:
+		m.ResetUploaded()
 		return nil
 	}
 	return fmt.Errorf("unknown TorrentSession field %s", name)

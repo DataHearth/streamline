@@ -25,11 +25,25 @@ func (e *Engine) enforceSeedLimits() {
 
 func (e *Engine) enforceOnce(ctx context.Context) {
 	for _, t := range e.client.Torrents() {
+		hash := t.InfoHash().HexString()
+		st := e.getState(hash)
+		// Lifetime bytes, persisted before any of the gates below: anacrolix
+		// counts from zero each boot, so a ratio read off its counter alone
+		// would forgive everything a torrent already gave back and a
+		// seed_ratio target would recede on every restart. Incomplete and
+		// paused torrents upload too, and this is the only tick that runs, so
+		// they are written here rather than under the seeding conditions.
+		stats := t.Stats()
+		uploaded := st.uploadedBase + stats.BytesWrittenData.Int64()
+		if err := e.store.SetTorrentSessionUploaded(
+			ctx, hash, uploaded,
+		); err != nil {
+			slog.WarnContext(ctx, "persisting uploaded bytes failed",
+				"info_hash", hash, "error", err)
+		}
 		if t.Info() == nil || t.BytesMissing() != 0 {
 			continue
 		}
-		hash := t.InfoHash().HexString()
-		st := e.getState(hash)
 		if st.paused || st.seedStopped {
 			continue
 		}
@@ -46,8 +60,7 @@ func (e *Engine) enforceOnce(ctx context.Context) {
 			}
 			st.completedAt = now
 		}
-		stats := t.Stats()
-		r := ratio(stats.BytesWrittenData.Int64(), t.Length())
+		r := ratio(uploaded, t.Length())
 		if !shouldStopSeeding(
 			r, e.seedRatio, st.completedAt, e.seedTime, time.Now(),
 		) {

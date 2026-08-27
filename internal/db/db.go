@@ -129,6 +129,11 @@ type Store interface {
 		at time.Time,
 	) error
 	SetTorrentSessionSeedStopped(ctx context.Context, infoHash string) error
+	SetTorrentSessionUploaded(
+		ctx context.Context,
+		infoHash string,
+		uploaded int64,
+	) error
 	CountTorrentSessions(ctx context.Context) (int, error)
 	// ListTorrentSessionsByPathPrefix returns sessions whose save_path sits
 	// under prefix. Used by the library path migration.

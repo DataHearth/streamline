@@ -36,7 +36,9 @@ type TorrentSession struct {
 	// CompletedAt holds the value of the "completed_at" field.
 	CompletedAt *time.Time `json:"completed_at,omitempty"`
 	// SeedStopped holds the value of the "seed_stopped" field.
-	SeedStopped  bool `json:"seed_stopped,omitempty"`
+	SeedStopped bool `json:"seed_stopped,omitempty"`
+	// Uploaded holds the value of the "uploaded" field.
+	Uploaded     int64 `json:"uploaded,omitempty"`
 	selectValues sql.SelectValues
 }
 
@@ -49,7 +51,7 @@ func (*TorrentSession) scanValues(columns []string) ([]any, error) {
 			values[i] = new([]byte)
 		case torrentsession.FieldPaused, torrentsession.FieldSeedStopped:
 			values[i] = new(sql.NullBool)
-		case torrentsession.FieldID:
+		case torrentsession.FieldID, torrentsession.FieldUploaded:
 			values[i] = new(sql.NullInt64)
 		case torrentsession.FieldInfoHash, torrentsession.FieldName, torrentsession.FieldSavePath, torrentsession.FieldSourceMagnet:
 			values[i] = new(sql.NullString)
@@ -137,6 +139,12 @@ func (_m *TorrentSession) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.SeedStopped = value.Bool
 			}
+		case torrentsession.FieldUploaded:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field uploaded", values[i])
+			} else if value.Valid {
+				_m.Uploaded = value.Int64
+			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -204,6 +212,9 @@ func (_m *TorrentSession) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("seed_stopped=")
 	builder.WriteString(fmt.Sprintf("%v", _m.SeedStopped))
+	builder.WriteString(", ")
+	builder.WriteString("uploaded=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Uploaded))
 	builder.WriteByte(')')
 	return builder.String()
 }

@@ -625,6 +625,7 @@ var (
 		{Name: "paused", Type: field.TypeBool, Default: false},
 		{Name: "completed_at", Type: field.TypeTime, Nullable: true},
 		{Name: "seed_stopped", Type: field.TypeBool, Default: false},
+		{Name: "uploaded", Type: field.TypeInt64, Default: 0},
 	}
 	// TorrentSessionsTable holds the schema information for the "torrent_sessions" table.
 	TorrentSessionsTable = &schema.Table{
