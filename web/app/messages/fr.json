@@ -881,6 +881,7 @@
 	"mediaserver_pick_section": "Choisir une section",
 	"mediaserver_plex_connect": "Connecter Plex (lecture seule)",
 	"mediaserver_plex_sections": "Sections Plex (lecture seule)",
+	"mediaserver_plex_sections_show": "Afficher l’extrait de configuration",
 	"mediaserver_plex_signin_first": "Connectez-vous d'abord avec Plex",
 	"mediaserver_plex_token_help": "Cliquez sur Connexion avec Plex ci-dessus. Le jeton est rempli automatiquement après connexion.",
 	"mediaserver_section_help": "Cliquez sur Découvrir pour lister les sections, ou saisissez une clé de section",

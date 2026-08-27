@@ -37,6 +37,12 @@
 		// Accessible name for the label-less case (e.g. a compact toolbar filter
 		// where the selected value already communicates the control's purpose).
 		ariaLabel?: string;
+		// Opt out of the read-only lock, for a picker whose value the operator
+		// needs to choose even though this instance cannot save it — the Plex
+		// section pickers, whose whole purpose on a read-only instance is to let
+		// someone identify which library is theirs and copy its key into config.
+		// See readOnlyLock(), which already names discovery as exempt.
+		readOnlyExempt?: boolean;
 	};
 
 	let {
@@ -47,10 +53,11 @@
 		id,
 		disabled = false,
 		ariaLabel,
+		readOnlyExempt = false,
 	}: Props = $props();
 
 	const lock = readOnlyLock();
-	let configLocked = $derived(lock());
+	let configLocked = $derived(!readOnlyExempt && lock());
 	let off = $derived(disabled || configLocked);
 
 	let open = $state(false);

@@ -9,9 +9,22 @@
 		open: boolean;
 		serverName: string;
 		sections: MediaServerSection[];
+		// The keys currently picked in the form's section dropdowns. A library
+		// can hold several sections of one type (a streamline one beside an
+		// existing Radarr/Sonarr one), so which is "yours" is a choice only the
+		// operator can make — the snippet follows it rather than guessing.
+		selectedMovie: string;
+		selectedShow: string;
 		onClose: () => void;
 	};
-	let { open, serverName, sections, onClose }: Props = $props();
+	let {
+		open,
+		serverName,
+		sections,
+		selectedMovie,
+		selectedShow,
+		onClose,
+	}: Props = $props();
 
 	// `copied` holds the label of the last-copied field, for the checkmark swap.
 	let copied = $state("");
@@ -19,13 +32,16 @@
 	let movies = $derived(sections.filter((s) => s.type === "movie"));
 	let shows = $derived(sections.filter((s) => s.type === "show"));
 
+	let movieKey = $derived(selectedMovie || movies[0]?.key || "<movie-section-key>");
+	let showKey = $derived(selectedShow || shows[0]?.key || "<tv-section-key>");
+
 	let snippet = $derived(
 		`media_server:
   servers:
     - name: ${serverName || "plex"}
       server_type: plex
-      library_section: ${movies[0]?.key ?? "<movie-section-key>"}
-      library_section_tv: ${shows[0]?.key ?? "<tv-section-key>"}`,
+      library_section: ${movieKey}
+      library_section_tv: ${showKey}`,
 	);
 
 	async function copy(value: string, label: string) {

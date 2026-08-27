@@ -881,6 +881,7 @@
 	"mediaserver_pick_section": "Pick a section",
 	"mediaserver_plex_connect": "Connect Plex (read-only)",
 	"mediaserver_plex_sections": "Plex sections (read-only)",
+	"mediaserver_plex_sections_show": "Show config snippet",
 	"mediaserver_plex_signin_first": "Sign in with Plex first",
 	"mediaserver_plex_token_help": "Click Connect with Plex above. The token is filled in automatically after you sign in.",
 	"mediaserver_section_help": "Click Discover to enumerate sections, or enter a section key",

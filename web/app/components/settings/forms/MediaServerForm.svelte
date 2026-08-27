@@ -108,14 +108,7 @@
 		},
 		onSuccess: (resp) => {
 			sections = resp.sections ?? [];
-			if (sections.length === 0) {
-				toast.warn("No sections returned");
-				return;
-			}
-			// Read-only can't save the picked section, so the picker is a dead end:
-			// surface the keys and a paste-ready snippet instead, as the Plex PIN
-			// flow does for the token.
-			if (lock()) sectionsOpen = true;
+			if (sections.length === 0) toast.warn("No sections returned");
 		},
 		onError: (err) => toast.err(i18n.mediaserver_discover_failed({ error: errorText(err) })),
 	}));
@@ -137,6 +130,7 @@
 			{#if opts.length > 0}
 				<Select
 					{label}
+					readOnlyExempt
 					value={field.state.value ?? ""}
 					options={[
 						{ value: "", label: i18n.mediaserver_pick_section() },
@@ -274,6 +268,17 @@
 							Discover sections
 						{/if}
 					</button>
+					{#if lock() && sections.length > 0}
+						<!-- Reopens the snippet after the pickers above have been used,
+						so choosing a section does not mean discovering again. -->
+						<button
+							type="button"
+							onclick={() => (sectionsOpen = true)}
+							class="inline-flex h-8 items-center gap-1.5 rounded-md border border-border-strong bg-surface px-3 text-xs font-medium text-fg-muted transition hover:bg-surface-2 hover:text-fg"
+						>
+							{i18n.mediaserver_plex_sections_show()}
+						</button>
+					{/if}
 					{#if !apiKey.current && !isEdit}
 						<span class="font-mono text-[10.5px] text-fg-faint">
 							{i18n.mediaserver_plex_signin_first()}
@@ -289,5 +294,7 @@
 	open={sectionsOpen}
 	serverName={form.state.values.name}
 	{sections}
+	selectedMovie={form.state.values.library_section}
+	selectedShow={form.state.values.library_section_tv}
 	onClose={() => (sectionsOpen = false)}
 />
