@@ -10,6 +10,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/anacrolix/torrent/metainfo"
@@ -231,6 +232,15 @@ func (q *QBittorrent) AddTorrent(
 				return nil, "", err
 			}
 		}
+		if len(src.WantedFiles) > 0 && len(src.Bytes) > 0 {
+			priorities, err := filePrioritiesField(src.Bytes, src.WantedFiles)
+			if err != nil {
+				return nil, "", err
+			}
+			if err := mw.WriteField("filePriorities", priorities); err != nil {
+				return nil, "", err
+			}
+		}
 		if err := mw.Close(); err != nil {
 			return nil, "", err
 		}
@@ -338,6 +348,29 @@ func (q *QBittorrent) AddTorrent(
 		"qbittorrent add: no hash returned (success=0, body=%q)",
 		string(body),
 	)
+}
+
+// filePrioritiesField builds the qBittorrent add-time filePriorities value:
+// one comma-joined entry per file in metainfo order, 1 (Normal) for a wanted
+// index and 0 (Ignored) for everything else.
+func filePrioritiesField(raw []byte, wantedFiles []int) (string, error) {
+	files, err := decodeTorrentFiles(raw)
+	if err != nil {
+		return "", err
+	}
+	wanted := make(map[int]bool, len(wantedFiles))
+	for _, idx := range wantedFiles {
+		wanted[idx] = true
+	}
+	priorities := make([]string, len(files))
+	for _, f := range files {
+		if wanted[f.Index] {
+			priorities[f.Index] = "1"
+		} else {
+			priorities[f.Index] = "0"
+		}
+	}
+	return strings.Join(priorities, ","), nil
 }
 
 func (q *QBittorrent) GetTorrent(
@@ -475,19 +508,116 @@ func (q *QBittorrent) TestConnection(ctx context.Context) error {
 	}
 }
 
+// qbFile is one entry of qBittorrent's /api/v2/torrents/files response.
+type qbFile struct {
+	Index    int    `json:"index"`
+	Name     string `json:"name"`
+	Size     int64  `json:"size"`
+	Priority int    `json:"priority"`
+}
+
 func (q *QBittorrent) ListFiles(
 	ctx context.Context,
 	hash string,
 ) ([]TorrentFile, error) {
-	return nil, ErrNotSupported
+	path := "/api/v2/torrents/files?hash=" + url.QueryEscape(hash)
+	resp, err := q.doRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, fmt.Errorf("qbittorrent files: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf(
+			"qbittorrent files: unexpected status %d", resp.StatusCode,
+		)
+	}
+
+	var qbFiles []qbFile
+	if err := json.NewDecoder(resp.Body).Decode(&qbFiles); err != nil {
+		return nil, fmt.Errorf("qbittorrent files decode: %w", err)
+	}
+
+	// Metadata not yet available (e.g. a magnet still resolving) answers an
+	// empty array; make(..., 0, 0) already yields a non-nil empty slice, so
+	// no special-casing is needed to satisfy the interface contract.
+	files := make([]TorrentFile, 0, len(qbFiles))
+	for _, f := range qbFiles {
+		files = append(files, TorrentFile{
+			Index:  f.Index,
+			Path:   f.Name,
+			Size:   f.Size,
+			Wanted: f.Priority != 0,
+		})
+	}
+	return files, nil
 }
 
+// SetWantedFiles makes wanted downloaded and everything else skipped.
+// qBittorrent's filePrio verb only accepts an explicit id list per call, and
+// this method is only handed the keep-set, so it lists the torrent's actual
+// files first to compute the complement — "every other file" per the
+// interface contract.
 func (q *QBittorrent) SetWantedFiles(
 	ctx context.Context,
 	hash string,
 	wanted []int,
 ) error {
-	return ErrNotSupported
+	files, err := q.ListFiles(ctx, hash)
+	if err != nil {
+		return fmt.Errorf("qbittorrent set wanted files: %w", err)
+	}
+
+	keep := make(map[int]bool, len(wanted))
+	for _, idx := range wanted {
+		keep[idx] = true
+	}
+	var skipped []int
+	for _, f := range files {
+		if !keep[f.Index] {
+			skipped = append(skipped, f.Index)
+		}
+	}
+
+	if err := q.setFilePriority(ctx, hash, skipped, "0"); err != nil {
+		return err
+	}
+	return q.setFilePriority(ctx, hash, wanted, "1")
+}
+
+// setFilePriority issues one qBittorrent filePrio call for ids, or no call at
+// all when ids is empty — the no-op is what collapses SetWantedFiles to a
+// single request when nothing needs skipping.
+func (q *QBittorrent) setFilePriority(
+	ctx context.Context,
+	hash string,
+	ids []int,
+	priority string,
+) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	idStrs := make([]string, len(ids))
+	for i, id := range ids {
+		idStrs[i] = strconv.Itoa(id)
+	}
+	form := url.Values{
+		"hash":     {hash},
+		"id":       {strings.Join(idStrs, "|")},
+		"priority": {priority},
+	}
+	resp, err := q.doRequest(
+		ctx, http.MethodPost, "/api/v2/torrents/filePrio", form,
+	)
+	if err != nil {
+		return fmt.Errorf("qbittorrent filePrio: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf(
+			"qbittorrent filePrio: unexpected status %d", resp.StatusCode,
+		)
+	}
+	return nil
 }
 
 func (q *QBittorrent) testAPIKey(ctx context.Context) error {
