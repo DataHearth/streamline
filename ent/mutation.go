@@ -725,6 +725,13 @@ type DownloadRecordMutation struct {
 	hold_reasons          *[]schema.HoldReason
 	appendhold_reasons    []schema.HoldReason
 	verification_bypassed *bool
+	wanted_episodes       *[]uint32
+	appendwanted_episodes []uint32
+	selected_files        *[]int
+	appendselected_files  []int
+	selected_bytes        *int64
+	addselected_bytes     *int64
+	selection_state       *downloadrecord.SelectionState
 	clearedFields         map[string]struct{}
 	movie                 *uint32
 	clearedmovie          bool
@@ -1638,6 +1645,242 @@ func (m *DownloadRecordMutation) ResetVerificationBypassed() {
 	m.verification_bypassed = nil
 }
 
+// SetWantedEpisodes sets the "wanted_episodes" field.
+func (m *DownloadRecordMutation) SetWantedEpisodes(u []uint32) {
+	m.wanted_episodes = &u
+	m.appendwanted_episodes = nil
+}
+
+// WantedEpisodes returns the value of the "wanted_episodes" field in the mutation.
+func (m *DownloadRecordMutation) WantedEpisodes() (r []uint32, exists bool) {
+	v := m.wanted_episodes
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldWantedEpisodes returns the old "wanted_episodes" field's value of the DownloadRecord entity.
+// If the DownloadRecord object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *DownloadRecordMutation) OldWantedEpisodes(ctx context.Context) (v []uint32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldWantedEpisodes is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldWantedEpisodes requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldWantedEpisodes: %w", err)
+	}
+	return oldValue.WantedEpisodes, nil
+}
+
+// AppendWantedEpisodes adds u to the "wanted_episodes" field.
+func (m *DownloadRecordMutation) AppendWantedEpisodes(u []uint32) {
+	m.appendwanted_episodes = append(m.appendwanted_episodes, u...)
+}
+
+// AppendedWantedEpisodes returns the list of values that were appended to the "wanted_episodes" field in this mutation.
+func (m *DownloadRecordMutation) AppendedWantedEpisodes() ([]uint32, bool) {
+	if len(m.appendwanted_episodes) == 0 {
+		return nil, false
+	}
+	return m.appendwanted_episodes, true
+}
+
+// ClearWantedEpisodes clears the value of the "wanted_episodes" field.
+func (m *DownloadRecordMutation) ClearWantedEpisodes() {
+	m.wanted_episodes = nil
+	m.appendwanted_episodes = nil
+	m.clearedFields[downloadrecord.FieldWantedEpisodes] = struct{}{}
+}
+
+// WantedEpisodesCleared returns if the "wanted_episodes" field was cleared in this mutation.
+func (m *DownloadRecordMutation) WantedEpisodesCleared() bool {
+	_, ok := m.clearedFields[downloadrecord.FieldWantedEpisodes]
+	return ok
+}
+
+// ResetWantedEpisodes resets all changes to the "wanted_episodes" field.
+func (m *DownloadRecordMutation) ResetWantedEpisodes() {
+	m.wanted_episodes = nil
+	m.appendwanted_episodes = nil
+	delete(m.clearedFields, downloadrecord.FieldWantedEpisodes)
+}
+
+// SetSelectedFiles sets the "selected_files" field.
+func (m *DownloadRecordMutation) SetSelectedFiles(i []int) {
+	m.selected_files = &i
+	m.appendselected_files = nil
+}
+
+// SelectedFiles returns the value of the "selected_files" field in the mutation.
+func (m *DownloadRecordMutation) SelectedFiles() (r []int, exists bool) {
+	v := m.selected_files
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSelectedFiles returns the old "selected_files" field's value of the DownloadRecord entity.
+// If the DownloadRecord object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *DownloadRecordMutation) OldSelectedFiles(ctx context.Context) (v []int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSelectedFiles is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSelectedFiles requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSelectedFiles: %w", err)
+	}
+	return oldValue.SelectedFiles, nil
+}
+
+// AppendSelectedFiles adds i to the "selected_files" field.
+func (m *DownloadRecordMutation) AppendSelectedFiles(i []int) {
+	m.appendselected_files = append(m.appendselected_files, i...)
+}
+
+// AppendedSelectedFiles returns the list of values that were appended to the "selected_files" field in this mutation.
+func (m *DownloadRecordMutation) AppendedSelectedFiles() ([]int, bool) {
+	if len(m.appendselected_files) == 0 {
+		return nil, false
+	}
+	return m.appendselected_files, true
+}
+
+// ClearSelectedFiles clears the value of the "selected_files" field.
+func (m *DownloadRecordMutation) ClearSelectedFiles() {
+	m.selected_files = nil
+	m.appendselected_files = nil
+	m.clearedFields[downloadrecord.FieldSelectedFiles] = struct{}{}
+}
+
+// SelectedFilesCleared returns if the "selected_files" field was cleared in this mutation.
+func (m *DownloadRecordMutation) SelectedFilesCleared() bool {
+	_, ok := m.clearedFields[downloadrecord.FieldSelectedFiles]
+	return ok
+}
+
+// ResetSelectedFiles resets all changes to the "selected_files" field.
+func (m *DownloadRecordMutation) ResetSelectedFiles() {
+	m.selected_files = nil
+	m.appendselected_files = nil
+	delete(m.clearedFields, downloadrecord.FieldSelectedFiles)
+}
+
+// SetSelectedBytes sets the "selected_bytes" field.
+func (m *DownloadRecordMutation) SetSelectedBytes(i int64) {
+	m.selected_bytes = &i
+	m.addselected_bytes = nil
+}
+
+// SelectedBytes returns the value of the "selected_bytes" field in the mutation.
+func (m *DownloadRecordMutation) SelectedBytes() (r int64, exists bool) {
+	v := m.selected_bytes
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSelectedBytes returns the old "selected_bytes" field's value of the DownloadRecord entity.
+// If the DownloadRecord object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *DownloadRecordMutation) OldSelectedBytes(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSelectedBytes is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSelectedBytes requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSelectedBytes: %w", err)
+	}
+	return oldValue.SelectedBytes, nil
+}
+
+// AddSelectedBytes adds i to the "selected_bytes" field.
+func (m *DownloadRecordMutation) AddSelectedBytes(i int64) {
+	if m.addselected_bytes != nil {
+		*m.addselected_bytes += i
+	} else {
+		m.addselected_bytes = &i
+	}
+}
+
+// AddedSelectedBytes returns the value that was added to the "selected_bytes" field in this mutation.
+func (m *DownloadRecordMutation) AddedSelectedBytes() (r int64, exists bool) {
+	v := m.addselected_bytes
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearSelectedBytes clears the value of the "selected_bytes" field.
+func (m *DownloadRecordMutation) ClearSelectedBytes() {
+	m.selected_bytes = nil
+	m.addselected_bytes = nil
+	m.clearedFields[downloadrecord.FieldSelectedBytes] = struct{}{}
+}
+
+// SelectedBytesCleared returns if the "selected_bytes" field was cleared in this mutation.
+func (m *DownloadRecordMutation) SelectedBytesCleared() bool {
+	_, ok := m.clearedFields[downloadrecord.FieldSelectedBytes]
+	return ok
+}
+
+// ResetSelectedBytes resets all changes to the "selected_bytes" field.
+func (m *DownloadRecordMutation) ResetSelectedBytes() {
+	m.selected_bytes = nil
+	m.addselected_bytes = nil
+	delete(m.clearedFields, downloadrecord.FieldSelectedBytes)
+}
+
+// SetSelectionState sets the "selection_state" field.
+func (m *DownloadRecordMutation) SetSelectionState(ds downloadrecord.SelectionState) {
+	m.selection_state = &ds
+}
+
+// SelectionState returns the value of the "selection_state" field in the mutation.
+func (m *DownloadRecordMutation) SelectionState() (r downloadrecord.SelectionState, exists bool) {
+	v := m.selection_state
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSelectionState returns the old "selection_state" field's value of the DownloadRecord entity.
+// If the DownloadRecord object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *DownloadRecordMutation) OldSelectionState(ctx context.Context) (v downloadrecord.SelectionState, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSelectionState is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSelectionState requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSelectionState: %w", err)
+	}
+	return oldValue.SelectionState, nil
+}
+
+// ResetSelectionState resets all changes to the "selection_state" field.
+func (m *DownloadRecordMutation) ResetSelectionState() {
+	m.selection_state = nil
+}
+
 // SetMovieID sets the "movie" edge to the Movie entity by id.
 func (m *DownloadRecordMutation) SetMovieID(id uint32) {
 	m.movie = &id
@@ -1750,7 +1993,7 @@ func (m *DownloadRecordMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *DownloadRecordMutation) Fields() []string {
-	fields := make([]string, 0, 17)
+	fields := make([]string, 0, 21)
 	if m.create_time != nil {
 		fields = append(fields, downloadrecord.FieldCreateTime)
 	}
@@ -1802,6 +2045,18 @@ func (m *DownloadRecordMutation) Fields() []string {
 	if m.verification_bypassed != nil {
 		fields = append(fields, downloadrecord.FieldVerificationBypassed)
 	}
+	if m.wanted_episodes != nil {
+		fields = append(fields, downloadrecord.FieldWantedEpisodes)
+	}
+	if m.selected_files != nil {
+		fields = append(fields, downloadrecord.FieldSelectedFiles)
+	}
+	if m.selected_bytes != nil {
+		fields = append(fields, downloadrecord.FieldSelectedBytes)
+	}
+	if m.selection_state != nil {
+		fields = append(fields, downloadrecord.FieldSelectionState)
+	}
 	return fields
 }
 
@@ -1844,6 +2099,14 @@ func (m *DownloadRecordMutation) Field(name string) (ent.Value, bool) {
 		return m.HoldReasons()
 	case downloadrecord.FieldVerificationBypassed:
 		return m.VerificationBypassed()
+	case downloadrecord.FieldWantedEpisodes:
+		return m.WantedEpisodes()
+	case downloadrecord.FieldSelectedFiles:
+		return m.SelectedFiles()
+	case downloadrecord.FieldSelectedBytes:
+		return m.SelectedBytes()
+	case downloadrecord.FieldSelectionState:
+		return m.SelectionState()
 	}
 	return nil, false
 }
@@ -1887,6 +2150,14 @@ func (m *DownloadRecordMutation) OldField(ctx context.Context, name string) (ent
 		return m.OldHoldReasons(ctx)
 	case downloadrecord.FieldVerificationBypassed:
 		return m.OldVerificationBypassed(ctx)
+	case downloadrecord.FieldWantedEpisodes:
+		return m.OldWantedEpisodes(ctx)
+	case downloadrecord.FieldSelectedFiles:
+		return m.OldSelectedFiles(ctx)
+	case downloadrecord.FieldSelectedBytes:
+		return m.OldSelectedBytes(ctx)
+	case downloadrecord.FieldSelectionState:
+		return m.OldSelectionState(ctx)
 	}
 	return nil, fmt.Errorf("unknown DownloadRecord field %s", name)
 }
@@ -2015,6 +2286,34 @@ func (m *DownloadRecordMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetVerificationBypassed(v)
 		return nil
+	case downloadrecord.FieldWantedEpisodes:
+		v, ok := value.([]uint32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetWantedEpisodes(v)
+		return nil
+	case downloadrecord.FieldSelectedFiles:
+		v, ok := value.([]int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSelectedFiles(v)
+		return nil
+	case downloadrecord.FieldSelectedBytes:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSelectedBytes(v)
+		return nil
+	case downloadrecord.FieldSelectionState:
+		v, ok := value.(downloadrecord.SelectionState)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSelectionState(v)
+		return nil
 	}
 	return fmt.Errorf("unknown DownloadRecord field %s", name)
 }
@@ -2029,6 +2328,9 @@ func (m *DownloadRecordMutation) AddedFields() []string {
 	if m.addimport_attempts != nil {
 		fields = append(fields, downloadrecord.FieldImportAttempts)
 	}
+	if m.addselected_bytes != nil {
+		fields = append(fields, downloadrecord.FieldSelectedBytes)
+	}
 	return fields
 }
 
@@ -2041,6 +2343,8 @@ func (m *DownloadRecordMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedSize()
 	case downloadrecord.FieldImportAttempts:
 		return m.AddedImportAttempts()
+	case downloadrecord.FieldSelectedBytes:
+		return m.AddedSelectedBytes()
 	}
 	return nil, false
 }
@@ -2063,6 +2367,13 @@ func (m *DownloadRecordMutation) AddField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddImportAttempts(v)
+		return nil
+	case downloadrecord.FieldSelectedBytes:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddSelectedBytes(v)
 		return nil
 	}
 	return fmt.Errorf("unknown DownloadRecord numeric field %s", name)
@@ -2101,6 +2412,15 @@ func (m *DownloadRecordMutation) ClearedFields() []string {
 	}
 	if m.FieldCleared(downloadrecord.FieldHoldReasons) {
 		fields = append(fields, downloadrecord.FieldHoldReasons)
+	}
+	if m.FieldCleared(downloadrecord.FieldWantedEpisodes) {
+		fields = append(fields, downloadrecord.FieldWantedEpisodes)
+	}
+	if m.FieldCleared(downloadrecord.FieldSelectedFiles) {
+		fields = append(fields, downloadrecord.FieldSelectedFiles)
+	}
+	if m.FieldCleared(downloadrecord.FieldSelectedBytes) {
+		fields = append(fields, downloadrecord.FieldSelectedBytes)
 	}
 	return fields
 }
@@ -2145,6 +2465,15 @@ func (m *DownloadRecordMutation) ClearField(name string) error {
 		return nil
 	case downloadrecord.FieldHoldReasons:
 		m.ClearHoldReasons()
+		return nil
+	case downloadrecord.FieldWantedEpisodes:
+		m.ClearWantedEpisodes()
+		return nil
+	case downloadrecord.FieldSelectedFiles:
+		m.ClearSelectedFiles()
+		return nil
+	case downloadrecord.FieldSelectedBytes:
+		m.ClearSelectedBytes()
 		return nil
 	}
 	return fmt.Errorf("unknown DownloadRecord nullable field %s", name)
@@ -2204,6 +2533,18 @@ func (m *DownloadRecordMutation) ResetField(name string) error {
 		return nil
 	case downloadrecord.FieldVerificationBypassed:
 		m.ResetVerificationBypassed()
+		return nil
+	case downloadrecord.FieldWantedEpisodes:
+		m.ResetWantedEpisodes()
+		return nil
+	case downloadrecord.FieldSelectedFiles:
+		m.ResetSelectedFiles()
+		return nil
+	case downloadrecord.FieldSelectedBytes:
+		m.ResetSelectedBytes()
+		return nil
+	case downloadrecord.FieldSelectionState:
+		m.ResetSelectionState()
 		return nil
 	}
 	return fmt.Errorf("unknown DownloadRecord field %s", name)

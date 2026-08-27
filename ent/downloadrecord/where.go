@@ -125,6 +125,11 @@ func VerificationBypassed(v bool) predicate.DownloadRecord {
 	return predicate.DownloadRecord(sql.FieldEQ(FieldVerificationBypassed, v))
 }
 
+// SelectedBytes applies equality check predicate on the "selected_bytes" field. It's identical to SelectedBytesEQ.
+func SelectedBytes(v int64) predicate.DownloadRecord {
+	return predicate.DownloadRecord(sql.FieldEQ(FieldSelectedBytes, v))
+}
+
 // CreateTimeEQ applies the EQ predicate on the "create_time" field.
 func CreateTimeEQ(v time.Time) predicate.DownloadRecord {
 	return predicate.DownloadRecord(sql.FieldEQ(FieldCreateTime, v))
@@ -993,6 +998,96 @@ func VerificationBypassedEQ(v bool) predicate.DownloadRecord {
 // VerificationBypassedNEQ applies the NEQ predicate on the "verification_bypassed" field.
 func VerificationBypassedNEQ(v bool) predicate.DownloadRecord {
 	return predicate.DownloadRecord(sql.FieldNEQ(FieldVerificationBypassed, v))
+}
+
+// WantedEpisodesIsNil applies the IsNil predicate on the "wanted_episodes" field.
+func WantedEpisodesIsNil() predicate.DownloadRecord {
+	return predicate.DownloadRecord(sql.FieldIsNull(FieldWantedEpisodes))
+}
+
+// WantedEpisodesNotNil applies the NotNil predicate on the "wanted_episodes" field.
+func WantedEpisodesNotNil() predicate.DownloadRecord {
+	return predicate.DownloadRecord(sql.FieldNotNull(FieldWantedEpisodes))
+}
+
+// SelectedFilesIsNil applies the IsNil predicate on the "selected_files" field.
+func SelectedFilesIsNil() predicate.DownloadRecord {
+	return predicate.DownloadRecord(sql.FieldIsNull(FieldSelectedFiles))
+}
+
+// SelectedFilesNotNil applies the NotNil predicate on the "selected_files" field.
+func SelectedFilesNotNil() predicate.DownloadRecord {
+	return predicate.DownloadRecord(sql.FieldNotNull(FieldSelectedFiles))
+}
+
+// SelectedBytesEQ applies the EQ predicate on the "selected_bytes" field.
+func SelectedBytesEQ(v int64) predicate.DownloadRecord {
+	return predicate.DownloadRecord(sql.FieldEQ(FieldSelectedBytes, v))
+}
+
+// SelectedBytesNEQ applies the NEQ predicate on the "selected_bytes" field.
+func SelectedBytesNEQ(v int64) predicate.DownloadRecord {
+	return predicate.DownloadRecord(sql.FieldNEQ(FieldSelectedBytes, v))
+}
+
+// SelectedBytesIn applies the In predicate on the "selected_bytes" field.
+func SelectedBytesIn(vs ...int64) predicate.DownloadRecord {
+	return predicate.DownloadRecord(sql.FieldIn(FieldSelectedBytes, vs...))
+}
+
+// SelectedBytesNotIn applies the NotIn predicate on the "selected_bytes" field.
+func SelectedBytesNotIn(vs ...int64) predicate.DownloadRecord {
+	return predicate.DownloadRecord(sql.FieldNotIn(FieldSelectedBytes, vs...))
+}
+
+// SelectedBytesGT applies the GT predicate on the "selected_bytes" field.
+func SelectedBytesGT(v int64) predicate.DownloadRecord {
+	return predicate.DownloadRecord(sql.FieldGT(FieldSelectedBytes, v))
+}
+
+// SelectedBytesGTE applies the GTE predicate on the "selected_bytes" field.
+func SelectedBytesGTE(v int64) predicate.DownloadRecord {
+	return predicate.DownloadRecord(sql.FieldGTE(FieldSelectedBytes, v))
+}
+
+// SelectedBytesLT applies the LT predicate on the "selected_bytes" field.
+func SelectedBytesLT(v int64) predicate.DownloadRecord {
+	return predicate.DownloadRecord(sql.FieldLT(FieldSelectedBytes, v))
+}
+
+// SelectedBytesLTE applies the LTE predicate on the "selected_bytes" field.
+func SelectedBytesLTE(v int64) predicate.DownloadRecord {
+	return predicate.DownloadRecord(sql.FieldLTE(FieldSelectedBytes, v))
+}
+
+// SelectedBytesIsNil applies the IsNil predicate on the "selected_bytes" field.
+func SelectedBytesIsNil() predicate.DownloadRecord {
+	return predicate.DownloadRecord(sql.FieldIsNull(FieldSelectedBytes))
+}
+
+// SelectedBytesNotNil applies the NotNil predicate on the "selected_bytes" field.
+func SelectedBytesNotNil() predicate.DownloadRecord {
+	return predicate.DownloadRecord(sql.FieldNotNull(FieldSelectedBytes))
+}
+
+// SelectionStateEQ applies the EQ predicate on the "selection_state" field.
+func SelectionStateEQ(v SelectionState) predicate.DownloadRecord {
+	return predicate.DownloadRecord(sql.FieldEQ(FieldSelectionState, v))
+}
+
+// SelectionStateNEQ applies the NEQ predicate on the "selection_state" field.
+func SelectionStateNEQ(v SelectionState) predicate.DownloadRecord {
+	return predicate.DownloadRecord(sql.FieldNEQ(FieldSelectionState, v))
+}
+
+// SelectionStateIn applies the In predicate on the "selection_state" field.
+func SelectionStateIn(vs ...SelectionState) predicate.DownloadRecord {
+	return predicate.DownloadRecord(sql.FieldIn(FieldSelectionState, vs...))
+}
+
+// SelectionStateNotIn applies the NotIn predicate on the "selection_state" field.
+func SelectionStateNotIn(vs ...SelectionState) predicate.DownloadRecord {
+	return predicate.DownloadRecord(sql.FieldNotIn(FieldSelectionState, vs...))
 }
 
 // HasMovie applies the HasEdge predicate on the "movie" edge.

@@ -52,6 +52,19 @@ func (DownloadRecord) Fields() []ent.Field {
 		field.JSON("hold_reasons", []HoldReason{}).Optional(),
 		// Set by a resolve-import so the re-run skips verification.
 		field.Bool("verification_bypassed").Default(false),
+		// Grab-time intent: which episodes this record's file selection was
+		// meant to cover, for a season pack where only some episodes are
+		// wanted. Movie records and packs pulled in whole leave this empty.
+		field.JSON("wanted_episodes", []uint32{}).Optional(),
+		// Resolution of that intent against the torrent's actual file list —
+		// the indices SetWantedFiles was called with.
+		field.JSON("selected_files", []int{}).Optional(),
+		// Sum of the selected files' sizes, computed once at selection time —
+		// the SPA's "2.1 GB of 115 GB" numerator.
+		field.Int64("selected_bytes").Optional(),
+		field.Enum("selection_state").
+			Values("pending", "applied", "unsupported", "skipped").
+			Default("skipped"),
 	}
 }
 

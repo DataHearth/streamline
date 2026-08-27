@@ -49,6 +49,14 @@ const (
 	FieldHoldReasons = "hold_reasons"
 	// FieldVerificationBypassed holds the string denoting the verification_bypassed field in the database.
 	FieldVerificationBypassed = "verification_bypassed"
+	// FieldWantedEpisodes holds the string denoting the wanted_episodes field in the database.
+	FieldWantedEpisodes = "wanted_episodes"
+	// FieldSelectedFiles holds the string denoting the selected_files field in the database.
+	FieldSelectedFiles = "selected_files"
+	// FieldSelectedBytes holds the string denoting the selected_bytes field in the database.
+	FieldSelectedBytes = "selected_bytes"
+	// FieldSelectionState holds the string denoting the selection_state field in the database.
+	FieldSelectionState = "selection_state"
 	// EdgeMovie holds the string denoting the movie edge name in mutations.
 	EdgeMovie = "movie"
 	// EdgeEpisode holds the string denoting the episode edge name in mutations.
@@ -91,6 +99,10 @@ var Columns = []string{
 	FieldReplaceMode,
 	FieldHoldReasons,
 	FieldVerificationBypassed,
+	FieldWantedEpisodes,
+	FieldSelectedFiles,
+	FieldSelectedBytes,
+	FieldSelectionState,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "download_records"
@@ -188,6 +200,34 @@ func ReplaceModeValidator(rm ReplaceMode) error {
 	}
 }
 
+// SelectionState defines the type for the "selection_state" enum field.
+type SelectionState string
+
+// SelectionStateSkipped is the default value of the SelectionState enum.
+const DefaultSelectionState = SelectionStateSkipped
+
+// SelectionState values.
+const (
+	SelectionStatePending     SelectionState = "pending"
+	SelectionStateApplied     SelectionState = "applied"
+	SelectionStateUnsupported SelectionState = "unsupported"
+	SelectionStateSkipped     SelectionState = "skipped"
+)
+
+func (ss SelectionState) String() string {
+	return string(ss)
+}
+
+// SelectionStateValidator is a validator for the "selection_state" field enum values. It is called by the builders before save.
+func SelectionStateValidator(ss SelectionState) error {
+	switch ss {
+	case SelectionStatePending, SelectionStateApplied, SelectionStateUnsupported, SelectionStateSkipped:
+		return nil
+	default:
+		return fmt.Errorf("downloadrecord: invalid enum value for selection_state field: %q", ss)
+	}
+}
+
 // OrderOption defines the ordering options for the DownloadRecord queries.
 type OrderOption func(*sql.Selector)
 
@@ -274,6 +314,16 @@ func ByReplaceMode(opts ...sql.OrderTermOption) OrderOption {
 // ByVerificationBypassed orders the results by the verification_bypassed field.
 func ByVerificationBypassed(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldVerificationBypassed, opts...).ToFunc()
+}
+
+// BySelectedBytes orders the results by the selected_bytes field.
+func BySelectedBytes(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSelectedBytes, opts...).ToFunc()
+}
+
+// BySelectionState orders the results by the selection_state field.
+func BySelectionState(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSelectionState, opts...).ToFunc()
 }
 
 // ByMovieField orders the results by movie field.

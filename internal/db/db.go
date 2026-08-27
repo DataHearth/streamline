@@ -264,6 +264,25 @@ type Store interface {
 		id uint32,
 		mode downloadrecord.ReplaceMode,
 	) error
+	// SetDownloadRecordSelection writes the resolution of a file selection:
+	// state, selected file indices, and their summed size.
+	SetDownloadRecordSelection(
+		ctx context.Context,
+		id uint32,
+		state downloadrecord.SelectionState,
+		files []int,
+		selectedBytes int64,
+	) error
+	// SetDownloadRecordWantedEpisodes overwrites wanted_episodes with the
+	// given union.
+	SetDownloadRecordWantedEpisodes(
+		ctx context.Context,
+		id uint32,
+		eps []uint32,
+	) error
+	// ListPendingSelectionRecords returns records awaiting file-selection
+	// resolution, with episode context eager-loaded.
+	ListPendingSelectionRecords(ctx context.Context) ([]*ent.DownloadRecord, error)
 	ListImportingDownloadRecords(ctx context.Context) ([]*ent.DownloadRecord, error)
 	FindImportingDownloadRecordByID(
 		ctx context.Context,

@@ -245,6 +245,46 @@ func (_c *DownloadRecordCreate) SetNillableVerificationBypassed(v *bool) *Downlo
 	return _c
 }
 
+// SetWantedEpisodes sets the "wanted_episodes" field.
+func (_c *DownloadRecordCreate) SetWantedEpisodes(v []uint32) *DownloadRecordCreate {
+	_c.mutation.SetWantedEpisodes(v)
+	return _c
+}
+
+// SetSelectedFiles sets the "selected_files" field.
+func (_c *DownloadRecordCreate) SetSelectedFiles(v []int) *DownloadRecordCreate {
+	_c.mutation.SetSelectedFiles(v)
+	return _c
+}
+
+// SetSelectedBytes sets the "selected_bytes" field.
+func (_c *DownloadRecordCreate) SetSelectedBytes(v int64) *DownloadRecordCreate {
+	_c.mutation.SetSelectedBytes(v)
+	return _c
+}
+
+// SetNillableSelectedBytes sets the "selected_bytes" field if the given value is not nil.
+func (_c *DownloadRecordCreate) SetNillableSelectedBytes(v *int64) *DownloadRecordCreate {
+	if v != nil {
+		_c.SetSelectedBytes(*v)
+	}
+	return _c
+}
+
+// SetSelectionState sets the "selection_state" field.
+func (_c *DownloadRecordCreate) SetSelectionState(v downloadrecord.SelectionState) *DownloadRecordCreate {
+	_c.mutation.SetSelectionState(v)
+	return _c
+}
+
+// SetNillableSelectionState sets the "selection_state" field if the given value is not nil.
+func (_c *DownloadRecordCreate) SetNillableSelectionState(v *downloadrecord.SelectionState) *DownloadRecordCreate {
+	if v != nil {
+		_c.SetSelectionState(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *DownloadRecordCreate) SetID(v uint32) *DownloadRecordCreate {
 	_c.mutation.SetID(v)
@@ -348,6 +388,10 @@ func (_c *DownloadRecordCreate) defaults() {
 		v := downloadrecord.DefaultVerificationBypassed
 		_c.mutation.SetVerificationBypassed(v)
 	}
+	if _, ok := _c.mutation.SelectionState(); !ok {
+		v := downloadrecord.DefaultSelectionState
+		_c.mutation.SetSelectionState(v)
+	}
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -387,6 +431,14 @@ func (_c *DownloadRecordCreate) check() error {
 	}
 	if _, ok := _c.mutation.VerificationBypassed(); !ok {
 		return &ValidationError{Name: "verification_bypassed", err: errors.New(`ent: missing required field "DownloadRecord.verification_bypassed"`)}
+	}
+	if _, ok := _c.mutation.SelectionState(); !ok {
+		return &ValidationError{Name: "selection_state", err: errors.New(`ent: missing required field "DownloadRecord.selection_state"`)}
+	}
+	if v, ok := _c.mutation.SelectionState(); ok {
+		if err := downloadrecord.SelectionStateValidator(v); err != nil {
+			return &ValidationError{Name: "selection_state", err: fmt.Errorf(`ent: validator failed for field "DownloadRecord.selection_state": %w`, err)}
+		}
 	}
 	return nil
 }
@@ -487,6 +539,22 @@ func (_c *DownloadRecordCreate) createSpec() (*DownloadRecord, *sqlgraph.CreateS
 	if value, ok := _c.mutation.VerificationBypassed(); ok {
 		_spec.SetField(downloadrecord.FieldVerificationBypassed, field.TypeBool, value)
 		_node.VerificationBypassed = value
+	}
+	if value, ok := _c.mutation.WantedEpisodes(); ok {
+		_spec.SetField(downloadrecord.FieldWantedEpisodes, field.TypeJSON, value)
+		_node.WantedEpisodes = value
+	}
+	if value, ok := _c.mutation.SelectedFiles(); ok {
+		_spec.SetField(downloadrecord.FieldSelectedFiles, field.TypeJSON, value)
+		_node.SelectedFiles = value
+	}
+	if value, ok := _c.mutation.SelectedBytes(); ok {
+		_spec.SetField(downloadrecord.FieldSelectedBytes, field.TypeInt64, value)
+		_node.SelectedBytes = value
+	}
+	if value, ok := _c.mutation.SelectionState(); ok {
+		_spec.SetField(downloadrecord.FieldSelectionState, field.TypeEnum, value)
+		_node.SelectionState = value
 	}
 	if nodes := _c.mutation.MovieIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

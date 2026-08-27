@@ -53,6 +53,10 @@ var (
 		{Name: "replace_mode", Type: field.TypeEnum, Enums: []string{"none", "upgrades", "all"}, Default: "none"},
 		{Name: "hold_reasons", Type: field.TypeJSON, Nullable: true},
 		{Name: "verification_bypassed", Type: field.TypeBool, Default: false},
+		{Name: "wanted_episodes", Type: field.TypeJSON, Nullable: true},
+		{Name: "selected_files", Type: field.TypeJSON, Nullable: true},
+		{Name: "selected_bytes", Type: field.TypeInt64, Nullable: true},
+		{Name: "selection_state", Type: field.TypeEnum, Enums: []string{"pending", "applied", "unsupported", "skipped"}, Default: "skipped"},
 		{Name: "episode_download_records", Type: field.TypeUint32, Nullable: true},
 		{Name: "movie_download_records", Type: field.TypeUint32, Nullable: true},
 	}
@@ -64,13 +68,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "download_records_episodes_download_records",
-				Columns:    []*schema.Column{DownloadRecordsColumns[18]},
+				Columns:    []*schema.Column{DownloadRecordsColumns[22]},
 				RefColumns: []*schema.Column{EpisodesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "download_records_movies_download_records",
-				Columns:    []*schema.Column{DownloadRecordsColumns[19]},
+				Columns:    []*schema.Column{DownloadRecordsColumns[23]},
 				RefColumns: []*schema.Column{MoviesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},

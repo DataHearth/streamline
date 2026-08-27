@@ -42,6 +42,11 @@ type CreateDownloadRecordParams struct {
 	SavePath      string
 	Quality       string
 	FailureReason string
+	// Grab-time intent for a partial season-pack selection; empty leaves the
+	// schema default (no scoped episodes).
+	WantedEpisodes []uint32
+	// Zero value resolves to the schema default (skipped).
+	SelectionState downloadrecord.SelectionState
 }
 
 func (db *DB) CreateDownloadRecord(
@@ -69,6 +74,12 @@ func (db *DB) CreateDownloadRecord(
 	}
 	if p.EpisodeID != 0 {
 		b = b.SetEpisodeID(p.EpisodeID)
+	}
+	if len(p.WantedEpisodes) > 0 {
+		b = b.SetWantedEpisodes(p.WantedEpisodes)
+	}
+	if p.SelectionState != "" {
+		b = b.SetSelectionState(p.SelectionState)
 	}
 	return b.Save(ctx)
 }
@@ -223,6 +234,50 @@ func (db *DB) SetDownloadRecordReplaceMode(
 	return db.client.DownloadRecord.UpdateOneID(id).
 		SetReplaceMode(mode).
 		Exec(ctx)
+}
+
+// SetDownloadRecordSelection writes the resolution of a file selection: the
+// state it landed in, the file indices actually selected, and their summed
+// size. Called once the client's file listing is known — before that only
+// wanted_episodes (the intent) is set.
+func (db *DB) SetDownloadRecordSelection(
+	ctx context.Context,
+	id uint32,
+	state downloadrecord.SelectionState,
+	files []int,
+	selectedBytes int64,
+) error {
+	return db.client.DownloadRecord.UpdateOneID(id).
+		SetSelectionState(state).
+		SetSelectedFiles(files).
+		SetSelectedBytes(selectedBytes).
+		Exec(ctx)
+}
+
+// SetDownloadRecordWantedEpisodes overwrites wanted_episodes with the given
+// union. A season pack can grow its selection as more episodes are confirmed
+// wanted between the grab and file-listing resolving, so this is a full
+// rewrite rather than an append.
+func (db *DB) SetDownloadRecordWantedEpisodes(
+	ctx context.Context,
+	id uint32,
+	eps []uint32,
+) error {
+	return db.client.DownloadRecord.UpdateOneID(id).
+		SetWantedEpisodes(eps).
+		Exec(ctx)
+}
+
+// ListPendingSelectionRecords returns records still awaiting file-selection
+// resolution (selection_state=pending), with episode context eager-loaded for
+// the phase-4 pass that maps selected files back to episodes.
+func (db *DB) ListPendingSelectionRecords(
+	ctx context.Context,
+) ([]*ent.DownloadRecord, error) {
+	return db.client.DownloadRecord.Query().
+		Where(downloadrecord.SelectionStateEQ(downloadrecord.SelectionStatePending)).
+		WithEpisode(withEpisodeContext).
+		All(ctx)
 }
 
 type RecordImportSuccessParams struct {

@@ -1115,4 +1115,113 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 			Expect(ent.IsNotFound(err)).To(BeTrue())
 		})
 	})
+
+	Describe("selection fields", func() {
+		It("creates with wanted episodes and a non-default selection state", func() {
+			rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "t", Size: 1, TorrentHash: "sel-create",
+				Status:  downloadrecord.StatusDownloading,
+				MovieID: movieID, DownloadClientName: clientName,
+				WantedEpisodes: []uint32{1, 2, 3},
+				SelectionState: downloadrecord.SelectionStatePending,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rec.WantedEpisodes).To(Equal([]uint32{1, 2, 3}))
+			Expect(
+				rec.SelectionState,
+			).To(Equal(downloadrecord.SelectionStatePending))
+		})
+
+		It("defaults selection_state to skipped when unset", func() {
+			rec := createRec("sel-default", downloadrecord.StatusDownloading)
+			Expect(
+				rec.SelectionState,
+			).To(Equal(downloadrecord.SelectionStateSkipped))
+			Expect(rec.WantedEpisodes).To(BeEmpty())
+		})
+
+		It(
+			"SetDownloadRecordSelection writes state, files and bytes, re-readable",
+			func() {
+				rec := createRec("sel-set", downloadrecord.StatusDownloading)
+
+				err := store.SetDownloadRecordSelection(
+					ctx,
+					rec.ID,
+					downloadrecord.SelectionStateApplied,
+					[]int{0, 2},
+					2_100_000_000,
+				)
+				Expect(err).NotTo(HaveOccurred())
+
+				got, err := store.FindDownloadRecordByID(ctx, rec.ID)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(
+					got.SelectionState,
+				).To(Equal(downloadrecord.SelectionStateApplied))
+				Expect(got.SelectedFiles).To(Equal([]int{0, 2}))
+				Expect(got.SelectedBytes).To(Equal(int64(2_100_000_000)))
+			},
+		)
+
+		It("SetDownloadRecordWantedEpisodes writes the union, re-readable", func() {
+			rec := createRec("sel-wanted", downloadrecord.StatusDownloading)
+
+			err := store.SetDownloadRecordWantedEpisodes(
+				ctx,
+				rec.ID,
+				[]uint32{5, 6, 7},
+			)
+			Expect(err).NotTo(HaveOccurred())
+
+			got, err := store.FindDownloadRecordByID(ctx, rec.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.WantedEpisodes).To(Equal([]uint32{5, 6, 7}))
+		})
+
+		It(
+			"ListPendingSelectionRecords returns only pending rows, with episode edges loaded",
+			func() {
+				show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+					Title: "Selection Show", Year: 2024, TvdbID: 9100,
+					Seasons: []SeasonSeed{{
+						Number:   1,
+						Episodes: []EpisodeSeed{{Number: 1, Title: "Pilot"}},
+					}},
+				})
+				Expect(err).NotTo(HaveOccurred())
+				episodeID := show.Edges.Seasons[0].Edges.Episodes[0].ID
+
+				pending, err := store.CreateDownloadRecord(
+					ctx,
+					CreateDownloadRecordParams{
+						Title: "t", Size: 1, TorrentHash: "sel-pending",
+						Status:             downloadrecord.StatusDownloading,
+						EpisodeID:          episodeID,
+						DownloadClientName: clientName,
+						SelectionState:     downloadrecord.SelectionStatePending,
+					},
+				)
+				Expect(err).NotTo(HaveOccurred())
+
+				// Not pending — must not appear in the list.
+				_, err = store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+					Title: "t", Size: 1, TorrentHash: "sel-applied",
+					Status:             downloadrecord.StatusDownloading,
+					EpisodeID:          episodeID,
+					DownloadClientName: clientName,
+					SelectionState:     downloadrecord.SelectionStateApplied,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				createRec("sel-skipped", downloadrecord.StatusDownloading)
+
+				list, err := store.ListPendingSelectionRecords(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(list).To(HaveLen(1))
+				Expect(list[0].ID).To(Equal(pending.ID))
+				Expect(list[0].Edges.Episode).NotTo(BeNil())
+				Expect(list[0].Edges.Episode.Edges.Season).NotTo(BeNil())
+			},
+		)
+	})
 })

@@ -55,6 +55,14 @@ type DownloadRecord struct {
 	HoldReasons []schema.HoldReason `json:"hold_reasons,omitempty"`
 	// VerificationBypassed holds the value of the "verification_bypassed" field.
 	VerificationBypassed bool `json:"verification_bypassed,omitempty"`
+	// WantedEpisodes holds the value of the "wanted_episodes" field.
+	WantedEpisodes []uint32 `json:"wanted_episodes,omitempty"`
+	// SelectedFiles holds the value of the "selected_files" field.
+	SelectedFiles []int `json:"selected_files,omitempty"`
+	// SelectedBytes holds the value of the "selected_bytes" field.
+	SelectedBytes int64 `json:"selected_bytes,omitempty"`
+	// SelectionState holds the value of the "selection_state" field.
+	SelectionState downloadrecord.SelectionState `json:"selection_state,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the DownloadRecordQuery when eager-loading is set.
 	Edges                    DownloadRecordEdges `json:"edges"`
@@ -101,13 +109,13 @@ func (*DownloadRecord) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case downloadrecord.FieldHoldReasons:
+		case downloadrecord.FieldHoldReasons, downloadrecord.FieldWantedEpisodes, downloadrecord.FieldSelectedFiles:
 			values[i] = new([]byte)
 		case downloadrecord.FieldVerificationBypassed:
 			values[i] = new(sql.NullBool)
-		case downloadrecord.FieldID, downloadrecord.FieldSize, downloadrecord.FieldImportAttempts:
+		case downloadrecord.FieldID, downloadrecord.FieldSize, downloadrecord.FieldImportAttempts, downloadrecord.FieldSelectedBytes:
 			values[i] = new(sql.NullInt64)
-		case downloadrecord.FieldTitle, downloadrecord.FieldQuality, downloadrecord.FieldStatus, downloadrecord.FieldTorrentHash, downloadrecord.FieldReleaseGroup, downloadrecord.FieldSavePath, downloadrecord.FieldFailureReason, downloadrecord.FieldIndexerName, downloadrecord.FieldDownloadClientName, downloadrecord.FieldReplaceMode:
+		case downloadrecord.FieldTitle, downloadrecord.FieldQuality, downloadrecord.FieldStatus, downloadrecord.FieldTorrentHash, downloadrecord.FieldReleaseGroup, downloadrecord.FieldSavePath, downloadrecord.FieldFailureReason, downloadrecord.FieldIndexerName, downloadrecord.FieldDownloadClientName, downloadrecord.FieldReplaceMode, downloadrecord.FieldSelectionState:
 			values[i] = new(sql.NullString)
 		case downloadrecord.FieldCreateTime, downloadrecord.FieldUpdateTime, downloadrecord.FieldImportedAt:
 			values[i] = new(sql.NullTime)
@@ -241,6 +249,34 @@ func (_m *DownloadRecord) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.VerificationBypassed = value.Bool
 			}
+		case downloadrecord.FieldWantedEpisodes:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field wanted_episodes", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.WantedEpisodes); err != nil {
+					return fmt.Errorf("unmarshal field wanted_episodes: %w", err)
+				}
+			}
+		case downloadrecord.FieldSelectedFiles:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field selected_files", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.SelectedFiles); err != nil {
+					return fmt.Errorf("unmarshal field selected_files: %w", err)
+				}
+			}
+		case downloadrecord.FieldSelectedBytes:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field selected_bytes", values[i])
+			} else if value.Valid {
+				_m.SelectedBytes = value.Int64
+			}
+		case downloadrecord.FieldSelectionState:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field selection_state", values[i])
+			} else if value.Valid {
+				_m.SelectionState = downloadrecord.SelectionState(value.String)
+			}
 		case downloadrecord.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for edge-field episode_download_records", value)
@@ -353,6 +389,18 @@ func (_m *DownloadRecord) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("verification_bypassed=")
 	builder.WriteString(fmt.Sprintf("%v", _m.VerificationBypassed))
+	builder.WriteString(", ")
+	builder.WriteString("wanted_episodes=")
+	builder.WriteString(fmt.Sprintf("%v", _m.WantedEpisodes))
+	builder.WriteString(", ")
+	builder.WriteString("selected_files=")
+	builder.WriteString(fmt.Sprintf("%v", _m.SelectedFiles))
+	builder.WriteString(", ")
+	builder.WriteString("selected_bytes=")
+	builder.WriteString(fmt.Sprintf("%v", _m.SelectedBytes))
+	builder.WriteString(", ")
+	builder.WriteString("selection_state=")
+	builder.WriteString(fmt.Sprintf("%v", _m.SelectionState))
 	builder.WriteByte(')')
 	return builder.String()
 }

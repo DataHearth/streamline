@@ -7692,6 +7692,68 @@ func (_c *MockStore_ListPendingImportScanShowFolders_Call) RunAndReturn(run func
 	return _c
 }
 
+// ListPendingSelectionRecords provides a mock function for the type MockStore
+func (_mock *MockStore) ListPendingSelectionRecords(ctx context.Context) ([]*ent.DownloadRecord, error) {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListPendingSelectionRecords")
+	}
+
+	var r0 []*ent.DownloadRecord
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) ([]*ent.DownloadRecord, error)); ok {
+		return returnFunc(ctx)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context) []*ent.DownloadRecord); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ent.DownloadRecord)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = returnFunc(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_ListPendingSelectionRecords_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListPendingSelectionRecords'
+type MockStore_ListPendingSelectionRecords_Call struct {
+	*mock.Call
+}
+
+// ListPendingSelectionRecords is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockStore_Expecter) ListPendingSelectionRecords(ctx any) *MockStore_ListPendingSelectionRecords_Call {
+	return &MockStore_ListPendingSelectionRecords_Call{Call: _e.mock.On("ListPendingSelectionRecords", ctx)}
+}
+
+func (_c *MockStore_ListPendingSelectionRecords_Call) Run(run func(ctx context.Context)) *MockStore_ListPendingSelectionRecords_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_ListPendingSelectionRecords_Call) Return(downloadRecords []*ent.DownloadRecord, err error) *MockStore_ListPendingSelectionRecords_Call {
+	_c.Call.Return(downloadRecords, err)
+	return _c
+}
+
+func (_c *MockStore_ListPendingSelectionRecords_Call) RunAndReturn(run func(ctx context.Context) ([]*ent.DownloadRecord, error)) *MockStore_ListPendingSelectionRecords_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListRequests provides a mock function for the type MockStore
 func (_mock *MockStore) ListRequests(ctx context.Context, p db.ListRequestsParams) ([]*ent.Request, int, error) {
 	ret := _mock.Called(ctx, p)
@@ -10206,6 +10268,144 @@ func (_c *MockStore_SetDownloadRecordSavePath_Call) Return(err error) *MockStore
 }
 
 func (_c *MockStore_SetDownloadRecordSavePath_Call) RunAndReturn(run func(ctx context.Context, id uint32, path string) error) *MockStore_SetDownloadRecordSavePath_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetDownloadRecordSelection provides a mock function for the type MockStore
+func (_mock *MockStore) SetDownloadRecordSelection(ctx context.Context, id uint32, state downloadrecord.SelectionState, files []int, selectedBytes int64) error {
+	ret := _mock.Called(ctx, id, state, files, selectedBytes)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetDownloadRecordSelection")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, downloadrecord.SelectionState, []int, int64) error); ok {
+		r0 = returnFunc(ctx, id, state, files, selectedBytes)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStore_SetDownloadRecordSelection_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetDownloadRecordSelection'
+type MockStore_SetDownloadRecordSelection_Call struct {
+	*mock.Call
+}
+
+// SetDownloadRecordSelection is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - state downloadrecord.SelectionState
+//   - files []int
+//   - selectedBytes int64
+func (_e *MockStore_Expecter) SetDownloadRecordSelection(ctx any, id any, state any, files any, selectedBytes any) *MockStore_SetDownloadRecordSelection_Call {
+	return &MockStore_SetDownloadRecordSelection_Call{Call: _e.mock.On("SetDownloadRecordSelection", ctx, id, state, files, selectedBytes)}
+}
+
+func (_c *MockStore_SetDownloadRecordSelection_Call) Run(run func(ctx context.Context, id uint32, state downloadrecord.SelectionState, files []int, selectedBytes int64)) *MockStore_SetDownloadRecordSelection_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 downloadrecord.SelectionState
+		if args[2] != nil {
+			arg2 = args[2].(downloadrecord.SelectionState)
+		}
+		var arg3 []int
+		if args[3] != nil {
+			arg3 = args[3].([]int)
+		}
+		var arg4 int64
+		if args[4] != nil {
+			arg4 = args[4].(int64)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_SetDownloadRecordSelection_Call) Return(err error) *MockStore_SetDownloadRecordSelection_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStore_SetDownloadRecordSelection_Call) RunAndReturn(run func(ctx context.Context, id uint32, state downloadrecord.SelectionState, files []int, selectedBytes int64) error) *MockStore_SetDownloadRecordSelection_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetDownloadRecordWantedEpisodes provides a mock function for the type MockStore
+func (_mock *MockStore) SetDownloadRecordWantedEpisodes(ctx context.Context, id uint32, eps []uint32) error {
+	ret := _mock.Called(ctx, id, eps)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetDownloadRecordWantedEpisodes")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, []uint32) error); ok {
+		r0 = returnFunc(ctx, id, eps)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStore_SetDownloadRecordWantedEpisodes_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetDownloadRecordWantedEpisodes'
+type MockStore_SetDownloadRecordWantedEpisodes_Call struct {
+	*mock.Call
+}
+
+// SetDownloadRecordWantedEpisodes is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - eps []uint32
+func (_e *MockStore_Expecter) SetDownloadRecordWantedEpisodes(ctx any, id any, eps any) *MockStore_SetDownloadRecordWantedEpisodes_Call {
+	return &MockStore_SetDownloadRecordWantedEpisodes_Call{Call: _e.mock.On("SetDownloadRecordWantedEpisodes", ctx, id, eps)}
+}
+
+func (_c *MockStore_SetDownloadRecordWantedEpisodes_Call) Run(run func(ctx context.Context, id uint32, eps []uint32)) *MockStore_SetDownloadRecordWantedEpisodes_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 []uint32
+		if args[2] != nil {
+			arg2 = args[2].([]uint32)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_SetDownloadRecordWantedEpisodes_Call) Return(err error) *MockStore_SetDownloadRecordWantedEpisodes_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStore_SetDownloadRecordWantedEpisodes_Call) RunAndReturn(run func(ctx context.Context, id uint32, eps []uint32) error) *MockStore_SetDownloadRecordWantedEpisodes_Call {
 	_c.Call.Return(run)
 	return _c
 }

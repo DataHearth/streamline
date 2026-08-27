@@ -321,6 +321,83 @@ func (_u *DownloadRecordUpdate) SetNillableVerificationBypassed(v *bool) *Downlo
 	return _u
 }
 
+// SetWantedEpisodes sets the "wanted_episodes" field.
+func (_u *DownloadRecordUpdate) SetWantedEpisodes(v []uint32) *DownloadRecordUpdate {
+	_u.mutation.SetWantedEpisodes(v)
+	return _u
+}
+
+// AppendWantedEpisodes appends value to the "wanted_episodes" field.
+func (_u *DownloadRecordUpdate) AppendWantedEpisodes(v []uint32) *DownloadRecordUpdate {
+	_u.mutation.AppendWantedEpisodes(v)
+	return _u
+}
+
+// ClearWantedEpisodes clears the value of the "wanted_episodes" field.
+func (_u *DownloadRecordUpdate) ClearWantedEpisodes() *DownloadRecordUpdate {
+	_u.mutation.ClearWantedEpisodes()
+	return _u
+}
+
+// SetSelectedFiles sets the "selected_files" field.
+func (_u *DownloadRecordUpdate) SetSelectedFiles(v []int) *DownloadRecordUpdate {
+	_u.mutation.SetSelectedFiles(v)
+	return _u
+}
+
+// AppendSelectedFiles appends value to the "selected_files" field.
+func (_u *DownloadRecordUpdate) AppendSelectedFiles(v []int) *DownloadRecordUpdate {
+	_u.mutation.AppendSelectedFiles(v)
+	return _u
+}
+
+// ClearSelectedFiles clears the value of the "selected_files" field.
+func (_u *DownloadRecordUpdate) ClearSelectedFiles() *DownloadRecordUpdate {
+	_u.mutation.ClearSelectedFiles()
+	return _u
+}
+
+// SetSelectedBytes sets the "selected_bytes" field.
+func (_u *DownloadRecordUpdate) SetSelectedBytes(v int64) *DownloadRecordUpdate {
+	_u.mutation.ResetSelectedBytes()
+	_u.mutation.SetSelectedBytes(v)
+	return _u
+}
+
+// SetNillableSelectedBytes sets the "selected_bytes" field if the given value is not nil.
+func (_u *DownloadRecordUpdate) SetNillableSelectedBytes(v *int64) *DownloadRecordUpdate {
+	if v != nil {
+		_u.SetSelectedBytes(*v)
+	}
+	return _u
+}
+
+// AddSelectedBytes adds value to the "selected_bytes" field.
+func (_u *DownloadRecordUpdate) AddSelectedBytes(v int64) *DownloadRecordUpdate {
+	_u.mutation.AddSelectedBytes(v)
+	return _u
+}
+
+// ClearSelectedBytes clears the value of the "selected_bytes" field.
+func (_u *DownloadRecordUpdate) ClearSelectedBytes() *DownloadRecordUpdate {
+	_u.mutation.ClearSelectedBytes()
+	return _u
+}
+
+// SetSelectionState sets the "selection_state" field.
+func (_u *DownloadRecordUpdate) SetSelectionState(v downloadrecord.SelectionState) *DownloadRecordUpdate {
+	_u.mutation.SetSelectionState(v)
+	return _u
+}
+
+// SetNillableSelectionState sets the "selection_state" field if the given value is not nil.
+func (_u *DownloadRecordUpdate) SetNillableSelectionState(v *downloadrecord.SelectionState) *DownloadRecordUpdate {
+	if v != nil {
+		_u.SetSelectionState(*v)
+	}
+	return _u
+}
+
 // SetMovieID sets the "movie" edge to the Movie entity by ID.
 func (_u *DownloadRecordUpdate) SetMovieID(id uint32) *DownloadRecordUpdate {
 	_u.mutation.SetMovieID(id)
@@ -427,6 +504,11 @@ func (_u *DownloadRecordUpdate) check() error {
 	if v, ok := _u.mutation.ReplaceMode(); ok {
 		if err := downloadrecord.ReplaceModeValidator(v); err != nil {
 			return &ValidationError{Name: "replace_mode", err: fmt.Errorf(`ent: validator failed for field "DownloadRecord.replace_mode": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.SelectionState(); ok {
+		if err := downloadrecord.SelectionStateValidator(v); err != nil {
+			return &ValidationError{Name: "selection_state", err: fmt.Errorf(`ent: validator failed for field "DownloadRecord.selection_state": %w`, err)}
 		}
 	}
 	return nil
@@ -538,6 +620,40 @@ func (_u *DownloadRecordUpdate) sqlSave(ctx context.Context) (_node int, err err
 	}
 	if value, ok := _u.mutation.VerificationBypassed(); ok {
 		_spec.SetField(downloadrecord.FieldVerificationBypassed, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.WantedEpisodes(); ok {
+		_spec.SetField(downloadrecord.FieldWantedEpisodes, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedWantedEpisodes(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, downloadrecord.FieldWantedEpisodes, value)
+		})
+	}
+	if _u.mutation.WantedEpisodesCleared() {
+		_spec.ClearField(downloadrecord.FieldWantedEpisodes, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.SelectedFiles(); ok {
+		_spec.SetField(downloadrecord.FieldSelectedFiles, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedSelectedFiles(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, downloadrecord.FieldSelectedFiles, value)
+		})
+	}
+	if _u.mutation.SelectedFilesCleared() {
+		_spec.ClearField(downloadrecord.FieldSelectedFiles, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.SelectedBytes(); ok {
+		_spec.SetField(downloadrecord.FieldSelectedBytes, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedSelectedBytes(); ok {
+		_spec.AddField(downloadrecord.FieldSelectedBytes, field.TypeInt64, value)
+	}
+	if _u.mutation.SelectedBytesCleared() {
+		_spec.ClearField(downloadrecord.FieldSelectedBytes, field.TypeInt64)
+	}
+	if value, ok := _u.mutation.SelectionState(); ok {
+		_spec.SetField(downloadrecord.FieldSelectionState, field.TypeEnum, value)
 	}
 	if _u.mutation.MovieCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -907,6 +1023,83 @@ func (_u *DownloadRecordUpdateOne) SetNillableVerificationBypassed(v *bool) *Dow
 	return _u
 }
 
+// SetWantedEpisodes sets the "wanted_episodes" field.
+func (_u *DownloadRecordUpdateOne) SetWantedEpisodes(v []uint32) *DownloadRecordUpdateOne {
+	_u.mutation.SetWantedEpisodes(v)
+	return _u
+}
+
+// AppendWantedEpisodes appends value to the "wanted_episodes" field.
+func (_u *DownloadRecordUpdateOne) AppendWantedEpisodes(v []uint32) *DownloadRecordUpdateOne {
+	_u.mutation.AppendWantedEpisodes(v)
+	return _u
+}
+
+// ClearWantedEpisodes clears the value of the "wanted_episodes" field.
+func (_u *DownloadRecordUpdateOne) ClearWantedEpisodes() *DownloadRecordUpdateOne {
+	_u.mutation.ClearWantedEpisodes()
+	return _u
+}
+
+// SetSelectedFiles sets the "selected_files" field.
+func (_u *DownloadRecordUpdateOne) SetSelectedFiles(v []int) *DownloadRecordUpdateOne {
+	_u.mutation.SetSelectedFiles(v)
+	return _u
+}
+
+// AppendSelectedFiles appends value to the "selected_files" field.
+func (_u *DownloadRecordUpdateOne) AppendSelectedFiles(v []int) *DownloadRecordUpdateOne {
+	_u.mutation.AppendSelectedFiles(v)
+	return _u
+}
+
+// ClearSelectedFiles clears the value of the "selected_files" field.
+func (_u *DownloadRecordUpdateOne) ClearSelectedFiles() *DownloadRecordUpdateOne {
+	_u.mutation.ClearSelectedFiles()
+	return _u
+}
+
+// SetSelectedBytes sets the "selected_bytes" field.
+func (_u *DownloadRecordUpdateOne) SetSelectedBytes(v int64) *DownloadRecordUpdateOne {
+	_u.mutation.ResetSelectedBytes()
+	_u.mutation.SetSelectedBytes(v)
+	return _u
+}
+
+// SetNillableSelectedBytes sets the "selected_bytes" field if the given value is not nil.
+func (_u *DownloadRecordUpdateOne) SetNillableSelectedBytes(v *int64) *DownloadRecordUpdateOne {
+	if v != nil {
+		_u.SetSelectedBytes(*v)
+	}
+	return _u
+}
+
+// AddSelectedBytes adds value to the "selected_bytes" field.
+func (_u *DownloadRecordUpdateOne) AddSelectedBytes(v int64) *DownloadRecordUpdateOne {
+	_u.mutation.AddSelectedBytes(v)
+	return _u
+}
+
+// ClearSelectedBytes clears the value of the "selected_bytes" field.
+func (_u *DownloadRecordUpdateOne) ClearSelectedBytes() *DownloadRecordUpdateOne {
+	_u.mutation.ClearSelectedBytes()
+	return _u
+}
+
+// SetSelectionState sets the "selection_state" field.
+func (_u *DownloadRecordUpdateOne) SetSelectionState(v downloadrecord.SelectionState) *DownloadRecordUpdateOne {
+	_u.mutation.SetSelectionState(v)
+	return _u
+}
+
+// SetNillableSelectionState sets the "selection_state" field if the given value is not nil.
+func (_u *DownloadRecordUpdateOne) SetNillableSelectionState(v *downloadrecord.SelectionState) *DownloadRecordUpdateOne {
+	if v != nil {
+		_u.SetSelectionState(*v)
+	}
+	return _u
+}
+
 // SetMovieID sets the "movie" edge to the Movie entity by ID.
 func (_u *DownloadRecordUpdateOne) SetMovieID(id uint32) *DownloadRecordUpdateOne {
 	_u.mutation.SetMovieID(id)
@@ -1026,6 +1219,11 @@ func (_u *DownloadRecordUpdateOne) check() error {
 	if v, ok := _u.mutation.ReplaceMode(); ok {
 		if err := downloadrecord.ReplaceModeValidator(v); err != nil {
 			return &ValidationError{Name: "replace_mode", err: fmt.Errorf(`ent: validator failed for field "DownloadRecord.replace_mode": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.SelectionState(); ok {
+		if err := downloadrecord.SelectionStateValidator(v); err != nil {
+			return &ValidationError{Name: "selection_state", err: fmt.Errorf(`ent: validator failed for field "DownloadRecord.selection_state": %w`, err)}
 		}
 	}
 	return nil
@@ -1154,6 +1352,40 @@ func (_u *DownloadRecordUpdateOne) sqlSave(ctx context.Context) (_node *Download
 	}
 	if value, ok := _u.mutation.VerificationBypassed(); ok {
 		_spec.SetField(downloadrecord.FieldVerificationBypassed, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.WantedEpisodes(); ok {
+		_spec.SetField(downloadrecord.FieldWantedEpisodes, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedWantedEpisodes(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, downloadrecord.FieldWantedEpisodes, value)
+		})
+	}
+	if _u.mutation.WantedEpisodesCleared() {
+		_spec.ClearField(downloadrecord.FieldWantedEpisodes, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.SelectedFiles(); ok {
+		_spec.SetField(downloadrecord.FieldSelectedFiles, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedSelectedFiles(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, downloadrecord.FieldSelectedFiles, value)
+		})
+	}
+	if _u.mutation.SelectedFilesCleared() {
+		_spec.ClearField(downloadrecord.FieldSelectedFiles, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.SelectedBytes(); ok {
+		_spec.SetField(downloadrecord.FieldSelectedBytes, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedSelectedBytes(); ok {
+		_spec.AddField(downloadrecord.FieldSelectedBytes, field.TypeInt64, value)
+	}
+	if _u.mutation.SelectedBytesCleared() {
+		_spec.ClearField(downloadrecord.FieldSelectedBytes, field.TypeInt64)
+	}
+	if value, ok := _u.mutation.SelectionState(); ok {
+		_spec.SetField(downloadrecord.FieldSelectionState, field.TypeEnum, value)
 	}
 	if _u.mutation.MovieCleared() {
 		edge := &sqlgraph.EdgeSpec{
