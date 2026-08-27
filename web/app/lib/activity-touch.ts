@@ -120,12 +120,15 @@ export function queueMeta(item: QueueEntry): MetaLine {
 			color: "var(--status-grabbing)",
 		};
 	}
+	// Applied: the client is only pulling the selected bytes, so that — not
+	// the release's full size — is the total the downloaded estimate is of.
+	const total = item.selection_state === "applied" ? (item.selected_bytes ?? item.size) : item.size;
 	if (item.status === "paused") {
-		const held = formatBytes(item.size * (item.progress ?? 0), "");
+		const held = formatBytes(total * (item.progress ?? 0), "");
 		return {
 			text: joinDot([
 				`paused at ${pct(item.progress)}`,
-				held ? `${held} of ${formatBytes(item.size)}` : "",
+				held ? `${held} of ${formatBytes(total)}` : "",
 			]),
 		};
 	}
@@ -134,7 +137,9 @@ export function queueMeta(item: QueueEntry): MetaLine {
 		text: joinDot([
 			formatSpeed(item.download_speed),
 			eta ? `${eta} left` : "",
-			item.download_client,
+			item.selection_state === "unsupported"
+				? i18n.queue_selection_unsupported()
+				: item.download_client,
 		]),
 	};
 }

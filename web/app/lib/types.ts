@@ -445,6 +445,12 @@ export type QueueEntry = {
 	eta?: number;
 	failure_reason?: string;
 	hold_reasons?: HoldReason[];
+	// Omitted entirely when "skipped" — no selection was ever applied, and the
+	// whole torrent downloads. selected_files_count/selected_bytes are present
+	// only when selection_state is "applied".
+	selection_state?: "pending" | "applied" | "unsupported";
+	selected_files_count?: number;
+	selected_bytes?: number;
 	created_at: string;
 };
 export type DownloadQueue = { items: QueueEntry[]; refreshed_at: string };

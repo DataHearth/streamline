@@ -1024,6 +1024,8 @@
 	"quality_upgrades_help": "Re-grab when a higher-quality release becomes available.",
 	"quality_view": "View quality profile",
 	"quality_view_short": "View profile",
+	"queue_selected_of": "{selected} of {total} selected",
+	"queue_selection_unsupported": "Client can't skip files — downloading whole",
 	"release_rejected": "Rejected",
 	"release_score": "Score",
 	"release_score_help": "Total custom-format score against this item's quality profile.",

@@ -65,6 +65,25 @@
 	let progress = $derived(
 		view === "history" ? 1 : queue?.status === "importing" ? 1 : (queue?.progress ?? 0),
 	);
+	// Applied: the file selection kept a subset of the torrent, so the size
+	// tile's meaningful total is what got kept, not the whole release.
+	let selectionApplied = $derived(
+		view === "queue" && queue?.selection_state === "applied",
+	);
+	let selectionUnsupported = $derived(
+		view === "queue" && queue?.selection_state === "unsupported",
+	);
+	let sizeValue = $derived.by(() => {
+		if (!item) return "—";
+		const size = formatBytes(item.size);
+		if (selectionApplied) {
+			return i18n.queue_selected_of({
+				selected: formatBytes(queue?.selected_bytes ?? 0),
+				total: size,
+			});
+		}
+		return size;
+	});
 	let meta = $derived(
 		item
 			? view === "queue"
@@ -163,13 +182,18 @@
 				>
 					<div class="bg-bg-elevated px-3 py-2.5">
 						<div class="font-mono text-[13.5px] font-semibold tabular-nums text-fg">
-							{formatBytes(item.size)}
+							{sizeValue}
 						</div>
 						<div
 							class="mt-px text-[9px] font-medium uppercase tracking-[0.12em] text-fg-faint"
 						>
 							{i18n.common_size()}
 						</div>
+						{#if selectionUnsupported}
+							<div class="mt-1 text-[9.5px] text-fg-faint">
+								{i18n.queue_selection_unsupported()}
+							</div>
+						{/if}
 					</div>
 					<div class="bg-bg-elevated px-3 py-2.5">
 						<div class="truncate font-mono text-[12.5px] font-semibold text-fg">

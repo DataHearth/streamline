@@ -1024,6 +1024,8 @@
 	"quality_upgrades_help": "Re-télécharger lorsqu'une release de meilleure qualité est disponible.",
 	"quality_view": "Voir le profil de qualité",
 	"quality_view_short": "Voir le profil",
+	"queue_selected_of": "{selected} sur {total} sélectionnés",
+	"queue_selection_unsupported": "Le client ne peut pas ignorer des fichiers — téléchargement intégral",
 	"release_rejected": "Rejetée",
 	"release_score": "Score",
 	"release_score_help": "Score total des formats personnalisés selon le profil de qualité de cet élément.",

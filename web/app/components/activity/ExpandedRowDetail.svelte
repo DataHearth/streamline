@@ -38,14 +38,33 @@
 	// client for a torrent that is already done, and the backend refuses them.
 	// Resolve is the only move, and the row itself carries that button.
 	let isHeld = $derived(view === "queue" && item.status === "held");
+	let queue = $derived(item as QueueEntry);
+
+	// Applied: the file selection kept a subset of the torrent, so the
+	// meaningful total is what got kept, not the whole release.
+	let selectionApplied = $derived(
+		view === "queue" && queue.selection_state === "applied",
+	);
+	let selectionUnsupported = $derived(
+		view === "queue" && queue.selection_state === "unsupported",
+	);
 
 	type KV = { label: string; value: string };
 	let rows = $derived.by<KV[]>(() => {
+		let sizeValue = formatBytes(item.size);
+		if (selectionApplied) {
+			sizeValue = i18n.queue_selected_of({
+				selected: formatBytes(queue.selected_bytes ?? 0),
+				total: formatBytes(item.size),
+			});
+		} else if (selectionUnsupported) {
+			sizeValue = `${sizeValue} — ${i18n.queue_selection_unsupported()}`;
+		}
 		const out: KV[] = [
 			{ label: i18n.common_release(), value: item.title },
 			{ label: i18n.common_indexer(), value: item.indexer || "—" },
 			{ label: i18n.common_client(), value: item.download_client || "—" },
-			{ label: i18n.common_size(), value: formatBytes(item.size) },
+			{ label: i18n.common_size(), value: sizeValue },
 			{ label: i18n.common_created(), value: formatDateTime(item.created_at) },
 		];
 		if (view === "history") {
