@@ -65,8 +65,13 @@ func (s *EpisodeMissingSearcher) Run(ctx context.Context) error {
 		)
 		return nil
 	}
+	// grabbed tracks episode IDs already served this tick, across every show
+	// and season: a pack's union can cover an episode a later season's own
+	// snapshot still lists as searchable, and re-searching it would waste an
+	// indexer query on bytes already on the way.
+	grabbed := make(map[uint32]struct{})
 	for _, show := range shows {
-		s.searchShow(ctx, show)
+		s.searchShow(ctx, show, grabbed)
 	}
 	return nil
 }
@@ -89,11 +94,12 @@ func (s *EpisodeMissingSearcher) SearchShow(
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
 	}
+	grabbed := make(map[uint32]struct{})
 	for _, show := range shows {
 		if show.ID != showID {
 			continue
 		}
-		s.searchShow(ctx, show)
+		s.searchShow(ctx, show, grabbed)
 	}
 	return nil
 }
@@ -122,7 +128,11 @@ func (t *searchTally) add(seasonNumber uint16, s searchTally) {
 // write a row per wanted episode per tick; the operator asked for a search of
 // this series, so that is what the history shows — with the seasons actually
 // touched in the payload, so a single-season pass still reads as one.
-func (s *EpisodeMissingSearcher) searchShow(ctx context.Context, show *ent.TVShow) {
+func (s *EpisodeMissingSearcher) searchShow(
+	ctx context.Context,
+	show *ent.TVShow,
+	grabbed map[uint32]struct{},
+) {
 	titles := []string{show.Title}
 	// Unfiltered season lengths, for sizing a pack. The season edges below are
 	// narrowed to searchable episodes, and a pack costs the whole season. A
@@ -135,7 +145,10 @@ func (s *EpisodeMissingSearcher) searchShow(ctx context.Context, show *ent.TVSho
 	perSeason := counts[show.ID]
 	var tally searchTally
 	for _, se := range show.Edges.Seasons {
-		tally.add(se.Number, s.processSeason(ctx, show, se, titles, perSeason))
+		tally.add(
+			se.Number,
+			s.processSeason(ctx, show, se, titles, perSeason, grabbed),
+		)
 	}
 	if tally.episodes == 0 {
 		return
@@ -170,17 +183,26 @@ func (s *EpisodeMissingSearcher) eligibleShows(
 
 // processSeason searches and grabs for one season's wanted episodes. The
 // season's episode edge is already filtered to searchable rows by
-// ListEligibleEpisodesForSync. With two or more wanted episodes it tries a
-// season pack first; otherwise (or on no acceptable pack) it falls back to
-// per-episode.
+// ListEligibleEpisodesForSync, and is narrowed again here against grabbed —
+// episodes an earlier season's pack already served this tick — before the
+// pack-vs-single decision, so a fully covered season searches nothing at all.
+// With two or more still-open episodes it tries a season pack first;
+// otherwise (or on no acceptable pack) it falls back to per-episode.
 func (s *EpisodeMissingSearcher) processSeason(
 	ctx context.Context,
 	show *ent.TVShow,
 	se *ent.Season,
 	titles []string,
 	perSeason map[uint16]int,
+	grabbed map[uint32]struct{},
 ) searchTally {
-	wanted := se.Edges.Episodes
+	wanted := make([]*ent.Episode, 0, len(se.Edges.Episodes))
+	for _, e := range se.Edges.Episodes {
+		if _, already := grabbed[e.ID]; already {
+			continue
+		}
+		wanted = append(wanted, e)
+	}
 	if len(wanted) == 0 {
 		return searchTally{}
 	}
@@ -188,7 +210,16 @@ func (s *EpisodeMissingSearcher) processSeason(
 
 	// Prefer a season pack when the whole season (2+ episodes) is wanted.
 	if len(wanted) >= 2 &&
-		s.grabSeasonPack(ctx, show, se, titles, wanted, profile, perSeason) {
+		s.grabSeasonPack(
+			ctx,
+			show,
+			se,
+			titles,
+			wanted,
+			profile,
+			perSeason,
+			grabbed,
+		) {
 		return searchTally{
 			episodes: len(wanted),
 			grabbed:  len(wanted),
@@ -198,7 +229,7 @@ func (s *EpisodeMissingSearcher) processSeason(
 
 	t := searchTally{episodes: len(wanted)}
 	for _, e := range wanted {
-		if s.grabEpisode(ctx, show, se, e, titles, profile) {
+		if s.grabEpisode(ctx, show, se, e, titles, profile, grabbed) {
 			t.grabbed++
 		}
 	}
@@ -222,6 +253,7 @@ func (s *EpisodeMissingSearcher) grabSeasonPack(
 	wanted []*ent.Episode,
 	profile quality.Profile,
 	perSeason map[uint16]int,
+	grabbed map[uint32]struct{},
 ) bool {
 	ctx, span := tracer.Start(ctx, "rss.tv_season_pack",
 		trace.WithAttributes(
@@ -266,9 +298,7 @@ func (s *EpisodeMissingSearcher) grabSeasonPack(
 		release := qualityctx.ContextFromRelease(
 			r.Title, r.Size, r.Seeders, episodes,
 		)
-		// No exclusion set: the beat-set is season-scoped and every season is
-		// scored once per pass, so nothing here can already be claimed.
-		beat := beatEpisodes(us, se.Number, profile, release, nil)
+		beat := beatEpisodes(us, se.Number, profile, release, grabbed)
 		wantedIDs := make([]uint32, 0, len(wanted)+len(beat))
 		for _, e := range wanted {
 			wantedIDs = append(wantedIDs, e.ID)
@@ -304,6 +334,9 @@ func (s *EpisodeMissingSearcher) grabSeasonPack(
 			continue
 		}
 		span.SetAttributes(attribute.String("release.title", r.Title))
+		for _, id := range wantedIDs {
+			grabbed[id] = struct{}{}
+		}
 		// The pack was grabbed to fill the gap, but it may also beat files
 		// already on disk. The importer decides that per episode, and upgrades
 		// is what lets it.
@@ -336,7 +369,11 @@ func (s *EpisodeMissingSearcher) grabEpisode(
 	e *ent.Episode,
 	titles []string,
 	profile quality.Profile,
+	grabbed map[uint32]struct{},
 ) bool {
+	if _, already := grabbed[e.ID]; already {
+		return false
+	}
 	results, err := s.indexers.SearchEpisode(
 		ctx, titles, show.TvdbID, se.Number, e.Number,
 	)
@@ -364,6 +401,7 @@ func (s *EpisodeMissingSearcher) grabEpisode(
 			}
 			continue
 		}
+		grabbed[e.ID] = struct{}{}
 		if err := s.store.SetEpisodeStatus(
 			ctx, e.ID, episode.StatusDownloading,
 		); err != nil {

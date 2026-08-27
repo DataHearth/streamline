@@ -667,4 +667,84 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 			Expect(searcher.Run(ctx)).To(Succeed())
 		})
 	})
+
+	Context("a per-tick grabbed set", func() {
+		It("does not re-search episodes a pack grab already serves", func() {
+			ep21 := &ent.Episode{ID: 21, Number: 1}
+			ep22 := &ent.Episode{ID: 22, Number: 2}
+			season2 := &ent.Season{ID: 6, Number: 2}
+			season2.Edges.Episodes = []*ent.Episode{ep21, ep22}
+
+			// Season 3's only wanted episode reuses season 2's ID 21 — a shape
+			// impossible for a real season pack, chosen to prove the skip is
+			// driven by the shared set, not by season topology.
+			season3 := &ent.Season{ID: 7, Number: 3}
+			season3.Edges.Episodes = []*ent.Episode{{ID: 21, Number: 1}}
+
+			show := &ent.TVShow{ID: 1, Title: "The Black Sea", TvdbID: 9001}
+			show.Edges.Seasons = []*ent.Season{season2, season3}
+			expectEligible([]*ent.TVShow{show}, nil)
+
+			indexerM.EXPECT().
+				SearchSeason(mock.Anything, []string{"The Black Sea"}, uint32(9001), uint16(2)).
+				Return([]indexer.SearchResult{{Title: "The.Black.Sea.S02.1080p.WEB-DL.x265-GRP", Seeders: 10}}, nil).
+				Once()
+			expectNoUpgradeCandidates()
+			dlM.EXPECT().
+				GrabEpisode(mock.Anything, mock.AnythingOfType("indexer.SearchResult"),
+					uint32(21), []uint32{21, 22}).
+				Return(&ent.DownloadRecord{ID: 60}, nil).Once()
+			expectReplaceMode(60)
+			for _, id := range []uint32{21, 22} {
+				store.EXPECT().
+					SetEpisodeStatus(mock.Anything, id, episode.StatusDownloading).
+					Return(nil).Once()
+				store.EXPECT().
+					SetEpisodeLastSearchAt(mock.Anything, id, mock.AnythingOfType("time.Time")).
+					Return(nil).Once()
+			}
+
+			// Season 3 issues no SearchEpisode call and no GrabEpisode call for
+			// ID 21: the mocks fail the spec on any unexpected call.
+			Expect(searcher.Run(ctx)).To(Succeed())
+		})
+
+		It("single-episode grabs enter the set too", func() {
+			epA := &ent.Episode{ID: 30, Number: 1}
+			season1 := &ent.Season{ID: 8, Number: 1}
+			season1.Edges.Episodes = []*ent.Episode{epA}
+
+			// Season 2's list reuses ID 30 — again an impossible-in-practice
+			// shape, chosen to prove a single grab enters the same set a pack
+			// grab would.
+			season2 := &ent.Season{ID: 9, Number: 2}
+			season2.Edges.Episodes = []*ent.Episode{{ID: 30, Number: 1}}
+
+			show := &ent.TVShow{ID: 1, Title: "The Black Sea", TvdbID: 9001}
+			show.Edges.Seasons = []*ent.Season{season1, season2}
+			expectEligible([]*ent.TVShow{show}, nil)
+
+			indexerM.EXPECT().
+				SearchEpisode(mock.Anything, []string{"The Black Sea"}, uint32(9001), uint16(1), uint16(1)).
+				Return([]indexer.SearchResult{{Title: acceptableEp, Seeders: 10}}, nil).
+				Once()
+			dlM.EXPECT().
+				GrabEpisode(mock.Anything, mock.AnythingOfType("indexer.SearchResult"),
+					uint32(30), []uint32{30}).
+				Return(&ent.DownloadRecord{}, nil).Once()
+			store.EXPECT().
+				SetEpisodeStatus(mock.Anything, uint32(30), episode.StatusDownloading).
+				Return(nil).Once()
+			store.EXPECT().
+				ResetEpisodeGrabFailures(mock.Anything, uint32(30)).
+				Return(nil).Once()
+			store.EXPECT().
+				SetEpisodeLastSearchAt(mock.Anything, uint32(30), mock.AnythingOfType("time.Time")).
+				Return(nil).Once()
+
+			// Season 2 issues no SearchEpisode call: the mock's query-count
+			// expectation (Once, above) fails the spec on a second call.
+			Expect(searcher.Run(ctx)).To(Succeed())
+		})
+	})
 })
