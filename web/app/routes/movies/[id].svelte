@@ -77,7 +77,12 @@
 
 	let movie = $derived(movieQuery.data);
 	let hasFiles = $derived((movie?.media_files?.length ?? 0) > 0);
-	let qpName = $derived(movie?.quality_profile || "Server default");
+	let defaultQpName = $derived(
+		qpQuery.data?.find((p) => p.is_default)?.name ?? "",
+	);
+	let qpName = $derived(
+		movie?.quality_profile || defaultQpName || i18n.quality_server_default(),
+	);
 
 	let searchOpen = $state(false);
 	let qpOpen = $state(false);

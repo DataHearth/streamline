@@ -3212,8 +3212,12 @@ type QualityProfile struct {
 	// Formats Custom formats (built-in or user-defined) scored for this
 	// profile. Each name must resolve to a built-in format or a
 	// custom_formats entry.
-	Formats       *[]QualityProfileFormatScore `json:"formats,omitempty"`
-	MinResolution QualityProfileMinResolution  `json:"min_resolution"`
+	Formats *[]QualityProfileFormatScore `json:"formats,omitempty"`
+
+	// IsDefault True when quality_default_profile names this profile — the one a
+	// movie or series with an empty quality_profile resolves to.
+	IsDefault     bool                        `json:"is_default"`
+	MinResolution QualityProfileMinResolution `json:"min_resolution"`
 
 	// MinScore Minimum total matched-format score a release needs to be
 	// grabbed.

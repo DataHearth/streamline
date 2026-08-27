@@ -286,6 +286,7 @@ export type AddMovieRequest = {
 
 export type QualityProfile = {
 	name: string;
+	is_default?: boolean;
 };
 
 // Requests. UI label "Rejected" maps to status "denied".

@@ -5146,10 +5146,16 @@ components:
           min_resolution,
           upgrade_allowed,
           replace_whole_season,
+          is_default,
         ]
       properties:
         name:
           type: string
+        is_default:
+          type: boolean
+          description: |
+            True when quality_default_profile names this profile — the one a
+            movie or series with an empty quality_profile resolves to.
         preferred_resolution:
           type: string
           enum: ["720p", "1080p", "2160p"]

@@ -43,6 +43,7 @@
 	import type {
 		Episode,
 		MonitoringPreset,
+		QualityProfile,
 		Season,
 		TVShow,
 	} from "../../lib/types";
@@ -365,7 +366,15 @@
 				label: s.number === 0 ? i18n.series_specials() : `${seasonLabel} ${s.number}`,
 			})),
 	);
-	let qpName = $derived(show?.quality_profile || "Server default");
+	const qpQuery = createQuery<QualityProfile[]>(() => ({
+		queryKey: ["quality-profiles"],
+		queryFn: () => api<QualityProfile[]>("/quality-profiles"),
+	}));
+	let qpName = $derived(
+		show?.quality_profile ||
+			qpQuery.data?.find((p) => p.is_default)?.name ||
+			i18n.quality_server_default(),
+	);
 </script>
 
 {#if seriesQuery.isLoading}

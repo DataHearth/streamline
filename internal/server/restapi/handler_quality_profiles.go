@@ -16,8 +16,13 @@ func qualityProfileToAPI(e config.QualityProfileEntry) QualityProfile {
 		codecs = []string{}
 	}
 	formats := formatScoresToAPI(e.Formats)
+	var isDefault bool
+	if c := config.Get(); c != nil {
+		isDefault = c.QualityDefaultProfile == e.Name
+	}
 	out := QualityProfile{
-		Name: e.Name,
+		Name:      e.Name,
+		IsDefault: isDefault,
 		PreferredResolution: QualityProfilePreferredResolution(
 			e.PreferredResolution,
 		),
