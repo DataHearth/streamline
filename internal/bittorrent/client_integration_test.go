@@ -15,9 +15,11 @@ import (
 	antorrent "github.com/anacrolix/torrent"
 	"github.com/anacrolix/torrent/bencode"
 	"github.com/anacrolix/torrent/metainfo"
+	"github.com/anacrolix/torrent/storage"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
@@ -619,6 +621,78 @@ var _ = Describe("Engine download flow", Label("integration", "bittorrent"), fun
 	})
 })
 
+// newUnboundEngineNoPortForwarding builds an unbound engine the way New
+// does, except cc.NoDefaultPortForwarding is forced on before the client is
+// constructed. New has no seam for this: it builds the *antorrent.ClientConfig
+// and calls antorrent.NewClient(cc) internally, and NewClient starts
+// `go cl.forwardPort()` synchronously, before returning, whenever
+// NoDefaultPortForwarding is unset — there is no point after New hands back
+// an *Engine where the flag could still matter. Every other spec in this
+// suite sidesteps the problem by binding to loopback (engineBindIP trips the
+// bound branch of newClientConfig, which already sets the flag); this is the
+// one spec that must stay unbound, to exercise the unbound TCP-dialer branch
+// the bug lived in, so it cannot use that trick. Left as production default,
+// this spec would multicast a real SSDP M-SEARCH on the developer's or CI
+// machine's LAN and, if a router answers, ask it for a real port mapping.
+func newUnboundEngineNoPortForwarding(
+	ctx context.Context, dlDir string, store db.Store,
+) (*Engine, func()) {
+	GinkgoHelper()
+	configtest.Setup(map[string]any{
+		"download_clients": []map[string]any{{
+			"name": "embedded", "client_type": "builtin",
+			"download_dir": dlDir, "listen_port": int(reserveListenPort()),
+			"disable_dht": true, "enabled": true,
+		}},
+	})
+	entry, ok := config.BuiltinDownloadClient()
+	Expect(ok).To(BeTrue())
+
+	sessionDir := filepath.Join(entry.DownloadDir, sessionDirName)
+	Expect(os.MkdirAll(sessionDir, 0o755)).To(Succeed())
+	pc, err := storage.NewBoltPieceCompletion(sessionDir)
+	Expect(err).NotTo(HaveOccurred())
+	st := newDrainingStorage(storage.NewFileWithCompletion(entry.DownloadDir, pc))
+
+	packetConn, listener, err := newPeerSockets(nil, entry.ListenPort)
+	Expect(err).NotTo(HaveOccurred())
+
+	cc := newClientConfig(entry, nil, st, packetConn)
+	cc.NoDefaultPortForwarding = true
+
+	client, err := antorrent.NewClient(cc)
+	Expect(err).NotTo(HaveOccurred())
+	client.AddListener(listener)
+	client.AddDialer(antorrent.NetworkDialer{Network: "tcp4", Dialer: &net.Dialer{}})
+	client.AddDialer(antorrent.NetworkDialer{Network: "tcp6", Dialer: &net.Dialer{}})
+
+	e := &Engine{
+		client:      client,
+		storageImpl: st,
+		store:       store,
+		downloadDir: entry.DownloadDir,
+		listener:    listener,
+		packetConn:  packetConn,
+		state:       map[string]*torrentState{},
+		sample:      map[string]speedSample{},
+		stop:        make(chan struct{}),
+	}
+	Expect(e.restore(ctx)).To(Succeed())
+	e.wg.Go(e.enforceSeedLimits)
+
+	closed := false
+	stop := func() {
+		GinkgoHelper()
+		if closed {
+			return
+		}
+		closed = true
+		Expect(e.Close()).To(Succeed())
+	}
+	DeferCleanup(stop)
+	return e, stop
+}
+
 // Regression coverage for the finding that DisableTCP (set so the engine's
 // own rebindable listener is the only TCP socket anacrolix ever sees — see
 // newClientConfig) silently left outbound TCP dialing dead whenever
@@ -650,7 +724,7 @@ var _ = Describe(
 			store := db.New(entClient)
 
 			torrentBytes, seederPort := newTCPOnlySeeder(seedDir)
-			engine, _ := newEngineBoundTo(ctx, dlDir, store, "")
+			engine, _ := newUnboundEngineNoPortForwarding(ctx, dlDir, store)
 
 			hash, err := engine.AddTorrent(ctx, download.TorrentSource{
 				Bytes: torrentBytes,

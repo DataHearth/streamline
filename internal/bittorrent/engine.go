@@ -311,18 +311,13 @@ func newClientConfig(
 		cc.ListenPacket = func(string, string) (net.PacketConn, error) {
 			return pc, nil
 		}
-		// The bound branch below narrows to one address family via
-		// DisableIPv6/DisableIPv4 (needed there so listeners stay within the
-		// bound interface); the unbound branch has no such narrowing, so with
-		// neither flag set cl.listenNetworks() yields both udp4 and udp6 and
-		// listenAllRetry calls ListenPacket once per network — two separate
-		// utp.Socket instances (each with its own DHT server) reading the one
-		// pc underneath, racing each other for every datagram. ListenPacket
-		// must be called exactly once, so pick a single label here too. pc
-		// itself is still opened on a nil IP (see newRebindablePacketConn), so
-		// it keeps accepting IPv6 datagrams regardless of which family
-		// anacrolix believes it is — only anacrolix's own family-scoped
-		// bookkeeping (this DHT server, any future IPv6-only routing) narrows.
+		// The engine hands anacrolix one packet conn, so the client must be told
+		// about exactly one UDP network, or listenAllRetry calls ListenPacket
+		// once per network and builds two utp.Socket instances racing each other
+		// to read the same pc. DisableIPv6 is how; its cost is that anacrolix
+		// rejects every inbound IPv6 peer and skips udp6:// trackers, while the
+		// tcp6 dialer added in New still dials IPv6 peers outbound.
+		// IPv4-mapped remotes keep To4() != nil, so v4 traffic is unaffected.
 		if bindIP == nil {
 			cc.DisableIPv6 = true
 		}
