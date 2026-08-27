@@ -172,9 +172,9 @@ Scores are relative order *within one profile* — there is no global scale, and
 
 ## Upgrades
 
-A profile can replace a file already on disk with a better release, but only through one path: the **RSS feed scanner**, not the interactive search. Interactive search only ever fills a `wanted` item.
+A profile can replace a file already on disk with a better release, but it never happens because you searched by hand — an interactive grab either fills a `wanted` item or overwrites because you ticked replace, and the upgrade rules aren't consulted either way. Two automatic paths apply them: the **RSS feed scanner**, which grades every release the feed shows it against what's on disk, and the **missing-episode search**, which upgrades only as a side effect of a season pack it was already grabbing to fill that season's gaps (see [Series, seasons and episodes](#series-seasons-and-episodes)). Neither ever runs a search *in order to* upgrade.
 
-Each feed tick, for every monitored movie or episode that already has a file (`upgrade_allowed` on, nothing already in flight for it — an item mid-re-grab isn't re-grabbed again every tick), an incoming release is graded against the current file:
+Whichever path found the release, the grading is the same. For a monitored movie or episode that already has a file (`upgrade_allowed` on, nothing already in flight for it — an item mid-re-grab isn't re-grabbed again every tick), the incoming release is graded against the current file:
 
 1. The release must pass the profile's band + minimum checks like any other candidate.
 2. **The current file's resolution must be in-band** (`Profile.UpgradableFrom`) — at or below `preferred_resolution`, and not unresolvable. A file *above* the band, or one whose resolution can't be determined at all, is never touched: both cases score `0` for the same mechanical reason (the band rejected them before any format was summed), and `0` is not evidence the file is bad — it's evidence the file is untouchable. Replacing it would delete exactly what the profile was protecting.
@@ -187,7 +187,7 @@ Only then does Streamline grab the replacement, mark the new download record's r
 Episodes upgrade by the same three rules, but a season pack is judged **episode by episode** against each episode's own file, not against the season as a whole:
 
 - **Each episode in the pack is compared to its own file.** A release that beats episode 3 but not episode 7 replaces episode 3 and leaves episode 7 alone — there's no season-wide veto, so one strong episode no longer blocks a pack that would improve the rest. At least one episode has to qualify for the pack to be grabbed at all.
-- **Filling a gap and upgrading happen in the same grab.** If a pack covers episodes you're missing, it's grabbed to fill them, and any episode you already have that the release beats is replaced in that same download — you don't need to re-run it once the season is complete.
+- **Filling a gap and upgrading happen in the same grab.** If a pack covers episodes you're missing, it's grabbed to fill them, and any episode you already have that the release beats is replaced in that same download — you don't need to re-run it once the season is complete. Both automatic paths work this way: the feed scanner when a pack turns up in the RSS listing, and the missing-episode search when it goes hunting for a season that still has gaps. The missing search only reaches for a pack when **two or more** of a season's episodes are due to be searched this pass — missing, aired, monitored, past their cooldown and under the grab-failure ceiling. A season with three gaps where two are unaired or still cooling down takes the single-episode path instead, and a single-episode grab replaces nothing; a season with no gap at all is never searched, so no pack is ever grabbed purely to upgrade.
 A single-episode release is judged against that one episode alone.
 
 Series upgrades reuse the identical import path: verification runs before anything on disk is touched, scoped to the episodes the import actually plans to replace (see [Import verification](Configuration-Reference#import-verification)) — a season pack doesn't verify episodes it isn't going to touch. That per-episode plan, and the probe re-check behind it, is a season-pack thing: a single-episode release was already judged once by the scanner, and the importer's import just carries that decision through.
@@ -254,6 +254,6 @@ Three, all a consequence of moving from "first release that passes" to score-the
 
 ## Not in this phase
 
-- **No active backlog search for upgrade-eligible items.** Upgrades happen when the RSS feed happens to see a better release; there's no scheduled sweep that goes looking for one after you retune a profile. Re-run search manually on items you want re-evaluated right away.
+- **No active backlog search for upgrade-eligible items.** Upgrades happen when the RSS feed happens to see a better release, or when the missing-episode search grabs a season pack that also beats what you have — and that second one only reaches seasons with gaps, since a complete season is never searched. Nothing goes looking for an upgrade on its own after you retune a profile. Re-run search manually on items you want re-evaluated right away.
 - **No per-file score caching.** Every score above is computed on the fly; that's fine at today's cost, but means there's no SQL-queryable "show me everything below its upgrade cap" view yet.
 - **No community format import/sync** (TRaSH Guides, Dictionarry, etc.). Custom formats here are entirely local.

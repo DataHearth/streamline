@@ -144,6 +144,8 @@ Once turned on, it applies automatically to every episode grab; there's no per-g
 
 If nothing in a release actually matches what's wanted, the grab is dropped rather than downloading a pack that would help nobody — for a `.torrent` source before it's even sent to the client, for a magnet by removing the torrent once that becomes clear. A selection that hasn't resolved after 10 minutes (`download.selection_grace`) gives up and downloads the release whole rather than leaving it stuck.
 
+**One related behavior does not depend on this flag.** When the missing-episode search grabs a season pack to fill gaps, any episode you already have that the release beats under your profile's upgrade rules is replaced on import — if it still beats yours once the file itself has been probed, since the importer re-checks each pack member rather than trusting the grab-time decision. With `selective_files` on, the pack downloads the gaps plus exactly those beaten episodes' files; with it off, the whole pack downloads and the same episodes are still replaced. The flag decides how much you download, not what gets replaced — see [Upgrades](Quality-Profiles-and-Custom-Formats#upgrades).
+
 The torrent drawer (**Activity → Torrents**) still shows every file with its priority and lets you flip one back on manually before the download finishes — the same control that existed before this feature, now driven automatically as well.
 
 ---
