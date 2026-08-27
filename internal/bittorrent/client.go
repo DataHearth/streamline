@@ -218,8 +218,8 @@ func (e *Engine) live(t *antorrent.Torrent) liveStats {
 	hash := t.InfoHash().HexString()
 	var size, completed int64
 	if t.Info() != nil {
-		size = t.Length()
-		completed = t.BytesCompleted()
+		size = wantedBytes(t)
+		completed = wantedCompleted(t)
 	}
 	var progress float64
 	if size > 0 {
@@ -279,7 +279,7 @@ func (e *Engine) status(
 	if t.Info() == nil {
 		return download.StatusFetching
 	}
-	if t.BytesMissing() == 0 {
+	if wantedMissing(t) == 0 {
 		if st.seedStopped {
 			return download.StatusCompleted
 		}

@@ -3,6 +3,7 @@ package bittorrent
 import (
 	"time"
 
+	"github.com/anacrolix/torrent/types"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -29,5 +30,24 @@ var _ = Describe("shouldStopSeeding", Label("unit", "bittorrent"), func() {
 
 	It("ignores seed-time when completion is unknown", func() {
 		Expect(shouldStopSeeding(0, 0, time.Time{}, time.Hour, now)).To(BeFalse())
+	})
+})
+
+var _ = Describe("ratio", Label("unit", "bittorrent"), func() {
+	// enforceOnce scores ratio against wantedBytes, not t.Length(): a
+	// skipped file's bytes would otherwise sit in the denominator forever,
+	// so a seed_ratio target set against what was actually downloaded could
+	// never be reached (spec §3.2).
+	It("lets a skipped-file torrent reach a ratio target", func() {
+		t := newTestTorrent()
+		applyFilePriorities(t, "all", nil)
+		t.Files()[0].SetPriority(types.PiecePriorityNone)
+		wanted := wantedBytes(t)
+		Expect(wanted).To(BeNumerically("<", t.Length()))
+
+		const target = 1.0
+		uploaded := wanted // fully seeded against what was actually wanted
+		Expect(ratio(uploaded, wanted)).To(BeNumerically(">=", target))
+		Expect(ratio(uploaded, t.Length())).To(BeNumerically("<", target))
 	})
 })

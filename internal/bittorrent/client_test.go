@@ -1,6 +1,7 @@
 package bittorrent
 
 import (
+	"github.com/anacrolix/torrent/types"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -49,4 +50,25 @@ var _ = Describe("specFromSource", Label("unit", "bittorrent"), func() {
 		Expect(err).To(HaveOccurred())
 		Expect(err.Error()).To(ContainSubstring("parse torrent file"))
 	})
+})
+
+var _ = Describe("Engine.status", Label("unit", "bittorrent"), func() {
+	// A partial selection must never block completion: BytesMissing counts
+	// the skipped file's pieces forever, which is exactly what wantedMissing
+	// exists to route around (spec §3.2).
+	It(
+		"reports seeding, not downloading, when a skipped file is the only gap",
+		func() {
+			t := newPartialTorrent()
+			applyFilePriorities(t, "all", nil)
+			t.Files()[0].SetPriority(types.PiecePriorityNone)
+			Expect(t.BytesMissing()).NotTo(BeZero(),
+				"fixture invariant: the skipped file's corrupted piece must still read as missing")
+
+			e := &Engine{}
+			Expect(
+				e.status(t, t.InfoHash().HexString()),
+			).To(Equal(download.StatusSeeding))
+		},
+	)
 })

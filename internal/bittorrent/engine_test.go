@@ -1,11 +1,11 @@
 package bittorrent
 
 import (
+	"context"
 	"net"
 	"os"
 	"path/filepath"
 
-	analog "github.com/anacrolix/log"
 	antorrent "github.com/anacrolix/torrent"
 	"github.com/anacrolix/torrent/bencode"
 	"github.com/anacrolix/torrent/metainfo"
@@ -16,6 +16,26 @@ import (
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/download"
 )
+
+// newTestClient starts a network-disabled anacrolix client rooted so that
+// its default file storage resolves back to dir. The default storage nests
+// each torrent's data under baseDir/info.Name, and BuildFromFilePath sets
+// info.Name to dir's own basename — so the base has to be dir's *parent*.
+func newTestClient(dir string) *antorrent.Client {
+	GinkgoHelper()
+	cc := antorrent.NewDefaultClientConfig()
+	cc.DataDir = filepath.Dir(dir)
+	cc.NoDHT = true
+	cc.DisableTrackers = true
+	cc.DisablePEX = true
+	cc.NoDefaultPortForwarding = true
+	cc.ListenPort = 0
+	cc.Slogger = engineSlogger()
+	client, err := antorrent.NewClient(cc)
+	Expect(err).NotTo(HaveOccurred())
+	DeferCleanup(func() { Expect(client.Close()).To(BeEmpty()) })
+	return client
+}
 
 // newTestTorrent builds a real single-piece, three-file torrent whose data
 // already sits in the client's own DataDir, so it never needs a peer or a
@@ -30,27 +50,55 @@ func newTestTorrent() *antorrent.Torrent {
 			filepath.Join(dir, name), []byte{byte(i), byte(i), byte(i)}, 0o644,
 		)).To(Succeed())
 	}
-	info := metainfo.Info{PieceLength: 1 << 20, Name: "applyFilePriorities-fixture"}
+	// BuildFromFilePath overwrites Name with dir's own basename, so setting
+	// it here first would be dead.
+	info := metainfo.Info{PieceLength: 1 << 20}
 	Expect(info.BuildFromFilePath(dir)).To(Succeed())
 	ib, err := bencode.Marshal(info)
 	Expect(err).NotTo(HaveOccurred())
 	mi := metainfo.MetaInfo{InfoBytes: ib}
 
-	cc := antorrent.NewDefaultClientConfig()
-	cc.DataDir = dir
-	cc.NoDHT = true
-	cc.DisableTrackers = true
-	cc.DisablePEX = true
-	cc.NoDefaultPortForwarding = true
-	cc.ListenPort = 0
-	cc.Logger = analog.Default.WithFilterLevel(analog.Error)
-	client, err := antorrent.NewClient(cc)
-	Expect(err).NotTo(HaveOccurred())
-	DeferCleanup(func() { Expect(client.Close()).To(BeEmpty()) })
-
-	t, err := client.AddTorrent(&mi)
+	t, err := newTestClient(dir).AddTorrent(&mi)
 	Expect(err).NotTo(HaveOccurred())
 	<-t.GotInfo()
+	// AddTorrent never hash-checks by itself — pieces stay "unknown" until
+	// something requests a check, so BytesCompleted reads 0 even though the
+	// data is already on disk. Callers that read completion (not just
+	// priority) need it verified up front.
+	Expect(t.VerifyDataContext(context.Background())).To(Succeed())
+	return t
+}
+
+// newPartialTorrent builds a three-file, three-piece torrent (one piece per
+// file, via a piece length matching each file's size) where the first
+// file's on-disk bytes are corrupted *after* the metainfo hash was computed
+// from the correct content. Verifying then leaves that one piece genuinely
+// incomplete — the shape a file whose data was never downloaded takes —
+// while the other two verify complete, which newTestTorrent's single-piece
+// layout can't produce: there, one shared piece is atomically complete or
+// not, so a skip can never leave it partially missing.
+func newPartialTorrent() *antorrent.Torrent {
+	GinkgoHelper()
+	dir := GinkgoT().TempDir()
+	for i, name := range []string{"a.bin", "b.bin", "c.bin"} {
+		Expect(os.WriteFile(
+			filepath.Join(dir, name), []byte{byte(i), byte(i), byte(i)}, 0o644,
+		)).To(Succeed())
+	}
+	info := metainfo.Info{PieceLength: 3}
+	Expect(info.BuildFromFilePath(dir)).To(Succeed())
+	ib, err := bencode.Marshal(info)
+	Expect(err).NotTo(HaveOccurred())
+	mi := metainfo.MetaInfo{InfoBytes: ib}
+
+	Expect(os.WriteFile(
+		filepath.Join(dir, "a.bin"), []byte{9, 9, 9}, 0o644,
+	)).To(Succeed())
+
+	t, err := newTestClient(dir).AddTorrent(&mi)
+	Expect(err).NotTo(HaveOccurred())
+	<-t.GotInfo()
+	Expect(t.VerifyDataContext(context.Background())).To(Succeed())
 	return t
 }
 

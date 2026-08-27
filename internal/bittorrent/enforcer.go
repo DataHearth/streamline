@@ -41,7 +41,7 @@ func (e *Engine) enforceOnce(ctx context.Context) {
 			slog.WarnContext(ctx, "persisting uploaded bytes failed",
 				"info_hash", hash, "error", err)
 		}
-		if t.Info() == nil || t.BytesMissing() != 0 {
+		if t.Info() == nil || wantedMissing(t) != 0 {
 			continue
 		}
 		if st.paused || st.seedStopped {
@@ -60,7 +60,7 @@ func (e *Engine) enforceOnce(ctx context.Context) {
 			}
 			st.completedAt = now
 		}
-		r := ratio(uploaded, t.Length())
+		r := ratio(uploaded, wantedBytes(t))
 		if !shouldStopSeeding(
 			r, e.seedRatio, st.completedAt, e.seedTime, time.Now(),
 		) {
