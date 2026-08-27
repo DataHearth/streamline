@@ -446,6 +446,21 @@
         }
       }
     },
+    "download": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Gates selective file download. Off is bit-for-bit today's behaviour.",
+      "properties": {
+        "selective_files": {
+          "type": "boolean",
+          "description": "Enables selecting which files of a torrent to download."
+        },
+        "selection_grace": {
+          "$ref": "#/definitions/duration",
+          "description": "How long file selection stays open after grab."
+        }
+      }
+    },
     "log": {
       "type": "object",
       "additionalProperties": false,

@@ -43,6 +43,7 @@ type Config struct {
 	MediaServer MediaServerConfig `koanf:"media_server"`
 	Events      EventsConfig      `koanf:"events"       validate:"required"`
 	FFmpeg      FFmpegConfig      `koanf:"ffmpeg"`
+	Download    DownloadConfig    `koanf:"download"`
 	// TorrentListenPort overrides the builtin download client's own
 	// listen_port, and is a top-level scalar so the environment can reach it:
 	// STREAMLINE_TORRENT_LISTEN_PORT lands here, while nothing in
@@ -285,6 +286,13 @@ type EventsConfig struct {
 type FFmpegConfig struct {
 	Enabled bool   `koanf:"enabled"`
 	Path    string `koanf:"path"`
+}
+
+// DownloadConfig gates selective file download (spec §7). Off is bit-for-bit
+// today's behaviour and the rollback path; runtime-toggleable.
+type DownloadConfig struct {
+	SelectiveFiles bool   `koanf:"selective_files"`
+	SelectionGrace string `koanf:"selection_grace" validate:"required"`
 }
 
 type LogConfig struct {
@@ -610,6 +618,8 @@ func defaults() map[string]any {
 		"events.retention":             "2160h",
 		"ffmpeg.enabled":               true,
 		"ffmpeg.path":                  "",
+		"download.selective_files":     false,
+		"download.selection_grace":     "10m",
 		"log.app.enabled":              true,
 		"log.app.level":                "info",
 		"log.app.format":               "text",

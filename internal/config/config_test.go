@@ -116,6 +116,15 @@ var _ = Describe("Config", Label("unit", "config"), func() {
 			})
 		})
 
+		Context("download defaults", func() {
+			It("defaults selective_files off and selection_grace to 10m", func() {
+				cfg, err := Load("")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(cfg.Download.SelectiveFiles).To(BeFalse())
+				Expect(cfg.Download.SelectionGrace).To(Equal("10m"))
+			})
+		})
+
 		Context("metadata.language default", func() {
 			It("defaults metadata.language to \"en\"", func() {
 				cfg, err := Load("")
@@ -494,6 +503,22 @@ quality_profiles:
 			Expect(os.WriteFile(cfgFile, []byte(yaml), 0o644)).To(Succeed())
 			_, err := Load(cfgFile)
 			Expect(err).To(HaveOccurred())
+		})
+
+		// download.selection_grace is a duration string consumed in a later
+		// task (phase 4); Validate has no format-parsing for any duration
+		// field today (session_ttl, the schedules, events.retention included)
+		// — only presence is checked via the struct tag, matching every other
+		// duration-shaped field in this config.
+		It("rejects an empty download.selection_grace", func() {
+			dir := GinkgoT().TempDir()
+			cfgFile := filepath.Join(dir, "config.yaml")
+			dataDir := filepath.Join(dir, "data")
+			Expect(os.MkdirAll(dataDir, 0o755)).To(Succeed())
+			yaml := "data_dir: " + dataDir + "\ndownload:\n  selection_grace: \"\"\n"
+			Expect(os.WriteFile(cfgFile, []byte(yaml), 0o644)).To(Succeed())
+			_, err := Load(cfgFile)
+			Expect(err).To(MatchError(ContainSubstring("'required' tag")))
 		})
 
 		Context("server.trusted_proxies", func() {
