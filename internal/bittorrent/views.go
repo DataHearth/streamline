@@ -25,6 +25,7 @@ type Manager interface {
 	ListViews(ctx context.Context) []TorrentView
 	Details(ctx context.Context, hash string) (TorrentDetails, error)
 	SetFilePriorities(ctx context.Context, hash string, prios []FilePriority) error
+	SetListenPort(ctx context.Context, port uint16) error
 	Runtime() RuntimeStatus
 }
 

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"os"
 	"path/filepath"
 	"time"
@@ -380,6 +381,90 @@ func filesHaveMissingBytes(t *antorrent.Torrent, indexes []int) bool {
 		}
 	}
 	return false
+}
+
+// SetListenPort moves the engine's peer sockets to port and re-announces
+// every torrent so trackers learn the new port at once.
+//
+// It exists for a VPN forwarded port, which rotates on every tunnel
+// reconnect and is authored by the tunnel rather than by config — so this
+// deliberately persists nothing. A restart falls back to
+// torrent_listen_port from the environment, which is where the value comes
+// from in the first place.
+func (e *Engine) SetListenPort(ctx context.Context, port uint16) error {
+	ctx, span := tracer.Start(ctx, "bittorrent.set_listen_port")
+	defer span.End()
+
+	if port == 0 {
+		return otelx.RecordSpanError(
+			span,
+			errors.New("listen port must be non-zero"),
+		)
+	}
+
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	// The question is whether the sockets being moved are already on port,
+	// not whether the client thinks it's listening there — a bare *Engine{}
+	// built for teardown/tests has no client at all.
+	listenerPort := uint16(portOf(e.listener.Addr()))
+	packetConnPort := uint16(portOf(e.packetConn.LocalAddr()))
+	if listenerPort == port && packetConnPort == port {
+		return nil
+	}
+
+	// Rebinding a socket already on port would open a second listener on an
+	// address the first one still holds and fail with "already in use" —
+	// each socket only rebinds when it isn't already where it needs to be,
+	// rather than the pair moving as an all-or-nothing unit.
+	if listenerPort != port {
+		if err := e.listener.rebind(port); err != nil {
+			return otelx.RecordSpanError(
+				span,
+				fmt.Errorf("rebind tcp listener: %w", err),
+			)
+		}
+	}
+	if packetConnPort != port {
+		if err := e.packetConn.rebind(port); err != nil {
+			return otelx.RecordSpanError(
+				span,
+				fmt.Errorf("rebind packet conn: %w", err),
+			)
+		}
+	}
+
+	// announceRequest reads incomingPeerPort() per request, so the sockets
+	// above are already enough for the *next* announce — but a private
+	// tracker's interval can be half an hour of continued unreachability.
+	// ModifyTrackers stops and restarts every announcer, which announces
+	// immediately; it is the only public route to a forced tracker announce.
+	//
+	// e.client is nil on the bare *Engine{} teardown/tests build; there are
+	// no torrents to re-announce for one of those.
+	if e.client != nil {
+		for _, t := range e.client.Torrents() {
+			mi := t.Metainfo()
+			t.ModifyTrackers(mi.AnnounceList)
+		}
+	}
+
+	slog.InfoContext(ctx, "torrent listen port moved", "port", port)
+	return nil
+}
+
+// portOf reads the port off a net.Addr as returned by a rebindableListener
+// or rebindablePacketConn — always a *net.TCPAddr or *net.UDPAddr.
+func portOf(addr net.Addr) int {
+	switch a := addr.(type) {
+	case *net.TCPAddr:
+		return a.Port
+	case *net.UDPAddr:
+		return a.Port
+	default:
+		return -1
+	}
 }
 
 // liveStats is one consistent snapshot of a torrent's transfer state,

@@ -1,6 +1,9 @@
 package bittorrent
 
 import (
+	"context"
+	"net"
+
 	"github.com/anacrolix/torrent/types"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -71,4 +74,46 @@ var _ = Describe("Engine.status", Label("unit", "bittorrent"), func() {
 			).To(Equal(download.StatusSeeding))
 		},
 	)
+})
+
+var _ = Describe("Engine.SetListenPort", Label("unit", "bittorrent"), func() {
+	newEngine := func() *Engine {
+		GinkgoHelper()
+		pc, err := newRebindablePacketConn(net.IPv4(127, 0, 0, 1), 0)
+		Expect(err).NotTo(HaveOccurred())
+		ln, err := newRebindableListener(net.IPv4(127, 0, 0, 1), 0)
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() {
+			Expect(pc.Close()).To(Succeed())
+			Expect(ln.Close()).To(Succeed())
+		})
+		return &Engine{packetConn: pc, listener: ln}
+	}
+
+	It("moves both sockets to the new port", func() {
+		e := newEngine()
+		free, err := net.ListenTCP("tcp", &net.TCPAddr{IP: net.IPv4(127, 0, 0, 1)})
+		Expect(err).NotTo(HaveOccurred())
+		port := uint16(free.Addr().(*net.TCPAddr).Port)
+		Expect(free.Close()).To(Succeed())
+
+		Expect(e.SetListenPort(context.Background(), port)).To(Succeed())
+
+		Expect(e.listener.Addr().(*net.TCPAddr).Port).To(Equal(int(port)))
+		Expect(e.packetConn.LocalAddr().(*net.UDPAddr).Port).To(Equal(int(port)))
+	})
+
+	It("is a no-op when the port already matches", func() {
+		e := newEngine()
+		before := e.listener.Addr().String()
+		port := uint16(e.listener.Addr().(*net.TCPAddr).Port)
+
+		Expect(e.SetListenPort(context.Background(), port)).To(Succeed())
+		Expect(e.listener.Addr().String()).To(Equal(before))
+	})
+
+	It("rejects port zero", func() {
+		e := newEngine()
+		Expect(e.SetListenPort(context.Background(), 0)).NotTo(Succeed())
+	})
 })
