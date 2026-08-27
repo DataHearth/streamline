@@ -75,12 +75,35 @@ func (e *Engine) AddTorrent(
 		return "", otelx.RecordSpanError(span, err)
 	}
 	hash := spec.InfoHash.HexString()
+
+	// Decided at add time, before AddTorrentSpec below can ever start pulling
+	// pieces (spec §4.4 builtin). A selective magnet has no keep-set yet —
+	// "pending" bumps nothing (applyFilePriorities) until the selection pass
+	// or a SetWantedFiles confirmation resolves it, so metadata fetches but
+	// zero data pieces are requested. A bytes source already carrying
+	// WantedFiles (Flow A) records "explicit" here instead of relying on the
+	// manager's post-add SetWantedFiles confirmation, which would otherwise
+	// let a moment of "all" priorities land first — a bytes source has its
+	// info immediately, so startWhenReady's default-priority pass can run
+	// before that confirmation call ever reaches the engine.
+	var selectionMode string
+	var wantedFiles []int
+	switch {
+	case src.Selective && sourceMagnet != "":
+		selectionMode = "pending"
+	case src.WantedFiles != nil:
+		selectionMode = "explicit"
+		wantedFiles = src.WantedFiles
+	}
+
 	if _, err := e.store.CreateTorrentSession(ctx, db.CreateTorrentSessionParams{
 		InfoHash:      hash,
 		Name:          spec.DisplayName,
 		SavePath:      e.downloadDir,
 		SourceMagnet:  sourceMagnet,
 		SourceTorrent: sourceBytes,
+		SelectionMode: selectionMode,
+		WantedFiles:   wantedFiles,
 	}); err != nil && !ent.IsConstraintError(err) {
 		return "", otelx.RecordSpanError(
 			span, fmt.Errorf("persist torrent session: %w", err),
@@ -90,9 +113,19 @@ func (e *Engine) AddTorrent(
 	if err != nil {
 		return "", otelx.RecordSpanError(span, fmt.Errorf("add torrent: %w", err))
 	}
+	// Gated on freshness like addedAt: a duplicate-hash add (the
+	// swallowed-constraint-error path above, reached when a completed,
+	// non-widen-eligible record falls through to a normal grab on the same
+	// hash) must never let this call's selection overwrite what the first
+	// add already persisted — CreateTorrentSession is create-only, so
+	// applying it unconditionally here would diverge memory from the DB row
+	// in both directions: bumping an already-resolved torrent's skipped
+	// files back to Normal now, and reverting to the stale row on restart.
 	e.setState(hash, func(st *torrentState) {
 		if st.addedAt.IsZero() {
 			st.addedAt = time.Now()
+			st.selectionMode = selectionMode
+			st.wantedFiles = wantedFiles
 		}
 	})
 	e.startWhenReady(t, false)

@@ -222,6 +222,18 @@ func (q *QBittorrent) AddTorrent(
 			if err := mw.WriteField("urls", src.Magnet); err != nil {
 				return nil, "", err
 			}
+			// A selective magnet has no keep-set to apply yet — the pass owns
+			// resolving it (Task 16) — so the torrent must not start pulling
+			// data before then. stopCondition halts it the moment metadata
+			// lands rather than immediately (a bare "stopped" add would never
+			// resolve file names for the pass to match against).
+			if src.Selective {
+				if err := mw.WriteField(
+					"stopCondition", "MetadataReceived",
+				); err != nil {
+					return nil, "", err
+				}
+			}
 		}
 		if len(src.Bytes) > 0 {
 			fw, err := mw.CreateFormFile("torrents", "release.torrent")

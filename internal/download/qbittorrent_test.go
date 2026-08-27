@@ -160,6 +160,78 @@ var _ = Describe("qBittorrent Client", Label("unit", "downloads"), func() {
 			Expect(addCategory).To(Equal("streamline"))
 		})
 
+		It(
+			"sends stopCondition=MetadataReceived for a selective magnet add",
+			func() {
+				var stopCondition string
+				var hasStopCondition bool
+				mux := http.NewServeMux()
+				mux.HandleFunc("/api/v2/auth/login",
+					func(w http.ResponseWriter, _ *http.Request) {
+						http.SetCookie(w, &http.Cookie{Name: "SID", Value: "s"})
+						w.WriteHeader(http.StatusOK)
+					})
+				mux.HandleFunc("/api/v2/torrents/createCategory",
+					func(w http.ResponseWriter, _ *http.Request) {
+						w.WriteHeader(http.StatusOK)
+					})
+				mux.HandleFunc("/api/v2/torrents/add",
+					func(w http.ResponseWriter, r *http.Request) {
+						Expect(r.ParseMultipartForm(1 << 20)).To(Succeed())
+						_, hasStopCondition = r.MultipartForm.Value["stopCondition"]
+						stopCondition = r.FormValue("stopCondition")
+						w.WriteHeader(http.StatusOK)
+					})
+				srv := httptest.NewServer(mux)
+				DeferCleanup(srv.Close)
+
+				c := NewQBittorrentPassword(srv.URL, "admin", "password")
+				_, err := c.AddTorrent(
+					context.Background(),
+					TorrentSource{
+						Magnet:    "magnet:?xt=urn:btih:abc123",
+						Selective: true,
+					},
+				)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(hasStopCondition).To(BeTrue())
+				Expect(stopCondition).To(Equal("MetadataReceived"))
+			},
+		)
+
+		It(
+			"omits stopCondition for a non-selective magnet add",
+			func() {
+				var hasStopCondition bool
+				mux := http.NewServeMux()
+				mux.HandleFunc("/api/v2/auth/login",
+					func(w http.ResponseWriter, _ *http.Request) {
+						http.SetCookie(w, &http.Cookie{Name: "SID", Value: "s"})
+						w.WriteHeader(http.StatusOK)
+					})
+				mux.HandleFunc("/api/v2/torrents/createCategory",
+					func(w http.ResponseWriter, _ *http.Request) {
+						w.WriteHeader(http.StatusOK)
+					})
+				mux.HandleFunc("/api/v2/torrents/add",
+					func(w http.ResponseWriter, r *http.Request) {
+						Expect(r.ParseMultipartForm(1 << 20)).To(Succeed())
+						_, hasStopCondition = r.MultipartForm.Value["stopCondition"]
+						w.WriteHeader(http.StatusOK)
+					})
+				srv := httptest.NewServer(mux)
+				DeferCleanup(srv.Close)
+
+				c := NewQBittorrentPassword(srv.URL, "admin", "password")
+				_, err := c.AddTorrent(
+					context.Background(),
+					TorrentSource{Magnet: "magnet:?xt=urn:btih:abc123"},
+				)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(hasStopCondition).To(BeFalse())
+			},
+		)
+
 		It("treats a 409 from createCategory as success", func() {
 			mux := http.NewServeMux()
 			mux.HandleFunc("/api/v2/auth/login",
