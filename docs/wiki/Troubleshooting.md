@@ -193,7 +193,7 @@ Behind a commercial VPN this is the usual cause, and it has a specific trap:
 
 - **The engine's port defaults to 42069** when `listen_port` is unset. No provider forwards that by coincidence, so a forward you set up elsewhere points at a port nothing is listening on.
 - **Both halves must agree.** A forward on port X does nothing while the engine listens on 42069, and setting the port does nothing without the forward.
-- **A per-session forwarded port can't live in the config file.** Providers reassign it on reconnect. Use [`torrent_listen_port`](Configuration-Reference#torrent_listen_port) and have your VPN sidecar write it and restart the container.
+- **A per-session forwarded port can't live in the config file.** Providers reassign it on reconnect. Use [`torrent_listen_port`](Configuration-Reference#torrent_listen_port) for the initial bind, and have your VPN sidecar call `PUT /api/v1/torrents/listen-port` on every reassignment — no restart needed.
 
 Check what the engine actually bound:
 

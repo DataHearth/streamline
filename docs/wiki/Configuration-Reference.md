@@ -77,7 +77,14 @@ VPN_PORT_FORWARDING_UP_COMMAND: '/bin/sh -c "... {{PORT}} ..."'
 Behaviour worth knowing:
 
 - **It wins wherever it is set.** The entry's own `listen_port` is ignored — a forwarded port is the only value that can be right, and a file naming a different one is stale by construction. Leave it at `0` (the default) to use the entry's value.
-- **It is read once, at startup.** Changing it needs the process restarted; the engine builds its client config during wiring and does not rebind afterwards. A rotation therefore costs one container restart, which is what a gluetun UP command should trigger.
+- **It is read at startup, but that's only the initial bind.** `PUT /api/v1/torrents/listen-port` (admin) moves the running engine's peer sockets to a new port without a restart — it's the endpoint a gluetun sidecar should call on every port reassignment:
+
+  ```yaml
+  VPN_PORT_FORWARDING: "on"
+  VPN_PORT_FORWARDING_UP_COMMAND: '/bin/sh -c "curl -sS -X PUT -H \"X-API-Key: $API_KEY\" -H \"Content-Type: application/json\" -d \"{\\\"port\\\":{{PORT}}}\" http://streamline:8080/api/v1/torrents/listen-port"'
+  ```
+
+  An API key works here even though keys are otherwise locked out of parts of the API — that restriction is scoped to the identity band (`/auth/*`, `/users`), and this endpoint isn't on it. The move is **not persisted**: it only changes what the running process is doing right now, so a restart re-reads `torrent_listen_port`/`STREAMLINE_TORRENT_LISTEN_PORT` from config as before. Keep the sidecar's `UP_COMMAND` as the source of truth for the *current* port; don't expect the config file to reflect it.
 - **It is validated like any port.** A value outside 1–65535 fails config validation at boot rather than being silently ignored.
 - **It applies to the built-in engine only.** External clients (qBittorrent, Transmission, Deluge) manage their own listening port; Streamline never sets it for them.
 

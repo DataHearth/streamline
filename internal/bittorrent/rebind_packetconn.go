@@ -26,8 +26,9 @@ type rebindablePacketConn struct {
 	closed bool
 }
 
-// port is always 0 in this task's own callers; the engine wiring that passes
-// a real configured port lands in a later task.
+// newPeerSockets (engine.go) passes entry.ListenPort here, and only falls
+// back to 0 — let the OS pick — when that is itself unconfigured; the TCP
+// listener then binds to whatever port this call resolved to.
 //
 //nolint:unparam // port is part of the constructor's public shape, not dead
 func newRebindablePacketConn(ip net.IP, port uint16) (*rebindablePacketConn, error) {

@@ -190,6 +190,7 @@ Built-in custom formats are listed alongside user-defined ones (`builtin: true`)
 | `GET` | `/torrents` · `/torrents/{hash}` |
 | `POST` | `/torrents/{hash}/pause` · `/resume` |
 | `PATCH` | `/torrents/{hash}/files/{index}` — toggle a file |
+| `PUT` | `/torrents/listen-port` — move the running engine's peer sockets; not persisted |
 
 ### Library 🔒
 
