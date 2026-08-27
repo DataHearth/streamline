@@ -640,6 +640,13 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 		})
 
 		It("grabs whole when every episode is missing or beaten", func() {
+			// wanted here is all 12 IDs; the collapse to a plain whole-torrent
+			// grab (selection_state: skipped) is the download manager's job,
+			// covered by "every candidate wanted: whole grab, record left at
+			// the skipped default" in internal/download/manager_test.go.
+			// selective_files: false collapses the same way, covered there by
+			// "selective_files off: identical to a nil wanted set even with
+			// one present".
 			expectEligible([]*ent.TVShow{showWith(
 				&ent.Episode{ID: 11, Number: 1},
 				&ent.Episode{ID: 12, Number: 2},

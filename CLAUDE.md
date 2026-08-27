@@ -105,7 +105,7 @@ Unified media management platform replacing the *arr stack (Radarr, Sonarr, Lida
   | `replace_mode` | producer | wanted set |
   |---|---|---|
   | `none` | single-episode missing grab (`grabEpisode`), manual grab without replace | missing (`wanted` + aired) episodes only |
-  | `upgrades` | RSS gap-fill (`grabPack`), RSS upgrade (`grabUpgrade`), missing-search pack (`grabSeasonPack`, per-grab `UpgradeCandidateShow` context) | missing episodes **∪** episodes whose file the release beats (`beatEpisodes`/`quality.ReplacesFile`) — this union is what keeps "a pack grabbed to fill a gap also replaces what it beats, in the same grab" true once bytes stop being free, and every automatic pack producer now spells it the same way |
+  | `upgrades` | RSS gap-fill (`grabPack`), RSS upgrade (`grabUpgrade`), missing-search pack (`grabSeasonPack`, per-grab `UpgradeCandidateShow` context) | missing episodes **∪** episodes whose file the release beats (`beatEpisodes`/`quality.ReplacesFile`) — this union is what keeps "a pack grabbed to fill a gap also replaces what it beats, in the same grab" true once bytes stop being free |
   | `all` | manual replace grab (`grabPackAndMark` with `replaceExisting`) | every episode in the grab's scope — the operator said replace |
 
   `wantedAiredEpisodes` is what the status-marking loop may ever flip to `downloading` in either mode — a pack can't contain an unaired episode regardless of what was asked to replace — while the `GrabEpisode` wanted-set itself is wider under `all`, since that mode is about the selective-download keep-set, not about which episodes get marked.

@@ -66,9 +66,9 @@ func (s *EpisodeMissingSearcher) Run(ctx context.Context) error {
 		return nil
 	}
 	// grabbed tracks episode IDs already served this tick, across every show
-	// and season: a pack's union can cover an episode a later season's own
-	// snapshot still lists as searchable, and re-searching it would waste an
-	// indexer query on bytes already on the way.
+	// and season. No producer today emits a union spanning seasons, so this
+	// is currently a no-op; it is the authority for "already served", so a
+	// future multi-season producer cannot re-search what it already covered.
 	grabbed := make(map[uint32]struct{})
 	for _, show := range shows {
 		s.searchShow(ctx, show, grabbed)
@@ -292,9 +292,12 @@ func (s *EpisodeMissingSearcher) grabSeasonPack(
 	for _, r := range ranked {
 		// Which files a release beats is the release's own question — a weaker
 		// pack replaces fewer of them — so the union is rebuilt per candidate
-		// rather than once for the whole ranked list. The two halves are
-		// disjoint by construction: a missing episode has no file, and a beaten
-		// one was picked because it has.
+		// rather than once for the whole ranked list. The two halves can
+		// overlap: ListEligibleEpisodesForSync matches on status=wanted without
+		// excluding HasMediaFiles, and upgradeCandidateEpisodes is the mirror
+		// image, so a wanted episode already holding a file can land in both.
+		// Left undeduped: computeKeepSet and unionEpisodes both key by episode
+		// ID and collapse it, and the importer never reads this list.
 		release := qualityctx.ContextFromRelease(
 			r.Title, r.Size, r.Seeders, episodes,
 		)
