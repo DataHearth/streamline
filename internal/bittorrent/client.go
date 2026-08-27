@@ -5,12 +5,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"time"
 
 	antorrent "github.com/anacrolix/torrent"
 	"github.com/anacrolix/torrent/metainfo"
+	"github.com/anacrolix/torrent/types"
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/db"
@@ -193,6 +195,118 @@ func (e *Engine) ResumeTorrent(ctx context.Context, hash string) error {
 
 // TestConnection is a no-op: a constructed engine is by definition running.
 func (e *Engine) TestConnection(ctx context.Context) error { return nil }
+
+// ListFiles returns the torrent's files, empty (nil error) when metadata
+// hasn't resolved yet — the same "not an error" shape GetTorrent's
+// StatusFetching reports for the same condition.
+func (e *Engine) ListFiles(
+	ctx context.Context,
+	hash string,
+) ([]download.TorrentFile, error) {
+	t, err := e.torrent(hash)
+	if err != nil {
+		return nil, err
+	}
+	files := []download.TorrentFile{}
+	if t.Info() != nil {
+		for i, f := range t.Files() {
+			files = append(files, download.TorrentFile{
+				Index:  i,
+				Path:   f.DisplayPath(),
+				Size:   f.Length(),
+				Wanted: f.Priority() != types.PiecePriorityNone,
+			})
+		}
+	}
+	return files, nil
+}
+
+// SetWantedFiles applies an explicit keep-set and persists it so a restart's
+// metadata re-resolve (startWhenReady) reproduces the same skip instead of
+// reverting to mode "all".
+func (e *Engine) SetWantedFiles(
+	ctx context.Context,
+	hash string,
+	wanted []int,
+) error {
+	t, err := e.torrent(hash)
+	if err != nil {
+		return err
+	}
+	if t.Info() == nil {
+		return errors.New("torrent metadata not yet available")
+	}
+	st := e.getState(hash)
+	newlyWanted := newlyWantedIndexes(st.selectionMode, st.wantedFiles, wanted)
+
+	applyFilePriorities(t, "explicit", wanted)
+	if err := e.store.SetTorrentSessionSelection(
+		ctx, hash, "explicit", wanted,
+	); err != nil {
+		return fmt.Errorf("persist torrent session selection: %w", err)
+	}
+	e.setState(hash, func(s *torrentState) {
+		s.selectionMode = "explicit"
+		s.wantedFiles = wanted
+	})
+
+	// A widened selection (spec §4.6: re-grabbing the same hash for more
+	// episodes) can hand back files that were never downloaded while this
+	// torrent was seed-stopped. Re-arm it, and reset completed_at — left
+	// stale, it would make the seed-time limit re-stop the torrent the
+	// instant the new files finish, since enforceOnce never re-stamps a
+	// completedAt that isn't already zero.
+	if st.seedStopped && filesHaveMissingBytes(t, newlyWanted) {
+		t.AllowDataUpload()
+		if err := e.store.SetTorrentSessionCompleted(
+			ctx, hash, time.Time{},
+		); err != nil {
+			slog.WarnContext(ctx, "resetting torrent completion failed",
+				"info_hash", hash, "error", err)
+		}
+		e.setState(hash, func(s *torrentState) {
+			s.seedStopped = false
+			s.completedAt = time.Time{}
+		})
+	}
+	return nil
+}
+
+// newlyWantedIndexes reports which of wanted were not already wanted under
+// the previous selection. Only mode "explicit" recorded a keep-set to diff
+// against; "all"/"pending" (or a session predating selection) already cover
+// every index, so nothing in a narrower wanted list can be "new".
+func newlyWantedIndexes(prevMode string, prevWanted, wanted []int) []int {
+	if prevMode != "explicit" {
+		return nil
+	}
+	prev := make(map[int]struct{}, len(prevWanted))
+	for _, i := range prevWanted {
+		prev[i] = struct{}{}
+	}
+	var out []int
+	for _, i := range wanted {
+		if _, ok := prev[i]; !ok {
+			out = append(out, i)
+		}
+	}
+	return out
+}
+
+// filesHaveMissingBytes reports whether any of indexes still has undownloaded
+// data, i.e. it needs the torrent uploading-disallowed state re-armed.
+func filesHaveMissingBytes(t *antorrent.Torrent, indexes []int) bool {
+	files := t.Files()
+	for _, i := range indexes {
+		if i < 0 || i >= len(files) {
+			continue
+		}
+		if files[i].BytesCompleted() < files[i].Length() {
+			return true
+		}
+	}
+	return false
+}
 
 // liveStats is one consistent snapshot of a torrent's transfer state,
 // shared by the download.Client view and the /torrents management views so

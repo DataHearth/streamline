@@ -250,6 +250,21 @@ func (t *Transmission) TestConnection(ctx context.Context) error {
 	return err
 }
 
+func (t *Transmission) ListFiles(
+	ctx context.Context,
+	hash string,
+) ([]TorrentFile, error) {
+	return nil, ErrNotSupported
+}
+
+func (t *Transmission) SetWantedFiles(
+	ctx context.Context,
+	hash string,
+	wanted []int,
+) error {
+	return ErrNotSupported
+}
+
 // mapTransmissionState maps the numeric torrent status to a TorrentStatus.
 // A non-empty errorString wins; a stopped-but-complete torrent (seeding
 // disabled) reports Completed so the monitor still imports it.

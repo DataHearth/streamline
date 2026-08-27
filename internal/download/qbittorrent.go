@@ -483,6 +483,21 @@ func (q *QBittorrent) TestConnection(ctx context.Context) error {
 	}
 }
 
+func (q *QBittorrent) ListFiles(
+	ctx context.Context,
+	hash string,
+) ([]TorrentFile, error) {
+	return nil, ErrNotSupported
+}
+
+func (q *QBittorrent) SetWantedFiles(
+	ctx context.Context,
+	hash string,
+	wanted []int,
+) error {
+	return ErrNotSupported
+}
+
 func (q *QBittorrent) testAPIKey(ctx context.Context) error {
 	req, err := http.NewRequestWithContext(
 		ctx,

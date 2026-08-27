@@ -172,6 +172,74 @@ func (_c *MockClient_GetTorrent_Call) RunAndReturn(run func(ctx context.Context,
 	return _c
 }
 
+// ListFiles provides a mock function for the type MockClient
+func (_mock *MockClient) ListFiles(ctx context.Context, hash string) ([]download.TorrentFile, error) {
+	ret := _mock.Called(ctx, hash)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListFiles")
+	}
+
+	var r0 []download.TorrentFile
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) ([]download.TorrentFile, error)); ok {
+		return returnFunc(ctx, hash)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) []download.TorrentFile); ok {
+		r0 = returnFunc(ctx, hash)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]download.TorrentFile)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, hash)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockClient_ListFiles_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListFiles'
+type MockClient_ListFiles_Call struct {
+	*mock.Call
+}
+
+// ListFiles is a helper method to define mock.On call
+//   - ctx context.Context
+//   - hash string
+func (_e *MockClient_Expecter) ListFiles(ctx any, hash any) *MockClient_ListFiles_Call {
+	return &MockClient_ListFiles_Call{Call: _e.mock.On("ListFiles", ctx, hash)}
+}
+
+func (_c *MockClient_ListFiles_Call) Run(run func(ctx context.Context, hash string)) *MockClient_ListFiles_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockClient_ListFiles_Call) Return(torrentFiles []download.TorrentFile, err error) *MockClient_ListFiles_Call {
+	_c.Call.Return(torrentFiles, err)
+	return _c
+}
+
+func (_c *MockClient_ListFiles_Call) RunAndReturn(run func(ctx context.Context, hash string) ([]download.TorrentFile, error)) *MockClient_ListFiles_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListTorrents provides a mock function for the type MockClient
 func (_mock *MockClient) ListTorrents(ctx context.Context) ([]download.Torrent, error) {
 	ret := _mock.Called(ctx)
@@ -407,6 +475,69 @@ func (_c *MockClient_ResumeTorrent_Call) Return(err error) *MockClient_ResumeTor
 }
 
 func (_c *MockClient_ResumeTorrent_Call) RunAndReturn(run func(ctx context.Context, hash string) error) *MockClient_ResumeTorrent_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetWantedFiles provides a mock function for the type MockClient
+func (_mock *MockClient) SetWantedFiles(ctx context.Context, hash string, wanted []int) error {
+	ret := _mock.Called(ctx, hash, wanted)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetWantedFiles")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, []int) error); ok {
+		r0 = returnFunc(ctx, hash, wanted)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockClient_SetWantedFiles_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetWantedFiles'
+type MockClient_SetWantedFiles_Call struct {
+	*mock.Call
+}
+
+// SetWantedFiles is a helper method to define mock.On call
+//   - ctx context.Context
+//   - hash string
+//   - wanted []int
+func (_e *MockClient_Expecter) SetWantedFiles(ctx any, hash any, wanted any) *MockClient_SetWantedFiles_Call {
+	return &MockClient_SetWantedFiles_Call{Call: _e.mock.On("SetWantedFiles", ctx, hash, wanted)}
+}
+
+func (_c *MockClient_SetWantedFiles_Call) Run(run func(ctx context.Context, hash string, wanted []int)) *MockClient_SetWantedFiles_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 []int
+		if args[2] != nil {
+			arg2 = args[2].([]int)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockClient_SetWantedFiles_Call) Return(err error) *MockClient_SetWantedFiles_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockClient_SetWantedFiles_Call) RunAndReturn(run func(ctx context.Context, hash string, wanted []int) error) *MockClient_SetWantedFiles_Call {
 	_c.Call.Return(run)
 	return _c
 }

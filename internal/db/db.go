@@ -142,6 +142,11 @@ type Store interface {
 		prefix string,
 	) ([]*ent.TorrentSession, error)
 	SetTorrentSessionSavePath(ctx context.Context, infoHash, path string) error
+	SetTorrentSessionSelection(
+		ctx context.Context,
+		hash, mode string,
+		wanted []int,
+	) error
 
 	// invites
 	CreateInvite(ctx context.Context, p CreateInviteParams) (*ent.Invite, error)

@@ -327,6 +327,21 @@ func (d *Deluge) TestConnection(ctx context.Context) error {
 	return d.ensureSession(ctx)
 }
 
+func (d *Deluge) ListFiles(
+	ctx context.Context,
+	hash string,
+) ([]TorrentFile, error) {
+	return nil, ErrNotSupported
+}
+
+func (d *Deluge) SetWantedFiles(
+	ctx context.Context,
+	hash string,
+	wanted []int,
+) error {
+	return ErrNotSupported
+}
+
 // mapDelugeState maps a Deluge state string to a TorrentStatus. A finished
 // torrent that is paused (seeding disabled) reports Completed so the monitor
 // still imports it.

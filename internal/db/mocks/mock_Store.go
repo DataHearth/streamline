@@ -11086,6 +11086,75 @@ func (_c *MockStore_SetTorrentSessionSeedStopped_Call) RunAndReturn(run func(ctx
 	return _c
 }
 
+// SetTorrentSessionSelection provides a mock function for the type MockStore
+func (_mock *MockStore) SetTorrentSessionSelection(ctx context.Context, hash string, mode string, wanted []int) error {
+	ret := _mock.Called(ctx, hash, mode, wanted)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetTorrentSessionSelection")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, []int) error); ok {
+		r0 = returnFunc(ctx, hash, mode, wanted)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStore_SetTorrentSessionSelection_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetTorrentSessionSelection'
+type MockStore_SetTorrentSessionSelection_Call struct {
+	*mock.Call
+}
+
+// SetTorrentSessionSelection is a helper method to define mock.On call
+//   - ctx context.Context
+//   - hash string
+//   - mode string
+//   - wanted []int
+func (_e *MockStore_Expecter) SetTorrentSessionSelection(ctx any, hash any, mode any, wanted any) *MockStore_SetTorrentSessionSelection_Call {
+	return &MockStore_SetTorrentSessionSelection_Call{Call: _e.mock.On("SetTorrentSessionSelection", ctx, hash, mode, wanted)}
+}
+
+func (_c *MockStore_SetTorrentSessionSelection_Call) Run(run func(ctx context.Context, hash string, mode string, wanted []int)) *MockStore_SetTorrentSessionSelection_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 []int
+		if args[3] != nil {
+			arg3 = args[3].([]int)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_SetTorrentSessionSelection_Call) Return(err error) *MockStore_SetTorrentSessionSelection_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStore_SetTorrentSessionSelection_Call) RunAndReturn(run func(ctx context.Context, hash string, mode string, wanted []int) error) *MockStore_SetTorrentSessionSelection_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SetTorrentSessionUploaded provides a mock function for the type MockStore
 func (_mock *MockStore) SetTorrentSessionUploaded(ctx context.Context, infoHash string, uploaded int64) error {
 	ret := _mock.Called(ctx, infoHash, uploaded)

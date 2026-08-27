@@ -40,6 +40,15 @@ type TorrentSource struct {
 	Magnet string // magnet:?xt=urn:btih:... URI
 }
 
+// TorrentFile is one file inside a torrent. Index is the client's own
+// ordering and is what SetWantedFiles addresses.
+type TorrentFile struct {
+	Index  int
+	Path   string // path within the torrent, forward slashes
+	Size   int64
+	Wanted bool
+}
+
 type Client interface {
 	AddTorrent(ctx context.Context, src TorrentSource) (string, error)
 	GetTorrent(ctx context.Context, hash string) (*Torrent, error)
@@ -48,4 +57,10 @@ type Client interface {
 	PauseTorrent(ctx context.Context, hash string) error
 	ResumeTorrent(ctx context.Context, hash string) error
 	TestConnection(ctx context.Context) error
+	// ListFiles returns the torrent's files. An empty slice with a nil error
+	// means metadata is not yet available — the caller retries.
+	ListFiles(ctx context.Context, hash string) ([]TorrentFile, error)
+	// SetWantedFiles makes exactly `wanted` (indexes) downloaded and skips
+	// every other file. ErrNotSupported flips the record to unsupported.
+	SetWantedFiles(ctx context.Context, hash string, wanted []int) error
 }

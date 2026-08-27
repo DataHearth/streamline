@@ -62,6 +62,9 @@ var (
 	// import verification. Its download is finished, so pause/resume/cancel
 	// have nothing to act on — POST /downloads/{id}/resolve owns it.
 	ErrRecordHeld = errors.New("download record is held for review")
+	// ErrNotSupported is returned by ListFiles/SetWantedFiles on a download
+	// client that has no notion of per-file selection.
+	ErrNotSupported = errors.New("file selection not supported")
 )
 
 // PathUnderRoot reports whether path resolves inside root, or is root itself.

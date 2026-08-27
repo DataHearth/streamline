@@ -550,6 +550,12 @@ func (stubClient) PauseTorrent(context.Context, string) error        { return ni
 func (stubClient) ResumeTorrent(context.Context, string) error       { return nil }
 func (stubClient) TestConnection(context.Context) error              { return nil }
 
+func (stubClient) ListFiles(context.Context, string) ([]TorrentFile, error) {
+	return nil, nil
+}
+
+func (stubClient) SetWantedFiles(context.Context, string, []int) error { return nil }
+
 var _ = Describe("buildClient builtin", Label("unit", "downloads"), func() {
 	It("returns the injected engine", func() {
 		engine := &stubClient{}

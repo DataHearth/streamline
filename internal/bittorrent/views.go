@@ -210,6 +210,11 @@ func (e *Engine) Details(
 	return d, nil
 }
 
+// SetFilePriorities applies the manual per-file PATCH path (the /torrents
+// detail view's priority editor) and persists the resulting keep-set exactly
+// as SetWantedFiles does, so a restart's metadata re-resolve reproduces this
+// skip instead of falling back to mode "all" (the standalone bugfix this
+// path was missing).
 func (e *Engine) SetFilePriorities(
 	ctx context.Context,
 	hash string,
@@ -233,6 +238,22 @@ func (e *Engine) SetFilePriorities(
 		}
 		files[p.Index].SetPriority(prio)
 	}
+
+	wanted := make([]int, 0, len(files))
+	for i, f := range files {
+		if f.Priority() != types.PiecePriorityNone {
+			wanted = append(wanted, i)
+		}
+	}
+	if err := e.store.SetTorrentSessionSelection(
+		ctx, hash, "explicit", wanted,
+	); err != nil {
+		return fmt.Errorf("persist torrent session selection: %w", err)
+	}
+	e.setState(hash, func(s *torrentState) {
+		s.selectionMode = "explicit"
+		s.wantedFiles = wanted
+	})
 	return nil
 }
 
