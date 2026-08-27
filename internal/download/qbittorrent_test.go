@@ -7,6 +7,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 
 	"github.com/anacrolix/torrent/bencode"
 	"github.com/anacrolix/torrent/metainfo"
@@ -331,10 +332,22 @@ var _ = Describe("qBittorrent Client", Label("unit", "downloads"), func() {
 		})
 
 		It(
-			"sends filePriorities covering every file, 1 for wanted and 0"+
-				" for skipped",
+			"never sends filePriorities on add; adds stopped, applies the"+
+				" selection via filePrio computed from the local metainfo,"+
+				" then starts",
 			func() {
-				var gotPriorities string
+				// qBittorrent 5.x 400s the whole add ("Cannot specify"+
+				// " filePriorities when uploading torrent files") when
+				// filePriorities rides the same request as the "torrents"
+				// file part — verified against a real container. The
+				// selection has to land as separate filePrio calls once
+				// AddTorrent has a hash to address it with, and the torrent
+				// must not run unselected in the meantime — hence stopped at
+				// add, started only after both filePrio calls succeed.
+				var sawAddField bool
+				var addedStopped, addedPaused bool
+				var gotPrio []url.Values
+				var sawFilesCall, sawStart bool
 				mux := http.NewServeMux()
 				mux.HandleFunc("/api/v2/auth/login",
 					func(w http.ResponseWriter, _ *http.Request) {
@@ -348,7 +361,38 @@ var _ = Describe("qBittorrent Client", Label("unit", "downloads"), func() {
 				mux.HandleFunc("/api/v2/torrents/add",
 					func(w http.ResponseWriter, r *http.Request) {
 						Expect(r.ParseMultipartForm(1 << 20)).To(Succeed())
-						gotPriorities = r.FormValue("filePriorities")
+						_, sawAddField = r.MultipartForm.Value["filePriorities"]
+						addedStopped = r.FormValue("stopped") == "true"
+						addedPaused = r.FormValue("paused") == "true"
+						w.Header().Set("Content-Type", "application/json")
+						_, _ = w.Write([]byte(
+							`{"added_torrent_ids":["abc123"],"success_count":1}`,
+						))
+					})
+				// Never hit: AddTorrent computes the selection from the raw
+				// .torrent bytes it already holds, not a daemon-side listing
+				// — the whole point being that listing can legitimately come
+				// back empty while metadata is still settling.
+				mux.HandleFunc("/api/v2/torrents/files",
+					func(w http.ResponseWriter, _ *http.Request) {
+						sawFilesCall = true
+						w.WriteHeader(http.StatusOK)
+						_, _ = w.Write([]byte("[]"))
+					})
+				mux.HandleFunc("/api/v2/torrents/filePrio",
+					func(w http.ResponseWriter, r *http.Request) {
+						Expect(r.ParseForm()).To(Succeed())
+						gotPrio = append(gotPrio, r.Form)
+						w.WriteHeader(http.StatusOK)
+					})
+				mux.HandleFunc("/api/v2/torrents/start",
+					func(w http.ResponseWriter, r *http.Request) {
+						Expect(r.ParseForm()).To(Succeed())
+						Expect(r.FormValue("hashes")).To(Equal("abc123"))
+						// The selection must be fully applied before start —
+						// both filePrio calls seen already.
+						Expect(gotPrio).To(HaveLen(2))
+						sawStart = true
 						w.WriteHeader(http.StatusOK)
 					})
 				srv := httptest.NewServer(mux)
@@ -369,7 +413,7 @@ var _ = Describe("qBittorrent Client", Label("unit", "downloads"), func() {
 				Expect(mi.Write(&torrent)).To(Succeed())
 
 				c := NewQBittorrentPassword(srv.URL, "admin", "password")
-				_, err = c.AddTorrent(
+				hash, err := c.AddTorrent(
 					context.Background(),
 					TorrentSource{
 						Bytes:       torrent.Bytes(),
@@ -378,42 +422,78 @@ var _ = Describe("qBittorrent Client", Label("unit", "downloads"), func() {
 					},
 				)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(gotPriorities).To(Equal("1,0,0"))
+				Expect(hash).To(Equal("abc123"))
+				Expect(sawAddField).To(BeFalse())
+				Expect(addedStopped).To(BeTrue())
+				Expect(addedPaused).To(BeTrue())
+				Expect(sawFilesCall).To(BeFalse())
+				Expect(gotPrio).To(ConsistOf(
+					SatisfyAll(
+						HaveKeyWithValue("id", []string{"1|2"}),
+						HaveKeyWithValue("priority", []string{"0"}),
+					),
+					SatisfyAll(
+						HaveKeyWithValue("id", []string{"0"}),
+						HaveKeyWithValue("priority", []string{"1"}),
+					),
+				))
+				Expect(sawStart).To(BeTrue())
 			},
 		)
 
-		It("omits filePriorities when WantedFiles is empty", func() {
-			var sawField bool
-			mux := http.NewServeMux()
-			mux.HandleFunc("/api/v2/auth/login",
-				func(w http.ResponseWriter, _ *http.Request) {
-					http.SetCookie(w, &http.Cookie{Name: "SID", Value: "s"})
-					w.WriteHeader(http.StatusOK)
-				})
-			mux.HandleFunc("/api/v2/torrents/createCategory",
-				func(w http.ResponseWriter, _ *http.Request) {
-					w.WriteHeader(http.StatusOK)
-				})
-			mux.HandleFunc("/api/v2/torrents/add",
-				func(w http.ResponseWriter, r *http.Request) {
-					Expect(r.ParseMultipartForm(1 << 20)).To(Succeed())
-					_, sawField = r.MultipartForm.Value["filePriorities"]
-					w.Header().Set("Content-Type", "application/json")
-					_, _ = w.Write([]byte(
-						`{"added_torrent_ids":["abc123"],"success_count":1}`,
-					))
-				})
-			srv := httptest.NewServer(mux)
-			DeferCleanup(srv.Close)
+		It(
+			"issues no selection call — no stopped/paused, no filePrio, no"+
+				" start — on a non-selective add",
+			func() {
+				var sawField, addedStopped, addedPaused bool
+				var sawFilePrio, sawStart bool
+				mux := http.NewServeMux()
+				mux.HandleFunc("/api/v2/auth/login",
+					func(w http.ResponseWriter, _ *http.Request) {
+						http.SetCookie(w, &http.Cookie{Name: "SID", Value: "s"})
+						w.WriteHeader(http.StatusOK)
+					})
+				mux.HandleFunc("/api/v2/torrents/createCategory",
+					func(w http.ResponseWriter, _ *http.Request) {
+						w.WriteHeader(http.StatusOK)
+					})
+				mux.HandleFunc("/api/v2/torrents/add",
+					func(w http.ResponseWriter, r *http.Request) {
+						Expect(r.ParseMultipartForm(1 << 20)).To(Succeed())
+						_, sawField = r.MultipartForm.Value["filePriorities"]
+						addedStopped = r.FormValue("stopped") == "true"
+						addedPaused = r.FormValue("paused") == "true"
+						w.Header().Set("Content-Type", "application/json")
+						_, _ = w.Write([]byte(
+							`{"added_torrent_ids":["abc123"],"success_count":1}`,
+						))
+					})
+				mux.HandleFunc("/api/v2/torrents/filePrio",
+					func(w http.ResponseWriter, _ *http.Request) {
+						sawFilePrio = true
+						w.WriteHeader(http.StatusOK)
+					})
+				mux.HandleFunc("/api/v2/torrents/start",
+					func(w http.ResponseWriter, _ *http.Request) {
+						sawStart = true
+						w.WriteHeader(http.StatusOK)
+					})
+				srv := httptest.NewServer(mux)
+				DeferCleanup(srv.Close)
 
-			c := NewQBittorrentPassword(srv.URL, "admin", "password")
-			_, err := c.AddTorrent(
-				context.Background(),
-				TorrentSource{Bytes: []byte("d8:announce0:e")},
-			)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(sawField).To(BeFalse())
-		})
+				c := NewQBittorrentPassword(srv.URL, "admin", "password")
+				_, err := c.AddTorrent(
+					context.Background(),
+					TorrentSource{Bytes: []byte("d8:announce0:e")},
+				)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(sawField).To(BeFalse())
+				Expect(addedStopped).To(BeFalse())
+				Expect(addedPaused).To(BeFalse())
+				Expect(sawFilePrio).To(BeFalse())
+				Expect(sawStart).To(BeFalse())
+			},
+		)
 	})
 
 	Describe("ListFiles", func() {

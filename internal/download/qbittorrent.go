@@ -232,12 +232,22 @@ func (q *QBittorrent) AddTorrent(
 				return nil, "", err
 			}
 		}
-		if len(src.WantedFiles) > 0 && len(src.Bytes) > 0 {
-			priorities, err := filePrioritiesField(src.Bytes, src.WantedFiles)
-			if err != nil {
+		// filePriorities is deliberately never sent here: qBittorrent 5.x
+		// rejects the whole add with 400 ("Cannot specify filePriorities when
+		// uploading torrent files") when it's combined with a "torrents" file
+		// part — the "torrents" field accepts more than one file per request,
+		// so per-file priorities would be ambiguous across them. The selection
+		// is applied below, after add — and to keep that window from
+		// downloading anything before priorities land, a selective add
+		// starts stopped ("stopped" is the v5 field, "paused" the v4 one;
+		// qBittorrent silently ignores whichever its version doesn't
+		// recognize, same as the stopCondition/magnet handling) and is only
+		// started once selection has been confirmed applied.
+		if len(src.WantedFiles) > 0 {
+			if err := mw.WriteField("stopped", "true"); err != nil {
 				return nil, "", err
 			}
-			if err := mw.WriteField("filePriorities", priorities); err != nil {
+			if err := mw.WriteField("paused", "true"); err != nil {
 				return nil, "", err
 			}
 		}
@@ -307,70 +317,117 @@ func (q *QBittorrent) AddTorrent(
 	}
 
 	body, _ := io.ReadAll(resp.Body)
+	hash := ""
 	if strings.Contains(resp.Header.Get("Content-Type"), "application/json") {
 		var env qbAddEnvelope
 		if jerr := json.Unmarshal(body, &env); jerr == nil &&
 			len(env.AddedTorrentIDs) > 0 {
-			hash := strings.ToLower(env.AddedTorrentIDs[0])
+			hash = strings.ToLower(env.AddedTorrentIDs[0])
 			slog.DebugContext(ctx,
 				"qbittorrent torrent added",
 				"hash", hash,
 				"success_count", env.SuccessCount,
 			)
-			return hash, nil
 		}
 	}
-	if src.Magnet != "" {
+	if hash == "" && src.Magnet != "" {
 		if h := extractBtihFromMagnet(src.Magnet); h != "" {
+			hash = h
 			slog.DebugContext(ctx,
 				"qbittorrent torrent added (magnet btih fallback)",
-				"hash", h,
+				"hash", hash,
 			)
-			return h, nil
 		}
 	}
 	// qBittorrent before WebAPI 2.15 (≤5.0.x) answers a bare "Ok." with no
 	// envelope, so for .torrent uploads the infohash is derived from the same
 	// bytes that were just sent. Guarded on a parseable info dict: hashing an
 	// absent one would mint a plausible-looking hash for garbage input.
-	if len(src.Bytes) > 0 {
+	if hash == "" && len(src.Bytes) > 0 {
 		if mi, merr := metainfo.Load(bytes.NewReader(src.Bytes)); merr == nil &&
 			len(mi.InfoBytes) > 0 {
-			hash := mi.HashInfoBytes().HexString()
+			hash = mi.HashInfoBytes().HexString()
 			slog.DebugContext(ctx,
 				"qbittorrent torrent added (locally derived infohash)",
 				"hash", hash,
 			)
-			return hash, nil
 		}
 	}
-	return "", fmt.Errorf(
-		"qbittorrent add: no hash returned (success=0, body=%q)",
-		string(body),
-	)
+	if hash == "" {
+		return "", fmt.Errorf(
+			"qbittorrent add: no hash returned (success=0, body=%q)",
+			string(body),
+		)
+	}
+
+	// Selection couldn't ride the add request (see buildBody above), so it's
+	// applied here instead — computed from src.Bytes directly rather than a
+	// round-tripped SetWantedFiles/ListFiles. qBittorrent's file listing can
+	// legitimately answer ([], nil) while metadata is still settling (the
+	// same condition the 202-Accepted branch above already tolerates); going
+	// through ListFiles here would read that as "no files to skip" and leave
+	// the torrent downloading everything with no error to show for it. The
+	// local metainfo is authoritative and available immediately — no round
+	// trip needed to know what the torrent contains.
+	if len(src.WantedFiles) > 0 && len(src.Bytes) > 0 {
+		if serr := q.applySelectionAndStart(
+			ctx,
+			hash,
+			src.Bytes,
+			src.WantedFiles,
+		); serr != nil {
+			// The add already landed a stopped torrent that never got a
+			// selection applied — leaving it behind would either strand a
+			// stopped orphan or, worse, get started unselected by some other
+			// path. Best-effort: a removal failure here doesn't change
+			// which error AddTorrent reports.
+			if rerr := q.RemoveTorrent(ctx, hash, true); rerr != nil {
+				slog.WarnContext(ctx,
+					"qbittorrent add: cleanup after failed selection failed",
+					"hash", hash, "error", rerr,
+				)
+			}
+			return "", fmt.Errorf("qbittorrent add: select files: %w", serr)
+		}
+	}
+	return hash, nil
 }
 
-// filePrioritiesField builds the qBittorrent add-time filePriorities value:
-// one comma-joined entry per file in metainfo order, 1 (Normal) for a wanted
-// index and 0 (Ignored) for everything else.
-func filePrioritiesField(raw []byte, wantedFiles []int) (string, error) {
+// applySelectionAndStart sets wantedFiles' complement to Ignored and
+// wantedFiles itself to Normal — computed against raw's own metainfo file
+// order rather than a daemon-side listing — then starts the torrent that
+// AddTorrent added stopped. Every step after the priorities are known must
+// succeed before the torrent starts, or a partial application would begin
+// downloading with the wrong (or no) selection in effect.
+func (q *QBittorrent) applySelectionAndStart(
+	ctx context.Context,
+	hash string,
+	raw []byte,
+	wantedFiles []int,
+) error {
 	files, err := decodeTorrentFiles(raw)
 	if err != nil {
-		return "", err
+		return err
 	}
 	wanted := make(map[int]bool, len(wantedFiles))
 	for _, idx := range wantedFiles {
 		wanted[idx] = true
 	}
-	priorities := make([]string, len(files))
+	skipped := make([]int, 0, len(files))
 	for _, f := range files {
-		if wanted[f.Index] {
-			priorities[f.Index] = "1"
-		} else {
-			priorities[f.Index] = "0"
+		if !wanted[f.Index] {
+			skipped = append(skipped, f.Index)
 		}
 	}
-	return strings.Join(priorities, ","), nil
+	if err := q.setFilePriority(ctx, hash, skipped, "0"); err != nil {
+		return err
+	}
+	if err := q.setFilePriority(ctx, hash, wantedFiles, "1"); err != nil {
+		return err
+	}
+	// stopStart(false) is the same v5 start / v4 resume version split
+	// ResumeTorrent uses.
+	return q.stopStart(ctx, hash, false)
 }
 
 func (q *QBittorrent) GetTorrent(
