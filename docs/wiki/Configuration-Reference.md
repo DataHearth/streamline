@@ -68,12 +68,6 @@ It is top-level, rather than another field on the `download_clients` entry, so t
 
 That matters for one situation: peering through a commercial VPN that assigns a **forwarded port per session**. Such a port rotates on every reconnect or server change, so it cannot be written into a config file that git owns and mounts read-only.
 
-```yaml
-# gluetun sidecar, on every port reassignment
-VPN_PORT_FORWARDING: "on"
-VPN_PORT_FORWARDING_UP_COMMAND: '/bin/sh -c "... {{PORT}} ..."'
-```
-
 Behaviour worth knowing:
 
 - **It wins wherever it is set.** The entry's own `listen_port` is ignored — a forwarded port is the only value that can be right, and a file naming a different one is stale by construction. Leave it at `0` (the default) to use the entry's value.
@@ -81,7 +75,7 @@ Behaviour worth knowing:
 
   ```yaml
   VPN_PORT_FORWARDING: "on"
-  VPN_PORT_FORWARDING_UP_COMMAND: '/bin/sh -c "curl -sS -X PUT -H \"X-API-Key: $API_KEY\" -H \"Content-Type: application/json\" -d \"{\\\"port\\\":{{PORT}}}\" http://streamline:8080/api/v1/torrents/listen-port"'
+  VPN_PORT_FORWARDING_UP_COMMAND: '/bin/sh -c "curl -sS --fail -X PUT -H \"X-API-Key: $API_KEY\" -H \"Content-Type: application/json\" -d \"{\\\"port\\\":{{PORT}}}\" http://streamline:8080/api/v1/torrents/listen-port"'
   ```
 
   An API key works here even though keys are otherwise locked out of parts of the API — that restriction is scoped to the identity band (`/auth/*`, `/users`), and this endpoint isn't on it. The move is **not persisted**: it only changes what the running process is doing right now, so a restart re-reads `torrent_listen_port`/`STREAMLINE_TORRENT_LISTEN_PORT` from config as before. Keep the sidecar's `UP_COMMAND` as the source of truth for the *current* port; don't expect the config file to reflect it.

@@ -253,6 +253,60 @@ var _ = Describe(
 			Expect(err).NotTo(HaveOccurred())
 			Expect(got).To(BeIdenticalTo(pc))
 		})
+
+		// Regression for the bug where an unbound client (no bind_interface)
+		// left both DisableIPv4 and DisableIPv6 unset: cl.listenNetworks()
+		// then yields udp4 *and* udp6, and listenAllRetry calls ListenPacket
+		// once per network — two separate utp.Socket instances (each with its
+		// own DHT server) reading the one shared packet conn, racing each
+		// other for every datagram.
+		It("narrows to one UDP network when unbound", func() {
+			pc, err := newRebindablePacketConn(nil, 0)
+			Expect(err).NotTo(HaveOccurred())
+			DeferCleanup(func() {
+				Expect(pc.Close()).To(Succeed())
+			})
+			cc := newClientConfig(
+				config.DownloadClientEntry{DownloadDir: GinkgoT().TempDir()},
+				nil, nil, pc,
+			)
+			// The conn itself is still opened on a nil IP (dual-stack) — this
+			// only narrows anacrolix's own labelling to a single call.
+			Expect(cc.DisableIPv6).To(BeTrue())
+		})
+
+		// This is the spec whose absence let the regression above through:
+		// the previous "leaves the default dialers alone when unbound" case
+		// passes a nil packet conn, so it never exercises the real shape
+		// (bindIP nil, pc non-nil) that New always builds.
+		It("calls ListenPacket exactly once for a real unbound client", func() {
+			pc, err := newRebindablePacketConn(nil, 0)
+			Expect(err).NotTo(HaveOccurred())
+			DeferCleanup(func() {
+				Expect(pc.Close()).To(Succeed())
+			})
+			entry := config.DownloadClientEntry{
+				DownloadDir: GinkgoT().TempDir(),
+				DisableDHT:  true,
+			}
+			cc := newClientConfig(entry, nil, nil, pc)
+			// Keep this unit test off the network; irrelevant to what's under
+			// test (the closure's own call count).
+			cc.NoDefaultPortForwarding = true
+
+			var calls int
+			inner := cc.ListenPacket
+			cc.ListenPacket = func(network, addr string) (net.PacketConn, error) {
+				calls++
+				return inner(network, addr)
+			}
+
+			client, err := antorrent.NewClient(cc)
+			Expect(err).NotTo(HaveOccurred())
+			DeferCleanup(func() { Expect(client.Close()).To(BeEmpty()) })
+
+			Expect(calls).To(Equal(1))
+		})
 	},
 )
 

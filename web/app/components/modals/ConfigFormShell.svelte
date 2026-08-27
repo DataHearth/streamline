@@ -66,7 +66,11 @@
 	// chrome it opened with; the next open picks the right layout again.
 	let fullScreenLatched = $state(false);
 	let wasOpen = false;
-	$effect(() => {
+	// $effect.pre, not $effect: this must decide the layout before the DOM
+	// paints, or a mobile open renders the desktop Modal branch for one tick
+	// before swapping — mounting, destroying, then remounting children on
+	// every open.
+	$effect.pre(() => {
 		if (open && !wasOpen) fullScreenLatched = !desktop();
 		wasOpen = open;
 	});

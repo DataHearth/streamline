@@ -18,6 +18,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/observability"
 	"github.com/datahearth/streamline/internal/otelx"
 )
 
@@ -383,14 +384,23 @@ func filesHaveMissingBytes(t *antorrent.Torrent, indexes []int) bool {
 	return false
 }
 
-// SetListenPort moves the engine's peer sockets to port and re-announces
-// every torrent so trackers learn the new port at once.
+// SetListenPort moves the engine's peer sockets to port.
 //
 // It exists for a VPN forwarded port, which rotates on every tunnel
 // reconnect and is authored by the tunnel rather than by config — so this
 // deliberately persists nothing. A restart falls back to
 // torrent_listen_port from the environment, which is where the value comes
 // from in the first place.
+//
+// The sockets move immediately, but announceRequest reads the port live per
+// request, so trackers only learn the new port at the *next* scheduled
+// announce. There is no public forced-announce for regular trackers in this
+// version of anacrolix (ModifyTrackers used to force one; it no longer does
+// — torrentRegularTrackerAnnouncer.Stop is now a no-op, and both
+// modifyTrackers and the client-level dispatcher key their state by
+// infohash, so restarting an announcer that's already running is a no-op
+// too). On a long tracker interval this leaves a real window where the
+// tracker still advertises the old port and inbound connections to it fail.
 func (e *Engine) SetListenPort(ctx context.Context, port uint16) error {
 	ctx, span := tracer.Start(ctx, "bittorrent.set_listen_port")
 	defer span.End()
@@ -408,8 +418,21 @@ func (e *Engine) SetListenPort(ctx context.Context, port uint16) error {
 	// The question is whether the sockets being moved are already on port,
 	// not whether the client thinks it's listening there — a bare *Engine{}
 	// built for teardown/tests has no client at all.
-	listenerPort := uint16(portOf(e.listener.Addr()))
-	packetConnPort := uint16(portOf(e.packetConn.LocalAddr()))
+	listenerPortRaw, ok := portOf(e.listener.Addr())
+	if !ok {
+		return otelx.RecordSpanError(span, fmt.Errorf(
+			"tcp listener address %v is not a TCP/UDP address", e.listener.Addr(),
+		))
+	}
+	packetConnPortRaw, ok := portOf(e.packetConn.LocalAddr())
+	if !ok {
+		return otelx.RecordSpanError(span, fmt.Errorf(
+			"packet conn address %v is not a TCP/UDP address",
+			e.packetConn.LocalAddr(),
+		))
+	}
+	listenerPort := uint16(listenerPortRaw)
+	packetConnPort := uint16(packetConnPortRaw)
 	if listenerPort == port && packetConnPort == port {
 		return nil
 	}
@@ -428,25 +451,31 @@ func (e *Engine) SetListenPort(ctx context.Context, port uint16) error {
 	}
 	if packetConnPort != port {
 		if err := e.packetConn.rebind(port); err != nil {
+			// The listener move above already landed (or wasn't needed), but
+			// the packet conn didn't: announces still carry packetConnPort —
+			// that's the port every tracker learns, not the listener's (see
+			// newPeerSockets) — while inbound TCP now only answers on the new
+			// port, so peers can reach neither. This does not "converge on
+			// retry": the only caller is gluetun's
+			// VPN_PORT_FORWARDING_UP_COMMAND, fired once per rotation with no
+			// retry of its own, so the mismatch persists until the next
+			// rotation or a restart.
+			// listener.Addr() is re-read rather than reusing listenerPort:
+			// the listener may have just been rebound above, and this must
+			// report where it actually ended up.
+			currentTCPPort, _ := portOf(e.listener.Addr())
+			//nolint:sloglint // LogAttrs takes slog.Attr by API design
+			slog.LogAttrs(
+				ctx,
+				observability.LevelCritical,
+				"torrent listen port partially moved: tcp listener and packet conn disagree",
+				slog.Int("tcp_port", currentTCPPort),
+				slog.Int("packet_conn_port", int(packetConnPort)),
+			)
 			return otelx.RecordSpanError(
 				span,
 				fmt.Errorf("rebind packet conn: %w", err),
 			)
-		}
-	}
-
-	// announceRequest reads incomingPeerPort() per request, so the sockets
-	// above are already enough for the *next* announce — but a private
-	// tracker's interval can be half an hour of continued unreachability.
-	// ModifyTrackers stops and restarts every announcer, which announces
-	// immediately; it is the only public route to a forced tracker announce.
-	//
-	// e.client is nil on the bare *Engine{} teardown/tests build; there are
-	// no torrents to re-announce for one of those.
-	if e.client != nil {
-		for _, t := range e.client.Torrents() {
-			mi := t.Metainfo()
-			t.ModifyTrackers(mi.AnnounceList)
 		}
 	}
 
@@ -455,15 +484,19 @@ func (e *Engine) SetListenPort(ctx context.Context, port uint16) error {
 }
 
 // portOf reads the port off a net.Addr as returned by a rebindableListener
-// or rebindablePacketConn — always a *net.TCPAddr or *net.UDPAddr.
-func portOf(addr net.Addr) int {
+// or rebindablePacketConn — always a *net.TCPAddr or *net.UDPAddr. The bool
+// is false for any other type; returning it explicitly (rather than a -1
+// sentinel a uint16 cast would silently wrap to 65535) is what makes an
+// unexpected address type a reported error instead of an indistinguishable
+// "already on port 65535".
+func portOf(addr net.Addr) (int, bool) {
 	switch a := addr.(type) {
 	case *net.TCPAddr:
-		return a.Port
+		return a.Port, true
 	case *net.UDPAddr:
-		return a.Port
+		return a.Port, true
 	default:
-		return -1
+		return 0, false
 	}
 }
 

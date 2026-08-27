@@ -45,6 +45,12 @@
 	// the previous render happened to see — a section the operator had just
 	// changed away from, or none at all for a field they had only just picked.
 	const serverName = untrack(() => form.useSelector((s) => s.values.name));
+	// Captured once, not through a selector: the by-name discover endpoint
+	// below must hit the name the server was saved under, not whatever the
+	// operator has since typed into the name field — renaming in the form and
+	// hitting Discover before saving would otherwise 404 against a name the
+	// server was never saved as.
+	const originalName = untrack(() => form.state.values.name);
 	const movieSection = untrack(() =>
 		form.useSelector((s) => s.values.library_section),
 	);
@@ -101,7 +107,7 @@
 			// secret server-side instead.
 			if (isEdit && !v.api_key) {
 				return api<{ sections: MediaServerSection[] }>(
-					`/media-servers/${encodeURIComponent(v.name)}/discover`,
+					`/media-servers/${encodeURIComponent(originalName)}/discover`,
 					{ method: "POST" },
 				);
 			}

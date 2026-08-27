@@ -115,6 +115,50 @@ func newSeederOfSize(dir string, size int, pieceLen int64) ([]byte, int) {
 	return buf.Bytes(), seeder.LocalPort()
 }
 
+// newTCPOnlySeeder is newSeederOfSize with uTP turned off, so the only way a
+// peer can reach it is by dialing TCP. DisableUTP alone leaves the udp
+// networks listening for DHT; NoDHT is already set above, and together the
+// pair drops listenNetworks() to tcp4 only (client.go's listenOnNetwork).
+// LocalPort() still resolves correctly with no uTP socket present — it
+// returns the first non-zero port across cl.listeners, which is then just
+// the TCP one.
+func newTCPOnlySeeder(dir string) ([]byte, int) {
+	GinkgoHelper()
+	content := make([]byte, 64<<10)
+	for i := range content {
+		content[i] = byte(i % 251)
+	}
+	Expect(os.WriteFile(
+		filepath.Join(dir, "payload.bin"), content, 0o644,
+	)).To(Succeed())
+
+	info := metainfo.Info{PieceLength: 16 << 10}
+	Expect(info.BuildFromFilePath(filepath.Join(dir, "payload.bin"))).To(Succeed())
+	ib, err := bencode.Marshal(info)
+	Expect(err).NotTo(HaveOccurred())
+	mi := metainfo.MetaInfo{InfoBytes: ib}
+	var buf bytes.Buffer
+	Expect(mi.Write(&buf)).To(Succeed())
+
+	cc := antorrent.NewDefaultClientConfig()
+	cc.DataDir = dir
+	cc.Seed = true
+	cc.NoDHT = true
+	cc.DisableUTP = true
+	cc.DisableTrackers = true
+	cc.DisablePEX = true
+	cc.NoDefaultPortForwarding = true
+	cc.ListenPort = 0
+	cc.Slogger = engineSlogger()
+	seeder, err := antorrent.NewClient(cc)
+	Expect(err).NotTo(HaveOccurred())
+	DeferCleanup(func() { Expect(seeder.Close()).To(BeEmpty()) })
+	st, err := seeder.AddTorrent(&mi)
+	Expect(err).NotTo(HaveOccurred())
+	<-st.GotInfo()
+	return buf.Bytes(), seeder.LocalPort()
+}
+
 // newEngine spins an Engine on a temp dir wired to an in-memory store and
 // registers its shutdown before returning, so a spec that fails part-way
 // can never leave the listener bound.
@@ -134,11 +178,24 @@ func newEngine(
 	store db.Store,
 ) (*Engine, func()) {
 	GinkgoHelper()
+	return newEngineBoundTo(ctx, dlDir, store, engineBindIP)
+}
+
+// newEngineBoundTo is newEngine with bind_interface left to the caller — an
+// empty string reproduces the unbound (no bind_interface configured) path,
+// which is the shape production runs in without a VPN tunnel.
+func newEngineBoundTo(
+	ctx context.Context,
+	dlDir string,
+	store db.Store,
+	bindInterface string,
+) (*Engine, func()) {
+	GinkgoHelper()
 	configtest.Setup(map[string]any{
 		"download_clients": []map[string]any{{
 			"name": "embedded", "client_type": "builtin",
 			"download_dir": dlDir, "listen_port": int(reserveListenPort()),
-			"bind_interface": engineBindIP, "disable_dht": true,
+			"bind_interface": bindInterface, "disable_dht": true,
 			"enabled": true,
 		}},
 	})
@@ -561,3 +618,56 @@ var _ = Describe("Engine download flow", Label("integration", "bittorrent"), fun
 		Expect(views[0].Hash).To(Equal(hash))
 	})
 })
+
+// Regression coverage for the finding that DisableTCP (set so the engine's
+// own rebindable listener is the only TCP socket anacrolix ever sees — see
+// newClientConfig) silently left outbound TCP dialing dead whenever
+// bind_interface was unset: New only attached a source-bound NetworkDialer
+// inside the bindIP != nil branch, so an unbound engine had cl.dialers
+// permanently empty and could reach peers over uTP only.
+//
+// cl.dialers is unexported, so this proves the fix the way the reviewer's
+// fallback allows: end to end, over a real loopback connection, against a
+// seeder with uTP turned off (newTCPOnlySeeder) so a TCP dial is the *only*
+// way in. It does not prove anything about IPv6 TCP dialing (no IPv6
+// loopback assumption is made here) or about dialer ordering when both TCP
+// and uTP peers are reachable — only that TCP dialing exists at all on the
+// unbound path.
+var _ = Describe(
+	"Engine unbound TCP dialing",
+	Label("integration", "bittorrent"),
+	func() {
+		It("downloads over TCP with no bind_interface configured", func() {
+			ctx := context.Background()
+			tmp := GinkgoT().TempDir()
+			seedDir := filepath.Join(tmp, "seed")
+			dlDir := filepath.Join(tmp, "dl")
+			Expect(os.MkdirAll(seedDir, 0o755)).To(Succeed())
+			Expect(os.MkdirAll(dlDir, 0o755)).To(Succeed())
+
+			entClient := dbtest.SetupTestDB(ctx)
+			DeferCleanup(entClient.Close)
+			store := db.New(entClient)
+
+			torrentBytes, seederPort := newTCPOnlySeeder(seedDir)
+			engine, _ := newEngineBoundTo(ctx, dlDir, store, "")
+
+			hash, err := engine.AddTorrent(ctx, download.TorrentSource{
+				Bytes: torrentBytes,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			connectToSeeder(engine, hash, seederPort)
+
+			Eventually(func() download.TorrentStatus {
+				t, terr := engine.GetTorrent(ctx, hash)
+				Expect(terr).NotTo(HaveOccurred())
+				return t.Status
+			}).WithTimeout(60 * time.Second).WithPolling(200 * time.Millisecond).
+				Should(Equal(download.StatusSeeding))
+
+			got, err := os.ReadFile(filepath.Join(dlDir, "payload.bin"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got).To(HaveLen(64 << 10))
+		})
+	},
+)

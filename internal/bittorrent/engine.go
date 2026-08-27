@@ -153,6 +153,11 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 	}
 	client.AddListener(listener)
 	var bindAddr string
+	// cc.DisableTCP above stops anacrolix from creating any TCP socket of its
+	// own, and cl.dialers is populated only from sockets it created — so
+	// without a dialer added here, nothing ever dials TCP and every outbound
+	// peer connection is uTP-only. Both branches exist to supply the TCP
+	// dialer anacrolix no longer will; only the *binding* differs.
 	if bindIP != nil {
 		network := "tcp6"
 		if bindIP.To4() != nil {
@@ -163,6 +168,15 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 			Dialer:  &net.Dialer{LocalAddr: &net.TCPAddr{IP: bindIP}},
 		})
 		bindAddr = bindIP.String()
+	} else {
+		client.AddDialer(antorrent.NetworkDialer{
+			Network: "tcp4",
+			Dialer:  &net.Dialer{},
+		})
+		client.AddDialer(antorrent.NetworkDialer{
+			Network: "tcp6",
+			Dialer:  &net.Dialer{},
+		})
 	}
 	e := &Engine{
 		client:      client,
@@ -296,6 +310,21 @@ func newClientConfig(
 	if pc != nil {
 		cc.ListenPacket = func(string, string) (net.PacketConn, error) {
 			return pc, nil
+		}
+		// The bound branch below narrows to one address family via
+		// DisableIPv6/DisableIPv4 (needed there so listeners stay within the
+		// bound interface); the unbound branch has no such narrowing, so with
+		// neither flag set cl.listenNetworks() yields both udp4 and udp6 and
+		// listenAllRetry calls ListenPacket once per network — two separate
+		// utp.Socket instances (each with its own DHT server) reading the one
+		// pc underneath, racing each other for every datagram. ListenPacket
+		// must be called exactly once, so pick a single label here too. pc
+		// itself is still opened on a nil IP (see newRebindablePacketConn), so
+		// it keeps accepting IPv6 datagrams regardless of which family
+		// anacrolix believes it is — only anacrolix's own family-scoped
+		// bookkeeping (this DHT server, any future IPv6-only routing) narrows.
+		if bindIP == nil {
+			cc.DisableIPv6 = true
 		}
 	}
 	if entry.MaxUploadKbps > 0 {
