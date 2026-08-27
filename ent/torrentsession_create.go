@@ -150,6 +150,26 @@ func (_c *TorrentSessionCreate) SetNillableUploaded(v *int64) *TorrentSessionCre
 	return _c
 }
 
+// SetWantedFiles sets the "wanted_files" field.
+func (_c *TorrentSessionCreate) SetWantedFiles(v []int) *TorrentSessionCreate {
+	_c.mutation.SetWantedFiles(v)
+	return _c
+}
+
+// SetSelectionMode sets the "selection_mode" field.
+func (_c *TorrentSessionCreate) SetSelectionMode(v torrentsession.SelectionMode) *TorrentSessionCreate {
+	_c.mutation.SetSelectionMode(v)
+	return _c
+}
+
+// SetNillableSelectionMode sets the "selection_mode" field if the given value is not nil.
+func (_c *TorrentSessionCreate) SetNillableSelectionMode(v *torrentsession.SelectionMode) *TorrentSessionCreate {
+	if v != nil {
+		_c.SetSelectionMode(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *TorrentSessionCreate) SetID(v uint32) *TorrentSessionCreate {
 	_c.mutation.SetID(v)
@@ -211,6 +231,10 @@ func (_c *TorrentSessionCreate) defaults() {
 		v := torrentsession.DefaultUploaded
 		_c.mutation.SetUploaded(v)
 	}
+	if _, ok := _c.mutation.SelectionMode(); !ok {
+		v := torrentsession.DefaultSelectionMode
+		_c.mutation.SetSelectionMode(v)
+	}
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -249,6 +273,14 @@ func (_c *TorrentSessionCreate) check() error {
 	if v, ok := _c.mutation.Uploaded(); ok {
 		if err := torrentsession.UploadedValidator(v); err != nil {
 			return &ValidationError{Name: "uploaded", err: fmt.Errorf(`ent: validator failed for field "TorrentSession.uploaded": %w`, err)}
+		}
+	}
+	if _, ok := _c.mutation.SelectionMode(); !ok {
+		return &ValidationError{Name: "selection_mode", err: errors.New(`ent: missing required field "TorrentSession.selection_mode"`)}
+	}
+	if v, ok := _c.mutation.SelectionMode(); ok {
+		if err := torrentsession.SelectionModeValidator(v); err != nil {
+			return &ValidationError{Name: "selection_mode", err: fmt.Errorf(`ent: validator failed for field "TorrentSession.selection_mode": %w`, err)}
 		}
 	}
 	return nil
@@ -326,6 +358,14 @@ func (_c *TorrentSessionCreate) createSpec() (*TorrentSession, *sqlgraph.CreateS
 	if value, ok := _c.mutation.Uploaded(); ok {
 		_spec.SetField(torrentsession.FieldUploaded, field.TypeInt64, value)
 		_node.Uploaded = value
+	}
+	if value, ok := _c.mutation.WantedFiles(); ok {
+		_spec.SetField(torrentsession.FieldWantedFiles, field.TypeJSON, value)
+		_node.WantedFiles = value
+	}
+	if value, ok := _c.mutation.SelectionMode(); ok {
+		_spec.SetField(torrentsession.FieldSelectionMode, field.TypeEnum, value)
+		_node.SelectionMode = value
 	}
 	return _node, _spec
 }

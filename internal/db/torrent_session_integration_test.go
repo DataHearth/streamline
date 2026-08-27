@@ -65,6 +65,20 @@ var _ = Describe("TorrentSession store", Label("integration", "db"), func() {
 		Expect(list).To(BeEmpty())
 	})
 
+	It("persists and rereads the selection", func() {
+		_, err := store.CreateTorrentSession(ctx, CreateTorrentSessionParams{
+			InfoHash: "aaaa", SavePath: "/dl",
+		})
+		Expect(err).ToNot(HaveOccurred())
+		Expect(store.SetTorrentSessionSelection(
+			ctx, "aaaa", "explicit", []int{0, 3},
+		)).To(Succeed())
+		rows, err := store.ListTorrentSessions(ctx)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(rows[0].SelectionMode).To(BeEquivalentTo("explicit"))
+		Expect(rows[0].WantedFiles).To(Equal([]int{0, 3}))
+	})
+
 	It("rejects a duplicate info_hash", func() {
 		p := CreateTorrentSessionParams{
 			InfoHash: "aabbccddeeff00112233445566778899aabbccdd",

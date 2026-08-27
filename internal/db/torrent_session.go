@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/datahearth/streamline/ent"
@@ -16,6 +17,8 @@ type CreateTorrentSessionParams struct {
 	SavePath      string
 	SourceMagnet  string
 	SourceTorrent []byte
+	SelectionMode string
+	WantedFiles   []int
 }
 
 func (db *DB) CreateTorrentSession(
@@ -31,6 +34,12 @@ func (db *DB) CreateTorrentSession(
 	}
 	if len(p.SourceTorrent) > 0 {
 		c.SetSourceTorrent(p.SourceTorrent)
+	}
+	if p.SelectionMode != "" {
+		c.SetSelectionMode(torrentsession.SelectionMode(p.SelectionMode))
+	}
+	if p.WantedFiles != nil {
+		c.SetWantedFiles(p.WantedFiles)
 	}
 	return c.Save(ctx)
 }
@@ -134,4 +143,20 @@ func (db *DB) SetTorrentSessionSeedStopped(
 		SetSeedStopped(true).
 		Save(ctx)
 	return err
+}
+
+func (db *DB) SetTorrentSessionSelection(
+	ctx context.Context,
+	hash, mode string,
+	wanted []int,
+) error {
+	_, err := db.client.TorrentSession.Update().
+		Where(torrentsession.InfoHashEQ(hash)).
+		SetSelectionMode(torrentsession.SelectionMode(mode)).
+		SetWantedFiles(wanted).
+		Save(ctx)
+	if err != nil {
+		return fmt.Errorf("set torrent session selection: %w", err)
+	}
+	return nil
 }

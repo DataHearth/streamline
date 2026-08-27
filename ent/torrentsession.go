@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -38,8 +39,12 @@ type TorrentSession struct {
 	// SeedStopped holds the value of the "seed_stopped" field.
 	SeedStopped bool `json:"seed_stopped,omitempty"`
 	// Uploaded holds the value of the "uploaded" field.
-	Uploaded     int64 `json:"uploaded,omitempty"`
-	selectValues sql.SelectValues
+	Uploaded int64 `json:"uploaded,omitempty"`
+	// WantedFiles holds the value of the "wanted_files" field.
+	WantedFiles []int `json:"wanted_files,omitempty"`
+	// SelectionMode holds the value of the "selection_mode" field.
+	SelectionMode torrentsession.SelectionMode `json:"selection_mode,omitempty"`
+	selectValues  sql.SelectValues
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -47,13 +52,13 @@ func (*TorrentSession) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case torrentsession.FieldSourceTorrent:
+		case torrentsession.FieldSourceTorrent, torrentsession.FieldWantedFiles:
 			values[i] = new([]byte)
 		case torrentsession.FieldPaused, torrentsession.FieldSeedStopped:
 			values[i] = new(sql.NullBool)
 		case torrentsession.FieldID, torrentsession.FieldUploaded:
 			values[i] = new(sql.NullInt64)
-		case torrentsession.FieldInfoHash, torrentsession.FieldName, torrentsession.FieldSavePath, torrentsession.FieldSourceMagnet:
+		case torrentsession.FieldInfoHash, torrentsession.FieldName, torrentsession.FieldSavePath, torrentsession.FieldSourceMagnet, torrentsession.FieldSelectionMode:
 			values[i] = new(sql.NullString)
 		case torrentsession.FieldCreateTime, torrentsession.FieldUpdateTime, torrentsession.FieldCompletedAt:
 			values[i] = new(sql.NullTime)
@@ -145,6 +150,20 @@ func (_m *TorrentSession) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Uploaded = value.Int64
 			}
+		case torrentsession.FieldWantedFiles:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field wanted_files", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.WantedFiles); err != nil {
+					return fmt.Errorf("unmarshal field wanted_files: %w", err)
+				}
+			}
+		case torrentsession.FieldSelectionMode:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field selection_mode", values[i])
+			} else if value.Valid {
+				_m.SelectionMode = torrentsession.SelectionMode(value.String)
+			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -215,6 +234,12 @@ func (_m *TorrentSession) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("uploaded=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Uploaded))
+	builder.WriteString(", ")
+	builder.WriteString("wanted_files=")
+	builder.WriteString(fmt.Sprintf("%v", _m.WantedFiles))
+	builder.WriteString(", ")
+	builder.WriteString("selection_mode=")
+	builder.WriteString(fmt.Sprintf("%v", _m.SelectionMode))
 	builder.WriteByte(')')
 	return builder.String()
 }

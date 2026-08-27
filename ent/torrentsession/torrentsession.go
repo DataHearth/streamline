@@ -3,6 +3,7 @@
 package torrentsession
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -35,6 +36,10 @@ const (
 	FieldSeedStopped = "seed_stopped"
 	// FieldUploaded holds the string denoting the uploaded field in the database.
 	FieldUploaded = "uploaded"
+	// FieldWantedFiles holds the string denoting the wanted_files field in the database.
+	FieldWantedFiles = "wanted_files"
+	// FieldSelectionMode holds the string denoting the selection_mode field in the database.
+	FieldSelectionMode = "selection_mode"
 	// Table holds the table name of the torrentsession in the database.
 	Table = "torrent_sessions"
 )
@@ -53,6 +58,8 @@ var Columns = []string{
 	FieldCompletedAt,
 	FieldSeedStopped,
 	FieldUploaded,
+	FieldWantedFiles,
+	FieldSelectionMode,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -85,6 +92,33 @@ var (
 	// UploadedValidator is a validator for the "uploaded" field. It is called by the builders before save.
 	UploadedValidator func(int64) error
 )
+
+// SelectionMode defines the type for the "selection_mode" enum field.
+type SelectionMode string
+
+// SelectionModeAll is the default value of the SelectionMode enum.
+const DefaultSelectionMode = SelectionModeAll
+
+// SelectionMode values.
+const (
+	SelectionModeAll      SelectionMode = "all"
+	SelectionModePending  SelectionMode = "pending"
+	SelectionModeExplicit SelectionMode = "explicit"
+)
+
+func (sm SelectionMode) String() string {
+	return string(sm)
+}
+
+// SelectionModeValidator is a validator for the "selection_mode" field enum values. It is called by the builders before save.
+func SelectionModeValidator(sm SelectionMode) error {
+	switch sm {
+	case SelectionModeAll, SelectionModePending, SelectionModeExplicit:
+		return nil
+	default:
+		return fmt.Errorf("torrentsession: invalid enum value for selection_mode field: %q", sm)
+	}
+}
 
 // OrderOption defines the ordering options for the TorrentSession queries.
 type OrderOption func(*sql.Selector)
@@ -142,4 +176,9 @@ func BySeedStopped(opts ...sql.OrderTermOption) OrderOption {
 // ByUploaded orders the results by the uploaded field.
 func ByUploaded(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUploaded, opts...).ToFunc()
+}
+
+// BySelectionMode orders the results by the selection_mode field.
+func BySelectionMode(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSelectionMode, opts...).ToFunc()
 }

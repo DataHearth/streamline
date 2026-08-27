@@ -35,5 +35,9 @@ func (TorrentSession) Fields() []ent.Field {
 		// a seed_ratio limit could never be reached — completed_at made the
 		// seed-time limit survive, and this is its counterpart.
 		field.Int64("uploaded").NonNegative().Default(0),
+		field.JSON("wanted_files", []int{}).Optional(),
+		field.Enum("selection_mode").
+			Values("all", "pending", "explicit").
+			Default("all"),
 	}
 }

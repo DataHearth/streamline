@@ -19499,25 +19499,28 @@ func (m *TVShowMutation) ResetEdge(name string) error {
 // TorrentSessionMutation represents an operation that mutates the TorrentSession nodes in the graph.
 type TorrentSessionMutation struct {
 	config
-	op             Op
-	typ            string
-	id             *uint32
-	create_time    *time.Time
-	update_time    *time.Time
-	info_hash      *string
-	name           *string
-	save_path      *string
-	source_magnet  *string
-	source_torrent *[]byte
-	paused         *bool
-	completed_at   *time.Time
-	seed_stopped   *bool
-	uploaded       *int64
-	adduploaded    *int64
-	clearedFields  map[string]struct{}
-	done           bool
-	oldValue       func(context.Context) (*TorrentSession, error)
-	predicates     []predicate.TorrentSession
+	op                 Op
+	typ                string
+	id                 *uint32
+	create_time        *time.Time
+	update_time        *time.Time
+	info_hash          *string
+	name               *string
+	save_path          *string
+	source_magnet      *string
+	source_torrent     *[]byte
+	paused             *bool
+	completed_at       *time.Time
+	seed_stopped       *bool
+	uploaded           *int64
+	adduploaded        *int64
+	wanted_files       *[]int
+	appendwanted_files []int
+	selection_mode     *torrentsession.SelectionMode
+	clearedFields      map[string]struct{}
+	done               bool
+	oldValue           func(context.Context) (*TorrentSession, error)
+	predicates         []predicate.TorrentSession
 }
 
 var _ ent.Mutation = (*TorrentSessionMutation)(nil)
@@ -20092,6 +20095,107 @@ func (m *TorrentSessionMutation) ResetUploaded() {
 	m.adduploaded = nil
 }
 
+// SetWantedFiles sets the "wanted_files" field.
+func (m *TorrentSessionMutation) SetWantedFiles(i []int) {
+	m.wanted_files = &i
+	m.appendwanted_files = nil
+}
+
+// WantedFiles returns the value of the "wanted_files" field in the mutation.
+func (m *TorrentSessionMutation) WantedFiles() (r []int, exists bool) {
+	v := m.wanted_files
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldWantedFiles returns the old "wanted_files" field's value of the TorrentSession entity.
+// If the TorrentSession object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TorrentSessionMutation) OldWantedFiles(ctx context.Context) (v []int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldWantedFiles is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldWantedFiles requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldWantedFiles: %w", err)
+	}
+	return oldValue.WantedFiles, nil
+}
+
+// AppendWantedFiles adds i to the "wanted_files" field.
+func (m *TorrentSessionMutation) AppendWantedFiles(i []int) {
+	m.appendwanted_files = append(m.appendwanted_files, i...)
+}
+
+// AppendedWantedFiles returns the list of values that were appended to the "wanted_files" field in this mutation.
+func (m *TorrentSessionMutation) AppendedWantedFiles() ([]int, bool) {
+	if len(m.appendwanted_files) == 0 {
+		return nil, false
+	}
+	return m.appendwanted_files, true
+}
+
+// ClearWantedFiles clears the value of the "wanted_files" field.
+func (m *TorrentSessionMutation) ClearWantedFiles() {
+	m.wanted_files = nil
+	m.appendwanted_files = nil
+	m.clearedFields[torrentsession.FieldWantedFiles] = struct{}{}
+}
+
+// WantedFilesCleared returns if the "wanted_files" field was cleared in this mutation.
+func (m *TorrentSessionMutation) WantedFilesCleared() bool {
+	_, ok := m.clearedFields[torrentsession.FieldWantedFiles]
+	return ok
+}
+
+// ResetWantedFiles resets all changes to the "wanted_files" field.
+func (m *TorrentSessionMutation) ResetWantedFiles() {
+	m.wanted_files = nil
+	m.appendwanted_files = nil
+	delete(m.clearedFields, torrentsession.FieldWantedFiles)
+}
+
+// SetSelectionMode sets the "selection_mode" field.
+func (m *TorrentSessionMutation) SetSelectionMode(tm torrentsession.SelectionMode) {
+	m.selection_mode = &tm
+}
+
+// SelectionMode returns the value of the "selection_mode" field in the mutation.
+func (m *TorrentSessionMutation) SelectionMode() (r torrentsession.SelectionMode, exists bool) {
+	v := m.selection_mode
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSelectionMode returns the old "selection_mode" field's value of the TorrentSession entity.
+// If the TorrentSession object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TorrentSessionMutation) OldSelectionMode(ctx context.Context) (v torrentsession.SelectionMode, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSelectionMode is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSelectionMode requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSelectionMode: %w", err)
+	}
+	return oldValue.SelectionMode, nil
+}
+
+// ResetSelectionMode resets all changes to the "selection_mode" field.
+func (m *TorrentSessionMutation) ResetSelectionMode() {
+	m.selection_mode = nil
+}
+
 // Where appends a list predicates to the TorrentSessionMutation builder.
 func (m *TorrentSessionMutation) Where(ps ...predicate.TorrentSession) {
 	m.predicates = append(m.predicates, ps...)
@@ -20126,7 +20230,7 @@ func (m *TorrentSessionMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *TorrentSessionMutation) Fields() []string {
-	fields := make([]string, 0, 11)
+	fields := make([]string, 0, 13)
 	if m.create_time != nil {
 		fields = append(fields, torrentsession.FieldCreateTime)
 	}
@@ -20160,6 +20264,12 @@ func (m *TorrentSessionMutation) Fields() []string {
 	if m.uploaded != nil {
 		fields = append(fields, torrentsession.FieldUploaded)
 	}
+	if m.wanted_files != nil {
+		fields = append(fields, torrentsession.FieldWantedFiles)
+	}
+	if m.selection_mode != nil {
+		fields = append(fields, torrentsession.FieldSelectionMode)
+	}
 	return fields
 }
 
@@ -20190,6 +20300,10 @@ func (m *TorrentSessionMutation) Field(name string) (ent.Value, bool) {
 		return m.SeedStopped()
 	case torrentsession.FieldUploaded:
 		return m.Uploaded()
+	case torrentsession.FieldWantedFiles:
+		return m.WantedFiles()
+	case torrentsession.FieldSelectionMode:
+		return m.SelectionMode()
 	}
 	return nil, false
 }
@@ -20221,6 +20335,10 @@ func (m *TorrentSessionMutation) OldField(ctx context.Context, name string) (ent
 		return m.OldSeedStopped(ctx)
 	case torrentsession.FieldUploaded:
 		return m.OldUploaded(ctx)
+	case torrentsession.FieldWantedFiles:
+		return m.OldWantedFiles(ctx)
+	case torrentsession.FieldSelectionMode:
+		return m.OldSelectionMode(ctx)
 	}
 	return nil, fmt.Errorf("unknown TorrentSession field %s", name)
 }
@@ -20307,6 +20425,20 @@ func (m *TorrentSessionMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetUploaded(v)
 		return nil
+	case torrentsession.FieldWantedFiles:
+		v, ok := value.([]int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetWantedFiles(v)
+		return nil
+	case torrentsession.FieldSelectionMode:
+		v, ok := value.(torrentsession.SelectionMode)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSelectionMode(v)
+		return nil
 	}
 	return fmt.Errorf("unknown TorrentSession field %s", name)
 }
@@ -20364,6 +20496,9 @@ func (m *TorrentSessionMutation) ClearedFields() []string {
 	if m.FieldCleared(torrentsession.FieldCompletedAt) {
 		fields = append(fields, torrentsession.FieldCompletedAt)
 	}
+	if m.FieldCleared(torrentsession.FieldWantedFiles) {
+		fields = append(fields, torrentsession.FieldWantedFiles)
+	}
 	return fields
 }
 
@@ -20389,6 +20524,9 @@ func (m *TorrentSessionMutation) ClearField(name string) error {
 		return nil
 	case torrentsession.FieldCompletedAt:
 		m.ClearCompletedAt()
+		return nil
+	case torrentsession.FieldWantedFiles:
+		m.ClearWantedFiles()
 		return nil
 	}
 	return fmt.Errorf("unknown TorrentSession nullable field %s", name)
@@ -20430,6 +20568,12 @@ func (m *TorrentSessionMutation) ResetField(name string) error {
 		return nil
 	case torrentsession.FieldUploaded:
 		m.ResetUploaded()
+		return nil
+	case torrentsession.FieldWantedFiles:
+		m.ResetWantedFiles()
+		return nil
+	case torrentsession.FieldSelectionMode:
+		m.ResetSelectionMode()
 		return nil
 	}
 	return fmt.Errorf("unknown TorrentSession field %s", name)

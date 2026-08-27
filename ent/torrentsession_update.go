@@ -10,6 +10,7 @@ import (
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"entgo.io/ent/dialect/sql/sqljson"
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/predicate"
 	"github.com/datahearth/streamline/ent/torrentsession"
@@ -184,6 +185,38 @@ func (_u *TorrentSessionUpdate) AddUploaded(v int64) *TorrentSessionUpdate {
 	return _u
 }
 
+// SetWantedFiles sets the "wanted_files" field.
+func (_u *TorrentSessionUpdate) SetWantedFiles(v []int) *TorrentSessionUpdate {
+	_u.mutation.SetWantedFiles(v)
+	return _u
+}
+
+// AppendWantedFiles appends value to the "wanted_files" field.
+func (_u *TorrentSessionUpdate) AppendWantedFiles(v []int) *TorrentSessionUpdate {
+	_u.mutation.AppendWantedFiles(v)
+	return _u
+}
+
+// ClearWantedFiles clears the value of the "wanted_files" field.
+func (_u *TorrentSessionUpdate) ClearWantedFiles() *TorrentSessionUpdate {
+	_u.mutation.ClearWantedFiles()
+	return _u
+}
+
+// SetSelectionMode sets the "selection_mode" field.
+func (_u *TorrentSessionUpdate) SetSelectionMode(v torrentsession.SelectionMode) *TorrentSessionUpdate {
+	_u.mutation.SetSelectionMode(v)
+	return _u
+}
+
+// SetNillableSelectionMode sets the "selection_mode" field if the given value is not nil.
+func (_u *TorrentSessionUpdate) SetNillableSelectionMode(v *torrentsession.SelectionMode) *TorrentSessionUpdate {
+	if v != nil {
+		_u.SetSelectionMode(*v)
+	}
+	return _u
+}
+
 // Mutation returns the TorrentSessionMutation object of the builder.
 func (_u *TorrentSessionUpdate) Mutation() *TorrentSessionMutation {
 	return _u.mutation
@@ -240,6 +273,11 @@ func (_u *TorrentSessionUpdate) check() error {
 	if v, ok := _u.mutation.Uploaded(); ok {
 		if err := torrentsession.UploadedValidator(v); err != nil {
 			return &ValidationError{Name: "uploaded", err: fmt.Errorf(`ent: validator failed for field "TorrentSession.uploaded": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.SelectionMode(); ok {
+		if err := torrentsession.SelectionModeValidator(v); err != nil {
+			return &ValidationError{Name: "selection_mode", err: fmt.Errorf(`ent: validator failed for field "TorrentSession.selection_mode": %w`, err)}
 		}
 	}
 	return nil
@@ -307,6 +345,20 @@ func (_u *TorrentSessionUpdate) sqlSave(ctx context.Context) (_node int, err err
 	}
 	if value, ok := _u.mutation.AddedUploaded(); ok {
 		_spec.AddField(torrentsession.FieldUploaded, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.WantedFiles(); ok {
+		_spec.SetField(torrentsession.FieldWantedFiles, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedWantedFiles(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, torrentsession.FieldWantedFiles, value)
+		})
+	}
+	if _u.mutation.WantedFilesCleared() {
+		_spec.ClearField(torrentsession.FieldWantedFiles, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.SelectionMode(); ok {
+		_spec.SetField(torrentsession.FieldSelectionMode, field.TypeEnum, value)
 	}
 	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
@@ -485,6 +537,38 @@ func (_u *TorrentSessionUpdateOne) AddUploaded(v int64) *TorrentSessionUpdateOne
 	return _u
 }
 
+// SetWantedFiles sets the "wanted_files" field.
+func (_u *TorrentSessionUpdateOne) SetWantedFiles(v []int) *TorrentSessionUpdateOne {
+	_u.mutation.SetWantedFiles(v)
+	return _u
+}
+
+// AppendWantedFiles appends value to the "wanted_files" field.
+func (_u *TorrentSessionUpdateOne) AppendWantedFiles(v []int) *TorrentSessionUpdateOne {
+	_u.mutation.AppendWantedFiles(v)
+	return _u
+}
+
+// ClearWantedFiles clears the value of the "wanted_files" field.
+func (_u *TorrentSessionUpdateOne) ClearWantedFiles() *TorrentSessionUpdateOne {
+	_u.mutation.ClearWantedFiles()
+	return _u
+}
+
+// SetSelectionMode sets the "selection_mode" field.
+func (_u *TorrentSessionUpdateOne) SetSelectionMode(v torrentsession.SelectionMode) *TorrentSessionUpdateOne {
+	_u.mutation.SetSelectionMode(v)
+	return _u
+}
+
+// SetNillableSelectionMode sets the "selection_mode" field if the given value is not nil.
+func (_u *TorrentSessionUpdateOne) SetNillableSelectionMode(v *torrentsession.SelectionMode) *TorrentSessionUpdateOne {
+	if v != nil {
+		_u.SetSelectionMode(*v)
+	}
+	return _u
+}
+
 // Mutation returns the TorrentSessionMutation object of the builder.
 func (_u *TorrentSessionUpdateOne) Mutation() *TorrentSessionMutation {
 	return _u.mutation
@@ -554,6 +638,11 @@ func (_u *TorrentSessionUpdateOne) check() error {
 	if v, ok := _u.mutation.Uploaded(); ok {
 		if err := torrentsession.UploadedValidator(v); err != nil {
 			return &ValidationError{Name: "uploaded", err: fmt.Errorf(`ent: validator failed for field "TorrentSession.uploaded": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.SelectionMode(); ok {
+		if err := torrentsession.SelectionModeValidator(v); err != nil {
+			return &ValidationError{Name: "selection_mode", err: fmt.Errorf(`ent: validator failed for field "TorrentSession.selection_mode": %w`, err)}
 		}
 	}
 	return nil
@@ -638,6 +727,20 @@ func (_u *TorrentSessionUpdateOne) sqlSave(ctx context.Context) (_node *TorrentS
 	}
 	if value, ok := _u.mutation.AddedUploaded(); ok {
 		_spec.AddField(torrentsession.FieldUploaded, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.WantedFiles(); ok {
+		_spec.SetField(torrentsession.FieldWantedFiles, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedWantedFiles(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, torrentsession.FieldWantedFiles, value)
+		})
+	}
+	if _u.mutation.WantedFilesCleared() {
+		_spec.ClearField(torrentsession.FieldWantedFiles, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.SelectionMode(); ok {
+		_spec.SetField(torrentsession.FieldSelectionMode, field.TypeEnum, value)
 	}
 	_spec.AddModifiers(_u.modifiers...)
 	_node = &TorrentSession{config: _u.config}

@@ -629,6 +629,36 @@ func UploadedLTE(v int64) predicate.TorrentSession {
 	return predicate.TorrentSession(sql.FieldLTE(FieldUploaded, v))
 }
 
+// WantedFilesIsNil applies the IsNil predicate on the "wanted_files" field.
+func WantedFilesIsNil() predicate.TorrentSession {
+	return predicate.TorrentSession(sql.FieldIsNull(FieldWantedFiles))
+}
+
+// WantedFilesNotNil applies the NotNil predicate on the "wanted_files" field.
+func WantedFilesNotNil() predicate.TorrentSession {
+	return predicate.TorrentSession(sql.FieldNotNull(FieldWantedFiles))
+}
+
+// SelectionModeEQ applies the EQ predicate on the "selection_mode" field.
+func SelectionModeEQ(v SelectionMode) predicate.TorrentSession {
+	return predicate.TorrentSession(sql.FieldEQ(FieldSelectionMode, v))
+}
+
+// SelectionModeNEQ applies the NEQ predicate on the "selection_mode" field.
+func SelectionModeNEQ(v SelectionMode) predicate.TorrentSession {
+	return predicate.TorrentSession(sql.FieldNEQ(FieldSelectionMode, v))
+}
+
+// SelectionModeIn applies the In predicate on the "selection_mode" field.
+func SelectionModeIn(vs ...SelectionMode) predicate.TorrentSession {
+	return predicate.TorrentSession(sql.FieldIn(FieldSelectionMode, vs...))
+}
+
+// SelectionModeNotIn applies the NotIn predicate on the "selection_mode" field.
+func SelectionModeNotIn(vs ...SelectionMode) predicate.TorrentSession {
+	return predicate.TorrentSession(sql.FieldNotIn(FieldSelectionMode, vs...))
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.TorrentSession) predicate.TorrentSession {
 	return predicate.TorrentSession(sql.AndPredicates(predicates...))

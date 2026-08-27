@@ -626,6 +626,8 @@ var (
 		{Name: "completed_at", Type: field.TypeTime, Nullable: true},
 		{Name: "seed_stopped", Type: field.TypeBool, Default: false},
 		{Name: "uploaded", Type: field.TypeInt64, Default: 0},
+		{Name: "wanted_files", Type: field.TypeJSON, Nullable: true},
+		{Name: "selection_mode", Type: field.TypeEnum, Enums: []string{"all", "pending", "explicit"}, Default: "all"},
 	}
 	// TorrentSessionsTable holds the schema information for the "torrent_sessions" table.
 	TorrentSessionsTable = &schema.Table{
