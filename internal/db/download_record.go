@@ -681,6 +681,14 @@ func (db *DB) ListActiveDownloadRecords(
 // FindLiveDownloadRecordByHash fetches the in-flight record tracking hash, with
 // its movie edge. Returns a nil row and a nil error when none matches — a
 // torrent the operator added out-of-band has no record, which is not a failure.
+// Used by PurgeRecordForHash (DELETE /torrents/{hash}) among others: a
+// completed record is deliberately NOT "live" here — it is an already-imported
+// history row (GET /activity/history serves it), and matching it would let
+// deleting a torrent client-side also delete that row, plus permanently block
+// re-grabbing a release whose torrent already left the client after import
+// (the hash would keep resolving to "duplicate" with nothing left to dedupe
+// against). See FindWidenableDownloadRecordByHash for the one caller that
+// does need completed records.
 func (db *DB) FindLiveDownloadRecordByHash(
 	ctx context.Context,
 	hash string,
@@ -701,6 +709,42 @@ func (db *DB) FindLiveDownloadRecordByHash(
 	}
 	if err != nil {
 		return nil, fmt.Errorf("find live download record by hash: %w", err)
+	}
+	return rec, nil
+}
+
+// FindWidenableDownloadRecordByHash is FindLiveDownloadRecordByHash plus
+// StatusCompleted: a completed record's torrent commonly still sits in the
+// client seeding, and a re-grab landing on that hash (spec §4.6) needs to find
+// it so grab can widen the selection instead of adding a duplicate torrent.
+// Kept separate rather than folded into FindLiveDownloadRecordByHash because a
+// completed record is "live" for exactly one purpose — grab's own widen
+// decision, which further gates on selection_state before treating the hit as
+// anything but an ordinary duplicate. Every other caller (PurgeRecordForHash
+// included) must keep seeing completed records as not-live.
+func (db *DB) FindWidenableDownloadRecordByHash(
+	ctx context.Context,
+	hash string,
+) (*ent.DownloadRecord, error) {
+	rec, err := db.client.DownloadRecord.Query().
+		Where(
+			downloadrecord.TorrentHashEQ(hash),
+			downloadrecord.StatusIn(
+				downloadrecord.StatusDownloading,
+				downloadrecord.StatusImporting,
+				downloadrecord.StatusHeld,
+				downloadrecord.StatusCompleted,
+			),
+		).
+		WithMovie().
+		First(ctx)
+	if ent.IsNotFound(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf(
+			"find widenable download record by hash: %w", err,
+		)
 	}
 	return rec, nil
 }

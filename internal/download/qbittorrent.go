@@ -340,14 +340,6 @@ func (q *QBittorrent) AddTorrent(
 	)
 }
 
-func extractBtihFromMagnet(magnet string) string {
-	parts := strings.SplitAfter(magnet, "btih:")
-	if len(parts) < 2 {
-		return ""
-	}
-	return strings.ToLower(strings.SplitN(parts[1], "&", 2)[0])
-}
-
 func (q *QBittorrent) GetTorrent(
 	ctx context.Context,
 	hash string,

@@ -68,7 +68,9 @@ func (e *Engine) enforceOnce(ctx context.Context) {
 		}
 		t.DisallowDataUpload()
 		e.setState(hash, func(s *torrentState) { s.seedStopped = true })
-		if err := e.store.SetTorrentSessionSeedStopped(ctx, hash); err != nil {
+		if err := e.store.SetTorrentSessionSeedStopped(
+			ctx, hash, true,
+		); err != nil {
 			slog.WarnContext(ctx, "persisting seed stop failed",
 				"info_hash", hash, "error", err)
 		}

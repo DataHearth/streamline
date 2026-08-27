@@ -137,10 +137,11 @@ func (db *DB) SetTorrentSessionUploaded(
 func (db *DB) SetTorrentSessionSeedStopped(
 	ctx context.Context,
 	infoHash string,
+	stopped bool,
 ) error {
 	_, err := db.client.TorrentSession.Update().
 		Where(torrentsession.InfoHashEQ(infoHash)).
-		SetSeedStopped(true).
+		SetSeedStopped(stopped).
 		Save(ctx)
 	return err
 }

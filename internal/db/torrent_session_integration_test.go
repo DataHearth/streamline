@@ -47,7 +47,7 @@ var _ = Describe("TorrentSession store", Label("integration", "db"), func() {
 			ctx, created.InfoHash, now,
 		)).To(Succeed())
 		Expect(store.SetTorrentSessionSeedStopped(
-			ctx, created.InfoHash,
+			ctx, created.InfoHash, true,
 		)).To(Succeed())
 
 		list, err = store.ListTorrentSessions(ctx)

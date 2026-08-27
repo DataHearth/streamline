@@ -1,6 +1,7 @@
 package download
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -14,6 +15,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/anacrolix/torrent/metainfo"
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
@@ -576,6 +579,49 @@ func (d *download) grab(
 			fmt.Errorf("fetch torrent: %w", err),
 		)
 	}
+
+	// spec §4.6: a re-grab landing on a hash already tracked by a live record
+	// means "I also want these episodes", not "add a duplicate torrent" —
+	// checked before any client contact, and before Flow A's own decode runs,
+	// since a widen recomputes the keep-set itself over the union.
+	if localHash := localInfoHash(src); localHash != "" {
+		if live, _ := d.db.FindWidenableDownloadRecordByHash(
+			ctx, localHash,
+		); live != nil {
+			// Widening only ever applies to a record Flow A already put through
+			// selective resolution (pending/applied) with selective_files still
+			// on and something new actually being asked for — every other
+			// combination (off, a plain whole-torrent grab, an unsupported/
+			// skipped client) is an ordinary duplicate hit. Gating on state
+			// rather than "has WantedEpisodes" is what keeps qBittorrent/
+			// Transmission/Deluge (WantedEpisodes is written unconditionally by
+			// GrabEpisode, but their ListFiles is ErrNotSupported outright) from
+			// ever reaching widenSelection at all.
+			if config.Get().Download.SelectiveFiles &&
+				len(wantedEpisodes) > 0 &&
+				(live.SelectionState == downloadrecord.SelectionStatePending ||
+					live.SelectionState == downloadrecord.SelectionStateApplied) {
+				rec, werr := d.widenSelection(ctx, live, wantedEpisodes)
+				switch {
+				case werr == nil:
+					outcome = "widened"
+				case errors.Is(werr, ErrTorrentAlreadyExists):
+					outcome = "already_exists"
+				default:
+					outcome = "widen_failed"
+				}
+				return rec, werr
+			}
+			if live.Status != downloadrecord.StatusCompleted {
+				outcome = "already_exists"
+				return nil, otelx.RecordSpanError(span, ErrTorrentAlreadyExists)
+			}
+			// Completed and not widen-eligible: FindWidenableDownloadRecordByHash
+			// matches it but it is not "live" for dedupe purposes — see that
+			// function's doc. Fall through to a normal grab.
+		}
+	}
+
 	// Flow A (spec §4.2): resolve which files the release actually needs to
 	// serve wantedEpisodes before the torrent is ever added. Decode/lookup
 	// errors fall through to a whole-torrent grab — selection is an
@@ -709,6 +755,215 @@ func (d *download) grab(
 	}
 	slog.InfoContext(ctx, "torrent grabbed", logAttrs...)
 	return record, nil
+}
+
+// extractBtihFromMagnet pulls the btih infohash out of a magnet URI,
+// lowercased. Used both as qBittorrent's pre-2.15 AddTorrent fallback (its
+// envelope-less "Ok." response carries no hash) and by localInfoHash below.
+func extractBtihFromMagnet(magnet string) string {
+	parts := strings.SplitAfter(magnet, "btih:")
+	if len(parts) < 2 {
+		return ""
+	}
+	return strings.ToLower(strings.SplitN(parts[1], "&", 2)[0])
+}
+
+// localInfoHash derives a torrent's infohash from src without contacting the
+// download client, lowercased to match how records store torrent_hash (every
+// Client implementation lowercases the hash it returns from AddTorrent). A
+// magnet's btih is read straight off the URI; bytes are parsed the same way
+// qBittorrent's own pre-2.15 fallback does. A decode failure here yields ""
+// rather than an error — like Flow A's own decode gate, the hash check is an
+// optimization, never a reason to fail a grab that would otherwise succeed.
+func localInfoHash(src TorrentSource) string {
+	if src.Magnet != "" {
+		return extractBtihFromMagnet(src.Magnet)
+	}
+	if len(src.Bytes) == 0 {
+		return ""
+	}
+	mi, err := metainfo.Load(bytes.NewReader(src.Bytes))
+	if err != nil {
+		return ""
+	}
+	return strings.ToLower(mi.HashInfoBytes().HexString())
+}
+
+// unionEpisodes merges newIDs into existing, returning the deduplicated union
+// (existing order preserved, new IDs appended) and the subset of newIDs not
+// already present — the delta widenSelection marks downloading, since
+// existing already ran that step at its original grab.
+func unionEpisodes(existing, newIDs []uint32) (union, added []uint32) {
+	seen := make(map[uint32]bool, len(existing)+len(newIDs))
+	union = append(union, existing...)
+	for _, id := range existing {
+		seen[id] = true
+	}
+	for _, id := range newIDs {
+		if seen[id] {
+			continue
+		}
+		seen[id] = true
+		union = append(union, id)
+		added = append(added, id)
+	}
+	return union, added
+}
+
+// widenSelection handles a re-grab that landed on a hash a live selective
+// record already tracks (spec §4.6): instead of a duplicate torrent, it
+// folds wantedEpisodes into the record's tracked set and asks the client for
+// whatever those episodes' files add to the keep-set. Never bumps
+// grab_failures — the release was found and the client already has (or will
+// have) the bytes, so nothing here is a failure the caller should count.
+func (d *download) widenSelection(
+	ctx context.Context,
+	live *ent.DownloadRecord,
+	wantedEpisodes []uint32,
+) (*ent.DownloadRecord, error) {
+	ctx, span := tracer.Start(ctx, "download.widen_selection",
+		trace.WithAttributes(
+			attribute.Int64("download_record.id", int64(live.ID)),
+		),
+	)
+	defer span.End()
+
+	union, added := unionEpisodes(live.WantedEpisodes, wantedEpisodes)
+
+	dc, ok := config.FindDownloadClient(live.DownloadClientName)
+	if !ok {
+		return nil, otelx.RecordSpanError(span, fmt.Errorf(
+			"download client %q not found", live.DownloadClientName,
+		))
+	}
+	client, err := d.buildClient(dc)
+	if err != nil {
+		return nil, otelx.RecordSpanError(span, err)
+	}
+
+	// Validate before writing anything: every external client (qBittorrent,
+	// Transmission, Deluge) returns ErrNotSupported from ListFiles
+	// unconditionally, without contacting the client, so this has to run —
+	// and be judged — before any DB write commits the wider intent. The entry
+	// gate in grab already excludes any record whose selection_state isn't
+	// pending/applied, so ErrNotSupported here only fires if that state went
+	// stale against the client's real support; either way it's the same as
+	// an ordinary duplicate hit, nothing to widen.
+	clientFiles, err := client.ListFiles(ctx, live.TorrentHash)
+	switch {
+	case errors.Is(err, ErrNotSupported):
+		return nil, otelx.RecordSpanError(span, ErrTorrentAlreadyExists)
+	case err != nil:
+		return nil, otelx.RecordSpanError(
+			span, fmt.Errorf("list files: %w", err),
+		)
+	}
+
+	if len(clientFiles) == 0 {
+		// Metadata not yet available (e.g. a magnet still resolving) — the
+		// phase-4 pending-selection pass finishes the job once it is.
+		if err := d.db.SetDownloadRecordWantedEpisodes(
+			ctx, live.ID, union,
+		); err != nil {
+			return nil, otelx.RecordSpanError(
+				span, fmt.Errorf("widen wanted episodes: %w", err),
+			)
+		}
+		live.WantedEpisodes = union
+		if err := d.db.SetDownloadRecordSelection(
+			ctx, live.ID, downloadrecord.SelectionStatePending, nil, 0,
+		); err != nil {
+			return nil, otelx.RecordSpanError(
+				span, fmt.Errorf("mark selection pending: %w", err),
+			)
+		}
+		live.SelectionState = downloadrecord.SelectionStatePending
+		return live, nil
+	}
+
+	// wantedEpisodes is non-empty (the caller's gate), so its first ID always
+	// names an episode on the show this record belongs to.
+	show, err := d.db.TVShowForEpisode(ctx, wantedEpisodes[0])
+	if err != nil {
+		return nil, otelx.RecordSpanError(
+			span, fmt.Errorf("tv show lookup: %w", err),
+		)
+	}
+	files := make([]metaFile, len(clientFiles))
+	for i, f := range clientFiles {
+		files[i] = metaFile{Index: f.Index, Path: f.Path, Size: f.Size}
+	}
+	keep, keptBytes, matched := computeKeepSet(
+		files, show.Edges.Seasons, show.Type == tvshow.TypeAnime, union,
+	)
+	if matched == 0 {
+		// The union matches nothing in the client's actual file list — never
+		// apply a keep-set that deselects every video file. Pre-feature
+		// behavior: treat this exactly like an ordinary duplicate hit, and
+		// commit nothing.
+		slog.WarnContext(ctx, "widen: keep-set matched no wanted episode",
+			"record.id", live.ID, "hash", live.TorrentHash,
+			"files", len(files), "wanted_episodes", union)
+		return nil, otelx.RecordSpanError(span, ErrTorrentAlreadyExists)
+	}
+
+	if err := d.db.SetDownloadRecordWantedEpisodes(
+		ctx, live.ID, union,
+	); err != nil {
+		return nil, otelx.RecordSpanError(
+			span, fmt.Errorf("widen wanted episodes: %w", err),
+		)
+	}
+	live.WantedEpisodes = union
+
+	switch serr := client.SetWantedFiles(ctx, live.TorrentHash, keep); {
+	case errors.Is(serr, ErrNotSupported):
+		if uerr := d.db.SetDownloadRecordSelection(
+			ctx, live.ID, downloadrecord.SelectionStateUnsupported, nil, 0,
+		); uerr != nil {
+			slog.WarnContext(ctx, "widen: mark selection unsupported failed",
+				"record.id", live.ID, "error", uerr)
+		}
+		live.SelectionState = downloadrecord.SelectionStateUnsupported
+	case serr != nil:
+		return nil, otelx.RecordSpanError(
+			span, fmt.Errorf("set wanted files: %w", serr),
+		)
+	default:
+		if uerr := d.db.SetDownloadRecordSelection(
+			ctx, live.ID, downloadrecord.SelectionStateApplied, keep, keptBytes,
+		); uerr != nil {
+			slog.WarnContext(ctx, "widen: confirm selection failed",
+				"record.id", live.ID, "error", uerr)
+		}
+		live.SelectionState = downloadrecord.SelectionStateApplied
+	}
+
+	// added is the delta this grab contributed; the episodes already in
+	// live.WantedEpisodes were marked at their original grab. The guard
+	// inside MarkEpisodeDownloading (moves only from "wanted") is what keeps
+	// this safe for a replace target already sitting at "available".
+	for _, id := range added {
+		if _, merr := d.db.MarkEpisodeDownloading(ctx, id); merr != nil {
+			slog.WarnContext(ctx, "widen: mark episode downloading failed",
+				"episode.id", id, "error", merr)
+		}
+	}
+
+	if live.Status == downloadrecord.StatusCompleted {
+		if err := d.db.UpdateDownloadRecordStatus(
+			ctx, live.ID, downloadrecord.StatusDownloading,
+		); err != nil {
+			return nil, otelx.RecordSpanError(
+				span, fmt.Errorf("revert record to downloading: %w", err),
+			)
+		}
+		live.Status = downloadrecord.StatusDownloading
+	}
+
+	slog.InfoContext(ctx, "widened selective grab", "record.id", live.ID,
+		"hash", live.TorrentHash, "added", len(added))
+	return live, nil
 }
 
 // CheckStatus polls download clients for all "downloading" records

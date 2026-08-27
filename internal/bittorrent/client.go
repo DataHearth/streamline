@@ -264,6 +264,18 @@ func (e *Engine) SetWantedFiles(
 			slog.WarnContext(ctx, "resetting torrent completion failed",
 				"info_hash", hash, "error", err)
 		}
+		// Persisted, not just in-memory: restore() re-applies whatever
+		// seed_stopped last saved, and a restart landing between this call and
+		// the newly-wanted files completing would otherwise re-stamp the stale
+		// "true" and strand the torrent seed-stopped with no enforcer pass left
+		// to re-check it (enforceOnce skips its bookkeeping entirely while
+		// wantedMissing(t) != 0).
+		if err := e.store.SetTorrentSessionSeedStopped(
+			ctx, hash, false,
+		); err != nil {
+			slog.WarnContext(ctx, "persisting seed re-arm failed",
+				"info_hash", hash, "error", err)
+		}
 		e.setState(hash, func(s *torrentState) {
 			s.seedStopped = false
 			s.completedAt = time.Time{}

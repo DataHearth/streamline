@@ -5696,6 +5696,74 @@ func (_c *MockStore_FindUserByID_Call) RunAndReturn(run func(ctx context.Context
 	return _c
 }
 
+// FindWidenableDownloadRecordByHash provides a mock function for the type MockStore
+func (_mock *MockStore) FindWidenableDownloadRecordByHash(ctx context.Context, hash string) (*ent.DownloadRecord, error) {
+	ret := _mock.Called(ctx, hash)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindWidenableDownloadRecordByHash")
+	}
+
+	var r0 *ent.DownloadRecord
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (*ent.DownloadRecord, error)); ok {
+		return returnFunc(ctx, hash)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) *ent.DownloadRecord); ok {
+		r0 = returnFunc(ctx, hash)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ent.DownloadRecord)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, hash)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_FindWidenableDownloadRecordByHash_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindWidenableDownloadRecordByHash'
+type MockStore_FindWidenableDownloadRecordByHash_Call struct {
+	*mock.Call
+}
+
+// FindWidenableDownloadRecordByHash is a helper method to define mock.On call
+//   - ctx context.Context
+//   - hash string
+func (_e *MockStore_Expecter) FindWidenableDownloadRecordByHash(ctx any, hash any) *MockStore_FindWidenableDownloadRecordByHash_Call {
+	return &MockStore_FindWidenableDownloadRecordByHash_Call{Call: _e.mock.On("FindWidenableDownloadRecordByHash", ctx, hash)}
+}
+
+func (_c *MockStore_FindWidenableDownloadRecordByHash_Call) Run(run func(ctx context.Context, hash string)) *MockStore_FindWidenableDownloadRecordByHash_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_FindWidenableDownloadRecordByHash_Call) Return(downloadRecord *ent.DownloadRecord, err error) *MockStore_FindWidenableDownloadRecordByHash_Call {
+	_c.Call.Return(downloadRecord, err)
+	return _c
+}
+
+func (_c *MockStore_FindWidenableDownloadRecordByHash_Call) RunAndReturn(run func(ctx context.Context, hash string) (*ent.DownloadRecord, error)) *MockStore_FindWidenableDownloadRecordByHash_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetRequest provides a mock function for the type MockStore
 func (_mock *MockStore) GetRequest(ctx context.Context, id uint32) (*ent.Request, error) {
 	ret := _mock.Called(ctx, id)
@@ -11230,16 +11298,16 @@ func (_c *MockStore_SetTorrentSessionSavePath_Call) RunAndReturn(run func(ctx co
 }
 
 // SetTorrentSessionSeedStopped provides a mock function for the type MockStore
-func (_mock *MockStore) SetTorrentSessionSeedStopped(ctx context.Context, infoHash string) error {
-	ret := _mock.Called(ctx, infoHash)
+func (_mock *MockStore) SetTorrentSessionSeedStopped(ctx context.Context, infoHash string, stopped bool) error {
+	ret := _mock.Called(ctx, infoHash, stopped)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SetTorrentSessionSeedStopped")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) error); ok {
-		r0 = returnFunc(ctx, infoHash)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, bool) error); ok {
+		r0 = returnFunc(ctx, infoHash, stopped)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -11254,11 +11322,12 @@ type MockStore_SetTorrentSessionSeedStopped_Call struct {
 // SetTorrentSessionSeedStopped is a helper method to define mock.On call
 //   - ctx context.Context
 //   - infoHash string
-func (_e *MockStore_Expecter) SetTorrentSessionSeedStopped(ctx any, infoHash any) *MockStore_SetTorrentSessionSeedStopped_Call {
-	return &MockStore_SetTorrentSessionSeedStopped_Call{Call: _e.mock.On("SetTorrentSessionSeedStopped", ctx, infoHash)}
+//   - stopped bool
+func (_e *MockStore_Expecter) SetTorrentSessionSeedStopped(ctx any, infoHash any, stopped any) *MockStore_SetTorrentSessionSeedStopped_Call {
+	return &MockStore_SetTorrentSessionSeedStopped_Call{Call: _e.mock.On("SetTorrentSessionSeedStopped", ctx, infoHash, stopped)}
 }
 
-func (_c *MockStore_SetTorrentSessionSeedStopped_Call) Run(run func(ctx context.Context, infoHash string)) *MockStore_SetTorrentSessionSeedStopped_Call {
+func (_c *MockStore_SetTorrentSessionSeedStopped_Call) Run(run func(ctx context.Context, infoHash string, stopped bool)) *MockStore_SetTorrentSessionSeedStopped_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -11268,9 +11337,14 @@ func (_c *MockStore_SetTorrentSessionSeedStopped_Call) Run(run func(ctx context.
 		if args[1] != nil {
 			arg1 = args[1].(string)
 		}
+		var arg2 bool
+		if args[2] != nil {
+			arg2 = args[2].(bool)
+		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -11281,7 +11355,7 @@ func (_c *MockStore_SetTorrentSessionSeedStopped_Call) Return(err error) *MockSt
 	return _c
 }
 
-func (_c *MockStore_SetTorrentSessionSeedStopped_Call) RunAndReturn(run func(ctx context.Context, infoHash string) error) *MockStore_SetTorrentSessionSeedStopped_Call {
+func (_c *MockStore_SetTorrentSessionSeedStopped_Call) RunAndReturn(run func(ctx context.Context, infoHash string, stopped bool) error) *MockStore_SetTorrentSessionSeedStopped_Call {
 	_c.Call.Return(run)
 	return _c
 }

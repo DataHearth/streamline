@@ -128,7 +128,11 @@ type Store interface {
 		infoHash string,
 		at time.Time,
 	) error
-	SetTorrentSessionSeedStopped(ctx context.Context, infoHash string) error
+	SetTorrentSessionSeedStopped(
+		ctx context.Context,
+		infoHash string,
+		stopped bool,
+	) error
 	SetTorrentSessionUploaded(
 		ctx context.Context,
 		infoHash string,
@@ -336,6 +340,10 @@ type Store interface {
 		id uint32,
 	) (*ent.DownloadRecord, error)
 	FindLiveDownloadRecordByHash(
+		ctx context.Context,
+		hash string,
+	) (*ent.DownloadRecord, error)
+	FindWidenableDownloadRecordByHash(
 		ctx context.Context,
 		hash string,
 	) (*ent.DownloadRecord, error)
