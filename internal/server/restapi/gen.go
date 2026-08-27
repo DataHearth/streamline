@@ -2781,6 +2781,15 @@ type LibraryConfigView struct {
 	Probe *ProbeConfig `json:"probe,omitempty"`
 }
 
+// ListenPortUpdate defines model for ListenPortUpdate.
+type ListenPortUpdate struct {
+	// Port Peer listening port the builtin engine should move to. Applied to
+	// the running engine only and never written back to config — the
+	// value is authored by a VPN tunnel that rotates it, and the
+	// deployments needing it run a read-only config file.
+	Port int32 `json:"port"`
+}
+
 // LookupDetail Everything a provider knows about one lookup result beyond what the
 // search response carries. One shape serves both verticals: movies fill
 // runtime/release_date/tmdb_id, series fill network/season_count/status.
@@ -4696,6 +4705,9 @@ type GrabSeasonReleaseJSONRequestBody = SearchResult
 // AddTorrentJSONRequestBody defines body for AddTorrent for application/json ContentType.
 type AddTorrentJSONRequestBody = AddTorrentRequest
 
+// SetTorrentListenPortJSONRequestBody defines body for SetTorrentListenPort for application/json ContentType.
+type SetTorrentListenPortJSONRequestBody = ListenPortUpdate
+
 // SetTorrentFilePriorityJSONRequestBody defines body for SetTorrentFilePriority for application/json ContentType.
 type SetTorrentFilePriorityJSONRequestBody = TorrentFilePriorityUpdate
 
@@ -5127,6 +5139,9 @@ type ServerInterface interface {
 	// AddTorrent Add a torrent by magnet link or .torrent file
 	// (POST /torrents)
 	AddTorrent(w http.ResponseWriter, r *http.Request)
+	// SetTorrentListenPort Move the builtin engine's peer listening port
+	// (PUT /torrents/listen-port)
+	SetTorrentListenPort(w http.ResponseWriter, r *http.Request)
 	// DeleteTorrent Remove a torrent, optionally deleting its data
 	// (DELETE /torrents/{hash})
 	DeleteTorrent(w http.ResponseWriter, r *http.Request, hash TorrentHash, params DeleteTorrentParams)
@@ -5996,6 +6011,12 @@ func (_ Unimplemented) ListTorrents(w http.ResponseWriter, r *http.Request) {
 // AddTorrent Add a torrent by magnet link or .torrent file
 // (POST /torrents)
 func (_ Unimplemented) AddTorrent(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// SetTorrentListenPort Move the builtin engine's peer listening port
+// (PUT /torrents/listen-port)
+func (_ Unimplemented) SetTorrentListenPort(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -9681,6 +9702,20 @@ func (siw *ServerInterfaceWrapper) AddTorrent(w http.ResponseWriter, r *http.Req
 	handler.ServeHTTP(w, r)
 }
 
+// SetTorrentListenPort operation middleware
+func (siw *ServerInterfaceWrapper) SetTorrentListenPort(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetTorrentListenPort(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // DeleteTorrent operation middleware
 func (siw *ServerInterfaceWrapper) DeleteTorrent(w http.ResponseWriter, r *http.Request) {
 
@@ -10458,6 +10493,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/torrents/{hash}", wrapper.GetTorrent)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/torrents/listen-port", wrapper.SetTorrentListenPort)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/torrents/{hash}/pause", wrapper.PauseTorrent)
@@ -19371,6 +19409,63 @@ func (response AddTorrent422JSONResponse) VisitAddTorrentResponse(w http.Respons
 	return err
 }
 
+type SetTorrentListenPortRequestObject struct {
+	Body *SetTorrentListenPortJSONRequestBody
+}
+
+type SetTorrentListenPortResponseObject interface {
+	VisitSetTorrentListenPortResponse(w http.ResponseWriter) error
+}
+
+type SetTorrentListenPort204Response = NoContentResponse
+
+func (response SetTorrentListenPort204Response) VisitSetTorrentListenPortResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type SetTorrentListenPort400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response SetTorrentListenPort400JSONResponse) VisitSetTorrentListenPortResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetTorrentListenPort403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response SetTorrentListenPort403JSONResponse) VisitSetTorrentListenPortResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetTorrentListenPort404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response SetTorrentListenPort404JSONResponse) VisitSetTorrentListenPortResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type DeleteTorrentRequestObject struct {
 	Hash   TorrentHash `json:"hash"`
 	Params DeleteTorrentParams
@@ -20584,6 +20679,9 @@ type StrictServerInterface interface {
 	// AddTorrent Add a torrent by magnet link or .torrent file
 	// (POST /torrents)
 	AddTorrent(ctx context.Context, request AddTorrentRequestObject) (AddTorrentResponseObject, error)
+	// SetTorrentListenPort Move the builtin engine's peer listening port
+	// (PUT /torrents/listen-port)
+	SetTorrentListenPort(ctx context.Context, request SetTorrentListenPortRequestObject) (SetTorrentListenPortResponseObject, error)
 	// DeleteTorrent Remove a torrent, optionally deleting its data
 	// (DELETE /torrents/{hash})
 	DeleteTorrent(ctx context.Context, request DeleteTorrentRequestObject) (DeleteTorrentResponseObject, error)
@@ -24577,6 +24675,37 @@ func (sh *strictHandler) AddTorrent(w http.ResponseWriter, r *http.Request) {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(AddTorrentResponseObject); ok {
 		if err := validResponse.VisitAddTorrentResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SetTorrentListenPort operation middleware
+func (sh *strictHandler) SetTorrentListenPort(w http.ResponseWriter, r *http.Request) {
+	var request SetTorrentListenPortRequestObject
+
+	var body SetTorrentListenPortJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SetTorrentListenPort(ctx, request.(SetTorrentListenPortRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SetTorrentListenPort")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SetTorrentListenPortResponseObject); ok {
+		if err := validResponse.VisitSetTorrentListenPortResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

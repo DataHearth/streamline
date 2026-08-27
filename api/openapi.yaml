@@ -1447,6 +1447,23 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /torrents/listen-port:
+    put:
+      operationId: setTorrentListenPort
+      summary: Move the builtin engine's peer listening port
+      tags: [torrents]
+      requestBody:
+        $ref: "#/components/requestBodies/ListenPortUpdate"
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /torrents/{hash}/pause:
     parameters:
       - $ref: "#/components/parameters/TorrentHash"
@@ -3652,6 +3669,13 @@ components:
           schema:
             $ref: "#/components/schemas/TorrentFilePriorityUpdate"
 
+    ListenPortUpdate:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ListenPortUpdate"
+
     CreateInvite:
       required: true
       content:
@@ -5756,6 +5780,21 @@ components:
         priority:
           type: string
           enum: [skip, normal, high]
+
+    ListenPortUpdate:
+      type: object
+      required: [port]
+      properties:
+        port:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 65535
+          description: |
+            Peer listening port the builtin engine should move to. Applied to
+            the running engine only and never written back to config — the
+            value is authored by a VPN tunnel that rotates it, and the
+            deployments needing it run a read-only config file.
 
     User:
       type: object

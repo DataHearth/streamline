@@ -207,6 +207,33 @@ func (s *Server) DeleteTorrent(
 	return DeleteTorrent204Response{}, nil
 }
 
+func (s *Server) SetTorrentListenPort(
+	ctx context.Context,
+	request SetTorrentListenPortRequestObject,
+) (SetTorrentListenPortResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return SetTorrentListenPort403JSONResponse{
+			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
+	if s.torrents == nil {
+		return SetTorrentListenPort404JSONResponse{
+			NotFoundJSONResponse: errNoBuiltin,
+		}, nil
+	}
+	if request.Body == nil || request.Body.Port < 1 || request.Body.Port > 65535 {
+		return SetTorrentListenPort400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(
+				"port must be between 1 and 65535",
+			),
+		}, nil
+	}
+	if err := s.torrents.SetListenPort(ctx, uint16(request.Body.Port)); err != nil {
+		return nil, err
+	}
+	return SetTorrentListenPort204Response{}, nil
+}
+
 func torrentInfoToAPI(v bittorrent.TorrentView) TorrentInfo {
 	return TorrentInfo{
 		Hash:           v.Hash,

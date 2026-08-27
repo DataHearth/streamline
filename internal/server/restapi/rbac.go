@@ -188,6 +188,7 @@ var minRole = map[string]string{
 	"PauseTorrent":           roleAdmin,
 	"ResumeTorrent":          roleAdmin,
 	"SetTorrentFilePriority": roleAdmin,
+	"SetTorrentListenPort":   roleAdmin,
 
 	"ListUsers":         roleAdmin,
 	"CreateUser":        roleAdmin,

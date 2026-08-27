@@ -12,6 +12,7 @@ import (
 
 	"github.com/datahearth/streamline/internal/auth"
 	"github.com/datahearth/streamline/internal/bittorrent"
+	"github.com/datahearth/streamline/internal/bittorrent/mocks"
 	"github.com/datahearth/streamline/internal/download"
 )
 
@@ -147,5 +148,70 @@ var _ = Describe("Handler: Torrents", Label("unit", "server", "torrents"), func(
 		resp, err := bare.ListTorrents(ctx, ListTorrentsRequestObject{})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp).To(BeAssignableToTypeOf(ListTorrents404JSONResponse{}))
+	})
+})
+
+var _ = Describe("SetTorrentListenPort", Label("unit", "restapi"), func() {
+	// Direct StrictServer calls, matching the "returns 404 when no builtin
+	// client is configured" spec already in this file: the claims stand in for
+	// the middleware these calls bypass.
+	adminCtx := func() context.Context {
+		return auth.ContextWithClaims(
+			context.Background(),
+			&auth.Claims{Role: roleAdmin},
+		)
+	}
+	body := func(port int32) SetTorrentListenPortRequestObject {
+		return SetTorrentListenPortRequestObject{Body: &ListenPortUpdate{Port: port}}
+	}
+
+	It("refuses a caller with no admin claim", func() {
+		// No claims at all: the handler's own admin check answers 403 before
+		// it can reach the missing engine.
+		resp, err := New(
+			Deps{},
+		).SetTorrentListenPort(context.Background(), body(43037))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(resp).To(BeAssignableToTypeOf(SetTorrentListenPort403JSONResponse{}))
+	})
+
+	It("404s when no builtin engine is configured", func() {
+		resp, err := New(Deps{}).SetTorrentListenPort(adminCtx(), body(43037))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(resp).To(BeAssignableToTypeOf(SetTorrentListenPort404JSONResponse{}))
+	})
+
+	It("passes the port to the engine", func() {
+		mgr := mocks.NewMockManager(GinkgoT())
+		mgr.EXPECT().
+			SetListenPort(mock.Anything, uint16(43037)).
+			Return(nil).
+			Once()
+
+		resp, err := New(
+			Deps{Torrents: mgr},
+		).SetTorrentListenPort(adminCtx(), body(43037))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(resp).To(BeAssignableToTypeOf(SetTorrentListenPort204Response{}))
+	})
+
+	It("rejects a port outside uint16 without reaching the engine", func() {
+		mgr := mocks.NewMockManager(GinkgoT())
+
+		resp, err := New(
+			Deps{Torrents: mgr},
+		).SetTorrentListenPort(adminCtx(), body(70000))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(resp).To(BeAssignableToTypeOf(SetTorrentListenPort400JSONResponse{}))
+	})
+
+	It("400s a nil body before dereferencing it", func() {
+		mgr := mocks.NewMockManager(GinkgoT())
+
+		resp, err := New(Deps{Torrents: mgr}).SetTorrentListenPort(
+			adminCtx(), SetTorrentListenPortRequestObject{},
+		)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(resp).To(BeAssignableToTypeOf(SetTorrentListenPort400JSONResponse{}))
 	})
 })
