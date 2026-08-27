@@ -7,12 +7,14 @@ import (
 	"time"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/quality"
+	"github.com/datahearth/streamline/internal/quality/qualityctx"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -205,8 +207,13 @@ func (s *EpisodeMissingSearcher) processSeason(
 
 // grabSeasonPack searches for a season pack and, working down the scored
 // packs best-first, grabs one against the first wanted episode and marks
-// every wanted episode in the season as downloading. Reports whether a pack
-// was grabbed.
+// every wanted episode in the season as downloading. The grab's wanted set is
+// the season's missing episodes plus, under an upgrade-permitting profile, the
+// on-disk episodes the same release beats — the feed scanner's grabPack rule,
+// so a pack means the same thing whichever pass found it. Only the missing
+// episodes are marked; a beaten one keeps its file's status until the importer
+// decides it per file via replace_mode upgrades. Reports whether a pack was
+// grabbed.
 func (s *EpisodeMissingSearcher) grabSeasonPack(
 	ctx context.Context,
 	show *ent.TVShow,
@@ -236,17 +243,46 @@ func (s *EpisodeMissingSearcher) grabSeasonPack(
 	if episodes < 1 {
 		episodes = singleRelease
 	}
-	wantedIDs := make([]uint32, len(wanted))
-	for i, e := range wanted {
-		wantedIDs[i] = e.ID
+	ranked := rankAccepted(profile, packs, episodes)
+	// Loaded at most once per pack attempt, and only with a pack worth
+	// grabbing: a season whose results are all rejected is the steady-state
+	// case and must not cost a query.
+	var us *wantedShow
+	if len(ranked) > 0 && profile.UpgradeAllowed {
+		row, err := s.store.UpgradeCandidateShow(ctx, show.ID)
+		if err != nil {
+			slog.WarnContext(ctx, "tv missing-search: upgrade context load failed",
+				"show", show.Title, "error", err)
+		} else if row != nil {
+			us = newWantedShow(row)
+		}
 	}
-	for _, r := range rankAccepted(profile, packs, episodes) {
-		if _, err := s.downloads.GrabEpisode(
+	for _, r := range ranked {
+		// Which files a release beats is the release's own question — a weaker
+		// pack replaces fewer of them — so the union is rebuilt per candidate
+		// rather than once for the whole ranked list. The two halves are
+		// disjoint by construction: a missing episode has no file, and a beaten
+		// one was picked because it has.
+		release := qualityctx.ContextFromRelease(
+			r.Title, r.Size, r.Seeders, episodes,
+		)
+		// No exclusion set: the beat-set is season-scoped and every season is
+		// scored once per pass, so nothing here can already be claimed.
+		beat := beatEpisodes(us, se.Number, profile, release, nil)
+		wantedIDs := make([]uint32, 0, len(wanted)+len(beat))
+		for _, e := range wanted {
+			wantedIDs = append(wantedIDs, e.ID)
+		}
+		for _, e := range beat {
+			wantedIDs = append(wantedIDs, e.ID)
+		}
+		rec, err := s.downloads.GrabEpisode(
 			ctx,
 			r,
 			wanted[0].ID,
 			wantedIDs,
-		); err != nil {
+		)
+		if err != nil {
 			slog.WarnContext(ctx, "tv missing-search: season-pack grab failed",
 				"show", show.Title, "season", se.Number,
 				"release", r.Title, "error", err)
@@ -268,13 +304,22 @@ func (s *EpisodeMissingSearcher) grabSeasonPack(
 			continue
 		}
 		span.SetAttributes(attribute.String("release.title", r.Title))
+		// The pack was grabbed to fill the gap, but it may also beat files
+		// already on disk. The importer decides that per episode, and upgrades
+		// is what lets it.
+		if err := s.store.SetDownloadRecordReplaceMode(
+			ctx, rec.ID, downloadrecord.ReplaceModeUpgrades,
+		); err != nil {
+			slog.ErrorContext(ctx, "tv missing-search: set replace mode failed",
+				"show", show.Title, "record.id", rec.ID, "error", err)
+		}
 		now := time.Now()
 		for _, e := range wanted {
 			markEpisodeDownloading(ctx, s.store, e.ID, now)
 		}
 		slog.InfoContext(ctx, "tv missing-search: grabbed season pack",
 			"show", show.Title, "season", se.Number,
-			"release", r.Title, "episodes", len(wanted))
+			"release", r.Title, "filled", len(wanted), "replaced", len(beat))
 		return true
 	}
 	return false

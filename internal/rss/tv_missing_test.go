@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"slices"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -13,6 +14,7 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	"github.com/datahearth/streamline/internal/download"
@@ -20,6 +22,16 @@ import (
 	"github.com/datahearth/streamline/internal/rss/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
+
+// matchIDs matches a grab's wanted-episode argument against an exact ID set,
+// order-insensitively: which episodes a pack was grabbed for is the contract,
+// the order the union happens to build them in is not.
+func matchIDs(ids ...uint32) any {
+	want := slices.Sorted(slices.Values(ids))
+	return mock.MatchedBy(func(got []uint32) bool {
+		return slices.Equal(slices.Sorted(slices.Values(got)), want)
+	})
+}
 
 var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 	var (
@@ -70,6 +82,23 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 	const acceptablePack = "The.Black.Sea.S03.1080p.WEB-DL.x265-GRP"
 	const acceptableEp = "The.Black.Sea.S03E01.1080p.WEB-DL.x265-GRP"
 
+	// expectNoUpgradeCandidates stubs the on-disk lookup a pack attempt makes
+	// under an upgrade-permitting profile with the empty answer: the specs
+	// below hold nothing on disk, so their packs fill gaps only.
+	expectNoUpgradeCandidates := func() {
+		store.EXPECT().UpgradeCandidateShow(mock.Anything, uint32(1)).
+			Return(nil, nil).Once()
+	}
+
+	// expectReplaceMode stubs the flag every pack grab stamps: a pack may beat
+	// files on disk, and the importer needs the permission to act on it.
+	expectReplaceMode := func(recordID uint32) {
+		store.EXPECT().
+			SetDownloadRecordReplaceMode(
+				mock.Anything, recordID, downloadrecord.ReplaceModeUpgrades,
+			).Return(nil).Once()
+	}
+
 	When("no download client is enabled", func() {
 		It("skips the pass after the eligibility query", func() {
 			overlay := defaultRSSConfig()
@@ -99,13 +128,15 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 					SearchSeason(mock.Anything, []string{"The Black Sea"}, uint32(9001), uint16(3)).
 					Return([]indexer.SearchResult{{Title: acceptablePack, Seeders: 10}}, nil).
 					Once()
+				expectNoUpgradeCandidates()
 
 				// Grabbed once, against the first wanted episode, carrying both
 				// wanted episode IDs.
 				dlM.EXPECT().
 					GrabEpisode(mock.Anything, mock.AnythingOfType("indexer.SearchResult"),
 						uint32(11), []uint32{11, 12}).
-					Return(&ent.DownloadRecord{}, nil).Once()
+					Return(&ent.DownloadRecord{ID: 55}, nil).Once()
+				expectReplaceMode(55)
 
 				// Every wanted episode flipped to downloading + stamped.
 				store.EXPECT().
@@ -220,6 +251,7 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 				SearchSeason(mock.Anything, []string{"The Black Sea"}, uint32(9001), uint16(3)).
 				Return([]indexer.SearchResult{{Title: acceptablePack, Seeders: 10}}, nil).
 				Once()
+			expectNoUpgradeCandidates()
 			dlM.EXPECT().
 				GrabEpisode(mock.Anything, mock.AnythingOfType("indexer.SearchResult"),
 					uint32(11), []uint32{11, 12}).
@@ -257,6 +289,7 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 				SearchSeason(mock.Anything, []string{"The Black Sea"}, uint32(9001), uint16(3)).
 				Return([]indexer.SearchResult{{Title: acceptablePack, Seeders: 10}}, nil).
 				Once()
+			expectNoUpgradeCandidates()
 			dlM.EXPECT().
 				GrabEpisode(mock.Anything, mock.AnythingOfType("indexer.SearchResult"),
 					uint32(11), []uint32{11, 12}).
@@ -354,9 +387,11 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 					{Title: acceptablePack, Seeders: 500},
 					remuxPack,
 				}, nil).Once()
+			expectNoUpgradeCandidates()
 			dlM.EXPECT().
 				GrabEpisode(mock.Anything, remuxPack, uint32(11), []uint32{11, 12}).
-				Return(&ent.DownloadRecord{}, nil).Once()
+				Return(&ent.DownloadRecord{ID: 55}, nil).Once()
+			expectReplaceMode(55)
 			for _, id := range []uint32{11, 12} {
 				store.EXPECT().
 					SetEpisodeStatus(mock.Anything, id, episode.StatusDownloading).
@@ -384,12 +419,16 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 			indexerM.EXPECT().
 				SearchSeason(mock.Anything, []string{"The Black Sea"}, uint32(9001), uint16(3)).
 				Return([]indexer.SearchResult{runnerUp, remuxPack}, nil).Once()
+			// One lookup for the whole attempt: the fall-through to the
+			// runner-up re-scores the beat-set, it does not re-query.
+			expectNoUpgradeCandidates()
 			dlM.EXPECT().
 				GrabEpisode(mock.Anything, remuxPack, uint32(11), []uint32{11, 12}).
 				Return(nil, context.DeadlineExceeded).Once()
 			dlM.EXPECT().
 				GrabEpisode(mock.Anything, runnerUp, uint32(11), []uint32{11, 12}).
-				Return(&ent.DownloadRecord{}, nil).Once()
+				Return(&ent.DownloadRecord{ID: 55}, nil).Once()
+			expectReplaceMode(55)
 			for _, id := range []uint32{11, 12} {
 				store.EXPECT().
 					SetEpisodeStatus(mock.Anything, id, episode.StatusDownloading).
@@ -474,10 +513,12 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 					uhdPack,
 				}, nil).
 				Once()
+			expectNoUpgradeCandidates()
 			// The higher-seeded 1080p pack is skipped for the pinned floor.
 			dlM.EXPECT().
 				GrabEpisode(mock.Anything, uhdPack, uint32(11), []uint32{11, 12}).
-				Return(&ent.DownloadRecord{}, nil).Once()
+				Return(&ent.DownloadRecord{ID: 55}, nil).Once()
+			expectReplaceMode(55)
 			for _, id := range []uint32{11, 12} {
 				store.EXPECT().
 					SetEpisodeStatus(mock.Anything, id, episode.StatusDownloading).
@@ -486,6 +527,142 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 					SetEpisodeLastSearchAt(mock.Anything, id, mock.AnythingOfType("time.Time")).
 					Return(nil).Once()
 			}
+
+			Expect(searcher.Run(ctx)).To(Succeed())
+		})
+	})
+
+	Context("a season pack that also beats files on disk", func() {
+		// remux only: it outscores a plain WEB-DL file and ties a remux one, so
+		// one release splits the season's on-disk episodes into beaten and not.
+		const remuxPack = "The.Black.Sea.S03.1080p.BluRay.REMUX.x264-GRP"
+
+		// onDisk builds an upgrade candidate: one episode holding a file, 1080p
+		// by both its name and its probed width.
+		onDisk := func(id uint32, number uint16, source string) *ent.Episode {
+			e := &ent.Episode{ID: id, Number: number}
+			e.Edges.MediaFiles = []*ent.MediaFile{{
+				Path: fmt.Sprintf(
+					"/tv/The Black Sea/Season 03/The.Black.Sea.S03E%02d.%s.mkv",
+					number, source,
+				),
+				Size:       4_000_000_000,
+				Width:      1920,
+				VideoCodec: "h264",
+			}}
+			return e
+		}
+		beaten := func(id uint32, number uint16) *ent.Episode {
+			return onDisk(id, number, "1080p.WEB-DL.x264-GRP")
+		}
+		kept := func(id uint32, number uint16) *ent.Episode {
+			return onDisk(id, number, "1080p.BluRay.REMUX.x264-GRP")
+		}
+
+		expectPackSearch := func() {
+			indexerM.EXPECT().
+				SearchSeason(mock.Anything, []string{"The Black Sea"}, uint32(9001), uint16(3)).
+				Return([]indexer.SearchResult{{Title: remuxPack, Seeders: 10}}, nil).
+				Once()
+		}
+		expectDownloading := func(ids ...uint32) {
+			for _, id := range ids {
+				store.EXPECT().
+					SetEpisodeStatus(mock.Anything, id, episode.StatusDownloading).
+					Return(nil).Once()
+				store.EXPECT().
+					SetEpisodeLastSearchAt(
+						mock.Anything, id, mock.AnythingOfType("time.Time"),
+					).
+					Return(nil).Once()
+			}
+		}
+
+		BeforeEach(func() { configtest.Setup(upgradeConfig()) })
+
+		It("unions beatable episodes into a season-pack grab", func() {
+			expectEligible([]*ent.TVShow{showWith(
+				&ent.Episode{ID: 11, Number: 1},
+				&ent.Episode{ID: 12, Number: 2},
+				&ent.Episode{ID: 13, Number: 3},
+				&ent.Episode{ID: 14, Number: 4},
+				&ent.Episode{ID: 15, Number: 5},
+			)}, nil)
+			store.EXPECT().UpgradeCandidateShow(mock.Anything, uint32(1)).
+				Return(showWith(
+					beaten(16, 6), beaten(17, 7), beaten(18, 8), beaten(19, 9),
+					kept(20, 10), kept(21, 11), kept(22, 12),
+				), nil).Once()
+			expectPackSearch()
+
+			// The missing five plus the four the release beats, and nothing the
+			// release only ties.
+			dlM.EXPECT().
+				GrabEpisode(mock.Anything, mock.AnythingOfType("indexer.SearchResult"),
+					uint32(11), matchIDs(11, 12, 13, 14, 15, 16, 17, 18, 19)).
+				Return(&ent.DownloadRecord{ID: 40}, nil).Once()
+			store.EXPECT().
+				SetDownloadRecordReplaceMode(
+					mock.Anything, uint32(40), downloadrecord.ReplaceModeUpgrades,
+				).Return(nil).Once()
+			// Only the missing episodes are marked: a beaten one keeps its file's
+			// "available" until the importer decides per file. No expectation is
+			// registered for 16-22, so a status write on one fails the spec.
+			expectDownloading(11, 12, 13, 14, 15)
+
+			Expect(searcher.Run(ctx)).To(Succeed())
+		})
+
+		It("skips the upgrade query when the profile forbids upgrades", func() {
+			show := showWith(
+				&ent.Episode{ID: 11, Number: 1},
+				&ent.Episode{ID: 12, Number: 2},
+			)
+			show.QualityProfile = lockedProfile
+			expectEligible([]*ent.TVShow{show}, nil)
+			expectPackSearch()
+
+			dlM.EXPECT().
+				GrabEpisode(mock.Anything, mock.AnythingOfType("indexer.SearchResult"),
+					uint32(11), matchIDs(11, 12)).
+				Return(&ent.DownloadRecord{ID: 41}, nil).Once()
+			// The mode is stamped regardless: an empty beat-set imports exactly
+			// as replace_mode none did.
+			store.EXPECT().
+				SetDownloadRecordReplaceMode(
+					mock.Anything, uint32(41), downloadrecord.ReplaceModeUpgrades,
+				).Return(nil).Once()
+			expectDownloading(11, 12)
+
+			// UpgradeCandidateShow carries no expectation: calling it fails the
+			// spec, which is the assertion that the query never runs.
+			Expect(searcher.Run(ctx)).To(Succeed())
+		})
+
+		It("grabs whole when every episode is missing or beaten", func() {
+			expectEligible([]*ent.TVShow{showWith(
+				&ent.Episode{ID: 11, Number: 1},
+				&ent.Episode{ID: 12, Number: 2},
+			)}, nil)
+			store.EXPECT().UpgradeCandidateShow(mock.Anything, uint32(1)).
+				Return(showWith(
+					beaten(13, 3), beaten(14, 4), beaten(15, 5), beaten(16, 6),
+					beaten(17, 7), beaten(18, 8), beaten(19, 9), beaten(20, 10),
+					beaten(21, 11), beaten(22, 12),
+				), nil).Once()
+			expectPackSearch()
+
+			dlM.EXPECT().
+				GrabEpisode(mock.Anything, mock.AnythingOfType("indexer.SearchResult"),
+					uint32(11), matchIDs(
+						11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
+					)).
+				Return(&ent.DownloadRecord{ID: 42}, nil).Once()
+			store.EXPECT().
+				SetDownloadRecordReplaceMode(
+					mock.Anything, uint32(42), downloadrecord.ReplaceModeUpgrades,
+				).Return(nil).Once()
+			expectDownloading(11, 12)
 
 			Expect(searcher.Run(ctx)).To(Succeed())
 		})

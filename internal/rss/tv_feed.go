@@ -471,32 +471,41 @@ func (w *wantedShow) lookup(p library.ParseResult) *ent.Episode {
 	return nil
 }
 
+// newWantedShow indexes one show's loaded episode edges. The feed scan indexes
+// every show of a listing up front; the missing search indexes the one show it
+// is already working on, so the construction lives apart from the map that
+// holds it.
+func newWantedShow(show *ent.TVShow) *wantedShow {
+	w := &wantedShow{
+		show:     show,
+		seasons:  make(map[uint16][]*ent.Episode),
+		byNumber: make(map[[2]uint16]*ent.Episode),
+	}
+	switch show.Type {
+	case tvshow.TypeAnime:
+		w.byAbs = make(map[uint16]*ent.Episode)
+	case tvshow.TypeDaily:
+		w.byDate = make(map[string]*ent.Episode)
+	}
+	for _, se := range show.Edges.Seasons {
+		for _, e := range se.Edges.Episodes {
+			w.seasons[se.Number] = append(w.seasons[se.Number], e)
+			w.byNumber[[2]uint16{se.Number, e.Number}] = e
+			if w.byAbs != nil && e.AbsoluteNumber > 0 {
+				w.byAbs[e.AbsoluteNumber] = e
+			}
+			if w.byDate != nil && !e.AirDate.IsZero() {
+				w.byDate[e.AirDate.Format(time.DateOnly)] = e
+			}
+		}
+	}
+	return w
+}
+
 func buildEpisodeIndex(shows []*ent.TVShow) map[string]*wantedShow {
 	index := make(map[string]*wantedShow, len(shows))
 	for _, show := range shows {
-		w := &wantedShow{
-			show:     show,
-			seasons:  make(map[uint16][]*ent.Episode),
-			byNumber: make(map[[2]uint16]*ent.Episode),
-		}
-		switch show.Type {
-		case tvshow.TypeAnime:
-			w.byAbs = make(map[uint16]*ent.Episode)
-		case tvshow.TypeDaily:
-			w.byDate = make(map[string]*ent.Episode)
-		}
-		for _, se := range show.Edges.Seasons {
-			for _, e := range se.Edges.Episodes {
-				w.seasons[se.Number] = append(w.seasons[se.Number], e)
-				w.byNumber[[2]uint16{se.Number, e.Number}] = e
-				if w.byAbs != nil && e.AbsoluteNumber > 0 {
-					w.byAbs[e.AbsoluteNumber] = e
-				}
-				if w.byDate != nil && !e.AirDate.IsZero() {
-					w.byDate[e.AirDate.Format(time.DateOnly)] = e
-				}
-			}
-		}
+		w := newWantedShow(show)
 		index[showKey(show.Title)] = w
 		if show.OriginalTitle != "" {
 			index[showKey(show.OriginalTitle)] = w

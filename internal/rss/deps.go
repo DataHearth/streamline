@@ -84,17 +84,22 @@ type EligibleEpisodeLister interface {
 		ctx context.Context,
 		showIDs []uint32,
 	) (map[uint32]map[uint16]int, error)
-}
-
-// TVFeedStore is what rss.TVFeedScanner needs on top of the missing-search
-// surface: the episodes already on disk, and the replace mode that tells an
-// upgrade's import which of them it may overwrite.
-type TVFeedStore interface {
-	EligibleEpisodeLister
-	ListUpgradeCandidateShows(ctx context.Context) ([]*ent.TVShow, error)
+	// UpgradeCandidateShow loads the on-disk episodes one pack grab may
+	// replace, for the show it is about to grab for.
+	UpgradeCandidateShow(ctx context.Context, showID uint32) (*ent.TVShow, error)
+	// SetDownloadRecordReplaceMode tells the import which of the episodes a
+	// grab covers it may overwrite.
 	SetDownloadRecordReplaceMode(
 		ctx context.Context,
 		id uint32,
 		mode downloadrecord.ReplaceMode,
 	) error
+}
+
+// TVFeedStore is what rss.TVFeedScanner needs on top of the missing-search
+// surface: every show's on-disk episodes in one query, since a feed tick
+// matches its items against the whole library rather than one show.
+type TVFeedStore interface {
+	EligibleEpisodeLister
+	ListUpgradeCandidateShows(ctx context.Context) ([]*ent.TVShow, error)
 }
