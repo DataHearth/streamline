@@ -108,6 +108,28 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 		})
 	})
 
+	Describe("SetDownloadRecordReplaceMode", func() {
+		It("raises none -> upgrades -> all and refuses to lower", func() {
+			rec := createRec("replace-mode", downloadrecord.StatusDownloading)
+			Expect(store.SetDownloadRecordReplaceMode(
+				ctx, rec.ID, downloadrecord.ReplaceModeUpgrades,
+			)).To(Succeed())
+			Expect(store.SetDownloadRecordReplaceMode(
+				ctx, rec.ID, downloadrecord.ReplaceModeAll,
+			)).To(Succeed())
+			Expect(store.SetDownloadRecordReplaceMode(
+				ctx, rec.ID, downloadrecord.ReplaceModeUpgrades,
+			)).To(Succeed()) // no error...
+
+			got, err := client.DownloadRecord.Get(ctx, rec.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(
+				got.ReplaceMode,
+			).To(Equal(downloadrecord.ReplaceModeAll))
+			// ...but no downgrade
+		})
+	})
+
 	Describe("ListDownloadingRecordsWithMovie", func() {
 		It("preloads client and movie", func() {
 			createRec("abc", downloadrecord.StatusDownloading)

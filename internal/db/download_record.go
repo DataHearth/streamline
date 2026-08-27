@@ -255,14 +255,38 @@ func (db *DB) FailDownloadRecord(
 		Exec(ctx)
 }
 
+var replaceModeRank = map[downloadrecord.ReplaceMode]int{
+	downloadrecord.ReplaceModeNone:     0,
+	downloadrecord.ReplaceModeUpgrades: 1,
+	downloadrecord.ReplaceModeAll:      2,
+}
+
+// SetDownloadRecordReplaceMode raises a record's replace mode and never
+// lowers it (none < upgrades < all). A §4.6 widen hands the caller an
+// existing record, and the caller's stamp must not downgrade the intent
+// the original grab recorded — a feed widen over a manual replace-grab
+// would otherwise quietly revoke the operator's overwrite. Fresh records
+// start at none, so every first stamp is a raise; a refused lower is a
+// silent no-op by design.
 func (db *DB) SetDownloadRecordReplaceMode(
 	ctx context.Context,
 	id uint32,
 	mode downloadrecord.ReplaceMode,
 ) error {
-	return db.client.DownloadRecord.UpdateOneID(id).
+	lowerOrEqual := make([]downloadrecord.ReplaceMode, 0, 3)
+	for m, r := range replaceModeRank {
+		if r <= replaceModeRank[mode] {
+			lowerOrEqual = append(lowerOrEqual, m)
+		}
+	}
+	_, err := db.client.DownloadRecord.Update().
+		Where(
+			downloadrecord.IDEQ(id),
+			downloadrecord.ReplaceModeIn(lowerOrEqual...),
+		).
 		SetReplaceMode(mode).
-		Exec(ctx)
+		Save(ctx)
+	return err
 }
 
 // SetDownloadRecordSelection writes the resolution of a file selection: the
