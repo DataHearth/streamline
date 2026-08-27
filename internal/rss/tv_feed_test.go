@@ -445,5 +445,95 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 				Return([]indexer.SearchResult{{Title: tiedPack}}, nil).Once()
 			Expect(scanner.Run(ctx)).To(Succeed())
 		})
+
+		It(
+			"carries the gap-filled episode and the one it beats, but not the one it doesn't",
+			func() {
+				configtest.Setup(upgradeConfig("a"))
+				newScanner()
+				expectQueries(
+					[]*ent.TVShow{showWith(&ent.Episode{ID: 11, Number: 1})},
+					[]*ent.TVShow{showWith(
+						epWithFile(12, 2, plainEpFile),
+						epWithFile(13, 3, remuxEpFile),
+					)},
+				)
+				// tiedPack beats the plain E02 file (200 > 0) but only ties the
+				// remux E03 file (200 == 200, not strictly greater) — the exact
+				// mix that tells "beats" apart from "wanted".
+				feeder.EXPECT().Feed(mock.Anything, "a").
+					Return([]indexer.SearchResult{{Title: tiedPack}}, nil).Once()
+				grabber.EXPECT().
+					GrabEpisode(
+						mock.Anything, mock.Anything, uint32(11), []uint32{11, 12},
+					).
+					Return(&ent.DownloadRecord{ID: 55}, nil).Once()
+				store.EXPECT().
+					SetDownloadRecordReplaceMode(
+						mock.Anything, uint32(55), downloadrecord.ReplaceModeUpgrades,
+					).
+					Return(nil).Once()
+				// Only the missing episode (11) is marked; the beaten one (12)
+				// keeps status "available" — the importer decides it per file.
+				expectDownloading(11)
+				Expect(scanner.Run(ctx)).To(Succeed())
+			},
+		)
+
+		It(
+			"leaves the beat set out of the gap-fill when the profile forbids upgrades",
+			func() {
+				configtest.Setup(upgradeConfig("a"))
+				newScanner()
+				expectQueries(
+					[]*ent.TVShow{onProfile(
+						lockedProfile, showWith(&ent.Episode{ID: 11, Number: 1}),
+					)},
+					[]*ent.TVShow{onProfile(
+						lockedProfile,
+						showWith(epWithFile(12, 2, plainEpFile)),
+					)},
+				)
+				feeder.EXPECT().Feed(mock.Anything, "a").
+					Return([]indexer.SearchResult{{Title: tiedPack}}, nil).Once()
+				grabber.EXPECT().
+					GrabEpisode(
+						mock.Anything, mock.Anything, uint32(11), []uint32{11},
+					).
+					Return(&ent.DownloadRecord{ID: 55}, nil).Once()
+				store.EXPECT().
+					SetDownloadRecordReplaceMode(
+						mock.Anything, uint32(55), downloadrecord.ReplaceModeUpgrades,
+					).
+					Return(nil).Once()
+				expectDownloading(11)
+				Expect(scanner.Run(ctx)).To(Succeed())
+			},
+		)
+
+		It(
+			"carries exactly the episode a pure upgrade beats, non-empty",
+			func() {
+				configtest.Setup(upgradeConfig("a"))
+				newScanner()
+				expectQueries(nil, []*ent.TVShow{showWith(
+					epWithFile(11, 1, plainEpFile),
+					epWithFile(12, 2, remuxEpFile),
+				)})
+				feeder.EXPECT().Feed(mock.Anything, "a").
+					Return([]indexer.SearchResult{{Title: tiedPack}}, nil).Once()
+				grabber.EXPECT().
+					GrabEpisode(
+						mock.Anything, mock.Anything, uint32(11), []uint32{11},
+					).
+					Return(&ent.DownloadRecord{ID: 55}, nil).Once()
+				store.EXPECT().
+					SetDownloadRecordReplaceMode(
+						mock.Anything, uint32(55), downloadrecord.ReplaceModeUpgrades,
+					).
+					Return(nil).Once()
+				Expect(scanner.Run(ctx)).To(Succeed())
+			},
+		)
 	})
 })
