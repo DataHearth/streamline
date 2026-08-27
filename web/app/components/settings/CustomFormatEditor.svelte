@@ -252,7 +252,9 @@
 	// The parser normalises what it lifts out of a release name to these spellings
 	// (internal/library/parser.go); the comparison is case-insensitive, and the
 	// field stays free text so an indexer's own vocabulary still works.
-	const SOURCES = ["BluRay", "Remux", "WEB-DL", "WEBRip", "WEB", "HDTV", "DVDRip"];
+	// No bare "WEB": the parser folds it onto WEB-DL, so offering it would author
+	// a value no release can ever carry.
+	const SOURCES = ["BluRay", "Remux", "WEB-DL", "WEBRip", "HDTV", "DVDRip"];
 	const CODECS = ["x264", "HEVC", "AV1", "MPEG2", "VC-1"];
 
 	// A resolution row has a closed vocabulary, so switching into it lands on a

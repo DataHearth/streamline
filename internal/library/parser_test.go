@@ -137,6 +137,16 @@ var _ = Describe("Filename Parser", Label("unit", "library"), func() {
 			"Hellboy 2019 FRENCH 1080p WEB-DL x264-Slay3R mkv", "Slay3R"),
 		Entry("bare container extension is not a group",
 			"Hellboy 2019 1080p WEB x264-mp4", ""),
+		Entry(
+			"hyphenated group keeps both halves",
+			"The.Elusive.Samurai.S02E05.VOSTFR.1080p.WEB.AAC.2.0.x264-tsundere-raws",
+			"tsundere-raws",
+		),
+		Entry(
+			"hyphenated source tag does not widen the group",
+			"The.Elusive.Samurai.S02E05.1080p.WEB-DL.x264-tsundere-raws",
+			"tsundere-raws",
+		),
 	)
 
 	DescribeTable(
@@ -194,7 +204,8 @@ var _ = Describe("Filename Parser", Label("unit", "library"), func() {
 		Entry("WEBRip", "Film.2020.1080p.WEBRip.x264-GRP", "WEBRip"),
 		Entry("HDTV", "Film.2020.1080p.HDTV.x264-GRP", "HDTV"),
 		Entry("DVDRip", "Film.2020.1080p.DVDRip.x264-GRP", "DVDRip"),
-		Entry("WEB", "Film.2020.1080p.WEB.x264-GRP", "WEB"),
+		Entry("bare WEB normalized to WEB-DL",
+			"Film.2020.1080p.WEB.x264-GRP", "WEB-DL"),
 		Entry("Remux standalone", "Film.2020.1080p.Remux.x264-GRP", "Remux"),
 		Entry("REMUX normalized to Remux",
 			"Film.2020.1080p.REMUX.x264-GRP", "Remux"),

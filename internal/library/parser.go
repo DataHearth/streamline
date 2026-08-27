@@ -83,6 +83,7 @@ func Parse(filename string) ParseResult {
 		cleanGroup(m[1]) != "" {
 		r.Group = cleanGroup(m[1])
 		filename = filename[:len(filename)-len(m[0])]
+		r.Group, filename = expandHyphenatedGroup(r.Group, filename)
 	} else if m := dotGroupRe.FindStringSubmatch(
 		filename,
 	); m != nil {
@@ -229,6 +230,27 @@ func cleanGroup(s string) string {
 		return ""
 	}
 	return strings.Join(words, " ")
+}
+
+// expandHyphenatedGroup walks left from a dash-captured group over further
+// dash-joined words, returning the widened group and the name it was cut from.
+// groupRe stops at the *last* dash, which splits a group whose own name carries
+// one: "…x264-tsundere-raws" is the group "tsundere-raws", not "raws". A word
+// holding a dot or a space is a separate token rather than part of the name
+// (".WEB-DL.x264-GRP", "Blu-Ray x264-GRP"), and a technical tag ends the walk.
+func expandHyphenatedGroup(group, rest string) (string, string) {
+	for {
+		i := strings.LastIndex(rest, "-")
+		if i < 0 {
+			return group, rest
+		}
+		w := rest[i+1:]
+		if strings.ContainsAny(w, ". ") || isNonGroupTag(w) {
+			return group, rest
+		}
+		group = w + "-" + group
+		rest = rest[:i]
+	}
 }
 
 // looksLikeRelease reports whether s carries at least one release token,
@@ -382,7 +404,12 @@ func normalizeSource(s string) string {
 		return "BluRay"
 	case "REMUX":
 		return "Remux"
-	case "WEB-DL", "WEBDL":
+	// Bare WEB is shorthand for WEB-DL, not a third source: a stream ripped
+	// untranscoded is what "…1080p.WEB.x264-GRP" names, and the *arr parsers
+	// fold it the same way. Kept apart, a profile written against one silently
+	// scored nothing from groups that spell it the other. WEBRip stays its own
+	// thing — that one really is a re-encode.
+	case "WEB-DL", "WEBDL", "WEB":
 		return "WEB-DL"
 	case "WEBRIP":
 		return "WEBRip"
@@ -390,8 +417,6 @@ func normalizeSource(s string) string {
 		return "HDTV"
 	case "DVDRIP":
 		return "DVDRip"
-	case "WEB":
-		return "WEB"
 	default:
 		return s
 	}

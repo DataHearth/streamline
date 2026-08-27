@@ -46,7 +46,7 @@ Both of these are *examples*, not defaults — nothing like them ships built in,
 | --- | --- | --- |
 | `release_title` | `pattern` (regex) | The raw release title |
 | `resolution` | `value` (`720p`\|`1080p`\|`2160p`) | Parsed resolution, or probed width for on-disk files |
-| `source` | `value` | Parsed source (`bluray`, `web`, `web-dl`, `hdtv`, ...) — matched case-insensitively but not otherwise fuzzed, so it must equal the parser's normalized spelling (`WEB-DL`, not `webdl`) |
+| `source` | `value` | Parsed source (`BluRay`, `WEB-DL`, `WEBRip`, `HDTV`, `DVDRip`, `Remux`) — matched case-insensitively but not otherwise fuzzed, so it must equal the parser's normalized spelling. A bare `WEB` tag normalizes to `WEB-DL`, so write `WEB-DL` to catch both spellings; `WEBRip` stays distinct, since that one really is a re-encode |
 | `release_group` | `pattern` (regex) | Parsed release group — the UI edits this one as a chip list, see below |
 | `codec` | `value` | Parsed codec, or probed video codec for on-disk files |
 | `size` | `min_gb` / `max_gb` | Indexer size, or the file's size on disk — **per episode**, see below |
