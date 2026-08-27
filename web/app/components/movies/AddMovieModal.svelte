@@ -433,10 +433,12 @@
 										<Film class="h-4 w-4" aria-hidden="true" />
 									</div>
 									{#if showPoster}
+										<!-- Never loading="lazy" here: the list lives in a portaled
+										modal, and Chrome never fires the deferred load for it, so
+										every poster stays blank forever. -->
 										<img
 											src={r.poster_url}
 											alt=""
-											loading="lazy"
 											onerror={() => markPosterFailed(r.tmdb_id)}
 											class="relative h-full w-full object-cover"
 										/>

@@ -177,10 +177,12 @@
 					{/if}
 				</div>
 				{#if item.poster_url}
+					<!-- Never loading="lazy" here: this panel lives in a portaled modal,
+					and Chrome never fires the deferred load for it, so the poster stays
+					blank forever. -->
 					<img
 						src={item.poster_url}
 						alt=""
-						loading="lazy"
 						class="relative h-full w-full object-cover"
 					/>
 				{/if}

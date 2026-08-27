@@ -436,10 +436,12 @@
 										{/if}
 									</div>
 									{#if r.poster_url && !failedPosters.has(r.id)}
+										<!-- Never loading="lazy" here: the list lives in a portaled
+										modal, and Chrome never fires the deferred load for it, so
+										every poster stays blank forever. -->
 										<img
 											src={r.poster_url}
 											alt=""
-											loading="lazy"
 											onerror={() => markPosterFailed(r.id)}
 											class="relative h-full w-full object-cover"
 										/>
