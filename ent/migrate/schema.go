@@ -79,6 +79,13 @@ var (
 				OnDelete:   schema.Cascade,
 			},
 		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "downloadrecord_selection_state",
+				Unique:  false,
+				Columns: []*schema.Column{DownloadRecordsColumns[21]},
+			},
+		},
 	}
 	// EpisodesColumns holds the columns for the "episodes" table.
 	EpisodesColumns = []*schema.Column{

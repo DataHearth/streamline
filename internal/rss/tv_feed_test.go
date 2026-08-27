@@ -3,6 +3,7 @@ package rss
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -15,6 +16,7 @@ import (
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/tvshow"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
+	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/rss/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
@@ -156,6 +158,54 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 			expectDownloading(11)
 			expectDownloading(12)
 			Expect(scanner.Run(ctx)).To(Succeed())
+		},
+	)
+
+	It(
+		"bumps grab_failures on the anchor when a pack holds no wanted file",
+		func() {
+			// ErrNoWantedFiles means the release cannot fill the gap at all —
+			// the same standing the single-episode arm just above counts.
+			// Uncounted, a season whose only packs all mismatch is re-tried on
+			// every feed tick and never reaches max_grab_failures.
+			configtest.Setup(indexerConfig("a"))
+			newScanner()
+			expectQueries([]*ent.TVShow{showWith(
+				&ent.Episode{ID: 11, Number: 1},
+				&ent.Episode{ID: 12, Number: 2},
+			)}, nil)
+			feeder.EXPECT().Feed(mock.Anything, "a").
+				Return([]indexer.SearchResult{{Title: acceptablePack}}, nil).Once()
+			grabber.EXPECT().
+				GrabEpisode(mock.Anything, mock.Anything, uint32(11), mock.Anything).
+				Return(nil, fmt.Errorf("%w: pack", download.ErrNoWantedFiles)).Once()
+			store.EXPECT().IncrementEpisodeGrabFailures(mock.Anything, uint32(11)).
+				Return(nil).Once()
+			Expect(scanner.Run(ctx)).To(Succeed())
+			// SetDownloadRecordReplaceMode and the downloading markers carry no
+			// expectation above: calling any would panic the mock.
+		},
+	)
+
+	It(
+		"leaves grab_failures alone when a pack grab fails for another reason",
+		func() {
+			// Negative control: only ErrNoWantedFiles is evidence about the
+			// episode; an offline client says nothing about the release.
+			configtest.Setup(indexerConfig("a"))
+			newScanner()
+			expectQueries([]*ent.TVShow{showWith(
+				&ent.Episode{ID: 11, Number: 1},
+				&ent.Episode{ID: 12, Number: 2},
+			)}, nil)
+			feeder.EXPECT().Feed(mock.Anything, "a").
+				Return([]indexer.SearchResult{{Title: acceptablePack}}, nil).Once()
+			grabber.EXPECT().
+				GrabEpisode(mock.Anything, mock.Anything, uint32(11), mock.Anything).
+				Return(nil, errors.New("client offline")).Once()
+			Expect(scanner.Run(ctx)).To(Succeed())
+			// IncrementEpisodeGrabFailures carries no expectation above:
+			// calling it would panic the mock.
 		},
 	)
 

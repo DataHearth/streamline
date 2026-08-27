@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/datahearth/streamline/ent"
@@ -142,8 +144,8 @@ func (d *download) resolvePendingSelection(
 			)
 		}
 		reason := fmt.Sprintf(
-			"no files in this release matched wanted episodes %v",
-			rec.WantedEpisodes,
+			"no files in this release matched wanted episodes %s",
+			strings.Join(episodeLabels(show, rec.WantedEpisodes), ", "),
 		)
 		if err := d.db.FailDownloadRecord(ctx, rec.ID, reason); err != nil {
 			return otelx.RecordSpanError(
@@ -235,6 +237,29 @@ func (d *download) finalizePending(
 			"record.id", rec.ID, "hash", rec.TorrentHash, "error", err)
 	}
 	return nil
+}
+
+// episodeLabels renders ids as SxxExx against show's already-fetched season
+// tree, in ids order. failure_reason is read by a human in the queue, and a
+// list of episode row ids names nothing they can act on. An id the tree
+// doesn't hold (a provider reconcile dropped it between grab and this pass)
+// falls back to its number so the reason is never silently short.
+func episodeLabels(show *ent.TVShow, ids []uint32) []string {
+	labels := make(map[uint32]string)
+	for _, se := range show.Edges.Seasons {
+		for _, ep := range se.Edges.Episodes {
+			labels[ep.ID] = fmt.Sprintf("S%02dE%02d", se.Number, ep.Number)
+		}
+	}
+	out := make([]string, len(ids))
+	for i, id := range ids {
+		if l, ok := labels[id]; ok {
+			out[i] = l
+			continue
+		}
+		out[i] = strconv.FormatUint(uint64(id), 10)
+	}
+	return out
 }
 
 // showForRecord resolves the TV show tree for rec's anchor episode, preferring

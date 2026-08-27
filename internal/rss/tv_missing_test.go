@@ -2,6 +2,8 @@ package rss
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"math"
 	"time"
 
@@ -13,6 +15,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/episode"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
+	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/rss/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
@@ -200,6 +203,79 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 			}
 
 			Expect(searcher.Run(ctx)).To(Succeed())
+		})
+	})
+
+	When("a season pack holds nothing for the wanted episodes", func() {
+		// ErrNoWantedFiles means the release cannot fill the gap at all, which
+		// is exactly the standing the single-episode path counts. Uncounted, a
+		// season whose only packs all mismatch is re-searched every tick and
+		// never reaches max_grab_failures.
+		It("bumps grab_failures on the anchor episode", func() {
+			ep1 := &ent.Episode{ID: 11, Number: 1}
+			ep2 := &ent.Episode{ID: 12, Number: 2}
+			expectEligible([]*ent.TVShow{showWith(ep1, ep2)}, nil)
+
+			indexerM.EXPECT().
+				SearchSeason(mock.Anything, []string{"The Black Sea"}, uint32(9001), uint16(3)).
+				Return([]indexer.SearchResult{{Title: acceptablePack, Seeders: 10}}, nil).
+				Once()
+			dlM.EXPECT().
+				GrabEpisode(mock.Anything, mock.AnythingOfType("indexer.SearchResult"),
+					uint32(11), []uint32{11, 12}).
+				Return(nil, fmt.Errorf("%w: pack", download.ErrNoWantedFiles)).Once()
+			store.EXPECT().
+				IncrementEpisodeGrabFailures(mock.Anything, uint32(11)).
+				Return(nil).Once()
+
+			// The pack was the only result, so the run falls through to the
+			// per-episode search for both episodes.
+			for _, n := range []uint16{1, 2} {
+				indexerM.EXPECT().
+					SearchEpisode(mock.Anything, []string{"The Black Sea"}, uint32(9001), uint16(3), n).
+					Return(nil, nil).Once()
+			}
+			for _, id := range []uint32{11, 12} {
+				store.EXPECT().
+					SetEpisodeLastSearchAt(mock.Anything, id, mock.AnythingOfType("time.Time")).
+					Return(nil).Once()
+			}
+
+			Expect(searcher.Run(ctx)).To(Succeed())
+		})
+	})
+
+	When("a season-pack grab fails for any other reason", func() {
+		// Negative control: only ErrNoWantedFiles is evidence about the
+		// episode. An unreachable client says nothing about the release.
+		It("leaves grab_failures alone", func() {
+			ep1 := &ent.Episode{ID: 11, Number: 1}
+			ep2 := &ent.Episode{ID: 12, Number: 2}
+			expectEligible([]*ent.TVShow{showWith(ep1, ep2)}, nil)
+
+			indexerM.EXPECT().
+				SearchSeason(mock.Anything, []string{"The Black Sea"}, uint32(9001), uint16(3)).
+				Return([]indexer.SearchResult{{Title: acceptablePack, Seeders: 10}}, nil).
+				Once()
+			dlM.EXPECT().
+				GrabEpisode(mock.Anything, mock.AnythingOfType("indexer.SearchResult"),
+					uint32(11), []uint32{11, 12}).
+				Return(nil, errors.New("client unreachable")).Once()
+
+			for _, n := range []uint16{1, 2} {
+				indexerM.EXPECT().
+					SearchEpisode(mock.Anything, []string{"The Black Sea"}, uint32(9001), uint16(3), n).
+					Return(nil, nil).Once()
+			}
+			for _, id := range []uint32{11, 12} {
+				store.EXPECT().
+					SetEpisodeLastSearchAt(mock.Anything, id, mock.AnythingOfType("time.Time")).
+					Return(nil).Once()
+			}
+
+			Expect(searcher.Run(ctx)).To(Succeed())
+			// IncrementEpisodeGrabFailures carries no expectation above:
+			// calling it would panic the mock.
 		})
 	})
 

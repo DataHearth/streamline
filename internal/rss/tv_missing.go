@@ -2,12 +2,14 @@ package rss
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"time"
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/quality"
@@ -248,6 +250,21 @@ func (s *EpisodeMissingSearcher) grabSeasonPack(
 			slog.WarnContext(ctx, "tv missing-search: season-pack grab failed",
 				"show", show.Title, "season", se.Number,
 				"release", r.Title, "error", err)
+			// ErrNoWantedFiles means the release holds nothing for these
+			// episodes, so the anchor is no closer to being filled than before
+			// — the same standing the single-episode path counts. Left
+			// uncounted, a season whose only packs are all mismatches would
+			// re-search every tick forever without ever reaching the
+			// max_grab_failures ceiling.
+			if errors.Is(err, download.ErrNoWantedFiles) {
+				if ierr := s.store.IncrementEpisodeGrabFailures(
+					ctx, wanted[0].ID,
+				); ierr != nil {
+					slog.WarnContext(ctx,
+						"tv missing-search: bump episode grab_failures failed",
+						"episode.id", wanted[0].ID, "error", ierr)
+				}
+			}
 			continue
 		}
 		span.SetAttributes(attribute.String("release.title", r.Title))

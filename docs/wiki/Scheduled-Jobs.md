@@ -26,7 +26,7 @@ Everything Streamline does on its own is a named job on a fixed interval. All of
 | `tv-orphan-scan` | `6h` | `schedules.tv_orphan_scan` | Same, under `series_path` |
 | `drift-check` | `15m` | `schedules.drift_check` | Detects tracked files that have vanished from disk |
 | `media-probe` | `15m` | `schedules.media_probe` | Backfills ffprobe technical info (`media_info`) onto `MediaFile` rows the importer didn't probe inline — adoption, orphan scan, bulk import. 25 rows/tick, oldest first. No-ops when `ffmpeg.enabled` is false or ffprobe isn't found |
-| `file-selection` | `5s` | `schedules.file_selection` | Resolves magnet-sourced [selective file downloads](First-Run-Setup#selective-file-download) still waiting to learn what's inside the torrent. Queries an indexed column and is a no-op when nothing is pending, hence the short interval. No-ops entirely when `download.selective_files` is off |
+| `file-selection` | `5s` | `schedules.file_selection` | Resolves magnet-sourced [selective file downloads](First-Run-Setup#selective-file-download) still waiting to learn what's inside the torrent. Queries an indexed column and is a no-op when nothing is pending, hence the short interval. It keeps draining pending records regardless of `download.selective_files` — turning the setting off stops new pending records being created, but records already waiting still have to be resolved |
 | `cleanup` | `24h` | `schedules.cleanup` | Prunes completed download records and aged-out events |
 | `purge-sessions` | `1h` | — | **System job.** Deletes expired sessions. Not configurable, not controllable |
 

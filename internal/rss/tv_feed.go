@@ -2,6 +2,7 @@ package rss
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"path/filepath"
@@ -13,6 +14,7 @@ import (
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/otelx"
@@ -302,6 +304,20 @@ func (s *TVFeedScanner) grabPack(
 		slog.WarnContext(ctx, "tv feed-scan: season-pack grab failed",
 			"show", ws.show.Title, "season", season,
 			"release", item.Title, "error", err)
+		// ErrNoWantedFiles means the release holds nothing for these episodes,
+		// so the anchor is no closer to being filled than before — the same
+		// standing the single-episode path counts. Left uncounted, a season
+		// whose only packs are all mismatches would be re-tried on every feed
+		// tick without ever reaching the max_grab_failures ceiling.
+		if errors.Is(err, download.ErrNoWantedFiles) {
+			if ierr := s.store.IncrementEpisodeGrabFailures(
+				ctx, wanted[0].ID,
+			); ierr != nil {
+				slog.WarnContext(ctx,
+					"tv feed-scan: bump episode grab_failures failed",
+					"episode.id", wanted[0].ID, "error", ierr)
+			}
+		}
 		return 0
 	}
 	// The pack is grabbed for the gap, but it may also beat files already on

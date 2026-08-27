@@ -220,8 +220,30 @@ func (e *Engine) ResumeTorrent(ctx context.Context, hash string) error {
 	if !st.seedStopped {
 		t.AllowDataUpload()
 	}
-	// No priority work here: file priorities (the single demand source, set
-	// by startWhenReady's default or the user) survive a pause untouched.
+	// Mode "pending" bumps no file at all, so resuming it without this would
+	// leave every piece at PiecePriorityNone forever — the torrent runs and
+	// asks for nothing. Resume is therefore the give-up exit from a pending
+	// selection: take it whole. Both callers want exactly that — the selection
+	// pass's finalizePending arms (grace expired, unsupported, everything
+	// matched) and a human clicking resume on the Torrents page.
+	//
+	// Persist before touching priorities: metadata may not have resolved yet,
+	// in which case startWhenReady's pass is what applies mode "all", and it
+	// reads the state this sets.
+	if st.selectionMode == "pending" {
+		if err := e.store.SetTorrentSessionSelection(
+			ctx, hash, "all", nil,
+		); err != nil {
+			return fmt.Errorf("persist torrent session selection: %w", err)
+		}
+		e.setState(hash, func(s *torrentState) {
+			s.selectionMode = "all"
+			s.wantedFiles = nil
+		})
+		if t.Info() != nil {
+			applyFilePriorities(t, "all", nil)
+		}
+	}
 	e.setState(hash, func(st *torrentState) { st.paused = false })
 	return e.store.SetTorrentSessionPaused(ctx, hash, false)
 }
@@ -256,12 +278,19 @@ func (e *Engine) ListFiles(
 
 // SetWantedFiles applies an explicit keep-set and persists it so a restart's
 // metadata re-resolve (startWhenReady) reproduces the same skip instead of
-// reverting to mode "all".
+// reverting to mode "all". Skip-everything is refused up front — a selective
+// record never wants zero files — before any state or priority is touched,
+// matching the Transmission/Deluge/qBittorrent behavior.
 func (e *Engine) SetWantedFiles(
 	ctx context.Context,
 	hash string,
 	wanted []int,
 ) error {
+	if len(wanted) == 0 {
+		return errors.New(
+			"builtin set wanted files: refusing to skip every file",
+		)
+	}
 	t, err := e.torrent(hash)
 	if err != nil {
 		return err
@@ -436,6 +465,14 @@ func (e *Engine) status(
 		return download.StatusPaused
 	}
 	if t.Info() == nil {
+		return download.StatusFetching
+	}
+	// A pending selection wants no file yet, so wantedBytes — and with it
+	// wantedMissing — is 0 and the completed branch below would report the
+	// torrent as seeding the instant its metadata resolved, which the download
+	// monitor reads as "ready to import". It is still fetching, just fetching
+	// the answer to which files it wants rather than the metainfo.
+	if st.selectionMode == "pending" {
 		return download.StatusFetching
 	}
 	if wantedMissing(t) == 0 {

@@ -622,15 +622,23 @@ func (q *QBittorrent) ListFiles(
 }
 
 // SetWantedFiles makes wanted downloaded and everything else skipped.
-// qBittorrent's filePrio verb only accepts an explicit id list per call, and
-// this method is only handed the keep-set, so it lists the torrent's actual
-// files first to compute the complement — "every other file" per the
-// interface contract.
+// Skip-everything is refused up front — a selective record never wants zero
+// files — before any request is made, matching the Transmission/Deluge and
+// builtin behavior. qBittorrent's filePrio verb only accepts an explicit id
+// list per call, and this method is only handed the keep-set, so it lists the
+// torrent's actual files first to compute the complement — "every other file"
+// per the interface contract.
 func (q *QBittorrent) SetWantedFiles(
 	ctx context.Context,
 	hash string,
 	wanted []int,
 ) error {
+	if len(wanted) == 0 {
+		return fmt.Errorf(
+			"qbittorrent set wanted files: refusing to skip every file",
+		)
+	}
+
 	files, err := q.ListFiles(ctx, hash)
 	if err != nil {
 		return fmt.Errorf("qbittorrent set wanted files: %w", err)

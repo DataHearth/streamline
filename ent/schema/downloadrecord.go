@@ -4,6 +4,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
+	"entgo.io/ent/schema/index"
 	"entgo.io/ent/schema/mixin"
 
 	"github.com/datahearth/streamline/ent/schema/mixins"
@@ -66,6 +67,14 @@ func (DownloadRecord) Fields() []ent.Field {
 			Values("pending", "applied", "unsupported", "skipped").
 			Default("skipped"),
 	}
+}
+
+// Indexes covers the file-selection pass's per-tick
+// ListPendingSelectionRecords, whose only predicate is selection_state and
+// which runs on a schedule against a table that keeps a month of completed
+// records.
+func (DownloadRecord) Indexes() []ent.Index {
+	return []ent.Index{index.Fields("selection_state")}
 }
 
 func (DownloadRecord) Edges() []ent.Edge {

@@ -86,6 +86,92 @@ var _ = Describe("Engine file selection", Label("unit", "bittorrent"), func() {
 		},
 	)
 
+	It("SetWantedFiles refuses an empty keep-set before any work", func() {
+		// No store expectations: the guard must return before persisting or
+		// touching a single priority. Mockery fails the spec on any call.
+		Expect(eng.SetWantedFiles(ctx, hash, nil)).To(
+			MatchError(ContainSubstring("refusing to skip every file")),
+		)
+		files, err := eng.ListFiles(ctx, hash)
+		Expect(err).ToNot(HaveOccurred())
+		for _, f := range files {
+			Expect(f.Wanted).To(BeFalse())
+		}
+	})
+
+	It(
+		"ResumeTorrent on a pending selection gives up and wants every file",
+		func() {
+			// The shape finalizePending drives: the pass gave up (grace expired,
+			// unsupported client, everything matched) and resumes. Nothing else
+			// ever writes mode "all" onto an existing session, so without this
+			// every file stays at PiecePriorityNone forever.
+			eng.setState(hash, func(s *torrentState) {
+				s.selectionMode = "pending"
+			})
+			store.EXPECT().
+				SetTorrentSessionSelection(mock.Anything, hash, "all", []int(nil)).
+				Return(nil).Once()
+			store.EXPECT().
+				SetTorrentSessionPaused(mock.Anything, hash, false).
+				Return(nil).Once()
+
+			Expect(eng.ResumeTorrent(ctx, hash)).To(Succeed())
+
+			st := eng.getState(hash)
+			Expect(st.selectionMode).To(Equal("all"))
+			Expect(st.wantedFiles).To(BeNil())
+			files, err := eng.ListFiles(ctx, hash)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(files).To(HaveLen(3))
+			for _, f := range files {
+				Expect(f.Wanted).To(BeTrue())
+			}
+		},
+	)
+
+	It(
+		"ResumeTorrent leaves an explicit selection alone",
+		func() {
+			store.EXPECT().
+				SetTorrentSessionSelection(mock.Anything, hash, "explicit", []int{1}).
+				Return(nil).Once()
+			Expect(eng.SetWantedFiles(ctx, hash, []int{1})).To(Succeed())
+
+			store.EXPECT().
+				SetTorrentSessionPaused(mock.Anything, hash, false).
+				Return(nil).Once()
+			Expect(eng.ResumeTorrent(ctx, hash)).To(Succeed())
+
+			Expect(eng.getState(hash).selectionMode).To(Equal("explicit"))
+			files, err := eng.ListFiles(ctx, hash)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(files[0].Wanted).To(BeFalse())
+			Expect(files[1].Wanted).To(BeTrue())
+		},
+	)
+
+	It(
+		"a metadata-resolved pending torrent reports fetching, never seeding",
+		func() {
+			// Every file is at PiecePriorityNone while pending, so wantedBytes —
+			// and with it wantedMissing — is 0 the instant metadata resolves. The
+			// download monitor reads seeding as "ready to import".
+			eng.setState(hash, func(s *torrentState) {
+				s.selectionMode = "pending"
+			})
+			Expect(eng.status(t, hash)).To(Equal(download.StatusFetching))
+
+			// Same torrent, same zero-byte demand, selection resolved: the
+			// completed branch applies again.
+			eng.setState(hash, func(s *torrentState) {
+				s.selectionMode = "all"
+			})
+			applyFilePriorities(t, "all", nil)
+			Expect(eng.status(t, hash)).To(Equal(download.StatusSeeding))
+		},
+	)
+
 	It("ListFiles reports empty for a metadata-less magnet", func() {
 		magnetHash, err := parseHash(
 			"aabbccddeeff00112233445566778899aabbccdd",

@@ -3,6 +3,7 @@ package download
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -256,18 +257,20 @@ var _ = Describe("RunSelectionPass", Label("unit", "downloads"), func() {
 	)
 
 	It(
-		"zero matches: selection flipped to skipped, record failed, "+
-			"torrent removed with files, grab_failures bumped",
+		"zero matches: selection flipped to skipped, record failed with "+
+			"SxxExx labels, torrent removed with files, grab_failures bumped",
 		func() {
 			anchor := passShow()
 			rec := pendingRecord(anchor, time.Now())
-			rec.WantedEpisodes = []uint32{999} // no episode on the show
+			// 21 and 22 are real rows on the show and nothing in the release
+			// serves either, so the reason has labels to render; 999 has no
+			// counterpart and falls back to its id.
+			rec.WantedEpisodes = []uint32{21, 22, 999}
 			store.EXPECT().
 				ListPendingSelectionRecords(mock.Anything).
 				Return([]*ent.DownloadRecord{rec}, nil).Once()
 			client.listFilesResult = []TorrentFile{
-				{Index: 0, Path: "Show.S01E01.mkv", Size: aboveFloor},
-				{Index: 1, Path: "Show.S01E02.mkv", Size: aboveFloor},
+				{Index: 0, Path: "Other.S05E99.mkv", Size: aboveFloor},
 			}
 			// selection_state must leave "pending" so the record drops out of
 			// the next ListPendingSelectionRecords pass — otherwise a failed
@@ -278,9 +281,13 @@ var _ = Describe("RunSelectionPass", Label("unit", "downloads"), func() {
 					[]int(nil), int64(0),
 				).
 				Return(nil).Once()
+			// A human reads this in the queue: episode row ids name nothing
+			// they can act on.
 			store.EXPECT().
 				FailDownloadRecord(mock.Anything, uint32(42), mock.MatchedBy(
-					func(reason string) bool { return reason != "" },
+					func(reason string) bool {
+						return strings.HasSuffix(reason, "S01E01, S01E02, 999")
+					},
 				)).
 				Return(nil).Once()
 			store.EXPECT().

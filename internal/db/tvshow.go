@@ -352,10 +352,8 @@ func (db *DB) FindTVShowByTVDBID(
 	return row, err
 }
 
-// TVShowForEpisode returns the show owning episodeID, found via the episode's
-// season edge and eager-loaded the same way the importer reaches the tree
-// (withEpisodeContext) — every season and its episodes, for matching a
-// torrent's file names back to episode rows.
+// Reached through the episode's season edge, eager-loaded by the same
+// withEpisodeContext the importer uses to walk the tree.
 func (db *DB) TVShowForEpisode(
 	ctx context.Context,
 	episodeID uint32,

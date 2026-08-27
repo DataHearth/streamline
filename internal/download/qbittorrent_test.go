@@ -714,6 +714,24 @@ var _ = Describe("qBittorrent Client", Label("unit", "downloads"), func() {
 			Expect(filePrioCalls).To(Equal(1))
 		})
 
+		It("rejects a skip-everything call before issuing any request", func() {
+			var calls int
+			mux := http.NewServeMux()
+			mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
+				calls++
+				w.WriteHeader(http.StatusOK)
+			})
+			srv := httptest.NewServer(mux)
+			DeferCleanup(srv.Close)
+
+			c := NewQBittorrentPassword(srv.URL, "admin", "password")
+			err := c.SetWantedFiles(context.Background(), "abc123", nil)
+			Expect(err).To(
+				MatchError(ContainSubstring("refusing to skip every file")),
+			)
+			Expect(calls).To(Equal(0))
+		})
+
 		It("returns a plain error on 409 (metadata not yet downloaded)", func() {
 			mux := http.NewServeMux()
 			mux.HandleFunc("/api/v2/auth/login",

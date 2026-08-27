@@ -1132,6 +1132,27 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 			).To(Equal(downloadrecord.SelectionStatePending))
 		})
 
+		It("creates carrying the keep-set an applied state claims", func() {
+			// The post-add confirmation only corrects these; a confirmation
+			// that fails for any reason other than ErrNotSupported leaves the
+			// record applied, and an applied record with no selected_files
+			// renders "0 B of X selected".
+			rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "t", Size: 1, TorrentHash: "sel-create-files",
+				Status:  downloadrecord.StatusDownloading,
+				MovieID: movieID, DownloadClientName: clientName,
+				SelectionState: downloadrecord.SelectionStateApplied,
+				SelectedFiles:  []int{0, 2},
+				SelectedBytes:  2_100_000_000,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			got, err := store.FindDownloadRecordByID(ctx, rec.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.SelectedFiles).To(Equal([]int{0, 2}))
+			Expect(got.SelectedBytes).To(Equal(int64(2_100_000_000)))
+		})
+
 		It("defaults selection_state to skipped when unset", func() {
 			rec := createRec("sel-default", downloadrecord.StatusDownloading)
 			Expect(

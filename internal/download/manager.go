@@ -601,21 +601,34 @@ func (d *download) grab(
 	// means "I also want these episodes", not "add a duplicate torrent" —
 	// checked before any client contact, and before Flow A's own decode runs,
 	// since a widen recomputes the keep-set itself over the union.
-	if localHash := localInfoHash(src); localHash != "" {
-		if live, _ := d.db.FindWidenableDownloadRecordByHash(
-			ctx, localHash,
-		); live != nil {
+	//
+	// The whole block is behind the feature flag, not just the widen arm: with
+	// selective_files off there is nothing to widen, and the pre-check's own
+	// duplicate rejection is behavior this feature introduced. Off has to be
+	// bit-for-bit the pre-feature path, where AddTorrent is what detects a
+	// duplicate hash.
+	if localHash := localInfoHash(src); config.Get().Download.SelectiveFiles &&
+		localHash != "" {
+		live, lerr := d.db.FindWidenableDownloadRecordByHash(ctx, localHash)
+		if lerr != nil {
+			// Not fatal — the pre-check is an optimization and AddTorrent still
+			// rejects a genuine duplicate — but silence here looks exactly like
+			// "no record found", which is the wrong conclusion to reach quietly.
+			slog.DebugContext(ctx,
+				"grab: widenable record lookup failed; whole-torrent grab",
+				"hash", localHash, "error", lerr)
+		}
+		if live != nil {
 			// Widening only ever applies to a record Flow A already put through
-			// selective resolution (pending/applied) with selective_files still
-			// on and something new actually being asked for — every other
-			// combination (off, a plain whole-torrent grab, an unsupported/
-			// skipped client) is an ordinary duplicate hit. Gating on state
-			// rather than "has WantedEpisodes" is what keeps qBittorrent/
-			// Transmission/Deluge (WantedEpisodes is written unconditionally by
-			// GrabEpisode, but their ListFiles is ErrNotSupported outright) from
-			// ever reaching widenSelection at all.
-			if config.Get().Download.SelectiveFiles &&
-				len(wantedEpisodes) > 0 &&
+			// selective resolution (pending/applied) with something new actually
+			// being asked for — every other combination (a plain whole-torrent
+			// grab, an unsupported/skipped client) is an ordinary duplicate hit.
+			// Gating on selection_state rather than "has WantedEpisodes" is what
+			// keeps a record whose client never resolved a selection (its state
+			// is skipped or unsupported) from reaching widenSelection at all;
+			// GrabEpisode writes WantedEpisodes unconditionally, so that field
+			// says nothing about whether a keep-set exists to widen.
+			if len(wantedEpisodes) > 0 &&
 				(live.SelectionState == downloadrecord.SelectionStatePending ||
 					live.SelectionState == downloadrecord.SelectionStateApplied) {
 				rec, werr := d.widenSelection(ctx, live, wantedEpisodes)
@@ -743,6 +756,8 @@ func (d *download) grab(
 	switch {
 	case selection != nil:
 		recordParams.SelectionState = downloadrecord.SelectionStateApplied
+		recordParams.SelectedFiles = selection.files
+		recordParams.SelectedBytes = selection.bytes
 	case selectivePending:
 		recordParams.SelectionState = downloadrecord.SelectionStatePending
 	}
@@ -755,11 +770,14 @@ func (d *download) grab(
 		)
 	}
 
-	// Uniform post-add confirmation (spec §4.4): the builtin engine's re-set
-	// is harmless and idempotent, qBittorrent reads its own selection back.
-	// ErrNotSupported flips the record so the SPA stops promising a selective
-	// download the client can't honour; any other error leaves it applied —
-	// the add-time selection already took, this call only confirms it.
+	// Uniform post-add confirmation (spec §4.4). What this call *is* differs by
+	// client: for qBittorrent it is the application itself (its API only takes
+	// a file selection after the torrent is admitted), for the builtin engine,
+	// Transmission and Deluge the selection already landed at add time and this
+	// re-set is idempotent. ErrNotSupported flips the record so the SPA stops
+	// promising a selective download the client can't honour; any other error
+	// leaves it applied, with the keep-set the create already stored — the
+	// selection pass's confirmation and a later widen both correct it.
 	if selection != nil {
 		switch serr := client.SetWantedFiles(ctx, hash, selection.files); {
 		case errors.Is(serr, ErrNotSupported):
@@ -889,14 +907,13 @@ func (d *download) widenSelection(
 		return nil, otelx.RecordSpanError(span, err)
 	}
 
-	// Validate before writing anything: every external client (qBittorrent,
-	// Transmission, Deluge) returns ErrNotSupported from ListFiles
-	// unconditionally, without contacting the client, so this has to run —
-	// and be judged — before any DB write commits the wider intent. The entry
-	// gate in grab already excludes any record whose selection_state isn't
-	// pending/applied, so ErrNotSupported here only fires if that state went
-	// stale against the client's real support; either way it's the same as
-	// an ordinary duplicate hit, nothing to widen.
+	// Validate before writing anything: a client that cannot report a file
+	// list cannot be widened at all, and that has to be known before any DB
+	// write commits the wider intent. The entry gate in grab already excludes
+	// any record whose selection_state isn't pending/applied, so
+	// ErrNotSupported here means that state went stale against what the client
+	// really supports; either way it is the same as an ordinary duplicate hit,
+	// nothing to widen.
 	clientFiles, err := client.ListFiles(ctx, live.TorrentHash)
 	switch {
 	case errors.Is(err, ErrNotSupported):
@@ -1076,15 +1093,23 @@ func (d *download) CheckStatus(ctx context.Context) ([]CompletedDownload, error)
 				return
 			}
 
-			if torrent.Status != StatusSeeding && torrent.Status != StatusCompleted {
+			pending := record.SelectionState ==
+				downloadrecord.SelectionStatePending
+			// A pending record has no keep-set yet, so a client scoping
+			// progress to wanted files can report it complete with nothing
+			// downloaded. Importing then would import an empty payload.
+			// RunSelectionPass either resolves it or gives up, and the record
+			// leaves pending either way.
+			if pending ||
+				(torrent.Status != StatusSeeding &&
+					torrent.Status != StatusCompleted) {
 				// Still in flight: mirror the torrent's paused state onto the
 				// episode badges (paused vs downloading) so the UI reflects it.
 				// A pending selection is never "paused" here even when the
 				// client reports it stopped at metadata (spec §4.2) — that's
 				// RunSelectionPass's window to resolve, not a state the user
 				// paused.
-				paused := torrent.Status == StatusPaused &&
-					record.SelectionState != downloadrecord.SelectionStatePending
+				paused := torrent.Status == StatusPaused && !pending
 				if serr := d.db.SyncSeasonDownloadStateForRecord(
 					ctx, record.ID, paused,
 				); serr != nil {

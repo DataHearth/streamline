@@ -374,6 +374,47 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 		)
 
 		When(
+			"a seeding-looking torrent belongs to a pending-selection record",
+			func() {
+				// A pending selection wants no file, so a client that scopes
+				// progress to wanted files reports it complete with nothing
+				// downloaded. Importing then imports an empty payload.
+				It("does not flip the record to importing", func() {
+					configtest.Setup(map[string]any{
+						"download_clients": []map[string]any{{
+							"name": "embedded", "client_type": "builtin",
+							"download_dir": "/downloads", "enabled": true,
+						}},
+					})
+					client := &fakePassClient{
+						torrent: &Torrent{
+							Hash: "abc", Name: "Show.S01", Status: StatusSeeding,
+						},
+					}
+					pendingMgr := New(store, client)
+					store.EXPECT().
+						ListDownloadingRecordsWithMovie(mock.Anything).
+						Return([]*ent.DownloadRecord{{
+							ID:                 9,
+							TorrentHash:        "abc",
+							DownloadClientName: "embedded",
+							SelectionState:     downloadrecord.SelectionStatePending,
+						}}, nil).Once()
+					store.EXPECT().
+						SyncSeasonDownloadStateForRecord(mock.Anything, uint32(9), false).
+						Return(nil).Once()
+
+					completed, err := pendingMgr.CheckStatus(ctx)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(completed).To(BeEmpty())
+					// UpdateDownloadRecordStatus/MarkRecordEpisodesImporting carry
+					// no expectation above: calling either would panic the mock.
+				})
+			},
+		)
+
+		When(
 			"a client-paused torrent belongs to a resolved-selection record",
 			func() {
 				// Negative control for the spec above: only selection_state=pending
@@ -775,11 +816,13 @@ var _ = Describe("GrabEpisode selective files", Label("unit", "downloads"), func
 		store = dbmocks.NewMockStore(GinkgoT())
 		client = &fakeSelectiveClient{addHash: "abc123"}
 		mgr = New(store, client)
-		// The §4.6 hash pre-check runs before Flow A on every grab; these specs
-		// are all about a hash with no live record behind it.
+		// The §4.6 hash pre-check runs before Flow A on every grab whose
+		// selective_files is on; these specs are all about a hash with no live
+		// record behind it. Maybe rather than Once because the flag-off spec
+		// below must not reach it at all, and asserts that itself.
 		store.EXPECT().
 			FindWidenableDownloadRecordByHash(mock.Anything, mock.Anything).
-			Return(nil, nil).Once()
+			Return(nil, nil).Maybe()
 	})
 
 	It("zero matches: never calls AddTorrent, error wraps ErrNoWantedFiles", func() {
@@ -802,11 +845,17 @@ var _ = Describe("GrabEpisode selective files", Label("unit", "downloads"), func
 			store.EXPECT().
 				TVShowForEpisode(mock.Anything, uint32(21)).
 				Return(show, nil).Once()
+			// The keep-set is part of the insert, not only of the post-add
+			// confirmation: a confirmation that fails for any reason other than
+			// ErrNotSupported leaves the record applied, and an applied record
+			// with no selected_files renders "0 B of 24 GB selected".
 			store.EXPECT().CreateDownloadRecord(mock.Anything, mock.MatchedBy(
 				func(p db.CreateDownloadRecordParams) bool {
 					return p.EpisodeID == 21 &&
 						p.SelectionState == downloadrecord.SelectionStateApplied &&
-						len(p.WantedEpisodes) == 1 && p.WantedEpisodes[0] == 21
+						len(p.WantedEpisodes) == 1 && p.WantedEpisodes[0] == 21 &&
+						len(p.SelectedFiles) == 1 && p.SelectedFiles[0] == 0 &&
+						p.SelectedBytes == aboveFloor
 				},
 			)).Return(&ent.DownloadRecord{ID: 42}, nil).Once()
 			store.EXPECT().SetDownloadRecordSelection(
@@ -823,6 +872,35 @@ var _ = Describe("GrabEpisode selective files", Label("unit", "downloads"), func
 			Expect(client.setWantedCalls).To(Equal(1))
 			Expect(client.setWantedHash).To(Equal("abc123"))
 			Expect(client.setWantedFiles).To(Equal([]int{0}))
+		},
+	)
+
+	It(
+		"every candidate wanted: whole grab, record left at the skipped default",
+		func() {
+			// The matched == videoTotal arm: selecting here would be a no-op
+			// selection, so the grab collapses back to a plain whole-torrent one
+			// and the record never claims to be selective.
+			result, show := twoEpisodeRelease(true)
+			store.EXPECT().
+				TVShowForEpisode(mock.Anything, uint32(21)).
+				Return(show, nil).Once()
+			store.EXPECT().CreateDownloadRecord(mock.Anything, mock.MatchedBy(
+				func(p db.CreateDownloadRecordParams) bool {
+					return p.SelectionState == "" &&
+						p.SelectedFiles == nil && p.SelectedBytes == 0
+				},
+			)).Return(&ent.DownloadRecord{ID: 42}, nil).Once()
+
+			_, err := mgr.GrabEpisode(ctx, result, 21, []uint32{21, 22})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(client.addTorrentCalls).To(Equal(1))
+			Expect(client.addTorrentSrc.Selective).To(BeFalse())
+			Expect(client.addTorrentSrc.WantedFiles).To(BeNil())
+			// SetDownloadRecordSelection carries no expectation above: calling
+			// it would panic the mock.
+			Expect(client.setWantedCalls).To(Equal(0))
 		},
 	)
 
@@ -883,6 +961,12 @@ var _ = Describe("GrabEpisode selective files", Label("unit", "downloads"), func
 			Expect(err).NotTo(HaveOccurred())
 			Expect(client.addTorrentSrc.Selective).To(BeFalse())
 			Expect(client.setWantedCalls).To(Equal(0))
+			// The §4.6 hash pre-check is part of the feature, so off means it
+			// never runs — duplicate detection is AddTorrent's again.
+			store.AssertNotCalled(
+				GinkgoT(), "FindWidenableDownloadRecordByHash",
+				mock.Anything, mock.Anything,
+			)
 		},
 	)
 
@@ -1188,6 +1272,7 @@ var _ = Describe(
 			"live skipped-state (non-selective) record + same hash: "+
 				"ErrTorrentAlreadyExists exactly as today",
 			func() {
+				selectiveConfig()
 				live := &ent.DownloadRecord{
 					ID:                 42,
 					TorrentHash:        hash,
@@ -1241,36 +1326,34 @@ var _ = Describe(
 		)
 
 		It(
-			"selective_files off: a would-be-widenable record still returns "+
-				"ErrTorrentAlreadyExists",
+			"selective_files off: no hash pre-check at all, AddTorrent owns "+
+				"duplicate detection",
 			func() {
 				// Outer BeforeEach's config leaves download.selective_files at
 				// its default (false) — deliberately not calling
-				// selectiveConfig() here.
-				live := &ent.DownloadRecord{
-					ID:                 42,
-					TorrentHash:        hash,
-					DownloadClientName: "embedded",
-					Status:             downloadrecord.StatusDownloading,
-					WantedEpisodes:     []uint32{21},
-					SelectionState:     downloadrecord.SelectionStateApplied,
-				}
+				// selectiveConfig() here. Off has to be the pre-feature path:
+				// the whole pre-check is skipped, so the grab reaches the client
+				// exactly as it did before this feature and a duplicate hash is
+				// whatever AddTorrent says it is.
 				store.EXPECT().
-					FindWidenableDownloadRecordByHash(mock.Anything, hash).
-					Return(live, nil).Once()
+					CreateDownloadRecord(mock.Anything, mock.Anything).
+					Return(&ent.DownloadRecord{ID: 99}, nil).Once()
 
 				result := indexer.SearchResult{
 					Title: "Show S01", Download: "magnet:?xt=urn:btih:" + hash,
 				}
 				_, err := mgr.GrabEpisode(ctx, result, 22, []uint32{22})
 
-				Expect(errors.Is(err, ErrTorrentAlreadyExists)).To(BeTrue())
-				Expect(client.addTorrentCalls).To(Equal(0))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(client.addTorrentCalls).To(Equal(1))
 				Expect(client.listFilesCalls).To(Equal(0))
+				// FindWidenableDownloadRecordByHash carries no expectation
+				// above: calling it would panic the mock.
 			},
 		)
 
 		It("no live record: normal grab proceeds", func() {
+			selectiveConfig()
 			store.EXPECT().
 				FindWidenableDownloadRecordByHash(mock.Anything, hash).
 				Return(nil, nil).Once()

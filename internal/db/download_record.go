@@ -47,6 +47,12 @@ type CreateDownloadRecordParams struct {
 	WantedEpisodes []uint32
 	// Zero value resolves to the schema default (skipped).
 	SelectionState downloadrecord.SelectionState
+	// The keep-set behind an "applied" SelectionState, stored at create so a
+	// failed post-add confirmation can't leave the row claiming a selection
+	// it can't name — the SPA renders selected_bytes against size, and an
+	// empty pair there reads as "0 B of 24 GB selected".
+	SelectedFiles []int
+	SelectedBytes int64
 }
 
 func (db *DB) CreateDownloadRecord(
@@ -80,6 +86,12 @@ func (db *DB) CreateDownloadRecord(
 	}
 	if p.SelectionState != "" {
 		b = b.SetSelectionState(p.SelectionState)
+	}
+	if len(p.SelectedFiles) > 0 {
+		b = b.SetSelectedFiles(p.SelectedFiles)
+	}
+	if p.SelectedBytes != 0 {
+		b = b.SetSelectedBytes(p.SelectedBytes)
 	}
 	return b.Save(ctx)
 }
