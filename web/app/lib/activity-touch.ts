@@ -53,6 +53,7 @@ export type RingReading = {
 export function ringReading(status: StatusKind): RingReading {
 	switch (status) {
 		case "grabbing":
+		case "importing":
 			return { mode: "spin", glyph: "down" };
 		case "fetching":
 			return { mode: "spin", glyph: "dots" };

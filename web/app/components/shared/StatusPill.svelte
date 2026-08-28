@@ -3,6 +3,7 @@
 	export type StatusKind =
 		| "downloading"
 		| "grabbing"
+		| "importing"
 		| "held"
 		| "available"
 		| "wanted"
@@ -19,6 +20,7 @@
 	const LABELS: Record<StatusKind, string> = {
 		downloading: i18n.status_downloading(),
 		grabbing: i18n.status_grabbing(),
+		importing: i18n.status_importing(),
 		held: i18n.status_held(),
 		available: i18n.status_available(),
 		wanted: i18n.status_wanted(),

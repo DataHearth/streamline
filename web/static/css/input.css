@@ -77,6 +77,8 @@
 	/* Status (ops palette — preserved verbatim) */
 	--status-downloading: #3b82f6;
 	--status-grabbing: #a78bfa;
+	/* importing shares grabbing's hue — same in-progress family, its own label. */
+	--status-importing: var(--status-grabbing);
 	--status-available: #22c55e;
 	--status-wanted: #f59e0b;
 	--status-missing: #64748b;

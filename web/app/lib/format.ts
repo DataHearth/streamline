@@ -43,9 +43,11 @@ export function formatRatio(ratio: number | undefined | null): string {
 	return ratio.toFixed(2);
 }
 
-// pillStatus maps a download lifecycle status onto an existing StatusPill
-// kind/token (no shared-component change): importing reuses the "grabbing"
-// in-progress token, error/failed share "failed", completed → "available".
+// pillStatus maps a download lifecycle status onto a StatusPill kind:
+// error/failed share "failed", completed → "available". "importing" carries
+// grabbing's hue through a CSS alias but keeps its own label — reusing the
+// "grabbing" kind outright made the pill read "Grabbing" on a record the
+// importer already had.
 export function pillStatus(
 	status:
 		| "downloading"
@@ -60,7 +62,7 @@ export function pillStatus(
 		case "held":
 			return "held";
 		case "importing":
-			return "grabbing";
+			return "importing";
 		case "error":
 		case "failed":
 			return "failed";
