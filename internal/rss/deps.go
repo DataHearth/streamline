@@ -50,7 +50,7 @@ type TVIndexerSearcher interface {
 		titles []string,
 		tvdbID uint32,
 		season, episode uint16,
-	) ([]indexer.SearchResult, error)
+	) ([]indexer.SearchResult, int, error)
 }
 
 // EpisodeGrabber is the subset of download.Downloader that

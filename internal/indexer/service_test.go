@@ -82,7 +82,7 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 				"returns an empty result slice without contacting any indexer",
 				func() {
 					configtest.Setup()
-					results, err := svc.SearchEpisode(
+					results, hidden, err := svc.SearchEpisode(
 						ctx,
 						[]string{"The Black Sea"},
 						12345,
@@ -91,6 +91,7 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 					)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(results).To(BeEmpty())
+					Expect(hidden).To(BeZero())
 				},
 			)
 		})
@@ -98,9 +99,16 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 		When("the titles slice is empty after dedup", func() {
 			It("returns nil without contacting any indexer", func() {
 				configtest.Setup()
-				results, err := svc.SearchEpisode(ctx, []string{"", ""}, 0, 0, 0)
+				results, hidden, err := svc.SearchEpisode(
+					ctx,
+					[]string{"", ""},
+					0,
+					0,
+					0,
+				)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(results).To(BeNil())
+				Expect(hidden).To(BeZero())
 			})
 		})
 	})
@@ -144,7 +152,7 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 	})
 
 	Describe("filterToSeason", func() {
-		It("keeps only releases scoped to exactly the season", func() {
+		It("keeps only season packs of exactly the season", func() {
 			in := []SearchResult{
 				{Title: "Breaking.Bad.S01.MULTI.1080p.BluRay.x265.RamirouHD"},
 				{Title: "Breaking.Bad.S01E05.1080p.WEB.x265-GRP"},
@@ -160,12 +168,53 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 			for i, r := range out {
 				titles[i] = r.Title
 			}
-			// S02 (wrong season), the integral, the complete collection and the
-			// S01-S05 range are dropped — only the season-1 pack + episode stay.
+			// S02 (wrong season), the single episode, the integral, the complete
+			// collection and the S01-S05 range are all dropped.
 			Expect(titles).To(ConsistOf(
 				"Breaking.Bad.S01.MULTI.1080p.BluRay.x265.RamirouHD",
-				"Breaking.Bad.S01E05.1080p.WEB.x265-GRP",
 			))
+		})
+	})
+
+	Describe("filterToEpisode", func() {
+		It("keeps the requested episode, absolute numbers and dailies", func() {
+			in := []SearchResult{
+				{Title: "Breaking.Bad.S01E05.1080p.WEB.x265-GRP"},
+				{Title: "Breaking.Bad.S01E06.1080p.WEB.x265-GRP"},
+				{Title: "Breaking.Bad.S02E05.1080p.WEB.x265-GRP"},
+				{Title: "Breaking.Bad.S01.MULTI.1080p.BluRay.x265.RamirouHD"},
+				{Title: "[SubsPlease] Breaking Bad - 05 (1080p) [A1B2C3D4]"},
+				{Title: "Breaking.Bad.2011.09.25.FRENCH.720p.WEB-GRP"},
+				// Names no scope at all: a tracker that publishes packs under the
+				// bare show title, and a different show entirely.
+				{Title: "Breaking Bad"},
+				{Title: "Breaking Bad The Movie 2017 Web-DL 720p AVC AAC VOSTF"},
+			}
+			out, _ := filterToEpisode(in, 1, 5)
+			titles := make([]string, len(out))
+			for i, r := range out {
+				titles[i] = r.Title
+			}
+			Expect(titles).To(ConsistOf(
+				"Breaking.Bad.S01E05.1080p.WEB.x265-GRP",
+				"[SubsPlease] Breaking Bad - 05 (1080p) [A1B2C3D4]",
+				"Breaking.Bad.2011.09.25.FRENCH.720p.WEB-GRP",
+			))
+		})
+
+		It("counts only the dropped packs that cover the episode", func() {
+			in := []SearchResult{
+				{Title: "Breaking.Bad.S01.MULTI.1080p.BluRay.x265.RamirouHD"},
+				{Title: "Breaking.Bad.COMPLETE.S01-S05.Bluray.Remux.1080p-GRP"},
+				{Title: "Breaking.Bad.INTEGRALE.MULTI.1080p.WEB.x265-NoTAG"},
+				// Covers other seasons, not season 1.
+				{Title: "Breaking.Bad.S02-S03.MULTI.1080p.WEB.x265-GRP"},
+				// Plain noise: another episode, nowhere to send anyone.
+				{Title: "Breaking.Bad.S01E06.1080p.WEB.x265-GRP"},
+			}
+			out, hidden := filterToEpisode(in, 1, 5)
+			Expect(out).To(BeEmpty())
+			Expect(hidden).To(Equal(3))
 		})
 	})
 })

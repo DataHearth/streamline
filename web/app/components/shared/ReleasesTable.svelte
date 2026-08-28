@@ -5,6 +5,7 @@
 		ChevronDown,
 		ChevronUp,
 		Download,
+		Info,
 		LoaderCircle,
 	} from "@lucide/svelte";
 	import { cn } from "../../lib/cn";
@@ -57,20 +58,27 @@
 	let indexerFilter = $state<string>("");
 	let errMsg = $state<string | null>(null);
 
-	const q = createQuery<SearchResult[]>(() => ({
+	type Results = { items: SearchResult[]; hiddenPacks: number };
+
+	const q = createQuery<Results>(() => ({
 		queryKey,
 		// Movie search returns a bare array; series episode search returns an
-		// { items } envelope. Normalize both to SearchResult[].
+		// { items, hidden_packs } envelope. Normalize both.
 		queryFn: async () => {
-			const raw = await api<SearchResult[] | { items?: SearchResult[] }>(
-				searchPath,
-				{ method: "POST" },
-			);
-			return Array.isArray(raw) ? raw : (raw.items ?? []);
+			const raw = await api<
+				SearchResult[] | { items?: SearchResult[]; hidden_packs?: number }
+			>(searchPath, { method: "POST" });
+			if (Array.isArray(raw)) return { items: raw, hiddenPacks: 0 };
+			return { items: raw.items ?? [], hiddenPacks: raw.hidden_packs ?? 0 };
 		},
 		enabled,
 		staleTime: 30_000,
 	}));
+
+	let data = $derived(q.data?.items ?? []);
+	// Packs the requested scope excluded. Absent on every scope but the episode
+	// one, which is why an empty list there is worth explaining.
+	let hiddenPacks = $derived(q.data?.hiddenPacks ?? 0);
 
 	function fieldValue(r: SearchResult, f: Field): string | number {
 		switch (f) {
@@ -97,7 +105,7 @@
 
 	// Scores are absent wholesale when no quality profile resolves for the item,
 	// so one row carrying one is what turns the column on.
-	let scored = $derived((q.data ?? []).some((r) => r.score !== undefined));
+	let scored = $derived(data.some((r) => r.score !== undefined));
 
 	$effect(() => {
 		if (scored && !sortPicked) {
@@ -115,7 +123,7 @@
 	// Distinct values present in the current results, for the filter dropdowns.
 	function distinct(pick: (r: SearchResult) => string | undefined): string[] {
 		const set = new Set<string>();
-		for (const r of q.data ?? []) {
+		for (const r of data) {
 			const v = pick(r);
 			if (v) set.add(v);
 		}
@@ -134,7 +142,7 @@
 	]);
 
 	let rows = $derived.by(() => {
-		const arr = (q.data ?? []).filter(
+		const arr = data.filter(
 			(r) =>
 				(groupFilter === "" || r.release_group === groupFilter) &&
 				(indexerFilter === "" || r.indexer === indexerFilter),
@@ -223,6 +231,15 @@
 	}
 </script>
 
+{#snippet packsHidden()}
+	{#if hiddenPacks > 0}
+		<p class="mb-3 flex items-start gap-1.5 text-xs text-fg-subtle">
+			<Info size={13} class="mt-px shrink-0" aria-hidden="true" />
+			<span>{i18n.grab_packs_hidden({ count: hiddenPacks })}</span>
+		</p>
+	{/if}
+{/snippet}
+
 {#snippet sortIcon(f: Field)}
 	{#if sortField === f}
 		{#if sortDir === "asc"}
@@ -262,14 +279,16 @@
 	>
 		{errorText(q.error, i18n.common_search_failed())}
 	</div>
-{:else if (q.data?.length ?? 0) === 0}
+{:else if data.length === 0}
 	<p class="py-10 text-center text-sm text-fg-muted">
 		{i18n.grab_no_releases()}
 	</p>
+	{@render packsHidden()}
 {:else}
+	{@render packsHidden()}
 	<div class="mb-3 flex flex-wrap items-center justify-between gap-3">
 		<span class="tabular text-[11px] text-fg-faint">
-			{rows.length} of {q.data?.length ?? 0} releases
+			{rows.length} of {data.length} releases
 		</span>
 		<div class="flex flex-wrap items-center gap-2">
 			{#if groups.length > 0}

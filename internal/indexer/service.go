@@ -98,12 +98,15 @@ type Manager interface {
 		titles []string,
 		tvdbID uint32,
 	) ([]SearchResult, error)
+	// SearchEpisode also reports how many season/whole-series packs covering
+	// the episode were filtered out, so a caller can say why an empty list is
+	// empty and point at the season scope.
 	SearchEpisode(
 		ctx context.Context,
 		titles []string,
 		tvdbID uint32,
 		season, episode uint16,
-	) ([]SearchResult, error)
+	) ([]SearchResult, int, error)
 	Feed(ctx context.Context, indexerName string) ([]SearchResult, error)
 }
 
@@ -228,18 +231,19 @@ func (i *indexer) SearchSeason(
 	return filtered, nil
 }
 
-// filterToSeason keeps only releases scoped to exactly the requested season.
+// filterToSeason keeps only season packs of exactly the requested season.
 // Whole-series / multi-season packs (COMPLETE, INTEGRALE, S01-S05) are dropped
 // even though they cover the season, because grabbing one imports every season
-// it contains — those belong to the whole-series scope. Releases tagged for a
-// different specific season are dropped too.
+// it contains — those belong to the whole-series scope. Single episodes are
+// dropped too: both callers treat what comes back as a pack, sizing it against
+// the season's episode count and marking the whole season downloading.
 func filterToSeason(results []SearchResult, season uint16) []SearchResult {
 	out := make([]SearchResult, 0, len(results))
 	for _, r := range results {
 		if library.IsWholeSeriesPack(r.Title) {
 			continue
 		}
-		if p := library.Parse(r.Title); p.Season == season {
+		if p := library.Parse(r.Title); p.SeasonPack && p.Season == season {
 			out = append(out, r)
 		}
 	}
@@ -275,7 +279,21 @@ func (i *indexer) SearchSeries(
 		return nil, nil
 	}
 
-	return i.searchAll(ctx, span, titles, SearchParams{TVDBID: tvdbID}), nil
+	results := i.searchAll(ctx, span, titles, SearchParams{TVDBID: tvdbID})
+	filtered := make([]SearchResult, 0, len(results))
+	for _, r := range results {
+		// A tvsearch with no season is a plain series query, so single episodes
+		// and single-season packs come back alongside the integrals. This scope
+		// grabs a release as covering every season, so only those qualify.
+		if library.IsWholeSeriesPack(r.Title) {
+			filtered = append(filtered, r)
+		}
+	}
+	span.SetAttributes(
+		attribute.Int("results.pre_series_filter", len(results)),
+		attribute.Int("results.total", len(filtered)),
+	)
+	return filtered, nil
 }
 
 // SearchEpisode queries all enabled indexers for a single episode (a tvsearch
@@ -286,7 +304,7 @@ func (i *indexer) SearchEpisode(
 	titles []string,
 	tvdbID uint32,
 	season, episode uint16,
-) ([]SearchResult, error) {
+) ([]SearchResult, int, error) {
 	titles = dedupTitles(titles)
 	ctx, span := tracer.Start(ctx, "indexer.search_episode",
 		trace.WithAttributes(
@@ -307,13 +325,67 @@ func (i *indexer) SearchEpisode(
 	if len(titles) == 0 {
 		slog.WarnContext(ctx, "indexer search skipped: no titles after dedup",
 			"series.tvdb_id", tvdbID)
-		return nil, nil
+		return nil, 0, nil
 	}
 
-	return i.searchAll(
+	// Same reason as the season scope: the season/episode params are routinely
+	// ignored, and the empty-result retry drops the id entirely, so what comes
+	// back is a keyword search over the whole series.
+	results := i.searchAll(
 		ctx, span, titles,
 		SearchParams{TVDBID: tvdbID, Season: season, Episode: episode},
-	), nil
+	)
+	filtered, hiddenPacks := filterToEpisode(results, season, episode)
+	span.SetAttributes(
+		attribute.Int("results.pre_episode_filter", len(results)),
+		attribute.Int("results.hidden_packs", hiddenPacks),
+		attribute.Int("results.total", len(filtered)),
+	)
+	return filtered, hiddenPacks, nil
+}
+
+// filterToEpisode keeps only releases naming exactly the requested episode.
+// Season packs are dropped: they are the season scope's business, and the
+// callers here size a result as one episode.
+//
+// A release naming no season and no episode is kept only when it carries an
+// anime absolute number or a daily air date — those shows never spell SxxExx,
+// and dropping them would hide every release they have. Keeping *anything*
+// unnumbered was the first cut of this and it let through the bulk of the noise
+// the filter exists to remove: a bare "Breaking Bad", a whole different show,
+// and any pack whose only scope word the parser cannot read.
+//
+// The second return counts the dropped releases that are packs *covering* this
+// episode, which is the only part of the noise an operator can act on: it is
+// what the season and whole-series scopes would offer instead. Releases for
+// some other episode are not counted — there is nowhere to send anyone for
+// those.
+func filterToEpisode(
+	results []SearchResult,
+	season, episode uint16,
+) ([]SearchResult, int) {
+	out := make([]SearchResult, 0, len(results))
+	hiddenPacks := 0
+	for _, r := range results {
+		p := library.Parse(r.Title)
+		if p.Season == season && p.Episode == episode {
+			out = append(out, r)
+			continue
+		}
+		// The span is read before the "names nothing" fallback below, not after:
+		// a COMPLETE/INTEGRALE pack carries no season token either, so the
+		// fallback would otherwise keep every integral in an episode search.
+		sp := library.ParseSeasonSpan(r.Title)
+		switch {
+		case sp.Complete ||
+			(sp.From != 0 && sp.From <= season && season <= sp.To):
+			hiddenPacks++
+		case sp.From == 0 && p.Season == 0 && p.Episode == 0 &&
+			(p.AbsoluteNumber > 0 || p.AirDate != nil):
+			out = append(out, r)
+		}
+	}
+	return out, hiddenPacks
 }
 
 // searchAll fans out one query per (indexer, title) across every enabled

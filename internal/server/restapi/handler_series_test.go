@@ -327,10 +327,13 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 	Describe("BrowseSeasonReleases", func() {
 		It("returns ranked season-pack results", func() {
 			app.tvshows.EXPECT().Get(mock.Anything, uint32(3)).
-				Return(&ent.TVShow{ID: 3, Title: "Breaking Bad", TvdbID: 81189}, nil).
+				Return(&ent.TVShow{
+					ID: 3, Title: "Breaking Bad",
+					OriginalTitle: "Breaking Bad (US)", TvdbID: 81189,
+				}, nil).
 				Once()
 			app.indexers.EXPECT().
-				SearchSeason(mock.Anything, []string{"Breaking Bad"},
+				SearchSeason(mock.Anything, []string{"Breaking Bad", "Breaking Bad (US)"},
 					uint32(81189), uint16(1)).
 				Return([]indexer.SearchResult{
 					{Title: "BB S01 1080p", Download: "magnet:x", Seeders: 20},
@@ -470,10 +473,13 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 	Describe("BrowseSeriesReleases", func() {
 		It("returns ranked whole-series results", func() {
 			app.tvshows.EXPECT().Get(mock.Anything, uint32(3)).
-				Return(&ent.TVShow{ID: 3, Title: "Breaking Bad", TvdbID: 81189}, nil).
+				Return(&ent.TVShow{
+					ID: 3, Title: "Breaking Bad",
+					OriginalTitle: "Breaking Bad (US)", TvdbID: 81189,
+				}, nil).
 				Once()
 			app.indexers.EXPECT().
-				SearchSeries(mock.Anything, []string{"Breaking Bad"}, uint32(81189)).
+				SearchSeries(mock.Anything, []string{"Breaking Bad", "Breaking Bad (US)"}, uint32(81189)).
 				Return([]indexer.SearchResult{
 					{Title: "BB Complete 1080p", Download: "magnet:y", Seeders: 42},
 				}, nil).Once()
@@ -510,6 +516,7 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 		show := &ent.TVShow{
 			ID:             3,
 			Title:          "Breaking Bad",
+			OriginalTitle:  "Breaking Bad (US)",
 			TvdbID:         81189,
 			QualityProfile: "default",
 		}
@@ -561,7 +568,7 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 			app.tvshows.EXPECT().Get(mock.Anything, uint32(3)).
 				Return(show, nil).Once()
 			app.indexers.EXPECT().
-				SearchSeries(mock.Anything, []string{"Breaking Bad"},
+				SearchSeries(mock.Anything, []string{"Breaking Bad", "Breaking Bad (US)"},
 					uint32(81189)).
 				Return(results, nil).Once()
 			app.store.EXPECT().
@@ -578,7 +585,7 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 			app.tvshows.EXPECT().Get(mock.Anything, uint32(3)).
 				Return(show, nil).Once()
 			app.indexers.EXPECT().
-				SearchSeason(mock.Anything, []string{"Breaking Bad"},
+				SearchSeason(mock.Anything, []string{"Breaking Bad", "Breaking Bad (US)"},
 					uint32(81189), uint16(1)).
 				Return(results, nil).Once()
 			app.store.EXPECT().
@@ -605,14 +612,45 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 			app.tvshows.EXPECT().Get(mock.Anything, uint32(3)).
 				Return(&withTree, nil).Once()
 			app.indexers.EXPECT().
-				SearchEpisode(mock.Anything, []string{"Breaking Bad"},
+				SearchEpisode(mock.Anything, []string{"Breaking Bad", "Breaking Bad (US)"},
 					uint32(81189), uint16(1), uint16(2)).
-				Return(results, nil).Once()
+				Return(results, 0, nil).Once()
 
 			resp := app.do(app.req(http.MethodPost,
 				"/api/v1/series/3/episodes/100/search", app.adminKey, nil))
 			defer resp.Body.Close()
 			expectScored(resp)
+		})
+
+		It("reports the packs the episode scope filtered out", func() {
+			withTree := *show
+			withTree.Edges.Seasons = []*ent.Season{
+				{
+					ID:     10,
+					Number: 1,
+					Edges: ent.SeasonEdges{
+						Episodes: []*ent.Episode{{ID: 100, Number: 2}},
+					},
+				},
+			}
+			app.tvshows.EXPECT().Get(mock.Anything, uint32(3)).
+				Return(&withTree, nil).Once()
+			app.indexers.EXPECT().
+				SearchEpisode(mock.Anything, []string{"Breaking Bad", "Breaking Bad (US)"},
+					uint32(81189), uint16(1), uint16(2)).
+				Return(nil, 4, nil).Once()
+
+			resp := app.do(app.req(http.MethodPost,
+				"/api/v1/series/3/episodes/100/search", app.adminKey, nil))
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			var body struct {
+				Items       []SearchResult `json:"items"`
+				HiddenPacks *int           `json:"hidden_packs"`
+			}
+			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+			Expect(body.Items).To(BeEmpty())
+			Expect(body.HiddenPacks).To(HaveValue(Equal(4)))
 		})
 	})
 

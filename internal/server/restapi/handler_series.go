@@ -382,9 +382,9 @@ func (s *Server) BrowseEpisodeReleases(
 			NotFoundJSONResponse: errNotFound("episode not found"),
 		}, nil
 	}
-	results, err := s.indexers.SearchEpisode(
+	results, hiddenPacks, err := s.indexers.SearchEpisode(
 		ctx,
-		[]string{show.Title},
+		[]string{show.Title, show.OriginalTitle},
 		show.TvdbID,
 		season,
 		episode,
@@ -399,8 +399,12 @@ func (s *Server) BrowseEpisodeReleases(
 		items = append(items, toSearchResult(r))
 	}
 	annotateResults(show.QualityProfile, items, singleReleaseEpisodes)
+	out := SearchResultsJSONResponse{Items: items}
+	if hiddenPacks > 0 {
+		out.HiddenPacks = &hiddenPacks
+	}
 	return BrowseEpisodeReleases200JSONResponse{
-		SearchResultsJSONResponse: SearchResultsJSONResponse{Items: items},
+		SearchResultsJSONResponse: out,
 	}, nil
 }
 
@@ -467,7 +471,10 @@ func (s *Server) BrowseSeasonReleases(
 		}, nil
 	}
 	results, err := s.indexers.SearchSeason(
-		ctx, []string{show.Title}, show.TvdbID, request.Number,
+		ctx,
+		[]string{show.Title, show.OriginalTitle},
+		show.TvdbID,
+		request.Number,
 	)
 	if err != nil {
 		return BrowseSeasonReleases500JSONResponse{
@@ -582,7 +589,11 @@ func (s *Server) BrowseSeriesReleases(
 			NotFoundJSONResponse: errNotFound(err.Error()),
 		}, nil
 	}
-	results, err := s.indexers.SearchSeries(ctx, []string{show.Title}, show.TvdbID)
+	results, err := s.indexers.SearchSeries(
+		ctx,
+		[]string{show.Title, show.OriginalTitle},
+		show.TvdbID,
+	)
 	if err != nil {
 		return BrowseSeriesReleases500JSONResponse{
 			InternalErrorJSONResponse: errInternal(ctx, err),

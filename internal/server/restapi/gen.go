@@ -3612,7 +3612,9 @@ type SearchResult struct {
 
 // SearchResultList defines model for SearchResultList.
 type SearchResultList struct {
-	Items []SearchResult `json:"items"`
+	// HiddenPacks Season or whole-series packs covering this item that were excluded because they are out of the requested scope. Only the episode scope reports it, and only when non-zero: it tells an operator that an empty or short list is not the whole story, and that the season or whole-series scope is where those releases are grabbable.
+	HiddenPacks *int           `json:"hidden_packs,omitempty"`
+	Items       []SearchResult `json:"items"`
 }
 
 // Season defines model for Season.

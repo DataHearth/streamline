@@ -133,7 +133,11 @@ func (s *EpisodeMissingSearcher) searchShow(
 	show *ent.TVShow,
 	grabbed map[uint32]struct{},
 ) {
-	titles := []string{show.Title}
+	// Both names, mirroring the movie searches. TVDB answers in
+	// metadata.language, so show.Title is the *local* title — the one a scene
+	// release is least likely to be named after. dedupTitles collapses them when
+	// a show has no language override.
+	titles := []string{show.Title, show.OriginalTitle}
 	// Unfiltered season lengths, for sizing a pack. The season edges below are
 	// narrowed to searchable episodes, and a pack costs the whole season. A
 	// failure here only leaves the size bounds unscaled.
@@ -377,7 +381,7 @@ func (s *EpisodeMissingSearcher) grabEpisode(
 	if _, already := grabbed[e.ID]; already {
 		return false
 	}
-	results, err := s.indexers.SearchEpisode(
+	results, _, err := s.indexers.SearchEpisode(
 		ctx, titles, show.TvdbID, se.Number, e.Number,
 	)
 	if err != nil {
