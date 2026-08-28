@@ -13,6 +13,7 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/db"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	libmocks "github.com/datahearth/streamline/internal/library/mocks"
 	metamocks "github.com/datahearth/streamline/internal/metadata/mocks"
@@ -46,20 +47,47 @@ var _ = Describe("Service.RunDriftCheck", Label("unit", "hygiene"), func() {
 		)
 	})
 
+	// pages scripts the keyset walk: one page of rows, then an empty page to
+	// end the loop. Every spec here fits in a single page.
+	pages := func(rows ...db.DriftRow) {
+		GinkgoHelper()
+		store.EXPECT().
+			ListMediaFilesForDrift(mock.Anything, uint32(0), driftPageSize).
+			Return(rows, nil).Once()
+		if len(rows) > 0 {
+			last := rows[len(rows)-1].ID
+			store.EXPECT().
+				ListMediaFilesForDrift(mock.Anything, last, driftPageSize).
+				Return(nil, nil).Once()
+		}
+	}
+
 	It("bumps last_seen_at for present files in one batch", func() {
 		seen := time.Now().Add(-2 * time.Hour)
-		rows := make([]*ent.MediaFile, 0, 2)
+		rows := make([]db.DriftRow, 0, 2)
 		for _, id := range []uint32{42, 43} {
 			path := filepath.Join(tmpDir, fmt.Sprintf("Inception-%d.mkv", id))
 			Expect(os.WriteFile(path, []byte("data"), 0o644)).To(Succeed())
-			rows = append(rows, &ent.MediaFile{
-				ID: id, Path: path, LastSeenAt: &seen,
-			})
+			rows = append(rows, db.DriftRow{ID: id, Path: path, LastSeenAt: &seen})
 		}
-		store.EXPECT().ListAllMediaFilesWithOwners(mock.Anything).
-			Return(rows, nil).Once()
+		pages(rows...)
 		store.EXPECT().
 			BumpMediaFilesLastSeen(mock.Anything, []uint32{42, 43}).
+			Return(nil).Once()
+
+		Expect(svc.RunDriftCheck(ctx, 15*time.Minute)).To(Succeed())
+	})
+
+	It("never loads owner edges for a file that is present", func() {
+		// The walk is a three-column projection; the owners cost an extra
+		// query and are only worth it once a file has actually gone. No
+		// FindMediaFileWithOwners expectation — the mock fails on any call.
+		path := filepath.Join(tmpDir, "Present.mkv")
+		Expect(os.WriteFile(path, []byte("data"), 0o644)).To(Succeed())
+		seen := time.Now().Add(-2 * time.Hour)
+		pages(db.DriftRow{ID: 5, Path: path, LastSeenAt: &seen})
+		store.EXPECT().
+			BumpMediaFilesLastSeen(mock.Anything, []uint32{5}).
 			Return(nil).Once()
 
 		Expect(svc.RunDriftCheck(ctx, 15*time.Minute)).To(Succeed())
@@ -68,13 +96,11 @@ var _ = Describe("Service.RunDriftCheck", Label("unit", "hygiene"), func() {
 	It(
 		"starts the grace clock when last_seen_at is NULL and the file is missing",
 		func() {
-			rows := []*ent.MediaFile{{
-				ID:   7,
-				Path: filepath.Join(tmpDir, "Gone.mkv"),
-			}}
+			path := filepath.Join(tmpDir, "Gone.mkv")
+			pages(db.DriftRow{ID: 7, Path: path})
 			store.EXPECT().
-				ListAllMediaFilesWithOwners(mock.Anything).
-				Return(rows, nil).
+				FindMediaFileWithOwners(mock.Anything, uint32(7)).
+				Return(&ent.MediaFile{ID: 7, Path: path}, nil).
 				Once()
 			store.EXPECT().
 				MarkMediaFileMissing(mock.Anything, uint32(7)).
@@ -91,14 +117,11 @@ var _ = Describe("Service.RunDriftCheck", Label("unit", "hygiene"), func() {
 
 	It("no-ops while still within the grace window", func() {
 		seen := time.Now().Add(-30 * time.Minute) // grace = 15m × 3 = 45m
-		rows := []*ent.MediaFile{{
-			ID:         11,
-			Path:       filepath.Join(tmpDir, "Gone.mkv"),
-			LastSeenAt: &seen,
-		}}
+		path := filepath.Join(tmpDir, "Gone.mkv")
+		pages(db.DriftRow{ID: 11, Path: path, LastSeenAt: &seen})
 		store.EXPECT().
-			ListAllMediaFilesWithOwners(mock.Anything).
-			Return(rows, nil).
+			FindMediaFileWithOwners(mock.Anything, uint32(11)).
+			Return(&ent.MediaFile{ID: 11, Path: path, LastSeenAt: &seen}, nil).
 			Once()
 		store.EXPECT().
 			MarkMediaFileMissing(mock.Anything, uint32(11)).
@@ -110,17 +133,16 @@ var _ = Describe("Service.RunDriftCheck", Label("unit", "hygiene"), func() {
 
 	It("reverts the movie when grace expires and the file is missing", func() {
 		seen := time.Now().Add(-2 * time.Hour)
-		rows := []*ent.MediaFile{{
-			ID:         99,
-			Path:       filepath.Join(tmpDir, "Gone.mkv"),
-			LastSeenAt: &seen,
-			Edges: ent.MediaFileEdges{
-				Movie: &ent.Movie{ID: 88, Title: "Gone", TmdbID: 1234},
-			},
-		}}
+		path := filepath.Join(tmpDir, "Gone.mkv")
+		pages(db.DriftRow{ID: 99, Path: path, LastSeenAt: &seen})
 		store.EXPECT().
-			ListAllMediaFilesWithOwners(mock.Anything).
-			Return(rows, nil).
+			FindMediaFileWithOwners(mock.Anything, uint32(99)).
+			Return(&ent.MediaFile{
+				ID: 99, Path: path, LastSeenAt: &seen,
+				Edges: ent.MediaFileEdges{
+					Movie: &ent.Movie{ID: 88, Title: "Gone", TmdbID: 1234},
+				},
+			}, nil).
 			Once()
 		store.EXPECT().
 			MarkMediaFileMissing(mock.Anything, uint32(99)).
@@ -136,17 +158,16 @@ var _ = Describe("Service.RunDriftCheck", Label("unit", "hygiene"), func() {
 
 	It("reverts the episode when grace expires and the file is missing", func() {
 		seen := time.Now().Add(-2 * time.Hour)
-		rows := []*ent.MediaFile{{
-			ID:         21,
-			Path:       filepath.Join(tmpDir, "S01E01.mkv"),
-			LastSeenAt: &seen,
-			Edges: ent.MediaFileEdges{
-				Episode: &ent.Episode{ID: 33, Number: 1},
-			},
-		}}
+		path := filepath.Join(tmpDir, "S01E01.mkv")
+		pages(db.DriftRow{ID: 21, Path: path, LastSeenAt: &seen})
 		store.EXPECT().
-			ListAllMediaFilesWithOwners(mock.Anything).
-			Return(rows, nil).
+			FindMediaFileWithOwners(mock.Anything, uint32(21)).
+			Return(&ent.MediaFile{
+				ID: 21, Path: path, LastSeenAt: &seen,
+				Edges: ent.MediaFileEdges{
+					Episode: &ent.Episode{ID: 33, Number: 1},
+				},
+			}, nil).
 			Once()
 		store.EXPECT().
 			MarkMediaFileMissing(mock.Anything, uint32(21)).
@@ -162,14 +183,11 @@ var _ = Describe("Service.RunDriftCheck", Label("unit", "hygiene"), func() {
 
 	It("deletes an ownerless row instead of warning about it forever", func() {
 		seen := time.Now().Add(-2 * time.Hour)
-		rows := []*ent.MediaFile{{
-			ID:         64,
-			Path:       filepath.Join(tmpDir, "Orphan.mkv"),
-			LastSeenAt: &seen,
-		}}
+		path := filepath.Join(tmpDir, "Orphan.mkv")
+		pages(db.DriftRow{ID: 64, Path: path, LastSeenAt: &seen})
 		store.EXPECT().
-			ListAllMediaFilesWithOwners(mock.Anything).
-			Return(rows, nil).
+			FindMediaFileWithOwners(mock.Anything, uint32(64)).
+			Return(&ent.MediaFile{ID: 64, Path: path, LastSeenAt: &seen}, nil).
 			Once()
 		store.EXPECT().
 			MarkMediaFileMissing(mock.Anything, uint32(64)).
@@ -195,13 +213,7 @@ var _ = Describe("Service.RunDriftCheck", Label("unit", "hygiene"), func() {
 		DeferCleanup(func() { _ = os.Chmod(locked, 0o755) })
 
 		seen := time.Now().Add(-2 * time.Hour)
-		rows := []*ent.MediaFile{{
-			ID: 5, Path: file, LastSeenAt: &seen,
-		}}
-		store.EXPECT().
-			ListAllMediaFilesWithOwners(mock.Anything).
-			Return(rows, nil).
-			Once()
+		pages(db.DriftRow{ID: 5, Path: file, LastSeenAt: &seen})
 
 		Expect(svc.RunDriftCheck(ctx, 15*time.Minute)).To(Succeed())
 	})

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/otelx"
 	"go.opentelemetry.io/otel/attribute"
@@ -25,40 +26,59 @@ func (s *Service) RunDriftCheck(ctx context.Context, interval time.Duration) err
 	ctx, span := tracer.Start(ctx, "hygiene.drift_check")
 	defer span.End()
 
-	rows, err := s.store.ListAllMediaFilesWithOwners(ctx)
-	if err != nil {
-		return otelx.RecordSpanError(span, err)
-	}
-	span.SetAttributes(attribute.Int("rows", len(rows)))
-
-	// Present files only need their grace clock advanced, so their bumps are
-	// collected and written as one batch after the walk. Issuing them row by
-	// row put thousands of UPDATEs on SQLite's single connection every tick,
-	// and every API request queued behind them for seconds.
-	present := make([]uint32, 0, len(rows))
-	for _, row := range rows {
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-		if s.checkDrift(ctx, row, graceWindow) {
-			present = append(present, row.ID)
-		}
-	}
-	if len(present) > 0 {
-		if err := s.store.BumpMediaFilesLastSeen(ctx, present); err != nil {
+	// Walked a page at a time over a three-column projection rather than
+	// materialising the whole table with both owner edges attached. The check
+	// stats a path and compares a timestamp; the owners are only consulted on
+	// the rare branch where a file has actually gone, and are fetched there.
+	var (
+		afterID uint32
+		total   int
+	)
+	present := make([]uint32, 0, driftPageSize)
+	for {
+		rows, err := s.store.ListMediaFilesForDrift(ctx, afterID, driftPageSize)
+		if err != nil {
 			return otelx.RecordSpanError(span, err)
 		}
-		driftVerified.Add(ctx, int64(len(present)))
+		if len(rows) == 0 {
+			break
+		}
+		total += len(rows)
+		for _, row := range rows {
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
+			if s.checkDrift(ctx, row, graceWindow) {
+				present = append(present, row.ID)
+			}
+			afterID = row.ID
+		}
+		// Flushed per page so the bump list cannot itself grow with the
+		// library — the batching that keeps these off the single SQLite
+		// connection one-by-one is inside BumpMediaFilesLastSeen.
+		if len(present) > 0 {
+			if err := s.store.BumpMediaFilesLastSeen(ctx, present); err != nil {
+				return otelx.RecordSpanError(span, err)
+			}
+			driftVerified.Add(ctx, int64(len(present)))
+			present = present[:0]
+		}
 	}
+	span.SetAttributes(attribute.Int("rows", total))
 	return nil
 }
 
 // checkDrift reports whether the row's file is present on disk; the caller
 // batches the last_seen bookkeeping for present rows. Missing and erroring
 // rows are handled here and report false.
+// driftPageSize is how many rows one keyset page carries. Big enough that a
+// modest library is one or two queries, small enough that the slice never
+// scales with the table.
+const driftPageSize = 500
+
 func (s *Service) checkDrift(
 	ctx context.Context,
-	row *ent.MediaFile,
+	row db.DriftRow,
 	graceWindow time.Duration,
 ) bool {
 	_, statErr := os.Stat(row.Path)
@@ -79,10 +99,20 @@ func (s *Service) checkDrift(
 
 func (s *Service) handleMissing(
 	ctx context.Context,
-	row *ent.MediaFile,
+	lean db.DriftRow,
 	graceWindow time.Duration,
 ) {
 	driftDrifted.Add(ctx, 1)
+
+	// The owners are needed from here on — to attribute the event and, past
+	// the grace window, to revert the right media. This is the one branch
+	// that pays for them, which is why the walk itself does not.
+	row, err := s.store.FindMediaFileWithOwners(ctx, lean.ID)
+	if err != nil {
+		slog.WarnContext(ctx, "load media file owners failed",
+			"media_file.id", lean.ID, "error", err)
+		return
+	}
 
 	first, err := s.store.MarkMediaFileMissing(ctx, row.ID)
 	if err != nil {
