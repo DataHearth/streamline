@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"log/slog"
 
 	"entgo.io/ent/dialect"
 	entsql "entgo.io/ent/dialect/sql"
@@ -34,6 +35,17 @@ func Open(ctx context.Context, dsn string) (*ent.Client, error) {
 			"&_pragma=synchronous(NORMAL)" +
 			"&_pragma=foreign_keys(1)" +
 			"&_pragma=busy_timeout(5000)" +
+			// Negative cache_size is KiB rather than pages: 8 MB of page
+			// cache against a ~2 MB default. modernc has no mmap, so every
+			// cache miss is a real pread through the pure-Go VFS — profiling
+			// a 610-movie library spent 7.4s of a 45s load window in pread
+			// alone. 8 MB is a bounded, affordable trade at a 256 MB target.
+			"&_pragma=cache_size(-8000)" +
+			// The WAL is truncated back to this after a checkpoint. Without
+			// it the file only ever grows to its high-water mark and stays
+			// there, which on an install doing steady bookkeeping writes
+			// means a permanently large WAL for a transient burst.
+			"&_pragma=journal_size_limit(67108864)" +
 			"&_timezone=UTC"
 	} else {
 		// Named + shared-cache so every pool connection sees the same DB.
@@ -85,6 +97,15 @@ func Open(ctx context.Context, dsn string) (*ent.Client, error) {
 		if err := runMigrations(db); err != nil {
 			db.Close()
 			return nil, fmt.Errorf("apply migrations: %w", err)
+		}
+		// sqlite_stat1 is otherwise never populated, leaving the planner to
+		// guess on every multi-index and subquery decision. optimize ANALYZEs
+		// only the tables whose stats are missing or stale, which is why it is
+		// safe here: on a settled database it does nothing, and right after a
+		// migration that added indexes it does exactly the work needed.
+		// Failure is not fatal — bad statistics are slow, not wrong.
+		if _, err := db.ExecContext(ctx, "PRAGMA optimize"); err != nil {
+			slog.WarnContext(ctx, "PRAGMA optimize failed", "error", err)
 		}
 	}
 
