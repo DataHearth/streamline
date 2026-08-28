@@ -185,6 +185,7 @@ type Store interface {
 	FindMoviesByTMDBIDs(ctx context.Context, tmdbIDs []uint32) ([]*ent.Movie, error)
 	CountMovies(ctx context.Context) (int, error)
 	CountMoviesByStatus(ctx context.Context, status movie.Status) (int, error)
+	MovieStatusCounts(ctx context.Context) (map[movie.Status]int, error)
 	MovieCreateTimesSince(ctx context.Context, since time.Time) ([]time.Time, error)
 	ListMovies(ctx context.Context, offset, limit uint32) ([]*ent.Movie, error)
 	FilterMovies(

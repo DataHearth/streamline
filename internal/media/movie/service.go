@@ -362,48 +362,23 @@ func (s *Service) Counts(ctx context.Context) (Counts, error) {
 	ctx, span := tracer.Start(ctx, "movie.counts")
 	defer span.End()
 
-	count := func(label string, fn func() (int, error)) (int, error) {
-		n, err := fn()
-		if err != nil {
-			return 0, otelx.RecordSpanError(
-				span,
-				fmt.Errorf("count %s: %w", label, err),
-			)
-		}
-		return n, nil
-	}
-
-	total, err := count(
-		"movies",
-		func() (int, error) { return s.db.CountMovies(ctx) },
-	)
+	byStatus, err := s.db.MovieStatusCounts(ctx)
 	if err != nil {
-		return Counts{}, err
+		return Counts{}, otelx.RecordSpanError(
+			span,
+			fmt.Errorf("count movies by status: %w", err),
+		)
 	}
-	wanted, err := count("wanted", func() (int, error) {
-		return s.db.CountMoviesByStatus(ctx, entmovie.StatusWanted)
-	})
-	if err != nil {
-		return Counts{}, err
+	// Every movie holds exactly one status, so the group sum is COUNT(*) and
+	// no separate total query is needed.
+	total := 0
+	for _, n := range byStatus {
+		total += n
 	}
-	downloading, err := count("downloading", func() (int, error) {
-		return s.db.CountMoviesByStatus(ctx, entmovie.StatusDownloading)
-	})
-	if err != nil {
-		return Counts{}, err
-	}
-	available, err := count("available", func() (int, error) {
-		return s.db.CountMoviesByStatus(ctx, entmovie.StatusAvailable)
-	})
-	if err != nil {
-		return Counts{}, err
-	}
-	failed, err := count("failed", func() (int, error) {
-		return s.db.CountMoviesByStatus(ctx, entmovie.StatusFailed)
-	})
-	if err != nil {
-		return Counts{}, err
-	}
+	wanted := byStatus[entmovie.StatusWanted]
+	downloading := byStatus[entmovie.StatusDownloading]
+	available := byStatus[entmovie.StatusAvailable]
+	failed := byStatus[entmovie.StatusFailed]
 	span.SetAttributes(
 		attribute.Int("counts.total", total),
 		attribute.Int("counts.wanted", wanted),

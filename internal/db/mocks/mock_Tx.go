@@ -9328,6 +9328,68 @@ func (_c *MockTx_MovieHasMediaFile_Call) RunAndReturn(run func(ctx context.Conte
 	return _c
 }
 
+// MovieStatusCounts provides a mock function for the type MockTx
+func (_mock *MockTx) MovieStatusCounts(ctx context.Context) (map[movie.Status]int, error) {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for MovieStatusCounts")
+	}
+
+	var r0 map[movie.Status]int
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) (map[movie.Status]int, error)); ok {
+		return returnFunc(ctx)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context) map[movie.Status]int); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[movie.Status]int)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = returnFunc(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_MovieStatusCounts_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'MovieStatusCounts'
+type MockTx_MovieStatusCounts_Call struct {
+	*mock.Call
+}
+
+// MovieStatusCounts is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockTx_Expecter) MovieStatusCounts(ctx any) *MockTx_MovieStatusCounts_Call {
+	return &MockTx_MovieStatusCounts_Call{Call: _e.mock.On("MovieStatusCounts", ctx)}
+}
+
+func (_c *MockTx_MovieStatusCounts_Call) Run(run func(ctx context.Context)) *MockTx_MovieStatusCounts_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_MovieStatusCounts_Call) Return(statusToInt map[movie.Status]int, err error) *MockTx_MovieStatusCounts_Call {
+	_c.Call.Return(statusToInt, err)
+	return _c
+}
+
+func (_c *MockTx_MovieStatusCounts_Call) RunAndReturn(run func(ctx context.Context) (map[movie.Status]int, error)) *MockTx_MovieStatusCounts_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // PurgeExpiredSessions provides a mock function for the type MockTx
 func (_mock *MockTx) PurgeExpiredSessions(ctx context.Context, before time.Time) (int, error) {
 	ret := _mock.Called(ctx, before)

@@ -328,15 +328,13 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 
 	Describe("Counts", func() {
 		It("aggregates total + per-status counts", func() {
-			storeMock.CountMovies(mock.Anything).Return(10, nil).Once()
-			storeMock.CountMoviesByStatus(mock.Anything, entmovie.StatusWanted).
-				Return(4, nil).Once()
-			storeMock.CountMoviesByStatus(mock.Anything, entmovie.StatusDownloading).
-				Return(2, nil).Once()
-			storeMock.CountMoviesByStatus(mock.Anything, entmovie.StatusAvailable).
-				Return(3, nil).Once()
-			storeMock.CountMoviesByStatus(mock.Anything, entmovie.StatusFailed).
-				Return(1, nil).Once()
+			storeMock.MovieStatusCounts(mock.Anything).
+				Return(map[entmovie.Status]int{
+					entmovie.StatusWanted:      4,
+					entmovie.StatusDownloading: 2,
+					entmovie.StatusAvailable:   3,
+					entmovie.StatusFailed:      1,
+				}, nil).Once()
 			storeMock.MovieCreateTimesSince(mock.Anything, mock.Anything).
 				Return([]time.Time{}, nil).Once()
 
@@ -354,9 +352,12 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 		})
 
 		It("buckets recent additions into a rising trend ending at total", func() {
-			storeMock.CountMovies(mock.Anything).Return(3, nil).Once()
-			storeMock.CountMoviesByStatus(mock.Anything, mock.Anything).
-				Return(1, nil).Times(4)
+			storeMock.MovieStatusCounts(mock.Anything).
+				Return(map[entmovie.Status]int{
+					entmovie.StatusWanted:      1,
+					entmovie.StatusDownloading: 1,
+					entmovie.StatusAvailable:   1,
+				}, nil).Once()
 			// Two added today, one yesterday; no prior baseline.
 			now := time.Now().UTC()
 			storeMock.MovieCreateTimesSince(mock.Anything, mock.Anything).
@@ -381,54 +382,27 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 			// monotonic non-decreasing
 		})
 
-		It("wraps total count errors", func() {
-			storeMock.CountMovies(mock.Anything).Return(0, errors.New("boom")).Once()
-			_, err := svc.Counts(ctx)
-			Expect(err).To(MatchError(ContainSubstring("count movies")))
+		It("reports a status with no rows as zero rather than missing", func() {
+			storeMock.MovieStatusCounts(mock.Anything).
+				Return(map[entmovie.Status]int{
+					entmovie.StatusAvailable: 7,
+				}, nil).Once()
+			storeMock.MovieCreateTimesSince(mock.Anything, mock.Anything).
+				Return([]time.Time{}, nil).Once()
+
+			c, err := svc.Counts(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(c.Total).To(Equal(7))
+			Expect(c.Wanted).To(BeZero())
+			Expect(c.Downloading).To(BeZero())
+			Expect(c.Failed).To(BeZero())
 		})
 
-		It("wraps wanted count errors", func() {
-			storeMock.CountMovies(mock.Anything).Return(1, nil).Once()
-			storeMock.CountMoviesByStatus(mock.Anything, entmovie.StatusWanted).
-				Return(0, errors.New("boom")).Once()
+		It("wraps count errors", func() {
+			storeMock.MovieStatusCounts(mock.Anything).
+				Return(nil, errors.New("boom")).Once()
 			_, err := svc.Counts(ctx)
-			Expect(err).To(MatchError(ContainSubstring("count wanted")))
-		})
-
-		It("wraps downloading count errors", func() {
-			storeMock.CountMovies(mock.Anything).Return(1, nil).Once()
-			storeMock.CountMoviesByStatus(mock.Anything, entmovie.StatusWanted).
-				Return(0, nil).Once()
-			storeMock.CountMoviesByStatus(mock.Anything, entmovie.StatusDownloading).
-				Return(0, errors.New("boom")).Once()
-			_, err := svc.Counts(ctx)
-			Expect(err).To(MatchError(ContainSubstring("count downloading")))
-		})
-
-		It("wraps available count errors", func() {
-			storeMock.CountMovies(mock.Anything).Return(1, nil).Once()
-			storeMock.CountMoviesByStatus(mock.Anything, entmovie.StatusWanted).
-				Return(0, nil).Once()
-			storeMock.CountMoviesByStatus(mock.Anything, entmovie.StatusDownloading).
-				Return(0, nil).Once()
-			storeMock.CountMoviesByStatus(mock.Anything, entmovie.StatusAvailable).
-				Return(0, errors.New("boom")).Once()
-			_, err := svc.Counts(ctx)
-			Expect(err).To(MatchError(ContainSubstring("count available")))
-		})
-
-		It("wraps failed count errors", func() {
-			storeMock.CountMovies(mock.Anything).Return(1, nil).Once()
-			storeMock.CountMoviesByStatus(mock.Anything, entmovie.StatusWanted).
-				Return(0, nil).Once()
-			storeMock.CountMoviesByStatus(mock.Anything, entmovie.StatusDownloading).
-				Return(0, nil).Once()
-			storeMock.CountMoviesByStatus(mock.Anything, entmovie.StatusAvailable).
-				Return(0, nil).Once()
-			storeMock.CountMoviesByStatus(mock.Anything, entmovie.StatusFailed).
-				Return(0, errors.New("boom")).Once()
-			_, err := svc.Counts(ctx)
-			Expect(err).To(MatchError(ContainSubstring("count failed")))
+			Expect(err).To(MatchError(ContainSubstring("count movies by status")))
 		})
 	})
 

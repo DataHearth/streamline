@@ -72,17 +72,49 @@ func (db *DB) CountMoviesByStatus(
 	return db.client.Movie.Query().Where(movie.StatusEQ(status)).Count(ctx)
 }
 
+// MovieStatusCounts returns the number of movies in each status, in one
+// GROUP BY pass. The counts endpoint wants five numbers off the same table;
+// asking for them one COUNT at a time was five full scans per nav mount.
+// A status with no rows is absent from the map, which reads back as 0.
+func (db *DB) MovieStatusCounts(
+	ctx context.Context,
+) (map[movie.Status]int, error) {
+	var rows []struct {
+		Status movie.Status `json:"status"`
+		Count  int          `json:"count"`
+	}
+	err := db.client.Movie.Query().
+		GroupBy(movie.FieldStatus).
+		Aggregate(ent.Count()).
+		Scan(ctx, &rows)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[movie.Status]int, len(rows))
+	for _, r := range rows {
+		out[r.Status] = r.Count
+	}
+	return out, nil
+}
+
 // MovieCreateTimesSince returns the create_time of every movie added on or
 // after `since`, oldest first — used to bucket library growth into a trend.
+// Scanned into a one-field struct rather than .All(): a one-column Select
+// still builds a fully zeroed *ent.Movie per row, which is the whole struct
+// allocated to read one field. It cannot scan into []time.Time — ent reflects
+// time.Time as a row struct and looks for a create_time field on it.
 func (db *DB) MovieCreateTimesSince(
 	ctx context.Context,
 	since time.Time,
 ) ([]time.Time, error) {
-	rows, err := db.client.Movie.Query().
+	var rows []struct {
+		CreateTime time.Time `json:"create_time"`
+	}
+	err := db.client.Movie.Query().
 		Where(movie.CreateTimeGTE(since)).
 		Order(ent.Asc(movie.FieldCreateTime)).
 		Select(movie.FieldCreateTime).
-		All(ctx)
+		Scan(ctx, &rows)
 	if err != nil {
 		return nil, err
 	}

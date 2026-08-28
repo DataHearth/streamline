@@ -213,6 +213,51 @@ var _ = Describe("Movie filter + lookup", Label("integration", "db"), func() {
 		})
 	})
 
+	Describe("MovieStatusCounts", func() {
+		It("groups every status in one pass, omitting empty ones", func() {
+			seed("a", 2020, 962, entmovie.StatusWanted)
+			seed("b", 2020, 963, entmovie.StatusWanted)
+			seed("c", 2020, 964, entmovie.StatusAvailable)
+
+			got, err := store.MovieStatusCounts(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got).To(Equal(map[entmovie.Status]int{
+				entmovie.StatusWanted:    2,
+				entmovie.StatusAvailable: 1,
+			}))
+		})
+
+		It("returns an empty map for an empty library", func() {
+			got, err := store.MovieStatusCounts(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got).To(BeEmpty())
+		})
+	})
+
+	Describe("MovieCreateTimesSince", func() {
+		It("scans create_time straight into times, oldest first", func() {
+			seed("a", 2020, 965, entmovie.StatusWanted)
+			seed("b", 2020, 966, entmovie.StatusWanted)
+
+			got, err := store.MovieCreateTimesSince(
+				ctx, time.Now().Add(-time.Hour),
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got).To(HaveLen(2))
+			Expect(got[0]).To(BeTemporally("<=", got[1]))
+		})
+
+		It("excludes rows created before the window", func() {
+			seed("a", 2020, 967, entmovie.StatusWanted)
+
+			got, err := store.MovieCreateTimesSince(
+				ctx, time.Now().Add(time.Hour),
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got).To(BeEmpty())
+		})
+	})
+
 	Describe("ListMovies", func() {
 		It("returns a page newest-first", func() {
 			a := seed("a", 2020, 904, entmovie.StatusWanted)
