@@ -556,4 +556,55 @@ var _ = Describe("ResolveScoredProfile", Label("unit", "config"), func() {
 		_, ok := config.ResolveScoredProfile("anything")
 		Expect(ok).To(BeFalse())
 	})
+
+	It("returns the same assembled profile on a repeat call", func() {
+		// The formats slice is built once per config generation; identical
+		// backing arrays are the observable evidence nothing recompiled.
+		a, ok := config.ResolveScoredProfile("default")
+		Expect(ok).To(BeTrue())
+		b, ok := config.ResolveScoredProfile("default")
+		Expect(ok).To(BeTrue())
+		Expect(&b.Formats[0]).To(BeIdenticalTo(&a.Formats[0]))
+	})
+
+	It(
+		"serves a fallback resolution from the resolved name, not the requested one",
+		func() {
+			// Cache keys are the resolved entry's name, so an arbitrary stored
+			// profile string cannot grow the map — and must still resolve.
+			a, ok := config.ResolveScoredProfile("nope")
+			Expect(ok).To(BeTrue())
+			b, ok := config.ResolveScoredProfile("also-nope")
+			Expect(ok).To(BeTrue())
+			Expect(&b.Formats[0]).To(BeIdenticalTo(&a.Formats[0]))
+		},
+	)
+
+	It("rebuilds after a config commit so a hot edit takes effect", func() {
+		before, ok := config.ResolveScoredProfile("default")
+		Expect(ok).To(BeTrue())
+		Expect(before.Formats).To(HaveLen(2))
+
+		// Any commit of the singleton — which is what every mutate_* path
+		// ends in — must drop the cache, or a custom format edited through
+		// the API keeps scoring by its old pattern until a restart.
+		configtest.Setup(map[string]any{
+			"quality_profiles": []map[string]any{
+				{
+					"name":                 "default",
+					"preferred_resolution": "2160p",
+					"min_resolution":       "1080p",
+					"formats": []map[string]any{
+						{"name": "x265", "score": 10},
+					},
+				},
+			},
+			"quality_default_profile": "default",
+		})
+
+		after, ok := config.ResolveScoredProfile("default")
+		Expect(ok).To(BeTrue())
+		Expect(after.Formats).To(HaveLen(1))
+		Expect(after.MaxResolution).To(Equal("2160p"))
+	})
 })

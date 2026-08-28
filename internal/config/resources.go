@@ -1,6 +1,10 @@
 package config
 
-import "github.com/datahearth/streamline/internal/quality"
+import (
+	"sync"
+
+	"github.com/datahearth/streamline/internal/quality"
+)
 
 // MediaServerEntry is one media-server integration. Secrets (api_key) are
 // stored plaintext in YAML, consistent with auth.oidc[].client_secret.
@@ -151,11 +155,49 @@ func FindCustomFormat(name string) (CustomFormatEntry, bool) {
 // (name falls back to the configured default; ok is false only when no
 // profiles are configured at all) while assembling a quality.Profile with
 // its formats resolved and scored.
+// scoredProfiles memoises assembled profiles. Assembling one compiles every
+// user custom format's conditions through regexp.Compile, and the series
+// detail path resolves a profile per episode — a 200-episode show was ~2,000
+// compilations and megabytes of garbage for one response.
+//
+// Keyed by the *resolved* entry's name, not the requested one: an unknown name
+// falls back to the default, so keying on the request would let arbitrary
+// stored strings grow the map. Invalidated wholesale on any config commit,
+// which is what makes a hot-edited custom format take effect immediately.
+var scoredProfiles struct {
+	mu     sync.Mutex
+	gen    uint64
+	byName map[string]quality.Profile
+}
+
+// ResolveScoredProfile mirrors ResolveQualityProfile's fallback semantics
+// (name falls back to the configured default; ok is false only when no
+// profiles are configured at all) while assembling a quality.Profile with
+// its formats resolved and scored.
+//
+// The returned Profile is shared between callers and must not be mutated.
 func ResolveScoredProfile(name string) (quality.Profile, bool) {
 	e, ok := ResolveQualityProfile(name)
 	if !ok {
 		return quality.Profile{}, false
 	}
+
+	gen := Generation()
+	scoredProfiles.mu.Lock()
+	defer scoredProfiles.mu.Unlock()
+	if scoredProfiles.byName == nil || scoredProfiles.gen != gen {
+		scoredProfiles.byName = make(map[string]quality.Profile)
+		scoredProfiles.gen = gen
+	}
+	if p, hit := scoredProfiles.byName[e.Name]; hit {
+		return p, true
+	}
+	p := buildScoredProfile(e)
+	scoredProfiles.byName[e.Name] = p
+	return p, true
+}
+
+func buildScoredProfile(e QualityProfileEntry) quality.Profile {
 	p := quality.Profile{
 		MinResolution:     e.MinResolution,
 		MaxResolution:     e.PreferredResolution,
@@ -180,7 +222,7 @@ func ResolveScoredProfile(name string) (quality.Profile, bool) {
 			quality.ScoredFormat{Format: f, Score: fs.Score},
 		)
 	}
-	return p, true
+	return p
 }
 
 // ResolveQualityProfile returns the profile named by name, falling back to

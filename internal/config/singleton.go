@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/knadh/koanf/parsers/yaml"
@@ -83,6 +84,15 @@ var (
 	)
 )
 
+// generation counts commits of the singleton. A cache derived from config
+// content compares the value it was built at against this instead of diffing
+// what it holds; bump it from every place that assigns `current`, or such a
+// cache serves a value the config no longer says.
+var generation atomic.Uint64
+
+// Generation reports how many times the singleton has been committed.
+func Generation() uint64 { return generation.Load() }
+
 // Get returns a pointer to the current singleton config. Callers must treat
 // the returned value as read-only; use Update to mutate.
 func Get() *Config {
@@ -114,6 +124,7 @@ func store(c *Config, p string, k *koanf.Koanf, layer *envLayer) {
 		layer.file = koanf.New(".")
 	}
 	current = c
+	generation.Add(1)
 	cfgPath = p
 	rawK = k
 	envOverlay = layer
@@ -140,6 +151,7 @@ func ResetForTest() {
 	mu.Lock()
 	defer mu.Unlock()
 	current = nil
+	generation.Add(1)
 	cfgPath = ""
 	rawK = nil
 	envOverlay = nil
@@ -290,6 +302,7 @@ func Update(ctx context.Context, fn func(*Config) error) error {
 		return fmt.Errorf("write: %w", err)
 	}
 	current = cloned
+	generation.Add(1)
 	if len(withheld) > 0 {
 		slog.WarnContext(
 			ctx,
