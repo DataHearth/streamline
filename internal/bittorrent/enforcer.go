@@ -35,12 +35,7 @@ func (e *Engine) enforceOnce(ctx context.Context) {
 		// they are written here rather than under the seeding conditions.
 		stats := t.Stats()
 		uploaded := st.uploadedBase + stats.BytesWrittenData.Int64()
-		if err := e.store.SetTorrentSessionUploaded(
-			ctx, hash, uploaded,
-		); err != nil {
-			slog.WarnContext(ctx, "persisting uploaded bytes failed",
-				"info_hash", hash, "error", err)
-		}
+		e.persistUploaded(ctx, hash, st.uploadedPersisted, uploaded)
 		if t.Info() == nil || wantedMissing(t) != 0 {
 			continue
 		}
@@ -76,6 +71,38 @@ func (e *Engine) enforceOnce(ctx context.Context) {
 		}
 		slog.InfoContext(ctx, "seed limits reached, stopped seeding",
 			"info_hash", hash, "ratio", r)
+	}
+}
+
+// persistUploaded writes the lifetime upload total only when it has moved
+// since the last write. A torrent nobody leeches from uploads nothing, so the
+// steady state on an idle library is no write at all.
+func (e *Engine) persistUploaded(
+	ctx context.Context,
+	hash string,
+	lastPersisted, uploaded int64,
+) {
+	if uploaded == lastPersisted {
+		return
+	}
+	if err := e.store.SetTorrentSessionUploaded(ctx, hash, uploaded); err != nil {
+		slog.WarnContext(ctx, "persisting uploaded bytes failed",
+			"info_hash", hash, "error", err)
+		return
+	}
+	e.setState(hash, func(s *torrentState) { s.uploadedPersisted = uploaded })
+}
+
+// flushUploaded persists every torrent's upload total on the way down. Up to
+// a minute of upload is otherwise lost to a clean shutdown, which the tick
+// alone cannot cover now that it skips unchanged rows.
+func (e *Engine) flushUploaded(ctx context.Context) {
+	for _, t := range e.client.Torrents() {
+		hash := t.InfoHash().HexString()
+		st := e.getState(hash)
+		stats := t.Stats()
+		e.persistUploaded(ctx, hash, st.uploadedPersisted,
+			st.uploadedBase+stats.BytesWrittenData.Int64())
 	}
 }
 

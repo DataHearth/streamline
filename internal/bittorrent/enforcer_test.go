@@ -1,11 +1,16 @@
 package bittorrent
 
 import (
+	"context"
+	"errors"
 	"time"
 
 	"github.com/anacrolix/torrent/types"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/mock"
+
+	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 )
 
 var _ = Describe("shouldStopSeeding", Label("unit", "bittorrent"), func() {
@@ -31,6 +36,47 @@ var _ = Describe("shouldStopSeeding", Label("unit", "bittorrent"), func() {
 	It("ignores seed-time when completion is unknown", func() {
 		Expect(shouldStopSeeding(0, 0, time.Time{}, time.Hour, now)).To(BeFalse())
 	})
+})
+
+var _ = Describe("persistUploaded", Label("unit", "bittorrent"), func() {
+	const hash = "aabbccdd"
+
+	var (
+		store *dbmocks.MockStore
+		e     *Engine
+	)
+
+	BeforeEach(func() {
+		store = dbmocks.NewMockStore(GinkgoT())
+		e = &Engine{store: store, state: map[string]*torrentState{}}
+	})
+
+	It("writes and records the new total when it moved", func() {
+		store.EXPECT().
+			SetTorrentSessionUploaded(mock.Anything, hash, int64(4096)).
+			Return(nil).Once()
+
+		e.persistUploaded(context.Background(), hash, 0, 4096)
+		Expect(e.getState(hash).uploadedPersisted).To(Equal(int64(4096)))
+	})
+
+	It("writes nothing when the total is unchanged", func() {
+		// No EXPECT: the mock fails the spec on any unexpected call, which is
+		// the whole assertion — an idle torrent must cost no commit at all.
+		e.persistUploaded(context.Background(), hash, 4096, 4096)
+	})
+
+	It(
+		"leaves the recorded total alone when the write fails, so the next tick retries",
+		func() {
+			store.EXPECT().
+				SetTorrentSessionUploaded(mock.Anything, hash, int64(4096)).
+				Return(errors.New("boom")).Once()
+
+			e.persistUploaded(context.Background(), hash, 0, 4096)
+			Expect(e.getState(hash).uploadedPersisted).To(BeZero())
+		},
+	)
 })
 
 var _ = Describe("ratio", Label("unit", "bittorrent"), func() {

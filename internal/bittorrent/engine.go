@@ -46,6 +46,12 @@ type torrentState struct {
 	// starts at zero every boot, so ratio has to be read off base + counter or
 	// a restart silently forgives whatever the torrent already gave back.
 	uploadedBase int64
+	// uploadedPersisted is the last total written to TorrentSession. The
+	// minute tick would otherwise rewrite the row for every torrent whether
+	// or not it moved, and a torrent nobody leeches from uploads nothing —
+	// 20 idle torrents cost ~28,800 no-op commits a day through the single
+	// SQLite connection every API request also queues behind.
+	uploadedPersisted int64
 	// selectionMode and wantedFiles mirror the persisted file-selection
 	// columns, consulted by applyFilePriorities every time startWhenReady
 	// runs — including the metadata-resolve re-run after a restore, so a
@@ -413,6 +419,7 @@ func (e *Engine) Close() error {
 	e.wg.Wait()
 	// Snapshot before closing: client.Close empties the torrent set.
 	torrents := e.client.Torrents()
+	e.flushUploaded(context.Background())
 	errs := e.client.Close()
 	waitPieceMarks(torrents)
 	// A custom DefaultStorage is not closed by client.Close (only the
@@ -496,12 +503,13 @@ func (e *Engine) restore(ctx context.Context) error {
 			continue
 		}
 		st := &torrentState{
-			paused:        s.Paused,
-			seedStopped:   s.SeedStopped,
-			addedAt:       s.CreateTime,
-			uploadedBase:  s.Uploaded,
-			selectionMode: string(s.SelectionMode),
-			wantedFiles:   s.WantedFiles,
+			paused:            s.Paused,
+			seedStopped:       s.SeedStopped,
+			addedAt:           s.CreateTime,
+			uploadedBase:      s.Uploaded,
+			uploadedPersisted: s.Uploaded,
+			selectionMode:     string(s.SelectionMode),
+			wantedFiles:       s.WantedFiles,
 		}
 		if s.CompletedAt != nil {
 			st.completedAt = *s.CompletedAt
