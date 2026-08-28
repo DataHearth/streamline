@@ -10,6 +10,7 @@
 		open,
 		seriesId,
 		seasons,
+		initialScope = "series",
 		onClose,
 	}: {
 		open: boolean;
@@ -17,6 +18,9 @@
 		// Season numbers that have episodes, ascending. 0 = Specials. "series"
 		// scope searches the whole show (integral / multi-season packs).
 		seasons: { number: number; label: string }[];
+		// Scope the modal opens on, so a per-season entry point lands on that
+		// season instead of making the operator re-pick what they just clicked.
+		initialScope?: string;
 		onClose: () => void;
 	} = $props();
 
@@ -26,7 +30,7 @@
 	// Reset to defaults each time the modal reopens.
 	$effect(() => {
 		if (open) {
-			scope = "series";
+			scope = initialScope;
 			replaceExisting = false;
 		}
 	});

@@ -25,6 +25,7 @@
 		onMonitorSeason,
 		onMonitorEpisode,
 		onManualSearch,
+		onSearchSeason,
 		onDeleteFile,
 		onDeleteSeasonFiles,
 	}: {
@@ -36,6 +37,7 @@
 		onMonitorSeason: (s: Season) => void;
 		onMonitorEpisode: (ep: Episode) => void;
 		onManualSearch: (ep: Episode) => void;
+		onSearchSeason: (s: Season) => void;
 		onDeleteFile: (ep: Episode) => void;
 		// Season scope: wipes every file under it and reverts those episodes to
 		// wanted. The season keeps existing — this is not "delete the season".
@@ -223,6 +225,15 @@
 						fill={s.monitored ? "currentColor" : "none"}
 						aria-hidden="true"
 					/>
+				</button>
+
+				<button
+					type="button"
+					onclick={() => onSearchSeason(s)}
+					aria-label="Search releases for {seasonName(s)}"
+					class="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-border bg-bg-elevated text-fg-subtle transition active:bg-accent-soft active:text-accent-text"
+				>
+					<Search size={15} aria-hidden="true" />
 				</button>
 
 				<button

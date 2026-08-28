@@ -190,6 +190,13 @@
 	let manualOpen = $state(false);
 	let manualEpisode = $state<Episode | null>(null);
 	let packSearchOpen = $state(false);
+	// Scope the pack-search modal opens on: "series" from the header actions, a
+	// season number from the episodes tab's per-season button.
+	let packSearchScope = $state("series");
+	function openPackSearch(scope: string) {
+		packSearchScope = scope;
+		packSearchOpen = true;
+	}
 	// One delete flow drives episode / season / series scope: the target holds
 	// a label for the confirm copy plus the episodes whose files get removed.
 	let deleteFiles = $state<{ label: string; episodes: Episode[] } | null>(null);
@@ -534,7 +541,7 @@
 					<div class="flex items-center gap-2">
 						<button
 							type="button"
-							onclick={() => (packSearchOpen = true)}
+							onclick={() => openPackSearch("series")}
 							class="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-semibold text-fg-on-accent transition active:bg-accent-pressed"
 						>
 							<Search size={15} aria-hidden="true" />
@@ -609,7 +616,7 @@
 
 					<button
 						type="button"
-						onclick={() => (packSearchOpen = true)}
+						onclick={() => openPackSearch("series")}
 						class="inline-flex h-10 items-center gap-2 rounded-md bg-accent px-4 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover hover:shadow-glow"
 					>
 						<Search size={14} aria-hidden="true" />
@@ -800,6 +807,7 @@
 						onMonitorSeason={(s) => monitorSeason.mutate(s)}
 						onMonitorEpisode={(ep) => monitorEpisode.mutate(ep)}
 						onManualSearch={openManualSearch}
+						onSearchSeason={(s) => openPackSearch(String(s.number))}
 						onDeleteFile={(ep) => openDeleteFiles(episodeCode(ep), [ep])}
 						onDeleteSeasonFiles={(s) =>
 							openDeleteFiles(
@@ -881,6 +889,15 @@
 								</div>
 							</div>
 							<div class="flex items-center gap-2">
+								<button
+									type="button"
+									onclick={() =>
+										currentSeason && openPackSearch(String(currentSeason.number))}
+									class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-3 text-sm text-fg-muted transition hover:border-border-strong hover:text-fg"
+								>
+									<Search size={15} aria-hidden="true" />
+									{i18n.series_search_season()}
+								</button>
 								{#if seasonFileEpisodes.length > 0}
 									<button
 										type="button"
@@ -958,6 +975,7 @@
 		open={packSearchOpen}
 		seriesId={show.id}
 		seasons={searchSeasons}
+		initialScope={packSearchScope}
 		onClose={() => (packSearchOpen = false)}
 	/>
 	<Dialog
