@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"crypto/rand"
+	"database/sql"
 	"encoding/hex"
 	"fmt"
 	"log/slog"
@@ -11,6 +12,7 @@ import (
 	entsql "entgo.io/ent/dialect/sql"
 	"github.com/XSAM/otelsql"
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/internal/config"
 	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 
 	_ "modernc.org/sqlite"
@@ -60,14 +62,31 @@ func Open(ctx context.Context, dsn string) (*ent.Client, error) {
 			"&_timezone=UTC"
 	}
 
-	db, err := otelsql.Open("sqlite", connStr,
-		otelsql.WithAttributes(semconv.DBSystemNameSQLite),
-		otelsql.WithSpanOptions(otelsql.SpanOptions{
-			OmitConnResetSession: true,
-			OmitConnPrepare:      true,
-			OmitRows:             true,
-		}),
-	)
+	// otelsql wraps every driver call to record a span and a metric. Against
+	// the no-op instruments an unconfigured install gets, that work is still
+	// done in full — an attribute set allocated and sorted per call — and the
+	// scheduler alone issues thousands of statements an hour while idle. With
+	// no endpoint there is nothing downstream to receive any of it, so the
+	// raw driver is opened instead.
+	//
+	// Read once, here: observability.Setup makes the same call on the same key
+	// at boot, so a config change to otel.endpoint needs a restart either way.
+	instrumented := config.Get() != nil && config.Get().OTel.Endpoint != ""
+
+	var db *sql.DB
+	var err error
+	if instrumented {
+		db, err = otelsql.Open("sqlite", connStr,
+			otelsql.WithAttributes(semconv.DBSystemNameSQLite),
+			otelsql.WithSpanOptions(otelsql.SpanOptions{
+				OmitConnResetSession: true,
+				OmitConnPrepare:      true,
+				OmitRows:             true,
+			}),
+		)
+	} else {
+		db, err = sql.Open("sqlite", connStr)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -86,11 +105,13 @@ func Open(ctx context.Context, dsn string) (*ent.Client, error) {
 		db.SetMaxOpenConns(1)
 	}
 
-	if _, err := otelsql.RegisterDBStatsMetrics(db,
-		otelsql.WithAttributes(semconv.DBSystemNameSQLite),
-	); err != nil {
-		db.Close()
-		return nil, fmt.Errorf("register db stats metrics: %w", err)
+	if instrumented {
+		if _, err := otelsql.RegisterDBStatsMetrics(db,
+			otelsql.WithAttributes(semconv.DBSystemNameSQLite),
+		); err != nil {
+			db.Close()
+			return nil, fmt.Errorf("register db stats metrics: %w", err)
+		}
 	}
 
 	if !memory {
