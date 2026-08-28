@@ -295,11 +295,16 @@ func (s *Service) Counts(ctx context.Context) (Counts, error) {
 	if err != nil {
 		return Counts{}, otelx.RecordSpanError(span, err)
 	}
+	downloading, err := s.db.CountDownloadingEpisodes(ctx)
+	if err != nil {
+		return Counts{}, otelx.RecordSpanError(span, err)
+	}
 	return Counts{
-		Total:          total,
-		Continuing:     continuing,
-		Ended:          ended,
-		WantedEpisodes: wanted,
+		Total:               total,
+		Continuing:          continuing,
+		Ended:               ended,
+		WantedEpisodes:      wanted,
+		DownloadingEpisodes: downloading,
 	}, nil
 }
 
@@ -1149,8 +1154,9 @@ type FilterParams struct {
 }
 
 type Counts struct {
-	Total          int
-	Continuing     int
-	Ended          int
-	WantedEpisodes int
+	Total               int
+	Continuing          int
+	Ended               int
+	WantedEpisodes      int
+	DownloadingEpisodes int
 }

@@ -6,7 +6,12 @@
 	import ProgressBar from "../shared/ProgressBar.svelte";
 	import { cn } from "../../lib/cn";
 	import { formatBytes, formatSpeed } from "../../lib/format";
-	import type { MovieCounts, QueueEntry, DiskUsage } from "../../lib/types";
+	import type {
+		MovieCounts,
+		TVShowCounts,
+		QueueEntry,
+		DiskUsage,
+	} from "../../lib/types";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	const movieCount = (n: number) =>
@@ -21,14 +26,14 @@
 
 	let {
 		counts,
-		seriesTotal,
+		seriesCounts,
 		monitoredMovies,
 		monitoredSeries,
 		queue,
 		disks,
 	}: {
 		counts?: MovieCounts;
-		seriesTotal?: number;
+		seriesCounts?: TVShowCounts;
 		monitoredMovies?: number;
 		monitoredSeries?: number;
 		queue: QueueEntry[];
@@ -48,6 +53,12 @@
 
 	let speed = $derived(sumSpeed(queue));
 	let speedText = $derived(formatSpeed(speed));
+
+	// Movies *and* episodes: the tile read `counts.downloading` alone, which is
+	// movies-only, so a series-only queue showed "0" beside a live speed.
+	let downloading = $derived(
+		(counts?.downloading ?? 0) + (seriesCounts?.downloading_episodes ?? 0),
+	);
 
 	let probed = $derived(disks.filter((d) => d.usage));
 
@@ -174,8 +185,8 @@
 			: undefined,
 	);
 	let titleTotal = $derived(
-		counts || seriesTotal !== undefined
-			? (counts?.total ?? 0) + (seriesTotal ?? 0)
+		counts || seriesCounts
+			? (counts?.total ?? 0) + (seriesCounts?.total ?? 0)
 			: undefined,
 	);
 </script>
@@ -199,7 +210,7 @@
 		<div
 			class="mt-1.5 truncate font-mono text-[11px] text-fg-muted md:text-[11.5px]"
 		>
-			{movieCount(counts?.total ?? 0)} · {seriesCount(seriesTotal ?? 0)}
+			{movieCount(counts?.total ?? 0)} · {seriesCount(seriesCounts?.total ?? 0)}
 		</div>
 	</div>
 
@@ -209,7 +220,7 @@
 		<div
 			class="font-mono text-3xl font-bold tabular leading-none tracking-tight text-status-downloading"
 		>
-			{counts?.downloading ?? "—"}
+			{downloading}
 		</div>
 		<div
 			class="mt-2 flex items-center gap-1.5 text-[11px] uppercase tracking-[0.1em] text-fg-subtle"

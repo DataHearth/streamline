@@ -243,3 +243,16 @@ func (db *DB) CountWantedEpisodes(ctx context.Context) (int, error) {
 	}
 	return n, nil
 }
+
+// CountDownloadingEpisodes counts episodes with a grab in flight. Only
+// `downloading` — `importing` and `paused` are in flight too but neither is
+// moving bytes, and this feeds a tile that reads as "what is coming down now".
+func (db *DB) CountDownloadingEpisodes(ctx context.Context) (int, error) {
+	n, err := db.client.Episode.Query().
+		Where(episode.StatusEQ(episode.StatusDownloading)).
+		Count(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("count downloading episodes: %w", err)
+	}
+	return n, nil
+}

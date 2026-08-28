@@ -238,7 +238,7 @@
 	>
 		<StatStrip
 			counts={countsQuery.data}
-			seriesTotal={seriesCountsQuery.data?.total}
+			seriesCounts={seriesCountsQuery.data}
 			{monitoredMovies}
 			{monitoredSeries}
 			{queue}

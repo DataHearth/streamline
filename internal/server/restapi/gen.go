@@ -4115,10 +4115,11 @@ type TVShowType string
 
 // TVShowCounts defines model for TVShowCounts.
 type TVShowCounts struct {
-	Continuing     int `json:"continuing"`
-	Ended          int `json:"ended"`
-	Total          int `json:"total"`
-	WantedEpisodes int `json:"wanted_episodes"`
+	Continuing          int `json:"continuing"`
+	DownloadingEpisodes int `json:"downloading_episodes"`
+	Ended               int `json:"ended"`
+	Total               int `json:"total"`
+	WantedEpisodes      int `json:"wanted_episodes"`
 }
 
 // TorrentAddResult defines model for TorrentAddResult.

@@ -104,10 +104,11 @@ func (s *Server) GetSeriesCounts(
 	}
 	return GetSeriesCounts200JSONResponse{
 		SeriesCountsResponseJSONResponse: SeriesCountsResponseJSONResponse{
-			Total:          c.Total,
-			Continuing:     c.Continuing,
-			Ended:          c.Ended,
-			WantedEpisodes: c.WantedEpisodes,
+			Total:               c.Total,
+			Continuing:          c.Continuing,
+			Ended:               c.Ended,
+			WantedEpisodes:      c.WantedEpisodes,
+			DownloadingEpisodes: c.DownloadingEpisodes,
 		},
 	}, nil
 }

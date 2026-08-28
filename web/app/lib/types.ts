@@ -86,6 +86,7 @@ export type TVShowCounts = {
 	continuing: number;
 	ended: number;
 	wanted_episodes: number;
+	downloading_episodes: number;
 };
 
 export type SeriesLookupResult = {

@@ -5172,7 +5172,7 @@ components:
 
     TVShowCounts:
       type: object
-      required: [total, continuing, ended, wanted_episodes]
+      required: [total, continuing, ended, wanted_episodes, downloading_episodes]
       properties:
         total:
           type: integer
@@ -5181,6 +5181,8 @@ components:
         ended:
           type: integer
         wanted_episodes:
+          type: integer
+        downloading_episodes:
           type: integer
 
     AddSeriesRequest:

@@ -182,12 +182,14 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 		storeMk.CountTVShowsByStatus(mock.Anything, enttvshow.SeriesStatusEnded).
 			Return(1, nil).Once()
 		storeMk.CountWantedEpisodes(mock.Anything).Return(2, nil).Once()
+		storeMk.CountDownloadingEpisodes(mock.Anything).Return(3, nil).Once()
 		c, err := svc.Counts(ctx)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(c.Total).To(Equal(2))
 		Expect(c.Continuing).To(Equal(1))
 		Expect(c.Ended).To(Equal(1))
 		Expect(c.WantedEpisodes).To(Equal(2))
+		Expect(c.DownloadingEpisodes).To(Equal(3))
 	})
 
 	It("Update toggles show monitored and cascades to the tree", func() {

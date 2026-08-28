@@ -674,6 +674,9 @@ type Store interface {
 	ResetEpisodeGrabFailures(ctx context.Context, id uint32) error
 	// CountWantedEpisodes counts monitored, wanted episodes library-wide.
 	CountWantedEpisodes(ctx context.Context) (int, error)
+	// CountDownloadingEpisodes counts episodes with a grab in flight
+	// library-wide.
+	CountDownloadingEpisodes(ctx context.Context) (int, error)
 	ListEligibleEpisodesForSync(
 		ctx context.Context,
 		maxGrabFailures uint8,
