@@ -153,6 +153,16 @@ proxy_set_header Host              $host;
 
 Traefik and Caddy do this by default.
 
+**Streamline ignores `X-Forwarded-*` from an untrusted peer.** Sending the header is only half of it: `server.trusted_proxies` is empty by default, which trusts nobody, so the headers are dropped and the connection still looks like plain HTTP. List the proxy itself, as narrowly as you can:
+
+```yaml
+server:
+  trusted_proxies:
+    - 10.42.0.7/32   # the ingress/proxy pod or host, not the client subnet
+```
+
+Naming a range clients can also occupy (a pod CIDR, `192.168.0.0/16`) makes every host in it a proxy as far as this gate is concerned.
+
 **Clock skew.** Sessions are JWTs with time-based validity. A container clock badly out of sync will reject tokens the moment they're issued.
 
 ---
@@ -180,6 +190,10 @@ The redirect URI to register at your IdP is:
 ```
 
 using the exact `name` you gave the provider.
+
+**"Invalid parameter: redirect_uri" from the IdP.** The URI Streamline sends is built per-request from the scheme and host the request arrived on, so behind a TLS-terminating proxy it comes out as `http://…` — never matching the `https://…` you registered — unless `server.trusted_proxies` names that proxy. Same fix as [Login loops back to the login page](#login-loops-back-to-the-login-page). `STREAMLINE_PUBLIC_URL` does **not** override it; it only sets the base for invite links.
+
+Read the failing `redirect_uri` straight out of the query string on the IdP's error page to see exactly what was sent.
 
 ---
 

@@ -221,7 +221,14 @@ gateway:
   hostnames: [streamline.example.com]
 ```
 
-Make sure whatever's in front forwards `X-Forwarded-Proto`, or the `Secure` session cookie won't be returned and logins will loop.
+Make sure whatever's in front forwards `X-Forwarded-Proto`, **and** that `server.trusted_proxies` names it — the header is ignored from an untrusted peer, which loops logins (no `Secure` cookie) and makes OIDC send an `http://` `redirect_uri` your IdP will reject:
+
+```yaml
+config:
+  server:
+    trusted_proxies:
+      - 10.42.0.7/32   # the ingress controller pod, not the pod CIDR
+```
 
 **OIDC redirect URIs are derived per-request from the host you connect on**, so multi-domain SSO needs no configuration — just register each domain's `/auth/oidc/<name>/callback` at your IdP.
 
