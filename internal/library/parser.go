@@ -352,7 +352,16 @@ func extractTitle(filename string, r ParseResult, yearIdx int) string {
 
 	markers := []string{}
 	if r.Season > 0 {
-		markers = append(markers, seasonEpRe.FindString(filename))
+		// A pack has no SxxExx to cut at, so fall back to the bare season
+		// token. Without it the cut lands on the resolution instead and the
+		// season plus every language/edition tag between them is glued into
+		// the title — "Good Omens S03 MULTi VF2", which TitleMatches can never
+		// equal the library's "Good Omens".
+		m := seasonEpRe.FindString(filename)
+		if m == "" {
+			m = seasonPackRe.FindString(filename)
+		}
+		markers = append(markers, m)
 	}
 	if r.Resolution != "" {
 		markers = append(markers, r.Resolution)

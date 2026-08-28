@@ -539,9 +539,6 @@ func showKey(title string) string {
 // parser already extracted is trimmed back off.
 func releaseShowKey(p library.ParseResult) string {
 	k := showKey(p.Title)
-	if p.SeasonPack {
-		k = strings.TrimSuffix(k, fmt.Sprintf(" s%02d", p.Season))
-	}
 	if p.AbsoluteNumber > 0 {
 		k = strings.TrimSuffix(k, fmt.Sprintf(" %d", p.AbsoluteNumber))
 	}

@@ -302,6 +302,12 @@ var _ = Describe("Filename Parser", Label("unit", "library"), func() {
 			Expect(r.SeasonPack).To(BeTrue())
 		})
 
+		It("cuts a season pack's title at the season token", func() {
+			r := Parse("Good.Omens.S03.MULTi.VF2.1080p.WEB.H264-FW")
+			Expect(r.SeasonPack).To(BeTrue())
+			Expect(r.Title).To(Equal("Good Omens"))
+		})
+
 		It("detects anime absolute numbering", func() {
 			r := Parse("[Grp] Hokkaido Signal - 18 [1080p].mkv")
 			Expect(r.AbsoluteNumber).To(Equal(uint16(18)))
