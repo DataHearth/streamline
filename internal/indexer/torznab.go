@@ -5,6 +5,7 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -21,6 +22,33 @@ var (
 	ErrUnauthorized     = errors.New("indexer credentials rejected")
 	ErrUnexpectedStatus = errors.New("indexer returned unexpected status")
 	ErrBadResponse      = errors.New("indexer returned malformed response")
+
+	// ErrFeedUnsupported means the protocol has no forward-feed endpoint at
+	// all, which is a different thing from a feed that came back empty. The
+	// RSS scanners skip such an indexer instead of scanning nothing and
+	// reporting it as a result.
+	ErrFeedUnsupported = errors.New("indexer does not support a feed")
+)
+
+const (
+	// maxTorznabResponse bounds a single indexer response. Torznab has no
+	// documented ceiling and the endpoint is a third party, so without this
+	// the decoder reads for as long as the far side keeps writing. 8 MiB is
+	// far past any real result page — Prowlarr's 100-item default is tens of
+	// KB — so hitting it means something is wrong, not that a page was large.
+	maxTorznabResponse = 8 << 20
+
+	// torznabLimit is the page size asked for. Torznab defines no default:
+	// Prowlarr sends 100 of its own accord, a bare Torznab endpoint sends
+	// whatever it feels like, and "whatever it feels like" has been the whole
+	// catalogue. Asking explicitly makes the two behave the same.
+	torznabLimit = "100"
+
+	// maxMergedResults bounds what a fan-out across every indexer × title
+	// hands back. Applied after the seeder sort, so it keeps the best of the
+	// merged set; nothing below 200 seeders' worth of ranking is a release
+	// anyone scrolls to.
+	maxMergedResults = 200
 )
 
 type Torznab struct {
@@ -45,6 +73,7 @@ func (t *Torznab) Search(
 		"apikey": {t.apiKey},
 		"t":      {"search"},
 		"q":      {params.Query},
+		"limit":  {torznabLimit},
 	}
 	if params.IMDBID != "" {
 		q.Set("t", "movie")
@@ -90,6 +119,7 @@ func (t *Torznab) Feed(ctx context.Context) ([]SearchResult, error) {
 	q := url.Values{
 		"apikey": {t.apiKey},
 		"t":      {"search"},
+		"limit":  {torznabLimit},
 	}
 	var rss torznabRSS
 	if err := t.get(ctx, q, &rss); err != nil {
@@ -158,7 +188,13 @@ func (t *Torznab) get(ctx context.Context, params url.Values, out any) error {
 		return fmt.Errorf("%w: status %d", ErrUnexpectedStatus, resp.StatusCode)
 	}
 
-	if err := xml.NewDecoder(resp.Body).Decode(out); err != nil {
+	// An indexer is a third party we do not control, and the decoder streams
+	// whatever it is fed straight into Go structs. Without a ceiling a
+	// misbehaving or hostile endpoint can hold the process at its own chosen
+	// size — the cap turns that into a bounded read that fails cleanly.
+	if err := xml.NewDecoder(
+		io.LimitReader(resp.Body, maxTorznabResponse),
+	).Decode(out); err != nil {
 		return fmt.Errorf("%w: %w", ErrBadResponse, err)
 	}
 	return nil

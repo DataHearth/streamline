@@ -2,6 +2,7 @@ package indexer
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"sort"
@@ -509,7 +510,29 @@ func (i *indexer) searchAll(
 		return results[i].Seeders > results[j].Seeders
 	})
 
-	span.SetAttributes(attribute.Int("results.total", len(results)))
+	// Truncated after the sort, so what survives is the best of the merged
+	// set rather than whichever indexer answered first. The fan-out is
+	// indexers × titles, each already capped at torznabLimit, so a handful of
+	// indexers can still merge into thousands of rows — every one of which is
+	// then scored, converted and serialized for a UI showing a page of them.
+	dropped := 0
+	if len(results) > maxMergedResults {
+		dropped = len(results) - maxMergedResults
+		results = results[:maxMergedResults]
+	}
+
+	span.SetAttributes(
+		attribute.Int("results.total", len(results)),
+		attribute.Int("results.dropped", dropped),
+	)
+	if dropped > 0 {
+		// Said out loud: a silent cap reads as "this is everything there is".
+		slog.InfoContext(ctx,
+			"indexer results truncated to the highest-seeded",
+			"kept", len(results),
+			"dropped", dropped,
+		)
+	}
 	slog.DebugContext(ctx,
 		"indexer search complete",
 		"titles.count", len(titles),
@@ -540,6 +563,15 @@ func (i *indexer) Feed(
 		baseURL,
 		config.SecretValue(row.APIKey, row.APIKeyFile),
 	).Feed(ctx)
+	if errors.Is(err, ErrFeedUnsupported) {
+		// Not a failure and not a result: the protocol has no feed. Reported
+		// as an empty scan so callers stay unchanged, at debug so an install
+		// running Prowlarr does not log two lines per indexer per tick
+		// forever.
+		slog.DebugContext(ctx, "indexer has no feed endpoint, skipping",
+			"indexer.name", row.Name)
+		return nil, nil
+	}
 	if err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
