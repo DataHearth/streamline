@@ -282,6 +282,7 @@ func newClientConfig(
 	// in an announce list are skipped.
 	cc.DisableWebtorrent = true
 	cc.Slogger = engineSlogger()
+	applyMemoryBounds(cc)
 	// cc.ListenPort is deliberately left alone. It only reaches
 	// listenAllWithListenFunc, whose one remaining network is served by the
 	// ListenPacket closure below — which hands back a conn newPeerSockets
