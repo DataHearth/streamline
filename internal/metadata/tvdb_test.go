@@ -309,6 +309,76 @@ var _ = Describe("TVDB search fallback", Label("unit", "metadata"), func() {
 	})
 })
 
+var _ = Describe("TVDB season translations", Label("unit", "metadata"), func() {
+	var (
+		client *TVDB
+		ctx    context.Context
+		asked  []string
+	)
+
+	BeforeEach(func() {
+		ctx = context.Background()
+		asked = nil
+		mux := http.NewServeMux()
+		mux.HandleFunc("/login", func(w http.ResponseWriter, _ *http.Request) {
+			_, _ = w.Write([]byte(`{"data":{"token":"t"}}`))
+		})
+		// 11 has a translated name, 22 a record carrying only an overview, 33
+		// none at all — the three answers TVDB really gives.
+		mux.HandleFunc("/seasons/11/translations/fra",
+			func(w http.ResponseWriter, r *http.Request) {
+				asked = append(asked, r.URL.Path)
+				_, _ = w.Write([]byte(
+					`{"data":{"name":"Entraînement des Piliers","language":"fra"}}`,
+				))
+			})
+		mux.HandleFunc("/seasons/22/translations/fra",
+			func(w http.ResponseWriter, r *http.Request) {
+				asked = append(asked, r.URL.Path)
+				_, _ = w.Write([]byte(
+					`{"data":{"name":null,"overview":"x","language":"fra"}}`,
+				))
+			})
+		mux.HandleFunc("/seasons/33/translations/fra",
+			func(w http.ResponseWriter, r *http.Request) {
+				asked = append(asked, r.URL.Path)
+				w.WriteHeader(http.StatusNotFound)
+				_, _ = w.Write([]byte(`{"status":"failure","data":null}`))
+			})
+		srv := httptest.NewServer(mux)
+		DeferCleanup(srv.Close)
+
+		client = NewTVDB()
+		client.BaseURL = srv.URL
+		client.apiKey = "x"
+		client.language = "fra"
+	})
+
+	It("translates what it can and keeps the original otherwise", func() {
+		seasons := []SeasonInfo{
+			{Number: 5, Name: "柱稽古編"},
+			{Number: 6, Name: "無限城編"},
+			{Number: 7, Name: "Arc 7"},
+		}
+		client.translateSeasons(ctx, seasons, []uint64{11, 22, 33})
+
+		Expect(seasons[0].Name).To(Equal("Entraînement des Piliers"))
+		// A null name is an overview-only translation, not a name to adopt.
+		Expect(seasons[1].Name).To(Equal("無限城編"))
+		// A 404 must not fail the refresh, nor blank the name.
+		Expect(seasons[2].Name).To(Equal("Arc 7"))
+		Expect(asked).To(HaveLen(3))
+	})
+
+	It("skips a season TVDB gave no id for", func() {
+		seasons := []SeasonInfo{{Number: 5, Name: "柱稽古編"}}
+		client.translateSeasons(ctx, seasons, []uint64{0})
+
+		Expect(seasons[0].Name).To(Equal("柱稽古編"))
+		Expect(asked).To(BeEmpty())
+	})
+})
+
 var _ = Describe("TVDB hidden base_url override", Label("unit", "metadata"), func() {
 	It("honors metadata.tvdb.base_url from the hidden config key", func() {
 		configtest.Setup(map[string]any{

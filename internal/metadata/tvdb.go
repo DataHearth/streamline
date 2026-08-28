@@ -349,6 +349,7 @@ func (t *TVDB) GetSeries(ctx context.Context, tvdbID uint32) (*TVDetails, error)
 				Name string `json:"name"`
 			} `json:"latestNetwork"`
 			Seasons []struct {
+				ID     uint64 `json:"id"`
 				Number uint16 `json:"number"`
 				Name   string `json:"name"`
 				Type   struct {
@@ -408,9 +409,11 @@ func (t *TVDB) GetSeries(ctx context.Context, tvdbID uint32) (*TVDetails, error)
 	if inferAnime(d.Genres, ext.Data.OriginalLanguage, ext.Data.OriginalCountry) {
 		d.Type = SeriesAnime
 	}
+	seasonIDs := make([]uint64, 0, len(ext.Data.Seasons))
 	for _, s := range ext.Data.Seasons {
 		if s.Type.Type == "official" || s.Type.Type == "" {
 			d.Seasons = append(d.Seasons, SeasonInfo{Number: s.Number, Name: s.Name})
+			seasonIDs = append(seasonIDs, s.ID)
 		}
 	}
 
@@ -429,6 +432,7 @@ func (t *TVDB) GetSeries(ctx context.Context, tvdbID uint32) (*TVDetails, error)
 				break
 			}
 		}
+		t.translateSeasons(ctx, d.Seasons, seasonIDs)
 	}
 
 	// Episodes (paginated). The /{lang} variant returns translated episode
@@ -547,6 +551,44 @@ func (t *TVDB) GetSeriesCast(
 		}
 	}
 	return cast, nil
+}
+
+// translateSeasons replaces each season's name with the configured language's,
+// in place. seasons and ids are index-aligned.
+//
+// It costs one request per season because TVDB offers no bulk form: the
+// extended series record carries only the original-language season name, and
+// its ?meta=translations covers the series, not its seasons. Left untranslated,
+// an anime's arc names stay Japanese on a French install while everything
+// around them is translated.
+//
+// A miss is ordinary, not exceptional, and there are two kinds: TVDB answers
+// 404 for a language it holds no record for, and a record it does hold can
+// still carry a null name (an overview-only translation). Both keep the
+// original name, which is why the error is dropped rather than surfaced — one
+// season without a translation must not fail a metadata refresh.
+func (t *TVDB) translateSeasons(
+	ctx context.Context,
+	seasons []SeasonInfo,
+	ids []uint64,
+) {
+	for i, id := range ids {
+		if i >= len(seasons) || id == 0 {
+			continue
+		}
+		var tr struct {
+			Data struct {
+				Name string `json:"name"`
+			} `json:"data"`
+		}
+		path := fmt.Sprintf("/seasons/%d/translations/%s", id, t.language)
+		if err := t.get(ctx, path, &tr); err != nil {
+			continue
+		}
+		if tr.Data.Name != "" {
+			seasons[i].Name = tr.Data.Name
+		}
+	}
 }
 
 func normalizeStatus(s string) string {
