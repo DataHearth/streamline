@@ -30,6 +30,11 @@ const (
 // in the same client.
 const managedCategory = "streamline"
 
+// maxQBResponse bounds an add reply. The daemon answers with a bare hash or a
+// small JSON envelope, so this only ever trips on something that is not
+// qBittorrent.
+const maxQBResponse = 1 << 20
+
 type QBittorrent struct {
 	baseURL string
 	mode    qbAuthMode
@@ -328,7 +333,10 @@ func (q *QBittorrent) AddTorrent(
 		)
 	}
 
-	body, _ := io.ReadAll(resp.Body)
+	// The reply is a hash or a short JSON envelope; anything approaching the
+	// cap is a misconfigured host answering with something else entirely
+	// (a proxy error page, the wrong service), which is not worth buffering.
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, maxQBResponse))
 	hash := ""
 	if strings.Contains(resp.Header.Get("Content-Type"), "application/json") {
 		var env qbAddEnvelope
