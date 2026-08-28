@@ -78,8 +78,12 @@ func (p *Prowlarr) Search(
 // query — so there is no cross-indexer latest-releases feed to forward.
 // rss-sync gets nothing for a Prowlarr entry, which is correct: RSS monitoring
 // belongs on the individual trackers.
+// Feed reports that Prowlarr has no forward-feed endpoint. It used to return
+// an empty result, which is indistinguishable from "the feed was empty this
+// tick" — so every 15-minute scan logged a fetch of 0 items for an indexer
+// that was never going to produce any.
 func (p *Prowlarr) Feed(context.Context) ([]SearchResult, error) {
-	return nil, nil
+	return nil, ErrFeedUnsupported
 }
 
 func (p *Prowlarr) TestConnection(ctx context.Context) error {

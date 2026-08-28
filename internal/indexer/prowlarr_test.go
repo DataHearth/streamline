@@ -76,9 +76,11 @@ var _ = Describe("Prowlarr Client", Label("unit", "indexers"), func() {
 	})
 
 	Describe("Feed", func() {
-		It("returns no items (Prowlarr has no aggregate feed)", func() {
+		It("reports that it has no feed rather than an empty one", func() {
+			// The distinction is what lets the scanners skip Prowlarr silently
+			// instead of logging a 0-item fetch every tick, forever.
 			res, err := NewProwlarr("http://unused", "k").Feed(context.Background())
-			Expect(err).NotTo(HaveOccurred())
+			Expect(err).To(MatchError(ErrFeedUnsupported))
 			Expect(res).To(BeEmpty())
 		})
 	})
