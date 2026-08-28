@@ -392,15 +392,18 @@ func filesHaveMissingBytes(t *antorrent.Torrent, indexes []int) bool {
 // torrent_listen_port from the environment, which is where the value comes
 // from in the first place.
 //
-// The sockets move immediately, but announceRequest reads the port live per
-// request, so trackers only learn the new port at the *next* scheduled
-// announce. There is no public forced-announce for regular trackers in this
-// version of anacrolix (ModifyTrackers used to force one; it no longer does
-// — torrentRegularTrackerAnnouncer.Stop is now a no-op, and both
-// modifyTrackers and the client-level dispatcher key their state by
-// infohash, so restarting an announcer that's already running is a no-op
-// too). On a long tracker interval this leaves a real window where the
-// tracker still advertises the old port and inbound connections to it fail.
+// The sockets move immediately, and every torrent then re-announces to DHT —
+// AnnounceToDht is a real forced announce and reads the peer port live, so it
+// carries the new one. Trackers do not get that treatment: announceRequest
+// also reads the port live per request, but they only learn it at the *next*
+// scheduled announce. There is no public forced-announce for regular trackers
+// in this version of anacrolix (ModifyTrackers used to force one; it no
+// longer does — torrentRegularTrackerAnnouncer.Stop is now a no-op, and both
+// modifyTrackers and the client-level dispatcher key their state by infohash,
+// so restarting an announcer that's already running is a no-op too). On a
+// long tracker interval this leaves a real window where the tracker still
+// advertises the old port and inbound connections to it fail; DHT is the half
+// of peer discovery that can be refreshed at once.
 func (e *Engine) SetListenPort(ctx context.Context, port uint16) error {
 	ctx, span := tracer.Start(ctx, "bittorrent.set_listen_port")
 	defer span.End()
@@ -412,6 +415,26 @@ func (e *Engine) SetListenPort(ctx context.Context, port uint16) error {
 		)
 	}
 
+	moved, err := e.movePeerSockets(ctx, port)
+	if err != nil {
+		return otelx.RecordSpanError(span, err)
+	}
+	if !moved {
+		return nil
+	}
+
+	slog.InfoContext(ctx, "torrent listen port moved", "port", port)
+	e.announceToDHT(ctx)
+	return nil
+}
+
+// movePeerSockets rebinds whichever of the two peer sockets is not already on
+// port and reports whether anything moved.
+//
+// It is split out of SetListenPort so the DHT announce that follows runs with
+// e.mu released: AnnounceToDht takes the anacrolix client lock, and this file
+// otherwise never holds e.mu across a call into anacrolix.
+func (e *Engine) movePeerSockets(ctx context.Context, port uint16) (bool, error) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
@@ -420,21 +443,21 @@ func (e *Engine) SetListenPort(ctx context.Context, port uint16) error {
 	// built for teardown/tests has no client at all.
 	listenerPortRaw, ok := portOf(e.listener.Addr())
 	if !ok {
-		return otelx.RecordSpanError(span, fmt.Errorf(
+		return false, fmt.Errorf(
 			"tcp listener address %v is not a TCP/UDP address", e.listener.Addr(),
-		))
+		)
 	}
 	packetConnPortRaw, ok := portOf(e.packetConn.LocalAddr())
 	if !ok {
-		return otelx.RecordSpanError(span, fmt.Errorf(
+		return false, fmt.Errorf(
 			"packet conn address %v is not a TCP/UDP address",
 			e.packetConn.LocalAddr(),
-		))
+		)
 	}
 	listenerPort := uint16(listenerPortRaw)
 	packetConnPort := uint16(packetConnPortRaw)
 	if listenerPort == port && packetConnPort == port {
-		return nil
+		return false, nil
 	}
 
 	// Rebinding a socket already on port would open a second listener on an
@@ -443,10 +466,7 @@ func (e *Engine) SetListenPort(ctx context.Context, port uint16) error {
 	// rather than the pair moving as an all-or-nothing unit.
 	if listenerPort != port {
 		if err := e.listener.rebind(port); err != nil {
-			return otelx.RecordSpanError(
-				span,
-				fmt.Errorf("rebind tcp listener: %w", err),
-			)
+			return false, fmt.Errorf("rebind tcp listener: %w", err)
 		}
 	}
 	if packetConnPort != port {
@@ -455,14 +475,20 @@ func (e *Engine) SetListenPort(ctx context.Context, port uint16) error {
 			// the packet conn didn't: announces still carry packetConnPort —
 			// that's the port every tracker learns, not the listener's (see
 			// newPeerSockets) — while inbound TCP now only answers on the new
-			// port, so peers can reach neither. This does not "converge on
-			// retry": the only caller is gluetun's
+			// port, so peers can reach neither.
+			//
+			// Calling this again *would* converge, because each socket is
+			// guarded on its own port and the one that already moved is
+			// skipped. Nothing does: the only caller is gluetun's
 			// VPN_PORT_FORWARDING_UP_COMMAND, fired once per rotation with no
-			// retry of its own, so the mismatch persists until the next
-			// rotation or a restart.
+			// retry of its own, so without a human the mismatch persists until
+			// the next rotation or a restart. Hence CRITICAL.
+			//
 			// listener.Addr() is re-read rather than reusing listenerPort:
 			// the listener may have just been rebound above, and this must
-			// report where it actually ended up.
+			// report where it actually ended up. Its type was already
+			// validated at the top of this function and a rebind cannot change
+			// it, so the discarded bool cannot be false here.
 			currentTCPPort, _ := portOf(e.listener.Addr())
 			//nolint:sloglint // LogAttrs takes slog.Attr by API design
 			slog.LogAttrs(
@@ -472,15 +498,44 @@ func (e *Engine) SetListenPort(ctx context.Context, port uint16) error {
 				slog.Int("tcp_port", currentTCPPort),
 				slog.Int("packet_conn_port", int(packetConnPort)),
 			)
-			return otelx.RecordSpanError(
-				span,
-				fmt.Errorf("rebind packet conn: %w", err),
-			)
+			return false, fmt.Errorf("rebind packet conn: %w", err)
 		}
 	}
 
-	slog.InfoContext(ctx, "torrent listen port moved", "port", port)
-	return nil
+	return true, nil
+}
+
+// announceToDHT re-announces every torrent on every DHT server the client
+// holds. Unlike the tracker side this is a real forced announce, and
+// AnnounceToDht reads the peer port live (Client.incomingPeerPort) at announce
+// time, so one issued after a rebind carries the new port with no extra
+// plumbing.
+//
+// Failures are logged and skipped: a torrent that cannot announce is one
+// torrent findable by fewer peers until its next scheduled announce, not a
+// reason to fail a port move that already landed.
+func (e *Engine) announceToDHT(ctx context.Context) {
+	// A bare *Engine{} — the shape SetListenPort's own specs build — has no
+	// client.
+	if e.client == nil {
+		return
+	}
+	// entry.DisableDHT sets cc.NoDHT, which leaves no servers at all. That is
+	// a configured no-op, not a failure worth logging on every rotation.
+	servers := e.client.DhtServers()
+	if len(servers) == 0 {
+		return
+	}
+	for _, t := range e.client.Torrents() {
+		for _, s := range servers {
+			// The discarded stop func force-ends an announce early; this one
+			// is meant to run to completion on its own goroutine.
+			if _, _, err := t.AnnounceToDht(s); err != nil {
+				slog.WarnContext(ctx, "dht announce after port move failed",
+					"torrent", t.Name(), "error", err)
+			}
+		}
+	}
 }
 
 // portOf reads the port off a net.Addr as returned by a rebindableListener

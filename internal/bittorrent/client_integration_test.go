@@ -120,10 +120,11 @@ func newSeederOfSize(dir string, size int, pieceLen int64) ([]byte, int) {
 // newTCPOnlySeeder is newSeederOfSize with uTP turned off, so the only way a
 // peer can reach it is by dialing TCP. DisableUTP alone leaves the udp
 // networks listening for DHT; NoDHT is already set above, and together the
-// pair drops listenNetworks() to tcp4 only (client.go's listenOnNetwork).
-// LocalPort() still resolves correctly with no uTP socket present — it
-// returns the first non-zero port across cl.listeners, which is then just
-// the TCP one.
+// pair drops listenNetworks() to tcp4 and tcp6 (client.go's listenOnNetwork)
+// — this seeder does not set DisableIPv6, so both survive, and only the udp
+// pair is gone. LocalPort() still resolves correctly with no uTP socket
+// present: it returns the first non-zero port across cl.listeners, which is
+// then a TCP one.
 func newTCPOnlySeeder(dir string) ([]byte, int) {
 	GinkgoHelper()
 	content := make([]byte, 64<<10)
@@ -654,7 +655,7 @@ func newUnboundEngineNoPortForwarding(
 	Expect(err).NotTo(HaveOccurred())
 	st := newDrainingStorage(storage.NewFileWithCompletion(entry.DownloadDir, pc))
 
-	packetConn, listener, err := newPeerSockets(nil, entry.ListenPort)
+	packetConn, listener, err := newPeerSockets(ctx, nil, entry.ListenPort)
 	Expect(err).NotTo(HaveOccurred())
 
 	cc := newClientConfig(entry, nil, st, packetConn)
@@ -707,6 +708,37 @@ func newUnboundEngineNoPortForwarding(
 // loopback assumption is made here) or about dialer ordering when both TCP
 // and uTP peers are reachable — only that TCP dialing exists at all on the
 // unbound path.
+// A port move ends in a forced DHT re-announce, which is the only half of
+// peer discovery that can be refreshed at once — a tracker only learns the new
+// port at its next scheduled announce. Every engine in this suite runs with
+// disable_dht, so this pins the other guard: cc.NoDHT leaves DhtServers()
+// empty, and the announce has to read that as a configured no-op rather than
+// iterating torrents against nothing.
+var _ = Describe(
+	"Engine listen port move with DHT disabled",
+	Label("integration", "bittorrent"),
+	func() {
+		It("moves the sockets and announces nowhere", func() {
+			ctx := context.Background()
+			tmp := GinkgoT().TempDir()
+			dlDir := filepath.Join(tmp, "dl")
+			Expect(os.MkdirAll(dlDir, 0o755)).To(Succeed())
+
+			entClient := dbtest.SetupTestDB(ctx)
+			DeferCleanup(entClient.Close)
+
+			engine, _ := newEngine(ctx, dlDir, db.New(entClient))
+			Expect(engine.client.DhtServers()).To(BeEmpty())
+
+			port := reserveListenPort()
+			Expect(engine.SetListenPort(ctx, port)).To(Succeed())
+			Expect(engine.listener.Addr().(*net.TCPAddr).Port).To(Equal(int(port)))
+			Expect(engine.packetConn.LocalAddr().(*net.UDPAddr).Port).
+				To(Equal(int(port)))
+		})
+	},
+)
+
 var _ = Describe(
 	"Engine unbound TCP dialing",
 	Label("integration", "bittorrent"),

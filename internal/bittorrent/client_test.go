@@ -116,4 +116,13 @@ var _ = Describe("Engine.SetListenPort", Label("unit", "bittorrent"), func() {
 		e := newEngine()
 		Expect(e.SetListenPort(context.Background(), 0)).NotTo(Succeed())
 	})
+
+	// Every spec above already depends on this: a successful move ends in the
+	// DHT announce, and these engines carry no anacrolix client at all. Named
+	// so a regression reads as the guard it is rather than as an unrelated
+	// panic in "moves both sockets to the new port".
+	It("announces to no DHT server when the engine has no client", func() {
+		e := newEngine()
+		Expect(func() { e.announceToDHT(context.Background()) }).NotTo(Panic())
+	})
 })

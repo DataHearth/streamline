@@ -205,8 +205,14 @@ var _ = Describe("newClientConfig", Label("unit", "bittorrent"), func() {
 		}
 		cc := newClientConfig(bound, nil, nil, nil)
 		Expect(cc.NoDHT).To(BeTrue())
-		Expect(cc.ListenPort).To(Equal(12345))
 		Expect(cc.DataDir).To(Equal(bound.DownloadDir))
+		// entry.ListenPort is newPeerSockets' input, not anacrolix's: the
+		// engine binds both peer sockets itself and hands the packet conn back
+		// through ListenPacket, which ignores the address it is asked for.
+		// Asserting the entry's port here read as though cc.ListenPort still
+		// decided something — it is left at the library default untouched.
+		Expect(cc.ListenPort).
+			To(Equal(antorrent.NewDefaultClientConfig().ListenPort))
 	})
 })
 
@@ -312,7 +318,11 @@ var _ = Describe(
 
 var _ = Describe("newPeerSockets", Label("unit", "bittorrent"), func() {
 	It("binds both sockets to the same port when the requested port is 0", func() {
-		pc, ln, err := newPeerSockets(net.IPv4(127, 0, 0, 1), 0)
+		pc, ln, err := newPeerSockets(
+			context.Background(),
+			net.IPv4(127, 0, 0, 1),
+			0,
+		)
 		Expect(err).NotTo(HaveOccurred())
 		DeferCleanup(func() {
 			Expect(pc.Close()).To(Succeed())
@@ -326,7 +336,11 @@ var _ = Describe("newPeerSockets", Label("unit", "bittorrent"), func() {
 
 	It("binds both sockets to the requested port directly", func() {
 		port := reserveListenPort()
-		pc, ln, err := newPeerSockets(net.IPv4(127, 0, 0, 1), port)
+		pc, ln, err := newPeerSockets(
+			context.Background(),
+			net.IPv4(127, 0, 0, 1),
+			port,
+		)
 		Expect(err).NotTo(HaveOccurred())
 		DeferCleanup(func() {
 			Expect(pc.Close()).To(Succeed())

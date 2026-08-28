@@ -79,6 +79,7 @@ Behaviour worth knowing:
   ```
 
   An API key works here even though keys are otherwise locked out of parts of the API — that restriction is scoped to the identity band (`/auth/*`, `/users`), and this endpoint isn't on it. The move is **not persisted**: it only changes what the running process is doing right now, so a restart re-reads `torrent_listen_port`/`STREAMLINE_TORRENT_LISTEN_PORT` from config as before. Keep the sidecar's `UP_COMMAND` as the source of truth for the *current* port; don't expect the config file to reflect it.
+- **Peers find you again at different speeds.** A completed move immediately re-announces every torrent to the DHT, which carries the new port straight away. Trackers are not re-announced — there is no way to force that in the torrent library Streamline pins — so a tracker keeps advertising the old port until its next scheduled announce, which on a private tracker can be half an hour. Nothing is lost in the meantime; inbound connections to the old port simply fail until the announce catches up.
 - **It is validated like any port.** A value outside 1–65535 fails config validation at boot rather than being silently ignored.
 - **It applies to the built-in engine only.** External clients (qBittorrent, Transmission, Deluge) manage their own listening port; Streamline never sets it for them.
 

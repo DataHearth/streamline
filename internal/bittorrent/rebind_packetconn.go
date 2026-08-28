@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"net"
 	"sync"
 	"time"
@@ -43,6 +42,9 @@ func newRebindablePacketConn(ip net.IP, port uint16) (*rebindablePacketConn, err
 // socket is retired, so a failure leaves the engine reachable on the port it
 // already had, and the swap happens before the close so a reader woken by that
 // close can see the replacement.
+//
+// Concurrent rebinds are serialised by Engine.mu, which the only caller
+// (Engine.movePeerSockets) holds across both sockets — not by anything here.
 func (c *rebindablePacketConn) rebind(port uint16) error {
 	next, err := net.ListenUDP("udp", &net.UDPAddr{IP: c.ip, Port: int(port)})
 	if err != nil {
@@ -51,28 +53,14 @@ func (c *rebindablePacketConn) rebind(port uint16) error {
 	c.mu.Lock()
 	if c.closed {
 		c.mu.Unlock()
-		if cerr := next.Close(); cerr != nil {
-			slog.WarnContext(
-				context.Background(),
-				"closing unused packet conn failed",
-				"error",
-				cerr,
-			)
-		}
+		closeAndWarn(context.Background(), "unused packet conn", next)
 		return net.ErrClosed
 	}
 	prev := c.conn
 	c.conn = next
 	c.mu.Unlock()
 
-	if err := prev.Close(); err != nil {
-		slog.WarnContext(
-			context.Background(),
-			"closing retired packet conn failed",
-			"error",
-			err,
-		)
-	}
+	closeAndWarn(context.Background(), "retired packet conn", prev)
 	return nil
 }
 

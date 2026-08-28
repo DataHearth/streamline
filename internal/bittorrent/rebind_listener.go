@@ -3,7 +3,6 @@ package bittorrent
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"net"
 	"sync"
 )
@@ -65,14 +64,8 @@ func (l *rebindableListener) pump(ln net.Listener) {
 		select {
 		case l.conns <- conn:
 		case <-l.done:
-			if cerr := conn.Close(); cerr != nil {
-				slog.WarnContext(
-					context.Background(),
-					"closing conn after listener shutdown failed",
-					"error",
-					cerr,
-				)
-			}
+			closeAndWarn(
+				context.Background(), "conn after listener shutdown", conn)
 			return
 		}
 	}
@@ -80,6 +73,11 @@ func (l *rebindableListener) pump(ln net.Listener) {
 
 // rebind moves the listening socket to port, binding the replacement before
 // retiring the old one so a failure leaves the engine reachable where it was.
+//
+// Concurrent rebinds are not guarded here beyond the swap: two of them could
+// each bind a socket and then race to install it, retiring the other's. What
+// makes that unreachable is Engine.mu, which the only caller
+// (Engine.movePeerSockets) holds for the whole pair of rebinds.
 func (l *rebindableListener) rebind(port uint16) error {
 	next, err := net.ListenTCP("tcp", &net.TCPAddr{IP: l.ip, Port: int(port)})
 	if err != nil {
@@ -89,14 +87,7 @@ func (l *rebindableListener) rebind(port uint16) error {
 	l.mu.Lock()
 	if l.closed {
 		l.mu.Unlock()
-		if cerr := next.Close(); cerr != nil {
-			slog.WarnContext(
-				context.Background(),
-				"closing unused listener failed",
-				"error",
-				cerr,
-			)
-		}
+		closeAndWarn(context.Background(), "unused listener", next)
 		return net.ErrClosed
 	}
 	prev := l.ln
@@ -105,14 +96,7 @@ func (l *rebindableListener) rebind(port uint16) error {
 
 	go l.pump(next)
 
-	if err := prev.Close(); err != nil {
-		slog.WarnContext(
-			context.Background(),
-			"closing retired listener failed",
-			"error",
-			err,
-		)
-	}
+	closeAndWarn(context.Background(), "retired listener", prev)
 	return nil
 }
 

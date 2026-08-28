@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net"
 	"os"
@@ -118,11 +119,9 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 		storage.NewFileWithCompletion(entry.DownloadDir, pc),
 	)
 
-	packetConn, listener, err := newPeerSockets(bindIP, entry.ListenPort)
+	packetConn, listener, err := newPeerSockets(ctx, bindIP, entry.ListenPort)
 	if err != nil {
-		if cerr := st.Close(); cerr != nil {
-			slog.WarnContext(ctx, "closing torrent storage failed", "error", cerr)
-		}
+		closeAndWarn(ctx, "torrent storage", st)
 		return nil, err
 	}
 
@@ -130,25 +129,9 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 
 	client, err := antorrent.NewClient(cc)
 	if err != nil {
-		if cerr := st.Close(); cerr != nil {
-			slog.WarnContext(ctx, "closing torrent storage failed", "error", cerr)
-		}
-		if cerr := listener.Close(); cerr != nil {
-			slog.WarnContext(
-				ctx,
-				"closing listener after client failure",
-				"error",
-				cerr,
-			)
-		}
-		if cerr := packetConn.Close(); cerr != nil {
-			slog.WarnContext(
-				ctx,
-				"closing packet conn after client failure",
-				"error",
-				cerr,
-			)
-		}
+		closeAndWarn(ctx, "torrent storage", st)
+		closeAndWarn(ctx, "listener after client failure", listener)
+		closeAndWarn(ctx, "packet conn after client failure", packetConn)
 		return nil, fmt.Errorf("start torrent client: %w", err)
 	}
 	client.AddListener(listener)
@@ -202,6 +185,18 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 	return e, nil
 }
 
+// closeAndWarn closes a socket whose close is not the caller's outcome — a
+// replacement being retired, or a partially built pair being unwound after
+// some other failure. what names it in the message ("retired listener").
+// Every such site logs and carries on, because the error the caller is
+// already returning (or the success it is already committed to) is the one
+// that matters.
+func closeAndWarn(ctx context.Context, what string, c io.Closer) {
+	if err := c.Close(); err != nil {
+		slog.WarnContext(ctx, "closing "+what+" failed", "error", err)
+	}
+}
+
 // maxPeerSocketBindAttempts bounds the retry newPeerSockets runs when the
 // requested port is 0: the UDP port the OS hands out can already be taken on
 // the independent TCP port space, so a collision is retried rather than
@@ -219,7 +214,7 @@ const maxPeerSocketBindAttempts = 5
 // first and then binds TCP to the number it got, retrying the pair if that
 // second bind loses a race for the port.
 func newPeerSockets(
-	bindIP net.IP, port uint16,
+	ctx context.Context, bindIP net.IP, port uint16,
 ) (*rebindablePacketConn, *rebindableListener, error) {
 	if port != 0 {
 		pc, err := newRebindablePacketConn(bindIP, port)
@@ -228,10 +223,7 @@ func newPeerSockets(
 		}
 		ln, err := newRebindableListener(bindIP, port)
 		if err != nil {
-			if cerr := pc.Close(); cerr != nil {
-				slog.WarnContext(context.Background(),
-					"closing packet conn after listener failure", "error", cerr)
-			}
+			closeAndWarn(ctx, "packet conn after listener failure", pc)
 			return nil, nil, err
 		}
 		return pc, ln, nil
@@ -248,27 +240,13 @@ func newPeerSockets(
 		if !ok {
 			lastErr = fmt.Errorf(
 				"unexpected packet conn local address type %T", pc.LocalAddr())
-			if cerr := pc.Close(); cerr != nil {
-				slog.WarnContext(
-					context.Background(),
-					"closing packet conn after address lookup failure",
-					"error",
-					cerr,
-				)
-			}
+			closeAndWarn(ctx, "packet conn after address lookup failure", pc)
 			continue
 		}
 		ln, err := newRebindableListener(bindIP, uint16(addr.Port))
 		if err != nil {
 			lastErr = err
-			if cerr := pc.Close(); cerr != nil {
-				slog.WarnContext(
-					context.Background(),
-					"closing packet conn after listener retry failure",
-					"error",
-					cerr,
-				)
-			}
+			closeAndWarn(ctx, "packet conn after listener retry failure", pc)
 			continue
 		}
 		return pc, ln, nil
@@ -298,9 +276,12 @@ func newClientConfig(
 	// in an announce list are skipped.
 	cc.DisableWebtorrent = true
 	cc.Slogger = engineSlogger()
-	if entry.ListenPort != 0 {
-		cc.ListenPort = int(entry.ListenPort)
-	}
+	// cc.ListenPort is deliberately left alone. It only reaches
+	// listenAllWithListenFunc, whose one remaining network is served by the
+	// ListenPacket closure below — which hands back a conn newPeerSockets
+	// already bound to entry.ListenPort and ignores the address it is asked
+	// for. Setting it read as though it decided a port; it decides nothing.
+	//
 	// The engine registers its own rebindable TCP listener and supplies the
 	// uTP/DHT packet conn, so both report a port it can move. A socket
 	// anacrolix created would sit at cl.listeners[0] — the entry LocalPort
