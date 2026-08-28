@@ -40,20 +40,6 @@ func (_c *ScheduledJobCreate) SetNillablePaused(v *bool) *ScheduledJobCreate {
 	return _c
 }
 
-// SetLastStartedAt sets the "last_started_at" field.
-func (_c *ScheduledJobCreate) SetLastStartedAt(v time.Time) *ScheduledJobCreate {
-	_c.mutation.SetLastStartedAt(v)
-	return _c
-}
-
-// SetNillableLastStartedAt sets the "last_started_at" field if the given value is not nil.
-func (_c *ScheduledJobCreate) SetNillableLastStartedAt(v *time.Time) *ScheduledJobCreate {
-	if v != nil {
-		_c.SetLastStartedAt(*v)
-	}
-	return _c
-}
-
 // SetLastFinishedAt sets the "last_finished_at" field.
 func (_c *ScheduledJobCreate) SetLastFinishedAt(v time.Time) *ScheduledJobCreate {
 	_c.mutation.SetLastFinishedAt(v)
@@ -228,10 +214,6 @@ func (_c *ScheduledJobCreate) createSpec() (*ScheduledJob, *sqlgraph.CreateSpec)
 	if value, ok := _c.mutation.Paused(); ok {
 		_spec.SetField(scheduledjob.FieldPaused, field.TypeBool, value)
 		_node.Paused = value
-	}
-	if value, ok := _c.mutation.LastStartedAt(); ok {
-		_spec.SetField(scheduledjob.FieldLastStartedAt, field.TypeTime, value)
-		_node.LastStartedAt = &value
 	}
 	if value, ok := _c.mutation.LastFinishedAt(); ok {
 		_spec.SetField(scheduledjob.FieldLastFinishedAt, field.TypeTime, value)

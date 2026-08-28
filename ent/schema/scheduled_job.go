@@ -19,7 +19,6 @@ func (ScheduledJob) Fields() []ent.Field {
 	return []ent.Field{
 		field.String("name").Unique().Immutable().NotEmpty(),
 		field.Bool("paused").Default(false),
-		field.Time("last_started_at").Optional().Nillable(),
 		field.Time("last_finished_at").Optional().Nillable(),
 		field.Enum("last_status").
 			Values("never", "success", "error", "skipped").

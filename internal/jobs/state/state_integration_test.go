@@ -30,19 +30,6 @@ var _ = Describe("DB StateHook", Label("integration", "scheduled_job"), func() {
 		hook = NewHook(client)
 	})
 
-	It("OnStart writes last_started_at", func() {
-		seedRow(ctx, client, "rss-sync")
-		now := time.Now()
-		hook.OnStart(ctx, "rss-sync", now)
-
-		row, err := client.ScheduledJob.Query().
-			Where(scheduledjob.Name("rss-sync")).
-			Only(ctx)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(row.LastStartedAt).NotTo(BeNil())
-		Expect(*row.LastStartedAt).To(BeTemporally("~", now, time.Second))
-	})
-
 	It(
 		"OnEnd success path writes finished/status/duration and clears last_error",
 		func() {
@@ -81,7 +68,7 @@ var _ = Describe("DB StateHook", Label("integration", "scheduled_job"), func() {
 	})
 
 	It(
-		"OnEnd skipped path leaves last_started_at/last_finished_at untouched",
+		"OnEnd skipped path leaves last_finished_at untouched",
 		func() {
 			seedRow(ctx, client, "skipped")
 			hook.OnEnd(ctx, "skipped", time.Now(), "skipped", nil, 0)
@@ -91,13 +78,11 @@ var _ = Describe("DB StateHook", Label("integration", "scheduled_job"), func() {
 				Only(ctx)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(row.LastStatus)).To(Equal("skipped"))
-			Expect(row.LastStartedAt).To(BeNil())
 			Expect(row.LastFinishedAt).To(BeNil())
 		},
 	)
 
 	It("missing row is treated as a no-op (logged, not panicked)", func() {
-		Expect(func() { hook.OnStart(ctx, "ghost", time.Now()) }).NotTo(Panic())
 		Expect(
 			func() { hook.OnEnd(ctx, "ghost", time.Now(), "success", nil, 0) },
 		).NotTo(Panic())

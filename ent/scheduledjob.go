@@ -21,8 +21,6 @@ type ScheduledJob struct {
 	Name string `json:"name,omitempty"`
 	// Paused holds the value of the "paused" field.
 	Paused bool `json:"paused,omitempty"`
-	// LastStartedAt holds the value of the "last_started_at" field.
-	LastStartedAt *time.Time `json:"last_started_at,omitempty"`
 	// LastFinishedAt holds the value of the "last_finished_at" field.
 	LastFinishedAt *time.Time `json:"last_finished_at,omitempty"`
 	// LastStatus holds the value of the "last_status" field.
@@ -45,7 +43,7 @@ func (*ScheduledJob) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullInt64)
 		case scheduledjob.FieldName, scheduledjob.FieldLastStatus, scheduledjob.FieldLastError:
 			values[i] = new(sql.NullString)
-		case scheduledjob.FieldLastStartedAt, scheduledjob.FieldLastFinishedAt:
+		case scheduledjob.FieldLastFinishedAt:
 			values[i] = new(sql.NullTime)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -79,13 +77,6 @@ func (_m *ScheduledJob) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field paused", values[i])
 			} else if value.Valid {
 				_m.Paused = value.Bool
-			}
-		case scheduledjob.FieldLastStartedAt:
-			if value, ok := values[i].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field last_started_at", values[i])
-			} else if value.Valid {
-				_m.LastStartedAt = new(time.Time)
-				*_m.LastStartedAt = value.Time
 			}
 		case scheduledjob.FieldLastFinishedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -153,11 +144,6 @@ func (_m *ScheduledJob) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("paused=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Paused))
-	builder.WriteString(", ")
-	if v := _m.LastStartedAt; v != nil {
-		builder.WriteString("last_started_at=")
-		builder.WriteString(v.Format(time.ANSIC))
-	}
 	builder.WriteString(", ")
 	if v := _m.LastFinishedAt; v != nil {
 		builder.WriteString("last_finished_at=")

@@ -283,7 +283,6 @@ func buildSchedule(info scheduler.JobInfo, row *ent.ScheduledJob) Schedule {
 	if row != nil {
 		out.Paused = row.Paused
 		out.Status = ScheduleStatus(row.LastStatus)
-		out.LastStartedAt = row.LastStartedAt
 		out.LastFinishedAt = row.LastFinishedAt
 		out.LastDurationMs = int32(row.LastDurationMs)
 		if row.LastError != "" {
@@ -291,15 +290,21 @@ func buildSchedule(info scheduler.JobInfo, row *ent.ScheduledJob) Schedule {
 			out.LastError = &msg
 		}
 	}
-	if !out.Paused && !out.Running {
-		switch {
-		case row != nil && row.LastFinishedAt != nil:
-			next := row.LastFinishedAt.Add(info.Interval)
-			out.NextRunAt = &next
-		case row != nil && row.LastStartedAt != nil:
-			next := row.LastStartedAt.Add(info.Interval)
-			out.NextRunAt = &next
-		}
+	// last_started_at is derived rather than stored: persisting it cost an
+	// UPDATE per run of every job. A run in flight reports the scheduler's
+	// live start time; a finished one is its end minus how long it took.
+	switch {
+	case info.StartedAt != nil:
+		out.LastStartedAt = info.StartedAt
+	case row != nil && row.LastFinishedAt != nil:
+		started := row.LastFinishedAt.Add(
+			-time.Duration(row.LastDurationMs) * time.Millisecond,
+		)
+		out.LastStartedAt = &started
+	}
+	if !out.Paused && !out.Running && row != nil && row.LastFinishedAt != nil {
+		next := row.LastFinishedAt.Add(info.Interval)
+		out.NextRunAt = &next
 	}
 	return out
 }

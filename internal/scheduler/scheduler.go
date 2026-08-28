@@ -53,8 +53,13 @@ type JobFunc func(ctx context.Context) error
 // StateHook receives lifecycle events for every job run. Implementations
 // must be safe for concurrent calls and must not block long; errors are
 // logged and otherwise ignored — a misbehaving hook never stops a run.
+//
+// There is deliberately no OnStart: persisting a start time cost one UPDATE
+// per run of every job — roughly half of all writes an idle install makes —
+// to record something a reader can have for free. A finished run's start is
+// last_finished_at minus last_duration_ms, and a running one's is
+// JobInfo.StartedAt, which is live rather than a row that may be a tick stale.
 type StateHook interface {
-	OnStart(ctx context.Context, name string, startedAt time.Time)
 	OnEnd(
 		ctx context.Context,
 		name string,
@@ -100,6 +105,28 @@ type JobInfo struct {
 	System   bool
 	Running  bool
 	Paused   bool
+	// StartedAt is set only while Running — the start of the run in flight.
+	// Nothing persists it: a run that never finishes leaves no trace after a
+	// restart, which is the same thing a stale last_started_at column said.
+	StartedAt *time.Time
+}
+
+// snapshot builds a JobInfo. The caller must hold j.mu.
+func (j *registeredJob) snapshot() JobInfo {
+	info := JobInfo{
+		Name:     j.name,
+		Interval: j.interval,
+		System:   j.system,
+		Running:  j.running.Load(),
+		Paused:   j.paused,
+	}
+	if info.Running {
+		if ns := j.startedAt.Load(); ns != 0 {
+			t := time.Unix(0, ns)
+			info.StartedAt = &t
+		}
+	}
+	return info
 }
 
 type registeredJob struct {
@@ -108,6 +135,9 @@ type registeredJob struct {
 	fn       JobFunc
 	system   bool
 	running  atomic.Bool
+	// startedAt is the current (or most recent) run's start, in unix nanos.
+	// It is what replaces the persisted last_started_at while a job runs.
+	startedAt atomic.Int64
 
 	// mu guards interval, paused, and stopCh.
 	mu     sync.Mutex
@@ -162,13 +192,7 @@ func (s *Scheduler) Get(name string) (JobInfo, error) {
 	}
 	job.mu.Lock()
 	defer job.mu.Unlock()
-	return JobInfo{
-		Name:     job.name,
-		Interval: job.interval,
-		System:   job.system,
-		Running:  job.running.Load(),
-		Paused:   job.paused,
-	}, nil
+	return job.snapshot(), nil
 }
 
 // List returns a snapshot of every registered job, sorted by name.
@@ -178,13 +202,7 @@ func (s *Scheduler) List() []JobInfo {
 	out := make([]JobInfo, 0, len(s.jobs))
 	for _, j := range s.jobs {
 		j.mu.Lock()
-		out = append(out, JobInfo{
-			Name:     j.name,
-			Interval: j.interval,
-			System:   j.system,
-			Running:  j.running.Load(),
-			Paused:   j.paused,
-		})
+		out = append(out, j.snapshot())
 		j.mu.Unlock()
 	}
 	sort.Slice(out, func(i, k int) bool { return out[i].Name < out[k].Name })
@@ -277,9 +295,7 @@ func (s *Scheduler) executeJob(ctx context.Context, job *registeredJob) {
 	defer span.End()
 
 	start := time.Now()
-	if s.hook != nil {
-		s.hook.OnStart(ctx, job.name, start)
-	}
+	job.startedAt.Store(start.UnixNano())
 
 	outcome := "success"
 	runErr := job.fn(ctx)

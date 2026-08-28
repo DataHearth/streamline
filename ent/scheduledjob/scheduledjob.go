@@ -17,8 +17,6 @@ const (
 	FieldName = "name"
 	// FieldPaused holds the string denoting the paused field in the database.
 	FieldPaused = "paused"
-	// FieldLastStartedAt holds the string denoting the last_started_at field in the database.
-	FieldLastStartedAt = "last_started_at"
 	// FieldLastFinishedAt holds the string denoting the last_finished_at field in the database.
 	FieldLastFinishedAt = "last_finished_at"
 	// FieldLastStatus holds the string denoting the last_status field in the database.
@@ -36,7 +34,6 @@ var Columns = []string{
 	FieldID,
 	FieldName,
 	FieldPaused,
-	FieldLastStartedAt,
 	FieldLastFinishedAt,
 	FieldLastStatus,
 	FieldLastError,
@@ -106,11 +103,6 @@ func ByName(opts ...sql.OrderTermOption) OrderOption {
 // ByPaused orders the results by the paused field.
 func ByPaused(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldPaused, opts...).ToFunc()
-}
-
-// ByLastStartedAt orders the results by the last_started_at field.
-func ByLastStartedAt(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldLastStartedAt, opts...).ToFunc()
 }
 
 // ByLastFinishedAt orders the results by the last_finished_at field.

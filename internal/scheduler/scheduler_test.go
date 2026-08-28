@@ -150,7 +150,39 @@ var _ = Describe("Scheduler", Label("unit", "scheduler"), func() {
 	})
 
 	Describe("StateHook", func() {
-		It("calls OnStart then OnEnd with success on a clean run", func() {
+		It("reports StartedAt only while a job is running", func() {
+			s := New()
+			gate := make(chan struct{})
+			release := make(chan struct{})
+			s.Register("slow", time.Hour, func(context.Context) error {
+				close(gate)
+				<-release
+				return nil
+			})
+
+			Expect(s.List()[0].StartedAt).To(BeNil())
+
+			ctx, cancel := context.WithCancel(context.Background())
+			done := make(chan struct{})
+			go func() { s.Start(ctx); close(done) }()
+
+			<-gate
+			Eventually(func() *time.Time { return s.List()[0].StartedAt }).
+				WithTimeout(2 * time.Second).
+				ShouldNot(BeNil())
+			Expect(*s.List()[0].StartedAt).
+				To(BeTemporally("~", time.Now(), 5*time.Second))
+
+			close(release)
+			Eventually(func() *time.Time { return s.List()[0].StartedAt }).
+				WithTimeout(2 * time.Second).
+				Should(BeNil())
+
+			cancel()
+			<-done
+		})
+
+		It("calls OnEnd with success on a clean run", func() {
 			h := &fakeHook{}
 			s := New(WithStateHook(h))
 			s.Register("ok", time.Hour, func(context.Context) error { return nil })
@@ -168,7 +200,6 @@ var _ = Describe("Scheduler", Label("unit", "scheduler"), func() {
 			cancel()
 			<-done
 
-			Expect(h.starts).To(ConsistOf("ok"))
 			Expect(h.ends).To(HaveLen(1))
 			Expect(h.ends[0].Status).To(Equal("success"))
 			Expect(h.ends[0].HasError).To(BeFalse())
@@ -198,7 +229,7 @@ var _ = Describe("Scheduler", Label("unit", "scheduler"), func() {
 		})
 
 		It(
-			"reports status=skipped without OnStart when previous run still active",
+			"reports status=skipped when the previous run is still active",
 			func() {
 				h := &fakeHook{}
 				s := New(WithStateHook(h))
@@ -249,7 +280,6 @@ var _ = Describe("Scheduler", Label("unit", "scheduler"), func() {
 
 				h.mu.Lock()
 				defer h.mu.Unlock()
-				Expect(h.starts).ToNot(BeEmpty())
 				var sawSkipped, sawSuccess bool
 				for _, e := range h.ends {
 					if e.Status == "skipped" {
@@ -561,9 +591,8 @@ var _ = Describe("Scheduler", Label("unit", "scheduler"), func() {
 })
 
 type fakeHook struct {
-	mu     sync.Mutex
-	starts []string
-	ends   []hookEnd
+	mu   sync.Mutex
+	ends []hookEnd
 }
 
 type hookEnd struct {
@@ -571,12 +600,6 @@ type hookEnd struct {
 	Status   string
 	HasError bool
 	Duration time.Duration
-}
-
-func (f *fakeHook) OnStart(_ context.Context, name string, _ time.Time) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	f.starts = append(f.starts, name)
 }
 
 func (f *fakeHook) OnEnd(

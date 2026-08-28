@@ -29,23 +29,6 @@ func NewHook(client *ent.Client) *Hook {
 
 var _ scheduler.StateHook = (*Hook)(nil)
 
-func (h *Hook) OnStart(ctx context.Context, name string, startedAt time.Time) {
-	_, err := h.client.ScheduledJob.Update().
-		Where(scheduledjob.Name(name)).
-		SetLastStartedAt(startedAt).
-		Save(ctx)
-	if err != nil && !errors.Is(err, context.Canceled) {
-		slog.WarnContext(
-			ctx,
-			"scheduled_job: OnStart update failed",
-			"job",
-			name,
-			"error",
-			err,
-		)
-	}
-}
-
 func (h *Hook) OnEnd(
 	ctx context.Context,
 	name string,

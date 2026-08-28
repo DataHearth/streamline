@@ -333,7 +333,7 @@ func init() {
 	// scheduledjob.DefaultPaused holds the default value on creation for the paused field.
 	scheduledjob.DefaultPaused = scheduledjobDescPaused.Default.(bool)
 	// scheduledjobDescLastDurationMs is the schema descriptor for last_duration_ms field.
-	scheduledjobDescLastDurationMs := scheduledjobFields[6].Descriptor()
+	scheduledjobDescLastDurationMs := scheduledjobFields[5].Descriptor()
 	// scheduledjob.DefaultLastDurationMs holds the default value on creation for the last_duration_ms field.
 	scheduledjob.DefaultLastDurationMs = scheduledjobDescLastDurationMs.Default.(uint32)
 	seasonMixin := schema.Season{}.Mixin()

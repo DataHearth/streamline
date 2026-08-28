@@ -15616,7 +15616,6 @@ type ScheduledJobMutation struct {
 	id                  *uint32
 	name                *string
 	paused              *bool
-	last_started_at     *time.Time
 	last_finished_at    *time.Time
 	last_status         *scheduledjob.LastStatus
 	last_error          *string
@@ -15802,55 +15801,6 @@ func (m *ScheduledJobMutation) OldPaused(ctx context.Context) (v bool, err error
 // ResetPaused resets all changes to the "paused" field.
 func (m *ScheduledJobMutation) ResetPaused() {
 	m.paused = nil
-}
-
-// SetLastStartedAt sets the "last_started_at" field.
-func (m *ScheduledJobMutation) SetLastStartedAt(t time.Time) {
-	m.last_started_at = &t
-}
-
-// LastStartedAt returns the value of the "last_started_at" field in the mutation.
-func (m *ScheduledJobMutation) LastStartedAt() (r time.Time, exists bool) {
-	v := m.last_started_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldLastStartedAt returns the old "last_started_at" field's value of the ScheduledJob entity.
-// If the ScheduledJob object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ScheduledJobMutation) OldLastStartedAt(ctx context.Context) (v *time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldLastStartedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldLastStartedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldLastStartedAt: %w", err)
-	}
-	return oldValue.LastStartedAt, nil
-}
-
-// ClearLastStartedAt clears the value of the "last_started_at" field.
-func (m *ScheduledJobMutation) ClearLastStartedAt() {
-	m.last_started_at = nil
-	m.clearedFields[scheduledjob.FieldLastStartedAt] = struct{}{}
-}
-
-// LastStartedAtCleared returns if the "last_started_at" field was cleared in this mutation.
-func (m *ScheduledJobMutation) LastStartedAtCleared() bool {
-	_, ok := m.clearedFields[scheduledjob.FieldLastStartedAt]
-	return ok
-}
-
-// ResetLastStartedAt resets all changes to the "last_started_at" field.
-func (m *ScheduledJobMutation) ResetLastStartedAt() {
-	m.last_started_at = nil
-	delete(m.clearedFields, scheduledjob.FieldLastStartedAt)
 }
 
 // SetLastFinishedAt sets the "last_finished_at" field.
@@ -16077,15 +16027,12 @@ func (m *ScheduledJobMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ScheduledJobMutation) Fields() []string {
-	fields := make([]string, 0, 7)
+	fields := make([]string, 0, 6)
 	if m.name != nil {
 		fields = append(fields, scheduledjob.FieldName)
 	}
 	if m.paused != nil {
 		fields = append(fields, scheduledjob.FieldPaused)
-	}
-	if m.last_started_at != nil {
-		fields = append(fields, scheduledjob.FieldLastStartedAt)
 	}
 	if m.last_finished_at != nil {
 		fields = append(fields, scheduledjob.FieldLastFinishedAt)
@@ -16111,8 +16058,6 @@ func (m *ScheduledJobMutation) Field(name string) (ent.Value, bool) {
 		return m.Name()
 	case scheduledjob.FieldPaused:
 		return m.Paused()
-	case scheduledjob.FieldLastStartedAt:
-		return m.LastStartedAt()
 	case scheduledjob.FieldLastFinishedAt:
 		return m.LastFinishedAt()
 	case scheduledjob.FieldLastStatus:
@@ -16134,8 +16079,6 @@ func (m *ScheduledJobMutation) OldField(ctx context.Context, name string) (ent.V
 		return m.OldName(ctx)
 	case scheduledjob.FieldPaused:
 		return m.OldPaused(ctx)
-	case scheduledjob.FieldLastStartedAt:
-		return m.OldLastStartedAt(ctx)
 	case scheduledjob.FieldLastFinishedAt:
 		return m.OldLastFinishedAt(ctx)
 	case scheduledjob.FieldLastStatus:
@@ -16166,13 +16109,6 @@ func (m *ScheduledJobMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetPaused(v)
-		return nil
-	case scheduledjob.FieldLastStartedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetLastStartedAt(v)
 		return nil
 	case scheduledjob.FieldLastFinishedAt:
 		v, ok := value.(time.Time)
@@ -16247,9 +16183,6 @@ func (m *ScheduledJobMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *ScheduledJobMutation) ClearedFields() []string {
 	var fields []string
-	if m.FieldCleared(scheduledjob.FieldLastStartedAt) {
-		fields = append(fields, scheduledjob.FieldLastStartedAt)
-	}
 	if m.FieldCleared(scheduledjob.FieldLastFinishedAt) {
 		fields = append(fields, scheduledjob.FieldLastFinishedAt)
 	}
@@ -16270,9 +16203,6 @@ func (m *ScheduledJobMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *ScheduledJobMutation) ClearField(name string) error {
 	switch name {
-	case scheduledjob.FieldLastStartedAt:
-		m.ClearLastStartedAt()
-		return nil
 	case scheduledjob.FieldLastFinishedAt:
 		m.ClearLastFinishedAt()
 		return nil
@@ -16292,9 +16222,6 @@ func (m *ScheduledJobMutation) ResetField(name string) error {
 		return nil
 	case scheduledjob.FieldPaused:
 		m.ResetPaused()
-		return nil
-	case scheduledjob.FieldLastStartedAt:
-		m.ResetLastStartedAt()
 		return nil
 	case scheduledjob.FieldLastFinishedAt:
 		m.ResetLastFinishedAt()

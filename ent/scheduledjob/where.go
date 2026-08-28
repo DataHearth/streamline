@@ -64,11 +64,6 @@ func Paused(v bool) predicate.ScheduledJob {
 	return predicate.ScheduledJob(sql.FieldEQ(FieldPaused, v))
 }
 
-// LastStartedAt applies equality check predicate on the "last_started_at" field. It's identical to LastStartedAtEQ.
-func LastStartedAt(v time.Time) predicate.ScheduledJob {
-	return predicate.ScheduledJob(sql.FieldEQ(FieldLastStartedAt, v))
-}
-
 // LastFinishedAt applies equality check predicate on the "last_finished_at" field. It's identical to LastFinishedAtEQ.
 func LastFinishedAt(v time.Time) predicate.ScheduledJob {
 	return predicate.ScheduledJob(sql.FieldEQ(FieldLastFinishedAt, v))
@@ -157,56 +152,6 @@ func PausedEQ(v bool) predicate.ScheduledJob {
 // PausedNEQ applies the NEQ predicate on the "paused" field.
 func PausedNEQ(v bool) predicate.ScheduledJob {
 	return predicate.ScheduledJob(sql.FieldNEQ(FieldPaused, v))
-}
-
-// LastStartedAtEQ applies the EQ predicate on the "last_started_at" field.
-func LastStartedAtEQ(v time.Time) predicate.ScheduledJob {
-	return predicate.ScheduledJob(sql.FieldEQ(FieldLastStartedAt, v))
-}
-
-// LastStartedAtNEQ applies the NEQ predicate on the "last_started_at" field.
-func LastStartedAtNEQ(v time.Time) predicate.ScheduledJob {
-	return predicate.ScheduledJob(sql.FieldNEQ(FieldLastStartedAt, v))
-}
-
-// LastStartedAtIn applies the In predicate on the "last_started_at" field.
-func LastStartedAtIn(vs ...time.Time) predicate.ScheduledJob {
-	return predicate.ScheduledJob(sql.FieldIn(FieldLastStartedAt, vs...))
-}
-
-// LastStartedAtNotIn applies the NotIn predicate on the "last_started_at" field.
-func LastStartedAtNotIn(vs ...time.Time) predicate.ScheduledJob {
-	return predicate.ScheduledJob(sql.FieldNotIn(FieldLastStartedAt, vs...))
-}
-
-// LastStartedAtGT applies the GT predicate on the "last_started_at" field.
-func LastStartedAtGT(v time.Time) predicate.ScheduledJob {
-	return predicate.ScheduledJob(sql.FieldGT(FieldLastStartedAt, v))
-}
-
-// LastStartedAtGTE applies the GTE predicate on the "last_started_at" field.
-func LastStartedAtGTE(v time.Time) predicate.ScheduledJob {
-	return predicate.ScheduledJob(sql.FieldGTE(FieldLastStartedAt, v))
-}
-
-// LastStartedAtLT applies the LT predicate on the "last_started_at" field.
-func LastStartedAtLT(v time.Time) predicate.ScheduledJob {
-	return predicate.ScheduledJob(sql.FieldLT(FieldLastStartedAt, v))
-}
-
-// LastStartedAtLTE applies the LTE predicate on the "last_started_at" field.
-func LastStartedAtLTE(v time.Time) predicate.ScheduledJob {
-	return predicate.ScheduledJob(sql.FieldLTE(FieldLastStartedAt, v))
-}
-
-// LastStartedAtIsNil applies the IsNil predicate on the "last_started_at" field.
-func LastStartedAtIsNil() predicate.ScheduledJob {
-	return predicate.ScheduledJob(sql.FieldIsNull(FieldLastStartedAt))
-}
-
-// LastStartedAtNotNil applies the NotNil predicate on the "last_started_at" field.
-func LastStartedAtNotNil() predicate.ScheduledJob {
-	return predicate.ScheduledJob(sql.FieldNotNull(FieldLastStartedAt))
 }
 
 // LastFinishedAtEQ applies the EQ predicate on the "last_finished_at" field.

@@ -631,7 +631,6 @@ var (
 		{Name: "id", Type: field.TypeUint32, Increment: true},
 		{Name: "name", Type: field.TypeString, Unique: true},
 		{Name: "paused", Type: field.TypeBool, Default: false},
-		{Name: "last_started_at", Type: field.TypeTime, Nullable: true},
 		{Name: "last_finished_at", Type: field.TypeTime, Nullable: true},
 		{Name: "last_status", Type: field.TypeEnum, Enums: []string{"never", "success", "error", "skipped"}, Default: "never"},
 		{Name: "last_error", Type: field.TypeString, Nullable: true},

@@ -43,26 +43,6 @@ func (_u *ScheduledJobUpdate) SetNillablePaused(v *bool) *ScheduledJobUpdate {
 	return _u
 }
 
-// SetLastStartedAt sets the "last_started_at" field.
-func (_u *ScheduledJobUpdate) SetLastStartedAt(v time.Time) *ScheduledJobUpdate {
-	_u.mutation.SetLastStartedAt(v)
-	return _u
-}
-
-// SetNillableLastStartedAt sets the "last_started_at" field if the given value is not nil.
-func (_u *ScheduledJobUpdate) SetNillableLastStartedAt(v *time.Time) *ScheduledJobUpdate {
-	if v != nil {
-		_u.SetLastStartedAt(*v)
-	}
-	return _u
-}
-
-// ClearLastStartedAt clears the value of the "last_started_at" field.
-func (_u *ScheduledJobUpdate) ClearLastStartedAt() *ScheduledJobUpdate {
-	_u.mutation.ClearLastStartedAt()
-	return _u
-}
-
 // SetLastFinishedAt sets the "last_finished_at" field.
 func (_u *ScheduledJobUpdate) SetLastFinishedAt(v time.Time) *ScheduledJobUpdate {
 	_u.mutation.SetLastFinishedAt(v)
@@ -201,12 +181,6 @@ func (_u *ScheduledJobUpdate) sqlSave(ctx context.Context) (_node int, err error
 	if value, ok := _u.mutation.Paused(); ok {
 		_spec.SetField(scheduledjob.FieldPaused, field.TypeBool, value)
 	}
-	if value, ok := _u.mutation.LastStartedAt(); ok {
-		_spec.SetField(scheduledjob.FieldLastStartedAt, field.TypeTime, value)
-	}
-	if _u.mutation.LastStartedAtCleared() {
-		_spec.ClearField(scheduledjob.FieldLastStartedAt, field.TypeTime)
-	}
 	if value, ok := _u.mutation.LastFinishedAt(); ok {
 		_spec.SetField(scheduledjob.FieldLastFinishedAt, field.TypeTime, value)
 	}
@@ -261,26 +235,6 @@ func (_u *ScheduledJobUpdateOne) SetNillablePaused(v *bool) *ScheduledJobUpdateO
 	if v != nil {
 		_u.SetPaused(*v)
 	}
-	return _u
-}
-
-// SetLastStartedAt sets the "last_started_at" field.
-func (_u *ScheduledJobUpdateOne) SetLastStartedAt(v time.Time) *ScheduledJobUpdateOne {
-	_u.mutation.SetLastStartedAt(v)
-	return _u
-}
-
-// SetNillableLastStartedAt sets the "last_started_at" field if the given value is not nil.
-func (_u *ScheduledJobUpdateOne) SetNillableLastStartedAt(v *time.Time) *ScheduledJobUpdateOne {
-	if v != nil {
-		_u.SetLastStartedAt(*v)
-	}
-	return _u
-}
-
-// ClearLastStartedAt clears the value of the "last_started_at" field.
-func (_u *ScheduledJobUpdateOne) ClearLastStartedAt() *ScheduledJobUpdateOne {
-	_u.mutation.ClearLastStartedAt()
 	return _u
 }
 
@@ -451,12 +405,6 @@ func (_u *ScheduledJobUpdateOne) sqlSave(ctx context.Context) (_node *ScheduledJ
 	}
 	if value, ok := _u.mutation.Paused(); ok {
 		_spec.SetField(scheduledjob.FieldPaused, field.TypeBool, value)
-	}
-	if value, ok := _u.mutation.LastStartedAt(); ok {
-		_spec.SetField(scheduledjob.FieldLastStartedAt, field.TypeTime, value)
-	}
-	if _u.mutation.LastStartedAtCleared() {
-		_spec.ClearField(scheduledjob.FieldLastStartedAt, field.TypeTime)
 	}
 	if value, ok := _u.mutation.LastFinishedAt(); ok {
 		_spec.SetField(scheduledjob.FieldLastFinishedAt, field.TypeTime, value)
