@@ -1,6 +1,7 @@
 package ffmpeg
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -18,6 +19,31 @@ import (
 // second; a hung network mount must not wedge the importer worker.
 const probeTimeout = time.Minute
 
+// maxProbeOutput bounds ffprobe's stdout. A real probe is a few KB of JSON —
+// even a file with dozens of streams stays well under this — so exceeding it
+// means the output is not the document we asked for.
+const maxProbeOutput = 1 << 20
+
+// cappedBuffer keeps the first limit bytes and throws the rest away, always
+// reporting a full write. Reporting short would make the child see a write
+// error; refusing to read at all would block it on a full pipe. Discarding is
+// what lets the process finish normally while the memory stays bounded.
+type cappedBuffer struct {
+	buf       bytes.Buffer
+	limit     int
+	truncated bool
+}
+
+func (c *cappedBuffer) Write(p []byte) (int, error) {
+	if room := c.limit - c.buf.Len(); room > 0 {
+		c.buf.Write(p[:min(room, len(p))])
+	}
+	if c.buf.Len() >= c.limit {
+		c.truncated = true
+	}
+	return len(p), nil
+}
+
 func (c *CLI) Probe(ctx context.Context, path string) (*Info, error) {
 	ctx, span := tracer.Start(ctx, "ffmpeg.probe",
 		trace.WithAttributes(attribute.String("file.path", path)))
@@ -29,19 +55,31 @@ func (c *CLI) Probe(ctx context.Context, path string) (*Info, error) {
 	ctx, cancel := context.WithTimeout(ctx, probeTimeout)
 	defer cancel()
 
-	out, err := exec.CommandContext(ctx, c.ffprobe,
+	cmd := exec.CommandContext(ctx, c.ffprobe,
 		"-v", "error",
 		"-print_format", "json",
 		"-show_format", "-show_streams",
 		path,
-	).Output()
-	if err != nil {
+	)
+	// Not .Output(): that buffers however much ffprobe decides to write, and
+	// what it writes is a function of the file, which arrives from a torrent.
+	// A capped writer keeps consuming past the limit rather than refusing, so
+	// the child never blocks on a full pipe waiting for a reader that stopped.
+	var out cappedBuffer
+	out.limit = maxProbeOutput
+	cmd.Stdout = &out
+	if err := cmd.Run(); err != nil {
 		return nil, otelx.RecordSpanError(
 			span,
 			fmt.Errorf("%w: %w", ErrUnreadable, err),
 		)
 	}
-	info, err := parseProbeOutput(out)
+	if out.truncated {
+		return nil, otelx.RecordSpanError(span, fmt.Errorf(
+			"%w: ffprobe wrote more than %d bytes", ErrUnreadable, maxProbeOutput,
+		))
+	}
+	info, err := parseProbeOutput(out.buf.Bytes())
 	if err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
