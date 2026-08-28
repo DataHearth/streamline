@@ -63,7 +63,7 @@ var _ = Describe("Service.RunSeriesOrphanScan", Label("unit", "hygiene"), func()
 			ListPendingImportScanShowFolders(mock.Anything).
 			Return(pending, nil).
 			Once()
-		store.EXPECT().ListTvShowsForAdoption(mock.Anything).Return(nil, nil).Once()
+		store.EXPECT().TVShowTVDBIndex(mock.Anything).Return(nil, nil).Once()
 	}
 
 	It("classifies an untracked show folder and queues it once", func() {
@@ -116,7 +116,7 @@ var _ = Describe("Service.RunSeriesOrphanScan", Label("unit", "hygiene"), func()
 			ListPendingImportScanShowFolders(mock.Anything).
 			Return(nil, nil).
 			Once()
-		store.EXPECT().ListTvShowsForAdoption(mock.Anything).Return(nil, nil).Once()
+		store.EXPECT().TVShowTVDBIndex(mock.Anything).Return(nil, nil).Once()
 		// No SearchSeries, no scan writes.
 
 		Expect(svc.RunSeriesOrphanScan(ctx)).To(Succeed())

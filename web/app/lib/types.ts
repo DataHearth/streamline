@@ -23,7 +23,6 @@ export type MonitoringPreset =
 
 // Library-list monitoring filter. Client-side only — both list endpoints
 // return every row and the SPA narrows the set.
-export type MonitorFilter = "all" | "monitored" | "unmonitored";
 
 export type Episode = {
 	id: number;
@@ -85,6 +84,10 @@ export type TVShowCounts = {
 	total: number;
 	continuing: number;
 	ended: number;
+	upcoming: number;
+	// Shows with at least one aired, monitored episode and no file — a
+	// per-show count, not an episode count. Labels the library's "missing" tab.
+	missing: number;
 	wanted_episodes: number;
 	downloading_episodes: number;
 };
@@ -156,11 +159,25 @@ export type Movie = {
 	runtime?: number;
 	monitored?: boolean;
 	quality_profile?: string;
+	// Detail responses only (GET /movies/{id}). List responses carry
+	// file_summary instead — see MovieFileSummary.
 	media_files?: MediaFile[];
+	file_summary?: MovieFileSummary;
 	cast?: CastMember[];
 	genres?: string[];
 	rating?: number;
 	added_at?: string;
+};
+
+// The per-movie file rollup a list response carries in place of media_files:
+// enough for the grid's size and quality columns and for bulk-action totals,
+// without loading every file row of every movie on the page. Absent when the
+// movie has no files.
+export type MovieFileSummary = {
+	file_count: number;
+	size_bytes: number;
+	resolution?: string;
+	codec?: string;
 };
 
 // What ffprobe read off the file. Null until the file has been probed, and

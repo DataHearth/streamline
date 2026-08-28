@@ -133,17 +133,7 @@ func (s *Service) pendingShowFolderSet(
 func (s *Service) trackedShowsByTVDB(
 	ctx context.Context,
 ) (map[uint32]uint32, error) {
-	shows, err := s.store.ListTvShowsForAdoption(ctx)
-	if err != nil {
-		return nil, err
-	}
-	out := make(map[uint32]uint32, len(shows))
-	for _, sh := range shows {
-		if sh.TvdbID != 0 {
-			out[sh.TvdbID] = sh.ID
-		}
-	}
-	return out, nil
+	return s.store.TVShowTVDBIndex(ctx)
 }
 
 // gatherVideoFiles recursively collects importable media files under root. Thin
