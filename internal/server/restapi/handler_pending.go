@@ -2,10 +2,13 @@ package restapi
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/library"
 	moviesvc "github.com/datahearth/streamline/internal/media/movie"
 	"github.com/datahearth/streamline/internal/media/tvshow"
 )
@@ -27,6 +30,137 @@ func (s *Server) ListPending(
 	}, nil
 }
 
+// reasonIdentified replaces the unidentified reason once an operator has named
+// the title. The proposal stays pending — naming it is not accepting it.
+const reasonIdentified = "identified, review and import"
+
+func (s *Server) IdentifyPending(
+	ctx context.Context,
+	request IdentifyPendingRequestObject,
+) (IdentifyPendingResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return IdentifyPending403JSONResponse{
+			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
+	rec, err := s.store.FindPendingDownloadRecordByID(ctx, request.Id)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return IdentifyPending404JSONResponse{
+				NotFoundJSONResponse: errNotFound("pending record not found"),
+			}, nil
+		}
+		return nil, err
+	}
+	if rec.Edges.Movie != nil || rec.Edges.Episode != nil {
+		return IdentifyPending409JSONResponse{
+			ConflictJSONResponse: errConflict(
+				"this proposal is already matched to a title",
+			),
+		}, nil
+	}
+
+	var movieID, episodeID uint32
+	switch request.Body.Kind {
+	case IdentifyPendingRequestKindSeries:
+		ep, resp := s.identifySeries(ctx, rec, request.Body.ProviderId)
+		if resp != nil {
+			return resp, nil
+		}
+		episodeID = ep
+	default:
+		m, resp := s.identifyMovie(ctx, request.Body.ProviderId)
+		if resp != nil {
+			return resp, nil
+		}
+		movieID = m
+	}
+
+	if err := s.store.IdentifyDownloadRecord(
+		ctx, request.Id, movieID, episodeID, reasonIdentified,
+	); err != nil {
+		return IdentifyPending500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	return IdentifyPending204Response{}, nil
+}
+
+// identifySeries resolves tvdbID to a show — adding it when the library does
+// not have it — and returns the episode the record should anchor to. A non-nil
+// response is the caller's return value.
+func (s *Server) identifySeries(
+	ctx context.Context, rec *ent.DownloadRecord, tvdbID uint32,
+) (uint32, IdentifyPendingResponseObject) {
+	// FindTVShowByTVDBID reports "not in the library" as a nil row with a nil
+	// error, so the row is what decides, not the error.
+	existing, err := s.store.FindTVShowByTVDBID(ctx, tvdbID)
+	if err != nil {
+		return 0, IdentifyPending500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}
+	}
+	id := uint32(0)
+	if existing != nil {
+		id = existing.ID
+	} else {
+		added, aerr := s.tvshows.Add(ctx, tvdbID, "")
+		if aerr != nil {
+			return 0, IdentifyPending422JSONResponse{
+				UnprocessableEntityJSONResponse: errUnprocessable(
+					fmt.Sprintf("could not add that series: %v", aerr),
+				),
+			}
+		}
+		id = added.ID
+	}
+
+	// Load the tree fresh either way: Add returns the row it created without
+	// the seasons the episode anchor is resolved against.
+	show, err := s.tvshows.Get(ctx, id)
+	if err != nil {
+		return 0, IdentifyPending500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}
+	}
+	parsed := library.Parse(rec.Title)
+	ep := download.AdoptionEpisode(parsed, show)
+	if ep == nil {
+		return 0, IdentifyPending422JSONResponse{
+			UnprocessableEntityJSONResponse: errUnprocessable(fmt.Sprintf(
+				"%s has no season %d to file this release against",
+				show.Title, parsed.Season,
+			)),
+		}
+	}
+	return ep.ID, nil
+}
+
+func (s *Server) identifyMovie(
+	ctx context.Context, tmdbID uint32,
+) (uint32, IdentifyPendingResponseObject) {
+	// GetByTMDBID reports "not in the library" as a nil row with a nil error,
+	// like FindTVShowByTVDBID above — the row decides, not the error.
+	existing, err := s.movies.GetByTMDBID(ctx, tmdbID)
+	if err != nil {
+		return 0, IdentifyPending500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}
+	}
+	if existing != nil {
+		return existing.ID, nil
+	}
+	added, _, err := s.movies.Add(ctx, tmdbID, "")
+	if err != nil {
+		return 0, IdentifyPending422JSONResponse{
+			UnprocessableEntityJSONResponse: errUnprocessable(
+				fmt.Sprintf("could not add that movie: %v", err),
+			),
+		}
+	}
+	return added.ID, nil
+}
+
 func (s *Server) ImportPending(
 	ctx context.Context,
 	request ImportPendingRequestObject,
@@ -34,13 +168,21 @@ func (s *Server) ImportPending(
 	if err := requireAdmin(ctx); err != nil {
 		return ImportPending403JSONResponse{ForbiddenJSONResponse: notAdminResp}, nil
 	}
-	if _, err := s.store.FindPendingDownloadRecordByID(ctx, request.Id); err != nil {
+	rec, err := s.store.FindPendingDownloadRecordByID(ctx, request.Id)
+	if err != nil {
 		if ent.IsNotFound(err) {
 			return ImportPending404JSONResponse{
 				NotFoundJSONResponse: errNotFound("pending record not found"),
 			}, nil
 		}
 		return nil, err
+	}
+	if rec.Edges.Movie == nil && rec.Edges.Episode == nil {
+		return ImportPending409JSONResponse{
+			ConflictJSONResponse: errConflict(
+				"identify this proposal before importing it",
+			),
+		}, nil
 	}
 	// Flip to importing; the import_scan safety-net job re-enqueues it.
 	if err := s.store.UpdateDownloadRecordStatus(
@@ -70,6 +212,13 @@ func (s *Server) ReplacePending(
 			}, nil
 		}
 		return nil, err
+	}
+	if rec.Edges.Movie == nil && rec.Edges.Episode == nil {
+		return ReplacePending409JSONResponse{
+			ConflictJSONResponse: errConflict(
+				"identify this proposal before replacing anything",
+			),
+		}, nil
 	}
 
 	// Clear the existing file(s) without touching torrents — the proposed

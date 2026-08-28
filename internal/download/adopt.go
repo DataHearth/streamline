@@ -26,6 +26,11 @@ type adoptDecision struct {
 	quality    string
 }
 
+// reasonUnidentified marks a proposal whose release matched nothing in the
+// library. It is the one proposal reason carrying no media edge, so the SPA
+// keys the Identify action off the absent media rather than off this string.
+const reasonUnidentified = "unidentified — pick a title"
+
 // untrackedTorrent pairs a torrent with the client it came from, so the
 // adoption record records the originating download client.
 type untrackedTorrent struct {
@@ -89,30 +94,17 @@ func classifyEpisodeAdoption(
 		return adoptDecision{}, false
 	}
 
-	singleEpisode := !parsed.SeasonPack &&
-		(parsed.Episode > 0 || parsed.AbsoluteNumber > 0)
-	if !singleEpisode {
-		// Season pack / multi-file: propose, never auto-fan. Link the first
-		// episode of the parsed season so the operator can act on it (the
-		// importer fans the directory out on import).
-		ep := firstEpisodeOfSeason(show, parsed.Season)
-		if ep == nil {
-			return adoptDecision{}, false
-		}
+	ep := AdoptionEpisode(parsed, show)
+	if ep == nil {
+		return adoptDecision{}, false
+	}
+	if !singleEpisodeRelease(parsed) {
+		// Season pack / multi-file: propose, never auto-fan.
 		return adoptDecision{
 			episodeID: ep.ID,
 			quality:   parsed.Resolution,
 			reason:    "season pack, review manually",
 		}, true
-	}
-
-	ep := library.MatchEpisode(
-		parsed,
-		show.Edges.Seasons,
-		show.Type == tvshow.TypeAnime,
-	)
-	if ep == nil {
-		return adoptDecision{}, false
 	}
 	d := adoptDecision{episodeID: ep.ID, quality: parsed.Resolution}
 	switch {
@@ -125,6 +117,34 @@ func classifyEpisodeAdoption(
 			parsed.Resolution, profileMin(show.QualityProfile))
 	}
 	return d, true
+}
+
+// AdoptionEpisode resolves the episode one release should be filed against
+// within one show: the matched episode for a single-episode release, the
+// season's first for a pack — the importer fans the directory out on import,
+// so the anchor only has to be somewhere the operator can act on it. nil when
+// the show has no counterpart for what the name claims, which for a pack means
+// the season itself is missing or empty.
+//
+// Exported because identifying a proposal by hand (a title the library did not
+// have when the torrent was adopted) has to land on the same episode the
+// automatic path would have chosen.
+func AdoptionEpisode(
+	parsed library.ParseResult, show *ent.TVShow,
+) *ent.Episode {
+	if singleEpisodeRelease(parsed) {
+		return library.MatchEpisode(
+			parsed,
+			show.Edges.Seasons,
+			show.Type == tvshow.TypeAnime,
+		)
+	}
+	return firstEpisodeOfSeason(show, parsed.Season)
+}
+
+func singleEpisodeRelease(parsed library.ParseResult) bool {
+	return !parsed.SeasonPack &&
+		(parsed.Episode > 0 || parsed.AbsoluteNumber > 0)
 }
 
 // firstEpisodeOfSeason returns the first episode of the show's season numbered
@@ -258,7 +278,18 @@ func (d *download) AdoptManualTorrents(ctx context.Context) ([]uint32, error) {
 			dec, ok = classifyEpisodeAdoption(parsed, shows, episodeHasFile)
 		}
 		if !ok {
-			continue // matched neither a movie nor an episode
+			// Nothing in the library matches. Filing it unidentified is what
+			// keeps the operator's own add from being a prerequisite: they
+			// name it from the proposal and the record links itself. Dropping
+			// it silently is how a manually-added torrent for an untracked
+			// title sat in the client forever with nothing to point at.
+			slog.InfoContext(ctx, "adopting an unidentified torrent",
+				"hash", u.t.Hash, "torrent", u.t.Name,
+				"parsed_title", parsed.Title)
+			dec = adoptDecision{
+				reason:  reasonUnidentified,
+				quality: parsed.Resolution,
+			}
 		}
 		id, err := d.persistAdoption(ctx, u, dec)
 		if err != nil {

@@ -9,11 +9,24 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/downloadrecord"
 	enttvshow "github.com/datahearth/streamline/ent/tvshow"
+	"github.com/datahearth/streamline/internal/db"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
+
+// adoptClient serves the adoption pass one canned listing.
+type adoptClient struct {
+	stubClient
+
+	torrents []Torrent
+}
+
+func (c *adoptClient) ListTorrents(context.Context) ([]Torrent, error) {
+	return c.torrents, nil
+}
 
 var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 	hasFileFn := func(v bool) func(*ent.Movie) bool {
@@ -158,6 +171,19 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 			Expect(dec.episodeID).To(Equal(uint32(101)))
 		})
 
+		// The spec above hands classifyEpisodeAdoption a ParseResult it built
+		// itself, so it never exercised the title extraction a real pack name
+		// goes through — which is where the language tags between the season
+		// and the resolution used to end up glued onto the title.
+		It("proposes a pack whose name carries language tags", func() {
+			shows := []*ent.TVShow{buildShow(false, false)}
+			parsed := library.Parse("The.Bear.S01.MULTi.VF2.1080p.WEB.H264-FW")
+			dec, ok := classifyEpisodeAdoption(parsed, shows, episodeHasFile)
+			Expect(ok).To(BeTrue())
+			Expect(dec.reason).To(Equal("season pack, review manually"))
+			Expect(dec.episodeID).To(Equal(uint32(101)))
+		})
+
 		It("matches an anime release on its absolute number", func() {
 			shows := []*ent.TVShow{buildShow(true, false)}
 			parsed := library.ParseResult{
@@ -217,5 +243,57 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(ids).To(BeEmpty())
 		})
+
+		It(
+			"files an unidentified proposal when nothing in the library matches",
+			func() {
+				configtest.Setup(map[string]any{
+					"library": map[string]any{"download_path": "/downloads"},
+					"download_clients": []map[string]any{{
+						"name": "embedded", "client_type": "builtin",
+						"download_dir": "/downloads", "enabled": true,
+					}},
+				})
+				client := &adoptClient{torrents: []Torrent{{
+					Hash:   "h1",
+					Name:   "Good.Omens.S03.MULTi.VF2.1080p.WEB.H264-FW",
+					Status: StatusSeeding,
+					Size:   100,
+				}}}
+				mgr = New(store, client).(Adopter)
+
+				store.EXPECT().AllDownloadRecordHashes(mock.Anything).
+					Return(map[string]struct{}{}, nil).Once()
+				store.EXPECT().
+					DeleteStalePendingAdoptions(mock.Anything, "embedded", []string{"h1"}).
+					Return(0, nil).Once()
+				store.EXPECT().
+					ListMoviesForAdoption(mock.Anything).
+					Return(nil, nil).
+					Once()
+				store.EXPECT().
+					ListTvShowsForAdoption(mock.Anything).
+					Return(nil, nil).
+					Once()
+
+				var got db.CreateDownloadRecordParams
+				store.EXPECT().CreateDownloadRecord(mock.Anything, mock.Anything).
+					Run(func(_ context.Context, p db.CreateDownloadRecordParams) {
+						got = p
+					}).
+					Return(&ent.DownloadRecord{ID: 7}, nil).Once()
+
+				ids, err := mgr.AdoptManualTorrents(ctx)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(
+					ids,
+				).To(BeEmpty(), "an unidentified torrent is never auto-imported")
+				Expect(got.Status).To(Equal(downloadrecord.StatusPending))
+				Expect(got.MovieID).To(BeZero())
+				Expect(got.EpisodeID).To(BeZero())
+				Expect(got.FailureReason).To(Equal(reasonUnidentified))
+			},
+		)
 	})
 })

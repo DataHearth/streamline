@@ -156,6 +156,7 @@ Everything database-backed (movies, series, requests, users, imports) uses numer
 | `POST` | `/activity/queue/{id}/pause` · `/resume` · `/activity/history/clear-completed` |
 | `GET` | `/activity/pending` 🔒 |
 | `POST` | `/activity/pending/{id}/import` · `/replace` · `/ignore` 🔒 |
+| `POST` | `/activity/pending/{id}/identify` 🔒 |
 | `POST` | `/downloads/{id}/resolve` 🔒 — release a held download |
 
 ### Requests

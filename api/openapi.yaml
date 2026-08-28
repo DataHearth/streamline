@@ -2921,6 +2921,9 @@ paths:
     post:
       operationId: importPending
       summary: Accept a proposal and import it as-is.
+      description: |
+        409 when the proposal carries no `media` — identify it first, or the
+        import has nothing to import into.
       tags: [activity]
       responses:
         "204":
@@ -2929,6 +2932,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -2938,6 +2943,9 @@ paths:
     post:
       operationId: replacePending
       summary: Delete the existing file, then import the proposal.
+      description: |
+        409 when the proposal carries no `media` — there is no existing file to
+        replace until it has been identified.
       tags: [activity]
       requestBody:
         $ref: "#/components/requestBodies/ReplacePending"
@@ -2948,8 +2956,40 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
         "413":
           $ref: "#/components/responses/PayloadTooLarge"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /activity/pending/{id}/identify:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: identifyPending
+      summary: Name the title behind an unidentified proposal.
+      description: |
+        Adds the chosen movie/series to the library when it isn't there yet and
+        links the proposal to it, leaving the proposal pending so the usual
+        import/replace/ignore decision still applies. Only valid for a proposal
+        carrying no `media` — 409 otherwise.
+      tags: [activity]
+      requestBody:
+        $ref: "#/components/requestBodies/IdentifyPending"
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -3621,6 +3661,13 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/IgnorePendingRequest"
+
+    IdentifyPending:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/IdentifyPendingRequest"
 
     CreateQualityProfile:
       required: true
@@ -4449,6 +4496,12 @@ components:
             Whether the matched movie/episode currently has a file. The UI
             shows Replace (swap) when true and Import (accept into the empty
             slot) when false.
+        parsed_title:
+          type: string
+          description: |
+            The title parsed out of the release name, present only when `media`
+            is absent — it seeds the search when the operator identifies the
+            proposal by hand.
         media:
           $ref: "#/components/schemas/PendingMedia"
 
@@ -4470,6 +4523,19 @@ components:
           description: |
             When true, also remove the existing file's source torrent from
             its download client (best-effort).
+
+    IdentifyPendingRequest:
+      type: object
+      required: [kind, provider_id]
+      properties:
+        kind:
+          type: string
+          enum: [movie, series]
+        provider_id:
+          type: integer
+          x-go-type: uint32
+          description: |
+            TMDB id when `kind` is `movie`, TVDB id when it is `series`.
 
     IgnorePendingRequest:
       type: object

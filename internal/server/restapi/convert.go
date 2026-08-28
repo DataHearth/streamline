@@ -730,6 +730,11 @@ func toPendingItem(r *ent.DownloadRecord) PendingItem {
 			}
 		}
 		item.Media = media
+	default:
+		// Nothing matched at adoption time. The raw release name is useless as
+		// a search seed, so hand the SPA what the parser made of it.
+		parsed := library.Parse(r.Title).Title
+		item.ParsedTitle = &parsed
 	}
 	return item
 }

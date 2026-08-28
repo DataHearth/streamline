@@ -121,6 +121,17 @@ Three actions per proposal:
 
 Ignore is permanent for that proposal — it won't be offered again.
 
+### Torrents for something you don't track yet
+
+You don't have to add the movie or series first. A torrent matching nothing in your library shows up as a proposal too, marked *unidentified*, with a single **Identify** action:
+
+1. Say whether it's a movie or a series — Streamline guesses from the release name.
+2. Pick the title from the usual TMDB/TVDB search, pre-filled with whatever the name parsed to.
+
+The title is added to your library if it isn't there already, and the download is matched to it. Nothing is imported at that point — the proposal stays put, now showing Import or Replace like any other.
+
+Adding a series this way monitors it, exactly as adding it by hand would, so Streamline will start looking for its other missing episodes. Unmonitor the seasons you don't want if that's not what you're after.
+
 ---
 
 ## Torrents (built-in client)

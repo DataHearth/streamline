@@ -471,6 +471,9 @@ export type PendingItem = {
 	quality: string;
 	reason: string;
 	has_file: boolean;
+	// Present only when media is absent: what the parser made of the release
+	// name, used to seed the identify search.
+	parsed_title?: string;
 	media?: PendingMedia;
 };
 export type PendingList = { items: PendingItem[] };

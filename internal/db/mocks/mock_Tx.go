@@ -6002,6 +6002,81 @@ func (_c *MockTx_HoldDownloadRecord_Call) RunAndReturn(run func(ctx context.Cont
 	return _c
 }
 
+// IdentifyDownloadRecord provides a mock function for the type MockTx
+func (_mock *MockTx) IdentifyDownloadRecord(ctx context.Context, id uint32, movieID uint32, episodeID uint32, reason string) error {
+	ret := _mock.Called(ctx, id, movieID, episodeID, reason)
+
+	if len(ret) == 0 {
+		panic("no return value specified for IdentifyDownloadRecord")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32, uint32, string) error); ok {
+		r0 = returnFunc(ctx, id, movieID, episodeID, reason)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTx_IdentifyDownloadRecord_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IdentifyDownloadRecord'
+type MockTx_IdentifyDownloadRecord_Call struct {
+	*mock.Call
+}
+
+// IdentifyDownloadRecord is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - movieID uint32
+//   - episodeID uint32
+//   - reason string
+func (_e *MockTx_Expecter) IdentifyDownloadRecord(ctx any, id any, movieID any, episodeID any, reason any) *MockTx_IdentifyDownloadRecord_Call {
+	return &MockTx_IdentifyDownloadRecord_Call{Call: _e.mock.On("IdentifyDownloadRecord", ctx, id, movieID, episodeID, reason)}
+}
+
+func (_c *MockTx_IdentifyDownloadRecord_Call) Run(run func(ctx context.Context, id uint32, movieID uint32, episodeID uint32, reason string)) *MockTx_IdentifyDownloadRecord_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 uint32
+		if args[2] != nil {
+			arg2 = args[2].(uint32)
+		}
+		var arg3 uint32
+		if args[3] != nil {
+			arg3 = args[3].(uint32)
+		}
+		var arg4 string
+		if args[4] != nil {
+			arg4 = args[4].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_IdentifyDownloadRecord_Call) Return(err error) *MockTx_IdentifyDownloadRecord_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTx_IdentifyDownloadRecord_Call) RunAndReturn(run func(ctx context.Context, id uint32, movieID uint32, episodeID uint32, reason string) error) *MockTx_IdentifyDownloadRecord_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // IncrementEpisodeGrabFailures provides a mock function for the type MockTx
 func (_mock *MockTx) IncrementEpisodeGrabFailures(ctx context.Context, id uint32) error {
 	ret := _mock.Called(ctx, id)

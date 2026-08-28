@@ -2,6 +2,7 @@
 	import { LoaderCircle } from "@lucide/svelte";
 	import Dialog from "../modals/Dialog.svelte";
 	import Checkbox from "../forms/Checkbox.svelte";
+	import IdentifyDialog from "./IdentifyDialog.svelte";
 	import type { PendingItem } from "../../lib/types";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 
@@ -21,6 +22,7 @@
 
 	let replaceOpen = $state(false);
 	let ignoreOpen = $state(false);
+	let identifyOpen = $state(false);
 	let removeOld = $state(false);
 	let removeTorrent = $state(false);
 
@@ -30,7 +32,9 @@
 
 	let mediaLabel = $derived.by(() => {
 		const m = item.media;
-		if (!m) return item.title;
+		// Unmatched: the parsed title reads better than the raw release name,
+		// which is shown in full on the mono line below anyway.
+		if (!m) return item.parsed_title || item.title;
 		if (m.type === "episode" && m.season != null && m.episode != null) {
 			return `${m.title} · S${pad(m.season)}E${pad(m.episode)}`;
 		}
@@ -75,11 +79,22 @@
 
 	<div class="flex shrink-0 items-center gap-2">
 		<!--
-			One primary action per row, chosen by whether the media already has a
-			file: Replace (swap the existing file) when it does, Import (accept into
-			the empty slot) when it doesn't. The inapplicable action is never shown.
+			One primary action per row. An unmatched proposal has no title to
+			import into yet, so it offers Identify and nothing else; otherwise the
+			choice is by whether the media already has a file: Replace (swap the
+			existing file) when it does, Import (accept into the empty slot) when
+			it doesn't. The inapplicable action is never shown.
 		-->
-		{#if item.has_file}
+		{#if !item.media}
+			<button
+				type="button"
+				onclick={() => (identifyOpen = true)}
+				disabled={busy}
+				class="inline-flex h-8 items-center gap-1.5 rounded-md bg-accent px-3 text-xs font-semibold text-fg-on-accent transition hover:bg-accent-hover focus:outline-none focus:ring-2 focus:ring-accent-ring disabled:cursor-not-allowed disabled:opacity-60"
+			>
+				Identify
+			</button>
+		{:else if item.has_file}
 			<button
 				type="button"
 				onclick={openReplace}
@@ -174,3 +189,11 @@
 		{i18n.file_also_remove_torrent()}
 	</Checkbox>
 </Dialog>
+
+<IdentifyDialog
+	open={identifyOpen}
+	id={item.id}
+	title={item.title}
+	parsedTitle={item.parsed_title}
+	onClose={() => (identifyOpen = false)}
+/>

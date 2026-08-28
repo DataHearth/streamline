@@ -133,6 +133,21 @@ func (db *DB) ListPendingDownloadRecords(
 		All(ctx)
 }
 
+func (db *DB) IdentifyDownloadRecord(
+	ctx context.Context,
+	id, movieID, episodeID uint32,
+	reason string,
+) error {
+	q := db.client.DownloadRecord.UpdateOneID(id).SetFailureReason(reason)
+	if movieID != 0 {
+		q = q.SetMovieID(movieID)
+	}
+	if episodeID != 0 {
+		q = q.SetEpisodeID(episodeID)
+	}
+	return q.Exec(ctx)
+}
+
 // DeleteStalePendingAdoptions removes pending adoption proposals for clientName
 // whose torrent_hash is no longer among liveHashes (the client's current
 // managed torrents). An empty liveHashes means the client reported zero

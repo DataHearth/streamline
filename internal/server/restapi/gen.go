@@ -444,6 +444,24 @@ func (e HoldReasonCheck) Valid() bool {
 	}
 }
 
+// Defines values for IdentifyPendingRequestKind.
+const (
+	IdentifyPendingRequestKindMovie  IdentifyPendingRequestKind = "movie"
+	IdentifyPendingRequestKindSeries IdentifyPendingRequestKind = "series"
+)
+
+// Valid indicates whether the value is a known member of the IdentifyPendingRequestKind enum.
+func (e IdentifyPendingRequestKind) Valid() bool {
+	switch e {
+	case IdentifyPendingRequestKindMovie:
+		return true
+	case IdentifyPendingRequestKindSeries:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ImportBulkDecisionRequestClassification.
 const (
 	ImportBulkDecisionRequestClassificationAmbiguous ImportBulkDecisionRequestClassification = "ambiguous"
@@ -2486,6 +2504,17 @@ type HoldReason struct {
 // HoldReasonCheck defines model for HoldReason.Check.
 type HoldReasonCheck string
 
+// IdentifyPendingRequest defines model for IdentifyPendingRequest.
+type IdentifyPendingRequest struct {
+	Kind IdentifyPendingRequestKind `json:"kind"`
+
+	// ProviderId TMDB id when `kind` is `movie`, TVDB id when it is `series`.
+	ProviderId uint32 `json:"provider_id"`
+}
+
+// IdentifyPendingRequestKind defines model for IdentifyPendingRequest.Kind.
+type IdentifyPendingRequestKind string
+
 // IgnorePendingRequest defines model for IgnorePendingRequest.
 type IgnorePendingRequest struct {
 	// RemoveTorrent When true, also remove the proposed torrent from its download
@@ -3197,9 +3226,14 @@ type PendingItem struct {
 	HasFile bool          `json:"has_file"`
 	Id      uint32        `json:"id"`
 	Media   *PendingMedia `json:"media,omitempty"`
-	Quality string        `json:"quality"`
-	Reason  string        `json:"reason"`
-	Title   string        `json:"title"`
+
+	// ParsedTitle The title parsed out of the release name, present only when `media`
+	// is absent — it seeds the search when the operator identifies the
+	// proposal by hand.
+	ParsedTitle *string `json:"parsed_title,omitempty"`
+	Quality     string  `json:"quality"`
+	Reason      string  `json:"reason"`
+	Title       string  `json:"title"`
 }
 
 // PendingList defines model for PendingList.
@@ -4314,6 +4348,9 @@ type GrabMovieRelease = SearchResult
 // GrabSeriesRelease defines model for GrabSeriesRelease.
 type GrabSeriesRelease = SearchResult
 
+// IdentifyPending defines model for IdentifyPending.
+type IdentifyPending = IdentifyPendingRequest
+
 // IgnorePending defines model for IgnorePending.
 type IgnorePending = IgnorePendingRequest
 
@@ -4552,6 +4589,9 @@ type ListUsersParamsSort string
 // ListUsersParamsOrder defines parameters for ListUsers.
 type ListUsersParamsOrder string
 
+// IdentifyPendingJSONRequestBody defines body for IdentifyPending for application/json ContentType.
+type IdentifyPendingJSONRequestBody = IdentifyPendingRequest
+
 // IgnorePendingJSONRequestBody defines body for IgnorePending for application/json ContentType.
 type IgnorePendingJSONRequestBody = IgnorePendingRequest
 
@@ -4743,6 +4783,9 @@ type ServerInterface interface {
 	// ListPending Adopted-torrent proposals awaiting a decision.
 	// (GET /activity/pending)
 	ListPending(w http.ResponseWriter, r *http.Request)
+	// IdentifyPending Name the title behind an unidentified proposal.
+	// (POST /activity/pending/{id}/identify)
+	IdentifyPending(w http.ResponseWriter, r *http.Request, id ResourceID)
 	// IgnorePending Dismiss a proposal (optionally removing its torrent).
 	// (POST /activity/pending/{id}/ignore)
 	IgnorePending(w http.ResponseWriter, r *http.Request, id ResourceID)
@@ -5223,6 +5266,12 @@ func (_ Unimplemented) DeleteHistoryItem(w http.ResponseWriter, r *http.Request,
 // ListPending Adopted-torrent proposals awaiting a decision.
 // (GET /activity/pending)
 func (_ Unimplemented) ListPending(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// IdentifyPending Name the title behind an unidentified proposal.
+// (POST /activity/pending/{id}/identify)
+func (_ Unimplemented) IdentifyPending(w http.ResponseWriter, r *http.Request, id ResourceID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -6321,6 +6370,32 @@ func (siw *ServerInterfaceWrapper) ListPending(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListPending(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// IdentifyPending operation middleware
+func (siw *ServerInterfaceWrapper) IdentifyPending(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.IdentifyPending(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -10735,6 +10810,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/activity/pending/{id}/replace", wrapper.ReplacePending)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/activity/pending/{id}/identify", wrapper.IdentifyPending)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/activity/pending/{id}/ignore", wrapper.IgnorePending)
 	})
 	r.Group(func(r chi.Router) {
@@ -11140,6 +11218,108 @@ func (response ListPending200JSONResponse) VisitListPendingResponse(w http.Respo
 	return err
 }
 
+type IdentifyPendingRequestObject struct {
+	Id   ResourceID `json:"id"`
+	Body *IdentifyPendingJSONRequestBody
+}
+
+type IdentifyPendingResponseObject interface {
+	VisitIdentifyPendingResponse(w http.ResponseWriter) error
+}
+
+type IdentifyPending204Response = NoContentResponse
+
+func (response IdentifyPending204Response) VisitIdentifyPendingResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type IdentifyPending403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response IdentifyPending403JSONResponse) VisitIdentifyPendingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type IdentifyPending404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response IdentifyPending404JSONResponse) VisitIdentifyPendingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type IdentifyPending409JSONResponse struct{ ConflictJSONResponse }
+
+func (response IdentifyPending409JSONResponse) VisitIdentifyPendingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type IdentifyPending413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response IdentifyPending413JSONResponse) VisitIdentifyPendingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type IdentifyPending422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response IdentifyPending422JSONResponse) VisitIdentifyPendingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type IdentifyPending500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response IdentifyPending500JSONResponse) VisitIdentifyPendingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type IgnorePendingRequestObject struct {
 	Id   ResourceID `json:"id"`
 	Body *IgnorePendingJSONRequestBody
@@ -11255,6 +11435,20 @@ func (response ImportPending404JSONResponse) VisitImportPendingResponse(w http.R
 	return err
 }
 
+type ImportPending409JSONResponse struct{ ConflictJSONResponse }
+
+func (response ImportPending409JSONResponse) VisitImportPendingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ImportPending500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response ImportPending500JSONResponse) VisitImportPendingResponse(w http.ResponseWriter) error {
@@ -11309,6 +11503,20 @@ func (response ReplacePending404JSONResponse) VisitReplacePendingResponse(w http
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplacePending409JSONResponse struct{ ConflictJSONResponse }
+
+func (response ReplacePending409JSONResponse) VisitReplacePendingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -20297,6 +20505,9 @@ type StrictServerInterface interface {
 	// ListPending Adopted-torrent proposals awaiting a decision.
 	// (GET /activity/pending)
 	ListPending(ctx context.Context, request ListPendingRequestObject) (ListPendingResponseObject, error)
+	// IdentifyPending Name the title behind an unidentified proposal.
+	// (POST /activity/pending/{id}/identify)
+	IdentifyPending(ctx context.Context, request IdentifyPendingRequestObject) (IdentifyPendingResponseObject, error)
 	// IgnorePending Dismiss a proposal (optionally removing its torrent).
 	// (POST /activity/pending/{id}/ignore)
 	IgnorePending(ctx context.Context, request IgnorePendingRequestObject) (IgnorePendingResponseObject, error)
@@ -20904,6 +21115,39 @@ func (sh *strictHandler) ListPending(w http.ResponseWriter, r *http.Request) {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ListPendingResponseObject); ok {
 		if err := validResponse.VisitListPendingResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// IdentifyPending operation middleware
+func (sh *strictHandler) IdentifyPending(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request IdentifyPendingRequestObject
+
+	request.Id = id
+
+	var body IdentifyPendingJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.IdentifyPending(ctx, request.(IdentifyPendingRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "IdentifyPending")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(IdentifyPendingResponseObject); ok {
+		if err := validResponse.VisitIdentifyPendingResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

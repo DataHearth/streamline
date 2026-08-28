@@ -261,6 +261,14 @@ type Store interface {
 		id uint32,
 		status downloadrecord.Status,
 	) error
+	// IdentifyDownloadRecord attaches the media an operator named to a
+	// proposal that matched nothing, and rewrites its reason. Exactly one of
+	// movieID/episodeID is non-zero.
+	IdentifyDownloadRecord(
+		ctx context.Context,
+		id, movieID, episodeID uint32,
+		reason string,
+	) error
 	// SetDownloadRecordReplaceMode sets how the importer treats episodes
 	// that already have a file for this record.
 	SetDownloadRecordReplaceMode(
