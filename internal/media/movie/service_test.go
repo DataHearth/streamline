@@ -181,50 +181,6 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 		})
 	})
 
-	Describe("List", func() {
-		It("rejects page=0", func() {
-			_, _, err := svc.List(ctx, 0, 10)
-			Expect(err).To(MatchError("page must be > 0"))
-		})
-
-		It("rejects limit=0", func() {
-			_, _, err := svc.List(ctx, 1, 0)
-			Expect(err).To(MatchError("limit must be > 0"))
-		})
-
-		It("wraps count errors", func() {
-			countErr := errors.New("count blew up")
-			storeMock.CountMovies(mock.Anything).Return(0, countErr).Once()
-
-			_, _, err := svc.List(ctx, 1, 10)
-			Expect(err).To(MatchError(ContainSubstring("count movies")))
-			Expect(err).To(MatchError(countErr))
-		})
-
-		It("wraps list errors", func() {
-			storeMock.CountMovies(mock.Anything).Return(1, nil).Once()
-			listErr := errors.New("select blew up")
-			storeMock.ListMovies(mock.Anything, uint32(0), uint32(10)).
-				Return(nil, listErr).Once()
-
-			_, _, err := svc.List(ctx, 1, 10)
-			Expect(err).To(MatchError(ContainSubstring("list movies")))
-			Expect(err).To(MatchError(listErr))
-		})
-
-		It("returns total + paginated rows", func() {
-			storeMock.CountMovies(mock.Anything).Return(42, nil).Once()
-			rows := []*ent.Movie{{ID: 1}, {ID: 2}}
-			storeMock.ListMovies(mock.Anything, uint32(20), uint32(10)).
-				Return(rows, nil).Once()
-
-			items, total, err := svc.List(ctx, 3, 10)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(total).To(Equal(uint32(42)))
-			Expect(items).To(Equal(rows))
-		})
-	})
-
 	Describe("FilterList", func() {
 		It("defaults page=1 limit=20 when zero", func() {
 			storeMock.FilterMovies(mock.Anything, mock.MatchedBy(func(p db.FilterMoviesParams) bool {
@@ -232,8 +188,10 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 			})).
 				Return([]*ent.Movie{}, 0, nil).
 				Once()
+			storeMock.MovieFileSummaries(mock.Anything, []uint32{}).
+				Return(nil, nil).Once()
 
-			_, _, err := svc.FilterList(ctx, FilterParams{})
+			_, _, _, err := svc.FilterList(ctx, FilterParams{})
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -245,8 +203,12 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 			})).
 				Return([]*ent.Movie{{ID: 1}}, 5, nil).
 				Once()
+			storeMock.MovieFileSummaries(mock.Anything, []uint32{1}).
+				Return(map[uint32]db.MovieFileSummary{
+					1: {FileCount: 2, SizeBytes: 900, PrimaryPath: "/lib/a.mkv"},
+				}, nil).Once()
 
-			items, total, err := svc.FilterList(ctx, FilterParams{
+			items, summaries, total, err := svc.FilterList(ctx, FilterParams{
 				Status: string(entmovie.StatusWanted),
 				Query:  "inter", Sort: "title", Order: "asc",
 				Page: 3, Limit: 2,
@@ -254,6 +216,24 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(items).To(HaveLen(1))
 			Expect(total).To(Equal(uint32(5)))
+			// The rollup is fetched for the page's ids, not eager-loaded.
+			Expect(summaries).To(HaveKeyWithValue(uint32(1),
+				db.MovieFileSummary{
+					FileCount: 2, SizeBytes: 900, PrimaryPath: "/lib/a.mkv",
+				}))
+		})
+
+		It("wraps file-summary errors", func() {
+			storeMock.FilterMovies(mock.Anything, mock.AnythingOfType("db.FilterMoviesParams")).
+				Return([]*ent.Movie{{ID: 1}}, 1, nil).
+				Once()
+			sumErr := errors.New("rollup blew up")
+			storeMock.MovieFileSummaries(mock.Anything, []uint32{1}).
+				Return(nil, sumErr).Once()
+
+			_, _, _, err := svc.FilterList(ctx, FilterParams{Page: 1, Limit: 10})
+			Expect(err).To(MatchError(ContainSubstring("movie file summaries")))
+			Expect(err).To(MatchError(sumErr))
 		})
 
 		It("wraps filter errors", func() {
@@ -262,7 +242,7 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 				Return(nil, 0, filterErr).
 				Once()
 
-			_, _, err := svc.FilterList(ctx, FilterParams{Page: 1, Limit: 10})
+			_, _, _, err := svc.FilterList(ctx, FilterParams{Page: 1, Limit: 10})
 			Expect(err).To(MatchError(ContainSubstring("filter movies")))
 			Expect(err).To(MatchError(filterErr))
 		})

@@ -18,15 +18,27 @@ func (s *Server) ListMovies(
 	ctx context.Context,
 	request ListMoviesRequestObject,
 ) (ListMoviesResponseObject, error) {
-	page, limit := uint16(1), uint16(20)
+	p := moviesvc.FilterParams{Page: 1, Limit: 20}
 	if request.Params.Page != nil {
-		page = uint16(*request.Params.Page)
+		p.Page = uint16(*request.Params.Page)
 	}
 	if request.Params.Limit != nil {
-		limit = clampLimit(*request.Params.Limit, moviesMaxLimit)
+		p.Limit = clampLimit(*request.Params.Limit, moviesMaxLimit)
+	}
+	if request.Params.Status != nil {
+		p.Status = *request.Params.Status
+	}
+	if request.Params.Query != nil {
+		p.Query = *request.Params.Query
+	}
+	if request.Params.Sort != nil {
+		p.Sort = *request.Params.Sort
+	}
+	if request.Params.Order != nil {
+		p.Order = string(*request.Params.Order)
 	}
 
-	movies, total, err := s.movies.List(ctx, page, limit)
+	movies, summaries, total, err := s.movies.FilterList(ctx, p)
 	if err != nil {
 		return ListMovies500JSONResponse{
 			InternalErrorJSONResponse: errInternal(ctx, err),
@@ -35,14 +47,14 @@ func (s *Server) ListMovies(
 
 	items := make([]Movie, 0, len(movies))
 	for _, m := range movies {
-		items = append(items, movieToAPI(m))
+		items = append(items, movieListToAPI(m, summaries[m.ID]))
 	}
 
 	return ListMovies200JSONResponse{
 		Items: items,
 		Total: total,
-		Page:  uint32(page),
-		Limit: limit,
+		Page:  uint32(p.Page),
+		Limit: p.Limit,
 	}, nil
 }
 

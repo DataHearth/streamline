@@ -57,6 +57,12 @@ type MediaFile struct {
 	Bitrate uint32 `json:"bitrate,omitempty"`
 	// ProbedAt holds the value of the "probed_at" field.
 	ProbedAt *time.Time `json:"probed_at,omitempty"`
+	// ParsedSource holds the value of the "parsed_source" field.
+	ParsedSource string `json:"parsed_source,omitempty"`
+	// ParsedResolution holds the value of the "parsed_resolution" field.
+	ParsedResolution string `json:"parsed_resolution,omitempty"`
+	// ParsedCodec holds the value of the "parsed_codec" field.
+	ParsedCodec string `json:"parsed_codec,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the MediaFileQuery when eager-loading is set.
 	Edges               MediaFileEdges `json:"edges"`
@@ -105,7 +111,7 @@ func (*MediaFile) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case mediafile.FieldID, mediafile.FieldSize, mediafile.FieldDurationSeconds, mediafile.FieldWidth, mediafile.FieldHeight, mediafile.FieldAudioChannels, mediafile.FieldBitrate:
 			values[i] = new(sql.NullInt64)
-		case mediafile.FieldPath, mediafile.FieldQuality, mediafile.FieldFormat, mediafile.FieldReleaseGroup, mediafile.FieldSource, mediafile.FieldContainer, mediafile.FieldVideoCodec, mediafile.FieldAudioCodec:
+		case mediafile.FieldPath, mediafile.FieldQuality, mediafile.FieldFormat, mediafile.FieldReleaseGroup, mediafile.FieldSource, mediafile.FieldContainer, mediafile.FieldVideoCodec, mediafile.FieldAudioCodec, mediafile.FieldParsedSource, mediafile.FieldParsedResolution, mediafile.FieldParsedCodec:
 			values[i] = new(sql.NullString)
 		case mediafile.FieldCreateTime, mediafile.FieldUpdateTime, mediafile.FieldLastSeenAt, mediafile.FieldMissingSince, mediafile.FieldProbedAt:
 			values[i] = new(sql.NullTime)
@@ -251,6 +257,24 @@ func (_m *MediaFile) assignValues(columns []string, values []any) error {
 				_m.ProbedAt = new(time.Time)
 				*_m.ProbedAt = value.Time
 			}
+		case mediafile.FieldParsedSource:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field parsed_source", values[i])
+			} else if value.Valid {
+				_m.ParsedSource = value.String
+			}
+		case mediafile.FieldParsedResolution:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field parsed_resolution", values[i])
+			} else if value.Valid {
+				_m.ParsedResolution = value.String
+			}
+		case mediafile.FieldParsedCodec:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field parsed_codec", values[i])
+			} else if value.Valid {
+				_m.ParsedCodec = value.String
+			}
 		case mediafile.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for edge-field episode_media_files", value)
@@ -373,6 +397,15 @@ func (_m *MediaFile) String() string {
 		builder.WriteString("probed_at=")
 		builder.WriteString(v.Format(time.ANSIC))
 	}
+	builder.WriteString(", ")
+	builder.WriteString("parsed_source=")
+	builder.WriteString(_m.ParsedSource)
+	builder.WriteString(", ")
+	builder.WriteString("parsed_resolution=")
+	builder.WriteString(_m.ParsedResolution)
+	builder.WriteString(", ")
+	builder.WriteString("parsed_codec=")
+	builder.WriteString(_m.ParsedCodec)
 	builder.WriteByte(')')
 	return builder.String()
 }

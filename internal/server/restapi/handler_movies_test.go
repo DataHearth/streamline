@@ -35,8 +35,10 @@ var _ = Describe(
 		Describe("ListMovies", func() {
 			It("clamps a limit above the documented maximum", func() {
 				app.movies.EXPECT().
-					List(mock.Anything, uint16(1), uint16(moviesMaxLimit)).
-					Return([]*ent.Movie{}, uint32(0), nil).
+					FilterList(mock.Anything, mock.MatchedBy(func(p moviesvc.FilterParams) bool {
+						return p.Limit == moviesMaxLimit
+					})).
+					Return([]*ent.Movie{}, nil, uint32(0), nil).
 					Once()
 
 				resp := app.do(app.req(
@@ -51,7 +53,7 @@ var _ = Describe(
 
 			It("returns paginated list when movies exist", func() {
 				app.movies.EXPECT().
-					List(mock.Anything, uint16(1), uint16(10)).
+					FilterList(mock.Anything, mock.AnythingOfType("movie.FilterParams")).
 					Return([]*ent.Movie{
 						{
 							ID:     1,
@@ -67,7 +69,7 @@ var _ = Describe(
 							TmdbID: 101,
 							Status: movie.StatusWanted,
 						},
-					}, uint32(2), nil).
+					}, nil, uint32(2), nil).
 					Once()
 
 				resp, err := http.Get(app.srv.URL + "/api/v1/movies?page=1&limit=10")
@@ -86,7 +88,7 @@ var _ = Describe(
 
 			It("round-trips a failed movie's status", func() {
 				app.movies.EXPECT().
-					List(mock.Anything, uint16(1), uint16(10)).
+					FilterList(mock.Anything, mock.AnythingOfType("movie.FilterParams")).
 					Return([]*ent.Movie{
 						{
 							ID:             3,
@@ -96,7 +98,7 @@ var _ = Describe(
 							Status:         movie.StatusFailed,
 							QualityProfile: "uhd",
 						},
-					}, uint32(1), nil).
+					}, nil, uint32(1), nil).
 					Once()
 
 				resp, err := http.Get(app.srv.URL + "/api/v1/movies?page=1&limit=10")
@@ -116,8 +118,8 @@ var _ = Describe(
 
 			It("returns empty page when no movies exist", func() {
 				app.movies.EXPECT().
-					List(mock.Anything, uint16(1), uint16(10)).
-					Return(nil, uint32(0), nil).
+					FilterList(mock.Anything, mock.AnythingOfType("movie.FilterParams")).
+					Return(nil, nil, uint32(0), nil).
 					Once()
 
 				resp, err := http.Get(app.srv.URL + "/api/v1/movies?page=1&limit=10")
@@ -553,7 +555,7 @@ var _ = Describe(
 
 			It("leaves the list view unscored", func() {
 				app.movies.EXPECT().
-					List(mock.Anything, uint16(1), uint16(10)).
+					FilterList(mock.Anything, mock.AnythingOfType("movie.FilterParams")).
 					Return([]*ent.Movie{
 						{
 							ID:             movieID,
@@ -572,7 +574,7 @@ var _ = Describe(
 								},
 							},
 						},
-					}, uint32(1), nil).
+					}, nil, uint32(1), nil).
 					Once()
 
 				resp := app.do(app.req(

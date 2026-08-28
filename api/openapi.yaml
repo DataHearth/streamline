@@ -43,7 +43,14 @@ paths:
     get:
       operationId: listMovies
       summary: List all movies
-      description: Returns a paginated list of movies in the library.
+      description: |
+        Returns a paginated list of movies in the library, filtered and sorted
+        server-side.
+
+        List entries carry a `file_summary` rollup instead of the full
+        `media_files` array — enough for the library grid's size and quality
+        columns and for bulk-action totals, without loading every file row of
+        every movie on a page. `media_files` is detail-only.
       tags: [movies]
       parameters:
         - name: page
@@ -59,6 +66,10 @@ paths:
             default: 20
             maximum: 100
             x-go-type: uint16
+        - $ref: "#/components/parameters/MoviesStatus"
+        - $ref: "#/components/parameters/MoviesQuery"
+        - $ref: "#/components/parameters/MoviesSort"
+        - $ref: "#/components/parameters/MoviesOrder"
       responses:
         "200":
           description: Paginated movie list
@@ -3639,6 +3650,38 @@ components:
         enum: [asc, desc]
         default: desc
 
+    MoviesStatus:
+      name: status
+      in: query
+      description: Filter by movie status (wanted/downloading/available/failed).
+      schema:
+        type: string
+
+    MoviesQuery:
+      name: query
+      in: query
+      description: Case-insensitive substring filter over title and original title.
+      schema:
+        type: string
+
+    MoviesSort:
+      name: sort
+      in: query
+      description: Sort key (recent/title/year).
+      schema:
+        type: string
+
+    MoviesOrder:
+      name: order
+      in: query
+      required: false
+      description: |
+        Sort direction. Omitted, each key uses the direction its name implies:
+        `title` ascending, everything else descending (newest first).
+      schema:
+        type: string
+        enum: [asc, desc]
+
     SeriesPage:
       name: page
       in: query
@@ -4725,6 +4768,32 @@ components:
             When true, also remove the proposed torrent from its download
             client.
 
+    MovieFileSummary:
+      type: object
+      description: |
+        Per-movie rollup of the files on disk, carried by list responses in
+        place of the full media_files array. Absent when the movie has no
+        files. The library grid's size and quality columns and the bulk-action
+        totals read this; anything needing the files themselves uses
+        GET /movies/{id}.
+      required: [file_count, size_bytes]
+      properties:
+        file_count:
+          type: integer
+          x-go-type: uint32
+        size_bytes:
+          type: integer
+          format: int64
+          description: Sum of every attached file's size.
+        resolution:
+          type: string
+          description: |
+            Parsed resolution of the primary (largest) file. Absent when the
+            filename does not name one.
+        codec:
+          type: string
+          description: Parsed video codec of the primary file, when known.
+
     Movie:
       type: object
       required: [id, title, original_title, year, status, monitored, tmdb_id]
@@ -4767,10 +4836,13 @@ components:
           type: array
           nullable: true
           description: |
-            Files attached to this movie. Populated by GET /movies and
-            GET /movies/{id}; absent when the movie has no files on disk.
+            Files attached to this movie. Only populated by GET /movies/{id};
+            list responses carry file_summary instead. Absent when the movie
+            has no files on disk.
           items:
             $ref: "#/components/schemas/MediaFile"
+        file_summary:
+          $ref: "#/components/schemas/MovieFileSummary"
         cast:
           type: array
           nullable: true
@@ -5172,7 +5244,16 @@ components:
 
     TVShowCounts:
       type: object
-      required: [total, continuing, ended, wanted_episodes, downloading_episodes]
+      required:
+        [
+          total,
+          continuing,
+          ended,
+          upcoming,
+          missing,
+          wanted_episodes,
+          downloading_episodes,
+        ]
       properties:
         total:
           type: integer
@@ -5180,6 +5261,14 @@ components:
           type: integer
         ended:
           type: integer
+        upcoming:
+          type: integer
+        missing:
+          type: integer
+          description: |
+            Shows with at least one aired, monitored episode that has no file.
+            A per-show count, not an episode count — it labels the library
+            list's "missing" tab, which selects shows.
         wanted_episodes:
           type: integer
         downloading_episodes:

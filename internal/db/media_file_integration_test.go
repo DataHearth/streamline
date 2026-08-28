@@ -165,7 +165,9 @@ var _ = Describe("MediaFile store", Label("integration", "db"), func() {
 				Width: 1920, Height: 1080, AudioCodec: "aac",
 				AudioChannels: 2, BitrateBPS: 8_000_000,
 			}
-			Expect(store.StampMediaFileProbe(ctx, mf.ID, info)).To(Succeed())
+			Expect(
+				store.StampMediaFileProbe(ctx, mf.ID, mf.Path, info),
+			).To(Succeed())
 
 			got, err := store.FindMediaFileByID(ctx, mf.ID)
 			Expect(err).NotTo(HaveOccurred())
@@ -184,7 +186,9 @@ var _ = Describe("MediaFile store", Label("integration", "db"), func() {
 			"stamps probed_at alone on a failed probe, leaving every probe column untouched",
 			func() {
 				mf := createMovieFile()
-				Expect(store.StampMediaFileProbe(ctx, mf.ID, nil)).To(Succeed())
+				Expect(
+					store.StampMediaFileProbe(ctx, mf.ID, mf.Path, nil),
+				).To(Succeed())
 
 				got, err := store.FindMediaFileByID(ctx, mf.ID)
 				Expect(err).NotTo(HaveOccurred())
@@ -205,7 +209,7 @@ var _ = Describe("MediaFile store", Label("integration", "db"), func() {
 		It("excludes rows that already have a probed_at", func() {
 			a := createMovieFile()
 			b := createMovieFile()
-			Expect(store.StampMediaFileProbe(ctx, a.ID, nil)).To(Succeed())
+			Expect(store.StampMediaFileProbe(ctx, a.ID, a.Path, nil)).To(Succeed())
 
 			rows, err := store.ListUnprobedMediaFiles(ctx, 10)
 			Expect(err).NotTo(HaveOccurred())

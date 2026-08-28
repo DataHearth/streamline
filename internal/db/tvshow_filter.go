@@ -146,6 +146,44 @@ func missingEpisode(now time.Time) predicate.Episode {
 	)
 }
 
+// TVShowStatusCounts returns the number of shows in each series_status, in one
+// GROUP BY pass. A status with no rows is absent, which reads back as 0.
+func (db *DB) TVShowStatusCounts(
+	ctx context.Context,
+) (map[tvshow.SeriesStatus]int, error) {
+	var rows []struct {
+		SeriesStatus tvshow.SeriesStatus `json:"series_status"`
+		Count        int                 `json:"count"`
+	}
+	err := db.client.TVShow.Query().
+		GroupBy(tvshow.FieldSeriesStatus).
+		Aggregate(ent.Count()).
+		Scan(ctx, &rows)
+	if err != nil {
+		return nil, fmt.Errorf("tv show status counts: %w", err)
+	}
+	out := make(map[tvshow.SeriesStatus]int, len(rows))
+	for _, r := range rows {
+		out[r.SeriesStatus] = r.Count
+	}
+	return out, nil
+}
+
+// CountTVShowsMissing counts shows with at least one aired, monitored episode
+// that has no file — the population behind the list's "missing" filter, so it
+// uses the same predicate rather than a second definition that could drift.
+func (db *DB) CountTVShowsMissing(ctx context.Context, now time.Time) (int, error) {
+	n, err := db.client.TVShow.Query().
+		Where(tvshow.HasSeasonsWith(
+			season.HasEpisodesWith(missingEpisode(now)),
+		)).
+		Count(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("count missing tv shows: %w", err)
+	}
+	return n, nil
+}
+
 // orderByEpisodeCount sorts by the number of episodes without loading any. The
 // count is a correlated subquery rather than a join so the page's LIMIT still
 // applies to shows, not to episode rows.

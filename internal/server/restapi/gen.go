@@ -1815,6 +1815,24 @@ func (e ImportClassification) Valid() bool {
 	}
 }
 
+// Defines values for MoviesOrder.
+const (
+	MoviesOrderAsc  MoviesOrder = "asc"
+	MoviesOrderDesc MoviesOrder = "desc"
+)
+
+// Valid indicates whether the value is a known member of the MoviesOrder enum.
+func (e MoviesOrder) Valid() bool {
+	switch e {
+	case MoviesOrderAsc:
+		return true
+	case MoviesOrderDesc:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RequestMediaTypeParam.
 const (
 	RequestMediaTypeParamMovie  RequestMediaTypeParam = "movie"
@@ -1995,6 +2013,24 @@ func (e ListImportShowsParamsClassification) Valid() bool {
 	case ListImportShowsParamsClassificationExisting:
 		return true
 	case ListImportShowsParamsClassificationUnmatched:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListMoviesParamsOrder.
+const (
+	ListMoviesParamsOrderAsc  ListMoviesParamsOrder = "asc"
+	ListMoviesParamsOrderDesc ListMoviesParamsOrder = "desc"
+)
+
+// Valid indicates whether the value is a known member of the ListMoviesParamsOrder enum.
+func (e ListMoviesParamsOrder) Valid() bool {
+	switch e {
+	case ListMoviesParamsOrderAsc:
+		return true
+	case ListMoviesParamsOrderDesc:
 		return true
 	default:
 		return false
@@ -3263,13 +3299,21 @@ type Movie struct {
 	// absent in list responses.
 	Cast *[]CastMember `json:"cast,omitempty"`
 
+	// FileSummary Per-movie rollup of the files on disk, carried by list responses in
+	// place of the full media_files array. Absent when the movie has no
+	// files. The library grid's size and quality columns and the bulk-action
+	// totals read this; anything needing the files themselves uses
+	// GET /movies/{id}.
+	FileSummary *MovieFileSummary `json:"file_summary,omitempty"`
+
 	// Genres TMDB genres. Only populated by GET /movies/{id}; absent in
 	// list responses.
 	Genres *[]string `json:"genres,omitempty"`
 	Id     uint32    `json:"id"`
 
-	// MediaFiles Files attached to this movie. Populated by GET /movies and
-	// GET /movies/{id}; absent when the movie has no files on disk.
+	// MediaFiles Files attached to this movie. Only populated by GET /movies/{id};
+	// list responses carry file_summary instead. Absent when the movie
+	// has no files on disk.
 	MediaFiles *[]MediaFile `json:"media_files,omitempty"`
 
 	// Monitored Whether Streamline auto-searches and upgrades this title.
@@ -3310,6 +3354,24 @@ type MovieCounts struct {
 	// when the library is empty.
 	Trend  []uint32 `json:"trend"`
 	Wanted uint32   `json:"wanted"`
+}
+
+// MovieFileSummary Per-movie rollup of the files on disk, carried by list responses in
+// place of the full media_files array. Absent when the movie has no
+// files. The library grid's size and quality columns and the bulk-action
+// totals read this; anything needing the files themselves uses
+// GET /movies/{id}.
+type MovieFileSummary struct {
+	// Codec Parsed video codec of the primary file, when known.
+	Codec     *string `json:"codec,omitempty"`
+	FileCount uint32  `json:"file_count"`
+
+	// Resolution Parsed resolution of the primary (largest) file. Absent when the
+	// filename does not name one.
+	Resolution *string `json:"resolution,omitempty"`
+
+	// SizeBytes Sum of every attached file's size.
+	SizeBytes int64 `json:"size_bytes"`
 }
 
 // MovieRecommendations defines model for MovieRecommendations.
@@ -4118,8 +4180,14 @@ type TVShowCounts struct {
 	Continuing          int `json:"continuing"`
 	DownloadingEpisodes int `json:"downloading_episodes"`
 	Ended               int `json:"ended"`
-	Total               int `json:"total"`
-	WantedEpisodes      int `json:"wanted_episodes"`
+
+	// Missing Shows with at least one aired, monitored episode that has no file.
+	// A per-show count, not an episode count — it labels the library
+	// list's "missing" tab, which selects shows.
+	Missing        int `json:"missing"`
+	Total          int `json:"total"`
+	Upcoming       int `json:"upcoming"`
+	WantedEpisodes int `json:"wanted_episodes"`
 }
 
 // TorrentAddResult defines model for TorrentAddResult.
@@ -4417,6 +4485,18 @@ type ImportScanFileID = uint32
 
 // ImportScanShowID defines model for ImportScanShowID.
 type ImportScanShowID = uint32
+
+// MoviesOrder defines model for MoviesOrder.
+type MoviesOrder string
+
+// MoviesQuery defines model for MoviesQuery.
+type MoviesQuery = string
+
+// MoviesSort defines model for MoviesSort.
+type MoviesSort = string
+
+// MoviesStatus defines model for MoviesStatus.
+type MoviesStatus = string
 
 // OIDCProviderName defines model for OIDCProviderName.
 type OIDCProviderName = string
@@ -4811,7 +4891,23 @@ type ListImportShowsParamsClassification string
 type ListMoviesParams struct {
 	Page  *uint32 `form:"page,omitempty" json:"page,omitempty"`
 	Limit *uint16 `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Status Filter by movie status (wanted/downloading/available/failed).
+	Status *MoviesStatus `form:"status,omitempty" json:"status,omitempty"`
+
+	// Query Case-insensitive substring filter over title and original title.
+	Query *MoviesQuery `form:"query,omitempty" json:"query,omitempty"`
+
+	// Sort Sort key (recent/title/year).
+	Sort *MoviesSort `form:"sort,omitempty" json:"sort,omitempty"`
+
+	// Order Sort direction. Omitted, each key uses the direction its name implies:
+	// `title` ascending, everything else descending (newest first).
+	Order *ListMoviesParamsOrder `form:"order,omitempty" json:"order,omitempty"`
 }
+
+// ListMoviesParamsOrder defines parameters for ListMovies.
+type ListMoviesParamsOrder string
 
 // DeleteMovieParams defines parameters for DeleteMovie.
 type DeleteMovieParams struct {
@@ -8597,6 +8693,58 @@ func (siw *ServerInterfaceWrapper) ListMovies(w http.ResponseWriter, r *http.Req
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "status" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "status", r.URL.Query(), &params.Status, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "status"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "query" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "query", r.URL.Query(), &params.Query, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "query"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "query", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "sort" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "sort", r.URL.Query(), &params.Sort, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "sort"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sort", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "order" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "order", r.URL.Query(), &params.Order, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "order"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "order", Err: err})
 		}
 		return
 	}

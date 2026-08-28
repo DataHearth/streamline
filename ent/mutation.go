@@ -10224,6 +10224,9 @@ type MediaFileMutation struct {
 	bitrate             *uint32
 	addbitrate          *int32
 	probed_at           *time.Time
+	parsed_source       *string
+	parsed_resolution   *string
+	parsed_codec        *string
 	clearedFields       map[string]struct{}
 	movie               *uint32
 	clearedmovie        bool
@@ -11329,6 +11332,153 @@ func (m *MediaFileMutation) ResetProbedAt() {
 	delete(m.clearedFields, mediafile.FieldProbedAt)
 }
 
+// SetParsedSource sets the "parsed_source" field.
+func (m *MediaFileMutation) SetParsedSource(s string) {
+	m.parsed_source = &s
+}
+
+// ParsedSource returns the value of the "parsed_source" field in the mutation.
+func (m *MediaFileMutation) ParsedSource() (r string, exists bool) {
+	v := m.parsed_source
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldParsedSource returns the old "parsed_source" field's value of the MediaFile entity.
+// If the MediaFile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaFileMutation) OldParsedSource(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldParsedSource is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldParsedSource requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldParsedSource: %w", err)
+	}
+	return oldValue.ParsedSource, nil
+}
+
+// ClearParsedSource clears the value of the "parsed_source" field.
+func (m *MediaFileMutation) ClearParsedSource() {
+	m.parsed_source = nil
+	m.clearedFields[mediafile.FieldParsedSource] = struct{}{}
+}
+
+// ParsedSourceCleared returns if the "parsed_source" field was cleared in this mutation.
+func (m *MediaFileMutation) ParsedSourceCleared() bool {
+	_, ok := m.clearedFields[mediafile.FieldParsedSource]
+	return ok
+}
+
+// ResetParsedSource resets all changes to the "parsed_source" field.
+func (m *MediaFileMutation) ResetParsedSource() {
+	m.parsed_source = nil
+	delete(m.clearedFields, mediafile.FieldParsedSource)
+}
+
+// SetParsedResolution sets the "parsed_resolution" field.
+func (m *MediaFileMutation) SetParsedResolution(s string) {
+	m.parsed_resolution = &s
+}
+
+// ParsedResolution returns the value of the "parsed_resolution" field in the mutation.
+func (m *MediaFileMutation) ParsedResolution() (r string, exists bool) {
+	v := m.parsed_resolution
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldParsedResolution returns the old "parsed_resolution" field's value of the MediaFile entity.
+// If the MediaFile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaFileMutation) OldParsedResolution(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldParsedResolution is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldParsedResolution requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldParsedResolution: %w", err)
+	}
+	return oldValue.ParsedResolution, nil
+}
+
+// ClearParsedResolution clears the value of the "parsed_resolution" field.
+func (m *MediaFileMutation) ClearParsedResolution() {
+	m.parsed_resolution = nil
+	m.clearedFields[mediafile.FieldParsedResolution] = struct{}{}
+}
+
+// ParsedResolutionCleared returns if the "parsed_resolution" field was cleared in this mutation.
+func (m *MediaFileMutation) ParsedResolutionCleared() bool {
+	_, ok := m.clearedFields[mediafile.FieldParsedResolution]
+	return ok
+}
+
+// ResetParsedResolution resets all changes to the "parsed_resolution" field.
+func (m *MediaFileMutation) ResetParsedResolution() {
+	m.parsed_resolution = nil
+	delete(m.clearedFields, mediafile.FieldParsedResolution)
+}
+
+// SetParsedCodec sets the "parsed_codec" field.
+func (m *MediaFileMutation) SetParsedCodec(s string) {
+	m.parsed_codec = &s
+}
+
+// ParsedCodec returns the value of the "parsed_codec" field in the mutation.
+func (m *MediaFileMutation) ParsedCodec() (r string, exists bool) {
+	v := m.parsed_codec
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldParsedCodec returns the old "parsed_codec" field's value of the MediaFile entity.
+// If the MediaFile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaFileMutation) OldParsedCodec(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldParsedCodec is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldParsedCodec requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldParsedCodec: %w", err)
+	}
+	return oldValue.ParsedCodec, nil
+}
+
+// ClearParsedCodec clears the value of the "parsed_codec" field.
+func (m *MediaFileMutation) ClearParsedCodec() {
+	m.parsed_codec = nil
+	m.clearedFields[mediafile.FieldParsedCodec] = struct{}{}
+}
+
+// ParsedCodecCleared returns if the "parsed_codec" field was cleared in this mutation.
+func (m *MediaFileMutation) ParsedCodecCleared() bool {
+	_, ok := m.clearedFields[mediafile.FieldParsedCodec]
+	return ok
+}
+
+// ResetParsedCodec resets all changes to the "parsed_codec" field.
+func (m *MediaFileMutation) ResetParsedCodec() {
+	m.parsed_codec = nil
+	delete(m.clearedFields, mediafile.FieldParsedCodec)
+}
+
 // SetMovieID sets the "movie" edge to the Movie entity by id.
 func (m *MediaFileMutation) SetMovieID(id uint32) {
 	m.movie = &id
@@ -11441,7 +11591,7 @@ func (m *MediaFileMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *MediaFileMutation) Fields() []string {
-	fields := make([]string, 0, 19)
+	fields := make([]string, 0, 22)
 	if m.create_time != nil {
 		fields = append(fields, mediafile.FieldCreateTime)
 	}
@@ -11499,6 +11649,15 @@ func (m *MediaFileMutation) Fields() []string {
 	if m.probed_at != nil {
 		fields = append(fields, mediafile.FieldProbedAt)
 	}
+	if m.parsed_source != nil {
+		fields = append(fields, mediafile.FieldParsedSource)
+	}
+	if m.parsed_resolution != nil {
+		fields = append(fields, mediafile.FieldParsedResolution)
+	}
+	if m.parsed_codec != nil {
+		fields = append(fields, mediafile.FieldParsedCodec)
+	}
 	return fields
 }
 
@@ -11545,6 +11704,12 @@ func (m *MediaFileMutation) Field(name string) (ent.Value, bool) {
 		return m.Bitrate()
 	case mediafile.FieldProbedAt:
 		return m.ProbedAt()
+	case mediafile.FieldParsedSource:
+		return m.ParsedSource()
+	case mediafile.FieldParsedResolution:
+		return m.ParsedResolution()
+	case mediafile.FieldParsedCodec:
+		return m.ParsedCodec()
 	}
 	return nil, false
 }
@@ -11592,6 +11757,12 @@ func (m *MediaFileMutation) OldField(ctx context.Context, name string) (ent.Valu
 		return m.OldBitrate(ctx)
 	case mediafile.FieldProbedAt:
 		return m.OldProbedAt(ctx)
+	case mediafile.FieldParsedSource:
+		return m.OldParsedSource(ctx)
+	case mediafile.FieldParsedResolution:
+		return m.OldParsedResolution(ctx)
+	case mediafile.FieldParsedCodec:
+		return m.OldParsedCodec(ctx)
 	}
 	return nil, fmt.Errorf("unknown MediaFile field %s", name)
 }
@@ -11733,6 +11904,27 @@ func (m *MediaFileMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetProbedAt(v)
+		return nil
+	case mediafile.FieldParsedSource:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetParsedSource(v)
+		return nil
+	case mediafile.FieldParsedResolution:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetParsedResolution(v)
+		return nil
+	case mediafile.FieldParsedCodec:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetParsedCodec(v)
 		return nil
 	}
 	return fmt.Errorf("unknown MediaFile field %s", name)
@@ -11881,6 +12073,15 @@ func (m *MediaFileMutation) ClearedFields() []string {
 	if m.FieldCleared(mediafile.FieldProbedAt) {
 		fields = append(fields, mediafile.FieldProbedAt)
 	}
+	if m.FieldCleared(mediafile.FieldParsedSource) {
+		fields = append(fields, mediafile.FieldParsedSource)
+	}
+	if m.FieldCleared(mediafile.FieldParsedResolution) {
+		fields = append(fields, mediafile.FieldParsedResolution)
+	}
+	if m.FieldCleared(mediafile.FieldParsedCodec) {
+		fields = append(fields, mediafile.FieldParsedCodec)
+	}
 	return fields
 }
 
@@ -11936,6 +12137,15 @@ func (m *MediaFileMutation) ClearField(name string) error {
 		return nil
 	case mediafile.FieldProbedAt:
 		m.ClearProbedAt()
+		return nil
+	case mediafile.FieldParsedSource:
+		m.ClearParsedSource()
+		return nil
+	case mediafile.FieldParsedResolution:
+		m.ClearParsedResolution()
+		return nil
+	case mediafile.FieldParsedCodec:
+		m.ClearParsedCodec()
 		return nil
 	}
 	return fmt.Errorf("unknown MediaFile nullable field %s", name)
@@ -12001,6 +12211,15 @@ func (m *MediaFileMutation) ResetField(name string) error {
 		return nil
 	case mediafile.FieldProbedAt:
 		m.ResetProbedAt()
+		return nil
+	case mediafile.FieldParsedSource:
+		m.ResetParsedSource()
+		return nil
+	case mediafile.FieldParsedResolution:
+		m.ResetParsedResolution()
+		return nil
+	case mediafile.FieldParsedCodec:
+		m.ResetParsedCodec()
 		return nil
 	}
 	return fmt.Errorf("unknown MediaFile field %s", name)

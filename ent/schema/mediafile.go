@@ -49,6 +49,16 @@ func (MediaFile) Fields() []ent.Field {
 		field.Uint8("audio_channels").Optional(),
 		field.Uint32("bitrate").Optional(),
 		field.Time("probed_at").Optional().Nillable(),
+		// Derived from the filename, stored because deriving it is ~12 regex
+		// passes and every response that mentions a file used to redo them —
+		// once per file, per episode, per poll. The filename never changes
+		// under a row, so the parse is a pure function of a column and there
+		// is nothing to keep in sync. Empty means "not parsed yet"; readers
+		// fall back to parsing live, which is what carries rows written
+		// before these columns existed.
+		field.String("parsed_source").Optional(),
+		field.String("parsed_resolution").Optional(),
+		field.String("parsed_codec").Optional(),
 	}
 }
 

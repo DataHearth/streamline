@@ -187,8 +187,13 @@ type Store interface {
 	CountMoviesByStatus(ctx context.Context, status movie.Status) (int, error)
 	MovieStatusCounts(ctx context.Context) (map[movie.Status]int, error)
 	MovieTMDBIndex(ctx context.Context) (map[uint32]uint32, error)
+	MovieFileSummaries(
+		ctx context.Context,
+		movieIDs []uint32,
+	) (map[uint32]MovieFileSummary, error)
 	MovieCreateTimesSince(ctx context.Context, since time.Time) ([]time.Time, error)
-	ListMovies(ctx context.Context, offset, limit uint32) ([]*ent.Movie, error)
+	TVShowStatusCounts(ctx context.Context) (map[tvshow.SeriesStatus]int, error)
+	CountTVShowsMissing(ctx context.Context, now time.Time) (int, error)
 	FilterMovies(
 		ctx context.Context,
 		p FilterMoviesParams,
@@ -458,7 +463,12 @@ type Store interface {
 	// StampMediaFileProbe records a probe attempt's result. A nil info
 	// (failed probe) still sets probed_at, so ListUnprobedMediaFiles never
 	// re-selects it.
-	StampMediaFileProbe(ctx context.Context, id uint32, info *ffmpeg.Info) error
+	StampMediaFileProbe(
+		ctx context.Context,
+		id uint32,
+		path string,
+		info *ffmpeg.Info,
+	) error
 	// UpdateMediaFilePath rewrites a MediaFile's path (used by rename).
 	UpdateMediaFilePath(ctx context.Context, id uint32, path string) error
 	// DeleteMediaFile removes a MediaFile row and leaves owners untouched.
@@ -660,6 +670,15 @@ type Store interface {
 	) ([]string, error)
 	DeleteTVShow(ctx context.Context, id uint32) error
 	SetSeasonMonitored(ctx context.Context, id uint32, monitored bool) error
+	TVShowTVDBIndex(ctx context.Context) (map[uint32]uint32, error)
+	ListMediaFilesForDrift(
+		ctx context.Context,
+		afterID uint32,
+		limit int,
+	) ([]DriftRow, error)
+	FindMediaFileWithOwners(ctx context.Context, id uint32) (*ent.MediaFile, error)
+	SetEpisodesMonitored(ctx context.Context, ids []uint32, monitored bool) error
+	SetSeasonsMonitored(ctx context.Context, ids []uint32, monitored bool) error
 	SetEpisodeMonitored(ctx context.Context, id uint32, monitored bool) error
 	CascadeShowMonitored(ctx context.Context, showID uint32, monitored bool) error
 	CascadeSeasonMonitored(

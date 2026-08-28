@@ -95,6 +95,34 @@ func movieToAPI(m *ent.Movie) Movie {
 	return mov
 }
 
+// movieListToAPI renders a list entry: the base movie plus the file rollup
+// that stands in for media_files. The row's media_files edge is deliberately
+// not loaded on this path, so movieToAPI emits no files and nothing has to
+// suppress them.
+func movieListToAPI(m *ent.Movie, sum db.MovieFileSummary) Movie {
+	out := movieToAPI(m)
+	if sum.FileCount == 0 {
+		return out
+	}
+	fs := MovieFileSummary{
+		FileCount: sum.FileCount,
+		SizeBytes: sum.SizeBytes,
+	}
+	// Resolution and codec are parsed from the filename, not stored, so the
+	// rollup parses once for the primary file rather than once per file.
+	parsed := library.Parse(filepath.Base(sum.PrimaryPath))
+	if parsed.Resolution != "" {
+		r := parsed.Resolution
+		fs.Resolution = &r
+	}
+	if parsed.Codec != "" {
+		c := parsed.Codec
+		fs.Codec = &c
+	}
+	out.FileSummary = &fs
+	return out
+}
+
 // storedCastToAPI renders the cast persisted on a Movie/TVShow row. Detail
 // views read cast from the DB, so nothing on that path calls a provider.
 func storedCastToAPI(cast []schema.CastMember) []CastMember {
@@ -278,8 +306,25 @@ func playOnToAPI(r mediaserver.PlayOnResult) PlayOnLink {
 	return out
 }
 
+// parsedFieldsOf returns a file's parsed source/resolution/codec, preferring
+// the stored columns and falling back to parsing the basename for rows written
+// before those columns existed. Parsing is ~12 regex passes, and this used to
+// run per file per response — per episode of a series detail, on every poll.
+// The fallback is what makes the migration need no data backfill: an old row
+// keeps working and gets its values the next time it is written.
+func parsedFieldsOf(f *ent.MediaFile) library.ParseResult {
+	if f.ParsedSource != "" || f.ParsedResolution != "" || f.ParsedCodec != "" {
+		return library.ParseResult{
+			Source:     f.ParsedSource,
+			Resolution: f.ParsedResolution,
+			Codec:      f.ParsedCodec,
+		}
+	}
+	return library.Parse(filepath.Base(f.Path))
+}
+
 func mediaFileToAPI(f *ent.MediaFile) MediaFile {
-	parsed := library.Parse(filepath.Base(f.Path))
+	parsed := parsedFieldsOf(f)
 	out := MediaFile{
 		Id:   f.ID,
 		Path: f.Path,
@@ -910,10 +955,9 @@ func episodeToAPI(e *ent.Episode, now time.Time, profile string) Episode {
 			rg := f.ReleaseGroup
 			out.ReleaseGroup = &rg
 		}
-		// Parsed rather than stored, exactly as MediaFile does it for movies.
 		// Only the source: resolution and codec come off the probe here, which
 		// measured them instead of reading them off a filename.
-		if src := library.Parse(filepath.Base(f.Path)).Source; src != "" {
+		if src := parsedFieldsOf(f).Source; src != "" {
 			out.ParsedSource = &src
 		}
 	}

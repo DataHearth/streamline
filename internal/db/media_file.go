@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"time"
 
 	"github.com/datahearth/streamline/ent"
@@ -10,6 +11,7 @@ import (
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/internal/ffmpeg"
+	"github.com/datahearth/streamline/internal/library"
 )
 
 type CreateMediaFileParams struct {
@@ -56,12 +58,19 @@ func (db *DB) CreateMediaFile(
 	ctx context.Context,
 	p CreateMediaFileParams,
 ) (*ent.MediaFile, error) {
+	// Parsed here rather than at each call site: every path that creates a
+	// media file wants the same three derived values, and doing it at the one
+	// choke point is what makes "a row always has them" true.
+	parsed := library.Parse(filepath.Base(p.Path))
 	q := db.client.MediaFile.Create().
 		SetPath(p.Path).
 		SetSize(p.Size).
 		SetQuality(p.Quality).
 		SetFormat(p.Format).
-		SetReleaseGroup(p.ReleaseGroup)
+		SetReleaseGroup(p.ReleaseGroup).
+		SetParsedSource(parsed.Source).
+		SetParsedResolution(parsed.Resolution).
+		SetParsedCodec(parsed.Codec)
 	if p.MovieID != 0 {
 		q = q.SetMovieID(p.MovieID)
 	}
@@ -96,13 +105,24 @@ func (db *DB) ListUnprobedMediaFiles(
 
 // StampMediaFileProbe records a probe attempt's result. A nil info (failed
 // probe) still sets probed_at, so ListUnprobedMediaFiles never re-selects it.
+//
+// path, when non-empty, also backfills the parsed_* columns. The probe job is
+// already walking and writing rows created before those columns existed, so it
+// is the cheapest place to fill them — no separate migration pass.
 func (db *DB) StampMediaFileProbe(
 	ctx context.Context,
 	id uint32,
+	path string,
 	info *ffmpeg.Info,
 ) error {
-	if err := applyProbe(db.client.MediaFile.UpdateOneID(id), info).
-		Exec(ctx); err != nil {
+	q := applyProbe(db.client.MediaFile.UpdateOneID(id), info)
+	if path != "" {
+		parsed := library.Parse(filepath.Base(path))
+		q = q.SetParsedSource(parsed.Source).
+			SetParsedResolution(parsed.Resolution).
+			SetParsedCodec(parsed.Codec)
+	}
+	if err := q.Exec(ctx); err != nil {
 		return fmt.Errorf("stamp probe on media_file %d: %w", id, err)
 	}
 	return nil
@@ -148,6 +168,57 @@ func (db *DB) ListAllMediaFilesWithOwners(
 		return nil, fmt.Errorf("list media_files with owners: %w", err)
 	}
 	return rows, nil
+}
+
+// DriftRow is the three columns the drift check needs to stat a file and do
+// its grace arithmetic. The owner edges are not here: they are read only on
+// the rare branch where a file has actually gone missing.
+type DriftRow struct {
+	ID         uint32     `json:"id"`
+	Path       string     `json:"path"`
+	LastSeenAt *time.Time `json:"last_seen_at"`
+}
+
+// ListMediaFilesForDrift returns one keyset page of drift rows, ordered by id,
+// starting after afterID. Paged and projected because the drift check runs
+// every 15 minutes over the whole table: loading every row with both owner
+// edges attached was tens of MB of transient garbage per tick on a library of
+// a few thousand files, to stat a path and compare a timestamp.
+func (db *DB) ListMediaFilesForDrift(
+	ctx context.Context,
+	afterID uint32,
+	limit int,
+) ([]DriftRow, error) {
+	q := db.client.MediaFile.Query().
+		Order(ent.Asc(mediafile.FieldID)).
+		Limit(limit)
+	if afterID > 0 {
+		q = q.Where(mediafile.IDGT(afterID))
+	}
+	var rows []DriftRow
+	err := q.Select(
+		mediafile.FieldID,
+		mediafile.FieldPath,
+		mediafile.FieldLastSeenAt,
+	).Scan(ctx, &rows)
+	if err != nil {
+		return nil, fmt.Errorf("list media_files for drift: %w", err)
+	}
+	return rows, nil
+}
+
+// FindMediaFileWithOwners loads one row with both owner edges — the shape the
+// drift check needs once a file turns out to be missing, which is the rare
+// case worth paying an extra query for.
+func (db *DB) FindMediaFileWithOwners(
+	ctx context.Context,
+	id uint32,
+) (*ent.MediaFile, error) {
+	return db.client.MediaFile.Query().
+		Where(mediafile.IDEQ(id)).
+		WithMovie(withLeanMovie).
+		WithEpisode().
+		Only(ctx)
 }
 
 func (db *DB) ListMediaFilesByMovieID(

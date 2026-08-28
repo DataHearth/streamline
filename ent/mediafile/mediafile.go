@@ -53,6 +53,12 @@ const (
 	FieldBitrate = "bitrate"
 	// FieldProbedAt holds the string denoting the probed_at field in the database.
 	FieldProbedAt = "probed_at"
+	// FieldParsedSource holds the string denoting the parsed_source field in the database.
+	FieldParsedSource = "parsed_source"
+	// FieldParsedResolution holds the string denoting the parsed_resolution field in the database.
+	FieldParsedResolution = "parsed_resolution"
+	// FieldParsedCodec holds the string denoting the parsed_codec field in the database.
+	FieldParsedCodec = "parsed_codec"
 	// EdgeMovie holds the string denoting the movie edge name in mutations.
 	EdgeMovie = "movie"
 	// EdgeEpisode holds the string denoting the episode edge name in mutations.
@@ -97,6 +103,9 @@ var Columns = []string{
 	FieldAudioChannels,
 	FieldBitrate,
 	FieldProbedAt,
+	FieldParsedSource,
+	FieldParsedResolution,
+	FieldParsedCodec,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "media_files"
@@ -262,6 +271,21 @@ func ByBitrate(opts ...sql.OrderTermOption) OrderOption {
 // ByProbedAt orders the results by the probed_at field.
 func ByProbedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldProbedAt, opts...).ToFunc()
+}
+
+// ByParsedSource orders the results by the parsed_source field.
+func ByParsedSource(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldParsedSource, opts...).ToFunc()
+}
+
+// ByParsedResolution orders the results by the parsed_resolution field.
+func ByParsedResolution(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldParsedResolution, opts...).ToFunc()
+}
+
+// ByParsedCodec orders the results by the parsed_codec field.
+func ByParsedCodec(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldParsedCodec, opts...).ToFunc()
 }
 
 // ByMovieField orders the results by movie field.

@@ -233,16 +233,6 @@ var _ = Describe("Movie filter + lookup", Label("integration", "db"), func() {
 			Expect(got.Cast).To(HaveLen(1))
 		})
 
-		It("omits cast from ListMovies but keeps every other field", func() {
-			items, err := store.ListMovies(ctx, 0, 10)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(items).ToNot(BeEmpty())
-			Expect(items[0].Cast).To(BeEmpty())
-			Expect(items[0].Title).To(Equal("Cast Carrier"))
-			Expect(items[0].TmdbID).To(Equal(uint32(970)))
-			Expect(items[0].QualityProfile).To(Equal(qualityProfile))
-		})
-
 		It("omits cast from FilterMovies but keeps every other field", func() {
 			items, _, err := store.FilterMovies(ctx, FilterMoviesParams{Limit: 10})
 			Expect(err).NotTo(HaveOccurred())
@@ -250,6 +240,22 @@ var _ = Describe("Movie filter + lookup", Label("integration", "db"), func() {
 			Expect(items[0].Cast).To(BeEmpty())
 			Expect(items[0].Title).To(Equal("Cast Carrier"))
 			Expect(items[0].Year).To(Equal(uint16(2020)))
+		})
+	})
+
+	Describe("the parsed_* columns", func() {
+		It("fills them from the filename at create", func() {
+			m := seed("Parsed", 2020, 995, entmovie.StatusAvailable)
+			f, err := store.CreateMediaFile(ctx, CreateMediaFileParams{
+				MovieID: m.ID,
+				Path:    "/lib/Parsed/Parsed.2020.1080p.BluRay.x264-GRP.mkv",
+				Size:    10,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			// Stored once, so the ~12 regex passes never run again for this row.
+			Expect(f.ParsedResolution).To(Equal("1080p"))
+			Expect(f.ParsedCodec).To(Equal("x264"))
+			Expect(f.ParsedSource).ToNot(BeEmpty())
 		})
 	})
 
@@ -309,14 +315,42 @@ var _ = Describe("Movie filter + lookup", Label("integration", "db"), func() {
 		})
 	})
 
-	Describe("ListMovies", func() {
-		It("returns a page newest-first", func() {
-			a := seed("a", 2020, 904, entmovie.StatusWanted)
-			b := seed("b", 2020, 905, entmovie.StatusWanted)
-			items, err := store.ListMovies(ctx, 0, 10)
+	Describe("MovieFileSummaries", func() {
+		It("rolls up count, total size and the largest file's path", func() {
+			m := seed("Summed", 2020, 990, entmovie.StatusAvailable)
+			for _, f := range []struct {
+				path string
+				size int64
+			}{
+				{"/lib/Summed/small.1080p.x264.mkv", 100},
+				{"/lib/Summed/big.2160p.hevc.mkv", 900},
+			} {
+				_, err := store.CreateMediaFile(ctx, CreateMediaFileParams{
+					MovieID: m.ID, Path: f.path, Size: f.size,
+				})
+				Expect(err).NotTo(HaveOccurred())
+			}
+
+			got, err := store.MovieFileSummaries(ctx, []uint32{m.ID})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(items[0].ID).To(Equal(b.ID))
-			Expect(items[1].ID).To(Equal(a.ID))
+			Expect(got[m.ID].FileCount).To(Equal(uint32(2)))
+			Expect(got[m.ID].SizeBytes).To(Equal(int64(1000)))
+			// Largest wins the primary slot, so the quality column reports the
+			// file a viewer would actually play.
+			Expect(got[m.ID].PrimaryPath).To(HaveSuffix("big.2160p.hevc.mkv"))
+		})
+
+		It("omits a movie with no files rather than reporting a zero row", func() {
+			m := seed("Empty", 2020, 991, entmovie.StatusWanted)
+			got, err := store.MovieFileSummaries(ctx, []uint32{m.ID})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got).To(BeEmpty())
+		})
+
+		It("returns an empty map for no ids without querying", func() {
+			got, err := store.MovieFileSummaries(ctx, nil)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got).To(BeEmpty())
 		})
 	})
 

@@ -190,7 +190,7 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 		})
 
 		It("filters by status, sorts by title asc, paginates", func() {
-			items, total, err := svc.FilterList(ctx, FilterParams{
+			items, _, total, err := svc.FilterList(ctx, FilterParams{
 				Status: string(entmovie.StatusWanted),
 				Sort:   "title", Order: "asc",
 				Page: 1, Limit: 2,
@@ -203,14 +203,14 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 		})
 
 		It("defaults page=1 limit=20 when zero", func() {
-			items, total, err := svc.FilterList(ctx, FilterParams{})
+			items, _, total, err := svc.FilterList(ctx, FilterParams{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(total).To(Equal(uint32(4)))
 			Expect(items).To(HaveLen(4))
 		})
 
 		It("returns the second page when paged", func() {
-			items, total, err := svc.FilterList(ctx, FilterParams{
+			items, _, total, err := svc.FilterList(ctx, FilterParams{
 				Status: string(entmovie.StatusWanted),
 				Sort:   "title", Order: "asc",
 				Page: 2, Limit: 2,

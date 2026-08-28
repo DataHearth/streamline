@@ -169,22 +169,6 @@ func (db *DB) MovieCreateTimesSince(
 	return out, nil
 }
 
-// ListMovies returns a page of movies newest first, with their media files
-// attached — the library grid renders size and quality per card, and the
-// footer sums the page's bytes.
-func (db *DB) ListMovies(
-	ctx context.Context,
-	offset, limit uint32,
-) ([]*ent.Movie, error) {
-	return db.client.Movie.Query().
-		Offset(int(offset)).
-		Limit(int(limit)).
-		Order(ent.Desc(movie.FieldCreateTime)).
-		Select(movieListColumns...).
-		WithMediaFiles().
-		All(ctx)
-}
-
 // ListWantedMovies returns every movie with status = wanted, regardless of
 // cooldown or grab-failure state. Used by the rss-sync feed scanner to build
 // a per-tick title+year lookup map.

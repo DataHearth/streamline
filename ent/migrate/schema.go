@@ -447,6 +447,9 @@ var (
 		{Name: "audio_channels", Type: field.TypeUint8, Nullable: true},
 		{Name: "bitrate", Type: field.TypeUint32, Nullable: true},
 		{Name: "probed_at", Type: field.TypeTime, Nullable: true},
+		{Name: "parsed_source", Type: field.TypeString, Nullable: true},
+		{Name: "parsed_resolution", Type: field.TypeString, Nullable: true},
+		{Name: "parsed_codec", Type: field.TypeString, Nullable: true},
 		{Name: "episode_media_files", Type: field.TypeUint32, Nullable: true},
 		{Name: "movie_media_files", Type: field.TypeUint32, Nullable: true},
 	}
@@ -458,13 +461,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "media_files_episodes_media_files",
-				Columns:    []*schema.Column{MediaFilesColumns[20]},
+				Columns:    []*schema.Column{MediaFilesColumns[23]},
 				RefColumns: []*schema.Column{EpisodesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "media_files_movies_media_files",
-				Columns:    []*schema.Column{MediaFilesColumns[21]},
+				Columns:    []*schema.Column{MediaFilesColumns[24]},
 				RefColumns: []*schema.Column{MoviesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -473,12 +476,12 @@ var (
 			{
 				Name:    "mediafile_episode_media_files",
 				Unique:  false,
-				Columns: []*schema.Column{MediaFilesColumns[20]},
+				Columns: []*schema.Column{MediaFilesColumns[23]},
 			},
 			{
 				Name:    "mediafile_movie_media_files",
 				Unique:  false,
-				Columns: []*schema.Column{MediaFilesColumns[21]},
+				Columns: []*schema.Column{MediaFilesColumns[24]},
 			},
 			{
 				Name:    "mediafile_probed_at",

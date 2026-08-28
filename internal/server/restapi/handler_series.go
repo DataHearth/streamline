@@ -107,6 +107,8 @@ func (s *Server) GetSeriesCounts(
 			Total:               c.Total,
 			Continuing:          c.Continuing,
 			Ended:               c.Ended,
+			Upcoming:            c.Upcoming,
+			Missing:             c.Missing,
 			WantedEpisodes:      c.WantedEpisodes,
 			DownloadingEpisodes: c.DownloadingEpisodes,
 		},

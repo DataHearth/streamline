@@ -187,8 +187,8 @@ var _ = Describe("Full Vertical Slice", Label("unit", "server", "movies"), func(
 			Return(fightClub, "", nil).
 			Once()
 		movies.EXPECT().
-			List(mock.Anything, uint16(1), uint16(10)).
-			Return([]*ent.Movie{fightClub}, uint32(1), nil).
+			FilterList(mock.Anything, mock.AnythingOfType("movie.FilterParams")).
+			Return([]*ent.Movie{fightClub}, nil, uint32(1), nil).
 			Once()
 		movies.EXPECT().
 			Get(mock.Anything, uint32(1)).
@@ -207,8 +207,8 @@ var _ = Describe("Full Vertical Slice", Label("unit", "server", "movies"), func(
 			Return(nil, fmt.Errorf("movie not found")).
 			Once()
 		movies.EXPECT().
-			List(mock.Anything, uint16(1), uint16(10)).
-			Return(nil, uint32(0), nil).
+			FilterList(mock.Anything, mock.AnythingOfType("movie.FilterParams")).
+			Return(nil, nil, uint32(0), nil).
 			Once()
 
 		By("Adding a movie via POST /api/v1/movies")

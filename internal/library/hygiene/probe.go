@@ -104,7 +104,7 @@ func (s *Service) probeRow(ctx context.Context, row *ent.MediaFile) bool {
 	// back oldest-first, so returning here on a deterministic per-row failure
 	// would re-select the same failing row at the head of every subsequent
 	// tick and starve every newer file behind it.
-	if err := s.store.StampMediaFileProbe(ctx, row.ID, info); err != nil {
+	if err := s.store.StampMediaFileProbe(ctx, row.ID, row.Path, info); err != nil {
 		// The drift-check job can delete this row between
 		// ListUnprobedMediaFiles and this stamp write; that race is routine,
 		// not an error.

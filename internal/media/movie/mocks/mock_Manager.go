@@ -8,6 +8,7 @@ import (
 	"context"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/media/movie"
 	"github.com/datahearth/streamline/internal/metadata"
 	mock "github.com/stretchr/testify/mock"
@@ -381,7 +382,7 @@ func (_c *MockManager_DeleteFile_Call) RunAndReturn(run func(ctx context.Context
 }
 
 // FilterList provides a mock function for the type MockManager
-func (_mock *MockManager) FilterList(ctx context.Context, p movie.FilterParams) ([]*ent.Movie, uint32, error) {
+func (_mock *MockManager) FilterList(ctx context.Context, p movie.FilterParams) ([]*ent.Movie, map[uint32]db.MovieFileSummary, uint32, error) {
 	ret := _mock.Called(ctx, p)
 
 	if len(ret) == 0 {
@@ -389,9 +390,10 @@ func (_mock *MockManager) FilterList(ctx context.Context, p movie.FilterParams) 
 	}
 
 	var r0 []*ent.Movie
-	var r1 uint32
-	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, movie.FilterParams) ([]*ent.Movie, uint32, error)); ok {
+	var r1 map[uint32]db.MovieFileSummary
+	var r2 uint32
+	var r3 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, movie.FilterParams) ([]*ent.Movie, map[uint32]db.MovieFileSummary, uint32, error)); ok {
 		return returnFunc(ctx, p)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, movie.FilterParams) []*ent.Movie); ok {
@@ -401,17 +403,24 @@ func (_mock *MockManager) FilterList(ctx context.Context, p movie.FilterParams) 
 			r0 = ret.Get(0).([]*ent.Movie)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, movie.FilterParams) uint32); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, movie.FilterParams) map[uint32]db.MovieFileSummary); ok {
 		r1 = returnFunc(ctx, p)
 	} else {
-		r1 = ret.Get(1).(uint32)
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(map[uint32]db.MovieFileSummary)
+		}
 	}
-	if returnFunc, ok := ret.Get(2).(func(context.Context, movie.FilterParams) error); ok {
+	if returnFunc, ok := ret.Get(2).(func(context.Context, movie.FilterParams) uint32); ok {
 		r2 = returnFunc(ctx, p)
 	} else {
-		r2 = ret.Error(2)
+		r2 = ret.Get(2).(uint32)
 	}
-	return r0, r1, r2
+	if returnFunc, ok := ret.Get(3).(func(context.Context, movie.FilterParams) error); ok {
+		r3 = returnFunc(ctx, p)
+	} else {
+		r3 = ret.Error(3)
+	}
+	return r0, r1, r2, r3
 }
 
 // MockManager_FilterList_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FilterList'
@@ -444,12 +453,12 @@ func (_c *MockManager_FilterList_Call) Run(run func(ctx context.Context, p movie
 	return _c
 }
 
-func (_c *MockManager_FilterList_Call) Return(movies []*ent.Movie, v uint32, err error) *MockManager_FilterList_Call {
-	_c.Call.Return(movies, v, err)
+func (_c *MockManager_FilterList_Call) Return(movies []*ent.Movie, uint32ToMovieFileSummary map[uint32]db.MovieFileSummary, v uint32, err error) *MockManager_FilterList_Call {
+	_c.Call.Return(movies, uint32ToMovieFileSummary, v, err)
 	return _c
 }
 
-func (_c *MockManager_FilterList_Call) RunAndReturn(run func(ctx context.Context, p movie.FilterParams) ([]*ent.Movie, uint32, error)) *MockManager_FilterList_Call {
+func (_c *MockManager_FilterList_Call) RunAndReturn(run func(ctx context.Context, p movie.FilterParams) ([]*ent.Movie, map[uint32]db.MovieFileSummary, uint32, error)) *MockManager_FilterList_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -586,86 +595,6 @@ func (_c *MockManager_GetByTMDBID_Call) Return(movie1 *ent.Movie, err error) *Mo
 }
 
 func (_c *MockManager_GetByTMDBID_Call) RunAndReturn(run func(ctx context.Context, tmdbID uint32) (*ent.Movie, error)) *MockManager_GetByTMDBID_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// List provides a mock function for the type MockManager
-func (_mock *MockManager) List(ctx context.Context, page uint16, limit uint16) ([]*ent.Movie, uint32, error) {
-	ret := _mock.Called(ctx, page, limit)
-
-	if len(ret) == 0 {
-		panic("no return value specified for List")
-	}
-
-	var r0 []*ent.Movie
-	var r1 uint32
-	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint16, uint16) ([]*ent.Movie, uint32, error)); ok {
-		return returnFunc(ctx, page, limit)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint16, uint16) []*ent.Movie); ok {
-		r0 = returnFunc(ctx, page, limit)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*ent.Movie)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uint16, uint16) uint32); ok {
-		r1 = returnFunc(ctx, page, limit)
-	} else {
-		r1 = ret.Get(1).(uint32)
-	}
-	if returnFunc, ok := ret.Get(2).(func(context.Context, uint16, uint16) error); ok {
-		r2 = returnFunc(ctx, page, limit)
-	} else {
-		r2 = ret.Error(2)
-	}
-	return r0, r1, r2
-}
-
-// MockManager_List_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'List'
-type MockManager_List_Call struct {
-	*mock.Call
-}
-
-// List is a helper method to define mock.On call
-//   - ctx context.Context
-//   - page uint16
-//   - limit uint16
-func (_e *MockManager_Expecter) List(ctx any, page any, limit any) *MockManager_List_Call {
-	return &MockManager_List_Call{Call: _e.mock.On("List", ctx, page, limit)}
-}
-
-func (_c *MockManager_List_Call) Run(run func(ctx context.Context, page uint16, limit uint16)) *MockManager_List_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 uint16
-		if args[1] != nil {
-			arg1 = args[1].(uint16)
-		}
-		var arg2 uint16
-		if args[2] != nil {
-			arg2 = args[2].(uint16)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
-	})
-	return _c
-}
-
-func (_c *MockManager_List_Call) Return(movies []*ent.Movie, v uint32, err error) *MockManager_List_Call {
-	_c.Call.Return(movies, v, err)
-	return _c
-}
-
-func (_c *MockManager_List_Call) RunAndReturn(run func(ctx context.Context, page uint16, limit uint16) ([]*ent.Movie, uint32, error)) *MockManager_List_Call {
 	_c.Call.Return(run)
 	return _c
 }

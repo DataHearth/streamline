@@ -272,6 +272,48 @@ func (_c *MediaFileCreate) SetNillableProbedAt(v *time.Time) *MediaFileCreate {
 	return _c
 }
 
+// SetParsedSource sets the "parsed_source" field.
+func (_c *MediaFileCreate) SetParsedSource(v string) *MediaFileCreate {
+	_c.mutation.SetParsedSource(v)
+	return _c
+}
+
+// SetNillableParsedSource sets the "parsed_source" field if the given value is not nil.
+func (_c *MediaFileCreate) SetNillableParsedSource(v *string) *MediaFileCreate {
+	if v != nil {
+		_c.SetParsedSource(*v)
+	}
+	return _c
+}
+
+// SetParsedResolution sets the "parsed_resolution" field.
+func (_c *MediaFileCreate) SetParsedResolution(v string) *MediaFileCreate {
+	_c.mutation.SetParsedResolution(v)
+	return _c
+}
+
+// SetNillableParsedResolution sets the "parsed_resolution" field if the given value is not nil.
+func (_c *MediaFileCreate) SetNillableParsedResolution(v *string) *MediaFileCreate {
+	if v != nil {
+		_c.SetParsedResolution(*v)
+	}
+	return _c
+}
+
+// SetParsedCodec sets the "parsed_codec" field.
+func (_c *MediaFileCreate) SetParsedCodec(v string) *MediaFileCreate {
+	_c.mutation.SetParsedCodec(v)
+	return _c
+}
+
+// SetNillableParsedCodec sets the "parsed_codec" field if the given value is not nil.
+func (_c *MediaFileCreate) SetNillableParsedCodec(v *string) *MediaFileCreate {
+	if v != nil {
+		_c.SetParsedCodec(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *MediaFileCreate) SetID(v uint32) *MediaFileCreate {
 	_c.mutation.SetID(v)
@@ -503,6 +545,18 @@ func (_c *MediaFileCreate) createSpec() (*MediaFile, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.ProbedAt(); ok {
 		_spec.SetField(mediafile.FieldProbedAt, field.TypeTime, value)
 		_node.ProbedAt = &value
+	}
+	if value, ok := _c.mutation.ParsedSource(); ok {
+		_spec.SetField(mediafile.FieldParsedSource, field.TypeString, value)
+		_node.ParsedSource = value
+	}
+	if value, ok := _c.mutation.ParsedResolution(); ok {
+		_spec.SetField(mediafile.FieldParsedResolution, field.TypeString, value)
+		_node.ParsedResolution = value
+	}
+	if value, ok := _c.mutation.ParsedCodec(); ok {
+		_spec.SetField(mediafile.FieldParsedCodec, field.TypeString, value)
+		_node.ParsedCodec = value
 	}
 	if nodes := _c.mutation.MovieIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

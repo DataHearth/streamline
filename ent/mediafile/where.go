@@ -145,6 +145,21 @@ func ProbedAt(v time.Time) predicate.MediaFile {
 	return predicate.MediaFile(sql.FieldEQ(FieldProbedAt, v))
 }
 
+// ParsedSource applies equality check predicate on the "parsed_source" field. It's identical to ParsedSourceEQ.
+func ParsedSource(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldParsedSource, v))
+}
+
+// ParsedResolution applies equality check predicate on the "parsed_resolution" field. It's identical to ParsedResolutionEQ.
+func ParsedResolution(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldParsedResolution, v))
+}
+
+// ParsedCodec applies equality check predicate on the "parsed_codec" field. It's identical to ParsedCodecEQ.
+func ParsedCodec(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldParsedCodec, v))
+}
+
 // CreateTimeEQ applies the EQ predicate on the "create_time" field.
 func CreateTimeEQ(v time.Time) predicate.MediaFile {
 	return predicate.MediaFile(sql.FieldEQ(FieldCreateTime, v))
@@ -1198,6 +1213,231 @@ func ProbedAtIsNil() predicate.MediaFile {
 // ProbedAtNotNil applies the NotNil predicate on the "probed_at" field.
 func ProbedAtNotNil() predicate.MediaFile {
 	return predicate.MediaFile(sql.FieldNotNull(FieldProbedAt))
+}
+
+// ParsedSourceEQ applies the EQ predicate on the "parsed_source" field.
+func ParsedSourceEQ(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldParsedSource, v))
+}
+
+// ParsedSourceNEQ applies the NEQ predicate on the "parsed_source" field.
+func ParsedSourceNEQ(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNEQ(FieldParsedSource, v))
+}
+
+// ParsedSourceIn applies the In predicate on the "parsed_source" field.
+func ParsedSourceIn(vs ...string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIn(FieldParsedSource, vs...))
+}
+
+// ParsedSourceNotIn applies the NotIn predicate on the "parsed_source" field.
+func ParsedSourceNotIn(vs ...string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotIn(FieldParsedSource, vs...))
+}
+
+// ParsedSourceGT applies the GT predicate on the "parsed_source" field.
+func ParsedSourceGT(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGT(FieldParsedSource, v))
+}
+
+// ParsedSourceGTE applies the GTE predicate on the "parsed_source" field.
+func ParsedSourceGTE(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGTE(FieldParsedSource, v))
+}
+
+// ParsedSourceLT applies the LT predicate on the "parsed_source" field.
+func ParsedSourceLT(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLT(FieldParsedSource, v))
+}
+
+// ParsedSourceLTE applies the LTE predicate on the "parsed_source" field.
+func ParsedSourceLTE(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLTE(FieldParsedSource, v))
+}
+
+// ParsedSourceContains applies the Contains predicate on the "parsed_source" field.
+func ParsedSourceContains(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldContains(FieldParsedSource, v))
+}
+
+// ParsedSourceHasPrefix applies the HasPrefix predicate on the "parsed_source" field.
+func ParsedSourceHasPrefix(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldHasPrefix(FieldParsedSource, v))
+}
+
+// ParsedSourceHasSuffix applies the HasSuffix predicate on the "parsed_source" field.
+func ParsedSourceHasSuffix(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldHasSuffix(FieldParsedSource, v))
+}
+
+// ParsedSourceIsNil applies the IsNil predicate on the "parsed_source" field.
+func ParsedSourceIsNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIsNull(FieldParsedSource))
+}
+
+// ParsedSourceNotNil applies the NotNil predicate on the "parsed_source" field.
+func ParsedSourceNotNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotNull(FieldParsedSource))
+}
+
+// ParsedSourceEqualFold applies the EqualFold predicate on the "parsed_source" field.
+func ParsedSourceEqualFold(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEqualFold(FieldParsedSource, v))
+}
+
+// ParsedSourceContainsFold applies the ContainsFold predicate on the "parsed_source" field.
+func ParsedSourceContainsFold(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldContainsFold(FieldParsedSource, v))
+}
+
+// ParsedResolutionEQ applies the EQ predicate on the "parsed_resolution" field.
+func ParsedResolutionEQ(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldParsedResolution, v))
+}
+
+// ParsedResolutionNEQ applies the NEQ predicate on the "parsed_resolution" field.
+func ParsedResolutionNEQ(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNEQ(FieldParsedResolution, v))
+}
+
+// ParsedResolutionIn applies the In predicate on the "parsed_resolution" field.
+func ParsedResolutionIn(vs ...string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIn(FieldParsedResolution, vs...))
+}
+
+// ParsedResolutionNotIn applies the NotIn predicate on the "parsed_resolution" field.
+func ParsedResolutionNotIn(vs ...string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotIn(FieldParsedResolution, vs...))
+}
+
+// ParsedResolutionGT applies the GT predicate on the "parsed_resolution" field.
+func ParsedResolutionGT(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGT(FieldParsedResolution, v))
+}
+
+// ParsedResolutionGTE applies the GTE predicate on the "parsed_resolution" field.
+func ParsedResolutionGTE(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGTE(FieldParsedResolution, v))
+}
+
+// ParsedResolutionLT applies the LT predicate on the "parsed_resolution" field.
+func ParsedResolutionLT(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLT(FieldParsedResolution, v))
+}
+
+// ParsedResolutionLTE applies the LTE predicate on the "parsed_resolution" field.
+func ParsedResolutionLTE(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLTE(FieldParsedResolution, v))
+}
+
+// ParsedResolutionContains applies the Contains predicate on the "parsed_resolution" field.
+func ParsedResolutionContains(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldContains(FieldParsedResolution, v))
+}
+
+// ParsedResolutionHasPrefix applies the HasPrefix predicate on the "parsed_resolution" field.
+func ParsedResolutionHasPrefix(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldHasPrefix(FieldParsedResolution, v))
+}
+
+// ParsedResolutionHasSuffix applies the HasSuffix predicate on the "parsed_resolution" field.
+func ParsedResolutionHasSuffix(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldHasSuffix(FieldParsedResolution, v))
+}
+
+// ParsedResolutionIsNil applies the IsNil predicate on the "parsed_resolution" field.
+func ParsedResolutionIsNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIsNull(FieldParsedResolution))
+}
+
+// ParsedResolutionNotNil applies the NotNil predicate on the "parsed_resolution" field.
+func ParsedResolutionNotNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotNull(FieldParsedResolution))
+}
+
+// ParsedResolutionEqualFold applies the EqualFold predicate on the "parsed_resolution" field.
+func ParsedResolutionEqualFold(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEqualFold(FieldParsedResolution, v))
+}
+
+// ParsedResolutionContainsFold applies the ContainsFold predicate on the "parsed_resolution" field.
+func ParsedResolutionContainsFold(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldContainsFold(FieldParsedResolution, v))
+}
+
+// ParsedCodecEQ applies the EQ predicate on the "parsed_codec" field.
+func ParsedCodecEQ(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldParsedCodec, v))
+}
+
+// ParsedCodecNEQ applies the NEQ predicate on the "parsed_codec" field.
+func ParsedCodecNEQ(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNEQ(FieldParsedCodec, v))
+}
+
+// ParsedCodecIn applies the In predicate on the "parsed_codec" field.
+func ParsedCodecIn(vs ...string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIn(FieldParsedCodec, vs...))
+}
+
+// ParsedCodecNotIn applies the NotIn predicate on the "parsed_codec" field.
+func ParsedCodecNotIn(vs ...string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotIn(FieldParsedCodec, vs...))
+}
+
+// ParsedCodecGT applies the GT predicate on the "parsed_codec" field.
+func ParsedCodecGT(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGT(FieldParsedCodec, v))
+}
+
+// ParsedCodecGTE applies the GTE predicate on the "parsed_codec" field.
+func ParsedCodecGTE(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGTE(FieldParsedCodec, v))
+}
+
+// ParsedCodecLT applies the LT predicate on the "parsed_codec" field.
+func ParsedCodecLT(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLT(FieldParsedCodec, v))
+}
+
+// ParsedCodecLTE applies the LTE predicate on the "parsed_codec" field.
+func ParsedCodecLTE(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLTE(FieldParsedCodec, v))
+}
+
+// ParsedCodecContains applies the Contains predicate on the "parsed_codec" field.
+func ParsedCodecContains(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldContains(FieldParsedCodec, v))
+}
+
+// ParsedCodecHasPrefix applies the HasPrefix predicate on the "parsed_codec" field.
+func ParsedCodecHasPrefix(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldHasPrefix(FieldParsedCodec, v))
+}
+
+// ParsedCodecHasSuffix applies the HasSuffix predicate on the "parsed_codec" field.
+func ParsedCodecHasSuffix(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldHasSuffix(FieldParsedCodec, v))
+}
+
+// ParsedCodecIsNil applies the IsNil predicate on the "parsed_codec" field.
+func ParsedCodecIsNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIsNull(FieldParsedCodec))
+}
+
+// ParsedCodecNotNil applies the NotNil predicate on the "parsed_codec" field.
+func ParsedCodecNotNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotNull(FieldParsedCodec))
+}
+
+// ParsedCodecEqualFold applies the EqualFold predicate on the "parsed_codec" field.
+func ParsedCodecEqualFold(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEqualFold(FieldParsedCodec, v))
+}
+
+// ParsedCodecContainsFold applies the ContainsFold predicate on the "parsed_codec" field.
+func ParsedCodecContainsFold(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldContainsFold(FieldParsedCodec, v))
 }
 
 // HasMovie applies the HasEdge predicate on the "movie" edge.

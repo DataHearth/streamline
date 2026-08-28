@@ -401,6 +401,66 @@ func (_u *MediaFileUpdate) ClearProbedAt() *MediaFileUpdate {
 	return _u
 }
 
+// SetParsedSource sets the "parsed_source" field.
+func (_u *MediaFileUpdate) SetParsedSource(v string) *MediaFileUpdate {
+	_u.mutation.SetParsedSource(v)
+	return _u
+}
+
+// SetNillableParsedSource sets the "parsed_source" field if the given value is not nil.
+func (_u *MediaFileUpdate) SetNillableParsedSource(v *string) *MediaFileUpdate {
+	if v != nil {
+		_u.SetParsedSource(*v)
+	}
+	return _u
+}
+
+// ClearParsedSource clears the value of the "parsed_source" field.
+func (_u *MediaFileUpdate) ClearParsedSource() *MediaFileUpdate {
+	_u.mutation.ClearParsedSource()
+	return _u
+}
+
+// SetParsedResolution sets the "parsed_resolution" field.
+func (_u *MediaFileUpdate) SetParsedResolution(v string) *MediaFileUpdate {
+	_u.mutation.SetParsedResolution(v)
+	return _u
+}
+
+// SetNillableParsedResolution sets the "parsed_resolution" field if the given value is not nil.
+func (_u *MediaFileUpdate) SetNillableParsedResolution(v *string) *MediaFileUpdate {
+	if v != nil {
+		_u.SetParsedResolution(*v)
+	}
+	return _u
+}
+
+// ClearParsedResolution clears the value of the "parsed_resolution" field.
+func (_u *MediaFileUpdate) ClearParsedResolution() *MediaFileUpdate {
+	_u.mutation.ClearParsedResolution()
+	return _u
+}
+
+// SetParsedCodec sets the "parsed_codec" field.
+func (_u *MediaFileUpdate) SetParsedCodec(v string) *MediaFileUpdate {
+	_u.mutation.SetParsedCodec(v)
+	return _u
+}
+
+// SetNillableParsedCodec sets the "parsed_codec" field if the given value is not nil.
+func (_u *MediaFileUpdate) SetNillableParsedCodec(v *string) *MediaFileUpdate {
+	if v != nil {
+		_u.SetParsedCodec(*v)
+	}
+	return _u
+}
+
+// ClearParsedCodec clears the value of the "parsed_codec" field.
+func (_u *MediaFileUpdate) ClearParsedCodec() *MediaFileUpdate {
+	_u.mutation.ClearParsedCodec()
+	return _u
+}
+
 // SetMovieID sets the "movie" edge to the Movie entity by ID.
 func (_u *MediaFileUpdate) SetMovieID(id uint32) *MediaFileUpdate {
 	_u.mutation.SetMovieID(id)
@@ -638,6 +698,24 @@ func (_u *MediaFileUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.ProbedAtCleared() {
 		_spec.ClearField(mediafile.FieldProbedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.ParsedSource(); ok {
+		_spec.SetField(mediafile.FieldParsedSource, field.TypeString, value)
+	}
+	if _u.mutation.ParsedSourceCleared() {
+		_spec.ClearField(mediafile.FieldParsedSource, field.TypeString)
+	}
+	if value, ok := _u.mutation.ParsedResolution(); ok {
+		_spec.SetField(mediafile.FieldParsedResolution, field.TypeString, value)
+	}
+	if _u.mutation.ParsedResolutionCleared() {
+		_spec.ClearField(mediafile.FieldParsedResolution, field.TypeString)
+	}
+	if value, ok := _u.mutation.ParsedCodec(); ok {
+		_spec.SetField(mediafile.FieldParsedCodec, field.TypeString, value)
+	}
+	if _u.mutation.ParsedCodecCleared() {
+		_spec.ClearField(mediafile.FieldParsedCodec, field.TypeString)
 	}
 	if _u.mutation.MovieCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -1089,6 +1167,66 @@ func (_u *MediaFileUpdateOne) ClearProbedAt() *MediaFileUpdateOne {
 	return _u
 }
 
+// SetParsedSource sets the "parsed_source" field.
+func (_u *MediaFileUpdateOne) SetParsedSource(v string) *MediaFileUpdateOne {
+	_u.mutation.SetParsedSource(v)
+	return _u
+}
+
+// SetNillableParsedSource sets the "parsed_source" field if the given value is not nil.
+func (_u *MediaFileUpdateOne) SetNillableParsedSource(v *string) *MediaFileUpdateOne {
+	if v != nil {
+		_u.SetParsedSource(*v)
+	}
+	return _u
+}
+
+// ClearParsedSource clears the value of the "parsed_source" field.
+func (_u *MediaFileUpdateOne) ClearParsedSource() *MediaFileUpdateOne {
+	_u.mutation.ClearParsedSource()
+	return _u
+}
+
+// SetParsedResolution sets the "parsed_resolution" field.
+func (_u *MediaFileUpdateOne) SetParsedResolution(v string) *MediaFileUpdateOne {
+	_u.mutation.SetParsedResolution(v)
+	return _u
+}
+
+// SetNillableParsedResolution sets the "parsed_resolution" field if the given value is not nil.
+func (_u *MediaFileUpdateOne) SetNillableParsedResolution(v *string) *MediaFileUpdateOne {
+	if v != nil {
+		_u.SetParsedResolution(*v)
+	}
+	return _u
+}
+
+// ClearParsedResolution clears the value of the "parsed_resolution" field.
+func (_u *MediaFileUpdateOne) ClearParsedResolution() *MediaFileUpdateOne {
+	_u.mutation.ClearParsedResolution()
+	return _u
+}
+
+// SetParsedCodec sets the "parsed_codec" field.
+func (_u *MediaFileUpdateOne) SetParsedCodec(v string) *MediaFileUpdateOne {
+	_u.mutation.SetParsedCodec(v)
+	return _u
+}
+
+// SetNillableParsedCodec sets the "parsed_codec" field if the given value is not nil.
+func (_u *MediaFileUpdateOne) SetNillableParsedCodec(v *string) *MediaFileUpdateOne {
+	if v != nil {
+		_u.SetParsedCodec(*v)
+	}
+	return _u
+}
+
+// ClearParsedCodec clears the value of the "parsed_codec" field.
+func (_u *MediaFileUpdateOne) ClearParsedCodec() *MediaFileUpdateOne {
+	_u.mutation.ClearParsedCodec()
+	return _u
+}
+
 // SetMovieID sets the "movie" edge to the Movie entity by ID.
 func (_u *MediaFileUpdateOne) SetMovieID(id uint32) *MediaFileUpdateOne {
 	_u.mutation.SetMovieID(id)
@@ -1356,6 +1494,24 @@ func (_u *MediaFileUpdateOne) sqlSave(ctx context.Context) (_node *MediaFile, er
 	}
 	if _u.mutation.ProbedAtCleared() {
 		_spec.ClearField(mediafile.FieldProbedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.ParsedSource(); ok {
+		_spec.SetField(mediafile.FieldParsedSource, field.TypeString, value)
+	}
+	if _u.mutation.ParsedSourceCleared() {
+		_spec.ClearField(mediafile.FieldParsedSource, field.TypeString)
+	}
+	if value, ok := _u.mutation.ParsedResolution(); ok {
+		_spec.SetField(mediafile.FieldParsedResolution, field.TypeString, value)
+	}
+	if _u.mutation.ParsedResolutionCleared() {
+		_spec.ClearField(mediafile.FieldParsedResolution, field.TypeString)
+	}
+	if value, ok := _u.mutation.ParsedCodec(); ok {
+		_spec.SetField(mediafile.FieldParsedCodec, field.TypeString, value)
+	}
+	if _u.mutation.ParsedCodecCleared() {
+		_spec.ClearField(mediafile.FieldParsedCodec, field.TypeString)
 	}
 	if _u.mutation.MovieCleared() {
 		edge := &sqlgraph.EdgeSpec{

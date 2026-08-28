@@ -80,8 +80,10 @@ var _ = Describe("Service.RunMediaProbe", Label("unit", "hygiene"), func() {
 				DurationSec: 100,
 				Container:   "matroska",
 			}, nil).Once()
-		store.EXPECT().StampMediaFileProbe(mock.Anything, uint32(1), mock.Anything).
-			Return(nil).Once()
+		store.EXPECT().
+			StampMediaFileProbe(mock.Anything, uint32(1), mock.Anything, mock.Anything).
+			Return(nil).
+			Once()
 		// row 2: os.Stat fails → skipped entirely, NOT stamped (drift-check
 		// owns missing files; stamping would hide the row from a later probe
 		// once the mount returns).
@@ -102,7 +104,7 @@ var _ = Describe("Service.RunMediaProbe", Label("unit", "hygiene"), func() {
 		prober.EXPECT().Probe(mock.Anything, existingFile).
 			Return(nil, ffmpeg.ErrNoVideoStream).Once()
 		store.EXPECT().
-			StampMediaFileProbe(mock.Anything, uint32(3), (*ffmpeg.Info)(nil)).
+			StampMediaFileProbe(mock.Anything, uint32(3), mock.Anything, (*ffmpeg.Info)(nil)).
 			Return(nil).Once()
 
 		Expect(svc.RunMediaProbe(ctx)).To(Succeed())
@@ -126,15 +128,19 @@ var _ = Describe("Service.RunMediaProbe", Label("unit", "hygiene"), func() {
 		prober.EXPECT().Available().Return(true).Once()
 		prober.EXPECT().Probe(mock.Anything, existingFile).
 			Return(&ffmpeg.Info{VideoCodec: "h264"}, nil).Once()
-		store.EXPECT().StampMediaFileProbe(mock.Anything, uint32(1), mock.Anything).
-			Return(errors.New("db unavailable")).Once()
+		store.EXPECT().
+			StampMediaFileProbe(mock.Anything, uint32(1), mock.Anything, mock.Anything).
+			Return(errors.New("db unavailable")).
+			Once()
 		// Row 1's stamp write failing must not abort the tick: row 2 is
 		// oldest-first behind it, and returning here would re-select row 1
 		// at the head of every subsequent tick, starving row 2 forever.
 		prober.EXPECT().Probe(mock.Anything, secondFile).
 			Return(&ffmpeg.Info{VideoCodec: "h264"}, nil).Once()
-		store.EXPECT().StampMediaFileProbe(mock.Anything, uint32(2), mock.Anything).
-			Return(nil).Once()
+		store.EXPECT().
+			StampMediaFileProbe(mock.Anything, uint32(2), mock.Anything, mock.Anything).
+			Return(nil).
+			Once()
 
 		var buf bytes.Buffer
 		GinkgoWriter.TeeTo(&buf)
@@ -161,7 +167,7 @@ var _ = Describe("Service.RunMediaProbe", Label("unit", "hygiene"), func() {
 			// The drift-check job can delete the row between ListUnprobedMediaFiles
 			// and this StampMediaFileProbe call; that race is routine, not an error.
 			store.EXPECT().
-				StampMediaFileProbe(mock.Anything, uint32(9), mock.Anything).
+				StampMediaFileProbe(mock.Anything, uint32(9), mock.Anything, mock.Anything).
 				Return(&ent.NotFoundError{}).
 				Once()
 
@@ -204,7 +210,7 @@ var _ = Describe("Service.RunMediaProbe", Label("unit", "hygiene"), func() {
 			prober.EXPECT().Probe(mock.Anything, existingFile).
 				Return(&ffmpeg.Info{VideoCodec: "h264"}, nil).Once()
 			store.EXPECT().
-				StampMediaFileProbe(mock.Anything, uint32(27), mock.Anything).
+				StampMediaFileProbe(mock.Anything, uint32(27), mock.Anything, mock.Anything).
 				Return(nil).
 				Once()
 

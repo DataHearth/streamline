@@ -70,8 +70,10 @@ type Manager interface {
 		tmdbID uint32,
 		qualityProfile string,
 	) (*ent.Movie, string, error)
-	List(ctx context.Context, page, limit uint16) ([]*ent.Movie, uint32, error)
-	FilterList(ctx context.Context, p FilterParams) ([]*ent.Movie, uint32, error)
+	FilterList(
+		ctx context.Context,
+		p FilterParams,
+	) ([]*ent.Movie, map[uint32]db.MovieFileSummary, uint32, error)
 	Get(ctx context.Context, id uint32) (*ent.Movie, error)
 	GetByTMDBID(ctx context.Context, tmdbID uint32) (*ent.Movie, error)
 	Update(ctx context.Context, id uint32, p UpdateParams) (*ent.Movie, error)
@@ -231,51 +233,14 @@ func (s *Service) Add(
 	return m, details.PosterPath, nil
 }
 
-func (s *Service) List(
-	ctx context.Context,
-	page, limit uint16,
-) ([]*ent.Movie, uint32, error) {
-	ctx, span := tracer.Start(ctx, "movie.list",
-		trace.WithAttributes(
-			attribute.Int("page", int(page)),
-			attribute.Int("limit", int(limit)),
-		),
-	)
-	defer span.End()
-
-	if page == 0 {
-		return nil, 0, otelx.RecordSpanError(span, fmt.Errorf("page must be > 0"))
-	}
-	if limit == 0 {
-		return nil, 0, otelx.RecordSpanError(span, fmt.Errorf("limit must be > 0"))
-	}
-
-	total, err := s.db.CountMovies(ctx)
-	if err != nil {
-		return nil, 0, otelx.RecordSpanError(
-			span,
-			fmt.Errorf("count movies: %w", err),
-		)
-	}
-
-	movies, err := s.db.ListMovies(ctx, uint32(page-1)*uint32(limit), uint32(limit))
-	if err != nil {
-		return nil, 0, otelx.RecordSpanError(
-			span,
-			fmt.Errorf("list movies: %w", err),
-		)
-	}
-	span.SetAttributes(attribute.Int64("results.total", int64(total)))
-
-	return movies, uint32(
-		total,
-	), nil //nolint:gosec // total from COUNT is non-negative
-}
-
+// FilterList returns one page of movies with the file rollup the list view
+// renders, mirroring the series twin. The rollup is a second query over the
+// page's ids rather than an eager-load, so a page costs one lean scan of
+// media_files instead of materialising every file row of every movie.
 func (s *Service) FilterList(
 	ctx context.Context,
 	p FilterParams,
-) ([]*ent.Movie, uint32, error) {
+) ([]*ent.Movie, map[uint32]db.MovieFileSummary, uint32, error) {
 	ctx, span := tracer.Start(ctx, "movie.filter_list",
 		trace.WithAttributes(
 			attribute.String("filter.status", p.Status),
@@ -305,13 +270,25 @@ func (s *Service) FilterList(
 		Limit:  uint32(limit),
 	})
 	if err != nil {
-		return nil, 0, otelx.RecordSpanError(
+		return nil, nil, 0, otelx.RecordSpanError(
 			span,
 			fmt.Errorf("filter movies: %w", err),
 		)
 	}
+	ids := make([]uint32, 0, len(items))
+	for _, m := range items {
+		ids = append(ids, m.ID)
+	}
+	summaries, err := s.db.MovieFileSummaries(ctx, ids)
+	if err != nil {
+		return nil, nil, 0, otelx.RecordSpanError(
+			span,
+			fmt.Errorf("movie file summaries: %w", err),
+		)
+	}
 	span.SetAttributes(attribute.Int64("results.total", int64(total)))
-	return items, uint32(total), nil //nolint:gosec // total is non-negative
+	//nolint:gosec // total is non-negative
+	return items, summaries, uint32(total), nil
 }
 
 func (s *Service) Get(ctx context.Context, id uint32) (*ent.Movie, error) {
