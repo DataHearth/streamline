@@ -95,9 +95,19 @@ There's a **Replace existing files** toggle on the grab dialog. Off, Streamline 
 
 For TV you can search at three levels:
 
-- **Whole series** — for complete-series packs
-- **A season** — for season packs. Note that Streamline *hides* complete-series and multi-season packs from a season search by default, since they rarely do what you want; there's a toggle to show them
-- **A single episode** — narrowest, most reliable
+- **Whole series** — complete-series and multi-season packs only (`COMPLETE`, `INTEGRALE`, `S01-S05`)
+- **A season** — season packs of that season only. Complete/multi-season packs are hidden here (grabbing one imports every season it contains), and so are single episodes
+- **A single episode** — that episode only; packs belong to the scopes above
+
+Each scope filters the indexer's results down to what it asked for. Indexers behind Prowlarr routinely ignore the season and episode parameters and answer with the whole series, so without this an episode search comes back full of other episodes.
+
+When an episode search hides packs that *did* cover the episode, it says so above the results ("4 season or complete pack(s) covering this episode were hidden"). That line is how you tell "nothing exists for this episode" apart from "it only exists inside a pack" — switch scope to the season or the whole series to grab one. On trackers that publish a show only as season packs, an empty episode search plus that line is the correct and complete answer.
+
+An episode search also drops releases whose name carries no season and no episode at all — a tracker that lists a torrent under the bare show title tells you nothing about what is in it. Anime releases using absolute numbering (`Show - 18`) and daily shows using a date (`Show 2011.09.25`) are kept, since those never spell `SxxExx`.
+
+The season and episode tabs both know the French spellings: `Saison 04` counts as a season token, and a `Complete` / `Complète` tag attached to a named season (`S05 Complete`, `Saison 04 Complète`) is read as that season's pack rather than as a whole-series pack.
+
+From the **Episodes** tab, the season header has its own **Search season** button, which opens the release search already scoped to the season you are looking at.
 
 ---
 

@@ -146,6 +146,8 @@ Everything database-backed (movies, series, requests, users, imports) uses numer
 | `POST` | `/series/{id}/episodes/{episodeId}/search` · `/grab` |
 | `DELETE` | `/series/{id}/episodes/{episodeId}/file` |
 
+Each of the three search scopes filters the indexer's answer to its own scope — an episode search returns that episode, a season search returns season packs of that season, a series search returns complete/multi-season packs. The episode search additionally carries `hidden_packs` (present only when non-zero): how many packs covering that episode it excluded, so an empty `items` can be told apart from "it only exists inside a pack".
+
 ### Activity
 
 | Method | Path |
