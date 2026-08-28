@@ -3,7 +3,14 @@
 	import ProgressBar from "../shared/ProgressBar.svelte";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 
-	const fetching = useIsFetching();
+	// Queries tagged `meta: { silent: true }` don't raise the bar: chrome that
+	// refreshes itself on a timer (the sidebar badges) and the dashboard, which
+	// is a glance rather than a thing you wait on. The bar is for a request the
+	// user asked for and is now waiting through — a poll nobody triggered reads
+	// as a stall rather than as progress, which is the failure it exists to fix.
+	const fetching = useIsFetching({
+		predicate: (q) => q.meta?.silent !== true,
+	});
 	const mutating = useIsMutating();
 	let busy = $derived(fetching.current + mutating.current > 0);
 

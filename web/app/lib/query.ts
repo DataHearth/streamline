@@ -12,6 +12,18 @@ const NAV_COUNT_KEYS = [
 	["imports", "counts"],
 ] as const;
 
+// Tag a query `meta: SILENT` to keep it out of the global loading bar
+// (components/layout/GlobalActivityBar.svelte). For polls the user did not
+// trigger and cannot wait on — nav badges, the dashboard's glance panels —
+// where a bar reads as a stall rather than as progress.
+export const SILENT = { silent: true } as const;
+
+// One cadence for every badge and counter in the nav, so the chrome refreshes
+// as a unit rather than each corner of it drifting on its own timer. Pages own
+// their own rate — the torrents page polls its list every 2 s and the nav rides
+// that same cache entry while you are on it.
+export const NAV_POLL_MS = 15_000;
+
 export const queryClient = new QueryClient({
 	mutationCache: new MutationCache({
 		onSuccess: () => {

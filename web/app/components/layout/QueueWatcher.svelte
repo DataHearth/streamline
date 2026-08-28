@@ -10,6 +10,7 @@
 	// for SSE/websockets if a live library view ever needs sub-30s freshness.
 	import { createQuery, useQueryClient } from "@tanstack/svelte-query";
 	import { api } from "../../lib/api";
+	import { NAV_POLL_MS, SILENT } from "../../lib/query";
 	import { auth } from "../../lib/auth.svelte";
 	import type { DownloadQueue } from "../../lib/types";
 
@@ -18,9 +19,10 @@
 	const queue = createQuery<DownloadQueue>(() => ({
 		queryKey: ["activity", "queue"],
 		queryFn: () => api<DownloadQueue>("/activity/queue"),
+		meta: SILENT,
 		enabled: auth.user !== null,
 		retry: false,
-		refetchInterval: 30000,
+		refetchInterval: NAV_POLL_MS,
 	}));
 
 	let signature = $derived(

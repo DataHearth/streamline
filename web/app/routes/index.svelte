@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { createQuery } from "@tanstack/svelte-query";
 	import { api, apiAllPages, type Paginated } from "../lib/api";
+	import { SILENT } from "../lib/query";
 	import { posterUrl, tvPosterUrl } from "../lib/posters";
 	import { formatBytes } from "../lib/format";
 	import { codecOf, fileMetaLine, resolutionOf } from "../lib/media-info";
@@ -28,29 +29,41 @@
 	import { upcomingEvents } from "../lib/calendar";
 	import { m as i18n } from "../lib/paraglide/messages.js";
 
+	// Nothing on the dashboard raises the global loading bar (`meta.silent`):
+	// it is a glance, every panel has its own skeleton, and the queue below
+	// polls on a timer nobody asked for.
 	const moviesQuery = createQuery<Paginated<Movie>>(() => ({
 		queryKey: ["movies"],
 		queryFn: () => apiAllPages<Movie>("/movies"),
+		meta: SILENT,
 	}));
 
 	const seriesQuery = createQuery<Paginated<TVShow>>(() => ({
 		queryKey: ["series"],
 		queryFn: () => apiAllPages<TVShow>("/series"),
+		meta: SILENT,
 	}));
 
 	const countsQuery = createQuery<MovieCounts>(() => ({
 		queryKey: ["movies", "counts"],
 		queryFn: () => api<MovieCounts>("/movies/counts"),
+		meta: SILENT,
 	}));
 
 	const seriesCountsQuery = createQuery<TVShowCounts>(() => ({
 		queryKey: ["series", "counts"],
 		queryFn: () => api<TVShowCounts>("/series/counts"),
+		meta: SILENT,
 	}));
 
+	// Polled on the queue's cadence below, so the two dashboard panels never
+	// disagree about what just happened — a grab landing in the queue and the
+	// event recording it should appear together.
 	const activityQuery = createQuery<ActivityList>(() => ({
 		queryKey: ["activity", "recent", 6],
 		queryFn: () => api<ActivityList>("/activity?limit=6"),
+		refetchInterval: 10000,
+		meta: SILENT,
 	}));
 
 	function upcomingRange() {
@@ -66,11 +79,13 @@
 				`/calendar/upcoming?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
 			);
 		},
+		meta: SILENT,
 	}));
 
 	const systemQuery = createQuery<SystemInfo>(() => ({
 		queryKey: ["system", "info"],
 		queryFn: () => api<SystemInfo>("/system/info"),
+		meta: SILENT,
 	}));
 
 	// The live queue. Activity polls this every 2s because it is the page you
@@ -79,6 +94,7 @@
 		queryKey: ["activity", "queue"],
 		queryFn: () => api<DownloadQueue>("/activity/queue"),
 		refetchInterval: 10000,
+		meta: SILENT,
 	}));
 	let queue = $derived(queueQuery.data?.items ?? []);
 

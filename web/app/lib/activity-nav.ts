@@ -5,6 +5,7 @@
 
 import { createQuery } from "@tanstack/svelte-query";
 import { api, ApiError } from "./api";
+import { NAV_POLL_MS, SILENT } from "./query";
 import type { DownloadClient, TorrentList } from "./types";
 
 // /torrents 404s while the built-in engine is off, and it can't come back
@@ -30,19 +31,24 @@ export function torrentCountsQuery() {
 	const clients = createQuery<DownloadClient[]>(() => ({
 		queryKey: ["download-clients"],
 		queryFn: () => api<DownloadClient[]>("/download-clients"),
+		meta: SILENT,
 		retry: false,
 		staleTime: 300000,
 	}));
-	// Same key as the torrents page, so the nav rides its 2 s poll instead of
-	// adding a second one.
+	// Same key as the torrents page, so there is never a second request in
+	// flight — but the interval below is not the whole story: refetchInterval
+	// lives on the cache entry, so whichever observer is mounted sets the rate.
+	// On the torrents page that is its own 2 s; everywhere else, this 15 s.
 	const q = createQuery<TorrentList>(() => ({
 		queryKey: ["activity", "torrents"],
 		queryFn: () => api<TorrentList>("/torrents"),
+		meta: SILENT,
 		enabled: !!clients.data?.some(
 			(c) => c.client_type === "builtin" && c.enabled,
 		),
 		retry: false,
-		refetchInterval: (q) => (engineDisabled(q.state.error) ? false : 15000),
+		refetchInterval: (q) =>
+			engineDisabled(q.state.error) ? false : NAV_POLL_MS,
 	}));
 	return {
 		get counts(): TorrentCounts {

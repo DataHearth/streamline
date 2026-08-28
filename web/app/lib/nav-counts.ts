@@ -9,6 +9,7 @@
 import { createQuery } from "@tanstack/svelte-query";
 import { api } from "./api";
 import { auth } from "./auth.svelte";
+import { NAV_POLL_MS, SILENT } from "./query";
 import { m as i18n } from "./paraglide/messages.js";
 import type {
 	DownloadQueue,
@@ -56,19 +57,22 @@ export function navCountsQuery() {
 		queryKey: ["movies", "counts"],
 		queryFn: () => api<MovieCounts>("/movies/counts"),
 		retry: false,
+		meta: SILENT,
 	}));
 	const series = createQuery<TVShowCounts>(() => ({
 		queryKey: ["series", "counts"],
 		queryFn: () => api<TVShowCounts>("/series/counts"),
 		retry: false,
+		meta: SILENT,
 	}));
 	// The activity page polls this key every 2 s while it is mounted; away from
-	// it, 30 s is plenty for a summary line.
+	// it the nav cadence is plenty for a summary line.
 	const queue = createQuery<DownloadQueue>(() => ({
 		queryKey: ["activity", "queue"],
 		queryFn: () => api<DownloadQueue>("/activity/queue"),
 		retry: false,
-		refetchInterval: 30000,
+		refetchInterval: NAV_POLL_MS,
+		meta: SILENT,
 	}));
 	const imports = createQuery<ImportCounts>(() => ({
 		queryKey: ["imports", "counts"],
@@ -80,7 +84,8 @@ export function navCountsQuery() {
 			),
 		enabled: auth.isAdmin,
 		retry: false,
-		refetchInterval: 60000,
+		refetchInterval: NAV_POLL_MS,
+		meta: SILENT,
 	}));
 
 	return {

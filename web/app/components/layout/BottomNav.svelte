@@ -22,6 +22,7 @@
 	import { isActive as routifyIsActive } from "@roxi/routify";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { api } from "../../lib/api";
+	import { NAV_POLL_MS, SILENT } from "../../lib/query";
 	import type { PendingList, RequestCounts, SystemInfo } from "../../lib/types";
 	import { auth } from "../../lib/auth.svelte";
 	import { cn } from "../../lib/cn";
@@ -47,6 +48,7 @@
 	const requestCountsQuery = createQuery<RequestCounts>(() => ({
 		queryKey: ["requests", "counts"],
 		queryFn: () => api<RequestCounts>("/requests/counts"),
+		meta: SILENT,
 		retry: false,
 	}));
 	let pendingRequests = $derived(requestCountsQuery.data?.pending ?? 0);
@@ -62,15 +64,17 @@
 	const pendingQuery = createQuery<PendingList>(() => ({
 		queryKey: ["activity", "pending"],
 		queryFn: () => api<PendingList>("/activity/pending"),
+		meta: SILENT,
 		enabled: auth.isAdmin,
 		retry: false,
-		refetchInterval: 30000,
+		refetchInterval: NAV_POLL_MS,
 	}));
 	let pendingAdoptions = $derived(pendingQuery.data?.items.length ?? 0);
 
 	const systemQuery = createQuery<SystemInfo>(() => ({
 		queryKey: ["system", "info"],
 		queryFn: () => api<SystemInfo>("/system/info"),
+		meta: SILENT,
 		retry: false,
 	}));
 	let version = $derived(systemQuery.data?.version ?? null);

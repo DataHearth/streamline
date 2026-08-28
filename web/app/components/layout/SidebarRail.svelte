@@ -19,6 +19,7 @@
 	import { isActive as routifyIsActive } from "@roxi/routify";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { api } from "../../lib/api";
+	import { SILENT } from "../../lib/query";
 	import type { RequestCounts } from "../../lib/types";
 	import { auth } from "../../lib/auth.svelte";
 	import { cn } from "../../lib/cn";
@@ -45,6 +46,7 @@
 	const requestCountsQuery = createQuery<RequestCounts>(() => ({
 		queryKey: ["requests", "counts"],
 		queryFn: () => api<RequestCounts>("/requests/counts"),
+		meta: SILENT,
 		retry: false,
 	}));
 	let pendingRequests = $derived(requestCountsQuery.data?.pending ?? 0);
