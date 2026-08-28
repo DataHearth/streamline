@@ -610,6 +610,46 @@ export type MetadataConfig = {
 	restart_required: boolean;
 };
 
+// The server's own bookkeeping. Only `events_retention` applies without a
+// restart — the log handlers and OTLP exporters are built once at boot, which
+// is what `restart_required` reports.
+export type SystemConfig = {
+	log: LogConfig;
+	otel_endpoint: string;
+	events_retention: string;
+	restart_required: boolean;
+};
+
+// One shape for the read view and the patch: on a patch an omitted field keeps
+// its stored value, which is why everything nests optional.
+export type LogConfig = {
+	app?: AppLogConfig;
+	http?: HTTPLogConfig;
+};
+
+export type AppLogConfig = {
+	enabled?: boolean;
+	level?: "debug" | "info" | "warn" | "error";
+	format?: "text" | "json";
+	output?: string;
+	rotate?: LogRotateConfig;
+};
+
+export type HTTPLogConfig = {
+	enabled?: boolean;
+	format?: "json" | "combined";
+	output?: string;
+	rotate?: LogRotateConfig;
+};
+
+// Only meaningful when the matching output is a file path. 0 disables a bound.
+export type LogRotateConfig = {
+	max_size_mb?: number;
+	max_backups?: number;
+	max_age_days?: number;
+	compress?: boolean;
+};
+
 export type MetadataConfigPatch = {
 	language?: string;
 	tmdb_region?: string;
@@ -758,6 +798,11 @@ export type DownloadClient = {
 	// builtin-only knobs (client_type "builtin"); absent for external clients.
 	download_dir?: string;
 	listen_port?: number;
+	// Present on the builtin entry only, and only when the top-level
+	// torrent_listen_port is set (normally by STREAMLINE_TORRENT_LISTEN_PORT).
+	// It wins over listen_port, so a form showing this must present listen_port
+	// as having no effect rather than as the port in force.
+	listen_port_override?: number;
 	max_upload_kbps?: number;
 	max_download_kbps?: number;
 	seed_ratio?: number;
@@ -918,6 +963,22 @@ export type SystemInfo = {
 	built_at?: string;
 	go_version: string;
 	go_os_arch: string;
+	// File-only by design — the trust boundary, the bootstrap block, and what
+	// the process generated for itself. Reported so Settings → General can say
+	// what is in force; secrets appear as a source, never a value.
+	server_host?: string;
+	server_port?: number;
+	read_only?: boolean;
+	trusted_proxies?: string[];
+	trusted_networks?: string[];
+	trusted_role?: string;
+	seed_admin_email?: string;
+	seed_admin_secret?: "file" | "config" | "unset";
+	session_secret_file?: string;
+	plex_client_id?: string;
+	torrent_listen_port?: number;
+	tmdb_api_key_file?: string;
+	tvdb_api_key_file?: string;
 };
 
 export type PlexPinBegin = {

@@ -2138,6 +2138,45 @@ paths:
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
 
+  /config/system:
+    get:
+      operationId: getConfigSystem
+      summary: Get logging, telemetry and retention configuration (admin)
+      description: |
+        Returns the server's own bookkeeping: application and HTTP logging, the
+        OTLP endpoint, and how long media events are kept.
+      tags: [config, admin]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        "200":
+          $ref: "#/components/responses/SystemConfig"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    patch:
+      operationId: updateConfigSystem
+      summary: Patch logging, telemetry and retention configuration (admin)
+      description: |
+        `events_retention` applies to the next cleanup tick. Everything else is
+        read once at boot, when the log handlers and the OTLP exporters are
+        built, so changing it flips the process-wide restart-required flag.
+      tags: [config, admin]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      requestBody:
+        $ref: "#/components/requestBodies/UpdateSystemConfig"
+      responses:
+        "200":
+          $ref: "#/components/responses/SystemConfig"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
   /config/oidc:
     get:
       operationId: listOIDCProviders
@@ -3885,6 +3924,13 @@ components:
           schema:
             $ref: "#/components/schemas/MetadataConfigPatch"
 
+    UpdateSystemConfig:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/SystemConfigPatch"
+
     CreateOIDCProvider:
       required: true
       content:
@@ -4324,6 +4370,13 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/MetadataConfigView"
+
+    SystemConfig:
+      description: Current logging, telemetry and retention configuration.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/SystemConfigView"
 
     OIDCProvider:
       description: OIDC provider detail.
@@ -5743,6 +5796,20 @@ components:
         listen_port:
           type: integer
           x-go-type: uint16
+          description: >-
+            The port this entry configures. Read listen_port_override first —
+            when that is present it is the port the engine actually binds, and
+            this value has no effect.
+        listen_port_override:
+          type: integer
+          x-go-type: uint16
+          description: >-
+            Present on the builtin entry only, and only when the top-level
+            `torrent_listen_port` is set — normally by
+            STREAMLINE_TORRENT_LISTEN_PORT, since the value is authored by a VPN
+            tunnel. It wins over `listen_port`, so a client showing this must
+            present `listen_port` as having no effect rather than as the port in
+            force.
         max_upload_kbps:
           type: integer
         max_download_kbps:
@@ -6502,6 +6569,102 @@ components:
         tvdb_api_key:
           type: string
           format: password
+
+    SystemConfigView:
+      type: object
+      required: [log, otel_endpoint, events_retention, restart_required]
+      properties:
+        log:
+          $ref: "#/components/schemas/LogConfig"
+        otel_endpoint:
+          type: string
+          description: >-
+            OTLP collector endpoint for traces, metrics and logs. Empty
+            disables export.
+        events_retention:
+          type: string
+          description: >-
+            Go duration string. How long media events are kept before the
+            cleanup job deletes them. The only field here that applies without
+            a restart.
+        restart_required:
+          type: boolean
+          description: >-
+            True when a logging or telemetry change is pending a process
+            restart. The same process-wide flag OIDC provider mutations set.
+
+    SystemConfigPatch:
+      type: object
+      description: Only provided fields are applied, nested objects included.
+      properties:
+        log:
+          $ref: "#/components/schemas/LogConfig"
+        otel_endpoint:
+          type: string
+        events_retention:
+          type: string
+
+    LogConfig:
+      type: object
+      description: >-
+        Application and HTTP logging. Every field is optional so one schema
+        serves the read view and the patch; on a patch an omitted field keeps
+        its stored value.
+      properties:
+        app:
+          $ref: "#/components/schemas/AppLogConfig"
+        http:
+          $ref: "#/components/schemas/HTTPLogConfig"
+
+    AppLogConfig:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        level:
+          type: string
+          enum: [debug, info, warn, error]
+        format:
+          type: string
+          enum: [text, json]
+        output:
+          type: string
+          description: >-
+            "stderr", "stdout", or a file path. Rotation applies to a file
+            only.
+        rotate:
+          $ref: "#/components/schemas/LogRotateConfig"
+
+    HTTPLogConfig:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        format:
+          type: string
+          enum: [json, combined]
+        output:
+          type: string
+        rotate:
+          $ref: "#/components/schemas/LogRotateConfig"
+
+    LogRotateConfig:
+      type: object
+      description: >-
+        Applies only when the matching output is a file path. 0 disables that
+        bound.
+      properties:
+        max_size_mb:
+          type: integer
+          minimum: 0
+        max_backups:
+          type: integer
+          minimum: 0
+        max_age_days:
+          type: integer
+          minimum: 0
+        compress:
+          type: boolean
 
     ProbeConfig:
       type: object
@@ -7551,6 +7714,58 @@ components:
         go_version:
           type: string
         go_os_arch:
+          type: string
+        server_host:
+          type: string
+          description: |
+            Everything from here down is file-only by design — the trust
+            boundary, the bootstrap block, and values the process generates for
+            itself. Reported read-only so one screen can say what is in force;
+            secrets are reported as a source, never a value.
+        server_port:
+          type: integer
+          x-go-type: uint16
+        read_only:
+          type: boolean
+          description: True when config.Update refuses every write-back.
+        trusted_proxies:
+          type: array
+          items:
+            type: string
+          description: >-
+            CIDRs whose X-Forwarded-* headers are believed. Empty trusts
+            nothing.
+        trusted_networks:
+          type: array
+          items:
+            type: string
+          description: CIDRs handed trusted_role without authenticating.
+        trusted_role:
+          type: string
+        seed_admin_email:
+          type: string
+        seed_admin_secret:
+          type: string
+          enum: [file, config, unset]
+          description: >-
+            Where the seed-admin password comes from. Never the password
+            itself.
+        session_secret_file:
+          type: string
+          description: Empty when the signing secret is inline in the config.
+        plex_client_id:
+          type: string
+          description: >-
+            Generated on first Plex configuration; required by the PIN flow.
+        torrent_listen_port:
+          type: integer
+          x-go-type: uint16
+          description: >-
+            Top-level override of the builtin download client's listen_port,
+            reachable as STREAMLINE_TORRENT_LISTEN_PORT. 0 means no override.
+        tmdb_api_key_file:
+          type: string
+        tvdb_api_key_file:
           type: string
 
     DiskUsage:

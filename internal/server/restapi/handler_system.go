@@ -74,7 +74,50 @@ func snapshotToAPI(s sysinfo.Snapshot) SystemInfo {
 	if s.SeriesUsage != nil {
 		out.SeriesUsage = diskUsageToAPI(*s.SeriesUsage)
 	}
+	fillFileOnlySettings(&out, s)
 	return out
+}
+
+// fillFileOnlySettings reports the settings no patch endpoint writes — the
+// trust boundary, the bootstrap block, and what the process generated for
+// itself. They are read-only everywhere, so the empty ones are simply omitted
+// rather than rendered as a blank row: an unset trusted_proxies is "trusts
+// nothing", which the page says in words, not as an empty list.
+func fillFileOnlySettings(out *SystemInfo, s sysinfo.Snapshot) {
+	host, port := s.ServerHost, s.ServerPort
+	readOnly, role := s.ReadOnly, s.TrustedRole
+	secret := SystemInfoSeedAdminSecret(s.SeedAdminSecret)
+	out.ServerHost = &host
+	out.ServerPort = &port
+	out.ReadOnly = &readOnly
+	out.TrustedRole = &role
+	out.SeedAdminSecret = &secret
+	out.TrustedProxies = &s.TrustedProxies
+	out.TrustedNetworks = &s.TrustedNetworks
+	if s.SeedAdminEmail != "" {
+		v := s.SeedAdminEmail
+		out.SeedAdminEmail = &v
+	}
+	if s.SessionSecretFile != "" {
+		v := s.SessionSecretFile
+		out.SessionSecretFile = &v
+	}
+	if s.PlexClientID != "" {
+		v := s.PlexClientID
+		out.PlexClientId = &v
+	}
+	if s.TorrentListenPort != 0 {
+		v := s.TorrentListenPort
+		out.TorrentListenPort = &v
+	}
+	if s.TMDBAPIKeyFile != "" {
+		v := s.TMDBAPIKeyFile
+		out.TmdbApiKeyFile = &v
+	}
+	if s.TVDBAPIKeyFile != "" {
+		v := s.TVDBAPIKeyFile
+		out.TvdbApiKeyFile = &v
+	}
 }
 
 func diskUsageToAPI(u sysinfo.DiskUsage) *DiskUsage {

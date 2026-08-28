@@ -40,6 +40,41 @@ type Snapshot struct {
 	BuiltAt      string
 	GoVersion    string
 	GoOSArch     string
+
+	// The settings below are file-only by design — the trust boundary, the
+	// bootstrap block, and values the process generates for itself. They are
+	// reported so the one screen an operator opens can say what is in force,
+	// which is otherwise only knowable by reading the YAML on the host. None of
+	// them is a secret: SeedAdminPassword and the session secret are reported as
+	// a source, never a value. Admin-only, like the rest of this snapshot.
+	ServerHost        string
+	ServerPort        uint16
+	ReadOnly          bool
+	TrustedProxies    []string
+	TrustedNetworks   []string
+	TrustedRole       string
+	SeedAdminEmail    string
+	SeedAdminSecret   string
+	SessionSecretFile string
+	PlexClientID      string
+	TorrentListenPort uint16
+	TMDBAPIKeyFile    string
+	TVDBAPIKeyFile    string
+}
+
+// secretSource names where a secret comes from without naming the secret:
+// a file path wins over an inline value, and neither set is "unset". Used for
+// the seed-admin password, whose inline form an older release may still have
+// left in the config.
+func secretSource(inline, file string) string {
+	switch {
+	case file != "":
+		return "file"
+	case inline != "":
+		return "config"
+	default:
+		return "unset"
+	}
 }
 
 // DiskUsage is the volume-level usage for a directory. Used / Total / Free
@@ -95,6 +130,23 @@ func Collect() Snapshot {
 		BuiltAt:      buildinfo.Date,
 		GoVersion:    runtime.Version(),
 		GoOSArch:     runtime.GOOS + "/" + runtime.GOARCH,
+
+		ServerHost:      cfg.Server.Host,
+		ServerPort:      cfg.Server.Port,
+		ReadOnly:        cfg.ReadOnly,
+		TrustedProxies:  cfg.Server.TrustedProxies,
+		TrustedNetworks: cfg.Auth.TrustedNetworks,
+		TrustedRole:     cfg.Auth.TrustedRole,
+		SeedAdminEmail:  cfg.Auth.SeedAdmin.Email,
+		SeedAdminSecret: secretSource(
+			cfg.Auth.SeedAdmin.Password,
+			cfg.Auth.SeedAdmin.PasswordFile,
+		),
+		SessionSecretFile: cfg.Auth.SessionSecretFile,
+		PlexClientID:      cfg.MediaServer.PlexClientID,
+		TorrentListenPort: cfg.TorrentListenPort,
+		TMDBAPIKeyFile:    cfg.Metadata.TMDBAPIKeyFile,
+		TVDBAPIKeyFile:    cfg.Metadata.TVDBAPIKeyFile,
 	}
 	if st, err := os.Stat(cfg.DatabasePath()); err == nil {
 		snap.DBSize = humanBytes(st.Size())

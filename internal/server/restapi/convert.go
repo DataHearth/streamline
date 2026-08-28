@@ -198,6 +198,17 @@ func downloadClientToAPI(e config.DownloadClientEntry) DownloadClient {
 		v := e.ListenPort
 		d.ListenPort = &v
 	}
+	// BuiltinDownloadClient resolves torrent_listen_port over this entry's own
+	// listen_port, so on the deployment the override exists for — a VPN whose
+	// forwarded port rotates — the settings form was showing, and happily
+	// saving, a value the engine never binds. Reporting the override is what
+	// lets the form say so instead of lying by omission.
+	if e.ClientType == "builtin" {
+		if c := config.Get(); c != nil && c.TorrentListenPort != 0 {
+			v := c.TorrentListenPort
+			d.ListenPortOverride = &v
+		}
+	}
 	if e.MaxUploadKbps != 0 {
 		v := e.MaxUploadKbps
 		d.MaxUploadKbps = &v

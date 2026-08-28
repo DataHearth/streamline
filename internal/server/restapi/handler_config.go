@@ -233,6 +233,156 @@ func (s *Server) UpdateConfigFfmpeg(
 	}, nil
 }
 
+// GetConfigSystem returns the logging, telemetry and retention configuration.
+// Admin only.
+func (s *Server) GetConfigSystem(
+	ctx context.Context,
+	_ GetConfigSystemRequestObject,
+) (GetConfigSystemResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return GetConfigSystem403JSONResponse{
+			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
+	return GetConfigSystem200JSONResponse{
+		SystemConfigJSONResponse: systemConfigView(config.Get()),
+	}, nil
+}
+
+// UpdateConfigSystem applies a partial update to the log, otel and events
+// sections. Admin only. events_retention reaches the next cleanup tick on its
+// own; the log handlers and OTLP exporters are built once at boot, so a change
+// to either flips the restart flag.
+func (s *Server) UpdateConfigSystem(
+	ctx context.Context,
+	req UpdateConfigSystemRequestObject,
+) (UpdateConfigSystemResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return UpdateConfigSystem403JSONResponse{
+			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
+
+	prev := config.Get()
+	patch := config.SystemPatch{
+		OTelEndpoint:    req.Body.OtelEndpoint,
+		EventsRetention: req.Body.EventsRetention,
+		Log:             logPatchFromAPI(req.Body.Log),
+	}
+
+	updated, err := config.UpdateSystem(ctx, patch)
+	if configLocked(err) {
+		return UpdateConfigSystem403JSONResponse{
+			ForbiddenJSONResponse: forbiddenResp(err.Error()),
+		}, nil
+	}
+	if err != nil {
+		return UpdateConfigSystem422JSONResponse{
+			UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
+		}, nil
+	}
+	// Retention is the one field this process picks up on its own, so a patch
+	// that only moved it must not ask for a restart.
+	if updated.Log != prev.Log || updated.OTel != prev.OTel {
+		restart.Mark()
+	}
+	slog.InfoContext(ctx, "system config updated",
+		"log.app.level", updated.Log.App.Level,
+		"otel.endpoint", updated.OTel.Endpoint,
+		"events.retention", updated.Events.Retention,
+	)
+	return UpdateConfigSystem200JSONResponse{
+		SystemConfigJSONResponse: systemConfigView(updated),
+	}, nil
+}
+
+// logPatchFromAPI maps the generated LogConfig — one all-optional schema
+// serving both the view and the patch — into the config layer's patch types.
+func logPatchFromAPI(in *LogConfig) *config.LogPatch {
+	if in == nil {
+		return nil
+	}
+	out := &config.LogPatch{}
+	if in.App != nil {
+		out.App = &config.AppLogPatch{
+			Enabled: in.App.Enabled,
+			Output:  in.App.Output,
+			Rotate:  rotatePatchFromAPI(in.App.Rotate),
+		}
+		if in.App.Level != nil {
+			v := string(*in.App.Level)
+			out.App.Level = &v
+		}
+		if in.App.Format != nil {
+			v := string(*in.App.Format)
+			out.App.Format = &v
+		}
+	}
+	if in.Http != nil {
+		out.HTTP = &config.HTTPLogPatch{
+			Enabled: in.Http.Enabled,
+			Output:  in.Http.Output,
+			Rotate:  rotatePatchFromAPI(in.Http.Rotate),
+		}
+		if in.Http.Format != nil {
+			v := string(*in.Http.Format)
+			out.HTTP.Format = &v
+		}
+	}
+	return out
+}
+
+func rotatePatchFromAPI(in *LogRotateConfig) *config.LogRotatePatch {
+	if in == nil {
+		return nil
+	}
+	return &config.LogRotatePatch{
+		MaxSizeMB:  in.MaxSizeMb,
+		MaxBackups: in.MaxBackups,
+		MaxAgeDays: in.MaxAgeDays,
+		Compress:   in.Compress,
+	}
+}
+
+// systemConfigView maps the three sections into the generated view. Every
+// nested field is populated even though the schema marks them optional — the
+// shape is shared with the patch, where optional means "leave alone".
+func systemConfigView(c *config.Config) SystemConfigJSONResponse {
+	app, http := c.Log.App, c.Log.HTTP
+	appLevel := AppLogConfigLevel(app.Level)
+	appFormat := AppLogConfigFormat(app.Format)
+	httpFormat := HTTPLogConfigFormat(http.Format)
+	return SystemConfigJSONResponse{
+		Log: LogConfig{
+			App: &AppLogConfig{
+				Enabled: &app.Enabled,
+				Level:   &appLevel,
+				Format:  &appFormat,
+				Output:  &app.Output,
+				Rotate:  rotateView(app.Rotate),
+			},
+			Http: &HTTPLogConfig{
+				Enabled: &http.Enabled,
+				Format:  &httpFormat,
+				Output:  &http.Output,
+				Rotate:  rotateView(http.Rotate),
+			},
+		},
+		OtelEndpoint:    c.OTel.Endpoint,
+		EventsRetention: c.Events.Retention,
+		RestartRequired: restart.Pending(),
+	}
+}
+
+func rotateView(r config.LogRotate) *LogRotateConfig {
+	return &LogRotateConfig{
+		MaxSizeMb:  &r.MaxSizeMB,
+		MaxBackups: &r.MaxBackups,
+		MaxAgeDays: &r.MaxAgeDays,
+		Compress:   &r.Compress,
+	}
+}
+
 // ListOIDCProviders returns every configured provider plus the process-wide
 // restart-required flag. Admin only.
 func (s *Server) ListOIDCProviders(

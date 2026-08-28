@@ -138,11 +138,19 @@ Some config is hot — changed through the UI or API, applied immediately, persi
 | `download.selective_files`, `download.selection_grace` | ✅ | Settings → Library |
 | `ffmpeg.enabled` | ✅ | Settings → Media probe |
 | `ffmpeg.path` | ⚠️ Accepted immediately, but only picked up by the process's prober on the next restart | Settings → Media probe |
+| `events.retention` | ✅ Applies on the next cleanup run | Settings → General |
 | `metadata.*` | ⚠️ Accepted immediately, but the TMDB and TVDB clients are built at boot — restart required | Settings → Metadata |
+| `log.*`, `otel.endpoint` | ⚠️ Accepted immediately, but the log handlers and OTLP exporters are built at boot — restart required | Settings → General |
 | OIDC providers | ⚠️ CRUD works, but only loaded at startup — restart required | Settings → Single Sign-On |
 | Everything else | ❌ File only, restart required | — |
 
-Notably **not** runtime-editable: `data_dir`, server host/port, `server.trusted_proxies`, `auth.mode`, `auth.trusted_networks`, `auth.trusted_role`, `auth.seed_admin.*`, session secrets, logging, OTel, `events.retention` and `torrent_listen_port`. The trust-boundary keys are deliberately file-only — the same reason the [OIDC](Authentication-and-SSO) provider API never exposes `allow_admin` or `email_linking`.
+Notably **not** runtime-editable: `data_dir`, server host/port, `server.trusted_proxies`, `auth.mode`, `auth.trusted_networks`, `auth.trusted_role`, `auth.seed_admin.*` and the session secrets. The trust-boundary keys are deliberately file-only — the same reason the [OIDC](Authentication-and-SSO) provider API never exposes `allow_admin` or `email_linking`.
+
+They are all **shown** read-only under **Server & security** on Settings → General, so one screen can tell you what is in force without reading the YAML on the host. Secrets appear there as a source (`In the config file` / `From a file` / `Not set`), never as a value.
+
+**`torrent_listen_port` is its own thing.** It is not editable as config at all, because the value is authored by a VPN tunnel rather than by you: `PUT /api/v1/torrents/listen-port` moves the *running* engine's peer sockets and re-announces to DHT without writing anything, so a restart falls back to `STREAMLINE_TORRENT_LISTEN_PORT`. The normal caller is gluetun's `VPN_PORT_FORWARDING_UP_COMMAND` on every port rotation; **Move listening port** on Activity → Torrents is the manual re-issue for when that hook fails, since nothing retries it automatically.
+
+**Three settings name the peer port; only one of them wins.** `download_clients[].listen_port` is what the builtin client's form edits, `torrent_listen_port` overrides it whenever it is non-zero (`BuiltinDownloadClient` resolves this), and the endpoint above moves the live socket without touching either. While an override is in force the form's **Listen port** field goes read-only and says so, because editing it there would save happily and change nothing — set the port through `STREAMLINE_TORRENT_LISTEN_PORT`, or move the running engine from Activity → Torrents.
 
 **The three library roots are a special case.** `library.movie_path`, `series_path` and `download_path` show up read-only on Settings → Library and are changed through Settings → Advanced instead. That flow rewrites every stored path in the database and *then* repoints the config; a plain edit would leave every existing file recorded under the old prefix.
 

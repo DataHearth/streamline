@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Zap, Folder, Gauge, Globe } from "@lucide/svelte";
+	import { Zap, Folder, Gauge, Globe, TriangleAlert } from "@lucide/svelte";
 	import TextField from "../../forms/TextField.svelte";
 	import Select from "../../forms/Select.svelte";
 	import TogglePill from "../../forms/TogglePill.svelte";
@@ -21,9 +21,16 @@
 	type Props = {
 		form: AppForm<Values>;
 		isEdit?: boolean;
+		// The effective port when the top-level torrent_listen_port overrides
+		// this entry's own. Editing listen_port then has no effect, so the field
+		// goes read-only and says why instead of accepting a value the engine
+		// will ignore.
+		listenPortOverride?: number | undefined;
 	};
 
-	let { form, isEdit = false }: Props = $props();
+	let { form, isEdit = false, listenPortOverride }: Props = $props();
+
+	let overridden = $derived(listenPortOverride !== undefined);
 
 	// Common network interfaces to bind to. Empty = all interfaces.
 	const INTERFACES = [
@@ -111,14 +118,35 @@
 		<div class="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-start">
 			<form.Field name="listen_port">
 				{#snippet children(field)}
-					<TextField
-						{field}
-						label={i18n.builtin_listen_port()}
-						type="number"
-						min={0}
-						max={65535}
-						help={i18n.builtin_listen_port_help()}
-					/>
+					<div>
+						<TextField
+							{field}
+							label={i18n.builtin_listen_port()}
+							type="number"
+							min={0}
+							max={65535}
+							readonly={overridden}
+							help={overridden
+								? i18n.builtin_listen_port_overridden_help()
+								: i18n.builtin_listen_port_help()}
+						/>
+						{#if overridden}
+							<p
+								class="mt-2 flex gap-2 text-xs leading-relaxed text-status-wanted"
+							>
+								<TriangleAlert
+									size={14}
+									class="mt-px shrink-0"
+									aria-hidden="true"
+								/>
+								<span>
+									{i18n.builtin_listen_port_overridden({
+										port: listenPortOverride ?? 0,
+									})}
+								</span>
+							</p>
+						{/if}
+					</div>
 				{/snippet}
 			</form.Field>
 			<form.Field name="disable_dht">
@@ -134,9 +162,14 @@
 				{/snippet}
 			</form.Field>
 		</div>
-		<p class="text-[11px] text-fg-subtle">
-			{i18n.builtin_vpn_tip()}
-		</p>
+		<!-- The tip tells you to set the listen port to your forwarded one, which
+		     is the opposite of what the override warning says. Under an override
+		     the port is already being supplied that way. -->
+		{#if !overridden}
+			<p class="text-[11px] text-fg-subtle">
+				{i18n.builtin_vpn_tip()}
+			</p>
+		{/if}
 	</div>
 
 	<!-- Speed limits (engine-global) -->

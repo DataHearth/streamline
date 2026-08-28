@@ -26,7 +26,13 @@
 		TorrentFilePriority,
 		AddTorrentRequest,
 	} from "../../lib/types";
-	import { Zap, ArrowUpRight, LoaderCircle, Plus } from "@lucide/svelte";
+	import {
+		Zap,
+		ArrowUpRight,
+		LoaderCircle,
+		Plus,
+		Network,
+	} from "@lucide/svelte";
 	import ActivityToolbar, {
 		ACTIVITY_CHIPS,
 	} from "../../components/activity/ActivityToolbar.svelte";
@@ -39,6 +45,34 @@
 	import AddTorrentSheet from "../../components/activity/AddTorrentSheet.svelte";
 	import { formatSpeed } from "../../lib/format";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
+
+	// Moving the peer port is normally gluetun's VPN_PORT_FORWARDING_UP_COMMAND
+	// calling this endpoint on every rotation. It has no retry of its own and a
+	// partial move persists until the next rotation, so a human needs a way to
+	// re-issue it. The endpoint persists nothing — a restart falls back to
+	// STREAMLINE_TORRENT_LISTEN_PORT — which is why this lives beside the live
+	// engine rather than on a settings form.
+	let portOpen = $state(false);
+	let portDraft = $state("");
+
+	const setPort = createMutation<null, Error, number>(() => ({
+		mutationFn: (port) =>
+			api<null>("/torrents/listen-port", { method: "PUT", body: { port } }),
+		onSuccess: () => {
+			toast.ok(i18n.torrent_port_moved());
+			portOpen = false;
+		},
+		onError: (err) => toast.err(errorText(err)),
+	}));
+
+	function submitPort() {
+		const port = Number(portDraft);
+		if (!Number.isInteger(port) || port < 1 || port > 65535) {
+			toast.err(i18n.torrent_port_invalid());
+			return;
+		}
+		setPort.mutate(port);
+	}
 
 	let statusFilter = $state<string[]>([]);
 	let search = $state("");
@@ -245,16 +279,62 @@
 		<span class="hidden group-data-[refreshing]:inline">{i18n.common_refreshing()}</span>
 	</div>
 
-	<header class="mb-1">
-		<h1 class="text-2xl font-bold tracking-tight text-fg">{i18n.torrent_label()}</h1>
-		<p class="mt-1 text-sm text-fg-muted">
-			{#if torrentsNotConfigured}
-				Built-in engine · disabled
-			{:else}
-				{torrentItems.length} torrent{torrentItems.length === 1 ? "" : "s"} · built-in
-				engine
-			{/if}
-		</p>
+	<header class="mb-1 flex flex-wrap items-start justify-between gap-3">
+		<div>
+			<h1 class="text-2xl font-bold tracking-tight text-fg">{i18n.torrent_label()}</h1>
+			<p class="mt-1 text-sm text-fg-muted">
+				{#if torrentsNotConfigured}
+					Built-in engine · disabled
+				{:else}
+					{torrentItems.length} torrent{torrentItems.length === 1 ? "" : "s"} · built-in
+					engine
+				{/if}
+			</p>
+		</div>
+		{#if !torrentsNotConfigured && auth.isAdmin}
+			<div class="flex items-center gap-2">
+				{#if portOpen}
+					<input
+						type="number"
+						min="1"
+						max="65535"
+						inputmode="numeric"
+						placeholder="51413"
+						bind:value={portDraft}
+						onkeydown={(e) => {
+							if (e.key === "Enter") submitPort();
+							if (e.key === "Escape") portOpen = false;
+						}}
+						class="h-9 w-28 rounded-md border border-border bg-bg px-3 font-mono text-sm text-fg placeholder:text-fg-faint focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+					/>
+					<button
+						type="button"
+						disabled={setPort.isPending}
+						onclick={submitPort}
+						class="inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+					>
+						{setPort.isPending ? i18n.common_applying() : i18n.torrent_port_apply()}
+					</button>
+					<button
+						type="button"
+						onclick={() => (portOpen = false)}
+						class="inline-flex h-9 items-center rounded-md border border-border px-3 text-sm text-fg-muted transition hover:text-fg"
+					>
+						{i18n.common_cancel()}
+					</button>
+				{:else}
+					<button
+						type="button"
+						onclick={() => (portOpen = true)}
+						title={i18n.torrent_port_help()}
+						class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border px-3 text-sm font-medium text-fg-muted transition hover:bg-surface hover:text-fg"
+					>
+						<Network size={14} aria-hidden="true" />
+						{i18n.torrent_port_move()}
+					</button>
+				{/if}
+			</div>
+		{/if}
 	</header>
 
 	{#if torrentsNotConfigured}

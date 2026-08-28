@@ -84,6 +84,48 @@ func (e AddSeriesRequestPreset) Valid() bool {
 	}
 }
 
+// Defines values for AppLogConfigFormat.
+const (
+	AppLogConfigFormatJson AppLogConfigFormat = "json"
+	AppLogConfigFormatText AppLogConfigFormat = "text"
+)
+
+// Valid indicates whether the value is a known member of the AppLogConfigFormat enum.
+func (e AppLogConfigFormat) Valid() bool {
+	switch e {
+	case AppLogConfigFormatJson:
+		return true
+	case AppLogConfigFormatText:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AppLogConfigLevel.
+const (
+	AppLogConfigLevelDebug AppLogConfigLevel = "debug"
+	AppLogConfigLevelError AppLogConfigLevel = "error"
+	AppLogConfigLevelInfo  AppLogConfigLevel = "info"
+	AppLogConfigLevelWarn  AppLogConfigLevel = "warn"
+)
+
+// Valid indicates whether the value is a known member of the AppLogConfigLevel enum.
+func (e AppLogConfigLevel) Valid() bool {
+	switch e {
+	case AppLogConfigLevelDebug:
+		return true
+	case AppLogConfigLevelError:
+		return true
+	case AppLogConfigLevelInfo:
+		return true
+	case AppLogConfigLevelWarn:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AuthConfigPatchOidcDefaultRole.
 const (
 	AuthConfigPatchOidcDefaultRoleAdmin       AuthConfigPatchOidcDefaultRole = "admin"
@@ -393,6 +435,24 @@ func (e EpisodeStatus) Valid() bool {
 	case EpisodeStatusUnaired:
 		return true
 	case EpisodeStatusWanted:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for HTTPLogConfigFormat.
+const (
+	HTTPLogConfigFormatCombined HTTPLogConfigFormat = "combined"
+	HTTPLogConfigFormatJson     HTTPLogConfigFormat = "json"
+)
+
+// Valid indicates whether the value is a known member of the HTTPLogConfigFormat enum.
+func (e HTTPLogConfigFormat) Valid() bool {
+	switch e {
+	case HTTPLogConfigFormatCombined:
+		return true
+	case HTTPLogConfigFormatJson:
 		return true
 	default:
 		return false
@@ -1458,6 +1518,27 @@ func (e ScheduleStatus) Valid() bool {
 	}
 }
 
+// Defines values for SystemInfoSeedAdminSecret.
+const (
+	SystemInfoSeedAdminSecretConfig SystemInfoSeedAdminSecret = "config"
+	SystemInfoSeedAdminSecretFile   SystemInfoSeedAdminSecret = "file"
+	SystemInfoSeedAdminSecretUnset  SystemInfoSeedAdminSecret = "unset"
+)
+
+// Valid indicates whether the value is a known member of the SystemInfoSeedAdminSecret enum.
+func (e SystemInfoSeedAdminSecret) Valid() bool {
+	switch e {
+	case SystemInfoSeedAdminSecretConfig:
+		return true
+	case SystemInfoSeedAdminSecretFile:
+		return true
+	case SystemInfoSeedAdminSecretUnset:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for TVShowSeriesStatus.
 const (
 	TVShowSeriesStatusContinuing TVShowSeriesStatus = "continuing"
@@ -2117,6 +2198,25 @@ type ApiKeyCreated struct {
 	RawToken   string     `json:"raw_token"`
 }
 
+// AppLogConfig defines model for AppLogConfig.
+type AppLogConfig struct {
+	Enabled *bool               `json:"enabled,omitempty"`
+	Format  *AppLogConfigFormat `json:"format,omitempty"`
+	Level   *AppLogConfigLevel  `json:"level,omitempty"`
+
+	// Output "stderr", "stdout", or a file path. Rotation applies to a file only.
+	Output *string `json:"output,omitempty"`
+
+	// Rotate Applies only when the matching output is a file path. 0 disables that bound.
+	Rotate *LogRotateConfig `json:"rotate,omitempty"`
+}
+
+// AppLogConfigFormat defines model for AppLogConfig.Format.
+type AppLogConfigFormat string
+
+// AppLogConfigLevel defines model for AppLogConfig.Level.
+type AppLogConfigLevel string
+
 // ApproveRequestRequest defines model for ApproveRequestRequest.
 type ApproveRequestRequest struct {
 	// QualityProfile Profile name; empty or omitted uses the server default.
@@ -2342,17 +2442,22 @@ type DownloadClient struct {
 	AuthMethod DownloadClientAuthMethod `json:"auth_method"`
 
 	// BindInterface Interface name (e.g. wg0) or IP the engine binds to. Empty = all interfaces.
-	BindInterface   *string                  `json:"bind_interface,omitempty"`
-	ClientType      DownloadClientClientType `json:"client_type"`
-	DisableDht      *bool                    `json:"disable_dht,omitempty"`
-	DownloadDir     *string                  `json:"download_dir,omitempty"`
-	Enabled         bool                     `json:"enabled"`
-	Host            string                   `json:"host"`
-	InterfaceBound  *string                  `json:"interface_bound,omitempty"`
-	ListenPort      *uint16                  `json:"listen_port,omitempty"`
-	MaxDownloadKbps *int                     `json:"max_download_kbps,omitempty"`
-	MaxUploadKbps   *int                     `json:"max_upload_kbps,omitempty"`
-	Name            string                   `json:"name"`
+	BindInterface  *string                  `json:"bind_interface,omitempty"`
+	ClientType     DownloadClientClientType `json:"client_type"`
+	DisableDht     *bool                    `json:"disable_dht,omitempty"`
+	DownloadDir    *string                  `json:"download_dir,omitempty"`
+	Enabled        bool                     `json:"enabled"`
+	Host           string                   `json:"host"`
+	InterfaceBound *string                  `json:"interface_bound,omitempty"`
+
+	// ListenPort The port this entry configures. Read listen_port_override first — when that is present it is the port the engine actually binds, and this value has no effect.
+	ListenPort *uint16 `json:"listen_port,omitempty"`
+
+	// ListenPortOverride Present on the builtin entry only, and only when the top-level `torrent_listen_port` is set — normally by STREAMLINE_TORRENT_LISTEN_PORT, since the value is authored by a VPN tunnel. It wins over `listen_port`, so a client showing this must present `listen_port` as having no effect rather than as the port in force.
+	ListenPortOverride *uint16 `json:"listen_port_override,omitempty"`
+	MaxDownloadKbps    *int    `json:"max_download_kbps,omitempty"`
+	MaxUploadKbps      *int    `json:"max_upload_kbps,omitempty"`
+	Name               string  `json:"name"`
 
 	// PasswordSet True when a password is stored. The password itself is never returned.
 	PasswordSet bool     `json:"password_set"`
@@ -2529,6 +2634,19 @@ type FFmpegConfigView struct {
 	// OIDCProviderListView.restart_required.
 	RestartRequired bool `json:"restart_required"`
 }
+
+// HTTPLogConfig defines model for HTTPLogConfig.
+type HTTPLogConfig struct {
+	Enabled *bool                `json:"enabled,omitempty"`
+	Format  *HTTPLogConfigFormat `json:"format,omitempty"`
+	Output  *string              `json:"output,omitempty"`
+
+	// Rotate Applies only when the matching output is a file path. 0 disables that bound.
+	Rotate *LogRotateConfig `json:"rotate,omitempty"`
+}
+
+// HTTPLogConfigFormat defines model for HTTPLogConfig.Format.
+type HTTPLogConfigFormat string
 
 // HistoryEntry defines model for HistoryEntry.
 type HistoryEntry struct {
@@ -2924,6 +3042,20 @@ type LockoutConfig struct {
 
 	// Window Go duration string. The sliding window failures accumulate over.
 	Window *string `json:"window,omitempty"`
+}
+
+// LogConfig Application and HTTP logging. Every field is optional so one schema serves the read view and the patch; on a patch an omitted field keeps its stored value.
+type LogConfig struct {
+	App  *AppLogConfig  `json:"app,omitempty"`
+	Http *HTTPLogConfig `json:"http,omitempty"`
+}
+
+// LogRotateConfig Applies only when the matching output is a file path. 0 disables that bound.
+type LogRotateConfig struct {
+	Compress   *bool `json:"compress,omitempty"`
+	MaxAgeDays *int  `json:"max_age_days,omitempty"`
+	MaxBackups *int  `json:"max_backups,omitempty"`
+	MaxSizeMb  *int  `json:"max_size_mb,omitempty"`
 }
 
 // LookupDetail Everything a provider knows about one lookup result beyond what the
@@ -3821,6 +3953,30 @@ type SpecialsMonitoredResult struct {
 	SeasonsUpdated int `json:"seasons_updated"`
 }
 
+// SystemConfigPatch Only provided fields are applied, nested objects included.
+type SystemConfigPatch struct {
+	EventsRetention *string `json:"events_retention,omitempty"`
+
+	// Log Application and HTTP logging. Every field is optional so one schema serves the read view and the patch; on a patch an omitted field keeps its stored value.
+	Log          *LogConfig `json:"log,omitempty"`
+	OtelEndpoint *string    `json:"otel_endpoint,omitempty"`
+}
+
+// SystemConfigView defines model for SystemConfigView.
+type SystemConfigView struct {
+	// EventsRetention Go duration string. How long media events are kept before the cleanup job deletes them. The only field here that applies without a restart.
+	EventsRetention string `json:"events_retention"`
+
+	// Log Application and HTTP logging. Every field is optional so one schema serves the read view and the patch; on a patch an omitted field keeps its stored value.
+	Log LogConfig `json:"log"`
+
+	// OtelEndpoint OTLP collector endpoint for traces, metrics and logs. Empty disables export.
+	OtelEndpoint string `json:"otel_endpoint"`
+
+	// RestartRequired True when a logging or telemetry change is pending a process restart. The same process-wide flag OIDC provider mutations set.
+	RestartRequired bool `json:"restart_required"`
+}
+
 // SystemInfo defines model for SystemInfo.
 type SystemInfo struct {
 	AppName   string     `json:"app_name"`
@@ -3847,13 +4003,48 @@ type SystemInfo struct {
 	// LibraryDir Configured library.movie_path.
 	LibraryDir   *string    `json:"library_dir,omitempty"`
 	LibraryUsage *DiskUsage `json:"library_usage,omitempty"`
-	PublicUrl    string     `json:"public_url"`
+
+	// PlexClientId Generated on first Plex configuration; required by the PIN flow.
+	PlexClientId *string `json:"plex_client_id,omitempty"`
+	PublicUrl    string  `json:"public_url"`
+
+	// ReadOnly True when config.Update refuses every write-back.
+	ReadOnly       *bool   `json:"read_only,omitempty"`
+	SeedAdminEmail *string `json:"seed_admin_email,omitempty"`
+
+	// SeedAdminSecret Where the seed-admin password comes from. Never the password itself.
+	SeedAdminSecret *SystemInfoSeedAdminSecret `json:"seed_admin_secret,omitempty"`
 
 	// SeriesDir Configured library.series_path.
 	SeriesDir   *string    `json:"series_dir,omitempty"`
 	SeriesUsage *DiskUsage `json:"series_usage,omitempty"`
-	Version     string     `json:"version"`
+
+	// ServerHost Everything from here down is file-only by design — the trust
+	// boundary, the bootstrap block, and values the process generates for
+	// itself. Reported read-only so one screen can say what is in force;
+	// secrets are reported as a source, never a value.
+	ServerHost *string `json:"server_host,omitempty"`
+	ServerPort *uint16 `json:"server_port,omitempty"`
+
+	// SessionSecretFile Empty when the signing secret is inline in the config.
+	SessionSecretFile *string `json:"session_secret_file,omitempty"`
+	TmdbApiKeyFile    *string `json:"tmdb_api_key_file,omitempty"`
+
+	// TorrentListenPort Top-level override of the builtin download client's listen_port, reachable as STREAMLINE_TORRENT_LISTEN_PORT. 0 means no override.
+	TorrentListenPort *uint16 `json:"torrent_listen_port,omitempty"`
+
+	// TrustedNetworks CIDRs handed trusted_role without authenticating.
+	TrustedNetworks *[]string `json:"trusted_networks,omitempty"`
+
+	// TrustedProxies CIDRs whose X-Forwarded-* headers are believed. Empty trusts nothing.
+	TrustedProxies *[]string `json:"trusted_proxies,omitempty"`
+	TrustedRole    *string   `json:"trusted_role,omitempty"`
+	TvdbApiKeyFile *string   `json:"tvdb_api_key_file,omitempty"`
+	Version        string    `json:"version"`
 }
+
+// SystemInfoSeedAdminSecret Where the seed-admin password comes from. Never the password itself.
+type SystemInfoSeedAdminSecret string
 
 // TMDBMovieResult defines model for TMDBMovieResult.
 type TMDBMovieResult struct {
@@ -4414,6 +4605,9 @@ type SeriesPlayOnLinks = PlayOnLinkList
 // SpecialsMonitored defines model for SpecialsMonitored.
 type SpecialsMonitored = SpecialsMonitoredResult
 
+// SystemConfig defines model for SystemConfig.
+type SystemConfig = SystemConfigView
+
 // Unauthorized defines model for Unauthorized.
 type Unauthorized = Error
 
@@ -4552,6 +4746,9 @@ type UpdateMovie = UpdateMovieRequest
 // UpdateOIDCProvider Only provided fields are applied. A blank/omitted client_secret
 // preserves the existing secret.
 type UpdateOIDCProvider = OIDCProviderPatch
+
+// UpdateSystemConfig Only provided fields are applied, nested objects included.
+type UpdateSystemConfig = SystemConfigPatch
 
 // ListActivityParams defines parameters for ListActivity.
 type ListActivityParams struct {
@@ -4780,6 +4977,9 @@ type CreateOIDCProviderJSONRequestBody = OIDCProviderCreate
 
 // UpdateOIDCProviderJSONRequestBody defines body for UpdateOIDCProvider for application/json ContentType.
 type UpdateOIDCProviderJSONRequestBody = OIDCProviderPatch
+
+// UpdateConfigSystemJSONRequestBody defines body for UpdateConfigSystem for application/json ContentType.
+type UpdateConfigSystemJSONRequestBody = SystemConfigPatch
 
 // CreateCustomFormatJSONRequestBody defines body for CreateCustomFormat for application/json ContentType.
 type CreateCustomFormatJSONRequestBody = CustomFormatCreate
@@ -5044,6 +5244,12 @@ type ServerInterface interface {
 	// UpdateOIDCProvider Update an OIDC provider (admin)
 	// (PATCH /config/oidc/{name})
 	UpdateOIDCProvider(w http.ResponseWriter, r *http.Request, name OIDCProviderName)
+	// GetConfigSystem Get logging, telemetry and retention configuration (admin)
+	// (GET /config/system)
+	GetConfigSystem(w http.ResponseWriter, r *http.Request)
+	// UpdateConfigSystem Patch logging, telemetry and retention configuration (admin)
+	// (PATCH /config/system)
+	UpdateConfigSystem(w http.ResponseWriter, r *http.Request)
 	// ListCustomFormats List custom formats
 	// (GET /custom-formats)
 	ListCustomFormats(w http.ResponseWriter, r *http.Request)
@@ -5650,6 +5856,18 @@ func (_ Unimplemented) GetOIDCProvider(w http.ResponseWriter, r *http.Request, n
 // UpdateOIDCProvider Update an OIDC provider (admin)
 // (PATCH /config/oidc/{name})
 func (_ Unimplemented) UpdateOIDCProvider(w http.ResponseWriter, r *http.Request, name OIDCProviderName) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetConfigSystem Get logging, telemetry and retention configuration (admin)
+// (GET /config/system)
+func (_ Unimplemented) GetConfigSystem(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// UpdateConfigSystem Patch logging, telemetry and retention configuration (admin)
+// (PATCH /config/system)
+func (_ Unimplemented) UpdateConfigSystem(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -7260,6 +7478,34 @@ func (siw *ServerInterfaceWrapper) UpdateOIDCProvider(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateOIDCProvider(w, r, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetConfigSystem operation middleware
+func (siw *ServerInterfaceWrapper) GetConfigSystem(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetConfigSystem(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateConfigSystem operation middleware
+func (siw *ServerInterfaceWrapper) UpdateConfigSystem(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateConfigSystem(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -10964,6 +11210,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Patch(options.BaseURL+"/config/metadata", wrapper.UpdateConfigMetadata)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/config/system", wrapper.GetConfigSystem)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/config/system", wrapper.UpdateConfigSystem)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/config/oidc", wrapper.ListOIDCProviders)
 	})
 	r.Group(func(r chi.Router) {
@@ -11295,6 +11547,8 @@ type SeriesSearchAcceptedResponse struct {
 }
 
 type SpecialsMonitoredJSONResponse SpecialsMonitoredResult
+
+type SystemConfigJSONResponse SystemConfigView
 
 type SystemInfoJSONResponse SystemInfo
 
@@ -13520,6 +13774,107 @@ type UpdateOIDCProvider422JSONResponse struct {
 }
 
 func (response UpdateOIDCProvider422JSONResponse) VisitUpdateOIDCProviderResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetConfigSystemRequestObject struct {
+}
+
+type GetConfigSystemResponseObject interface {
+	VisitGetConfigSystemResponse(w http.ResponseWriter) error
+}
+
+type GetConfigSystem200JSONResponse struct{ SystemConfigJSONResponse }
+
+func (response GetConfigSystem200JSONResponse) VisitGetConfigSystemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetConfigSystem403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetConfigSystem403JSONResponse) VisitGetConfigSystemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateConfigSystemRequestObject struct {
+	Body *UpdateConfigSystemJSONRequestBody
+}
+
+type UpdateConfigSystemResponseObject interface {
+	VisitUpdateConfigSystemResponse(w http.ResponseWriter) error
+}
+
+type UpdateConfigSystem200JSONResponse struct{ SystemConfigJSONResponse }
+
+func (response UpdateConfigSystem200JSONResponse) VisitUpdateConfigSystemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateConfigSystem403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpdateConfigSystem403JSONResponse) VisitUpdateConfigSystemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateConfigSystem413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response UpdateConfigSystem413JSONResponse) VisitUpdateConfigSystemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateConfigSystem422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response UpdateConfigSystem422JSONResponse) VisitUpdateConfigSystemResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -21172,6 +21527,12 @@ type StrictServerInterface interface {
 	// UpdateOIDCProvider Update an OIDC provider (admin)
 	// (PATCH /config/oidc/{name})
 	UpdateOIDCProvider(ctx context.Context, request UpdateOIDCProviderRequestObject) (UpdateOIDCProviderResponseObject, error)
+	// GetConfigSystem Get logging, telemetry and retention configuration (admin)
+	// (GET /config/system)
+	GetConfigSystem(ctx context.Context, request GetConfigSystemRequestObject) (GetConfigSystemResponseObject, error)
+	// UpdateConfigSystem Patch logging, telemetry and retention configuration (admin)
+	// (PATCH /config/system)
+	UpdateConfigSystem(ctx context.Context, request UpdateConfigSystemRequestObject) (UpdateConfigSystemResponseObject, error)
 	// ListCustomFormats List custom formats
 	// (GET /custom-formats)
 	ListCustomFormats(ctx context.Context, request ListCustomFormatsRequestObject) (ListCustomFormatsResponseObject, error)
@@ -22695,6 +23056,61 @@ func (sh *strictHandler) UpdateOIDCProvider(w http.ResponseWriter, r *http.Reque
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateOIDCProviderResponseObject); ok {
 		if err := validResponse.VisitUpdateOIDCProviderResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetConfigSystem operation middleware
+func (sh *strictHandler) GetConfigSystem(w http.ResponseWriter, r *http.Request) {
+	var request GetConfigSystemRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetConfigSystem(ctx, request.(GetConfigSystemRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetConfigSystem")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetConfigSystemResponseObject); ok {
+		if err := validResponse.VisitGetConfigSystemResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateConfigSystem operation middleware
+func (sh *strictHandler) UpdateConfigSystem(w http.ResponseWriter, r *http.Request) {
+	var request UpdateConfigSystemRequestObject
+
+	var body UpdateConfigSystemJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateConfigSystem(ctx, request.(UpdateConfigSystemRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateConfigSystem")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateConfigSystemResponseObject); ok {
+		if err := validResponse.VisitUpdateConfigSystemResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

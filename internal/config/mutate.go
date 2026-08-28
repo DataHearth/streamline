@@ -65,6 +65,45 @@ type DownloadPatch struct {
 	SelectionGrace *string
 }
 
+// SystemPatch carries optional field updates to the server's own bookkeeping:
+// logging, the OTLP endpoint, and event retention. Nil fields are left
+// untouched.
+type SystemPatch struct {
+	Log             *LogPatch
+	OTelEndpoint    *string
+	EventsRetention *string
+}
+
+// LogPatch is optional-partial at every level: a nil App leaves the whole
+// application-log section alone, and a non-nil App with one field set leaves
+// its siblings alone.
+type LogPatch struct {
+	App  *AppLogPatch
+	HTTP *HTTPLogPatch
+}
+
+type AppLogPatch struct {
+	Enabled *bool
+	Level   *string
+	Format  *string
+	Output  *string
+	Rotate  *LogRotatePatch
+}
+
+type HTTPLogPatch struct {
+	Enabled *bool
+	Format  *string
+	Output  *string
+	Rotate  *LogRotatePatch
+}
+
+type LogRotatePatch struct {
+	MaxSizeMB  *int
+	MaxBackups *int
+	MaxAgeDays *int
+	Compress   *bool
+}
+
 // MetadataPatch carries optional field updates to the metadata section. A
 // blank api key preserves the stored one — the UI never shows the current
 // value, so blank means "unchanged."
@@ -341,6 +380,89 @@ func UpdateMetadata(
 		return MetadataConfig{}, err
 	}
 	return out, nil
+}
+
+// UpdateSystem merges the patch into the log, otel and events sections and
+// persists it. Returns the whole Config so callers can echo every section
+// back — the three do not share a struct.
+//
+// Only events.retention applies to this process: the cleanup job reads it per
+// tick. The log handlers are built once by observability.Setup and the OTLP
+// exporters once alongside them, so a logging or telemetry change is a
+// restart-required one and the handler flags it.
+func UpdateSystem(ctx context.Context, patch SystemPatch) (*Config, error) {
+	if err := checkDuration(
+		"events.retention", patch.EventsRetention,
+	); err != nil {
+		return nil, err
+	}
+
+	var out Config
+	err := Update(ctx, func(c *Config) error {
+		if patch.Log != nil {
+			applyLogPatch(&c.Log, patch.Log)
+		}
+		if patch.OTelEndpoint != nil {
+			c.OTel.Endpoint = *patch.OTelEndpoint
+		}
+		if patch.EventsRetention != nil {
+			c.Events.Retention = *patch.EventsRetention
+		}
+		out = *c
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func applyLogPatch(dst *LogConfig, p *LogPatch) {
+	if p.App != nil {
+		if p.App.Enabled != nil {
+			dst.App.Enabled = *p.App.Enabled
+		}
+		if p.App.Level != nil {
+			dst.App.Level = *p.App.Level
+		}
+		if p.App.Format != nil {
+			dst.App.Format = *p.App.Format
+		}
+		if p.App.Output != nil {
+			dst.App.Output = *p.App.Output
+		}
+		applyRotatePatch(&dst.App.Rotate, p.App.Rotate)
+	}
+	if p.HTTP != nil {
+		if p.HTTP.Enabled != nil {
+			dst.HTTP.Enabled = *p.HTTP.Enabled
+		}
+		if p.HTTP.Format != nil {
+			dst.HTTP.Format = *p.HTTP.Format
+		}
+		if p.HTTP.Output != nil {
+			dst.HTTP.Output = *p.HTTP.Output
+		}
+		applyRotatePatch(&dst.HTTP.Rotate, p.HTTP.Rotate)
+	}
+}
+
+func applyRotatePatch(dst *LogRotate, p *LogRotatePatch) {
+	if p == nil {
+		return
+	}
+	if p.MaxSizeMB != nil {
+		dst.MaxSizeMB = *p.MaxSizeMB
+	}
+	if p.MaxBackups != nil {
+		dst.MaxBackups = *p.MaxBackups
+	}
+	if p.MaxAgeDays != nil {
+		dst.MaxAgeDays = *p.MaxAgeDays
+	}
+	if p.Compress != nil {
+		dst.Compress = *p.Compress
+	}
 }
 
 // AddOIDCProvider probes the issuer's discovery document, then appends the

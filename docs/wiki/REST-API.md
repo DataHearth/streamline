@@ -232,7 +232,7 @@ Built-in custom formats are listed alongside user-defined ones (`builtin: true`)
 
 | Method | Path |
 | --- | --- |
-| `GET` `PATCH` | `/config/auth` · `/config/library` · `/config/ffmpeg` · `/config/download` · `/config/metadata` |
+| `GET` `PATCH` | `/config/auth` · `/config/library` · `/config/ffmpeg` · `/config/download` · `/config/metadata` · `/config/system` |
 | `GET` `POST` | `/config/oidc` |
 | `GET` `PATCH` `DELETE` | `/config/oidc/{name}` |
 | `GET` | `/schedules` · `/schedules/{name}` |
@@ -301,7 +301,7 @@ api -X PATCH -d '{"enabled":false}' "$SL/api/v1/config/ffmpeg"
 
 ## Editing config
 
-Five sections are readable and patchable over the API; [Configuration Reference](Configuration-Reference#whats-editable-at-runtime) has the full table of what is hot and what needs a restart. Every one is admin-only, takes a partial body (an omitted field keeps its stored value), and answers with the section's new state.
+Six sections are readable and patchable over the API; [Configuration Reference](Configuration-Reference#whats-editable-at-runtime) has the full table of what is hot and what needs a restart. Every one is admin-only, takes a partial body (an omitted field keeps its stored value), and answers with the section's new state.
 
 ```bash
 api -X PATCH -d '{"import_mode":"copy","max_grab_failures":5}' "$SL/api/v1/config/library"
@@ -320,6 +320,17 @@ api "$SL/api/v1/config/metadata"
 
 api -X PATCH -d '{"language":"fr","tmdb_region":"FR"}' "$SL/api/v1/config/metadata"
 ```
+
+**`/config/system`** carries the server's own bookkeeping — application and HTTP logging, the OTLP endpoint, and how long media events are kept. `log` nests partially at every level, so patching one field leaves its siblings alone:
+
+```bash
+api -X PATCH -d '{"log":{"app":{"level":"debug"}}}' "$SL/api/v1/config/system"
+# app.format, app.output and the whole http section keep their stored values
+```
+
+`events_retention` is the only field here that reaches this process on its own — the cleanup job reads it per tick. Everything else is read once at boot, so changing it comes back with `restart_required: true`; a patch that only moves retention does not raise the flag.
+
+`log.app.output` and `log.http.output` are each `stderr`, `stdout`, or a file path. `log.*.rotate` applies only to a file path, and `0` on any of its bounds disables that bound — the settings page shows the rotation fields only once the output is a file, for the same reason.
 
 ---
 
