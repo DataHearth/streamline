@@ -209,10 +209,17 @@ func (s *Scheduler) List() []JobInfo {
 	return out
 }
 
-// Start launches every registered job that is not paused. Each job runs
-// immediately once, then repeats at its interval. Blocks until ctx is
-// cancelled. Jobs marked paused (via Pause prior to Start) stay dormant
-// until Resume is called.
+// bootStagger spreads the first run of each job at startup. Every job used to
+// fire the instant Start ran, which made the boot minute the heaviest period
+// the profiler saw — a full metadata sweep, both orphan scans and both missing
+// searches at once, all contending for the single SQLite connection while the
+// server was also trying to answer its first requests.
+const bootStagger = 2 * time.Second
+
+// Start launches every registered job that is not paused. Each job runs once
+// shortly after start — staggered, see bootStagger — then repeats at its
+// interval. Blocks until ctx is cancelled. Jobs marked paused (via Pause prior
+// to Start) stay dormant until Resume is called.
 func (s *Scheduler) Start(ctx context.Context) {
 	s.mu.Lock()
 	s.rootCtx = ctx
@@ -221,15 +228,29 @@ func (s *Scheduler) Start(ctx context.Context) {
 		jobs = append(jobs, j)
 	}
 	s.mu.Unlock()
-	for _, j := range jobs {
+	// Sorted so the spread is reproducible: map order would shuffle which job
+	// waits longest on every boot, which makes a slow start hard to read.
+	sort.Slice(jobs, func(i, k int) bool { return jobs[i].name < jobs[k].name })
+
+	for i, j := range jobs {
 		j.mu.Lock()
 		paused := j.paused
+		interval := j.interval
 		j.mu.Unlock()
 		if !paused {
-			s.startJob(ctx, j)
+			s.startJob(ctx, j, bootDelay(i, interval))
 		}
 	}
 	<-ctx.Done()
+}
+
+// bootDelay is how long job number index waits before its first run. Capped at
+// half the job's own interval so a frequent job is never held past the point
+// where it would have ticked anyway — a 5s job must not sit out 20s of stagger
+// meant for hourly ones. The first job always runs immediately.
+func bootDelay(index int, interval time.Duration) time.Duration {
+	d := time.Duration(index) * bootStagger
+	return min(d, interval/2)
 }
 
 // root returns the context Start was called with, and whether Start has run.
@@ -245,14 +266,19 @@ func (s *Scheduler) root() (context.Context, bool) {
 	return s.rootCtx, true
 }
 
-// startJob assigns a fresh stopCh to job and launches the goroutine.
-func (s *Scheduler) startJob(ctx context.Context, job *registeredJob) {
+// startJob assigns a fresh stopCh to job and launches the goroutine. delay
+// defers only the first run; the ticker period is unaffected.
+func (s *Scheduler) startJob(
+	ctx context.Context,
+	job *registeredJob,
+	delay time.Duration,
+) {
 	stop := make(chan struct{})
 	job.mu.Lock()
 	job.stopCh = stop
 	interval := job.interval
 	job.mu.Unlock()
-	go s.runJob(ctx, stop, interval, job)
+	go s.runJob(ctx, stop, interval, job, delay)
 }
 
 func (s *Scheduler) runJob(
@@ -260,7 +286,17 @@ func (s *Scheduler) runJob(
 	stopCh <-chan struct{},
 	interval time.Duration,
 	job *registeredJob,
+	firstDelay time.Duration,
 ) {
+	if firstDelay > 0 {
+		select {
+		case <-ctx.Done():
+			return
+		case <-stopCh:
+			return
+		case <-time.After(firstDelay):
+		}
+	}
 	go s.executeJob(ctx, job)
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
@@ -379,7 +415,7 @@ func (s *Scheduler) Resume(name string) error {
 	if started {
 		stop := make(chan struct{})
 		job.stopCh = stop
-		go s.runJob(rootCtx, stop, job.interval, job)
+		go s.runJob(rootCtx, stop, job.interval, job, 0)
 	}
 	slog.InfoContext(rootCtx, "scheduler job resumed", "job", name)
 	return nil
@@ -404,7 +440,7 @@ func (s *Scheduler) Reschedule(name string, interval time.Duration) error {
 		close(job.stopCh)
 		stop := make(chan struct{})
 		job.stopCh = stop
-		go s.runJob(rootCtx, stop, interval, job)
+		go s.runJob(rootCtx, stop, interval, job, 0)
 	}
 	slog.InfoContext(
 		rootCtx,
