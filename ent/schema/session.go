@@ -4,6 +4,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
+	"entgo.io/ent/schema/index"
 	"entgo.io/ent/schema/mixin"
 
 	"github.com/datahearth/streamline/ent/schema/mixins"
@@ -39,4 +40,10 @@ func (Session) Edges() []ent.Edge {
 			Unique().
 			Required(),
 	}
+}
+
+func (Session) Indexes() []ent.Index {
+	// Sessions are listed per user, and deleting a user cascades through this
+	// table — with foreign_keys=ON that is a full scan without the index.
+	return []ent.Index{index.Edges("user")}
 }

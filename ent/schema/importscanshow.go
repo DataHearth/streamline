@@ -62,5 +62,7 @@ func (ImportScanShow) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("classification"),
 		index.Fields("decision"),
+		index.Edges("scan"),
+		index.Fields("folder_path"),
 	}
 }

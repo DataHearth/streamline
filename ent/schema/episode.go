@@ -55,5 +55,11 @@ func (Episode) Edges() []ent.Edge {
 }
 
 func (Episode) Indexes() []ent.Index {
-	return []ent.Index{index.Edges("season")}
+	// episodes is the largest table in the schema. status is scanned twice per
+	// /series/counts and twice per 30s monitor tick
+	// (RevertOrphanedDownloadingEpisodes).
+	return []ent.Index{
+		index.Edges("season"),
+		index.Fields("status"),
+	}
 }

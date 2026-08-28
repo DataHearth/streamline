@@ -53,5 +53,7 @@ func (Request) Indexes() []ent.Index {
 			Annotations(entsql.IndexWhere(
 				"status IN ('pending', 'approved', 'available')",
 			)),
+		index.Edges("requester"),
+		index.Edges("approved_by"),
 	}
 }

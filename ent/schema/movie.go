@@ -57,5 +57,11 @@ func (Movie) Edges() []ent.Edge {
 func (Movie) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("digital_release_date"),
+		// status: every counts call filters on it once per status and the
+		// library list filters on it per tab. create_time: the list orders by
+		// it on every page, which without an index is a full scan into a temp
+		// B-tree sort.
+		index.Fields("status"),
+		index.Fields("create_time"),
 	}
 }

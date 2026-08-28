@@ -35,5 +35,6 @@ func (OIDCIdentity) Edges() []ent.Edge {
 func (OIDCIdentity) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("provider", "subject").Unique(),
+		index.Edges("owner"),
 	}
 }

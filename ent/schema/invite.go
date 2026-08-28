@@ -5,6 +5,7 @@ import (
 	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
+	"entgo.io/ent/schema/index"
 	"entgo.io/ent/schema/mixin"
 
 	"github.com/datahearth/streamline/ent/schema/mixins"
@@ -37,5 +38,12 @@ func (Invite) Edges() []ent.Edge {
 			Required().
 			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("used_by", User.Type).Unique(),
+	}
+}
+
+func (Invite) Indexes() []ent.Index {
+	return []ent.Index{
+		index.Edges("created_by"),
+		index.Edges("used_by"),
 	}
 }

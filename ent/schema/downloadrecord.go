@@ -74,7 +74,21 @@ func (DownloadRecord) Fields() []ent.Field {
 // which runs on a schedule against a table that keeps a month of completed
 // records.
 func (DownloadRecord) Indexes() []ent.Index {
-	return []ent.Index{index.Fields("selection_state")}
+	return []ent.Index{
+		index.Fields("selection_state"),
+		// status: the queue, the pending list and the 30s monitor tick all
+		// filter on it. torrent_hash: the monitor's orphan sweep and the
+		// torrents page look records up by hash. (update_time, id): history
+		// pages order by it, and without the index each page of the infinite
+		// scroll full-scans into a temp sort.
+		index.Fields("status"),
+		index.Fields("torrent_hash"),
+		index.Fields("update_time", "id"),
+		// SQLite indexes no foreign key on its own, so deleting a movie or an
+		// episode scans this table for children to cascade.
+		index.Edges("movie"),
+		index.Edges("episode"),
+	}
 }
 
 func (DownloadRecord) Edges() []ent.Edge {

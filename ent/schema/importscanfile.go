@@ -65,5 +65,10 @@ func (ImportScanFile) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("classification"),
 		index.Fields("decision"),
+		// Every row query is scoped to one scan, and deleting a scan cascades
+		// through this table. source_path is how a scan's rows are matched
+		// back to files on disk.
+		index.Edges("scan"),
+		index.Fields("source_path"),
 	}
 }

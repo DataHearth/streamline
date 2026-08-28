@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"entgo.io/ent"
+	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
@@ -62,5 +63,13 @@ func (MediaFile) Edges() []ent.Edge {
 // lookup was a full media_files scan. The series list runs one per episode row
 // of the page: 3.9s for 20 shows on a real library.
 func (MediaFile) Indexes() []ent.Index {
-	return []ent.Index{index.Edges("episode"), index.Edges("movie")}
+	return []ent.Index{
+		index.Edges("episode"),
+		index.Edges("movie"),
+		// Partial: the media-probe backfill asks for the oldest rows that were
+		// never probed, so once the backfill drains, the index is empty and
+		// the 15-minute job stops scanning the whole table forever.
+		index.Fields("probed_at").
+			Annotations(entsql.IndexWhere("probed_at IS NULL")),
+	}
 }

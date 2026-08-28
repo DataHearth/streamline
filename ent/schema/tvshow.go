@@ -5,6 +5,7 @@ import (
 	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
+	"entgo.io/ent/schema/index"
 	"entgo.io/ent/schema/mixin"
 
 	"github.com/datahearth/streamline/ent/schema/mixins"
@@ -62,5 +63,14 @@ func (TVShow) Edges() []ent.Edge {
 			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("events", MediaEvent.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),
+	}
+}
+
+func (TVShow) Indexes() []ent.Index {
+	// Mirrors Movie: create_time orders the list page, series_status filters
+	// it. FilterTVShows pushes both into SQL, so both are hit per request.
+	return []ent.Index{
+		index.Fields("create_time"),
+		index.Fields("series_status"),
 	}
 }

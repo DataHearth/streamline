@@ -32,6 +32,18 @@ var (
 				OnDelete:   schema.Cascade,
 			},
 		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "apikey_key_hash",
+				Unique:  true,
+				Columns: []*schema.Column{APIKeysColumns[4]},
+			},
+			{
+				Name:    "apikey_user_api_keys",
+				Unique:  false,
+				Columns: []*schema.Column{APIKeysColumns[6]},
+			},
+		},
 	}
 	// DownloadRecordsColumns holds the columns for the "download_records" table.
 	DownloadRecordsColumns = []*schema.Column{
@@ -85,6 +97,31 @@ var (
 				Unique:  false,
 				Columns: []*schema.Column{DownloadRecordsColumns[21]},
 			},
+			{
+				Name:    "downloadrecord_status",
+				Unique:  false,
+				Columns: []*schema.Column{DownloadRecordsColumns[6]},
+			},
+			{
+				Name:    "downloadrecord_torrent_hash",
+				Unique:  false,
+				Columns: []*schema.Column{DownloadRecordsColumns[7]},
+			},
+			{
+				Name:    "downloadrecord_update_time_id",
+				Unique:  false,
+				Columns: []*schema.Column{DownloadRecordsColumns[2], DownloadRecordsColumns[0]},
+			},
+			{
+				Name:    "downloadrecord_movie_download_records",
+				Unique:  false,
+				Columns: []*schema.Column{DownloadRecordsColumns[23]},
+			},
+			{
+				Name:    "downloadrecord_episode_download_records",
+				Unique:  false,
+				Columns: []*schema.Column{DownloadRecordsColumns[22]},
+			},
 		},
 	}
 	// EpisodesColumns holds the columns for the "episodes" table.
@@ -121,6 +158,11 @@ var (
 				Name:    "episode_season_episodes",
 				Unique:  false,
 				Columns: []*schema.Column{EpisodesColumns[12]},
+			},
+			{
+				Name:    "episode_status",
+				Unique:  false,
+				Columns: []*schema.Column{EpisodesColumns[11]},
 			},
 		},
 	}
@@ -206,6 +248,16 @@ var (
 				Unique:  false,
 				Columns: []*schema.Column{ImportScanFilesColumns[13]},
 			},
+			{
+				Name:    "importscanfile_import_scan_files",
+				Unique:  false,
+				Columns: []*schema.Column{ImportScanFilesColumns[18]},
+			},
+			{
+				Name:    "importscanfile_source_path",
+				Unique:  false,
+				Columns: []*schema.Column{ImportScanFilesColumns[3]},
+			},
 		},
 	}
 	// ImportScanShowsColumns holds the columns for the "import_scan_shows" table.
@@ -252,6 +304,16 @@ var (
 				Unique:  false,
 				Columns: []*schema.Column{ImportScanShowsColumns[11]},
 			},
+			{
+				Name:    "importscanshow_import_scan_shows",
+				Unique:  false,
+				Columns: []*schema.Column{ImportScanShowsColumns[16]},
+			},
+			{
+				Name:    "importscanshow_folder_path",
+				Unique:  false,
+				Columns: []*schema.Column{ImportScanShowsColumns[3]},
+			},
 		},
 	}
 	// InvitesColumns holds the columns for the "invites" table.
@@ -284,6 +346,18 @@ var (
 				Columns:    []*schema.Column{InvitesColumns[9]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.SetNull,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "invite_invite_created_by",
+				Unique:  false,
+				Columns: []*schema.Column{InvitesColumns[8]},
+			},
+			{
+				Name:    "invite_invite_used_by",
+				Unique:  false,
+				Columns: []*schema.Column{InvitesColumns[9]},
 			},
 		},
 	}
@@ -406,6 +480,14 @@ var (
 				Unique:  false,
 				Columns: []*schema.Column{MediaFilesColumns[21]},
 			},
+			{
+				Name:    "mediafile_probed_at",
+				Unique:  false,
+				Columns: []*schema.Column{MediaFilesColumns[19]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "probed_at IS NULL",
+				},
+			},
 		},
 	}
 	// MoviesColumns holds the columns for the "movies" table.
@@ -442,6 +524,16 @@ var (
 				Unique:  false,
 				Columns: []*schema.Column{MoviesColumns[12]},
 			},
+			{
+				Name:    "movie_status",
+				Unique:  false,
+				Columns: []*schema.Column{MoviesColumns[8]},
+			},
+			{
+				Name:    "movie_create_time",
+				Unique:  false,
+				Columns: []*schema.Column{MoviesColumns[1]},
+			},
 		},
 	}
 	// OidcIdentitiesColumns holds the columns for the "oidc_identities" table.
@@ -472,6 +564,11 @@ var (
 				Name:    "oidcidentity_provider_subject",
 				Unique:  true,
 				Columns: []*schema.Column{OidcIdentitiesColumns[3], OidcIdentitiesColumns[4]},
+			},
+			{
+				Name:    "oidcidentity_user_oidc_identities",
+				Unique:  false,
+				Columns: []*schema.Column{OidcIdentitiesColumns[6]},
 			},
 		},
 	}
@@ -516,6 +613,16 @@ var (
 				Annotation: &entsql.IndexAnnotation{
 					Where: "status IN ('pending', 'approved', 'available')",
 				},
+			},
+			{
+				Name:    "request_user_requests",
+				Unique:  false,
+				Columns: []*schema.Column{RequestsColumns[10]},
+			},
+			{
+				Name:    "request_request_approved_by",
+				Unique:  false,
+				Columns: []*schema.Column{RequestsColumns[9]},
 			},
 		},
 	}
@@ -593,6 +700,13 @@ var (
 				OnDelete:   schema.Cascade,
 			},
 		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "session_user_sessions",
+				Unique:  false,
+				Columns: []*schema.Column{SessionsColumns[9]},
+			},
+		},
 	}
 	// TvShowsColumns holds the columns for the "tv_shows" table.
 	TvShowsColumns = []*schema.Column{
@@ -622,6 +736,18 @@ var (
 		Name:       "tv_shows",
 		Columns:    TvShowsColumns,
 		PrimaryKey: []*schema.Column{TvShowsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "tvshow_create_time",
+				Unique:  false,
+				Columns: []*schema.Column{TvShowsColumns[1]},
+			},
+			{
+				Name:    "tvshow_series_status",
+				Unique:  false,
+				Columns: []*schema.Column{TvShowsColumns[7]},
+			},
+		},
 	}
 	// TorrentSessionsColumns holds the columns for the "torrent_sessions" table.
 	TorrentSessionsColumns = []*schema.Column{
