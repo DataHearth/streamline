@@ -185,8 +185,11 @@ type Checker interface {
 // scheduler job: resolving magnet-sourced selective grabs (selection_state
 // pending) once the client reports the torrent's file list, or giving up
 // past the selection grace window.
+// The count it returns is how many pending records the pass found, which is
+// what lets the job pace itself instead of polling at magnet-resolution speed
+// on an install with no magnet in flight.
 type SelectionResolver interface {
-	RunSelectionPass(ctx context.Context) error
+	RunSelectionPass(ctx context.Context) (int, error)
 }
 
 // Downloader is the consumer-facing surface used by HTTP handlers and the

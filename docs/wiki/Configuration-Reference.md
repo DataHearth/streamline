@@ -276,7 +276,7 @@ Go duration strings. All are runtime-editable, pausable and runnable on demand �
 | `schedules.tv_rss_sync` | `15m` | | `schedules.cleanup` | `24h` |
 | `schedules.movie_missing_search` | `12h` | | `schedules.movie_metadata_refresh` | `24h` |
 | `schedules.tv_missing_search` | `12h` | | `schedules.tv_metadata_refresh` | `24h` |
-| `schedules.media_probe` | `15m` | | `schedules.file_selection` | `5s` |
+| `schedules.media_probe` | `15m` | | `schedules.file_selection` | `30s` |
 
 **Deprecated aliases**, still honoured with a warning at boot: `rss_sync` (→ `movie_rss_sync`), `missing_search`, `metadata_refresh` and `orphan_scan` (each → both the `movie_*` and `tv_*` keys).
 

@@ -150,7 +150,7 @@ var _ = Describe("RunSelectionPass", Label("unit", "downloads"), func() {
 			Once()
 		client.listFilesResult = nil
 
-		err := mgr.RunSelectionPass(ctx)
+		_, err := mgr.RunSelectionPass(ctx)
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(client.resumeCalls).To(Equal(0))
@@ -174,7 +174,7 @@ var _ = Describe("RunSelectionPass", Label("unit", "downloads"), func() {
 			).
 			Return(nil).Once()
 
-		err := mgr.RunSelectionPass(ctx)
+		_, err := mgr.RunSelectionPass(ctx)
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(client.resumeCalls).To(Equal(1))
@@ -199,7 +199,7 @@ var _ = Describe("RunSelectionPass", Label("unit", "downloads"), func() {
 				).
 				Return(nil).Once()
 
-			err := mgr.RunSelectionPass(ctx)
+			_, err := mgr.RunSelectionPass(ctx)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(client.resumeCalls).To(Equal(1))
@@ -219,7 +219,7 @@ var _ = Describe("RunSelectionPass", Label("unit", "downloads"), func() {
 				Return([]*ent.DownloadRecord{rec}, nil).Once()
 			client.listFilesErr = errors.New("connection refused")
 
-			err := mgr.RunSelectionPass(ctx)
+			_, err := mgr.RunSelectionPass(ctx)
 
 			// RunSelectionPass swallows the per-record error and continues;
 			// this only proves no terminal state was written — the mock
@@ -247,7 +247,7 @@ var _ = Describe("RunSelectionPass", Label("unit", "downloads"), func() {
 				).
 				Return(nil).Once()
 
-			err := mgr.RunSelectionPass(ctx)
+			_, err := mgr.RunSelectionPass(ctx)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(client.resumeCalls).To(Equal(1))
@@ -294,7 +294,7 @@ var _ = Describe("RunSelectionPass", Label("unit", "downloads"), func() {
 				IncrementEpisodeGrabFailures(mock.Anything, uint32(21)).
 				Return(nil).Once()
 
-			err := mgr.RunSelectionPass(ctx)
+			_, err := mgr.RunSelectionPass(ctx)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(client.removeCalls).To(Equal(1))
@@ -333,7 +333,7 @@ var _ = Describe("RunSelectionPass", Label("unit", "downloads"), func() {
 				IncrementEpisodeGrabFailures(mock.Anything, uint32(21)).
 				Return(nil).Once()
 
-			err := mgr.RunSelectionPass(ctx)
+			_, err := mgr.RunSelectionPass(ctx)
 
 			// RunSelectionPass swallows per-record errors (logs and
 			// continues), so this only proves the DB calls above — the
@@ -363,7 +363,7 @@ var _ = Describe("RunSelectionPass", Label("unit", "downloads"), func() {
 				).
 				Return(nil).Once()
 
-			err := mgr.RunSelectionPass(ctx)
+			_, err := mgr.RunSelectionPass(ctx)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(client.setWantedCalls).To(Equal(1))
@@ -393,7 +393,7 @@ var _ = Describe("RunSelectionPass", Label("unit", "downloads"), func() {
 			).
 			Return(nil).Once()
 
-		err := mgr.RunSelectionPass(ctx)
+		_, err := mgr.RunSelectionPass(ctx)
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(client.setWantedCalls).To(Equal(1))
@@ -424,7 +424,7 @@ var _ = Describe("RunSelectionPass", Label("unit", "downloads"), func() {
 				).
 				Return(nil).Once()
 
-			err := mgr.RunSelectionPass(ctx)
+			_, err := mgr.RunSelectionPass(ctx)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(client.setWantedCalls).To(Equal(1))

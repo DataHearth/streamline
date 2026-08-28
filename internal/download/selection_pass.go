@@ -24,13 +24,17 @@ import (
 // One bad record must not starve the rest, so per-record failures are
 // logged and the loop continues; only the initial list query fails the
 // whole pass.
-func (d *download) RunSelectionPass(ctx context.Context) error {
+// by jobs.FileSelection, which paces itself on it; nothing in this package
+// reads it, which is all unparam can see.
+//
+//nolint:unparam // the count is consumed through download.SelectionResolver
+func (d *download) RunSelectionPass(ctx context.Context) (int, error) {
 	ctx, span := tracer.Start(ctx, "download.run_selection_pass")
 	defer span.End()
 
 	records, err := d.db.ListPendingSelectionRecords(ctx)
 	if err != nil {
-		return otelx.RecordSpanError(
+		return 0, otelx.RecordSpanError(
 			span, fmt.Errorf("list pending selection records: %w", err),
 		)
 	}
@@ -42,7 +46,7 @@ func (d *download) RunSelectionPass(ctx context.Context) error {
 				"record.id", rec.ID, "hash", rec.TorrentHash, "error", err)
 		}
 	}
-	return nil
+	return len(records), nil
 }
 
 // resolvePendingSelection resolves one pending record: metadata not yet

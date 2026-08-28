@@ -603,7 +603,7 @@ func defaults() map[string]any {
 		"schedules.import_scan":            "60s",
 		"schedules.drift_check":            "15m",
 		"schedules.media_probe":            "15m",
-		"schedules.file_selection":         "5s",
+		"schedules.file_selection":         "30s",
 		"library.drift_grace_ticks":        3,
 		"library.probe.always_ask":         false,
 		"library.probe.min_duration_ratio": 0.5,
