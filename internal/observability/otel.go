@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/datahearth/streamline/internal/config"
 	"go.opentelemetry.io/contrib/bridges/otelslog"
@@ -41,6 +42,28 @@ type Config struct {
 
 // Shutdown flushes and shuts down all OTel providers (tracer, meter, logger).
 type Shutdown func(ctx context.Context) error
+
+// Export budgets, sized for the small self-hosted machine this runs on rather
+// than for the SDK's data-centre defaults. All three are compile-time: an
+// operator who wants full fidelity is running a collector that can take it,
+// and can say so with the standard OTEL_* environment variables, which the
+// SDK reads on its own.
+const (
+	// traceSampleRatio is the head sampling rate for root spans. The DB
+	// driver is instrumented, so 100% means every SQL statement ships.
+	traceSampleRatio = 0.05
+
+	// logQueueSize is the batch processor's ring. The SDK default of 2048
+	// allocates its whole backing store at startup (~1.5 MB) for a burst that
+	// a single-user install does not have.
+	logQueueSize = 256
+	// logBatchSize bounds one export; smaller batches, sent more evenly.
+	logBatchSize = 64
+	// logExportInterval is how often the processor wakes. The 1s default is a
+	// timer firing all day on an install that logs a handful of lines a
+	// minute.
+	logExportInterval = 5 * time.Second
+)
 
 // Setup initializes the full observability pipeline and returns the slog
 // handler the caller must install via slog.SetDefault. The handler fans log
@@ -101,9 +124,18 @@ func Setup(ctx context.Context, cfg Config) (slog.Handler, Shutdown, error) {
 	if err != nil {
 		return nil, nil, fmt.Errorf("otlp trace exporter: %w", err)
 	}
+	// Sampled, not head-on. The DB driver is instrumented, so an unsampled
+	// provider turns every SQL statement into an exported span — on an idle
+	// install that is thousands an hour of scheduler bookkeeping, and under
+	// load it is the dominant span source by an order of magnitude. Parent-
+	// based so a sampled request keeps its whole tree: what gets thinned is
+	// which traces start, never a trace with holes in it.
 	tp := trace.NewTracerProvider(
 		trace.WithBatcher(traceExp),
 		trace.WithResource(res),
+		trace.WithSampler(
+			trace.ParentBased(trace.TraceIDRatioBased(traceSampleRatio)),
+		),
 	)
 	otel.SetTracerProvider(tp)
 
@@ -126,8 +158,16 @@ func Setup(ctx context.Context, cfg Config) (slog.Handler, Shutdown, error) {
 	if err != nil {
 		return nil, nil, fmt.Errorf("otlp log exporter: %w", err)
 	}
+	// The SDK's default batch processor reserves its whole queue up front —
+	// 2048 records of backing store, ~1.5 MB — and wakes once a second whether
+	// or not anything was logged. On a 256 MB target that is a real slice of
+	// the budget held for a burst that mostly never comes.
 	lp := sdklog.NewLoggerProvider(
-		sdklog.WithProcessor(sdklog.NewBatchProcessor(logExp)),
+		sdklog.WithProcessor(sdklog.NewBatchProcessor(logExp,
+			sdklog.WithMaxQueueSize(logQueueSize),
+			sdklog.WithExportMaxBatchSize(logBatchSize),
+			sdklog.WithExportInterval(logExportInterval),
+		)),
 		sdklog.WithResource(res),
 	)
 	logglobal.SetLoggerProvider(lp)
