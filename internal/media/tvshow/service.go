@@ -276,18 +276,21 @@ func (s *Service) Get(ctx context.Context, id uint32) (*ent.TVShow, error) {
 func (s *Service) Counts(ctx context.Context) (Counts, error) {
 	ctx, span := tracer.Start(ctx, "tvshow.counts")
 	defer span.End()
-	total, err := s.db.CountTVShows(ctx)
+	// One GROUP BY rather than a COUNT per status: the nav badge calls this on
+	// every page mount, and each separate count was its own scan.
+	byStatus, err := s.db.TVShowStatusCounts(ctx)
 	if err != nil {
 		return Counts{}, otelx.RecordSpanError(span, err)
 	}
-	continuing, err := s.db.CountTVShowsByStatus(
-		ctx,
-		enttvshow.SeriesStatusContinuing,
-	)
-	if err != nil {
-		return Counts{}, otelx.RecordSpanError(span, err)
+	total := 0
+	for _, n := range byStatus {
+		total += n
 	}
-	ended, err := s.db.CountTVShowsByStatus(ctx, enttvshow.SeriesStatusEnded)
+	continuing := byStatus[enttvshow.SeriesStatusContinuing]
+	ended := byStatus[enttvshow.SeriesStatusEnded]
+	upcoming := byStatus[enttvshow.SeriesStatusUpcoming]
+
+	missing, err := s.db.CountTVShowsMissing(ctx, time.Now())
 	if err != nil {
 		return Counts{}, otelx.RecordSpanError(span, err)
 	}
@@ -303,6 +306,8 @@ func (s *Service) Counts(ctx context.Context) (Counts, error) {
 		Total:               total,
 		Continuing:          continuing,
 		Ended:               ended,
+		Upcoming:            upcoming,
+		Missing:             missing,
 		WantedEpisodes:      wanted,
 		DownloadingEpisodes: downloading,
 	}, nil
@@ -424,20 +429,39 @@ func (s *Service) applyPreset(ctx context.Context, id uint32, preset string) err
 	}
 	now := time.Now()
 	pilot := pilotEpisode(show)
+	// Collected into four buckets and written as four statements. Per-row
+	// updates meant one autocommit per episode — a 250-episode show held the
+	// one SQLite connection for ~270 of them, mid-request.
+	var (
+		epOn, epOff         []uint32
+		seasonOn, seasonOff []uint32
+	)
 	for _, se := range show.Edges.Seasons {
 		seasonMon := false
 		for _, e := range se.Edges.Episodes {
-			want := presetWants(preset, e, now, e == pilot)
-			if err := s.db.SetEpisodeMonitored(ctx, e.ID, want); err != nil {
-				return err
+			if presetWants(preset, e, now, e == pilot) {
+				epOn = append(epOn, e.ID)
+				seasonMon = true
+			} else {
+				epOff = append(epOff, e.ID)
 			}
-			seasonMon = seasonMon || want
 		}
-		if err := s.db.SetSeasonMonitored(ctx, se.ID, seasonMon); err != nil {
-			return err
+		if seasonMon {
+			seasonOn = append(seasonOn, se.ID)
+		} else {
+			seasonOff = append(seasonOff, se.ID)
 		}
 	}
-	return nil
+	if err := s.db.SetEpisodesMonitored(ctx, epOn, true); err != nil {
+		return err
+	}
+	if err := s.db.SetEpisodesMonitored(ctx, epOff, false); err != nil {
+		return err
+	}
+	if err := s.db.SetSeasonsMonitored(ctx, seasonOn, true); err != nil {
+		return err
+	}
+	return s.db.SetSeasonsMonitored(ctx, seasonOff, false)
 }
 
 // pilotEpisode returns the show's series premiere: the first episode of the
@@ -1154,9 +1178,14 @@ type FilterParams struct {
 }
 
 type Counts struct {
-	Total               int
-	Continuing          int
-	Ended               int
+	Total      int
+	Continuing int
+	Ended      int
+	Upcoming   int
+	// Missing is how many shows have at least one aired, monitored episode
+	// with no file — the population behind the list's "missing" tab, which is
+	// a per-show fact and not derivable from WantedEpisodes.
+	Missing             int
 	WantedEpisodes      int
 	DownloadingEpisodes int
 }

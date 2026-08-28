@@ -175,12 +175,15 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 	})
 
 	It("Counts aggregates show + wanted-episode totals", func() {
-		storeMk.CountTVShows(mock.Anything).Return(2, nil).Once()
-		storeMk.CountTVShowsByStatus(mock.Anything, enttvshow.SeriesStatusContinuing).
-			Return(1, nil).
-			Once()
-		storeMk.CountTVShowsByStatus(mock.Anything, enttvshow.SeriesStatusEnded).
-			Return(1, nil).Once()
+		// Total is the group sum, so it needs no query of its own — a status
+		// the map omits reads back as 0.
+		storeMk.TVShowStatusCounts(mock.Anything).
+			Return(map[enttvshow.SeriesStatus]int{
+				enttvshow.SeriesStatusContinuing: 1,
+				enttvshow.SeriesStatusEnded:      1,
+			}, nil).Once()
+		storeMk.CountTVShowsMissing(mock.Anything, mock.Anything).
+			Return(4, nil).Once()
 		storeMk.CountWantedEpisodes(mock.Anything).Return(2, nil).Once()
 		storeMk.CountDownloadingEpisodes(mock.Anything).Return(3, nil).Once()
 		c, err := svc.Counts(ctx)
@@ -188,6 +191,8 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 		Expect(c.Total).To(Equal(2))
 		Expect(c.Continuing).To(Equal(1))
 		Expect(c.Ended).To(Equal(1))
+		Expect(c.Upcoming).To(BeZero())
+		Expect(c.Missing).To(Equal(4))
 		Expect(c.WantedEpisodes).To(Equal(2))
 		Expect(c.DownloadingEpisodes).To(Equal(3))
 	})
@@ -225,13 +230,16 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 	It("Update applies the 'all' monitoring preset to seasons and episodes", func() {
 		show := withWantedEpisodes(2)
 		storeMk.FindTVShowByID(mock.Anything, uint32(1)).Return(show, nil).Twice()
-		storeMk.SetEpisodeMonitored(mock.Anything, uint32(1), true).
-			Return(nil).
-			Once()
-		storeMk.SetEpisodeMonitored(mock.Anything, uint32(2), true).
-			Return(nil).
-			Once()
-		storeMk.SetSeasonMonitored(mock.Anything, uint32(1), true).Return(nil).Once()
+		// One statement per bucket rather than one per row: a 250-episode show
+		// used to cost ~270 autocommits on the single SQLite connection.
+		storeMk.SetEpisodesMonitored(mock.Anything, []uint32{1, 2}, true).
+			Return(nil).Once()
+		storeMk.SetEpisodesMonitored(mock.Anything, []uint32(nil), false).
+			Return(nil).Once()
+		storeMk.SetSeasonsMonitored(mock.Anything, []uint32{1}, true).
+			Return(nil).Once()
+		storeMk.SetSeasonsMonitored(mock.Anything, []uint32(nil), false).
+			Return(nil).Once()
 		_, err := svc.Update(ctx, 1, UpdateParams{Preset: "all"})
 		Expect(err).NotTo(HaveOccurred())
 	})
@@ -247,15 +255,15 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 			}}},
 		}}}
 		storeMk.FindTVShowByID(mock.Anything, uint32(1)).Return(show, nil).Twice()
-		storeMk.SetEpisodeMonitored(mock.Anything, uint32(100), false).
+		// The pilot (101) is the only monitored episode: the special (100) and
+		// the second regular episode (102) are both off, and season 0 with it.
+		storeMk.SetEpisodesMonitored(mock.Anything, []uint32{101}, true).
 			Return(nil).Once()
-		storeMk.SetEpisodeMonitored(mock.Anything, uint32(101), true).
+		storeMk.SetEpisodesMonitored(mock.Anything, []uint32{100, 102}, false).
 			Return(nil).Once()
-		storeMk.SetEpisodeMonitored(mock.Anything, uint32(102), false).
+		storeMk.SetSeasonsMonitored(mock.Anything, []uint32{11}, true).
 			Return(nil).Once()
-		storeMk.SetSeasonMonitored(mock.Anything, uint32(10), false).
-			Return(nil).Once()
-		storeMk.SetSeasonMonitored(mock.Anything, uint32(11), true).
+		storeMk.SetSeasonsMonitored(mock.Anything, []uint32{10}, false).
 			Return(nil).Once()
 
 		_, err := svc.Update(ctx, 1, UpdateParams{Preset: "pilot"})

@@ -511,6 +511,66 @@ func (db *DB) SetEpisodeMonitored(
 	return db.client.Episode.UpdateOneID(id).SetMonitored(monitored).Exec(ctx)
 }
 
+// TVShowTVDBIndex maps every tracked tvdb id to its show row id — the series
+// twin of MovieTMDBIndex. The scanners that only need to tell a tracked show
+// from a new one were calling ListTvShowsForAdoption, which eager-loads the
+// whole season → episode → media_file tree (~121 KB per show) to read two
+// columns.
+func (db *DB) TVShowTVDBIndex(ctx context.Context) (map[uint32]uint32, error) {
+	var rows []struct {
+		ID     uint32 `json:"id"`
+		TvdbID uint32 `json:"tvdb_id"`
+	}
+	err := db.client.TVShow.Query().
+		Select(tvshow.FieldID, tvshow.FieldTvdbID).
+		Scan(ctx, &rows)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[uint32]uint32, len(rows))
+	for _, r := range rows {
+		if r.TvdbID != 0 {
+			out[r.TvdbID] = r.ID
+		}
+	}
+	return out, nil
+}
+
+// SetEpisodesMonitored sets the flag on many episodes in one statement. The
+// monitoring presets used to walk the tree one UpdateOneID at a time, each its
+// own autocommit — ~270 of them for a 250-episode show, all serialized through
+// the single SQLite connection while the request held it.
+func (db *DB) SetEpisodesMonitored(
+	ctx context.Context,
+	ids []uint32,
+	monitored bool,
+) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	_, err := db.client.Episode.Update().
+		Where(episode.IDIn(ids...)).
+		SetMonitored(monitored).
+		Save(ctx)
+	return err
+}
+
+// SetSeasonsMonitored is SetEpisodesMonitored's season twin.
+func (db *DB) SetSeasonsMonitored(
+	ctx context.Context,
+	ids []uint32,
+	monitored bool,
+) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	_, err := db.client.Season.Update().
+		Where(season.IDIn(ids...)).
+		SetMonitored(monitored).
+		Save(ctx)
+	return err
+}
+
 // CascadeShowMonitored sets every season and episode of a show to monitored,
 // so toggling a series' monitor flag flows down to its whole tree (an
 // unmonitored show must not leave monitored episodes for the fetcher to grab).
