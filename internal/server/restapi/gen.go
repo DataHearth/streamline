@@ -912,6 +912,48 @@ func (e InviteCreatedRole) Valid() bool {
 	}
 }
 
+// Defines values for LibraryConfigPatchImportMode.
+const (
+	LibraryConfigPatchImportModeCopy     LibraryConfigPatchImportMode = "copy"
+	LibraryConfigPatchImportModeHardlink LibraryConfigPatchImportMode = "hardlink"
+	LibraryConfigPatchImportModeMove     LibraryConfigPatchImportMode = "move"
+)
+
+// Valid indicates whether the value is a known member of the LibraryConfigPatchImportMode enum.
+func (e LibraryConfigPatchImportMode) Valid() bool {
+	switch e {
+	case LibraryConfigPatchImportModeCopy:
+		return true
+	case LibraryConfigPatchImportModeHardlink:
+		return true
+	case LibraryConfigPatchImportModeMove:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for LibraryConfigViewImportMode.
+const (
+	LibraryConfigViewImportModeCopy     LibraryConfigViewImportMode = "copy"
+	LibraryConfigViewImportModeHardlink LibraryConfigViewImportMode = "hardlink"
+	LibraryConfigViewImportModeMove     LibraryConfigViewImportMode = "move"
+)
+
+// Valid indicates whether the value is a known member of the LibraryConfigViewImportMode enum.
+func (e LibraryConfigViewImportMode) Valid() bool {
+	switch e {
+	case LibraryConfigViewImportModeCopy:
+		return true
+	case LibraryConfigViewImportModeHardlink:
+		return true
+	case LibraryConfigViewImportModeMove:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MediaServerServerType.
 const (
 	MediaServerServerTypeEmby     MediaServerServerType = "emby"
@@ -2083,6 +2125,8 @@ type ApproveRequestRequest struct {
 
 // AuthConfigPatch Only provided fields are applied.
 type AuthConfigPatch struct {
+	// Lockout Per-account login-failure lockout. Partial on a patch: an omitted field keeps its stored value.
+	Lockout          *LockoutConfig                   `json:"lockout,omitempty"`
 	OidcDefaultRole  *AuthConfigPatchOidcDefaultRole  `json:"oidc_default_role,omitempty"`
 	RegistrationMode *AuthConfigPatchRegistrationMode `json:"registration_mode,omitempty"`
 
@@ -2098,6 +2142,8 @@ type AuthConfigPatchRegistrationMode string
 
 // AuthConfigView defines model for AuthConfigView.
 type AuthConfigView struct {
+	// Lockout Per-account login-failure lockout. Partial on a patch: an omitted field keeps its stored value.
+	Lockout          LockoutConfig                  `json:"lockout"`
 	OidcDefaultRole  AuthConfigViewOidcDefaultRole  `json:"oidc_default_role"`
 	RegistrationMode AuthConfigViewRegistrationMode `json:"registration_mode"`
 
@@ -2360,6 +2406,21 @@ type DownloadClientCreateAuthMethod string
 
 // DownloadClientCreateClientType defines model for DownloadClientCreate.ClientType.
 type DownloadClientCreateClientType string
+
+// DownloadConfigPatch Only provided fields are applied.
+type DownloadConfigPatch struct {
+	SelectionGrace *string `json:"selection_grace,omitempty"`
+	SelectiveFiles *bool   `json:"selective_files,omitempty"`
+}
+
+// DownloadConfigView defines model for DownloadConfigView.
+type DownloadConfigView struct {
+	// SelectionGrace Go duration string. How long a magnet-sourced selection may sit pending before giving up and downloading whole.
+	SelectionGrace string `json:"selection_grace"`
+
+	// SelectiveFiles Grab only the files a release is wanted for. Off is a whole-torrent grab, the pre-feature behaviour.
+	SelectiveFiles bool `json:"selective_files"`
+}
 
 // DownloadHistory defines model for DownloadHistory.
 type DownloadHistory struct {
@@ -2790,25 +2851,59 @@ type JWTRotated struct {
 	Token *string `json:"token,omitempty"`
 }
 
-// LibraryConfigPatch Only provided fields are applied.
+// LibraryConfigPatch Only provided fields are applied. The three roots are absent by design — see LibraryConfigView.movie_path.
 type LibraryConfigPatch struct {
-	MonitorSpecials *bool `json:"monitor_specials,omitempty"`
+	AllowedDownloadRoots *[]string                     `json:"allowed_download_roots,omitempty"`
+	DriftGraceTicks      *int                          `json:"drift_grace_ticks,omitempty"`
+	ImportMaxAttempts    *int                          `json:"import_max_attempts,omitempty"`
+	ImportMode           *LibraryConfigPatchImportMode `json:"import_mode,omitempty"`
+	KeepTorrentSeeding   *bool                         `json:"keep_torrent_seeding,omitempty"`
+	MaxGrabFailures      *int                          `json:"max_grab_failures,omitempty"`
+	MonitorSpecials      *bool                         `json:"monitor_specials,omitempty"`
+	MovieNaming          *string                       `json:"movie_naming,omitempty"`
+
+	// NoMatchCooldown Go duration string.
+	NoMatchCooldown *string `json:"no_match_cooldown,omitempty"`
 
 	// Probe Import-time verification against ffprobe results; when patched, only
 	// provided fields are applied.
-	Probe *ProbeConfig `json:"probe,omitempty"`
+	Probe        *ProbeConfig `json:"probe,omitempty"`
+	SeriesNaming *string      `json:"series_naming,omitempty"`
 }
+
+// LibraryConfigPatchImportMode defines model for LibraryConfigPatch.ImportMode.
+type LibraryConfigPatchImportMode string
 
 // LibraryConfigView defines model for LibraryConfigView.
 type LibraryConfigView struct {
+	AllowedDownloadRoots *[]string                   `json:"allowed_download_roots,omitempty"`
+	DownloadPath         *string                     `json:"download_path,omitempty"`
+	DriftGraceTicks      int                         `json:"drift_grace_ticks"`
+	ImportMaxAttempts    int                         `json:"import_max_attempts"`
+	ImportMode           LibraryConfigViewImportMode `json:"import_mode"`
+	KeepTorrentSeeding   bool                        `json:"keep_torrent_seeding"`
+	MaxGrabFailures      int                         `json:"max_grab_failures"`
+
 	// MonitorSpecials Monitor season 0 (specials) when a series is added or a refresh
 	// discovers the season. Applies to newly seeded seasons only.
-	MonitorSpecials bool `json:"monitor_specials"`
+	MonitorSpecials bool   `json:"monitor_specials"`
+	MovieNaming     string `json:"movie_naming"`
+
+	// MoviePath Read-only here. A root only moves through POST /library/path-migration, which rewrites every stored path before it repoints the config — a plain edit would strand them.
+	MoviePath *string `json:"movie_path,omitempty"`
+
+	// NoMatchCooldown Go duration string.
+	NoMatchCooldown string `json:"no_match_cooldown"`
 
 	// Probe Import-time verification against ffprobe results; when patched, only
 	// provided fields are applied.
-	Probe *ProbeConfig `json:"probe,omitempty"`
+	Probe        *ProbeConfig `json:"probe,omitempty"`
+	SeriesNaming string       `json:"series_naming"`
+	SeriesPath   *string      `json:"series_path,omitempty"`
 }
+
+// LibraryConfigViewImportMode defines model for LibraryConfigView.ImportMode.
+type LibraryConfigViewImportMode string
 
 // ListenPortUpdate defines model for ListenPortUpdate.
 type ListenPortUpdate struct {
@@ -2817,6 +2912,18 @@ type ListenPortUpdate struct {
 	// value is authored by a VPN tunnel that rotates it, and the
 	// deployments needing it run a read-only config file.
 	Port int32 `json:"port"`
+}
+
+// LockoutConfig Per-account login-failure lockout. Partial on a patch: an omitted field keeps its stored value.
+type LockoutConfig struct {
+	// Duration Go duration string. How long the lockout holds.
+	Duration *string `json:"duration,omitempty"`
+
+	// Threshold Failed attempts that lock the account.
+	Threshold *int `json:"threshold,omitempty"`
+
+	// Window Go duration string. The sliding window failures accumulate over.
+	Window *string `json:"window,omitempty"`
 }
 
 // LookupDetail Everything a provider knows about one lookup result beyond what the
@@ -2983,6 +3090,32 @@ type MediaServerUpdate struct {
 
 // MediaServerUpdateServerType defines model for MediaServerUpdate.ServerType.
 type MediaServerUpdateServerType string
+
+// MetadataConfigPatch Only provided fields are applied. A blank api key preserves the stored one — the current value is never echoed, so blank means "unchanged".
+type MetadataConfigPatch struct {
+	Language   *string `json:"language,omitempty"`
+	TmdbApiKey *string `json:"tmdb_api_key,omitempty"`
+	TmdbRegion *string `json:"tmdb_region,omitempty"`
+	TvdbApiKey *string `json:"tvdb_api_key,omitempty"`
+}
+
+// MetadataConfigView defines model for MetadataConfigView.
+type MetadataConfigView struct {
+	// Language BCP-47 tag. The language TMDB and TVDB answer in — so also the titles the library stores and matches releases against.
+	Language string `json:"language"`
+
+	// RestartRequired True when a metadata change is pending a process restart. The same process-wide flag OIDC provider mutations set.
+	RestartRequired bool `json:"restart_required"`
+
+	// TmdbApiKeyFileManaged True when the key comes from metadata.tmdb_api_key_file. Setting it here is refused — the file is the source of truth.
+	TmdbApiKeyFileManaged *bool `json:"tmdb_api_key_file_managed,omitempty"`
+	TmdbApiKeySet         bool  `json:"tmdb_api_key_set"`
+
+	// TmdbRegion Two-letter uppercase region code, for TMDB release dates.
+	TmdbRegion            string `json:"tmdb_region"`
+	TvdbApiKeyFileManaged *bool  `json:"tvdb_api_key_file_managed,omitempty"`
+	TvdbApiKeySet         bool   `json:"tvdb_api_key_set"`
+}
 
 // MonitorToggleRequest defines model for MonitorToggleRequest.
 type MonitorToggleRequest struct {
@@ -4180,6 +4313,9 @@ type BadRequest = Error
 // Conflict defines model for Conflict.
 type Conflict = Error
 
+// DownloadConfig defines model for DownloadConfig.
+type DownloadConfig = DownloadConfigView
+
 // FFmpegConfig defines model for FFmpegConfig.
 type FFmpegConfig = FFmpegConfigView
 
@@ -4208,6 +4344,9 @@ type MediaServerList = MediaServerListView
 
 // MediaServerOK defines model for MediaServerOK.
 type MediaServerOK = MediaServer
+
+// MetadataConfig defines model for MetadataConfig.
+type MetadataConfig = MetadataConfigView
 
 // MovieCountsResponse defines model for MovieCountsResponse.
 type MovieCountsResponse = MovieCounts
@@ -4383,6 +4522,9 @@ type TestCustomFormat = CustomFormatTestRequest
 // UpdateAuthConfig Only provided fields are applied.
 type UpdateAuthConfig = AuthConfigPatch
 
+// UpdateDownloadConfig Only provided fields are applied.
+type UpdateDownloadConfig = DownloadConfigPatch
+
 // UpdateFFmpegConfig Only provided fields are applied. found and resolved_path are derived and read-only — sending them has no effect.
 type UpdateFFmpegConfig = FFmpegConfigPatch
 
@@ -4392,7 +4534,7 @@ type UpdateImportFileDecision = ImportScanFileDecisionRequest
 // UpdateImportShowDecision defines model for UpdateImportShowDecision.
 type UpdateImportShowDecision = ImportScanShowDecisionRequest
 
-// UpdateLibraryConfig Only provided fields are applied.
+// UpdateLibraryConfig Only provided fields are applied. The three roots are absent by design — see LibraryConfigView.movie_path.
 type UpdateLibraryConfig = LibraryConfigPatch
 
 // UpdateMe defines model for UpdateMe.
@@ -4400,6 +4542,9 @@ type UpdateMe = UpdateMeRequest
 
 // UpdateMediaServer defines model for UpdateMediaServer.
 type UpdateMediaServer = MediaServerUpdate
+
+// UpdateMetadataConfig Only provided fields are applied. A blank api key preserves the stored one — the current value is never echoed, so blank means "unchanged".
+type UpdateMetadataConfig = MetadataConfigPatch
 
 // UpdateMovie defines model for UpdateMovie.
 type UpdateMovie = UpdateMovieRequest
@@ -4618,11 +4763,17 @@ type ChangePasswordJSONRequestBody = ChangePasswordRequest
 // UpdateConfigAuthJSONRequestBody defines body for UpdateConfigAuth for application/json ContentType.
 type UpdateConfigAuthJSONRequestBody = AuthConfigPatch
 
+// UpdateConfigDownloadJSONRequestBody defines body for UpdateConfigDownload for application/json ContentType.
+type UpdateConfigDownloadJSONRequestBody = DownloadConfigPatch
+
 // UpdateConfigFfmpegJSONRequestBody defines body for UpdateConfigFfmpeg for application/json ContentType.
 type UpdateConfigFfmpegJSONRequestBody = FFmpegConfigPatch
 
 // UpdateConfigLibraryJSONRequestBody defines body for UpdateConfigLibrary for application/json ContentType.
 type UpdateConfigLibraryJSONRequestBody = LibraryConfigPatch
+
+// UpdateConfigMetadataJSONRequestBody defines body for UpdateConfigMetadata for application/json ContentType.
+type UpdateConfigMetadataJSONRequestBody = MetadataConfigPatch
 
 // CreateOIDCProviderJSONRequestBody defines body for CreateOIDCProvider for application/json ContentType.
 type CreateOIDCProviderJSONRequestBody = OIDCProviderCreate
@@ -4854,6 +5005,12 @@ type ServerInterface interface {
 	// UpdateConfigAuth Patch auth configuration (admin)
 	// (PATCH /config/auth)
 	UpdateConfigAuth(w http.ResponseWriter, r *http.Request)
+	// GetConfigDownload Get download configuration (admin)
+	// (GET /config/download)
+	GetConfigDownload(w http.ResponseWriter, r *http.Request)
+	// UpdateConfigDownload Patch download configuration (admin)
+	// (PATCH /config/download)
+	UpdateConfigDownload(w http.ResponseWriter, r *http.Request)
 	// GetConfigFfmpeg Get ffmpeg configuration (admin)
 	// (GET /config/ffmpeg)
 	GetConfigFfmpeg(w http.ResponseWriter, r *http.Request)
@@ -4866,6 +5023,12 @@ type ServerInterface interface {
 	// UpdateConfigLibrary Patch library configuration (admin)
 	// (PATCH /config/library)
 	UpdateConfigLibrary(w http.ResponseWriter, r *http.Request)
+	// GetConfigMetadata Get metadata provider configuration (admin)
+	// (GET /config/metadata)
+	GetConfigMetadata(w http.ResponseWriter, r *http.Request)
+	// UpdateConfigMetadata Patch metadata provider configuration (admin)
+	// (PATCH /config/metadata)
+	UpdateConfigMetadata(w http.ResponseWriter, r *http.Request)
 	// ListOIDCProviders List OIDC providers (admin)
 	// (GET /config/oidc)
 	ListOIDCProviders(w http.ResponseWriter, r *http.Request)
@@ -5067,6 +5230,9 @@ type ServerInterface interface {
 	// UpdateQualityProfile Update a quality profile
 	// (PUT /quality-profiles/{name})
 	UpdateQualityProfile(w http.ResponseWriter, r *http.Request, name ResourceName)
+	// SetDefaultQualityProfile Make this the default quality profile
+	// (POST /quality-profiles/{name}/default)
+	SetDefaultQualityProfile(w http.ResponseWriter, r *http.Request, name ResourceName)
 	// ListRequests List media requests
 	// (GET /requests)
 	ListRequests(w http.ResponseWriter, r *http.Request, params ListRequestsParams)
@@ -5409,6 +5575,18 @@ func (_ Unimplemented) UpdateConfigAuth(w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// GetConfigDownload Get download configuration (admin)
+// (GET /config/download)
+func (_ Unimplemented) GetConfigDownload(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// UpdateConfigDownload Patch download configuration (admin)
+// (PATCH /config/download)
+func (_ Unimplemented) UpdateConfigDownload(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // GetConfigFfmpeg Get ffmpeg configuration (admin)
 // (GET /config/ffmpeg)
 func (_ Unimplemented) GetConfigFfmpeg(w http.ResponseWriter, r *http.Request) {
@@ -5430,6 +5608,18 @@ func (_ Unimplemented) GetConfigLibrary(w http.ResponseWriter, r *http.Request) 
 // UpdateConfigLibrary Patch library configuration (admin)
 // (PATCH /config/library)
 func (_ Unimplemented) UpdateConfigLibrary(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetConfigMetadata Get metadata provider configuration (admin)
+// (GET /config/metadata)
+func (_ Unimplemented) GetConfigMetadata(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// UpdateConfigMetadata Patch metadata provider configuration (admin)
+// (PATCH /config/metadata)
+func (_ Unimplemented) UpdateConfigMetadata(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -5822,6 +6012,12 @@ func (_ Unimplemented) DeleteQualityProfile(w http.ResponseWriter, r *http.Reque
 // UpdateQualityProfile Update a quality profile
 // (PUT /quality-profiles/{name})
 func (_ Unimplemented) UpdateQualityProfile(w http.ResponseWriter, r *http.Request, name ResourceName) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// SetDefaultQualityProfile Make this the default quality profile
+// (POST /quality-profiles/{name}/default)
+func (_ Unimplemented) SetDefaultQualityProfile(w http.ResponseWriter, r *http.Request, name ResourceName) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -6855,6 +7051,34 @@ func (siw *ServerInterfaceWrapper) UpdateConfigAuth(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// GetConfigDownload operation middleware
+func (siw *ServerInterfaceWrapper) GetConfigDownload(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetConfigDownload(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateConfigDownload operation middleware
+func (siw *ServerInterfaceWrapper) UpdateConfigDownload(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateConfigDownload(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetConfigFfmpeg operation middleware
 func (siw *ServerInterfaceWrapper) GetConfigFfmpeg(w http.ResponseWriter, r *http.Request) {
 
@@ -6902,6 +7126,34 @@ func (siw *ServerInterfaceWrapper) UpdateConfigLibrary(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateConfigLibrary(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetConfigMetadata operation middleware
+func (siw *ServerInterfaceWrapper) GetConfigMetadata(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetConfigMetadata(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateConfigMetadata operation middleware
+func (siw *ServerInterfaceWrapper) UpdateConfigMetadata(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateConfigMetadata(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -8565,6 +8817,32 @@ func (siw *ServerInterfaceWrapper) UpdateQualityProfile(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateQualityProfile(w, r, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetDefaultQualityProfile operation middleware
+func (siw *ServerInterfaceWrapper) SetDefaultQualityProfile(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "name" -------------
+	var name ResourceName
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", chi.URLParam(r, "name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetDefaultQualityProfile(w, r, name)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -10512,6 +10790,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Put(options.BaseURL+"/quality-profiles/{name}", wrapper.UpdateQualityProfile)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/quality-profiles/{name}/default", wrapper.SetDefaultQualityProfile)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/custom-formats", wrapper.ListCustomFormats)
 	})
 	r.Group(func(r chi.Router) {
@@ -10669,6 +10950,18 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/config/ffmpeg", wrapper.UpdateConfigFfmpeg)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/config/download", wrapper.GetConfigDownload)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/config/download", wrapper.UpdateConfigDownload)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/config/metadata", wrapper.GetConfigMetadata)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/config/metadata", wrapper.UpdateConfigMetadata)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/config/oidc", wrapper.ListOIDCProviders)
@@ -10861,6 +11154,8 @@ type ConflictJSONResponse Error
 type ConnectionTestOKResponse struct {
 }
 
+type DownloadConfigJSONResponse DownloadConfigView
+
 type DownloadHistoryJSONResponse DownloadHistory
 
 type DownloadQueueJSONResponse DownloadQueue
@@ -10916,6 +11211,8 @@ type MediaServerOKJSONResponse MediaServer
 
 type MediaServerTestOKResponse struct {
 }
+
+type MetadataConfigJSONResponse MetadataConfigView
 
 type MovieCountsResponseJSONResponse MovieCounts
 
@@ -12538,6 +12835,107 @@ func (response UpdateConfigAuth422JSONResponse) VisitUpdateConfigAuthResponse(w 
 	return err
 }
 
+type GetConfigDownloadRequestObject struct {
+}
+
+type GetConfigDownloadResponseObject interface {
+	VisitGetConfigDownloadResponse(w http.ResponseWriter) error
+}
+
+type GetConfigDownload200JSONResponse struct{ DownloadConfigJSONResponse }
+
+func (response GetConfigDownload200JSONResponse) VisitGetConfigDownloadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetConfigDownload403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetConfigDownload403JSONResponse) VisitGetConfigDownloadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateConfigDownloadRequestObject struct {
+	Body *UpdateConfigDownloadJSONRequestBody
+}
+
+type UpdateConfigDownloadResponseObject interface {
+	VisitUpdateConfigDownloadResponse(w http.ResponseWriter) error
+}
+
+type UpdateConfigDownload200JSONResponse struct{ DownloadConfigJSONResponse }
+
+func (response UpdateConfigDownload200JSONResponse) VisitUpdateConfigDownloadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateConfigDownload403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpdateConfigDownload403JSONResponse) VisitUpdateConfigDownloadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateConfigDownload413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response UpdateConfigDownload413JSONResponse) VisitUpdateConfigDownloadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateConfigDownload422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response UpdateConfigDownload422JSONResponse) VisitUpdateConfigDownloadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetConfigFfmpegRequestObject struct {
 }
 
@@ -12729,6 +13127,107 @@ type UpdateConfigLibrary422JSONResponse struct {
 }
 
 func (response UpdateConfigLibrary422JSONResponse) VisitUpdateConfigLibraryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetConfigMetadataRequestObject struct {
+}
+
+type GetConfigMetadataResponseObject interface {
+	VisitGetConfigMetadataResponse(w http.ResponseWriter) error
+}
+
+type GetConfigMetadata200JSONResponse struct{ MetadataConfigJSONResponse }
+
+func (response GetConfigMetadata200JSONResponse) VisitGetConfigMetadataResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetConfigMetadata403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetConfigMetadata403JSONResponse) VisitGetConfigMetadataResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateConfigMetadataRequestObject struct {
+	Body *UpdateConfigMetadataJSONRequestBody
+}
+
+type UpdateConfigMetadataResponseObject interface {
+	VisitUpdateConfigMetadataResponse(w http.ResponseWriter) error
+}
+
+type UpdateConfigMetadata200JSONResponse struct{ MetadataConfigJSONResponse }
+
+func (response UpdateConfigMetadata200JSONResponse) VisitUpdateConfigMetadataResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateConfigMetadata403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpdateConfigMetadata403JSONResponse) VisitUpdateConfigMetadataResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateConfigMetadata413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response UpdateConfigMetadata413JSONResponse) VisitUpdateConfigMetadataResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateConfigMetadata422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response UpdateConfigMetadata422JSONResponse) VisitUpdateConfigMetadataResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -17159,6 +17658,64 @@ func (response UpdateQualityProfile500JSONResponse) VisitUpdateQualityProfileRes
 	return err
 }
 
+type SetDefaultQualityProfileRequestObject struct {
+	Name ResourceName `json:"name"`
+}
+
+type SetDefaultQualityProfileResponseObject interface {
+	VisitSetDefaultQualityProfileResponse(w http.ResponseWriter) error
+}
+
+type SetDefaultQualityProfile204Response struct {
+}
+
+func (response SetDefaultQualityProfile204Response) VisitSetDefaultQualityProfileResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type SetDefaultQualityProfile403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response SetDefaultQualityProfile403JSONResponse) VisitSetDefaultQualityProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetDefaultQualityProfile404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response SetDefaultQualityProfile404JSONResponse) VisitSetDefaultQualityProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetDefaultQualityProfile500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response SetDefaultQualityProfile500JSONResponse) VisitSetDefaultQualityProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListRequestsRequestObject struct {
 	Params ListRequestsParams
 }
@@ -20576,6 +21133,12 @@ type StrictServerInterface interface {
 	// UpdateConfigAuth Patch auth configuration (admin)
 	// (PATCH /config/auth)
 	UpdateConfigAuth(ctx context.Context, request UpdateConfigAuthRequestObject) (UpdateConfigAuthResponseObject, error)
+	// GetConfigDownload Get download configuration (admin)
+	// (GET /config/download)
+	GetConfigDownload(ctx context.Context, request GetConfigDownloadRequestObject) (GetConfigDownloadResponseObject, error)
+	// UpdateConfigDownload Patch download configuration (admin)
+	// (PATCH /config/download)
+	UpdateConfigDownload(ctx context.Context, request UpdateConfigDownloadRequestObject) (UpdateConfigDownloadResponseObject, error)
 	// GetConfigFfmpeg Get ffmpeg configuration (admin)
 	// (GET /config/ffmpeg)
 	GetConfigFfmpeg(ctx context.Context, request GetConfigFfmpegRequestObject) (GetConfigFfmpegResponseObject, error)
@@ -20588,6 +21151,12 @@ type StrictServerInterface interface {
 	// UpdateConfigLibrary Patch library configuration (admin)
 	// (PATCH /config/library)
 	UpdateConfigLibrary(ctx context.Context, request UpdateConfigLibraryRequestObject) (UpdateConfigLibraryResponseObject, error)
+	// GetConfigMetadata Get metadata provider configuration (admin)
+	// (GET /config/metadata)
+	GetConfigMetadata(ctx context.Context, request GetConfigMetadataRequestObject) (GetConfigMetadataResponseObject, error)
+	// UpdateConfigMetadata Patch metadata provider configuration (admin)
+	// (PATCH /config/metadata)
+	UpdateConfigMetadata(ctx context.Context, request UpdateConfigMetadataRequestObject) (UpdateConfigMetadataResponseObject, error)
 	// ListOIDCProviders List OIDC providers (admin)
 	// (GET /config/oidc)
 	ListOIDCProviders(ctx context.Context, request ListOIDCProvidersRequestObject) (ListOIDCProvidersResponseObject, error)
@@ -20789,6 +21358,9 @@ type StrictServerInterface interface {
 	// UpdateQualityProfile Update a quality profile
 	// (PUT /quality-profiles/{name})
 	UpdateQualityProfile(ctx context.Context, request UpdateQualityProfileRequestObject) (UpdateQualityProfileResponseObject, error)
+	// SetDefaultQualityProfile Make this the default quality profile
+	// (POST /quality-profiles/{name}/default)
+	SetDefaultQualityProfile(ctx context.Context, request SetDefaultQualityProfileRequestObject) (SetDefaultQualityProfileResponseObject, error)
 	// ListRequests List media requests
 	// (GET /requests)
 	ListRequests(ctx context.Context, request ListRequestsRequestObject) (ListRequestsResponseObject, error)
@@ -21770,6 +22342,61 @@ func (sh *strictHandler) UpdateConfigAuth(w http.ResponseWriter, r *http.Request
 	}
 }
 
+// GetConfigDownload operation middleware
+func (sh *strictHandler) GetConfigDownload(w http.ResponseWriter, r *http.Request) {
+	var request GetConfigDownloadRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetConfigDownload(ctx, request.(GetConfigDownloadRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetConfigDownload")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetConfigDownloadResponseObject); ok {
+		if err := validResponse.VisitGetConfigDownloadResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateConfigDownload operation middleware
+func (sh *strictHandler) UpdateConfigDownload(w http.ResponseWriter, r *http.Request) {
+	var request UpdateConfigDownloadRequestObject
+
+	var body UpdateConfigDownloadJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateConfigDownload(ctx, request.(UpdateConfigDownloadRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateConfigDownload")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateConfigDownloadResponseObject); ok {
+		if err := validResponse.VisitUpdateConfigDownloadResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetConfigFfmpeg operation middleware
 func (sh *strictHandler) GetConfigFfmpeg(w http.ResponseWriter, r *http.Request) {
 	var request GetConfigFfmpegRequestObject
@@ -21873,6 +22500,61 @@ func (sh *strictHandler) UpdateConfigLibrary(w http.ResponseWriter, r *http.Requ
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateConfigLibraryResponseObject); ok {
 		if err := validResponse.VisitUpdateConfigLibraryResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetConfigMetadata operation middleware
+func (sh *strictHandler) GetConfigMetadata(w http.ResponseWriter, r *http.Request) {
+	var request GetConfigMetadataRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetConfigMetadata(ctx, request.(GetConfigMetadataRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetConfigMetadata")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetConfigMetadataResponseObject); ok {
+		if err := validResponse.VisitGetConfigMetadataResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateConfigMetadata operation middleware
+func (sh *strictHandler) UpdateConfigMetadata(w http.ResponseWriter, r *http.Request) {
+	var request UpdateConfigMetadataRequestObject
+
+	var body UpdateConfigMetadataJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateConfigMetadata(ctx, request.(UpdateConfigMetadataRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateConfigMetadata")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateConfigMetadataResponseObject); ok {
+		if err := validResponse.VisitUpdateConfigMetadataResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -23780,6 +24462,32 @@ func (sh *strictHandler) UpdateQualityProfile(w http.ResponseWriter, r *http.Req
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateQualityProfileResponseObject); ok {
 		if err := validResponse.VisitUpdateQualityProfileResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SetDefaultQualityProfile operation middleware
+func (sh *strictHandler) SetDefaultQualityProfile(w http.ResponseWriter, r *http.Request, name ResourceName) {
+	var request SetDefaultQualityProfileRequestObject
+
+	request.Name = name
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SetDefaultQualityProfile(ctx, request.(SetDefaultQualityProfileRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SetDefaultQualityProfile")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SetDefaultQualityProfileResponseObject); ok {
+		if err := validResponse.VisitSetDefaultQualityProfileResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

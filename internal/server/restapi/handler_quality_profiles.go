@@ -184,6 +184,35 @@ func (s *Server) UpdateQualityProfile(
 	return UpdateQualityProfile200JSONResponse(qualityProfileToAPI(e)), nil
 }
 
+// SetDefaultQualityProfile points quality_default_profile at the named
+// profile. Also the way out of DeleteQualityProfile's 409: the current default
+// cannot be deleted while it holds the role.
+func (s *Server) SetDefaultQualityProfile(
+	ctx context.Context,
+	request SetDefaultQualityProfileRequestObject,
+) (SetDefaultQualityProfileResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return SetDefaultQualityProfile403JSONResponse{
+			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
+	switch err := config.SetDefaultQualityProfile(ctx, request.Name); {
+	case errors.Is(err, config.ErrQualityProfileNotFound):
+		return SetDefaultQualityProfile404JSONResponse{
+			NotFoundJSONResponse: errNotFound("quality profile not found"),
+		}, nil
+	case configLocked(err):
+		return SetDefaultQualityProfile403JSONResponse{
+			ForbiddenJSONResponse: forbiddenResp(err.Error()),
+		}, nil
+	case err != nil:
+		return SetDefaultQualityProfile500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	return SetDefaultQualityProfile204Response{}, nil
+}
+
 func (s *Server) DeleteQualityProfile(
 	ctx context.Context,
 	request DeleteQualityProfileRequestObject,

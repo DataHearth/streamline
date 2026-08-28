@@ -980,6 +980,28 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /quality-profiles/{name}/default:
+    parameters:
+      - $ref: "#/components/parameters/ResourceName"
+    post:
+      operationId: setDefaultQualityProfile
+      summary: Make this the default quality profile
+      description: >-
+        Points `quality_default_profile` at this profile — the one a movie or
+        series with an empty `quality_profile` resolves to. Also the only way
+        to free the current default for deletion, which is refused with 409
+        while it holds the role.
+      tags: [quality-profiles]
+      responses:
+        "204":
+          description: Default set
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   # ── Custom Formats ──────────────────────────────────────
   /custom-formats:
     get:
@@ -2034,6 +2056,81 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/FFmpegConfig"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /config/download:
+    get:
+      operationId: getConfigDownload
+      summary: Get download configuration (admin)
+      description: |
+        Returns the runtime-editable download configuration. Changes made via
+        PATCH take effect immediately — no restart required.
+      tags: [config, admin]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        "200":
+          $ref: "#/components/responses/DownloadConfig"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    patch:
+      operationId: updateConfigDownload
+      summary: Patch download configuration (admin)
+      tags: [config, admin]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      requestBody:
+        $ref: "#/components/requestBodies/UpdateDownloadConfig"
+      responses:
+        "200":
+          $ref: "#/components/responses/DownloadConfig"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /config/metadata:
+    get:
+      operationId: getConfigMetadata
+      summary: Get metadata provider configuration (admin)
+      description: |
+        Returns the metadata provider settings. API keys are never echoed —
+        only a `*_set` flag says whether one is configured.
+      tags: [config, admin]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        "200":
+          $ref: "#/components/responses/MetadataConfig"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    patch:
+      operationId: updateConfigMetadata
+      summary: Patch metadata provider configuration (admin)
+      description: |
+        Every field here is read once at boot, when the TMDB and TVDB clients
+        are constructed, so a change flips the process-wide restart-required
+        flag and applies on the next start. A blank api key preserves the
+        stored one; a key sourced from a `*_file` path is refused with 422.
+      tags: [config, admin]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      requestBody:
+        $ref: "#/components/requestBodies/UpdateMetadataConfig"
+      responses:
+        "200":
+          $ref: "#/components/responses/MetadataConfig"
         "403":
           $ref: "#/components/responses/Forbidden"
         "413":
@@ -3774,6 +3871,20 @@ components:
           schema:
             $ref: "#/components/schemas/FFmpegConfigPatch"
 
+    UpdateDownloadConfig:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/DownloadConfigPatch"
+
+    UpdateMetadataConfig:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/MetadataConfigPatch"
+
     CreateOIDCProvider:
       required: true
       content:
@@ -4199,6 +4310,20 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/FFmpegConfigView"
+
+    DownloadConfig:
+      description: Current runtime-editable download configuration.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/DownloadConfigView"
+
+    MetadataConfig:
+      description: Current metadata provider configuration, secrets elided.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/MetadataConfigView"
 
     OIDCProvider:
       description: OIDC provider detail.
@@ -6139,7 +6264,7 @@ components:
 
     AuthConfigView:
       type: object
-      required: [registration_mode, session_ttl, oidc_default_role]
+      required: [registration_mode, session_ttl, oidc_default_role, lockout]
       properties:
         registration_mode:
           type: string
@@ -6150,6 +6275,8 @@ components:
         oidc_default_role:
           type: string
           enum: [admin, member, request_only]
+        lockout:
+          $ref: "#/components/schemas/LockoutConfig"
 
     AuthConfigPatch:
       type: object
@@ -6164,6 +6291,27 @@ components:
         oidc_default_role:
           type: string
           enum: [admin, member, request_only]
+        lockout:
+          $ref: "#/components/schemas/LockoutConfig"
+
+    LockoutConfig:
+      type: object
+      description: >-
+        Per-account login-failure lockout. Partial on a patch: an omitted
+        field keeps its stored value.
+      properties:
+        threshold:
+          type: integer
+          minimum: 1
+          maximum: 255
+          description: Failed attempts that lock the account.
+        window:
+          type: string
+          description: >-
+            Go duration string. The sliding window failures accumulate over.
+        duration:
+          type: string
+          description: Go duration string. How long the lockout holds.
 
     SpecialsMonitoredResult:
       type: object
@@ -6178,24 +6326,182 @@ components:
 
     LibraryConfigView:
       type: object
-      required: [monitor_specials]
+      required:
+        - monitor_specials
+        - movie_naming
+        - series_naming
+        - import_mode
+        - keep_torrent_seeding
+        - no_match_cooldown
+        - max_grab_failures
+        - import_max_attempts
+        - drift_grace_ticks
+        - movie_path
+        - series_path
+        - download_path
       properties:
         monitor_specials:
           type: boolean
           description: |
             Monitor season 0 (specials) when a series is added or a refresh
             discovers the season. Applies to newly seeded seasons only.
+        movie_naming:
+          type: string
+        series_naming:
+          type: string
+        import_mode:
+          type: string
+          enum: [hardlink, copy, move]
+        keep_torrent_seeding:
+          type: boolean
+        no_match_cooldown:
+          type: string
+          description: Go duration string.
+        max_grab_failures:
+          type: integer
+          minimum: 1
+          maximum: 255
+        import_max_attempts:
+          type: integer
+          minimum: 1
+          maximum: 255
+        drift_grace_ticks:
+          type: integer
+          minimum: 1
+          maximum: 20
+        allowed_download_roots:
+          type: array
+          items:
+            type: string
+        movie_path:
+          type: string
+          readOnly: true
+          description: >-
+            Read-only here. A root only moves through
+            POST /library/path-migration, which rewrites every stored path
+            before it repoints the config — a plain edit would strand them.
+        series_path:
+          type: string
+          readOnly: true
+        download_path:
+          type: string
+          readOnly: true
         probe:
           $ref: "#/components/schemas/ProbeConfig"
 
     LibraryConfigPatch:
       type: object
-      description: Only provided fields are applied.
+      description: >-
+        Only provided fields are applied. The three roots are absent by
+        design — see LibraryConfigView.movie_path.
       properties:
         monitor_specials:
           type: boolean
+        movie_naming:
+          type: string
+        series_naming:
+          type: string
+        import_mode:
+          type: string
+          enum: [hardlink, copy, move]
+        keep_torrent_seeding:
+          type: boolean
+        no_match_cooldown:
+          type: string
+          description: Go duration string.
+        max_grab_failures:
+          type: integer
+          minimum: 1
+          maximum: 255
+        import_max_attempts:
+          type: integer
+          minimum: 1
+          maximum: 255
+        drift_grace_ticks:
+          type: integer
+          minimum: 1
+          maximum: 20
+        allowed_download_roots:
+          type: array
+          items:
+            type: string
         probe:
           $ref: "#/components/schemas/ProbeConfig"
+
+    DownloadConfigView:
+      type: object
+      required: [selective_files, selection_grace]
+      properties:
+        selective_files:
+          type: boolean
+          description: >-
+            Grab only the files a release is wanted for. Off is a whole-torrent
+            grab, the pre-feature behaviour.
+        selection_grace:
+          type: string
+          description: >-
+            Go duration string. How long a magnet-sourced selection may sit
+            pending before giving up and downloading whole.
+
+    DownloadConfigPatch:
+      type: object
+      description: Only provided fields are applied.
+      properties:
+        selective_files:
+          type: boolean
+        selection_grace:
+          type: string
+
+    MetadataConfigView:
+      type: object
+      required:
+        - language
+        - tmdb_region
+        - tmdb_api_key_set
+        - tvdb_api_key_set
+        - restart_required
+      properties:
+        language:
+          type: string
+          description: >-
+            BCP-47 tag. The language TMDB and TVDB answer in — so also the
+            titles the library stores and matches releases against.
+        tmdb_region:
+          type: string
+          description: Two-letter uppercase region code, for TMDB release dates.
+        tmdb_api_key_set:
+          type: boolean
+        tvdb_api_key_set:
+          type: boolean
+        tmdb_api_key_file_managed:
+          type: boolean
+          description: >-
+            True when the key comes from metadata.tmdb_api_key_file. Setting it
+            here is refused — the file is the source of truth.
+        tvdb_api_key_file_managed:
+          type: boolean
+        restart_required:
+          type: boolean
+          description: >-
+            True when a metadata change is pending a process restart. The same
+            process-wide flag OIDC provider mutations set.
+
+    MetadataConfigPatch:
+      type: object
+      description: >-
+        Only provided fields are applied. A blank api key preserves the stored
+        one — the current value is never echoed, so blank means "unchanged".
+      properties:
+        language:
+          type: string
+        tmdb_region:
+          type: string
+        tmdb_api_key:
+          type: string
+          format: password
+        tvdb_api_key:
+          type: string
+          format: password
 
     ProbeConfig:
       type: object

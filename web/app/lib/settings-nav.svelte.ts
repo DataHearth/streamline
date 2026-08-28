@@ -8,6 +8,8 @@ import {
 	Tags,
 	Tv,
 	Film,
+	FolderTree,
+	Languages,
 	Clock,
 	Shield,
 	KeyRound,
@@ -43,8 +45,10 @@ export const SETTINGS_TITLES: Record<string, () => string> = {
 	"/settings/advanced": () => i18n.settings_advanced(),
 	"/settings/quality-profiles": () => i18n.settings_quality_profiles(),
 	"/settings/custom-formats": () => i18n.settings_custom_formats(),
+	"/settings/library": () => i18n.settings_library(),
 	"/settings/series": () => i18n.settings_series(),
 	"/settings/media-probe": () => i18n.settings_media_probe(),
+	"/settings/metadata": () => i18n.settings_metadata(),
 	"/settings/indexers": () => i18n.settings_indexers(),
 	"/settings/download-clients": () => i18n.settings_download_clients(),
 	"/settings/media-servers": () => i18n.settings_media_servers(),
@@ -124,6 +128,11 @@ export function createSettingsNav(withCounts = true) {
 				name: i18n.nav_library(),
 				items: [
 					{
+						path: "/settings/library",
+						Icon: FolderTree,
+						label: i18n.settings_library(),
+					},
+					{
 						path: "/settings/quality-profiles",
 						Icon: Gauge,
 						label: i18n.settings_quality_profiles(),
@@ -150,6 +159,14 @@ export function createSettingsNav(withCounts = true) {
 						path: "/settings/media-probe",
 						Icon: Film,
 						label: i18n.settings_media_probe(),
+					},
+					// The provider keys and the language they answer in decide what
+					// every title in the library is called, so this is a library
+					// setting rather than a connection — there is no host to reach.
+					{
+						path: "/settings/metadata",
+						Icon: Languages,
+						label: i18n.settings_metadata(),
 					},
 				],
 			},

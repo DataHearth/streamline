@@ -183,8 +183,11 @@ Each of the three search scopes filters the indexer's answer to its own scope �
 | `POST` | `/custom-formats/test` — evaluate a draft condition set against a sample release |
 | `POST` | `/media-servers/discover` — list libraries/sections for a draft (body carries the token) |
 | `POST` | `/media-servers/{name}/discover` — same, for a saved server, using its stored token |
+| `POST` | `/quality-profiles/{name}/default` — point `quality_default_profile` at this profile |
 
 Built-in custom formats are listed alongside user-defined ones (`builtin: true`); `PUT`/`DELETE` against a built-in, or a delete of a format still scored by a quality profile, is `409`. See [Quality Profiles and Custom Formats](Quality-Profiles-and-Custom-Formats).
+
+`is_default` on a quality profile marks the one a movie or series with an empty `quality_profile` resolves to. Deleting it is a `409` while it holds the role, so `POST /quality-profiles/{name}/default` is both how you change the default and how you free the old one for deletion.
 
 ### Torrents 🔒 (built-in client)
 
@@ -229,7 +232,7 @@ Built-in custom formats are listed alongside user-defined ones (`builtin: true`)
 
 | Method | Path |
 | --- | --- |
-| `GET` `PATCH` | `/config/auth` · `/config/library` · `/config/ffmpeg` |
+| `GET` `PATCH` | `/config/auth` · `/config/library` · `/config/ffmpeg` · `/config/download` · `/config/metadata` |
 | `GET` `POST` | `/config/oidc` |
 | `GET` `PATCH` `DELETE` | `/config/oidc/{name}` |
 | `GET` | `/schedules` · `/schedules/{name}` |
@@ -293,6 +296,30 @@ api -X PATCH -d '{"enabled":false}' "$SL/api/v1/config/ffmpeg"
 `found` and `resolved_path` are derived from the current process's live prober, not the config file — read-only, sending them in the `PATCH` body has no effect. `path` only takes effect on the next restart, since the prober is built once at boot: a `PATCH` that changes it comes back with `restart_required: true`, and `found` in that same response still describes the old path. Re-sending the path it already has changes nothing and does not raise the flag.
 
 **Import verification** reads the probe result before an import happens: `library.probe.always_ask` and `library.probe.min_duration_ratio` (via `GET`/`PATCH /config/library`) and `allowed_codecs` on a quality profile decide whether a finished download is imported or [held](#resolving-a-held-download) for a decision. See [Configuration Reference](Configuration-Reference#import-verification) for the checks.
+
+---
+
+## Editing config
+
+Five sections are readable and patchable over the API; [Configuration Reference](Configuration-Reference#whats-editable-at-runtime) has the full table of what is hot and what needs a restart. Every one is admin-only, takes a partial body (an omitted field keeps its stored value), and answers with the section's new state.
+
+```bash
+api -X PATCH -d '{"import_mode":"copy","max_grab_failures":5}' "$SL/api/v1/config/library"
+api -X PATCH -d '{"selective_files":true}'                     "$SL/api/v1/config/download"
+api -X PATCH -d '{"lockout":{"threshold":5}}'                  "$SL/api/v1/config/auth"
+```
+
+**`/config/library`** also returns `movie_path`, `series_path` and `download_path` — read-only, because a root only moves through [path migration](Importing-an-Existing-Library), which rewrites every stored path before it repoints the config. Sending them in the body has no effect. The bounded counters (`max_grab_failures`, `import_max_attempts` 1–255; `drift_grace_ticks` 1–20) answer `422` outside their range rather than wrapping.
+
+**`/config/metadata`** never echoes an api key. The read view carries `tmdb_api_key_set`/`tvdb_api_key_set` and, when the key comes from a `*_file` path, `tmdb_api_key_file_managed`/`tvdb_api_key_file_managed`. On a `PATCH`, a blank or omitted key **keeps the stored one** — there's no way to clear a key over the API — and setting one inline while the matching `*_file` is configured is a `422`: the file is the source of truth. Every field here is read once at boot, so a real change comes back with `restart_required: true`.
+
+```bash
+api "$SL/api/v1/config/metadata"
+# {"language":"en","tmdb_region":"US","tmdb_api_key_set":true,"tvdb_api_key_set":true,
+#  "tmdb_api_key_file_managed":false,"tvdb_api_key_file_managed":false,"restart_required":false}
+
+api -X PATCH -d '{"language":"fr","tmdb_region":"FR"}' "$SL/api/v1/config/metadata"
+```
 
 ---
 

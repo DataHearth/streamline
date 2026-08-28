@@ -38,6 +38,33 @@ export const authConfigPatch = v.object({
 	registration_mode: registrationMode,
 	session_ttl: goDuration,
 	oidc_default_role: userRole,
+	lockout: v.object({
+		threshold: v.pipe(
+			v.number(),
+			v.integer("Whole number"),
+			v.minValue(1, "At least 1"),
+			v.maxValue(255, "At most 255"),
+		),
+		window: goDuration,
+		duration: goDuration,
+	}),
+});
+
+// A blank api key means "leave the stored one alone", so the empty string has
+// to pass — the field is never seeded with the current value.
+const optionalSecret = v.pipe(v.string(), v.maxLength(256, "Too long"));
+
+export const metadataConfigPatch = v.object({
+	language: v.pipe(
+		v.string(),
+		v.regex(/^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$/, "Use a BCP-47 tag (e.g. en, fr)"),
+	),
+	tmdb_region: v.pipe(
+		v.string(),
+		v.regex(/^[A-Z]{2}$/, "Two uppercase letters (e.g. FR)"),
+	),
+	tmdb_api_key: optionalSecret,
+	tvdb_api_key: optionalSecret,
 });
 
 export const oidcProviderCreate = v.object({

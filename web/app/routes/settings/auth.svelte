@@ -82,6 +82,11 @@
 			session_ttl: cfg.data?.session_ttl ?? "168h",
 			oidc_default_role: (cfg.data?.oidc_default_role ??
 				"member") as UserRole,
+			lockout: {
+				threshold: cfg.data?.lockout?.threshold ?? 10,
+				window: cfg.data?.lockout?.window ?? "15m",
+				duration: cfg.data?.lockout?.duration ?? "15m",
+			},
 		},
 		validators: { onChange: authConfigPatch },
 		onSubmit: ({ value }) => save.mutate(value),
@@ -92,6 +97,11 @@
 			registration_mode: data.registration_mode,
 			session_ttl: data.session_ttl,
 			oidc_default_role: data.oidc_default_role,
+			lockout: {
+				threshold: data.lockout?.threshold ?? 10,
+				window: data.lockout?.window ?? "15m",
+				duration: data.lockout?.duration ?? "15m",
+			},
 		});
 	}
 
@@ -195,6 +205,52 @@
 						</div>
 					{/snippet}
 				</form.Field>
+			</div>
+
+			<div class="rounded-lg border border-border bg-bg-card p-4">
+				<h2 class="text-sm font-semibold text-fg">{i18n.auth_lockout()}</h2>
+				<p class="mt-0.5 text-xs leading-relaxed text-fg-subtle">
+					{i18n.auth_lockout_help()}
+				</p>
+				<div class="mt-4 grid gap-4 sm:grid-cols-3">
+					<form.Field name="lockout.threshold">
+						{#snippet children(field)}
+							<TextField
+								{field}
+								type="number"
+								min={1}
+								max={255}
+								label={i18n.auth_lockout_threshold()}
+								help={i18n.auth_lockout_threshold_help()}
+								floatError
+							/>
+						{/snippet}
+					</form.Field>
+
+					<form.Field name="lockout.window">
+						{#snippet children(field)}
+							<TextField
+								{field}
+								label={i18n.auth_lockout_window()}
+								placeholder="15m"
+								help={i18n.auth_lockout_window_help()}
+								floatError
+							/>
+						{/snippet}
+					</form.Field>
+
+					<form.Field name="lockout.duration">
+						{#snippet children(field)}
+							<TextField
+								{field}
+								label={i18n.auth_lockout_duration()}
+								placeholder="15m"
+								help={i18n.auth_lockout_duration_help()}
+								floatError
+							/>
+						{/snippet}
+					</form.Field>
+				</div>
 			</div>
 
 			<div class="flex justify-end gap-2">

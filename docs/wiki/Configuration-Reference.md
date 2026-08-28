@@ -122,20 +122,29 @@ With no writable config file (a `:ro` mount, `read_only: true`, or no file at al
 
 Some config is hot — changed through the UI or API, applied immediately, persisted back to the file. The rest requires an edit and a restart.
 
-| Area | Runtime-editable? |
-| --- | --- |
-| Indexers, download clients, media servers, quality profiles | ✅ Full CRUD |
-| Schedule intervals, pause/resume/run | ✅ |
-| `auth.registration_mode`, `auth.session_ttl`, `auth.oidc_default_role` | ✅ |
-| `library.monitor_specials` | ✅ |
-| `library.probe.*` | ✅ Applies to the next import — see [Import verification](#import-verification) |
-| `ffmpeg.enabled` | ✅ |
-| `ffmpeg.path` | ⚠️ Accepted immediately, but only picked up by the process's prober on the next restart |
-| `download.selective_files` | ✅ |
-| OIDC providers | ⚠️ CRUD works, but only loaded at startup — restart required |
-| Everything else | ❌ File only, restart required |
+| Area | Runtime-editable? | Where in the UI |
+| --- | --- | --- |
+| Indexers, download clients, media servers | ✅ Full CRUD | Settings → Connections |
+| Quality profiles, custom formats | ✅ Full CRUD | Settings → Library |
+| `quality_default_profile` | ✅ The ★ button on a profile row | Settings → Quality profiles |
+| Schedule intervals, pause/resume/run | ✅ | Settings → Schedules |
+| `auth.registration_mode`, `auth.session_ttl`, `auth.oidc_default_role` | ✅ | Settings → Authentication |
+| `auth.lockout.{threshold,window,duration}` | ✅ | Settings → Authentication |
+| `library.monitor_specials` | ✅ | Settings → Series |
+| `library.probe.*` | ✅ Applies to the next import — see [Import verification](#import-verification) | Settings → Media probe |
+| `library.{movie,series}_naming` | ✅ Applies to the next import or rename | Settings → Library |
+| `library.import_mode`, `keep_torrent_seeding`, `import_max_attempts`, `allowed_download_roots` | ✅ | Settings → Library |
+| `library.no_match_cooldown`, `max_grab_failures`, `drift_grace_ticks` | ✅ | Settings → Library |
+| `download.selective_files`, `download.selection_grace` | ✅ | Settings → Library |
+| `ffmpeg.enabled` | ✅ | Settings → Media probe |
+| `ffmpeg.path` | ⚠️ Accepted immediately, but only picked up by the process's prober on the next restart | Settings → Media probe |
+| `metadata.*` | ⚠️ Accepted immediately, but the TMDB and TVDB clients are built at boot — restart required | Settings → Metadata |
+| OIDC providers | ⚠️ CRUD works, but only loaded at startup — restart required | Settings → Single Sign-On |
+| Everything else | ❌ File only, restart required | — |
 
-Notably **not** runtime-editable: all library paths, `import_mode`, `data_dir`, server host/port, metadata keys, logging, OTel, and lockout thresholds.
+Notably **not** runtime-editable: `data_dir`, server host/port, `server.trusted_proxies`, `auth.mode`, `auth.trusted_networks`, `auth.trusted_role`, `auth.seed_admin.*`, session secrets, logging, OTel, `events.retention` and `torrent_listen_port`. The trust-boundary keys are deliberately file-only — the same reason the [OIDC](Authentication-and-SSO) provider API never exposes `allow_admin` or `email_linking`.
+
+**The three library roots are a special case.** `library.movie_path`, `series_path` and `download_path` show up read-only on Settings → Library and are changed through Settings → Advanced instead. That flow rewrites every stored path in the database and *then* repoints the config; a plain edit would leave every existing file recorded under the old prefix.
 
 Setting `read_only: true` refuses every runtime write, turning the first two rows into ❌ as well.
 

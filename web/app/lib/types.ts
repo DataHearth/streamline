@@ -560,11 +560,61 @@ export type AuthConfig = {
 	registration_mode: "disabled" | "open" | "invite";
 	session_ttl: string;
 	oidc_default_role: UserRole;
+	lockout: LockoutConfig;
 };
 
+// Per-account login-failure lockout. Every field is optional on a patch: an
+// omitted one keeps its stored value.
+export type LockoutConfig = {
+	threshold?: number;
+	window?: string;
+	duration?: string;
+};
+
+// The three roots are read-only here — a root only moves through the path
+// migration on Settings → Advanced, which rewrites every stored path before it
+// repoints the config. They ride along so the page can show where the library
+// lives without a second request.
 export type LibraryConfig = {
 	monitor_specials: boolean;
+	movie_naming: string;
+	series_naming: string;
+	import_mode: ImportTransferMode;
+	keep_torrent_seeding: boolean;
+	no_match_cooldown: string;
+	max_grab_failures: number;
+	import_max_attempts: number;
+	drift_grace_ticks: number;
+	allowed_download_roots?: string[];
+	movie_path?: string;
+	series_path?: string;
+	download_path?: string;
 	probe?: ProbeConfig;
+};
+
+export type DownloadConfig = {
+	selective_files: boolean;
+	selection_grace: string;
+};
+
+// The api keys are write-only: the response says whether one is configured
+// (`*_set`) and whether a `*_file` path owns it (`*_file_managed`, which is
+// what makes the field read-only), never the value.
+export type MetadataConfig = {
+	language: string;
+	tmdb_region: string;
+	tmdb_api_key_set: boolean;
+	tvdb_api_key_set: boolean;
+	tmdb_api_key_file_managed?: boolean;
+	tvdb_api_key_file_managed?: boolean;
+	restart_required: boolean;
+};
+
+export type MetadataConfigPatch = {
+	language?: string;
+	tmdb_region?: string;
+	tmdb_api_key?: string;
+	tvdb_api_key?: string;
 };
 
 export type ProbeConfig = {
@@ -609,6 +659,9 @@ export type QualityProfileFormatScore = {
 
 export type QualityProfileFull = {
 	name: string;
+	// True when quality_default_profile names this profile — the one a movie or
+	// series with an empty quality_profile resolves to.
+	is_default?: boolean;
 	preferred_resolution: Resolution;
 	min_resolution: Resolution;
 	upgrade_allowed: boolean;
