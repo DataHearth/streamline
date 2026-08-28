@@ -205,7 +205,7 @@ func (s *Service) runScan(ctx context.Context, scan *ent.ImportScan) {
 			"scan.id", scan.ID, "error", err)
 	}
 
-	alreadyAdded, err := s.buildExistingMap(ctx)
+	alreadyAdded, err := s.store.MovieTMDBIndex(ctx)
 	if err != nil {
 		slog.WarnContext(
 			ctx,
@@ -281,18 +281,6 @@ func walkSourceDir(ctx context.Context, root string) ([]scannedCandidate, error)
 		return nil, fmt.Errorf("walk source dir: %w", err)
 	}
 	return out, nil
-}
-
-func (s *Service) buildExistingMap(ctx context.Context) (map[uint32]uint32, error) {
-	movies, err := s.store.ListMovies(ctx, 0, 1<<31-1)
-	if err != nil {
-		return nil, err
-	}
-	m := make(map[uint32]uint32, len(movies))
-	for _, mv := range movies {
-		m[mv.TmdbID] = mv.ID
-	}
-	return m, nil
 }
 
 func (s *Service) runMatchPhase(

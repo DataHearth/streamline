@@ -180,7 +180,7 @@ func (db *DB) FindPendingDownloadRecordByID(
 			downloadrecord.ID(id),
 			downloadrecord.StatusEQ(downloadrecord.StatusPending),
 		).
-		WithMovie().
+		WithMovie(withLeanMovie).
 		WithEpisode().
 		Only(ctx)
 }
@@ -241,7 +241,7 @@ func (db *DB) ListDownloadingRecordsWithMovie(
 ) ([]*ent.DownloadRecord, error) {
 	return db.client.DownloadRecord.Query().
 		Where(downloadrecord.StatusEQ(downloadrecord.StatusDownloading)).
-		WithMovie().
+		WithMovie(withLeanMovie).
 		All(ctx)
 }
 
@@ -384,7 +384,7 @@ func (db *DB) ListImportingDownloadRecords(
 ) ([]*ent.DownloadRecord, error) {
 	return db.client.DownloadRecord.Query().
 		Where(downloadrecord.StatusEQ(downloadrecord.StatusImporting)).
-		WithMovie().
+		WithMovie(withLeanMovie).
 		WithEpisode(withEpisodeContext).
 		All(ctx)
 }
@@ -402,7 +402,7 @@ func (db *DB) FindImportingDownloadRecordByID(
 			downloadrecord.ID(id),
 			downloadrecord.StatusEQ(downloadrecord.StatusImporting),
 		).
-		WithMovie().
+		WithMovie(withLeanMovie).
 		WithEpisode(withEpisodeContext).
 		Only(ctx)
 }
@@ -441,7 +441,7 @@ func (db *DB) FindHeldDownloadRecordByID(
 			downloadrecord.ID(id),
 			downloadrecord.StatusEQ(downloadrecord.StatusHeld),
 		).
-		WithMovie().
+		WithMovie(withLeanMovie).
 		WithEpisode(withEpisodeContext).
 		Only(ctx)
 }
@@ -739,7 +739,7 @@ func (db *DB) ListActiveDownloadRecords(
 			// where a user is told one is waiting on them.
 			downloadrecord.StatusHeld,
 		)).
-		WithMovie().
+		WithMovie(withLeanMovie).
 		WithEpisode(func(q *ent.EpisodeQuery) {
 			q.WithSeason(func(sq *ent.SeasonQuery) { sq.WithTvShow() })
 		}).
@@ -770,7 +770,7 @@ func (db *DB) FindLiveDownloadRecordByHash(
 				downloadrecord.StatusHeld,
 			),
 		).
-		WithMovie().
+		WithMovie(withLeanMovie).
 		First(ctx)
 	if ent.IsNotFound(err) {
 		return nil, nil
@@ -804,7 +804,7 @@ func (db *DB) FindWidenableDownloadRecordByHash(
 				downloadrecord.StatusCompleted,
 			),
 		).
-		WithMovie().
+		WithMovie(withLeanMovie).
 		First(ctx)
 	if ent.IsNotFound(err) {
 		return nil, nil
@@ -834,7 +834,7 @@ func (db *DB) FindActiveDownloadRecordByID(
 				downloadrecord.StatusHeld,
 			),
 		).
-		WithMovie().
+		WithMovie(withLeanMovie).
 		Only(ctx)
 }
 
@@ -863,7 +863,7 @@ func (db *DB) ListDownloadHistory(
 			ent.Desc(downloadrecord.FieldUpdateTime),
 			ent.Desc(downloadrecord.FieldID),
 		).
-		WithMovie().
+		WithMovie(withLeanMovie).
 		WithEpisode(func(q *ent.EpisodeQuery) {
 			q.WithSeason(func(sq *ent.SeasonQuery) { sq.WithTvShow() })
 		})

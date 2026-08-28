@@ -186,6 +186,7 @@ type Store interface {
 	CountMovies(ctx context.Context) (int, error)
 	CountMoviesByStatus(ctx context.Context, status movie.Status) (int, error)
 	MovieStatusCounts(ctx context.Context) (map[movie.Status]int, error)
+	MovieTMDBIndex(ctx context.Context) (map[uint32]uint32, error)
 	MovieCreateTimesSince(ctx context.Context, since time.Time) ([]time.Time, error)
 	ListMovies(ctx context.Context, offset, limit uint32) ([]*ent.Movie, error)
 	FilterMovies(

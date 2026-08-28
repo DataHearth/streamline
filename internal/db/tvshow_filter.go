@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	entsql "entgo.io/ent/dialect/sql"
@@ -13,6 +14,15 @@ import (
 	"github.com/datahearth/streamline/ent/predicate"
 	"github.com/datahearth/streamline/ent/season"
 	"github.com/datahearth/streamline/ent/tvshow"
+)
+
+// tvShowListColumns mirrors movieListColumns: every TVShow column except the
+// cast blob, which the list view never renders and which ent otherwise
+// decodes per row. Subtraction rather than enumeration so a new field lands
+// in the list by default.
+var tvShowListColumns = slices.DeleteFunc(
+	slices.Clone(tvshow.Columns),
+	func(c string) bool { return c == tvshow.FieldCast },
 )
 
 type FilterTVShowsParams struct {
@@ -88,7 +98,7 @@ func (db *DB) FilterTVShows(
 		q = q.Order(orderBy(tvshow.FieldCreateTime, descending(p.Order, true)))
 	}
 
-	rows, err := q.All(ctx)
+	rows, err := q.Select(tvShowListColumns...).All(ctx)
 	if err != nil {
 		return nil, nil, 0, fmt.Errorf("list tv shows: %w", err)
 	}

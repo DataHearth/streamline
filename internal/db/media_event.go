@@ -47,7 +47,7 @@ func (db *DB) RecentActivity(
 	// come along with it; without them the feed can only name a number.
 	q := db.client.MediaEvent.Query().
 		Order(ent.Desc(mediaevent.FieldCreateTime), ent.Desc(mediaevent.FieldID)).
-		WithMovie().
+		WithMovie(withLeanMovie).
 		WithTvShow().
 		WithEpisode(func(eq *ent.EpisodeQuery) {
 			eq.WithSeason(func(sq *ent.SeasonQuery) { sq.WithTvShow() })

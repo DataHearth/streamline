@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"slices"
 	"time"
 
 	"github.com/datahearth/streamline/ent"
@@ -61,6 +62,27 @@ func (db *DB) FindMovieByID(ctx context.Context, id uint32) (*ent.Movie, error) 
 		Only(ctx)
 }
 
+// movieListColumns is every Movie column except cast. Cast is a JSON blob
+// that ent decodes into a []CastMember per row on scan, which a list response
+// never emits — profiling one page walk of a 610-movie library put 480 MB of
+// garbage on that single Unmarshal. Detail responses read it and must not use
+// this projection.
+//
+// Derived by subtraction rather than enumerated so a field added later is in
+// the list by default; enumerating the wanted columns means a new field is
+// silently absent from the API until somebody notices.
+var movieListColumns = slices.DeleteFunc(
+	slices.Clone(movie.Columns),
+	func(c string) bool { return c == movie.FieldCast },
+)
+
+// withLeanMovie eager-loads the movie edge without its cast blob, for the
+// queue, history, activity and drift paths — none of which emit cast, and
+// all of which are polled every few seconds.
+func withLeanMovie(q *ent.MovieQuery) {
+	q.Select(movieListColumns...)
+}
+
 func (db *DB) CountMovies(ctx context.Context) (int, error) {
 	return db.client.Movie.Query().Count(ctx)
 }
@@ -70,6 +92,28 @@ func (db *DB) CountMoviesByStatus(
 	status movie.Status,
 ) (int, error) {
 	return db.client.Movie.Query().Where(movie.StatusEQ(status)).Count(ctx)
+}
+
+// MovieTMDBIndex maps every tracked tmdb id to its movie row id. The bulk
+// importer needs exactly this to tell an already-tracked title from a new
+// one; it used to page the entire movie table *with media files attached* to
+// build the same two columns.
+func (db *DB) MovieTMDBIndex(ctx context.Context) (map[uint32]uint32, error) {
+	var rows []struct {
+		ID     uint32 `json:"id"`
+		TmdbID uint32 `json:"tmdb_id"`
+	}
+	err := db.client.Movie.Query().
+		Select(movie.FieldID, movie.FieldTmdbID).
+		Scan(ctx, &rows)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[uint32]uint32, len(rows))
+	for _, r := range rows {
+		out[r.TmdbID] = r.ID
+	}
+	return out, nil
 }
 
 // MovieStatusCounts returns the number of movies in each status, in one
@@ -136,6 +180,7 @@ func (db *DB) ListMovies(
 		Offset(int(offset)).
 		Limit(int(limit)).
 		Order(ent.Desc(movie.FieldCreateTime)).
+		Select(movieListColumns...).
 		WithMediaFiles().
 		All(ctx)
 }
@@ -292,7 +337,7 @@ func (db *DB) FilterMovies(
 		}
 	}
 
-	items, err := q.All(ctx)
+	items, err := q.Select(movieListColumns...).All(ctx)
 	if err != nil {
 		return nil, 0, err
 	}

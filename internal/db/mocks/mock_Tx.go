@@ -9390,6 +9390,68 @@ func (_c *MockTx_MovieStatusCounts_Call) RunAndReturn(run func(ctx context.Conte
 	return _c
 }
 
+// MovieTMDBIndex provides a mock function for the type MockTx
+func (_mock *MockTx) MovieTMDBIndex(ctx context.Context) (map[uint32]uint32, error) {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for MovieTMDBIndex")
+	}
+
+	var r0 map[uint32]uint32
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) (map[uint32]uint32, error)); ok {
+		return returnFunc(ctx)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context) map[uint32]uint32); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[uint32]uint32)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = returnFunc(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_MovieTMDBIndex_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'MovieTMDBIndex'
+type MockTx_MovieTMDBIndex_Call struct {
+	*mock.Call
+}
+
+// MovieTMDBIndex is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockTx_Expecter) MovieTMDBIndex(ctx any) *MockTx_MovieTMDBIndex_Call {
+	return &MockTx_MovieTMDBIndex_Call{Call: _e.mock.On("MovieTMDBIndex", ctx)}
+}
+
+func (_c *MockTx_MovieTMDBIndex_Call) Run(run func(ctx context.Context)) *MockTx_MovieTMDBIndex_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_MovieTMDBIndex_Call) Return(uint32ToUint32 map[uint32]uint32, err error) *MockTx_MovieTMDBIndex_Call {
+	_c.Call.Return(uint32ToUint32, err)
+	return _c
+}
+
+func (_c *MockTx_MovieTMDBIndex_Call) RunAndReturn(run func(ctx context.Context) (map[uint32]uint32, error)) *MockTx_MovieTMDBIndex_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // PurgeExpiredSessions provides a mock function for the type MockTx
 func (_mock *MockTx) PurgeExpiredSessions(ctx context.Context, before time.Time) (int, error) {
 	ret := _mock.Called(ctx, before)

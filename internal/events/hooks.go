@@ -6,8 +6,10 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/importscanfile"
 	"github.com/datahearth/streamline/ent/importscanshow"
+	"github.com/datahearth/streamline/ent/movie"
 )
 
 // owner is the resolved (scope, id) pair an event hangs off. A zero id means
@@ -333,8 +335,10 @@ func downloadRecordOwner(
 	}
 	row, err := c.DownloadRecord.Query().
 		Where(downloadrecord.IDEQ(ids[0])).
-		WithMovie().
-		WithEpisode().
+		// Only the owner's id is read below, and this runs inside the
+		// caller's transaction on every download-record mutation.
+		WithMovie(func(q *ent.MovieQuery) { q.Select(movie.FieldID) }).
+		WithEpisode(func(q *ent.EpisodeQuery) { q.Select(episode.FieldID) }).
 		Only(ctx)
 	if ent.IsNotFound(err) {
 		return owner{}, nil

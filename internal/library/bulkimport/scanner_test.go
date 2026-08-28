@@ -160,7 +160,7 @@ var _ = Describe(
 				Return(nil).
 				Maybe()
 			store.EXPECT().
-				ListMovies(mock.Anything, mock.Anything, mock.Anything).
+				MovieTMDBIndex(mock.Anything).
 				Return(nil, nil).
 				Maybe()
 			store.EXPECT().

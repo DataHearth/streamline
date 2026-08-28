@@ -141,7 +141,7 @@ func (db *DB) ListAllMediaFilesWithOwners(
 	ctx context.Context,
 ) ([]*ent.MediaFile, error) {
 	rows, err := db.client.MediaFile.Query().
-		WithMovie().
+		WithMovie(withLeanMovie).
 		WithEpisode().
 		All(ctx)
 	if err != nil {
