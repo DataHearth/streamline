@@ -7,10 +7,13 @@
 	let {
 		open,
 		movieId,
+		scopeLabel,
 		onClose,
 	}: {
 		open: boolean;
 		movieId: number;
+		// e.g. "Dune (2021)"; shown in the modal title for context.
+		scopeLabel?: string;
 		onClose: () => void;
 	} = $props();
 
@@ -20,7 +23,14 @@
 	});
 </script>
 
-<Modal {open} title={i18n.action_manual_search()} size="4xl" {onClose}>
+<Modal
+	{open}
+	title={scopeLabel
+		? i18n.manual_search_scope({ scope: scopeLabel })
+		: i18n.action_manual_search()}
+	size="4xl"
+	{onClose}
+>
 	<div class="mb-4 flex justify-start md:justify-end">
 		<ReplaceExistingToggle
 			checked={replaceExisting}

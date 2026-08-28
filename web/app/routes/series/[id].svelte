@@ -237,9 +237,10 @@
 	let manualScope = $derived.by(() => {
 		if (!manualEpisode || currentSeason === null) return undefined;
 		const code = `S${pad2(currentSeason.number)}E${pad2(manualEpisode.number)}`;
-		return manualEpisode.title
+		const scope = manualEpisode.title
 			? `${code} — ${manualEpisode.title}`
 			: code;
+		return show ? `${show.title} · ${scope}` : scope;
 	});
 
 	const qc = useQueryClient();
@@ -976,6 +977,7 @@
 		seriesId={show.id}
 		seasons={searchSeasons}
 		initialScope={packSearchScope}
+		scopeLabel={show.year ? `${show.title} (${show.year})` : show.title}
 		onClose={() => (packSearchOpen = false)}
 	/>
 	<Dialog

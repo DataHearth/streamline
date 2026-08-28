@@ -11,10 +11,13 @@
 		seriesId,
 		seasons,
 		initialScope = "series",
+		scopeLabel,
 		onClose,
 	}: {
 		open: boolean;
 		seriesId: number;
+		// e.g. "Breaking Bad (2008)"; shown in the modal title for context.
+		scopeLabel?: string;
 		// Season numbers that have episodes, ascending. 0 = Specials. "series"
 		// scope searches the whole show (integral / multi-season packs).
 		seasons: { number: number; label: string }[];
@@ -57,7 +60,14 @@
 	);
 </script>
 
-<Modal {open} title={i18n.action_manual_search()} size="4xl" {onClose}>
+<Modal
+	{open}
+	title={scopeLabel
+		? i18n.manual_search_scope({ scope: scopeLabel })
+		: i18n.action_manual_search()}
+	size="4xl"
+	{onClose}
+>
 	<div class="mb-4 flex flex-wrap items-center gap-3">
 		<span class="text-xs font-medium uppercase tracking-wide text-fg-subtle">
 			{i18n.series_scope()}

@@ -352,6 +352,7 @@
 	<ManualSearchModal
 		open={searchOpen}
 		movieId={movie.id}
+		scopeLabel={movie.year ? `${movie.title} (${movie.year})` : movie.title}
 		onClose={() => (searchOpen = false)}
 	/>
 	<QualityProfileModal
