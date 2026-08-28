@@ -390,7 +390,7 @@ Built-in engine only (ignored for external clients):
 | `max_upload_kbps`, `max_download_kbps` | | `0` = unlimited |
 | `seed_ratio` | | Stop seeding at this ratio. Uploaded bytes are persisted per torrent and accumulate across restarts, so a restart doesn't hand a torrent back its ratio |
 | `seed_time` | | Stop seeding after this duration, measured from the persisted completion time |
-| `disable_dht` | | |
+| `disable_dht` | | Turns off the distributed hash table. **Recommended on a small machine.** DHT keeps a routing table warm and answers queries from the wider network continuously, whether or not you are downloading — none of which an indexer-driven setup needs, since every torrent here arrives from a tracker that already knows its peers. Left on it costs memory and a steady trickle of background traffic for nothing. Turn it off unless you add magnets by hand and rely on public swarms to find them |
 | `bind_interface` | | Bind to one interface — useful for a VPN tunnel |
 
 ### indexers
