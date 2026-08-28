@@ -52,14 +52,28 @@ var (
 	dotGroupRe = regexp.MustCompile(`\.([A-Za-z0-9]+)$`)
 
 	seasonPackRe = regexp.MustCompile(`(?i)\bS(\d{2})\b(?:[^E]|$)`)
+	// Non-scene releases spell the season out — French trackers in particular
+	// ("Breaking Bad Saison 04 Complète Multi …"). Without this the name carries
+	// no season token at all, which reads as "single episode of nothing" and
+	// lets a season pack through every scope filter.
+	longSeasonRe = regexp.MustCompile(`(?i)\b(?:season|saison)\s*(\d{1,2})\b`)
 	dailyDateRe  = regexp.MustCompile(
 		`\b((?:19|20)\d{2})[.\-_ ](\d{2})[.\-_ ](\d{2})\b`,
 	)
 	// seasonRangeRe matches a multi-season span like "S01-S05" / "S01.S02" /
-	// "S01 S02" (second season must carry an S so a resolution like "S01.1080p"
-	// isn't mistaken for a range). completePackRe matches complete-series tags.
-	seasonRangeRe  = regexp.MustCompile(`(?i)S\d{1,2}[-. ]+S\d{1,2}`)
-	completePackRe = regexp.MustCompile(`(?i)\b(complete|int[eé]grale?)\b`)
+	// "S01 S02" / "S01 & S02 & S03" (second season must carry an S so a
+	// resolution like "S01.1080p" isn't mistaken for a range). The separator
+	// class covers the join characters groups actually use — an ampersand chain
+	// is a real shape ("Demon Slayer S01 & S02 & S03") and read as a single
+	// season it lands in a one-season search offering every season.
+	// completePackRe matches complete-series tags.
+	seasonRangeRe = regexp.MustCompile(`(?i)S\d{1,2}[-.,+& ]+S\d{1,2}`)
+	// seasonTokenRe finds every season token in a name, for bounding a chain
+	// whose pairwise matches cannot overlap.
+	seasonTokenRe = regexp.MustCompile(`(?i)\bS(\d{1,2})\b`)
+	// "complet"/"complète" are the French spellings, and they qualify whatever
+	// noun the name gives them — see IsWholeSeriesPack for why that matters.
+	completePackRe = regexp.MustCompile(`(?i)\b(compl[eè]te?|int[eé]grale?)\b`)
 	// absoluteRe matches an anime absolute number like " - 18 ". It is
 	// deliberately conservative; false positives are acceptable since absolute
 	// matching is a fallback only used for type=anime shows downstream.
@@ -120,9 +134,13 @@ func Parse(filename string) ParseResult {
 			r.AirDate = &t
 		}
 	}
-	// Season pack: SXX present but no SXXEXX matched.
+	// Season pack: SXX (or a spelled-out season) present but no SXXEXX matched.
 	if r.Episode == 0 {
-		if m := seasonPackRe.FindStringSubmatch(filename); m != nil {
+		m := seasonPackRe.FindStringSubmatch(filename)
+		if m == nil {
+			m = longSeasonRe.FindStringSubmatch(filename)
+		}
+		if m != nil {
 			if s, err := strconv.Atoi(m[1]); err == nil {
 				r.Season = uint16(s)
 				r.SeasonPack = true
@@ -140,7 +158,7 @@ func Parse(filename string) ParseResult {
 
 	// Extract resolution
 	if m := resolutionRe.FindString(filename); m != "" {
-		r.Resolution = m
+		r.Resolution = normalizeResolution(m)
 	}
 
 	// Extract source
@@ -271,14 +289,51 @@ func looksLikeRelease(s string) bool {
 // multi-season pack (e.g. "COMPLETE", "INTEGRALE", "S01-S05") that spans more
 // than one season. A season-scoped search filters these out since grabbing one
 // imports every season it contains.
+//
+// A "complete" tag alone is not enough: it qualifies whatever the name names,
+// and half the season packs in the wild say it about the season they carry
+// ("Breaking Bad S05 Complete Multi …", "Breaking Bad Saison 04 Complète …").
+// Read as whole-series, those were dropped from a search for exactly the season
+// they hold. So the tag only spans the series when no single season is named —
+// and a season *range* wins over both, since "COMPLETE S01-S05" spans five.
 func IsWholeSeriesPack(name string) bool {
-	return seasonRangeRe.MatchString(name) || completePackRe.MatchString(name)
+	if seasonRangeRe.MatchString(name) {
+		return true
+	}
+	return completePackRe.MatchString(name) && !namesOneSeason(name)
 }
 
-// seasonRangeBoundsRe captures the two season numbers IsWholeSeriesPack only
-// detects, so a span can name the seasons rather than just report that there
-// are several.
-var seasonRangeBoundsRe = regexp.MustCompile(`(?i)S(\d{1,2})[-. ]+S(\d{1,2})`)
+// namesOneSeason reports whether the name scopes itself to a single season, in
+// any of the three spellings the parser knows.
+func namesOneSeason(name string) bool {
+	return seasonEpRe.MatchString(name) ||
+		seasonPackRe.MatchString(name) ||
+		longSeasonRe.MatchString(name)
+}
+
+// seasonRangeBounds returns the lowest and highest season a multi-season name
+// covers, for the spans IsWholeSeriesPack only detects the existence of. It
+// reads *every* season token rather than the pair seasonRangeRe matched:
+// pairwise matches cannot overlap, so a chain ("S01 & S02 & S03") matches
+// "S01 & S02" and then resumes past it, leaving the tail unread and the pack
+// sized two seasons short.
+func seasonRangeBounds(name string) (uint16, uint16) {
+	var lo, hi uint16
+	for _, m := range seasonTokenRe.FindAllStringSubmatch(name, -1) {
+		n, err := strconv.ParseUint(m[1], 10, 16)
+		if err != nil {
+			continue
+		}
+		s := uint16(n)
+		if lo == 0 || s < lo {
+			lo = s
+		}
+		if s > hi {
+			hi = s
+		}
+	}
+	return lo, hi
+}
 
 // SeasonSpan is which seasons a release covers. It exists to size a pack: the
 // release names its scope but never how many files it holds, and no indexer
@@ -295,24 +350,21 @@ type SeasonSpan struct {
 }
 
 // ParseSeasonSpan reads a release name's season scope. A season range wins over
-// a plain SXX, which wins over nothing: "S01-S03" is three seasons even though
-// the first token alone would parse as season 1.
+// a plain SXX, which wins over a bare complete/integral tag, which wins over
+// nothing: "S01-S03" is three seasons even though the first token alone would
+// parse as season 1, and "S05 Complete" is season 5 rather than the series
+// (same reasoning as IsWholeSeriesPack).
 func ParseSeasonSpan(name string) SeasonSpan {
-	if completePackRe.MatchString(name) {
-		return SeasonSpan{Complete: true}
-	}
-	if m := seasonRangeBoundsRe.FindStringSubmatch(name); m != nil {
-		from, err1 := strconv.ParseUint(m[1], 10, 16)
-		to, err2 := strconv.ParseUint(m[2], 10, 16)
-		if err1 == nil && err2 == nil {
-			if from > to {
-				from, to = to, from
-			}
-			return SeasonSpan{From: uint16(from), To: uint16(to)}
+	if seasonRangeRe.MatchString(name) {
+		if from, to := seasonRangeBounds(name); from > 0 {
+			return SeasonSpan{From: from, To: to}
 		}
 	}
 	if p := Parse(name); p.SeasonPack {
 		return SeasonSpan{From: p.Season, To: p.Season}
+	}
+	if completePackRe.MatchString(name) {
+		return SeasonSpan{Complete: true}
 	}
 	return SeasonSpan{}
 }
@@ -361,10 +413,17 @@ func extractTitle(filename string, r ParseResult, yearIdx int) string {
 		if m == "" {
 			m = seasonPackRe.FindString(filename)
 		}
+		if m == "" {
+			m = longSeasonRe.FindString(filename)
+		}
 		markers = append(markers, m)
 	}
 	if r.Resolution != "" {
-		markers = append(markers, r.Resolution)
+		// The stored value is normalised, so it need not appear in the name as
+		// written ("1080P", "4K"). Re-find the original text, like Source below.
+		if m := resolutionRe.FindString(filename); m != "" {
+			markers = append(markers, m)
+		}
 	}
 	if r.Source != "" {
 		// Find original source string in filename (before normalization)
@@ -410,6 +469,19 @@ func normalizeCodec(s string) string {
 	default:
 		return s
 	}
+}
+
+// normalizeResolution canonicalises a matched resolution token to the bucket
+// name every consumer keys on. Groups spell it in any casing they like, and
+// `quality.resolutionRank` is a plain switch: an uppercase "1080P" ranked 0,
+// which `Evaluate` reports as "resolution outside profile band" — a whole
+// release rejected for the case of one letter.
+func normalizeResolution(s string) string {
+	lower := strings.ToLower(s)
+	if lower == "4k" {
+		return "2160p"
+	}
+	return lower
 }
 
 func normalizeSource(s string) string {

@@ -180,6 +180,63 @@ var _ = Describe("Filename Parser", Label("unit", "library"), func() {
 			"Breaking.Bad.S01.1080p.BluRay.x265-GRP", false),
 		Entry("single episode is not whole-series",
 			"Breaking.Bad.S01E05.1080p.WEB-GRP", false),
+		Entry(
+			"complete qualifies the season it names",
+			"Breaking Bad S05 Complete Multi 1080p NF WEB-DL DD 5.1 AVC-D3L0P",
+			false,
+		),
+		Entry("so does the French spelling",
+			"Breaking Bad Saison 04 Complète Multi [EN FR] 1080p PopHD", false),
+		Entry("a bare French integral is still whole-series",
+			"Breaking Bad Intégrale CUSTOM MULTi 2160p WEBRip H265-Dam", true),
+		Entry("an ampersand chain is a multi-season pack",
+			"[KURISU_] Demon Slayer Kimetsu No Yaiba S01 & S02 & S03 1080P WEBRip",
+			true),
+		Entry("so is a plus-joined pair",
+			"Demon Slayer S01+S02 1080p WEBRip", true),
+	)
+
+	DescribeTable(
+		"resolution is canonicalised, whatever casing the group used",
+		func(input, wantRes, wantTitle string) {
+			r := Parse(input)
+			Expect(r.Resolution).To(Equal(wantRes))
+			Expect(r.Title).To(Equal(wantTitle))
+		},
+		Entry("uppercase P", "Demon.Slayer.S01.1080P.WEBRip.HEVC-GRP",
+			"1080p", "Demon Slayer"),
+		Entry("lowercase stays", "Demon.Slayer.S01.1080p.WEBRip.HEVC-GRP",
+			"1080p", "Demon Slayer"),
+		Entry("4K folds into its bucket", "Demon.Slayer.S01.4K.WEBRip.HEVC-GRP",
+			"2160p", "Demon Slayer"),
+	)
+
+	DescribeTable("multi-season span bounds",
+		func(input string, want SeasonSpan) {
+			Expect(ParseSeasonSpan(input)).To(Equal(want))
+		},
+		Entry("dash range", "Show.S01-S05.1080p-GRP", SeasonSpan{From: 1, To: 5}),
+		// The pairwise match consumes "S01 & S02" and resumes past it, so only
+		// reading every token sees the third season.
+		Entry("ampersand chain reaches the last season",
+			"[KURISU_] Show S01 & S02 & S03 1080P WEBRip",
+			SeasonSpan{From: 1, To: 3}),
+	)
+
+	DescribeTable(
+		"spelled-out season packs",
+		func(input string, wantSeason uint16, wantTitle string) {
+			r := Parse(input)
+			Expect(r.SeasonPack).To(BeTrue())
+			Expect(r.Season).To(Equal(wantSeason))
+			Expect(r.Title).To(Equal(wantTitle))
+		},
+		Entry("French, zero-padded",
+			"Breaking Bad Saison 04 Complète Multi [EN FR] 1080p PopHD",
+			uint16(4), "Breaking Bad"),
+		Entry("English long form, unpadded",
+			"Breaking Bad Season 4 Complete 1080p WEB-DL",
+			uint16(4), "Breaking Bad"),
 	)
 
 	DescribeTable("extension stripping",
