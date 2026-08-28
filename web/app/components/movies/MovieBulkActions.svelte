@@ -44,14 +44,12 @@
 	let count = $derived(selected.size);
 	let active = $derived(count > 0);
 	let picked = $derived(movies.filter((m) => selected.has(m.id)));
+	// Off the list response's file rollup; media_files is detail-only.
 	let fileCount = $derived(
-		picked.reduce((n, m) => n + (m.media_files?.length ?? 0), 0),
+		picked.reduce((n, m) => n + (m.file_summary?.file_count ?? 0), 0),
 	);
 	let pickedBytes = $derived(
-		picked.reduce(
-			(n, m) => n + (m.media_files ?? []).reduce((s, f) => s + f.size, 0),
-			0,
-		),
+		picked.reduce((n, m) => n + (m.file_summary?.size_bytes ?? 0), 0),
 	);
 	let monitoredPicked = $derived(picked.filter((m) => m.monitored).length);
 	let qpOpen = $state(false);

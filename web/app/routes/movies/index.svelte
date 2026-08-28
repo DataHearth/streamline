@@ -1,25 +1,20 @@
 <script lang="ts">
 	import { untrack } from "svelte";
 	import { onMount } from "svelte";
-	import { createQuery } from "@tanstack/svelte-query";
-	import { api, apiAllPages, errorText, type Paginated } from "../../lib/api";
+	import { createInfiniteQuery, createQuery } from "@tanstack/svelte-query";
+	import { api, errorText, type Paginated } from "../../lib/api";
 	import { formatRelative } from "../../lib/dates";
-	import { formatBytes } from "../../lib/format";
-	import { movieStatus } from "../../lib/status";
-	import { fold } from "../../lib/text";
 	import { loadPref, savePref } from "../../lib/prefs";
 	import { pageMeta } from "../../lib/page-meta.svelte";
 	import MoviesToolbar from "../../components/movies/MoviesToolbar.svelte";
 	import MovieGrid from "../../components/movies/MovieGrid.svelte";
 	import MovieList from "../../components/movies/MovieList.svelte";
-	import RenderSentinel from "../../components/shared/RenderSentinel.svelte";
-	import { IncrementalList } from "../../lib/incremental-list.svelte";
 	import MoviesEmpty from "../../components/movies/MoviesEmpty.svelte";
 	import MovieBulkActions from "../../components/movies/MovieBulkActions.svelte";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 	import type {
-		MonitorFilter,
 		Movie,
+		MovieCounts,
 		ScheduleList,
 	} from "../../lib/types";
 
@@ -49,20 +44,12 @@
 		const rawSort = p.get("sort") ?? stored[0] ?? "title";
 		const rawOrder = p.get("order") ?? stored[1] ?? "asc";
 		const rawView = p.get("view") ?? "grid";
-		// ?monitored=1 predates the unmonitored side of the filter, so it keeps
-		// meaning what it did and 0 is the new opposite.
-		const rawMonitored = p.get("monitored");
 		return {
 			tab: VALID_TABS.has(rawTab) ? rawTab : "all",
 			query: p.get("q") ?? "",
 			sort: (rawSort === "year" ? "year" : "title") as SortKey,
 			order: (rawOrder === "desc" ? "desc" : "asc") as SortOrder,
 			view: (rawView === "list" ? "list" : "grid") as View,
-			monitorFilter: (rawMonitored === "1"
-				? "monitored"
-				: rawMonitored === "0"
-					? "unmonitored"
-					: "all") as MonitorFilter,
 		};
 	}
 
@@ -72,7 +59,14 @@
 	let sort = $state<SortKey>(initial.sort);
 	let order = $state<SortOrder>(initial.order);
 	let view = $state<View>(initial.view);
-	let monitorFilter = $state<MonitorFilter>(initial.monitorFilter);
+	// debouncedQuery is what the server query keys on. Typing must not fire a
+	// request per keystroke now that filtering is server-side.
+	let debouncedQuery = $state(initial.query);
+	$effect(() => {
+		const q = query;
+		const t = setTimeout(() => (debouncedQuery = q), 250);
+		return () => clearTimeout(t);
+	});
 	// A phone has no width for the list table — seven columns at 390px is not a
 	// readable row. Below md the library is posters only, whatever the URL or the
 	// last-used view says, and the sheet stops offering the choice.
@@ -103,8 +97,6 @@
 		const p = new URLSearchParams();
 		if (tab !== "all") p.set("status", tab);
 		if (query) p.set("q", query);
-		if (monitorFilter !== "all")
-			p.set("monitored", monitorFilter === "monitored" ? "1" : "0");
 		if (sort !== "title") p.set("sort", sort);
 		if (order !== "asc") p.set("order", order);
 		if (view !== "grid") p.set("view", view);
@@ -125,9 +117,40 @@
 		}
 	});
 
-	const moviesQuery = createQuery<Paginated<Movie>>(() => ({
-		queryKey: ["movies"],
-		queryFn: () => apiAllPages<Movie>("/movies"),
+	// Filtering, sorting and paging are the server's. The page used to pull the
+	// whole library and do all three in the browser, which meant every stale
+	// refetch — window focus, any mutation — re-walked 600+ rows over seven
+	// requests to render twenty cards.
+	const PAGE = 50;
+	const moviesQuery = createInfiniteQuery<
+		Paginated<Movie>,
+		Error,
+		{ pages: Paginated<Movie>[]; pageParams: number[] },
+		readonly ["movies", string, string, SortKey, SortOrder],
+		number
+	>(() => ({
+		queryKey: ["movies", tab, debouncedQuery, sort, order] as const,
+		queryFn: ({ pageParam }) => {
+			const p = new URLSearchParams({
+				page: String(pageParam),
+				limit: String(PAGE),
+				sort,
+				order,
+			});
+			if (tab !== "all") p.set("status", tab);
+			if (debouncedQuery.trim()) p.set("query", debouncedQuery.trim());
+			return api<Paginated<Movie>>(`/movies?${p.toString()}`);
+		},
+		initialPageParam: 1,
+		getNextPageParam: (last, pages) =>
+			pages.flatMap((p) => p.items).length < last.total
+				? pages.length + 1
+				: undefined,
+	}));
+
+	const countsQuery = createQuery<MovieCounts>(() => ({
+		queryKey: ["movies", "counts"],
+		queryFn: () => api<MovieCounts>("/movies/counts"),
 	}));
 
 	const schedulesQuery = createQuery<ScheduleList>(() => ({
@@ -135,83 +158,48 @@
 		queryFn: () => api<ScheduleList>("/schedules"),
 	}));
 
-	let allMovies = $derived(moviesQuery.data?.items ?? []);
-
-	let counts = $derived.by(() => {
-		const c = {
-			total: allMovies.length,
+	let counts = $derived(
+		countsQuery.data ?? {
+			total: 0,
 			wanted: 0,
 			downloading: 0,
 			available: 0,
 			failed: 0,
-		};
-		for (const m of allMovies) {
-			const s = movieStatus(m);
-			if (s === "wanted") c.wanted++;
-			else if (s === "downloading") c.downloading++;
-			else if (s === "available") c.available++;
-			else if (s === "failed") c.failed++;
-		}
-		return c;
-	});
-
-	// Unmonitored fileless movies resolve to "missing", which has no tab — they
-	// stay reachable under All rather than padding the Wanted queue.
-	let monitoredCount = $derived(allMovies.filter((m) => m.monitored).length);
-	let unmonitoredCount = $derived(allMovies.length - monitoredCount);
-
-	function passesTab(m: Movie): boolean {
-		if (tab === "all") return true;
-		return movieStatus(m) === tab;
-	}
-
-	let visibleMovies = $derived.by(() => {
-		let list = allMovies.filter(passesTab);
-		if (monitorFilter !== "all")
-			list = list.filter((m) => m.monitored === (monitorFilter === "monitored"));
-		const q = fold(query.trim());
-		if (q)
-			list = list.filter(
-				(m) =>
-					fold(m.title).includes(q) || fold(m.original_title).includes(q),
-			);
-		const sorted = [...list];
-		sorted.sort((a, b) => {
-			let cmp: number;
-			if (sort === "year") cmp = (a.year ?? 0) - (b.year ?? 0);
-			else
-				cmp = a.title.localeCompare(b.title, undefined, {
-					sensitivity: "base",
-				});
-			return order === "asc" ? cmp : -cmp;
-		});
-		return sorted;
-	});
-
-	let libraryEmpty = $derived(
-		tab === "all" &&
-			!query &&
-			monitorFilter === "all" &&
-			allMovies.length === 0,
+		},
 	);
 
-	// Only the rendered slice is budgeted; counts, selection and bulk actions
-	// keep operating on the full filtered set.
-	const rendered = new IncrementalList(() => visibleMovies);
-	$effect(() => {
-		void tab;
-		void query;
-		void monitorFilter;
-		void sort;
-		void order;
-		rendered.reset();
-	});
+	// Everything loaded so far. Bulk selection and the "N of M" line read this,
+	// so both mean "of what you have pulled in", not "of the whole library".
+	let visibleMovies = $derived(
+		(moviesQuery.data?.pages ?? []).flatMap((p) => p.items),
+	);
+	let matchedTotal = $derived(moviesQuery.data?.pages?.[0]?.total ?? 0);
 
-	let monitoredSize = $derived.by(() => {
-		let total = 0;
-		for (const m of allMovies)
-			for (const f of m.media_files ?? []) total += f.size;
-		return total;
+	let libraryEmpty = $derived(
+		tab === "all" && !debouncedQuery && counts.total === 0,
+	);
+
+	// Appending the next page as the sentinel comes into view replaces the old
+	// IncrementalList: a page is 50 cards, which mounts without blocking, and
+	// there is no longer a whole library sitting in memory to slice.
+	let pageSentinel = $state<HTMLDivElement | null>(null);
+	$effect(() => {
+		const el = pageSentinel;
+		if (!el) return;
+		const io = new IntersectionObserver(
+			(entries) => {
+				if (
+					entries[0]?.isIntersecting &&
+					moviesQuery.hasNextPage &&
+					!moviesQuery.isFetchingNextPage
+				) {
+					moviesQuery.fetchNextPage();
+				}
+			},
+			{ rootMargin: "600px" },
+		);
+		io.observe(el);
+		return () => io.disconnect();
 	});
 
 	let lastScan = $derived.by(() => {
@@ -228,15 +216,12 @@
 	function clearFilters() {
 		tab = "all";
 		query = "";
-		monitorFilter = "all";
 	}
 
 	// Below md the page gives up its own count line and the topbar carries it
 	// under the title instead; at md and up the line below the toolbar stays.
 	let metaLine = $derived.by(() => {
 		const parts = [`${counts.total} titles`];
-		if (monitoredSize > 0)
-			parts.push(`${formatBytes(monitoredSize, "0 B")} monitored`);
 		if (lastScan) parts.push(`scan ${formatRelative(lastScan)}`);
 		return parts.join(" · ");
 	});
@@ -287,8 +272,9 @@
 	// bar would keep acting on rows the user can no longer see.
 	$effect(() => {
 		tab;
-		query;
-		monitorFilter;
+		debouncedQuery;
+		sort;
+		order;
 		untrack(clearSelection);
 	});
 </script>
@@ -319,15 +305,11 @@
 			{order}
 			view={shownView}
 			{counts}
-			{monitorFilter}
-			{monitoredCount}
-			{unmonitoredCount}
 			{selectMode}
 			selectedCount={selected.size}
 			visibleCount={visibleMovies.length}
 			onTabChange={(t) => (tab = t)}
 			onQueryChange={(q) => (query = q)}
-			onMonitorFilterChange={(v) => (monitorFilter = v)}
 			onSortChange={setSort}
 			onViewChange={(v) => (view = v)}
 			onClearFilters={clearFilters}
@@ -340,7 +322,7 @@
 			class="hidden w-full flex-wrap items-baseline justify-between gap-2 px-4 pt-4 pb-2 font-mono text-[11px] text-fg-subtle md:flex md:px-6"
 		>
 			<div>
-				{visibleMovies.length} of {counts.total} titles
+				{visibleMovies.length} of {matchedTotal} titles
 				{#if query}
 					<span
 						class="ml-2 inline-flex items-center gap-1 rounded-full bg-accent-soft px-2 py-0.5 text-accent-text"
@@ -358,9 +340,7 @@
 				{/if}
 			</div>
 			<div class="flex flex-wrap items-center gap-2">
-				<span>{formatBytes(monitoredSize, "0 B")} monitored</span>
 				{#if lastScan}
-					<span class="text-fg-faint">·</span>
 					<span>last scan {formatRelative(lastScan)}</span>
 				{/if}
 			</div>
@@ -374,7 +354,7 @@
 				/>
 			{:else if shownView === "list"}
 				<MovieList
-					movies={rendered.items}
+					movies={visibleMovies}
 					{sort}
 					{order}
 					onSortChange={setSort}
@@ -384,14 +364,22 @@
 				/>
 			{:else}
 				<MovieGrid
-					movies={rendered.items}
+					movies={visibleMovies}
 					{selected}
 					{selectMode}
 					onToggle={toggle}
 					onLongPress={beginLongPress}
 				/>
 			{/if}
-			<RenderSentinel list={rendered} />
+			{#if moviesQuery.hasNextPage}
+				<div bind:this={pageSentinel} class="h-10">
+					{#if moviesQuery.isFetchingNextPage}
+						<p class="py-3 text-center text-xs text-fg-subtle">
+							{i18n.common_loading()}
+						</p>
+					{/if}
+				</div>
+			{/if}
 		</div>
 
 		<MovieBulkActions

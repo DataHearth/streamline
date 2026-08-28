@@ -4,7 +4,6 @@
 	import { SILENT } from "../lib/query";
 	import { posterUrl, tvPosterUrl } from "../lib/posters";
 	import { formatBytes } from "../lib/format";
-	import { codecOf, fileMetaLine, resolutionOf } from "../lib/media-info";
 	import type {
 		ActivityList,
 		DiskUsage,
@@ -123,7 +122,9 @@
 	});
 
 	function movieToHero(m: Movie): HeroItem {
-		const f = m.media_files?.[0];
+		// List responses carry the file rollup, not the files: the grid needs a
+		// size and a quality, not every media_file row of every movie on a page.
+		const s = m.file_summary;
 		return {
 			title: m.title,
 			year: m.year,
@@ -131,9 +132,11 @@
 			runtime: m.runtime,
 			rating: m.rating,
 			status: m.status,
-			resolution: f ? resolutionOf(f) : undefined,
-			codec: f ? codecOf(f) : undefined,
-			fileMeta: fileMetaLine(f, formatBytes(f?.size, "")),
+			resolution: s?.resolution,
+			codec: s?.codec,
+			fileMeta: [formatBytes(s?.size_bytes, ""), s?.resolution, s?.codec]
+				.filter(Boolean)
+				.join(" · "),
 			posterSrc: posterUrl(m),
 			href: `/movies/${m.id}`,
 		};

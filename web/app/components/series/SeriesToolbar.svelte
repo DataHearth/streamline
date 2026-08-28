@@ -28,8 +28,6 @@
 	import SelectionControls from "../shared/SelectionControls.svelte";
 	import SelectionTopBar from "../shared/SelectionTopBar.svelte";
 	import MediaFilterSheet from "../shared/MediaFilterSheet.svelte";
-	import MonitorFilterTabs from "../shared/MonitorFilterTabs.svelte";
-	import type { MonitorFilter } from "../../lib/types";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	type View = "grid" | "list";
@@ -41,16 +39,12 @@
 		sort,
 		view,
 		counts,
-		monitorFilter,
-		monitoredCount,
-		unmonitoredCount,
 		selectMode,
 		selectedCount,
 		visibleCount,
 		onTabChange,
 		onTypeChange,
 		onQueryChange,
-		onMonitorFilterChange,
 		onSortChange,
 		onViewChange,
 		onClearFilters,
@@ -64,16 +58,12 @@
 		sort: SeriesSort;
 		view: View;
 		counts: SeriesTabCounts;
-		monitorFilter: MonitorFilter;
-		monitoredCount: number;
-		unmonitoredCount: number;
 		selectMode: boolean;
 		selectedCount: number;
 		visibleCount: number;
 		onTabChange: (t: SeriesTab) => void;
 		onTypeChange: (t: SeriesTypeFilter) => void;
 		onQueryChange: (q: string) => void;
-		onMonitorFilterChange: (v: MonitorFilter) => void;
 		onSortChange: (s: SeriesSort) => void;
 		onViewChange: (v: View) => void;
 		onClearFilters: () => void;
@@ -157,7 +147,6 @@
 	let selecting = $derived(selectMode || selectedCount > 0);
 	let activeFilters = $derived(
 		(query ? 1 : 0) +
-			(monitorFilter !== "all" ? 1 : 0) +
 			(tab !== "all" ? 1 : 0) +
 			(typeFilter !== "all" ? 1 : 0),
 	);
@@ -260,10 +249,6 @@
 	sortOptions={sortOptions}
 	{sort}
 	onSortChange={(k) => selectSort(k as SeriesSort)}
-	{monitorFilter}
-	{monitoredCount}
-	{unmonitoredCount}
-	{onMonitorFilterChange}
 	{view}
 	{onViewChange}
 	onSelectMode={() => onSelectModeChange(true)}
@@ -498,13 +483,6 @@
 	<div
 		class="order-3 flex w-full flex-wrap items-center gap-2 lg:order-none lg:w-auto"
 	>
-		<MonitorFilterTabs
-			value={monitorFilter}
-			{monitoredCount}
-			{unmonitoredCount}
-			onChange={onMonitorFilterChange}
-		/>
-
 		<!-- List rows carry their own checkboxes (and a select-all in the header), so
 		     the toolbar's Select controls would be a second way to do the same thing. -->
 		{#if view === "grid"}

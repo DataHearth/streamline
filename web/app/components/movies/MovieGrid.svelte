@@ -40,7 +40,8 @@
 	}));
 
 	function enrich(m: Movie) {
-		const f = m.media_files?.[0];
+		// The list response's file rollup — media_files is detail-only.
+		const f = m.file_summary;
 		return {
 			id: m.id,
 			title: m.title,
@@ -49,8 +50,8 @@
 			status: movieStatus(m),
 			monitored: m.monitored,
 			rating: m.rating,
-			resolution: f?.parsed_resolution,
-			size_text: formatBytes(f?.size, ""),
+			resolution: f?.resolution,
+			size_text: formatBytes(f?.size_bytes, ""),
 		};
 	}
 </script>

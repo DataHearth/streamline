@@ -17,13 +17,18 @@
 	let { movie, variant = "card" }: { movie: Movie; variant?: "card" | "toolbar" } =
 		$props();
 
-	let hasFiles = $derived((movie.media_files?.length ?? 0) > 0);
+	// The menu opens from both a list row and the detail page, and the two
+	// carry the file count differently: a list response has the rollup, a
+	// detail response has the files themselves.
+	let fileCount = $derived(
+		movie.file_summary?.file_count ?? movie.media_files?.length ?? 0,
+	);
+	let hasFiles = $derived(fileCount > 0);
 
 	let qpOpen = $state(false);
 	let renameOpen = $state(false);
 	let deleteOpen = $state(false);
 	let reidentifyOpen = $state(false);
-	let fileCount = $derived(movie.media_files?.length ?? 0);
 
 	const qc = useQueryClient();
 

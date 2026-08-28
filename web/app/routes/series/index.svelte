@@ -1,11 +1,10 @@
 <script lang="ts">
 	import { untrack } from "svelte";
 	import { onMount } from "svelte";
-	import { createQuery } from "@tanstack/svelte-query";
-	import { api, apiAllPages, errorText, type Paginated } from "../../lib/api";
+	import { createInfiniteQuery, createQuery } from "@tanstack/svelte-query";
+	import { api, errorText, type Paginated } from "../../lib/api";
 	import { formatRelative } from "../../lib/dates";
 	import { loadPref, savePref } from "../../lib/prefs";
-	import { fold } from "../../lib/text";
 	import { pageMeta } from "../../lib/page-meta.svelte";
 	import SeriesToolbar from "../../components/series/SeriesToolbar.svelte";
 	import type {
@@ -16,11 +15,9 @@
 	} from "../../components/series/SeriesToolbar.svelte";
 	import SeriesGrid from "../../components/series/SeriesGrid.svelte";
 	import SeriesList from "../../components/series/SeriesList.svelte";
-	import RenderSentinel from "../../components/shared/RenderSentinel.svelte";
-	import { IncrementalList } from "../../lib/incremental-list.svelte";
 	import SeriesEmpty from "../../components/series/SeriesEmpty.svelte";
 	import SeriesBulkActions from "../../components/series/SeriesBulkActions.svelte";
-	import type { MonitorFilter, ScheduleList, TVShow } from "../../lib/types";
+	import type { ScheduleList, TVShow, TVShowCounts } from "../../lib/types";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	type View = "grid" | "list";
@@ -61,20 +58,12 @@
 			loadPref(SORT_PREF) ??
 			"title") as SeriesSort;
 		const rawView = p.get("view") ?? "grid";
-		// ?monitored=1 predates the unmonitored side of the filter, so it keeps
-		// meaning what it did and 0 is the new opposite.
-		const rawMonitored = p.get("monitored");
 		return {
 			tab: VALID_TABS.has(rawTab) ? rawTab : "all",
 			typeFilter: VALID_TYPES.has(rawType) ? rawType : "all",
 			query: p.get("q") ?? "",
 			sort: VALID_SORTS.has(rawSort) ? rawSort : "title",
 			view: (rawView === "list" ? "list" : "grid") as View,
-			monitorFilter: (rawMonitored === "1"
-				? "monitored"
-				: rawMonitored === "0"
-					? "unmonitored"
-					: "all") as MonitorFilter,
 		};
 	}
 
@@ -84,7 +73,14 @@
 	let query = $state(initial.query);
 	let sort = $state<SeriesSort>(initial.sort);
 	let view = $state<View>(initial.view);
-	let monitorFilter = $state<MonitorFilter>(initial.monitorFilter);
+	// debouncedQuery is what the server query keys on. Typing must not fire a
+	// request per keystroke now that filtering is server-side.
+	let debouncedQuery = $state(initial.query);
+	$effect(() => {
+		const q = query;
+		const t = setTimeout(() => (debouncedQuery = q), 250);
+		return () => clearTimeout(t);
+	});
 	// A phone has no width for the list table, so below md the library is posters
 	// only — whatever the URL or the last-used view says.
 	let narrow = $state(false);
@@ -114,8 +110,6 @@
 		if (tab !== "all") p.set("status", tab);
 		if (typeFilter !== "all") p.set("type", typeFilter);
 		if (query) p.set("q", query);
-		if (monitorFilter !== "all")
-			p.set("monitored", monitorFilter === "monitored" ? "1" : "0");
 		if (sort !== "title") p.set("sort", sort);
 		if (view !== "grid") p.set("view", view);
 		const search = p.toString();
@@ -135,9 +129,40 @@
 		}
 	});
 
-	const seriesQuery = createQuery<Paginated<TVShow>>(() => ({
-		queryKey: ["series"],
-		queryFn: () => apiAllPages<TVShow>("/series"),
+	// Filtering, sorting and paging are the server's — db.FilterTVShows has
+	// pushed all three into SQL since the list-performance work; the page just
+	// never used the params. It pulled the whole library and redid the work in
+	// the browser on every stale refetch.
+	const PAGE = 50;
+	const seriesQuery = createInfiniteQuery<
+		Paginated<TVShow>,
+		Error,
+		{ pages: Paginated<TVShow>[]; pageParams: number[] },
+		readonly ["series", SeriesTab, SeriesTypeFilter, string, SeriesSort],
+		number
+	>(() => ({
+		queryKey: ["series", tab, typeFilter, debouncedQuery, sort] as const,
+		queryFn: ({ pageParam }) => {
+			const p = new URLSearchParams({
+				page: String(pageParam),
+				limit: String(PAGE),
+				sort,
+			});
+			if (tab !== "all") p.set("status", tab);
+			if (typeFilter !== "all") p.set("type", typeFilter);
+			if (debouncedQuery.trim()) p.set("query", debouncedQuery.trim());
+			return api<Paginated<TVShow>>(`/series?${p.toString()}`);
+		},
+		initialPageParam: 1,
+		getNextPageParam: (last, pages) =>
+			pages.flatMap((p) => p.items).length < last.total
+				? pages.length + 1
+				: undefined,
+	}));
+
+	const countsQuery = createQuery<TVShowCounts>(() => ({
+		queryKey: ["series", "counts"],
+		queryFn: () => api<TVShowCounts>("/series/counts"),
 	}));
 
 	const schedulesQuery = createQuery<ScheduleList>(() => ({
@@ -145,94 +170,56 @@
 		queryFn: () => api<ScheduleList>("/schedules"),
 	}));
 
-	let allSeries = $derived(seriesQuery.data?.items ?? []);
-
-	let counts = $derived.by<SeriesTabCounts>(() => {
-		const c: SeriesTabCounts = {
-			all: allSeries.length,
-			continuing: 0,
-			ended: 0,
-			upcoming: 0,
-			missing: 0,
-		};
-		for (const s of allSeries) {
-			if (s.series_status === "continuing") c.continuing++;
-			else if (s.series_status === "ended") c.ended++;
-			else if (s.series_status === "upcoming") c.upcoming++;
-			if ((s.wanted_episodes ?? 0) > 0) c.missing++;
-		}
-		return c;
+	let counts = $derived<SeriesTabCounts>({
+		all: countsQuery.data?.total ?? 0,
+		continuing: countsQuery.data?.continuing ?? 0,
+		ended: countsQuery.data?.ended ?? 0,
+		upcoming: countsQuery.data?.upcoming ?? 0,
+		missing: countsQuery.data?.missing ?? 0,
 	});
 
-	let monitoredCount = $derived(allSeries.filter((s) => s.monitored).length);
-	let unmonitoredCount = $derived(allSeries.length - monitoredCount);
-
-	function passesTab(s: TVShow): boolean {
-		if (tab === "all") return true;
-		if (tab === "missing") return (s.wanted_episodes ?? 0) > 0;
-		return s.series_status === tab;
-	}
-
-	let visibleSeries = $derived.by(() => {
-		let list = allSeries.filter(passesTab);
-		if (typeFilter !== "all") list = list.filter((s) => s.type === typeFilter);
-		if (monitorFilter !== "all")
-			list = list.filter((s) => s.monitored === (monitorFilter === "monitored"));
-		const q = fold(query.trim());
-		if (q)
-			list = list.filter(
-				(s) =>
-					fold(s.title).includes(q) ||
-					fold(s.network ?? "").includes(q) ||
-					fold((s.genres ?? []).join(" ")).includes(q),
-			);
-		const sorted = [...list];
-		sorted.sort((a, b) => {
-			switch (sort) {
-				case "title":
-					return a.title.localeCompare(b.title, undefined, {
-						sensitivity: "base",
-					});
-				case "year":
-					return (b.year ?? 0) - (a.year ?? 0);
-				case "rating":
-					return (b.rating ?? 0) - (a.rating ?? 0);
-				case "episodes":
-					return (b.total_episodes ?? 0) - (a.total_episodes ?? 0);
-				default:
-					// "recent": no added-date is exposed, so id descending is the
-					// closest proxy for most-recently-added.
-					return b.id - a.id;
-			}
-		});
-		return sorted;
-	});
+	// Everything loaded so far. Bulk selection and the "N of M" line read this,
+	// so both mean "of what you have pulled in", not "of the whole library".
+	let visibleSeries = $derived(
+		(seriesQuery.data?.pages ?? []).flatMap((p) => p.items),
+	);
+	let matchedTotal = $derived(seriesQuery.data?.pages?.[0]?.total ?? 0);
 
 	let totalEpisodes = $derived(
-		allSeries.reduce((sum, s) => sum + (s.have_episodes ?? 0), 0),
+		visibleSeries.reduce((sum, s) => sum + (s.have_episodes ?? 0), 0),
 	);
 	let libraryEpisodes = $derived(
-		allSeries.reduce((sum, s) => sum + (s.total_episodes ?? 0), 0),
+		visibleSeries.reduce((sum, s) => sum + (s.total_episodes ?? 0), 0),
 	);
 
 	let libraryEmpty = $derived(
 		tab === "all" &&
 			typeFilter === "all" &&
-			!query &&
-			monitorFilter === "all" &&
-			allSeries.length === 0,
+			!debouncedQuery &&
+			counts.all === 0,
 	);
 
-	// Only the rendered slice is budgeted; counts, selection and bulk actions
-	// keep operating on the full filtered set.
-	const rendered = new IncrementalList(() => visibleSeries);
+	// Appending the next page as the sentinel comes into view replaces the old
+	// IncrementalList: a page is 50 cards, which mounts without blocking, and
+	// there is no longer a whole library sitting in memory to slice.
+	let pageSentinel = $state<HTMLDivElement | null>(null);
 	$effect(() => {
-		void tab;
-		void typeFilter;
-		void query;
-		void monitorFilter;
-		void sort;
-		rendered.reset();
+		const el = pageSentinel;
+		if (!el) return;
+		const io = new IntersectionObserver(
+			(entries) => {
+				if (
+					entries[0]?.isIntersecting &&
+					seriesQuery.hasNextPage &&
+					!seriesQuery.isFetchingNextPage
+				) {
+					seriesQuery.fetchNextPage();
+				}
+			},
+			{ rootMargin: "600px" },
+		);
+		io.observe(el);
+		return () => io.disconnect();
 	});
 
 	let lastScan = $derived.by(() => {
@@ -250,7 +237,6 @@
 		tab = "all";
 		typeFilter = "all";
 		query = "";
-		monitorFilter = "all";
 	}
 
 	// Below md the topbar carries this under the title and the page's own count
@@ -312,7 +298,6 @@
 		tab;
 		typeFilter;
 		query;
-		monitorFilter;
 		untrack(clearSelection);
 	});
 </script>
@@ -343,16 +328,12 @@
 			{sort}
 			view={shownView}
 			{counts}
-			{monitorFilter}
-			{monitoredCount}
-			{unmonitoredCount}
 			{selectMode}
 			selectedCount={selected.size}
 			visibleCount={visibleSeries.length}
 			onTabChange={(t) => (tab = t)}
 			onTypeChange={(t) => (typeFilter = t)}
 			onQueryChange={(q) => (query = q)}
-			onMonitorFilterChange={(v) => (monitorFilter = v)}
 			onSortChange={setSort}
 			onViewChange={(v) => (view = v)}
 			onClearFilters={clearFilters}
@@ -367,7 +348,7 @@
 			<div>
 				{i18n.series_count_of({
 					visible: visibleSeries.length,
-					total: counts.all,
+					total: matchedTotal,
 				})}
 				{#if query}
 					<span
@@ -406,21 +387,29 @@
 				/>
 			{:else if shownView === "list"}
 				<SeriesList
-					series={rendered.items}
+					series={visibleSeries}
 					{selected}
 					onToggle={toggle}
 					onToggleAll={toggleAll}
 				/>
 			{:else}
 				<SeriesGrid
-					series={rendered.items}
+					series={visibleSeries}
 					{selected}
 					{selectMode}
 					onToggle={toggle}
 					onLongPress={beginLongPress}
 				/>
 			{/if}
-			<RenderSentinel list={rendered} />
+			{#if seriesQuery.hasNextPage}
+				<div bind:this={pageSentinel} class="h-10">
+					{#if seriesQuery.isFetchingNextPage}
+						<p class="py-3 text-center text-xs text-fg-subtle">
+							{i18n.common_loading()}
+						</p>
+					{/if}
+				</div>
+			{/if}
 		</div>
 
 		<SeriesBulkActions

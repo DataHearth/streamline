@@ -9,7 +9,6 @@
 	import {
 		X,
 		Search,
-		Bookmark,
 		LayoutGrid,
 		List,
 		ListChecks,
@@ -19,7 +18,6 @@
 	import { lockScroll, unlockScroll } from "../../lib/scrollLock";
 	import { sheetSwipe } from "../../lib/sheet-swipe";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
-	import type { MonitorFilter } from "../../lib/types";
 
 	// Everything the library toolbars can no longer afford to keep on screen at
 	// phone width: the filter query, sort, monitored, view and the way into
@@ -33,10 +31,6 @@
 		sortOptions,
 		sort,
 		onSortChange,
-		monitorFilter,
-		monitoredCount,
-		unmonitoredCount,
-		onMonitorFilterChange,
 		view,
 		onViewChange,
 		onSelectMode,
@@ -52,10 +46,6 @@
 		sortOptions: FilterOption[];
 		sort: string;
 		onSortChange: (key: string) => void;
-		monitorFilter: MonitorFilter;
-		monitoredCount: number;
-		unmonitoredCount: number;
-		onMonitorFilterChange: (v: MonitorFilter) => void;
 		view: "grid" | "list";
 		onViewChange: (v: "grid" | "list") => void;
 		onSelectMode: () => void;
@@ -77,22 +67,6 @@
 			unlockScroll();
 		};
 	});
-
-	let monitorOptions = $derived<
-		{ key: MonitorFilter; label: string; count?: number }[]
-	>([
-		{ key: "all", label: i18n.common_all() },
-		{
-			key: "monitored",
-			label: i18n.monitor_monitored(),
-			count: monitoredCount,
-		},
-		{
-			key: "unmonitored",
-			label: i18n.monitor_unmonitored(),
-			count: unmonitoredCount,
-		},
-	]);
 
 	const chip =
 		"inline-flex h-9 shrink-0 items-center gap-2 rounded-full border px-3.5 text-[13px] font-medium transition";
@@ -194,35 +168,6 @@
 				{#if extra}
 					{@render extra()}
 				{/if}
-
-				<div class="pt-5">
-					<div class={label}>{i18n.filter_show()}</div>
-					<div class="flex flex-wrap gap-2" role="group">
-						{#each monitorOptions as opt (opt.key)}
-							{@const on = monitorFilter === opt.key}
-							<button
-								type="button"
-								aria-pressed={on}
-								onclick={() => onMonitorFilterChange(opt.key)}
-								class={cn(chip, on ? chipOn : chipOff)}
-							>
-								{#if opt.key !== "all"}
-									<Bookmark
-										size={14}
-										fill={opt.key === "monitored" ? "currentColor" : "none"}
-										aria-hidden="true"
-									/>
-								{/if}
-								{opt.label}
-								{#if opt.count !== undefined}
-									<span class="font-mono text-[11px] tabular-nums opacity-70">
-										{opt.count}
-									</span>
-								{/if}
-							</button>
-						{/each}
-					</div>
-				</div>
 
 				<!-- The list table needs columns a phone cannot give it, so the choice
 				     only appears from md up; below that the library is posters only. -->

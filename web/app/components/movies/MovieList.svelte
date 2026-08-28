@@ -11,7 +11,7 @@
 	import StatusPill from "../shared/StatusPill.svelte";
 	import SelectBox from "../shared/SelectBox.svelte";
 	import MovieActionsMenu from "./MovieActionsMenu.svelte";
-	import type { Movie, MediaFile } from "../../lib/types";
+	import type { Movie, MovieFileSummary } from "../../lib/types";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	type SortKey = "title" | "year";
@@ -52,16 +52,17 @@
 		onError: (e) => toast.err(errorText(e, i18n.common_update_failed())),
 	}));
 
-	function totalSize(files: MediaFile[] | undefined): string {
-		const f = files?.[0];
-		return f ? formatBytes(f.size) : "—";
+	// Both columns read the list response's file rollup, not media_files —
+	// which is detail-only. totalSize is now the sum of every attached file
+	// rather than the first one's size, which is what the column always meant.
+	function totalSize(s: MovieFileSummary | undefined): string {
+		return s ? formatBytes(s.size_bytes) : "—";
 	}
 
-	function quality(files: MediaFile[] | undefined): string {
-		const f = files?.[0];
-		if (!f) return "—";
-		const parts = [f.parsed_resolution, f.parsed_codec].filter(
-			(v): v is string => Boolean(v),
+	function quality(s: MovieFileSummary | undefined): string {
+		if (!s) return "—";
+		const parts = [s.resolution, s.codec].filter((v): v is string =>
+			Boolean(v),
 		);
 		return parts.length > 0 ? parts.join(" · ") : "—";
 	}
@@ -217,17 +218,17 @@
 					<td
 						class="hidden px-3 py-2 font-mono text-xs text-fg-muted @3xl:table-cell"
 					>
-						{quality(movie.media_files)}
+						{quality(movie.file_summary)}
 					</td>
 					<td
 						class={cn(
 							"hidden px-3 py-2 text-right font-mono text-xs tabular @2xl:table-cell",
-							totalSize(movie.media_files) === "—"
+							totalSize(movie.file_summary) === "—"
 								? "text-fg-faint"
 								: "text-fg-muted",
 						)}
 					>
-						{totalSize(movie.media_files)}
+						{totalSize(movie.file_summary)}
 					</td>
 					<td class="px-3 py-2">
 						<div class="flex items-center justify-end gap-1">
