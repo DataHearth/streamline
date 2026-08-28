@@ -216,6 +216,14 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 		})
 
 		It("returns the error when listing known hashes fails", func() {
+			// Needs an enabled client, or the pass short-circuits before the
+			// query this spec is about.
+			configtest.Setup(map[string]any{
+				"download_clients": []map[string]any{{
+					"name": "embedded", "client_type": "builtin",
+					"download_dir": "/downloads", "enabled": true,
+				}},
+			})
 			store.EXPECT().AllDownloadRecordHashes(mock.Anything).
 				Return(nil, errors.New("db boom")).Once()
 			_, err := mgr.AdoptManualTorrents(ctx)
@@ -237,8 +245,10 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 
 		It("no-ops when no download clients are configured", func() {
 			configtest.Setup()
-			store.EXPECT().AllDownloadRecordHashes(mock.Anything).
-				Return(map[string]struct{}{}, nil).Once()
+			// No EXPECT: with nothing to adopt from, the pass must not even
+			// reach the hash query — a full scan of download_records that the
+			// 30s monitor tick would otherwise pay for an empty loop. The
+			// mock fails the spec on any call, which is the assertion.
 			ids, err := mgr.AdoptManualTorrents(ctx)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(ids).To(BeEmpty())
