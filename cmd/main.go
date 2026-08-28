@@ -198,6 +198,11 @@ func run(ctx context.Context, cmd *cli.Command) error {
 	logger := slog.New(handler)
 	slog.SetDefault(logger)
 
+	if limit := applyMemoryLimit(); limit > 0 {
+		slog.InfoContext(ctx, "derived GOMEMLIMIT from the cgroup memory limit",
+			"gomemlimit_bytes", limit)
+	}
+
 	// 3. Wire application
 	ctx, stop := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
