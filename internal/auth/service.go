@@ -188,6 +188,10 @@ type auth struct {
 	// and can leave SQLite WAL/SHM files dangling.
 	bg sync.WaitGroup
 
+	// touches keeps last_seen_at writes off the per-request path; see
+	// touchDebounce for why minutes of resolution are enough.
+	touches *touchDebounce
+
 	// pendingRotations holds callerID -> pendingRotation for the read-only
 	// two-step rotate. Deliberately in-memory only: an unconfirmed candidate
 	// dying with the process is the correct outcome.
@@ -202,7 +206,7 @@ func New(store db.Store) (Manager, error) {
 	if err != nil {
 		return nil, fmt.Errorf("parse auth.session_ttl: %w", err)
 	}
-	a := &auth{db: store, jwtTTL: ttl}
+	a := &auth{db: store, jwtTTL: ttl, touches: newTouchDebounce()}
 	secret := []byte(
 		config.SecretValue(cfg.Auth.SessionSecret, cfg.Auth.SessionSecretFile),
 	)
@@ -754,9 +758,15 @@ func (s *auth) ValidateAPIKey(
 	}
 
 	// Best-effort: a failed stamp must not reject an otherwise valid key.
-	if err := s.db.TouchAPIKey(ctx, ak.ID, time.Now()); err != nil {
-		slog.WarnContext(ctx, "failed to record API key usage",
-			"api_key.id", ak.ID, "error", err)
+	// Debounced like the session touch — this one is synchronous, on the
+	// request path, so a bulk consumer used to pay a full row rewrite per
+	// request for a column nothing branches on. At one write per
+	// touchInterval it is rare enough not to be worth detaching.
+	if s.touches.allow(fmt.Sprintf("apikey:%d", ak.ID), time.Now()) {
+		if err := s.db.TouchAPIKey(ctx, ak.ID, time.Now()); err != nil {
+			slog.WarnContext(ctx, "failed to record API key usage",
+				"api_key.id", ak.ID, "error", err)
+		}
 	}
 
 	return ak.Edges.Owner, nil

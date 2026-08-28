@@ -126,6 +126,9 @@ func (s *auth) TouchSession(
 // the background. Registered on s.bg so Shutdown can wait for in-flight
 // touches before the caller closes the DB.
 func (s *auth) TouchSessionAsync(jti string) {
+	if !s.touches.allow("session:"+jti, time.Now()) {
+		return
+	}
 	s.bg.Go(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()

@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net"
 	"net/http"
@@ -151,6 +152,10 @@ func authenticateAPI(
 			return
 		}
 		if err := svc.ValidateSession(ctx, claims.JTI); err != nil {
+			if !sessionRejected(err) {
+				rejectUnavailable(ctx, w, err)
+				return
+			}
 			slog.InfoContext(
 				ctx,
 				"api auth rejected",
@@ -181,10 +186,14 @@ func authenticateAPI(
 		if c, err := r.Cookie(auth.SessionCookie); err == nil {
 			claims, err := svc.ValidateToken(c.Value)
 			if err == nil {
-				if err := svc.ValidateSession(ctx, claims.JTI); err == nil {
+				switch err := svc.ValidateSession(ctx, claims.JTI); {
+				case err == nil:
 					svc.TouchSessionAsync(claims.JTI)
 					ctx := auth.ContextWithClaims(ctx, claims)
 					next.ServeHTTP(w, r.WithContext(ctx))
+					return
+				case !sessionRejected(err):
+					rejectUnavailable(ctx, w, err)
 					return
 				}
 			}
@@ -244,6 +253,31 @@ func identityMutationForAPIKey(r *http.Request) bool {
 // *authenticated* caller: anyone holding a valid key can still make requests as
 // fast as the server answers them, which is the same trust the API's RBAC
 // already extends. Metering that too is a per-user quota, not this.
+// sessionRejected reports whether a ValidateSession error is a verdict about
+// the session — missing, revoked, expired — rather than the query having
+// failed. The distinction matters because every authenticated request runs
+// this: read as a verdict, one stretch of write congestion on the single
+// SQLite connection signs every user out and sends them to /login, and the
+// re-login storm lands on the same connection.
+func sessionRejected(err error) bool {
+	return errors.Is(err, auth.ErrSessionNotFound) ||
+		errors.Is(err, auth.ErrSessionRevoked) ||
+		errors.Is(err, auth.ErrSessionExpired)
+}
+
+// rejectUnavailable answers a session lookup that failed for reasons the
+// credential is not responsible for. Not metered: nothing about the request
+// was wrong.
+func rejectUnavailable(
+	ctx context.Context,
+	w http.ResponseWriter,
+	err error,
+) {
+	slog.ErrorContext(ctx, "session lookup failed, refusing to treat it as a "+
+		"rejected credential", "error", err)
+	http.Error(w, "service unavailable", http.StatusServiceUnavailable)
+}
+
 func rejectAPI(
 	limiter auth.Limiter,
 	w http.ResponseWriter,
@@ -283,6 +317,10 @@ func authenticateWeb(
 		return
 	}
 	if err := svc.ValidateSession(r.Context(), claims.JTI); err != nil {
+		if !sessionRejected(err) {
+			rejectUnavailable(r.Context(), w, err)
+			return
+		}
 		redirectToLogin(w, r)
 		return
 	}

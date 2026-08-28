@@ -176,6 +176,44 @@ var _ = g.Describe("authenticateAPI", g.Label("unit"), func() {
 
 			Expect(rr.Code).To(Equal(http.StatusUnauthorized))
 		})
+
+		g.It("answers 503 when the session lookup itself failed", func() {
+			// A DB failure is not a verdict about the credential. Answering
+			// 401 here signs every user out for the duration of the outage
+			// and the re-login storm lands on the same database.
+			svc.EXPECT().ValidateToken(sessionToken).Return(claims, nil).Once()
+			svc.EXPECT().
+				ValidateSession(mock.Anything, jti).
+				Return(errors.New("query session: database is locked")).
+				Once()
+
+			req := httptest.NewRequest(http.MethodGet, "/api/v1/movies", nil)
+			req.AddCookie(
+				&http.Cookie{Name: auth.SessionCookie, Value: sessionToken},
+			)
+			req.Header.Set("Sec-Fetch-Site", "same-origin")
+			rr := httptest.NewRecorder()
+
+			authenticateAPI(svc, nil, next, rr, req)
+
+			Expect(rr.Code).To(Equal(http.StatusServiceUnavailable))
+		})
+
+		g.It("answers 503 on a bearer token whose session lookup failed", func() {
+			svc.EXPECT().ValidateToken(bearerToken).Return(claims, nil).Once()
+			svc.EXPECT().
+				ValidateSession(mock.Anything, jti).
+				Return(errors.New("query session: database is locked")).
+				Once()
+
+			req := httptest.NewRequest(http.MethodGet, "/api/v1/movies", nil)
+			req.Header.Set("Authorization", "Bearer "+bearerToken)
+			rr := httptest.NewRecorder()
+
+			authenticateAPI(svc, nil, next, rr, req)
+
+			Expect(rr.Code).To(Equal(http.StatusServiceUnavailable))
+		})
 	})
 
 	g.Context("existing auth transports stay intact", func() {
