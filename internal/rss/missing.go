@@ -117,6 +117,21 @@ func currentSearchWindow() (searchWindow, error) {
 	}, nil
 }
 
+// transportFailure reports whether err is the indexer or the download client
+// being unreachable, rather than anything about the release.
+//
+// grab_failures is a strike count against a *release choice*, and nothing
+// resets it but a successful grab — so counting a timeout retires the item
+// permanently after max_grab_failures (3 by default) unlucky ticks. That is
+// what a flaky Prowlarr did to a homelab library: episodes with clean,
+// accepted releases stopped being searched at all, since the eligibility
+// query gates on the same counter, leaving no symptom beyond a row that sits
+// "wanted" forever.
+func transportFailure(err error) bool {
+	return errors.Is(err, download.ErrUnreachable) ||
+		errors.Is(err, indexer.ErrUnreachable)
+}
+
 // unthrottledWindow waives both throttles for user-triggered searches: a cap
 // no counter reaches and a cutoff every past search predates.
 func unthrottledWindow() searchWindow {
@@ -305,12 +320,14 @@ func (s *MissingSearcher) SearchOne(ctx context.Context, m *ent.Movie) error {
 		}
 		movieOutcome = "grab_failed"
 		span.SetAttributes(attribute.String("outcome", "grab_failed"))
-		if e := s.db.IncrementMovieGrabFailures(ctx, m.ID); e != nil {
-			slog.WarnContext(ctx,
-				"missing-search: failed to bump grab_failures",
-				"movie", m.Title,
-				"error", e,
-			)
+		if !transportFailure(err) {
+			if e := s.db.IncrementMovieGrabFailures(ctx, m.ID); e != nil {
+				slog.WarnContext(ctx,
+					"missing-search: failed to bump grab_failures",
+					"movie", m.Title,
+					"error", e,
+				)
+			}
 		}
 		return otelx.RecordSpanError(span, fmt.Errorf("grab %q: %w", m.Title, err))
 	}

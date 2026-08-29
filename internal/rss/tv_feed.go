@@ -385,11 +385,19 @@ func (s *TVFeedScanner) grabUpgrade(
 	if err != nil {
 		slog.WarnContext(ctx, "tv feed-scan: upgrade grab failed",
 			"show", us.show.Title, "release", item.Title, "error", err)
-		if ierr := s.store.IncrementEpisodeGrabFailures(
-			ctx, selected[0].ID,
-		); ierr != nil {
-			slog.WarnContext(ctx, "tv feed-scan: bump episode grab_failures failed",
-				"episode.id", selected[0].ID, "error", ierr)
+		if !transportFailure(err) {
+			if ierr := s.store.IncrementEpisodeGrabFailures(
+				ctx, selected[0].ID,
+			); ierr != nil {
+				slog.WarnContext(
+					ctx,
+					"tv feed-scan: bump episode grab_failures failed",
+					"episode.id",
+					selected[0].ID,
+					"error",
+					ierr,
+				)
+			}
 		}
 		return 0
 	}
@@ -431,9 +439,17 @@ func (s *TVFeedScanner) grabOne(
 		slog.WarnContext(ctx, "tv feed-scan: episode grab failed",
 			"show", show.Title, "episode.id", e.ID,
 			"release", item.Title, "error", err)
-		if ierr := s.store.IncrementEpisodeGrabFailures(ctx, e.ID); ierr != nil {
-			slog.WarnContext(ctx, "tv feed-scan: bump episode grab_failures failed",
-				"episode.id", e.ID, "error", ierr)
+		if !transportFailure(err) {
+			if ierr := s.store.IncrementEpisodeGrabFailures(ctx, e.ID); ierr != nil {
+				slog.WarnContext(
+					ctx,
+					"tv feed-scan: bump episode grab_failures failed",
+					"episode.id",
+					e.ID,
+					"error",
+					ierr,
+				)
+			}
 		}
 		return false
 	}

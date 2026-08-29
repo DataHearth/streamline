@@ -144,12 +144,14 @@ func (s *FeedScanner) processItems(
 			if _, err := s.grabber.Grab(ctx, item, m.ID); err != nil {
 				slog.WarnContext(ctx, "feed-scan: grab failed",
 					"movie", m.Title, "error", err)
-				if bumpErr := s.store.IncrementMovieGrabFailures(
-					ctx,
-					m.ID,
-				); bumpErr != nil {
-					slog.WarnContext(ctx, "feed-scan: bump grab_failures failed",
-						"movie", m.Title, "error", bumpErr)
+				if !transportFailure(err) {
+					if bumpErr := s.store.IncrementMovieGrabFailures(
+						ctx,
+						m.ID,
+					); bumpErr != nil {
+						slog.WarnContext(ctx, "feed-scan: bump grab_failures failed",
+							"movie", m.Title, "error", bumpErr)
+					}
 				}
 				continue
 			}
@@ -213,9 +215,14 @@ func (s *FeedScanner) tryUpgrade(
 	if err != nil {
 		slog.WarnContext(ctx, "feed-scan: upgrade grab failed",
 			"movie", m.Title, "release", item.Title, "error", err)
-		if bumpErr := s.store.IncrementMovieGrabFailures(ctx, m.ID); bumpErr != nil {
-			slog.WarnContext(ctx, "feed-scan: bump grab_failures failed",
-				"movie", m.Title, "error", bumpErr)
+		if !transportFailure(err) {
+			if bumpErr := s.store.IncrementMovieGrabFailures(
+				ctx,
+				m.ID,
+			); bumpErr != nil {
+				slog.WarnContext(ctx, "feed-scan: bump grab_failures failed",
+					"movie", m.Title, "error", bumpErr)
+			}
 		}
 		return false
 	}

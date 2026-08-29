@@ -55,7 +55,9 @@ Loosen the profile, or grab the release manually — a manual grab bypasses the 
 
 **5. Has it been long enough?** RSS sync runs every 15 minutes; missing search every 12 hours. A title that failed to match once is also on a `library.no_match_cooldown` (6h default) before it's searched again. Force it with **Search now** on the title, or run the job from Settings → Schedules.
 
-**6. Is it marked Failed?** After `library.max_grab_failures` (default 3) consecutive failures Streamline stops trying. **Search now** resets it.
+**6. Is it marked Failed?** After `library.max_grab_failures` (default 3) consecutive failures Streamline stops trying. **Search now** resets it. Episodes report the running count as `grab_failures` (absent when zero) on the series detail response, which is the only warning before an episode goes quiet — a retired episode is skipped by the search entirely, so it produces no log line and no activity entry.
+
+Failures that were never about the release do **not** count: an unreachable indexer or download client (a Prowlarr timeout, most often) is retried on the next pass with the counter untouched. If that were counted, three slow ticks would retire an episode that had a perfectly good release waiting.
 
 ---
 

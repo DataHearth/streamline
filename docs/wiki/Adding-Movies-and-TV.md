@@ -63,7 +63,7 @@ Once added, the show page shows every season and episode, what's on disk, what's
 
 **Episodes** have a fifth, **Paused**, for episodes deliberately held back, and **Skipped** for ones you've told Streamline to ignore.
 
-A film goes **Failed** after `library.max_grab_failures` (default 3) consecutive failed grab attempts. This is a circuit breaker, not a permanent verdict — it stops Streamline hammering a tracker for something that isn't working. Open the film and hit **Search now** to try again.
+A film goes **Failed** after `library.max_grab_failures` (default 3) consecutive failed grab attempts. This is a circuit breaker, not a permanent verdict — it stops Streamline hammering a tracker for something that isn't working. Open the film and hit **Search now** to try again. A timeout reaching your indexer or download client doesn't count toward it: that says nothing about the release, so it is retried on the next pass instead of spending a strike.
 
 Separately, when a search finds *nothing acceptable*, that title goes quiet for `library.no_match_cooldown` (default 6 hours) before being searched again. That's why a just-added obscure film may sit at Wanted for a while without visible activity.
 

@@ -401,10 +401,15 @@ func (s *EpisodeMissingSearcher) grabEpisode(
 			slog.WarnContext(ctx, "tv missing-search: episode grab failed",
 				"show", show.Title, "season", se.Number, "episode", e.Number,
 				"release", r.Title, "error", err)
-			if ierr := s.store.IncrementEpisodeGrabFailures(ctx, e.ID); ierr != nil {
-				slog.WarnContext(ctx,
-					"tv missing-search: bump episode grab_failures failed",
-					"episode.id", e.ID, "error", ierr)
+			if !transportFailure(err) {
+				if ierr := s.store.IncrementEpisodeGrabFailures(
+					ctx,
+					e.ID,
+				); ierr != nil {
+					slog.WarnContext(ctx,
+						"tv missing-search: bump episode grab_failures failed",
+						"episode.id", e.ID, "error", ierr)
+				}
 			}
 			continue
 		}

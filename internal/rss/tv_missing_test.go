@@ -187,6 +187,34 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 		})
 	})
 
+	When("the single-episode grab fails because the client is unreachable", func() {
+		// A timeout says nothing about the release. Counted, three unlucky
+		// ticks reach max_grab_failures and the eligibility query then stops
+		// returning the episode at all — it goes quiet with a clean, accepted
+		// release still on offer.
+		It("leaves grab_failures alone", func() {
+			ep1 := &ent.Episode{ID: 11, Number: 1}
+			expectEligible([]*ent.TVShow{showWith(ep1)}, nil)
+
+			indexerM.EXPECT().
+				SearchEpisode(mock.Anything, []string{"The Black Sea", "Karadeniz"}, uint32(9001), uint16(3), uint16(1)).
+				Return([]indexer.SearchResult{{Title: acceptableEp, Seeders: 10}}, 0, nil).
+				Once()
+			dlM.EXPECT().
+				GrabEpisode(mock.Anything, mock.AnythingOfType("indexer.SearchResult"),
+					uint32(11), []uint32{11}).
+				Return(nil, fmt.Errorf("fetch torrent: %w: timeout", download.ErrUnreachable)).
+				Once()
+			// IncrementEpisodeGrabFailures carries no expectation: the mock
+			// fails the spec if the guard lets the call through.
+			store.EXPECT().
+				SetEpisodeLastSearchAt(mock.Anything, uint32(11), mock.AnythingOfType("time.Time")).
+				Return(nil).Once()
+
+			Expect(searcher.Run(ctx)).To(Succeed())
+		})
+	})
+
 	When("the only release fails the quality bar", func() {
 		It("grabs nothing and only stamps last_search_at", func() {
 			ep1 := &ent.Episode{ID: 11, Number: 1}
