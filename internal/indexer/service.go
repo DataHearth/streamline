@@ -151,8 +151,34 @@ func dedupTitles(in []string) []string {
 	return out
 }
 
+// dedupResults collapses the same release appearing more than once in a merged
+// result set, preserving first-seen order.
+//
+// The key is not the download URL: a series is queried once per title (local +
+// original) and Prowlarr answered the two queries with the same releases under
+// different proxy links, so every release showed up twice in the manual-search
+// modal. Title+indexer+size is the release identity; the indexer stays in the
+// key so the same release on two trackers keeps both rows, which carry their
+// own seeder counts.
+func dedupResults(in []SearchResult) []SearchResult {
+	if len(in) < 2 {
+		return in
+	}
+	seen := make(map[string]struct{}, len(in))
+	out := in[:0]
+	for _, r := range in {
+		key := fmt.Sprintf("%s|%s|%d", r.Title, r.Indexer, r.Size)
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		out = append(out, r)
+	}
+	return out
+}
+
 // SearchMovie queries all enabled indexers for a movie against each
-// (deduped) title and returns results merged, deduped by Download URL,
+// (deduped) title and returns results merged, deduped by release identity,
 // and sorted by seeders descending. Per-indexer queries run sequentially
 // across titles to respect indexer rate limits; indexers themselves are
 // fanned out in parallel.
@@ -390,7 +416,7 @@ func filterToEpisode(
 }
 
 // searchAll fans out one query per (indexer, title) across every enabled
-// indexer, merging results deduped by Download URL and sorted by seeders
+// indexer, merging results deduped by release identity and sorted by seeders
 // descending. base carries the id/season/episode params shared by every
 // query; Query is filled per title. Per-indexer errors are logged, never
 // returned. When a query keyed by a database id (tmdbid/tvdbid) comes back
@@ -493,18 +519,7 @@ func (i *indexer) searchAll(
 
 	wg.Wait()
 
-	if len(results) > 1 {
-		seen := make(map[string]struct{}, len(results))
-		out := results[:0]
-		for _, r := range results {
-			if _, ok := seen[r.Download]; ok {
-				continue
-			}
-			seen[r.Download] = struct{}{}
-			out = append(out, r)
-		}
-		results = out
-	}
+	results = dedupResults(results)
 
 	sort.Slice(results, func(i, j int) bool {
 		return results[i].Seeders > results[j].Seeders

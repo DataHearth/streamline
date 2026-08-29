@@ -130,6 +130,40 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 		})
 	})
 
+	Describe("dedupResults", func() {
+		rel := func(idx, dl string) SearchResult {
+			return SearchResult{
+				Title:    "Slime.S04E07.1080p-GRP",
+				Indexer:  idx,
+				Download: dl,
+				Size:     1_400_000_000,
+			}
+		}
+
+		It("collapses one release answered under two proxy links", func() {
+			out := dedupResults([]SearchResult{
+				rel("C411", "http://p/1?q=local"),
+				rel("C411", "http://p/1?q=original"),
+			})
+			Expect(out).To(HaveLen(1))
+			Expect(out[0].Download).To(Equal("http://p/1?q=local"))
+		})
+
+		It("keeps the same release on a different tracker", func() {
+			Expect(dedupResults([]SearchResult{
+				rel("C411", "http://p/1"),
+				rel("TR4KER", "http://p/2"),
+			})).To(HaveLen(2))
+		})
+
+		It("keeps a same-named release of a different size", func() {
+			a := rel("C411", "http://p/1")
+			b := a
+			b.Size = 426_000_000
+			Expect(dedupResults([]SearchResult{a, b})).To(HaveLen(2))
+		})
+	})
+
 	Describe("Feed", func() {
 		When("the named indexer is not configured", func() {
 			It("returns ErrIndexerNotFound", func() {
