@@ -54,10 +54,13 @@
 	let speed = $derived(sumSpeed(queue));
 	let speedText = $derived(formatSpeed(speed));
 
-	// Movies *and* episodes: the tile read `counts.downloading` alone, which is
-	// movies-only, so a series-only queue showed "0" beside a live speed.
+	// Counted off the same queue the speed and the Live queue panel below read,
+	// not off `counts.downloading` + `downloading_episodes`: those are media-row
+	// statuses, which drift from the records actually in flight (a replace grab
+	// leaves its episode `available`), so the tile read 1 beside a two-item
+	// queue. One record is one download here — a season pack counts once.
 	let downloading = $derived(
-		(counts?.downloading ?? 0) + (seriesCounts?.downloading_episodes ?? 0),
+		queue.filter((q) => q.status === "downloading").length,
 	);
 
 	let probed = $derived(disks.filter((d) => d.usage));
