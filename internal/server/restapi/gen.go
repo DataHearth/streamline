@@ -2583,6 +2583,12 @@ type Episode struct {
 	// FileScore Total matched-format score of this episode's file, computed at response time against the series' quality profile. Series detail only — the list response carries no episodes at all. A file whose resolution falls outside the profile's band scores 0, the same number the upgrade decision works from. Absent when no quality profile is configured at all, or when the episode has no file.
 	FileScore *int `json:"file_score,omitempty"`
 
+	// GrabFailures Consecutive failed grabs for this episode. Omitted when zero. At
+	// `library.max_grab_failures` the episode stops being searched
+	// entirely, so a non-zero value is the only warning an operator
+	// gets before it goes quiet. Reset by any successful grab.
+	GrabFailures *uint8 `json:"grab_failures,omitempty"`
+
 	// HasFile Whether a media file is linked to this episode. Equivalent to a
 	// non-empty `path`, stated explicitly so clients do not have to infer
 	// presence from `path` or `status`.

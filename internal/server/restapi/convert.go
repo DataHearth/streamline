@@ -931,6 +931,11 @@ func episodeToAPI(e *ent.Episode, now time.Time, profile string) Episode {
 	if e.AbsoluteNumber > 0 {
 		out.AbsoluteNumber = &e.AbsoluteNumber
 	}
+	// Absent means zero: the counter only matters as it climbs toward
+	// library.max_grab_failures, past which nothing searches this episode again.
+	if e.GrabFailures > 0 {
+		out.GrabFailures = &e.GrabFailures
+	}
 	if e.Title != "" {
 		out.Title = &e.Title
 	}

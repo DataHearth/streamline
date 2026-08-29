@@ -233,5 +233,22 @@ var _ = Describe("convert", Label("unit", "server"), func() {
 			e := &ent.Episode{ID: 1, Number: 1, Status: "wanted", Monitored: true}
 			Expect(episodeToAPI(e, time.Now(), "").MediaInfo).To(BeNil())
 		})
+
+		It("reports grab_failures, omitting it at zero", func() {
+			clean := &ent.Episode{
+				ID:        1,
+				Number:    1,
+				Status:    "wanted",
+				Monitored: true,
+			}
+			Expect(episodeToAPI(clean, time.Now(), "").GrabFailures).To(BeNil())
+
+			failing := &ent.Episode{
+				ID: 1, Number: 1, Status: "wanted", Monitored: true, GrabFailures: 2,
+			}
+			out := episodeToAPI(failing, time.Now(), "")
+			Expect(out.GrabFailures).NotTo(BeNil())
+			Expect(*out.GrabFailures).To(Equal(uint8(2)))
+		})
 	})
 })

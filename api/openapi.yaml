@@ -5206,6 +5206,14 @@ components:
         path:
           type: string
           description: On-disk path of the episode's media file, when imported.
+        grab_failures:
+          type: integer
+          x-go-type: uint8
+          description: |
+            Consecutive failed grabs for this episode. Omitted when zero. At
+            `library.max_grab_failures` the episode stops being searched
+            entirely, so a non-zero value is the only warning an operator
+            gets before it goes quiet. Reset by any successful grab.
         release_group:
           type: string
           description: Release group recorded on the episode's media file.
