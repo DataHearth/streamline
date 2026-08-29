@@ -48,7 +48,7 @@
 		<label
 			title={o.label}
 			class={cn(
-				"grid h-9 w-9 place-items-center rounded-md border border-border bg-bg-card text-fg-muted transition hover:border-border-strong has-[:checked]:border-accent has-[:checked]:bg-accent-soft has-[:checked]:text-fg has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent",
+				"grid h-11 w-11 lg:h-9 lg:w-9 place-items-center rounded-md border border-border bg-bg-card text-fg-muted transition hover:border-border-strong has-[:checked]:border-accent has-[:checked]:bg-accent-soft has-[:checked]:text-fg has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent",
 				allLocked ? "cursor-not-allowed" : "cursor-pointer",
 				disabled && "opacity-40",
 			)}

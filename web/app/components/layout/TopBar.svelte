@@ -304,7 +304,7 @@
 					{#if c.href}
 						<a
 							href={c.href}
-							class="transition hover:text-fg"
+							class="touch-hit transition hover:text-fg"
 						>
 							{c.label}
 						</a>

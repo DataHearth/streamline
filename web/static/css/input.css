@@ -672,3 +672,94 @@ input[type="checkbox"]:not(.native):disabled {
 		}
 	}
 }
+
+/* ------------------------------------------------------------------ */
+/* Touch tap targets.                                                  */
+/* Below lg the pointer is a thumb, and several controls are drawn at  */
+/* desktop density on purpose: a 28px icon button over a poster, an    */
+/* inline text link inside a heading. `.touch-hit` grows the control's */
+/* OWN box by 15px top and bottom below lg, which clears 44px for      */
+/* anything with a line of text in it.                                 */
+/*                                                                     */
+/* Padding on the element, never an overlaid pseudo-element. A pseudo  */
+/* band is clipped by any ancestor that scrolls or hides overflow —    */
+/* and a one-axis scroller computes the other axis to `auto`, so chips */
+/* in the drag-scroll rows kept a 32px target while measuring as       */
+/* fixed. Padding is part of the element, so it is hit-tested as the   */
+/* element.                                                            */
+/*                                                                     */
+/* The doubled class outranks the Tailwind padding utility the same    */
+/* element usually carries (`py-1`, `px-3`); equal specificity would   */
+/* hand that contest to whichever sheet loaded last. Vertical only —   */
+/* horizontal padding would shift a glyph off the edge it is aligned   */
+/* to. A control that is too NARROW, or one anchored into a corner     */
+/* where padding would move the ink, gets real ink at a breakpoint     */
+/* instead (`h-10 w-10 lg:h-7 lg:w-7`).                                */
+/*                                                                     */
+/* NEVER put this on a control that also carries a fixed sub-44px      */
+/* `h-*`: `box-sizing: border-box` means the used height stays that    */
+/* value, the content box collapses and the label overflows it. Use    */
+/* `min-h-11 lg:h-8 lg:min-h-0` there.                                 */
+/* `grep 'touch-hit[^"]*\bh-[0-9]'` over the components should return  */
+/* nothing — every hit is a silent no-op.                              */
+/* ------------------------------------------------------------------ */
+@media (max-width: 1023px) {
+	.touch-hit.touch-hit {
+		padding-top: 15px;
+		padding-bottom: 15px;
+	}
+}
+
+/* ------------------------------------------------------------------ */
+/* Small-control floor below lg.                                       */
+/* The responsive audit's warn families were all one thing: primitives */
+/* drawn at desktop density (h-8 discs, h-9 fields and toolbar         */
+/* buttons, h-[30px] view switches, px-3.5/py-2 primary buttons,       */
+/* py-1.5 filter tabs) reaching a thumb 6-14px short of 44. Rather     */
+/* than 200 per-call-site breakpoints, the floor is stated once here   */
+/* and keyed on the utility the primitive already carries, so the      */
+/* desktop drawing is untouched and only the reachable box below lg    */
+/* changes. Square icon buttons get the same floor on the cross axis.  */
+/*                                                                     */
+/* `h-10` is deliberately absent: the 40px ceiling group was grown to  */
+/* 40 on purpose, and an invisible 44 there overlaps its neighbour.    */
+/* ------------------------------------------------------------------ */
+@media (max-width: 1023px) {
+	button[class~="h-8"],
+	button[class~="h-9"],
+	button[class~="h-[30px]"],
+	button[class~="py-2"],
+	button[class~="py-2.5"],
+	button[class~="py-1.5"],
+	a[class~="h-8"],
+	a[class~="h-9"],
+	a[class~="py-2"],
+	a[class~="py-2.5"],
+	a[class~="py-1.5"],
+	input[class~="h-8"],
+	input[class~="h-9"],
+	input[class~="py-2"],
+	input[class~="py-2.5"],
+	select[class~="h-8"],
+	select[class~="h-9"],
+	select[class~="py-2"],
+	select[class~="py-2.5"],
+	summary[class~="py-2"] {
+		min-height: 44px;
+	}
+
+	button[class~="h-8"][class~="w-8"],
+	button[class~="h-9"][class~="w-9"],
+	button[class~="h-[30px]"][class~="w-[30px]"] {
+		min-width: 44px;
+	}
+
+	/* Type floor. The 9-10px font-mono labels read as noise on a phone and
+	   sat under the 10.5px legibility line; the half-pixel lift costs no
+	   layout. */
+	[class~="text-[9px]"],
+	[class~="text-[9.5px]"],
+	[class~="text-[10px]"] {
+		font-size: 10.5px;
+	}
+}

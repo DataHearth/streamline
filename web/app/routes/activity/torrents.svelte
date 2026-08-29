@@ -311,14 +311,14 @@
 						type="button"
 						disabled={setPort.isPending}
 						onclick={submitPort}
-						class="inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+						class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
 					>
 						{setPort.isPending ? i18n.common_applying() : i18n.torrent_port_apply()}
 					</button>
 					<button
 						type="button"
 						onclick={() => (portOpen = false)}
-						class="inline-flex h-9 items-center rounded-md border border-border px-3 text-sm text-fg-muted transition hover:text-fg"
+						class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center rounded-md border border-border px-3 text-sm text-fg-muted transition hover:text-fg"
 					>
 						{i18n.common_cancel()}
 					</button>
@@ -327,7 +327,7 @@
 						type="button"
 						onclick={() => (portOpen = true)}
 						title={i18n.torrent_port_help()}
-						class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border px-3 text-sm font-medium text-fg-muted transition hover:bg-surface hover:text-fg"
+						class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md border border-border px-3 text-sm font-medium text-fg-muted transition hover:bg-surface hover:text-fg"
 					>
 						<Network size={14} aria-hidden="true" />
 						{i18n.torrent_port_move()}
@@ -357,7 +357,7 @@
 			{#if auth.isAdmin}
 				<a
 					href="/settings/download-clients"
-					class="inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-3.5 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover"
+					class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md bg-accent px-3.5 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover"
 				>
 					{i18n.torrent_enable_in_settings()}
 					<ArrowUpRight size={15} aria-hidden="true" />

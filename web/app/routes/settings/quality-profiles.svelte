@@ -234,7 +234,7 @@
 							<button
 								type="button"
 								onclick={() => openEdit(p)}
-								class="rounded-md p-1.5 text-fg-muted transition hover:bg-surface hover:text-fg"
+								class="rounded-md p-3 text-fg-muted lg:p-1.5 transition hover:bg-surface hover:text-fg"
 								aria-label={i18n.quality_view_short()}
 							>
 								<Eye size={16} aria-hidden="true" />
@@ -245,7 +245,7 @@
 									type="button"
 									disabled={makeDefault.isPending}
 									onclick={() => makeDefault.mutate(p.name)}
-									class="rounded-md p-1.5 text-fg-muted transition hover:bg-surface hover:text-accent disabled:cursor-not-allowed disabled:opacity-60"
+									class="rounded-md p-3 text-fg-muted lg:p-1.5 transition hover:bg-surface hover:text-accent disabled:cursor-not-allowed disabled:opacity-60"
 									aria-label={i18n.quality_make_default()}
 									title={i18n.quality_make_default()}
 								>
@@ -255,7 +255,7 @@
 							<button
 								type="button"
 								onclick={() => openEdit(p)}
-								class="rounded-md p-1.5 text-fg-muted transition hover:bg-surface hover:text-fg"
+								class="rounded-md p-3 text-fg-muted lg:p-1.5 transition hover:bg-surface hover:text-fg"
 								aria-label={i18n.quality_edit_short()}
 							>
 								<Pencil size={16} aria-hidden="true" />
@@ -265,7 +265,7 @@
 								disabled={p.is_default}
 								title={p.is_default ? i18n.quality_default_undeletable() : null}
 								onclick={() => onDelete(p)}
-								class="rounded-md p-1.5 text-fg-muted transition hover:bg-status-failed/10 hover:text-status-failed"
+								class="rounded-md p-3 text-fg-muted lg:p-1.5 transition hover:bg-status-failed/10 hover:text-status-failed"
 								aria-label={i18n.quality_delete()}
 							>
 								<Trash2 size={16} aria-hidden="true" />

@@ -31,7 +31,7 @@
 		type="button"
 		onclick={onClear}
 		aria-label={i18n.bulk_exit_selection()}
-		class="grid h-9 w-9 shrink-0 place-items-center rounded-full text-accent-text transition active:bg-white/[0.06]"
+		class="grid h-11 w-11 lg:h-9 lg:w-9 shrink-0 place-items-center rounded-full text-accent-text transition active:bg-white/[0.06]"
 	>
 		<X size={18} aria-hidden="true" />
 	</button>

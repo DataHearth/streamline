@@ -159,7 +159,7 @@
 									type="button"
 									onclick={() => toggleSort(key, h.numeric ?? false)}
 									class={cn(
-										"-mx-1 inline-flex items-center gap-1 whitespace-nowrap rounded px-1 py-0.5 uppercase tracking-[0.12em] transition hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring",
+										"touch-hit -mx-1 inline-flex min-w-11 justify-center items-center gap-1 whitespace-nowrap rounded px-1 py-0.5 uppercase tracking-[0.12em] transition hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring",
 										sort === h.key && "text-accent-text",
 									)}
 								>

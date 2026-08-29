@@ -162,7 +162,7 @@
 					<button
 						type="button"
 						onclick={() => applyPreset(p)}
-						class="inline-flex h-9 items-center rounded-full border border-border bg-bg-elevated px-3.5 text-sm font-medium text-fg transition hover:border-border-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
+						class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center rounded-full border border-border bg-bg-elevated px-3.5 text-sm font-medium text-fg transition hover:border-border-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
 					>
 						{p.label}
 					</button>
@@ -280,7 +280,7 @@
 								...rows,
 								{ name: options[0]?.value ?? "", score: 0 },
 							])}
-						class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-3 text-sm font-medium text-fg transition hover:border-border-strong disabled:cursor-not-allowed disabled:opacity-60"
+						class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-3 text-sm font-medium text-fg transition hover:border-border-strong disabled:cursor-not-allowed disabled:opacity-60"
 					>
 						<Plus size={15} aria-hidden="true" />
 						{i18n.quality_add_format()}
@@ -327,7 +327,7 @@
 									disabled={locked}
 									onclick={() =>
 										field.handleChange(rows.filter((_, k) => k !== i))}
-									class="grid h-9 w-9 shrink-0 place-items-center rounded-md text-fg-muted transition hover:bg-status-failed/10 hover:text-status-failed disabled:cursor-not-allowed disabled:opacity-40"
+									class="grid h-11 w-11 lg:h-9 lg:w-9 shrink-0 place-items-center rounded-md text-fg-muted transition hover:bg-status-failed/10 hover:text-status-failed disabled:cursor-not-allowed disabled:opacity-40"
 									aria-label={i18n.quality_remove_format()}
 								>
 									<Trash2 size={16} aria-hidden="true" />

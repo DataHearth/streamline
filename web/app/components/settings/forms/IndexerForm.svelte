@@ -108,7 +108,7 @@
 		disabled={lock()}
 		onclick={() => applyPreset(p)}
 		class={cn(
-			"inline-flex h-9 cursor-pointer items-center gap-2 rounded-md border border-border bg-bg-card px-2.5 text-xs font-medium text-fg-muted transition hover:border-border-strong hover:text-fg disabled:cursor-not-allowed disabled:opacity-60",
+			"inline-flex min-h-11 lg:h-9 lg:min-h-0 cursor-pointer items-center gap-2 rounded-md border border-border bg-bg-card px-2.5 text-xs font-medium text-fg-muted transition hover:border-border-strong hover:text-fg disabled:cursor-not-allowed disabled:opacity-60",
 			aggregator && "border-accent/30",
 		)}
 	>

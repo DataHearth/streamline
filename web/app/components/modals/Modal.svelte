@@ -121,7 +121,7 @@
 						type="button"
 						onclick={onClose}
 						aria-label={i18n.common_close()}
-						class="grid h-8 w-8 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg"
+						class="grid h-11 w-11 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg lg:h-8 lg:w-8"
 					>
 						<X size={16} aria-hidden="true" />
 					</button>

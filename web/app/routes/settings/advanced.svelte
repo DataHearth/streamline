@@ -341,7 +341,7 @@
 				type="button"
 				disabled={!ready || runPreview.isPending}
 				onclick={() => runPreview.mutate()}
-				class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border-strong bg-bg px-3 text-sm font-medium text-fg transition hover:bg-surface disabled:cursor-not-allowed disabled:opacity-60"
+				class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md border border-border-strong bg-bg px-3 text-sm font-medium text-fg transition hover:bg-surface disabled:cursor-not-allowed disabled:opacity-60"
 			>
 				{runPreview.isPending ? i18n.common_checking() : i18n.common_preview()}
 			</button>
@@ -349,7 +349,7 @@
 				type="button"
 				disabled={!preview || preview.total === 0 || live}
 				onclick={() => (confirmOpen = true)}
-				class="inline-flex h-9 items-center gap-1.5 rounded-md bg-status-failed px-3 text-sm font-medium text-bg-deep transition hover:bg-status-failed/90 disabled:cursor-not-allowed disabled:opacity-60"
+				class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md bg-status-failed px-3 text-sm font-medium text-bg-deep transition hover:bg-status-failed/90 disabled:cursor-not-allowed disabled:opacity-60"
 			>
 				{i18n.migration_run()}
 			</button>

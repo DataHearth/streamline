@@ -275,7 +275,7 @@
 						onClose();
 						if (ep) onDeleteFile(ep);
 					}}
-					class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-3.5 text-sm font-medium text-fg-muted transition hover:border-status-failed/40 hover:bg-status-failed/10 hover:text-status-failed"
+					class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-3.5 text-sm font-medium text-fg-muted transition hover:border-status-failed/40 hover:bg-status-failed/10 hover:text-status-failed"
 				>
 					<Trash2 size={15} aria-hidden="true" />
 					{i18n.action_delete_file()}
@@ -289,7 +289,7 @@
 						onClose();
 						if (ep) onManualSearch(ep);
 					}}
-					class="inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-3.5 text-sm font-medium text-fg-on-accent transition hover:bg-accent-hover"
+					class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md bg-accent px-3.5 text-sm font-medium text-fg-on-accent transition hover:bg-accent-hover"
 				>
 					<Search size={15} aria-hidden="true" />
 					{i18n.action_manual_search()}

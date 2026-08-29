@@ -198,7 +198,7 @@
 			</div>
 			<a
 				href="/settings/advanced"
-				class="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-accent hover:underline"
+				class="touch-hit mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-accent hover:underline"
 			>
 				<FolderInput size={13} aria-hidden="true" />
 				{i18n.library_move_a_root()}

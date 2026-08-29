@@ -141,7 +141,7 @@
 		<button
 			type="button"
 			onclick={onClose}
-			class="inline-flex h-9 items-center rounded-md border border-border px-3 text-sm text-fg-muted hover:text-fg"
+			class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center rounded-md border border-border px-3 text-sm text-fg-muted hover:text-fg"
 		>
 			{i18n.common_cancel()}
 		</button>
@@ -149,7 +149,7 @@
 			type="button"
 			onclick={submit}
 			disabled={!canSubmit}
-			class="inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-4 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+			class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md bg-accent px-4 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
 		>
 			{busy ? i18n.action_adding() : i18n.action_add_torrent()}
 		</button>

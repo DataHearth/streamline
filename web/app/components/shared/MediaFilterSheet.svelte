@@ -20,7 +20,7 @@
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	// Everything the library toolbars can no longer afford to keep on screen at
-	// phone width: the filter query, sort, monitored, view and the way into
+	// phone width: the filter query, sort, view and the way into
 	// selection. One sheet, one trip.
 	let {
 		open,
@@ -69,7 +69,7 @@
 	});
 
 	const chip =
-		"inline-flex h-9 shrink-0 items-center gap-2 rounded-full border px-3.5 text-[13px] font-medium transition";
+		"inline-flex h-11 shrink-0 items-center gap-2 rounded-full border px-3.5 text-[13px] font-medium transition";
 	const chipOff =
 		"border-border bg-surface text-fg-muted active:bg-surface-2";
 	const chipOn = "border-accent-line bg-accent-soft text-accent-text";
@@ -109,7 +109,7 @@
 					type="button"
 					onclick={onClose}
 					aria-label={i18n.common_close()}
-					class="grid h-9 w-9 place-items-center rounded-full bg-surface text-fg-subtle transition active:bg-bg-hover"
+					class="grid h-11 w-11 place-items-center rounded-full bg-surface text-fg-subtle transition active:bg-bg-hover"
 				>
 					<X size={16} aria-hidden="true" />
 				</button>

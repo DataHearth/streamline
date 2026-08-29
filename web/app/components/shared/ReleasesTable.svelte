@@ -417,7 +417,7 @@
 							type="button"
 							onclick={() => onGrab(r)}
 							disabled={pending || grab.isPending}
-							class="ml-auto inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md bg-accent px-3 text-[12px] font-semibold text-fg-on-accent transition active:bg-accent-pressed disabled:cursor-not-allowed disabled:opacity-60"
+							class="ml-auto inline-flex min-h-11 lg:h-9 lg:min-h-0 shrink-0 items-center gap-1.5 rounded-md bg-accent px-3 text-[12px] font-semibold text-fg-on-accent transition active:bg-accent-pressed disabled:cursor-not-allowed disabled:opacity-60"
 						>
 							{#if pending}
 								<LoaderCircle size={13} class="animate-spin" aria-hidden="true" />
@@ -452,7 +452,7 @@
 							<button
 								type="button"
 								onclick={() => toggle("title")}
-								class="inline-flex items-center gap-1 uppercase tracking-[0.12em] transition hover:text-fg"
+								class="touch-hit inline-flex min-w-11 items-center justify-center gap-1 uppercase tracking-[0.12em] transition hover:text-fg"
 							>
 								Release
 								{@render sortIcon("title")}
@@ -466,7 +466,7 @@
 							<button
 								type="button"
 								onclick={() => toggle("group")}
-								class="inline-flex items-center gap-1 uppercase tracking-[0.12em] transition hover:text-fg"
+								class="touch-hit inline-flex min-w-11 items-center justify-center gap-1 uppercase tracking-[0.12em] transition hover:text-fg"
 							>
 								Group
 								{@render sortIcon("group")}
@@ -480,7 +480,7 @@
 							<button
 								type="button"
 								onclick={() => toggle("indexer")}
-								class="inline-flex items-center gap-1 uppercase tracking-[0.12em] transition hover:text-fg"
+								class="touch-hit inline-flex min-w-11 items-center justify-center gap-1 uppercase tracking-[0.12em] transition hover:text-fg"
 							>
 								Indexer
 								{@render sortIcon("indexer")}
@@ -494,7 +494,7 @@
 							<button
 								type="button"
 								onclick={() => toggle("published")}
-								class="inline-flex items-center gap-1 uppercase tracking-[0.12em] transition hover:text-fg"
+								class="touch-hit inline-flex min-w-11 items-center justify-center gap-1 uppercase tracking-[0.12em] transition hover:text-fg"
 							>
 								Released
 								{@render sortIcon("published")}
@@ -510,7 +510,7 @@
 									type="button"
 									onclick={() => toggle("score")}
 									title={i18n.release_score_help()}
-									class="inline-flex items-center gap-1 uppercase tracking-[0.12em] transition hover:text-fg"
+									class="touch-hit inline-flex min-w-11 items-center justify-center gap-1 uppercase tracking-[0.12em] transition hover:text-fg"
 								>
 									{i18n.release_score()}
 									{@render sortIcon("score")}
@@ -525,7 +525,7 @@
 							<button
 								type="button"
 								onclick={() => toggle("size")}
-								class="inline-flex items-center gap-1 uppercase tracking-[0.12em] transition hover:text-fg"
+								class="touch-hit inline-flex min-w-11 items-center justify-center gap-1 uppercase tracking-[0.12em] transition hover:text-fg"
 							>
 								Size
 								{@render sortIcon("size")}
@@ -539,7 +539,7 @@
 							<button
 								type="button"
 								onclick={() => toggle("seeders")}
-								class="inline-flex items-center gap-1 uppercase tracking-[0.12em] transition hover:text-fg"
+								class="touch-hit inline-flex min-w-11 items-center justify-center gap-1 uppercase tracking-[0.12em] transition hover:text-fg"
 							>
 								Seeders
 								{@render sortIcon("seeders")}
@@ -648,7 +648,7 @@
 									type="button"
 									onclick={() => onGrab(r)}
 									disabled={pending || grab.isPending}
-									class="inline-flex h-7 items-center gap-1 rounded-md bg-accent px-2.5 text-[11px] font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+									class="inline-flex h-10 items-center gap-1 rounded-md bg-accent px-2.5 text-[11px] font-semibold text-fg-on-accent lg:h-7 transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
 								>
 									{#if pending}
 										<LoaderCircle

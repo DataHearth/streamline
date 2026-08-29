@@ -181,7 +181,7 @@
 									<button
 										type="button"
 										onclick={() => openEdit(f)}
-										class="rounded-md p-1.5 text-fg-muted transition hover:bg-surface hover:text-fg"
+										class="rounded-md p-3 text-fg-muted lg:p-1.5 transition hover:bg-surface hover:text-fg"
 										aria-label={i18n.cf_view()}
 									>
 										<Eye size={16} aria-hidden="true" />
@@ -190,7 +190,7 @@
 									<button
 										type="button"
 										onclick={() => openEdit(f)}
-										class="rounded-md p-1.5 text-fg-muted transition hover:bg-surface hover:text-fg"
+										class="rounded-md p-3 text-fg-muted lg:p-1.5 transition hover:bg-surface hover:text-fg"
 										aria-label={i18n.cf_edit()}
 									>
 										<Pencil size={16} aria-hidden="true" />
@@ -198,7 +198,7 @@
 									<button
 										type="button"
 										onclick={() => (deleting = f)}
-										class="rounded-md p-1.5 text-fg-muted transition hover:bg-status-failed/10 hover:text-status-failed"
+										class="rounded-md p-3 text-fg-muted lg:p-1.5 transition hover:bg-status-failed/10 hover:text-status-failed"
 										aria-label={i18n.cf_delete()}
 									>
 										<Trash2 size={16} aria-hidden="true" />

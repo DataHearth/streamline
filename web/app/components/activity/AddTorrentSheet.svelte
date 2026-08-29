@@ -117,7 +117,7 @@
 					type="button"
 					onclick={onClose}
 					aria-label={i18n.common_close()}
-					class="grid h-9 w-9 place-items-center rounded-full bg-surface text-fg-subtle transition active:bg-bg-hover"
+					class="grid h-11 w-11 place-items-center rounded-full bg-surface text-fg-subtle transition active:bg-bg-hover"
 				>
 					<X size={16} aria-hidden="true" />
 				</button>
@@ -153,7 +153,7 @@
 					<button
 						type="button"
 						onclick={paste}
-						class="shrink-0 text-[12.5px] font-semibold text-accent-text transition active:opacity-70"
+						class="touch-hit min-w-11 shrink-0 text-center text-[12.5px] font-semibold text-accent-text transition active:opacity-70"
 					>
 						{i18n.common_paste()}
 					</button>

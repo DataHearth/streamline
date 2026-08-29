@@ -175,7 +175,7 @@
 							onclick={() => onDelete(p)}
 							disabled={config.readOnly}
 							title={config.readOnly ? READONLY_HINT : null}
-							class="rounded-md p-1.5 text-fg-muted transition hover:bg-status-failed/10 hover:text-status-failed disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-fg-muted"
+							class="rounded-md p-3 text-fg-muted lg:p-1.5 transition hover:bg-status-failed/10 hover:text-status-failed disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-fg-muted"
 							aria-label={i18n.oidc_delete_provider()}
 						>
 							<Trash2 size={16} aria-hidden="true" />

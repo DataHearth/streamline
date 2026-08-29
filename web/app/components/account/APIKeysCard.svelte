@@ -98,7 +98,7 @@
 			<button
 				type="submit"
 				disabled={create.isPending || newName.trim().length === 0}
-				class="inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-3.5 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+				class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md bg-accent px-3.5 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
 			>
 				<Plus size={14} aria-hidden="true" />
 				{create.isPending ? i18n.common_creating() : i18n.common_create()}
@@ -127,7 +127,7 @@
 				<button
 					type="button"
 					onclick={() => (revealed = null)}
-					class="grid h-7 w-7 shrink-0 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg"
+					class="grid h-11 w-11 shrink-0 place-items-center rounded-md text-fg-muted lg:h-7 lg:w-7 transition hover:bg-surface hover:text-fg"
 					aria-label={i18n.common_dismiss()}
 				>
 					<X size={14} aria-hidden="true" />

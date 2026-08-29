@@ -137,7 +137,7 @@
 				e.stopPropagation();
 				onToggle(item.id);
 			}}
-			class="inline-flex h-7 w-7 items-center justify-center rounded-md text-fg-faint transition hover:bg-bg-subtle hover:text-fg"
+			class="inline-flex h-11 w-11 items-center justify-center rounded-md text-fg-faint lg:h-7 lg:w-7 transition hover:bg-bg-subtle hover:text-fg"
 		>
 			<ChevronRight
 				size={15}

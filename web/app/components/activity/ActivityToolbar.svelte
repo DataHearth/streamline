@@ -107,7 +107,7 @@
 					onclick={() => toggleChip(c.key)}
 					aria-pressed={on}
 					class={cn(
-						"inline-flex h-7 shrink-0 items-center gap-1.5 rounded-sm px-2.5 font-mono text-[11px] lowercase transition",
+						"inline-flex h-11 shrink-0 items-center gap-1.5 rounded-sm px-2.5 font-mono text-[11px] lowercase transition lg:h-7",
 						on ? "bg-accent-soft text-accent-text" : "text-fg-subtle hover:text-fg",
 					)}
 				>
@@ -144,7 +144,7 @@
 			aria-label={i18n.common_search_and_sort()}
 			title={i18n.common_search_and_sort()}
 			class={cn(
-				"relative ml-auto grid h-9 w-9 shrink-0 place-items-center rounded-md border transition lg:hidden",
+				"relative ml-auto grid h-11 w-11 lg:h-9 lg:w-9 shrink-0 place-items-center rounded-md border transition lg:hidden",
 				activeFilters > 0
 					? "border-accent-line bg-accent-soft text-accent-text"
 					: "border-border-strong bg-bg-elevated text-fg-muted hover:text-fg",
@@ -166,7 +166,7 @@
 			type="button"
 			onclick={() => onClearCompleted?.()}
 			disabled={clearableCount === 0}
-			class="ml-auto inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border border-border bg-bg-elevated px-3 text-[12.5px] font-medium text-fg-muted transition hover:border-border-strong hover:text-fg disabled:cursor-not-allowed disabled:opacity-50"
+			class="ml-auto inline-flex min-h-11 lg:h-9 lg:min-h-0 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border border-border bg-bg-elevated px-3 text-[12.5px] font-medium text-fg-muted transition hover:border-border-strong hover:text-fg disabled:cursor-not-allowed disabled:opacity-50"
 		>
 			<Trash2 size={14} aria-hidden="true" />
 			<span class="md:hidden">Clear{clearableCount > 0 ? ` (${clearableCount})` : ""}</span>

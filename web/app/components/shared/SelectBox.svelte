@@ -35,7 +35,7 @@
 	class={cn(
 		"grid shrink-0 place-items-center transition focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring",
 		variant === "card"
-			? "h-6 w-6 rounded-md border backdrop-blur-sm"
+			? "h-10 w-10 rounded-md border backdrop-blur-sm lg:h-6 lg:w-6"
 			: "h-[18px] w-[18px] rounded border",
 		checked || indeterminate
 			? "border-accent bg-accent text-fg-on-accent"

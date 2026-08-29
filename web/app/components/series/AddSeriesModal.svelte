@@ -545,7 +545,7 @@
 			<button
 				type="button"
 				onclick={() => selected && onPick?.(selected)}
-				class="inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-4 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover"
+				class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md bg-accent px-4 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover"
 			>
 				<Check size={15} aria-hidden="true" />
 				{i18n.action_use_match()}
@@ -554,7 +554,7 @@
 			<a
 				href={`/series/${selectedLocalId}`}
 				onclick={onClose}
-				class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-4 text-sm font-medium text-fg-muted transition hover:border-border-strong hover:text-fg"
+				class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-4 text-sm font-medium text-fg-muted transition hover:border-border-strong hover:text-fg"
 			>
 				{i18n.action_open_in_library()}
 				<ArrowUpRight size={15} aria-hidden="true" />
@@ -571,7 +571,7 @@
 				disabled={selectedPending}
 				aria-busy={selectedPending}
 				onclick={() => selected && addMutation.mutate(selected)}
-				class="inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-4 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+				class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md bg-accent px-4 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
 			>
 				{#if selectedPending}
 					<LoaderCircle size={15} class="animate-spin" aria-hidden="true" />

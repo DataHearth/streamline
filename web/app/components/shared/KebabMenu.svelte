@@ -150,9 +150,9 @@
 	class={cn(
 		"grid place-items-center transition focus:outline-none focus:ring-2 focus:ring-accent-ring",
 		variant === "card"
-			? "h-7 w-7 rounded-full border border-white/10 bg-black/65 text-white backdrop-blur-sm hover:bg-black/80"
+			? "h-10 w-10 lg:h-7 lg:w-7 rounded-full border border-white/10 bg-black/65 text-white backdrop-blur-sm hover:bg-black/80"
 			: variant === "bar"
-				? "h-9 w-9 rounded-md border border-border bg-bg-elevated text-fg-muted hover:border-border-strong hover:text-fg"
+				? "h-11 w-11 lg:h-9 lg:w-9 rounded-md border border-border bg-bg-elevated text-fg-muted hover:border-border-strong hover:text-fg"
 				: "h-10 w-10 rounded-md border border-border-strong bg-white/[0.08] text-fg backdrop-blur-sm hover:bg-white/[0.14]",
 	)}
 >

@@ -19,7 +19,7 @@
 	];
 
 	const cell =
-		"inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-sm px-2 py-1.5 text-[12px] font-medium transition md:px-3 md:text-[12.5px]";
+		"inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-sm px-2 py-1.5 text-[12px] font-medium transition md:px-3 md:text-[12.5px] lg:min-h-0 lg:min-w-0";
 </script>
 
 <div

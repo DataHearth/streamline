@@ -463,7 +463,7 @@
 				type="button"
 				disabled={locked}
 				onclick={() => draft.conditions.push(newCondition())}
-				class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-3 text-sm font-medium text-fg transition hover:border-border-strong disabled:cursor-not-allowed disabled:opacity-60"
+				class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-3 text-sm font-medium text-fg transition hover:border-border-strong disabled:cursor-not-allowed disabled:opacity-60"
 			>
 				<Plus size={15} aria-hidden="true" />
 				{i18n.cf_add_condition()}
@@ -500,14 +500,14 @@
 							>
 								{#each chips as name, k (name)}
 									<span
-										class="inline-flex items-center gap-1 rounded-full border border-accent-line bg-accent-soft py-0.5 pl-2.5 pr-1 text-xs font-medium text-accent-text"
+										class="inline-flex min-h-11 items-center gap-1 rounded-full border border-accent-line bg-accent-soft py-0.5 pl-2.5 pr-1 text-xs font-medium text-accent-text lg:min-h-0"
 									>
 										<span class="font-mono leading-none">{name}</span>
 										<button
 											type="button"
 											disabled={locked}
 											onclick={() => removeGroup(c, k)}
-											class="grid h-4 w-4 place-items-center rounded-full text-accent-text/70 transition hover:bg-accent-line hover:text-accent-text disabled:cursor-not-allowed disabled:opacity-40"
+											class="grid h-8 w-8 place-items-center rounded-full text-accent-text/70 transition hover:bg-accent-line hover:text-accent-text disabled:cursor-not-allowed disabled:opacity-40 lg:h-4 lg:w-4"
 											aria-label={i18n.cf_group_remove()}
 										>
 											<X size={11} aria-hidden="true" />
@@ -532,7 +532,7 @@
 									}}
 									onkeydown={(e) => onGroupKey(e, c, i)}
 									onblur={() => commitGroups(c, i)}
-									class="min-w-32 flex-1 bg-transparent py-0.5 text-sm text-fg placeholder:text-fg-faint focus:outline-none read-only:cursor-not-allowed"
+									class="min-h-11 min-w-32 flex-1 bg-transparent py-0.5 text-sm text-fg placeholder:text-fg-faint focus:outline-none read-only:cursor-not-allowed lg:min-h-0"
 								/>
 							</div>
 						{:else if c.type === "release_title" || c.type === "release_group"}
@@ -656,7 +656,7 @@
 								type="button"
 								disabled={locked || draft.conditions.length === 1}
 								onclick={() => draft.conditions.splice(i, 1)}
-								class="grid h-9 w-9 place-items-center rounded-md text-fg-muted transition hover:bg-status-failed/10 hover:text-status-failed disabled:cursor-not-allowed disabled:opacity-40"
+								class="grid h-11 w-11 lg:h-9 lg:w-9 place-items-center rounded-md text-fg-muted transition hover:bg-status-failed/10 hover:text-status-failed disabled:cursor-not-allowed disabled:opacity-40"
 								aria-label={i18n.cf_remove_condition()}
 							>
 								<Trash2 size={16} aria-hidden="true" />
@@ -696,7 +696,7 @@
 								<button
 									type="button"
 									onclick={() => (c.groupRaw = !c.groupRaw)}
-									class="text-[11px] font-medium text-accent-text underline-offset-2 transition hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
+									class="touch-hit text-[11px] font-medium text-accent-text underline-offset-2 transition hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
 								>
 									{c.groupRaw
 										? i18n.cf_group_use_chips()

@@ -89,7 +89,7 @@
 					aria-pressed={on}
 					onclick={() => onClassificationChange(chip.key)}
 					class={cn(
-						"inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-[12.5px] font-medium transition",
+						"inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full border px-3 text-[12.5px] font-medium transition",
 						on
 							? "border-accent-line bg-accent-soft text-accent-text"
 							: "border-border bg-surface text-fg-muted active:bg-surface-2",

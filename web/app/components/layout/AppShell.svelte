@@ -52,7 +52,7 @@
 	     reflows anything sitting on a wrap boundary. -->
 	<main
 		id="main"
-		class="min-w-0 flex-1 overflow-y-auto pb-16 [scrollbar-gutter:stable] md:pb-0"
+		class="min-w-0 flex-1 overflow-y-auto pb-20 [scrollbar-gutter:stable] md:pb-0"
 	>
 		<TopBar />
 		{@render children?.()}

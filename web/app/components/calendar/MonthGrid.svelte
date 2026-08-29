@@ -241,7 +241,7 @@
 									longDate.format(cell.date),
 									ev.currentTarget,
 								)}
-							class="flex-none rounded px-1.5 py-0.5 text-left font-mono text-[10px] text-fg-subtle transition-colors hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
+							class="flex-none rounded px-1.5 py-0.5 text-left font-mono text-[11px] text-fg-subtle min-h-11 lg:min-h-0 flex items-center transition-colors hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
 						>
 							{i18n.calendar_more_count({ count: evs.length - vis })}
 						</button>

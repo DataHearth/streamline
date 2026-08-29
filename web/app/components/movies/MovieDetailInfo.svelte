@@ -192,7 +192,7 @@
 					}}
 					aria-label={i18n.action_delete_file()}
 					title={i18n.action_delete_file()}
-					class="grid h-7 w-7 place-items-center rounded-md text-fg-muted transition hover:bg-status-failed/10 hover:text-status-failed focus:outline-none focus:ring-2 focus:ring-accent-ring"
+					class="grid h-11 w-11 place-items-center rounded-md text-fg-muted transition hover:bg-status-failed/10 lg:h-7 lg:w-7 hover:text-status-failed focus:outline-none focus:ring-2 focus:ring-accent-ring"
 				>
 					<Trash2 class="h-4 w-4" aria-hidden="true" />
 				</button>
@@ -325,7 +325,7 @@
 						onclick={onClick}
 						title={primary.path}
 						aria-label={i18n.action_copy_file_path()}
-						class="block w-full truncate rounded text-right font-mono underline decoration-border-strong decoration-dotted underline-offset-[3px] transition-colors [-webkit-touch-callout:none] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring {holding
+						class="touch-hit block w-full truncate rounded text-right font-mono underline decoration-border-strong decoration-dotted underline-offset-[3px] transition-colors [-webkit-touch-callout:none] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring {holding
 							? 'text-accent-text'
 							: 'text-fg'}"
 					>

@@ -172,7 +172,7 @@
 		{i18n.auth_no_account()}
 		<a
 			href="/register"
-			class="cursor-pointer rounded font-medium text-accent hover:text-accent-hover hover:underline focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
+			class="touch-hit inline-block cursor-pointer rounded font-medium text-accent hover:text-accent-hover hover:underline focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
 		>
 			{i18n.auth_create_one()}
 		</a>

@@ -19,7 +19,7 @@
 -->
 <label
 	title={i18n.grab_replace_help()}
-	class="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-md border border-border bg-bg-base px-2.5 text-xs font-medium text-fg-subtle transition has-[:checked]:border-status-wanted/45 has-[:checked]:bg-status-wanted/10 has-[:checked]:text-status-wanted"
+	class="inline-flex min-h-11 lg:h-9 lg:min-h-0 cursor-pointer items-center gap-1.5 rounded-md border border-border bg-bg-base px-2.5 text-xs font-medium text-fg-subtle transition has-[:checked]:border-status-wanted/45 has-[:checked]:bg-status-wanted/10 has-[:checked]:text-status-wanted"
 >
 	<input
 		type="checkbox"

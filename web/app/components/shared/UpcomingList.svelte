@@ -63,7 +63,7 @@
 		{#if seeAllHref}
 			<a
 				href={seeAllHref}
-				class="text-[11.5px] text-fg-subtle transition hover:text-accent-text"
+				class="touch-hit text-[11.5px] text-fg-subtle transition hover:text-accent-text"
 			>
 				{seeAllLabel}
 			</a>

@@ -214,7 +214,7 @@
 						? i18n.a11y_stop_monitoring_season({ season: seasonName(s) })
 						: i18n.a11y_monitor_season({ season: seasonName(s) })}
 					class={cn(
-						"grid h-9 w-9 shrink-0 place-items-center rounded-lg border transition",
+						"grid h-11 w-11 lg:h-9 lg:w-9 shrink-0 place-items-center rounded-lg border transition",
 						s.monitored
 							? "border-accent-line bg-accent-soft text-accent-text"
 							: "border-border bg-bg-elevated text-fg-subtle",
@@ -231,7 +231,7 @@
 					type="button"
 					onclick={() => onSearchSeason(s)}
 					aria-label="Search releases for {seasonName(s)}"
-					class="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-border bg-bg-elevated text-fg-subtle transition active:bg-accent-soft active:text-accent-text"
+					class="grid h-11 w-11 lg:h-9 lg:w-9 shrink-0 place-items-center rounded-lg border border-border bg-bg-elevated text-fg-subtle transition active:bg-accent-soft active:text-accent-text"
 				>
 					<Search size={15} aria-hidden="true" />
 				</button>
@@ -241,7 +241,7 @@
 					disabled={seasonFiles(s).length === 0}
 					onclick={() => onDeleteSeasonFiles(s)}
 					aria-label="Delete all files in {seasonName(s)}"
-					class="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-border bg-bg-elevated text-fg-subtle transition active:bg-status-failed/10 active:text-status-failed disabled:opacity-35"
+					class="grid h-11 w-11 lg:h-9 lg:w-9 shrink-0 place-items-center rounded-lg border border-border bg-bg-elevated text-fg-subtle transition active:bg-status-failed/10 active:text-status-failed disabled:opacity-35"
 				>
 					<Trash2 size={15} aria-hidden="true" />
 				</button>
@@ -280,7 +280,7 @@
 									? i18n.action_stop_monitoring_episode()
 									: i18n.action_monitor_episode()}
 								class={cn(
-									"grid h-8 w-8 shrink-0 place-items-center rounded-md transition disabled:opacity-40",
+									"grid h-11 w-11 shrink-0 place-items-center rounded-md transition disabled:opacity-40 lg:h-8 lg:w-8",
 									ep.monitored ? "text-accent-text" : "text-fg-faint",
 								)}
 							>

@@ -20,7 +20,7 @@
 	} = $props();
 
 	const base =
-		"inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border px-3 text-[12.5px] font-medium transition";
+		"inline-flex min-h-11 lg:h-9 lg:min-h-0 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border px-3 text-[12.5px] font-medium transition";
 	const off =
 		"border-border bg-bg-elevated text-fg-muted hover:border-border-strong hover:text-fg";
 	const on = "border-accent bg-accent-soft text-accent-text";

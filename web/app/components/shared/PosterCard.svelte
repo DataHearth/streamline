@@ -253,7 +253,7 @@
 			aria-pressed={movie.monitored ?? false}
 			title={movie.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
 			class={cn(
-				"absolute right-2 top-2 z-10 grid h-7 w-7 place-items-center rounded-full border border-white/10 bg-bg-deep transition hover:bg-bg-elevated focus:outline-none focus:ring-2 focus:ring-accent-ring",
+				"absolute right-2 top-2 z-10 grid h-10 w-10 lg:h-7 lg:w-7 place-items-center rounded-full border border-white/10 bg-bg-deep transition hover:bg-bg-elevated focus:outline-none focus:ring-2 focus:ring-accent-ring",
 				movie.monitored ? "text-accent-text" : "text-fg-subtle hover:text-fg",
 			)}
 		>
@@ -273,7 +273,7 @@
 				type="button"
 				onclick={stop(onSearch)}
 				aria-label={i18n.action_search_releases()}
-				class="grid h-7 w-7 place-items-center rounded-full border border-white/10 bg-black/65 text-white backdrop-blur-sm transition hover:bg-black/80"
+				class="grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-black/65 text-white backdrop-blur-sm transition hover:bg-black/80 lg:h-7 lg:w-7"
 			>
 				<Search size={14} aria-hidden="true" />
 			</button>

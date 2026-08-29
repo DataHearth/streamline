@@ -400,7 +400,7 @@
 				type="button"
 				onclick={() => (attnOpen = !attnOpen)}
 				aria-expanded={attnOpen}
-				class="flex w-full items-center gap-2 text-left {attnOpen ? 'mb-3' : ''}"
+				class="touch-hit flex w-full items-center gap-2 text-left {attnOpen ? 'mb-3' : ''}"
 			>
 				<h2 class="text-sm font-semibold text-fg">{i18n.common_needs_attention()}</h2>
 				{#if pendingItems.length > 0}

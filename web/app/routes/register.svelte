@@ -198,7 +198,7 @@
 		{i18n.auth_have_account()}
 		<a
 			href="/login"
-			class="cursor-pointer rounded font-medium text-accent hover:text-accent-hover hover:underline focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
+			class="touch-hit inline-block cursor-pointer rounded font-medium text-accent hover:text-accent-hover hover:underline focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
 		>
 			{i18n.auth_sign_in()}
 		</a>

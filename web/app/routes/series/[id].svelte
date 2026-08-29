@@ -428,7 +428,7 @@
 		<div class="relative w-full px-4 pt-6 md:px-8">
 			<a
 				href="/series"
-				class="inline-flex items-center gap-1.5 rounded-full border border-border bg-black/40 px-3 py-1.5 text-[11.5px] font-medium text-fg-muted backdrop-blur-sm transition hover:bg-black/60 hover:text-fg"
+				class="touch-hit inline-flex items-center gap-1.5 rounded-full border border-border bg-black/40 px-3 py-1.5 text-[11.5px] font-medium text-fg-muted backdrop-blur-sm transition hover:bg-black/60 hover:text-fg"
 			>
 				<ArrowLeft size={13} aria-hidden="true" />
 				{i18n.settings_series()}
@@ -842,7 +842,7 @@
 										? i18n.action_stop_monitoring_season()
 										: i18n.action_monitor_season()}
 									class={cn(
-										"grid h-9 w-9 shrink-0 place-items-center rounded-md border border-border bg-bg-elevated transition hover:border-border-strong",
+										"grid h-11 w-11 lg:h-9 lg:w-9 shrink-0 place-items-center rounded-md border border-border bg-bg-elevated transition hover:border-border-strong",
 										currentSeason.monitored
 											? "text-accent-text"
 											: "text-fg-subtle hover:text-fg",
@@ -894,7 +894,7 @@
 									type="button"
 									onclick={() =>
 										currentSeason && openPackSearch(String(currentSeason.number))}
-									class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-3 text-sm text-fg-muted transition hover:border-border-strong hover:text-fg"
+									class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-3 text-sm text-fg-muted transition hover:border-border-strong hover:text-fg"
 								>
 									<Search size={15} aria-hidden="true" />
 									{i18n.series_search_season()}
@@ -910,7 +910,7 @@
 													: `${seasonLabel} ${currentSeason.number}`,
 												seasonFileEpisodes,
 											)}
-										class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-3 text-sm text-fg-muted transition hover:border-status-failed/40 hover:bg-status-failed/10 hover:text-status-failed"
+										class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-3 text-sm text-fg-muted transition hover:border-status-failed/40 hover:bg-status-failed/10 hover:text-status-failed"
 									>
 										<Trash2 size={15} aria-hidden="true" />
 										{i18n.action_delete_files()}

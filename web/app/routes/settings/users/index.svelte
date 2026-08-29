@@ -239,7 +239,7 @@
 				type="button"
 				onclick={() => (sheetOpen = true)}
 				aria-label={i18n.users_filter_sort()}
-				class="relative grid h-[38px] w-[38px] shrink-0 place-items-center rounded-md border border-border text-fg-muted transition active:bg-bg-hover lg:hidden"
+				class="relative grid h-11 w-11 shrink-0 place-items-center rounded-md border border-border text-fg-muted transition active:bg-bg-hover lg:hidden"
 			>
 				<SlidersHorizontal size={17} aria-hidden="true" />
 				{#if activeFilters > 0}
@@ -336,7 +336,7 @@
 					type="button"
 					disabled={!hasPrev}
 					onclick={() => (offset = Math.max(0, offset - LIMIT))}
-					class="inline-flex h-9 items-center rounded-md border border-border px-3 hover:border-accent disabled:cursor-not-allowed disabled:opacity-40"
+					class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center rounded-md border border-border px-3 hover:border-accent disabled:cursor-not-allowed disabled:opacity-40"
 				>
 					{i18n.common_prev()}
 				</button>
@@ -344,7 +344,7 @@
 					type="button"
 					disabled={!hasNext}
 					onclick={() => (offset += LIMIT)}
-					class="inline-flex h-9 items-center rounded-md border border-border px-3 hover:border-accent disabled:cursor-not-allowed disabled:opacity-40"
+					class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center rounded-md border border-border px-3 hover:border-accent disabled:cursor-not-allowed disabled:opacity-40"
 				>
 					{i18n.common_next()}
 				</button>

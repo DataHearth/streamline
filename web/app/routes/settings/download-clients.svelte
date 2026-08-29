@@ -353,7 +353,7 @@
 							<button
 								type="button"
 								onclick={openBuiltinEdit}
-								class="rounded-md p-1.5 text-fg-muted transition hover:bg-surface hover:text-fg"
+								class="rounded-md p-3 text-fg-muted lg:p-1.5 transition hover:bg-surface hover:text-fg"
 								aria-label={i18n.builtin_view()}
 							>
 								<Eye size={16} aria-hidden="true" />
@@ -362,7 +362,7 @@
 							<button
 								type="button"
 								onclick={openBuiltinEdit}
-								class="rounded-md p-1.5 text-fg-muted transition hover:bg-surface hover:text-fg"
+								class="rounded-md p-3 text-fg-muted lg:p-1.5 transition hover:bg-surface hover:text-fg"
 								aria-label={i18n.builtin_edit()}
 							>
 								<Pencil size={16} aria-hidden="true" />
@@ -370,7 +370,7 @@
 							<button
 								type="button"
 								onclick={() => (deletingBuiltin = true)}
-								class="rounded-md p-1.5 text-fg-muted transition hover:bg-status-failed/10 hover:text-status-failed"
+								class="rounded-md p-3 text-fg-muted lg:p-1.5 transition hover:bg-status-failed/10 hover:text-status-failed"
 								aria-label={i18n.builtin_remove()}
 							>
 								<Trash2 size={16} aria-hidden="true" />
@@ -497,7 +497,7 @@
 									<button
 										type="button"
 										onclick={() => openEdit(c)}
-										class="grid h-9 w-9 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg"
+										class="grid h-11 w-11 lg:h-9 lg:w-9 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg"
 										aria-label={i18n.dlclient_view_short()}
 									>
 										<Eye size={16} aria-hidden="true" />
@@ -506,7 +506,7 @@
 									<button
 										type="button"
 										onclick={() => openEdit(c)}
-										class="grid h-9 w-9 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg"
+										class="grid h-11 w-11 lg:h-9 lg:w-9 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg"
 										aria-label={i18n.dlclient_edit_short()}
 									>
 										<Pencil size={16} aria-hidden="true" />
@@ -514,7 +514,7 @@
 									<button
 										type="button"
 										onclick={() => onDelete(c)}
-										class="grid h-9 w-9 place-items-center rounded-md text-fg-muted transition hover:bg-status-failed/10 hover:text-status-failed"
+										class="grid h-11 w-11 lg:h-9 lg:w-9 place-items-center rounded-md text-fg-muted transition hover:bg-status-failed/10 hover:text-status-failed"
 										aria-label={i18n.dlclient_delete()}
 									>
 										<Trash2 size={16} aria-hidden="true" />

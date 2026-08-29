@@ -63,7 +63,7 @@
 				type="button"
 				disabled={test.isPending}
 				onclick={() => test.mutate()}
-				class="inline-flex h-9 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-md border border-border bg-bg-base text-[13px] font-medium text-fg-muted transition hover:border-border-strong hover:text-fg active:bg-bg-hover disabled:cursor-progress disabled:opacity-60"
+				class="inline-flex min-h-11 lg:h-9 lg:min-h-0 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-md border border-border bg-bg-base text-[13px] font-medium text-fg-muted transition hover:border-border-strong hover:text-fg active:bg-bg-hover disabled:cursor-progress disabled:opacity-60"
 			>
 				<Plug size={13} aria-hidden="true" />
 				{test.isPending ? i18n.common_testing() : label}

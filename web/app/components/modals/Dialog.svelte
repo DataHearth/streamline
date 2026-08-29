@@ -92,7 +92,7 @@
 		onclick={() => run(a)}
 		disabled={a.disabled || a.pending}
 		data-autofocus={a.autofocus ? true : undefined}
-		class="inline-flex h-9 items-center rounded-md px-3.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60 {VARIANT[
+		class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center rounded-md px-3.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60 {VARIANT[
 			a.variant ?? 'primary'
 		]}"
 	>

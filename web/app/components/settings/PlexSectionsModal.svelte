@@ -143,7 +143,7 @@
 		<button
 			type="button"
 			onclick={close}
-			class="inline-flex h-9 items-center rounded-md border border-border px-3 text-sm font-medium text-fg-muted transition hover:bg-surface hover:text-fg"
+			class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center rounded-md border border-border px-3 text-sm font-medium text-fg-muted transition hover:bg-surface hover:text-fg"
 		>
 			{i18n.common_close()}
 		</button>

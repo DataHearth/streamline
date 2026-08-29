@@ -212,7 +212,7 @@
 		<button
 			type="button"
 			onclick={() => (allCollapsed ? expandAll() : collapseAll())}
-			class="text-[11px] font-medium text-fg-subtle transition hover:text-fg"
+			class="touch-hit text-[11px] font-medium text-fg-subtle transition hover:text-fg"
 		>
 			{allCollapsed ? i18n.common_expand_all() : i18n.common_collapse_all()}
 		</button>
@@ -239,7 +239,7 @@
 					<button
 						type="button"
 						onclick={() => toggle(row.path)}
-						class="flex min-w-0 flex-1 items-center gap-2 text-left"
+						class="touch-hit flex min-w-0 flex-1 items-center gap-2 text-left"
 						aria-expanded={!collapsed.has(row.path)}
 					>
 						<ChevronRight
@@ -283,7 +283,7 @@
 									title="{p.label} — all {row.count} files in {row.name}"
 									onclick={() => setFolderPriority(row.path, p.key)}
 									class={cn(
-										"flex items-center gap-1.5 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide transition",
+										"flex min-h-10 items-center gap-1.5 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide transition lg:min-h-0",
 										sel ? p.on : "text-fg-faint hover:bg-surface hover:text-fg",
 									)}
 								>
@@ -352,7 +352,7 @@
 									disabled={busyIndex === f.index}
 									onclick={() => onSetPriority(f.index, p.key)}
 									class={cn(
-										"flex items-center gap-1.5 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide transition",
+										"flex min-h-10 items-center gap-1.5 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide transition lg:min-h-0",
 										sel ? p.on : "text-fg-faint hover:bg-surface hover:text-fg",
 									)}
 								>

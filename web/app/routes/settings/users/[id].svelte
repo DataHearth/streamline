@@ -43,7 +43,7 @@
 <div class="mx-auto w-full max-w-5xl px-4 py-6 md:px-8 md:py-7">
 	<a
 		href="/settings/users"
-		class="inline-flex items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-3 py-1.5 text-xs font-medium text-fg-muted transition hover:border-border-strong hover:text-fg"
+		class="touch-hit inline-flex items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-3 py-1.5 text-xs font-medium text-fg-muted transition hover:border-border-strong hover:text-fg"
 	>
 		<ArrowLeft class="h-3.5 w-3.5" aria-hidden="true" />
 		{i18n.users_back()}

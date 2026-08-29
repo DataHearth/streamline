@@ -121,7 +121,7 @@
 			<button
 				type="button"
 				onclick={close}
-				class="flex-none text-[14.5px] font-medium text-accent-text"
+				class="touch-hit flex-none text-[14.5px] font-medium text-accent-text"
 			>
 				{i18n.common_cancel()}
 			</button>

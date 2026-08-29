@@ -578,7 +578,7 @@
 <div class="mx-auto w-full max-w-7xl px-4 py-6 md:px-8 md:py-7">
 	<a
 		href="/library/imports"
-		class="inline-flex items-center gap-1.5 text-xs text-fg-subtle transition hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
+		class="touch-hit inline-flex items-center gap-1.5 text-xs text-fg-subtle transition hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
 	>
 		<ArrowLeft size={14} aria-hidden="true" />
 		{i18n.imports_label()}
@@ -656,7 +656,7 @@
 						type="button"
 						disabled={cancel.isPending}
 						onclick={() => (confirmCancel = true)}
-						class="inline-flex items-center gap-1.5 rounded-md border border-border bg-bg-card px-3 py-1.5 text-xs font-medium text-fg-muted transition hover:border-border-strong hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring disabled:opacity-60"
+						class="touch-hit inline-flex items-center gap-1.5 rounded-md border border-border bg-bg-card px-3 py-1.5 text-xs font-medium text-fg-muted transition hover:border-border-strong hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring disabled:opacity-60"
 					>
 						<Square size={13} aria-hidden="true" />
 						{cancel.isPending ? i18n.common_cancelling() : i18n.common_cancel()}
@@ -666,7 +666,7 @@
 						type="button"
 						disabled={discard.isPending}
 						onclick={() => (confirmDiscard = true)}
-						class="inline-flex items-center gap-1.5 rounded-md border border-border bg-bg-card px-3 py-1.5 text-xs font-medium text-fg-muted transition hover:border-status-failed/50 hover:text-status-failed focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring disabled:opacity-60"
+						class="touch-hit inline-flex items-center gap-1.5 rounded-md border border-border bg-bg-card px-3 py-1.5 text-xs font-medium text-fg-muted transition hover:border-status-failed/50 hover:text-status-failed focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring disabled:opacity-60"
 					>
 						<Trash2 size={13} aria-hidden="true" />
 						{discard.isPending ? i18n.common_discarding() : i18n.common_discard()}
@@ -953,7 +953,7 @@
 			type="button"
 			onclick={() => toggleSort(key)}
 			class={cn(
-				"inline-flex items-center gap-1 font-semibold uppercase tracking-[0.14em] transition-colors",
+				"touch-hit inline-flex items-center gap-1 font-semibold uppercase tracking-[0.14em] transition-colors",
 				active ? "text-fg-muted" : "hover:text-fg-muted",
 			)}
 		>

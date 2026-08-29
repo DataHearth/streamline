@@ -119,9 +119,9 @@
 	}
 
 	const navIcon =
-		"grid h-9 w-9 place-items-center rounded-md border border-border-strong text-fg-muted transition-colors hover:bg-surface hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring";
+		"grid h-11 w-11 lg:h-9 lg:w-9 place-items-center rounded-md border border-border-strong text-fg-muted transition-colors hover:bg-surface hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring";
 	const todayBtn =
-		"h-9 rounded-md border border-border-strong px-4 text-sm text-fg transition-colors hover:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring";
+		"min-h-11 rounded-md border border-border-strong px-4 text-sm text-fg transition-colors hover:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring lg:h-9 lg:min-h-0";
 </script>
 
 <div

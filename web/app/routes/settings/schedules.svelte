@@ -301,7 +301,7 @@
 		<button
 			type="button"
 			onclick={() => (modalOpen = false)}
-			class="inline-flex h-9 items-center rounded-md border border-border px-3 text-sm text-fg-muted hover:text-fg"
+			class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center rounded-md border border-border px-3 text-sm text-fg-muted hover:text-fg"
 		>
 			{i18n.common_cancel()}
 		</button>
@@ -309,7 +309,7 @@
 			type="submit"
 			form="schedule-form"
 			disabled={config.readOnly || !form.state.canSubmit || form.state.isSubmitting}
-			class="inline-flex h-9 items-center rounded-md bg-accent px-4 text-sm font-semibold text-fg-on-accent hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+			class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center rounded-md bg-accent px-4 text-sm font-semibold text-fg-on-accent hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
 		>
 			{form.state.isSubmitting ? i18n.common_saving() : i18n.common_save()}
 		</button>

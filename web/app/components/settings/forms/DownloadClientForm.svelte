@@ -155,7 +155,7 @@
 						>
 						{#each [{ v: "password" as const, l: i18n.dlclient_user_pass() }, { v: "api_key" as const, l: i18n.field_api_key() }] as o}
 							<label
-								class="inline-flex h-9 cursor-pointer items-center rounded-md border border-border bg-bg-card px-3 text-xs font-medium text-fg-muted transition hover:border-border-strong has-[:checked]:border-accent has-[:checked]:bg-accent-soft has-[:checked]:text-fg has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60"
+								class="inline-flex min-h-11 lg:h-9 lg:min-h-0 cursor-pointer items-center rounded-md border border-border bg-bg-card px-3 text-xs font-medium text-fg-muted transition hover:border-border-strong has-[:checked]:border-accent has-[:checked]:bg-accent-soft has-[:checked]:text-fg has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60"
 							>
 								<input
 									type="radio"

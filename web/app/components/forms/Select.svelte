@@ -203,7 +203,7 @@
 			aria-expanded={open}
 			onclick={toggle}
 			class={cn(
-				"flex h-[38px] w-full items-center justify-between gap-2 rounded-md border border-border bg-bg px-3 text-sm text-fg transition-colors hover:border-border-strong focus-visible:outline-2 focus-visible:outline-accent",
+				"flex min-h-11 w-full items-center justify-between gap-2 rounded-md border border-border bg-bg px-3 text-sm text-fg transition-colors hover:border-border-strong focus-visible:outline-2 focus-visible:outline-accent lg:h-[38px] lg:min-h-0",
 				open && "border-accent",
 				off && "cursor-not-allowed opacity-60",
 			)}
@@ -241,7 +241,7 @@
 						title={o.hint}
 						onclick={() => pick(o.value)}
 						class={cn(
-							"flex w-full items-start justify-between gap-2 px-3 py-1.5 text-left text-sm transition-colors hover:bg-bg-hover",
+							"flex min-h-11 w-full items-start justify-between gap-2 px-3 py-1.5 text-left text-sm transition-colors hover:bg-bg-hover lg:min-h-0",
 							value === o.value && "text-accent",
 						)}
 					>

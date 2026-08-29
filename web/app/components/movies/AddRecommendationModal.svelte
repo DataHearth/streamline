@@ -121,7 +121,7 @@
 		<button
 			type="button"
 			onclick={onClose}
-			class="inline-flex h-9 items-center rounded-md px-3 text-sm font-medium text-fg-muted transition hover:bg-surface hover:text-fg"
+			class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center rounded-md px-3 text-sm font-medium text-fg-muted transition hover:bg-surface hover:text-fg"
 		>
 			{i18n.common_cancel()}
 		</button>
@@ -129,7 +129,7 @@
 			type="button"
 			disabled={!rec || addMutation.isPending}
 			onclick={() => rec && addMutation.mutate(rec)}
-			class="inline-flex h-9 items-center gap-2 rounded-md bg-accent px-4 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+			class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-2 rounded-md bg-accent px-4 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
 		>
 			{#if addMutation.isPending}
 				<LoaderCircle size={14} class="animate-spin" aria-hidden="true" />

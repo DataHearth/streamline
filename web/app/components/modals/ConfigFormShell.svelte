@@ -124,7 +124,7 @@
 				<button
 					type="button"
 					onclick={onClose}
-					class="shrink-0 rounded-md px-2 py-2 text-sm text-fg-muted transition active:bg-bg-hover"
+					class="min-h-11 shrink-0 rounded-md px-2 py-2 text-sm text-fg-muted transition active:bg-bg-hover"
 				>
 					{config.readOnly ? i18n.common_close() : i18n.common_cancel()}
 				</button>
@@ -141,7 +141,7 @@
 						type="submit"
 						form={formId}
 						disabled={submitDisabled}
-						class="shrink-0 rounded-md px-2 py-2 text-sm font-semibold text-accent-text transition active:bg-bg-hover disabled:opacity-40"
+						class="min-h-11 shrink-0 rounded-md px-2 py-2 text-sm font-semibold text-accent-text transition active:bg-bg-hover disabled:opacity-40"
 					>
 						{submitLabel}
 					</button>

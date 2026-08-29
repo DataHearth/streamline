@@ -466,7 +466,7 @@
 												<button
 													type="button"
 													onclick={() => openDeny(r)}
-													class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border px-3 text-sm font-medium text-fg-muted transition hover:border-border-strong hover:text-fg"
+													class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md border border-border px-3 text-sm font-medium text-fg-muted transition hover:border-border-strong hover:text-fg"
 												>
 													<X size={14} aria-hidden="true" />
 													{i18n.common_reject()}
@@ -476,7 +476,7 @@
 													disabled={approve.isPending}
 													onclick={() =>
 														approve.mutate({ r, profile: selectedProfile })}
-													class="inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-3.5 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:opacity-60"
+													class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md bg-accent px-3.5 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:opacity-60"
 												>
 													<Check size={14} aria-hidden="true" />
 													{i18n.requests_approve_add()}
@@ -488,7 +488,7 @@
 											<button
 												type="button"
 												onclick={() => reopen.mutate(r)}
-												class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border px-3 text-sm font-medium text-fg-muted transition hover:border-border-strong hover:text-fg"
+												class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md border border-border px-3 text-sm font-medium text-fg-muted transition hover:border-border-strong hover:text-fg"
 											>
 												<RotateCcw size={14} aria-hidden="true" />
 												{i18n.requests_reopen()}

@@ -72,7 +72,7 @@
 			onclick={onClear}
 			aria-label={i18n.bulk_clear_selection()}
 			title={i18n.bulk_clear_selection()}
-			class="grid h-9 w-9 shrink-0 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
+			class="grid h-11 w-11 lg:h-9 lg:w-9 shrink-0 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
 		>
 			<X size={16} aria-hidden="true" />
 		</button>

@@ -188,7 +188,7 @@
 							<button
 								type="button"
 								onclick={copyHash}
-								class="group mt-1 inline-flex max-w-full items-center gap-1.5 text-left"
+								class="touch-hit group mt-1 inline-flex max-w-full items-center gap-1.5 text-left"
 								title={i18n.action_copy_infohash()}
 							>
 								<span
@@ -216,7 +216,7 @@
 						type="button"
 						onclick={onClose}
 						aria-label={i18n.common_close()}
-						class="grid h-9 w-9 shrink-0 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg"
+						class="grid h-11 w-11 shrink-0 place-items-center rounded-md text-fg-muted lg:h-9 lg:w-9 transition hover:bg-surface hover:text-fg"
 					>
 						<X size={16} aria-hidden="true" />
 					</button>
@@ -309,7 +309,11 @@
 						<p class="text-sm text-fg-muted">{i18n.common_loading_details()}</p>
 					</div>
 				{:else if tab === "files"}
-					{#if detail.files.length === 0}
+					<!-- Optional chaining, not a bare read: `detail` can go null under the
+				     open drawer (the poll 404s when a fetching magnet resolves to a new
+				     hash, or the torrent is removed elsewhere), and the inner block
+				     re-runs on that change before the outer branch is torn down. -->
+					{#if (detail?.files?.length ?? 0) === 0}
 						<div class="flex flex-col items-center justify-center gap-2 py-16 text-center">
 							<FileText size={24} class="text-fg-faint" aria-hidden="true" />
 							<p class="text-sm font-medium text-fg">{i18n.torrent_waiting_metadata()}</p>
@@ -319,7 +323,7 @@
 						</div>
 					{:else}
 						<TorrentFilesTab
-							files={detail.files}
+							files={detail?.files ?? []}
 							status={torrent.status}
 							{canControl}
 							busyIndex={busyFileIndex}
@@ -327,9 +331,9 @@
 						/>
 					{/if}
 				{:else if tab === "peers"}
-					<TorrentPeersTab peers={detail.peers} peerCount={detail.peer_count} status={torrent.status} />
+					<TorrentPeersTab peers={detail?.peers ?? []} peerCount={detail?.peer_count ?? 0} status={torrent.status} />
 				{:else}
-					<TorrentTrackersTab trackers={detail.trackers} />
+					<TorrentTrackersTab trackers={detail?.trackers ?? []} />
 				{/if}
 			</div>
 
@@ -343,7 +347,7 @@
 							type="button"
 							disabled={busy}
 							onclick={() => onResume(torrent.hash)}
-							class="inline-flex h-9 items-center gap-1.5 rounded-md bg-bg-subtle px-3.5 text-sm font-semibold text-fg transition hover:bg-surface disabled:opacity-50"
+							class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md bg-bg-subtle px-3.5 text-sm font-semibold text-fg transition hover:bg-surface disabled:opacity-50"
 						>
 							{#if busy}<LoaderCircle size={14} class="motion-safe:animate-spin" aria-hidden="true" />{:else}<Play size={14} aria-hidden="true" />{/if}
 							Resume
@@ -353,7 +357,7 @@
 							type="button"
 							disabled={busy}
 							onclick={() => onPause(torrent.hash)}
-							class="inline-flex h-9 items-center gap-1.5 rounded-md bg-bg-subtle px-3.5 text-sm font-semibold text-fg transition hover:bg-surface disabled:opacity-50"
+							class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md bg-bg-subtle px-3.5 text-sm font-semibold text-fg transition hover:bg-surface disabled:opacity-50"
 						>
 							{#if busy}<LoaderCircle size={14} class="motion-safe:animate-spin" aria-hidden="true" />{:else}<Pause size={14} aria-hidden="true" />{/if}
 							Pause
@@ -363,7 +367,7 @@
 						type="button"
 						disabled={busy}
 						onclick={() => { deleteFiles = false; confirmRemove = true; }}
-						class="ml-auto inline-flex h-9 items-center gap-1.5 rounded-md bg-status-failed/15 px-3.5 text-sm font-semibold text-status-failed transition hover:bg-status-failed/25 disabled:opacity-50"
+						class="ml-auto inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md bg-status-failed/15 px-3.5 text-sm font-semibold text-status-failed transition hover:bg-status-failed/25 disabled:opacity-50"
 					>
 						<Trash2 size={14} aria-hidden="true" />
 						{i18n.common_remove()}

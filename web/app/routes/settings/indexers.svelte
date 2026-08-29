@@ -256,7 +256,7 @@
 									<button
 										type="button"
 										onclick={() => openEdit(i)}
-										class="grid h-9 w-9 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg"
+										class="grid h-11 w-11 lg:h-9 lg:w-9 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg"
 										aria-label={i18n.indexer_view()}
 									>
 										<Eye size={16} aria-hidden="true" />
@@ -265,7 +265,7 @@
 									<button
 										type="button"
 										onclick={() => openEdit(i)}
-										class="grid h-9 w-9 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg"
+										class="grid h-11 w-11 lg:h-9 lg:w-9 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg"
 										aria-label={i18n.indexer_edit()}
 									>
 										<Pencil size={16} aria-hidden="true" />
@@ -273,7 +273,7 @@
 									<button
 										type="button"
 										onclick={() => onDelete(i)}
-										class="grid h-9 w-9 place-items-center rounded-md text-fg-muted transition hover:bg-status-failed/10 hover:text-status-failed"
+										class="grid h-11 w-11 lg:h-9 lg:w-9 place-items-center rounded-md text-fg-muted transition hover:bg-status-failed/10 hover:text-status-failed"
 										aria-label={i18n.indexer_delete()}
 									>
 										<Trash2 size={16} aria-hidden="true" />

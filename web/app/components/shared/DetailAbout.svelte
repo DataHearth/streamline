@@ -45,7 +45,7 @@
 				<button
 					type="button"
 					onclick={onViewAllCast}
-					class="font-mono text-[11px] text-accent-text transition hover:text-accent"
+					class="touch-hit font-mono text-[11px] text-accent-text transition hover:text-accent"
 				>
 					{i18n.common_view_all()}
 				</button>

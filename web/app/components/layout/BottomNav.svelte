@@ -416,7 +416,7 @@
 					type="button"
 					onclick={closeSheet}
 					aria-label={i18n.common_close()}
-					class="grid h-9 w-9 place-items-center rounded-full bg-surface text-fg-subtle transition hover:bg-bg-hover hover:text-fg"
+					class="grid h-11 w-11 place-items-center rounded-full bg-surface text-fg-subtle transition hover:bg-bg-hover hover:text-fg"
 				>
 					<X size={16} aria-hidden="true" />
 				</button>

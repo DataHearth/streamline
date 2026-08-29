@@ -47,7 +47,7 @@
 		{#if !isIndex}
 			<a
 				href="/settings"
-				class="mb-3 inline-flex items-center gap-1.5 rounded-md py-1 pr-2 text-[13px] text-fg-muted transition hover:text-fg lg:hidden"
+				class="touch-hit mb-3 inline-flex items-center gap-1.5 rounded-md py-1 pr-2 text-[13px] text-fg-muted transition hover:text-fg lg:hidden"
 			>
 				<ChevronLeft size={15} aria-hidden="true" />
 				{i18n.nav_settings()}

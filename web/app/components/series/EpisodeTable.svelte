@@ -96,7 +96,7 @@
 							aria-label={ep.monitored ? i18n.action_stop_monitoring_episode() : i18n.action_monitor_episode()}
 							title={ep.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
 							class={cn(
-								"grid h-7 w-7 place-items-center rounded-md transition focus:outline-none focus:ring-2 focus:ring-accent-ring disabled:cursor-not-allowed disabled:opacity-40",
+								"grid h-11 w-11 place-items-center rounded-md transition focus:outline-none focus:ring-2 focus:ring-accent-ring disabled:cursor-not-allowed disabled:opacity-40 lg:h-7 lg:w-7",
 								ep.monitored
 									? "text-accent-text"
 									: "text-fg-subtle hover:text-fg",
@@ -166,7 +166,7 @@
 								onclick={() => (detail = ep)}
 								aria-label="Details for {epCode(ep)}"
 								title={i18n.common_details()}
-								class="grid h-7 w-7 place-items-center rounded-md text-fg-subtle transition hover:bg-surface hover:text-fg focus-visible:ring-2 focus-visible:ring-accent-ring"
+								class="grid h-11 w-11 place-items-center rounded-md text-fg-subtle transition hover:bg-surface hover:text-fg focus-visible:ring-2 focus-visible:ring-accent-ring lg:h-7 lg:w-7"
 							>
 								<Info size={14} aria-hidden="true" />
 							</button>
@@ -176,7 +176,7 @@
 									onclick={() => onManualSearch(ep)}
 									aria-label="Manual search for {epCode(ep)}"
 									title={i18n.action_manual_search()}
-									class="grid h-7 w-7 place-items-center rounded-md text-fg-subtle transition hover:bg-surface hover:text-fg focus-visible:ring-2 focus-visible:ring-accent-ring"
+									class="grid h-11 w-11 place-items-center rounded-md text-fg-subtle transition hover:bg-surface hover:text-fg focus-visible:ring-2 focus-visible:ring-accent-ring lg:h-7 lg:w-7"
 								>
 									<Search size={14} aria-hidden="true" />
 								</button>
@@ -187,7 +187,7 @@
 									onclick={() => onDeleteFile(ep)}
 									aria-label="Delete file for {epCode(ep)}"
 									title={i18n.action_delete_file()}
-									class="grid h-7 w-7 place-items-center rounded-md text-fg-subtle transition hover:bg-status-failed/10 hover:text-status-failed focus-visible:ring-2 focus-visible:ring-accent-ring"
+									class="grid h-11 w-11 place-items-center rounded-md text-fg-subtle transition hover:bg-status-failed/10 hover:text-status-failed focus-visible:ring-2 focus-visible:ring-accent-ring lg:h-7 lg:w-7"
 								>
 									<Trash2 size={14} aria-hidden="true" />
 								</button>

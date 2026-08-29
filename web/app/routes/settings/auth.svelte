@@ -301,7 +301,7 @@
 						config.readOnly
 							? rotate.mutate(false)
 							: (confirmRotate = true)}
-					class="inline-flex h-9 items-center gap-1.5 rounded-md border border-status-failed/40 bg-status-failed/10 px-3 text-sm font-medium text-status-failed transition hover:bg-status-failed/15 disabled:cursor-not-allowed disabled:opacity-60"
+					class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md border border-status-failed/40 bg-status-failed/10 px-3 text-sm font-medium text-status-failed transition hover:bg-status-failed/15 disabled:cursor-not-allowed disabled:opacity-60"
 				>
 					<RefreshCw size={14} aria-hidden="true" />
 					{rotate.isPending ? i18n.auth_rotating() : i18n.auth_rotate_secret()}
@@ -357,7 +357,7 @@
 			type="button"
 			data-autofocus
 			onclick={() => (pendingSecret = null)}
-			class="inline-flex h-9 items-center rounded-md border border-border px-3 text-sm text-fg-muted transition hover:text-fg"
+			class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center rounded-md border border-border px-3 text-sm text-fg-muted transition hover:text-fg"
 		>
 			{i18n.common_cancel()}
 		</button>
@@ -365,7 +365,7 @@
 			type="button"
 			disabled={rotate.isPending}
 			onclick={() => rotate.mutate(true)}
-			class="inline-flex h-9 items-center gap-1.5 rounded-md border border-status-failed/40 bg-status-failed/10 px-3 text-sm font-medium text-status-failed transition hover:bg-status-failed/15 disabled:cursor-not-allowed disabled:opacity-60"
+			class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md border border-status-failed/40 bg-status-failed/10 px-3 text-sm font-medium text-status-failed transition hover:bg-status-failed/15 disabled:cursor-not-allowed disabled:opacity-60"
 		>
 			<RefreshCw size={14} aria-hidden="true" />
 			{rotate.isPending ? i18n.common_applying() : i18n.auth_saved_apply()}

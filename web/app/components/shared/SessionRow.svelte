@@ -66,7 +66,7 @@
 		type="button"
 		disabled={session.is_current || revoking}
 		onclick={onRevoke}
-		class="inline-flex h-8 shrink-0 items-center gap-1 rounded-md px-2 text-xs font-medium text-status-failed transition hover:bg-status-failed/10 disabled:cursor-not-allowed disabled:text-fg-faint disabled:hover:bg-transparent"
+		class="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-md px-2 text-xs font-medium text-status-failed lg:h-8 lg:min-h-0 transition hover:bg-status-failed/10 disabled:cursor-not-allowed disabled:text-fg-faint disabled:hover:bg-transparent"
 		aria-label={i18n.action_revoke_session()}
 	>
 		<Trash2 size={14} aria-hidden="true" />

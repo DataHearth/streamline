@@ -44,7 +44,7 @@
 		<button
 			type="button"
 			onclick={startEdit}
-			class="inline-flex h-7 items-center rounded-md border border-border bg-surface px-3 text-xs font-medium text-fg-muted transition hover:bg-surface-2 hover:text-fg"
+			class="inline-flex min-h-11 items-center rounded-md border border-border bg-surface px-3 text-xs font-medium text-fg-muted lg:h-7 lg:min-h-0 transition hover:bg-surface-2 hover:text-fg"
 		>
 			{i18n.common_edit()}
 		</button>
@@ -136,7 +136,7 @@
 				if (!mutation.isPending) open = false;
 			}}
 			disabled={mutation.isPending}
-			class="inline-flex h-9 items-center rounded-md border border-border bg-surface px-3.5 text-sm font-medium text-fg-muted transition hover:bg-surface-2 hover:text-fg disabled:cursor-not-allowed disabled:opacity-60"
+			class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center rounded-md border border-border bg-surface px-3.5 text-sm font-medium text-fg-muted transition hover:bg-surface-2 hover:text-fg disabled:cursor-not-allowed disabled:opacity-60"
 		>
 			{i18n.common_cancel()}
 		</button>
@@ -144,7 +144,7 @@
 			type="submit"
 			form="edit-profile-form"
 			disabled={mutation.isPending}
-			class="inline-flex h-9 items-center rounded-md bg-accent px-3.5 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+			class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center rounded-md bg-accent px-3.5 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
 		>
 			{mutation.isPending ? i18n.common_saving() : i18n.common_save_changes()}
 		</button>

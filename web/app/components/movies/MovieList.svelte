@@ -239,7 +239,7 @@
 								aria-pressed={movie.monitored}
 								title={movie.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
 								class={cn(
-									"grid h-8 w-8 place-items-center rounded-md transition hover:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring",
+									"grid h-11 w-11 lg:h-8 lg:w-8 place-items-center rounded-md transition hover:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring",
 									movie.monitored
 										? "text-accent-text"
 										: "text-fg-muted hover:text-fg",

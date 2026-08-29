@@ -80,7 +80,7 @@
 	}
 
 	const navBtn =
-		"grid h-7 w-7 place-items-center rounded-md border border-border text-fg-muted transition-colors hover:border-border-strong hover:bg-surface hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring disabled:pointer-events-none disabled:opacity-40";
+		"hidden h-7 w-7 place-items-center rounded-md border border-border lg:grid text-fg-muted transition-colors hover:border-border-strong hover:bg-surface hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring disabled:pointer-events-none disabled:opacity-40";
 </script>
 
 {#if recs.length > 0}
