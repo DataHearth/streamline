@@ -24,6 +24,10 @@ func (s *Server) ListActivity(
 		id := *req.Params.MovieId
 		f.MovieID = &id
 	}
+	if req.Params.SeriesId != nil {
+		id := *req.Params.SeriesId
+		f.SeriesID = &id
+	}
 	if req.Params.Since != nil {
 		t := *req.Params.Since
 		f.Since = &t

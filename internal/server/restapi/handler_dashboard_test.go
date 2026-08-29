@@ -83,6 +83,25 @@ var _ = Describe(
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			})
 
+			It(
+				"forwards series_id, so a series feed is not the whole library",
+				func() {
+					app.store.EXPECT().
+						RecentActivity(mock.Anything, mock.MatchedBy(func(f db.ActivityFilter) bool {
+							return f.SeriesID != nil && *f.SeriesID == 118
+						})).
+						Return(&db.ActivityResult{}, nil).
+						Once()
+
+					resp, err := http.Get(
+						app.srv.URL + "/api/v1/activity?series_id=118",
+					)
+					Expect(err).NotTo(HaveOccurred())
+					defer resp.Body.Close()
+					Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				},
+			)
+
 			It("400s on a malformed cursor", func() {
 				app.store.EXPECT().
 					RecentActivity(mock.Anything, mock.AnythingOfType("db.ActivityFilter")).
