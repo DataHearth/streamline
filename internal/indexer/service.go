@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"regexp"
 	"sort"
 	"sync"
 	"time"
@@ -250,12 +251,66 @@ func (i *indexer) SearchSeason(
 		titles,
 		SearchParams{TVDBID: tvdbID, Season: season},
 	)
-	filtered := filterToSeason(results, season)
+	filtered := preferTitleMatches(filterToSeason(results, season), titles)
 	span.SetAttributes(
 		attribute.Int("results.pre_season_filter", len(results)),
 		attribute.Int("results.total", len(filtered)),
 	)
 	return filtered, nil
+}
+
+// A fansub tag survives extractTitle and would make every tagged release read
+// as a different show. The opening bracket is usually already gone —
+// library.Parse trims leading delimiters — so it is optional here, and
+// everything through the first closing bracket goes. Same shape as
+// rss.fansubTagRe, which normalizes the same names for the feed scanner.
+var fansubTagRe = regexp.MustCompile(`^\[?[^\]]*\]\s*`)
+
+// preferTitleMatches returns only the results whose parsed title names this
+// show, and every result when none does.
+//
+// The scope filters match on numbers alone, so an indexer answering a keyword
+// search offers every show sharing them: a search for one anime's S04E03 came
+// back with Reacher, Ted Lasso and Strange New Worlds alongside it, any of
+// which can outrank the right release under a profile that cannot tell them
+// apart. The importer files whatever was grabbed under the record's anchor
+// episode, so a wrong result becomes a wrong file with nothing downstream to
+// catch it.
+//
+// Dropping the non-matches outright is what this deliberately does not do.
+// titles is the show's own two names — TVShow stores no aliases and neither
+// caller loads TVDB's — so a library holding a show under a translated title
+// (`Moi, quand je me réincarne en Slime`, original `転生したらスライムだった件`)
+// matches none of its English releases, which are most of what its indexers
+// carry. Preferring keeps the wrong show from winning on score whenever the
+// right one is present, and costs nothing when it isn't.
+//
+// A release whose title the parser could not read counts as a match: an empty
+// title is no evidence of the wrong show. Matching is prefix-tolerant in both
+// directions because a parsed title keeps what extractTitle could not cut —
+// `Breaking Bad COMPLETE`, a fansub tag, a translated suffix.
+func preferTitleMatches(results []SearchResult, titles []string) []SearchResult {
+	if len(titles) == 0 {
+		return results
+	}
+	matched := make([]SearchResult, 0, len(results))
+	for _, r := range results {
+		name := fansubTagRe.ReplaceAllString(library.Parse(r.Title).Title, "")
+		if name == "" {
+			matched = append(matched, r)
+			continue
+		}
+		for _, t := range titles {
+			if library.TitlePrefixMatches(name, t) {
+				matched = append(matched, r)
+				break
+			}
+		}
+	}
+	if len(matched) == 0 {
+		return results
+	}
+	return matched
 }
 
 // filterToSeason keeps only season packs of exactly the requested season.
@@ -363,6 +418,7 @@ func (i *indexer) SearchEpisode(
 		SearchParams{TVDBID: tvdbID, Season: season, Episode: episode},
 	)
 	filtered, hiddenPacks := filterToEpisode(results, season, episode)
+	filtered = preferTitleMatches(filtered, titles)
 	span.SetAttributes(
 		attribute.Int("results.pre_episode_filter", len(results)),
 		attribute.Int("results.hidden_packs", hiddenPacks),

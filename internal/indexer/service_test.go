@@ -251,4 +251,50 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 			Expect(hidden).To(Equal(3))
 		})
 	})
+
+	Describe("preferTitleMatches", func() {
+		It(
+			"keeps this show's releases when another show shares the numbers",
+			func() {
+				in := []SearchResult{
+					{Title: "Breaking.Bad.S01E05.1080p.WEB.x265-GRP"},
+					{Title: "Ted Lasso S01E05 1080p WEB H264-CAKES"},
+					{Title: "Reacher S01E05 1080p HEVC x265-MeGusta"},
+					// A pack keyword and a fansub tag both survive extractTitle, so
+					// the comparison has to tolerate them.
+					{Title: "Breaking.Bad.S01.COMPLETE.MULTI.1080p.WEB-GRP"},
+					{Title: "[SubsPlease] Breaking Bad - 05 (1080p) [A1B2C3D4]"},
+				}
+				out := preferTitleMatches(
+					in,
+					[]string{"Breaking Bad", "Breaking Bad"},
+				)
+				titles := make([]string, len(out))
+				for i, r := range out {
+					titles[i] = r.Title
+				}
+				Expect(titles).To(ConsistOf(
+					"Breaking.Bad.S01E05.1080p.WEB.x265-GRP",
+					"Breaking.Bad.S01.COMPLETE.MULTI.1080p.WEB-GRP",
+					"[SubsPlease] Breaking Bad - 05 (1080p) [A1B2C3D4]",
+				))
+			},
+		)
+
+		It("keeps everything when no release names the show", func() {
+			// A library holding a show under a translated title matches none of
+			// its English releases, and dropping them leaves nothing to grab.
+			in := []SearchResult{
+				{
+					Title: "That.Time.I.Got.Reincarnated.as.a.Slime.S04E20.VOSTFR.1080p.WEB",
+				},
+				{Title: "Slime.Datta.Ken.S04E20.VOSTFR.1080p.WEB"},
+			}
+			out := preferTitleMatches(in, []string{
+				"Moi, quand je me réincarne en Slime",
+				"転生したらスライムだった件",
+			})
+			Expect(out).To(HaveLen(2))
+		})
+	})
 })
