@@ -90,5 +90,25 @@ func MatchEpisodeInSeason(
 			}
 		}
 	}
+	// An anime group may write the absolute number in SxxExx form: TLC and
+	// Tsundere-Raws both publish "The.Elusive.Samurai.S02E15" for the episode
+	// TVDB numbers S02E03 (absolute 15), listing it on the indexer as S02E03
+	// and naming the file inside the torrent S02E15. The parser reads a real
+	// season and episode there, so AbsoluteNumber is 0 and the loop above never
+	// consults it — a grab whose keep-set matched nothing then fails with
+	// ErrNoWantedFiles before any client is contacted, and the episode is never
+	// filled no matter how many acceptable releases exist.
+	//
+	// Only reached once the exact season+episode found nothing, so a season
+	// that genuinely holds that episode still wins.
+	if anime && parsed.AbsoluteNumber == 0 && parsed.Episode > 0 {
+		for _, se := range seasons {
+			for _, e := range se.Edges.Episodes {
+				if e.AbsoluteNumber == parsed.Episode {
+					return se.Number, e
+				}
+			}
+		}
+	}
 	return 0, nil
 }

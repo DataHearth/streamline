@@ -50,4 +50,35 @@ var _ = Describe("MatchEpisode", Label("unit", "library"), func() {
 			MatchEpisode(ParseResult{Season: 9, Episode: 9}, seasons, false),
 		).To(BeNil())
 	})
+
+	// TLC and Tsundere-Raws list a release as S02E03 and name the file inside
+	// the torrent S02E15 — the absolute number in SxxExx form. Refusing it
+	// fails the grab with ErrNoWantedFiles before any client is contacted.
+	It(
+		"reads an anime SxxExx as an absolute number when the season lacks it",
+		func() {
+			_, ep := MatchEpisodeInSeason(
+				ParseResult{Season: 2, Episode: 3}, seasons, true,
+			)
+			Expect(ep).NotTo(BeNil())
+			Expect(ep.AbsoluteNumber).To(Equal(uint16(3)))
+			Expect(ep.Number).To(Equal(uint16(1)))
+		},
+	)
+
+	It("prefers a real season+episode over the absolute fallback", func() {
+		season, ep := MatchEpisodeInSeason(
+			ParseResult{Season: 1, Episode: 2}, seasons, true,
+		)
+		Expect(ep).NotTo(BeNil())
+		Expect(season).To(Equal(uint16(1)))
+		Expect(ep.AbsoluteNumber).To(Equal(uint16(2)))
+	})
+
+	It("does not apply the absolute fallback to non-anime", func() {
+		_, ep := MatchEpisodeInSeason(
+			ParseResult{Season: 2, Episode: 3}, seasons, false,
+		)
+		Expect(ep).To(BeNil())
+	})
 })
