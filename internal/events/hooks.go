@@ -326,6 +326,14 @@ func downloadRecordOwner(
 	if hasID(m.EpisodeID) {
 		return owner{ScopeEpisode, mustID(m.EpisodeID)}, nil
 	}
+	// A create carries its edges in the mutation or not at all — there is no
+	// stored row to fall back to, and ent refuses IDs() on OpCreate outright.
+	// Reaching the query below therefore failed the whole insert, which is how
+	// an adopted torrent matching nothing in the library ("unidentified — pick
+	// a title", the one proposal shape with no owner) silently never got filed.
+	if m.Op().Is(ent.OpCreate) {
+		return owner{}, nil
+	}
 	ids, err := m.IDs(ctx)
 	if err != nil {
 		return owner{}, err
