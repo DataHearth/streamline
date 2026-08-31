@@ -126,7 +126,7 @@ func (r *RenameService) target(m *ent.Movie, currentPath string) string {
 		ext := strings.TrimPrefix(filepath.Ext(currentPath), ".")
 		parsed.Extension = ext
 	}
-	vars := library.BuildMovieVars(m.Title, m.Year, m.TmdbID, "", parsed)
+	vars := library.BuildMovieVars(m.Title, m.Year, m.TmdbID, parsed)
 	rel := library.ApplyTemplate(r.naming, vars)
 	segments := strings.Split(rel, "/")
 	for i, seg := range segments {

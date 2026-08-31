@@ -89,7 +89,7 @@ var _ = Describe("ImportService", Label("unit", "library"), func() {
 					TmdbID: 157336,
 				}
 
-				got, err := svc.ImportMovie(ctx, srcFile, m, "")
+				got, err := svc.ImportMovie(ctx, srcFile, m)
 				Expect(err).NotTo(HaveOccurred())
 
 				expectedPath := filepath.Join(
@@ -126,7 +126,7 @@ var _ = Describe("ImportService", Label("unit", "library"), func() {
 				svc := NewImportService(cfg)
 				m := &ent.Movie{ID: 1, Title: "Movie", Year: 2020, TmdbID: 999}
 
-				got, err := svc.ImportMovie(ctx, downloadDir, m, "")
+				got, err := svc.ImportMovie(ctx, downloadDir, m)
 				Expect(err).NotTo(HaveOccurred())
 
 				expectedPath := filepath.Join(
@@ -168,7 +168,7 @@ var _ = Describe("ImportService", Label("unit", "library"), func() {
 
 				svc := NewImportService(cfg)
 				m := &ent.Movie{ID: 1, Title: "Flick", Year: 2024, TmdbID: 1}
-				_, err := svc.ImportMovie(ctx, downloadDir, m, "")
+				_, err := svc.ImportMovie(ctx, downloadDir, m)
 				Expect(err).To(MatchError(ErrDestExists))
 			},
 		)
@@ -190,7 +190,7 @@ var _ = Describe("ImportService", Label("unit", "library"), func() {
 
 				svc := NewImportService(cfg)
 				m := &ent.Movie{ID: 1, Title: "Flick", Year: 2024, TmdbID: 1}
-				got, err := svc.ImportMovie(ctx, downloadDir, m, "")
+				got, err := svc.ImportMovie(ctx, downloadDir, m)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(got.Path).To(Equal(filepath.Join(destDir, "Flick.mkv")))
 			},
@@ -205,7 +205,7 @@ var _ = Describe("ImportService", Label("unit", "library"), func() {
 			}
 			svc := NewImportService(cfg)
 			m := &ent.Movie{ID: 1, Title: "Flick", Year: 2024, TmdbID: 1}
-			_, err := svc.ImportMovie(ctx, downloadDir, m, "")
+			_, err := svc.ImportMovie(ctx, downloadDir, m)
 			Expect(err).To(MatchError(ErrUnsafePath))
 		})
 	})

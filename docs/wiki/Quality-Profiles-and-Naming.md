@@ -129,7 +129,6 @@ Templates include directory separators — the whole relative path under `movie_
 | `{title}` | Movie title from TMDB |
 | `{year}` | Release year — omitted if unknown |
 | `{tmdb_id}` | TMDB ID |
-| `{imdb_id}` | IMDb ID, when known |
 | `{quality}` | Parsed resolution |
 | `{source}` | Parsed source |
 | `{codec}` | Parsed codec |
@@ -153,9 +152,9 @@ Templates include directory separators — the whole relative path under `movie_
 | `{air_date}` | `YYYY-MM-DD`, when parsed |
 | `{ext}` | File extension |
 
-`{imdb_id}` is movie-only; `{absolute}` and `{air_date}` are episode-only. Everything else is available to both.
+`{tmdb_id}` is movie-only and `{tvdb_id}` series-only (they are the same token in different namespaces); `{absolute}` and `{air_date}` are episode-only. Everything else is available to both.
 
-`{tvdb_id}` is the series counterpart of `{tmdb_id}` — write it as `{tvdb-{tvdb_id}}` for the same Plex/Jellyfin ID hint the movie default uses. Streamline reads that marker back when scanning an existing library, so a series folder carrying it is matched by ID rather than by title.
+Write `{tvdb_id}` as `{tvdb-{tvdb_id}}` for the same Plex/Jellyfin ID hint the movie default gets from `{tmdb-{tmdb_id}}`. Streamline reads that marker back when scanning an existing library, so a folder carrying it is matched by ID rather than by title.
 
 ### Zero-padding
 
@@ -174,7 +173,7 @@ Padding applies only when the value parses as a number; otherwise it's rendered 
 An unrecognised token, or one whose value isn't populated, becomes an empty string rather than an error or a literal `{token}`. That's what lets optional segments stay clean:
 
 ```
-{title} ({year}) [{imdb_id}]     →  The Matrix (1999) []      # when unknown
+{title} ({year}) [{group}]      →  The Matrix (1999) []      # when unparsed
 ```
 
 Note the brackets survive. If a segment should disappear entirely when its token is empty, don't wrap it in literal punctuation.

@@ -305,7 +305,6 @@ func (s *Service) commitAttach(
 			ctx,
 			filepath.Dir(f.SourcePath),
 			m,
-			"",
 			string(scan.ImportMode),
 		)
 		if err != nil {
@@ -354,7 +353,6 @@ func (s *Service) commitRename(
 		ctx,
 		filepath.Dir(f.SourcePath),
 		m,
-		"",
 		string(scan.ImportMode),
 	)
 	if err != nil {

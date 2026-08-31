@@ -40,8 +40,8 @@ func (_m *MockImporter) EXPECT() *MockImporter_Expecter {
 }
 
 // ImportMovieWithMode provides a mock function for the type MockImporter
-func (_mock *MockImporter) ImportMovieWithMode(ctx context.Context, srcDir string, m *ent.Movie, imdbID string, modeOverride string) (library.ImportedFile, error) {
-	ret := _mock.Called(ctx, srcDir, m, imdbID, modeOverride)
+func (_mock *MockImporter) ImportMovieWithMode(ctx context.Context, srcDir string, m *ent.Movie, modeOverride string) (library.ImportedFile, error) {
+	ret := _mock.Called(ctx, srcDir, m, modeOverride)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ImportMovieWithMode")
@@ -49,16 +49,16 @@ func (_mock *MockImporter) ImportMovieWithMode(ctx context.Context, srcDir strin
 
 	var r0 library.ImportedFile
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, *ent.Movie, string, string) (library.ImportedFile, error)); ok {
-		return returnFunc(ctx, srcDir, m, imdbID, modeOverride)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, *ent.Movie, string) (library.ImportedFile, error)); ok {
+		return returnFunc(ctx, srcDir, m, modeOverride)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, *ent.Movie, string, string) library.ImportedFile); ok {
-		r0 = returnFunc(ctx, srcDir, m, imdbID, modeOverride)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, *ent.Movie, string) library.ImportedFile); ok {
+		r0 = returnFunc(ctx, srcDir, m, modeOverride)
 	} else {
 		r0 = ret.Get(0).(library.ImportedFile)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, *ent.Movie, string, string) error); ok {
-		r1 = returnFunc(ctx, srcDir, m, imdbID, modeOverride)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, *ent.Movie, string) error); ok {
+		r1 = returnFunc(ctx, srcDir, m, modeOverride)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -74,13 +74,12 @@ type MockImporter_ImportMovieWithMode_Call struct {
 //   - ctx context.Context
 //   - srcDir string
 //   - m *ent.Movie
-//   - imdbID string
 //   - modeOverride string
-func (_e *MockImporter_Expecter) ImportMovieWithMode(ctx any, srcDir any, m any, imdbID any, modeOverride any) *MockImporter_ImportMovieWithMode_Call {
-	return &MockImporter_ImportMovieWithMode_Call{Call: _e.mock.On("ImportMovieWithMode", ctx, srcDir, m, imdbID, modeOverride)}
+func (_e *MockImporter_Expecter) ImportMovieWithMode(ctx any, srcDir any, m any, modeOverride any) *MockImporter_ImportMovieWithMode_Call {
+	return &MockImporter_ImportMovieWithMode_Call{Call: _e.mock.On("ImportMovieWithMode", ctx, srcDir, m, modeOverride)}
 }
 
-func (_c *MockImporter_ImportMovieWithMode_Call) Run(run func(ctx context.Context, srcDir string, m *ent.Movie, imdbID string, modeOverride string)) *MockImporter_ImportMovieWithMode_Call {
+func (_c *MockImporter_ImportMovieWithMode_Call) Run(run func(ctx context.Context, srcDir string, m *ent.Movie, modeOverride string)) *MockImporter_ImportMovieWithMode_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -98,16 +97,11 @@ func (_c *MockImporter_ImportMovieWithMode_Call) Run(run func(ctx context.Contex
 		if args[3] != nil {
 			arg3 = args[3].(string)
 		}
-		var arg4 string
-		if args[4] != nil {
-			arg4 = args[4].(string)
-		}
 		run(
 			arg0,
 			arg1,
 			arg2,
 			arg3,
-			arg4,
 		)
 	})
 	return _c
@@ -118,7 +112,7 @@ func (_c *MockImporter_ImportMovieWithMode_Call) Return(importedFile library.Imp
 	return _c
 }
 
-func (_c *MockImporter_ImportMovieWithMode_Call) RunAndReturn(run func(ctx context.Context, srcDir string, m *ent.Movie, imdbID string, modeOverride string) (library.ImportedFile, error)) *MockImporter_ImportMovieWithMode_Call {
+func (_c *MockImporter_ImportMovieWithMode_Call) RunAndReturn(run func(ctx context.Context, srcDir string, m *ent.Movie, modeOverride string) (library.ImportedFile, error)) *MockImporter_ImportMovieWithMode_Call {
 	_c.Call.Return(run)
 	return _c
 }

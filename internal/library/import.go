@@ -203,9 +203,8 @@ func (s *ImportService) ImportMovie(
 	ctx context.Context,
 	srcDir string,
 	m *ent.Movie,
-	imdbID string,
 ) (ImportedFile, error) {
-	return s.ImportMovieWithMode(ctx, srcDir, m, imdbID, "")
+	return s.ImportMovieWithMode(ctx, srcDir, m, "")
 }
 
 // ImportMovieWithMode is ImportMovie with an explicit transfer-mode override.
@@ -214,7 +213,6 @@ func (s *ImportService) ImportMovieWithMode(
 	ctx context.Context,
 	srcDir string,
 	m *ent.Movie,
-	imdbID string,
 	modeOverride string,
 ) (ImportedFile, error) {
 	mode := modeOverride
@@ -238,7 +236,7 @@ func (s *ImportService) ImportMovieWithMode(
 		naming:  s.config.MovieNaming,
 		mode:    mode,
 		buildVars: func(parsed ParseResult) map[string]string {
-			return BuildMovieVars(m.Title, m.Year, m.TmdbID, imdbID, parsed)
+			return BuildMovieVars(m.Title, m.Year, m.TmdbID, parsed)
 		},
 		owner: []any{"movie.id", m.ID},
 	})
@@ -470,7 +468,6 @@ type Importer interface {
 		ctx context.Context,
 		srcDir string,
 		m *ent.Movie,
-		imdbID string,
 		modeOverride string,
 	) (ImportedFile, error)
 }

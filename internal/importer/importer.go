@@ -368,7 +368,7 @@ func (w *Worker) importMovieRecord(
 		}
 	}
 
-	imported, err := w.lib.ImportMovie(ctx, rec.SavePath, m, "")
+	imported, err := w.lib.ImportMovie(ctx, rec.SavePath, m)
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
 	}

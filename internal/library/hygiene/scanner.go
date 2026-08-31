@@ -223,7 +223,7 @@ func (s *Service) handleOrphan(
 	}
 
 	imported, err := s.importer.ImportMovieWithMode(
-		ctx, filepath.Dir(cand.Path), movie, "", "",
+		ctx, filepath.Dir(cand.Path), movie, "",
 	)
 	if err != nil {
 		orphanImportFailed.Add(ctx, 1)

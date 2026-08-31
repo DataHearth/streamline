@@ -51,12 +51,11 @@ var _ = Describe("Naming Templates", Label("unit", "library"), func() {
 	})
 
 	Describe("BuildMovieVars", func() {
-		It("populates tmdb_id/imdb_id/group/source/codec when present", func() {
+		It("populates tmdb_id/group/source/codec when present", func() {
 			vars := BuildMovieVars(
 				"Test Movie",
 				2024,
 				12345,
-				"tt9999",
 				ParseResult{
 					Resolution: "1080p",
 					Source:     "WEB-DL",
@@ -68,7 +67,6 @@ var _ = Describe("Naming Templates", Label("unit", "library"), func() {
 			Expect(vars["title"]).To(Equal("Test Movie"))
 			Expect(vars["year"]).To(Equal("2024"))
 			Expect(vars["tmdb_id"]).To(Equal("12345"))
-			Expect(vars["imdb_id"]).To(Equal("tt9999"))
 			Expect(vars["quality"]).To(Equal("1080p"))
 			Expect(vars["source"]).To(Equal("WEB-DL"))
 			Expect(vars["codec"]).To(Equal("x264"))
@@ -76,26 +74,23 @@ var _ = Describe("Naming Templates", Label("unit", "library"), func() {
 			Expect(vars["ext"]).To(Equal("mkv"))
 		})
 
-		It("omits tmdb_id/imdb_id/year/ext when unset", func() {
+		It("omits tmdb_id/year/ext when unset", func() {
 			vars := BuildMovieVars(
 				"Movie",
 				0,
 				0,
-				"",
 				ParseResult{Resolution: "720p"},
 			)
 			_, hasYear := vars["year"]
 			_, hasTmdb := vars["tmdb_id"]
-			_, hasImdb := vars["imdb_id"]
 			_, hasExt := vars["ext"]
 			Expect(hasYear).To(BeFalse())
 			Expect(hasTmdb).To(BeFalse())
-			Expect(hasImdb).To(BeFalse())
 			Expect(hasExt).To(BeFalse())
 		})
 
 		It("renders Plex-style {tmdb-{tmdb_id}} literal braces around id", func() {
-			vars := BuildMovieVars("X", 2024, 999, "", ParseResult{Extension: "mkv"})
+			vars := BuildMovieVars("X", 2024, 999, ParseResult{Extension: "mkv"})
 			got := ApplyTemplate(
 				"{title} ({year}) {tmdb-{tmdb_id}}/file.{ext}",
 				vars,

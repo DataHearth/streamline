@@ -12,7 +12,7 @@ var templateTokenRe = regexp.MustCompile(`\{(\w+)(?::(\d+))?\}`)
 // ApplyTemplate replaces {key} and {key:02} tokens in a template string
 // with values from the provided map. Format spec {key:02} zero-pads
 // numeric values to the given width. Unknown tokens render as empty —
-// keeps optional segments like {imdb_id} clean when not populated.
+// keeps optional segments clean when not populated.
 //
 // Substituted values are run through SanitizePath. The rendered string is a
 // path whose "/" are structural, and callers split on them: a title carrying
@@ -48,7 +48,6 @@ func BuildMovieVars(
 	title string,
 	year uint16,
 	tmdbID uint32,
-	imdbID string,
 	parsed ParseResult,
 ) map[string]string {
 	vars := map[string]string{
@@ -63,9 +62,6 @@ func BuildMovieVars(
 	}
 	if tmdbID != 0 {
 		vars["tmdb_id"] = strconv.FormatUint(uint64(tmdbID), 10)
-	}
-	if imdbID != "" {
-		vars["imdb_id"] = imdbID
 	}
 	if parsed.Extension != "" {
 		vars["ext"] = parsed.Extension

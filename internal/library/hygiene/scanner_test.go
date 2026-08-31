@@ -91,7 +91,7 @@ var _ = Describe("Service.RunOrphanScan", Label("unit", "hygiene"), func() {
 			mock.Anything,
 			filepath.Dir(path),
 			mock.MatchedBy(func(m *ent.Movie) bool { return m.TmdbID == 27205 }),
-			"", "",
+			"",
 		).Return(library.ImportedFile{Path: path, Size: 60 * 1024 * 1024}, nil).Once()
 		store.EXPECT().CreateMediaFile(mock.Anything, mock.MatchedBy(
 			func(p db.CreateMediaFileParams) bool {
@@ -210,7 +210,7 @@ var _ = Describe("Service.RunOrphanScan", Label("unit", "hygiene"), func() {
 		store.EXPECT().FindMovieByTMDBID(mock.Anything, uint32(27205)).
 			Return(&ent.Movie{ID: 1, TmdbID: 27205}, nil).Once()
 		imp.EXPECT().ImportMovieWithMode(
-			mock.Anything, mock.Anything, mock.Anything, "", "",
+			mock.Anything, mock.Anything, mock.Anything, "",
 		).Return(library.ImportedFile{}, errors.New("disk full")).Once()
 		expectQueueWriteOnce(101)
 
