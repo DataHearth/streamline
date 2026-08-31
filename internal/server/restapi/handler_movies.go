@@ -314,7 +314,7 @@ func (s *Server) GrabMovieRelease(
 	switch {
 	case errors.Is(err, download.ErrUntrustedSource):
 		return GrabMovieRelease422JSONResponse{
-			UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
+			UnprocessableEntityJSONResponse: errGrabRejected(err.Error()),
 		}, nil
 	case err != nil:
 		return GrabMovieRelease500JSONResponse{

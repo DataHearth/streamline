@@ -2640,7 +2640,7 @@ type EpisodeStatus string
 type Error struct {
 	// Code Stable machine-readable error code (e.g. last_admin,
 	// self_delete_forbidden, email_exists, connection_failed,
-	// invalid_condition). Present for domain errors
+	// invalid_condition, grab_rejected). Present for domain errors
 	// where the caller needs to branch on the specific reason; absent
 	// for generic errors where the message is sufficient.
 	Code *string `json:"code,omitempty"`

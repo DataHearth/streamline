@@ -434,7 +434,7 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 
 	Describe("GrabEpisodeRelease", func() {
 		It(
-			"maps a zero-match selective grab to 422 with the message verbatim",
+			"maps a zero-match selective grab to a grab_rejected 422 carrying the reason",
 			func() {
 				app.tvshows.EXPECT().Get(mock.Anything, uint32(3)).
 					Return(&ent.TVShow{ID: 3}, nil).Once()
@@ -463,9 +463,14 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 
 				var body struct {
 					Message string `json:"message"`
+					Code    string `json:"code"`
 				}
 				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
 				Expect(body.Message).To(Equal(grabErr.Error()))
+				// Without the code the SPA renders every 422 as its generic
+				// unprocessable line, discarding the only text that says
+				// the release matched no wanted episode.
+				Expect(body.Code).To(Equal("grab_rejected"))
 			},
 		)
 	})

@@ -80,6 +80,11 @@ export function errorText(err: unknown, fallback?: string): string {
 		// index plus the regexp diagnostic, all derived from what was typed —
 		// is the only thing that says which condition is wrong and why.
 		if (code === "invalid_condition" && err.message) return err.message;
+		// And for a grab the server refused: an untrusted download host, or a
+		// release whose files match no wanted episode. The generic 422 blames
+		// the request body, which sent an operator hunting through releases for
+		// a reason this message had already named.
+		if (code === "grab_rejected" && err.message) return err.message;
 		if (code && BY_CODE[code]) return BY_CODE[code]();
 		return byStatus(err.status);
 	}

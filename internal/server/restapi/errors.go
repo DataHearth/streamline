@@ -81,3 +81,18 @@ func errInvalidCondition(msg string) UnprocessableEntityJSONResponse {
 	code := codeInvalidCondition
 	return UnprocessableEntityJSONResponse{Message: msg, Code: &code}
 }
+
+// codeGrabRejected marks a 422 raised because the grab itself was refused —
+// an untrusted download host, or a release whose files match no wanted
+// episode. Nothing about the request body is wrong, so the generic 422 ("some
+// of those values weren't accepted") sends the operator looking at the release
+// they picked instead of at the reason, which the message already names.
+const codeGrabRejected = "grab_rejected"
+
+// errGrabRejected is errUnprocessable for a refused grab. The message is a
+// download-package sentinel plus the release title the caller submitted, so it
+// is safe to show verbatim and is the only place the refusal's reason appears.
+func errGrabRejected(msg string) UnprocessableEntityJSONResponse {
+	code := codeGrabRejected
+	return UnprocessableEntityJSONResponse{Message: msg, Code: &code}
+}
