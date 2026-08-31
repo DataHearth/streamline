@@ -11,10 +11,11 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	enttvshow "github.com/datahearth/streamline/ent/tvshow"
+	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/library"
-	moviesvc "github.com/datahearth/streamline/internal/media/movie"
-	"github.com/datahearth/streamline/internal/media/tvshow"
+	"github.com/datahearth/streamline/internal/quality"
+	"github.com/datahearth/streamline/internal/quality/qualityctx"
 )
 
 func (s *Server) ListPending(
@@ -211,23 +212,32 @@ func (s *Server) PreviewPending(
 	}
 	return PreviewPending200JSONResponse{
 		PendingPreviewJSONResponse: PendingPreviewJSONResponse(
-			previewPack(files, show),
+			previewPack(files, show, rec.Title),
 		),
 	}, nil
 }
 
-// previewPack buckets a torrent's files by what an import would do with each:
-// fill an empty episode, leave an episode that already has a file alone, or
-// nothing at all. It applies the same extension / size / sample filters the
-// importer's own file walk does, so the counts cannot promise a file the
-// import then skips. Two files landing on one episode count once — the
-// importer imports whichever it reaches first.
-func previewPack(files []download.TorrentFile, show *ent.TVShow) PendingPreview {
+// previewPack buckets a torrent's files by what each action would do with
+// them: fill an empty episode, beat an episode that already has a file, or
+// lose to it. It applies the same extension / size / sample filters the
+// importer's own file walk does, and reaches the same per-file verdict through
+// qualityctx.Replaces, so the counts cannot promise a file the import then
+// skips. Two files landing on one episode count once — the importer imports
+// whichever it reaches first.
+//
+// The one thing it cannot mirror is the probe: the files are still in the
+// download client, so upgrades/keeps are decided on filename and size alone
+// and the import may land on a slightly different split.
+func previewPack(
+	files []download.TorrentFile, show *ent.TVShow, releaseTitle string,
+) PendingPreview {
 	out := PendingPreview{
-		Imports: []PendingPreviewEpisode{},
-		OnDisk:  []PendingPreviewEpisode{},
+		Imports:  []PendingPreviewEpisode{},
+		Upgrades: []PendingPreviewEpisode{},
+		Keeps:    []PendingPreviewEpisode{},
 	}
 	anime := show.Type == enttvshow.TypeAnime
+	profile, hasProfile := config.ResolveScoredProfile(show.QualityProfile)
 	seen := map[uint32]bool{}
 	for _, f := range files {
 		name := path.Base(f.Path)
@@ -251,13 +261,39 @@ func previewPack(files []download.TorrentFile, show *ent.TVShow) PendingPreview 
 		if ep.Title != "" {
 			item.Title = &ep.Title
 		}
-		if len(ep.Edges.MediaFiles) > 0 {
-			out.OnDisk = append(out.OnDisk, item)
-		} else {
+		switch {
+		case len(ep.Edges.MediaFiles) == 0:
 			out.Imports = append(out.Imports, item)
+		case hasProfile && replacesEpisodeFile(
+			profile, ep.Edges.MediaFiles[0], name, f.Size, releaseTitle,
+		):
+			out.Upgrades = append(out.Upgrades, item)
+		default:
+			// No profile resolves, or the file on disk wins. takesPackFile
+			// answers false for both, so neither action touches this episode.
+			out.Keeps = append(out.Keeps, item)
 		}
 	}
 	return out
+}
+
+// replacesEpisodeFile is takesPackFile's "upgrades" arm minus the probe, which
+// the preview cannot have.
+func replacesEpisodeFile(
+	profile quality.Profile,
+	existing *ent.MediaFile,
+	name string,
+	size int64,
+	releaseTitle string,
+) bool {
+	return qualityctx.Replaces(
+		profile,
+		qualityctx.ContextFromFile(
+			filepath.Base(existing.Path), existing.Size,
+			int(existing.Width), existing.VideoCodec,
+		),
+		qualityctx.ContextFromPackFile(name, size, 0, "", releaseTitle),
+	)
 }
 
 func (s *Server) ImportPending(
@@ -320,10 +356,27 @@ func (s *Server) ReplacePending(
 		}, nil
 	}
 
-	// Clear the existing file(s) without touching torrents — the proposed
-	// torrent must survive to be imported.
-	if resp := s.clearExistingFile(ctx, rec); resp != nil {
-		return resp, nil
+	// The importer owns the replacement, and this used to pre-delete instead:
+	// one file, the record's *anchor*, which on a pack is a handle rather than
+	// anything the torrent holds — so Replace could delete a file the release
+	// had no copy of, and skip the other N because the record was still
+	// replace_mode "none". Worse on every shape, the delete ran here, before
+	// anything was probed: a held import had already destroyed the only copy on
+	// disk, which is exactly the ordering importSingleEpisode/importMovieRecord
+	// go out of their way to avoid.
+	//
+	// "upgrades" rather than "all" because a pack proposal is not a release the
+	// operator inspected: it is hundreds of files, and quality.ReplacesFile is
+	// what decides, per episode, against that episode's own file. A movie or a
+	// single episode has no second opinion to reach, so the importer's
+	// `!= none` check reads it as the plain overwrite it is. It can therefore
+	// legitimately replace nothing — the preview says so before the click.
+	if err := s.store.SetDownloadRecordReplaceMode(
+		ctx, request.Id, downloadrecord.ReplaceModeUpgrades,
+	); err != nil {
+		return ReplacePending500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
 	}
 
 	removeOld := request.Body != nil &&
@@ -341,50 +394,6 @@ func (s *Server) ReplacePending(
 		}, nil
 	}
 	return ReplacePending204Response{}, nil
-}
-
-// clearExistingFile deletes the matched media's current file(s) and reverts it
-// to wanted. Returns a non-nil 500 response on failure, nil on success (incl.
-// "nothing to delete").
-func (s *Server) clearExistingFile(
-	ctx context.Context, rec *ent.DownloadRecord,
-) ReplacePendingResponseObject {
-	switch {
-	case rec.Edges.Movie != nil:
-		files, err := s.store.ListMediaFilesByMovieID(ctx, rec.Edges.Movie.ID)
-		if err != nil {
-			return ReplacePending500JSONResponse{
-				InternalErrorJSONResponse: errInternal(ctx, err),
-			}
-		}
-		for _, f := range files {
-			if err := s.movies.DeleteFile(
-				ctx, rec.Edges.Movie.ID, f.ID, moviesvc.DeleteFileOptions{},
-			); err != nil {
-				return ReplacePending500JSONResponse{
-					InternalErrorJSONResponse: errInternal(ctx, err),
-				}
-			}
-		}
-	case rec.Edges.Episode != nil:
-		if _, err := s.store.FindMediaFileByEpisodeID(
-			ctx, rec.Edges.Episode.ID,
-		); ent.IsNotFound(err) {
-			return nil // no file to replace
-		} else if err != nil {
-			return ReplacePending500JSONResponse{
-				InternalErrorJSONResponse: errInternal(ctx, err),
-			}
-		}
-		if err := s.tvshows.DeleteEpisodeFile(
-			ctx, rec.Edges.Episode.ID, tvshow.DeleteFileOptions{},
-		); err != nil {
-			return ReplacePending500JSONResponse{
-				InternalErrorJSONResponse: errInternal(ctx, err),
-			}
-		}
-	}
-	return nil
 }
 
 // removeOldTorrent best-effort removes the torrent that produced the existing

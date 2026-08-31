@@ -203,7 +203,8 @@ var _ = Describe("Manual torrent adoption", Label("e2e", "api"), func() {
 
 		var preview struct {
 			Imports   []previewEpisode `json:"imports"`
-			OnDisk    []previewEpisode `json:"on_disk"`
+			Upgrades  []previewEpisode `json:"upgrades"`
+			Keeps     []previewEpisode `json:"keeps"`
 			Unmatched int              `json:"unmatched"`
 		}
 		previewed := get(
@@ -221,7 +222,10 @@ var _ = Describe("Manual torrent adoption", Label("e2e", "api"), func() {
 			filled = append(filled, fmt.Sprintf("S%02dE%02d", e.Season, e.Episode))
 		}
 		Expect(filled).To(ConsistOf("S01E100", "S02E100", "S03E100"))
-		Expect(preview.OnDisk).To(HaveLen(3))
+		// The three episodes already on disk are never in `imports`; which of
+		// the other two buckets they fall into is the quality profile's call,
+		// covered against a known profile in the restapi specs.
+		Expect(len(preview.Upgrades) + len(preview.Keeps)).To(Equal(3))
 		// The making-of only; the undersized sample never reaches matching.
 		Expect(preview.Unmatched).To(Equal(1))
 	})

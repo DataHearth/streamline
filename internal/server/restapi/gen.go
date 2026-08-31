@@ -3587,18 +3587,27 @@ type PendingMedia struct {
 // PendingMediaType defines model for PendingMedia.Type.
 type PendingMediaType string
 
-// PendingPreview defines model for PendingPreview.
+// PendingPreview What the torrent's files would do to the library, bucketed the way the
+// importer will bucket them. `upgrades` and `keeps` are decided from
+// filenames and sizes only — the importer probes each source before
+// deciding, and a probe can contradict what a name claims — so those two
+// are the best answer available before the transfer, not a promise.
 type PendingPreview struct {
-	// Imports Episodes the torrent fills — they hold no file today.
+	// Imports Episodes the torrent fills — they hold no file today. Both Import
+	// and Replace take these.
 	Imports []PendingPreviewEpisode `json:"imports"`
 
-	// OnDisk Episodes the torrent also carries that already hold a file. An
-	// import leaves these in place; only Replace overwrites.
-	OnDisk []PendingPreviewEpisode `json:"on_disk"`
+	// Keeps Episodes whose existing file wins, or that no profile can rank.
+	// Neither action touches these.
+	Keeps []PendingPreviewEpisode `json:"keeps"`
 
 	// Unmatched How many of the torrent's video files matched no episode — extras,
 	// or a naming shape the parser cannot read. They are never imported.
 	Unmatched int `json:"unmatched"`
+
+	// Upgrades Episodes holding a file this release beats under the show's quality
+	// profile. Import leaves them alone; Replace takes them.
+	Upgrades []PendingPreviewEpisode `json:"upgrades"`
 }
 
 // PendingPreviewEpisode defines model for PendingPreviewEpisode.

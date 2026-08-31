@@ -500,7 +500,8 @@ export type PendingPreviewEpisode = {
 };
 export type PendingPreview = {
 	imports: PendingPreviewEpisode[];
-	on_disk: PendingPreviewEpisode[];
+	upgrades: PendingPreviewEpisode[];
+	keeps: PendingPreviewEpisode[];
 	unmatched: number;
 };
 

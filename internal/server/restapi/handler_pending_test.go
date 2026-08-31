@@ -13,7 +13,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/internal/download"
-	moviesvc "github.com/datahearth/streamline/internal/media/movie"
+	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
 
 var _ = Describe("Handler: Pending", Label("unit", "server", "activity"), func() {
@@ -221,13 +221,32 @@ var _ = Describe("Handler: Pending", Label("unit", "server", "activity"), func()
 	})
 
 	Describe("PreviewPending", func() {
-		// One season the library half-holds: E01 on disk, E02 missing. The
-		// record anchors on E02 but the torrent carries both, plus an extra
-		// that matches nothing — the three buckets the row renders.
+		BeforeEach(func() {
+			configtest.Setup(map[string]any{
+				"quality_profiles": []any{
+					map[string]any{
+						"name": "HD", "min_resolution": "720p",
+						"preferred_resolution": "2160p", "upgrade_allowed": true,
+						"formats": []any{
+							map[string]any{"name": "resolution-1080p", "score": 100},
+							map[string]any{"name": "resolution-720p", "score": 50},
+						},
+					},
+				},
+				"quality_default_profile": "HD",
+			})
+		})
+
+		// One season the library half-holds: E01 on disk at 720p, E02 missing.
+		// The record anchors on E02 but the torrent carries both, plus an extra
+		// that matches nothing — every bucket the row renders.
 		show := func() *ent.TVShow {
 			e1 := &ent.Episode{
 				ID: 101, Number: 1, Title: "Pilot",
-				Edges: ent.EpisodeEdges{MediaFiles: []*ent.MediaFile{{ID: 7}}},
+				Edges: ent.EpisodeEdges{MediaFiles: []*ent.MediaFile{{
+					ID: 7, Path: "/lib/The.Bear.S01E01.720p.WEB.mkv",
+					Size: 700 << 20,
+				}}},
 			}
 			e2 := &ent.Episode{ID: 102, Number: 2, Title: "Second"}
 			se := &ent.Season{
@@ -280,9 +299,43 @@ var _ = Describe("Handler: Pending", Label("unit", "server", "activity"), func()
 			Expect(body.Imports).To(HaveLen(1))
 			Expect(body.Imports[0].Season).To(Equal(uint16(1)))
 			Expect(body.Imports[0].Episode).To(Equal(uint16(2)))
-			Expect(body.OnDisk).To(HaveLen(1))
-			Expect(body.OnDisk[0].Episode).To(Equal(uint16(1)))
+			// 1080p beats the 720p on disk under the profile above.
+			Expect(body.Upgrades).To(HaveLen(1))
+			Expect(body.Upgrades[0].Episode).To(Equal(uint16(1)))
+			Expect(body.Keeps).To(BeEmpty())
 			Expect(body.Unmatched).To(Equal(1))
+		})
+
+		It("keeps an episode whose file the release does not beat", func() {
+			s := show()
+			// Same resolution as the incoming files: nothing to gain, so the
+			// episode belongs in neither Import nor Upgrade.
+			s.Edges.Seasons[0].Edges.Episodes[0].Edges.MediaFiles[0].Path = "/lib/The.Bear.S01E01.1080p.WEB.mkv"
+			app.store.EXPECT().
+				FindPendingDownloadRecordByID(mock.Anything, uint32(1)).
+				Return(pendingPack(), nil).Once()
+			app.store.EXPECT().
+				FindTVShowByID(mock.Anything, uint32(5)).Return(s, nil).Once()
+			app.downloads.EXPECT().
+				ListTorrentFiles(mock.Anything, "qbit", "abc").
+				Return([]download.TorrentFile{
+					{Path: "Bear/The.Bear.S01E01.1080p.mkv", Size: 900 << 20},
+					{Path: "Bear/The.Bear.S01E02.1080p.mkv", Size: 900 << 20},
+				}, nil).Once()
+
+			resp := app.do(app.req(
+				http.MethodGet, "/api/v1/activity/pending/1/preview",
+				app.adminKey, nil,
+			))
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+			var body PendingPreview
+			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+			Expect(body.Imports).To(HaveLen(1))
+			Expect(body.Upgrades).To(BeEmpty())
+			Expect(body.Keeps).To(HaveLen(1))
+			Expect(body.Keeps[0].Episode).To(Equal(uint16(1)))
 		})
 
 		It("409s on a proposal with no episode", func() {
@@ -396,7 +449,12 @@ var _ = Describe("Handler: Pending", Label("unit", "server", "activity"), func()
 	})
 
 	Describe("ReplacePending", func() {
-		It("deletes the existing movie file then flips to importing", func() {
+		// Nothing is deleted here any more. The handler used to clear the file
+		// itself, before anything had been probed — so a held import had
+		// already destroyed the only copy on disk. Raising replace_mode hands
+		// the swap to the importer, which verifies first and, on a pack,
+		// decides it per episode.
+		It("raises the record to upgrades and flips to importing", func() {
 			app.store.EXPECT().
 				FindPendingDownloadRecordByID(mock.Anything, uint32(1)).
 				Return(&ent.DownloadRecord{
@@ -404,11 +462,8 @@ var _ = Describe("Handler: Pending", Label("unit", "server", "activity"), func()
 					Edges: ent.DownloadRecordEdges{Movie: &ent.Movie{ID: 3}},
 				}, nil).Once()
 			app.store.EXPECT().
-				ListMediaFilesByMovieID(mock.Anything, uint32(3)).
-				Return([]*ent.MediaFile{{ID: 7}}, nil).Once()
-			app.movies.EXPECT().
-				DeleteFile(mock.Anything, uint32(3), uint32(7),
-					moviesvc.DeleteFileOptions{}).
+				SetDownloadRecordReplaceMode(mock.Anything, uint32(1),
+					downloadrecord.ReplaceModeUpgrades).
 				Return(nil).Once()
 			app.store.EXPECT().
 				UpdateDownloadRecordStatus(mock.Anything, uint32(1),

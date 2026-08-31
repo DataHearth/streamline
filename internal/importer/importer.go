@@ -493,32 +493,9 @@ func takesPackFile(
 		if pf.info != nil {
 			width, codec = int(pf.info.Width), pf.info.VideoCodec
 		}
-		incoming := qualityctx.ContextFromFile(
-			filepath.Base(pf.path), pf.size, width, codec,
-		)
-		fromTitle := library.Parse(recordTitle)
-		if incoming.Source == "" {
-			incoming.Source = fromTitle.Source
-		}
-		if incoming.Group == "" {
-			incoming.Group = fromTitle.Group
-		}
-		// release_title conditions match the whole raw string, so there is no
-		// single field to test for "does the basename carry it" — appending
-		// the release title adds whatever the basename lacks without ever
-		// dropping what the basename itself already states.
-		incoming.Title += " " + recordTitle
-		// Evaluate(incoming).Score is 0 both for "matched nothing" and for
-		// "rejected outright" (e.g. above preferred_resolution, which the
-		// probe can legitimately reveal even when the release claimed lower).
-		// ReplacesFile takes that 0 at face value, and 0 beats any
-		// "never grab this" negative score — the scanner never reaches this
-		// case because it pre-rejects via evaluateRelease, but this path
-		// does not.
-		if quality.Evaluate(profile, incoming).Rejected {
-			return false
-		}
-		return quality.ReplacesFile(profile, existing, incoming)
+		return qualityctx.Replaces(profile, existing, qualityctx.ContextFromPackFile(
+			filepath.Base(pf.path), pf.size, width, codec, recordTitle,
+		))
 	default:
 		return false
 	}
