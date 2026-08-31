@@ -184,6 +184,37 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 			Expect(dec.episodeID).To(Equal(uint32(101)))
 		})
 
+		// A whole-series pack names no season, so parsed.Season is 0 — the
+		// specials season. Anchoring there filed a Kaamelott integrale
+		// against S00E01.
+		It("anchors a whole-series pack past the specials", func() {
+			show := buildShow(false, false)
+			show.Edges.Seasons = append(
+				[]*ent.Season{{
+					Number: 0,
+					Edges: ent.SeasonEdges{
+						Episodes: []*ent.Episode{{ID: 900, Number: 1}},
+					},
+				}},
+				show.Edges.Seasons...,
+			)
+			parsed := library.Parse(
+				"Kaamelott Integrale (Livres I a VI + Bonus) FRENCH " +
+					"[1080p] BDRIP HEVC-H265 10bits - Themouche",
+			)
+			Expect(AdoptionEpisode(parsed, show).ID).To(Equal(uint32(101)))
+		})
+
+		// A pack is fetched for what the library is missing, so anchoring it on
+		// the season's first episode names one the operator already has.
+		It("anchors a pack on the first episode with no file", func() {
+			show := buildShow(false, false)
+			eps := show.Edges.Seasons[0].Edges.Episodes
+			eps[0].Edges.MediaFiles = []*ent.MediaFile{{ID: 9}}
+			parsed := library.Parse("The.Bear.S01.MULTi.1080p.WEB.H264-FW")
+			Expect(AdoptionEpisode(parsed, show).ID).To(Equal(uint32(102)))
+		})
+
 		It("matches an anime release on its absolute number", func() {
 			shows := []*ent.TVShow{buildShow(true, false)}
 			parsed := library.ParseResult{

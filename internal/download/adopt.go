@@ -1,9 +1,11 @@
 package download
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 
 	"github.com/datahearth/streamline/ent"
@@ -120,9 +122,10 @@ func classifyEpisodeAdoption(
 }
 
 // AdoptionEpisode resolves the episode one release should be filed against
-// within one show: the matched episode for a single-episode release, the
-// season's first for a pack — the importer fans the directory out on import,
-// so the anchor only has to be somewhere the operator can act on it. nil when
+// within one show: the matched episode for a single-episode release, and for a
+// pack the first episode it can actually fill — the importer fans the directory
+// out on import, so the anchor is only a handle, but a handle naming an episode
+// that is already on disk says nothing about why the pack was fetched. nil when
 // the show has no counterpart for what the name claims, which for a pack means
 // the season itself is missing or empty.
 //
@@ -132,32 +135,74 @@ func classifyEpisodeAdoption(
 func AdoptionEpisode(
 	parsed library.ParseResult, show *ent.TVShow,
 ) *ent.Episode {
-	if singleEpisodeRelease(parsed) {
+	switch {
+	case singleEpisodeRelease(parsed):
 		return library.MatchEpisode(
 			parsed,
 			show.Edges.Seasons,
 			show.Type == tvshow.TypeAnime,
 		)
+	case parsed.SeasonPack:
+		return packAnchor(seasonNumbered(show, parsed.Season))
+	default:
+		// A whole-series pack ("INTEGRALE", "COMPLETE") names no season, so
+		// parsed.Season is 0 — which is the *specials* season, not "unknown".
+		// Anchoring there filed a six-season Kaamelott integrale against
+		// S00E01 and pointed its import at the specials.
+		return packAnchor(numberedSeasonsFirst(show))
 	}
-	return firstEpisodeOfSeason(show, parsed.Season)
+}
+
+// packAnchor picks the episode a pack is filed against: the first one holding
+// no file, since that is what the pack was fetched to fill. Falls back to the
+// first episode when everything in scope is already on disk — the pack is then
+// an upgrade, and one of its episodes is as good a handle as another. nil when
+// no season in seasons holds an episode.
+func packAnchor(seasons []*ent.Season) *ent.Episode {
+	var first *ent.Episode
+	for _, se := range seasons {
+		for _, e := range se.Edges.Episodes {
+			if first == nil {
+				first = e
+			}
+			if !episodeHasFile(e) {
+				return e
+			}
+		}
+	}
+	return first
+}
+
+// seasonNumbered returns the show's season numbered `season`, or nothing.
+func seasonNumbered(show *ent.TVShow, season uint16) []*ent.Season {
+	for _, se := range show.Edges.Seasons {
+		if se.Number == season {
+			return []*ent.Season{se}
+		}
+	}
+	return nil
+}
+
+// numberedSeasonsFirst orders the show's seasons ascending with the specials
+// last, so a whole-series pack anchors in the numbered seasons it is about.
+func numberedSeasonsFirst(show *ent.TVShow) []*ent.Season {
+	out := slices.Clone(show.Edges.Seasons)
+	slices.SortStableFunc(out, func(a, b *ent.Season) int {
+		return cmp.Compare(specialsLast(a.Number), specialsLast(b.Number))
+	})
+	return out
+}
+
+func specialsLast(season uint16) uint16 {
+	if season == 0 {
+		return ^uint16(0)
+	}
+	return season
 }
 
 func singleEpisodeRelease(parsed library.ParseResult) bool {
 	return !parsed.SeasonPack &&
 		(parsed.Episode > 0 || parsed.AbsoluteNumber > 0)
-}
-
-// firstEpisodeOfSeason returns the first episode of the show's season numbered
-// `season`, or nil when the season is absent or empty.
-func firstEpisodeOfSeason(show *ent.TVShow, season uint16) *ent.Episode {
-	for _, se := range show.Edges.Seasons {
-		if se.Number == season {
-			for _, e := range se.Edges.Episodes {
-				return e
-			}
-		}
-	}
-	return nil
 }
 
 // episodeHasFile reports whether an episode (with MediaFiles eager-loaded)
