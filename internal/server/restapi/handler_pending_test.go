@@ -2,6 +2,7 @@ package restapi
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 
@@ -11,6 +12,7 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/internal/download"
 	moviesvc "github.com/datahearth/streamline/internal/media/movie"
 )
 
@@ -215,6 +217,111 @@ var _ = Describe("Handler: Pending", Label("unit", "server", "activity"), func()
 			resp := app.do(req)
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
+		})
+	})
+
+	Describe("PreviewPending", func() {
+		// One season the library half-holds: E01 on disk, E02 missing. The
+		// record anchors on E02 but the torrent carries both, plus an extra
+		// that matches nothing — the three buckets the row renders.
+		show := func() *ent.TVShow {
+			e1 := &ent.Episode{
+				ID: 101, Number: 1, Title: "Pilot",
+				Edges: ent.EpisodeEdges{MediaFiles: []*ent.MediaFile{{ID: 7}}},
+			}
+			e2 := &ent.Episode{ID: 102, Number: 2, Title: "Second"}
+			se := &ent.Season{
+				Number: 1,
+				Edges:  ent.SeasonEdges{Episodes: []*ent.Episode{e1, e2}},
+			}
+			return &ent.TVShow{
+				ID: 5, Title: "The Bear",
+				Edges: ent.TVShowEdges{Seasons: []*ent.Season{se}},
+			}
+		}
+
+		pendingPack := func() *ent.DownloadRecord {
+			s := show()
+			s.Edges.Seasons[0].Edges.TvShow = s
+			ep := s.Edges.Seasons[0].Edges.Episodes[1]
+			ep.Edges.Season = s.Edges.Seasons[0]
+			return &ent.DownloadRecord{
+				ID: 1, TorrentHash: "abc", DownloadClientName: "qbit",
+				Edges: ent.DownloadRecordEdges{Episode: ep},
+			}
+		}
+
+		It("buckets the torrent's files by what an import would do", func() {
+			app.store.EXPECT().
+				FindPendingDownloadRecordByID(mock.Anything, uint32(1)).
+				Return(pendingPack(), nil).Once()
+			app.store.EXPECT().
+				FindTVShowByID(mock.Anything, uint32(5)).
+				Return(show(), nil).Once()
+			app.downloads.EXPECT().
+				ListTorrentFiles(mock.Anything, "qbit", "abc").
+				Return([]download.TorrentFile{
+					{Path: "Bear/The.Bear.S01E01.1080p.mkv", Size: 900 << 20},
+					{Path: "Bear/The.Bear.S01E02.1080p.mkv", Size: 900 << 20},
+					{Path: "Bear/Behind.The.Scenes.1080p.mkv", Size: 900 << 20},
+					{Path: "Bear/tiny.mkv", Size: 1 << 10},
+					{Path: "Bear/notes.txt", Size: 900 << 20},
+				}, nil).Once()
+
+			resp := app.do(app.req(
+				http.MethodGet, "/api/v1/activity/pending/1/preview",
+				app.adminKey, nil,
+			))
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+			var body PendingPreview
+			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+			Expect(body.Imports).To(HaveLen(1))
+			Expect(body.Imports[0].Season).To(Equal(uint16(1)))
+			Expect(body.Imports[0].Episode).To(Equal(uint16(2)))
+			Expect(body.OnDisk).To(HaveLen(1))
+			Expect(body.OnDisk[0].Episode).To(Equal(uint16(1)))
+			Expect(body.Unmatched).To(Equal(1))
+		})
+
+		It("409s on a proposal with no episode", func() {
+			app.store.EXPECT().
+				FindPendingDownloadRecordByID(mock.Anything, uint32(2)).
+				Return(&ent.DownloadRecord{
+					ID:    2,
+					Edges: ent.DownloadRecordEdges{Movie: &ent.Movie{ID: 3}},
+				}, nil).Once()
+
+			resp := app.do(app.req(
+				http.MethodGet, "/api/v1/activity/pending/2/preview",
+				app.adminKey, nil,
+			))
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusConflict))
+		})
+
+		It("422s connection_failed when the client cannot be listed", func() {
+			app.store.EXPECT().
+				FindPendingDownloadRecordByID(mock.Anything, uint32(1)).
+				Return(pendingPack(), nil).Once()
+			app.store.EXPECT().
+				FindTVShowByID(mock.Anything, uint32(5)).
+				Return(show(), nil).Once()
+			app.downloads.EXPECT().
+				ListTorrentFiles(mock.Anything, "qbit", "abc").
+				Return(nil, errors.New("dial tcp: connection refused")).Once()
+
+			resp := app.do(app.req(
+				http.MethodGet, "/api/v1/activity/pending/1/preview",
+				app.adminKey, nil,
+			))
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+
+			var body UnprocessableEntity
+			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+			Expect(body.Code).To(HaveValue(Equal("connection_failed")))
 		})
 	})
 

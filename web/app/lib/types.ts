@@ -493,6 +493,17 @@ export type PendingItem = {
 };
 export type PendingList = { items: PendingItem[] };
 
+export type PendingPreviewEpisode = {
+	season: number;
+	episode: number;
+	title?: string;
+};
+export type PendingPreview = {
+	imports: PendingPreviewEpisode[];
+	on_disk: PendingPreviewEpisode[];
+	unmatched: number;
+};
+
 export type HistoryEntry = {
 	id: number;
 	status: "completed" | "failed";

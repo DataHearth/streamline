@@ -217,6 +217,11 @@ type Downloader interface {
 		deleteFiles bool,
 	) error
 	PurgeRecordForHash(ctx context.Context, torrentHash string) error
+	ListTorrentFiles(
+		ctx context.Context,
+		downloadClientName string,
+		torrentHash string,
+	) ([]TorrentFile, error)
 	Queue(ctx context.Context) (QueueSnapshot, error)
 	CancelQueueItem(ctx context.Context, recordID uint32) error
 	PauseQueueItem(ctx context.Context, recordID uint32) error
@@ -1374,6 +1379,33 @@ func (d *download) RemoveTorrent(
 		return otelx.RecordSpanError(span, err)
 	}
 	return client.RemoveTorrent(ctx, hash, deleteFiles)
+}
+
+func (d *download) ListTorrentFiles(
+	ctx context.Context,
+	clientName string,
+	hash string,
+) ([]TorrentFile, error) {
+	ctx, span := tracer.Start(ctx, "download.list_torrent_files",
+		trace.WithAttributes(attribute.String("torrent.hash", hash)))
+	defer span.End()
+
+	dc, ok := config.FindDownloadClient(clientName)
+	if !ok {
+		return nil, otelx.RecordSpanError(
+			span,
+			fmt.Errorf("download client %q not found", clientName),
+		)
+	}
+	client, err := d.buildClient(dc)
+	if err != nil {
+		return nil, otelx.RecordSpanError(span, err)
+	}
+	files, err := client.ListFiles(ctx, hash)
+	if err != nil {
+		return nil, otelx.RecordSpanError(span, err)
+	}
+	return files, nil
 }
 
 // buildBaseURL composes scheme://host:port for download client requests.

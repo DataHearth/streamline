@@ -181,7 +181,13 @@ func (db *DB) FindPendingDownloadRecordByID(
 			downloadrecord.StatusEQ(downloadrecord.StatusPending),
 		).
 		WithMovie(withLeanMovie).
-		WithEpisode().
+		// Season → show comes along because the pending-proposal preview
+		// resolves the pack against the show's whole episode tree, and an
+		// episode with no season loaded is indistinguishable from no episode
+		// at all.
+		WithEpisode(func(q *ent.EpisodeQuery) {
+			q.WithSeason(func(sq *ent.SeasonQuery) { sq.WithTvShow() })
+		}).
 		Only(ctx)
 }
 

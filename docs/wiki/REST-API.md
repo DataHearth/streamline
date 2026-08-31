@@ -161,6 +161,7 @@ Each of the three search scopes filters the indexer's answer to its own scope �
 | `DELETE` | `/activity/queue/{id}` · `/activity/history/{id}` |
 | `POST` | `/activity/queue/{id}/pause` · `/resume` · `/activity/history/clear-completed` |
 | `GET` | `/activity/pending` 🔒 |
+| `GET` | `/activity/pending/{id}/preview` 🔒 |
 | `POST` | `/activity/pending/{id}/import` · `/replace` · `/ignore` 🔒 |
 | `POST` | `/activity/pending/{id}/identify` 🔒 |
 | `POST` | `/downloads/{id}/resolve` 🔒 — release a held download |

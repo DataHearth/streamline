@@ -3587,6 +3587,27 @@ type PendingMedia struct {
 // PendingMediaType defines model for PendingMedia.Type.
 type PendingMediaType string
 
+// PendingPreview defines model for PendingPreview.
+type PendingPreview struct {
+	// Imports Episodes the torrent fills — they hold no file today.
+	Imports []PendingPreviewEpisode `json:"imports"`
+
+	// OnDisk Episodes the torrent also carries that already hold a file. An
+	// import leaves these in place; only Replace overwrites.
+	OnDisk []PendingPreviewEpisode `json:"on_disk"`
+
+	// Unmatched How many of the torrent's video files matched no episode — extras,
+	// or a naming shape the parser cannot read. They are never imported.
+	Unmatched int `json:"unmatched"`
+}
+
+// PendingPreviewEpisode defines model for PendingPreviewEpisode.
+type PendingPreviewEpisode struct {
+	Episode uint16  `json:"episode"`
+	Season  uint16  `json:"season"`
+	Title   *string `json:"title,omitempty"`
+}
+
 // PlayOnLink defines model for PlayOnLink.
 type PlayOnLink struct {
 	// Fallback True when url points to the server home, not the movie page.
@@ -5248,6 +5269,9 @@ type ServerInterface interface {
 	// ImportPending Accept a proposal and import it as-is.
 	// (POST /activity/pending/{id}/import)
 	ImportPending(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// PreviewPending What importing a proposal's torrent would do, file by file.
+	// (GET /activity/pending/{id}/preview)
+	PreviewPending(w http.ResponseWriter, r *http.Request, id ResourceID)
 	// ReplacePending Delete the existing file, then import the proposal.
 	// (POST /activity/pending/{id}/replace)
 	ReplacePending(w http.ResponseWriter, r *http.Request, id ResourceID)
@@ -5761,6 +5785,12 @@ func (_ Unimplemented) IgnorePending(w http.ResponseWriter, r *http.Request, id 
 // ImportPending Accept a proposal and import it as-is.
 // (POST /activity/pending/{id}/import)
 func (_ Unimplemented) ImportPending(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PreviewPending What importing a proposal's torrent would do, file by file.
+// (GET /activity/pending/{id}/preview)
+func (_ Unimplemented) PreviewPending(w http.ResponseWriter, r *http.Request, id ResourceID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -6967,6 +6997,32 @@ func (siw *ServerInterfaceWrapper) ImportPending(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ImportPending(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewPending operation middleware
+func (siw *ServerInterfaceWrapper) PreviewPending(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewPending(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -11506,6 +11562,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/activity/pending", wrapper.ListPending)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/activity/pending/{id}/preview", wrapper.PreviewPending)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/activity/pending/{id}/import", wrapper.ImportPending)
 	})
 	r.Group(func(r chi.Router) {
@@ -11656,6 +11715,8 @@ type PathMigrationRootListJSONResponse PathMigrationRootList
 type PayloadTooLargeJSONResponse Error
 
 type PendingListJSONResponse PendingList
+
+type PendingPreviewJSONResponse PendingPreview
 
 type ReidentifyResultJSONResponse ReidentifyResult
 
@@ -12160,6 +12221,100 @@ func (response ImportPending409JSONResponse) VisitImportPendingResponse(w http.R
 type ImportPending500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response ImportPending500JSONResponse) VisitImportPendingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PreviewPendingRequestObject struct {
+	Id ResourceID `json:"id"`
+}
+
+type PreviewPendingResponseObject interface {
+	VisitPreviewPendingResponse(w http.ResponseWriter) error
+}
+
+type PreviewPending200JSONResponse struct{ PendingPreviewJSONResponse }
+
+func (response PreviewPending200JSONResponse) VisitPreviewPendingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PreviewPending403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response PreviewPending403JSONResponse) VisitPreviewPendingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PreviewPending404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response PreviewPending404JSONResponse) VisitPreviewPendingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PreviewPending409JSONResponse struct{ ConflictJSONResponse }
+
+func (response PreviewPending409JSONResponse) VisitPreviewPendingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PreviewPending422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response PreviewPending422JSONResponse) VisitPreviewPendingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PreviewPending500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response PreviewPending500JSONResponse) VisitPreviewPendingResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -21583,6 +21738,9 @@ type StrictServerInterface interface {
 	// ImportPending Accept a proposal and import it as-is.
 	// (POST /activity/pending/{id}/import)
 	ImportPending(ctx context.Context, request ImportPendingRequestObject) (ImportPendingResponseObject, error)
+	// PreviewPending What importing a proposal's torrent would do, file by file.
+	// (GET /activity/pending/{id}/preview)
+	PreviewPending(ctx context.Context, request PreviewPendingRequestObject) (PreviewPendingResponseObject, error)
 	// ReplacePending Delete the existing file, then import the proposal.
 	// (POST /activity/pending/{id}/replace)
 	ReplacePending(ctx context.Context, request ReplacePendingRequestObject) (ReplacePendingResponseObject, error)
@@ -22300,6 +22458,32 @@ func (sh *strictHandler) ImportPending(w http.ResponseWriter, r *http.Request, i
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ImportPendingResponseObject); ok {
 		if err := validResponse.VisitImportPendingResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PreviewPending operation middleware
+func (sh *strictHandler) PreviewPending(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request PreviewPendingRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PreviewPending(ctx, request.(PreviewPendingRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PreviewPending")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PreviewPendingResponseObject); ok {
+		if err := validResponse.VisitPreviewPendingResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

@@ -313,6 +313,80 @@ func (_c *MockDownloader_GrabEpisode_Call) RunAndReturn(run func(ctx context.Con
 	return _c
 }
 
+// ListTorrentFiles provides a mock function for the type MockDownloader
+func (_mock *MockDownloader) ListTorrentFiles(ctx context.Context, downloadClientName string, torrentHash string) ([]download.TorrentFile, error) {
+	ret := _mock.Called(ctx, downloadClientName, torrentHash)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListTorrentFiles")
+	}
+
+	var r0 []download.TorrentFile
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) ([]download.TorrentFile, error)); ok {
+		return returnFunc(ctx, downloadClientName, torrentHash)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) []download.TorrentFile); ok {
+		r0 = returnFunc(ctx, downloadClientName, torrentHash)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]download.TorrentFile)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+		r1 = returnFunc(ctx, downloadClientName, torrentHash)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockDownloader_ListTorrentFiles_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListTorrentFiles'
+type MockDownloader_ListTorrentFiles_Call struct {
+	*mock.Call
+}
+
+// ListTorrentFiles is a helper method to define mock.On call
+//   - ctx context.Context
+//   - downloadClientName string
+//   - torrentHash string
+func (_e *MockDownloader_Expecter) ListTorrentFiles(ctx any, downloadClientName any, torrentHash any) *MockDownloader_ListTorrentFiles_Call {
+	return &MockDownloader_ListTorrentFiles_Call{Call: _e.mock.On("ListTorrentFiles", ctx, downloadClientName, torrentHash)}
+}
+
+func (_c *MockDownloader_ListTorrentFiles_Call) Run(run func(ctx context.Context, downloadClientName string, torrentHash string)) *MockDownloader_ListTorrentFiles_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockDownloader_ListTorrentFiles_Call) Return(torrentFiles []download.TorrentFile, err error) *MockDownloader_ListTorrentFiles_Call {
+	_c.Call.Return(torrentFiles, err)
+	return _c
+}
+
+func (_c *MockDownloader_ListTorrentFiles_Call) RunAndReturn(run func(ctx context.Context, downloadClientName string, torrentHash string) ([]download.TorrentFile, error)) *MockDownloader_ListTorrentFiles_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // PauseQueueItem provides a mock function for the type MockDownloader
 func (_mock *MockDownloader) PauseQueueItem(ctx context.Context, recordID uint32) error {
 	ret := _mock.Called(ctx, recordID)

@@ -3062,6 +3062,33 @@ paths:
         "200":
           $ref: "#/components/responses/PendingList"
 
+  /activity/pending/{id}/preview:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    get:
+      operationId: previewPending
+      summary: What importing a proposal's torrent would do, file by file.
+      description: |
+        Reads the torrent's file list from its download client and matches each
+        file against the series, so a pack can say which episodes it fills
+        before the decision is taken. 409 when the proposal carries no episode
+        (a movie, or one not identified yet); 422 `connection_failed` when the
+        download client cannot be reached.
+      tags: [activity]
+      responses:
+        "200":
+          $ref: "#/components/responses/PendingPreview"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /activity/pending/{id}/import:
     parameters:
       - $ref: "#/components/parameters/ResourceID"
@@ -4352,6 +4379,13 @@ components:
           schema:
             $ref: "#/components/schemas/PendingList"
 
+    PendingPreview:
+      description: What importing the proposal's torrent would do.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/PendingPreview"
+
     SeriesSearchAccepted:
       description: Indexer search dispatched for the series.
 
@@ -4725,6 +4759,41 @@ components:
             proposal by hand.
         media:
           $ref: "#/components/schemas/PendingMedia"
+
+    PendingPreviewEpisode:
+      type: object
+      required: [season, episode]
+      properties:
+        season:
+          type: integer
+          x-go-type: uint16
+        episode:
+          type: integer
+          x-go-type: uint16
+        title:
+          type: string
+
+    PendingPreview:
+      type: object
+      required: [imports, on_disk, unmatched]
+      properties:
+        imports:
+          type: array
+          description: Episodes the torrent fills — they hold no file today.
+          items:
+            $ref: "#/components/schemas/PendingPreviewEpisode"
+        on_disk:
+          type: array
+          description: |
+            Episodes the torrent also carries that already hold a file. An
+            import leaves these in place; only Replace overwrites.
+          items:
+            $ref: "#/components/schemas/PendingPreviewEpisode"
+        unmatched:
+          type: integer
+          description: |
+            How many of the torrent's video files matched no episode — extras,
+            or a naming shape the parser cannot read. They are never imported.
 
     PendingList:
       type: object

@@ -4,9 +4,13 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"path"
+	"path/filepath"
+	"strings"
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
+	enttvshow "github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/library"
 	moviesvc "github.com/datahearth/streamline/internal/media/movie"
@@ -159,6 +163,101 @@ func (s *Server) identifyMovie(
 		}
 	}
 	return added.ID, nil
+}
+
+// PreviewPending answers what importing the proposal's torrent would do. A
+// pack proposal links exactly one episode — the anchor — which says nothing
+// about the other episodes in the torrent, so the operator was deciding blind
+// on anything wider than a single file.
+func (s *Server) PreviewPending(
+	ctx context.Context,
+	request PreviewPendingRequestObject,
+) (PreviewPendingResponseObject, error) {
+	rec, err := s.store.FindPendingDownloadRecordByID(ctx, request.Id)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return PreviewPending404JSONResponse{
+				NotFoundJSONResponse: errNotFound("pending record not found"),
+			}, nil
+		}
+		return nil, err
+	}
+	ep := rec.Edges.Episode
+	if ep == nil || ep.Edges.Season == nil ||
+		ep.Edges.Season.Edges.TvShow == nil {
+		return PreviewPending409JSONResponse{
+			ConflictJSONResponse: errConflict(
+				"only a proposal matched to an episode can be previewed",
+			),
+		}, nil
+	}
+	// The record's own episode edge carries one season; the pack is matched
+	// against the whole tree, exactly as the importer matches it.
+	show, err := s.store.FindTVShowByID(ctx, ep.Edges.Season.Edges.TvShow.ID)
+	if err != nil {
+		return PreviewPending500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	files, err := s.downloads.ListTorrentFiles(
+		ctx, rec.DownloadClientName, rec.TorrentHash,
+	)
+	if err != nil {
+		return PreviewPending422JSONResponse{
+			UnprocessableEntityJSONResponse: errConnectionFailed(
+				fmt.Sprintf("could not list the torrent's files: %v", err),
+			),
+		}, nil
+	}
+	return PreviewPending200JSONResponse{
+		PendingPreviewJSONResponse: PendingPreviewJSONResponse(
+			previewPack(files, show),
+		),
+	}, nil
+}
+
+// previewPack buckets a torrent's files by what an import would do with each:
+// fill an empty episode, leave an episode that already has a file alone, or
+// nothing at all. It applies the same extension / size / sample filters the
+// importer's own file walk does, so the counts cannot promise a file the
+// import then skips. Two files landing on one episode count once — the
+// importer imports whichever it reaches first.
+func previewPack(files []download.TorrentFile, show *ent.TVShow) PendingPreview {
+	out := PendingPreview{
+		Imports: []PendingPreviewEpisode{},
+		OnDisk:  []PendingPreviewEpisode{},
+	}
+	anime := show.Type == enttvshow.TypeAnime
+	seen := map[uint32]bool{}
+	for _, f := range files {
+		name := path.Base(f.Path)
+		if !library.MediaExts[strings.ToLower(filepath.Ext(name))] ||
+			f.Size < library.MinEpisodeSize ||
+			library.SampleRe.MatchString(name) {
+			continue
+		}
+		season, ep := library.MatchEpisodeInSeason(
+			library.Parse(name), show.Edges.Seasons, anime,
+		)
+		if ep == nil {
+			out.Unmatched++
+			continue
+		}
+		if seen[ep.ID] {
+			continue
+		}
+		seen[ep.ID] = true
+		item := PendingPreviewEpisode{Season: season, Episode: ep.Number}
+		if ep.Title != "" {
+			item.Title = &ep.Title
+		}
+		if len(ep.Edges.MediaFiles) > 0 {
+			out.OnDisk = append(out.OnDisk, item)
+		} else {
+			out.Imports = append(out.Imports, item)
+		}
+	}
+	return out
 }
 
 func (s *Server) ImportPending(
