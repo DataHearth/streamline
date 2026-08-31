@@ -142,14 +142,20 @@ Templates include directory separators — the whole relative path under `movie_
 | --- | --- |
 | `{title}` | **Show** title |
 | `{year}` | Show year |
+| `{tvdb_id}` | TVDB ID |
 | `{season}`, `{episode}` | Numbers |
 | `{episode_title}` | Episode title |
 | `{quality}` | Parsed resolution |
+| `{source}` | Parsed source |
+| `{codec}` | Parsed codec |
+| `{group}` | Release group |
 | `{absolute}` | Absolute episode number, when parsed |
 | `{air_date}` | `YYYY-MM-DD`, when parsed |
 | `{ext}` | File extension |
 
-Note that episode templates do **not** get `{source}`, `{codec}` or `{group}` — those are movie-only.
+`{imdb_id}` is movie-only; `{absolute}` and `{air_date}` are episode-only. Everything else is available to both.
+
+`{tvdb_id}` is the series counterpart of `{tmdb_id}` — write it as `{tvdb-{tvdb_id}}` for the same Plex/Jellyfin ID hint the movie default uses. Streamline reads that marker back when scanning an existing library, so a series folder carrying it is matched by ID rather than by title.
 
 ### Zero-padding
 

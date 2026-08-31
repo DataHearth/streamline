@@ -76,7 +76,9 @@ func BuildMovieVars(
 // BuildEpisodeVars creates template variables for TV episode naming.
 func BuildEpisodeVars(
 	showTitle string,
-	year, season, episode uint16,
+	year uint16,
+	tvdbID uint32,
+	season, episode uint16,
 	episodeTitle string,
 	parsed ParseResult,
 ) map[string]string {
@@ -86,9 +88,15 @@ func BuildEpisodeVars(
 		"episode":       strconv.FormatUint(uint64(episode), 10),
 		"episode_title": episodeTitle,
 		"quality":       parsed.Resolution,
+		"source":        parsed.Source,
+		"codec":         parsed.Codec,
+		"group":         parsed.Group,
 	}
 	if year > 0 {
 		vars["year"] = strconv.FormatUint(uint64(year), 10)
+	}
+	if tvdbID != 0 {
+		vars["tvdb_id"] = strconv.FormatUint(uint64(tvdbID), 10)
 	}
 	if parsed.Extension != "" {
 		vars["ext"] = parsed.Extension

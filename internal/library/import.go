@@ -294,6 +294,7 @@ func (s *ImportService) ImportEpisodeWithMode(
 			return BuildEpisodeVars(
 				show.Title,
 				show.Year,
+				show.TvdbID,
 				season,
 				ep.Number,
 				ep.Title,

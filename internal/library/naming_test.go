@@ -111,6 +111,7 @@ var _ = Describe("Naming Templates", Label("unit", "library"), func() {
 				vars := BuildEpisodeVars(
 					"Breaking Bad",
 					2008,
+					81189,
 					3,
 					7,
 					"One Minute",
@@ -118,16 +119,21 @@ var _ = Describe("Naming Templates", Label("unit", "library"), func() {
 						Resolution: "1080p",
 						Source:     "BluRay",
 						Codec:      "x264",
+						Group:      "GROUP",
 						Extension:  "mkv",
 					},
 				)
 
 				Expect(vars["title"]).To(Equal("Breaking Bad"))
 				Expect(vars["year"]).To(Equal("2008"))
+				Expect(vars["tvdb_id"]).To(Equal("81189"))
 				Expect(vars["season"]).To(Equal("3"))
 				Expect(vars["episode"]).To(Equal("7"))
 				Expect(vars["episode_title"]).To(Equal("One Minute"))
 				Expect(vars["quality"]).To(Equal("1080p"))
+				Expect(vars["source"]).To(Equal("BluRay"))
+				Expect(vars["codec"]).To(Equal("x264"))
+				Expect(vars["group"]).To(Equal("GROUP"))
 				Expect(vars["ext"]).To(Equal("mkv"))
 			},
 		)
@@ -136,19 +142,23 @@ var _ = Describe("Naming Templates", Label("unit", "library"), func() {
 			vars := BuildEpisodeVars(
 				"Show",
 				0,
+				0,
 				1,
 				1,
 				"",
 				ParseResult{Resolution: "720p"},
 			)
 			_, hasYear := vars["year"]
+			_, hasTvdb := vars["tvdb_id"]
 			Expect(hasYear).To(BeFalse())
+			Expect(hasTvdb).To(BeFalse())
 		})
 
 		It("omits ext key when extension is empty", func() {
 			vars := BuildEpisodeVars(
 				"Show",
 				2020,
+				0,
 				1,
 				1,
 				"",
@@ -163,6 +173,7 @@ var _ = Describe("Naming Templates", Label("unit", "library"), func() {
 			vars := BuildEpisodeVars(
 				"Hokkaido Signal",
 				2024,
+				0,
 				1,
 				18,
 				"Static",

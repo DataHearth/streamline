@@ -126,7 +126,7 @@ func (r *RenameService) target(
 		parsed.Extension = strings.TrimPrefix(filepath.Ext(currentPath), ".")
 	}
 	vars := library.BuildEpisodeVars(
-		show.Title, show.Year, season, ep.Number, ep.Title, parsed,
+		show.Title, show.Year, show.TvdbID, season, ep.Number, ep.Title, parsed,
 	)
 	rel := library.ApplyTemplate(r.naming, vars)
 	segments := strings.Split(rel, "/")
