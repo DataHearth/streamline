@@ -24,8 +24,16 @@ type ParseResult struct {
 }
 
 var (
-	yearRe       = regexp.MustCompile(`\b((?:19|20)\d{2})\b`)
-	seasonEpRe   = regexp.MustCompile(`(?i)S(\d{2})E(\d{2})`)
+	yearRe = regexp.MustCompile(`\b((?:19|20)\d{2})\b`)
+	// The episode number takes a third digit: a season past 99 episodes is
+	// rare but real (Kaamelott's first four Livres run to 100 shorts each),
+	// and pinned at two digits "S01E100" parsed as episode 10 — silently, so
+	// the file matched the wrong episode or none at all, and nothing about the
+	// release name looked malformed. Greedy, so the third digit wins when it
+	// is there. The season stays at two: every spelling of a season past 99 is
+	// a different problem, and widening it makes "S1E1" ambiguous with tokens
+	// this regex is not anchored against.
+	seasonEpRe   = regexp.MustCompile(`(?i)S(\d{2})E(\d{2,3})`)
 	resolutionRe = regexp.MustCompile(`(?i)\b(720p|1080p|2160p|4K)\b`)
 	sourceRe     = regexp.MustCompile(
 		`(?i)\b(BluRay|WEB-DL|WEBDL|WEBRip|HDTV|DVDRip|BDRip|BRRip|Remux|WEB)\b`,
