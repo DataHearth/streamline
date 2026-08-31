@@ -132,40 +132,12 @@ func ResolveEpisodeFile(pathOrDir string) (string, error) {
 	return findMediaFile(pathOrDir, MinEpisodeSize)
 }
 
-// ListVideoFiles returns every video file directly under dir that passes the
-// episode size + sample filters. Used by the importer to enumerate a season
-// pack's individual episode files.
-func ListVideoFiles(dir string) ([]string, error) {
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return nil, err
-	}
-	var out []string
-	for _, e := range entries {
-		if e.IsDir() {
-			continue
-		}
-		name := e.Name()
-		if !MediaExts[filepath.Ext(name)] {
-			continue
-		}
-		info, err := e.Info()
-		if err != nil || info.Size() < MinEpisodeSize {
-			continue
-		}
-		if SampleRe.MatchString(name) {
-			continue
-		}
-		out = append(out, filepath.Join(dir, name))
-	}
-	return out, nil
-}
-
 // ListVideoFilesRecursive returns every importable video file under dir and its
-// subdirectories, applying the same ext / min-size / sample filters as
-// ListVideoFiles. Unlike ListVideoFiles it descends into season folders, so it
-// handles the Show/Season NN/episode layout. Unreadable descendants are skipped;
-// only an unreadable root produces an error.
+// subdirectories, applying the same ext / min-size / sample filters the single
+// file resolver uses. It descends into subdirectories, so it handles both the
+// Show/Season NN/episode layout and a whole-series pack laid out one folder per
+// season. Unreadable descendants are skipped; only an unreadable root produces
+// an error.
 func ListVideoFilesRecursive(dir string) ([]string, error) {
 	var out []string
 	err := filepath.WalkDir(dir, func(p string, d fs.DirEntry, walkErr error) error {

@@ -566,7 +566,7 @@ func (w *Worker) importEpisodeRecord(
 	if !info.IsDir() {
 		return w.importSingleEpisode(ctx, span, rec, show, season.Number, ep, libCfg)
 	}
-	files, err := library.ListVideoFiles(rec.SavePath)
+	files, err := library.ListVideoFilesRecursive(rec.SavePath)
 	if err != nil {
 		return otelx.RecordSpanError(
 			span,

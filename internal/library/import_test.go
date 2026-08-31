@@ -37,20 +37,6 @@ var _ = Describe("ListVideoFilesRecursive", Label("unit", "library"), func() {
 	})
 })
 
-var _ = Describe("ListVideoFiles", Label("unit", "library"), func() {
-	It("skips zero-byte stubs and small files, returning only real videos", func() {
-		packDir := GinkgoT().TempDir()
-
-		realVideo := writeSizedFile(packDir, "episode.mkv", 10<<20)
-		writeSizedFile(packDir, "stub.mkv", 0)
-		writeSizedFile(packDir, "subs.srt", 1024)
-
-		got, err := ListVideoFiles(packDir)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(got).To(ConsistOf(realVideo))
-	})
-})
-
 var _ = Describe("ImportService", Label("unit", "library"), func() {
 	Describe("ImportMovie", func() {
 		var (
