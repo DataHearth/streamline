@@ -57,7 +57,7 @@
 		</div>
 		<a
 			href="/activity"
-			class="text-[11.5px] text-fg-subtle transition hover:text-accent-text"
+			class="touch-hit text-[11.5px] text-fg-subtle transition hover:text-accent-text"
 		>
 			{i18n.dash_open_activity()}
 		</a>

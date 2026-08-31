@@ -284,7 +284,7 @@
 				onfocus={diskEnter}
 				onblur={diskLeave}
 				class={cn(
-					"absolute right-1.5 top-1.5 z-20 grid h-7 w-7 place-items-center rounded-md transition hover:bg-surface hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring",
+					"absolute right-1.5 top-1.5 z-20 grid h-10 w-10 lg:h-7 lg:w-7 place-items-center rounded-md transition hover:bg-surface hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring",
 					diskOpen ? "bg-surface text-fg" : "text-fg-subtle",
 				)}
 			>

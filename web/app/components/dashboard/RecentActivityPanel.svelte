@@ -15,7 +15,7 @@
 		<h3 class="text-sm font-semibold text-fg">{i18n.common_recent_activity()}</h3>
 		<a
 			href="/activity?view=events"
-			class="text-[11.5px] text-fg-subtle transition hover:text-accent-text"
+			class="touch-hit text-[11.5px] text-fg-subtle transition hover:text-accent-text"
 		>
 			{i18n.dash_view_all()}
 		</a>

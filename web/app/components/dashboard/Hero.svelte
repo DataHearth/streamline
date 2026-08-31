@@ -65,7 +65,7 @@
 
 			<div class="text-fg" style="grid-area:head">
 				<div
-					class="mb-3 inline-flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-[0.18em] text-accent-text"
+					class="mb-3 inline-flex max-w-full flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[10.5px] uppercase tracking-[0.18em] text-accent-text"
 				>
 					<span
 						class="h-1.5 w-1.5 rounded-full bg-accent motion-safe:animate-pulse"
