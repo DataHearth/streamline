@@ -20,6 +20,13 @@ type ReleaseContext struct {
 	// guessed. Indexers never report a torrent's file count; it is only
 	// knowable after the grab, which is too late to gate one.
 	EpisodeCount int
+	// EmptyIsUnknown distinguishes a context assembled from stored columns
+	// from one parsed out of a release name. A parser looked at the whole
+	// name, so an empty Group there is a real absence the release states; a
+	// column is empty both when the release had none and when nothing ever
+	// filled it in, and a negate condition cannot be allowed to read the
+	// second as the first. Set it on any context built from a row.
+	EmptyIsUnknown bool
 }
 
 // episodeScale is the multiplier a size bound is measured in. It never
@@ -40,29 +47,32 @@ type Format struct {
 
 // Matches implements Radarr custom-format semantics: every required
 // condition must pass, and when non-required conditions exist at least
-// one must pass.
+// one must pass. A condition whose input was never recorded satisfies
+// neither test — see Condition.eval on why unknown is not false.
 func (f Format) Matches(r ReleaseContext) bool {
 	hasOptional, optionalHit := false, false
 	for _, c := range f.Conditions {
-		ok := c.eval(r)
+		ok, known := c.eval(r)
 		if c.Required {
-			if !ok {
+			if !known || !ok {
 				return false
 			}
 			continue
 		}
 		hasOptional = true
-		optionalHit = optionalHit || ok
+		optionalHit = optionalHit || (known && ok)
 	}
 	return !hasOptional || optionalHit
 }
 
 // Explain returns each condition's post-negate verdict, index-aligned
-// with f.Conditions. Powers the format tester endpoint.
+// with f.Conditions. Powers the format tester endpoint, which always
+// evaluates a typed release name, so an unknown input reports false.
 func (f Format) Explain(r ReleaseContext) []bool {
 	out := make([]bool, len(f.Conditions))
 	for i, c := range f.Conditions {
-		out[i] = c.eval(r)
+		ok, known := c.eval(r)
+		out[i] = known && ok
 	}
 	return out
 }

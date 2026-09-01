@@ -41,7 +41,7 @@ var _ = Describe("Format.Matches", Label("unit", "quality"), func() {
 	It("negate inverts a condition", func() {
 		Expect(mk(title(`(?i)remux`, true, true)).Matches(rel)).To(BeFalse())
 	})
-	It("absent data evaluates false before negate", func() {
+	It("unrecorded data matches neither way, negated or not", func() {
 		noSeed := rel
 		noSeed.HasSeeders = false
 		c := quality.Condition{
@@ -49,7 +49,76 @@ var _ = Describe("Format.Matches", Label("unit", "quality"), func() {
 		}
 		Expect(mk(c).Matches(noSeed)).To(BeFalse())
 		c.Negate = true
-		Expect(mk(c).Matches(noSeed)).To(BeTrue())
+		Expect(mk(c).Matches(noSeed)).To(BeFalse())
+	})
+})
+
+// The regression this whole tri-state exists for: `negate` on a field nobody
+// filled in scored a match out of ignorance. On a real library every imported
+// file hit the idiomatic "release carries no group" format for -100 apiece,
+// because the scorer was reading a renamed path that never had a group in it.
+var _ = Describe("unknown vs absent input", Label("unit", "quality"), func() {
+	noGroup := quality.Condition{
+		Type: quality.ConditionReleaseGroup, Pattern: `.`,
+		Negate: true, Required: true,
+	}
+	mk := func(c quality.Condition) quality.Format {
+		f, err := quality.NewFormat("no-release-group", []quality.Condition{c})
+		Expect(err).NotTo(HaveOccurred())
+		return f
+	}
+
+	It("does not fire on a row whose group was never recorded", func() {
+		row := quality.ReleaseContext{Size: 1 << 30, EmptyIsUnknown: true}
+		Expect(mk(noGroup).Matches(row)).To(BeFalse())
+	})
+
+	It("still fires on a release name that carries no group", func() {
+		rel := quality.ReleaseContext{Title: "Movie 2024 1080p", Size: 1 << 30}
+		Expect(mk(noGroup).Matches(rel)).To(BeTrue())
+	})
+
+	It("does not fire on a row that did record a group", func() {
+		row := quality.ReleaseContext{
+			Size: 1 << 30, Group: "GRP", EmptyIsUnknown: true,
+		}
+		Expect(mk(noGroup).Matches(row)).To(BeFalse())
+	})
+
+	It("skips a release_title condition on a row, which has no name", func() {
+		row := quality.ReleaseContext{
+			Size: 1 << 30, Source: "BluRay", EmptyIsUnknown: true,
+		}
+		for _, neg := range []bool{false, true} {
+			f, err := quality.NewFormat("vff", []quality.Condition{{
+				Type: quality.ConditionReleaseTitle, Pattern: `(?i)\bvff\b`,
+				Negate: neg, Required: true,
+			}})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(f.Matches(row)).To(BeFalse(), "negate=%v", neg)
+		}
+	})
+
+	It("scores a row off its stored columns, not its renamed path", func() {
+		bluray, err := quality.NewFormat("source-bluray", []quality.Condition{{
+			Type: quality.ConditionSource, Value: "BluRay", Required: true,
+		}})
+		Expect(err).NotTo(HaveOccurred())
+		p := quality.Profile{
+			MinResolution: "1080p", MaxResolution: "2160p",
+			Formats: []quality.ScoredFormat{
+				{Format: mk(noGroup), Score: -100},
+				{Format: bluray, Score: 50},
+			},
+		}
+		row := quality.ReleaseContext{
+			Size: 8 << 30, Resolution: "2160p", Source: "BluRay",
+			Group: "FraMeSToR", EmptyIsUnknown: true,
+		}
+		res := quality.Evaluate(p, row)
+		Expect(res.Rejected).To(BeFalse())
+		Expect(res.Score).To(Equal(50))
+		Expect(res.Matched).To(ConsistOf("source-bluray"))
 	})
 })
 

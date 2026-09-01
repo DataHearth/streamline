@@ -80,33 +80,67 @@ func conditionRef(name string, i int) string {
 	return fmt.Sprintf("format %q condition %d", name, i)
 }
 
-func (c Condition) eval(r ReleaseContext) bool {
-	var ok bool
+// eval reports the condition's post-negate verdict and whether the input it
+// reads was recorded at all.
+//
+// The second return is what keeps "no" apart from "don't know". Negate turns a
+// false into a match, so a condition reading a field nobody filled in scores a
+// positive out of ignorance: `negate` on release_group — the idiomatic "this
+// release carries no group" format — matched every library file whose group
+// was never stored, which on a real library was every file, for -100 apiece.
+// An unknown input matches nothing and negate-matches nothing.
+func (c Condition) eval(r ReleaseContext) (ok, known bool) {
 	switch c.Type {
 	case ConditionReleaseTitle:
+		// A context assembled from stored columns has no release name at all:
+		// the renamer wrote the only name it has, and the naming template
+		// keeps a fraction of the tokens a condition here matches on.
+		if r.Title == "" {
+			return false, false
+		}
 		ok = c.re.MatchString(r.Title)
 	case ConditionReleaseGroup:
+		if r.Group == "" && r.EmptyIsUnknown {
+			return false, false
+		}
 		ok = r.Group != "" && c.re.MatchString(r.Group)
 	case ConditionResolution:
+		if r.Resolution == "" && r.EmptyIsUnknown {
+			return false, false
+		}
 		ok = r.Resolution != "" && strings.EqualFold(r.Resolution, c.Value)
 	case ConditionSource:
+		if r.Source == "" && r.EmptyIsUnknown {
+			return false, false
+		}
 		ok = r.Source != "" && strings.EqualFold(r.Source, c.Value)
 	case ConditionCodec:
+		if r.Codec == "" && r.EmptyIsUnknown {
+			return false, false
+		}
 		ok = r.Codec != "" && strings.EqualFold(r.Codec, c.Value)
 	case ConditionSize:
+		if r.Size <= 0 {
+			return false, false
+		}
 		// Both bounds scale with the episode count rather than the size being
 		// divided by it: same predicate, but the threshold stays the number the
 		// operator typed, which is what a per-episode budget means.
 		n := r.episodeScale()
 		gb := float64(r.Size) / (1 << 30)
-		ok = r.Size > 0 &&
-			(c.MinGB == 0 || gb >= c.MinGB*n) &&
+		ok = (c.MinGB == 0 || gb >= c.MinGB*n) &&
 			(c.MaxGB == 0 || gb <= c.MaxGB*n)
 	case ConditionSeeders:
-		ok = r.HasSeeders && r.Seeders >= c.Min
+		// HasSeeders is already the "was this reported" flag — Torznab leaves
+		// the attribute at 0 when the indexer omits it, and a file has no
+		// seeders to report in the first place.
+		if !r.HasSeeders {
+			return false, false
+		}
+		ok = r.Seeders >= c.Min
 	}
 	if c.Negate {
-		return !ok
+		ok = !ok
 	}
-	return ok
+	return ok, true
 }
