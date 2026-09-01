@@ -21,6 +21,7 @@ import (
 	"github.com/datahearth/streamline/internal/media/tvshow"
 	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
+	"github.com/datahearth/streamline/internal/testutil/mediafiletest"
 )
 
 var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
@@ -216,11 +217,13 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 				Status:    "available",
 				Monitored: true,
 			}
-			ep.Edges.MediaFiles = []*ent.MediaFile{{
-				ID: 3, Size: 4_000_000_000,
-				Path: "/tv/Breaking Bad/Season 01/" +
-					"Breaking.Bad.S01E01.1080p.BluRay.Remux.x265-GRP.mkv",
-			}}
+			const epFile = "Breaking.Bad.S01E01.1080p.BluRay.Remux.x265-GRP.mkv"
+			ep.Edges.MediaFiles = []*ent.MediaFile{mediafiletest.StoredParse(
+				&ent.MediaFile{
+					ID: 3, Size: 4_000_000_000,
+					Path: "/tv/Breaking Bad/Season 01/" + epFile,
+				}, epFile,
+			)}
 			season := &ent.Season{ID: 2, Number: 1, Monitored: true}
 			season.Edges.Episodes = []*ent.Episode{ep}
 			show := &ent.TVShow{

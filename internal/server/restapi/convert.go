@@ -1133,9 +1133,7 @@ func mediaFileScore(profileName string, f *ent.MediaFile) *int {
 	if !ok {
 		return nil
 	}
-	res := quality.Evaluate(p, qualityctx.ContextFromFile(
-		filepath.Base(f.Path), f.Size, int(f.Width), f.VideoCodec,
-	))
+	res := quality.Evaluate(p, qualityctx.ContextFromRow(f))
 	return &res.Score
 }
 

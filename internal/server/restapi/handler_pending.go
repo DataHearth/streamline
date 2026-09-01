@@ -288,10 +288,7 @@ func replacesEpisodeFile(
 ) bool {
 	return qualityctx.Replaces(
 		profile,
-		qualityctx.ContextFromFile(
-			filepath.Base(existing.Path), existing.Size,
-			int(existing.Width), existing.VideoCodec,
-		),
+		qualityctx.ContextFromRow(existing),
 		qualityctx.ContextFromPackFile(name, size, 0, "", releaseTitle),
 	)
 }

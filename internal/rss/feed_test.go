@@ -16,6 +16,7 @@ import (
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/rss/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
+	"github.com/datahearth/streamline/internal/testutil/mediafiletest"
 )
 
 func indexerConfig(names ...string) map[string]any {
@@ -93,12 +94,12 @@ func movieWithFileAt(profile, basename string, width uint16) *ent.Movie {
 		ID: 9, TmdbID: 42, Title: "Dune", Year: 2021,
 		QualityProfile: profile,
 	}
-	m.Edges.MediaFiles = []*ent.MediaFile{{
+	m.Edges.MediaFiles = []*ent.MediaFile{mediafiletest.StoredParse(&ent.MediaFile{
 		Path:       "/movies/Dune (2021)/" + basename,
 		Size:       8_000_000_000,
 		Width:      width,
 		VideoCodec: "h264",
-	}}
+	}, basename)}
 	return m
 }
 

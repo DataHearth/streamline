@@ -14,6 +14,7 @@ import (
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
+	"github.com/datahearth/streamline/internal/testutil/mediafiletest"
 )
 
 var _ = Describe("Handler: Pending", Label("unit", "server", "activity"), func() {
@@ -243,10 +244,12 @@ var _ = Describe("Handler: Pending", Label("unit", "server", "activity"), func()
 		show := func() *ent.TVShow {
 			e1 := &ent.Episode{
 				ID: 101, Number: 1, Title: "Pilot",
-				Edges: ent.EpisodeEdges{MediaFiles: []*ent.MediaFile{{
-					ID: 7, Path: "/lib/The.Bear.S01E01.720p.WEB.mkv",
-					Size: 700 << 20,
-				}}},
+				Edges: ent.EpisodeEdges{MediaFiles: []*ent.MediaFile{
+					mediafiletest.StoredParse(&ent.MediaFile{
+						ID: 7, Path: "/lib/The.Bear.S01E01.720p.WEB.mkv",
+						Size: 700 << 20,
+					}, "The.Bear.S01E01.720p.WEB.mkv"),
+				}},
 			}
 			e2 := &ent.Episode{ID: 102, Number: 2, Title: "Second"}
 			se := &ent.Season{
@@ -310,7 +313,10 @@ var _ = Describe("Handler: Pending", Label("unit", "server", "activity"), func()
 			s := show()
 			// Same resolution as the incoming files: nothing to gain, so the
 			// episode belongs in neither Import nor Upgrade.
-			s.Edges.Seasons[0].Edges.Episodes[0].Edges.MediaFiles[0].Path = "/lib/The.Bear.S01E01.1080p.WEB.mkv"
+			const at1080p = "The.Bear.S01E01.1080p.WEB.mkv"
+			f := s.Edges.Seasons[0].Edges.Episodes[0].Edges.MediaFiles[0]
+			f.Path = "/lib/" + at1080p
+			mediafiletest.StoredParse(f, at1080p)
 			app.store.EXPECT().
 				FindPendingDownloadRecordByID(mock.Anything, uint32(1)).
 				Return(pendingPack(), nil).Once()

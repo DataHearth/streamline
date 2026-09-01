@@ -4,6 +4,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/quality"
 	"github.com/datahearth/streamline/internal/quality/qualityctx"
 )
@@ -55,6 +56,49 @@ var _ = Describe("ContextFromFile", Label("unit", "quality"), func() {
 			0,
 			"",
 		)
+		Expect(r.Resolution).To(Equal("2160p"))
+		Expect(r.Codec).To(Equal("HEVC"))
+	})
+})
+
+var _ = Describe("ContextFromRow", Label("unit", "quality"), func() {
+	It("reads the stored columns, not the renamed path", func() {
+		r := qualityctx.ContextFromRow(&ent.MediaFile{
+			Path:             "/srv/movies/Dune (2021)/Dune (2021) [2160p].mkv",
+			Size:             8 << 30,
+			ReleaseGroup:     "FraMeSToR",
+			ParsedSource:     "BluRay",
+			ParsedResolution: "2160p",
+			ParsedCodec:      "HEVC",
+		})
+		Expect(r.Group).To(Equal("FraMeSToR"))
+		Expect(r.Source).To(Equal("BluRay"))
+		Expect(r.Resolution).To(Equal("2160p"))
+		Expect(r.Codec).To(Equal("HEVC"))
+		Expect(r.Size).To(Equal(int64(8 << 30)))
+		Expect(r.EmptyIsUnknown).To(BeTrue())
+	})
+
+	It("keeps the basename as title — nothing stores the release name", func() {
+		r := qualityctx.ContextFromRow(&ent.MediaFile{
+			Path: "/srv/movies/Dune (2021) [2160p].mkv",
+		})
+		Expect(r.Title).To(Equal("Dune (2021) [2160p].mkv"))
+	})
+
+	It("prefers the probe over the stored parse", func() {
+		r := qualityctx.ContextFromRow(&ent.MediaFile{
+			ParsedResolution: "2160p", ParsedCodec: "HEVC",
+			Width: 1920, VideoCodec: "h264",
+		})
+		Expect(r.Resolution).To(Equal("1080p"))
+		Expect(r.Codec).To(Equal("h264"))
+	})
+
+	It("keeps the stored parse when ffmpeg never probed the file", func() {
+		r := qualityctx.ContextFromRow(&ent.MediaFile{
+			ParsedResolution: "2160p", ParsedCodec: "HEVC",
+		})
 		Expect(r.Resolution).To(Equal("2160p"))
 		Expect(r.Codec).To(Equal("HEVC"))
 	})

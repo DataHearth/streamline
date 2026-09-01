@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -191,9 +190,7 @@ func (s *FeedScanner) tryUpgrade(
 		return false
 	}
 	mf := m.Edges.MediaFiles[0]
-	file := qualityctx.ContextFromFile(
-		filepath.Base(mf.Path), mf.Size, int(mf.Width), mf.VideoCodec,
-	)
+	file := qualityctx.ContextFromRow(mf)
 	release := qualityctx.ContextFromRelease(
 		item.Title, item.Size, item.Seeders, singleRelease,
 	)

@@ -87,7 +87,11 @@ A `release_group` row in **Settings → Custom formats** is a chip list, not a t
 
 Nothing is hidden from you: **Edit as regex** switches the row back to the raw pattern, and an existing pattern the chip list could not have written (anything that is not exactly that anchored alternation of literals) opens as raw regex on its own, so a hand-written pattern is never silently rewritten. A raw pattern that *does* match the chip shape shows as chips again.
 
-**Matching semantics are Radarr-compatible:** every `required` condition must pass, and if the format has any non-required conditions, at least one of those must also pass (a format that is all-required needs nothing else — "at least one of zero" is vacuously true). `negate` inverts a single condition's result before it's combined. A condition whose input is missing — seeders on a file, a release group nobody could parse — evaluates false, negated or not.
+**Matching semantics are Radarr-compatible:** every `required` condition must pass, and if the format has any non-required conditions, at least one of those must also pass (a format that is all-required needs nothing else — "at least one of zero" is vacuously true). `negate` inverts a single condition's result before it's combined.
+
+**A condition whose input was never recorded matches nothing — negated or not.** This is the one place `negate` does *not* invert: "no" and "don't know" are different answers, and a negated condition reading a field nobody filled in would otherwise score a positive out of ignorance. The idiomatic "this release carries no group" format (`release_group`, pattern `.`, `negate: true`) is the case this exists for — it fires on a release whose name genuinely carries no group tag, and stays silent on a library file whose group was never stored.
+
+The distinction only bites where a value can be *absent* rather than *stated as none*: a file already in the library, whose columns are filled at import and are empty on anything imported before those columns existed. A release parsed from its name knows everything the name says, so an empty group there is a real absence and matches as before. Seeders are always "unrecorded" for a file, and for a release whose indexer omitted the attribute.
 
 Two required conditions is "AND". Two non-required conditions is "OR" (either matches the format). Mixing both is "these must all hold, plus at least one of these":
 
@@ -239,6 +243,17 @@ Applying one never saves — it fills the form and you edit from there, includin
 - **Movie detail** (`GET /movies/{id}`) reports `file_score` on each entry of `media_files` — the file's score against the movie's current profile, computed at response time. It's list-response-omitted (the same eager-loaded `media_files` edge that also carries file size and quality elsewhere), and absent entirely when no quality profile is configured at all. There's no `rejected` flag on a file — a file outside the band or below `min_score` simply shows `file_score: 0`, the same number the upgrade decision reads.
 - **Series detail** (`GET /series/{id}`) reports `file_score` on each episode that has a file, against the series' profile, on the same terms. The series *list* never carries episodes at all, so there is no list/detail split to think about there.
 - `min_score` is omitted from API responses when it's `0` — the handler only sets the pointer when the value is non-zero, not a signal that the profile has no minimum. Absent means `0`.
+
+### What a file can be scored on
+
+A file in the library is scored from the columns the importer stored — its release group, and the source/resolution/codec parsed from the release name at import — with the probe's width and codec winning where there is one. It is **not** scored by re-parsing its path: the renamer wrote that path from your naming template, and the default template keeps only the resolution, so the group and source are gone from it.
+
+The exception is `release_title`, which matches the whole raw release name and has no column behind it. Against a file it matches only what your naming template happened to keep. So a format written as a title regex — `remux`, `hdr`, `multi-audio`, `dubbed`, and any language or `PROPER`/`REPACK` tag you have written yourself — generally scores **0** for a file on disk while scoring normally for the release being compared to it. Two consequences worth knowing:
+
+- A `file_score` is a floor, not the score the release originally earned. A REMUX on disk under a profile scoring `remux` at +250 reports 250 less than the release it came from.
+- Automatic upgrades lean the same way, since `ShouldUpgrade` compares those two numbers. If your profile's weight sits mostly in title-matched formats, `upgrade_until_score` will not hold as intended.
+
+Keeping more of the release name in `library.movie_naming` / `library.series_naming` is the lever available today — a template ending `[{quality}]` keeps a resolution and nothing else.
 
 ---
 

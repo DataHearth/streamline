@@ -20,6 +20,7 @@ import (
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/rss/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
+	"github.com/datahearth/streamline/internal/testutil/mediafiletest"
 )
 
 var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
@@ -352,12 +353,14 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 		// both its name and its probed width.
 		epWithFile := func(id uint32, number uint16, basename string) *ent.Episode {
 			e := &ent.Episode{ID: id, Number: number}
-			e.Edges.MediaFiles = []*ent.MediaFile{{
-				Path:       "/tv/The Black Sea/Season 03/" + basename,
-				Size:       4_000_000_000,
-				Width:      1920,
-				VideoCodec: "h264",
-			}}
+			e.Edges.MediaFiles = []*ent.MediaFile{
+				mediafiletest.StoredParse(&ent.MediaFile{
+					Path:       "/tv/The Black Sea/Season 03/" + basename,
+					Size:       4_000_000_000,
+					Width:      1920,
+					VideoCodec: "h264",
+				}, basename),
+			}
 			return e
 		}
 

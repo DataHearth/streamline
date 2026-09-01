@@ -2606,7 +2606,7 @@ type Episode struct {
 	Number    uint16     `json:"number"`
 	Overview  *string    `json:"overview,omitempty"`
 
-	// ParsedSource Source tag (BluRay/Remux/WEB-DL/…) parsed from the file's basename at response time.
+	// ParsedSource Source tag (BluRay/Remux/WEB-DL/…) parsed from the release name at import. Empty on rows written before the column existed.
 	ParsedSource *string `json:"parsed_source,omitempty"`
 
 	// Path On-disk path of the episode's media file, when imported.
@@ -3140,13 +3140,13 @@ type MediaFile struct {
 	// when this is null.
 	MediaInfo *MediaInfo `json:"media_info,omitempty"`
 
-	// ParsedCodec Video codec (x264/HEVC/AV1/…) parsed from the file's basename at response time.
+	// ParsedCodec Video codec (x264/HEVC/AV1/…) parsed from the release name at import. Empty on rows written before the column existed.
 	ParsedCodec *string `json:"parsed_codec,omitempty"`
 
-	// ParsedResolution Resolution (720p/1080p/2160p) parsed from the file's basename at response time.
+	// ParsedResolution Resolution (720p/1080p/2160p) parsed from the release name at import. Empty on rows written before the column existed.
 	ParsedResolution *string `json:"parsed_resolution,omitempty"`
 
-	// ParsedSource Source tag (BluRay/Remux/WEB-DL/…) parsed from the file's basename at response time.
+	// ParsedSource Source tag (BluRay/Remux/WEB-DL/…) parsed from the release name at import. Empty on rows written before the column existed.
 	ParsedSource *string `json:"parsed_source,omitempty"`
 	Path         string  `json:"path"`
 	Quality      *string `json:"quality,omitempty"`

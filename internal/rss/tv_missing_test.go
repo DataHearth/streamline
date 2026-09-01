@@ -21,6 +21,7 @@ import (
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/rss/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
+	"github.com/datahearth/streamline/internal/testutil/mediafiletest"
 )
 
 // matchIDs matches a grab's wanted-episode argument against an exact ID set,
@@ -572,15 +573,17 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 		// by both its name and its probed width.
 		onDisk := func(id uint32, number uint16, source string) *ent.Episode {
 			e := &ent.Episode{ID: id, Number: number}
-			e.Edges.MediaFiles = []*ent.MediaFile{{
-				Path: fmt.Sprintf(
-					"/tv/The Black Sea/Season 03/The.Black.Sea.S03E%02d.%s.mkv",
-					number, source,
-				),
-				Size:       4_000_000_000,
-				Width:      1920,
-				VideoCodec: "h264",
-			}}
+			name := fmt.Sprintf(
+				"The.Black.Sea.S03E%02d.%s.mkv", number, source,
+			)
+			e.Edges.MediaFiles = []*ent.MediaFile{
+				mediafiletest.StoredParse(&ent.MediaFile{
+					Path:       "/tv/The Black Sea/Season 03/" + name,
+					Size:       4_000_000_000,
+					Width:      1920,
+					VideoCodec: "h264",
+				}, name),
+			}
 			return e
 		}
 		beaten := func(id uint32, number uint16) *ent.Episode {

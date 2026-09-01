@@ -5021,13 +5021,13 @@ components:
           type: string
         parsed_source:
           type: string
-          description: Source tag (BluRay/Remux/WEB-DL/…) parsed from the file's basename at response time.
+          description: Source tag (BluRay/Remux/WEB-DL/…) parsed from the release name at import. Empty on rows written before the column existed.
         parsed_resolution:
           type: string
-          description: Resolution (720p/1080p/2160p) parsed from the file's basename at response time.
+          description: Resolution (720p/1080p/2160p) parsed from the release name at import. Empty on rows written before the column existed.
         parsed_codec:
           type: string
-          description: Video codec (x264/HEVC/AV1/…) parsed from the file's basename at response time.
+          description: Video codec (x264/HEVC/AV1/…) parsed from the release name at import. Empty on rows written before the column existed.
         file_score:
           type: integer
           description: >-
@@ -5328,7 +5328,7 @@ components:
           description: Release group recorded on the episode's media file.
         parsed_source:
           type: string
-          description: Source tag (BluRay/Remux/WEB-DL/…) parsed from the file's basename at response time.
+          description: Source tag (BluRay/Remux/WEB-DL/…) parsed from the release name at import. Empty on rows written before the column existed.
         file_score:
           type: integer
           description: >-

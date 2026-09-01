@@ -1,6 +1,9 @@
 package qualityctx
 
 import (
+	"path/filepath"
+
+	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/quality"
 )
@@ -78,9 +81,54 @@ func Replaces(p quality.Profile, existing, incoming quality.ReleaseContext) bool
 	return quality.ReplacesFile(p, existing, incoming)
 }
 
-// ContextFromFile scores what is already on disk. Probe data (width,
-// codec) wins over the filename parse when present; seeder conditions
-// can never match a file.
+// ContextFromRow scores a file already in the library, off the columns the
+// importer stored rather than off its path.
+//
+// The path is the wrong input and was the one being used: the renamer wrote it
+// from the naming template, and the default template keeps only the
+// resolution, so re-parsing it reported no group and no source for every
+// imported file. Against a profile scoring the idiomatic "release carries no
+// group" format at -100, that made every file in the library score -100 for a
+// group the row had recorded all along — and since ReplacesFile compares that
+// number against a full release score, the RSS scanner read the whole library
+// as upgradable.
+//
+// Probe data wins over the stored parse for the two things it can see
+// directly, and is ignored at zero so an ffmpeg-disabled install falls back to
+// what the release name claimed.
+//
+// Title stays the basename, which is the one field this cannot repair: nothing
+// stores the release name, so a release_title condition matches only what the
+// naming template kept. Blanking it was tried and is worse — a file then
+// scores none of remux/hdr/multi-audio while the release replacing it scores
+// all of them, so everything on disk becomes upgradable; suppressing them on
+// both sides instead stops upgrades happening at all, since those formats are
+// what the upgrade rules are written in. Both are visible in rss's upgrade
+// specs. Closing it means answering those conditions from the probe, which
+// needs condition types that do not exist yet.
+func ContextFromRow(f *ent.MediaFile) quality.ReleaseContext {
+	r := quality.ReleaseContext{
+		Title:          filepath.Base(f.Path),
+		Size:           f.Size,
+		Resolution:     f.ParsedResolution,
+		Source:         f.ParsedSource,
+		Group:          f.ReleaseGroup,
+		Codec:          f.ParsedCodec,
+		EmptyIsUnknown: true,
+	}
+	if w := quality.ResolutionFromWidth(int(f.Width)); w != "" {
+		r.Resolution = w
+	}
+	if f.VideoCodec != "" {
+		r.Codec = f.VideoCodec
+	}
+	return r
+}
+
+// ContextFromFile scores a file by its name — a file inside a torrent, which
+// has no row yet. For a file already in the library use ContextFromRow: its
+// name has been through the renamer. Probe data (width, codec) wins over the
+// filename parse when present; seeder conditions can never match a file.
 func ContextFromFile(
 	basename string,
 	size int64,

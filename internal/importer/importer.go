@@ -484,10 +484,7 @@ func takesPackFile(
 		if !hasProfile {
 			return false
 		}
-		existing := qualityctx.ContextFromFile(
-			filepath.Base(pf.existing.Path), pf.existing.Size,
-			int(pf.existing.Width), pf.existing.VideoCodec,
-		)
+		existing := qualityctx.ContextFromRow(pf.existing)
 		// The probe wins over the filename when there is one — the same
 		// degrade path an ffmpeg-disabled install takes everywhere else.
 		width, codec := 0, ""

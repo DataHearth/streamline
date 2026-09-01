@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -254,9 +253,7 @@ func beatEpisodes(
 			continue
 		}
 		mf := e.Edges.MediaFiles[0]
-		file := qualityctx.ContextFromFile(
-			filepath.Base(mf.Path), mf.Size, int(mf.Width), mf.VideoCodec,
-		)
+		file := qualityctx.ContextFromRow(mf)
 		if quality.ReplacesFile(p, file, release) {
 			beat = append(beat, e)
 		}
@@ -366,9 +363,7 @@ func (s *TVFeedScanner) grabUpgrade(
 		if _, already := pass.grabbed[e.ID]; !already &&
 			len(e.Edges.MediaFiles) > 0 {
 			mf := e.Edges.MediaFiles[0]
-			file := qualityctx.ContextFromFile(
-				filepath.Base(mf.Path), mf.Size, int(mf.Width), mf.VideoCodec,
-			)
+			file := qualityctx.ContextFromRow(mf)
 			if quality.ReplacesFile(p, file, release) {
 				selected = []*ent.Episode{e}
 			}

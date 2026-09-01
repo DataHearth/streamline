@@ -20,6 +20,7 @@ import (
 	moviesvc "github.com/datahearth/streamline/internal/media/movie"
 	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
+	"github.com/datahearth/streamline/internal/testutil/mediafiletest"
 )
 
 var _ = Describe(
@@ -572,9 +573,11 @@ var _ = Describe(
 					Once()
 				app.store.EXPECT().
 					ListMediaFilesByMovieID(mock.Anything, movieID).
-					Return([]*ent.MediaFile{
-						{ID: 1, Path: filePath, Size: 8_400_000_000},
-					}, nil).
+					Return([]*ent.MediaFile{mediafiletest.StoredParse(
+						&ent.MediaFile{
+							ID: 1, Path: filePath, Size: 8_400_000_000,
+						}, filePath,
+					)}, nil).
 					Once()
 
 				resp, err := http.Get(
