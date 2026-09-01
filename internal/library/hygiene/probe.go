@@ -100,11 +100,20 @@ func (s *Service) probeRow(ctx context.Context, row *ent.MediaFile) bool {
 		mediaProbeProbed.Add(ctx, 1)
 	}
 
+	// Only a row that never got the parsed_* columns is backfilled from its
+	// path: the importer stores the *release name's* parse, and the basename
+	// the renamer wrote carries fewer tokens than it did.
+	parsePath := ""
+	if row.ParsedSource == "" && row.ParsedResolution == "" &&
+		row.ParsedCodec == "" {
+		parsePath = row.Path
+	}
+
 	// Log-and-continue, like checkDrift's own store-call failures: rows come
 	// back oldest-first, so returning here on a deterministic per-row failure
 	// would re-select the same failing row at the head of every subsequent
 	// tick and starve every newer file behind it.
-	if err := s.store.StampMediaFileProbe(ctx, row.ID, row.Path, info); err != nil {
+	if err := s.store.StampMediaFileProbe(ctx, row.ID, parsePath, info); err != nil {
 		// The drift-check job can delete this row between
 		// ListUnprobedMediaFiles and this stamp write; that race is routine,
 		// not an error.

@@ -23,7 +23,10 @@ type CreateMediaFileParams struct {
 	MovieID      uint32 // set for movie files; mutually exclusive with EpisodeID
 	EpisodeID    uint32 // set for episode files (e.g. series adoption)
 	Source       mediafile.Source
-	Probe        *ffmpeg.Info // set to stamp probed_at at create time; nil leaves probed_at NULL for the backfill
+	// Parsed is the release name's parse, when the caller has it. Nil falls
+	// back to parsing Path's basename — see applyParsed.
+	Parsed *library.ParseResult
+	Probe  *ffmpeg.Info // set to stamp probed_at at create time; nil leaves probed_at NULL for the backfill
 }
 
 // applyProbe copies probe info onto a MediaFile create/update builder. One
@@ -54,23 +57,35 @@ func applyProbe[T interface {
 		SetBitrate(info.BitrateBPS)
 }
 
+// applyParsed writes the parsed_* columns from the release name's parse when
+// the caller has it, falling back to the stored path's basename. The two
+// disagree for anything the renamer touched: the destination name is rendered
+// from the naming template, and the default one keeps only the resolution, so
+// the source and codec tokens are gone before this reads them back.
+func applyParsed[T interface {
+	SetParsedSource(string) T
+	SetParsedResolution(string) T
+	SetParsedCodec(string) T
+}](q T, parsed *library.ParseResult, path string) T {
+	if parsed == nil {
+		p := library.Parse(filepath.Base(path))
+		parsed = &p
+	}
+	return q.SetParsedSource(parsed.Source).
+		SetParsedResolution(parsed.Resolution).
+		SetParsedCodec(parsed.Codec)
+}
+
 func (db *DB) CreateMediaFile(
 	ctx context.Context,
 	p CreateMediaFileParams,
 ) (*ent.MediaFile, error) {
-	// Parsed here rather than at each call site: every path that creates a
-	// media file wants the same three derived values, and doing it at the one
-	// choke point is what makes "a row always has them" true.
-	parsed := library.Parse(filepath.Base(p.Path))
-	q := db.client.MediaFile.Create().
+	q := applyParsed(db.client.MediaFile.Create().
 		SetPath(p.Path).
 		SetSize(p.Size).
 		SetQuality(p.Quality).
 		SetFormat(p.Format).
-		SetReleaseGroup(p.ReleaseGroup).
-		SetParsedSource(parsed.Source).
-		SetParsedResolution(parsed.Resolution).
-		SetParsedCodec(parsed.Codec)
+		SetReleaseGroup(p.ReleaseGroup), p.Parsed, p.Path)
 	if p.MovieID != 0 {
 		q = q.SetMovieID(p.MovieID)
 	}
@@ -108,7 +123,10 @@ func (db *DB) ListUnprobedMediaFiles(
 //
 // path, when non-empty, also backfills the parsed_* columns. The probe job is
 // already walking and writing rows created before those columns existed, so it
-// is the cheapest place to fill them — no separate migration pass.
+// is the cheapest place to fill them — no separate migration pass. Callers pass
+// it only for a row that has none: a basename the renamer wrote carries fewer
+// tokens than the release name did, so re-deriving over a filled row loses the
+// source and codec the importer stored.
 func (db *DB) StampMediaFileProbe(
 	ctx context.Context,
 	id uint32,
@@ -117,10 +135,7 @@ func (db *DB) StampMediaFileProbe(
 ) error {
 	q := applyProbe(db.client.MediaFile.UpdateOneID(id), info)
 	if path != "" {
-		parsed := library.Parse(filepath.Base(path))
-		q = q.SetParsedSource(parsed.Source).
-			SetParsedResolution(parsed.Resolution).
-			SetParsedCodec(parsed.Codec)
+		q = applyParsed(q, nil, path)
 	}
 	if err := q.Exec(ctx); err != nil {
 		return fmt.Errorf("stamp probe on media_file %d: %w", id, err)

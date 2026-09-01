@@ -382,6 +382,7 @@ func (w *Worker) importMovieRecord(
 			Quality:      imported.Parsed.Resolution,
 			Format:       imported.Parsed.Extension,
 			ReleaseGroup: imported.Parsed.Group,
+			Parsed:       &imported.Parsed,
 			Probe:        probeInfo,
 		},
 	}); err != nil {
@@ -652,6 +653,7 @@ func (w *Worker) importEpisodeRecord(
 					Quality:      imported.Parsed.Resolution,
 					Format:       imported.Parsed.Extension,
 					ReleaseGroup: imported.Parsed.Group,
+					Parsed:       &imported.Parsed,
 					Probe:        pf.info,
 				},
 			},
@@ -741,6 +743,7 @@ func (w *Worker) importSingleEpisode(
 				Quality:      imported.Parsed.Resolution,
 				Format:       imported.Parsed.Extension,
 				ReleaseGroup: imported.Parsed.Group,
+				Parsed:       &imported.Parsed,
 				Probe:        probeInfo,
 			},
 		},

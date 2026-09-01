@@ -14,6 +14,7 @@ import (
 	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/ent/season"
 	"github.com/datahearth/streamline/internal/ffmpeg"
+	"github.com/datahearth/streamline/internal/library"
 )
 
 // withEpisodeContext eager-loads the Episode edge of an importing record along
@@ -366,7 +367,10 @@ type MediaFileRow struct {
 	Quality      string
 	Format       string
 	ReleaseGroup string
-	Probe        *ffmpeg.Info // nil leaves probed_at NULL for the backfill
+	// Parsed is the release name's parse, when the caller has it. Nil falls
+	// back to parsing Path's basename — see applyParsed.
+	Parsed *library.ParseResult
+	Probe  *ffmpeg.Info // nil leaves probed_at NULL for the backfill
 }
 
 type RecordImportFailureParams struct {
@@ -524,13 +528,13 @@ func (db *DB) RecordImportSuccess(
 		return err
 	}
 
-	mc := tx.MediaFile.Create().
+	mc := applyParsed(tx.MediaFile.Create().
 		SetPath(p.File.Path).
 		SetSize(p.File.Size).
 		SetQuality(p.File.Quality).
 		SetFormat(p.File.Format).
 		SetReleaseGroup(p.File.ReleaseGroup).
-		SetMovieID(p.MovieID)
+		SetMovieID(p.MovieID), p.File.Parsed, p.File.Path)
 	if p.File.Probe != nil {
 		mc = applyProbe(mc, p.File.Probe)
 	}
@@ -574,13 +578,13 @@ func (db *DB) RecordEpisodeImportSuccess(
 	if err != nil {
 		return err
 	}
-	ec := tx.MediaFile.Create().
+	ec := applyParsed(tx.MediaFile.Create().
 		SetPath(p.File.Path).
 		SetSize(p.File.Size).
 		SetQuality(p.File.Quality).
 		SetFormat(p.File.Format).
 		SetReleaseGroup(p.File.ReleaseGroup).
-		SetEpisodeID(p.EpisodeID)
+		SetEpisodeID(p.EpisodeID), p.File.Parsed, p.File.Path)
 	if p.File.Probe != nil {
 		ec = applyProbe(ec, p.File.Probe)
 	}

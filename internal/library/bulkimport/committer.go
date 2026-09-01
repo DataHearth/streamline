@@ -314,6 +314,7 @@ func (s *Service) commitAttach(
 		params.Size = imported.Size
 		params.Quality = imported.Parsed.Resolution
 		params.ReleaseGroup = imported.Parsed.Group
+		params.Parsed = &imported.Parsed
 	}
 	return s.linkAndMarkAvailable(
 		ctx, params, entimportscanfile.OutcomeAttached, 0,
@@ -364,6 +365,7 @@ func (s *Service) commitRename(
 		Size:         imported.Size,
 		Quality:      imported.Parsed.Resolution,
 		ReleaseGroup: imported.Parsed.Group,
+		Parsed:       &imported.Parsed,
 		Source:       entmediafile.SourceWizard,
 	}, entimportscanfile.OutcomeCreated, m.ID)
 }

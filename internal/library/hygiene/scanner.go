@@ -237,6 +237,7 @@ func (s *Service) handleOrphan(
 		Size:         imported.Size,
 		Quality:      cand.Parsed.Resolution,
 		ReleaseGroup: cand.Parsed.Group,
+		Parsed:       &cand.Parsed,
 		Source:       entmediafile.SourceAuto,
 	}); err != nil {
 		orphanImportFailed.Add(ctx, 1)

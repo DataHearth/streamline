@@ -11,6 +11,7 @@ import (
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	entmovie "github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/schema"
+	"github.com/datahearth/streamline/internal/library"
 )
 
 var _ = Describe("Movie filter + lookup", Label("integration", "db"), func() {
@@ -256,6 +257,23 @@ var _ = Describe("Movie filter + lookup", Label("integration", "db"), func() {
 			Expect(f.ParsedResolution).To(Equal("1080p"))
 			Expect(f.ParsedCodec).To(Equal("x264"))
 			Expect(f.ParsedSource).ToNot(BeEmpty())
+		})
+
+		It("prefers the caller's parse over the renamed basename", func() {
+			m := seed("Renamed", 2020, 994, entmovie.StatusAvailable)
+			parsed := library.Parse("Renamed.2020.1080p.BluRay.x264-GRP.mkv")
+			f, err := store.CreateMediaFile(ctx, CreateMediaFileParams{
+				MovieID: m.ID,
+				// What the default naming template renders: no source, no
+				// codec, so parsing this back finds neither.
+				Path:   "/lib/Renamed (2020)/Renamed (2020) [1080p].mkv",
+				Size:   10,
+				Parsed: &parsed,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(f.ParsedSource).To(Equal("BluRay"))
+			Expect(f.ParsedCodec).To(Equal("x264"))
+			Expect(f.ParsedResolution).To(Equal("1080p"))
 		})
 	})
 

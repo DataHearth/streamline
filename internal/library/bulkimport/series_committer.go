@@ -188,6 +188,7 @@ func (s *Service) commitShow(
 			Quality:      parsed.Resolution,
 			Format:       parsed.Extension,
 			ReleaseGroup: parsed.Group,
+			Parsed:       &parsed,
 			Source:       entmediafile.SourceWizard,
 		}); err != nil {
 			slog.WarnContext(ctx, "series adopt: create media file failed",

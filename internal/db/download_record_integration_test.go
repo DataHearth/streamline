@@ -13,6 +13,7 @@ import (
 	entmovie "github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/internal/ffmpeg"
+	"github.com/datahearth/streamline/internal/library"
 )
 
 var _ = Describe("Download record store", Label("integration", "db"), func() {
@@ -218,6 +219,22 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 
 			count, _ := client.MediaFile.Query().Count(ctx)
 			Expect(count).To(Equal(1))
+		})
+
+		It("stores the release name's parse, not the renamed path's", func() {
+			rec := createRec("def", downloadrecord.StatusImporting)
+			parsed := library.Parse("Dune.2021.2160p.WEB-DL.x265-GRP.mkv")
+			Expect(store.RecordImportSuccess(ctx, RecordImportSuccessParams{
+				RecordID: rec.ID, MovieID: movieID,
+				File: MediaFileRow{
+					Path: "/lib/Dune (2021)/Dune (2021) [2160p].mkv", Size: 1,
+					Parsed: &parsed,
+				},
+			})).To(Succeed())
+
+			mf, _ := client.MediaFile.Query().Only(ctx)
+			Expect(mf.ParsedSource).To(Equal("WEB-DL"))
+			Expect(mf.ParsedCodec).To(Equal("HEVC"))
 		})
 
 		When("the media file path is empty", func() {
