@@ -88,8 +88,13 @@
 			// import that one episode. The scope the preview reports wins when
 			// there is one, so a record identified before the anchor was fixed
 			// is relabelled by the same rule, with nothing to migrate.
-			if (packSeasons.length === 1) {
-				return `${m.title} · S${pad(packSeasons[0])}`;
+			// Narrowed by value rather than by length: noUncheckedIndexedAccess
+			// types packSeasons[0] as possibly undefined however the length was
+			// tested, and a `?? 0` fallback would render a "S00" that cannot
+			// happen.
+			const [onlySeason] = packSeasons;
+			if (packSeasons.length === 1 && onlySeason !== undefined) {
+				return `${m.title} · S${pad(onlySeason)}`;
 			}
 			if (packSeasons.length > 1) {
 				return `${m.title} · ${packSeasons.length} seasons`;
