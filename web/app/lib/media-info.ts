@@ -9,13 +9,7 @@
 // renders exactly what it rendered before this feature existed: no empty rows,
 // no placeholder dashes.
 
-import type {
-	AudioTrack,
-	Episode,
-	MediaFile,
-	MediaInfo,
-	SubtitleTrack,
-} from "./types";
+import type { Episode, MediaFile, MediaInfo } from "./types";
 import { getLocale } from "./paraglide/runtime.js";
 import { m as i18n } from "./paraglide/messages.js";
 
@@ -34,8 +28,9 @@ export function probeOf(src: {
 		!i.duration_seconds &&
 		!i.audio_codec &&
 		!i.bitrate &&
-		!i.audio_tracks?.length &&
-		!i.subtitles?.length;
+		!i.audio_track_count &&
+		!i.audio_languages?.length &&
+		!i.subtitle_languages?.length;
 	return empty ? null : i;
 }
 
@@ -166,31 +161,30 @@ export function langName(code?: string): string {
 	}
 }
 
-// Default track first: it is the one that plays, and the one the flat
-// audio_codec/audio_channels fields describe.
-export function audioTracks(info: MediaInfo | null): AudioTrack[] {
-	const tracks = info?.audio_tracks ?? [];
-	if (tracks.length < 2) return [...tracks];
-	const def = tracks.find((t) => t.default);
-	if (!def) return [...tracks];
-	return [def, ...tracks.filter((t) => t !== def)];
+// The languages present, deduped and sorted server-side. These are sets, not
+// track lists: three tracks can be two languages, and nothing says which track
+// holds which. Rendering a row per language is therefore the only honest shape
+// — a row per track would have to invent the mapping.
+export function audioLanguages(info: MediaInfo | null): string[] {
+	return info?.audio_languages ?? [];
 }
 
-export function subtitleTracks(info: MediaInfo | null): SubtitleTrack[] {
-	return info?.subtitles ?? [];
+export function subtitleLanguages(info: MediaInfo | null): string[] {
+	return info?.subtitle_languages ?? [];
 }
 
-export function primaryAudio(info: MediaInfo | null): AudioTrack | undefined {
-	return audioTracks(info)[0];
+// How many audio streams the file holds, which is its own fact: an untagged
+// file has a count and no languages at all.
+export function audioTrackCount(info: MediaInfo | null): number {
+	return info?.audio_track_count ?? audioLanguages(info).length;
 }
 
-// One audio track, written out: "EAC3 · 5.1". Prefers the enumerated default
-// track and falls back to the flat fields, per field.
+// The default track, written out: "EAC3 · 5.1". The flat fields describe the
+// track that plays, and they are the only per-track detail there is.
 export function audioLabel(info: MediaInfo | null): string | undefined {
 	if (!info) return undefined;
-	const t = primaryAudio(info);
-	const codec = codecLabel(t?.codec ?? info.audio_codec);
-	const layout = channelLayout(t?.channels ?? info.audio_channels);
+	const codec = codecLabel(info.audio_codec);
+	const layout = channelLayout(info.audio_channels);
 	if (codec && layout) return `${codec} · ${layout}`;
 	return codec ?? layout;
 }
@@ -205,31 +199,19 @@ export function audioSummary(
 	info: MediaInfo | null,
 	cap = TRACK_CAP,
 ): TrackSummary | undefined {
-	const tracks = audioTracks(info);
-	if (tracks.length === 0) {
-		const flat = audioLabel(info);
-		return flat ? { text: flat, hidden: 0, total: 1 } : undefined;
+	if (!info) return undefined;
+	const langs = audioLanguages(info);
+	const count = audioTrackCount(info);
+	const flat = audioLabel(info);
+	// One track, or several with nothing to tell them apart: the flat
+	// codec/channels line is more use than a bare count.
+	if (count <= 1 || langs.length === 0) {
+		return flat ? { text: flat, hidden: 0, total: Math.max(count, 1) } : undefined;
 	}
-	if (tracks.length === 1) {
-		const t = tracks[0];
-		if (!t) return undefined;
-		return {
-			text: joinDot([
-				langShort(t.language),
-				codecLabel(t.codec),
-				channelLayout(t.channels),
-			]),
-			hidden: 0,
-			total: 1,
-		};
-	}
-	const shown = tracks.slice(0, cap).map((t) =>
-		joinSpace([langShort(t.language), channelLayout(t.channels)]),
-	);
 	return {
-		text: shown.join(" · "),
-		hidden: Math.max(0, tracks.length - cap),
-		total: tracks.length,
+		text: langs.slice(0, cap).map(langShort).join(", "),
+		hidden: Math.max(0, langs.length - cap),
+		total: count,
 	};
 }
 
@@ -237,37 +219,13 @@ export function subtitleSummary(
 	info: MediaInfo | null,
 	cap = TRACK_CAP,
 ): TrackSummary | undefined {
-	const subs = subtitleTracks(info);
-	if (subs.length === 0) return undefined;
-	if (subs.length === 1) {
-		const s = subs[0];
-		if (!s) return undefined;
-		return {
-			text: joinDot([langShort(s.language), codecLabel(s.codec)]),
-			hidden: 0,
-			total: 1,
-		};
-	}
-	// Languages, deduplicated: a track list of eng/eng-forced/eng-SDH is one
-	// language as far as a summary is concerned.
-	const langs: string[] = [];
-	for (const s of subs) {
-		const l = langShort(s.language);
-		if (!langs.includes(l)) langs.push(l);
-	}
+	const langs = subtitleLanguages(info);
+	if (langs.length === 0) return undefined;
 	return {
-		text: langs.slice(0, cap).join(", "),
+		text: langs.slice(0, cap).map(langShort).join(", "),
 		hidden: Math.max(0, langs.length - cap),
-		total: subs.length,
+		total: langs.length,
 	};
-}
-
-// The flags that change what a subtitle track is for.
-export function subtitleFlags(s: SubtitleTrack): string[] {
-	const out: string[] = [];
-	if (s.forced) out.push(i18n.sub_forced());
-	if (s.hearing_impaired) out.push(i18n.sub_sdh());
-	return out;
 }
 
 export function formatBitrate(bps?: number): string | undefined {

@@ -51,6 +51,33 @@ Both of these are *examples*, not defaults — nothing like them ships built in,
 | `codec` | `value` | Parsed codec, or probed video codec for on-disk files |
 | `size` | `min_gb` / `max_gb` | Indexer size, or the file's size on disk — **per episode**, see below |
 | `seeders` | `min` | Indexer seeders — always absent for an on-disk file, so this condition can never match a file |
+| `audio_tracks` | `min` | Number of audio streams: probed for a file, inferred from a `MULTi`/`DUAL AUDIO` tag for a release |
+| `audio_language` | `value` (ISO 639 code) | Audio stream languages: probed for a file, inferred from a `VFF`/`VFQ`/`TRUEFRENCH`/`VF2`/`VOF` tag for a release |
+| `subtitle_language` | `value` (ISO 639 code) | Non-forced subtitle stream languages: probed for a file, inferred from a `VOSTFR`/`SUBFRENCH` tag for a release |
+
+The last three are the only types besides the parsed columns that a file **already in your library** can answer, which matters more than it sounds — see [What a file can be scored on](#what-a-file-can-be-scored-on).
+
+Language values are ISO 639 codes and are normalised on both ends, so `fre`, `fr` and `fra` are the same condition. Write whichever you like. Forced subtitle tracks are excluded from `subtitle_language`: a forced track carries signs and foreign dialogue rather than the script, so counting one would report a French dub as French-subtitled.
+
+#### What the probe knows that you cannot match on
+
+ffprobe records more than the conditions expose. These are stored and shown on the file/episode detail panels, but **no condition type reads them** — there is nothing to write against them today:
+
+| Probed and shown | Matchable? |
+| --- | --- |
+| Width / height | ✅ via `resolution` (bucketed by **width**) |
+| Video codec | ✅ via `codec` |
+| Audio stream count | ✅ via `audio_tracks` |
+| Audio / subtitle languages | ✅ via `audio_language` / `subtitle_language` |
+| Container (`matroska`, `mp4`) | ❌ |
+| Duration | ❌ — but it *is* checked at import, against `library.probe.min_duration_ratio` |
+| Overall bitrate | ❌ |
+| Audio codec (`eac3`, `dts`) | ❌ — only the *count* and the languages are matchable, not what the default track is encoded in |
+| Audio channel count (5.1, 7.1) | ❌ |
+| HDR / colour metadata | ❌ — not recorded at all. It is decidable for ~85% of files but only ~1–2% of releases advertise it, so a condition could almost never compare the two sides |
+
+Write a `release_title` regex if you need one of these from the release side — just don't expect it to score the file you already have.
+
 
 ### Size is per episode, not per release
 
@@ -246,14 +273,39 @@ Applying one never saves — it fills the form and you edit from there, includin
 
 ### What a file can be scored on
 
-A file in the library is scored from the columns the importer stored — its release group, and the source/resolution/codec parsed from the release name at import — with the probe's width and codec winning where there is one. It is **not** scored by re-parsing its path: the renamer wrote that path from your naming template, and the default template keeps only the resolution, so the group and source are gone from it.
+A file in the library is scored from the columns the importer stored — its release group, the source/resolution/codec parsed from the release name at import, and (once probed) its audio track count, audio languages and subtitle languages — with the probe winning wherever it has an answer. It is **not** scored by re-parsing its path: the renamer wrote that path from your naming template, and the default template keeps only the resolution, so the group and source are gone from it.
 
-The exception is `release_title`, which matches the whole raw release name and has no column behind it. Against a file it matches only what your naming template happened to keep. So a format written as a title regex — `remux`, `hdr`, `multi-audio`, `dubbed`, and any language or `PROPER`/`REPACK` tag you have written yourself — generally scores **0** for a file on disk while scoring normally for the release being compared to it. Two consequences worth knowing:
+The exception is `release_title`. It matches the whole raw release name, and a file in your library no longer has one — so against a file this condition is treated as **unanswerable**, not as a miss.
+
+That distinction is the whole game. A format written *only* as a title regex cannot judge a file, so streamline drops it from **both** sides when deciding an upgrade, rather than letting the release score it and the file not. Before this, a profile whose weight sat in title-matched formats read its entire library as upgradable, forever: on one real install an anime profile paying `vostfr` +1000 left every episode about 1050 points below its own `upgrade_until_score`, and no file could ever earn those points back.
+
+**The fix, and what you should do about it:** pair a title regex with a condition the file can answer, in the same format, both non-required. The format then matches a release by its name and a file by its probe, and the two become comparable:
+
+```yaml
+custom_formats:
+  - name: vostfr
+    conditions:
+      - { type: release_title, pattern: '(?i)\bvostfr\b' }
+      - { type: subtitle_language, value: fra }
+  - name: vff
+    conditions:
+      - { type: release_title, pattern: '(?i)\b(truefrench|vff|vf2|vof)\b' }
+      - { type: audio_language, value: fra }
+```
+
+The builtin `multi-audio` already ships this way (`MULTi` in the title **or** two audio tracks on disk), as do `x265`/`x264`/`av1` (title **or** probed codec).
+
+Some things stay unanswerable for a file no matter what, because they are facts about the *upload* rather than about the bytes:
+
+- **`vff` vs `vfq`** — both are `tags.language: fra` in the file. The pairing above will match either. If you score `vfq` negatively, that release never gets grabbed in the first place, so in practice the French audio on your disk is the one you wanted.
+- **`remux`**, **`repack`/`proper`**, and screener/junk-source tags — nothing in the file records them.
+
+Two consequences remain for those:
 
 - A `file_score` is a floor, not the score the release originally earned. A REMUX on disk under a profile scoring `remux` at +250 reports 250 less than the release it came from.
-- Automatic upgrades lean the same way, since `ShouldUpgrade` compares those two numbers. If your profile's weight sits mostly in title-matched formats, `upgrade_until_score` will not hold as intended.
+- Those formats take no part in upgrade decisions at all — neither for nor against.
 
-Keeping more of the release name in `library.movie_naming` / `library.series_naming` is the lever available today — a template ending `[{quality}]` keeps a resolution and nothing else.
+Probing has to be on for any of this: with `ffmpeg.enabled: false` the stream conditions are unanswerable too, and upgrades fall back to comparing only the parsed columns. Files imported before this feature are filled in by the `media-probe` backfill job (25 rows every 15 minutes), so an existing library converges on its own.
 
 ---
 

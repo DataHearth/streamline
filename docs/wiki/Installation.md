@@ -210,13 +210,14 @@ Two things about the chart that surprise people:
 
 ## Optional: ffmpeg
 
-Streamline runs perfectly well with no `ffmpeg` or `ffprobe` anywhere on the machine. Two features
-are gated behind them, and only those two:
+Streamline runs perfectly well with no `ffmpeg` or `ffprobe` anywhere on the machine. Three features
+are gated behind them, and only those three:
 
 | Feature | What you lose without ffprobe |
 | --- | --- |
-| **Media info** | Resolution, codecs, duration, channels and bitrate on files and episodes. The rest of the page is unaffected |
+| **Media info** | Resolution, codecs, duration, channels, bitrate and stream languages on files and episodes. The rest of the page is unaffected |
 | **Import verification** | Downloads are imported on the strength of the release name alone. With ffprobe, a file whose real resolution, duration or codec contradicts the claim is *held* for you to resolve instead of landing in your library |
+| **Scoring a file you already have** | The `audio_tracks`, `audio_language` and `subtitle_language` conditions are answerable only from a probe. Without one they are unanswerable for a file on disk, so automatic upgrades compare the two sides on the parsed release name alone — see [What a file can be scored on](Quality-Profiles-and-Custom-Formats#what-a-file-can-be-scored-on) |
 
 Everything else — searching, grabbing, importing, renaming, requests, notifications — works
 identically either way. Missing binaries are a **graceful degrade, never a boot error**: nothing

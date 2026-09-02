@@ -185,34 +185,22 @@ export type MediaInfo = {
 	width?: number;
 	height?: number;
 	duration_seconds?: number;
-	// The default (or first) audio track, flattened. Kept alongside audio_tracks:
-	// it is what the brief's contract carries, and a file whose streams could not
-	// be enumerated may still report this much.
+	// The default (or first) audio track, flattened — the one that plays. Kept
+	// alongside the aggregate fields below: a file whose streams could not be
+	// enumerated may still report this much.
 	audio_codec?: string;
 	audio_channels?: number;
 	bitrate?: number;
 	probed_at?: string;
-	// Every audio and subtitle stream ffprobe found. Languages are ISO 639-2/B
-	// as ffprobe reports them ("eng", "fra", "und").
-	audio_tracks?: AudioTrack[];
-	subtitles?: SubtitleTrack[];
-};
-
-export type AudioTrack = {
-	language?: string;
-	codec?: string;
-	channels?: number;
-	default?: boolean;
-	// ffprobe's stream title, when the muxer set one ("Surround", "Commentary").
-	title?: string;
-};
-
-export type SubtitleTrack = {
-	language?: string;
-	codec?: string;
-	forced?: boolean;
-	hearing_impaired?: boolean;
-	default?: boolean;
+	// Aggregate stream facts, not per-track records: a count and two language
+	// sets, which is what the API actually carries. Languages are ISO 639-2/T,
+	// canonicalised server-side ("fre" is stored as "fra"). subtitle_languages
+	// excludes forced tracks. Which track holds which language, its codec, and
+	// whether it is default or forced are not knowable from this — do not
+	// reintroduce per-track types to render them.
+	audio_track_count?: number;
+	audio_languages?: string[];
+	subtitle_languages?: string[];
 };
 
 export type MediaFile = {
@@ -747,7 +735,14 @@ export type CustomFormatConditionType =
 	| "release_group"
 	| "codec"
 	| "size"
-	| "seeders";
+	| "seeders"
+	// Answerable from a probed file as well as from a release name, which
+	// release_title is not — the renamer destroys the name of a file already in
+	// the library. Pair one with a release_title row in the same format and the
+	// format scores the release by its name and the file by its probe.
+	| "audio_tracks"
+	| "audio_language"
+	| "subtitle_language";
 
 // Only the fields its `type` reads are meaningful; the API omits the rest and
 // the editor keeps them around so switching a row's type back restores what

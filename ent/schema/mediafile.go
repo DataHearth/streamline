@@ -48,6 +48,15 @@ func (MediaFile) Fields() []ent.Field {
 		field.String("audio_codec").Optional(),
 		field.Uint8("audio_channels").Optional(),
 		field.Uint32("bitrate").Optional(),
+		// Stream-level probe results. audio_langs and sub_langs are
+		// comma-joined ISO-639-2/T codes rather than a JSON array: ent decodes
+		// a JSON field on every scanned row — the cost that put 480 MB of
+		// garbage on one walk of Movie.cast — and these sit on the same list
+		// paths. Empty is ambiguous between "no track" and "never probed", so
+		// readers gate on probed_at, not on the string.
+		field.Uint8("audio_tracks").Optional(),
+		field.String("audio_langs").Optional(),
+		field.String("sub_langs").Optional(),
 		field.Time("probed_at").Optional().Nillable(),
 		// Derived from the filename, stored because deriving it is ~12 regex
 		// passes and every response that mentions a file used to redo them —

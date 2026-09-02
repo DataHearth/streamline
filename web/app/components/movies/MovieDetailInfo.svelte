@@ -8,18 +8,15 @@
 	import { cn } from "../../lib/cn";
 	import {
 		audioSummary,
-		audioTracks,
-		channelLayout,
-		codecLabel,
+		audioLanguages,
 		codecOf,
 		formatBitrate,
 		formatDuration,
 		langName,
 		probeOf,
 		resolutionOf,
-		subtitleFlags,
 		subtitleSummary,
-		subtitleTracks,
+		subtitleLanguages,
 		type TrackSummary,
 	} from "../../lib/media-info";
 	import Dialog from "../modals/Dialog.svelte";
@@ -47,8 +44,10 @@
 	// carries its codec inline and has nothing to expand to.
 	let audio = $derived(audioSummary(probe));
 	let subs = $derived(subtitleSummary(probe));
-	let audioList = $derived(audioTracks(probe));
-	let subList = $derived(subtitleTracks(probe));
+	// One row per language, not per track: the API carries language sets and a
+	// count, and which track holds which language is not knowable.
+	let audioList = $derived(audioLanguages(probe));
+	let subList = $derived(subtitleLanguages(probe));
 	let audioOpen = $state(false);
 	let subsOpen = $state(false);
 
@@ -231,24 +230,9 @@
 						)}
 						{#if audioOpen}
 							<div class="col-span-2 mt-0.5 divide-y divide-border border-y border-border">
-								{#each audioList as t, k (k)}
+								{#each audioList as lang (lang)}
 									<div class="flex items-baseline justify-between gap-3 py-1.5">
-										<span class="min-w-0 truncate text-fg-muted">
-											{langName(t.language)}
-											{#if t.title}
-												<span class="text-fg-faint">· {t.title}</span>
-											{/if}
-											{#if t.default}
-												<span class="text-[10px] uppercase tracking-[0.1em] text-accent-text">
-													{i18n.track_default()}
-												</span>
-											{/if}
-										</span>
-										<span class="shrink-0 font-mono text-fg-subtle">
-											{[codecLabel(t.codec), channelLayout(t.channels)]
-												.filter(Boolean)
-												.join(" · ")}
-										</span>
+										<span class="min-w-0 truncate text-fg-muted">{langName(lang)}</span>
 									</div>
 								{/each}
 							</div>
@@ -264,19 +248,9 @@
 						)}
 						{#if subsOpen}
 							<div class="col-span-2 mt-0.5 divide-y divide-border border-y border-border">
-								{#each subList as t, k (k)}
+								{#each subList as lang (lang)}
 									<div class="flex items-baseline justify-between gap-3 py-1.5">
-										<span class="min-w-0 truncate text-fg-muted">
-											{langName(t.language)}
-											{#each subtitleFlags(t) as flag (flag)}
-												<span class="text-[10px] uppercase tracking-[0.1em] text-fg-faint">
-													{flag}
-												</span>
-											{/each}
-										</span>
-										<span class="shrink-0 font-mono text-fg-subtle">
-											{codecLabel(t.codec) ?? "—"}
-										</span>
+										<span class="min-w-0 truncate text-fg-muted">{langName(lang)}</span>
 									</div>
 								{/each}
 							</div>

@@ -928,6 +928,21 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 			Expect(wp.runImport(context.Background(), 2)).To(Succeed())
 		})
 
+		// probedFile is an existing library file with probe results on it.
+		// probed_at is what makes audio_tracks readable: without it
+		// ContextFromRow reports every stream field unknown, since a zero count
+		// cannot be told from a row nothing ever looked at.
+		probedFile := func(id uint32, name string, tracks uint8) *ent.MediaFile {
+			probed := time.Now()
+			return &ent.MediaFile{
+				ID:          id,
+				Path:        filepath.Join(libDir, name),
+				Width:       1920,
+				AudioTracks: tracks,
+				ProbedAt:    &probed,
+			}
+		}
+
 		packProfileConfig := func() map[string]any {
 			return map[string]any{
 				"library": map[string]any{
@@ -942,8 +957,12 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 					"preferred_resolution": "1080p",
 					"min_resolution":       "720p",
 					"upgrade_allowed":      true,
+					// multi-audio, not remux: remux is a release_title format, so
+					// a file on disk cannot answer it and ReplacesFile drops it
+					// from both sides. The track-count arm is what lets an
+					// existing file be compared at all.
 					"formats": []map[string]any{
-						{"name": "remux", "score": 200},
+						{"name": "multi-audio", "score": 200},
 					},
 				}},
 			}
@@ -954,8 +973,8 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 			season, eps := buildShow()
 			src := filepath.Join(tmp, "pack-upgrades")
 			Expect(os.MkdirAll(src, 0o755)).To(Succeed())
-			seedMediaFile(src, "Show.S01E01.1080p.BluRay.REMUX.x264-GRP.mkv")
-			seedMediaFile(src, "Show.S01E02.1080p.BluRay.REMUX.x264-GRP.mkv")
+			seedMediaFile(src, "Show.S01E01.1080p.MULTi.BluRay.x264-GRP.mkv")
+			seedMediaFile(src, "Show.S01E02.1080p.MULTi.BluRay.x264-GRP.mkv")
 			rec := episodeRecord(2, src, season, eps[0])
 			rec.ReplaceMode = downloadrecord.ReplaceModeUpgrades
 
@@ -963,25 +982,14 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 				FindImportingDownloadRecordByID(mock.Anything, uint32(2)).
 				Return(rec, nil).
 				Once()
-			// E01 holds a plain WEB-DL the pack's remux beats; E02 already holds one.
+			// E01 holds a single-audio file the pack's MULTi beats; E02 already
+			// holds a multi-audio one and ties.
 			storeMk.EXPECT().FindMediaFileByEpisodeID(mock.Anything, eps[0].ID).
-				Return(&ent.MediaFile{
-					ID: 8,
-					Path: filepath.Join(
-						libDir,
-						"Show.S01E01.1080p.WEB-DL.x264-GRP.mkv",
-					),
-					Width: 1920,
-				}, nil).Once()
+				Return(probedFile(8, "Show.S01E01.1080p.WEB-DL.x264-GRP.mkv", 1), nil).
+				Once()
 			storeMk.EXPECT().FindMediaFileByEpisodeID(mock.Anything, eps[1].ID).
-				Return(&ent.MediaFile{
-					ID: 9,
-					Path: filepath.Join(
-						libDir,
-						"Show.S01E02.1080p.BluRay.REMUX.x264-GRP.mkv",
-					),
-					Width: 1920,
-				}, nil).Once()
+				Return(probedFile(9, "Show.S01E02.1080p.MULTi.BluRay.x264-GRP.mkv", 2), nil).
+				Once()
 			// Only E01's row is cleared, and only E01 is re-recorded.
 			storeMk.EXPECT().
 				DeleteMediaFileAndRevertEpisode(mock.Anything, uint32(8), eps[0].ID).
@@ -1010,37 +1018,25 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 				season, eps := buildShow()
 				src := filepath.Join(tmp, "pack-title-fallback")
 				Expect(os.MkdirAll(src, 0o755)).To(Succeed())
-				// Neither member's own name says "remux" — only the pack's
+				// Neither member's own name says MULTi — only the pack's
 				// release title does, the way a real season-pack release is
 				// usually named.
 				seedMediaFile(src, "Show.S01E01.1080p.mkv")
 				seedMediaFile(src, "Show.S01E02.1080p.mkv")
 				rec := episodeRecord(2, src, season, eps[0])
 				rec.ReplaceMode = downloadrecord.ReplaceModeUpgrades
-				rec.Title = "Show.S01.1080p.BluRay.REMUX.x264-GRP"
+				rec.Title = "Show.S01.1080p.MULTi.BluRay.x264-GRP"
 
 				storeMk.EXPECT().
 					FindImportingDownloadRecordByID(mock.Anything, uint32(2)).
 					Return(rec, nil).
 					Once()
 				storeMk.EXPECT().FindMediaFileByEpisodeID(mock.Anything, eps[0].ID).
-					Return(&ent.MediaFile{
-						ID: 8,
-						Path: filepath.Join(
-							libDir,
-							"Show.S01E01.1080p.WEB-DL.x264-GRP.mkv",
-						),
-						Width: 1920,
-					}, nil).Once()
+					Return(probedFile(8, "Show.S01E01.1080p.WEB-DL.x264-GRP.mkv", 1), nil).
+					Once()
 				storeMk.EXPECT().FindMediaFileByEpisodeID(mock.Anything, eps[1].ID).
-					Return(&ent.MediaFile{
-						ID: 9,
-						Path: filepath.Join(
-							libDir,
-							"Show.S01E02.1080p.WEB-DL.x264-GRP.mkv",
-						),
-						Width: 1920,
-					}, nil).Once()
+					Return(probedFile(9, "Show.S01E02.1080p.WEB-DL.x264-GRP.mkv", 1), nil).
+					Once()
 				storeMk.EXPECT().
 					DeleteMediaFileAndRevertEpisode(mock.Anything, uint32(8), eps[0].ID).
 					Return(nil).Once()
@@ -1074,36 +1070,24 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 			season, eps := buildShow()
 			src := filepath.Join(tmp, "pack-hold-scope")
 			Expect(os.MkdirAll(src, 0o755)).To(Succeed())
-			seedMediaFile(src, "Show.S01E01.1080p.BluRay.REMUX.x264-GRP.mkv")
-			seedMediaFile(src, "Show.S01E02.1080p.BluRay.REMUX.x264-GRP.mkv")
+			seedMediaFile(src, "Show.S01E01.1080p.MULTi.BluRay.x264-GRP.mkv")
+			seedMediaFile(src, "Show.S01E02.1080p.MULTi.BluRay.x264-GRP.mkv")
 			rec := episodeRecord(2, src, season, eps[0])
 			rec.ReplaceMode = downloadrecord.ReplaceModeUpgrades
 			// E02 is the corrupt one, and E02 is the episode already holding a
-			// remux — so nothing this import touches is bad.
-			wp := proberFailingFor("Show.S01E02.1080p.BluRay.REMUX.x264-GRP.mkv")
+			// multi-audio file — so nothing this import touches is bad.
+			wp := proberFailingFor("Show.S01E02.1080p.MULTi.BluRay.x264-GRP.mkv")
 
 			storeMk.EXPECT().
 				FindImportingDownloadRecordByID(mock.Anything, uint32(2)).
 				Return(rec, nil).
 				Once()
 			storeMk.EXPECT().FindMediaFileByEpisodeID(mock.Anything, eps[0].ID).
-				Return(&ent.MediaFile{
-					ID: 8,
-					Path: filepath.Join(
-						libDir,
-						"Show.S01E01.1080p.WEB-DL.x264-GRP.mkv",
-					),
-					Width: 1920,
-				}, nil).Once()
+				Return(probedFile(8, "Show.S01E01.1080p.WEB-DL.x264-GRP.mkv", 1), nil).
+				Once()
 			storeMk.EXPECT().FindMediaFileByEpisodeID(mock.Anything, eps[1].ID).
-				Return(&ent.MediaFile{
-					ID: 9,
-					Path: filepath.Join(
-						libDir,
-						"Show.S01E02.1080p.BluRay.REMUX.x264-GRP.mkv",
-					),
-					Width: 1920,
-				}, nil).Once()
+				Return(probedFile(9, "Show.S01E02.1080p.MULTi.BluRay.x264-GRP.mkv", 2), nil).
+				Once()
 			storeMk.EXPECT().
 				DeleteMediaFileAndRevertEpisode(mock.Anything, uint32(8), eps[0].ID).
 				Return(nil).Once()

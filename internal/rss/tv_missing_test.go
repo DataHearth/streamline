@@ -21,7 +21,6 @@ import (
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/rss/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
-	"github.com/datahearth/streamline/internal/testutil/mediafiletest"
 )
 
 // matchIDs matches a grab's wanted-episode argument against an exact ID set,
@@ -409,7 +408,7 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 			show.QualityProfile = scoredProfile
 			expectEligible([]*ent.TVShow{show}, nil)
 
-			remuxPack := indexer.SearchResult{
+			multiPack := indexer.SearchResult{
 				Title:   "The.Black.Sea.S03.2160p.BluRay.REMUX.x265-GRP",
 				Seeders: 2,
 			}
@@ -417,11 +416,11 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 				SearchSeason(mock.Anything, []string{"The Black Sea", "Karadeniz"}, uint32(9001), uint16(3)).
 				Return([]indexer.SearchResult{
 					{Title: acceptablePack, Seeders: 500},
-					remuxPack,
+					multiPack,
 				}, nil).Once()
 			expectNoUpgradeCandidates()
 			dlM.EXPECT().
-				GrabEpisode(mock.Anything, remuxPack, uint32(11), []uint32{11, 12}).
+				GrabEpisode(mock.Anything, multiPack, uint32(11), []uint32{11, 12}).
 				Return(&ent.DownloadRecord{ID: 55}, nil).Once()
 			expectReplaceMode(55)
 			for _, id := range []uint32{11, 12} {
@@ -443,19 +442,19 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 			show.QualityProfile = scoredProfile
 			expectEligible([]*ent.TVShow{show}, nil)
 
-			remuxPack := indexer.SearchResult{
+			multiPack := indexer.SearchResult{
 				Title:   "The.Black.Sea.S03.2160p.BluRay.REMUX.x265-GRP",
 				Seeders: 2,
 			}
 			runnerUp := indexer.SearchResult{Title: acceptablePack, Seeders: 500}
 			indexerM.EXPECT().
 				SearchSeason(mock.Anything, []string{"The Black Sea", "Karadeniz"}, uint32(9001), uint16(3)).
-				Return([]indexer.SearchResult{runnerUp, remuxPack}, nil).Once()
+				Return([]indexer.SearchResult{runnerUp, multiPack}, nil).Once()
 			// One lookup for the whole attempt: the fall-through to the
 			// runner-up re-scores the beat-set, it does not re-query.
 			expectNoUpgradeCandidates()
 			dlM.EXPECT().
-				GrabEpisode(mock.Anything, remuxPack, uint32(11), []uint32{11, 12}).
+				GrabEpisode(mock.Anything, multiPack, uint32(11), []uint32{11, 12}).
 				Return(nil, context.DeadlineExceeded).Once()
 			dlM.EXPECT().
 				GrabEpisode(mock.Anything, runnerUp, uint32(11), []uint32{11, 12}).
@@ -567,7 +566,7 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 	Context("a season pack that also beats files on disk", func() {
 		// remux only: it outscores a plain WEB-DL file and ties a remux one, so
 		// one release splits the season's on-disk episodes into beaten and not.
-		const remuxPack = "The.Black.Sea.S03.1080p.BluRay.REMUX.x264-GRP"
+		const multiPack = "The.Black.Sea.S03.1080p.MULTi.BluRay.x264-GRP"
 
 		// onDisk builds an upgrade candidate: one episode holding a file, 1080p
 		// by both its name and its probed width.
@@ -576,27 +575,22 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 			name := fmt.Sprintf(
 				"The.Black.Sea.S03E%02d.%s.mkv", number, source,
 			)
-			e.Edges.MediaFiles = []*ent.MediaFile{
-				mediafiletest.StoredParse(&ent.MediaFile{
-					Path:       "/tv/The Black Sea/Season 03/" + name,
-					Size:       4_000_000_000,
-					Width:      1920,
-					VideoCodec: "h264",
-				}, name),
-			}
+			e.Edges.MediaFiles = []*ent.MediaFile{fileFixture(
+				"/tv/The Black Sea/Season 03/"+name, name, 1920,
+			)}
 			return e
 		}
 		beaten := func(id uint32, number uint16) *ent.Episode {
 			return onDisk(id, number, "1080p.WEB-DL.x264-GRP")
 		}
 		kept := func(id uint32, number uint16) *ent.Episode {
-			return onDisk(id, number, "1080p.BluRay.REMUX.x264-GRP")
+			return onDisk(id, number, "1080p.MULTi.BluRay.x264-GRP")
 		}
 
 		expectPackSearch := func() {
 			indexerM.EXPECT().
 				SearchSeason(mock.Anything, []string{"The Black Sea", "Karadeniz"}, uint32(9001), uint16(3)).
-				Return([]indexer.SearchResult{{Title: remuxPack, Seeders: 10}}, nil).
+				Return([]indexer.SearchResult{{Title: multiPack, Seeders: 10}}, nil).
 				Once()
 		}
 		expectDownloading := func(ids ...uint32) {

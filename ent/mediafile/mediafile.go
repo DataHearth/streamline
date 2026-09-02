@@ -51,6 +51,12 @@ const (
 	FieldAudioChannels = "audio_channels"
 	// FieldBitrate holds the string denoting the bitrate field in the database.
 	FieldBitrate = "bitrate"
+	// FieldAudioTracks holds the string denoting the audio_tracks field in the database.
+	FieldAudioTracks = "audio_tracks"
+	// FieldAudioLangs holds the string denoting the audio_langs field in the database.
+	FieldAudioLangs = "audio_langs"
+	// FieldSubLangs holds the string denoting the sub_langs field in the database.
+	FieldSubLangs = "sub_langs"
 	// FieldProbedAt holds the string denoting the probed_at field in the database.
 	FieldProbedAt = "probed_at"
 	// FieldParsedSource holds the string denoting the parsed_source field in the database.
@@ -102,6 +108,9 @@ var Columns = []string{
 	FieldAudioCodec,
 	FieldAudioChannels,
 	FieldBitrate,
+	FieldAudioTracks,
+	FieldAudioLangs,
+	FieldSubLangs,
 	FieldProbedAt,
 	FieldParsedSource,
 	FieldParsedResolution,
@@ -266,6 +275,21 @@ func ByAudioChannels(opts ...sql.OrderTermOption) OrderOption {
 // ByBitrate orders the results by the bitrate field.
 func ByBitrate(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldBitrate, opts...).ToFunc()
+}
+
+// ByAudioTracks orders the results by the audio_tracks field.
+func ByAudioTracks(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAudioTracks, opts...).ToFunc()
+}
+
+// ByAudioLangs orders the results by the audio_langs field.
+func ByAudioLangs(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAudioLangs, opts...).ToFunc()
+}
+
+// BySubLangs orders the results by the sub_langs field.
+func BySubLangs(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSubLangs, opts...).ToFunc()
 }
 
 // ByProbedAt orders the results by the probed_at field.

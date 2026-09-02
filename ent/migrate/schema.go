@@ -446,6 +446,9 @@ var (
 		{Name: "audio_codec", Type: field.TypeString, Nullable: true},
 		{Name: "audio_channels", Type: field.TypeUint8, Nullable: true},
 		{Name: "bitrate", Type: field.TypeUint32, Nullable: true},
+		{Name: "audio_tracks", Type: field.TypeUint8, Nullable: true},
+		{Name: "audio_langs", Type: field.TypeString, Nullable: true},
+		{Name: "sub_langs", Type: field.TypeString, Nullable: true},
 		{Name: "probed_at", Type: field.TypeTime, Nullable: true},
 		{Name: "parsed_source", Type: field.TypeString, Nullable: true},
 		{Name: "parsed_resolution", Type: field.TypeString, Nullable: true},
@@ -461,13 +464,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "media_files_episodes_media_files",
-				Columns:    []*schema.Column{MediaFilesColumns[23]},
+				Columns:    []*schema.Column{MediaFilesColumns[26]},
 				RefColumns: []*schema.Column{EpisodesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "media_files_movies_media_files",
-				Columns:    []*schema.Column{MediaFilesColumns[24]},
+				Columns:    []*schema.Column{MediaFilesColumns[27]},
 				RefColumns: []*schema.Column{MoviesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -476,17 +479,17 @@ var (
 			{
 				Name:    "mediafile_episode_media_files",
 				Unique:  false,
-				Columns: []*schema.Column{MediaFilesColumns[23]},
+				Columns: []*schema.Column{MediaFilesColumns[26]},
 			},
 			{
 				Name:    "mediafile_movie_media_files",
 				Unique:  false,
-				Columns: []*schema.Column{MediaFilesColumns[24]},
+				Columns: []*schema.Column{MediaFilesColumns[27]},
 			},
 			{
 				Name:    "mediafile_probed_at",
 				Unique:  false,
-				Columns: []*schema.Column{MediaFilesColumns[19]},
+				Columns: []*schema.Column{MediaFilesColumns[22]},
 				Annotation: &entsql.IndexAnnotation{
 					Where: "probed_at IS NULL",
 				},

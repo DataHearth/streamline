@@ -265,7 +265,7 @@ Built-in custom formats are listed alongside user-defined ones (`builtin: true`)
 
 ## Media probe
 
-Technical details read from your files with `ffprobe` — resolution, codecs, duration, bitrate. See [Configuration Reference](Configuration-Reference#ffmpeg) for the config side.
+Technical details read from your files with `ffprobe` — resolution, codecs, duration, bitrate, stream languages. See [Configuration Reference](Configuration-Reference#ffmpeg) for the config side.
 
 **`media_info`** is a nullable object on `MediaFile` (movies) and `Episode` responses:
 
@@ -279,11 +279,18 @@ Technical details read from your files with `ffprobe` — resolution, codecs, du
   "audio_codec": "eac3",
   "audio_channels": 6,
   "bitrate": 24500000,
+  "audio_track_count": 3,
+  "audio_languages": ["eng", "fra", "jpn"],
+  "subtitle_languages": ["eng", "fra"],
   "probed_at": "2026-08-18T12:00:00Z"
 }
 ```
 
-It's absent until the file has been probed, and absent again if the probe failed — check for the key, don't assume it's always there. There's no per-stream breakdown (no `audio_tracks`/`subtitles`) in this release.
+It's absent until the file has been probed, and absent again if the probe failed — check for the key, don't assume it's always there.
+
+Stream data is **aggregate, not per-track**: a count and two language sets. There is no per-stream breakdown, so which track holds which language, its codec, and whether it is default or forced are not exposed — do not reconstruct a track list from these, the mapping isn't in the data. Three audio tracks can be two languages. Languages are ISO 639-2/T, deduped and sorted, canonicalised server-side (a file tagged `fre` reports `fra`); `subtitle_languages` excludes forced tracks. Both arrays are omitted when empty, and `audio_track_count` when zero.
+
+`audio_track_count`, `audio_languages` and `subtitle_languages` are also the only probed values a [custom format condition](Quality-Profiles-and-Custom-Formats#what-the-probe-knows-that-you-cannot-match-on) can read, alongside width and video codec.
 
 It describes the file's **main** video track and its first audio track. Embedded cover art and poster thumbnails are video streams as far as ffprobe is concerned, so the largest one wins — a 4K film carrying a 300×300 poster reports `3840`, not `300`.
 

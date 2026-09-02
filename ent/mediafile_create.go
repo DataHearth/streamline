@@ -258,6 +258,48 @@ func (_c *MediaFileCreate) SetNillableBitrate(v *uint32) *MediaFileCreate {
 	return _c
 }
 
+// SetAudioTracks sets the "audio_tracks" field.
+func (_c *MediaFileCreate) SetAudioTracks(v uint8) *MediaFileCreate {
+	_c.mutation.SetAudioTracks(v)
+	return _c
+}
+
+// SetNillableAudioTracks sets the "audio_tracks" field if the given value is not nil.
+func (_c *MediaFileCreate) SetNillableAudioTracks(v *uint8) *MediaFileCreate {
+	if v != nil {
+		_c.SetAudioTracks(*v)
+	}
+	return _c
+}
+
+// SetAudioLangs sets the "audio_langs" field.
+func (_c *MediaFileCreate) SetAudioLangs(v string) *MediaFileCreate {
+	_c.mutation.SetAudioLangs(v)
+	return _c
+}
+
+// SetNillableAudioLangs sets the "audio_langs" field if the given value is not nil.
+func (_c *MediaFileCreate) SetNillableAudioLangs(v *string) *MediaFileCreate {
+	if v != nil {
+		_c.SetAudioLangs(*v)
+	}
+	return _c
+}
+
+// SetSubLangs sets the "sub_langs" field.
+func (_c *MediaFileCreate) SetSubLangs(v string) *MediaFileCreate {
+	_c.mutation.SetSubLangs(v)
+	return _c
+}
+
+// SetNillableSubLangs sets the "sub_langs" field if the given value is not nil.
+func (_c *MediaFileCreate) SetNillableSubLangs(v *string) *MediaFileCreate {
+	if v != nil {
+		_c.SetSubLangs(*v)
+	}
+	return _c
+}
+
 // SetProbedAt sets the "probed_at" field.
 func (_c *MediaFileCreate) SetProbedAt(v time.Time) *MediaFileCreate {
 	_c.mutation.SetProbedAt(v)
@@ -541,6 +583,18 @@ func (_c *MediaFileCreate) createSpec() (*MediaFile, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Bitrate(); ok {
 		_spec.SetField(mediafile.FieldBitrate, field.TypeUint32, value)
 		_node.Bitrate = value
+	}
+	if value, ok := _c.mutation.AudioTracks(); ok {
+		_spec.SetField(mediafile.FieldAudioTracks, field.TypeUint8, value)
+		_node.AudioTracks = value
+	}
+	if value, ok := _c.mutation.AudioLangs(); ok {
+		_spec.SetField(mediafile.FieldAudioLangs, field.TypeString, value)
+		_node.AudioLangs = value
+	}
+	if value, ok := _c.mutation.SubLangs(); ok {
+		_spec.SetField(mediafile.FieldSubLangs, field.TypeString, value)
+		_node.SubLangs = value
 	}
 	if value, ok := _c.mutation.ProbedAt(); ok {
 		_spec.SetField(mediafile.FieldProbedAt, field.TypeTime, value)

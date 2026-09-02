@@ -2,6 +2,9 @@ package qualityctx
 
 import (
 	"path/filepath"
+	"strings"
+
+	"github.com/datahearth/streamline/internal/ffmpeg"
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/library"
@@ -24,29 +27,34 @@ func ContextFromRelease(
 	episodes int,
 ) quality.ReleaseContext {
 	p := library.Parse(title)
-	return quality.ReleaseContext{
+	r := quality.ReleaseContext{
 		Title: title, Size: size,
 		Seeders: int(seeders), HasSeeders: seeders > 0,
 		Resolution: p.Resolution, Source: p.Source,
 		Group: p.Group, Codec: p.Codec,
 		EpisodeCount: episodes,
 	}
+	applyStreamHints(&r, title)
+	return r
 }
 
 // ContextFromPackFile scores one file *inside* a release against the release
 // it arrived in. A basename alone routinely omits what the release name
 // states — the source, the group, and anything a `release_title` condition
 // matches — so the release title is folded in for whatever the basename does
-// not already say, never replacing what it does. width/codec come from a probe
-// when there is one and are ignored at zero, exactly as ContextFromFile.
+// not already say, never replacing what it does. info comes from a probe when
+// there is one, exactly as ContextFromFile; the release title additionally
+// fills any stream field the probe left unknown, which is what keeps the
+// pending-proposal preview — where the files are still in the client and
+// nothing can be probed — answering vostfr and multi-audio the same way the
+// import will.
 func ContextFromPackFile(
 	basename string,
 	size int64,
-	width int,
-	codec string,
+	info *ffmpeg.Info,
 	releaseTitle string,
 ) quality.ReleaseContext {
-	r := ContextFromFile(basename, size, width, codec)
+	r := ContextFromFile(basename, size, info)
 	fromTitle := library.Parse(releaseTitle)
 	if r.Source == "" {
 		r.Source = fromTitle.Source
@@ -59,6 +67,10 @@ func ContextFromPackFile(
 	// release title adds whatever the basename lacks without ever dropping
 	// what the basename itself already states.
 	r.Title += " " + releaseTitle
+	// Only fills what the probe left unknown, so a measurement always wins over
+	// the name's claim. With no probe at all this is the only evidence there
+	// is, which is the pending-proposal preview's whole situation.
+	applyStreamHints(&r, releaseTitle)
 	return r
 }
 
@@ -97,15 +109,16 @@ func Replaces(p quality.Profile, existing, incoming quality.ReleaseContext) bool
 // directly, and is ignored at zero so an ffmpeg-disabled install falls back to
 // what the release name claimed.
 //
-// Title stays the basename, which is the one field this cannot repair: nothing
-// stores the release name, so a release_title condition matches only what the
-// naming template kept. Blanking it was tried and is worse — a file then
-// scores none of remux/hdr/multi-audio while the release replacing it scores
-// all of them, so everything on disk becomes upgradable; suppressing them on
-// both sides instead stops upgrades happening at all, since those formats are
-// what the upgrade rules are written in. Both are visible in rss's upgrade
-// specs. Closing it means answering those conditions from the probe, which
-// needs condition types that do not exist yet.
+// Title stays the basename and EmptyIsUnknown makes every release_title
+// condition read as unknown here, because nothing stores the release name: the
+// naming template kept a fraction of its tokens. Blanking Title instead was
+// tried and is worse — a file then scores none of remux/vostfr/multi-audio
+// while the release replacing it scores all of them, so everything on disk
+// becomes upgradable. Reporting them unknown is what lets ReplacesFile drop
+// those formats from *both* sides instead. That alone once stopped upgrades
+// happening at all, since the upgrade rules were written entirely in
+// title-matched formats; it works now because the stream fields below answer
+// the ones carrying the weight.
 func ContextFromRow(f *ent.MediaFile) quality.ReleaseContext {
 	r := quality.ReleaseContext{
 		Title:          filepath.Base(f.Path),
@@ -122,7 +135,28 @@ func ContextFromRow(f *ent.MediaFile) quality.ReleaseContext {
 	if f.VideoCodec != "" {
 		r.Codec = f.VideoCodec
 	}
+	// Gated on probed_at rather than on the values: an empty audio_langs is
+	// both "the probe found no tagged track" and "nothing ever looked", and
+	// only the first may be negated. probed_at is the one column that tells
+	// them apart. A probe that failed stamps it too and stores nothing, which
+	// is why the track count is read as a real zero only alongside it.
+	if f.ProbedAt != nil {
+		tracks := int(f.AudioTracks)
+		r.AudioTracks = &tracks
+		r.AudioLangs = splitLangs(f.AudioLangs)
+		r.SubLangs = splitLangs(f.SubLangs)
+	}
 	return r
+}
+
+// splitLangs turns a stored comma list into the slice a language condition
+// reads. Never nil: reaching here means the row was probed, so an empty column
+// is the answer "no tagged track of any language", not an absence.
+func splitLangs(s string) []string {
+	if s == "" {
+		return []string{}
+	}
+	return strings.Split(s, ",")
 }
 
 // ContextFromFile scores a file by its name — a file inside a torrent, which
@@ -132,8 +166,7 @@ func ContextFromRow(f *ent.MediaFile) quality.ReleaseContext {
 func ContextFromFile(
 	basename string,
 	size int64,
-	width int,
-	codec string,
+	info *ffmpeg.Info,
 ) quality.ReleaseContext {
 	p := library.Parse(basename)
 	r := quality.ReleaseContext{
@@ -141,11 +174,18 @@ func ContextFromFile(
 		Resolution: p.Resolution, Source: p.Source,
 		Group: p.Group, Codec: p.Codec,
 	}
-	if w := quality.ResolutionFromWidth(width); w != "" {
+	if info == nil {
+		return r
+	}
+	if w := quality.ResolutionFromWidth(int(info.Width)); w != "" {
 		r.Resolution = w
 	}
-	if codec != "" {
-		r.Codec = codec
+	if info.VideoCodec != "" {
+		r.Codec = info.VideoCodec
 	}
+	tracks := int(info.AudioTracks)
+	r.AudioTracks = &tracks
+	r.AudioLangs = splitLangs(info.AudioLangs)
+	r.SubLangs = splitLangs(info.SubLangs)
 	return r
 }

@@ -95,10 +95,16 @@ type probeStream struct {
 	Channels    uint8           `json:"channels"`
 	Duration    string          `json:"duration"`
 	Disposition probeStreamDisp `json:"disposition"`
+	Tags        probeStreamTags `json:"tags"`
+}
+
+type probeStreamTags struct {
+	Language string `json:"language"`
 }
 
 type probeStreamDisp struct {
 	AttachedPic int `json:"attached_pic"`
+	Forced      int `json:"forced"`
 }
 
 type probeFormat struct {
@@ -134,6 +140,8 @@ func parseProbeOutput(raw []byte) (*Info, error) {
 		// ffprobe omits codec_name for codecs without a descriptor, so
 		// VideoCodec cannot double as the stream-chosen sentinel.
 		videoFound bool
+		audioLangs langSet
+		subLangs   langSet
 	)
 	for _, s := range out.Streams {
 		switch s.CodecType {
@@ -164,8 +172,20 @@ func parseProbeOutput(raw []byte) (*Info, error) {
 				info.AudioCodec = s.CodecName
 				info.AudioChannels = s.Channels
 			}
+			// Saturating: no real file has 255 audio streams, and a wrapped
+			// count would read as a single-track release to a min-tracks
+			// condition — the one direction that must not happen silently.
+			if info.AudioTracks < 255 {
+				info.AudioTracks++
+			}
+			audioLangs.add(s.Tags.Language)
+		case "subtitle":
+			if s.Disposition.Forced == 0 {
+				subLangs.add(s.Tags.Language)
+			}
 		}
 	}
+	info.AudioLangs, info.SubLangs = audioLangs.join(), subLangs.join()
 	if !videoFound {
 		return nil, ErrNoVideoStream
 	}

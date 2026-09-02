@@ -27,6 +27,18 @@ type ReleaseContext struct {
 	// filled it in, and a negate condition cannot be allowed to read the
 	// second as the first. Set it on any context built from a row.
 	EmptyIsUnknown bool
+	// Stream facts, nil meaning "nobody could say". A file answers all three
+	// from its probe; a release answers only what its name happens to claim —
+	// MULTi fills AudioTracks, VOSTFR fills SubLangs, and a name saying
+	// neither leaves them nil rather than asserting a zero. An empty non-nil
+	// slice is a real answer: the probe found no track of any language.
+	//
+	// They are what makes a format like vostfr comparable at all. Written as
+	// release_title alone it can only ever match the release, since the
+	// renamer destroys the name of the file it is being compared against.
+	AudioTracks *int
+	AudioLangs  []string
+	SubLangs    []string
 }
 
 // episodeScale is the multiplier a size bound is measured in. It never
@@ -152,7 +164,62 @@ func ReplacesFile(p Profile, existing, incoming ReleaseContext) bool {
 	if !p.UpgradeAllowed || !p.UpgradableFrom(existing.Resolution) {
 		return false
 	}
-	return p.ShouldUpgrade(Evaluate(p, existing).Score, Evaluate(p, incoming).Score)
+	cmp := p.comparableTo(existing)
+	return p.ShouldUpgrade(
+		Evaluate(cmp, existing).Score, Evaluate(cmp, incoming).Score)
+}
+
+// comparableTo drops the formats the existing file cannot answer, so both
+// sides of an upgrade are scored on the same evidence.
+//
+// Without it the comparison is rigged: a format written only in release_title
+// is unanswerable for a row, so the file scores 0 for it while the release
+// scores its full weight, and every file in the library reads as upgradable by
+// exactly that margin. Measured on a real install: an anime profile paying
+// vostfr 1000 and multi-audio 50 left every episode ~1050 below an
+// upgrade_until_score of 1200 — permanently, since no file could ever earn
+// those points back.
+//
+// Dropping a format is not the same as forgiving it. A "never grab this"
+// negative (junk-source, banned-groups) still rejects the incoming release in
+// Evaluate, which qualityctx.Replaces runs before ever calling this.
+func (p Profile) comparableTo(existing ReleaseContext) Profile {
+	out := p
+	out.Formats = make([]ScoredFormat, 0, len(p.Formats))
+	for _, sf := range p.Formats {
+		if sf.Format.answerable(existing) {
+			out.Formats = append(out.Formats, sf)
+		}
+	}
+	return out
+}
+
+// answerable reports whether f can reach a verdict for r on evidence r
+// actually holds: every required condition known, and at least one condition
+// of any kind known.
+//
+// "At least one", not "all", because the formats worth comparing are exactly
+// the ones pairing a release_title arm with a measurable arm — vostfr as
+// title-or-subtitle_language, multi-audio as title-or-audio_tracks. A row can
+// never answer the title arm, so demanding all of them dropped precisely those
+// formats and left a file that genuinely lacked the French subtitles unable to
+// be upgraded by a release that had them. A format written *only* in
+// release_title still drops, which is the point: there the file's non-match is
+// an artifact of the renamer, not a fact about the file.
+//
+// A required condition is different — Matches fails the whole format when one
+// is unknown, so an unprovable required condition makes the file score 0 for a
+// reason the release never has to face.
+func (f Format) answerable(r ReleaseContext) bool {
+	anyKnown := false
+	for _, c := range f.Conditions {
+		_, known := c.eval(r)
+		if c.Required && !known {
+			return false
+		}
+		anyKnown = anyKnown || known
+	}
+	return anyKnown
 }
 
 // CompareResolutions orders two resolution buckets the way the profile band

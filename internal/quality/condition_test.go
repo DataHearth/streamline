@@ -328,3 +328,78 @@ var _ = Describe("NewFormat validation", Label("unit", "quality"), func() {
 		Expect(err.Error()).NotTo(ContainSubstring("format"))
 	})
 })
+
+var _ = Describe("stream conditions", Label("unit", "quality"), func() {
+	row := func(mut func(*quality.ReleaseContext)) quality.ReleaseContext {
+		r := quality.ReleaseContext{
+			Title: "Show - S01E01 - Title [].mkv", EmptyIsUnknown: true,
+		}
+		mut(&r)
+		return r
+	}
+
+	It("reports a release_title condition unknown for a row", func() {
+		// The basename is non-empty, so without the EmptyIsUnknown arm this
+		// is a confident false for every file in the library — which is how a
+		// file scored 0 against a release's vostfr and the scanner read the
+		// whole library as upgradable.
+		f := mustFmt("t", quality.Condition{
+			Type: quality.ConditionReleaseTitle, Pattern: `(?i)\bvostfr\b`,
+		})
+		Expect(f.Matches(row(func(*quality.ReleaseContext) {}))).To(BeFalse())
+		Expect(f.Explain(row(func(*quality.ReleaseContext) {}))).
+			To(Equal([]bool{false}))
+	})
+
+	It("still matches a release_title condition on a release", func() {
+		f := mustFmt("t", quality.Condition{
+			Type: quality.ConditionReleaseTitle, Pattern: `(?i)\bvostfr\b`,
+		})
+		Expect(f.Matches(quality.ReleaseContext{
+			Title: "Show.S01E01.VOSTFR.1080p-GRP",
+		})).To(BeTrue())
+	})
+
+	It("matches audio_tracks against the minimum", func() {
+		f := mustFmt("m", quality.Condition{
+			Type: quality.ConditionAudioTracks, Min: 2,
+		})
+		two, one := 2, 1
+		Expect(f.Matches(row(func(r *quality.ReleaseContext) {
+			r.AudioTracks = &two
+		}))).To(BeTrue())
+		Expect(f.Matches(row(func(r *quality.ReleaseContext) {
+			r.AudioTracks = &one
+		}))).To(BeFalse())
+	})
+
+	It("canonicalises a language condition's value at compile time", func() {
+		// An operator writing the spelling their own library uses must not
+		// silently match nothing.
+		f := mustFmt("s", quality.Condition{
+			Type: quality.ConditionSubtitleLanguage, Value: "FRE",
+		})
+		Expect(f.Matches(row(func(r *quality.ReleaseContext) {
+			r.SubLangs = []string{"fra"}
+		}))).To(BeTrue())
+	})
+
+	It("treats a nil list as unknown and an empty list as a real answer", func() {
+		f := mustFmt("s", quality.Condition{
+			Type: quality.ConditionAudioLanguage, Value: "fra", Negate: true,
+		})
+		// nil: nobody looked, so the negation must not score a positive.
+		Expect(f.Matches(row(func(*quality.ReleaseContext) {}))).To(BeFalse())
+		// empty: probed, no French track — the negation is earned.
+		Expect(f.Matches(row(func(r *quality.ReleaseContext) {
+			r.AudioLangs = []string{}
+		}))).To(BeTrue())
+	})
+
+	It("rejects a language condition with no value", func() {
+		_, err := quality.NewFormat("x", []quality.Condition{
+			{Type: quality.ConditionAudioLanguage},
+		})
+		Expect(err).To(MatchError(ContainSubstring("value required")))
+	})
+})

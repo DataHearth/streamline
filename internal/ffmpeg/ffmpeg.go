@@ -29,6 +29,21 @@ type Info struct {
 	AudioCodec    string
 	AudioChannels uint8
 	BitrateBPS    uint32
+	// AudioTracks counts audio streams. It is kept alongside AudioLangs
+	// because the two disagree on 391 of 5425 files in a real library: 321
+	// carry no language tag at all — where a language-derived count would say
+	// "one track" instead of "no idea" — and 70 hold a commentary track in the
+	// language they already have.
+	AudioTracks uint8
+	// AudioLangs and SubLangs hold ISO-639-2/T codes, deduped, sorted and
+	// comma-joined ("eng,fra,jpn"). Comma strings rather than slices because
+	// these land in plain text columns a list scan reads without decoding
+	// anything — the mistake Movie.cast's JSON blob made.
+	AudioLangs string
+	// SubLangs excludes forced tracks: a forced subtitle carries signs and
+	// foreign dialogue, not the script, so counting one would report a French
+	// dub as French-subtitled.
+	SubLangs string
 }
 
 // Prober is the consumer-facing surface (importer, media-probe job). *CLI

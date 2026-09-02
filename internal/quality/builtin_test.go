@@ -4,6 +4,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/quality"
 	"github.com/datahearth/streamline/internal/quality/qualityctx"
 )
@@ -71,7 +72,8 @@ var _ = Describe("Builtins", Label("unit", "quality"), func() {
 			f, ok := quality.BuiltinByName("x264")
 			Expect(ok).To(BeTrue())
 			ctx := qualityctx.ContextFromFile(
-				"Movie.2024.1080p.WEBRip-GRP.mkv", 0, 0, "h264")
+				"Movie.2024.1080p.WEBRip-GRP.mkv", 0,
+				&ffmpeg.Info{VideoCodec: "h264"})
 			Expect(f.Matches(ctx)).To(BeTrue())
 		},
 	)

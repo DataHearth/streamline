@@ -182,3 +182,46 @@ var _ = Describe("parseProbeOutput", Label("unit", "ffmpeg"), func() {
 		Expect(err).To(MatchError(ErrNoVideoStream))
 	})
 })
+
+var _ = Describe("parseProbeOutput streams", Label("unit", "ffmpeg"), func() {
+	const multi = `{
+	  "streams": [
+	    {"codec_type":"video","codec_name":"hevc","width":1920,"height":1080},
+	    {"codec_type":"audio","codec_name":"aac","channels":2,"tags":{"language":"jpn"}},
+	    {"codec_type":"audio","codec_name":"aac","channels":6,"tags":{"language":"fre"}},
+	    {"codec_type":"subtitle","codec_name":"subrip","tags":{"language":"fre"}},
+	    {"codec_type":"subtitle","codec_name":"subrip","tags":{"language":"eng"},
+	     "disposition":{"forced":1}}
+	  ],
+	  "format": {"format_name":"matroska","duration":"1440.0"}
+	}`
+
+	It("counts audio tracks and folds their languages", func() {
+		info, err := parseProbeOutput([]byte(multi))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(info.AudioTracks).To(Equal(uint8(2)))
+		Expect(info.AudioLangs).To(Equal("fra,jpn"))
+	})
+
+	It(
+		"excludes forced subtitles, which carry signs rather than the script",
+		func() {
+			info, err := parseProbeOutput([]byte(multi))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(info.SubLangs).To(Equal("fra"))
+		},
+	)
+
+	It("reports empty language lists for an untagged file", func() {
+		info, err := parseProbeOutput([]byte(`{
+		  "streams":[
+		    {"codec_type":"video","codec_name":"h264","width":1280,"height":720},
+		    {"codec_type":"audio","codec_name":"aac","channels":2}
+		  ],
+		  "format":{"format_name":"matroska","duration":"60.0"}}`))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(info.AudioTracks).To(Equal(uint8(1)))
+		Expect(info.AudioLangs).To(BeEmpty())
+		Expect(info.SubLangs).To(BeEmpty())
+	})
+})

@@ -272,18 +272,25 @@ func (e CreateUserRequestRole) Valid() bool {
 
 // Defines values for CustomFormatConditionType.
 const (
-	CustomFormatConditionTypeCodec        CustomFormatConditionType = "codec"
-	CustomFormatConditionTypeReleaseGroup CustomFormatConditionType = "release_group"
-	CustomFormatConditionTypeReleaseTitle CustomFormatConditionType = "release_title"
-	CustomFormatConditionTypeResolution   CustomFormatConditionType = "resolution"
-	CustomFormatConditionTypeSeeders      CustomFormatConditionType = "seeders"
-	CustomFormatConditionTypeSize         CustomFormatConditionType = "size"
-	CustomFormatConditionTypeSource       CustomFormatConditionType = "source"
+	CustomFormatConditionTypeAudioLanguage    CustomFormatConditionType = "audio_language"
+	CustomFormatConditionTypeAudioTracks      CustomFormatConditionType = "audio_tracks"
+	CustomFormatConditionTypeCodec            CustomFormatConditionType = "codec"
+	CustomFormatConditionTypeReleaseGroup     CustomFormatConditionType = "release_group"
+	CustomFormatConditionTypeReleaseTitle     CustomFormatConditionType = "release_title"
+	CustomFormatConditionTypeResolution       CustomFormatConditionType = "resolution"
+	CustomFormatConditionTypeSeeders          CustomFormatConditionType = "seeders"
+	CustomFormatConditionTypeSize             CustomFormatConditionType = "size"
+	CustomFormatConditionTypeSource           CustomFormatConditionType = "source"
+	CustomFormatConditionTypeSubtitleLanguage CustomFormatConditionType = "subtitle_language"
 )
 
 // Valid indicates whether the value is a known member of the CustomFormatConditionType enum.
 func (e CustomFormatConditionType) Valid() bool {
 	switch e {
+	case CustomFormatConditionTypeAudioLanguage:
+		return true
+	case CustomFormatConditionTypeAudioTracks:
+		return true
 	case CustomFormatConditionTypeCodec:
 		return true
 	case CustomFormatConditionTypeReleaseGroup:
@@ -297,6 +304,8 @@ func (e CustomFormatConditionType) Valid() bool {
 	case CustomFormatConditionTypeSize:
 		return true
 	case CustomFormatConditionTypeSource:
+		return true
+	case CustomFormatConditionTypeSubtitleLanguage:
 		return true
 	default:
 		return false
@@ -2380,7 +2389,7 @@ type CustomFormatCondition struct {
 	// MaxGb Upper bound (inclusive) for a size condition. 0 means unbounded.
 	MaxGb *float64 `json:"max_gb,omitempty"`
 
-	// Min Minimum seeders for a seeders condition.
+	// Min Inclusive minimum for a seeders or audio_tracks condition.
 	Min *int `json:"min,omitempty"`
 
 	// MinGb Lower bound (inclusive) for a size condition. 0 means unbounded.
@@ -2393,14 +2402,16 @@ type CustomFormatCondition struct {
 	Pattern *string `json:"pattern,omitempty"`
 
 	// Required When true, this condition must pass for the format to match. When false, the format matches if any non-required condition passes (Radarr custom-format semantics).
-	Required *bool                     `json:"required,omitempty"`
-	Type     CustomFormatConditionType `json:"type"`
+	Required *bool `json:"required,omitempty"`
 
-	// Value Exact match value. Required for resolution, source and codec.
+	// Type audio_tracks, audio_language and subtitle_language are answerable both from a release name and from a probed file, which release_title is not: the renamer destroys the name of a file already in the library. Pairing a release_title condition with one of these in the same format is how a format scores a release by its name and the file it would replace by measurement.
+	Type CustomFormatConditionType `json:"type"`
+
+	// Value Exact match value. Required for resolution, source, codec, audio_language and subtitle_language. Language values are ISO 639 codes and are canonicalised, so "fre", "fr" and "fra" are the same condition.
 	Value *string `json:"value,omitempty"`
 }
 
-// CustomFormatConditionType defines model for CustomFormatCondition.Type.
+// CustomFormatConditionType audio_tracks, audio_language and subtitle_language are answerable both from a release name and from a probed file, which release_title is not: the renamer destroys the name of a file already in the library. Pairing a release_title condition with one of these in the same format is how a format scores a release by its name and the file it would replace by measurement.
 type CustomFormatConditionType string
 
 // CustomFormatConditionResult defines model for CustomFormatConditionResult.
@@ -3167,6 +3178,16 @@ type MediaInfo struct {
 	// AudioCodec Example: eac3
 	AudioCodec *string `json:"audio_codec,omitempty"`
 
+	// AudioLanguages ISO 639-2/T codes of the audio streams, deduped and sorted. Empty means the probe found no tagged track — not that the file is silent. Bibliographic codes ("fre") are folded onto the terminological form ("fra") when the file is probed.
+	//
+	// Example: ["fra","jpn"]
+	AudioLanguages *[]string `json:"audio_languages,omitempty"`
+
+	// AudioTrackCount Number of audio streams. Kept alongside audio_languages because a file may carry two tracks in one language (a commentary), and an untagged file has a track count but no languages at all.
+	//
+	// Example: 2
+	AudioTrackCount *int `json:"audio_track_count,omitempty"`
+
 	// Bitrate Overall bitrate in bits per second.
 	//
 	// Example: 24500000
@@ -3181,6 +3202,11 @@ type MediaInfo struct {
 	// Height Example: 1608
 	Height   int       `json:"height"`
 	ProbedAt time.Time `json:"probed_at"`
+
+	// SubtitleLanguages ISO 639-2/T codes of the non-forced subtitle streams. Forced tracks are excluded: they carry signs and foreign dialogue rather than the script, so counting one would report a dub as subtitled.
+	//
+	// Example: ["fra"]
+	SubtitleLanguages *[]string `json:"subtitle_languages,omitempty"`
 
 	// VideoCodec Example: hevc
 	VideoCodec string `json:"video_codec"`

@@ -120,6 +120,9 @@ export const customFormatConditionType = v.picklist(
 		"codec",
 		"size",
 		"seeders",
+		"audio_tracks",
+		"audio_language",
+		"subtitle_language",
 	] as const,
 	"Pick a condition type",
 );
@@ -128,7 +131,13 @@ export const customFormatConditionType = v.picklist(
 // on every row so a type switch is reversible, so the checks below have to be
 // scoped by type rather than run over the whole row.
 export const PATTERN_CONDITIONS = ["release_title", "release_group"] as const;
-export const VALUE_CONDITIONS = ["resolution", "source", "codec"] as const;
+export const VALUE_CONDITIONS = [
+	"resolution",
+	"source",
+	"codec",
+	"audio_language",
+	"subtitle_language",
+] as const;
 
 // A pattern's *syntax* is deliberately not validated here. The backend compiles
 // Go RE2, which JS RegExp cannot stand in for: `(?i)` — the inline flag this
@@ -173,6 +182,10 @@ export const customFormatCondition = v.pipe(
 		"Maximum must not be below the minimum",
 	),
 	v.check((c) => c.type !== "seeders" || c.min > 0, "Minimum seeders required"),
+	v.check(
+		(c) => c.type !== "audio_tracks" || c.min > 0,
+		"Minimum audio tracks required",
+	),
 );
 
 export const customFormat = v.object({

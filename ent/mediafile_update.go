@@ -381,6 +381,73 @@ func (_u *MediaFileUpdate) ClearBitrate() *MediaFileUpdate {
 	return _u
 }
 
+// SetAudioTracks sets the "audio_tracks" field.
+func (_u *MediaFileUpdate) SetAudioTracks(v uint8) *MediaFileUpdate {
+	_u.mutation.ResetAudioTracks()
+	_u.mutation.SetAudioTracks(v)
+	return _u
+}
+
+// SetNillableAudioTracks sets the "audio_tracks" field if the given value is not nil.
+func (_u *MediaFileUpdate) SetNillableAudioTracks(v *uint8) *MediaFileUpdate {
+	if v != nil {
+		_u.SetAudioTracks(*v)
+	}
+	return _u
+}
+
+// AddAudioTracks adds value to the "audio_tracks" field.
+func (_u *MediaFileUpdate) AddAudioTracks(v int8) *MediaFileUpdate {
+	_u.mutation.AddAudioTracks(v)
+	return _u
+}
+
+// ClearAudioTracks clears the value of the "audio_tracks" field.
+func (_u *MediaFileUpdate) ClearAudioTracks() *MediaFileUpdate {
+	_u.mutation.ClearAudioTracks()
+	return _u
+}
+
+// SetAudioLangs sets the "audio_langs" field.
+func (_u *MediaFileUpdate) SetAudioLangs(v string) *MediaFileUpdate {
+	_u.mutation.SetAudioLangs(v)
+	return _u
+}
+
+// SetNillableAudioLangs sets the "audio_langs" field if the given value is not nil.
+func (_u *MediaFileUpdate) SetNillableAudioLangs(v *string) *MediaFileUpdate {
+	if v != nil {
+		_u.SetAudioLangs(*v)
+	}
+	return _u
+}
+
+// ClearAudioLangs clears the value of the "audio_langs" field.
+func (_u *MediaFileUpdate) ClearAudioLangs() *MediaFileUpdate {
+	_u.mutation.ClearAudioLangs()
+	return _u
+}
+
+// SetSubLangs sets the "sub_langs" field.
+func (_u *MediaFileUpdate) SetSubLangs(v string) *MediaFileUpdate {
+	_u.mutation.SetSubLangs(v)
+	return _u
+}
+
+// SetNillableSubLangs sets the "sub_langs" field if the given value is not nil.
+func (_u *MediaFileUpdate) SetNillableSubLangs(v *string) *MediaFileUpdate {
+	if v != nil {
+		_u.SetSubLangs(*v)
+	}
+	return _u
+}
+
+// ClearSubLangs clears the value of the "sub_langs" field.
+func (_u *MediaFileUpdate) ClearSubLangs() *MediaFileUpdate {
+	_u.mutation.ClearSubLangs()
+	return _u
+}
+
 // SetProbedAt sets the "probed_at" field.
 func (_u *MediaFileUpdate) SetProbedAt(v time.Time) *MediaFileUpdate {
 	_u.mutation.SetProbedAt(v)
@@ -692,6 +759,27 @@ func (_u *MediaFileUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.BitrateCleared() {
 		_spec.ClearField(mediafile.FieldBitrate, field.TypeUint32)
+	}
+	if value, ok := _u.mutation.AudioTracks(); ok {
+		_spec.SetField(mediafile.FieldAudioTracks, field.TypeUint8, value)
+	}
+	if value, ok := _u.mutation.AddedAudioTracks(); ok {
+		_spec.AddField(mediafile.FieldAudioTracks, field.TypeUint8, value)
+	}
+	if _u.mutation.AudioTracksCleared() {
+		_spec.ClearField(mediafile.FieldAudioTracks, field.TypeUint8)
+	}
+	if value, ok := _u.mutation.AudioLangs(); ok {
+		_spec.SetField(mediafile.FieldAudioLangs, field.TypeString, value)
+	}
+	if _u.mutation.AudioLangsCleared() {
+		_spec.ClearField(mediafile.FieldAudioLangs, field.TypeString)
+	}
+	if value, ok := _u.mutation.SubLangs(); ok {
+		_spec.SetField(mediafile.FieldSubLangs, field.TypeString, value)
+	}
+	if _u.mutation.SubLangsCleared() {
+		_spec.ClearField(mediafile.FieldSubLangs, field.TypeString)
 	}
 	if value, ok := _u.mutation.ProbedAt(); ok {
 		_spec.SetField(mediafile.FieldProbedAt, field.TypeTime, value)
@@ -1147,6 +1235,73 @@ func (_u *MediaFileUpdateOne) ClearBitrate() *MediaFileUpdateOne {
 	return _u
 }
 
+// SetAudioTracks sets the "audio_tracks" field.
+func (_u *MediaFileUpdateOne) SetAudioTracks(v uint8) *MediaFileUpdateOne {
+	_u.mutation.ResetAudioTracks()
+	_u.mutation.SetAudioTracks(v)
+	return _u
+}
+
+// SetNillableAudioTracks sets the "audio_tracks" field if the given value is not nil.
+func (_u *MediaFileUpdateOne) SetNillableAudioTracks(v *uint8) *MediaFileUpdateOne {
+	if v != nil {
+		_u.SetAudioTracks(*v)
+	}
+	return _u
+}
+
+// AddAudioTracks adds value to the "audio_tracks" field.
+func (_u *MediaFileUpdateOne) AddAudioTracks(v int8) *MediaFileUpdateOne {
+	_u.mutation.AddAudioTracks(v)
+	return _u
+}
+
+// ClearAudioTracks clears the value of the "audio_tracks" field.
+func (_u *MediaFileUpdateOne) ClearAudioTracks() *MediaFileUpdateOne {
+	_u.mutation.ClearAudioTracks()
+	return _u
+}
+
+// SetAudioLangs sets the "audio_langs" field.
+func (_u *MediaFileUpdateOne) SetAudioLangs(v string) *MediaFileUpdateOne {
+	_u.mutation.SetAudioLangs(v)
+	return _u
+}
+
+// SetNillableAudioLangs sets the "audio_langs" field if the given value is not nil.
+func (_u *MediaFileUpdateOne) SetNillableAudioLangs(v *string) *MediaFileUpdateOne {
+	if v != nil {
+		_u.SetAudioLangs(*v)
+	}
+	return _u
+}
+
+// ClearAudioLangs clears the value of the "audio_langs" field.
+func (_u *MediaFileUpdateOne) ClearAudioLangs() *MediaFileUpdateOne {
+	_u.mutation.ClearAudioLangs()
+	return _u
+}
+
+// SetSubLangs sets the "sub_langs" field.
+func (_u *MediaFileUpdateOne) SetSubLangs(v string) *MediaFileUpdateOne {
+	_u.mutation.SetSubLangs(v)
+	return _u
+}
+
+// SetNillableSubLangs sets the "sub_langs" field if the given value is not nil.
+func (_u *MediaFileUpdateOne) SetNillableSubLangs(v *string) *MediaFileUpdateOne {
+	if v != nil {
+		_u.SetSubLangs(*v)
+	}
+	return _u
+}
+
+// ClearSubLangs clears the value of the "sub_langs" field.
+func (_u *MediaFileUpdateOne) ClearSubLangs() *MediaFileUpdateOne {
+	_u.mutation.ClearSubLangs()
+	return _u
+}
+
 // SetProbedAt sets the "probed_at" field.
 func (_u *MediaFileUpdateOne) SetProbedAt(v time.Time) *MediaFileUpdateOne {
 	_u.mutation.SetProbedAt(v)
@@ -1488,6 +1643,27 @@ func (_u *MediaFileUpdateOne) sqlSave(ctx context.Context) (_node *MediaFile, er
 	}
 	if _u.mutation.BitrateCleared() {
 		_spec.ClearField(mediafile.FieldBitrate, field.TypeUint32)
+	}
+	if value, ok := _u.mutation.AudioTracks(); ok {
+		_spec.SetField(mediafile.FieldAudioTracks, field.TypeUint8, value)
+	}
+	if value, ok := _u.mutation.AddedAudioTracks(); ok {
+		_spec.AddField(mediafile.FieldAudioTracks, field.TypeUint8, value)
+	}
+	if _u.mutation.AudioTracksCleared() {
+		_spec.ClearField(mediafile.FieldAudioTracks, field.TypeUint8)
+	}
+	if value, ok := _u.mutation.AudioLangs(); ok {
+		_spec.SetField(mediafile.FieldAudioLangs, field.TypeString, value)
+	}
+	if _u.mutation.AudioLangsCleared() {
+		_spec.ClearField(mediafile.FieldAudioLangs, field.TypeString)
+	}
+	if value, ok := _u.mutation.SubLangs(); ok {
+		_spec.SetField(mediafile.FieldSubLangs, field.TypeString, value)
+	}
+	if _u.mutation.SubLangsCleared() {
+		_spec.ClearField(mediafile.FieldSubLangs, field.TypeString)
 	}
 	if value, ok := _u.mutation.ProbedAt(); ok {
 		_spec.SetField(mediafile.FieldProbedAt, field.TypeTime, value)

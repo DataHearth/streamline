@@ -4,7 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
+
+	"github.com/datahearth/streamline/internal/langcode"
 )
 
 var errUnknownConditionType = errors.New("unknown condition type")
@@ -19,6 +22,14 @@ const (
 	ConditionCodec        ConditionType = "codec"
 	ConditionSize         ConditionType = "size"
 	ConditionSeeders      ConditionType = "seeders"
+	// The three stream types. Each is answerable from a file's probe AND from
+	// a release name's tokens, which is the property release_title lacks and
+	// the reason these exist: a format pairing a release_title arm with one of
+	// these matches the release by name and the file by measurement, so the
+	// two can finally be compared.
+	ConditionAudioTracks      ConditionType = "audio_tracks"
+	ConditionAudioLanguage    ConditionType = "audio_language"
+	ConditionSubtitleLanguage ConditionType = "subtitle_language"
 )
 
 type Condition struct {
@@ -59,7 +70,16 @@ func NewFormat(name string, conds []Condition) (Format, error) {
 			if c.Value == "" {
 				return Format{}, fmt.Errorf("%s: value required", where)
 			}
-		case ConditionSize, ConditionSeeders:
+		case ConditionAudioLanguage, ConditionSubtitleLanguage:
+			if c.Value == "" {
+				return Format{}, fmt.Errorf("%s: value required", where)
+			}
+			// Stored codes are canonicalised at probe time, so a condition
+			// spelled "fre" or "FR" would silently never match. Fold it here
+			// rather than at eval time: the compile is once per config
+			// generation, the eval is once per release per format.
+			c.Value = langcode.Canonical(c.Value)
+		case ConditionSize, ConditionSeeders, ConditionAudioTracks:
 		default:
 			return Format{}, fmt.Errorf(
 				"%s: %w %q", where, errUnknownConditionType, c.Type)
@@ -92,13 +112,23 @@ func conditionRef(name string, i int) string {
 func (c Condition) eval(r ReleaseContext) (ok, known bool) {
 	switch c.Type {
 	case ConditionReleaseTitle:
-		// A context assembled from stored columns has no release name at all:
-		// the renamer wrote the only name it has, and the naming template
-		// keeps a fraction of the tokens a condition here matches on.
 		if r.Title == "" {
 			return false, false
 		}
 		ok = c.re.MatchString(r.Title)
+		// For a row, Title is the basename the renamer wrote — a *subset* of
+		// the release name, since the naming template keeps a fraction of its
+		// tokens. So the two outcomes are not symmetric: a match is real
+		// evidence the token was there, but a miss proves only that the
+		// template dropped it. Reporting that miss as a confident false is how
+		// a file scored 0 against a release's remux/vostfr/multi-audio while
+		// the scanner read the whole library as upgradable; reporting it
+		// unknown lets ReplacesFile drop the format from both sides instead.
+		// A template that keeps the whole release name still scores normally,
+		// which the blunter "unknown for every row" rule threw away.
+		if r.EmptyIsUnknown && !ok {
+			return false, false
+		}
 	case ConditionReleaseGroup:
 		if r.Group == "" && r.EmptyIsUnknown {
 			return false, false
@@ -138,6 +168,23 @@ func (c Condition) eval(r ReleaseContext) (ok, known bool) {
 			return false, false
 		}
 		ok = r.Seeders >= c.Min
+	case ConditionAudioTracks:
+		if r.AudioTracks == nil {
+			return false, false
+		}
+		ok = *r.AudioTracks >= c.Min
+	case ConditionAudioLanguage:
+		// nil is "nobody could say"; an empty slice is a probe that found no
+		// tagged track, which is a real answer and may be negated.
+		if r.AudioLangs == nil {
+			return false, false
+		}
+		ok = slices.Contains(r.AudioLangs, c.Value)
+	case ConditionSubtitleLanguage:
+		if r.SubLangs == nil {
+			return false, false
+		}
+		ok = slices.Contains(r.SubLangs, c.Value)
 	}
 	if c.Negate {
 		ok = !ok

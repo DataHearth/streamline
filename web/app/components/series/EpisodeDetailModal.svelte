@@ -31,16 +31,15 @@
 	import { formatBytes } from "../../lib/format";
 	import {
 		audioLabel,
-		audioTracks,
-		channelLayout,
+		audioLanguages,
+		audioTrackCount,
 		codecLabel,
 		formatBitrate,
 		formatDuration,
 		langName,
 		probeOf,
 		resolutionBucket,
-		subtitleFlags,
-		subtitleTracks,
+		subtitleLanguages,
 	} from "../../lib/media-info";
 	import type { Episode } from "../../lib/types";
 
@@ -61,21 +60,17 @@
 	} = $props();
 
 	let probe = $derived(episode ? probeOf(episode) : null);
-	let audioList = $derived(audioTracks(probe));
-	let subList = $derived(subtitleTracks(probe));
+	// One row per language, not per track: the API carries language sets, and
+	// which track holds which language is not knowable from them.
+	let audioList = $derived(audioLanguages(probe));
+	let subList = $derived(subtitleLanguages(probe));
 	// Only when the streams could not be enumerated: otherwise the track list
 	// below says the same thing per language.
 	let flatAudio = $derived(audioList.length === 0 ? audioLabel(probe) : undefined);
 
 	// Aliased for the same reason as MovieDetailInfo's TrackToggle: a snippet's
 	// parameter list cannot carry an inline object type.
-	type TrackListRow = {
-		name: string;
-		note?: string;
-		flags: string[];
-		value: string;
-	};
-	type TrackListRows = TrackListRow[];
+	type TrackListRows = string[];
 	// Only rows the probe actually carries: an audio-less remux has no Audio row
 	// rather than a dash.
 	let probeRows = $derived(
@@ -127,24 +122,9 @@
 			{heading}
 		</h5>
 		<div class="mt-1 divide-y divide-border border-y border-border">
-			{#each rows as row, k (k)}
-				<div class="flex items-baseline justify-between gap-3 py-1.5 text-sm">
-					<span class="min-w-0 truncate text-fg-muted">
-						{row.name}
-						{#if row.note}
-							<span class="text-fg-faint">· {row.note}</span>
-						{/if}
-						{#each row.flags as flag (flag)}
-							<span
-								class="ml-1 text-[10px] uppercase tracking-[0.1em] text-fg-faint"
-							>
-								{flag}
-							</span>
-						{/each}
-					</span>
-					<span class="shrink-0 font-mono text-xs text-fg-subtle">
-						{row.value}
-					</span>
+			{#each rows as name (name)}
+				<div class="py-1.5 text-sm">
+					<span class="block min-w-0 truncate text-fg-muted">{name}</span>
 				</div>
 			{/each}
 		</div>
@@ -228,27 +208,14 @@
 
 				{#if audioList.length > 0}
 					{@render trackList(
-						i18n.file_audio_tracks({ count: audioList.length }),
-						audioList.map((t) => ({
-							name: langName(t.language),
-							note: t.title,
-							flags: t.default ? [i18n.track_default()] : [],
-							value:
-								[codecLabel(t.codec), channelLayout(t.channels)]
-									.filter(Boolean)
-									.join(" · ") || "—",
-						})),
+						i18n.file_audio_tracks({ count: audioTrackCount(probe) }),
+						audioList.map(langName),
 					)}
 				{/if}
 				{#if subList.length > 0}
 					{@render trackList(
 						i18n.file_subtitle_tracks({ count: subList.length }),
-						subList.map((t) => ({
-							name: langName(t.language),
-							note: undefined,
-							flags: subtitleFlags(t),
-							value: codecLabel(t.codec) ?? "—",
-						})),
+						subList.map(langName),
 					)}
 				{/if}
 			</div>

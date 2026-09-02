@@ -140,6 +140,21 @@ func Bitrate(v uint32) predicate.MediaFile {
 	return predicate.MediaFile(sql.FieldEQ(FieldBitrate, v))
 }
 
+// AudioTracks applies equality check predicate on the "audio_tracks" field. It's identical to AudioTracksEQ.
+func AudioTracks(v uint8) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldAudioTracks, v))
+}
+
+// AudioLangs applies equality check predicate on the "audio_langs" field. It's identical to AudioLangsEQ.
+func AudioLangs(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldAudioLangs, v))
+}
+
+// SubLangs applies equality check predicate on the "sub_langs" field. It's identical to SubLangsEQ.
+func SubLangs(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldSubLangs, v))
+}
+
 // ProbedAt applies equality check predicate on the "probed_at" field. It's identical to ProbedAtEQ.
 func ProbedAt(v time.Time) predicate.MediaFile {
 	return predicate.MediaFile(sql.FieldEQ(FieldProbedAt, v))
@@ -1163,6 +1178,206 @@ func BitrateIsNil() predicate.MediaFile {
 // BitrateNotNil applies the NotNil predicate on the "bitrate" field.
 func BitrateNotNil() predicate.MediaFile {
 	return predicate.MediaFile(sql.FieldNotNull(FieldBitrate))
+}
+
+// AudioTracksEQ applies the EQ predicate on the "audio_tracks" field.
+func AudioTracksEQ(v uint8) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldAudioTracks, v))
+}
+
+// AudioTracksNEQ applies the NEQ predicate on the "audio_tracks" field.
+func AudioTracksNEQ(v uint8) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNEQ(FieldAudioTracks, v))
+}
+
+// AudioTracksIn applies the In predicate on the "audio_tracks" field.
+func AudioTracksIn(vs ...uint8) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIn(FieldAudioTracks, vs...))
+}
+
+// AudioTracksNotIn applies the NotIn predicate on the "audio_tracks" field.
+func AudioTracksNotIn(vs ...uint8) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotIn(FieldAudioTracks, vs...))
+}
+
+// AudioTracksGT applies the GT predicate on the "audio_tracks" field.
+func AudioTracksGT(v uint8) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGT(FieldAudioTracks, v))
+}
+
+// AudioTracksGTE applies the GTE predicate on the "audio_tracks" field.
+func AudioTracksGTE(v uint8) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGTE(FieldAudioTracks, v))
+}
+
+// AudioTracksLT applies the LT predicate on the "audio_tracks" field.
+func AudioTracksLT(v uint8) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLT(FieldAudioTracks, v))
+}
+
+// AudioTracksLTE applies the LTE predicate on the "audio_tracks" field.
+func AudioTracksLTE(v uint8) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLTE(FieldAudioTracks, v))
+}
+
+// AudioTracksIsNil applies the IsNil predicate on the "audio_tracks" field.
+func AudioTracksIsNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIsNull(FieldAudioTracks))
+}
+
+// AudioTracksNotNil applies the NotNil predicate on the "audio_tracks" field.
+func AudioTracksNotNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotNull(FieldAudioTracks))
+}
+
+// AudioLangsEQ applies the EQ predicate on the "audio_langs" field.
+func AudioLangsEQ(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldAudioLangs, v))
+}
+
+// AudioLangsNEQ applies the NEQ predicate on the "audio_langs" field.
+func AudioLangsNEQ(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNEQ(FieldAudioLangs, v))
+}
+
+// AudioLangsIn applies the In predicate on the "audio_langs" field.
+func AudioLangsIn(vs ...string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIn(FieldAudioLangs, vs...))
+}
+
+// AudioLangsNotIn applies the NotIn predicate on the "audio_langs" field.
+func AudioLangsNotIn(vs ...string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotIn(FieldAudioLangs, vs...))
+}
+
+// AudioLangsGT applies the GT predicate on the "audio_langs" field.
+func AudioLangsGT(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGT(FieldAudioLangs, v))
+}
+
+// AudioLangsGTE applies the GTE predicate on the "audio_langs" field.
+func AudioLangsGTE(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGTE(FieldAudioLangs, v))
+}
+
+// AudioLangsLT applies the LT predicate on the "audio_langs" field.
+func AudioLangsLT(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLT(FieldAudioLangs, v))
+}
+
+// AudioLangsLTE applies the LTE predicate on the "audio_langs" field.
+func AudioLangsLTE(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLTE(FieldAudioLangs, v))
+}
+
+// AudioLangsContains applies the Contains predicate on the "audio_langs" field.
+func AudioLangsContains(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldContains(FieldAudioLangs, v))
+}
+
+// AudioLangsHasPrefix applies the HasPrefix predicate on the "audio_langs" field.
+func AudioLangsHasPrefix(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldHasPrefix(FieldAudioLangs, v))
+}
+
+// AudioLangsHasSuffix applies the HasSuffix predicate on the "audio_langs" field.
+func AudioLangsHasSuffix(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldHasSuffix(FieldAudioLangs, v))
+}
+
+// AudioLangsIsNil applies the IsNil predicate on the "audio_langs" field.
+func AudioLangsIsNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIsNull(FieldAudioLangs))
+}
+
+// AudioLangsNotNil applies the NotNil predicate on the "audio_langs" field.
+func AudioLangsNotNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotNull(FieldAudioLangs))
+}
+
+// AudioLangsEqualFold applies the EqualFold predicate on the "audio_langs" field.
+func AudioLangsEqualFold(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEqualFold(FieldAudioLangs, v))
+}
+
+// AudioLangsContainsFold applies the ContainsFold predicate on the "audio_langs" field.
+func AudioLangsContainsFold(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldContainsFold(FieldAudioLangs, v))
+}
+
+// SubLangsEQ applies the EQ predicate on the "sub_langs" field.
+func SubLangsEQ(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldSubLangs, v))
+}
+
+// SubLangsNEQ applies the NEQ predicate on the "sub_langs" field.
+func SubLangsNEQ(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNEQ(FieldSubLangs, v))
+}
+
+// SubLangsIn applies the In predicate on the "sub_langs" field.
+func SubLangsIn(vs ...string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIn(FieldSubLangs, vs...))
+}
+
+// SubLangsNotIn applies the NotIn predicate on the "sub_langs" field.
+func SubLangsNotIn(vs ...string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotIn(FieldSubLangs, vs...))
+}
+
+// SubLangsGT applies the GT predicate on the "sub_langs" field.
+func SubLangsGT(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGT(FieldSubLangs, v))
+}
+
+// SubLangsGTE applies the GTE predicate on the "sub_langs" field.
+func SubLangsGTE(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGTE(FieldSubLangs, v))
+}
+
+// SubLangsLT applies the LT predicate on the "sub_langs" field.
+func SubLangsLT(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLT(FieldSubLangs, v))
+}
+
+// SubLangsLTE applies the LTE predicate on the "sub_langs" field.
+func SubLangsLTE(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLTE(FieldSubLangs, v))
+}
+
+// SubLangsContains applies the Contains predicate on the "sub_langs" field.
+func SubLangsContains(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldContains(FieldSubLangs, v))
+}
+
+// SubLangsHasPrefix applies the HasPrefix predicate on the "sub_langs" field.
+func SubLangsHasPrefix(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldHasPrefix(FieldSubLangs, v))
+}
+
+// SubLangsHasSuffix applies the HasSuffix predicate on the "sub_langs" field.
+func SubLangsHasSuffix(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldHasSuffix(FieldSubLangs, v))
+}
+
+// SubLangsIsNil applies the IsNil predicate on the "sub_langs" field.
+func SubLangsIsNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIsNull(FieldSubLangs))
+}
+
+// SubLangsNotNil applies the NotNil predicate on the "sub_langs" field.
+func SubLangsNotNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotNull(FieldSubLangs))
+}
+
+// SubLangsEqualFold applies the EqualFold predicate on the "sub_langs" field.
+func SubLangsEqualFold(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEqualFold(FieldSubLangs, v))
+}
+
+// SubLangsContainsFold applies the ContainsFold predicate on the "sub_langs" field.
+func SubLangsContainsFold(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldContainsFold(FieldSubLangs, v))
 }
 
 // ProbedAtEQ applies the EQ predicate on the "probed_at" field.

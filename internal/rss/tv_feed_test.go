@@ -20,7 +20,6 @@ import (
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/rss/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
-	"github.com/datahearth/streamline/internal/testutil/mediafiletest"
 )
 
 var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
@@ -332,12 +331,12 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 	Context("upgrades", func() {
 		const (
 			plainEpFile = "The.Black.Sea.S03E01.1080p.WEB-DL.x264-GRP.mkv"
-			remuxEpFile = "The.Black.Sea.S03E02.1080p.BluRay.REMUX.x264-GRP.mkv"
+			multiEpFile = "The.Black.Sea.S03E02.1080p.MULTi.BluRay.x264-GRP.mkv"
 
-			betterEp   = "The.Black.Sea.S03E01.2160p.BluRay.REMUX.HDR.x265-GRP"
-			betterPack = "The.Black.Sea.S03.2160p.BluRay.REMUX.HDR.x265-GRP"
-			// remux only: ties the 200 a remux file already scores.
-			tiedPack = "The.Black.Sea.S03.1080p.BluRay.REMUX.x264-GRP"
+			betterEp   = "The.Black.Sea.S03E01.2160p.MULTi.BluRay.x265-GRP"
+			betterPack = "The.Black.Sea.S03.2160p.MULTi.BluRay.x265-GRP"
+			// multi-audio only: ties the 200 a multi-audio file already scores.
+			tiedPack = "The.Black.Sea.S03.1080p.MULTi.BluRay.x264-GRP"
 			// betterEp's E02 twin. Fed as a second item in the same tick to turn
 			// "which episodes ended up in `selected`/`targets`" into an
 			// observable: GrabEpisode always fires against the pack's first
@@ -346,21 +345,16 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 			// regressed one. This release, offered on its own, only gets grabbed
 			// if E02 is still up for grabs — i.e. wasn't already claimed by the
 			// pack this tick (`pass.grabbed`).
-			betterEp2 = "The.Black.Sea.S03E02.2160p.BluRay.REMUX.HDR.x265-GRP"
+			betterEp2 = "The.Black.Sea.S03E02.2160p.MULTi.BluRay.x265-GRP"
 		)
 
 		// epWithFile builds an upgrade candidate episode: one on disk, 1080p by
 		// both its name and its probed width.
 		epWithFile := func(id uint32, number uint16, basename string) *ent.Episode {
 			e := &ent.Episode{ID: id, Number: number}
-			e.Edges.MediaFiles = []*ent.MediaFile{
-				mediafiletest.StoredParse(&ent.MediaFile{
-					Path:       "/tv/The Black Sea/Season 03/" + basename,
-					Size:       4_000_000_000,
-					Width:      1920,
-					VideoCodec: "h264",
-				}, basename),
-			}
+			e.Edges.MediaFiles = []*ent.MediaFile{fileFixture(
+				"/tv/The Black Sea/Season 03/"+basename, basename, 1920,
+			)}
 			return e
 		}
 
@@ -396,7 +390,7 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 			newScanner()
 			expectQueries(nil, []*ent.TVShow{showWith(
 				epWithFile(11, 1, plainEpFile),
-				epWithFile(12, 2, remuxEpFile),
+				epWithFile(12, 2, multiEpFile),
 			)})
 			// betterEp2 rides along in the same feed: GrabEpisode always fires
 			// against the pack's first episode regardless of how many episodes
@@ -426,7 +420,7 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 			newScanner()
 			expectQueries(nil, []*ent.TVShow{showWith(
 				epWithFile(11, 1, plainEpFile),
-				epWithFile(12, 2, remuxEpFile),
+				epWithFile(12, 2, multiEpFile),
 			)})
 			// betterEp2 rides along in the same feed as the real assertion that
 			// E02 was "left": GrabEpisode(...,11) fires identically whether the
@@ -472,7 +466,7 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 			newScanner()
 			expectQueries(
 				[]*ent.TVShow{showWith(&ent.Episode{ID: 11, Number: 1})},
-				[]*ent.TVShow{showWith(epWithFile(12, 2, remuxEpFile))},
+				[]*ent.TVShow{showWith(epWithFile(12, 2, multiEpFile))},
 			)
 			feeder.EXPECT().Feed(mock.Anything, "a").
 				Return([]indexer.SearchResult{{Title: tiedPack}}, nil).Once()
@@ -491,8 +485,8 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 			configtest.Setup(upgradeConfig("a"))
 			newScanner()
 			expectQueries(nil, []*ent.TVShow{showWith(
-				epWithFile(11, 1, remuxEpFile),
-				epWithFile(12, 2, remuxEpFile),
+				epWithFile(11, 1, multiEpFile),
+				epWithFile(12, 2, multiEpFile),
 			)})
 			feeder.EXPECT().Feed(mock.Anything, "a").
 				Return([]indexer.SearchResult{{Title: tiedPack}}, nil).Once()
@@ -508,7 +502,7 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 					[]*ent.TVShow{showWith(&ent.Episode{ID: 11, Number: 1})},
 					[]*ent.TVShow{showWith(
 						epWithFile(12, 2, plainEpFile),
-						epWithFile(13, 3, remuxEpFile),
+						epWithFile(13, 3, multiEpFile),
 					)},
 				)
 				// tiedPack beats the plain E02 file (200 > 0) but only ties the
@@ -571,7 +565,7 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 				newScanner()
 				expectQueries(nil, []*ent.TVShow{showWith(
 					epWithFile(11, 1, plainEpFile),
-					epWithFile(12, 2, remuxEpFile),
+					epWithFile(12, 2, multiEpFile),
 				)})
 				feeder.EXPECT().Feed(mock.Anything, "a").
 					Return([]indexer.SearchResult{{Title: tiedPack}}, nil).Once()

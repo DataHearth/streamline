@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"path/filepath"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/datahearth/streamline/ent"
@@ -382,6 +383,23 @@ func mediaInfoToAPI(f *ent.MediaFile) *MediaInfo {
 	if f.Bitrate != 0 {
 		b := int(f.Bitrate)
 		out.Bitrate = &b
+	}
+	if f.AudioTracks != 0 {
+		t := int(f.AudioTracks)
+		out.AudioTrackCount = &t
+	}
+	// Emitted only when non-empty, like every other optional here. An empty
+	// list does mean something internally — the probe found no tagged track,
+	// which a negated condition may act on — but this whole object is already
+	// absent unless the file was probed, so a reader seeing the object without
+	// the field can draw the same conclusion.
+	if f.AudioLangs != "" {
+		l := strings.Split(f.AudioLangs, ",")
+		out.AudioLanguages = &l
+	}
+	if f.SubLangs != "" {
+		l := strings.Split(f.SubLangs, ",")
+		out.SubtitleLanguages = &l
 	}
 	return out
 }

@@ -55,6 +55,12 @@ type MediaFile struct {
 	AudioChannels uint8 `json:"audio_channels,omitempty"`
 	// Bitrate holds the value of the "bitrate" field.
 	Bitrate uint32 `json:"bitrate,omitempty"`
+	// AudioTracks holds the value of the "audio_tracks" field.
+	AudioTracks uint8 `json:"audio_tracks,omitempty"`
+	// AudioLangs holds the value of the "audio_langs" field.
+	AudioLangs string `json:"audio_langs,omitempty"`
+	// SubLangs holds the value of the "sub_langs" field.
+	SubLangs string `json:"sub_langs,omitempty"`
 	// ProbedAt holds the value of the "probed_at" field.
 	ProbedAt *time.Time `json:"probed_at,omitempty"`
 	// ParsedSource holds the value of the "parsed_source" field.
@@ -109,9 +115,9 @@ func (*MediaFile) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case mediafile.FieldID, mediafile.FieldSize, mediafile.FieldDurationSeconds, mediafile.FieldWidth, mediafile.FieldHeight, mediafile.FieldAudioChannels, mediafile.FieldBitrate:
+		case mediafile.FieldID, mediafile.FieldSize, mediafile.FieldDurationSeconds, mediafile.FieldWidth, mediafile.FieldHeight, mediafile.FieldAudioChannels, mediafile.FieldBitrate, mediafile.FieldAudioTracks:
 			values[i] = new(sql.NullInt64)
-		case mediafile.FieldPath, mediafile.FieldQuality, mediafile.FieldFormat, mediafile.FieldReleaseGroup, mediafile.FieldSource, mediafile.FieldContainer, mediafile.FieldVideoCodec, mediafile.FieldAudioCodec, mediafile.FieldParsedSource, mediafile.FieldParsedResolution, mediafile.FieldParsedCodec:
+		case mediafile.FieldPath, mediafile.FieldQuality, mediafile.FieldFormat, mediafile.FieldReleaseGroup, mediafile.FieldSource, mediafile.FieldContainer, mediafile.FieldVideoCodec, mediafile.FieldAudioCodec, mediafile.FieldAudioLangs, mediafile.FieldSubLangs, mediafile.FieldParsedSource, mediafile.FieldParsedResolution, mediafile.FieldParsedCodec:
 			values[i] = new(sql.NullString)
 		case mediafile.FieldCreateTime, mediafile.FieldUpdateTime, mediafile.FieldLastSeenAt, mediafile.FieldMissingSince, mediafile.FieldProbedAt:
 			values[i] = new(sql.NullTime)
@@ -249,6 +255,24 @@ func (_m *MediaFile) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field bitrate", values[i])
 			} else if value.Valid {
 				_m.Bitrate = uint32(value.Int64)
+			}
+		case mediafile.FieldAudioTracks:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field audio_tracks", values[i])
+			} else if value.Valid {
+				_m.AudioTracks = uint8(value.Int64)
+			}
+		case mediafile.FieldAudioLangs:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field audio_langs", values[i])
+			} else if value.Valid {
+				_m.AudioLangs = value.String
+			}
+		case mediafile.FieldSubLangs:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field sub_langs", values[i])
+			} else if value.Valid {
+				_m.SubLangs = value.String
 			}
 		case mediafile.FieldProbedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -392,6 +416,15 @@ func (_m *MediaFile) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("bitrate=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Bitrate))
+	builder.WriteString(", ")
+	builder.WriteString("audio_tracks=")
+	builder.WriteString(fmt.Sprintf("%v", _m.AudioTracks))
+	builder.WriteString(", ")
+	builder.WriteString("audio_langs=")
+	builder.WriteString(_m.AudioLangs)
+	builder.WriteString(", ")
+	builder.WriteString("sub_langs=")
+	builder.WriteString(_m.SubLangs)
 	builder.WriteString(", ")
 	if v := _m.ProbedAt; v != nil {
 		builder.WriteString("probed_at=")

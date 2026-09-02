@@ -5076,6 +5076,32 @@ components:
           type: integer
           description: Overall bitrate in bits per second.
           example: 24500000
+        audio_track_count:
+          type: integer
+          description: >-
+            Number of audio streams. Kept alongside audio_languages because a
+            file may carry two tracks in one language (a commentary), and an
+            untagged file has a track count but no languages at all.
+          example: 2
+        audio_languages:
+          type: array
+          items:
+            type: string
+          description: >-
+            ISO 639-2/T codes of the audio streams, deduped and sorted. Empty
+            means the probe found no tagged track — not that the file is
+            silent. Bibliographic codes ("fre") are folded onto the
+            terminological form ("fra") when the file is probed.
+          example: [fra, jpn]
+        subtitle_languages:
+          type: array
+          items:
+            type: string
+          description: >-
+            ISO 639-2/T codes of the non-forced subtitle streams. Forced tracks
+            are excluded: they carry signs and foreign dialogue rather than the
+            script, so counting one would report a dub as subtitled.
+          example: [fra]
         probed_at:
           type: string
           format: date-time
@@ -5790,7 +5816,17 @@ components:
               codec,
               size,
               seeders,
+              audio_tracks,
+              audio_language,
+              subtitle_language,
             ]
+          description: >-
+            audio_tracks, audio_language and subtitle_language are answerable
+            both from a release name and from a probed file, which
+            release_title is not: the renamer destroys the name of a file
+            already in the library. Pairing a release_title condition with one
+            of these in the same format is how a format scores a release by its
+            name and the file it would replace by measurement.
         pattern:
           type: string
           description: >-
@@ -5798,7 +5834,11 @@ components:
             release_group.
         value:
           type: string
-          description: Exact match value. Required for resolution, source and codec.
+          description: >-
+            Exact match value. Required for resolution, source, codec,
+            audio_language and subtitle_language. Language values are ISO 639
+            codes and are canonicalised, so "fre", "fr" and "fra" are the same
+            condition.
         min_gb:
           type: number
           format: double
@@ -5809,7 +5849,8 @@ components:
           description: Upper bound (inclusive) for a size condition. 0 means unbounded.
         min:
           type: integer
-          description: Minimum seeders for a seeders condition.
+          description: >-
+            Inclusive minimum for a seeders or audio_tracks condition.
         required:
           type: boolean
           description: >-

@@ -486,13 +486,12 @@ func takesPackFile(
 		}
 		existing := qualityctx.ContextFromRow(pf.existing)
 		// The probe wins over the filename when there is one — the same
-		// degrade path an ffmpeg-disabled install takes everywhere else.
-		width, codec := 0, ""
-		if pf.info != nil {
-			width, codec = int(pf.info.Width), pf.info.VideoCodec
-		}
+		// degrade path an ffmpeg-disabled install takes everywhere else. A nil
+		// info is the ffmpeg-off case and leaves every stream field unknown,
+		// which drops those formats from both sides rather than scoring the
+		// incoming file as having none of them.
 		return qualityctx.Replaces(profile, existing, qualityctx.ContextFromPackFile(
-			filepath.Base(pf.path), pf.size, width, codec, recordTitle,
+			filepath.Base(pf.path), pf.size, pf.info, recordTitle,
 		))
 	default:
 		return false

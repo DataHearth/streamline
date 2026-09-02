@@ -10223,6 +10223,10 @@ type MediaFileMutation struct {
 	addaudio_channels   *int8
 	bitrate             *uint32
 	addbitrate          *int32
+	audio_tracks        *uint8
+	addaudio_tracks     *int8
+	audio_langs         *string
+	sub_langs           *string
 	probed_at           *time.Time
 	parsed_source       *string
 	parsed_resolution   *string
@@ -11283,6 +11287,174 @@ func (m *MediaFileMutation) ResetBitrate() {
 	delete(m.clearedFields, mediafile.FieldBitrate)
 }
 
+// SetAudioTracks sets the "audio_tracks" field.
+func (m *MediaFileMutation) SetAudioTracks(u uint8) {
+	m.audio_tracks = &u
+	m.addaudio_tracks = nil
+}
+
+// AudioTracks returns the value of the "audio_tracks" field in the mutation.
+func (m *MediaFileMutation) AudioTracks() (r uint8, exists bool) {
+	v := m.audio_tracks
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAudioTracks returns the old "audio_tracks" field's value of the MediaFile entity.
+// If the MediaFile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaFileMutation) OldAudioTracks(ctx context.Context) (v uint8, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAudioTracks is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAudioTracks requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAudioTracks: %w", err)
+	}
+	return oldValue.AudioTracks, nil
+}
+
+// AddAudioTracks adds u to the "audio_tracks" field.
+func (m *MediaFileMutation) AddAudioTracks(u int8) {
+	if m.addaudio_tracks != nil {
+		*m.addaudio_tracks += u
+	} else {
+		m.addaudio_tracks = &u
+	}
+}
+
+// AddedAudioTracks returns the value that was added to the "audio_tracks" field in this mutation.
+func (m *MediaFileMutation) AddedAudioTracks() (r int8, exists bool) {
+	v := m.addaudio_tracks
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearAudioTracks clears the value of the "audio_tracks" field.
+func (m *MediaFileMutation) ClearAudioTracks() {
+	m.audio_tracks = nil
+	m.addaudio_tracks = nil
+	m.clearedFields[mediafile.FieldAudioTracks] = struct{}{}
+}
+
+// AudioTracksCleared returns if the "audio_tracks" field was cleared in this mutation.
+func (m *MediaFileMutation) AudioTracksCleared() bool {
+	_, ok := m.clearedFields[mediafile.FieldAudioTracks]
+	return ok
+}
+
+// ResetAudioTracks resets all changes to the "audio_tracks" field.
+func (m *MediaFileMutation) ResetAudioTracks() {
+	m.audio_tracks = nil
+	m.addaudio_tracks = nil
+	delete(m.clearedFields, mediafile.FieldAudioTracks)
+}
+
+// SetAudioLangs sets the "audio_langs" field.
+func (m *MediaFileMutation) SetAudioLangs(s string) {
+	m.audio_langs = &s
+}
+
+// AudioLangs returns the value of the "audio_langs" field in the mutation.
+func (m *MediaFileMutation) AudioLangs() (r string, exists bool) {
+	v := m.audio_langs
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAudioLangs returns the old "audio_langs" field's value of the MediaFile entity.
+// If the MediaFile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaFileMutation) OldAudioLangs(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAudioLangs is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAudioLangs requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAudioLangs: %w", err)
+	}
+	return oldValue.AudioLangs, nil
+}
+
+// ClearAudioLangs clears the value of the "audio_langs" field.
+func (m *MediaFileMutation) ClearAudioLangs() {
+	m.audio_langs = nil
+	m.clearedFields[mediafile.FieldAudioLangs] = struct{}{}
+}
+
+// AudioLangsCleared returns if the "audio_langs" field was cleared in this mutation.
+func (m *MediaFileMutation) AudioLangsCleared() bool {
+	_, ok := m.clearedFields[mediafile.FieldAudioLangs]
+	return ok
+}
+
+// ResetAudioLangs resets all changes to the "audio_langs" field.
+func (m *MediaFileMutation) ResetAudioLangs() {
+	m.audio_langs = nil
+	delete(m.clearedFields, mediafile.FieldAudioLangs)
+}
+
+// SetSubLangs sets the "sub_langs" field.
+func (m *MediaFileMutation) SetSubLangs(s string) {
+	m.sub_langs = &s
+}
+
+// SubLangs returns the value of the "sub_langs" field in the mutation.
+func (m *MediaFileMutation) SubLangs() (r string, exists bool) {
+	v := m.sub_langs
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSubLangs returns the old "sub_langs" field's value of the MediaFile entity.
+// If the MediaFile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaFileMutation) OldSubLangs(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSubLangs is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSubLangs requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSubLangs: %w", err)
+	}
+	return oldValue.SubLangs, nil
+}
+
+// ClearSubLangs clears the value of the "sub_langs" field.
+func (m *MediaFileMutation) ClearSubLangs() {
+	m.sub_langs = nil
+	m.clearedFields[mediafile.FieldSubLangs] = struct{}{}
+}
+
+// SubLangsCleared returns if the "sub_langs" field was cleared in this mutation.
+func (m *MediaFileMutation) SubLangsCleared() bool {
+	_, ok := m.clearedFields[mediafile.FieldSubLangs]
+	return ok
+}
+
+// ResetSubLangs resets all changes to the "sub_langs" field.
+func (m *MediaFileMutation) ResetSubLangs() {
+	m.sub_langs = nil
+	delete(m.clearedFields, mediafile.FieldSubLangs)
+}
+
 // SetProbedAt sets the "probed_at" field.
 func (m *MediaFileMutation) SetProbedAt(t time.Time) {
 	m.probed_at = &t
@@ -11591,7 +11763,7 @@ func (m *MediaFileMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *MediaFileMutation) Fields() []string {
-	fields := make([]string, 0, 22)
+	fields := make([]string, 0, 25)
 	if m.create_time != nil {
 		fields = append(fields, mediafile.FieldCreateTime)
 	}
@@ -11645,6 +11817,15 @@ func (m *MediaFileMutation) Fields() []string {
 	}
 	if m.bitrate != nil {
 		fields = append(fields, mediafile.FieldBitrate)
+	}
+	if m.audio_tracks != nil {
+		fields = append(fields, mediafile.FieldAudioTracks)
+	}
+	if m.audio_langs != nil {
+		fields = append(fields, mediafile.FieldAudioLangs)
+	}
+	if m.sub_langs != nil {
+		fields = append(fields, mediafile.FieldSubLangs)
 	}
 	if m.probed_at != nil {
 		fields = append(fields, mediafile.FieldProbedAt)
@@ -11702,6 +11883,12 @@ func (m *MediaFileMutation) Field(name string) (ent.Value, bool) {
 		return m.AudioChannels()
 	case mediafile.FieldBitrate:
 		return m.Bitrate()
+	case mediafile.FieldAudioTracks:
+		return m.AudioTracks()
+	case mediafile.FieldAudioLangs:
+		return m.AudioLangs()
+	case mediafile.FieldSubLangs:
+		return m.SubLangs()
 	case mediafile.FieldProbedAt:
 		return m.ProbedAt()
 	case mediafile.FieldParsedSource:
@@ -11755,6 +11942,12 @@ func (m *MediaFileMutation) OldField(ctx context.Context, name string) (ent.Valu
 		return m.OldAudioChannels(ctx)
 	case mediafile.FieldBitrate:
 		return m.OldBitrate(ctx)
+	case mediafile.FieldAudioTracks:
+		return m.OldAudioTracks(ctx)
+	case mediafile.FieldAudioLangs:
+		return m.OldAudioLangs(ctx)
+	case mediafile.FieldSubLangs:
+		return m.OldSubLangs(ctx)
 	case mediafile.FieldProbedAt:
 		return m.OldProbedAt(ctx)
 	case mediafile.FieldParsedSource:
@@ -11898,6 +12091,27 @@ func (m *MediaFileMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetBitrate(v)
 		return nil
+	case mediafile.FieldAudioTracks:
+		v, ok := value.(uint8)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAudioTracks(v)
+		return nil
+	case mediafile.FieldAudioLangs:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAudioLangs(v)
+		return nil
+	case mediafile.FieldSubLangs:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSubLangs(v)
+		return nil
 	case mediafile.FieldProbedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -11952,6 +12166,9 @@ func (m *MediaFileMutation) AddedFields() []string {
 	if m.addbitrate != nil {
 		fields = append(fields, mediafile.FieldBitrate)
 	}
+	if m.addaudio_tracks != nil {
+		fields = append(fields, mediafile.FieldAudioTracks)
+	}
 	return fields
 }
 
@@ -11972,6 +12189,8 @@ func (m *MediaFileMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedAudioChannels()
 	case mediafile.FieldBitrate:
 		return m.AddedBitrate()
+	case mediafile.FieldAudioTracks:
+		return m.AddedAudioTracks()
 	}
 	return nil, false
 }
@@ -12023,6 +12242,13 @@ func (m *MediaFileMutation) AddField(name string, value ent.Value) error {
 		}
 		m.AddBitrate(v)
 		return nil
+	case mediafile.FieldAudioTracks:
+		v, ok := value.(int8)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddAudioTracks(v)
+		return nil
 	}
 	return fmt.Errorf("unknown MediaFile numeric field %s", name)
 }
@@ -12069,6 +12295,15 @@ func (m *MediaFileMutation) ClearedFields() []string {
 	}
 	if m.FieldCleared(mediafile.FieldBitrate) {
 		fields = append(fields, mediafile.FieldBitrate)
+	}
+	if m.FieldCleared(mediafile.FieldAudioTracks) {
+		fields = append(fields, mediafile.FieldAudioTracks)
+	}
+	if m.FieldCleared(mediafile.FieldAudioLangs) {
+		fields = append(fields, mediafile.FieldAudioLangs)
+	}
+	if m.FieldCleared(mediafile.FieldSubLangs) {
+		fields = append(fields, mediafile.FieldSubLangs)
 	}
 	if m.FieldCleared(mediafile.FieldProbedAt) {
 		fields = append(fields, mediafile.FieldProbedAt)
@@ -12134,6 +12369,15 @@ func (m *MediaFileMutation) ClearField(name string) error {
 		return nil
 	case mediafile.FieldBitrate:
 		m.ClearBitrate()
+		return nil
+	case mediafile.FieldAudioTracks:
+		m.ClearAudioTracks()
+		return nil
+	case mediafile.FieldAudioLangs:
+		m.ClearAudioLangs()
+		return nil
+	case mediafile.FieldSubLangs:
+		m.ClearSubLangs()
 		return nil
 	case mediafile.FieldProbedAt:
 		m.ClearProbedAt()
@@ -12208,6 +12452,15 @@ func (m *MediaFileMutation) ResetField(name string) error {
 		return nil
 	case mediafile.FieldBitrate:
 		m.ResetBitrate()
+		return nil
+	case mediafile.FieldAudioTracks:
+		m.ResetAudioTracks()
+		return nil
+	case mediafile.FieldAudioLangs:
+		m.ResetAudioLangs()
+		return nil
+	case mediafile.FieldSubLangs:
+		m.ResetSubLangs()
 		return nil
 	case mediafile.FieldProbedAt:
 		m.ResetProbedAt()

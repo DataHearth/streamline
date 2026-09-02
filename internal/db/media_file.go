@@ -41,6 +41,9 @@ func applyProbe[T interface {
 	SetAudioCodec(string) T
 	SetAudioChannels(uint8) T
 	SetBitrate(uint32) T
+	SetAudioTracks(uint8) T
+	SetAudioLangs(string) T
+	SetSubLangs(string) T
 	SetProbedAt(time.Time) T
 }](q T, info *ffmpeg.Info) T {
 	q = q.SetProbedAt(time.Now())
@@ -54,7 +57,10 @@ func applyProbe[T interface {
 		SetHeight(info.Height).
 		SetAudioCodec(info.AudioCodec).
 		SetAudioChannels(info.AudioChannels).
-		SetBitrate(info.BitrateBPS)
+		SetBitrate(info.BitrateBPS).
+		SetAudioTracks(info.AudioTracks).
+		SetAudioLangs(info.AudioLangs).
+		SetSubLangs(info.SubLangs)
 }
 
 // applyParsed writes the parsed_* columns from the release name's parse when

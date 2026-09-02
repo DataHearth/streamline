@@ -289,7 +289,7 @@ func replacesEpisodeFile(
 	return qualityctx.Replaces(
 		profile,
 		qualityctx.ContextFromRow(existing),
-		qualityctx.ContextFromPackFile(name, size, 0, "", releaseTitle),
+		qualityctx.ContextFromPackFile(name, size, nil, releaseTitle),
 	)
 }
 

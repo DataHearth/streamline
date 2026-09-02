@@ -62,13 +62,15 @@ var builtins = []Format{
 		Condition{
 			Type: ConditionResolution, Value: "720p", Required: true,
 		}),
+	// The track-count arm is what lets a file answer this at all: the release
+	// says MULTi in its name, the file says it by holding two audio streams,
+	// and until both could answer, every imported file scored 0 here against
+	// any MULTi release. Both arms optional, so this is "any of" — a name
+	// claiming MULTi still matches when no probe ran.
 	mustFormat("multi-audio",
 		"Releases carrying more than one audio language.",
-		Condition{
-			Type:     ConditionReleaseTitle,
-			Pattern:  `(?i)\b(multi|dual[ ._-]?audio)\b`,
-			Required: true,
-		}),
+		title(`(?i)\b(multi|dual[ ._-]?audio)\b`),
+		Condition{Type: ConditionAudioTracks, Min: 2}),
 	mustFormat("dubbed",
 		"Releases flagged as dubbed audio, rather than the original language track.",
 		Condition{

@@ -14,6 +14,20 @@
 		"codec",
 		"size",
 		"seeders",
+		"audio_tracks",
+		"audio_language",
+		"subtitle_language",
+	];
+
+	// The three types a file already in the library can answer. A release_title
+	// condition cannot: the renamer wrote the only name that file has. Pairing
+	// one of these with a release_title row in the same format is what lets the
+	// format score a release by its name and the file it would replace by its
+	// probe — otherwise the file scores 0 and everything reads as upgradable.
+	const STREAM_TYPES: CustomFormatConditionType[] = [
+		"audio_tracks",
+		"audio_language",
+		"subtitle_language",
 	];
 
 	export function conditionTypeLabel(t: CustomFormatConditionType): string {
@@ -32,7 +46,17 @@
 				return messages.cf_type_size();
 			case "seeders":
 				return messages.cf_type_seeders();
+			case "audio_tracks":
+				return messages.cf_type_audio_tracks();
+			case "audio_language":
+				return messages.cf_type_audio_language();
+			case "subtitle_language":
+				return messages.cf_type_subtitle_language();
 		}
+	}
+
+	export function isStreamCondition(t: CustomFormatConditionType): boolean {
+		return STREAM_TYPES.includes(t);
 	}
 
 	// A row keeps every field the API knows about, whatever its type reads, so
@@ -171,6 +195,8 @@
 				case "resolution":
 				case "source":
 				case "codec":
+				case "audio_language":
+				case "subtitle_language":
 					out.value = c.value.trim();
 					break;
 				case "size":
@@ -178,6 +204,7 @@
 					if (c.max_gb > 0) out.max_gb = c.max_gb;
 					break;
 				case "seeders":
+				case "audio_tracks":
 					out.min = c.min;
 					break;
 			}
@@ -613,10 +640,12 @@
 									class="{inputClass} font-mono tabular"
 								/>
 							</label>
-						{:else if c.type === "seeders"}
+						{:else if c.type === "seeders" || c.type === "audio_tracks"}
 							<label class="w-32 shrink-0">
 								<span class="mb-1 block text-[11px] font-medium text-fg-muted">
-									{i18n.cf_min_seeders()}
+									{c.type === "seeders"
+										? i18n.cf_min_seeders()
+										: i18n.cf_min_audio_tracks()}
 								</span>
 								<input
 									type="number"
@@ -629,6 +658,19 @@
 											(e.currentTarget as HTMLInputElement).value,
 										))}
 									class="{inputClass} font-mono tabular"
+								/>
+							</label>
+						{:else if c.type === "audio_language" || c.type === "subtitle_language"}
+							<label class="w-32 shrink-0">
+								<span class="mb-1 block text-[11px] font-medium text-fg-muted">
+									{i18n.cf_value()}
+								</span>
+								<input
+									type="text"
+									readonly={locked}
+									placeholder="fra"
+									bind:value={c.value}
+									class="{inputClass} font-mono"
 								/>
 							</label>
 						{/if}
@@ -707,6 +749,13 @@
 							<span class="text-[11px] text-fg-subtle"
 								>{i18n.cf_pattern_help()}</span
 							>
+						{:else if isStreamCondition(c.type)}
+							<span class="text-[11px] text-fg-subtle">{i18n.cf_stream_help()}</span>
+							{#if c.type !== "audio_tracks"}
+								<span class="text-[11px] text-fg-subtle">
+									{i18n.cf_language_help()}
+								</span>
+							{/if}
 						{/if}
 					</div>
 
