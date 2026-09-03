@@ -192,16 +192,12 @@ var _ = Describe("Handler: Activity queue/history",
 				Equal(HistoryEntryStatus("completed")))
 		})
 
-		It("clamps a limit above the documented maximum", func() {
-			app.store.EXPECT().ListDownloadHistory(
-				mock.Anything, activityMaxLimit,
-				mock.AnythingOfType("string")).
-				Return(&db.DownloadHistoryResult{}, nil).Once()
+		It("rejects a limit above the documented maximum", func() {
 			resp, err := http.Get(
 				app.srv.URL + "/api/v1/activity/history?limit=2147483647")
 			Expect(err).NotTo(HaveOccurred())
 			defer resp.Body.Close()
-			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		})
 	})
 

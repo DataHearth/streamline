@@ -20,6 +20,7 @@ import (
 	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/posters"
+	"github.com/datahearth/streamline/internal/utils/numeric"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -213,7 +214,7 @@ func (s *Service) List(
 	if err != nil {
 		return nil, 0, otelx.RecordSpanError(span, err)
 	}
-	return rows, uint32(total), nil
+	return rows, numeric.SaturateU32(total), nil
 }
 
 // FilterList returns one page of series with the episode rollup the list view

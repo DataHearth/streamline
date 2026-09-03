@@ -10,6 +10,7 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/metadata"
 	requestsvc "github.com/datahearth/streamline/internal/request"
+	"github.com/datahearth/streamline/internal/utils/numeric"
 )
 
 func (s *Server) ListRequests(
@@ -23,19 +24,26 @@ func (s *Server) ListRequests(
 		}, nil
 	}
 
-	p := db.ListRequestsParams{Limit: 50}
+	page, ok := positiveOr(req.Params.Page, uint16(1))
+	if !ok {
+		return ListRequests400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(msgZeroPage),
+		}, nil
+	}
+	limit, ok := limitOr(req.Params.Limit, 50, requestsMaxLimit)
+	if !ok {
+		return ListRequests400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(limitRangeMsg(requestsMaxLimit)),
+		}, nil
+	}
+	p := db.ListRequestsParams{Limit: limit}
 	if req.Params.Status != nil {
 		p.Status = string(*req.Params.Status)
 	}
 	if req.Params.MediaType != nil {
 		p.MediaType = string(*req.Params.MediaType)
 	}
-	if req.Params.Limit != nil && *req.Params.Limit > 0 {
-		p.Limit = clampLimit(*req.Params.Limit, requestsMaxLimit)
-	}
-	if req.Params.Page != nil && *req.Params.Page > 1 {
-		p.Offset = (*req.Params.Page - 1) * p.Limit
-	}
+	p.Offset = uint32(page-1) * p.Limit
 	// Reviewers (admin/member) see all requests; request_only sees only theirs.
 	if claims.Role == "request_only" {
 		p.RequesterID = claims.UserID
@@ -51,15 +59,11 @@ func (s *Server) ListRequests(
 	for _, r := range rows {
 		items = append(items, requestToAPI(r))
 	}
-	page := uint32(1)
-	if req.Params.Page != nil && *req.Params.Page > 0 {
-		page = *req.Params.Page
-	}
 	return ListRequests200JSONResponse{
 		RequestsListJSONResponse: RequestsListJSONResponse{
 			Items: items,
-			Total: uint32(total),
-			Page:  page,
+			Total: numeric.SaturateU32(total),
+			Page:  uint32(page),
 			Limit: p.Limit,
 		},
 	}, nil
@@ -360,11 +364,13 @@ func seriesDetailsToRequestMedia(d *metadata.TVDetails) RequestMediaDetails {
 	if cast := castToAPI(d.Cast); len(cast) != 0 {
 		out.Cast = &cast
 	}
-	if n := uint16(len(d.Seasons)); n != 0 {
-		out.SeasonCount = &n
+	if n := len(d.Seasons); n != 0 {
+		c := numeric.SaturateU16(n)
+		out.SeasonCount = &c
 	}
-	if n := uint16(len(d.Episodes)); n != 0 {
-		out.EpisodeCount = &n
+	if n := len(d.Episodes); n != 0 {
+		c := numeric.SaturateU16(n)
+		out.EpisodeCount = &c
 	}
 	return out
 }

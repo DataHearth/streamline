@@ -511,7 +511,7 @@ type Store interface {
 	IncrementImportScanProgress(
 		ctx context.Context,
 		id uint32,
-		processedDelta uint32,
+		processedDelta int,
 	) error
 	CountActiveImportScans(ctx context.Context) (uint32, error)
 	DeleteImportScan(ctx context.Context, id uint32) error

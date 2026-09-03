@@ -43,6 +43,7 @@ const engineBindIP = "127.0.0.1"
 func reserveListenPort() uint16 {
 	GinkgoHelper()
 	for range 100 {
+		//nolint:gosec // bounded 10000..29999, well inside uint16
 		port := uint16(10000 + rand.IntN(20000))
 		if portBindable(port) {
 			return port

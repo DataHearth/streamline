@@ -22,6 +22,7 @@ import (
 	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/quality"
 	"github.com/datahearth/streamline/internal/quality/qualityctx"
+	"github.com/datahearth/streamline/internal/utils/numeric"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
@@ -852,9 +853,9 @@ func tvShowToAPI(s *ent.TVShow) TVShow {
 	seasons := make([]Season, 0, len(s.Edges.Seasons))
 	for i, se := range s.Edges.Seasons {
 		v := views[i]
-		have += uint32(v.Available)
-		total += uint32(v.Total)
-		wanted += uint32(v.Missing)
+		have += numeric.SaturateU32(v.Available)
+		total += numeric.SaturateU32(v.Total)
+		wanted += numeric.SaturateU32(v.Missing)
 		seasons = append(seasons, seasonToAPI(se, v, now, s.QualityProfile))
 	}
 	out.HaveEpisodes = &have

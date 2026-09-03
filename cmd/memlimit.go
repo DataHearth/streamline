@@ -60,6 +60,7 @@ func cgroupMemoryLimit(root, procSelf string) int64 {
 	var best int64
 	for _, dir := range cgroupDirs(root, selfCgroupPaths(procSelf)) {
 		for _, name := range []string{"memory.max", "memory.limit_in_bytes"} {
+			//nolint:gosec // cgroup paths come from the kernel and our own constants, never from a request
 			b, err := os.ReadFile(filepath.Join(dir, name))
 			if err != nil {
 				continue
@@ -97,6 +98,7 @@ func cgroupDirs(root string, selfPaths []string) []string {
 // in /proc/self/cgroup: the v2 unified line ("0::/path") and any v1 line
 // carrying the memory controller.
 func selfCgroupPaths(procSelf string) []string {
+	//nolint:gosec // procSelf is /proc/self/cgroup, a caller-supplied constant
 	b, err := os.ReadFile(procSelf)
 	if err != nil {
 		return nil

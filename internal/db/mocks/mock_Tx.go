@@ -6329,7 +6329,7 @@ func (_c *MockTx_IncrementEpisodeGrabFailures_Call) RunAndReturn(run func(ctx co
 }
 
 // IncrementImportScanProgress provides a mock function for the type MockTx
-func (_mock *MockTx) IncrementImportScanProgress(ctx context.Context, id uint32, processedDelta uint32) error {
+func (_mock *MockTx) IncrementImportScanProgress(ctx context.Context, id uint32, processedDelta int) error {
 	ret := _mock.Called(ctx, id, processedDelta)
 
 	if len(ret) == 0 {
@@ -6337,7 +6337,7 @@ func (_mock *MockTx) IncrementImportScanProgress(ctx context.Context, id uint32,
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, int) error); ok {
 		r0 = returnFunc(ctx, id, processedDelta)
 	} else {
 		r0 = ret.Error(0)
@@ -6353,12 +6353,12 @@ type MockTx_IncrementImportScanProgress_Call struct {
 // IncrementImportScanProgress is a helper method to define mock.On call
 //   - ctx context.Context
 //   - id uint32
-//   - processedDelta uint32
+//   - processedDelta int
 func (_e *MockTx_Expecter) IncrementImportScanProgress(ctx any, id any, processedDelta any) *MockTx_IncrementImportScanProgress_Call {
 	return &MockTx_IncrementImportScanProgress_Call{Call: _e.mock.On("IncrementImportScanProgress", ctx, id, processedDelta)}
 }
 
-func (_c *MockTx_IncrementImportScanProgress_Call) Run(run func(ctx context.Context, id uint32, processedDelta uint32)) *MockTx_IncrementImportScanProgress_Call {
+func (_c *MockTx_IncrementImportScanProgress_Call) Run(run func(ctx context.Context, id uint32, processedDelta int)) *MockTx_IncrementImportScanProgress_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -6368,9 +6368,9 @@ func (_c *MockTx_IncrementImportScanProgress_Call) Run(run func(ctx context.Cont
 		if args[1] != nil {
 			arg1 = args[1].(uint32)
 		}
-		var arg2 uint32
+		var arg2 int
 		if args[2] != nil {
-			arg2 = args[2].(uint32)
+			arg2 = args[2].(int)
 		}
 		run(
 			arg0,
@@ -6386,7 +6386,7 @@ func (_c *MockTx_IncrementImportScanProgress_Call) Return(err error) *MockTx_Inc
 	return _c
 }
 
-func (_c *MockTx_IncrementImportScanProgress_Call) RunAndReturn(run func(ctx context.Context, id uint32, processedDelta uint32) error) *MockTx_IncrementImportScanProgress_Call {
+func (_c *MockTx_IncrementImportScanProgress_Call) RunAndReturn(run func(ctx context.Context, id uint32, processedDelta int) error) *MockTx_IncrementImportScanProgress_Call {
 	_c.Call.Return(run)
 	return _c
 }

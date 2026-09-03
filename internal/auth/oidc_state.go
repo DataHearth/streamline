@@ -10,6 +10,8 @@ const transientCookieMaxAge = 600 // 10 min
 // /auth/oidc/. Used to carry state + nonce + PKCE verifier across the
 // provider redirect round-trip.
 func SetTransientCookie(w http.ResponseWriter, r *http.Request, name, value string) {
+	//nolint:gosec // Secure deliberately tracks the transport (isSecure) so
+	// plain-http dev works; HttpOnly+SameSite are set
 	http.SetCookie(w, &http.Cookie{
 		Name:     name,
 		Value:    value,
@@ -38,6 +40,7 @@ func ReadTransientCookies(r *http.Request, names ...string) map[string]string {
 // ClearTransientCookies expires the named cookies.
 func ClearTransientCookies(w http.ResponseWriter, r *http.Request, names ...string) {
 	for _, n := range names {
+		//nolint:gosec // expiry write; same deliberate Secure handling as above
 		http.SetCookie(w, &http.Cookie{
 			Name:     n,
 			Value:    "",

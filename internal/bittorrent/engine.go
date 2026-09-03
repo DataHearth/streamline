@@ -114,7 +114,7 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 		return nil, err
 	}
 	sessionDir := filepath.Join(entry.DownloadDir, sessionDirName)
-	if err := os.MkdirAll(sessionDir, 0o755); err != nil {
+	if err := os.MkdirAll(sessionDir, 0o750); err != nil {
 		return nil, fmt.Errorf("create session dir: %w", err)
 	}
 	pc, err := storage.NewBoltPieceCompletion(sessionDir)
@@ -249,7 +249,16 @@ func newPeerSockets(
 			closeAndWarn(ctx, "packet conn after address lookup failure", pc)
 			continue
 		}
-		ln, err := newRebindableListener(bindIP, uint16(addr.Port))
+		lnPort, ok := narrowPort(addr.Port)
+		if !ok {
+			lastErr = fmt.Errorf(
+				"packet conn bound to out-of-range port %d",
+				addr.Port,
+			)
+			closeAndWarn(ctx, "packet conn after port range failure", pc)
+			continue
+		}
+		ln, err := newRebindableListener(bindIP, lnPort)
 		if err != nil {
 			lastErr = err
 			closeAndWarn(ctx, "packet conn after listener retry failure", pc)

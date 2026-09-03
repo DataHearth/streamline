@@ -5,6 +5,7 @@ package restapi
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 
@@ -126,14 +127,26 @@ func Mount(r chi.Router, s *Server) {
 			ResponseErrorHandlerFunc: responseError,
 		},
 	)
-	HandlerFromMuxWithBaseURL(handler, r, "/api/v1")
+	HandlerWithOptions(handler, ChiServerOptions{
+		BaseURL:    "/api/v1",
+		BaseRouter: r,
+		// Param-binding failures (e.g. ?page=70000 into a uint16) otherwise
+		// fall back to the generated text/plain http.Error on an all-JSON API.
+		ErrorHandlerFunc: func(
+			w http.ResponseWriter,
+			r *http.Request,
+			err error,
+		) {
+			denyJSON(r.Context(), w, http.StatusBadRequest, paramErrMessage(err))
+		},
+	})
 }
 
-// requestError replaces the generated default only for the one error it can
-// now see: middleware.BodyLimit's MaxBytesReader tripping mid-decode, which the
-// generated code wraps with %w. Every other decode failure keeps the exact
-// plain-text 400 the default emitted — echoing the decode/binding failure is
-// echoing user input, not internal state — so no existing client sees a change.
+// requestError handles request decode failures. middleware.BodyLimit's
+// MaxBytesReader tripping mid-decode (which the generated code wraps with %w)
+// gets its 413; every other decode failure echoes as a 400 — echoing the
+// decode/binding failure is echoing user input, not internal state — in the
+// JSON error shape every other response on this API uses.
 func requestError(w http.ResponseWriter, r *http.Request, err error) {
 	if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
 		w.Header().Set("Content-Type", "application/json")
@@ -147,7 +160,23 @@ func requestError(w http.ResponseWriter, r *http.Request, err error) {
 		}
 		return
 	}
-	http.Error(w, err.Error(), http.StatusBadRequest)
+	denyJSON(r.Context(), w, http.StatusBadRequest, err.Error())
+}
+
+// paramErrMessage keeps a binding failure's 400 body to the parameter's
+// name: the raw error spells out the Go type the value failed to fit
+// ("out of range for uint16"), which is internal detail, not API contract.
+func paramErrMessage(err error) string {
+	if e, ok := errors.AsType[*InvalidParamFormatError](err); ok {
+		return fmt.Sprintf("invalid value for parameter %s", e.ParamName)
+	}
+	if e, ok := errors.AsType[*UnmarshalingParamError](err); ok {
+		return fmt.Sprintf("invalid value for parameter %s", e.ParamName)
+	}
+	if e, ok := errors.AsType[*RequiredParamError](err); ok {
+		return fmt.Sprintf("missing required parameter %s", e.ParamName)
+	}
+	return "invalid request parameters"
 }
 
 // responseError handles a handler returning a non-nil error. The generated

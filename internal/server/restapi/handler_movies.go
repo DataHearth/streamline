@@ -12,19 +12,26 @@ import (
 	"github.com/datahearth/streamline/internal/library"
 	moviesvc "github.com/datahearth/streamline/internal/media/movie"
 	"github.com/datahearth/streamline/internal/metadata"
+	"github.com/datahearth/streamline/internal/utils/numeric"
 )
 
 func (s *Server) ListMovies(
 	ctx context.Context,
 	request ListMoviesRequestObject,
 ) (ListMoviesResponseObject, error) {
-	p := moviesvc.FilterParams{Page: 1, Limit: 20}
-	if request.Params.Page != nil {
-		p.Page = uint16(*request.Params.Page)
+	page, ok := positiveOr(request.Params.Page, uint16(1))
+	if !ok {
+		return ListMovies400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(msgZeroPage),
+		}, nil
 	}
-	if request.Params.Limit != nil {
-		p.Limit = clampLimit(*request.Params.Limit, moviesMaxLimit)
+	limit, ok := limitOr(request.Params.Limit, 20, moviesMaxLimit)
+	if !ok {
+		return ListMovies400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(limitRangeMsg(moviesMaxLimit)),
+		}, nil
 	}
+	p := moviesvc.FilterParams{Page: page, Limit: limit}
 	if request.Params.Status != nil {
 		p.Status = *request.Params.Status
 	}
@@ -68,17 +75,19 @@ func (s *Server) GetMovieCounts(
 			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
-	trend := make([]uint32, len(counts.Trend))
-	for i, v := range counts.Trend {
-		trend[i] = uint32(v)
+	// trend is a required, non-nullable array in the spec, and the SPA maps
+	// over it unguarded — a nil slice would marshal as `null`.
+	trend := make([]uint32, 0, len(counts.Trend))
+	for _, v := range counts.Trend {
+		trend = append(trend, numeric.SaturateU32(v))
 	}
 	return GetMovieCounts200JSONResponse{
 		MovieCountsResponseJSONResponse: MovieCountsResponseJSONResponse{
-			Total:       uint32(counts.Total),
-			Wanted:      uint32(counts.Wanted),
-			Downloading: uint32(counts.Downloading),
-			Available:   uint32(counts.Available),
-			Failed:      uint32(counts.Failed),
+			Total:       numeric.SaturateU32(counts.Total),
+			Wanted:      numeric.SaturateU32(counts.Wanted),
+			Downloading: numeric.SaturateU32(counts.Downloading),
+			Available:   numeric.SaturateU32(counts.Available),
+			Failed:      numeric.SaturateU32(counts.Failed),
 			Trend:       trend,
 		},
 	}, nil
