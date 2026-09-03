@@ -15,7 +15,7 @@ type: application
 # them as a failed `helm upgrade`, not a silent no-op. The write-path check
 # covers the `config:` block only — see the securityContext comment in
 # values.yaml for what it cannot see.
-version: 2.0.0
+version: 2.0.1
 kubeVersion: ">=1.27.0-0"
 home: https://github.com/DataHearth/streamline
 sources:
