@@ -6,10 +6,21 @@
 	"schedule": [
 		"* 0-6 * * 1"
 	],
-	"prConcurrentLimit": 5,
+	"prConcurrentLimit": 8,
 	"minimumReleaseAge": "3 days",
 	"labels": ["dependencies"],
 	"reviewers": ["DataHearth"],
+	"customManagers": [
+		{
+			"description": "Renovate has no built-in support for actions/setup-node, so a workflow's node-version is read from the annotation comment above it. Without this the Node runtime moves in the Dockerfile and stays pinned in CI.",
+			"customType": "regex",
+			"managerFilePatterns": ["/^\\.github/workflows/[^/]+\\.ya?ml$/"],
+			"matchStrings": [
+				"# renovate: datasource=(?<datasource>[a-z-]+?) depName=(?<depName>[^\\s]+?)(?: versioning=(?<versioning>[a-z-]+?))?\\s+[\\w-]+?-version: (?<currentValue>.+?)\\n"
+			],
+			"versioningTemplate": "{{#if versioning}}{{{versioning}}}{{else}}semver{{/if}}"
+		}
+	],
 	"packageRules": [
 		{
 			"matchManagers": ["gomod"],
@@ -43,6 +54,35 @@
 		{
 			"matchUpdateTypes": ["major"],
 			"dependencyDashboardApproval": true
+		},
+		{
+			"description": "A toolchain version is declared in several files at once, so each one is bundled into a single PR. These rules come last on purpose: the later rule wins, so they override both the per-manager groupName above and the major-update dashboard gate.",
+			"matchManagers": ["gomod"],
+			"matchDepTypes": ["golang", "toolchain"],
+			"rangeStrategy": "bump",
+			"groupName": "go runtime",
+			"dependencyDashboardApproval": false
+		},
+		{
+			"description": "The rest of the Go runtime: the golang base image's version ARG and its digest, plus any go-version a workflow pins directly (CI reads go.mod today, so this only matters if that changes).",
+			"matchManagers": ["dockerfile", "github-actions"],
+			"matchDepNames": ["golang", "go"],
+			"groupName": "go runtime",
+			"dependencyDashboardApproval": false
+		},
+		{
+			"description": "The Node runtime: the node base image and the node-version each workflow installs, the latter via the custom manager above.",
+			"matchManagers": ["dockerfile", "github-actions", "custom.regex"],
+			"matchDepNames": ["node"],
+			"groupName": "node runtime",
+			"dependencyDashboardApproval": false
+		},
+		{
+			"description": "pnpm: package.json's packageManager field and the setup action in CI. Splitting them meant two PRs for one upgrade.",
+			"matchManagers": ["npm", "github-actions"],
+			"matchDepNames": ["pnpm", "pnpm/action-setup"],
+			"groupName": "pnpm",
+			"dependencyDashboardApproval": false
 		}
 	],
 	"vulnerabilityAlerts": {
