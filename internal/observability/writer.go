@@ -17,6 +17,13 @@ import (
 // output.
 var StderrSink io.Writer = os.Stderr
 
+// timberjack compression algorithms. Only these two are reachable from the
+// config's boolean rotate.compress key.
+const (
+	compressionNone = "none"
+	compressionGzip = "gzip"
+)
+
 // openLogWriter resolves an Output value into a writer. stderr returns the
 // fallback writer (defaulting to StderrSink) with a nil closer; file paths
 // return a *timberjack.Logger with rotation knobs applied and a Close() that
@@ -39,12 +46,19 @@ func openLogWriter(
 			output = filepath.Join(cfg.DataDir, output)
 		}
 	}
+	// timberjack deprecated the Compress bool in favour of a Compression
+	// algorithm string; "gzip" is what the old bool resolved to, so the
+	// config key stays a bool and is mapped here.
+	compression := compressionNone
+	if rot.Compress {
+		compression = compressionGzip
+	}
 	tj := &timberjack.Logger{
-		Filename:   output,
-		MaxSize:    rot.MaxSizeMB,
-		MaxBackups: rot.MaxBackups,
-		MaxAge:     rot.MaxAgeDays,
-		Compress:   rot.Compress,
+		Filename:    output,
+		MaxSize:     rot.MaxSizeMB,
+		MaxBackups:  rot.MaxBackups,
+		MaxAge:      rot.MaxAgeDays,
+		Compression: compression,
 	}
 	return tj, tj
 }
