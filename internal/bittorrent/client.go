@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"net"
 	"os"
 	"path/filepath"
@@ -441,21 +442,19 @@ func (e *Engine) movePeerSockets(ctx context.Context, port uint16) (bool, error)
 	// The question is whether the sockets being moved are already on port,
 	// not whether the client thinks it's listening there — a bare *Engine{}
 	// built for teardown/tests has no client at all.
-	listenerPortRaw, ok := portOf(e.listener.Addr())
+	listenerPort, ok := portOf(e.listener.Addr())
 	if !ok {
 		return false, fmt.Errorf(
 			"tcp listener address %v is not a TCP/UDP address", e.listener.Addr(),
 		)
 	}
-	packetConnPortRaw, ok := portOf(e.packetConn.LocalAddr())
+	packetConnPort, ok := portOf(e.packetConn.LocalAddr())
 	if !ok {
 		return false, fmt.Errorf(
 			"packet conn address %v is not a TCP/UDP address",
 			e.packetConn.LocalAddr(),
 		)
 	}
-	listenerPort := uint16(listenerPortRaw)
-	packetConnPort := uint16(packetConnPortRaw)
 	if listenerPort == port && packetConnPort == port {
 		return false, nil
 	}
@@ -495,7 +494,7 @@ func (e *Engine) movePeerSockets(ctx context.Context, port uint16) (bool, error)
 				ctx,
 				observability.LevelCritical,
 				"torrent listen port partially moved: tcp listener and packet conn disagree",
-				slog.Int("tcp_port", currentTCPPort),
+				slog.Int("tcp_port", int(currentTCPPort)),
 				slog.Int("packet_conn_port", int(packetConnPort)),
 			)
 			return false, fmt.Errorf("rebind packet conn: %w", err)
@@ -544,15 +543,25 @@ func (e *Engine) announceToDHT(ctx context.Context) {
 // sentinel a uint16 cast would silently wrap to 65535) is what makes an
 // unexpected address type a reported error instead of an indistinguishable
 // "already on port 65535".
-func portOf(addr net.Addr) (int, bool) {
+func portOf(addr net.Addr) (uint16, bool) {
 	switch a := addr.(type) {
 	case *net.TCPAddr:
-		return a.Port, true
+		return narrowPort(a.Port)
 	case *net.UDPAddr:
-		return a.Port, true
+		return narrowPort(a.Port)
 	default:
 		return 0, false
 	}
+}
+
+// narrowPort converts a net address' int Port to the uint16 the wire format
+// actually is. The guard is what lets gosec prove the conversion, and a port
+// outside the range means the address is not one we can listen on.
+func narrowPort(p int) (uint16, bool) {
+	if p < 0 || p > math.MaxUint16 {
+		return 0, false
+	}
+	return uint16(p), true
 }
 
 // liveStats is one consistent snapshot of a torrent's transfer state,

@@ -33,14 +33,51 @@ var _ = Describe(
 		})
 
 		Describe("ListMovies", func() {
-			It("clamps a limit above the documented maximum", func() {
-				app.movies.EXPECT().
-					FilterList(mock.Anything, mock.MatchedBy(func(p moviesvc.FilterParams) bool {
-						return p.Limit == moviesMaxLimit
-					})).
-					Return([]*ent.Movie{}, nil, uint32(0), nil).
-					Once()
+			It("rejects an explicit page=0 with a JSON 400", func() {
+				resp := app.do(app.req(
+					http.MethodGet,
+					"/api/v1/movies?page=0",
+					app.adminKey,
+					nil,
+				))
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+				var body Error
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				Expect(body.Message).To(Equal("page must be >= 1"))
+			})
 
+			It("rejects an explicit limit=0 with a JSON 400", func() {
+				resp := app.do(app.req(
+					http.MethodGet,
+					"/api/v1/movies?limit=0",
+					app.adminKey,
+					nil,
+				))
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+				var body Error
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				Expect(body.Message).To(Equal("limit must be between 1 and 100"))
+			})
+
+			It("rejects an out-of-range page with a JSON 400", func() {
+				resp := app.do(app.req(
+					http.MethodGet,
+					"/api/v1/movies?page=70000",
+					app.adminKey,
+					nil,
+				))
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+				Expect(resp.Header.Get("Content-Type")).
+					To(HavePrefix("application/json"))
+				var body Error
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				Expect(body.Message).To(ContainSubstring("page"))
+			})
+
+			It("rejects a limit above the documented maximum", func() {
 				resp := app.do(app.req(
 					http.MethodGet,
 					"/api/v1/movies?limit=65535",
@@ -48,7 +85,10 @@ var _ = Describe(
 					nil,
 				))
 				defer resp.Body.Close()
-				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+				var body Error
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				Expect(body.Message).To(Equal("limit must be between 1 and 100"))
 			})
 
 			It("returns paginated list when movies exist", func() {

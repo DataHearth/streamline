@@ -14,6 +14,7 @@ import (
 	"github.com/datahearth/streamline/ent/predicate"
 	"github.com/datahearth/streamline/ent/season"
 	"github.com/datahearth/streamline/ent/tvshow"
+	"github.com/datahearth/streamline/internal/utils/numeric"
 )
 
 // tvShowListColumns mirrors movieListColumns: every TVShow column except the
@@ -110,7 +111,7 @@ func (db *DB) FilterTVShows(
 	if err != nil {
 		return nil, nil, 0, err
 	}
-	return rows, counts, uint32(total), nil
+	return rows, counts, numeric.SaturateU32(total), nil
 }
 
 func orderBy(field string, desc bool) tvshow.OrderOption {

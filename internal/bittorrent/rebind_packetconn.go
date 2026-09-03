@@ -28,8 +28,6 @@ type rebindablePacketConn struct {
 // newPeerSockets (engine.go) passes entry.ListenPort here, and only falls
 // back to 0 — let the OS pick — when that is itself unconfigured; the TCP
 // listener then binds to whatever port this call resolved to.
-//
-//nolint:unparam // port is part of the constructor's public shape, not dead
 func newRebindablePacketConn(ip net.IP, port uint16) (*rebindablePacketConn, error) {
 	conn, err := net.ListenUDP("udp", &net.UDPAddr{IP: ip, Port: int(port)})
 	if err != nil {

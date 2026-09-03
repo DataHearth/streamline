@@ -265,7 +265,7 @@ func (p *pack) build(dataDir, announce string) error {
 			if err := writePattern(
 				filepath.Join(dir, name),
 				episodeSize,
-				byte(season*16+ep),
+				byte(uint(season*16+ep)&0xFF),
 			); err != nil {
 				return err
 			}

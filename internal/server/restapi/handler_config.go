@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/ffmpeg"
@@ -581,7 +582,10 @@ func narrowUint8(key string, v *int, max int) (*uint8, error) {
 	if v == nil {
 		return nil, nil
 	}
-	if *v < 1 || *v > max {
+	// The math.MaxUint8 clause is what lets gosec prove the conversion below
+	// cannot overflow. Every caller passes a max of 255 or less, so it never
+	// changes which values are accepted.
+	if *v < 1 || *v > max || *v > math.MaxUint8 {
 		return nil, fmt.Errorf("%s: must be between 1 and %d", key, max)
 	}
 	n := uint8(*v)

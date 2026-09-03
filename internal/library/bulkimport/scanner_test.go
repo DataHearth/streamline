@@ -99,7 +99,7 @@ var _ = Describe(
 			)
 			store.EXPECT().
 				CountActiveImportScans(mock.Anything).
-				Return(uint32(1), nil).
+				Return(1, nil).
 				Once()
 			_, err := svc.StartScan(ctx, StartScanParams{
 				SourcePath: seriesRoot,
@@ -134,7 +134,7 @@ var _ = Describe(
 		It("rejects when another scan is already active", func() {
 			store.EXPECT().
 				CountActiveImportScans(mock.Anything).
-				Return(uint32(1), nil).
+				Return(1, nil).
 				Once()
 			_, err := svc.StartScan(
 				ctx,
@@ -149,7 +149,7 @@ var _ = Describe(
 		It("creates the scan row when validation passes", func() {
 			store.EXPECT().
 				CountActiveImportScans(mock.Anything).
-				Return(uint32(0), nil).
+				Return(0, nil).
 				Once()
 			store.EXPECT().CreateImportScan(mock.Anything, mock.Anything).
 				Return(&ent.ImportScan{ID: 1, SourcePath: libRoot, Mode: entimportscan.ModeInPlace, Status: entimportscan.StatusRunning}, nil).

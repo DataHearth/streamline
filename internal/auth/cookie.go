@@ -39,6 +39,8 @@ func SetSession(
 	token string,
 	ttl time.Duration,
 ) {
+	//nolint:gosec // Secure deliberately tracks the transport (isSecure) so
+	// plain-http dev works; HttpOnly+SameSite are set
 	http.SetCookie(w, &http.Cookie{
 		Name:     SessionCookie,
 		Value:    token,
@@ -52,6 +54,7 @@ func SetSession(
 
 // ClearSession expires the session cookie.
 func ClearSession(w http.ResponseWriter, r *http.Request) {
+	//nolint:gosec // expiry write; same deliberate Secure handling as SetSession
 	http.SetCookie(w, &http.Cookie{
 		Name:     SessionCookie,
 		Value:    "",

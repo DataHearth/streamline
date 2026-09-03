@@ -58,12 +58,15 @@ paths:
           schema:
             type: integer
             default: 1
-            x-go-type: uint32
+            minimum: 1
+            maximum: 65535
+            x-go-type: uint16
         - name: limit
           in: query
           schema:
             type: integer
             default: 20
+            minimum: 1
             maximum: 100
             x-go-type: uint16
         - $ref: "#/components/parameters/MoviesStatus"
@@ -77,6 +80,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PaginatedMovies"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "500":
           $ref: "#/components/responses/InternalError"
     post:
@@ -442,6 +447,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/SeriesList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "500":
           $ref: "#/components/responses/InternalError"
     post:
@@ -2309,7 +2316,8 @@ paths:
         - in: query
           name: limit
           description: Max items per page (1..100).
-          schema: { type: integer, default: 25, maximum: 100, x-go-type: uint16 }
+          schema:
+            { type: integer, default: 25, minimum: 1, maximum: 100, x-go-type: uint16 }
         - in: query
           name: offset
           description: Zero-based offset for pagination.
@@ -2319,6 +2327,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/UsersList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "403":
           $ref: "#/components/responses/Forbidden"
     post:
@@ -2622,6 +2632,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/ImportScanList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "403":
           $ref: "#/components/responses/Forbidden"
     post:
@@ -2713,6 +2725,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/ImportScanFileList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "403":
           $ref: "#/components/responses/Forbidden"
         "404":
@@ -2751,6 +2765,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/ImportScanShowList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "403":
           $ref: "#/components/responses/Forbidden"
         "404":
@@ -3240,6 +3256,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/RequestsList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "500":
@@ -3468,8 +3486,10 @@ components:
       required: false
       schema:
         type: integer
-        x-go-type: uint32
+        x-go-type: uint16
         default: 1
+        minimum: 1
+        maximum: 65535
     RequestLimit:
       name: limit
       in: query
@@ -3478,6 +3498,7 @@ components:
         type: integer
         x-go-type: uint32
         default: 50
+        minimum: 1
         maximum: 100
     UserID:
       name: uid
@@ -3543,6 +3564,7 @@ components:
         type: integer
         x-go-type: uint16
         minimum: 1
+        maximum: 65535
         default: 1
     ImportLimit:
       name: limit
@@ -3715,7 +3737,9 @@ components:
       schema:
         type: integer
         default: 1
-        x-go-type: uint32
+        minimum: 1
+        maximum: 65535
+        x-go-type: uint16
 
     SeriesLimit:
       name: limit
@@ -3723,6 +3747,7 @@ components:
       schema:
         type: integer
         default: 20
+        minimum: 1
         maximum: 100
         x-go-type: uint16
 
@@ -7115,8 +7140,10 @@ components:
           nullable: true
         last_duration_ms:
           type: integer
-          format: int32
+          format: int64
           minimum: 0
+          maximum: 4294967295
+          x-go-type: uint32
         last_error:
           type: string
           nullable: true

@@ -23,6 +23,30 @@ var _ = Describe("Request handlers", Label("unit", "restapi"), func() {
 	})
 
 	Describe("GET /requests", func() {
+		It("rejects an out-of-range page with a JSON 400", func() {
+			resp := app.do(app.req(
+				http.MethodGet,
+				"/api/v1/requests?page=70000",
+				app.adminKey,
+				nil,
+			))
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			Expect(resp.Header.Get("Content-Type")).
+				To(HavePrefix("application/json"))
+		})
+
+		It("rejects an explicit page=0 with a JSON 400", func() {
+			resp := app.do(app.req(
+				http.MethodGet,
+				"/api/v1/requests?page=0",
+				app.adminKey,
+				nil,
+			))
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+		})
+
 		It("401s without auth", func() {
 			resp, err := http.DefaultClient.Do(
 				app.req(http.MethodGet, "/api/v1/requests", "invalid-token", nil),
@@ -32,13 +56,7 @@ var _ = Describe("Request handlers", Label("unit", "restapi"), func() {
 			Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
 		})
 
-		It("clamps a limit above the documented maximum", func() {
-			app.requests.EXPECT().
-				List(mock.Anything, mock.MatchedBy(func(p db.ListRequestsParams) bool {
-					return p.Limit == requestsMaxLimit
-				})).
-				Return([]*ent.Request{}, 0, nil).Once()
-
+		It("rejects a limit above the documented maximum", func() {
 			resp, err := http.DefaultClient.Do(
 				app.req(
 					http.MethodGet,
@@ -49,7 +67,7 @@ var _ = Describe("Request handlers", Label("unit", "restapi"), func() {
 			)
 			Expect(err).NotTo(HaveOccurred())
 			defer resp.Body.Close()
-			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		})
 
 		It("admins see all (no requester scoping)", func() {

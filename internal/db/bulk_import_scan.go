@@ -7,6 +7,7 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	entimportscan "github.com/datahearth/streamline/ent/importscan"
+	"github.com/datahearth/streamline/internal/utils/numeric"
 )
 
 type CreateImportScanParams struct {
@@ -17,7 +18,7 @@ type CreateImportScanParams struct {
 }
 
 type UpdateScanStatusOpts struct {
-	TotalCount         *uint32
+	TotalCount         *int
 	FailureReason      *string
 	ScannedAt          *time.Time
 	CommittedAt        *time.Time
@@ -78,7 +79,7 @@ func (db *DB) ListImportScans(
 	if err != nil {
 		return nil, 0, fmt.Errorf("list import scans: %w", err)
 	}
-	return rows, uint32(total), nil //nolint:gosec // count is non-negative
+	return rows, numeric.SaturateU32(total), nil
 }
 
 func (db *DB) UpdateImportScanStatus(
@@ -89,7 +90,7 @@ func (db *DB) UpdateImportScanStatus(
 ) error {
 	u := db.client.ImportScan.UpdateOneID(id).SetStatus(status)
 	if opts.TotalCount != nil {
-		u = u.SetTotalCount(*opts.TotalCount)
+		u = u.SetTotalCount(numeric.SaturateU32(*opts.TotalCount))
 	}
 	if opts.FailureReason != nil {
 		u = u.SetFailureReason(*opts.FailureReason)
@@ -112,11 +113,11 @@ func (db *DB) UpdateImportScanStatus(
 func (db *DB) IncrementImportScanProgress(
 	ctx context.Context,
 	id uint32,
-	processedDelta uint32,
+	processedDelta int,
 ) error {
+	//nolint:gosec // delta is a flush-batch length, far below int32 range
 	return db.client.ImportScan.UpdateOneID(id).
 		AddProcessedCount(int32(processedDelta)).
-		//nolint:gosec // delta is bounded by file count
 		Exec(ctx)
 }
 
@@ -127,7 +128,7 @@ func (db *DB) CountActiveImportScans(ctx context.Context) (uint32, error) {
 	if err != nil {
 		return 0, err
 	}
-	return uint32(n), nil //nolint:gosec // count is non-negative
+	return numeric.SaturateU32(n), nil
 }
 
 func (db *DB) DeleteImportScan(ctx context.Context, id uint32) error {
@@ -146,5 +147,5 @@ func (db *DB) AbortInflightImportScans(
 	if err != nil {
 		return 0, err
 	}
-	return uint32(n), nil //nolint:gosec // count is non-negative
+	return numeric.SaturateU32(n), nil
 }

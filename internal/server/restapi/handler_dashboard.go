@@ -36,9 +36,13 @@ func (s *Server) ListActivity(
 		t := *req.Params.Before
 		f.Before = &t
 	}
-	if req.Params.Limit != nil {
-		f.Limit = clampLimit(*req.Params.Limit, activityMaxLimit)
+	limit, ok := limitOr(req.Params.Limit, 0, activityMaxLimit)
+	if !ok {
+		return ListActivity400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(limitRangeMsg(activityMaxLimit)),
+		}, nil
 	}
+	f.Limit = limit
 	if req.Params.Cursor != nil {
 		f.Cursor = *req.Params.Cursor
 	}

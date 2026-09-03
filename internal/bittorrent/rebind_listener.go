@@ -35,8 +35,6 @@ type rebindableListener struct {
 // forwarded directly, and an unconfigured one is resolved to whatever the
 // packet conn already bound, so the pair always answers on the same port.
 // Only this package's own tests pass 0, to grab a free port.
-//
-//nolint:unparam // port is part of the constructor's public shape, not dead
 func newRebindableListener(ip net.IP, port uint16) (*rebindableListener, error) {
 	ln, err := net.ListenTCP("tcp", &net.TCPAddr{IP: ip, Port: int(port)})
 	if err != nil {

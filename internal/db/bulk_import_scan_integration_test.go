@@ -49,7 +49,7 @@ var _ = Describe("ImportScan store", Label("integration", "db"), func() {
 				},
 			)
 			Expect(err).ToNot(HaveOccurred())
-			total := uint32(42)
+			total := 42
 			now := time.Now()
 			Expect(
 				store.UpdateImportScanStatus(

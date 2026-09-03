@@ -43,7 +43,7 @@ func (s *Service) runScanSeries(ctx context.Context, scan *ent.ImportScan) {
 	// Upper bound only: entries that are not directories, or hold no usable
 	// video file, are skipped below. total_count is corrected to the real
 	// queue length once the walk is done.
-	total := uint32(len(entries))
+	total := len(entries)
 	if err := s.store.UpdateImportScanStatus(
 		ctx,
 		scan.ID,
@@ -91,8 +91,7 @@ func (s *Service) runScanSeries(ctx context.Context, scan *ent.ImportScan) {
 				"folder", e.Name(), "error", herr)
 		}
 		c := ClassifyShow(folder, p.Title, p.Year, hits, trackedByTVDB)
-		//nolint:gosec // a folder holds far fewer than 65k episode files
-		queue = append(queue, BuildShowParams(folder, p, c, uint16(len(files))))
+		queue = append(queue, BuildShowParams(folder, p, c, len(files)))
 
 		if err := s.store.IncrementImportScanProgress(ctx, scan.ID, 1); err != nil {
 			slog.WarnContext(ctx, "series scan: failed to increment progress",
@@ -112,7 +111,7 @@ func (s *Service) runScanSeries(ctx context.Context, scan *ent.ImportScan) {
 	}
 
 	scannedAt := time.Now()
-	queued := uint32(len(queue))
+	queued := len(queue)
 	if err := s.store.UpdateImportScanStatus(
 		ctx,
 		scan.ID,

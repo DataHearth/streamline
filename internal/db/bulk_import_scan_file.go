@@ -9,6 +9,7 @@ import (
 	entimportscan "github.com/datahearth/streamline/ent/importscan"
 	entimportscanfile "github.com/datahearth/streamline/ent/importscanfile"
 	"github.com/datahearth/streamline/ent/schema"
+	"github.com/datahearth/streamline/internal/utils/numeric"
 )
 
 // ErrImportScanFileNotFound reports that a scan-scoped UPDATE matched no row:
@@ -137,7 +138,7 @@ func (db *DB) FilterImportScanFiles(
 	if err != nil {
 		return nil, 0, fmt.Errorf("list import scan files: %w", err)
 	}
-	return rows, uint32(total), nil //nolint:gosec // count is non-negative
+	return rows, numeric.SaturateU32(total), nil
 }
 
 func (db *DB) FindImportScanFile(

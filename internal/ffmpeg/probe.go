@@ -55,6 +55,7 @@ func (c *CLI) Probe(ctx context.Context, path string) (*Info, error) {
 	ctx, cancel := context.WithTimeout(ctx, probeTimeout)
 	defer cancel()
 
+	//nolint:gosec // c.ffprobe is resolved from the operator's ffmpeg.path (or $PATH) at boot; the flags are fixed and path is a library file
 	cmd := exec.CommandContext(ctx, c.ffprobe,
 		"-v", "error",
 		"-print_format", "json",

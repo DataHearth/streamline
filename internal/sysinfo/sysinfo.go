@@ -6,6 +6,7 @@ package sysinfo
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -194,8 +195,31 @@ func diskUsage(total, free int64) *DiskUsage {
 	if total <= 0 {
 		return nil
 	}
+	// Clamp the reported free figure into [0, total] before anything is
+	// derived from it, so every number the badge shows agrees with the
+	// others. Root-reserved blocks can push free above the unprivileged
+	// total, and an unsigned Bavail that overflowed int64 arrives negative;
+	// either way, rendering the raw value produces a nonsense "-524288000 B"
+	// or a Free larger than Total, and the used it implies wraps the
+	// percentage. Clamping once here is what keeps used + free == total.
+	free = min(max(free, 0), total)
 	used := total - free
-	pct := uint8(used * 100 / total)
+	// used*100 overflows int64 past ~92PB and the wrap would read as 0% on
+	// a nearly-full volume; only that range takes the divide-first
+	// approximation, so ordinary volumes keep the exact arithmetic. used is
+	// now bounded by total, so reaching that range implies total/100 > 0 and
+	// the division is safe. The upper clamp stays an explicit branch so
+	// gosec's range analysis can see the uint8 narrowing is safe.
+	var pctWide int64
+	if used <= math.MaxInt64/100 {
+		pctWide = used * 100 / total
+	} else {
+		pctWide = used / (total / 100)
+	}
+	if pctWide > 100 {
+		pctWide = 100
+	}
+	pct := uint8(pctWide)
 	kind := "ok"
 	switch {
 	case pct >= 90:

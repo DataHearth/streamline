@@ -10,6 +10,7 @@ import (
 	entimportscanshow "github.com/datahearth/streamline/ent/importscanshow"
 	entmediafile "github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/schema"
+	"github.com/datahearth/streamline/internal/utils/numeric"
 )
 
 // ErrImportScanShowNotFound is the show-level counterpart of
@@ -124,7 +125,7 @@ func (db *DB) ListImportScanShows(
 	if err != nil {
 		return nil, 0, fmt.Errorf("list import scan shows: %w", err)
 	}
-	return rows, uint32(total), nil //nolint:gosec // count is non-negative
+	return rows, numeric.SaturateU32(total), nil
 }
 
 func (db *DB) FindImportScanShow(

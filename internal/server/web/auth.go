@@ -488,6 +488,9 @@ func (h *Handler) oidcStart(w http.ResponseWriter, r *http.Request) {
 		oauth2.S256ChallengeOption(verifier),
 		oauth2.SetAuthURLParam("redirect_uri", oidcRedirectURI(r, name)),
 	)
+	//nolint:gosec // url is AuthCodeURL for a provider h.oidc.Get validated
+	// above, so the name interpolated into redirect_uri can only be a
+	// configured one — and the IdP only honors registered redirect_uris
 	http.Redirect(w, r, url, http.StatusFound)
 }
 
@@ -626,6 +629,8 @@ func (h *Handler) oidcCallback(w http.ResponseWriter, r *http.Request) {
 	clearAll()
 	auth.SetSession(w, r, sessTok, h.sessionTTL())
 	h.refundAttempt(r)
+	//nolint:gosec // sanitizeNext rejects scheme/host/userinfo/backslash and
+	// // or /auth/ prefixes; covered by its specs in auth_test.go
 	http.Redirect(w, r, sanitizeNext(cookies[oidcNextCookie]), http.StatusFound)
 }
 

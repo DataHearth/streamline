@@ -41,7 +41,8 @@ type RuntimeStatus struct {
 
 func (e *Engine) Runtime() RuntimeStatus {
 	return RuntimeStatus{
-		Running:        true,
+		Running: true,
+		//nolint:gosec // LocalPort is a bound TCP/UDP port, 0..65535
 		PortBound:      uint16(e.client.LocalPort()),
 		InterfaceBound: e.bindAddr,
 	}

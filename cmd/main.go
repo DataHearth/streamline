@@ -145,6 +145,7 @@ func configInit(_ context.Context, cmd *cli.Command) error {
 	if out == "" {
 		return config.DumpDefaults(os.Stdout)
 	}
+	//nolint:gosec // out is the operator's own --output flag
 	f, err := os.Create(out)
 	if err != nil {
 		return fmt.Errorf("create %s: %w", out, err)
