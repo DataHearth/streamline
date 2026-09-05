@@ -22,7 +22,7 @@
 </script>
 
 <aside
-	class="hidden shrink-0 self-start lg:sticky lg:top-20 lg:block lg:w-56"
+	class="hidden shrink-0 self-start lg:sticky lg:top-[5.75rem] lg:block lg:w-56"
 	aria-label={i18n.settings_sections()}
 >
 	<div class="mb-3.5 px-2">
