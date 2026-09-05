@@ -75,10 +75,6 @@ func (t *Torznab) Search(
 		"q":      {params.Query},
 		"limit":  {torznabLimit},
 	}
-	if params.IMDBID != "" {
-		q.Set("t", "movie")
-		q.Set("imdbid", params.IMDBID)
-	}
 	if params.TMDBID > 0 {
 		q.Set("t", "movie")
 		q.Set("tmdbid", strconv.FormatUint(uint64(params.TMDBID), 10))

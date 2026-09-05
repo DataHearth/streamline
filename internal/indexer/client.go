@@ -21,7 +21,6 @@ type SearchResult struct {
 
 type SearchParams struct {
 	Query   string
-	IMDBID  string
 	TMDBID  uint32
 	TVDBID  uint32
 	Season  uint16

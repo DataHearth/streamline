@@ -145,8 +145,7 @@ var _ = Describe("Torznab Client", Label("unit", "indexers"), func() {
 				)
 
 				results, err := client.Search(context.Background(), SearchParams{
-					Query:  "Interstellar",
-					IMDBID: "tt0816692",
+					Query: "Interstellar",
 				})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(results).To(HaveLen(1))
@@ -341,7 +340,7 @@ var _ = Describe("Torznab Client", Label("unit", "indexers"), func() {
 					<limits max="100" default="100"/>
 					<searching>
 						<search available="yes" supportedParams="q"/>
-						<movie-search available="yes" supportedParams="q,imdbid,tmdbid"/>
+						<movie-search available="yes" supportedParams="q,tmdbid"/>
 					</searching>
 					<categories>
 						<category id="2000" name="Movies"/>

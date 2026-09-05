@@ -63,7 +63,7 @@ const (
   <limits max="100" default="50"/>
   <searching>
     <search available="yes" supportedParams="q"/>
-    <movie-search available="yes" supportedParams="q,imdbid,tmdbid"/>
+    <movie-search available="yes" supportedParams="q,tmdbid"/>
     <tv-search available="yes" supportedParams="q,season,ep"/>
   </searching>
   <categories><category id="2000" name="Movies"/></categories>
