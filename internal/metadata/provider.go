@@ -36,7 +36,6 @@ type MovieDetails struct {
 	Tagline          string
 	ReleaseDate      string // ISO yyyy-mm-dd, as TMDB returns it
 	OriginalLanguage string // ISO 639-1
-	IMDbID           string
 }
 
 type Provider interface {
@@ -128,7 +127,6 @@ type TVDetails struct {
 	Seasons    []SeasonInfo
 	Episodes   []EpisodeInfo
 	FirstAired string // ISO yyyy-mm-dd, as TVDB returns it
-	IMDbID     string
 }
 
 // TVProvider fetches TV-series metadata. Implemented by *TVDB.

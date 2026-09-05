@@ -128,7 +128,6 @@ export type LookupDetail = {
 	original_language?: string;
 	tmdb_id?: number;
 	tvdb_id?: number;
-	imdb_id?: string;
 	// Series only.
 	network?: string;
 	season_count?: number;

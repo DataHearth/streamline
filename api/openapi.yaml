@@ -8152,8 +8152,6 @@ components:
         tvdb_id:
           type: integer
           x-go-type: uint32
-        imdb_id:
-          type: string
         network:
           type: string
         season_count:

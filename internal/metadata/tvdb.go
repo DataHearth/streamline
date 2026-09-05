@@ -338,10 +338,6 @@ func (t *TVDB) GetSeries(ctx context.Context, tvdbID uint32) (*TVDetails, error)
 			Status           struct {
 				Name string `json:"name"`
 			} `json:"status"`
-			RemoteIDs []struct {
-				ID         string `json:"id"`
-				SourceName string `json:"sourceName"`
-			} `json:"remoteIds"`
 			Genres []struct {
 				Name string `json:"name"`
 			} `json:"genres"`
@@ -396,12 +392,6 @@ func (t *TVDB) GetSeries(ctx context.Context, tvdbID uint32) (*TVDetails, error)
 		FirstAired: ext.Data.FirstAired,
 		// TVDB v4 removed user ratings; `score` is an arbitrary popularity
 		// metric (not a 0-10 rating), so Rating is left unset (0 = unknown).
-	}
-	for _, r := range ext.Data.RemoteIDs {
-		if strings.EqualFold(r.SourceName, "IMDB") {
-			d.IMDbID = r.ID
-			break
-		}
 	}
 	for _, g := range ext.Data.Genres {
 		d.Genres = append(d.Genres, g.Name)

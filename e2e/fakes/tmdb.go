@@ -50,7 +50,6 @@ var (
 		"vote_average":   MovieRating,
 		"vote_count":     27000,
 		"status":         "Released",
-		"imdb_id":        "tt0137523",
 		"genres":         []any{map[string]any{"id": 18, "name": MovieGenre}},
 	}
 

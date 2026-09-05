@@ -302,9 +302,6 @@ func movieDetailsToRequestMedia(d *metadata.MovieDetails) RequestMediaDetails {
 	if d.OriginalLanguage != "" {
 		out.OriginalLanguage = &d.OriginalLanguage
 	}
-	if d.IMDbID != "" {
-		out.ImdbId = &d.IMDbID
-	}
 	if d.TMDBID != 0 {
 		out.TmdbId = &d.TMDBID
 	}
@@ -339,9 +336,6 @@ func seriesDetailsToRequestMedia(d *metadata.TVDetails) RequestMediaDetails {
 	}
 	if d.FirstAired != "" {
 		out.ReleaseDate = &d.FirstAired
-	}
-	if d.IMDbID != "" {
-		out.ImdbId = &d.IMDbID
 	}
 	if d.TVDBID != 0 {
 		out.TvdbId = &d.TVDBID
@@ -380,7 +374,6 @@ func toLookupDetail(d RequestMediaDetails) LookupDetail {
 		Cast:             d.Cast,
 		EpisodeCount:     d.EpisodeCount,
 		Genres:           d.Genres,
-		ImdbId:           d.ImdbId,
 		Network:          d.Network,
 		OriginalLanguage: d.OriginalLanguage,
 		Overview:         d.Overview,

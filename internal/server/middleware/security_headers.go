@@ -133,7 +133,7 @@ const securityCOOP = "same-origin-allow-popups"
 // leave a trap that springs on the first form post or sendBeacon, and only on
 // plain-http installs. same-origin still fixes what the leak was about: a
 // cross-origin request gets no Referer at all, so /register?token=<invite>
-// cannot escape, and the instance hostname stays off the TMDB/TVDB/IMDb links
+// cannot escape, and the instance hostname stays off the TMDB/TVDB links
 // the UI renders.
 func SecurityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

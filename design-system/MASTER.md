@@ -138,7 +138,7 @@ data (mono tables) 1.4
 ```
 
 ### Mono reserved for
-File sizes, bitrates, resolutions (`1080p`), codecs (`x265 10-bit`), percentages, counts in dense tables, hashes, release names, timestamps, durations (`01:47:32`), ETAs, speeds (`12.4 MB/s`), TMDB/IMDb IDs, release tags.
+File sizes, bitrates, resolutions (`1080p`), codecs (`x265 10-bit`), percentages, counts in dense tables, hashes, release names, timestamps, durations (`01:47:32`), ETAs, speeds (`12.4 MB/s`), TMDB/TVDB IDs, release tags.
 
 **Rule:** if the value will sort, compare, or be scanned column-wise → mono. If it's prose → sans.
 

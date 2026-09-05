@@ -235,7 +235,6 @@ func (t *TMDB) GetMovie(ctx context.Context, tmdbID uint32) (*MovieDetails, erro
 		Tagline:          resp.Tagline,
 		ReleaseDate:      resp.ReleaseDate,
 		OriginalLanguage: resp.OriginalLanguage,
-		IMDbID:           resp.IMDbID,
 	}, nil
 }
 
@@ -465,7 +464,6 @@ type tmdbMovieResponse struct {
 	ReleaseDate      string             `json:"release_date"`
 	Overview         string             `json:"overview"`
 	Tagline          string             `json:"tagline"`
-	IMDbID           string             `json:"imdb_id"`
 	PosterPath       string             `json:"poster_path"`
 	Genres           []tmdbGenre        `json:"genres"`
 	Runtime          int                `json:"runtime"`

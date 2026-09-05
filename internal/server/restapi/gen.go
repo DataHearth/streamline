@@ -3107,7 +3107,6 @@ type LookupDetail struct {
 	Cast             *[]CastMember `json:"cast,omitempty"`
 	EpisodeCount     *uint16       `json:"episode_count,omitempty"`
 	Genres           *[]string     `json:"genres,omitempty"`
-	ImdbId           *string       `json:"imdb_id,omitempty"`
 	Network          *string       `json:"network,omitempty"`
 	OriginalLanguage *string       `json:"original_language,omitempty"`
 	Overview         *string       `json:"overview,omitempty"`
@@ -3851,7 +3850,6 @@ type RequestMediaDetails struct {
 	Cast             *[]CastMember `json:"cast,omitempty"`
 	EpisodeCount     *uint16       `json:"episode_count,omitempty"`
 	Genres           *[]string     `json:"genres,omitempty"`
-	ImdbId           *string       `json:"imdb_id,omitempty"`
 	Network          *string       `json:"network,omitempty"`
 	OriginalLanguage *string       `json:"original_language,omitempty"`
 	Overview         *string       `json:"overview,omitempty"`
