@@ -32,34 +32,11 @@
 
 	let grid = $derived(buildMonthGrid(year, month0, weekStart));
 
-	// From lg the grid is height-clamped to the viewport (the page does not
-	// scroll), so how many chips a cell can hold is a measured quantity rather
-	// than a constant. Below that the cells keep their 92px minimum and three.
+	// A cell holds three rows, always — not a quantity measured off the cell's
+	// height. Three releases show as three; a fourth spends the last row on "+N"
+	// so four or more show two and the button. The lg rows carry a matching
+	// floor (`minmax`, below) so the rule never outruns the room.
 	const MAX_VISIBLE = 3;
-	// Measured, not guessed: a chip is 21.75px tall plus the 4px flex gap, and
-	// the header is the cell's 12px of padding plus a 16.5px date row.
-	const CHIP_H = 26;
-	const HEAD_H = 29;
-	let weeksEl = $state<HTMLDivElement | null>(null);
-	let cellH = $state(0);
-
-	$effect(() => {
-		const first = weeksEl?.firstElementChild as HTMLElement | null;
-		if (!first) return;
-		const ro = new ResizeObserver(() => (cellH = first.clientHeight));
-		ro.observe(first);
-		cellH = first.clientHeight;
-		return () => ro.disconnect();
-	});
-
-	// Date row plus the cell's own padding come off the top before chips fit.
-	let chipRoom = $derived(Math.max(0, cellH - HEAD_H));
-	// An overflowing day spends one of these rows on the "+N" button (it is
-	// shorter than a chip, so a whole row is the conservative reservation): a
-	// cell with room for three shows two releases and "+N". Budgeting it as a
-	// height subtracted from the room was off by a slot — integer division turns
-	// any shortfall into a lost chip — so a two-chip cell showed one and "+1".
-	let fits = $derived(Math.min(MAX_VISIBLE, Math.floor(chipRoom / CHIP_H)));
 	const POP_W = 248;
 	const GAP = 6;
 
@@ -181,7 +158,6 @@
 	</div>
 
 	<div
-		bind:this={weeksEl}
 		class="weeks grid grid-cols-7 gap-1.5 lg:min-h-0 lg:flex-1"
 		style:--weeks={grid.length}
 	>
@@ -189,7 +165,7 @@
 			{#each week as cell (cell.date.toISOString())}
 				{@const evs = eventsForDay(events, cell.date)}
 				{@const vis =
-					evs.length <= fits ? evs.length : Math.max(0, fits - 1)}
+					evs.length <= MAX_VISIBLE ? evs.length : MAX_VISIBLE - 1}
 				{@const isToday = isSameDay(cell.date, today)}
 				{@const key = cell.date.toDateString()}
 				<div
@@ -292,10 +268,13 @@
 
 <style>
 	/* Height-clamped from lg: the weeks share whatever the viewport leaves, so a
-	   five- and a six-week month both fit without the page scrolling. */
+	   five- and a six-week month both fit without the page scrolling. The floor
+	   is what three rows cost — a 16.5px date row and 12px of padding, then three
+	   21.75px chips on a 4px gap — so a cell can always show what the three-item
+	   rule asks of it, and only a genuinely short window scrolls. */
 	@media (min-width: 1024px) {
 		.weeks {
-			grid-template-rows: repeat(var(--weeks), minmax(0, 1fr));
+			grid-template-rows: repeat(var(--weeks), minmax(108px, 1fr));
 		}
 	}
 	.chip {
