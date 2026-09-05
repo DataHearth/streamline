@@ -26,6 +26,7 @@
 	import WantedScroller from "../components/dashboard/WantedScroller.svelte";
 	import UpcomingList from "../components/shared/UpcomingList.svelte";
 	import { upcomingEvents } from "../lib/calendar";
+	import { additionLabel } from "../lib/additions";
 	import { m as i18n } from "../lib/paraglide/messages.js";
 
 	// Nothing on the dashboard raises the global loading bar (`meta.silent`):
@@ -200,6 +201,11 @@
 		};
 	}
 
+	// This row lists arrivals, and for a series the arrival is the import, not
+	// the show record: a show followed since March that took an episode this
+	// morning is one of today's additions, and the card names the episodes rather
+	// than repeating the show. A show whose imports predate the field keeps its
+	// own added_at and says nothing.
 	let recent = $derived(
 		[
 			...allMovies
@@ -207,7 +213,13 @@
 				.map((m) => movieItem(m, "available")),
 			...allSeries
 				.filter((s) => (s.have_episodes ?? 0) > 0)
-				.map((s) => seriesItem(s, "available")),
+				.map((s) => {
+					const item = seriesItem(s, "available");
+					const add = s.last_added;
+					return add
+						? { ...item, detail: additionLabel(add), added: addedAt(add.at) }
+						: item;
+				}),
 		]
 			.sort(byNewest)
 			.slice(0, 8),

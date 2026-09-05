@@ -27,6 +27,7 @@
 		movie,
 		size = "md",
 		showMeta = true,
+		detail,
 		href,
 		posterSrc,
 		onMonitor,
@@ -40,6 +41,10 @@
 		movie: PosterMovie;
 		size?: "sm" | "md" | "lg";
 		showMeta?: boolean;
+		// A qualifier under the title: what this card is here for when that is not
+		// the title itself — the episodes an import landed ("S03E04 · Quartz").
+		// Same vocabulary as eventSubject().detail.
+		detail?: string;
 		// Default to the movie detail route + movie poster; series pass their own.
 		href?: string;
 		posterSrc?: string;
@@ -181,6 +186,14 @@
 					title={movie.original_title}
 				>
 					{movie.original_title}
+				</p>
+			{/if}
+			{#if detail}
+				<p
+					class="mt-0.5 truncate font-mono text-[11px] tracking-tight text-accent-text drop-shadow-[0_1px_2px_rgb(0_0_0_/0.9)]"
+					title={detail}
+				>
+					{detail}
 				</p>
 			{/if}
 			<p

@@ -75,6 +75,26 @@ export type TVShow = {
 	seasons?: Season[];
 	cast?: CastMember[];
 	added_at?: string;
+	// The most recent import into this show. `added_at` is when the show record
+	// was created, which says nothing about when files arrived: a show followed
+	// since March can take an episode this morning. Absent until one has.
+	last_added?: SeriesAddition;
+};
+
+// What one import put in the library, summarised for a list response — enough
+// to name the arrival without fetching the show's seasons.
+export type SeriesAddition = {
+	at: string;
+	/** Seasons the import landed in — one entry in the ordinary case. */
+	seasons: number[];
+	/** Episode numbers within `seasons[0]`; omitted for a multi-season pack. */
+	episodes?: number[];
+	/** The episode's own title, set only when the import was a single episode. */
+	episode_title?: string;
+	/** Set when the batch filled its season, so it reads as a pack, not a run. */
+	whole_season?: boolean;
+	/** Episodes imported across every season the batch touched. */
+	count: number;
 };
 
 export type TVShowCounts = {

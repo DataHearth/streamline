@@ -138,6 +138,8 @@
 	"add_import_existing": "Import existing files",
 	"add_search_tmdb_track": "Search TMDB and start tracking",
 	"add_tv_anime_daily": "TV, anime, daily shows",
+	"added_episodes_one": "{count} episode",
+	"added_episodes_other": "{count} episodes",
 	"auth_accept_invite_title": "Accept invite",
 	"auth_applied_immediately": "Applied immediately",
 	"auth_continue_with_provider": "Continue with {provider}",

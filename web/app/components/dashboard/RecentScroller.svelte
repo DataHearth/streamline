@@ -9,6 +9,9 @@
 		status: StatusKind;
 		href?: string;
 		posterSrc?: string;
+		// What the row is reporting, when the title is not it: a series entry in a
+		// row of arrivals is there because episodes landed, and says which.
+		detail?: string;
 	};
 </script>
 
@@ -57,6 +60,21 @@
 		const ro = new ResizeObserver(updateBounds);
 		ro.observe(scrollEl);
 		return () => ro.disconnect();
+	});
+
+	// The row is newest-first, so an arrival is prepended. Scroll anchoring holds
+	// the posters already on screen still, which parks that new poster off the
+	// left edge — the one thing the row exists to show is the one thing you can't
+	// see. When the leading item changes, return the row to its start.
+	let leadKey: string | number | null = null;
+	$effect(() => {
+		const lead = movies[0];
+		const next = lead ? (lead.href ?? lead.id) : null;
+		const isFirstRun = leadKey === null;
+		if (next === leadKey) return;
+		leadKey = next;
+		if (isFirstRun || !scrollEl) return; // already at 0 on mount
+		scrollEl.scrollTo({ left: 0, behavior: "smooth" });
 	});
 
 	function scrollBy(dir: 1 | -1) {
@@ -138,6 +156,7 @@
 							status: movie.status,
 						}}
 						size="md"
+						detail={movie.detail}
 						href={movie.href}
 						posterSrc={movie.posterSrc}
 					/>
