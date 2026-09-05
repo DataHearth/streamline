@@ -4,26 +4,21 @@
 		LayoutDashboard,
 		Film,
 		Tv,
-		Activity,
 		FolderInput,
 		CalendarDays,
 		Inbox,
 		Settings,
 		LogOut,
-		ChevronDown,
 		ListVideo,
 		Magnet,
 	} from "@lucide/svelte";
 	import { isActive as routifyIsActive } from "@roxi/routify";
-	import { slide } from "svelte/transition";
-	import { cubicOut } from "svelte/easing";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { api } from "../../lib/api";
 	import { NAV_POLL_MS, SILENT } from "../../lib/query";
 	import { auth } from "../../lib/auth.svelte";
 	import { cn } from "../../lib/cn";
 	import {
-		TORRENT_PILLS,
 		torrentCountsQuery,
 		activityCurrent,
 		type IsActiveFn,
@@ -99,62 +94,43 @@
 		{ label: i18n.requests_label(), href: "/requests", icon: Inbox },
 	]);
 
-	// Activity covers two routes, so the nav row opens instead of navigating.
+	// Activity's two routes each sit as their own top-level row — no parent to
+	// fold, so the destination is always one click away.
 	const activityLinks = [
 		{ label: i18n.activity_queue_history(), href: "/activity", icon: ListVideo },
 		{ label: i18n.torrent_label(), href: "/activity/torrents", icon: Magnet },
 	];
-	let activityActive = $derived(isActiveFn("/activity"));
-	let activityOpen = $state(false);
-	// Landing on any activity route unfolds the group so the current page is
-	// visible in the nav; leaving collapses it again. A manual toggle in
-	// between sticks — the effect only re-runs when the route crosses the
-	// activity boundary, not when activityOpen itself changes.
-	$effect(() => {
-		activityOpen = activityActive;
-	});
 	const torrentCounts = torrentCountsQuery();
 	// Shares the page keys the other nav surfaces already ride, so the pills
 	// cost no poll of their own.
 	const navCounts = navCountsQuery();
 
-	let torrentTotal = $derived(
-		TORRENT_PILLS.reduce(
-			(sum, p) => sum + (torrentCounts.counts[p.key] ?? 0),
-			0,
-		),
-	);
-	let queueTotal = $derived(
-		navCounts.queueDots.reduce((sum, d) => sum + d.count, 0),
-	);
-
-	// Folded, the group has to answer for both its routes, so each contributes
-	// one pill; unfolded, the rows carry their own per-status ones and repeating
-	// them up here would double-count what is already on screen.
-	let activityPills = $derived<NavDot[]>(
+	// One pill per row, not one per status: four queue dots and three torrent
+	// dots left no room for the label they were annotating. The per-status
+	// breakdown lives on the page itself.
+	let queuePills = $derived<NavDot[]>(
 		[
 			{
 				key: "queue",
 				label: i18n.activity_queue_history(),
-				count: queueTotal,
+				count: navCounts.queueDots.reduce((sum, d) => sum + d.count, 0),
 				dot: "downloading",
-			},
-			{
-				key: "torrents",
-				label: i18n.torrent_label(),
-				count: torrentTotal,
-				dot: "seeding",
 			},
 		].filter((p) => p.count > 0),
 	);
 
 	let torrentPills = $derived<NavDot[]>(
-		TORRENT_PILLS.map((p) => ({
-			key: p.key,
-			label: p.key,
-			count: torrentCounts.counts[p.key] ?? 0,
-			dot: p.dot,
-		})).filter((p) => p.count > 0),
+		[
+			{
+				key: "torrents",
+				label: i18n.status_downloading(),
+				// Only what is moving. Seeding and stalled are on the page's own
+				// filter row; a nav row that counted them said 5 when one torrent was
+				// actually fetching.
+				count: torrentCounts.counts.downloading ?? 0,
+				dot: "downloading",
+			},
+		].filter((p) => p.count > 0),
 	);
 
 	let importPills = $derived<NavDot[]>(
@@ -303,73 +279,33 @@
 			{i18n.nav_operations()}
 		</div>
 		<ul class="flex flex-col gap-px pb-3">
-			<li>
-				<button
-					type="button"
-					onclick={() => (activityOpen = !activityOpen)}
-					aria-expanded={activityOpen}
-					class={cn(
-						itemBase,
-						"w-full",
-						activityActive ? itemActive : itemInactive,
-					)}
-				>
-					<Activity size={18} class="shrink-0" />
-					<span class="flex-1 truncate text-left">{i18n.nav_activity()}</span>
-					{#if !activityOpen}
-						{@render dotPills(activityPills)}
-					{/if}
-					<ChevronDown
-						size={14}
-						class={cn(
-							"shrink-0 transition-transform duration-150",
-							activityOpen && "rotate-180",
-						)}
-						aria-hidden="true"
-					/>
-				</button>
-			</li>
-			{#if activityOpen}
+			{#each activityLinks as link (link.href)}
+				{@const current = activityCurrent(isActiveFn, link.href)}
 				<li>
-				<ul
-					class="flex flex-col gap-px"
-					transition:slide={{ duration: 180, easing: cubicOut }}
-				>
-				{#each activityLinks as link (link.href)}
-					{@const current = activityCurrent(isActiveFn, link.href)}
-					<li class="ml-[11px] border-l border-border pl-2">
-						<a
-							href={link.href}
-							aria-current={current ? "page" : undefined}
-							class={cn(
-								"flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] transition-colors",
-								current
-									? "bg-accent-soft font-medium text-accent-text"
-									: "text-fg-muted hover:bg-surface hover:text-fg",
-							)}
-						>
-							<link.icon size={15} class="shrink-0" />
-							<span class="min-w-0 flex-1 truncate">{link.label}</span>
-							{#if link.href === "/activity"}
-								{#if pendingAdoptions > 0}
-									<span
-										class="shrink-0 rounded-full bg-status-wanted/20 px-1.5 py-px font-mono text-[10.5px] tabular-nums text-status-wanted"
-										title={i18n.nav_adopted_needs_attention()}
-									>
-										{pendingAdoptions.toLocaleString()}
-									</span>
-								{/if}
-								{@render dotPills(navCounts.queueDots)}
+					<a
+						href={link.href}
+						aria-current={current ? "page" : undefined}
+						class={cn(itemBase, current ? itemActive : itemInactive)}
+					>
+						<link.icon size={18} class="shrink-0" />
+						<span class="min-w-0 flex-1 truncate">{link.label}</span>
+						{#if link.href === "/activity"}
+							{#if pendingAdoptions > 0}
+								<span
+									class="shrink-0 rounded-full bg-status-wanted/20 px-1.5 py-px font-mono text-[10.5px] tabular-nums text-status-wanted"
+									title={i18n.nav_adopted_needs_attention()}
+								>
+									{pendingAdoptions.toLocaleString()}
+								</span>
 							{/if}
-							{#if link.href === "/activity/torrents"}
-								{@render dotPills(torrentPills)}
-							{/if}
-						</a>
-					</li>
-				{/each}
-				</ul>
+							{@render dotPills(queuePills)}
+						{/if}
+						{#if link.href === "/activity/torrents"}
+							{@render dotPills(torrentPills)}
+						{/if}
+					</a>
 				</li>
-			{/if}
+			{/each}
 			{#each opsItems as item (item.href)}
 				{@const active = isActiveFn(item.href)}
 				<li>
