@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.26
+# syntax=docker/dockerfile:1.27
 
 # Every base image is pinned by digest, not just by tag: a tag is mutable, so a
 # tag-only pin means the bytes that ship can change without a commit. Refresh one
