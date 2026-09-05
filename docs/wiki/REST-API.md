@@ -286,7 +286,7 @@ Technical details read from your files with `ffprobe` — resolution, codecs, du
 }
 ```
 
-It's absent until the file has been probed, and absent again if the probe failed — check for the key, don't assume it's always there.
+It's absent until the file has been probed, and absent again if the probe failed — check for the key, don't assume it's always there. An upgrade of Streamline that adds a new probed field also clears the stamp on files probed before that field existed, so `media_info` goes absent for them until the backfill job gets to them again: a partial probe result read as a complete one would be wrong everywhere, including in [upgrade decisions](Quality-Profiles-and-Custom-Formats#what-a-file-can-be-scored-on).
 
 Stream data is **aggregate, not per-track**: a count and two language sets. There is no per-stream breakdown, so which track holds which language, its codec, and whether it is default or forced are not exposed — do not reconstruct a track list from these, the mapping isn't in the data. Three audio tracks can be two languages. Languages are ISO 639-2/T, deduped and sorted, canonicalised server-side (a file tagged `fre` reports `fra`); `subtitle_languages` excludes forced tracks. Both arrays are omitted when empty, and `audio_track_count` when zero.
 
