@@ -1,4 +1,4 @@
-h1:2AYuC2Z8Fgb9Vu2lPdVbOiR43eNELhHh29TKdPeb7Mc=
+h1:B8nuBwHtelFeYZV/kb3neF17wBlTvJ0Zr5t3GX+K1/Q=
 20260711233411_init.up.sql h1:SnFgSovf1iYwGuugRm4tu95nCLy0xIAqSp751Vyr/kM=
 20260716225006_torrent_sessions.up.sql h1:dEzVx6y6gahJgd97oI2zsr0z1nGCk7XJA6iIK7gi7fM=
 20260729130131_movie_delete_cascade.up.sql h1:BJFbn+C5KacGtKGdTQizJ6ghjG66OvFTXEzGlSx4m3s=
@@ -24,3 +24,4 @@ h1:2AYuC2Z8Fgb9Vu2lPdVbOiR43eNELhHh29TKdPeb7Mc=
 20260829002352_media_file_parsed_fields.up.sql h1:7E/DFqaCZOBcCIusvVR6taJ5QDBXrTkHojqDbmXi/mE=
 20260902141241_add_media_file_stream_columns.up.sql h1:OsoAasDdaGHfIGgwosxTYcP/4hyjQnGGUwVUloH+lAo=
 20260906140114_add_release_and_air_dates.up.sql h1:pnzJArCEPCMmQf8LWk0WxpxDozpwS9ehyCPqlyQR9D0=
+20260906144051_unstamp_metadata_refresh.up.sql h1:DWSkOWGCS2ZNmrekRLlP+mR5Z2WrZcXu9WbWGplccTc=
