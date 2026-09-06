@@ -249,6 +249,17 @@ key is absent: you opted out, so it isn't a warning.
 
 ---
 
+## Install as an app
+
+Streamline ships a web-app manifest, so the browser can pin it to a home screen and open it full-screen without browser chrome. Nothing runs offline: it is the same web UI, just without the address bar.
+
+- **Android / desktop Chrome and Edge** — open Streamline, then use the browser's install prompt (the icon in the address bar, or the browser menu → *Install app*).
+- **iOS Safari** — Safari never prompts. Tap *Share* → *Add to Home Screen*.
+
+The installed app uses the same session cookie as the tab, so a login in one is a login in both. If you sign in through OIDC, see the [standalone note](Authentication-and-SSO#oidc-from-an-installed-app) on the Authentication page.
+
+---
+
 ## Verifying what you downloaded
 
 Every release artefact is signed. If you care about supply-chain integrity, verify before running.

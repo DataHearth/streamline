@@ -50,3 +50,4 @@ Selective file download is implemented for all four clients but ships behind `do
 | OpenTelemetry traces, metrics, logs | Shipped |
 | Docker images, Helm chart, single binary | Shipped |
 | Library path migration (re-root a moved library) | Shipped |
+| Installable web app (home-screen manifest) | Shipped |

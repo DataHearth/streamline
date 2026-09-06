@@ -243,6 +243,10 @@ Callback failures redirect to `/login?error=<code>`:
 
 **OIDC providers are only loaded at process start.** UI edits persist but don't take effect until you restart. The Settings → SSO page says so; it's the most common OIDC support question.
 
+### OIDC from an installed app
+
+When Streamline is opened from a phone's home screen (see [Install as an app](Installation#install-as-an-app)), an OIDC login navigates to the IdP, which iOS opens in an in-app browser sheet. Recent iOS versions hand the session cookie back to the installed app when the sheet closes; older ones did not, and the login appeared to succeed in the sheet and then land on `/login` again. Local username-and-password login is unaffected. If a standalone OIDC login loops, sign in once from Safari — the installed app shares that session.
+
 ---
 
 ## Reverse proxies
