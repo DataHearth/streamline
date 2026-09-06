@@ -2,6 +2,7 @@
 	import { ChevronLeft, ExternalLink, Film, Star, Tv } from "@lucide/svelte";
 	import MovieDetailCast from "../movies/MovieDetailCast.svelte";
 	import type { LookupDetail } from "../../lib/types";
+	import { formatDate } from "../../lib/dates";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	// The right-hand pane of the add/request modals: everything TMDB/TVDB knows
@@ -44,17 +45,6 @@
 		// peek is the header — reprinting it would shift the layout mid-drag).
 		headless?: boolean;
 	} = $props();
-
-	function formatDate(iso?: string): string {
-		if (!iso) return "";
-		const d = new Date(iso.length === 10 ? `${iso}T00:00:00` : iso);
-		if (Number.isNaN(d.getTime())) return iso;
-		return d.toLocaleDateString(undefined, {
-			day: "numeric",
-			month: "short",
-			year: "numeric",
-		});
-	}
 
 	function formatRuntime(min?: number): string {
 		if (!min || min <= 0) return "";

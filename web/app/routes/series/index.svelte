@@ -10,8 +10,10 @@
 	import type {
 		SeriesTab,
 		SeriesTypeFilter,
+		SeriesMonFilter,
 		SeriesSort,
 		SeriesTabCounts,
+		SeriesMonCounts,
 	} from "../../components/series/SeriesToolbar.svelte";
 	import SeriesGrid from "../../components/series/SeriesGrid.svelte";
 	import SeriesList from "../../components/series/SeriesList.svelte";
@@ -28,6 +30,8 @@
 		"ended",
 		"upcoming",
 		"missing",
+		"downloading",
+		"importing",
 	]);
 	const VALID_TYPES = new Set<SeriesTypeFilter>([
 		"all",
@@ -35,6 +39,7 @@
 		"anime",
 		"daily",
 	]);
+	const VALID_MON = new Set<SeriesMonFilter>(["all", "monitored", "unmonitored"]);
 	const VALID_SORTS = new Set<SeriesSort>([
 		"recent",
 		"title",
@@ -54,6 +59,7 @@
 				: new URLSearchParams(window.location.search);
 		const rawTab = (p.get("status") ?? "all") as SeriesTab;
 		const rawType = (p.get("type") ?? "all") as SeriesTypeFilter;
+		const rawMon = (p.get("monitored") ?? "all") as SeriesMonFilter;
 		const rawSort = (p.get("sort") ??
 			loadPref(SORT_PREF) ??
 			"title") as SeriesSort;
@@ -61,6 +67,7 @@
 		return {
 			tab: VALID_TABS.has(rawTab) ? rawTab : "all",
 			typeFilter: VALID_TYPES.has(rawType) ? rawType : "all",
+			mon: VALID_MON.has(rawMon) ? rawMon : "all",
 			query: p.get("q") ?? "",
 			sort: VALID_SORTS.has(rawSort) ? rawSort : "title",
 			view: (rawView === "list" ? "list" : "grid") as View,
@@ -70,6 +77,7 @@
 	const initial = readParams();
 	let tab = $state<SeriesTab>(initial.tab);
 	let typeFilter = $state<SeriesTypeFilter>(initial.typeFilter);
+	let mon = $state<SeriesMonFilter>(initial.mon);
 	let query = $state(initial.query);
 	let sort = $state<SeriesSort>(initial.sort);
 	let view = $state<View>(initial.view);
@@ -109,6 +117,7 @@
 		const p = new URLSearchParams();
 		if (tab !== "all") p.set("status", tab);
 		if (typeFilter !== "all") p.set("type", typeFilter);
+		if (mon !== "all") p.set("monitored", mon);
 		if (query) p.set("q", query);
 		if (sort !== "title") p.set("sort", sort);
 		if (view !== "grid") p.set("view", view);
@@ -138,10 +147,17 @@
 		Paginated<TVShow>,
 		Error,
 		{ pages: Paginated<TVShow>[]; pageParams: number[] },
-		readonly ["series", SeriesTab, SeriesTypeFilter, string, SeriesSort],
+		readonly [
+			"series",
+			SeriesTab,
+			SeriesTypeFilter,
+			SeriesMonFilter,
+			string,
+			SeriesSort,
+		],
 		number
 	>(() => ({
-		queryKey: ["series", tab, typeFilter, debouncedQuery, sort] as const,
+		queryKey: ["series", tab, typeFilter, mon, debouncedQuery, sort] as const,
 		queryFn: ({ pageParam }) => {
 			const p = new URLSearchParams({
 				page: String(pageParam),
@@ -150,6 +166,7 @@
 			});
 			if (tab !== "all") p.set("status", tab);
 			if (typeFilter !== "all") p.set("type", typeFilter);
+			if (mon !== "all") p.set("monitored", mon);
 			if (debouncedQuery.trim()) p.set("query", debouncedQuery.trim());
 			return api<Paginated<TVShow>>(`/series?${p.toString()}`);
 		},
@@ -176,6 +193,14 @@
 		ended: countsQuery.data?.ended ?? 0,
 		upcoming: countsQuery.data?.upcoming ?? 0,
 		missing: countsQuery.data?.missing ?? 0,
+		downloading: countsQuery.data?.downloading ?? 0,
+		importing: countsQuery.data?.importing ?? 0,
+	});
+
+	let monCounts = $derived<SeriesMonCounts>({
+		all: countsQuery.data?.total ?? 0,
+		monitored: countsQuery.data?.monitored ?? 0,
+		unmonitored: countsQuery.data?.unmonitored ?? 0,
 	});
 
 	// Everything loaded so far. Bulk selection and the "N of M" line read this,
@@ -192,16 +217,14 @@
 		visibleSeries.reduce((sum, s) => sum + (s.total_episodes ?? 0), 0),
 	);
 
-	let libraryEmpty = $derived(
-		tab === "all" &&
-			typeFilter === "all" &&
-			!debouncedQuery &&
-			counts.all === 0,
+	let filtering = $derived(
+		tab !== "all" || typeFilter !== "all" || mon !== "all" || !!debouncedQuery,
 	);
+	let libraryEmpty = $derived(!filtering && counts.all === 0);
 
-	// A page is 50 cards, which mounts without blocking, so appending the next
-	// one as the sentinel comes into view needs no incremental renderer and
-	// keeps no whole library in memory to slice.
+	// Appending the next page as the sentinel comes into view replaces the old
+	// IncrementalList: a page is 50 cards, which mounts without blocking, and
+	// there is no longer a whole library sitting in memory to slice.
 	let pageSentinel = $state<HTMLDivElement | null>(null);
 	$effect(() => {
 		const el = pageSentinel;
@@ -236,13 +259,18 @@
 	function clearFilters() {
 		tab = "all";
 		typeFilter = "all";
+		mon = "all";
 		query = "";
 	}
 
 	// Below md the topbar carries this under the title and the page's own count
 	// line stands down; at md and up nothing changes.
 	let metaLine = $derived.by(() => {
-		const parts = [i18n.series_shows_count({ count: counts.all })];
+		const parts = [
+			filtering
+				? i18n.series_count_of({ visible: matchedTotal, total: counts.all })
+				: i18n.series_shows_count({ count: counts.all }),
+		];
 		if (libraryEpisodes > 0)
 			parts.push(
 				i18n.series_episodes_of({
@@ -297,6 +325,7 @@
 	$effect(() => {
 		tab;
 		typeFilter;
+		mon;
 		query;
 		untrack(clearSelection);
 	});
@@ -324,15 +353,18 @@
 		<SeriesToolbar
 			{tab}
 			{typeFilter}
+			{mon}
 			{query}
 			{sort}
 			view={shownView}
 			{counts}
+			{monCounts}
 			{selectMode}
 			selectedCount={selected.size}
 			visibleCount={visibleSeries.length}
 			onTabChange={(t) => (tab = t)}
 			onTypeChange={(t) => (typeFilter = t)}
+			onMonChange={(m) => (mon = m)}
 			onQueryChange={(q) => (query = q)}
 			onSortChange={setSort}
 			onViewChange={(v) => (view = v)}

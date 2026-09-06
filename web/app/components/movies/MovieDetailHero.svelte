@@ -3,6 +3,7 @@
 	import { Film, ArrowLeft } from "@lucide/svelte";
 	import { posterUrl } from "../../lib/posters";
 	import { movieStatus } from "../../lib/status";
+	import { formatDate } from "../../lib/dates";
 	import Poster from "./Poster.svelte";
 	import StatusPill from "../shared/StatusPill.svelte";
 	import type { Movie, MediaFile } from "../../lib/types";
@@ -26,11 +27,15 @@
 	let primary = $derived(pickPrimary(movie.media_files));
 	let backdropSrc = $derived(posterUrl(movie));
 
-	// Single dotted meta line: year · runtime · rating · genres, then any
+	// Single dotted meta line: release · runtime · rating · genres, then any
 	// file-derived facts. Mirrors the prototype's left-aligned header.
 	let metaParts = $derived.by(() => {
 		const p: string[] = [];
-		if (movie.year) p.push(String(movie.year));
+		// The full date when we have one — it carries the year, so the two never
+		// both appear. A title announced without a date still has its year.
+		const released = formatDate(movie.release_date);
+		if (released) p.push(released);
+		else if (movie.year) p.push(String(movie.year));
 		if (movie.runtime) p.push(`${movie.runtime}m`);
 		if (movie.rating) p.push(`★ ${movie.rating.toFixed(1)}`);
 		if (movie.genres?.length) p.push(movie.genres.join(" / "));

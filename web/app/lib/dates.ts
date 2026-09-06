@@ -13,6 +13,14 @@ const dateShort = new Intl.DateTimeFormat(locale, {
 	month: "short",
 	day: "numeric",
 });
+// Day, month, year — in that order in every locale. `dateStyle` would hand
+// en-US "May 17, 2025"; the parts are reassembled so one reading order holds
+// across the app rather than changing under the language.
+const dateFull = new Intl.DateTimeFormat(locale, {
+	day: "numeric",
+	month: "short",
+	year: "numeric",
+});
 const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
 
 export function formatDateTime(iso: string | null | undefined): string {
@@ -23,6 +31,27 @@ export function formatDateTime(iso: string | null | undefined): string {
 export function formatDateShort(iso: string | null | undefined): string {
 	if (!iso) return "";
 	return dateShort.format(new Date(iso));
+}
+
+// A date-only string is a wall-clock fact, not an instant: `Date.parse` reads
+// "2022-08-08" as UTC midnight, which then formats as the day before for every
+// viewer west of UTC. Ten characters means a day, so it is parsed as local
+// midnight; anything longer carries its own time and zone.
+function parseDay(iso: string): number {
+	return Date.parse(iso.length === 10 ? `${iso}T00:00:00` : iso);
+}
+
+// A day, with its year, and no time of day — for dates that are facts about the
+// title rather than about our copy of it (a release date, not an import).
+export function formatDate(iso: string | null | undefined): string {
+	if (!iso) return "";
+	const t = parseDay(iso);
+	if (Number.isNaN(t)) return "";
+	const parts = dateFull.formatToParts(new Date(t));
+	const part = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+	// Reassembled rather than formatted: this drops the locale's own separators
+	// (en-US's comma) along with its ordering.
+	return `${part("day")} ${part("month")} ${part("year")}`.trim();
 }
 
 const MIN = 60_000;

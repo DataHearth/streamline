@@ -41,7 +41,12 @@
 		onError: (e) => toast.err(errorText(e, i18n.common_update_failed())),
 	}));
 
-	function availability(s: TVShow): "wanted" | "available" | "missing" {
+	function availability(
+		s: TVShow,
+	): "downloading" | "importing" | "wanted" | "available" | "missing" {
+		// Same precedence the grid cards use: in flight beats the gap it fills.
+		if ((s.downloading_episodes ?? 0) > 0) return "downloading";
+		if ((s.importing_episodes ?? 0) > 0) return "importing";
 		if ((s.wanted_episodes ?? 0) > 0) return "wanted";
 		// Unmonitored shows report zero wanted episodes, so "nothing wanted" alone
 		// would badge an empty library entry as available.
@@ -181,6 +186,16 @@
 						{#if (show.wanted_episodes ?? 0) > 0}
 							<span class="ml-1.5 text-status-wanted"
 								>· {show.wanted_episodes} wanted</span
+							>
+						{/if}
+						{#if (show.downloading_episodes ?? 0) > 0}
+							<span class="ml-1.5 lowercase text-status-downloading"
+								>· {show.downloading_episodes} {i18n.status_downloading()}</span
+							>
+						{/if}
+						{#if (show.importing_episodes ?? 0) > 0}
+							<span class="ml-1.5 lowercase text-status-importing"
+								>· {show.importing_episodes} {i18n.status_importing()}</span
 							>
 						{/if}
 					</td>

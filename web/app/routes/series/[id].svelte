@@ -20,6 +20,7 @@
 	import { cn } from "../../lib/cn";
 	import { missingEpisodes } from "../../lib/status";
 	import { tvPosterUrl } from "../../lib/posters";
+	import { formatDate } from "../../lib/dates";
 	import Poster from "../../components/movies/Poster.svelte";
 	import StatusPill from "../../components/shared/StatusPill.svelte";
 	import type { StatusKind } from "../../components/shared/StatusPill.svelte";
@@ -152,6 +153,9 @@
 		}
 		return show?.total_episodes ?? 0;
 	});
+	// Named as First aired where it is labelled, and printed bare in the hero's
+	// dotted meta line — the same date either way.
+	let airedText = $derived(formatDate(show?.first_aired));
 	let unairedTotal = $derived(
 		seasons.reduce((n, s) => n + (s.unaired ?? 0), 0),
 	);
@@ -162,7 +166,8 @@
 	let metaParts = $derived.by(() => {
 		if (!show) return [] as string[];
 		const p: string[] = [];
-		p.push(String(show.year));
+		// The date carries its own year, so the two never both appear.
+		p.push(airedText || String(show.year));
 		if (seasons.length > 0)
 			p.push(`${seasons.length} season${seasons.length === 1 ? "" : "s"}`);
 		if (show.total_episodes) p.push(`${show.total_episodes} episodes`);
@@ -765,7 +770,10 @@
 								<dt class="text-fg-subtle">{i18n.builtin_network()}</dt>
 								<dd class="text-right font-mono text-fg">{show.network}</dd>
 							{/if}
-							{#if show.year}
+							{#if airedText}
+								<dt class="text-fg-subtle">{i18n.detail_first_aired()}</dt>
+								<dd class="text-right font-mono text-fg">{airedText}</dd>
+							{:else if show.year}
 								<dt class="text-fg-subtle">{i18n.common_year()}</dt>
 								<dd class="text-right font-mono text-fg">{show.year}</dd>
 							{/if}

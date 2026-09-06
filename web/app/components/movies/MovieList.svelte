@@ -212,7 +212,7 @@
 						<StatusPill
 							status={movieStatus(movie)}
 							size="sm"
-							live={movie.status === "downloading"}
+							live={movie.status === "downloading" || movie.status === "importing"}
 						/>
 					</td>
 					<td

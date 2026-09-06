@@ -47,6 +47,7 @@
 			title: m.title,
 			original_title: m.original_title,
 			year: m.year,
+			releaseDate: m.release_date,
 			status: movieStatus(m),
 			monitored: m.monitored,
 			rating: m.rating,

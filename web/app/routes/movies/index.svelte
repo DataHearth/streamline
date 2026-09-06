@@ -22,6 +22,7 @@
 	type SortKey = "title" | "year";
 	type SortOrder = "asc" | "desc";
 
+	const VALID_MON = new Set(["all", "monitored", "unmonitored"]);
 	const VALID_TABS = new Set([
 		"all",
 		"available",
@@ -42,11 +43,13 @@
 				: new URLSearchParams(window.location.search);
 		const stored = loadPref(SORT_PREF)?.split("-") ?? [];
 		const rawTab = p.get("status") ?? "all";
+		const rawMon = p.get("monitored") ?? "all";
 		const rawSort = p.get("sort") ?? stored[0] ?? "title";
 		const rawOrder = p.get("order") ?? stored[1] ?? "asc";
 		const rawView = p.get("view") ?? "grid";
 		return {
 			tab: VALID_TABS.has(rawTab) ? rawTab : "all",
+			mon: VALID_MON.has(rawMon) ? rawMon : "all",
 			query: p.get("q") ?? "",
 			sort: (rawSort === "year" ? "year" : "title") as SortKey,
 			order: (rawOrder === "desc" ? "desc" : "asc") as SortOrder,
@@ -56,6 +59,7 @@
 
 	const initial = readParams();
 	let tab = $state(initial.tab);
+	let mon = $state(initial.mon);
 	let query = $state(initial.query);
 	let sort = $state<SortKey>(initial.sort);
 	let order = $state<SortOrder>(initial.order);
@@ -97,6 +101,7 @@
 		// never fire again.
 		const p = new URLSearchParams();
 		if (tab !== "all") p.set("status", tab);
+		if (mon !== "all") p.set("monitored", mon);
 		if (query) p.set("q", query);
 		if (sort !== "title") p.set("sort", sort);
 		if (order !== "asc") p.set("order", order);
@@ -127,10 +132,10 @@
 		Paginated<Movie>,
 		Error,
 		{ pages: Paginated<Movie>[]; pageParams: number[] },
-		readonly ["movies", string, string, SortKey, SortOrder],
+		readonly ["movies", string, string, string, SortKey, SortOrder],
 		number
 	>(() => ({
-		queryKey: ["movies", tab, debouncedQuery, sort, order] as const,
+		queryKey: ["movies", tab, mon, debouncedQuery, sort, order] as const,
 		queryFn: ({ pageParam }) => {
 			const p = new URLSearchParams({
 				page: String(pageParam),
@@ -139,6 +144,7 @@
 				order,
 			});
 			if (tab !== "all") p.set("status", tab);
+			if (mon !== "all") p.set("monitored", mon);
 			if (debouncedQuery.trim()) p.set("query", debouncedQuery.trim());
 			return api<Paginated<Movie>>(`/movies?${p.toString()}`);
 		},
@@ -167,6 +173,8 @@
 			importing: 0,
 			available: 0,
 			failed: 0,
+			monitored: 0,
+			unmonitored: 0,
 		},
 	);
 
@@ -177,13 +185,12 @@
 	);
 	let matchedTotal = $derived(moviesQuery.data?.pages?.[0]?.total ?? 0);
 
-	let libraryEmpty = $derived(
-		tab === "all" && !debouncedQuery && counts.total === 0,
-	);
+	let filtering = $derived(tab !== "all" || mon !== "all" || !!debouncedQuery);
+	let libraryEmpty = $derived(!filtering && counts.total === 0);
 
-	// A page is 50 cards, which mounts without blocking, so appending the next
-	// one as the sentinel comes into view needs no incremental renderer and
-	// keeps no whole library in memory to slice.
+	// Appending the next page as the sentinel comes into view replaces the old
+	// IncrementalList: a page is 50 cards, which mounts without blocking, and
+	// there is no longer a whole library sitting in memory to slice.
 	let pageSentinel = $state<HTMLDivElement | null>(null);
 	$effect(() => {
 		const el = pageSentinel;
@@ -217,13 +224,18 @@
 
 	function clearFilters() {
 		tab = "all";
+		mon = "all";
 		query = "";
 	}
 
 	// Below md the page gives up its own count line and the topbar carries it
 	// under the title instead; at md and up the line below the toolbar stays.
 	let metaLine = $derived.by(() => {
-		const parts = [`${counts.total} titles`];
+		const parts = [
+			filtering
+				? `${matchedTotal} of ${counts.total} titles`
+				: `${counts.total} titles`,
+		];
 		if (lastScan) parts.push(`scan ${formatRelative(lastScan)}`);
 		return parts.join(" · ");
 	});
@@ -274,6 +286,7 @@
 	// bar would keep acting on rows the user can no longer see.
 	$effect(() => {
 		tab;
+		mon;
 		debouncedQuery;
 		sort;
 		order;
@@ -302,6 +315,7 @@
 	{:else}
 		<MoviesToolbar
 			{tab}
+			{mon}
 			{query}
 			{sort}
 			{order}
@@ -311,6 +325,7 @@
 			selectedCount={selected.size}
 			visibleCount={visibleMovies.length}
 			onTabChange={(t) => (tab = t)}
+			onMonChange={(m) => (mon = m)}
 			onQueryChange={(q) => (query = q)}
 			onSortChange={setSort}
 			onViewChange={(v) => (view = v)}

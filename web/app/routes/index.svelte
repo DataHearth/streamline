@@ -129,6 +129,7 @@
 		return {
 			title: m.title,
 			year: m.year,
+			releaseDate: m.release_date,
 			overview: m.overview,
 			runtime: m.runtime,
 			rating: m.rating,
@@ -146,6 +147,7 @@
 		return {
 			title: s.title,
 			year: s.year,
+			releaseDate: s.first_aired,
 			overview: s.overview,
 			runtime: s.runtime,
 			rating: s.rating,

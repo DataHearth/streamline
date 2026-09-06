@@ -5,6 +5,7 @@
 	import { api, errorText } from "../../lib/api";
 	import { toast } from "../../lib/toast";
 	import { formatBytes } from "../../lib/format";
+	import { formatDate } from "../../lib/dates";
 	import { cn } from "../../lib/cn";
 	import {
 		audioSummary,
@@ -33,6 +34,9 @@
 	} = $props();
 
 	let primary = $derived(movie.media_files?.[0]);
+	// Named as Released when there is a day to name, Year when the server has
+	// only the year — the same fallback the hero makes, so the two never disagree.
+	let releasedText = $derived(formatDate(movie.release_date));
 	// The panel groups by provenance rather than marking values one by one: what
 	// ffprobe read, what the release name claimed, and what is on disk. An
 	// unprobed file is the same panel without its first group — no empty rows and
@@ -339,7 +343,10 @@
 			<dd class="text-right font-mono text-fg">
 				{movie.monitored ? i18n.common_yes() : i18n.common_no()}
 			</dd>
-			{#if movie.year}
+			{#if releasedText}
+				<dt class="text-fg-subtle">{i18n.detail_released()}</dt>
+				<dd class="text-right font-mono text-fg">{releasedText}</dd>
+			{:else if movie.year}
 				<dt class="text-fg-subtle">{i18n.common_year()}</dt>
 				<dd class="text-right font-mono text-fg">{movie.year}</dd>
 			{/if}

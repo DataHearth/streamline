@@ -6,6 +6,9 @@
 	export type HeroItem = {
 		title: string;
 		year: number;
+		// Movies carry a release day; series have only a year, so the hero prints
+		// whichever it was given rather than requiring both.
+		releaseDate?: string | null;
 		overview?: string;
 		runtime?: number;
 		rating?: number | null;
@@ -22,6 +25,7 @@
 	import { ArrowRight, Film } from "@lucide/svelte";
 	import Poster from "../movies/Poster.svelte";
 	import StatusPill from "../shared/StatusPill.svelte";
+	import { formatDate } from "../../lib/dates";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	let { item, loading = false }: { item?: HeroItem; loading?: boolean } =
@@ -30,6 +34,8 @@
 	let ratingText = $derived(
 		item?.rating && item.rating > 0 ? item.rating.toFixed(1) : "",
 	);
+	// The date carries its own year, so the two never both appear.
+	let releasedText = $derived(formatDate(item?.releaseDate));
 </script>
 
 {#if item}
@@ -83,7 +89,7 @@
 				<div
 					class="flex flex-wrap items-center gap-2 font-mono text-xs text-fg-muted"
 				>
-					<span>{item.year}</span>
+					<span>{releasedText || item.year}</span>
 					{#if item.runtime}
 						<span class="text-fg-faint">·</span>
 						<span>{item.runtime}m</span>

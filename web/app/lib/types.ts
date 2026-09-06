@@ -70,6 +70,10 @@ export type TVShow = {
 	type: SeriesType;
 	monitored: boolean;
 	tvdb_id: number;
+	// First air date, ISO yyyy-mm-dd — the series counterpart to
+	// Movie.release_date. Absent for an announced show with no date set, which
+	// is why `year` stays and stays required.
+	first_aired?: string | null;
 	network?: string;
 	creator?: string;
 	runtime?: number;
@@ -126,8 +130,18 @@ export type TVShowCounts = {
 	// Shows with at least one aired, monitored episode and no file — a
 	// per-show count, not an episode count. Labels the library's "missing" tab.
 	missing: number;
+	// Shows with at least one episode in flight — a per-show count, like
+	// `missing`, and the one the library's downloading tab reads.
+	downloading: number;
+	// Shows with at least one episode importing — the phase after the grab, and
+	// the one a card reads as Importing.
+	importing: number;
 	wanted_episodes: number;
 	downloading_episodes: number;
+	// Monitoring, counted over the whole library — same facet the movies library
+	// carries, and the count a show's own `monitored` flag rolls up to.
+	monitored: number;
+	unmonitored: number;
 };
 
 export type SeriesLookupResult = {
@@ -190,6 +204,11 @@ export type Movie = {
 	title: string;
 	original_title: string;
 	year: number;
+	// Primary (theatrical) release, ISO yyyy-mm-dd — the same field
+	// LookupDetail carries, kept on the library record so the detail page can
+	// name a day rather than a year. Absent for an announced title with no date
+	// set yet, which is why `year` stays and stays required.
+	release_date?: string | null;
 	status: MovieStatus;
 	tmdb_id: number;
 	overview?: string;
@@ -385,6 +404,10 @@ export type MovieCounts = {
 	importing: number;
 	available: number;
 	failed: number;
+	// Monitoring is a facet of its own, counted over the whole library rather
+	// than within the current status — the toolbar shows both tallies at once.
+	monitored: number;
+	unmonitored: number;
 	// Cumulative library size per day over the last 30 days, oldest first;
 	// the final element equals `total`. All zeros when the library is empty.
 	trend: number[];

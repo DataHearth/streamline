@@ -84,6 +84,7 @@
 			title: s.title,
 			original_title: s.original_title,
 			year: s.year,
+			releaseDate: s.first_aired,
 			status,
 			monitored: s.monitored,
 			rating: s.rating ?? undefined,

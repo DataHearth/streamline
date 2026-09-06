@@ -9,12 +9,16 @@
 	import SelectBox from "./SelectBox.svelte";
 	import type { StatusKind } from "./StatusPill.svelte";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { formatDate } from "../../lib/dates";
 
 	type PosterMovie = {
 		id: number;
 		title: string;
 		original_title?: string;
 		year: number;
+		// A release day when the caller has one (movies); series pass only a year,
+		// and the caption prints whichever it was given.
+		releaseDate?: string | null;
 		status: StatusKind;
 		monitored?: boolean;
 		progress?: number;
@@ -64,6 +68,9 @@
 
 	let cardHref = $derived(href ?? `/movies/${movie.id}`);
 	let cardPoster = $derived(posterSrc ?? posterUrl(movie));
+	// The same medium date the heroes print — the caption shares its line with the
+	// rating, which is why it truncates rather than wrapping.
+	let releasedText = $derived(formatDate(movie.releaseDate));
 
 	// While a selection is in progress the whole card becomes a selection
 	// target — clicking through to a detail page mid-triage loses the set.
@@ -197,9 +204,9 @@
 				</p>
 			{/if}
 			<p
-				class="mt-0.5 font-mono text-[11px] tracking-tight text-white/80 drop-shadow-[0_1px_2px_rgb(0_0_0_/0.9)]"
+				class="mt-0.5 truncate font-mono text-[11px] tracking-tight text-white/80 drop-shadow-[0_1px_2px_rgb(0_0_0_/0.9)]"
 			>
-				{movie.year}{#if movie.rating && movie.rating > 0}
+				{releasedText || movie.year}{#if movie.rating && movie.rating > 0}
 					<span class="text-white/70"> · ★ {movie.rating.toFixed(1)}</span>
 				{/if}
 			</p>
