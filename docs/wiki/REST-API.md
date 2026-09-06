@@ -78,10 +78,10 @@ For anything non-interactive, use an API key instead.
 { "items": [ ... ], "total": 137, "page": 1, "limit": 20 }
 ```
 
-`limit` is **capped at 100** on every collection endpoint (200 for activity). A larger value is clamped silently — you get 100 items and a `200`, with nothing in the response saying the limit was reduced. Paginate against `total`, not against "fewer items came back than I asked for", or you will read the first page and stop.
+`limit` must be **between 1 and 100** on every collection endpoint (200 for activity). A value outside that range is a `400` with a message naming the bound. Paginate against `total`, not against "fewer items came back than I asked for", or you will read the first page and stop.
 
 ```bash
-# wrong: reads 100 of 621 and thinks it is done
+# wrong: 400 "limit must be between 1 and 100"
 curl ".../movies?page=1&limit=500"
 
 # right: walk pages until you have `total`
