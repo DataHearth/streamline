@@ -433,6 +433,37 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 			Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
 		})
 
+		It("maps a pack matching no wanted file to a grab_rejected 422", func() {
+			app.tvshows.EXPECT().Get(mock.Anything, uint32(3)).
+				Return(&ent.TVShow{ID: 3}, nil).Once()
+			grabErr := fmt.Errorf("grab pack: %w: BB S01", download.ErrNoWantedFiles)
+			app.tvshows.EXPECT().
+				GrabSeasonRelease(mock.Anything, uint32(3), uint16(1),
+					mock.AnythingOfType("indexer.SearchResult"), false).
+				Return(grabErr).Once()
+
+			req := app.req(
+				http.MethodPost,
+				"/api/v1/series/3/seasons/1/grab",
+				app.adminKey,
+				strings.NewReader(
+					`{"title":"BB S01","download_url":"magnet:x","size":1,"seeders":1}`,
+				),
+			)
+			req.Header.Set("Content-Type", "application/json")
+			resp := app.do(req)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+
+			var body struct {
+				Message string `json:"message"`
+				Code    string `json:"code"`
+			}
+			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+			Expect(body.Message).To(Equal(grabErr.Error()))
+			Expect(body.Code).To(Equal("grab_rejected"))
+		})
+
 		It("422s when title/download_url are missing", func() {
 			app.tvshows.EXPECT().Get(mock.Anything, uint32(3)).
 				Return(&ent.TVShow{ID: 3}, nil).Once()
@@ -700,6 +731,40 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 			resp := app.do(req)
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
+		})
+
+		It("maps a pack matching no wanted file to a grab_rejected 422", func() {
+			app.tvshows.EXPECT().Get(mock.Anything, uint32(3)).
+				Return(&ent.TVShow{ID: 3}, nil).Once()
+			grabErr := fmt.Errorf(
+				"grab pack: %w: BB Complete",
+				download.ErrNoWantedFiles,
+			)
+			app.tvshows.EXPECT().
+				GrabSeriesRelease(mock.Anything, uint32(3),
+					mock.AnythingOfType("indexer.SearchResult"), false).
+				Return(grabErr).Once()
+
+			req := app.req(
+				http.MethodPost,
+				"/api/v1/series/3/grab",
+				app.adminKey,
+				strings.NewReader(
+					`{"title":"BB Complete","download_url":"magnet:y","size":1,"seeders":1}`,
+				),
+			)
+			req.Header.Set("Content-Type", "application/json")
+			resp := app.do(req)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+
+			var body struct {
+				Message string `json:"message"`
+				Code    string `json:"code"`
+			}
+			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+			Expect(body.Message).To(Equal(grabErr.Error()))
+			Expect(body.Code).To(Equal("grab_rejected"))
 		})
 	})
 

@@ -528,7 +528,8 @@ func (s *Server) GrabSeasonRelease(
 		ctx, request.Id, request.Number, sr, replaceExisting(request.Body),
 	)
 	switch {
-	case errors.Is(err, download.ErrUntrustedSource):
+	case errors.Is(err, download.ErrUntrustedSource),
+		errors.Is(err, download.ErrNoWantedFiles):
 		return GrabSeasonRelease422JSONResponse{
 			UnprocessableEntityJSONResponse: errGrabRejected(err.Error()),
 		}, nil
@@ -646,7 +647,8 @@ func (s *Server) GrabSeriesRelease(
 		ctx, request.Id, sr, replaceExisting(request.Body),
 	)
 	switch {
-	case errors.Is(err, download.ErrUntrustedSource):
+	case errors.Is(err, download.ErrUntrustedSource),
+		errors.Is(err, download.ErrNoWantedFiles):
 		return GrabSeriesRelease422JSONResponse{
 			UnprocessableEntityJSONResponse: errGrabRejected(err.Error()),
 		}, nil
