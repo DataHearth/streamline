@@ -490,6 +490,60 @@ type Store interface {
 		ctx context.Context,
 		mediaFileID, episodeID uint32,
 	) error
+	// UpdateMediaFileAfterTranscode writes a transcode's outcome onto the file
+	// it replaced in place and nulls probed_at plus every probe column, since
+	// the bytes changed and the media-probe backfill must re-read them.
+	UpdateMediaFileAfterTranscode(
+		ctx context.Context,
+		id uint32,
+		path string,
+		size, sizeBefore int64,
+		format string,
+	) error
+
+	// transcode jobs
+	// CreateTranscodeJob queues a transcode for mediaFileID, or returns the
+	// job already queued/running for that file instead of duplicating it.
+	CreateTranscodeJob(
+		ctx context.Context,
+		mediaFileID uint32,
+	) (*ent.TranscodeJob, error)
+	// ClaimNextTranscodeJob atomically moves the oldest queued job to
+	// running, bumping attempts and stamping started_at, with the media
+	// file's owner chain loaded. (nil, nil) when nothing is queued.
+	ClaimNextTranscodeJob(ctx context.Context) (*ent.TranscodeJob, error)
+	// CompleteTranscodeJob marks id succeeded with the before/after sizes,
+	// finished_at, and clears any error left from earlier attempts.
+	CompleteTranscodeJob(
+		ctx context.Context,
+		id uint32,
+		sizeBefore, sizeAfter int64,
+	) error
+	// FailTranscodeJob records a failed attempt: non-terminal returns the job
+	// to queued with the error recorded; terminal marks it failed with
+	// finished_at stamped.
+	FailTranscodeJob(
+		ctx context.Context,
+		id uint32,
+		reason string,
+		terminal bool,
+	) error
+	// MarkTranscodeJobCanceled cancels a queued or running job, stamping
+	// finished_at. ErrTranscodeJobNotCancelable otherwise.
+	MarkTranscodeJobCanceled(ctx context.Context, id uint32) error
+	// RetryTranscodeJob resets a failed job back to queued with attempts,
+	// error and finished_at all cleared. ErrTranscodeJobNotRetryable
+	// otherwise.
+	RetryTranscodeJob(ctx context.Context, id uint32) error
+	// ResetRunningTranscodeJobs bulk-reverts every running job back to
+	// queued — restart-safety for a worker that died mid-transcode.
+	ResetRunningTranscodeJobs(ctx context.Context) (int, error)
+	// ListTranscodeJobs returns up to limit jobs newest-first with each
+	// job's media file and owner chain loaded.
+	ListTranscodeJobs(ctx context.Context, limit int) ([]*ent.TranscodeJob, error)
+	// ListMediaFilesWithTranscodeOwners returns every MediaFile with its
+	// owner chain loaded — the transcode scan's candidate set.
+	ListMediaFilesWithTranscodeOwners(ctx context.Context) ([]*ent.MediaFile, error)
 
 	// bulk-import scans
 	CreateImportScan(

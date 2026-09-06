@@ -848,6 +848,68 @@ func (_c *MockTx_CascadeSpecialsMonitored_Call) RunAndReturn(run func(ctx contex
 	return _c
 }
 
+// ClaimNextTranscodeJob provides a mock function for the type MockTx
+func (_mock *MockTx) ClaimNextTranscodeJob(ctx context.Context) (*ent.TranscodeJob, error) {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ClaimNextTranscodeJob")
+	}
+
+	var r0 *ent.TranscodeJob
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) (*ent.TranscodeJob, error)); ok {
+		return returnFunc(ctx)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context) *ent.TranscodeJob); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ent.TranscodeJob)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = returnFunc(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_ClaimNextTranscodeJob_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ClaimNextTranscodeJob'
+type MockTx_ClaimNextTranscodeJob_Call struct {
+	*mock.Call
+}
+
+// ClaimNextTranscodeJob is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockTx_Expecter) ClaimNextTranscodeJob(ctx any) *MockTx_ClaimNextTranscodeJob_Call {
+	return &MockTx_ClaimNextTranscodeJob_Call{Call: _e.mock.On("ClaimNextTranscodeJob", ctx)}
+}
+
+func (_c *MockTx_ClaimNextTranscodeJob_Call) Run(run func(ctx context.Context)) *MockTx_ClaimNextTranscodeJob_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_ClaimNextTranscodeJob_Call) Return(transcodeJob *ent.TranscodeJob, err error) *MockTx_ClaimNextTranscodeJob_Call {
+	_c.Call.Return(transcodeJob, err)
+	return _c
+}
+
+func (_c *MockTx_ClaimNextTranscodeJob_Call) RunAndReturn(run func(ctx context.Context) (*ent.TranscodeJob, error)) *MockTx_ClaimNextTranscodeJob_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Commit provides a mock function for the type MockTx
 func (_mock *MockTx) Commit() error {
 	ret := _mock.Called()
@@ -888,6 +950,75 @@ func (_c *MockTx_Commit_Call) Return(err error) *MockTx_Commit_Call {
 }
 
 func (_c *MockTx_Commit_Call) RunAndReturn(run func() error) *MockTx_Commit_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CompleteTranscodeJob provides a mock function for the type MockTx
+func (_mock *MockTx) CompleteTranscodeJob(ctx context.Context, id uint32, sizeBefore int64, sizeAfter int64) error {
+	ret := _mock.Called(ctx, id, sizeBefore, sizeAfter)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CompleteTranscodeJob")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, int64, int64) error); ok {
+		r0 = returnFunc(ctx, id, sizeBefore, sizeAfter)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTx_CompleteTranscodeJob_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CompleteTranscodeJob'
+type MockTx_CompleteTranscodeJob_Call struct {
+	*mock.Call
+}
+
+// CompleteTranscodeJob is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - sizeBefore int64
+//   - sizeAfter int64
+func (_e *MockTx_Expecter) CompleteTranscodeJob(ctx any, id any, sizeBefore any, sizeAfter any) *MockTx_CompleteTranscodeJob_Call {
+	return &MockTx_CompleteTranscodeJob_Call{Call: _e.mock.On("CompleteTranscodeJob", ctx, id, sizeBefore, sizeAfter)}
+}
+
+func (_c *MockTx_CompleteTranscodeJob_Call) Run(run func(ctx context.Context, id uint32, sizeBefore int64, sizeAfter int64)) *MockTx_CompleteTranscodeJob_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 int64
+		if args[2] != nil {
+			arg2 = args[2].(int64)
+		}
+		var arg3 int64
+		if args[3] != nil {
+			arg3 = args[3].(int64)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_CompleteTranscodeJob_Call) Return(err error) *MockTx_CompleteTranscodeJob_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTx_CompleteTranscodeJob_Call) RunAndReturn(run func(ctx context.Context, id uint32, sizeBefore int64, sizeAfter int64) error) *MockTx_CompleteTranscodeJob_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -2825,6 +2956,74 @@ func (_c *MockTx_CreateTorrentSession_Call) RunAndReturn(run func(ctx context.Co
 	return _c
 }
 
+// CreateTranscodeJob provides a mock function for the type MockTx
+func (_mock *MockTx) CreateTranscodeJob(ctx context.Context, mediaFileID uint32) (*ent.TranscodeJob, error) {
+	ret := _mock.Called(ctx, mediaFileID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateTranscodeJob")
+	}
+
+	var r0 *ent.TranscodeJob
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (*ent.TranscodeJob, error)); ok {
+		return returnFunc(ctx, mediaFileID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) *ent.TranscodeJob); ok {
+		r0 = returnFunc(ctx, mediaFileID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ent.TranscodeJob)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+		r1 = returnFunc(ctx, mediaFileID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_CreateTranscodeJob_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateTranscodeJob'
+type MockTx_CreateTranscodeJob_Call struct {
+	*mock.Call
+}
+
+// CreateTranscodeJob is a helper method to define mock.On call
+//   - ctx context.Context
+//   - mediaFileID uint32
+func (_e *MockTx_Expecter) CreateTranscodeJob(ctx any, mediaFileID any) *MockTx_CreateTranscodeJob_Call {
+	return &MockTx_CreateTranscodeJob_Call{Call: _e.mock.On("CreateTranscodeJob", ctx, mediaFileID)}
+}
+
+func (_c *MockTx_CreateTranscodeJob_Call) Run(run func(ctx context.Context, mediaFileID uint32)) *MockTx_CreateTranscodeJob_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_CreateTranscodeJob_Call) Return(transcodeJob *ent.TranscodeJob, err error) *MockTx_CreateTranscodeJob_Call {
+	_c.Call.Return(transcodeJob, err)
+	return _c
+}
+
+func (_c *MockTx_CreateTranscodeJob_Call) RunAndReturn(run func(ctx context.Context, mediaFileID uint32) (*ent.TranscodeJob, error)) *MockTx_CreateTranscodeJob_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // CreateUser provides a mock function for the type MockTx
 func (_mock *MockTx) CreateUser(ctx context.Context, p db.CreateUserParams) (*ent.User, error) {
 	ret := _mock.Called(ctx, p)
@@ -4151,6 +4350,75 @@ func (_c *MockTx_FailHeldDownloadRecord_Call) Return(err error) *MockTx_FailHeld
 }
 
 func (_c *MockTx_FailHeldDownloadRecord_Call) RunAndReturn(run func(ctx context.Context, id uint32, reason string, requeue bool) error) *MockTx_FailHeldDownloadRecord_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// FailTranscodeJob provides a mock function for the type MockTx
+func (_mock *MockTx) FailTranscodeJob(ctx context.Context, id uint32, reason string, terminal bool) error {
+	ret := _mock.Called(ctx, id, reason, terminal)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FailTranscodeJob")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string, bool) error); ok {
+		r0 = returnFunc(ctx, id, reason, terminal)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTx_FailTranscodeJob_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FailTranscodeJob'
+type MockTx_FailTranscodeJob_Call struct {
+	*mock.Call
+}
+
+// FailTranscodeJob is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - reason string
+//   - terminal bool
+func (_e *MockTx_Expecter) FailTranscodeJob(ctx any, id any, reason any, terminal any) *MockTx_FailTranscodeJob_Call {
+	return &MockTx_FailTranscodeJob_Call{Call: _e.mock.On("FailTranscodeJob", ctx, id, reason, terminal)}
+}
+
+func (_c *MockTx_FailTranscodeJob_Call) Run(run func(ctx context.Context, id uint32, reason string, terminal bool)) *MockTx_FailTranscodeJob_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 bool
+		if args[3] != nil {
+			arg3 = args[3].(bool)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_FailTranscodeJob_Call) Return(err error) *MockTx_FailTranscodeJob_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTx_FailTranscodeJob_Call) RunAndReturn(run func(ctx context.Context, id uint32, reason string, terminal bool) error) *MockTx_FailTranscodeJob_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -8006,6 +8274,68 @@ func (_c *MockTx_ListMediaFilesForDrift_Call) RunAndReturn(run func(ctx context.
 	return _c
 }
 
+// ListMediaFilesWithTranscodeOwners provides a mock function for the type MockTx
+func (_mock *MockTx) ListMediaFilesWithTranscodeOwners(ctx context.Context) ([]*ent.MediaFile, error) {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListMediaFilesWithTranscodeOwners")
+	}
+
+	var r0 []*ent.MediaFile
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) ([]*ent.MediaFile, error)); ok {
+		return returnFunc(ctx)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context) []*ent.MediaFile); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ent.MediaFile)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = returnFunc(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_ListMediaFilesWithTranscodeOwners_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListMediaFilesWithTranscodeOwners'
+type MockTx_ListMediaFilesWithTranscodeOwners_Call struct {
+	*mock.Call
+}
+
+// ListMediaFilesWithTranscodeOwners is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockTx_Expecter) ListMediaFilesWithTranscodeOwners(ctx any) *MockTx_ListMediaFilesWithTranscodeOwners_Call {
+	return &MockTx_ListMediaFilesWithTranscodeOwners_Call{Call: _e.mock.On("ListMediaFilesWithTranscodeOwners", ctx)}
+}
+
+func (_c *MockTx_ListMediaFilesWithTranscodeOwners_Call) Run(run func(ctx context.Context)) *MockTx_ListMediaFilesWithTranscodeOwners_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_ListMediaFilesWithTranscodeOwners_Call) Return(mediaFiles []*ent.MediaFile, err error) *MockTx_ListMediaFilesWithTranscodeOwners_Call {
+	_c.Call.Return(mediaFiles, err)
+	return _c
+}
+
+func (_c *MockTx_ListMediaFilesWithTranscodeOwners_Call) RunAndReturn(run func(ctx context.Context) ([]*ent.MediaFile, error)) *MockTx_ListMediaFilesWithTranscodeOwners_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListMoviesForAdoption provides a mock function for the type MockTx
 func (_mock *MockTx) ListMoviesForAdoption(ctx context.Context) ([]*ent.Movie, error) {
 	ret := _mock.Called(ctx)
@@ -8726,6 +9056,74 @@ func (_c *MockTx_ListTorrentSessionsByPathPrefix_Call) Return(torrentSessions []
 }
 
 func (_c *MockTx_ListTorrentSessionsByPathPrefix_Call) RunAndReturn(run func(ctx context.Context, prefix string) ([]*ent.TorrentSession, error)) *MockTx_ListTorrentSessionsByPathPrefix_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListTranscodeJobs provides a mock function for the type MockTx
+func (_mock *MockTx) ListTranscodeJobs(ctx context.Context, limit int) ([]*ent.TranscodeJob, error) {
+	ret := _mock.Called(ctx, limit)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListTranscodeJobs")
+	}
+
+	var r0 []*ent.TranscodeJob
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int) ([]*ent.TranscodeJob, error)); ok {
+		return returnFunc(ctx, limit)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int) []*ent.TranscodeJob); ok {
+		r0 = returnFunc(ctx, limit)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ent.TranscodeJob)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int) error); ok {
+		r1 = returnFunc(ctx, limit)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_ListTranscodeJobs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListTranscodeJobs'
+type MockTx_ListTranscodeJobs_Call struct {
+	*mock.Call
+}
+
+// ListTranscodeJobs is a helper method to define mock.On call
+//   - ctx context.Context
+//   - limit int
+func (_e *MockTx_Expecter) ListTranscodeJobs(ctx any, limit any) *MockTx_ListTranscodeJobs_Call {
+	return &MockTx_ListTranscodeJobs_Call{Call: _e.mock.On("ListTranscodeJobs", ctx, limit)}
+}
+
+func (_c *MockTx_ListTranscodeJobs_Call) Run(run func(ctx context.Context, limit int)) *MockTx_ListTranscodeJobs_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_ListTranscodeJobs_Call) Return(transcodeJobs []*ent.TranscodeJob, err error) *MockTx_ListTranscodeJobs_Call {
+	_c.Call.Return(transcodeJobs, err)
+	return _c
+}
+
+func (_c *MockTx_ListTranscodeJobs_Call) RunAndReturn(run func(ctx context.Context, limit int) ([]*ent.TranscodeJob, error)) *MockTx_ListTranscodeJobs_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -9510,6 +9908,63 @@ func (_c *MockTx_MarkRequestsAvailable_Call) Return(err error) *MockTx_MarkReque
 }
 
 func (_c *MockTx_MarkRequestsAvailable_Call) RunAndReturn(run func(ctx context.Context, mediaType string, mediaID uint32) error) *MockTx_MarkRequestsAvailable_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// MarkTranscodeJobCanceled provides a mock function for the type MockTx
+func (_mock *MockTx) MarkTranscodeJobCanceled(ctx context.Context, id uint32) error {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for MarkTranscodeJobCanceled")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) error); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTx_MarkTranscodeJobCanceled_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'MarkTranscodeJobCanceled'
+type MockTx_MarkTranscodeJobCanceled_Call struct {
+	*mock.Call
+}
+
+// MarkTranscodeJobCanceled is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+func (_e *MockTx_Expecter) MarkTranscodeJobCanceled(ctx any, id any) *MockTx_MarkTranscodeJobCanceled_Call {
+	return &MockTx_MarkTranscodeJobCanceled_Call{Call: _e.mock.On("MarkTranscodeJobCanceled", ctx, id)}
+}
+
+func (_c *MockTx_MarkTranscodeJobCanceled_Call) Run(run func(ctx context.Context, id uint32)) *MockTx_MarkTranscodeJobCanceled_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_MarkTranscodeJobCanceled_Call) Return(err error) *MockTx_MarkTranscodeJobCanceled_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTx_MarkTranscodeJobCanceled_Call) RunAndReturn(run func(ctx context.Context, id uint32) error) *MockTx_MarkTranscodeJobCanceled_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -10443,6 +10898,123 @@ func (_c *MockTx_ResetMovieGrabFailures_Call) Return(err error) *MockTx_ResetMov
 }
 
 func (_c *MockTx_ResetMovieGrabFailures_Call) RunAndReturn(run func(ctx context.Context, id uint32) error) *MockTx_ResetMovieGrabFailures_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ResetRunningTranscodeJobs provides a mock function for the type MockTx
+func (_mock *MockTx) ResetRunningTranscodeJobs(ctx context.Context) (int, error) {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ResetRunningTranscodeJobs")
+	}
+
+	var r0 int
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) (int, error)); ok {
+		return returnFunc(ctx)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context) int); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = returnFunc(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_ResetRunningTranscodeJobs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ResetRunningTranscodeJobs'
+type MockTx_ResetRunningTranscodeJobs_Call struct {
+	*mock.Call
+}
+
+// ResetRunningTranscodeJobs is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockTx_Expecter) ResetRunningTranscodeJobs(ctx any) *MockTx_ResetRunningTranscodeJobs_Call {
+	return &MockTx_ResetRunningTranscodeJobs_Call{Call: _e.mock.On("ResetRunningTranscodeJobs", ctx)}
+}
+
+func (_c *MockTx_ResetRunningTranscodeJobs_Call) Run(run func(ctx context.Context)) *MockTx_ResetRunningTranscodeJobs_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_ResetRunningTranscodeJobs_Call) Return(n int, err error) *MockTx_ResetRunningTranscodeJobs_Call {
+	_c.Call.Return(n, err)
+	return _c
+}
+
+func (_c *MockTx_ResetRunningTranscodeJobs_Call) RunAndReturn(run func(ctx context.Context) (int, error)) *MockTx_ResetRunningTranscodeJobs_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RetryTranscodeJob provides a mock function for the type MockTx
+func (_mock *MockTx) RetryTranscodeJob(ctx context.Context, id uint32) error {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RetryTranscodeJob")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) error); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTx_RetryTranscodeJob_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RetryTranscodeJob'
+type MockTx_RetryTranscodeJob_Call struct {
+	*mock.Call
+}
+
+// RetryTranscodeJob is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+func (_e *MockTx_Expecter) RetryTranscodeJob(ctx any, id any) *MockTx_RetryTranscodeJob_Call {
+	return &MockTx_RetryTranscodeJob_Call{Call: _e.mock.On("RetryTranscodeJob", ctx, id)}
+}
+
+func (_c *MockTx_RetryTranscodeJob_Call) Run(run func(ctx context.Context, id uint32)) *MockTx_RetryTranscodeJob_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_RetryTranscodeJob_Call) Return(err error) *MockTx_RetryTranscodeJob_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTx_RetryTranscodeJob_Call) RunAndReturn(run func(ctx context.Context, id uint32) error) *MockTx_RetryTranscodeJob_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -13526,6 +14098,87 @@ func (_c *MockTx_UpdateImportScanStatus_Call) Return(err error) *MockTx_UpdateIm
 }
 
 func (_c *MockTx_UpdateImportScanStatus_Call) RunAndReturn(run func(ctx context.Context, id uint32, status importscan.Status, opts db.UpdateScanStatusOpts) error) *MockTx_UpdateImportScanStatus_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UpdateMediaFileAfterTranscode provides a mock function for the type MockTx
+func (_mock *MockTx) UpdateMediaFileAfterTranscode(ctx context.Context, id uint32, path string, size int64, sizeBefore int64, format string) error {
+	ret := _mock.Called(ctx, id, path, size, sizeBefore, format)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateMediaFileAfterTranscode")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string, int64, int64, string) error); ok {
+		r0 = returnFunc(ctx, id, path, size, sizeBefore, format)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTx_UpdateMediaFileAfterTranscode_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateMediaFileAfterTranscode'
+type MockTx_UpdateMediaFileAfterTranscode_Call struct {
+	*mock.Call
+}
+
+// UpdateMediaFileAfterTranscode is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - path string
+//   - size int64
+//   - sizeBefore int64
+//   - format string
+func (_e *MockTx_Expecter) UpdateMediaFileAfterTranscode(ctx any, id any, path any, size any, sizeBefore any, format any) *MockTx_UpdateMediaFileAfterTranscode_Call {
+	return &MockTx_UpdateMediaFileAfterTranscode_Call{Call: _e.mock.On("UpdateMediaFileAfterTranscode", ctx, id, path, size, sizeBefore, format)}
+}
+
+func (_c *MockTx_UpdateMediaFileAfterTranscode_Call) Run(run func(ctx context.Context, id uint32, path string, size int64, sizeBefore int64, format string)) *MockTx_UpdateMediaFileAfterTranscode_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 int64
+		if args[3] != nil {
+			arg3 = args[3].(int64)
+		}
+		var arg4 int64
+		if args[4] != nil {
+			arg4 = args[4].(int64)
+		}
+		var arg5 string
+		if args[5] != nil {
+			arg5 = args[5].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+			arg5,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_UpdateMediaFileAfterTranscode_Call) Return(err error) *MockTx_UpdateMediaFileAfterTranscode_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTx_UpdateMediaFileAfterTranscode_Call) RunAndReturn(run func(ctx context.Context, id uint32, path string, size int64, sizeBefore int64, format string) error) *MockTx_UpdateMediaFileAfterTranscode_Call {
 	_c.Call.Return(run)
 	return _c
 }

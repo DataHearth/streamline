@@ -302,6 +302,42 @@ func (db *DB) UpdateMediaFilePath(
 	return nil
 }
 
+// UpdateMediaFileAfterTranscode writes a transcode's outcome onto the file it
+// replaced in place: the new path/size/format, size_before for the detail
+// page's savings, and transcoded_at. The bytes on disk changed, so every probe
+// column is nulled alongside probed_at — the media-probe backfill re-reads
+// them at its own pace, same as a never-probed row.
+func (db *DB) UpdateMediaFileAfterTranscode(
+	ctx context.Context,
+	id uint32,
+	path string,
+	size, sizeBefore int64,
+	format string,
+) error {
+	if err := db.client.MediaFile.UpdateOneID(id).
+		SetPath(path).
+		SetSize(size).
+		SetFormat(format).
+		SetSizeBefore(sizeBefore).
+		SetTranscodedAt(time.Now()).
+		ClearContainer().
+		ClearDurationSeconds().
+		ClearVideoCodec().
+		ClearWidth().
+		ClearHeight().
+		ClearAudioCodec().
+		ClearAudioChannels().
+		ClearBitrate().
+		ClearAudioTracks().
+		ClearAudioLangs().
+		ClearSubLangs().
+		ClearProbedAt().
+		Exec(ctx); err != nil {
+		return fmt.Errorf("update media_file %d after transcode: %w", id, err)
+	}
+	return nil
+}
+
 // StartMediaFileGraceClock stamps last_seen_at for a row that never had one,
 // so a missing file gets a full grace window instead of instant deletion. It
 // deliberately leaves missing_since alone: clearing it here made the next
