@@ -49,10 +49,49 @@ type EpisodeCounts struct {
 	Have    uint32
 	Wanted  uint32
 	Unaired uint32
-	// Importing counts the episodes past the grab and being written into the
-	// library. It cuts across the buckets above rather than replacing one —
-	// an importing episode has no file yet, so it is still Wanted.
-	Importing uint32
+	// Downloading and Importing count what the show has in flight. Both cut
+	// across the buckets above rather than replacing one — neither has a file
+	// yet, so both are still Wanted.
+	Downloading uint32
+	Importing   uint32
+	// Scope is what the in-flight grab covers, which is what the library card
+	// names instead of the gaps behind it: "episode", "season" (one season,
+	// several episodes) or "series" (spanning seasons). Empty when nothing is
+	// in flight. Season is set for the first two, Episode for "episode" only.
+	//
+	// Derived from the in-flight episode rows rather than from the record's
+	// release title: an operator can grab a pack in two goes, and what the
+	// card should say is what is actually landing.
+	Scope   string
+	Season  uint16
+	Episode uint16
+	// InFlightEpisodes are the ids behind those counts, so a caller holding
+	// the live queue can find this show's entries without a second query.
+	InFlightEpisodes []uint32
+}
+
+// In-flight scopes, mirroring the API's SeriesDownloadScope.
+const (
+	scopeEpisode = "episode"
+	scopeSeason  = "season"
+	scopeSeries  = "series"
+)
+
+// widen folds one in-flight episode into the show's scope: the first row sets
+// "episode", a second in the same season promotes to "season", and one in
+// another season to "series". Season and Episode are cleared as they stop
+// being true of the whole set, so a caller never reads a number the scope
+// does not license.
+func (c *EpisodeCounts) widen(seasonNo, number uint16, id uint32) {
+	c.InFlightEpisodes = append(c.InFlightEpisodes, id)
+	switch {
+	case c.Scope == "":
+		c.Scope, c.Season, c.Episode = scopeEpisode, seasonNo, number
+	case c.Season != seasonNo:
+		c.Scope, c.Season, c.Episode = scopeSeries, 0, 0
+	case c.Scope == scopeEpisode:
+		c.Scope, c.Episode = scopeSeason, 0
+	}
 }
 
 // FilterTVShows applies every filter, the sort and the page in SQL, and
@@ -233,6 +272,9 @@ func (db *DB) episodeCounts(
 	}
 	var rows []struct {
 		ShowID    uint32    `sql:"show_id"`
+		EpisodeID uint32    `sql:"episode_id"`
+		Season    uint16    `sql:"season_number"`
+		Number    uint16    `sql:"number"`
 		Monitored bool      `sql:"monitored"`
 		AirDate   time.Time `sql:"air_date"`
 		Status    string    `sql:"status"`
@@ -252,6 +294,9 @@ func (db *DB) episodeCounts(
 			)
 			s.Select(
 				entsql.As(se.C(season.TvShowColumn), "show_id"),
+				entsql.As(s.C(episode.FieldID), "episode_id"),
+				entsql.As(se.C(season.FieldNumber), "season_number"),
+				s.C(episode.FieldNumber),
 				s.C(episode.FieldMonitored),
 				s.C(episode.FieldAirDate),
 				s.C(episode.FieldStatus),
@@ -265,14 +310,22 @@ func (db *DB) episodeCounts(
 
 	for _, r := range rows {
 		c := out[r.ShowID]
+		// In flight is tallied before the scope guard below: a grab that is
+		// landing is worth naming whether or not its episode is monitored,
+		// and the card would otherwise stay silent through the whole import.
+		switch r.Status {
+		case string(episode.StatusDownloading):
+			c.Downloading++
+			c.widen(r.Season, r.Number, r.EpisodeID)
+		case string(episode.StatusImporting):
+			c.Importing++
+			c.widen(r.Season, r.Number, r.EpisodeID)
+		}
 		if !r.Monitored && !r.HasFile {
 			out[r.ShowID] = c
 			continue
 		}
 		c.Total++
-		if r.Status == string(episode.StatusImporting) {
-			c.Importing++
-		}
 		switch {
 		case r.HasFile:
 			c.Have++

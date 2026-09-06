@@ -7,6 +7,7 @@ import (
 
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/media/tvshow"
@@ -55,9 +56,10 @@ func (s *Server) ListSeries(
 			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
+	progress := s.seriesDownloadProgress(ctx, counts)
 	items := make([]TVShow, 0, len(rows))
 	for _, r := range rows {
-		items = append(items, tvShowListToAPI(r, counts[r.ID]))
+		items = append(items, tvShowListToAPI(r, counts[r.ID], progress[r.ID]))
 	}
 	return ListSeries200JSONResponse{SeriesListJSONResponse: SeriesListJSONResponse{
 		Items: items,
@@ -65,6 +67,60 @@ func (s *Server) ListSeries(
 		Page:  uint32(p.Page),
 		Limit: p.Limit,
 	}}, nil
+}
+
+// seriesDownloadProgress returns the mean live progress per show over the
+// page's downloading episodes. The queue is a short-TTL cached snapshot
+// shared with /activity, and it is only asked for when some show on the page
+// is actually downloading — an idle library pays nothing, and a library page
+// must never be the thing that wakes every download client.
+//
+// A queue that cannot be read is not an error here: the shows keep their
+// counts and scope and the card falls back to an indeterminate bar. Importing
+// contributes nothing by design — there is no percentage behind it.
+func (s *Server) seriesDownloadProgress(
+	ctx context.Context,
+	counts map[uint32]db.EpisodeCounts,
+) map[uint32]*float32 {
+	out := make(map[uint32]*float32, len(counts))
+	owner := make(map[uint32]uint32) // in-flight episode id -> show id
+	for showID, c := range counts {
+		if c.Downloading == 0 {
+			continue
+		}
+		for _, epID := range c.InFlightEpisodes {
+			owner[epID] = showID
+		}
+	}
+	if len(owner) == 0 {
+		return out
+	}
+	snap, err := s.downloads.Queue(ctx)
+	if err != nil {
+		slog.WarnContext(ctx,
+			"series list: live queue unavailable, omitting progress",
+			"error", err)
+		return out
+	}
+
+	sum := make(map[uint32]float64)
+	n := make(map[uint32]int)
+	for _, e := range snap.Items {
+		if e.Episode == nil {
+			continue
+		}
+		showID, ok := owner[e.Episode.ID]
+		if !ok {
+			continue
+		}
+		sum[showID] += e.Progress
+		n[showID]++
+	}
+	for showID, count := range n {
+		mean := float32(sum[showID] / float64(count))
+		out[showID] = &mean
+	}
+	return out
 }
 
 func (s *Server) AddSeries(

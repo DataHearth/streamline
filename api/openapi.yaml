@@ -5182,6 +5182,14 @@ components:
             type: integer
             x-go-type: uint32
 
+    SeriesDownloadScope:
+      type: string
+      description: |
+        What a show's in-flight grab covers, derived from the episodes
+        actually in flight rather than from the release title: one episode, one
+        season's worth, or spanning seasons.
+      enum: [episode, season, series]
+
     TVShow:
       type: object
       required: [id, title, year, series_status, type, monitored, tvdb_id]
@@ -5243,13 +5251,39 @@ components:
           type: integer
           description: Aired/undated episodes without a file (the "missing" count).
           x-go-type: uint32
+        downloading_episodes:
+          type: integer
+          description: |
+            Episodes with a grab in flight. Cuts across the counts above
+            rather than replacing one: a downloading episode has no file yet,
+            so it also counts as wanted.
+          x-go-type: uint32
         importing_episodes:
           type: integer
           description: |
             Episodes past the grab and being written into the library. Cuts
-            across the counts above rather than replacing one: an importing
-            episode has no file yet, so it also counts as wanted.
+            across the counts above the same way.
           x-go-type: uint32
+        downloading_scope:
+          $ref: "#/components/schemas/SeriesDownloadScope"
+        downloading_season:
+          type: integer
+          description: |
+            Season the in-flight grab lands in. Present for the `episode` and
+            `season` scopes; absent when it spans seasons.
+          x-go-type: uint16
+        downloading_episode:
+          type: integer
+          description: Episode number, present only for the `episode` scope.
+          x-go-type: uint16
+        download_progress:
+          type: number
+          format: float
+          description: |
+            Mean progress across the show's in-flight download-client entries,
+            0-1. Absent when nothing is downloading, when the live queue could
+            not be read, and always for an import — which has no percentage to
+            report and renders as an indeterminate bar.
         seasons:
           type: array
           nullable: true

@@ -889,13 +889,33 @@ func tvShowToAPI(s *ent.TVShow) TVShow {
 // SQL because the list query deliberately leaves the season/episode tree
 // unloaded — serializing it was 121 KB per show. `seasons` stays absent here;
 // the detail view (tvShowToAPI) is what carries it.
-func tvShowListToAPI(s *ent.TVShow, c db.EpisodeCounts) TVShow {
+// progress is the mean over the show's live queue entries, or nil when the
+// show has nothing downloading or the queue could not be read — the card
+// draws an indeterminate bar for a nil, which is the honest reading.
+func tvShowListToAPI(s *ent.TVShow, c db.EpisodeCounts, progress *float32) TVShow {
 	out := tvShowBaseToAPI(s)
-	have, total, wanted, importing := c.Have, c.Total, c.Wanted, c.Importing
+	have, total, wanted := c.Have, c.Total, c.Wanted
+	downloading, importing := c.Downloading, c.Importing
 	out.HaveEpisodes = &have
 	out.TotalEpisodes = &total
 	out.WantedEpisodes = &wanted
+	out.DownloadingEpisodes = &downloading
 	out.ImportingEpisodes = &importing
+	out.DownloadProgress = progress
+	if c.Scope != "" {
+		scope := SeriesDownloadScope(c.Scope)
+		out.DownloadingScope = &scope
+		// Season 0 is the specials, a real season — only the series scope
+		// licenses no season at all.
+		if scope != SeriesDownloadScopeSeries {
+			season := c.Season
+			out.DownloadingSeason = &season
+		}
+		if scope == SeriesDownloadScopeEpisode {
+			number := c.Episode
+			out.DownloadingEpisode = &number
+		}
+	}
 	return out
 }
 

@@ -215,6 +215,65 @@ var _ = Describe("FilterTVShows", Label("unit", "db"), func() {
 			Expect(c.Have).To(BeZero())
 		})
 
+		DescribeTable(
+			"names the in-flight scope from the episodes actually in flight",
+			func(inFlight [][2]int, scope string, seasonNo, epNo uint16) {
+				aired := now.Add(-24 * time.Hour)
+				show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+					Title: "Scoped", Year: 2020, TvdbID: 20,
+					SeriesStatus: "continuing", Type: "standard",
+					Seasons: []SeasonSeed{
+						{Number: 1, Episodes: []EpisodeSeed{
+							{Number: 1, Title: "A", AirDate: &aired},
+							{Number: 2, Title: "B", AirDate: &aired},
+						}},
+						{Number: 2, Episodes: []EpisodeSeed{
+							{Number: 1, Title: "C", AirDate: &aired},
+						}},
+					},
+				})
+				Expect(err).NotTo(HaveOccurred())
+				for _, se := range inFlight {
+					ep := show.Edges.Seasons[se[0]].Edges.Episodes[se[1]]
+					Expect(store.SetEpisodeStatus(
+						ctx, ep.ID, episode.StatusDownloading,
+					)).To(Succeed())
+				}
+
+				_, counts, _, err := store.FilterTVShows(ctx, FilterTVShowsParams{
+					Limit: 20, Now: now,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				c := counts[show.ID]
+				Expect(c.Scope).To(Equal(scope))
+				Expect(c.Season).To(Equal(seasonNo))
+				Expect(c.Episode).To(Equal(epNo))
+				Expect(c.Downloading).To(Equal(uint32(len(inFlight))))
+				Expect(c.InFlightEpisodes).To(HaveLen(len(inFlight)))
+			},
+			Entry("one episode", [][2]int{{0, 0}}, "episode", uint16(1), uint16(1)),
+			Entry("two of one season", [][2]int{{0, 0}, {0, 1}},
+				"season", uint16(1), uint16(0)),
+			// Season and episode are cleared as they stop being true of the
+			// whole set, so no caller can read a number the scope disowns.
+			Entry("across seasons", [][2]int{{0, 0}, {1, 0}},
+				"series", uint16(0), uint16(0)),
+		)
+
+		It("leaves the scope empty when nothing is in flight", func() {
+			aired := now.Add(-24 * time.Hour)
+			show := seedShow("Idle", 21, []EpisodeSeed{
+				{Number: 1, Title: "A", AirDate: &aired},
+			}, true)
+
+			_, counts, _, err := store.FilterTVShows(ctx, FilterTVShowsParams{
+				Limit: 20, Now: now,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(counts[show.ID].Scope).To(BeEmpty())
+			Expect(counts[show.ID].InFlightEpisodes).To(BeEmpty())
+		})
+
 		It("still counts a downloaded episode its owner later unmonitored", func() {
 			aired := now.Add(-24 * time.Hour)
 			show := seedShow("Kept", 7, []EpisodeSeed{

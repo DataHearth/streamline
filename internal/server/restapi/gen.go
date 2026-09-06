@@ -1530,6 +1530,27 @@ func (e ScheduleStatus) Valid() bool {
 	}
 }
 
+// Defines values for SeriesDownloadScope.
+const (
+	SeriesDownloadScopeEpisode SeriesDownloadScope = "episode"
+	SeriesDownloadScopeSeason  SeriesDownloadScope = "season"
+	SeriesDownloadScopeSeries  SeriesDownloadScope = "series"
+)
+
+// Valid indicates whether the value is a known member of the SeriesDownloadScope enum.
+func (e SeriesDownloadScope) Valid() bool {
+	switch e {
+	case SeriesDownloadScopeEpisode:
+		return true
+	case SeriesDownloadScopeSeason:
+		return true
+	case SeriesDownloadScopeSeries:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SystemInfoSeedAdminSecret.
 const (
 	SystemInfoSeedAdminSecretConfig SystemInfoSeedAdminSecret = "config"
@@ -4029,6 +4050,11 @@ type Season struct {
 	Unaired *int `json:"unaired,omitempty"`
 }
 
+// SeriesDownloadScope What a show's in-flight grab covers, derived from the episodes
+// actually in flight rather than from the release title: one episode, one
+// season's worth, or spanning seasons.
+type SeriesDownloadScope string
+
 // SeriesLookupResult defines model for SeriesLookupResult.
 type SeriesLookupResult struct {
 	// AlreadyAdded True when a series with this tvdb_id is already in the library.
@@ -4202,15 +4228,37 @@ type TVShow struct {
 	// absent in list responses.
 	Cast    *[]CastMember `json:"cast,omitempty"`
 	Creator *string       `json:"creator,omitempty"`
-	Genres  *[]string     `json:"genres,omitempty"`
+
+	// DownloadProgress Mean progress across the show's in-flight download-client entries,
+	// 0-1. Absent when nothing is downloading, when the live queue could
+	// not be read, and always for an import — which has no percentage to
+	// report and renders as an indeterminate bar.
+	DownloadProgress *float32 `json:"download_progress,omitempty"`
+
+	// DownloadingEpisode Episode number, present only for the `episode` scope.
+	DownloadingEpisode *uint16 `json:"downloading_episode,omitempty"`
+
+	// DownloadingEpisodes Episodes with a grab in flight. Cuts across the counts above
+	// rather than replacing one: a downloading episode has no file yet,
+	// so it also counts as wanted.
+	DownloadingEpisodes *uint32 `json:"downloading_episodes,omitempty"`
+
+	// DownloadingScope What a show's in-flight grab covers, derived from the episodes
+	// actually in flight rather than from the release title: one episode, one
+	// season's worth, or spanning seasons.
+	DownloadingScope *SeriesDownloadScope `json:"downloading_scope,omitempty"`
+
+	// DownloadingSeason Season the in-flight grab lands in. Present for the `episode` and
+	// `season` scopes; absent when it spans seasons.
+	DownloadingSeason *uint16   `json:"downloading_season,omitempty"`
+	Genres            *[]string `json:"genres,omitempty"`
 
 	// HaveEpisodes Episodes with a media file. Rolled up across seasons.
 	HaveEpisodes *uint32 `json:"have_episodes,omitempty"`
 	Id           uint32  `json:"id"`
 
 	// ImportingEpisodes Episodes past the grab and being written into the library. Cuts
-	// across the counts above rather than replacing one: an importing
-	// episode has no file yet, so it also counts as wanted.
+	// across the counts above the same way.
 	ImportingEpisodes *uint32 `json:"importing_episodes,omitempty"`
 	Monitored         bool    `json:"monitored"`
 	Network           *string `json:"network,omitempty"`
