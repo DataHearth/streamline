@@ -708,14 +708,10 @@
 		container-type: inline-size;
 		container-name: libtoolbar;
 	}
-	/* The threshold is what the expanded row measures (1102px), not a
-	   breakpoint: three keys plus a pinned field cost ~350px over the compact
-	   row, so turning them on any earlier just moves the wrap back. */
+	/* The field takes the slack at every width, as its `flex-1` says: pinning it
+	   to 13rem above 1120px both holed the row and wrapped it, since flex breaks
+	   lines on the basis and select mode's "Select all N" then did not fit. */
 	@container libtoolbar (min-width: 1120px) {
-		.search-wrap {
-			flex: none;
-			width: 13rem;
-		}
 		.sort-key {
 			display: inline;
 		}

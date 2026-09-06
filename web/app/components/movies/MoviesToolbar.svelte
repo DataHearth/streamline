@@ -631,17 +631,13 @@
 		container-type: inline-size;
 		container-name: libtoolbar;
 	}
-	/* Wide enough for a fixed field: it stops growing and the row keeps a stable
-	   left edge for the action group. Narrower, it takes the slack instead, so a
-	   wrapped first line is full rather than holed. The threshold is what the
-	   expanded row measures (970px), not a breakpoint: keys and a pinned field
-	   cost 300px more than the compact row, so turning them on any earlier just
-	   moves the wrap back. */
+	/* The field takes the slack at every width — the `flex-1` it is marked with,
+	   no container rule of its own. It was pinned to 15rem from 990px up, which
+	   left a 185px hole between it and the action group, and pinned it wrapped:
+	   flex breaks lines on an item's basis, before any shrinking, so select
+	   mode's extra "Select all N" pushed the whole group onto a second line and
+	   the grid below it jumped down. A zero basis can do neither. */
 	@container libtoolbar (min-width: 990px) {
-		.search-wrap {
-			flex: none;
-			width: 15rem;
-		}
 		.sort-key {
 			display: inline;
 		}
