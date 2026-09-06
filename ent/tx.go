@@ -46,6 +46,8 @@ type Tx struct {
 	TVShow *TVShowClient
 	// TorrentSession is the client for interacting with the TorrentSession builders.
 	TorrentSession *TorrentSessionClient
+	// TranscodeJob is the client for interacting with the TranscodeJob builders.
+	TranscodeJob *TranscodeJobClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
 
@@ -196,6 +198,7 @@ func (tx *Tx) init() {
 	tx.Session = NewSessionClient(tx.config)
 	tx.TVShow = NewTVShowClient(tx.config)
 	tx.TorrentSession = NewTorrentSessionClient(tx.config)
+	tx.TranscodeJob = NewTranscodeJobClient(tx.config)
 	tx.User = NewUserClient(tx.config)
 }
 

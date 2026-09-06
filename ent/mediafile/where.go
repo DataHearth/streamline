@@ -175,6 +175,16 @@ func ParsedCodec(v string) predicate.MediaFile {
 	return predicate.MediaFile(sql.FieldEQ(FieldParsedCodec, v))
 }
 
+// TranscodedAt applies equality check predicate on the "transcoded_at" field. It's identical to TranscodedAtEQ.
+func TranscodedAt(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldTranscodedAt, v))
+}
+
+// SizeBefore applies equality check predicate on the "size_before" field. It's identical to SizeBeforeEQ.
+func SizeBefore(v int64) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldSizeBefore, v))
+}
+
 // CreateTimeEQ applies the EQ predicate on the "create_time" field.
 func CreateTimeEQ(v time.Time) predicate.MediaFile {
 	return predicate.MediaFile(sql.FieldEQ(FieldCreateTime, v))
@@ -1655,6 +1665,106 @@ func ParsedCodecContainsFold(v string) predicate.MediaFile {
 	return predicate.MediaFile(sql.FieldContainsFold(FieldParsedCodec, v))
 }
 
+// TranscodedAtEQ applies the EQ predicate on the "transcoded_at" field.
+func TranscodedAtEQ(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldTranscodedAt, v))
+}
+
+// TranscodedAtNEQ applies the NEQ predicate on the "transcoded_at" field.
+func TranscodedAtNEQ(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNEQ(FieldTranscodedAt, v))
+}
+
+// TranscodedAtIn applies the In predicate on the "transcoded_at" field.
+func TranscodedAtIn(vs ...time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIn(FieldTranscodedAt, vs...))
+}
+
+// TranscodedAtNotIn applies the NotIn predicate on the "transcoded_at" field.
+func TranscodedAtNotIn(vs ...time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotIn(FieldTranscodedAt, vs...))
+}
+
+// TranscodedAtGT applies the GT predicate on the "transcoded_at" field.
+func TranscodedAtGT(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGT(FieldTranscodedAt, v))
+}
+
+// TranscodedAtGTE applies the GTE predicate on the "transcoded_at" field.
+func TranscodedAtGTE(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGTE(FieldTranscodedAt, v))
+}
+
+// TranscodedAtLT applies the LT predicate on the "transcoded_at" field.
+func TranscodedAtLT(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLT(FieldTranscodedAt, v))
+}
+
+// TranscodedAtLTE applies the LTE predicate on the "transcoded_at" field.
+func TranscodedAtLTE(v time.Time) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLTE(FieldTranscodedAt, v))
+}
+
+// TranscodedAtIsNil applies the IsNil predicate on the "transcoded_at" field.
+func TranscodedAtIsNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIsNull(FieldTranscodedAt))
+}
+
+// TranscodedAtNotNil applies the NotNil predicate on the "transcoded_at" field.
+func TranscodedAtNotNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotNull(FieldTranscodedAt))
+}
+
+// SizeBeforeEQ applies the EQ predicate on the "size_before" field.
+func SizeBeforeEQ(v int64) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldSizeBefore, v))
+}
+
+// SizeBeforeNEQ applies the NEQ predicate on the "size_before" field.
+func SizeBeforeNEQ(v int64) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNEQ(FieldSizeBefore, v))
+}
+
+// SizeBeforeIn applies the In predicate on the "size_before" field.
+func SizeBeforeIn(vs ...int64) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIn(FieldSizeBefore, vs...))
+}
+
+// SizeBeforeNotIn applies the NotIn predicate on the "size_before" field.
+func SizeBeforeNotIn(vs ...int64) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotIn(FieldSizeBefore, vs...))
+}
+
+// SizeBeforeGT applies the GT predicate on the "size_before" field.
+func SizeBeforeGT(v int64) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGT(FieldSizeBefore, v))
+}
+
+// SizeBeforeGTE applies the GTE predicate on the "size_before" field.
+func SizeBeforeGTE(v int64) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGTE(FieldSizeBefore, v))
+}
+
+// SizeBeforeLT applies the LT predicate on the "size_before" field.
+func SizeBeforeLT(v int64) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLT(FieldSizeBefore, v))
+}
+
+// SizeBeforeLTE applies the LTE predicate on the "size_before" field.
+func SizeBeforeLTE(v int64) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLTE(FieldSizeBefore, v))
+}
+
+// SizeBeforeIsNil applies the IsNil predicate on the "size_before" field.
+func SizeBeforeIsNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIsNull(FieldSizeBefore))
+}
+
+// SizeBeforeNotNil applies the NotNil predicate on the "size_before" field.
+func SizeBeforeNotNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotNull(FieldSizeBefore))
+}
+
 // HasMovie applies the HasEdge predicate on the "movie" edge.
 func HasMovie() predicate.MediaFile {
 	return predicate.MediaFile(func(s *sql.Selector) {
@@ -1693,6 +1803,29 @@ func HasEpisode() predicate.MediaFile {
 func HasEpisodeWith(preds ...predicate.Episode) predicate.MediaFile {
 	return predicate.MediaFile(func(s *sql.Selector) {
 		step := newEpisodeStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasTranscodeJobs applies the HasEdge predicate on the "transcode_jobs" edge.
+func HasTranscodeJobs() predicate.MediaFile {
+	return predicate.MediaFile(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, TranscodeJobsTable, TranscodeJobsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasTranscodeJobsWith applies the HasEdge predicate on the "transcode_jobs" edge with a given conditions (other predicates).
+func HasTranscodeJobsWith(preds ...predicate.TranscodeJob) predicate.MediaFile {
+	return predicate.MediaFile(func(s *sql.Selector) {
+		step := newTranscodeJobsStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

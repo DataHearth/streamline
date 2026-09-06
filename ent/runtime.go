@@ -22,6 +22,7 @@ import (
 	"github.com/datahearth/streamline/ent/season"
 	"github.com/datahearth/streamline/ent/session"
 	"github.com/datahearth/streamline/ent/torrentsession"
+	"github.com/datahearth/streamline/ent/transcodejob"
 	"github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/ent/user"
 )
@@ -446,6 +447,25 @@ func init() {
 	torrentsession.DefaultUploaded = torrentsessionDescUploaded.Default.(int64)
 	// torrentsession.UploadedValidator is a validator for the "uploaded" field. It is called by the builders before save.
 	torrentsession.UploadedValidator = torrentsessionDescUploaded.Validators[0].(func(int64) error)
+	transcodejobMixin := schema.TranscodeJob{}.Mixin()
+	transcodejobMixinFields1 := transcodejobMixin[1].Fields()
+	_ = transcodejobMixinFields1
+	transcodejobFields := schema.TranscodeJob{}.Fields()
+	_ = transcodejobFields
+	// transcodejobDescCreateTime is the schema descriptor for create_time field.
+	transcodejobDescCreateTime := transcodejobMixinFields1[0].Descriptor()
+	// transcodejob.DefaultCreateTime holds the default value on creation for the create_time field.
+	transcodejob.DefaultCreateTime = transcodejobDescCreateTime.Default.(func() time.Time)
+	// transcodejobDescUpdateTime is the schema descriptor for update_time field.
+	transcodejobDescUpdateTime := transcodejobMixinFields1[1].Descriptor()
+	// transcodejob.DefaultUpdateTime holds the default value on creation for the update_time field.
+	transcodejob.DefaultUpdateTime = transcodejobDescUpdateTime.Default.(func() time.Time)
+	// transcodejob.UpdateDefaultUpdateTime holds the default value on update for the update_time field.
+	transcodejob.UpdateDefaultUpdateTime = transcodejobDescUpdateTime.UpdateDefault.(func() time.Time)
+	// transcodejobDescAttempts is the schema descriptor for attempts field.
+	transcodejobDescAttempts := transcodejobFields[1].Descriptor()
+	// transcodejob.DefaultAttempts holds the default value on creation for the attempts field.
+	transcodejob.DefaultAttempts = transcodejobDescAttempts.Default.(uint8)
 	userMixin := schema.User{}.Mixin()
 	userMixinFields1 := userMixin[1].Fields()
 	_ = userMixinFields1

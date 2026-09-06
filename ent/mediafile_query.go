@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -15,19 +16,21 @@ import (
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/predicate"
+	"github.com/datahearth/streamline/ent/transcodejob"
 )
 
 // MediaFileQuery is the builder for querying MediaFile entities.
 type MediaFileQuery struct {
 	config
-	ctx         *QueryContext
-	order       []mediafile.OrderOption
-	inters      []Interceptor
-	predicates  []predicate.MediaFile
-	withMovie   *MovieQuery
-	withEpisode *EpisodeQuery
-	withFKs     bool
-	modifiers   []func(*sql.Selector)
+	ctx               *QueryContext
+	order             []mediafile.OrderOption
+	inters            []Interceptor
+	predicates        []predicate.MediaFile
+	withMovie         *MovieQuery
+	withEpisode       *EpisodeQuery
+	withTranscodeJobs *TranscodeJobQuery
+	withFKs           bool
+	modifiers         []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -101,6 +104,28 @@ func (_q *MediaFileQuery) QueryEpisode() *EpisodeQuery {
 			sqlgraph.From(mediafile.Table, mediafile.FieldID, selector),
 			sqlgraph.To(episode.Table, episode.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, mediafile.EpisodeTable, mediafile.EpisodeColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryTranscodeJobs chains the current query on the "transcode_jobs" edge.
+func (_q *MediaFileQuery) QueryTranscodeJobs() *TranscodeJobQuery {
+	query := (&TranscodeJobClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(mediafile.Table, mediafile.FieldID, selector),
+			sqlgraph.To(transcodejob.Table, transcodejob.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, mediafile.TranscodeJobsTable, mediafile.TranscodeJobsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -295,13 +320,14 @@ func (_q *MediaFileQuery) Clone() *MediaFileQuery {
 		return nil
 	}
 	return &MediaFileQuery{
-		config:      _q.config,
-		ctx:         _q.ctx.Clone(),
-		order:       append([]mediafile.OrderOption{}, _q.order...),
-		inters:      append([]Interceptor{}, _q.inters...),
-		predicates:  append([]predicate.MediaFile{}, _q.predicates...),
-		withMovie:   _q.withMovie.Clone(),
-		withEpisode: _q.withEpisode.Clone(),
+		config:            _q.config,
+		ctx:               _q.ctx.Clone(),
+		order:             append([]mediafile.OrderOption{}, _q.order...),
+		inters:            append([]Interceptor{}, _q.inters...),
+		predicates:        append([]predicate.MediaFile{}, _q.predicates...),
+		withMovie:         _q.withMovie.Clone(),
+		withEpisode:       _q.withEpisode.Clone(),
+		withTranscodeJobs: _q.withTranscodeJobs.Clone(),
 		// clone intermediate query.
 		sql:       _q.sql.Clone(),
 		path:      _q.path,
@@ -328,6 +354,17 @@ func (_q *MediaFileQuery) WithEpisode(opts ...func(*EpisodeQuery)) *MediaFileQue
 		opt(query)
 	}
 	_q.withEpisode = query
+	return _q
+}
+
+// WithTranscodeJobs tells the query-builder to eager-load the nodes that are connected to
+// the "transcode_jobs" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *MediaFileQuery) WithTranscodeJobs(opts ...func(*TranscodeJobQuery)) *MediaFileQuery {
+	query := (&TranscodeJobClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withTranscodeJobs = query
 	return _q
 }
 
@@ -410,9 +447,10 @@ func (_q *MediaFileQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Me
 		nodes       = []*MediaFile{}
 		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
-		loadedTypes = [2]bool{
+		loadedTypes = [3]bool{
 			_q.withMovie != nil,
 			_q.withEpisode != nil,
+			_q.withTranscodeJobs != nil,
 		}
 	)
 	if _q.withMovie != nil || _q.withEpisode != nil {
@@ -451,6 +489,13 @@ func (_q *MediaFileQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Me
 	if query := _q.withEpisode; query != nil {
 		if err := _q.loadEpisode(ctx, query, nodes, nil,
 			func(n *MediaFile, e *Episode) { n.Edges.Episode = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withTranscodeJobs; query != nil {
+		if err := _q.loadTranscodeJobs(ctx, query, nodes,
+			func(n *MediaFile) { n.Edges.TranscodeJobs = []*TranscodeJob{} },
+			func(n *MediaFile, e *TranscodeJob) { n.Edges.TranscodeJobs = append(n.Edges.TranscodeJobs, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -518,6 +563,37 @@ func (_q *MediaFileQuery) loadEpisode(ctx context.Context, query *EpisodeQuery, 
 		for i := range nodes {
 			assign(nodes[i], n)
 		}
+	}
+	return nil
+}
+func (_q *MediaFileQuery) loadTranscodeJobs(ctx context.Context, query *TranscodeJobQuery, nodes []*MediaFile, init func(*MediaFile), assign func(*MediaFile, *TranscodeJob)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uint32]*MediaFile)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.TranscodeJob(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(mediafile.TranscodeJobsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.media_file_transcode_jobs
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "media_file_transcode_jobs" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "media_file_transcode_jobs" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
 	}
 	return nil
 }

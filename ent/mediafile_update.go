@@ -15,6 +15,7 @@ import (
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/predicate"
+	"github.com/datahearth/streamline/ent/transcodejob"
 )
 
 // MediaFileUpdate is the builder for updating MediaFile entities.
@@ -528,6 +529,53 @@ func (_u *MediaFileUpdate) ClearParsedCodec() *MediaFileUpdate {
 	return _u
 }
 
+// SetTranscodedAt sets the "transcoded_at" field.
+func (_u *MediaFileUpdate) SetTranscodedAt(v time.Time) *MediaFileUpdate {
+	_u.mutation.SetTranscodedAt(v)
+	return _u
+}
+
+// SetNillableTranscodedAt sets the "transcoded_at" field if the given value is not nil.
+func (_u *MediaFileUpdate) SetNillableTranscodedAt(v *time.Time) *MediaFileUpdate {
+	if v != nil {
+		_u.SetTranscodedAt(*v)
+	}
+	return _u
+}
+
+// ClearTranscodedAt clears the value of the "transcoded_at" field.
+func (_u *MediaFileUpdate) ClearTranscodedAt() *MediaFileUpdate {
+	_u.mutation.ClearTranscodedAt()
+	return _u
+}
+
+// SetSizeBefore sets the "size_before" field.
+func (_u *MediaFileUpdate) SetSizeBefore(v int64) *MediaFileUpdate {
+	_u.mutation.ResetSizeBefore()
+	_u.mutation.SetSizeBefore(v)
+	return _u
+}
+
+// SetNillableSizeBefore sets the "size_before" field if the given value is not nil.
+func (_u *MediaFileUpdate) SetNillableSizeBefore(v *int64) *MediaFileUpdate {
+	if v != nil {
+		_u.SetSizeBefore(*v)
+	}
+	return _u
+}
+
+// AddSizeBefore adds value to the "size_before" field.
+func (_u *MediaFileUpdate) AddSizeBefore(v int64) *MediaFileUpdate {
+	_u.mutation.AddSizeBefore(v)
+	return _u
+}
+
+// ClearSizeBefore clears the value of the "size_before" field.
+func (_u *MediaFileUpdate) ClearSizeBefore() *MediaFileUpdate {
+	_u.mutation.ClearSizeBefore()
+	return _u
+}
+
 // SetMovieID sets the "movie" edge to the Movie entity by ID.
 func (_u *MediaFileUpdate) SetMovieID(id uint32) *MediaFileUpdate {
 	_u.mutation.SetMovieID(id)
@@ -566,6 +614,21 @@ func (_u *MediaFileUpdate) SetEpisode(v *Episode) *MediaFileUpdate {
 	return _u.SetEpisodeID(v.ID)
 }
 
+// AddTranscodeJobIDs adds the "transcode_jobs" edge to the TranscodeJob entity by IDs.
+func (_u *MediaFileUpdate) AddTranscodeJobIDs(ids ...uint32) *MediaFileUpdate {
+	_u.mutation.AddTranscodeJobIDs(ids...)
+	return _u
+}
+
+// AddTranscodeJobs adds the "transcode_jobs" edges to the TranscodeJob entity.
+func (_u *MediaFileUpdate) AddTranscodeJobs(v ...*TranscodeJob) *MediaFileUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddTranscodeJobIDs(ids...)
+}
+
 // Mutation returns the MediaFileMutation object of the builder.
 func (_u *MediaFileUpdate) Mutation() *MediaFileMutation {
 	return _u.mutation
@@ -581,6 +644,27 @@ func (_u *MediaFileUpdate) ClearMovie() *MediaFileUpdate {
 func (_u *MediaFileUpdate) ClearEpisode() *MediaFileUpdate {
 	_u.mutation.ClearEpisode()
 	return _u
+}
+
+// ClearTranscodeJobs clears all "transcode_jobs" edges to the TranscodeJob entity.
+func (_u *MediaFileUpdate) ClearTranscodeJobs() *MediaFileUpdate {
+	_u.mutation.ClearTranscodeJobs()
+	return _u
+}
+
+// RemoveTranscodeJobIDs removes the "transcode_jobs" edge to TranscodeJob entities by IDs.
+func (_u *MediaFileUpdate) RemoveTranscodeJobIDs(ids ...uint32) *MediaFileUpdate {
+	_u.mutation.RemoveTranscodeJobIDs(ids...)
+	return _u
+}
+
+// RemoveTranscodeJobs removes "transcode_jobs" edges to TranscodeJob entities.
+func (_u *MediaFileUpdate) RemoveTranscodeJobs(v ...*TranscodeJob) *MediaFileUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveTranscodeJobIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -805,6 +889,21 @@ func (_u *MediaFileUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.ParsedCodecCleared() {
 		_spec.ClearField(mediafile.FieldParsedCodec, field.TypeString)
 	}
+	if value, ok := _u.mutation.TranscodedAt(); ok {
+		_spec.SetField(mediafile.FieldTranscodedAt, field.TypeTime, value)
+	}
+	if _u.mutation.TranscodedAtCleared() {
+		_spec.ClearField(mediafile.FieldTranscodedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.SizeBefore(); ok {
+		_spec.SetField(mediafile.FieldSizeBefore, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedSizeBefore(); ok {
+		_spec.AddField(mediafile.FieldSizeBefore, field.TypeInt64, value)
+	}
+	if _u.mutation.SizeBeforeCleared() {
+		_spec.ClearField(mediafile.FieldSizeBefore, field.TypeInt64)
+	}
 	if _u.mutation.MovieCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -856,6 +955,51 @@ func (_u *MediaFileUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(episode.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.TranscodeJobsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   mediafile.TranscodeJobsTable,
+			Columns: []string{mediafile.TranscodeJobsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(transcodejob.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedTranscodeJobsIDs(); len(nodes) > 0 && !_u.mutation.TranscodeJobsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   mediafile.TranscodeJobsTable,
+			Columns: []string{mediafile.TranscodeJobsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(transcodejob.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.TranscodeJobsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   mediafile.TranscodeJobsTable,
+			Columns: []string{mediafile.TranscodeJobsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(transcodejob.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {
@@ -1382,6 +1526,53 @@ func (_u *MediaFileUpdateOne) ClearParsedCodec() *MediaFileUpdateOne {
 	return _u
 }
 
+// SetTranscodedAt sets the "transcoded_at" field.
+func (_u *MediaFileUpdateOne) SetTranscodedAt(v time.Time) *MediaFileUpdateOne {
+	_u.mutation.SetTranscodedAt(v)
+	return _u
+}
+
+// SetNillableTranscodedAt sets the "transcoded_at" field if the given value is not nil.
+func (_u *MediaFileUpdateOne) SetNillableTranscodedAt(v *time.Time) *MediaFileUpdateOne {
+	if v != nil {
+		_u.SetTranscodedAt(*v)
+	}
+	return _u
+}
+
+// ClearTranscodedAt clears the value of the "transcoded_at" field.
+func (_u *MediaFileUpdateOne) ClearTranscodedAt() *MediaFileUpdateOne {
+	_u.mutation.ClearTranscodedAt()
+	return _u
+}
+
+// SetSizeBefore sets the "size_before" field.
+func (_u *MediaFileUpdateOne) SetSizeBefore(v int64) *MediaFileUpdateOne {
+	_u.mutation.ResetSizeBefore()
+	_u.mutation.SetSizeBefore(v)
+	return _u
+}
+
+// SetNillableSizeBefore sets the "size_before" field if the given value is not nil.
+func (_u *MediaFileUpdateOne) SetNillableSizeBefore(v *int64) *MediaFileUpdateOne {
+	if v != nil {
+		_u.SetSizeBefore(*v)
+	}
+	return _u
+}
+
+// AddSizeBefore adds value to the "size_before" field.
+func (_u *MediaFileUpdateOne) AddSizeBefore(v int64) *MediaFileUpdateOne {
+	_u.mutation.AddSizeBefore(v)
+	return _u
+}
+
+// ClearSizeBefore clears the value of the "size_before" field.
+func (_u *MediaFileUpdateOne) ClearSizeBefore() *MediaFileUpdateOne {
+	_u.mutation.ClearSizeBefore()
+	return _u
+}
+
 // SetMovieID sets the "movie" edge to the Movie entity by ID.
 func (_u *MediaFileUpdateOne) SetMovieID(id uint32) *MediaFileUpdateOne {
 	_u.mutation.SetMovieID(id)
@@ -1420,6 +1611,21 @@ func (_u *MediaFileUpdateOne) SetEpisode(v *Episode) *MediaFileUpdateOne {
 	return _u.SetEpisodeID(v.ID)
 }
 
+// AddTranscodeJobIDs adds the "transcode_jobs" edge to the TranscodeJob entity by IDs.
+func (_u *MediaFileUpdateOne) AddTranscodeJobIDs(ids ...uint32) *MediaFileUpdateOne {
+	_u.mutation.AddTranscodeJobIDs(ids...)
+	return _u
+}
+
+// AddTranscodeJobs adds the "transcode_jobs" edges to the TranscodeJob entity.
+func (_u *MediaFileUpdateOne) AddTranscodeJobs(v ...*TranscodeJob) *MediaFileUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddTranscodeJobIDs(ids...)
+}
+
 // Mutation returns the MediaFileMutation object of the builder.
 func (_u *MediaFileUpdateOne) Mutation() *MediaFileMutation {
 	return _u.mutation
@@ -1435,6 +1641,27 @@ func (_u *MediaFileUpdateOne) ClearMovie() *MediaFileUpdateOne {
 func (_u *MediaFileUpdateOne) ClearEpisode() *MediaFileUpdateOne {
 	_u.mutation.ClearEpisode()
 	return _u
+}
+
+// ClearTranscodeJobs clears all "transcode_jobs" edges to the TranscodeJob entity.
+func (_u *MediaFileUpdateOne) ClearTranscodeJobs() *MediaFileUpdateOne {
+	_u.mutation.ClearTranscodeJobs()
+	return _u
+}
+
+// RemoveTranscodeJobIDs removes the "transcode_jobs" edge to TranscodeJob entities by IDs.
+func (_u *MediaFileUpdateOne) RemoveTranscodeJobIDs(ids ...uint32) *MediaFileUpdateOne {
+	_u.mutation.RemoveTranscodeJobIDs(ids...)
+	return _u
+}
+
+// RemoveTranscodeJobs removes "transcode_jobs" edges to TranscodeJob entities.
+func (_u *MediaFileUpdateOne) RemoveTranscodeJobs(v ...*TranscodeJob) *MediaFileUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveTranscodeJobIDs(ids...)
 }
 
 // Where appends a list predicates to the MediaFileUpdate builder.
@@ -1689,6 +1916,21 @@ func (_u *MediaFileUpdateOne) sqlSave(ctx context.Context) (_node *MediaFile, er
 	if _u.mutation.ParsedCodecCleared() {
 		_spec.ClearField(mediafile.FieldParsedCodec, field.TypeString)
 	}
+	if value, ok := _u.mutation.TranscodedAt(); ok {
+		_spec.SetField(mediafile.FieldTranscodedAt, field.TypeTime, value)
+	}
+	if _u.mutation.TranscodedAtCleared() {
+		_spec.ClearField(mediafile.FieldTranscodedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.SizeBefore(); ok {
+		_spec.SetField(mediafile.FieldSizeBefore, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedSizeBefore(); ok {
+		_spec.AddField(mediafile.FieldSizeBefore, field.TypeInt64, value)
+	}
+	if _u.mutation.SizeBeforeCleared() {
+		_spec.ClearField(mediafile.FieldSizeBefore, field.TypeInt64)
+	}
 	if _u.mutation.MovieCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -1740,6 +1982,51 @@ func (_u *MediaFileUpdateOne) sqlSave(ctx context.Context) (_node *MediaFile, er
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(episode.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.TranscodeJobsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   mediafile.TranscodeJobsTable,
+			Columns: []string{mediafile.TranscodeJobsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(transcodejob.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedTranscodeJobsIDs(); len(nodes) > 0 && !_u.mutation.TranscodeJobsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   mediafile.TranscodeJobsTable,
+			Columns: []string{mediafile.TranscodeJobsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(transcodejob.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.TranscodeJobsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   mediafile.TranscodeJobsTable,
+			Columns: []string{mediafile.TranscodeJobsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(transcodejob.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

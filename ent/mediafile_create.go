@@ -13,6 +13,7 @@ import (
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
+	"github.com/datahearth/streamline/ent/transcodejob"
 )
 
 // MediaFileCreate is the builder for creating a MediaFile entity.
@@ -356,6 +357,34 @@ func (_c *MediaFileCreate) SetNillableParsedCodec(v *string) *MediaFileCreate {
 	return _c
 }
 
+// SetTranscodedAt sets the "transcoded_at" field.
+func (_c *MediaFileCreate) SetTranscodedAt(v time.Time) *MediaFileCreate {
+	_c.mutation.SetTranscodedAt(v)
+	return _c
+}
+
+// SetNillableTranscodedAt sets the "transcoded_at" field if the given value is not nil.
+func (_c *MediaFileCreate) SetNillableTranscodedAt(v *time.Time) *MediaFileCreate {
+	if v != nil {
+		_c.SetTranscodedAt(*v)
+	}
+	return _c
+}
+
+// SetSizeBefore sets the "size_before" field.
+func (_c *MediaFileCreate) SetSizeBefore(v int64) *MediaFileCreate {
+	_c.mutation.SetSizeBefore(v)
+	return _c
+}
+
+// SetNillableSizeBefore sets the "size_before" field if the given value is not nil.
+func (_c *MediaFileCreate) SetNillableSizeBefore(v *int64) *MediaFileCreate {
+	if v != nil {
+		_c.SetSizeBefore(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *MediaFileCreate) SetID(v uint32) *MediaFileCreate {
 	_c.mutation.SetID(v)
@@ -398,6 +427,21 @@ func (_c *MediaFileCreate) SetNillableEpisodeID(id *uint32) *MediaFileCreate {
 // SetEpisode sets the "episode" edge to the Episode entity.
 func (_c *MediaFileCreate) SetEpisode(v *Episode) *MediaFileCreate {
 	return _c.SetEpisodeID(v.ID)
+}
+
+// AddTranscodeJobIDs adds the "transcode_jobs" edge to the TranscodeJob entity by IDs.
+func (_c *MediaFileCreate) AddTranscodeJobIDs(ids ...uint32) *MediaFileCreate {
+	_c.mutation.AddTranscodeJobIDs(ids...)
+	return _c
+}
+
+// AddTranscodeJobs adds the "transcode_jobs" edges to the TranscodeJob entity.
+func (_c *MediaFileCreate) AddTranscodeJobs(v ...*TranscodeJob) *MediaFileCreate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddTranscodeJobIDs(ids...)
 }
 
 // Mutation returns the MediaFileMutation object of the builder.
@@ -612,6 +656,14 @@ func (_c *MediaFileCreate) createSpec() (*MediaFile, *sqlgraph.CreateSpec) {
 		_spec.SetField(mediafile.FieldParsedCodec, field.TypeString, value)
 		_node.ParsedCodec = value
 	}
+	if value, ok := _c.mutation.TranscodedAt(); ok {
+		_spec.SetField(mediafile.FieldTranscodedAt, field.TypeTime, value)
+		_node.TranscodedAt = &value
+	}
+	if value, ok := _c.mutation.SizeBefore(); ok {
+		_spec.SetField(mediafile.FieldSizeBefore, field.TypeInt64, value)
+		_node.SizeBefore = value
+	}
 	if nodes := _c.mutation.MovieIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -644,6 +696,22 @@ func (_c *MediaFileCreate) createSpec() (*MediaFile, *sqlgraph.CreateSpec) {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.episode_media_files = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.TranscodeJobsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   mediafile.TranscodeJobsTable,
+			Columns: []string{mediafile.TranscodeJobsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(transcodejob.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

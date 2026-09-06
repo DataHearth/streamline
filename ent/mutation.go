@@ -29,6 +29,7 @@ import (
 	"github.com/datahearth/streamline/ent/season"
 	"github.com/datahearth/streamline/ent/session"
 	"github.com/datahearth/streamline/ent/torrentsession"
+	"github.com/datahearth/streamline/ent/transcodejob"
 	"github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/ent/user"
 )
@@ -59,6 +60,7 @@ const (
 	TypeSession        = "Session"
 	TypeTVShow         = "TVShow"
 	TypeTorrentSession = "TorrentSession"
+	TypeTranscodeJob   = "TranscodeJob"
 	TypeUser           = "User"
 )
 
@@ -10196,49 +10198,55 @@ func (m *MediaEventMutation) ResetEdge(name string) error {
 // MediaFileMutation represents an operation that mutates the MediaFile nodes in the graph.
 type MediaFileMutation struct {
 	config
-	op                  Op
-	typ                 string
-	id                  *uint32
-	create_time         *time.Time
-	update_time         *time.Time
-	_path               *string
-	size                *int64
-	addsize             *int64
-	quality             *string
-	format              *string
-	release_group       *string
-	source              *mediafile.Source
-	last_seen_at        *time.Time
-	missing_since       *time.Time
-	container           *string
-	duration_seconds    *uint32
-	addduration_seconds *int32
-	video_codec         *string
-	width               *uint16
-	addwidth            *int16
-	height              *uint16
-	addheight           *int16
-	audio_codec         *string
-	audio_channels      *uint8
-	addaudio_channels   *int8
-	bitrate             *uint32
-	addbitrate          *int32
-	audio_tracks        *uint8
-	addaudio_tracks     *int8
-	audio_langs         *string
-	sub_langs           *string
-	probed_at           *time.Time
-	parsed_source       *string
-	parsed_resolution   *string
-	parsed_codec        *string
-	clearedFields       map[string]struct{}
-	movie               *uint32
-	clearedmovie        bool
-	episode             *uint32
-	clearedepisode      bool
-	done                bool
-	oldValue            func(context.Context) (*MediaFile, error)
-	predicates          []predicate.MediaFile
+	op                    Op
+	typ                   string
+	id                    *uint32
+	create_time           *time.Time
+	update_time           *time.Time
+	_path                 *string
+	size                  *int64
+	addsize               *int64
+	quality               *string
+	format                *string
+	release_group         *string
+	source                *mediafile.Source
+	last_seen_at          *time.Time
+	missing_since         *time.Time
+	container             *string
+	duration_seconds      *uint32
+	addduration_seconds   *int32
+	video_codec           *string
+	width                 *uint16
+	addwidth              *int16
+	height                *uint16
+	addheight             *int16
+	audio_codec           *string
+	audio_channels        *uint8
+	addaudio_channels     *int8
+	bitrate               *uint32
+	addbitrate            *int32
+	audio_tracks          *uint8
+	addaudio_tracks       *int8
+	audio_langs           *string
+	sub_langs             *string
+	probed_at             *time.Time
+	parsed_source         *string
+	parsed_resolution     *string
+	parsed_codec          *string
+	transcoded_at         *time.Time
+	size_before           *int64
+	addsize_before        *int64
+	clearedFields         map[string]struct{}
+	movie                 *uint32
+	clearedmovie          bool
+	episode               *uint32
+	clearedepisode        bool
+	transcode_jobs        map[uint32]struct{}
+	removedtranscode_jobs map[uint32]struct{}
+	clearedtranscode_jobs bool
+	done                  bool
+	oldValue              func(context.Context) (*MediaFile, error)
+	predicates            []predicate.MediaFile
 }
 
 var _ ent.Mutation = (*MediaFileMutation)(nil)
@@ -11651,6 +11659,125 @@ func (m *MediaFileMutation) ResetParsedCodec() {
 	delete(m.clearedFields, mediafile.FieldParsedCodec)
 }
 
+// SetTranscodedAt sets the "transcoded_at" field.
+func (m *MediaFileMutation) SetTranscodedAt(t time.Time) {
+	m.transcoded_at = &t
+}
+
+// TranscodedAt returns the value of the "transcoded_at" field in the mutation.
+func (m *MediaFileMutation) TranscodedAt() (r time.Time, exists bool) {
+	v := m.transcoded_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTranscodedAt returns the old "transcoded_at" field's value of the MediaFile entity.
+// If the MediaFile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaFileMutation) OldTranscodedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTranscodedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTranscodedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTranscodedAt: %w", err)
+	}
+	return oldValue.TranscodedAt, nil
+}
+
+// ClearTranscodedAt clears the value of the "transcoded_at" field.
+func (m *MediaFileMutation) ClearTranscodedAt() {
+	m.transcoded_at = nil
+	m.clearedFields[mediafile.FieldTranscodedAt] = struct{}{}
+}
+
+// TranscodedAtCleared returns if the "transcoded_at" field was cleared in this mutation.
+func (m *MediaFileMutation) TranscodedAtCleared() bool {
+	_, ok := m.clearedFields[mediafile.FieldTranscodedAt]
+	return ok
+}
+
+// ResetTranscodedAt resets all changes to the "transcoded_at" field.
+func (m *MediaFileMutation) ResetTranscodedAt() {
+	m.transcoded_at = nil
+	delete(m.clearedFields, mediafile.FieldTranscodedAt)
+}
+
+// SetSizeBefore sets the "size_before" field.
+func (m *MediaFileMutation) SetSizeBefore(i int64) {
+	m.size_before = &i
+	m.addsize_before = nil
+}
+
+// SizeBefore returns the value of the "size_before" field in the mutation.
+func (m *MediaFileMutation) SizeBefore() (r int64, exists bool) {
+	v := m.size_before
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSizeBefore returns the old "size_before" field's value of the MediaFile entity.
+// If the MediaFile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaFileMutation) OldSizeBefore(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSizeBefore is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSizeBefore requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSizeBefore: %w", err)
+	}
+	return oldValue.SizeBefore, nil
+}
+
+// AddSizeBefore adds i to the "size_before" field.
+func (m *MediaFileMutation) AddSizeBefore(i int64) {
+	if m.addsize_before != nil {
+		*m.addsize_before += i
+	} else {
+		m.addsize_before = &i
+	}
+}
+
+// AddedSizeBefore returns the value that was added to the "size_before" field in this mutation.
+func (m *MediaFileMutation) AddedSizeBefore() (r int64, exists bool) {
+	v := m.addsize_before
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearSizeBefore clears the value of the "size_before" field.
+func (m *MediaFileMutation) ClearSizeBefore() {
+	m.size_before = nil
+	m.addsize_before = nil
+	m.clearedFields[mediafile.FieldSizeBefore] = struct{}{}
+}
+
+// SizeBeforeCleared returns if the "size_before" field was cleared in this mutation.
+func (m *MediaFileMutation) SizeBeforeCleared() bool {
+	_, ok := m.clearedFields[mediafile.FieldSizeBefore]
+	return ok
+}
+
+// ResetSizeBefore resets all changes to the "size_before" field.
+func (m *MediaFileMutation) ResetSizeBefore() {
+	m.size_before = nil
+	m.addsize_before = nil
+	delete(m.clearedFields, mediafile.FieldSizeBefore)
+}
+
 // SetMovieID sets the "movie" edge to the Movie entity by id.
 func (m *MediaFileMutation) SetMovieID(id uint32) {
 	m.movie = &id
@@ -11729,6 +11856,60 @@ func (m *MediaFileMutation) ResetEpisode() {
 	m.clearedepisode = false
 }
 
+// AddTranscodeJobIDs adds the "transcode_jobs" edge to the TranscodeJob entity by ids.
+func (m *MediaFileMutation) AddTranscodeJobIDs(ids ...uint32) {
+	if m.transcode_jobs == nil {
+		m.transcode_jobs = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		m.transcode_jobs[ids[i]] = struct{}{}
+	}
+}
+
+// ClearTranscodeJobs clears the "transcode_jobs" edge to the TranscodeJob entity.
+func (m *MediaFileMutation) ClearTranscodeJobs() {
+	m.clearedtranscode_jobs = true
+}
+
+// TranscodeJobsCleared reports if the "transcode_jobs" edge to the TranscodeJob entity was cleared.
+func (m *MediaFileMutation) TranscodeJobsCleared() bool {
+	return m.clearedtranscode_jobs
+}
+
+// RemoveTranscodeJobIDs removes the "transcode_jobs" edge to the TranscodeJob entity by IDs.
+func (m *MediaFileMutation) RemoveTranscodeJobIDs(ids ...uint32) {
+	if m.removedtranscode_jobs == nil {
+		m.removedtranscode_jobs = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		delete(m.transcode_jobs, ids[i])
+		m.removedtranscode_jobs[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedTranscodeJobs returns the removed IDs of the "transcode_jobs" edge to the TranscodeJob entity.
+func (m *MediaFileMutation) RemovedTranscodeJobsIDs() (ids []uint32) {
+	for id := range m.removedtranscode_jobs {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// TranscodeJobsIDs returns the "transcode_jobs" edge IDs in the mutation.
+func (m *MediaFileMutation) TranscodeJobsIDs() (ids []uint32) {
+	for id := range m.transcode_jobs {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetTranscodeJobs resets all changes to the "transcode_jobs" edge.
+func (m *MediaFileMutation) ResetTranscodeJobs() {
+	m.transcode_jobs = nil
+	m.clearedtranscode_jobs = false
+	m.removedtranscode_jobs = nil
+}
+
 // Where appends a list predicates to the MediaFileMutation builder.
 func (m *MediaFileMutation) Where(ps ...predicate.MediaFile) {
 	m.predicates = append(m.predicates, ps...)
@@ -11763,7 +11944,7 @@ func (m *MediaFileMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *MediaFileMutation) Fields() []string {
-	fields := make([]string, 0, 25)
+	fields := make([]string, 0, 27)
 	if m.create_time != nil {
 		fields = append(fields, mediafile.FieldCreateTime)
 	}
@@ -11839,6 +12020,12 @@ func (m *MediaFileMutation) Fields() []string {
 	if m.parsed_codec != nil {
 		fields = append(fields, mediafile.FieldParsedCodec)
 	}
+	if m.transcoded_at != nil {
+		fields = append(fields, mediafile.FieldTranscodedAt)
+	}
+	if m.size_before != nil {
+		fields = append(fields, mediafile.FieldSizeBefore)
+	}
 	return fields
 }
 
@@ -11897,6 +12084,10 @@ func (m *MediaFileMutation) Field(name string) (ent.Value, bool) {
 		return m.ParsedResolution()
 	case mediafile.FieldParsedCodec:
 		return m.ParsedCodec()
+	case mediafile.FieldTranscodedAt:
+		return m.TranscodedAt()
+	case mediafile.FieldSizeBefore:
+		return m.SizeBefore()
 	}
 	return nil, false
 }
@@ -11956,6 +12147,10 @@ func (m *MediaFileMutation) OldField(ctx context.Context, name string) (ent.Valu
 		return m.OldParsedResolution(ctx)
 	case mediafile.FieldParsedCodec:
 		return m.OldParsedCodec(ctx)
+	case mediafile.FieldTranscodedAt:
+		return m.OldTranscodedAt(ctx)
+	case mediafile.FieldSizeBefore:
+		return m.OldSizeBefore(ctx)
 	}
 	return nil, fmt.Errorf("unknown MediaFile field %s", name)
 }
@@ -12140,6 +12335,20 @@ func (m *MediaFileMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetParsedCodec(v)
 		return nil
+	case mediafile.FieldTranscodedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTranscodedAt(v)
+		return nil
+	case mediafile.FieldSizeBefore:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSizeBefore(v)
+		return nil
 	}
 	return fmt.Errorf("unknown MediaFile field %s", name)
 }
@@ -12169,6 +12378,9 @@ func (m *MediaFileMutation) AddedFields() []string {
 	if m.addaudio_tracks != nil {
 		fields = append(fields, mediafile.FieldAudioTracks)
 	}
+	if m.addsize_before != nil {
+		fields = append(fields, mediafile.FieldSizeBefore)
+	}
 	return fields
 }
 
@@ -12191,6 +12403,8 @@ func (m *MediaFileMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedBitrate()
 	case mediafile.FieldAudioTracks:
 		return m.AddedAudioTracks()
+	case mediafile.FieldSizeBefore:
+		return m.AddedSizeBefore()
 	}
 	return nil, false
 }
@@ -12248,6 +12462,13 @@ func (m *MediaFileMutation) AddField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddAudioTracks(v)
+		return nil
+	case mediafile.FieldSizeBefore:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddSizeBefore(v)
 		return nil
 	}
 	return fmt.Errorf("unknown MediaFile numeric field %s", name)
@@ -12316,6 +12537,12 @@ func (m *MediaFileMutation) ClearedFields() []string {
 	}
 	if m.FieldCleared(mediafile.FieldParsedCodec) {
 		fields = append(fields, mediafile.FieldParsedCodec)
+	}
+	if m.FieldCleared(mediafile.FieldTranscodedAt) {
+		fields = append(fields, mediafile.FieldTranscodedAt)
+	}
+	if m.FieldCleared(mediafile.FieldSizeBefore) {
+		fields = append(fields, mediafile.FieldSizeBefore)
 	}
 	return fields
 }
@@ -12390,6 +12617,12 @@ func (m *MediaFileMutation) ClearField(name string) error {
 		return nil
 	case mediafile.FieldParsedCodec:
 		m.ClearParsedCodec()
+		return nil
+	case mediafile.FieldTranscodedAt:
+		m.ClearTranscodedAt()
+		return nil
+	case mediafile.FieldSizeBefore:
+		m.ClearSizeBefore()
 		return nil
 	}
 	return fmt.Errorf("unknown MediaFile nullable field %s", name)
@@ -12474,18 +12707,27 @@ func (m *MediaFileMutation) ResetField(name string) error {
 	case mediafile.FieldParsedCodec:
 		m.ResetParsedCodec()
 		return nil
+	case mediafile.FieldTranscodedAt:
+		m.ResetTranscodedAt()
+		return nil
+	case mediafile.FieldSizeBefore:
+		m.ResetSizeBefore()
+		return nil
 	}
 	return fmt.Errorf("unknown MediaFile field %s", name)
 }
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *MediaFileMutation) AddedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.movie != nil {
 		edges = append(edges, mediafile.EdgeMovie)
 	}
 	if m.episode != nil {
 		edges = append(edges, mediafile.EdgeEpisode)
+	}
+	if m.transcode_jobs != nil {
+		edges = append(edges, mediafile.EdgeTranscodeJobs)
 	}
 	return edges
 }
@@ -12502,30 +12744,50 @@ func (m *MediaFileMutation) AddedIDs(name string) []ent.Value {
 		if id := m.episode; id != nil {
 			return []ent.Value{*id}
 		}
+	case mediafile.EdgeTranscodeJobs:
+		ids := make([]ent.Value, 0, len(m.transcode_jobs))
+		for id := range m.transcode_jobs {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *MediaFileMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
+	if m.removedtranscode_jobs != nil {
+		edges = append(edges, mediafile.EdgeTranscodeJobs)
+	}
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *MediaFileMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case mediafile.EdgeTranscodeJobs:
+		ids := make([]ent.Value, 0, len(m.removedtranscode_jobs))
+		for id := range m.removedtranscode_jobs {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *MediaFileMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.clearedmovie {
 		edges = append(edges, mediafile.EdgeMovie)
 	}
 	if m.clearedepisode {
 		edges = append(edges, mediafile.EdgeEpisode)
+	}
+	if m.clearedtranscode_jobs {
+		edges = append(edges, mediafile.EdgeTranscodeJobs)
 	}
 	return edges
 }
@@ -12538,6 +12800,8 @@ func (m *MediaFileMutation) EdgeCleared(name string) bool {
 		return m.clearedmovie
 	case mediafile.EdgeEpisode:
 		return m.clearedepisode
+	case mediafile.EdgeTranscodeJobs:
+		return m.clearedtranscode_jobs
 	}
 	return false
 }
@@ -12565,6 +12829,9 @@ func (m *MediaFileMutation) ResetEdge(name string) error {
 		return nil
 	case mediafile.EdgeEpisode:
 		m.ResetEpisode()
+		return nil
+	case mediafile.EdgeTranscodeJobs:
+		m.ResetTranscodeJobs()
 		return nil
 	}
 	return fmt.Errorf("unknown MediaFile edge %s", name)
@@ -21511,6 +21778,1039 @@ func (m *TorrentSessionMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *TorrentSessionMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown TorrentSession edge %s", name)
+}
+
+// TranscodeJobMutation represents an operation that mutates the TranscodeJob nodes in the graph.
+type TranscodeJobMutation struct {
+	config
+	op                Op
+	typ               string
+	id                *uint32
+	create_time       *time.Time
+	update_time       *time.Time
+	status            *transcodejob.Status
+	attempts          *uint8
+	addattempts       *int8
+	error             *string
+	size_before       *int64
+	addsize_before    *int64
+	size_after        *int64
+	addsize_after     *int64
+	started_at        *time.Time
+	finished_at       *time.Time
+	clearedFields     map[string]struct{}
+	media_file        *uint32
+	clearedmedia_file bool
+	done              bool
+	oldValue          func(context.Context) (*TranscodeJob, error)
+	predicates        []predicate.TranscodeJob
+}
+
+var _ ent.Mutation = (*TranscodeJobMutation)(nil)
+
+// transcodejobOption allows management of the mutation configuration using functional options.
+type transcodejobOption func(*TranscodeJobMutation)
+
+// newTranscodeJobMutation creates new mutation for the TranscodeJob entity.
+func newTranscodeJobMutation(c config, op Op, opts ...transcodejobOption) *TranscodeJobMutation {
+	m := &TranscodeJobMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeTranscodeJob,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withTranscodeJobID sets the ID field of the mutation.
+func withTranscodeJobID(id uint32) transcodejobOption {
+	return func(m *TranscodeJobMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *TranscodeJob
+		)
+		m.oldValue = func(ctx context.Context) (*TranscodeJob, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().TranscodeJob.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withTranscodeJob sets the old TranscodeJob of the mutation.
+func withTranscodeJob(node *TranscodeJob) transcodejobOption {
+	return func(m *TranscodeJobMutation) {
+		m.oldValue = func(context.Context) (*TranscodeJob, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m TranscodeJobMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m TranscodeJobMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of TranscodeJob entities.
+func (m *TranscodeJobMutation) SetID(id uint32) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *TranscodeJobMutation) ID() (id uint32, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *TranscodeJobMutation) IDs(ctx context.Context) ([]uint32, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uint32{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().TranscodeJob.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreateTime sets the "create_time" field.
+func (m *TranscodeJobMutation) SetCreateTime(t time.Time) {
+	m.create_time = &t
+}
+
+// CreateTime returns the value of the "create_time" field in the mutation.
+func (m *TranscodeJobMutation) CreateTime() (r time.Time, exists bool) {
+	v := m.create_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreateTime returns the old "create_time" field's value of the TranscodeJob entity.
+// If the TranscodeJob object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TranscodeJobMutation) OldCreateTime(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreateTime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreateTime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreateTime: %w", err)
+	}
+	return oldValue.CreateTime, nil
+}
+
+// ResetCreateTime resets all changes to the "create_time" field.
+func (m *TranscodeJobMutation) ResetCreateTime() {
+	m.create_time = nil
+}
+
+// SetUpdateTime sets the "update_time" field.
+func (m *TranscodeJobMutation) SetUpdateTime(t time.Time) {
+	m.update_time = &t
+}
+
+// UpdateTime returns the value of the "update_time" field in the mutation.
+func (m *TranscodeJobMutation) UpdateTime() (r time.Time, exists bool) {
+	v := m.update_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdateTime returns the old "update_time" field's value of the TranscodeJob entity.
+// If the TranscodeJob object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TranscodeJobMutation) OldUpdateTime(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdateTime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdateTime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdateTime: %w", err)
+	}
+	return oldValue.UpdateTime, nil
+}
+
+// ResetUpdateTime resets all changes to the "update_time" field.
+func (m *TranscodeJobMutation) ResetUpdateTime() {
+	m.update_time = nil
+}
+
+// SetStatus sets the "status" field.
+func (m *TranscodeJobMutation) SetStatus(t transcodejob.Status) {
+	m.status = &t
+}
+
+// Status returns the value of the "status" field in the mutation.
+func (m *TranscodeJobMutation) Status() (r transcodejob.Status, exists bool) {
+	v := m.status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStatus returns the old "status" field's value of the TranscodeJob entity.
+// If the TranscodeJob object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TranscodeJobMutation) OldStatus(ctx context.Context) (v transcodejob.Status, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
+	}
+	return oldValue.Status, nil
+}
+
+// ResetStatus resets all changes to the "status" field.
+func (m *TranscodeJobMutation) ResetStatus() {
+	m.status = nil
+}
+
+// SetAttempts sets the "attempts" field.
+func (m *TranscodeJobMutation) SetAttempts(u uint8) {
+	m.attempts = &u
+	m.addattempts = nil
+}
+
+// Attempts returns the value of the "attempts" field in the mutation.
+func (m *TranscodeJobMutation) Attempts() (r uint8, exists bool) {
+	v := m.attempts
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAttempts returns the old "attempts" field's value of the TranscodeJob entity.
+// If the TranscodeJob object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TranscodeJobMutation) OldAttempts(ctx context.Context) (v uint8, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAttempts is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAttempts requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAttempts: %w", err)
+	}
+	return oldValue.Attempts, nil
+}
+
+// AddAttempts adds u to the "attempts" field.
+func (m *TranscodeJobMutation) AddAttempts(u int8) {
+	if m.addattempts != nil {
+		*m.addattempts += u
+	} else {
+		m.addattempts = &u
+	}
+}
+
+// AddedAttempts returns the value that was added to the "attempts" field in this mutation.
+func (m *TranscodeJobMutation) AddedAttempts() (r int8, exists bool) {
+	v := m.addattempts
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetAttempts resets all changes to the "attempts" field.
+func (m *TranscodeJobMutation) ResetAttempts() {
+	m.attempts = nil
+	m.addattempts = nil
+}
+
+// SetError sets the "error" field.
+func (m *TranscodeJobMutation) SetError(s string) {
+	m.error = &s
+}
+
+// Error returns the value of the "error" field in the mutation.
+func (m *TranscodeJobMutation) Error() (r string, exists bool) {
+	v := m.error
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldError returns the old "error" field's value of the TranscodeJob entity.
+// If the TranscodeJob object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TranscodeJobMutation) OldError(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldError is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldError requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldError: %w", err)
+	}
+	return oldValue.Error, nil
+}
+
+// ClearError clears the value of the "error" field.
+func (m *TranscodeJobMutation) ClearError() {
+	m.error = nil
+	m.clearedFields[transcodejob.FieldError] = struct{}{}
+}
+
+// ErrorCleared returns if the "error" field was cleared in this mutation.
+func (m *TranscodeJobMutation) ErrorCleared() bool {
+	_, ok := m.clearedFields[transcodejob.FieldError]
+	return ok
+}
+
+// ResetError resets all changes to the "error" field.
+func (m *TranscodeJobMutation) ResetError() {
+	m.error = nil
+	delete(m.clearedFields, transcodejob.FieldError)
+}
+
+// SetSizeBefore sets the "size_before" field.
+func (m *TranscodeJobMutation) SetSizeBefore(i int64) {
+	m.size_before = &i
+	m.addsize_before = nil
+}
+
+// SizeBefore returns the value of the "size_before" field in the mutation.
+func (m *TranscodeJobMutation) SizeBefore() (r int64, exists bool) {
+	v := m.size_before
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSizeBefore returns the old "size_before" field's value of the TranscodeJob entity.
+// If the TranscodeJob object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TranscodeJobMutation) OldSizeBefore(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSizeBefore is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSizeBefore requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSizeBefore: %w", err)
+	}
+	return oldValue.SizeBefore, nil
+}
+
+// AddSizeBefore adds i to the "size_before" field.
+func (m *TranscodeJobMutation) AddSizeBefore(i int64) {
+	if m.addsize_before != nil {
+		*m.addsize_before += i
+	} else {
+		m.addsize_before = &i
+	}
+}
+
+// AddedSizeBefore returns the value that was added to the "size_before" field in this mutation.
+func (m *TranscodeJobMutation) AddedSizeBefore() (r int64, exists bool) {
+	v := m.addsize_before
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearSizeBefore clears the value of the "size_before" field.
+func (m *TranscodeJobMutation) ClearSizeBefore() {
+	m.size_before = nil
+	m.addsize_before = nil
+	m.clearedFields[transcodejob.FieldSizeBefore] = struct{}{}
+}
+
+// SizeBeforeCleared returns if the "size_before" field was cleared in this mutation.
+func (m *TranscodeJobMutation) SizeBeforeCleared() bool {
+	_, ok := m.clearedFields[transcodejob.FieldSizeBefore]
+	return ok
+}
+
+// ResetSizeBefore resets all changes to the "size_before" field.
+func (m *TranscodeJobMutation) ResetSizeBefore() {
+	m.size_before = nil
+	m.addsize_before = nil
+	delete(m.clearedFields, transcodejob.FieldSizeBefore)
+}
+
+// SetSizeAfter sets the "size_after" field.
+func (m *TranscodeJobMutation) SetSizeAfter(i int64) {
+	m.size_after = &i
+	m.addsize_after = nil
+}
+
+// SizeAfter returns the value of the "size_after" field in the mutation.
+func (m *TranscodeJobMutation) SizeAfter() (r int64, exists bool) {
+	v := m.size_after
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSizeAfter returns the old "size_after" field's value of the TranscodeJob entity.
+// If the TranscodeJob object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TranscodeJobMutation) OldSizeAfter(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSizeAfter is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSizeAfter requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSizeAfter: %w", err)
+	}
+	return oldValue.SizeAfter, nil
+}
+
+// AddSizeAfter adds i to the "size_after" field.
+func (m *TranscodeJobMutation) AddSizeAfter(i int64) {
+	if m.addsize_after != nil {
+		*m.addsize_after += i
+	} else {
+		m.addsize_after = &i
+	}
+}
+
+// AddedSizeAfter returns the value that was added to the "size_after" field in this mutation.
+func (m *TranscodeJobMutation) AddedSizeAfter() (r int64, exists bool) {
+	v := m.addsize_after
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearSizeAfter clears the value of the "size_after" field.
+func (m *TranscodeJobMutation) ClearSizeAfter() {
+	m.size_after = nil
+	m.addsize_after = nil
+	m.clearedFields[transcodejob.FieldSizeAfter] = struct{}{}
+}
+
+// SizeAfterCleared returns if the "size_after" field was cleared in this mutation.
+func (m *TranscodeJobMutation) SizeAfterCleared() bool {
+	_, ok := m.clearedFields[transcodejob.FieldSizeAfter]
+	return ok
+}
+
+// ResetSizeAfter resets all changes to the "size_after" field.
+func (m *TranscodeJobMutation) ResetSizeAfter() {
+	m.size_after = nil
+	m.addsize_after = nil
+	delete(m.clearedFields, transcodejob.FieldSizeAfter)
+}
+
+// SetStartedAt sets the "started_at" field.
+func (m *TranscodeJobMutation) SetStartedAt(t time.Time) {
+	m.started_at = &t
+}
+
+// StartedAt returns the value of the "started_at" field in the mutation.
+func (m *TranscodeJobMutation) StartedAt() (r time.Time, exists bool) {
+	v := m.started_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStartedAt returns the old "started_at" field's value of the TranscodeJob entity.
+// If the TranscodeJob object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TranscodeJobMutation) OldStartedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStartedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStartedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStartedAt: %w", err)
+	}
+	return oldValue.StartedAt, nil
+}
+
+// ClearStartedAt clears the value of the "started_at" field.
+func (m *TranscodeJobMutation) ClearStartedAt() {
+	m.started_at = nil
+	m.clearedFields[transcodejob.FieldStartedAt] = struct{}{}
+}
+
+// StartedAtCleared returns if the "started_at" field was cleared in this mutation.
+func (m *TranscodeJobMutation) StartedAtCleared() bool {
+	_, ok := m.clearedFields[transcodejob.FieldStartedAt]
+	return ok
+}
+
+// ResetStartedAt resets all changes to the "started_at" field.
+func (m *TranscodeJobMutation) ResetStartedAt() {
+	m.started_at = nil
+	delete(m.clearedFields, transcodejob.FieldStartedAt)
+}
+
+// SetFinishedAt sets the "finished_at" field.
+func (m *TranscodeJobMutation) SetFinishedAt(t time.Time) {
+	m.finished_at = &t
+}
+
+// FinishedAt returns the value of the "finished_at" field in the mutation.
+func (m *TranscodeJobMutation) FinishedAt() (r time.Time, exists bool) {
+	v := m.finished_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldFinishedAt returns the old "finished_at" field's value of the TranscodeJob entity.
+// If the TranscodeJob object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TranscodeJobMutation) OldFinishedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldFinishedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldFinishedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFinishedAt: %w", err)
+	}
+	return oldValue.FinishedAt, nil
+}
+
+// ClearFinishedAt clears the value of the "finished_at" field.
+func (m *TranscodeJobMutation) ClearFinishedAt() {
+	m.finished_at = nil
+	m.clearedFields[transcodejob.FieldFinishedAt] = struct{}{}
+}
+
+// FinishedAtCleared returns if the "finished_at" field was cleared in this mutation.
+func (m *TranscodeJobMutation) FinishedAtCleared() bool {
+	_, ok := m.clearedFields[transcodejob.FieldFinishedAt]
+	return ok
+}
+
+// ResetFinishedAt resets all changes to the "finished_at" field.
+func (m *TranscodeJobMutation) ResetFinishedAt() {
+	m.finished_at = nil
+	delete(m.clearedFields, transcodejob.FieldFinishedAt)
+}
+
+// SetMediaFileID sets the "media_file" edge to the MediaFile entity by id.
+func (m *TranscodeJobMutation) SetMediaFileID(id uint32) {
+	m.media_file = &id
+}
+
+// ClearMediaFile clears the "media_file" edge to the MediaFile entity.
+func (m *TranscodeJobMutation) ClearMediaFile() {
+	m.clearedmedia_file = true
+}
+
+// MediaFileCleared reports if the "media_file" edge to the MediaFile entity was cleared.
+func (m *TranscodeJobMutation) MediaFileCleared() bool {
+	return m.clearedmedia_file
+}
+
+// MediaFileID returns the "media_file" edge ID in the mutation.
+func (m *TranscodeJobMutation) MediaFileID() (id uint32, exists bool) {
+	if m.media_file != nil {
+		return *m.media_file, true
+	}
+	return
+}
+
+// MediaFileIDs returns the "media_file" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// MediaFileID instead. It exists only for internal usage by the builders.
+func (m *TranscodeJobMutation) MediaFileIDs() (ids []uint32) {
+	if id := m.media_file; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetMediaFile resets all changes to the "media_file" edge.
+func (m *TranscodeJobMutation) ResetMediaFile() {
+	m.media_file = nil
+	m.clearedmedia_file = false
+}
+
+// Where appends a list predicates to the TranscodeJobMutation builder.
+func (m *TranscodeJobMutation) Where(ps ...predicate.TranscodeJob) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the TranscodeJobMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *TranscodeJobMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.TranscodeJob, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *TranscodeJobMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *TranscodeJobMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (TranscodeJob).
+func (m *TranscodeJobMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *TranscodeJobMutation) Fields() []string {
+	fields := make([]string, 0, 9)
+	if m.create_time != nil {
+		fields = append(fields, transcodejob.FieldCreateTime)
+	}
+	if m.update_time != nil {
+		fields = append(fields, transcodejob.FieldUpdateTime)
+	}
+	if m.status != nil {
+		fields = append(fields, transcodejob.FieldStatus)
+	}
+	if m.attempts != nil {
+		fields = append(fields, transcodejob.FieldAttempts)
+	}
+	if m.error != nil {
+		fields = append(fields, transcodejob.FieldError)
+	}
+	if m.size_before != nil {
+		fields = append(fields, transcodejob.FieldSizeBefore)
+	}
+	if m.size_after != nil {
+		fields = append(fields, transcodejob.FieldSizeAfter)
+	}
+	if m.started_at != nil {
+		fields = append(fields, transcodejob.FieldStartedAt)
+	}
+	if m.finished_at != nil {
+		fields = append(fields, transcodejob.FieldFinishedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *TranscodeJobMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case transcodejob.FieldCreateTime:
+		return m.CreateTime()
+	case transcodejob.FieldUpdateTime:
+		return m.UpdateTime()
+	case transcodejob.FieldStatus:
+		return m.Status()
+	case transcodejob.FieldAttempts:
+		return m.Attempts()
+	case transcodejob.FieldError:
+		return m.Error()
+	case transcodejob.FieldSizeBefore:
+		return m.SizeBefore()
+	case transcodejob.FieldSizeAfter:
+		return m.SizeAfter()
+	case transcodejob.FieldStartedAt:
+		return m.StartedAt()
+	case transcodejob.FieldFinishedAt:
+		return m.FinishedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *TranscodeJobMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case transcodejob.FieldCreateTime:
+		return m.OldCreateTime(ctx)
+	case transcodejob.FieldUpdateTime:
+		return m.OldUpdateTime(ctx)
+	case transcodejob.FieldStatus:
+		return m.OldStatus(ctx)
+	case transcodejob.FieldAttempts:
+		return m.OldAttempts(ctx)
+	case transcodejob.FieldError:
+		return m.OldError(ctx)
+	case transcodejob.FieldSizeBefore:
+		return m.OldSizeBefore(ctx)
+	case transcodejob.FieldSizeAfter:
+		return m.OldSizeAfter(ctx)
+	case transcodejob.FieldStartedAt:
+		return m.OldStartedAt(ctx)
+	case transcodejob.FieldFinishedAt:
+		return m.OldFinishedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown TranscodeJob field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *TranscodeJobMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case transcodejob.FieldCreateTime:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreateTime(v)
+		return nil
+	case transcodejob.FieldUpdateTime:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdateTime(v)
+		return nil
+	case transcodejob.FieldStatus:
+		v, ok := value.(transcodejob.Status)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStatus(v)
+		return nil
+	case transcodejob.FieldAttempts:
+		v, ok := value.(uint8)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAttempts(v)
+		return nil
+	case transcodejob.FieldError:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetError(v)
+		return nil
+	case transcodejob.FieldSizeBefore:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSizeBefore(v)
+		return nil
+	case transcodejob.FieldSizeAfter:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSizeAfter(v)
+		return nil
+	case transcodejob.FieldStartedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStartedAt(v)
+		return nil
+	case transcodejob.FieldFinishedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetFinishedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown TranscodeJob field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *TranscodeJobMutation) AddedFields() []string {
+	var fields []string
+	if m.addattempts != nil {
+		fields = append(fields, transcodejob.FieldAttempts)
+	}
+	if m.addsize_before != nil {
+		fields = append(fields, transcodejob.FieldSizeBefore)
+	}
+	if m.addsize_after != nil {
+		fields = append(fields, transcodejob.FieldSizeAfter)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *TranscodeJobMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case transcodejob.FieldAttempts:
+		return m.AddedAttempts()
+	case transcodejob.FieldSizeBefore:
+		return m.AddedSizeBefore()
+	case transcodejob.FieldSizeAfter:
+		return m.AddedSizeAfter()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *TranscodeJobMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case transcodejob.FieldAttempts:
+		v, ok := value.(int8)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddAttempts(v)
+		return nil
+	case transcodejob.FieldSizeBefore:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddSizeBefore(v)
+		return nil
+	case transcodejob.FieldSizeAfter:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddSizeAfter(v)
+		return nil
+	}
+	return fmt.Errorf("unknown TranscodeJob numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *TranscodeJobMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(transcodejob.FieldError) {
+		fields = append(fields, transcodejob.FieldError)
+	}
+	if m.FieldCleared(transcodejob.FieldSizeBefore) {
+		fields = append(fields, transcodejob.FieldSizeBefore)
+	}
+	if m.FieldCleared(transcodejob.FieldSizeAfter) {
+		fields = append(fields, transcodejob.FieldSizeAfter)
+	}
+	if m.FieldCleared(transcodejob.FieldStartedAt) {
+		fields = append(fields, transcodejob.FieldStartedAt)
+	}
+	if m.FieldCleared(transcodejob.FieldFinishedAt) {
+		fields = append(fields, transcodejob.FieldFinishedAt)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *TranscodeJobMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *TranscodeJobMutation) ClearField(name string) error {
+	switch name {
+	case transcodejob.FieldError:
+		m.ClearError()
+		return nil
+	case transcodejob.FieldSizeBefore:
+		m.ClearSizeBefore()
+		return nil
+	case transcodejob.FieldSizeAfter:
+		m.ClearSizeAfter()
+		return nil
+	case transcodejob.FieldStartedAt:
+		m.ClearStartedAt()
+		return nil
+	case transcodejob.FieldFinishedAt:
+		m.ClearFinishedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown TranscodeJob nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *TranscodeJobMutation) ResetField(name string) error {
+	switch name {
+	case transcodejob.FieldCreateTime:
+		m.ResetCreateTime()
+		return nil
+	case transcodejob.FieldUpdateTime:
+		m.ResetUpdateTime()
+		return nil
+	case transcodejob.FieldStatus:
+		m.ResetStatus()
+		return nil
+	case transcodejob.FieldAttempts:
+		m.ResetAttempts()
+		return nil
+	case transcodejob.FieldError:
+		m.ResetError()
+		return nil
+	case transcodejob.FieldSizeBefore:
+		m.ResetSizeBefore()
+		return nil
+	case transcodejob.FieldSizeAfter:
+		m.ResetSizeAfter()
+		return nil
+	case transcodejob.FieldStartedAt:
+		m.ResetStartedAt()
+		return nil
+	case transcodejob.FieldFinishedAt:
+		m.ResetFinishedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown TranscodeJob field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *TranscodeJobMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.media_file != nil {
+		edges = append(edges, transcodejob.EdgeMediaFile)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *TranscodeJobMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case transcodejob.EdgeMediaFile:
+		if id := m.media_file; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *TranscodeJobMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *TranscodeJobMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *TranscodeJobMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.clearedmedia_file {
+		edges = append(edges, transcodejob.EdgeMediaFile)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *TranscodeJobMutation) EdgeCleared(name string) bool {
+	switch name {
+	case transcodejob.EdgeMediaFile:
+		return m.clearedmedia_file
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *TranscodeJobMutation) ClearEdge(name string) error {
+	switch name {
+	case transcodejob.EdgeMediaFile:
+		m.ClearMediaFile()
+		return nil
+	}
+	return fmt.Errorf("unknown TranscodeJob unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *TranscodeJobMutation) ResetEdge(name string) error {
+	switch name {
+	case transcodejob.EdgeMediaFile:
+		m.ResetMediaFile()
+		return nil
+	}
+	return fmt.Errorf("unknown TranscodeJob edge %s", name)
 }
 
 // UserMutation represents an operation that mutates the User nodes in the graph.

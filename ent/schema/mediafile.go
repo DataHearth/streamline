@@ -68,6 +68,10 @@ func (MediaFile) Fields() []ent.Field {
 		field.String("parsed_source").Optional(),
 		field.String("parsed_resolution").Optional(),
 		field.String("parsed_codec").Optional(),
+		// Set together by the swap; the detail page states the saving from
+		// them without reaching the job.
+		field.Time("transcoded_at").Optional().Nillable(),
+		field.Int64("size_before").Optional(),
 	}
 }
 
@@ -75,6 +79,7 @@ func (MediaFile) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("movie", Movie.Type).Ref("media_files").Unique(),
 		edge.From("episode", Episode.Type).Ref("media_files").Unique(),
+		edge.To("transcode_jobs", TranscodeJob.Type),
 	}
 }
 

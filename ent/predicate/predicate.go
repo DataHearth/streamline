@@ -57,5 +57,8 @@ type TVShow func(*sql.Selector)
 // TorrentSession is the predicate function for torrentsession builders.
 type TorrentSession func(*sql.Selector)
 
+// TranscodeJob is the predicate function for transcodejob builders.
+type TranscodeJob func(*sql.Selector)
+
 // User is the predicate function for user builders.
 type User func(*sql.Selector)

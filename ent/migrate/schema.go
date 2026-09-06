@@ -453,6 +453,8 @@ var (
 		{Name: "parsed_source", Type: field.TypeString, Nullable: true},
 		{Name: "parsed_resolution", Type: field.TypeString, Nullable: true},
 		{Name: "parsed_codec", Type: field.TypeString, Nullable: true},
+		{Name: "transcoded_at", Type: field.TypeTime, Nullable: true},
+		{Name: "size_before", Type: field.TypeInt64, Nullable: true},
 		{Name: "episode_media_files", Type: field.TypeUint32, Nullable: true},
 		{Name: "movie_media_files", Type: field.TypeUint32, Nullable: true},
 	}
@@ -464,13 +466,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "media_files_episodes_media_files",
-				Columns:    []*schema.Column{MediaFilesColumns[26]},
+				Columns:    []*schema.Column{MediaFilesColumns[28]},
 				RefColumns: []*schema.Column{EpisodesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "media_files_movies_media_files",
-				Columns:    []*schema.Column{MediaFilesColumns[27]},
+				Columns:    []*schema.Column{MediaFilesColumns[29]},
 				RefColumns: []*schema.Column{MoviesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -479,12 +481,12 @@ var (
 			{
 				Name:    "mediafile_episode_media_files",
 				Unique:  false,
-				Columns: []*schema.Column{MediaFilesColumns[26]},
+				Columns: []*schema.Column{MediaFilesColumns[28]},
 			},
 			{
 				Name:    "mediafile_movie_media_files",
 				Unique:  false,
-				Columns: []*schema.Column{MediaFilesColumns[27]},
+				Columns: []*schema.Column{MediaFilesColumns[29]},
 			},
 			{
 				Name:    "mediafile_probed_at",
@@ -779,6 +781,46 @@ var (
 		Columns:    TorrentSessionsColumns,
 		PrimaryKey: []*schema.Column{TorrentSessionsColumns[0]},
 	}
+	// TranscodeJobsColumns holds the columns for the "transcode_jobs" table.
+	TranscodeJobsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUint32, Increment: true},
+		{Name: "create_time", Type: field.TypeTime},
+		{Name: "update_time", Type: field.TypeTime},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"queued", "running", "succeeded", "failed", "canceled"}, Default: "queued"},
+		{Name: "attempts", Type: field.TypeUint8, Default: 0},
+		{Name: "error", Type: field.TypeString, Nullable: true},
+		{Name: "size_before", Type: field.TypeInt64, Nullable: true},
+		{Name: "size_after", Type: field.TypeInt64, Nullable: true},
+		{Name: "started_at", Type: field.TypeTime, Nullable: true},
+		{Name: "finished_at", Type: field.TypeTime, Nullable: true},
+		{Name: "media_file_transcode_jobs", Type: field.TypeUint32},
+	}
+	// TranscodeJobsTable holds the schema information for the "transcode_jobs" table.
+	TranscodeJobsTable = &schema.Table{
+		Name:       "transcode_jobs",
+		Columns:    TranscodeJobsColumns,
+		PrimaryKey: []*schema.Column{TranscodeJobsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "transcode_jobs_media_files_transcode_jobs",
+				Columns:    []*schema.Column{TranscodeJobsColumns[10]},
+				RefColumns: []*schema.Column{MediaFilesColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "transcodejob_status",
+				Unique:  false,
+				Columns: []*schema.Column{TranscodeJobsColumns[3]},
+			},
+			{
+				Name:    "transcodejob_media_file_transcode_jobs",
+				Unique:  false,
+				Columns: []*schema.Column{TranscodeJobsColumns[10]},
+			},
+		},
+	}
 	// UsersColumns holds the columns for the "users" table.
 	UsersColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUint32, Increment: true},
@@ -818,6 +860,7 @@ var (
 		SessionsTable,
 		TvShowsTable,
 		TorrentSessionsTable,
+		TranscodeJobsTable,
 		UsersTable,
 	}
 )
@@ -841,4 +884,5 @@ func init() {
 	RequestsTable.ForeignKeys[1].RefTable = UsersTable
 	SeasonsTable.ForeignKeys[0].RefTable = TvShowsTable
 	SessionsTable.ForeignKeys[0].RefTable = UsersTable
+	TranscodeJobsTable.ForeignKeys[0].RefTable = MediaFilesTable
 }

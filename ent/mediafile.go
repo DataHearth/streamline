@@ -69,6 +69,10 @@ type MediaFile struct {
 	ParsedResolution string `json:"parsed_resolution,omitempty"`
 	// ParsedCodec holds the value of the "parsed_codec" field.
 	ParsedCodec string `json:"parsed_codec,omitempty"`
+	// TranscodedAt holds the value of the "transcoded_at" field.
+	TranscodedAt *time.Time `json:"transcoded_at,omitempty"`
+	// SizeBefore holds the value of the "size_before" field.
+	SizeBefore int64 `json:"size_before,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the MediaFileQuery when eager-loading is set.
 	Edges               MediaFileEdges `json:"edges"`
@@ -83,9 +87,11 @@ type MediaFileEdges struct {
 	Movie *Movie `json:"movie,omitempty"`
 	// Episode holds the value of the episode edge.
 	Episode *Episode `json:"episode,omitempty"`
+	// TranscodeJobs holds the value of the transcode_jobs edge.
+	TranscodeJobs []*TranscodeJob `json:"transcode_jobs,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [3]bool
 }
 
 // MovieOrErr returns the Movie value or an error if the edge
@@ -110,16 +116,25 @@ func (e MediaFileEdges) EpisodeOrErr() (*Episode, error) {
 	return nil, &NotLoadedError{edge: "episode"}
 }
 
+// TranscodeJobsOrErr returns the TranscodeJobs value or an error if the edge
+// was not loaded in eager-loading.
+func (e MediaFileEdges) TranscodeJobsOrErr() ([]*TranscodeJob, error) {
+	if e.loadedTypes[2] {
+		return e.TranscodeJobs, nil
+	}
+	return nil, &NotLoadedError{edge: "transcode_jobs"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*MediaFile) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case mediafile.FieldID, mediafile.FieldSize, mediafile.FieldDurationSeconds, mediafile.FieldWidth, mediafile.FieldHeight, mediafile.FieldAudioChannels, mediafile.FieldBitrate, mediafile.FieldAudioTracks:
+		case mediafile.FieldID, mediafile.FieldSize, mediafile.FieldDurationSeconds, mediafile.FieldWidth, mediafile.FieldHeight, mediafile.FieldAudioChannels, mediafile.FieldBitrate, mediafile.FieldAudioTracks, mediafile.FieldSizeBefore:
 			values[i] = new(sql.NullInt64)
 		case mediafile.FieldPath, mediafile.FieldQuality, mediafile.FieldFormat, mediafile.FieldReleaseGroup, mediafile.FieldSource, mediafile.FieldContainer, mediafile.FieldVideoCodec, mediafile.FieldAudioCodec, mediafile.FieldAudioLangs, mediafile.FieldSubLangs, mediafile.FieldParsedSource, mediafile.FieldParsedResolution, mediafile.FieldParsedCodec:
 			values[i] = new(sql.NullString)
-		case mediafile.FieldCreateTime, mediafile.FieldUpdateTime, mediafile.FieldLastSeenAt, mediafile.FieldMissingSince, mediafile.FieldProbedAt:
+		case mediafile.FieldCreateTime, mediafile.FieldUpdateTime, mediafile.FieldLastSeenAt, mediafile.FieldMissingSince, mediafile.FieldProbedAt, mediafile.FieldTranscodedAt:
 			values[i] = new(sql.NullTime)
 		case mediafile.ForeignKeys[0]: // episode_media_files
 			values[i] = new(sql.NullInt64)
@@ -299,6 +314,19 @@ func (_m *MediaFile) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.ParsedCodec = value.String
 			}
+		case mediafile.FieldTranscodedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field transcoded_at", values[i])
+			} else if value.Valid {
+				_m.TranscodedAt = new(time.Time)
+				*_m.TranscodedAt = value.Time
+			}
+		case mediafile.FieldSizeBefore:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field size_before", values[i])
+			} else if value.Valid {
+				_m.SizeBefore = value.Int64
+			}
 		case mediafile.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for edge-field episode_media_files", value)
@@ -334,6 +362,11 @@ func (_m *MediaFile) QueryMovie() *MovieQuery {
 // QueryEpisode queries the "episode" edge of the MediaFile entity.
 func (_m *MediaFile) QueryEpisode() *EpisodeQuery {
 	return NewMediaFileClient(_m.config).QueryEpisode(_m)
+}
+
+// QueryTranscodeJobs queries the "transcode_jobs" edge of the MediaFile entity.
+func (_m *MediaFile) QueryTranscodeJobs() *TranscodeJobQuery {
+	return NewMediaFileClient(_m.config).QueryTranscodeJobs(_m)
 }
 
 // Update returns a builder for updating this MediaFile.
@@ -439,6 +472,14 @@ func (_m *MediaFile) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("parsed_codec=")
 	builder.WriteString(_m.ParsedCodec)
+	builder.WriteString(", ")
+	if v := _m.TranscodedAt; v != nil {
+		builder.WriteString("transcoded_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
+	builder.WriteString("size_before=")
+	builder.WriteString(fmt.Sprintf("%v", _m.SizeBefore))
 	builder.WriteByte(')')
 	return builder.String()
 }

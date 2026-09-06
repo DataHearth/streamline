@@ -65,10 +65,16 @@ const (
 	FieldParsedResolution = "parsed_resolution"
 	// FieldParsedCodec holds the string denoting the parsed_codec field in the database.
 	FieldParsedCodec = "parsed_codec"
+	// FieldTranscodedAt holds the string denoting the transcoded_at field in the database.
+	FieldTranscodedAt = "transcoded_at"
+	// FieldSizeBefore holds the string denoting the size_before field in the database.
+	FieldSizeBefore = "size_before"
 	// EdgeMovie holds the string denoting the movie edge name in mutations.
 	EdgeMovie = "movie"
 	// EdgeEpisode holds the string denoting the episode edge name in mutations.
 	EdgeEpisode = "episode"
+	// EdgeTranscodeJobs holds the string denoting the transcode_jobs edge name in mutations.
+	EdgeTranscodeJobs = "transcode_jobs"
 	// Table holds the table name of the mediafile in the database.
 	Table = "media_files"
 	// MovieTable is the table that holds the movie relation/edge.
@@ -85,6 +91,13 @@ const (
 	EpisodeInverseTable = "episodes"
 	// EpisodeColumn is the table column denoting the episode relation/edge.
 	EpisodeColumn = "episode_media_files"
+	// TranscodeJobsTable is the table that holds the transcode_jobs relation/edge.
+	TranscodeJobsTable = "transcode_jobs"
+	// TranscodeJobsInverseTable is the table name for the TranscodeJob entity.
+	// It exists in this package in order to avoid circular dependency with the "transcodejob" package.
+	TranscodeJobsInverseTable = "transcode_jobs"
+	// TranscodeJobsColumn is the table column denoting the transcode_jobs relation/edge.
+	TranscodeJobsColumn = "media_file_transcode_jobs"
 )
 
 // Columns holds all SQL columns for mediafile fields.
@@ -115,6 +128,8 @@ var Columns = []string{
 	FieldParsedSource,
 	FieldParsedResolution,
 	FieldParsedCodec,
+	FieldTranscodedAt,
+	FieldSizeBefore,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "media_files"
@@ -312,6 +327,16 @@ func ByParsedCodec(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldParsedCodec, opts...).ToFunc()
 }
 
+// ByTranscodedAt orders the results by the transcoded_at field.
+func ByTranscodedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTranscodedAt, opts...).ToFunc()
+}
+
+// BySizeBefore orders the results by the size_before field.
+func BySizeBefore(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSizeBefore, opts...).ToFunc()
+}
+
 // ByMovieField orders the results by movie field.
 func ByMovieField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -323,6 +348,20 @@ func ByMovieField(field string, opts ...sql.OrderTermOption) OrderOption {
 func ByEpisodeField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
 		sqlgraph.OrderByNeighborTerms(s, newEpisodeStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByTranscodeJobsCount orders the results by transcode_jobs count.
+func ByTranscodeJobsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newTranscodeJobsStep(), opts...)
+	}
+}
+
+// ByTranscodeJobs orders the results by transcode_jobs terms.
+func ByTranscodeJobs(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newTranscodeJobsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
 func newMovieStep() *sqlgraph.Step {
@@ -337,5 +376,12 @@ func newEpisodeStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(EpisodeInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2O, true, EpisodeTable, EpisodeColumn),
+	)
+}
+func newTranscodeJobsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(TranscodeJobsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, TranscodeJobsTable, TranscodeJobsColumn),
 	)
 }

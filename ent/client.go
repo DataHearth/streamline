@@ -31,6 +31,7 @@ import (
 	"github.com/datahearth/streamline/ent/season"
 	"github.com/datahearth/streamline/ent/session"
 	"github.com/datahearth/streamline/ent/torrentsession"
+	"github.com/datahearth/streamline/ent/transcodejob"
 	"github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/ent/user"
 )
@@ -74,6 +75,8 @@ type Client struct {
 	TVShow *TVShowClient
 	// TorrentSession is the client for interacting with the TorrentSession builders.
 	TorrentSession *TorrentSessionClient
+	// TranscodeJob is the client for interacting with the TranscodeJob builders.
+	TranscodeJob *TranscodeJobClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
 }
@@ -104,6 +107,7 @@ func (c *Client) init() {
 	c.Session = NewSessionClient(c.config)
 	c.TVShow = NewTVShowClient(c.config)
 	c.TorrentSession = NewTorrentSessionClient(c.config)
+	c.TranscodeJob = NewTranscodeJobClient(c.config)
 	c.User = NewUserClient(c.config)
 }
 
@@ -214,6 +218,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		Session:        NewSessionClient(cfg),
 		TVShow:         NewTVShowClient(cfg),
 		TorrentSession: NewTorrentSessionClient(cfg),
+		TranscodeJob:   NewTranscodeJobClient(cfg),
 		User:           NewUserClient(cfg),
 	}, nil
 }
@@ -251,6 +256,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		Session:        NewSessionClient(cfg),
 		TVShow:         NewTVShowClient(cfg),
 		TorrentSession: NewTorrentSessionClient(cfg),
+		TranscodeJob:   NewTranscodeJobClient(cfg),
 		User:           NewUserClient(cfg),
 	}, nil
 }
@@ -284,7 +290,7 @@ func (c *Client) Use(hooks ...Hook) {
 		c.ApiKey, c.DownloadRecord, c.Episode, c.ImportScan, c.ImportScanFile,
 		c.ImportScanShow, c.Invite, c.MediaEvent, c.MediaFile, c.Movie, c.OIDCIdentity,
 		c.Request, c.ScheduledJob, c.Season, c.Session, c.TVShow, c.TorrentSession,
-		c.User,
+		c.TranscodeJob, c.User,
 	} {
 		n.Use(hooks...)
 	}
@@ -297,7 +303,7 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.ApiKey, c.DownloadRecord, c.Episode, c.ImportScan, c.ImportScanFile,
 		c.ImportScanShow, c.Invite, c.MediaEvent, c.MediaFile, c.Movie, c.OIDCIdentity,
 		c.Request, c.ScheduledJob, c.Season, c.Session, c.TVShow, c.TorrentSession,
-		c.User,
+		c.TranscodeJob, c.User,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -340,6 +346,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.TVShow.mutate(ctx, m)
 	case *TorrentSessionMutation:
 		return c.TorrentSession.mutate(ctx, m)
+	case *TranscodeJobMutation:
+		return c.TranscodeJob.mutate(ctx, m)
 	case *UserMutation:
 		return c.User.mutate(ctx, m)
 	default:
@@ -1807,6 +1815,22 @@ func (c *MediaFileClient) QueryEpisode(_m *MediaFile) *EpisodeQuery {
 	return query
 }
 
+// QueryTranscodeJobs queries the transcode_jobs edge of a MediaFile.
+func (c *MediaFileClient) QueryTranscodeJobs(_m *MediaFile) *TranscodeJobQuery {
+	query := (&TranscodeJobClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(mediafile.Table, mediafile.FieldID, id),
+			sqlgraph.To(transcodejob.Table, transcodejob.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, mediafile.TranscodeJobsTable, mediafile.TranscodeJobsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *MediaFileClient) Hooks() []Hook {
 	return c.hooks.MediaFile
@@ -3072,6 +3096,155 @@ func (c *TorrentSessionClient) mutate(ctx context.Context, m *TorrentSessionMuta
 	}
 }
 
+// TranscodeJobClient is a client for the TranscodeJob schema.
+type TranscodeJobClient struct {
+	config
+}
+
+// NewTranscodeJobClient returns a client for the TranscodeJob from the given config.
+func NewTranscodeJobClient(c config) *TranscodeJobClient {
+	return &TranscodeJobClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `transcodejob.Hooks(f(g(h())))`.
+func (c *TranscodeJobClient) Use(hooks ...Hook) {
+	c.hooks.TranscodeJob = append(c.hooks.TranscodeJob, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `transcodejob.Intercept(f(g(h())))`.
+func (c *TranscodeJobClient) Intercept(interceptors ...Interceptor) {
+	c.inters.TranscodeJob = append(c.inters.TranscodeJob, interceptors...)
+}
+
+// Create returns a builder for creating a TranscodeJob entity.
+func (c *TranscodeJobClient) Create() *TranscodeJobCreate {
+	mutation := newTranscodeJobMutation(c.config, OpCreate)
+	return &TranscodeJobCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of TranscodeJob entities.
+func (c *TranscodeJobClient) CreateBulk(builders ...*TranscodeJobCreate) *TranscodeJobCreateBulk {
+	return &TranscodeJobCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *TranscodeJobClient) MapCreateBulk(slice any, setFunc func(*TranscodeJobCreate, int)) *TranscodeJobCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &TranscodeJobCreateBulk{err: fmt.Errorf("calling to TranscodeJobClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*TranscodeJobCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &TranscodeJobCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for TranscodeJob.
+func (c *TranscodeJobClient) Update() *TranscodeJobUpdate {
+	mutation := newTranscodeJobMutation(c.config, OpUpdate)
+	return &TranscodeJobUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *TranscodeJobClient) UpdateOne(_m *TranscodeJob) *TranscodeJobUpdateOne {
+	mutation := newTranscodeJobMutation(c.config, OpUpdateOne, withTranscodeJob(_m))
+	return &TranscodeJobUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *TranscodeJobClient) UpdateOneID(id uint32) *TranscodeJobUpdateOne {
+	mutation := newTranscodeJobMutation(c.config, OpUpdateOne, withTranscodeJobID(id))
+	return &TranscodeJobUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for TranscodeJob.
+func (c *TranscodeJobClient) Delete() *TranscodeJobDelete {
+	mutation := newTranscodeJobMutation(c.config, OpDelete)
+	return &TranscodeJobDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *TranscodeJobClient) DeleteOne(_m *TranscodeJob) *TranscodeJobDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *TranscodeJobClient) DeleteOneID(id uint32) *TranscodeJobDeleteOne {
+	builder := c.Delete().Where(transcodejob.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &TranscodeJobDeleteOne{builder}
+}
+
+// Query returns a query builder for TranscodeJob.
+func (c *TranscodeJobClient) Query() *TranscodeJobQuery {
+	return &TranscodeJobQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeTranscodeJob},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a TranscodeJob entity by its id.
+func (c *TranscodeJobClient) Get(ctx context.Context, id uint32) (*TranscodeJob, error) {
+	return c.Query().Where(transcodejob.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *TranscodeJobClient) GetX(ctx context.Context, id uint32) *TranscodeJob {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryMediaFile queries the media_file edge of a TranscodeJob.
+func (c *TranscodeJobClient) QueryMediaFile(_m *TranscodeJob) *MediaFileQuery {
+	query := (&MediaFileClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(transcodejob.Table, transcodejob.FieldID, id),
+			sqlgraph.To(mediafile.Table, mediafile.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, transcodejob.MediaFileTable, transcodejob.MediaFileColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *TranscodeJobClient) Hooks() []Hook {
+	return c.hooks.TranscodeJob
+}
+
+// Interceptors returns the client interceptors.
+func (c *TranscodeJobClient) Interceptors() []Interceptor {
+	return c.inters.TranscodeJob
+}
+
+func (c *TranscodeJobClient) mutate(ctx context.Context, m *TranscodeJobMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&TranscodeJobCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&TranscodeJobUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&TranscodeJobUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&TranscodeJobDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown TranscodeJob mutation op: %q", m.Op())
+	}
+}
+
 // UserClient is a client for the User schema.
 type UserClient struct {
 	config
@@ -3274,11 +3447,11 @@ type (
 	hooks struct {
 		ApiKey, DownloadRecord, Episode, ImportScan, ImportScanFile, ImportScanShow,
 		Invite, MediaEvent, MediaFile, Movie, OIDCIdentity, Request, ScheduledJob,
-		Season, Session, TVShow, TorrentSession, User []ent.Hook
+		Season, Session, TVShow, TorrentSession, TranscodeJob, User []ent.Hook
 	}
 	inters struct {
 		ApiKey, DownloadRecord, Episode, ImportScan, ImportScanFile, ImportScanShow,
 		Invite, MediaEvent, MediaFile, Movie, OIDCIdentity, Request, ScheduledJob,
-		Season, Session, TVShow, TorrentSession, User []ent.Interceptor
+		Season, Session, TVShow, TorrentSession, TranscodeJob, User []ent.Interceptor
 	}
 )
