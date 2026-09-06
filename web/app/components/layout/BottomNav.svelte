@@ -211,14 +211,19 @@
 	// drag only starts from the header or from a list already scrolled to the
 	// top, otherwise the gesture belongs to the list. Past a quarter of the
 	// sheet's height — or on a flick — it closes; anything less springs back.
+	// The touch move is claimed in JS as well: left to itself the browser turns
+	// the touch into a scroll and cancels the pointer, which limited the drag to
+	// the header — the only strip with `touch-action: none`.
 	const DISMISS_RATIO = 0.25;
 	const FLICK = 0.5; // px per ms
 	function swipeSheet(node: HTMLElement) {
 		let id: number | null = null;
 		let startY = 0;
+		let startX = 0;
 		let startedAt = 0;
 		let dy = 0;
 		let dragging = false;
+		let touchDriven = false;
 		const backdrop = () =>
 			node.parentElement?.querySelector<HTMLElement>('[data-sheet-backdrop=""]');
 
@@ -226,6 +231,15 @@
 			node.style.transform = dy > 0 ? `translate3d(0, ${dy}px, 0)` : "";
 			const b = backdrop();
 			if (b) b.style.opacity = String(Math.max(0.25, 1 - dy / (node.offsetHeight || 1)));
+		};
+		const drive = (delta: number) => {
+			if (!dragging) {
+				dragging = true;
+				node.style.transition = "none";
+			}
+			// Resistance above the resting position rather than a gap under it.
+			dy = delta > 0 ? delta : delta / 4;
+			paint();
 		};
 		const reset = (animate: boolean) => {
 			node.style.transition = animate
@@ -243,17 +257,17 @@
 			if (scroller?.contains(target) && scroller.scrollTop > 0) return;
 			id = e.pointerId;
 			startY = e.clientY;
+			startX = e.clientX;
 			startedAt = e.timeStamp;
 			dy = 0;
+			touchDriven = false;
 		};
 		const onMove = (e: PointerEvent) => {
-			if (e.pointerId !== id) return;
+			if (e.pointerId !== id || touchDriven) return;
 			const delta = e.clientY - startY;
 			// 6px of slop so a tap on a row is still a tap.
 			if (!dragging) {
 				if (delta < 6) return;
-				dragging = true;
-				node.style.transition = "none";
 				// Capture keeps the gesture alive if the finger leaves the sheet;
 				// it can legitimately fail (pointer already released), and the
 				// drag still works without it.
@@ -261,9 +275,22 @@
 					node.setPointerCapture(e.pointerId);
 				} catch {}
 			}
-			// Resistance above the resting position rather than a gap under it.
-			dy = delta > 0 ? delta : delta / 4;
-			paint();
+			drive(delta);
+		};
+		const onTouchMove = (e: TouchEvent) => {
+			// `id === null` means onDown already refused this gesture — a list
+			// scrolled off its top keeps it.
+			if (id === null) return;
+			const t = e.touches[0];
+			if (!t) return;
+			const delta = t.clientY - startY;
+			// Downward only, and not while the finger is mostly travelling
+			// sideways.
+			if (!dragging && (delta < 6 || delta <= Math.abs(t.clientX - startX)))
+				return;
+			if (e.cancelable) e.preventDefault();
+			touchDriven = true;
+			drive(delta);
 		};
 		const onUp = (e: PointerEvent) => {
 			if (e.pointerId !== id) return;
@@ -283,6 +310,7 @@
 			if (e.pointerId !== id) return;
 			id = null;
 			dragging = false;
+			touchDriven = false;
 			reset(true);
 		};
 
@@ -290,6 +318,7 @@
 		node.addEventListener("pointermove", onMove);
 		node.addEventListener("pointerup", onUp);
 		node.addEventListener("pointercancel", onCancel);
+		node.addEventListener("touchmove", onTouchMove, { passive: false });
 		// Bound here rather than as onclick= on the sheet: a click handler on a
 		// plain div is an a11y warning, and the links it delegates for are
 		// already keyboard-operable (Enter fires click).
@@ -300,6 +329,7 @@
 				node.removeEventListener("pointermove", onMove);
 				node.removeEventListener("pointerup", onUp);
 				node.removeEventListener("pointercancel", onCancel);
+				node.removeEventListener("touchmove", onTouchMove);
 				node.removeEventListener("click", onSheetClick);
 			},
 		};
