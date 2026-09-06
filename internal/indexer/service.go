@@ -209,7 +209,16 @@ func (i *indexer) SearchMovie(
 		return nil, nil
 	}
 
-	return i.searchAll(ctx, span, titles, SearchParams{TMDBID: tmdbID}), nil
+	results := i.searchAll(ctx, span, titles, SearchParams{TMDBID: tmdbID})
+	// Same keyword-search noise the TV scopes filter: an indexer ignoring the
+	// tmdbid answers with every film it holds, and a profile cannot tell one
+	// film from another.
+	filtered := preferTitleMatches(results, titles)
+	span.SetAttributes(
+		attribute.Int("results.pre_title_filter", len(results)),
+		attribute.Int("results.total", len(filtered)),
+	)
+	return filtered, nil
 }
 
 // SearchSeason queries all enabled indexers for a season pack of the given

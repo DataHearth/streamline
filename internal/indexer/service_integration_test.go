@@ -130,5 +130,73 @@ var _ = Describe("Service", Label("integration", "indexers"), func() {
 				Expect(results[1].Seeders).To(Equal(uint32(50)))
 			},
 		)
+
+		It("drops the other films an indexer answers a keyword search with",
+			func() {
+				ctx := context.Background()
+
+				ts := httptest.NewServer(
+					http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+						w.Header().Set("Content-Type", "application/xml")
+						w.WriteHeader(http.StatusOK)
+						_, err := w.Write(torznabXML([]testRSSItem{
+							{
+								Title: "Nonnas.2025.AD.MULTI.VFF.1080p.WEB.EAC3.5.1.x264-FW",
+								GUID:  "https://idx.com/1",
+								Link:  "https://idx.com/dl/1",
+								Size:  5600000000,
+								Enclosure: testEnclosure{
+									URL:    "https://idx.com/dl/1",
+									Length: 5600000000,
+									Type:   "application/x-bittorrent",
+								},
+								ExtraXML: torznabAttrs(
+									map[string]string{"seeders": "29"},
+								),
+							},
+							{
+								Title: "Comme.un.chef.2012.MULTI.VFF.1080p.BluRay.x264-GRP",
+								GUID:  "https://idx.com/2",
+								Link:  "https://idx.com/dl/2",
+								Size:  4000000000,
+								Enclosure: testEnclosure{
+									URL:    "https://idx.com/dl/2",
+									Length: 4000000000,
+									Type:   "application/x-bittorrent",
+								},
+								ExtraXML: torznabAttrs(
+									map[string]string{"seeders": "5"},
+								),
+							},
+						}))
+						Expect(err).NotTo(HaveOccurred())
+					}),
+				)
+				defer ts.Close()
+
+				host, port := splitHostPort(ts.URL)
+				configtest.Setup(map[string]any{
+					"indexers": []map[string]any{
+						{
+							"name":     "Indexer1",
+							"host":     host,
+							"port":     int(port),
+							"api_key":  "key1",
+							"protocol": "torznab",
+							"enabled":  true,
+						},
+					},
+				})
+
+				results, err := New().SearchMovie(
+					ctx,
+					[]string{"Comme un chef"},
+					127585,
+				)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(results).To(HaveLen(1))
+				Expect(results[0].Title).To(HavePrefix("Comme.un.chef"))
+			},
+		)
 	})
 })
