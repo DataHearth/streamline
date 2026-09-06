@@ -28,6 +28,7 @@
 # ginkgo test binaries (left over when a suite compiles but panics)
 *.test
 
+/deploy/helm/streamline/kubeconfig.yaml
 /deploy/helm/streamline/charts/observability/dashboards/
 /deploy/helm/streamline/charts/observability/charts/
 /deploy/config/

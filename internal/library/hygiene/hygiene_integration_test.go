@@ -42,12 +42,6 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 				"import_mode":         "copy",
 				"import_max_attempts": 3,
 				"drift_grace_ticks":   3,
-				"default_quality": map[string]any{
-					"preferred_resolution": "1080p",
-					"min_resolution":       "720p",
-					"no_match_cooldown":    "6h",
-					"max_grab_failures":    3,
-				},
 			},
 		})
 		entClient = dbtest.SetupTestDB(ctx)
@@ -138,12 +132,6 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 				"import_mode":         "hardlink",
 				"import_max_attempts": 3,
 				"drift_grace_ticks":   3,
-				"default_quality": map[string]any{
-					"preferred_resolution": "1080p",
-					"min_resolution":       "720p",
-					"no_match_cooldown":    "6h",
-					"max_grab_failures":    3,
-				},
 			},
 		})
 		imp = library.NewImportService(&cfg.Library)

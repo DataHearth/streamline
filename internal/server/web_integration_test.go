@@ -136,11 +136,6 @@ library:
   series_path: %s/series
   movie_naming: "{title}"
   import_mode: hardlink
-  default_quality:
-    preferred_resolution: 1080p
-    min_resolution: 720p
-    no_match_cooldown: 6h
-    max_grab_failures: 3
 schedules:
   rss_sync: 15m
   metadata_refresh: 24h

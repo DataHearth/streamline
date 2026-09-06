@@ -192,7 +192,7 @@ tasks:
       - exclude: "**/*_test.go"
       - exclude: "**/mocks/**"
     generates:
-      - internal/api/gen.go
+      - internal/server/restapi/gen.go
       - ent/**/*.go
       - exclude: ent/schema/*.go
 
