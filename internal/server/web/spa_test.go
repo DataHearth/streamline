@@ -1,6 +1,7 @@
 package web
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
@@ -74,5 +75,39 @@ var _ = g.Describe("API docs bundle", g.Label("unit"), func() {
 			_, err := webassets.Assets.Open(strings.TrimPrefix(ref, "/"))
 			Expect(err).ToNot(HaveOccurred(), ref)
 		}
+	})
+})
+
+// The embed lists directories one by one, so a new top-level static file
+// is invisible until web/embed.go names it. The shell links the manifest
+// unconditionally; an unembedded one is a 404 the browser reports only in
+// DevTools, and the app silently stops being installable.
+var _ = g.Describe("Web-app manifest", g.Label("unit"), func() {
+	var manifest struct {
+		Display string `json:"display"`
+		Icons   []struct {
+			Src     string `json:"src"`
+			Purpose string `json:"purpose"`
+		} `json:"icons"`
+	}
+
+	g.BeforeEach(func() {
+		raw, err := webassets.Assets.ReadFile("static/manifest.json")
+		Expect(err).ToNot(HaveOccurred())
+		Expect(json.Unmarshal(raw, &manifest)).To(Succeed())
+	})
+
+	g.It("asks for a standalone window", func() {
+		Expect(manifest.Display).To(Equal("standalone"))
+	})
+
+	g.It("names only icons the binary embeds, one of them maskable", func() {
+		purposes := make([]string, 0, len(manifest.Icons))
+		for _, icon := range manifest.Icons {
+			_, err := webassets.Assets.Open(strings.TrimPrefix(icon.Src, "/"))
+			Expect(err).ToNot(HaveOccurred(), icon.Src)
+			purposes = append(purposes, icon.Purpose)
+		}
+		Expect(purposes).To(ContainElement("maskable"))
 	})
 })

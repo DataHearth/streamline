@@ -1,0 +1,29 @@
+{
+	"id": "/",
+	"name": "Streamline",
+	"short_name": "Streamline",
+	"start_url": "/",
+	"scope": "/",
+	"display": "standalone",
+	"background_color": "#0b0b10",
+	"theme_color": "#0b0b10",
+	"icons": [
+		{
+			"src": "/static/images/favicon-512.png",
+			"sizes": "512x512",
+			"type": "image/png",
+			"purpose": "any"
+		},
+		{
+			"src": "/static/images/icon-maskable-512.png",
+			"sizes": "512x512",
+			"type": "image/png",
+			"purpose": "maskable"
+		}
+	],
+	"shortcuts": [
+		{ "name": "Requests", "url": "/requests" },
+		{ "name": "Activity", "url": "/activity" },
+		{ "name": "Calendar", "url": "/calendar" }
+	]
+}

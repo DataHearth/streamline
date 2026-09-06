@@ -8,6 +8,7 @@ import "embed"
 //go:embed static/dist
 //go:embed static/fonts
 //go:embed static/images
+//go:embed static/manifest.json
 var Assets embed.FS
 
 //go:embed app/index.html
