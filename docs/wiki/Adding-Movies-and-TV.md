@@ -52,16 +52,23 @@ Once added, the show page shows every season and episode, what's on disk, what's
 
 ## What the statuses mean
 
-**Movies** carry one of four:
+**Movies** carry one of five:
 
 | Status | Meaning |
 | --- | --- |
 | **Wanted** | Monitored, no file yet, being searched for |
 | **Downloading** | A release was grabbed and is in your download client |
+| **Importing** | The download finished; the file is being verified and moved into your library |
 | **Available** | Imported and sitting in your library |
 | **Failed** | Grabs kept failing — see below |
 
-**Episodes** have a fifth, **Paused**, for episodes deliberately held back, and **Skipped** for ones you've told Streamline to ignore.
+**Episodes** have a sixth, **Paused**, for episodes deliberately held back, and **Skipped** for ones you've told Streamline to ignore.
+
+A series card in the library shows the same states, read from its episodes: **Downloading** while any episode has a grab in flight, then **Importing**. Instead of the usual `have/total eps`, the card names what is landing — `S03E04` for a single episode, `S03 pack` for a season, `Full series` for a complete pack — and shows a progress bar underneath. An import has no percentage to report, so its bar runs indeterminate.
+
+Both library toolbars filter on **Status** and **Monitoring** independently — "wanted *and* unmonitored" is one view, not two. The series Status menu adds Downloading and Importing alongside Continuing/Ended/Upcoming/Missing; those three are read off the show's episodes rather than being series statuses of their own.
+
+Cards and detail pages name a **release day** rather than a year once one is known (`2 Feb 2024`) — a film's theatrical release, a show's first air date. An existing library fills these in gradually: the value arrives with the next metadata refresh of each title, and until then the year is shown as before.
 
 A film goes **Failed** after `library.max_grab_failures` (default 3) consecutive failed grab attempts. This is a circuit breaker, not a permanent verdict — it stops Streamline hammering a tracker for something that isn't working. Open the film and hit **Search now** to try again. A timeout reaching your indexer or download client doesn't count toward it: that says nothing about the release, so it is retried on the next pass instead of spending a strike.
 
