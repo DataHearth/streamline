@@ -175,9 +175,9 @@ export async function authFetch<T = unknown>(
 }
 
 // PAGE_LIMIT is the largest page every paginated list endpoint will serve; the
-// spec declares `maximum: 100` on each limit param and the handlers clamp to it
-// silently. Asking for more returns 100 with no indication it was reduced, so a
-// caller that wants the whole set has to walk pages against `total`.
+// spec declares `maximum: 100` on each limit param and the handlers answer 400
+// past it, so a caller that wants the whole set has to walk pages against
+// `total`.
 export const PAGE_LIMIT = 100;
 
 // Paginated is the aggregate apiAllPages returns: every item plus the server-

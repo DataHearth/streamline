@@ -179,9 +179,9 @@
 		tab === "all" && !debouncedQuery && counts.total === 0,
 	);
 
-	// Appending the next page as the sentinel comes into view replaces the old
-	// IncrementalList: a page is 50 cards, which mounts without blocking, and
-	// there is no longer a whole library sitting in memory to slice.
+	// A page is 50 cards, which mounts without blocking, so appending the next
+	// one as the sentinel comes into view needs no incremental renderer and
+	// keeps no whole library in memory to slice.
 	let pageSentinel = $state<HTMLDivElement | null>(null);
 	$effect(() => {
 		const el = pageSentinel;
