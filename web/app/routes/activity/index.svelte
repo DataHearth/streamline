@@ -207,7 +207,10 @@
 	let showPending = $derived(
 		auth.isAdmin && (pendingItems.length > 0 || pendingQuery.isError),
 	);
-	let attnOpen = $state(true);
+	// Collapsed on arrival: the count in the header is the whole message, and the
+	// queue below it is what the page is for. Opening is one click when the
+	// proposals are what you came for.
+	let attnOpen = $state(false);
 	// Below md the section is one banner line and the proposals open in a sheet:
 	// three of them expanded push the queue entirely below the fold, and each one's
 	// three decisions want the full width.
