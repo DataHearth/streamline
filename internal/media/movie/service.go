@@ -115,6 +115,7 @@ type Counts struct {
 	Total       int
 	Wanted      int
 	Downloading int
+	Importing   int
 	Available   int
 	Failed      int
 	// Trend holds the cumulative library size at the end of each of the last
@@ -354,12 +355,14 @@ func (s *Service) Counts(ctx context.Context) (Counts, error) {
 	}
 	wanted := byStatus[entmovie.StatusWanted]
 	downloading := byStatus[entmovie.StatusDownloading]
+	importing := byStatus[entmovie.StatusImporting]
 	available := byStatus[entmovie.StatusAvailable]
 	failed := byStatus[entmovie.StatusFailed]
 	span.SetAttributes(
 		attribute.Int("counts.total", total),
 		attribute.Int("counts.wanted", wanted),
 		attribute.Int("counts.downloading", downloading),
+		attribute.Int("counts.importing", importing),
 		attribute.Int("counts.available", available),
 		attribute.Int("counts.failed", failed),
 	)
@@ -372,6 +375,7 @@ func (s *Service) Counts(ctx context.Context) (Counts, error) {
 		Total:       total,
 		Wanted:      wanted,
 		Downloading: downloading,
+		Importing:   importing,
 		Available:   available,
 		Failed:      failed,
 		Trend:       trend,

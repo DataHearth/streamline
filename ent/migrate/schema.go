@@ -506,7 +506,7 @@ var (
 		{Name: "year", Type: field.TypeUint16},
 		{Name: "overview", Type: field.TypeString, Nullable: true},
 		{Name: "runtime", Type: field.TypeUint16, Nullable: true, Default: 0},
-		{Name: "status", Type: field.TypeEnum, Enums: []string{"wanted", "downloading", "available", "failed"}, Default: "wanted"},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"wanted", "downloading", "importing", "available", "failed"}, Default: "wanted"},
 		{Name: "monitored", Type: field.TypeBool, Default: true},
 		{Name: "tmdb_id", Type: field.TypeUint32, Unique: true},
 		{Name: "last_search_at", Type: field.TypeTime, Nullable: true},

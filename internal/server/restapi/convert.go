@@ -891,10 +891,11 @@ func tvShowToAPI(s *ent.TVShow) TVShow {
 // the detail view (tvShowToAPI) is what carries it.
 func tvShowListToAPI(s *ent.TVShow, c db.EpisodeCounts) TVShow {
 	out := tvShowBaseToAPI(s)
-	have, total, wanted := c.Have, c.Total, c.Wanted
+	have, total, wanted, importing := c.Have, c.Total, c.Wanted, c.Importing
 	out.HaveEpisodes = &have
 	out.TotalEpisodes = &total
 	out.WantedEpisodes = &wanted
+	out.ImportingEpisodes = &importing
 	return out
 }
 

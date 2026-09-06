@@ -1158,6 +1158,15 @@ func (d *download) CheckStatus(ctx context.Context) ([]CompletedDownload, error)
 					"mark episodes importing failed",
 					"id", record.ID, "error", err)
 			}
+			if record.Edges.Movie != nil {
+				if err := d.db.UpdateMovieStatus(
+					ctx, record.Edges.Movie.ID, movie.StatusImporting,
+				); err != nil {
+					slog.WarnContext(ctx,
+						"mark movie importing failed",
+						"id", record.ID, "error", err)
+				}
+			}
 			if err := d.db.SetDownloadRecordSavePath(
 				ctx,
 				record.ID,

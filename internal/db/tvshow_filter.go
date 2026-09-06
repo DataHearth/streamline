@@ -49,6 +49,10 @@ type EpisodeCounts struct {
 	Have    uint32
 	Wanted  uint32
 	Unaired uint32
+	// Importing counts the episodes past the grab and being written into the
+	// library. It cuts across the buckets above rather than replacing one —
+	// an importing episode has no file yet, so it is still Wanted.
+	Importing uint32
 }
 
 // FilterTVShows applies every filter, the sort and the page in SQL, and
@@ -231,6 +235,7 @@ func (db *DB) episodeCounts(
 		ShowID    uint32    `sql:"show_id"`
 		Monitored bool      `sql:"monitored"`
 		AirDate   time.Time `sql:"air_date"`
+		Status    string    `sql:"status"`
 		HasFile   bool      `sql:"has_file"`
 	}
 	err := db.client.Episode.Query().
@@ -249,6 +254,7 @@ func (db *DB) episodeCounts(
 				entsql.As(se.C(season.TvShowColumn), "show_id"),
 				s.C(episode.FieldMonitored),
 				s.C(episode.FieldAirDate),
+				s.C(episode.FieldStatus),
 				entsql.As(hasFile, "has_file"),
 			)
 		}).
@@ -264,6 +270,9 @@ func (db *DB) episodeCounts(
 			continue
 		}
 		c.Total++
+		if r.Status == string(episode.StatusImporting) {
+			c.Importing++
+		}
 		switch {
 		case r.HasFile:
 			c.Have++

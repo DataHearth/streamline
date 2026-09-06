@@ -193,8 +193,12 @@ func (db *DB) ListUpgradeCandidateMovies(
 			movie.HasMediaFiles(),
 			// A movie whose replacement is already in flight would be
 			// re-grabbed every tick, and each failed re-grab bumps
-			// grab_failures on a healthy movie.
-			movie.StatusNEQ(movie.StatusDownloading),
+			// grab_failures on a healthy movie. "importing" is in flight
+			// too — the bytes are down but the file is not on disk yet.
+			movie.StatusNotIn(
+				movie.StatusDownloading,
+				movie.StatusImporting,
+			),
 		).
 		WithMediaFiles().
 		All(ctx)

@@ -149,6 +149,7 @@ const DefaultStatus = StatusWanted
 const (
 	StatusWanted      Status = "wanted"
 	StatusDownloading Status = "downloading"
+	StatusImporting   Status = "importing"
 	StatusAvailable   Status = "available"
 	StatusFailed      Status = "failed"
 )
@@ -160,7 +161,7 @@ func (s Status) String() string {
 // StatusValidator is a validator for the "status" field enum values. It is called by the builders before save.
 func StatusValidator(s Status) error {
 	switch s {
-	case StatusWanted, StatusDownloading, StatusAvailable, StatusFailed:
+	case StatusWanted, StatusDownloading, StatusImporting, StatusAvailable, StatusFailed:
 		return nil
 	default:
 		return fmt.Errorf("movie: invalid enum value for status field: %q", s)

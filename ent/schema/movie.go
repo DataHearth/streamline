@@ -27,7 +27,7 @@ func (Movie) Fields() []ent.Field {
 		field.String("overview").Optional(),
 		field.Uint16("runtime").Optional().Default(0),
 		field.Enum("status").
-			Values("wanted", "downloading", "available", "failed").
+			Values("wanted", "downloading", "importing", "available", "failed").
 			Default("wanted"),
 		field.Bool("monitored").Default(true),
 		field.Uint32("tmdb_id").Unique(),

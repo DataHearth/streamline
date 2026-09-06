@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/episode"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -191,6 +192,28 @@ var _ = Describe("FilterTVShows", Label("unit", "db"), func() {
 				Expect(c.Unaired).To(Equal(uint32(2)))
 			},
 		)
+
+		It("tallies importing across the buckets, not instead of one", func() {
+			aired := now.Add(-24 * time.Hour)
+			show := seedShow("Landing", 8, []EpisodeSeed{
+				{Number: 1, Title: "importing", AirDate: &aired},
+				{Number: 2, Title: "wanted", AirDate: &aired},
+			}, true)
+			eps := show.Edges.Seasons[0].Edges.Episodes
+			Expect(store.SetEpisodeStatus(
+				ctx, eps[0].ID, episode.StatusImporting,
+			)).To(Succeed())
+
+			_, counts, _, err := store.FilterTVShows(ctx, FilterTVShowsParams{
+				Limit: 20, Now: now,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			c := counts[show.ID]
+			Expect(c.Importing).To(Equal(uint32(1)))
+			// The importing episode has no file yet, so it is still wanted.
+			Expect(c.Wanted).To(Equal(uint32(2)))
+			Expect(c.Have).To(BeZero())
+		})
 
 		It("still counts a downloaded episode its owner later unmonitored", func() {
 			aired := now.Add(-24 * time.Hour)

@@ -3702,7 +3702,7 @@ components:
     MoviesStatus:
       name: status
       in: query
-      description: Filter by movie status (wanted/downloading/available/failed).
+      description: Filter by movie status (wanted/downloading/importing/available/failed).
       schema:
         type: string
 
@@ -4928,7 +4928,7 @@ components:
           x-go-type: uint16
         status:
           type: string
-          enum: [wanted, downloading, available, failed]
+          enum: [wanted, downloading, importing, available, failed]
         monitored:
           type: boolean
           description: Whether Streamline auto-searches and upgrades this title.
@@ -5128,7 +5128,7 @@ components:
           description: Name of the quality profile (empty resolves to the default).
         status:
           type: string
-          enum: [wanted, downloading, available, failed]
+          enum: [wanted, downloading, importing, available, failed]
         monitored:
           type: boolean
 
@@ -5152,7 +5152,7 @@ components:
 
     MovieCounts:
       type: object
-      required: [total, wanted, downloading, available, failed, trend]
+      required: [total, wanted, downloading, importing, available, failed, trend]
       properties:
         total:
           type: integer
@@ -5161,6 +5161,9 @@ components:
           type: integer
           x-go-type: uint32
         downloading:
+          type: integer
+          x-go-type: uint32
+        importing:
           type: integer
           x-go-type: uint32
         available:
@@ -5239,6 +5242,13 @@ components:
         wanted_episodes:
           type: integer
           description: Aired/undated episodes without a file (the "missing" count).
+          x-go-type: uint32
+        importing_episodes:
+          type: integer
+          description: |
+            Episodes past the grab and being written into the library. Cuts
+            across the counts above rather than replacing one: an importing
+            episode has no file yet, so it also counts as wanted.
           x-go-type: uint32
         seasons:
           type: array

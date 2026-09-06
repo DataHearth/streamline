@@ -86,6 +86,7 @@ func (s *Server) GetMovieCounts(
 			Total:       numeric.SaturateU32(counts.Total),
 			Wanted:      numeric.SaturateU32(counts.Wanted),
 			Downloading: numeric.SaturateU32(counts.Downloading),
+			Importing:   numeric.SaturateU32(counts.Importing),
 			Available:   numeric.SaturateU32(counts.Available),
 			Failed:      numeric.SaturateU32(counts.Failed),
 			Trend:       trend,

@@ -1112,6 +1112,7 @@ const (
 	MovieStatusAvailable   MovieStatus = "available"
 	MovieStatusDownloading MovieStatus = "downloading"
 	MovieStatusFailed      MovieStatus = "failed"
+	MovieStatusImporting   MovieStatus = "importing"
 	MovieStatusWanted      MovieStatus = "wanted"
 )
 
@@ -1123,6 +1124,8 @@ func (e MovieStatus) Valid() bool {
 	case MovieStatusDownloading:
 		return true
 	case MovieStatusFailed:
+		return true
+	case MovieStatusImporting:
 		return true
 	case MovieStatusWanted:
 		return true
@@ -1697,6 +1700,7 @@ const (
 	UpdateMovieRequestStatusAvailable   UpdateMovieRequestStatus = "available"
 	UpdateMovieRequestStatusDownloading UpdateMovieRequestStatus = "downloading"
 	UpdateMovieRequestStatusFailed      UpdateMovieRequestStatus = "failed"
+	UpdateMovieRequestStatusImporting   UpdateMovieRequestStatus = "importing"
 	UpdateMovieRequestStatusWanted      UpdateMovieRequestStatus = "wanted"
 )
 
@@ -1708,6 +1712,8 @@ func (e UpdateMovieRequestStatus) Valid() bool {
 	case UpdateMovieRequestStatusDownloading:
 		return true
 	case UpdateMovieRequestStatusFailed:
+		return true
+	case UpdateMovieRequestStatusImporting:
 		return true
 	case UpdateMovieRequestStatusWanted:
 		return true
@@ -3378,6 +3384,7 @@ type MovieCounts struct {
 	Available   uint32 `json:"available"`
 	Downloading uint32 `json:"downloading"`
 	Failed      uint32 `json:"failed"`
+	Importing   uint32 `json:"importing"`
 	Total       uint32 `json:"total"`
 
 	// Trend Cumulative library size at the end of each day over the last 30
@@ -4200,8 +4207,13 @@ type TVShow struct {
 	// HaveEpisodes Episodes with a media file. Rolled up across seasons.
 	HaveEpisodes *uint32 `json:"have_episodes,omitempty"`
 	Id           uint32  `json:"id"`
-	Monitored    bool    `json:"monitored"`
-	Network      *string `json:"network,omitempty"`
+
+	// ImportingEpisodes Episodes past the grab and being written into the library. Cuts
+	// across the counts above rather than replacing one: an importing
+	// episode has no file yet, so it also counts as wanted.
+	ImportingEpisodes *uint32 `json:"importing_episodes,omitempty"`
+	Monitored         bool    `json:"monitored"`
+	Network           *string `json:"network,omitempty"`
 
 	// OriginalTitle Untranslated TVDB name. Equals title when the localized title
 	// matches the original; UI hides it in that case.
@@ -4952,7 +4964,7 @@ type ListMoviesParams struct {
 	Page  *uint16 `form:"page,omitempty" json:"page,omitempty"`
 	Limit *uint16 `form:"limit,omitempty" json:"limit,omitempty"`
 
-	// Status Filter by movie status (wanted/downloading/available/failed).
+	// Status Filter by movie status (wanted/downloading/importing/available/failed).
 	Status *MoviesStatus `form:"status,omitempty" json:"status,omitempty"`
 
 	// Query Case-insensitive substring filter over title and original title.
