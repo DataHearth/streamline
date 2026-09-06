@@ -77,6 +77,12 @@
 			dot: "bg-status-downloading",
 		},
 		{
+			key: "importing",
+			label: i18n.status_importing(),
+			tint: "text-status-importing",
+			dot: "bg-status-importing",
+		},
+		{
 			key: "wanted",
 			label: i18n.status_wanted(),
 			tint: "text-status-wanted",
@@ -132,6 +138,8 @@
 				return counts.wanted;
 			case "downloading":
 				return counts.downloading;
+			case "importing":
+				return counts.importing;
 			case "available":
 				return counts.available;
 			case "failed":

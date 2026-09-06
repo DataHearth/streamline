@@ -224,17 +224,20 @@
 			<StatusPill
 				status={movie.status}
 				size="sm"
-				live={movie.status === "downloading"}
+				live={movie.status === "downloading" || movie.status === "importing"}
 			/>
 		</div>
 
-		{#if movie.status === "downloading"}
+		<!-- An import has no percentage to report, so its bar runs indeterminate. -->
+		{#if movie.status === "downloading" || movie.status === "importing"}
 			<div class="absolute inset-x-0 bottom-0">
 				<ProgressBar
-					value={movie.progress}
-					status="downloading"
+					value={movie.status === "importing" ? undefined : movie.progress}
+					status={movie.status}
 					height={2}
-					label={i18n.status_downloading()}
+					label={movie.status === "importing"
+						? i18n.status_importing()
+						: i18n.status_downloading()}
 				/>
 			</div>
 		{/if}

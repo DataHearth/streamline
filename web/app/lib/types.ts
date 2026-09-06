@@ -1,4 +1,9 @@
-export type MovieStatus = "wanted" | "downloading" | "available" | "failed";
+export type MovieStatus =
+	| "wanted"
+	| "downloading"
+	| "importing"
+	| "available"
+	| "failed";
 
 export type SeriesStatus = "continuing" | "ended" | "upcoming";
 export type SeriesType = "standard" | "anime" | "daily";
@@ -71,6 +76,9 @@ export type TVShow = {
 	have_episodes?: number;
 	total_episodes?: number;
 	wanted_episodes?: number;
+	// Episodes past the grab and being written into the library. A list-only
+	// rollup — the detail response carries the episode tree instead.
+	importing_episodes?: number;
 	// Only populated by GET /series/{id}; absent in list responses.
 	seasons?: Season[];
 	cast?: CastMember[];
@@ -361,6 +369,7 @@ export type MovieCounts = {
 	total: number;
 	wanted: number;
 	downloading: number;
+	importing: number;
 	available: number;
 	failed: number;
 	// Cumulative library size per day over the last 30 days, oldest first;

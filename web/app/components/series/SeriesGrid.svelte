@@ -40,6 +40,10 @@
 	}));
 
 	function cardStatus(s: TVShow): StatusKind {
+		// Being written into the library outranks the gaps behind it: the card's
+		// next change of state is the import landing, not an episode being wanted
+		// — and an importing episode is counted wanted until its file exists.
+		if ((s.importing_episodes ?? 0) > 0) return "importing";
 		if ((s.wanted_episodes ?? 0) > 0) return "wanted";
 		// Unmonitored shows report zero wanted episodes, so "nothing wanted" alone
 		// would badge an empty library entry as available.
@@ -52,15 +56,21 @@
 	}
 
 	function enrich(s: TVShow) {
+		const status = cardStatus(s);
 		return {
 			id: s.id,
 			title: s.title,
 			original_title: s.original_title,
 			year: s.year,
-			status: cardStatus(s),
+			status,
 			monitored: s.monitored,
 			rating: s.rating ?? undefined,
-			size_text: episodeText(s),
+			// While an import runs the card names what is landing rather than what
+			// it holds — the have/total count is the one thing about to change.
+			size_text:
+				status === "importing"
+					? `${s.importing_episodes ?? 0} eps`
+					: episodeText(s),
 		};
 	}
 </script>

@@ -178,6 +178,7 @@
 
 	--color-status-downloading: var(--status-downloading);
 	--color-status-grabbing: var(--status-grabbing);
+	--color-status-importing: var(--status-importing);
 	--color-status-available: var(--status-available);
 	--color-status-wanted: var(--status-wanted);
 	--color-status-missing: var(--status-missing);

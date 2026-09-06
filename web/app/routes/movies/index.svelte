@@ -27,6 +27,7 @@
 		"available",
 		"wanted",
 		"downloading",
+		"importing",
 		"failed",
 	]);
 
@@ -163,6 +164,7 @@
 			total: 0,
 			wanted: 0,
 			downloading: 0,
+			importing: 0,
 			available: 0,
 			failed: 0,
 		},
