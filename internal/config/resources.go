@@ -80,6 +80,40 @@ type QualityProfileEntry struct {
 	Formats           []QualityProfileFormatScore `koanf:"formats"             validate:"dive"`
 	MinScore          int                         `koanf:"min_score"`
 	UpgradeUntilScore int                         `koanf:"upgrade_until_score"`
+	// Transcode is nil for a profile the background transcode worker never
+	// touches; transcoding.enabled must also be true for a set policy to
+	// take effect (see TranscodeEligible).
+	Transcode *TranscodePolicy `koanf:"transcode"`
+}
+
+// TranscodePolicy: any failing `if` rule queues a transcode toward `to`.
+// HDR/DV video is exempt from re-encode in v1 — the rule evaluator suspends
+// codec/bitrate rules for it; container remux still applies.
+type TranscodePolicy struct {
+	If TranscodeIf `koanf:"if"`
+	To TranscodeTo `koanf:"to"`
+}
+
+type TranscodeIf struct {
+	VideoCodecs     []string `koanf:"video_codecs"      validate:"dive,oneof=h264 hevc av1 vp9 mpeg4 mpeg2video vc1"`
+	Containers      []string `koanf:"containers"        validate:"dive,oneof=mkv mp4 avi mov ts m2ts webm wmv"`
+	MaxVideoBitrate string   `koanf:"max_video_bitrate"`
+}
+
+type TranscodeTo struct {
+	Container        string   `koanf:"container"         validate:"required,oneof=mkv mp4"`
+	VideoCodec       string   `koanf:"video_codec"       validate:"required,oneof=h264 hevc av1"`
+	CRF              uint8    `koanf:"crf"               validate:"max=51"`
+	Preset           string   `koanf:"preset"            validate:"required,oneof=ultrafast superfast veryfast faster fast medium slow slower veryslow"`
+	AudioCodec       string   `koanf:"audio_codec"       validate:"required,oneof=aac opus ac3 flac"`
+	AudioPassthrough []string `koanf:"audio_passthrough"`
+}
+
+// DefaultAudioPassthrough is applied when a policy names none: TrueHD/E-AC-3
+// carry Atmos and DTS(-HD) cannot be re-encoded losslessly, so copying is the
+// only way they survive.
+var DefaultAudioPassthrough = []string{
+	"truehd", "eac3", "ac3", "dts", "aac", "opus", "flac",
 }
 
 // QualityProfileFormatScore attaches a score to a format named by name,
@@ -237,6 +271,18 @@ func ResolveQualityProfile(name string) (QualityProfileEntry, bool) {
 		return p, true
 	}
 	return findProfile(c.QualityProfiles, c.QualityDefaultProfile)
+}
+
+// TranscodeEligible reports whether profile is subject to the background
+// transcode worker: the feature must be enabled globally, and the resolved
+// profile must carry a transcode policy.
+func TranscodeEligible(profile string) bool {
+	c := Get()
+	if c == nil || !c.Transcoding.Enabled {
+		return false
+	}
+	p, ok := ResolveQualityProfile(profile)
+	return ok && p.Transcode != nil
 }
 
 func findProfile(

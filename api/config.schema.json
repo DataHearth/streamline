@@ -139,6 +139,89 @@
         "upgrade_until_score": {
           "type": "integer",
           "description": "Stops upgrade-seeking once the current score reaches this value. 0 means no cap."
+        },
+        "transcode": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "required": ["to"],
+          "description": "Background transcode policy for this profile. transcoding.enabled must also be true for it to take effect. Any failing `if` rule queues a transcode toward `to`. HDR/DV video is exempt from re-encode in v1; container remux still applies.",
+          "properties": {
+            "if": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "video_codecs": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "h264",
+                      "hevc",
+                      "av1",
+                      "vp9",
+                      "mpeg4",
+                      "mpeg2video",
+                      "vc1"
+                    ]
+                  }
+                },
+                "containers": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": ["mkv", "mp4", "avi", "mov", "ts", "m2ts", "webm", "wmv"]
+                  }
+                },
+                "max_video_bitrate": {
+                  "type": "string",
+                  "description": "e.g. \"12M\", \"8000k\", \"500000\" bits/sec. Must parse via config.ParseBitrate."
+                }
+              }
+            },
+            "to": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["container", "video_codec", "preset", "audio_codec"],
+              "properties": {
+                "container": {
+                  "type": "string",
+                  "enum": ["mkv", "mp4"]
+                },
+                "video_codec": {
+                  "type": "string",
+                  "enum": ["h264", "hevc", "av1"]
+                },
+                "crf": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 51
+                },
+                "preset": {
+                  "type": "string",
+                  "enum": [
+                    "ultrafast",
+                    "superfast",
+                    "veryfast",
+                    "faster",
+                    "fast",
+                    "medium",
+                    "slow",
+                    "slower",
+                    "veryslow"
+                  ]
+                },
+                "audio_codec": {
+                  "type": "string",
+                  "enum": ["aac", "opus", "ac3", "flac"]
+                },
+                "audio_passthrough": {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "description": "Audio codecs copied rather than re-encoded. Defaults to config.DefaultAudioPassthrough when a policy names none."
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -462,6 +545,24 @@
         "selection_grace": {
           "$ref": "#/definitions/duration",
           "description": "How long file selection stays open after grab."
+        }
+      }
+    },
+    "transcoding": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Global switch and budget for the post-import transcode worker. Binaries come from ffmpeg.",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "max_concurrent": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 8
+        },
+        "max_failures": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10
         }
       }
     },

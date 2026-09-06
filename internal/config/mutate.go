@@ -128,6 +128,14 @@ type FFmpegPatch struct {
 	Path    *string
 }
 
+// TranscodingPatch carries optional field updates to the transcoding
+// section. Nil fields are left untouched.
+type TranscodingPatch struct {
+	Enabled       *bool
+	MaxConcurrent *uint8
+	MaxFailures   *uint8
+}
+
 // OIDCProviderPatch carries optional field updates to a single OIDC provider.
 // A nil ClientSecret (or empty string) preserves the existing secret — the
 // UI never shows the current value, so blank means "unchanged."
@@ -300,6 +308,33 @@ func UpdateFFmpeg(ctx context.Context, patch FFmpegPatch) (FFmpegConfig, error) 
 	})
 	if err != nil {
 		return FFmpegConfig{}, err
+	}
+	return out, nil
+}
+
+// UpdateTranscoding merges the patch into the transcoding section and
+// persists it. Returns the resulting TranscodingConfig so callers can echo
+// the new state back.
+func UpdateTranscoding(
+	ctx context.Context,
+	patch TranscodingPatch,
+) (TranscodingConfig, error) {
+	var out TranscodingConfig
+	err := Update(ctx, func(c *Config) error {
+		if patch.Enabled != nil {
+			c.Transcoding.Enabled = *patch.Enabled
+		}
+		if patch.MaxConcurrent != nil {
+			c.Transcoding.MaxConcurrent = *patch.MaxConcurrent
+		}
+		if patch.MaxFailures != nil {
+			c.Transcoding.MaxFailures = *patch.MaxFailures
+		}
+		out = c.Transcoding
+		return nil
+	})
+	if err != nil {
+		return TranscodingConfig{}, err
 	}
 	return out, nil
 }

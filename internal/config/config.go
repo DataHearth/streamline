@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -45,6 +46,7 @@ type Config struct {
 	Events      EventsConfig      `koanf:"events"       validate:"required"`
 	FFmpeg      FFmpegConfig      `koanf:"ffmpeg"`
 	Download    DownloadConfig    `koanf:"download"`
+	Transcoding TranscodingConfig `koanf:"transcoding"`
 	// TorrentListenPort overrides the builtin download client's own
 	// listen_port, and is a top-level scalar so the environment can reach it:
 	// STREAMLINE_TORRENT_LISTEN_PORT lands here, while nothing in
@@ -320,6 +322,15 @@ func (c DownloadConfig) SelectionGraceDuration() time.Duration {
 	return 10 * time.Minute
 }
 
+// TranscodingConfig is the global switch and budget for the post-import
+// transcode worker. The binaries come from FFmpegConfig — one ffmpeg surface.
+// All three keys are runtime-editable through config.Update.
+type TranscodingConfig struct {
+	Enabled       bool  `koanf:"enabled"`
+	MaxConcurrent uint8 `koanf:"max_concurrent" validate:"min=1,max=8"`
+	MaxFailures   uint8 `koanf:"max_failures"   validate:"min=1,max=10"`
+}
+
 type LogConfig struct {
 	App  AppLog  `koanf:"app"  validate:"required"`
 	HTTP HTTPLog `koanf:"http" validate:"required"`
@@ -385,6 +396,22 @@ func (c *Config) normalizeOIDCEmailLinking() {
 	}
 }
 
+// normalizeTranscodePolicies fills a profile's transcode.to.audio_passthrough
+// with DefaultAudioPassthrough when the profile carries a policy but names
+// none — TrueHD/E-AC-3/DTS(-HD) cannot be re-encoded losslessly, so a policy
+// that never named an audio_passthrough list still needs one to keep those
+// tracks intact. Hangs off the same funnel as normalizeOIDCEmailLinking:
+// Validate runs on load and inside config.Update, so a policy added through
+// the REST API gets the default too.
+func (c *Config) normalizeTranscodePolicies() {
+	for i := range c.QualityProfiles {
+		p := c.QualityProfiles[i].Transcode
+		if p != nil && len(p.To.AudioPassthrough) == 0 {
+			p.To.AudioPassthrough = append([]string(nil), DefaultAudioPassthrough...)
+		}
+	}
+}
+
 // Validate reports whether these values are a config the process can run on.
 // Beyond normalising the OIDC linking tier onto c, it only reads c. Creating
 // directories is ensureDataDir's job, so a caller asking a question rather than
@@ -407,7 +434,37 @@ func (c *Config) normalizeOIDCEmailLinking() {
 // Update, which can only compare the reasons it was told about.
 func (c *Config) Validate() error {
 	c.normalizeOIDCEmailLinking()
+	c.normalizeTranscodePolicies()
 	return errors.Join(validator.New().Struct(c), c.checkInvariants())
+}
+
+// ParseBitrate reads a bitrate as ffmpeg's own CLI flags do: digits
+// optionally suffixed with k/K (kilobits) or m/M (megabits, SI, not binary),
+// or a bare bits-per-second count. Used to validate
+// QualityProfileEntry.Transcode.If.MaxVideoBitrate before it reaches the
+// rule evaluator.
+func ParseBitrate(s string) (int64, error) {
+	if s == "" {
+		return 0, fmt.Errorf("bitrate %q: empty", s)
+	}
+	multiplier := int64(1)
+	numPart := s
+	switch s[len(s)-1] {
+	case 'k', 'K':
+		multiplier = 1_000
+		numPart = s[:len(s)-1]
+	case 'm', 'M':
+		multiplier = 1_000_000
+		numPart = s[:len(s)-1]
+	}
+	n, err := strconv.ParseInt(numPart, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("bitrate %q: %w", s, err)
+	}
+	if n <= 0 {
+		return 0, fmt.Errorf("bitrate %q: must be positive", s)
+	}
+	return n * multiplier, nil
 }
 
 // ensureDataDir creates data_dir. Nothing else makes it: the poster cache
@@ -545,6 +602,14 @@ func (c *Config) checkInvariants() error {
 				fs.Name,
 			))
 		}
+		if p.Transcode != nil && p.Transcode.If.MaxVideoBitrate != "" {
+			if _, err := ParseBitrate(p.Transcode.If.MaxVideoBitrate); err != nil {
+				errs = append(errs, fmt.Errorf(
+					"quality profile %q: transcode.if.max_video_bitrate %w",
+					p.Name, err,
+				))
+			}
+		}
 	}
 	return errors.Join(errs...)
 }
@@ -646,6 +711,9 @@ func defaults() map[string]any {
 		"ffmpeg.path":                  "",
 		"download.selective_files":     false,
 		"download.selection_grace":     "10m",
+		"transcoding.enabled":          false,
+		"transcoding.max_concurrent":   1,
+		"transcoding.max_failures":     3,
 		"log.app.enabled":              true,
 		"log.app.level":                "info",
 		"log.app.format":               "text",

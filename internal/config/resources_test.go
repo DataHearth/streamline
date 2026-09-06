@@ -489,6 +489,144 @@ var _ = Describe("Custom formats", Label("unit", "config"), func() {
 	)
 })
 
+var _ = Describe("Transcoding config", Label("unit", "config"), func() {
+	It("defaults to disabled with max_concurrent=1, max_failures=3", func() {
+		c := configtest.Setup()
+		Expect(c.Transcoding.Enabled).To(BeFalse())
+		Expect(c.Transcoding.MaxConcurrent).To(Equal(uint8(1)))
+		Expect(c.Transcoding.MaxFailures).To(Equal(uint8(3)))
+	})
+
+	It(
+		"round-trips a transcode policy and fills the default audio passthrough",
+		func() {
+			configtest.Setup(map[string]any{
+				"quality_profiles": []map[string]any{
+					{
+						"name":                 "default",
+						"preferred_resolution": "1080p",
+						"min_resolution":       "1080p",
+						"transcode": map[string]any{
+							"if": map[string]any{
+								"video_codecs": []string{"mpeg2video"},
+							},
+							"to": map[string]any{
+								"container":   "mkv",
+								"video_codec": "hevc",
+								"crf":         20,
+								"preset":      "medium",
+								"audio_codec": "aac",
+							},
+						},
+					},
+				},
+			})
+
+			p, ok := config.ResolveQualityProfile("default")
+			Expect(ok).To(BeTrue())
+			Expect(p.Transcode).NotTo(BeNil())
+			Expect(p.Transcode.If.VideoCodecs).To(Equal([]string{"mpeg2video"}))
+			Expect(p.Transcode.To.Container).To(Equal("mkv"))
+			Expect(p.Transcode.To.CRF).To(Equal(uint8(20)))
+			Expect(p.Transcode.To.AudioPassthrough).
+				To(Equal(config.DefaultAudioPassthrough))
+		},
+	)
+
+	Describe("TranscodeEligible", func() {
+		It("is false when the profile carries no transcode policy", func() {
+			configtest.Setup(map[string]any{
+				"transcoding": map[string]any{"enabled": true},
+			})
+			Expect(config.TranscodeEligible("default")).To(BeFalse())
+		})
+
+		It(
+			"is false when transcoding is disabled globally, even with a policy",
+			func() {
+				configtest.Setup(map[string]any{
+					"quality_profiles": []map[string]any{
+						{
+							"name":                 "default",
+							"preferred_resolution": "1080p",
+							"min_resolution":       "1080p",
+							"transcode": map[string]any{
+								"to": map[string]any{
+									"container":   "mkv",
+									"video_codec": "hevc",
+									"preset":      "medium",
+									"audio_codec": "aac",
+								},
+							},
+						},
+					},
+				})
+				Expect(config.TranscodeEligible("default")).To(BeFalse())
+			},
+		)
+
+		It(
+			"is true when transcoding is enabled and the profile carries a policy",
+			func() {
+				configtest.Setup(map[string]any{
+					"transcoding": map[string]any{"enabled": true},
+					"quality_profiles": []map[string]any{
+						{
+							"name":                 "default",
+							"preferred_resolution": "1080p",
+							"min_resolution":       "1080p",
+							"transcode": map[string]any{
+								"to": map[string]any{
+									"container":   "mkv",
+									"video_codec": "hevc",
+									"preset":      "medium",
+									"audio_codec": "aac",
+								},
+							},
+						},
+					},
+				})
+				Expect(config.TranscodeEligible("default")).To(BeTrue())
+			},
+		)
+	})
+
+	It("rejects a max_video_bitrate value ParseBitrate cannot read", func() {
+		c := configtest.Setup()
+		c.QualityProfiles[0].Transcode = &config.TranscodePolicy{
+			If: config.TranscodeIf{MaxVideoBitrate: "nope"},
+			To: config.TranscodeTo{
+				Container:  "mkv",
+				VideoCodec: "hevc",
+				Preset:     "medium",
+				AudioCodec: "aac",
+			},
+		}
+		err := c.Validate()
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("max_video_bitrate"))
+	})
+
+	DescribeTable("ParseBitrate",
+		func(input string, want int64, wantErr bool) {
+			got, err := config.ParseBitrate(input)
+			if wantErr {
+				Expect(err).To(HaveOccurred())
+				return
+			}
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got).To(Equal(want))
+		},
+		Entry("megabit shorthand", "12M", int64(12_000_000), false),
+		Entry("kilobit shorthand lowercase", "8000k", int64(8_000_000), false),
+		Entry("bare byte count", "500000", int64(500_000), false),
+		Entry("case-insensitive suffix", "8000K", int64(8_000_000), false),
+		Entry("non-numeric", "nope", int64(0), true),
+		Entry("zero", "0", int64(0), true),
+		Entry("negative", "-1M", int64(0), true),
+	)
+})
+
 var _ = Describe("ResolveScoredProfile", Label("unit", "config"), func() {
 	BeforeEach(func() {
 		configtest.Setup(map[string]any{

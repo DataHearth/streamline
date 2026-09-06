@@ -151,6 +151,70 @@ var _ = Describe("Config mutate", Label("unit", "config"), func() {
 		})
 	})
 
+	Describe("UpdateTranscoding", func() {
+		It("defaults to disabled, max_concurrent=1, max_failures=3", func() {
+			Expect(config.Get().Transcoding.Enabled).To(BeFalse())
+			Expect(config.Get().Transcoding.MaxConcurrent).To(Equal(uint8(1)))
+			Expect(config.Get().Transcoding.MaxFailures).To(Equal(uint8(3)))
+		})
+
+		It("applies enabled without disturbing the other fields", func() {
+			t := true
+			got, err := config.UpdateTranscoding(
+				context.Background(),
+				config.TranscodingPatch{Enabled: &t},
+			)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(got.Enabled).To(BeTrue())
+			Expect(got.MaxConcurrent).To(Equal(uint8(1)))
+			Expect(got.MaxFailures).To(Equal(uint8(3)))
+		})
+
+		It(
+			"applies max_concurrent and max_failures without disturbing enabled",
+			func() {
+				t := true
+				_, err := config.UpdateTranscoding(
+					context.Background(),
+					config.TranscodingPatch{Enabled: &t},
+				)
+				Expect(err).ToNot(HaveOccurred())
+
+				concurrent := uint8(4)
+				failures := uint8(7)
+				got, err := config.UpdateTranscoding(
+					context.Background(),
+					config.TranscodingPatch{
+						MaxConcurrent: &concurrent,
+						MaxFailures:   &failures,
+					},
+				)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(got.MaxConcurrent).To(Equal(uint8(4)))
+				Expect(got.MaxFailures).To(Equal(uint8(7)))
+				Expect(got.Enabled).To(BeTrue())
+			},
+		)
+
+		It("rejects max_concurrent above 8", func() {
+			bad := uint8(9)
+			_, err := config.UpdateTranscoding(
+				context.Background(),
+				config.TranscodingPatch{MaxConcurrent: &bad},
+			)
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("rejects max_failures of 0", func() {
+			bad := uint8(0)
+			_, err := config.UpdateTranscoding(
+				context.Background(),
+				config.TranscodingPatch{MaxFailures: &bad},
+			)
+			Expect(err).To(HaveOccurred())
+		})
+	})
+
 	Describe("AddOIDCProvider", func() {
 		var srv *httptest.Server
 
