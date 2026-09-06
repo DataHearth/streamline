@@ -279,7 +279,7 @@
 </script>
 
 <header
-	class="sticky top-0 z-30 flex h-16 items-center gap-2 border-b border-border bg-bg-deep/70 pl-4 pr-2 backdrop-blur-md saturate-150 md:gap-4 md:px-8"
+	class="sticky top-0 z-30 flex min-h-16 items-center gap-2 border-b border-border bg-bg-deep/70 pl-4 pr-2 pt-[env(safe-area-inset-top)] backdrop-blur-md saturate-150 md:gap-4 md:px-8"
 >
 	<div class="min-w-0 flex-1">
 		{#if crumbs.length === 1}
