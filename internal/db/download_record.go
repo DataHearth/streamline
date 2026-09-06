@@ -125,7 +125,7 @@ func (db *DB) ListPendingDownloadRecords(
 ) ([]*ent.DownloadRecord, error) {
 	return db.client.DownloadRecord.Query().
 		Where(downloadrecord.StatusEQ(downloadrecord.StatusPending)).
-		WithMovie(func(mq *ent.MovieQuery) { mq.WithMediaFiles() }).
+		WithMovie(func(mq *ent.MovieQuery) { withLeanMovie(mq); mq.WithMediaFiles() }).
 		WithEpisode(func(q *ent.EpisodeQuery) {
 			q.WithMediaFiles()
 			q.WithSeason(func(sq *ent.SeasonQuery) { sq.WithTvShow() })
