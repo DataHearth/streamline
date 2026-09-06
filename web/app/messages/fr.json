@@ -1211,6 +1211,8 @@
 	"series_apply_existing": "Appliquer aux séries existantes",
 	"series_available_after_import": "Disponible une fois les épisodes importés",
 	"series_continuing": "En cours",
+	"series_dl_full_series": "Série complète",
+	"series_dl_season_pack": "Pack S{season}",
 	"series_count_of": "{visible} sur {total} séries",
 	"series_delete_episode_confirm": "Supprimer ce fichier d'épisode ?",
 	"series_empty_help": "Ajoutez une série depuis TVDB pour suivre les épisodes et récupérer les releases automatiquement.",

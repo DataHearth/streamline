@@ -40,9 +40,11 @@
 	}));
 
 	function cardStatus(s: TVShow): StatusKind {
-		// Being written into the library outranks the gaps behind it: the card's
-		// next change of state is the import landing, not an episode being wanted
-		// — and an importing episode is counted wanted until its file exists.
+		// A grab in flight outranks the gaps behind it: the card's next change of
+		// state is the download landing, not the episode being wanted — and an
+		// in-flight episode is counted wanted until its file exists.
+		if ((s.downloading_episodes ?? 0) > 0) return "downloading";
+		// Past the grab, being written into the library.
 		if ((s.importing_episodes ?? 0) > 0) return "importing";
 		if ((s.wanted_episodes ?? 0) > 0) return "wanted";
 		// Unmonitored shows report zero wanted episodes, so "nothing wanted" alone
@@ -55,8 +57,28 @@
 		return `${s.have_episodes ?? 0}/${s.total_episodes} eps`;
 	}
 
+	// While something is in flight the card names what is coming rather than
+	// what it holds — the episode, the season pack, or the whole series. The
+	// have/total count is the one thing about to change.
+	const pad = (n: number) => String(n).padStart(2, "0");
+	function downloadText(s: TVShow): string {
+		if (
+			s.downloading_scope === "episode" &&
+			s.downloading_season != null &&
+			s.downloading_episode != null
+		)
+			return `S${pad(s.downloading_season)}E${pad(s.downloading_episode)}`;
+		if (s.downloading_scope === "season" && s.downloading_season != null)
+			return i18n.series_dl_season_pack({ season: pad(s.downloading_season) });
+		if (s.downloading_scope === "series") return i18n.series_dl_full_series();
+		// Scope unknown — the count still says how much is in flight.
+		return `${s.downloading_episodes || s.importing_episodes || 0} eps`;
+	}
+
 	function enrich(s: TVShow) {
 		const status = cardStatus(s);
+		const downloading = status === "downloading";
+		const inFlight = downloading || status === "importing";
 		return {
 			id: s.id,
 			title: s.title,
@@ -65,12 +87,11 @@
 			status,
 			monitored: s.monitored,
 			rating: s.rating ?? undefined,
-			// While an import runs the card names what is landing rather than what
-			// it holds — the have/total count is the one thing about to change.
-			size_text:
-				status === "importing"
-					? `${s.importing_episodes ?? 0} eps`
-					: episodeText(s),
+			// Undefined progress draws the indeterminate bar, which is the honest
+			// reading when the server has not sent one — and an import has no
+			// percentage to send.
+			progress: downloading ? s.download_progress : undefined,
+			size_text: inFlight ? downloadText(s) : episodeText(s),
 		};
 	}
 </script>

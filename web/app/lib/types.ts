@@ -6,6 +6,9 @@ export type MovieStatus =
 	| "failed";
 
 export type SeriesStatus = "continuing" | "ended" | "upcoming";
+// What an in-flight grab covers, which is what a library card has to say: one
+// episode, a season pack, or a complete-series pack.
+export type SeriesDownloadScope = "episode" | "season" | "series";
 export type SeriesType = "standard" | "anime" | "daily";
 export type EpisodeStatus =
 	| "wanted"
@@ -76,9 +79,19 @@ export type TVShow = {
 	have_episodes?: number;
 	total_episodes?: number;
 	wanted_episodes?: number;
-	// Episodes past the grab and being written into the library. A list-only
-	// rollup — the detail response carries the episode tree instead.
+	// What the show has in flight, so a library card can badge it without a
+	// per-show queue lookup. List-only rollups — the detail response carries
+	// the episode tree instead. Zero or absent when nothing is running.
+	downloading_episodes?: number;
+	/** Episodes past the grab and being written into the library. */
 	importing_episodes?: number;
+	downloading_scope?: SeriesDownloadScope;
+	/** Season the grab lands in; absent when it spans seasons. */
+	downloading_season?: number;
+	/** Episode number, set only when the scope is a single episode. */
+	downloading_episode?: number;
+	/** Mean progress across the in-flight items, 0-1. */
+	download_progress?: number;
 	// Only populated by GET /series/{id}; absent in list responses.
 	seasons?: Season[];
 	cast?: CastMember[];
