@@ -37,6 +37,8 @@ const (
 	FieldTmdbID = "tmdb_id"
 	// FieldLastSearchAt holds the string denoting the last_search_at field in the database.
 	FieldLastSearchAt = "last_search_at"
+	// FieldReleaseDate holds the string denoting the release_date field in the database.
+	FieldReleaseDate = "release_date"
 	// FieldDigitalReleaseDate holds the string denoting the digital_release_date field in the database.
 	FieldDigitalReleaseDate = "digital_release_date"
 	// FieldGrabFailures holds the string denoting the grab_failures field in the database.
@@ -98,6 +100,7 @@ var Columns = []string{
 	FieldMonitored,
 	FieldTmdbID,
 	FieldLastSearchAt,
+	FieldReleaseDate,
 	FieldDigitalReleaseDate,
 	FieldGrabFailures,
 	FieldFailureReason,
@@ -229,6 +232,11 @@ func ByTmdbID(opts ...sql.OrderTermOption) OrderOption {
 // ByLastSearchAt orders the results by the last_search_at field.
 func ByLastSearchAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldLastSearchAt, opts...).ToFunc()
+}
+
+// ByReleaseDate orders the results by the release_date field.
+func ByReleaseDate(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldReleaseDate, opts...).ToFunc()
 }
 
 // ByDigitalReleaseDate orders the results by the digital_release_date field.

@@ -23,6 +23,7 @@ type CreateMovieParams struct {
 	Rating         float64
 	Genres         []string
 	Cast           []schema.CastMember
+	ReleaseDate    *time.Time
 }
 
 func (db *DB) CreateMovie(
@@ -34,7 +35,8 @@ func (db *DB) CreateMovie(
 		SetOriginalTitle(p.OriginalTitle).
 		SetYear(p.Year).
 		SetTmdbID(p.TmdbID).
-		SetStatus(p.Status)
+		SetStatus(p.Status).
+		SetNillableReleaseDate(p.ReleaseDate)
 	if p.Overview != "" {
 		b.SetOverview(p.Overview)
 	}
@@ -92,6 +94,13 @@ func (db *DB) CountMoviesByStatus(
 	status movie.Status,
 ) (int, error) {
 	return db.client.Movie.Query().Where(movie.StatusEQ(status)).Count(ctx)
+}
+
+// CountMoviesMonitored counts movies whose monitored flag is set. The
+// unmonitored tally is the library total minus this, so the toolbar's
+// monitoring facet costs one query rather than two.
+func (db *DB) CountMoviesMonitored(ctx context.Context) (int, error) {
+	return db.client.Movie.Query().Where(movie.MonitoredEQ(true)).Count(ctx)
 }
 
 // MovieTMDBIndex maps every tracked tmdb id to its movie row id. The bulk
@@ -275,11 +284,13 @@ func (db *DB) DeleteMovie(ctx context.Context, id uint32) error {
 // Limit must be > 0.
 type FilterMoviesParams struct {
 	Status movie.Status
-	Query  string
-	Sort   string // "title" | "year" | "create_time"
-	Order  string // "asc" | "desc"
-	Offset uint32
-	Limit  uint32
+	// Monitored filters on the movie's own flag; nil means "either".
+	Monitored *bool
+	Query     string
+	Sort      string // "title" | "year" | "create_time"
+	Order     string // "asc" | "desc"
+	Offset    uint32
+	Limit     uint32
 }
 
 func (db *DB) FilterMovies(
@@ -289,6 +300,9 @@ func (db *DB) FilterMovies(
 	base := db.client.Movie.Query()
 	if p.Status != "" {
 		base = base.Where(movie.StatusEQ(p.Status))
+	}
+	if p.Monitored != nil {
+		base = base.Where(movie.MonitoredEQ(*p.Monitored))
 	}
 	if p.Query != "" {
 		base = base.Where(movie.Or(
@@ -377,6 +391,7 @@ type UpdateMovieMetadataParams struct {
 	Rating        float64
 	Genres        []string
 	Cast          []schema.CastMember
+	ReleaseDate   *time.Time
 }
 
 // UpdateMovieMetadata updates only the TMDB-sourced metadata fields. Status and
@@ -396,6 +411,7 @@ func (db *DB) UpdateMovieMetadata(
 		SetRating(p.Rating).
 		SetGenres(p.Genres).
 		SetCast(p.Cast).
+		SetNillableReleaseDate(p.ReleaseDate).
 		SetLastRefreshedAt(time.Now()).
 		Exec(ctx)
 }

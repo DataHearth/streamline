@@ -205,6 +205,26 @@ func (_u *MovieUpdate) ClearLastSearchAt() *MovieUpdate {
 	return _u
 }
 
+// SetReleaseDate sets the "release_date" field.
+func (_u *MovieUpdate) SetReleaseDate(v time.Time) *MovieUpdate {
+	_u.mutation.SetReleaseDate(v)
+	return _u
+}
+
+// SetNillableReleaseDate sets the "release_date" field if the given value is not nil.
+func (_u *MovieUpdate) SetNillableReleaseDate(v *time.Time) *MovieUpdate {
+	if v != nil {
+		_u.SetReleaseDate(*v)
+	}
+	return _u
+}
+
+// ClearReleaseDate clears the value of the "release_date" field.
+func (_u *MovieUpdate) ClearReleaseDate() *MovieUpdate {
+	_u.mutation.ClearReleaseDate()
+	return _u
+}
+
 // SetDigitalReleaseDate sets the "digital_release_date" field.
 func (_u *MovieUpdate) SetDigitalReleaseDate(v time.Time) *MovieUpdate {
 	_u.mutation.SetDigitalReleaseDate(v)
@@ -604,6 +624,12 @@ func (_u *MovieUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.LastSearchAtCleared() {
 		_spec.ClearField(movie.FieldLastSearchAt, field.TypeTime)
 	}
+	if value, ok := _u.mutation.ReleaseDate(); ok {
+		_spec.SetField(movie.FieldReleaseDate, field.TypeTime, value)
+	}
+	if _u.mutation.ReleaseDateCleared() {
+		_spec.ClearField(movie.FieldReleaseDate, field.TypeTime)
+	}
 	if value, ok := _u.mutation.DigitalReleaseDate(); ok {
 		_spec.SetField(movie.FieldDigitalReleaseDate, field.TypeTime, value)
 	}
@@ -990,6 +1016,26 @@ func (_u *MovieUpdateOne) SetNillableLastSearchAt(v *time.Time) *MovieUpdateOne 
 // ClearLastSearchAt clears the value of the "last_search_at" field.
 func (_u *MovieUpdateOne) ClearLastSearchAt() *MovieUpdateOne {
 	_u.mutation.ClearLastSearchAt()
+	return _u
+}
+
+// SetReleaseDate sets the "release_date" field.
+func (_u *MovieUpdateOne) SetReleaseDate(v time.Time) *MovieUpdateOne {
+	_u.mutation.SetReleaseDate(v)
+	return _u
+}
+
+// SetNillableReleaseDate sets the "release_date" field if the given value is not nil.
+func (_u *MovieUpdateOne) SetNillableReleaseDate(v *time.Time) *MovieUpdateOne {
+	if v != nil {
+		_u.SetReleaseDate(*v)
+	}
+	return _u
+}
+
+// ClearReleaseDate clears the value of the "release_date" field.
+func (_u *MovieUpdateOne) ClearReleaseDate() *MovieUpdateOne {
+	_u.mutation.ClearReleaseDate()
 	return _u
 }
 
@@ -1421,6 +1467,12 @@ func (_u *MovieUpdateOne) sqlSave(ctx context.Context) (_node *Movie, err error)
 	}
 	if _u.mutation.LastSearchAtCleared() {
 		_spec.ClearField(movie.FieldLastSearchAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.ReleaseDate(); ok {
+		_spec.SetField(movie.FieldReleaseDate, field.TypeTime, value)
+	}
+	if _u.mutation.ReleaseDateCleared() {
+		_spec.ClearField(movie.FieldReleaseDate, field.TypeTime)
 	}
 	if value, ok := _u.mutation.DigitalReleaseDate(); ok {
 		_spec.SetField(movie.FieldDigitalReleaseDate, field.TypeTime, value)

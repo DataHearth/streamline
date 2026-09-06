@@ -315,6 +315,7 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 					entmovie.StatusAvailable:   3,
 					entmovie.StatusFailed:      1,
 				}, nil).Once()
+			storeMock.CountMoviesMonitored(mock.Anything).Return(0, nil).Once()
 			storeMock.MovieCreateTimesSince(mock.Anything, mock.Anything).
 				Return([]time.Time{}, nil).Once()
 
@@ -340,6 +341,7 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 				}, nil).Once()
 			// Two added today, one yesterday; no prior baseline.
 			now := time.Now().UTC()
+			storeMock.CountMoviesMonitored(mock.Anything).Return(0, nil).Once()
 			storeMock.MovieCreateTimesSince(mock.Anything, mock.Anything).
 				Return([]time.Time{
 					now.Add(-24 * time.Hour),
@@ -367,6 +369,7 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 				Return(map[entmovie.Status]int{
 					entmovie.StatusAvailable: 7,
 				}, nil).Once()
+			storeMock.CountMoviesMonitored(mock.Anything).Return(0, nil).Once()
 			storeMock.MovieCreateTimesSince(mock.Anything, mock.Anything).
 				Return([]time.Time{}, nil).Once()
 

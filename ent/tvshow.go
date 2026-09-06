@@ -29,6 +29,8 @@ type TVShow struct {
 	OriginalTitle string `json:"original_title,omitempty"`
 	// Year holds the value of the "year" field.
 	Year uint16 `json:"year,omitempty"`
+	// FirstAired holds the value of the "first_aired" field.
+	FirstAired *time.Time `json:"first_aired,omitempty"`
 	// Overview holds the value of the "overview" field.
 	Overview string `json:"overview,omitempty"`
 	// SeriesStatus holds the value of the "series_status" field.
@@ -107,7 +109,7 @@ func (*TVShow) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullInt64)
 		case tvshow.FieldTitle, tvshow.FieldOriginalTitle, tvshow.FieldOverview, tvshow.FieldSeriesStatus, tvshow.FieldType, tvshow.FieldPosterPath, tvshow.FieldNetwork, tvshow.FieldCreator, tvshow.FieldQualityProfile:
 			values[i] = new(sql.NullString)
-		case tvshow.FieldCreateTime, tvshow.FieldUpdateTime, tvshow.FieldLastRefreshedAt:
+		case tvshow.FieldCreateTime, tvshow.FieldUpdateTime, tvshow.FieldFirstAired, tvshow.FieldLastRefreshedAt:
 			values[i] = new(sql.NullTime)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -159,6 +161,13 @@ func (_m *TVShow) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field year", values[i])
 			} else if value.Valid {
 				_m.Year = uint16(value.Int64)
+			}
+		case tvshow.FieldFirstAired:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field first_aired", values[i])
+			} else if value.Valid {
+				_m.FirstAired = new(time.Time)
+				*_m.FirstAired = value.Time
 			}
 		case tvshow.FieldOverview:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -309,6 +318,11 @@ func (_m *TVShow) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("year=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Year))
+	builder.WriteString(", ")
+	if v := _m.FirstAired; v != nil {
+		builder.WriteString("first_aired=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("overview=")
 	builder.WriteString(_m.Overview)

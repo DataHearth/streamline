@@ -36,6 +36,10 @@ func (TVShow) Fields() []ent.Field {
 		field.String("title").NotEmpty(),
 		field.String("original_title").Optional(),
 		field.Uint16("year"),
+		// First air date, as TVDB reports it — the series counterpart to
+		// Movie.release_date. Absent for an announced show with no date set,
+		// which is why `year` stays and stays required.
+		field.Time("first_aired").Optional().Nillable(),
 		field.String("overview").Optional(),
 		field.Enum("series_status").
 			Values("continuing", "ended", "upcoming").

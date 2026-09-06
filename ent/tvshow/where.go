@@ -80,6 +80,11 @@ func Year(v uint16) predicate.TVShow {
 	return predicate.TVShow(sql.FieldEQ(FieldYear, v))
 }
 
+// FirstAired applies equality check predicate on the "first_aired" field. It's identical to FirstAiredEQ.
+func FirstAired(v time.Time) predicate.TVShow {
+	return predicate.TVShow(sql.FieldEQ(FieldFirstAired, v))
+}
+
 // Overview applies equality check predicate on the "overview" field. It's identical to OverviewEQ.
 func Overview(v string) predicate.TVShow {
 	return predicate.TVShow(sql.FieldEQ(FieldOverview, v))
@@ -388,6 +393,56 @@ func YearLT(v uint16) predicate.TVShow {
 // YearLTE applies the LTE predicate on the "year" field.
 func YearLTE(v uint16) predicate.TVShow {
 	return predicate.TVShow(sql.FieldLTE(FieldYear, v))
+}
+
+// FirstAiredEQ applies the EQ predicate on the "first_aired" field.
+func FirstAiredEQ(v time.Time) predicate.TVShow {
+	return predicate.TVShow(sql.FieldEQ(FieldFirstAired, v))
+}
+
+// FirstAiredNEQ applies the NEQ predicate on the "first_aired" field.
+func FirstAiredNEQ(v time.Time) predicate.TVShow {
+	return predicate.TVShow(sql.FieldNEQ(FieldFirstAired, v))
+}
+
+// FirstAiredIn applies the In predicate on the "first_aired" field.
+func FirstAiredIn(vs ...time.Time) predicate.TVShow {
+	return predicate.TVShow(sql.FieldIn(FieldFirstAired, vs...))
+}
+
+// FirstAiredNotIn applies the NotIn predicate on the "first_aired" field.
+func FirstAiredNotIn(vs ...time.Time) predicate.TVShow {
+	return predicate.TVShow(sql.FieldNotIn(FieldFirstAired, vs...))
+}
+
+// FirstAiredGT applies the GT predicate on the "first_aired" field.
+func FirstAiredGT(v time.Time) predicate.TVShow {
+	return predicate.TVShow(sql.FieldGT(FieldFirstAired, v))
+}
+
+// FirstAiredGTE applies the GTE predicate on the "first_aired" field.
+func FirstAiredGTE(v time.Time) predicate.TVShow {
+	return predicate.TVShow(sql.FieldGTE(FieldFirstAired, v))
+}
+
+// FirstAiredLT applies the LT predicate on the "first_aired" field.
+func FirstAiredLT(v time.Time) predicate.TVShow {
+	return predicate.TVShow(sql.FieldLT(FieldFirstAired, v))
+}
+
+// FirstAiredLTE applies the LTE predicate on the "first_aired" field.
+func FirstAiredLTE(v time.Time) predicate.TVShow {
+	return predicate.TVShow(sql.FieldLTE(FieldFirstAired, v))
+}
+
+// FirstAiredIsNil applies the IsNil predicate on the "first_aired" field.
+func FirstAiredIsNil() predicate.TVShow {
+	return predicate.TVShow(sql.FieldIsNull(FieldFirstAired))
+}
+
+// FirstAiredNotNil applies the NotNil predicate on the "first_aired" field.
+func FirstAiredNotNil() predicate.TVShow {
+	return predicate.TVShow(sql.FieldNotNull(FieldFirstAired))
 }
 
 // OverviewEQ applies the EQ predicate on the "overview" field.

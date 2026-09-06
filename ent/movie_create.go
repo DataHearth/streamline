@@ -146,6 +146,20 @@ func (_c *MovieCreate) SetNillableLastSearchAt(v *time.Time) *MovieCreate {
 	return _c
 }
 
+// SetReleaseDate sets the "release_date" field.
+func (_c *MovieCreate) SetReleaseDate(v time.Time) *MovieCreate {
+	_c.mutation.SetReleaseDate(v)
+	return _c
+}
+
+// SetNillableReleaseDate sets the "release_date" field if the given value is not nil.
+func (_c *MovieCreate) SetNillableReleaseDate(v *time.Time) *MovieCreate {
+	if v != nil {
+		_c.SetReleaseDate(*v)
+	}
+	return _c
+}
+
 // SetDigitalReleaseDate sets the "digital_release_date" field.
 func (_c *MovieCreate) SetDigitalReleaseDate(v time.Time) *MovieCreate {
 	_c.mutation.SetDigitalReleaseDate(v)
@@ -477,6 +491,10 @@ func (_c *MovieCreate) createSpec() (*Movie, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.LastSearchAt(); ok {
 		_spec.SetField(movie.FieldLastSearchAt, field.TypeTime, value)
 		_node.LastSearchAt = &value
+	}
+	if value, ok := _c.mutation.ReleaseDate(); ok {
+		_spec.SetField(movie.FieldReleaseDate, field.TypeTime, value)
+		_node.ReleaseDate = &value
 	}
 	if value, ok := _c.mutation.DigitalReleaseDate(); ok {
 		_spec.SetField(movie.FieldDigitalReleaseDate, field.TypeTime, value)

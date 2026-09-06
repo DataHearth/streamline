@@ -435,6 +435,18 @@ func (t *TMDB) withLang(p url.Values, lang string) url.Values {
 	return p
 }
 
+// ParseISODate reads the `yyyy-mm-dd` both providers use for a release or air
+// date. Nil for anything it cannot read — an empty string, which is how TMDB
+// and TVDB both report "no date announced", and a malformed one, which must
+// not fail the metadata refresh carrying it.
+func ParseISODate(s string) *time.Time {
+	t, err := time.Parse(time.DateOnly, s)
+	if err != nil {
+		return nil
+	}
+	return &t
+}
+
 func extractYear(releaseDate string) uint16 {
 	if parts := strings.SplitN(releaseDate, "-", 2); len(parts) > 0 {
 		y, _ := strconv.ParseUint(parts[0], 10, 16)

@@ -49,6 +49,10 @@ func (s *Server) ListSeries(
 	if request.Params.Order != nil {
 		p.Order = string(*request.Params.Order)
 	}
+	if request.Params.Monitored != nil {
+		on := *request.Params.Monitored == ListSeriesParamsMonitoredMonitored
+		p.Monitored = &on
+	}
 
 	rows, counts, total, err := s.tvshows.FilterList(ctx, p)
 	if err != nil {
@@ -174,6 +178,10 @@ func (s *Server) GetSeriesCounts(
 			Ended:               c.Ended,
 			Upcoming:            c.Upcoming,
 			Missing:             c.Missing,
+			Downloading:         c.Downloading,
+			Importing:           c.Importing,
+			Monitored:           c.Monitored,
+			Unmonitored:         c.Unmonitored,
 			WantedEpisodes:      c.WantedEpisodes,
 			DownloadingEpisodes: c.DownloadingEpisodes,
 		},

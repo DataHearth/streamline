@@ -32,6 +32,10 @@ func (Movie) Fields() []ent.Field {
 		field.Bool("monitored").Default(true),
 		field.Uint32("tmdb_id").Unique(),
 		field.Time("last_search_at").Optional().Nillable(),
+		// Primary (theatrical) release, as TMDB reports it. Distinct from
+		// digital_release_date, which is what the release-radar search waits on;
+		// this one is what the library displays.
+		field.Time("release_date").Optional().Nillable(),
 		field.Time("digital_release_date").Optional().Nillable(),
 		field.Uint8("grab_failures").Default(0),
 		field.String("failure_reason").Optional(),

@@ -57,6 +57,7 @@ type CreateTVShowParams struct {
 	PosterPath     string
 	QualityProfile string
 	Seasons        []SeasonSeed
+	FirstAired     *time.Time
 }
 
 type UpdateTVShowParams struct {
@@ -79,6 +80,7 @@ type UpdateTVShowMetadataParams struct {
 	Rating        float64
 	Genres        []string
 	Cast          []schema.CastMember
+	FirstAired    *time.Time
 }
 
 // UpdateTVShowMetadata persists refreshed provider metadata onto an existing
@@ -97,7 +99,8 @@ func (db *DB) UpdateTVShowMetadata(
 		SetCreator(p.Creator).
 		SetRuntime(p.Runtime).
 		SetRating(p.Rating).
-		SetGenres(p.Genres)
+		SetGenres(p.Genres).
+		SetNillableFirstAired(p.FirstAired)
 	// Cast comes from a separate provider call than the rest, so an empty
 	// slice means "that call failed" far more often than "this show has no
 	// actors" — keep whatever is already stored.
@@ -290,6 +293,7 @@ func (db *DB) CreateTVShow(
 		SetCast(p.Cast).
 		SetPosterPath(p.PosterPath).
 		SetQualityProfile(p.QualityProfile).
+		SetNillableFirstAired(p.FirstAired).
 		Save(ctx)
 	if err != nil {
 		tx.Rollback()

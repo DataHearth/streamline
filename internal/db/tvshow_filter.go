@@ -26,9 +26,17 @@ var tvShowListColumns = slices.DeleteFunc(
 	func(c string) bool { return c == tvshow.FieldCast },
 )
 
+// Status values the list accepts beyond series_status and "missing": a show
+// is downloading or importing when any of its episodes is, which is the same
+// rule the library card badges by.
+const (
+	statusDownloading = "downloading"
+	statusImporting   = "importing"
+)
+
 type FilterTVShowsParams struct {
 	// Status is a series_status value, "missing" (has an aired, monitored
-	// episode with no file), or "" / "all".
+	// episode with no file), "downloading", "importing", or "" / "all".
 	Status string
 	Type   string
 	Query  string
@@ -36,6 +44,8 @@ type FilterTVShowsParams struct {
 	Order  string
 	Offset uint32
 	Limit  uint16
+	// Monitored filters on the show's own flag; nil means "either".
+	Monitored *bool
 	// Now anchors the aired/unaired split. Passed in so a caller can render a
 	// consistent view across the filter and the counts.
 	Now time.Time
@@ -109,11 +119,18 @@ func (db *DB) FilterTVShows(
 	if p.Query != "" {
 		base = base.Where(tvshow.TitleContainsFold(p.Query))
 	}
+	if p.Monitored != nil {
+		base = base.Where(tvshow.MonitoredEQ(*p.Monitored))
+	}
 	switch p.Status {
 	case "", "all":
 	case "missing":
 		base = base.Where(tvshow.HasSeasonsWith(
 			season.HasEpisodesWith(missingEpisode(p.Now)),
+		))
+	case statusDownloading, statusImporting:
+		base = base.Where(tvshow.HasSeasonsWith(
+			season.HasEpisodesWith(episode.StatusEQ(episode.Status(p.Status))),
 		))
 	default:
 		base = base.Where(tvshow.SeriesStatusEQ(tvshow.SeriesStatus(p.Status)))
@@ -224,6 +241,37 @@ func (db *DB) CountTVShowsMissing(ctx context.Context, now time.Time) (int, erro
 		Count(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("count missing tv shows: %w", err)
+	}
+	return n, nil
+}
+
+// CountTVShowsInFlight counts shows holding at least one episode in the given
+// state — the per-show population behind the list's downloading and importing
+// tabs, matching what FilterTVShows selects for the same status.
+func (db *DB) CountTVShowsInFlight(
+	ctx context.Context,
+	status episode.Status,
+) (int, error) {
+	n, err := db.client.TVShow.Query().
+		Where(tvshow.HasSeasonsWith(
+			season.HasEpisodesWith(episode.StatusEQ(status)),
+		)).
+		Count(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("count %s tv shows: %w", status, err)
+	}
+	return n, nil
+}
+
+// CountTVShowsMonitored counts shows whose own monitored flag is set. The
+// unmonitored tally is the library total minus this, so the facet costs one
+// query rather than two.
+func (db *DB) CountTVShowsMonitored(ctx context.Context) (int, error) {
+	n, err := db.client.TVShow.Query().
+		Where(tvshow.MonitoredEQ(true)).
+		Count(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("count monitored tv shows: %w", err)
 	}
 	return n, nil
 }

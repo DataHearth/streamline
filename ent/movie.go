@@ -41,6 +41,8 @@ type Movie struct {
 	TmdbID uint32 `json:"tmdb_id,omitempty"`
 	// LastSearchAt holds the value of the "last_search_at" field.
 	LastSearchAt *time.Time `json:"last_search_at,omitempty"`
+	// ReleaseDate holds the value of the "release_date" field.
+	ReleaseDate *time.Time `json:"release_date,omitempty"`
 	// DigitalReleaseDate holds the value of the "digital_release_date" field.
 	DigitalReleaseDate *time.Time `json:"digital_release_date,omitempty"`
 	// GrabFailures holds the value of the "grab_failures" field.
@@ -118,7 +120,7 @@ func (*Movie) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullInt64)
 		case movie.FieldTitle, movie.FieldOriginalTitle, movie.FieldOverview, movie.FieldStatus, movie.FieldFailureReason, movie.FieldQualityProfile:
 			values[i] = new(sql.NullString)
-		case movie.FieldCreateTime, movie.FieldUpdateTime, movie.FieldLastSearchAt, movie.FieldDigitalReleaseDate, movie.FieldLastRefreshedAt:
+		case movie.FieldCreateTime, movie.FieldUpdateTime, movie.FieldLastSearchAt, movie.FieldReleaseDate, movie.FieldDigitalReleaseDate, movie.FieldLastRefreshedAt:
 			values[i] = new(sql.NullTime)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -207,6 +209,13 @@ func (_m *Movie) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.LastSearchAt = new(time.Time)
 				*_m.LastSearchAt = value.Time
+			}
+		case movie.FieldReleaseDate:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field release_date", values[i])
+			} else if value.Valid {
+				_m.ReleaseDate = new(time.Time)
+				*_m.ReleaseDate = value.Time
 			}
 		case movie.FieldDigitalReleaseDate:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -345,6 +354,11 @@ func (_m *Movie) String() string {
 	builder.WriteString(", ")
 	if v := _m.LastSearchAt; v != nil {
 		builder.WriteString("last_search_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
+	if v := _m.ReleaseDate; v != nil {
+		builder.WriteString("release_date=")
 		builder.WriteString(v.Format(time.ANSIC))
 	}
 	builder.WriteString(", ")

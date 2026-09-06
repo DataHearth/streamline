@@ -105,6 +105,11 @@ func LastSearchAt(v time.Time) predicate.Movie {
 	return predicate.Movie(sql.FieldEQ(FieldLastSearchAt, v))
 }
 
+// ReleaseDate applies equality check predicate on the "release_date" field. It's identical to ReleaseDateEQ.
+func ReleaseDate(v time.Time) predicate.Movie {
+	return predicate.Movie(sql.FieldEQ(FieldReleaseDate, v))
+}
+
 // DigitalReleaseDate applies equality check predicate on the "digital_release_date" field. It's identical to DigitalReleaseDateEQ.
 func DigitalReleaseDate(v time.Time) predicate.Movie {
 	return predicate.Movie(sql.FieldEQ(FieldDigitalReleaseDate, v))
@@ -628,6 +633,56 @@ func LastSearchAtIsNil() predicate.Movie {
 // LastSearchAtNotNil applies the NotNil predicate on the "last_search_at" field.
 func LastSearchAtNotNil() predicate.Movie {
 	return predicate.Movie(sql.FieldNotNull(FieldLastSearchAt))
+}
+
+// ReleaseDateEQ applies the EQ predicate on the "release_date" field.
+func ReleaseDateEQ(v time.Time) predicate.Movie {
+	return predicate.Movie(sql.FieldEQ(FieldReleaseDate, v))
+}
+
+// ReleaseDateNEQ applies the NEQ predicate on the "release_date" field.
+func ReleaseDateNEQ(v time.Time) predicate.Movie {
+	return predicate.Movie(sql.FieldNEQ(FieldReleaseDate, v))
+}
+
+// ReleaseDateIn applies the In predicate on the "release_date" field.
+func ReleaseDateIn(vs ...time.Time) predicate.Movie {
+	return predicate.Movie(sql.FieldIn(FieldReleaseDate, vs...))
+}
+
+// ReleaseDateNotIn applies the NotIn predicate on the "release_date" field.
+func ReleaseDateNotIn(vs ...time.Time) predicate.Movie {
+	return predicate.Movie(sql.FieldNotIn(FieldReleaseDate, vs...))
+}
+
+// ReleaseDateGT applies the GT predicate on the "release_date" field.
+func ReleaseDateGT(v time.Time) predicate.Movie {
+	return predicate.Movie(sql.FieldGT(FieldReleaseDate, v))
+}
+
+// ReleaseDateGTE applies the GTE predicate on the "release_date" field.
+func ReleaseDateGTE(v time.Time) predicate.Movie {
+	return predicate.Movie(sql.FieldGTE(FieldReleaseDate, v))
+}
+
+// ReleaseDateLT applies the LT predicate on the "release_date" field.
+func ReleaseDateLT(v time.Time) predicate.Movie {
+	return predicate.Movie(sql.FieldLT(FieldReleaseDate, v))
+}
+
+// ReleaseDateLTE applies the LTE predicate on the "release_date" field.
+func ReleaseDateLTE(v time.Time) predicate.Movie {
+	return predicate.Movie(sql.FieldLTE(FieldReleaseDate, v))
+}
+
+// ReleaseDateIsNil applies the IsNil predicate on the "release_date" field.
+func ReleaseDateIsNil() predicate.Movie {
+	return predicate.Movie(sql.FieldIsNull(FieldReleaseDate))
+}
+
+// ReleaseDateNotNil applies the NotNil predicate on the "release_date" field.
+func ReleaseDateNotNil() predicate.Movie {
+	return predicate.Movie(sql.FieldNotNull(FieldReleaseDate))
 }
 
 // DigitalReleaseDateEQ applies the EQ predicate on the "digital_release_date" field.

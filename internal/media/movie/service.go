@@ -118,6 +118,10 @@ type Counts struct {
 	Importing   int
 	Available   int
 	Failed      int
+	// Monitoring is a facet of its own, counted over the whole library rather
+	// than within the current status: the toolbar shows both tallies at once.
+	Monitored   int
+	Unmonitored int
 	// Trend holds the cumulative library size at the end of each of the last
 	// trendDays days, oldest first; the final element equals Total.
 	Trend []int
@@ -134,6 +138,8 @@ type FilterParams struct {
 	Order  string
 	Page   uint16
 	Limit  uint16
+	// Monitored filters on the movie's own flag; nil means "either".
+	Monitored *bool
 }
 
 // metadataMinRefreshInterval bounds the TMDB call rate of the metadata-refresh
@@ -207,6 +213,7 @@ func (s *Service) Add(
 		Rating:         float64(details.Rating),
 		Genres:         details.Genres,
 		Cast:           db.StoredCast(details.Cast),
+		ReleaseDate:    metadata.ParseISODate(details.ReleaseDate),
 	})
 	if err != nil {
 		if ent.IsConstraintError(err) {
@@ -263,12 +270,13 @@ func (s *Service) FilterList(
 		limit = 20
 	}
 	items, total, err := s.db.FilterMovies(ctx, db.FilterMoviesParams{
-		Status: entmovie.Status(p.Status),
-		Query:  p.Query,
-		Sort:   p.Sort,
-		Order:  p.Order,
-		Offset: uint32(page-1) * uint32(limit),
-		Limit:  uint32(limit),
+		Status:    entmovie.Status(p.Status),
+		Monitored: p.Monitored,
+		Query:     p.Query,
+		Sort:      p.Sort,
+		Order:     p.Order,
+		Offset:    uint32(page-1) * uint32(limit),
+		Limit:     uint32(limit),
 	})
 	if err != nil {
 		return nil, nil, 0, otelx.RecordSpanError(
@@ -366,6 +374,13 @@ func (s *Service) Counts(ctx context.Context) (Counts, error) {
 		attribute.Int("counts.available", available),
 		attribute.Int("counts.failed", failed),
 	)
+	monitored, err := s.db.CountMoviesMonitored(ctx)
+	if err != nil {
+		return Counts{}, otelx.RecordSpanError(
+			span,
+			fmt.Errorf("count monitored movies: %w", err),
+		)
+	}
 	trend, err := s.movieTrend(ctx, total)
 	if err != nil {
 		return Counts{}, err
@@ -378,6 +393,8 @@ func (s *Service) Counts(ctx context.Context) (Counts, error) {
 		Importing:   importing,
 		Available:   available,
 		Failed:      failed,
+		Monitored:   monitored,
+		Unmonitored: total - monitored,
 		Trend:       trend,
 	}, nil
 }
@@ -610,6 +627,7 @@ func (s *Service) applyMetadata(
 		Rating:        float64(details.Rating),
 		Genres:        details.Genres,
 		Cast:          db.StoredCast(details.Cast),
+		ReleaseDate:   metadata.ParseISODate(details.ReleaseDate),
 	})
 }
 

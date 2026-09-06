@@ -12590,6 +12590,7 @@ type MovieMutation struct {
 	tmdb_id                 *uint32
 	addtmdb_id              *int32
 	last_search_at          *time.Time
+	release_date            *time.Time
 	digital_release_date    *time.Time
 	grab_failures           *uint8
 	addgrab_failures        *int8
@@ -13215,6 +13216,55 @@ func (m *MovieMutation) LastSearchAtCleared() bool {
 func (m *MovieMutation) ResetLastSearchAt() {
 	m.last_search_at = nil
 	delete(m.clearedFields, movie.FieldLastSearchAt)
+}
+
+// SetReleaseDate sets the "release_date" field.
+func (m *MovieMutation) SetReleaseDate(t time.Time) {
+	m.release_date = &t
+}
+
+// ReleaseDate returns the value of the "release_date" field in the mutation.
+func (m *MovieMutation) ReleaseDate() (r time.Time, exists bool) {
+	v := m.release_date
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldReleaseDate returns the old "release_date" field's value of the Movie entity.
+// If the Movie object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MovieMutation) OldReleaseDate(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldReleaseDate is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldReleaseDate requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldReleaseDate: %w", err)
+	}
+	return oldValue.ReleaseDate, nil
+}
+
+// ClearReleaseDate clears the value of the "release_date" field.
+func (m *MovieMutation) ClearReleaseDate() {
+	m.release_date = nil
+	m.clearedFields[movie.FieldReleaseDate] = struct{}{}
+}
+
+// ReleaseDateCleared returns if the "release_date" field was cleared in this mutation.
+func (m *MovieMutation) ReleaseDateCleared() bool {
+	_, ok := m.clearedFields[movie.FieldReleaseDate]
+	return ok
+}
+
+// ResetReleaseDate resets all changes to the "release_date" field.
+func (m *MovieMutation) ResetReleaseDate() {
+	m.release_date = nil
+	delete(m.clearedFields, movie.FieldReleaseDate)
 }
 
 // SetDigitalReleaseDate sets the "digital_release_date" field.
@@ -13865,7 +13915,7 @@ func (m *MovieMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *MovieMutation) Fields() []string {
-	fields := make([]string, 0, 19)
+	fields := make([]string, 0, 20)
 	if m.create_time != nil {
 		fields = append(fields, movie.FieldCreateTime)
 	}
@@ -13898,6 +13948,9 @@ func (m *MovieMutation) Fields() []string {
 	}
 	if m.last_search_at != nil {
 		fields = append(fields, movie.FieldLastSearchAt)
+	}
+	if m.release_date != nil {
+		fields = append(fields, movie.FieldReleaseDate)
 	}
 	if m.digital_release_date != nil {
 		fields = append(fields, movie.FieldDigitalReleaseDate)
@@ -13953,6 +14006,8 @@ func (m *MovieMutation) Field(name string) (ent.Value, bool) {
 		return m.TmdbID()
 	case movie.FieldLastSearchAt:
 		return m.LastSearchAt()
+	case movie.FieldReleaseDate:
+		return m.ReleaseDate()
 	case movie.FieldDigitalReleaseDate:
 		return m.DigitalReleaseDate()
 	case movie.FieldGrabFailures:
@@ -14000,6 +14055,8 @@ func (m *MovieMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldTmdbID(ctx)
 	case movie.FieldLastSearchAt:
 		return m.OldLastSearchAt(ctx)
+	case movie.FieldReleaseDate:
+		return m.OldReleaseDate(ctx)
 	case movie.FieldDigitalReleaseDate:
 		return m.OldDigitalReleaseDate(ctx)
 	case movie.FieldGrabFailures:
@@ -14101,6 +14158,13 @@ func (m *MovieMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetLastSearchAt(v)
+		return nil
+	case movie.FieldReleaseDate:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetReleaseDate(v)
 		return nil
 	case movie.FieldDigitalReleaseDate:
 		v, ok := value.(time.Time)
@@ -14260,6 +14324,9 @@ func (m *MovieMutation) ClearedFields() []string {
 	if m.FieldCleared(movie.FieldLastSearchAt) {
 		fields = append(fields, movie.FieldLastSearchAt)
 	}
+	if m.FieldCleared(movie.FieldReleaseDate) {
+		fields = append(fields, movie.FieldReleaseDate)
+	}
 	if m.FieldCleared(movie.FieldDigitalReleaseDate) {
 		fields = append(fields, movie.FieldDigitalReleaseDate)
 	}
@@ -14303,6 +14370,9 @@ func (m *MovieMutation) ClearField(name string) error {
 		return nil
 	case movie.FieldLastSearchAt:
 		m.ClearLastSearchAt()
+		return nil
+	case movie.FieldReleaseDate:
+		m.ClearReleaseDate()
 		return nil
 	case movie.FieldDigitalReleaseDate:
 		m.ClearDigitalReleaseDate()
@@ -14365,6 +14435,9 @@ func (m *MovieMutation) ResetField(name string) error {
 		return nil
 	case movie.FieldLastSearchAt:
 		m.ResetLastSearchAt()
+		return nil
+	case movie.FieldReleaseDate:
+		m.ResetReleaseDate()
 		return nil
 	case movie.FieldDigitalReleaseDate:
 		m.ResetDigitalReleaseDate()
@@ -18385,6 +18458,7 @@ type TVShowMutation struct {
 	original_title    *string
 	year              *uint16
 	addyear           *int16
+	first_aired       *time.Time
 	overview          *string
 	series_status     *tvshow.SeriesStatus
 	_type             *tvshow.Type
@@ -18731,6 +18805,55 @@ func (m *TVShowMutation) AddedYear() (r int16, exists bool) {
 func (m *TVShowMutation) ResetYear() {
 	m.year = nil
 	m.addyear = nil
+}
+
+// SetFirstAired sets the "first_aired" field.
+func (m *TVShowMutation) SetFirstAired(t time.Time) {
+	m.first_aired = &t
+}
+
+// FirstAired returns the value of the "first_aired" field in the mutation.
+func (m *TVShowMutation) FirstAired() (r time.Time, exists bool) {
+	v := m.first_aired
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldFirstAired returns the old "first_aired" field's value of the TVShow entity.
+// If the TVShow object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TVShowMutation) OldFirstAired(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldFirstAired is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldFirstAired requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFirstAired: %w", err)
+	}
+	return oldValue.FirstAired, nil
+}
+
+// ClearFirstAired clears the value of the "first_aired" field.
+func (m *TVShowMutation) ClearFirstAired() {
+	m.first_aired = nil
+	m.clearedFields[tvshow.FieldFirstAired] = struct{}{}
+}
+
+// FirstAiredCleared returns if the "first_aired" field was cleared in this mutation.
+func (m *TVShowMutation) FirstAiredCleared() bool {
+	_, ok := m.clearedFields[tvshow.FieldFirstAired]
+	return ok
+}
+
+// ResetFirstAired resets all changes to the "first_aired" field.
+func (m *TVShowMutation) ResetFirstAired() {
+	m.first_aired = nil
+	delete(m.clearedFields, tvshow.FieldFirstAired)
 }
 
 // SetOverview sets the "overview" field.
@@ -19603,7 +19726,7 @@ func (m *TVShowMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *TVShowMutation) Fields() []string {
-	fields := make([]string, 0, 19)
+	fields := make([]string, 0, 20)
 	if m.create_time != nil {
 		fields = append(fields, tvshow.FieldCreateTime)
 	}
@@ -19618,6 +19741,9 @@ func (m *TVShowMutation) Fields() []string {
 	}
 	if m.year != nil {
 		fields = append(fields, tvshow.FieldYear)
+	}
+	if m.first_aired != nil {
+		fields = append(fields, tvshow.FieldFirstAired)
 	}
 	if m.overview != nil {
 		fields = append(fields, tvshow.FieldOverview)
@@ -19679,6 +19805,8 @@ func (m *TVShowMutation) Field(name string) (ent.Value, bool) {
 		return m.OriginalTitle()
 	case tvshow.FieldYear:
 		return m.Year()
+	case tvshow.FieldFirstAired:
+		return m.FirstAired()
 	case tvshow.FieldOverview:
 		return m.Overview()
 	case tvshow.FieldSeriesStatus:
@@ -19726,6 +19854,8 @@ func (m *TVShowMutation) OldField(ctx context.Context, name string) (ent.Value, 
 		return m.OldOriginalTitle(ctx)
 	case tvshow.FieldYear:
 		return m.OldYear(ctx)
+	case tvshow.FieldFirstAired:
+		return m.OldFirstAired(ctx)
 	case tvshow.FieldOverview:
 		return m.OldOverview(ctx)
 	case tvshow.FieldSeriesStatus:
@@ -19797,6 +19927,13 @@ func (m *TVShowMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetYear(v)
+		return nil
+	case tvshow.FieldFirstAired:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetFirstAired(v)
 		return nil
 	case tvshow.FieldOverview:
 		v, ok := value.(string)
@@ -19980,6 +20117,9 @@ func (m *TVShowMutation) ClearedFields() []string {
 	if m.FieldCleared(tvshow.FieldOriginalTitle) {
 		fields = append(fields, tvshow.FieldOriginalTitle)
 	}
+	if m.FieldCleared(tvshow.FieldFirstAired) {
+		fields = append(fields, tvshow.FieldFirstAired)
+	}
 	if m.FieldCleared(tvshow.FieldOverview) {
 		fields = append(fields, tvshow.FieldOverview)
 	}
@@ -20026,6 +20166,9 @@ func (m *TVShowMutation) ClearField(name string) error {
 	switch name {
 	case tvshow.FieldOriginalTitle:
 		m.ClearOriginalTitle()
+		return nil
+	case tvshow.FieldFirstAired:
+		m.ClearFirstAired()
 		return nil
 	case tvshow.FieldOverview:
 		m.ClearOverview()
@@ -20079,6 +20222,9 @@ func (m *TVShowMutation) ResetField(name string) error {
 		return nil
 	case tvshow.FieldYear:
 		m.ResetYear()
+		return nil
+	case tvshow.FieldFirstAired:
+		m.ResetFirstAired()
 		return nil
 	case tvshow.FieldOverview:
 		m.ResetOverview()

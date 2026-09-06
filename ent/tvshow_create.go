@@ -77,6 +77,20 @@ func (_c *TVShowCreate) SetYear(v uint16) *TVShowCreate {
 	return _c
 }
 
+// SetFirstAired sets the "first_aired" field.
+func (_c *TVShowCreate) SetFirstAired(v time.Time) *TVShowCreate {
+	_c.mutation.SetFirstAired(v)
+	return _c
+}
+
+// SetNillableFirstAired sets the "first_aired" field if the given value is not nil.
+func (_c *TVShowCreate) SetNillableFirstAired(v *time.Time) *TVShowCreate {
+	if v != nil {
+		_c.SetFirstAired(*v)
+	}
+	return _c
+}
+
 // SetOverview sets the "overview" field.
 func (_c *TVShowCreate) SetOverview(v string) *TVShowCreate {
 	_c.mutation.SetOverview(v)
@@ -442,6 +456,10 @@ func (_c *TVShowCreate) createSpec() (*TVShow, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Year(); ok {
 		_spec.SetField(tvshow.FieldYear, field.TypeUint16, value)
 		_node.Year = value
+	}
+	if value, ok := _c.mutation.FirstAired(); ok {
+		_spec.SetField(tvshow.FieldFirstAired, field.TypeTime, value)
+		_node.FirstAired = &value
 	}
 	if value, ok := _c.mutation.Overview(); ok {
 		_spec.SetField(tvshow.FieldOverview, field.TypeString, value)

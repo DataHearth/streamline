@@ -159,6 +159,7 @@ func (s *Service) Add(
 		PosterPath:     d.PosterPath,
 		QualityProfile: qualityProfile,
 		Seasons:        seedSeasons(d),
+		FirstAired:     metadata.ParseISODate(d.FirstAired),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create tv show: %w", err)
@@ -242,14 +243,15 @@ func (s *Service) FilterList(
 	}
 
 	rows, counts, total, err := s.db.FilterTVShows(ctx, db.FilterTVShowsParams{
-		Status: p.Status,
-		Type:   p.Type,
-		Query:  strings.TrimSpace(p.Query),
-		Sort:   p.Sort,
-		Order:  p.Order,
-		Offset: uint32(page-1) * uint32(limit),
-		Limit:  limit,
-		Now:    time.Now(),
+		Status:    p.Status,
+		Type:      p.Type,
+		Query:     strings.TrimSpace(p.Query),
+		Sort:      p.Sort,
+		Order:     p.Order,
+		Offset:    uint32(page-1) * uint32(limit),
+		Limit:     limit,
+		Monitored: p.Monitored,
+		Now:       time.Now(),
 	})
 	if err != nil {
 		return nil, nil, 0, otelx.RecordSpanError(span, err)
@@ -303,12 +305,32 @@ func (s *Service) Counts(ctx context.Context) (Counts, error) {
 	if err != nil {
 		return Counts{}, otelx.RecordSpanError(span, err)
 	}
+	downloadingShows, err := s.db.CountTVShowsInFlight(
+		ctx, episode.StatusDownloading,
+	)
+	if err != nil {
+		return Counts{}, otelx.RecordSpanError(span, err)
+	}
+	importingShows, err := s.db.CountTVShowsInFlight(
+		ctx, episode.StatusImporting,
+	)
+	if err != nil {
+		return Counts{}, otelx.RecordSpanError(span, err)
+	}
+	monitored, err := s.db.CountTVShowsMonitored(ctx)
+	if err != nil {
+		return Counts{}, otelx.RecordSpanError(span, err)
+	}
 	return Counts{
 		Total:               total,
 		Continuing:          continuing,
 		Ended:               ended,
 		Upcoming:            upcoming,
 		Missing:             missing,
+		Downloading:         downloadingShows,
+		Importing:           importingShows,
+		Monitored:           monitored,
+		Unmonitored:         total - monitored,
 		WantedEpisodes:      wanted,
 		DownloadingEpisodes: downloading,
 	}, nil
@@ -869,6 +891,7 @@ func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.TVShow, error
 		Rating:        float64(d.Rating),
 		Genres:        d.Genres,
 		Cast:          db.StoredCast(cast),
+		FirstAired:    metadata.ParseISODate(d.FirstAired),
 	}); err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
@@ -975,6 +998,7 @@ func (s *Service) Reidentify(
 		Rating:        float64(d.Rating),
 		Genres:        d.Genres,
 		Cast:          db.StoredCast(cast),
+		FirstAired:    metadata.ParseISODate(d.FirstAired),
 	}); err != nil {
 		return nil, nil, otelx.RecordSpanError(span, err)
 	}
@@ -1169,13 +1193,15 @@ type UpdateParams struct {
 }
 
 type FilterParams struct {
-	Status string // series_status filter, or "missing" for shows with wanted eps
+	Status string // series_status, "missing", "downloading" or "importing"
 	Type   string // standard|anime|daily|""
 	Query  string
 	Sort   string // recent|title|year|rating|episodes
 	Order  string
 	Page   uint16
 	Limit  uint16
+	// Monitored filters on the show's own flag; nil means "either".
+	Monitored *bool
 }
 
 type Counts struct {
@@ -1186,7 +1212,15 @@ type Counts struct {
 	// Missing is how many shows have at least one aired, monitored episode
 	// with no file — the population behind the list's "missing" tab, which is
 	// a per-show fact and not derivable from WantedEpisodes.
-	Missing             int
+	Missing int
+	// Downloading and Importing are per-show counts like Missing — shows
+	// holding at least one episode in that state, not episode counts.
+	Downloading int
+	Importing   int
+	// Monitoring is a facet of its own, counted over the whole library rather
+	// than within the current status: the toolbar shows both tallies at once.
+	Monitored           int
+	Unmonitored         int
 	WantedEpisodes      int
 	DownloadingEpisodes int
 }

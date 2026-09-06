@@ -186,6 +186,11 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 			Return(4, nil).Once()
 		storeMk.CountWantedEpisodes(mock.Anything).Return(2, nil).Once()
 		storeMk.CountDownloadingEpisodes(mock.Anything).Return(3, nil).Once()
+		storeMk.CountTVShowsInFlight(mock.Anything, episode.StatusDownloading).
+			Return(1, nil).Once()
+		storeMk.CountTVShowsInFlight(mock.Anything, episode.StatusImporting).
+			Return(0, nil).Once()
+		storeMk.CountTVShowsMonitored(mock.Anything).Return(1, nil).Once()
 		c, err := svc.Counts(ctx)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(c.Total).To(Equal(2))
@@ -193,6 +198,11 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 		Expect(c.Ended).To(Equal(1))
 		Expect(c.Upcoming).To(BeZero())
 		Expect(c.Missing).To(Equal(4))
+		Expect(c.Downloading).To(Equal(1))
+		Expect(c.Importing).To(BeZero())
+		Expect(c.Monitored).To(Equal(1))
+		// Unmonitored is the library total minus monitored, never its own query.
+		Expect(c.Unmonitored).To(Equal(1))
 		Expect(c.WantedEpisodes).To(Equal(2))
 		Expect(c.DownloadingEpisodes).To(Equal(3))
 	})

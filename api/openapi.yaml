@@ -70,6 +70,7 @@ paths:
             maximum: 100
             x-go-type: uint16
         - $ref: "#/components/parameters/MoviesStatus"
+        - $ref: "#/components/parameters/MoviesMonitored"
         - $ref: "#/components/parameters/MoviesQuery"
         - $ref: "#/components/parameters/MoviesSort"
         - $ref: "#/components/parameters/MoviesOrder"
@@ -440,6 +441,7 @@ paths:
         - $ref: "#/components/parameters/SeriesPage"
         - $ref: "#/components/parameters/SeriesLimit"
         - $ref: "#/components/parameters/SeriesStatus"
+        - $ref: "#/components/parameters/SeriesMonitored"
         - $ref: "#/components/parameters/SeriesType"
         - $ref: "#/components/parameters/SeriesQuery"
         - $ref: "#/components/parameters/SeriesSort"
@@ -3706,6 +3708,16 @@ components:
       schema:
         type: string
 
+    MoviesMonitored:
+      name: monitored
+      in: query
+      description: |
+        Restrict to monitored or unmonitored titles. A facet of its own,
+        combined with `status` rather than replacing it.
+      schema:
+        type: string
+        enum: [monitored, unmonitored]
+
     MoviesQuery:
       name: query
       in: query
@@ -3754,7 +3766,10 @@ components:
     SeriesStatus:
       name: status
       in: query
-      description: Filter by series_status (continuing/ended/upcoming) or "missing".
+      description: |
+        Filter by series_status (continuing/ended/upcoming), "missing",
+        "downloading" or "importing". The last three are per-show facts read
+        off the episode tree, not series_status values.
       schema:
         type: string
 
@@ -3764,6 +3779,16 @@ components:
       description: Filter by series type (standard/anime/daily).
       schema:
         type: string
+
+    SeriesMonitored:
+      name: monitored
+      in: query
+      description: |
+        Restrict to monitored or unmonitored shows, on the show's own flag. A
+        facet of its own, combined with `status` rather than replacing it.
+      schema:
+        type: string
+        enum: [monitored, unmonitored]
 
     SeriesQuery:
       name: query
@@ -4920,6 +4945,16 @@ components:
         year:
           type: integer
           x-go-type: uint16
+        release_date:
+          type: string
+          format: date
+          nullable: true
+          description: |
+            Primary (theatrical) release, ISO yyyy-mm-dd. Distinct from
+            `digital_release_date`, which is what the release-radar search
+            waits on; this is what the library displays. Absent for an
+            announced title with no date set, which is why `year` stays
+            required.
         overview:
           type: string
         runtime:
@@ -5152,7 +5187,18 @@ components:
 
     MovieCounts:
       type: object
-      required: [total, wanted, downloading, importing, available, failed, trend]
+      required:
+        [
+          total,
+          wanted,
+          downloading,
+          importing,
+          available,
+          failed,
+          monitored,
+          unmonitored,
+          trend,
+        ]
       properties:
         total:
           type: integer
@@ -5170,6 +5216,15 @@ components:
           type: integer
           x-go-type: uint32
         failed:
+          type: integer
+          x-go-type: uint32
+        monitored:
+          type: integer
+          description: |
+            Monitoring counted over the whole library rather than within the
+            current status — the toolbar shows both tallies at once.
+          x-go-type: uint32
+        unmonitored:
           type: integer
           x-go-type: uint32
         trend:
@@ -5207,6 +5262,14 @@ components:
         year:
           type: integer
           x-go-type: uint16
+        first_aired:
+          type: string
+          format: date
+          nullable: true
+          description: |
+            First air date, ISO yyyy-mm-dd — the series counterpart to
+            Movie.release_date. Absent for an announced show with no date set,
+            which is why `year` stays required.
         overview:
           type: string
         series_status:
@@ -5438,6 +5501,10 @@ components:
           ended,
           upcoming,
           missing,
+          downloading,
+          importing,
+          monitored,
+          unmonitored,
           wanted_episodes,
           downloading_episodes,
         ]
@@ -5456,6 +5523,21 @@ components:
             Shows with at least one aired, monitored episode that has no file.
             A per-show count, not an episode count — it labels the library
             list's "missing" tab, which selects shows.
+        downloading:
+          type: integer
+          description: |
+            Shows with at least one episode downloading — a per-show count like
+            `missing`, and what the library list's "downloading" tab selects.
+        importing:
+          type: integer
+          description: Shows with at least one episode importing.
+        monitored:
+          type: integer
+          description: |
+            Monitoring counted over the whole library rather than within the
+            current status — the toolbar shows both tallies at once.
+        unmonitored:
+          type: integer
         wanted_episodes:
           type: integer
         downloading_episodes:

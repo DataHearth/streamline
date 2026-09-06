@@ -1851,6 +1851,24 @@ func (e ImportClassification) Valid() bool {
 	}
 }
 
+// Defines values for MoviesMonitored.
+const (
+	MoviesMonitoredMonitored   MoviesMonitored = "monitored"
+	MoviesMonitoredUnmonitored MoviesMonitored = "unmonitored"
+)
+
+// Valid indicates whether the value is a known member of the MoviesMonitored enum.
+func (e MoviesMonitored) Valid() bool {
+	switch e {
+	case MoviesMonitoredMonitored:
+		return true
+	case MoviesMonitoredUnmonitored:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MoviesOrder.
 const (
 	MoviesOrderAsc  MoviesOrder = "asc"
@@ -1905,6 +1923,24 @@ func (e RequestStatusParam) Valid() bool {
 	case RequestStatusParamDenied:
 		return true
 	case RequestStatusParamPending:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SeriesMonitored.
+const (
+	SeriesMonitoredMonitored   SeriesMonitored = "monitored"
+	SeriesMonitoredUnmonitored SeriesMonitored = "unmonitored"
+)
+
+// Valid indicates whether the value is a known member of the SeriesMonitored enum.
+func (e SeriesMonitored) Valid() bool {
+	switch e {
+	case SeriesMonitoredMonitored:
+		return true
+	case SeriesMonitoredUnmonitored:
 		return true
 	default:
 		return false
@@ -2055,6 +2091,24 @@ func (e ListImportShowsParamsClassification) Valid() bool {
 	}
 }
 
+// Defines values for ListMoviesParamsMonitored.
+const (
+	ListMoviesParamsMonitoredMonitored   ListMoviesParamsMonitored = "monitored"
+	ListMoviesParamsMonitoredUnmonitored ListMoviesParamsMonitored = "unmonitored"
+)
+
+// Valid indicates whether the value is a known member of the ListMoviesParamsMonitored enum.
+func (e ListMoviesParamsMonitored) Valid() bool {
+	switch e {
+	case ListMoviesParamsMonitoredMonitored:
+		return true
+	case ListMoviesParamsMonitoredUnmonitored:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListMoviesParamsOrder.
 const (
 	ListMoviesParamsOrderAsc  ListMoviesParamsOrder = "asc"
@@ -2109,6 +2163,24 @@ func (e ListRequestsParamsMediaType) Valid() bool {
 	case ListRequestsParamsMediaTypeMovie:
 		return true
 	case ListRequestsParamsMediaTypeTvshow:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListSeriesParamsMonitored.
+const (
+	ListSeriesParamsMonitoredMonitored   ListSeriesParamsMonitored = "monitored"
+	ListSeriesParamsMonitoredUnmonitored ListSeriesParamsMonitored = "unmonitored"
+)
+
+// Valid indicates whether the value is a known member of the ListSeriesParamsMonitored enum.
+func (e ListSeriesParamsMonitored) Valid() bool {
+	switch e {
+	case ListSeriesParamsMonitoredMonitored:
+		return true
+	case ListSeriesParamsMonitoredUnmonitored:
 		return true
 	default:
 		return false
@@ -3389,6 +3461,13 @@ type Movie struct {
 	// and omitted when TMDB has no votes.
 	Rating *float32 `json:"rating,omitempty"`
 
+	// ReleaseDate Primary (theatrical) release, ISO yyyy-mm-dd. Distinct from
+	// `digital_release_date`, which is what the release-radar search
+	// waits on; this is what the library displays. Absent for an
+	// announced title with no date set, which is why `year` stays
+	// required.
+	ReleaseDate *openapi_types.Date `json:"release_date,omitempty"`
+
 	// Runtime Runtime in minutes. Zero when unknown.
 	Runtime *uint16     `json:"runtime,omitempty"`
 	Status  MovieStatus `json:"status"`
@@ -3406,13 +3485,18 @@ type MovieCounts struct {
 	Downloading uint32 `json:"downloading"`
 	Failed      uint32 `json:"failed"`
 	Importing   uint32 `json:"importing"`
-	Total       uint32 `json:"total"`
+
+	// Monitored Monitoring counted over the whole library rather than within the
+	// current status — the toolbar shows both tallies at once.
+	Monitored uint32 `json:"monitored"`
+	Total     uint32 `json:"total"`
 
 	// Trend Cumulative library size at the end of each day over the last 30
 	// days, oldest first. The final element equals `total`. All zeros
 	// when the library is empty.
-	Trend  []uint32 `json:"trend"`
-	Wanted uint32   `json:"wanted"`
+	Trend       []uint32 `json:"trend"`
+	Unmonitored uint32   `json:"unmonitored"`
+	Wanted      uint32   `json:"wanted"`
 }
 
 // MovieFileSummary Per-movie rollup of the files on disk, carried by list responses in
@@ -4250,8 +4334,13 @@ type TVShow struct {
 
 	// DownloadingSeason Season the in-flight grab lands in. Present for the `episode` and
 	// `season` scopes; absent when it spans seasons.
-	DownloadingSeason *uint16   `json:"downloading_season,omitempty"`
-	Genres            *[]string `json:"genres,omitempty"`
+	DownloadingSeason *uint16 `json:"downloading_season,omitempty"`
+
+	// FirstAired First air date, ISO yyyy-mm-dd — the series counterpart to
+	// Movie.release_date. Absent for an announced show with no date set,
+	// which is why `year` stays required.
+	FirstAired *openapi_types.Date `json:"first_aired,omitempty"`
+	Genres     *[]string           `json:"genres,omitempty"`
 
 	// HaveEpisodes Episodes with a media file. Rolled up across seasons.
 	HaveEpisodes *uint32 `json:"have_episodes,omitempty"`
@@ -4297,15 +4386,27 @@ type TVShowType string
 
 // TVShowCounts defines model for TVShowCounts.
 type TVShowCounts struct {
-	Continuing          int `json:"continuing"`
+	Continuing int `json:"continuing"`
+
+	// Downloading Shows with at least one episode downloading — a per-show count like
+	// `missing`, and what the library list's "downloading" tab selects.
+	Downloading         int `json:"downloading"`
 	DownloadingEpisodes int `json:"downloading_episodes"`
 	Ended               int `json:"ended"`
+
+	// Importing Shows with at least one episode importing.
+	Importing int `json:"importing"`
 
 	// Missing Shows with at least one aired, monitored episode that has no file.
 	// A per-show count, not an episode count — it labels the library
 	// list's "missing" tab, which selects shows.
-	Missing        int `json:"missing"`
+	Missing int `json:"missing"`
+
+	// Monitored Monitoring counted over the whole library rather than within the
+	// current status — the toolbar shows both tallies at once.
+	Monitored      int `json:"monitored"`
 	Total          int `json:"total"`
+	Unmonitored    int `json:"unmonitored"`
 	Upcoming       int `json:"upcoming"`
 	WantedEpisodes int `json:"wanted_episodes"`
 }
@@ -4606,6 +4707,9 @@ type ImportScanFileID = uint32
 // ImportScanShowID defines model for ImportScanShowID.
 type ImportScanShowID = uint32
 
+// MoviesMonitored defines model for MoviesMonitored.
+type MoviesMonitored string
+
 // MoviesOrder defines model for MoviesOrder.
 type MoviesOrder string
 
@@ -4653,6 +4757,9 @@ type SeriesLimit = uint16
 
 // SeriesLookupQuery defines model for SeriesLookupQuery.
 type SeriesLookupQuery = string
+
+// SeriesMonitored defines model for SeriesMonitored.
+type SeriesMonitored string
 
 // SeriesOrder defines model for SeriesOrder.
 type SeriesOrder string
@@ -5015,6 +5122,10 @@ type ListMoviesParams struct {
 	// Status Filter by movie status (wanted/downloading/importing/available/failed).
 	Status *MoviesStatus `form:"status,omitempty" json:"status,omitempty"`
 
+	// Monitored Restrict to monitored or unmonitored titles. A facet of its own,
+	// combined with `status` rather than replacing it.
+	Monitored *ListMoviesParamsMonitored `form:"monitored,omitempty" json:"monitored,omitempty"`
+
 	// Query Case-insensitive substring filter over title and original title.
 	Query *MoviesQuery `form:"query,omitempty" json:"query,omitempty"`
 
@@ -5025,6 +5136,9 @@ type ListMoviesParams struct {
 	// `title` ascending, everything else descending (newest first).
 	Order *ListMoviesParamsOrder `form:"order,omitempty" json:"order,omitempty"`
 }
+
+// ListMoviesParamsMonitored defines parameters for ListMovies.
+type ListMoviesParamsMonitored string
 
 // ListMoviesParamsOrder defines parameters for ListMovies.
 type ListMoviesParamsOrder string
@@ -5072,8 +5186,14 @@ type ListSeriesParams struct {
 	Page  *SeriesPage  `form:"page,omitempty" json:"page,omitempty"`
 	Limit *SeriesLimit `form:"limit,omitempty" json:"limit,omitempty"`
 
-	// Status Filter by series_status (continuing/ended/upcoming) or "missing".
+	// Status Filter by series_status (continuing/ended/upcoming), "missing",
+	// "downloading" or "importing". The last three are per-show facts read
+	// off the episode tree, not series_status values.
 	Status *SeriesStatus `form:"status,omitempty" json:"status,omitempty"`
+
+	// Monitored Restrict to monitored or unmonitored shows, on the show's own flag. A
+	// facet of its own, combined with `status` rather than replacing it.
+	Monitored *ListSeriesParamsMonitored `form:"monitored,omitempty" json:"monitored,omitempty"`
 
 	// Type Filter by series type (standard/anime/daily).
 	Type *SeriesType `form:"type,omitempty" json:"type,omitempty"`
@@ -5088,6 +5208,9 @@ type ListSeriesParams struct {
 	// `title` ascending, everything else descending (newest, highest, most).
 	Order *ListSeriesParamsOrder `form:"order,omitempty" json:"order,omitempty"`
 }
+
+// ListSeriesParamsMonitored defines parameters for ListSeries.
+type ListSeriesParamsMonitored string
 
 // ListSeriesParamsOrder defines parameters for ListSeries.
 type ListSeriesParamsOrder string
@@ -8865,6 +8988,19 @@ func (siw *ServerInterfaceWrapper) ListMovies(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	// ------------- Optional query parameter "monitored" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "monitored", r.URL.Query(), &params.Monitored, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "monitored"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "monitored", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "query" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "query", r.URL.Query(), &params.Query, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
@@ -9866,6 +10002,19 @@ func (siw *ServerInterfaceWrapper) ListSeries(w http.ResponseWriter, r *http.Req
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "status"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "monitored" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "monitored", r.URL.Query(), &params.Monitored, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "monitored"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "monitored", Err: err})
 		}
 		return
 	}

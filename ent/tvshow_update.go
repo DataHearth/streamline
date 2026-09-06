@@ -94,6 +94,26 @@ func (_u *TVShowUpdate) AddYear(v int16) *TVShowUpdate {
 	return _u
 }
 
+// SetFirstAired sets the "first_aired" field.
+func (_u *TVShowUpdate) SetFirstAired(v time.Time) *TVShowUpdate {
+	_u.mutation.SetFirstAired(v)
+	return _u
+}
+
+// SetNillableFirstAired sets the "first_aired" field if the given value is not nil.
+func (_u *TVShowUpdate) SetNillableFirstAired(v *time.Time) *TVShowUpdate {
+	if v != nil {
+		_u.SetFirstAired(*v)
+	}
+	return _u
+}
+
+// ClearFirstAired clears the value of the "first_aired" field.
+func (_u *TVShowUpdate) ClearFirstAired() *TVShowUpdate {
+	_u.mutation.ClearFirstAired()
+	return _u
+}
+
 // SetOverview sets the "overview" field.
 func (_u *TVShowUpdate) SetOverview(v string) *TVShowUpdate {
 	_u.mutation.SetOverview(v)
@@ -536,6 +556,12 @@ func (_u *TVShowUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.AddedYear(); ok {
 		_spec.AddField(tvshow.FieldYear, field.TypeUint16, value)
 	}
+	if value, ok := _u.mutation.FirstAired(); ok {
+		_spec.SetField(tvshow.FieldFirstAired, field.TypeTime, value)
+	}
+	if _u.mutation.FirstAiredCleared() {
+		_spec.ClearField(tvshow.FieldFirstAired, field.TypeTime)
+	}
 	if value, ok := _u.mutation.Overview(); ok {
 		_spec.SetField(tvshow.FieldOverview, field.TypeString, value)
 	}
@@ -797,6 +823,26 @@ func (_u *TVShowUpdateOne) SetNillableYear(v *uint16) *TVShowUpdateOne {
 // AddYear adds value to the "year" field.
 func (_u *TVShowUpdateOne) AddYear(v int16) *TVShowUpdateOne {
 	_u.mutation.AddYear(v)
+	return _u
+}
+
+// SetFirstAired sets the "first_aired" field.
+func (_u *TVShowUpdateOne) SetFirstAired(v time.Time) *TVShowUpdateOne {
+	_u.mutation.SetFirstAired(v)
+	return _u
+}
+
+// SetNillableFirstAired sets the "first_aired" field if the given value is not nil.
+func (_u *TVShowUpdateOne) SetNillableFirstAired(v *time.Time) *TVShowUpdateOne {
+	if v != nil {
+		_u.SetFirstAired(*v)
+	}
+	return _u
+}
+
+// ClearFirstAired clears the value of the "first_aired" field.
+func (_u *TVShowUpdateOne) ClearFirstAired() *TVShowUpdateOne {
+	_u.mutation.ClearFirstAired()
 	return _u
 }
 
@@ -1271,6 +1317,12 @@ func (_u *TVShowUpdateOne) sqlSave(ctx context.Context) (_node *TVShow, err erro
 	}
 	if value, ok := _u.mutation.AddedYear(); ok {
 		_spec.AddField(tvshow.FieldYear, field.TypeUint16, value)
+	}
+	if value, ok := _u.mutation.FirstAired(); ok {
+		_spec.SetField(tvshow.FieldFirstAired, field.TypeTime, value)
+	}
+	if _u.mutation.FirstAiredCleared() {
+		_spec.ClearField(tvshow.FieldFirstAired, field.TypeTime)
 	}
 	if value, ok := _u.mutation.Overview(); ok {
 		_spec.SetField(tvshow.FieldOverview, field.TypeString, value)

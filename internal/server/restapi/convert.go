@@ -75,6 +75,9 @@ func movieToAPI(m *ent.Movie) Movie {
 		TmdbId:        m.TmdbID,
 		AddedAt:       &m.CreateTime,
 	}
+	if m.ReleaseDate != nil {
+		mov.ReleaseDate = &openapi_types.Date{Time: *m.ReleaseDate}
+	}
 	if m.Overview != "" {
 		mov.Overview = &m.Overview
 	}
@@ -831,6 +834,9 @@ func tvShowBaseToAPI(s *ent.TVShow) TVShow {
 		Monitored:    s.Monitored,
 		TvdbId:       s.TvdbID,
 		AddedAt:      &s.CreateTime,
+	}
+	if s.FirstAired != nil {
+		out.FirstAired = &openapi_types.Date{Time: *s.FirstAired}
 	}
 	if s.OriginalTitle != "" {
 		out.OriginalTitle = &s.OriginalTitle

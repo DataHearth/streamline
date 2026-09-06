@@ -25,6 +25,8 @@ const (
 	FieldOriginalTitle = "original_title"
 	// FieldYear holds the string denoting the year field in the database.
 	FieldYear = "year"
+	// FieldFirstAired holds the string denoting the first_aired field in the database.
+	FieldFirstAired = "first_aired"
 	// FieldOverview holds the string denoting the overview field in the database.
 	FieldOverview = "overview"
 	// FieldSeriesStatus holds the string denoting the series_status field in the database.
@@ -83,6 +85,7 @@ var Columns = []string{
 	FieldTitle,
 	FieldOriginalTitle,
 	FieldYear,
+	FieldFirstAired,
 	FieldOverview,
 	FieldSeriesStatus,
 	FieldType,
@@ -211,6 +214,11 @@ func ByOriginalTitle(opts ...sql.OrderTermOption) OrderOption {
 // ByYear orders the results by the year field.
 func ByYear(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldYear, opts...).ToFunc()
+}
+
+// ByFirstAired orders the results by the first_aired field.
+func ByFirstAired(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldFirstAired, opts...).ToFunc()
 }
 
 // ByOverview orders the results by the overview field.

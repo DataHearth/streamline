@@ -510,6 +510,7 @@ var (
 		{Name: "monitored", Type: field.TypeBool, Default: true},
 		{Name: "tmdb_id", Type: field.TypeUint32, Unique: true},
 		{Name: "last_search_at", Type: field.TypeTime, Nullable: true},
+		{Name: "release_date", Type: field.TypeTime, Nullable: true},
 		{Name: "digital_release_date", Type: field.TypeTime, Nullable: true},
 		{Name: "grab_failures", Type: field.TypeUint8, Default: 0},
 		{Name: "failure_reason", Type: field.TypeString, Nullable: true},
@@ -528,7 +529,7 @@ var (
 			{
 				Name:    "movie_digital_release_date",
 				Unique:  false,
-				Columns: []*schema.Column{MoviesColumns[12]},
+				Columns: []*schema.Column{MoviesColumns[13]},
 			},
 			{
 				Name:    "movie_status",
@@ -721,6 +722,7 @@ var (
 		{Name: "title", Type: field.TypeString},
 		{Name: "original_title", Type: field.TypeString, Nullable: true},
 		{Name: "year", Type: field.TypeUint16},
+		{Name: "first_aired", Type: field.TypeTime, Nullable: true},
 		{Name: "overview", Type: field.TypeString, Nullable: true},
 		{Name: "series_status", Type: field.TypeEnum, Enums: []string{"continuing", "ended", "upcoming"}, Default: "continuing"},
 		{Name: "type", Type: field.TypeEnum, Enums: []string{"standard", "anime", "daily"}, Default: "standard"},
@@ -750,7 +752,7 @@ var (
 			{
 				Name:    "tvshow_series_status",
 				Unique:  false,
-				Columns: []*schema.Column{TvShowsColumns[7]},
+				Columns: []*schema.Column{TvShowsColumns[8]},
 			},
 		},
 	}

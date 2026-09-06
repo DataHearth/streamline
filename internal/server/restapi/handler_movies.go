@@ -44,6 +44,10 @@ func (s *Server) ListMovies(
 	if request.Params.Order != nil {
 		p.Order = string(*request.Params.Order)
 	}
+	if request.Params.Monitored != nil {
+		on := *request.Params.Monitored == ListMoviesParamsMonitoredMonitored
+		p.Monitored = &on
+	}
 
 	movies, summaries, total, err := s.movies.FilterList(ctx, p)
 	if err != nil {
@@ -89,6 +93,8 @@ func (s *Server) GetMovieCounts(
 			Importing:   numeric.SaturateU32(counts.Importing),
 			Available:   numeric.SaturateU32(counts.Available),
 			Failed:      numeric.SaturateU32(counts.Failed),
+			Monitored:   numeric.SaturateU32(counts.Monitored),
+			Unmonitored: numeric.SaturateU32(counts.Unmonitored),
 			Trend:       trend,
 		},
 	}, nil
