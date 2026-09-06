@@ -374,8 +374,9 @@ func (w *Worker) importMovieRecord(
 	}
 
 	if err := w.db.RecordImportSuccess(ctx, db.RecordImportSuccessParams{
-		RecordID: rec.ID,
-		MovieID:  m.ID,
+		RecordID:       rec.ID,
+		MovieID:        m.ID,
+		QueueTranscode: config.TranscodeEligible(m.QualityProfile),
 		File: db.MediaFileRow{
 			Path:         imported.Path,
 			Size:         imported.Size,
@@ -641,8 +642,9 @@ func (w *Worker) importEpisodeRecord(
 		if err := w.db.RecordEpisodeImportSuccess(
 			ctx,
 			db.RecordEpisodeImportSuccessParams{
-				RecordID:  rec.ID,
-				EpisodeID: pf.episode.ID,
+				RecordID:       rec.ID,
+				EpisodeID:      pf.episode.ID,
+				QueueTranscode: config.TranscodeEligible(show.QualityProfile),
 				File: db.MediaFileRow{
 					Path:         imported.Path,
 					Size:         imported.Size,
@@ -731,8 +733,9 @@ func (w *Worker) importSingleEpisode(
 	if err := w.db.RecordEpisodeImportSuccess(
 		ctx,
 		db.RecordEpisodeImportSuccessParams{
-			RecordID:  rec.ID,
-			EpisodeID: ep.ID,
+			RecordID:       rec.ID,
+			EpisodeID:      ep.ID,
+			QueueTranscode: config.TranscodeEligible(show.QualityProfile),
 			File: db.MediaFileRow{
 				Path:         imported.Path,
 				Size:         imported.Size,

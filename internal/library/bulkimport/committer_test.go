@@ -106,6 +106,10 @@ var _ = Describe("Service.commitAttach", Label("unit", "bulkimport"), func() {
 				Return(nil, nil).
 				Once()
 			store.EXPECT().
+				FindMovieByID(mock.Anything, uint32(42)).
+				Return(&ent.Movie{ID: 42}, nil).
+				Once()
+			store.EXPECT().
 				CreateMediaFile(mock.Anything, db.CreateMediaFileParams{
 					MovieID:      42,
 					Path:         "/import/Movie.mkv",
@@ -147,6 +151,10 @@ var _ = Describe("Service.commitAttach", Label("unit", "bulkimport"), func() {
 			Return(nil).
 			Once()
 		store.EXPECT().
+			FindMovieByID(mock.Anything, uint32(42)).
+			Return(&ent.Movie{ID: 42}, nil).
+			Once()
+		store.EXPECT().
 			CreateMediaFile(mock.Anything, mock.MatchedBy(func(p db.CreateMediaFileParams) bool {
 				return p.MovieID == 42 && p.Path == "/import/Movie.mkv"
 			})).
@@ -180,6 +188,53 @@ var _ = Describe("Service.commitAttach", Label("unit", "bulkimport"), func() {
 		Expect(msg).To(BeEmpty())
 		Expect(movieID).To(Equal(uint32(42)))
 	})
+
+	It(
+		"queues a transcode job when the movie's profile is transcode-eligible",
+		func() {
+			configtest.Setup(map[string]any{
+				"transcoding": map[string]any{"enabled": true},
+				"quality_profiles": []map[string]any{{
+					"name": "hd", "preferred_resolution": "1080p",
+					"min_resolution": "720p",
+					"transcode": map[string]any{
+						"to": map[string]any{
+							"container": "mkv", "video_codec": "hevc",
+							"preset": "medium", "audio_codec": "aac",
+						},
+					},
+				}},
+				"quality_default_profile": "hd",
+			})
+			f := &ent.ImportScanFile{
+				ID: 7, ExistingMovieID: 42, SourcePath: "/import/Movie.mkv",
+				Size: 1_500_000_000,
+			}
+
+			store.EXPECT().
+				ListMediaFilesByMovieID(mock.Anything, uint32(42)).
+				Return(nil, nil).
+				Once()
+			store.EXPECT().
+				FindMovieByID(mock.Anything, uint32(42)).
+				Return(&ent.Movie{ID: 42, QualityProfile: "hd"}, nil).
+				Once()
+			store.EXPECT().
+				CreateMediaFile(mock.Anything, mock.MatchedBy(func(p db.CreateMediaFileParams) bool {
+					return p.QueueTranscode
+				})).
+				Return(&ent.MediaFile{}, nil).
+				Once()
+			store.EXPECT().
+				UpdateMovieStatus(mock.Anything, uint32(42), entmovie.StatusAvailable).
+				Return(nil).
+				Once()
+
+			outcome, _, movieID := svc.commitAttach(ctx, inPlaceScan, f)
+			Expect(outcome).To(Equal(entimportscanfile.OutcomeAttached))
+			Expect(movieID).To(Equal(uint32(42)))
+		},
+	)
 })
 
 var _ = Describe(
@@ -291,4 +346,204 @@ var _ = Describe("Service.addOrFindMovie", Label("unit", "bulkimport"), func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(m.ID).To(Equal(uint32(3)))
 	})
+})
+
+var _ = Describe("Service.commitAdoptInPlace", Label("unit", "bulkimport"), func() {
+	var (
+		ctx   context.Context
+		store *dbmocks.MockStore
+		meta  *metamocks.MockProvider
+		svc   *Service
+	)
+
+	const tmdbID = uint32(55001)
+
+	BeforeEach(func() {
+		ctx = context.Background()
+		store = dbmocks.NewMockStore(GinkgoT())
+		meta = metamocks.NewMockProvider(GinkgoT())
+	})
+
+	It(
+		"queues a transcode job when the created movie's profile is transcode-eligible",
+		func() {
+			configtest.Setup(map[string]any{
+				"transcoding": map[string]any{"enabled": true},
+				// tmdb_region defaults to "FR", which makes Add fetch a digital
+				// release date — irrelevant here and not stubbed on the mock.
+				"metadata": map[string]any{"tmdb_region": ""},
+				"quality_profiles": []map[string]any{{
+					"name": "hd", "preferred_resolution": "1080p",
+					"min_resolution": "720p",
+					"transcode": map[string]any{
+						"to": map[string]any{
+							"container": "mkv", "video_codec": "hevc",
+							"preset": "medium", "audio_codec": "aac",
+						},
+					},
+				}},
+				"quality_default_profile": "hd",
+			})
+			svc = NewService(store, meta, nil, nil,
+				movie.NewService(store, meta, nil, nil), nil, "/lib", "/lib-tv")
+			f := &ent.ImportScanFile{
+				ID: 7, SourcePath: "/import/Movie.mkv", Size: 1_500_000_000,
+				ParsedQuality: "1080p", ParsedReleaseGroup: "X",
+			}
+
+			meta.EXPECT().GetMovie(mock.Anything, tmdbID).
+				Return(&metadata.MovieDetails{
+					MovieResult: metadata.MovieResult{
+						TMDBID: tmdbID, Title: "Fantasia 2000", Year: 2000,
+					},
+				}, nil).Once()
+			// Add is called with an empty quality profile (resolved later at
+			// read time), so the created row's QualityProfile is empty here too
+			// — config.TranscodeEligible("") is what falls back to the default.
+			store.EXPECT().CreateMovie(mock.Anything, mock.Anything).
+				Return(&ent.Movie{ID: 42}, nil).Once()
+			store.EXPECT().
+				CreateMediaFile(mock.Anything, mock.MatchedBy(func(p db.CreateMediaFileParams) bool {
+					return p.QueueTranscode
+				})).
+				Return(&ent.MediaFile{}, nil).
+				Once()
+			store.EXPECT().
+				UpdateMovieStatus(mock.Anything, uint32(42), entmovie.StatusAvailable).
+				Return(nil).
+				Once()
+
+			outcome, msg, movieID := svc.commitAdoptInPlace(ctx, f, tmdbID)
+			Expect(msg).To(BeEmpty())
+			Expect(outcome).To(Equal(entimportscanfile.OutcomeCreated))
+			Expect(movieID).To(Equal(uint32(42)))
+		},
+	)
+
+	It("does not queue a transcode job when transcoding is disabled", func() {
+		configtest.Setup(map[string]any{
+			"metadata": map[string]any{"tmdb_region": ""},
+			"quality_profiles": []map[string]any{{
+				"name": "hd", "preferred_resolution": "1080p",
+				"min_resolution": "720p",
+			}},
+			"quality_default_profile": "hd",
+		})
+		svc = NewService(store, meta, nil, nil,
+			movie.NewService(store, meta, nil, nil), nil, "/lib", "/lib-tv")
+		f := &ent.ImportScanFile{
+			ID: 8, SourcePath: "/import/Movie2.mkv", Size: 1_500_000_000,
+		}
+
+		meta.EXPECT().GetMovie(mock.Anything, tmdbID).
+			Return(&metadata.MovieDetails{
+				MovieResult: metadata.MovieResult{
+					TMDBID: tmdbID, Title: "Fantasia 2000", Year: 2000,
+				},
+			}, nil).Once()
+		store.EXPECT().CreateMovie(mock.Anything, mock.Anything).
+			Return(&ent.Movie{ID: 43}, nil).Once()
+		store.EXPECT().
+			CreateMediaFile(mock.Anything, mock.MatchedBy(func(p db.CreateMediaFileParams) bool {
+				return !p.QueueTranscode
+			})).
+			Return(&ent.MediaFile{}, nil).
+			Once()
+		store.EXPECT().
+			UpdateMovieStatus(mock.Anything, uint32(43), entmovie.StatusAvailable).
+			Return(nil).
+			Once()
+
+		outcome, _, movieID := svc.commitAdoptInPlace(ctx, f, tmdbID)
+		Expect(outcome).To(Equal(entimportscanfile.OutcomeCreated))
+		Expect(movieID).To(Equal(uint32(43)))
+	})
+})
+
+var _ = Describe("Service.commitRename", Label("unit", "bulkimport"), func() {
+	var (
+		ctx    context.Context
+		store  *dbmocks.MockStore
+		meta   *metamocks.MockProvider
+		svc    *Service
+		libDir string
+		srcDir string
+	)
+
+	const tmdbID = uint32(55002)
+
+	BeforeEach(func() {
+		ctx = context.Background()
+		store = dbmocks.NewMockStore(GinkgoT())
+		meta = metamocks.NewMockProvider(GinkgoT())
+		base := GinkgoT().TempDir()
+		libDir = filepath.Join(base, "lib")
+		srcDir = filepath.Join(base, "src")
+		Expect(os.MkdirAll(libDir, 0o755)).To(Succeed())
+		Expect(os.MkdirAll(srcDir, 0o755)).To(Succeed())
+	})
+
+	It(
+		"queues a transcode job when the created movie's profile is transcode-eligible",
+		func() {
+			configtest.Setup(map[string]any{
+				"transcoding": map[string]any{"enabled": true},
+				"metadata":    map[string]any{"tmdb_region": ""},
+				"quality_profiles": []map[string]any{{
+					"name": "hd", "preferred_resolution": "1080p",
+					"min_resolution": "720p",
+					"transcode": map[string]any{
+						"to": map[string]any{
+							"container": "mkv", "video_codec": "hevc",
+							"preset": "medium", "audio_codec": "aac",
+						},
+					},
+				}},
+				"quality_default_profile": "hd",
+			})
+			svc = NewService(store, meta, nil, library.NewImportService(
+				&config.LibraryConfig{
+					MoviePath:   libDir,
+					MovieNaming: "{title} ({year})/{title}.{ext}",
+					ImportMode:  "hardlink",
+				},
+			), movie.NewService(store, meta, nil, nil), nil, libDir, libDir)
+
+			src := filepath.Join(srcDir, "Fight Club - 1999.mkv")
+			Expect(
+				os.WriteFile(src, make([]byte, 60*1024*1024), 0o644),
+			).To(Succeed())
+			scan := &ent.ImportScan{
+				ID:         1,
+				Mode:       entimportscan.ModeRename,
+				ImportMode: entimportscan.ImportModeHardlink,
+			}
+			f := &ent.ImportScanFile{ID: 7, SourcePath: src}
+
+			meta.EXPECT().GetMovie(mock.Anything, tmdbID).
+				Return(&metadata.MovieDetails{
+					MovieResult: metadata.MovieResult{
+						TMDBID: tmdbID, Title: "Fight Club", Year: 1999,
+					},
+				}, nil).Once()
+			store.EXPECT().CreateMovie(mock.Anything, mock.Anything).
+				Return(&ent.Movie{ID: 42, Title: "Fight Club", Year: 1999}, nil).
+				Once()
+			store.EXPECT().
+				CreateMediaFile(mock.Anything, mock.MatchedBy(func(p db.CreateMediaFileParams) bool {
+					return p.QueueTranscode
+				})).
+				Return(&ent.MediaFile{}, nil).
+				Once()
+			store.EXPECT().
+				UpdateMovieStatus(mock.Anything, uint32(42), entmovie.StatusAvailable).
+				Return(nil).
+				Once()
+
+			outcome, msg, movieID := svc.commitRename(ctx, scan, f, tmdbID)
+			Expect(msg).To(BeEmpty())
+			Expect(outcome).To(Equal(entimportscanfile.OutcomeCreated))
+			Expect(movieID).To(Equal(uint32(42)))
+		},
+	)
 })

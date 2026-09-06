@@ -27,6 +27,9 @@ type CreateMediaFileParams struct {
 	// back to parsing Path's basename — see applyParsed.
 	Parsed *library.ParseResult
 	Probe  *ffmpeg.Info // set to stamp probed_at at create time; nil leaves probed_at NULL for the backfill
+	// QueueTranscode rides the same create as the file: config.TranscodeEligible
+	// decides it, so a profile change never needs a backfill of missed rows.
+	QueueTranscode bool
 }
 
 // applyProbe copies probe info onto a MediaFile create/update builder. One
@@ -104,7 +107,18 @@ func (db *DB) CreateMediaFile(
 	if p.Probe != nil {
 		q = applyProbe(q, p.Probe)
 	}
-	return q.Save(ctx)
+	mf, err := q.Save(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if p.QueueTranscode {
+		if _, err := db.client.TranscodeJob.Create().
+			SetMediaFile(mf).
+			Save(ctx); err != nil {
+			return nil, fmt.Errorf("queue transcode job: %w", err)
+		}
+	}
+	return mf, nil
 }
 
 // ListUnprobedMediaFiles returns up to limit rows that have never been probed

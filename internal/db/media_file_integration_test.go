@@ -9,7 +9,9 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/episode"
+	"github.com/datahearth/streamline/ent/mediafile"
 	entmovie "github.com/datahearth/streamline/ent/movie"
+	"github.com/datahearth/streamline/ent/transcodejob"
 	"github.com/datahearth/streamline/internal/ffmpeg"
 )
 
@@ -107,6 +109,36 @@ var _ = Describe("MediaFile store", Label("integration", "db"), func() {
 			Expect(mf.AudioChannels).To(Equal(uint8(6)))
 			Expect(mf.Bitrate).To(Equal(uint32(20_000_000)))
 			Expect(mf.ProbedAt).NotTo(BeNil())
+		})
+
+		It("queues a transcode job when QueueTranscode is true", func() {
+			m, err := store.CreateMovie(ctx, CreateMovieParams{
+				Title: "Dune", OriginalTitle: "Dune", Year: 2021, TmdbID: 998,
+				Status: entmovie.StatusWanted, QualityProfile: "HD",
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			mf, err := store.CreateMediaFile(ctx, CreateMediaFileParams{
+				Path: "/lib/dune3.mkv", Size: 1, MovieID: m.ID,
+				QueueTranscode: true,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			n, err := client.TranscodeJob.Query().
+				Where(transcodejob.HasMediaFileWith(mediafile.ID(mf.ID))).
+				Count(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(1))
+		})
+
+		It("queues no transcode job when QueueTranscode is false", func() {
+			mf := createMovieFile()
+
+			n, err := client.TranscodeJob.Query().
+				Where(transcodejob.HasMediaFileWith(mediafile.ID(mf.ID))).
+				Count(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(0))
 		})
 	})
 

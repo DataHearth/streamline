@@ -17,6 +17,7 @@ import (
 	entimportscanshow "github.com/datahearth/streamline/ent/importscanshow"
 	entmediafile "github.com/datahearth/streamline/ent/mediafile"
 	enttvshow "github.com/datahearth/streamline/ent/tvshow"
+	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/library"
 )
@@ -182,14 +183,15 @@ func (s *Service) commitShow(
 			path, size, parsed = imported.Path, imported.Size, imported.Parsed
 		}
 		if _, err := s.store.CreateMediaFile(ctx, db.CreateMediaFileParams{
-			EpisodeID:    target.ID,
-			Path:         path,
-			Size:         size,
-			Quality:      parsed.Resolution,
-			Format:       parsed.Extension,
-			ReleaseGroup: parsed.Group,
-			Parsed:       &parsed,
-			Source:       entmediafile.SourceWizard,
+			EpisodeID:      target.ID,
+			Path:           path,
+			Size:           size,
+			Quality:        parsed.Resolution,
+			Format:         parsed.Extension,
+			ReleaseGroup:   parsed.Group,
+			Parsed:         &parsed,
+			Source:         entmediafile.SourceWizard,
+			QueueTranscode: config.TranscodeEligible(show.QualityProfile),
 		}); err != nil {
 			slog.WarnContext(ctx, "series adopt: create media file failed",
 				"episode.id", target.ID, "error", err)

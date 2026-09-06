@@ -19,6 +19,7 @@ import (
 	entimportscanfile "github.com/datahearth/streamline/ent/importscanfile"
 	entmediafile "github.com/datahearth/streamline/ent/mediafile"
 	entmovie "github.com/datahearth/streamline/ent/movie"
+	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/media/movie"
 	"github.com/datahearth/streamline/internal/otelx"
@@ -285,22 +286,23 @@ func (s *Service) commitAttach(
 			return commitFail("delete replaced file", err, 0)
 		}
 	}
+	m, err := s.store.FindMovieByID(ctx, f.ExistingMovieID)
+	if err != nil {
+		return commitFail("find movie", err, 0)
+	}
 	// A rename scan relocates everything it accepts, existing rows included —
 	// attaching this one where it lies would leave the library split across the
 	// source root and the configured one, which only an inode sweep can find.
 	params := db.CreateMediaFileParams{
-		MovieID:      f.ExistingMovieID,
-		Path:         f.SourcePath,
-		Size:         f.Size,
-		Quality:      f.ParsedQuality,
-		ReleaseGroup: f.ParsedReleaseGroup,
-		Source:       entmediafile.SourceWizard,
+		MovieID:        f.ExistingMovieID,
+		Path:           f.SourcePath,
+		Size:           f.Size,
+		Quality:        f.ParsedQuality,
+		ReleaseGroup:   f.ParsedReleaseGroup,
+		Source:         entmediafile.SourceWizard,
+		QueueTranscode: config.TranscodeEligible(m.QualityProfile),
 	}
 	if scan.Mode == entimportscan.ModeRename {
-		m, err := s.store.FindMovieByID(ctx, f.ExistingMovieID)
-		if err != nil {
-			return commitFail("find movie", err, 0)
-		}
 		imported, err := s.importSvc.ImportMovieWithMode(
 			ctx,
 			filepath.Dir(f.SourcePath),
@@ -331,12 +333,13 @@ func (s *Service) commitAdoptInPlace(
 		return commitFail("add movie", err, 0)
 	}
 	return s.linkAndMarkAvailable(ctx, db.CreateMediaFileParams{
-		MovieID:      m.ID,
-		Path:         f.SourcePath,
-		Size:         f.Size,
-		Quality:      f.ParsedQuality,
-		ReleaseGroup: f.ParsedReleaseGroup,
-		Source:       entmediafile.SourceWizard,
+		MovieID:        m.ID,
+		Path:           f.SourcePath,
+		Size:           f.Size,
+		Quality:        f.ParsedQuality,
+		ReleaseGroup:   f.ParsedReleaseGroup,
+		Source:         entmediafile.SourceWizard,
+		QueueTranscode: config.TranscodeEligible(m.QualityProfile),
 	}, entimportscanfile.OutcomeCreated, m.ID)
 }
 
@@ -360,12 +363,13 @@ func (s *Service) commitRename(
 		return commitFail("import movie", err, m.ID)
 	}
 	return s.linkAndMarkAvailable(ctx, db.CreateMediaFileParams{
-		MovieID:      m.ID,
-		Path:         imported.Path,
-		Size:         imported.Size,
-		Quality:      imported.Parsed.Resolution,
-		ReleaseGroup: imported.Parsed.Group,
-		Parsed:       &imported.Parsed,
-		Source:       entmediafile.SourceWizard,
+		MovieID:        m.ID,
+		Path:           imported.Path,
+		Size:           imported.Size,
+		Quality:        imported.Parsed.Resolution,
+		ReleaseGroup:   imported.Parsed.Group,
+		Parsed:         &imported.Parsed,
+		Source:         entmediafile.SourceWizard,
+		QueueTranscode: config.TranscodeEligible(m.QualityProfile),
 	}, entimportscanfile.OutcomeCreated, m.ID)
 }

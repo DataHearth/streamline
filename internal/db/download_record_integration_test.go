@@ -10,8 +10,10 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
+	"github.com/datahearth/streamline/ent/mediafile"
 	entmovie "github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/schema"
+	"github.com/datahearth/streamline/ent/transcodejob"
 	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/library"
 )
@@ -306,6 +308,37 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 			Expect(mf.ProbedAt).To(BeNil())
 			Expect(mf.VideoCodec).To(BeEmpty())
 		})
+
+		It("queues a transcode job when QueueTranscode is true", func() {
+			rec := createRec("qt-true", downloadrecord.StatusImporting)
+			err := store.RecordImportSuccess(ctx, RecordImportSuccessParams{
+				RecordID: rec.ID, MovieID: movieID, QueueTranscode: true,
+				File: MediaFileRow{Path: "/lib/dune.mkv", Size: 1024},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			mf, err := client.MediaFile.Query().Only(ctx)
+			Expect(err).NotTo(HaveOccurred())
+
+			n, err := client.TranscodeJob.Query().
+				Where(transcodejob.HasMediaFileWith(mediafile.ID(mf.ID))).
+				Count(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(1))
+		})
+
+		It("queues no transcode job when QueueTranscode is false", func() {
+			rec := createRec("qt-false", downloadrecord.StatusImporting)
+			err := store.RecordImportSuccess(ctx, RecordImportSuccessParams{
+				RecordID: rec.ID, MovieID: movieID,
+				File: MediaFileRow{Path: "/lib/dune.mkv", Size: 1024},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			n, err := client.TranscodeJob.Query().Count(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(0))
+		})
 	})
 
 	Describe("RecordImportFailure", func() {
@@ -556,6 +589,59 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(mf.ProbedAt).To(BeNil())
 			Expect(mf.VideoCodec).To(BeEmpty())
+		})
+
+		It("queues a transcode job when QueueTranscode is true", func() {
+			episodeID := createEpisode(9103)
+			rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "t", Size: 1, TorrentHash: "tv3",
+				Status:             downloadrecord.StatusImporting,
+				EpisodeID:          episodeID,
+				DownloadClientName: clientName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			err = store.RecordEpisodeImportSuccess(
+				ctx,
+				RecordEpisodeImportSuccessParams{
+					RecordID: rec.ID, EpisodeID: episodeID, QueueTranscode: true,
+					File: MediaFileRow{Path: "/lib/bear.mkv", Size: 1024},
+				},
+			)
+			Expect(err).NotTo(HaveOccurred())
+
+			mf, err := client.MediaFile.Query().Only(ctx)
+			Expect(err).NotTo(HaveOccurred())
+
+			n, err := client.TranscodeJob.Query().
+				Where(transcodejob.HasMediaFileWith(mediafile.ID(mf.ID))).
+				Count(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(1))
+		})
+
+		It("queues no transcode job when QueueTranscode is false", func() {
+			episodeID := createEpisode(9104)
+			rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "t", Size: 1, TorrentHash: "tv4",
+				Status:             downloadrecord.StatusImporting,
+				EpisodeID:          episodeID,
+				DownloadClientName: clientName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			err = store.RecordEpisodeImportSuccess(
+				ctx,
+				RecordEpisodeImportSuccessParams{
+					RecordID: rec.ID, EpisodeID: episodeID,
+					File: MediaFileRow{Path: "/lib/bear.mkv", Size: 1024},
+				},
+			)
+			Expect(err).NotTo(HaveOccurred())
+
+			n, err := client.TranscodeJob.Query().Count(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(0))
 		})
 	})
 

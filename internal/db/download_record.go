@@ -359,6 +359,8 @@ type RecordImportSuccessParams struct {
 	RecordID uint32
 	MovieID  uint32
 	File     MediaFileRow
+	// QueueTranscode rides the same tx as the MediaFile create.
+	QueueTranscode bool
 }
 
 type MediaFileRow struct {
@@ -538,9 +540,18 @@ func (db *DB) RecordImportSuccess(
 	if p.File.Probe != nil {
 		mc = applyProbe(mc, p.File.Probe)
 	}
-	if _, err := mc.Save(ctx); err != nil {
+	mf, err := mc.Save(ctx)
+	if err != nil {
 		tx.Rollback()
 		return fmt.Errorf("create media file: %w", err)
+	}
+	if p.QueueTranscode {
+		if _, err := tx.TranscodeJob.Create().
+			SetMediaFile(mf).
+			Save(ctx); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("queue transcode job: %w", err)
+		}
 	}
 	if err := tx.DownloadRecord.UpdateOneID(p.RecordID).
 		SetStatus(downloadrecord.StatusCompleted).
@@ -564,6 +575,8 @@ type RecordEpisodeImportSuccessParams struct {
 	RecordID  uint32
 	EpisodeID uint32
 	File      MediaFileRow
+	// QueueTranscode rides the same tx as the MediaFile create.
+	QueueTranscode bool
 }
 
 // RecordEpisodeImportSuccess mirrors RecordImportSuccess for the TV path:
@@ -588,9 +601,18 @@ func (db *DB) RecordEpisodeImportSuccess(
 	if p.File.Probe != nil {
 		ec = applyProbe(ec, p.File.Probe)
 	}
-	if _, err := ec.Save(ctx); err != nil {
+	mf, err := ec.Save(ctx)
+	if err != nil {
 		tx.Rollback()
 		return fmt.Errorf("create media file: %w", err)
+	}
+	if p.QueueTranscode {
+		if _, err := tx.TranscodeJob.Create().
+			SetMediaFile(mf).
+			Save(ctx); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("queue transcode job: %w", err)
+		}
 	}
 	if err := tx.DownloadRecord.UpdateOneID(p.RecordID).
 		SetStatus(downloadrecord.StatusCompleted).
