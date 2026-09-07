@@ -7,6 +7,7 @@ Streamline's API is the same one its own web UI uses — there's no privileged i
 - [Conventions](#conventions)
 - [Endpoint map](#endpoint-map)
 - [Media probe](#media-probe)
+- [Transcoding](#transcoding)
 - [Quality scoring](#quality-scoring)
 - [Worked examples](#worked-examples)
 - [Generating a client](#generating-a-client)
@@ -203,6 +204,16 @@ Built-in custom formats are listed alongside user-defined ones (`builtin: true`)
 | `PATCH` | `/torrents/{hash}/files/{index}` — toggle a file |
 | `PUT` | `/torrents/listen-port` — move the running engine's peer sockets; not persisted |
 
+### Transcoding 🔒
+
+| Method | Path |
+| --- | --- |
+| `GET` | `/transcoding/queue` — newest 200 jobs, no filter |
+| `POST` | `/transcoding/jobs/{id}/cancel` · `/retry` |
+| `POST` | `/transcoding/scan` — queue the existing library |
+
+All four answer `409` while `transcoding.enabled` is false.
+
 ### Library 🔒
 
 | Method | Path |
@@ -237,7 +248,7 @@ Built-in custom formats are listed alongside user-defined ones (`builtin: true`)
 
 | Method | Path |
 | --- | --- |
-| `GET` `PATCH` | `/config/auth` · `/config/library` · `/config/ffmpeg` · `/config/download` · `/config/metadata` · `/config/system` |
+| `GET` `PATCH` | `/config/auth` · `/config/library` · `/config/ffmpeg` · `/config/download` · `/config/metadata` · `/config/system` · `/config/transcoding` |
 | `GET` `POST` | `/config/oidc` |
 | `GET` `PATCH` `DELETE` | `/config/oidc/{name}` |
 | `GET` | `/schedules` · `/schedules/{name}` |
@@ -300,20 +311,85 @@ It describes the file's **main** video track and its first audio track. Embedded
 
 ```bash
 api "$SL/api/v1/config/ffmpeg"
-# {"enabled":true,"path":"","found":true,"resolved_path":"/usr/local/bin/ffprobe","restart_required":false}
+# {"enabled":true,"path":"","found":true,"resolved_path":"/usr/local/bin/ffprobe",
+#  "version":"6.1.1","restart_required":false}
 
 api -X PATCH -d '{"enabled":false}' "$SL/api/v1/config/ffmpeg"
 ```
 
-`found` and `resolved_path` are derived from the current process's live prober, not the config file — read-only, sending them in the `PATCH` body has no effect. `path` only takes effect on the next restart, since the prober is built once at boot: a `PATCH` that changes it comes back with `restart_required: true`, and `found` in that same response still describes the old path. Re-sending the path it already has changes nothing and does not raise the flag.
+`found` and `resolved_path` are derived from the current process's live prober, not the config file — read-only, sending them in the `PATCH` body has no effect. `version` comes from `ffmpeg -version` and is present only when the **ffmpeg** binary resolves and answers; `found` is ffprobe's and does not imply it, which matters because [transcoding](#transcoding) needs the encoder rather than the prober. `path` only takes effect on the next restart, since the prober is built once at boot: a `PATCH` that changes it comes back with `restart_required: true`, and `found` in that same response still describes the old path. Re-sending the path it already has changes nothing and does not raise the flag.
 
 **Import verification** reads the probe result before an import happens: `library.probe.always_ask` and `library.probe.min_duration_ratio` (via `GET`/`PATCH /config/library`) and `allowed_codecs` on a quality profile decide whether a finished download is imported or [held](#resolving-a-held-download) for a decision. See [Configuration Reference](Configuration-Reference#import-verification) for the checks.
 
 ---
 
+## Transcoding
+
+Background re-encoding of imported files, driven by the `transcode` block on a [quality profile](Quality-Profiles-and-Custom-Formats#transcoding-a-profiles-files). The queue is admin-only, and **every endpoint here answers `409` while `transcoding.enabled` is false** — a feature that is off returns a conflict, not an empty list, so a client can tell the two apart.
+
+**`GET /transcoding/queue`** returns the newest 200 jobs, newest first. There is no `status` filter; filter client-side.
+
+```json
+[
+  {
+    "id": 41,
+    "status": "running",
+    "attempts": 1,
+    "file_path": "/srv/streamline/movies/Heat (1995)/Heat (1995).mkv",
+    "media_title": "Heat (1995)",
+    "movie_id": 12,
+    "percent": 42.5,
+    "eta_seconds": 1980,
+    "speed": 1.8,
+    "created_at": "2026-09-07T09:00:00Z",
+    "started_at": "2026-09-07T09:01:12Z"
+  },
+  {
+    "id": 40,
+    "status": "succeeded",
+    "attempts": 1,
+    "file_path": "/srv/streamline/movies/Alien (1979)/Alien (1979).mkv",
+    "media_title": "Alien (1979)",
+    "movie_id": 9,
+    "size_before": 37580963840,
+    "size_after": 12884901888,
+    "created_at": "2026-09-07T08:00:00Z",
+    "started_at": "2026-09-07T08:00:05Z",
+    "finished_at": "2026-09-07T08:44:31Z"
+  }
+]
+```
+
+`status` is `queued` · `running` · `succeeded` · `failed` · `canceled`. `movie_id`, or `series_id` + `episode_id`, links the row back to the item — exactly one pair is set. `error` carries the tail of ffmpeg's stderr from the last failed attempt.
+
+**`attempts` counts claims, not failures**, so a `running` row is always at 1 or more — the claim that started it is what incremented it. **`size_before` and `size_after` are written together, only when a job succeeds**, so neither is present on a queued, running, failed or canceled row; the size of a file mid-encode is not in this payload. `finished_at` likewise appears only once the job reaches a terminal status.
+
+**`percent`, `eta_seconds` and `speed` are live and in-memory only.** They come from the encoder running in *this* process, so they are absent for every status but `running` — and absent for a `running` row whose encode belonged to a process that has since restarted (that row is reset to `queued` on the next boot anyway). Don't treat their absence as zero progress.
+
+**`POST /transcoding/jobs/{id}/cancel`** (204) stops a running encode or drops a queued one. A cancel that arrives after the file has already been swapped in is too late — the job completes. **`POST /transcoding/jobs/{id}/retry`** (204) puts a `failed` job back in the queue with `attempts`, `error` and `finished_at` cleared.
+
+Both answer `409` for a job in the wrong state, **and there is no `404`**: each is a single conditional update, so an id naming no job at all is indistinguishable from one that has already finished.
+
+**`POST /transcoding/scan`** (202) walks the library, re-probes every file whose profile carries a `transcode` block, and queues the non-compliant ones. It returns as soon as the scan is dispatched — there is no scan-status endpoint; watch the queue. `409` while a scan is already running, and `409` when the worker could not run the jobs anyway (`ffmpeg.enabled: false`, or the ffmpeg binary not found in this process) rather than queueing work nothing would drain.
+
+**`transcoded_at` and `size_before`** appear on `MediaFile` and flat on `Episode` once a file has been re-encoded — `size` names the file as it is now, so the pair is what renders "35 GB → 12 GB". Both are absent for a file that has never been transcoded. A transcode also clears the file's [`media_info`](#media-probe) until the backfill re-probes it: the bytes changed, so the old probe no longer describes them.
+
+**`GET`/`PATCH /config/transcoding`** (admin) reads and edits the switch and the budget:
+
+```bash
+api "$SL/api/v1/config/transcoding"
+# {"enabled":false,"max_concurrent":1,"max_failures":3}
+
+api -X PATCH -d '{"enabled":true,"max_concurrent":2}' "$SL/api/v1/config/transcoding"
+```
+
+All three take effect on the next worker tick — no restart. The binaries come from [`/config/ffmpeg`](#media-probe); this section carries no path of its own.
+
+---
+
 ## Editing config
 
-Six sections are readable and patchable over the API; [Configuration Reference](Configuration-Reference#whats-editable-at-runtime) has the full table of what is hot and what needs a restart. Every one is admin-only, takes a partial body (an omitted field keeps its stored value), and answers with the section's new state.
+Seven sections are readable and patchable over the API; [Configuration Reference](Configuration-Reference#whats-editable-at-runtime) has the full table of what is hot and what needs a restart. Every one is admin-only, takes a partial body (an omitted field keeps its stored value), and answers with the section's new state.
 
 ```bash
 api -X PATCH -d '{"import_mode":"copy","max_grab_failures":5}' "$SL/api/v1/config/library"

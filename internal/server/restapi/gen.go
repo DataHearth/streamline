@@ -4809,6 +4809,10 @@ type TranscodeIfVideoCodecs string
 
 // TranscodeJob defines model for TranscodeJob.
 type TranscodeJob struct {
+	// Attempts How many times this job has been claimed, not how many times it
+	// has failed — the claim that starts an encode is what increments
+	// it, so a running row is always at 1 or more. Compared against
+	// transcoding.max_failures to decide whether a failure retries.
 	Attempts  uint8     `json:"attempts"`
 	CreatedAt time.Time `json:"created_at"`
 
@@ -4841,10 +4845,13 @@ type TranscodeJob struct {
 	// SeriesId Set when the file belongs to an episode.
 	SeriesId *uint32 `json:"series_id,omitempty"`
 
-	// SizeAfter Output size in bytes, recorded when the encode lands.
+	// SizeAfter Output size in bytes, written with size_before when the job
+	// succeeds. Absent for every other status.
 	SizeAfter *int64 `json:"size_after,omitempty"`
 
-	// SizeBefore Source size in bytes, recorded when the encode starts.
+	// SizeBefore Source size in bytes. Written with size_after when the job
+	// succeeds, so it is absent on a queued, running, failed or
+	// canceled row — the size of a file mid-encode is not reported.
 	SizeBefore *int64 `json:"size_before,omitempty"`
 
 	// Speed Live encode speed as a multiple of realtime, present under the
@@ -4881,7 +4888,10 @@ type TranscodeTo struct {
 	AudioPassthrough *[]string            `json:"audio_passthrough,omitempty"`
 	Container        TranscodeToContainer `json:"container"`
 
-	// Crf Constant-rate factor. 0 falls back to the encoder default.
+	// Crf Constant-rate factor. 0, or omitted, leaves -crf out of the
+	// ffmpeg invocation entirely, so the encoder's own default applies
+	// (libx264 23, libx265 28, libsvtav1 35). It is not a CRF of zero,
+	// which would ask for a near-lossless encode.
 	Crf        *uint8                `json:"crf,omitempty"`
 	Preset     TranscodeToPreset     `json:"preset"`
 	VideoCodec TranscodeToVideoCodec `json:"video_codec"`

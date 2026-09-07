@@ -7,6 +7,7 @@ How Streamline scores a release against what you want, decides whether to grab i
 - [Scoring profiles](#scoring-profiles)
 - [The scoring mental model](#the-scoring-mental-model)
 - [Upgrades](#upgrades)
+- [Transcoding a profile's files](#transcoding-a-profiles-files)
 - [The tester](#the-tester)
 - [Presets](#presets)
 - [Where scores show up](#where-scores-show-up)
@@ -224,6 +225,49 @@ A single-episode release is judged against that one episode alone.
 Series upgrades reuse the identical import path: verification runs before anything on disk is touched, scoped to the episodes the import actually plans to replace (see [Import verification](Configuration-Reference#import-verification)) — a season pack doesn't verify episodes it isn't going to touch. That per-episode plan, and the probe re-check behind it, is a season-pack thing: a single-episode release was already judged once by the scanner, and the importer's import just carries that decision through.
 
 **On-disk scores are never stored.** Every comparison rebuilds a `ReleaseContext` from the file's row on demand — basename parsed the same way a release title is, resolution from the probed width (falling back to the filename parse), codec from the probe, size from the row. Editing a profile re-ranks your whole library instantly, with no migration and no cached score to invalidate.
+
+---
+
+## Transcoding a profile's files
+
+Scoring decides which release you *grab*. A profile can also decide what the file looks like once it's on disk: a `transcode` block re-encodes or remuxes imported files that don't comply with it.
+
+This is off unless you turn it on globally — `transcoding.enabled` in [config](Configuration-Reference#transcoding), or Settings → Transcoding. A profile with no `transcode` block is never touched either way.
+
+```yaml
+quality_profiles:
+  - name: default
+    min_resolution: 1080p
+    preferred_resolution: 2160p
+    transcode:
+      if:                            # a file failing ANY of these is queued
+        video_codecs: [hevc, av1]    # h264 gets re-encoded
+        containers: [mkv]            # anything else gets remuxed to mkv
+        max_video_bitrate: 12M       # above this, re-encode even if the codec is fine
+      to:
+        container: mkv
+        video_codec: hevc
+        crf: 22                      # lower is bigger and better; 18–28 is the usual range
+        preset: medium
+        audio_codec: aac
+        audio_passthrough: [truehd, eac3, dts]   # optional; see below
+```
+
+**`if` is the compliance test, `to` is the destination.** Each new import on this profile is probed, checked against `if`, and queued when it fails. Files that were already in the library when you wrote the rules aren't reached automatically — **Scan library** on [Activity → Transcoding](Activity-and-Calendar#transcoding) is the pass that catches them up.
+
+**Failing only the container is a remux, not a re-encode.** The streams are copied into the new container untouched: seconds instead of hours, and no quality lost. Only a codec or bitrate failure re-encodes.
+
+**HDR and Dolby Vision are never re-encoded.** The codec and bitrate rules are suspended for them, so a 60 Mbit/s HDR remux stays exactly as it is even under `max_video_bitrate: 12M`. Re-encoding HDR without carrying its metadata through produces grey, washed-out video, and that's worse than a large file. The container rule still applies — an HDR file in the wrong container is remuxed, which is lossless anyway.
+
+**`audio_passthrough` keeps lossless and object-based audio intact.** Listed source codecs are copied instead of being re-encoded to `to.audio_codec`, per track. The default when you name none is `truehd eac3 ac3 dts aac opus flac`: TrueHD and E-AC-3 carry Atmos, and DTS-HD can't survive a re-encode losslessly, so copying is the only way they come out the other side. Set it explicitly to a shorter list if you'd rather trade that for the space.
+
+**The swap is atomic and verified.** The encode is written beside the original, probed to confirm the duration matches and the audio survived, and only then renamed over the file — so an interrupted or failed transcode never leaves you with a broken library file. A container change moves the file to the new extension and the old one is deleted; the database row follows it. `size_before` is kept, which is what the detail page's "35 GB → 12 GB" line reads.
+
+**A file's [`media_info`](REST-API#media-probe) disappears briefly after a transcode.** The bytes changed, so the old probe no longer describes them; the media-probe backfill re-reads the file on its next pass.
+
+Failed jobs retry up to `transcoding.max_failures` times and then park in the queue with ffmpeg's own error, for you to look at. Nothing is deleted on failure — the original file is still there.
+
+**Not supported:** hardware encoders (everything runs on the CPU), a Dolby-Vision-preserving re-encode, and editing `transcode` from the profile form in the UI — this block is YAML and API only. There is also no way to *remove* a policy over the API: omitting the field on an update keeps the stored one, so clearing it is a config-file edit.
 
 ---
 

@@ -8,6 +8,7 @@ Where to look when you want to know what Streamline is doing, what it did, and w
 - [History](#history)
 - [Adopted torrents](#adopted-torrents)
 - [Torrents (built-in client)](#torrents-built-in-client)
+- [Transcoding](#transcoding)
 - [Calendar](#calendar)
 
 ---
@@ -141,6 +142,34 @@ Adding a series this way monitors it, exactly as adding it by hand would, so Str
 Live view of the engine's torrents: peers, pieces, ratio, up/down rates. You can pause and resume individual torrents, and toggle individual **files** within a torrent on and off — handy for a season pack where you only want three episodes.
 
 If you're using qBittorrent or Transmission, this page will be empty; manage those torrents in their own UI or from the Queue.
+
+---
+
+## Transcoding
+
+**Activity → Transcoding.** Admin only. The queue of files being re-encoded in the background, driven by the `transcode` block on a [quality profile](Quality-Profiles-and-Custom-Formats#transcoding-a-profiles-files).
+
+Transcoding is **off by default**. Until you turn it on under Settings → Transcoding this page shows an off state rather than an empty queue — there's a difference between "nothing to do" and "not running", and the page says which.
+
+Each row names the movie or episode, the file on disk, and where the job got to:
+
+| Status | Meaning |
+| --- | --- |
+| **Queued** | Waiting for a free slot. `max_concurrent` decides how many run at once |
+| **Running** | Encoding now, with a live percentage, speed and ETA |
+| **Succeeded** | The file on disk has been replaced. The row shows the size before and after |
+| **Failed** | Out of attempts, or failed once in a way no retry can fix. The row carries the tail of ffmpeg's own error output |
+| **Canceled** | You stopped it, or it was queued when you did |
+
+**Cancel** stops a running encode and throws away the partial output — the original file is untouched, so cancelling is always safe. The one exception is a cancel that arrives in the last moment before the swap: by then the encode is finished and the job completes rather than discarding good work.
+
+**Retry** puts a failed job back in the queue with its attempt count reset. Fix whatever the error names first — a job that failed because the disk was full will fail the same way again.
+
+One kind of failure must not be retried blindly: a job that finished its encode, swapped the new file in, and *then* failed to record that in the database is parked as failed immediately, with no attempts left and a CRITICAL line in the log naming both paths. The file on disk has already been replaced, so a retry would re-encode from a source that is gone. Read the log line and reconcile the row by hand — the error text says which path the database still points at.
+
+A running job's progress comes from the encoder inside the running process, so it disappears if Streamline restarts mid-encode. That job is put back in the queue on the next boot and starts over; the half-written file it left behind is cleaned up automatically.
+
+**Scan library** (on this page and on Settings → Transcoding) re-probes every file whose profile has a `transcode` block and queues the ones that don't comply. Files that arrived before you turned transcoding on — or before you wrote the rules — are only reachable this way; new imports queue themselves. It's a full pass over your library, so it's a deliberate button rather than a schedule.
 
 ---
 

@@ -17,12 +17,27 @@ import (
 )
 
 var _ = Describe("REST API held downloads", Label("e2e"), func() {
-	// always_ask is the one hold reason that needs no probe, so the flow runs
-	// without depending on an ffprobe binary being present on the runner.
+	// always_ask is the one hold reason that needs no probe, which is what lets
+	// this flow run whether or not the runner has ffprobe.
 	alwaysAsk := func(on bool) {
 		GinkgoHelper()
 		resp := patch("/api/v1/config/library", adminAuth, map[string]any{
 			"probe": map[string]any{"always_ask": on},
+		})
+		defer resp.Body.Close()
+		Expect(resp.StatusCode).To(Equal(http.StatusOK))
+	}
+
+	// The source below is a sparse file, not media, so a runner that *does*
+	// have ffprobe probes it, fails, and holds for `corrupt` — which is
+	// reported alone, displacing the always_ask reason this spec asserts on.
+	// The importer reads ffmpeg.enabled per import, so turning it off here
+	// pins the outcome instead of leaving it to what the runner happens to
+	// have installed (the devshell ships ffmpeg for the transcode e2e).
+	ffmpegEnabled := func(on bool) {
+		GinkgoHelper()
+		resp := patch("/api/v1/config/ffmpeg", adminAuth, map[string]any{
+			"enabled": on,
 		})
 		defer resp.Body.Close()
 		Expect(resp.StatusCode).To(Equal(http.StatusOK))
@@ -58,6 +73,8 @@ var _ = Describe("REST API held downloads", Label("e2e"), func() {
 	It("holds an import for review and imports it on resolve", func() {
 		alwaysAsk(true)
 		DeferCleanup(func() { alwaysAsk(false) })
+		ffmpegEnabled(false)
+		DeferCleanup(func() { ffmpegEnabled(true) })
 
 		ctx := context.Background()
 		movie, err := app.Store.CreateMovie(ctx, db.CreateMovieParams{

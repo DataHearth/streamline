@@ -46,15 +46,15 @@ func BuildArgs(
 		passthroughSet[strings.ToLower(codec)] = true
 	}
 
-	args = append(
-		args,
-		"-c:v",
-		encoders[pol.To.VideoCodec],
-		"-crf",
-		strconv.Itoa(int(pol.To.CRF)),
-		"-preset",
-		pol.To.Preset,
-	)
+	args = append(args, "-c:v", encoders[pol.To.VideoCodec])
+	// 0 is "unset", not a CRF of zero: passing -crf 0 asks for a near-lossless
+	// encode, so a policy that omits the key would produce a file larger than
+	// the one it replaced. Omitting the flag is what leaves the encoder's own
+	// default in force.
+	if pol.To.CRF != 0 {
+		args = append(args, "-crf", strconv.Itoa(int(pol.To.CRF)))
+	}
+	args = append(args, "-preset", pol.To.Preset)
 	for i, codec := range info.AudioCodecs {
 		if passthroughSet[strings.ToLower(codec)] {
 			args = append(args, fmt.Sprintf("-c:a:%d", i), "copy")

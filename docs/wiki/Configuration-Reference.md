@@ -8,7 +8,7 @@ Every configuration key, its default, and where it can be changed from.
 - [What's editable at runtime](#whats-editable-at-runtime)
 - [CLI](#cli)
 - [Reference](#reference)
-  - [Top level](#top-level) · [server](#server) · [auth](#auth) · [library](#library) · [schedules](#schedules) · [metadata](#metadata) · [ffmpeg](#ffmpeg) · [log](#log) · [otel](#otel) · [events](#events)
+  - [Top level](#top-level) · [server](#server) · [auth](#auth) · [library](#library) · [schedules](#schedules) · [metadata](#metadata) · [ffmpeg](#ffmpeg) · [transcoding](#transcoding) · [log](#log) · [otel](#otel) · [events](#events)
   - [media_server](#media_server) · [download_clients](#download_clients) · [indexers](#indexers) · [quality_profiles](#quality_profiles) · [custom_formats](#custom_formats)
 
 ---
@@ -138,6 +138,8 @@ Some config is hot — changed through the UI or API, applied immediately, persi
 | `download.selective_files`, `download.selection_grace` | ✅ | Settings → Library |
 | `ffmpeg.enabled` | ✅ | Settings → Media probe |
 | `ffmpeg.path` | ⚠️ Accepted immediately, but only picked up by the process's prober on the next restart | Settings → Media probe |
+| `transcoding.{enabled,max_concurrent,max_failures}` | ✅ Read on every worker tick — no restart | Settings → Transcoding |
+| `quality_profiles[].transcode` | ⚠️ API and YAML only — the profile form does not edit it | — |
 | `events.retention` | ✅ Applies on the next cleanup run | Settings → General |
 | `metadata.*` | ⚠️ Accepted immediately, but the TMDB and TVDB clients are built at boot — restart required | Settings → Metadata |
 | `log.*`, `otel.endpoint` | ⚠️ Accepted immediately, but the log handlers and OTLP exporters are built at boot — restart required | Settings → General |
@@ -303,6 +305,22 @@ Backs the media probe feature: technical details (resolution, codecs, duration, 
 
 Missing binaries (or `enabled: false`) degrade gracefully — imports and library scans work exactly as they did before this feature existed, just without `media_info`. Nothing errors at boot. `GET /api/v1/system/info` surfaces `ffmpeg_warn: true` when probing is enabled but ffprobe wasn't found; the official Docker image ships the binaries, so this only bites custom builds or `path` misconfiguration.
 
+`ffmpeg.path` also supplies the binary the [transcoder](#transcoding) runs. Both binaries are resolved out of that one directory, so there is no separate `ffmpeg_path` to set — and `ffprobe` being found does not prove `ffmpeg` is: `GET /api/v1/config/ffmpeg` reports a `version` field only when `ffmpeg -version` actually answers.
+
+### transcoding
+
+Background re-encoding of imported media. The *rules* live on each quality profile (`quality_profiles[].transcode`, below); this block is only the master switch and the budget. Off by default.
+
+| Key | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `transcoding.enabled` | bool | `false` | Master switch. While off nothing is claimed and every `/api/v1/transcoding/*` endpoint answers `409`. **Runtime-editable** |
+| `transcoding.max_concurrent` | int | `1` | 1–8. How many encodes run at once. **Runtime-editable** |
+| `transcoding.max_failures` | int | `3` | 1–10. Attempts a job gets before it parks as `failed`. A retry from the queue resets the counter. **Runtime-editable** |
+
+None of the three is read at boot, so a change needs no restart: `enabled` and `max_concurrent` are read at every worker tick, and `max_failures` when a job fails. Turning `enabled` off does not interrupt an encode already running; it stops the next one from starting.
+
+The worker needs `ffmpeg` itself, not just `ffprobe`. With `ffmpeg.enabled: false`, or with the binary missing, the worker stays idle and **Scan library** refuses with a `409` rather than queueing rows nothing would ever drain. The official Docker image ships both binaries.
+
 ### log
 
 Two independent loggers: `log.app` (application) and `log.http` (access log).
@@ -419,6 +437,23 @@ Built-in engine only (ignored for external clients):
 | `formats` | | `[{name, score}]` — custom formats (built-in or `custom_formats`) scored for this profile. See [Quality Profiles and Custom Formats](Quality-Profiles-and-Custom-Formats) |
 | `min_score` | | Minimum total matched-format score a release needs to be grabbed. Default `0` |
 | `upgrade_until_score` | | Stop upgrading once the current file's score reaches this value. `0` (default) means no cap |
+| `transcode` | | Post-import re-encode rules for files on this profile. Absent — the default — means they are never re-encoded. Needs `transcoding.enabled`. Full reference: [Quality Profiles and Custom Formats](Quality-Profiles-and-Custom-Formats#transcoding-a-profiles-files) |
+
+`transcode` is a nested `{if, to}` block:
+
+| Field | Required | Notes |
+| --- | --- | --- |
+| `if.video_codecs` | | Codecs considered acceptable: `h264` `hevc` `av1` `vp9` `mpeg4` `mpeg2video` `vc1`. Empty means any |
+| `if.containers` | | Containers considered acceptable: `mkv` `mp4` `avi` `mov` `ts` `m2ts` `webm` `wmv`. Empty means any |
+| `if.max_video_bitrate` | | Ceiling as an ffmpeg-style rate — `8M`, `4500k`. Empty means no bitrate rule |
+| `to.container` | ✅ | `mkv` \| `mp4` |
+| `to.video_codec` | ✅ | `h264` \| `hevc` \| `av1` |
+| `to.crf` | | 0–51, lower is bigger and better. `0` (or omitted) leaves `-crf` out, so the encoder's default applies — libx264 23, libx265 28, libsvtav1 35 |
+| `to.preset` | ✅ | `ultrafast` … `veryslow` — the usual x264/x265 ladder |
+| `to.audio_codec` | ✅ | `aac` \| `opus` \| `ac3` \| `flac`. Applied only to tracks not covered by `audio_passthrough` |
+| `to.audio_passthrough` | | Source audio codecs copied rather than re-encoded. Empty applies the built-in list: `truehd eac3 ac3 dts aac opus flac` |
+
+A file failing **any** `if` rule is queued. HDR and Dolby Vision video is exempt from the codec and bitrate rules — it is never re-encoded — but a container remux still applies to it.
 
 One profile named `default` (1080p/1080p, upgrades allowed, no formats) ships out of the box.
 

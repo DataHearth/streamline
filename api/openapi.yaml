@@ -7366,6 +7366,11 @@ components:
         attempts:
           type: integer
           x-go-type: uint8
+          description: |
+            How many times this job has been claimed, not how many times it
+            has failed — the claim that starts an encode is what increments
+            it, so a running row is always at 1 or more. Compared against
+            transcoding.max_failures to decide whether a failure retries.
         error:
           type: string
           description: Why the last attempt failed. Absent while none has.
@@ -7392,11 +7397,16 @@ components:
         size_before:
           type: integer
           format: int64
-          description: Source size in bytes, recorded when the encode starts.
+          description: |
+            Source size in bytes. Written with size_after when the job
+            succeeds, so it is absent on a queued, running, failed or
+            canceled row — the size of a file mid-encode is not reported.
         size_after:
           type: integer
           format: int64
-          description: Output size in bytes, recorded when the encode lands.
+          description: |
+            Output size in bytes, written with size_before when the job
+            succeeds. Absent for every other status.
         percent:
           type: number
           format: double
@@ -7478,7 +7488,11 @@ components:
           type: integer
           x-go-type: uint8
           maximum: 51
-          description: Constant-rate factor. 0 falls back to the encoder default.
+          description: |
+            Constant-rate factor. 0, or omitted, leaves -crf out of the
+            ffmpeg invocation entirely, so the encoder's own default applies
+            (libx264 23, libx265 28, libsvtav1 35). It is not a CRF of zero,
+            which would ask for a near-lossless encode.
         preset:
           type: string
           enum:

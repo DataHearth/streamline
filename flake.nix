@@ -88,6 +88,9 @@
               syft
               biome
               djlint
+              # headless: the e2e transcode spec drives ffmpeg/ffprobe, and
+              # nothing here needs the X11/SDL outputs the full build pulls in.
+              ffmpeg-headless
               sqlite
             ];
           };

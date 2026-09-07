@@ -27,12 +27,8 @@ var _ = Describe("Shell navigation", Label("e2e"), func() {
 	It("walks the sidebar through every primary section", func() {
 		page := newSessionPage("/")
 		page.MustElement(`aside[aria-label="Primary navigation"]`)
-		// The Activity group is a collapsed disclosure until one of its routes is
-		// current, so its links aren't in the DOM to click yet.
-		page.MustElement(
-			`aside[aria-label="Primary navigation"] button[aria-expanded="false"]`,
-		).MustClick()
-
+		// Operations' routes are each their own top-level row, so every link
+		// below is in the DOM from the first render.
 		for _, section := range []struct{ href, heading string }{
 			{"/movies", "Movies"},
 			{"/series", "Series"},

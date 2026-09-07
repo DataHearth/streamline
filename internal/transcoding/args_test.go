@@ -42,6 +42,21 @@ var _ = Describe("BuildArgs", Label("unit", "transcoding"), func() {
 		}))
 	})
 
+	It("omits -crf entirely at 0, leaving the encoder's default", func() {
+		info := &ffmpeg.Info{AudioCodecs: []string{"aac"}}
+		pol := config.TranscodePolicy{To: config.TranscodeTo{
+			Container:  "mkv",
+			VideoCodec: "hevc",
+			Preset:     "medium",
+			AudioCodec: "aac",
+		}}
+		args := BuildArgs("/in.mkv", "/out.mkv", info, pol, ActionTranscode)
+		Expect(args).NotTo(ContainElement("-crf"))
+		// -preset follows the encoder directly, so the omission dropped the
+		// pair rather than leaving a stray value in a flag's position.
+		Expect(args[indexOf(args, "-c:v")+2]).To(Equal("-preset"))
+	})
+
 	It("omits -c:t copy for a non-mkv target", func() {
 		info := &ffmpeg.Info{AudioCodecs: []string{"aac"}}
 		pol := config.TranscodeTo{
