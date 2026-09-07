@@ -19,6 +19,7 @@
 		basename,
 		sortJobs,
 		totalReclaimed,
+		scanWorkerUnavailable,
 		transcodingDisabled,
 		type TranscodeSortKey,
 	} from "../../lib/transcoding";
@@ -96,6 +97,10 @@
 			toast.ok(i18n.transcode_scan_started());
 		},
 		onError: (e) => {
+			if (scanWorkerUnavailable(e)) {
+				toast.err(i18n.transcode_scan_no_ffmpeg());
+				return;
+			}
 			if (e instanceof ApiError && e.status === 409) {
 				scanStarted = true;
 				toast.err(i18n.transcode_scan_running());

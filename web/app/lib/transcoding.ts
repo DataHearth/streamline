@@ -191,3 +191,10 @@ export const TRANSCODE_SORT_CHIPS: {
 	{ key: "saved", label: i18n.transcode_sort_saved() },
 	{ key: "size", label: i18n.sort_largest() },
 ];
+
+// POST /transcoding/scan answers 409 for two different reasons — a scan is
+// already running, or the worker cannot run at all (ffmpeg disabled or not
+// found). Only the first is "started, just not by you"; the second must not
+// latch the button into its scan-started state.
+export const scanWorkerUnavailable = (e: unknown) =>
+	e instanceof ApiError && e.status === 409 && e.body?.code === "worker_unavailable";

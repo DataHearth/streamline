@@ -9,6 +9,7 @@
 	import { config } from "../../lib/config.svelte";
 	import { toast } from "../../lib/toast";
 	import type { FFmpegConfig, TranscodeConfig } from "../../lib/types";
+	import { scanWorkerUnavailable } from "../../lib/transcoding";
 	import Checkbox from "../../components/forms/Checkbox.svelte";
 	import FieldLock from "../../components/forms/FieldLock.svelte";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
@@ -50,6 +51,10 @@
 			toast.ok(i18n.transcode_scan_started());
 		},
 		onError: (e) => {
+			if (scanWorkerUnavailable(e)) {
+				toast.err(i18n.transcode_scan_no_ffmpeg());
+				return;
+			}
 			if (e instanceof ApiError && e.status === 409) {
 				scanStarted = true;
 				toast.err(i18n.transcode_scan_running());
@@ -91,6 +96,9 @@
 
 	let pending = $derived(transcoding.isPending || ffmpeg.isPending);
 	let failed = $derived(transcoding.isError || ffmpeg.isError);
+	// The worker refuses to run with ffmpeg switched off just as with the
+	// binary missing, but `missing` cannot say so: it is gated on `enabled`.
+	let ffmpegOff = $derived(ffmpeg.data?.enabled === false);
 	let missing = $derived(
 		Boolean(ffmpeg.data?.enabled) && ffmpeg.data?.found === false,
 	);
@@ -229,7 +237,7 @@
 			<div class="mt-4 flex flex-wrap items-center gap-3">
 				<button
 					type="button"
-					disabled={config.readOnly || scan.isPending || scanStarted || missing || !transcoding.data.enabled}
+					disabled={config.readOnly || scan.isPending || scanStarted || missing || ffmpegOff || !transcoding.data.enabled}
 					onclick={() => scan.mutate()}
 					class="inline-flex min-h-11 items-center gap-1.5 rounded-md bg-accent px-3.5 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 lg:h-9 lg:min-h-0"
 				>
@@ -250,6 +258,8 @@
 					</a>
 				{:else if !transcoding.data.enabled}
 					<span class="text-xs text-fg-muted">{i18n.transcode_scan_needs_enable()}</span>
+				{:else if ffmpegOff}
+					<span class="text-xs text-fg-muted">{i18n.transcode_scan_needs_ffmpeg()}</span>
 				{/if}
 			</div>
 		</section>

@@ -127,7 +127,7 @@ func (s *Server) StartTranscodeScan(
 	// actually usable.
 	if !s.transcoder.Ready() {
 		return StartTranscodeScan409JSONResponse{
-			ConflictJSONResponse: errConflict(
+			ConflictJSONResponse: errWorkerUnavailable(
 				"transcoding worker cannot run: ffmpeg disabled or not found",
 			),
 		}, nil

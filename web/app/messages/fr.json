@@ -1508,6 +1508,8 @@
 	"transcode_scan": "Analyser la bibliothèque",
 	"transcode_scan_help": "Vérifie chaque fichier déjà présent dans la bibliothèque par rapport à son profil et met en file ceux qui ne sont pas conformes. S'exécute en arrière-plan ; les tâches apparaissent sur la page Transcodage au fur et à mesure.",
 	"transcode_scan_needs_enable": "Activez d'abord le transcodage.",
+	"transcode_scan_needs_ffmpeg": "Activez d'abord ffmpeg dans Analyse des médias.",
+	"transcode_scan_no_ffmpeg": "Rien ne peut tourner : ffmpeg est désactivé ou introuvable",
 	"transcode_scan_running": "Une analyse est déjà en cours",
 	"transcode_scan_started": "Analyse lancée — les tâches apparaissent dans Transcodage",
 	"transcode_settings_intro": "Les fichiers qui ne correspondent pas à la politique de transcodage de leur profil de qualité sont ré-encodés en arrière-plan après l'import. L'original reste lisible jusqu'au remplacement du fichier.",

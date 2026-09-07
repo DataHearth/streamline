@@ -3352,9 +3352,10 @@ paths:
         as the scan is dispatched.
 
         409 while an earlier scan is still walking the library, while
-        transcoding.enabled is false, and when the worker could not claim
-        the rows a scan would queue anyway — ffmpeg disabled, or its binary
-        not found in this process.
+        transcoding.enabled is false, and — carrying code
+        worker_unavailable — when the worker could not claim the rows a
+        scan would queue anyway: ffmpeg disabled, or its binary not found
+        in this process.
       tags: [transcoding, admin]
       security:
         - BearerAuth: []
@@ -4917,7 +4918,7 @@ components:
           description: |
             Stable machine-readable error code (e.g. last_admin,
             self_delete_forbidden, email_exists, connection_failed,
-            invalid_condition, grab_rejected). Present for domain errors
+            invalid_condition, grab_rejected, worker_unavailable). Present for domain errors
             where the caller needs to branch on the specific reason; absent
             for generic errors where the message is sufficient.
 

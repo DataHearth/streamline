@@ -395,6 +395,7 @@ var _ = Describe(
 				Expect(body.Message).To(Equal(
 					"transcoding worker cannot run: ffmpeg disabled or not found",
 				))
+				Expect(body.Code).To(HaveValue(Equal("worker_unavailable")))
 			})
 
 			It("answers 409 when the ffmpeg binary is not found", func() {
@@ -414,6 +415,7 @@ var _ = Describe(
 				Expect(body.Message).To(Equal(
 					"transcoding worker cannot run: ffmpeg disabled or not found",
 				))
+				Expect(body.Code).To(HaveValue(Equal("worker_unavailable")))
 			})
 
 			It("refuses a non-admin", func() {

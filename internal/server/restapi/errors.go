@@ -96,3 +96,16 @@ func errGrabRejected(msg string) UnprocessableEntityJSONResponse {
 	code := codeGrabRejected
 	return UnprocessableEntityJSONResponse{Message: msg, Code: &code}
 }
+
+// codeWorkerUnavailable marks a 409 from POST /transcoding/scan raised because
+// the worker cannot run (ffmpeg disabled or not found), as opposed to the
+// plain 409 for a scan already in flight. The SPA reads both scan 409s as
+// "already running" without it, and its Scan button then latches into "scan
+// started" for a scan that never began.
+const codeWorkerUnavailable = "worker_unavailable"
+
+// errWorkerUnavailable is errConflict for a scan the worker cannot serve.
+func errWorkerUnavailable(msg string) ConflictJSONResponse {
+	code := codeWorkerUnavailable
+	return ConflictJSONResponse{Message: msg, Code: &code}
+}

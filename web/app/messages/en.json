@@ -1508,6 +1508,8 @@
 	"transcode_scan": "Scan library",
 	"transcode_scan_help": "Checks every file already in the library against its profile and queues the ones that do not comply. Runs in the background; jobs appear on the Transcoding page as they are created.",
 	"transcode_scan_needs_enable": "Enable transcoding first.",
+	"transcode_scan_needs_ffmpeg": "Enable ffmpeg on Media probe first.",
+	"transcode_scan_no_ffmpeg": "Nothing can run: ffmpeg is disabled or not found",
 	"transcode_scan_running": "A scan is already running",
 	"transcode_scan_started": "Scan started — jobs appear in Transcoding",
 	"transcode_settings_intro": "Files that do not match their quality profile's transcode policy are re-encoded in the background after import. The original stays watchable until the new file is swapped in.",
