@@ -188,6 +188,25 @@ var _ = Describe("Worker.Scan", Label("integration", "transcoding"), func() {
 		Expect(jobCount()).To(BeZero())
 	})
 
+	It("skips a row whose encode was rejected", func() {
+		mf := seedMovieFile("hevc")
+		job, err := store.CreateTranscodeJob(ctx, mf.ID)
+		Expect(err).NotTo(HaveOccurred())
+		_, err = store.ClaimNextTranscodeJob(ctx)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(
+			store.RejectTranscodeJob(ctx, job.ID, "output rejected: x", 14, 21),
+		).To(Succeed())
+
+		Expect(worker.Scan(ctx)).To(Succeed())
+		awaitScanDone()
+
+		jobs, err := store.ListTranscodeJobs(ctx, 10)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(jobs).To(HaveLen(1))
+		Expect(jobs[0].Status).To(Equal(transcodejob.StatusRejected))
+	})
+
 	It("returns ErrScanRunning when a scan is already in flight", func() {
 		marker := filepath.Join(GinkgoT().TempDir(), "scanning")
 		GinkgoT().Setenv("FFPROBE_MARKER", marker)

@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
-	"math"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -341,7 +341,7 @@ func (w *Worker) runJob(ctx context.Context, c *claimed) {
 
 	started := time.Now()
 	args := BuildArgs(mf.Path, outPath, info, *pol, action)
-	err = run(
+	_, err = run(
 		jctx,
 		w.prober.FFmpegPath(),
 		args,
@@ -370,23 +370,44 @@ func (w *Worker) runJob(ctx context.Context, c *claimed) {
 	}
 
 	// Verification runs on wctx so a cancel arriving mid-probe doesn't read as
-	// a corrupt output; the checkpoint below is where it lands instead.
-	out, err := w.verify(wctx, outPath, info)
-	if err != nil {
+	// a corrupt output; the opt-in exec checks inside it run on jctx instead,
+	// since they launch ffmpeg and jctx is what a cancel can actually kill.
+	// The checkpoints below are where a kill-induced verdict, and a genuine
+	// one, both land.
+	out, err := w.verify(wctx, jctx, outPath, mf.Path, info, mf.Size, action, *pol)
+	rej, isRejection := errors.AsType[*rejection](err)
+	if err != nil && !isRejection {
+		// vmafScore doesn't reclassify a killed exec the way the health check
+		// does, so a cancel or shutdown mid-window surfaces here as a plain
+		// error rather than as rej — the same two checks the probe and encode
+		// arms already run, for the same reason: neither cancellation may be
+		// spent as a failed attempt.
+		if ctx.Err() != nil {
+			return
+		}
+		if jctx.Err() != nil {
+			w.markCanceled(wctx, job)
+			return
+		}
 		w.fail(wctx, job, err)
 		return
 	}
 
 	// Shutdown ahead of the job's own cancel, for the reason the probe arm
 	// states: canceled is terminal, and a process going down must not spend
-	// the file's only chance at being transcoded.
+	// the file's only chance at being transcoded. A rejection produced by a
+	// check that shutdown itself killed is exactly as moot as any other
+	// verdict recorded on the way down, so this guard covers it too.
 	if ctx.Err() != nil {
 		return
 	}
 	// The last point a cancel can be honoured: nothing has moved yet, so the
 	// deferred remove drops the encode and the library file is untouched. Past
 	// the swap the work is done and a cancel is simply too late — completing it
-	// is what keeps the row and the bytes on disk saying the same thing.
+	// is what keeps the row and the bytes on disk saying the same thing. A
+	// rejection is no exception: a cancel killing a health check or a VMAF
+	// pass produces the same *exec.ExitError a real failure would, and the
+	// operator asked for canceled, not a verdict.
 	if jctx.Err() != nil {
 		w.markCanceled(wctx, job)
 		return
@@ -396,7 +417,8 @@ func (w *Worker) runJob(ctx context.Context, c *claimed) {
 	// rename, a re-identify. The encode then holds the *old* bytes, and on a
 	// replace that renders the same name the swap would rename them over the
 	// file that replaced them. Re-reading the row here is what catches that —
-	// and the cascade means the row can also simply be gone.
+	// and the cascade means the row can also simply be gone. A rejection about
+	// those stale bytes is exactly as stale, so this guard runs ahead of it too.
 	if err := w.stillCurrent(wctx, mf); err != nil {
 		slog.WarnContext(wctx, "dropped a transcode whose file changed under it",
 			"transcode.job_id", job.ID,
@@ -405,6 +427,11 @@ func (w *Worker) runJob(ctx context.Context, c *claimed) {
 			"error", err,
 		)
 		w.markCanceled(wctx, job)
+		return
+	}
+
+	if rej != nil {
+		w.reject(wctx, job, mf, rej)
 		return
 	}
 
@@ -450,32 +477,121 @@ func (w *Worker) runJob(ctx context.Context, c *claimed) {
 	)
 }
 
-// verify checks the encode against the source before anything is swapped: the
-// durations must agree within two seconds (containers round), and audio the
-// source had must have survived. The probe it read is returned because the row
-// is written from it — the encode's own streams, rather than a hole the
-// media-probe backfill has to fill before the file can be scored again.
+// verify judges the encode before anything is swapped. The probe it read is
+// returned because the row is written from it — the encode's own streams,
+// rather than a hole the media-probe backfill has to fill before the file can
+// be scored again. A *rejection is a verdict on the output and terminal; any
+// other error is the job's and retries. The probe and the size stat run on
+// ctx (uncancellable, so a cancel arriving mid-probe never reads as a corrupt
+// output); the health check and VMAF pass launch ffmpeg and run on execCtx
+// instead, so a cancel — or shutdown — can actually kill them.
 func (w *Worker) verify(
-	ctx context.Context,
-	outPath string,
+	ctx, execCtx context.Context,
+	outPath, srcPath string,
 	src *ffmpeg.Info,
+	srcSize int64,
+	action Action,
+	pol config.TranscodePolicy,
 ) (*ffmpeg.Info, error) {
 	out, err := w.prober.Probe(ctx, outPath)
 	if err != nil {
 		return nil, fmt.Errorf("output verification: %w", err)
 	}
-	if math.Abs(float64(out.DurationSec)-float64(src.DurationSec)) > 2 {
-		return nil, fmt.Errorf(
-			"output verification: duration %ds against source %ds",
-			out.DurationSec, src.DurationSec,
-		)
+	st, err := os.Stat(outPath)
+	if err != nil {
+		return nil, fmt.Errorf("output verification: %w", err)
 	}
-	if len(src.AudioCodecs) > 0 && len(out.AudioCodecs) == 0 {
-		return nil, errors.New(
-			"output verification: no audio stream in the output",
+	cfg := config.Get()
+	if cfg == nil {
+		return nil, errNoConfig
+	}
+	v := cfg.Transcoding.Verify
+	if err := checkOutput(
+		src,
+		out,
+		srcSize,
+		st.Size(),
+		action,
+		pol.To.Container,
+		v,
+	); err != nil {
+		return nil, err
+	}
+	total := time.Duration(src.DurationSec) * time.Second
+	if v.HealthCheck {
+		if err := healthCheck(
+			execCtx,
+			w.prober.FFmpegPath(),
+			outPath,
+			total,
+			func(Snapshot) {},
+		); err != nil {
+			// A verdict on the output needs ffmpeg to have actually run and
+			// exited non-zero; a failure to launch it at all (missing binary,
+			// broken pipe) is the job's own and must stay retryable.
+			if _, ok := errors.AsType[*exec.ExitError](err); !ok {
+				return nil, fmt.Errorf("output verification: %w", err)
+			}
+			first, _, _ := strings.Cut(
+				strings.TrimPrefix(err.Error(), "ffmpeg: "),
+				"\n",
+			)
+			// The exit status prefix is noise here; the first stderr line names the frame.
+			if _, after, ok := strings.Cut(first, ": "); ok {
+				first = after
+			}
+			return nil, &rejection{
+				reason:  "decode check failed: " + first,
+				outSize: st.Size(),
+			}
+		}
+	}
+	if action == ActionTranscode && v.MinVMAF != 0 {
+		score, ok, err := vmafScore(
+			execCtx,
+			w.prober.FFmpegPath(),
+			outPath,
+			srcPath,
+			src.DurationSec,
 		)
+		if err != nil {
+			return nil, fmt.Errorf("output verification: %w", err)
+		}
+		if ok && score < float64(v.MinVMAF) {
+			return nil, &rejection{
+				reason:  fmt.Sprintf("VMAF %.1f below %d", score, v.MinVMAF),
+				outSize: st.Size(),
+			}
+		}
 	}
 	return out, nil
+}
+
+// reject parks the job on a verdict about its output. Terminal without
+// counting an attempt: the same encode gives the same file, so nothing here
+// is worth retrying on its own, and the retry endpoint is the operator's
+// way of asking again after changing the policy or the band.
+func (w *Worker) reject(
+	ctx context.Context,
+	job *ent.TranscodeJob,
+	mf *ent.MediaFile,
+	rej *rejection,
+) {
+	if err := w.db.RejectTranscodeJob(
+		ctx, job.ID, rej.Error(), mf.Size, rej.outSize,
+	); err != nil {
+		slog.ErrorContext(ctx, "could not record a rejected transcode job",
+			"transcode.job_id", job.ID, "error", err)
+		return
+	}
+	slog.WarnContext(ctx, "transcode output rejected",
+		"transcode.job_id", job.ID,
+		"media_file.path", mf.Path,
+		"transcode.size_before", mf.Size,
+		"transcode.size_after", rej.outSize,
+		"transcode.reason", rej.reason,
+	)
+	record(ctx, "rejected")
 }
 
 // stillCurrent reports whether the row the job was claimed with still names

@@ -35,15 +35,15 @@ func (t *tailBuffer) Write(p []byte) (int, error) {
 func (t *tailBuffer) String() string { return strings.TrimSpace(string(t.buf)) }
 
 // run executes ffmpeg, streaming progress snapshots to emit. The last 4 KiB
-// of stderr are folded into the returned error — that tail is what the
-// queue shows as the job's error.
+// of stderr are returned alongside the error (folded into it on a Wait
+// failure) because libvmaf reports its score on stderr and nowhere else.
 func run(
 	ctx context.Context,
 	bin string,
 	args []string,
 	total time.Duration,
 	emit func(Snapshot),
-) error {
+) (string, error) {
 	//nolint:gosec // bin is the prober's ffmpeg, resolved from ffmpeg.path (or $PATH) at boot; args are BuildArgs' fixed flags plus library paths
 	cmd := exec.CommandContext(ctx, bin, args...)
 	tail := &tailBuffer{max: stderrTail}
@@ -51,16 +51,16 @@ func run(
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return fmt.Errorf("ffmpeg stdout pipe: %w", err)
+		return "", fmt.Errorf("ffmpeg stdout pipe: %w", err)
 	}
 	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("ffmpeg start: %w", err)
+		return "", fmt.Errorf("ffmpeg start: %w", err)
 	}
 	// Drains the pipe to EOF, which is also what keeps a chatty ffmpeg from
 	// blocking on a full pipe while Wait waits for it to exit.
 	readProgress(ctx, stdout, total, emit)
 	if err := cmd.Wait(); err != nil {
-		return fmt.Errorf("ffmpeg: %w: %s", err, tail)
+		return tail.String(), fmt.Errorf("ffmpeg: %w: %s", err, tail)
 	}
-	return nil
+	return tail.String(), nil
 }

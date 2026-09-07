@@ -15,9 +15,11 @@ import (
 	"github.com/datahearth/streamline/ent"
 	entmovie "github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/transcodejob"
+	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	"github.com/datahearth/streamline/internal/ffmpeg"
+	mockffmpeg "github.com/datahearth/streamline/internal/ffmpeg/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 	"github.com/datahearth/streamline/internal/transcoding/mocks"
 )
@@ -64,6 +66,43 @@ var _ = Describe("Worker", Label("integration", "transcoding"), func() {
 		}
 	}
 
+	// setup applies the standard worker config, overriding transcoding.verify
+	// when verify is non-nil — the rejection specs only need to name what
+	// they're testing, not repeat the whole map.
+	setup := func(verify map[string]any) {
+		transcoding := map[string]any{
+			"enabled":        true,
+			"max_concurrent": 1,
+			"max_failures":   3,
+		}
+		if verify != nil {
+			transcoding["verify"] = verify
+		}
+		configtest.Setup(map[string]any{
+			"ffmpeg": map[string]any{"enabled": true, "path": bin},
+			"library": map[string]any{
+				"movie_path":  movieRoot,
+				"series_path": filepath.Join(root, "series"),
+			},
+			"transcoding": transcoding,
+			"quality_profiles": []map[string]any{
+				{
+					"name":                 "hevc",
+					"preferred_resolution": "1080p",
+					"min_resolution":       "1080p",
+					"transcode":            transcodePolicy("12M"),
+				},
+				{
+					"name":                 "lenient",
+					"preferred_resolution": "1080p",
+					"min_resolution":       "1080p",
+					"transcode":            transcodePolicy("20M"),
+				},
+			},
+			"quality_default_profile": "hevc",
+		})
+	}
+
 	BeforeEach(func() {
 		ctx = context.Background()
 		root = GinkgoT().TempDir()
@@ -83,33 +122,7 @@ var _ = Describe("Worker", Label("integration", "transcoding"), func() {
 		Expect(os.WriteFile(encoded, []byte("transcoded"), 0o644)).To(Succeed())
 		GinkgoT().Setenv("FAKE_INPUT", encoded)
 
-		configtest.Setup(map[string]any{
-			"ffmpeg": map[string]any{"enabled": true, "path": bin},
-			"library": map[string]any{
-				"movie_path":  movieRoot,
-				"series_path": seriesRoot,
-			},
-			"transcoding": map[string]any{
-				"enabled":        true,
-				"max_concurrent": 1,
-				"max_failures":   3,
-			},
-			"quality_profiles": []map[string]any{
-				{
-					"name":                 "hevc",
-					"preferred_resolution": "1080p",
-					"min_resolution":       "1080p",
-					"transcode":            transcodePolicy("12M"),
-				},
-				{
-					"name":                 "lenient",
-					"preferred_resolution": "1080p",
-					"min_resolution":       "1080p",
-					"transcode":            transcodePolicy("20M"),
-				},
-			},
-			"quality_default_profile": "hevc",
-		})
+		setup(nil)
 
 		client, err = db.Open(ctx, ":memory:")
 		Expect(err).NotTo(HaveOccurred())
@@ -206,6 +219,177 @@ var _ = Describe("Worker", Label("integration", "transcoding"), func() {
 		Expect(done.SizeBefore).To(Equal(mf.Size))
 		Expect(done.SizeAfter).To(Equal(int64(len("transcoded"))))
 		Expect(done.FinishedAt).NotTo(BeNil())
+	})
+
+	// The rejection specs drive the outcome through what the fake encode
+	// "produces": the BeforeEach's 10-byte output is 71 % of the 14-byte
+	// source and passes the default band.
+	setEncoded := func(content string) {
+		GinkgoHelper()
+		encoded := filepath.Join(root, "encoded.bin")
+		Expect(os.WriteFile(encoded, []byte(content), 0o644)).To(Succeed())
+	}
+
+	It("rejects an encode larger than the source and leaves the file alone", func() {
+		setEncoded("this output is bigger") // 21 bytes → 150 %
+		mf := seedMovieFile("hevc")
+		job := queueJob(mf)
+
+		Expect(worker.tick(ctx)).To(BeTrue())
+
+		Expect(os.ReadFile(mf.Path)).To(Equal([]byte("original-bytes")))
+		Expect(tempFiles()).To(BeEmpty())
+		got, err := store.FindMediaFileByID(ctx, mf.ID)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(got.TranscodedAt).To(BeNil())
+
+		done := reload(job)
+		Expect(done.Status).To(Equal(transcodejob.StatusRejected))
+		Expect(
+			done.Error,
+		).To(Equal("output rejected: output is 150% of the source (max 100%)"))
+		Expect(done.SizeBefore).To(Equal(mf.Size))
+		Expect(done.SizeAfter).To(Equal(int64(21)))
+		Expect(done.FinishedAt).NotTo(BeNil())
+	})
+
+	It("rejects an encode that fails the decode health check", func() {
+		setup(map[string]any{"health_check": true})
+		GinkgoT().Setenv("FAKE_HEALTH_FAIL", "1")
+		mf := seedMovieFile("hevc")
+		job := queueJob(mf)
+
+		Expect(worker.tick(ctx)).To(BeTrue())
+
+		Expect(os.ReadFile(mf.Path)).To(Equal([]byte("original-bytes")))
+		done := reload(job)
+		Expect(done.Status).To(Equal(transcodejob.StatusRejected))
+		Expect(
+			done.Error,
+		).To(HavePrefix("output rejected: decode check failed: Error while decoding"))
+	})
+
+	It(
+		"cancels a health check in progress instead of recording its verdict",
+		func() {
+			setup(map[string]any{"health_check": true})
+			marker := filepath.Join(root, "health-checking")
+			GinkgoT().Setenv("FAKE_HEALTH_MARKER", marker)
+			GinkgoT().Setenv("FAKE_HEALTH_SLEEP", "5")
+
+			mf := seedMovieFile("hevc")
+			job := queueJob(mf)
+
+			finished := make(chan struct{})
+			go func() {
+				defer GinkgoRecover()
+				defer close(finished)
+				worker.tick(ctx)
+			}()
+
+			// The marker is touched right as the decode check starts, so the
+			// cancel below lands mid-check rather than before or after it.
+			Eventually(marker, 10*time.Second, 20*time.Millisecond).
+				Should(BeAnExistingFile())
+
+			Expect(worker.Cancel(ctx, job.ID)).To(Succeed())
+			Eventually(finished, 10*time.Second).Should(BeClosed())
+
+			Expect(reload(job).Status).To(Equal(transcodejob.StatusCanceled))
+			Expect(os.ReadFile(mf.Path)).To(Equal([]byte("original-bytes")))
+			Expect(tempFiles()).To(BeEmpty())
+		},
+	)
+
+	It(
+		"cancels a VMAF window in progress instead of failing the attempt",
+		func() {
+			setup(map[string]any{"min_vmaf": 90})
+			marker := filepath.Join(root, "vmaf-scoring")
+			GinkgoT().Setenv("FAKE_VMAF_MARKER", marker)
+			GinkgoT().Setenv("FAKE_VMAF_SLEEP", "5")
+
+			mf := seedMovieFile("hevc")
+			job := queueJob(mf)
+
+			finished := make(chan struct{})
+			go func() {
+				defer GinkgoRecover()
+				defer close(finished)
+				worker.tick(ctx)
+			}()
+
+			// The marker is touched right as the first window starts, so the
+			// cancel below lands mid-window rather than before or after it.
+			Eventually(marker, 10*time.Second, 20*time.Millisecond).
+				Should(BeAnExistingFile())
+
+			Expect(worker.Cancel(ctx, job.ID)).To(Succeed())
+			Eventually(finished, 10*time.Second).Should(BeClosed())
+
+			Expect(reload(job).Status).To(Equal(transcodejob.StatusCanceled))
+			Expect(os.ReadFile(mf.Path)).To(Equal([]byte("original-bytes")))
+			Expect(tempFiles()).To(BeEmpty())
+		},
+	)
+
+	It(
+		"keeps a health-check exec failure retryable, not a rejection",
+		func() {
+			setup(map[string]any{"health_check": true})
+
+			info := &ffmpeg.Info{
+				DurationSec: 5400, Width: 1920, Height: 1080, AudioTracks: 2,
+			}
+			outPath := filepath.Join(root, "unreachable.mkv")
+			Expect(os.WriteFile(outPath, []byte("output"), 0o644)).To(Succeed())
+
+			// FFmpegPath is normally resolved at boot from ffmpeg.path (or
+			// $PATH); pointing it at a binary that isn't there is what makes
+			// the health check fail to launch rather than exit non-zero.
+			prober := mockffmpeg.NewMockProber(GinkgoT())
+			prober.EXPECT().Probe(mock.Anything, outPath).Return(info, nil).Once()
+			prober.EXPECT().FFmpegPath().Return("/nonexistent/ffmpeg").Once()
+
+			w := NewWorker(Deps{Prober: prober})
+			_, err := w.verify(
+				ctx, ctx, outPath, "/irrelevant/src.mkv", info,
+				int64(len("output")), ActionRemux,
+				config.TranscodePolicy{To: config.TranscodeTo{Container: "mkv"}},
+			)
+
+			Expect(err).To(HaveOccurred())
+			_, isRejection := errors.AsType[*rejection](err)
+			Expect(isRejection).To(BeFalse())
+			Expect(err.Error()).To(ContainSubstring("output verification"))
+		},
+	)
+
+	It("rejects an encode scoring under min_vmaf", func() {
+		setup(map[string]any{"min_vmaf": 90})
+		GinkgoT().Setenv("FAKE_VMAF", "82.5")
+		mf := seedMovieFile("hevc")
+		job := queueJob(mf)
+
+		Expect(worker.tick(ctx)).To(BeTrue())
+
+		Expect(os.ReadFile(mf.Path)).To(Equal([]byte("original-bytes")))
+		done := reload(job)
+		Expect(done.Status).To(Equal(transcodejob.StatusRejected))
+		Expect(done.Error).To(Equal("output rejected: VMAF 82.5 below 90"))
+	})
+
+	It("swaps anyway when ffmpeg carries no libvmaf, logging once", func() {
+		setup(map[string]any{"min_vmaf": 90})
+		GinkgoT().Setenv("FAKE_VMAF_MISSING", "1")
+		mf := seedMovieFile("hevc")
+		job := queueJob(mf)
+		ms.EXPECT().RefreshAll(mock.Anything, "movie", movieRoot).Return(nil).Once()
+
+		Expect(worker.tick(ctx)).To(BeTrue())
+
+		Expect(os.ReadFile(mf.Path)).To(Equal([]byte("transcoded")))
+		Expect(reload(job).Status).To(Equal(transcodejob.StatusSucceeded))
 	})
 
 	It("completes a compliant file as a no-op, leaving it untouched", func() {
@@ -307,24 +491,27 @@ var _ = Describe("Worker", Label("integration", "transcoding"), func() {
 		Expect(got.FinishedAt).NotTo(BeNil())
 	})
 
-	It("requeues the job when the output fails verification", func() {
-		divergent := filepath.Join(root, "short.json")
-		Expect(os.WriteFile(divergent, []byte(shortDurationProbe), 0o644)).
-			To(Succeed())
-		GinkgoT().Setenv("FFPROBE_FIXTURE_TMP", divergent)
+	It(
+		"rejects the job when the output's duration diverges from the source",
+		func() {
+			divergent := filepath.Join(root, "short.json")
+			Expect(os.WriteFile(divergent, []byte(shortDurationProbe), 0o644)).
+				To(Succeed())
+			GinkgoT().Setenv("FFPROBE_FIXTURE_TMP", divergent)
 
-		mf := seedMovieFile("hevc")
-		job := queueJob(mf)
+			mf := seedMovieFile("hevc")
+			job := queueJob(mf)
 
-		Expect(worker.tick(ctx)).To(BeTrue())
+			Expect(worker.tick(ctx)).To(BeTrue())
 
-		Expect(os.ReadFile(mf.Path)).To(Equal([]byte("original-bytes")))
-		Expect(tempFiles()).To(BeEmpty())
+			Expect(os.ReadFile(mf.Path)).To(Equal([]byte("original-bytes")))
+			Expect(tempFiles()).To(BeEmpty())
 
-		got := reload(job)
-		Expect(got.Status).To(Equal(transcodejob.StatusQueued))
-		Expect(got.Error).To(ContainSubstring("output verification"))
-	})
+			got := reload(job)
+			Expect(got.Status).To(Equal(transcodejob.StatusRejected))
+			Expect(got.Error).To(ContainSubstring("duration"))
+		},
+	)
 
 	It("requeues running jobs and sweeps stray temp files on recovery", func() {
 		mf := seedMovieFile("hevc")
@@ -453,6 +640,45 @@ var _ = Describe("Worker", Label("integration", "transcoding"), func() {
 		Expect(tempFiles()).To(BeEmpty())
 		Expect(reload(job).Status).To(Equal(transcodejob.StatusCanceled))
 	})
+
+	It(
+		"cancels rather than records a rejection when the file changed under it",
+		func() {
+			marker := filepath.Join(root, "verifying-resized")
+			GinkgoT().Setenv("FFPROBE_MARKER_TMP", marker)
+			GinkgoT().Setenv("FFPROBE_SLEEP_TMP", "2")
+			setEncoded(
+				"this output is bigger",
+			) // 21 bytes → rejected as 150% of the 14-byte source
+
+			mf := seedMovieFile("hevc")
+			job := queueJob(mf)
+
+			finished := make(chan struct{})
+			go func() {
+				defer GinkgoRecover()
+				defer close(finished)
+				worker.tick(ctx)
+			}()
+
+			// Parked on the verification probe: the encode already ran against
+			// the original bytes and would be rejected as too large against
+			// them, which is exactly the window a replace import lands in.
+			Eventually(marker, 10*time.Second, 20*time.Millisecond).
+				Should(BeAnExistingFile())
+			resized := []byte("a replace import wrote this")
+			Expect(os.WriteFile(mf.Path, resized, 0o644)).To(Succeed())
+			Expect(client.MediaFile.UpdateOneID(mf.ID).
+				SetSize(int64(len(resized))).
+				Exec(ctx)).To(Succeed())
+
+			Eventually(finished, 10*time.Second).Should(BeClosed())
+
+			Expect(os.ReadFile(mf.Path)).To(Equal(resized))
+			Expect(tempFiles()).To(BeEmpty())
+			Expect(reload(job).Status).To(Equal(transcodejob.StatusCanceled))
+		},
+	)
 
 	It("leaves the row running when shutdown lands during the source probe", func() {
 		marker := filepath.Join(root, "probing")

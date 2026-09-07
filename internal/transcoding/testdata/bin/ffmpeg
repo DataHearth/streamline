@@ -1,14 +1,46 @@
 #!/bin/sh
-# Fake ffmpeg: "-version" prints a version line; otherwise the last argument is
-# the output path — emit two progress blocks, then copy $FAKE_INPUT there.
-# FAKE_FFMPEG_FAIL=1 exits 1 with stderr; FAKE_FFMPEG_SLEEP delays the copy.
+# Fake ffmpeg. "-version" prints a version line. A "-lavfi" run is a VMAF
+# window: it prints a score line on stderr ($FAKE_VMAF, default 95) unless
+# $FAKE_VMAF_MISSING=1, which fails like a build without libvmaf.
+# $FAKE_VMAF_MARKER/$FAKE_VMAF_SLEEP park a window the same way
+# $FAKE_HEALTH_MARKER/$FAKE_HEALTH_SLEEP park the health check below. A run
+# whose output is "-" is the health check: exit 1 when $FAKE_HEALTH_FAIL=1,
+# else 0. $FAKE_HEALTH_MARKER is touched right before the check runs, and
+# $FAKE_HEALTH_SLEEP then delays it — together they let a spec park a health
+# check and know it is parked, mirroring $FFPROBE_MARKER_TMP/$FFPROBE_SLEEP_TMP.
+# Otherwise the last argument is the output path — emit two progress blocks,
+# then copy $FAKE_INPUT there. FAKE_FFMPEG_FAIL=1 exits 1 with stderr;
+# FAKE_FFMPEG_SLEEP delays the copy.
 #
 # The sleep redirects both streams to /dev/null so it does not inherit the
 # pipes: a cancelled run kills this shell, and an inheriting child would hold
 # the read end open for the rest of its sleep, stalling the reader.
 if [ "$1" = "-version" ]; then echo "ffmpeg version 7.1.1-fake"; exit 0; fi
+for a in "$@"; do
+	if [ "$a" = "-lavfi" ]; then
+		if [ "$FAKE_VMAF_MISSING" = "1" ]; then
+			echo "No such filter: 'libvmaf'" >&2; exit 1
+		fi
+		if [ -n "$FAKE_VMAF_MARKER" ]; then : > "$FAKE_VMAF_MARKER"; fi
+		if [ -n "$FAKE_VMAF_SLEEP" ]; then sleep "$FAKE_VMAF_SLEEP" >/dev/null 2>&1; fi
+		printf 'progress=end\n'
+		echo "[Parsed_libvmaf_0 @ 0x0] VMAF score: ${FAKE_VMAF:-95.000000}" >&2
+		exit 0
+	fi
+	out="$a"
+done
+if [ "$out" = "-" ]; then
+	if [ "$FAKE_HEALTH_FAIL" = "1" ]; then
+		echo "Error while decoding stream #0:0: Invalid data found when processing input" >&2
+		exit 1
+	fi
+	if [ -n "$FAKE_HEALTH_MARKER" ]; then : > "$FAKE_HEALTH_MARKER"; fi
+	printf 'progress=continue\n'
+	if [ -n "$FAKE_HEALTH_SLEEP" ]; then sleep "$FAKE_HEALTH_SLEEP" >/dev/null 2>&1; fi
+	printf 'progress=end\n'
+	exit 0
+fi
 if [ "$FAKE_FFMPEG_FAIL" = "1" ]; then echo "conversion failed: broken pipe" >&2; exit 1; fi
-for a in "$@"; do out="$a"; done
 printf 'out_time_us=1000000\nspeed=2x\nprogress=continue\n'
 if [ -n "$FAKE_FFMPEG_SLEEP" ]; then sleep "$FAKE_FFMPEG_SLEEP" >/dev/null 2>&1; fi
 printf 'out_time_us=2000000\nspeed=2x\nprogress=end\n'
