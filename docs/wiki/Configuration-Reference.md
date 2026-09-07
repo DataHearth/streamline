@@ -197,6 +197,7 @@ Defaults shown are the built-in ones, as emitted by `streamline config init`.
 | --- | --- | --- | --- |
 | `server.host` | string | `0.0.0.0` | Bind address |
 | `server.port` | int | `8080` | 1–65535 |
+| `server.trusted_proxies` | []cidr | `[]` | CIDRs whose `X-Forwarded-*` headers are believed. Empty trusts none. List the proxies themselves, ideally a `/32` each — never a client subnet |
 
 ### auth
 
@@ -204,7 +205,7 @@ Defaults shown are the built-in ones, as emitted by `streamline config init`.
 | --- | --- | --- | --- |
 | `auth.mode` | enum | `full` | `full` \| `trusted-network` \| `disabled` — see [Authentication and SSO](Authentication-and-SSO#auth-modes) |
 | `auth.trusted_networks` | []cidr | `[]` | CIDRs auto-authenticated when mode is `trusted-network` |
-| `auth.trusted_role` | enum | `admin` | Role granted to trusted-network requests |
+| `auth.trusted_role` | enum | `member` | Role granted to trusted-network requests |
 | `auth.session_secret` | string | *generated* | JWT HMAC key |
 | `auth.session_secret_file` | path | — | Mutually exclusive with the above |
 | `auth.session_ttl` | duration | `168h` | Session lifetime |

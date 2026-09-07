@@ -37,7 +37,7 @@ The client IP is resolved by chi's `ClientIPFromXFFTrustedProxies(1)` middleware
 
 That assumption is load-bearing. If Streamline is exposed directly, or sits behind a different number of proxies, or behind one that appends to a client-supplied `X-Forwarded-For` instead of overwriting it, **a client can forge a trusted source IP and be granted `trusted_role` with no credentials at all.**
 
-Only use this mode when you control the proxy chain, and set `trusted_role` to the least-privileged role that does the job. The default is `admin`, which is rarely what you want here.
+Only use this mode when you control the proxy chain, and set `trusted_role` to the least-privileged role that does the job. The default is `member`; `admin` is rarely what you want here.
 
 ### `disabled`
 
