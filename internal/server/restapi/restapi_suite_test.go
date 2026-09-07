@@ -29,6 +29,7 @@ import (
 	reqmocks "github.com/datahearth/streamline/internal/request/mocks"
 	"github.com/datahearth/streamline/internal/testutil"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
+	"github.com/datahearth/streamline/internal/transcoding"
 )
 
 func TestRestAPI(t *testing.T) {
@@ -143,6 +144,13 @@ func newAPIKeyApp() *apiKeyApp {
 		PathMigrations: pathmigrate.NewService(a.store),
 		Prober:         a.prober,
 		Importer:       a.importer,
+		// A real worker, never started: the handlers only ever ask it for
+		// progress of a job this process is encoding (none) and for a scan,
+		// which drives the store mock.
+		Transcoder: transcoding.NewWorker(transcoding.Deps{
+			DB:     a.store,
+			Prober: a.prober,
+		}),
 	})
 
 	r := chi.NewRouter()

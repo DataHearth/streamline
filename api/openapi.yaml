@@ -32,6 +32,8 @@ tags:
     description: Media request workflow (request → approve/deny)
   - name: torrents
     description: Torrents held by the builtin download client
+  - name: transcoding
+    description: Background re-encode queue driven by quality-profile transcode policies
 
 servers:
   - url: /api/v1
@@ -2083,6 +2085,43 @@ paths:
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
 
+  /config/transcoding:
+    get:
+      operationId: getConfigTranscoding
+      summary: Get transcoding configuration (admin)
+      description: |
+        Returns the runtime-editable transcoding configuration. All three keys
+        take effect immediately — the worker reads them per tick, so no
+        restart is required. The binaries themselves come from
+        /config/ffmpeg; this section only carries the switch and the budget.
+      tags: [config, admin]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        "200":
+          $ref: "#/components/responses/TranscodingConfig"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    patch:
+      operationId: updateConfigTranscoding
+      summary: Patch transcoding configuration (admin)
+      tags: [config, admin]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      requestBody:
+        $ref: "#/components/requestBodies/UpdateTranscodingConfig"
+      responses:
+        "200":
+          $ref: "#/components/responses/TranscodingConfig"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
   /config/download:
     get:
       operationId: getConfigDownload
@@ -3219,6 +3258,115 @@ paths:
         "400":
           $ref: "#/components/responses/BadRequest"
 
+  # ── Transcoding ─────────────────────────────────────────
+  /transcoding/queue:
+    get:
+      operationId: listTranscodeQueue
+      summary: List transcode jobs (admin)
+      description: |
+        Newest first, capped at 200. A running job carries the live
+        percent/eta_seconds/speed reported by the worker in this process;
+        a job running in no process (a restart mid-encode) carries none.
+
+        409 while transcoding.enabled is false — the whole feature is off,
+        and an empty list would read as "nothing queued" instead.
+      tags: [transcoding, admin]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        # Inline rather than a components/responses entry: oapi-codegen wraps
+        # a referenced response in a struct, which turns a bare array body
+        # into an object. Same shape listQualityProfiles uses.
+        "200":
+          description: Transcode jobs, newest first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TranscodeJob"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /transcoding/jobs/{id}/cancel:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: cancelTranscodeJob
+      summary: Cancel a queued or running transcode job (admin)
+      description: |
+        Cancels a job running in this process by interrupting its encode,
+        and any other open job by marking the row directly.
+
+        409 for a job that is not open — which includes an id that names no
+        job at all: the update is a single conditional statement, so "no such
+        row" and "already finished" are the same zero rows affected and there
+        is no 404 to tell them apart.
+      tags: [transcoding, admin]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        "204":
+          $ref: "#/components/responses/TranscodeJobCanceled"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /transcoding/jobs/{id}/retry:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: retryTranscodeJob
+      summary: Re-queue a failed transcode job (admin)
+      description: |
+        Resets a failed job to queued with attempts, error and finished_at
+        cleared.
+
+        409 for a job in any other status — which includes an id that names
+        no job at all, for the same reason cancel has no 404: the update is a
+        single conditional statement and both cases affect zero rows.
+      tags: [transcoding, admin]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        "204":
+          $ref: "#/components/responses/TranscodeJobRetried"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /transcoding/scan:
+    post:
+      operationId: startTranscodeScan
+      summary: Queue transcodes for the existing library (admin)
+      description: |
+        Probes every media file whose quality profile carries a transcode
+        policy and queues a job for each non-compliant one. Returns as soon
+        as the scan is dispatched.
+
+        409 while an earlier scan is still walking the library, while
+        transcoding.enabled is false, and when the worker could not claim
+        the rows a scan would queue anyway — ffmpeg disabled, or its binary
+        not found in this process.
+      tags: [transcoding, admin]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        "202":
+          $ref: "#/components/responses/TranscodeScanAccepted"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
   # ── System ──────────────────────────────────────────────
   /system/info:
     get:
@@ -4030,6 +4178,13 @@ components:
           schema:
             $ref: "#/components/schemas/FFmpegConfigPatch"
 
+    UpdateTranscodingConfig:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/TranscodingConfigPatch"
+
     UpdateDownloadConfig:
       required: true
       content:
@@ -4483,6 +4638,22 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/FFmpegConfigView"
+
+    TranscodingConfig:
+      description: Current runtime-editable transcoding configuration.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/TranscodingConfigView"
+
+    TranscodeJobCanceled:
+      description: Transcode job canceled.
+
+    TranscodeJobRetried:
+      description: Transcode job re-queued.
+
+    TranscodeScanAccepted:
+      description: Library scan dispatched.
 
     DownloadConfig:
       description: Current runtime-editable download configuration.
@@ -5072,6 +5243,19 @@ components:
             resolution falls outside the profile's band scores 0, the
             same number the upgrade decision works from. Absent when no
             quality profile is configured at all.
+        transcoded_at:
+          type: string
+          format: date-time
+          description: |
+            When the transcode worker replaced this file. Absent for a file
+            it never touched.
+        size_before:
+          type: integer
+          format: int64
+          description: |
+            Size in bytes before the transcode. Present alongside
+            transcoded_at; size names the file as it is now, so the pair is
+            what states the saving.
         media_info:
           $ref: "#/components/schemas/MediaInfo"
 
@@ -5471,6 +5655,19 @@ components:
             resolution falls outside the profile's band scores 0, the same
             number the upgrade decision works from. Absent when no quality
             profile is configured at all, or when the episode has no file.
+        transcoded_at:
+          type: string
+          format: date-time
+          description: |
+            When the transcode worker replaced this episode's file. Absent
+            for a file it never touched.
+        size_before:
+          type: integer
+          format: int64
+          description: |
+            Size in bytes before the transcode. Present alongside
+            transcoded_at; size names the file as it is now, so the pair is
+            what states the saving.
         media_info:
           $ref: "#/components/schemas/MediaInfo"
 
@@ -5870,6 +6067,8 @@ components:
             Stop upgrading once the current file's score reaches this
             value. 0 (or unset) upgrades whenever a higher-scoring release
             is found, subject to upgrade_allowed.
+        transcode:
+          $ref: "#/components/schemas/TranscodePolicy"
 
     QualityProfileCreate:
       type: object
@@ -5913,6 +6112,8 @@ components:
             Stop upgrading once the current file's score reaches this
             value. 0 (or unset) upgrades whenever a higher-scoring release
             is found, subject to upgrade_allowed.
+        transcode:
+          $ref: "#/components/schemas/TranscodePolicy"
 
     QualityProfileFormatScore:
       type: object
@@ -7088,6 +7289,13 @@ components:
           type: string
           description: |
             Absolute path the prober resolved, when found is true.
+        version:
+          type: string
+          description: |
+            Version token off `ffmpeg -version`, present when the ffmpeg
+            binary resolves and answers. Absent when it does not — the
+            transcode worker needs ffmpeg itself, which found (ffprobe)
+            does not prove.
         restart_required:
           type: boolean
           description: |
@@ -7104,6 +7312,197 @@ components:
           type: boolean
         path:
           type: string
+
+    TranscodingConfigView:
+      type: object
+      required: [enabled, max_concurrent, max_failures]
+      properties:
+        enabled:
+          type: boolean
+          description: |
+            Master switch. While false the worker claims nothing and the
+            /transcoding/* endpoints answer 409.
+        max_concurrent:
+          type: integer
+          minimum: 1
+          maximum: 8
+          description: How many encodes may run at once.
+        max_failures:
+          type: integer
+          minimum: 1
+          maximum: 10
+          description: |
+            Attempts a job gets before it stops being retried
+            automatically. A retry through the API resets the counter.
+
+    TranscodingConfigPatch:
+      type: object
+      description: Only provided fields are applied.
+      properties:
+        enabled:
+          type: boolean
+        max_concurrent:
+          type: integer
+          minimum: 1
+          maximum: 8
+        max_failures:
+          type: integer
+          minimum: 1
+          maximum: 10
+
+    TranscodeJobStatus:
+      type: string
+      enum: [queued, running, succeeded, failed, canceled]
+
+    TranscodeJob:
+      type: object
+      required: [id, status, attempts, file_path, media_title, created_at]
+      properties:
+        id:
+          type: integer
+          x-go-type: uint32
+        status:
+          $ref: "#/components/schemas/TranscodeJobStatus"
+        attempts:
+          type: integer
+          x-go-type: uint8
+        error:
+          type: string
+          description: Why the last attempt failed. Absent while none has.
+        file_path:
+          type: string
+          description: On-disk path of the media file this job re-encodes.
+        media_title:
+          type: string
+          description: |
+            "Movie (2019)" or "Show S01E02", built from the file's owner
+            chain — what the queue row is labelled with.
+        movie_id:
+          type: integer
+          x-go-type: uint32
+          description: Set when the file belongs to a movie.
+        series_id:
+          type: integer
+          x-go-type: uint32
+          description: Set when the file belongs to an episode.
+        episode_id:
+          type: integer
+          x-go-type: uint32
+          description: Set when the file belongs to an episode.
+        size_before:
+          type: integer
+          format: int64
+          description: Source size in bytes, recorded when the encode starts.
+        size_after:
+          type: integer
+          format: int64
+          description: Output size in bytes, recorded when the encode lands.
+        percent:
+          type: number
+          format: double
+          description: |
+            Live progress of a job running in this process. Absent for
+            every other status, and for a running row whose encode belongs
+            to a process that has since restarted.
+        eta_seconds:
+          type: integer
+          description: Live estimate, present under the same rule as percent.
+        speed:
+          type: number
+          format: double
+          description: |
+            Live encode speed as a multiple of realtime, present under the
+            same rule as percent.
+        created_at:
+          type: string
+          format: date-time
+        started_at:
+          type: string
+          format: date-time
+        finished_at:
+          type: string
+          format: date-time
+
+    TranscodePolicy:
+      type: object
+      required: [to]
+      description: |
+        Attached to a quality profile: any failing `if` rule queues a
+        transcode of the file toward `to`. Absent means the profile's files
+        are never re-encoded. There is no way to remove a policy over the
+        API — omitting the field on an update leaves the stored one alone,
+        and clearing it is a config-file edit.
+      properties:
+        if:
+          $ref: "#/components/schemas/TranscodeIf"
+        to:
+          $ref: "#/components/schemas/TranscodeTo"
+
+    TranscodeIf:
+      type: object
+      description: |
+        Compliance rules. A file failing any of them is queued. HDR/DV video
+        is exempt from the codec and bitrate rules; a container remux still
+        applies.
+      properties:
+        video_codecs:
+          type: array
+          items:
+            type: string
+            enum: [h264, hevc, av1, vp9, mpeg4, mpeg2video, vc1]
+          description: Codecs considered compliant. Empty means any codec.
+        containers:
+          type: array
+          items:
+            type: string
+            enum: [mkv, mp4, avi, mov, ts, m2ts, webm, wmv]
+          description: Containers considered compliant. Empty means any container.
+        max_video_bitrate:
+          type: string
+          description: |
+            Ceiling as an ffmpeg-style rate ("8M", "4500k"). Empty means no
+            bitrate rule.
+
+    TranscodeTo:
+      type: object
+      required: [container, video_codec, preset, audio_codec]
+      description: What a queued file is re-encoded into.
+      properties:
+        container:
+          type: string
+          enum: [mkv, mp4]
+        video_codec:
+          type: string
+          enum: [h264, hevc, av1]
+        crf:
+          type: integer
+          x-go-type: uint8
+          maximum: 51
+          description: Constant-rate factor. 0 falls back to the encoder default.
+        preset:
+          type: string
+          enum:
+            [
+              ultrafast,
+              superfast,
+              veryfast,
+              faster,
+              fast,
+              medium,
+              slow,
+              slower,
+              veryslow,
+            ]
+        audio_codec:
+          type: string
+          enum: [aac, opus, ac3, flac]
+        audio_passthrough:
+          type: array
+          items:
+            type: string
+          description: |
+            Source audio codecs copied instead of re-encoded. Empty applies
+            the built-in list, which keeps Atmos and DTS intact.
 
     OIDCProviderView:
       type: object

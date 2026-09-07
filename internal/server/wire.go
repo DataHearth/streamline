@@ -38,6 +38,7 @@ import (
 	"github.com/datahearth/streamline/internal/rss"
 	"github.com/datahearth/streamline/internal/scheduler"
 	"github.com/datahearth/streamline/internal/server/middleware"
+	"github.com/datahearth/streamline/internal/transcoding"
 	"go.opentelemetry.io/otel"
 )
 
@@ -239,6 +240,36 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		Prober:      prober,
 	})
 	go imp.Start(ctx)
+
+	transcoder := transcoding.NewWorker(transcoding.Deps{
+		DB:          store,
+		Prober:      prober,
+		MediaServer: dispatcher,
+	})
+	// The worker is always constructed — the REST surface answers off it and
+	// off the config switch, not off whether it is running — but there is
+	// nothing for it to do without the ffmpeg binary itself, which the
+	// prober's ffprobe resolving does not prove.
+	if prober.FFmpegPath() == "" {
+		slog.WarnContext(ctx, "transcoding worker idle: ffmpeg binary not found",
+			"ffmpeg.path", cfg.FFmpeg.Path,
+		)
+	} else {
+		go transcoder.Start(ctx)
+		if cfg.Transcoding.Enabled {
+			version, err := prober.Version(ctx)
+			if err != nil {
+				slog.WarnContext(ctx, "could not read the ffmpeg version",
+					"error", err,
+				)
+			} else {
+				slog.InfoContext(ctx, "transcoding worker started",
+					"ffmpeg_version", version,
+					"max_concurrent", cfg.Transcoding.MaxConcurrent,
+				)
+			}
+		}
+	}
 
 	// 4. Create auth service
 	authSvc, err := auth.New(store)
@@ -442,6 +473,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		PathMigrations:  pathMigrations,
 		Importer:        imp,
 		Prober:          prober,
+		Transcoder:      transcoder,
 		AuthMiddleware:  authMW,
 		HTTPLog:         httpLogger.Middleware(httpAccessSkip),
 	})

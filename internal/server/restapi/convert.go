@@ -360,7 +360,19 @@ func mediaFileToAPI(f *ent.MediaFile) MediaFile {
 		out.ParsedCodec = &pc
 	}
 	out.MediaInfo = mediaInfoToAPI(f)
+	out.TranscodedAt, out.SizeBefore = transcodeSavingOf(f)
 	return out
+}
+
+// transcodeSavingOf reports when the transcode worker replaced a file and
+// what it weighed before, both absent for a file it never touched.
+func transcodeSavingOf(f *ent.MediaFile) (*time.Time, *int64) {
+	if f.TranscodedAt == nil {
+		return nil, nil
+	}
+	at := *f.TranscodedAt
+	before := f.SizeBefore
+	return &at, &before
 }
 
 func mediaInfoToAPI(f *ent.MediaFile) *MediaInfo {
@@ -1002,6 +1014,7 @@ func episodeToAPI(e *ent.Episode, now time.Time, profile string) Episode {
 		out.Size = &sz
 		out.FileScore = mediaFileScore(profile, f)
 		out.MediaInfo = mediaInfoToAPI(f)
+		out.TranscodedAt, out.SizeBefore = transcodeSavingOf(f)
 		if f.ReleaseGroup != "" {
 			rg := f.ReleaseGroup
 			out.ReleaseGroup = &rg

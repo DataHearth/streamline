@@ -2,6 +2,7 @@ package restapi
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -9,6 +10,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/mock"
 
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/restart"
@@ -219,6 +221,16 @@ var _ = Describe("Handler: Config API", Label("unit", "server", "config"), func(
 	})
 
 	Describe("Config ffmpeg", func() {
+		// Every view asks the prober for a version; none of these specs is
+		// about that field, so the answer is "no ffmpeg" and the call is
+		// optional rather than expected once per view.
+		BeforeEach(func() {
+			app.prober.EXPECT().
+				Version(mock.Anything).
+				Return("", errors.New("ffmpeg not found")).
+				Maybe()
+		})
+
 		It("round-trips an enabled patch and reports the live probe result", func() {
 			app.prober.EXPECT().Available().Return(false).Once()
 

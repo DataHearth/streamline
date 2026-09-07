@@ -39,6 +39,98 @@ func qualityProfileToAPI(e config.QualityProfileEntry) QualityProfile {
 		v := e.UpgradeUntilScore
 		out.UpgradeUntilScore = &v
 	}
+	out.Transcode = transcodePolicyToAPI(e.Transcode)
+	return out
+}
+
+// transcodePolicyToAPI maps a profile's transcode block into the generated
+// view. Nil in, nil out: a profile the worker never touches carries no field.
+func transcodePolicyToAPI(p *config.TranscodePolicy) *TranscodePolicy {
+	if p == nil {
+		return nil
+	}
+	out := &TranscodePolicy{
+		To: TranscodeTo{
+			Container:  TranscodeToContainer(p.To.Container),
+			VideoCodec: TranscodeToVideoCodec(p.To.VideoCodec),
+			Preset:     TranscodeToPreset(p.To.Preset),
+			AudioCodec: TranscodeToAudioCodec(p.To.AudioCodec),
+		},
+	}
+	if p.To.CRF != 0 {
+		crf := p.To.CRF
+		out.To.Crf = &crf
+	}
+	if len(p.To.AudioPassthrough) > 0 {
+		ap := p.To.AudioPassthrough
+		out.To.AudioPassthrough = &ap
+	}
+	if len(p.If.VideoCodecs) > 0 ||
+		len(p.If.Containers) > 0 ||
+		p.If.MaxVideoBitrate != "" {
+		cond := &TranscodeIf{}
+		if len(p.If.VideoCodecs) > 0 {
+			codecs := make([]TranscodeIfVideoCodecs, len(p.If.VideoCodecs))
+			for i, c := range p.If.VideoCodecs {
+				codecs[i] = TranscodeIfVideoCodecs(c)
+			}
+			cond.VideoCodecs = &codecs
+		}
+		if len(p.If.Containers) > 0 {
+			containers := make([]TranscodeIfContainers, len(p.If.Containers))
+			for i, c := range p.If.Containers {
+				containers[i] = TranscodeIfContainers(c)
+			}
+			cond.Containers = &containers
+		}
+		if p.If.MaxVideoBitrate != "" {
+			b := p.If.MaxVideoBitrate
+			cond.MaxVideoBitrate = &b
+		}
+		out.If = cond
+	}
+	return out
+}
+
+// transcodePolicyFromAPI is the inverse, used by create/update requests.
+func transcodePolicyFromAPI(p *TranscodePolicy) *config.TranscodePolicy {
+	if p == nil {
+		return nil
+	}
+	out := &config.TranscodePolicy{
+		To: config.TranscodeTo{
+			Container:  string(p.To.Container),
+			VideoCodec: string(p.To.VideoCodec),
+			Preset:     string(p.To.Preset),
+			AudioCodec: string(p.To.AudioCodec),
+		},
+	}
+	if p.To.Crf != nil {
+		out.To.CRF = *p.To.Crf
+	}
+	if p.To.AudioPassthrough != nil {
+		out.To.AudioPassthrough = *p.To.AudioPassthrough
+	}
+	if p.If == nil {
+		return out
+	}
+	if p.If.VideoCodecs != nil {
+		codecs := make([]string, len(*p.If.VideoCodecs))
+		for i, c := range *p.If.VideoCodecs {
+			codecs[i] = string(c)
+		}
+		out.If.VideoCodecs = codecs
+	}
+	if p.If.Containers != nil {
+		containers := make([]string, len(*p.If.Containers))
+		for i, c := range *p.If.Containers {
+			containers[i] = string(c)
+		}
+		out.If.Containers = containers
+	}
+	if p.If.MaxVideoBitrate != nil {
+		out.If.MaxVideoBitrate = *p.If.MaxVideoBitrate
+	}
 	return out
 }
 
@@ -116,6 +208,7 @@ func (s *Server) CreateQualityProfile(
 	if request.Body.UpgradeUntilScore != nil {
 		e.UpgradeUntilScore = *request.Body.UpgradeUntilScore
 	}
+	e.Transcode = transcodePolicyFromAPI(request.Body.Transcode)
 
 	switch err := config.AddQualityProfile(ctx, e); {
 	case errors.Is(err, config.ErrQualityProfileExists):
@@ -165,6 +258,9 @@ func (s *Server) UpdateQualityProfile(
 	if request.Body.UpgradeUntilScore != nil {
 		patch.UpgradeUntilScore = request.Body.UpgradeUntilScore
 	}
+	// Nil leaves the stored policy alone, so there is deliberately no way to
+	// remove one over the API — clearing it is a config-file edit.
+	patch.Transcode = transcodePolicyFromAPI(request.Body.Transcode)
 
 	switch err := config.UpdateQualityProfile(ctx, request.Name, patch); {
 	case errors.Is(err, config.ErrQualityProfileNotFound):

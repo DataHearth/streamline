@@ -27,6 +27,10 @@ type QualityProfilePatch struct {
 	Formats             *[]QualityProfileFormatScore
 	MinScore            *int
 	UpgradeUntilScore   *int
+	// Transcode replaces the whole block when set. There is no way to remove
+	// one through a patch — nil means "leave it alone", so clearing a policy
+	// is a config-file edit.
+	Transcode *TranscodePolicy
 }
 
 func AddQualityProfile(ctx context.Context, e QualityProfileEntry) error {
@@ -79,6 +83,9 @@ func UpdateQualityProfile(
 		}
 		if p.UpgradeUntilScore != nil {
 			e.UpgradeUntilScore = *p.UpgradeUntilScore
+		}
+		if p.Transcode != nil {
+			e.Transcode = p.Transcode
 		}
 		c.QualityProfiles[idx] = e
 		slog.InfoContext(ctx, "quality profile updated", "name", name)

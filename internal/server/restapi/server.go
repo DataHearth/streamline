@@ -28,6 +28,7 @@ import (
 	"github.com/datahearth/streamline/internal/rss"
 	"github.com/datahearth/streamline/internal/scheduler"
 	"github.com/datahearth/streamline/internal/server/middleware"
+	"github.com/datahearth/streamline/internal/transcoding"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -57,6 +58,9 @@ type Server struct {
 	ent             *ent.Client
 	publicURL       string
 	prober          ffmpeg.Prober
+	// transcoder is nil in any composition that wired no worker; the
+	// /transcoding/* handlers read that as the feature being off.
+	transcoder *transcoding.Worker
 }
 
 // Deps is the dependency set required by restapi handlers.
@@ -84,6 +88,7 @@ type Deps struct {
 	Ent             *ent.Client
 	PublicURL       string
 	Prober          ffmpeg.Prober
+	Transcoder      *transcoding.Worker
 }
 
 // New constructs a Server from the given Deps.
@@ -112,6 +117,7 @@ func New(d Deps) *Server {
 		ent:             d.Ent,
 		publicURL:       d.PublicURL,
 		prober:          d.Prober,
+		transcoder:      d.Transcoder,
 	}
 }
 

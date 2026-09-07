@@ -29,6 +29,7 @@ import (
 	"github.com/datahearth/streamline/internal/server/middleware"
 	"github.com/datahearth/streamline/internal/server/restapi"
 	"github.com/datahearth/streamline/internal/server/web"
+	"github.com/datahearth/streamline/internal/transcoding"
 	"github.com/datahearth/streamline/internal/utils/httputil"
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
@@ -73,6 +74,7 @@ type Config struct {
 	PathMigrations  *pathmigrate.Service
 	Importer        importer.Enqueuer
 	Prober          ffmpeg.Prober
+	Transcoder      *transcoding.Worker
 	AuthMiddleware  func(http.Handler) http.Handler
 	HTTPLog         func(http.Handler) http.Handler
 }
@@ -110,6 +112,7 @@ func New(cfg Config) *Server {
 		Ent:             cfg.Ent,
 		PublicURL:       config.PublicURL(),
 		Prober:          cfg.Prober,
+		Transcoder:      cfg.Transcoder,
 	})
 
 	s := &Server{

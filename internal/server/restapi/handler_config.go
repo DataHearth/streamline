@@ -184,7 +184,9 @@ func (s *Server) GetConfigFfmpeg(
 		}, nil
 	}
 	return GetConfigFfmpeg200JSONResponse{
-		FFmpegConfigJSONResponse: ffmpegConfigView(config.Get().FFmpeg, s.prober),
+		FFmpegConfigJSONResponse: ffmpegConfigView(
+			ctx, config.Get().FFmpeg, s.prober,
+		),
 	}, nil
 }
 
@@ -230,7 +232,74 @@ func (s *Server) UpdateConfigFfmpeg(
 		"path", updated.Path,
 	)
 	return UpdateConfigFfmpeg200JSONResponse{
-		FFmpegConfigJSONResponse: ffmpegConfigView(updated, s.prober),
+		FFmpegConfigJSONResponse: ffmpegConfigView(ctx, updated, s.prober),
+	}, nil
+}
+
+// GetConfigTranscoding returns the transcoding configuration. Admin only.
+func (s *Server) GetConfigTranscoding(
+	ctx context.Context,
+	_ GetConfigTranscodingRequestObject,
+) (GetConfigTranscodingResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return GetConfigTranscoding403JSONResponse{
+			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
+	return GetConfigTranscoding200JSONResponse{
+		TranscodingConfigJSONResponse: transcodingConfigView(
+			config.Get().Transcoding,
+		),
+	}, nil
+}
+
+// UpdateConfigTranscoding applies a partial update to the transcoding config.
+// Admin only. The worker reads all three keys per tick, so nothing here marks
+// the restart flag.
+func (s *Server) UpdateConfigTranscoding(
+	ctx context.Context,
+	req UpdateConfigTranscodingRequestObject,
+) (UpdateConfigTranscodingResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return UpdateConfigTranscoding403JSONResponse{
+			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
+
+	concurrent, errConcurrent := narrowUint8(
+		"max_concurrent", req.Body.MaxConcurrent, 8,
+	)
+	failures, errFailures := narrowUint8(
+		"max_failures", req.Body.MaxFailures, 10,
+	)
+	if err := errors.Join(errConcurrent, errFailures); err != nil {
+		return UpdateConfigTranscoding422JSONResponse{
+			UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
+		}, nil
+	}
+
+	updated, err := config.UpdateTranscoding(ctx, config.TranscodingPatch{
+		Enabled:       req.Body.Enabled,
+		MaxConcurrent: concurrent,
+		MaxFailures:   failures,
+	})
+	if configLocked(err) {
+		return UpdateConfigTranscoding403JSONResponse{
+			ForbiddenJSONResponse: forbiddenResp(err.Error()),
+		}, nil
+	}
+	if err != nil {
+		return UpdateConfigTranscoding422JSONResponse{
+			UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
+		}, nil
+	}
+	slog.InfoContext(ctx, "transcoding config updated",
+		"enabled", updated.Enabled,
+		"max_concurrent", updated.MaxConcurrent,
+		"max_failures", updated.MaxFailures,
+	)
+	return UpdateConfigTranscoding200JSONResponse{
+		TranscodingConfigJSONResponse: transcodingConfigView(updated),
 	}, nil
 }
 
@@ -795,6 +864,7 @@ func (s *Server) UpdateConfigMetadata(
 // restart_required mirrors the same process-wide flag ListOIDCProviders
 // reports, so a path fix surfaces here instead of only on the OIDC page.
 func ffmpegConfigView(
+	ctx context.Context,
 	f config.FFmpegConfig,
 	prober ffmpeg.Prober,
 ) FFmpegConfigJSONResponse {
@@ -809,7 +879,26 @@ func ffmpegConfigView(
 		resolved := prober.ResolvedPath()
 		out.ResolvedPath = &resolved
 	}
+	// found describes ffprobe; the transcode worker needs ffmpeg, which can be
+	// missing on its own. Asking is the only way to tell, and a failure is an
+	// absent field rather than a failed response.
+	if version, err := prober.Version(ctx); err != nil {
+		slog.DebugContext(ctx, "ffmpeg version unavailable", "error", err)
+	} else {
+		out.Version = &version
+	}
 	return out
+}
+
+// transcodingConfigView maps config.TranscodingConfig into the generated view.
+func transcodingConfigView(
+	t config.TranscodingConfig,
+) TranscodingConfigJSONResponse {
+	return TranscodingConfigJSONResponse{
+		Enabled:       t.Enabled,
+		MaxConcurrent: int(t.MaxConcurrent),
+		MaxFailures:   int(t.MaxFailures),
+	}
 }
 
 // oidcProviderView maps config.OIDCConfig into the generated OIDCProviderView.

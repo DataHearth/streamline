@@ -1716,6 +1716,204 @@ func (e TorrentInfoStatus) Valid() bool {
 	}
 }
 
+// Defines values for TranscodeIfContainers.
+const (
+	TranscodeIfContainersAvi  TranscodeIfContainers = "avi"
+	TranscodeIfContainersM2ts TranscodeIfContainers = "m2ts"
+	TranscodeIfContainersMkv  TranscodeIfContainers = "mkv"
+	TranscodeIfContainersMov  TranscodeIfContainers = "mov"
+	TranscodeIfContainersMp4  TranscodeIfContainers = "mp4"
+	TranscodeIfContainersTs   TranscodeIfContainers = "ts"
+	TranscodeIfContainersWebm TranscodeIfContainers = "webm"
+	TranscodeIfContainersWmv  TranscodeIfContainers = "wmv"
+)
+
+// Valid indicates whether the value is a known member of the TranscodeIfContainers enum.
+func (e TranscodeIfContainers) Valid() bool {
+	switch e {
+	case TranscodeIfContainersAvi:
+		return true
+	case TranscodeIfContainersM2ts:
+		return true
+	case TranscodeIfContainersMkv:
+		return true
+	case TranscodeIfContainersMov:
+		return true
+	case TranscodeIfContainersMp4:
+		return true
+	case TranscodeIfContainersTs:
+		return true
+	case TranscodeIfContainersWebm:
+		return true
+	case TranscodeIfContainersWmv:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TranscodeIfVideoCodecs.
+const (
+	TranscodeIfVideoCodecsAv1        TranscodeIfVideoCodecs = "av1"
+	TranscodeIfVideoCodecsH264       TranscodeIfVideoCodecs = "h264"
+	TranscodeIfVideoCodecsHevc       TranscodeIfVideoCodecs = "hevc"
+	TranscodeIfVideoCodecsMpeg2video TranscodeIfVideoCodecs = "mpeg2video"
+	TranscodeIfVideoCodecsMpeg4      TranscodeIfVideoCodecs = "mpeg4"
+	TranscodeIfVideoCodecsVc1        TranscodeIfVideoCodecs = "vc1"
+	TranscodeIfVideoCodecsVp9        TranscodeIfVideoCodecs = "vp9"
+)
+
+// Valid indicates whether the value is a known member of the TranscodeIfVideoCodecs enum.
+func (e TranscodeIfVideoCodecs) Valid() bool {
+	switch e {
+	case TranscodeIfVideoCodecsAv1:
+		return true
+	case TranscodeIfVideoCodecsH264:
+		return true
+	case TranscodeIfVideoCodecsHevc:
+		return true
+	case TranscodeIfVideoCodecsMpeg2video:
+		return true
+	case TranscodeIfVideoCodecsMpeg4:
+		return true
+	case TranscodeIfVideoCodecsVc1:
+		return true
+	case TranscodeIfVideoCodecsVp9:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TranscodeJobStatus.
+const (
+	TranscodeJobStatusCanceled  TranscodeJobStatus = "canceled"
+	TranscodeJobStatusFailed    TranscodeJobStatus = "failed"
+	TranscodeJobStatusQueued    TranscodeJobStatus = "queued"
+	TranscodeJobStatusRunning   TranscodeJobStatus = "running"
+	TranscodeJobStatusSucceeded TranscodeJobStatus = "succeeded"
+)
+
+// Valid indicates whether the value is a known member of the TranscodeJobStatus enum.
+func (e TranscodeJobStatus) Valid() bool {
+	switch e {
+	case TranscodeJobStatusCanceled:
+		return true
+	case TranscodeJobStatusFailed:
+		return true
+	case TranscodeJobStatusQueued:
+		return true
+	case TranscodeJobStatusRunning:
+		return true
+	case TranscodeJobStatusSucceeded:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TranscodeToAudioCodec.
+const (
+	TranscodeToAudioCodecAac  TranscodeToAudioCodec = "aac"
+	TranscodeToAudioCodecAc3  TranscodeToAudioCodec = "ac3"
+	TranscodeToAudioCodecFlac TranscodeToAudioCodec = "flac"
+	TranscodeToAudioCodecOpus TranscodeToAudioCodec = "opus"
+)
+
+// Valid indicates whether the value is a known member of the TranscodeToAudioCodec enum.
+func (e TranscodeToAudioCodec) Valid() bool {
+	switch e {
+	case TranscodeToAudioCodecAac:
+		return true
+	case TranscodeToAudioCodecAc3:
+		return true
+	case TranscodeToAudioCodecFlac:
+		return true
+	case TranscodeToAudioCodecOpus:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TranscodeToContainer.
+const (
+	TranscodeToContainerMkv TranscodeToContainer = "mkv"
+	TranscodeToContainerMp4 TranscodeToContainer = "mp4"
+)
+
+// Valid indicates whether the value is a known member of the TranscodeToContainer enum.
+func (e TranscodeToContainer) Valid() bool {
+	switch e {
+	case TranscodeToContainerMkv:
+		return true
+	case TranscodeToContainerMp4:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TranscodeToPreset.
+const (
+	TranscodeToPresetFast      TranscodeToPreset = "fast"
+	TranscodeToPresetFaster    TranscodeToPreset = "faster"
+	TranscodeToPresetMedium    TranscodeToPreset = "medium"
+	TranscodeToPresetSlow      TranscodeToPreset = "slow"
+	TranscodeToPresetSlower    TranscodeToPreset = "slower"
+	TranscodeToPresetSuperfast TranscodeToPreset = "superfast"
+	TranscodeToPresetUltrafast TranscodeToPreset = "ultrafast"
+	TranscodeToPresetVeryfast  TranscodeToPreset = "veryfast"
+	TranscodeToPresetVeryslow  TranscodeToPreset = "veryslow"
+)
+
+// Valid indicates whether the value is a known member of the TranscodeToPreset enum.
+func (e TranscodeToPreset) Valid() bool {
+	switch e {
+	case TranscodeToPresetFast:
+		return true
+	case TranscodeToPresetFaster:
+		return true
+	case TranscodeToPresetMedium:
+		return true
+	case TranscodeToPresetSlow:
+		return true
+	case TranscodeToPresetSlower:
+		return true
+	case TranscodeToPresetSuperfast:
+		return true
+	case TranscodeToPresetUltrafast:
+		return true
+	case TranscodeToPresetVeryfast:
+		return true
+	case TranscodeToPresetVeryslow:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TranscodeToVideoCodec.
+const (
+	TranscodeToVideoCodecAv1  TranscodeToVideoCodec = "av1"
+	TranscodeToVideoCodecH264 TranscodeToVideoCodec = "h264"
+	TranscodeToVideoCodecHevc TranscodeToVideoCodec = "hevc"
+)
+
+// Valid indicates whether the value is a known member of the TranscodeToVideoCodec enum.
+func (e TranscodeToVideoCodec) Valid() bool {
+	switch e {
+	case TranscodeToVideoCodecAv1:
+		return true
+	case TranscodeToVideoCodecH264:
+		return true
+	case TranscodeToVideoCodecHevc:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UpdateMovieRequestStatus.
 const (
 	UpdateMovieRequestStatusAvailable   UpdateMovieRequestStatus = "available"
@@ -2731,9 +2929,18 @@ type Episode struct {
 	ReleaseGroup *string `json:"release_group,omitempty"`
 	Size         *int64  `json:"size,omitempty"`
 
+	// SizeBefore Size in bytes before the transcode. Present alongside
+	// transcoded_at; size names the file as it is now, so the pair is
+	// what states the saving.
+	SizeBefore *int64 `json:"size_before,omitempty"`
+
 	// Status Presentation status of an episode. "unaired" is derived rather than stored: an episode with no file whose air date is still ahead or is not yet known (a provider announces a future season as dateless "TBA" placeholders).
 	Status EpisodeStatus `json:"status"`
 	Title  *string       `json:"title,omitempty"`
+
+	// TranscodedAt When the transcode worker replaced this episode's file. Absent
+	// for a file it never touched.
+	TranscodedAt *time.Time `json:"transcoded_at,omitempty"`
 }
 
 // EpisodeRef Show + S/E context for a TV download record (queue/history rows render
@@ -2789,6 +2996,12 @@ type FFmpegConfigView struct {
 	// process-wide flag OIDC provider mutations set — see
 	// OIDCProviderListView.restart_required.
 	RestartRequired bool `json:"restart_required"`
+
+	// Version Version token off `ffmpeg -version`, present when the ffmpeg
+	// binary resolves and answers. Absent when it does not — the
+	// transcode worker needs ffmpeg itself, which found (ffprobe)
+	// does not prove.
+	Version *string `json:"version,omitempty"`
 }
 
 // HTTPLogConfig defines model for HTTPLogConfig.
@@ -3266,6 +3479,15 @@ type MediaFile struct {
 	Quality      *string `json:"quality,omitempty"`
 	ReleaseGroup *string `json:"release_group,omitempty"`
 	Size         int64   `json:"size"`
+
+	// SizeBefore Size in bytes before the transcode. Present alongside
+	// transcoded_at; size names the file as it is now, so the pair is
+	// what states the saving.
+	SizeBefore *int64 `json:"size_before,omitempty"`
+
+	// TranscodedAt When the transcode worker replaced this file. Absent for a file
+	// it never touched.
+	TranscodedAt *time.Time `json:"transcoded_at,omitempty"`
 }
 
 // MediaInfo Technical details probed from the file with ffprobe. Absent when the
@@ -3812,7 +4034,14 @@ type QualityProfile struct {
 	MinScore            *int                              `json:"min_score,omitempty"`
 	Name                string                            `json:"name"`
 	PreferredResolution QualityProfilePreferredResolution `json:"preferred_resolution"`
-	UpgradeAllowed      bool                              `json:"upgrade_allowed"`
+
+	// Transcode Attached to a quality profile: any failing `if` rule queues a
+	// transcode of the file toward `to`. Absent means the profile's files
+	// are never re-encoded. There is no way to remove a policy over the
+	// API — omitting the field on an update leaves the stored one alone,
+	// and clearing it is a config-file edit.
+	Transcode      *TranscodePolicy `json:"transcode,omitempty"`
+	UpgradeAllowed bool             `json:"upgrade_allowed"`
 
 	// UpgradeUntilScore Stop upgrading once the current file's score reaches this
 	// value. 0 (or unset) upgrades whenever a higher-scoring release
@@ -3845,7 +4074,14 @@ type QualityProfileCreate struct {
 	MinScore            *int                                    `json:"min_score,omitempty"`
 	Name                string                                  `json:"name"`
 	PreferredResolution QualityProfileCreatePreferredResolution `json:"preferred_resolution"`
-	UpgradeAllowed      *bool                                   `json:"upgrade_allowed,omitempty"`
+
+	// Transcode Attached to a quality profile: any failing `if` rule queues a
+	// transcode of the file toward `to`. Absent means the profile's files
+	// are never re-encoded. There is no way to remove a policy over the
+	// API — omitting the field on an update leaves the stored one alone,
+	// and clearing it is a config-file edit.
+	Transcode      *TranscodePolicy `json:"transcode,omitempty"`
+	UpgradeAllowed *bool            `json:"upgrade_allowed,omitempty"`
 
 	// UpgradeUntilScore Stop upgrading once the current file's score reaches this
 	// value. 0 (or unset) upgrades whenever a higher-scoring release
@@ -4550,6 +4786,140 @@ type TorrentPeer struct {
 	UploadRate   *float64 `json:"upload_rate,omitempty"`
 }
 
+// TranscodeIf Compliance rules. A file failing any of them is queued. HDR/DV video
+// is exempt from the codec and bitrate rules; a container remux still
+// applies.
+type TranscodeIf struct {
+	// Containers Containers considered compliant. Empty means any container.
+	Containers *[]TranscodeIfContainers `json:"containers,omitempty"`
+
+	// MaxVideoBitrate Ceiling as an ffmpeg-style rate ("8M", "4500k"). Empty means no
+	// bitrate rule.
+	MaxVideoBitrate *string `json:"max_video_bitrate,omitempty"`
+
+	// VideoCodecs Codecs considered compliant. Empty means any codec.
+	VideoCodecs *[]TranscodeIfVideoCodecs `json:"video_codecs,omitempty"`
+}
+
+// TranscodeIfContainers defines model for TranscodeIf.Containers.
+type TranscodeIfContainers string
+
+// TranscodeIfVideoCodecs defines model for TranscodeIf.VideoCodecs.
+type TranscodeIfVideoCodecs string
+
+// TranscodeJob defines model for TranscodeJob.
+type TranscodeJob struct {
+	Attempts  uint8     `json:"attempts"`
+	CreatedAt time.Time `json:"created_at"`
+
+	// EpisodeId Set when the file belongs to an episode.
+	EpisodeId *uint32 `json:"episode_id,omitempty"`
+
+	// Error Why the last attempt failed. Absent while none has.
+	Error *string `json:"error,omitempty"`
+
+	// EtaSeconds Live estimate, present under the same rule as percent.
+	EtaSeconds *int `json:"eta_seconds,omitempty"`
+
+	// FilePath On-disk path of the media file this job re-encodes.
+	FilePath   string     `json:"file_path"`
+	FinishedAt *time.Time `json:"finished_at,omitempty"`
+	Id         uint32     `json:"id"`
+
+	// MediaTitle "Movie (2019)" or "Show S01E02", built from the file's owner
+	// chain — what the queue row is labelled with.
+	MediaTitle string `json:"media_title"`
+
+	// MovieId Set when the file belongs to a movie.
+	MovieId *uint32 `json:"movie_id,omitempty"`
+
+	// Percent Live progress of a job running in this process. Absent for
+	// every other status, and for a running row whose encode belongs
+	// to a process that has since restarted.
+	Percent *float64 `json:"percent,omitempty"`
+
+	// SeriesId Set when the file belongs to an episode.
+	SeriesId *uint32 `json:"series_id,omitempty"`
+
+	// SizeAfter Output size in bytes, recorded when the encode lands.
+	SizeAfter *int64 `json:"size_after,omitempty"`
+
+	// SizeBefore Source size in bytes, recorded when the encode starts.
+	SizeBefore *int64 `json:"size_before,omitempty"`
+
+	// Speed Live encode speed as a multiple of realtime, present under the
+	// same rule as percent.
+	Speed     *float64           `json:"speed,omitempty"`
+	StartedAt *time.Time         `json:"started_at,omitempty"`
+	Status    TranscodeJobStatus `json:"status"`
+}
+
+// TranscodeJobStatus defines model for TranscodeJobStatus.
+type TranscodeJobStatus string
+
+// TranscodePolicy Attached to a quality profile: any failing `if` rule queues a
+// transcode of the file toward `to`. Absent means the profile's files
+// are never re-encoded. There is no way to remove a policy over the
+// API — omitting the field on an update leaves the stored one alone,
+// and clearing it is a config-file edit.
+type TranscodePolicy struct {
+	// If Compliance rules. A file failing any of them is queued. HDR/DV video
+	// is exempt from the codec and bitrate rules; a container remux still
+	// applies.
+	If *TranscodeIf `json:"if,omitempty"`
+
+	// To What a queued file is re-encoded into.
+	To TranscodeTo `json:"to"`
+}
+
+// TranscodeTo What a queued file is re-encoded into.
+type TranscodeTo struct {
+	AudioCodec TranscodeToAudioCodec `json:"audio_codec"`
+
+	// AudioPassthrough Source audio codecs copied instead of re-encoded. Empty applies
+	// the built-in list, which keeps Atmos and DTS intact.
+	AudioPassthrough *[]string            `json:"audio_passthrough,omitempty"`
+	Container        TranscodeToContainer `json:"container"`
+
+	// Crf Constant-rate factor. 0 falls back to the encoder default.
+	Crf        *uint8                `json:"crf,omitempty"`
+	Preset     TranscodeToPreset     `json:"preset"`
+	VideoCodec TranscodeToVideoCodec `json:"video_codec"`
+}
+
+// TranscodeToAudioCodec defines model for TranscodeTo.AudioCodec.
+type TranscodeToAudioCodec string
+
+// TranscodeToContainer defines model for TranscodeTo.Container.
+type TranscodeToContainer string
+
+// TranscodeToPreset defines model for TranscodeTo.Preset.
+type TranscodeToPreset string
+
+// TranscodeToVideoCodec defines model for TranscodeTo.VideoCodec.
+type TranscodeToVideoCodec string
+
+// TranscodingConfigPatch Only provided fields are applied.
+type TranscodingConfigPatch struct {
+	Enabled       *bool `json:"enabled,omitempty"`
+	MaxConcurrent *int  `json:"max_concurrent,omitempty"`
+	MaxFailures   *int  `json:"max_failures,omitempty"`
+}
+
+// TranscodingConfigView defines model for TranscodingConfigView.
+type TranscodingConfigView struct {
+	// Enabled Master switch. While false the worker claims nothing and the
+	// /transcoding/* endpoints answer 409.
+	Enabled bool `json:"enabled"`
+
+	// MaxConcurrent How many encodes may run at once.
+	MaxConcurrent int `json:"max_concurrent"`
+
+	// MaxFailures Attempts a job gets before it stops being retried
+	// automatically. A retry through the API resets the counter.
+	MaxFailures int `json:"max_failures"`
+}
+
 // UpcomingEpisode defines model for UpcomingEpisode.
 type UpcomingEpisode struct {
 	AirDate     time.Time `json:"air_date"`
@@ -4920,6 +5290,9 @@ type SpecialsMonitored = SpecialsMonitoredResult
 // SystemConfig defines model for SystemConfig.
 type SystemConfig = SystemConfigView
 
+// TranscodingConfig defines model for TranscodingConfig.
+type TranscodingConfig = TranscodingConfigView
+
 // Unauthorized defines model for Unauthorized.
 type Unauthorized = Error
 
@@ -5061,6 +5434,9 @@ type UpdateOIDCProvider = OIDCProviderPatch
 
 // UpdateSystemConfig Only provided fields are applied, nested objects included.
 type UpdateSystemConfig = SystemConfigPatch
+
+// UpdateTranscodingConfig Only provided fields are applied.
+type UpdateTranscodingConfig = TranscodingConfigPatch
 
 // ListActivityParams defines parameters for ListActivity.
 type ListActivityParams struct {
@@ -5324,6 +5700,9 @@ type UpdateOIDCProviderJSONRequestBody = OIDCProviderPatch
 
 // UpdateConfigSystemJSONRequestBody defines body for UpdateConfigSystem for application/json ContentType.
 type UpdateConfigSystemJSONRequestBody = SystemConfigPatch
+
+// UpdateConfigTranscodingJSONRequestBody defines body for UpdateConfigTranscoding for application/json ContentType.
+type UpdateConfigTranscodingJSONRequestBody = TranscodingConfigPatch
 
 // CreateCustomFormatJSONRequestBody defines body for CreateCustomFormat for application/json ContentType.
 type CreateCustomFormatJSONRequestBody = CustomFormatCreate
@@ -5597,6 +5976,12 @@ type ServerInterface interface {
 	// UpdateConfigSystem Patch logging, telemetry and retention configuration (admin)
 	// (PATCH /config/system)
 	UpdateConfigSystem(w http.ResponseWriter, r *http.Request)
+	// GetConfigTranscoding Get transcoding configuration (admin)
+	// (GET /config/transcoding)
+	GetConfigTranscoding(w http.ResponseWriter, r *http.Request)
+	// UpdateConfigTranscoding Patch transcoding configuration (admin)
+	// (PATCH /config/transcoding)
+	UpdateConfigTranscoding(w http.ResponseWriter, r *http.Request)
 	// ListCustomFormats List custom formats
 	// (GET /custom-formats)
 	ListCustomFormats(w http.ResponseWriter, r *http.Request)
@@ -5927,6 +6312,18 @@ type ServerInterface interface {
 	// ResumeTorrent Resume a torrent
 	// (POST /torrents/{hash}/resume)
 	ResumeTorrent(w http.ResponseWriter, r *http.Request, hash TorrentHash)
+	// CancelTranscodeJob Cancel a queued or running transcode job (admin)
+	// (POST /transcoding/jobs/{id}/cancel)
+	CancelTranscodeJob(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// RetryTranscodeJob Re-queue a failed transcode job (admin)
+	// (POST /transcoding/jobs/{id}/retry)
+	RetryTranscodeJob(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// ListTranscodeQueue List transcode jobs (admin)
+	// (GET /transcoding/queue)
+	ListTranscodeQueue(w http.ResponseWriter, r *http.Request)
+	// StartTranscodeScan Queue transcodes for the existing library (admin)
+	// (POST /transcoding/scan)
+	StartTranscodeScan(w http.ResponseWriter, r *http.Request)
 	// ListUsers List users (admin)
 	// (GET /users)
 	ListUsers(w http.ResponseWriter, r *http.Request, params ListUsersParams)
@@ -6221,6 +6618,18 @@ func (_ Unimplemented) GetConfigSystem(w http.ResponseWriter, r *http.Request) {
 // UpdateConfigSystem Patch logging, telemetry and retention configuration (admin)
 // (PATCH /config/system)
 func (_ Unimplemented) UpdateConfigSystem(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetConfigTranscoding Get transcoding configuration (admin)
+// (GET /config/transcoding)
+func (_ Unimplemented) GetConfigTranscoding(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// UpdateConfigTranscoding Patch transcoding configuration (admin)
+// (PATCH /config/transcoding)
+func (_ Unimplemented) UpdateConfigTranscoding(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -6871,6 +7280,30 @@ func (_ Unimplemented) PauseTorrent(w http.ResponseWriter, r *http.Request, hash
 // ResumeTorrent Resume a torrent
 // (POST /torrents/{hash}/resume)
 func (_ Unimplemented) ResumeTorrent(w http.ResponseWriter, r *http.Request, hash TorrentHash) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// CancelTranscodeJob Cancel a queued or running transcode job (admin)
+// (POST /transcoding/jobs/{id}/cancel)
+func (_ Unimplemented) CancelTranscodeJob(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// RetryTranscodeJob Re-queue a failed transcode job (admin)
+// (POST /transcoding/jobs/{id}/retry)
+func (_ Unimplemented) RetryTranscodeJob(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ListTranscodeQueue List transcode jobs (admin)
+// (GET /transcoding/queue)
+func (_ Unimplemented) ListTranscodeQueue(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// StartTranscodeScan Queue transcodes for the existing library (admin)
+// (POST /transcoding/scan)
+func (_ Unimplemented) StartTranscodeScan(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -7885,6 +8318,34 @@ func (siw *ServerInterfaceWrapper) UpdateConfigSystem(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateConfigSystem(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetConfigTranscoding operation middleware
+func (siw *ServerInterfaceWrapper) GetConfigTranscoding(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetConfigTranscoding(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateConfigTranscoding operation middleware
+func (siw *ServerInterfaceWrapper) UpdateConfigTranscoding(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateConfigTranscoding(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -10935,6 +11396,86 @@ func (siw *ServerInterfaceWrapper) ResumeTorrent(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// CancelTranscodeJob operation middleware
+func (siw *ServerInterfaceWrapper) CancelTranscodeJob(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CancelTranscodeJob(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RetryTranscodeJob operation middleware
+func (siw *ServerInterfaceWrapper) RetryTranscodeJob(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RetryTranscodeJob(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListTranscodeQueue operation middleware
+func (siw *ServerInterfaceWrapper) ListTranscodeQueue(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListTranscodeQueue(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// StartTranscodeScan operation middleware
+func (siw *ServerInterfaceWrapper) StartTranscodeScan(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.StartTranscodeScan(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListUsers operation middleware
 func (siw *ServerInterfaceWrapper) ListUsers(w http.ResponseWriter, r *http.Request) {
 
@@ -11655,6 +12196,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Patch(options.BaseURL+"/config/ffmpeg", wrapper.UpdateConfigFfmpeg)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/config/transcoding", wrapper.GetConfigTranscoding)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/config/transcoding", wrapper.UpdateConfigTranscoding)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/config/download", wrapper.GetConfigDownload)
 	})
 	r.Group(func(r chi.Router) {
@@ -11824,6 +12371,18 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/calendar/upcoming", wrapper.ListUpcomingReleases)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/transcoding/queue", wrapper.ListTranscodeQueue)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/transcoding/jobs/{id}/cancel", wrapper.CancelTranscodeJob)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/transcoding/jobs/{id}/retry", wrapper.RetryTranscodeJob)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/transcoding/scan", wrapper.StartTranscodeScan)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/system/info", wrapper.GetSystemInfo)
@@ -12019,6 +12578,17 @@ type TorrentAddResultJSONResponse TorrentAddResult
 type TorrentDetailsJSONResponse TorrentDetails
 
 type TorrentListJSONResponse TorrentList
+
+type TranscodeJobCanceledResponse struct {
+}
+
+type TranscodeJobRetriedResponse struct {
+}
+
+type TranscodeScanAcceptedResponse struct {
+}
+
+type TranscodingConfigJSONResponse TranscodingConfigView
 
 type UnauthorizedJSONResponse Error
 
@@ -14431,6 +15001,107 @@ type UpdateConfigSystem422JSONResponse struct {
 }
 
 func (response UpdateConfigSystem422JSONResponse) VisitUpdateConfigSystemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetConfigTranscodingRequestObject struct {
+}
+
+type GetConfigTranscodingResponseObject interface {
+	VisitGetConfigTranscodingResponse(w http.ResponseWriter) error
+}
+
+type GetConfigTranscoding200JSONResponse struct{ TranscodingConfigJSONResponse }
+
+func (response GetConfigTranscoding200JSONResponse) VisitGetConfigTranscodingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetConfigTranscoding403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetConfigTranscoding403JSONResponse) VisitGetConfigTranscodingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateConfigTranscodingRequestObject struct {
+	Body *UpdateConfigTranscodingJSONRequestBody
+}
+
+type UpdateConfigTranscodingResponseObject interface {
+	VisitUpdateConfigTranscodingResponse(w http.ResponseWriter) error
+}
+
+type UpdateConfigTranscoding200JSONResponse struct{ TranscodingConfigJSONResponse }
+
+func (response UpdateConfigTranscoding200JSONResponse) VisitUpdateConfigTranscodingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateConfigTranscoding403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpdateConfigTranscoding403JSONResponse) VisitUpdateConfigTranscodingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateConfigTranscoding413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response UpdateConfigTranscoding413JSONResponse) VisitUpdateConfigTranscodingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateConfigTranscoding422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response UpdateConfigTranscoding422JSONResponse) VisitUpdateConfigTranscodingResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -21535,6 +22206,183 @@ func (response ResumeTorrent422JSONResponse) VisitResumeTorrentResponse(w http.R
 	return err
 }
 
+type CancelTranscodeJobRequestObject struct {
+	Id ResourceID `json:"id"`
+}
+
+type CancelTranscodeJobResponseObject interface {
+	VisitCancelTranscodeJobResponse(w http.ResponseWriter) error
+}
+
+type CancelTranscodeJob204Response = TranscodeJobCanceledResponse
+
+func (response CancelTranscodeJob204Response) VisitCancelTranscodeJobResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type CancelTranscodeJob403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response CancelTranscodeJob403JSONResponse) VisitCancelTranscodeJobResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CancelTranscodeJob409JSONResponse struct{ ConflictJSONResponse }
+
+func (response CancelTranscodeJob409JSONResponse) VisitCancelTranscodeJobResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RetryTranscodeJobRequestObject struct {
+	Id ResourceID `json:"id"`
+}
+
+type RetryTranscodeJobResponseObject interface {
+	VisitRetryTranscodeJobResponse(w http.ResponseWriter) error
+}
+
+type RetryTranscodeJob204Response = TranscodeJobRetriedResponse
+
+func (response RetryTranscodeJob204Response) VisitRetryTranscodeJobResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type RetryTranscodeJob403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response RetryTranscodeJob403JSONResponse) VisitRetryTranscodeJobResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RetryTranscodeJob409JSONResponse struct{ ConflictJSONResponse }
+
+func (response RetryTranscodeJob409JSONResponse) VisitRetryTranscodeJobResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListTranscodeQueueRequestObject struct {
+}
+
+type ListTranscodeQueueResponseObject interface {
+	VisitListTranscodeQueueResponse(w http.ResponseWriter) error
+}
+
+type ListTranscodeQueue200JSONResponse []TranscodeJob
+
+func (response ListTranscodeQueue200JSONResponse) VisitListTranscodeQueueResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListTranscodeQueue403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListTranscodeQueue403JSONResponse) VisitListTranscodeQueueResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListTranscodeQueue409JSONResponse struct{ ConflictJSONResponse }
+
+func (response ListTranscodeQueue409JSONResponse) VisitListTranscodeQueueResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type StartTranscodeScanRequestObject struct {
+}
+
+type StartTranscodeScanResponseObject interface {
+	VisitStartTranscodeScanResponse(w http.ResponseWriter) error
+}
+
+type StartTranscodeScan202Response = TranscodeScanAcceptedResponse
+
+func (response StartTranscodeScan202Response) VisitStartTranscodeScanResponse(w http.ResponseWriter) error {
+	w.WriteHeader(202)
+	return nil
+}
+
+type StartTranscodeScan403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response StartTranscodeScan403JSONResponse) VisitStartTranscodeScanResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type StartTranscodeScan409JSONResponse struct{ ConflictJSONResponse }
+
+func (response StartTranscodeScan409JSONResponse) VisitStartTranscodeScanResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListUsersRequestObject struct {
 	Params ListUsersParams
 }
@@ -22190,6 +23038,12 @@ type StrictServerInterface interface {
 	// UpdateConfigSystem Patch logging, telemetry and retention configuration (admin)
 	// (PATCH /config/system)
 	UpdateConfigSystem(ctx context.Context, request UpdateConfigSystemRequestObject) (UpdateConfigSystemResponseObject, error)
+	// GetConfigTranscoding Get transcoding configuration (admin)
+	// (GET /config/transcoding)
+	GetConfigTranscoding(ctx context.Context, request GetConfigTranscodingRequestObject) (GetConfigTranscodingResponseObject, error)
+	// UpdateConfigTranscoding Patch transcoding configuration (admin)
+	// (PATCH /config/transcoding)
+	UpdateConfigTranscoding(ctx context.Context, request UpdateConfigTranscodingRequestObject) (UpdateConfigTranscodingResponseObject, error)
 	// ListCustomFormats List custom formats
 	// (GET /custom-formats)
 	ListCustomFormats(ctx context.Context, request ListCustomFormatsRequestObject) (ListCustomFormatsResponseObject, error)
@@ -22520,6 +23374,18 @@ type StrictServerInterface interface {
 	// ResumeTorrent Resume a torrent
 	// (POST /torrents/{hash}/resume)
 	ResumeTorrent(ctx context.Context, request ResumeTorrentRequestObject) (ResumeTorrentResponseObject, error)
+	// CancelTranscodeJob Cancel a queued or running transcode job (admin)
+	// (POST /transcoding/jobs/{id}/cancel)
+	CancelTranscodeJob(ctx context.Context, request CancelTranscodeJobRequestObject) (CancelTranscodeJobResponseObject, error)
+	// RetryTranscodeJob Re-queue a failed transcode job (admin)
+	// (POST /transcoding/jobs/{id}/retry)
+	RetryTranscodeJob(ctx context.Context, request RetryTranscodeJobRequestObject) (RetryTranscodeJobResponseObject, error)
+	// ListTranscodeQueue List transcode jobs (admin)
+	// (GET /transcoding/queue)
+	ListTranscodeQueue(ctx context.Context, request ListTranscodeQueueRequestObject) (ListTranscodeQueueResponseObject, error)
+	// StartTranscodeScan Queue transcodes for the existing library (admin)
+	// (POST /transcoding/scan)
+	StartTranscodeScan(ctx context.Context, request StartTranscodeScanRequestObject) (StartTranscodeScanResponseObject, error)
 	// ListUsers List users (admin)
 	// (GET /users)
 	ListUsers(ctx context.Context, request ListUsersRequestObject) (ListUsersResponseObject, error)
@@ -23794,6 +24660,61 @@ func (sh *strictHandler) UpdateConfigSystem(w http.ResponseWriter, r *http.Reque
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateConfigSystemResponseObject); ok {
 		if err := validResponse.VisitUpdateConfigSystemResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetConfigTranscoding operation middleware
+func (sh *strictHandler) GetConfigTranscoding(w http.ResponseWriter, r *http.Request) {
+	var request GetConfigTranscodingRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetConfigTranscoding(ctx, request.(GetConfigTranscodingRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetConfigTranscoding")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetConfigTranscodingResponseObject); ok {
+		if err := validResponse.VisitGetConfigTranscodingResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateConfigTranscoding operation middleware
+func (sh *strictHandler) UpdateConfigTranscoding(w http.ResponseWriter, r *http.Request) {
+	var request UpdateConfigTranscodingRequestObject
+
+	var body UpdateConfigTranscodingJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateConfigTranscoding(ctx, request.(UpdateConfigTranscodingRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateConfigTranscoding")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateConfigTranscodingResponseObject); ok {
+		if err := validResponse.VisitUpdateConfigTranscodingResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -26918,6 +27839,106 @@ func (sh *strictHandler) ResumeTorrent(w http.ResponseWriter, r *http.Request, h
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ResumeTorrentResponseObject); ok {
 		if err := validResponse.VisitResumeTorrentResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CancelTranscodeJob operation middleware
+func (sh *strictHandler) CancelTranscodeJob(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request CancelTranscodeJobRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CancelTranscodeJob(ctx, request.(CancelTranscodeJobRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CancelTranscodeJob")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CancelTranscodeJobResponseObject); ok {
+		if err := validResponse.VisitCancelTranscodeJobResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RetryTranscodeJob operation middleware
+func (sh *strictHandler) RetryTranscodeJob(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request RetryTranscodeJobRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RetryTranscodeJob(ctx, request.(RetryTranscodeJobRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RetryTranscodeJob")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RetryTranscodeJobResponseObject); ok {
+		if err := validResponse.VisitRetryTranscodeJobResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListTranscodeQueue operation middleware
+func (sh *strictHandler) ListTranscodeQueue(w http.ResponseWriter, r *http.Request) {
+	var request ListTranscodeQueueRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListTranscodeQueue(ctx, request.(ListTranscodeQueueRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListTranscodeQueue")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListTranscodeQueueResponseObject); ok {
+		if err := validResponse.VisitListTranscodeQueueResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// StartTranscodeScan operation middleware
+func (sh *strictHandler) StartTranscodeScan(w http.ResponseWriter, r *http.Request) {
+	var request StartTranscodeScanRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.StartTranscodeScan(ctx, request.(StartTranscodeScanRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "StartTranscodeScan")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(StartTranscodeScanResponseObject); ok {
+		if err := validResponse.VisitStartTranscodeScanResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

@@ -190,6 +190,11 @@ func (w *Worker) enabled(cfg *config.Config) bool {
 		w.prober.FFmpegPath() != ""
 }
 
+// Ready reports whether this worker would claim work right now. A scan that
+// queues rows the worker will never claim is worse than a refusal — nothing
+// drains them and nothing says why.
+func (w *Worker) Ready() bool { return w.enabled(config.Get()) }
+
 // claimed is a job this process has taken, with the context that cancels it.
 type claimed struct {
 	job    *ent.TranscodeJob
