@@ -109,13 +109,13 @@ func Seed(r entuser.Role) Value { return known(string(r)) }
 // Invited is the role an invite carried. See Operator.
 func Invited(r entuser.Role) Value { return known(string(r)) }
 
-// SelfRegistered is the role an open registration lands on: auth.oidc_default_role,
+// SelfRegistered is the role an open registration lands on: auth.default_role,
 // applied to an account an anonymous request just created for itself.
 //
 // It clamps admin to member, exactly as Federated clamps that same key's admin
 // down for a provider without allow_admin. The key is read on two paths and
 // only the OIDC one has a provider whose allow_admin can vouch for admin, so
-// leaving it uncapped here would let an operator who set oidc_default_role:
+// leaving it uncapped here would let an operator who set default_role:
 // admin for a provider they do trust hand admin to whoever posts /auth/register
 // first — the inversion where presenting no identity at all outranks a
 // federated login.
@@ -139,7 +139,7 @@ func known(r string) Value {
 // Federated is the single gate every role a login through the named provider
 // can write passes through, whatever its source: candidates are the roles the
 // provider's claims map to, fallback the operator-set role to land on when none
-// of them survives (auth.oidc_default_role, or the role an invite carries).
+// of them survives (auth.default_role, or the role an invite carries).
 //
 // The winner is the highest-privilege candidate the provider may confer, and
 // fallback only when no candidate qualifies. A provider without allow_admin
@@ -150,7 +150,7 @@ func known(r string) Value {
 //     admin group alone matches nothing — so a claim the provider may not
 //     honour leaves the role it already had untouched instead of re-ranking it.
 //   - A fallback of admin is clamped to member, because a provisioning login
-//     has to land somewhere. An operator who sets auth.oidc_default_role: admin
+//     has to land somewhere. An operator who sets auth.default_role: admin
 //     and leaves allow_admin off gets members, not the perverse inversion where
 //     withholding every mapped group outranks presenting one.
 //

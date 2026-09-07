@@ -80,8 +80,7 @@
 			registration_mode: (cfg.data?.registration_mode ??
 				"open") as AuthConfig["registration_mode"],
 			session_ttl: cfg.data?.session_ttl ?? "168h",
-			oidc_default_role: (cfg.data?.oidc_default_role ??
-				"member") as UserRole,
+			default_role: (cfg.data?.default_role ?? "member") as UserRole,
 			lockout: {
 				threshold: cfg.data?.lockout?.threshold ?? 10,
 				window: cfg.data?.lockout?.window ?? "15m",
@@ -96,7 +95,7 @@
 		form.reset({
 			registration_mode: data.registration_mode,
 			session_ttl: data.session_ttl,
-			oidc_default_role: data.oidc_default_role,
+			default_role: data.default_role,
 			lockout: {
 				threshold: data.lockout?.threshold ?? 10,
 				window: data.lockout?.window ?? "15m",
@@ -186,11 +185,11 @@
 					{/snippet}
 				</form.Field>
 
-				<form.Field name="oidc_default_role">
+				<form.Field name="default_role">
 					{#snippet children(field)}
 						<div>
 							<Select
-								label={i18n.auth_oidc_default_role()}
+								label={i18n.auth_default_role()}
 								value={field.state.value as UserRole}
 								options={[
 									{ value: "admin", label: i18n.common_admin() },
@@ -200,7 +199,7 @@
 								onChange={(role) => field.handleChange(role)}
 							/>
 							<p class="mt-1 text-xs text-fg-muted">
-								{i18n.settings_oidc_role_help()}
+								{i18n.settings_default_role_help()}
 							</p>
 						</div>
 					{/snippet}

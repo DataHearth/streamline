@@ -60,14 +60,14 @@ var _ = Describe("REST API config", Label("e2e"), func() {
 			var cfg struct {
 				RegistrationMode string `json:"registration_mode"`
 				SessionTtl       string `json:"session_ttl"`
-				OidcDefaultRole  string `json:"oidc_default_role"`
+				DefaultRole      string `json:"default_role"`
 			}
 			decode(resp, &cfg)
 			Expect(cfg.RegistrationMode).To(BeElementOf(
 				"disabled", "open", "invite",
 			))
 			Expect(cfg.SessionTtl).NotTo(BeEmpty())
-			Expect(cfg.OidcDefaultRole).NotTo(BeEmpty())
+			Expect(cfg.DefaultRole).NotTo(BeEmpty())
 		})
 
 		It("patches the registration mode", func() {

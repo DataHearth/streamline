@@ -74,10 +74,10 @@ var _ = Describe("Config mutate", Label("unit", "config"), func() {
 			Expect(got.SessionTTL).To(Equal("30m"))
 		})
 
-		It("rejects invalid oidc_default_role via validator", func() {
+		It("rejects invalid default_role via validator", func() {
 			bad := "bogus"
 			_, err := config.UpdateAuth(context.Background(), config.AuthPatch{
-				OIDCDefaultRole: &bad,
+				DefaultRole: &bad,
 			})
 			Expect(err).To(HaveOccurred())
 		})

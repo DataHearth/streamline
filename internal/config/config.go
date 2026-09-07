@@ -88,17 +88,30 @@ type ServerConfig struct {
 }
 
 type AuthConfig struct {
-	Mode              string        `koanf:"mode"                validate:"required,oneof=full trusted-network disabled"`
-	TrustedNetworks   []string      `koanf:"trusted_networks"    validate:"dive,cidr"`
-	TrustedRole       string        `koanf:"trusted_role"        validate:"required,oneof=admin member request_only"`
-	SessionSecret     string        `koanf:"session_secret"      validate:"excluded_with=SessionSecretFile"`
-	SessionSecretFile string        `koanf:"session_secret_file" validate:"omitempty,excluded_with=SessionSecret,filepath"`
-	SessionTTL        string        `koanf:"session_ttl"         validate:"required"`
-	RegistrationMode  string        `koanf:"registration_mode"   validate:"required,oneof=disabled open invite"`
-	OIDCDefaultRole   string        `koanf:"oidc_default_role"   validate:"required,oneof=admin member request_only"`
-	SeedAdmin         SeedAdminCfg  `koanf:"seed_admin"`
-	OIDC              []OIDCConfig  `koanf:"oidc"                validate:"dive"`
-	Lockout           LockoutConfig `koanf:"lockout"             validate:"required"`
+	Mode              string   `koanf:"mode"                validate:"required,oneof=full trusted-network disabled"`
+	TrustedNetworks   []string `koanf:"trusted_networks"    validate:"dive,cidr"`
+	TrustedRole       string   `koanf:"trusted_role"        validate:"required,oneof=admin member request_only"`
+	SessionSecret     string   `koanf:"session_secret"      validate:"excluded_with=SessionSecretFile"`
+	SessionSecretFile string   `koanf:"session_secret_file" validate:"omitempty,excluded_with=SessionSecret,filepath"`
+	SessionTTL        string   `koanf:"session_ttl"         validate:"required"`
+	RegistrationMode  string   `koanf:"registration_mode"   validate:"required,oneof=disabled open invite"`
+	// DefaultRole is the role a user is created with when they register
+	// themselves: an anonymous POST /auth/register in open mode, and an OIDC
+	// login provisioning a new account whose claims map to nothing. It is
+	// only ever a fallback — an invite carries its own role, and a matched
+	// claim outranks it.
+	//
+	// It is capped on both paths and neither cap is this key's to lift:
+	// role.SelfRegistered clamps admin to member locally, and role.Federated
+	// clamps it for a provider without allow_admin.
+	//
+	// Renamed from auth.oidc_default_role, which the local path read too
+	// despite the name. A clean break: the old key is not aliased, so a config
+	// still naming it loses the value and falls back to member.
+	DefaultRole string        `koanf:"default_role" validate:"required,oneof=admin member request_only"`
+	SeedAdmin   SeedAdminCfg  `koanf:"seed_admin"`
+	OIDC        []OIDCConfig  `koanf:"oidc"         validate:"dive"`
+	Lockout     LockoutConfig `koanf:"lockout"      validate:"required"`
 }
 
 // LockoutConfig governs the per-account login-failure lockout. Threshold is
@@ -134,7 +147,7 @@ type OIDCConfig struct {
 	// values map), subject to the AllowAdmin ceiling. Adopting an existing
 	// local account by email is the one login that does not apply it, so
 	// establishing a link can never also promote. Leave empty to give OIDC
-	// users auth.oidc_default_role.
+	// users auth.default_role.
 	//
 	// RoleClaim may name a nested claim with a dotted path — Keycloak's roles
 	// live at realm_access.roles, not at the top level. A claim whose literal
@@ -164,7 +177,7 @@ type OIDCConfig struct {
 	// including for a provider added through the REST API, which does not
 	// expose the key — no role this provider confers may be admin. That covers
 	// every source, not just the claims: the claim-mapped role, the
-	// auth.oidc_default_role a provisioning login falls back to, and the role
+	// auth.default_role a provisioning login falls back to, and the role
 	// carried by an invite consumed through SSO.
 	//
 	// It reads no claim of the request being served, deliberately. A ceiling
@@ -570,7 +583,7 @@ func defaults() map[string]any {
 		"auth.session_secret_file":         "",
 		"auth.session_ttl":                 "168h",
 		"auth.registration_mode":           "disabled",
-		"auth.oidc_default_role":           "member",
+		"auth.default_role":                "member",
 		"auth.seed_admin.email":            "",
 		"auth.seed_admin.password":         "",
 		"auth.seed_admin.password_file":    "",
@@ -697,11 +710,18 @@ func newDefaultsKoanf() *koanf.Koanf {
 	return k
 }
 
-// renamedScheduleKeys maps each pre-media-split schedules key to the keys that
-// replaced it. missing_search, metadata_refresh and orphan_scan each drove both
-// the movie and the TV job, so a value set under the old name has to land on
-// both replacements or the operator's cadence silently changes for one library.
-var renamedScheduleKeys = map[string][]string{
+// renamedKeys maps each deprecated config key to the keys that replaced it.
+//
+// The entries are the pre-media-split schedules names: missing_search,
+// metadata_refresh and orphan_scan each drove both the movie and the TV job, so
+// a value set under the old name has to land on both replacements or the
+// operator's cadence silently changes for one library.
+//
+// auth.oidc_default_role was briefly here when it became auth.default_role and
+// is deliberately not: that rename is a clean break, so an old config's value
+// is ignored rather than carried over. The map stays general because the next
+// rename should not have to rebuild the mechanism.
+var renamedKeys = map[string][]string{
 	"schedules.rss_sync": {"schedules.movie_rss_sync"},
 	"schedules.missing_search": {
 		"schedules.movie_missing_search",
@@ -717,21 +737,21 @@ var renamedScheduleKeys = map[string][]string{
 	},
 }
 
-// applyRenamedScheduleKeys copies a value still set under a pre-media-split
-// schedules key onto its replacements, skipping any replacement the operator
-// already set themselves, and returns the replacements it actually wrote keyed
-// by the deprecated key they came from. Without it an old config keeps parsing
-// — koanf drops keys the struct no longer has — while every renamed job
-// silently reverts to its default interval.
+// applyRenamedKeys copies a value still set under a deprecated key onto its
+// replacements, skipping any replacement the operator already set themselves,
+// and returns the replacements it actually wrote keyed by the deprecated key
+// they came from. Without it an old config keeps parsing — koanf drops keys the
+// struct no longer has — while every renamed job silently reverts to its
+// default interval.
 //
 // "Already set themselves" is read as "carries a value that differs from the
 // default", which covers both layer shapes this runs against: the merged koanf,
 // where the defaults are always present, and the file-only koanf, where a key
 // the operator did not write is simply absent.
-func applyRenamedScheduleKeys(k *koanf.Koanf) (map[string][]string, error) {
+func applyRenamedKeys(k *koanf.Koanf) (map[string][]string, error) {
 	d := defaults()
 	applied := map[string][]string{}
-	for old, replacements := range renamedScheduleKeys {
+	for old, replacements := range renamedKeys {
 		if !k.Exists(old) {
 			continue
 		}
@@ -769,12 +789,12 @@ func finalize(k, fileK *koanf.Koanf) (*Config, *envLayer, error) {
 	}
 
 	// The file layer gets the same expansion, so a file that still names a
-	// deprecated schedules key owns the replacement too and keeps its own
-	// cadence when write-back reverts an environment-supplied one.
-	if _, err := applyRenamedScheduleKeys(fileK); err != nil {
+	// deprecated key owns the replacement too and keeps its own value when
+	// write-back reverts an environment-supplied one.
+	if _, err := applyRenamedKeys(fileK); err != nil {
 		return nil, nil, err
 	}
-	applied, err := applyRenamedScheduleKeys(k)
+	applied, err := applyRenamedKeys(k)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -782,10 +802,10 @@ func finalize(k, fileK *koanf.Koanf) (*Config, *envLayer, error) {
 	for old, written := range applied {
 		slog.WarnContext(
 			context.Background(),
-			"config: schedules key was renamed; still honouring the old one",
+			"config: key was renamed; still honouring the old one",
 			"deprecated.key", old,
 			"replacement.keys", strings.Join(written, ", "),
-			"interval", k.String(old),
+			"value", k.String(old),
 		)
 		// The alias lands environment data on a key the environment never
 		// named. Unless the replacement joins the env key set, write-back reads

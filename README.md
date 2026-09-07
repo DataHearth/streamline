@@ -286,7 +286,7 @@ user, which cascades the identity away with it.
 **`allow_admin` — whether it may grant `admin`.** With it `false` (the default)
 **no login through this provider ever puts an account on `admin`**, with no
 exception: not a claim mapped to `admin` by `role_mapping`, not an
-`auth.oidc_default_role` of `admin` a signup falls back to, and not the role
+`auth.default_role` of `admin` a signup falls back to, and not the role
 carried by an invite consumed through SSO. A user in both an admin group and a
 member group lands on member; one in an admin group alone keeps whatever role
 they already had. Set `allow_admin: true` for a provider that really is allowed

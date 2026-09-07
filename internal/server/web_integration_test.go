@@ -127,7 +127,7 @@ auth:
   trusted_role: admin
   registration_mode: %s
   session_ttl: 168h
-  oidc_default_role: member
+  default_role: member
   seed_admin:
     email: %q
     password: %q%s

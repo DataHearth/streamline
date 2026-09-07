@@ -228,6 +228,28 @@ schedules:
 			})
 		})
 
+		Context("with the removed auth.oidc_default_role", func() {
+			// The rename to auth.default_role is a clean break: the old key is
+			// not in renamedKeys, so koanf drops it like any key the struct does
+			// not have and the role falls back to the default. This spec pins
+			// that decision rather than the alias it replaced — an operator
+			// upgrading past the rename has to move the key themselves, and the
+			// silent part of that is exactly what it documents.
+			It("ignores the old key, leaving default_role at its default", func() {
+				raw := "data_dir: " + GinkgoT().TempDir() + `
+auth:
+  mode: disabled
+  trusted_role: member
+  session_ttl: 168h
+  registration_mode: open
+  oidc_default_role: request_only
+`
+				Expect(LoadReader(strings.NewReader(raw))).To(Succeed())
+
+				Expect(Get().Auth.DefaultRole).To(Equal("member"))
+			})
+		})
+
 		Context("with environment variables", func() {
 			BeforeEach(func() {
 				os.Setenv("STREAMLINE_SERVER__PORT", "7070")
@@ -320,13 +342,13 @@ schedules:
 		})
 
 		It(
-			"defaults auth.registration_mode=disabled, session_ttl=168h, oidc_default_role=member",
+			"defaults auth.registration_mode=disabled, session_ttl=168h, default_role=member",
 			func() {
 				cfg, err := Load("")
 				Expect(err).ToNot(HaveOccurred())
 				Expect(cfg.Auth.RegistrationMode).To(Equal("disabled"))
 				Expect(cfg.Auth.SessionTTL).To(Equal("168h"))
-				Expect(cfg.Auth.OIDCDefaultRole).To(Equal("member"))
+				Expect(cfg.Auth.DefaultRole).To(Equal("member"))
 			},
 		)
 

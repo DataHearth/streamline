@@ -126,21 +126,21 @@ func (e AppLogConfigLevel) Valid() bool {
 	}
 }
 
-// Defines values for AuthConfigPatchOidcDefaultRole.
+// Defines values for AuthConfigPatchDefaultRole.
 const (
-	AuthConfigPatchOidcDefaultRoleAdmin       AuthConfigPatchOidcDefaultRole = "admin"
-	AuthConfigPatchOidcDefaultRoleMember      AuthConfigPatchOidcDefaultRole = "member"
-	AuthConfigPatchOidcDefaultRoleRequestOnly AuthConfigPatchOidcDefaultRole = "request_only"
+	AuthConfigPatchDefaultRoleAdmin       AuthConfigPatchDefaultRole = "admin"
+	AuthConfigPatchDefaultRoleMember      AuthConfigPatchDefaultRole = "member"
+	AuthConfigPatchDefaultRoleRequestOnly AuthConfigPatchDefaultRole = "request_only"
 )
 
-// Valid indicates whether the value is a known member of the AuthConfigPatchOidcDefaultRole enum.
-func (e AuthConfigPatchOidcDefaultRole) Valid() bool {
+// Valid indicates whether the value is a known member of the AuthConfigPatchDefaultRole enum.
+func (e AuthConfigPatchDefaultRole) Valid() bool {
 	switch e {
-	case AuthConfigPatchOidcDefaultRoleAdmin:
+	case AuthConfigPatchDefaultRoleAdmin:
 		return true
-	case AuthConfigPatchOidcDefaultRoleMember:
+	case AuthConfigPatchDefaultRoleMember:
 		return true
-	case AuthConfigPatchOidcDefaultRoleRequestOnly:
+	case AuthConfigPatchDefaultRoleRequestOnly:
 		return true
 	default:
 		return false
@@ -168,21 +168,21 @@ func (e AuthConfigPatchRegistrationMode) Valid() bool {
 	}
 }
 
-// Defines values for AuthConfigViewOidcDefaultRole.
+// Defines values for AuthConfigViewDefaultRole.
 const (
-	AuthConfigViewOidcDefaultRoleAdmin       AuthConfigViewOidcDefaultRole = "admin"
-	AuthConfigViewOidcDefaultRoleMember      AuthConfigViewOidcDefaultRole = "member"
-	AuthConfigViewOidcDefaultRoleRequestOnly AuthConfigViewOidcDefaultRole = "request_only"
+	AuthConfigViewDefaultRoleAdmin       AuthConfigViewDefaultRole = "admin"
+	AuthConfigViewDefaultRoleMember      AuthConfigViewDefaultRole = "member"
+	AuthConfigViewDefaultRoleRequestOnly AuthConfigViewDefaultRole = "request_only"
 )
 
-// Valid indicates whether the value is a known member of the AuthConfigViewOidcDefaultRole enum.
-func (e AuthConfigViewOidcDefaultRole) Valid() bool {
+// Valid indicates whether the value is a known member of the AuthConfigViewDefaultRole enum.
+func (e AuthConfigViewDefaultRole) Valid() bool {
 	switch e {
-	case AuthConfigViewOidcDefaultRoleAdmin:
+	case AuthConfigViewDefaultRoleAdmin:
 		return true
-	case AuthConfigViewOidcDefaultRoleMember:
+	case AuthConfigViewDefaultRoleMember:
 		return true
-	case AuthConfigViewOidcDefaultRoleRequestOnly:
+	case AuthConfigViewDefaultRoleRequestOnly:
 		return true
 	default:
 		return false
@@ -2369,34 +2369,38 @@ type ApproveRequestRequest struct {
 
 // AuthConfigPatch Only provided fields are applied.
 type AuthConfigPatch struct {
+	// DefaultRole See AuthConfigView.default_role.
+	DefaultRole *AuthConfigPatchDefaultRole `json:"default_role,omitempty"`
+
 	// Lockout Per-account login-failure lockout. Partial on a patch: an omitted field keeps its stored value.
 	Lockout          *LockoutConfig                   `json:"lockout,omitempty"`
-	OidcDefaultRole  *AuthConfigPatchOidcDefaultRole  `json:"oidc_default_role,omitempty"`
 	RegistrationMode *AuthConfigPatchRegistrationMode `json:"registration_mode,omitempty"`
 
 	// SessionTtl Go duration string (e.g. "168h", "30m").
 	SessionTtl *string `json:"session_ttl,omitempty"`
 }
 
-// AuthConfigPatchOidcDefaultRole defines model for AuthConfigPatch.OidcDefaultRole.
-type AuthConfigPatchOidcDefaultRole string
+// AuthConfigPatchDefaultRole See AuthConfigView.default_role.
+type AuthConfigPatchDefaultRole string
 
 // AuthConfigPatchRegistrationMode defines model for AuthConfigPatch.RegistrationMode.
 type AuthConfigPatchRegistrationMode string
 
 // AuthConfigView defines model for AuthConfigView.
 type AuthConfigView struct {
+	// DefaultRole Role a self-registering user is created with, on both paths: an anonymous POST /auth/register in open mode, and an OIDC login provisioning a new account whose claims map to nothing. Only ever a fallback — an invite carries its own role and a matched claim outranks it — and admin is clamped to member on both paths (locally always, federated unless the provider sets allow_admin).
+	DefaultRole AuthConfigViewDefaultRole `json:"default_role"`
+
 	// Lockout Per-account login-failure lockout. Partial on a patch: an omitted field keeps its stored value.
 	Lockout          LockoutConfig                  `json:"lockout"`
-	OidcDefaultRole  AuthConfigViewOidcDefaultRole  `json:"oidc_default_role"`
 	RegistrationMode AuthConfigViewRegistrationMode `json:"registration_mode"`
 
 	// SessionTtl Go duration string (e.g. "168h", "30m").
 	SessionTtl string `json:"session_ttl"`
 }
 
-// AuthConfigViewOidcDefaultRole defines model for AuthConfigView.OidcDefaultRole.
-type AuthConfigViewOidcDefaultRole string
+// AuthConfigViewDefaultRole Role a self-registering user is created with, on both paths: an anonymous POST /auth/register in open mode, and an OIDC login provisioning a new account whose claims map to nothing. Only ever a fallback — an invite carries its own role and a matched claim outranks it — and admin is clamped to member on both paths (locally always, federated unless the provider sets allow_admin).
+type AuthConfigViewDefaultRole string
 
 // AuthConfigViewRegistrationMode defines model for AuthConfigView.RegistrationMode.
 type AuthConfigViewRegistrationMode string

@@ -128,7 +128,7 @@ Some config is hot — changed through the UI or API, applied immediately, persi
 | Quality profiles, custom formats | ✅ Full CRUD | Settings → Library |
 | `quality_default_profile` | ✅ The ★ button on a profile row | Settings → Quality profiles |
 | Schedule intervals, pause/resume/run | ✅ | Settings → Schedules |
-| `auth.registration_mode`, `auth.session_ttl`, `auth.oidc_default_role` | ✅ | Settings → Authentication |
+| `auth.registration_mode`, `auth.session_ttl`, `auth.default_role` | ✅ | Settings → Authentication |
 | `auth.lockout.{threshold,window,duration}` | ✅ | Settings → Authentication |
 | `library.monitor_specials` | ✅ | Settings → Series |
 | `library.probe.*` | ✅ Applies to the next import — see [Import verification](#import-verification) | Settings → Media probe |
@@ -210,7 +210,7 @@ Defaults shown are the built-in ones, as emitted by `streamline config init`.
 | `auth.session_secret_file` | path | — | Mutually exclusive with the above |
 | `auth.session_ttl` | duration | `168h` | Session lifetime |
 | `auth.registration_mode` | enum | `disabled` | `disabled` \| `open` \| `invite` |
-| `auth.oidc_default_role` | enum | `member` | Role for users auto-created via OIDC |
+| `auth.default_role` | enum | `member` | Role a self-registering user lands on, local or SSO. Fallback only, and `admin` is clamped to `member` — see [Authentication and SSO](Authentication-and-SSO). Renamed from `auth.oidc_default_role`, which is **no longer read at all** |
 | `auth.seed_admin.email` | string | `""` | Bootstrap admin. No-op once any user exists |
 | `auth.seed_admin.password` | string | `""` | Generated and persisted if left empty |
 | `auth.seed_admin.password_file` | path | `""` | Wins over `password` |

@@ -638,7 +638,11 @@ export type InviteCreated = Invite & {
 export type AuthConfig = {
 	registration_mode: "disabled" | "open" | "invite";
 	session_ttl: string;
-	oidc_default_role: UserRole;
+	// Role a self-registering user lands on, on both paths: an anonymous
+	// /auth/register in open mode, and an OIDC login provisioning a new account
+	// whose claims map to nothing. A fallback only — an invite carries its own
+	// role and a matched claim outranks it.
+	default_role: UserRole;
 	lockout: LockoutConfig;
 };
 

@@ -18,7 +18,7 @@ import (
 type AuthPatch struct {
 	RegistrationMode *string
 	SessionTTL       *string
-	OIDCDefaultRole  *string
+	DefaultRole      *string
 	// Lockout is itself optional-partial: a nil Lockout leaves the whole
 	// section untouched, and a non-nil one with a single field set leaves the
 	// others alone.
@@ -191,8 +191,8 @@ func UpdateAuth(ctx context.Context, patch AuthPatch) (AuthConfig, error) {
 		if patch.SessionTTL != nil {
 			c.Auth.SessionTTL = *patch.SessionTTL
 		}
-		if patch.OIDCDefaultRole != nil {
-			c.Auth.OIDCDefaultRole = *patch.OIDCDefaultRole
+		if patch.DefaultRole != nil {
+			c.Auth.DefaultRole = *patch.DefaultRole
 		}
 		if lockout.Threshold != nil {
 			c.Auth.Lockout.Threshold = *lockout.Threshold

@@ -261,7 +261,10 @@
           "type": "string",
           "enum": ["disabled", "open", "invite"]
         },
-        "oidc_default_role": { "$ref": "#/definitions/role" },
+        "default_role": {
+          "allOf": [{ "$ref": "#/definitions/role" }],
+          "description": "Role a self-registering user is created with: an anonymous POST /auth/register in open mode, and an OIDC login provisioning a new account whose claims map to nothing. Only ever a fallback \u2014 an invite carries its own role and a matched claim outranks it \u2014 and admin is clamped to member on both paths (locally always, federated unless the provider sets allow_admin)."
+        },
         "seed_admin": {
           "type": "object",
           "additionalProperties": false,
@@ -301,7 +304,7 @@
               },
               "allow_admin": {
                 "type": "boolean",
-                "description": "Whether this provider may put an account on the admin role. Default false, in which case no role it confers is ever admin — not the claim-mapped role, not the auth.oidc_default_role a provisioning login falls back to, and not the role carried by an invite consumed through SSO. Independent of email_linking, so no change to either setting can raise capability on the other axis."
+                "description": "Whether this provider may put an account on the admin role. Default false, in which case no role it confers is ever admin — not the claim-mapped role, not the auth.default_role a provisioning login falls back to, and not the role carried by an invite consumed through SSO. Independent of email_linking, so no change to either setting can raise capability on the other axis."
               }
             }
           }

@@ -118,12 +118,12 @@ func (m *oidcManager) Get(name string) (*OIDCProvider, bool) {
 //     never changes the role. Otherwise ErrOIDCLinkNotAllowed: matching an
 //     address is not proof the same human holds both accounts.
 //  4. New user → respect registration_mode (disabled rejects; invite needs a
-//     matching invite; open falls back to oidc_default_role). User, identity
+//     matching invite; open falls back to default_role). User, identity
 //     and invite consumption commit as one transaction, so a failed
 //     provisioning never burns the invite.
 //
 // Every role this function can put on an account — claim-mapped, invite-carried
-// or oidc_default_role — is decided by approle.Federated and carried as an
+// or default_role — is decided by approle.Federated and carried as an
 // approle.Value, a type only that package can fill in. Nothing here reads the
 // account's auth_method to rank it: the shape an adoption leaves behind
 // describes how the row was reached, not how far the provider is trusted, and
@@ -291,7 +291,7 @@ func (s *auth) LoginOIDC(
 	}
 
 	// 4. new user — apply onboarding policy
-	fallbackRole := cfg.Auth.OIDCDefaultRole
+	fallbackRole := cfg.Auth.DefaultRole
 	var inv *ent.Invite
 	switch cfg.Auth.RegistrationMode {
 	case "disabled":

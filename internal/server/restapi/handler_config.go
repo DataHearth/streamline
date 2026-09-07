@@ -47,9 +47,9 @@ func (s *Server) UpdateConfigAuth(
 	if req.Body.SessionTtl != nil {
 		patch.SessionTTL = req.Body.SessionTtl
 	}
-	if req.Body.OidcDefaultRole != nil {
-		v := string(*req.Body.OidcDefaultRole)
-		patch.OIDCDefaultRole = &v
+	if req.Body.DefaultRole != nil {
+		v := string(*req.Body.DefaultRole)
+		patch.DefaultRole = &v
 	}
 	if req.Body.Lockout != nil {
 		threshold, err := narrowUint8(
@@ -81,7 +81,7 @@ func (s *Server) UpdateConfigAuth(
 	slog.InfoContext(ctx, "auth config updated",
 		"registration_mode", updated.RegistrationMode,
 		"session_ttl", updated.SessionTTL,
-		"oidc_default_role", updated.OIDCDefaultRole,
+		"default_role", updated.DefaultRole,
 	)
 	return UpdateConfigAuth200JSONResponse{
 		AuthConfigJSONResponse: authConfigView(updated),
@@ -600,7 +600,7 @@ func authConfigView(a config.AuthConfig) AuthConfigJSONResponse {
 	return AuthConfigJSONResponse{
 		RegistrationMode: AuthConfigViewRegistrationMode(a.RegistrationMode),
 		SessionTtl:       a.SessionTTL,
-		OidcDefaultRole:  AuthConfigViewOidcDefaultRole(a.OIDCDefaultRole),
+		DefaultRole:      AuthConfigViewDefaultRole(a.DefaultRole),
 		Lockout: LockoutConfig{
 			Threshold: &threshold,
 			Window:    &window,

@@ -249,7 +249,7 @@ config:
   # auth.oidc[].allow_admin — whether it may put an account on the admin ROLE:
   #   false (default) — no login through this provider ever yields admin, with
   #     no exception: not a claim mapped to admin by role_mapping, not an
-  #     auth.oidc_default_role of admin, not the role an invite carries. A
+  #     auth.default_role of admin, not the role an invite carries. A
   #     per-request check would not do: the attacker chooses which groups each
   #     login carries, so they present a harmless one first and the admin group
   #     after the link exists.

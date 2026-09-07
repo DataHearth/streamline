@@ -223,17 +223,17 @@ var _ = Describe("LoginOIDC end-to-end", Label("integration", "auth"), func() {
 			map[string]any{"groups": []any{"streamline-admins"}}, SessionMeta{})
 		Expect(err).ToNot(HaveOccurred())
 		// The admins group is the only one presented, so nothing maps and the
-		// user falls back to oidc_default_role.
+		// user falls back to default_role.
 		Expect(u.Role).To(Equal(entuser.RoleMember))
 	})
 
-	// Round 4 POC (B). oidc_default_role is what a provisioning login lands on
+	// Round 4 POC (B). default_role is what a provisioning login lands on
 	// when no claim maps, and it is operator-set — but it is still a role this
 	// provider confers, so the ceiling has to reach it too. Without that, an
 	// install whose default is admin inverts: presenting the mapped admin group
 	// yields member (the group is barred), while presenting nothing at all
 	// yields admin.
-	It("caps an oidc_default_role of admin for a provider without the ceiling",
+	It("caps a default_role of admin for a provider without the ceiling",
 		func() {
 			config.ResetForTest()
 			loadOIDCRoleMapConfigDefault(
@@ -540,7 +540,7 @@ var _ = Describe("LoginOIDC end-to-end", Label("integration", "auth"), func() {
 			u, _, err := svc.LoginOIDC(ctx, "kc", "sub-a", "a@x.com", "A", true,
 				map[string]any{"groups": []any{"streamline-admins"}}, SessionMeta{})
 			Expect(err).ToNot(HaveOccurred())
-			// oidc_default_role is "member"; the admins group maps to admin.
+			// default_role is "member"; the admins group maps to admin.
 			Expect(u.Role).To(Equal(entuser.RoleAdmin))
 		},
 	)
@@ -723,7 +723,7 @@ auth:
   trusted_role: admin
   session_ttl: 168h
   registration_mode: open
-  oidc_default_role: member
+  default_role: member
   oidc:
     - name: corp
       issuer: https://corp.example.com
@@ -764,7 +764,7 @@ func loadOIDCRoleMapConfig(emailLinking string) {
 }
 
 // loadOIDCRoleMapConfigDefault is loadOIDCRoleMapConfig with the provider's
-// admin ceiling and auth.oidc_default_role spelled out.
+// admin ceiling and auth.default_role spelled out.
 func loadOIDCRoleMapConfigDefault(
 	emailLinking string,
 	allowAdmin bool,
@@ -778,7 +778,7 @@ auth:
   trusted_role: admin
   session_ttl: 168h
   registration_mode: open
-  oidc_default_role: ` + defaultRole + `
+  default_role: ` + defaultRole + `
   oidc:
     - name: kc
       issuer: https://kc.example.com
@@ -810,7 +810,7 @@ log:
 // loadOIDCTestConfig populates the config singleton with the minimum required
 // fields for LoginOIDC + helpers to run, declaring provider "google" with the
 // given email_linking setting.
-func loadOIDCTestConfig(regMode, oidcDefaultRole, emailLinking string) {
+func loadOIDCTestConfig(regMode, defaultRole, emailLinking string) {
 	GinkgoHelper()
 	yaml := `
 data_dir: ` + os.TempDir() + `
@@ -819,7 +819,7 @@ auth:
   trusted_role: admin
   session_ttl: 168h
   registration_mode: ` + regMode + `
-  oidc_default_role: ` + oidcDefaultRole + `
+  default_role: ` + defaultRole + `
   oidc:
     - name: google
       issuer: https://accounts.google.com

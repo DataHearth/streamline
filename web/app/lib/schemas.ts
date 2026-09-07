@@ -37,7 +37,7 @@ export const registrationMode = v.picklist(
 export const authConfigPatch = v.object({
 	registration_mode: registrationMode,
 	session_ttl: goDuration,
-	oidc_default_role: userRole,
+	default_role: userRole,
 	lockout: v.object({
 		threshold: v.pipe(
 			v.number(),

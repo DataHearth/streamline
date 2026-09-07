@@ -473,7 +473,7 @@ func loadableConfig(fileKeys *koanf.Koanf) (*Config, []loadIssue) {
 	if err := k.Merge(fileKeys); err != nil {
 		return nil, []loadIssue{{id: err.Error(), err: err}}
 	}
-	if _, err := applyRenamedScheduleKeys(k); err != nil {
+	if _, err := applyRenamedKeys(k); err != nil {
 		return nil, []loadIssue{{id: err.Error(), err: err}}
 	}
 	var c Config

@@ -149,6 +149,19 @@ Admins can revoke any user's keys from Settings → Users.
 
 An admin is **always** seeded on a fresh install, so the user table is never empty at request time. There is no first-user-registration special case to race.
 
+### Which role a new account gets
+
+`auth.default_role` (default `member`) is the role a user lands on when they register **themselves** — and it serves both paths, which is why it is not called `oidc_default_role` any more:
+
+- an anonymous `POST /auth/register` in `open` mode;
+- an OIDC login provisioning a new account whose claims map to no role.
+
+It is only ever a **fallback**. An invite carries its own role, chosen by the admin who issued it, and a claim mapped through `role_claim`/`role_mapping` outranks it.
+
+`admin` is clamped to `member` on both self-registration paths: always on the local one, and on the federated one unless that provider sets `allow_admin: true`. So setting `auth.default_role: admin` for an IdP you trust cannot also hand admin to whoever posts `/auth/register` first. An invite is not clamped locally — naming a role for one specific account is a direct decision — but an invite consumed *through SSO* still passes the provider's ceiling.
+
+> **Upgrading:** this key was previously called `auth.oidc_default_role`, and the old name is **no longer read**. If your config still uses it, rename it — otherwise the key is ignored and new self-registered accounts fall back to `member`, with nothing in the logs to say so. The API is the same clean break: `GET /api/v1/config/auth` returns only `default_role`, and a `PATCH` naming `oidc_default_role` is ignored as an unknown field.
+
 Invites: `POST /api/v1/auth/invites` returns the raw token **once**. The SPA fetches `GET /auth/invite/{token}` to prefill the form; that lookup deliberately skips the email match so the page can render, while `RegisterWithInvite` enforces the binding atomically inside a transaction at submit time. Registration failures are mapped to user-safe messages — raw service errors are logged, never returned.
 
 ---
@@ -217,7 +230,7 @@ On callback, in order:
 2. **`email_verified` is false** → reject (`oidc_email_unverified`). Streamline will not link on an unverified email; that would let anyone who can assert an address take over the matching account.
 3. **Existing user with that (lowercased) email** → link the identity and promote `auth_method` from `local` to `both`.
 4. **New user** → apply `registration_mode`:
-   - `open` → create with `auth.oidc_default_role`
+   - `open` → create with `auth.default_role`
    - `invite` → consume the earliest unused, unexpired invite bound to that email; no match → `oidc_no_invite`
    - `disabled` → `oidc_registration_disabled`
 
@@ -225,7 +238,7 @@ On callback, in order:
 
 With `role_claim` and `role_mapping` both set, the claim is **authoritative** — the mapped role is applied on every login, so demotions in your IdP take effect. The claim value may be a string or an array; every value is checked and the **highest-privilege match wins** (`admin` 3 > `member` 2 > `request_only` 1).
 
-With no mapping configured, new users get `auth.oidc_default_role` and existing users keep whatever role they have.
+With no mapping configured, new users get `auth.default_role` and existing users keep whatever role they have.
 
 ### Errors
 

@@ -303,7 +303,7 @@ var _ = Describe("Bootstrap service unit", Label("unit", "auth"), func() {
 			Expect(tok).NotTo(BeEmpty())
 		})
 
-		// auth.oidc_default_role is legitimately admin for a provider carrying
+		// auth.default_role is legitimately admin for a provider carrying
 		// allow_admin; open registration reads the same key with no provider
 		// behind it, so it must land a member either way.
 		It("clamps an admin default role to member", func() {

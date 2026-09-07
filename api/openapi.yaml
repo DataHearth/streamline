@@ -6706,7 +6706,7 @@ components:
 
     AuthConfigView:
       type: object
-      required: [registration_mode, session_ttl, oidc_default_role, lockout]
+      required: [registration_mode, session_ttl, default_role, lockout]
       properties:
         registration_mode:
           type: string
@@ -6714,9 +6714,16 @@ components:
         session_ttl:
           type: string
           description: Go duration string (e.g. "168h", "30m").
-        oidc_default_role:
+        default_role:
           type: string
           enum: [admin, member, request_only]
+          description: >-
+            Role a self-registering user is created with, on both paths: an
+            anonymous POST /auth/register in open mode, and an OIDC login
+            provisioning a new account whose claims map to nothing. Only ever a
+            fallback — an invite carries its own role and a matched claim
+            outranks it — and admin is clamped to member on both paths (locally
+            always, federated unless the provider sets allow_admin).
         lockout:
           $ref: "#/components/schemas/LockoutConfig"
 
@@ -6730,9 +6737,10 @@ components:
         session_ttl:
           type: string
           description: Go duration string (e.g. "168h", "30m").
-        oidc_default_role:
+        default_role:
           type: string
           enum: [admin, member, request_only]
+          description: See AuthConfigView.default_role.
         lockout:
           $ref: "#/components/schemas/LockoutConfig"
 

@@ -145,7 +145,7 @@ func roleWritesIn(writes []roleWrite, fn string) int {
 // and keeping an OIDC login out of these functions is what closes it.
 var roleWriters = map[string]string{
 	"BootstrapSeedAdmin": "seeds the admin against an empty database, before any login exists",
-	"RegisterOpen":       "local registration; the role is auth.oidc_default_role's peer, not a claim",
+	"RegisterOpen":       "local registration; the role is auth.default_role's peer, not a claim",
 	"Register":           "local registration through the webui",
 	"RegisterWithInvite": "local registration; the invite's role, reached only with a password",
 	"CreateUserDirect":   "admin-created account, over an authenticated admin session",
@@ -925,7 +925,7 @@ var _ = Describe("LoginOIDC unit", Label("unit", "auth"), func() {
 				"session_secret":    "test-secret",
 				"session_ttl":       "1h",
 				"registration_mode": "open",
-				"oidc_default_role": "member",
+				"default_role":      "member",
 			},
 		})
 	})
@@ -955,7 +955,7 @@ var _ = Describe("LoginOIDC unit", Label("unit", "auth"), func() {
 				"session_secret":    "test-secret",
 				"session_ttl":       "1h",
 				"registration_mode": regMode,
-				"oidc_default_role": "member",
+				"default_role":      "member",
 				"oidc":              []any{provider},
 			},
 		})
@@ -1689,7 +1689,7 @@ var _ = Describe("LoginOIDC unit", Label("unit", "auth"), func() {
 					"session_secret":    "test-secret",
 					"session_ttl":       "1h",
 					"registration_mode": "disabled",
-					"oidc_default_role": "member",
+					"default_role":      "member",
 				},
 			})
 			storeMock.FindOIDCIdentity(mock.AnythingOfType(ctxType), "google", "sub-1").
@@ -1719,7 +1719,7 @@ var _ = Describe("LoginOIDC unit", Label("unit", "auth"), func() {
 					"session_secret":    "test-secret",
 					"session_ttl":       "1h",
 					"registration_mode": "invite",
-					"oidc_default_role": "member",
+					"default_role":      "member",
 				},
 			})
 		})

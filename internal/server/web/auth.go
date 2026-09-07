@@ -195,7 +195,7 @@ func (h *Handler) authRegister(w http.ResponseWriter, r *http.Request) {
 				email,
 				body.Password,
 				body.DisplayName,
-				cfg.Auth.OIDCDefaultRole,
+				cfg.Auth.DefaultRole,
 				sessionMeta(r),
 			)
 		}
