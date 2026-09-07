@@ -3264,7 +3264,9 @@ paths:
       operationId: listTranscodeQueue
       summary: List transcode jobs (admin)
       description: |
-        Newest first, capped at 200. A running job carries the live
+        Newest 200, plus every rejected row regardless of age — Retry is a
+        rejected row's only exit, so it must stay reachable no matter how far
+        it falls behind the cap. A running job carries the live
         percent/eta_seconds/speed reported by the worker in this process;
         a job running in no process (a restart mid-encode) carries none.
 
@@ -3324,8 +3326,8 @@ paths:
       operationId: retryTranscodeJob
       summary: Re-queue a failed transcode job (admin)
       description: |
-        Resets a failed job to queued with attempts, error and finished_at
-        cleared.
+        Puts a `failed` or `rejected` job back in the queue with attempts,
+        error and finished_at cleared.
 
         409 for a job in any other status — which includes an id that names
         no job at all, for the same reason cancel has no 404: the update is a
@@ -7316,7 +7318,7 @@ components:
 
     TranscodingConfigView:
       type: object
-      required: [enabled, max_concurrent, max_failures]
+      required: [enabled, max_concurrent, max_failures, verify]
       properties:
         enabled:
           type: boolean
@@ -7335,6 +7337,8 @@ components:
           description: |
             Attempts a job gets before it stops being retried
             automatically. A retry through the API resets the counter.
+        verify:
+          $ref: "#/components/schemas/TranscodeVerifyConfigView"
 
     TranscodingConfigPatch:
       type: object
@@ -7350,10 +7354,73 @@ components:
           type: integer
           minimum: 1
           maximum: 10
+        verify:
+          $ref: "#/components/schemas/TranscodeVerifyConfigPatch"
+
+    TranscodeVerifyConfigView:
+      type: object
+      description: |
+        Checks an encode must pass before it replaces the library file. A
+        failing encode lands as a `rejected` job and is never retried on
+        its own. Zero disables a bound.
+      required: [max_size_percent, min_size_percent, health_check, min_vmaf]
+      properties:
+        max_size_percent:
+          type: integer
+          minimum: 0
+          maximum: 200
+          description: |
+            Reject a transcode whose output exceeds this percentage of the
+            source size. Remuxes are exempt — they copy the streams and may
+            grow by container overhead.
+        min_size_percent:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: |
+            Reject any output under this percentage of the source — a dropped
+            stream or a truncated encode, not a transcode.
+        health_check:
+          type: boolean
+          description: |
+            Fully decode the output before the swap. One extra decode pass
+            per job.
+        min_vmaf:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: |
+            Reject a transcode whose mean VMAF over three 60 s windows falls
+            below this. Needs an ffmpeg built with libvmaf; without one the
+            check is skipped and logged once.
+
+    TranscodeVerifyConfigPatch:
+      type: object
+      description: Only provided fields are applied.
+      properties:
+        max_size_percent:
+          type: integer
+          minimum: 0
+          maximum: 200
+        min_size_percent:
+          type: integer
+          minimum: 0
+          maximum: 100
+        health_check:
+          type: boolean
+        min_vmaf:
+          type: integer
+          minimum: 0
+          maximum: 100
 
     TranscodeJobStatus:
       type: string
-      enum: [queued, running, succeeded, failed, canceled]
+      enum: [queued, running, succeeded, failed, canceled, rejected]
+      description: |
+        `rejected` is terminal like `failed`, but is a verdict on the
+        output rather than a failure of the job: the encode verified as
+        worse than or broken relative to its source, so it was never
+        swapped in and is not retried automatically. Retry is the override.
 
     TranscodeJob:
       type: object
@@ -7374,7 +7441,9 @@ components:
             transcoding.max_failures to decide whether a failure retries.
         error:
           type: string
-          description: Why the last attempt failed. Absent while none has.
+          description: |
+            Why the last attempt failed, or why the output was rejected.
+            Absent while neither has happened.
         file_path:
           type: string
           description: On-disk path of the media file this job re-encodes.
@@ -7400,14 +7469,15 @@ components:
           format: int64
           description: |
             Source size in bytes. Written with size_after when the job
-            succeeds, so it is absent on a queued, running, failed or
-            canceled row — the size of a file mid-encode is not reported.
+            succeeds or is rejected, so it is absent on a queued, running,
+            failed or canceled row — the size of a file mid-encode is not
+            reported.
         size_after:
           type: integer
           format: int64
           description: |
             Output size in bytes, written with size_before when the job
-            succeeds. Absent for every other status.
+            succeeds or is rejected. Absent for every other status.
         percent:
           type: number
           format: double

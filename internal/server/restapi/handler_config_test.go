@@ -406,6 +406,40 @@ var _ = Describe("Handler: Config API", Label("unit", "server", "config"), func(
 		})
 	})
 
+	Describe("UpdateConfigTranscoding verify block", func() {
+		It("patches the verify block and echoes it", func() {
+			body := strings.NewReader(
+				`{"verify":{"max_size_percent":110,"min_vmaf":90}}`,
+			)
+			resp := app.do(
+				jsonReq(app, http.MethodPatch, "/api/v1/config/transcoding", body),
+			)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+			var view TranscodingConfigView
+			Expect(json.NewDecoder(resp.Body).Decode(&view)).To(Succeed())
+			Expect(view.Verify.MaxSizePercent).To(Equal(110))
+			Expect(view.Verify.MinVmaf).To(Equal(90))
+			Expect(view.Verify.MinSizePercent).To(Equal(5))
+		})
+
+		It("refuses a verify percentage out of range", func() {
+			body := strings.NewReader(`{"verify":{"max_size_percent":300}}`)
+			resp := app.do(
+				jsonReq(app, http.MethodPatch, "/api/v1/config/transcoding", body),
+			)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+
+			var got Error
+			Expect(json.NewDecoder(resp.Body).Decode(&got)).To(Succeed())
+			Expect(got.Message).To(
+				ContainSubstring("max_size_percent: must be between 0 and 200"),
+			)
+		})
+	})
+
 	Describe("OIDC provider CRUD", func() {
 		var oidc *httptest.Server
 

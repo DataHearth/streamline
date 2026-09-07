@@ -1790,6 +1790,7 @@ const (
 	TranscodeJobStatusCanceled  TranscodeJobStatus = "canceled"
 	TranscodeJobStatusFailed    TranscodeJobStatus = "failed"
 	TranscodeJobStatusQueued    TranscodeJobStatus = "queued"
+	TranscodeJobStatusRejected  TranscodeJobStatus = "rejected"
 	TranscodeJobStatusRunning   TranscodeJobStatus = "running"
 	TranscodeJobStatusSucceeded TranscodeJobStatus = "succeeded"
 )
@@ -1802,6 +1803,8 @@ func (e TranscodeJobStatus) Valid() bool {
 	case TranscodeJobStatusFailed:
 		return true
 	case TranscodeJobStatusQueued:
+		return true
+	case TranscodeJobStatusRejected:
 		return true
 	case TranscodeJobStatusRunning:
 		return true
@@ -4819,7 +4822,8 @@ type TranscodeJob struct {
 	// EpisodeId Set when the file belongs to an episode.
 	EpisodeId *uint32 `json:"episode_id,omitempty"`
 
-	// Error Why the last attempt failed. Absent while none has.
+	// Error Why the last attempt failed, or why the output was rejected.
+	// Absent while neither has happened.
 	Error *string `json:"error,omitempty"`
 
 	// EtaSeconds Live estimate, present under the same rule as percent.
@@ -4846,22 +4850,31 @@ type TranscodeJob struct {
 	SeriesId *uint32 `json:"series_id,omitempty"`
 
 	// SizeAfter Output size in bytes, written with size_before when the job
-	// succeeds. Absent for every other status.
+	// succeeds or is rejected. Absent for every other status.
 	SizeAfter *int64 `json:"size_after,omitempty"`
 
 	// SizeBefore Source size in bytes. Written with size_after when the job
-	// succeeds, so it is absent on a queued, running, failed or
-	// canceled row — the size of a file mid-encode is not reported.
+	// succeeds or is rejected, so it is absent on a queued, running,
+	// failed or canceled row — the size of a file mid-encode is not
+	// reported.
 	SizeBefore *int64 `json:"size_before,omitempty"`
 
 	// Speed Live encode speed as a multiple of realtime, present under the
 	// same rule as percent.
-	Speed     *float64           `json:"speed,omitempty"`
-	StartedAt *time.Time         `json:"started_at,omitempty"`
-	Status    TranscodeJobStatus `json:"status"`
+	Speed     *float64   `json:"speed,omitempty"`
+	StartedAt *time.Time `json:"started_at,omitempty"`
+
+	// Status `rejected` is terminal like `failed`, but is a verdict on the
+	// output rather than a failure of the job: the encode verified as
+	// worse than or broken relative to its source, so it was never
+	// swapped in and is not retried automatically. Retry is the override.
+	Status TranscodeJobStatus `json:"status"`
 }
 
-// TranscodeJobStatus defines model for TranscodeJobStatus.
+// TranscodeJobStatus `rejected` is terminal like `failed`, but is a verdict on the
+// output rather than a failure of the job: the encode verified as
+// worse than or broken relative to its source, so it was never
+// swapped in and is not retried automatically. Retry is the override.
 type TranscodeJobStatus string
 
 // TranscodePolicy Attached to a quality profile: any failing `if` rule queues a
@@ -4909,11 +4922,45 @@ type TranscodeToPreset string
 // TranscodeToVideoCodec defines model for TranscodeTo.VideoCodec.
 type TranscodeToVideoCodec string
 
+// TranscodeVerifyConfigPatch Only provided fields are applied.
+type TranscodeVerifyConfigPatch struct {
+	HealthCheck    *bool `json:"health_check,omitempty"`
+	MaxSizePercent *int  `json:"max_size_percent,omitempty"`
+	MinSizePercent *int  `json:"min_size_percent,omitempty"`
+	MinVmaf        *int  `json:"min_vmaf,omitempty"`
+}
+
+// TranscodeVerifyConfigView Checks an encode must pass before it replaces the library file. A
+// failing encode lands as a `rejected` job and is never retried on
+// its own. Zero disables a bound.
+type TranscodeVerifyConfigView struct {
+	// HealthCheck Fully decode the output before the swap. One extra decode pass
+	// per job.
+	HealthCheck bool `json:"health_check"`
+
+	// MaxSizePercent Reject a transcode whose output exceeds this percentage of the
+	// source size. Remuxes are exempt — they copy the streams and may
+	// grow by container overhead.
+	MaxSizePercent int `json:"max_size_percent"`
+
+	// MinSizePercent Reject any output under this percentage of the source — a dropped
+	// stream or a truncated encode, not a transcode.
+	MinSizePercent int `json:"min_size_percent"`
+
+	// MinVmaf Reject a transcode whose mean VMAF over three 60 s windows falls
+	// below this. Needs an ffmpeg built with libvmaf; without one the
+	// check is skipped and logged once.
+	MinVmaf int `json:"min_vmaf"`
+}
+
 // TranscodingConfigPatch Only provided fields are applied.
 type TranscodingConfigPatch struct {
 	Enabled       *bool `json:"enabled,omitempty"`
 	MaxConcurrent *int  `json:"max_concurrent,omitempty"`
 	MaxFailures   *int  `json:"max_failures,omitempty"`
+
+	// Verify Only provided fields are applied.
+	Verify *TranscodeVerifyConfigPatch `json:"verify,omitempty"`
 }
 
 // TranscodingConfigView defines model for TranscodingConfigView.
@@ -4928,6 +4975,11 @@ type TranscodingConfigView struct {
 	// MaxFailures Attempts a job gets before it stops being retried
 	// automatically. A retry through the API resets the counter.
 	MaxFailures int `json:"max_failures"`
+
+	// Verify Checks an encode must pass before it replaces the library file. A
+	// failing encode lands as a `rejected` job and is never retried on
+	// its own. Zero disables a bound.
+	Verify TranscodeVerifyConfigView `json:"verify"`
 }
 
 // UpcomingEpisode defines model for UpcomingEpisode.

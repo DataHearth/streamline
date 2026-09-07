@@ -272,7 +272,27 @@ func (s *Server) UpdateConfigTranscoding(
 	failures, errFailures := narrowUint8(
 		"max_failures", req.Body.MaxFailures, 10,
 	)
-	if err := errors.Join(errConcurrent, errFailures); err != nil {
+	var verify config.TranscodeVerifyPatch
+	var errVerify error
+	if vp := req.Body.Verify; vp != nil {
+		var errMax, errMin, errVMAF error
+		verify.MaxSizePercent, errMax = narrowUint8Range(
+			"max_size_percent",
+			vp.MaxSizePercent,
+			0,
+			200,
+		)
+		verify.MinSizePercent, errMin = narrowUint8Range(
+			"min_size_percent",
+			vp.MinSizePercent,
+			0,
+			100,
+		)
+		verify.MinVMAF, errVMAF = narrowUint8Range("min_vmaf", vp.MinVmaf, 0, 100)
+		verify.HealthCheck = vp.HealthCheck
+		errVerify = errors.Join(errMax, errMin, errVMAF)
+	}
+	if err := errors.Join(errConcurrent, errFailures, errVerify); err != nil {
 		return UpdateConfigTranscoding422JSONResponse{
 			UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
 		}, nil
@@ -282,6 +302,7 @@ func (s *Server) UpdateConfigTranscoding(
 		Enabled:       req.Body.Enabled,
 		MaxConcurrent: concurrent,
 		MaxFailures:   failures,
+		Verify:        verify,
 	})
 	if configLocked(err) {
 		return UpdateConfigTranscoding403JSONResponse{
@@ -297,6 +318,10 @@ func (s *Server) UpdateConfigTranscoding(
 		"enabled", updated.Enabled,
 		"max_concurrent", updated.MaxConcurrent,
 		"max_failures", updated.MaxFailures,
+		"verify_max_size_percent", updated.Verify.MaxSizePercent,
+		"verify_min_size_percent", updated.Verify.MinSizePercent,
+		"verify_health_check", updated.Verify.HealthCheck,
+		"verify_min_vmaf", updated.Verify.MinVMAF,
 	)
 	return UpdateConfigTranscoding200JSONResponse{
 		TranscodingConfigJSONResponse: transcodingConfigView(updated),
@@ -642,20 +667,25 @@ func (s *Server) DeleteOIDCProvider(
 }
 
 // narrowUint8 converts a spec-bounded integer to the uint8 the config stores,
-// refusing anything outside [1, max]. The conversion cannot be trusted to do
-// it: nothing validates a request body against the spec's minimum/maximum, and
-// uint8(300) is 44 — a value the config's own min/max tags then accept. Every
-// key that reaches this is a counter whose floor is 1, so only the ceiling
-// varies.
+// refusing anything outside [1, max]. Every key that reaches this is a
+// counter whose floor is 1, so only the ceiling varies.
 func narrowUint8(key string, v *int, max int) (*uint8, error) {
+	return narrowUint8Range(key, v, 1, max)
+}
+
+// narrowUint8Range rejects a request value outside [lo, hi] before it is
+// converted: nothing validates a body against the spec's bounds, and
+// uint8(300) is 44, a value the config's own tags then happily accept.
+func narrowUint8Range(key string, v *int, lo, hi int) (*uint8, error) {
 	if v == nil {
 		return nil, nil
 	}
-	// The math.MaxUint8 clause is what lets gosec prove the conversion below
-	// cannot overflow. Every caller passes a max of 255 or less, so it never
-	// changes which values are accepted.
-	if *v < 1 || *v > max || *v > math.MaxUint8 {
-		return nil, fmt.Errorf("%s: must be between 1 and %d", key, max)
+	// gosec's overflow check needs a literal bound on both sides to prove the
+	// conversion below is safe; `lo`/`hi` are parameters, not literals, so the
+	// 0 and math.MaxUint8 clauses carry that proof and every caller's actual
+	// range is still enforced by the lo/hi clauses beside them.
+	if *v < 0 || *v < lo || *v > hi || *v > math.MaxUint8 {
+		return nil, fmt.Errorf("%s: must be between %d and %d", key, lo, hi)
 	}
 	n := uint8(*v)
 	return &n, nil
@@ -898,6 +928,12 @@ func transcodingConfigView(
 		Enabled:       t.Enabled,
 		MaxConcurrent: int(t.MaxConcurrent),
 		MaxFailures:   int(t.MaxFailures),
+		Verify: TranscodeVerifyConfigView{
+			MaxSizePercent: int(t.Verify.MaxSizePercent),
+			MinSizePercent: int(t.Verify.MinSizePercent),
+			HealthCheck:    t.Verify.HealthCheck,
+			MinVmaf:        int(t.Verify.MinVMAF),
+		},
 	}
 }
 
