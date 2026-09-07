@@ -33,9 +33,11 @@ Who may create an account is controlled by `auth.registration_mode` at **Setting
 
 | Mode | Behaviour |
 | --- | --- |
-| **disabled** | Nobody can self-register. Admins create accounts by hand. This is the default |
-| **invite** | Registration requires a valid invite token |
-| **open** | Anyone who can reach the login page can create an account |
+| **disabled** | Nobody can self-register, with a password or through SSO. Admins create accounts by hand. This is the default |
+| **invite** | An invite is required, whether the person registers with a password or signs in through SSO |
+| **open** | Anyone who can reach the login page can create an account, with a password or through SSO |
+
+The mode governs **both** ways a new account gets created — the registration form and a first-time SSO login — and only new accounts. People who already have an account sign in regardless.
 
 `open` on an internet-facing instance means anyone who finds your URL gets an account. Use `invite`.
 
@@ -46,6 +48,8 @@ Who may create an account is controlled by `auth.registration_mode` at **Setting
 You choose the email address and the role the invite grants. Streamline generates a token and shows you the registration link — **once**. It is not stored in a retrievable form; if you lose it, revoke the invite and make another.
 
 Send the link. When they open it, the registration form is pre-filled with the bound email address (read-only), and the account is created with the role you picked. Signing up with a different email than the invite was bound to is rejected.
+
+**If they sign in through SSO instead, skip the link.** An invite is matched by email, so all they have to do is sign in with your identity provider using the address you invited — the invite is consumed on that first login and grants the role you picked. The link and the SSO path redeem the same invite; whichever happens first uses it up.
 
 Invites are single-use and expire.
 

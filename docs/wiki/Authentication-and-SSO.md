@@ -143,11 +143,22 @@ Admins can revoke any user's keys from Settings → Users.
 
 | Mode | Behaviour |
 | --- | --- |
-| `disabled` | No self-registration. Default |
-| `invite` | Requires a valid invite token |
-| `open` | Anyone can register |
+| `disabled` | No self-registration, by password or through SSO. Default |
+| `invite` | A valid invite is required, by password or through SSO |
+| `open` | Anyone can register, by password or through SSO |
+
+**The mode covers both doors onto a new account** — the registration form *and* a first-time SSO login — and it covers **only new accounts**. An existing user signs in whatever the mode is, and so does an existing local account that a provider adopts by email under `email_linking`: adoption links an identity to an account that already exists, so it is governed by that key, not by `registration_mode`.
 
 An admin is **always** seeded on a fresh install, so the user table is never empty at request time. There is no first-user-registration special case to race.
+
+### Two ways an invite is redeemed
+
+Under `invite` mode the same invite can arrive through either door:
+
+- **By link** — `POST /auth/register` must carry the raw token, or it is refused with `403 invite_required`. The email binding is enforced at submit time.
+- **Through SSO** — the invited person never sees the token. On their first login the earliest unused, unexpired invite bound to the email the IdP asserts is consumed automatically; no match rejects the login with `oidc_no_invite`. A provider that reports `email_verified: false` is rejected one step earlier, so an IdP whose users can self-assert an address cannot claim someone else's invite.
+
+So inviting an SSO user is just: issue an invite for their email, tell them to sign in with the provider. There is no link for them to click.
 
 ### Which role a new account gets
 

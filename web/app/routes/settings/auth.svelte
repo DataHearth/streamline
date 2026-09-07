@@ -160,6 +160,7 @@
 				{#snippet children(field)}
 					<RadioCards
 						legend={i18n.auth_registration_mode()}
+						help={i18n.auth_registration_mode_help()}
 						columns={3}
 						name={field.name}
 						value={field.state.value}

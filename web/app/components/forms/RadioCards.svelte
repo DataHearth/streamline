@@ -13,6 +13,7 @@
 		legend?: string;
 		columns?: 2 | 3;
 		disabled?: boolean;
+		help?: string;
 	};
 
 	let {
@@ -23,6 +24,7 @@
 		legend,
 		columns = 2,
 		disabled = false,
+		help,
 	}: Props = $props();
 
 	const COLS = { 2: "sm:grid-cols-2", 3: "sm:grid-cols-3" } as const;
@@ -61,4 +63,7 @@
 			</label>
 		{/each}
 	</div>
+	{#if help}
+		<p class="mt-2 text-xs text-fg-subtle">{help}</p>
+	{/if}
 </fieldset>
