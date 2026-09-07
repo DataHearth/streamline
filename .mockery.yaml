@@ -78,6 +78,9 @@ packages:
   github.com/datahearth/streamline/internal/scheduler:
     interfaces:
       Controller: {}
+  github.com/datahearth/streamline/internal/transcoding:
+    interfaces:
+      MediaServerRefresher: {}
   github.com/datahearth/streamline/internal/server/middleware:
     interfaces:
       Authenticator: {}

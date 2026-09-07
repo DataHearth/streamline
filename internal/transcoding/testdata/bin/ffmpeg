@@ -1,0 +1,15 @@
+#!/bin/sh
+# Fake ffmpeg: "-version" prints a version line; otherwise the last argument is
+# the output path — emit two progress blocks, then copy $FAKE_INPUT there.
+# FAKE_FFMPEG_FAIL=1 exits 1 with stderr; FAKE_FFMPEG_SLEEP delays the copy.
+#
+# The sleep redirects both streams to /dev/null so it does not inherit the
+# pipes: a cancelled run kills this shell, and an inheriting child would hold
+# the read end open for the rest of its sleep, stalling the reader.
+if [ "$1" = "-version" ]; then echo "ffmpeg version 7.1.1-fake"; exit 0; fi
+if [ "$FAKE_FFMPEG_FAIL" = "1" ]; then echo "conversion failed: broken pipe" >&2; exit 1; fi
+for a in "$@"; do out="$a"; done
+printf 'out_time_us=1000000\nspeed=2x\nprogress=continue\n'
+if [ -n "$FAKE_FFMPEG_SLEEP" ]; then sleep "$FAKE_FFMPEG_SLEEP" >/dev/null 2>&1; fi
+printf 'out_time_us=2000000\nspeed=2x\nprogress=end\n'
+cp "$FAKE_INPUT" "$out"

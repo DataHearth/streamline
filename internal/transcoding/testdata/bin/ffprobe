@@ -1,0 +1,19 @@
+#!/bin/sh
+# Fake ffprobe: emits $FFPROBE_FIXTURE, or $FFPROBE_FIXTURE_TMP when asked
+# about the swap's temp file, ignoring every other argument.
+#
+# The temp-file branch also honours $FFPROBE_MARKER_TMP (touched before the
+# read) and $FFPROBE_SLEEP_TMP (held before the read): together they let a spec
+# park the verification probe and know it is parked. The sleep redirects both
+# streams so it does not inherit this process's pipes.
+for a in "$@"; do last="$a"; done
+case "$last" in
+	*.streamline-tmp.*)
+		if [ -n "$FFPROBE_MARKER_TMP" ]; then : > "$FFPROBE_MARKER_TMP"; fi
+		if [ -n "$FFPROBE_SLEEP_TMP" ]; then
+			sleep "$FFPROBE_SLEEP_TMP" >/dev/null 2>&1
+		fi
+		cat "${FFPROBE_FIXTURE_TMP:-$FFPROBE_FIXTURE}"
+		;;
+	*) cat "$FFPROBE_FIXTURE" ;;
+esac
