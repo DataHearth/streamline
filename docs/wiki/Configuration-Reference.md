@@ -445,8 +445,8 @@ Built-in engine only (ignored for external clients):
 | --- | --- | --- |
 | `if.video_codecs` | | Codecs considered acceptable: `h264` `hevc` `av1` `vp9` `mpeg4` `mpeg2video` `vc1`. Empty means any |
 | `if.containers` | | Containers considered acceptable: `mkv` `mp4` `avi` `mov` `ts` `m2ts` `webm` `wmv`. Empty means any |
-| `if.max_video_bitrate` | | Ceiling as an ffmpeg-style rate — `8M`, `4500k`. Empty means no bitrate rule |
-| `to.container` | ✅ | `mkv` \| `mp4` |
+| `if.max_video_bitrate` | | Ceiling as an ffmpeg-style rate — `8M`, `4500k`. Empty means no bitrate rule. Read off the video stream where the file records one, and otherwise off the **container's total bitrate**, which includes every audio track — mkv rarely records a per-stream rate, so that fallback is the usual case. Leave headroom for the audio, or files whose video is already under the ceiling get queued |
+| `to.container` | ✅ | `mkv` \| `mp4`. **mp4 keeps video and audio only** — subtitle streams and font attachments are dropped, because mp4 cannot carry SRT/ASS/PGS or attachments at all. `mkv` keeps everything |
 | `to.video_codec` | ✅ | `h264` \| `hevc` \| `av1` |
 | `to.crf` | | 0–51, lower is bigger and better. `0` (or omitted) leaves `-crf` out, so the encoder's default applies — libx264 23, libx265 28, libsvtav1 35 |
 | `to.preset` | ✅ | `ultrafast` … `veryslow` — the usual x264/x265 ladder |
@@ -454,6 +454,10 @@ Built-in engine only (ignored for external clients):
 | `to.audio_passthrough` | | Source audio codecs copied rather than re-encoded. Empty applies the built-in list: `truehd eac3 ac3 dts aac opus flac` |
 
 A file failing **any** `if` rule is queued. HDR and Dolby Vision video is exempt from the codec and bitrate rules — it is never re-encoded — but a container remux still applies to it.
+
+**The destination has to satisfy the test.** A `to.video_codec` missing from a non-empty `if.video_codecs`, or a `to.container` missing from a non-empty `if.containers`, is refused at load with a message naming both keys: the encode would land, the next pass would read its own output as non-compliant, and the file would be re-encoded forever with every job reporting success. The one loop that cannot be caught this way is a `crf` output that comes out above `max_video_bitrate` — set the ceiling with headroom, not at the rate you are aiming for.
+
+**Do not combine a `transcode` block with a `formats` entry that scores a `size` condition's `min_gb` positively.** A transcode's whole point is a smaller file, and the row is re-probed from the encode — so the shrunk file scores below the release that produced it and looks upgradable to the RSS feed forever after.
 
 One profile named `default` (1080p/1080p, upgrades allowed, no formats) ships out of the box.
 

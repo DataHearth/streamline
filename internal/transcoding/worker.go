@@ -296,6 +296,13 @@ func (w *Worker) runJob(ctx context.Context, c *claimed) {
 
 	info, err := w.prober.Probe(jctx, mf.Path)
 	if err != nil {
+		// Shutdown first: it cancels jctx too, and canceled is a terminal
+		// state nothing retries and the dedupe ignores — a file recorded that
+		// way on the way down would never be transcoded again. Leaving the row
+		// running hands it to the next boot's recover.
+		if ctx.Err() != nil {
+			return
+		}
 		if jctx.Err() != nil {
 			w.markCanceled(wctx, job)
 			return
@@ -364,16 +371,39 @@ func (w *Worker) runJob(ctx context.Context, c *claimed) {
 
 	// Verification runs on wctx so a cancel arriving mid-probe doesn't read as
 	// a corrupt output; the checkpoint below is where it lands instead.
-	if err := w.verify(wctx, outPath, info); err != nil {
+	out, err := w.verify(wctx, outPath, info)
+	if err != nil {
 		w.fail(wctx, job, err)
 		return
 	}
 
+	// Shutdown ahead of the job's own cancel, for the reason the probe arm
+	// states: canceled is terminal, and a process going down must not spend
+	// the file's only chance at being transcoded.
+	if ctx.Err() != nil {
+		return
+	}
 	// The last point a cancel can be honoured: nothing has moved yet, so the
 	// deferred remove drops the encode and the library file is untouched. Past
 	// the swap the work is done and a cancel is simply too late — completing it
 	// is what keeps the row and the bytes on disk saying the same thing.
 	if jctx.Err() != nil {
+		w.markCanceled(wctx, job)
+		return
+	}
+
+	// An encode outlives plenty of writes to its own row: a replace import, a
+	// rename, a re-identify. The encode then holds the *old* bytes, and on a
+	// replace that renders the same name the swap would rename them over the
+	// file that replaced them. Re-reading the row here is what catches that —
+	// and the cascade means the row can also simply be gone.
+	if err := w.stillCurrent(wctx, mf); err != nil {
+		slog.WarnContext(wctx, "dropped a transcode whose file changed under it",
+			"transcode.job_id", job.ID,
+			"media_file.id", mf.ID,
+			"media_file.path", mf.Path,
+			"error", err,
+		)
 		w.markCanceled(wctx, job)
 		return
 	}
@@ -391,7 +421,7 @@ func (w *Worker) runJob(ctx context.Context, c *claimed) {
 	}
 
 	if err := w.db.UpdateMediaFileAfterTranscode(
-		wctx, mf.ID, finalPath, sizeAfter, mf.Size, pol.To.Container,
+		wctx, mf.ID, finalPath, sizeAfter, mf.Size, pol.To.Container, out,
 	); err != nil {
 		w.abandon(wctx, job, mf, finalPath,
 			fmt.Errorf("%w: record transcode outcome: %w", errAfterSwap, err))
@@ -422,24 +452,46 @@ func (w *Worker) runJob(ctx context.Context, c *claimed) {
 
 // verify checks the encode against the source before anything is swapped: the
 // durations must agree within two seconds (containers round), and audio the
-// source had must have survived.
+// source had must have survived. The probe it read is returned because the row
+// is written from it — the encode's own streams, rather than a hole the
+// media-probe backfill has to fill before the file can be scored again.
 func (w *Worker) verify(
 	ctx context.Context,
 	outPath string,
 	src *ffmpeg.Info,
-) error {
+) (*ffmpeg.Info, error) {
 	out, err := w.prober.Probe(ctx, outPath)
 	if err != nil {
-		return fmt.Errorf("output verification: %w", err)
+		return nil, fmt.Errorf("output verification: %w", err)
 	}
 	if math.Abs(float64(out.DurationSec)-float64(src.DurationSec)) > 2 {
-		return fmt.Errorf(
+		return nil, fmt.Errorf(
 			"output verification: duration %ds against source %ds",
 			out.DurationSec, src.DurationSec,
 		)
 	}
 	if len(src.AudioCodecs) > 0 && len(out.AudioCodecs) == 0 {
-		return errors.New("output verification: no audio stream in the output")
+		return nil, errors.New(
+			"output verification: no audio stream in the output",
+		)
+	}
+	return out, nil
+}
+
+// stillCurrent reports whether the row the job was claimed with still names
+// the file the encode was made from. Path and size together are what a replace
+// import moves: the same rendered name over different bytes changes only the
+// size, and a rename or re-identify changes only the path.
+func (w *Worker) stillCurrent(ctx context.Context, mf *ent.MediaFile) error {
+	got, err := w.db.FindMediaFileByID(ctx, mf.ID)
+	if err != nil {
+		return fmt.Errorf("re-read media_file %d: %w", mf.ID, err)
+	}
+	if got.Path != mf.Path {
+		return fmt.Errorf("path moved to %s", got.Path)
+	}
+	if got.Size != mf.Size {
+		return fmt.Errorf("size changed to %d bytes", got.Size)
 	}
 	return nil
 }
@@ -449,6 +501,23 @@ func (w *Worker) verify(
 // separately — that removal failing is not worth failing an import-complete
 // job over, since the row already points at the file that exists.
 func swap(ctx context.Context, outPath, finalPath, srcPath string) (int64, error) {
+	// A container change lands the encode on a path the source does not hold,
+	// and os.Rename destroys whatever is already there without a word. A
+	// multi-file movie is enough for that path to belong to another row, and
+	// nothing about this job licenses deleting it — so the job fails instead,
+	// retryably, with the path in the reason.
+	if finalPath != srcPath {
+		switch _, err := os.Lstat(finalPath); {
+		case err == nil:
+			return 0, fmt.Errorf(
+				"swap in the transcoded file: %s already exists", finalPath,
+			)
+		case !errors.Is(err, fs.ErrNotExist):
+			return 0, fmt.Errorf(
+				"swap in the transcoded file: stat %s: %w", finalPath, err,
+			)
+		}
+	}
 	if err := os.Rename(outPath, finalPath); err != nil {
 		return 0, fmt.Errorf("swap in the transcoded file: %w", err)
 	}

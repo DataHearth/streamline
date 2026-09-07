@@ -195,7 +195,11 @@ var _ = Describe("Worker", Label("integration", "transcoding"), func() {
 		Expect(got.SizeBefore).To(Equal(mf.Size))
 		Expect(got.Format).To(Equal("mkv"))
 		Expect(got.TranscodedAt).NotTo(BeNil())
-		Expect(got.ProbedAt).To(BeNil())
+		// The output's own probe, taken by verify, so nothing scores the row
+		// off the release name until a backfill catches up with it.
+		Expect(got.ProbedAt).NotTo(BeNil())
+		Expect(got.VideoCodec).To(Equal("h264"))
+		Expect(got.AudioTracks).To(Equal(uint8(2)))
 
 		done := reload(job)
 		Expect(done.Status).To(Equal(transcodejob.StatusSucceeded))
@@ -419,6 +423,86 @@ var _ = Describe("Worker", Label("integration", "transcoding"), func() {
 		Expect(tempFiles()).To(BeEmpty())
 	})
 
+	It("drops the encode when the row moved out from under it", func() {
+		marker := filepath.Join(root, "verifying-moved")
+		GinkgoT().Setenv("FFPROBE_MARKER_TMP", marker)
+		GinkgoT().Setenv("FFPROBE_SLEEP_TMP", "2")
+
+		mf := seedMovieFile("hevc")
+		job := queueJob(mf)
+
+		finished := make(chan struct{})
+		go func() {
+			defer GinkgoRecover()
+			defer close(finished)
+			worker.tick(ctx)
+		}()
+
+		// Parked on the verification probe: the encode is finished and the
+		// swap has not happened, which is the window a replace import or a
+		// rename lands in.
+		Eventually(marker, 10*time.Second, 20*time.Millisecond).
+			Should(BeAnExistingFile())
+		moved := filepath.Join(movieRoot, "Renamed.mkv")
+		Expect(store.UpdateMediaFilePath(ctx, mf.ID, moved)).To(Succeed())
+
+		Eventually(finished, 10*time.Second).Should(BeClosed())
+
+		Expect(os.ReadFile(mf.Path)).To(Equal([]byte("original-bytes")))
+		Expect(moved).NotTo(BeAnExistingFile())
+		Expect(tempFiles()).To(BeEmpty())
+		Expect(reload(job).Status).To(Equal(transcodejob.StatusCanceled))
+	})
+
+	It("leaves the row running when shutdown lands during the source probe", func() {
+		marker := filepath.Join(root, "probing")
+		GinkgoT().Setenv("FFPROBE_MARKER", marker)
+		GinkgoT().Setenv("FFPROBE_SLEEP", "2")
+
+		mf := seedMovieFile("hevc")
+		job := queueJob(mf)
+
+		runCtx, stop := context.WithCancel(ctx)
+		defer stop()
+		finished := make(chan struct{})
+		go func() {
+			defer GinkgoRecover()
+			defer close(finished)
+			worker.tick(runCtx)
+		}()
+
+		Eventually(marker, 10*time.Second, 20*time.Millisecond).
+			Should(BeAnExistingFile())
+		stop()
+		Eventually(finished, 10*time.Second).Should(BeClosed())
+
+		// canceled is terminal — recording one here would retire the file.
+		got := reload(job)
+		Expect(got.Status).To(Equal(transcodejob.StatusRunning))
+		Expect(os.ReadFile(mf.Path)).To(Equal([]byte("original-bytes")))
+	})
+
+	It("refuses a container change onto a path another file already holds", func() {
+		dv, err := filepath.Abs("testdata/ffprobe_hevc_dv.json")
+		Expect(err).NotTo(HaveOccurred())
+		GinkgoT().Setenv("FFPROBE_FIXTURE", dv)
+
+		mf := seedMovieFileExt("hevc", ".avi")
+		job := queueJob(mf)
+		sibling := strings.TrimSuffix(mf.Path, ".avi") + ".mkv"
+		Expect(os.WriteFile(sibling, []byte("sibling"), 0o644)).To(Succeed())
+
+		Expect(worker.tick(ctx)).To(BeTrue())
+
+		Expect(os.ReadFile(sibling)).To(Equal([]byte("sibling")))
+		Expect(os.ReadFile(mf.Path)).To(Equal([]byte("original-bytes")))
+		Expect(tempFiles()).To(BeEmpty())
+
+		got := reload(job)
+		Expect(got.Status).To(Equal(transcodejob.StatusQueued))
+		Expect(got.Error).To(ContainSubstring("already exists"))
+	})
+
 	It("fails terminally when the row cannot be updated after the swap", func() {
 		// The store is mocked here because the failure under test is the store
 		// itself refusing the write once the bytes on disk have already been
@@ -438,8 +522,13 @@ var _ = Describe("Worker", Label("integration", "transcoding"), func() {
 			Return(job, nil).
 			Once()
 		mockStore.EXPECT().
+			FindMediaFileByID(mock.Anything, mf.ID).
+			Return(mf, nil).
+			Once()
+		mockStore.EXPECT().
 			UpdateMediaFileAfterTranscode(
 				mock.Anything, mf.ID, path, mock.Anything, mf.Size, "mkv",
+				mock.Anything,
 			).
 			Return(errors.New("database is locked")).
 			Once()

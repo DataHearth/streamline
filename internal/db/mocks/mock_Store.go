@@ -14015,16 +14015,16 @@ func (_c *MockStore_UpdateImportScanStatus_Call) RunAndReturn(run func(ctx conte
 }
 
 // UpdateMediaFileAfterTranscode provides a mock function for the type MockStore
-func (_mock *MockStore) UpdateMediaFileAfterTranscode(ctx context.Context, id uint32, path string, size int64, sizeBefore int64, format string) error {
-	ret := _mock.Called(ctx, id, path, size, sizeBefore, format)
+func (_mock *MockStore) UpdateMediaFileAfterTranscode(ctx context.Context, id uint32, path string, size int64, sizeBefore int64, format string, probe *ffmpeg.Info) error {
+	ret := _mock.Called(ctx, id, path, size, sizeBefore, format, probe)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpdateMediaFileAfterTranscode")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string, int64, int64, string) error); ok {
-		r0 = returnFunc(ctx, id, path, size, sizeBefore, format)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string, int64, int64, string, *ffmpeg.Info) error); ok {
+		r0 = returnFunc(ctx, id, path, size, sizeBefore, format, probe)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -14043,11 +14043,12 @@ type MockStore_UpdateMediaFileAfterTranscode_Call struct {
 //   - size int64
 //   - sizeBefore int64
 //   - format string
-func (_e *MockStore_Expecter) UpdateMediaFileAfterTranscode(ctx any, id any, path any, size any, sizeBefore any, format any) *MockStore_UpdateMediaFileAfterTranscode_Call {
-	return &MockStore_UpdateMediaFileAfterTranscode_Call{Call: _e.mock.On("UpdateMediaFileAfterTranscode", ctx, id, path, size, sizeBefore, format)}
+//   - probe *ffmpeg.Info
+func (_e *MockStore_Expecter) UpdateMediaFileAfterTranscode(ctx any, id any, path any, size any, sizeBefore any, format any, probe any) *MockStore_UpdateMediaFileAfterTranscode_Call {
+	return &MockStore_UpdateMediaFileAfterTranscode_Call{Call: _e.mock.On("UpdateMediaFileAfterTranscode", ctx, id, path, size, sizeBefore, format, probe)}
 }
 
-func (_c *MockStore_UpdateMediaFileAfterTranscode_Call) Run(run func(ctx context.Context, id uint32, path string, size int64, sizeBefore int64, format string)) *MockStore_UpdateMediaFileAfterTranscode_Call {
+func (_c *MockStore_UpdateMediaFileAfterTranscode_Call) Run(run func(ctx context.Context, id uint32, path string, size int64, sizeBefore int64, format string, probe *ffmpeg.Info)) *MockStore_UpdateMediaFileAfterTranscode_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -14073,6 +14074,10 @@ func (_c *MockStore_UpdateMediaFileAfterTranscode_Call) Run(run func(ctx context
 		if args[5] != nil {
 			arg5 = args[5].(string)
 		}
+		var arg6 *ffmpeg.Info
+		if args[6] != nil {
+			arg6 = args[6].(*ffmpeg.Info)
+		}
 		run(
 			arg0,
 			arg1,
@@ -14080,6 +14085,7 @@ func (_c *MockStore_UpdateMediaFileAfterTranscode_Call) Run(run func(ctx context
 			arg3,
 			arg4,
 			arg5,
+			arg6,
 		)
 	})
 	return _c
@@ -14090,7 +14096,7 @@ func (_c *MockStore_UpdateMediaFileAfterTranscode_Call) Return(err error) *MockS
 	return _c
 }
 
-func (_c *MockStore_UpdateMediaFileAfterTranscode_Call) RunAndReturn(run func(ctx context.Context, id uint32, path string, size int64, sizeBefore int64, format string) error) *MockStore_UpdateMediaFileAfterTranscode_Call {
+func (_c *MockStore_UpdateMediaFileAfterTranscode_Call) RunAndReturn(run func(ctx context.Context, id uint32, path string, size int64, sizeBefore int64, format string, probe *ffmpeg.Info) error) *MockStore_UpdateMediaFileAfterTranscode_Call {
 	_c.Call.Return(run)
 	return _c
 }

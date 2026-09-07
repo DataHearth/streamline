@@ -805,7 +805,7 @@ var (
 				Symbol:     "transcode_jobs_media_files_transcode_jobs",
 				Columns:    []*schema.Column{TranscodeJobsColumns[10]},
 				RefColumns: []*schema.Column{MediaFilesColumns[0]},
-				OnDelete:   schema.NoAction,
+				OnDelete:   schema.Cascade,
 			},
 		},
 		Indexes: []*schema.Index{

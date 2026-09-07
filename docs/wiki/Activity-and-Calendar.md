@@ -159,9 +159,11 @@ Each row names the movie or episode, the file on disk, and where the job got to:
 | **Running** | Encoding now, with a live percentage, speed and ETA |
 | **Succeeded** | The file on disk has been replaced. The row shows the size before and after |
 | **Failed** | Out of attempts, or failed once in a way no retry can fix. The row carries the tail of ffmpeg's own error output |
-| **Canceled** | You stopped it, or it was queued when you did |
+| **Canceled** | You stopped it, it was queued when you did, or the file changed under the encode. Terminal — see below |
 
 **Cancel** stops a running encode and throws away the partial output — the original file is untouched, so cancelling is always safe. The one exception is a cancel that arrives in the last moment before the swap: by then the encode is finished and the job completes rather than discarding good work.
+
+**A canceled job is a dead end.** Only **failed** jobs can be retried, and nothing re-queues a canceled one — not the next import, not a restart. The way back is **Scan library**, which finds the file again if it still doesn't comply. Streamline cancels a job on its own in one case: the file changed underneath a running encode (a replacement was imported, or it was renamed), which makes the encode's output the wrong bytes to swap in.
 
 **Retry** puts a failed job back in the queue with its attempt count reset. Fix whatever the error names first — a job that failed because the disk was full will fail the same way again.
 

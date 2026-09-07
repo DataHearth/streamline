@@ -264,7 +264,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 				)
 			} else {
 				slog.InfoContext(ctx, "transcoding worker started",
-					"ffmpeg_version", version,
+					"ffmpeg.version", version,
 					"max_concurrent", cfg.Transcoding.MaxConcurrent,
 				)
 			}

@@ -38,10 +38,10 @@
 	let confirmCancel = $state<TranscodeJob | null>(null);
 	const qc = useQueryClient();
 
-	// The whole list, filtered in the browser. The endpoint takes a single
-	// `status`, but the chips are multi-select and the counts above them need
-	// every state anyway — the torrents page fetches whole and filters locally
-	// for the same reason.
+	// The whole list, filtered in the browser. The endpoint takes no status
+	// filter: the chips are multi-select and the counts above them need every
+	// state anyway — the torrents page fetches whole and filters locally for
+	// the same reason.
 	const jobs = createQuery<TranscodeJob[]>(() => ({
 		queryKey: ["transcoding", "queue", ""],
 		queryFn: () => api<TranscodeJob[]>("/transcoding/queue"),

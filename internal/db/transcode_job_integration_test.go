@@ -436,20 +436,59 @@ var _ = Describe("TranscodeJob store", Label("integration", "db"), func() {
 		})
 	})
 
-	Describe("UpdateMediaFileAfterTranscode", func() {
-		It("updates the file and clears the probe columns", func() {
+	Describe("the media_file → transcode_jobs cascade", func() {
+		It("lets a file that has jobs be deleted, taking them with it", func() {
 			mf := createMovieFile()
-			info := &ffmpeg.Info{
+			job, err := store.CreateTranscodeJob(ctx, mf.ID)
+			Expect(err).NotTo(HaveOccurred())
+			claimed, err := store.ClaimNextTranscodeJob(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(claimed).NotTo(BeNil())
+			Expect(store.CompleteTranscodeJob(ctx, job.ID, 2000, 900)).
+				To(Succeed())
+
+			Expect(store.DeleteMediaFile(ctx, mf.ID)).To(Succeed())
+
+			n, err := client.TranscodeJob.Query().Count(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(BeZero())
+		})
+
+		It("lets the owning movie be deleted through the file's jobs", func() {
+			mf := createMovieFile()
+			_, err := store.CreateTranscodeJob(ctx, mf.ID)
+			Expect(err).NotTo(HaveOccurred())
+			owner, err := client.MediaFile.QueryMovie(mf).Only(ctx)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(store.DeleteMovie(ctx, owner.ID)).To(Succeed())
+
+			n, err := client.TranscodeJob.Query().Count(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(BeZero())
+		})
+	})
+
+	Describe("UpdateMediaFileAfterTranscode", func() {
+		It("updates the file and restamps the probe from the output", func() {
+			mf := createMovieFile()
+			before := &ffmpeg.Info{
 				Container: "matroska", DurationSec: 5400, VideoCodec: "h264",
 				Width: 1920, Height: 1080, AudioCodec: "aac",
 				AudioChannels: 2, BitrateBPS: 8_000_000, AudioTracks: 2,
 				AudioLangs: "eng", SubLangs: "eng",
 			}
-			Expect(store.StampMediaFileProbe(ctx, mf.ID, mf.Path, info)).
+			Expect(store.StampMediaFileProbe(ctx, mf.ID, mf.Path, before)).
 				To(Succeed())
 
+			after := &ffmpeg.Info{
+				Container: "matroska", DurationSec: 5400, VideoCodec: "hevc",
+				Width: 1920, Height: 1080, AudioCodec: "aac",
+				AudioChannels: 2, BitrateBPS: 3_000_000, AudioTracks: 1,
+				AudioLangs: "eng", SubLangs: "fra",
+			}
 			err := store.UpdateMediaFileAfterTranscode(
-				ctx, mf.ID, "/lib/dune.hevc.mkv", 900, 2000, "mkv",
+				ctx, mf.ID, "/lib/dune.hevc.mkv", 900, 2000, "mkv", after,
 			)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -461,18 +500,15 @@ var _ = Describe("TranscodeJob store", Label("integration", "db"), func() {
 			Expect(got.SizeBefore).To(Equal(int64(2000)))
 			Expect(got.TranscodedAt).NotTo(BeNil())
 
-			Expect(got.ProbedAt).To(BeNil())
-			Expect(got.Container).To(BeEmpty())
-			Expect(got.DurationSeconds).To(BeZero())
-			Expect(got.VideoCodec).To(BeEmpty())
-			Expect(got.Width).To(BeZero())
-			Expect(got.Height).To(BeZero())
-			Expect(got.AudioCodec).To(BeEmpty())
-			Expect(got.AudioChannels).To(BeZero())
-			Expect(got.Bitrate).To(BeZero())
-			Expect(got.AudioTracks).To(BeZero())
-			Expect(got.AudioLangs).To(BeEmpty())
-			Expect(got.SubLangs).To(BeEmpty())
+			// The row describes the bytes that are now on disk, so nothing
+			// scoring it falls back to the release name it was imported under.
+			Expect(got.ProbedAt).NotTo(BeNil())
+			Expect(got.VideoCodec).To(Equal("hevc"))
+			Expect(got.Bitrate).To(Equal(uint32(3_000_000)))
+			Expect(got.AudioTracks).To(Equal(uint8(1)))
+			Expect(got.SubLangs).To(Equal("fra"))
+			Expect(got.Width).To(Equal(uint16(1920)))
+			Expect(got.Height).To(Equal(uint16(1080)))
 		})
 	})
 })

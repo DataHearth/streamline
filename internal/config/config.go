@@ -413,7 +413,8 @@ func (c *Config) normalizeTranscodePolicies() {
 }
 
 // Validate reports whether these values are a config the process can run on.
-// Beyond normalising the OIDC linking tier onto c, it only reads c. Creating
+// Beyond normalising the OIDC linking tier and the transcode policies onto c,
+// it only reads c. Creating
 // directories is ensureDataDir's job, so a caller asking a question rather than
 // booting — config.Update, deciding whether the file it is about to write would
 // still load — leaves nothing behind on the filesystem when the answer is no.
@@ -602,13 +603,38 @@ func (c *Config) checkInvariants() error {
 				fs.Name,
 			))
 		}
-		if p.Transcode != nil && p.Transcode.If.MaxVideoBitrate != "" {
+		if p.Transcode == nil {
+			continue
+		}
+		if p.Transcode.If.MaxVideoBitrate != "" {
 			if _, err := ParseBitrate(p.Transcode.If.MaxVideoBitrate); err != nil {
 				errs = append(errs, fmt.Errorf(
 					"quality profile %q: transcode.if.max_video_bitrate %w",
 					p.Name, err,
 				))
 			}
+		}
+		// A destination its own `if` rejects is a loop: the encode lands,
+		// the next pass reads the result as non-compliant, and the file is
+		// re-encoded forever. Nothing downstream can catch it — every job
+		// succeeds — so it has to be refused here.
+		if len(p.Transcode.If.VideoCodecs) > 0 &&
+			!slices.Contains(p.Transcode.If.VideoCodecs, p.Transcode.To.VideoCodec) {
+			errs = append(errs, fmt.Errorf(
+				"quality profile %q: transcode.to.video_codec %q is not in "+
+					"transcode.if.video_codecs — the output would fail the "+
+					"rule that produced it",
+				p.Name, p.Transcode.To.VideoCodec,
+			))
+		}
+		if len(p.Transcode.If.Containers) > 0 &&
+			!slices.Contains(p.Transcode.If.Containers, p.Transcode.To.Container) {
+			errs = append(errs, fmt.Errorf(
+				"quality profile %q: transcode.to.container %q is not in "+
+					"transcode.if.containers — the output would fail the "+
+					"rule that produced it",
+				p.Name, p.Transcode.To.Container,
+			))
 		}
 	}
 	return errors.Join(errs...)

@@ -372,7 +372,7 @@ Both answer `409` for a job in the wrong state, **and there is no `404`**: each 
 
 **`POST /transcoding/scan`** (202) walks the library, re-probes every file whose profile carries a `transcode` block, and queues the non-compliant ones. It returns as soon as the scan is dispatched — there is no scan-status endpoint; watch the queue. `409` while a scan is already running, and `409` when the worker could not run the jobs anyway (`ffmpeg.enabled: false`, or the ffmpeg binary not found in this process) rather than queueing work nothing would drain.
 
-**`transcoded_at` and `size_before`** appear on `MediaFile` and flat on `Episode` once a file has been re-encoded — `size` names the file as it is now, so the pair is what renders "35 GB → 12 GB". Both are absent for a file that has never been transcoded. A transcode also clears the file's [`media_info`](#media-probe) until the backfill re-probes it: the bytes changed, so the old probe no longer describes them.
+**`transcoded_at` and `size_before`** appear on `MediaFile` and flat on `Episode` once a file has been re-encoded — `size` names the file as it is now, so the pair is what renders "35 GB → 12 GB". Both are absent for a file that has never been transcoded. The file's [`media_info`](#media-probe) is rewritten in the same update, from the probe the worker took to verify the encode — so it describes the new bytes right away rather than going missing until the backfill catches up.
 
 **`GET`/`PATCH /config/transcoding`** (admin) reads and edits the switch and the budget:
 

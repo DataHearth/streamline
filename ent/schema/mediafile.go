@@ -79,7 +79,8 @@ func (MediaFile) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("movie", Movie.Type).Ref("media_files").Unique(),
 		edge.From("episode", Episode.Type).Ref("media_files").Unique(),
-		edge.To("transcode_jobs", TranscodeJob.Type),
+		edge.To("transcode_jobs", TranscodeJob.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
 }
 

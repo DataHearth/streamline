@@ -57,7 +57,7 @@ var _ = Describe("BuildArgs", Label("unit", "transcoding"), func() {
 		Expect(args[indexOf(args, "-c:v")+2]).To(Equal("-preset"))
 	})
 
-	It("omits -c:t copy for a non-mkv target", func() {
+	It("builds the golden mp4 invocation, video and audio only", func() {
 		info := &ffmpeg.Info{AudioCodecs: []string{"aac"}}
 		pol := config.TranscodeTo{
 			Container:  "mp4",
@@ -73,8 +73,54 @@ var _ = Describe("BuildArgs", Label("unit", "transcoding"), func() {
 			config.TranscodePolicy{To: pol},
 			ActionTranscode,
 		)
-		Expect(args).NotTo(ContainElement("-c:t"))
-		Expect(args).To(ContainElement("-c:s"))
+		Expect(args).To(Equal([]string{
+			"-hide_banner", "-nostats", "-progress", "pipe:1", "-y",
+			"-i", "/in.mkv", "-map", "0:v", "-map", "0:a",
+			"-c:v", "libx264", "-crf", "20", "-preset", "fast",
+			"-c:a:0", "aac",
+			"/out.mp4",
+		}))
+	})
+
+	It("maps video and audio only when remuxing into mp4", func() {
+		info := &ffmpeg.Info{}
+		pol := config.TranscodePolicy{To: config.TranscodeTo{Container: "mp4"}}
+		args := BuildArgs("/in.mkv", "/out.mp4", info, pol, ActionRemux)
+		Expect(args).To(Equal([]string{
+			"-hide_banner", "-nostats", "-progress", "pipe:1", "-y",
+			"-i", "/in.mkv", "-map", "0:v", "-map", "0:a",
+			"-c", "copy",
+			"/out.mp4",
+		}))
+	})
+
+	It("passes libsvtav1 a numeric preset", func() {
+		info := &ffmpeg.Info{AudioCodecs: []string{"aac"}}
+		pol := config.TranscodePolicy{To: config.TranscodeTo{
+			Container:  "mkv",
+			VideoCodec: "av1",
+			CRF:        32,
+			Preset:     "medium",
+			AudioCodec: "aac",
+		}}
+		args := BuildArgs("/in.mkv", "/out.mkv", info, pol, ActionTranscode)
+		i := indexOf(args, "-c:v")
+		Expect(args[i : i+6]).To(Equal([]string{
+			"-c:v", "libsvtav1", "-crf", "32", "-preset", "7",
+		}))
+	})
+
+	It("leaves an x264-style preset alone for libx265", func() {
+		info := &ffmpeg.Info{AudioCodecs: []string{"aac"}}
+		pol := config.TranscodePolicy{To: config.TranscodeTo{
+			Container:  "mkv",
+			VideoCodec: "hevc",
+			CRF:        22,
+			Preset:     "medium",
+			AudioCodec: "aac",
+		}}
+		args := BuildArgs("/in.mkv", "/out.mkv", info, pol, ActionTranscode)
+		Expect(args[indexOf(args, "-preset")+1]).To(Equal("medium"))
 	})
 
 	DescribeTable("encoder mapping",

@@ -34,6 +34,14 @@ func (w *Worker) runScan(ctx context.Context) {
 
 	var queued int
 	for _, mf := range files {
+		// A row this pipeline already produced is left alone. Re-encoding an
+		// encode is not a v1 operation, and a policy whose output its own `if`
+		// still rejects would otherwise turn every scan into another
+		// generation loss over the whole library — config.checkInvariants
+		// refuses the obvious spellings of that, but not every one.
+		if mf.TranscodedAt != nil {
+			continue
+		}
 		pol := policyFor(mf)
 		if pol == nil {
 			continue

@@ -176,6 +176,18 @@ var _ = Describe("Worker.Scan", Label("integration", "transcoding"), func() {
 		},
 	)
 
+	It("skips a row the pipeline has already transcoded", func() {
+		done := seedMovieFile("hevc")
+		Expect(store.UpdateMediaFileAfterTranscode(
+			ctx, done.ID, done.Path, 900, done.Size, "mkv", nil,
+		)).To(Succeed())
+
+		Expect(worker.Scan(ctx)).To(Succeed())
+		awaitScanDone()
+
+		Expect(jobCount()).To(BeZero())
+	})
+
 	It("returns ErrScanRunning when a scan is already in flight", func() {
 		marker := filepath.Join(GinkgoT().TempDir(), "scanning")
 		GinkgoT().Setenv("FFPROBE_MARKER", marker)

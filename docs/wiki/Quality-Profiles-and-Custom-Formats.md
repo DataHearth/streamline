@@ -263,7 +263,15 @@ quality_profiles:
 
 **The swap is atomic and verified.** The encode is written beside the original, probed to confirm the duration matches and the audio survived, and only then renamed over the file — so an interrupted or failed transcode never leaves you with a broken library file. A container change moves the file to the new extension and the old one is deleted; the database row follows it. `size_before` is kept, which is what the detail page's "35 GB → 12 GB" line reads.
 
-**A file's [`media_info`](REST-API#media-probe) disappears briefly after a transcode.** The bytes changed, so the old probe no longer describes them; the media-probe backfill re-reads the file on its next pass.
+**A file's [`media_info`](REST-API#media-probe) is rewritten by the transcode, not cleared.** The encode is probed to verify it before the swap, and that probe is what the row keeps — so the file's codec, bitrate and track counts describe the new bytes immediately. Nothing has to wait for the media-probe backfill, and nothing scores the file off the release name it was originally imported under.
+
+**`to.container: mp4` drops subtitle and attachment streams; `mkv` keeps everything.** mp4 cannot carry SRT, ASS or PGS subtitles, nor font attachments, so only video and audio are copied across. If your files carry subtitles you want to keep, target mkv.
+
+**The destination has to satisfy `if`, or the config is refused.** A `to.video_codec` your own `if.video_codecs` rejects — or a `to.container` your `if.containers` rejects — would re-encode every file, then read the result as non-compliant and re-encode it again, forever, with every job reporting success. Streamline refuses that at startup. The variant it cannot predict is a `crf` that produces a file above `max_video_bitrate`: set the ceiling above the rate you are aiming for, not at it.
+
+**Don't score file size and transcode on the same profile.** A `size` condition scored positively for `min_gb` says "bigger is better"; a transcode makes files smaller and re-probes them. Together, every transcode makes its own output look like something worth upgrading.
+
+**Scan library skips files this pipeline already produced.** A row with a transcode behind it is left alone — re-encoding an encode loses quality for nothing.
 
 Failed jobs retry up to `transcoding.max_failures` times and then park in the queue with ffmpeg's own error, for you to look at. Nothing is deleted on failure — the original file is still there.
 

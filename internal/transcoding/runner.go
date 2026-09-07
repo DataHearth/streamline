@@ -58,7 +58,7 @@ func run(
 	}
 	// Drains the pipe to EOF, which is also what keeps a chatty ffmpeg from
 	// blocking on a full pipe while Wait waits for it to exit.
-	readProgress(stdout, total, emit)
+	readProgress(ctx, stdout, total, emit)
 	if err := cmd.Wait(); err != nil {
 		return fmt.Errorf("ffmpeg: %w: %s", err, tail)
 	}

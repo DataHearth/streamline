@@ -318,34 +318,28 @@ func (db *DB) UpdateMediaFilePath(
 
 // UpdateMediaFileAfterTranscode writes a transcode's outcome onto the file it
 // replaced in place: the new path/size/format, size_before for the detail
-// page's savings, and transcoded_at. The bytes on disk changed, so every probe
-// column is nulled alongside probed_at — the media-probe backfill re-reads
-// them at its own pace, same as a never-probed row.
+// page's savings, transcoded_at, and probe — the encode's own probe, which the
+// worker already holds from verifying it.
+//
+// The probe is not optional in practice. Nulling the columns instead left the
+// row scoring off parsed_codec until the media-probe backfill reached it, so an
+// h264→hevc transcode read as x264 for up to a backfill cycle and the RSS feed
+// could grab an "upgrade" over a file it had just produced.
 func (db *DB) UpdateMediaFileAfterTranscode(
 	ctx context.Context,
 	id uint32,
 	path string,
 	size, sizeBefore int64,
 	format string,
+	probe *ffmpeg.Info,
 ) error {
-	if err := db.client.MediaFile.UpdateOneID(id).
+	q := applyProbe(db.client.MediaFile.UpdateOneID(id), probe)
+	if err := q.
 		SetPath(path).
 		SetSize(size).
 		SetFormat(format).
 		SetSizeBefore(sizeBefore).
 		SetTranscodedAt(time.Now()).
-		ClearContainer().
-		ClearDurationSeconds().
-		ClearVideoCodec().
-		ClearWidth().
-		ClearHeight().
-		ClearAudioCodec().
-		ClearAudioChannels().
-		ClearBitrate().
-		ClearAudioTracks().
-		ClearAudioLangs().
-		ClearSubLangs().
-		ClearProbedAt().
 		Exec(ctx); err != nil {
 		return fmt.Errorf("update media_file %d after transcode: %w", id, err)
 	}

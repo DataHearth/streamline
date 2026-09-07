@@ -508,7 +508,7 @@ var _ = Describe("Transcoding config", Label("unit", "config"), func() {
 						"min_resolution":       "1080p",
 						"transcode": map[string]any{
 							"if": map[string]any{
-								"video_codecs": []string{"mpeg2video"},
+								"video_codecs": []string{"hevc"},
 							},
 							"to": map[string]any{
 								"container":   "mkv",
@@ -525,7 +525,7 @@ var _ = Describe("Transcoding config", Label("unit", "config"), func() {
 			p, ok := config.ResolveQualityProfile("default")
 			Expect(ok).To(BeTrue())
 			Expect(p.Transcode).NotTo(BeNil())
-			Expect(p.Transcode.If.VideoCodecs).To(Equal([]string{"mpeg2video"}))
+			Expect(p.Transcode.If.VideoCodecs).To(Equal([]string{"hevc"}))
 			Expect(p.Transcode.To.Container).To(Equal("mkv"))
 			Expect(p.Transcode.To.CRF).To(Equal(uint8(20)))
 			Expect(p.Transcode.To.AudioPassthrough).
@@ -605,6 +605,38 @@ var _ = Describe("Transcoding config", Label("unit", "config"), func() {
 		err := c.Validate()
 		Expect(err).To(HaveOccurred())
 		Expect(err.Error()).To(ContainSubstring("max_video_bitrate"))
+	})
+
+	It("rejects a to.video_codec its own if.video_codecs rejects", func() {
+		c := configtest.Setup()
+		c.QualityProfiles[0].Transcode = &config.TranscodePolicy{
+			If: config.TranscodeIf{VideoCodecs: []string{"hevc", "av1"}},
+			To: config.TranscodeTo{
+				Container:  "mkv",
+				VideoCodec: "h264",
+				Preset:     "medium",
+				AudioCodec: "aac",
+			},
+		}
+		err := c.Validate()
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("transcode.to.video_codec"))
+	})
+
+	It("rejects a to.container its own if.containers rejects", func() {
+		c := configtest.Setup()
+		c.QualityProfiles[0].Transcode = &config.TranscodePolicy{
+			If: config.TranscodeIf{Containers: []string{"mkv"}},
+			To: config.TranscodeTo{
+				Container:  "mp4",
+				VideoCodec: "hevc",
+				Preset:     "medium",
+				AudioCodec: "aac",
+			},
+		}
+		err := c.Validate()
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("transcode.to.container"))
 	})
 
 	DescribeTable("ParseBitrate",

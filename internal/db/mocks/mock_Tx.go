@@ -14103,16 +14103,16 @@ func (_c *MockTx_UpdateImportScanStatus_Call) RunAndReturn(run func(ctx context.
 }
 
 // UpdateMediaFileAfterTranscode provides a mock function for the type MockTx
-func (_mock *MockTx) UpdateMediaFileAfterTranscode(ctx context.Context, id uint32, path string, size int64, sizeBefore int64, format string) error {
-	ret := _mock.Called(ctx, id, path, size, sizeBefore, format)
+func (_mock *MockTx) UpdateMediaFileAfterTranscode(ctx context.Context, id uint32, path string, size int64, sizeBefore int64, format string, probe *ffmpeg.Info) error {
+	ret := _mock.Called(ctx, id, path, size, sizeBefore, format, probe)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpdateMediaFileAfterTranscode")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string, int64, int64, string) error); ok {
-		r0 = returnFunc(ctx, id, path, size, sizeBefore, format)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string, int64, int64, string, *ffmpeg.Info) error); ok {
+		r0 = returnFunc(ctx, id, path, size, sizeBefore, format, probe)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -14131,11 +14131,12 @@ type MockTx_UpdateMediaFileAfterTranscode_Call struct {
 //   - size int64
 //   - sizeBefore int64
 //   - format string
-func (_e *MockTx_Expecter) UpdateMediaFileAfterTranscode(ctx any, id any, path any, size any, sizeBefore any, format any) *MockTx_UpdateMediaFileAfterTranscode_Call {
-	return &MockTx_UpdateMediaFileAfterTranscode_Call{Call: _e.mock.On("UpdateMediaFileAfterTranscode", ctx, id, path, size, sizeBefore, format)}
+//   - probe *ffmpeg.Info
+func (_e *MockTx_Expecter) UpdateMediaFileAfterTranscode(ctx any, id any, path any, size any, sizeBefore any, format any, probe any) *MockTx_UpdateMediaFileAfterTranscode_Call {
+	return &MockTx_UpdateMediaFileAfterTranscode_Call{Call: _e.mock.On("UpdateMediaFileAfterTranscode", ctx, id, path, size, sizeBefore, format, probe)}
 }
 
-func (_c *MockTx_UpdateMediaFileAfterTranscode_Call) Run(run func(ctx context.Context, id uint32, path string, size int64, sizeBefore int64, format string)) *MockTx_UpdateMediaFileAfterTranscode_Call {
+func (_c *MockTx_UpdateMediaFileAfterTranscode_Call) Run(run func(ctx context.Context, id uint32, path string, size int64, sizeBefore int64, format string, probe *ffmpeg.Info)) *MockTx_UpdateMediaFileAfterTranscode_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -14161,6 +14162,10 @@ func (_c *MockTx_UpdateMediaFileAfterTranscode_Call) Run(run func(ctx context.Co
 		if args[5] != nil {
 			arg5 = args[5].(string)
 		}
+		var arg6 *ffmpeg.Info
+		if args[6] != nil {
+			arg6 = args[6].(*ffmpeg.Info)
+		}
 		run(
 			arg0,
 			arg1,
@@ -14168,6 +14173,7 @@ func (_c *MockTx_UpdateMediaFileAfterTranscode_Call) Run(run func(ctx context.Co
 			arg3,
 			arg4,
 			arg5,
+			arg6,
 		)
 	})
 	return _c
@@ -14178,7 +14184,7 @@ func (_c *MockTx_UpdateMediaFileAfterTranscode_Call) Return(err error) *MockTx_U
 	return _c
 }
 
-func (_c *MockTx_UpdateMediaFileAfterTranscode_Call) RunAndReturn(run func(ctx context.Context, id uint32, path string, size int64, sizeBefore int64, format string) error) *MockTx_UpdateMediaFileAfterTranscode_Call {
+func (_c *MockTx_UpdateMediaFileAfterTranscode_Call) RunAndReturn(run func(ctx context.Context, id uint32, path string, size int64, sizeBefore int64, format string, probe *ffmpeg.Info) error) *MockTx_UpdateMediaFileAfterTranscode_Call {
 	_c.Call.Return(run)
 	return _c
 }

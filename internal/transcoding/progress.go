@@ -2,7 +2,9 @@ package transcoding
 
 import (
 	"bufio"
+	"context"
 	"io"
+	"log/slog"
 	"strconv"
 	"strings"
 	"time"
@@ -17,7 +19,12 @@ type Snapshot struct {
 
 // readProgress consumes ffmpeg -progress key=value output and calls emit at
 // each block boundary (progress=continue|end). Returns on EOF.
-func readProgress(r io.Reader, total time.Duration, emit func(Snapshot)) {
+func readProgress(
+	ctx context.Context,
+	r io.Reader,
+	total time.Duration,
+	emit func(Snapshot),
+) {
 	scanner := bufio.NewScanner(r)
 	var elapsed time.Duration
 	var speed float64
@@ -60,5 +67,14 @@ func readProgress(r io.Reader, total time.Duration, emit func(Snapshot)) {
 			}
 			emit(snap)
 		}
+	}
+
+	// bufio.Scanner gives up on a line longer than its 64 KiB buffer, and the
+	// loop above then returns with ffmpeg still writing. The pipe fills, ffmpeg
+	// blocks on its own progress output, and the encode never finishes — so
+	// whatever is left is drained rather than abandoned.
+	if _, err := io.Copy(io.Discard, r); err != nil {
+		slog.DebugContext(ctx, "could not drain ffmpeg's progress output",
+			"error", err)
 	}
 }

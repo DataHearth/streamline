@@ -491,14 +491,15 @@ type Store interface {
 		mediaFileID, episodeID uint32,
 	) error
 	// UpdateMediaFileAfterTranscode writes a transcode's outcome onto the file
-	// it replaced in place and nulls probed_at plus every probe column, since
-	// the bytes changed and the media-probe backfill must re-read them.
+	// it replaced in place, restamping the probe columns from the encode's own
+	// probe so the row never scores off a release name it no longer describes.
 	UpdateMediaFileAfterTranscode(
 		ctx context.Context,
 		id uint32,
 		path string,
 		size, sizeBefore int64,
 		format string,
+		probe *ffmpeg.Info,
 	) error
 
 	// transcode jobs

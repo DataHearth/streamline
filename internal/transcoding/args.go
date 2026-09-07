@@ -15,6 +15,24 @@ var encoders = map[string]string{
 	"av1":  "libsvtav1",
 }
 
+// svtPresets maps the policy's x264/x265 preset names onto SVT-AV1's numeric
+// ladder. libsvtav1 takes `-preset <int>` (-2..13) and rejects a name outright,
+// so every av1 job failed at the first frame until this existed. The names stay
+// the config's surface because they are the only spelling shared by the three
+// encoders; higher SVT numbers are faster, which is why the table runs the
+// other way from how it reads.
+var svtPresets = map[string]string{
+	"ultrafast": "12",
+	"superfast": "11",
+	"veryfast":  "10",
+	"faster":    "9",
+	"fast":      "8",
+	"medium":    "7",
+	"slow":      "5",
+	"slower":    "4",
+	"veryslow":  "3",
+}
+
 // BuildArgs assembles the ffmpeg invocation. action is ActionRemux or
 // ActionTranscode. HDR video never reaches ActionTranscode (Evaluate exempts
 // it), so no HDR metadata forwarding is needed.
@@ -32,8 +50,16 @@ func BuildArgs(
 		"-y",
 		"-i",
 		in,
-		"-map",
-		"0",
+	}
+	// mp4 takes video and audio only. `-map 0` hands the muxer the source's
+	// subtitle and attachment streams too, and mp4 refuses SRT/ASS/PGS and font
+	// attachments outright — which is most mkv sources, so an mp4 target failed
+	// on nearly everything it was pointed at. mkv holds all of it, so it keeps
+	// the whole file.
+	if pol.To.Container == "mp4" {
+		args = append(args, "-map", "0:v", "-map", "0:a")
+	} else {
+		args = append(args, "-map", "0")
 	}
 
 	if action == ActionRemux {
@@ -54,7 +80,13 @@ func BuildArgs(
 	if pol.To.CRF != 0 {
 		args = append(args, "-crf", strconv.Itoa(int(pol.To.CRF)))
 	}
-	args = append(args, "-preset", pol.To.Preset)
+	preset := pol.To.Preset
+	if pol.To.VideoCodec == "av1" {
+		if n, ok := svtPresets[preset]; ok {
+			preset = n
+		}
+	}
+	args = append(args, "-preset", preset)
 	for i, codec := range info.AudioCodecs {
 		if passthroughSet[strings.ToLower(codec)] {
 			args = append(args, fmt.Sprintf("-c:a:%d", i), "copy")
@@ -62,9 +94,8 @@ func BuildArgs(
 			args = append(args, fmt.Sprintf("-c:a:%d", i), pol.To.AudioCodec)
 		}
 	}
-	args = append(args, "-c:s", "copy")
 	if pol.To.Container == "mkv" {
-		args = append(args, "-c:t", "copy")
+		args = append(args, "-c:s", "copy", "-c:t", "copy")
 	}
 	return append(args, out)
 }

@@ -168,8 +168,10 @@ var _ = Describe(
 			Expect(got.Size).NotTo(BeZero())
 			Expect(got.Size).NotTo(Equal(st.Size()))
 			Expect(got.TranscodedAt).NotTo(BeNil())
-			// Cleared so the media-probe backfill re-reads the new file's streams.
-			Expect(got.ProbedAt).To(BeNil())
+			// Restamped from the encode's own probe, so the row describes the
+			// hevc file rather than the h264 release name it came in under.
+			Expect(got.ProbedAt).NotTo(BeNil())
+			Expect(got.VideoCodec).To(Equal("hevc"))
 		})
 	},
 )
