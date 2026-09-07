@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
+	"sort"
 	"time"
 
 	"github.com/datahearth/streamline/ent"
@@ -12,7 +14,9 @@ import (
 )
 
 var (
-	ErrTranscodeJobNotRetryable  = errors.New("transcode job is not failed")
+	ErrTranscodeJobNotRetryable = errors.New(
+		"transcode job is not failed or rejected",
+	)
 	ErrTranscodeJobNotCancelable = errors.New("transcode job is not open")
 )
 
@@ -146,6 +150,39 @@ func (db *DB) FailTranscodeJob(
 	return nil
 }
 
+// RejectTranscodeJob parks id as rejected: the encode verified as worse than
+// or broken relative to its source. Terminal like a failed job, but it also
+// records both sizes, since the numbers are usually the reason. Conditional
+// on the row still being running — an operator's cancel arriving during
+// verification must win, not be overwritten by a verdict about bytes the
+// job no longer owns.
+func (db *DB) RejectTranscodeJob(
+	ctx context.Context,
+	id uint32,
+	reason string,
+	sizeBefore, sizeAfter int64,
+) error {
+	n, err := db.client.TranscodeJob.Update().
+		Where(
+			transcodejob.IDEQ(id),
+			transcodejob.StatusEQ(transcodejob.StatusRunning),
+		).
+		SetStatus(transcodejob.StatusRejected).
+		SetError(reason).
+		SetSizeBefore(sizeBefore).
+		SetSizeAfter(sizeAfter).
+		SetFinishedAt(time.Now()).
+		Save(ctx)
+	if err != nil {
+		return fmt.Errorf("reject transcode job %d: %w", id, err)
+	}
+	if n == 0 {
+		slog.DebugContext(ctx, "transcode job was no longer running when rejected",
+			"transcode.job_id", id)
+	}
+	return nil
+}
+
 // MarkTranscodeJobCanceled cancels id from queued or running, stamping
 // finished_at. Any other status is ErrTranscodeJobNotCancelable.
 func (db *DB) MarkTranscodeJobCanceled(ctx context.Context, id uint32) error {
@@ -166,14 +203,14 @@ func (db *DB) MarkTranscodeJobCanceled(ctx context.Context, id uint32) error {
 	return nil
 }
 
-// RetryTranscodeJob resets a failed job back to queued with a clean slate —
-// attempts, error and finished_at all cleared. Any other status is
-// ErrTranscodeJobNotRetryable.
+// RetryTranscodeJob resets a failed or rejected job back to queued with a
+// clean slate — attempts, error and finished_at all cleared. Any other
+// status is ErrTranscodeJobNotRetryable.
 func (db *DB) RetryTranscodeJob(ctx context.Context, id uint32) error {
 	n, err := db.client.TranscodeJob.Update().
 		Where(
 			transcodejob.IDEQ(id),
-			transcodejob.StatusEQ(transcodejob.StatusFailed),
+			transcodejob.StatusIn(transcodejob.StatusFailed, transcodejob.StatusRejected),
 		).
 		SetStatus(transcodejob.StatusQueued).
 		SetAttempts(0).
@@ -203,14 +240,20 @@ func (db *DB) ResetRunningTranscodeJobs(ctx context.Context) (int, error) {
 	return n, nil
 }
 
-// ListTranscodeJobs returns up to limit jobs newest-first (create_time, then
-// id, both descending) with each job's media file and owner chain loaded —
-// what the REST layer renders as "Movie (2019)" / "Show S01E02".
+// ListTranscodeJobs returns the newest limit jobs of every status other than
+// rejected, plus every rejected row regardless of age, merged and sorted
+// newest-first (create_time, then id, both descending), each with its media
+// file and owner chain loaded — what the REST layer renders as "Movie
+// (2019)" / "Show S01E02". A rejected row is the only handle on a file the
+// scan now skips (ListMediaFilesWithTranscodeOwners excludes it) and Retry
+// is its only exit, so it must stay reachable no matter how old — the same
+// reason held download records always appear in the live queue.
 func (db *DB) ListTranscodeJobs(
 	ctx context.Context,
 	limit int,
 ) ([]*ent.TranscodeJob, error) {
 	rows, err := db.client.TranscodeJob.Query().
+		Where(transcodejob.StatusNEQ(transcodejob.StatusRejected)).
 		Order(
 			ent.Desc(transcodejob.FieldCreateTime),
 			ent.Desc(transcodejob.FieldID),
@@ -221,15 +264,37 @@ func (db *DB) ListTranscodeJobs(
 	if err != nil {
 		return nil, fmt.Errorf("list transcode jobs: %w", err)
 	}
+
+	rejected, err := db.client.TranscodeJob.Query().
+		Where(transcodejob.StatusEQ(transcodejob.StatusRejected)).
+		WithMediaFile(withTranscodeOwners).
+		All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list rejected transcode jobs: %w", err)
+	}
+
+	rows = append(rows, rejected...)
+	sort.Slice(rows, func(i, j int) bool {
+		if !rows[i].CreateTime.Equal(rows[j].CreateTime) {
+			return rows[i].CreateTime.After(rows[j].CreateTime)
+		}
+		return rows[i].ID > rows[j].ID
+	})
 	return rows, nil
 }
 
 // ListMediaFilesWithTranscodeOwners returns every MediaFile with its owner
-// chain loaded — the transcode scan's candidate set.
+// chain loaded — the transcode scan's candidate set. A file holding a
+// rejected job is left out: the encode was judged worse than the source, and
+// a retry from the queue is the only way to ask again (it flips that same row
+// back to queued, so "has a rejected job" is exactly "rejected, not retried").
 func (db *DB) ListMediaFilesWithTranscodeOwners(
 	ctx context.Context,
 ) ([]*ent.MediaFile, error) {
-	q := db.client.MediaFile.Query()
+	q := db.client.MediaFile.Query().
+		Where(mediafile.Not(mediafile.HasTranscodeJobsWith(
+			transcodejob.StatusEQ(transcodejob.StatusRejected),
+		)))
 	withTranscodeOwners(q)
 	rows, err := q.All(ctx)
 	if err != nil {

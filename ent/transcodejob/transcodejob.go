@@ -105,6 +105,7 @@ const (
 	StatusSucceeded Status = "succeeded"
 	StatusFailed    Status = "failed"
 	StatusCanceled  Status = "canceled"
+	StatusRejected  Status = "rejected"
 )
 
 func (s Status) String() string {
@@ -114,7 +115,7 @@ func (s Status) String() string {
 // StatusValidator is a validator for the "status" field enum values. It is called by the builders before save.
 func StatusValidator(s Status) error {
 	switch s {
-	case StatusQueued, StatusRunning, StatusSucceeded, StatusFailed, StatusCanceled:
+	case StatusQueued, StatusRunning, StatusSucceeded, StatusFailed, StatusCanceled, StatusRejected:
 		return nil
 	default:
 		return fmt.Errorf("transcodejob: invalid enum value for status field: %q", s)

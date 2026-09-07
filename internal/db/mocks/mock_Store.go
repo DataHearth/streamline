@@ -10630,6 +10630,81 @@ func (_c *MockStore_RecordImportSuccess_Call) RunAndReturn(run func(ctx context.
 	return _c
 }
 
+// RejectTranscodeJob provides a mock function for the type MockStore
+func (_mock *MockStore) RejectTranscodeJob(ctx context.Context, id uint32, reason string, sizeBefore int64, sizeAfter int64) error {
+	ret := _mock.Called(ctx, id, reason, sizeBefore, sizeAfter)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RejectTranscodeJob")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string, int64, int64) error); ok {
+		r0 = returnFunc(ctx, id, reason, sizeBefore, sizeAfter)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStore_RejectTranscodeJob_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RejectTranscodeJob'
+type MockStore_RejectTranscodeJob_Call struct {
+	*mock.Call
+}
+
+// RejectTranscodeJob is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - reason string
+//   - sizeBefore int64
+//   - sizeAfter int64
+func (_e *MockStore_Expecter) RejectTranscodeJob(ctx any, id any, reason any, sizeBefore any, sizeAfter any) *MockStore_RejectTranscodeJob_Call {
+	return &MockStore_RejectTranscodeJob_Call{Call: _e.mock.On("RejectTranscodeJob", ctx, id, reason, sizeBefore, sizeAfter)}
+}
+
+func (_c *MockStore_RejectTranscodeJob_Call) Run(run func(ctx context.Context, id uint32, reason string, sizeBefore int64, sizeAfter int64)) *MockStore_RejectTranscodeJob_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 int64
+		if args[3] != nil {
+			arg3 = args[3].(int64)
+		}
+		var arg4 int64
+		if args[4] != nil {
+			arg4 = args[4].(int64)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_RejectTranscodeJob_Call) Return(err error) *MockStore_RejectTranscodeJob_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStore_RejectTranscodeJob_Call) RunAndReturn(run func(ctx context.Context, id uint32, reason string, sizeBefore int64, sizeAfter int64) error) *MockStore_RejectTranscodeJob_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ReleaseHeldDownloadRecord provides a mock function for the type MockStore
 func (_mock *MockStore) ReleaseHeldDownloadRecord(ctx context.Context, id uint32) error {
 	ret := _mock.Called(ctx, id)

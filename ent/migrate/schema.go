@@ -786,7 +786,7 @@ var (
 		{Name: "id", Type: field.TypeUint32, Increment: true},
 		{Name: "create_time", Type: field.TypeTime},
 		{Name: "update_time", Type: field.TypeTime},
-		{Name: "status", Type: field.TypeEnum, Enums: []string{"queued", "running", "succeeded", "failed", "canceled"}, Default: "queued"},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"queued", "running", "succeeded", "failed", "canceled", "rejected"}, Default: "queued"},
 		{Name: "attempts", Type: field.TypeUint8, Default: 0},
 		{Name: "error", Type: field.TypeString, Nullable: true},
 		{Name: "size_before", Type: field.TypeInt64, Nullable: true},

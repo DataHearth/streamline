@@ -17,7 +17,7 @@ func (TranscodeJob) Mixin() []ent.Mixin { return []ent.Mixin{mixins.UintID{}, mi
 func (TranscodeJob) Fields() []ent.Field {
 	return []ent.Field{
 		field.Enum("status").
-			Values("queued", "running", "succeeded", "failed", "canceled").
+			Values("queued", "running", "succeeded", "failed", "canceled", "rejected").
 			Default("queued"),
 		field.Uint8("attempts").Default(0),
 		field.String("error").Optional(),

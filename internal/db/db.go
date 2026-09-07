@@ -529,11 +529,20 @@ type Store interface {
 		reason string,
 		terminal bool,
 	) error
+	// RejectTranscodeJob parks id as rejected: the encode verified as worse
+	// than or broken relative to its source. Terminal like a failed job, but
+	// it also records both sizes.
+	RejectTranscodeJob(
+		ctx context.Context,
+		id uint32,
+		reason string,
+		sizeBefore, sizeAfter int64,
+	) error
 	// MarkTranscodeJobCanceled cancels a queued or running job, stamping
 	// finished_at. ErrTranscodeJobNotCancelable otherwise.
 	MarkTranscodeJobCanceled(ctx context.Context, id uint32) error
-	// RetryTranscodeJob resets a failed job back to queued with attempts,
-	// error and finished_at all cleared. ErrTranscodeJobNotRetryable
+	// RetryTranscodeJob resets a failed or rejected job back to queued with
+	// attempts, error and finished_at all cleared. ErrTranscodeJobNotRetryable
 	// otherwise.
 	RetryTranscodeJob(ctx context.Context, id uint32) error
 	// ResetRunningTranscodeJobs bulk-reverts every running job back to
@@ -543,7 +552,8 @@ type Store interface {
 	// job's media file and owner chain loaded.
 	ListTranscodeJobs(ctx context.Context, limit int) ([]*ent.TranscodeJob, error)
 	// ListMediaFilesWithTranscodeOwners returns every MediaFile with its
-	// owner chain loaded — the transcode scan's candidate set.
+	// owner chain loaded — the transcode scan's candidate set. A file
+	// holding a rejected job is excluded until it is retried.
 	ListMediaFilesWithTranscodeOwners(ctx context.Context) ([]*ent.MediaFile, error)
 
 	// bulk-import scans

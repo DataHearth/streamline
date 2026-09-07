@@ -300,6 +300,87 @@ var _ = Describe("TranscodeJob store", Label("integration", "db"), func() {
 		})
 	})
 
+	Describe("RejectTranscodeJob", func() {
+		It("rejects a job terminally with both sizes and the reason", func() {
+			mf := createMovieFile()
+			job, err := store.CreateTranscodeJob(ctx, mf.ID)
+			Expect(err).NotTo(HaveOccurred())
+			_, err = store.ClaimNextTranscodeJob(ctx)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(store.RejectTranscodeJob(
+				ctx,
+				job.ID,
+				"output rejected: output is 132% of the source (max 100%)",
+				100,
+				132,
+			)).To(Succeed())
+
+			got, err := client.TranscodeJob.Get(ctx, job.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.Status).To(Equal(transcodejob.StatusRejected))
+			Expect(got.Error).To(ContainSubstring("132%"))
+			Expect(got.SizeBefore).To(Equal(int64(100)))
+			Expect(got.SizeAfter).To(Equal(int64(132)))
+			Expect(got.FinishedAt).NotTo(BeNil())
+		})
+
+		It("retries a rejected job back to queued", func() {
+			mf := createMovieFile()
+			job, err := store.CreateTranscodeJob(ctx, mf.ID)
+			Expect(err).NotTo(HaveOccurred())
+			_, err = store.ClaimNextTranscodeJob(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(
+				store.RejectTranscodeJob(ctx, job.ID, "output rejected: x", 1, 2),
+			).
+				To(Succeed())
+
+			Expect(store.RetryTranscodeJob(ctx, job.ID)).To(Succeed())
+
+			got, err := client.TranscodeJob.Get(ctx, job.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.Status).To(Equal(transcodejob.StatusQueued))
+			Expect(got.Error).To(BeEmpty())
+			Expect(got.FinishedAt).To(BeNil())
+		})
+
+		It("leaves a file with a rejected job out of the scan candidates", func() {
+			mf := createMovieFile()
+			job, err := store.CreateTranscodeJob(ctx, mf.ID)
+			Expect(err).NotTo(HaveOccurred())
+			_, err = store.ClaimNextTranscodeJob(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(
+				store.RejectTranscodeJob(ctx, job.ID, "output rejected: x", 1, 2),
+			).
+				To(Succeed())
+
+			files, err := store.ListMediaFilesWithTranscodeOwners(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(files).NotTo(ContainElement(HaveField("ID", mf.ID)))
+		})
+
+		It("no-ops when the row is no longer running", func() {
+			mf := createMovieFile()
+			job, err := store.CreateTranscodeJob(ctx, mf.ID)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Never claimed, so it is still queued — an operator's cancel (or
+			// any other terminal transition) arriving before the worker's
+			// verdict must win, not be overwritten by it.
+			Expect(
+				store.RejectTranscodeJob(ctx, job.ID, "output rejected: x", 1, 2),
+			).
+				To(Succeed())
+
+			got, err := client.TranscodeJob.Get(ctx, job.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.Status).To(Equal(transcodejob.StatusQueued))
+			Expect(got.Error).To(BeEmpty())
+		})
+	})
+
 	Describe("MarkTranscodeJobCanceled", func() {
 		It("cancels a queued job", func() {
 			mf := createMovieFile()
@@ -409,6 +490,46 @@ var _ = Describe("TranscodeJob store", Label("integration", "db"), func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(rows).To(HaveLen(1))
 		})
+
+		It(
+			"returns every rejected row even once it has aged past the limit",
+			func() {
+				rejectedFile := createMovieFile()
+				rejectedJob, err := store.CreateTranscodeJob(ctx, rejectedFile.ID)
+				Expect(err).NotTo(HaveOccurred())
+				_, err = store.ClaimNextTranscodeJob(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(
+					store.RejectTranscodeJob(
+						ctx,
+						rejectedJob.ID,
+						"output rejected: x",
+						1,
+						2,
+					),
+				).To(Succeed())
+
+				const limit = 2
+				var newest *ent.TranscodeJob
+				for range limit + 1 {
+					mf := createMovieFile()
+					job, err := store.CreateTranscodeJob(ctx, mf.ID)
+					Expect(err).NotTo(HaveOccurred())
+					newest = job
+				}
+
+				rows, err := store.ListTranscodeJobs(ctx, limit)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(rows).To(HaveLen(limit + 1))
+				Expect(rows[0].ID).To(Equal(newest.ID))
+				Expect(rows).To(ContainElement(HaveField("ID", rejectedJob.ID)))
+				for _, r := range rows {
+					if r.ID == rejectedJob.ID {
+						Expect(r.Status).To(Equal(transcodejob.StatusRejected))
+					}
+				}
+			},
+		)
 	})
 
 	Describe("ListMediaFilesWithTranscodeOwners", func() {
