@@ -5,8 +5,10 @@
 
 import { createQuery } from "@tanstack/svelte-query";
 import { api, ApiError } from "./api";
+import { auth } from "./auth.svelte";
+import { transcodingDisabled } from "./transcoding";
 import { NAV_POLL_MS, SILENT } from "./query";
-import type { DownloadClient, TorrentList } from "./types";
+import type { DownloadClient, TorrentList, TranscodeJob } from "./types";
 
 // /torrents 404s while the built-in engine is off, and it can't come back
 // without a config change. Refetching a query that has never held data resets
@@ -24,6 +26,12 @@ export const TORRENT_PILLS = [
 ] as const;
 
 export type TorrentCounts = Record<string, number>;
+
+export type TranscodeCounts = {
+	running: number;
+	queued: number;
+	failed: number;
+};
 
 export function torrentCountsQuery() {
 	// The engine is a download-clients entry; with it off, /torrents only ever
@@ -55,6 +63,33 @@ export function torrentCountsQuery() {
 			const out: TorrentCounts = {};
 			for (const t of q.data?.items ?? [])
 				out[t.status] = (out[t.status] ?? 0) + 1;
+			return out;
+		},
+	};
+}
+
+// The queue route's own query polls every 2 s while something is live; away
+// from it this is the nav's cadence. Admin-only endpoint, and it 409s while
+// transcoding is disabled — which no refetch can clear — so both cases stop the
+// poll rather than retrying forever.
+export function transcodeCountsQuery() {
+	const q = createQuery<TranscodeJob[]>(() => ({
+		queryKey: ["transcoding", "queue", ""],
+		queryFn: () => api<TranscodeJob[]>("/transcoding/queue"),
+		meta: SILENT,
+		enabled: auth.isAdmin,
+		retry: false,
+		refetchInterval: (q) =>
+			transcodingDisabled(q.state.error) ? false : NAV_POLL_MS,
+	}));
+	return {
+		get counts(): TranscodeCounts {
+			const out: TranscodeCounts = { running: 0, queued: 0, failed: 0 };
+			for (const j of q.data ?? []) {
+				if (j.status === "running") out.running++;
+				else if (j.status === "queued") out.queued++;
+				else if (j.status === "failed") out.failed++;
+			}
 			return out;
 		},
 	};

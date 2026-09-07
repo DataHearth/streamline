@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	export type ActivityView = "queue" | "history" | "torrents";
+	export type ActivityView = "queue" | "history" | "torrents" | "transcoding";
 
 	// `dot` maps each filter to a real --status-* token (some chip keys like
 	// "importing"/"error" have no token of their own — mirror lib/format.pillStatus).
@@ -24,6 +24,15 @@
 			{ key: "seeding", label: "seeding", dot: "seeding" },
 			{ key: "completed", label: i18n.lc_completed(), dot: "completed" },
 			{ key: "paused", label: i18n.lc_paused(), dot: "paused" },
+		],
+		// Lifecycle order, not attention order — the strip is read left to right
+		// as the path a job takes, and the sort is what puts work first.
+		transcoding: [
+			{ key: "queued", label: i18n.lc_queued(), dot: "queued" },
+			{ key: "running", label: i18n.lc_running(), dot: "running" },
+			{ key: "succeeded", label: i18n.lc_succeeded(), dot: "succeeded" },
+			{ key: "failed", label: i18n.lc_failed(), dot: "failed" },
+			{ key: "canceled", label: i18n.lc_canceled(), dot: "canceled" },
 		],
 	};
 </script>
@@ -107,7 +116,7 @@
 					onclick={() => toggleChip(c.key)}
 					aria-pressed={on}
 					class={cn(
-						"inline-flex h-11 shrink-0 items-center gap-1.5 rounded-sm px-2.5 font-mono text-[11px] lowercase transition lg:h-7",
+						"inline-flex h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-sm px-2.5 font-mono text-[11px] lowercase transition lg:h-7",
 						on ? "bg-accent-soft text-accent-text" : "text-fg-subtle hover:text-fg",
 					)}
 				>
@@ -186,7 +195,9 @@
 			oninput={(e) => onSearchChange(e.currentTarget.value)}
 			placeholder={view === "torrents"
 				? i18n.activity_filter_placeholder()
-				: i18n.activity_filter_title_movie()}
+				: view === "transcoding"
+					? i18n.transcode_filter_placeholder()
+					: i18n.activity_filter_title_movie()}
 			aria-label={i18n.activity_filter()}
 			class="min-w-0 flex-1 bg-transparent text-[13px] text-fg outline-none placeholder:text-fg-faint"
 		/>

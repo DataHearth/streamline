@@ -8,6 +8,7 @@ import {
 	Tags,
 	Tv,
 	Film,
+	Replace,
 	FolderTree,
 	Languages,
 	Clock,
@@ -48,6 +49,7 @@ export const SETTINGS_TITLES: Record<string, () => string> = {
 	"/settings/library": () => i18n.settings_library(),
 	"/settings/series": () => i18n.settings_series(),
 	"/settings/media-probe": () => i18n.settings_media_probe(),
+	"/settings/transcoding": () => i18n.settings_transcoding(),
 	"/settings/metadata": () => i18n.settings_metadata(),
 	"/settings/indexers": () => i18n.settings_indexers(),
 	"/settings/download-clients": () => i18n.settings_download_clients(),
@@ -160,6 +162,18 @@ export function createSettingsNav(withCounts = true) {
 						Icon: Film,
 						label: i18n.settings_media_probe(),
 					},
+					// Sits next to probing because it is the other thing that happens
+					// to a file entering the library, and it reads the same binary.
+					// Admin-only, like every transcoding surface.
+					...(isAdmin
+						? [
+								{
+									path: "/settings/transcoding",
+									Icon: Replace,
+									label: i18n.settings_transcoding(),
+								},
+							]
+						: []),
 					// The provider keys and the language they answer in decide what
 					// every title in the library is called, so this is a library
 					// setting rather than a connection — there is no host to reach.

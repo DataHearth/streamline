@@ -95,6 +95,17 @@
 	--status-unaired: var(--status-missing);
 	--status-skipped: var(--status-paused);
 
+	/* Transcode job states. Aliases, not new hues: a queued job is the same
+	   "waiting on the machine" amber as wanted, a running one the same blue as
+	   a download, succeeded the same green as available, canceled the same zinc
+	   as paused. They exist as their own names so StatusPill can carry the
+	   right label, and so one line here moves any of them if they ever earn a
+	   hue. */
+	--status-queued: var(--status-wanted);
+	--status-running: var(--status-downloading);
+	--status-succeeded: var(--status-available);
+	--status-canceled: var(--status-paused);
+
 	/* A download that finished, failed verification and waits on a person. Amber
 	   because it is the same "needs something from you" family as wanted — an
 	   alias rather than a reuse of the name, so StatusPill's
@@ -191,6 +202,10 @@
 	--color-status-unaired: var(--status-unaired);
 	--color-status-skipped: var(--status-skipped);
 	--color-status-held: var(--status-held);
+	--color-status-queued: var(--status-queued);
+	--color-status-running: var(--status-running);
+	--color-status-succeeded: var(--status-succeeded);
+	--color-status-canceled: var(--status-canceled);
 
 	--radius-sm: var(--radius-sm);
 	--radius-md: var(--radius-md);

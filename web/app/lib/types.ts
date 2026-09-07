@@ -46,6 +46,11 @@ export type Episode = {
 	parsed_source?: string;
 	file_score?: number;
 	media_info?: MediaInfo | null;
+	// Set when this file is the output of a transcode job. size_before is what
+	// the file weighed on import, so the detail can state the saving without
+	// going back to the job.
+	transcoded_at?: string;
+	size_before?: number;
 };
 
 export type Season = {
@@ -278,6 +283,11 @@ export type MediaFile = {
 	// no quality profile resolves. 0 is a real score, not "unknown".
 	file_score?: number;
 	media_info?: MediaInfo | null;
+	// Set when this file is the output of a transcode job. size_before is what
+	// the file weighed on import, so the detail can state the saving without
+	// going back to the job.
+	transcoded_at?: string;
+	size_before?: number;
 };
 
 export type SearchResult = {
@@ -758,6 +768,50 @@ export type FFmpegConfig = {
 	resolved_path?: string;
 	version?: string;
 	restart_required?: boolean;
+};
+
+// Runtime-patchable transcoding config. The 2026-07-07 block's own
+// ffmpeg_path / ffprobe_path keys are deliberately absent: the shipped
+// `ffmpeg` block already resolves the binary once at boot and Media probe owns
+// that surface.
+export type TranscodeConfig = {
+	enabled: boolean;
+	max_concurrent: number;
+	max_failures: number;
+};
+
+export type TranscodeStatus =
+	| "queued"
+	| "running"
+	| "succeeded"
+	| "failed"
+	| "canceled";
+
+// One job is one media file. percent / eta_seconds / speed live in worker
+// memory only — they vanish on a server restart while the job is still
+// `running` (it is requeued at boot), so every reader must survive their
+// absence rather than treating them as required on a running row.
+export type TranscodeJob = {
+	id: number;
+	status: TranscodeStatus;
+	attempts: number;
+	// ffmpeg stderr tail, failed jobs. Up to ~10 lines.
+	error?: string;
+	file_path: string;
+	media_title: string;
+	// Where the row links back to. A job is always about a library item, but the
+	// contract as written carries no id for it — see github.md.
+	movie_id?: number;
+	series_id?: number;
+	episode_id?: number;
+	size_before?: number;
+	size_after?: number;
+	percent?: number;
+	eta_seconds?: number;
+	speed?: number;
+	created_at: string;
+	started_at?: string;
+	finished_at?: string;
 };
 
 export type OIDCProvider = {

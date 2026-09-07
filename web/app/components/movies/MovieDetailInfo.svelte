@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { ChevronDown, ExternalLink, Trash2 } from "@lucide/svelte";
+	import { ChevronDown, ExternalLink, Trash2, ArrowUpRight } from "@lucide/svelte";
 	import { createMutation, useQueryClient } from "@tanstack/svelte-query";
 	import { auth } from "../../lib/auth.svelte";
 	import { api, errorText } from "../../lib/api";
 	import { toast } from "../../lib/toast";
 	import { formatBytes } from "../../lib/format";
-	import { formatDate } from "../../lib/dates";
+	import { formatDate, formatRelative } from "../../lib/dates";
 	import { cn } from "../../lib/cn";
 	import {
 		audioSummary,
@@ -291,6 +291,25 @@
 				<dd class="text-right font-mono text-fg">
 					{formatBytes(primary.size)}
 				</dd>
+				{#if primary.transcoded_at}
+					<!-- The file on disk is no longer the file that was imported, and the
+					     size above is the post-encode one — so the row says what happened
+					     to it and links to the job that did it. -->
+					<dt class="text-fg-subtle">{i18n.file_transcoded()}</dt>
+					<dd class="min-w-0 text-right">
+						<a
+							href="/activity/transcoding"
+							class="touch-hit inline-flex items-center gap-1.5 rounded font-mono text-status-succeeded transition-colors hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
+						>
+							{#if primary.size_before}
+								{formatBytes(primary.size_before)} → {formatBytes(primary.size)}
+							{:else}
+								{formatRelative(primary.transcoded_at)}
+							{/if}
+							<ArrowUpRight size={12} aria-hidden="true" />
+						</a>
+					</dd>
+				{/if}
 				<dt class="text-fg-subtle">{i18n.field_path()}</dt>
 				<dd class="min-w-0">
 					<button

@@ -11,6 +11,7 @@
 		LogOut,
 		ListVideo,
 		Magnet,
+		Replace,
 	} from "@lucide/svelte";
 	import { isActive as routifyIsActive } from "@roxi/routify";
 	import { createQuery } from "@tanstack/svelte-query";
@@ -20,6 +21,7 @@
 	import { cn } from "../../lib/cn";
 	import {
 		torrentCountsQuery,
+		transcodeCountsQuery,
 		activityCurrent,
 		type IsActiveFn,
 	} from "../../lib/activity-nav";
@@ -94,13 +96,24 @@
 		{ label: i18n.requests_label(), href: "/requests", icon: Inbox },
 	]);
 
-	// Activity's two routes each sit as their own top-level row — no parent to
-	// fold, so the destination is always one click away.
-	const activityLinks = [
+	// Activity's three routes each sit as their own top-level row — no parent to
+	// fold, so the destination is always one click away. Transcoding is
+	// admin-only, which is why this list is derived rather than constant.
+	let activityLinks = $derived([
 		{ label: i18n.activity_queue_history(), href: "/activity", icon: ListVideo },
 		{ label: i18n.torrent_label(), href: "/activity/torrents", icon: Magnet },
-	];
+		...(auth.isAdmin
+			? [
+					{
+						label: i18n.transcode_label(),
+						href: "/activity/transcoding",
+						icon: Replace,
+					},
+				]
+			: []),
+	]);
 	const torrentCounts = torrentCountsQuery();
+	const transcodeCounts = transcodeCountsQuery();
 	// Shares the page keys the other nav surfaces already ride, so the pills
 	// cost no poll of their own.
 	const navCounts = navCountsQuery();
@@ -129,6 +142,26 @@
 				// actually fetching.
 				count: torrentCounts.counts.downloading ?? 0,
 				dot: "downloading",
+			},
+		].filter((p) => p.count > 0),
+	);
+
+	// Running first — it is the only transcode state that is actually consuming
+	// the box. Failed comes second because it is the one waiting on a person;
+	// queued says nothing a running count doesn't imply.
+	let transcodePills = $derived<NavDot[]>(
+		[
+			{
+				key: "running",
+				label: i18n.lc_running(),
+				count: transcodeCounts.counts.running,
+				dot: "running",
+			},
+			{
+				key: "failed",
+				label: i18n.lc_failed(),
+				count: transcodeCounts.counts.failed,
+				dot: "failed",
 			},
 		].filter((p) => p.count > 0),
 	);
@@ -302,6 +335,9 @@
 						{/if}
 						{#if link.href === "/activity/torrents"}
 							{@render dotPills(torrentPills)}
+						{/if}
+						{#if link.href === "/activity/transcoding"}
+							{@render dotPills(transcodePills)}
 						{/if}
 					</a>
 				</li>

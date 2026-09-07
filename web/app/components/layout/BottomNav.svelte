@@ -9,6 +9,7 @@
 		Activity,
 		ListVideo,
 		Magnet,
+		Replace,
 		Tv,
 		CalendarDays,
 		Inbox,
@@ -29,6 +30,7 @@
 	import {
 		TORRENT_PILLS,
 		torrentCountsQuery,
+		transcodeCountsQuery,
 		activityCurrent,
 		type IsActiveFn,
 	} from "../../lib/activity-nav";
@@ -89,6 +91,8 @@
 		dots?: NavDot[];
 		// Torrents states go in the line slot as coloured dots, not as text.
 		torrents?: boolean;
+		// Same, for the transcode queue's running / failed pair.
+		transcoding?: boolean;
 	};
 
 	// Every fan-out in the bar raises the same sheet; only the rows differ.
@@ -98,6 +102,18 @@
 		{ label: i18n.movies_label(), href: "/movies", icon: Film, line: counts.moviesLine },
 		{ label: i18n.settings_series(), href: "/series", icon: Tv, line: counts.seriesLine },
 	]);
+	const transcodeCounts = transcodeCountsQuery();
+	// Words, not dots: this sheet is the phone's entry point and the two numbers
+	// that matter read faster as a sentence than as two coloured pills.
+	let transcodeLine = $derived.by(() => {
+		const c = transcodeCounts.counts;
+		const parts: string[] = [];
+		if (c.running) parts.push(i18n.transcode_n_running({ n: c.running }));
+		if (c.queued) parts.push(i18n.transcode_n_queued({ n: c.queued }));
+		if (c.failed) parts.push(i18n.transcode_n_failed({ n: c.failed }));
+		return parts.join(" · ") || i18n.transcode_nothing_in_flight();
+	});
+
 	let activityRows = $derived<Row[]>([
 		{
 			label: i18n.activity_queue_history(),
@@ -113,6 +129,17 @@
 			icon: Magnet,
 			torrents: true,
 		},
+		...(auth.isAdmin
+			? [
+					{
+						label: i18n.transcode_label(),
+						href: "/activity/transcoding",
+						icon: Replace,
+						line: transcodeLine,
+						badge: transcodeCounts.counts.failed,
+					},
+				]
+			: []),
 	]);
 	let moreRows = $derived<Row[]>([
 		{ label: i18n.common_calendar(), href: "/calendar", icon: CalendarDays },
