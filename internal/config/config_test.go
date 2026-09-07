@@ -2,6 +2,7 @@ package config
 
 import (
 	"bytes"
+	"context"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -574,6 +575,69 @@ quality_profiles:
 			It("rejects an IPv4-mapped range that would never match", func() {
 				Expect(loadProxies("::ffff:10.1.0.0/112")).To(HaveOccurred())
 			})
+		})
+	})
+
+	Describe("transcoding.verify", func() {
+		loadVerify := func(body string) (*Config, error) {
+			GinkgoHelper()
+			dir := GinkgoT().TempDir()
+			dataDir := filepath.Join(dir, "data")
+			Expect(os.MkdirAll(dataDir, 0o755)).To(Succeed())
+			cfgFile := filepath.Join(dir, "config.yaml")
+			Expect(os.WriteFile(
+				cfgFile,
+				[]byte("data_dir: "+dataDir+"\n"+body),
+				0o600,
+			)).To(Succeed())
+			return Load(cfgFile)
+		}
+
+		It("defaults to a 5–100 % band with the optional checks off", func() {
+			cfg, err := loadVerify("")
+			Expect(err).NotTo(HaveOccurred())
+			v := cfg.Transcoding.Verify
+			Expect(v.MaxSizePercent).To(Equal(uint8(100)))
+			Expect(v.MinSizePercent).To(Equal(uint8(5)))
+			Expect(v.HealthCheck).To(BeFalse())
+			Expect(v.MinVMAF).To(BeZero())
+		})
+
+		It("rejects a floor at or above the ceiling", func() {
+			_, err := loadVerify(`transcoding:
+  verify:
+    max_size_percent: 50
+    min_size_percent: 50
+`)
+			Expect(err).To(MatchError(
+				ContainSubstring(
+					"min_size_percent 50 must be below max_size_percent 50",
+				),
+			))
+		})
+
+		It("leaves the floor unchecked when the ceiling is disabled", func() {
+			cfg, err := loadVerify(`transcoding:
+  verify:
+    max_size_percent: 0
+    min_size_percent: 90
+`)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(cfg.Transcoding.Verify.MinSizePercent).To(Equal(uint8(90)))
+		})
+
+		It("patches one verify key without touching its siblings", func() {
+			_, err := loadVerify("")
+			Expect(err).NotTo(HaveOccurred())
+
+			hc := true
+			out, err := UpdateTranscoding(context.Background(), TranscodingPatch{
+				Verify: TranscodeVerifyPatch{HealthCheck: &hc},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(out.Verify.HealthCheck).To(BeTrue())
+			Expect(out.Verify.MaxSizePercent).To(Equal(uint8(100)))
+			Expect(out.Verify.MinSizePercent).To(Equal(uint8(5)))
 		})
 	})
 

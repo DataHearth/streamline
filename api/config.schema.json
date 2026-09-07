@@ -563,6 +563,35 @@
           "type": "integer",
           "minimum": 1,
           "maximum": 10
+        },
+        "verify": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Checks an encode must pass before it replaces the library file. A failing encode is rejected and never retried automatically. Zero disables a bound.",
+          "properties": {
+            "max_size_percent": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 200,
+              "description": "Reject a transcode whose output is larger than this percentage of the source. Remuxes are exempt."
+            },
+            "min_size_percent": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100,
+              "description": "Reject an output smaller than this percentage of the source — a dropped stream or a truncated encode."
+            },
+            "health_check": {
+              "type": "boolean",
+              "description": "Fully decode the output with ffmpeg before the swap. Costs a decode pass per job."
+            },
+            "min_vmaf": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100,
+              "description": "Reject a transcode scoring below this VMAF, measured over three 60s windows against the source. Needs an ffmpeg built with libvmaf; skipped with a log line otherwise."
+            }
+          }
         }
       }
     },

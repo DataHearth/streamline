@@ -324,11 +324,21 @@ func (c DownloadConfig) SelectionGraceDuration() time.Duration {
 
 // TranscodingConfig is the global switch and budget for the post-import
 // transcode worker. The binaries come from FFmpegConfig — one ffmpeg surface.
-// All three keys are runtime-editable through config.Update.
+// All keys are runtime-editable through config.Update.
 type TranscodingConfig struct {
-	Enabled       bool  `koanf:"enabled"`
-	MaxConcurrent uint8 `koanf:"max_concurrent" validate:"min=1,max=8"`
-	MaxFailures   uint8 `koanf:"max_failures"   validate:"min=1,max=10"`
+	Enabled       bool                  `koanf:"enabled"`
+	MaxConcurrent uint8                 `koanf:"max_concurrent" validate:"min=1,max=8"`
+	MaxFailures   uint8                 `koanf:"max_failures"   validate:"min=1,max=10"`
+	Verify        TranscodeVerifyConfig `koanf:"verify"`
+}
+
+// TranscodeVerifyConfig gates the swap: an encode failing any of these is
+// rejected and the library file is left alone. Zero disables a bound.
+type TranscodeVerifyConfig struct {
+	MaxSizePercent uint8 `koanf:"max_size_percent" validate:"max=200"`
+	MinSizePercent uint8 `koanf:"min_size_percent" validate:"max=100"`
+	HealthCheck    bool  `koanf:"health_check"`
+	MinVMAF        uint8 `koanf:"min_vmaf"         validate:"max=100"`
 }
 
 type LogConfig struct {
@@ -637,6 +647,15 @@ func (c *Config) checkInvariants() error {
 			))
 		}
 	}
+	// A floor at or above the ceiling is an empty band that rejects every encode.
+	if v := c.Transcoding.Verify; v.MaxSizePercent != 0 &&
+		v.MinSizePercent >= v.MaxSizePercent {
+		errs = append(errs, fmt.Errorf(
+			"transcoding.verify.min_size_percent %d must be below max_size_percent %d",
+			v.MinSizePercent,
+			v.MaxSizePercent,
+		))
+	}
 	return errors.Join(errs...)
 }
 
@@ -730,31 +749,35 @@ func defaults() map[string]any {
 				"upgrade_allowed":      true,
 			},
 		},
-		"quality_default_profile":      "default",
-		"custom_formats":               []any{},
-		"events.retention":             "2160h",
-		"ffmpeg.enabled":               true,
-		"ffmpeg.path":                  "",
-		"download.selective_files":     false,
-		"download.selection_grace":     "10m",
-		"transcoding.enabled":          false,
-		"transcoding.max_concurrent":   1,
-		"transcoding.max_failures":     3,
-		"log.app.enabled":              true,
-		"log.app.level":                "info",
-		"log.app.format":               "text",
-		"log.app.output":               "stderr",
-		"log.app.rotate.max_size_mb":   100,
-		"log.app.rotate.max_backups":   5,
-		"log.app.rotate.max_age_days":  30,
-		"log.app.rotate.compress":      true,
-		"log.http.enabled":             true,
-		"log.http.output":              "stderr",
-		"log.http.format":              "json",
-		"log.http.rotate.max_size_mb":  100,
-		"log.http.rotate.max_backups":  5,
-		"log.http.rotate.max_age_days": 30,
-		"log.http.rotate.compress":     true,
+		"quality_default_profile":             "default",
+		"custom_formats":                      []any{},
+		"events.retention":                    "2160h",
+		"ffmpeg.enabled":                      true,
+		"ffmpeg.path":                         "",
+		"download.selective_files":            false,
+		"download.selection_grace":            "10m",
+		"transcoding.enabled":                 false,
+		"transcoding.max_concurrent":          1,
+		"transcoding.max_failures":            3,
+		"transcoding.verify.max_size_percent": 100,
+		"transcoding.verify.min_size_percent": 5,
+		"transcoding.verify.health_check":     false,
+		"transcoding.verify.min_vmaf":         0,
+		"log.app.enabled":                     true,
+		"log.app.level":                       "info",
+		"log.app.format":                      "text",
+		"log.app.output":                      "stderr",
+		"log.app.rotate.max_size_mb":          100,
+		"log.app.rotate.max_backups":          5,
+		"log.app.rotate.max_age_days":         30,
+		"log.app.rotate.compress":             true,
+		"log.http.enabled":                    true,
+		"log.http.output":                     "stderr",
+		"log.http.format":                     "json",
+		"log.http.rotate.max_size_mb":         100,
+		"log.http.rotate.max_backups":         5,
+		"log.http.rotate.max_age_days":        30,
+		"log.http.rotate.compress":            true,
 	}
 }
 

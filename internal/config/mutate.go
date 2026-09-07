@@ -134,6 +134,16 @@ type TranscodingPatch struct {
 	Enabled       *bool
 	MaxConcurrent *uint8
 	MaxFailures   *uint8
+	Verify        TranscodeVerifyPatch
+}
+
+// TranscodeVerifyPatch carries optional field updates to the transcoding
+// verify section. Nil fields are left untouched.
+type TranscodeVerifyPatch struct {
+	MaxSizePercent *uint8
+	MinSizePercent *uint8
+	HealthCheck    *bool
+	MinVMAF        *uint8
 }
 
 // OIDCProviderPatch carries optional field updates to a single OIDC provider.
@@ -329,6 +339,19 @@ func UpdateTranscoding(
 		}
 		if patch.MaxFailures != nil {
 			c.Transcoding.MaxFailures = *patch.MaxFailures
+		}
+		v := &c.Transcoding.Verify
+		if patch.Verify.MaxSizePercent != nil {
+			v.MaxSizePercent = *patch.Verify.MaxSizePercent
+		}
+		if patch.Verify.MinSizePercent != nil {
+			v.MinSizePercent = *patch.Verify.MinSizePercent
+		}
+		if patch.Verify.HealthCheck != nil {
+			v.HealthCheck = *patch.Verify.HealthCheck
+		}
+		if patch.Verify.MinVMAF != nil {
+			v.MinVMAF = *patch.Verify.MinVMAF
 		}
 		out = c.Transcoding
 		return nil
