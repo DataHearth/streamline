@@ -6,6 +6,9 @@
 # read) and $FFPROBE_SLEEP_TMP (held before the read): together they let a spec
 # park the verification probe and know it is parked. The sleep redirects both
 # streams so it does not inherit this process's pipes.
+#
+# The default branch mirrors that with $FFPROBE_MARKER/$FFPROBE_SLEEP, for a
+# spec that needs to park a library-scan probe instead.
 for a in "$@"; do last="$a"; done
 case "$last" in
 	*.streamline-tmp.*)
@@ -15,5 +18,9 @@ case "$last" in
 		fi
 		cat "${FFPROBE_FIXTURE_TMP:-$FFPROBE_FIXTURE}"
 		;;
-	*) cat "$FFPROBE_FIXTURE" ;;
+	*)
+		if [ -n "$FFPROBE_MARKER" ]; then : > "$FFPROBE_MARKER"; fi
+		if [ -n "$FFPROBE_SLEEP" ]; then sleep "$FFPROBE_SLEEP" >/dev/null 2>&1; fi
+		cat "$FFPROBE_FIXTURE"
+		;;
 esac

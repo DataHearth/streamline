@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/datahearth/streamline/ent"
@@ -39,6 +40,10 @@ var (
 	// already been replaced, which is what makes the job terminal: a retry
 	// would re-probe a source that no longer exists.
 	errAfterSwap = errors.New("the library file was already replaced")
+
+	// ErrScanRunning is returned by Scan while an earlier call's goroutine is
+	// still walking the library.
+	ErrScanRunning = errors.New("transcode scan already running")
 )
 
 func init() {
@@ -100,6 +105,10 @@ type Worker struct {
 	progress map[uint32]Snapshot
 	cancels  map[uint32]context.CancelFunc
 	running  int
+
+	// scanning guards Scan against a second retroactive-library scan running
+	// concurrently with the first.
+	scanning atomic.Bool
 }
 
 func NewWorker(deps Deps) *Worker {
