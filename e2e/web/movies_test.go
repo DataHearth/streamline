@@ -17,7 +17,9 @@ var _ = Describe("Movies page", Label("e2e"), func() {
 		Expect(page.MustElementR("h1", "^Movies$").MustText()).To(Equal("Movies"))
 		Expect(page.MustElementR("p", "Your library is empty").MustText()).
 			To(ContainSubstring("Your library is empty"))
-		Expect(visibleElement(page, `nav[aria-label="Movie status"]`).MustText()).
+		// From md up the status facet is a dropdown button, not the phone's tab
+		// strip — the nav of the same label is the md:hidden twin.
+		Expect(visibleElement(page, `button[aria-label="Movie status"]`).MustText()).
 			To(ContainSubstring("All"))
 	})
 
@@ -41,8 +43,8 @@ var _ = Describe("Movies page", Label("e2e"), func() {
 
 	It("filters to a status tab and clears back to the library view", func() {
 		page := newSessionPage("/movies")
-		visibleElement(page, `nav[aria-label="Movie status"]`).
-			MustElementR("button", "Wanted").MustClick()
+		visibleElement(page, `button[aria-label="Movie status"]`).MustClick()
+		page.MustElementR(`[role=option]`, "Wanted").MustClick()
 
 		Expect(page.MustElementR("p", "No movies match this view").MustText()).
 			To(ContainSubstring("No movies match this view"))
