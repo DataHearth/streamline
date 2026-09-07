@@ -47,4 +47,36 @@ EOF`)
 		_, err := c.Probe(context.Background(), "/any.mkv")
 		Expect(err).To(MatchError(ErrUnreadable))
 	})
+
+	writeFakeFFmpeg := func(dir, script string) {
+		GinkgoHelper()
+		p := filepath.Join(dir, "ffmpeg")
+		Expect(os.WriteFile(p, []byte("#!/bin/sh\n"+script), 0o755)).To(Succeed())
+	}
+
+	It("resolves ffmpeg alongside ffprobe and reports its version", func() {
+		dir := GinkgoT().TempDir()
+		writeFakeFFprobe(dir, "exit 0")
+		writeFakeFFmpeg(
+			dir,
+			`echo "ffmpeg version 7.1.1 Copyright (c) 2000-2025 the FFmpeg developers"`,
+		)
+		c := NewCLI(dir)
+		Expect(c.FFmpegPath()).NotTo(BeEmpty())
+		version, err := c.Version(context.Background())
+		Expect(err).NotTo(HaveOccurred())
+		Expect(version).To(Equal("7.1.1"))
+	})
+
+	It(
+		"reports no ffmpeg path and errors on Version when the binary is missing",
+		func() {
+			dir := GinkgoT().TempDir()
+			writeFakeFFprobe(dir, "exit 0")
+			c := NewCLI(dir)
+			Expect(c.FFmpegPath()).To(BeEmpty())
+			_, err := c.Version(context.Background())
+			Expect(err).To(HaveOccurred())
+		},
+	)
 })

@@ -88,14 +88,21 @@ func (c *CLI) Probe(ctx context.Context, path string) (*Info, error) {
 }
 
 type probeStream struct {
-	CodecType   string          `json:"codec_type"`
-	CodecName   string          `json:"codec_name"`
-	Width       uint16          `json:"width"`
-	Height      uint16          `json:"height"`
-	Channels    uint8           `json:"channels"`
-	Duration    string          `json:"duration"`
-	Disposition probeStreamDisp `json:"disposition"`
-	Tags        probeStreamTags `json:"tags"`
+	CodecType     string          `json:"codec_type"`
+	CodecName     string          `json:"codec_name"`
+	Width         uint16          `json:"width"`
+	Height        uint16          `json:"height"`
+	Channels      uint8           `json:"channels"`
+	Duration      string          `json:"duration"`
+	BitRate       string          `json:"bit_rate"`
+	ColorTransfer string          `json:"color_transfer"`
+	SideDataList  []probeSideData `json:"side_data_list"`
+	Disposition   probeStreamDisp `json:"disposition"`
+	Tags          probeStreamTags `json:"tags"`
+}
+
+type probeSideData struct {
+	SideDataType string `json:"side_data_type"`
 }
 
 type probeStreamTags struct {
@@ -118,6 +125,21 @@ type probeOutput struct {
 	Format  probeFormat   `json:"format"`
 }
 
+// isHDR reports a PQ/HLG transfer function or a Dolby Vision configuration
+// record in the stream's side data.
+func isHDR(s probeStream) bool {
+	switch s.ColorTransfer {
+	case "smpte2084", "arib-std-b67":
+		return true
+	}
+	for _, sd := range s.SideDataList {
+		if strings.Contains(sd.SideDataType, "DOVI") {
+			return true
+		}
+	}
+	return false
+}
+
 func parseProbeOutput(raw []byte) (*Info, error) {
 	var out probeOutput
 	if err := json.Unmarshal(raw, &out); err != nil {
@@ -136,6 +158,7 @@ func parseProbeOutput(raw []byte) (*Info, error) {
 	}
 	var (
 		videoStreamDuration string
+		videoStreamBitRate  string
 		videoPixels         uint32
 		// ffprobe omits codec_name for codecs without a descriptor, so
 		// VideoCodec cannot double as the stream-chosen sentinel.
@@ -164,7 +187,9 @@ func parseProbeOutput(raw []byte) (*Info, error) {
 			}
 			info.VideoCodec = s.CodecName
 			info.Width, info.Height = s.Width, s.Height
+			info.HDR = isHDR(s)
 			videoStreamDuration = s.Duration
+			videoStreamBitRate = s.BitRate
 			videoPixels = pixels
 			videoFound = true
 		case "audio":
@@ -178,12 +203,18 @@ func parseProbeOutput(raw []byte) (*Info, error) {
 			if info.AudioTracks < 255 {
 				info.AudioTracks++
 			}
+			info.AudioCodecs = append(info.AudioCodecs, s.CodecName)
 			audioLangs.add(s.Tags.Language)
 		case "subtitle":
 			if s.Disposition.Forced == 0 {
 				subLangs.add(s.Tags.Language)
 			}
 		}
+	}
+	if b, err := strconv.ParseUint(videoStreamBitRate, 10, 32); err == nil {
+		info.VideoBitrateBPS = uint32(b)
+	} else {
+		info.VideoBitrateBPS = info.BitrateBPS
 	}
 	info.AudioLangs, info.SubLangs = audioLangs.join(), subLangs.join()
 	if !videoFound {

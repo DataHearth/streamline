@@ -82,6 +82,50 @@ func (_c *MockProber_Available_Call) RunAndReturn(run func() bool) *MockProber_A
 	return _c
 }
 
+// FFmpegPath provides a mock function for the type MockProber
+func (_mock *MockProber) FFmpegPath() string {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for FFmpegPath")
+	}
+
+	var r0 string
+	if returnFunc, ok := ret.Get(0).(func() string); ok {
+		r0 = returnFunc()
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	return r0
+}
+
+// MockProber_FFmpegPath_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FFmpegPath'
+type MockProber_FFmpegPath_Call struct {
+	*mock.Call
+}
+
+// FFmpegPath is a helper method to define mock.On call
+func (_e *MockProber_Expecter) FFmpegPath() *MockProber_FFmpegPath_Call {
+	return &MockProber_FFmpegPath_Call{Call: _e.mock.On("FFmpegPath")}
+}
+
+func (_c *MockProber_FFmpegPath_Call) Run(run func()) *MockProber_FFmpegPath_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *MockProber_FFmpegPath_Call) Return(s string) *MockProber_FFmpegPath_Call {
+	_c.Call.Return(s)
+	return _c
+}
+
+func (_c *MockProber_FFmpegPath_Call) RunAndReturn(run func() string) *MockProber_FFmpegPath_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Probe provides a mock function for the type MockProber
 func (_mock *MockProber) Probe(ctx context.Context, path string) (*ffmpeg.Info, error) {
 	ret := _mock.Called(ctx, path)
@@ -190,6 +234,66 @@ func (_c *MockProber_ResolvedPath_Call) Return(s string) *MockProber_ResolvedPat
 }
 
 func (_c *MockProber_ResolvedPath_Call) RunAndReturn(run func() string) *MockProber_ResolvedPath_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Version provides a mock function for the type MockProber
+func (_mock *MockProber) Version(ctx context.Context) (string, error) {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Version")
+	}
+
+	var r0 string
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) (string, error)); ok {
+		return returnFunc(ctx)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context) string); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = returnFunc(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockProber_Version_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Version'
+type MockProber_Version_Call struct {
+	*mock.Call
+}
+
+// Version is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockProber_Expecter) Version(ctx any) *MockProber_Version_Call {
+	return &MockProber_Version_Call{Call: _e.mock.On("Version", ctx)}
+}
+
+func (_c *MockProber_Version_Call) Run(run func(ctx context.Context)) *MockProber_Version_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockProber_Version_Call) Return(s string, err error) *MockProber_Version_Call {
+	_c.Call.Return(s, err)
+	return _c
+}
+
+func (_c *MockProber_Version_Call) RunAndReturn(run func(ctx context.Context) (string, error)) *MockProber_Version_Call {
 	_c.Call.Return(run)
 	return _c
 }

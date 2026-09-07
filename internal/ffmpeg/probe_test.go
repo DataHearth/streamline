@@ -225,3 +225,40 @@ var _ = Describe("parseProbeOutput streams", Label("unit", "ffmpeg"), func() {
 		Expect(info.SubLangs).To(BeEmpty())
 	})
 })
+
+var _ = Describe("parseProbeOutput HDR", Label("unit", "ffmpeg"), func() {
+	It(
+		"reports SDR with the stream's own video bitrate and ordered audio codecs",
+		func() {
+			info, err := parseProbeOutput([]byte(`{
+		  "streams": [
+		    {"codec_type":"video","codec_name":"h264","width":1920,"height":1080,"bit_rate":"9000000"},
+		    {"codec_type":"audio","codec_name":"dts","channels":6},
+		    {"codec_type":"audio","codec_name":"aac","channels":2}
+		  ],
+		  "format": {"format_name":"matroska","duration":"3600.0","bit_rate":"9500000"}
+		}`))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(info.HDR).To(BeFalse())
+			Expect(info.VideoBitrateBPS).To(Equal(uint32(9000000)))
+			Expect(info.AudioCodecs).To(Equal([]string{"dts", "aac"}))
+		},
+	)
+
+	It("detects PQ/DV HDR and falls back to the format bitrate", func() {
+		info, err := parseProbeOutput([]byte(`{
+		  "streams": [
+		    {"codec_type":"video","codec_name":"hevc","width":3840,"height":2160,
+		     "color_transfer":"smpte2084",
+		     "side_data_list":[{"side_data_type":"DOVI configuration record"}]},
+		    {"codec_type":"audio","codec_name":"truehd","channels":8},
+		    {"codec_type":"audio","codec_name":"eac3","channels":6}
+		  ],
+		  "format": {"format_name":"matroska","duration":"7200.0","bit_rate":"45000000"}
+		}`))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(info.HDR).To(BeTrue())
+		Expect(info.VideoBitrateBPS).To(Equal(uint32(45000000)))
+		Expect(info.AudioCodecs).To(Equal([]string{"truehd", "eac3"}))
+	})
+})
