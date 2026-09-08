@@ -1,0 +1,86 @@
+version: "3"
+
+tasks:
+  # build:go pulls build:js + build:css via its own deps, so this alias
+  # just forwards. Kept for workflow clarity and back-compat with CI.
+  app:
+    desc: Build Go binary with frontend assets
+    deps: [go]
+
+  go:
+    desc: Build Go binary
+    # Frontend assets are embedded via //go:embed — must exist at compile time.
+    deps: [js, css]
+    cmd: go build -o {{.BINARY}} ./cmd
+    sources:
+      - "**/*.go"
+      - exclude: "**/*_test.go"
+      - exclude: "**/mocks/**"
+      - go.mod
+      - go.sum
+      # Embedded assets (web/embed.go). Globbed, not enumerated: a hand-listed
+      # subset drifts silently — it once missed spa.min.css and embedded a stale
+      # bundle. The only non-embedded files here (input.css, docs.js) are bundle
+      # inputs, so they never trigger a rebuild that wasn't already due.
+      - web/static/**
+      - web/app/index.html
+      - web/api_docs.html
+      # Embedded too (internal/db/migrations.go). Editing a .sql without this
+      # leaves the binary carrying the previous migration, which surfaces as a
+      # dirty schema_migrations row rather than as a stale build.
+      - internal/db/migrations/**
+    generates:
+      - "{{.BINARY}}"
+
+  js:
+    desc: Bundle JS — docs bundle (scalar), SPA bundle (svelte)
+    cmds:
+      - mkdir -p /tmp/streamline/bundle web/static/dist
+      - pnpm exec esbuild web/static/js/docs.js --bundle --minify
+        --outdir=/tmp/streamline/bundle --entry-names=[name].min
+      - mv /tmp/streamline/bundle/docs.min.js web/static/js/docs.min.js
+      - mv /tmp/streamline/bundle/docs.min.css web/static/css/docs.min.css
+      - pnpm exec paraglide-js compile --project ./web/app/project.inlang
+        --outdir ./web/app/lib/paraglide --is-server false
+        --emit-ts-declarations
+        --strategy localStorage preferredLanguage baseLocale
+      - pnpm exec routify build
+      - node web/app/esbuild.config.mjs
+    sources:
+      - web/static/js/docs.js
+      - web/app/**/*.ts
+      - web/app/**/*.svelte
+      - exclude: web/app/.routify/**
+      - web/app/messages/*.json
+      - web/app/project.inlang/settings.json
+      - web/app/esbuild.config.mjs
+      - web/app/tsconfig.json
+      - routify.config.js
+      - package.json
+      - pnpm-lock.yaml
+    generates:
+      - web/static/js/docs.min.js
+      - web/static/css/docs.min.css
+      - web/static/dist/spa.min.js
+      - web/static/dist/spa.min.css
+
+  css:
+    desc: Build TailwindCSS
+    cmd: pnpm exec tailwindcss -i web/static/css/input.css -o
+      web/static/css/style.css --minify
+    sources:
+      - web/static/css/input.css
+      - web/app/**/*.svelte
+    generates:
+      - web/static/css/style.css
+
+  oci:
+    desc: Build the streamline OCI image (ghcr.io/datahearth/streamline:{{.TAG}})
+    vars:
+      TAG: '{{.TAG | default "dev"}}'
+    cmds:
+      - docker build -t ghcr.io/datahearth/streamline:{{.TAG}} -f
+        deploy/Dockerfile .
+      - docker tag ghcr.io/datahearth/streamline:{{.TAG}}
+        ghcr.io/datahearth/streamline:latest
+

@@ -1,0 +1,89 @@
+version: "3"
+
+tasks:
+  deps:
+    desc: Fetch upstream subchart dependencies into charts/observability/charts/
+    cmd: helm dependency update deploy/helm/streamline/charts/observability
+    sources:
+      - deploy/helm/streamline/charts/observability/Chart.yaml
+    generates:
+      - deploy/helm/streamline/charts/observability/Chart.lock
+
+  prep:
+    desc: Copy dashboard JSON into observability subchart
+    deps: [deps]
+    cmds:
+      - mkdir -p deploy/helm/streamline/charts/observability/dashboards
+      - cp deploy/grafana/dashboards/streamline.json
+        deploy/helm/streamline/charts/observability/dashboards/streamline.json
+    sources:
+      - deploy/grafana/dashboards/streamline.json
+    generates:
+      - deploy/helm/streamline/charts/observability/dashboards/streamline.json
+
+  lint:
+    desc: Lint the Helm chart
+    deps: [prep]
+    cmd: helm lint deploy/helm/streamline
+
+  template:
+    desc: Render Helm chart (defaults and observability-enabled)
+    deps: [prep]
+    cmds:
+      - mkdir -p /tmp/streamline
+      # image.tag has no default — the chart refuses to pick an app version.
+      - helm template streamline deploy/helm/streamline --set image.tag=dev >
+        /tmp/streamline/helm-default.yaml
+      - helm template streamline deploy/helm/streamline --set image.tag=dev
+        --set observability.enabled=true > /tmp/streamline/helm-obs.yaml
+
+  kind:up:
+    desc: Create kind cluster for e2e
+    cmds:
+      - kind create cluster --name streamline-dev --wait 2m
+      - kind export kubeconfig --name streamline-dev --kubeconfig
+        deploy/helm/streamline/kubeconfig.yaml
+
+  kind:down:
+    desc: Destroy kind cluster
+    cmds:
+      - kind delete cluster --name streamline-dev
+      - rm deploy/helm/streamline/kubeconfig.yaml
+
+  kind:load:
+    desc: Load streamline image into kind
+    deps: [":build:oci"]
+    cmd: kind load docker-image ghcr.io/datahearth/streamline:dev --name
+      streamline-dev
+
+  install:
+    desc: Install chart into current kube context
+    deps: [prep]
+    cmd: |
+      helm upgrade --install streamline deploy/helm/streamline \
+        --namespace streamline --create-namespace \
+        --set image.tag=dev \
+        --set image.pullPolicy=IfNotPresent \
+        --set observability.enabled=true \
+        --wait --timeout 5m
+
+  test:
+    desc: Run helm test hooks
+    cmd: helm test streamline --namespace streamline --logs
+
+  e2e:
+    desc: Full kind-based e2e (build, load, install, test, teardown)
+    cmds:
+      - task: kind:up
+      - defer: {task: kind:down}
+      - task: kind:load
+      - task: install
+      - task: test
+
+  package:
+    desc: Package chart tarball (used by CI release job)
+    deps: [prep]
+    cmds:
+      - mkdir -p /tmp/streamline/helm
+      - helm package deploy/helm/streamline -d /tmp/streamline/helm
+

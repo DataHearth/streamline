@@ -1,0 +1,29 @@
+version: "3"
+
+tasks:
+  default:
+    desc: Run all linters
+    cmds:
+      - task: go
+      - task: frontend
+      - task: ts
+
+  go:
+    desc: Lint Go code
+    # Frontend assets must exist before the Go typechecker resolves the
+    # //go:embed paths in web/embed.go.
+    deps: [":build:js", ":build:css"]
+    cmd: go tool golangci-lint run ./...
+
+  frontend:
+    desc: Lint JS/CSS (biome)
+    cmds:
+      - biome lint web/static/js web/static/css
+
+  ts:
+    desc: Typecheck the SPA (svelte-check)
+    # esbuild strips types without checking them, so nothing else in the build
+    # would catch a type error in web/app.
+    deps: [":build:js"]
+    cmd: pnpm exec svelte-check --tsconfig web/app/tsconfig.json {{.CLI_ARGS}}
+

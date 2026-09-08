@@ -1,0 +1,93 @@
+version: "3"
+
+tasks:
+  changelog:
+    desc: Regenerate CHANGELOG.md through VERSION, commit it, and advance main. Usage - task release:changelog VERSION=v0.1.0
+    requires:
+      vars: [VERSION]
+    # Commit the changelog on its own revision — release:tag reads main:CHANGELOG.md,
+    # so the section must be committed and on the bookmark/branch. jj if present
+    # (advance main to the new revision), plain git commit otherwise.
+    cmd: |
+      if command -v jj >/dev/null 2>&1; then
+        jj new -m "docs(changelog): {{.VERSION}}"
+        git-cliff --tag {{.VERSION}} -o CHANGELOG.md
+        jj bookmark set main -r @
+      else
+        git-cliff --tag {{.VERSION}} -o CHANGELOG.md
+        git add CHANGELOG.md
+        git commit -m "docs(changelog): {{.VERSION}}"
+      fi
+
+  tag:
+    desc: Cut an app release — tag main v*.*.* and push it, triggering changelog, gh release and OCI image. Usage - task release:tag VERSION=v0.1.0
+    requires:
+      vars: [VERSION]
+    preconditions:
+      # A bad tag pushes fine but matches no CI glob — nothing releases. Fail first.
+      - sh: 'echo "{{.VERSION}}" | grep -qE "^v[0-9]+\.[0-9]+\.[0-9]+"'
+        msg: "VERSION must look like v0.1.0 or v0.1.0-alpha.1"
+      # Read the tag target, not the working copy: CHANGELOG.md is only in the
+      # release once it is committed, and an uncommitted one must not pass.
+      - sh: 'V="{{.VERSION}}"; git show main:CHANGELOG.md 2>/dev/null | grep -q "^## \[${V#v}\]"'
+        msg: "main has no CHANGELOG.md section for {{.VERSION}} — run: task release:changelog VERSION={{.VERSION}}, then commit it"
+    cmds:
+      # git, not jj: jj can't create or push tags. The tag push is the trigger —
+      # it fans out to .github/workflows/{image,release}.yaml.
+      #
+      # main, not HEAD: jj parks git HEAD on @- while @ is the working-copy
+      # commit, so HEAD is one commit behind the bookmark whenever the working
+      # copy holds anything. Tag the bookmark that is actually being released.
+      - git tag -a {{.VERSION}} main -m "{{.VERSION}}"
+      - git push origin {{.VERSION}}
+      # The chart is NOT released here — it versions independently. Operators
+      # deploy this image by setting image.tag in their values; the chart has
+      # no appVersion and never picks a tag for them.
+
+  # --- Local release ------------------------------------------------------
+  # release:tag above is the real path — CI does everything on the tag push.
+  # The targets below cut a release from a workstation instead (e.g. an alpha
+  # to smoke-test in a real cluster), reusing the same steps CI runs. See
+  # .github/workflows/{image,release}.yaml.
+  # Requires `docker login ghcr.io` and `helm registry login ghcr.io`.
+
+  image:
+    desc: Build + push multi-arch OCI image to GHCR (usage - task release:image VERSION=v0.1.0-alpha.1)
+    requires:
+      vars: [VERSION]
+    vars:
+      # ponytail: covers typical clusters; override PLATFORMS=linux/amd64 to narrow.
+      PLATFORMS: '{{.PLATFORMS | default "linux/amd64,linux/arm64"}}'
+      # CI's docker/metadata-action strips the leading v from semver tags. Match it,
+      # or a locally-cut release lands on tags no chart ever references.
+      VER: '{{trimPrefix "v" .VERSION}}'
+    cmd: |
+      docker buildx build --push \
+        --platform {{.PLATFORMS}} \
+        -f deploy/Dockerfile \
+        -t ghcr.io/datahearth/streamline:{{.VER}} \
+        --build-arg VERSION={{.VER}} \
+        --build-arg COMMIT="$(git rev-parse --short HEAD)" \
+        --build-arg BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+        .
+
+  helm:
+    desc: Package + push the helm chart to GHCR OCI at the version in Chart.yaml (usage - task release:helm)
+    deps: [":helm:prep"]
+    vars:
+      CHART_VERSION:
+        sh: "sed -n 's/^version: *//p' deploy/helm/streamline/Chart.yaml"
+    cmds:
+      - mkdir -p /tmp/streamline/helm
+      - helm package deploy/helm/streamline -d /tmp/streamline/helm
+      - helm push /tmp/streamline/helm/streamline-{{.CHART_VERSION}}.tgz
+        oci://ghcr.io/datahearth/charts
+
+  default:
+    desc: Local k8s-deployable release - image at VERSION + chart at its own Chart.yaml version. Usage - task release VERSION=v0.1.0-alpha.1
+    requires:
+      vars: [VERSION]
+    cmds:
+      - task: image
+        vars: {VERSION: "{{.VERSION}}"}
+      - task: helm
