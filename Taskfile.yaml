@@ -350,6 +350,29 @@ tasks:
   # Chart.yaml is the source of truth for the chart version — chart:tag reads
   # it, nothing stamps it at package time.
 
+  chart:bump:
+    desc: Bump the chart version, commit it on its own revision and advance main. Usage - task chart:bump VERSION=2.1.0
+    requires:
+      vars: [VERSION]
+    preconditions:
+      - sh: 'echo "{{.VERSION}}" | grep -qE "^[0-9]+\.[0-9]+\.[0-9]+$"'
+        msg: "VERSION must look like 2.1.0 — no leading v, chart:tag adds the chart-v prefix"
+    # Same shape as release:changelog, and for the same reason: chart:tag reads
+    # main:Chart.yaml, so the bump must be committed and on the bookmark/branch.
+    # Bump against the diff, not against the version already there — a renovate
+    # deps PR bumps the patch itself, so a feature landing after it inherits a
+    # patch number that claims nothing shipped.
+    cmd: |
+      if command -v jj >/dev/null 2>&1; then
+        jj new -m "chore(helm): chart v{{.VERSION}}"
+        sed -i 's/^version: .*/version: {{.VERSION}}/' deploy/helm/streamline/Chart.yaml
+        jj bookmark set main -r @
+      else
+        sed -i 's/^version: .*/version: {{.VERSION}}/' deploy/helm/streamline/Chart.yaml
+        git add deploy/helm/streamline/Chart.yaml
+        git commit -m "chore(helm): chart v{{.VERSION}}"
+      fi
+
   chart:tag:
     desc: Cut a chart release — tag main chart-v<Chart.yaml version> and push it, triggering .github/workflows/chart.yaml
     vars:
@@ -358,12 +381,24 @@ tasks:
     preconditions:
       # Tag the committed chart, not the working copy — CI packages from the tag.
       - sh: 'git show main:deploy/helm/streamline/Chart.yaml | grep -q "^version: {{.CHART_VERSION}}$"'
-        msg: "main's Chart.yaml is not at version {{.CHART_VERSION}} — commit the bump first"
+        msg: "main's Chart.yaml is not at version {{.CHART_VERSION}} — run: task chart:bump VERSION={{.CHART_VERSION}}"
       - sh: '! git rev-parse -q --verify refs/tags/chart-v{{.CHART_VERSION}} >/dev/null'
         msg: "chart-v{{.CHART_VERSION}} already exists — bump version in deploy/helm/streamline/Chart.yaml"
     cmds:
       - git tag -a chart-v{{.CHART_VERSION}} main -m "chart-v{{.CHART_VERSION}}"
       - git push origin chart-v{{.CHART_VERSION}}
+
+  chart:release:
+    desc: Cut a chart release end to end — bump, commit, advance main, tag and push. Usage - task chart:release VERSION=2.1.0
+    requires:
+      vars: [VERSION]
+    # Both halves keep their own preconditions, so this is only ever the two
+    # commands in order — chart:tag re-reads Chart.yaml after chart:bump wrote
+    # it. Run them apart to review the bump commit before the tag goes out.
+    cmds:
+      - task: chart:bump
+        vars: { VERSION: '{{.VERSION}}' }
+      - task: chart:tag
 
   # --- Local release ------------------------------------------------------
   # release:tag above is the real path — CI does everything on the tag push.
