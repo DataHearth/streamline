@@ -774,10 +774,23 @@ export type FFmpegConfig = {
 // ffmpeg_path / ffprobe_path keys are deliberately absent: the shipped
 // `ffmpeg` block already resolves the binary once at boot and Media probe owns
 // that surface.
+export type TranscodeVerifyConfig = {
+	max_size_percent: number;
+	min_size_percent: number;
+	health_check: boolean;
+	min_vmaf: number;
+};
+
 export type TranscodeConfig = {
 	enabled: boolean;
 	max_concurrent: number;
 	max_failures: number;
+	verify: TranscodeVerifyConfig;
+};
+
+// PATCH body: every level optional.
+export type TranscodeConfigPatch = Partial<Omit<TranscodeConfig, "verify">> & {
+	verify?: Partial<TranscodeVerifyConfig>;
 };
 
 export type TranscodeStatus =
@@ -785,7 +798,8 @@ export type TranscodeStatus =
 	| "running"
 	| "succeeded"
 	| "failed"
-	| "canceled";
+	| "canceled"
+	| "rejected";
 
 // One job is one media file. percent / eta_seconds / speed live in worker
 // memory only — they vanish on a server restart while the job is still

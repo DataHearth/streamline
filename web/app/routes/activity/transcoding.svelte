@@ -129,7 +129,9 @@
 	let activeFilters = $derived(statusFilter.length + (search.trim() ? 1 : 0));
 	let running = $derived(allJobs.filter((j) => j.status === "running").length);
 	let queued = $derived(allJobs.filter((j) => j.status === "queued").length);
-	let failed = $derived(allJobs.filter((j) => j.status === "failed").length);
+	let failed = $derived(
+		allJobs.filter((j) => j.status === "failed" || j.status === "rejected").length,
+	);
 	let reclaimed = $derived(totalReclaimed(allJobs));
 	let busyId = $derived.by<number | null>(() => {
 		if (cancelJob.isPending) return cancelJob.variables ?? null;

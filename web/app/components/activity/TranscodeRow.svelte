@@ -36,7 +36,7 @@
 	let fig = $derived(jobFigure(job));
 	let running = $derived(job.status === "running");
 	let cancellable = $derived(running || job.status === "queued");
-	let retryable = $derived(job.status === "failed");
+	let retryable = $derived(job.status === "failed" || job.status === "rejected");
 	// The stderr tail is up to ten lines; the row shows the first, which is
 	// almost always the real cause, and the block holds the rest.
 	let errorHead = $derived(job.error?.split("\n")[0] ?? "");

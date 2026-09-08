@@ -49,7 +49,8 @@ export function jobHref(j: TranscodeJob): string | null {
 }
 
 export function bytesSaved(j: TranscodeJob): number {
-	if (!j.size_before || !j.size_after) return 0;
+	// A rejected row carries both sizes too, but nothing was ever swapped in.
+	if (j.status !== "succeeded" || !j.size_before || !j.size_after) return 0;
 	return Math.max(0, j.size_before - j.size_after);
 }
 
@@ -129,6 +130,12 @@ export function jobFigure(j: TranscodeJob): JobFigure {
 				sub: i18n.transcode_failed_when({ when: formatRelative(j.finished_at) }),
 				tone: "var(--status-failed)",
 			};
+		case "rejected":
+			return {
+				value: `${formatBytes(j.size_before)} → ${formatBytes(j.size_after)}`,
+				sub: i18n.transcode_rejected_when({ when: formatRelative(j.finished_at) }),
+				tone: "var(--status-failed)",
+			};
 		default:
 			return {
 				value: formatBytes(j.size_before),
@@ -152,8 +159,9 @@ const STATUS_RANK: Record<TranscodeStatus, number> = {
 	running: 0,
 	queued: 1,
 	failed: 2,
-	succeeded: 3,
-	canceled: 4,
+	rejected: 3,
+	succeeded: 4,
+	canceled: 5,
 };
 
 const newest = (a: TranscodeJob, b: TranscodeJob) =>

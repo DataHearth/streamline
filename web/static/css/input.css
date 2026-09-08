@@ -106,6 +106,10 @@
 	--status-succeeded: var(--status-available);
 	--status-canceled: var(--status-paused);
 
+	/* A rejected encode is a failure the operator can act on, so it wears the
+	   failed hue under its own label. */
+	--status-rejected: var(--status-failed);
+
 	/* A download that finished, failed verification and waits on a person. Amber
 	   because it is the same "needs something from you" family as wanted — an
 	   alias rather than a reuse of the name, so StatusPill's
@@ -206,6 +210,7 @@
 	--color-status-running: var(--status-running);
 	--color-status-succeeded: var(--status-succeeded);
 	--color-status-canceled: var(--status-canceled);
+	--color-status-rejected: var(--status-rejected);
 
 	--radius-sm: var(--radius-sm);
 	--radius-md: var(--radius-md);

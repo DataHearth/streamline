@@ -23,7 +23,8 @@
 		| "queued"
 		| "running"
 		| "succeeded"
-		| "canceled";
+		| "canceled"
+		| "rejected";
 
 	const LABELS: Record<StatusKind, string> = {
 		downloading: i18n.status_downloading(),
@@ -45,6 +46,7 @@
 		running: i18n.status_running(),
 		succeeded: i18n.status_succeeded(),
 		canceled: i18n.status_canceled(),
+		rejected: i18n.status_rejected(),
 	};
 </script>
 

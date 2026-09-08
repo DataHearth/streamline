@@ -8,7 +8,7 @@
 	import { api, errorText, ApiError } from "../../lib/api";
 	import { config } from "../../lib/config.svelte";
 	import { toast } from "../../lib/toast";
-	import type { FFmpegConfig, TranscodeConfig } from "../../lib/types";
+	import type { FFmpegConfig, TranscodeConfig, TranscodeConfigPatch } from "../../lib/types";
 	import { scanWorkerUnavailable } from "../../lib/transcoding";
 	import Checkbox from "../../components/forms/Checkbox.svelte";
 	import FieldLock from "../../components/forms/FieldLock.svelte";
@@ -28,7 +28,7 @@
 		queryFn: () => api<FFmpegConfig>("/config/ffmpeg"),
 	}));
 
-	const save = createMutation<TranscodeConfig, Error, Partial<TranscodeConfig>>(
+	const save = createMutation<TranscodeConfig, Error, TranscodeConfigPatch>(
 		() => ({
 			mutationFn: (body) =>
 				api<TranscodeConfig>("/config/transcoding", { method: "PATCH", body }),
@@ -75,6 +75,12 @@
 	let failures = $derived(
 		failuresDraft ?? String(transcoding.data?.max_failures ?? 3),
 	);
+	let maxSizeDraft = $state<string | null>(null);
+	let minSizeDraft = $state<string | null>(null);
+	let vmafDraft = $state<string | null>(null);
+	let maxSize = $derived(maxSizeDraft ?? String(transcoding.data?.verify.max_size_percent ?? 100));
+	let minSize = $derived(minSizeDraft ?? String(transcoding.data?.verify.min_size_percent ?? 5));
+	let vmaf = $derived(vmafDraft ?? String(transcoding.data?.verify.min_vmaf ?? 0));
 
 	function commitNumber(
 		raw: string | null,
@@ -226,6 +232,109 @@
 					<ArrowUpRight size={12} aria-hidden="true" />
 				</a>
 			</p>
+		</section>
+
+		<section class="mt-4 rounded-lg border border-border bg-bg-card p-4">
+			<h2 class="text-sm font-semibold text-fg">{i18n.transcode_verify()}</h2>
+			<p class="mt-0.5 text-xs leading-relaxed text-fg-subtle">
+				{i18n.transcode_verify_help()}
+			</p>
+
+			<div class="mt-4 grid gap-4 sm:grid-cols-3">
+				<label class="block">
+					<span class="mb-1 flex items-center gap-1.5 text-sm font-medium text-fg">
+						{i18n.transcode_max_size_percent()}
+						<FieldLock locked={config.readOnly} />
+					</span>
+					<input
+						type="number"
+						min="0"
+						max="200"
+						inputmode="numeric"
+						readonly={config.readOnly}
+						value={maxSize}
+						oninput={(e) => (maxSizeDraft = (e.currentTarget as HTMLInputElement).value)}
+						onblur={() => {
+							const raw = maxSizeDraft;
+							maxSizeDraft = null;
+							commitNumber(raw, transcoding.data?.verify.max_size_percent, 0, 200, (v) =>
+								save.mutate({ verify: { max_size_percent: v } }),
+							);
+						}}
+						onkeydown={(e) => {
+							if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur();
+						}}
+						class="{inputClass} font-mono tabular-nums"
+					/>
+					<p class="mt-1 text-xs text-fg-muted">{i18n.transcode_max_size_percent_help()}</p>
+				</label>
+
+				<label class="block">
+					<span class="mb-1 flex items-center gap-1.5 text-sm font-medium text-fg">
+						{i18n.transcode_min_size_percent()}
+						<FieldLock locked={config.readOnly} />
+					</span>
+					<input
+						type="number"
+						min="0"
+						max="100"
+						inputmode="numeric"
+						readonly={config.readOnly}
+						value={minSize}
+						oninput={(e) => (minSizeDraft = (e.currentTarget as HTMLInputElement).value)}
+						onblur={() => {
+							const raw = minSizeDraft;
+							minSizeDraft = null;
+							commitNumber(raw, transcoding.data?.verify.min_size_percent, 0, 100, (v) =>
+								save.mutate({ verify: { min_size_percent: v } }),
+							);
+						}}
+						onkeydown={(e) => {
+							if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur();
+						}}
+						class="{inputClass} font-mono tabular-nums"
+					/>
+					<p class="mt-1 text-xs text-fg-muted">{i18n.transcode_min_size_percent_help()}</p>
+				</label>
+
+				<label class="block">
+					<span class="mb-1 flex items-center gap-1.5 text-sm font-medium text-fg">
+						{i18n.transcode_min_vmaf()}
+						<FieldLock locked={config.readOnly} />
+					</span>
+					<input
+						type="number"
+						min="0"
+						max="100"
+						inputmode="numeric"
+						readonly={config.readOnly}
+						value={vmaf}
+						oninput={(e) => (vmafDraft = (e.currentTarget as HTMLInputElement).value)}
+						onblur={() => {
+							const raw = vmafDraft;
+							vmafDraft = null;
+							commitNumber(raw, transcoding.data?.verify.min_vmaf, 0, 100, (v) =>
+								save.mutate({ verify: { min_vmaf: v } }),
+							);
+						}}
+						onkeydown={(e) => {
+							if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur();
+						}}
+						class="{inputClass} font-mono tabular-nums"
+					/>
+					<p class="mt-1 text-xs text-fg-muted">{i18n.transcode_min_vmaf_help()}</p>
+				</label>
+			</div>
+
+			<div class="mt-4">
+				<Checkbox
+					checked={transcoding.data.verify.health_check}
+					disabled={locked}
+					onChange={(v) => save.mutate({ verify: { health_check: v } })}
+					label={i18n.transcode_health_check()}
+					description={i18n.transcode_health_check_help()}
+				/>
+			</div>
 		</section>
 
 		<section class="mt-4 rounded-lg border border-border bg-bg-card p-4">

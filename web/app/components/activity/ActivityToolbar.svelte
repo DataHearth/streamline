@@ -32,6 +32,7 @@
 			{ key: "running", label: i18n.lc_running(), dot: "running" },
 			{ key: "succeeded", label: i18n.lc_succeeded(), dot: "succeeded" },
 			{ key: "failed", label: i18n.lc_failed(), dot: "failed" },
+			{ key: "rejected", label: i18n.status_rejected(), dot: "rejected" },
 			{ key: "canceled", label: i18n.lc_canceled(), dot: "canceled" },
 		],
 	};
