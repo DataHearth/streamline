@@ -37,6 +37,7 @@ const BY_CODE: Record<string, () => string> = {
 	register_failed: i18n.err_register_failed,
 	rate_limited: i18n.err_rate_limited,
 	bad_request: i18n.err_bad_request,
+	body_too_large: i18n.err_body_too_large,
 };
 
 function byStatus(status: number): string {
@@ -51,6 +52,10 @@ function byStatus(status: number): string {
 			return i18n.err_not_found();
 		case 409:
 			return i18n.err_conflict();
+		// A fronting reverse proxy can cap the body first and answer 413 with no
+		// JSON body, so there is no code to key on.
+		case 413:
+			return i18n.err_body_too_large();
 		case 422:
 			return i18n.err_unprocessable();
 		case 429:

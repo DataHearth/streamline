@@ -562,6 +562,7 @@
 	"dlclients_empty_help": "Add a qBittorrent, Transmission, or Deluge instance to receive grabs.",
 	"episode_number": "Episode {number}",
 	"err_bad_request": "That request wasn't valid.",
+	"err_body_too_large": "That's too large to send. Check the upload size limit.",
 	"err_conflict": "That conflicts with something that already exists.",
 	"err_email_required": "An email address is required.",
 	"err_forbidden": "You don't have permission to do that.",

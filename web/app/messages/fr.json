@@ -562,6 +562,7 @@
 	"dlclients_empty_help": "Ajoutez une instance qBittorrent, Transmission ou Deluge pour recevoir les téléchargements.",
 	"episode_number": "Épisode {number}",
 	"err_bad_request": "Cette requête n'est pas valide.",
+	"err_body_too_large": "C'est trop volumineux pour être envoyé. Vérifiez la limite de taille.",
 	"err_conflict": "Cela entre en conflit avec un élément existant.",
 	"err_email_required": "Une adresse e-mail est requise.",
 	"err_forbidden": "Vous n'avez pas la permission d'effectuer cette action.",
