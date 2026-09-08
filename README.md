@@ -8,7 +8,7 @@
 
 Self-hosted unified media manager. Replaces the \*arr stack (Radarr, Sonarr, Lidarr, Readarr) and Seerr with a single binary.
 
-https://github.com/user-attachments/assets/9116fb45-1a25-414d-b79e-5fe83df25f6b
+https://github.com/user-attachments/assets/318e94d2-7571-4dda-96f6-f62bb4af8a46
 
 |  |  |
 | --- | --- |
@@ -421,11 +421,12 @@ Found a vulnerability? Don't open an issue — see [SECURITY.md](SECURITY.md).
 
 ## Screenshots
 
-> **The library shown in every screenshot and in the demo video is fabricated.** Titles, posters and
-> metadata come from public metadata providers; the "files" behind them do not exist. Streamline is a
-> library manager — it neither hosts nor distributes media. It does not endorse copyright
-> infringement or any other unlawful use, and the authors accept no responsibility for how you use
-> it. Obtaining content you have the right to is your responsibility.
+> **The library shown in every screenshot and in the demo video is fabricated.** Every title in it is
+> public domain or openly licensed — Blender Open Movies, silent and mid-century films whose copyright
+> has lapsed. Posters and metadata come from public metadata providers; the "files" behind them do not
+> exist. Streamline is a library manager — it neither hosts nor distributes media. It does not endorse
+> copyright infringement or any other unlawful use, and the authors accept no responsibility for how
+> you use it. Obtaining content you have the right to is your responsibility.
 
 |  |  |
 | --- | --- |
