@@ -40,20 +40,9 @@ For operators who want the whole surface: every config key, declarative deploys,
 
 ## What Streamline does today
 
-| | Status |
-| --- | --- |
-| Movies, TV shows | Shipped |
-| Music, books | Planned |
-| qBittorrent, Transmission, Deluge | Shipped |
-| Built-in torrent client (no external client needed) | Shipped |
-| Torznab, Prowlarr indexers | Shipped |
-| Usenet (NZB + SABnzbd/NZBGet) | Planned |
-| Plex / Jellyfin / Emby notifications and deep links | Shipped |
-| Built-in player (stream from Streamline itself) | Planned |
-| Multi-user, OIDC SSO, invites, request system | Shipped |
-| REST API, OpenTelemetry, Helm chart, single binary | Shipped |
+Movies and TV are shipped, with the built-in torrent client, quality scoring, transcoding, requests and the REST API. Music, books, Usenet and a built-in player are not.
 
-The canonical, always-current version of this table is [`docs/ROADMAP.md`](https://github.com/datahearth/streamline/blob/main/docs/ROADMAP.md).
+The full picture — every media type, download path, playback option and platform feature, marked Shipped, In progress or Planned — is on the **[Roadmap](Roadmap)**.
 
 ---
 

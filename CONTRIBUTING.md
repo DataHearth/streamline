@@ -7,7 +7,7 @@ useful things you can send.
 
 - **Bug fix** — just open a PR. Link the issue if there is one.
 - **New feature** — open an issue first so we can agree on the shape before you
-  spend an evening on it. Check [docs/ROADMAP.md](docs/ROADMAP.md); music,
+  spend an evening on it. Check [the roadmap](docs/wiki/Roadmap.md); music,
   books and the built-in player are already planned, and a half-built version
   of a planned feature is harder to merge than nothing.
 - **New integration** (indexer, download client, media server) — welcome. Copy

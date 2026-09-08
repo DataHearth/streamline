@@ -1,6 +1,6 @@
 # Streamline
 
-Unified media management platform replacing the *arr stack (Radarr, Sonarr, Lidarr, Readarr) and Seerr. Single self-hosted binary with a slick web UI, REST API for mobile developers, multi-user support with SSO, built-in request system, and automatic media organization. Supports Torznab and Prowlarr indexers, torrent download clients (qBittorrent, Transmission, Deluge, or the built-in engine), and media server notifications (Plex, Jellyfin, Emby). Shipped v1.0.0; music, books and a player are planned (`docs/ROADMAP.md`).
+Unified media management platform replacing the *arr stack (Radarr, Sonarr, Lidarr, Readarr) and Seerr. Single self-hosted binary with a slick web UI, REST API for mobile developers, multi-user support with SSO, built-in request system, and automatic media organization. Supports Torznab and Prowlarr indexers, torrent download clients (qBittorrent, Transmission, Deluge, or the built-in engine), and media server notifications (Plex, Jellyfin, Emby). Shipped v1.0.0; music, books and a player are planned (`docs/wiki/Roadmap.md`).
 
 ## Stack
 - Go monolith: chi + oapi-codegen (OpenAPI → server) + ent ORM + modernc.org/sqlite (CGO-free)
@@ -399,7 +399,7 @@ Convention for landing a batch of independent fixes (audit findings, review comm
 - `ent/schema/` — ent ORM schemas
 - `web/app/` — Svelte 5 SPA (`routes/`, `components/`, `lib/`); `web/static/` — CSS/JS/fonts/images; `web/embed.go` `//go:embed`s the built assets + SPA shell
 - `docs/plans/` — design docs and plans (gitignored, local only)
-- `docs/ROADMAP.md` — public, user-facing feature status (Shipped / In progress / Planned). Not an internal phase list; update it when a feature ships or starts.
+- `docs/wiki/Roadmap.md` — public, user-facing feature status (Shipped / In progress / Planned). Not an internal phase list; update it when a feature ships or starts.
 - `CHANGELOG.md` — generated from conventional commits by git-cliff (`task release:app:changelog VERSION=vX.Y.Z`); don't hand-write entries.
 - `deploy/` — Dockerfile + Helm charts + `compose.yaml` (local test stack: gluetun VPN + qBittorrent + Prowlarr + Plex, builds from source — *not* a user deployment template)
 - `deploy/helm/streamline/` — streamline chart (installs to `streamline` ns). Optional subchart `charts/observability/` installs upstream alloy/VM/VL/VT/grafana into `observability` ns via `namespaceOverride`.

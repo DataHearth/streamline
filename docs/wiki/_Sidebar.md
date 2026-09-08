@@ -9,6 +9,7 @@
 - [Activity and Calendar](Activity-and-Calendar)
 - [Requests and Users](Requests-and-Users)
 - [Troubleshooting](Troubleshooting)
+- [Roadmap](Roadmap)
 
 **Advanced**
 
@@ -25,4 +26,3 @@
 
 - [Issues](https://github.com/datahearth/streamline/issues)
 - [Releases](https://github.com/datahearth/streamline/releases)
-- [Roadmap](https://github.com/datahearth/streamline/blob/main/docs/ROADMAP.md)

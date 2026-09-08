@@ -19,7 +19,7 @@ https://github.com/user-attachments/assets/9116fb45-1a25-414d-b79e-5fe83df25f6b
 
 ## Features
 
-- Unified movie & TV library (music & books planned — see the [roadmap](docs/ROADMAP.md))
+- Unified movie & TV library (music & books planned — see the [roadmap](docs/wiki/Roadmap.md))
 - Adopt an existing library: scan untracked files and import them under review
 - Monitoring, RSS auto-grab, manual search, and a calendar of upcoming releases
 - Quality profiles, activity queue and history
@@ -417,7 +417,7 @@ Found a vulnerability? Don't open an issue — see [SECURITY.md](SECURITY.md).
 - Issues: https://github.com/datahearth/streamline/issues
 - Releases: https://github.com/datahearth/streamline/releases
 - Changelog: [CHANGELOG.md](CHANGELOG.md)
-- Roadmap: [docs/ROADMAP.md](docs/ROADMAP.md)
+- Roadmap: [docs/wiki/Roadmap.md](docs/wiki/Roadmap.md)
 
 ## Screenshots
 
