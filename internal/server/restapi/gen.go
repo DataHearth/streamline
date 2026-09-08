@@ -1917,6 +1917,69 @@ func (e TranscodeToVideoCodec) Valid() bool {
 	}
 }
 
+// Defines values for TranscodingConfigPatchHwAccel.
+const (
+	TranscodingConfigPatchHwAccelAuto  TranscodingConfigPatchHwAccel = "auto"
+	TranscodingConfigPatchHwAccelNone  TranscodingConfigPatchHwAccel = "none"
+	TranscodingConfigPatchHwAccelVaapi TranscodingConfigPatchHwAccel = "vaapi"
+)
+
+// Valid indicates whether the value is a known member of the TranscodingConfigPatchHwAccel enum.
+func (e TranscodingConfigPatchHwAccel) Valid() bool {
+	switch e {
+	case TranscodingConfigPatchHwAccelAuto:
+		return true
+	case TranscodingConfigPatchHwAccelNone:
+		return true
+	case TranscodingConfigPatchHwAccelVaapi:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TranscodingConfigViewHwAccel.
+const (
+	TranscodingConfigViewHwAccelAuto  TranscodingConfigViewHwAccel = "auto"
+	TranscodingConfigViewHwAccelNone  TranscodingConfigViewHwAccel = "none"
+	TranscodingConfigViewHwAccelVaapi TranscodingConfigViewHwAccel = "vaapi"
+)
+
+// Valid indicates whether the value is a known member of the TranscodingConfigViewHwAccel enum.
+func (e TranscodingConfigViewHwAccel) Valid() bool {
+	switch e {
+	case TranscodingConfigViewHwAccelAuto:
+		return true
+	case TranscodingConfigViewHwAccelNone:
+		return true
+	case TranscodingConfigViewHwAccelVaapi:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TranscodingConfigViewHwStatus.
+const (
+	TranscodingConfigViewHwStatusOff         TranscodingConfigViewHwStatus = "off"
+	TranscodingConfigViewHwStatusReady       TranscodingConfigViewHwStatus = "ready"
+	TranscodingConfigViewHwStatusUnavailable TranscodingConfigViewHwStatus = "unavailable"
+)
+
+// Valid indicates whether the value is a known member of the TranscodingConfigViewHwStatus enum.
+func (e TranscodingConfigViewHwStatus) Valid() bool {
+	switch e {
+	case TranscodingConfigViewHwStatusOff:
+		return true
+	case TranscodingConfigViewHwStatusReady:
+		return true
+	case TranscodingConfigViewHwStatusUnavailable:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UpdateMovieRequestStatus.
 const (
 	UpdateMovieRequestStatusAvailable   UpdateMovieRequestStatus = "available"
@@ -4955,19 +5018,44 @@ type TranscodeVerifyConfigView struct {
 
 // TranscodingConfigPatch Only provided fields are applied.
 type TranscodingConfigPatch struct {
-	Enabled       *bool `json:"enabled,omitempty"`
-	MaxConcurrent *int  `json:"max_concurrent,omitempty"`
-	MaxFailures   *int  `json:"max_failures,omitempty"`
+	Enabled       *bool                          `json:"enabled,omitempty"`
+	HwAccel       *TranscodingConfigPatchHwAccel `json:"hw_accel,omitempty"`
+	HwDevice      *string                        `json:"hw_device,omitempty"`
+	MaxConcurrent *int                           `json:"max_concurrent,omitempty"`
+	MaxFailures   *int                           `json:"max_failures,omitempty"`
 
 	// Verify Only provided fields are applied.
 	Verify *TranscodeVerifyConfigPatch `json:"verify,omitempty"`
 }
+
+// TranscodingConfigPatchHwAccel defines model for TranscodingConfigPatch.HwAccel.
+type TranscodingConfigPatchHwAccel string
 
 // TranscodingConfigView defines model for TranscodingConfigView.
 type TranscodingConfigView struct {
 	// Enabled Master switch. While false the worker claims nothing and the
 	// /transcoding/* endpoints answer 409.
 	Enabled bool `json:"enabled"`
+
+	// HwAccel Hardware encoding policy. `auto` probes hw_device once and
+	// falls back to software per job when the probe failed or the
+	// policy's codec has no hardware encoder; `none` forces
+	// software. The probe is re-run when this or hw_device changes,
+	// no restart.
+	HwAccel TranscodingConfigViewHwAccel `json:"hw_accel"`
+
+	// HwDevice DRM render node the probe opens (`/dev/dri/renderD128` by
+	// default). Changing it re-runs the probe, no restart.
+	HwDevice string `json:"hw_device"`
+
+	// HwReason The probe's error text. Present only when hw_status is
+	// `unavailable`.
+	HwReason *string `json:"hw_reason,omitempty"`
+
+	// HwStatus Live probe outcome: `off` while hw_accel is `none` or no
+	// worker is running, `ready` when the device answered,
+	// `unavailable` when the probe failed — see hw_reason.
+	HwStatus TranscodingConfigViewHwStatus `json:"hw_status"`
 
 	// MaxConcurrent How many encodes may run at once.
 	MaxConcurrent int `json:"max_concurrent"`
@@ -4981,6 +5069,18 @@ type TranscodingConfigView struct {
 	// its own. Zero disables a bound.
 	Verify TranscodeVerifyConfigView `json:"verify"`
 }
+
+// TranscodingConfigViewHwAccel Hardware encoding policy. `auto` probes hw_device once and
+// falls back to software per job when the probe failed or the
+// policy's codec has no hardware encoder; `none` forces
+// software. The probe is re-run when this or hw_device changes,
+// no restart.
+type TranscodingConfigViewHwAccel string
+
+// TranscodingConfigViewHwStatus Live probe outcome: `off` while hw_accel is `none` or no
+// worker is running, `ready` when the device answered,
+// `unavailable` when the probe failed — see hw_reason.
+type TranscodingConfigViewHwStatus string
 
 // UpcomingEpisode defines model for UpcomingEpisode.
 type UpcomingEpisode struct {

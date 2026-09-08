@@ -433,6 +433,16 @@ var _ = Describe(
 		})
 
 		Describe("GetConfigTranscoding", func() {
+			// The view probes the hardware under the default hw_accel auto,
+			// which execs the prober's ffmpeg; a binary that is not there
+			// is a deterministic "unavailable".
+			BeforeEach(func() {
+				app.prober.EXPECT().
+					FFmpegPath().
+					Return("/does/not/exist/ffmpeg").
+					Maybe()
+			})
+
 			It("returns the configured section", func() {
 				resp := app.do(app.req(
 					http.MethodGet, "/api/v1/config/transcoding", "", nil,
@@ -445,6 +455,13 @@ var _ = Describe(
 				Expect(view.Enabled).To(BeTrue())
 				Expect(view.MaxConcurrent).To(Equal(1))
 				Expect(view.MaxFailures).To(Equal(3))
+				Expect(view.HwAccel).To(Equal(TranscodingConfigViewHwAccelAuto))
+				Expect(view.HwDevice).To(Equal("/dev/dri/renderD128"))
+				Expect(view.HwStatus).
+					To(Equal(TranscodingConfigViewHwStatusUnavailable))
+				Expect(
+					view.HwReason,
+				).To(HaveValue(ContainSubstring("list encoders")))
 			})
 
 			It("refuses a non-admin", func() {
@@ -462,6 +479,13 @@ var _ = Describe(
 		})
 
 		Describe("UpdateConfigTranscoding", func() {
+			BeforeEach(func() {
+				app.prober.EXPECT().
+					FFmpegPath().
+					Return("/does/not/exist/ffmpeg").
+					Maybe()
+			})
+
 			It("applies a patch and echoes the new state", func() {
 				resp := app.do(jsonKeyReq(app,
 					http.MethodPatch,
@@ -477,6 +501,36 @@ var _ = Describe(
 				Expect(view.MaxConcurrent).To(Equal(4))
 				Expect(view.MaxFailures).To(Equal(2))
 				Expect(view.Enabled).To(BeTrue())
+			})
+
+			It("round-trips the hardware keys and reports the probe off", func() {
+				resp := app.do(jsonKeyReq(app,
+					http.MethodPatch,
+					"/api/v1/config/transcoding",
+					"",
+					`{"hw_accel": "none", "hw_device": "/dev/dri/renderD129"}`,
+				))
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				var view TranscodingConfigView
+				Expect(json.NewDecoder(resp.Body).Decode(&view)).To(Succeed())
+				Expect(view.HwAccel).To(Equal(TranscodingConfigViewHwAccelNone))
+				Expect(view.HwDevice).To(Equal("/dev/dri/renderD129"))
+				Expect(view.HwStatus).To(Equal(TranscodingConfigViewHwStatusOff))
+				Expect(view.HwReason).To(BeNil())
+			})
+
+			It("refuses an unknown hw_accel", func() {
+				resp := app.do(jsonKeyReq(app,
+					http.MethodPatch,
+					"/api/v1/config/transcoding",
+					"",
+					`{"hw_accel": "cuda"}`,
+				))
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).
+					To(Equal(http.StatusUnprocessableEntity))
 			})
 
 			It("refuses max_concurrent that narrows to a valid uint8", func() {

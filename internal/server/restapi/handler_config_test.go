@@ -407,6 +407,15 @@ var _ = Describe("Handler: Config API", Label("unit", "server", "config"), func(
 	})
 
 	Describe("UpdateConfigTranscoding verify block", func() {
+		// The echoed view probes the hardware under the default hw_accel
+		// auto, which execs the prober's ffmpeg.
+		BeforeEach(func() {
+			app.prober.EXPECT().
+				FFmpegPath().
+				Return("/does/not/exist/ffmpeg").
+				Maybe()
+		})
+
 		It("patches the verify block and echoes it", func() {
 			body := strings.NewReader(
 				`{"verify":{"max_size_percent":110,"min_vmaf":90}}`,

@@ -7318,7 +7318,16 @@ components:
 
     TranscodingConfigView:
       type: object
-      required: [enabled, max_concurrent, max_failures, verify]
+      required:
+        [
+          enabled,
+          max_concurrent,
+          max_failures,
+          hw_accel,
+          hw_device,
+          hw_status,
+          verify,
+        ]
       properties:
         enabled:
           type: boolean
@@ -7337,6 +7346,32 @@ components:
           description: |
             Attempts a job gets before it stops being retried
             automatically. A retry through the API resets the counter.
+        hw_accel:
+          type: string
+          enum: [auto, none, vaapi]
+          description: |
+            Hardware encoding policy. `auto` probes hw_device once and
+            falls back to software per job when the probe failed or the
+            policy's codec has no hardware encoder; `none` forces
+            software. The probe is re-run when this or hw_device changes,
+            no restart.
+        hw_device:
+          type: string
+          description: |
+            DRM render node the probe opens (`/dev/dri/renderD128` by
+            default). Changing it re-runs the probe, no restart.
+        hw_status:
+          type: string
+          enum: [off, ready, unavailable]
+          description: |
+            Live probe outcome: `off` while hw_accel is `none` or no
+            worker is running, `ready` when the device answered,
+            `unavailable` when the probe failed — see hw_reason.
+        hw_reason:
+          type: string
+          description: |
+            The probe's error text. Present only when hw_status is
+            `unavailable`.
         verify:
           $ref: "#/components/schemas/TranscodeVerifyConfigView"
 
@@ -7354,6 +7389,11 @@ components:
           type: integer
           minimum: 1
           maximum: 10
+        hw_accel:
+          type: string
+          enum: [auto, none, vaapi]
+        hw_device:
+          type: string
         verify:
           $ref: "#/components/schemas/TranscodeVerifyConfigPatch"
 

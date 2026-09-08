@@ -246,15 +246,17 @@ func (s *Server) GetConfigTranscoding(
 			ForbiddenJSONResponse: notAdminResp,
 		}, nil
 	}
+	status, reason := s.transcodeHWStatus(ctx)
 	return GetConfigTranscoding200JSONResponse{
 		TranscodingConfigJSONResponse: transcodingConfigView(
-			config.Get().Transcoding,
+			config.Get().Transcoding, status, reason,
 		),
 	}, nil
 }
 
 // UpdateConfigTranscoding applies a partial update to the transcoding config.
-// Admin only. The worker reads all three keys per tick, so nothing here marks
+// Admin only. The worker reads the scalar keys per tick and re-runs the
+// hardware probe when hw_accel or hw_device changes, so nothing here marks
 // the restart flag.
 func (s *Server) UpdateConfigTranscoding(
 	ctx context.Context,
@@ -298,10 +300,16 @@ func (s *Server) UpdateConfigTranscoding(
 		}, nil
 	}
 
+	var hwAccel *string
+	if req.Body.HwAccel != nil {
+		hwAccel = new(string(*req.Body.HwAccel))
+	}
 	updated, err := config.UpdateTranscoding(ctx, config.TranscodingPatch{
 		Enabled:       req.Body.Enabled,
 		MaxConcurrent: concurrent,
 		MaxFailures:   failures,
+		HWAccel:       hwAccel,
+		HWDevice:      req.Body.HwDevice,
 		Verify:        verify,
 	})
 	if configLocked(err) {
@@ -318,14 +326,28 @@ func (s *Server) UpdateConfigTranscoding(
 		"enabled", updated.Enabled,
 		"max_concurrent", updated.MaxConcurrent,
 		"max_failures", updated.MaxFailures,
+		"hw_accel", updated.HWAccel,
+		"hw_device", updated.HWDevice,
 		"verify_max_size_percent", updated.Verify.MaxSizePercent,
 		"verify_min_size_percent", updated.Verify.MinSizePercent,
 		"verify_health_check", updated.Verify.HealthCheck,
 		"verify_min_vmaf", updated.Verify.MinVMAF,
 	)
+	status, reason := s.transcodeHWStatus(ctx)
 	return UpdateConfigTranscoding200JSONResponse{
-		TranscodingConfigJSONResponse: transcodingConfigView(updated),
+		TranscodingConfigJSONResponse: transcodingConfigView(
+			updated, status, reason,
+		),
 	}, nil
+}
+
+// transcodeHWStatus reads the worker's hardware probe outcome, reporting off
+// when the composition wired no worker.
+func (s *Server) transcodeHWStatus(ctx context.Context) (string, string) {
+	if s.transcoder == nil {
+		return "off", ""
+	}
+	return s.transcoder.HWStatus(ctx)
 }
 
 // GetConfigSystem returns the logging, telemetry and retention configuration.
@@ -920,14 +942,19 @@ func ffmpegConfigView(
 	return out
 }
 
-// transcodingConfigView maps config.TranscodingConfig into the generated view.
+// transcodingConfigView maps config.TranscodingConfig plus the worker's
+// hardware probe outcome into the generated view.
 func transcodingConfigView(
 	t config.TranscodingConfig,
+	hwStatus, hwReason string,
 ) TranscodingConfigJSONResponse {
-	return TranscodingConfigJSONResponse{
+	out := TranscodingConfigJSONResponse{
 		Enabled:       t.Enabled,
 		MaxConcurrent: int(t.MaxConcurrent),
 		MaxFailures:   int(t.MaxFailures),
+		HwAccel:       TranscodingConfigViewHwAccel(t.HWAccel),
+		HwDevice:      t.HWDevice,
+		HwStatus:      TranscodingConfigViewHwStatus(hwStatus),
 		Verify: TranscodeVerifyConfigView{
 			MaxSizePercent: int(t.Verify.MaxSizePercent),
 			MinSizePercent: int(t.Verify.MinSizePercent),
@@ -935,6 +962,10 @@ func transcodingConfigView(
 			MinVmaf:        int(t.Verify.MinVMAF),
 		},
 	}
+	if hwReason != "" {
+		out.HwReason = &hwReason
+	}
+	return out
 }
 
 // oidcProviderView maps config.OIDCConfig into the generated OIDCProviderView.
