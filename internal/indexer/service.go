@@ -337,6 +337,10 @@ func filterProviderIDs(results []SearchResult, base SearchParams) []SearchResult
 // carry. Preferring keeps the wrong show from winning on score whenever the
 // right one is present, and costs nothing when it isn't.
 //
+// The fallback set is stamped TitleMismatch so the automatic grabbers can
+// refuse what only a human should see: "prefer" is the right answer for a
+// browse and the wrong one for a pass that grabs the highest score unattended.
+//
 // A release whose title the parser could not read counts as a match: an empty
 // title is no evidence of the wrong show. Matching is prefix-tolerant in both
 // directions because a parsed title keeps what extractTitle could not cut —
@@ -360,6 +364,9 @@ func preferTitleMatches(results []SearchResult, titles []string) []SearchResult 
 		}
 	}
 	if len(matched) == 0 {
+		for i := range results {
+			results[i].TitleMismatch = true
+		}
 		return results
 	}
 	return matched

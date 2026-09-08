@@ -356,6 +356,9 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 				"転生したらスライムだった件",
 			})
 			Expect(out).To(HaveLen(2))
+			for _, r := range out {
+				Expect(r.TitleMismatch).To(BeTrue())
+			}
 		})
 	})
 })

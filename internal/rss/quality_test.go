@@ -112,6 +112,20 @@ var _ = Describe("rankAccepted", Label("unit", "rss"), func() {
 			"Movie.2024.1080p.WEB-DL.x264",
 		}))
 	})
+
+	It("drops a release only a browse should see", func() {
+		// preferTitleMatches hands back the whole set when nothing names the
+		// show, which is how The.Shield.S06 reached a Détective Conan
+		// season-pack grab: the profile scores it fine and nothing else can
+		// tell it apart.
+		ranked := rankAccepted(scoringTestProfile(0), []indexer.SearchResult{
+			{Title: "The.Shield.S06.MULTI.1080p.BluRay.x265", TitleMismatch: true},
+			{Title: "Movie.2024.1080p.WEB-DL.x264"},
+		}, singleRelease)
+
+		Expect(ranked).To(HaveLen(1))
+		Expect(ranked[0].Title).To(Equal("Movie.2024.1080p.WEB-DL.x264"))
+	})
 })
 
 var _ = Describe("scoreBest", Label("unit", "rss"), func() {

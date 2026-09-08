@@ -28,6 +28,19 @@ type SearchResult struct {
 	// distinction.
 	TMDBID uint32
 	TVDBID uint32
+
+	// TitleMismatch marks a result preferTitleMatches kept only because
+	// nothing in the set named the show at all. Browsing wants those — a show
+	// held under a translated title matches none of its releases — but an
+	// automatic grab must not take one: the scope filters match on numbers
+	// alone, so a season-pack search for "Détective Conan" that nothing named
+	// came back holding The.Shield.S06 and Monk.S05, and the scorer has no way
+	// to tell those from the show it asked for.
+	//
+	// The zero value is the permissive one on purpose: a result that never
+	// passed through preferTitleMatches (an RSS feed item, a whole-series pack)
+	// carries no verdict and must not read as a rejected one.
+	TitleMismatch bool
 }
 
 // MediaKind is the library kind a search is scoped to. It decides the newznab

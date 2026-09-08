@@ -93,6 +93,14 @@ func evaluateRelease(
 // highest score, ties broken by seeders. Callers walk the whole slice so a
 // grab that fails falls through to the next-best release instead of ending
 // the attempt.
+//
+// TitleMismatch is dropped ahead of the profile: those results name some other
+// show and are only in the set because nothing named this one, so a profile
+// that cannot tell them apart would grab the best-scoring stranger. Every
+// caller here is an unattended pass; the browse endpoints keep the whole set.
+// The cost is that a show whose library title matches none of its releases
+// stops filling itself automatically — grabbing nothing is the better half of
+// that trade, and interactive search still reaches those releases.
 func rankAccepted(
 	p quality.Profile,
 	results []indexer.SearchResult,
@@ -105,6 +113,9 @@ func rankAccepted(
 
 	accepted := make([]scored, 0, len(results))
 	for _, r := range results {
+		if r.TitleMismatch {
+			continue
+		}
 		res := evaluateRelease(p, r, episodes)
 		if res.Rejected {
 			continue
