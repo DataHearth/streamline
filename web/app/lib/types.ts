@@ -781,15 +781,26 @@ export type TranscodeVerifyConfig = {
 	min_vmaf: number;
 };
 
+export type TranscodeHwAccel = "auto" | "none" | "vaapi";
+export type TranscodeHwStatus = "off" | "ready" | "unavailable";
+
 export type TranscodeConfig = {
 	enabled: boolean;
 	max_concurrent: number;
 	max_failures: number;
+	hw_accel: TranscodeHwAccel;
+	hw_device: string;
+	hw_status: TranscodeHwStatus;
+	// The probe's error text; present only when hw_status is "unavailable".
+	hw_reason?: string;
 	verify: TranscodeVerifyConfig;
 };
 
-// PATCH body: every level optional.
-export type TranscodeConfigPatch = Partial<Omit<TranscodeConfig, "verify">> & {
+// PATCH body: every level optional. hw_status / hw_reason are the probe's
+// verdict and cannot be written.
+export type TranscodeConfigPatch = Partial<
+	Omit<TranscodeConfig, "verify" | "hw_status" | "hw_reason">
+> & {
 	verify?: Partial<TranscodeVerifyConfig>;
 };
 

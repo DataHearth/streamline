@@ -6,12 +6,19 @@
 	} from "@tanstack/svelte-query";
 	import { ArrowUpRight, LoaderCircle, Radar, TriangleAlert } from "@lucide/svelte";
 	import { api, errorText, ApiError } from "../../lib/api";
+	import { cn } from "../../lib/cn";
 	import { config } from "../../lib/config.svelte";
 	import { toast } from "../../lib/toast";
-	import type { FFmpegConfig, TranscodeConfig, TranscodeConfigPatch } from "../../lib/types";
+	import type {
+		FFmpegConfig,
+		TranscodeConfig,
+		TranscodeConfigPatch,
+		TranscodeHwAccel,
+	} from "../../lib/types";
 	import { scanWorkerUnavailable } from "../../lib/transcoding";
 	import Checkbox from "../../components/forms/Checkbox.svelte";
 	import FieldLock from "../../components/forms/FieldLock.svelte";
+	import Select from "../../components/forms/Select.svelte";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	const qc = useQueryClient();
@@ -81,6 +88,18 @@
 	let maxSize = $derived(maxSizeDraft ?? String(transcoding.data?.verify.max_size_percent ?? 100));
 	let minSize = $derived(minSizeDraft ?? String(transcoding.data?.verify.min_size_percent ?? 5));
 	let vmaf = $derived(vmafDraft ?? String(transcoding.data?.verify.min_vmaf ?? 0));
+	let hwDeviceDraft = $state<string | null>(null);
+	let hwDevice = $derived(hwDeviceDraft ?? (transcoding.data?.hw_device ?? ""));
+	let hwOff = $derived(transcoding.data?.hw_accel === "none");
+
+	function commitHwDevice() {
+		const raw = hwDeviceDraft;
+		hwDeviceDraft = null;
+		if (raw === null) return;
+		const next = raw.trim();
+		if (next === (transcoding.data?.hw_device ?? "")) return;
+		save.mutate({ hw_device: next });
+	}
 
 	function commitNumber(
 		raw: string | null,
@@ -232,6 +251,93 @@
 					<ArrowUpRight size={12} aria-hidden="true" />
 				</a>
 			</p>
+		</section>
+
+		<section class="mt-4 rounded-lg border border-border bg-bg-card p-4">
+			<h2 class="text-sm font-semibold text-fg">{i18n.transcode_hw()}</h2>
+			<p class="mt-0.5 text-xs leading-relaxed text-fg-subtle">
+				{i18n.transcode_hw_help()}
+			</p>
+
+			<div class="mt-4 grid gap-4 sm:grid-cols-2">
+				<Select
+					label={i18n.transcode_hw_accel()}
+					value={transcoding.data.hw_accel}
+					disabled={save.isPending}
+					options={[
+						{
+							value: "auto",
+							label: i18n.transcode_hw_accel_auto(),
+							hint: i18n.transcode_hw_accel_auto_hint(),
+						},
+						{
+							value: "none",
+							label: i18n.transcode_hw_accel_none(),
+							hint: i18n.transcode_hw_accel_none_hint(),
+						},
+						{
+							value: "vaapi",
+							label: i18n.transcode_hw_accel_vaapi(),
+							hint: i18n.transcode_hw_accel_vaapi_hint(),
+						},
+					]}
+					onChange={(v) => save.mutate({ hw_accel: v as TranscodeHwAccel })}
+				/>
+
+				<label class="block">
+					<span class="mb-1 flex items-center gap-1.5 text-sm font-medium text-fg">
+						{i18n.transcode_hw_device()}
+						<FieldLock locked={config.readOnly} />
+					</span>
+					<input
+						type="text"
+						spellcheck="false"
+						autocomplete="off"
+						readonly={config.readOnly}
+						disabled={hwOff}
+						placeholder="/dev/dri/renderD128"
+						value={hwDevice}
+						oninput={(e) => (hwDeviceDraft = (e.currentTarget as HTMLInputElement).value)}
+						onblur={commitHwDevice}
+						onkeydown={(e) => {
+							if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur();
+						}}
+						class="{inputClass} font-mono disabled:cursor-not-allowed disabled:opacity-70"
+					/>
+					<p class="mt-1 text-xs text-fg-muted">{i18n.transcode_hw_device_help()}</p>
+				</label>
+			</div>
+
+			{#if transcoding.data.hw_status === "unavailable"}
+				<div
+					class="mt-4 flex items-start gap-2.5 rounded-md border border-status-wanted/40 bg-status-wanted/10 p-3 text-xs leading-relaxed text-status-wanted"
+				>
+					<TriangleAlert size={14} class="mt-0.5 shrink-0" aria-hidden="true" />
+					<span class="min-w-0">
+						{i18n.transcode_hw_status_unavailable()}
+						{#if transcoding.data.hw_reason}
+							<span class="mt-1 block font-mono text-xs break-all">{transcoding.data.hw_reason}</span>
+						{/if}
+					</span>
+				</div>
+			{:else}
+				<div
+					class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-bg px-3 py-2.5"
+				>
+					<span class="text-xs text-fg-subtle">{i18n.transcode_hw_status()}</span>
+					<span
+						class={cn(
+							"text-xs",
+							transcoding.data.hw_status === "ready" ? "text-status-available" : "text-fg-muted",
+						)}
+					>
+						{transcoding.data.hw_status === "ready"
+							? i18n.transcode_hw_status_ready()
+							: i18n.transcode_hw_status_off()}
+					</span>
+				</div>
+			{/if}
+			<p class="mt-1.5 text-xs text-fg-muted">{i18n.transcode_hw_verify_note()}</p>
 		</section>
 
 		<section class="mt-4 rounded-lg border border-border bg-bg-card p-4">
