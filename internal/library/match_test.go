@@ -20,6 +20,9 @@ var _ = Describe("TitleMatches", Label("unit", "library"), func() {
 	It("returns false for genuine difference", func() {
 		Expect(TitleMatches("The Matrix", "The Matrix Reloaded")).To(BeFalse())
 	})
+	It("folds accents a scene release never carries", func() {
+		Expect(TitleMatches("Détective Conan", "Detective Conan")).To(BeTrue())
+	})
 })
 
 var _ = Describe("MatchEpisode", Label("unit", "library"), func() {

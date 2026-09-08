@@ -4,6 +4,8 @@ import (
 	"regexp"
 	"strings"
 
+	"golang.org/x/text/unicode/norm"
+
 	"github.com/datahearth/streamline/ent"
 )
 
@@ -19,9 +21,16 @@ var (
 // normalizeTitle lowercases, strips non-alphanumerics, and strips a leading
 // article ("the"/"a"/"an") for tolerant title comparison (e.g. "The Batman" vs
 // "the.batman" vs "Batman").
+//
+// NFD is what makes an accented library title comparable to a scene release,
+// which never carries one: decomposing splits "é" into "e" plus a combining
+// mark, and titleNonAlnum drops that mark like any other non-ASCII byte.
+// Without it "Détective Conan" normalized to "dtectiveconan" and matched none
+// of its own releases, so preferTitleMatches found nothing to prefer and fell
+// back to handing the whole result set to the season-pack grabber.
 func normalizeTitle(s string) string {
 	s = titleYearSuffix.ReplaceAllString(s, "")
-	s = strings.ToLower(s)
+	s = strings.ToLower(norm.NFD.String(s))
 	s = titleNonAlnum.ReplaceAllString(s, "")
 	s = titleArticleHead.ReplaceAllString(s, "")
 	return s
