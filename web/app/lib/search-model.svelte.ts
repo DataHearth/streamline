@@ -10,7 +10,7 @@
 
 import { onMount, type Component } from "svelte";
 import { goto } from "@roxi/routify";
-import { createQuery } from "@tanstack/svelte-query";
+import { createQuery, keepPreviousData } from "@tanstack/svelte-query";
 import {
 	LayoutDashboard,
 	Film,
@@ -25,7 +25,7 @@ import {
 	Users,
 	LogOut,
 } from "@lucide/svelte";
-import { api, apiAllPages } from "./api";
+import { api, type Paginated } from "./api";
 import { auth } from "./auth.svelte";
 import { fold } from "./text";
 import type { Movie, TVShow } from "./types";
@@ -109,21 +109,35 @@ export function createSearchModel(
 	// every route. Ungated, each mount pulled the whole movie and series
 	// libraries for a panel that stays closed until the user types — on a
 	// 23-show library that was 2.8 MB and ~2.6s of the /movies page load.
-	const enabled = $derived(getQuery().trim().length >= TITLE_MIN);
+	//
+	// Matching is the server's, same as the library lists: it searches the
+	// original title too and folds accents, neither of which a filter over
+	// `title` in the browser could do.
+	let typed = $state("");
+	$effect(() => {
+		const q = getQuery().trim();
+		const t = setTimeout(() => (typed = q), 200);
+		return () => clearTimeout(t);
+	});
+	const enabled = $derived(typed.length >= TITLE_MIN);
 
-	const moviesQuery = createQuery(() => ({
-		queryKey: ["movies"],
-		queryFn: () => apiAllPages<Movie>("/movies"),
-		staleTime: 30_000,
-		enabled,
-	}));
+	function titleSearch<T>(path: string) {
+		return createQuery(() => ({
+			queryKey: [path.slice(1), "search", typed],
+			queryFn: () =>
+				api<Paginated<T>>(
+					`${path}?query=${encodeURIComponent(typed)}&limit=${TITLE_LIMIT}`,
+				),
+			staleTime: 30_000,
+			// Keeps the last hits on screen while the next ones load, so the
+			// list doesn't empty and re-fill under the cursor on every keystroke.
+			placeholderData: keepPreviousData,
+			enabled,
+		}));
+	}
 
-	const seriesQuery = createQuery(() => ({
-		queryKey: ["series"],
-		queryFn: () => apiAllPages<TVShow>("/series"),
-		staleTime: 30_000,
-		enabled,
-	}));
+	const moviesQuery = titleSearch<Movie>("/movies");
+	const seriesQuery = titleSearch<TVShow>("/series");
 
 	function pages(): PageItem[] {
 		const isAdmin = auth.user?.role === "admin";
@@ -152,30 +166,22 @@ export function createSearchModel(
 
 	let sections = $derived.by<SearchSection[]>(() => {
 		const q = fold(getQuery().trim());
-		const movieHits: MovieItem[] =
-			q.length >= TITLE_MIN && moviesQuery.data
-				? moviesQuery.data.items
-						.filter((m) => fold(m.title).includes(q))
-						.slice(0, TITLE_LIMIT)
-						.map((m) => ({
-							kind: "movie",
-							id: m.id,
-							label: m.title,
-							year: m.year,
-						}))
-				: [];
-		const seriesHits: SeriesItem[] =
-			q.length >= TITLE_MIN && seriesQuery.data
-				? seriesQuery.data.items
-						.filter((s) => fold(s.title).includes(q))
-						.slice(0, TITLE_LIMIT)
-						.map((s) => ({
-							kind: "series",
-							id: s.id,
-							label: s.title,
-							year: s.year,
-						}))
-				: [];
+		const movieHits: MovieItem[] = enabled
+			? (moviesQuery.data?.items ?? []).map((m) => ({
+					kind: "movie",
+					id: m.id,
+					label: m.title,
+					year: m.year,
+				}))
+			: [];
+		const seriesHits: SeriesItem[] = enabled
+			? (seriesQuery.data?.items ?? []).map((s) => ({
+					kind: "series",
+					id: s.id,
+					label: s.title,
+					year: s.year,
+				}))
+			: [];
 		const matchedPages = pages().filter((p) => fold(p.label).includes(q));
 		const matchedActions = actions().filter((a) => fold(a.label).includes(q));
 
@@ -207,12 +213,12 @@ export function createSearchModel(
 	let titleHits = $derived(
 		flat.filter((i) => i.kind === "movie" || i.kind === "series").length,
 	);
-	// What search actually looks at, not what the library holds. Null until the
-	// query passes TITLE_MIN and the fetch lands, so the hint stays absent
-	// rather than claiming zero while the panel is still closed.
+	// How many titles matched, against the at-most-TITLE_LIMIT-each shown. Null
+	// until the query passes TITLE_MIN and the fetch lands, so the hint stays
+	// absent rather than claiming zero while the panel is still closed.
 	let searchable = $derived.by<number | null>(() => {
-		const m = moviesQuery.data?.items.length ?? null;
-		const s = seriesQuery.data?.items.length ?? null;
+		const m = moviesQuery.data?.total ?? null;
+		const s = seriesQuery.data?.total ?? null;
 		if (m === null && s === null) return null;
 		return (m ?? 0) + (s ?? 0);
 	});

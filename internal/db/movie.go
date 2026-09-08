@@ -5,6 +5,8 @@ import (
 	"slices"
 	"time"
 
+	entsql "entgo.io/ent/dialect/sql"
+
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/movie"
@@ -305,10 +307,12 @@ func (db *DB) FilterMovies(
 		base = base.Where(movie.MonitoredEQ(*p.Monitored))
 	}
 	if p.Query != "" {
-		base = base.Where(movie.Or(
-			movie.TitleContainsFold(p.Query),
-			movie.OriginalTitleContainsFold(p.Query),
-		))
+		base = base.Where(func(s *entsql.Selector) {
+			s.Where(entsql.Or(
+				foldContains(s, movie.FieldTitle, p.Query),
+				foldContains(s, movie.FieldOriginalTitle, p.Query),
+			))
+		})
 	}
 
 	total, err := base.Clone().Count(ctx)

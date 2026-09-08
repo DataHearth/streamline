@@ -373,6 +373,22 @@ var _ = Describe("FilterTVShows", Label("unit", "db"), func() {
 		})
 	})
 
+	Describe("query", func() {
+		It("matches with and without accents, either way round", func() {
+			seedShow("Détective Conan", 40, nil, true)
+			seedShow("Naruto", 41, nil, true)
+
+			for _, q := range []string{"detective", "Détec", "CONAN"} {
+				rows, _, total, err := store.FilterTVShows(ctx, FilterTVShowsParams{
+					Query: q, Limit: 20, Now: now,
+				})
+				Expect(err).NotTo(HaveOccurred(), q)
+				Expect(total).To(Equal(uint32(1)), q)
+				Expect(titles(rows)).To(Equal([]string{"Détective Conan"}), q)
+			}
+		})
+	})
+
 	Describe("paging", func() {
 		It("counts the whole filtered set, not the page", func() {
 			for i := range 5 {

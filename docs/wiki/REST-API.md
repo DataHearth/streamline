@@ -93,7 +93,7 @@ curl ".../movies?page=2&limit=100"
 
 Activity feeds use cursor pagination instead (`?cursor=`, `?limit=`), since they're append-only and time-ordered.
 
-**Filtering and sorting.** `GET /movies` and `GET /series` filter, search and sort server-side — `?status=`, `?query=` (case-insensitive substring over the titles), `?sort=` and `?order=`. `/series` additionally takes `?type=`. Doing this client-side means pulling the whole library first; these params exist so you don't have to.
+**Filtering and sorting.** `GET /movies` and `GET /series` filter, search and sort server-side — `?status=`, `?query=` (substring over the titles, ignoring case and accents — `detective` finds `Détective Conan`), `?sort=` and `?order=`. `/series` additionally takes `?type=`. Doing this client-side means pulling the whole library first; these params exist so you don't have to.
 
 **Movie list responses carry `file_summary`, not `media_files`.** The rollup gives you `file_count`, `size_bytes` and the largest file's parsed `resolution`/`codec` — enough for a list view, without a page of movies dragging in every file row it owns. Use `GET /movies/{id}` when you need the files themselves.
 

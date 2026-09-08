@@ -117,7 +117,12 @@ func (db *DB) FilterTVShows(
 		base = base.Where(tvshow.TypeEQ(tvshow.Type(p.Type)))
 	}
 	if p.Query != "" {
-		base = base.Where(tvshow.TitleContainsFold(p.Query))
+		base = base.Where(func(s *entsql.Selector) {
+			s.Where(entsql.Or(
+				foldContains(s, tvshow.FieldTitle, p.Query),
+				foldContains(s, tvshow.FieldOriginalTitle, p.Query),
+			))
+		})
 	}
 	if p.Monitored != nil {
 		base = base.Where(tvshow.MonitoredEQ(*p.Monitored))

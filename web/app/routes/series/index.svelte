@@ -1,7 +1,11 @@
 <script lang="ts">
 	import { untrack } from "svelte";
 	import { onMount } from "svelte";
-	import { createInfiniteQuery, createQuery } from "@tanstack/svelte-query";
+	import {
+		createInfiniteQuery,
+		createQuery,
+		keepPreviousData,
+	} from "@tanstack/svelte-query";
 	import { api, errorText, type Paginated } from "../../lib/api";
 	import { formatRelative } from "../../lib/dates";
 	import { loadPref, savePref } from "../../lib/prefs";
@@ -175,6 +179,10 @@
 			pages.flatMap((p) => p.items).length < last.total
 				? pages.length + 1
 				: undefined,
+		// Every filter keystroke is a new query key, and without this the page
+		// falls back to isLoading — which unmounts the toolbar the user is
+		// typing in, taking the caret with it.
+		placeholderData: keepPreviousData,
 	}));
 
 	const countsQuery = createQuery<TVShowCounts>(() => ({
