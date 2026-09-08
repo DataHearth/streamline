@@ -192,11 +192,33 @@ func renderCaps(c TorznabCaps) string {
 	b.WriteString(searchMode("tv-search", c.TVSearchParams))
 	b.WriteString(searchMode("movie-search", c.MovieSearchParams))
 	b.WriteString("  </searching>\n  <categories>\n")
-	for _, id := range c.Categories {
-		fmt.Fprintf(&b, "    <category id=\"%d\" name=\"cat%d\"/>\n", id, id)
+	for _, root := range categoryRoots(c.Categories) {
+		fmt.Fprintf(&b, "    <category id=\"%d\" name=\"cat%d\">\n", root, root)
+		for _, id := range c.Categories {
+			if id/1000*1000 == root && id != root {
+				fmt.Fprintf(&b, "      <subcat id=\"%d\" name=\"cat%d\"/>\n", id, id)
+			}
+		}
+		b.WriteString("    </category>\n")
 	}
 	b.WriteString("  </categories>\n</caps>")
 	return b.String()
+}
+
+// categoryRoots returns the newznab roots (2000, 5000, …) the ids fall under,
+// in first-seen order, so a leaf's parent is declared even when only the leaf
+// was listed.
+func categoryRoots(ids []int) []int {
+	seen := map[int]bool{}
+	var roots []int
+	for _, id := range ids {
+		root := id / 1000 * 1000
+		if !seen[root] {
+			seen[root] = true
+			roots = append(roots, root)
+		}
+	}
+	return roots
 }
 
 // searchMode renders one <x-search> element. available="no" is what makes
@@ -227,6 +249,9 @@ func renderFeed(releases []TorznabRelease) string {
 		b.WriteString("  <item>\n")
 		fmt.Fprintf(&b, "    <title>%s</title>\n", escapeXML(r.Title))
 		fmt.Fprintf(&b, "    <guid>%s</guid>\n", escapeXML(guid))
+		// Prowlarr refuses to save an indexer whose test feed has an item
+		// without one ("Each item in the RSS feed must have a pubDate").
+		fmt.Fprintf(&b, "    <pubDate>%s</pubDate>\n", ReleasePubDate)
 		fmt.Fprintf(
 			&b,
 			"    <enclosure url=\"http://fake.invalid/%s.torrent\" length=\"%d\""+
@@ -236,7 +261,14 @@ func renderFeed(releases []TorznabRelease) string {
 		fmt.Fprintf(&b, "    <size>%d</size>\n", r.Size)
 		b.WriteString(torznabAttr("seeders", fmt.Sprint(r.Seeders)))
 		b.WriteString(torznabAttr("peers", fmt.Sprint(r.Seeders)))
+		// The root is emitted beside the leaf, as real feeds do: Prowlarr keeps
+		// a release only when its categories intersect the request's, and a
+		// root-category request (5000) never intersects a leaf-only item
+		// (5040) — it recorded the release in history and then dropped it.
 		if r.Category != 0 {
+			if root := r.Category / 1000 * 1000; root != r.Category {
+				b.WriteString(torznabAttr("category", fmt.Sprint(root)))
+			}
 			b.WriteString(torznabAttr("category", fmt.Sprint(r.Category)))
 		}
 		// Emitted only when set: a zero id must reach the client as an absent
