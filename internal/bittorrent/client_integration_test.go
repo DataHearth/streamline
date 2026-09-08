@@ -111,8 +111,9 @@ func newSeederOfSize(dir string, size int, pieceLen int64) ([]byte, int) {
 	cc.Slogger = engineSlogger()
 	seeder, err := antorrent.NewClient(cc)
 	Expect(err).NotTo(HaveOccurred())
-	DeferCleanup(func() { Expect(seeder.Close()).To(BeEmpty()) })
-	st, err := seeder.AddTorrent(&mi)
+	var st *antorrent.Torrent
+	DeferCleanup(func() { closeSeeder(seeder, st) })
+	st, err = seeder.AddTorrent(&mi)
 	Expect(err).NotTo(HaveOccurred())
 	<-st.GotInfo()
 	return buf.Bytes(), seeder.LocalPort()
@@ -156,8 +157,9 @@ func newTCPOnlySeeder(dir string) ([]byte, int) {
 	cc.Slogger = engineSlogger()
 	seeder, err := antorrent.NewClient(cc)
 	Expect(err).NotTo(HaveOccurred())
-	DeferCleanup(func() { Expect(seeder.Close()).To(BeEmpty()) })
-	st, err := seeder.AddTorrent(&mi)
+	var st *antorrent.Torrent
+	DeferCleanup(func() { closeSeeder(seeder, st) })
+	st, err = seeder.AddTorrent(&mi)
 	Expect(err).NotTo(HaveOccurred())
 	<-st.GotInfo()
 	return buf.Bytes(), seeder.LocalPort()
@@ -263,6 +265,25 @@ func pieceCheckSettled(t *antorrent.Torrent) bool {
 		}
 	}
 	return true
+}
+
+// closeSeeder waits for the seeder's own initial piece check before closing
+// the client. The seeder runs anacrolix's default storage, whose in-memory
+// piece completion is cleared by Close; a hasher still marking a piece
+// complete then finds no entry for the infohash, its GetRange yields nothing,
+// and allFilePiecesComplete's panicif takes the whole suite down (file-piece.go:209
+// in the pinned v1.61.1 pre-release). st is nil when AddTorrent never ran.
+func closeSeeder(seeder *antorrent.Client, st *antorrent.Torrent) {
+	GinkgoHelper()
+	if st != nil {
+		Eventually(pieceCheckSettled).WithArguments(st).
+			WithTimeout(30 * time.Second).WithPolling(2 * time.Millisecond).
+			Should(BeTrue())
+		Consistently(pieceCheckSettled).WithArguments(st).
+			WithTimeout(50 * time.Millisecond).WithPolling(5 * time.Millisecond).
+			Should(BeTrue())
+	}
+	Expect(seeder.Close()).To(BeEmpty())
 }
 
 // connectToSeeder points the engine's torrent at the local seeder, but not
