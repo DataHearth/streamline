@@ -69,6 +69,60 @@ var _ = Describe("RenameService", Label("unit", "movies"), func() {
 		)
 	})
 
+	// The shipped template, which keeps only {quality} — so a file renamed
+	// once no longer carries anything else in its name and re-parsing it can
+	// only lose more. The row is the authority for both specs below.
+	const defaultNaming = "{title} ({year}) {tmdb-{tmdb_id}}/{title} ({year}) [{quality}].{ext}"
+
+	It("recovers a quality the name lost, from the probe on the row", func() {
+		store := dbmocks.NewMockStore(GinkgoT())
+		svc := NewRenameService(store, "/library/movies", defaultNaming)
+		movie := &ent.Movie{ID: 1, Title: "13 Hours", Year: 2016, TmdbID: 300671}
+		files := []*ent.MediaFile{{
+			ID: 10,
+			Path: "/library/movies/13 Hours (2016) {tmdb-300671}/" +
+				"13 Hours (2016) [].mkv",
+			Width: 3840,
+		}}
+		store.EXPECT().FindMovieByID(mock.Anything, uint32(1)).
+			Return(movie, nil).Once()
+		store.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(1)).
+			Return(files, nil).Once()
+
+		plan, err := svc.Preview(ctx, 1)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(plan.Operations).To(HaveLen(1))
+		Expect(plan.Operations[0].To).To(Equal(
+			"/library/movies/13 Hours (2016) {tmdb-300671}/" +
+				"13 Hours (2016) [2160p].mkv",
+		))
+	})
+
+	// Nothing on the row and nothing left in the name: the empty brackets go
+	// rather than re-rendering, so the file reaches a stable name instead of
+	// being re-planned on every pass.
+	It("drops the empty brackets when nothing can supply a quality", func() {
+		store := dbmocks.NewMockStore(GinkgoT())
+		svc := NewRenameService(store, "/library/movies", defaultNaming)
+		movie := &ent.Movie{ID: 1, Title: "13 Hours", Year: 2016, TmdbID: 300671}
+		files := []*ent.MediaFile{{
+			ID: 10,
+			Path: "/library/movies/13 Hours (2016) {tmdb-300671}/" +
+				"13 Hours (2016) [].mkv",
+		}}
+		store.EXPECT().FindMovieByID(mock.Anything, uint32(1)).
+			Return(movie, nil).Once()
+		store.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(1)).
+			Return(files, nil).Once()
+
+		plan, err := svc.Preview(ctx, 1)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(plan.Operations).To(HaveLen(1))
+		Expect(plan.Operations[0].To).To(Equal(
+			"/library/movies/13 Hours (2016) {tmdb-300671}/13 Hours (2016).mkv",
+		))
+	})
+
 	It("applies the plan, moves files, and updates DB paths", func() {
 		store := dbmocks.NewMockStore(GinkgoT())
 		svc := NewRenameService(store, tmp, naming)

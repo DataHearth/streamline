@@ -156,6 +156,10 @@ Templates include directory separators — the whole relative path under `movie_
 
 Write `{tvdb_id}` as `{tvdb-{tvdb_id}}` for the same Plex/Jellyfin ID hint the movie default gets from `{tmdb-{tmdb_id}}`. Streamline reads that marker back when scanning an existing library, so a folder carrying it is matched by ID rather than by title.
 
+**Where `{quality}`, `{source}`, `{codec}` and `{group}` come from.** On import, from the release name. On a **rename**, from what Streamline recorded about the file — not from the name on disk, which the previous rename wrote and which carries only the tokens your template kept. `{quality}` additionally falls back to the probed video width, so a file whose release name never stated a resolution still gets one once [ffmpeg](Configuration-Reference#ffmpeg) has probed it. The name on disk is consulted last, for a file adopted in place that Streamline never parsed at import time.
+
+`{codec}` keeps the release's spelling (`x265`) where there is one and only falls back to the probe's (`hevc`) when nothing claimed a codec — the two are different vocabularies and a template means the first.
+
 ### Zero-padding
 
 `{token:N}` zero-pads a numeric value to width N:
@@ -173,10 +177,11 @@ Padding applies only when the value parses as a number; otherwise it's rendered 
 An unrecognised token, or one whose value isn't populated, becomes an empty string rather than an error or a literal `{token}`. That's what lets optional segments stay clean:
 
 ```
-{title} ({year}) [{group}]      →  The Matrix (1999) []      # when unparsed
+{title} ({year}) [{group}]      →  The Matrix (1999)      # when unparsed
+{title} - {group}               →  The Matrix -           # when unparsed
 ```
 
-Note the brackets survive. If a segment should disappear entirely when its token is empty, don't wrap it in literal punctuation.
+An empty token wrapped in `[...]` or `(...)` takes the brackets **and the space before them** with it — punctuation in a template is there to delimit a value, and with no value there is nothing to delimit. A bare token has no pair to remove, so a separator around one survives; keep an optional token in brackets if you want the segment to disappear cleanly.
 
 > **A quirk in the shipped default.** The movie default contains `{tmdb-{tmdb_id}}` — nested braces. The parser matches `{tmdb_id}` inside it, so this renders as `{tmdb-603}` rather than `tmdb-603`: the literal outer braces stay in the directory name. Plex and Jellyfin both read `{tmdb-603}` as an ID hint, so this is intentional and works — but if you write your own template, know that the braces are literal text, not template syntax.
 

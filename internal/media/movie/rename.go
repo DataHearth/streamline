@@ -103,7 +103,7 @@ func (r *RenameService) buildPlan(
 	}
 	var plan library.RenamePlan
 	for _, f := range files {
-		target := r.target(m, f.Path)
+		target := r.target(m, f)
 		if target == f.Path {
 			continue
 		}
@@ -120,12 +120,13 @@ func (r *RenameService) buildPlan(
 // relies on (library.ApplyTemplate + BuildMovieVars + SanitizePath) so that
 // renames land at the importer's destination. The sanitisation pass is
 // per-segment to preserve directory separators.
-func (r *RenameService) target(m *ent.Movie, currentPath string) string {
-	parsed := library.Parse(filepath.Base(currentPath))
-	if parsed.Extension == "" {
-		ext := strings.TrimPrefix(filepath.Ext(currentPath), ".")
-		parsed.Extension = ext
-	}
+//
+// The release facts come from the row rather than from the current basename:
+// re-parsing a name this service wrote loses every token the template omits,
+// which for the default template is all of them but the quality — and then
+// loses the quality too on the pass after that.
+func (r *RenameService) target(m *ent.Movie, f *ent.MediaFile) string {
+	parsed := library.ParsedFromMediaFile(f)
 	vars := library.BuildMovieVars(m.Title, m.Year, m.TmdbID, parsed)
 	rel := library.ApplyTemplate(r.naming, vars)
 	segments := strings.Split(rel, "/")

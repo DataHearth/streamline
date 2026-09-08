@@ -99,7 +99,7 @@ func (r *RenameService) buildPlan(
 	for _, se := range show.Edges.Seasons {
 		for _, ep := range se.Edges.Episodes {
 			for _, f := range ep.Edges.MediaFiles {
-				target := r.target(show, se.Number, ep, f.Path)
+				target := r.target(show, se.Number, ep, f)
 				if target == f.Path {
 					continue
 				}
@@ -118,13 +118,15 @@ func (r *RenameService) buildPlan(
 // relies on (library.BuildEpisodeVars + ApplyTemplate + SanitizePath) so that
 // renames land at the importer's destination. Sanitisation is per-segment to
 // preserve directory separators.
+//
+// The release facts come from the row rather than from the current basename:
+// re-parsing a name this service wrote loses every token the template omits,
+// which for the default template is all of them but the quality — and then
+// loses the quality too on the pass after that.
 func (r *RenameService) target(
-	show *ent.TVShow, season uint16, ep *ent.Episode, currentPath string,
+	show *ent.TVShow, season uint16, ep *ent.Episode, f *ent.MediaFile,
 ) string {
-	parsed := library.Parse(filepath.Base(currentPath))
-	if parsed.Extension == "" {
-		parsed.Extension = strings.TrimPrefix(filepath.Ext(currentPath), ".")
-	}
+	parsed := library.ParsedFromMediaFile(f)
 	vars := library.BuildEpisodeVars(
 		show.Title, show.Year, show.TvdbID, season, ep.Number, ep.Title, parsed,
 	)

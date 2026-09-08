@@ -6,6 +6,8 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	"github.com/datahearth/streamline/ent"
 )
 
 var _ = Describe("Naming Templates", Label("unit", "library"), func() {
@@ -47,6 +49,50 @@ var _ = Describe("Naming Templates", Label("unit", "library"), func() {
 				"title": "x", "ext": "mkv",
 			})
 			Expect(result).To(Equal("x-.mkv"))
+		})
+	})
+
+	// The default movie template ends "[{quality}].{ext}", so a file with no
+	// known quality rendered "13 Hours (2016) [].mkv" — and the renamer then
+	// re-parsed that name on the next pass, which is what made the empty
+	// brackets permanent.
+	Describe("ApplyTemplate with an empty bracketed token", func() {
+		const movieTpl = "{title} ({year}) {tmdb-{tmdb_id}}/{title} ({year}) [{quality}].{ext}"
+
+		It("drops the brackets and the space before them", func() {
+			out := ApplyTemplate(movieTpl, map[string]string{
+				"title": "13 Hours", "year": "2016",
+				"tmdb_id": "300671", "quality": "", "ext": "mkv",
+			})
+			Expect(out).To(Equal(
+				"13 Hours (2016) {tmdb-300671}/13 Hours (2016).mkv",
+			))
+		})
+
+		It("keeps the brackets when the token has a value", func() {
+			out := ApplyTemplate(movieTpl, map[string]string{
+				"title": "13 Hours", "year": "2016",
+				"tmdb_id": "300671", "quality": "2160p", "ext": "mkv",
+			})
+			Expect(out).To(Equal(
+				"13 Hours (2016) {tmdb-300671}/13 Hours (2016) [2160p].mkv",
+			))
+		})
+
+		It("drops an empty parenthesised year the same way", func() {
+			out := ApplyTemplate("{title} ({year}).{ext}", map[string]string{
+				"title": "Untitled", "ext": "mkv",
+			})
+			Expect(out).To(Equal("Untitled.mkv"))
+		})
+
+		// One half of a pair is literal text the author wrote for some other
+		// reason, so an empty token must not eat it.
+		It("leaves an unmatched delimiter alone", func() {
+			out := ApplyTemplate("{title} [{quality}.{ext}", map[string]string{
+				"title": "x", "quality": "", "ext": "mkv",
+			})
+			Expect(out).To(Equal("x [.mkv"))
 		})
 	})
 
@@ -204,6 +250,74 @@ var _ = Describe("ApplyTemplate path safety", Label("unit", "library"), func() {
 		Expect(strings.Split(out, "/")).To(Equal([]string{
 			"Rambo - Last Blood", "Rambo - Last Blood.mkv",
 		}))
+	})
+})
+
+var _ = Describe("ParsedFromMediaFile", Label("unit", "library"), func() {
+	// The path the renamer wrote back is not evidence: the default template
+	// keeps only {quality}, so everything else was gone by the second pass.
+	const renamed = "/srv/movies/13 Hours (2016) {tmdb-300671}/13 Hours (2016) [].mkv"
+
+	It("recovers the release facts the naming template dropped", func() {
+		p := ParsedFromMediaFile(&ent.MediaFile{
+			Path:             renamed,
+			ReleaseGroup:     "TSuNDeRe-RaWS",
+			ParsedSource:     "BluRay",
+			ParsedResolution: "2160p",
+			ParsedCodec:      "x265",
+		})
+
+		Expect(p.Resolution).To(Equal("2160p"))
+		Expect(p.Source).To(Equal("BluRay"))
+		Expect(p.Codec).To(Equal("x265"))
+		Expect(p.Group).To(Equal("TSuNDeRe-RaWS"))
+		Expect(p.Extension).To(Equal("mkv"))
+	})
+
+	// The reported case: nothing was stored from the release name, but the
+	// probe measured the file. Without this the name re-renders "[]" forever.
+	It("falls back to the probe when the stored parse is empty", func() {
+		p := ParsedFromMediaFile(&ent.MediaFile{
+			Path: renamed, Width: 3840, VideoCodec: "hevc",
+		})
+
+		Expect(p.Resolution).To(Equal("2160p"))
+		Expect(p.Codec).To(Equal("hevc"))
+	})
+
+	It("lets the probe's measurement outrank the release's claim", func() {
+		p := ParsedFromMediaFile(&ent.MediaFile{
+			Path: renamed, ParsedResolution: "1080p", Width: 3840,
+		})
+
+		Expect(p.Resolution).To(Equal("2160p"))
+	})
+
+	// ffprobe says "hevc" and a release says "x265"; {codec} in a template
+	// means the second, so a measurement only fills what nobody claimed.
+	It("keeps the release's codec spelling over the probe's", func() {
+		p := ParsedFromMediaFile(&ent.MediaFile{
+			Path: renamed, ParsedCodec: "x265", VideoCodec: "hevc",
+		})
+
+		Expect(p.Codec).To(Equal("x265"))
+	})
+
+	// An orphan scan or an adoption stores none of these columns, so the name
+	// on disk is still the release's own and is the only evidence there is.
+	It("falls back to the basename for an uninstrumented row", func() {
+		path := "/srv/movies/13 Hours 2016 1080p BluRay x264-GRP.mkv"
+		p := ParsedFromMediaFile(&ent.MediaFile{Path: path})
+
+		Expect(p.Resolution).To(Equal("1080p"))
+		Expect(p.Source).To(Equal("BluRay"))
+		Expect(p.Codec).To(Equal("x264"))
+		Expect(p.Group).To(Equal("GRP"))
+	})
+
+	It("takes the extension off the path when the name parses none", func() {
+		p := ParsedFromMediaFile(&ent.MediaFile{Path: renamed})
+		Expect(p.Extension).To(Equal("mkv"))
 	})
 })
 
