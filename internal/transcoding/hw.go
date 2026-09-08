@@ -18,6 +18,9 @@ type HW struct {
 	Backend  string
 	Device   string
 	Encoders map[string]string
+	// TenBit is whether the device accepted a p010 upload, i.e. whether a
+	// 10-bit source can keep its depth through the encoder.
+	TenBit bool
 }
 
 var vaapiEncoders = map[string]string{
@@ -80,17 +83,37 @@ func probeVAAPI(ctx context.Context, bin, device string) (*HW, error) {
 			enc = e
 		}
 	}
+	if err := testEncode(ctx, bin, device, enc, "nv12"); err != nil {
+		return nil, err
+	}
+	hw := &HW{Backend: "vaapi", Device: device, Encoders: found}
+	// 10-bit is a driver capability, not an encoder one: Main10 is missing on
+	// older Intel and some AMD generations while hevc_vaapi still lists. A
+	// refusal here means those sources encode at 8 bits, not that jobs fail.
+	if err := testEncode(ctx, bin, device, enc, "p010"); err != nil {
+		slog.DebugContext(ctx, "10-bit hardware encoding unavailable", "error", err)
+	} else {
+		hw.TenBit = true
+	}
+	return hw, nil
+}
+
+func testEncode(ctx context.Context, bin, device, enc, format string) error {
 	args := []string{
 		"-hide_banner", "-loglevel", "error", "-vaapi_device", device,
 		"-f", "lavfi", "-i", "testsrc=size=320x240:rate=25", "-t", "0.5",
-		"-vf", "format=nv12,hwupload", "-c:v", enc, "-f", "null", "-",
+		"-vf", "format=" + format + ",hwupload", "-c:v", enc,
 	}
+	if format == "p010" && enc == "hevc_vaapi" {
+		args = append(args, "-profile:v", "main10")
+	}
+	args = append(args, "-f", "null", "-")
 	tail := &tailBuffer{max: stderrTail}
 	//nolint:gosec // bin is the prober's ffmpeg; device is transcoding.hw_device
 	cmd := exec.CommandContext(ctx, bin, args...)
 	cmd.Stderr = tail
 	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf(
+		return fmt.Errorf(
 			"test encode with %s on %s: %w: %s",
 			enc,
 			device,
@@ -98,7 +121,7 @@ func probeVAAPI(ctx context.Context, bin, device string) (*HW, error) {
 			tail,
 		)
 	}
-	return &HW{Backend: "vaapi", Device: device, Encoders: found}, nil
+	return nil
 }
 
 // hwProbe memoises one probe per (hw_accel, hw_device) pair so the key stays

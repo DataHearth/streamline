@@ -81,7 +81,7 @@ func BuildArgs(
 	}
 
 	if hwEnc != "" {
-		args = append(args, hwVideoArgs(hwEnc, pol.To)...)
+		args = append(args, hwVideoArgs(hwEnc, hw, info, pol.To)...)
 	} else {
 		args = append(args, swVideoArgs(pol.To)...)
 	}
@@ -117,12 +117,28 @@ func swVideoArgs(to config.TranscodeTo) []string {
 }
 
 // hwVideoArgs decodes in software and uploads frames to the device: it works
-// on every source codec, and the encoder is where the time goes. format=nv12
-// pins 8-bit output; HDR never reaches a transcode, so nothing 10-bit has to
-// survive. CRF is handed to the encoder as a constant QP, which is the closest
-// VAAPI has to it, and 0 stays "unset" as on the software path.
-func hwVideoArgs(enc string, to config.TranscodeTo) []string {
-	args := []string{"-vf", "format=nv12,hwupload", "-c:v", enc}
+// on every source codec, and the encoder is where the time goes. The upload
+// format decides the output depth, so a 10-bit source goes up as p010 when the
+// device can take it, as the software encoders keep the depth on their own;
+// h264 has no 10-bit VAAPI profile and always lands at 8 bits. CRF is handed
+// to the encoder as a constant QP, which is the closest VAAPI has to it, and 0
+// stays "unset" as on the software path.
+func hwVideoArgs(
+	enc string,
+	hw *HW,
+	info *ffmpeg.Info,
+	to config.TranscodeTo,
+) []string {
+	upload := "nv12"
+	var profile []string
+	if info.TenBit && hw.TenBit && to.VideoCodec != "h264" {
+		upload = "p010"
+		if to.VideoCodec == "hevc" {
+			profile = []string{"-profile:v", "main10"}
+		}
+	}
+	args := []string{"-vf", "format=" + upload + ",hwupload", "-c:v", enc}
+	args = append(args, profile...)
 	if to.CRF != 0 {
 		args = append(args, "-rc_mode", "CQP", "-qp", strconv.Itoa(int(to.CRF)))
 	}

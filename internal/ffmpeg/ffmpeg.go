@@ -55,6 +55,10 @@ type Info struct {
 	// HDR is true for a PQ/HLG transfer (smpte2084 / arib-std-b67) or a Dolby
 	// Vision configuration record in the video stream's side data.
 	HDR bool
+	// TenBit reports a 10-bit video pixel format (yuv420p10le and kin). The
+	// software encoders keep the source depth on their own; the VAAPI upload
+	// format is what has to read this.
+	TenBit bool
 	// AudioCodecs lists every audio stream's codec in stream order — the encoder
 	// decides copy-vs-encode per stream, so the summary AudioCodec is not enough.
 	AudioCodecs []string

@@ -8,7 +8,7 @@ import (
 var _ = Describe("parseProbeOutput", Label("unit", "ffmpeg"), func() {
 	const good = `{
 	  "streams": [
-	    {"codec_type":"video","codec_name":"hevc","width":3840,"height":1608},
+	    {"codec_type":"video","codec_name":"hevc","width":3840,"height":1608,"pix_fmt":"yuv420p10le"},
 	    {"codec_type":"audio","codec_name":"eac3","channels":6},
 	    {"codec_type":"subtitle","codec_name":"subrip"}
 	  ],
@@ -26,6 +26,7 @@ var _ = Describe("parseProbeOutput", Label("unit", "ffmpeg"), func() {
 		Expect(info.DurationSec).To(Equal(uint32(8130)))
 		Expect(info.Container).To(Equal("matroska"))
 		Expect(info.BitrateBPS).To(Equal(uint32(24500000)))
+		Expect(info.TenBit).To(BeTrue())
 	})
 
 	It("rejects output with no video stream", func() {

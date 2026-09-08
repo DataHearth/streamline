@@ -200,6 +200,62 @@ var _ = Describe("BuildArgs", Label("unit", "transcoding"), func() {
 			Expect(args).NotTo(ContainElement("-vaapi_device"))
 		})
 
+		DescribeTable(
+			"keeps a 10-bit source at 10 bits when the device can",
+			func(codec string, deviceTenBit bool, upload string, profile []string) {
+				hw := &HW{
+					Backend: "vaapi",
+					Device:  "/dev/dri/renderD128",
+					Encoders: map[string]string{
+						"hevc": "hevc_vaapi",
+						"av1":  "av1_vaapi",
+						"h264": "h264_vaapi",
+					},
+					TenBit: deviceTenBit,
+				}
+				p := pol
+				p.To.VideoCodec = codec
+				tenBit := &ffmpeg.Info{AudioCodecs: []string{"aac"}, TenBit: true}
+				args := BuildArgs(
+					"/in.mkv",
+					"/out.mkv",
+					tenBit,
+					p,
+					ActionTranscode,
+					hw,
+				)
+				Expect(args).To(ContainElement("format=" + upload + ",hwupload"))
+				if len(profile) == 0 {
+					Expect(args).NotTo(ContainElement("-profile:v"))
+					return
+				}
+				i := indexOf(args, "-c:v")
+				Expect(args[i+2 : i+2+len(profile)]).To(Equal(profile))
+			},
+			Entry(
+				"hevc → p010 Main10",
+				"hevc",
+				true,
+				"p010",
+				[]string{"-profile:v", "main10"},
+			),
+			Entry(
+				"av1 → p010, Main already covers it",
+				"av1",
+				true,
+				"p010",
+				[]string{},
+			),
+			Entry("h264 has no 10-bit profile", "h264", true, "nv12", []string{}),
+			Entry(
+				"device without Main10 → 8-bit",
+				"hevc",
+				false,
+				"nv12",
+				[]string{},
+			),
+		)
+
 		It("never touches a remux", func() {
 			args := BuildArgs("/in.mp4", "/out.mkv", info, pol, ActionRemux, vaapi)
 			Expect(args).NotTo(ContainElement("-vaapi_device"))

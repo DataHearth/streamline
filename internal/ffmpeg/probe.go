@@ -92,6 +92,7 @@ type probeStream struct {
 	CodecName     string          `json:"codec_name"`
 	Width         uint16          `json:"width"`
 	Height        uint16          `json:"height"`
+	PixFmt        string          `json:"pix_fmt"`
 	Channels      uint8           `json:"channels"`
 	Duration      string          `json:"duration"`
 	BitRate       string          `json:"bit_rate"`
@@ -188,6 +189,7 @@ func parseProbeOutput(raw []byte) (*Info, error) {
 			info.VideoCodec = s.CodecName
 			info.Width, info.Height = s.Width, s.Height
 			info.HDR = isHDR(s)
+			info.TenBit = strings.Contains(s.PixFmt, "10")
 			videoStreamDuration = s.Duration
 			videoStreamBitRate = s.BitRate
 			videoPixels = pixels
