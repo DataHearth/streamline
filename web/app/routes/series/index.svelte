@@ -8,7 +8,8 @@
 	} from "@tanstack/svelte-query";
 	import { api, errorText, type Paginated } from "../../lib/api";
 	import { formatRelative } from "../../lib/dates";
-	import { loadPref, savePref } from "../../lib/prefs";
+	import { loadPref, savePref, SERIES_SEARCH } from "../../lib/prefs";
+	import { onRouteQuery } from "../../lib/route-query";
 	import { pageMeta } from "../../lib/page-meta.svelte";
 	import SeriesToolbar from "../../components/series/SeriesToolbar.svelte";
 	import type {
@@ -56,11 +57,11 @@
 	// otherwise fall back to the last sort this browser chose, then A→Z.
 	const SORT_PREF = "streamline:series:sort";
 
-	function readParams() {
-		const p =
-			typeof window === "undefined"
-				? new URLSearchParams()
-				: new URLSearchParams(window.location.search);
+	function readParams(
+		p = new URLSearchParams(
+			typeof window === "undefined" ? "" : window.location.search,
+		),
+	) {
 		const rawTab = (p.get("status") ?? "all") as SeriesTab;
 		const rawType = (p.get("type") ?? "all") as SeriesTypeFilter;
 		const rawMon = (p.get("monitored") ?? "all") as SeriesMonFilter;
@@ -105,6 +106,21 @@
 	});
 	let shownView = $derived<View>(narrow ? "grid" : view);
 
+	// window.location still names the outgoing page while this one mounts, so the
+	// filters a back link carries have to come off the route being rendered.
+	onMount(() =>
+		onRouteQuery("/series", (p) => {
+			const v = readParams(p);
+			tab = v.tab;
+			typeFilter = v.typeFilter;
+			mon = v.mon;
+			query = v.query;
+			debouncedQuery = v.query;
+			sort = v.sort;
+			view = v.view;
+		}),
+	);
+
 	function setSort(s: SeriesSort) {
 		sort = s;
 		savePref(SORT_PREF, s);
@@ -135,6 +151,7 @@
 		// what a detail page's back link hit: /series/1?tab=episodes became
 		// /series/1 and never reached the list.
 		if (window.location.pathname !== "/series") return;
+		savePref(SERIES_SEARCH, search);
 
 		const next = `${window.location.pathname}${search ? `?${search}` : ""}`;
 		if (next !== window.location.pathname + window.location.search) {

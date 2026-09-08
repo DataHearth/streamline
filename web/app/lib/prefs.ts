@@ -17,3 +17,16 @@ export function savePref(key: string, value: string) {
 		// Preference is cosmetic; the page works fine without it persisting.
 	}
 }
+
+// The library lists stamp their current filter/sort query string here so a
+// detail page's back link returns to the library as it was left. The list URL
+// itself is not reachable from the detail page — Routify navigates by pushState
+// and the browser's own back entry is only right when the detail page was
+// opened from the list.
+export const MOVIES_SEARCH = "streamline:movies:search";
+export const SERIES_SEARCH = "streamline:series:search";
+
+export function listHref(path: string, key: string) {
+	const search = loadPref(key);
+	return search ? `${path}?${search}` : path;
+}

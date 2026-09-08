@@ -8,7 +8,8 @@
 	} from "@tanstack/svelte-query";
 	import { api, errorText, type Paginated } from "../../lib/api";
 	import { formatRelative } from "../../lib/dates";
-	import { loadPref, savePref } from "../../lib/prefs";
+	import { loadPref, savePref, MOVIES_SEARCH } from "../../lib/prefs";
+	import { onRouteQuery } from "../../lib/route-query";
 	import { pageMeta } from "../../lib/page-meta.svelte";
 	import MoviesToolbar from "../../components/movies/MoviesToolbar.svelte";
 	import MovieGrid from "../../components/movies/MovieGrid.svelte";
@@ -40,11 +41,11 @@
 	// otherwise fall back to the last sort this browser chose, then A→Z.
 	const SORT_PREF = "streamline:movies:sort";
 
-	function readParams() {
-		const p =
-			typeof window === "undefined"
-				? new URLSearchParams()
-				: new URLSearchParams(window.location.search);
+	function readParams(
+		p = new URLSearchParams(
+			typeof window === "undefined" ? "" : window.location.search,
+		),
+	) {
 		const stored = loadPref(SORT_PREF)?.split("-") ?? [];
 		const rawTab = p.get("status") ?? "all";
 		const rawMon = p.get("monitored") ?? "all";
@@ -89,6 +90,21 @@
 	});
 	let shownView = $derived<View>(narrow ? "grid" : view);
 
+	// window.location still names the outgoing page while this one mounts, so the
+	// filters a back link carries have to come off the route being rendered.
+	onMount(() =>
+		onRouteQuery("/movies", (p) => {
+			const v = readParams(p);
+			tab = v.tab;
+			mon = v.mon;
+			query = v.query;
+			debouncedQuery = v.query;
+			sort = v.sort;
+			order = v.order;
+			view = v.view;
+		}),
+	);
+
 	function setSort(s: SortKey, o: SortOrder) {
 		sort = s;
 		order = o;
@@ -120,6 +136,7 @@
 		// what a detail page's back link hit: /movies/2?tab=cast became /movies/2
 		// and never reached the list.
 		if (window.location.pathname !== "/movies") return;
+		savePref(MOVIES_SEARCH, search);
 
 		const next = `${window.location.pathname}${search ? `?${search}` : ""}`;
 		if (next !== window.location.pathname + window.location.search) {
