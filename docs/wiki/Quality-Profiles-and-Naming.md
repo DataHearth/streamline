@@ -233,7 +233,7 @@ series_naming: '{title}/{title} - {air_date} - {episode_title}.{ext}'
 
 ## Renaming existing files
 
-Changing a template does **not** rewrite files already on disk. Apply it with the per-title **Rename** action, or:
+Changing a template does **not** rewrite files already on disk. Apply it with the per-title **Rename files…** action, or across a selection: pick titles on the Movies or Series page, then **⋯ → Rename files…** in the bulk bar. The bulk action skips titles with nothing on disk and applies without a preview — use the per-title action when you want to see the exact moves first. Or over the API:
 
 ```bash
 curl -X POST -H "X-API-Key: $KEY" \

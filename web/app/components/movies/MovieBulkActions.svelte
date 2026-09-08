@@ -5,6 +5,7 @@
 		BookmarkX,
 		Radar,
 		SlidersHorizontal,
+		FileEdit,
 		RefreshCw,
 		Trash2,
 	} from "@lucide/svelte";
@@ -22,6 +23,7 @@
 	import type { KebabItem } from "../shared/KebabMenu.svelte";
 	import QualityProfileModal from "./QualityProfileModal.svelte";
 	import DeleteTitleDialog from "../shared/DeleteTitleDialog.svelte";
+	import Dialog from "../modals/Dialog.svelte";
 	import type { Movie, QualityProfile } from "../../lib/types";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 
@@ -52,8 +54,15 @@
 		picked.reduce((n, m) => n + (m.file_summary?.size_bytes ?? 0), 0),
 	);
 	let monitoredPicked = $derived(picked.filter((m) => m.monitored).length);
+	// Renaming a title with nothing on disk is a request that can only come
+	// back with an empty plan, so the selection is narrowed to what has files
+	// and the count in the confirm says how many that is.
+	let renamable = $derived(
+		picked.filter((m) => (m.file_summary?.file_count ?? 0) > 0),
+	);
 	let qpOpen = $state(false);
 	let deleteOpen = $state(false);
+	let renameOpen = $state(false);
 	let busy = $state(false);
 
 	const qc = useQueryClient();
@@ -74,15 +83,18 @@
 		else toast.err(`${verb} ${res.ok}, ${res.failed} failed`);
 	}
 
+	// items defaults to the whole selection; rename passes the subset that has
+	// files, so the "N titles" the toast reports is the number actually acted on.
 	async function run(
 		verb: string,
 		fn: (m: Movie) => Promise<unknown>,
 		after?: () => void,
+		items: Movie[] = picked,
 	) {
 		if (busy) return;
 		busy = true;
 		try {
-			const res = await runBulk(picked, fn);
+			const res = await runBulk(items, fn);
 			qc.invalidateQueries({ queryKey: ["movies"] });
 			report(verb, res);
 			after?.();
@@ -110,6 +122,17 @@
 			api(`/movies/${m.id}/refresh-metadata`, { method: "POST" }),
 		);
 	}
+	// No preview: one per selected title is 50 requests to render a list nobody
+	// can read at that length. The single-title kebab keeps its preview modal
+	// for when the exact moves matter.
+	function renameFiles() {
+		run(
+			"Renamed",
+			(m) => api(`/movies/${m.id}/rename`, { method: "POST" }),
+			() => (renameOpen = false),
+			renamable,
+		);
+	}
 	function saveProfile(profile: string) {
 		run("Reprofiled", (m) => patch(m, { quality_profile: profile }), () => {
 			qpOpen = false;
@@ -127,6 +150,15 @@
 	}
 
 	let menuItems = $derived<KebabItem[]>([
+		{
+			key: "rename",
+			label: i18n.action_rename_files_ellipsis(),
+			icon: FileEdit,
+			disabled: renamable.length === 0,
+			title:
+				renamable.length === 0 ? i18n.movies_available_after_import() : undefined,
+			onSelect: () => (renameOpen = true),
+		},
 		{
 			key: "refresh",
 			label: i18n.action_refresh_metadata(),
@@ -185,6 +217,17 @@
 			label: i18n.action_change_quality_profile(),
 			icon: SlidersHorizontal,
 			onSelect: () => (qpOpen = true),
+		},
+		{
+			key: "rename",
+			label: i18n.action_rename_files_ellipsis(),
+			icon: FileEdit,
+			disabled: renamable.length === 0,
+			line:
+				renamable.length === 0
+					? i18n.movies_available_after_import()
+					: `${plural(renamable.length, "title")} with files on disk`,
+			onSelect: () => (renameOpen = true),
 		},
 		{
 			key: "refresh",
@@ -260,6 +303,22 @@
 	saving={busy}
 	onClose={() => (qpOpen = false)}
 	onSave={saveProfile}
+/>
+<Dialog
+	open={renameOpen}
+	title="Rename files for {plural(renamable.length, 'title')}?"
+	body="Files are moved to match your naming template. A title whose files already sit at their target name is left alone."
+	onClose={() => (renameOpen = false)}
+	actions={[
+		{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },
+		{
+			label: busy ? i18n.common_applying() : i18n.action_rename_files(),
+			variant: "primary",
+			dismiss: false,
+			pending: busy,
+			onClick: renameFiles,
+		},
+	]}
 />
 <DeleteTitleDialog
 	open={deleteOpen}

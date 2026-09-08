@@ -5,6 +5,7 @@
 		BookmarkX,
 		Radar,
 		SlidersHorizontal,
+		FileEdit,
 		RefreshCw,
 		Trash2,
 	} from "@lucide/svelte";
@@ -21,6 +22,7 @@
 	import type { KebabItem } from "../shared/KebabMenu.svelte";
 	import QualityProfileModal from "../movies/QualityProfileModal.svelte";
 	import DeleteTitleDialog from "../shared/DeleteTitleDialog.svelte";
+	import Dialog from "../modals/Dialog.svelte";
 	import type { TVShow, QualityProfile } from "../../lib/types";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 
@@ -48,8 +50,13 @@
 		picked.reduce((n, s) => n + (s.wanted_episodes ?? 0), 0),
 	);
 	let monitoredPicked = $derived(picked.filter((s) => s.monitored).length);
+	// A show with no episode on disk can only come back with an empty rename
+	// plan, so it is dropped from the request set rather than counted in the
+	// toast. have_episodes is the list rollup; the episode tree is detail-only.
+	let renamable = $derived(picked.filter((s) => (s.have_episodes ?? 0) > 0));
 	let qpOpen = $state(false);
 	let deleteOpen = $state(false);
+	let renameOpen = $state(false);
 	let busy = $state(false);
 
 	const qc = useQueryClient();
@@ -71,15 +78,18 @@
 		else toast.err(`${verb} ${res.ok}, ${res.failed} failed`);
 	}
 
+	// items defaults to the whole selection; rename passes the subset that has
+	// episodes on disk, so the count the toast reports is what was acted on.
 	async function run(
 		verb: string,
 		fn: (s: TVShow) => Promise<unknown>,
 		after?: () => void,
+		items: TVShow[] = picked,
 	) {
 		if (busy) return;
 		busy = true;
 		try {
-			const res = await runBulk(picked, fn);
+			const res = await runBulk(items, fn);
 			qc.invalidateQueries({ queryKey: ["series"] });
 			report(verb, res);
 			after?.();
@@ -107,6 +117,17 @@
 			api(`/series/${s.id}/refresh-metadata`, { method: "POST" }),
 		);
 	}
+	// No preview: one per selected show is a request each to render a list
+	// nobody can read at that length, and a show's plan is every episode it
+	// holds. The single-show kebab keeps its preview for when the moves matter.
+	function renameFiles() {
+		run(
+			"Renamed",
+			(s) => api(`/series/${s.id}/rename`, { method: "POST" }),
+			() => (renameOpen = false),
+			renamable,
+		);
+	}
 	function saveProfile(profile: string) {
 		run("Reprofiled", (s) => patch(s, { quality_profile: profile }), () => {
 			qpOpen = false;
@@ -124,6 +145,17 @@
 	}
 
 	let menuItems = $derived<KebabItem[]>([
+		{
+			key: "rename",
+			label: i18n.action_rename_files_ellipsis(),
+			icon: FileEdit,
+			disabled: renamable.length === 0,
+			title:
+				renamable.length === 0
+					? "Available once an episode has been imported"
+					: undefined,
+			onSelect: () => (renameOpen = true),
+		},
 		{
 			key: "refresh",
 			label: i18n.action_refresh_metadata(),
@@ -181,6 +213,17 @@
 			label: i18n.action_change_quality_profile(),
 			icon: SlidersHorizontal,
 			onSelect: () => (qpOpen = true),
+		},
+		{
+			key: "rename",
+			label: i18n.action_rename_files_ellipsis(),
+			icon: FileEdit,
+			disabled: renamable.length === 0,
+			line:
+				renamable.length === 0
+					? "no episodes on disk"
+					: `${plural(renamable.length, "series", "series")} with episodes on disk`,
+			onSelect: () => (renameOpen = true),
 		},
 		{
 			key: "refresh",
@@ -265,6 +308,22 @@
 	saving={busy}
 	onClose={() => (qpOpen = false)}
 	onSave={saveProfile}
+/>
+<Dialog
+	open={renameOpen}
+	title="Rename files for {plural(renamable.length, 'series', 'series')}?"
+	body="Every episode on disk is moved to match your naming template. Files already sitting at their target name are left alone."
+	onClose={() => (renameOpen = false)}
+	actions={[
+		{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },
+		{
+			label: busy ? i18n.common_applying() : i18n.action_rename_files(),
+			variant: "primary",
+			dismiss: false,
+			pending: busy,
+			onClick: renameFiles,
+		},
+	]}
 />
 <DeleteTitleDialog
 	open={deleteOpen}
