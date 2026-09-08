@@ -578,8 +578,8 @@ quality_profiles:
 		})
 	})
 
-	Describe("transcoding.verify", func() {
-		loadVerify := func(body string) (*Config, error) {
+	Describe("transcoding", func() {
+		loadTranscoding := func(body string) (*Config, error) {
 			GinkgoHelper()
 			dir := GinkgoT().TempDir()
 			dataDir := filepath.Join(dir, "data")
@@ -594,7 +594,7 @@ quality_profiles:
 		}
 
 		It("defaults to a 5–100 % band with the optional checks off", func() {
-			cfg, err := loadVerify("")
+			cfg, err := loadTranscoding("")
 			Expect(err).NotTo(HaveOccurred())
 			v := cfg.Transcoding.Verify
 			Expect(v.MaxSizePercent).To(Equal(uint8(100)))
@@ -604,7 +604,7 @@ quality_profiles:
 		})
 
 		It("rejects a floor at or above the ceiling", func() {
-			_, err := loadVerify(`transcoding:
+			_, err := loadTranscoding(`transcoding:
   verify:
     max_size_percent: 50
     min_size_percent: 50
@@ -617,7 +617,7 @@ quality_profiles:
 		})
 
 		It("leaves the floor unchecked when the ceiling is disabled", func() {
-			cfg, err := loadVerify(`transcoding:
+			cfg, err := loadTranscoding(`transcoding:
   verify:
     max_size_percent: 0
     min_size_percent: 90
@@ -627,7 +627,7 @@ quality_profiles:
 		})
 
 		It("patches one verify key without touching its siblings", func() {
-			_, err := loadVerify("")
+			_, err := loadTranscoding("")
 			Expect(err).NotTo(HaveOccurred())
 
 			hc := true
@@ -638,6 +638,18 @@ quality_profiles:
 			Expect(out.Verify.HealthCheck).To(BeTrue())
 			Expect(out.Verify.MaxSizePercent).To(Equal(uint8(100)))
 			Expect(out.Verify.MinSizePercent).To(Equal(uint8(5)))
+		})
+
+		It("defaults hw_accel to auto on the first render node", func() {
+			cfg, err := loadTranscoding("")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(cfg.Transcoding.HWAccel).To(Equal("auto"))
+			Expect(cfg.Transcoding.HWDevice).To(Equal("/dev/dri/renderD128"))
+		})
+
+		It("rejects an unknown hw_accel backend", func() {
+			_, err := loadTranscoding("transcoding:\n  hw_accel: nvenc\n")
+			Expect(err).To(MatchError(ContainSubstring("HWAccel")))
 		})
 	})
 

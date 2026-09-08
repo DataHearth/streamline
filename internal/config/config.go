@@ -329,6 +329,8 @@ type TranscodingConfig struct {
 	Enabled       bool                  `koanf:"enabled"`
 	MaxConcurrent uint8                 `koanf:"max_concurrent" validate:"min=1,max=8"`
 	MaxFailures   uint8                 `koanf:"max_failures"   validate:"min=1,max=10"`
+	HWAccel       string                `koanf:"hw_accel"       validate:"required,oneof=auto none vaapi"`
+	HWDevice      string                `koanf:"hw_device"      validate:"required"`
 	Verify        TranscodeVerifyConfig `koanf:"verify"`
 }
 
@@ -759,6 +761,8 @@ func defaults() map[string]any {
 		"transcoding.enabled":                 false,
 		"transcoding.max_concurrent":          1,
 		"transcoding.max_failures":            3,
+		"transcoding.hw_accel":                "auto",
+		"transcoding.hw_device":               "/dev/dri/renderD128",
 		"transcoding.verify.max_size_percent": 100,
 		"transcoding.verify.min_size_percent": 5,
 		"transcoding.verify.health_check":     false,

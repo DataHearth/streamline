@@ -564,6 +564,15 @@
           "minimum": 1,
           "maximum": 10
         },
+        "hw_accel": {
+          "type": "string",
+          "enum": ["auto", "none", "vaapi"],
+          "description": "Hardware encoder backend. auto probes hw_device once and falls back to software when the probe fails or the target codec has no hardware encoder; none forces software."
+        },
+        "hw_device": {
+          "type": "string",
+          "description": "DRM render node handed to ffmpeg as -vaapi_device."
+        },
         "verify": {
           "type": "object",
           "additionalProperties": false,
