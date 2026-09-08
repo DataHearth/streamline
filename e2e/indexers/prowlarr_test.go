@@ -2,7 +2,6 @@ package indexers
 
 import (
 	"context"
-	"sync"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -26,8 +25,6 @@ const (
 // route back to this process is a host port fixed when it starts, so a second
 // recorder on a second port would be unreachable from inside it.
 var (
-	setupOnce sync.Once
-
 	prowlarr *containers.Prowlarr
 	// tvFull declares season, ep and tvdbid. tvNoIDs declares only q and
 	// season/ep — the shape most private trackers have, and the one that
@@ -38,11 +35,18 @@ var (
 // setup starts the recorder, then Prowlarr forwarding its port, then
 // registers one indexer per endpoint. Ordered: the port must exist before the
 // container starts, and Prowlarr probes each feed's caps as it saves it.
+//
+// Called from BeforeSuite, never BeforeEach: the recorder registers its
+// shutdown with DeferCleanup, which runs at the end of whatever phase called
+// it. Under a per-spec hook the fake was closed after the first spec while the
+// endpoints kept naming its port, and Prowlarr — which cannot tell a dead
+// tracker from a disappeared one — disabled every indexer for the backoff
+// window, so nothing after the first spec reached the fake at all.
 func setup() {
 	GinkgoHelper()
 	containers.Require()
 
-	setupOnce.Do(func() {
+	{
 		rec := fakes.NewTorznabRecorder()
 
 		tvFull = rec.Mount("/tv-full",
@@ -89,7 +93,7 @@ func setup() {
 				Categories: []int{5000, 2000},
 			})
 		}
-	})
+	}
 }
 
 // client is the real streamline Prowlarr client, pointed at the container.
@@ -101,8 +105,6 @@ var _ = Describe(
 	"the Prowlarr client against a real Prowlarr",
 	Label("e2e", "containers"),
 	func() {
-		BeforeEach(setup)
-
 		It("delivers the season and episode to the tracker", func() {
 			// The whole point of the container: prowlarrQuery writes
 			// {season:2}{episode:3} into the query string, and only a real

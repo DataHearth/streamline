@@ -21,4 +21,7 @@ func TestIndexers(t *testing.T) {
 	RunSpecs(t, "E2E Indexers Suite")
 }
 
-var _ = BeforeSuite(func() { DeferCleanup(testutil.InstallSlog()) })
+var _ = BeforeSuite(func() {
+	DeferCleanup(testutil.InstallSlog())
+	setup()
+})
