@@ -55,7 +55,7 @@ func BodyLimit(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		limit := int64(defaultMaxBody)
 		if r.Method == http.MethodPost && routePath(r) == addTorrentPath &&
-			isAdmin(r) {
+			auth.IsAdmin(r.Context()) {
 			limit = torrentMaxBody
 		}
 
@@ -89,12 +89,4 @@ func routePath(r *http.Request) string {
 		return r.URL.RawPath
 	}
 	return r.URL.Path
-}
-
-// isAdmin reports whether the request carries admin claims. A request with no
-// claims at all is not an admin: the anonymous case is the auth middleware's to
-// answer, and it already has by the time this runs.
-func isAdmin(r *http.Request) bool {
-	c := auth.ClaimsFromContext(r.Context())
-	return c != nil && auth.RoleAtLeast(c.Role, "admin")
 }
