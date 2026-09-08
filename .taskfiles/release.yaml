@@ -55,10 +55,17 @@ tasks:
 
   # --- App release --------------------------------------------------------
 
-  changelog:
-    desc: Regenerate CHANGELOG.md through VERSION, commit it, and advance main. Usage - task release:changelog VERSION=v0.1.0
+  app:changelog:
+    desc: Regenerate CHANGELOG.md through VERSION, commit it, and advance main. Usage - task release:app:changelog VERSION=v0.1.0
     requires:
       vars: [VERSION]
+    preconditions:
+      # Also on app:tag, and needed on both: release:app runs this half first,
+      # so a guard only on the tag lets a bad VERSION commit a changelog before
+      # anything checks it. release:chart is safe by luck of ordering — its
+      # guarded half is the one that runs first.
+      - sh: 'echo "{{.VERSION}}" | grep -qE "^v[0-9]+\.[0-9]+\.[0-9]+"'
+        msg: "VERSION must look like v0.1.0 or v0.1.0-alpha.1"
     cmds:
       - task: _commit
         vars:
@@ -66,8 +73,8 @@ tasks:
           FILE: CHANGELOG.md
           CMD: 'git-cliff --tag {{.VERSION}} -o CHANGELOG.md'
 
-  tag:
-    desc: Cut an app release — tag main v*.*.* and push it, triggering changelog, gh release and OCI image. Usage - task release:tag VERSION=v0.1.0
+  app:tag:
+    desc: Cut an app release — tag main v*.*.* and push it, triggering changelog, gh release and OCI image. Usage - task release:app:tag VERSION=v0.1.0
     requires:
       vars: [VERSION]
     preconditions:
@@ -77,13 +84,25 @@ tasks:
       # Read the tag target, not the working copy: CHANGELOG.md is only in the
       # release once it is committed, and an uncommitted one must not pass.
       - sh: 'V="{{.VERSION}}"; git show main:CHANGELOG.md 2>/dev/null | grep -q "^## \[${V#v}\]"'
-        msg: "main has no CHANGELOG.md section for {{.VERSION}} — run: task release:changelog VERSION={{.VERSION}}"
+        msg: "main has no CHANGELOG.md section for {{.VERSION}} — run: task release:app:changelog VERSION={{.VERSION}}"
     # The chart is NOT released here — it versions independently. Operators
     # deploy this image by setting image.tag in their values; the chart has
     # no appVersion and never picks a tag for them.
     cmds:
       - task: _tag
         vars: {TAG: '{{.VERSION}}'}
+
+  app:
+    desc: Cut an app release end to end — changelog, commit, advance main, tag and push. Usage - task release:app VERSION=v3.0.0
+    requires:
+      vars: [VERSION]
+    # Same trade as release:chart: run the halves apart to read the generated
+    # changelog before the tag goes out, since the tag is what CI acts on.
+    cmds:
+      - task: app:changelog
+        vars: {VERSION: '{{.VERSION}}'}
+      - task: app:tag
+        vars: {VERSION: '{{.VERSION}}'}
 
   # --- Chart release ------------------------------------------------------
   # Chart.yaml is the source of truth for the chart version — release:chart:tag
