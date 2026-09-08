@@ -35,12 +35,14 @@ var svtPresets = map[string]string{
 
 // BuildArgs assembles the ffmpeg invocation. action is ActionRemux or
 // ActionTranscode. HDR video never reaches ActionTranscode (Evaluate exempts
-// it), so no HDR metadata forwarding is needed.
+// it), so no HDR metadata forwarding is needed. hw is the probed backend or
+// nil for software; it is used only when it carries the policy's codec.
 func BuildArgs(
 	in, out string,
 	info *ffmpeg.Info,
 	pol config.TranscodePolicy,
 	action Action,
+	hw *HW,
 ) []string {
 	args := []string{
 		"-hide_banner",
@@ -48,9 +50,15 @@ func BuildArgs(
 		"-progress",
 		"pipe:1",
 		"-y",
-		"-i",
-		in,
 	}
+	hwEnc := ""
+	if action == ActionTranscode && hw != nil {
+		hwEnc = hw.Encoders[pol.To.VideoCodec]
+	}
+	if hwEnc != "" {
+		args = append(args, "-vaapi_device", hw.Device)
+	}
+	args = append(args, "-i", in)
 	// mp4 takes video and audio only. `-map 0` hands the muxer the source's
 	// subtitle and attachment streams too, and mp4 refuses SRT/ASS/PGS and font
 	// attachments outright — which is most mkv sources, so an mp4 target failed
@@ -72,21 +80,11 @@ func BuildArgs(
 		passthroughSet[strings.ToLower(codec)] = true
 	}
 
-	args = append(args, "-c:v", encoders[pol.To.VideoCodec])
-	// 0 is "unset", not a CRF of zero: passing -crf 0 asks for a near-lossless
-	// encode, so a policy that omits the key would produce a file larger than
-	// the one it replaced. Omitting the flag is what leaves the encoder's own
-	// default in force.
-	if pol.To.CRF != 0 {
-		args = append(args, "-crf", strconv.Itoa(int(pol.To.CRF)))
+	if hwEnc != "" {
+		args = append(args, hwVideoArgs(hwEnc, pol.To)...)
+	} else {
+		args = append(args, swVideoArgs(pol.To)...)
 	}
-	preset := pol.To.Preset
-	if pol.To.VideoCodec == "av1" {
-		if n, ok := svtPresets[preset]; ok {
-			preset = n
-		}
-	}
-	args = append(args, "-preset", preset)
 	for i, codec := range info.AudioCodecs {
 		if passthroughSet[strings.ToLower(codec)] {
 			args = append(args, fmt.Sprintf("-c:a:%d", i), "copy")
@@ -98,4 +96,38 @@ func BuildArgs(
 		args = append(args, "-c:s", "copy", "-c:t", "copy")
 	}
 	return append(args, out)
+}
+
+func swVideoArgs(to config.TranscodeTo) []string {
+	args := []string{"-c:v", encoders[to.VideoCodec]}
+	// 0 is "unset", not a CRF of zero: passing -crf 0 asks for a near-lossless
+	// encode, so a policy that omits the key would produce a file larger than
+	// the one it replaced. Omitting the flag is what leaves the encoder's own
+	// default in force.
+	if to.CRF != 0 {
+		args = append(args, "-crf", strconv.Itoa(int(to.CRF)))
+	}
+	preset := to.Preset
+	if to.VideoCodec == "av1" {
+		if n, ok := svtPresets[preset]; ok {
+			preset = n
+		}
+	}
+	return append(args, "-preset", preset)
+}
+
+// hwVideoArgs decodes in software and uploads frames to the device: it works
+// on every source codec, and the encoder is where the time goes. format=nv12
+// pins 8-bit output; HDR never reaches a transcode, so nothing 10-bit has to
+// survive. CRF is handed to the encoder as a constant QP, which is the closest
+// VAAPI has to it, and 0 stays "unset" as on the software path.
+func hwVideoArgs(enc string, to config.TranscodeTo) []string {
+	args := []string{"-vf", "format=nv12,hwupload", "-c:v", enc}
+	if to.CRF != 0 {
+		args = append(args, "-rc_mode", "CQP", "-qp", strconv.Itoa(int(to.CRF)))
+	}
+	if level, ok := vaapiLevels[to.Preset]; ok {
+		args = append(args, "-compression_level", level)
+	}
+	return args
 }

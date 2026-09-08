@@ -19,7 +19,7 @@ var _ = Describe("BuildArgs", Label("unit", "transcoding"), func() {
 			AudioCodec:       "aac",
 			AudioPassthrough: config.DefaultAudioPassthrough,
 		}}
-		args := BuildArgs("/in.mkv", "/out.mkv", info, pol, ActionTranscode)
+		args := BuildArgs("/in.mkv", "/out.mkv", info, pol, ActionTranscode, nil)
 		Expect(args).To(Equal([]string{
 			"-hide_banner", "-nostats", "-progress", "pipe:1", "-y",
 			"-i", "/in.mkv", "-map", "0",
@@ -33,7 +33,7 @@ var _ = Describe("BuildArgs", Label("unit", "transcoding"), func() {
 	It("builds the golden remux invocation", func() {
 		info := &ffmpeg.Info{}
 		pol := config.TranscodePolicy{To: config.TranscodeTo{Container: "mkv"}}
-		args := BuildArgs("/in.mp4", "/out.mkv", info, pol, ActionRemux)
+		args := BuildArgs("/in.mp4", "/out.mkv", info, pol, ActionRemux, nil)
 		Expect(args).To(Equal([]string{
 			"-hide_banner", "-nostats", "-progress", "pipe:1", "-y",
 			"-i", "/in.mp4", "-map", "0",
@@ -50,7 +50,7 @@ var _ = Describe("BuildArgs", Label("unit", "transcoding"), func() {
 			Preset:     "medium",
 			AudioCodec: "aac",
 		}}
-		args := BuildArgs("/in.mkv", "/out.mkv", info, pol, ActionTranscode)
+		args := BuildArgs("/in.mkv", "/out.mkv", info, pol, ActionTranscode, nil)
 		Expect(args).NotTo(ContainElement("-crf"))
 		// -preset follows the encoder directly, so the omission dropped the
 		// pair rather than leaving a stray value in a flag's position.
@@ -72,6 +72,7 @@ var _ = Describe("BuildArgs", Label("unit", "transcoding"), func() {
 			info,
 			config.TranscodePolicy{To: pol},
 			ActionTranscode,
+			nil,
 		)
 		Expect(args).To(Equal([]string{
 			"-hide_banner", "-nostats", "-progress", "pipe:1", "-y",
@@ -85,7 +86,7 @@ var _ = Describe("BuildArgs", Label("unit", "transcoding"), func() {
 	It("maps video and audio only when remuxing into mp4", func() {
 		info := &ffmpeg.Info{}
 		pol := config.TranscodePolicy{To: config.TranscodeTo{Container: "mp4"}}
-		args := BuildArgs("/in.mkv", "/out.mp4", info, pol, ActionRemux)
+		args := BuildArgs("/in.mkv", "/out.mp4", info, pol, ActionRemux, nil)
 		Expect(args).To(Equal([]string{
 			"-hide_banner", "-nostats", "-progress", "pipe:1", "-y",
 			"-i", "/in.mkv", "-map", "0:v", "-map", "0:a",
@@ -103,7 +104,7 @@ var _ = Describe("BuildArgs", Label("unit", "transcoding"), func() {
 			Preset:     "medium",
 			AudioCodec: "aac",
 		}}
-		args := BuildArgs("/in.mkv", "/out.mkv", info, pol, ActionTranscode)
+		args := BuildArgs("/in.mkv", "/out.mkv", info, pol, ActionTranscode, nil)
 		i := indexOf(args, "-c:v")
 		Expect(args[i : i+6]).To(Equal([]string{
 			"-c:v", "libsvtav1", "-crf", "32", "-preset", "7",
@@ -119,7 +120,7 @@ var _ = Describe("BuildArgs", Label("unit", "transcoding"), func() {
 			Preset:     "medium",
 			AudioCodec: "aac",
 		}}
-		args := BuildArgs("/in.mkv", "/out.mkv", info, pol, ActionTranscode)
+		args := BuildArgs("/in.mkv", "/out.mkv", info, pol, ActionTranscode, nil)
 		Expect(args[indexOf(args, "-preset")+1]).To(Equal("medium"))
 	})
 
@@ -133,7 +134,7 @@ var _ = Describe("BuildArgs", Label("unit", "transcoding"), func() {
 				Preset:     "medium",
 				AudioCodec: "aac",
 			}}
-			args := BuildArgs("/in.mkv", "/out.mkv", info, pol, ActionTranscode)
+			args := BuildArgs("/in.mkv", "/out.mkv", info, pol, ActionTranscode, nil)
 			idx := -1
 			for i, a := range args {
 				if a == "-c:v" {
@@ -148,6 +149,64 @@ var _ = Describe("BuildArgs", Label("unit", "transcoding"), func() {
 		Entry("av1", "av1", "libsvtav1"),
 	)
 
+	Describe("hardware encoding", func() {
+		vaapi := &HW{
+			Backend:  "vaapi",
+			Device:   "/dev/dri/renderD128",
+			Encoders: map[string]string{"hevc": "hevc_vaapi"},
+		}
+		pol := config.TranscodePolicy{To: config.TranscodeTo{
+			Container:  "mkv",
+			VideoCodec: "hevc",
+			CRF:        22,
+			Preset:     "medium",
+			AudioCodec: "aac",
+		}}
+		info := &ffmpeg.Info{AudioCodecs: []string{"aac"}}
+
+		It("builds the golden VAAPI invocation", func() {
+			args := BuildArgs(
+				"/in.mkv",
+				"/out.mkv",
+				info,
+				pol,
+				ActionTranscode,
+				vaapi,
+			)
+			Expect(args).To(Equal([]string{
+				"-hide_banner", "-nostats", "-progress", "pipe:1", "-y",
+				"-vaapi_device", "/dev/dri/renderD128",
+				"-i", "/in.mkv", "-map", "0",
+				"-vf", "format=nv12,hwupload", "-c:v", "hevc_vaapi",
+				"-rc_mode", "CQP", "-qp", "22", "-compression_level", "4",
+				"-c:a:0", "aac",
+				"-c:s", "copy", "-c:t", "copy",
+				"/out.mkv",
+			}))
+		})
+
+		It("falls back to software when the backend lacks the codec", func() {
+			av1 := pol
+			av1.To.VideoCodec = "av1"
+			args := BuildArgs(
+				"/in.mkv",
+				"/out.mkv",
+				info,
+				av1,
+				ActionTranscode,
+				vaapi,
+			)
+			Expect(args).To(ContainElements("-c:v", "libsvtav1"))
+			Expect(args).NotTo(ContainElement("-vaapi_device"))
+		})
+
+		It("never touches a remux", func() {
+			args := BuildArgs("/in.mp4", "/out.mkv", info, pol, ActionRemux, vaapi)
+			Expect(args).NotTo(ContainElement("-vaapi_device"))
+			Expect(args).To(ContainElements("-c", "copy"))
+		})
+	})
+
 	It("passes through an audio codec on the policy's explicit list", func() {
 		info := &ffmpeg.Info{AudioCodecs: []string{"ac3"}}
 		pol := config.TranscodePolicy{To: config.TranscodeTo{
@@ -158,7 +217,7 @@ var _ = Describe("BuildArgs", Label("unit", "transcoding"), func() {
 			AudioCodec:       "aac",
 			AudioPassthrough: []string{"ac3"},
 		}}
-		args := BuildArgs("/in.mkv", "/out.mkv", info, pol, ActionTranscode)
+		args := BuildArgs("/in.mkv", "/out.mkv", info, pol, ActionTranscode, nil)
 		Expect(args).To(ContainElement("-c:a:0"))
 		i := indexOf(args, "-c:a:0")
 		Expect(args[i+1]).To(Equal("copy"))

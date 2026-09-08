@@ -106,6 +106,11 @@ type Worker struct {
 	cancels  map[uint32]context.CancelFunc
 	running  int
 
+	// hwMu is its own lock because the probe runs ffmpeg for up to
+	// hwProbeTimeout and nothing under mu may wait that long.
+	hwMu sync.Mutex
+	hw   hwProbe
+
 	// scanning guards Scan against a second retroactive-library scan running
 	// concurrently with the first.
 	scanning atomic.Bool
@@ -340,7 +345,7 @@ func (w *Worker) runJob(ctx context.Context, c *claimed) {
 	}()
 
 	started := time.Now()
-	args := BuildArgs(mf.Path, outPath, info, *pol, action)
+	args := BuildArgs(mf.Path, outPath, info, *pol, action, w.hardware(jctx))
 	_, err = run(
 		jctx,
 		w.prober.FFmpegPath(),
