@@ -111,6 +111,35 @@ Open <http://localhost:8080>.
 
 Pin to `vX.Y.Z` or at least `X.Y` for anything you care about.
 
+### Hardware encoding (VAAPI)
+
+The [transcoder](Quality-Profiles-and-Custom-Formats#transcoding-a-profiles-files) can encode on an Intel or AMD GPU through VAAPI instead of the CPU. **The default image cannot do this**: its `ffmpeg` is a static build with no libva, and passing a GPU into it changes nothing. Every release also publishes a second image with a `-vaapi` tag suffix, built on Debian with Debian's ffmpeg and the Mesa and Intel VAAPI drivers. It is not distroless, and it is the image to run if you want hardware encoding in a container.
+
+The container needs the render node and the host group that owns it:
+
+```bash
+docker run ... \
+  --device /dev/dri/renderD128 \
+  --group-add "$(stat -c %g /dev/dri/renderD128)" \
+  ghcr.io/datahearth/streamline:vX.Y.Z-vaapi
+```
+
+Or in `compose.yaml`:
+
+```yaml
+services:
+  streamline:
+    image: ghcr.io/datahearth/streamline:vX.Y.Z-vaapi
+    devices:
+      - /dev/dri/renderD128:/dev/dri/renderD128
+    group_add:
+      - "989"   # the gid of /dev/dri/renderD128 on the host: stat -c %g /dev/dri/renderD128
+```
+
+With the Helm chart, set `hwAccel.enabled: true` and pick the `-vaapi` image tag. The chart requests the GPU through a device plugin rather than a hostPath or a privileged pod, so the cluster needs one installed: `hwAccel.resourceName` defaults to `gpu.intel.com/i915` and is `amd.com/gpu` for AMD's plugin. `hwAccel.device` is the node inside the pod (default `/dev/dri/renderD128`), and `hwAccel.supplementalGroups` is the list of `video`/`render` gids to grant, which depends on the host distribution.
+
+Then set `transcoding.hw_accel` (default `auto`, so usually nothing to do) and `transcoding.hw_device` if your node is not `renderD128`. Settings → Transcoding reports whether the device answered. A bare-metal install needs no image at all: any ffmpeg with VAAPI on `$PATH` or in `ffmpeg.path` will do. See [Configuration Reference](Configuration-Reference#transcoding) for the two keys.
+
 ---
 
 ## Plain binary

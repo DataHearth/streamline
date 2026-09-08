@@ -138,7 +138,7 @@ Some config is hot — changed through the UI or API, applied immediately, persi
 | `download.selective_files`, `download.selection_grace` | ✅ | Settings → Library |
 | `ffmpeg.enabled` | ✅ | Settings → Media probe |
 | `ffmpeg.path` | ⚠️ Accepted immediately, but only picked up by the process's prober on the next restart | Settings → Media probe |
-| `transcoding.{enabled,max_concurrent,max_failures,verify.*}` | ✅ Read on every worker tick — no restart | Settings → Transcoding |
+| `transcoding.{enabled,max_concurrent,max_failures,hw_accel,hw_device,verify.*}` | ✅ Read on every worker tick — no restart | Settings → Transcoding |
 | `quality_profiles[].transcode` | ⚠️ API and YAML only — the profile form does not edit it | — |
 | `events.retention` | ✅ Applies on the next cleanup run | Settings → General |
 | `metadata.*` | ⚠️ Accepted immediately, but the TMDB and TVDB clients are built at boot — restart required | Settings → Metadata |
@@ -316,6 +316,8 @@ Background re-encoding of imported media. The *rules* live on each quality profi
 | `transcoding.enabled` | bool | `false` | Master switch. While off nothing is claimed and every `/api/v1/transcoding/*` endpoint answers `409`. **Runtime-editable** |
 | `transcoding.max_concurrent` | int | `1` | 1–8. How many encodes run at once. **Runtime-editable** |
 | `transcoding.max_failures` | int | `3` | 1–10. Attempts a job gets before it parks as `failed`. A retry from the queue resets the counter. **Runtime-editable** |
+| `transcoding.hw_accel` | string | `auto` | `auto`, `none` or `vaapi`. `auto` probes `hw_device` once and uses VAAPI when the probe passes and the policy's `to.video_codec` has a VAAPI encoder, software otherwise, decided per job; `none` forces software; `vaapi` names the Linux backend explicitly (today it behaves as `auto`). Needs an ffmpeg built with libva: the default image has none, see [Hardware encoding](Installation#hardware-encoding-vaapi). Changing it re-probes on the next job. **Runtime-editable** |
+| `transcoding.hw_device` | string | `/dev/dri/renderD128` | The render node VAAPI opens. Must be passed into a container and be writable by the process (the host's `render` group). Changing it re-probes on the next job. **Runtime-editable** |
 | `transcoding.verify.max_size_percent` | int | `100` | 0–200. Reject a transcode whose output exceeds this share of the source size. Remuxes are exempt. `0` disables. **Runtime-editable** |
 | `transcoding.verify.min_size_percent` | int | `5` | 0–100. Reject any output under this share of the source — a dropped stream or a truncated encode. `0` disables. Must stay below `max_size_percent`. **Runtime-editable** |
 | `transcoding.verify.health_check` | bool | `false` | Fully decode the output before the swap. One extra decode pass per job. **Runtime-editable** |
@@ -323,7 +325,7 @@ Background re-encoding of imported media. The *rules* live on each quality profi
 
 A rejected encode lands on the queue as `rejected` with both sizes and the check that condemned it, and the original file is untouched. It is never retried on its own — the same encode gives the same file — and the scan skips it; **Retry** on the Transcoding page asks again after the band or the policy has changed.
 
-None of these keys is read at boot, so a change needs no restart: `enabled` and `max_concurrent` are read at every worker tick, and `max_failures` when a job fails. Turning `enabled` off does not interrupt an encode already running; it stops the next one from starting.
+None of these keys is read at boot, so a change needs no restart: `enabled` and `max_concurrent` are read at every worker tick, and `max_failures` when a job fails. Turning `enabled` off does not interrupt an encode already running; it stops the next one from starting. `hw_accel` and `hw_device` are probed the first time a job needs them and the result is kept until either key changes, so a fixed device passthrough takes effect on the next job with no restart. The view reports `hw_status` (`off`, `ready` or `unavailable`) and, when unavailable, `hw_reason` with the probe's error.
 
 The worker needs `ffmpeg` itself, not just `ffprobe`. With `ffmpeg.enabled: false`, or with the binary missing, the worker stays idle and **Scan library** refuses with a `409` rather than queueing rows nothing would ever drain. The official Docker image ships both binaries.
 

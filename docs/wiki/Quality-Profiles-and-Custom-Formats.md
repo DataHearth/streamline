@@ -275,7 +275,9 @@ quality_profiles:
 
 Failed jobs retry up to `transcoding.max_failures` times and then park in the queue with ffmpeg's own error, for you to look at. Nothing is deleted on failure — the original file is still there.
 
-**Not supported:** hardware encoders (everything runs on the CPU), a Dolby-Vision-preserving re-encode, and editing `transcode` from the profile form in the UI — this block is YAML and API only. There is also no way to *remove* a policy over the API: omitting the field on an update keeps the stored one, so clearing it is a config-file edit.
+**Hardware encoding.** On Linux the encode can run on an Intel or AMD GPU through VAAPI: `transcoding.hw_accel` (default `auto`) probes `transcoding.hw_device` once and uses it whenever the policy's `to.video_codec` has a VAAPI encoder, falling back to the CPU for that job otherwise. `crf` is handed to the GPU as a constant QP and `preset` maps onto its compression level, so a policy needs no rewriting to move between the two. Hardware encoders are fast but routinely produce a larger file than x265 at the same quality, which is what the `transcoding.verify` size band and VMAF check are for. It needs an ffmpeg built with VAAPI, and the default Docker image does not have one: see [Hardware encoding](Installation#hardware-encoding-vaapi) for the `-vaapi` image and the device passthrough, and [Configuration Reference](Configuration-Reference#transcoding) for the two keys.
+
+**Not supported:** VideoToolbox on macOS and NVENC/QSV/AMF (VAAPI is the only hardware backend), a Dolby-Vision-preserving re-encode, and editing `transcode` from the profile form in the UI — this block is YAML and API only. There is also no way to *remove* a policy over the API: omitting the field on an update keeps the stored one, so clearing it is a config-file edit.
 
 ---
 
