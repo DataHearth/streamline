@@ -115,8 +115,14 @@ RUN mkdir -p /out/data
 # distroless one: a plain `docker build` must still produce the hardened image.
 FROM debian:bookworm-slim@sha256:88200866dfff7ea7f5cbcb6ec7c8a701889efe6fe859fe64d6990e4b07ea4171 AS vaapi
 
+# The digest pin holds the base layer steady; it does not hold back security
+# updates. Debian rebuilds the image days after publishing one, so a package
+# already in the base (libpcre2, zlib, …) stays vulnerable through an install
+# that never names it — apt leaves a satisfied dependency alone. Grype fails the
+# build on exactly that, so the upgrade runs before anything is added.
 RUN sed -i 's/^Components: main$/Components: main non-free/' /etc/apt/sources.list.d/debian.sources && \
     apt-get update && \
+    apt-get upgrade -y --no-install-recommends && \
     apt-get install -y --no-install-recommends \
       ca-certificates \
       tzdata \
