@@ -209,7 +209,12 @@ func (i *indexer) SearchMovie(
 		return nil, nil
 	}
 
-	results := i.searchAll(ctx, span, titles, SearchParams{TMDBID: tmdbID})
+	results := i.searchAll(
+		ctx,
+		span,
+		titles,
+		SearchParams{Kind: KindMovie, TMDBID: tmdbID},
+	)
 	// Same keyword-search noise the TV scopes filter: an indexer ignoring the
 	// tmdbid answers with every film it holds, and a profile cannot tell one
 	// film from another.
@@ -258,7 +263,7 @@ func (i *indexer) SearchSeason(
 		ctx,
 		span,
 		titles,
-		SearchParams{TVDBID: tvdbID, Season: season},
+		SearchParams{Kind: KindTV, TVDBID: tvdbID, Season: season},
 	)
 	filtered := preferTitleMatches(filterToSeason(results, season), titles)
 	span.SetAttributes(
@@ -274,6 +279,44 @@ func (i *indexer) SearchSeason(
 // everything through the first closing bracket goes. Same shape as
 // rss.fansubTagRe, which normalizes the same names for the feed scanner.
 var fansubTagRe = regexp.MustCompile(`^\[?[^\]]*\]\s*`)
+
+// filterProviderIDs drops releases whose own provider id contradicts the
+// search, and is the one filter here that does not guess.
+//
+// A tracker that publishes a tvdbid/tmdbid alongside a release states outright
+// what the release is for — Prowlarr re-emits it on ReleaseResource and the
+// Torznab path reads the same attrs. That settles what the title heuristics
+// cannot: a show held under a translated title matches none of its English
+// releases, and releases naming another show entirely share the numbers this
+// package's scope filters match on. So an id that disagrees is dropped
+// outright, ahead of preferTitleMatches, which keeps its prefer-don't-require
+// job for everything unlabelled.
+//
+// A zero id is the tracker saying nothing, never "no match" — most releases on
+// most trackers carry none, and reading zero as a mismatch would empty the
+// result set. Only ids the search itself asked about are compared: a TV search
+// carries no TMDB id, and a series' TMDB id on a release says nothing about
+// the TVDB id we hold.
+//
+// The trust this places in a tracker's metadata is the same trust an id-keyed
+// search would place in it, so a mis-tagged upload is filtered out. That is
+// the intended reading of a wrong id, not a regression.
+func filterProviderIDs(results []SearchResult, base SearchParams) []SearchResult {
+	if base.TMDBID == 0 && base.TVDBID == 0 {
+		return results
+	}
+	out := make([]SearchResult, 0, len(results))
+	for _, r := range results {
+		if base.TVDBID > 0 && r.TVDBID > 0 && r.TVDBID != base.TVDBID {
+			continue
+		}
+		if base.TMDBID > 0 && r.TMDBID > 0 && r.TMDBID != base.TMDBID {
+			continue
+		}
+		out = append(out, r)
+	}
+	return out
+}
 
 // preferTitleMatches returns only the results whose parsed title names this
 // show, and every result when none does.
@@ -370,7 +413,12 @@ func (i *indexer) SearchSeries(
 		return nil, nil
 	}
 
-	results := i.searchAll(ctx, span, titles, SearchParams{TVDBID: tvdbID})
+	results := i.searchAll(
+		ctx,
+		span,
+		titles,
+		SearchParams{Kind: KindTV, TVDBID: tvdbID},
+	)
 	filtered := make([]SearchResult, 0, len(results))
 	for _, r := range results {
 		// A tvsearch with no season is a plain series query, so single episodes
@@ -424,7 +472,12 @@ func (i *indexer) SearchEpisode(
 	// back is a keyword search over the whole series.
 	results := i.searchAll(
 		ctx, span, titles,
-		SearchParams{TVDBID: tvdbID, Season: season, Episode: episode},
+		SearchParams{
+			Kind:    KindTV,
+			TVDBID:  tvdbID,
+			Season:  season,
+			Episode: episode,
+		},
 	)
 	filtered, hiddenPacks := filterToEpisode(results, season, episode)
 	filtered = preferTitleMatches(filtered, titles)
@@ -536,20 +589,28 @@ func (i *indexer) searchAll(
 					childSpan.End()
 					continue
 				}
-				// Most private trackers behind Prowlarr don't index by
-				// TMDB/TVDB ID and silently return 0 when the id is set.
-				// Retry once without it so keyword search runs against the
-				// title only (season/episode are preserved).
-				if len(res) == 0 && (base.TMDBID > 0 || base.TVDBID > 0) {
+				// Most private trackers don't index by TMDB/TVDB ID and
+				// silently return 0 when one is set. Retry once on the bare
+				// title, keeping only the media kind so the category root —
+				// and with it Prowlarr's own indexer filtering — still
+				// applies.
+				//
+				// Season and episode are dropped too, not preserved. They
+				// used to be, harmlessly, because nothing forwarded them to
+				// Prowlarr; now that they narrow at the tracker, keeping them
+				// would make the retry re-issue the query that just came back
+				// empty. This is also the path that saves absolute-numbered
+				// anime, where the show genuinely has no SxxExx release and
+				// the title alone is the only query that can match.
+				if len(res) == 0 && base.narrowed() {
 					slog.DebugContext(queryCtx,
-						"indexer search empty with id, retrying without",
+						"indexer search empty, retrying on the bare title",
 						"indexer", idx.Name,
 						"title", title,
 					)
 					retry, retryErr := client.Search(queryCtx, SearchParams{
-						Query:   title,
-						Season:  base.Season,
-						Episode: base.Episode,
+						Query: title,
+						Kind:  base.Kind,
 					})
 					if retryErr == nil {
 						res = retry
@@ -584,7 +645,12 @@ func (i *indexer) searchAll(
 
 	wg.Wait()
 
-	results = dedupResults(results)
+	// Before the dedup and, more to the point, before the truncation below:
+	// a release for the wrong title must not spend one of the 200 slots the
+	// merged set is capped at.
+	kept := filterProviderIDs(results, base)
+	span.SetAttributes(attribute.Int("results.id_mismatch", len(results)-len(kept)))
+	results = dedupResults(kept)
 
 	sort.Slice(results, func(i, j int) bool {
 		return results[i].Seeders > results[j].Seeders

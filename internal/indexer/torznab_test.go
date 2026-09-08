@@ -160,6 +160,43 @@ var _ = Describe("Torznab Client", Label("unit", "indexers"), func() {
 					results[0].Download,
 				).To(Equal("https://example.com/download/123"))
 			})
+
+			It("decodes the provider ids under either spelling", func() {
+				// Both are in the wild; Prowlarr's own parser accepts the same
+				// pair. An absent attr leaves the field zero, which reads as
+				// "the tracker said nothing" rather than as a mismatch.
+				client := newTorznabServer(
+					func(w http.ResponseWriter, _ *http.Request) {
+						_, err := w.Write(torznabXML([]testRSSItem{
+							{
+								Title: "Breaking Bad S02E03",
+								ExtraXML: torznabAttrs(map[string]string{
+									"tvdbid": "81189",
+									"tmdb":   "1396",
+								}),
+							},
+							{
+								Title: "Untagged",
+								ExtraXML: torznabAttrs(
+									map[string]string{"seeders": "1"},
+								),
+							},
+						}))
+						Expect(err).NotTo(HaveOccurred())
+					},
+				)
+
+				results, err := client.Search(
+					context.Background(),
+					SearchParams{Query: "Breaking Bad"},
+				)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(results).To(HaveLen(2))
+				Expect(results[0].TVDBID).To(Equal(uint32(81189)))
+				Expect(results[0].TMDBID).To(Equal(uint32(1396)))
+				Expect(results[1].TVDBID).To(BeZero())
+				Expect(results[1].TMDBID).To(BeZero())
+			})
 		})
 
 		When("the feed has no items", func() {

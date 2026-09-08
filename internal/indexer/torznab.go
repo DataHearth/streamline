@@ -146,6 +146,19 @@ func parseItems(items []torznabItem) []SearchResult {
 				}
 			case "category":
 				r.Category = attr.Value
+			// The tracker's own provider ids, when it publishes them. Both
+			// spellings are accepted because both are in the wild; Prowlarr
+			// reads the same pair (NewznabRssParser.GetIntAttribute). An
+			// absent attr leaves the field zero, which filterProviderIDs
+			// reads as "the tracker said nothing".
+			case "tvdbid", "tvdb":
+				if v, err := strconv.ParseUint(attr.Value, 10, 32); err == nil {
+					r.TVDBID = uint32(v)
+				}
+			case "tmdbid", "tmdb":
+				if v, err := strconv.ParseUint(attr.Value, 10, 32); err == nil {
+					r.TMDBID = uint32(v)
+				}
 			}
 		}
 		results = append(results, r)

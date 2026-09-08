@@ -252,6 +252,67 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 		})
 	})
 
+	Describe("filterProviderIDs", func() {
+		It("drops a release the tracker labelled as another show", func() {
+			// The one filter here that does not guess: the tracker said what
+			// the release is for, so a disagreement settles it outright —
+			// where preferTitleMatches can only prefer.
+			in := []SearchResult{
+				{Title: "right show", TVDBID: 81189},
+				{Title: "wrong show", TVDBID: 99999},
+				{Title: "unlabelled"},
+			}
+			out := filterProviderIDs(in, SearchParams{
+				Kind:   KindTV,
+				TVDBID: 81189,
+			})
+			titles := make([]string, len(out))
+			for i, r := range out {
+				titles[i] = r.Title
+			}
+			Expect(titles).To(ConsistOf("right show", "unlabelled"))
+		})
+
+		It("reads a zero id as unsaid, not as a mismatch", func() {
+			// Most releases on most trackers carry none; reading zero as a
+			// mismatch empties the result set.
+			in := []SearchResult{{Title: "a"}, {Title: "b"}}
+			Expect(filterProviderIDs(in, SearchParams{
+				Kind:   KindMovie,
+				TMDBID: 438631,
+			})).To(HaveLen(2))
+		})
+
+		It("compares only the id the search itself asked about", func() {
+			// A series' TMDB id on a release says nothing about the TVDB id
+			// the library holds, so a TV search must not read it as a verdict.
+			in := []SearchResult{{Title: "a", TMDBID: 1396, TVDBID: 81189}}
+			Expect(filterProviderIDs(in, SearchParams{
+				Kind:   KindTV,
+				TVDBID: 81189,
+			})).To(HaveLen(1))
+		})
+
+		It("leaves an unscoped search untouched", func() {
+			in := []SearchResult{{Title: "a", TVDBID: 99999}}
+			Expect(filterProviderIDs(in, SearchParams{Query: "a"})).To(HaveLen(1))
+		})
+	})
+
+	Describe("SearchParams.narrowed", func() {
+		It("reports whether the query carried more than a bare title", func() {
+			// What gates the empty-result retry: a query that named nothing
+			// else has no narrower form to fall back from.
+			Expect(SearchParams{Query: "x"}.narrowed()).To(BeFalse())
+			Expect(SearchParams{Query: "x", Kind: KindTV}.narrowed()).To(BeFalse())
+			Expect(SearchParams{TMDBID: 1}.narrowed()).To(BeTrue())
+			Expect(SearchParams{TVDBID: 1}.narrowed()).To(BeTrue())
+			// Season and episode count now that they narrow at the tracker.
+			Expect(SearchParams{Season: 1}.narrowed()).To(BeTrue())
+			Expect(SearchParams{Episode: 1}.narrowed()).To(BeTrue())
+		})
+	})
+
 	Describe("preferTitleMatches", func() {
 		It(
 			"keeps this show's releases when another show shares the numbers",

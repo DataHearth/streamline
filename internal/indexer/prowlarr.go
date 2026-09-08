@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/datahearth/streamline/internal/otelx"
 )
@@ -38,6 +39,14 @@ type prowlarrRelease struct {
 	Indexer     string `json:"indexer"`
 	Protocol    string `json:"protocol"` // "torrent" | "usenet"
 	PublishDate string `json:"publishDate"`
+
+	// Provider ids the tracker published on the release, parsed by Prowlarr
+	// out of the torznab attrs and re-emitted here. Absent decodes to 0, which
+	// is "the tracker said nothing". ReleaseResource also carries imdbId and
+	// tvMazeId; neither is decoded because nothing in the library has a
+	// counterpart to compare them against.
+	TMDBID uint32 `json:"tmdbId"`
+	TVDBID uint32 `json:"tvdbId"`
 }
 
 // newznab category roots used to keep movie searches from returning TV (and
@@ -47,23 +56,93 @@ const (
 	catTV     = "5000"
 )
 
+func newznabCategory(kind MediaKind) string {
+	switch kind {
+	case KindMovie:
+		return catMovies
+	case KindTV:
+		return catTV
+	default:
+		return ""
+	}
+}
+
+// prowlarrSearchType picks the `type` param. It is not cosmetic: Prowlarr
+// parses the {key:value} tokens out of the query string only under `tvsearch`
+// or `movie` (NewznabRequest.QueryToParams), so a `search` type silently
+// discards everything prowlarrQuery writes. The two must agree.
+func prowlarrSearchType(kind MediaKind) string {
+	switch kind {
+	case KindMovie:
+		return "movie"
+	case KindTV:
+		return "tvsearch"
+	default:
+		return "search"
+	}
+}
+
+// prowlarrQuery renders the search term plus the {key:value} tokens Prowlarr
+// parses back out of it. GET /api/v1/search takes only query/type/indexerIds/
+// categories/limit/offset — there is no season or episode param — so the query
+// string is the only channel there is. Prowlarr strips each matched token
+// before handing the remainder to the trackers as the search term.
+//
+// Season and episode only. The id tokens are deliberately not sent: Prowlarr
+// drops an indexer from the fan-out *entirely* when handed an id its caps
+// don't declare (HttpIndexerBase.Fetch returns an empty result rather than
+// falling back to a keyword search), so a tracker that simply doesn't index by
+// tvdbid would contribute nothing instead of contributing what it has. The
+// ids come back on the results instead, which filterProviderIDs uses and which
+// costs no coverage. Season and episode are absent from that guard, so they
+// narrow without ever excluding an indexer.
+func prowlarrQuery(params SearchParams) string {
+	q := strings.TrimSpace(params.Query)
+	if params.Kind != KindTV {
+		return q
+	}
+	var b strings.Builder
+	b.WriteString(q)
+	// Appended with no separator: Prowlarr removes the token text and trims,
+	// so the term the trackers see is exactly the title either way — but a
+	// season 0 token would name the specials, and every caller here treats a
+	// zero season as "no season was named".
+	//
+	// The episode hangs off the season rather than standing alone. Prowlarr
+	// renders the pair as one SxxEyy search string and yields nothing at all
+	// for a season it was not given (TvSearchCriteria.GetEpisodeSearchString),
+	// so a lone episode token narrows the tracker to "episode 3" of no
+	// particular season.
+	if params.Season > 0 {
+		fmt.Fprintf(&b, "{season:%d}", params.Season)
+		if params.Episode > 0 {
+			fmt.Fprintf(&b, "{episode:%d}", params.Episode)
+		}
+	}
+	return b.String()
+}
+
 func (p *Prowlarr) Search(
 	ctx context.Context,
 	params SearchParams,
 ) ([]SearchResult, error) {
 	q := url.Values{
-		"query": {params.Query},
-		"type":  {"search"},
+		"query": {prowlarrQuery(params)},
+		"type":  {prowlarrSearchType(params.Kind)},
 		"limit": {"100"},
 		// indexerIds=-2 restricts the fan-out to torrent indexers only —
 		// streamline can't grab usenet, so skip those trackers entirely.
 		"indexerIds": {"-2"},
 	}
-	switch {
-	case params.TVDBID > 0 || params.Season > 0:
-		q.Set("categories", catTV)
-	case params.TMDBID > 0:
-		q.Set("categories", catMovies)
+	// Keyed off the search's own scope, never off whichever id happens to be
+	// set: the id-less retry drops the ids by design, and deriving the
+	// category from them sent no `categories` at all on that pass — a keyword
+	// search over every indexer and every category. Prowlarr drops indexers
+	// whose caps don't cover the root from the fan-out entirely
+	// (ReleaseSearchService.Dispatch) and expands it into each tracker's own
+	// children, so the root is the useful granularity.
+	if cat := newznabCategory(params.Kind); cat != "" {
+		q.Set("categories", cat)
 	}
 
 	var releases []prowlarrRelease
@@ -113,6 +192,8 @@ func mapProwlarrReleases(releases []prowlarrRelease) []SearchResult {
 			// The meaningful indexer is the sub-tracker Prowlarr fanned out to,
 			// not the Prowlarr entry; searchAll preserves a non-empty value.
 			Indexer: r.Indexer,
+			TMDBID:  r.TMDBID,
+			TVDBID:  r.TVDBID,
 		})
 	}
 	return results
