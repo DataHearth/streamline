@@ -57,6 +57,11 @@ owner = "datahearth"
 repo = "streamline"
 
 [git]
+# Only app tags are releases here. The chart versions independently on chart-v*
+# tags (.taskfiles/release.yaml), and without this git-cliff reads those as app
+# releases: the changelog grew a "[chart-v2.1.0]" section, and every app release
+# cut after a chart tag covered only the commits since that chart tag.
+tag_pattern = "^v[0-9]+\\.[0-9]+\\.[0-9]+"
 # Parse commits according to the conventional commits specification.
 # See https://www.conventionalcommits.org
 conventional_commits = true
@@ -69,6 +74,9 @@ filter_unconventional = false
 # place release content is filtered — GitHub release bodies are the rendered
 # CHANGELOG.md section (see .github/workflows/release.yaml).
 commit_parsers = [
+    # filter_unconventional = false sends anything unmatched to Changed, and an
+    # empty commit message renders there as a bare "- ".
+    { message = "^\\s*$", skip = true },
     { message = "^feat", group = "Added" },
     { message = "^fix", group = "Fixed" },
     { message = "^revert", group = "Removed" },

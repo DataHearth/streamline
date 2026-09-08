@@ -3,6 +3,14 @@ version: 2
 
 project_name: streamline
 
+# The helm chart versions independently on chart-v* tags (.taskfiles/release.yaml).
+# GoReleaser reads the latest tag as the release it is cutting, and "chart-v2.1.0"
+# is not a semver it can parse — so any run that is not exactly on a v* tag
+# (a snapshot, a local build) picks the chart tag and fails or mis-versions.
+git:
+  ignore_tags:
+    - "chart-v*"
+
 before:
   hooks:
     - pnpm install --frozen-lockfile
