@@ -88,6 +88,28 @@ resources:
   limits:
     cpu: 500m
     memory: 512Mi
+
+# GPU transcoding through VAAPI. Does NOTHING unless image.tag is the `-vaapi`
+# variant (e.g. `1.2.0-vaapi`): the default image's ffmpeg is static with no
+# libva, so it cannot open a render node however the pod is granted one.
+# `transcoding.hw_accel` in config decides whether the worker uses it (default
+# auto). No hostPath, no privileged: the render node reaches the pod through a
+# GPU device plugin's extended resource, and access to it through the groups
+# below.
+hwAccel:
+  enabled: false
+  # Render node inside the pod, passed as STREAMLINE_TRANSCODING__HW_DEVICE.
+  device: /dev/dri/renderD128
+  # The extended resource the node's GPU device plugin advertises. Requested
+  # AND limited at 1 (Kubernetes demands the two match for extended resources),
+  # merged over `resources` above. `gpu.intel.com/i915` is Intel's plugin;
+  # AMD's is `amd.com/gpu`.
+  resourceName: gpu.intel.com/i915
+  # Added to podSecurityContext.supplementalGroups so uid 1000 can open the
+  # node the plugin mounts as root:render 0660. HOST-DEPENDENT: 44 (video) and
+  # 109 (render) are Debian/Ubuntu's; check `stat -c %g /dev/dri/renderD128`
+  # on the GPU node and replace them.
+  supplementalGroups: [44, 109]
 nodeSelector: {}
 tolerations: []
 affinity: {}

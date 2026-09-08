@@ -24,6 +24,11 @@ services:
     build:
       context: ..
       dockerfile: deploy/Dockerfile
+      # VAAPI transcoding needs the glibc variant plus the render node and its
+      # group; the gid is `stat -c %g /dev/dri/renderD128` on the host.
+      # target: vaapi
+    # devices: ["/dev/dri:/dev/dri"]
+    # group_add: ["<render gid>"]
     container_name: streamline
     restart: unless-stopped
     user: "1000:100"

@@ -35,7 +35,11 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.podSecurityContext }}
+      {{- $podSecurityContext := deepCopy (.Values.podSecurityContext | default dict) }}
+      {{- if .Values.hwAccel.enabled }}
+      {{- $_ := set $podSecurityContext "supplementalGroups" (concat ($podSecurityContext.supplementalGroups | default list) .Values.hwAccel.supplementalGroups | uniq) }}
+      {{- end }}
+      {{- with $podSecurityContext }}
       securityContext:
         {{- toYaml . | nindent 8 }}
       {{- end }}
@@ -56,6 +60,10 @@ spec:
             {{- if .Values.observability.enabled }}
             - name: OTEL_EXPORTER_OTLP_INSECURE
               value: "true"
+            {{- end }}
+            {{- if .Values.hwAccel.enabled }}
+            - name: STREAMLINE_TRANSCODING__HW_DEVICE
+              value: {{ .Values.hwAccel.device | quote }}
             {{- end }}
             {{- with .Values.extraEnv }}
             {{- toYaml . | nindent 12 }}
@@ -78,7 +86,15 @@ spec:
             initialDelaySeconds: 2
             periodSeconds: 5
           resources:
+            {{- if .Values.hwAccel.enabled }}
+            {{- /* Two separate dicts on purpose: merge mutates its first
+                   argument, so one shared dict would carry the limits' cpu and
+                   memory into requests. */}}
+            {{- $gpu := dict "limits" (dict .Values.hwAccel.resourceName 1) "requests" (dict .Values.hwAccel.resourceName 1) }}
+            {{- toYaml (merge $gpu (.Values.resources | default dict)) | nindent 12 }}
+            {{- else }}
             {{- toYaml .Values.resources | nindent 12 }}
+            {{- end }}
           volumeMounts:
             - name: config
               mountPath: /etc/streamline

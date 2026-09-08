@@ -100,6 +100,44 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 # copy it over with the right ownership.
 RUN mkdir -p /out/data
 
+# --- Runtime, VAAPI variant (`--target vaapi`, published as `<tag>-vaapi`) ---
+# The default image below cannot hardware-encode: static-ffmpeg is built without
+# libva (`-vaapi_device` is an unrecognized option in it), and even with it the
+# VAAPI drivers are shared objects libva dlopen()s from a glibc install. So this
+# stage is Debian's own ffmpeg plus the Mesa (AMD) and Intel drivers, and it
+# does NOT copy the static ffmpeg in. The Intel driver only exists for amd64;
+# arm64 gets Mesa alone rather than a failed apt run.
+#
+# The render node is root:render 0660 on most hosts. Nothing in the image can
+# grant that group: pass it at run time with `--group-add <render gid>` (compose
+# `group_add`, the chart's hwAccel.supplementalGroups), gid from
+# `stat -c %g /dev/dri/renderD128`. This is why the stage sits ABOVE the
+# distroless one: a plain `docker build` must still produce the hardened image.
+FROM debian:bookworm-slim@sha256:88200866dfff7ea7f5cbcb6ec7c8a701889efe6fe859fe64d6990e4b07ea4171 AS vaapi
+
+RUN sed -i 's/^Components: main$/Components: main non-free/' /etc/apt/sources.list.d/debian.sources && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+      ca-certificates \
+      tzdata \
+      ffmpeg \
+      libva2 \
+      libva-drm2 \
+      mesa-va-drivers \
+      $([ "$(dpkg --print-architecture)" = amd64 ] && echo intel-media-va-driver-non-free) && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /
+
+COPY --from=builder --chown=1000:1000 /out/data /data
+COPY --from=builder /out/streamline /usr/local/bin/streamline
+
+EXPOSE 8080
+VOLUME ["/data"]
+USER 1000:1000
+ENTRYPOINT ["/usr/local/bin/streamline"]
+CMD ["--config", "/etc/streamline/config.yaml"]
+
 # --- Runtime ---
 # distroless static: no shell, no package manager, no libc — nothing an attacker
 # who lands RCE can pivot through. It still carries the only OS files the app
