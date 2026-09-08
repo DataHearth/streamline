@@ -34,7 +34,7 @@ The built-in client is the newest of these and still has a rough edge: a downloa
 
 Selective file download is implemented for all four clients but ships behind `download.selective_files`, off by default until it's run in anger; flip it on to try it today.
 
-Transcoding rewrites files on disk after import, to shrink a library or normalise its containers — it is not playback transcoding, which belongs to the built-in player below. It is off by default (`transcoding.enabled`), runs on the CPU only, and never re-encodes HDR or Dolby Vision.
+Transcoding rewrites files on disk after import, to shrink a library or normalise its containers — it is not playback transcoding, which belongs to the built-in player below. It is off by default (`transcoding.enabled`), runs on the CPU only, and never re-encodes HDR or Dolby Vision. Every encode is verified against its source before it replaces the file — duration, resolution, audio and subtitle tracks, a size band, and optionally a full decode pass and a VMAF score — and one that fails is rejected rather than swapped in. Hardware encoding (VAAPI on Linux, VideoToolbox on macOS) is planned.
 
 ## Playback
 

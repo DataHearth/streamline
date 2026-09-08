@@ -208,7 +208,7 @@ Built-in custom formats are listed alongside user-defined ones (`builtin: true`)
 
 | Method | Path |
 | --- | --- |
-| `GET` | `/transcoding/queue` — newest 200 jobs, no filter |
+| `GET` | `/transcoding/queue` — newest 200 jobs plus every rejected row, no filter |
 | `POST` | `/transcoding/jobs/{id}/cancel` · `/retry` |
 | `POST` | `/transcoding/scan` — queue the existing library |
 
@@ -327,7 +327,7 @@ api -X PATCH -d '{"enabled":false}' "$SL/api/v1/config/ffmpeg"
 
 Background re-encoding of imported files, driven by the `transcode` block on a [quality profile](Quality-Profiles-and-Custom-Formats#transcoding-a-profiles-files). The queue is admin-only, and **every endpoint here answers `409` while `transcoding.enabled` is false** — a feature that is off returns a conflict, not an empty list, so a client can tell the two apart.
 
-**`GET /transcoding/queue`** returns the newest 200 jobs, newest first. There is no `status` filter; filter client-side.
+**`GET /transcoding/queue`** returns the newest 200 jobs, plus every `rejected` row regardless of age, newest first. There is no `status` filter; filter client-side.
 
 ```json
 [
@@ -360,13 +360,13 @@ Background re-encoding of imported files, driven by the `transcode` block on a [
 ]
 ```
 
-`status` is `queued` · `running` · `succeeded` · `failed` · `canceled`. `movie_id`, or `series_id` + `episode_id`, links the row back to the item — exactly one pair is set. `error` carries the tail of ffmpeg's stderr from the last failed attempt.
+`status` is `queued` · `running` · `succeeded` · `failed` · `canceled` · `rejected`. `movie_id`, or `series_id` + `episode_id`, links the row back to the item — exactly one pair is set. `error` carries the tail of ffmpeg's stderr from the last failed attempt. `rejected` means the output failed verification — a verdict on the encode, terminal, with `error` naming the check and its numbers.
 
-**`attempts` counts claims, not failures**, so a `running` row is always at 1 or more — the claim that started it is what incremented it. **`size_before` and `size_after` are written together, only when a job succeeds**, so neither is present on a queued, running, failed or canceled row; the size of a file mid-encode is not in this payload. `finished_at` likewise appears only once the job reaches a terminal status.
+**`attempts` counts claims, not failures**, so a `running` row is always at 1 or more — the claim that started it is what incremented it. **`size_before` and `size_after` are written together, only when a job succeeds or is rejected**, so neither is present on a queued, running, failed or canceled row; the size of a file mid-encode is not in this payload. `finished_at` likewise appears only once the job reaches a terminal status.
 
 **`percent`, `eta_seconds` and `speed` are live and in-memory only.** They come from the encoder running in *this* process, so they are absent for every status but `running` — and absent for a `running` row whose encode belonged to a process that has since restarted (that row is reset to `queued` on the next boot anyway). Don't treat their absence as zero progress.
 
-**`POST /transcoding/jobs/{id}/cancel`** (204) stops a running encode or drops a queued one. A cancel that arrives after the file has already been swapped in is too late — the job completes. **`POST /transcoding/jobs/{id}/retry`** (204) puts a `failed` job back in the queue with `attempts`, `error` and `finished_at` cleared.
+**`POST /transcoding/jobs/{id}/cancel`** (204) stops a running encode or drops a queued one. A cancel that arrives after the file has already been swapped in is too late — the job completes. **`POST /transcoding/jobs/{id}/retry`** (204) puts a `failed` or `rejected` job back in the queue with `attempts`, `error` and `finished_at` cleared.
 
 Both answer `409` for a job in the wrong state, **and there is no `404`**: each is a single conditional update, so an id naming no job at all is indistinguishable from one that has already finished.
 
@@ -378,12 +378,14 @@ Both answer `409` for a job in the wrong state, **and there is no `404`**: each 
 
 ```bash
 api "$SL/api/v1/config/transcoding"
-# {"enabled":false,"max_concurrent":1,"max_failures":3}
+# {"enabled":false,"max_concurrent":1,"max_failures":3,"verify":{"max_size_percent":100,"min_size_percent":5,"health_check":false,"min_vmaf":0}}
 
 api -X PATCH -d '{"enabled":true,"max_concurrent":2}' "$SL/api/v1/config/transcoding"
+
+api -X PATCH -d '{"verify":{"max_size_percent":110,"health_check":true}}' "$SL/api/v1/config/transcoding"
 ```
 
-All three take effect on the next worker tick — no restart. The binaries come from [`/config/ffmpeg`](#media-probe); this section carries no path of its own.
+Every key here, the `verify` block included, takes effect on the next worker tick — no restart. The binaries come from [`/config/ffmpeg`](#media-probe); this section carries no path of its own.
 
 ---
 
