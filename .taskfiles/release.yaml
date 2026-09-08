@@ -1,23 +1,70 @@
 version: "3"
 
+# Everything that cuts a release lives here — the app and the chart both, since
+# they release the same way: edit the file that carries the version, commit it
+# on its own revision, advance main, then tag main and push. Only the edit, the
+# commit message and the tag name differ, so _commit and _tag below are the
+# whole procedure and both flows call them.
+#
+# The two versions stay independent: a values/template fix ships without an app
+# release, and an app release ships without a chart bump. One namespace, two
+# version lines.
+
+vars:
+  CHART: deploy/helm/streamline/Chart.yaml
+
 tasks:
+  _commit:
+    internal: true
+    requires:
+      vars: [MESSAGE, FILE, CMD]
+    # CMD is spliced into the shell: it is the one step that genuinely differs
+    # (git-cliff for the app, a version rewrite for the chart).
+    #
+    # It runs INSIDE the new revision — jj snapshots the working copy on the
+    # next command, which is the bookmark move, so the edit lands on the
+    # revision main ends up pointing at. Both tag tasks read main:<FILE>, so an
+    # edit left in the working copy must not pass.
+    cmd: |
+      if command -v jj >/dev/null 2>&1; then
+        jj new -m "{{.MESSAGE}}"
+        {{.CMD}}
+        jj bookmark set main -r @
+      else
+        {{.CMD}}
+        git add {{.FILE}}
+        git commit -m "{{.MESSAGE}}"
+      fi
+
+  _tag:
+    internal: true
+    requires:
+      vars: [TAG]
+    preconditions:
+      - sh: '! git rev-parse -q --verify refs/tags/{{.TAG}} >/dev/null'
+        msg: "{{.TAG}} already exists{{with .HINT}} — {{.}}{{end}}"
+    cmds:
+      # git, not jj: jj can't create or push tags. The tag push is the trigger —
+      # it fans out to the workflows under .github/workflows/.
+      #
+      # main, not HEAD: jj parks git HEAD on @- while @ is the working-copy
+      # commit, so HEAD is one commit behind the bookmark whenever the working
+      # copy holds anything. Tag the bookmark that is actually being released.
+      - git tag -a {{.TAG}} main -m "{{.TAG}}"
+      - git push origin {{.TAG}}
+
+  # --- App release --------------------------------------------------------
+
   changelog:
     desc: Regenerate CHANGELOG.md through VERSION, commit it, and advance main. Usage - task release:changelog VERSION=v0.1.0
     requires:
       vars: [VERSION]
-    # Commit the changelog on its own revision — release:tag reads main:CHANGELOG.md,
-    # so the section must be committed and on the bookmark/branch. jj if present
-    # (advance main to the new revision), plain git commit otherwise.
-    cmd: |
-      if command -v jj >/dev/null 2>&1; then
-        jj new -m "docs(changelog): {{.VERSION}}"
-        git-cliff --tag {{.VERSION}} -o CHANGELOG.md
-        jj bookmark set main -r @
-      else
-        git-cliff --tag {{.VERSION}} -o CHANGELOG.md
-        git add CHANGELOG.md
-        git commit -m "docs(changelog): {{.VERSION}}"
-      fi
+    cmds:
+      - task: _commit
+        vars:
+          MESSAGE: 'docs(changelog): {{.VERSION}}'
+          FILE: CHANGELOG.md
+          CMD: 'git-cliff --tag {{.VERSION}} -o CHANGELOG.md'
 
   tag:
     desc: Cut an app release — tag main v*.*.* and push it, triggering changelog, gh release and OCI image. Usage - task release:tag VERSION=v0.1.0
@@ -30,19 +77,61 @@ tasks:
       # Read the tag target, not the working copy: CHANGELOG.md is only in the
       # release once it is committed, and an uncommitted one must not pass.
       - sh: 'V="{{.VERSION}}"; git show main:CHANGELOG.md 2>/dev/null | grep -q "^## \[${V#v}\]"'
-        msg: "main has no CHANGELOG.md section for {{.VERSION}} — run: task release:changelog VERSION={{.VERSION}}, then commit it"
+        msg: "main has no CHANGELOG.md section for {{.VERSION}} — run: task release:changelog VERSION={{.VERSION}}"
+    # The chart is NOT released here — it versions independently. Operators
+    # deploy this image by setting image.tag in their values; the chart has
+    # no appVersion and never picks a tag for them.
     cmds:
-      # git, not jj: jj can't create or push tags. The tag push is the trigger —
-      # it fans out to .github/workflows/{image,release}.yaml.
-      #
-      # main, not HEAD: jj parks git HEAD on @- while @ is the working-copy
-      # commit, so HEAD is one commit behind the bookmark whenever the working
-      # copy holds anything. Tag the bookmark that is actually being released.
-      - git tag -a {{.VERSION}} main -m "{{.VERSION}}"
-      - git push origin {{.VERSION}}
-      # The chart is NOT released here — it versions independently. Operators
-      # deploy this image by setting image.tag in their values; the chart has
-      # no appVersion and never picks a tag for them.
+      - task: _tag
+        vars: {TAG: '{{.VERSION}}'}
+
+  # --- Chart release ------------------------------------------------------
+  # Chart.yaml is the source of truth for the chart version — release:chart:tag
+  # reads it, nothing stamps it at package time.
+
+  chart:bump:
+    desc: Bump the chart version, commit it on its own revision and advance main. Usage - task release:chart:bump VERSION=2.1.0
+    requires:
+      vars: [VERSION]
+    preconditions:
+      - sh: 'echo "{{.VERSION}}" | grep -qE "^[0-9]+\.[0-9]+\.[0-9]+$"'
+        msg: "VERSION must look like 2.1.0 — no leading v, release:chart:tag adds the chart-v prefix"
+    # Bump against the diff, not against the version already there — a renovate
+    # deps PR bumps the patch itself, so a feature landing after it inherits a
+    # patch number that claims nothing shipped.
+    cmds:
+      - task: _commit
+        vars:
+          MESSAGE: 'chore(helm): chart v{{.VERSION}}'
+          FILE: '{{.CHART}}'
+          CMD: "sed -i 's/^version: .*/version: {{.VERSION}}/' {{.CHART}}"
+
+  chart:tag:
+    desc: Cut a chart release — tag main chart-v<Chart.yaml version> and push it, triggering .github/workflows/chart.yaml
+    vars:
+      CHART_VERSION:
+        sh: "sed -n 's/^version: *//p' deploy/helm/streamline/Chart.yaml"
+    preconditions:
+      # Tag the committed chart, not the working copy — CI packages from the tag.
+      - sh: 'git show main:{{.CHART}} | grep -q "^version: {{.CHART_VERSION}}$"'
+        msg: "main's Chart.yaml is not at version {{.CHART_VERSION}} — run: task release:chart:bump VERSION={{.CHART_VERSION}}"
+    cmds:
+      - task: _tag
+        vars:
+          TAG: 'chart-v{{.CHART_VERSION}}'
+          HINT: 'bump version in {{.CHART}}'
+
+  chart:
+    desc: Cut a chart release end to end — bump, commit, advance main, tag and push. Usage - task release:chart VERSION=2.1.0
+    requires:
+      vars: [VERSION]
+    # Both halves keep their own preconditions, so this is only ever the two
+    # commands in order — chart:tag re-reads Chart.yaml after chart:bump wrote
+    # it. Run them apart to review the bump commit before the tag goes out.
+    cmds:
+      - task: chart:bump
+        vars: {VERSION: '{{.VERSION}}'}
+      - task: chart:tag
 
   # --- Local release ------------------------------------------------------
   # release:tag above is the real path — CI does everything on the tag push.
@@ -73,15 +162,13 @@ tasks:
 
   helm:
     desc: Package + push the helm chart to GHCR OCI at the version in Chart.yaml (usage - task release:helm)
-    deps: [":helm:prep"]
+    # helm:package already builds the tarball CI releases — this only pushes it.
+    deps: [":helm:package"]
     vars:
       CHART_VERSION:
         sh: "sed -n 's/^version: *//p' deploy/helm/streamline/Chart.yaml"
-    cmds:
-      - mkdir -p /tmp/streamline/helm
-      - helm package deploy/helm/streamline -d /tmp/streamline/helm
-      - helm push /tmp/streamline/helm/streamline-{{.CHART_VERSION}}.tgz
-        oci://ghcr.io/datahearth/charts
+    cmd: helm push /tmp/streamline/helm/streamline-{{.CHART_VERSION}}.tgz
+      oci://ghcr.io/datahearth/charts
 
   default:
     desc: Local k8s-deployable release - image at VERSION + chart at its own Chart.yaml version. Usage - task release VERSION=v0.1.0-alpha.1
