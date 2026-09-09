@@ -54,7 +54,9 @@ var _ = Describe("Bootstrap service unit", Label("unit", "auth"), func() {
 		})
 
 		It("propagates store errors", func() {
-			storeMock.CountUsers(mock.Anything).Return(0, errors.New("count fail")).Once()
+			storeMock.CountUsers(mock.Anything).
+				Return(0, errors.New("count fail")).
+				Once()
 			_, err := svc.IsFirstUser(ctx)
 			Expect(err).To(MatchError("count fail"))
 		})
@@ -192,7 +194,9 @@ var _ = Describe("Bootstrap service unit", Label("unit", "auth"), func() {
 
 		It("wraps IsFirstUser errors", func() {
 			seedAdminConfig("admin@x.com", "hunter22", "")
-			storeMock.CountUsers(mock.Anything).Return(0, errors.New("count fail")).Once()
+			storeMock.CountUsers(mock.Anything).
+				Return(0, errors.New("count fail")).
+				Once()
 			Expect(svc.BootstrapSeedAdmin(ctx)).
 				To(MatchError(ContainSubstring("count users")))
 		})
@@ -272,7 +276,8 @@ var _ = Describe("Bootstrap service unit", Label("unit", "auth"), func() {
 			seedAdminConfig("admin@x.com", "hunter22", "")
 			storeMock.CountUsers(mock.Anything).Return(0, nil).Once()
 			storeMock.CreateUser(mock.Anything, mock.AnythingOfType("db.CreateUserParams")).
-				Return(nil, errors.New("create fail")).Once()
+				Return(nil, errors.New("create fail")).
+				Once()
 			Expect(svc.BootstrapSeedAdmin(ctx)).
 				To(MatchError(ContainSubstring("create seed admin")))
 		})
@@ -342,7 +347,8 @@ var _ = Describe("Bootstrap service unit", Label("unit", "auth"), func() {
 
 		It("wraps store create errors", func() {
 			storeMock.CreateUser(mock.Anything, mock.AnythingOfType("db.CreateUserParams")).
-				Return(nil, errors.New("create fail")).Once()
+				Return(nil, errors.New("create fail")).
+				Once()
 			_, _, err := svc.RegisterOpen(
 				ctx,
 				"a@x.com",

@@ -91,7 +91,8 @@ var _ = Describe("Invite service unit", Label("unit", "auth"), func() {
 				ExpiresAt: time.Now().Add(time.Hour),
 			}
 			storeMock.FindInviteByTokenHash(mock.Anything, mock.AnythingOfType("string")).
-				Return(inv, nil).Once()
+				Return(inv, nil).
+				Once()
 			got, err := svc.LookupInviteForPrefill(ctx, "raw")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(got.ID).To(Equal(uint32(1)))
@@ -99,7 +100,8 @@ var _ = Describe("Invite service unit", Label("unit", "auth"), func() {
 
 		It("returns ErrInviteInvalid when token not found", func() {
 			storeMock.FindInviteByTokenHash(mock.Anything, mock.AnythingOfType("string")).
-				Return(nil, &ent.NotFoundError{}).Once()
+				Return(nil, &ent.NotFoundError{}).
+				Once()
 			_, err := svc.LookupInviteForPrefill(ctx, "raw")
 			Expect(err).To(MatchError(ErrInviteInvalid))
 		})
@@ -108,7 +110,8 @@ var _ = Describe("Invite service unit", Label("unit", "auth"), func() {
 			now := time.Now()
 			inv := &ent.Invite{ID: 1, UsedAt: &now, ExpiresAt: now.Add(time.Hour)}
 			storeMock.FindInviteByTokenHash(mock.Anything, mock.AnythingOfType("string")).
-				Return(inv, nil).Once()
+				Return(inv, nil).
+				Once()
 			_, err := svc.LookupInviteForPrefill(ctx, "raw")
 			Expect(err).To(MatchError(ErrInviteInvalid))
 		})
@@ -116,7 +119,8 @@ var _ = Describe("Invite service unit", Label("unit", "auth"), func() {
 		It("returns ErrInviteInvalid when expired", func() {
 			inv := &ent.Invite{ID: 1, ExpiresAt: time.Now().Add(-time.Hour)}
 			storeMock.FindInviteByTokenHash(mock.Anything, mock.AnythingOfType("string")).
-				Return(inv, nil).Once()
+				Return(inv, nil).
+				Once()
 			_, err := svc.LookupInviteForPrefill(ctx, "raw")
 			Expect(err).To(MatchError(ErrInviteInvalid))
 		})
@@ -128,7 +132,8 @@ var _ = Describe("Invite service unit", Label("unit", "auth"), func() {
 				ExpiresAt: time.Now().Add(time.Hour),
 			}
 			storeMock.FindInviteByTokenHash(mock.Anything, mock.AnythingOfType("string")).
-				Return(inv, nil).Once()
+				Return(inv, nil).
+				Once()
 			got, err := svc.LookupInviteForPrefill(ctx, "raw")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(got.Email).To(Equal("bound@x.com"))
@@ -155,7 +160,8 @@ var _ = Describe("Invite service unit", Label("unit", "auth"), func() {
 
 		It("propagates store errors", func() {
 			storeMock.RevokeInvite(mock.Anything, uint32(1), mock.AnythingOfType("time.Time")).
-				Return(errors.New("revoke fail")).Once()
+				Return(errors.New("revoke fail")).
+				Once()
 			Expect(svc.RevokeInvite(ctx, 1)).To(MatchError("revoke fail"))
 		})
 	})
@@ -172,7 +178,8 @@ var _ = Describe("Invite service unit", Label("unit", "auth"), func() {
 		It("creates user, marks invite used, commits, issues token", func() {
 			tx := dbmocks.NewMockTx(GinkgoT())
 			storeMock.FindInviteByTokenHash(mock.Anything, mock.AnythingOfType("string")).
-				Return(validInvite(), nil).Once()
+				Return(validInvite(), nil).
+				Once()
 			storeMock.Tx(mock.Anything).Return(tx, nil).Once()
 			tx.EXPECT().
 				CreateUser(mock.Anything, mock.MatchedBy(func(p db.CreateUserParams) bool {
@@ -204,7 +211,8 @@ var _ = Describe("Invite service unit", Label("unit", "auth"), func() {
 
 		It("returns ErrInviteInvalid when validation fails", func() {
 			storeMock.FindInviteByTokenHash(mock.Anything, mock.AnythingOfType("string")).
-				Return(nil, &ent.NotFoundError{}).Once()
+				Return(nil, &ent.NotFoundError{}).
+				Once()
 			_, _, err := svc.RegisterWithInvite(
 				ctx,
 				"raw",
@@ -218,7 +226,8 @@ var _ = Describe("Invite service unit", Label("unit", "auth"), func() {
 
 		It("wraps bcrypt failures", func() {
 			storeMock.FindInviteByTokenHash(mock.Anything, mock.AnythingOfType("string")).
-				Return(validInvite(), nil).Once()
+				Return(validInvite(), nil).
+				Once()
 			_, _, err := svc.RegisterWithInvite(
 				ctx,
 				"raw",
@@ -232,7 +241,8 @@ var _ = Describe("Invite service unit", Label("unit", "auth"), func() {
 
 		It("wraps tx.Begin failures", func() {
 			storeMock.FindInviteByTokenHash(mock.Anything, mock.AnythingOfType("string")).
-				Return(validInvite(), nil).Once()
+				Return(validInvite(), nil).
+				Once()
 			storeMock.Tx(mock.Anything).Return(nil, errors.New("begin fail")).Once()
 			_, _, err := svc.RegisterWithInvite(
 				ctx,
@@ -248,10 +258,11 @@ var _ = Describe("Invite service unit", Label("unit", "auth"), func() {
 		It("rolls back on CreateUser failure", func() {
 			tx := dbmocks.NewMockTx(GinkgoT())
 			storeMock.FindInviteByTokenHash(mock.Anything, mock.AnythingOfType("string")).
-				Return(validInvite(), nil).Once()
+				Return(validInvite(), nil).
+				Once()
 			storeMock.Tx(mock.Anything).Return(tx, nil).Once()
 			tx.EXPECT().
-CreateUser(mock.Anything, mock.AnythingOfType("db.CreateUserParams")).
+				CreateUser(mock.Anything, mock.AnythingOfType("db.CreateUserParams")).
 				Return(nil, errors.New("create fail")).Once()
 			tx.EXPECT().Rollback().Return(nil).Once()
 			_, _, err := svc.RegisterWithInvite(
@@ -268,10 +279,11 @@ CreateUser(mock.Anything, mock.AnythingOfType("db.CreateUserParams")).
 		It("rolls back on ConsumeInvite failure", func() {
 			tx := dbmocks.NewMockTx(GinkgoT())
 			storeMock.FindInviteByTokenHash(mock.Anything, mock.AnythingOfType("string")).
-				Return(validInvite(), nil).Once()
+				Return(validInvite(), nil).
+				Once()
 			storeMock.Tx(mock.Anything).Return(tx, nil).Once()
 			tx.EXPECT().
-CreateUser(mock.Anything, mock.AnythingOfType("db.CreateUserParams")).
+				CreateUser(mock.Anything, mock.AnythingOfType("db.CreateUserParams")).
 				Return(&ent.User{ID: 1}, nil).Once()
 			tx.EXPECT().
 				ConsumeInvite(mock.Anything, uint32(5), uint32(1), mock.AnythingOfType("time.Time")).
@@ -292,10 +304,11 @@ CreateUser(mock.Anything, mock.AnythingOfType("db.CreateUserParams")).
 		It("maps a lost consumption race to ErrInviteInvalid", func() {
 			tx := dbmocks.NewMockTx(GinkgoT())
 			storeMock.FindInviteByTokenHash(mock.Anything, mock.AnythingOfType("string")).
-				Return(validInvite(), nil).Once()
+				Return(validInvite(), nil).
+				Once()
 			storeMock.Tx(mock.Anything).Return(tx, nil).Once()
 			tx.EXPECT().
-CreateUser(mock.Anything, mock.AnythingOfType("db.CreateUserParams")).
+				CreateUser(mock.Anything, mock.AnythingOfType("db.CreateUserParams")).
 				Return(&ent.User{ID: 1}, nil).Once()
 			tx.EXPECT().
 				ConsumeInvite(mock.Anything, uint32(5), uint32(1), mock.AnythingOfType("time.Time")).
@@ -316,10 +329,11 @@ CreateUser(mock.Anything, mock.AnythingOfType("db.CreateUserParams")).
 		It("wraps Commit failures", func() {
 			tx := dbmocks.NewMockTx(GinkgoT())
 			storeMock.FindInviteByTokenHash(mock.Anything, mock.AnythingOfType("string")).
-				Return(validInvite(), nil).Once()
+				Return(validInvite(), nil).
+				Once()
 			storeMock.Tx(mock.Anything).Return(tx, nil).Once()
 			tx.EXPECT().
-CreateUser(mock.Anything, mock.AnythingOfType("db.CreateUserParams")).
+				CreateUser(mock.Anything, mock.AnythingOfType("db.CreateUserParams")).
 				Return(&ent.User{ID: 1}, nil).Once()
 			tx.EXPECT().
 				ConsumeInvite(mock.Anything, uint32(5), uint32(1), mock.AnythingOfType("time.Time")).
