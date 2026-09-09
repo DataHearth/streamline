@@ -9,6 +9,7 @@ import (
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/importscanfile"
 	"github.com/datahearth/streamline/ent/importscanshow"
+	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
 )
 
@@ -62,6 +63,9 @@ func Register(client *ent.Client) {
 
 	client.DownloadRecord.Use(downloadRecordHook())
 	client.MediaFile.Use(mediaFileHook())
+	client.MediaFile.Use(mediaFileDeleteHook())
+	client.Movie.Use(movieHook())
+	client.TVShow.Use(tvShowHook())
 	client.ImportScanFile.Use(importScanFileHook())
 	client.ImportScanShow.Use(importScanShowHook())
 }
@@ -116,10 +120,19 @@ func downloadRecordHook() ent.Hook {
 					}
 					var t Type
 					switch status {
-					case downloadrecord.StatusCompleted:
+					// StatusImporting, not StatusCompleted: completed is
+					// stamped by RecordImportSuccess, i.e. once the file is
+					// already filed, where the MediaFile create hook is
+					// separately recording TypeImported. Hanging
+					// download_completed off it produced two rows for one
+					// moment and left the hours between grabbed and imported
+					// — the actual download — with nothing in the feed.
+					case downloadrecord.StatusImporting:
 						t = TypeDownloadCompleted
 					case downloadrecord.StatusFailed:
 						t = TypeDownloadFailed
+					case downloadrecord.StatusHeld:
+						t = TypeImportHeld
 					default:
 						return val, nil
 					}
@@ -281,6 +294,14 @@ func downloadStatusPayload(m *ent.DownloadRecordMutation) map[string]any {
 	p := map[string]any{}
 	if v, ok := m.FailureReason(); ok && v != "" {
 		p["reason"] = v
+	}
+	if v, ok := m.HoldReasons(); ok && len(v) > 0 {
+		checks := make([]string, 0, len(v))
+		for _, r := range v {
+			checks = append(checks, r.Check)
+		}
+		p["held_checks"] = checks
+		p["held_count"] = len(v)
 	}
 	return p
 }
@@ -451,4 +472,219 @@ func importScanShowTVShowID(
 		return *row.ExistingTvshowID, nil
 	}
 	return 0, nil
+}
+
+// suppressKey marks a context whose MediaFile deletions must not produce a
+// file_removed event.
+type suppressKey struct{}
+
+// SuppressFileRemoved marks ctx so the media-file delete hook stays quiet for
+// deletions made under it.
+//
+// The drift sweep records drift_detected/drift_confirmed itself, naming the
+// file that vanished and the check that proved it. The delete hook cannot see
+// which caller it runs under, so without this the same disappearance landed
+// twice — once diagnosed, once bare — and the bare row read as a second,
+// unexplained deletion.
+func SuppressFileRemoved(ctx context.Context) context.Context {
+	return context.WithValue(ctx, suppressKey{}, true)
+}
+
+func fileRemovedSuppressed(ctx context.Context) bool {
+	v, _ := ctx.Value(suppressKey{}).(bool)
+	return v
+}
+
+// movieHook records a movie entering the library and its monitored flag being
+// flipped. Both ride the same mutation type, and CreateMovie/UpdateMovie each
+// have a single caller, so nothing else can trip them.
+func movieHook() ent.Hook {
+	return func(next ent.Mutator) ent.Mutator {
+		return ent.MutateFunc(
+			func(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+				mm, ok := m.(*ent.MovieMutation)
+				if !ok {
+					return next.Mutate(ctx, m)
+				}
+				val, err := next.Mutate(ctx, m)
+				if err != nil {
+					return val, err
+				}
+				c := mm.Client()
+				switch {
+				case mm.Op().Is(ent.OpCreate):
+					row, ok := val.(*ent.Movie)
+					if !ok || row.ID == 0 {
+						return val, nil
+					}
+					recordAux(ctx, "movie", c, TypeAdded, ScopeMovie, row.ID,
+						moviePayload(row))
+				case mm.Op().Is(ent.OpUpdate | ent.OpUpdateOne):
+					monitored, changed := mm.Monitored()
+					if !changed {
+						return val, nil
+					}
+					id, ok := mm.ID()
+					if !ok || id == 0 {
+						return val, nil
+					}
+					recordAux(ctx, "movie", c, TypeMonitoringChanged,
+						ScopeMovie, id, map[string]any{
+							"monitored": monitored,
+						})
+				}
+				return val, nil
+			},
+		)
+	}
+}
+
+// tvShowHook is the series twin of movieHook. A monitored flip here cascades
+// to every season and episode, which the payload says so a reader does not
+// mistake it for a show-level-only change.
+func tvShowHook() ent.Hook {
+	return func(next ent.Mutator) ent.Mutator {
+		return ent.MutateFunc(
+			func(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+				tm, ok := m.(*ent.TVShowMutation)
+				if !ok {
+					return next.Mutate(ctx, m)
+				}
+				val, err := next.Mutate(ctx, m)
+				if err != nil {
+					return val, err
+				}
+				c := tm.Client()
+				switch {
+				case tm.Op().Is(ent.OpCreate):
+					row, ok := val.(*ent.TVShow)
+					if !ok || row.ID == 0 {
+						return val, nil
+					}
+					recordAux(ctx, "tv_show", c, TypeAdded, ScopeSeries,
+						row.ID, tvShowPayload(row))
+				case tm.Op().Is(ent.OpUpdate | ent.OpUpdateOne):
+					monitored, changed := tm.Monitored()
+					if !changed {
+						return val, nil
+					}
+					id, ok := tm.ID()
+					if !ok || id == 0 {
+						return val, nil
+					}
+					recordAux(ctx, "tv_show", c, TypeMonitoringChanged,
+						ScopeSeries, id, map[string]any{
+							"monitored": monitored,
+							"cascade":   true,
+						})
+				}
+				return val, nil
+			},
+		)
+	}
+}
+
+// mediaFileDeleteHook records a file leaving the library, whatever removed it
+// — a manual delete, an upgrade replacing it, or a bulk-import commit
+// adopting a better copy. It resolves the owner *before* the delete runs,
+// since the row and its edges are gone afterwards.
+func mediaFileDeleteHook() ent.Hook {
+	return func(next ent.Mutator) ent.Mutator {
+		return ent.MutateFunc(
+			func(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+				mf, ok := m.(*ent.MediaFileMutation)
+				if !ok || !mf.Op().Is(ent.OpDelete|ent.OpDeleteOne) {
+					return next.Mutate(ctx, m)
+				}
+				if fileRemovedSuppressed(ctx) {
+					return next.Mutate(ctx, m)
+				}
+				c := mf.Client()
+				doomed, err := doomedMediaFiles(ctx, c, mf)
+				if err != nil {
+					auxFailure(ctx, "media_file_delete", err)
+					return next.Mutate(ctx, m)
+				}
+				val, err := next.Mutate(ctx, m)
+				if err != nil {
+					return val, err
+				}
+				for _, d := range doomed {
+					recordAux(ctx, "media_file_delete", c, TypeFileRemoved,
+						d.scope, d.id, map[string]any{
+							"path": d.path,
+						})
+				}
+				return val, nil
+			},
+		)
+	}
+}
+
+// removed is a media file resolved to its owner before deletion.
+type removed struct {
+	scope Scope
+	id    uint32
+	path  string
+}
+
+// doomedMediaFiles reads the rows a delete mutation is about to remove,
+// resolving each to its owning movie or episode. Files whose owner is itself
+// being deleted come back ownerless and are skipped.
+func doomedMediaFiles(
+	ctx context.Context,
+	c *ent.Client,
+	m *ent.MediaFileMutation,
+) ([]removed, error) {
+	ids, err := m.IDs(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	rows, err := c.MediaFile.Query().
+		Where(mediafile.IDIn(ids...)).
+		WithMovie(func(q *ent.MovieQuery) { q.Select(movie.FieldID) }).
+		WithEpisode(func(q *ent.EpisodeQuery) { q.Select(episode.FieldID) }).
+		All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]removed, 0, len(rows))
+	for _, row := range rows {
+		switch {
+		case row.Edges.Movie != nil:
+			out = append(out, removed{
+				ScopeMovie, row.Edges.Movie.ID, row.Path,
+			})
+		case row.Edges.Episode != nil:
+			out = append(out, removed{
+				ScopeEpisode, row.Edges.Episode.ID, row.Path,
+			})
+		}
+	}
+	return out, nil
+}
+
+func moviePayload(m *ent.Movie) map[string]any {
+	p := map[string]any{"title": m.Title}
+	if m.Year != 0 {
+		p["year"] = m.Year
+	}
+	if m.QualityProfile != "" {
+		p["quality_profile"] = m.QualityProfile
+	}
+	return p
+}
+
+func tvShowPayload(s *ent.TVShow) map[string]any {
+	p := map[string]any{"title": s.Title}
+	if s.Year != 0 {
+		p["year"] = s.Year
+	}
+	if s.QualityProfile != "" {
+		p["quality_profile"] = s.QualityProfile
+	}
+	return p
 }

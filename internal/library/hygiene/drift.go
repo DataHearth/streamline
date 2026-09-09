@@ -179,6 +179,7 @@ func (s *Service) recordDrift(
 }
 
 func (s *Service) revertMovie(ctx context.Context, mediaFileID, movieID uint32) {
+	ctx = events.SuppressFileRemoved(ctx)
 	if err := s.store.DeleteMediaFileAndRevertMovie(
 		ctx,
 		mediaFileID,
@@ -201,6 +202,7 @@ func (s *Service) revertMovie(ctx context.Context, mediaFileID, movieID uint32) 
 }
 
 func (s *Service) revertEpisode(ctx context.Context, mediaFileID, episodeID uint32) {
+	ctx = events.SuppressFileRemoved(ctx)
 	if err := s.store.DeleteMediaFileAndRevertEpisode(
 		ctx,
 		mediaFileID,
