@@ -110,6 +110,7 @@ hwAccel:
   # 109 (render) are Debian/Ubuntu's; check `stat -c %g /dev/dri/renderD128`
   # on the GPU node and replace them.
   supplementalGroups: [44, 109]
+priorityClassName: ""
 nodeSelector: {}
 tolerations: []
 affinity: {}
