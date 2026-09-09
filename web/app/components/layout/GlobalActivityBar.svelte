@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { useIsFetching, useIsMutating } from "@tanstack/svelte-query";
+	import { portal } from "../../lib/focus-trap";
 	import ProgressBar from "../shared/ProgressBar.svelte";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 
@@ -32,8 +33,13 @@
 
 {#if visible}
 	<!-- Above the modal layer (z-50) and the Select portal (z-200): an indexer
-	     search runs inside a modal, which is exactly where the stall was felt. -->
-	<div class="fixed inset-x-0 top-0 z-[300]">
+	     search runs inside a modal, which is exactly where the stall was felt.
+	     z-index alone was not enough — the bar renders inside the app root, and
+	     the modal portals to <body>, so its z-50 in the ROOT stacking context
+	     beat a z-300 confined to an ancestor's. The bar was painted behind the
+	     backdrop and came out blurred. It portals to <body> too now, where the
+	     two are finally comparable. -->
+	<div use:portal class="fixed inset-x-0 top-0 z-[300]">
 		<ProgressBar height={2} label={i18n.common_loading()} />
 	</div>
 {/if}
