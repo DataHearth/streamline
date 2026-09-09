@@ -7,12 +7,39 @@ import (
 	"log/slog"
 
 	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/otelx"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 )
 
-var tracer = otel.Tracer("github.com/datahearth/streamline/internal/mediaserver")
+var (
+	tracer = otel.Tracer("github.com/datahearth/streamline/internal/mediaserver")
+	meter  = otel.Meter("github.com/datahearth/streamline/internal/mediaserver")
+
+	// refreshes is dimensioned by server so "Plex has been failing every
+	// refresh since Tuesday while Jellyfin is fine" is a graph rather than a
+	// log grep. This runs after every completed import and every transcode,
+	// so a silent failure here is a library that stops updating.
+	refreshes metric.Int64Counter
+)
+
+func init() {
+	refreshes = otelx.Must(meter.Int64Counter(
+		"streamline.mediaserver.refreshes",
+		metric.WithDescription("Library refresh dispatches by server and outcome"),
+	))
+}
+
+// countRefresh records one server's outcome for a refresh dispatch.
+func countRefresh(ctx context.Context, ms config.MediaServerEntry, outcome string) {
+	refreshes.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("server.name", ms.Name),
+		attribute.String("server.type", ms.ServerType),
+		attribute.String("outcome", outcome),
+	))
+}
 
 // Dispatcher fans RefreshLibrary across all enabled media servers, read live
 // from config per invocation.
@@ -50,6 +77,7 @@ func (d *Dispatcher) RefreshAll(
 				err,
 			)
 			errs = append(errs, fmt.Errorf("%s: %w", ms.Name, err))
+			countRefresh(ctx, ms, "client_error")
 			continue
 		}
 		section := ms.LibrarySection
@@ -70,7 +98,10 @@ func (d *Dispatcher) RefreshAll(
 				err,
 			)
 			errs = append(errs, fmt.Errorf("%s: %w", ms.Name, err))
+			countRefresh(ctx, ms, "error")
+			continue
 		}
+		countRefresh(ctx, ms, "ok")
 	}
 	return errors.Join(errs...)
 }

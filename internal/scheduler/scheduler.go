@@ -9,6 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/datahearth/streamline/internal/observability"
 	"github.com/datahearth/streamline/internal/otelx"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -78,6 +79,11 @@ var (
 	ErrJobNotPaused     = errors.New("scheduler: job not paused")
 	ErrJobBusy          = errors.New("scheduler: job currently running")
 	ErrNotStarted       = errors.New("scheduler: not started")
+
+	// errJobPanicked stands in for a job that panicked, so the run is counted
+	// and persisted like any other failure instead of vanishing with the
+	// process. Not exported: no caller decides anything on it.
+	errJobPanicked = errors.New("scheduler: job panicked")
 )
 
 // Option mutates a registered job at registration time.
@@ -138,6 +144,10 @@ type registeredJob struct {
 	// startedAt is the current (or most recent) run's start, in unix nanos.
 	// It is what replaces the persisted last_started_at while a job runs.
 	startedAt atomic.Int64
+	// lastSuccess is the last run that returned no error, in unix seconds, or
+	// 0 for a job that has not yet succeeded this process. Read by the
+	// last-success gauge; see registerJobGauge for why a counter is not enough.
+	lastSuccess atomic.Int64
 
 	// mu guards interval, paused, and stopCh.
 	mu     sync.Mutex
@@ -228,6 +238,8 @@ func (s *Scheduler) Start(ctx context.Context) {
 		jobs = append(jobs, j)
 	}
 	s.mu.Unlock()
+
+	s.registerJobGauge(ctx, jobs)
 	// Sorted so the spread is reproducible: map order would shuffle which job
 	// waits longest on every boot, which makes a slow start hard to read.
 	sort.Slice(jobs, func(i, k int) bool { return jobs[i].name < jobs[k].name })
@@ -242,6 +254,48 @@ func (s *Scheduler) Start(ctx context.Context) {
 		}
 	}
 	<-ctx.Done()
+}
+
+// registerJobGauge publishes the last successful run of each job as a unix
+// timestamp.
+//
+// The run counters answer "did it run" only for as long as the backend keeps
+// the samples, and say nothing at all once a job stops ticking — which is the
+// failure that matters here: a background job (missing search, RSS feed,
+// orphan scan) that quietly stops running forever, with no error to count
+// because nothing is running to fail. The alert an operator actually wants is
+// "orphan_scan has not succeeded in 24h", and that needs a timestamp.
+func (s *Scheduler) registerJobGauge(ctx context.Context, jobs []*registeredJob) {
+	if len(jobs) == 0 {
+		return
+	}
+	gauge, err := meter.Int64ObservableGauge(
+		"streamline.scheduler.job.last_success_unixtime",
+		metric.WithDescription(
+			"Unix time of a job's last successful run; 0 if never since boot",
+		),
+		metric.WithUnit("s"),
+	)
+	if err != nil {
+		slog.ErrorContext(ctx, "scheduler last-success gauge unavailable",
+			"error", err)
+		return
+	}
+	_, err = meter.RegisterCallback(
+		func(_ context.Context, o metric.Observer) error {
+			for _, j := range jobs {
+				o.ObserveInt64(gauge, j.lastSuccess.Load(), metric.WithAttributes(
+					attribute.String("job.name", j.name),
+				))
+			}
+			return nil
+		},
+		gauge,
+	)
+	if err != nil {
+		slog.ErrorContext(ctx, "scheduler last-success gauge not registered",
+			"error", err)
+	}
 }
 
 // bootDelay is how long job number index waits before its first run. Capped at
@@ -334,15 +388,20 @@ func (s *Scheduler) executeJob(ctx context.Context, job *registeredJob) {
 	job.startedAt.Store(start.UnixNano())
 
 	outcome := "success"
-	runErr := job.fn(ctx)
+	runErr := runGuarded(ctx, job)
 	end := time.Now()
 	dur := end.Sub(start)
 
-	if runErr != nil {
+	switch {
+	case errors.Is(runErr, errJobPanicked):
+		outcome = "panic"
+		otelx.RecordSpanError(span, runErr)
+	case runErr != nil:
 		outcome = "error"
 		otelx.RecordSpanError(span, runErr)
 		slog.ErrorContext(ctx, "job failed", "job", job.name, "error", runErr)
-	} else {
+	default:
+		job.lastSuccess.Store(end.Unix())
 		slog.DebugContext(ctx, "job completed", "job", job.name)
 	}
 
@@ -356,6 +415,24 @@ func (s *Scheduler) executeJob(ctx context.Context, job *registeredJob) {
 	if s.hook != nil {
 		s.hook.OnEnd(ctx, job.name, end, outcome, runErr, dur)
 	}
+}
+
+// runGuarded calls a job body with a panic guard.
+//
+// Every job runs on its own goroutine, so an unrecovered panic in one of them
+// — a nil map in an RSS scan, a bad index in a rename — is not that job
+// failing, it is the whole process exiting: scheduler, downloads, transcodes
+// and HTTP server with it. Converted to an error, the failure stays inside the
+// job that caused it and the next tick retries.
+func runGuarded(ctx context.Context, job *registeredJob) error {
+	var err error
+	func() {
+		defer observability.RecoverPanic(ctx, "scheduled job "+job.name, func() {
+			err = errJobPanicked
+		})
+		err = job.fn(ctx)
+	}()
+	return err
 }
 
 func (s *Scheduler) job(name string) (*registeredJob, error) {

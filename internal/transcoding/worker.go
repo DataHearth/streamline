@@ -22,20 +22,24 @@ import (
 	"github.com/datahearth/streamline/internal/otelx"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var (
 	tracer = otel.Tracer("github.com/datahearth/streamline/internal/transcoding")
 	meter  = otel.Meter("github.com/datahearth/streamline/internal/transcoding")
 
-	jobsTotal   metric.Int64Counter
-	jobDuration metric.Float64Histogram
-	bytesSaved  metric.Int64Counter
+	jobsTotal      metric.Int64Counter
+	jobDuration    metric.Float64Histogram
+	encodeDuration metric.Float64Histogram
+	bytesSaved     metric.Int64Counter
 
-	errNoPolicy = errors.New("no transcode policy")
-	errNoOwner  = errors.New("transcode job has no media file")
-	errNoConfig = errors.New("config not loaded")
+	errJobPanicked = errors.New("transcode job panicked")
+	errNoPolicy    = errors.New("no transcode policy")
+	errNoOwner     = errors.New("transcode job has no media file")
+	errNoConfig    = errors.New("config not loaded")
 	// errAfterSwap marks a failure that happened once the library file had
 	// already been replaced, which is what makes the job terminal: a retry
 	// would re-probe a source that no longer exists.
@@ -53,7 +57,17 @@ func init() {
 	))
 	jobDuration = otelx.Must(meter.Float64Histogram(
 		"streamline.transcoding.duration",
-		metric.WithDescription("Transcode job duration"),
+		metric.WithDescription(
+			"Transcode job duration, encode through verification and swap",
+		),
+		metric.WithUnit("s"),
+	))
+	// Split out because jobDuration covers verification too, and VMAF alone
+	// runs up to three extra decode passes — "how long does this codec take to
+	// encode" was not answerable from a number that includes them.
+	encodeDuration = otelx.Must(meter.Float64Histogram(
+		"streamline.transcoding.encode_duration",
+		metric.WithDescription("ffmpeg encode duration, verification excluded"),
 		metric.WithUnit("s"),
 	))
 	bytesSaved = otelx.Must(meter.Int64Counter(
@@ -133,6 +147,7 @@ func (w *Worker) Start(ctx context.Context) {
 	if err := w.recover(ctx); err != nil {
 		slog.ErrorContext(ctx, "transcode recovery failed", "error", err)
 	}
+	w.registerConcurrencyGauge(ctx)
 
 	ticker := time.NewTicker(pollInterval)
 	defer ticker.Stop()
@@ -149,6 +164,45 @@ func (w *Worker) Start(ctx context.Context) {
 		case <-ticker.C:
 		case <-w.wake:
 		}
+	}
+}
+
+// registerConcurrencyGauge publishes encodes in flight against the ceiling
+// they are competing for. Queue depth comes from the job rows (see
+// RegisterEntityMetrics); what only the worker knows is how many of its slots
+// are actually busy, which is the difference between "saturated" and "stalled"
+// when the queue is not draining.
+func (w *Worker) registerConcurrencyGauge(ctx context.Context) {
+	running, err := meter.Int64ObservableGauge(
+		"streamline.transcoding.running",
+		metric.WithDescription("Encodes currently in flight"),
+	)
+	if err != nil {
+		slog.ErrorContext(ctx, "transcode running gauge unavailable",
+			"error", err)
+		return
+	}
+	limit, err := meter.Int64ObservableGauge(
+		"streamline.transcoding.max_concurrent",
+		metric.WithDescription("Configured ceiling on concurrent encodes"),
+	)
+	if err != nil {
+		slog.ErrorContext(ctx, "transcode ceiling gauge unavailable",
+			"error", err)
+		return
+	}
+	if _, err := meter.RegisterCallback(
+		func(_ context.Context, o metric.Observer) error {
+			o.ObserveInt64(running, int64(w.active()))
+			if cfg := config.Get(); cfg != nil {
+				o.ObserveInt64(limit, int64(cfg.Transcoding.MaxConcurrent))
+			}
+			return nil
+		},
+		running, limit,
+	); err != nil {
+		slog.ErrorContext(ctx, "transcode concurrency gauges not registered",
+			"error", err)
 	}
 }
 
@@ -286,6 +340,15 @@ func (w *Worker) runJob(ctx context.Context, c *claimed) {
 	// ctx is the worker's, and only its Err means the process is shutting down.
 	wctx := context.WithoutCancel(jctx)
 
+	// A panic here would otherwise kill the process — the encode runs on its
+	// own goroutine with nothing above it — and leave the row `running`, which
+	// only the next boot's recover would clear. Terminal rather than retried:
+	// the same input panicking again is a loop, and an operator can retry the
+	// row by hand once the cause is fixed.
+	defer observability.RecoverPanic(wctx, "transcode job", func() {
+		w.failTerminal(wctx, job, errJobPanicked)
+	})
+
 	mf := job.Edges.MediaFile
 	if mf == nil {
 		w.failTerminal(wctx, job, errNoOwner)
@@ -373,6 +436,7 @@ func (w *Worker) runJob(ctx context.Context, c *claimed) {
 		w.fail(wctx, job, err)
 		return
 	}
+	encodeDuration.Record(wctx, time.Since(started).Seconds())
 
 	// Verification runs on wctx so a cancel arriving mid-probe doesn't read as
 	// a corrupt output; the opt-in exec checks inside it run on jctx instead,
@@ -596,6 +660,7 @@ func (w *Worker) reject(
 		"transcode.size_after", rej.outSize,
 		"transcode.reason", rej.reason,
 	)
+	otelx.RecordSpanError(trace.SpanFromContext(ctx), rej)
 	record(ctx, "rejected")
 }
 
@@ -751,6 +816,7 @@ func (w *Worker) failWith(
 		"transcode.terminal", terminal,
 		"error", cause,
 	)
+	otelx.RecordSpanError(trace.SpanFromContext(ctx), cause)
 	if terminal {
 		record(ctx, "failed")
 	}
@@ -864,8 +930,20 @@ func actionName(a Action) string {
 	}
 }
 
+// record counts a finished job and stamps the outcome on the job's span.
+//
+// Every terminal path funnels through here, which is why the span marking
+// lives here too: transcoding.run is opened in runJob and closed by a defer,
+// and nothing between them touched it, so a job that failed, was rejected or
+// was canceled still reported OK. Filtering a tracing backend for error spans
+// found no failing encodes at all.
 func record(ctx context.Context, outcome string) {
 	jobsTotal.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("outcome", outcome),
 	))
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(attribute.String("transcode.outcome", outcome))
+	if outcome == "failed" || outcome == "rejected" {
+		span.SetStatus(codes.Error, outcome)
+	}
 }
