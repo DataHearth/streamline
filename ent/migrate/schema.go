@@ -366,7 +366,7 @@ var (
 		{Name: "id", Type: field.TypeUint32, Increment: true},
 		{Name: "create_time", Type: field.TypeTime},
 		{Name: "update_time", Type: field.TypeTime},
-		{Name: "type", Type: field.TypeEnum, Enums: []string{"grabbed", "download_completed", "download_failed", "imported", "import_failed", "drift_detected", "drift_confirmed", "searched"}},
+		{Name: "type", Type: field.TypeEnum, Enums: []string{"grabbed", "download_completed", "download_failed", "download_cancelled", "grab_widened", "imported", "import_failed", "import_held_for_review", "drift_detected", "drift_confirmed", "searched", "added", "file_renamed", "file_removed", "reidentified", "metadata_refreshed", "monitoring_changed", "request_approved", "transcode_completed", "transcode_failed", "transcode_rejected"}},
 		{Name: "payload", Type: field.TypeJSON, Nullable: true},
 		{Name: "episode_events", Type: field.TypeUint32, Nullable: true},
 		{Name: "movie_events", Type: field.TypeUint32, Nullable: true},

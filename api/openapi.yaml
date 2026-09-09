@@ -3770,18 +3770,7 @@ components:
       schema:
         type: array
         items:
-          type: string
-          enum:
-            [
-              grabbed,
-              download_completed,
-              download_failed,
-              imported,
-              import_failed,
-              drift_detected,
-              drift_confirmed,
-              searched,
-            ]
+          $ref: "#/components/schemas/ActivityEventType"
       style: form
       explode: true
     ActivityMovieID:
@@ -8294,31 +8283,50 @@ components:
           type: integer
           x-go-type: uint32
 
+    ActivityEventType:
+      type: string
+      description: |
+        What happened to the item the event hangs off. Mirrors the enum on
+        the MediaEvent ent schema and events.Type; the three must agree.
+      enum:
+        [
+          grabbed,
+          download_completed,
+          download_failed,
+          download_cancelled,
+          grab_widened,
+          imported,
+          import_failed,
+          import_held_for_review,
+          drift_detected,
+          drift_confirmed,
+          searched,
+          added,
+          file_renamed,
+          file_removed,
+          reidentified,
+          metadata_refreshed,
+          monitoring_changed,
+          request_approved,
+          transcode_completed,
+          transcode_failed,
+          transcode_rejected,
+        ]
     ActivityEvent:
       type: object
       required: [id, type, created_at]
       description: |
         Exactly one of movie / episode / series is set, naming what the event
-        happened to. `series` carries only what belongs to no single episode —
-        a search issued at series or season scope; per-episode outcomes use
-        `episode`.
+        happened to. `series` carries what belongs to no single episode — a
+        search issued at series or season scope, and the show-level actions
+        (added, reidentified, metadata_refreshed, monitoring_changed);
+        per-episode outcomes use `episode`.
       properties:
         id:
           type: integer
           x-go-type: uint32
         type:
-          type: string
-          enum:
-            [
-              grabbed,
-              download_completed,
-              download_failed,
-              imported,
-              import_failed,
-              drift_detected,
-              drift_confirmed,
-              searched,
-            ]
+          $ref: "#/components/schemas/ActivityEventType"
         created_at:
           type: string
           format: date-time

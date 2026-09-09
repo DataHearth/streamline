@@ -20,19 +20,36 @@ import (
 
 // Defines values for ActivityEventType.
 const (
-	ActivityEventTypeDownloadCompleted ActivityEventType = "download_completed"
-	ActivityEventTypeDownloadFailed    ActivityEventType = "download_failed"
-	ActivityEventTypeDriftConfirmed    ActivityEventType = "drift_confirmed"
-	ActivityEventTypeDriftDetected     ActivityEventType = "drift_detected"
-	ActivityEventTypeGrabbed           ActivityEventType = "grabbed"
-	ActivityEventTypeImportFailed      ActivityEventType = "import_failed"
-	ActivityEventTypeImported          ActivityEventType = "imported"
-	ActivityEventTypeSearched          ActivityEventType = "searched"
+	ActivityEventTypeAdded               ActivityEventType = "added"
+	ActivityEventTypeDownloadCancelled   ActivityEventType = "download_cancelled"
+	ActivityEventTypeDownloadCompleted   ActivityEventType = "download_completed"
+	ActivityEventTypeDownloadFailed      ActivityEventType = "download_failed"
+	ActivityEventTypeDriftConfirmed      ActivityEventType = "drift_confirmed"
+	ActivityEventTypeDriftDetected       ActivityEventType = "drift_detected"
+	ActivityEventTypeFileRemoved         ActivityEventType = "file_removed"
+	ActivityEventTypeFileRenamed         ActivityEventType = "file_renamed"
+	ActivityEventTypeGrabWidened         ActivityEventType = "grab_widened"
+	ActivityEventTypeGrabbed             ActivityEventType = "grabbed"
+	ActivityEventTypeImportFailed        ActivityEventType = "import_failed"
+	ActivityEventTypeImportHeldForReview ActivityEventType = "import_held_for_review"
+	ActivityEventTypeImported            ActivityEventType = "imported"
+	ActivityEventTypeMetadataRefreshed   ActivityEventType = "metadata_refreshed"
+	ActivityEventTypeMonitoringChanged   ActivityEventType = "monitoring_changed"
+	ActivityEventTypeReidentified        ActivityEventType = "reidentified"
+	ActivityEventTypeRequestApproved     ActivityEventType = "request_approved"
+	ActivityEventTypeSearched            ActivityEventType = "searched"
+	ActivityEventTypeTranscodeCompleted  ActivityEventType = "transcode_completed"
+	ActivityEventTypeTranscodeFailed     ActivityEventType = "transcode_failed"
+	ActivityEventTypeTranscodeRejected   ActivityEventType = "transcode_rejected"
 )
 
 // Valid indicates whether the value is a known member of the ActivityEventType enum.
 func (e ActivityEventType) Valid() bool {
 	switch e {
+	case ActivityEventTypeAdded:
+		return true
+	case ActivityEventTypeDownloadCancelled:
+		return true
 	case ActivityEventTypeDownloadCompleted:
 		return true
 	case ActivityEventTypeDownloadFailed:
@@ -41,13 +58,35 @@ func (e ActivityEventType) Valid() bool {
 		return true
 	case ActivityEventTypeDriftDetected:
 		return true
+	case ActivityEventTypeFileRemoved:
+		return true
+	case ActivityEventTypeFileRenamed:
+		return true
+	case ActivityEventTypeGrabWidened:
+		return true
 	case ActivityEventTypeGrabbed:
 		return true
 	case ActivityEventTypeImportFailed:
 		return true
+	case ActivityEventTypeImportHeldForReview:
+		return true
 	case ActivityEventTypeImported:
 		return true
+	case ActivityEventTypeMetadataRefreshed:
+		return true
+	case ActivityEventTypeMonitoringChanged:
+		return true
+	case ActivityEventTypeReidentified:
+		return true
+	case ActivityEventTypeRequestApproved:
+		return true
 	case ActivityEventTypeSearched:
+		return true
+	case ActivityEventTypeTranscodeCompleted:
+		return true
+	case ActivityEventTypeTranscodeFailed:
+		return true
+	case ActivityEventTypeTranscodeRejected:
 		return true
 	default:
 		return false
@@ -2271,42 +2310,6 @@ func (e UsersSort) Valid() bool {
 	}
 }
 
-// Defines values for ListActivityParamsType.
-const (
-	ListActivityParamsTypeDownloadCompleted ListActivityParamsType = "download_completed"
-	ListActivityParamsTypeDownloadFailed    ListActivityParamsType = "download_failed"
-	ListActivityParamsTypeDriftConfirmed    ListActivityParamsType = "drift_confirmed"
-	ListActivityParamsTypeDriftDetected     ListActivityParamsType = "drift_detected"
-	ListActivityParamsTypeGrabbed           ListActivityParamsType = "grabbed"
-	ListActivityParamsTypeImportFailed      ListActivityParamsType = "import_failed"
-	ListActivityParamsTypeImported          ListActivityParamsType = "imported"
-	ListActivityParamsTypeSearched          ListActivityParamsType = "searched"
-)
-
-// Valid indicates whether the value is a known member of the ListActivityParamsType enum.
-func (e ListActivityParamsType) Valid() bool {
-	switch e {
-	case ListActivityParamsTypeDownloadCompleted:
-		return true
-	case ListActivityParamsTypeDownloadFailed:
-		return true
-	case ListActivityParamsTypeDriftConfirmed:
-		return true
-	case ListActivityParamsTypeDriftDetected:
-		return true
-	case ListActivityParamsTypeGrabbed:
-		return true
-	case ListActivityParamsTypeImportFailed:
-		return true
-	case ListActivityParamsTypeImported:
-		return true
-	case ListActivityParamsTypeSearched:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for ListImportFilesParamsClassification.
 const (
 	ListImportFilesParamsClassificationAmbiguous ListImportFilesParamsClassification = "ambiguous"
@@ -2533,9 +2536,10 @@ func (e ListUsersParamsOrder) Valid() bool {
 }
 
 // ActivityEvent Exactly one of movie / episode / series is set, naming what the event
-// happened to. `series` carries only what belongs to no single episode —
-// a search issued at series or season scope; per-episode outcomes use
-// `episode`.
+// happened to. `series` carries what belongs to no single episode — a
+// search issued at series or season scope, and the show-level actions
+// (added, reidentified, metadata_refreshed, monitoring_changed);
+// per-episode outcomes use `episode`.
 type ActivityEvent struct {
 	CreatedAt time.Time `json:"created_at"`
 
@@ -2548,11 +2552,15 @@ type ActivityEvent struct {
 
 	// Series Minimal series identity for feed rows. Deliberately not the full TVShow
 	// schema, which carries the whole season/episode tree.
-	Series *SeriesRef        `json:"series,omitempty"`
-	Type   ActivityEventType `json:"type"`
+	Series *SeriesRef `json:"series,omitempty"`
+
+	// Type What happened to the item the event hangs off. Mirrors the enum on
+	// the MediaEvent ent schema and events.Type; the three must agree.
+	Type ActivityEventType `json:"type"`
 }
 
-// ActivityEventType defines model for ActivityEvent.Type.
+// ActivityEventType What happened to the item the event hangs off. Mirrors the enum on
+// the MediaEvent ent schema and events.Type; the three must agree.
 type ActivityEventType string
 
 // ActivityList defines model for ActivityList.
@@ -5205,7 +5213,7 @@ type ActivitySeriesID = uint32
 type ActivitySince = time.Time
 
 // ActivityType defines model for ActivityType.
-type ActivityType = []string
+type ActivityType = []ActivityEventType
 
 // ApiKeyID defines model for ApiKeyID.
 type ApiKeyID = uint32
@@ -5621,9 +5629,6 @@ type ListActivityParams struct {
 	Limit    *ActivityLimit    `form:"limit,omitempty" json:"limit,omitempty"`
 	Cursor   *ActivityCursor   `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
-
-// ListActivityParamsType defines parameters for ListActivity.
-type ListActivityParamsType string
 
 // ListDownloadHistoryParams defines parameters for ListDownloadHistory.
 type ListDownloadHistoryParams struct {

@@ -100,14 +100,27 @@ type Type string
 
 // Type values.
 const (
-	TypeGrabbed           Type = "grabbed"
-	TypeDownloadCompleted Type = "download_completed"
-	TypeDownloadFailed    Type = "download_failed"
-	TypeImported          Type = "imported"
-	TypeImportFailed      Type = "import_failed"
-	TypeDriftDetected     Type = "drift_detected"
-	TypeDriftConfirmed    Type = "drift_confirmed"
-	TypeSearched          Type = "searched"
+	TypeGrabbed             Type = "grabbed"
+	TypeDownloadCompleted   Type = "download_completed"
+	TypeDownloadFailed      Type = "download_failed"
+	TypeDownloadCancelled   Type = "download_cancelled"
+	TypeGrabWidened         Type = "grab_widened"
+	TypeImported            Type = "imported"
+	TypeImportFailed        Type = "import_failed"
+	TypeImportHeldForReview Type = "import_held_for_review"
+	TypeDriftDetected       Type = "drift_detected"
+	TypeDriftConfirmed      Type = "drift_confirmed"
+	TypeSearched            Type = "searched"
+	TypeAdded               Type = "added"
+	TypeFileRenamed         Type = "file_renamed"
+	TypeFileRemoved         Type = "file_removed"
+	TypeReidentified        Type = "reidentified"
+	TypeMetadataRefreshed   Type = "metadata_refreshed"
+	TypeMonitoringChanged   Type = "monitoring_changed"
+	TypeRequestApproved     Type = "request_approved"
+	TypeTranscodeCompleted  Type = "transcode_completed"
+	TypeTranscodeFailed     Type = "transcode_failed"
+	TypeTranscodeRejected   Type = "transcode_rejected"
 )
 
 func (_type Type) String() string {
@@ -117,7 +130,7 @@ func (_type Type) String() string {
 // TypeValidator is a validator for the "type" field enum values. It is called by the builders before save.
 func TypeValidator(_type Type) error {
 	switch _type {
-	case TypeGrabbed, TypeDownloadCompleted, TypeDownloadFailed, TypeImported, TypeImportFailed, TypeDriftDetected, TypeDriftConfirmed, TypeSearched:
+	case TypeGrabbed, TypeDownloadCompleted, TypeDownloadFailed, TypeDownloadCancelled, TypeGrabWidened, TypeImported, TypeImportFailed, TypeImportHeldForReview, TypeDriftDetected, TypeDriftConfirmed, TypeSearched, TypeAdded, TypeFileRenamed, TypeFileRemoved, TypeReidentified, TypeMetadataRefreshed, TypeMonitoringChanged, TypeRequestApproved, TypeTranscodeCompleted, TypeTranscodeFailed, TypeTranscodeRejected:
 		return nil
 	default:
 		return fmt.Errorf("mediaevent: invalid enum value for type field: %q", _type)
