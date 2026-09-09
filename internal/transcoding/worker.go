@@ -17,6 +17,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/observability"
 	"github.com/datahearth/streamline/internal/otelx"
@@ -532,6 +533,12 @@ func (w *Worker) runJob(ctx context.Context, c *claimed) {
 	}
 
 	record(wctx, "succeeded")
+	recordEvent(wctx, mf, events.TypeTranscodeCompleted, map[string]any{
+		"path":        finalPath,
+		"size_before": mf.Size,
+		"size_after":  sizeAfter,
+		"container":   pol.To.Container,
+	})
 	jobDuration.Record(wctx, time.Since(started).Seconds())
 	if saved := mf.Size - sizeAfter; saved > 0 {
 		bytesSaved.Add(wctx, saved)
@@ -653,6 +660,12 @@ func (w *Worker) reject(
 			"transcode.job_id", job.ID, "error", err)
 		return
 	}
+	recordEvent(ctx, mf, events.TypeTranscodeRejected, map[string]any{
+		"path":        mf.Path,
+		"reason":      rej.Error(),
+		"size_before": mf.Size,
+		"size_after":  rej.outSize,
+	})
 	slog.WarnContext(ctx, "transcode output rejected",
 		"transcode.job_id", job.ID,
 		"media_file.path", mf.Path,
@@ -745,6 +758,37 @@ func (w *Worker) refresh(ctx context.Context, mf *ent.MediaFile) {
 	}
 }
 
+// recordEvent files a transcode outcome against the movie or episode the job's
+// media file belongs to. A job whose file or owner edge is missing — the
+// errNoOwner path, which is exactly the failure of having no owner — records
+// nothing rather than inventing a scope.
+func recordEvent(
+	ctx context.Context,
+	mf *ent.MediaFile,
+	t events.Type,
+	payload map[string]any,
+) {
+	if mf == nil {
+		return
+	}
+	var (
+		scope events.Scope
+		id    uint32
+	)
+	switch {
+	case mf.Edges.Movie != nil:
+		scope, id = events.ScopeMovie, mf.Edges.Movie.ID
+	case mf.Edges.Episode != nil:
+		scope, id = events.ScopeEpisode, mf.Edges.Episode.ID
+	default:
+		return
+	}
+	if err := events.Record(ctx, nil, t, scope, id, payload); err != nil {
+		slog.WarnContext(ctx, "could not record a transcode event",
+			"media_file.id", mf.ID, "event.type", string(t), "error", err)
+	}
+}
+
 func (w *Worker) markCanceled(ctx context.Context, job *ent.TranscodeJob) {
 	err := w.db.MarkTranscodeJobCanceled(ctx, job.ID)
 	// Not cancelable means an operator already marked the row and the running
@@ -819,6 +863,11 @@ func (w *Worker) failWith(
 	otelx.RecordSpanError(trace.SpanFromContext(ctx), cause)
 	if terminal {
 		record(ctx, "failed")
+		recordEvent(ctx, job.Edges.MediaFile, events.TypeTranscodeFailed,
+			map[string]any{
+				"reason":   cause.Error(),
+				"attempts": job.Attempts,
+			})
 	}
 }
 
