@@ -68,7 +68,11 @@ runs:
       uses: anthropics/claude-code-action@5ccc3a35a6367cdb8e6fbd0728287467540ecfe2 # v1
       with:
         claude_code_oauth_token: ${{ inputs.claude_code_oauth_token }}
+        # Pinned, not left to the CLI's default: that default moves with the
+        # Claude Code version the action installs, and release notes would
+        # change voice between releases for no reason anyone could see.
         claude_args: >-
+          --model claude-sonnet-5
           --add-dir ${{ runner.temp }}
           --allowed-tools Read
           --json-schema '{"type":"object","properties":{"notes":{"type":"string"}},"required":["notes"],"additionalProperties":false}'
