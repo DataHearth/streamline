@@ -79,6 +79,9 @@ Every log line made with a request context is enriched automatically. You don't 
 ```yaml
 otel:
   endpoint: "alloy.observability.svc.cluster.local:4318"
+  insecure: true
+  sample_ratio: 0.05
+  environment: "prod"
 ```
 
 An empty endpoint disables OTel export entirely — no traces, no metrics, no log bridge. That's the default.
@@ -86,7 +89,16 @@ An empty endpoint disables OTel export entirely — no traces, no metrics, no lo
 Traces, metrics and logs are all batch-exported to that single endpoint.
 
 > [!IMPORTANT]
-> The SDK defaults to HTTPS. For a plaintext collector you must set `OTEL_EXPORTER_OTLP_INSECURE=true` as an environment variable. Forgetting this is the usual reason a correctly-configured endpoint receives nothing.
+> The SDK defaults to HTTPS. For a plaintext collector set `otel.insecure: true` (the environment variable `OTEL_EXPORTER_OTLP_INSECURE=true` does the same). Forgetting this is the usual reason a correctly-configured endpoint receives nothing.
+
+`otel.sample_ratio` is the head sampling rate for root spans, `0`–`1`, defaulting to `0.05`. The DB driver is instrumented, so `1.0` exports every SQL statement. Setting `OTEL_TRACES_SAMPLER` overrides it — Streamline stands aside and lets the SDK read the standard variables.
+
+`otel.environment` fills `deployment.environment` on the resource. Two installs exporting to one collector are otherwise indistinguishable; the resource also carries host and OS attributes, and honours `OTEL_RESOURCE_ATTRIBUTES`.
+
+> [!NOTE]
+> `log.app.enabled: false` disables the **stderr sink only**. Traces, metrics and OTLP-exported logs continue as long as `otel.endpoint` is set. (Before v1.1 it disabled the whole pipeline.)
+
+If the collector is unreachable, the export failure is logged to stderr as `opentelemetry export failed`, at most once a minute. Silence there means export is working — or that `log.app.enabled` is false.
 
 ### Traces
 
@@ -106,7 +118,22 @@ Outbound HTTP is instrumented via a shared `otelhttp`-wrapped client, so calls t
 
 ### Metrics
 
-The database layer is auto-instrumented — SQL queries are traced via `otelsql`, and connection-pool statistics are registered as metrics. Standard Go runtime metrics come along with the SDK.
+The database layer is auto-instrumented — SQL queries are traced via `otelsql`, and connection-pool statistics are registered as metrics. Go runtime metrics (goroutine count, GC pause, heap size) are exported too.
+
+Beyond those, the series worth building alerts on:
+
+| Metric | What it answers |
+| --- | --- |
+| `streamline.scheduler.job.last_success_unixtime` | "Has this background job stopped running?" A job that silently dies produces no errors to count — only a timestamp that stops advancing. |
+| `streamline.download.client_reachable` | Whether each download client answered its last call. `0` for more than a few minutes means the client is down. |
+| `streamline.bittorrent.stalled_torrents` | Incomplete torrents with no peers. |
+| `streamline.transcoding.running` vs `.max_concurrent` | Saturated or stalled. Queue depth is `streamline_transcode_jobs_by_status{status="queued"}`. |
+| `streamline.importer.outcomes` | Imports by `held` / `failed` / `terminal` / `succeeded`; `streamline.importer.queued` is the backlog. |
+| `streamline.indexer.queries` / `.feeds` | Per-indexer outcome, split into `unauthorized`, `unreachable`, `bad_response` — an expired API key and a dead tracker are different problems. |
+| `streamline.mediaserver.refreshes` | Per-server refresh outcome; catches Plex failing while Jellyfin works. |
+| `streamline.auth.api_rejections` | Rejected `/api/v1` authentication by method and reason. |
+| `streamline.auth.ratelimit.table_full` | **Any non-zero rate means the login rate limiter has stopped limiting.** |
+| `streamline_requests_by_status{status="pending"}` | Request backlog. `streamline_movies_by_status` and `streamline_episodes_by_status` cover wanted/downloading counts. |
 
 ### Logs
 
@@ -135,7 +162,7 @@ flowchart LR
   VT --> G
 ```
 
-Point `otel.endpoint` at Alloy on `4318` and set `OTEL_EXPORTER_OTLP_INSECURE=true`.
+Point `otel.endpoint` at Alloy on `4318` and set `otel.insecure: true`.
 
 **Kubernetes:** the Helm chart has an optional `observability` subchart wiring the same components from their upstream charts:
 

@@ -372,8 +372,13 @@ Both take a `rotate` block, applied when output is a file path:
 | Key | Type | Default | Notes |
 | --- | --- | --- | --- |
 | `otel.endpoint` | string | `""` | OTLP endpoint. Empty disables export entirely |
+| `otel.insecure` | bool | `false` | Send OTLP over plaintext HTTP. Required for an `http://` collector |
+| `otel.sample_ratio` | number | `0.05` | Head sampling rate for root spans, `0`–`1`. Ignored when `OTEL_TRACES_SAMPLER` is set |
+| `otel.environment` | string | `""` | Fills the `deployment.environment` resource attribute (e.g. `prod`, `staging`) |
 
-The OTel SDK defaults to HTTPS. For a plaintext collector, set `OTEL_EXPORTER_OTLP_INSECURE=true`. See [Observability and Logging](Observability-and-Logging).
+The OTel SDK defaults to HTTPS. Set `otel.insecure: true` for a plaintext collector — `OTEL_EXPORTER_OTLP_INSECURE=true` still works and does the same thing. See [Observability and Logging](Observability-and-Logging).
+
+`log.app.enabled: false` turns off the stderr log sink only. Traces, metrics and OTLP-exported logs keep flowing as long as `otel.endpoint` is set.
 
 ### events
 

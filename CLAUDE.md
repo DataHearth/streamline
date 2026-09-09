@@ -16,6 +16,7 @@ Svelte 5 SPA in `web/app/` (TypeScript everywhere), Routify v3 file-routing over
 ## Logging
 - No `*slog.Logger` plumbing. `cmd/main.go` calls `observability.Setup` then `slog.SetDefault`; every package logs via `slog.XContext(ctx, ...)` (top-level) — never hold a logger field.
 - `observability.Setup` returns one `slog.Handler` = `contextEnrichingHandler(multiHandler{stderr, otelslog.Handler})`. stderr is pretty text/json from `log.app.{level,format}`; otelslog bridges to the OTLP logs pipeline (traces/metrics/logs all batch-exported to `otel.endpoint`).
+- **`log.app.enabled` gates the stderr sink only**; the OTel pipeline is gated on `otel.endpoint` alone. It used to return early with a `DiscardHandler`, so quieting local logs silently stopped traces and metrics as well — an instance exporting nothing, for a reason nowhere near the OTel config.
 - `contextEnrichingHandler` auto-attaches `request_id` (chi), `user.id`/`user.email`/`user.roles` (auth claims, OTel semconv v1.40.0), `http.route` (chi route pattern). Trace/span IDs come from otelslog. Use `slog.XContext` so ctx flows through.
 - `observability.LevelCritical` (= `slog.LevelError + 4`, rendered `CRITICAL`) for panics, invariant violations, unrecoverable conditions. Call via `slog.LogAttrs(ctx, observability.LevelCritical, ...)`.
 - OTel semconv pinned at v1.40.0 — use `semconv.<Key>Key` constants (e.g. `semconv.HTTPRouteKey`) over string literals; keep versions aligned across files.
@@ -25,6 +26,11 @@ Svelte 5 SPA in `web/app/` (TypeScript everywhere), Routify v3 file-routing over
 - Per-package tracer: `var tracer = otel.Tracer("github.com/datahearth/streamline/internal/<pkg>")`. Span names `<pkg>.<op>` (e.g. `download.grab`, `rss.process_movie`, `indexer.query`).
 - DB auto-instrumented via `otelsql.Open` + `RegisterDBStatsMetrics` in `internal/db/client.go`. Add business-logic spans in service methods + `span.SetAttributes` for domain context.
 - Prefer semconv helper funcs (`semconv.UserEmail`, `semconv.UserRoles`, `semconv.UserID`, `semconv.DBSystemNameSQLite`) over raw `attribute.String("user.email", …)`.
+- **Never put a row id in a metric attribute** — `movie.id`, `episode.id`, a request path with an id in it. That is one time series per row in the library. Ids belong in the log line and on the span; a metric attribute is a low-cardinality dimension (`outcome`, `kind`, `status`, an indexer or client *name*).
+- **A span that can fail must record the failure.** Every terminal path funnels its error through `otelx.RecordSpanError` or, where a helper owns the exits, through one choke point (`transcoding.record`, `scheduler.executeJob`). A span left untouched by its own failure paths reports OK, and filtering a backend for error spans then finds nothing wrong.
+- **Every goroutine started with `go` defers `observability.RecoverPanic(ctx, what, onPanic)`.** `middleware.Recoverer` covers the request path and nothing else; an unrecovered panic in a background worker takes the whole process down. `onPanic` is the caller's policy — a scheduled job records `errJobPanicked` and retries next tick, a transcode fails terminally, a boot goroutine calls `stop()` for a clean shutdown.
+- Sampling is `otel.sample_ratio` (default `0.05`), overridden by `OTEL_TRACES_SAMPLER` — `Setup` skips its own `WithSampler` when that variable is set, because passing the option at all makes the SDK ignore the env. `otel.insecure` is needed for an `http://` collector; `otel.environment` fills `deployment.environment`.
+- `otel.SetErrorHandler` routes SDK export failures into the stderr handler **only** — never the full handler, or a failing log exporter is fed its own error records.
 
 ## HTTP Routes
 - `/health` — pre-auth bare JSON endpoint (NOT in OpenAPI), for k8s probes + load balancers. Registered in `internal/server/server.go`.
