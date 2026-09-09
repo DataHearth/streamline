@@ -539,45 +539,29 @@ func movieHook() ent.Hook {
 	}
 }
 
-// tvShowHook is the series twin of movieHook. A monitored flip here cascades
-// to every season and episode, which the payload says so a reader does not
-// mistake it for a show-level-only change.
+// tvShowHook is the series twin of movieHook, minus the monitoring half: a
+// series toggle cascades to every season and episode, and the activity row for
+// it carries the episode count. The hook sees only the show row's own update
+// and so cannot know that count — tvshow.Service.Update records it instead,
+// where the cascade returns it.
 func tvShowHook() ent.Hook {
 	return func(next ent.Mutator) ent.Mutator {
 		return ent.MutateFunc(
 			func(ctx context.Context, m ent.Mutation) (ent.Value, error) {
 				tm, ok := m.(*ent.TVShowMutation)
-				if !ok {
+				if !ok || !tm.Op().Is(ent.OpCreate) {
 					return next.Mutate(ctx, m)
 				}
 				val, err := next.Mutate(ctx, m)
 				if err != nil {
 					return val, err
 				}
-				c := tm.Client()
-				switch {
-				case tm.Op().Is(ent.OpCreate):
-					row, ok := val.(*ent.TVShow)
-					if !ok || row.ID == 0 {
-						return val, nil
-					}
-					recordAux(ctx, "tv_show", c, TypeAdded, ScopeSeries,
-						row.ID, tvShowPayload(row))
-				case tm.Op().Is(ent.OpUpdate | ent.OpUpdateOne):
-					monitored, changed := tm.Monitored()
-					if !changed {
-						return val, nil
-					}
-					id, ok := tm.ID()
-					if !ok || id == 0 {
-						return val, nil
-					}
-					recordAux(ctx, "tv_show", c, TypeMonitoringChanged,
-						ScopeSeries, id, map[string]any{
-							"monitored": monitored,
-							"cascade":   true,
-						})
+				row, ok := val.(*ent.TVShow)
+				if !ok || row.ID == 0 {
+					return val, nil
 				}
+				recordAux(ctx, "tv_show", tm.Client(), TypeAdded, ScopeSeries,
+					row.ID, tvShowPayload(row))
 				return val, nil
 			},
 		)

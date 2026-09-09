@@ -370,7 +370,8 @@ var _ = Describe("TVShow store", Label("unit", "db"), func() {
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(store.CascadeShowMonitored(ctx, show.ID, false)).To(Succeed())
+		_, err = store.CascadeShowMonitored(ctx, show.ID, false)
+		Expect(err).NotTo(HaveOccurred())
 
 		got, err := store.FindTVShowByID(ctx, show.ID)
 		Expect(err).NotTo(HaveOccurred())
@@ -398,8 +399,10 @@ var _ = Describe("TVShow store", Label("unit", "db"), func() {
 			got, err := store.FindTVShowByID(ctx, show.ID)
 			Expect(err).NotTo(HaveOccurred())
 			s1 := got.Edges.Seasons[0]
-
-			Expect(store.CascadeSeasonMonitored(ctx, s1.ID, false)).To(Succeed())
+			cascade, err := store.CascadeSeasonMonitored(ctx, s1.ID, false)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(cascade.ShowID).To(Equal(show.ID))
+			Expect(cascade.Number).To(Equal(uint16(1)))
 
 			after, err := store.FindTVShowByID(ctx, show.ID)
 			Expect(err).NotTo(HaveOccurred())
@@ -479,7 +482,8 @@ var _ = Describe("TVShow store", Label("unit", "db"), func() {
 				UpdateTVShowParams{Monitored: &off},
 			)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(store.CascadeShowMonitored(ctx, ignored.ID, false)).To(Succeed())
+			_, err = store.CascadeShowMonitored(ctx, ignored.ID, false)
+			Expect(err).NotTo(HaveOccurred())
 
 			n, err := store.CascadeSpecialsMonitored(ctx, true)
 			Expect(err).NotTo(HaveOccurred())

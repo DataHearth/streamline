@@ -750,12 +750,16 @@ type Store interface {
 	SetEpisodesMonitored(ctx context.Context, ids []uint32, monitored bool) error
 	SetSeasonsMonitored(ctx context.Context, ids []uint32, monitored bool) error
 	SetEpisodeMonitored(ctx context.Context, id uint32, monitored bool) error
-	CascadeShowMonitored(ctx context.Context, showID uint32, monitored bool) error
+	CascadeShowMonitored(
+		ctx context.Context,
+		showID uint32,
+		monitored bool,
+	) (int, error)
 	CascadeSeasonMonitored(
 		ctx context.Context,
 		seasonID uint32,
 		monitored bool,
-	) error
+	) (SeasonCascade, error)
 	CascadeSpecialsMonitored(ctx context.Context, monitored bool) (int, error)
 	SetEpisodeStatus(ctx context.Context, id uint32, status episode.Status) error
 	MarkEpisodeDownloading(ctx context.Context, id uint32) (bool, error)

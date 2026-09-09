@@ -2,6 +2,7 @@
 	import { Activity } from "@lucide/svelte";
 	import { formatRelative, formatDateTime } from "../../lib/dates";
 	import { eventSubject, EVENT_MARKS } from "../../lib/activity-event";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 	import type { ActivityEvent } from "../../lib/types";
 
 	let { events }: { events: ActivityEvent[] } = $props();
@@ -18,6 +19,14 @@
 		if (!payload) return "";
 		const v = payload.size;
 		return typeof v === "string" ? v : "";
+	}
+
+	// A season or series monitor toggle is one row carrying how many episodes
+	// it moved, so the count is the only thing that says how big it was.
+	function episodes(payload: Record<string, unknown> | undefined): string {
+		const n = payload?.episodes;
+		if (typeof n !== "number" || n === 0) return "";
+		return n === 1 ? i18n.activity_one_episode() : i18n.activity_n_episodes({ count: n });
 	}
 </script>
 
@@ -63,7 +72,7 @@
 						</time>
 					</div>
 					<div class="mt-0.5 truncate font-mono text-[10.5px] text-fg-subtle">
-						{release(event.payload) || mark.label}
+						{release(event.payload) || episodes(event.payload) || mark.label}
 					</div>
 				</div>
 				{#if size(event.payload)}

@@ -424,8 +424,22 @@ func (s *Service) Update(
 	// A series monitor toggle is a master switch: cascade it to every season and
 	// episode so an unmonitored show leaves nothing for the fetcher to grab.
 	if p.Monitored != nil {
-		if err := s.db.CascadeShowMonitored(ctx, id, *p.Monitored); err != nil {
+		episodes, err := s.db.CascadeShowMonitored(ctx, id, *p.Monitored)
+		if err != nil {
 			return nil, otelx.RecordSpanError(span, err)
+		}
+		// One row carrying the count, not one per episode: the toggle is a
+		// single action, and a long-running series would otherwise push a day
+		// of real activity off the feed on its own.
+		if err := events.Record(
+			ctx, nil, events.TypeMonitoringChanged, events.ScopeSeries, id,
+			map[string]any{
+				"monitored": *p.Monitored,
+				"episodes":  episodes,
+			},
+		); err != nil {
+			slog.WarnContext(ctx, "record monitoring event failed",
+				"tvshow.id", id, "error", err)
 		}
 	}
 	show, err := s.db.UpdateTVShow(
@@ -533,11 +547,44 @@ func presetWants(
 func (s *Service) SetSeasonMonitored(ctx context.Context, id uint32, m bool) error {
 	// Cascade to the season's episodes so a season toggle isn't undone by the
 	// fetcher still seeing monitored episodes underneath it.
-	return s.db.CascadeSeasonMonitored(ctx, id, m)
+	c, err := s.db.CascadeSeasonMonitored(ctx, id, m)
+	if err != nil {
+		return err
+	}
+	if c.ShowID == 0 {
+		return nil
+	}
+	// Series-scoped with the season number in `seasons`, which is the shape
+	// eventSubject already renders as "Show · Season 3" — a season is not an
+	// event scope of its own. One row with the count, as for the show toggle.
+	if err := events.Record(
+		ctx, nil, events.TypeMonitoringChanged, events.ScopeSeries, c.ShowID,
+		map[string]any{
+			"monitored": m,
+			"episodes":  c.Episodes,
+			"seasons":   []uint16{c.Number},
+		},
+	); err != nil {
+		slog.WarnContext(ctx, "record monitoring event failed",
+			"tvshow.id", c.ShowID, "season.number", c.Number, "error", err)
+	}
+	return nil
 }
 
 func (s *Service) SetEpisodeMonitored(ctx context.Context, id uint32, m bool) error {
-	return s.db.SetEpisodeMonitored(ctx, id, m)
+	if err := s.db.SetEpisodeMonitored(ctx, id, m); err != nil {
+		return err
+	}
+	// A single episode is one deliberate toggle, so it gets its own row —
+	// unlike the season and show cascades above, which report a count.
+	if err := events.Record(
+		ctx, nil, events.TypeMonitoringChanged, events.ScopeEpisode, id,
+		map[string]any{"monitored": m},
+	); err != nil {
+		slog.WarnContext(ctx, "record monitoring event failed",
+			"episode.id", id, "error", err)
+	}
+	return nil
 }
 
 // ApplySpecialsToExisting pushes the current library.monitor_specials value

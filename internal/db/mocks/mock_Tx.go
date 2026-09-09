@@ -657,20 +657,29 @@ func (_c *MockTx_BumpMediaFilesLastSeen_Call) RunAndReturn(run func(ctx context.
 }
 
 // CascadeSeasonMonitored provides a mock function for the type MockTx
-func (_mock *MockTx) CascadeSeasonMonitored(ctx context.Context, seasonID uint32, monitored bool) error {
+func (_mock *MockTx) CascadeSeasonMonitored(ctx context.Context, seasonID uint32, monitored bool) (db.SeasonCascade, error) {
 	ret := _mock.Called(ctx, seasonID, monitored)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CascadeSeasonMonitored")
 	}
 
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, bool) error); ok {
+	var r0 db.SeasonCascade
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, bool) (db.SeasonCascade, error)); ok {
+		return returnFunc(ctx, seasonID, monitored)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, bool) db.SeasonCascade); ok {
 		r0 = returnFunc(ctx, seasonID, monitored)
 	} else {
-		r0 = ret.Error(0)
+		r0 = ret.Get(0).(db.SeasonCascade)
 	}
-	return r0
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, bool) error); ok {
+		r1 = returnFunc(ctx, seasonID, monitored)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
 }
 
 // MockTx_CascadeSeasonMonitored_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CascadeSeasonMonitored'
@@ -709,31 +718,40 @@ func (_c *MockTx_CascadeSeasonMonitored_Call) Run(run func(ctx context.Context, 
 	return _c
 }
 
-func (_c *MockTx_CascadeSeasonMonitored_Call) Return(err error) *MockTx_CascadeSeasonMonitored_Call {
-	_c.Call.Return(err)
+func (_c *MockTx_CascadeSeasonMonitored_Call) Return(seasonCascade db.SeasonCascade, err error) *MockTx_CascadeSeasonMonitored_Call {
+	_c.Call.Return(seasonCascade, err)
 	return _c
 }
 
-func (_c *MockTx_CascadeSeasonMonitored_Call) RunAndReturn(run func(ctx context.Context, seasonID uint32, monitored bool) error) *MockTx_CascadeSeasonMonitored_Call {
+func (_c *MockTx_CascadeSeasonMonitored_Call) RunAndReturn(run func(ctx context.Context, seasonID uint32, monitored bool) (db.SeasonCascade, error)) *MockTx_CascadeSeasonMonitored_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // CascadeShowMonitored provides a mock function for the type MockTx
-func (_mock *MockTx) CascadeShowMonitored(ctx context.Context, showID uint32, monitored bool) error {
+func (_mock *MockTx) CascadeShowMonitored(ctx context.Context, showID uint32, monitored bool) (int, error) {
 	ret := _mock.Called(ctx, showID, monitored)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CascadeShowMonitored")
 	}
 
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, bool) error); ok {
+	var r0 int
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, bool) (int, error)); ok {
+		return returnFunc(ctx, showID, monitored)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, bool) int); ok {
 		r0 = returnFunc(ctx, showID, monitored)
 	} else {
-		r0 = ret.Error(0)
+		r0 = ret.Get(0).(int)
 	}
-	return r0
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, bool) error); ok {
+		r1 = returnFunc(ctx, showID, monitored)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
 }
 
 // MockTx_CascadeShowMonitored_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CascadeShowMonitored'
@@ -772,12 +790,12 @@ func (_c *MockTx_CascadeShowMonitored_Call) Run(run func(ctx context.Context, sh
 	return _c
 }
 
-func (_c *MockTx_CascadeShowMonitored_Call) Return(err error) *MockTx_CascadeShowMonitored_Call {
-	_c.Call.Return(err)
+func (_c *MockTx_CascadeShowMonitored_Call) Return(n int, err error) *MockTx_CascadeShowMonitored_Call {
+	_c.Call.Return(n, err)
 	return _c
 }
 
-func (_c *MockTx_CascadeShowMonitored_Call) RunAndReturn(run func(ctx context.Context, showID uint32, monitored bool) error) *MockTx_CascadeShowMonitored_Call {
+func (_c *MockTx_CascadeShowMonitored_Call) RunAndReturn(run func(ctx context.Context, showID uint32, monitored bool) (int, error)) *MockTx_CascadeShowMonitored_Call {
 	_c.Call.Return(run)
 	return _c
 }

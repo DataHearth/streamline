@@ -595,28 +595,35 @@ func (db *DB) SetSeasonsMonitored(
 // so toggling a series' monitor flag flows down to its whole tree (an
 // unmonitored show must not leave monitored episodes for the fetcher to grab).
 // Both bulk updates run in one transaction.
+// CascadeShowMonitored returns the number of episodes it touched, which is what
+// the activity feed reports: a show-wide toggle is one action, and recording it
+// per episode would write a row per episode in the series.
 func (db *DB) CascadeShowMonitored(
 	ctx context.Context,
 	showID uint32,
 	monitored bool,
-) error {
+) (int, error) {
 	tx, err := db.client.Tx(ctx)
 	if err != nil {
-		return fmt.Errorf("begin tx: %w", err)
+		return 0, fmt.Errorf("begin tx: %w", err)
 	}
 	if _, err := tx.Season.Update().
 		Where(season.HasTvShowWith(tvshow.ID(showID))).
 		SetMonitored(monitored).Save(ctx); err != nil {
 		tx.Rollback()
-		return fmt.Errorf("cascade seasons monitored: %w", err)
+		return 0, fmt.Errorf("cascade seasons monitored: %w", err)
 	}
-	if _, err := tx.Episode.Update().
+	episodes, err := tx.Episode.Update().
 		Where(episode.HasSeasonWith(season.HasTvShowWith(tvshow.ID(showID)))).
-		SetMonitored(monitored).Save(ctx); err != nil {
+		SetMonitored(monitored).Save(ctx)
+	if err != nil {
 		tx.Rollback()
-		return fmt.Errorf("cascade episodes monitored: %w", err)
+		return 0, fmt.Errorf("cascade episodes monitored: %w", err)
 	}
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return 0, err
+	}
+	return episodes, nil
 }
 
 // CascadeSpecialsMonitored sets season 0 — and its episodes — across the whole
@@ -661,27 +668,56 @@ func (db *DB) CascadeSpecialsMonitored(
 
 // CascadeSeasonMonitored sets a season and all its episodes to monitored in one
 // transaction, so a season toggle flows down to its episodes.
+// SeasonCascade reports what a season monitor toggle touched. The owning show
+// and season number come back with it because a season has no event scope of
+// its own: the activity row hangs off the series, and the number is what makes
+// it read as "Show · Season 3" rather than the bare show title.
+type SeasonCascade struct {
+	ShowID   uint32
+	Number   uint16
+	Episodes int
+}
+
+// Returns what it touched, for the same reason CascadeShowMonitored does.
 func (db *DB) CascadeSeasonMonitored(
 	ctx context.Context,
 	seasonID uint32,
 	monitored bool,
-) error {
+) (SeasonCascade, error) {
 	tx, err := db.client.Tx(ctx)
 	if err != nil {
-		return fmt.Errorf("begin tx: %w", err)
+		return SeasonCascade{}, fmt.Errorf("begin tx: %w", err)
+	}
+	row, err := tx.Season.Query().
+		Where(season.ID(seasonID)).
+		WithTvShow(func(q *ent.TVShowQuery) { q.Select(tvshow.FieldID) }).
+		Only(ctx)
+	if err != nil {
+		tx.Rollback()
+		return SeasonCascade{}, fmt.Errorf("find season %d: %w", seasonID, err)
 	}
 	if err := tx.Season.UpdateOneID(seasonID).
 		SetMonitored(monitored).Exec(ctx); err != nil {
 		tx.Rollback()
-		return fmt.Errorf("set season monitored: %w", err)
+		return SeasonCascade{}, fmt.Errorf("set season monitored: %w", err)
 	}
-	if _, err := tx.Episode.Update().
+	episodes, err := tx.Episode.Update().
 		Where(episode.HasSeasonWith(season.ID(seasonID))).
-		SetMonitored(monitored).Save(ctx); err != nil {
+		SetMonitored(monitored).Save(ctx)
+	if err != nil {
 		tx.Rollback()
-		return fmt.Errorf("cascade season episodes monitored: %w", err)
+		return SeasonCascade{}, fmt.Errorf(
+			"cascade season episodes monitored: %w", err,
+		)
 	}
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return SeasonCascade{}, err
+	}
+	out := SeasonCascade{Number: row.Number, Episodes: episodes}
+	if row.Edges.TvShow != nil {
+		out.ShowID = row.Edges.TvShow.ID
+	}
+	return out, nil
 }
 
 func (db *DB) SetEpisodeStatus(

@@ -210,7 +210,7 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 	It("Update toggles show monitored and cascades to the tree", func() {
 		t := true
 		storeMk.CascadeShowMonitored(mock.Anything, uint32(7), true).
-			Return(nil).Once()
+			Return(12, nil).Once()
 		storeMk.UpdateTVShow(mock.Anything, uint32(7), mock.MatchedBy(func(p db.UpdateTVShowParams) bool {
 			return p.Monitored != nil && *p.Monitored
 		})).
@@ -282,7 +282,7 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 
 	It("SetSeasonMonitored cascades to the season's episodes", func() {
 		storeMk.CascadeSeasonMonitored(mock.Anything, uint32(3), false).
-			Return(nil).
+			Return(db.SeasonCascade{ShowID: 9, Number: 2, Episodes: 8}, nil).
 			Once()
 		Expect(svc.SetSeasonMonitored(ctx, 3, false)).To(Succeed())
 	})
