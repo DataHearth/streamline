@@ -409,6 +409,11 @@ func (t *TMDB) get(
 	}
 	defer resp.Body.Close()
 
+	// On the caller's span, not just in a log line: a 429 (TMDB does rate
+	// limit) and a 500 were otherwise indistinguishable in every signal an
+	// alert could reach.
+	recordProviderStatus(ctx, resp.StatusCode)
+
 	if resp.StatusCode != http.StatusOK {
 		slog.WarnContext(
 			ctx,

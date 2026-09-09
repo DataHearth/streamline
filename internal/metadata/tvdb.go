@@ -149,12 +149,15 @@ func (t *TVDB) invalidate(stale string) {
 }
 
 func (t *TVDB) get(ctx context.Context, path string, out any) error {
+	started := time.Now()
 	token, err := t.login(ctx)
 	if err != nil {
+		recordTVDBRequest(ctx, path, 0, started)
 		return err
 	}
 	resp, err := t.do(ctx, path, token)
 	if err != nil {
+		recordTVDBRequest(ctx, path, 0, started)
 		return err
 	}
 	// TVDB tokens expire after ~1 month; a 401 means this one aged out, so
@@ -169,13 +172,16 @@ func (t *TVDB) get(ctx context.Context, path string, out any) error {
 		)
 		t.invalidate(token)
 		if token, err = t.login(ctx); err != nil {
+			recordTVDBRequest(ctx, path, http.StatusUnauthorized, started)
 			return err
 		}
 		if resp, err = t.do(ctx, path, token); err != nil {
+			recordTVDBRequest(ctx, path, 0, started)
 			return err
 		}
 	}
 	defer resp.Body.Close()
+	recordTVDBRequest(ctx, path, resp.StatusCode, started)
 	if resp.StatusCode != http.StatusOK {
 		slog.WarnContext(
 			ctx,
@@ -573,6 +579,13 @@ func (t *TVDB) translateSeasons(
 		}
 		path := fmt.Sprintf("/seasons/%d/translations/%s", id, t.language)
 		if err := t.get(ctx, path, &tr); err != nil {
+			// Debug, because the ordinary miss above is not worth a line per
+			// season per show. But it must leave *some* trace: a TVDB outage
+			// or an expired token silently reverts every season of every show
+			// to its original-language name through this exact path, and the
+			// two were indistinguishable when nothing was recorded at all.
+			slog.DebugContext(ctx, "tvdb season translation unavailable",
+				"tvdb.season_id", id, "error", err)
 			continue
 		}
 		if tr.Data.Name != "" {

@@ -50,7 +50,30 @@ var (
 	searchDuration metric.Float64Histogram
 	indexerQueries metric.Int64Counter
 	indexerTests   metric.Int64Counter
+	indexerFeeds   metric.Int64Counter
 )
+
+// queryOutcome names why an indexer call failed, for the outcome attribute.
+//
+// A blanket "error" put an expired API key, an unreachable tracker and a
+// malformed response in one bucket, so the metric could say an indexer was
+// failing but never which of those to go and fix.
+func queryOutcome(err error) string {
+	switch {
+	case err == nil:
+		return "success"
+	case errors.Is(err, ErrUnauthorized):
+		return "unauthorized"
+	case errors.Is(err, ErrUnreachable):
+		return "unreachable"
+	case errors.Is(err, ErrBadResponse):
+		return "bad_response"
+	case errors.Is(err, ErrUnexpectedStatus):
+		return "unexpected_status"
+	default:
+		return "error"
+	}
+}
 
 func init() {
 	searchCounter = otelx.Must(meter.Int64Counter(
@@ -70,11 +93,20 @@ func init() {
 		"streamline.indexer.tests",
 		metric.WithDescription("Indexer connection-test invocations by outcome"),
 	))
+	// Feed is what every RSS tick calls, once per enabled indexer — the
+	// primary automated ingestion path, and the one with no counter, so
+	// "indexer X's feed has been failing for an hour" was only ever a log
+	// grep while the search path had a graph.
+	indexerFeeds = otelx.Must(meter.Int64Counter(
+		"streamline.indexer.feeds",
+		metric.WithDescription("Per-indexer feed fetches by outcome"),
+	))
 
 	ctx := context.Background()
 	searchCounter.Add(ctx, 0)
 	indexerQueries.Add(ctx, 0)
 	indexerTests.Add(ctx, 0)
+	indexerFeeds.Add(ctx, 0)
 	searchDuration.Record(ctx, 0)
 }
 
@@ -584,7 +616,7 @@ func (i *indexer) searchAll(
 				if err != nil {
 					indexerQueries.Add(queryCtx, 1, metric.WithAttributes(
 						attribute.String("indexer.name", idx.Name),
-						attribute.String("outcome", "error"),
+						attribute.String("outcome", queryOutcome(err)),
 					))
 					otelx.RecordSpanError(childSpan, err)
 					slog.WarnContext(queryCtx,
@@ -621,6 +653,24 @@ func (i *indexer) searchAll(
 					})
 					if retryErr == nil {
 						res = retry
+					} else {
+						// Dropping this silently made a tracker that is down
+						// or rate-limiting on the retry leg indistinguishable
+						// from a bare-title query that legitimately found
+						// nothing — both left an empty result and no signal.
+						indexerQueries.Add(queryCtx, 1, metric.WithAttributes(
+							attribute.String("indexer.name", idx.Name),
+							attribute.String(
+								"outcome",
+								"retry_"+queryOutcome(retryErr),
+							),
+						))
+						slog.DebugContext(queryCtx,
+							"indexer bare-title retry failed",
+							"indexer", idx.Name,
+							"title", title,
+							"error", retryErr,
+						)
 					}
 				}
 				indexerQueries.Add(queryCtx, 1, metric.WithAttributes(
@@ -705,8 +755,16 @@ func (i *indexer) Feed(
 	)
 	defer span.End()
 
+	countFeed := func(outcome string) {
+		indexerFeeds.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("indexer.name", indexerName),
+			attribute.String("outcome", outcome),
+		))
+	}
+
 	row, ok := config.FindIndexer(indexerName)
 	if !ok {
+		countFeed("not_found")
 		return nil, otelx.RecordSpanError(span, config.ErrIndexerNotFound)
 	}
 
@@ -723,11 +781,14 @@ func (i *indexer) Feed(
 		// forever.
 		slog.DebugContext(ctx, "indexer has no feed endpoint, skipping",
 			"indexer.name", row.Name)
+		countFeed("unsupported")
 		return nil, nil
 	}
 	if err != nil {
+		countFeed(queryOutcome(err))
 		return nil, otelx.RecordSpanError(span, err)
 	}
+	countFeed("success")
 	for k := range results {
 		// Prowlarr stamps the real sub-tracker; only fall back to the config
 		// name when the client left it blank (Torznab). Mirrors Search.

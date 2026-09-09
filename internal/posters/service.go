@@ -25,6 +25,7 @@ var (
 	meter  = otel.Meter("github.com/datahearth/streamline/internal/posters")
 
 	posterCache metric.Int64Counter
+	posterFetch metric.Int64Counter
 )
 
 func init() {
@@ -32,7 +33,13 @@ func init() {
 		"streamline.posters.cache",
 		metric.WithDescription("Poster Serve cache hits/misses by kind + outcome"),
 	))
-	posterCache.Add(context.Background(), 0)
+	posterFetch = otelx.Must(meter.Int64Counter(
+		"streamline.posters.fetch",
+		metric.WithDescription("Poster source fetches by kind + outcome"),
+	))
+	ctx := context.Background()
+	posterCache.Add(ctx, 0)
+	posterFetch.Add(ctx, 0)
 }
 
 // maxPosterSize caps the fetched artwork. The TV path forwards whatever
@@ -111,8 +118,20 @@ func (p *posters) Fetch(
 		attribute.String("poster.src", src),
 	)
 
+	// Serve counts cache hits and misses; the outbound fetch behind a miss had
+	// only a span, so an artwork CDN degrading — timeouts, 403s, oversized
+	// bodies — could be seen in a trace and thresholded nowhere.
+	outcome := "ok"
+	defer func() {
+		posterFetch.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("poster.kind", kind),
+			attribute.String("outcome", outcome),
+		))
+	}()
+
 	dst := p.Path(kind, id)
 	if st, err := os.Stat(dst); err == nil && st.Size() > 0 {
+		outcome = "cached"
 		return nil
 	}
 	if err := os.MkdirAll(filepath.Dir(dst), 0o750); err != nil {
@@ -125,10 +144,12 @@ func (p *posters) Fetch(
 	}
 	resp, err := p.client.Do(req)
 	if err != nil {
+		outcome = "transport_error"
 		return otelx.RecordSpanError(span, err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
+		outcome = "http_error"
 		return otelx.RecordSpanError(
 			span,
 			fmt.Errorf("poster source status %d", resp.StatusCode),
@@ -149,6 +170,7 @@ func (p *posters) Fetch(
 	if n > maxPosterSize {
 		tmp.Close()
 		_ = os.Remove(tmpName)
+		outcome = "too_large"
 		return otelx.RecordSpanError(
 			span,
 			fmt.Errorf("poster exceeds %d byte cap", maxPosterSize),
