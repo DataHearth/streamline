@@ -1,0 +1,110 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-action.json
+name: Release notes
+description: Extract a version's CHANGELOG section and rewrite it as readable release notes with Claude.
+
+# Both release lines assemble their notes the same way — the app on v* tags
+# (release.yaml) and the chart on chart-v* tags (chart.yaml) — so the extraction,
+# the prompt and the fallback live here once. Only the changelog, the subject
+# and the footer differ.
+
+inputs:
+  changelog:
+    description: Path to the CHANGELOG.md holding the section.
+    required: true
+  version:
+    description: Version whose "## [x.y.z]" section to extract. No leading v.
+    required: true
+  subject:
+    description: What is being released, in prose — e.g. "Streamline" or "the Streamline Helm chart".
+    required: true
+  footer:
+    description: Markdown appended verbatim below the notes (install and verify lines).
+    required: false
+    default: ""
+  claude_code_oauth_token:
+    description: Token for anthropics/claude-code-action. Omit it and the raw changelog section ships unchanged.
+    required: false
+    default: ""
+
+outputs:
+  file:
+    description: Path to the assembled release notes.
+    value: ${{ steps.assemble.outputs.file }}
+
+runs:
+  using: composite
+  steps:
+    # The changelog is the source of truth and the only input to the notes;
+    # a missing section is a release-blocking mistake, unlike a missing model.
+    #
+    # Every interpolated input reaches the shell through env, never spliced
+    # into the script: the footers carry backticks, and `helm install ...` in
+    # a double-quoted string is command substitution.
+    - id: extract
+      shell: bash
+      env:
+        CHANGELOG: ${{ inputs.changelog }}
+        VERSION: ${{ inputs.version }}
+      run: |
+        raw="$RUNNER_TEMP/raw-notes.md"
+        awk -v tag="## [$VERSION]" 'index($0, tag) == 1 {p=1; next} p && /^## \[/ {exit} p' \
+          "$CHANGELOG" > "$raw"
+        if ! grep -q '[^[:space:]]' "$raw"; then
+          echo "::error::$CHANGELOG has no section for $VERSION"
+          exit 1
+        fi
+
+    # continue-on-error, and the token is optional: a release must never be
+    # blocked by the model being unreachable. assemble falls back to the raw
+    # section, which is what shipped before this step existed.
+    - id: claude
+      if: inputs.claude_code_oauth_token != ''
+      continue-on-error: true
+      uses: anthropics/claude-code-action@5ccc3a35a6367cdb8e6fbd0728287467540ecfe2 # v1
+      with:
+        claude_code_oauth_token: ${{ inputs.claude_code_oauth_token }}
+        claude_args: >-
+          --add-dir ${{ runner.temp }}
+          --allowed-tools Read
+          --json-schema '{"type":"object","properties":{"notes":{"type":"string"}},"required":["notes"],"additionalProperties":false}'
+        prompt: |
+          Read ${{ runner.temp }}/raw-notes.md. It is the ${{ inputs.version }} section of
+          the changelog for ${{ inputs.subject }}, generated from conventional commit
+          subjects, and it is the only source you may use.
+
+          Rewrite it as the GitHub release notes an operator reads before deciding
+          whether to upgrade. Return the markdown in the `notes` field.
+
+          - Open with one or two sentences saying what this release is about. If the
+            release is a handful of unrelated fixes, say that plainly rather than
+            inventing a theme.
+          - Then the changes, grouped under the same headings the section already
+            uses (Added / Changed / Fixed / Removed). Drop a heading that would be
+            empty.
+          - Rewrite each entry as a full sentence describing the effect on someone
+            running this, not the commit subject reworded. Keep the scope prefix's
+            meaning but drop the `scope:` syntax.
+          - Anything marked **BREAKING** goes first, under its own `### Breaking
+            changes` heading, and says what an upgrade will do to a running install.
+          - Never invent a change, a version number, a migration step or a
+            justification that is not in the section. You have no other context and
+            must not go looking for any — do not read other files, and if an entry is
+            too terse to expand honestly, keep it terse.
+          - No preamble, no sign-off, no heading naming the version — the release
+            page already shows it. Start with the summary sentence.
+
+    - id: assemble
+      shell: bash
+      env:
+        STRUCTURED: ${{ steps.claude.outputs.structured_output }}
+        FOOTER: ${{ inputs.footer }}
+      run: |
+        notes="$RUNNER_TEMP/release-notes.md"
+        printf '%s' "$STRUCTURED" | jq -r '.notes // empty' > "$notes" 2>/dev/null || : > "$notes"
+        if ! grep -q '[^[:space:]]' "$notes"; then
+          echo "::warning::no notes from Claude — using the raw changelog section"
+          cp "$RUNNER_TEMP/raw-notes.md" "$notes"
+        fi
+        printf '%s' "$FOOTER" >> "$notes"
+        echo "file=$notes" >> "$GITHUB_OUTPUT"
+        { echo '### Release notes'; echo; cat "$notes"; } >> "$GITHUB_STEP_SUMMARY"

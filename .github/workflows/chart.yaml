@@ -9,7 +9,7 @@ on:
     tags: ["chart-v*.*.*"]
 
 permissions:
-  contents: read
+  contents: write
   packages: write
 
 jobs:
@@ -50,6 +50,30 @@ jobs:
 
       - name: Package + push chart
         run: task release:helm
+
+      - name: Build release notes
+        id: notes
+        uses: ./.github/actions/release-notes
+        with:
+          changelog: deploy/helm/streamline/CHANGELOG.md
+          version: ${{ env.version }}
+          subject: the Streamline Helm chart
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          footer: |
+
+            ---
+            Install: `helm install streamline oci://ghcr.io/datahearth/charts/streamline --version ${{ env.version }}`
+
+      # --latest=false, or a chart release displaces the app release as the
+      # repo's "Latest" — the two version lines share one releases page.
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "Helm chart v${{ env.version }}" \
+            --notes-file "${{ steps.notes.outputs.file }}" \
+            --latest=false
 
       - name: Summary
         if: always()

@@ -46,30 +46,33 @@ jobs:
       - name: Install syft
         uses: anchore/sbom-action/download-syft@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
 
+      - name: Version
+        id: v
+        run: echo "v=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
       # --release-notes makes GoReleaser skip changelog generation *and* the
       # release header/footer, so the whole body is assembled here. Written to
       # RUNNER_TEMP, not the workspace: GoReleaser fails on a dirty git tree.
       - name: Build release notes
-        run: |
-          v="${GITHUB_REF_NAME#v}"
-          notes="$RUNNER_TEMP/release-notes.md"
-          awk -v tag="## [$v]" 'index($0, tag) == 1 {p=1; next} p && /^## \[/ {exit} p' CHANGELOG.md > "$notes"
-          if ! grep -q '[^[:space:]]' "$notes"; then
-            echo "CHANGELOG.md has no section for $GITHUB_REF_NAME" >&2
-            exit 1
-          fi
-          {
-            printf '\n---\n'
-            printf 'Image: `ghcr.io/datahearth/streamline:%s`\n' "$v"
-            printf 'Verify: `cosign verify ghcr.io/datahearth/streamline:%s --certificate-identity-regexp="https://github.com/datahearth/streamline/.github/workflows/image.yaml@.*" --certificate-oidc-issuer=https://token.actions.githubusercontent.com`\n' "$v"
-          } >> "$notes"
+        id: notes
+        uses: ./.github/actions/release-notes
+        with:
+          changelog: CHANGELOG.md
+          version: ${{ steps.v.outputs.v }}
+          subject: Streamline
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          footer: |
+
+            ---
+            Image: `ghcr.io/datahearth/streamline:${{ steps.v.outputs.v }}`
+            Verify: `cosign verify ghcr.io/datahearth/streamline:${{ steps.v.outputs.v }} --certificate-identity-regexp="https://github.com/datahearth/streamline/.github/workflows/image.yaml@.*" --certificate-oidc-issuer=https://token.actions.githubusercontent.com`
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
         with:
           distribution: goreleaser
           version: "~> v2"
-          args: release --clean --release-notes=${{ runner.temp }}/release-notes.md
+          args: release --clean --release-notes=${{ steps.notes.outputs.file }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
