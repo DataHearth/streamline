@@ -2,6 +2,8 @@
 
 Streamline has a built-in request system, so you don't need to run Overseerr/Jellyseerr alongside it. Household members ask for things; you approve them; Streamline adds and downloads them.
 
+[![Requests](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/requests.png)](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/requests.png)
+
 - [The three roles](#the-three-roles)
 - [Letting people in](#letting-people-in)
 - [Making a request](#making-a-request)
@@ -13,23 +15,27 @@ Streamline has a built-in request system, so you don't need to run Overseerr/Jel
 
 ## The three roles
 
-| Role | Can do |
-| --- | --- |
-| **Admin** | Everything: settings, indexers, download clients, imports, users, approving *and* denying requests |
-| **Member** | Browse the library, add and search titles, manage downloads, approve requests. No access to Settings |
-| **Request only** | Search for titles and request them. Sees only their own requests. Nothing else |
+| Capability | Admin | Member | Request only |
+| --- | --- | --- | --- |
+| Settings, indexers, download clients, imports | Yes | No | No |
+| Manage users | Yes | No | No |
+| Add and search titles, manage downloads | Yes | Yes | No |
+| Search for titles and submit requests | Yes | Yes | Yes |
+| See everyone's requests | Yes | Yes | No (own only) |
+| Approve requests | Yes | Yes | No |
+| Deny or reopen requests | Yes | Yes | No |
 
 **Request only** is the role for the people you're running this *for* — housemates, family, the friend who keeps asking for films. They get a search box and a request button, and none of the machinery.
 
 **Member** is for someone you trust to help run the library but not to reconfigure it.
-
-Note the asymmetry on requests: **members can approve, but only admins can deny or reopen.** Approving adds something to the library, which is recoverable. Denying is a judgement call about someone else's request, so it stays with admins.
 
 ---
 
 ## Letting people in
 
 Who may create an account is controlled by `auth.registration_mode` at **Settings → Authentication**. Changes take effect immediately.
+
+[![Sign in](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/login.png)](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/login.png)
 
 | Mode | Behaviour |
 | --- | --- |
@@ -39,7 +45,8 @@ Who may create an account is controlled by `auth.registration_mode` at **Setting
 
 The mode governs **both** ways a new account gets created — the registration form and a first-time SSO login — and only new accounts. People who already have an account sign in regardless.
 
-`open` on an internet-facing instance means anyone who finds your URL gets an account. Use `invite`.
+> [!WARNING]
+> `open` on an internet-facing instance means anyone who finds your URL gets an account. Use `invite`.
 
 ### Invites
 
@@ -49,7 +56,8 @@ You choose the email address and the role the invite grants. Streamline generate
 
 Send the link. When they open it, the registration form is pre-filled with the bound email address (read-only), and the account is created with the role you picked. Signing up with a different email than the invite was bound to is rejected.
 
-**If they sign in through SSO instead, skip the link.** An invite is matched by email, so all they have to do is sign in with your identity provider using the address you invited — the invite is consumed on that first login and grants the role you picked. The link and the SSO path redeem the same invite; whichever happens first uses it up.
+> [!TIP]
+> If they sign in through SSO instead, skip the link. An invite is matched by email, so all they have to do is sign in with your identity provider using the address you invited — the invite is consumed on that first login and grants the role you picked. The link and the SSO path redeem the same invite; whichever happens first uses it up.
 
 Invites are single-use and expire.
 
@@ -125,7 +133,8 @@ The avatar menu, top right → **Account settings**.
 - **Sessions** — every device you're logged in on, with the option to revoke any of them
 - **API keys** — create long-lived keys for scripts and mobile apps. Shown once at creation; store it immediately
 
-An API key carries the same permissions as the user that owns it. A key made by an admin is an admin key. If you're wiring up something that only needs to read, make the key on a member account. Keys can't touch account security either way — password changes, key/session management, user administration, and JWT rotation refuse keys with `403` and require a logged-in session.
+> [!IMPORTANT]
+> An API key carries the same permissions as the user that owns it. A key made by an admin is an admin key. If you're wiring up something that only needs to read, make the key on a member account. Keys can't touch account security either way — password changes, key/session management, user administration, and JWT rotation refuse keys with `403` and require a logged-in session.
 
 Sessions last `auth.session_ttl` (default 168h — one week) before requiring a fresh login.
 

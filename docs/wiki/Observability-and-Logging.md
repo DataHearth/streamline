@@ -31,7 +31,10 @@ log:
 
 `rotate` only applies when `output` is a file path; rotating stderr is meaningless.
 
-Beyond the four standard levels there's one more: **`CRITICAL`** (rendered as such, ranked above `error`). It's reserved for panics, invariant violations and unrecoverable conditions. A `CRITICAL` line is never routine — it's the one to page on.
+Beyond the four standard levels there's one more: **`CRITICAL`** (rendered as such, ranked above `error`). It's reserved for panics, invariant violations and unrecoverable conditions.
+
+> [!TIP]
+> A `CRITICAL` line is never routine — it's the one to page on.
 
 ---
 
@@ -82,7 +85,8 @@ An empty endpoint disables OTel export entirely — no traces, no metrics, no lo
 
 Traces, metrics and logs are all batch-exported to that single endpoint.
 
-> **The SDK defaults to HTTPS.** For a plaintext collector you must set `OTEL_EXPORTER_OTLP_INSECURE=true` as an environment variable. Forgetting this is the usual reason a correctly-configured endpoint receives nothing.
+> [!IMPORTANT]
+> The SDK defaults to HTTPS. For a plaintext collector you must set `OTEL_EXPORTER_OTLP_INSECURE=true` as an environment variable. Forgetting this is the usual reason a correctly-configured endpoint receives nothing.
 
 ### Traces
 
@@ -120,7 +124,18 @@ The repository ships a working observability stack so you don't have to assemble
 docker compose -f deploy/compose.observability.yaml up -d
 ```
 
-Grafana Alloy (OTLP receiver) → VictoriaMetrics (metrics), VictoriaLogs (logs), VictoriaTraces (traces) → Grafana. Point `otel.endpoint` at Alloy on `4318` and set `OTEL_EXPORTER_OTLP_INSECURE=true`.
+```mermaid
+flowchart LR
+  S[Streamline] -->|OTLP| A[Grafana Alloy]
+  A --> VM[VictoriaMetrics]
+  A --> VL[VictoriaLogs]
+  A --> VT[VictoriaTraces]
+  VM --> G[Grafana]
+  VL --> G
+  VT --> G
+```
+
+Point `otel.endpoint` at Alloy on `4318` and set `OTEL_EXPORTER_OTLP_INSECURE=true`.
 
 **Kubernetes:** the Helm chart has an optional `observability` subchart wiring the same components from their upstream charts:
 

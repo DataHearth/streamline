@@ -2,6 +2,11 @@
 
 How a title gets from "I'd like to watch that" to a file on disk.
 
+| | |
+| --- | --- |
+| [![Movies](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/movies.png)](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/movies.png) | [![Series](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/series.png)](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/series.png) |
+| **Movies** — poster grid with per-title status | **Series** — monitored and missing counts |
+
 - [Adding a movie](#adding-a-movie)
 - [Adding a TV show](#adding-a-tv-show)
 - [What the statuses mean](#what-the-statuses-mean)
@@ -22,9 +27,10 @@ Pick the right one — check the year, posters help — and you'll be asked for 
 - **Quality profile** — leave it on the default unless this particular film deserves different treatment
 - **Monitored** — on by default. A monitored film is one Streamline actively hunts for
 
-Confirm, and the film lands in your library as **Wanted**.
+Confirm, and the film lands in your library as **Wanted**. Streamline searches on a schedule, not on the spot, so nothing happens instantly.
 
-Nothing happens instantly. Streamline searches on a schedule, not on the spot. If you're impatient, open the film and hit **Search now**.
+> [!TIP]
+> Impatient? Open the film and hit **Search now** to search right away instead of waiting for the next scheduled pass.
 
 ---
 
@@ -42,11 +48,14 @@ Shows have one extra decision, and it's the one worth reading carefully — **wh
 | **Future episodes** | Nothing aired yet; only what airs from now on |
 | **Pilot only** | Season 1 Episode 1, to try a show before committing |
 
-**Specials (season 0) are not monitored by default.** Most people don't want them, and they're the most poorly-named releases on any tracker. Turn them on globally at Settings → Series (`library.monitor_specials`), or per show from the show's page.
+> [!NOTE]
+> Specials (season 0) are not monitored by default. Most people don't want them, and they're the most poorly-named releases on any tracker. Turn them on globally at Settings → Series (`library.monitor_specials`), or per show from the show's page.
 
 The Settings → Series page also holds the defaults applied to *new* shows and to seasons discovered later. Changing it doesn't retroactively touch shows already in your library — there's an explicit **Apply to existing series** action for that.
 
-Once added, the show page shows every season and episode, what's on disk, what's missing, and what's still to air.
+Once added, the show page shows every season and episode, what's on disk, what's missing, and what's still to air:
+
+[![Series episodes](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/series-episodes.png)](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/series-episodes.png)
 
 ---
 
@@ -74,6 +83,10 @@ A film goes **Failed** after `library.max_grab_failures` (default 3) consecutive
 
 Separately, when a search finds *nothing acceptable*, that title goes quiet for `library.no_match_cooldown` (default 6 hours) before being searched again. That's why a just-added obscure film may sit at Wanted for a while without visible activity.
 
+The detail page is where all of this comes together — cast, artwork, and once a file's in place, its ffprobe media info:
+
+[![Movie detail](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/movie-detail.png)](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/movie-detail.png)
+
 ---
 
 ## How automatic grabbing works
@@ -86,6 +99,17 @@ Two independent jobs hunt for things, and it helps to know which one is doing wh
 
 Both exist separately for movies and TV (`movie_rss_sync`, `tv_rss_sync`, `movie_missing_search`, `tv_missing_search`) and all four can be retimed, paused or run on demand from **Settings → Schedules**.
 
+```mermaid
+flowchart LR
+  A[RSS sync] --> C{Passes quality bar?}
+  B[Missing search] --> C
+  C -->|no| D[Skipped]
+  C -->|yes| E[Grab to download client]
+  E --> F[Download monitor]
+  F --> G[Import + rename]
+  G --> H[Media server refresh]
+```
+
 When a release passes the quality bar, Streamline sends it to the highest-priority enabled download client, tagged `streamline`. When it finishes, the download monitor (every 30 seconds) notices, and the importer hardlinks it into your library under the naming template, then nudges your media server to rescan.
 
 So the expected latency for a brand-new release is *minutes*, and for something obscure and old it can be *hours* — that's not a fault, it's the missing-search interval.
@@ -94,7 +118,9 @@ So the expected latency for a brand-new release is *minutes*, and for something 
 
 ## Searching manually
 
-Automation not finding it? Open the title and click **Search** — this runs a live query against every enabled indexer and shows you what came back.
+Automation not finding it? Open the title and click **Search** — this runs a live query against every enabled indexer and shows you what came back:
+
+[![Manual search](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/manual-search.png)](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/manual-search.png)
 
 The results list gives you release name, size, seeders, indexer and detected quality, and you can filter by indexer or release group. Click a release to grab it directly, bypassing the quality profile entirely. That's the escape hatch for the case where you want *this specific release* and don't care what the rules say.
 
@@ -130,34 +156,18 @@ This is the right tool for "I have seasons 1-3 and don't want 4 onwards" — unm
 
 ## Fixing a wrong match
 
-Sometimes a title ends up pointing at the wrong entry — an import matched
-*The Matrix* to *The Matrix Reloaded*, or a series folder landed on the wrong
-show. **Change match…** in the actions menu repairs it without losing anything.
-Admin only.
+Sometimes a title ends up pointing at the wrong entry — an import matched *The Matrix* to *The Matrix Reloaded*, or a series folder landed on the wrong show. **Change match…** in the actions menu repairs it without losing anything. Admin only.
 
-Pick the correct title from the same TMDB/TVDB search the add flow uses, confirm,
-and the entry is repointed **in place**: it keeps its id, its files, its download
-history and any requests attached to it. Only the provider identity changes.
-Metadata is refreshed from the new entry and the files are renamed into the new
-title's folder.
+Pick the correct title from the same TMDB/TVDB search the add flow uses, confirm, and the entry is repointed **in place**: it keeps its id, its files, its download history and any requests attached to it. Only the provider identity changes. Metadata is refreshed from the new entry and the files are renamed into the new title's folder.
 
-**For a series** the season and episode list is rebuilt from the new show, and
-each file is re-attached to the episode with the same season and episode number.
-Files whose numbering has no counterpart in the new show are **left on disk** and
-listed back to you — a provider numbering seasons differently is not evidence the
-media is unwanted. Their database rows are dropped, so an orphan scan can re-adopt
-them once you have decided where they belong.
+**For a series** the season and episode list is rebuilt from the new show, and each file is re-attached to the episode with the same season and episode number. Files whose numbering has no counterpart in the new show are **left on disk** and listed back to you — a provider numbering seasons differently is not evidence the media is unwanted. Their database rows are dropped, so an orphan scan can re-adopt them once you have decided where they belong.
 
-Re-identifying a series also re-infers its **type** (standard/anime/daily). That is
-the one case where an override you set by hand is deliberately discarded: it was
-about the old show.
+Re-identifying a series also re-infers its **type** (standard/anime/daily). That is the one case where an override you set by hand is deliberately discarded: it was about the old show.
 
-There is no undo, because none is needed — changing the match back is the same
-action in reverse, files and all.
+There is no undo, because none is needed — changing the match back is the same action in reverse, files and all.
 
-**You cannot re-identify onto a title already in your library.** `tmdb_id` and
-`tvdb_id` are unique, and merging two entries is a different operation than this
-one. Delete the wrong entry first.
+> [!IMPORTANT]
+> You cannot re-identify onto a title already in your library. `tmdb_id` and `tvdb_id` are unique, and merging two entries is a different operation than this one. Delete the wrong entry first.
 
 ---
 

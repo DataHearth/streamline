@@ -12,23 +12,23 @@ Everything Streamline does on its own is a named job on a fixed interval. All of
 
 ## The jobs
 
-| Job | Default | Config key | What it does |
-| --- | --- | --- | --- |
-| `download-monitor` | `30s` | `schedules.download_monitor` | Polls download clients for progress; hands finished torrents to the importer; adopts manually-added `streamline`-tagged torrents |
-| `import-scan` | `60s` | `schedules.import_scan` | Recovery sweep: re-queues any download record stuck in `importing` state, so work isn't lost across a restart or transient failure |
-| `movie-rss-sync` | `15m` | `schedules.movie_rss_sync` | Reads indexer RSS feeds, grabs matching wanted movies |
-| `tv-rss-sync` | `15m` | `schedules.tv_rss_sync` | Same, for episodes |
-| `movie-missing-search` | `12h` | `schedules.movie_missing_search` | Actively searches indexers for every still-wanted movie |
-| `tv-missing-search` | `12h` | `schedules.tv_missing_search` | Same, for episodes |
-| `movie-metadata-refresh` | `24h` | `schedules.movie_metadata_refresh` | Re-pulls TMDB metadata, posters, release dates |
-| `tv-metadata-refresh` | `24h` | `schedules.tv_metadata_refresh` | Re-pulls TVDB metadata; discovers new seasons and episodes |
-| `movie-orphan-scan` | `6h` | `schedules.movie_orphan_scan` | Finds untracked video files under `movie_path` and queues them for review |
-| `tv-orphan-scan` | `6h` | `schedules.tv_orphan_scan` | Same, under `series_path` |
-| `drift-check` | `15m` | `schedules.drift_check` | Detects tracked files that have vanished from disk |
-| `media-probe` | `15m` | `schedules.media_probe` | Backfills ffprobe technical info (`media_info`) onto `MediaFile` rows the importer didn't probe inline — adoption, orphan scan, bulk import. 25 rows/tick, oldest first. No-ops when `ffmpeg.enabled` is false or ffprobe isn't found |
-| `file-selection` | `30s` | `schedules.file_selection` | Resolves magnet-sourced [selective file downloads](First-Run-Setup#selective-file-download) still waiting to learn what's inside the torrent. While records are actually pending the job re-checks every 5 seconds from inside its own run, so a magnet resolves at that cadence rather than this one; the interval here is only how often it looks for work when there is none. It keeps draining pending records regardless of `download.selective_files` — turning the setting off stops new pending records being created, but records already waiting still have to be resolved |
-| `cleanup` | `24h` | `schedules.cleanup` | Prunes completed download records and aged-out events |
-| `purge-sessions` | `1h` | — | **System job.** Deletes expired sessions. Not configurable, not controllable |
+| Job | Default | Config key | What it does | Trigger |
+| --- | --- | --- | --- | --- |
+| `download-monitor` | `30s` | `schedules.download_monitor` | Polls download clients for progress; hands finished torrents to the importer; adopts manually-added `streamline`-tagged torrents | UI / API |
+| `import-scan` | `60s` | `schedules.import_scan` | Recovery sweep: re-queues any download record stuck in `importing` state, so work isn't lost across a restart or transient failure | UI / API |
+| `movie-rss-sync` | `15m` | `schedules.movie_rss_sync` | Reads indexer RSS feeds, grabs matching wanted movies | UI / API |
+| `tv-rss-sync` | `15m` | `schedules.tv_rss_sync` | Same, for episodes | UI / API |
+| `movie-missing-search` | `12h` | `schedules.movie_missing_search` | Actively searches indexers for every still-wanted movie | UI / API |
+| `tv-missing-search` | `12h` | `schedules.tv_missing_search` | Same, for episodes | UI / API |
+| `movie-metadata-refresh` | `24h` | `schedules.movie_metadata_refresh` | Re-pulls TMDB metadata, posters, release dates | UI / API |
+| `tv-metadata-refresh` | `24h` | `schedules.tv_metadata_refresh` | Re-pulls TVDB metadata; discovers new seasons and episodes | UI / API |
+| `movie-orphan-scan` | `6h` | `schedules.movie_orphan_scan` | Finds untracked video files under `movie_path` and queues them for review | UI / API |
+| `tv-orphan-scan` | `6h` | `schedules.tv_orphan_scan` | Same, under `series_path` | UI / API |
+| `drift-check` | `15m` | `schedules.drift_check` | Detects tracked files that have vanished from disk | UI / API |
+| `media-probe` | `15m` | `schedules.media_probe` | Backfills ffprobe technical info (`media_info`) onto `MediaFile` rows the importer didn't probe inline — adoption, orphan scan, bulk import. 25 rows/tick, oldest first. No-ops when `ffmpeg.enabled` is false or ffprobe isn't found | UI / API |
+| `file-selection` | `30s` | `schedules.file_selection` | Resolves magnet-sourced [selective file downloads](First-Run-Setup#selective-file-download) still waiting to learn what's inside the torrent. While records are actually pending the job re-checks every 5 seconds from inside its own run, so a magnet resolves at that cadence rather than this one; the interval here is only how often it looks for work when there is none. It keeps draining pending records regardless of `download.selective_files` — turning the setting off stops new pending records being created, but records already waiting still have to be resolved | UI / API |
+| `cleanup` | `24h` | `schedules.cleanup` | Prunes completed download records and aged-out events | UI / API |
+| `purge-sessions` | `1h` | — | Deletes expired sessions | System job — not controllable |
 
 ### RSS sync vs missing search
 
@@ -107,7 +107,8 @@ Each job reports:
 | `last_duration_ms` | How long the last run took |
 | `last_error` | Failure message, when `status` is `error` |
 
-**`skipped` is the status worth watching for.** It means the job ran but bailed out because a precondition wasn't met — most often **no enabled download client**, which causes all three acquisition jobs (`*-rss-sync`, `*-missing-search`) to give up immediately. A library that never grabs anything, with jobs reporting `skipped`, is almost always this.
+> [!IMPORTANT]
+> `skipped` is the status worth watching for. It means the job ran but bailed out because a precondition wasn't met — most often **no enabled download client**, which causes all three acquisition jobs (`*-rss-sync`, `*-missing-search`) to give up immediately. A library that never grabs anything, with jobs reporting `skipped`, is almost always this.
 
 A rising `last_duration_ms` on `*-missing-search` is normal as your wanted list grows; on `drift-check` it usually means slow storage.
 
@@ -126,13 +127,15 @@ Sensible directions, if the defaults don't suit:
 | Library never changes outside Streamline | Pause both orphan scans entirely |
 | Metadata churn matters (new seasons) | Shorten `tv_metadata_refresh` to `12h` |
 
-Pausing a job is a legitimate long-term configuration, not just a debugging step. If nothing ever touches your library outside Streamline, the orphan scans are pure I/O for no benefit.
+> [!TIP]
+> Pausing a job is a legitimate long-term configuration, not just a debugging step. If nothing ever touches your library outside Streamline, the orphan scans are pure I/O for no benefit.
 
 ---
 
 ## Deprecated config keys
 
-Four older keys are still honoured, with a warning logged at boot:
+<details>
+<summary><b>Four older keys, still honoured with a warning logged at boot</b></summary>
 
 | Old key | Now |
 | --- | --- |
@@ -142,3 +145,5 @@ Four older keys are still honoured, with a warning logged at boot:
 | `schedules.orphan_scan` | Applied to **both** `movie_orphan_scan` and `tv_orphan_scan` |
 
 Migrate to the split keys — you almost certainly want TV metadata refreshed more often than movie metadata, and the merged keys can't express that.
+
+</details>

@@ -1,20 +1,23 @@
 # Troubleshooting
 
-Ordered roughly by how often each one bites people.
+Find what you're seeing in the table below, then jump straight to the fix. Ordered roughly by how often each one bites people.
 
-- [Searching finds nothing at all](#searching-finds-nothing-at-all)
-- [Nothing ever gets grabbed](#nothing-ever-gets-grabbed)
-- [Downloads finish but never import](#downloads-finish-but-never-import)
-- [Permission denied on import](#permission-denied-on-import)
-- [I can't log in](#i-cant-log-in)
-- [Login loops back to the login page](#login-loops-back-to-the-login-page)
-- [Settings are greyed out](#settings-are-greyed-out)
-- [OIDC changes do nothing](#oidc-changes-do-nothing)
-- [Torrents seed forever but upload nothing](#torrents-seed-forever-but-upload-nothing)
-- [My media server doesn't notice new files](#my-media-server-doesnt-notice-new-files)
-- [Database is locked](#database-is-locked)
-- [Where the logs are](#where-the-logs-are)
-- [Filing a good bug report](#filing-a-good-bug-report)
+| What you're seeing | Likely cause | Fix |
+| --- | --- | --- |
+| Title search returns nothing at all, not just no releases | No metadata API key configured | [Searching finds nothing at all](#searching-finds-nothing-at-all) |
+| Titles sit at **Wanted** forever | No working indexer/client, or quality profile rejecting every release | [Nothing ever gets grabbed](#nothing-ever-gets-grabbed) |
+| Torrent completes in the client but Streamline does nothing with it | Held for review, or a path/mount mismatch | [Downloads finish but never import](#downloads-finish-but-never-import) |
+| Import fails writing to disk | Streamline's uid/gid can't write to your media directories | [Permission denied on import](#permission-denied-on-import) |
+| No password, or too many failed logins | Seed password never seen, or account/IP locked out | [I can't log in](#i-cant-log-in) |
+| Login redirects back to the login form | Proxy not forwarding scheme, untrusted proxy, or clock skew | [Login loops back to the login page](#login-loops-back-to-the-login-page) |
+| Settings UI won't accept changes | `read_only: true` — instance is config-managed | [Settings are greyed out](#settings-are-greyed-out) |
+| Edited an SSO provider and nothing changed | Providers load once at boot | [OIDC changes do nothing](#oidc-changes-do-nothing) |
+| Torrents show **Seeding** but upload is `0 B/s`, 0 peers | Nothing can open an inbound connection to you (NAT/port forward) | [Torrents seed forever but upload nothing](#torrents-seed-forever-but-upload-nothing) |
+| Plex/Jellyfin/Emby doesn't pick up new files | Refresh failed, wrong library section, or separate mounts | [My media server doesn't notice new files](#my-media-server-doesnt-notice-new-files) |
+| Library looks empty after a mount/volume change | Stored paths no longer match reality | [My library emptied itself after a remount](#my-library-emptied-itself-after-a-remount) |
+| `unable to open database file` / general DB errors | More than one writer, or the DB is on a network filesystem | [Database is locked](#database-is-locked) |
+| Need to see what's actually happening | — | [Where the logs are](#where-the-logs-are) |
+| Ready to report a bug | — | [Filing a good bug report](#filing-a-good-bug-report) |
 
 ---
 
@@ -42,7 +45,10 @@ Titles sit at **Wanted** forever. Work down this list in order.
 
 **1. Is there an enabled indexer that passes its test?** Settings → Indexers → Test. A red result means Streamline can't reach it or the API key is wrong.
 
-**2. Is there an enabled download client that passes its test?** Settings → Download clients → Test. With no working client, Streamline won't even search — all three automation jobs bail out immediately when there's nowhere to send a grab. This is the single most common cause, and it's silent unless you read the logs.
+> [!TIP]
+> Check this one first: with no working download client, Streamline won't even search — all three automation jobs bail out immediately when there's nowhere to send a grab. It's the single most common cause of this symptom, and it's silent unless you read the logs.
+
+**2. Is there an enabled download client that passes its test?** Settings → Download clients → Test.
 
 **3. Does a manual search return results?** Open the title → **Search**. If this comes back empty, the problem is upstream of Streamline: your indexers genuinely have nothing.
 
@@ -135,7 +141,10 @@ streamline auth unlock you@example.com
 
 There's also a per-IP rate limit of 5 attempts per 15 minutes that is *not* clearable — wait it out.
 
-**You've genuinely lost the admin password.** `auth.seed_admin` only acts when the user table is empty, so you can't use it to reset an existing install. Another admin can reset the password from Settings → Users. If there's no other admin, you're editing the database directly — stop the service and back up `data/` first.
+**You've genuinely lost the admin password.** `auth.seed_admin` only acts when the user table is empty, so you can't use it to reset an existing install. Another admin can reset the password from Settings → Users.
+
+> [!WARNING]
+> If there's no other admin, you're editing the database directly. Stop the service and back up `data/` first — a mistake here is not recoverable.
 
 ---
 
@@ -280,10 +289,8 @@ curl -sS -X POST -H "X-API-Key: $KEY" -H 'Content-Type: application/json' \
   "$SL/api/v1/library/path-migration/preview"
 ```
 
-Drop `/preview` to apply. Add `"move_files": true` only if the files also need
-relocating; without it Streamline expects them to already be at the new path
-and just rewrites the records. Nothing on the server remembers the old prefix,
-so you have to name it yourself.
+> [!WARNING]
+> Always run the `/preview` call first and check the result before dropping it to apply. Add `"move_files": true` only if the files also need relocating; without it Streamline expects them to already be at the new path and just rewrites the records — pointing the migration at the wrong `from`/`to` pair moves or orphans real files. Nothing on the server remembers the old prefix, so you have to name it yourself.
 
 The `downloads` root is the softer case: nothing prunes download records on
 drift, so its warning reads `downloads cannot import` instead — the risk is

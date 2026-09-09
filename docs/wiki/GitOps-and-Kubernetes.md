@@ -2,6 +2,18 @@
 
 Running Streamline declaratively: config from git, secrets from your secret store, nothing mutated at runtime.
 
+```mermaid
+flowchart LR
+  V[values.yaml] --> CM[ConfigMap: config.yaml]
+  V --> ENV[Secret: env vars]
+  V --> SF[Secret: mounted files]
+  CM --> Pod[streamline pod]
+  ENV --> Pod
+  SF --> Pod
+  Pod --> RO{read_only: true}
+  RO -->|blocks| UI[Settings UI writes]
+```
+
 - [Read-only mode](#read-only-mode)
 - [The Helm chart](#the-helm-chart)
 - [Storage layout](#storage-layout)
@@ -30,11 +42,12 @@ Three values are normally generated on first boot and persisted back into the co
 
 | Value | Consequence of omitting it |
 | --- | --- |
-| **`auth.session_secret`** | Falls back to an ephemeral secret regenerated at every start — **every user is logged out on every restart and every pod reschedule** |
+| **`auth.session_secret`** | Falls back to an ephemeral secret regenerated at every start — every user is logged out on every restart and every pod reschedule |
 | **`media_server.plex_client_id`** | A new client identity per restart; Plex sees a new device each time |
 | **`auth.seed_admin.password`** | You'll never learn the generated password |
 
-The session secret is the one that will actually bite you. Generate one and store it:
+> [!WARNING]
+> `auth.session_secret` is the one that will actually bite you — it's the row above, but easy to skip past in a table. Generate one and store it:
 
 ```bash
 openssl rand -hex 32
@@ -73,7 +86,8 @@ podSecurityContext:
   runAsNonRoot: true
 ```
 
-`fsGroup` is what makes a root-owned RWO PVC (Ceph RBD, for instance) group-writable. Drop it and the pod crashloops on `unable to open database file (14)`.
+> [!IMPORTANT]
+> `fsGroup` is what makes a root-owned RWO PVC (Ceph RBD, for instance) group-writable. Drop it and the pod crashloops on `unable to open database file (14)`.
 
 **`server.port` must equal `service.port`.** Probes and the container port both target it.
 
@@ -114,7 +128,10 @@ persistence:
   accessMode: ReadWriteOnce
 ```
 
-Holds the SQLite database and cached posters. **Keep it on local or block storage.** SQLite locking over NFS or SMB is unreliable and will corrupt the database.
+Holds the SQLite database and cached posters.
+
+> [!WARNING]
+> Keep it on local or block storage. SQLite locking over NFS or SMB is unreliable and will corrupt the database.
 
 ### Library
 
@@ -295,7 +312,8 @@ Your config file lives in git (or is rendered by the chart), and your media is y
 
 The database is `<data_dir>/streamline.db`.
 
-> **There is no `sqlite3` binary in the container.** The runtime image is `debian:bookworm-slim` carrying only `ca-certificates` and the Streamline binary, so `.backup` inside the container is not an option. Back up from the outside.
+> [!NOTE]
+> There is no `sqlite3` binary in the container. The runtime image is `debian:bookworm-slim` carrying only `ca-certificates` and the Streamline binary, so `.backup` inside the container is not an option. Back up from the outside.
 
 **The clean way — stop it first:**
 

@@ -114,7 +114,10 @@ Two values are generated on first boot and **written back into your config file*
 
 A third, `auth.seed_admin.password`, is generated and persisted only when you asked for a seeded admin without supplying a password.
 
-With no writable config file (a `:ro` mount, `read_only: true`, or no file at all) the session secret falls back to an **ephemeral** value, regenerated at every start — meaning everyone is logged out on each restart. For any deployment where the config isn't writable, supply `auth.session_secret` explicitly. See [GitOps and Kubernetes](GitOps-and-Kubernetes).
+With no writable config file (a `:ro` mount, `read_only: true`, or no file at all) the session secret falls back to an **ephemeral** value, regenerated at every start.
+
+> [!WARNING]
+> An ephemeral session secret means everyone is logged out on every restart. For any deployment where the config isn't writable, supply `auth.session_secret` explicitly. See [GitOps and Kubernetes](GitOps-and-Kubernetes).
 
 ---
 
@@ -146,9 +149,14 @@ Some config is hot — changed through the UI or API, applied immediately, persi
 | OIDC providers | ⚠️ CRUD works, but only loaded at startup — restart required | Settings → Single Sign-On |
 | Everything else | ❌ File only, restart required | — |
 
-Notably **not** runtime-editable: `data_dir`, server host/port, `server.trusted_proxies`, `auth.mode`, `auth.trusted_networks`, `auth.trusted_role`, `auth.seed_admin.*` and the session secrets. The trust-boundary keys are deliberately file-only — the same reason the [OIDC](Authentication-and-SSO) provider API never exposes `allow_admin` or `email_linking`.
+Notably **not** runtime-editable: `data_dir`, server host/port, `server.trusted_proxies`, `auth.mode`, `auth.trusted_networks`, `auth.trusted_role`, `auth.seed_admin.*` and the session secrets.
+
+> [!IMPORTANT]
+> The trust-boundary keys are deliberately file-only — the same reason the [OIDC](Authentication-and-SSO) provider API never exposes `allow_admin` or `email_linking`.
 
 They are all **shown** read-only under **Server & security** on Settings → General, so one screen can tell you what is in force without reading the YAML on the host. Secrets appear there as a source (`In the config file` / `From a file` / `Not set`), never as a value.
+
+[![Settings — runtime snapshot](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/settings.png)](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/settings.png)
 
 **`torrent_listen_port` is its own thing.** It is not editable as config at all, because the value is authored by a VPN tunnel rather than by you: `PUT /api/v1/torrents/listen-port` moves the *running* engine's peer sockets and re-announces to DHT without writing anything, so a restart falls back to `STREAMLINE_TORRENT_LISTEN_PORT`. The normal caller is gluetun's `VPN_PORT_FORWARDING_UP_COMMAND` on every port rotation; **Move listening port** on Activity → Torrents is the manual re-issue for when that hook fails, since nothing retries it automatically.
 
@@ -269,17 +277,24 @@ every other check is skipped and imports behave as before.
 
 ### schedules
 
-Go duration strings. All are runtime-editable, pausable and runnable on demand — see [Scheduled Jobs](Scheduled-Jobs).
+All values are Go duration strings, runtime-editable, pausable and runnable on demand — see [Scheduled Jobs](Scheduled-Jobs).
 
-| Key | Default | | Key | Default |
-| --- | --- | --- | --- | --- |
-| `schedules.download_monitor` | `30s` | | `schedules.movie_orphan_scan` | `6h` |
-| `schedules.import_scan` | `60s` | | `schedules.tv_orphan_scan` | `6h` |
-| `schedules.movie_rss_sync` | `15m` | | `schedules.drift_check` | `15m` |
-| `schedules.tv_rss_sync` | `15m` | | `schedules.cleanup` | `24h` |
-| `schedules.movie_missing_search` | `12h` | | `schedules.movie_metadata_refresh` | `24h` |
-| `schedules.tv_missing_search` | `12h` | | `schedules.tv_metadata_refresh` | `24h` |
-| `schedules.media_probe` | `15m` | | `schedules.file_selection` | `30s` |
+| Key | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `schedules.download_monitor` | duration | `30s` | |
+| `schedules.import_scan` | duration | `60s` | |
+| `schedules.movie_rss_sync` | duration | `15m` | |
+| `schedules.tv_rss_sync` | duration | `15m` | |
+| `schedules.movie_missing_search` | duration | `12h` | |
+| `schedules.tv_missing_search` | duration | `12h` | |
+| `schedules.media_probe` | duration | `15m` | |
+| `schedules.movie_orphan_scan` | duration | `6h` | |
+| `schedules.tv_orphan_scan` | duration | `6h` | |
+| `schedules.drift_check` | duration | `15m` | |
+| `schedules.cleanup` | duration | `24h` | |
+| `schedules.movie_metadata_refresh` | duration | `24h` | |
+| `schedules.tv_metadata_refresh` | duration | `24h` | |
+| `schedules.file_selection` | duration | `30s` | |
 
 **Deprecated aliases**, still honoured with a warning at boot: `rss_sync` (→ `movie_rss_sync`), `missing_search`, `metadata_refresh` and `orphan_scan` (each → both the `movie_*` and `tv_*` keys).
 
@@ -469,7 +484,8 @@ A file failing **any** `if` rule is queued. HDR and Dolby Vision video is exempt
 
 One profile named `default` (1080p/1080p, upgrades allowed, no formats) ships out of the box.
 
-> **Configuring more than nothing:** with *no* profiles configured at all, every release is rejected. Grabbing at an unknown quality bar is treated as worse than grabbing nothing.
+> [!IMPORTANT]
+> With *no* quality profiles configured at all, every release is rejected. Grabbing at an unknown quality bar is treated as worse than grabbing nothing.
 
 ### custom_formats
 

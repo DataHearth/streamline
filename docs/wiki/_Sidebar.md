@@ -1,6 +1,6 @@
 ### [🏠 Home](Home)
 
-**Operating Streamline**
+**🎬 Operating Streamline**
 
 - [Installation](Installation)
 - [First-Run Setup](First-Run-Setup)
@@ -11,7 +11,7 @@
 - [Troubleshooting](Troubleshooting)
 - [Roadmap](Roadmap)
 
-**Advanced**
+**⚙️ Advanced**
 
 - [Configuration Reference](Configuration-Reference)
 - [Authentication and SSO](Authentication-and-SSO)

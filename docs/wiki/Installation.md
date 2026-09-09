@@ -4,6 +4,15 @@ Streamline is a single binary with no external dependencies — no database serv
 
 A couple of features are gated behind the `ffmpeg`/`ffprobe` binaries, but they are opt-in extras and never a requirement: without them Streamline installs, boots and runs the same, just without media info and import verification. See [Optional: ffmpeg](#optional-ffmpeg).
 
+## Which install method?
+
+| Method | Pick this if… |
+| --- | --- |
+| [Docker Compose](#docker-compose) | You want the simplest self-hosted setup, with ffmpeg included out of the box |
+| [Plain binary](#plain-binary) | You'd rather not run a container, or your hardware doesn't suit one |
+| [Unraid, Synology, TrueNAS](#unraid-synology-truenas) | You run one of these NAS OSes and prefer its own Docker UI |
+| [Kubernetes / Helm](#kubernetes--helm) | You already run Kubernetes and want a GitOps-style, declarative deploy |
+
 - [Before you start: the folder rule](#before-you-start-the-folder-rule)
 - [Docker Compose](#docker-compose) — recommended for most people
 - [Plain binary](#plain-binary)
@@ -16,18 +25,17 @@ A couple of features are gated behind the `ffmpeg`/`ffprobe` binaries, but they 
 
 ## Before you start: the folder rule
 
-This is the single most common setup mistake, so it goes first.
-
-Streamline needs two directories:
+This is the single most common setup mistake, so it goes first. Streamline needs two directories:
 
 - **Downloads** — where your torrent client puts finished files
 - **Media** — where your organised library lives, the folder Plex/Jellyfin/Emby reads
 
 By default Streamline **hardlinks** files from downloads into media. A hardlink is a second name for the same data on disk: the file appears in both places but occupies space once, and your torrent client can keep seeding the original untouched.
 
-Hardlinks only work **within one filesystem**. If downloads and media are on different disks, different volumes, or mounted into the container as two unrelated paths, hardlinking fails and Streamline falls back to erroring out rather than silently doubling your disk usage.
+> [!IMPORTANT]
+> Hardlinks only work **within one filesystem**. If downloads and media are on different disks, different volumes, or mounted into the container as two unrelated paths, hardlinking fails and Streamline errors out rather than silently doubling your disk usage. **Mount one parent directory, not two children.**
 
-**The fix is to mount one parent directory, not two children.** Do this:
+Do this:
 
 ```yaml
 volumes:
@@ -42,7 +50,8 @@ volumes:
   - /srv/data/downloads:/downloads # ✗ filesystems as far as the container knows
 ```
 
-Your torrent client needs the *same* layout mounted at the *same* paths, or the paths it reports won't resolve inside Streamline's container.
+> [!WARNING]
+> Your torrent client needs the *same* layout mounted at the *same* paths. If they don't match, the paths it reports won't resolve inside Streamline's container, and imports silently break.
 
 If you genuinely can't put them on one filesystem, set `library.import_mode` to `copy` (keeps the torrent seeding, uses double the space) or `move` (saves space, kills seeding). See the [Configuration Reference](Configuration-Reference#library).
 
@@ -98,7 +107,8 @@ docker compose logs -f streamline
 
 Open <http://localhost:8080>.
 
-> **Mounting the config read-only?** `:ro` is safe for a GitOps-style deploy, but Streamline writes a few generated values back on first boot (session signing secret, Plex client ID, and a generated admin password if you didn't set one). With a read-only mount you must supply those yourself — see [GitOps and Kubernetes](GitOps-and-Kubernetes).
+> [!IMPORTANT]
+> Mounting the config read-only? `:ro` is safe for a GitOps-style deploy, but Streamline writes a few generated values back on first boot (session signing secret, Plex client ID, and a generated admin password if you didn't set one). With a read-only mount you must supply those yourself — see [GitOps and Kubernetes](GitOps-and-Kubernetes).
 
 ### Image tags
 
@@ -109,11 +119,17 @@ Open <http://localhost:8080>.
 | `edge` | Every push to `main` — expect breakage |
 | `sha-<short>` | An exact commit |
 
-Pin to `vX.Y.Z` or at least `X.Y` for anything you care about.
+> [!TIP]
+> Pin to `vX.Y.Z` or at least `X.Y` for anything you care about.
 
 ### Hardware encoding (VAAPI)
 
-The [transcoder](Quality-Profiles-and-Custom-Formats#transcoding-a-profiles-files) can encode on an Intel or AMD GPU through VAAPI instead of the CPU. **The default image cannot do this**: its `ffmpeg` is a static build with no libva, and passing a GPU into it changes nothing. Every release also publishes a second image with a `-vaapi` tag suffix, built on Debian with Debian's ffmpeg and the Mesa and Intel VAAPI drivers. It is not distroless, and it is the image to run if you want hardware encoding in a container.
+The [transcoder](Quality-Profiles-and-Custom-Formats#transcoding-a-profiles-files) can encode on an Intel or AMD GPU through VAAPI instead of the CPU. **The default image cannot do this**: its `ffmpeg` is a static build with no libva, and passing a GPU into it changes nothing. Every release also publishes a second image with a `-vaapi` tag suffix, built on Debian with Debian's ffmpeg and the Mesa and Intel VAAPI drivers, for exactly this case.
+
+<details>
+<summary>Enabling VAAPI in a container, on Kubernetes, or bare metal</summary>
+
+It is not distroless, and it is the image to run if you want hardware encoding in a container.
 
 The container needs the render node and the host group that owns it:
 
@@ -139,6 +155,8 @@ services:
 With the Helm chart, set `hwAccel.enabled: true` and pick the `-vaapi` image tag. The chart requests the GPU through a device plugin rather than a hostPath or a privileged pod, so the cluster needs one installed: `hwAccel.resourceName` defaults to `gpu.intel.com/i915` and is `amd.com/gpu` for AMD's plugin. `hwAccel.device` is the node inside the pod (default `/dev/dri/renderD128`), and `hwAccel.supplementalGroups` is the list of `video`/`render` gids to grant, which depends on the host distribution.
 
 Then set `transcoding.hw_accel` (default `auto`, so usually nothing to do) and `transcoding.hw_device` if your node is not `renderD128`. Settings → Transcoding reports whether the device answered. A bare-metal install needs no image at all: any ffmpeg with VAAPI on `$PATH` or in `ffmpeg.path` will do. See [Configuration Reference](Configuration-Reference#transcoding) for the two keys.
+
+</details>
 
 ---
 
@@ -195,7 +213,12 @@ Set `data_dir: /var/lib/streamline` in your config so the database lands somewhe
 
 ## Unraid, Synology, TrueNAS
 
-There's no first-party app-store package for these yet — you install the Docker image through whatever container UI your NAS provides. The settings translate like this:
+There's no first-party app-store package for these yet — you install the Docker image through whatever container UI your NAS provides.
+
+<details>
+<summary>Settings translation table and per-NAS notes</summary>
+
+The settings translate like this:
 
 | Field in your NAS's Docker UI | Value |
 | --- | --- |
@@ -213,6 +236,8 @@ There's no first-party app-store package for these yet — you install the Docke
 **TrueNAS SCALE specifics.** Either use the Docker/Apps custom-app flow with the same mounts, or install the [Helm chart](#kubernetes--helm) directly since SCALE runs Kubernetes underneath.
 
 You'll then need to generate a config file. The simplest route is to start the container once, let it fail or come up on defaults, then edit `config/config.yaml` on the NAS filesystem directly and restart.
+
+</details>
 
 ---
 

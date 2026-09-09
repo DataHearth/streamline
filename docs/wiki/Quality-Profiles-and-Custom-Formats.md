@@ -2,6 +2,29 @@
 
 How Streamline scores a release against what you want, decides whether to grab it, and decides whether to replace a file you already have. For how a release title gets parsed into a resolution/source/codec/group in the first place, and how the resulting file gets named, see [Quality Profiles and Naming](Quality-Profiles-and-Naming).
 
+## The decision path
+
+Every release passes through the same gate. The band and score checks decide whether it is grabbed at all; the branch below them only runs when there's already a file on disk to compare it against.
+
+```mermaid
+flowchart TD
+  A[Release] --> B{In resolution band?}
+  B -->|no| R1[Rejected: outside band]
+  B -->|yes| C[Sum matching format scores]
+  C --> D{Total >= min_score?}
+  D -->|no| R2[Rejected: below minimum]
+  D -->|yes| E{File already present?}
+  E -->|no| G[Grabbed]
+  E -->|yes| F{upgrade_allowed?}
+  F -->|no| I[File left alone]
+  F -->|yes| H{Current file in band<br/>and resolvable?}
+  H -->|no| I
+  H -->|yes| J{Current score below cap<br/>and new score higher?}
+  J -->|no| I
+  J -->|yes| K[Grabbed as upgrade]
+```
+
+- [The decision path](#the-decision-path)
 - [Custom formats](#custom-formats)
 - [The built-in library](#the-built-in-library)
 - [Scoring profiles](#scoring-profiles)
@@ -51,10 +74,18 @@ Both of these are *examples*, not defaults — nothing like them ships built in,
 | `release_group` | `pattern` (regex) | Parsed release group — the UI edits this one as a chip list, see below |
 | `codec` | `value` | Parsed codec, or probed video codec for on-disk files |
 | `size` | `min_gb` / `max_gb` | Indexer size, or the file's size on disk — **per episode**, see below |
+
+<details>
+<summary><b>4 more condition types</b> — seeders and the probe-only stream fields</summary>
+
+| Condition type | Fields | Evaluated against |
+| --- | --- | --- |
 | `seeders` | `min` | Indexer seeders — always absent for an on-disk file, so this condition can never match a file |
 | `audio_tracks` | `min` | Number of audio streams: probed for a file, inferred from a `MULTi`/`DUAL AUDIO` tag for a release |
 | `audio_language` | `value` (ISO 639 code) | Audio stream languages: probed for a file, inferred from a `VFF`/`VFQ`/`TRUEFRENCH`/`VF2`/`VOF` tag for a release |
 | `subtitle_language` | `value` (ISO 639 code) | Non-forced subtitle stream languages: probed for a file, inferred from a `VOSTFR`/`SUBFRENCH` tag for a release |
+
+</details>
 
 The last three are the only types besides the parsed columns that a file **already in your library** can answer, which matters more than it sounds — see [What a file can be scored on](#what-a-file-can-be-scored-on).
 
@@ -117,7 +148,8 @@ Nothing is hidden from you: **Edit as regex** switches the row back to the raw p
 
 **Matching semantics are Radarr-compatible:** every `required` condition must pass, and if the format has any non-required conditions, at least one of those must also pass (a format that is all-required needs nothing else — "at least one of zero" is vacuously true). `negate` inverts a single condition's result before it's combined.
 
-**A condition whose input was never recorded matches nothing — negated or not.** This is the one place `negate` does *not* invert: "no" and "don't know" are different answers, and a negated condition reading a field nobody filled in would otherwise score a positive out of ignorance. The idiomatic "this release carries no group" format (`release_group`, pattern `.`, `negate: true`) is the case this exists for — it fires on a release whose name genuinely carries no group tag, and stays silent on a library file whose group was never stored.
+> [!IMPORTANT]
+> A condition whose input was never recorded matches nothing — negated or not. This is the one place `negate` does *not* invert: "no" and "don't know" are different answers, and a negated condition reading a field nobody filled in would otherwise score a positive out of ignorance. The idiomatic "this release carries no group" format (`release_group`, pattern `.`, `negate: true`) is the case this exists for — it fires on a release whose name genuinely carries no group tag, and stays silent on a library file whose group was never stored.
 
 The distinction only bites where a value can be *absent* rather than *stated as none*: a file already in the library, whose columns are filled at import and are empty on anything imported before those columns existed. A release parsed from its name knows everything the name says, so an empty group there is a real absence and matches as before. Seeders are always "unrecorded" for a file, and for a release whose indexer omitted the attribute.
 
@@ -142,11 +174,19 @@ Ten formats compiled into the binary — not seeded into YAML, so they can't be 
 | `remux` | "remux" in the title |
 | `x265` | x265/HEVC/h265 in the title, or probed codec `hevc` |
 | `x264` | x264/AVC/h264 in the title, or probed codec `h264` |
-| `av1` | "av1" in the title, or probed codec `av1` |
-| `hdr` | HDR10/HDR10+/HDR/DV/Dolby Vision in the title |
 | `resolution-2160p` / `-1080p` / `-720p` | Parsed resolution equals that exact tier |
+
+<details>
+<summary><b>4 more built-ins</b> — HDR, AV1, and the multi-audio/dubbed tags</summary>
+
+| Name | Catches |
+| --- | --- |
+| `hdr` | HDR10/HDR10+/HDR/DV/Dolby Vision in the title |
+| `av1` | "av1" in the title, or probed codec `av1` |
 | `multi-audio` | "multi" or "dual audio" in the title |
 | `dubbed` | "dubbed" in the title |
+
+</details>
 
 Every built-in *describes* a release — what codec, what resolution, what source. None of them judges one. Opinions about which release groups or which rip sources you'll accept are yours to write as `custom_formats`, because they don't generalize: the group list one person blocks is the group list another prefers, and a screener is worthless to most people and the only available copy to some. The `scene-junk` and `bad-group` examples above, and the release-group chips in **Settings → Custom formats**, are there to make writing your own a two-minute job.
 
@@ -174,6 +214,12 @@ quality_profiles:
 
 quality_default_profile: default
 ```
+
+| Incoming release | Formats matched | Score | Outcome under `default` |
+| --- | --- | --- | --- |
+| `Movie.2024.2160p.BluRay.x265.mkv` | `x265` (+100) | 100 | Above `min_score` (0) — grabbed if nothing better is on disk |
+| `Movie.2024.2160p.BluRay.x265.HDR.mkv` | `x265` (+100), `hdr` (+50) | 150 | Above `min_score`, and higher-scoring — wins if both are candidates for the same item |
+| `Movie.2024.CAM.mkv` (also scored against `scene-junk`) | `scene-junk` (−1000) | −1000 | Below `min_score` (0) — rejected |
 
 `formats[].name` must resolve to a built-in name or a `custom_formats` entry — an unknown name is a `422` on save. A profile with no `formats` at all still works: nothing is scored, so any in-band release passes with a score of `0`.
 
@@ -267,7 +313,8 @@ quality_profiles:
 
 **`to.container: mp4` drops subtitle and attachment streams; `mkv` keeps everything.** mp4 cannot carry SRT, ASS or PGS subtitles, nor font attachments, so only video and audio are copied across. If your files carry subtitles you want to keep, target mkv.
 
-**The destination has to satisfy `if`, or the config is refused.** A `to.video_codec` your own `if.video_codecs` rejects — or a `to.container` your `if.containers` rejects — would re-encode every file, then read the result as non-compliant and re-encode it again, forever, with every job reporting success. Streamline refuses that at startup. The variant it cannot predict is a `crf` that produces a file above `max_video_bitrate`: set the ceiling above the rate you are aiming for, not at it.
+> [!IMPORTANT]
+> The destination has to satisfy `if`, or the config is refused. A `to.video_codec` your own `if.video_codecs` rejects — or a `to.container` your `if.containers` rejects — would re-encode every file, then read the result as non-compliant and re-encode it again, forever, with every job reporting success. Streamline refuses that at startup. The variant it cannot predict is a `crf` that produces a file above `max_video_bitrate`: set the ceiling above the rate you are aiming for, not at it.
 
 **Don't score file size and transcode on the same profile.** A `size` condition scored positively for `min_gb` says "bigger is better"; a transcode makes files smaller and re-probes them. Together, every transcode makes its own output look like something worth upgrading.
 
@@ -320,6 +367,8 @@ Applying one never saves — it fills the form and you edit from there, includin
 
 ## Where scores show up
 
+[![Manual search](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/manual-search.png)](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/manual-search.png)
+
 - **Browse releases** (`/movies/{id}/search`, the series browse endpoints, and the RSS/missing-search paths that feed them) sort by score descending, ties by seeders — not by seeders alone. Every `SearchResult` carries `score`, `rejected`, `reject_reason`, and `matched_formats`, all relative to the queried item's own profile. Rejected releases are still listed (the SPA mutes them) — an operator can grab one deliberately; `score`/`rejected`/etc. are ignored if present on a grab request body.
 - **Movie detail** (`GET /movies/{id}`) reports `file_score` on each entry of `media_files` — the file's score against the movie's current profile, computed at response time. It's list-response-omitted (the same eager-loaded `media_files` edge that also carries file size and quality elsewhere), and absent entirely when no quality profile is configured at all. There's no `rejected` flag on a file — a file outside the band or below `min_score` simply shows `file_score: 0`, the same number the upgrade decision reads.
 - **Series detail** (`GET /series/{id}`) reports `file_score` on each episode that has a file, against the series' profile, on the same terms. The series *list* never carries episodes at all, so there is no list/detail split to think about there.
@@ -347,6 +396,13 @@ custom_formats:
       - { type: audio_language, value: fra }
 ```
 
+| Match against | `vostfr` fires on | `vff` fires on |
+| --- | --- | --- |
+| A release title | `vostfr` in the name | `truefrench`/`vff`/`vf2`/`vof` in the name |
+| A library file | French (`fra`) subtitle track present | French (`fra`) audio track present |
+
+Either half is enough to match — the two conditions are non-required, so the format scores a release by its name and a file already on disk by its probe, and the two become comparable.
+
 The builtin `multi-audio` already ships this way (`MULTi` in the title **or** two audio tracks on disk), as do `x265`/`x264`/`av1` (title **or** probed codec).
 
 Some things stay unanswerable for a file no matter what, because they are facts about the *upload* rather than about the bytes:
@@ -369,7 +425,10 @@ Three, all a consequence of moving from "first release that passes" to score-the
 
 1. **`pickBest` is now score-ranked, then seeders-ranked** — previously it was first-hit (whichever the indexer listed first). A profile with an empty `formats` list still improves: it becomes seeders-ranked instead of first-hit.
 2. **A profile with `upgrade_allowed: false` and `min_resolution` below `preferred_resolution` can now grab anywhere in that band.** Before, "upgrades off" meant "accept only exactly `preferred_resolution`". Now it means "accept the whole band, just don't replace a file already there."
-3. **`preferred_resolution` is a hard ceiling, everywhere a profile is evaluated** — including the RSS/missing-search feed scanners, not just interactive search. An install whose `preferred_resolution` sits below its media's actual resolution will stop grabbing anything above it until the profile is raised. If your library already has files above a profile's `preferred_resolution`, review your profiles before relying on automatic search after upgrading.
+3. **`preferred_resolution` is a hard ceiling, everywhere a profile is evaluated** — including the RSS/missing-search feed scanners, not just interactive search. An install whose `preferred_resolution` sits below its media's actual resolution will stop grabbing anything above it until the profile is raised.
+
+> [!WARNING]
+> If your library already has files above a profile's `preferred_resolution`, review your profiles before relying on automatic search after upgrading — the ceiling now applies everywhere, so grabbing above it silently stops until the profile is raised.
 
 ---
 

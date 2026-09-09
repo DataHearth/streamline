@@ -4,6 +4,8 @@ You already have a few hundred films and a shelf of box sets on disk. This page 
 
 Import scans are **admin-only** and live under **Imports** in the sidebar.
 
+[![Library import](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/library-import.png)](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/library-import.png)
+
 - [The two modes](#the-two-modes)
 - [Running a scan](#running-a-scan)
 - [Reviewing the results](#reviewing-the-results)
@@ -38,6 +40,9 @@ Each scan can override the global `library.import_mode` for that scan only:
 | **Copy** | Leaves the original intact, uses double the disk |
 | **Move** | Destructive, frees the source disk |
 
+> [!CAUTION]
+> **Move** is destructive — it removes the original file from the source disk once the transfer succeeds. Use Hardlink or Copy unless you specifically want the source freed.
+
 Chose in-place and later changed your mind? Adopted files can be renamed afterwards with the per-title **Rename** action. The two operations are deliberately separate.
 
 ---
@@ -62,7 +67,8 @@ The unit of work differs by media type, which trips people up:
 
 So for TV, point the scan at the directory *containing* your show folders — `/media/series`, not `/media/series/The Wire`.
 
-> **A note on folder depth:** the scanner does not recurse infinitely. For films, keep your files at a sane depth under the scan root rather than buried many levels down.
+> [!NOTE]
+> The scanner does not recurse infinitely. For films, keep your files at a sane depth under the scan root rather than buried many levels down.
 
 Very small files are skipped as junk before anything is matched, along with anything whose name contains `sample`. The floor is **50 MB for a film** and **5 MB for an episode** — episodes get the lower one because short-form series are real (a three-minute episode is a few tens of MB, well under a film's floor). A show folder whose file count looks far too low in the review list is the symptom of files falling under it.
 
@@ -81,7 +87,9 @@ When the scan finishes it sits at **awaiting review**. Nothing has touched your 
 | **Unmatched** | No match found | Search manually, or exclude it |
 | **Existing** | Already tracked by Streamline | Committing attaches the file to the existing entry, relocating it if the scan is in Rename mode |
 
-Filter by classification to work through them in batches. In practice a tidy library comes back nearly all Confirmed, and you spend your time on a handful of oddities.
+Filter by classification to work through them in batches. In practice a tidy library comes back nearly all Confirmed, and you spend your time on a handful of oddities — an ambiguous match or a file that failed verification look like this:
+
+[![Import verification](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/import-verification.png)](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/import-verification.png)
 
 For each entry you can:
 
@@ -111,7 +119,8 @@ Commit runs in the background and reports `{imported} imported, {failed} failed`
 
 You can also **Discard** a scan under review, which throws away every decision you made without touching anything.
 
-> **Films already in your library:** committing an entry flagged *"Movie already in the library"* attaches the scanned file to that entry. If that entry already **has** a file on disk, the old one is deleted and replaced — usually what you want when re-importing a better copy, but it is a deletion, so check before committing a large batch. If it has no file (the common case for titles added by hand or through a request), nothing is deleted and the commit simply attaches.
+> [!WARNING]
+> Committing an entry flagged *"Movie already in the library"* attaches the scanned file to that entry. If that entry already **has** a file on disk, the old one is deleted and replaced — usually what you want when re-importing a better copy, but it is a deletion, so check before committing a large batch. If it has no file (the common case for titles added by hand or through a request), nothing is deleted and the commit simply attaches.
 >
 > In **Rename** mode these entries are relocated into your library root like every other accepted entry, using the scan's import mode. They are not left where they were found.
 

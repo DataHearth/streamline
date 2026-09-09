@@ -2,6 +2,11 @@
 
 Streamline is installed and the page loads. This gets you from a blank library to something that downloads films by itself, in about fifteen minutes.
 
+[![Dashboard](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/dashboard.png)](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/dashboard.png)
+
+> [!IMPORTANT]
+> Steps 1–5 are required — without a login, metadata keys, library folders, a download client and an indexer, Streamline has nothing to search with and nowhere to put what it finds. Step 6 (quality profile) already ships with a sensible default, and step 7 (media server) is opt-in — both can be revisited later.
+
 - [1. Log in](#1-log-in)
 - [2. Get metadata API keys](#2-get-metadata-api-keys)
 - [3. Set your library folders](#3-set-your-library-folders)
@@ -14,6 +19,8 @@ Streamline is installed and the page loads. This gets you from a blank library t
 ---
 
 ## 1. Log in
+
+[![Sign in](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/login.png)](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/login.png)
 
 An admin account is always created on first boot — the database is never empty, so there's no "register the first user" flow to race someone to.
 
@@ -34,8 +41,12 @@ auth:
 grep -A 3 seed_admin config/config.yaml
 ```
 
-Log in, then change the password from the account menu (top right → **Account settings**). The generated one is sitting in a plaintext file; treat it as a bootstrap credential, not a permanent one.
+Log in, then change the password from the account menu (top right → **Account settings**).
 
+> [!WARNING]
+> The generated password is sitting in a plaintext config file. Treat it as a bootstrap credential, not a permanent one — change it as soon as you've logged in.
+
+> [!NOTE]
 > Locked yourself out by fat-fingering the password? Streamline rate-limits logins per IP (5 attempts / 15 minutes) *and* locks the account after 10 failures in a 15-minute window. Clear the account lock from the command line:
 > ```bash
 > streamline auth unlock you@example.com
@@ -223,6 +234,8 @@ For **Jellyfin/Emby**, generate an API key in that server's dashboard and paste 
 ---
 
 ## Which settings live where
+
+[![Settings](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/settings.png)](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/settings.png)
 
 Streamline splits configuration in two, and knowing which half you're in saves a lot of confusion.
 

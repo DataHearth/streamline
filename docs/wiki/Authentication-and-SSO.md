@@ -1,5 +1,9 @@
 # Authentication and SSO
 
+Streamline authenticates every request by default, supports OIDC single sign-on alongside local accounts, and enforces a three-role permission model. This page covers the auth modes, how sessions and API keys work, the OIDC round trip, and how to size roles, registration and lockout for your deployment.
+
+[![Sign in](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/login.png)](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/login.png)
+
 - [Auth modes](#auth-modes)
 - [Transport split](#transport-split)
 - [Roles and RBAC](#roles-and-rbac)
@@ -35,9 +39,8 @@ auth:
 
 The client IP is resolved by chi's `ClientIPFromXFFTrustedProxies(1)` middleware — it derives the client from `X-Forwarded-For` **assuming exactly one trusted proxy in front of Streamline**.
 
-That assumption is load-bearing. If Streamline is exposed directly, or sits behind a different number of proxies, or behind one that appends to a client-supplied `X-Forwarded-For` instead of overwriting it, **a client can forge a trusted source IP and be granted `trusted_role` with no credentials at all.**
-
-Only use this mode when you control the proxy chain, and set `trusted_role` to the least-privileged role that does the job. The default is `member`; `admin` is rarely what you want here.
+> [!WARNING]
+> That assumption is load-bearing. If Streamline is exposed directly, or sits behind a different number of proxies, or behind one that appends to a client-supplied `X-Forwarded-For` instead of overwriting it, **a client can forge a trusted source IP and be granted `trusted_role` with no credentials at all.** Only use this mode when you control the proxy chain, and set `trusted_role` to the least-privileged role that does the job. The default is `member`; `admin` is rarely what you want here.
 
 ### `disabled`
 
@@ -78,24 +81,22 @@ These bypass auth entirely:
 
 ## Roles and RBAC
 
-| Role | Rank | Scope |
-| --- | --- | --- |
-| `admin` | 3 | Everything |
-| `member` | 2 | Library, downloads, approving requests. No settings |
-| `request_only` | 1 | Create and view own requests only |
+Three roles, ranked `admin` (3) > `member` (2) > `request_only` (1):
 
-Roughly 76 API operations are admin-gated: all of `/config/*`, `/users/*`, `/indexers/*`, `/download-clients/*`, `/media-servers/*`, `/quality-profiles/*`, `/schedules/*`, `/library/*`, `/torrents/*`, `/activity/pending/*`, plus invites and system info.
+| Capability | `admin` | `member` | `request_only` |
+| --- | :---: | :---: | :---: |
+| Create / view own requests | ✅ | ✅ | ✅ |
+| List requests | ✅ (all) | ✅ (all) | ✅ (own only) |
+| Approve a request | ✅ | ✅ | ❌ |
+| Deny / reopen a request | ✅ | ✅ | ❌ |
+| Browse the library, trigger searches and grabs | ✅ | ✅ | ❌ |
+| Manage own API keys, sessions, password | ✅ | ✅ | ✅ |
+| Settings, users, indexers, download clients, media servers, quality profiles, schedules, library admin, torrents, adoption review | ✅ | ❌ | ❌ |
 
-On requests specifically:
+That last row is roughly 76 API operations, all admin-gated: `/config/*`, `/users/*`, `/indexers/*`, `/download-clients/*`, `/media-servers/*`, `/quality-profiles/*`, `/schedules/*`, `/library/*`, `/torrents/*`, `/activity/pending/*`, plus invites and system info.
 
-| Operation | Required |
-| --- | --- |
-| Create a request | Any authenticated user |
-| List requests | Any — but `request_only` users are scoped server-side to their own |
-| Approve | `admin` or `member` |
-| Deny, Reopen | `admin` |
-
-Streamline refuses to delete or demote the **last remaining admin**.
+> [!IMPORTANT]
+> Streamline refuses to delete or demote the **last remaining admin** — regardless of who's asking.
 
 ---
 
@@ -131,7 +132,8 @@ curl -H "X-API-Key: $KEY" https://streamline.example.com/api/v1/movies
 
 An API key inherits the full permissions of its owning user — an admin's key is an admin key. Scripts that only need read access should use a key on a member account.
 
-One carve-out: keys are **read-only on the identity surface**. Any non-GET request under `/api/v1/auth/me`, `/auth/password`, `/auth/invites`, `/auth/jwt`, or `/users` returns `403` when authenticated with a key — creating or revoking keys, changing passwords, managing sessions, administering users, and rotating the JWT secret all require a logged-in session (Bearer JWT or the browser cookie). A leaked key therefore can't mint replacement credentials or reshape accounts; it grabs and browses, nothing more. Media and settings endpoints are unaffected.
+> [!WARNING]
+> Keys are **read-only on the identity surface**. Any non-GET request under `/api/v1/auth/me`, `/auth/password`, `/auth/invites`, `/auth/jwt`, or `/users` returns `403` when authenticated with a key — creating or revoking keys, changing passwords, managing sessions, administering users, and rotating the JWT secret all require a logged-in session (Bearer JWT or the browser cookie). A leaked key therefore can't mint replacement credentials or reshape accounts; it grabs and browses, nothing more. Media and settings endpoints are unaffected.
 
 Admins can revoke any user's keys from Settings → Users.
 
@@ -222,6 +224,24 @@ auth:
 ### Flow
 
 Authorization code with **PKCE (S256)**, plus state and nonce. All three are held in short-lived `_oidc_*` cookies scoped to `/auth/oidc/`.
+
+```mermaid
+sequenceDiagram
+  participant B as Browser
+  participant S as Streamline
+  participant I as Identity provider
+
+  B->>S: GET /auth/oidc/{name}/start
+  S-->>B: Set _oidc_* cookies, redirect to IdP
+  B->>I: Authorization request (PKCE, state, nonce)
+  I-->>B: User authenticates
+  I-->>B: Redirect to callback (code, state)
+  B->>S: GET /auth/oidc/{name}/callback
+  S->>I: Exchange code for tokens (PKCE verifier)
+  I-->>S: ID token + claims
+  S->>S: Verify state/nonce, link or create account
+  S-->>B: Set streamline_session cookie, redirect
+```
 
 Redirect URI:
 

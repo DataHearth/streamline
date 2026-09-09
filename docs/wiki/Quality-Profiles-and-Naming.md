@@ -28,7 +28,8 @@ Everything starts here. Streamline extracts structured fields from a release tit
 | **Codec** | `x264`, `x265`, `H.264`, `H.265`, `H264`, `H265`, `HEVC`, `AV1`, `MPEG2`, `VC-1`, `AVC` |
 | **Group** | Trailing `-GROUP`, or a trailing `.GROUP` when there's no dash form. Known technical tags (`MULTI`, `COMPLETE`, resolutions) are excluded |
 
-The consequence worth remembering: **anything the parser can't read, Streamline won't accept.** That's a deliberate posture — silently grabbing an unknown-quality release is worse than grabbing nothing.
+> [!IMPORTANT]
+> Anything the parser can't read, Streamline won't accept. That's a deliberate posture — silently grabbing an unknown-quality release is worse than grabbing nothing.
 
 ---
 
@@ -104,7 +105,8 @@ Three consequences that account for most "why won't it grab this" questions:
 
 A release that survives the resolution band is then scored against the profile's custom formats — that part, plus source/codec preference, upgrade behaviour and the whole scoring model, is [Quality Profiles and Custom Formats](Quality-Profiles-and-Custom-Formats).
 
-**Manual grabs bypass the profile entirely.** That's the escape hatch.
+> [!TIP]
+> Manual grabs bypass the profile entirely. That's the escape hatch.
 
 ---
 
@@ -124,33 +126,33 @@ Templates include directory separators — the whole relative path under `movie_
 
 **Movies:**
 
-| Token | Value |
-| --- | --- |
-| `{title}` | Movie title from TMDB |
-| `{year}` | Release year — omitted if unknown |
-| `{tmdb_id}` | TMDB ID |
-| `{quality}` | Parsed resolution |
-| `{source}` | Parsed source |
-| `{codec}` | Parsed codec |
-| `{group}` | Release group |
-| `{ext}` | File extension |
+| Token | Expands to | Example |
+| --- | --- | --- |
+| `{title}` | Movie title from TMDB | `The Matrix` |
+| `{year}` | Release year — omitted if unknown | `1999` |
+| `{tmdb_id}` | TMDB ID | `603` |
+| `{quality}` | Parsed resolution | `1080p` |
+| `{source}` | Parsed source | `BluRay` |
+| `{codec}` | Parsed codec | `x265` |
+| `{group}` | Release group | `GROUP` |
+| `{ext}` | File extension | `mkv` |
 
 **Episodes:**
 
-| Token | Value |
-| --- | --- |
-| `{title}` | **Show** title |
-| `{year}` | Show year |
-| `{tvdb_id}` | TVDB ID |
-| `{season}`, `{episode}` | Numbers |
-| `{episode_title}` | Episode title |
-| `{quality}` | Parsed resolution |
-| `{source}` | Parsed source |
-| `{codec}` | Parsed codec |
-| `{group}` | Release group |
-| `{absolute}` | Absolute episode number, when parsed |
-| `{air_date}` | `YYYY-MM-DD`, when parsed |
-| `{ext}` | File extension |
+| Token | Expands to | Example |
+| --- | --- | --- |
+| `{title}` | **Show** title | `Show` |
+| `{year}` | Show year | `2019` |
+| `{tvdb_id}` | TVDB ID | `12345` |
+| `{season}`, `{episode}` | Numbers | `1`, `2` |
+| `{episode_title}` | Episode title | `Pilot` |
+| `{quality}` | Parsed resolution | `1080p` |
+| `{source}` | Parsed source | `WEB-DL` |
+| `{codec}` | Parsed codec | `x264` |
+| `{group}` | Release group | `GROUP` |
+| `{absolute}` | Absolute episode number, when parsed | `018` |
+| `{air_date}` | `YYYY-MM-DD`, when parsed | `2024-03-15` |
+| `{ext}` | File extension | `mkv` |
 
 `{tmdb_id}` is movie-only and `{tvdb_id}` series-only (they are the same token in different namespaces); `{absolute}` and `{air_date}` are episode-only. Everything else is available to both.
 
@@ -183,7 +185,8 @@ An unrecognised token, or one whose value isn't populated, becomes an empty stri
 
 An empty token wrapped in `[...]` or `(...)` takes the brackets **and the space before them** with it — punctuation in a template is there to delimit a value, and with no value there is nothing to delimit. A bare token has no pair to remove, so a separator around one survives; keep an optional token in brackets if you want the segment to disappear cleanly.
 
-> **A quirk in the shipped default.** The movie default contains `{tmdb-{tmdb_id}}` — nested braces. The parser matches `{tmdb_id}` inside it, so this renders as `{tmdb-603}` rather than `tmdb-603`: the literal outer braces stay in the directory name. Plex and Jellyfin both read `{tmdb-603}` as an ID hint, so this is intentional and works — but if you write your own template, know that the braces are literal text, not template syntax.
+> [!NOTE]
+> The movie default contains `{tmdb-{tmdb_id}}` — nested braces. The parser matches `{tmdb_id}` inside it, so this renders as `{tmdb-603}` rather than `tmdb-603`: the literal outer braces stay in the directory name. Plex and Jellyfin both read `{tmdb-603}` as an ID hint, so this is intentional and works — but if you write your own template, know that the braces are literal text, not template syntax.
 
 ### Sanitisation
 
@@ -206,9 +209,8 @@ rendered path, so a `/` inside a title (`In/Spectre`, `Face/Off`) becomes a dash
 rather than a directory separator. The `/` in the template itself still marks a
 directory.
 
-> If you are upgrading, existing folders keep their old spelling until you
-> re-run a rename. `POST /movies/{id}/rename` moves the file and removes the
-> directory it emptied.
+> [!WARNING]
+> Existing folders keep their old spelling until you re-run a rename — changing a template or fixing sanitisation doesn't touch files already on disk. `POST /movies/{id}/rename` moves the file and removes the directory it emptied.
 
 ### Examples
 

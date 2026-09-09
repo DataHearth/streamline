@@ -6,6 +6,9 @@ Streamline's API is the same one its own web UI uses — there's no privileged i
 - [Authentication](#authentication)
 - [Conventions](#conventions)
 - [Endpoint map](#endpoint-map)
+  - [Movies](#movies) · [Series](#series) · [Activity](#activity) · [Requests](#requests)
+  - [Config-backed resources](#config-backed-resources) · [Torrents](#torrents-built-in-client) · [Transcoding endpoints](#transcoding-endpoints) · [Library](#library)
+  - [Auth and users](#auth-and-users) · [Config, schedules, system](#config-schedules-system) · [Calendar](#calendar) · [Outside `/api/v1`](#outside-apiv1)
 - [Media probe](#media-probe)
 - [Transcoding](#transcoding)
 - [Quality scoring](#quality-scoring)
@@ -43,7 +46,8 @@ Cookies are ignored on `/api/v1` **except** for same-origin browser requests car
 
 Failures return `401` with a JSON body. No redirects on the API surface.
 
-The two credentials are equal on media and settings endpoints, but API keys are **read-only on the identity surface**: any non-GET request under `/auth/me`, `/auth/password`, `/auth/invites`, `/auth/jwt`, or `/users` returns `403` with a key — those actions need a session (Bearer JWT or the SPA cookie). That's why the key-creation example below authenticates with a JWT.
+> [!WARNING]
+> API keys are **read-only on the identity surface**: any non-GET request under `/auth/me`, `/auth/password`, `/auth/invites`, `/auth/jwt`, or `/users` returns `403` with a key — those actions need a session (Bearer JWT or the SPA cookie). The two credentials are otherwise equal on media and settings endpoints. That's why the key-creation example below authenticates with a JWT, not a key.
 
 ### Getting an API key
 
@@ -65,7 +69,8 @@ curl -c cookies.txt -X POST -H 'Content-Type: application/json' \
   https://streamline.example.com/auth/login
 ```
 
-Note the path: `/auth/login`, **not** `/api/v1/auth/login`. It returns `204` and sets `streamline_session`; the cookie's value is the JWT, so you can lift it out and use it as a Bearer token.
+> [!IMPORTANT]
+> Note the path: `/auth/login`, **not** `/api/v1/auth/login`. It returns `204` and sets `streamline_session`; the cookie's value is the JWT, so you can lift it out and use it as a Bearer token.
 
 For anything non-interactive, use an API key instead.
 
@@ -119,158 +124,158 @@ Everything database-backed (movies, series, requests, users, imports) uses numer
 
 ## Endpoint map
 
-115 paths. Grouped, with admin-only marked 🔒.
+115 paths, grouped below. **Auth** is `Authenticated` (any logged-in user or valid credential) or `🔒 Admin`; the Requests group is more granular and spells out the exact roles.
 
 ### Movies
 
-| Method | Path |
-| --- | --- |
-| `GET` `POST` | `/movies` |
-| `GET` | `/movies/counts` |
-| `GET` `PATCH` `DELETE` | `/movies/{id}` |
-| `POST` | `/movies/{id}/search` · `/search-now` · `/grab` · `/refresh-metadata` · `/rename` · `/play-on` |
-| `POST` | `/movies/{id}/reidentify` 🔒 — point the entry at a different TMDB title |
-| `GET` | `/movies/{id}/recommendations` |
-| `DELETE` | `/movies/{id}/files/{fileId}` |
-| `GET` | `/search/movie` · `/search/movie/{tmdb_id}` — TMDB lookup |
+| Method | Path | What it does | Auth |
+| --- | --- | --- | --- |
+| `GET` `POST` | `/movies` | List / add movies | Authenticated |
+| `GET` | `/movies/counts` | Counts by status | Authenticated |
+| `GET` `PATCH` `DELETE` | `/movies/{id}` | Fetch / update / delete a movie | Authenticated |
+| `POST` | `/movies/{id}/search` · `/search-now` · `/grab` · `/refresh-metadata` · `/rename` · `/play-on` | Search, force a search, grab, refresh metadata, rename to the naming template, or play on a media server | Authenticated |
+| `POST` | `/movies/{id}/reidentify` | Point the entry at a different TMDB title | 🔒 Admin |
+| `GET` | `/movies/{id}/recommendations` | TMDB recommendations | Authenticated |
+| `DELETE` | `/movies/{id}/files/{fileId}` | Delete a file | Authenticated |
+| `GET` | `/search/movie` · `/search/movie/{tmdb_id}` | TMDB title lookup | Authenticated |
 
 ### Series
 
-| Method | Path |
-| --- | --- |
-| `GET` `POST` | `/series` — list takes `?status=`, `?type=`, `?query=`, `?sort=`, `?order=` |
-| `GET` | `/series/counts` · `/series/lookup` · `/series/lookup/{tvdb_id}` |
-| `POST` | `/series/specials/apply` |
-| `GET` `PATCH` `DELETE` | `/series/{id}` |
-| `GET` | `/series/{id}/browse` |
-| `POST` | `/series/{id}/search` · `/grab` · `/refresh-metadata` · `/rename` · `/play-on` |
-| `POST` | `/series/{id}/reidentify` 🔒 — point the entry at a different TVDB show |
-| `PATCH` | `/series/{id}/seasons/{number}` |
-| `POST` | `/series/{id}/seasons/{number}/search` · `/grab` |
-| `GET` `PATCH` | `/series/{id}/episodes/{episodeId}` |
-| `POST` | `/series/{id}/episodes/{episodeId}/search` · `/grab` |
-| `DELETE` | `/series/{id}/episodes/{episodeId}/file` |
+| Method | Path | What it does | Auth |
+| --- | --- | --- | --- |
+| `GET` `POST` | `/series` | List (`?status=`, `?type=`, `?query=`, `?sort=`, `?order=`) / add a series | Authenticated |
+| `GET` | `/series/counts` · `/series/lookup` · `/series/lookup/{tvdb_id}` | Counts, TVDB lookup | Authenticated |
+| `POST` | `/series/specials/apply` | Apply the specials handling | Authenticated |
+| `GET` `PATCH` `DELETE` | `/series/{id}` | Fetch / update / delete a series | Authenticated |
+| `GET` | `/series/{id}/browse` | Browse the season/episode tree | Authenticated |
+| `POST` | `/series/{id}/search` · `/grab` · `/refresh-metadata` · `/rename` · `/play-on` | Search, grab, refresh metadata, rename, or play on a media server | Authenticated |
+| `POST` | `/series/{id}/reidentify` | Point the entry at a different TVDB show | 🔒 Admin |
+| `PATCH` | `/series/{id}/seasons/{number}` | Update a season | Authenticated |
+| `POST` | `/series/{id}/seasons/{number}/search` · `/grab` | Search or grab a season | Authenticated |
+| `GET` `PATCH` | `/series/{id}/episodes/{episodeId}` | Fetch / update an episode | Authenticated |
+| `POST` | `/series/{id}/episodes/{episodeId}/search` · `/grab` | Search or grab an episode | Authenticated |
+| `DELETE` | `/series/{id}/episodes/{episodeId}/file` | Delete the episode's file | Authenticated |
 
 Each of the three search scopes filters the indexer's answer to its own scope — an episode search returns that episode, a season search returns season packs of that season, a series search returns complete/multi-season packs. The episode search additionally carries `hidden_packs` (present only when non-zero): how many packs covering that episode it excluded, so an empty `items` can be told apart from "it only exists inside a pack".
 
 ### Activity
 
-| Method | Path |
-| --- | --- |
-| `GET` | `/activity` — event feed (movies, episodes and series; filter with `?movie_id=` or `?series_id=`) |
-| `GET` | `/activity/queue` · `/activity/history` |
-| `DELETE` | `/activity/queue/{id}` · `/activity/history/{id}` |
-| `POST` | `/activity/queue/{id}/pause` · `/resume` · `/activity/history/clear-completed` |
-| `GET` | `/activity/pending` 🔒 |
-| `GET` | `/activity/pending/{id}/preview` 🔒 |
-| `POST` | `/activity/pending/{id}/import` · `/replace` · `/ignore` 🔒 |
-| `POST` | `/activity/pending/{id}/identify` 🔒 |
-| `POST` | `/downloads/{id}/resolve` 🔒 — release a held download |
+| Method | Path | What it does | Auth |
+| --- | --- | --- | --- |
+| `GET` | `/activity` | Event feed (movies, episodes and series; filter with `?movie_id=` or `?series_id=`) | Authenticated |
+| `GET` | `/activity/queue` · `/activity/history` | Queue and history views | Authenticated |
+| `DELETE` | `/activity/queue/{id}` · `/activity/history/{id}` | Remove a queue or history entry | Authenticated |
+| `POST` | `/activity/queue/{id}/pause` · `/resume` · `/activity/history/clear-completed` | Pause/resume a download, or clear completed history | Authenticated |
+| `GET` | `/activity/pending` | List adoption proposals | 🔒 Admin |
+| `GET` | `/activity/pending/{id}/preview` | Preview a proposal | 🔒 Admin |
+| `POST` | `/activity/pending/{id}/import` · `/replace` · `/ignore` | Decide a proposal | 🔒 Admin |
+| `POST` | `/activity/pending/{id}/identify` | Identify a proposal against metadata | 🔒 Admin |
+| `POST` | `/downloads/{id}/resolve` | Release a held download | 🔒 Admin |
 
 ### Requests
 
-| Method | Path | Who |
-| --- | --- | --- |
-| `GET` `POST` | `/requests` | Any (scoped for `request_only`) |
-| `GET` | `/requests/counts` · `/requests/{id}/metadata` | Any |
-| `POST` | `/requests/{id}/approve` | admin, member |
-| `POST` | `/requests/{id}/deny` · `/reopen` | admin |
+| Method | Path | What it does | Auth |
+| --- | --- | --- | --- |
+| `GET` `POST` | `/requests` | List / create requests | Any (scoped for `request_only`) |
+| `GET` | `/requests/counts` · `/requests/{id}/metadata` | Counts, request metadata | Any |
+| `POST` | `/requests/{id}/approve` | Approve a request | admin, member |
+| `POST` | `/requests/{id}/deny` · `/reopen` | Deny or reopen a request | admin |
 
-### Config-backed resources 🔒
+### Config-backed resources
 
-| Method | Path |
-| --- | --- |
-| `GET` `POST` | `/indexers` · `/download-clients` · `/media-servers` · `/quality-profiles` · `/custom-formats` |
-| `GET` `DELETE` | `/{resource}/{name}` |
-| `PUT` | `/indexers/{name}` · `/download-clients/{name}` · `/quality-profiles/{name}` · `/custom-formats/{name}` |
-| `PATCH` | `/media-servers/{name}` |
-| `POST` | `/{resource}/test` — test an unsaved config |
-| `POST` | `/{resource}/{name}/test` — test a saved one |
-| `POST` | `/custom-formats/test` — evaluate a draft condition set against a sample release |
-| `POST` | `/media-servers/discover` — list libraries/sections for a draft (body carries the token) |
-| `POST` | `/media-servers/{name}/discover` — same, for a saved server, using its stored token |
-| `POST` | `/quality-profiles/{name}/default` — point `quality_default_profile` at this profile |
+| Method | Path | What it does | Auth |
+| --- | --- | --- | --- |
+| `GET` `POST` | `/indexers` · `/download-clients` · `/media-servers` · `/quality-profiles` · `/custom-formats` | List / create | 🔒 Admin |
+| `GET` `DELETE` | `/{resource}/{name}` | Fetch / delete by name | 🔒 Admin |
+| `PUT` | `/indexers/{name}` · `/download-clients/{name}` · `/quality-profiles/{name}` · `/custom-formats/{name}` | Replace | 🔒 Admin |
+| `PATCH` | `/media-servers/{name}` | Update | 🔒 Admin |
+| `POST` | `/{resource}/test` | Test an unsaved config | 🔒 Admin |
+| `POST` | `/{resource}/{name}/test` | Test a saved one | 🔒 Admin |
+| `POST` | `/custom-formats/test` | Evaluate a draft condition set against a sample release | 🔒 Admin |
+| `POST` | `/media-servers/discover` | List libraries/sections for a draft (body carries the token) | 🔒 Admin |
+| `POST` | `/media-servers/{name}/discover` | Same, for a saved server, using its stored token | 🔒 Admin |
+| `POST` | `/quality-profiles/{name}/default` | Point `quality_default_profile` at this profile | 🔒 Admin |
 
 Built-in custom formats are listed alongside user-defined ones (`builtin: true`); `PUT`/`DELETE` against a built-in, or a delete of a format still scored by a quality profile, is `409`. See [Quality Profiles and Custom Formats](Quality-Profiles-and-Custom-Formats).
 
 `is_default` on a quality profile marks the one a movie or series with an empty `quality_profile` resolves to. Deleting it is a `409` while it holds the role, so `POST /quality-profiles/{name}/default` is both how you change the default and how you free the old one for deletion.
 
-### Torrents 🔒 (built-in client)
+### Torrents (built-in client)
 
-| Method | Path |
-| --- | --- |
-| `GET` | `/torrents` · `/torrents/{hash}` |
-| `POST` | `/torrents/{hash}/pause` · `/resume` |
-| `PATCH` | `/torrents/{hash}/files/{index}` — toggle a file |
-| `PUT` | `/torrents/listen-port` — move the running engine's peer sockets; not persisted |
+| Method | Path | What it does | Auth |
+| --- | --- | --- | --- |
+| `GET` | `/torrents` · `/torrents/{hash}` | List / fetch a torrent | 🔒 Admin |
+| `POST` | `/torrents/{hash}/pause` · `/resume` | Pause / resume | 🔒 Admin |
+| `PATCH` | `/torrents/{hash}/files/{index}` | Toggle a file | 🔒 Admin |
+| `PUT` | `/torrents/listen-port` | Move the running engine's peer sockets; not persisted | 🔒 Admin |
 
-### Transcoding 🔒
+### Transcoding endpoints
 
-| Method | Path |
-| --- | --- |
-| `GET` | `/transcoding/queue` — newest 200 jobs plus every rejected row, no filter |
-| `POST` | `/transcoding/jobs/{id}/cancel` · `/retry` |
-| `POST` | `/transcoding/scan` — queue the existing library |
+| Method | Path | What it does | Auth |
+| --- | --- | --- | --- |
+| `GET` | `/transcoding/queue` | Newest 200 jobs plus every rejected row, no filter | 🔒 Admin |
+| `POST` | `/transcoding/jobs/{id}/cancel` · `/retry` | Cancel or retry a job | 🔒 Admin |
+| `POST` | `/transcoding/scan` | Queue the existing library | 🔒 Admin |
 
 All four answer `409` while `transcoding.enabled` is false.
 
-### Library 🔒
+### Library
 
-| Method | Path |
-| --- | --- |
-| `GET` `POST` | `/library/imports` |
-| `GET` `DELETE` | `/library/imports/{id}` |
-| `POST` | `/library/imports/{id}/cancel` · `/commit` |
-| `GET` | `/library/imports/{id}/files` · `/shows` |
-| `PATCH` | `/library/imports/{id}/files/{fileId}` · `/shows/{showId}` |
-| `POST` | `/library/imports/{id}/decisions` — bulk decision |
-| `GET` `POST` | `/library/path-migration` |
-| `GET` | `/library/path-migration/roots` |
-| `POST` | `/library/path-migration/preview` |
+| Method | Path | What it does | Auth |
+| --- | --- | --- | --- |
+| `GET` `POST` | `/library/imports` | List / start an import scan | 🔒 Admin |
+| `GET` `DELETE` | `/library/imports/{id}` | Fetch / delete a scan | 🔒 Admin |
+| `POST` | `/library/imports/{id}/cancel` · `/commit` | Cancel or commit a scan | 🔒 Admin |
+| `GET` | `/library/imports/{id}/files` · `/shows` | List scanned rows | 🔒 Admin |
+| `PATCH` | `/library/imports/{id}/files/{fileId}` · `/shows/{showId}` | Update a row's match | 🔒 Admin |
+| `POST` | `/library/imports/{id}/decisions` | Bulk decision | 🔒 Admin |
+| `GET` `POST` | `/library/path-migration` | List / start a path migration | 🔒 Admin |
+| `GET` | `/library/path-migration/roots` | List roots | 🔒 Admin |
+| `POST` | `/library/path-migration/preview` | Preview a migration | 🔒 Admin |
 
 ### Auth and users
 
-| Method | Path | Who |
-| --- | --- | --- |
-| `GET` `PATCH` | `/auth/me` | Any |
-| `PUT` | `/auth/password` | Any |
-| `GET` `POST` | `/auth/me/api-keys` · `/auth/me/sessions` | Any |
-| `DELETE` | `/auth/me/api-keys/{id}` · `/auth/me/sessions/{id}` | Any |
-| `POST` | `/auth/jwt/rotate` | 🔒 |
-| `GET` `POST` | `/auth/invites` | 🔒 |
-| `DELETE` | `/auth/invites/{id}` | 🔒 |
-| `GET` `POST` | `/users` | 🔒 |
-| `GET` `PATCH` `DELETE` | `/users/{uid}` | 🔒 |
-| `POST` | `/users/{uid}/password-reset` · `/unlock` | 🔒 |
-| `DELETE` | `/users/{uid}/api-keys/{kid}` · `/sessions/{sid}` | 🔒 |
+| Method | Path | What it does | Auth |
+| --- | --- | --- | --- |
+| `GET` `PATCH` | `/auth/me` | Fetch / update your profile | Any |
+| `PUT` | `/auth/password` | Change your password | Any |
+| `GET` `POST` | `/auth/me/api-keys` · `/auth/me/sessions` | List / create your API keys or sessions | Any |
+| `DELETE` | `/auth/me/api-keys/{id}` · `/auth/me/sessions/{id}` | Revoke your own key or session | Any |
+| `POST` | `/auth/jwt/rotate` | Rotate the JWT signing secret (logs everyone out) | 🔒 Admin |
+| `GET` `POST` | `/auth/invites` | List / create invites | 🔒 Admin |
+| `DELETE` | `/auth/invites/{id}` | Revoke an invite | 🔒 Admin |
+| `GET` `POST` | `/users` | List / create users | 🔒 Admin |
+| `GET` `PATCH` `DELETE` | `/users/{uid}` | Fetch / update / delete a user | 🔒 Admin |
+| `POST` | `/users/{uid}/password-reset` · `/unlock` | Reset a password or clear a lockout | 🔒 Admin |
+| `DELETE` | `/users/{uid}/api-keys/{kid}` · `/sessions/{sid}` | Revoke another user's key or session | 🔒 Admin |
 
-### Config, schedules, system 🔒
+### Config, schedules, system
 
-| Method | Path |
-| --- | --- |
-| `GET` `PATCH` | `/config/auth` · `/config/library` · `/config/ffmpeg` · `/config/download` · `/config/metadata` · `/config/system` · `/config/transcoding` |
-| `GET` `POST` | `/config/oidc` |
-| `GET` `PATCH` `DELETE` | `/config/oidc/{name}` |
-| `GET` | `/schedules` · `/schedules/{name}` |
-| `PATCH` | `/schedules/{name}` |
-| `POST` | `/schedules/{name}/pause` · `/resume` · `/run` |
-| `GET` | `/system/info` |
+| Method | Path | What it does | Auth |
+| --- | --- | --- | --- |
+| `GET` `PATCH` | `/config/auth` · `/config/library` · `/config/ffmpeg` · `/config/download` · `/config/metadata` · `/config/system` · `/config/transcoding` | Read / patch a config section | 🔒 Admin |
+| `GET` `POST` | `/config/oidc` | List / add an OIDC provider | 🔒 Admin |
+| `GET` `PATCH` `DELETE` | `/config/oidc/{name}` | Fetch / update / remove a provider | 🔒 Admin |
+| `GET` | `/schedules` · `/schedules/{name}` | List / fetch a schedule | 🔒 Admin |
+| `PATCH` | `/schedules/{name}` | Update a schedule | 🔒 Admin |
+| `POST` | `/schedules/{name}/pause` · `/resume` · `/run` | Pause, resume, or run a schedule now | 🔒 Admin |
+| `GET` | `/system/info` | Server info | 🔒 Admin |
 
 ### Calendar
 
-| Method | Path |
-| --- | --- |
-| `GET` | `/calendar/upcoming?from=&to=` — movie digital releases and episode air dates |
+| Method | Path | What it does | Auth |
+| --- | --- | --- | --- |
+| `GET` | `/calendar/upcoming?from=&to=` | Movie digital releases and episode air dates | Authenticated |
 
 ### Outside `/api/v1`
 
-| Path | Notes |
-| --- | --- |
-| `GET /health` | Unauthenticated probe. Bare JSON, deliberately not in the spec |
-| `POST /auth/login` · `/auth/register` · `/auth/logout` | Cookie-based, `204` on success |
-| `GET /auth/config` · `/auth/invite/{token}` | Pre-auth SPA bootstrap |
-| `GET /auth/oidc/{name}/start` · `/callback` | The OIDC flow |
-| `GET /posters/{kind}/{id}/poster.jpg` | Poster proxy |
+| Method | Path | What it does | Auth |
+| --- | --- | --- | --- |
+| `GET` | `/health` | Unauthenticated probe. Bare JSON, deliberately not in the spec | None |
+| `POST` | `/auth/login` · `/auth/register` · `/auth/logout` | Cookie-based, `204` on success | None |
+| `GET` | `/auth/config` · `/auth/invite/{token}` | Pre-auth SPA bootstrap | None |
+| `GET` | `/auth/oidc/{name}/start` · `/callback` | The OIDC flow | None |
+| `GET` | `/posters/{kind}/{id}/poster.jpg` | Poster proxy | — |
 
 ---
 
@@ -279,6 +284,9 @@ All four answer `409` while `transcoding.enabled` is false.
 Technical details read from your files with `ffprobe` — resolution, codecs, duration, bitrate, stream languages. See [Configuration Reference](Configuration-Reference#ffmpeg) for the config side.
 
 **`media_info`** is a nullable object on `MediaFile` (movies) and `Episode` responses:
+
+<details>
+<summary><b>Example <code>media_info</code> object</b></summary>
 
 ```json
 {
@@ -296,6 +304,8 @@ Technical details read from your files with `ffprobe` — resolution, codecs, du
   "probed_at": "2026-08-18T12:00:00Z"
 }
 ```
+
+</details>
 
 It's absent until the file has been probed, and absent again if the probe failed — check for the key, don't assume it's always there. An upgrade of Streamline that adds a new probed field also clears the stamp on files probed before that field existed, so `media_info` goes absent for them until the backfill job gets to them again: a partial probe result read as a complete one would be wrong everywhere, including in [upgrade decisions](Quality-Profiles-and-Custom-Formats#what-a-file-can-be-scored-on).
 
@@ -329,6 +339,9 @@ Background re-encoding of imported files, driven by the `transcode` block on a [
 
 **`GET /transcoding/queue`** returns the newest 200 jobs, plus every `rejected` row regardless of age, newest first. There is no `status` filter; filter client-side.
 
+<details>
+<summary><b>Example queue response</b></summary>
+
 ```json
 [
   {
@@ -359,6 +372,8 @@ Background re-encoding of imported files, driven by the `transcode` block on a [
   }
 ]
 ```
+
+</details>
 
 `status` is `queued` · `running` · `succeeded` · `failed` · `canceled` · `rejected`. `movie_id`, or `series_id` + `episode_id`, links the row back to the item — exactly one pair is set. `error` carries the tail of ffmpeg's stderr from the last failed attempt. `rejected` means the output failed verification — a verdict on the encode, terminal, with `error` naming the check and its numbers.
 
@@ -430,6 +445,9 @@ Full mental model, condition types and the built-in format library: [Quality Pro
 
 **`QualityProfile`** gained four fields alongside the pre-existing `preferred_resolution`/`min_resolution`/`upgrade_allowed`/`allowed_codecs`:
 
+<details>
+<summary><b>Example <code>QualityProfile</code></b></summary>
+
 ```json
 {
   "name": "default",
@@ -445,9 +463,14 @@ Full mental model, condition types and the built-in format library: [Quality Pro
 }
 ```
 
+</details>
+
 `formats[].name` accepts either a built-in name or a `custom_formats` entry name; an unresolvable name is `422`. `min_score` is **omitted from the response when it's `0`** — the handler only sets the field when the value is non-zero (`*int`), not a signal it's unset; absent reads as `0`.
 
 **Browse-releases responses** (`POST /movies/{id}/search`, the series browse endpoints) annotate each `SearchResult` with the item's own profile:
+
+<details>
+<summary><b>Example <code>SearchResult</code></b></summary>
 
 ```json
 {
@@ -458,6 +481,8 @@ Full mental model, condition types and the built-in format library: [Quality Pro
   "matched_formats": ["remux", "hdr"]
 }
 ```
+
+</details>
 
 Results are sorted `score` descending, ties broken by seeders — not by seeders alone. `rejected: true` releases (resolution outside the profile band, or score below `min_score`) are still returned with a `reject_reason`, so an operator can grab one deliberately; `score`/`rejected`/`reject_reason`/`matched_formats` are all ignored if sent back on a grab request body.
 

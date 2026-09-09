@@ -2,6 +2,11 @@
 
 Where to look when you want to know what Streamline is doing, what it did, and what's coming.
 
+| | | |
+| --- | --- | --- |
+| [![Queue](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/activity-queue.png)](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/activity-queue.png) | [![History](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/history.png)](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/history.png) | [![Calendar](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/calendar.png)](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/calendar.png) |
+| **Doing** — live queue, progress and ETA | **Did** — every grab and its source | **Coming** — upcoming episodes and releases |
+
 - [Dashboard](#dashboard)
 - [The event feed](#the-event-feed)
 - [The queue](#the-queue)
@@ -23,9 +28,7 @@ The health indicator in the top bar reflects real state — disk usage on your d
 
 ## The event feed
 
-The **Recent activity** panel on the dashboard, and `GET /api/v1/activity` behind it,
-is the history of what happened to each title. Events cover movies, episodes and
-series:
+The **Recent activity** panel on the dashboard, and `GET /api/v1/activity` behind it, is the history of what happened to each title. Events cover movies, episodes and series:
 
 | Event | When it fires |
 | --- | --- |
@@ -37,18 +40,11 @@ series:
 | `drift_confirmed` | It stayed missing past the grace window and the row was reverted |
 | `searched` | A search-and-grab pass ran |
 
-Every event names exactly one owner — `movie`, `episode` or `series`. Episode rows
-render as *Show · S01E03*.
+Every event names exactly one owner — `movie`, `episode` or `series`. Episode rows render as *Show · S01E03*.
 
-**`searched` is recorded once per search, not once per episode.** Asking Streamline
-to search a series writes one event for the whole pass, with the seasons it
-touched, how many episodes it searched and how many it grabbed in the payload.
-A pass over one season reads as *Show · Season 3*. Without that, a
-`tv-missing-search` tick over a large library would write thousands of rows an hour.
+**`searched` is recorded once per search, not once per episode.** Asking Streamline to search a series writes one event for the whole pass, with the seasons it touched, how many episodes it searched and how many it grabbed in the payload. A pass over one season reads as *Show · Season 3*. Without that, a `tv-missing-search` tick over a large library would write thousands of rows an hour.
 
-Browsing releases in the manual-grab dialog records nothing — no grab happened,
-and the results are already on screen. The grab that follows still fires
-`grabbed`.
+Browsing releases in the manual-grab dialog records nothing — no grab happened, and the results are already on screen. The grab that follows still fires `grabbed`.
 
 Rows are purged by the `cleanup` job after `events.retention` (default 90 days).
 
@@ -56,9 +52,7 @@ Rows are purged by the `cleanup` job after `events.retention` (default 90 days).
 
 ## The queue
 
-**Activity → Queue.** A live snapshot of everything currently downloading, refreshed every 30 seconds by the `download-monitor` job.
-
-Each row shows progress, speed, ETA, size, which download client is handling it, and what it's for.
+**Activity → Queue.** A live snapshot of everything currently downloading, refreshed every 30 seconds by the `download-monitor` job. Each row shows progress, speed, ETA, size, which download client is handling it, and what it's for.
 
 You can **pause**, **resume** and **remove** items directly — these act on your actual download client, so pausing here pauses in qBittorrent. Removing asks whether to delete the downloaded data too.
 
@@ -72,18 +66,12 @@ A queue entry is in one of five states:
 | **Paused** | Suspended, by you or by the client |
 | **Error** | Something failed — the entry carries a failure reason |
 
-**Held** entries are the only ones whose next move is yours. Streamline probed
-the finished file and it disagrees with what the release claimed — a 720p file
-sold as 1080p, a truncated runtime, a codec your profile doesn't allow, or a
-file ffprobe cannot read at all. Nothing was moved into your library. Open the
-entry and choose: **import anyway**, or delete it — with or without searching
-for a replacement. A season pack is held whole, listing every file that failed.
+**Held** entries are the only ones whose next move is yours. Streamline probed the finished file and it disagrees with what the release claimed — a 720p file sold as 1080p, a truncated runtime, a codec your profile doesn't allow, or a file ffprobe cannot read at all. Nothing was moved into your library. Open the entry and choose: **import anyway**, or delete it — with or without searching for a replacement. A season pack is held whole, listing every file that failed.
 
-See [Configuration Reference](Configuration-Reference#import-verification) for
-the checks and how to turn them up or off (including `always_ask`, which holds
-every import for review).
+See [Configuration Reference](Configuration-Reference#import-verification) for the checks and how to turn them up or off (including `always_ask`, which holds every import for review).
 
-A torrent that shows progress stuck at the same percentage with no speed has no peers. It'll sit there forever — remove it and let Streamline find another release, or search manually and pick one with more seeders.
+> [!TIP]
+> A torrent stuck at the same percentage with no speed has no peers. Remove it and let Streamline find another release, or search manually and pick one with more seeders.
 
 ---
 
@@ -149,7 +137,8 @@ If you're using qBittorrent or Transmission, this page will be empty; manage tho
 
 **Activity → Transcoding.** Admin only. The queue of files being re-encoded in the background, driven by the `transcode` block on a [quality profile](Quality-Profiles-and-Custom-Formats#transcoding-a-profiles-files).
 
-Transcoding is **off by default**. Until you turn it on under Settings → Transcoding this page shows an off state rather than an empty queue — there's a difference between "nothing to do" and "not running", and the page says which.
+> [!NOTE]
+> Transcoding is **off by default**. Until you turn it on under Settings → Transcoding this page shows an off state rather than an empty queue — there's a difference between "nothing to do" and "not running", and the page says which.
 
 Each row names the movie or episode, the file on disk, and where the job got to:
 
@@ -167,7 +156,8 @@ Each row names the movie or episode, the file on disk, and where the job got to:
 
 **Retry** puts a failed job back in the queue with its attempt count reset. Fix whatever the error names first — a job that failed because the disk was full will fail the same way again.
 
-One kind of failure must not be retried blindly: a job that finished its encode, swapped the new file in, and *then* failed to record that in the database is parked as failed immediately, with no attempts left and a CRITICAL line in the log naming both paths. The file on disk has already been replaced, so a retry would re-encode from a source that is gone. Read the log line and reconcile the row by hand — the error text says which path the database still points at.
+> [!WARNING]
+> A job that finished its encode, swapped the new file in, and *then* failed to record that in the database is parked as failed immediately, with no attempts left and a CRITICAL line in the log naming both paths. The file on disk has already been replaced, so a retry would re-encode from a source that is gone. Read the log line and reconcile the row by hand — the error text says which path the database still points at.
 
 A running job's progress comes from the encoder inside the running process, so it disappears if Streamline restarts mid-encode. That job is put back in the queue on the next boot and starts over; the half-written file it left behind is cleaned up automatically.
 
@@ -184,7 +174,8 @@ A running job's progress comes from the encoder inside the running process, so i
 
 Filter chips switch between all / movies / episodes. Click any day to see what lands on it; click an entry to jump to the title.
 
-The calendar is a *forecast*, not a queue. An entry appearing today doesn't mean Streamline has grabbed it — it means the release date has arrived and the next RSS sync or missing search is now likely to find something.
+> [!NOTE]
+> The calendar is a *forecast*, not a queue. An entry appearing today doesn't mean Streamline has grabbed it — it means the release date has arrived and the next RSS sync or missing search is now likely to find something.
 
 Weeks start on Monday regardless of locale.
 
