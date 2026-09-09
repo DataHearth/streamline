@@ -10,10 +10,12 @@
 	} from "@lucide/svelte";
 	import { cn } from "../../lib/cn";
 	import { api, errorText } from "../../lib/api";
+	import { auth } from "../../lib/auth.svelte";
 	import { toast } from "../../lib/toast";
 	import { formatBytes } from "../../lib/format";
-	import type { SearchResult } from "../../lib/types";
+	import type { Indexer, SearchResult } from "../../lib/types";
 	import Select from "../forms/Select.svelte";
+	import SearchNarration from "./SearchNarration.svelte";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	type Field =
@@ -57,6 +59,14 @@
 	let groupFilter = $state<string>("");
 	let indexerFilter = $state<string>("");
 	let errMsg = $state<string | null>(null);
+	// Cancelling is local: the endpoint answers once, so there is nothing to
+	// abort server-side. Dropping the query is what "stop waiting" means here,
+	// and it leaves a state that says so rather than an empty table.
+	let canceled = $state(false);
+	$effect(() => {
+		// Reopening the dialog is a fresh search, never a cancelled one.
+		if (enabled) canceled = false;
+	});
 
 	type Results = { items: SearchResult[]; hiddenPacks: number };
 
@@ -71,9 +81,24 @@
 			if (Array.isArray(raw)) return { items: raw, hiddenPacks: 0 };
 			return { items: raw.items ?? [], hiddenPacks: raw.hidden_packs ?? 0 };
 		},
-		enabled,
+		enabled: enabled && !canceled,
 		staleTime: 30_000,
 	}));
+
+	// Only to name the scope of the wait: "Searching 6 indexers". Admin-only
+	// endpoint, so a non-admin gets the countless phrasing rather than a number
+	// they could not check. Silent: the global bar belongs to the search.
+	const indexersQuery = createQuery<Indexer[]>(() => ({
+		queryKey: ["indexers"],
+		queryFn: () => api<Indexer[]>("/indexers"),
+		enabled:
+			enabled && !canceled && q.isLoading && auth.user?.role === "admin",
+		staleTime: 300_000,
+		meta: { silent: true },
+	}));
+	let indexerCount = $derived(
+		indexersQuery.data?.filter((i) => i.enabled).length || undefined,
+	);
 
 	let data = $derived(q.data?.items ?? []);
 	// Packs the requested scope excluded. Absent on every scope but the episode
@@ -260,29 +285,47 @@
 	</div>
 {/if}
 
-{#if q.isLoading}
-	<p class="mb-3 flex items-center gap-2 text-xs text-fg-muted">
-		<LoaderCircle size={13} class="animate-spin" aria-hidden="true" />
-		{i18n.common_searching()}
-	</p>
-	<ul aria-hidden="true" class="flex flex-col gap-2">
-		{#each Array(6) as _}
-			<li
-				class="h-12 animate-pulse rounded-md bg-bg-card/50 motion-reduce:animate-none"
-			></li>
-		{/each}
-	</ul>
+{#if canceled}
+	<div
+		class="rounded-lg border border-dashed border-border bg-bg-elevated px-5 py-10 text-center"
+	>
+		<p class="text-sm text-fg-muted">{i18n.search_canceled()}</p>
+		<button
+			type="button"
+			onclick={() => (canceled = false)}
+			class="mt-2 text-xs font-medium text-accent transition hover:text-accent-hover"
+		>
+			{i18n.common_retry()}
+		</button>
+	</div>
+{:else if q.isLoading}
+	<SearchNarration
+		{indexerCount}
+		scopePending={indexersQuery.isPending && auth.user?.role === "admin"}
+		onCancel={() => (canceled = true)}
+	/>
 {:else if q.isError}
 	<div
 		role="alert"
-		class="rounded-lg border border-dashed border-status-failed/40 bg-status-failed/5 py-10 text-center text-sm text-status-failed"
+		class="rounded-lg border border-dashed border-status-failed/40 bg-status-failed/5 px-5 py-10 text-center"
 	>
-		{errorText(q.error, i18n.common_search_failed())}
+		<p class="text-sm text-status-failed">
+			{errorText(q.error, i18n.common_search_failed())}
+		</p>
+		<button
+			type="button"
+			onclick={() => q.refetch()}
+			class="mt-2 text-xs font-medium text-accent transition hover:text-accent-hover"
+		>
+			{i18n.common_retry()}
+		</button>
 	</div>
 {:else if data.length === 0}
-	<p class="py-10 text-center text-sm text-fg-muted">
-		{i18n.grab_no_releases()}
-	</p>
+	<div
+		class="rounded-lg border border-dashed border-border bg-bg-elevated px-5 py-10 text-center"
+	>
+		<p class="text-sm text-fg-muted">{i18n.grab_no_releases()}</p>
+	</div>
 	{@render packsHidden()}
 {:else}
 	{@render packsHidden()}

@@ -25,19 +25,26 @@
 	});
 </script>
 
+{#snippet replaceFooter()}
+	<!-- P2: the grab modifier sits under the list, next to where the eye ends
+	     up after picking a row, and stays put while a long list scrolls. The
+	     help text was only ever a title attribute before. -->
+	<div class="flex w-full items-center">
+		<ReplaceExistingToggle
+			checked={replaceExisting}
+			onChange={(v) => (replaceExisting = v)}
+		/>
+	</div>
+{/snippet}
+
 <Modal
 	{open}
 	title={scopeLabel ? i18n.manual_search_scope({ scope: scopeLabel }) : i18n.action_manual_search()}
 	size="4xl"
 	{onClose}
+	footer={episodeId > 0 ? replaceFooter : undefined}
 >
 	{#if episodeId > 0}
-		<div class="mb-4 flex justify-start md:justify-end">
-			<ReplaceExistingToggle
-				checked={replaceExisting}
-				onChange={(v) => (replaceExisting = v)}
-			/>
-		</div>
 		<ReleasesTable
 			searchPath={`/series/${seriesId}/episodes/${episodeId}/search`}
 			grabPath={`/series/${seriesId}/episodes/${episodeId}/grab`}

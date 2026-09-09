@@ -60,6 +60,18 @@
 	);
 </script>
 
+{#snippet replaceFooter()}
+	<!-- P2: the grab modifier sits under the list, next to where the eye ends
+	     up after picking a row, and stays put while a long list scrolls. The
+	     help text was only ever a title attribute before. -->
+	<div class="flex w-full items-center">
+		<ReplaceExistingToggle
+			checked={replaceExisting}
+			onChange={(v) => (replaceExisting = v)}
+		/>
+	</div>
+{/snippet}
+
 <Modal
 	{open}
 	title={scopeLabel
@@ -67,6 +79,7 @@
 		: i18n.action_manual_search()}
 	size="4xl"
 	{onClose}
+	footer={replaceFooter}
 >
 	<div class="mb-4 flex flex-wrap items-center gap-3">
 		<span class="text-xs font-medium uppercase tracking-wide text-fg-subtle">
@@ -78,12 +91,6 @@
 				{options}
 				ariaLabel="Search scope"
 				onChange={(v) => (scope = v)}
-			/>
-		</div>
-		<div class="ml-auto">
-			<ReplaceExistingToggle
-				checked={replaceExisting}
-				onChange={(v) => (replaceExisting = v)}
 			/>
 		</div>
 	</div>
