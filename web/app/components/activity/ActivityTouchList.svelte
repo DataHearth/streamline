@@ -1,4 +1,5 @@
 <script lang="ts">
+	import SkeletonList from "../shared/SkeletonList.svelte";
 	import { Activity, LoaderCircle } from "@lucide/svelte";
 	import TouchRow from "./TouchRow.svelte";
 	import { entryHeading, historyMeta, queueMeta } from "../../lib/activity-touch";
@@ -57,11 +58,7 @@
 
 <div class="mt-3 md:hidden">
 	{#if loading}
-		<div
-			class="rounded-xl border border-border bg-bg-elevated px-5 py-10 text-center text-sm text-fg-subtle"
-		>
-			{i18n.common_loading()}
-		</div>
+		<div class="flex flex-col gap-2.5"><SkeletonList variant="row" count={4} /></div>
 	{:else if error}
 		<div
 			class="rounded-xl border border-status-failed/25 bg-bg-elevated px-5 py-9 text-center"

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import SkeletonList from "../shared/SkeletonList.svelte";
 	import { Activity, LoaderCircle, ChevronUp, ChevronDown } from "@lucide/svelte";
 	import ActivityRow from "./ActivityRow.svelte";
 	import ExpandedRowDetail from "./ExpandedRowDetail.svelte";
@@ -211,7 +212,7 @@
 	class="@container mt-3 hidden overflow-x-auto rounded-lg border border-border bg-bg-elevated md:block"
 >
 	{#if loading}
-		<div class="px-5 py-10 text-center text-sm text-fg-subtle">{i18n.common_loading()}</div>
+		<SkeletonList variant="divided" count={6} />
 	{:else if error}
 		<div class="px-5 py-10 text-center">
 			<p class="text-sm font-semibold text-status-failed">

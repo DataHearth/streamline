@@ -1,4 +1,5 @@
 <script lang="ts">
+	import SkeletonList from "../../components/shared/SkeletonList.svelte";
 	import { slide } from "svelte/transition";
 	import { ChevronDown, ChevronRight, LoaderCircle } from "@lucide/svelte";
 	import {
@@ -486,9 +487,7 @@
 			class="mt-3 overflow-hidden rounded-lg border border-border bg-bg-elevated"
 		>
 			{#if events.isPending}
-				<p class="px-5 py-10 text-center text-sm text-fg-subtle">
-					{i18n.common_loading()}
-				</p>
+				<SkeletonList variant="divided" count={5} />
 			{:else if events.isError}
 				<p class="px-5 py-10 text-center text-sm text-status-failed">
 					{errorText(events.error)}

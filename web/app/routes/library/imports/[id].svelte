@@ -5,6 +5,7 @@
 		useQueryClient,
 	} from "@tanstack/svelte-query";
 	import { goto, params } from "@roxi/routify";
+	import SkeletonList from "../../../components/shared/SkeletonList.svelte";
 	import { onMount } from "svelte";
 	import {
 		ArrowDown,
@@ -585,7 +586,7 @@
 	</a>
 
 	{#if scanQuery.isPending}
-		<p class="mt-6 text-sm text-fg-subtle">{i18n.common_loading()}</p>
+		<div class="mt-6 space-y-4"><SkeletonList variant="panel" count={2} /></div>
 	{:else if scanQuery.isError}
 		<p class="mt-6 text-sm text-status-failed">
 			{i18n.err_load_failed_detail({ reason: errorText(scanQuery.error) })}

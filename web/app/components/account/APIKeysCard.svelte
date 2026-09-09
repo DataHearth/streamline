@@ -1,4 +1,5 @@
 <script lang="ts">
+	import SkeletonList from "../shared/SkeletonList.svelte";
 	import {
 		createQuery,
 		createMutation,
@@ -149,7 +150,7 @@
 	{/if}
 
 	{#if keys.isPending}
-		<p class="px-5 py-6 text-sm text-fg-subtle">{i18n.common_loading()}</p>
+		<SkeletonList variant="divided" count={2} />
 	{:else if keys.isError}
 		<p class="px-5 py-6 text-sm text-status-failed">
 			{i18n.err_load_failed_detail({ reason: errorText(keys.error) })}

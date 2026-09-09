@@ -1,4 +1,5 @@
 <script lang="ts">
+	import SkeletonList from "../shared/SkeletonList.svelte";
 	import { onMount } from "svelte";
 	import { fly, fade } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
@@ -304,9 +305,11 @@
 			<!-- Tab body -->
 			<div data-sheet-scroll class="min-h-0 flex-1 overflow-y-auto p-4">
 				{#if !detail}
-					<div class="flex flex-col items-center justify-center gap-2 py-16 text-center">
-						<LoaderCircle size={22} class="text-fg-faint motion-safe:animate-spin" aria-hidden="true" />
-						<p class="text-sm text-fg-muted">{i18n.common_loading_details()}</p>
+					<!-- Every tab here is a list of a known shape, so the wait is a
+					     placeholder rather than a narration: the rows arrive where
+					     these sit and the body does not jump. -->
+					<div class="flex flex-col gap-2.5">
+						<SkeletonList variant="row" count={5} />
 					</div>
 				{:else if tab === "files"}
 					<!-- Optional chaining, not a bare read: `detail` can go null under the

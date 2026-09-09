@@ -1,4 +1,5 @@
 <script lang="ts">
+	import SkeletonList from "../../../components/shared/SkeletonList.svelte";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { onMount } from "svelte";
 	import { Inbox } from "@lucide/svelte";
@@ -75,7 +76,7 @@
 		</header>
 
 		{#if list.isPending}
-			<p class="px-5 py-10 text-center text-sm text-fg-subtle">{i18n.common_loading()}</p>
+			<SkeletonList variant="divided" count={4} />
 		{:else if list.isError}
 			<p class="px-5 py-10 text-center text-sm text-status-failed">
 				{i18n.err_load_failed_detail({ reason: errorText(list.error) })}

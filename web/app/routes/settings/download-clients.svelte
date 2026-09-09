@@ -1,4 +1,5 @@
 <script lang="ts">
+	import SkeletonList from "../../components/shared/SkeletonList.svelte";
 	import {
 		createQuery,
 		createMutation,
@@ -410,7 +411,7 @@
 		{/if}
 
 		{#if list.isPending}
-			<p class="text-sm text-fg-subtle">{i18n.common_loading()}</p>
+			<SkeletonList variant="card" count={4} />
 		{:else if list.isError}
 			<p class="text-sm text-status-failed">
 				{i18n.err_load_failed_detail({ reason: errorText(list.error) })}

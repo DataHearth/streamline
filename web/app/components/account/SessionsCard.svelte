@@ -1,4 +1,5 @@
 <script lang="ts">
+	import SkeletonList from "../shared/SkeletonList.svelte";
 	import {
 		createQuery,
 		createMutation,
@@ -58,7 +59,7 @@
 	</header>
 
 	{#if sessions.isPending}
-		<p class="px-5 py-6 text-sm text-fg-subtle">{i18n.common_loading()}</p>
+		<SkeletonList variant="divided" count={3} />
 	{:else if sessions.isError}
 		<p class="px-5 py-6 text-sm text-status-failed">
 			{i18n.err_load_failed_detail({ reason: errorText(sessions.error) })}

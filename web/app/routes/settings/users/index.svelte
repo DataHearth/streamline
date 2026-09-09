@@ -1,4 +1,5 @@
 <script lang="ts">
+	import SkeletonList from "../../../components/shared/SkeletonList.svelte";
 	import { ArrowDown, ArrowUp, ArrowUpDown } from "@lucide/svelte";
 	import {
 		createQuery,
@@ -271,7 +272,7 @@
 
 	<div class="mt-5">
 		{#if users.isPending}
-			<p class="px-1 py-4 text-sm text-fg-subtle">{i18n.common_loading()}</p>
+			<SkeletonList variant="divided" count={5} />
 		{:else if users.isError}
 			<p class="px-1 py-4 text-sm text-status-failed">
 				{i18n.err_load_failed_detail({ reason: errorText(users.error) })}

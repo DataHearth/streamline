@@ -1,4 +1,7 @@
 <script lang="ts">
+	import SkeletonToolbar from "../../components/shared/SkeletonToolbar.svelte";
+	import SkeletonList from "../../components/shared/SkeletonList.svelte";
+	import Skeleton from "../../components/shared/Skeleton.svelte";
 	import { untrack } from "svelte";
 	import { onMount } from "svelte";
 	import {
@@ -321,8 +324,35 @@
 
 <div class="flex flex-col">
 	{#if moviesQuery.isLoading}
-		<div class="w-full px-4 py-16 text-center text-sm text-fg-subtle md:px-6">
-			{i18n.common_loading_movies()}
+		<span class="sr-only" role="status">{i18n.common_loading_movies()}</span>
+		<SkeletonToolbar triggers={2} />
+		<!-- The count row ("24 of 24 titles" · "363 episodes · last scan …") is
+		     also loaded-branch-only, and is 40.5px of the offset. Same gating as
+		     the real one, so it stays absent at phone where the real row is too. -->
+		<div
+			class="hidden w-full flex-wrap items-baseline justify-between gap-2 px-4 pb-2 pt-4 md:flex md:px-6"
+			aria-hidden="true"
+		>
+			<div class="h-[16.5px] w-[104px] animate-pulse rounded bg-white/[0.06] motion-reduce:animate-none"></div>
+			<div class="h-[16.5px] w-[196px] animate-pulse rounded bg-white/[0.06] motion-reduce:animate-none"></div>
+		</div>
+		<div class="w-full px-4 pb-6 pt-3 md:px-6 md:pt-0">
+			{#if shownView === "list"}
+				<div
+					class="@container overflow-hidden rounded-lg border border-border bg-bg-elevated/70"
+				>
+					<div class="border-b border-border px-3 py-2.5">
+						<Skeleton w="180px" h={9} />
+					</div>
+					<SkeletonList variant="media-row" count={8} />
+				</div>
+			{:else}
+				<div
+					class="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-x-4 gap-y-6 md:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] xl:grid-cols-[repeat(auto-fill,minmax(200px,1fr))]"
+				>
+					<SkeletonList variant="poster" count={12} />
+				</div>
+			{/if}
 		</div>
 	{:else if moviesQuery.isError}
 		<div class="w-full px-4 md:px-6">

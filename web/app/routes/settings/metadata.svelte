@@ -1,4 +1,5 @@
 <script lang="ts">
+	import SkeletonList from "../../components/shared/SkeletonList.svelte";
 	import {
 		createQuery,
 		createMutation,
@@ -80,7 +81,7 @@
 	</header>
 
 	{#if cfg.isPending}
-		<p class="mt-6 text-sm text-fg-subtle">{i18n.common_loading()}</p>
+		<div class="mt-6 space-y-4"><SkeletonList variant="panel" count={2} /></div>
 	{:else if cfg.isError}
 		<p class="mt-6 text-sm text-status-failed">
 			{i18n.err_load_failed_detail({ reason: errorText(cfg.error) })}
