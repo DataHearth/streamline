@@ -7,9 +7,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/otelx"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -72,7 +74,7 @@ func (s *Service) Create(
 
 	existing, err := s.db.FindActiveRequest(ctx, mediaType, mediaID)
 	if err != nil {
-		return nil, err
+		return nil, otelx.RecordSpanError(span, err)
 	}
 	if existing != nil {
 		return nil, ErrDuplicate
@@ -101,8 +103,17 @@ func (s *Service) Create(
 		if ent.IsConstraintError(err) {
 			return nil, ErrDuplicate
 		}
-		return nil, err
+		return nil, otelx.RecordSpanError(span, err)
 	}
+	// The request system is the only bridge between a user's ask and a library
+	// change, and none of its four transitions logged anything — so "who
+	// requested this, who approved it, and why was that one denied" was
+	// unanswerable from the log stream.
+	slog.InfoContext(ctx, "media requested",
+		"request.id", row.ID,
+		"media.type", mediaType,
+		"media.id", mediaID,
+		"user.id", requesterID)
 	return row, nil
 }
 
@@ -122,45 +133,65 @@ func (s *Service) Approve(
 		if ent.IsNotFound(err) {
 			return nil, fmt.Errorf("request %d: %w", id, ErrRequestNotFound)
 		}
-		return nil, err
+		return nil, otelx.RecordSpanError(span, err)
 	}
 	switch req.MediaType {
 	case "movie":
 		if _, _, err := s.movies.Add(ctx, req.MediaID, qualityProfile); err != nil {
-			return nil, fmt.Errorf("approve: add movie: %w", err)
+			return nil, otelx.RecordSpanError(
+				span, fmt.Errorf("approve: add movie: %w", err),
+			)
 		}
 	case "tvshow":
 		if _, err := s.shows.Add(ctx, req.MediaID, qualityProfile); err != nil {
-			return nil, fmt.Errorf("approve: add show: %w", err)
+			return nil, otelx.RecordSpanError(
+				span, fmt.Errorf("approve: add show: %w", err),
+			)
 		}
 	}
 	if err := s.db.ApproveRequest(ctx, id, adminID); err != nil {
-		return nil, err
+		return nil, otelx.RecordSpanError(span, err)
 	}
+	slog.InfoContext(ctx, "request approved",
+		"request.id", id, "media.type", req.MediaType, "user.id", adminID)
 	return s.db.GetRequest(ctx, id)
 }
 
+// Deny and Reopen are the negative half of the same workflow as Approve, and
+// were the untraced half — a slow or failing denial showed up in no span at
+// all while its sibling was fully covered.
 func (s *Service) Deny(
 	ctx context.Context,
 	id, adminID uint32,
 	reason string,
 ) (*ent.Request, error) {
+	ctx, span := tracer.Start(ctx, "request.deny",
+		trace.WithAttributes(attribute.Int("request.id", int(id))))
+	defer span.End()
+
 	if err := s.db.DenyRequest(ctx, id, adminID, reason); err != nil {
 		if ent.IsNotFound(err) {
 			return nil, fmt.Errorf("request %d: %w", id, ErrRequestNotFound)
 		}
-		return nil, err
+		return nil, otelx.RecordSpanError(span, err)
 	}
+	slog.InfoContext(ctx, "request denied",
+		"request.id", id, "user.id", adminID, "reason", reason)
 	return s.db.GetRequest(ctx, id)
 }
 
 func (s *Service) Reopen(ctx context.Context, id uint32) (*ent.Request, error) {
+	ctx, span := tracer.Start(ctx, "request.reopen",
+		trace.WithAttributes(attribute.Int("request.id", int(id))))
+	defer span.End()
+
 	if err := s.db.ReopenRequest(ctx, id); err != nil {
 		if ent.IsNotFound(err) {
 			return nil, fmt.Errorf("request %d: %w", id, ErrRequestNotFound)
 		}
-		return nil, err
+		return nil, otelx.RecordSpanError(span, err)
 	}
+	slog.InfoContext(ctx, "request reopened", "request.id", id)
 	return s.db.GetRequest(ctx, id)
 }
 

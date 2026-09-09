@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"path/filepath"
 	"time"
 
@@ -431,7 +432,16 @@ func (db *DB) DeleteMediaFileAndRevertMovie(
 		tx.Rollback()
 		return fmt.Errorf("revert movie %d to wanted: %w", movieID, err)
 	}
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	// Logged here rather than left to callers: drift_check logs its own
+	// reverts, but the importer's upgrade-replace path calls straight into
+	// this and logged nothing, so "why did this go back to wanted" had no
+	// answer on the path that most often causes it.
+	slog.InfoContext(ctx, "media file removed, movie reverted to wanted",
+		"media_file.id", mediaFileID, "movie.id", movieID)
+	return nil
 }
 
 // DeleteMediaFileAndRevertEpisode removes the MediaFile row and flips the
@@ -454,5 +464,10 @@ func (db *DB) DeleteMediaFileAndRevertEpisode(
 		tx.Rollback()
 		return fmt.Errorf("revert episode %d to wanted: %w", episodeID, err)
 	}
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	slog.InfoContext(ctx, "media file removed, episode reverted to wanted",
+		"media_file.id", mediaFileID, "episode.id", episodeID)
+	return nil
 }

@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	entsql "entgo.io/ent/dialect/sql"
@@ -227,6 +228,7 @@ func (db *DB) ReconcileEpisodes(
 	// the provider actually reported some for it (an empty set is treated as
 	// "unknown", not "all removed").
 	var removedFiles []string
+	var removedSeasons, removedEpisodes int
 	if len(seasons) > 0 {
 		for _, sr := range show.Edges.Seasons {
 			epSet, kept := want[sr.Number]
@@ -236,6 +238,8 @@ func (db *DB) ReconcileEpisodes(
 					tx.Rollback()
 					return nil, err
 				}
+				removedSeasons++
+				removedEpisodes += len(sr.Edges.Episodes)
 				continue
 			}
 			if len(epSet) == 0 {
@@ -250,11 +254,23 @@ func (db *DB) ReconcileEpisodes(
 					tx.Rollback()
 					return nil, err
 				}
+				removedEpisodes++
 			}
 		}
 	}
 	if err := tx.Commit(); err != nil {
 		return nil, err
+	}
+	// The guard above refuses to prune on an empty provider response, but a
+	// *short* one is accepted as authoritative — so a partial TVDB payload
+	// deletes real rows through this path. It is the layer that does the
+	// deleting, and it left no record of how much it took.
+	if removedSeasons > 0 || removedEpisodes > 0 {
+		slog.InfoContext(ctx, "pruned episode tree",
+			"tvshow.id", showID,
+			"seasons_removed", removedSeasons,
+			"episodes_removed", removedEpisodes,
+			"files_removed", len(removedFiles))
 	}
 	return removedFiles, nil
 }

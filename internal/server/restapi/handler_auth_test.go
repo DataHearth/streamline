@@ -220,9 +220,12 @@ var _ = Describe("Handler: Auth API", Label("unit", "server", "auth"), func() {
 		})
 
 		It("revokes nonexistent invite → 404", func() {
+			// An ent not-found, which is what the store actually returns for a
+			// missing row. The handler distinguishes it from a real failure,
+			// so a plain error here would exercise the 500 path instead.
 			app.auth.EXPECT().
 				RevokeInvite(mock.Anything, uint32(999)).
-				Return(fmt.Errorf("invite not found")).
+				Return(&ent.NotFoundError{}).
 				Once()
 
 			resp := app.do(

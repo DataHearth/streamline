@@ -547,6 +547,11 @@ func (s *Service) Reidentify(
 	// The cached poster is keyed by row id, so it still shows the old title
 	// until it is replaced.
 	s.fetchPoster(ctx, id, details.PosterPath)
+	// The series twin logs its outcome; this one logged nothing, leaving the
+	// rarer and more consequential of the two corrections — a movie repointed
+	// at different metadata — without an audit trail.
+	slog.InfoContext(ctx, "movie re-identified",
+		"movie.id", id, "movie.tmdb_id", tmdbID, "title", details.Title)
 	return s.db.FindMovieByID(ctx, id)
 }
 

@@ -115,7 +115,7 @@ func Open(ctx context.Context, dsn string) (*ent.Client, error) {
 	}
 
 	if !memory {
-		if err := runMigrations(db); err != nil {
+		if err := runMigrations(ctx, db); err != nil {
 			db.Close()
 			return nil, fmt.Errorf("apply migrations: %w", err)
 		}

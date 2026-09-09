@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"path/filepath"
 
@@ -93,7 +94,7 @@ var _ = Describe("runMigrations", Label("integration", "db"), func() {
 		seed(6, "tvshow", 7, "pending")   // duplicate — collapsed
 		seed(7, "movie", 99, "pending")   // no duplicate — survives
 
-		Expect(runMigrations(sqlDB)).To(Succeed())
+		Expect(runMigrations(context.Background(), sqlDB)).To(Succeed())
 		Expect(ids()).To(Equal([]int{1, 4, 5, 7}))
 
 		By("rejecting a second active row for media the index now covers")
@@ -116,7 +117,7 @@ var _ = Describe("runMigrations", Label("integration", "db"), func() {
 		seed(2, "movie", 42, "denied")
 		seed(3, "tvshow", 7, "approved")
 
-		Expect(runMigrations(sqlDB)).To(Succeed())
+		Expect(runMigrations(context.Background(), sqlDB)).To(Succeed())
 		Expect(ids()).To(Equal([]int{1, 2, 3}))
 	})
 })
