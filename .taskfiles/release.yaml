@@ -3,7 +3,7 @@ version: "3"
 # Everything that cuts a release lives here — the app and the chart both, since
 # they release the same way: edit the file that carries the version, commit it
 # on its own revision, advance main, then tag main and push. Only the edit, the
-# commit message and the tag name differ, so _commit and _tag below are the
+# commit message and the tag name differ, so _changelog and _tag below are the
 # whole procedure and both flows call them.
 #
 # The two versions stay independent: a values/template fix ships without an app
@@ -19,28 +19,6 @@ vars:
   CHART_PATHS: 'deploy/helm/**'
 
 tasks:
-  _commit:
-    internal: true
-    requires:
-      vars: [MESSAGE, FILE, CMD]
-    # CMD is spliced into the shell: it is the one step that genuinely differs
-    # (git-cliff for the app, a version rewrite for the chart).
-    #
-    # It runs INSIDE the new revision — jj snapshots the working copy on the
-    # next command, which is the bookmark move, so the edit lands on the
-    # revision main ends up pointing at. Both tag tasks read main:<FILE>, so an
-    # edit left in the working copy must not pass.
-    cmd: |
-      if command -v jj >/dev/null 2>&1; then
-        jj new -m "{{.MESSAGE}}"
-        {{.CMD}}
-        jj bookmark set main -r @
-      else
-        {{.CMD}}
-        git add {{.FILE}}
-        git commit -m "{{.MESSAGE}}"
-      fi
-
   _tag:
     internal: true
     requires:
@@ -58,6 +36,39 @@ tasks:
       - git tag -a {{.TAG}} main -m "{{.TAG}}"
       - git push origin {{.TAG}}
 
+  # Both changelogs are one procedure with different scope: render the file
+  # with git-cliff, commit it on its own revision, advance main. Only CONFIG,
+  # TAG, SCOPE and OUT differ. FILE defaults to OUT — the chart overrides it
+  # because its revision carries Chart.yaml too.
+  #
+  # PRE is spliced ahead of git-cliff in the same shell, so a caller that must
+  # edit something else in the same revision (the chart's version rewrite) gets
+  # it committed alongside rather than in a second commit.
+  #
+  # GEN runs INSIDE the new revision — jj snapshots the working copy on the
+  # next command, which is the bookmark move, so the edit lands on the revision
+  # main ends up pointing at. Both tag tasks read main:<file>, so an edit left
+  # in the working copy must not pass. FILE is the git path only: jj snapshots
+  # the whole working copy and needs no equivalent.
+  _changelog:
+    internal: true
+    requires:
+      vars: [MESSAGE, TAG, SCOPE, OUT]
+    vars:
+      GEN: >-
+        {{with .PRE}}{{.}} && {{end}}git-cliff{{with .CONFIG}} --config {{.}}{{end}}
+        --tag {{.TAG}} {{.SCOPE}} -o {{.OUT}}
+    cmd: |
+      if command -v jj >/dev/null 2>&1; then
+        jj new -m "{{.MESSAGE}}"
+        {{.GEN}}
+        jj bookmark set main -r @
+      else
+        {{.GEN}}
+        git add {{.FILE | default .OUT}}
+        git commit -m "{{.MESSAGE}}"
+      fi
+
   # --- App release --------------------------------------------------------
 
   app:changelog:
@@ -74,11 +85,12 @@ tasks:
       - sh: 'echo "{{.V}}" | grep -qE "^[0-9]+\.[0-9]+\.[0-9]+"'
         msg: "VERSION must look like 0.1.0 or 0.1.0-alpha.1 (a leading v is accepted and stripped)"
     cmds:
-      - task: _commit
+      - task: _changelog
         vars:
           MESSAGE: 'docs(changelog): v{{.V}}'
-          FILE: CHANGELOG.md
-          CMD: "git-cliff --tag v{{.V}} --exclude-path '{{.CHART_PATHS}}' -o CHANGELOG.md"
+          TAG: 'v{{.V}}'
+          SCOPE: "--exclude-path '{{.CHART_PATHS}}'"
+          OUT: CHANGELOG.md
 
   app:tag:
     desc: Cut an app release — tag main v*.*.* and push it, triggering changelog, gh release and OCI image. Usage - task release:app:tag VERSION=0.1.0
@@ -130,17 +142,18 @@ tasks:
     # deps PR bumps the patch itself, so a feature landing after it inherits a
     # patch number that claims nothing shipped.
     cmds:
-      - task: _commit
+      # One revision for the bump and the changelog: chart:tag reads both off
+      # main, and helm packages the whole chart dir, so the CHANGELOG ships
+      # inside the tarball Artifact Hub renders.
+      - task: _changelog
         vars:
           MESSAGE: 'chore(helm): chart v{{.V}}'
+          PRE: "sed -i 's/^version: .*/version: {{.V}}/' {{.CHART}}"
           FILE: '{{.CHART}} {{.CHART_DIR}}/CHANGELOG.md'
-          # One revision for the bump and the changelog: chart:tag reads both
-          # off main, and helm packages the whole chart dir, so the CHANGELOG
-          # ships inside the tarball Artifact Hub renders.
-          CMD: >-
-            sed -i 's/^version: .*/version: {{.V}}/' {{.CHART}} &&
-            git-cliff --config cliff.chart.toml --tag chart-v{{.V}}
-            --include-path '{{.CHART_PATHS}}' -o {{.CHART_DIR}}/CHANGELOG.md
+          CONFIG: cliff.chart.toml
+          TAG: 'chart-v{{.V}}'
+          SCOPE: "--include-path '{{.CHART_PATHS}}'"
+          OUT: '{{.CHART_DIR}}/CHANGELOG.md'
 
   chart:tag:
     desc: Cut a chart release — tag main chart-v<Chart.yaml version> and push it, triggering .github/workflows/chart.yaml
