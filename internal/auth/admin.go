@@ -360,7 +360,7 @@ func (s *auth) AdminResetPassword(
 		// Best-effort like the session revoke, but logged at ERROR: a key that
 		// survives the reset is a standing credential the reset was meant to
 		// cut.
-		slog.ErrorContext(ctx, "revoke_api_keys_failed",
+		slog.ErrorContext(ctx, "failed to revoke api keys",
 			"user.id", id, "error", err)
 	}
 	slog.InfoContext(ctx, "admin_password_reset",

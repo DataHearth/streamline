@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/auth"
 	"github.com/datahearth/streamline/internal/config"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -188,10 +189,16 @@ func (s *Server) RevokeInvite(
 			ForbiddenJSONResponse: notAdminResp,
 		}, nil
 	}
+	// 404 only for an invite that is genuinely not there. Everything else was
+	// answered the same way, so a database error told the admin the invite had
+	// never existed and left no trace of the real failure anywhere.
 	if err := s.auth.RevokeInvite(ctx, req.Id); err != nil {
-		return RevokeInvite404JSONResponse{
-			NotFoundJSONResponse: NotFoundJSONResponse{Message: "not found"},
-		}, nil
+		if ent.IsNotFound(err) {
+			return RevokeInvite404JSONResponse{
+				NotFoundJSONResponse: NotFoundJSONResponse{Message: "not found"},
+			}, nil
+		}
+		return nil, err
 	}
 	return RevokeInvite204Response{}, nil
 }

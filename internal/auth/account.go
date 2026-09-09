@@ -131,17 +131,17 @@ func (s *auth) ChangePassword(
 	if err := s.RevokeOtherSessions(ctx, userID, keepJTI); err != nil {
 		// Best-effort: the password is already updated. Log and carry on so the
 		// caller's own session stays usable even if the peer revoke races.
-		slog.WarnContext(ctx, "revoke_other_sessions_failed", "error", err)
+		slog.WarnContext(ctx, "failed to revoke other sessions", "error", err)
 	}
 	revoked, err := s.db.DeleteAPIKeysByUser(ctx, userID)
 	if err != nil {
 		// Best-effort like the session revoke, but logged at ERROR: a key that
 		// survives the rotation is a standing credential the rotation was
 		// meant to cut.
-		slog.ErrorContext(ctx, "revoke_api_keys_failed",
+		slog.ErrorContext(ctx, "failed to revoke api keys",
 			"user.id", userID, "error", err)
 	}
-	slog.InfoContext(ctx, "auth_password_changed",
+	slog.InfoContext(ctx, "password changed",
 		"user.id", userID, "api_keys_revoked", revoked)
 	return nil
 }

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -189,7 +190,7 @@ func (s *auth) LoginOIDC(
 			displayName,
 			emailVerified,
 		); syncErr != nil {
-			slog.WarnContext(ctx, "auth.oidc_profile_sync_failed",
+			slog.WarnContext(ctx, "failed to sync oidc profile",
 				"user.id", u.ID, "error", syncErr)
 		} else if changed {
 			span.SetAttributes(attribute.Bool("auth.oidc.profile_changed", true))
@@ -197,11 +198,10 @@ func (s *auth) LoginOIDC(
 				u = reloaded
 			}
 		}
-		u = s.syncOIDCRole(
-			ctx,
-			u,
-			approle.Federated(provider, "", oidcClaimRoles(pc, claims)...),
-		)
+		claimRoles := oidcClaimRoles(pc, claims)
+		mapped := approle.Federated(provider, "", claimRoles...)
+		logAdminWithheld(ctx, provider, mapped.String(), claimRoles)
+		u = s.syncOIDCRole(ctx, u, mapped)
 		tok, err := s.issueToken(ctx, u, meta)
 		if err != nil {
 			return u, tok, otelx.RecordSpanError(span, err)
@@ -310,7 +310,9 @@ func (s *auth) LoginOIDC(
 	// arrives over a channel the provider controls the far end of, and the
 	// documented promise for a provider without allow_admin is that no login
 	// through it yields admin, with no exception to read past.
-	role := approle.Federated(provider, fallbackRole, oidcClaimRoles(pc, claims)...)
+	claimRoles := oidcClaimRoles(pc, claims)
+	role := approle.Federated(provider, fallbackRole, claimRoles...)
+	logAdminWithheld(ctx, provider, role.String(), claimRoles)
 	span.SetAttributes(
 		attribute.String("oidc.outcome", "new_user"),
 		semconv.UserRoles(role.String()),
@@ -485,6 +487,28 @@ func claimStrings(raw any) []string {
 // The write goes through db.UpdateUserRole, whose guarded UPDATE refuses to
 // demote the last admin: a claim change at the IdP may lower a role, but it
 // cannot leave the instance with nobody able to administer it.
+// logAdminWithheld records that a login presented an admin claim and did not
+// get admin — which, given Federated dropped it, can only be the provider's
+// allow_admin being off.
+//
+// Federated deliberately reads nothing about the request, so it cannot say
+// this itself, and the span records only the role that came out. Without the
+// line, "my OIDC group isn't granting admin" has two indistinguishable causes:
+// the provider may not confer admin, or no claim matched an admin-mapped
+// group. Provider name only — no claim values are logged.
+func logAdminWithheld(
+	ctx context.Context,
+	provider, resolved string,
+	candidates []string,
+) {
+	admin := string(entuser.RoleAdmin)
+	if resolved == admin || !slices.Contains(candidates, admin) {
+		return
+	}
+	slog.DebugContext(ctx, "oidc admin role withheld: provider may not grant admin",
+		"oidc.provider", provider, "user.roles", resolved)
+}
+
 func (s *auth) syncOIDCRole(
 	ctx context.Context,
 	u *ent.User,
@@ -496,12 +520,19 @@ func (s *auth) syncOIDCRole(
 	updated, err := s.db.UpdateUserRole(ctx, u.ID, mapped)
 	if err != nil {
 		if errors.Is(err, db.ErrLastAdmin) {
-			slog.WarnContext(ctx, "auth.oidc_role_sync_refused_last_admin",
-				"user.id", u.ID, "user.role", string(u.Role),
-				"role", mapped.String())
+			slog.WarnContext(
+				ctx,
+				"oidc role sync refused: would remove the last admin",
+				"user.id",
+				u.ID,
+				"user.role",
+				string(u.Role),
+				"role",
+				mapped.String(),
+			)
 			return u
 		}
-		slog.WarnContext(ctx, "auth.oidc_role_sync_failed",
+		slog.WarnContext(ctx, "failed to sync oidc role",
 			"user.id", u.ID, "role", mapped.String(), "error", err)
 		return u
 	}
@@ -533,7 +564,7 @@ func (s *auth) syncOIDCProfile(
 			return false, fmt.Errorf("lookup email collision: %w", err)
 		}
 		if err == nil && other.ID != u.ID {
-			slog.WarnContext(ctx, "auth.oidc_email_collision",
+			slog.WarnContext(ctx, "oidc email claim collides with another account",
 				"user.id", u.ID, "claim.email", claimEmail, "other.id", other.ID)
 		} else {
 			params.Email = &claimEmail

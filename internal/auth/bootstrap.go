@@ -13,7 +13,12 @@ import (
 	"github.com/datahearth/streamline/ent/user"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/otelx"
 	approle "github.com/datahearth/streamline/internal/role"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -154,9 +159,32 @@ func (s *auth) RegisterOpen(
 	email, password, displayName, defaultRole string,
 	meta SessionMeta,
 ) (*ent.User, string, error) {
+	ctx, span := tracer.Start(ctx, "auth.register_open",
+		trace.WithAttributes(
+			semconv.UserEmail(email),
+			semconv.UserRoles(defaultRole),
+			attribute.String("auth.method", "open"),
+		),
+	)
+	defer span.End()
+
+	// Register carries the same block, but nothing in production calls it —
+	// the SPA's two real signup paths are this one and RegisterWithInvite, so
+	// the registrations counter read zero on every install that had users.
+	outcome := "success"
+	defer func() {
+		registrations.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("auth.method", "open"),
+			attribute.String("outcome", outcome),
+		))
+	}()
+
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, "", fmt.Errorf("hash password: %w", err)
+		outcome = "error"
+		return nil, "", otelx.RecordSpanError(
+			span, fmt.Errorf("hash password: %w", err),
+		)
 	}
 	u, err := s.db.CreateUser(ctx, db.CreateUserParams{
 		Email:        strings.ToLower(email),
@@ -166,11 +194,17 @@ func (s *auth) RegisterOpen(
 		AuthMethod:   user.AuthMethodLocal,
 	})
 	if err != nil {
-		return nil, "", fmt.Errorf("create user: %w", err)
+		outcome = "error"
+		return nil, "", otelx.RecordSpanError(
+			span, fmt.Errorf("create user: %w", err),
+		)
 	}
 	tok, err := s.issueToken(ctx, u, meta)
 	if err != nil {
-		return nil, "", err
+		outcome = "error"
+		return nil, "", otelx.RecordSpanError(span, err)
 	}
+	slog.InfoContext(ctx, "user registered",
+		"user.id", u.ID, "auth.method", "open", "user.roles", string(u.Role))
 	return u, tok, nil
 }

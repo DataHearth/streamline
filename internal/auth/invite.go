@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -14,7 +15,12 @@ import (
 	entuser "github.com/datahearth/streamline/ent/user"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/otelx"
 	approle "github.com/datahearth/streamline/internal/role"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -40,12 +46,20 @@ func (s *auth) CreateInvite(
 	email, role string,
 	ttl time.Duration,
 ) (string, *ent.Invite, error) {
+	ctx, span := tracer.Start(ctx, "auth.create_invite", trace.WithAttributes(
+		semconv.UserRoles(role),
+		attribute.Int64("invite.created_by", int64(createdByID)),
+	))
+	defer span.End()
+
 	if config.Get().Auth.RegistrationMode == "disabled" {
-		return "", nil, ErrRegistrationDisabled
+		return "", nil, otelx.RecordSpanError(span, ErrRegistrationDisabled)
 	}
 	raw, err := generateToken(32)
 	if err != nil {
-		return "", nil, fmt.Errorf("generate invite token: %w", err)
+		return "", nil, otelx.RecordSpanError(
+			span, fmt.Errorf("generate invite token: %w", err),
+		)
 	}
 	inv, err := s.db.CreateInvite(ctx, db.CreateInviteParams{
 		TokenHash:   hashInviteToken(raw),
@@ -105,8 +119,24 @@ func (s *auth) ListInvites(ctx context.Context) ([]*ent.Invite, error) {
 	return s.db.ListInvites(ctx)
 }
 
+// RevokeInvite marks an invite unusable. A not-found error is the caller's to
+// turn into a 404; anything else is ours and is logged here, because the
+// handler collapses every error into the same "no such invite" answer and an
+// admin whose revocation is silently failing would be told the invite never
+// existed.
 func (s *auth) RevokeInvite(ctx context.Context, id uint32) error {
-	return s.db.RevokeInvite(ctx, id, time.Now())
+	ctx, span := tracer.Start(ctx, "auth.revoke_invite", trace.WithAttributes(
+		attribute.Int64("invite.id", int64(id)),
+	))
+	defer span.End()
+
+	err := s.db.RevokeInvite(ctx, id, time.Now())
+	if err != nil && !ent.IsNotFound(err) {
+		slog.ErrorContext(ctx, "could not revoke an invite",
+			"invite.id", id, "error", err)
+		return otelx.RecordSpanError(span, err)
+	}
+	return err
 }
 
 // RegisterWithInvite consumes the invite and creates the user atomically.
@@ -116,20 +146,43 @@ func (s *auth) RegisterWithInvite(
 	rawToken, email, password, displayName string,
 	meta SessionMeta,
 ) (*ent.User, string, error) {
+	ctx, span := tracer.Start(ctx, "auth.register_with_invite",
+		trace.WithAttributes(
+			semconv.UserEmail(email),
+			attribute.String("auth.method", "invite"),
+		),
+	)
+	defer span.End()
+
+	outcome := "success"
+	defer func() {
+		registrations.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("auth.method", "invite"),
+			attribute.String("outcome", outcome),
+		))
+	}()
+
 	// Validate invite first (read-only) so we fail fast without starting a tx.
 	inv, err := s.validateInvite(ctx, rawToken, email)
 	if err != nil {
-		return nil, "", err
+		outcome = "invalid_invite"
+		return nil, "", otelx.RecordSpanError(span, err)
 	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, "", fmt.Errorf("hash password: %w", err)
+		outcome = "error"
+		return nil, "", otelx.RecordSpanError(
+			span, fmt.Errorf("hash password: %w", err),
+		)
 	}
 
 	tx, err := s.db.Tx(ctx)
 	if err != nil {
-		return nil, "", fmt.Errorf("begin tx: %w", err)
+		outcome = "error"
+		return nil, "", otelx.RecordSpanError(
+			span, fmt.Errorf("begin tx: %w", err),
+		)
 	}
 
 	u, err := tx.CreateUser(ctx, db.CreateUserParams{
@@ -141,24 +194,37 @@ func (s *auth) RegisterWithInvite(
 	})
 	if err != nil {
 		tx.Rollback()
-		return nil, "", fmt.Errorf("create user: %w", err)
+		outcome = "error"
+		return nil, "", otelx.RecordSpanError(
+			span, fmt.Errorf("create user: %w", err),
+		)
 	}
 
 	if err := tx.ConsumeInvite(ctx, inv.ID, u.ID, time.Now()); err != nil {
 		tx.Rollback()
 		if errors.Is(err, db.ErrInviteUsed) {
-			return nil, "", ErrInviteInvalid
+			outcome = "invalid_invite"
+			return nil, "", otelx.RecordSpanError(span, ErrInviteInvalid)
 		}
-		return nil, "", fmt.Errorf("consume invite: %w", err)
+		outcome = "error"
+		return nil, "", otelx.RecordSpanError(
+			span, fmt.Errorf("consume invite: %w", err),
+		)
 	}
 
 	if err := tx.Commit(); err != nil {
-		return nil, "", fmt.Errorf("commit tx: %w", err)
+		outcome = "error"
+		return nil, "", otelx.RecordSpanError(
+			span, fmt.Errorf("commit tx: %w", err),
+		)
 	}
 
 	tok, err := s.issueToken(ctx, u, meta)
 	if err != nil {
-		return nil, "", err
+		outcome = "error"
+		return nil, "", otelx.RecordSpanError(span, err)
 	}
+	slog.InfoContext(ctx, "user registered",
+		"user.id", u.ID, "auth.method", "invite", "user.roles", string(u.Role))
 	return u, tok, nil
 }

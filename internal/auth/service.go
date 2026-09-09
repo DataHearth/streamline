@@ -526,7 +526,7 @@ func (s *auth) Login(
 		)
 		if locked {
 			span.SetAttributes(attribute.Bool("auth.lockout.locked", true))
-			slog.WarnContext(ctx, "auth.account_locked",
+			slog.WarnContext(ctx, "account locked after repeated failed logins",
 				"user.id", u.ID,
 				"user.email", u.Email,
 				"lockout.duration", until.Sub(now).String(),
@@ -544,7 +544,7 @@ func (s *auth) Login(
 
 	if u.FailedLoginCount > 0 || u.LastFailedLoginAt != nil || u.LockedUntil != nil {
 		if err := s.clearLockoutState(ctx, u.ID); err != nil {
-			slog.WarnContext(ctx, "auth.lockout_clear_failed",
+			slog.WarnContext(ctx, "failed to clear lockout state",
 				"user.id", u.ID, "error", err)
 		}
 	}

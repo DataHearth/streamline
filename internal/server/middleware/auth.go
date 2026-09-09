@@ -12,7 +12,21 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/auth"
 	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/utils/httputil"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+)
+
+var apiRejections = otelx.Must(
+	otel.Meter("github.com/datahearth/streamline/internal/server/middleware").
+		Int64Counter(
+			"streamline.auth.api_rejections",
+			metric.WithDescription(
+				"Rejected /api/v1 authentication attempts by method + reason",
+			),
+		),
 )
 
 // Authenticator is the minimum surface the middleware needs from the auth
@@ -100,26 +114,12 @@ func authenticateAPI(
 	if apiKey := r.Header.Get("X-API-Key"); apiKey != "" {
 		u, err := svc.ValidateAPIKey(ctx, apiKey)
 		if err != nil {
-			slog.InfoContext(
-				ctx,
-				"api auth rejected",
-				"reason",
-				"invalid api key",
-				"auth.method",
-				"api_key",
-			)
+			rejectedAuth(ctx, "invalid api key", "api_key")
 			rejectAPI(limiter, w, r, "invalid API key")
 			return
 		}
 		if identityMutationForAPIKey(r) {
-			slog.InfoContext(
-				ctx,
-				"api auth rejected",
-				"reason",
-				"identity mutation via api key",
-				"auth.method",
-				"api_key",
-			)
+			rejectedAuth(ctx, "identity mutation via api key", "api_key")
 			// Not metered: the credential is valid, this is authorization.
 			http.Error(
 				w,
@@ -140,14 +140,7 @@ func authenticateAPI(
 	if tok := extractBearer(r); tok != "" {
 		claims, err := svc.ValidateToken(tok)
 		if err != nil {
-			slog.InfoContext(
-				ctx,
-				"api auth rejected",
-				"reason",
-				"invalid bearer token",
-				"auth.method",
-				"bearer",
-			)
+			rejectedAuth(ctx, "invalid bearer token", "bearer")
 			rejectAPI(limiter, w, r, "invalid token")
 			return
 		}
@@ -156,14 +149,7 @@ func authenticateAPI(
 				rejectUnavailable(ctx, w, err)
 				return
 			}
-			slog.InfoContext(
-				ctx,
-				"api auth rejected",
-				"reason",
-				"session invalid",
-				"auth.method",
-				"bearer",
-			)
+			rejectedAuth(ctx, "session invalid", "bearer")
 			rejectAPI(limiter, w, r, "unauthorized")
 			return
 		}
@@ -199,8 +185,24 @@ func authenticateAPI(
 			}
 		}
 	}
-	slog.InfoContext(ctx, "api auth rejected", "reason", "no credentials")
+	rejectedAuth(ctx, "no credentials", "none")
 	rejectAPI(limiter, w, r, "unauthorized")
+}
+
+// rejectedAuth logs and counts one API authentication rejection.
+//
+// This middleware sees every /api/v1 request, so it is where a spike in
+// invalid API keys (a leaked key being tried, a key rollout that went wrong)
+// or in rejected bearer tokens actually shows. Each rejection was logged
+// individually and never aggregated, leaving the signal as unstructured log
+// lines an operator had to build a metric out of after the fact.
+func rejectedAuth(ctx context.Context, reason, method string) {
+	slog.InfoContext(ctx, "api auth rejected",
+		"reason", reason, "auth.method", method)
+	apiRejections.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("auth.method", method),
+		attribute.String("reason", reason),
+	))
 }
 
 // identityPrefixes lists the /api/v1 subtrees where an API key may read but

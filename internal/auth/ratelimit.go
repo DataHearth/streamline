@@ -1,10 +1,23 @@
 package auth
 
 import (
+	"context"
 	"net/netip"
 	"sync"
 	"time"
+
+	"github.com/datahearth/streamline/internal/otelx"
+	"go.opentelemetry.io/otel/metric"
 )
+
+// rateLimitTableFull counts attempts granted because the key table was full.
+// Any non-zero rate means the limiter has stopped limiting.
+var rateLimitTableFull = otelx.Must(meter.Int64Counter(
+	"streamline.auth.ratelimit.table_full",
+	metric.WithDescription(
+		"Attempts allowed unmetered because the limiter's key table was full",
+	),
+))
 
 // Limiter is the consumer-facing surface used by login and OIDC handlers
 // to throttle credential attempts per client address.
@@ -217,6 +230,11 @@ func (l *limiter) Allow(key string) (bool, time.Duration) {
 		return false, l.window - (now - w[0])
 	}
 	if !tracked && len(l.cur)+len(l.prev) >= maxKeys {
+		// The documented lapse, made audible. Past the cap every new key is
+		// granted and unrecorded, which means brute-force protection is off —
+		// and it was off silently, with no log and no counter, exactly under
+		// the flood that would trip it.
+		rateLimitTableFull.Add(context.Background(), 1)
 		return true, 0
 	}
 	if w == nil {

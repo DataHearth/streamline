@@ -113,7 +113,7 @@ func (s *auth) RotateJWTSecret(
 				fmt.Errorf("persist secret: %w", err),
 			)
 		}
-		slog.WarnContext(ctx, "auth.jwt_rotate_no_backing_file",
+		slog.WarnContext(ctx, "jwt rotation has no backing secret file",
 			"caller.id", callerID, "error", err)
 	}
 
@@ -142,7 +142,7 @@ func (s *auth) applyJWTSecret(
 	// Truncate sessions — old tokens are already invalid (signed with old
 	// secret). Failure here is benign; cleanup eventually reaps dead rows.
 	if err := s.db.TruncateSessions(ctx); err != nil {
-		slog.WarnContext(ctx, "auth.jwt_rotate_truncate_failed",
+		slog.WarnContext(ctx, "failed to truncate the jwt secret file",
 			"user.id", callerID, "error", err)
 	}
 
@@ -155,7 +155,7 @@ func (s *auth) applyJWTSecret(
 		return "", otelx.RecordSpanError(span, err)
 	}
 
-	slog.InfoContext(ctx, "auth.jwt_rotated",
+	slog.InfoContext(ctx, "jwt signing secret rotated",
 		"caller.id", callerID, "caller.email", caller.Email)
 	return tok, nil
 }

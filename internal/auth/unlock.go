@@ -77,7 +77,7 @@ func (s *auth) unlockByID(
 		}
 		return fmt.Errorf("clear lockout: %w", err)
 	}
-	slog.InfoContext(ctx, "auth.unlocked",
+	slog.InfoContext(ctx, "account unlocked",
 		"user.id", id, "mode", string(mode))
 	return nil
 }
