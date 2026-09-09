@@ -19,6 +19,7 @@ and this chart adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 
 ### Changed
 
+- deps: Update helm charts (#48)
 - **BREAKING** config: Rename auth.oidc_default_role to auth.default_role
 
 ## [2.0.0] - 2026-08-18
@@ -26,6 +27,10 @@ and this chart adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 ### Added
 
 - **BREAKING** helm: Require image.tag, drop appVersion fallback
+
+### Changed
+
+- deps: Update helm charts (#11)
 
 ### Fixed
 

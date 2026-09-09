@@ -4,8 +4,11 @@
 # The chart releases on its own version line, so it needs its own changelog —
 # see .taskfiles/release.yaml (release:chart:bump). This file exists rather
 # than reusing cliff.toml with flags because the templates differ — its own
-# header wording, and headings that drop the chart-v tag prefix. Everything
-# below [changelog] is shaped like cliff.toml; keep the two in sync.
+# header wording, and headings that drop the chart-v tag prefix — and because
+# commit_parsers differs, which git-cliff exposes neither as a CLI flag nor as
+# an env override (GIT_CLIFF__GIT__COMMIT_PARSERS rejects the array). The
+# templates are shaped like cliff.toml's; keep the two in sync.
+
 [changelog]
 header = """
 # Changelog\n
@@ -60,12 +63,22 @@ repo = "streamline"
 tag_pattern = "^chart-v[0-9]+\\.[0-9]+\\.[0-9]+"
 conventional_commits = true
 filter_unconventional = false
-# Same set as cliff.toml — this file diverges only in the templates above.
+# Where this diverges from cliff.toml: a chart release is very often nothing
+# but chore commits — a values/template tidy-up, or renovate moving a subchart
+# pin. cliff.toml skips every chore, which for the chart produced a release
+# section with a heading and nothing under it. The invocation is already
+# path-filtered to the chart, so any chore(deps) reaching this config touched
+# the chart by definition and is worth listing.
 commit_parsers = [
     { message = "^\\s*$", skip = true },
+    # The bump commit is what the tag points at, so it lands inside its own
+    # section — "helm: Chart v2.2.0" as the entry for release 2.2.0.
+    { message = "^chore\\(helm\\): chart v[0-9]", skip = true },
     { message = "^feat", group = "Added" },
     { message = "^fix", group = "Fixed" },
     { message = "^revert", group = "Removed" },
+    { message = "^chore\\(helm\\)", group = "Changed" },
+    { message = "^chore\\(deps\\)", group = "Changed" },
     { message = "^docs", skip = true },
     { message = "^test", skip = true },
     { message = "^chore", skip = true },
