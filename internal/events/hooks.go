@@ -2,7 +2,7 @@ package events
 
 import (
 	"context"
-	"fmt"
+	"log/slog"
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
@@ -21,6 +21,39 @@ type owner struct {
 }
 
 func (o owner) ok() bool { return o.id != 0 }
+
+// auxFailure reports a failure in the event-recording half of a hook and lets
+// the mutation stand.
+//
+// The hooks run after next.Mutate, so by the time anything here can fail the
+// write they exist to describe has already happened. Returning the error made
+// it the *mutation's* error: a locked events table or a bad payload marshal
+// surfaced as "importing this file failed" or "download status update failed",
+// with the real cause wrapped several layers down — an activity-feed problem
+// dressed up as a library one. Record and PurgeOldEvents already log and count
+// their own failures; this is for the resolve step in front of them.
+func auxFailure(ctx context.Context, hook string, err error) {
+	slog.ErrorContext(ctx, "could not attribute an event to its owner",
+		"hook", hook, "error", err)
+}
+
+// recordAux writes a hook's event and never fails the mutation behind it, for
+// the reason auxFailure gives. Record has already logged and counted the
+// failure in detail; this only adds which hook was recording.
+func recordAux(
+	ctx context.Context,
+	hook string,
+	c *ent.Client,
+	t Type,
+	scope Scope,
+	ownerID uint32,
+	payload map[string]any,
+) {
+	if err := Record(ctx, c, t, scope, ownerID, payload); err != nil {
+		slog.DebugContext(ctx, "event not recorded; mutation left in place",
+			"hook", hook)
+	}
+}
 
 // Register installs runtime mutation hooks on the supplied client and
 // captures it as the package default for tx-less Record calls.
@@ -50,23 +83,21 @@ func downloadRecordHook() ent.Hook {
 				case ent.OpCreate:
 					o, err := downloadRecordOwner(ctx, c, dm)
 					if err != nil {
-						return val, fmt.Errorf(
-							"events.downloadRecordHook: resolve owner: %w", err,
-						)
+						auxFailure(ctx, "download_record", err)
+						return val, nil
 					}
 					if !o.ok() {
 						return val, nil
 					}
-					if err := Record(
+					recordAux(
 						ctx,
+						"download_record",
 						c,
 						TypeGrabbed,
 						o.scope,
 						o.id,
 						downloadCreatePayload(dm),
-					); err != nil {
-						return val, err
-					}
+					)
 				default:
 					if !dm.Op().Is(ent.OpUpdate | ent.OpUpdateOne) {
 						return val, nil
@@ -77,9 +108,8 @@ func downloadRecordHook() ent.Hook {
 					}
 					o, err := downloadRecordOwner(ctx, c, dm)
 					if err != nil {
-						return val, fmt.Errorf(
-							"events.downloadRecordHook: resolve owner: %w", err,
-						)
+						auxFailure(ctx, "download_record", err)
+						return val, nil
 					}
 					if !o.ok() {
 						return val, nil
@@ -93,11 +123,10 @@ func downloadRecordHook() ent.Hook {
 					default:
 						return val, nil
 					}
-					if err := Record(
-						ctx, c, t, o.scope, o.id, downloadStatusPayload(dm),
-					); err != nil {
-						return val, err
-					}
+					recordAux(
+						ctx, "download_record", c, t, o.scope, o.id,
+						downloadStatusPayload(dm),
+					)
 				}
 				return val, nil
 			},
@@ -129,16 +158,15 @@ func mediaFileHook() ent.Hook {
 				default:
 					return val, nil
 				}
-				if err := Record(
+				recordAux(
 					ctx,
+					"media_file",
 					mf.Client(),
 					TypeImported,
 					o.scope,
 					o.id,
 					mediaFileCreatePayload(mf),
-				); err != nil {
-					return val, err
-				}
+				)
 				return val, nil
 			},
 		)
@@ -167,24 +195,21 @@ func importScanFileHook() ent.Hook {
 				c := isf.Client()
 				movieID, err := importScanFileMovieID(ctx, c, isf)
 				if err != nil {
-					return val, fmt.Errorf(
-						"events.importScanFileHook: load movie id: %w",
-						err,
-					)
+					auxFailure(ctx, "import_scan_file", err)
+					return val, nil
 				}
 				if movieID == 0 {
 					return val, nil
 				}
-				if err := Record(
+				recordAux(
 					ctx,
+					"import_scan_file",
 					c,
 					TypeImportFailed,
 					ScopeMovie,
 					movieID,
 					importScanFilePayload(isf),
-				); err != nil {
-					return val, err
-				}
+				)
 				return val, nil
 			},
 		)
@@ -217,24 +242,21 @@ func importScanShowHook() ent.Hook {
 				c := iss.Client()
 				showID, err := importScanShowTVShowID(ctx, c, iss)
 				if err != nil {
-					return val, fmt.Errorf(
-						"events.importScanShowHook: load tv show id: %w",
-						err,
-					)
+					auxFailure(ctx, "import_scan_show", err)
+					return val, nil
 				}
 				if showID == 0 {
 					return val, nil
 				}
-				if err := Record(
+				recordAux(
 					ctx,
+					"import_scan_show",
 					c,
 					TypeImportFailed,
 					ScopeSeries,
 					showID,
 					importScanShowPayload(iss),
-				); err != nil {
-					return val, err
-				}
+				)
 				return val, nil
 			},
 		)

@@ -9,7 +9,25 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/mediaevent"
+	"github.com/datahearth/streamline/internal/otelx"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/trace"
 )
+
+var (
+	tracer = otel.Tracer("github.com/datahearth/streamline/internal/events")
+	meter  = otel.Meter("github.com/datahearth/streamline/internal/events")
+
+	recordFailures metric.Int64Counter
+)
+
+func init() {
+	recordFailures = otelx.Must(
+		meter.Int64Counter("streamline.events.record.failures"),
+	)
+}
 
 // Scope names which entity an event hangs off. A MediaEvent has three
 // optional owner edges and exactly one must be set; Scope is how a caller
@@ -60,20 +78,30 @@ func Record(
 	ownerID uint32,
 	payload map[string]any,
 ) error {
+	ctx, span := tracer.Start(ctx, "events.record", trace.WithAttributes(
+		attribute.String("event.type", string(t)),
+		attribute.Int64(scope.logKey(), int64(ownerID)),
+	))
+	defer span.End()
+
 	if !t.Valid() {
-		return fmt.Errorf("events: invalid type: %q", t)
+		return otelx.RecordSpanError(
+			span, fmt.Errorf("events: invalid type: %q", t),
+		)
 	}
 	if ownerID == 0 {
-		return fmt.Errorf("events: %s event with no %s", t, scope)
+		return otelx.RecordSpanError(
+			span, fmt.Errorf("events: %s event with no %s", t, scope),
+		)
 	}
 	c := client
 	if c == nil {
 		c = defaultClient
 	}
 	if c == nil {
-		return errors.New(
+		return otelx.RecordSpanError(span, errors.New(
 			"events: no client (Register not called and explicit client nil)",
-		)
+		))
 	}
 	q := c.MediaEvent.Create().SetType(mediaevent.Type(t))
 	switch scope {
@@ -98,9 +126,12 @@ func Record(
 			"error",
 			err,
 		)
-		return fmt.Errorf(
+		recordFailures.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("event.type", string(t)),
+		))
+		return otelx.RecordSpanError(span, fmt.Errorf(
 			"events: record %s for %s %d: %w", t, scope, ownerID, err,
-		)
+		))
 	}
 	slog.InfoContext(
 		ctx,
@@ -118,8 +149,13 @@ var defaultClient *ent.Client
 // PurgeOldEvents deletes MediaEvent rows whose create_time is older
 // than (now - retention). Returns the number of rows deleted.
 func PurgeOldEvents(ctx context.Context, retention time.Duration) (int, error) {
+	ctx, span := tracer.Start(ctx, "events.purge_old")
+	defer span.End()
+
 	if defaultClient == nil {
-		return 0, errors.New("events: default client not registered")
+		return 0, otelx.RecordSpanError(
+			span, errors.New("events: default client not registered"),
+		)
 	}
 	cutoff := time.Now().Add(-retention)
 	n, err := defaultClient.MediaEvent.Delete().
@@ -134,11 +170,12 @@ func PurgeOldEvents(ctx context.Context, retention time.Duration) (int, error) {
 			"error",
 			err,
 		)
-		return 0, fmt.Errorf(
+		return 0, otelx.RecordSpanError(span, fmt.Errorf(
 			"events: purge older than %s: %w",
 			cutoff.Format(time.RFC3339), err,
-		)
+		))
 	}
+	span.SetAttributes(attribute.Int("events.purged", n))
 	slog.InfoContext(
 		ctx,
 		"purged old events",
