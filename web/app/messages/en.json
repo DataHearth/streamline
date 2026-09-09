@@ -109,6 +109,8 @@
 	"activity_filter_title_movie": "Filter title or movie…",
 	"activity_held_resolve_hint": "Held for review — close this and use Resolve on the queue row.",
 	"activity_history": "History",
+	"activity_mon_off": "Unmonitored",
+	"activity_mon_on": "Monitored",
 	"activity_n_episodes": "{count} episodes",
 	"activity_one_episode": "1 episode",
 	"activity_history_help": "Grabs, imports, and drift events will appear here.",

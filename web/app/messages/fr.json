@@ -109,6 +109,8 @@
 	"activity_filter_title_movie": "Filtrer par titre ou film…",
 	"activity_held_resolve_hint": "En attente de validation — fermez cette fiche et utilisez Résoudre sur la ligne de la file.",
 	"activity_history": "Historique",
+	"activity_mon_off": "Non surveillé",
+	"activity_mon_on": "Surveillé",
 	"activity_n_episodes": "{count} épisodes",
 	"activity_one_episode": "1 épisode",
 	"activity_history_help": "Les récupérations, imports et écarts détectés apparaîtront ici.",

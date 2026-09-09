@@ -2,7 +2,7 @@
 	import { createQuery } from "@tanstack/svelte-query";
 	import { Activity } from "@lucide/svelte";
 	import { api, errorText } from "../../lib/api";
-	import { EVENT_MARKS } from "../../lib/activity-event";
+	import { EVENT_MARKS, monitoringDetail } from "../../lib/activity-event";
 	import { formatRelative, formatDateTime } from "../../lib/dates";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 	import type { ActivityEvent, ActivityList } from "../../lib/types";
@@ -72,7 +72,7 @@
 				fg: "text-fg-muted",
 				label: event.type.toUpperCase(),
 			}}
-			{@const rel = release(event)}
+			{@const rel = release(event) || monitoringDetail(event)}
 			{@const sz = size(event)}
 			<li
 				class="grid grid-cols-[28px_1fr_auto_auto] items-center gap-4 border-b border-border px-4 py-3 last:border-b-0"

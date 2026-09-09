@@ -211,3 +211,23 @@ export const EVENT_MARKS: Record<ActivityType, Mark> = {
 		label: i18n.dash_evt_transcode_rejected(),
 	},
 };
+
+/**
+ * Second-line text for a monitoring toggle, or "" for any other event.
+ *
+ * The direction is the point — "Monitoring changed" says something happened
+ * without saying which way, and the eye glyph is the same either way. A season
+ * or series toggle is one row for a whole cascade, so it also carries how many
+ * episodes moved.
+ */
+export function monitoringDetail(event: ActivityEvent): string {
+	if (event.type !== "monitoring_changed") return "";
+	const state = event.payload?.monitored
+		? i18n.activity_mon_on()
+		: i18n.activity_mon_off();
+	const n = event.payload?.episodes;
+	if (typeof n !== "number" || n === 0) return state;
+	const count =
+		n === 1 ? i18n.activity_one_episode() : i18n.activity_n_episodes({ count: n });
+	return `${count} · ${state}`;
+}

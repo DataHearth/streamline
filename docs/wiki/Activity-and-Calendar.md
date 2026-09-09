@@ -32,17 +32,31 @@ The **Recent activity** panel on the dashboard, and `GET /api/v1/activity` behin
 
 | Event | When it fires |
 | --- | --- |
+| `added` | A movie or series entered the library |
 | `grabbed` | A release was sent to the download client |
-| `download_completed` / `download_failed` | That download finished or failed |
+| `download_completed` | The bytes arrived and the import is starting |
+| `download_failed` | That download failed |
+| `download_cancelled` | You cancelled or removed the download, and the title went back to wanted |
+| `grab_widened` | More episodes were added to a torrent already in flight |
 | `imported` | A file landed in the library |
 | `import_failed` | A bulk-import entry failed |
+| `import_held_for_review` | Import verification failed and the download is parked, waiting on your decision |
+| `file_renamed` | A file was moved by a rename pass |
+| `file_removed` | A file left the library — deleted by hand, replaced by an upgrade, or swapped in a bulk-import commit |
 | `drift_detected` | A tracked file went missing from disk |
 | `drift_confirmed` | It stayed missing past the grace window and the row was reverted |
+| `reidentified` | A title was re-pointed at different metadata |
+| `metadata_refreshed` | A provider refresh actually changed something — a new title, or episodes added or pruned |
+| `monitoring_changed` | Monitoring was turned on or off |
+| `request_approved` | Someone's request was approved and the title was added |
+| `transcode_completed` / `transcode_failed` / `transcode_rejected` | A transcode finished, gave up, or produced output that failed verification |
 | `searched` | A search-and-grab pass ran |
 
 Every event names exactly one owner — `movie`, `episode` or `series`. Episode rows render as *Show · S01E03*.
 
 **`searched` is recorded once per search, not once per episode.** Asking Streamline to search a series writes one event for the whole pass, with the seasons it touched, how many episodes it searched and how many it grabbed in the payload. A pass over one season reads as *Show · Season 3*. Without that, a `tv-missing-search` tick over a large library would write thousands of rows an hour.
+
+**Monitoring a season or a whole series is likewise one event, not one per episode.** Turning a series off writes a single row saying how many episodes it moved — *Lupin · 25 episodes* — and a season toggle reads as *Lupin · Season 1 · 10 episodes*. Toggling one episode on its own still gets its own row, since that is a single deliberate action.
 
 Browsing releases in the manual-grab dialog records nothing — no grab happened, and the results are already on screen. The grab that follows still fires `grabbed`.
 
