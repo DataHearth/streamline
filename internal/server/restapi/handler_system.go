@@ -118,6 +118,18 @@ func fillFileOnlySettings(out *SystemInfo, s sysinfo.Snapshot) {
 		v := s.TVDBAPIKeyFile
 		out.TvdbApiKeyFile = &v
 	}
+	// Reported even when empty: "no endpoint" is the answer to "why is nothing
+	// arriving in the collector", so omitting it hides the finding.
+	endpoint := s.OTelEndpoint
+	out.OtelEndpoint = &endpoint
+	if s.LogLevel != "" {
+		v := s.LogLevel
+		out.LogLevel = &v
+	}
+	if s.LogFormat != "" {
+		v := s.LogFormat
+		out.LogFormat = &v
+	}
 }
 
 func diskUsageToAPI(u sysinfo.DiskUsage) *DiskUsage {

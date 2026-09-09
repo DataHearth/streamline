@@ -372,6 +372,16 @@ type LogRotate struct {
 
 type OTelConfig struct {
 	Endpoint string `koanf:"endpoint"`
+	// Insecure sends OTLP over plaintext HTTP. The SDK defaults to HTTPS, so a
+	// collector reached over http:// is silently unreachable without it.
+	Insecure bool `koanf:"insecure"`
+	// SampleRatio is the head sampling rate for root spans. The DB driver is
+	// instrumented, so 1.0 exports every SQL statement. Ignored when
+	// OTEL_TRACES_SAMPLER is set — the SDK's own knob wins there.
+	SampleRatio float64 `koanf:"sample_ratio" validate:"min=0,max=1"`
+	// Environment fills deployment.environment on the resource. Two installs
+	// exporting to one collector are otherwise indistinguishable.
+	Environment string `koanf:"environment"`
 }
 
 // MediaServerConfig holds media-server integration identifiers. PlexClientID
@@ -739,6 +749,9 @@ func defaults() map[string]any {
 		"metadata.language":                "en",
 		"metadata.tmdb_region":             "FR",
 		"otel.endpoint":                    "",
+		"otel.insecure":                    false,
+		"otel.sample_ratio":                0.05,
+		"otel.environment":                 "",
 		"media_server.plex_client_id":      "",
 		"media_server.servers":             []any{},
 		"download_clients":                 []any{},

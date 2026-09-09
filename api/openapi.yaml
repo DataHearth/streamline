@@ -8676,6 +8676,17 @@ components:
           type: string
         tvdb_api_key_file:
           type: string
+        otel_endpoint:
+          type: string
+          description: >-
+            OTLP endpoint traces, metrics and logs are exported to. Empty means
+            telemetry export is off for this instance.
+        log_level:
+          type: string
+          description: Effective level of the stderr log sink.
+        log_format:
+          type: string
+          description: Effective format of the stderr log sink (text or json).
 
     DiskUsage:
       type: object

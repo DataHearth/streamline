@@ -1148,6 +1148,9 @@ export type SystemInfo = {
 	torrent_listen_port?: number;
 	tmdb_api_key_file?: string;
 	tvdb_api_key_file?: string;
+	otel_endpoint?: string;
+	log_level?: string;
+	log_format?: string;
 };
 
 export type PlexPinBegin = {

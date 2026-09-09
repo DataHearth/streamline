@@ -18,6 +18,10 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
+// otelFlushTimeout is how long the final telemetry flush gets, on top of the
+// shutdown budget the application teardown spends.
+const otelFlushTimeout = 5 * time.Second
+
 // versionString assembles the --version line. buildinfo holds the goreleaser
 // ldflag values; we fall back to placeholders so the CLI stays readable when
 // built via plain go run / go build.
@@ -214,15 +218,34 @@ func run(ctx context.Context, cmd *cli.Command) error {
 	}
 	defer app.DB.Close()
 
+	// The two goroutines below run for the life of the process, so a panic in
+	// either is an unrecovered panic that kills it outright — skipping the
+	// deferred shutdown below, and with it the final flush of the telemetry
+	// describing the crash. Both hand stop() to the recovery, which takes the
+	// ordinary shutdown path instead.
+
 	// 5. Start scheduler in background
-	go app.Scheduler.Start(ctx)
+	go func() {
+		defer observability.RecoverPanic(ctx, "scheduler", stop)
+		app.Scheduler.Start(ctx)
+	}()
 
 	// 6. Start HTTP server
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
 	httpSrv := server.NewHTTPServer(addr, app.Server.Router())
 
+	logger.InfoContext(ctx, "streamline starting",
+		"version", versionString(),
+		"addr", addr,
+		"config_path", config.Path(),
+		"database_path", cfg.DatabasePath(),
+		"data_dir", cfg.DataDir,
+		"otel_endpoint", cfg.OTel.Endpoint,
+		"read_only", cfg.ReadOnly,
+	)
+
 	go func() {
-		logger.InfoContext(ctx, "server starting", "addr", addr)
+		defer observability.RecoverPanic(ctx, "http server", stop)
 		if err := httpSrv.ListenAndServe(); err != nil &&
 			!errors.Is(err, http.ErrServerClosed) {
 			logger.ErrorContext(ctx, "server error", "error", err)
@@ -258,8 +281,18 @@ func run(ctx context.Context, cmd *cli.Command) error {
 	if err := app.HTTPLogger.Close(); err != nil {
 		logger.ErrorContext(shutdownCtx, "http access log close error", "error", err)
 	}
-	if err := otelShutdown(shutdownCtx); err != nil {
-		logger.ErrorContext(shutdownCtx, "otel shutdown error", "error", err)
+
+	// Its own budget, not what the steps above left behind. The shutdowns most
+	// likely to run long — a torrent engine under load, a WAL checkpoint on a
+	// busy disk — are exactly the ones whose telemetry is worth keeping, and
+	// sharing the deadline meant the final batch was dropped precisely then.
+	otelCtx, otelCancel := context.WithTimeout(
+		context.Background(),
+		otelFlushTimeout,
+	)
+	defer otelCancel()
+	if err := otelShutdown(otelCtx); err != nil {
+		logger.ErrorContext(otelCtx, "otel shutdown error", "error", err)
 	}
 
 	logger.InfoContext(shutdownCtx, "shutdown complete")

@@ -61,6 +61,11 @@ type Snapshot struct {
 	TorrentListenPort uint16
 	TMDBAPIKeyFile    string
 	TVDBAPIKeyFile    string
+	// Whether telemetry is on at all, and where it goes. Same reason as the
+	// rest of this block: otherwise only knowable by reading the YAML.
+	OTelEndpoint string
+	LogLevel     string
+	LogFormat    string
 }
 
 // secretSource names where a secret comes from without naming the secret:
@@ -148,6 +153,9 @@ func Collect() Snapshot {
 		TorrentListenPort: cfg.TorrentListenPort,
 		TMDBAPIKeyFile:    cfg.Metadata.TMDBAPIKeyFile,
 		TVDBAPIKeyFile:    cfg.Metadata.TVDBAPIKeyFile,
+		OTelEndpoint:      cfg.OTel.Endpoint,
+		LogLevel:          cfg.Log.App.Level,
+		LogFormat:         cfg.Log.App.Format,
 	}
 	if st, err := os.Stat(cfg.DatabasePath()); err == nil {
 		snap.DBSize = humanBytes(st.Size())

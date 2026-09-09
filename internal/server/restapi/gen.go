@@ -4549,6 +4549,15 @@ type SystemInfo struct {
 	LibraryDir   *string    `json:"library_dir,omitempty"`
 	LibraryUsage *DiskUsage `json:"library_usage,omitempty"`
 
+	// LogFormat Effective format of the stderr log sink (text or json).
+	LogFormat *string `json:"log_format,omitempty"`
+
+	// LogLevel Effective level of the stderr log sink.
+	LogLevel *string `json:"log_level,omitempty"`
+
+	// OtelEndpoint OTLP endpoint traces, metrics and logs are exported to. Empty means telemetry export is off for this instance.
+	OtelEndpoint *string `json:"otel_endpoint,omitempty"`
+
 	// PlexClientId Generated on first Plex configuration; required by the PIN flow.
 	PlexClientId *string `json:"plex_client_id,omitempty"`
 	PublicUrl    string  `json:"public_url"`

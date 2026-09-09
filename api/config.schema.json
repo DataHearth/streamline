@@ -653,6 +653,20 @@
         "endpoint": {
           "type": "string",
           "description": "OTLP endpoint. Empty disables OTel export."
+        },
+        "insecure": {
+          "type": "boolean",
+          "description": "Send OTLP over plaintext HTTP. Required for an http:// collector; the SDK defaults to HTTPS."
+        },
+        "sample_ratio": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Head sampling rate for root spans. Ignored when OTEL_TRACES_SAMPLER is set."
+        },
+        "environment": {
+          "type": "string",
+          "description": "Value for the deployment.environment resource attribute (e.g. prod, staging)."
         }
       }
     },

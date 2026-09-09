@@ -272,6 +272,16 @@
 			{#if d.tvdb_api_key_file}
 				{@render kv("metadata.tvdb_api_key_file", d.tvdb_api_key_file)}
 			{/if}
+			{@render kv(
+				i18n.settings_otel_endpoint(),
+				d.otel_endpoint || i18n.settings_otel_disabled(),
+			)}
+			{#if d.log_level}
+				{@render kv(
+					i18n.settings_log_sink(),
+					`${d.log_level} / ${d.log_format ?? "text"}`,
+				)}
+			{/if}
 		</dl>
 	</section>
 

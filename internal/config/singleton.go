@@ -101,6 +101,14 @@ func Get() *Config {
 	return current
 }
 
+// Path returns the config file backing the singleton, or "" when the process
+// is running on defaults and environment alone.
+func Path() string {
+	mu.RLock()
+	defer mu.RUnlock()
+	return cfgPath
+}
+
 // store sets the singleton config (package-internal). k is the fully merged
 // load-time koanf (defaults + file + env); it is retained for HiddenString.
 // layer describes what the environment contributed to that merge.
@@ -271,6 +279,12 @@ func Update(ctx context.Context, fn func(*Config) error) error {
 		slog.ErrorContext(ctx, "config flatten failed", "error", err)
 		return fmt.Errorf("flatten: %w", err)
 	}
+	// Taken before stripEnvLayerLocked thins `next`, so the audit line
+	// describes what the admin asked for, not what survived the env layer.
+	var changed []string
+	if prev, perr := flatten(current); perr == nil {
+		changed = changedKeys(prev.All(), next.All())
+	}
 	if err := envOwnedWritesLocked(next); err != nil {
 		slog.WarnContext(
 			ctx,
@@ -313,7 +327,11 @@ func Update(ctx context.Context, fn func(*Config) error) error {
 			cfgPath,
 		)
 	}
-	slog.InfoContext(ctx, "config saved to disk", "path", cfgPath)
+	saved := []any{"path", cfgPath}
+	if len(changed) > 0 {
+		saved = append(saved, "config.changed", strings.Join(changed, ", "))
+	}
+	slog.InfoContext(ctx, "config saved to disk", saved...)
 	return nil
 }
 
