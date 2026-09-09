@@ -11,6 +11,7 @@ import (
 	"github.com/datahearth/streamline/ent/importscanfile"
 	"github.com/datahearth/streamline/ent/importscanshow"
 	"github.com/datahearth/streamline/ent/mediaevent"
+	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/internal/db"
 )
 
@@ -46,9 +47,8 @@ var _ = Describe("hooks via Register", Label("integration", "events"), func() {
 			SetSize(4_000_000_000).
 			SaveX(ctx)
 
-		evs := client.MediaEvent.Query().AllX(ctx)
+		evs := eventsOfType(ctx, client, TypeGrabbed)
 		Expect(evs).To(HaveLen(1))
-		Expect(evs[0].Type).To(Equal(mediaevent.Type(TypeGrabbed)))
 		Expect(
 			evs[0].Payload,
 		).To(HaveKeyWithValue("release_title", "Fight.Club.1999.1080p.BluRay-X"))
@@ -67,15 +67,69 @@ var _ = Describe("hooks via Register", Label("integration", "events"), func() {
 			SetTitle("Inception.2010.1080p").
 			SaveX(ctx)
 
+		// Importing, not completed: completed is stamped once the file is
+		// already filed, where MediaFile.Create records imported instead.
 		client.DownloadRecord.UpdateOne(dl).
-			SetStatus(downloadrecord.StatusCompleted).
+			SetStatus(downloadrecord.StatusImporting).
 			SaveX(ctx)
 
 		types := allEventTypes(ctx, client)
 		Expect(types).To(ConsistOf(
+			mediaevent.Type(TypeAdded),
 			mediaevent.Type(TypeGrabbed),
 			mediaevent.Type(TypeDownloadCompleted),
 		))
+	})
+
+	It("does not emit download_completed when a record reaches completed", func() {
+		movie := client.Movie.Create().
+			SetTitle("Dune").
+			SetOriginalTitle("Dune").
+			SetYear(2021).
+			SetTmdbID(438631).
+			SaveX(ctx)
+
+		dl := client.DownloadRecord.Create().
+			SetMovieID(movie.ID).
+			SetTitle("Dune.2021.2160p").
+			SaveX(ctx)
+
+		client.DownloadRecord.UpdateOne(dl).
+			SetStatus(downloadrecord.StatusCompleted).
+			SaveX(ctx)
+
+		Expect(eventsOfType(ctx, client, TypeDownloadCompleted)).To(BeEmpty())
+	})
+
+	It("emits import_held_for_review with the checks that failed", func() {
+		movie := client.Movie.Create().
+			SetTitle("Heat").
+			SetOriginalTitle("Heat").
+			SetYear(1995).
+			SetTmdbID(949).
+			SaveX(ctx)
+
+		dl := client.DownloadRecord.Create().
+			SetMovieID(movie.ID).
+			SetTitle("Heat.1995.1080p").
+			SaveX(ctx)
+
+		client.DownloadRecord.UpdateOne(dl).
+			SetStatus(downloadrecord.StatusHeld).
+			SetHoldReasons([]schema.HoldReason{
+				{
+					File:     "heat.mkv",
+					Check:    "duration",
+					Expected: "170m",
+					Actual:   "3m",
+				},
+			}).
+			SaveX(ctx)
+
+		held := eventsOfType(ctx, client, TypeImportHeld)
+		Expect(held).To(HaveLen(1))
+		Expect(held[0].Payload).To(HaveKeyWithValue("held_count", float64(1)))
+		Expect(held[0].Payload).To(HaveKey("held_checks"))
 	})
 
 	It("emits download_failed with reason payload", func() {
@@ -118,9 +172,8 @@ var _ = Describe("hooks via Register", Label("integration", "events"), func() {
 			SetSource("orphan").
 			SaveX(ctx)
 
-		evs := client.MediaEvent.Query().AllX(ctx)
+		evs := eventsOfType(ctx, client, TypeImported)
 		Expect(evs).To(HaveLen(1))
-		Expect(evs[0].Type).To(Equal(mediaevent.Type(TypeImported)))
 		Expect(evs[0].Payload).To(HaveKeyWithValue("source", "orphan"))
 	})
 
@@ -193,14 +246,18 @@ var _ = Describe("hooks via Register", Label("integration", "events"), func() {
 			SetEpisodeID(ep.ID).SetTitle("The.Bear.S01E02").SaveX(ctx)
 
 		client.DownloadRecord.UpdateOne(dl).
-			SetStatus(downloadrecord.StatusCompleted).SaveX(ctx)
+			SetStatus(downloadrecord.StatusImporting).SaveX(ctx)
 
-		Expect(allEventTypes(ctx, client)).To(Equal([]mediaevent.Type{
-			mediaevent.Type(TypeGrabbed),
-			mediaevent.Type(TypeDownloadCompleted),
-		}))
-		// Every row hangs off the episode, never the movie edge.
-		rows := client.MediaEvent.Query().WithEpisode().WithMovie().AllX(ctx)
+		// The show's own `added` row is series-scoped and not part of this;
+		// what matters is that every download-record event hangs off the
+		// episode rather than the movie edge.
+		rows := client.MediaEvent.Query().
+			Where(mediaevent.TypeIn(
+				mediaevent.Type(TypeGrabbed),
+				mediaevent.Type(TypeDownloadCompleted),
+			)).
+			WithEpisode().WithMovie().AllX(ctx)
+		Expect(rows).To(HaveLen(2))
 		for _, r := range rows {
 			Expect(r.Edges.Episode).NotTo(BeNil())
 			Expect(r.Edges.Episode.ID).To(Equal(ep.ID))
@@ -222,9 +279,7 @@ var _ = Describe("hooks via Register", Label("integration", "events"), func() {
 			SetEpisodeID(ep.ID).
 			SaveX(ctx)
 
-		Expect(allEventTypes(ctx, client)).To(Equal([]mediaevent.Type{
-			mediaevent.Type(TypeImported),
-		}))
+		Expect(eventsOfType(ctx, client, TypeImported)).To(HaveLen(1))
 	})
 
 	It("records a failed series import against the series", func() {
@@ -244,10 +299,70 @@ var _ = Describe("hooks via Register", Label("integration", "events"), func() {
 			SetOutcome(importscanshow.OutcomeFailed).
 			SaveX(ctx)
 
-		rows := client.MediaEvent.Query().WithTvShow().AllX(ctx)
+		rows := client.MediaEvent.Query().
+			Where(mediaevent.TypeEQ(mediaevent.Type(TypeImportFailed))).
+			WithTvShow().AllX(ctx)
 		Expect(rows).To(HaveLen(1))
-		Expect(rows[0].Type).To(Equal(mediaevent.Type(TypeImportFailed)))
 		Expect(rows[0].Edges.TvShow.ID).To(Equal(show.ID))
+	})
+
+	It("emits added when a movie enters the library", func() {
+		movie := client.Movie.Create().
+			SetTitle("Sicario").
+			SetOriginalTitle("Sicario").
+			SetYear(2015).
+			SetTmdbID(273481).
+			SaveX(ctx)
+
+		rows := client.MediaEvent.Query().
+			Where(mediaevent.TypeEQ(mediaevent.Type(TypeAdded))).
+			WithMovie().AllX(ctx)
+		Expect(rows).To(HaveLen(1))
+		Expect(rows[0].Edges.Movie.ID).To(Equal(movie.ID))
+		Expect(rows[0].Payload).To(HaveKeyWithValue("title", "Sicario"))
+	})
+
+	It("emits file_removed with the path when a media file is deleted", func() {
+		movie := client.Movie.Create().
+			SetTitle("Arrival").
+			SetOriginalTitle("Arrival").
+			SetYear(2016).
+			SetTmdbID(329865).
+			SaveX(ctx)
+
+		mf := client.MediaFile.Create().
+			SetMovieID(movie.ID).
+			SetPath("/lib/Arrival.mkv").
+			SetSize(1).
+			SaveX(ctx)
+
+		client.MediaFile.DeleteOne(mf).ExecX(ctx)
+
+		removed := eventsOfType(ctx, client, TypeFileRemoved)
+		Expect(removed).To(HaveLen(1))
+		Expect(removed[0].Payload).To(
+			HaveKeyWithValue("path", "/lib/Arrival.mkv"),
+		)
+	})
+
+	It("stays quiet on a delete made under SuppressFileRemoved", func() {
+		movie := client.Movie.Create().
+			SetTitle("Prisoners").
+			SetOriginalTitle("Prisoners").
+			SetYear(2013).
+			SetTmdbID(146233).
+			SaveX(ctx)
+
+		mf := client.MediaFile.Create().
+			SetMovieID(movie.ID).
+			SetPath("/lib/Prisoners.mkv").
+			SetSize(1).
+			SaveX(ctx)
+
+		// The drift sweep records its own diagnosed event for this deletion.
+		client.MediaFile.DeleteOne(mf).ExecX(SuppressFileRemoved(ctx))
+
+		Expect(eventsOfType(ctx, client, TypeFileRemoved)).To(BeEmpty())
 	})
 })
 
@@ -262,4 +377,16 @@ func allEventTypes(ctx context.Context, c *ent.Client) []mediaevent.Type {
 		out = append(out, r.Type)
 	}
 	return out
+}
+
+func eventsOfType(
+	ctx context.Context, c *ent.Client, t Type,
+) []*ent.MediaEvent {
+	GinkgoHelper()
+	rows, err := c.MediaEvent.Query().
+		Where(mediaevent.TypeEQ(mediaevent.Type(t))).
+		Order(ent.Asc(mediaevent.FieldCreateTime)).
+		All(ctx)
+	Expect(err).NotTo(HaveOccurred())
+	return rows
 }

@@ -52,8 +52,8 @@ var _ = Describe("PurgeOldEvents", Label("integration", "events"), func() {
 
 		survivors, err := client.MediaEvent.Query().IDs(ctx)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(survivors).To(ConsistOf(recent.ID))
-		_ = old
+		Expect(survivors).To(ContainElement(recent.ID))
+		Expect(survivors).NotTo(ContainElement(old.ID))
 	})
 
 	It("returns 0 when nothing is past retention", func() {
