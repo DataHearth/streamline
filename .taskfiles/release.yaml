@@ -24,17 +24,22 @@ tasks:
     requires:
       vars: [TAG]
     preconditions:
-      - sh: '! git rev-parse -q --verify refs/tags/{{.TAG}} >/dev/null'
+      # jj tag list warns on stderr and prints nothing on stdout for a name it
+      # doesn't have, so empty output is the "free to take" signal.
+      - sh: '[ -z "$(jj tag list {{.TAG}} 2>/dev/null)" ]'
         msg: "{{.TAG}} already exists{{with .HINT}} — {{.}}{{end}}"
     cmds:
-      # git, not jj: jj can't create or push tags. The tag push is the trigger —
-      # it fans out to the workflows under .github/workflows/.
+      # jj gained tags in 0.45, so this no longer drops to git. `jj tag set`
+      # writes a lightweight tag where `git tag -a` wrote an annotated one —
+      # nothing here reads a tag message (goreleaser takes its body from
+      # --release-notes, git-cliff never gets --with-tag-message).
       #
-      # main, not HEAD: jj parks git HEAD on @- while @ is the working-copy
-      # commit, so HEAD is one commit behind the bookmark whenever the working
-      # copy holds anything. Tag the bookmark that is actually being released.
-      - git tag -a {{.TAG}} main -m "{{.TAG}}"
-      - git push origin {{.TAG}}
+      # -r main, not the default @: @ is the working-copy commit, one ahead of
+      # the bookmark whenever it holds anything. Tag what is being released.
+      - jj tag set {{.TAG}} -r main
+      # --remote origin, not the default: there is a second remote (fork).
+      # This push is the trigger — it fans out to .github/workflows/.
+      - jj git push --remote origin --tag {{.TAG}}
 
   # Both changelogs are one procedure with different scope: render the file
   # with git-cliff, commit it on its own revision, advance main. Only CONFIG,
