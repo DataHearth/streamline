@@ -25,6 +25,7 @@ import (
 	"github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/otelx"
 	"go.opentelemetry.io/otel"
@@ -489,6 +490,13 @@ func (d *download) CancelQueueItem(ctx context.Context, recordID uint32) error {
 	if m := rec.Edges.Movie; m != nil {
 		if err := d.db.RevertMovieToWantedIfNoFile(ctx, m.ID); err != nil {
 			return fmt.Errorf("revert movie: %w", err)
+		}
+		if err := events.Record(
+			ctx, nil, events.TypeDownloadCancelled, events.ScopeMovie, m.ID,
+			map[string]any{"release_title": rec.Title},
+		); err != nil {
+			slog.WarnContext(ctx, "record download cancellation event failed",
+				"movie.id", m.ID, "error", err)
 		}
 	}
 	return nil
@@ -1063,6 +1071,17 @@ func (d *download) widenSelection(
 		if _, merr := d.db.MarkEpisodeDownloading(ctx, id); merr != nil {
 			slog.WarnContext(ctx, "widen: mark episode downloading failed",
 				"episode.id", id, "error", merr)
+			continue
+		}
+		// A widen creates no new download record, so the grab hook never
+		// fires for these — from the user's side an episode started
+		// downloading and nothing said so.
+		if err := events.Record(
+			ctx, nil, events.TypeGrabWidened, events.ScopeEpisode, id,
+			map[string]any{"release_title": live.Title},
+		); err != nil {
+			slog.WarnContext(ctx, "record widen event failed",
+				"episode.id", id, "error", err)
 		}
 	}
 
