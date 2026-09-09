@@ -47,8 +47,13 @@ runs:
         VERSION: ${{ inputs.version }}
       run: |
         raw="$RUNNER_TEMP/raw-notes.md"
-        awk -v tag="## [$VERSION]" 'index($0, tag) == 1 {p=1; next} p && /^## \[/ {exit} p' \
-          "$CHANGELOG" > "$raw"
+        # Stop at the next version heading, or at the link-reference block —
+        # the oldest section has no heading after it and would otherwise
+        # swallow the footer. That is the first release of any new changelog.
+        awk -v tag="## [$VERSION]" '
+          index($0, tag) == 1 {p=1; next}
+          p && (/^## \[/ || /^\[[^]]+\]: /) {exit}
+          p' "$CHANGELOG" > "$raw"
         if ! grep -q '[^[:space:]]' "$raw"; then
           echo "::error::$CHANGELOG has no section for $VERSION"
           exit 1
