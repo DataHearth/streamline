@@ -4,6 +4,8 @@ import (
 	"context"
 	"log/slog"
 	"time"
+
+	"go.opentelemetry.io/otel/attribute"
 )
 
 const enforceInterval = time.Minute
@@ -24,7 +26,12 @@ func (e *Engine) enforceSeedLimits() {
 }
 
 func (e *Engine) enforceOnce(ctx context.Context) {
+	ctx, span := tracer.Start(ctx, "bittorrent.enforce_seed_limits")
+	defer span.End()
+
+	var evaluated, stopped int
 	for _, t := range e.client.Torrents() {
+		evaluated++
 		hash := t.InfoHash().HexString()
 		st := e.getState(hash)
 		// Lifetime bytes, persisted before any of the gates below: anacrolix
@@ -69,9 +76,15 @@ func (e *Engine) enforceOnce(ctx context.Context) {
 			slog.WarnContext(ctx, "persisting seed stop failed",
 				"info_hash", hash, "error", err)
 		}
+		stopped++
+		seedStops.Add(ctx, 1)
 		slog.InfoContext(ctx, "seed limits reached, stopped seeding",
 			"info_hash", hash, "ratio", r)
 	}
+	span.SetAttributes(
+		attribute.Int("torrents.evaluated", evaluated),
+		attribute.Int("torrents.seed_stopped", stopped),
+	)
 }
 
 // persistUploaded writes the lifetime upload total only when it has moved

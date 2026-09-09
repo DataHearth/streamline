@@ -15,6 +15,7 @@ import (
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/otelx"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -170,6 +171,7 @@ func (d *download) resolvePendingSelection(
 				span, fmt.Errorf("remove torrent: %w", err),
 			)
 		}
+		countSelection(ctx, "dropped")
 		slog.WarnContext(ctx, "file selection: dropped zero-match magnet",
 			"record.id", rec.ID, "hash", rec.TorrentHash,
 			"wanted_episodes", rec.WantedEpisodes, "files", clientFiles)
@@ -194,6 +196,7 @@ func (d *download) resolvePendingSelection(
 				span, fmt.Errorf("mark selection unsupported: %w", err),
 			)
 		}
+		countSelection(ctx, "unsupported")
 	case serr != nil:
 		return otelx.RecordSpanError(
 			span, fmt.Errorf("set wanted files: %w", serr),
@@ -206,6 +209,7 @@ func (d *download) resolvePendingSelection(
 				span, fmt.Errorf("mark selection applied: %w", err),
 			)
 		}
+		countSelection(ctx, "applied")
 	}
 	// Starts a qB torrent stopped at metadata; no-op for an already-running
 	// builtin/Transmission torrent.
@@ -236,11 +240,22 @@ func (d *download) finalizePending(
 			span, fmt.Errorf("mark selection %s: %w", state, err),
 		)
 	}
+	countSelection(ctx, string(state))
 	if err := client.ResumeTorrent(ctx, rec.TorrentHash); err != nil {
 		slog.WarnContext(ctx, "file selection: resume torrent failed",
 			"record.id", rec.ID, "hash", rec.TorrentHash, "error", err)
 	}
 	return nil
+}
+
+// countSelection records how one deferred selection resolved. A sustained rate
+// of `dropped` or `skipped` points at something real — a client whose
+// ListFiles never resolves, or a parser regression against real releases —
+// which otherwise surfaces only when a user reports a stuck magnet.
+func countSelection(ctx context.Context, outcome string) {
+	selectionCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("outcome", outcome),
+	))
 }
 
 // episodeLabels renders ids as SxxExx against show's already-fetched season

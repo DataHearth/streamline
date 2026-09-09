@@ -21,6 +21,8 @@ import (
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/observability"
 	"github.com/datahearth/streamline/internal/otelx"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var _ download.Client = (*Engine)(nil)
@@ -289,17 +291,26 @@ func (e *Engine) SetWantedFiles(
 	hash string,
 	wanted []int,
 ) error {
+	ctx, span := tracer.Start(ctx, "bittorrent.set_wanted_files",
+		trace.WithAttributes(
+			attribute.String("torrent.hash", hash),
+			attribute.Int("wanted.count", len(wanted)),
+		))
+	defer span.End()
+
 	if len(wanted) == 0 {
-		return errors.New(
+		return otelx.RecordSpanError(span, errors.New(
 			"builtin set wanted files: refusing to skip every file",
-		)
+		))
 	}
 	t, err := e.torrent(hash)
 	if err != nil {
-		return err
+		return otelx.RecordSpanError(span, err)
 	}
 	if t.Info() == nil {
-		return errors.New("torrent metadata not yet available")
+		return otelx.RecordSpanError(
+			span, errors.New("torrent metadata not yet available"),
+		)
 	}
 	st := e.getState(hash)
 	newlyWanted := newlyWantedIndexes(st.selectionMode, st.wantedFiles, wanted)
@@ -308,7 +319,9 @@ func (e *Engine) SetWantedFiles(
 	if err := e.store.SetTorrentSessionSelection(
 		ctx, hash, "explicit", wanted,
 	); err != nil {
-		return fmt.Errorf("persist torrent session selection: %w", err)
+		return otelx.RecordSpanError(
+			span, fmt.Errorf("persist torrent session selection: %w", err),
+		)
 	}
 	e.setState(hash, func(s *torrentState) {
 		s.selectionMode = "explicit"

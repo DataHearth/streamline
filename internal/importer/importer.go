@@ -105,6 +105,7 @@ func NewWorker(d Deps) *Worker {
 // a closed channel would panic them. Consumers terminate on ctx.Done instead;
 // w.stop turns those late enqueues into no-ops.
 func (w *Worker) Start(ctx context.Context) {
+	w.registerQueueGauges(ctx)
 	var wg sync.WaitGroup
 	for range consumers {
 		wg.Go(func() { w.consume(ctx) })
@@ -139,6 +140,7 @@ func (w *Worker) Enqueue(recordID uint32) {
 	select {
 	case w.ch <- recordID:
 	default:
+		dropped.Add(context.Background(), 1)
 		slog.WarnContext(
 			context.Background(),
 			"importer queue full, dropping enqueue",
@@ -315,6 +317,7 @@ func (w *Worker) hold(
 	if err := w.db.HoldDownloadRecord(ctx, rec.ID, reasons); err != nil {
 		return otelx.RecordSpanError(span, fmt.Errorf("hold record: %w", err))
 	}
+	recordOutcome(ctx, "held")
 	slog.InfoContext(ctx, "import held for review",
 		"download_record.id", rec.ID,
 		"reasons", len(reasons),
@@ -805,6 +808,7 @@ func (w *Worker) cleanupTorrent(
 
 func (w *Worker) handleOutcome(ctx context.Context, recordID uint32, runErr error) {
 	if runErr == nil {
+		recordOutcome(ctx, "succeeded")
 		return
 	}
 	if errors.Is(runErr, context.Canceled) ||
@@ -844,6 +848,11 @@ func (w *Worker) handleOutcome(ctx context.Context, recordID uint32, runErr erro
 	if err := w.db.RecordImportFailure(ctx, params); err != nil {
 		slog.ErrorContext(ctx, "record import failure write failed", "error", err)
 		return
+	}
+	if isTerminal {
+		recordOutcome(ctx, "terminal")
+	} else {
+		recordOutcome(ctx, "failed")
 	}
 	//nolint:sloglint // LogAttrs takes slog.Attr by API design
 	slog.LogAttrs(ctx, slog.LevelWarn, "import failed",

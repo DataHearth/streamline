@@ -187,6 +187,7 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 		}
 		return nil, fmt.Errorf("restore torrent sessions: %w", err)
 	}
+	e.registerEngineGauges(ctx)
 	e.wg.Go(e.enforceSeedLimits)
 	return e, nil
 }

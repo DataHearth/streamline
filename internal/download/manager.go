@@ -122,6 +122,14 @@ var (
 	completedCount   metric.Int64Counter
 	testCounter      metric.Int64Counter
 	orphanCounter    metric.Int64Counter
+	// adoptCounter and selectionCounter cover the two sweeps that run on every
+	// monitor tick. Their outcomes reached span attributes only, which are
+	// invisible unless that particular tick happened to be sampled — so a
+	// flood of unidentified adoptions (a misconfigured client category) or a
+	// run of zero-match magnet drops had no signal an alert could watch.
+	adoptCounter     metric.Int64Counter
+	adoptPruned      metric.Int64Counter
+	selectionCounter metric.Int64Counter
 )
 
 func init() {
@@ -153,6 +161,22 @@ func init() {
 	orphanCounter = otelx.Must(meter.Int64Counter(
 		"streamline.download.orphans_purged",
 		metric.WithDescription("Number of orphaned download records purged"),
+	))
+	adoptCounter = otelx.Must(meter.Int64Counter(
+		"streamline.download.adoptions",
+		metric.WithDescription("Adopted untracked torrents by outcome"),
+	))
+	adoptPruned = otelx.Must(meter.Int64Counter(
+		"streamline.download.adoption_proposals_pruned",
+		metric.WithDescription(
+			"Pending adoption proposals dropped because the torrent vanished",
+		),
+	))
+	selectionCounter = otelx.Must(meter.Int64Counter(
+		"streamline.download.selection_pass",
+		metric.WithDescription(
+			"Deferred file-selection resolutions by outcome",
+		),
 	))
 
 	// Prime instruments with 0 so series appear in the backend before the
@@ -269,6 +293,11 @@ type download struct {
 	qmu   sync.Mutex
 	qSnap []QueueEntry
 	qAt   time.Time
+
+	// reachable holds client name → last observed reachability, written by the
+	// adoption sweep and read by the gauge in reachability.go.
+	reachable  sync.Map
+	gaugesOnce sync.Once
 }
 
 // New builds the download manager. builtin may be nil (no engine configured);
@@ -786,9 +815,17 @@ func (d *download) grab(
 	// promising a selective download the client can't honour; any other error
 	// leaves it applied, with the keep-set the create already stored — the
 	// selection pass's confirmation and a later widen both correct it.
+	//
+	// The outcome lands on the grab's own span as well as in the log. Without
+	// it the span reported a clean grab while the selective download had
+	// silently degraded to whole-torrent, and correlating the two meant
+	// finding an unlinked warning by hand.
 	if selection != nil {
 		switch serr := client.SetWantedFiles(ctx, hash, selection.files); {
 		case errors.Is(serr, ErrNotSupported):
+			span.SetAttributes(
+				attribute.String("selection.confirm_outcome", "unsupported"),
+			)
 			if uerr := d.db.SetDownloadRecordSelection(
 				ctx, record.ID, downloadrecord.SelectionStateUnsupported, nil, 0,
 			); uerr != nil {
@@ -796,9 +833,15 @@ func (d *download) grab(
 					"record.id", record.ID, "error", uerr)
 			}
 		case serr != nil:
+			span.SetAttributes(
+				attribute.String("selection.confirm_outcome", "failed"),
+			)
 			slog.WarnContext(ctx, "grab: confirm selected files failed",
 				"record.id", record.ID, "hash", hash, "error", serr)
 		default:
+			span.SetAttributes(
+				attribute.String("selection.confirm_outcome", "applied"),
+			)
 			if uerr := d.db.SetDownloadRecordSelection(
 				ctx, record.ID, downloadrecord.SelectionStateApplied,
 				selection.files, selection.bytes,

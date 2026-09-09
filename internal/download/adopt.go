@@ -16,6 +16,7 @@ import (
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/otelx"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 )
 
 // adoptDecision is what to do with one untracked managed torrent.
@@ -246,6 +247,7 @@ func (d *download) AdoptManualTorrents(ctx context.Context) ([]uint32, error) {
 	if len(config.EnabledDownloadClients()) == 0 {
 		return nil, nil
 	}
+	d.gaugesOnce.Do(func() { d.registerClientGauges(ctx) })
 
 	known, err := d.db.AllDownloadRecordHashes(ctx)
 	if err != nil {
@@ -264,14 +266,17 @@ func (d *download) AdoptManualTorrents(ctx context.Context) ([]uint32, error) {
 		if err != nil {
 			slog.DebugContext(ctx, "adopt: build client failed",
 				"client", dc.Name, "error", err)
+			d.setReachable(dc.Name, false)
 			continue
 		}
 		torrents, err := client.ListTorrents(ctx)
 		if err != nil {
 			slog.DebugContext(ctx, "adopt: list torrents failed",
 				"client", dc.Name, "error", err)
+			d.setReachable(dc.Name, false)
 			continue
 		}
+		d.setReachable(dc.Name, true)
 		live := make([]string, 0, len(torrents))
 		for _, t := range torrents {
 			live = append(live, t.Hash)
@@ -303,6 +308,7 @@ func (d *download) AdoptManualTorrents(ctx context.Context) ([]uint32, error) {
 		pruned += n
 	}
 	span.SetAttributes(attribute.Int("adopt.pruned", pruned))
+	adoptPruned.Add(ctx, int64(pruned))
 
 	if len(untracked) == 0 {
 		return nil, nil // early-exit: no candidate loads
@@ -347,11 +353,22 @@ func (d *download) AdoptManualTorrents(ctx context.Context) ([]uint32, error) {
 		if err != nil {
 			slog.WarnContext(ctx, "adopt: persist failed",
 				"hash", u.t.Hash, "error", err)
+			adoptCounter.Add(ctx, 1, metric.WithAttributes(
+				attribute.String("outcome", "persist_failed"),
+			))
 			continue
 		}
-		if dec.autoImport {
+		outcome := "proposal"
+		switch {
+		case dec.autoImport:
+			outcome = "auto_import"
 			enqueue = append(enqueue, id)
+		case dec.reason == reasonUnidentified:
+			outcome = "unidentified"
 		}
+		adoptCounter.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("outcome", outcome),
+		))
 	}
 	span.SetAttributes(attribute.Int("adopt.enqueued", len(enqueue)))
 	return enqueue, nil
