@@ -11,6 +11,7 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/otelx"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -135,22 +136,45 @@ func (s *Service) Approve(
 		}
 		return nil, otelx.RecordSpanError(span, err)
 	}
+	// The library row Add creates carries its own `added` event via the ent
+	// hook. This one is the half the hook cannot see: that the addition came
+	// from a request, and which one.
+	var (
+		scope   events.Scope
+		ownerID uint32
+	)
 	switch req.MediaType {
 	case "movie":
-		if _, _, err := s.movies.Add(ctx, req.MediaID, qualityProfile); err != nil {
+		m, _, err := s.movies.Add(ctx, req.MediaID, qualityProfile)
+		if err != nil {
 			return nil, otelx.RecordSpanError(
 				span, fmt.Errorf("approve: add movie: %w", err),
 			)
 		}
+		scope, ownerID = events.ScopeMovie, m.ID
 	case "tvshow":
-		if _, err := s.shows.Add(ctx, req.MediaID, qualityProfile); err != nil {
+		show, err := s.shows.Add(ctx, req.MediaID, qualityProfile)
+		if err != nil {
 			return nil, otelx.RecordSpanError(
 				span, fmt.Errorf("approve: add show: %w", err),
 			)
 		}
+		scope, ownerID = events.ScopeSeries, show.ID
 	}
 	if err := s.db.ApproveRequest(ctx, id, adminID); err != nil {
 		return nil, otelx.RecordSpanError(span, err)
+	}
+	if ownerID != 0 {
+		if err := events.Record(
+			ctx, nil, events.TypeRequestApproved, scope, ownerID,
+			map[string]any{
+				"request_id":  id,
+				"approved_by": adminID,
+			},
+		); err != nil {
+			slog.WarnContext(ctx, "record request approval event failed",
+				"request.id", id, "error", err)
+		}
 	}
 	slog.InfoContext(ctx, "request approved",
 		"request.id", id, "media.type", req.MediaType, "user.id", adminID)
