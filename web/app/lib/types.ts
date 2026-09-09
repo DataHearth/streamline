@@ -451,11 +451,24 @@ export type ActivityType =
 	| "grabbed"
 	| "download_completed"
 	| "download_failed"
+	| "download_cancelled"
+	| "grab_widened"
 	| "imported"
 	| "import_failed"
+	| "import_held_for_review"
 	| "drift_detected"
 	| "drift_confirmed"
-	| "searched";
+	| "searched"
+	| "added"
+	| "file_renamed"
+	| "file_removed"
+	| "reidentified"
+	| "metadata_refreshed"
+	| "monitoring_changed"
+	| "request_approved"
+	| "transcode_completed"
+	| "transcode_failed"
+	| "transcode_rejected";
 
 export type SeriesRef = {
 	id: number;

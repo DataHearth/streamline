@@ -1,22 +1,11 @@
 <script lang="ts">
 	import { createQuery } from "@tanstack/svelte-query";
-	import {
-		Activity,
-		Check,
-		Download,
-		X,
-		GitBranch,
-		ShieldCheck,
-		Search,
-	} from "@lucide/svelte";
+	import { Activity } from "@lucide/svelte";
 	import { api, errorText } from "../../lib/api";
+	import { EVENT_MARKS } from "../../lib/activity-event";
 	import { formatRelative, formatDateTime } from "../../lib/dates";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
-	import type {
-		ActivityEvent,
-		ActivityList,
-		ActivityType,
-	} from "../../lib/types";
+	import type { ActivityEvent, ActivityList } from "../../lib/types";
 
 	let { movieId }: { movieId: number } = $props();
 
@@ -26,63 +15,6 @@
 			api<ActivityList>(`/activity?movie_id=${movieId}&limit=50`),
 	}));
 
-	type Mark = {
-		icon: typeof Activity;
-		bg: string;
-		fg: string;
-		label: string;
-	};
-
-	const MARKS: Record<ActivityType, Mark> = {
-		imported: {
-			icon: Check,
-			bg: "bg-status-available/15",
-			fg: "text-status-available",
-			label: i18n.activity_evt_imported(),
-		},
-		download_completed: {
-			icon: Check,
-			bg: "bg-status-available/15",
-			fg: "text-status-available",
-			label: i18n.activity_evt_download_completed(),
-		},
-		grabbed: {
-			icon: Download,
-			bg: "bg-status-grabbing/15",
-			fg: "text-status-grabbing",
-			label: i18n.activity_evt_grabbed(),
-		},
-		download_failed: {
-			icon: X,
-			bg: "bg-status-failed/15",
-			fg: "text-status-failed",
-			label: i18n.activity_evt_download_failed(),
-		},
-		import_failed: {
-			icon: X,
-			bg: "bg-status-failed/15",
-			fg: "text-status-failed",
-			label: i18n.activity_evt_import_failed(),
-		},
-		drift_detected: {
-			icon: GitBranch,
-			bg: "bg-status-wanted/15",
-			fg: "text-status-wanted",
-			label: i18n.activity_evt_drift_detected(),
-		},
-		drift_confirmed: {
-			icon: ShieldCheck,
-			bg: "bg-status-wanted/15",
-			fg: "text-status-wanted",
-			label: i18n.activity_evt_drift_confirmed(),
-		},
-		searched: {
-			icon: Search,
-			bg: "bg-accent/15",
-			fg: "text-accent",
-			label: i18n.activity_evt_searched(),
-		},
-	};
 
 	function release(event: ActivityEvent): string {
 		const p = event.payload ?? {};
@@ -134,7 +66,7 @@
 		role="list"
 	>
 		{#each events as event (event.id)}
-			{@const mark = MARKS[event.type] ?? {
+			{@const mark = EVENT_MARKS[event.type] ?? {
 				icon: Activity,
 				bg: "bg-surface-2",
 				fg: "text-fg-muted",

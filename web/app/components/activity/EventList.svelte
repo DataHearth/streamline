@@ -1,77 +1,12 @@
 <script lang="ts">
-	import {
-		Activity,
-		Check,
-		Download,
-		X,
-		GitBranch,
-		ShieldCheck,
-		Radar,
-	} from "@lucide/svelte";
+	import { Activity } from "@lucide/svelte";
 	import { formatRelative, formatDateTime } from "../../lib/dates";
-	import { eventSubject } from "../../lib/activity-event";
-	import type { ActivityEvent, ActivityType } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { eventSubject, EVENT_MARKS } from "../../lib/activity-event";
+	import type { ActivityEvent } from "../../lib/types";
 
 	let { events }: { events: ActivityEvent[] } = $props();
 
-	type Mark = {
-		icon: typeof Check;
-		bg: string;
-		fg: string;
-		label: string;
-	};
 
-	const MARKS: Record<ActivityType, Mark> = {
-		imported: {
-			icon: Check,
-			bg: "bg-status-available/15",
-			fg: "text-status-available",
-			label: i18n.activity_imported(),
-		},
-		download_completed: {
-			icon: Check,
-			bg: "bg-status-available/15",
-			fg: "text-status-available",
-			label: i18n.dash_evt_download_completed(),
-		},
-		grabbed: {
-			icon: Download,
-			bg: "bg-status-grabbing/15",
-			fg: "text-status-grabbing",
-			label: i18n.dash_evt_grabbed(),
-		},
-		download_failed: {
-			icon: X,
-			bg: "bg-status-failed/15",
-			fg: "text-status-failed",
-			label: i18n.dash_evt_download_failed(),
-		},
-		import_failed: {
-			icon: X,
-			bg: "bg-status-failed/15",
-			fg: "text-status-failed",
-			label: i18n.dash_evt_import_failed(),
-		},
-		drift_detected: {
-			icon: GitBranch,
-			bg: "bg-status-wanted/15",
-			fg: "text-status-wanted",
-			label: i18n.dash_evt_drift_detected(),
-		},
-		drift_confirmed: {
-			icon: ShieldCheck,
-			bg: "bg-status-wanted/15",
-			fg: "text-status-wanted",
-			label: i18n.dash_evt_drift_confirmed(),
-		},
-		searched: {
-			icon: Radar,
-			bg: "bg-surface-2",
-			fg: "text-fg-muted",
-			label: i18n.dash_evt_searched(),
-		},
-	};
 
 	function release(payload: Record<string, unknown> | undefined): string {
 		if (!payload) return "";
@@ -88,7 +23,7 @@
 
 <ul class="flex flex-col gap-0.5 p-2">
 	{#each events as event (event.id)}
-		{@const mark = MARKS[event.type] ?? {
+		{@const mark = EVENT_MARKS[event.type] ?? {
 			icon: Activity,
 			bg: "bg-surface-2",
 			fg: "text-fg-muted",
