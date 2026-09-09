@@ -9,7 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **BREAKING** helm: Require image.tag, drop appVersion fallback
 - web: Serve the dashboard at the root route, drop /dashboard
 - web: Media probe & import verification UI from design
 - config: Add ffmpeg block
