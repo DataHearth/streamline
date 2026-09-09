@@ -15,6 +15,7 @@ import (
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/metadata"
@@ -921,6 +922,25 @@ func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.TVShow, error
 	// cache stayed cleared for every show already in the library. Fetch
 	// no-ops when the file is present, so this is free on a warm cache.
 	s.fetchPoster(ctx, id, d.PosterPath)
+	// Only when the provider actually moved something. RefreshStale runs this
+	// over every stale show on a tick, and an unconditional event would bury a
+	// day of real activity under one row per series in the library.
+	if len(removed) > 0 || show.Title != d.Title {
+		payload := map[string]any{"title": d.Title}
+		if show.Title != d.Title {
+			payload["old_title"] = show.Title
+		}
+		if len(removed) > 0 {
+			payload["episodes_removed"] = len(removed)
+		}
+		if err := events.Record(
+			ctx, nil, events.TypeMetadataRefreshed, events.ScopeSeries, id,
+			payload,
+		); err != nil {
+			slog.WarnContext(ctx, "record metadata refresh event failed",
+				"tvshow.id", id, "error", err)
+		}
+	}
 	return s.db.FindTVShowByID(ctx, id)
 }
 
@@ -1048,6 +1068,19 @@ func (s *Service) Reidentify(
 		"files_unmatched",
 		len(unmatched),
 	)
+	if err := events.Record(
+		ctx, nil, events.TypeReidentified, events.ScopeSeries, id,
+		map[string]any{
+			"old_tvdb_id":     show.TvdbID,
+			"new_tvdb_id":     tvdbID,
+			"title":           refreshed.Title,
+			"files_kept":      len(detached) - len(unmatched),
+			"files_unmatched": len(unmatched),
+		},
+	); err != nil {
+		slog.WarnContext(ctx, "record re-identify event failed",
+			"tvshow.id", id, "error", err)
+	}
 	return refreshed, unmatched, nil
 }
 

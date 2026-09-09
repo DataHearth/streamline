@@ -3,12 +3,14 @@ package tvshow
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/otelx"
 	"go.opentelemetry.io/otel/attribute"
@@ -78,6 +80,22 @@ func (r *RenameService) Apply(
 			return library.RenamePlan{}, otelx.RecordSpanError(span,
 				fmt.Errorf("update media_file %d: %w", op.MediaFileID, err))
 		}
+		if op.EpisodeID == 0 {
+			continue
+		}
+		if err := events.Record(
+			ctx, nil, events.TypeFileRenamed, events.ScopeEpisode,
+			op.EpisodeID,
+			map[string]any{
+				"old_path":      op.From,
+				"new_path":      op.To,
+				"media_file_id": op.MediaFileID,
+			},
+		); err != nil {
+			slog.WarnContext(ctx, "record rename event failed",
+				"episode.id", op.EpisodeID, "media_file.id", op.MediaFileID,
+				"error", err)
+		}
 	}
 	span.SetAttributes(attribute.Int("rename.op_count", len(plan.Operations)))
 	return plan, nil
@@ -107,6 +125,7 @@ func (r *RenameService) buildPlan(
 					MediaFileID: f.ID,
 					From:        f.Path,
 					To:          target,
+					EpisodeID:   ep.ID,
 				})
 			}
 		}

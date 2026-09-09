@@ -12,6 +12,7 @@ import (
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/otelx"
@@ -526,6 +527,7 @@ func (s *Service) Reidentify(
 		return nil, otelx.RecordSpanError(span, fmt.Errorf("lookup target: %w", err))
 	}
 
+	oldTMDBID := m.TmdbID
 	if err := s.db.SetMovieTMDBID(ctx, id, tmdbID); err != nil {
 		return nil, otelx.RecordSpanError(span, fmt.Errorf("set tmdb id: %w", err))
 	}
@@ -552,6 +554,17 @@ func (s *Service) Reidentify(
 	// at different metadata — without an audit trail.
 	slog.InfoContext(ctx, "movie re-identified",
 		"movie.id", id, "movie.tmdb_id", tmdbID, "title", details.Title)
+	if err := events.Record(
+		ctx, nil, events.TypeReidentified, events.ScopeMovie, id,
+		map[string]any{
+			"old_tmdb_id": oldTMDBID,
+			"new_tmdb_id": tmdbID,
+			"title":       details.Title,
+		},
+	); err != nil {
+		slog.WarnContext(ctx, "record re-identify event failed",
+			"movie.id", id, "error", err)
+	}
 	return s.db.FindMovieByID(ctx, id)
 }
 
@@ -614,6 +627,22 @@ func (s *Service) refreshOne(ctx context.Context, m *ent.Movie) error {
 	// the series path already does it, and without it dropping the poster
 	// directory left movies with placeholders permanently.
 	s.fetchPoster(ctx, m.ID, details.PosterPath)
+	// Only when the provider actually moved something. RefreshStale runs this
+	// over every stale row on a tick, and an unconditional event would bury a
+	// day of real activity under one row per movie in the library.
+	if m.Title != details.Title || m.Year != details.Year {
+		if err := events.Record(
+			ctx, nil, events.TypeMetadataRefreshed, events.ScopeMovie, m.ID,
+			map[string]any{
+				"old_title": m.Title,
+				"title":     details.Title,
+				"year":      details.Year,
+			},
+		); err != nil {
+			slog.WarnContext(ctx, "record metadata refresh event failed",
+				"movie.id", m.ID, "error", err)
+		}
+	}
 	return nil
 }
 

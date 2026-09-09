@@ -3,12 +3,14 @@ package movie
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/otelx"
 	"go.opentelemetry.io/otel/attribute"
@@ -79,6 +81,18 @@ func (r *RenameService) Apply(
 		if err := r.db.UpdateMediaFilePath(ctx, op.MediaFileID, op.To); err != nil {
 			return library.RenamePlan{}, otelx.RecordSpanError(span,
 				fmt.Errorf("update media_file %d: %w", op.MediaFileID, err))
+		}
+		if err := events.Record(
+			ctx, nil, events.TypeFileRenamed, events.ScopeMovie, movieID,
+			map[string]any{
+				"old_path":      op.From,
+				"new_path":      op.To,
+				"media_file_id": op.MediaFileID,
+			},
+		); err != nil {
+			slog.WarnContext(ctx, "record rename event failed",
+				"movie.id", movieID, "media_file.id", op.MediaFileID,
+				"error", err)
 		}
 	}
 	span.SetAttributes(attribute.Int("rename.op_count", len(plan.Operations)))
