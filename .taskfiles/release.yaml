@@ -61,44 +61,48 @@ tasks:
   # --- App release --------------------------------------------------------
 
   app:changelog:
-    desc: Regenerate CHANGELOG.md through VERSION, commit it, and advance main. Usage - task release:app:changelog VERSION=v0.1.0
+    desc: Regenerate CHANGELOG.md through VERSION, commit it, and advance main. Usage - task release:app:changelog VERSION=0.1.0
     requires:
       vars: [VERSION]
+    vars:
+      V: '{{trimPrefix "v" .VERSION}}'
     preconditions:
       # Also on app:tag, and needed on both: release:app runs this half first,
       # so a guard only on the tag lets a bad VERSION commit a changelog before
       # anything checks it. release:chart is safe by luck of ordering — its
       # guarded half is the one that runs first.
-      - sh: 'echo "{{.VERSION}}" | grep -qE "^v[0-9]+\.[0-9]+\.[0-9]+"'
-        msg: "VERSION must look like v0.1.0 or v0.1.0-alpha.1"
+      - sh: 'echo "{{.V}}" | grep -qE "^[0-9]+\.[0-9]+\.[0-9]+"'
+        msg: "VERSION must look like 0.1.0 or 0.1.0-alpha.1 (a leading v is accepted and stripped)"
     cmds:
       - task: _commit
         vars:
-          MESSAGE: 'docs(changelog): {{.VERSION}}'
+          MESSAGE: 'docs(changelog): v{{.V}}'
           FILE: CHANGELOG.md
-          CMD: "git-cliff --tag {{.VERSION}} --exclude-path '{{.CHART_PATHS}}' -o CHANGELOG.md"
+          CMD: "git-cliff --tag v{{.V}} --exclude-path '{{.CHART_PATHS}}' -o CHANGELOG.md"
 
   app:tag:
-    desc: Cut an app release — tag main v*.*.* and push it, triggering changelog, gh release and OCI image. Usage - task release:app:tag VERSION=v0.1.0
+    desc: Cut an app release — tag main v*.*.* and push it, triggering changelog, gh release and OCI image. Usage - task release:app:tag VERSION=0.1.0
     requires:
       vars: [VERSION]
+    vars:
+      V: '{{trimPrefix "v" .VERSION}}'
     preconditions:
       # A bad tag pushes fine but matches no CI glob — nothing releases. Fail first.
-      - sh: 'echo "{{.VERSION}}" | grep -qE "^v[0-9]+\.[0-9]+\.[0-9]+"'
-        msg: "VERSION must look like v0.1.0 or v0.1.0-alpha.1"
+      - sh: 'echo "{{.V}}" | grep -qE "^[0-9]+\.[0-9]+\.[0-9]+"'
+        msg: "VERSION must look like 0.1.0 or 0.1.0-alpha.1 (a leading v is accepted and stripped)"
       # Read the tag target, not the working copy: CHANGELOG.md is only in the
       # release once it is committed, and an uncommitted one must not pass.
-      - sh: 'V="{{.VERSION}}"; git show main:CHANGELOG.md 2>/dev/null | grep -q "^## \[${V#v}\]"'
-        msg: "main has no CHANGELOG.md section for {{.VERSION}} — run: task release:app:changelog VERSION={{.VERSION}}"
+      - sh: 'git show main:CHANGELOG.md 2>/dev/null | grep -q "^## \[{{.V}}\]"'
+        msg: "main has no CHANGELOG.md section for v{{.V}} — run: task release:app:changelog VERSION={{.V}}"
     # The chart is NOT released here — it versions independently. Operators
     # deploy this image by setting image.tag in their values; the chart has
     # no appVersion and never picks a tag for them.
     cmds:
       - task: _tag
-        vars: {TAG: '{{.VERSION}}'}
+        vars: {TAG: 'v{{.V}}'}
 
   app:
-    desc: Cut an app release end to end — changelog, commit, advance main, tag and push. Usage - task release:app VERSION=v3.0.0
+    desc: Cut an app release end to end — changelog, commit, advance main, tag and push. Usage - task release:app VERSION=3.0.0
     requires:
       vars: [VERSION]
     # Same trade as release:chart: run the halves apart to read the generated
@@ -117,23 +121,25 @@ tasks:
     desc: Bump the chart version, regenerate the chart CHANGELOG, commit both on their own revision and advance main. Usage - task release:chart:bump VERSION=2.1.0
     requires:
       vars: [VERSION]
+    vars:
+      V: '{{trimPrefix "v" .VERSION}}'
     preconditions:
-      - sh: 'echo "{{.VERSION}}" | grep -qE "^[0-9]+\.[0-9]+\.[0-9]+$"'
-        msg: "VERSION must look like 2.1.0 — no leading v, release:chart:tag adds the chart-v prefix"
+      - sh: 'echo "{{.V}}" | grep -qE "^[0-9]+\.[0-9]+\.[0-9]+$"'
+        msg: "VERSION must look like 2.1.0 (a leading v is accepted and stripped)"
     # Bump against the diff, not against the version already there — a renovate
     # deps PR bumps the patch itself, so a feature landing after it inherits a
     # patch number that claims nothing shipped.
     cmds:
       - task: _commit
         vars:
-          MESSAGE: 'chore(helm): chart v{{.VERSION}}'
+          MESSAGE: 'chore(helm): chart v{{.V}}'
           FILE: '{{.CHART}} {{.CHART_DIR}}/CHANGELOG.md'
           # One revision for the bump and the changelog: chart:tag reads both
           # off main, and helm packages the whole chart dir, so the CHANGELOG
           # ships inside the tarball Artifact Hub renders.
           CMD: >-
-            sed -i 's/^version: .*/version: {{.VERSION}}/' {{.CHART}} &&
-            git-cliff --config cliff.chart.toml --tag chart-v{{.VERSION}}
+            sed -i 's/^version: .*/version: {{.V}}/' {{.CHART}} &&
+            git-cliff --config cliff.chart.toml --tag chart-v{{.V}}
             --include-path '{{.CHART_PATHS}}' -o {{.CHART_DIR}}/CHANGELOG.md
 
   chart:tag:
@@ -173,7 +179,7 @@ tasks:
   # Requires `docker login ghcr.io` and `helm registry login ghcr.io`.
 
   image:
-    desc: Build + push multi-arch OCI image to GHCR (usage - task release:image VERSION=v0.1.0-alpha.1)
+    desc: Build + push multi-arch OCI image to GHCR (usage - task release:image VERSION=0.1.0-alpha.1)
     requires:
       vars: [VERSION]
     vars:
@@ -203,7 +209,7 @@ tasks:
       oci://ghcr.io/datahearth/charts
 
   default:
-    desc: Local k8s-deployable release - image at VERSION + chart at its own Chart.yaml version. Usage - task release VERSION=v0.1.0-alpha.1
+    desc: Local k8s-deployable release - image at VERSION + chart at its own Chart.yaml version. Usage - task release VERSION=0.1.0-alpha.1
     requires:
       vars: [VERSION]
     cmds:
