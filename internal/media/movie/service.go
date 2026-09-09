@@ -705,7 +705,7 @@ func (s *Service) Delete(
 		}
 		root := config.Get().Library.MoviePath
 		for _, f := range files {
-			if err := library.RemoveMediaFile(f.Path, root); err != nil {
+			if err := library.RemoveMediaFile(ctx, f.Path, root); err != nil {
 				slog.WarnContext(ctx, "delete movie file failed",
 					"movie.id", id, "path", f.Path, "error", err)
 			}
@@ -759,7 +759,7 @@ func (s *Service) DeleteFile(
 		}
 		return otelx.RecordSpanError(span, fmt.Errorf("find media_file: %w", err))
 	}
-	if err := library.RemoveMediaFile(
+	if err := library.RemoveMediaFile(ctx,
 		mf.Path, config.Get().Library.MoviePath,
 	); err != nil {
 		slog.WarnContext(ctx, "delete media file from disk failed",

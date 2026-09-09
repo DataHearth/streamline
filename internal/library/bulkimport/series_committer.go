@@ -89,6 +89,8 @@ func (s *Service) runCommitSeries(ctx context.Context, scan *ent.ImportScan) {
 		"commit.failed_count",
 		failed,
 	)
+	countCommit(ctx, "series", "success", int64(success))
+	countCommit(ctx, "series", "failed", int64(failed))
 }
 
 // commitShow adopts one show folder: resolve/create the show, then link each
@@ -159,6 +161,14 @@ func (s *Service) commitShow(
 			if rmErr := os.Remove(mf.Path); rmErr != nil && !os.IsNotExist(rmErr) {
 				slog.WarnContext(ctx, "series adopt: remove old file failed",
 					"path", mf.Path, "error", rmErr)
+			} else if rmErr == nil {
+				// The failure path was logged and the success path was not, so
+				// the case that actually deleted a file left no trace — and
+				// "where did my old copy go" is asked about exactly that one.
+				slog.InfoContext(ctx, "series adopt: replaced an existing file",
+					"episode.id", target.ID,
+					"old_path", mf.Path,
+					"new_path", f)
 			}
 			if dErr := s.store.DeleteMediaFile(ctx, mf.ID); dErr != nil {
 				slog.WarnContext(ctx, "series adopt: delete replaced file failed",

@@ -9,10 +9,12 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/datahearth/streamline/ent"
 	entimportscan "github.com/datahearth/streamline/ent/importscan"
+	entimportscanshow "github.com/datahearth/streamline/ent/importscanshow"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/library"
 )
@@ -62,6 +64,8 @@ func (s *Service) runScanSeries(ctx context.Context, scan *ent.ImportScan) {
 	}
 
 	queue := make([]db.CreateImportScanShowParams, 0, len(entries))
+	tally := map[entimportscanshow.Classification]int{}
+	var walkErrors, lookupErrors int
 	lastPoll := time.Now()
 	for _, e := range entries {
 		if time.Since(lastPoll) > cancellationPollEvery {
@@ -77,6 +81,7 @@ func (s *Service) runScanSeries(ctx context.Context, scan *ent.ImportScan) {
 		folder := filepath.Join(scan.SourcePath, e.Name())
 		files, lerr := library.ListVideoFilesRecursive(folder)
 		if lerr != nil {
+			walkErrors++
 			slog.WarnContext(ctx, "series scan: folder walk failed",
 				"folder", folder, "error", lerr)
 		}
@@ -87,10 +92,12 @@ func (s *Service) runScanSeries(ctx context.Context, scan *ent.ImportScan) {
 		p := library.Parse(e.Name())
 		hits, herr := s.tvmeta.SearchSeries(ctx, p.Title)
 		if herr != nil {
+			lookupErrors++
 			slog.WarnContext(ctx, "series scan: tvdb lookup failed",
 				"folder", e.Name(), "error", herr)
 		}
 		c := ClassifyShow(folder, p.Title, p.Year, hits, trackedByTVDB)
+		tally[c.Kind]++
 		queue = append(queue, BuildShowParams(folder, p, c, len(files)))
 
 		if err := s.store.IncrementImportScanProgress(ctx, scan.ID, 1); err != nil {
@@ -121,8 +128,28 @@ func (s *Service) runScanSeries(ctx context.Context, scan *ent.ImportScan) {
 		slog.ErrorContext(ctx, "series scan: failed to flip scan to awaiting_review",
 			"scan.id", scan.ID, "error", err)
 	}
+	// Same split as the movie scanner, for the same reason: "shows.queued: 60"
+	// reads identically whether TVDB is down or the library already holds
+	// every one of them. The error tallies are what the movie side already
+	// counts and the series side did not, so an alert built on the hygiene
+	// counters silently had no series coverage.
 	slog.InfoContext(ctx, "series scan finished",
-		"scan.id", scan.ID, "shows.queued", len(queue))
+		"scan.id", scan.ID,
+		"shows.queued", len(queue),
+		"scan.confirmed", tally[entimportscanshow.ClassificationConfirmed],
+		"scan.existing", tally[entimportscanshow.ClassificationExisting],
+		"scan.ambiguous", tally[entimportscanshow.ClassificationAmbiguous],
+		"scan.unmatched", tally[entimportscanshow.ClassificationUnmatched],
+		"scan.walk_errors", walkErrors,
+		"scan.tvdb_lookup_errors", lookupErrors)
+	for kind, n := range tally {
+		scanClassified.Add(ctx, int64(n), metric.WithAttributes(
+			attribute.String("classification", string(kind)),
+			attribute.String("kind", "series"),
+		))
+	}
+	countCommit(ctx, "series", "walk_error", int64(walkErrors))
+	countCommit(ctx, "series", "tvdb_lookup_error", int64(lookupErrors))
 }
 
 // trackedShowsByTVDB maps tvdb_id → tracked tvshow id so the classifier can flag

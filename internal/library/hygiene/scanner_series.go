@@ -71,6 +71,10 @@ func (s *Service) RunSeriesOrphanScan(ctx context.Context) error {
 		p := library.Parse(e.Name())
 		hits, herr := s.tvmeta.SearchSeries(ctx, p.Title)
 		if herr != nil {
+			// The movie orphan scan counts its match errors; this side only
+			// logged them, so a TVDB outage spiking these lines produced no
+			// metric and nothing paged until someone noticed missing shows.
+			seriesOrphanLookupFailed.Add(ctx, 1)
 			slog.WarnContext(ctx, "series tvdb lookup failed",
 				"folder", e.Name(), "error", herr)
 		}
@@ -84,6 +88,7 @@ func (s *Service) RunSeriesOrphanScan(ctx context.Context) error {
 	if len(queue) == 0 {
 		return nil
 	}
+	seriesOrphanQueued.Add(ctx, int64(len(queue)))
 	scanID, err := s.openReviewScanID(
 		ctx,
 		s.cfg.SeriesPath,
@@ -142,6 +147,7 @@ func (s *Service) trackedShowsByTVDB(
 func gatherVideoFiles(ctx context.Context, root string) []string {
 	files, err := library.ListVideoFilesRecursive(root)
 	if err != nil {
+		seriesOrphanWalkErrors.Add(ctx, 1)
 		slog.WarnContext(ctx, "series scan: folder walk failed",
 			"folder", root, "error", err)
 	}

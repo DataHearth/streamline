@@ -188,9 +188,16 @@ func (s *Service) revertMovie(ctx context.Context, mediaFileID, movieID uint32) 
 			"media_file.id", mediaFileID, "movie.id", movieID, "error", err)
 		return
 	}
+	// The id belongs in the log, not on the counter: as a metric attribute it
+	// is one time series per movie in the library.
 	driftReverted.Add(ctx, 1, metric.WithAttributes(
-		attribute.Int64("movie.id", int64(movieID)),
+		attribute.String("media.kind", "movie"),
 	))
+	// deleteOrphan below logs its own removals; this one only had the counter,
+	// so "why did this movie go back to wanted overnight" was answerable from
+	// the events table and not from the log stream an operator actually greps.
+	slog.InfoContext(ctx, "drift reverted media file",
+		"media_file.id", mediaFileID, "movie.id", movieID)
 }
 
 func (s *Service) revertEpisode(ctx context.Context, mediaFileID, episodeID uint32) {
@@ -204,8 +211,10 @@ func (s *Service) revertEpisode(ctx context.Context, mediaFileID, episodeID uint
 		return
 	}
 	driftReverted.Add(ctx, 1, metric.WithAttributes(
-		attribute.Int64("episode.id", int64(episodeID)),
+		attribute.String("media.kind", "episode"),
 	))
+	slog.InfoContext(ctx, "drift reverted media file",
+		"media_file.id", mediaFileID, "episode.id", episodeID)
 }
 
 // deleteOrphan reaps a row whose owner is gone. Movie deletes predating the

@@ -153,6 +153,8 @@ func (s *Service) runCommit(ctx context.Context, scan *ent.ImportScan) {
 		"commit.failed_count",
 		failedCount,
 	)
+	countCommit(ctx, "movie", "success", int64(successCount))
+	countCommit(ctx, "movie", "failed", int64(failedCount))
 }
 
 func (s *Service) commitOne(
@@ -281,6 +283,14 @@ func (s *Service) commitAttach(
 		if err := os.Remove(mf.Path); err != nil && !os.IsNotExist(err) {
 			slog.WarnContext(ctx, "attach replace: remove old file failed",
 				"path", mf.Path, "error", err)
+		} else if err == nil {
+			// Only the failure was logged, so the deletion that actually
+			// happened left nothing behind to explain a file disappearing
+			// mid-commit.
+			slog.InfoContext(ctx, "attach replace: replaced an existing file",
+				"movie.id", f.ExistingMovieID,
+				"old_path", mf.Path,
+				"new_path", f.SourcePath)
 		}
 		if err := s.store.DeleteMediaFile(ctx, mf.ID); err != nil {
 			return commitFail("delete replaced file", err, 0)

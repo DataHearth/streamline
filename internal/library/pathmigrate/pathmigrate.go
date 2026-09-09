@@ -16,6 +16,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/datahearth/streamline/internal/config"
@@ -25,8 +26,22 @@ import (
 	"github.com/datahearth/streamline/internal/otelx"
 )
 
-var tracer = otel.Tracer(
-	"github.com/datahearth/streamline/internal/library/pathmigrate",
+var (
+	tracer = otel.Tracer(
+		"github.com/datahearth/streamline/internal/library/pathmigrate",
+	)
+	meter = otel.Meter(
+		"github.com/datahearth/streamline/internal/library/pathmigrate",
+	)
+
+	runs = otelx.Must(meter.Int64Counter(
+		"streamline.library.pathmigrate.runs",
+		metric.WithDescription("Library path migrations by outcome"),
+	))
+	filesMoved = otelx.Must(meter.Int64Counter(
+		"streamline.library.pathmigrate.files_moved",
+		metric.WithDescription("Files relocated by a library path migration"),
+	))
 )
 
 // Root names the configured library root a migration targets.
@@ -491,10 +506,20 @@ func (s *Service) finish(ctx context.Context, err error) {
 	s.mu.Unlock()
 
 	if err != nil {
+		runs.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("outcome", "failed"),
+		))
 		slog.ErrorContext(ctx, "library path migration failed",
 			"error", err, "migration.done", done, "migration.skipped", skipped)
 		return
 	}
+	// A rare, operator-triggered, whole-library file move. It reported only
+	// through logs and a Status struct someone had to remember to poll, so a
+	// failed migration surfaced on no dashboard at all.
+	runs.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("outcome", "completed"),
+	))
+	filesMoved.Add(ctx, int64(done))
 	slog.InfoContext(ctx, "library path migration finished",
 		"migration.done", done, "migration.skipped", skipped)
 }

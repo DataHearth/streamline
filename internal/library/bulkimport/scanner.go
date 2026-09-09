@@ -13,10 +13,12 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/datahearth/streamline/ent"
 	entimportscan "github.com/datahearth/streamline/ent/importscan"
+	entimportscanfile "github.com/datahearth/streamline/ent/importscanfile"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/otelx"
@@ -218,7 +220,8 @@ func (s *Service) runScan(ctx context.Context, scan *ent.ImportScan) {
 		alreadyAdded = map[uint32]uint32{}
 	}
 
-	if !s.runMatchPhase(ctx, scan, candidates, alreadyAdded) {
+	tally, ok := s.runMatchPhase(ctx, scan, candidates, alreadyAdded)
+	if !ok {
 		return
 	}
 
@@ -232,16 +235,27 @@ func (s *Service) runScan(ctx context.Context, scan *ent.ImportScan) {
 		slog.ErrorContext(ctx, "bulk import: failed to flip scan to awaiting_review",
 			"scan.id", scan.ID, "error", err)
 	}
+	// The split is what says whether TMDB matching is broadly failing (mostly
+	// unmatched/ambiguous) or the folder is simply full of things the library
+	// already has (mostly existing). A bare total says only that 400 files
+	// need review, which is the same number in both cases and points nowhere.
 	slog.InfoContext(
 		ctx,
 		"bulk import scan finished",
-		"scan.id",
-		scan.ID,
-		"scan.outcome",
-		"awaiting_review",
-		"scan.total_count",
-		total,
+		"scan.id", scan.ID,
+		"scan.outcome", "awaiting_review",
+		"scan.total_count", total,
+		"scan.confirmed", tally[entimportscanfile.ClassificationConfirmed],
+		"scan.existing", tally[entimportscanfile.ClassificationExisting],
+		"scan.ambiguous", tally[entimportscanfile.ClassificationAmbiguous],
+		"scan.unmatched", tally[entimportscanfile.ClassificationUnmatched],
 	)
+	for kind, n := range tally {
+		scanClassified.Add(ctx, int64(n), metric.WithAttributes(
+			attribute.String("classification", string(kind)),
+			attribute.String("kind", "movie"),
+		))
+	}
 }
 
 func walkSourceDir(ctx context.Context, root string) ([]scannedCandidate, error) {
@@ -288,8 +302,9 @@ func (s *Service) runMatchPhase(
 	scan *ent.ImportScan,
 	candidates []scannedCandidate,
 	alreadyAdded map[uint32]uint32,
-) bool {
+) (map[entimportscanfile.Classification]int, bool) {
 	sem := make(chan struct{}, scanConcurrency)
+	tally := map[entimportscanfile.Classification]int{}
 	var batchMu sync.Mutex
 	batch := make([]db.CreateImportScanFileParams, 0, bulkInsertBatchSize)
 	var wg sync.WaitGroup
@@ -338,6 +353,7 @@ func (s *Service) runMatchPhase(
 			defer func() { <-sem }()
 			row := s.classifyOne(ctx, c, alreadyAdded)
 			batchMu.Lock()
+			tally[row.Classification]++
 			batch = append(batch, row)
 			if len(batch) >= bulkInsertBatchSize {
 				flush()
@@ -349,7 +365,7 @@ func (s *Service) runMatchPhase(
 	batchMu.Lock()
 	flush()
 	batchMu.Unlock()
-	return stillActive
+	return tally, stillActive
 }
 
 func (s *Service) classifyOne(

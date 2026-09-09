@@ -1,6 +1,7 @@
 package library
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 
@@ -29,7 +30,7 @@ var _ = Describe("RemoveMediaFile", Label("unit", "library"), func() {
 		touch(filepath.Join(dir, "Amélie (2001) [1080p].en.srt"))
 		touch(filepath.Join(dir, "Amélie (2001) [1080p]-thumb.jpg"))
 
-		Expect(RemoveMediaFile(media, root)).To(Succeed())
+		Expect(RemoveMediaFile(context.Background(), media, root)).To(Succeed())
 
 		Expect(dir).NotTo(BeADirectory())
 		Expect(root).To(BeADirectory())
@@ -40,7 +41,7 @@ var _ = Describe("RemoveMediaFile", Label("unit", "library"), func() {
 		media := touch(filepath.Join(dir, "Movie [1080p].mkv"))
 		keep := touch(filepath.Join(dir, "poster.jpg"))
 
-		Expect(RemoveMediaFile(media, root)).To(Succeed())
+		Expect(RemoveMediaFile(context.Background(), media, root)).To(Succeed())
 
 		Expect(media).NotTo(BeAnExistingFile())
 		Expect(keep).To(BeAnExistingFile())
@@ -51,7 +52,7 @@ var _ = Describe("RemoveMediaFile", Label("unit", "library"), func() {
 		media := touch(filepath.Join(dir, "Show - S01E01 - Pilot.mkv"))
 		other := touch(filepath.Join(dir, "Show - S01E01 - Pilot - Part 2.mkv"))
 
-		Expect(RemoveMediaFile(media, root)).To(Succeed())
+		Expect(RemoveMediaFile(context.Background(), media, root)).To(Succeed())
 
 		Expect(media).NotTo(BeAnExistingFile())
 		Expect(other).To(BeAnExistingFile())
@@ -61,14 +62,20 @@ var _ = Describe("RemoveMediaFile", Label("unit", "library"), func() {
 		dir := filepath.Join(root, "Show", "Season 01")
 		media := touch(filepath.Join(dir, "Show - S01E01.mkv"))
 
-		Expect(RemoveMediaFile(media, root)).To(Succeed())
+		Expect(RemoveMediaFile(context.Background(), media, root)).To(Succeed())
 
 		Expect(filepath.Join(root, "Show")).NotTo(BeADirectory())
 		Expect(root).To(BeADirectory())
 	})
 
 	It("is a no-op when the folder is already gone", func() {
-		Expect(RemoveMediaFile(filepath.Join(root, "gone", "x.mkv"), root)).
+		Expect(
+			RemoveMediaFile(
+				context.Background(),
+				filepath.Join(root, "gone", "x.mkv"),
+				root,
+			),
+		).
 			To(Succeed())
 	})
 })

@@ -43,6 +43,13 @@ var (
 	mediaProbeProbed  metric.Int64Counter
 	mediaProbeFailed  metric.Int64Counter
 	mediaProbeMissing metric.Int64Counter
+
+	// The series orphan scan had none of the counters its movie counterpart
+	// has, so any alert built on the orphan_scan family silently covered only
+	// half the library.
+	seriesOrphanQueued       metric.Int64Counter
+	seriesOrphanWalkErrors   metric.Int64Counter
+	seriesOrphanLookupFailed metric.Int64Counter
 )
 
 func init() {
@@ -89,6 +96,17 @@ func init() {
 	)
 	mediaProbeMissing = otelx.Must(
 		meter.Int64Counter("streamline.hygiene.media_probe.missing"),
+	)
+	seriesOrphanQueued = otelx.Must(
+		meter.Int64Counter("streamline.hygiene.series_orphan_scan.queued"),
+	)
+	seriesOrphanWalkErrors = otelx.Must(
+		meter.Int64Counter("streamline.hygiene.series_orphan_scan.walk_errors"),
+	)
+	seriesOrphanLookupFailed = otelx.Must(
+		meter.Int64Counter(
+			"streamline.hygiene.series_orphan_scan.tvdb_lookup_failed",
+		),
 	)
 
 	ctx := context.Background()

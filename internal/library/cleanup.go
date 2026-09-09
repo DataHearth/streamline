@@ -1,7 +1,9 @@
 package library
 
 import (
+	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,7 +14,12 @@ import (
 // `<stem>.en.srt` or `<stem>-thumb.jpg` — then prunes the directories the
 // deletion left empty, stopping below root so a library root survives even
 // when it holds nothing else.
-func RemoveMediaFile(path, root string) error {
+//
+// Takes a context solely so the deletion is auditable. It removes files and
+// walks directories away irreversibly, and callers only ever logged the error
+// path — so the normal case, the one that actually deleted things, left no
+// record of which sidecars went with the file or how far up the prune walked.
+func RemoveMediaFile(ctx context.Context, path, root string) error {
 	dir := filepath.Dir(path)
 	base := filepath.Base(path)
 	stem := strings.TrimSuffix(base, filepath.Ext(base))
@@ -24,6 +31,7 @@ func RemoveMediaFile(path, root string) error {
 		}
 		return fmt.Errorf("read %s: %w", dir, err)
 	}
+	var sidecars int
 	for _, e := range entries {
 		if e.IsDir() {
 			continue
@@ -36,8 +44,15 @@ func RemoveMediaFile(path, root string) error {
 			!os.IsNotExist(err) {
 			return fmt.Errorf("remove %s: %w", name, err)
 		}
+		if name != base {
+			sidecars++
+		}
 	}
-	PruneEmptyDirs(dir, root)
+	pruned := PruneEmptyDirs(ctx, dir, root)
+	slog.InfoContext(ctx, "media file removed",
+		"file.path", path,
+		"sidecars_removed", sidecars,
+		"dirs_pruned", pruned)
 	return nil
 }
 
@@ -61,12 +76,21 @@ func isSidecar(name, stem string) bool {
 // A non-empty directory is exactly what should stop the walk, and os.Remove
 // reporting ENOTEMPTY is how that shows up — the error is the exit condition,
 // not a failure. root is never removed, nor is anything outside it.
-func PruneEmptyDirs(dir, root string) {
+//
+// Returns how many directories it removed, and names each one: the walk can
+// climb several levels, and a root computed slightly wrong takes real
+// directories with it. Without the trail there was nothing afterwards to say
+// which ones went.
+func PruneEmptyDirs(ctx context.Context, dir, root string) int {
 	root = filepath.Clean(root)
 	prefix := root + string(filepath.Separator)
+	var pruned int
 	for dir = filepath.Clean(dir); strings.HasPrefix(dir, prefix); dir = filepath.Dir(dir) {
 		if err := os.Remove(dir); err != nil {
-			return
+			return pruned
 		}
+		pruned++
+		slog.InfoContext(ctx, "pruned empty library directory", "dir.path", dir)
 	}
+	return pruned
 }
