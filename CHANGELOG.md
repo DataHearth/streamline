@@ -377,7 +377,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - auth: Gate OIDC account linking and cap the roles a provider may grant
 - auth: Close the login enumeration oracles and the stored-hash DoS
 - posters: Cap the artwork fetch at 20 MB
-- deploy: Stop automounting the ServiceAccount token
 - middleware: Send no-store and COOP on non-static responses
 - middleware: Accept a same-origin GET carrying only a Referer
 - download: Contain torrent-name paths and serialize entity imports
