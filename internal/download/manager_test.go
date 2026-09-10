@@ -21,12 +21,15 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
+	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
+	"github.com/datahearth/streamline/internal/testutil/dbtest"
 )
 
 // downloadSpans captures everything the package tracer emits. It is installed
@@ -1450,6 +1453,98 @@ var _ = Describe(
 				// SetDownloadRecordWantedEpisodes/SetDownloadRecordSelection
 				// carry no expectation above: calling either would panic the
 				// mock, so reaching here proves no DB write happened.
+			},
+		)
+
+		It(
+			"widening across two seasons records one series-scoped "+
+				"grab_widened event",
+			func() {
+				selectiveConfig()
+				entClient := dbtest.SetupTestDB(ctx)
+				DeferCleanup(entClient.Close)
+				events.Register(entClient)
+
+				show := entClient.TVShow.Create().
+					SetTitle("Show").
+					SetOriginalTitle("Show").
+					SetYear(2020).
+					SetTvdbID(1).
+					SaveX(ctx)
+
+				liveShow := &ent.TVShow{
+					ID:   show.ID,
+					Type: tvshow.TypeStandard,
+					Edges: ent.TVShowEdges{Seasons: []*ent.Season{
+						{Number: 1, Edges: ent.SeasonEdges{
+							Episodes: []*ent.Episode{{ID: 21, Number: 1}},
+						}},
+						{Number: 2, Edges: ent.SeasonEdges{
+							Episodes: []*ent.Episode{
+								{ID: 23, Number: 1},
+								{ID: 24, Number: 2},
+							},
+						}},
+					}},
+				}
+
+				live := &ent.DownloadRecord{
+					ID:                 42,
+					Title:              "Show S02",
+					TorrentHash:        hash,
+					DownloadClientName: "embedded",
+					Status:             downloadrecord.StatusCompleted,
+					WantedEpisodes:     []uint32{21},
+					SelectionState:     downloadrecord.SelectionStateApplied,
+				}
+				client.listFilesResult = []TorrentFile{
+					{Index: 0, Path: "Show.S02E01.mkv", Size: aboveFloor},
+					{Index: 1, Path: "Show.S02E02.mkv", Size: aboveFloor},
+				}
+				store.EXPECT().
+					FindWidenableDownloadRecordByHash(mock.Anything, hash).
+					Return(live, nil).Once()
+				store.EXPECT().
+					TVShowForEpisode(mock.Anything, uint32(23)).
+					Return(liveShow, nil).Once()
+				store.EXPECT().
+					SetDownloadRecordWantedEpisodes(
+						mock.Anything, uint32(42), []uint32{21, 23, 24},
+					).
+					Return(nil).Once()
+				store.EXPECT().
+					SetDownloadRecordSelection(
+						mock.Anything, uint32(42), downloadrecord.SelectionStateApplied,
+						[]int{0, 1}, 2*aboveFloor,
+					).
+					Return(nil).Once()
+				store.EXPECT().
+					MarkEpisodeDownloading(mock.Anything, uint32(23)).
+					Return(true, nil).Once()
+				store.EXPECT().
+					MarkEpisodeDownloading(mock.Anything, uint32(24)).
+					Return(true, nil).Once()
+				store.EXPECT().
+					UpdateDownloadRecordStatus(
+						mock.Anything, uint32(42), downloadrecord.StatusDownloading,
+					).
+					Return(nil).Once()
+
+				result := indexer.SearchResult{
+					Title: "Show S02", Download: "magnet:?xt=urn:btih:" + hash,
+				}
+				_, err := mgr.GrabEpisode(ctx, result, 23, []uint32{23, 24})
+				Expect(err).NotTo(HaveOccurred())
+
+				evs := entClient.MediaEvent.Query().
+					Where(mediaevent.TypeEQ(mediaevent.Type(events.TypeGrabWidened))).
+					AllX(ctx)
+				Expect(evs).To(HaveLen(1))
+				Expect(evs[0].Payload).To(HaveKeyWithValue("episodes", float64(2)))
+				Expect(
+					evs[0].Payload,
+				).To(HaveKeyWithValue("release_title", "Show S02"))
+				Expect(evs[0].Payload["seasons"]).To(ConsistOf(float64(2)))
 			},
 		)
 	},

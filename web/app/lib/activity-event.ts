@@ -38,9 +38,10 @@ const pad = (n: number) => String(n).padStart(2, "0");
 
 /**
  * Resolves which of an event's three possible owners is set and renders it as
- * one row. A series-scoped search carries the seasons it touched in its
- * payload; when it touched exactly one, saying so is more useful than the bare
- * show title, and when it touched several the count already reads as "all".
+ * one row. A series-scoped event carries the seasons and episode count it
+ * covered in its payload; when it touched exactly one season, saying so is
+ * more useful than the bare show title, and the episode count (bulk imports,
+ * renames, grab widenings, drift) rides alongside it — see `seriesQualifier`.
  */
 export function eventSubject(event: ActivityEvent): EventSubject {
 	if (event.movie) {
@@ -58,19 +59,34 @@ export function eventSubject(event: ActivityEvent): EventSubject {
 		return {
 			title: event.series.title,
 			href: `/series/${event.series.id}`,
-			detail: seasonLabel(event.payload),
+			detail: seriesQualifier(event.payload),
 		};
 	}
 	return { title: "Unknown" };
 }
 
-function seasonLabel(
+/**
+ * Qualifier for a series-scoped event: the season when the payload names
+ * exactly one, the episode count when the payload has one, both joined when
+ * both are present. A search with no count still reads as "Season N" alone —
+ * that is the pre-existing behaviour for `searched`, which carries seasons
+ * but no episode count.
+ */
+function seriesQualifier(
 	payload: Record<string, unknown> | undefined,
 ): string | undefined {
 	const seasons = payload?.seasons;
-	if (!Array.isArray(seasons) || seasons.length !== 1) return undefined;
-	const n = seasons[0];
-	return typeof n === "number" ? `Season ${n}` : undefined;
+	const season =
+		Array.isArray(seasons) && seasons.length === 1 && typeof seasons[0] === "number"
+			? i18n.season_number({ number: seasons[0] })
+			: undefined;
+	const episodes = payload?.episodes;
+	if (typeof episodes !== "number") return season;
+	const count =
+		episodes === 1
+			? i18n.activity_one_episode()
+			: i18n.activity_n_episodes({ count: episodes });
+	return season ? `${season} · ${count}` : count;
 }
 
 /**

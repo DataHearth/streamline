@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 
@@ -21,6 +22,7 @@ import (
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/otelx"
@@ -612,6 +614,11 @@ func (w *Worker) importEpisodeRecord(
 	}
 
 	matched, skippedExisting := 0, 0
+	touched := map[uint16]struct{}{}
+	// One imported event stands for the whole pack, recorded below. Without
+	// this the per-file create hook wrote an activity row per episode, so a
+	// full-season grab read as twenty-odd unrelated imports.
+	ctx = events.SuppressImported(ctx)
 	for _, pf := range plan {
 		if !pf.willImport {
 			skippedExisting++
@@ -664,6 +671,7 @@ func (w *Worker) importEpisodeRecord(
 				fmt.Errorf("record episode import success: %w", err),
 			)
 		}
+		touched[pf.season] = struct{}{}
 		matched++
 	}
 	if matched == 0 {
@@ -677,6 +685,24 @@ func (w *Worker) importEpisodeRecord(
 	}
 	slog.InfoContext(ctx, "imported season pack",
 		"tvshow.id", show.ID, "matched", matched, "files", len(files))
+
+	seasons := make([]uint16, 0, len(touched))
+	for n := range touched {
+		seasons = append(seasons, n)
+	}
+	slices.Sort(seasons)
+	if err := events.Record(
+		ctx, nil, events.TypeImported, events.ScopeSeries, show.ID,
+		map[string]any{
+			"seasons":       seasons,
+			"episodes":      matched,
+			"release_title": rec.Title,
+			"source":        "pack",
+		},
+	); err != nil {
+		slog.WarnContext(ctx, "season pack: record imported event failed",
+			"tvshow.id", show.ID, "error", err)
+	}
 
 	w.markRequestsAvailable(ctx, "tvshow", show.TvdbID)
 	w.refreshMediaServers(ctx, "series", libCfg.SeriesPath)

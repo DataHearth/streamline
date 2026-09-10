@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -1067,21 +1068,44 @@ func (d *download) widenSelection(
 	// live.WantedEpisodes were marked at their original grab. The guard
 	// inside MarkEpisodeDownloading (moves only from "wanted") is what keeps
 	// this safe for a replace target already sitting at "available".
+	episodeSeasons := make(map[uint32]uint16)
+	for _, se := range show.Edges.Seasons {
+		for _, ep := range se.Edges.Episodes {
+			episodeSeasons[ep.ID] = se.Number
+		}
+	}
+	seenSeason := make(map[uint16]struct{})
+	var widenedSeasons []uint16
+	widened := 0
 	for _, id := range added {
 		if _, merr := d.db.MarkEpisodeDownloading(ctx, id); merr != nil {
 			slog.WarnContext(ctx, "widen: mark episode downloading failed",
 				"episode.id", id, "error", merr)
 			continue
 		}
-		// A widen creates no new download record, so the grab hook never
-		// fires for these — from the user's side an episode started
-		// downloading and nothing said so.
+		widened++
+		if season, ok := episodeSeasons[id]; ok {
+			if _, dup := seenSeason[season]; !dup {
+				seenSeason[season] = struct{}{}
+				widenedSeasons = append(widenedSeasons, season)
+			}
+		}
+	}
+	// A widen creates no new download record, so the grab hook never fires
+	// for these — from the user's side a series started downloading more
+	// episodes and nothing said so.
+	if widened > 0 {
+		slices.Sort(widenedSeasons)
 		if err := events.Record(
-			ctx, nil, events.TypeGrabWidened, events.ScopeEpisode, id,
-			map[string]any{"release_title": live.Title},
+			ctx, nil, events.TypeGrabWidened, events.ScopeSeries, show.ID,
+			map[string]any{
+				"seasons":       widenedSeasons,
+				"episodes":      widened,
+				"release_title": live.Title,
+			},
 		); err != nil {
 			slog.WarnContext(ctx, "record widen event failed",
-				"episode.id", id, "error", err)
+				"tvshow.id", show.ID, "error", err)
 		}
 	}
 

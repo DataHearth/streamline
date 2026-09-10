@@ -245,7 +245,9 @@ func (db *DB) ListMediaFilesForDrift(
 
 // FindMediaFileWithOwners loads one row with both owner edges — the shape the
 // drift check needs once a file turns out to be missing, which is the rare
-// case worth paying an extra query for.
+// case worth paying an extra query for. The episode edge carries its season
+// and show: drift is reported per show, so the sweep needs the season number
+// and the show id, not just the episode.
 func (db *DB) FindMediaFileWithOwners(
 	ctx context.Context,
 	id uint32,
@@ -253,7 +255,9 @@ func (db *DB) FindMediaFileWithOwners(
 	return db.client.MediaFile.Query().
 		Where(mediafile.IDEQ(id)).
 		WithMovie().
-		WithEpisode().
+		WithEpisode(func(q *ent.EpisodeQuery) {
+			q.WithSeason(func(sq *ent.SeasonQuery) { sq.WithTvShow() })
+		}).
 		Only(ctx)
 }
 

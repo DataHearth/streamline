@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -19,6 +20,7 @@ import (
 	enttvshow "github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/library"
 )
 
@@ -133,6 +135,11 @@ func (s *Service) commitShow(
 		success = entimportscanshow.OutcomeAttached
 	}
 	matched := 0
+	touched := map[uint16]struct{}{}
+	// One imported event stands for the whole show, recorded below. Without
+	// this the per-file create hook wrote an activity row per episode, and a
+	// commit of a few hundred files buried every other event in the feed.
+	ctx = events.SuppressImported(ctx)
 	for _, m := range plan {
 		f, season, target := m.path, m.season, m.episode
 		parsed := library.Parse(filepath.Base(f))
@@ -215,10 +222,29 @@ func (s *Service) commitShow(
 			slog.WarnContext(ctx, "series adopt: flip episode status failed",
 				"episode.id", target.ID, "error", err)
 		}
+		touched[season] = struct{}{}
 		matched++
 	}
 	slog.InfoContext(ctx, "series adopted",
 		"tvshow.id", show.ID, "matched", matched, "files", len(files))
+	if matched > 0 {
+		seasons := make([]uint16, 0, len(touched))
+		for n := range touched {
+			seasons = append(seasons, n)
+		}
+		slices.Sort(seasons)
+		if err := events.Record(
+			ctx, nil, events.TypeImported, events.ScopeSeries, show.ID,
+			map[string]any{
+				"seasons":  seasons,
+				"episodes": matched,
+				"source":   "bulk_import",
+			},
+		); err != nil {
+			slog.WarnContext(ctx, "series adopt: record imported event failed",
+				"tvshow.id", show.ID, "error", err)
+		}
+	}
 	return success, "", show.ID
 }
 

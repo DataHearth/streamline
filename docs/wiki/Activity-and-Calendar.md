@@ -58,6 +58,8 @@ Every event names exactly one owner — `movie`, `episode` or `series`. Episode 
 
 **Monitoring a season or a whole series is likewise one event, not one per episode.** Turning a series off writes a single row saying how many episodes it moved — *Lupin · 25 episodes* — and a season toggle reads as *Lupin · Season 1 · 10 episodes*. Toggling one episode on its own still gets its own row, since that is a single deliberate action.
 
+**Renames, bulk imports, season-pack imports, widened grabs and drift on a series show as one event per series.** Like searches, a series rename, bulk-import commit, season-pack import, grab widened across episodes, or drift detection sweep writes a single event naming the seasons involved and episode count — *Show · Season 2 · 12 episodes* in the details — instead of one row per file or episode. This keeps the activity feed readable when operations span many files.
+
 Browsing releases in the manual-grab dialog records nothing — no grab happened, and the results are already on screen. The grab that follows still fires `grabbed`.
 
 Rows are purged by the `cleanup` job after `events.retention` (default 90 days).

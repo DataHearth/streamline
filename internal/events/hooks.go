@@ -162,6 +162,9 @@ func mediaFileHook() ent.Hook {
 				if !mf.Op().Is(ent.OpCreate) {
 					return val, nil
 				}
+				if importedSuppressed(ctx) {
+					return val, nil
+				}
 				var o owner
 				switch {
 				case hasID(mf.MovieID):
@@ -492,6 +495,31 @@ func SuppressFileRemoved(ctx context.Context) context.Context {
 
 func fileRemovedSuppressed(ctx context.Context) bool {
 	v, _ := ctx.Value(suppressKey{}).(bool)
+	return v
+}
+
+// suppressImportedKey marks a context whose MediaFile creates must not produce
+// an imported event. It is deliberately its own key rather than a second
+// meaning for suppressKey: a bulk commit that replaces files needs both
+// suppressions at once, and sharing the key would make either one imply the
+// other.
+type suppressImportedKey struct{}
+
+// SuppressImported marks ctx so the media-file create hook stays quiet for
+// files filed under it.
+//
+// A bulk caller — a series scan commit, a season-pack import — files tens to
+// hundreds of episodes for one operator action, and the hook cannot see that
+// it runs inside one: a 442-file commit wrote 442 activity rows. Those callers
+// record a single series-scoped imported event covering the whole batch
+// instead, which is why the per-file row has to go away rather than be
+// deduplicated afterwards.
+func SuppressImported(ctx context.Context) context.Context {
+	return context.WithValue(ctx, suppressImportedKey{}, true)
+}
+
+func importedSuppressed(ctx context.Context) bool {
+	v, _ := ctx.Value(suppressImportedKey{}).(bool)
 	return v
 }
 

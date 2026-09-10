@@ -10,6 +10,9 @@ type RenameOperation struct {
 	// EpisodeID names the episode the file belongs to, for series plans. Zero
 	// for a movie plan, whose owner is the movie the whole plan is built for.
 	EpisodeID uint32
+	// Season is the season number the episode belongs to, for series plans.
+	// Zero (and meaningless) for a movie plan.
+	Season uint16
 }
 
 // RenamePlan is the set of file moves needed to bring a title's media files in

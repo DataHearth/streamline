@@ -14,16 +14,19 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	mockdb "github.com/datahearth/streamline/internal/db/mocks"
+	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/ffmpeg"
 	mockffmpeg "github.com/datahearth/streamline/internal/ffmpeg/mocks"
 	mockimp "github.com/datahearth/streamline/internal/importer/mocks"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
+	"github.com/datahearth/streamline/internal/testutil/dbtest"
 )
 
 func seedMediaFile(dir, name string) {
@@ -749,6 +752,60 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 		Expect(w.runImport(context.Background(), 2)).To(Succeed())
 		Expect(recorded).To(HaveKey(eps[0].ID))
 		Expect(recorded).To(HaveKey(eps[1].ID))
+	})
+
+	It("season pack records one series imported event for the whole pack", func() {
+		ctx := context.Background()
+		entClient := dbtest.SetupTestDB(ctx)
+		DeferCleanup(entClient.Close)
+		events.Register(entClient)
+
+		season, eps := buildShow()
+		// The event hangs off a real row: the show the fixture describes has to
+		// exist for the media_events foreign key to hold.
+		row := entClient.TVShow.Create().
+			SetTitle("Show").SetYear(2024).SetTvdbID(4242).SaveX(ctx)
+		season.Edges.TvShow.ID = row.ID
+
+		src := filepath.Join(tmp, "pack-one-event")
+		Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+		seedMediaFile(src, "Show.S01E01.1080p.mkv")
+		seedMediaFile(src, "Show.S01E02.1080p.mkv")
+		rec := episodeRecord(2, src, season, eps[0])
+		rec.Title = "Show.S01.1080p.WEB-DL-X"
+
+		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(2)).
+			Return(rec, nil).Once()
+		storeMk.EXPECT().FindMediaFileByEpisodeID(mock.Anything, mock.Anything).
+			Return(nil, &ent.NotFoundError{}).Twice()
+		storeMk.EXPECT().
+			RecordEpisodeImportSuccess(mock.Anything, mock.Anything).
+			Return(nil).Twice()
+		storeMk.EXPECT().
+			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
+			Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, mock.Anything, libDir).
+			Return(nil).Once()
+
+		Expect(w.runImport(ctx, 2)).To(Succeed())
+
+		evs := entClient.MediaEvent.Query().
+			Where(mediaevent.TypeEQ(mediaevent.Type(events.TypeImported))).
+			WithTvShow().
+			AllX(ctx)
+		Expect(evs).To(HaveLen(1))
+		Expect(evs[0].Edges.TvShow.ID).To(Equal(row.ID))
+		Expect(evs[0].Payload).To(
+			HaveKeyWithValue("episodes", BeNumerically("==", 2)),
+		)
+		Expect(evs[0].Payload).To(HaveKeyWithValue("source", "pack"))
+		Expect(evs[0].Payload).To(
+			HaveKeyWithValue("release_title", "Show.S01.1080p.WEB-DL-X"),
+		)
+		Expect(evs[0].Payload).To(HaveKeyWithValue(
+			"seasons", ConsistOf(BeNumerically("==", 1)),
+		))
 	})
 
 	It(

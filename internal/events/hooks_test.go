@@ -177,6 +177,43 @@ var _ = Describe("hooks via Register", Label("integration", "events"), func() {
 		Expect(evs[0].Payload).To(HaveKeyWithValue("source", "orphan"))
 	})
 
+	It("stays quiet on a create made under SuppressImported", func() {
+		movie := client.Movie.Create().
+			SetTitle("Nickel Boys").
+			SetOriginalTitle("Nickel Boys").
+			SetYear(2024).
+			SetTmdbID(1000837).
+			SaveX(ctx)
+
+		// A bulk caller records one event for the whole batch itself.
+		client.MediaFile.Create().
+			SetMovieID(movie.ID).
+			SetPath("/lib/Nickel Boys.mkv").
+			SetSize(1).
+			SaveX(SuppressImported(ctx))
+
+		Expect(eventsOfType(ctx, client, TypeImported)).To(BeEmpty())
+	})
+
+	It("suppresses imported and file_removed independently", func() {
+		movie := client.Movie.Create().
+			SetTitle("Conclave").
+			SetOriginalTitle("Conclave").
+			SetYear(2024).
+			SetTmdbID(974576).
+			SaveX(ctx)
+
+		mf := client.MediaFile.Create().
+			SetMovieID(movie.ID).
+			SetPath("/lib/Conclave.mkv").
+			SetSize(1).
+			SaveX(SuppressImported(ctx))
+		client.MediaFile.DeleteOne(mf).ExecX(SuppressImported(ctx))
+
+		Expect(eventsOfType(ctx, client, TypeImported)).To(BeEmpty())
+		Expect(eventsOfType(ctx, client, TypeFileRemoved)).To(HaveLen(1))
+	})
+
 	It(
 		"emits import_failed when ImportScanFile.outcome → failed and movie is attributable",
 		func() {

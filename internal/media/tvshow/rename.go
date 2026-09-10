@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/datahearth/streamline/ent"
@@ -80,25 +81,37 @@ func (r *RenameService) Apply(
 			return library.RenamePlan{}, otelx.RecordSpanError(span,
 				fmt.Errorf("update media_file %d: %w", op.MediaFileID, err))
 		}
-		if op.EpisodeID == 0 {
-			continue
-		}
+	}
+	if len(plan.Operations) > 0 {
 		if err := events.Record(
-			ctx, nil, events.TypeFileRenamed, events.ScopeEpisode,
-			op.EpisodeID,
+			ctx, nil, events.TypeFileRenamed, events.ScopeSeries, seriesID,
 			map[string]any{
-				"old_path":      op.From,
-				"new_path":      op.To,
-				"media_file_id": op.MediaFileID,
+				"seasons":  renamedSeasons(plan.Operations),
+				"episodes": len(plan.Operations),
 			},
 		); err != nil {
 			slog.WarnContext(ctx, "record rename event failed",
-				"episode.id", op.EpisodeID, "media_file.id", op.MediaFileID,
-				"error", err)
+				"tvshow.id", seriesID, "error", err)
 		}
 	}
 	span.SetAttributes(attribute.Int("rename.op_count", len(plan.Operations)))
 	return plan, nil
+}
+
+// renamedSeasons returns the sorted, de-duplicated season numbers touched by
+// a rename plan, for the series-scoped event payload.
+func renamedSeasons(ops []library.RenameOperation) []uint16 {
+	seen := make(map[uint16]struct{}, len(ops))
+	var seasons []uint16
+	for _, op := range ops {
+		if _, ok := seen[op.Season]; ok {
+			continue
+		}
+		seen[op.Season] = struct{}{}
+		seasons = append(seasons, op.Season)
+	}
+	slices.Sort(seasons)
+	return seasons
 }
 
 func (r *RenameService) buildPlan(
@@ -126,6 +139,7 @@ func (r *RenameService) buildPlan(
 					From:        f.Path,
 					To:          target,
 					EpisodeID:   ep.ID,
+					Season:      se.Number,
 				})
 			}
 		}

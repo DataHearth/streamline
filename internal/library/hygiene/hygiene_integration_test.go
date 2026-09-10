@@ -2,6 +2,7 @@ package hygiene
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
@@ -12,8 +13,10 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	entepisode "github.com/datahearth/streamline/ent/episode"
+	entmediaevent "github.com/datahearth/streamline/ent/mediaevent"
 	entmovie "github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/metadata"
 	metamocks "github.com/datahearth/streamline/internal/metadata/mocks"
@@ -46,6 +49,9 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 		})
 		entClient = dbtest.SetupTestDB(ctx)
 		DeferCleanup(entClient.Close)
+		// The drift specs below assert the MediaEvent rows a sweep writes, and
+		// events.Record needs the package default client the server wires up.
+		events.Register(entClient)
 		store = db.New(entClient)
 		meta = metamocks.NewMockProvider(GinkgoT())
 		imp = library.NewImportService(&cfg.Library)
@@ -201,6 +207,21 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 		refreshed, err := store.FindMovieByID(ctx, m.ID)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(refreshed.Status)).To(Equal("wanted"))
+
+		for _, t := range []entmediaevent.Type{
+			entmediaevent.TypeDriftDetected,
+			entmediaevent.TypeDriftConfirmed,
+		} {
+			evs, err := entClient.MediaEvent.Query().
+				Where(entmediaevent.TypeEQ(t)).
+				WithMovie().
+				All(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(evs).To(HaveLen(1), string(t))
+			Expect(evs[0].Edges.Movie).NotTo(BeNil(), "movie drift stays per movie")
+			Expect(evs[0].Edges.Movie.ID).To(Equal(m.ID))
+			Expect(evs[0].Payload["path"]).To(Equal(path))
+		}
 	})
 
 	It("reverts an Episode when its file disappears past the grace window", func() {
@@ -241,6 +262,87 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 		refreshed, err := entClient.Episode.Get(ctx, ep.ID)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(refreshed.Status)).To(Equal("wanted"))
+	})
+
+	It("folds a whole show's missing files into one event per type", func() {
+		air := time.Now()
+		show, err := store.CreateTVShow(ctx, db.CreateTVShowParams{
+			Title: "Vanished", Year: 2024, TvdbID: 5555,
+			Seasons: []db.SeasonSeed{
+				{
+					Number: 1,
+					Episodes: []db.EpisodeSeed{
+						{Number: 1, Title: "One", AirDate: &air},
+						{Number: 2, Title: "Two", AirDate: &air},
+					},
+				},
+				{
+					Number: 2,
+					Episodes: []db.EpisodeSeed{
+						{Number: 1, Title: "Three", AirDate: &air},
+					},
+				},
+			},
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		// Staggered so the aggregate's missing_since is provably the earliest
+		// of the three and not just whichever row happened to be walked first.
+		oldest := time.Now().Add(-5 * time.Hour).UTC().Truncate(time.Second)
+		offset := 0
+		for _, season := range show.Edges.Seasons {
+			for _, ep := range season.Edges.Episodes {
+				Expect(store.SetEpisodeStatus(
+					ctx, ep.ID, entepisode.StatusAvailable,
+				)).To(Succeed())
+				path := filepath.Join(tmpDir, fmt.Sprintf(
+					"Vanished S%02dE%02d.mkv", season.Number, ep.Number,
+				))
+				Expect(os.WriteFile(path, []byte("data"), 0o644)).To(Succeed())
+				mf, err := store.CreateMediaFile(ctx, db.CreateMediaFileParams{
+					EpisodeID: ep.ID, Path: path, Size: 4,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(entClient.MediaFile.UpdateOneID(mf.ID).
+					SetLastSeenAt(oldest.Add(time.Duration(offset) * time.Hour)).
+					Exec(ctx)).To(Succeed())
+				Expect(os.Remove(path)).To(Succeed())
+				offset++
+			}
+		}
+
+		Expect(svc.RunDriftCheck(ctx, time.Millisecond)).To(Succeed())
+
+		for _, t := range []entmediaevent.Type{
+			entmediaevent.TypeDriftDetected,
+			entmediaevent.TypeDriftConfirmed,
+		} {
+			evs, err := entClient.MediaEvent.Query().
+				Where(entmediaevent.TypeEQ(t)).
+				WithTvShow().
+				WithEpisode().
+				All(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(evs).To(HaveLen(1), string(t))
+			Expect(evs[0].Edges.Episode).To(BeNil(), "aggregated, not per episode")
+			Expect(evs[0].Edges.TvShow).NotTo(BeNil())
+			Expect(evs[0].Edges.TvShow.ID).To(Equal(show.ID))
+			Expect(evs[0].Payload["seasons"]).To(HaveExactElements(
+				BeEquivalentTo(1), BeEquivalentTo(2),
+			))
+			Expect(evs[0].Payload["episodes"]).To(BeEquivalentTo(3))
+			Expect(evs[0].Payload).NotTo(HaveKey("path"))
+		}
+
+		confirmed, err := entClient.MediaEvent.Query().
+			Where(entmediaevent.TypeEQ(entmediaevent.TypeDriftConfirmed)).
+			Only(ctx)
+		Expect(err).NotTo(HaveOccurred())
+		since, err := time.Parse(
+			time.RFC3339Nano, confirmed.Payload["missing_since"].(string),
+		)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(since.UTC()).To(BeTemporally("==", oldest))
 	})
 
 	It("deletes a media_file row whose owner is gone", func() {

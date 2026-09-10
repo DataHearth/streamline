@@ -12,10 +12,12 @@ import (
 	"github.com/datahearth/streamline/ent"
 	entimportscan "github.com/datahearth/streamline/ent/importscan"
 	entimportscanshow "github.com/datahearth/streamline/ent/importscanshow"
+	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/transcodejob"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/media/tvshow"
 	"github.com/datahearth/streamline/internal/metadata"
@@ -31,6 +33,7 @@ var _ = Describe(
 		var (
 			ctx    context.Context
 			tmpDir string
+			client *ent.Client
 			store  db.Store
 			tvmeta *metamocks.MockTVProvider
 			svc    *Service
@@ -42,7 +45,8 @@ var _ = Describe(
 			// quality profile resolves.
 			configtest.Setup(map[string]any{})
 			tmpDir = GinkgoT().TempDir()
-			client := dbtest.SetupTestDB(ctx)
+			client = dbtest.SetupTestDB(ctx)
+			events.Register(client)
 			DeferCleanup(client.Close)
 			store = db.New(client)
 			tvmeta = metamocks.NewMockTVProvider(GinkgoT())
@@ -190,6 +194,28 @@ var _ = Describe(
 				Expect(string(refreshed.Status)).To(Equal("completed"))
 				Expect(refreshed.CommitSuccessCount).To(Equal(uint32(1)))
 
+				// One series-scoped row for the whole commit, not one per file.
+				imported := client.MediaEvent.Query().
+					Where(mediaevent.TypeEQ(
+						mediaevent.Type(events.TypeImported),
+					)).
+					WithTvShow().
+					WithEpisode().
+					AllX(ctx)
+				Expect(imported).To(HaveLen(1))
+				Expect(imported[0].Edges.Episode).To(BeNil())
+				Expect(imported[0].Edges.TvShow).NotTo(BeNil())
+				Expect(imported[0].Edges.TvShow.ID).To(Equal(show.ID))
+				Expect(imported[0].Payload).To(
+					HaveKeyWithValue("episodes", BeNumerically("==", 3)),
+				)
+				Expect(imported[0].Payload).To(
+					HaveKeyWithValue("source", "bulk_import"),
+				)
+				Expect(imported[0].Payload).To(HaveKeyWithValue(
+					"seasons", ConsistOf(BeNumerically("==", 1)),
+				))
+
 				// Re-adopting the show with a different E01 file replaces the
 				// episode's tracked file instead of double-linking it.
 				oldPath := mf.Path
@@ -256,6 +282,7 @@ var _ = Describe(
 				).To(Succeed())
 
 				client := dbtest.SetupTestDB(ctx)
+				events.Register(client)
 				DeferCleanup(client.Close)
 				store := db.New(client)
 				tvmeta := metamocks.NewMockTVProvider(GinkgoT())
@@ -360,6 +387,7 @@ var _ = Describe(
 				})
 				tmpDir := GinkgoT().TempDir()
 				client := dbtest.SetupTestDB(ctx)
+				events.Register(client)
 				DeferCleanup(client.Close)
 				store := db.New(client)
 				tvmeta := metamocks.NewMockTVProvider(GinkgoT())

@@ -156,18 +156,39 @@ var _ = Describe("Service.RunDriftCheck", Label("unit", "hygiene"), func() {
 		Expect(svc.RunDriftCheck(ctx, 15*time.Minute)).To(Succeed())
 	})
 
+	// episodeFile builds the owner shape FindMediaFileWithOwners returns for an
+	// episode-owned row: the episode with its season and show attached.
+	episodeFile := func(
+		id, episodeID, showID uint32,
+		season uint16,
+		path string,
+		seen *time.Time,
+	) *ent.MediaFile {
+		return &ent.MediaFile{
+			ID: id, Path: path, LastSeenAt: seen,
+			Edges: ent.MediaFileEdges{
+				Episode: &ent.Episode{
+					ID: episodeID, Number: 1,
+					Edges: ent.EpisodeEdges{
+						Season: &ent.Season{
+							Number: season,
+							Edges: ent.SeasonEdges{
+								TvShow: &ent.TVShow{ID: showID, Title: "Gone Show"},
+							},
+						},
+					},
+				},
+			},
+		}
+	}
+
 	It("reverts the episode when grace expires and the file is missing", func() {
 		seen := time.Now().Add(-2 * time.Hour)
 		path := filepath.Join(tmpDir, "S01E01.mkv")
 		pages(db.DriftRow{ID: 21, Path: path, LastSeenAt: &seen})
 		store.EXPECT().
 			FindMediaFileWithOwners(mock.Anything, uint32(21)).
-			Return(&ent.MediaFile{
-				ID: 21, Path: path, LastSeenAt: &seen,
-				Edges: ent.MediaFileEdges{
-					Episode: &ent.Episode{ID: 33, Number: 1},
-				},
-			}, nil).
+			Return(episodeFile(21, 33, 55, 1, path, &seen), nil).
 			Once()
 		store.EXPECT().
 			MarkMediaFileMissing(mock.Anything, uint32(21)).
@@ -177,6 +198,30 @@ var _ = Describe("Service.RunDriftCheck", Label("unit", "hygiene"), func() {
 			DeleteMediaFileAndRevertEpisode(mock.Anything, uint32(21), uint32(33)).
 			Return(nil).
 			Once()
+
+		Expect(svc.RunDriftCheck(ctx, 15*time.Minute)).To(Succeed())
+	})
+
+	It("reverts every episode of a show whose folder disappeared", func() {
+		seen := time.Now().Add(-2 * time.Hour)
+		rows := make([]db.DriftRow, 0, 3)
+		for i, id := range []uint32{21, 22, 23} {
+			path := filepath.Join(tmpDir, fmt.Sprintf("S01E0%d.mkv", i+1))
+			rows = append(rows, db.DriftRow{ID: id, Path: path, LastSeenAt: &seen})
+			store.EXPECT().
+				FindMediaFileWithOwners(mock.Anything, id).
+				Return(episodeFile(id, id+100, 55, 1, path, &seen), nil).
+				Once()
+			store.EXPECT().
+				MarkMediaFileMissing(mock.Anything, id).
+				Return(true, nil).
+				Once()
+			store.EXPECT().
+				DeleteMediaFileAndRevertEpisode(mock.Anything, id, id+100).
+				Return(nil).
+				Once()
+		}
+		pages(rows...)
 
 		Expect(svc.RunDriftCheck(ctx, 15*time.Minute)).To(Succeed())
 	})
