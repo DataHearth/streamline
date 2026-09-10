@@ -85,7 +85,7 @@
 			aria-expanded={open}
 			onclick={toggle}
 			class={cn(
-				"flex min-h-11 w-full items-center justify-between gap-2 rounded-md border border-border bg-bg px-3 text-sm text-fg transition-colors hover:border-border-strong focus-visible:outline-2 focus-visible:outline-accent lg:h-[38px] lg:min-h-0",
+				"flex min-h-11 w-full items-center justify-between gap-2 rounded-md border border-border bg-bg px-3 text-sm text-fg transition-colors hover:border-border-strong focus-visible:outline-2 focus-visible:outline-accent lg:h-9 lg:min-h-0",
 				open && "border-accent",
 				off && "cursor-not-allowed opacity-60",
 			)}

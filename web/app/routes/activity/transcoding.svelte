@@ -29,6 +29,7 @@
 	import TouchStatLine from "../../components/activity/TouchStatLine.svelte";
 	import TranscodeList from "../../components/activity/TranscodeList.svelte";
 	import Dialog from "../../components/modals/Dialog.svelte";
+	import Select from "../../components/forms/Select.svelte";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	let statusFilter = $state<string[]>([]);
@@ -195,20 +196,22 @@
 			<div class="flex flex-wrap items-center gap-2">
 				<!-- Sort lives here rather than on column headers, because there are
 				     no columns. Below lg the same key is set by the filter sheet's
-				     chips, so the two can never disagree. -->
+				     chips, so the two can never disagree. The app has one dropdown
+				     surface and this is it — a native <select> drops the OS menu, which
+				     matches neither the row metrics nor the tinted surface every other
+				     picker in the app opens. -->
 				<label class="hidden items-center gap-2 lg:flex">
 					<span class="font-mono text-[10px] uppercase tracking-[0.14em] text-fg-faint">
 						{i18n.filter_sort()}
 					</span>
-					<select
-						bind:value={sort}
-						aria-label={i18n.filter_sort()}
-						class="h-9 rounded-md border border-border bg-bg-elevated px-2.5 text-[12.5px] text-fg-muted transition hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
-					>
-						{#each TRANSCODE_SORT_CHIPS as opt (opt.key)}
-							<option value={opt.key}>{opt.label}</option>
-						{/each}
-					</select>
+					<div class="w-[190px]">
+						<Select
+							value={sort}
+							options={TRANSCODE_SORT_CHIPS.map((o) => ({ value: o.key, label: o.label }))}
+							onChange={(v) => (sort = v)}
+							ariaLabel={i18n.filter_sort()}
+						/>
+					</div>
 				</label>
 				{#if scanStarted}
 					<span class="font-mono text-[11px] text-fg-subtle">

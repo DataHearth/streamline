@@ -69,7 +69,7 @@
 				<ChevronDown
 					size={13}
 					class={cn(
-						"shrink-0 text-fg-faint transition-transform",
+						"shrink-0 text-fg-faint transition-transform sm:hidden",
 						expanded && "rotate-180",
 					)}
 					aria-hidden="true"
@@ -146,6 +146,25 @@
 					{i18n.transcode_retry()}
 				</button>
 			{/if}
+			<!-- From sm up the chevron rides at the row's own right edge rather than at
+			     the end of the title: the title button is flex-1 and the block beside it
+			     varies with the status — a figure, a Cancel, a Retry, nothing at all —
+			     so a chevron inside the title landed at a different x on every row.
+			     Pointer-only and hidden from the tree: the title button is the control
+			     and it already carries aria-expanded. -->
+			<button
+				type="button"
+				tabindex="-1"
+				aria-hidden="true"
+				onclick={() => onToggle(job.id)}
+				class="hidden h-7 w-7 shrink-0 place-items-center rounded-sm text-fg-faint transition hover:text-fg sm:grid"
+			>
+				<ChevronDown
+					size={13}
+					class={cn("transition-transform", expanded && "rotate-180")}
+					aria-hidden="true"
+				/>
+			</button>
 		</div>
 	</div>
 
