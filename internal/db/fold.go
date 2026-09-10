@@ -10,9 +10,16 @@ import (
 	"modernc.org/sqlite"
 )
 
-// foldText lowercases and strips diacritics, mirroring the SPA's fold() in
-// web/app/lib/text.ts so a title typed without accents finds one that has
-// them ("detective" → "Détective Conan").
+// foldText lowercases, strips diacritics and turns every run of punctuation or
+// whitespace into a single space, mirroring the SPA's fold() in
+// web/app/lib/text.ts so a title typed without accents or punctuation finds one
+// that has them ("detective" → "Détective Conan", "moi quand je me reincarne en
+// slime" → "Moi, quand je me réincarne en Slime").
+//
+// Punctuation becomes a space rather than vanishing: a separator the user typed
+// as a space has to line up with one the title spells with a hyphen, so "spider
+// man" finds "Spider-Man" while "spiderman" — which is not how either is
+// written — does not.
 func foldText(s string) string {
 	var b strings.Builder
 	b.Grow(len(s))
@@ -20,9 +27,13 @@ func foldText(s string) string {
 		if unicode.Is(unicode.Mn, r) {
 			continue
 		}
-		b.WriteRune(r)
+		if unicode.IsLetter(r) || unicode.IsDigit(r) {
+			b.WriteRune(r)
+			continue
+		}
+		b.WriteRune(' ')
 	}
-	return b.String()
+	return strings.Join(strings.Fields(b.String()), " ")
 }
 
 // SQLite's LIKE folds ASCII case only, so accent folding has to happen inside
