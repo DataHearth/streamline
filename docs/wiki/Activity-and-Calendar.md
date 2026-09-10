@@ -109,10 +109,12 @@ Streamline only manages torrents tagged with the category/label `streamline`. If
 
 When it can safely tell — and the file is a clean upgrade or a straightforward addition — it just imports it. When it *can't* be sure, it doesn't guess. It parks it as a **proposal** awaiting your decision, and the sidebar flags *"Adopted torrents need attention"*.
 
+One case is settled without asking: a torrent whose payload is the very file already in your library — same size, and nothing in its name contradicting what Streamline recorded at import — is filed straight into history as completed. That is what a torrent left seeding after its record was lost looks like, and a proposal for it would only ever be dismissed.
+
 Proposals come up when:
 
 - The resolution is below your quality profile's minimum
-- A file already exists for that title
+- A different file already exists for that title
 - The match is ambiguous
 - It's a season pack that doesn't map cleanly onto what you're missing
 

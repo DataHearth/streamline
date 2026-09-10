@@ -81,6 +81,24 @@ var _ = Describe("hooks via Register", Label("integration", "events"), func() {
 		))
 	})
 
+	It("stays quiet on a record born completed", func() {
+		movie := client.Movie.Create().
+			SetTitle("Dune").
+			SetOriginalTitle("Dune").
+			SetYear(2021).
+			SetTmdbID(438631).
+			SaveX(ctx)
+
+		client.DownloadRecord.Create().
+			SetMovieID(movie.ID).
+			SetTitle("Dune.2021.2160p").
+			SetStatus(downloadrecord.StatusCompleted).
+			SaveX(ctx)
+
+		Expect(eventsOfType(ctx, client, TypeGrabbed)).To(BeEmpty())
+		Expect(eventsOfType(ctx, client, TypeDownloadCompleted)).To(BeEmpty())
+	})
+
 	It("does not emit download_completed when a record reaches completed", func() {
 		movie := client.Movie.Create().
 			SetTitle("Dune").

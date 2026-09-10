@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
@@ -25,8 +26,42 @@ type adoptDecision struct {
 	// autoImport true → an importing record the caller enqueues; false → a
 	// pending proposal carrying reason.
 	autoImport bool
-	reason     string
-	quality    string
+	// completed marks a torrent whose payload is the file the library already
+	// holds: the record is born completed, restoring the bookkeeping a lost
+	// row left behind, and nobody is asked anything.
+	completed bool
+	reason    string
+	quality   string
+}
+
+// sameFile reports whether a torrent — its parsed name and size — is the
+// media file the owner already holds. A byte-identical size for the same
+// title is one release, and that is the case a wiped records table leaves
+// behind: the library file *is* this torrent's payload, copied out at import.
+// The release facts both sides state are a veto on top: a stored group or
+// source that contradicts the torrent's name says two different encodes
+// happened to land on one byte count. A fact either side leaves blank is not
+// evidence. Codec is deliberately not compared: a row without a stored parse
+// reports the probe's "hevc", and the name says "x265" for the same stream.
+//
+// ponytail: whole-torrent size only. A torrent carrying an .nfo beside the
+// video falls through to the "already have a file" proposal it got before;
+// compare against the torrent's largest file if that ever matters.
+func sameFile(parsed library.ParseResult, size int64, files []*ent.MediaFile) bool {
+	if len(files) == 0 || files[0].Size != size {
+		return false
+	}
+	have := library.ParsedFromMediaFile(files[0])
+	for _, pair := range [][2]string{
+		{parsed.Group, have.Group},
+		{parsed.Resolution, have.Resolution},
+		{parsed.Source, have.Source},
+	} {
+		if pair[0] != "" && pair[1] != "" && !strings.EqualFold(pair[0], pair[1]) {
+			return false
+		}
+	}
+	return true
 }
 
 // reasonUnidentified marks a proposal whose release matched nothing in the
@@ -41,14 +76,14 @@ type untrackedTorrent struct {
 	clientName string
 }
 
-// classifyMovieAdoption decides the outcome for a parsed release against the
-// candidate movies. hasFile reports whether a matched movie already has a file.
-// Pure: no I/O, fully unit-tested. The bool return is false when nothing
-// matched (skip — create no row).
+// classifyMovieAdoption decides the outcome for a parsed release of size bytes
+// against the candidate movies, with their media files eager-loaded. Pure: no
+// I/O, fully unit-tested. The bool return is false when nothing matched (skip
+// — create no row).
 func classifyMovieAdoption(
 	parsed library.ParseResult,
+	size int64,
 	candidates []*ent.Movie,
-	hasFile func(*ent.Movie) bool,
 ) (adoptDecision, bool) {
 	var matches []*ent.Movie
 	for _, m := range candidates {
@@ -64,7 +99,9 @@ func classifyMovieAdoption(
 	switch {
 	case len(matches) > 1:
 		d.reason = "ambiguous match"
-	case hasFile(m):
+	case sameFile(parsed, size, m.Edges.MediaFiles):
+		d.completed = true
+	case len(m.Edges.MediaFiles) > 0:
 		d.reason = "already have a file"
 	case resolutionOK(parsed.Resolution, profileMin(m.QualityProfile)):
 		d.autoImport = true
@@ -75,16 +112,17 @@ func classifyMovieAdoption(
 	return d, true
 }
 
-// classifyEpisodeAdoption decides the outcome for a parsed release against the
-// candidate shows. A single-episode release (SxxExx, or an anime absolute
-// number) matches an episode and applies the has-file/quality rules using the
-// show's profile; a season pack or otherwise-unresolvable multi is proposed
-// "review manually" linked to the first episode of the parsed season. Returns
-// false when no show matches (skip — create no row). Pure: no I/O.
+// classifyEpisodeAdoption decides the outcome for a parsed release of size
+// bytes against the candidate shows. A single-episode release (SxxExx, or an
+// anime absolute number) matches an episode and applies the has-file/quality
+// rules using the show's profile; a season pack or otherwise-unresolvable
+// multi is proposed "review manually" linked to the first episode of the
+// parsed season. Returns false when no show matches (skip — create no row).
+// Pure: no I/O.
 func classifyEpisodeAdoption(
 	parsed library.ParseResult,
+	size int64,
 	shows []*ent.TVShow,
-	hasFile func(*ent.Episode) bool,
 ) (adoptDecision, bool) {
 	var show *ent.TVShow
 	for _, s := range shows {
@@ -111,7 +149,9 @@ func classifyEpisodeAdoption(
 	}
 	d := adoptDecision{episodeID: ep.ID, quality: parsed.Resolution}
 	switch {
-	case hasFile(ep):
+	case sameFile(parsed, size, ep.Edges.MediaFiles):
+		d.completed = true
+	case episodeHasFile(ep):
 		d.reason = "already have a file"
 	case resolutionOK(parsed.Resolution, profileMin(show.QualityProfile)):
 		d.autoImport = true
@@ -326,14 +366,12 @@ func (d *download) AdoptManualTorrents(ctx context.Context) ([]uint32, error) {
 			span, fmt.Errorf("list shows: %w", err),
 		)
 	}
-	hasFile := d.movieHasFile(ctx)
-
 	var enqueue []uint32
 	for _, u := range untracked {
 		parsed := library.Parse(u.t.Name)
-		dec, ok := classifyMovieAdoption(parsed, movies, hasFile)
+		dec, ok := classifyMovieAdoption(parsed, u.t.Size, movies)
 		if !ok {
-			dec, ok = classifyEpisodeAdoption(parsed, shows, episodeHasFile)
+			dec, ok = classifyEpisodeAdoption(parsed, u.t.Size, shows)
 		}
 		if !ok {
 			// Nothing in the library matches. Filing it unidentified is what
@@ -363,6 +401,10 @@ func (d *download) AdoptManualTorrents(ctx context.Context) ([]uint32, error) {
 		case dec.autoImport:
 			outcome = "auto_import"
 			enqueue = append(enqueue, id)
+		case dec.completed:
+			outcome = "completed"
+			slog.InfoContext(ctx, "adopted a torrent already in the library",
+				"hash", u.t.Hash, "torrent", u.t.Name)
 		case dec.reason == reasonUnidentified:
 			outcome = "unidentified"
 		}
@@ -374,30 +416,24 @@ func (d *download) AdoptManualTorrents(ctx context.Context) ([]uint32, error) {
 	return enqueue, nil
 }
 
-// movieHasFile returns a closure over MovieHasMediaFile. A lookup error is
-// treated as "has file" so an indeterminate state proposes rather than
-// blind-imports.
-func (d *download) movieHasFile(ctx context.Context) func(*ent.Movie) bool {
-	return func(m *ent.Movie) bool {
-		has, err := d.db.MovieHasMediaFile(ctx, m.TmdbID)
-		if err != nil {
-			slog.WarnContext(ctx, "adopt: media file check failed",
-				"movie.id", m.ID, "error", err)
-			return true
-		}
-		return has
-	}
-}
-
 // persistAdoption writes the adoption record (importing for auto-import,
-// pending for a proposal) and returns its ID. SavePath mirrors CheckStatus:
-// the download path joined with the torrent name.
+// completed for a file the library already holds, pending for a proposal) and
+// returns its ID. SavePath mirrors CheckStatus: the download path joined with
+// the torrent name.
 func (d *download) persistAdoption(
 	ctx context.Context, u untrackedTorrent, dec adoptDecision,
 ) (uint32, error) {
 	status := downloadrecord.StatusPending
-	if dec.autoImport {
+	var importedAt *time.Time
+	switch {
+	case dec.autoImport:
 		status = downloadrecord.StatusImporting
+	case dec.completed:
+		// imported_at is what the completed-record sweep ages on; without it
+		// the row would outlive every real import.
+		status = downloadrecord.StatusCompleted
+		now := time.Now()
+		importedAt = &now
 	}
 	savePath, err := downloadSavePath(u.t.Name)
 	if err != nil {
@@ -414,6 +450,7 @@ func (d *download) persistAdoption(
 		SavePath:           savePath,
 		Quality:            dec.quality,
 		FailureReason:      dec.reason,
+		ImportedAt:         importedAt,
 	})
 	if err != nil {
 		return 0, err

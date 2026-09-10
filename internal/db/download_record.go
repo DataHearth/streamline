@@ -54,6 +54,9 @@ type CreateDownloadRecordParams struct {
 	// empty pair there reads as "0 B of 24 GB selected".
 	SelectedFiles []int
 	SelectedBytes int64
+	// Set when the record is born completed — an adoption of a torrent whose
+	// file is already the library's. Nil otherwise; the importer stamps it.
+	ImportedAt *time.Time
 }
 
 func (db *DB) CreateDownloadRecord(
@@ -61,6 +64,7 @@ func (db *DB) CreateDownloadRecord(
 	p CreateDownloadRecordParams,
 ) (*ent.DownloadRecord, error) {
 	b := db.client.DownloadRecord.Create().
+		SetNillableImportedAt(p.ImportedAt).
 		SetTitle(p.Title).
 		SetSize(p.Size).
 		SetTorrentHash(p.TorrentHash).
@@ -250,7 +254,7 @@ func (db *DB) LatestImportedRecordForEpisode(
 // The set is small (in-memory matched against untracked torrent names), so a
 // full fetch is fine.
 func (db *DB) ListMoviesForAdoption(ctx context.Context) ([]*ent.Movie, error) {
-	return db.client.Movie.Query().All(ctx)
+	return db.client.Movie.Query().WithMediaFiles().All(ctx)
 }
 
 // ListTvShowsForAdoption returns every show with its seasons → episodes →

@@ -85,6 +85,11 @@ func downloadRecordHook() ent.Hook {
 				c := dm.Client()
 				switch dm.Op() {
 				case ent.OpCreate:
+					// A record born completed is bookkeeping for a file the
+					// library already holds; nothing was grabbed.
+					if st, _ := dm.Status(); st == downloadrecord.StatusCompleted {
+						return val, nil
+					}
 					o, err := downloadRecordOwner(ctx, c, dm)
 					if err != nil {
 						auxFailure(ctx, "download_record", err)

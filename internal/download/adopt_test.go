@@ -29,10 +29,6 @@ func (c *adoptClient) ListTorrents(context.Context) ([]Torrent, error) {
 }
 
 var _ = Describe("Adoption", Label("unit", "downloads"), func() {
-	hasFileFn := func(v bool) func(*ent.Movie) bool {
-		return func(*ent.Movie) bool { return v }
-	}
-
 	Describe("classifyMovieAdoption", func() {
 		candidates := []*ent.Movie{
 			{ID: 3, Title: "The Batman", Year: 2022, TmdbID: 414906},
@@ -52,7 +48,7 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 
 		It("auto-imports a fileless movie at OK resolution", func() {
 			parsed := library.Parse("The.Batman.2022.1080p.BluRay-X")
-			dec, ok := classifyMovieAdoption(parsed, candidates, hasFileFn(false))
+			dec, ok := classifyMovieAdoption(parsed, 0, candidates)
 			Expect(ok).To(BeTrue())
 			Expect(dec.autoImport).To(BeTrue())
 			Expect(dec.movieID).To(Equal(uint32(3)))
@@ -60,17 +56,55 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 			Expect(dec.reason).To(BeEmpty())
 		})
 
-		It("proposes when the movie already has a file", func() {
+		withFile := []*ent.Movie{{
+			ID: 3, Title: "The Batman", Year: 2022, TmdbID: 414906,
+			Edges: ent.MovieEdges{MediaFiles: []*ent.MediaFile{{ID: 9, Size: 4096}}},
+		}}
+
+		It("proposes when the movie already has a different file", func() {
 			parsed := library.Parse("The.Batman.2022.1080p.BluRay-X")
-			dec, ok := classifyMovieAdoption(parsed, candidates, hasFileFn(true))
+			dec, ok := classifyMovieAdoption(parsed, 5000, withFile)
 			Expect(ok).To(BeTrue())
 			Expect(dec.autoImport).To(BeFalse())
+			Expect(dec.completed).To(BeFalse())
 			Expect(dec.reason).To(Equal("already have a file"))
 		})
 
+		It("adopts as completed when the torrent is the movie's own file", func() {
+			parsed := library.Parse("The.Batman.2022.1080p.BluRay-X")
+			dec, ok := classifyMovieAdoption(parsed, 4096, withFile)
+			Expect(ok).To(BeTrue())
+			Expect(dec.completed).To(BeTrue())
+			Expect(dec.autoImport).To(BeFalse())
+			Expect(dec.movieID).To(Equal(uint32(3)))
+			Expect(dec.reason).To(BeEmpty())
+		})
+
+		It(
+			"proposes on a same-size file whose stored release facts disagree",
+			func() {
+				other := []*ent.Movie{{
+					ID: 3, Title: "The Batman", Year: 2022, TmdbID: 414906,
+					Edges: ent.MovieEdges{MediaFiles: []*ent.MediaFile{
+						{
+							ID:               9,
+							Size:             4096,
+							ReleaseGroup:     "Y",
+							ParsedResolution: "1080p",
+						},
+					}},
+				}}
+				parsed := library.Parse("The.Batman.2022.1080p.BluRay-X")
+				dec, ok := classifyMovieAdoption(parsed, 4096, other)
+				Expect(ok).To(BeTrue())
+				Expect(dec.completed).To(BeFalse())
+				Expect(dec.reason).To(Equal("already have a file"))
+			},
+		)
+
 		It("proposes when resolution is below the profile minimum", func() {
 			parsed := library.Parse("The.Batman.2022.720p.WEB-X")
-			dec, ok := classifyMovieAdoption(parsed, candidates, hasFileFn(false))
+			dec, ok := classifyMovieAdoption(parsed, 0, candidates)
 			Expect(ok).To(BeTrue())
 			Expect(dec.autoImport).To(BeFalse())
 			Expect(dec.reason).To(ContainSubstring("below minimum"))
@@ -82,7 +116,7 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 				{ID: 4, Title: "The Batman", Year: 2022, TmdbID: 2},
 			}
 			parsed := library.Parse("The.Batman.2022.1080p.BluRay-X")
-			dec, ok := classifyMovieAdoption(parsed, multi, hasFileFn(false))
+			dec, ok := classifyMovieAdoption(parsed, 0, multi)
 			Expect(ok).To(BeTrue())
 			Expect(dec.autoImport).To(BeFalse())
 			Expect(dec.reason).To(Equal("ambiguous match"))
@@ -90,7 +124,7 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 
 		It("skips when no movie matches", func() {
 			parsed := library.Parse("Some.Other.Film.2019.1080p-X")
-			_, ok := classifyMovieAdoption(parsed, candidates, hasFileFn(false))
+			_, ok := classifyMovieAdoption(parsed, 0, candidates)
 			Expect(ok).To(BeFalse())
 		})
 	})
@@ -113,7 +147,7 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 			ep1 := &ent.Episode{ID: 101, Number: 1, AbsoluteNumber: 1}
 			ep2 := &ent.Episode{ID: 102, Number: 2, AbsoluteNumber: 2}
 			if ep2HasFile {
-				ep2.Edges.MediaFiles = []*ent.MediaFile{{ID: 9}}
+				ep2.Edges.MediaFiles = []*ent.MediaFile{{ID: 9, Size: 4096}}
 			}
 			season := &ent.Season{
 				Number: 1,
@@ -144,19 +178,31 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 		It("auto-imports a fileless episode at OK resolution", func() {
 			shows := []*ent.TVShow{buildShow(false, false)}
 			parsed := library.Parse("The.Bear.S01E02.1080p.WEB-X")
-			dec, ok := classifyEpisodeAdoption(parsed, shows, episodeHasFile)
+			dec, ok := classifyEpisodeAdoption(parsed, 0, shows)
 			Expect(ok).To(BeTrue())
 			Expect(dec.autoImport).To(BeTrue())
 			Expect(dec.episodeID).To(Equal(uint32(102)))
 		})
 
-		It("proposes when the matched episode already has a file", func() {
+		It("proposes when the matched episode already has a different file", func() {
 			shows := []*ent.TVShow{buildShow(false, true)}
 			parsed := library.Parse("The.Bear.S01E02.1080p.WEB-X")
-			dec, ok := classifyEpisodeAdoption(parsed, shows, episodeHasFile)
+			dec, ok := classifyEpisodeAdoption(parsed, 5000, shows)
 			Expect(ok).To(BeTrue())
 			Expect(dec.autoImport).To(BeFalse())
+			Expect(dec.completed).To(BeFalse())
 			Expect(dec.reason).To(Equal("already have a file"))
+		})
+
+		It("adopts as completed when the torrent is the episode's own file", func() {
+			shows := []*ent.TVShow{buildShow(false, true)}
+			parsed := library.Parse("The.Bear.S01E02.1080p.WEB-X")
+			dec, ok := classifyEpisodeAdoption(parsed, 4096, shows)
+			Expect(ok).To(BeTrue())
+			Expect(dec.completed).To(BeTrue())
+			Expect(dec.autoImport).To(BeFalse())
+			Expect(dec.episodeID).To(Equal(uint32(102)))
+			Expect(dec.reason).To(BeEmpty())
 		})
 
 		It("proposes a season pack linked to the season's first episode", func() {
@@ -164,7 +210,7 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 			parsed := library.ParseResult{
 				Title: "The Bear", Season: 1, SeasonPack: true, Resolution: "1080p",
 			}
-			dec, ok := classifyEpisodeAdoption(parsed, shows, episodeHasFile)
+			dec, ok := classifyEpisodeAdoption(parsed, 0, shows)
 			Expect(ok).To(BeTrue())
 			Expect(dec.autoImport).To(BeFalse())
 			Expect(dec.reason).To(Equal("season pack, review manually"))
@@ -178,7 +224,7 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 		It("proposes a pack whose name carries language tags", func() {
 			shows := []*ent.TVShow{buildShow(false, false)}
 			parsed := library.Parse("The.Bear.S01.MULTi.VF2.1080p.WEB.H264-FW")
-			dec, ok := classifyEpisodeAdoption(parsed, shows, episodeHasFile)
+			dec, ok := classifyEpisodeAdoption(parsed, 0, shows)
 			Expect(ok).To(BeTrue())
 			Expect(dec.reason).To(Equal("season pack, review manually"))
 			Expect(dec.episodeID).To(Equal(uint32(101)))
@@ -220,7 +266,7 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 			parsed := library.ParseResult{
 				Title: "The Bear", AbsoluteNumber: 2, Resolution: "1080p",
 			}
-			dec, ok := classifyEpisodeAdoption(parsed, shows, episodeHasFile)
+			dec, ok := classifyEpisodeAdoption(parsed, 0, shows)
 			Expect(ok).To(BeTrue())
 			Expect(dec.episodeID).To(Equal(uint32(102)))
 			Expect(dec.autoImport).To(BeTrue())
@@ -229,7 +275,7 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 		It("skips when no show title matches", func() {
 			shows := []*ent.TVShow{buildShow(false, false)}
 			parsed := library.Parse("Other.Show.S01E01.1080p-X")
-			_, ok := classifyEpisodeAdoption(parsed, shows, episodeHasFile)
+			_, ok := classifyEpisodeAdoption(parsed, 0, shows)
 			Expect(ok).To(BeFalse())
 		})
 	})
@@ -283,6 +329,54 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 			ids, err := mgr.AdoptManualTorrents(ctx)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(ids).To(BeEmpty())
+		})
+
+		It("files a torrent that is the library's own file as completed", func() {
+			configtest.Setup(map[string]any{
+				"library": map[string]any{"download_path": "/downloads"},
+				"download_clients": []map[string]any{{
+					"name": "embedded", "client_type": "builtin",
+					"download_dir": "/downloads", "enabled": true,
+				}},
+			})
+			client := &adoptClient{torrents: []Torrent{{
+				Hash:   "h1",
+				Name:   "The.Batman.2022.1080p.BluRay-X",
+				Status: StatusSeeding,
+				Size:   4096,
+			}}}
+			mgr = New(store, client).(Adopter)
+
+			store.EXPECT().AllDownloadRecordHashes(mock.Anything).
+				Return(map[string]struct{}{}, nil).Once()
+			store.EXPECT().
+				DeleteStalePendingAdoptions(mock.Anything, "embedded", []string{"h1"}).
+				Return(0, nil).Once()
+			store.EXPECT().ListMoviesForAdoption(mock.Anything).
+				Return([]*ent.Movie{{
+					ID: 3, Title: "The Batman", Year: 2022, TmdbID: 414906,
+					Edges: ent.MovieEdges{
+						MediaFiles: []*ent.MediaFile{{ID: 9, Size: 4096}},
+					},
+				}}, nil).Once()
+			store.EXPECT().ListTvShowsForAdoption(mock.Anything).
+				Return(nil, nil).Once()
+
+			var got db.CreateDownloadRecordParams
+			store.EXPECT().CreateDownloadRecord(mock.Anything, mock.Anything).
+				Run(func(_ context.Context, p db.CreateDownloadRecordParams) {
+					got = p
+				}).
+				Return(&ent.DownloadRecord{ID: 7}, nil).Once()
+
+			ids, err := mgr.AdoptManualTorrents(ctx)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ids).To(BeEmpty(), "nothing to import: the file is already there")
+			Expect(got.Status).To(Equal(downloadrecord.StatusCompleted))
+			Expect(got.MovieID).To(Equal(uint32(3)))
+			Expect(got.ImportedAt).NotTo(BeNil())
+			Expect(got.FailureReason).To(BeEmpty())
 		})
 
 		It(
