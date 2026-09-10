@@ -42,6 +42,22 @@ func runMigrations(ctx context.Context, db *sql.DB) error {
 	slog.InfoContext(ctx, "applying database migrations",
 		"schema.version_before", before)
 
+	// Atlas opens every table-rebuild migration with `PRAGMA foreign_keys =
+	// off`, and golang-migrate runs each file inside a transaction, where that
+	// pragma is a documented no-op. The DSN turns foreign keys on, so the
+	// implicit delete behind `DROP TABLE movies` ran with cascades live and
+	// took every season, episode, media file, event and download record with
+	// it. Disabling it out here holds because the pool is capped at one
+	// connection, so the setting is still in force inside those transactions.
+	var foreignKeys int
+	if err := db.QueryRowContext(ctx, "PRAGMA foreign_keys").
+		Scan(&foreignKeys); err != nil {
+		return fmt.Errorf("read foreign keys: %w", err)
+	}
+	if _, err := db.ExecContext(ctx, "PRAGMA foreign_keys = off"); err != nil {
+		return fmt.Errorf("disable foreign keys: %w", err)
+	}
+
 	started := time.Now()
 	err = m.Up()
 	elapsed := time.Since(started)
@@ -51,6 +67,25 @@ func runMigrations(ctx context.Context, db *sql.DB) error {
 			"duration_ms", elapsed.Milliseconds(),
 			"error", err)
 		return fmt.Errorf("migrate up: %w", err)
+	}
+
+	if _, err := db.ExecContext(
+		ctx,
+		fmt.Sprintf("PRAGMA foreign_keys = %d", foreignKeys),
+	); err != nil {
+		return fmt.Errorf("restore foreign keys: %w", err)
+	}
+	// Enforcement was off for the whole run, so a data migration writing a
+	// dangling reference now succeeds silently. This is the canary for that.
+	var dangling int
+	if err := db.QueryRowContext(
+		ctx,
+		"SELECT count(*) FROM pragma_foreign_key_check",
+	).Scan(&dangling); err != nil {
+		slog.WarnContext(ctx, "foreign key check failed", "error", err)
+	} else if dangling > 0 {
+		slog.ErrorContext(ctx, "database holds dangling references after migrating",
+			"violations", dangling)
 	}
 
 	after, dirty, _ := m.Version()

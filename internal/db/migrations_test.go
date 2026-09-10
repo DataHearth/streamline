@@ -299,3 +299,126 @@ var _ = Describe("person credits backfill", Label("integration", "db"), func() {
 		Expect(credits()).To(BeEmpty())
 	})
 })
+
+// dropCastJSONVersion rebuilds movies and tv_shows to drop their cast columns.
+// SQLite cannot drop a column in place, so Atlas emits CREATE/INSERT/DROP/RENAME
+// — and the DROP is what makes this spec necessary.
+const dropCastJSONVersion = 20260910104500
+
+var _ = Describe("runMigrations against a table rebuild",
+	Label("integration", "db"), func() {
+		var sqlDB *sql.DB
+
+		// Mirrors the production DSN and pool: foreign keys enforced, one
+		// connection. Both matter — enforcement is what cascades, and the single
+		// connection is what makes disabling it around the run hold.
+		BeforeEach(func() {
+			var err error
+			sqlDB, err = sql.Open("sqlite", "file:"+
+				filepath.Join(GinkgoT().TempDir(), "rebuild.db")+
+				"?_pragma=foreign_keys(1)")
+			Expect(err).NotTo(HaveOccurred())
+			sqlDB.SetMaxOpenConns(1)
+			DeferCleanup(func() { Expect(sqlDB.Close()).To(Succeed()) })
+		})
+
+		counts := func() map[string]int {
+			GinkgoHelper()
+			rows, err := sqlDB.Query(`
+				SELECT 'movies', count(*) FROM movies
+				UNION ALL SELECT 'tv_shows', count(*) FROM tv_shows
+				UNION ALL SELECT 'seasons', count(*) FROM seasons
+				UNION ALL SELECT 'episodes', count(*) FROM episodes
+				UNION ALL SELECT 'media_files', count(*) FROM media_files
+				UNION ALL SELECT 'download_records', count(*) FROM download_records
+				UNION ALL SELECT 'media_events', count(*) FROM media_events
+				UNION ALL SELECT 'credits', count(*) FROM credits
+				UNION ALL SELECT 'transcode_jobs', count(*) FROM transcode_jobs`)
+			Expect(err).NotTo(HaveOccurred())
+			defer rows.Close()
+			out := map[string]int{}
+			for rows.Next() {
+				var table string
+				var n int
+				Expect(rows.Scan(&table, &n)).To(Succeed())
+				out[table] = n
+			}
+			Expect(rows.Err()).NotTo(HaveOccurred())
+			return out
+		}
+
+		It("keeps every row that cascades off movies and tv_shows", func() {
+			src, err := iofs.New(migrationsFS, "migrations")
+			Expect(err).NotTo(HaveOccurred())
+			previous, err := src.Prev(dropCastJSONVersion)
+			Expect(err).NotTo(HaveOccurred())
+			drv, err := sqlite.WithInstance(sqlDB, &sqlite.Config{})
+			Expect(err).NotTo(HaveOccurred())
+			m, err := migrate.NewWithInstance("iofs", src, "sqlite", drv)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(m.Migrate(previous)).To(Succeed())
+
+			exec := func(query string) {
+				GinkgoHelper()
+				_, err := sqlDB.Exec(query)
+				Expect(err).To(Succeed())
+			}
+			exec(`INSERT INTO movies
+		      (id, create_time, update_time, title, original_title, year, tmdb_id)
+		      VALUES (1, datetime('now'), datetime('now'), 'Alpha', 'Alpha', 2020, 11)`)
+			exec(`INSERT INTO tv_shows
+		      (id, create_time, update_time, title, year, tvdb_id)
+		      VALUES (1, datetime('now'), datetime('now'), 'Beta', 2021, 22)`)
+			exec(`INSERT INTO seasons
+		      (id, create_time, update_time, number, tv_show_seasons)
+		      VALUES (1, datetime('now'), datetime('now'), 1, 1)`)
+			exec(`INSERT INTO episodes
+		      (id, create_time, update_time, number, season_episodes)
+		      VALUES (1, datetime('now'), datetime('now'), 1, 1)`)
+			exec(`INSERT INTO media_files
+		      (id, create_time, update_time, path, size, movie_media_files)
+		      VALUES (1, datetime('now'), datetime('now'), '/m/a.mkv', 1, 1)`)
+			exec(`INSERT INTO media_files
+		      (id, create_time, update_time, path, size, episode_media_files)
+		      VALUES (2, datetime('now'), datetime('now'), '/t/b.mkv', 1, 1)`)
+			exec(`INSERT INTO download_records
+		      (id, create_time, update_time, title, movie_download_records)
+		      VALUES (1, datetime('now'), datetime('now'), 'Alpha.2020', 1)`)
+			exec(`INSERT INTO media_events
+		      (id, create_time, update_time, type, movie_events)
+		      VALUES (1, datetime('now'), datetime('now'), 'imported', 1)`)
+			exec(`INSERT INTO persons
+		      (id, create_time, update_time, name)
+		      VALUES (1, datetime('now'), datetime('now'), 'Gamma')`)
+			exec(`INSERT INTO credits
+		      (id, create_time, update_time, person_credits, movie_credits)
+		      VALUES (1, datetime('now'), datetime('now'), 1, 1)`)
+			exec(`INSERT INTO credits
+		      (id, create_time, update_time, person_credits, tv_show_credits)
+		      VALUES (2, datetime('now'), datetime('now'), 1, 1)`)
+			exec(`INSERT INTO transcode_jobs
+		      (id, create_time, update_time, media_file_transcode_jobs)
+		      VALUES (1, datetime('now'), datetime('now'), 1)`)
+
+			Expect(runMigrations(context.Background(), sqlDB)).To(Succeed())
+
+			By("leaving the rebuilt parents and everything hanging off them intact")
+			Expect(counts()).To(Equal(map[string]int{
+				"movies":           1,
+				"tv_shows":         1,
+				"seasons":          1,
+				"episodes":         1,
+				"media_files":      2,
+				"download_records": 1,
+				"media_events":     1,
+				"credits":          2,
+				"transcode_jobs":   1,
+			}))
+
+			By("restoring enforcement once the run is over")
+			_, err = sqlDB.Exec(`INSERT INTO media_files
+		      (id, create_time, update_time, path, size, movie_media_files)
+		      VALUES (3, datetime('now'), datetime('now'), '/m/c.mkv', 1, 999)`)
+			Expect(err).To(HaveOccurred())
+		})
+	})
