@@ -54,11 +54,11 @@ var _ = Describe(
 		// placeEpisode writes a >MinMediaSize file in a season subfolder, exercising
 		// the recursive folder walk (Show/Season NN/episode layout).
 		placeEpisode := func(showFolder, file string) {
-			dir := filepath.Join(tmpDir, showFolder, "Season 01")
-			Expect(os.MkdirAll(dir, 0o755)).To(Succeed())
+			path := filepath.Join(tmpDir, showFolder, "Season 01", file)
+			Expect(os.MkdirAll(filepath.Dir(path), 0o755)).To(Succeed())
 			Expect(
 				os.WriteFile(
-					filepath.Join(dir, file),
+					path,
 					make([]byte, 60*1024*1024),
 					0o644,
 				),
@@ -94,6 +94,11 @@ var _ = Describe(
 								Number:       3,
 								Title:        "...And the Bag's in the River",
 							},
+							{
+								SeasonNumber: 1,
+								Number:       4,
+								Title:        "Cancer Man",
+							},
 						},
 					}, nil).
 					Once()
@@ -102,6 +107,12 @@ var _ = Describe(
 
 				placeEpisode("Breaking Bad", "Breaking Bad S01E01.mkv")
 				placeEpisode("Breaking Bad", "Breaking Bad S01E02.mkv")
+				// The layout an unsanitized slash in the episode title used to
+				// produce: the number is on the folder, the file says nothing.
+				placeEpisode(
+					"Breaking Bad",
+					filepath.Join("Breaking Bad - S01E04 - Cancer", "Man [].mkv"),
+				)
 
 				scan, err := store.CreateImportScan(ctx, db.CreateImportScanParams{
 					SourcePath: tmpDir,
@@ -129,7 +140,7 @@ var _ = Describe(
 								ParsedTitle:    "Breaking Bad",
 								Classification: entimportscanshow.ClassificationConfirmed,
 								TVDBID:         &id,
-								FileCount:      2,
+								FileCount:      3,
 							},
 						},
 					),
@@ -155,9 +166,11 @@ var _ = Describe(
 				Expect(statuses[1]).To(Equal("available"))
 				Expect(statuses[2]).To(Equal("available"))
 				Expect(statuses[3]).To(Equal("wanted"))
+				Expect(statuses[4]).To(Equal("available"))
 				Expect(fileCounts[1]).To(Equal(1))
 				Expect(fileCounts[2]).To(Equal(1))
 				Expect(fileCounts[3]).To(Equal(0))
+				Expect(fileCounts[4]).To(Equal(1))
 
 				// Media file points at the on-disk path (adopted in place, not moved).
 				mf, err := store.FindMediaFileByEpisodeID(ctx, episodeID(full))

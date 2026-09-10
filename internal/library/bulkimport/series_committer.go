@@ -237,12 +237,24 @@ func planEpisodes(show *ent.TVShow, files []string) ([]episodeMatch, int) {
 	var plan []episodeMatch
 	unmatched := 0
 	for _, f := range files {
-		parsed := library.Parse(filepath.Base(f))
 		season, target := library.MatchEpisodeInSeason(
-			parsed,
+			library.Parse(filepath.Base(f)),
 			show.Edges.Seasons,
 			anime,
 		)
+		if target == nil {
+			// SanitizePath used to let a slash through, so an episode titled
+			// "White Hat/Black Hat" was written as a folder named for the
+			// episode with the title's tail as the only file in it. Those
+			// files are still on disk and their basename says nothing; the
+			// folder above them carries the episode number. Folder-per-episode
+			// releases have the same shape.
+			season, target = library.MatchEpisodeInSeason(
+				library.Parse(filepath.Base(filepath.Dir(f))),
+				show.Edges.Seasons,
+				anime,
+			)
+		}
 		if target == nil {
 			unmatched++
 			continue
