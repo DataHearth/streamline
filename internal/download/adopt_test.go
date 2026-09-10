@@ -63,7 +63,7 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 
 		It("proposes when the movie already has a different file", func() {
 			parsed := library.Parse("The.Batman.2022.1080p.BluRay-X")
-			dec, ok := classifyMovieAdoption(parsed, 5000, withFile)
+			dec, ok := classifyMovieAdoption(parsed, 4096+2<<20, withFile)
 			Expect(ok).To(BeTrue())
 			Expect(dec.autoImport).To(BeFalse())
 			Expect(dec.completed).To(BeFalse())
@@ -78,6 +78,21 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 			Expect(dec.autoImport).To(BeFalse())
 			Expect(dec.movieID).To(Equal(uint32(3)))
 			Expect(dec.reason).To(BeEmpty())
+		})
+
+		It("tolerates a sidecar beside the video in a folder torrent", func() {
+			parsed := library.Parse("The.Batman.2022.1080p.BluRay-X")
+			dec, _ := classifyMovieAdoption(parsed, 4096+4769, withFile)
+			Expect(dec.completed).To(BeTrue())
+
+			dec, _ = classifyMovieAdoption(parsed, 4096+2<<20, withFile)
+			Expect(dec.completed).To(BeFalse())
+			Expect(dec.reason).To(Equal("already have a file"))
+
+			dec, _ = classifyMovieAdoption(parsed, 4000, withFile)
+			Expect(
+				dec.completed,
+			).To(BeFalse(), "a torrent smaller than the file is not it")
 		})
 
 		It(
@@ -187,7 +202,7 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 		It("proposes when the matched episode already has a different file", func() {
 			shows := []*ent.TVShow{buildShow(false, true)}
 			parsed := library.Parse("The.Bear.S01E02.1080p.WEB-X")
-			dec, ok := classifyEpisodeAdoption(parsed, 5000, shows)
+			dec, ok := classifyEpisodeAdoption(parsed, 4096+2<<20, shows)
 			Expect(ok).To(BeTrue())
 			Expect(dec.autoImport).To(BeFalse())
 			Expect(dec.completed).To(BeFalse())

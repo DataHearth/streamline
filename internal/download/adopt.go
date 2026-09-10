@@ -44,11 +44,14 @@ type adoptDecision struct {
 // evidence. Codec is deliberately not compared: a row without a stored parse
 // reports the probe's "hevc", and the name says "x265" for the same stream.
 //
-// ponytail: whole-torrent size only. A torrent carrying an .nfo beside the
-// video falls through to the "already have a file" proposal it got before;
-// compare against the torrent's largest file if that ever matters.
+// The torrent may be a folder: an .nfo or a subtitle beside the video adds
+// kilobytes to the total, so the torrent may exceed the file by up to
+// sidecarSlack. A sample clip is megabytes and falls through to the "already
+// have a file" proposal; compare against the torrent's largest file if that
+// ever matters.
 func sameFile(parsed library.ParseResult, size int64, files []*ent.MediaFile) bool {
-	if len(files) == 0 || files[0].Size != size {
+	const sidecarSlack = 1 << 20
+	if len(files) == 0 || size < files[0].Size || size-files[0].Size > sidecarSlack {
 		return false
 	}
 	have := library.ParsedFromMediaFile(files[0])
