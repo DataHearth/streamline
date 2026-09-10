@@ -215,21 +215,55 @@ func (db *DB) ListUpgradeCandidateMovies(
 		All(ctx)
 }
 
-// UpcomingReleases returns wanted movies whose digital_release_date falls in
-// [from, to), ordered by release date ascending. Used by the dashboard
-// calendar modal.
+// UpcomingReleases returns wanted movies whose release falls in [from, to),
+// ordered ascending. Used by the dashboard calendar modal.
+//
+// digital_release_date wins when set, and release_date (theatrical) stands in
+// when it is not: TMDB publishes a type-4 entry only once a title is actually
+// available to buy, so a film still in cinemas — exactly what an "upcoming"
+// calendar is for — has a theatrical date and nothing else. Keying on the
+// digital date alone left the movie half of the calendar permanently empty.
 func (db *DB) UpcomingReleases(
 	ctx context.Context,
 	from, to time.Time,
 ) ([]*ent.Movie, error) {
-	return db.client.Movie.Query().
+	movies, err := db.client.Movie.Query().
 		Where(
 			movie.StatusEQ(movie.StatusWanted),
-			movie.DigitalReleaseDateGTE(from),
-			movie.DigitalReleaseDateLT(to),
+			movie.Or(
+				movie.And(
+					movie.DigitalReleaseDateGTE(from),
+					movie.DigitalReleaseDateLT(to),
+				),
+				movie.And(
+					movie.DigitalReleaseDateIsNil(),
+					movie.ReleaseDateGTE(from),
+					movie.ReleaseDateLT(to),
+				),
+			),
 		).
-		Order(ent.Asc(movie.FieldDigitalReleaseDate)).
 		All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	// ponytail: sorted in Go — one calendar window is a handful of rows, and
+	// a COALESCE ORDER BY needs raw SQL past the ent builder.
+	slices.SortFunc(movies, func(a, b *ent.Movie) int {
+		return UpcomingReleaseDate(a).Compare(UpcomingReleaseDate(b))
+	})
+	return movies, nil
+}
+
+// UpcomingReleaseDate is the date UpcomingReleases matched m on: the digital
+// release when TMDB has published one, the theatrical release otherwise.
+func UpcomingReleaseDate(m *ent.Movie) time.Time {
+	if m.DigitalReleaseDate != nil {
+		return *m.DigitalReleaseDate
+	}
+	if m.ReleaseDate != nil {
+		return *m.ReleaseDate
+	}
+	return time.Time{}
 }
 
 // ListMoviesStaleSince returns movies never refreshed, or last refreshed

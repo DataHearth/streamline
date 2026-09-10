@@ -27,7 +27,12 @@ var _ = Describe("Store.UpcomingReleases", Label("integration", "db"), func() {
 		store = New(client)
 	})
 
-	seed := func(title string, tmdbID uint32, status entmovie.Status, drd *time.Time) {
+	seedDates := func(
+		title string,
+		tmdbID uint32,
+		status entmovie.Status,
+		drd, rd *time.Time,
+	) {
 		GinkgoHelper()
 		c := client.Movie.Create().
 			SetTitle(title).
@@ -38,7 +43,15 @@ var _ = Describe("Store.UpcomingReleases", Label("integration", "db"), func() {
 		if drd != nil {
 			c = c.SetDigitalReleaseDate(*drd)
 		}
+		if rd != nil {
+			c = c.SetReleaseDate(*rd)
+		}
 		c.SaveX(ctx)
+	}
+
+	seed := func(title string, tmdbID uint32, status entmovie.Status, drd *time.Time) {
+		GinkgoHelper()
+		seedDates(title, tmdbID, status, drd, nil)
 	}
 
 	It(
@@ -76,13 +89,34 @@ var _ = Describe("Store.UpcomingReleases", Label("integration", "db"), func() {
 		Expect(got[0].Title).To(Equal("Wanted"))
 	})
 
-	It("excludes wanted movies with no digital_release_date set", func() {
+	It("excludes wanted movies with neither release date set", func() {
 		now := time.Now().UTC().Truncate(time.Minute)
 
-		seed("NoDRD", 1, entmovie.StatusWanted, nil)
+		seed("NoDates", 1, entmovie.StatusWanted, nil)
 
 		got, err := store.UpcomingReleases(ctx, now, now.Add(7*24*time.Hour))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(got).To(BeEmpty())
+	})
+
+	It("falls back to release_date when no digital date is published", func() {
+		now := time.Now().UTC().Truncate(time.Minute)
+		d3 := now.Add(3 * 24 * time.Hour)
+		d5 := now.Add(5 * 24 * time.Hour)
+		dPast := now.Add(-24 * time.Hour)
+
+		seedDates("Theatrical-Late", 1, entmovie.StatusWanted, nil, &d5)
+		seedDates("Digital", 2, entmovie.StatusWanted, &d3, nil)
+		seedDates("Theatrical-Past", 3, entmovie.StatusWanted, nil, &dPast)
+		// A published digital date is the schedule, even when it has passed
+		// and the theatrical date lands inside the window.
+		seedDates("Digital-Wins", 4, entmovie.StatusWanted, &dPast, &d3)
+
+		got, err := store.UpcomingReleases(ctx, now, now.Add(7*24*time.Hour))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(got).To(HaveLen(2))
+		Expect(got[0].Title).To(Equal("Digital"))
+		Expect(got[1].Title).To(Equal("Theatrical-Late"))
+		Expect(UpcomingReleaseDate(got[1])).To(Equal(d5))
 	})
 })

@@ -429,6 +429,7 @@ export type UpcomingMovie = {
 	year: number;
 	tmdb_id: number;
 	digital_release_date: string;
+	release_type: "digital" | "theatrical";
 };
 
 export type UpcomingEpisode = {

@@ -61,7 +61,10 @@ export function toCalendarEvents(movies: UpcomingMovie[]): CalendarEvent[] {
 		id: `movie-${m.id}`,
 		kind: "movie",
 		title: m.title,
-		detail: i18n.calendar_digital_release(),
+		detail:
+			m.release_type === "theatrical"
+				? i18n.calendar_theatrical_release()
+				: i18n.calendar_digital_release(),
 		poster: posterUrl({ id: m.id }),
 		href: `/movies/${m.id}`,
 		date: new Date(m.digital_release_date),

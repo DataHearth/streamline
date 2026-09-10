@@ -8513,7 +8513,7 @@ components:
 
     UpcomingMovie:
       type: object
-      required: [id, title, year, tmdb_id, digital_release_date]
+      required: [id, title, year, tmdb_id, digital_release_date, release_type]
       properties:
         id:
           type: integer
@@ -8529,6 +8529,13 @@ components:
         digital_release_date:
           type: string
           format: date-time
+          description: >-
+            The release this entry is scheduled on. Named for the digital
+            release it carries whenever TMDB has published one; when it has
+            not, this is the theatrical date and release_type says so.
+        release_type:
+          type: string
+          enum: [digital, theatrical]
 
     UpcomingEpisode:
       type: object

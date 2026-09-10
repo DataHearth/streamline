@@ -183,7 +183,7 @@ A running job's progress comes from the encoder inside the running process, so i
 
 **Calendar.** A month grid plus an agenda view of what's on the horizon, covering two kinds of event:
 
-- **Movie digital releases** — for wanted films, the date they become available digitally in your `metadata.tmdb_region`. This is why setting the region correctly matters: leave it wrong and your calendar shows another country's release schedule.
+- **Movie releases** — for wanted films, the date they become available digitally in your `metadata.tmdb_region`, labelled *Digital release*. This is why setting the region correctly matters: leave it wrong and your calendar shows another country's release schedule. TMDB only publishes a digital date once a film is actually buyable, so a title still in cinemas shows its theatrical date instead, labelled *In cinemas*.
 - **Episode air dates** — upcoming episodes of the shows you're tracking.
 
 Filter chips switch between all / movies / episodes. Click any day to see what lands on it; click an entry to jump to the title.

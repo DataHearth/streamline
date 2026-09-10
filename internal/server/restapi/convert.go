@@ -559,8 +559,10 @@ func toUpcomingMovie(m *ent.Movie) UpcomingMovie {
 		Year:   m.Year,
 		TmdbId: m.TmdbID,
 	}
+	out.DigitalReleaseDate = db.UpcomingReleaseDate(m)
+	out.ReleaseType = UpcomingMovieReleaseTypeTheatrical
 	if m.DigitalReleaseDate != nil {
-		out.DigitalReleaseDate = *m.DigitalReleaseDate
+		out.ReleaseType = UpcomingMovieReleaseTypeDigital
 	}
 	return out
 }

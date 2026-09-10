@@ -231,6 +231,7 @@
 	"bulk_selection": "Selection",
 	"calendar_coming_up": "Coming up",
 	"calendar_digital_release": "Digital release",
+	"calendar_theatrical_release": "In cinemas",
 	"calendar_filter_releases": "Filter releases",
 	"calendar_intro": "Releases on the radar — cinema, digital, and streaming windows.",
 	"calendar_load_failed": "Couldn't load releases for this month.",

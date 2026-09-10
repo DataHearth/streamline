@@ -2019,6 +2019,24 @@ func (e TranscodingConfigViewHwStatus) Valid() bool {
 	}
 }
 
+// Defines values for UpcomingMovieReleaseType.
+const (
+	UpcomingMovieReleaseTypeDigital    UpcomingMovieReleaseType = "digital"
+	UpcomingMovieReleaseTypeTheatrical UpcomingMovieReleaseType = "theatrical"
+)
+
+// Valid indicates whether the value is a known member of the UpcomingMovieReleaseType enum.
+func (e UpcomingMovieReleaseType) Valid() bool {
+	switch e {
+	case UpcomingMovieReleaseTypeDigital:
+		return true
+	case UpcomingMovieReleaseTypeTheatrical:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UpdateMovieRequestStatus.
 const (
 	UpdateMovieRequestStatusAvailable   UpdateMovieRequestStatus = "available"
@@ -5121,12 +5139,17 @@ type UpcomingList struct {
 
 // UpcomingMovie defines model for UpcomingMovie.
 type UpcomingMovie struct {
-	DigitalReleaseDate time.Time `json:"digital_release_date"`
-	Id                 uint32    `json:"id"`
-	Title              string    `json:"title"`
-	TmdbId             uint32    `json:"tmdb_id"`
-	Year               uint16    `json:"year"`
+	// DigitalReleaseDate The release this entry is scheduled on. Named for the digital release it carries whenever TMDB has published one; when it has not, this is the theatrical date and release_type says so.
+	DigitalReleaseDate time.Time                `json:"digital_release_date"`
+	Id                 uint32                   `json:"id"`
+	ReleaseType        UpcomingMovieReleaseType `json:"release_type"`
+	Title              string                   `json:"title"`
+	TmdbId             uint32                   `json:"tmdb_id"`
+	Year               uint16                   `json:"year"`
 }
+
+// UpcomingMovieReleaseType defines model for UpcomingMovie.ReleaseType.
+type UpcomingMovieReleaseType string
 
 // UpdateMeRequest defines model for UpdateMeRequest.
 type UpdateMeRequest struct {
