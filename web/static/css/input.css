@@ -108,7 +108,7 @@
 
 	/* A rejected encode is a failure the operator can act on, so it wears the
 	   failed hue under its own label. */
-	--status-rejected: var(--status-failed);
+	--status-rejected: var(--status-missing);
 
 	/* A download that finished, failed verification and waits on a person. Amber
 	   because it is the same "needs something from you" family as wanted — an
