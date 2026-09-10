@@ -181,6 +181,74 @@ func (_c *MockProvider_GetMovie_Call) RunAndReturn(run func(ctx context.Context,
 	return _c
 }
 
+// GetPerson provides a mock function for the type MockProvider
+func (_mock *MockProvider) GetPerson(ctx context.Context, tmdbID uint32) (*metadata.PersonDetails, error) {
+	ret := _mock.Called(ctx, tmdbID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetPerson")
+	}
+
+	var r0 *metadata.PersonDetails
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (*metadata.PersonDetails, error)); ok {
+		return returnFunc(ctx, tmdbID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) *metadata.PersonDetails); ok {
+		r0 = returnFunc(ctx, tmdbID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*metadata.PersonDetails)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+		r1 = returnFunc(ctx, tmdbID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockProvider_GetPerson_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetPerson'
+type MockProvider_GetPerson_Call struct {
+	*mock.Call
+}
+
+// GetPerson is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tmdbID uint32
+func (_e *MockProvider_Expecter) GetPerson(ctx any, tmdbID any) *MockProvider_GetPerson_Call {
+	return &MockProvider_GetPerson_Call{Call: _e.mock.On("GetPerson", ctx, tmdbID)}
+}
+
+func (_c *MockProvider_GetPerson_Call) Run(run func(ctx context.Context, tmdbID uint32)) *MockProvider_GetPerson_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockProvider_GetPerson_Call) Return(personDetails *metadata.PersonDetails, err error) *MockProvider_GetPerson_Call {
+	_c.Call.Return(personDetails, err)
+	return _c
+}
+
+func (_c *MockProvider_GetPerson_Call) RunAndReturn(run func(ctx context.Context, tmdbID uint32) (*metadata.PersonDetails, error)) *MockProvider_GetPerson_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Recommendations provides a mock function for the type MockProvider
 func (_mock *MockProvider) Recommendations(ctx context.Context, tmdbID uint32) ([]metadata.MovieResult, error) {
 	ret := _mock.Called(ctx, tmdbID)

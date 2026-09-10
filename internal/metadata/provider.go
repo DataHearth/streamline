@@ -42,6 +42,24 @@ type MovieDetails struct {
 	OriginalLanguage string // ISO 639-1
 }
 
+// PersonDetails is one person's biographical record, as either provider
+// supplies it. Fields a provider does not carry stay empty rather than being
+// synthesised — TVDB has no equivalent of KnownFor, and neither provider
+// guarantees a biography, a death date or a birthplace.
+type PersonDetails struct {
+	Biography string
+	// KnownFor is TMDB's known_for_department ("Acting", "Directing", …).
+	// Always empty for TVDB.
+	KnownFor     string
+	Birthday     string // ISO yyyy-mm-dd, empty when unknown
+	Deathday     string // ISO yyyy-mm-dd, empty when alive or unknown
+	PlaceOfBirth string
+	ProfileURL   string
+	IMDbID       string
+	InstagramID  string
+	TwitterID    string
+}
+
 type Provider interface {
 	SearchMovie(
 		ctx context.Context,
@@ -49,6 +67,9 @@ type Provider interface {
 		year uint16,
 	) ([]MovieResult, error)
 	GetMovie(ctx context.Context, tmdbID uint32) (*MovieDetails, error)
+	// GetPerson returns the biographical record behind a movie cast entry's
+	// TMDBID.
+	GetPerson(ctx context.Context, tmdbID uint32) (*PersonDetails, error)
 	// Recommendations returns TMDB's "recommended" movies for the given
 	// title, capped and ordered as TMDB returns them.
 	Recommendations(ctx context.Context, tmdbID uint32) ([]MovieResult, error)
@@ -140,4 +161,7 @@ type TVProvider interface {
 	// GetSeriesCast returns top-billed actors for a series. Cheaper than
 	// GetSeries: one extended-record fetch, no episode pagination.
 	GetSeriesCast(ctx context.Context, tvdbID uint32) ([]CastMember, error)
+	// GetPerson returns the biographical record behind a series cast entry's
+	// TVDBID.
+	GetPerson(ctx context.Context, tvdbID uint32) (*PersonDetails, error)
 }

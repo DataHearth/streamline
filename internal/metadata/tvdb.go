@@ -550,6 +550,102 @@ func (t *TVDB) GetSeriesCast(
 	return cast, nil
 }
 
+// GetPerson returns the biographical record for a TVDB people id.
+//
+// TVDB carries no known-for department, so PersonDetails.KnownFor is left empty
+// rather than guessed from the person's credits. Social handles are only ever
+// present as remoteIds entries on this same record — most people carry an IMDB
+// id and nothing else — and no extra request is made hunting for them.
+func (t *TVDB) GetPerson(
+	ctx context.Context,
+	tvdbID uint32,
+) (*PersonDetails, error) {
+	ctx, span := tracer.Start(ctx, "metadata.tvdb.get_person",
+		trace.WithAttributes(attribute.Int("tvdb.id", int(tvdbID))))
+	defer span.End()
+
+	var ext struct {
+		Data struct {
+			ID          uint32          `json:"id"`
+			Name        string          `json:"name"`
+			Image       string          `json:"image"`
+			Birth       string          `json:"birth"`
+			Death       string          `json:"death"`
+			BirthPlace  string          `json:"birthPlace"`
+			Biographies []tvdbBiography `json:"biographies"`
+			RemoteIDs   []struct {
+				ID         string `json:"id"`
+				SourceName string `json:"sourceName"`
+			} `json:"remoteIds"`
+		} `json:"data"`
+	}
+	if err := t.get(
+		ctx,
+		fmt.Sprintf("/people/%d/extended", tvdbID),
+		&ext,
+	); err != nil {
+		return nil, otelx.RecordSpanError(
+			span,
+			fmt.Errorf("tvdb get person: %w", err),
+		)
+	}
+
+	d := &PersonDetails{
+		Biography:    pickBiography(ext.Data.Biographies, t.language),
+		Birthday:     ext.Data.Birth,
+		Deathday:     ext.Data.Death,
+		PlaceOfBirth: ext.Data.BirthPlace,
+		ProfileURL:   TVDBArtworkURL(ext.Data.Image),
+	}
+	for _, r := range ext.Data.RemoteIDs {
+		switch strings.ToLower(r.SourceName) {
+		case "imdb":
+			d.IMDbID = r.ID
+		case "instagram":
+			d.InstagramID = r.ID
+		case "twitter", "x":
+			d.TwitterID = r.ID
+		}
+	}
+	return d, nil
+}
+
+// pickBiography chooses one entry out of TVDB's per-language biographies array:
+// the configured language, then English, then whatever TVDB listed first.
+//
+// TVDB marks no entry as the default, and the array is frequently English-only,
+// so without the English leg a French install shows an empty biography for most
+// of the catalogue. The first-entry leg covers the people TVDB holds a bio for
+// in neither.
+func pickBiography(bios []tvdbBiography, lang string) string {
+	var english string
+	for _, b := range bios {
+		if b.Biography == "" {
+			continue
+		}
+		if lang != "" && strings.EqualFold(b.Language, lang) {
+			return b.Biography
+		}
+		if english == "" && strings.EqualFold(b.Language, "eng") {
+			english = b.Biography
+		}
+	}
+	if english != "" {
+		return english
+	}
+	for _, b := range bios {
+		if b.Biography != "" {
+			return b.Biography
+		}
+	}
+	return ""
+}
+
+type tvdbBiography struct {
+	Biography string `json:"biography"`
+	Language  string `json:"language"`
+}
+
 // translateSeasons replaces each season's name with the configured language's,
 // in place. seasons and ids are index-aligned.
 //

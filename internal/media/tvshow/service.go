@@ -167,6 +167,7 @@ func (s *Service) Add(
 	}
 
 	s.fetchPoster(ctx, show.ID, d.PosterPath)
+	s.enrichPeople(ctx, show.ID)
 
 	showsAdded.Add(ctx, 1)
 	slog.InfoContext(
@@ -947,6 +948,7 @@ func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.TVShow, error
 	}); err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
+	s.enrichPeople(ctx, id)
 	// Re-sync the season/episode tree so refreshed titles (e.g. a language
 	// change) surface, an ongoing series picks up newly-aired episodes, and
 	// provider-removed episodes/seasons are pruned. Their files are removed
@@ -1073,6 +1075,7 @@ func (s *Service) Reidentify(
 	}); err != nil {
 		return nil, nil, otelx.RecordSpanError(span, err)
 	}
+	s.enrichPeople(ctx, id)
 	// A metadata refresh deliberately preserves `type` because an operator may
 	// have corrected it. Re-identify is the exception: this is a different show,
 	// so the correction was about the old one and re-inferring is right.

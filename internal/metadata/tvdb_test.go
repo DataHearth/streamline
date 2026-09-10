@@ -125,6 +125,114 @@ var _ = Describe("TVDB series cast", Label("unit", "metadata"), func() {
 	})
 })
 
+var _ = Describe("TVDB person", Label("unit", "metadata"), func() {
+	var (
+		client *TVDB
+		ctx    context.Context
+		body   string
+	)
+
+	BeforeEach(func() {
+		ctx = context.Background()
+		srv := httptest.NewServer(
+			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				Expect(r.URL.Path).To(Equal("/people/456/extended"))
+				Expect(r.Header.Get("Authorization")).To(Equal("Bearer t"))
+				_, _ = w.Write([]byte(body))
+			}),
+		)
+		DeferCleanup(srv.Close)
+
+		client = NewTVDB()
+		client.BaseURL = srv.URL
+		client.token = "t" // skip /login round trip
+	})
+
+	It("maps the extended people record", func() {
+		body = `{"data":{"id":456,"name":"Actor A","image":"/a.jpg","birth":"1969-11-04","death":"2024-01-02","birthPlace":"Uvalde, Texas","biographies":[{"biography":"An actor.","language":"eng"}],"remoteIds":[{"id":"nm0000190","sourceName":"IMDB"},{"id":"actor_a","sourceName":"Instagram"},{"id":"ActorA","sourceName":"Twitter"}]}}`
+
+		p, err := client.GetPerson(ctx, 456)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(p.Biography).To(Equal("An actor."))
+		Expect(p.Birthday).To(Equal("1969-11-04"))
+		Expect(p.Deathday).To(Equal("2024-01-02"))
+		Expect(p.PlaceOfBirth).To(Equal("Uvalde, Texas"))
+		Expect(p.ProfileURL).To(Equal("https://artworks.thetvdb.com/a.jpg"))
+		Expect(p.IMDbID).To(Equal("nm0000190"))
+		Expect(p.InstagramID).To(Equal("actor_a"))
+		Expect(p.TwitterID).To(Equal("ActorA"))
+		// TVDB has no known-for department; it is never invented from credits.
+		Expect(p.KnownFor).To(BeEmpty())
+	})
+
+	It("leaves a person TVDB holds no remote ids for empty", func() {
+		body = `{"data":{"id":456,"name":"Actor A","birth":null,"death":null,"birthPlace":null,"biographies":[],"remoteIds":[]}}`
+
+		p, err := client.GetPerson(ctx, 456)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(p.Biography).To(BeEmpty())
+		Expect(p.Birthday).To(BeEmpty())
+		Expect(p.Deathday).To(BeEmpty())
+		Expect(p.IMDbID).To(BeEmpty())
+		Expect(p.InstagramID).To(BeEmpty())
+		Expect(p.TwitterID).To(BeEmpty())
+		Expect(p.ProfileURL).To(BeEmpty())
+	})
+
+	It("picks the configured language's biography over English", func() {
+		client.language = "fra"
+		body = `{"data":{"id":456,"biographies":[{"biography":"An actor.","language":"eng"},{"biography":"Un acteur.","language":"fra"}]}}`
+
+		p, err := client.GetPerson(ctx, 456)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(p.Biography).To(Equal("Un acteur."))
+	})
+
+	It("surfaces a non-200 as an error", func() {
+		client.token = "t"
+		srv := httptest.NewServer(
+			http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(http.StatusNotFound)
+			}),
+		)
+		DeferCleanup(srv.Close)
+		client.BaseURL = srv.URL
+
+		_, err := client.GetPerson(ctx, 456)
+		Expect(err).To(MatchError(ContainSubstring("tvdb get person")))
+	})
+})
+
+var _ = Describe("pickBiography", Label("unit", "metadata"), func() {
+	bios := func(pairs ...string) []tvdbBiography {
+		out := make([]tvdbBiography, 0, len(pairs)/2)
+		for i := 0; i < len(pairs); i += 2 {
+			out = append(
+				out,
+				tvdbBiography{Language: pairs[i], Biography: pairs[i+1]},
+			)
+		}
+		return out
+	}
+
+	DescribeTable("language fallback chain",
+		func(entries []tvdbBiography, lang, want string) {
+			Expect(pickBiography(entries, lang)).To(Equal(want))
+		},
+		Entry("configured language wins",
+			bios("eng", "english", "fra", "french"), "fra", "french"),
+		Entry("english when the configured language is absent",
+			bios("deu", "german", "eng", "english"), "fra", "english"),
+		Entry("first entry when neither is present",
+			bios("deu", "german", "spa", "spanish"), "fra", "german"),
+		Entry("an empty configured language still prefers english",
+			bios("deu", "german", "eng", "english"), "", "english"),
+		Entry("a language entry carrying no text is skipped",
+			bios("fra", "", "eng", "english"), "fra", "english"),
+		Entry("no biographies at all", []tvdbBiography{}, "eng", ""),
+	)
+})
+
 var _ = Describe("TVDB token handling", Label("unit", "metadata"), func() {
 	var (
 		ctx       context.Context

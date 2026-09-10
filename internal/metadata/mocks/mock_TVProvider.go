@@ -38,6 +38,74 @@ func (_m *MockTVProvider) EXPECT() *MockTVProvider_Expecter {
 	return &MockTVProvider_Expecter{mock: &_m.Mock}
 }
 
+// GetPerson provides a mock function for the type MockTVProvider
+func (_mock *MockTVProvider) GetPerson(ctx context.Context, tvdbID uint32) (*metadata.PersonDetails, error) {
+	ret := _mock.Called(ctx, tvdbID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetPerson")
+	}
+
+	var r0 *metadata.PersonDetails
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (*metadata.PersonDetails, error)); ok {
+		return returnFunc(ctx, tvdbID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) *metadata.PersonDetails); ok {
+		r0 = returnFunc(ctx, tvdbID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*metadata.PersonDetails)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+		r1 = returnFunc(ctx, tvdbID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTVProvider_GetPerson_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetPerson'
+type MockTVProvider_GetPerson_Call struct {
+	*mock.Call
+}
+
+// GetPerson is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tvdbID uint32
+func (_e *MockTVProvider_Expecter) GetPerson(ctx any, tvdbID any) *MockTVProvider_GetPerson_Call {
+	return &MockTVProvider_GetPerson_Call{Call: _e.mock.On("GetPerson", ctx, tvdbID)}
+}
+
+func (_c *MockTVProvider_GetPerson_Call) Run(run func(ctx context.Context, tvdbID uint32)) *MockTVProvider_GetPerson_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTVProvider_GetPerson_Call) Return(personDetails *metadata.PersonDetails, err error) *MockTVProvider_GetPerson_Call {
+	_c.Call.Return(personDetails, err)
+	return _c
+}
+
+func (_c *MockTVProvider_GetPerson_Call) RunAndReturn(run func(ctx context.Context, tvdbID uint32) (*metadata.PersonDetails, error)) *MockTVProvider_GetPerson_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetSeries provides a mock function for the type MockTVProvider
 func (_mock *MockTVProvider) GetSeries(ctx context.Context, tvdbID uint32) (*metadata.TVDetails, error) {
 	ret := _mock.Called(ctx, tvdbID)

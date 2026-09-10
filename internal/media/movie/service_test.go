@@ -43,6 +43,12 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 		dl := mockdownload.NewMockDownloader(GinkgoT())
 		downloadMock = dl.EXPECT()
 		svc = NewService(store, meta, posters, dl)
+		// Cast enrichment runs after every add and metadata update and is
+		// exercised on its own in people_test.go; here it is background noise
+		// with nothing to enrich.
+		storeMock.PeopleNeedingDetails(
+			mock.Anything, mock.Anything, mock.Anything,
+		).Return(nil, nil).Maybe()
 		configtest.Setup(map[string]any{
 			"metadata": map[string]any{"tmdb_region": ""},
 		})

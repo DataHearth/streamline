@@ -29,6 +29,24 @@ type Person struct {
 	Name string `json:"name,omitempty"`
 	// ProfileURL holds the value of the "profile_url" field.
 	ProfileURL string `json:"profile_url,omitempty"`
+	// Biography holds the value of the "biography" field.
+	Biography string `json:"biography,omitempty"`
+	// KnownFor holds the value of the "known_for" field.
+	KnownFor string `json:"known_for,omitempty"`
+	// Birthday holds the value of the "birthday" field.
+	Birthday string `json:"birthday,omitempty"`
+	// Deathday holds the value of the "deathday" field.
+	Deathday string `json:"deathday,omitempty"`
+	// PlaceOfBirth holds the value of the "place_of_birth" field.
+	PlaceOfBirth string `json:"place_of_birth,omitempty"`
+	// ImdbID holds the value of the "imdb_id" field.
+	ImdbID string `json:"imdb_id,omitempty"`
+	// InstagramID holds the value of the "instagram_id" field.
+	InstagramID string `json:"instagram_id,omitempty"`
+	// TwitterID holds the value of the "twitter_id" field.
+	TwitterID string `json:"twitter_id,omitempty"`
+	// DetailsFetchedAt holds the value of the "details_fetched_at" field.
+	DetailsFetchedAt *time.Time `json:"details_fetched_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the PersonQuery when eager-loading is set.
 	Edges        PersonEdges `json:"edges"`
@@ -60,9 +78,9 @@ func (*Person) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case person.FieldID, person.FieldTmdbID, person.FieldTvdbID:
 			values[i] = new(sql.NullInt64)
-		case person.FieldName, person.FieldProfileURL:
+		case person.FieldName, person.FieldProfileURL, person.FieldBiography, person.FieldKnownFor, person.FieldBirthday, person.FieldDeathday, person.FieldPlaceOfBirth, person.FieldImdbID, person.FieldInstagramID, person.FieldTwitterID:
 			values[i] = new(sql.NullString)
-		case person.FieldCreateTime, person.FieldUpdateTime:
+		case person.FieldCreateTime, person.FieldUpdateTime, person.FieldDetailsFetchedAt:
 			values[i] = new(sql.NullTime)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -120,6 +138,61 @@ func (_m *Person) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field profile_url", values[i])
 			} else if value.Valid {
 				_m.ProfileURL = value.String
+			}
+		case person.FieldBiography:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field biography", values[i])
+			} else if value.Valid {
+				_m.Biography = value.String
+			}
+		case person.FieldKnownFor:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field known_for", values[i])
+			} else if value.Valid {
+				_m.KnownFor = value.String
+			}
+		case person.FieldBirthday:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field birthday", values[i])
+			} else if value.Valid {
+				_m.Birthday = value.String
+			}
+		case person.FieldDeathday:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field deathday", values[i])
+			} else if value.Valid {
+				_m.Deathday = value.String
+			}
+		case person.FieldPlaceOfBirth:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field place_of_birth", values[i])
+			} else if value.Valid {
+				_m.PlaceOfBirth = value.String
+			}
+		case person.FieldImdbID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field imdb_id", values[i])
+			} else if value.Valid {
+				_m.ImdbID = value.String
+			}
+		case person.FieldInstagramID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field instagram_id", values[i])
+			} else if value.Valid {
+				_m.InstagramID = value.String
+			}
+		case person.FieldTwitterID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field twitter_id", values[i])
+			} else if value.Valid {
+				_m.TwitterID = value.String
+			}
+		case person.FieldDetailsFetchedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field details_fetched_at", values[i])
+			} else if value.Valid {
+				_m.DetailsFetchedAt = new(time.Time)
+				*_m.DetailsFetchedAt = value.Time
 			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
@@ -179,6 +252,35 @@ func (_m *Person) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("profile_url=")
 	builder.WriteString(_m.ProfileURL)
+	builder.WriteString(", ")
+	builder.WriteString("biography=")
+	builder.WriteString(_m.Biography)
+	builder.WriteString(", ")
+	builder.WriteString("known_for=")
+	builder.WriteString(_m.KnownFor)
+	builder.WriteString(", ")
+	builder.WriteString("birthday=")
+	builder.WriteString(_m.Birthday)
+	builder.WriteString(", ")
+	builder.WriteString("deathday=")
+	builder.WriteString(_m.Deathday)
+	builder.WriteString(", ")
+	builder.WriteString("place_of_birth=")
+	builder.WriteString(_m.PlaceOfBirth)
+	builder.WriteString(", ")
+	builder.WriteString("imdb_id=")
+	builder.WriteString(_m.ImdbID)
+	builder.WriteString(", ")
+	builder.WriteString("instagram_id=")
+	builder.WriteString(_m.InstagramID)
+	builder.WriteString(", ")
+	builder.WriteString("twitter_id=")
+	builder.WriteString(_m.TwitterID)
+	builder.WriteString(", ")
+	if v := _m.DetailsFetchedAt; v != nil {
+		builder.WriteString("details_fetched_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
 	builder.WriteByte(')')
 	return builder.String()
 }

@@ -26,6 +26,24 @@ const (
 	FieldName = "name"
 	// FieldProfileURL holds the string denoting the profile_url field in the database.
 	FieldProfileURL = "profile_url"
+	// FieldBiography holds the string denoting the biography field in the database.
+	FieldBiography = "biography"
+	// FieldKnownFor holds the string denoting the known_for field in the database.
+	FieldKnownFor = "known_for"
+	// FieldBirthday holds the string denoting the birthday field in the database.
+	FieldBirthday = "birthday"
+	// FieldDeathday holds the string denoting the deathday field in the database.
+	FieldDeathday = "deathday"
+	// FieldPlaceOfBirth holds the string denoting the place_of_birth field in the database.
+	FieldPlaceOfBirth = "place_of_birth"
+	// FieldImdbID holds the string denoting the imdb_id field in the database.
+	FieldImdbID = "imdb_id"
+	// FieldInstagramID holds the string denoting the instagram_id field in the database.
+	FieldInstagramID = "instagram_id"
+	// FieldTwitterID holds the string denoting the twitter_id field in the database.
+	FieldTwitterID = "twitter_id"
+	// FieldDetailsFetchedAt holds the string denoting the details_fetched_at field in the database.
+	FieldDetailsFetchedAt = "details_fetched_at"
 	// EdgeCredits holds the string denoting the credits edge name in mutations.
 	EdgeCredits = "credits"
 	// Table holds the table name of the person in the database.
@@ -48,6 +66,15 @@ var Columns = []string{
 	FieldTvdbID,
 	FieldName,
 	FieldProfileURL,
+	FieldBiography,
+	FieldKnownFor,
+	FieldBirthday,
+	FieldDeathday,
+	FieldPlaceOfBirth,
+	FieldImdbID,
+	FieldInstagramID,
+	FieldTwitterID,
+	FieldDetailsFetchedAt,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -111,6 +138,51 @@ func ByName(opts ...sql.OrderTermOption) OrderOption {
 // ByProfileURL orders the results by the profile_url field.
 func ByProfileURL(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldProfileURL, opts...).ToFunc()
+}
+
+// ByBiography orders the results by the biography field.
+func ByBiography(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBiography, opts...).ToFunc()
+}
+
+// ByKnownFor orders the results by the known_for field.
+func ByKnownFor(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldKnownFor, opts...).ToFunc()
+}
+
+// ByBirthday orders the results by the birthday field.
+func ByBirthday(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBirthday, opts...).ToFunc()
+}
+
+// ByDeathday orders the results by the deathday field.
+func ByDeathday(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDeathday, opts...).ToFunc()
+}
+
+// ByPlaceOfBirth orders the results by the place_of_birth field.
+func ByPlaceOfBirth(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPlaceOfBirth, opts...).ToFunc()
+}
+
+// ByImdbID orders the results by the imdb_id field.
+func ByImdbID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldImdbID, opts...).ToFunc()
+}
+
+// ByInstagramID orders the results by the instagram_id field.
+func ByInstagramID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldInstagramID, opts...).ToFunc()
+}
+
+// ByTwitterID orders the results by the twitter_id field.
+func ByTwitterID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTwitterID, opts...).ToFunc()
+}
+
+// ByDetailsFetchedAt orders the results by the details_fetched_at field.
+func ByDetailsFetchedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDetailsFetchedAt, opts...).ToFunc()
 }
 
 // ByCreditsCount orders the results by credits count.

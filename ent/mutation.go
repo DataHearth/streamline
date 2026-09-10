@@ -16264,24 +16264,33 @@ func (m *OIDCIdentityMutation) ResetEdge(name string) error {
 // PersonMutation represents an operation that mutates the Person nodes in the graph.
 type PersonMutation struct {
 	config
-	op             Op
-	typ            string
-	id             *uint32
-	create_time    *time.Time
-	update_time    *time.Time
-	tmdb_id        *uint32
-	addtmdb_id     *int32
-	tvdb_id        *uint32
-	addtvdb_id     *int32
-	name           *string
-	profile_url    *string
-	clearedFields  map[string]struct{}
-	credits        map[uint32]struct{}
-	removedcredits map[uint32]struct{}
-	clearedcredits bool
-	done           bool
-	oldValue       func(context.Context) (*Person, error)
-	predicates     []predicate.Person
+	op                 Op
+	typ                string
+	id                 *uint32
+	create_time        *time.Time
+	update_time        *time.Time
+	tmdb_id            *uint32
+	addtmdb_id         *int32
+	tvdb_id            *uint32
+	addtvdb_id         *int32
+	name               *string
+	profile_url        *string
+	biography          *string
+	known_for          *string
+	birthday           *string
+	deathday           *string
+	place_of_birth     *string
+	imdb_id            *string
+	instagram_id       *string
+	twitter_id         *string
+	details_fetched_at *time.Time
+	clearedFields      map[string]struct{}
+	credits            map[uint32]struct{}
+	removedcredits     map[uint32]struct{}
+	clearedcredits     bool
+	done               bool
+	oldValue           func(context.Context) (*Person, error)
+	predicates         []predicate.Person
 }
 
 var _ ent.Mutation = (*PersonMutation)(nil)
@@ -16685,6 +16694,447 @@ func (m *PersonMutation) ResetProfileURL() {
 	delete(m.clearedFields, person.FieldProfileURL)
 }
 
+// SetBiography sets the "biography" field.
+func (m *PersonMutation) SetBiography(s string) {
+	m.biography = &s
+}
+
+// Biography returns the value of the "biography" field in the mutation.
+func (m *PersonMutation) Biography() (r string, exists bool) {
+	v := m.biography
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBiography returns the old "biography" field's value of the Person entity.
+// If the Person object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PersonMutation) OldBiography(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBiography is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBiography requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBiography: %w", err)
+	}
+	return oldValue.Biography, nil
+}
+
+// ClearBiography clears the value of the "biography" field.
+func (m *PersonMutation) ClearBiography() {
+	m.biography = nil
+	m.clearedFields[person.FieldBiography] = struct{}{}
+}
+
+// BiographyCleared returns if the "biography" field was cleared in this mutation.
+func (m *PersonMutation) BiographyCleared() bool {
+	_, ok := m.clearedFields[person.FieldBiography]
+	return ok
+}
+
+// ResetBiography resets all changes to the "biography" field.
+func (m *PersonMutation) ResetBiography() {
+	m.biography = nil
+	delete(m.clearedFields, person.FieldBiography)
+}
+
+// SetKnownFor sets the "known_for" field.
+func (m *PersonMutation) SetKnownFor(s string) {
+	m.known_for = &s
+}
+
+// KnownFor returns the value of the "known_for" field in the mutation.
+func (m *PersonMutation) KnownFor() (r string, exists bool) {
+	v := m.known_for
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldKnownFor returns the old "known_for" field's value of the Person entity.
+// If the Person object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PersonMutation) OldKnownFor(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldKnownFor is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldKnownFor requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldKnownFor: %w", err)
+	}
+	return oldValue.KnownFor, nil
+}
+
+// ClearKnownFor clears the value of the "known_for" field.
+func (m *PersonMutation) ClearKnownFor() {
+	m.known_for = nil
+	m.clearedFields[person.FieldKnownFor] = struct{}{}
+}
+
+// KnownForCleared returns if the "known_for" field was cleared in this mutation.
+func (m *PersonMutation) KnownForCleared() bool {
+	_, ok := m.clearedFields[person.FieldKnownFor]
+	return ok
+}
+
+// ResetKnownFor resets all changes to the "known_for" field.
+func (m *PersonMutation) ResetKnownFor() {
+	m.known_for = nil
+	delete(m.clearedFields, person.FieldKnownFor)
+}
+
+// SetBirthday sets the "birthday" field.
+func (m *PersonMutation) SetBirthday(s string) {
+	m.birthday = &s
+}
+
+// Birthday returns the value of the "birthday" field in the mutation.
+func (m *PersonMutation) Birthday() (r string, exists bool) {
+	v := m.birthday
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBirthday returns the old "birthday" field's value of the Person entity.
+// If the Person object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PersonMutation) OldBirthday(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBirthday is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBirthday requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBirthday: %w", err)
+	}
+	return oldValue.Birthday, nil
+}
+
+// ClearBirthday clears the value of the "birthday" field.
+func (m *PersonMutation) ClearBirthday() {
+	m.birthday = nil
+	m.clearedFields[person.FieldBirthday] = struct{}{}
+}
+
+// BirthdayCleared returns if the "birthday" field was cleared in this mutation.
+func (m *PersonMutation) BirthdayCleared() bool {
+	_, ok := m.clearedFields[person.FieldBirthday]
+	return ok
+}
+
+// ResetBirthday resets all changes to the "birthday" field.
+func (m *PersonMutation) ResetBirthday() {
+	m.birthday = nil
+	delete(m.clearedFields, person.FieldBirthday)
+}
+
+// SetDeathday sets the "deathday" field.
+func (m *PersonMutation) SetDeathday(s string) {
+	m.deathday = &s
+}
+
+// Deathday returns the value of the "deathday" field in the mutation.
+func (m *PersonMutation) Deathday() (r string, exists bool) {
+	v := m.deathday
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDeathday returns the old "deathday" field's value of the Person entity.
+// If the Person object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PersonMutation) OldDeathday(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDeathday is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDeathday requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDeathday: %w", err)
+	}
+	return oldValue.Deathday, nil
+}
+
+// ClearDeathday clears the value of the "deathday" field.
+func (m *PersonMutation) ClearDeathday() {
+	m.deathday = nil
+	m.clearedFields[person.FieldDeathday] = struct{}{}
+}
+
+// DeathdayCleared returns if the "deathday" field was cleared in this mutation.
+func (m *PersonMutation) DeathdayCleared() bool {
+	_, ok := m.clearedFields[person.FieldDeathday]
+	return ok
+}
+
+// ResetDeathday resets all changes to the "deathday" field.
+func (m *PersonMutation) ResetDeathday() {
+	m.deathday = nil
+	delete(m.clearedFields, person.FieldDeathday)
+}
+
+// SetPlaceOfBirth sets the "place_of_birth" field.
+func (m *PersonMutation) SetPlaceOfBirth(s string) {
+	m.place_of_birth = &s
+}
+
+// PlaceOfBirth returns the value of the "place_of_birth" field in the mutation.
+func (m *PersonMutation) PlaceOfBirth() (r string, exists bool) {
+	v := m.place_of_birth
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPlaceOfBirth returns the old "place_of_birth" field's value of the Person entity.
+// If the Person object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PersonMutation) OldPlaceOfBirth(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPlaceOfBirth is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPlaceOfBirth requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPlaceOfBirth: %w", err)
+	}
+	return oldValue.PlaceOfBirth, nil
+}
+
+// ClearPlaceOfBirth clears the value of the "place_of_birth" field.
+func (m *PersonMutation) ClearPlaceOfBirth() {
+	m.place_of_birth = nil
+	m.clearedFields[person.FieldPlaceOfBirth] = struct{}{}
+}
+
+// PlaceOfBirthCleared returns if the "place_of_birth" field was cleared in this mutation.
+func (m *PersonMutation) PlaceOfBirthCleared() bool {
+	_, ok := m.clearedFields[person.FieldPlaceOfBirth]
+	return ok
+}
+
+// ResetPlaceOfBirth resets all changes to the "place_of_birth" field.
+func (m *PersonMutation) ResetPlaceOfBirth() {
+	m.place_of_birth = nil
+	delete(m.clearedFields, person.FieldPlaceOfBirth)
+}
+
+// SetImdbID sets the "imdb_id" field.
+func (m *PersonMutation) SetImdbID(s string) {
+	m.imdb_id = &s
+}
+
+// ImdbID returns the value of the "imdb_id" field in the mutation.
+func (m *PersonMutation) ImdbID() (r string, exists bool) {
+	v := m.imdb_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldImdbID returns the old "imdb_id" field's value of the Person entity.
+// If the Person object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PersonMutation) OldImdbID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldImdbID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldImdbID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldImdbID: %w", err)
+	}
+	return oldValue.ImdbID, nil
+}
+
+// ClearImdbID clears the value of the "imdb_id" field.
+func (m *PersonMutation) ClearImdbID() {
+	m.imdb_id = nil
+	m.clearedFields[person.FieldImdbID] = struct{}{}
+}
+
+// ImdbIDCleared returns if the "imdb_id" field was cleared in this mutation.
+func (m *PersonMutation) ImdbIDCleared() bool {
+	_, ok := m.clearedFields[person.FieldImdbID]
+	return ok
+}
+
+// ResetImdbID resets all changes to the "imdb_id" field.
+func (m *PersonMutation) ResetImdbID() {
+	m.imdb_id = nil
+	delete(m.clearedFields, person.FieldImdbID)
+}
+
+// SetInstagramID sets the "instagram_id" field.
+func (m *PersonMutation) SetInstagramID(s string) {
+	m.instagram_id = &s
+}
+
+// InstagramID returns the value of the "instagram_id" field in the mutation.
+func (m *PersonMutation) InstagramID() (r string, exists bool) {
+	v := m.instagram_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldInstagramID returns the old "instagram_id" field's value of the Person entity.
+// If the Person object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PersonMutation) OldInstagramID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldInstagramID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldInstagramID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldInstagramID: %w", err)
+	}
+	return oldValue.InstagramID, nil
+}
+
+// ClearInstagramID clears the value of the "instagram_id" field.
+func (m *PersonMutation) ClearInstagramID() {
+	m.instagram_id = nil
+	m.clearedFields[person.FieldInstagramID] = struct{}{}
+}
+
+// InstagramIDCleared returns if the "instagram_id" field was cleared in this mutation.
+func (m *PersonMutation) InstagramIDCleared() bool {
+	_, ok := m.clearedFields[person.FieldInstagramID]
+	return ok
+}
+
+// ResetInstagramID resets all changes to the "instagram_id" field.
+func (m *PersonMutation) ResetInstagramID() {
+	m.instagram_id = nil
+	delete(m.clearedFields, person.FieldInstagramID)
+}
+
+// SetTwitterID sets the "twitter_id" field.
+func (m *PersonMutation) SetTwitterID(s string) {
+	m.twitter_id = &s
+}
+
+// TwitterID returns the value of the "twitter_id" field in the mutation.
+func (m *PersonMutation) TwitterID() (r string, exists bool) {
+	v := m.twitter_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTwitterID returns the old "twitter_id" field's value of the Person entity.
+// If the Person object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PersonMutation) OldTwitterID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTwitterID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTwitterID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTwitterID: %w", err)
+	}
+	return oldValue.TwitterID, nil
+}
+
+// ClearTwitterID clears the value of the "twitter_id" field.
+func (m *PersonMutation) ClearTwitterID() {
+	m.twitter_id = nil
+	m.clearedFields[person.FieldTwitterID] = struct{}{}
+}
+
+// TwitterIDCleared returns if the "twitter_id" field was cleared in this mutation.
+func (m *PersonMutation) TwitterIDCleared() bool {
+	_, ok := m.clearedFields[person.FieldTwitterID]
+	return ok
+}
+
+// ResetTwitterID resets all changes to the "twitter_id" field.
+func (m *PersonMutation) ResetTwitterID() {
+	m.twitter_id = nil
+	delete(m.clearedFields, person.FieldTwitterID)
+}
+
+// SetDetailsFetchedAt sets the "details_fetched_at" field.
+func (m *PersonMutation) SetDetailsFetchedAt(t time.Time) {
+	m.details_fetched_at = &t
+}
+
+// DetailsFetchedAt returns the value of the "details_fetched_at" field in the mutation.
+func (m *PersonMutation) DetailsFetchedAt() (r time.Time, exists bool) {
+	v := m.details_fetched_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDetailsFetchedAt returns the old "details_fetched_at" field's value of the Person entity.
+// If the Person object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PersonMutation) OldDetailsFetchedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDetailsFetchedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDetailsFetchedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDetailsFetchedAt: %w", err)
+	}
+	return oldValue.DetailsFetchedAt, nil
+}
+
+// ClearDetailsFetchedAt clears the value of the "details_fetched_at" field.
+func (m *PersonMutation) ClearDetailsFetchedAt() {
+	m.details_fetched_at = nil
+	m.clearedFields[person.FieldDetailsFetchedAt] = struct{}{}
+}
+
+// DetailsFetchedAtCleared returns if the "details_fetched_at" field was cleared in this mutation.
+func (m *PersonMutation) DetailsFetchedAtCleared() bool {
+	_, ok := m.clearedFields[person.FieldDetailsFetchedAt]
+	return ok
+}
+
+// ResetDetailsFetchedAt resets all changes to the "details_fetched_at" field.
+func (m *PersonMutation) ResetDetailsFetchedAt() {
+	m.details_fetched_at = nil
+	delete(m.clearedFields, person.FieldDetailsFetchedAt)
+}
+
 // AddCreditIDs adds the "credits" edge to the Credit entity by ids.
 func (m *PersonMutation) AddCreditIDs(ids ...uint32) {
 	if m.credits == nil {
@@ -16773,7 +17223,7 @@ func (m *PersonMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *PersonMutation) Fields() []string {
-	fields := make([]string, 0, 6)
+	fields := make([]string, 0, 15)
 	if m.create_time != nil {
 		fields = append(fields, person.FieldCreateTime)
 	}
@@ -16791,6 +17241,33 @@ func (m *PersonMutation) Fields() []string {
 	}
 	if m.profile_url != nil {
 		fields = append(fields, person.FieldProfileURL)
+	}
+	if m.biography != nil {
+		fields = append(fields, person.FieldBiography)
+	}
+	if m.known_for != nil {
+		fields = append(fields, person.FieldKnownFor)
+	}
+	if m.birthday != nil {
+		fields = append(fields, person.FieldBirthday)
+	}
+	if m.deathday != nil {
+		fields = append(fields, person.FieldDeathday)
+	}
+	if m.place_of_birth != nil {
+		fields = append(fields, person.FieldPlaceOfBirth)
+	}
+	if m.imdb_id != nil {
+		fields = append(fields, person.FieldImdbID)
+	}
+	if m.instagram_id != nil {
+		fields = append(fields, person.FieldInstagramID)
+	}
+	if m.twitter_id != nil {
+		fields = append(fields, person.FieldTwitterID)
+	}
+	if m.details_fetched_at != nil {
+		fields = append(fields, person.FieldDetailsFetchedAt)
 	}
 	return fields
 }
@@ -16812,6 +17289,24 @@ func (m *PersonMutation) Field(name string) (ent.Value, bool) {
 		return m.Name()
 	case person.FieldProfileURL:
 		return m.ProfileURL()
+	case person.FieldBiography:
+		return m.Biography()
+	case person.FieldKnownFor:
+		return m.KnownFor()
+	case person.FieldBirthday:
+		return m.Birthday()
+	case person.FieldDeathday:
+		return m.Deathday()
+	case person.FieldPlaceOfBirth:
+		return m.PlaceOfBirth()
+	case person.FieldImdbID:
+		return m.ImdbID()
+	case person.FieldInstagramID:
+		return m.InstagramID()
+	case person.FieldTwitterID:
+		return m.TwitterID()
+	case person.FieldDetailsFetchedAt:
+		return m.DetailsFetchedAt()
 	}
 	return nil, false
 }
@@ -16833,6 +17328,24 @@ func (m *PersonMutation) OldField(ctx context.Context, name string) (ent.Value, 
 		return m.OldName(ctx)
 	case person.FieldProfileURL:
 		return m.OldProfileURL(ctx)
+	case person.FieldBiography:
+		return m.OldBiography(ctx)
+	case person.FieldKnownFor:
+		return m.OldKnownFor(ctx)
+	case person.FieldBirthday:
+		return m.OldBirthday(ctx)
+	case person.FieldDeathday:
+		return m.OldDeathday(ctx)
+	case person.FieldPlaceOfBirth:
+		return m.OldPlaceOfBirth(ctx)
+	case person.FieldImdbID:
+		return m.OldImdbID(ctx)
+	case person.FieldInstagramID:
+		return m.OldInstagramID(ctx)
+	case person.FieldTwitterID:
+		return m.OldTwitterID(ctx)
+	case person.FieldDetailsFetchedAt:
+		return m.OldDetailsFetchedAt(ctx)
 	}
 	return nil, fmt.Errorf("unknown Person field %s", name)
 }
@@ -16883,6 +17396,69 @@ func (m *PersonMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetProfileURL(v)
+		return nil
+	case person.FieldBiography:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBiography(v)
+		return nil
+	case person.FieldKnownFor:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetKnownFor(v)
+		return nil
+	case person.FieldBirthday:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBirthday(v)
+		return nil
+	case person.FieldDeathday:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDeathday(v)
+		return nil
+	case person.FieldPlaceOfBirth:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPlaceOfBirth(v)
+		return nil
+	case person.FieldImdbID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetImdbID(v)
+		return nil
+	case person.FieldInstagramID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetInstagramID(v)
+		return nil
+	case person.FieldTwitterID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTwitterID(v)
+		return nil
+	case person.FieldDetailsFetchedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDetailsFetchedAt(v)
 		return nil
 	}
 	return fmt.Errorf("unknown Person field %s", name)
@@ -16950,6 +17526,33 @@ func (m *PersonMutation) ClearedFields() []string {
 	if m.FieldCleared(person.FieldProfileURL) {
 		fields = append(fields, person.FieldProfileURL)
 	}
+	if m.FieldCleared(person.FieldBiography) {
+		fields = append(fields, person.FieldBiography)
+	}
+	if m.FieldCleared(person.FieldKnownFor) {
+		fields = append(fields, person.FieldKnownFor)
+	}
+	if m.FieldCleared(person.FieldBirthday) {
+		fields = append(fields, person.FieldBirthday)
+	}
+	if m.FieldCleared(person.FieldDeathday) {
+		fields = append(fields, person.FieldDeathday)
+	}
+	if m.FieldCleared(person.FieldPlaceOfBirth) {
+		fields = append(fields, person.FieldPlaceOfBirth)
+	}
+	if m.FieldCleared(person.FieldImdbID) {
+		fields = append(fields, person.FieldImdbID)
+	}
+	if m.FieldCleared(person.FieldInstagramID) {
+		fields = append(fields, person.FieldInstagramID)
+	}
+	if m.FieldCleared(person.FieldTwitterID) {
+		fields = append(fields, person.FieldTwitterID)
+	}
+	if m.FieldCleared(person.FieldDetailsFetchedAt) {
+		fields = append(fields, person.FieldDetailsFetchedAt)
+	}
 	return fields
 }
 
@@ -16972,6 +17575,33 @@ func (m *PersonMutation) ClearField(name string) error {
 		return nil
 	case person.FieldProfileURL:
 		m.ClearProfileURL()
+		return nil
+	case person.FieldBiography:
+		m.ClearBiography()
+		return nil
+	case person.FieldKnownFor:
+		m.ClearKnownFor()
+		return nil
+	case person.FieldBirthday:
+		m.ClearBirthday()
+		return nil
+	case person.FieldDeathday:
+		m.ClearDeathday()
+		return nil
+	case person.FieldPlaceOfBirth:
+		m.ClearPlaceOfBirth()
+		return nil
+	case person.FieldImdbID:
+		m.ClearImdbID()
+		return nil
+	case person.FieldInstagramID:
+		m.ClearInstagramID()
+		return nil
+	case person.FieldTwitterID:
+		m.ClearTwitterID()
+		return nil
+	case person.FieldDetailsFetchedAt:
+		m.ClearDetailsFetchedAt()
 		return nil
 	}
 	return fmt.Errorf("unknown Person nullable field %s", name)
@@ -16998,6 +17628,33 @@ func (m *PersonMutation) ResetField(name string) error {
 		return nil
 	case person.FieldProfileURL:
 		m.ResetProfileURL()
+		return nil
+	case person.FieldBiography:
+		m.ResetBiography()
+		return nil
+	case person.FieldKnownFor:
+		m.ResetKnownFor()
+		return nil
+	case person.FieldBirthday:
+		m.ResetBirthday()
+		return nil
+	case person.FieldDeathday:
+		m.ResetDeathday()
+		return nil
+	case person.FieldPlaceOfBirth:
+		m.ResetPlaceOfBirth()
+		return nil
+	case person.FieldImdbID:
+		m.ResetImdbID()
+		return nil
+	case person.FieldInstagramID:
+		m.ResetInstagramID()
+		return nil
+	case person.FieldTwitterID:
+		m.ResetTwitterID()
+		return nil
+	case person.FieldDetailsFetchedAt:
+		m.ResetDetailsFetchedAt()
 		return nil
 	}
 	return fmt.Errorf("unknown Person field %s", name)

@@ -236,6 +236,7 @@ func (s *Service) Add(
 	}
 
 	s.fetchPoster(ctx, m.ID, details.PosterPath)
+	s.enrichPeople(ctx, m.ID)
 
 	moviesAdded.Add(ctx, 1)
 	slog.InfoContext(ctx, "movie added", "title", m.Title, "tmdb_id", m.TmdbID)
@@ -646,8 +647,23 @@ func (s *Service) refreshOne(ctx context.Context, m *ent.Movie) error {
 	return nil
 }
 
-// applyMetadata persists the TMDB-sourced fields onto an existing row.
+// applyMetadata persists the TMDB-sourced fields onto an existing row, then
+// enriches whatever cast that write introduced. The enrichment is deliberately
+// outside the update — UpdateMovieMetadata owns the transaction the credits
+// are written in, and provider calls do not belong inside a SQLite write lock.
 func (s *Service) applyMetadata(
+	ctx context.Context,
+	id uint32,
+	details *metadata.MovieDetails,
+) error {
+	if err := s.updateMetadata(ctx, id, details); err != nil {
+		return err
+	}
+	s.enrichPeople(ctx, id)
+	return nil
+}
+
+func (s *Service) updateMetadata(
 	ctx context.Context,
 	id uint32,
 	details *metadata.MovieDetails,

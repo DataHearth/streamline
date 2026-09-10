@@ -4080,14 +4080,33 @@ type PendingPreviewEpisode struct {
 
 // Person defines model for Person.
 type Person struct {
+	Biography *string `json:"biography,omitempty"`
+
+	// Birthday Provider-format date, normally `YYYY-MM-DD`. Not a `date` — the
+	// providers return partial and malformed values, and they are
+	// passed through as given rather than dropped.
+	Birthday *string `json:"birthday,omitempty"`
+
 	// Credits Library items — movies plus series — the person is credited on. A
 	// person listed twice on one title counts once.
 	Credits uint32 `json:"credits"`
 
+	// Deathday As `birthday`. Absent when the person is alive or unknown.
+	Deathday *string `json:"deathday,omitempty"`
+
 	// Id Row id in the library's `persons` table — the identity, and the
 	// only key GET /people/{id} accepts.
-	Id   uint32 `json:"id"`
-	Name string `json:"name"`
+	Id     uint32  `json:"id"`
+	ImdbId *string `json:"imdb_id,omitempty"`
+
+	// InstagramId Handle, not a URL.
+	InstagramId *string `json:"instagram_id,omitempty"`
+
+	// KnownFor TMDB's known-for department ("Acting", "Directing", …). TVDB has no
+	// equivalent, so a series-sourced person never has one.
+	KnownFor     *string `json:"known_for,omitempty"`
+	Name         string  `json:"name"`
+	PlaceOfBirth *string `json:"place_of_birth,omitempty"`
 
 	// ProfileUrl Portrait URL as the provider gave it. Absent when no credit
 	// carries one.
@@ -4100,22 +4119,77 @@ type Person struct {
 	// TvdbId TVDB person id, or 0 when TVDB never supplied one. Series cast
 	// comes from TVDB, so these are the entries with no `tmdb_id`.
 	TvdbId uint32 `json:"tvdb_id"`
+
+	// TwitterId Handle, not a URL.
+	TwitterId *string `json:"twitter_id,omitempty"`
+}
+
+// PersonBio Biographical record fetched from the person's own provider record when
+// the title crediting them was ingested. Every field is optional and
+// frequently absent: neither provider guarantees a biography, a death
+// date or a birthplace, and a TVDB-sourced person carries no `known_for`
+// and usually no socials at all. An empty value is omitted rather than
+// sent as `""`.
+type PersonBio struct {
+	Biography *string `json:"biography,omitempty"`
+
+	// Birthday Provider-format date, normally `YYYY-MM-DD`. Not a `date` — the
+	// providers return partial and malformed values, and they are
+	// passed through as given rather than dropped.
+	Birthday *string `json:"birthday,omitempty"`
+
+	// Deathday As `birthday`. Absent when the person is alive or unknown.
+	Deathday *string `json:"deathday,omitempty"`
+	ImdbId   *string `json:"imdb_id,omitempty"`
+
+	// InstagramId Handle, not a URL.
+	InstagramId *string `json:"instagram_id,omitempty"`
+
+	// KnownFor TMDB's known-for department ("Acting", "Directing", …). TVDB has no
+	// equivalent, so a series-sourced person never has one.
+	KnownFor     *string `json:"known_for,omitempty"`
+	PlaceOfBirth *string `json:"place_of_birth,omitempty"`
+
+	// TwitterId Handle, not a URL.
+	TwitterId *string `json:"twitter_id,omitempty"`
 }
 
 // PersonCredits defines model for PersonCredits.
 type PersonCredits struct {
+	Biography *string `json:"biography,omitempty"`
+
+	// Birthday Provider-format date, normally `YYYY-MM-DD`. Not a `date` — the
+	// providers return partial and malformed values, and they are
+	// passed through as given rather than dropped.
+	Birthday *string `json:"birthday,omitempty"`
+
+	// Deathday As `birthday`. Absent when the person is alive or unknown.
+	Deathday *string `json:"deathday,omitempty"`
+
 	// Id Row id in the library's `persons` table.
-	Id         uint32               `json:"id"`
-	Movies     []PersonMovieCredit  `json:"movies"`
-	Name       string               `json:"name"`
-	ProfileUrl *string              `json:"profile_url,omitempty"`
-	Series     []PersonSeriesCredit `json:"series"`
+	Id     uint32  `json:"id"`
+	ImdbId *string `json:"imdb_id,omitempty"`
+
+	// InstagramId Handle, not a URL.
+	InstagramId *string `json:"instagram_id,omitempty"`
+
+	// KnownFor TMDB's known-for department ("Acting", "Directing", …). TVDB has no
+	// equivalent, so a series-sourced person never has one.
+	KnownFor     *string              `json:"known_for,omitempty"`
+	Movies       []PersonMovieCredit  `json:"movies"`
+	Name         string               `json:"name"`
+	PlaceOfBirth *string              `json:"place_of_birth,omitempty"`
+	ProfileUrl   *string              `json:"profile_url,omitempty"`
+	Series       []PersonSeriesCredit `json:"series"`
 
 	// TmdbId TMDB person id, or 0 when TMDB never supplied one.
 	TmdbId uint32 `json:"tmdb_id"`
 
 	// TvdbId TVDB person id, or 0 when TVDB never supplied one.
 	TvdbId uint32 `json:"tvdb_id"`
+
+	// TwitterId Handle, not a URL.
+	TwitterId *string `json:"twitter_id,omitempty"`
 }
 
 // PersonList defines model for PersonList.

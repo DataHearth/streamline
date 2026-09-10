@@ -28,10 +28,52 @@ type Person struct {
 	TVDBID     uint32
 	Name       string
 	ProfileURL string
+	PersonBio
 	// Credits counts the library items — movies plus series — the person is
 	// credited on, not the credit rows: a person listed twice on one title is
 	// one credit.
 	Credits uint32
+}
+
+// PersonBio is the biographical record the provider person-detail call fills
+// in, shared by both person shapes the API serves. Every field is frequently
+// absent: neither provider guarantees a biography or a death date, and a
+// TVDB-sourced person has no KnownFor at all.
+type PersonBio struct {
+	Biography    string
+	KnownFor     string
+	Birthday     string
+	Deathday     string
+	PlaceOfBirth string
+	IMDbID       string
+	InstagramID  string
+	TwitterID    string
+}
+
+// personRow projects a stored row onto the API-facing shape, minus the
+// Credits rollup no single-row query computes.
+func personRow(p *ent.Person) Person {
+	return Person{
+		ID:         p.ID,
+		TMDBID:     p.TmdbID,
+		TVDBID:     p.TvdbID,
+		Name:       p.Name,
+		ProfileURL: p.ProfileURL,
+		PersonBio:  personBio(p),
+	}
+}
+
+func personBio(p *ent.Person) PersonBio {
+	return PersonBio{
+		Biography:    p.Biography,
+		KnownFor:     p.KnownFor,
+		Birthday:     p.Birthday,
+		Deathday:     p.Deathday,
+		PlaceOfBirth: p.PlaceOfBirth,
+		IMDbID:       p.ImdbID,
+		InstagramID:  p.InstagramID,
+		TwitterID:    p.TwitterID,
+	}
 }
 
 type ListPeopleParams struct {
@@ -62,8 +104,9 @@ type PersonCredits struct {
 	TVDBID     uint32
 	Name       string
 	ProfileURL string
-	Movies     []MovieCredit
-	Series     []SeriesCredit
+	PersonBio
+	Movies []MovieCredit
+	Series []SeriesCredit
 }
 
 // creditItemKey counts a person's credits by library item rather than by
@@ -108,12 +151,20 @@ func (db *DB) ListPeople(
 	}
 
 	var rows []struct {
-		ID         uint32 `sql:"id"`
-		TMDBID     uint32 `sql:"tmdb_id"`
-		TVDBID     uint32 `sql:"tvdb_id"`
-		Name       string `sql:"name"`
-		ProfileURL string `sql:"profile_url"`
-		Credits    uint32 `sql:"credits"`
+		ID           uint32 `sql:"id"`
+		TMDBID       uint32 `sql:"tmdb_id"`
+		TVDBID       uint32 `sql:"tvdb_id"`
+		Name         string `sql:"name"`
+		ProfileURL   string `sql:"profile_url"`
+		Biography    string `sql:"biography"`
+		KnownFor     string `sql:"known_for"`
+		Birthday     string `sql:"birthday"`
+		Deathday     string `sql:"deathday"`
+		PlaceOfBirth string `sql:"place_of_birth"`
+		IMDbID       string `sql:"imdb_id"`
+		InstagramID  string `sql:"instagram_id"`
+		TwitterID    string `sql:"twitter_id"`
+		Credits      uint32 `sql:"credits"`
 	}
 	err = db.client.Person.Query().
 		Modify(func(s *entsql.Selector) {
@@ -125,6 +176,14 @@ func (db *DB) ListPeople(
 				entsql.As(s.C(person.FieldTvdbID), "tvdb_id"),
 				entsql.As(s.C(person.FieldName), "name"),
 				entsql.As(s.C(person.FieldProfileURL), "profile_url"),
+				entsql.As(s.C(person.FieldBiography), "biography"),
+				entsql.As(s.C(person.FieldKnownFor), "known_for"),
+				entsql.As(s.C(person.FieldBirthday), "birthday"),
+				entsql.As(s.C(person.FieldDeathday), "deathday"),
+				entsql.As(s.C(person.FieldPlaceOfBirth), "place_of_birth"),
+				entsql.As(s.C(person.FieldImdbID), "imdb_id"),
+				entsql.As(s.C(person.FieldInstagramID), "instagram_id"),
+				entsql.As(s.C(person.FieldTwitterID), "twitter_id"),
 				entsql.As(credits, "credits"),
 			)
 			peopleWhere(s, p.Query)
@@ -151,7 +210,17 @@ func (db *DB) ListPeople(
 			TVDBID:     r.TVDBID,
 			Name:       r.Name,
 			ProfileURL: r.ProfileURL,
-			Credits:    r.Credits,
+			PersonBio: PersonBio{
+				Biography:    r.Biography,
+				KnownFor:     r.KnownFor,
+				Birthday:     r.Birthday,
+				Deathday:     r.Deathday,
+				PlaceOfBirth: r.PlaceOfBirth,
+				IMDbID:       r.IMDbID,
+				InstagramID:  r.InstagramID,
+				TwitterID:    r.TwitterID,
+			},
+			Credits: r.Credits,
 		})
 	}
 	return out, total, nil
@@ -196,6 +265,7 @@ func (db *DB) PersonCredits(
 		TVDBID:     p.TvdbID,
 		Name:       p.Name,
 		ProfileURL: p.ProfileURL,
+		PersonBio:  personBio(p),
 		Movies:     make([]MovieCredit, 0, len(p.Edges.Credits)),
 		Series:     make([]SeriesCredit, 0, len(p.Edges.Credits)),
 	}

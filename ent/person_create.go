@@ -97,6 +97,132 @@ func (_c *PersonCreate) SetNillableProfileURL(v *string) *PersonCreate {
 	return _c
 }
 
+// SetBiography sets the "biography" field.
+func (_c *PersonCreate) SetBiography(v string) *PersonCreate {
+	_c.mutation.SetBiography(v)
+	return _c
+}
+
+// SetNillableBiography sets the "biography" field if the given value is not nil.
+func (_c *PersonCreate) SetNillableBiography(v *string) *PersonCreate {
+	if v != nil {
+		_c.SetBiography(*v)
+	}
+	return _c
+}
+
+// SetKnownFor sets the "known_for" field.
+func (_c *PersonCreate) SetKnownFor(v string) *PersonCreate {
+	_c.mutation.SetKnownFor(v)
+	return _c
+}
+
+// SetNillableKnownFor sets the "known_for" field if the given value is not nil.
+func (_c *PersonCreate) SetNillableKnownFor(v *string) *PersonCreate {
+	if v != nil {
+		_c.SetKnownFor(*v)
+	}
+	return _c
+}
+
+// SetBirthday sets the "birthday" field.
+func (_c *PersonCreate) SetBirthday(v string) *PersonCreate {
+	_c.mutation.SetBirthday(v)
+	return _c
+}
+
+// SetNillableBirthday sets the "birthday" field if the given value is not nil.
+func (_c *PersonCreate) SetNillableBirthday(v *string) *PersonCreate {
+	if v != nil {
+		_c.SetBirthday(*v)
+	}
+	return _c
+}
+
+// SetDeathday sets the "deathday" field.
+func (_c *PersonCreate) SetDeathday(v string) *PersonCreate {
+	_c.mutation.SetDeathday(v)
+	return _c
+}
+
+// SetNillableDeathday sets the "deathday" field if the given value is not nil.
+func (_c *PersonCreate) SetNillableDeathday(v *string) *PersonCreate {
+	if v != nil {
+		_c.SetDeathday(*v)
+	}
+	return _c
+}
+
+// SetPlaceOfBirth sets the "place_of_birth" field.
+func (_c *PersonCreate) SetPlaceOfBirth(v string) *PersonCreate {
+	_c.mutation.SetPlaceOfBirth(v)
+	return _c
+}
+
+// SetNillablePlaceOfBirth sets the "place_of_birth" field if the given value is not nil.
+func (_c *PersonCreate) SetNillablePlaceOfBirth(v *string) *PersonCreate {
+	if v != nil {
+		_c.SetPlaceOfBirth(*v)
+	}
+	return _c
+}
+
+// SetImdbID sets the "imdb_id" field.
+func (_c *PersonCreate) SetImdbID(v string) *PersonCreate {
+	_c.mutation.SetImdbID(v)
+	return _c
+}
+
+// SetNillableImdbID sets the "imdb_id" field if the given value is not nil.
+func (_c *PersonCreate) SetNillableImdbID(v *string) *PersonCreate {
+	if v != nil {
+		_c.SetImdbID(*v)
+	}
+	return _c
+}
+
+// SetInstagramID sets the "instagram_id" field.
+func (_c *PersonCreate) SetInstagramID(v string) *PersonCreate {
+	_c.mutation.SetInstagramID(v)
+	return _c
+}
+
+// SetNillableInstagramID sets the "instagram_id" field if the given value is not nil.
+func (_c *PersonCreate) SetNillableInstagramID(v *string) *PersonCreate {
+	if v != nil {
+		_c.SetInstagramID(*v)
+	}
+	return _c
+}
+
+// SetTwitterID sets the "twitter_id" field.
+func (_c *PersonCreate) SetTwitterID(v string) *PersonCreate {
+	_c.mutation.SetTwitterID(v)
+	return _c
+}
+
+// SetNillableTwitterID sets the "twitter_id" field if the given value is not nil.
+func (_c *PersonCreate) SetNillableTwitterID(v *string) *PersonCreate {
+	if v != nil {
+		_c.SetTwitterID(*v)
+	}
+	return _c
+}
+
+// SetDetailsFetchedAt sets the "details_fetched_at" field.
+func (_c *PersonCreate) SetDetailsFetchedAt(v time.Time) *PersonCreate {
+	_c.mutation.SetDetailsFetchedAt(v)
+	return _c
+}
+
+// SetNillableDetailsFetchedAt sets the "details_fetched_at" field if the given value is not nil.
+func (_c *PersonCreate) SetNillableDetailsFetchedAt(v *time.Time) *PersonCreate {
+	if v != nil {
+		_c.SetDetailsFetchedAt(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *PersonCreate) SetID(v uint32) *PersonCreate {
 	_c.mutation.SetID(v)
@@ -242,6 +368,42 @@ func (_c *PersonCreate) createSpec() (*Person, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.ProfileURL(); ok {
 		_spec.SetField(person.FieldProfileURL, field.TypeString, value)
 		_node.ProfileURL = value
+	}
+	if value, ok := _c.mutation.Biography(); ok {
+		_spec.SetField(person.FieldBiography, field.TypeString, value)
+		_node.Biography = value
+	}
+	if value, ok := _c.mutation.KnownFor(); ok {
+		_spec.SetField(person.FieldKnownFor, field.TypeString, value)
+		_node.KnownFor = value
+	}
+	if value, ok := _c.mutation.Birthday(); ok {
+		_spec.SetField(person.FieldBirthday, field.TypeString, value)
+		_node.Birthday = value
+	}
+	if value, ok := _c.mutation.Deathday(); ok {
+		_spec.SetField(person.FieldDeathday, field.TypeString, value)
+		_node.Deathday = value
+	}
+	if value, ok := _c.mutation.PlaceOfBirth(); ok {
+		_spec.SetField(person.FieldPlaceOfBirth, field.TypeString, value)
+		_node.PlaceOfBirth = value
+	}
+	if value, ok := _c.mutation.ImdbID(); ok {
+		_spec.SetField(person.FieldImdbID, field.TypeString, value)
+		_node.ImdbID = value
+	}
+	if value, ok := _c.mutation.InstagramID(); ok {
+		_spec.SetField(person.FieldInstagramID, field.TypeString, value)
+		_node.InstagramID = value
+	}
+	if value, ok := _c.mutation.TwitterID(); ok {
+		_spec.SetField(person.FieldTwitterID, field.TypeString, value)
+		_node.TwitterID = value
+	}
+	if value, ok := _c.mutation.DetailsFetchedAt(); ok {
+		_spec.SetField(person.FieldDetailsFetchedAt, field.TypeTime, value)
+		_node.DetailsFetchedAt = &value
 	}
 	if nodes := _c.mutation.CreditsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

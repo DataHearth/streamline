@@ -325,6 +325,10 @@ var _ = Describe("Service.addOrFindMovie", Label("unit", "bulkimport"), func() {
 		})
 		ctx = context.Background()
 		store = dbmocks.NewMockStore(GinkgoT())
+		// movie.Service enriches cast after every add; nothing to enrich here.
+		store.EXPECT().PeopleNeedingDetails(
+			mock.Anything, mock.Anything, mock.Anything,
+		).Return(nil, nil).Maybe()
 		meta = metamocks.NewMockProvider(GinkgoT())
 		svc = NewService(store, meta, nil, nil,
 			movie.NewService(store, meta, nil, nil), nil, "/lib", "/lib-tv")
@@ -361,6 +365,10 @@ var _ = Describe("Service.commitAdoptInPlace", Label("unit", "bulkimport"), func
 	BeforeEach(func() {
 		ctx = context.Background()
 		store = dbmocks.NewMockStore(GinkgoT())
+		// movie.Service enriches cast after every add; nothing to enrich here.
+		store.EXPECT().PeopleNeedingDetails(
+			mock.Anything, mock.Anything, mock.Anything,
+		).Return(nil, nil).Maybe()
 		meta = metamocks.NewMockProvider(GinkgoT())
 	})
 
@@ -475,6 +483,10 @@ var _ = Describe("Service.commitRename", Label("unit", "bulkimport"), func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 		store = dbmocks.NewMockStore(GinkgoT())
+		// movie.Service enriches cast after every add; nothing to enrich here.
+		store.EXPECT().PeopleNeedingDetails(
+			mock.Anything, mock.Anything, mock.Anything,
+		).Return(nil, nil).Maybe()
 		meta = metamocks.NewMockProvider(GinkgoT())
 		base := GinkgoT().TempDir()
 		libDir = filepath.Join(base, "lib")

@@ -802,6 +802,22 @@ type Store interface {
 		owner CastOwner,
 		ownerID uint32,
 	) ([]CastEntry, error)
+	// PeopleNeedingDetails returns the people credited on a title whose
+	// biographical record has never been fetched — the work list for the
+	// post-commit enrichment pass. Credits is not populated.
+	PeopleNeedingDetails(
+		ctx context.Context,
+		owner CastOwner,
+		ownerID uint32,
+	) ([]Person, error)
+	// SavePersonDetails writes one person's biographical record and stamps
+	// details_fetched_at, which is what keeps them out of every later
+	// PeopleNeedingDetails result.
+	SavePersonDetails(
+		ctx context.Context,
+		id uint32,
+		d metadata.PersonDetails,
+	) error
 
 	// requests
 	CreateRequest(ctx context.Context, p CreateRequestParams) (*ent.Request, error)

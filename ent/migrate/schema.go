@@ -643,6 +643,15 @@ var (
 		{Name: "tvdb_id", Type: field.TypeUint32, Nullable: true, Default: 0},
 		{Name: "name", Type: field.TypeString},
 		{Name: "profile_url", Type: field.TypeString, Nullable: true},
+		{Name: "biography", Type: field.TypeString, Nullable: true},
+		{Name: "known_for", Type: field.TypeString, Nullable: true},
+		{Name: "birthday", Type: field.TypeString, Nullable: true},
+		{Name: "deathday", Type: field.TypeString, Nullable: true},
+		{Name: "place_of_birth", Type: field.TypeString, Nullable: true},
+		{Name: "imdb_id", Type: field.TypeString, Nullable: true},
+		{Name: "instagram_id", Type: field.TypeString, Nullable: true},
+		{Name: "twitter_id", Type: field.TypeString, Nullable: true},
+		{Name: "details_fetched_at", Type: field.TypeTime, Nullable: true},
 	}
 	// PersonsTable holds the schema information for the "persons" table.
 	PersonsTable = &schema.Table{

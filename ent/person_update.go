@@ -124,6 +124,186 @@ func (_u *PersonUpdate) ClearProfileURL() *PersonUpdate {
 	return _u
 }
 
+// SetBiography sets the "biography" field.
+func (_u *PersonUpdate) SetBiography(v string) *PersonUpdate {
+	_u.mutation.SetBiography(v)
+	return _u
+}
+
+// SetNillableBiography sets the "biography" field if the given value is not nil.
+func (_u *PersonUpdate) SetNillableBiography(v *string) *PersonUpdate {
+	if v != nil {
+		_u.SetBiography(*v)
+	}
+	return _u
+}
+
+// ClearBiography clears the value of the "biography" field.
+func (_u *PersonUpdate) ClearBiography() *PersonUpdate {
+	_u.mutation.ClearBiography()
+	return _u
+}
+
+// SetKnownFor sets the "known_for" field.
+func (_u *PersonUpdate) SetKnownFor(v string) *PersonUpdate {
+	_u.mutation.SetKnownFor(v)
+	return _u
+}
+
+// SetNillableKnownFor sets the "known_for" field if the given value is not nil.
+func (_u *PersonUpdate) SetNillableKnownFor(v *string) *PersonUpdate {
+	if v != nil {
+		_u.SetKnownFor(*v)
+	}
+	return _u
+}
+
+// ClearKnownFor clears the value of the "known_for" field.
+func (_u *PersonUpdate) ClearKnownFor() *PersonUpdate {
+	_u.mutation.ClearKnownFor()
+	return _u
+}
+
+// SetBirthday sets the "birthday" field.
+func (_u *PersonUpdate) SetBirthday(v string) *PersonUpdate {
+	_u.mutation.SetBirthday(v)
+	return _u
+}
+
+// SetNillableBirthday sets the "birthday" field if the given value is not nil.
+func (_u *PersonUpdate) SetNillableBirthday(v *string) *PersonUpdate {
+	if v != nil {
+		_u.SetBirthday(*v)
+	}
+	return _u
+}
+
+// ClearBirthday clears the value of the "birthday" field.
+func (_u *PersonUpdate) ClearBirthday() *PersonUpdate {
+	_u.mutation.ClearBirthday()
+	return _u
+}
+
+// SetDeathday sets the "deathday" field.
+func (_u *PersonUpdate) SetDeathday(v string) *PersonUpdate {
+	_u.mutation.SetDeathday(v)
+	return _u
+}
+
+// SetNillableDeathday sets the "deathday" field if the given value is not nil.
+func (_u *PersonUpdate) SetNillableDeathday(v *string) *PersonUpdate {
+	if v != nil {
+		_u.SetDeathday(*v)
+	}
+	return _u
+}
+
+// ClearDeathday clears the value of the "deathday" field.
+func (_u *PersonUpdate) ClearDeathday() *PersonUpdate {
+	_u.mutation.ClearDeathday()
+	return _u
+}
+
+// SetPlaceOfBirth sets the "place_of_birth" field.
+func (_u *PersonUpdate) SetPlaceOfBirth(v string) *PersonUpdate {
+	_u.mutation.SetPlaceOfBirth(v)
+	return _u
+}
+
+// SetNillablePlaceOfBirth sets the "place_of_birth" field if the given value is not nil.
+func (_u *PersonUpdate) SetNillablePlaceOfBirth(v *string) *PersonUpdate {
+	if v != nil {
+		_u.SetPlaceOfBirth(*v)
+	}
+	return _u
+}
+
+// ClearPlaceOfBirth clears the value of the "place_of_birth" field.
+func (_u *PersonUpdate) ClearPlaceOfBirth() *PersonUpdate {
+	_u.mutation.ClearPlaceOfBirth()
+	return _u
+}
+
+// SetImdbID sets the "imdb_id" field.
+func (_u *PersonUpdate) SetImdbID(v string) *PersonUpdate {
+	_u.mutation.SetImdbID(v)
+	return _u
+}
+
+// SetNillableImdbID sets the "imdb_id" field if the given value is not nil.
+func (_u *PersonUpdate) SetNillableImdbID(v *string) *PersonUpdate {
+	if v != nil {
+		_u.SetImdbID(*v)
+	}
+	return _u
+}
+
+// ClearImdbID clears the value of the "imdb_id" field.
+func (_u *PersonUpdate) ClearImdbID() *PersonUpdate {
+	_u.mutation.ClearImdbID()
+	return _u
+}
+
+// SetInstagramID sets the "instagram_id" field.
+func (_u *PersonUpdate) SetInstagramID(v string) *PersonUpdate {
+	_u.mutation.SetInstagramID(v)
+	return _u
+}
+
+// SetNillableInstagramID sets the "instagram_id" field if the given value is not nil.
+func (_u *PersonUpdate) SetNillableInstagramID(v *string) *PersonUpdate {
+	if v != nil {
+		_u.SetInstagramID(*v)
+	}
+	return _u
+}
+
+// ClearInstagramID clears the value of the "instagram_id" field.
+func (_u *PersonUpdate) ClearInstagramID() *PersonUpdate {
+	_u.mutation.ClearInstagramID()
+	return _u
+}
+
+// SetTwitterID sets the "twitter_id" field.
+func (_u *PersonUpdate) SetTwitterID(v string) *PersonUpdate {
+	_u.mutation.SetTwitterID(v)
+	return _u
+}
+
+// SetNillableTwitterID sets the "twitter_id" field if the given value is not nil.
+func (_u *PersonUpdate) SetNillableTwitterID(v *string) *PersonUpdate {
+	if v != nil {
+		_u.SetTwitterID(*v)
+	}
+	return _u
+}
+
+// ClearTwitterID clears the value of the "twitter_id" field.
+func (_u *PersonUpdate) ClearTwitterID() *PersonUpdate {
+	_u.mutation.ClearTwitterID()
+	return _u
+}
+
+// SetDetailsFetchedAt sets the "details_fetched_at" field.
+func (_u *PersonUpdate) SetDetailsFetchedAt(v time.Time) *PersonUpdate {
+	_u.mutation.SetDetailsFetchedAt(v)
+	return _u
+}
+
+// SetNillableDetailsFetchedAt sets the "details_fetched_at" field if the given value is not nil.
+func (_u *PersonUpdate) SetNillableDetailsFetchedAt(v *time.Time) *PersonUpdate {
+	if v != nil {
+		_u.SetDetailsFetchedAt(*v)
+	}
+	return _u
+}
+
+// ClearDetailsFetchedAt clears the value of the "details_fetched_at" field.
+func (_u *PersonUpdate) ClearDetailsFetchedAt() *PersonUpdate {
+	_u.mutation.ClearDetailsFetchedAt()
+	return _u
+}
+
 // AddCreditIDs adds the "credits" edge to the Credit entity by IDs.
 func (_u *PersonUpdate) AddCreditIDs(ids ...uint32) *PersonUpdate {
 	_u.mutation.AddCreditIDs(ids...)
@@ -258,6 +438,60 @@ func (_u *PersonUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.ProfileURLCleared() {
 		_spec.ClearField(person.FieldProfileURL, field.TypeString)
+	}
+	if value, ok := _u.mutation.Biography(); ok {
+		_spec.SetField(person.FieldBiography, field.TypeString, value)
+	}
+	if _u.mutation.BiographyCleared() {
+		_spec.ClearField(person.FieldBiography, field.TypeString)
+	}
+	if value, ok := _u.mutation.KnownFor(); ok {
+		_spec.SetField(person.FieldKnownFor, field.TypeString, value)
+	}
+	if _u.mutation.KnownForCleared() {
+		_spec.ClearField(person.FieldKnownFor, field.TypeString)
+	}
+	if value, ok := _u.mutation.Birthday(); ok {
+		_spec.SetField(person.FieldBirthday, field.TypeString, value)
+	}
+	if _u.mutation.BirthdayCleared() {
+		_spec.ClearField(person.FieldBirthday, field.TypeString)
+	}
+	if value, ok := _u.mutation.Deathday(); ok {
+		_spec.SetField(person.FieldDeathday, field.TypeString, value)
+	}
+	if _u.mutation.DeathdayCleared() {
+		_spec.ClearField(person.FieldDeathday, field.TypeString)
+	}
+	if value, ok := _u.mutation.PlaceOfBirth(); ok {
+		_spec.SetField(person.FieldPlaceOfBirth, field.TypeString, value)
+	}
+	if _u.mutation.PlaceOfBirthCleared() {
+		_spec.ClearField(person.FieldPlaceOfBirth, field.TypeString)
+	}
+	if value, ok := _u.mutation.ImdbID(); ok {
+		_spec.SetField(person.FieldImdbID, field.TypeString, value)
+	}
+	if _u.mutation.ImdbIDCleared() {
+		_spec.ClearField(person.FieldImdbID, field.TypeString)
+	}
+	if value, ok := _u.mutation.InstagramID(); ok {
+		_spec.SetField(person.FieldInstagramID, field.TypeString, value)
+	}
+	if _u.mutation.InstagramIDCleared() {
+		_spec.ClearField(person.FieldInstagramID, field.TypeString)
+	}
+	if value, ok := _u.mutation.TwitterID(); ok {
+		_spec.SetField(person.FieldTwitterID, field.TypeString, value)
+	}
+	if _u.mutation.TwitterIDCleared() {
+		_spec.ClearField(person.FieldTwitterID, field.TypeString)
+	}
+	if value, ok := _u.mutation.DetailsFetchedAt(); ok {
+		_spec.SetField(person.FieldDetailsFetchedAt, field.TypeTime, value)
+	}
+	if _u.mutation.DetailsFetchedAtCleared() {
+		_spec.ClearField(person.FieldDetailsFetchedAt, field.TypeTime)
 	}
 	if _u.mutation.CreditsCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -417,6 +651,186 @@ func (_u *PersonUpdateOne) SetNillableProfileURL(v *string) *PersonUpdateOne {
 // ClearProfileURL clears the value of the "profile_url" field.
 func (_u *PersonUpdateOne) ClearProfileURL() *PersonUpdateOne {
 	_u.mutation.ClearProfileURL()
+	return _u
+}
+
+// SetBiography sets the "biography" field.
+func (_u *PersonUpdateOne) SetBiography(v string) *PersonUpdateOne {
+	_u.mutation.SetBiography(v)
+	return _u
+}
+
+// SetNillableBiography sets the "biography" field if the given value is not nil.
+func (_u *PersonUpdateOne) SetNillableBiography(v *string) *PersonUpdateOne {
+	if v != nil {
+		_u.SetBiography(*v)
+	}
+	return _u
+}
+
+// ClearBiography clears the value of the "biography" field.
+func (_u *PersonUpdateOne) ClearBiography() *PersonUpdateOne {
+	_u.mutation.ClearBiography()
+	return _u
+}
+
+// SetKnownFor sets the "known_for" field.
+func (_u *PersonUpdateOne) SetKnownFor(v string) *PersonUpdateOne {
+	_u.mutation.SetKnownFor(v)
+	return _u
+}
+
+// SetNillableKnownFor sets the "known_for" field if the given value is not nil.
+func (_u *PersonUpdateOne) SetNillableKnownFor(v *string) *PersonUpdateOne {
+	if v != nil {
+		_u.SetKnownFor(*v)
+	}
+	return _u
+}
+
+// ClearKnownFor clears the value of the "known_for" field.
+func (_u *PersonUpdateOne) ClearKnownFor() *PersonUpdateOne {
+	_u.mutation.ClearKnownFor()
+	return _u
+}
+
+// SetBirthday sets the "birthday" field.
+func (_u *PersonUpdateOne) SetBirthday(v string) *PersonUpdateOne {
+	_u.mutation.SetBirthday(v)
+	return _u
+}
+
+// SetNillableBirthday sets the "birthday" field if the given value is not nil.
+func (_u *PersonUpdateOne) SetNillableBirthday(v *string) *PersonUpdateOne {
+	if v != nil {
+		_u.SetBirthday(*v)
+	}
+	return _u
+}
+
+// ClearBirthday clears the value of the "birthday" field.
+func (_u *PersonUpdateOne) ClearBirthday() *PersonUpdateOne {
+	_u.mutation.ClearBirthday()
+	return _u
+}
+
+// SetDeathday sets the "deathday" field.
+func (_u *PersonUpdateOne) SetDeathday(v string) *PersonUpdateOne {
+	_u.mutation.SetDeathday(v)
+	return _u
+}
+
+// SetNillableDeathday sets the "deathday" field if the given value is not nil.
+func (_u *PersonUpdateOne) SetNillableDeathday(v *string) *PersonUpdateOne {
+	if v != nil {
+		_u.SetDeathday(*v)
+	}
+	return _u
+}
+
+// ClearDeathday clears the value of the "deathday" field.
+func (_u *PersonUpdateOne) ClearDeathday() *PersonUpdateOne {
+	_u.mutation.ClearDeathday()
+	return _u
+}
+
+// SetPlaceOfBirth sets the "place_of_birth" field.
+func (_u *PersonUpdateOne) SetPlaceOfBirth(v string) *PersonUpdateOne {
+	_u.mutation.SetPlaceOfBirth(v)
+	return _u
+}
+
+// SetNillablePlaceOfBirth sets the "place_of_birth" field if the given value is not nil.
+func (_u *PersonUpdateOne) SetNillablePlaceOfBirth(v *string) *PersonUpdateOne {
+	if v != nil {
+		_u.SetPlaceOfBirth(*v)
+	}
+	return _u
+}
+
+// ClearPlaceOfBirth clears the value of the "place_of_birth" field.
+func (_u *PersonUpdateOne) ClearPlaceOfBirth() *PersonUpdateOne {
+	_u.mutation.ClearPlaceOfBirth()
+	return _u
+}
+
+// SetImdbID sets the "imdb_id" field.
+func (_u *PersonUpdateOne) SetImdbID(v string) *PersonUpdateOne {
+	_u.mutation.SetImdbID(v)
+	return _u
+}
+
+// SetNillableImdbID sets the "imdb_id" field if the given value is not nil.
+func (_u *PersonUpdateOne) SetNillableImdbID(v *string) *PersonUpdateOne {
+	if v != nil {
+		_u.SetImdbID(*v)
+	}
+	return _u
+}
+
+// ClearImdbID clears the value of the "imdb_id" field.
+func (_u *PersonUpdateOne) ClearImdbID() *PersonUpdateOne {
+	_u.mutation.ClearImdbID()
+	return _u
+}
+
+// SetInstagramID sets the "instagram_id" field.
+func (_u *PersonUpdateOne) SetInstagramID(v string) *PersonUpdateOne {
+	_u.mutation.SetInstagramID(v)
+	return _u
+}
+
+// SetNillableInstagramID sets the "instagram_id" field if the given value is not nil.
+func (_u *PersonUpdateOne) SetNillableInstagramID(v *string) *PersonUpdateOne {
+	if v != nil {
+		_u.SetInstagramID(*v)
+	}
+	return _u
+}
+
+// ClearInstagramID clears the value of the "instagram_id" field.
+func (_u *PersonUpdateOne) ClearInstagramID() *PersonUpdateOne {
+	_u.mutation.ClearInstagramID()
+	return _u
+}
+
+// SetTwitterID sets the "twitter_id" field.
+func (_u *PersonUpdateOne) SetTwitterID(v string) *PersonUpdateOne {
+	_u.mutation.SetTwitterID(v)
+	return _u
+}
+
+// SetNillableTwitterID sets the "twitter_id" field if the given value is not nil.
+func (_u *PersonUpdateOne) SetNillableTwitterID(v *string) *PersonUpdateOne {
+	if v != nil {
+		_u.SetTwitterID(*v)
+	}
+	return _u
+}
+
+// ClearTwitterID clears the value of the "twitter_id" field.
+func (_u *PersonUpdateOne) ClearTwitterID() *PersonUpdateOne {
+	_u.mutation.ClearTwitterID()
+	return _u
+}
+
+// SetDetailsFetchedAt sets the "details_fetched_at" field.
+func (_u *PersonUpdateOne) SetDetailsFetchedAt(v time.Time) *PersonUpdateOne {
+	_u.mutation.SetDetailsFetchedAt(v)
+	return _u
+}
+
+// SetNillableDetailsFetchedAt sets the "details_fetched_at" field if the given value is not nil.
+func (_u *PersonUpdateOne) SetNillableDetailsFetchedAt(v *time.Time) *PersonUpdateOne {
+	if v != nil {
+		_u.SetDetailsFetchedAt(*v)
+	}
+	return _u
+}
+
+// ClearDetailsFetchedAt clears the value of the "details_fetched_at" field.
+func (_u *PersonUpdateOne) ClearDetailsFetchedAt() *PersonUpdateOne {
+	_u.mutation.ClearDetailsFetchedAt()
 	return _u
 }
 
@@ -584,6 +998,60 @@ func (_u *PersonUpdateOne) sqlSave(ctx context.Context) (_node *Person, err erro
 	}
 	if _u.mutation.ProfileURLCleared() {
 		_spec.ClearField(person.FieldProfileURL, field.TypeString)
+	}
+	if value, ok := _u.mutation.Biography(); ok {
+		_spec.SetField(person.FieldBiography, field.TypeString, value)
+	}
+	if _u.mutation.BiographyCleared() {
+		_spec.ClearField(person.FieldBiography, field.TypeString)
+	}
+	if value, ok := _u.mutation.KnownFor(); ok {
+		_spec.SetField(person.FieldKnownFor, field.TypeString, value)
+	}
+	if _u.mutation.KnownForCleared() {
+		_spec.ClearField(person.FieldKnownFor, field.TypeString)
+	}
+	if value, ok := _u.mutation.Birthday(); ok {
+		_spec.SetField(person.FieldBirthday, field.TypeString, value)
+	}
+	if _u.mutation.BirthdayCleared() {
+		_spec.ClearField(person.FieldBirthday, field.TypeString)
+	}
+	if value, ok := _u.mutation.Deathday(); ok {
+		_spec.SetField(person.FieldDeathday, field.TypeString, value)
+	}
+	if _u.mutation.DeathdayCleared() {
+		_spec.ClearField(person.FieldDeathday, field.TypeString)
+	}
+	if value, ok := _u.mutation.PlaceOfBirth(); ok {
+		_spec.SetField(person.FieldPlaceOfBirth, field.TypeString, value)
+	}
+	if _u.mutation.PlaceOfBirthCleared() {
+		_spec.ClearField(person.FieldPlaceOfBirth, field.TypeString)
+	}
+	if value, ok := _u.mutation.ImdbID(); ok {
+		_spec.SetField(person.FieldImdbID, field.TypeString, value)
+	}
+	if _u.mutation.ImdbIDCleared() {
+		_spec.ClearField(person.FieldImdbID, field.TypeString)
+	}
+	if value, ok := _u.mutation.InstagramID(); ok {
+		_spec.SetField(person.FieldInstagramID, field.TypeString, value)
+	}
+	if _u.mutation.InstagramIDCleared() {
+		_spec.ClearField(person.FieldInstagramID, field.TypeString)
+	}
+	if value, ok := _u.mutation.TwitterID(); ok {
+		_spec.SetField(person.FieldTwitterID, field.TypeString, value)
+	}
+	if _u.mutation.TwitterIDCleared() {
+		_spec.ClearField(person.FieldTwitterID, field.TypeString)
+	}
+	if value, ok := _u.mutation.DetailsFetchedAt(); ok {
+		_spec.SetField(person.FieldDetailsFetchedAt, field.TypeTime, value)
+	}
+	if _u.mutation.DetailsFetchedAtCleared() {
+		_spec.ClearField(person.FieldDetailsFetchedAt, field.TypeTime)
 	}
 	if _u.mutation.CreditsCleared() {
 		edge := &sqlgraph.EdgeSpec{

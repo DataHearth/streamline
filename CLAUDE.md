@@ -79,7 +79,9 @@ Twelve optional probe columns hang off `MediaFile`; `probed_at` stamped means al
 
 An episode with no air date is **unaired, never missing**, and five places split aired from unaired — they must agree or a show matches a filter with nothing missing on its page. Specials (season 0) are out of every show-level number — seasons, episodes, the missing filter, the episode sort — and must be out of all of them at once; the specials season still renders with its own counts.
 
-**Probe semantics, the event hooks, re-identify ordering, the in-flight marking paths and the list push-down: [`docs/agents/media-lifecycle.md`](docs/agents/media-lifecycle.md) — read it before touching status transitions, `internal/events/`, or `internal/db` list queries.**
+Cast is written inside the title's transaction; the **person biography fetch is not** — it runs after the commit, from the service layer that holds the providers, and `internal/db` stays free of any provider dependency. A person is enriched **once, ever**, keyed on `Person.details_fetched_at`, and no failure there may fail the import.
+
+**Probe semantics, the event hooks, cast ingest and person enrichment, re-identify ordering, the in-flight marking paths and the list push-down: [`docs/agents/media-lifecycle.md`](docs/agents/media-lifecycle.md) — read it before touching status transitions, `internal/events/`, or `internal/db` list queries.**
 ## Transcoding
 
 `transcoding: {enabled, max_concurrent, max_failures, hw_accel, hw_device, verify}` is the global surface, all runtime-editable with no restart; the **policy** lives on the quality profile (`quality_profiles[].transcode`), not globally. A job is created in the same call as the `MediaFile` row. Encode → verify → atomic swap beside the original; a verified-worse output is `rejected` (terminal, retryable by hand), a failure retries to `max_failures`.

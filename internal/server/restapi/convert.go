@@ -35,6 +35,16 @@ import (
 // these helpers cover the shared inner payload so the message lives in one
 // place per status code.
 
+// optString renders an optional string field: empty becomes an absent key
+// rather than `""`. The SPA treats the two the same, so an empty string in a
+// response is noise on every row that has one.
+func optString(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
+}
+
 func unauthorizedResp(msg string) UnauthorizedJSONResponse {
 	return UnauthorizedJSONResponse{Message: msg}
 }

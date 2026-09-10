@@ -402,6 +402,14 @@ var _ = Describe("TMDB Client", Label("unit", "metadata"), func() {
 			Expect(details.Cast[0].TVDBID).To(BeZero())
 		})
 
+		It("builds cast portraits at h632, not an upscaled w185", func() {
+			details, err := client.GetMovie(context.Background(), 157336)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(details.Cast).To(HaveLen(1))
+			Expect(details.Cast[0].ProfileURL).
+				To(Equal("https://image.tmdb.org/t/p/h632/mc.jpg"))
+		})
+
 		Context("with a non-default language", func() {
 			BeforeEach(func() {
 				configtest.Setup(map[string]any{
@@ -859,6 +867,101 @@ var _ = Describe("TMDB Client", Label("unit", "metadata"), func() {
 		It("falls back to the TMDB default when unset", func() {
 			configtest.Setup()
 			Expect(NewTMDB().BaseURL).To(Equal(tmdbBaseURL))
+		})
+	})
+
+	Describe("GetPerson", func() {
+		It("maps the full person record including external ids", func() {
+			ts = httptest.NewServer(
+				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					Expect(r.URL.Path).To(Equal("/3/person/1892"))
+					Expect(r.URL.Query().Get("append_to_response")).
+						To(Equal("external_ids"))
+					Expect(r.Header.Get("Authorization")).
+						To(Equal("Bearer test-key"))
+
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = w.Write(jsonBytes(map[string]any{
+						"id":                   1892,
+						"name":                 "Matthew McConaughey",
+						"biography":            "An American actor.",
+						"known_for_department": "Acting",
+						"birthday":             "1969-11-04",
+						"deathday":             nil,
+						"place_of_birth":       "Uvalde, Texas, USA",
+						"profile_path":         "/mc.jpg",
+						"external_ids": map[string]any{
+							"imdb_id":      "nm0000190",
+							"instagram_id": "officiallymcconaughey",
+							"twitter_id":   "McConaughey",
+						},
+					}))
+				}),
+			)
+			client = newTestTMDB(ts.URL)
+			DeferCleanup(func() { ts.Close() })
+
+			p, err := client.GetPerson(context.Background(), 1892)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(p.Biography).To(Equal("An American actor."))
+			Expect(p.KnownFor).To(Equal("Acting"))
+			Expect(p.Birthday).To(Equal("1969-11-04"))
+			Expect(p.Deathday).To(BeEmpty())
+			Expect(p.PlaceOfBirth).To(Equal("Uvalde, Texas, USA"))
+			Expect(p.ProfileURL).
+				To(Equal("https://image.tmdb.org/t/p/h632/mc.jpg"))
+			Expect(p.IMDbID).To(Equal("nm0000190"))
+			Expect(p.InstagramID).To(Equal("officiallymcconaughey"))
+			Expect(p.TwitterID).To(Equal("McConaughey"))
+		})
+
+		It("reads a null biography, deathday and profile as unknown", func() {
+			ts = httptest.NewServer(
+				http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = w.Write(jsonBytes(map[string]any{
+						"id":                   66633,
+						"name":                 "Unknown Person",
+						"biography":            nil,
+						"known_for_department": "Acting",
+						"birthday":             nil,
+						"deathday":             nil,
+						"place_of_birth":       nil,
+						"profile_path":         nil,
+						"external_ids": map[string]any{
+							"imdb_id":      nil,
+							"instagram_id": nil,
+							"twitter_id":   nil,
+						},
+					}))
+				}),
+			)
+			client = newTestTMDB(ts.URL)
+			DeferCleanup(func() { ts.Close() })
+
+			p, err := client.GetPerson(context.Background(), 66633)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(p.Biography).To(BeEmpty())
+			Expect(p.Birthday).To(BeEmpty())
+			Expect(p.Deathday).To(BeEmpty())
+			Expect(p.PlaceOfBirth).To(BeEmpty())
+			// PosterURL is empty in, empty out — never a bare CDN prefix.
+			Expect(p.ProfileURL).To(BeEmpty())
+			Expect(p.IMDbID).To(BeEmpty())
+			Expect(p.KnownFor).To(Equal("Acting"))
+		})
+
+		It("surfaces a non-200 as an error", func() {
+			ts = httptest.NewServer(
+				http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+					w.WriteHeader(http.StatusNotFound)
+				}),
+			)
+			client = newTestTMDB(ts.URL)
+			DeferCleanup(func() { ts.Close() })
+
+			_, err := client.GetPerson(context.Background(), 1)
+			Expect(err).To(MatchError(ContainSubstring("tmdb get person")))
 		})
 	})
 

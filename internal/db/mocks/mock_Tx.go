@@ -10388,6 +10388,80 @@ func (_c *MockTx_MovieTMDBIndex_Call) RunAndReturn(run func(ctx context.Context)
 	return _c
 }
 
+// PeopleNeedingDetails provides a mock function for the type MockTx
+func (_mock *MockTx) PeopleNeedingDetails(ctx context.Context, owner db.CastOwner, ownerID uint32) ([]db.Person, error) {
+	ret := _mock.Called(ctx, owner, ownerID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for PeopleNeedingDetails")
+	}
+
+	var r0 []db.Person
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.CastOwner, uint32) ([]db.Person, error)); ok {
+		return returnFunc(ctx, owner, ownerID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.CastOwner, uint32) []db.Person); ok {
+		r0 = returnFunc(ctx, owner, ownerID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]db.Person)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.CastOwner, uint32) error); ok {
+		r1 = returnFunc(ctx, owner, ownerID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_PeopleNeedingDetails_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PeopleNeedingDetails'
+type MockTx_PeopleNeedingDetails_Call struct {
+	*mock.Call
+}
+
+// PeopleNeedingDetails is a helper method to define mock.On call
+//   - ctx context.Context
+//   - owner db.CastOwner
+//   - ownerID uint32
+func (_e *MockTx_Expecter) PeopleNeedingDetails(ctx any, owner any, ownerID any) *MockTx_PeopleNeedingDetails_Call {
+	return &MockTx_PeopleNeedingDetails_Call{Call: _e.mock.On("PeopleNeedingDetails", ctx, owner, ownerID)}
+}
+
+func (_c *MockTx_PeopleNeedingDetails_Call) Run(run func(ctx context.Context, owner db.CastOwner, ownerID uint32)) *MockTx_PeopleNeedingDetails_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.CastOwner
+		if args[1] != nil {
+			arg1 = args[1].(db.CastOwner)
+		}
+		var arg2 uint32
+		if args[2] != nil {
+			arg2 = args[2].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_PeopleNeedingDetails_Call) Return(persons []db.Person, err error) *MockTx_PeopleNeedingDetails_Call {
+	_c.Call.Return(persons, err)
+	return _c
+}
+
+func (_c *MockTx_PeopleNeedingDetails_Call) RunAndReturn(run func(ctx context.Context, owner db.CastOwner, ownerID uint32) ([]db.Person, error)) *MockTx_PeopleNeedingDetails_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // PersonCredits provides a mock function for the type MockTx
 func (_mock *MockTx) PersonCredits(ctx context.Context, id uint32) (*db.PersonCredits, error) {
 	ret := _mock.Called(ctx, id)
@@ -11817,6 +11891,69 @@ func (_c *MockTx_Rollback_Call) Return(err error) *MockTx_Rollback_Call {
 }
 
 func (_c *MockTx_Rollback_Call) RunAndReturn(run func() error) *MockTx_Rollback_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SavePersonDetails provides a mock function for the type MockTx
+func (_mock *MockTx) SavePersonDetails(ctx context.Context, id uint32, d metadata.PersonDetails) error {
+	ret := _mock.Called(ctx, id, d)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SavePersonDetails")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, metadata.PersonDetails) error); ok {
+		r0 = returnFunc(ctx, id, d)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTx_SavePersonDetails_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SavePersonDetails'
+type MockTx_SavePersonDetails_Call struct {
+	*mock.Call
+}
+
+// SavePersonDetails is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - d metadata.PersonDetails
+func (_e *MockTx_Expecter) SavePersonDetails(ctx any, id any, d any) *MockTx_SavePersonDetails_Call {
+	return &MockTx_SavePersonDetails_Call{Call: _e.mock.On("SavePersonDetails", ctx, id, d)}
+}
+
+func (_c *MockTx_SavePersonDetails_Call) Run(run func(ctx context.Context, id uint32, d metadata.PersonDetails)) *MockTx_SavePersonDetails_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 metadata.PersonDetails
+		if args[2] != nil {
+			arg2 = args[2].(metadata.PersonDetails)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_SavePersonDetails_Call) Return(err error) *MockTx_SavePersonDetails_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTx_SavePersonDetails_Call) RunAndReturn(run func(ctx context.Context, id uint32, d metadata.PersonDetails) error) *MockTx_SavePersonDetails_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -35,15 +35,20 @@ func (s *Server) ListPeople(
 	items := make([]Person, 0, len(people))
 	for _, person := range people {
 		item := Person{
-			Id:      person.ID,
-			TmdbId:  person.TMDBID,
-			TvdbId:  person.TVDBID,
-			Name:    person.Name,
-			Credits: person.Credits,
-		}
-		if person.ProfileURL != "" {
-			url := person.ProfileURL
-			item.ProfileUrl = &url
+			Id:           person.ID,
+			TmdbId:       person.TMDBID,
+			TvdbId:       person.TVDBID,
+			Name:         person.Name,
+			Credits:      person.Credits,
+			ProfileUrl:   optString(person.ProfileURL),
+			Biography:    optString(person.Biography),
+			KnownFor:     optString(person.KnownFor),
+			Birthday:     optString(person.Birthday),
+			Deathday:     optString(person.Deathday),
+			PlaceOfBirth: optString(person.PlaceOfBirth),
+			ImdbId:       optString(person.IMDbID),
+			InstagramId:  optString(person.InstagramID),
+			TwitterId:    optString(person.TwitterID),
 		}
 		items = append(items, item)
 	}
@@ -91,16 +96,21 @@ func (s *Server) GetPerson(
 	}
 
 	out := PersonCredits{
-		Id:     credits.ID,
-		TmdbId: credits.TMDBID,
-		TvdbId: credits.TVDBID,
-		Name:   credits.Name,
-		Movies: movies,
-		Series: series,
-	}
-	if credits.ProfileURL != "" {
-		url := credits.ProfileURL
-		out.ProfileUrl = &url
+		Id:           credits.ID,
+		TmdbId:       credits.TMDBID,
+		TvdbId:       credits.TVDBID,
+		Name:         credits.Name,
+		Movies:       movies,
+		Series:       series,
+		ProfileUrl:   optString(credits.ProfileURL),
+		Biography:    optString(credits.Biography),
+		KnownFor:     optString(credits.KnownFor),
+		Birthday:     optString(credits.Birthday),
+		Deathday:     optString(credits.Deathday),
+		PlaceOfBirth: optString(credits.PlaceOfBirth),
+		ImdbId:       optString(credits.IMDbID),
+		InstagramId:  optString(credits.InstagramID),
+		TwitterId:    optString(credits.TwitterID),
 	}
 	return GetPerson200JSONResponse(out), nil
 }

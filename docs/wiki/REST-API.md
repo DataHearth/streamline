@@ -180,9 +180,30 @@ A person is listed only while something credits them. `credits` counts library i
   "tvdb_id": 0,                                             // 0 when TVDB never named them
   "name": "Béatrice Dalle",
   "profile_url": "https://image.tmdb.org/t/p/w185/…jpg",    // omitted when empty
-  "credits": 3
+  "credits": 3,
+
+  // Biographical fields — every one optional, every one omitted when empty
+  "biography": "French actress born in Brest…",
+  "known_for": "Acting",                                    // TMDB only
+  "birthday": "1964-12-19",
+  "deathday": "1852-11-27",                                 // absent while alive
+  "place_of_birth": "Brest, Finistère, France",
+  "imdb_id": "nm0001102",
+  "instagram_id": "beatricedalle",                          // handle, not a URL
+  "twitter_id": "beatricedalle"                             // handle, not a URL
 }
 ```
+
+The biographical block is filled in from the person's own provider record when a title crediting them is ingested, and every field is optional. An empty value is **omitted**, never sent as `""`, so a client should treat absent and empty the same.
+
+Two sources, two shapes of gap:
+
+- **TMDB** (movie cast) supplies all of them, subject to what the provider itself holds.
+- **TVDB** (series cast) has no known-for department at all — a series-sourced person never carries `known_for` — and usually no socials either. That is the provider, not a failed fetch; there is no fallback and nothing is synthesised.
+
+`birthday` and `deathday` are the provider's own strings, normally `YYYY-MM-DD`. They are not `date`-typed: both providers return partial and malformed values ("1984", ""), and they are passed through as given rather than dropped.
+
+The fetch happens **once per person, ever**. An actor credited on thirty titles costs one provider call, not thirty, and the pass runs after the title's write has committed, so it can never fail an add or a refresh. A lookup that errors leaves the person unenriched and the next metadata refresh of a title crediting them retries — which is why a person can be listed with none of these fields for a while.
 
 ```jsonc
 // GET /api/v1/people/42
@@ -192,6 +213,8 @@ A person is listed only while something credits them. `credits` counts library i
   "tvdb_id": 0,
   "name": "Béatrice Dalle",
   "profile_url": "https://image.tmdb.org/t/p/w185/…jpg",  // omitted when empty
+  // …the same optional biographical fields as the list item
+  "biography": "French actress born in Brest…",
   "movies": [{ "movie": { /* Movie */ }, "character": "Betty" }],
   "series": [{ "series": { /* TVShow */ }, "character": "Herself" }]
 }

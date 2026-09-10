@@ -32,6 +32,26 @@ func (Person) Fields() []ent.Field {
 		field.Uint32("tvdb_id").Optional().Default(0),
 		field.String("name").NotEmpty(),
 		field.String("profile_url").Optional(),
+		field.String("biography").Optional(),
+		// known_for is TMDB's known_for_department ("Acting", "Writing"). TVDB
+		// has no equivalent field, so a TVDB-sourced person leaves this empty
+		// — that is expected, not a fetch failure.
+		field.String("known_for").Optional(),
+		// birthday/deathday stay strings, not time.Time: providers return
+		// partial or malformed dates ("1984", ""), and a date column would
+		// force a lossy parse at ingest. Kept as provider-format YYYY-MM-DD.
+		field.String("birthday").Optional(),
+		field.String("deathday").Optional(),
+		field.String("place_of_birth").Optional(),
+		field.String("imdb_id").Optional(),
+		field.String("instagram_id").Optional(),
+		field.String("twitter_id").Optional(),
+		// details_fetched_at marks whether the provider person-detail call has
+		// ever succeeded for this row. A person can exist from cast ingest
+		// alone with none of the fields above filled; nil here is how a later
+		// refresh knows to skip people already enriched rather than re-fetch
+		// everyone on every pass.
+		field.Time("details_fetched_at").Optional().Nillable(),
 	}
 }
 

@@ -26,6 +26,12 @@ const tmdbBaseURL = "https://api.themoviedb.org"
 // maxCastMembers caps how many top-billed cast entries we surface per movie.
 const maxCastMembers = 15
 
+// profileSize is the TMDB image size for person portraits. TMDB offers only
+// w45, w185, h632 and original for profiles; the cast rail and the person page
+// both render the portrait at roughly 260px wide, so w185 is upscaled and
+// visibly soft. h632 is the next size that covers it.
+const profileSize = "h632"
+
 var (
 	tracer = otel.Tracer("github.com/datahearth/streamline/internal/metadata")
 	meter  = otel.Meter("github.com/datahearth/streamline/internal/metadata")
@@ -209,7 +215,7 @@ func (t *TMDB) GetMovie(ctx context.Context, tmdbID uint32) (*MovieDetails, erro
 			TMDBID:     c.ID,
 			Name:       c.Name,
 			Character:  c.Character,
-			ProfileURL: PosterURL(c.ProfilePath, "w185"),
+			ProfileURL: PosterURL(c.ProfilePath, profileSize),
 		})
 	}
 
@@ -235,6 +241,60 @@ func (t *TMDB) GetMovie(ctx context.Context, tmdbID uint32) (*MovieDetails, erro
 		Tagline:          resp.Tagline,
 		ReleaseDate:      resp.ReleaseDate,
 		OriginalLanguage: resp.OriginalLanguage,
+	}, nil
+}
+
+// GetPerson returns the biographical record for a TMDB person id. The social
+// handles and the IMDb id live under external_ids, appended to the same request
+// rather than fetched separately.
+func (t *TMDB) GetPerson(
+	ctx context.Context,
+	tmdbID uint32,
+) (*PersonDetails, error) {
+	ctx, span := tracer.Start(ctx, "metadata.tmdb.get_person",
+		trace.WithAttributes(attribute.Int64("tmdb.id", int64(tmdbID))),
+	)
+	defer span.End()
+
+	start := time.Now()
+	outcome := "success"
+	defer func() {
+		tmdbDuration.Record(ctx, time.Since(start).Seconds(), metric.WithAttributes(
+			attribute.String("endpoint", "get_person"),
+		))
+		tmdbRequests.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("endpoint", "get_person"),
+			attribute.String("outcome", outcome),
+		))
+	}()
+
+	params := url.Values{"append_to_response": {"external_ids"}}
+	params = t.withLang(params, t.language)
+
+	var resp tmdbPersonResponse
+	if err := t.get(
+		ctx,
+		fmt.Sprintf("/3/person/%d", tmdbID),
+		params,
+		&resp,
+	); err != nil {
+		outcome = "error"
+		return nil, otelx.RecordSpanError(
+			span,
+			fmt.Errorf("tmdb get person: %w", err),
+		)
+	}
+
+	return &PersonDetails{
+		Biography:    resp.Biography,
+		KnownFor:     resp.KnownForDepartment,
+		Birthday:     resp.Birthday,
+		Deathday:     resp.Deathday,
+		PlaceOfBirth: resp.PlaceOfBirth,
+		ProfileURL:   PosterURL(resp.ProfilePath, profileSize),
+		IMDbID:       resp.ExternalIDs.IMDbID,
+		InstagramID:  resp.ExternalIDs.InstagramID,
+		TwitterID:    resp.ExternalIDs.TwitterID,
 	}, nil
 }
 
@@ -488,6 +548,27 @@ type tmdbMovieResponse struct {
 	VoteCount        uint32             `json:"vote_count"`
 	Translations     tmdbTranslationBag `json:"translations"`
 	Credits          tmdbCredits        `json:"credits"`
+}
+
+// tmdbPersonResponse is /3/person/{id} with append_to_response=external_ids.
+// biography, deathday, place_of_birth and profile_path are all nullable, which
+// decodes to the empty string — the states the person page renders as unknown.
+type tmdbPersonResponse struct {
+	ID                 uint32              `json:"id"`
+	Name               string              `json:"name"`
+	Biography          string              `json:"biography"`
+	KnownForDepartment string              `json:"known_for_department"`
+	Birthday           string              `json:"birthday"`
+	Deathday           string              `json:"deathday"`
+	PlaceOfBirth       string              `json:"place_of_birth"`
+	ProfilePath        string              `json:"profile_path"`
+	ExternalIDs        tmdbPersonExternals `json:"external_ids"`
+}
+
+type tmdbPersonExternals struct {
+	IMDbID      string `json:"imdb_id"`
+	InstagramID string `json:"instagram_id"`
+	TwitterID   string `json:"twitter_id"`
 }
 
 type tmdbCredits struct {

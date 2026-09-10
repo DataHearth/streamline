@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"time"
 
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/tvshow"
@@ -73,6 +74,47 @@ var _ = Describe("Person and credit schema fields", Label("unit", "db"), func() 
 		Expect(p.TmdbID).To(BeZero())
 		Expect(p.TvdbID).To(BeZero())
 		Expect(p.ProfileURL).To(BeEmpty())
+		Expect(p.Biography).To(BeEmpty())
+		Expect(p.KnownFor).To(BeEmpty())
+		Expect(p.Birthday).To(BeEmpty())
+		Expect(p.Deathday).To(BeEmpty())
+		Expect(p.PlaceOfBirth).To(BeEmpty())
+		Expect(p.ImdbID).To(BeEmpty())
+		Expect(p.InstagramID).To(BeEmpty())
+		Expect(p.TwitterID).To(BeEmpty())
+		Expect(p.DetailsFetchedAt).To(BeNil())
+	})
+
+	It("stamps details_fetched_at once the provider detail call succeeds", func() {
+		client, err := Open(ctx, ":memory:")
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() { Expect(client.Close()).To(Succeed()) })
+
+		p := client.Person.Create().SetName("Ana Vidal").SaveX(ctx)
+		Expect(p.DetailsFetchedAt).To(BeNil())
+
+		fetchedAt := time.Now().UTC().Truncate(time.Second)
+		p = p.Update().
+			SetBiography("An actor known for...").
+			SetKnownFor("Acting").
+			SetBirthday("1984-05-02").
+			SetDeathday("").
+			SetPlaceOfBirth("Lisbon, Portugal").
+			SetImdbID("nm1234567").
+			SetInstagramID("ana.vidal").
+			SetTwitterID("anavidal").
+			SetDetailsFetchedAt(fetchedAt).
+			SaveX(ctx)
+
+		Expect(p.Biography).To(Equal("An actor known for..."))
+		Expect(p.KnownFor).To(Equal("Acting"))
+		Expect(p.Birthday).To(Equal("1984-05-02"))
+		Expect(p.PlaceOfBirth).To(Equal("Lisbon, Portugal"))
+		Expect(p.ImdbID).To(Equal("nm1234567"))
+		Expect(p.InstagramID).To(Equal("ana.vidal"))
+		Expect(p.TwitterID).To(Equal("anavidal"))
+		Expect(p.DetailsFetchedAt).NotTo(BeNil())
+		Expect(*p.DetailsFetchedAt).To(Equal(fetchedAt))
 	})
 
 	It("rejects an empty name", func() {
