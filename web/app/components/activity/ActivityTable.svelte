@@ -207,9 +207,14 @@
 </script>
 
 <!-- The table is the md-and-up reading; below that ActivityTouchList takes over,
-     since six columns don't survive 390px. -->
+     since six columns don't survive 390px.
+     The card is shrinkable inside the page's capped column, so a long queue or
+     history scrolls here — under a sticky header that stays put — instead of
+     pushing the toolbar off the top. A floor, not a fill: a three-row queue still
+     hugs its rows, and a short window cannot squeeze this below a couple of rows
+     (under that the column scrolls instead of slicing the first one). -->
 <div
-	class="@container mt-3 hidden overflow-x-auto rounded-lg border border-border bg-bg-elevated md:block"
+	class="@container mt-3 hidden overflow-x-auto overflow-y-auto rounded-lg border border-border bg-bg-elevated md:block md:min-h-[14rem]"
 >
 	{#if loading}
 		<SkeletonList variant="divided" count={6} />
@@ -238,8 +243,12 @@
 		</div>
 	{:else}
 		<table class="w-full min-w-[520px] border-collapse text-left">
+			<!-- The header rides over the rows now that the card scrolls, so it needs an
+			     opaque ground: `bg-surface` is rgba(255,255,255,.04) and the rows read
+			     straight through it. Painted on the cells rather than the row, since
+			     that is what `position: sticky` moves under `border-collapse`. -->
 			<thead
-				class="sticky top-0 z-10 bg-surface text-[10px] uppercase tracking-[0.12em] text-fg-faint"
+				class="sticky top-0 z-10 text-[10px] uppercase tracking-[0.12em] text-fg-faint"
 			>
 				<tr>
 					{#each headers as h, i (i)}
@@ -247,7 +256,7 @@
 							scope="col"
 							aria-sort={h.sort ? ariaSort(h.sort) : undefined}
 							class={cn(
-								"px-2 py-2.5 font-medium first:pl-4 last:pr-4",
+								"border-b border-border bg-bg-elevated px-2 py-2.5 font-medium first:pl-4 last:pr-4",
 								h.grow ? "w-full max-w-0" : "w-px whitespace-nowrap",
 								h.hide,
 							)}

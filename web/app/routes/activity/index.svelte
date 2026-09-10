@@ -360,9 +360,18 @@
 	}
 </script>
 
+<!-- At md and up the page is capped at the viewport and the list inside it does
+     the scrolling: a 200-row history moved the toolbar and the sticky header off
+     screen before the rows ran out. A cap and not a fixed height, and the column
+     scrolls rather than clips: in a short window (a 540px-tall laptop window) the
+     chrome above the list plus the list's own floor is taller than the cap, and a
+     clipping column sliced the first row in half with no way to scroll to it.
+     Below md the page scrolls as before — the touch list is paged,
+     pull-to-refresh needs the page at scrollTop 0, and the bottom nav already
+     eats the bottom of the viewport. -->
 <div
 	use:pullRefresh={{ onRefresh: refreshAll }}
-	class="group relative flex flex-col px-4 py-6 md:px-6"
+	class="group relative flex flex-col px-4 py-6 md:max-h-[calc(100dvh-4rem)] md:min-h-0 md:overflow-y-auto md:px-6"
 >
 	<!-- Sits in the gap the pull opens above the page. -->
 	<div
@@ -398,7 +407,7 @@
 
 	{#if showPending}
 		<section
-			class="mt-4 hidden rounded-xl border border-status-wanted/30 bg-status-wanted/[0.04] p-4 md:block"
+			class="mt-4 hidden shrink-0 rounded-xl border border-status-wanted/30 bg-status-wanted/[0.04] p-4 md:block"
 		>
 			<button
 				type="button"
@@ -483,8 +492,13 @@
 			/>
 		</div>
 
+		<!-- min-h-0 with a floor rather than flex-1: the panel hugs a short feed,
+		     stops at the bottom edge once it would outgrow the column, and never
+		     shrinks below a few rows — under that it is a sliver of a row, and the
+		     column scrolls instead. The sentinel rides inside it, so the observer
+		     fires on the panel's scroll, not the page's. -->
 		<div
-			class="mt-3 overflow-hidden rounded-lg border border-border bg-bg-elevated"
+			class="mt-3 overflow-hidden rounded-lg border border-border bg-bg-elevated md:min-h-[14rem] md:overflow-y-auto"
 		>
 			{#if events.isPending}
 				<SkeletonList variant="divided" count={5} />

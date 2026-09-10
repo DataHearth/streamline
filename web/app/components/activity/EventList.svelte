@@ -39,7 +39,7 @@
 			<svelte:element
 				this={subject.href ? "a" : "div"}
 				href={subject.href}
-				class="grid grid-cols-[26px_1fr_auto] items-start gap-2.5 rounded-md px-2 py-2.5 transition {subject.href
+				class="grid grid-cols-[26px_minmax(0,1fr)_auto] items-start gap-2.5 rounded-md px-2 py-2.5 transition {subject.href
 					? 'hover:bg-surface'
 					: ''}"
 			>
@@ -49,33 +49,33 @@
 					<mark.icon size={13} aria-hidden="true" />
 				</span>
 				<div class="min-w-0">
-					<div class="flex items-baseline justify-between gap-2">
-						<span class="truncate text-[12.5px] font-medium text-fg">
-							{subject.title}
-							{#if subject.detail}
-								<span
-									class="ml-1 font-mono text-[10.5px] font-normal text-fg-subtle"
-									>· {subject.detail}</span
-								>
-							{/if}
-						</span>
-						<time
-							datetime={event.created_at}
-							title={formatDateTime(event.created_at)}
-							class="shrink-0 font-mono text-[10.5px] text-fg-faint"
-						>
-							{formatRelative(event.created_at)}
-						</time>
-					</div>
+					<span class="block truncate text-[12.5px] font-medium text-fg">
+						{subject.title}
+						{#if subject.detail}
+							<span
+								class="ml-1 font-mono text-[10.5px] font-normal text-fg-subtle"
+								>· {subject.detail}</span
+							>
+						{/if}
+					</span>
 					<div class="mt-0.5 truncate font-mono text-[10.5px] text-fg-subtle">
 						{release(event.payload) || monitoringDetail(event) || mark.label}
 					</div>
 				</div>
-				{#if size(event.payload)}
-					<span class="self-center font-mono text-[10.5px] text-fg-subtle">
-						{size(event.payload)}
-					</span>
-				{/if}
+				<!-- When and how big share one right-hand column, stacked on the row's two
+				     lines. The time used to sit inside the title block and the size in a
+				     track of its own, which put the two right edges 80px apart and neither
+				     of them on a line the eye could follow down the feed. -->
+				<div class="flex flex-col items-end gap-0.5 font-mono text-[10.5px] tabular-nums">
+					<time
+						datetime={event.created_at}
+						title={formatDateTime(event.created_at)}
+						class="whitespace-nowrap text-fg-faint"
+					>
+						{formatRelative(event.created_at)}
+					</time>
+					<span class="text-fg-subtle">{size(event.payload)}</span>
+				</div>
 			</svelte:element>
 		</li>
 	{/each}
