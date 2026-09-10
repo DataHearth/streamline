@@ -107,6 +107,9 @@
 
 	let show = $derived(seriesQuery.data);
 	let seasons = $derived<Season[]>(show?.seasons ?? []);
+	// Specials are a season of the show but not of its run: every headline
+	// number here counts the numbered seasons only, as the API's rollups do.
+	let regularSeasons = $derived(seasons.filter((s) => s.number > 0));
 
 	let selectedSeason = $state<number | null>(null);
 	$effect(() => {
@@ -117,8 +120,7 @@
 		if (seasons.some((s) => s.number === selectedSeason)) return;
 		// Default to the latest non-special season, falling back to whatever
 		// the last entry is (e.g. a specials-only show).
-		const regular = seasons.filter((s) => s.number > 0);
-		const pool = regular.length > 0 ? regular : seasons;
+		const pool = regularSeasons.length > 0 ? regularSeasons : seasons;
 		const last = pool[pool.length - 1];
 		if (last) selectedSeason = last.number;
 	});
@@ -132,7 +134,7 @@
 	// monitors are the missing ones, and only the client knows that split.
 	let seasonMissing = $derived(missingEpisodes(currentEpisodes));
 	let showMissing = $derived(
-		seasons.reduce((n, s) => n + missingEpisodes(s.episodes ?? []), 0),
+		regularSeasons.reduce((n, s) => n + missingEpisodes(s.episodes ?? []), 0),
 	);
 
 	let seriesAvail = $derived<StatusKind>(
@@ -146,8 +148,8 @@
 	);
 
 	let airedTotal = $derived.by(() => {
-		if (seasons.length > 0) {
-			return seasons.reduce(
+		if (regularSeasons.length > 0) {
+			return regularSeasons.reduce(
 				(n, s) => n + Math.max(0, (s.total ?? 0) - (s.unaired ?? 0)),
 				0,
 			);
@@ -158,7 +160,7 @@
 	// dotted meta line — the same date either way.
 	let airedText = $derived(formatDate(show?.first_aired));
 	let unairedTotal = $derived(
-		seasons.reduce((n, s) => n + (s.unaired ?? 0), 0),
+		regularSeasons.reduce((n, s) => n + (s.unaired ?? 0), 0),
 	);
 	let seriesProgress = $derived(
 		(show?.have_episodes ?? 0) / Math.max(1, airedTotal),
@@ -169,8 +171,8 @@
 		const p: string[] = [];
 		// The date carries its own year, so the two never both appear.
 		p.push(airedText || String(show.year));
-		if (seasons.length > 0)
-			p.push(`${seasons.length} season${seasons.length === 1 ? "" : "s"}`);
+		const n = regularSeasons.length;
+		if (n > 0) p.push(`${n} season${n === 1 ? "" : "s"}`);
 		if (show.total_episodes) p.push(`${show.total_episodes} episodes`);
 		if (show.rating && show.rating > 0) p.push(`★ ${show.rating.toFixed(1)}`);
 		if (show.runtime) p.push(`${show.runtime}m`);

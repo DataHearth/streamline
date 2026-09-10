@@ -887,15 +887,21 @@ func tvShowToAPI(s *ent.TVShow) TVShow {
 
 	now := time.Now()
 	views := tvshow.DeriveSeasonViews(s, now)
-	var have, total, wanted uint32
+	var seasonCount, have, total, wanted uint32
 	seasons := make([]Season, 0, len(s.Edges.Seasons))
 	for i, se := range s.Edges.Seasons {
 		v := views[i]
-		have += numeric.SaturateU32(v.Available)
-		total += numeric.SaturateU32(v.Total)
-		wanted += numeric.SaturateU32(v.Missing)
+		// Specials stay in the season list — the page draws them — but out of
+		// the show's headline numbers, matching db.EpisodeCounts.
+		if se.Number > 0 {
+			seasonCount++
+			have += numeric.SaturateU32(v.Available)
+			total += numeric.SaturateU32(v.Total)
+			wanted += numeric.SaturateU32(v.Missing)
+		}
 		seasons = append(seasons, seasonToAPI(se, v, now, s.QualityProfile))
 	}
+	out.TotalSeasons = &seasonCount
 	out.HaveEpisodes = &have
 	out.TotalEpisodes = &total
 	out.WantedEpisodes = &wanted
@@ -916,6 +922,7 @@ func tvShowListToAPI(s *ent.TVShow, c db.EpisodeCounts, progress *float32) TVSho
 	out := tvShowBaseToAPI(s)
 	have, total, wanted := c.Have, c.Total, c.Wanted
 	downloading, importing := c.Downloading, c.Importing
+	out.TotalSeasons = &c.Seasons
 	out.HaveEpisodes = &have
 	out.TotalEpisodes = &total
 	out.WantedEpisodes = &wanted

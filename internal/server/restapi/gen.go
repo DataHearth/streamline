@@ -4683,7 +4683,8 @@ type TVShow struct {
 	FirstAired *openapi_types.Date `json:"first_aired,omitempty"`
 	Genres     *[]string           `json:"genres,omitempty"`
 
-	// HaveEpisodes Episodes with a media file. Rolled up across seasons.
+	// HaveEpisodes Episodes with a media file. Rolled up across seasons, specials
+	// excluded.
 	HaveEpisodes *uint32 `json:"have_episodes,omitempty"`
 	Id           uint32  `json:"id"`
 
@@ -4711,8 +4712,12 @@ type TVShow struct {
 	SeriesStatus  TVShowSeriesStatus `json:"series_status"`
 	Title         string             `json:"title"`
 	TotalEpisodes *uint32            `json:"total_episodes,omitempty"`
-	TvdbId        uint32             `json:"tvdb_id"`
-	Type          TVShowType         `json:"type"`
+
+	// TotalSeasons Seasons the show has, specials (season 0) excluded — the same
+	// scope the episode rollups below use.
+	TotalSeasons *uint32    `json:"total_seasons,omitempty"`
+	TvdbId       uint32     `json:"tvdb_id"`
+	Type         TVShowType `json:"type"`
 
 	// WantedEpisodes Aired/undated episodes without a file (the "missing" count).
 	WantedEpisodes *uint32 `json:"wanted_episodes,omitempty"`

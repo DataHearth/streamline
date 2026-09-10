@@ -77,7 +77,7 @@ The builtin engine owns its own peer sockets and caps its peer pool with constan
 
 Twelve optional probe columns hang off `MediaFile`; `probed_at` stamped means all twelve were recorded, so **a migration adding a probe column nulls `probed_at` in the same file**. `MediaEvent` has three optional owner edges and exactly one is set. `episode.status` is `wanted | downloading | importing | paused | available | skipped`, and every path that grabs must mark its episodes. The series list filters, sorts and pages in SQL with a per-show counts rollup — never the episode tree.
 
-An episode with no air date is **unaired, never missing**, and five places split aired from unaired — they must agree or a show matches a filter with nothing missing on its page.
+An episode with no air date is **unaired, never missing**, and five places split aired from unaired — they must agree or a show matches a filter with nothing missing on its page. Specials (season 0) are out of every show-level number — seasons, episodes, the missing filter, the episode sort — and must be out of all of them at once; the specials season still renders with its own counts.
 
 **Probe semantics, the event hooks, re-identify ordering, the in-flight marking paths and the list push-down: [`docs/agents/media-lifecycle.md`](docs/agents/media-lifecycle.md) — read it before touching status transitions, `internal/events/`, or `internal/db` list queries.**
 ## Transcoding

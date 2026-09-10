@@ -5479,9 +5479,17 @@ components:
         quality_profile:
           type: string
           description: Name of the quality profile (empty resolves to the default).
+        total_seasons:
+          type: integer
+          description: |
+            Seasons the show has, specials (season 0) excluded — the same
+            scope the episode rollups below use.
+          x-go-type: uint32
         have_episodes:
           type: integer
-          description: Episodes with a media file. Rolled up across seasons.
+          description: |
+            Episodes with a media file. Rolled up across seasons, specials
+            excluded.
           x-go-type: uint32
         total_episodes:
           type: integer

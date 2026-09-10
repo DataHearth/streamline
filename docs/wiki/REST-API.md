@@ -118,6 +118,8 @@ Everything database-backed (movies, series, requests, users, imports) uses numer
 
 **Sort direction follows the key.** `GET /series?sort=` defaults to the direction the key implies — `title` ascending, `year`, `rating`, `episodes` and `recent` descending, so "most episodes" means most. Pass `?order=asc|desc` to override. `sort=episodes` ranks by the same episode count the list response reports in `total_episodes` (monitored, or already on disk), not by every row the provider lists.
 
+**Series counts leave the specials out.** `total_seasons`, `total_episodes`, `have_episodes` and `wanted_episodes` cover the numbered seasons only — season 0 is reported as its own entry in the detail response's `seasons` array, with its own counts, but never folded into the show's totals or into `status=missing`. `total_seasons` counts the seasons themselves, so a season the library follows no episode of still counts as one.
+
 **Errors** are `{"message": "..."}` with a conventional status: `400` bad request, `401` unauthenticated, `403` forbidden (usually not an admin), `404`, `409` conflict (already exists), `422` unprocessable, `500`. Some carry a stable `code` alongside the message when the caller needs to branch on the specific reason — `last_admin`, `email_exists`, `connection_failed` (a connection test's upstream diagnostic), `invalid_condition` (a custom-format condition that would not compile), `grab_rejected` (a grab the server refused — an untrusted download host, or a release whose files match no wanted episode). Those last three carry a message composed for display, which the web UI shows verbatim; a coded error's `message` is otherwise still advisory.
 
 ---

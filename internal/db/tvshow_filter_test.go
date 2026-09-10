@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/datahearth/streamline/ent"
@@ -192,6 +193,54 @@ var _ = Describe("FilterTVShows", Label("unit", "db"), func() {
 				Expect(c.Unaired).To(Equal(uint32(2)))
 			},
 		)
+
+		It("counts the numbered seasons and leaves the specials out", func() {
+			aired := now.Add(-24 * time.Hour)
+			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title:        "With specials",
+				Year:         2020,
+				TvdbID:       77,
+				SeriesStatus: "continuing",
+				Type:         "standard",
+				Seasons: []SeasonSeed{
+					{Number: 0, Episodes: []EpisodeSeed{
+						{Number: 1, Title: "special", AirDate: &aired},
+					}},
+					{Number: 1, Episodes: []EpisodeSeed{
+						{Number: 1, Title: "s1e1", AirDate: &aired},
+					}},
+					{Number: 2, Episodes: []EpisodeSeed{
+						{Number: 1, Title: "s2e1", AirDate: &aired},
+					}},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			for _, se := range show.Edges.Seasons {
+				if se.Number == 0 {
+					continue
+				}
+				id := se.Edges.Episodes[0].ID
+				attachFile(id, fmt.Sprintf("/tv/s/%d.mkv", id))
+			}
+
+			_, counts, _, err := store.FilterTVShows(ctx, FilterTVShowsParams{
+				Limit: 20, Now: now,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			c := counts[show.ID]
+			Expect(c.Seasons).To(Equal(uint32(2)))
+			Expect(c.Total).To(Equal(uint32(2)))
+			Expect(c.Have).To(Equal(uint32(2)))
+			Expect(c.Wanted).To(BeZero())
+
+			// A gap only the specials have keeps the show out of the missing
+			// filter too, which must agree with those counts.
+			rows, _, _, err := store.FilterTVShows(ctx, FilterTVShowsParams{
+				Limit: 20, Now: now, Status: "missing",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(titles(rows)).NotTo(ContainElement("With specials"))
+		})
 
 		It("tallies importing across the buckets, not instead of one", func() {
 			aired := now.Add(-24 * time.Hour)

@@ -85,6 +85,9 @@ export type TVShow = {
 	rating?: number | null;
 	genres?: string[];
 	quality_profile?: string;
+	// Specials (season 0) count for none of these — not the seasons, not the
+	// episodes.
+	total_seasons?: number;
 	have_episodes?: number;
 	total_episodes?: number;
 	wanted_episodes?: number;
