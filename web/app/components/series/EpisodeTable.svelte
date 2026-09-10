@@ -19,6 +19,7 @@
 		onMonitorEpisode,
 		onManualSearch,
 		onDeleteFile,
+		showMonitored = true,
 	}: {
 		episodes: Episode[];
 		seasonNumber: number;
@@ -27,6 +28,7 @@
 		onMonitorEpisode: (ep: Episode) => void;
 		onManualSearch: (ep: Episode) => void;
 		onDeleteFile: (ep: Episode) => void;
+		showMonitored?: boolean;
 	} = $props();
 
 	function pad(n: number): string {
@@ -79,7 +81,7 @@
 		</thead>
 		<tbody>
 			{#each episodes as ep (ep.id)}
-				{@const meta = STATUS_META[episodeStatus(ep)]}
+				{@const meta = STATUS_META[episodeStatus(ep, showMonitored)]}
 				{@const monitorDisabled = ep.status === "unaired" && !seasonMonitored}
 				<tr
 					class={cn(
@@ -206,4 +208,5 @@
 	onClose={() => (detail = null)}
 	{onManualSearch}
 	{onDeleteFile}
+	{showMonitored}
 />

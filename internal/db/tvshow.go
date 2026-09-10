@@ -785,7 +785,7 @@ func (db *DB) ListEligibleEpisodesForSync(
 	airedBefore time.Time,
 ) ([]*ent.TVShow, error) {
 	eligible := []predicate.Episode{
-		episode.MonitoredEQ(true),
+		monitoredEpisode(),
 		episode.StatusEQ(episode.StatusWanted),
 		episode.GrabFailuresLT(maxGrabFailures),
 		episode.Or(
@@ -821,7 +821,7 @@ func (db *DB) ListEligibleEpisodesForSync(
 // once that one write had failed.
 func upgradeCandidateEpisodes() []predicate.Episode {
 	return []predicate.Episode{
-		episode.MonitoredEQ(true),
+		monitoredEpisode(),
 		episode.HasMediaFiles(),
 		episode.Not(episode.HasDownloadRecordsWith(
 			downloadrecord.StatusIn(
@@ -944,7 +944,7 @@ func (db *DB) ListUpcomingEpisodes(
 ) ([]*ent.Episode, error) {
 	return db.client.Episode.Query().
 		Where(
-			episode.MonitoredEQ(true),
+			monitoredEpisode(),
 			episode.AirDateGTE(from),
 			episode.AirDateLTE(to),
 		).

@@ -10,6 +10,7 @@
 		selected,
 		onSelect,
 		vertical = false,
+		showMonitored = true,
 	}: {
 		seasons: Season[];
 		selected: number;
@@ -17,6 +18,7 @@
 		// The tablet two-pane layout stacks the strip down the left instead of
 		// scrolling it across the top.
 		vertical?: boolean;
+		showMonitored?: boolean;
 	} = $props();
 
 	function pad(n: number): string {
@@ -31,7 +33,7 @@
 >
 	{#each seasons as s (s.number)}
 		{@const active = selected === s.number}
-		{@const missing = missingEpisodes(s.episodes ?? [])}
+		{@const missing = missingEpisodes(s.episodes ?? [], showMonitored)}
 		<button
 			type="button"
 			onclick={() => onSelect(s.number)}
@@ -62,7 +64,7 @@
 					<span class="text-fg-faint">· {s.unaired} future</span>
 				{/if}
 			</div>
-			<SeasonProgress season={s} />
+			<SeasonProgress season={s} {showMonitored} />
 		</button>
 	{/each}
 </div>

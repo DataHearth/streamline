@@ -193,6 +193,23 @@ func descending(order string, naturally bool) bool {
 	}
 }
 
+// monitoredEpisode matches an episode the library is actually following: its
+// own flag and its show's.
+//
+// The show's flag is a gate, not a label. Unmonitoring a show writes only
+// tv_shows.monitored — it never reached the episodes underneath — and a
+// metadata refresh creates new seasons and episodes from the *season's* flag,
+// so a show switched off still accumulated monitored episodes. Every query
+// that tested the episode alone therefore kept working through shows their
+// owner had explicitly stopped following: searching for them, badging them
+// wanted, and listing them on the calendar.
+func monitoredEpisode() predicate.Episode {
+	return episode.And(
+		episode.MonitoredEQ(true),
+		episode.HasSeasonWith(season.HasTvShowWith(tvshow.MonitoredEQ(true))),
+	)
+}
+
 // missingEpisode matches an episode the library wants but does not have: it is
 // monitored, has no file, and has aired. Mirrors DeriveSeasonViews' Missing
 // bucket — the two must agree, or a show appears under the "missing" filter
@@ -203,7 +220,7 @@ func missingEpisode(now time.Time) predicate.Episode {
 		// Specials are out of the show's rollup, so a missing one must not
 		// put the show under the filter either.
 		episode.HasSeasonWith(season.NumberGT(0)),
-		episode.MonitoredEQ(true),
+		monitoredEpisode(),
 		episode.Not(episode.HasMediaFiles()),
 		episode.AirDateNotNil(),
 		episode.AirDateLTE(now),
@@ -331,14 +348,20 @@ func (db *DB) episodeCounts(
 		AirDate   time.Time `sql:"air_date"`
 		Status    string    `sql:"status"`
 		HasFile   bool      `sql:"has_file"`
+		// The show's own flag, joined in rather than derived from the episode:
+		// it gates the buckets the same way monitoredEpisode() gates the
+		// queries, so the card and the filter cannot disagree.
+		ShowMonitored bool `sql:"show_monitored"`
 	}
 	err := db.client.Episode.Query().
 		Where(episode.HasSeasonWith(season.HasTvShowWith(tvshow.IDIn(showIDs...)))).
 		Modify(func(s *entsql.Selector) {
 			b := entsql.Dialect(s.Dialect())
 			se := b.Table(season.Table).As("cnt_season")
+			sh := b.Table(tvshow.Table).As("cnt_show")
 			mf := b.Table(mediafile.Table).As("cnt_file")
 			s.Join(se).On(s.C(episode.SeasonColumn), se.C(season.FieldID))
+			s.Join(sh).On(se.C(season.TvShowColumn), sh.C(tvshow.FieldID))
 			hasFile := fmt.Sprintf(
 				"EXISTS (SELECT 1 FROM %s AS %s WHERE %s = %s)",
 				mediafile.Table, "cnt_file",
@@ -353,6 +376,7 @@ func (db *DB) episodeCounts(
 				s.C(episode.FieldAirDate),
 				s.C(episode.FieldStatus),
 				entsql.As(hasFile, "has_file"),
+				entsql.As(sh.C(tvshow.FieldMonitored), "show_monitored"),
 			)
 		}).
 		Scan(ctx, &rows)
@@ -373,7 +397,7 @@ func (db *DB) episodeCounts(
 			c.Importing++
 			c.widen(r.Season, r.Number, r.EpisodeID)
 		}
-		if r.Season == 0 || (!r.Monitored && !r.HasFile) {
+		if r.Season == 0 || ((!r.Monitored || !r.ShowMonitored) && !r.HasFile) {
 			out[r.ShowID] = c
 			continue
 		}
@@ -425,7 +449,7 @@ func (db *DB) episodeCounts(
 func (db *DB) CountWantedEpisodes(ctx context.Context) (int, error) {
 	n, err := db.client.Episode.Query().
 		Where(
-			episode.MonitoredEQ(true),
+			monitoredEpisode(),
 			episode.StatusEQ(episode.StatusWanted),
 		).
 		Count(ctx)

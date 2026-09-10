@@ -4,7 +4,10 @@
 	import type { EpisodeDisplayStatus } from "../../lib/status";
 	import type { Season } from "../../lib/types";
 
-	let { season }: { season: Season } = $props();
+	let {
+		season,
+		showMonitored = true,
+	}: { season: Season; showMonitored?: boolean } = $props();
 
 	type Seg = { key: string; count: number; token: string; label: string };
 
@@ -15,7 +18,7 @@
 		const eps = season.episodes ?? [];
 		if (eps.length > 0) {
 			const n = (s: EpisodeDisplayStatus) =>
-				eps.filter((e) => episodeStatus(e) === s).length;
+				eps.filter((e) => episodeStatus(e, showMonitored) === s).length;
 			return [
 				{ key: "available", count: n("available"), token: "available", label: i18n.lc_available() },
 				{ key: "downloading", count: n("downloading"), token: "downloading", label: i18n.lc_downloading() },

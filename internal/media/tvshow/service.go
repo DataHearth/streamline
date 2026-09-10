@@ -366,7 +366,7 @@ func DeriveSeasonViews(show *ent.TVShow, now time.Time) []SeasonView {
 		v := SeasonView{Number: se.Number}
 		for _, e := range se.Edges.Episodes {
 			hasFile := len(e.Edges.MediaFiles) > 0
-			if !e.Monitored && !hasFile {
+			if (!e.Monitored || !show.Monitored) && !hasFile {
 				continue
 			}
 			v.Total++

@@ -133,9 +133,13 @@
 	// The API's season.missing counts only *monitored* fileless episodes — the
 	// ones a search will chase — so it reads as "wanted" here. Episodes nobody
 	// monitors are the missing ones, and only the client knows that split.
-	let seasonMissing = $derived(missingEpisodes(currentEpisodes));
+	let showMonitored = $derived(show?.monitored ?? true);
+	let seasonMissing = $derived(missingEpisodes(currentEpisodes, showMonitored));
 	let showMissing = $derived(
-		regularSeasons.reduce((n, s) => n + missingEpisodes(s.episodes ?? []), 0),
+		regularSeasons.reduce(
+			(n, s) => n + missingEpisodes(s.episodes ?? [], showMonitored),
+			0,
+		),
 	);
 
 	let seriesAvail = $derived<StatusKind>(
@@ -817,6 +821,7 @@
 						{seasons}
 						selected={selectedSeason ?? seasons[0]?.number ?? 0}
 						onSelect={(n) => (selectedSeason = n)}
+						{showMonitored}
 						seriesType={show.type}
 						{seasonLabel}
 						onMonitorSeason={(s) => monitorSeason.mutate(s)}
@@ -840,6 +845,7 @@
 						{seasons}
 						selected={selectedSeason ?? seasons[0]?.number ?? 0}
 						onSelect={(n) => (selectedSeason = n)}
+						{showMonitored}
 					/>
 
 					<div class="flex min-w-0 flex-col gap-4">

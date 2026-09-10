@@ -324,11 +324,14 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 		aired := now.Add(-24 * time.Hour)
 
 		It("counts a monitored, aired, file-less episode as missing", func() {
-			show := &ent.TVShow{Edges: ent.TVShowEdges{Seasons: []*ent.Season{
-				{Number: 1, Edges: ent.SeasonEdges{Episodes: []*ent.Episode{
-					{ID: 1, Number: 1, AirDate: aired, Monitored: true},
-				}}},
-			}}}
+			show := &ent.TVShow{
+				Monitored: true,
+				Edges: ent.TVShowEdges{Seasons: []*ent.Season{
+					{Number: 1, Edges: ent.SeasonEdges{Episodes: []*ent.Episode{
+						{ID: 1, Number: 1, AirDate: aired, Monitored: true},
+					}}},
+				}},
+			}
 
 			v := DeriveSeasonViews(show, now)[0]
 			Expect(v.Missing).To(Equal(1))
@@ -336,11 +339,14 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 		})
 
 		It("counts a monitored, dateless episode as unaired", func() {
-			show := &ent.TVShow{Edges: ent.TVShowEdges{Seasons: []*ent.Season{
-				{Number: 2, Edges: ent.SeasonEdges{Episodes: []*ent.Episode{
-					{ID: 1, Number: 1, Title: "TBA", Monitored: true},
-				}}},
-			}}}
+			show := &ent.TVShow{
+				Monitored: true,
+				Edges: ent.TVShowEdges{Seasons: []*ent.Season{
+					{Number: 2, Edges: ent.SeasonEdges{Episodes: []*ent.Episode{
+						{ID: 1, Number: 1, Title: "TBA", Monitored: true},
+					}}},
+				}},
+			}
 
 			v := DeriveSeasonViews(show, now)[0]
 			Expect(v.Unaired).To(Equal(1))
@@ -349,13 +355,16 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 		})
 
 		It("leaves a file-less unmonitored episode out of every count", func() {
-			show := &ent.TVShow{Edges: ent.TVShowEdges{Seasons: []*ent.Season{
-				{Number: 0, Edges: ent.SeasonEdges{Episodes: []*ent.Episode{
-					{ID: 1, Number: 1, AirDate: aired},
-					{ID: 2, Number: 2, AirDate: now.Add(24 * time.Hour)},
-					{ID: 3, Number: 3},
-				}}},
-			}}}
+			show := &ent.TVShow{
+				Monitored: true,
+				Edges: ent.TVShowEdges{Seasons: []*ent.Season{
+					{Number: 0, Edges: ent.SeasonEdges{Episodes: []*ent.Episode{
+						{ID: 1, Number: 1, AirDate: aired},
+						{ID: 2, Number: 2, AirDate: now.Add(24 * time.Hour)},
+						{ID: 3, Number: 3},
+					}}},
+				}},
+			}
 
 			v := DeriveSeasonViews(show, now)[0]
 			Expect(v.Missing).To(BeZero())
@@ -365,14 +374,17 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 		})
 
 		It("counts a downloaded unmonitored episode as available", func() {
-			show := &ent.TVShow{Edges: ent.TVShowEdges{Seasons: []*ent.Season{
-				{Number: 0, Edges: ent.SeasonEdges{Episodes: []*ent.Episode{
-					{ID: 1, Number: 1, AirDate: aired, Edges: ent.EpisodeEdges{
-						MediaFiles: []*ent.MediaFile{{ID: 1}},
-					}},
-					{ID: 2, Number: 2, AirDate: aired},
-				}}},
-			}}}
+			show := &ent.TVShow{
+				Monitored: true,
+				Edges: ent.TVShowEdges{Seasons: []*ent.Season{
+					{Number: 0, Edges: ent.SeasonEdges{Episodes: []*ent.Episode{
+						{ID: 1, Number: 1, AirDate: aired, Edges: ent.EpisodeEdges{
+							MediaFiles: []*ent.MediaFile{{ID: 1}},
+						}},
+						{ID: 2, Number: 2, AirDate: aired},
+					}}},
+				}},
+			}
 
 			v := DeriveSeasonViews(show, now)[0]
 			Expect(v.Available).To(Equal(1))
@@ -383,20 +395,28 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 		It(
 			"keeps a season whole when monitored and unmonitored files mix",
 			func() {
-				show := &ent.TVShow{Edges: ent.TVShowEdges{Seasons: []*ent.Season{
-					{Number: 1, Edges: ent.SeasonEdges{Episodes: []*ent.Episode{
-						{
-							ID: 1, Number: 1, AirDate: aired, Monitored: true,
-							Edges: ent.EpisodeEdges{
-								MediaFiles: []*ent.MediaFile{{ID: 1}},
+				show := &ent.TVShow{
+					Monitored: true,
+					Edges: ent.TVShowEdges{Seasons: []*ent.Season{
+						{Number: 1, Edges: ent.SeasonEdges{Episodes: []*ent.Episode{
+							{
+								ID: 1, Number: 1, AirDate: aired, Monitored: true,
+								Edges: ent.EpisodeEdges{
+									MediaFiles: []*ent.MediaFile{{ID: 1}},
+								},
 							},
-						},
-						{ID: 2, Number: 2, AirDate: aired, Edges: ent.EpisodeEdges{
-							MediaFiles: []*ent.MediaFile{{ID: 2}},
-						}},
-						{ID: 3, Number: 3, AirDate: aired},
-					}}},
-				}}}
+							{
+								ID:      2,
+								Number:  2,
+								AirDate: aired,
+								Edges: ent.EpisodeEdges{
+									MediaFiles: []*ent.MediaFile{{ID: 2}},
+								},
+							},
+							{ID: 3, Number: 3, AirDate: aired},
+						}}},
+					}},
+				}
 
 				v := DeriveSeasonViews(show, now)[0]
 				Expect(v.Available).To(Equal(2))
@@ -404,6 +424,38 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 				Expect(v.Missing).To(BeZero())
 			},
 		)
+
+		// The show's flag gates its episodes' own, matching db.monitoredEpisode:
+		// unmonitoring a show never wrote through to the episode rows, so a page
+		// reading those alone counted gaps the list had already stopped counting.
+		It("drops a monitored episode whose show is not monitored", func() {
+			show := &ent.TVShow{Edges: ent.TVShowEdges{Seasons: []*ent.Season{
+				{Number: 1, Edges: ent.SeasonEdges{Episodes: []*ent.Episode{
+					{ID: 1, Number: 1, AirDate: aired, Monitored: true},
+				}}},
+			}}}
+
+			v := DeriveSeasonViews(show, now)[0]
+			Expect(v.Missing).To(BeZero())
+			Expect(v.Total).To(BeZero())
+		})
+
+		It("keeps a file it already holds under an unmonitored show", func() {
+			show := &ent.TVShow{Edges: ent.TVShowEdges{Seasons: []*ent.Season{
+				{Number: 1, Edges: ent.SeasonEdges{Episodes: []*ent.Episode{
+					{
+						ID: 1, Number: 1, AirDate: aired, Monitored: true,
+						Edges: ent.EpisodeEdges{
+							MediaFiles: []*ent.MediaFile{{ID: 1}},
+						},
+					},
+				}}},
+			}}}
+
+			v := DeriveSeasonViews(show, now)[0]
+			Expect(v.Available).To(Equal(1))
+			Expect(v.Total).To(Equal(1))
+		})
 	})
 
 	// The filter, sort and page all resolve in SQL now; what the service still

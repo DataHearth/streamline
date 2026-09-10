@@ -28,6 +28,7 @@
 		onSearchSeason,
 		onDeleteFile,
 		onDeleteSeasonFiles,
+		showMonitored = true,
 	}: {
 		seasons: Season[];
 		selected: number;
@@ -42,6 +43,7 @@
 		// Season scope: wipes every file under it and reverts those episodes to
 		// wanted. The season keeps existing — this is not "delete the season".
 		onDeleteSeasonFiles: (s: Season) => void;
+		showMonitored?: boolean;
 	} = $props();
 
 	// Collapse is local, expand is shared. Pushing "nothing open" up into the
@@ -70,7 +72,7 @@
 	// used to show Search OR Delete OR a dot, so which action existed depended on
 	// state and details were unreachable at this width entirely.
 	function epMenu(s: Season, ep: Episode): KebabItem[] {
-		const st = episodeStatus(ep);
+		const st = episodeStatus(ep, showMonitored);
 		const hasFile = (ep.size ?? 0) > 0;
 		return [
 			{
@@ -126,7 +128,7 @@
 	// is in: what the file is, how far a download has got, or what a wanted
 	// episode has to search against.
 	function epLine(ep: Episode): string {
-		const st = episodeStatus(ep);
+		const st = episodeStatus(ep, showMonitored);
 		if (st === "available") {
 			const parts = [episodeMedia(ep), formatBytes(ep.size, "")].filter(Boolean);
 			return parts.join(" · ") || "available";
@@ -155,7 +157,7 @@
 <div class="overflow-hidden rounded-lg border border-border bg-bg-elevated/60">
 	{#each seasons as s (s.number)}
 		{@const open = openSeason === s.number}
-		{@const missing = missingEpisodes(s.episodes ?? [])}
+		{@const missing = missingEpisodes(s.episodes ?? [], showMonitored)}
 		{@const wanted = s.missing ?? 0}
 		<section class="border-b border-border last:border-b-0">
 			<div
@@ -267,7 +269,7 @@
 			{#if open}
 				<ul transition:slide={{ duration: 180, easing: cubicOut }}>
 					{#each s.episodes ?? [] as ep (ep.id)}
-						{@const st = episodeStatus(ep)}
+						{@const st = episodeStatus(ep, showMonitored)}
 						<li
 							class="flex items-center gap-2.5 border-t border-border bg-bg-deep px-3 py-2.5"
 						>
@@ -338,4 +340,5 @@
 	onClose={() => (detail = null)}
 	{onManualSearch}
 	{onDeleteFile}
+	{showMonitored}
 />

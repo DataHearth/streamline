@@ -51,12 +51,14 @@
 		onClose,
 		onManualSearch,
 		onDeleteFile,
+		showMonitored = true,
 	}: {
 		episode: Episode | null;
 		code: string;
 		onClose: () => void;
 		onManualSearch: (ep: Episode) => void;
 		onDeleteFile: (ep: Episode) => void;
+		showMonitored?: boolean;
 	} = $props();
 
 	let probe = $derived(episode ? probeOf(episode) : null);
@@ -132,7 +134,7 @@
 {/snippet}
 
 {#if episode}
-	{@const meta = STATUS_META[episodeStatus(episode)]}
+	{@const meta = STATUS_META[episodeStatus(episode, showMonitored)]}
 	<Modal open={true} title={episode.title || "TBA"} size="xl" {onClose}>
 		<div class="flex flex-wrap items-center gap-2">
 			<span

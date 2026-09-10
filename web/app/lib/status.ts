@@ -26,11 +26,22 @@ export type EpisodeDisplayStatus = EpisodeStatus | "missing";
 
 // Same split as movieStatus. Unaired wins over monitoring: an episode that
 // hasn't aired isn't missing, nobody could have it yet.
-export function episodeStatus(e: Episode): EpisodeDisplayStatus {
-	if (e.status === "wanted" && !e.monitored) return "missing";
+//
+// showMonitored gates the episode's own flag the way db.monitoredEpisode does
+// server-side. Unmonitoring a show never wrote through to its episodes, so an
+// episode row under one still carries monitored=true; reading that alone made
+// this page count gaps the list page had already stopped counting.
+export function episodeStatus(
+	e: Episode,
+	showMonitored = true,
+): EpisodeDisplayStatus {
+	if (e.status === "wanted" && (!e.monitored || !showMonitored)) {
+		return "missing";
+	}
 	return e.status;
 }
 
-export function missingEpisodes(episodes: Episode[]): number {
-	return episodes.filter((e) => episodeStatus(e) === "missing").length;
+export function missingEpisodes(episodes: Episode[], showMonitored = true) {
+	return episodes.filter((e) => episodeStatus(e, showMonitored) === "missing")
+		.length;
 }

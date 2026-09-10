@@ -455,3 +455,102 @@ var _ = Describe("FilterTVShows", Label("unit", "db"), func() {
 		})
 	})
 })
+
+// Unmonitoring a show writes tv_shows.monitored and nothing else — it never
+// reached the episodes underneath, and a metadata refresh creates new ones from
+// the season's flag. Every query that read the episode alone therefore kept
+// working through shows their owner had switched off.
+var _ = Describe("an unmonitored show", Label("unit", "db"), func() {
+	var (
+		store Store
+		ctx   context.Context
+		now   time.Time
+		show  *ent.TVShow
+	)
+
+	BeforeEach(func() {
+		ctx = context.Background()
+		client, err := Open(ctx, ":memory:")
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() { Expect(client.Close()).To(Succeed()) })
+		store = New(client)
+		now = time.Now()
+
+		aired := now.Add(-24 * time.Hour)
+		show, err = store.CreateTVShow(ctx, CreateTVShowParams{
+			Title:        "Dropped",
+			Year:         2020,
+			TvdbID:       1,
+			SeriesStatus: "continuing",
+			Type:         "standard",
+			Seasons: []SeasonSeed{{Number: 1, Episodes: []EpisodeSeed{
+				{Number: 1, Title: "A", AirDate: &aired},
+			}}},
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		// The episode stays monitored throughout: that is the state the bug
+		// lived in, and the show's flag alone has to be enough.
+		off := false
+		_, err = store.UpdateTVShow(
+			ctx,
+			show.ID,
+			UpdateTVShowParams{Monitored: &off},
+		)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(show.Edges.Seasons[0].Edges.Episodes[0].Monitored).To(BeTrue())
+	})
+
+	It("is not offered to the missing-episode search", func() {
+		shows, err := store.ListEligibleEpisodesForSync(ctx, 5, now, now)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(shows).To(BeEmpty())
+	})
+
+	It("is out of the wanted-episode tally", func() {
+		Expect(store.CountWantedEpisodes(ctx)).To(BeZero())
+	})
+
+	It("is out of the calendar", func() {
+		eps, err := store.ListUpcomingEpisodes(
+			ctx, now.Add(-48*time.Hour), now.Add(48*time.Hour),
+		)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(eps).To(BeEmpty())
+	})
+
+	It(
+		"does not match the missing filter, and its card reads nothing wanted",
+		func() {
+			rows, _, total, err := store.FilterTVShows(ctx, FilterTVShowsParams{
+				Status: "missing", Limit: 20, Now: now,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(total).To(BeZero())
+			Expect(rows).To(BeEmpty())
+
+			_, counts, _, err := store.FilterTVShows(ctx, FilterTVShowsParams{
+				Limit: 20, Now: now,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(counts[show.ID].Wanted).To(BeZero())
+		},
+	)
+
+	It("still counts a file it already holds", func() {
+		ep := show.Edges.Seasons[0].Edges.Episodes[0]
+		_, err := store.CreateMediaFile(ctx, CreateMediaFileParams{
+			EpisodeID: ep.ID,
+			Path:      "/tv/d/S01E01.mkv",
+			Size:      1,
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		_, counts, _, err := store.FilterTVShows(ctx, FilterTVShowsParams{
+			Limit: 20, Now: now,
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(counts[show.ID].Have).To(Equal(uint32(1)))
+		Expect(counts[show.ID].Total).To(Equal(uint32(1)))
+	})
+})
