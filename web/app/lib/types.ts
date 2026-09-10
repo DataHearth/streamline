@@ -242,6 +242,17 @@ export type PersonDetail = {
 	tvdb_id: number;
 	name: string;
 	profile_url?: string;
+	// Biography, dates and socials are all provider-dependent and usually
+	// absent: series cast comes from TVDB, which supplies no known_for and
+	// rarely any handle. Dates arrive as "YYYY-MM-DD" but can be partial.
+	biography?: string;
+	known_for?: string;
+	birthday?: string;
+	deathday?: string;
+	place_of_birth?: string;
+	imdb_id?: string;
+	instagram_id?: string;
+	twitter_id?: string;
 	movies: PersonMovieCredit[];
 	series: PersonSeriesCredit[];
 };
