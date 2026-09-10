@@ -31,6 +31,7 @@
 	import Dialog from "../../components/modals/Dialog.svelte";
 	import DeleteTitleDialog from "../../components/shared/DeleteTitleDialog.svelte";
 	import ReidentifyDialog from "../../components/shared/ReidentifyDialog.svelte";
+	import SeriesRenamePreviewModal from "../../components/series/SeriesRenamePreviewModal.svelte";
 	import SeasonStrip from "../../components/series/SeasonStrip.svelte";
 	import SeasonAccordion from "../../components/series/SeasonAccordion.svelte";
 	import EpisodeTable from "../../components/series/EpisodeTable.svelte";
@@ -195,6 +196,7 @@
 
 	let deleteOpen = $state(false);
 	let reidentifyOpen = $state(false);
+	let renameOpen = $state(false);
 	let manualOpen = $state(false);
 	let manualEpisode = $state<Episode | null>(null);
 	let packSearchOpen = $state(false);
@@ -362,6 +364,7 @@
 		if (a === "search") searchSeries.mutate();
 		else if (a === "refresh") refresh.mutate();
 		else if (a === "reidentify") reidentifyOpen = true;
+		else if (a === "rename") renameOpen = true;
 		else if (a === "delete") deleteOpen = true;
 		else if (a === "delete-files") openDeleteFiles("this series", seriesFileEpisodes);
 	}
@@ -587,7 +590,7 @@
 						<SeriesKebabMenu
 							onPick={onKebabPick}
 							allowDeleteFiles
-							disabledActions={hasFiles ? [] : ["delete-files"]}
+							disabledActions={hasFiles ? [] : ["rename", "delete-files"]}
 						/>
 					</div>
 					<div class="flex items-center gap-2">
@@ -677,7 +680,7 @@
 						<SeriesKebabMenu
 							onPick={onKebabPick}
 							allowDeleteFiles
-							disabledActions={hasFiles ? [] : ["delete-files"]}
+							disabledActions={hasFiles ? [] : ["rename", "delete-files"]}
 						/>
 					</div>
 				</div>
@@ -963,6 +966,12 @@
 		id={show.id}
 		currentTitle={show.title}
 		onClose={() => (reidentifyOpen = false)}
+	/>
+
+	<SeriesRenamePreviewModal
+		open={renameOpen}
+		seriesId={show.id}
+		onClose={() => (renameOpen = false)}
 	/>
 
 	<DeleteTitleDialog
