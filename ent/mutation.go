@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/datahearth/streamline/ent/apikey"
+	"github.com/datahearth/streamline/ent/credit"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/importscan"
@@ -22,6 +23,7 @@ import (
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/oidcidentity"
+	"github.com/datahearth/streamline/ent/person"
 	"github.com/datahearth/streamline/ent/predicate"
 	"github.com/datahearth/streamline/ent/request"
 	"github.com/datahearth/streamline/ent/scheduledjob"
@@ -44,6 +46,7 @@ const (
 
 	// Node types.
 	TypeApiKey         = "ApiKey"
+	TypeCredit         = "Credit"
 	TypeDownloadRecord = "DownloadRecord"
 	TypeEpisode        = "Episode"
 	TypeImportScan     = "ImportScan"
@@ -54,6 +57,7 @@ const (
 	TypeMediaFile      = "MediaFile"
 	TypeMovie          = "Movie"
 	TypeOIDCIdentity   = "OIDCIdentity"
+	TypePerson         = "Person"
 	TypeRequest        = "Request"
 	TypeScheduledJob   = "ScheduledJob"
 	TypeSeason         = "Season"
@@ -699,6 +703,763 @@ func (m *ApiKeyMutation) ResetEdge(name string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown ApiKey edge %s", name)
+}
+
+// CreditMutation represents an operation that mutates the Credit nodes in the graph.
+type CreditMutation struct {
+	config
+	op             Op
+	typ            string
+	id             *uint32
+	create_time    *time.Time
+	update_time    *time.Time
+	character      *string
+	_order         *uint8
+	add_order      *int8
+	clearedFields  map[string]struct{}
+	person         *uint32
+	clearedperson  bool
+	movie          *uint32
+	clearedmovie   bool
+	tv_show        *uint32
+	clearedtv_show bool
+	done           bool
+	oldValue       func(context.Context) (*Credit, error)
+	predicates     []predicate.Credit
+}
+
+var _ ent.Mutation = (*CreditMutation)(nil)
+
+// creditOption allows management of the mutation configuration using functional options.
+type creditOption func(*CreditMutation)
+
+// newCreditMutation creates new mutation for the Credit entity.
+func newCreditMutation(c config, op Op, opts ...creditOption) *CreditMutation {
+	m := &CreditMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeCredit,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withCreditID sets the ID field of the mutation.
+func withCreditID(id uint32) creditOption {
+	return func(m *CreditMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *Credit
+		)
+		m.oldValue = func(ctx context.Context) (*Credit, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().Credit.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withCredit sets the old Credit of the mutation.
+func withCredit(node *Credit) creditOption {
+	return func(m *CreditMutation) {
+		m.oldValue = func(context.Context) (*Credit, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m CreditMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m CreditMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of Credit entities.
+func (m *CreditMutation) SetID(id uint32) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *CreditMutation) ID() (id uint32, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *CreditMutation) IDs(ctx context.Context) ([]uint32, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uint32{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().Credit.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreateTime sets the "create_time" field.
+func (m *CreditMutation) SetCreateTime(t time.Time) {
+	m.create_time = &t
+}
+
+// CreateTime returns the value of the "create_time" field in the mutation.
+func (m *CreditMutation) CreateTime() (r time.Time, exists bool) {
+	v := m.create_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreateTime returns the old "create_time" field's value of the Credit entity.
+// If the Credit object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CreditMutation) OldCreateTime(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreateTime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreateTime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreateTime: %w", err)
+	}
+	return oldValue.CreateTime, nil
+}
+
+// ResetCreateTime resets all changes to the "create_time" field.
+func (m *CreditMutation) ResetCreateTime() {
+	m.create_time = nil
+}
+
+// SetUpdateTime sets the "update_time" field.
+func (m *CreditMutation) SetUpdateTime(t time.Time) {
+	m.update_time = &t
+}
+
+// UpdateTime returns the value of the "update_time" field in the mutation.
+func (m *CreditMutation) UpdateTime() (r time.Time, exists bool) {
+	v := m.update_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdateTime returns the old "update_time" field's value of the Credit entity.
+// If the Credit object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CreditMutation) OldUpdateTime(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdateTime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdateTime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdateTime: %w", err)
+	}
+	return oldValue.UpdateTime, nil
+}
+
+// ResetUpdateTime resets all changes to the "update_time" field.
+func (m *CreditMutation) ResetUpdateTime() {
+	m.update_time = nil
+}
+
+// SetCharacter sets the "character" field.
+func (m *CreditMutation) SetCharacter(s string) {
+	m.character = &s
+}
+
+// Character returns the value of the "character" field in the mutation.
+func (m *CreditMutation) Character() (r string, exists bool) {
+	v := m.character
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCharacter returns the old "character" field's value of the Credit entity.
+// If the Credit object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CreditMutation) OldCharacter(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCharacter is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCharacter requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCharacter: %w", err)
+	}
+	return oldValue.Character, nil
+}
+
+// ClearCharacter clears the value of the "character" field.
+func (m *CreditMutation) ClearCharacter() {
+	m.character = nil
+	m.clearedFields[credit.FieldCharacter] = struct{}{}
+}
+
+// CharacterCleared returns if the "character" field was cleared in this mutation.
+func (m *CreditMutation) CharacterCleared() bool {
+	_, ok := m.clearedFields[credit.FieldCharacter]
+	return ok
+}
+
+// ResetCharacter resets all changes to the "character" field.
+func (m *CreditMutation) ResetCharacter() {
+	m.character = nil
+	delete(m.clearedFields, credit.FieldCharacter)
+}
+
+// SetOrder sets the "order" field.
+func (m *CreditMutation) SetOrder(u uint8) {
+	m._order = &u
+	m.add_order = nil
+}
+
+// Order returns the value of the "order" field in the mutation.
+func (m *CreditMutation) Order() (r uint8, exists bool) {
+	v := m._order
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOrder returns the old "order" field's value of the Credit entity.
+// If the Credit object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CreditMutation) OldOrder(ctx context.Context) (v uint8, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOrder is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOrder requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOrder: %w", err)
+	}
+	return oldValue.Order, nil
+}
+
+// AddOrder adds u to the "order" field.
+func (m *CreditMutation) AddOrder(u int8) {
+	if m.add_order != nil {
+		*m.add_order += u
+	} else {
+		m.add_order = &u
+	}
+}
+
+// AddedOrder returns the value that was added to the "order" field in this mutation.
+func (m *CreditMutation) AddedOrder() (r int8, exists bool) {
+	v := m.add_order
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearOrder clears the value of the "order" field.
+func (m *CreditMutation) ClearOrder() {
+	m._order = nil
+	m.add_order = nil
+	m.clearedFields[credit.FieldOrder] = struct{}{}
+}
+
+// OrderCleared returns if the "order" field was cleared in this mutation.
+func (m *CreditMutation) OrderCleared() bool {
+	_, ok := m.clearedFields[credit.FieldOrder]
+	return ok
+}
+
+// ResetOrder resets all changes to the "order" field.
+func (m *CreditMutation) ResetOrder() {
+	m._order = nil
+	m.add_order = nil
+	delete(m.clearedFields, credit.FieldOrder)
+}
+
+// SetPersonID sets the "person" edge to the Person entity by id.
+func (m *CreditMutation) SetPersonID(id uint32) {
+	m.person = &id
+}
+
+// ClearPerson clears the "person" edge to the Person entity.
+func (m *CreditMutation) ClearPerson() {
+	m.clearedperson = true
+}
+
+// PersonCleared reports if the "person" edge to the Person entity was cleared.
+func (m *CreditMutation) PersonCleared() bool {
+	return m.clearedperson
+}
+
+// PersonID returns the "person" edge ID in the mutation.
+func (m *CreditMutation) PersonID() (id uint32, exists bool) {
+	if m.person != nil {
+		return *m.person, true
+	}
+	return
+}
+
+// PersonIDs returns the "person" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// PersonID instead. It exists only for internal usage by the builders.
+func (m *CreditMutation) PersonIDs() (ids []uint32) {
+	if id := m.person; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetPerson resets all changes to the "person" edge.
+func (m *CreditMutation) ResetPerson() {
+	m.person = nil
+	m.clearedperson = false
+}
+
+// SetMovieID sets the "movie" edge to the Movie entity by id.
+func (m *CreditMutation) SetMovieID(id uint32) {
+	m.movie = &id
+}
+
+// ClearMovie clears the "movie" edge to the Movie entity.
+func (m *CreditMutation) ClearMovie() {
+	m.clearedmovie = true
+}
+
+// MovieCleared reports if the "movie" edge to the Movie entity was cleared.
+func (m *CreditMutation) MovieCleared() bool {
+	return m.clearedmovie
+}
+
+// MovieID returns the "movie" edge ID in the mutation.
+func (m *CreditMutation) MovieID() (id uint32, exists bool) {
+	if m.movie != nil {
+		return *m.movie, true
+	}
+	return
+}
+
+// MovieIDs returns the "movie" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// MovieID instead. It exists only for internal usage by the builders.
+func (m *CreditMutation) MovieIDs() (ids []uint32) {
+	if id := m.movie; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetMovie resets all changes to the "movie" edge.
+func (m *CreditMutation) ResetMovie() {
+	m.movie = nil
+	m.clearedmovie = false
+}
+
+// SetTvShowID sets the "tv_show" edge to the TVShow entity by id.
+func (m *CreditMutation) SetTvShowID(id uint32) {
+	m.tv_show = &id
+}
+
+// ClearTvShow clears the "tv_show" edge to the TVShow entity.
+func (m *CreditMutation) ClearTvShow() {
+	m.clearedtv_show = true
+}
+
+// TvShowCleared reports if the "tv_show" edge to the TVShow entity was cleared.
+func (m *CreditMutation) TvShowCleared() bool {
+	return m.clearedtv_show
+}
+
+// TvShowID returns the "tv_show" edge ID in the mutation.
+func (m *CreditMutation) TvShowID() (id uint32, exists bool) {
+	if m.tv_show != nil {
+		return *m.tv_show, true
+	}
+	return
+}
+
+// TvShowIDs returns the "tv_show" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// TvShowID instead. It exists only for internal usage by the builders.
+func (m *CreditMutation) TvShowIDs() (ids []uint32) {
+	if id := m.tv_show; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetTvShow resets all changes to the "tv_show" edge.
+func (m *CreditMutation) ResetTvShow() {
+	m.tv_show = nil
+	m.clearedtv_show = false
+}
+
+// Where appends a list predicates to the CreditMutation builder.
+func (m *CreditMutation) Where(ps ...predicate.Credit) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the CreditMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *CreditMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.Credit, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *CreditMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *CreditMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (Credit).
+func (m *CreditMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *CreditMutation) Fields() []string {
+	fields := make([]string, 0, 4)
+	if m.create_time != nil {
+		fields = append(fields, credit.FieldCreateTime)
+	}
+	if m.update_time != nil {
+		fields = append(fields, credit.FieldUpdateTime)
+	}
+	if m.character != nil {
+		fields = append(fields, credit.FieldCharacter)
+	}
+	if m._order != nil {
+		fields = append(fields, credit.FieldOrder)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *CreditMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case credit.FieldCreateTime:
+		return m.CreateTime()
+	case credit.FieldUpdateTime:
+		return m.UpdateTime()
+	case credit.FieldCharacter:
+		return m.Character()
+	case credit.FieldOrder:
+		return m.Order()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *CreditMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case credit.FieldCreateTime:
+		return m.OldCreateTime(ctx)
+	case credit.FieldUpdateTime:
+		return m.OldUpdateTime(ctx)
+	case credit.FieldCharacter:
+		return m.OldCharacter(ctx)
+	case credit.FieldOrder:
+		return m.OldOrder(ctx)
+	}
+	return nil, fmt.Errorf("unknown Credit field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *CreditMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case credit.FieldCreateTime:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreateTime(v)
+		return nil
+	case credit.FieldUpdateTime:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdateTime(v)
+		return nil
+	case credit.FieldCharacter:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCharacter(v)
+		return nil
+	case credit.FieldOrder:
+		v, ok := value.(uint8)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOrder(v)
+		return nil
+	}
+	return fmt.Errorf("unknown Credit field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *CreditMutation) AddedFields() []string {
+	var fields []string
+	if m.add_order != nil {
+		fields = append(fields, credit.FieldOrder)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *CreditMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case credit.FieldOrder:
+		return m.AddedOrder()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *CreditMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case credit.FieldOrder:
+		v, ok := value.(int8)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddOrder(v)
+		return nil
+	}
+	return fmt.Errorf("unknown Credit numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *CreditMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(credit.FieldCharacter) {
+		fields = append(fields, credit.FieldCharacter)
+	}
+	if m.FieldCleared(credit.FieldOrder) {
+		fields = append(fields, credit.FieldOrder)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *CreditMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *CreditMutation) ClearField(name string) error {
+	switch name {
+	case credit.FieldCharacter:
+		m.ClearCharacter()
+		return nil
+	case credit.FieldOrder:
+		m.ClearOrder()
+		return nil
+	}
+	return fmt.Errorf("unknown Credit nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *CreditMutation) ResetField(name string) error {
+	switch name {
+	case credit.FieldCreateTime:
+		m.ResetCreateTime()
+		return nil
+	case credit.FieldUpdateTime:
+		m.ResetUpdateTime()
+		return nil
+	case credit.FieldCharacter:
+		m.ResetCharacter()
+		return nil
+	case credit.FieldOrder:
+		m.ResetOrder()
+		return nil
+	}
+	return fmt.Errorf("unknown Credit field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *CreditMutation) AddedEdges() []string {
+	edges := make([]string, 0, 3)
+	if m.person != nil {
+		edges = append(edges, credit.EdgePerson)
+	}
+	if m.movie != nil {
+		edges = append(edges, credit.EdgeMovie)
+	}
+	if m.tv_show != nil {
+		edges = append(edges, credit.EdgeTvShow)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *CreditMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case credit.EdgePerson:
+		if id := m.person; id != nil {
+			return []ent.Value{*id}
+		}
+	case credit.EdgeMovie:
+		if id := m.movie; id != nil {
+			return []ent.Value{*id}
+		}
+	case credit.EdgeTvShow:
+		if id := m.tv_show; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *CreditMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 3)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *CreditMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *CreditMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 3)
+	if m.clearedperson {
+		edges = append(edges, credit.EdgePerson)
+	}
+	if m.clearedmovie {
+		edges = append(edges, credit.EdgeMovie)
+	}
+	if m.clearedtv_show {
+		edges = append(edges, credit.EdgeTvShow)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *CreditMutation) EdgeCleared(name string) bool {
+	switch name {
+	case credit.EdgePerson:
+		return m.clearedperson
+	case credit.EdgeMovie:
+		return m.clearedmovie
+	case credit.EdgeTvShow:
+		return m.clearedtv_show
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *CreditMutation) ClearEdge(name string) error {
+	switch name {
+	case credit.EdgePerson:
+		m.ClearPerson()
+		return nil
+	case credit.EdgeMovie:
+		m.ClearMovie()
+		return nil
+	case credit.EdgeTvShow:
+		m.ClearTvShow()
+		return nil
+	}
+	return fmt.Errorf("unknown Credit unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *CreditMutation) ResetEdge(name string) error {
+	switch name {
+	case credit.EdgePerson:
+		m.ResetPerson()
+		return nil
+	case credit.EdgeMovie:
+		m.ResetMovie()
+		return nil
+	case credit.EdgeTvShow:
+		m.ResetTvShow()
+		return nil
+	}
+	return fmt.Errorf("unknown Credit edge %s", name)
 }
 
 // DownloadRecordMutation represents an operation that mutates the DownloadRecord nodes in the graph.
@@ -12867,8 +13628,6 @@ type MovieMutation struct {
 	addrating               *float64
 	genres                  *[]string
 	appendgenres            []string
-	cast                    *[]schema.CastMember
-	appendcast              []schema.CastMember
 	last_refreshed_at       *time.Time
 	clearedFields           map[string]struct{}
 	download_records        map[uint32]struct{}
@@ -12880,6 +13639,9 @@ type MovieMutation struct {
 	events                  map[uint32]struct{}
 	removedevents           map[uint32]struct{}
 	clearedevents           bool
+	credits                 map[uint32]struct{}
+	removedcredits          map[uint32]struct{}
+	clearedcredits          bool
 	done                    bool
 	oldValue                func(context.Context) (*Movie, error)
 	predicates              []predicate.Movie
@@ -13872,71 +14634,6 @@ func (m *MovieMutation) ResetGenres() {
 	delete(m.clearedFields, movie.FieldGenres)
 }
 
-// SetCast sets the "cast" field.
-func (m *MovieMutation) SetCast(sm []schema.CastMember) {
-	m.cast = &sm
-	m.appendcast = nil
-}
-
-// Cast returns the value of the "cast" field in the mutation.
-func (m *MovieMutation) Cast() (r []schema.CastMember, exists bool) {
-	v := m.cast
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldCast returns the old "cast" field's value of the Movie entity.
-// If the Movie object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *MovieMutation) OldCast(ctx context.Context) (v []schema.CastMember, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldCast is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldCast requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldCast: %w", err)
-	}
-	return oldValue.Cast, nil
-}
-
-// AppendCast adds sm to the "cast" field.
-func (m *MovieMutation) AppendCast(sm []schema.CastMember) {
-	m.appendcast = append(m.appendcast, sm...)
-}
-
-// AppendedCast returns the list of values that were appended to the "cast" field in this mutation.
-func (m *MovieMutation) AppendedCast() ([]schema.CastMember, bool) {
-	if len(m.appendcast) == 0 {
-		return nil, false
-	}
-	return m.appendcast, true
-}
-
-// ClearCast clears the value of the "cast" field.
-func (m *MovieMutation) ClearCast() {
-	m.cast = nil
-	m.appendcast = nil
-	m.clearedFields[movie.FieldCast] = struct{}{}
-}
-
-// CastCleared returns if the "cast" field was cleared in this mutation.
-func (m *MovieMutation) CastCleared() bool {
-	_, ok := m.clearedFields[movie.FieldCast]
-	return ok
-}
-
-// ResetCast resets all changes to the "cast" field.
-func (m *MovieMutation) ResetCast() {
-	m.cast = nil
-	m.appendcast = nil
-	delete(m.clearedFields, movie.FieldCast)
-}
-
 // SetLastRefreshedAt sets the "last_refreshed_at" field.
 func (m *MovieMutation) SetLastRefreshedAt(t time.Time) {
 	m.last_refreshed_at = &t
@@ -14148,6 +14845,60 @@ func (m *MovieMutation) ResetEvents() {
 	m.removedevents = nil
 }
 
+// AddCreditIDs adds the "credits" edge to the Credit entity by ids.
+func (m *MovieMutation) AddCreditIDs(ids ...uint32) {
+	if m.credits == nil {
+		m.credits = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		m.credits[ids[i]] = struct{}{}
+	}
+}
+
+// ClearCredits clears the "credits" edge to the Credit entity.
+func (m *MovieMutation) ClearCredits() {
+	m.clearedcredits = true
+}
+
+// CreditsCleared reports if the "credits" edge to the Credit entity was cleared.
+func (m *MovieMutation) CreditsCleared() bool {
+	return m.clearedcredits
+}
+
+// RemoveCreditIDs removes the "credits" edge to the Credit entity by IDs.
+func (m *MovieMutation) RemoveCreditIDs(ids ...uint32) {
+	if m.removedcredits == nil {
+		m.removedcredits = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		delete(m.credits, ids[i])
+		m.removedcredits[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedCredits returns the removed IDs of the "credits" edge to the Credit entity.
+func (m *MovieMutation) RemovedCreditsIDs() (ids []uint32) {
+	for id := range m.removedcredits {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// CreditsIDs returns the "credits" edge IDs in the mutation.
+func (m *MovieMutation) CreditsIDs() (ids []uint32) {
+	for id := range m.credits {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetCredits resets all changes to the "credits" edge.
+func (m *MovieMutation) ResetCredits() {
+	m.credits = nil
+	m.clearedcredits = false
+	m.removedcredits = nil
+}
+
 // Where appends a list predicates to the MovieMutation builder.
 func (m *MovieMutation) Where(ps ...predicate.Movie) {
 	m.predicates = append(m.predicates, ps...)
@@ -14182,7 +14933,7 @@ func (m *MovieMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *MovieMutation) Fields() []string {
-	fields := make([]string, 0, 20)
+	fields := make([]string, 0, 19)
 	if m.create_time != nil {
 		fields = append(fields, movie.FieldCreateTime)
 	}
@@ -14237,9 +14988,6 @@ func (m *MovieMutation) Fields() []string {
 	if m.genres != nil {
 		fields = append(fields, movie.FieldGenres)
 	}
-	if m.cast != nil {
-		fields = append(fields, movie.FieldCast)
-	}
 	if m.last_refreshed_at != nil {
 		fields = append(fields, movie.FieldLastRefreshedAt)
 	}
@@ -14287,8 +15035,6 @@ func (m *MovieMutation) Field(name string) (ent.Value, bool) {
 		return m.Rating()
 	case movie.FieldGenres:
 		return m.Genres()
-	case movie.FieldCast:
-		return m.Cast()
 	case movie.FieldLastRefreshedAt:
 		return m.LastRefreshedAt()
 	}
@@ -14336,8 +15082,6 @@ func (m *MovieMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldRating(ctx)
 	case movie.FieldGenres:
 		return m.OldGenres(ctx)
-	case movie.FieldCast:
-		return m.OldCast(ctx)
 	case movie.FieldLastRefreshedAt:
 		return m.OldLastRefreshedAt(ctx)
 	}
@@ -14475,13 +15219,6 @@ func (m *MovieMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetGenres(v)
 		return nil
-	case movie.FieldCast:
-		v, ok := value.([]schema.CastMember)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetCast(v)
-		return nil
 	case movie.FieldLastRefreshedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -14609,9 +15346,6 @@ func (m *MovieMutation) ClearedFields() []string {
 	if m.FieldCleared(movie.FieldGenres) {
 		fields = append(fields, movie.FieldGenres)
 	}
-	if m.FieldCleared(movie.FieldCast) {
-		fields = append(fields, movie.FieldCast)
-	}
 	if m.FieldCleared(movie.FieldLastRefreshedAt) {
 		fields = append(fields, movie.FieldLastRefreshedAt)
 	}
@@ -14655,9 +15389,6 @@ func (m *MovieMutation) ClearField(name string) error {
 		return nil
 	case movie.FieldGenres:
 		m.ClearGenres()
-		return nil
-	case movie.FieldCast:
-		m.ClearCast()
 		return nil
 	case movie.FieldLastRefreshedAt:
 		m.ClearLastRefreshedAt()
@@ -14724,9 +15455,6 @@ func (m *MovieMutation) ResetField(name string) error {
 	case movie.FieldGenres:
 		m.ResetGenres()
 		return nil
-	case movie.FieldCast:
-		m.ResetCast()
-		return nil
 	case movie.FieldLastRefreshedAt:
 		m.ResetLastRefreshedAt()
 		return nil
@@ -14736,7 +15464,7 @@ func (m *MovieMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *MovieMutation) AddedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.download_records != nil {
 		edges = append(edges, movie.EdgeDownloadRecords)
 	}
@@ -14745,6 +15473,9 @@ func (m *MovieMutation) AddedEdges() []string {
 	}
 	if m.events != nil {
 		edges = append(edges, movie.EdgeEvents)
+	}
+	if m.credits != nil {
+		edges = append(edges, movie.EdgeCredits)
 	}
 	return edges
 }
@@ -14771,13 +15502,19 @@ func (m *MovieMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case movie.EdgeCredits:
+		ids := make([]ent.Value, 0, len(m.credits))
+		for id := range m.credits {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *MovieMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.removeddownload_records != nil {
 		edges = append(edges, movie.EdgeDownloadRecords)
 	}
@@ -14786,6 +15523,9 @@ func (m *MovieMutation) RemovedEdges() []string {
 	}
 	if m.removedevents != nil {
 		edges = append(edges, movie.EdgeEvents)
+	}
+	if m.removedcredits != nil {
+		edges = append(edges, movie.EdgeCredits)
 	}
 	return edges
 }
@@ -14812,13 +15552,19 @@ func (m *MovieMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case movie.EdgeCredits:
+		ids := make([]ent.Value, 0, len(m.removedcredits))
+		for id := range m.removedcredits {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *MovieMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.cleareddownload_records {
 		edges = append(edges, movie.EdgeDownloadRecords)
 	}
@@ -14827,6 +15573,9 @@ func (m *MovieMutation) ClearedEdges() []string {
 	}
 	if m.clearedevents {
 		edges = append(edges, movie.EdgeEvents)
+	}
+	if m.clearedcredits {
+		edges = append(edges, movie.EdgeCredits)
 	}
 	return edges
 }
@@ -14841,6 +15590,8 @@ func (m *MovieMutation) EdgeCleared(name string) bool {
 		return m.clearedmedia_files
 	case movie.EdgeEvents:
 		return m.clearedevents
+	case movie.EdgeCredits:
+		return m.clearedcredits
 	}
 	return false
 }
@@ -14865,6 +15616,9 @@ func (m *MovieMutation) ResetEdge(name string) error {
 		return nil
 	case movie.EdgeEvents:
 		m.ResetEvents()
+		return nil
+	case movie.EdgeCredits:
+		m.ResetCredits()
 		return nil
 	}
 	return fmt.Errorf("unknown Movie edge %s", name)
@@ -15505,6 +16259,832 @@ func (m *OIDCIdentityMutation) ResetEdge(name string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown OIDCIdentity edge %s", name)
+}
+
+// PersonMutation represents an operation that mutates the Person nodes in the graph.
+type PersonMutation struct {
+	config
+	op             Op
+	typ            string
+	id             *uint32
+	create_time    *time.Time
+	update_time    *time.Time
+	tmdb_id        *uint32
+	addtmdb_id     *int32
+	tvdb_id        *uint32
+	addtvdb_id     *int32
+	name           *string
+	profile_url    *string
+	clearedFields  map[string]struct{}
+	credits        map[uint32]struct{}
+	removedcredits map[uint32]struct{}
+	clearedcredits bool
+	done           bool
+	oldValue       func(context.Context) (*Person, error)
+	predicates     []predicate.Person
+}
+
+var _ ent.Mutation = (*PersonMutation)(nil)
+
+// personOption allows management of the mutation configuration using functional options.
+type personOption func(*PersonMutation)
+
+// newPersonMutation creates new mutation for the Person entity.
+func newPersonMutation(c config, op Op, opts ...personOption) *PersonMutation {
+	m := &PersonMutation{
+		config:        c,
+		op:            op,
+		typ:           TypePerson,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withPersonID sets the ID field of the mutation.
+func withPersonID(id uint32) personOption {
+	return func(m *PersonMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *Person
+		)
+		m.oldValue = func(ctx context.Context) (*Person, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().Person.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withPerson sets the old Person of the mutation.
+func withPerson(node *Person) personOption {
+	return func(m *PersonMutation) {
+		m.oldValue = func(context.Context) (*Person, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m PersonMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m PersonMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of Person entities.
+func (m *PersonMutation) SetID(id uint32) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *PersonMutation) ID() (id uint32, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *PersonMutation) IDs(ctx context.Context) ([]uint32, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uint32{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().Person.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreateTime sets the "create_time" field.
+func (m *PersonMutation) SetCreateTime(t time.Time) {
+	m.create_time = &t
+}
+
+// CreateTime returns the value of the "create_time" field in the mutation.
+func (m *PersonMutation) CreateTime() (r time.Time, exists bool) {
+	v := m.create_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreateTime returns the old "create_time" field's value of the Person entity.
+// If the Person object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PersonMutation) OldCreateTime(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreateTime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreateTime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreateTime: %w", err)
+	}
+	return oldValue.CreateTime, nil
+}
+
+// ResetCreateTime resets all changes to the "create_time" field.
+func (m *PersonMutation) ResetCreateTime() {
+	m.create_time = nil
+}
+
+// SetUpdateTime sets the "update_time" field.
+func (m *PersonMutation) SetUpdateTime(t time.Time) {
+	m.update_time = &t
+}
+
+// UpdateTime returns the value of the "update_time" field in the mutation.
+func (m *PersonMutation) UpdateTime() (r time.Time, exists bool) {
+	v := m.update_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdateTime returns the old "update_time" field's value of the Person entity.
+// If the Person object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PersonMutation) OldUpdateTime(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdateTime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdateTime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdateTime: %w", err)
+	}
+	return oldValue.UpdateTime, nil
+}
+
+// ResetUpdateTime resets all changes to the "update_time" field.
+func (m *PersonMutation) ResetUpdateTime() {
+	m.update_time = nil
+}
+
+// SetTmdbID sets the "tmdb_id" field.
+func (m *PersonMutation) SetTmdbID(u uint32) {
+	m.tmdb_id = &u
+	m.addtmdb_id = nil
+}
+
+// TmdbID returns the value of the "tmdb_id" field in the mutation.
+func (m *PersonMutation) TmdbID() (r uint32, exists bool) {
+	v := m.tmdb_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTmdbID returns the old "tmdb_id" field's value of the Person entity.
+// If the Person object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PersonMutation) OldTmdbID(ctx context.Context) (v uint32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTmdbID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTmdbID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTmdbID: %w", err)
+	}
+	return oldValue.TmdbID, nil
+}
+
+// AddTmdbID adds u to the "tmdb_id" field.
+func (m *PersonMutation) AddTmdbID(u int32) {
+	if m.addtmdb_id != nil {
+		*m.addtmdb_id += u
+	} else {
+		m.addtmdb_id = &u
+	}
+}
+
+// AddedTmdbID returns the value that was added to the "tmdb_id" field in this mutation.
+func (m *PersonMutation) AddedTmdbID() (r int32, exists bool) {
+	v := m.addtmdb_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearTmdbID clears the value of the "tmdb_id" field.
+func (m *PersonMutation) ClearTmdbID() {
+	m.tmdb_id = nil
+	m.addtmdb_id = nil
+	m.clearedFields[person.FieldTmdbID] = struct{}{}
+}
+
+// TmdbIDCleared returns if the "tmdb_id" field was cleared in this mutation.
+func (m *PersonMutation) TmdbIDCleared() bool {
+	_, ok := m.clearedFields[person.FieldTmdbID]
+	return ok
+}
+
+// ResetTmdbID resets all changes to the "tmdb_id" field.
+func (m *PersonMutation) ResetTmdbID() {
+	m.tmdb_id = nil
+	m.addtmdb_id = nil
+	delete(m.clearedFields, person.FieldTmdbID)
+}
+
+// SetTvdbID sets the "tvdb_id" field.
+func (m *PersonMutation) SetTvdbID(u uint32) {
+	m.tvdb_id = &u
+	m.addtvdb_id = nil
+}
+
+// TvdbID returns the value of the "tvdb_id" field in the mutation.
+func (m *PersonMutation) TvdbID() (r uint32, exists bool) {
+	v := m.tvdb_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTvdbID returns the old "tvdb_id" field's value of the Person entity.
+// If the Person object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PersonMutation) OldTvdbID(ctx context.Context) (v uint32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTvdbID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTvdbID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTvdbID: %w", err)
+	}
+	return oldValue.TvdbID, nil
+}
+
+// AddTvdbID adds u to the "tvdb_id" field.
+func (m *PersonMutation) AddTvdbID(u int32) {
+	if m.addtvdb_id != nil {
+		*m.addtvdb_id += u
+	} else {
+		m.addtvdb_id = &u
+	}
+}
+
+// AddedTvdbID returns the value that was added to the "tvdb_id" field in this mutation.
+func (m *PersonMutation) AddedTvdbID() (r int32, exists bool) {
+	v := m.addtvdb_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearTvdbID clears the value of the "tvdb_id" field.
+func (m *PersonMutation) ClearTvdbID() {
+	m.tvdb_id = nil
+	m.addtvdb_id = nil
+	m.clearedFields[person.FieldTvdbID] = struct{}{}
+}
+
+// TvdbIDCleared returns if the "tvdb_id" field was cleared in this mutation.
+func (m *PersonMutation) TvdbIDCleared() bool {
+	_, ok := m.clearedFields[person.FieldTvdbID]
+	return ok
+}
+
+// ResetTvdbID resets all changes to the "tvdb_id" field.
+func (m *PersonMutation) ResetTvdbID() {
+	m.tvdb_id = nil
+	m.addtvdb_id = nil
+	delete(m.clearedFields, person.FieldTvdbID)
+}
+
+// SetName sets the "name" field.
+func (m *PersonMutation) SetName(s string) {
+	m.name = &s
+}
+
+// Name returns the value of the "name" field in the mutation.
+func (m *PersonMutation) Name() (r string, exists bool) {
+	v := m.name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldName returns the old "name" field's value of the Person entity.
+// If the Person object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PersonMutation) OldName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldName: %w", err)
+	}
+	return oldValue.Name, nil
+}
+
+// ResetName resets all changes to the "name" field.
+func (m *PersonMutation) ResetName() {
+	m.name = nil
+}
+
+// SetProfileURL sets the "profile_url" field.
+func (m *PersonMutation) SetProfileURL(s string) {
+	m.profile_url = &s
+}
+
+// ProfileURL returns the value of the "profile_url" field in the mutation.
+func (m *PersonMutation) ProfileURL() (r string, exists bool) {
+	v := m.profile_url
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldProfileURL returns the old "profile_url" field's value of the Person entity.
+// If the Person object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PersonMutation) OldProfileURL(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldProfileURL is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldProfileURL requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldProfileURL: %w", err)
+	}
+	return oldValue.ProfileURL, nil
+}
+
+// ClearProfileURL clears the value of the "profile_url" field.
+func (m *PersonMutation) ClearProfileURL() {
+	m.profile_url = nil
+	m.clearedFields[person.FieldProfileURL] = struct{}{}
+}
+
+// ProfileURLCleared returns if the "profile_url" field was cleared in this mutation.
+func (m *PersonMutation) ProfileURLCleared() bool {
+	_, ok := m.clearedFields[person.FieldProfileURL]
+	return ok
+}
+
+// ResetProfileURL resets all changes to the "profile_url" field.
+func (m *PersonMutation) ResetProfileURL() {
+	m.profile_url = nil
+	delete(m.clearedFields, person.FieldProfileURL)
+}
+
+// AddCreditIDs adds the "credits" edge to the Credit entity by ids.
+func (m *PersonMutation) AddCreditIDs(ids ...uint32) {
+	if m.credits == nil {
+		m.credits = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		m.credits[ids[i]] = struct{}{}
+	}
+}
+
+// ClearCredits clears the "credits" edge to the Credit entity.
+func (m *PersonMutation) ClearCredits() {
+	m.clearedcredits = true
+}
+
+// CreditsCleared reports if the "credits" edge to the Credit entity was cleared.
+func (m *PersonMutation) CreditsCleared() bool {
+	return m.clearedcredits
+}
+
+// RemoveCreditIDs removes the "credits" edge to the Credit entity by IDs.
+func (m *PersonMutation) RemoveCreditIDs(ids ...uint32) {
+	if m.removedcredits == nil {
+		m.removedcredits = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		delete(m.credits, ids[i])
+		m.removedcredits[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedCredits returns the removed IDs of the "credits" edge to the Credit entity.
+func (m *PersonMutation) RemovedCreditsIDs() (ids []uint32) {
+	for id := range m.removedcredits {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// CreditsIDs returns the "credits" edge IDs in the mutation.
+func (m *PersonMutation) CreditsIDs() (ids []uint32) {
+	for id := range m.credits {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetCredits resets all changes to the "credits" edge.
+func (m *PersonMutation) ResetCredits() {
+	m.credits = nil
+	m.clearedcredits = false
+	m.removedcredits = nil
+}
+
+// Where appends a list predicates to the PersonMutation builder.
+func (m *PersonMutation) Where(ps ...predicate.Person) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the PersonMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *PersonMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.Person, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *PersonMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *PersonMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (Person).
+func (m *PersonMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *PersonMutation) Fields() []string {
+	fields := make([]string, 0, 6)
+	if m.create_time != nil {
+		fields = append(fields, person.FieldCreateTime)
+	}
+	if m.update_time != nil {
+		fields = append(fields, person.FieldUpdateTime)
+	}
+	if m.tmdb_id != nil {
+		fields = append(fields, person.FieldTmdbID)
+	}
+	if m.tvdb_id != nil {
+		fields = append(fields, person.FieldTvdbID)
+	}
+	if m.name != nil {
+		fields = append(fields, person.FieldName)
+	}
+	if m.profile_url != nil {
+		fields = append(fields, person.FieldProfileURL)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *PersonMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case person.FieldCreateTime:
+		return m.CreateTime()
+	case person.FieldUpdateTime:
+		return m.UpdateTime()
+	case person.FieldTmdbID:
+		return m.TmdbID()
+	case person.FieldTvdbID:
+		return m.TvdbID()
+	case person.FieldName:
+		return m.Name()
+	case person.FieldProfileURL:
+		return m.ProfileURL()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *PersonMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case person.FieldCreateTime:
+		return m.OldCreateTime(ctx)
+	case person.FieldUpdateTime:
+		return m.OldUpdateTime(ctx)
+	case person.FieldTmdbID:
+		return m.OldTmdbID(ctx)
+	case person.FieldTvdbID:
+		return m.OldTvdbID(ctx)
+	case person.FieldName:
+		return m.OldName(ctx)
+	case person.FieldProfileURL:
+		return m.OldProfileURL(ctx)
+	}
+	return nil, fmt.Errorf("unknown Person field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *PersonMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case person.FieldCreateTime:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreateTime(v)
+		return nil
+	case person.FieldUpdateTime:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdateTime(v)
+		return nil
+	case person.FieldTmdbID:
+		v, ok := value.(uint32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTmdbID(v)
+		return nil
+	case person.FieldTvdbID:
+		v, ok := value.(uint32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTvdbID(v)
+		return nil
+	case person.FieldName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetName(v)
+		return nil
+	case person.FieldProfileURL:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetProfileURL(v)
+		return nil
+	}
+	return fmt.Errorf("unknown Person field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *PersonMutation) AddedFields() []string {
+	var fields []string
+	if m.addtmdb_id != nil {
+		fields = append(fields, person.FieldTmdbID)
+	}
+	if m.addtvdb_id != nil {
+		fields = append(fields, person.FieldTvdbID)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *PersonMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case person.FieldTmdbID:
+		return m.AddedTmdbID()
+	case person.FieldTvdbID:
+		return m.AddedTvdbID()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *PersonMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case person.FieldTmdbID:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddTmdbID(v)
+		return nil
+	case person.FieldTvdbID:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddTvdbID(v)
+		return nil
+	}
+	return fmt.Errorf("unknown Person numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *PersonMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(person.FieldTmdbID) {
+		fields = append(fields, person.FieldTmdbID)
+	}
+	if m.FieldCleared(person.FieldTvdbID) {
+		fields = append(fields, person.FieldTvdbID)
+	}
+	if m.FieldCleared(person.FieldProfileURL) {
+		fields = append(fields, person.FieldProfileURL)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *PersonMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *PersonMutation) ClearField(name string) error {
+	switch name {
+	case person.FieldTmdbID:
+		m.ClearTmdbID()
+		return nil
+	case person.FieldTvdbID:
+		m.ClearTvdbID()
+		return nil
+	case person.FieldProfileURL:
+		m.ClearProfileURL()
+		return nil
+	}
+	return fmt.Errorf("unknown Person nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *PersonMutation) ResetField(name string) error {
+	switch name {
+	case person.FieldCreateTime:
+		m.ResetCreateTime()
+		return nil
+	case person.FieldUpdateTime:
+		m.ResetUpdateTime()
+		return nil
+	case person.FieldTmdbID:
+		m.ResetTmdbID()
+		return nil
+	case person.FieldTvdbID:
+		m.ResetTvdbID()
+		return nil
+	case person.FieldName:
+		m.ResetName()
+		return nil
+	case person.FieldProfileURL:
+		m.ResetProfileURL()
+		return nil
+	}
+	return fmt.Errorf("unknown Person field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *PersonMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.credits != nil {
+		edges = append(edges, person.EdgeCredits)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *PersonMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case person.EdgeCredits:
+		ids := make([]ent.Value, 0, len(m.credits))
+		for id := range m.credits {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *PersonMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.removedcredits != nil {
+		edges = append(edges, person.EdgeCredits)
+	}
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *PersonMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case person.EdgeCredits:
+		ids := make([]ent.Value, 0, len(m.removedcredits))
+		for id := range m.removedcredits {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *PersonMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.clearedcredits {
+		edges = append(edges, person.EdgeCredits)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *PersonMutation) EdgeCleared(name string) bool {
+	switch name {
+	case person.EdgeCredits:
+		return m.clearedcredits
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *PersonMutation) ClearEdge(name string) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown Person unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *PersonMutation) ResetEdge(name string) error {
+	switch name {
+	case person.EdgeCredits:
+		m.ResetCredits()
+		return nil
+	}
+	return fmt.Errorf("unknown Person edge %s", name)
 }
 
 // RequestMutation represents an operation that mutates the Request nodes in the graph.
@@ -18741,8 +20321,6 @@ type TVShowMutation struct {
 	addrating         *float64
 	genres            *[]string
 	appendgenres      []string
-	cast              *[]schema.CastMember
-	appendcast        []schema.CastMember
 	last_refreshed_at *time.Time
 	quality_profile   *string
 	clearedFields     map[string]struct{}
@@ -18752,6 +20330,9 @@ type TVShowMutation struct {
 	events            map[uint32]struct{}
 	removedevents     map[uint32]struct{}
 	clearedevents     bool
+	credits           map[uint32]struct{}
+	removedcredits    map[uint32]struct{}
+	clearedcredits    bool
 	done              bool
 	oldValue          func(context.Context) (*TVShow, error)
 	predicates        []predicate.TVShow
@@ -19688,71 +21269,6 @@ func (m *TVShowMutation) ResetGenres() {
 	delete(m.clearedFields, tvshow.FieldGenres)
 }
 
-// SetCast sets the "cast" field.
-func (m *TVShowMutation) SetCast(sm []schema.CastMember) {
-	m.cast = &sm
-	m.appendcast = nil
-}
-
-// Cast returns the value of the "cast" field in the mutation.
-func (m *TVShowMutation) Cast() (r []schema.CastMember, exists bool) {
-	v := m.cast
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldCast returns the old "cast" field's value of the TVShow entity.
-// If the TVShow object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *TVShowMutation) OldCast(ctx context.Context) (v []schema.CastMember, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldCast is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldCast requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldCast: %w", err)
-	}
-	return oldValue.Cast, nil
-}
-
-// AppendCast adds sm to the "cast" field.
-func (m *TVShowMutation) AppendCast(sm []schema.CastMember) {
-	m.appendcast = append(m.appendcast, sm...)
-}
-
-// AppendedCast returns the list of values that were appended to the "cast" field in this mutation.
-func (m *TVShowMutation) AppendedCast() ([]schema.CastMember, bool) {
-	if len(m.appendcast) == 0 {
-		return nil, false
-	}
-	return m.appendcast, true
-}
-
-// ClearCast clears the value of the "cast" field.
-func (m *TVShowMutation) ClearCast() {
-	m.cast = nil
-	m.appendcast = nil
-	m.clearedFields[tvshow.FieldCast] = struct{}{}
-}
-
-// CastCleared returns if the "cast" field was cleared in this mutation.
-func (m *TVShowMutation) CastCleared() bool {
-	_, ok := m.clearedFields[tvshow.FieldCast]
-	return ok
-}
-
-// ResetCast resets all changes to the "cast" field.
-func (m *TVShowMutation) ResetCast() {
-	m.cast = nil
-	m.appendcast = nil
-	delete(m.clearedFields, tvshow.FieldCast)
-}
-
 // SetLastRefreshedAt sets the "last_refreshed_at" field.
 func (m *TVShowMutation) SetLastRefreshedAt(t time.Time) {
 	m.last_refreshed_at = &t
@@ -19959,6 +21475,60 @@ func (m *TVShowMutation) ResetEvents() {
 	m.removedevents = nil
 }
 
+// AddCreditIDs adds the "credits" edge to the Credit entity by ids.
+func (m *TVShowMutation) AddCreditIDs(ids ...uint32) {
+	if m.credits == nil {
+		m.credits = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		m.credits[ids[i]] = struct{}{}
+	}
+}
+
+// ClearCredits clears the "credits" edge to the Credit entity.
+func (m *TVShowMutation) ClearCredits() {
+	m.clearedcredits = true
+}
+
+// CreditsCleared reports if the "credits" edge to the Credit entity was cleared.
+func (m *TVShowMutation) CreditsCleared() bool {
+	return m.clearedcredits
+}
+
+// RemoveCreditIDs removes the "credits" edge to the Credit entity by IDs.
+func (m *TVShowMutation) RemoveCreditIDs(ids ...uint32) {
+	if m.removedcredits == nil {
+		m.removedcredits = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		delete(m.credits, ids[i])
+		m.removedcredits[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedCredits returns the removed IDs of the "credits" edge to the Credit entity.
+func (m *TVShowMutation) RemovedCreditsIDs() (ids []uint32) {
+	for id := range m.removedcredits {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// CreditsIDs returns the "credits" edge IDs in the mutation.
+func (m *TVShowMutation) CreditsIDs() (ids []uint32) {
+	for id := range m.credits {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetCredits resets all changes to the "credits" edge.
+func (m *TVShowMutation) ResetCredits() {
+	m.credits = nil
+	m.clearedcredits = false
+	m.removedcredits = nil
+}
+
 // Where appends a list predicates to the TVShowMutation builder.
 func (m *TVShowMutation) Where(ps ...predicate.TVShow) {
 	m.predicates = append(m.predicates, ps...)
@@ -19993,7 +21563,7 @@ func (m *TVShowMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *TVShowMutation) Fields() []string {
-	fields := make([]string, 0, 20)
+	fields := make([]string, 0, 19)
 	if m.create_time != nil {
 		fields = append(fields, tvshow.FieldCreateTime)
 	}
@@ -20045,9 +21615,6 @@ func (m *TVShowMutation) Fields() []string {
 	if m.genres != nil {
 		fields = append(fields, tvshow.FieldGenres)
 	}
-	if m.cast != nil {
-		fields = append(fields, tvshow.FieldCast)
-	}
 	if m.last_refreshed_at != nil {
 		fields = append(fields, tvshow.FieldLastRefreshedAt)
 	}
@@ -20096,8 +21663,6 @@ func (m *TVShowMutation) Field(name string) (ent.Value, bool) {
 		return m.Rating()
 	case tvshow.FieldGenres:
 		return m.Genres()
-	case tvshow.FieldCast:
-		return m.Cast()
 	case tvshow.FieldLastRefreshedAt:
 		return m.LastRefreshedAt()
 	case tvshow.FieldQualityProfile:
@@ -20145,8 +21710,6 @@ func (m *TVShowMutation) OldField(ctx context.Context, name string) (ent.Value, 
 		return m.OldRating(ctx)
 	case tvshow.FieldGenres:
 		return m.OldGenres(ctx)
-	case tvshow.FieldCast:
-		return m.OldCast(ctx)
 	case tvshow.FieldLastRefreshedAt:
 		return m.OldLastRefreshedAt(ctx)
 	case tvshow.FieldQualityProfile:
@@ -20279,13 +21842,6 @@ func (m *TVShowMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetGenres(v)
 		return nil
-	case tvshow.FieldCast:
-		v, ok := value.([]schema.CastMember)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetCast(v)
-		return nil
 	case tvshow.FieldLastRefreshedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -20408,9 +21964,6 @@ func (m *TVShowMutation) ClearedFields() []string {
 	if m.FieldCleared(tvshow.FieldGenres) {
 		fields = append(fields, tvshow.FieldGenres)
 	}
-	if m.FieldCleared(tvshow.FieldCast) {
-		fields = append(fields, tvshow.FieldCast)
-	}
 	if m.FieldCleared(tvshow.FieldLastRefreshedAt) {
 		fields = append(fields, tvshow.FieldLastRefreshedAt)
 	}
@@ -20457,9 +22010,6 @@ func (m *TVShowMutation) ClearField(name string) error {
 		return nil
 	case tvshow.FieldGenres:
 		m.ClearGenres()
-		return nil
-	case tvshow.FieldCast:
-		m.ClearCast()
 		return nil
 	case tvshow.FieldLastRefreshedAt:
 		m.ClearLastRefreshedAt()
@@ -20526,9 +22076,6 @@ func (m *TVShowMutation) ResetField(name string) error {
 	case tvshow.FieldGenres:
 		m.ResetGenres()
 		return nil
-	case tvshow.FieldCast:
-		m.ResetCast()
-		return nil
 	case tvshow.FieldLastRefreshedAt:
 		m.ResetLastRefreshedAt()
 		return nil
@@ -20541,12 +22088,15 @@ func (m *TVShowMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *TVShowMutation) AddedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.seasons != nil {
 		edges = append(edges, tvshow.EdgeSeasons)
 	}
 	if m.events != nil {
 		edges = append(edges, tvshow.EdgeEvents)
+	}
+	if m.credits != nil {
+		edges = append(edges, tvshow.EdgeCredits)
 	}
 	return edges
 }
@@ -20567,18 +22117,27 @@ func (m *TVShowMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case tvshow.EdgeCredits:
+		ids := make([]ent.Value, 0, len(m.credits))
+		for id := range m.credits {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *TVShowMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.removedseasons != nil {
 		edges = append(edges, tvshow.EdgeSeasons)
 	}
 	if m.removedevents != nil {
 		edges = append(edges, tvshow.EdgeEvents)
+	}
+	if m.removedcredits != nil {
+		edges = append(edges, tvshow.EdgeCredits)
 	}
 	return edges
 }
@@ -20599,18 +22158,27 @@ func (m *TVShowMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case tvshow.EdgeCredits:
+		ids := make([]ent.Value, 0, len(m.removedcredits))
+		for id := range m.removedcredits {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *TVShowMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.clearedseasons {
 		edges = append(edges, tvshow.EdgeSeasons)
 	}
 	if m.clearedevents {
 		edges = append(edges, tvshow.EdgeEvents)
+	}
+	if m.clearedcredits {
+		edges = append(edges, tvshow.EdgeCredits)
 	}
 	return edges
 }
@@ -20623,6 +22191,8 @@ func (m *TVShowMutation) EdgeCleared(name string) bool {
 		return m.clearedseasons
 	case tvshow.EdgeEvents:
 		return m.clearedevents
+	case tvshow.EdgeCredits:
+		return m.clearedcredits
 	}
 	return false
 }
@@ -20644,6 +22214,9 @@ func (m *TVShowMutation) ResetEdge(name string) error {
 		return nil
 	case tvshow.EdgeEvents:
 		m.ResetEvents()
+		return nil
+	case tvshow.EdgeCredits:
+		m.ResetCredits()
 		return nil
 	}
 	return fmt.Errorf("unknown TVShow edge %s", name)

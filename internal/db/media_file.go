@@ -197,7 +197,7 @@ func (db *DB) ListAllMediaFilesWithOwners(
 	ctx context.Context,
 ) ([]*ent.MediaFile, error) {
 	rows, err := db.client.MediaFile.Query().
-		WithMovie(withLeanMovie).
+		WithMovie().
 		WithEpisode().
 		All(ctx)
 	if err != nil {
@@ -252,7 +252,7 @@ func (db *DB) FindMediaFileWithOwners(
 ) (*ent.MediaFile, error) {
 	return db.client.MediaFile.Query().
 		Where(mediafile.IDEQ(id)).
-		WithMovie(withLeanMovie).
+		WithMovie().
 		WithEpisode().
 		Only(ctx)
 }

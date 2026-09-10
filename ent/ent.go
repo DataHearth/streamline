@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/datahearth/streamline/ent/apikey"
+	"github.com/datahearth/streamline/ent/credit"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/importscan"
@@ -23,6 +24,7 @@ import (
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/oidcidentity"
+	"github.com/datahearth/streamline/ent/person"
 	"github.com/datahearth/streamline/ent/request"
 	"github.com/datahearth/streamline/ent/scheduledjob"
 	"github.com/datahearth/streamline/ent/season"
@@ -92,6 +94,7 @@ func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
 			apikey.Table:         apikey.ValidColumn,
+			credit.Table:         credit.ValidColumn,
 			downloadrecord.Table: downloadrecord.ValidColumn,
 			episode.Table:        episode.ValidColumn,
 			importscan.Table:     importscan.ValidColumn,
@@ -102,6 +105,7 @@ func checkColumn(t, c string) error {
 			mediafile.Table:      mediafile.ValidColumn,
 			movie.Table:          movie.ValidColumn,
 			oidcidentity.Table:   oidcidentity.ValidColumn,
+			person.Table:         person.ValidColumn,
 			request.Table:        request.ValidColumn,
 			scheduledjob.Table:   scheduledjob.ValidColumn,
 			season.Table:         season.ValidColumn,

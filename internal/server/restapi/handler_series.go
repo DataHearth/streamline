@@ -275,9 +275,15 @@ func (s *Server) GetSeries(
 			NotFoundJSONResponse: errNotFound(err.Error()),
 		}, nil
 	}
+	credits, err := s.store.TitleCast(ctx, db.CastOwnerSeries, show.ID)
+	if err != nil {
+		return GetSeries500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
 	result := tvShowToAPI(show)
-	if len(show.Cast) > 0 {
-		apiCast := storedCastToAPI(show.Cast)
+	if len(credits) > 0 {
+		apiCast := libraryCastToAPI(credits)
 		result.Cast = &apiCast
 	}
 	return GetSeries200JSONResponse{

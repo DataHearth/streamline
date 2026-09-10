@@ -8,6 +8,7 @@ import (
 
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	entmovie "github.com/datahearth/streamline/ent/movie"
+	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/library"
 	moviesvc "github.com/datahearth/streamline/internal/media/movie"
@@ -150,8 +151,14 @@ func (s *Server) GetMovie(
 		}
 		result.MediaFiles = &apiFiles
 	}
-	if len(m.Cast) > 0 {
-		cast := storedCastToAPI(m.Cast)
+	credits, err := s.store.TitleCast(ctx, db.CastOwnerMovie, m.ID)
+	if err != nil {
+		return GetMovie500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	if len(credits) > 0 {
+		cast := libraryCastToAPI(credits)
 		result.Cast = &cast
 	}
 	if len(m.Genres) > 0 {

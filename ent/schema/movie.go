@@ -42,7 +42,6 @@ func (Movie) Fields() []ent.Field {
 		field.String("quality_profile").Optional(),
 		field.Float("rating").Optional().Default(0),
 		field.Strings("genres").Optional(),
-		field.JSON("cast", []CastMember{}).Optional(),
 		field.Time("last_refreshed_at").Optional().Nillable(),
 	}
 }
@@ -54,6 +53,8 @@ func (Movie) Edges() []ent.Edge {
 		edge.To("media_files", MediaFile.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("events", MediaEvent.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
+		edge.To("credits", Credit.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
 }

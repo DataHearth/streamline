@@ -10,8 +10,8 @@ import (
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/datahearth/streamline/ent/credit"
 	"github.com/datahearth/streamline/ent/mediaevent"
-	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/ent/season"
 	"github.com/datahearth/streamline/ent/tvshow"
 )
@@ -229,12 +229,6 @@ func (_c *TVShowCreate) SetGenres(v []string) *TVShowCreate {
 	return _c
 }
 
-// SetCast sets the "cast" field.
-func (_c *TVShowCreate) SetCast(v []schema.CastMember) *TVShowCreate {
-	_c.mutation.SetCast(v)
-	return _c
-}
-
 // SetLastRefreshedAt sets the "last_refreshed_at" field.
 func (_c *TVShowCreate) SetLastRefreshedAt(v time.Time) *TVShowCreate {
 	_c.mutation.SetLastRefreshedAt(v)
@@ -297,6 +291,21 @@ func (_c *TVShowCreate) AddEvents(v ...*MediaEvent) *TVShowCreate {
 		ids[i] = v[i].ID
 	}
 	return _c.AddEventIDs(ids...)
+}
+
+// AddCreditIDs adds the "credits" edge to the Credit entity by IDs.
+func (_c *TVShowCreate) AddCreditIDs(ids ...uint32) *TVShowCreate {
+	_c.mutation.AddCreditIDs(ids...)
+	return _c
+}
+
+// AddCredits adds the "credits" edges to the Credit entity.
+func (_c *TVShowCreate) AddCredits(v ...*Credit) *TVShowCreate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddCreditIDs(ids...)
 }
 
 // Mutation returns the TVShowMutation object of the builder.
@@ -505,10 +514,6 @@ func (_c *TVShowCreate) createSpec() (*TVShow, *sqlgraph.CreateSpec) {
 		_spec.SetField(tvshow.FieldGenres, field.TypeJSON, value)
 		_node.Genres = value
 	}
-	if value, ok := _c.mutation.Cast(); ok {
-		_spec.SetField(tvshow.FieldCast, field.TypeJSON, value)
-		_node.Cast = value
-	}
 	if value, ok := _c.mutation.LastRefreshedAt(); ok {
 		_spec.SetField(tvshow.FieldLastRefreshedAt, field.TypeTime, value)
 		_node.LastRefreshedAt = &value
@@ -542,6 +547,22 @@ func (_c *TVShowCreate) createSpec() (*TVShow, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.CreditsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   tvshow.CreditsTable,
+			Columns: []string{tvshow.CreditsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(credit.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

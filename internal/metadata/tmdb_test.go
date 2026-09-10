@@ -365,6 +365,17 @@ var _ = Describe("TMDB Client", Label("unit", "metadata"), func() {
 						},
 						"runtime":      169,
 						"vote_average": 8.4,
+						"credits": map[string]any{
+							"cast": []map[string]any{
+								{
+									"id":           1892,
+									"name":         "Matthew McConaughey",
+									"character":    "Cooper",
+									"profile_path": "/mc.jpg",
+									"order":        0,
+								},
+							},
+						},
 					}))
 				}),
 			)
@@ -381,6 +392,14 @@ var _ = Describe("TMDB Client", Label("unit", "metadata"), func() {
 			Expect(details.Genres).To(ConsistOf("Adventure", "Drama"))
 			Expect(details.Runtime).To(Equal(uint16(169)))
 			Expect(details.Rating).To(BeNumerically("~", 8.4, 0.001))
+		})
+
+		It("populates TMDBID on cast entries, leaving TVDBID zero", func() {
+			details, err := client.GetMovie(context.Background(), 157336)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(details.Cast).To(HaveLen(1))
+			Expect(details.Cast[0].TMDBID).To(Equal(uint32(1892)))
+			Expect(details.Cast[0].TVDBID).To(BeZero())
 		})
 
 		Context("with a non-default language", func() {

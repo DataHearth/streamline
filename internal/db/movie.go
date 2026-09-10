@@ -10,7 +10,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/movie"
-	"github.com/datahearth/streamline/ent/schema"
+	"github.com/datahearth/streamline/internal/metadata"
 )
 
 type CreateMovieParams struct {
@@ -24,7 +24,7 @@ type CreateMovieParams struct {
 	QualityProfile string
 	Rating         float64
 	Genres         []string
-	Cast           []schema.CastMember
+	Cast           []metadata.CastMember
 	ReleaseDate    *time.Time
 }
 
@@ -32,7 +32,11 @@ func (db *DB) CreateMovie(
 	ctx context.Context,
 	p CreateMovieParams,
 ) (*ent.Movie, error) {
-	b := db.client.Movie.Create().
+	tx, err := db.client.Tx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	b := tx.Movie.Create().
 		SetTitle(p.Title).
 		SetOriginalTitle(p.OriginalTitle).
 		SetYear(p.Year).
@@ -54,37 +58,34 @@ func (db *DB) CreateMovie(
 	if len(p.Genres) != 0 {
 		b.SetGenres(p.Genres)
 	}
-	if len(p.Cast) != 0 {
-		b.SetCast(p.Cast)
+	m, err := b.Save(ctx)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
 	}
-	return b.Save(ctx)
+	if err := replaceCast(
+		ctx,
+		tx.Client(),
+		CastOwnerMovie,
+		m.ID,
+		p.Cast,
+	); err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	// Re-read rather than hand back the row the transaction built: an entity
+	// carries the client it was created with, and a committed tx's client
+	// errors on every later query through it. CreateTVShow does the same.
+	return db.FindMovieByID(ctx, m.ID)
 }
 
 func (db *DB) FindMovieByID(ctx context.Context, id uint32) (*ent.Movie, error) {
 	return db.client.Movie.Query().
 		Where(movie.IDEQ(id)).
 		Only(ctx)
-}
-
-// movieListColumns is every Movie column except cast. Cast is a JSON blob
-// that ent decodes into a []CastMember per row on scan, which a list response
-// never emits — profiling one page walk of a 610-movie library put 480 MB of
-// garbage on that single Unmarshal. Detail responses read it and must not use
-// this projection.
-//
-// Derived by subtraction rather than enumerated so a field added later is in
-// the list by default; enumerating the wanted columns means a new field is
-// silently absent from the API until somebody notices.
-var movieListColumns = slices.DeleteFunc(
-	slices.Clone(movie.Columns),
-	func(c string) bool { return c == movie.FieldCast },
-)
-
-// withLeanMovie eager-loads the movie edge without its cast blob, for the
-// queue, history, activity and drift paths — none of which emit cast, and
-// all of which are polled every few seconds.
-func withLeanMovie(q *ent.MovieQuery) {
-	q.Select(movieListColumns...)
 }
 
 func (db *DB) CountMovies(ctx context.Context) (int, error) {
@@ -377,7 +378,7 @@ func (db *DB) FilterMovies(
 		}
 	}
 
-	items, err := q.Select(movieListColumns...).All(ctx)
+	items, err := q.All(ctx)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -428,7 +429,7 @@ type UpdateMovieMetadataParams struct {
 	Runtime       uint16
 	Rating        float64
 	Genres        []string
-	Cast          []schema.CastMember
+	Cast          []metadata.CastMember
 	ReleaseDate   *time.Time
 }
 
@@ -440,7 +441,11 @@ func (db *DB) UpdateMovieMetadata(
 	id uint32,
 	p UpdateMovieMetadataParams,
 ) error {
-	return db.client.Movie.UpdateOneID(id).
+	tx, err := db.client.Tx(ctx)
+	if err != nil {
+		return err
+	}
+	if err := tx.Movie.UpdateOneID(id).
 		SetTitle(p.Title).
 		SetOriginalTitle(p.OriginalTitle).
 		SetYear(p.Year).
@@ -448,10 +453,17 @@ func (db *DB) UpdateMovieMetadata(
 		SetRuntime(p.Runtime).
 		SetRating(p.Rating).
 		SetGenres(p.Genres).
-		SetCast(p.Cast).
 		SetNillableReleaseDate(p.ReleaseDate).
 		SetLastRefreshedAt(time.Now()).
-		Exec(ctx)
+		Exec(ctx); err != nil {
+		tx.Rollback()
+		return err
+	}
+	if err := replaceCast(ctx, tx.Client(), CastOwnerMovie, id, p.Cast); err != nil {
+		tx.Rollback()
+		return err
+	}
+	return tx.Commit()
 }
 
 // SetMovieTMDBID repoints a row at a different TMDB title. Everything else on

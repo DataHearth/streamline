@@ -24,7 +24,7 @@ var (
 // the episode's season → show chain) so a transcode job's row can render
 // "Movie (2019)" / "Show S01E02" and link to it without a follow-up query.
 func withTranscodeOwners(q *ent.MediaFileQuery) {
-	q.WithMovie(withLeanMovie).
+	q.WithMovie().
 		WithEpisode(func(eq *ent.EpisodeQuery) {
 			eq.WithSeason(func(sq *ent.SeasonQuery) {
 				sq.WithTvShow()

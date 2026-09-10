@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/datahearth/streamline/ent"
-	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
@@ -128,16 +127,36 @@ func movieListToAPI(m *ent.Movie, sum db.MovieFileSummary) Movie {
 	return out
 }
 
-// storedCastToAPI renders the cast persisted on a Movie/TVShow row. Detail
-// views read cast from the DB, so nothing on that path calls a provider.
-func storedCastToAPI(cast []schema.CastMember) []CastMember {
-	out := make([]metadata.CastMember, 0, len(cast))
+// libraryCastToAPI renders the cast credited on a stored Movie/TVShow. Detail
+// views read cast from the credits table, so nothing on that path calls a
+// provider.
+//
+// person_id is what separates this from castToAPI: it is the only key
+// /people/{id} accepts, and a series actor comes from TVDB with no tmdb id at
+// all, so nothing else on the entry can address them.
+func libraryCastToAPI(cast []db.CastEntry) []CastMember {
+	out := make([]CastMember, 0, len(cast))
 	for _, c := range cast {
-		out = append(out, metadata.CastMember(c))
+		m := CastMember{Name: c.Name, PersonId: &c.PersonID}
+		if c.TMDBID != 0 {
+			m.TmdbId = &c.TMDBID
+		}
+		if c.Character != "" {
+			m.Character = &c.Character
+		}
+		if c.ProfileURL != "" {
+			m.ProfileUrl = &c.ProfileURL
+		}
+		if url := providerPersonURL(c.TMDBID, c.TVDBID); url != "" {
+			m.PersonUrl = &url
+		}
+		out = append(out, m)
 	}
-	return castToAPI(out)
+	return out
 }
 
+// castToAPI renders a live provider lookup — a title the library does not
+// hold — so there is no persons row and no person_id to link by.
 func castToAPI(cast []metadata.CastMember) []CastMember {
 	out := make([]CastMember, 0, len(cast))
 	for _, c := range cast {
@@ -152,11 +171,10 @@ func castToAPI(cast []metadata.CastMember) []CastMember {
 		if c.ProfileURL != "" {
 			m.ProfileUrl = &c.ProfileURL
 		}
-		// Person page link: TVDB cast carries it directly; TMDB cast derives
-		// it from the person id.
+		// TVDB cast carries the link directly; TMDB cast derives it.
 		personURL := c.PersonURL
-		if personURL == "" && c.TMDBID != 0 {
-			personURL = fmt.Sprintf("https://www.themoviedb.org/person/%d", c.TMDBID)
+		if personURL == "" {
+			personURL = providerPersonURL(c.TMDBID, c.TVDBID)
 		}
 		if personURL != "" {
 			m.PersonUrl = &personURL
@@ -164,6 +182,19 @@ func castToAPI(cast []metadata.CastMember) []CastMember {
 		out = append(out, m)
 	}
 	return out
+}
+
+// providerPersonURL builds the person's page on whichever provider supplied
+// them. tmdb first: a person carrying both ids was matched on the tmdb one.
+func providerPersonURL(tmdbID, tvdbID uint32) string {
+	switch {
+	case tmdbID != 0:
+		return fmt.Sprintf("https://www.themoviedb.org/person/%d", tmdbID)
+	case tvdbID != 0:
+		return fmt.Sprintf("https://www.thetvdb.com/dereferrer/people/%d", tvdbID)
+	default:
+		return ""
+	}
 }
 
 func toAPIUser(u *ent.User) User {

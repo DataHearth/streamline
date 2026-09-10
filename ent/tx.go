@@ -14,6 +14,8 @@ type Tx struct {
 	config
 	// ApiKey is the client for interacting with the ApiKey builders.
 	ApiKey *ApiKeyClient
+	// Credit is the client for interacting with the Credit builders.
+	Credit *CreditClient
 	// DownloadRecord is the client for interacting with the DownloadRecord builders.
 	DownloadRecord *DownloadRecordClient
 	// Episode is the client for interacting with the Episode builders.
@@ -34,6 +36,8 @@ type Tx struct {
 	Movie *MovieClient
 	// OIDCIdentity is the client for interacting with the OIDCIdentity builders.
 	OIDCIdentity *OIDCIdentityClient
+	// Person is the client for interacting with the Person builders.
+	Person *PersonClient
 	// Request is the client for interacting with the Request builders.
 	Request *RequestClient
 	// ScheduledJob is the client for interacting with the ScheduledJob builders.
@@ -182,6 +186,7 @@ func (tx *Tx) Client() *Client {
 
 func (tx *Tx) init() {
 	tx.ApiKey = NewApiKeyClient(tx.config)
+	tx.Credit = NewCreditClient(tx.config)
 	tx.DownloadRecord = NewDownloadRecordClient(tx.config)
 	tx.Episode = NewEpisodeClient(tx.config)
 	tx.ImportScan = NewImportScanClient(tx.config)
@@ -192,6 +197,7 @@ func (tx *Tx) init() {
 	tx.MediaFile = NewMediaFileClient(tx.config)
 	tx.Movie = NewMovieClient(tx.config)
 	tx.OIDCIdentity = NewOIDCIdentityClient(tx.config)
+	tx.Person = NewPersonClient(tx.config)
 	tx.Request = NewRequestClient(tx.config)
 	tx.ScheduledJob = NewScheduledJobClient(tx.config)
 	tx.Season = NewSeasonClient(tx.config)

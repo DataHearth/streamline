@@ -14,7 +14,7 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/movie"
-	"github.com/datahearth/streamline/ent/schema"
+	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
 	moviesvc "github.com/datahearth/streamline/internal/media/movie"
@@ -476,6 +476,10 @@ var _ = Describe(
 					}, nil).
 					Once()
 				app.store.EXPECT().
+					TitleCast(mock.Anything, db.CastOwnerMovie, movieID).
+					Return(nil, nil).
+					Once()
+				app.store.EXPECT().
 					ListMediaFilesByMovieID(mock.Anything, movieID).
 					Return([]*ent.MediaFile{
 						{
@@ -519,6 +523,10 @@ var _ = Describe(
 						TmdbID: 43,
 						Status: movie.StatusWanted,
 					}, nil).
+					Once()
+				app.store.EXPECT().
+					TitleCast(mock.Anything, db.CastOwnerMovie, movieID).
+					Return(nil, nil).
 					Once()
 				app.store.EXPECT().
 					ListMediaFilesByMovieID(mock.Anything, movieID).
@@ -570,6 +578,10 @@ var _ = Describe(
 						Status:         movie.StatusAvailable,
 						QualityProfile: "default",
 					}, nil).
+					Once()
+				app.store.EXPECT().
+					TitleCast(mock.Anything, db.CastOwnerMovie, movieID).
+					Return(nil, nil).
 					Once()
 				app.store.EXPECT().
 					ListMediaFilesByMovieID(mock.Anything, movieID).
@@ -658,14 +670,20 @@ var _ = Describe(
 						Status: movie.StatusAvailable,
 						Rating: 8.2,
 						Genres: []string{"Thriller", "Mystery"},
-						Cast: []schema.CastMember{
-							{Name: "Yara Osei", Character: "The Broker"},
-						},
 					}, nil).
 					Once()
 				app.store.EXPECT().
 					ListMediaFilesByMovieID(mock.Anything, movieID).
 					Return(nil, nil).
+					Once()
+				app.store.EXPECT().
+					TitleCast(mock.Anything, db.CastOwnerMovie, movieID).
+					Return([]db.CastEntry{{
+						PersonID:  91,
+						TMDBID:    3001,
+						Name:      "Yara Osei",
+						Character: "The Broker",
+					}}, nil).
 					Once()
 
 				resp, err := http.Get(
@@ -679,8 +697,10 @@ var _ = Describe(
 					Genres []string `json:"genres"`
 					Rating float32  `json:"rating"`
 					Cast   []struct {
+						PersonID  uint32 `json:"person_id"`
 						Name      string `json:"name"`
 						Character string `json:"character"`
+						PersonURL string `json:"person_url"`
 					} `json:"cast"`
 				}
 				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
@@ -689,6 +709,11 @@ var _ = Describe(
 				Expect(body.Cast).To(HaveLen(1))
 				Expect(body.Cast[0].Name).To(Equal("Yara Osei"))
 				Expect(body.Cast[0].Character).To(Equal("The Broker"))
+				// person_id is what the cast grid links to /people/{id} by;
+				// without it a cast entry has no way to address the person.
+				Expect(body.Cast[0].PersonID).To(Equal(uint32(91)))
+				Expect(body.Cast[0].PersonURL).
+					To(Equal("https://www.themoviedb.org/person/3001"))
 			})
 		})
 

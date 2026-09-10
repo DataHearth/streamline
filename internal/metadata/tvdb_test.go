@@ -101,6 +101,30 @@ var _ = Describe("TVDB provider", Label("unit", "metadata"), func() {
 	})
 })
 
+var _ = Describe("TVDB series cast", Label("unit", "metadata"), func() {
+	It("carries TVDB's people id as TVDBID, leaving TMDBID unset", func() {
+		srv := httptest.NewServer(
+			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				Expect(r.URL.Path).To(Equal("/series/123/extended"))
+				_, _ = w.Write([]byte(
+					`{"data":{"characters":[{"name":"Character A","personName":"Actor A","personImgURL":"/a.jpg","peopleType":"Actor","peopleId":456,"sort":1}]}}`,
+				))
+			}),
+		)
+		DeferCleanup(srv.Close)
+
+		client := NewTVDB()
+		client.BaseURL = srv.URL
+		client.token = "test-token" // skip /login round trip
+
+		cast, err := client.GetSeriesCast(context.Background(), 123)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(cast).To(HaveLen(1))
+		Expect(cast[0].TVDBID).To(Equal(uint32(456)))
+		Expect(cast[0].TMDBID).To(BeZero())
+	})
+})
+
 var _ = Describe("TVDB token handling", Label("unit", "metadata"), func() {
 	var (
 		ctx       context.Context

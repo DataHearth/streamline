@@ -156,7 +156,7 @@ func (s *Service) Add(
 		Runtime:        d.Runtime,
 		Rating:         float64(d.Rating),
 		Genres:         d.Genres,
-		Cast:           db.StoredCast(cast),
+		Cast:           cast,
 		PosterPath:     d.PosterPath,
 		QualityProfile: qualityProfile,
 		Seasons:        seedSeasons(d),
@@ -942,7 +942,7 @@ func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.TVShow, error
 		Runtime:       d.Runtime,
 		Rating:        float64(d.Rating),
 		Genres:        d.Genres,
-		Cast:          db.StoredCast(cast),
+		Cast:          cast,
 		FirstAired:    metadata.ParseISODate(d.FirstAired),
 	}); err != nil {
 		return nil, otelx.RecordSpanError(span, err)
@@ -1068,7 +1068,7 @@ func (s *Service) Reidentify(
 		Runtime:       d.Runtime,
 		Rating:        float64(d.Rating),
 		Genres:        d.Genres,
-		Cast:          db.StoredCast(cast),
+		Cast:          cast,
 		FirstAired:    metadata.ParseISODate(d.FirstAired),
 	}); err != nil {
 		return nil, nil, otelx.RecordSpanError(span, err)

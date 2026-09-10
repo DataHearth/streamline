@@ -16,6 +16,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/datahearth/streamline/ent/apikey"
+	"github.com/datahearth/streamline/ent/credit"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/importscan"
@@ -26,6 +27,7 @@ import (
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/oidcidentity"
+	"github.com/datahearth/streamline/ent/person"
 	"github.com/datahearth/streamline/ent/request"
 	"github.com/datahearth/streamline/ent/scheduledjob"
 	"github.com/datahearth/streamline/ent/season"
@@ -43,6 +45,8 @@ type Client struct {
 	Schema *migrate.Schema
 	// ApiKey is the client for interacting with the ApiKey builders.
 	ApiKey *ApiKeyClient
+	// Credit is the client for interacting with the Credit builders.
+	Credit *CreditClient
 	// DownloadRecord is the client for interacting with the DownloadRecord builders.
 	DownloadRecord *DownloadRecordClient
 	// Episode is the client for interacting with the Episode builders.
@@ -63,6 +67,8 @@ type Client struct {
 	Movie *MovieClient
 	// OIDCIdentity is the client for interacting with the OIDCIdentity builders.
 	OIDCIdentity *OIDCIdentityClient
+	// Person is the client for interacting with the Person builders.
+	Person *PersonClient
 	// Request is the client for interacting with the Request builders.
 	Request *RequestClient
 	// ScheduledJob is the client for interacting with the ScheduledJob builders.
@@ -91,6 +97,7 @@ func NewClient(opts ...Option) *Client {
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
 	c.ApiKey = NewApiKeyClient(c.config)
+	c.Credit = NewCreditClient(c.config)
 	c.DownloadRecord = NewDownloadRecordClient(c.config)
 	c.Episode = NewEpisodeClient(c.config)
 	c.ImportScan = NewImportScanClient(c.config)
@@ -101,6 +108,7 @@ func (c *Client) init() {
 	c.MediaFile = NewMediaFileClient(c.config)
 	c.Movie = NewMovieClient(c.config)
 	c.OIDCIdentity = NewOIDCIdentityClient(c.config)
+	c.Person = NewPersonClient(c.config)
 	c.Request = NewRequestClient(c.config)
 	c.ScheduledJob = NewScheduledJobClient(c.config)
 	c.Season = NewSeasonClient(c.config)
@@ -202,6 +210,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		ctx:            ctx,
 		config:         cfg,
 		ApiKey:         NewApiKeyClient(cfg),
+		Credit:         NewCreditClient(cfg),
 		DownloadRecord: NewDownloadRecordClient(cfg),
 		Episode:        NewEpisodeClient(cfg),
 		ImportScan:     NewImportScanClient(cfg),
@@ -212,6 +221,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		MediaFile:      NewMediaFileClient(cfg),
 		Movie:          NewMovieClient(cfg),
 		OIDCIdentity:   NewOIDCIdentityClient(cfg),
+		Person:         NewPersonClient(cfg),
 		Request:        NewRequestClient(cfg),
 		ScheduledJob:   NewScheduledJobClient(cfg),
 		Season:         NewSeasonClient(cfg),
@@ -240,6 +250,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		ctx:            ctx,
 		config:         cfg,
 		ApiKey:         NewApiKeyClient(cfg),
+		Credit:         NewCreditClient(cfg),
 		DownloadRecord: NewDownloadRecordClient(cfg),
 		Episode:        NewEpisodeClient(cfg),
 		ImportScan:     NewImportScanClient(cfg),
@@ -250,6 +261,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		MediaFile:      NewMediaFileClient(cfg),
 		Movie:          NewMovieClient(cfg),
 		OIDCIdentity:   NewOIDCIdentityClient(cfg),
+		Person:         NewPersonClient(cfg),
 		Request:        NewRequestClient(cfg),
 		ScheduledJob:   NewScheduledJobClient(cfg),
 		Season:         NewSeasonClient(cfg),
@@ -287,10 +299,10 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
-		c.ApiKey, c.DownloadRecord, c.Episode, c.ImportScan, c.ImportScanFile,
+		c.ApiKey, c.Credit, c.DownloadRecord, c.Episode, c.ImportScan, c.ImportScanFile,
 		c.ImportScanShow, c.Invite, c.MediaEvent, c.MediaFile, c.Movie, c.OIDCIdentity,
-		c.Request, c.ScheduledJob, c.Season, c.Session, c.TVShow, c.TorrentSession,
-		c.TranscodeJob, c.User,
+		c.Person, c.Request, c.ScheduledJob, c.Season, c.Session, c.TVShow,
+		c.TorrentSession, c.TranscodeJob, c.User,
 	} {
 		n.Use(hooks...)
 	}
@@ -300,10 +312,10 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.ApiKey, c.DownloadRecord, c.Episode, c.ImportScan, c.ImportScanFile,
+		c.ApiKey, c.Credit, c.DownloadRecord, c.Episode, c.ImportScan, c.ImportScanFile,
 		c.ImportScanShow, c.Invite, c.MediaEvent, c.MediaFile, c.Movie, c.OIDCIdentity,
-		c.Request, c.ScheduledJob, c.Season, c.Session, c.TVShow, c.TorrentSession,
-		c.TranscodeJob, c.User,
+		c.Person, c.Request, c.ScheduledJob, c.Season, c.Session, c.TVShow,
+		c.TorrentSession, c.TranscodeJob, c.User,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -314,6 +326,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 	switch m := m.(type) {
 	case *ApiKeyMutation:
 		return c.ApiKey.mutate(ctx, m)
+	case *CreditMutation:
+		return c.Credit.mutate(ctx, m)
 	case *DownloadRecordMutation:
 		return c.DownloadRecord.mutate(ctx, m)
 	case *EpisodeMutation:
@@ -334,6 +348,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Movie.mutate(ctx, m)
 	case *OIDCIdentityMutation:
 		return c.OIDCIdentity.mutate(ctx, m)
+	case *PersonMutation:
+		return c.Person.mutate(ctx, m)
 	case *RequestMutation:
 		return c.Request.mutate(ctx, m)
 	case *ScheduledJobMutation:
@@ -501,6 +517,187 @@ func (c *ApiKeyClient) mutate(ctx context.Context, m *ApiKeyMutation) (Value, er
 		return (&ApiKeyDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown ApiKey mutation op: %q", m.Op())
+	}
+}
+
+// CreditClient is a client for the Credit schema.
+type CreditClient struct {
+	config
+}
+
+// NewCreditClient returns a client for the Credit from the given config.
+func NewCreditClient(c config) *CreditClient {
+	return &CreditClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `credit.Hooks(f(g(h())))`.
+func (c *CreditClient) Use(hooks ...Hook) {
+	c.hooks.Credit = append(c.hooks.Credit, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `credit.Intercept(f(g(h())))`.
+func (c *CreditClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Credit = append(c.inters.Credit, interceptors...)
+}
+
+// Create returns a builder for creating a Credit entity.
+func (c *CreditClient) Create() *CreditCreate {
+	mutation := newCreditMutation(c.config, OpCreate)
+	return &CreditCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Credit entities.
+func (c *CreditClient) CreateBulk(builders ...*CreditCreate) *CreditCreateBulk {
+	return &CreditCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *CreditClient) MapCreateBulk(slice any, setFunc func(*CreditCreate, int)) *CreditCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &CreditCreateBulk{err: fmt.Errorf("calling to CreditClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*CreditCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &CreditCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Credit.
+func (c *CreditClient) Update() *CreditUpdate {
+	mutation := newCreditMutation(c.config, OpUpdate)
+	return &CreditUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *CreditClient) UpdateOne(_m *Credit) *CreditUpdateOne {
+	mutation := newCreditMutation(c.config, OpUpdateOne, withCredit(_m))
+	return &CreditUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *CreditClient) UpdateOneID(id uint32) *CreditUpdateOne {
+	mutation := newCreditMutation(c.config, OpUpdateOne, withCreditID(id))
+	return &CreditUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Credit.
+func (c *CreditClient) Delete() *CreditDelete {
+	mutation := newCreditMutation(c.config, OpDelete)
+	return &CreditDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *CreditClient) DeleteOne(_m *Credit) *CreditDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *CreditClient) DeleteOneID(id uint32) *CreditDeleteOne {
+	builder := c.Delete().Where(credit.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &CreditDeleteOne{builder}
+}
+
+// Query returns a query builder for Credit.
+func (c *CreditClient) Query() *CreditQuery {
+	return &CreditQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeCredit},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a Credit entity by its id.
+func (c *CreditClient) Get(ctx context.Context, id uint32) (*Credit, error) {
+	return c.Query().Where(credit.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *CreditClient) GetX(ctx context.Context, id uint32) *Credit {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryPerson queries the person edge of a Credit.
+func (c *CreditClient) QueryPerson(_m *Credit) *PersonQuery {
+	query := (&PersonClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(credit.Table, credit.FieldID, id),
+			sqlgraph.To(person.Table, person.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, credit.PersonTable, credit.PersonColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryMovie queries the movie edge of a Credit.
+func (c *CreditClient) QueryMovie(_m *Credit) *MovieQuery {
+	query := (&MovieClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(credit.Table, credit.FieldID, id),
+			sqlgraph.To(movie.Table, movie.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, credit.MovieTable, credit.MovieColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryTvShow queries the tv_show edge of a Credit.
+func (c *CreditClient) QueryTvShow(_m *Credit) *TVShowQuery {
+	query := (&TVShowClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(credit.Table, credit.FieldID, id),
+			sqlgraph.To(tvshow.Table, tvshow.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, credit.TvShowTable, credit.TvShowColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *CreditClient) Hooks() []Hook {
+	return c.hooks.Credit
+}
+
+// Interceptors returns the client interceptors.
+func (c *CreditClient) Interceptors() []Interceptor {
+	return c.inters.Credit
+}
+
+func (c *CreditClient) mutate(ctx context.Context, m *CreditMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&CreditCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&CreditUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&CreditUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&CreditDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Credit mutation op: %q", m.Op())
 	}
 }
 
@@ -2012,6 +2209,22 @@ func (c *MovieClient) QueryEvents(_m *Movie) *MediaEventQuery {
 	return query
 }
 
+// QueryCredits queries the credits edge of a Movie.
+func (c *MovieClient) QueryCredits(_m *Movie) *CreditQuery {
+	query := (&CreditClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(movie.Table, movie.FieldID, id),
+			sqlgraph.To(credit.Table, credit.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, movie.CreditsTable, movie.CreditsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *MovieClient) Hooks() []Hook {
 	return c.hooks.Movie
@@ -2183,6 +2396,155 @@ func (c *OIDCIdentityClient) mutate(ctx context.Context, m *OIDCIdentityMutation
 		return (&OIDCIdentityDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown OIDCIdentity mutation op: %q", m.Op())
+	}
+}
+
+// PersonClient is a client for the Person schema.
+type PersonClient struct {
+	config
+}
+
+// NewPersonClient returns a client for the Person from the given config.
+func NewPersonClient(c config) *PersonClient {
+	return &PersonClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `person.Hooks(f(g(h())))`.
+func (c *PersonClient) Use(hooks ...Hook) {
+	c.hooks.Person = append(c.hooks.Person, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `person.Intercept(f(g(h())))`.
+func (c *PersonClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Person = append(c.inters.Person, interceptors...)
+}
+
+// Create returns a builder for creating a Person entity.
+func (c *PersonClient) Create() *PersonCreate {
+	mutation := newPersonMutation(c.config, OpCreate)
+	return &PersonCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Person entities.
+func (c *PersonClient) CreateBulk(builders ...*PersonCreate) *PersonCreateBulk {
+	return &PersonCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *PersonClient) MapCreateBulk(slice any, setFunc func(*PersonCreate, int)) *PersonCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &PersonCreateBulk{err: fmt.Errorf("calling to PersonClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*PersonCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &PersonCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Person.
+func (c *PersonClient) Update() *PersonUpdate {
+	mutation := newPersonMutation(c.config, OpUpdate)
+	return &PersonUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *PersonClient) UpdateOne(_m *Person) *PersonUpdateOne {
+	mutation := newPersonMutation(c.config, OpUpdateOne, withPerson(_m))
+	return &PersonUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *PersonClient) UpdateOneID(id uint32) *PersonUpdateOne {
+	mutation := newPersonMutation(c.config, OpUpdateOne, withPersonID(id))
+	return &PersonUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Person.
+func (c *PersonClient) Delete() *PersonDelete {
+	mutation := newPersonMutation(c.config, OpDelete)
+	return &PersonDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *PersonClient) DeleteOne(_m *Person) *PersonDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *PersonClient) DeleteOneID(id uint32) *PersonDeleteOne {
+	builder := c.Delete().Where(person.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &PersonDeleteOne{builder}
+}
+
+// Query returns a query builder for Person.
+func (c *PersonClient) Query() *PersonQuery {
+	return &PersonQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypePerson},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a Person entity by its id.
+func (c *PersonClient) Get(ctx context.Context, id uint32) (*Person, error) {
+	return c.Query().Where(person.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *PersonClient) GetX(ctx context.Context, id uint32) *Person {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryCredits queries the credits edge of a Person.
+func (c *PersonClient) QueryCredits(_m *Person) *CreditQuery {
+	query := (&CreditClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(person.Table, person.FieldID, id),
+			sqlgraph.To(credit.Table, credit.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, person.CreditsTable, person.CreditsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *PersonClient) Hooks() []Hook {
+	return c.hooks.Person
+}
+
+// Interceptors returns the client interceptors.
+func (c *PersonClient) Interceptors() []Interceptor {
+	return c.inters.Person
+}
+
+func (c *PersonClient) mutate(ctx context.Context, m *PersonMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&PersonCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&PersonUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&PersonUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&PersonDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Person mutation op: %q", m.Op())
 	}
 }
 
@@ -2938,6 +3300,22 @@ func (c *TVShowClient) QueryEvents(_m *TVShow) *MediaEventQuery {
 	return query
 }
 
+// QueryCredits queries the credits edge of a TVShow.
+func (c *TVShowClient) QueryCredits(_m *TVShow) *CreditQuery {
+	query := (&CreditClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(tvshow.Table, tvshow.FieldID, id),
+			sqlgraph.To(credit.Table, credit.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, tvshow.CreditsTable, tvshow.CreditsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *TVShowClient) Hooks() []Hook {
 	return c.hooks.TVShow
@@ -3445,13 +3823,15 @@ func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error)
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		ApiKey, DownloadRecord, Episode, ImportScan, ImportScanFile, ImportScanShow,
-		Invite, MediaEvent, MediaFile, Movie, OIDCIdentity, Request, ScheduledJob,
-		Season, Session, TVShow, TorrentSession, TranscodeJob, User []ent.Hook
+		ApiKey, Credit, DownloadRecord, Episode, ImportScan, ImportScanFile,
+		ImportScanShow, Invite, MediaEvent, MediaFile, Movie, OIDCIdentity, Person,
+		Request, ScheduledJob, Season, Session, TVShow, TorrentSession, TranscodeJob,
+		User []ent.Hook
 	}
 	inters struct {
-		ApiKey, DownloadRecord, Episode, ImportScan, ImportScanFile, ImportScanShow,
-		Invite, MediaEvent, MediaFile, Movie, OIDCIdentity, Request, ScheduledJob,
-		Season, Session, TVShow, TorrentSession, TranscodeJob, User []ent.Interceptor
+		ApiKey, Credit, DownloadRecord, Episode, ImportScan, ImportScanFile,
+		ImportScanShow, Invite, MediaEvent, MediaFile, Movie, OIDCIdentity, Person,
+		Request, ScheduledJob, Season, Session, TVShow, TorrentSession, TranscodeJob,
+		User []ent.Interceptor
 	}
 )

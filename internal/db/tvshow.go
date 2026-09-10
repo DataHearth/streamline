@@ -13,9 +13,9 @@ import (
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/predicate"
-	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/ent/season"
 	"github.com/datahearth/streamline/ent/tvshow"
+	"github.com/datahearth/streamline/internal/metadata"
 )
 
 type EpisodeSeed struct {
@@ -54,7 +54,7 @@ type CreateTVShowParams struct {
 	Runtime        uint16
 	Rating         float64
 	Genres         []string
-	Cast           []schema.CastMember
+	Cast           []metadata.CastMember
 	PosterPath     string
 	QualityProfile string
 	Seasons        []SeasonSeed
@@ -80,7 +80,7 @@ type UpdateTVShowMetadataParams struct {
 	Runtime       uint16
 	Rating        float64
 	Genres        []string
-	Cast          []schema.CastMember
+	Cast          []metadata.CastMember
 	FirstAired    *time.Time
 }
 
@@ -91,7 +91,11 @@ func (db *DB) UpdateTVShowMetadata(
 	id uint32,
 	p UpdateTVShowMetadataParams,
 ) error {
-	u := db.client.TVShow.UpdateOneID(id).
+	tx, err := db.client.Tx(ctx)
+	if err != nil {
+		return err
+	}
+	u := tx.TVShow.UpdateOneID(id).
 		SetTitle(p.Title).
 		SetOriginalTitle(p.OriginalTitle).
 		SetYear(p.Year).
@@ -102,12 +106,6 @@ func (db *DB) UpdateTVShowMetadata(
 		SetRating(p.Rating).
 		SetGenres(p.Genres).
 		SetNillableFirstAired(p.FirstAired)
-	// Cast comes from a separate provider call than the rest, so an empty
-	// slice means "that call failed" far more often than "this show has no
-	// actors" — keep whatever is already stored.
-	if len(p.Cast) > 0 {
-		u = u.SetCast(p.Cast)
-	}
 	if p.SeriesStatus != "" {
 		u = u.SetSeriesStatus(tvshow.SeriesStatus(p.SeriesStatus))
 	}
@@ -115,7 +113,21 @@ func (db *DB) UpdateTVShowMetadata(
 	// it decides whether episodes match by absolute number, and it is the one
 	// piece of show metadata an operator can correct by hand — re-deriving it on
 	// every refresh would silently undo that correction.
-	return u.Exec(ctx)
+	if err := u.Exec(ctx); err != nil {
+		tx.Rollback()
+		return err
+	}
+	if err := replaceCast(
+		ctx,
+		tx.Client(),
+		CastOwnerSeries,
+		id,
+		p.Cast,
+	); err != nil {
+		tx.Rollback()
+		return err
+	}
+	return tx.Commit()
 }
 
 // ReconcileEpisodes syncs the stored season/episode tree with freshly fetched
@@ -306,7 +318,6 @@ func (db *DB) CreateTVShow(
 		SetRuntime(p.Runtime).
 		SetRating(p.Rating).
 		SetGenres(p.Genres).
-		SetCast(p.Cast).
 		SetPosterPath(p.PosterPath).
 		SetQualityProfile(p.QualityProfile).
 		SetNillableFirstAired(p.FirstAired).
@@ -342,6 +353,16 @@ func (db *DB) CreateTVShow(
 				return nil, err
 			}
 		}
+	}
+	if err := replaceCast(
+		ctx,
+		tx.Client(),
+		CastOwnerSeries,
+		show.ID,
+		p.Cast,
+	); err != nil {
+		tx.Rollback()
+		return nil, err
 	}
 	if err := tx.Commit(); err != nil {
 		return nil, err

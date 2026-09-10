@@ -12,12 +12,12 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/dialect/sql/sqljson"
 	"entgo.io/ent/schema/field"
+	"github.com/datahearth/streamline/ent/credit"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/predicate"
-	"github.com/datahearth/streamline/ent/schema"
 )
 
 // MovieUpdate is the builder for updating Movie entities.
@@ -351,24 +351,6 @@ func (_u *MovieUpdate) ClearGenres() *MovieUpdate {
 	return _u
 }
 
-// SetCast sets the "cast" field.
-func (_u *MovieUpdate) SetCast(v []schema.CastMember) *MovieUpdate {
-	_u.mutation.SetCast(v)
-	return _u
-}
-
-// AppendCast appends value to the "cast" field.
-func (_u *MovieUpdate) AppendCast(v []schema.CastMember) *MovieUpdate {
-	_u.mutation.AppendCast(v)
-	return _u
-}
-
-// ClearCast clears the value of the "cast" field.
-func (_u *MovieUpdate) ClearCast() *MovieUpdate {
-	_u.mutation.ClearCast()
-	return _u
-}
-
 // SetLastRefreshedAt sets the "last_refreshed_at" field.
 func (_u *MovieUpdate) SetLastRefreshedAt(v time.Time) *MovieUpdate {
 	_u.mutation.SetLastRefreshedAt(v)
@@ -432,6 +414,21 @@ func (_u *MovieUpdate) AddEvents(v ...*MediaEvent) *MovieUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.AddEventIDs(ids...)
+}
+
+// AddCreditIDs adds the "credits" edge to the Credit entity by IDs.
+func (_u *MovieUpdate) AddCreditIDs(ids ...uint32) *MovieUpdate {
+	_u.mutation.AddCreditIDs(ids...)
+	return _u
+}
+
+// AddCredits adds the "credits" edges to the Credit entity.
+func (_u *MovieUpdate) AddCredits(v ...*Credit) *MovieUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddCreditIDs(ids...)
 }
 
 // Mutation returns the MovieMutation object of the builder.
@@ -500,6 +497,27 @@ func (_u *MovieUpdate) RemoveEvents(v ...*MediaEvent) *MovieUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveEventIDs(ids...)
+}
+
+// ClearCredits clears all "credits" edges to the Credit entity.
+func (_u *MovieUpdate) ClearCredits() *MovieUpdate {
+	_u.mutation.ClearCredits()
+	return _u
+}
+
+// RemoveCreditIDs removes the "credits" edge to Credit entities by IDs.
+func (_u *MovieUpdate) RemoveCreditIDs(ids ...uint32) *MovieUpdate {
+	_u.mutation.RemoveCreditIDs(ids...)
+	return _u
+}
+
+// RemoveCredits removes "credits" edges to Credit entities.
+func (_u *MovieUpdate) RemoveCredits(v ...*Credit) *MovieUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveCreditIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -674,17 +692,6 @@ func (_u *MovieUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.GenresCleared() {
 		_spec.ClearField(movie.FieldGenres, field.TypeJSON)
 	}
-	if value, ok := _u.mutation.Cast(); ok {
-		_spec.SetField(movie.FieldCast, field.TypeJSON, value)
-	}
-	if value, ok := _u.mutation.AppendedCast(); ok {
-		_spec.AddModifier(func(u *sql.UpdateBuilder) {
-			sqljson.Append(u, movie.FieldCast, value)
-		})
-	}
-	if _u.mutation.CastCleared() {
-		_spec.ClearField(movie.FieldCast, field.TypeJSON)
-	}
 	if value, ok := _u.mutation.LastRefreshedAt(); ok {
 		_spec.SetField(movie.FieldLastRefreshedAt, field.TypeTime, value)
 	}
@@ -819,6 +826,51 @@ func (_u *MovieUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.CreditsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   movie.CreditsTable,
+			Columns: []string{movie.CreditsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(credit.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedCreditsIDs(); len(nodes) > 0 && !_u.mutation.CreditsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   movie.CreditsTable,
+			Columns: []string{movie.CreditsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(credit.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.CreditsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   movie.CreditsTable,
+			Columns: []string{movie.CreditsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(credit.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {
@@ -1165,24 +1217,6 @@ func (_u *MovieUpdateOne) ClearGenres() *MovieUpdateOne {
 	return _u
 }
 
-// SetCast sets the "cast" field.
-func (_u *MovieUpdateOne) SetCast(v []schema.CastMember) *MovieUpdateOne {
-	_u.mutation.SetCast(v)
-	return _u
-}
-
-// AppendCast appends value to the "cast" field.
-func (_u *MovieUpdateOne) AppendCast(v []schema.CastMember) *MovieUpdateOne {
-	_u.mutation.AppendCast(v)
-	return _u
-}
-
-// ClearCast clears the value of the "cast" field.
-func (_u *MovieUpdateOne) ClearCast() *MovieUpdateOne {
-	_u.mutation.ClearCast()
-	return _u
-}
-
 // SetLastRefreshedAt sets the "last_refreshed_at" field.
 func (_u *MovieUpdateOne) SetLastRefreshedAt(v time.Time) *MovieUpdateOne {
 	_u.mutation.SetLastRefreshedAt(v)
@@ -1246,6 +1280,21 @@ func (_u *MovieUpdateOne) AddEvents(v ...*MediaEvent) *MovieUpdateOne {
 		ids[i] = v[i].ID
 	}
 	return _u.AddEventIDs(ids...)
+}
+
+// AddCreditIDs adds the "credits" edge to the Credit entity by IDs.
+func (_u *MovieUpdateOne) AddCreditIDs(ids ...uint32) *MovieUpdateOne {
+	_u.mutation.AddCreditIDs(ids...)
+	return _u
+}
+
+// AddCredits adds the "credits" edges to the Credit entity.
+func (_u *MovieUpdateOne) AddCredits(v ...*Credit) *MovieUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddCreditIDs(ids...)
 }
 
 // Mutation returns the MovieMutation object of the builder.
@@ -1314,6 +1363,27 @@ func (_u *MovieUpdateOne) RemoveEvents(v ...*MediaEvent) *MovieUpdateOne {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveEventIDs(ids...)
+}
+
+// ClearCredits clears all "credits" edges to the Credit entity.
+func (_u *MovieUpdateOne) ClearCredits() *MovieUpdateOne {
+	_u.mutation.ClearCredits()
+	return _u
+}
+
+// RemoveCreditIDs removes the "credits" edge to Credit entities by IDs.
+func (_u *MovieUpdateOne) RemoveCreditIDs(ids ...uint32) *MovieUpdateOne {
+	_u.mutation.RemoveCreditIDs(ids...)
+	return _u
+}
+
+// RemoveCredits removes "credits" edges to Credit entities.
+func (_u *MovieUpdateOne) RemoveCredits(v ...*Credit) *MovieUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveCreditIDs(ids...)
 }
 
 // Where appends a list predicates to the MovieUpdate builder.
@@ -1518,17 +1588,6 @@ func (_u *MovieUpdateOne) sqlSave(ctx context.Context) (_node *Movie, err error)
 	if _u.mutation.GenresCleared() {
 		_spec.ClearField(movie.FieldGenres, field.TypeJSON)
 	}
-	if value, ok := _u.mutation.Cast(); ok {
-		_spec.SetField(movie.FieldCast, field.TypeJSON, value)
-	}
-	if value, ok := _u.mutation.AppendedCast(); ok {
-		_spec.AddModifier(func(u *sql.UpdateBuilder) {
-			sqljson.Append(u, movie.FieldCast, value)
-		})
-	}
-	if _u.mutation.CastCleared() {
-		_spec.ClearField(movie.FieldCast, field.TypeJSON)
-	}
 	if value, ok := _u.mutation.LastRefreshedAt(); ok {
 		_spec.SetField(movie.FieldLastRefreshedAt, field.TypeTime, value)
 	}
@@ -1663,6 +1722,51 @@ func (_u *MovieUpdateOne) sqlSave(ctx context.Context) (_node *Movie, err error)
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.CreditsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   movie.CreditsTable,
+			Columns: []string{movie.CreditsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(credit.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedCreditsIDs(); len(nodes) > 0 && !_u.mutation.CreditsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   movie.CreditsTable,
+			Columns: []string{movie.CreditsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(credit.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.CreditsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   movie.CreditsTable,
+			Columns: []string{movie.CreditsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(credit.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

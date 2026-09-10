@@ -945,16 +945,6 @@ func GenresNotNil() predicate.TVShow {
 	return predicate.TVShow(sql.FieldNotNull(FieldGenres))
 }
 
-// CastIsNil applies the IsNil predicate on the "cast" field.
-func CastIsNil() predicate.TVShow {
-	return predicate.TVShow(sql.FieldIsNull(FieldCast))
-}
-
-// CastNotNil applies the NotNil predicate on the "cast" field.
-func CastNotNil() predicate.TVShow {
-	return predicate.TVShow(sql.FieldNotNull(FieldCast))
-}
-
 // LastRefreshedAtEQ applies the EQ predicate on the "last_refreshed_at" field.
 func LastRefreshedAtEQ(v time.Time) predicate.TVShow {
 	return predicate.TVShow(sql.FieldEQ(FieldLastRefreshedAt, v))
@@ -1118,6 +1108,29 @@ func HasEvents() predicate.TVShow {
 func HasEventsWith(preds ...predicate.MediaEvent) predicate.TVShow {
 	return predicate.TVShow(func(s *sql.Selector) {
 		step := newEventsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasCredits applies the HasEdge predicate on the "credits" edge.
+func HasCredits() predicate.TVShow {
+	return predicate.TVShow(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, CreditsTable, CreditsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasCreditsWith applies the HasEdge predicate on the "credits" edge with a given conditions (other predicates).
+func HasCreditsWith(preds ...predicate.Credit) predicate.TVShow {
+	return predicate.TVShow(func(s *sql.Selector) {
+		step := newCreditsStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

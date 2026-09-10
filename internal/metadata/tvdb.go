@@ -533,6 +533,7 @@ func (t *TVDB) GetSeriesCast(
 			continue
 		}
 		member := CastMember{
+			TVDBID:     c.PeopleID,
 			Name:       c.PersonName,
 			Character:  c.Name,
 			ProfileURL: TVDBArtworkURL(c.PersonImg),

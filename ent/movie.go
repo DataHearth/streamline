@@ -11,7 +11,6 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/datahearth/streamline/ent/movie"
-	"github.com/datahearth/streamline/ent/schema"
 )
 
 // Movie is the model entity for the Movie schema.
@@ -55,8 +54,6 @@ type Movie struct {
 	Rating float64 `json:"rating,omitempty"`
 	// Genres holds the value of the "genres" field.
 	Genres []string `json:"genres,omitempty"`
-	// Cast holds the value of the "cast" field.
-	Cast []schema.CastMember `json:"cast,omitempty"`
 	// LastRefreshedAt holds the value of the "last_refreshed_at" field.
 	LastRefreshedAt *time.Time `json:"last_refreshed_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -73,9 +70,11 @@ type MovieEdges struct {
 	MediaFiles []*MediaFile `json:"media_files,omitempty"`
 	// Events holds the value of the events edge.
 	Events []*MediaEvent `json:"events,omitempty"`
+	// Credits holds the value of the credits edge.
+	Credits []*Credit `json:"credits,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [3]bool
+	loadedTypes [4]bool
 }
 
 // DownloadRecordsOrErr returns the DownloadRecords value or an error if the edge
@@ -105,12 +104,21 @@ func (e MovieEdges) EventsOrErr() ([]*MediaEvent, error) {
 	return nil, &NotLoadedError{edge: "events"}
 }
 
+// CreditsOrErr returns the Credits value or an error if the edge
+// was not loaded in eager-loading.
+func (e MovieEdges) CreditsOrErr() ([]*Credit, error) {
+	if e.loadedTypes[3] {
+		return e.Credits, nil
+	}
+	return nil, &NotLoadedError{edge: "credits"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*Movie) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case movie.FieldGenres, movie.FieldCast:
+		case movie.FieldGenres:
 			values[i] = new([]byte)
 		case movie.FieldMonitored:
 			values[i] = new(sql.NullBool)
@@ -256,14 +264,6 @@ func (_m *Movie) assignValues(columns []string, values []any) error {
 					return fmt.Errorf("unmarshal field genres: %w", err)
 				}
 			}
-		case movie.FieldCast:
-			if value, ok := values[i].(*[]byte); !ok {
-				return fmt.Errorf("unexpected type %T for field cast", values[i])
-			} else if value != nil && len(*value) > 0 {
-				if err := json.Unmarshal(*value, &_m.Cast); err != nil {
-					return fmt.Errorf("unmarshal field cast: %w", err)
-				}
-			}
 		case movie.FieldLastRefreshedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field last_refreshed_at", values[i])
@@ -297,6 +297,11 @@ func (_m *Movie) QueryMediaFiles() *MediaFileQuery {
 // QueryEvents queries the "events" edge of the Movie entity.
 func (_m *Movie) QueryEvents() *MediaEventQuery {
 	return NewMovieClient(_m.config).QueryEvents(_m)
+}
+
+// QueryCredits queries the "credits" edge of the Movie entity.
+func (_m *Movie) QueryCredits() *CreditQuery {
+	return NewMovieClient(_m.config).QueryCredits(_m)
 }
 
 // Update returns a builder for updating this Movie.
@@ -381,9 +386,6 @@ func (_m *Movie) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("genres=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Genres))
-	builder.WriteString(", ")
-	builder.WriteString("cast=")
-	builder.WriteString(fmt.Sprintf("%v", _m.Cast))
 	builder.WriteString(", ")
 	if v := _m.LastRefreshedAt; v != nil {
 		builder.WriteString("last_refreshed_at=")

@@ -15,6 +15,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/internal/auth"
+	"github.com/datahearth/streamline/internal/db"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	moviesvc "github.com/datahearth/streamline/internal/media/movie"
 	moviemocks "github.com/datahearth/streamline/internal/media/movie/mocks"
@@ -77,6 +78,10 @@ var _ = Describe("Full Vertical Slice", Label("unit", "server", "movies"), func(
 			Once()
 		store.EXPECT().
 			ListMediaFilesByMovieID(mock.Anything, uint32(1)).
+			Return(nil, nil).
+			Once()
+		store.EXPECT().
+			TitleCast(mock.Anything, db.CastOwnerMovie, uint32(1)).
 			Return(nil, nil).
 			Once()
 		searchHit := metadata.MovieResult{
@@ -196,6 +201,10 @@ var _ = Describe("Full Vertical Slice", Label("unit", "server", "movies"), func(
 			Once()
 		store.EXPECT().
 			ListMediaFilesByMovieID(mock.Anything, uint32(1)).
+			Return(nil, nil).
+			Once()
+		store.EXPECT().
+			TitleCast(mock.Anything, db.CastOwnerMovie, uint32(1)).
 			Return(nil, nil).
 			Once()
 		movies.EXPECT().

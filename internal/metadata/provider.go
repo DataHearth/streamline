@@ -16,7 +16,11 @@ type MovieResult struct {
 }
 
 type CastMember struct {
+	// TMDBID and TVDBID are each scoped to their own provider's id space, so
+	// neither is globally unique on its own; exactly one is set depending on
+	// which provider supplied the entry.
 	TMDBID     uint32
+	TVDBID     uint32
 	Name       string
 	Character  string
 	ProfileURL string

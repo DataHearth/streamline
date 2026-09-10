@@ -10,7 +10,6 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
-	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/ent/tvshow"
 )
 
@@ -53,8 +52,6 @@ type TVShow struct {
 	Rating float64 `json:"rating,omitempty"`
 	// Genres holds the value of the "genres" field.
 	Genres []string `json:"genres,omitempty"`
-	// Cast holds the value of the "cast" field.
-	Cast []schema.CastMember `json:"cast,omitempty"`
 	// LastRefreshedAt holds the value of the "last_refreshed_at" field.
 	LastRefreshedAt *time.Time `json:"last_refreshed_at,omitempty"`
 	// QualityProfile holds the value of the "quality_profile" field.
@@ -71,9 +68,11 @@ type TVShowEdges struct {
 	Seasons []*Season `json:"seasons,omitempty"`
 	// Events holds the value of the events edge.
 	Events []*MediaEvent `json:"events,omitempty"`
+	// Credits holds the value of the credits edge.
+	Credits []*Credit `json:"credits,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [3]bool
 }
 
 // SeasonsOrErr returns the Seasons value or an error if the edge
@@ -94,12 +93,21 @@ func (e TVShowEdges) EventsOrErr() ([]*MediaEvent, error) {
 	return nil, &NotLoadedError{edge: "events"}
 }
 
+// CreditsOrErr returns the Credits value or an error if the edge
+// was not loaded in eager-loading.
+func (e TVShowEdges) CreditsOrErr() ([]*Credit, error) {
+	if e.loadedTypes[2] {
+		return e.Credits, nil
+	}
+	return nil, &NotLoadedError{edge: "credits"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*TVShow) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case tvshow.FieldGenres, tvshow.FieldCast:
+		case tvshow.FieldGenres:
 			values[i] = new([]byte)
 		case tvshow.FieldMonitored:
 			values[i] = new(sql.NullBool)
@@ -237,14 +245,6 @@ func (_m *TVShow) assignValues(columns []string, values []any) error {
 					return fmt.Errorf("unmarshal field genres: %w", err)
 				}
 			}
-		case tvshow.FieldCast:
-			if value, ok := values[i].(*[]byte); !ok {
-				return fmt.Errorf("unexpected type %T for field cast", values[i])
-			} else if value != nil && len(*value) > 0 {
-				if err := json.Unmarshal(*value, &_m.Cast); err != nil {
-					return fmt.Errorf("unmarshal field cast: %w", err)
-				}
-			}
 		case tvshow.FieldLastRefreshedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field last_refreshed_at", values[i])
@@ -279,6 +279,11 @@ func (_m *TVShow) QuerySeasons() *SeasonQuery {
 // QueryEvents queries the "events" edge of the TVShow entity.
 func (_m *TVShow) QueryEvents() *MediaEventQuery {
 	return NewTVShowClient(_m.config).QueryEvents(_m)
+}
+
+// QueryCredits queries the "credits" edge of the TVShow entity.
+func (_m *TVShow) QueryCredits() *CreditQuery {
+	return NewTVShowClient(_m.config).QueryCredits(_m)
 }
 
 // Update returns a builder for updating this TVShow.
@@ -356,9 +361,6 @@ func (_m *TVShow) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("genres=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Genres))
-	builder.WriteString(", ")
-	builder.WriteString("cast=")
-	builder.WriteString(fmt.Sprintf("%v", _m.Cast))
 	builder.WriteString(", ")
 	if v := _m.LastRefreshedAt; v != nil {
 		builder.WriteString("last_refreshed_at=")

@@ -21,6 +21,18 @@ func (f ApiKeyFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, erro
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ApiKeyMutation", m)
 }
 
+// The CreditFunc type is an adapter to allow the use of ordinary
+// function as Credit mutator.
+type CreditFunc func(context.Context, *ent.CreditMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f CreditFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.CreditMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.CreditMutation", m)
+}
+
 // The DownloadRecordFunc type is an adapter to allow the use of ordinary
 // function as DownloadRecord mutator.
 type DownloadRecordFunc func(context.Context, *ent.DownloadRecordMutation) (ent.Value, error)
@@ -139,6 +151,18 @@ func (f OIDCIdentityFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.OIDCIdentityMutation", m)
+}
+
+// The PersonFunc type is an adapter to allow the use of ordinary
+// function as Person mutator.
+type PersonFunc func(context.Context, *ent.PersonMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f PersonFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.PersonMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PersonMutation", m)
 }
 
 // The RequestFunc type is an adapter to allow the use of ordinary

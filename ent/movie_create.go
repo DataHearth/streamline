@@ -10,11 +10,11 @@ import (
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/datahearth/streamline/ent/credit"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
-	"github.com/datahearth/streamline/ent/schema"
 )
 
 // MovieCreate is the builder for creating a Movie entity.
@@ -236,12 +236,6 @@ func (_c *MovieCreate) SetGenres(v []string) *MovieCreate {
 	return _c
 }
 
-// SetCast sets the "cast" field.
-func (_c *MovieCreate) SetCast(v []schema.CastMember) *MovieCreate {
-	_c.mutation.SetCast(v)
-	return _c
-}
-
 // SetLastRefreshedAt sets the "last_refreshed_at" field.
 func (_c *MovieCreate) SetLastRefreshedAt(v time.Time) *MovieCreate {
 	_c.mutation.SetLastRefreshedAt(v)
@@ -305,6 +299,21 @@ func (_c *MovieCreate) AddEvents(v ...*MediaEvent) *MovieCreate {
 		ids[i] = v[i].ID
 	}
 	return _c.AddEventIDs(ids...)
+}
+
+// AddCreditIDs adds the "credits" edge to the Credit entity by IDs.
+func (_c *MovieCreate) AddCreditIDs(ids ...uint32) *MovieCreate {
+	_c.mutation.AddCreditIDs(ids...)
+	return _c
+}
+
+// AddCredits adds the "credits" edges to the Credit entity.
+func (_c *MovieCreate) AddCredits(v ...*Credit) *MovieCreate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddCreditIDs(ids...)
 }
 
 // Mutation returns the MovieMutation object of the builder.
@@ -520,10 +529,6 @@ func (_c *MovieCreate) createSpec() (*Movie, *sqlgraph.CreateSpec) {
 		_spec.SetField(movie.FieldGenres, field.TypeJSON, value)
 		_node.Genres = value
 	}
-	if value, ok := _c.mutation.Cast(); ok {
-		_spec.SetField(movie.FieldCast, field.TypeJSON, value)
-		_node.Cast = value
-	}
 	if value, ok := _c.mutation.LastRefreshedAt(); ok {
 		_spec.SetField(movie.FieldLastRefreshedAt, field.TypeTime, value)
 		_node.LastRefreshedAt = &value
@@ -569,6 +574,22 @@ func (_c *MovieCreate) createSpec() (*Movie, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.CreditsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   movie.CreditsTable,
+			Columns: []string{movie.CreditsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(credit.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

@@ -213,7 +213,7 @@ func (s *Service) Add(
 		QualityProfile: qualityProfile,
 		Rating:         float64(details.Rating),
 		Genres:         details.Genres,
-		Cast:           db.StoredCast(details.Cast),
+		Cast:           details.Cast,
 		ReleaseDate:    metadata.ParseISODate(details.ReleaseDate),
 	})
 	if err != nil {
@@ -660,7 +660,7 @@ func (s *Service) applyMetadata(
 		Runtime:       details.Runtime,
 		Rating:        float64(details.Rating),
 		Genres:        details.Genres,
-		Cast:          db.StoredCast(details.Cast),
+		Cast:          details.Cast,
 		ReleaseDate:   metadata.ParseISODate(details.ReleaseDate),
 	})
 }

@@ -9,6 +9,9 @@ import (
 // ApiKey is the predicate function for apikey builders.
 type ApiKey func(*sql.Selector)
 
+// Credit is the predicate function for credit builders.
+type Credit func(*sql.Selector)
+
 // DownloadRecord is the predicate function for downloadrecord builders.
 type DownloadRecord func(*sql.Selector)
 
@@ -38,6 +41,9 @@ type Movie func(*sql.Selector)
 
 // OIDCIdentity is the predicate function for oidcidentity builders.
 type OIDCIdentity func(*sql.Selector)
+
+// Person is the predicate function for person builders.
+type Person func(*sql.Selector)
 
 // Request is the predicate function for request builders.
 type Request func(*sql.Selector)

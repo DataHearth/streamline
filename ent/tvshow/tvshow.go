@@ -49,8 +49,6 @@ const (
 	FieldRating = "rating"
 	// FieldGenres holds the string denoting the genres field in the database.
 	FieldGenres = "genres"
-	// FieldCast holds the string denoting the cast field in the database.
-	FieldCast = "cast"
 	// FieldLastRefreshedAt holds the string denoting the last_refreshed_at field in the database.
 	FieldLastRefreshedAt = "last_refreshed_at"
 	// FieldQualityProfile holds the string denoting the quality_profile field in the database.
@@ -59,6 +57,8 @@ const (
 	EdgeSeasons = "seasons"
 	// EdgeEvents holds the string denoting the events edge name in mutations.
 	EdgeEvents = "events"
+	// EdgeCredits holds the string denoting the credits edge name in mutations.
+	EdgeCredits = "credits"
 	// Table holds the table name of the tvshow in the database.
 	Table = "tv_shows"
 	// SeasonsTable is the table that holds the seasons relation/edge.
@@ -75,6 +75,13 @@ const (
 	EventsInverseTable = "media_events"
 	// EventsColumn is the table column denoting the events relation/edge.
 	EventsColumn = "tv_show_events"
+	// CreditsTable is the table that holds the credits relation/edge.
+	CreditsTable = "credits"
+	// CreditsInverseTable is the table name for the Credit entity.
+	// It exists in this package in order to avoid circular dependency with the "credit" package.
+	CreditsInverseTable = "credits"
+	// CreditsColumn is the table column denoting the credits relation/edge.
+	CreditsColumn = "tv_show_credits"
 )
 
 // Columns holds all SQL columns for tvshow fields.
@@ -97,7 +104,6 @@ var Columns = []string{
 	FieldRuntime,
 	FieldRating,
 	FieldGenres,
-	FieldCast,
 	FieldLastRefreshedAt,
 	FieldQualityProfile,
 }
@@ -308,6 +314,20 @@ func ByEvents(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newEventsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByCreditsCount orders the results by credits count.
+func ByCreditsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newCreditsStep(), opts...)
+	}
+}
+
+// ByCredits orders the results by credits terms.
+func ByCredits(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newCreditsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newSeasonsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -320,5 +340,12 @@ func newEventsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(EventsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, EventsTable, EventsColumn),
+	)
+}
+func newCreditsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(CreditsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, CreditsTable, CreditsColumn),
 	)
 }

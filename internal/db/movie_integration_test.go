@@ -10,7 +10,6 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	entmovie "github.com/datahearth/streamline/ent/movie"
-	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/internal/library"
 )
 
@@ -212,35 +211,6 @@ var _ = Describe("Movie filter + lookup", Label("integration", "db"), func() {
 			nWanted, err := store.CountMoviesByStatus(ctx, entmovie.StatusWanted)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(nWanted).To(Equal(1))
-		})
-	})
-
-	Describe("the lean list projection", func() {
-		// The list paths select every column except cast, which detail paths
-		// still read. Getting this wrong is silent: the field simply comes
-		// back empty in an API response nobody is looking at closely.
-		var seeded *ent.Movie
-
-		BeforeEach(func() {
-			seeded = seed("Cast Carrier", 2020, 970, entmovie.StatusWanted)
-			Expect(client.Movie.UpdateOneID(seeded.ID).
-				SetCast([]schema.CastMember{{TMDBID: 7, Name: "Someone"}}).
-				Exec(ctx)).To(Succeed())
-		})
-
-		It("keeps cast reachable through a detail lookup", func() {
-			got, err := store.FindMovieByID(ctx, seeded.ID)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(got.Cast).To(HaveLen(1))
-		})
-
-		It("omits cast from FilterMovies but keeps every other field", func() {
-			items, _, err := store.FilterMovies(ctx, FilterMoviesParams{Limit: 10})
-			Expect(err).NotTo(HaveOccurred())
-			Expect(items).ToNot(BeEmpty())
-			Expect(items[0].Cast).To(BeEmpty())
-			Expect(items[0].Title).To(Equal("Cast Carrier"))
-			Expect(items[0].Year).To(Equal(uint16(2020)))
 		})
 	})
 

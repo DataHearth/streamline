@@ -141,6 +141,9 @@ var minRole = map[string]string{
 	"SearchMovie":             roleMember,
 	"SearchMovieNow":          roleMember,
 
+	"ListPeople": roleRequestOnly,
+	"GetPerson":  roleRequestOnly,
+
 	"ListQualityProfiles":      roleRequestOnly,
 	"CreateQualityProfile":     roleAdmin,
 	"UpdateQualityProfile":     roleAdmin,

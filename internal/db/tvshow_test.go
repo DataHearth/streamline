@@ -7,7 +7,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
-	"github.com/datahearth/streamline/ent/schema"
+	"github.com/datahearth/streamline/internal/metadata"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -300,7 +300,7 @@ var _ = Describe("TVShow store", Label("unit", "db"), func() {
 		It("keeps the stored cast when the refresh carries none", func() {
 			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
 				Title: "X", Year: 2020, TvdbID: 11,
-				Cast: []schema.CastMember{{Name: "Ana Vidal"}},
+				Cast: []metadata.CastMember{{Name: "Ana Vidal"}},
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -310,10 +310,10 @@ var _ = Describe("TVShow store", Label("unit", "db"), func() {
 				}),
 			).To(Succeed())
 
-			got, err := store.FindTVShowByID(ctx, show.ID)
+			cast, err := store.TitleCast(ctx, CastOwnerSeries, show.ID)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(got.Cast).To(HaveLen(1))
-			Expect(got.Cast[0].Name).To(Equal("Ana Vidal"))
+			Expect(cast).To(HaveLen(1))
+			Expect(cast[0].Name).To(Equal("Ana Vidal"))
 		})
 	})
 

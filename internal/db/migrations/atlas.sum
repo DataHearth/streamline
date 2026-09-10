@@ -1,4 +1,4 @@
-h1:QbRyD0Z95t7fEOoBtjrbfDl8RMPg1SMMW1PfU5cKEcU=
+h1:dvU0fhOTjwZbuVrzYTIra3hNGlnaPMAU5YuIvHJPFeE=
 20260711233411_init.up.sql h1:SnFgSovf1iYwGuugRm4tu95nCLy0xIAqSp751Vyr/kM=
 20260716225006_torrent_sessions.up.sql h1:dEzVx6y6gahJgd97oI2zsr0z1nGCk7XJA6iIK7gi7fM=
 20260729130131_movie_delete_cascade.up.sql h1:BJFbn+C5KacGtKGdTQizJ6ghjG66OvFTXEzGlSx4m3s=
@@ -27,3 +27,6 @@ h1:QbRyD0Z95t7fEOoBtjrbfDl8RMPg1SMMW1PfU5cKEcU=
 20260906144051_unstamp_metadata_refresh.up.sql h1:DWSkOWGCS2ZNmrekRLlP+mR5Z2WrZcXu9WbWGplccTc=
 20260906224132_transcode_jobs.up.sql h1:674XyJDo5vxAkByj5Ddh2h9sDg5QIHZhduE4kNXLp5M=
 20260907151403_transcode_jobs_cascade.up.sql h1:/0FWRiMhxyFqbFwkglpJzefJw81o9v78dgfignesiKM=
+20260910080858_add_person_credits.up.sql h1:6Lk2NwaNYplHDLtSv6Ibo13LKgyYwuP27DVPTmD++Qw=
+20260910102919_backfill_person_credits.up.sql h1:tNZVeGB/G468wIlLeAunWcrsdglhSpnMjtOo4dgMDkQ=
+20260910104500_drop_cast_json.up.sql h1:ytBxRCyq3sEy0g8B1wvdnSoxjK48VXJ5XqjlPjtrSvQ=

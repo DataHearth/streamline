@@ -20,6 +20,7 @@ import (
 	"github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/ffmpeg"
+	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/role"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -8732,6 +8733,80 @@ func (_c *MockTx_ListPendingSelectionRecords_Call) RunAndReturn(run func(ctx con
 	return _c
 }
 
+// ListPeople provides a mock function for the type MockTx
+func (_mock *MockTx) ListPeople(ctx context.Context, p db.ListPeopleParams) ([]db.Person, uint32, error) {
+	ret := _mock.Called(ctx, p)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListPeople")
+	}
+
+	var r0 []db.Person
+	var r1 uint32
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ListPeopleParams) ([]db.Person, uint32, error)); ok {
+		return returnFunc(ctx, p)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ListPeopleParams) []db.Person); ok {
+		r0 = returnFunc(ctx, p)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]db.Person)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.ListPeopleParams) uint32); ok {
+		r1 = returnFunc(ctx, p)
+	} else {
+		r1 = ret.Get(1).(uint32)
+	}
+	if returnFunc, ok := ret.Get(2).(func(context.Context, db.ListPeopleParams) error); ok {
+		r2 = returnFunc(ctx, p)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
+}
+
+// MockTx_ListPeople_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListPeople'
+type MockTx_ListPeople_Call struct {
+	*mock.Call
+}
+
+// ListPeople is a helper method to define mock.On call
+//   - ctx context.Context
+//   - p db.ListPeopleParams
+func (_e *MockTx_Expecter) ListPeople(ctx any, p any) *MockTx_ListPeople_Call {
+	return &MockTx_ListPeople_Call{Call: _e.mock.On("ListPeople", ctx, p)}
+}
+
+func (_c *MockTx_ListPeople_Call) Run(run func(ctx context.Context, p db.ListPeopleParams)) *MockTx_ListPeople_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.ListPeopleParams
+		if args[1] != nil {
+			arg1 = args[1].(db.ListPeopleParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_ListPeople_Call) Return(persons []db.Person, v uint32, err error) *MockTx_ListPeople_Call {
+	_c.Call.Return(persons, v, err)
+	return _c
+}
+
+func (_c *MockTx_ListPeople_Call) RunAndReturn(run func(ctx context.Context, p db.ListPeopleParams) ([]db.Person, uint32, error)) *MockTx_ListPeople_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListRequests provides a mock function for the type MockTx
 func (_mock *MockTx) ListRequests(ctx context.Context, p db.ListRequestsParams) ([]*ent.Request, int, error) {
 	ret := _mock.Called(ctx, p)
@@ -10313,6 +10388,74 @@ func (_c *MockTx_MovieTMDBIndex_Call) RunAndReturn(run func(ctx context.Context)
 	return _c
 }
 
+// PersonCredits provides a mock function for the type MockTx
+func (_mock *MockTx) PersonCredits(ctx context.Context, id uint32) (*db.PersonCredits, error) {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for PersonCredits")
+	}
+
+	var r0 *db.PersonCredits
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (*db.PersonCredits, error)); ok {
+		return returnFunc(ctx, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) *db.PersonCredits); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*db.PersonCredits)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+		r1 = returnFunc(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_PersonCredits_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PersonCredits'
+type MockTx_PersonCredits_Call struct {
+	*mock.Call
+}
+
+// PersonCredits is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+func (_e *MockTx_Expecter) PersonCredits(ctx any, id any) *MockTx_PersonCredits_Call {
+	return &MockTx_PersonCredits_Call{Call: _e.mock.On("PersonCredits", ctx, id)}
+}
+
+func (_c *MockTx_PersonCredits_Call) Run(run func(ctx context.Context, id uint32)) *MockTx_PersonCredits_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_PersonCredits_Call) Return(personCredits *db.PersonCredits, err error) *MockTx_PersonCredits_Call {
+	_c.Call.Return(personCredits, err)
+	return _c
+}
+
+func (_c *MockTx_PersonCredits_Call) RunAndReturn(run func(ctx context.Context, id uint32) (*db.PersonCredits, error)) *MockTx_PersonCredits_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // PurgeExpiredSessions provides a mock function for the type MockTx
 func (_mock *MockTx) PurgeExpiredSessions(ctx context.Context, before time.Time) (int, error) {
 	ret := _mock.Called(ctx, before)
@@ -10877,6 +11020,75 @@ func (_c *MockTx_ReopenRequest_Call) Return(err error) *MockTx_ReopenRequest_Cal
 }
 
 func (_c *MockTx_ReopenRequest_Call) RunAndReturn(run func(ctx context.Context, id uint32) error) *MockTx_ReopenRequest_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ReplaceCast provides a mock function for the type MockTx
+func (_mock *MockTx) ReplaceCast(ctx context.Context, owner db.CastOwner, ownerID uint32, cast []metadata.CastMember) error {
+	ret := _mock.Called(ctx, owner, ownerID, cast)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ReplaceCast")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.CastOwner, uint32, []metadata.CastMember) error); ok {
+		r0 = returnFunc(ctx, owner, ownerID, cast)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTx_ReplaceCast_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReplaceCast'
+type MockTx_ReplaceCast_Call struct {
+	*mock.Call
+}
+
+// ReplaceCast is a helper method to define mock.On call
+//   - ctx context.Context
+//   - owner db.CastOwner
+//   - ownerID uint32
+//   - cast []metadata.CastMember
+func (_e *MockTx_Expecter) ReplaceCast(ctx any, owner any, ownerID any, cast any) *MockTx_ReplaceCast_Call {
+	return &MockTx_ReplaceCast_Call{Call: _e.mock.On("ReplaceCast", ctx, owner, ownerID, cast)}
+}
+
+func (_c *MockTx_ReplaceCast_Call) Run(run func(ctx context.Context, owner db.CastOwner, ownerID uint32, cast []metadata.CastMember)) *MockTx_ReplaceCast_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.CastOwner
+		if args[1] != nil {
+			arg1 = args[1].(db.CastOwner)
+		}
+		var arg2 uint32
+		if args[2] != nil {
+			arg2 = args[2].(uint32)
+		}
+		var arg3 []metadata.CastMember
+		if args[3] != nil {
+			arg3 = args[3].([]metadata.CastMember)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_ReplaceCast_Call) Return(err error) *MockTx_ReplaceCast_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTx_ReplaceCast_Call) RunAndReturn(run func(ctx context.Context, owner db.CastOwner, ownerID uint32, cast []metadata.CastMember) error) *MockTx_ReplaceCast_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -13458,6 +13670,80 @@ func (_c *MockTx_TVShowTVDBIndex_Call) Return(uint32ToUint32 map[uint32]uint32, 
 }
 
 func (_c *MockTx_TVShowTVDBIndex_Call) RunAndReturn(run func(ctx context.Context) (map[uint32]uint32, error)) *MockTx_TVShowTVDBIndex_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// TitleCast provides a mock function for the type MockTx
+func (_mock *MockTx) TitleCast(ctx context.Context, owner db.CastOwner, ownerID uint32) ([]db.CastEntry, error) {
+	ret := _mock.Called(ctx, owner, ownerID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for TitleCast")
+	}
+
+	var r0 []db.CastEntry
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.CastOwner, uint32) ([]db.CastEntry, error)); ok {
+		return returnFunc(ctx, owner, ownerID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.CastOwner, uint32) []db.CastEntry); ok {
+		r0 = returnFunc(ctx, owner, ownerID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]db.CastEntry)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.CastOwner, uint32) error); ok {
+		r1 = returnFunc(ctx, owner, ownerID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_TitleCast_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'TitleCast'
+type MockTx_TitleCast_Call struct {
+	*mock.Call
+}
+
+// TitleCast is a helper method to define mock.On call
+//   - ctx context.Context
+//   - owner db.CastOwner
+//   - ownerID uint32
+func (_e *MockTx_Expecter) TitleCast(ctx any, owner any, ownerID any) *MockTx_TitleCast_Call {
+	return &MockTx_TitleCast_Call{Call: _e.mock.On("TitleCast", ctx, owner, ownerID)}
+}
+
+func (_c *MockTx_TitleCast_Call) Run(run func(ctx context.Context, owner db.CastOwner, ownerID uint32)) *MockTx_TitleCast_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.CastOwner
+		if args[1] != nil {
+			arg1 = args[1].(db.CastOwner)
+		}
+		var arg2 uint32
+		if args[2] != nil {
+			arg2 = args[2].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_TitleCast_Call) Return(castEntrys []db.CastEntry, err error) *MockTx_TitleCast_Call {
+	_c.Call.Return(castEntrys, err)
+	return _c
+}
+
+func (_c *MockTx_TitleCast_Call) RunAndReturn(run func(ctx context.Context, owner db.CastOwner, ownerID uint32) ([]db.CastEntry, error)) *MockTx_TitleCast_Call {
 	_c.Call.Return(run)
 	return _c
 }

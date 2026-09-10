@@ -2700,6 +2700,12 @@ type CastMember struct {
 	Character *string `json:"character,omitempty"`
 	Name      string  `json:"name"`
 
+	// PersonId Row id of the person in the library, for GET /people/{id}. Present
+	// on the cast of a stored movie or series; absent on a provider
+	// lookup of a title the library does not hold, which has no person
+	// row behind it.
+	PersonId *uint32 `json:"person_id,omitempty"`
+
 	// PersonUrl Link to the person's page on the source provider (TMDB for movies,
 	// TVDB for series). Absent when the provider has no id for them.
 	PersonUrl *string `json:"person_url,omitempty"`
@@ -4072,6 +4078,71 @@ type PendingPreviewEpisode struct {
 	Title   *string `json:"title,omitempty"`
 }
 
+// Person defines model for Person.
+type Person struct {
+	// Credits Library items — movies plus series — the person is credited on. A
+	// person listed twice on one title counts once.
+	Credits uint32 `json:"credits"`
+
+	// Id Row id in the library's `persons` table — the identity, and the
+	// only key GET /people/{id} accepts.
+	Id   uint32 `json:"id"`
+	Name string `json:"name"`
+
+	// ProfileUrl Portrait URL as the provider gave it. Absent when no credit
+	// carries one.
+	ProfileUrl *string `json:"profile_url,omitempty"`
+
+	// TmdbId TMDB person id, or 0 when TMDB never supplied one. Data the person
+	// carries, not a key.
+	TmdbId uint32 `json:"tmdb_id"`
+
+	// TvdbId TVDB person id, or 0 when TVDB never supplied one. Series cast
+	// comes from TVDB, so these are the entries with no `tmdb_id`.
+	TvdbId uint32 `json:"tvdb_id"`
+}
+
+// PersonCredits defines model for PersonCredits.
+type PersonCredits struct {
+	// Id Row id in the library's `persons` table.
+	Id         uint32               `json:"id"`
+	Movies     []PersonMovieCredit  `json:"movies"`
+	Name       string               `json:"name"`
+	ProfileUrl *string              `json:"profile_url,omitempty"`
+	Series     []PersonSeriesCredit `json:"series"`
+
+	// TmdbId TMDB person id, or 0 when TMDB never supplied one.
+	TmdbId uint32 `json:"tmdb_id"`
+
+	// TvdbId TVDB person id, or 0 when TVDB never supplied one.
+	TvdbId uint32 `json:"tvdb_id"`
+}
+
+// PersonList defines model for PersonList.
+type PersonList struct {
+	Items  []Person `json:"items"`
+	Limit  uint16   `json:"limit"`
+	Offset uint32   `json:"offset"`
+
+	// Total Total number of people matching the filter.
+	Total uint32 `json:"total"`
+}
+
+// PersonMovieCredit defines model for PersonMovieCredit.
+type PersonMovieCredit struct {
+	// Character Character played in this movie. Empty when the provider gave none
+	// — the character belongs to the pairing, not to the person.
+	Character string `json:"character"`
+	Movie     Movie  `json:"movie"`
+}
+
+// PersonSeriesCredit defines model for PersonSeriesCredit.
+type PersonSeriesCredit struct {
+	// Character Character played in this series.
+	Character string `json:"character"`
+	Series    TVShow `json:"series"`
+}
+
 // PlayOnLink defines model for PlayOnLink.
 type PlayOnLink struct {
 	// Fallback True when url points to the server home, not the movie page.
@@ -5306,6 +5377,18 @@ type MoviesStatus = string
 // OIDCProviderName defines model for OIDCProviderName.
 type OIDCProviderName = string
 
+// PeopleLimit defines model for PeopleLimit.
+type PeopleLimit = uint16
+
+// PeopleOffset defines model for PeopleOffset.
+type PeopleOffset = uint32
+
+// PeopleQuery defines model for PeopleQuery.
+type PeopleQuery = string
+
+// PersonID defines model for PersonID.
+type PersonID = uint32
+
 // RenamePreview defines model for RenamePreview.
 type RenamePreview = bool
 
@@ -5742,6 +5825,18 @@ type ReidentifyMovieJSONBody struct {
 type RenameMovieFilesParams struct {
 	// Preview When true, returns the rename plan without applying it.
 	Preview *RenamePreview `form:"preview,omitempty" json:"preview,omitempty"`
+}
+
+// ListPeopleParams defines parameters for ListPeople.
+type ListPeopleParams struct {
+	// Query Substring filter over the credited name, accent- and case-folded.
+	Query *PeopleQuery `form:"query,omitempty" json:"query,omitempty"`
+
+	// Limit Max items per page (1..100).
+	Limit *PeopleLimit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Offset Zero-based offset for pagination.
+	Offset *PeopleOffset `form:"offset,omitempty" json:"offset,omitempty"`
 }
 
 // ListRequestsParams defines parameters for ListRequests.
@@ -6360,6 +6455,12 @@ type ServerInterface interface {
 	// SearchMovieNow Dispatch an indexer search and grab for a single movie
 	// (POST /movies/{id}/search-now)
 	SearchMovieNow(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// ListPeople List cast members in the library
+	// (GET /people)
+	ListPeople(w http.ResponseWriter, r *http.Request, params ListPeopleParams)
+	// GetPerson Get a cast member's credits
+	// (GET /people/{id})
+	GetPerson(w http.ResponseWriter, r *http.Request, id PersonID)
 	// ListQualityProfiles List quality profiles
 	// (GET /quality-profiles)
 	ListQualityProfiles(w http.ResponseWriter, r *http.Request)
@@ -7172,6 +7273,18 @@ func (_ Unimplemented) SearchMovie(w http.ResponseWriter, r *http.Request, id Re
 // SearchMovieNow Dispatch an indexer search and grab for a single movie
 // (POST /movies/{id}/search-now)
 func (_ Unimplemented) SearchMovieNow(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ListPeople List cast members in the library
+// (GET /people)
+func (_ Unimplemented) ListPeople(w http.ResponseWriter, r *http.Request, params ListPeopleParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetPerson Get a cast member's credits
+// (GET /people/{id})
+func (_ Unimplemented) GetPerson(w http.ResponseWriter, r *http.Request, id PersonID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -10101,6 +10214,91 @@ func (siw *ServerInterfaceWrapper) SearchMovieNow(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// ListPeople operation middleware
+func (siw *ServerInterfaceWrapper) ListPeople(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListPeopleParams
+
+	// ------------- Optional query parameter "query" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "query", r.URL.Query(), &params.Query, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "query"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "query", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", r.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "offset"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListPeople(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetPerson operation middleware
+func (siw *ServerInterfaceWrapper) GetPerson(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id PersonID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetPerson(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListQualityProfiles operation middleware
 func (siw *ServerInterfaceWrapper) ListQualityProfiles(w http.ResponseWriter, r *http.Request) {
 
@@ -12224,6 +12422,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/series/{id}/play-on", wrapper.GetSeriesPlayOnLinks)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/people", wrapper.ListPeople)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/people/{id}", wrapper.GetPerson)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/quality-profiles", wrapper.ListQualityProfiles)
@@ -19204,6 +19408,106 @@ func (response SearchMovieNow500JSONResponse) VisitSearchMovieNowResponse(w http
 	return err
 }
 
+type ListPeopleRequestObject struct {
+	Params ListPeopleParams
+}
+
+type ListPeopleResponseObject interface {
+	VisitListPeopleResponse(w http.ResponseWriter) error
+}
+
+type ListPeople200JSONResponse PersonList
+
+func (response ListPeople200JSONResponse) VisitListPeopleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListPeople400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListPeople400JSONResponse) VisitListPeopleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListPeople500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListPeople500JSONResponse) VisitListPeopleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetPersonRequestObject struct {
+	Id PersonID `json:"id"`
+}
+
+type GetPersonResponseObject interface {
+	VisitGetPersonResponse(w http.ResponseWriter) error
+}
+
+type GetPerson200JSONResponse PersonCredits
+
+func (response GetPerson200JSONResponse) VisitGetPersonResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetPerson404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetPerson404JSONResponse) VisitGetPersonResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetPerson500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetPerson500JSONResponse) VisitGetPersonResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListQualityProfilesRequestObject struct {
 }
 
@@ -23422,6 +23726,12 @@ type StrictServerInterface interface {
 	// SearchMovieNow Dispatch an indexer search and grab for a single movie
 	// (POST /movies/{id}/search-now)
 	SearchMovieNow(ctx context.Context, request SearchMovieNowRequestObject) (SearchMovieNowResponseObject, error)
+	// ListPeople List cast members in the library
+	// (GET /people)
+	ListPeople(ctx context.Context, request ListPeopleRequestObject) (ListPeopleResponseObject, error)
+	// GetPerson Get a cast member's credits
+	// (GET /people/{id})
+	GetPerson(ctx context.Context, request GetPersonRequestObject) (GetPersonResponseObject, error)
 	// ListQualityProfiles List quality profiles
 	// (GET /quality-profiles)
 	ListQualityProfiles(ctx context.Context, request ListQualityProfilesRequestObject) (ListQualityProfilesResponseObject, error)
@@ -26572,6 +26882,58 @@ func (sh *strictHandler) SearchMovieNow(w http.ResponseWriter, r *http.Request, 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(SearchMovieNowResponseObject); ok {
 		if err := validResponse.VisitSearchMovieNowResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListPeople operation middleware
+func (sh *strictHandler) ListPeople(w http.ResponseWriter, r *http.Request, params ListPeopleParams) {
+	var request ListPeopleRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListPeople(ctx, request.(ListPeopleRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListPeople")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListPeopleResponseObject); ok {
+		if err := validResponse.VisitListPeopleResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetPerson operation middleware
+func (sh *strictHandler) GetPerson(w http.ResponseWriter, r *http.Request, id PersonID) {
+	var request GetPersonRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetPerson(ctx, request.(GetPersonRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetPerson")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetPersonResponseObject); ok {
+		if err := validResponse.VisitGetPersonResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

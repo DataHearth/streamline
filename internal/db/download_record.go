@@ -125,7 +125,7 @@ func (db *DB) ListPendingDownloadRecords(
 ) ([]*ent.DownloadRecord, error) {
 	return db.client.DownloadRecord.Query().
 		Where(downloadrecord.StatusEQ(downloadrecord.StatusPending)).
-		WithMovie(func(mq *ent.MovieQuery) { withLeanMovie(mq); mq.WithMediaFiles() }).
+		WithMovie(func(mq *ent.MovieQuery) { mq.WithMediaFiles() }).
 		WithEpisode(func(q *ent.EpisodeQuery) {
 			q.WithMediaFiles()
 			q.WithSeason(func(sq *ent.SeasonQuery) { sq.WithTvShow() })
@@ -181,7 +181,7 @@ func (db *DB) FindPendingDownloadRecordByID(
 			downloadrecord.ID(id),
 			downloadrecord.StatusEQ(downloadrecord.StatusPending),
 		).
-		WithMovie(withLeanMovie).
+		WithMovie().
 		// Season → show comes along because the pending-proposal preview
 		// resolves the pack against the show's whole episode tree, and an
 		// episode with no season loaded is indistinguishable from no episode
@@ -248,7 +248,7 @@ func (db *DB) ListDownloadingRecordsWithMovie(
 ) ([]*ent.DownloadRecord, error) {
 	return db.client.DownloadRecord.Query().
 		Where(downloadrecord.StatusEQ(downloadrecord.StatusDownloading)).
-		WithMovie(withLeanMovie).
+		WithMovie().
 		All(ctx)
 }
 
@@ -396,7 +396,7 @@ func (db *DB) ListImportingDownloadRecords(
 ) ([]*ent.DownloadRecord, error) {
 	return db.client.DownloadRecord.Query().
 		Where(downloadrecord.StatusEQ(downloadrecord.StatusImporting)).
-		WithMovie(withLeanMovie).
+		WithMovie().
 		WithEpisode(withEpisodeContext).
 		All(ctx)
 }
@@ -414,7 +414,7 @@ func (db *DB) FindImportingDownloadRecordByID(
 			downloadrecord.ID(id),
 			downloadrecord.StatusEQ(downloadrecord.StatusImporting),
 		).
-		WithMovie(withLeanMovie).
+		WithMovie().
 		WithEpisode(withEpisodeContext).
 		Only(ctx)
 }
@@ -453,7 +453,7 @@ func (db *DB) FindHeldDownloadRecordByID(
 			downloadrecord.ID(id),
 			downloadrecord.StatusEQ(downloadrecord.StatusHeld),
 		).
-		WithMovie(withLeanMovie).
+		WithMovie().
 		WithEpisode(withEpisodeContext).
 		Only(ctx)
 }
@@ -771,7 +771,7 @@ func (db *DB) ListActiveDownloadRecords(
 			// where a user is told one is waiting on them.
 			downloadrecord.StatusHeld,
 		)).
-		WithMovie(withLeanMovie).
+		WithMovie().
 		WithEpisode(func(q *ent.EpisodeQuery) {
 			q.WithSeason(func(sq *ent.SeasonQuery) { sq.WithTvShow() })
 		}).
@@ -802,7 +802,7 @@ func (db *DB) FindLiveDownloadRecordByHash(
 				downloadrecord.StatusHeld,
 			),
 		).
-		WithMovie(withLeanMovie).
+		WithMovie().
 		First(ctx)
 	if ent.IsNotFound(err) {
 		return nil, nil
@@ -836,7 +836,7 @@ func (db *DB) FindWidenableDownloadRecordByHash(
 				downloadrecord.StatusCompleted,
 			),
 		).
-		WithMovie(withLeanMovie).
+		WithMovie().
 		First(ctx)
 	if ent.IsNotFound(err) {
 		return nil, nil
@@ -866,7 +866,7 @@ func (db *DB) FindActiveDownloadRecordByID(
 				downloadrecord.StatusHeld,
 			),
 		).
-		WithMovie(withLeanMovie).
+		WithMovie().
 		Only(ctx)
 }
 
@@ -895,7 +895,7 @@ func (db *DB) ListDownloadHistory(
 			ent.Desc(downloadrecord.FieldUpdateTime),
 			ent.Desc(downloadrecord.FieldID),
 		).
-		WithMovie(withLeanMovie).
+		WithMovie().
 		WithEpisode(func(q *ent.EpisodeQuery) {
 			q.WithSeason(func(sq *ent.SeasonQuery) { sq.WithTvShow() })
 		})

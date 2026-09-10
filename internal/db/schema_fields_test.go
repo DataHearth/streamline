@@ -55,3 +55,95 @@ var _ = Describe("TV schema fields", Label("unit", "db"), func() {
 		Expect(ep.Status).To(Equal(episode.StatusWanted))
 	})
 })
+
+var _ = Describe("Person and credit schema fields", Label("unit", "db"), func() {
+	var ctx context.Context
+
+	BeforeEach(func() {
+		ctx = context.Background()
+	})
+
+	It("defaults both provider ids to zero", func() {
+		client, err := Open(ctx, ":memory:")
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() { Expect(client.Close()).To(Succeed()) })
+
+		p := client.Person.Create().SetName("Ana Vidal").SaveX(ctx)
+
+		Expect(p.TmdbID).To(BeZero())
+		Expect(p.TvdbID).To(BeZero())
+		Expect(p.ProfileURL).To(BeEmpty())
+	})
+
+	It("rejects an empty name", func() {
+		client, err := Open(ctx, ":memory:")
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() { Expect(client.Close()).To(Succeed()) })
+
+		_, err = client.Person.Create().SetName("").Save(ctx)
+		Expect(err).To(HaveOccurred())
+	})
+
+	It(
+		"stores two provider-scoped people sharing the zero id of the other provider",
+		func() {
+			client, err := Open(ctx, ":memory:")
+			Expect(err).NotTo(HaveOccurred())
+			DeferCleanup(func() { Expect(client.Close()).To(Succeed()) })
+
+			client.Person.Create().SetName("Ana Vidal").SetTmdbID(4021).SaveX(ctx)
+			client.Person.Create().SetName("Ilya Koval").SetTvdbID(9911).SaveX(ctx)
+
+			Expect(client.Person.Query().CountX(ctx)).To(Equal(2))
+		},
+	)
+
+	It("credits a person on a movie and on a show, one owner each", func() {
+		client, err := Open(ctx, ":memory:")
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() { Expect(client.Close()).To(Succeed()) })
+
+		person := client.Person.Create().
+			SetName("Ana Vidal").
+			SetTmdbID(4021).
+			SaveX(ctx)
+		movie := client.Movie.Create().
+			SetTitle("The Long Wait").SetOriginalTitle("The Long Wait").
+			SetYear(2024).SetTmdbID(700).SaveX(ctx)
+		show := client.TVShow.Create().
+			SetTitle("The Black Sea").SetYear(2023).SetTvdbID(123456).SaveX(ctx)
+
+		movieCredit := client.Credit.Create().
+			SetPerson(person).
+			SetMovie(movie).SetCharacter("Nadia").SetOrder(1).SaveX(ctx)
+		showCredit := client.Credit.Create().
+			SetPerson(person).SetTvShow(show).SaveX(ctx)
+
+		Expect(movieCredit.Character).To(Equal("Nadia"))
+		Expect(movieCredit.Order).To(Equal(uint8(1)))
+		Expect(showCredit.Character).To(BeEmpty())
+		Expect(showCredit.Order).To(BeZero())
+
+		Expect(movieCredit.QueryMovie().OnlyIDX(ctx)).To(Equal(movie.ID))
+		Expect(movieCredit.QueryTvShow().CountX(ctx)).To(BeZero())
+		Expect(showCredit.QueryTvShow().OnlyIDX(ctx)).To(Equal(show.ID))
+		Expect(showCredit.QueryMovie().CountX(ctx)).To(BeZero())
+
+		Expect(person.QueryCredits().CountX(ctx)).To(Equal(2))
+		Expect(movie.QueryCredits().OnlyIDX(ctx)).To(Equal(movieCredit.ID))
+		Expect(show.QueryCredits().OnlyIDX(ctx)).To(Equal(showCredit.ID))
+	})
+
+	It("requires a person on a credit", func() {
+		client, err := Open(ctx, ":memory:")
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() { Expect(client.Close()).To(Succeed()) })
+
+		movie := client.Movie.Create().
+			SetTitle("The Long Wait").SetOriginalTitle("The Long Wait").
+			SetYear(2024).SetTmdbID(700).SaveX(ctx)
+
+		_, err = client.Credit.Create().SetMovie(movie).Save(ctx)
+		Expect(err).To(HaveOccurred())
+	})
+})

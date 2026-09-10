@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/datahearth/streamline/ent/apikey"
+	"github.com/datahearth/streamline/ent/credit"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/importscan"
@@ -16,6 +17,7 @@ import (
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/oidcidentity"
+	"github.com/datahearth/streamline/ent/person"
 	"github.com/datahearth/streamline/ent/request"
 	"github.com/datahearth/streamline/ent/scheduledjob"
 	"github.com/datahearth/streamline/ent/schema"
@@ -54,6 +56,25 @@ func init() {
 	apikeyDescKeyHash := apikeyFields[1].Descriptor()
 	// apikey.KeyHashValidator is a validator for the "key_hash" field. It is called by the builders before save.
 	apikey.KeyHashValidator = apikeyDescKeyHash.Validators[0].(func(string) error)
+	creditMixin := schema.Credit{}.Mixin()
+	creditMixinFields1 := creditMixin[1].Fields()
+	_ = creditMixinFields1
+	creditFields := schema.Credit{}.Fields()
+	_ = creditFields
+	// creditDescCreateTime is the schema descriptor for create_time field.
+	creditDescCreateTime := creditMixinFields1[0].Descriptor()
+	// credit.DefaultCreateTime holds the default value on creation for the create_time field.
+	credit.DefaultCreateTime = creditDescCreateTime.Default.(func() time.Time)
+	// creditDescUpdateTime is the schema descriptor for update_time field.
+	creditDescUpdateTime := creditMixinFields1[1].Descriptor()
+	// credit.DefaultUpdateTime holds the default value on creation for the update_time field.
+	credit.DefaultUpdateTime = creditDescUpdateTime.Default.(func() time.Time)
+	// credit.UpdateDefaultUpdateTime holds the default value on update for the update_time field.
+	credit.UpdateDefaultUpdateTime = creditDescUpdateTime.UpdateDefault.(func() time.Time)
+	// creditDescOrder is the schema descriptor for order field.
+	creditDescOrder := creditFields[1].Descriptor()
+	// credit.DefaultOrder holds the default value on creation for the order field.
+	credit.DefaultOrder = creditDescOrder.Default.(uint8)
 	downloadrecordMixin := schema.DownloadRecord{}.Mixin()
 	downloadrecordMixinFields1 := downloadrecordMixin[1].Fields()
 	_ = downloadrecordMixinFields1
@@ -304,6 +325,33 @@ func init() {
 	oidcidentityDescSubject := oidcidentityFields[1].Descriptor()
 	// oidcidentity.SubjectValidator is a validator for the "subject" field. It is called by the builders before save.
 	oidcidentity.SubjectValidator = oidcidentityDescSubject.Validators[0].(func(string) error)
+	personMixin := schema.Person{}.Mixin()
+	personMixinFields1 := personMixin[1].Fields()
+	_ = personMixinFields1
+	personFields := schema.Person{}.Fields()
+	_ = personFields
+	// personDescCreateTime is the schema descriptor for create_time field.
+	personDescCreateTime := personMixinFields1[0].Descriptor()
+	// person.DefaultCreateTime holds the default value on creation for the create_time field.
+	person.DefaultCreateTime = personDescCreateTime.Default.(func() time.Time)
+	// personDescUpdateTime is the schema descriptor for update_time field.
+	personDescUpdateTime := personMixinFields1[1].Descriptor()
+	// person.DefaultUpdateTime holds the default value on creation for the update_time field.
+	person.DefaultUpdateTime = personDescUpdateTime.Default.(func() time.Time)
+	// person.UpdateDefaultUpdateTime holds the default value on update for the update_time field.
+	person.UpdateDefaultUpdateTime = personDescUpdateTime.UpdateDefault.(func() time.Time)
+	// personDescTmdbID is the schema descriptor for tmdb_id field.
+	personDescTmdbID := personFields[0].Descriptor()
+	// person.DefaultTmdbID holds the default value on creation for the tmdb_id field.
+	person.DefaultTmdbID = personDescTmdbID.Default.(uint32)
+	// personDescTvdbID is the schema descriptor for tvdb_id field.
+	personDescTvdbID := personFields[1].Descriptor()
+	// person.DefaultTvdbID holds the default value on creation for the tvdb_id field.
+	person.DefaultTvdbID = personDescTvdbID.Default.(uint32)
+	// personDescName is the schema descriptor for name field.
+	personDescName := personFields[2].Descriptor()
+	// person.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	person.NameValidator = personDescName.Validators[0].(func(string) error)
 	requestMixin := schema.Request{}.Mixin()
 	requestMixinFields1 := requestMixin[1].Fields()
 	_ = requestMixinFields1

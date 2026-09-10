@@ -22,19 +22,6 @@ import (
 	"github.com/datahearth/streamline/internal/role"
 )
 
-// StoredCast converts provider cast into the JSON shape persisted on Movie and
-// TVShow. The two structs are field-identical, so the conversion is direct.
-func StoredCast(cast []metadata.CastMember) []schema.CastMember {
-	if len(cast) == 0 {
-		return nil
-	}
-	out := make([]schema.CastMember, 0, len(cast))
-	for _, c := range cast {
-		out = append(out, schema.CastMember(c))
-	}
-	return out
-}
-
 // Tx is a transaction-bound Store. Caller invokes regular Store methods, then
 // Commit or Rollback. Either method is terminal — calling both, or calling
 // the same method twice, is a programmer error.
@@ -790,6 +777,31 @@ type Store interface {
 		ctx context.Context,
 		showIDs []uint32,
 	) (map[uint32]map[uint16]int, error)
+
+	// people (cast)
+	// ListPeople pages the cast members credited anywhere in the library,
+	// most-credited first, with the credit count rolled up in SQL.
+	ListPeople(ctx context.Context, p ListPeopleParams) ([]Person, uint32, error)
+	// PersonCredits returns every movie and series crediting the person, each
+	// with the character they play there. ErrPersonNotFound when no such
+	// persons row exists.
+	PersonCredits(ctx context.Context, id uint32) (*PersonCredits, error)
+	// ReplaceCast persists a title's cast into persons/credits, replacing that
+	// owner's credits wholesale. An empty list leaves the stored credits
+	// alone — a provider that returned no cast is not a title with no cast.
+	ReplaceCast(
+		ctx context.Context,
+		owner CastOwner,
+		ownerID uint32,
+		cast []metadata.CastMember,
+	) error
+	// TitleCast returns a title's cast in billing order, each entry carrying
+	// the persons row id the API links by.
+	TitleCast(
+		ctx context.Context,
+		owner CastOwner,
+		ownerID uint32,
+	) ([]CastEntry, error)
 
 	// requests
 	CreateRequest(ctx context.Context, p CreateRequestParams) (*ent.Request, error)

@@ -34,6 +34,8 @@ tags:
     description: Torrents held by the builtin download client
   - name: transcoding
     description: Background re-encode queue driven by quality-profile transcode policies
+  - name: people
+    description: Cast members credited on the library's movies and series
 
 servers:
   - url: /api/v1
@@ -912,6 +914,67 @@ paths:
           $ref: "#/components/responses/SeriesPlayOnLinks"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ── People (cast) ───────────────────────────────────────
+  /people:
+    get:
+      operationId: listPeople
+      summary: List cast members in the library
+      description: |
+        Returns the cast members credited on any movie or series in the
+        library, most-credited first and then by name.
+
+        People are rows in their own table, related to titles through
+        `credits`; `id` is that row id and the only key `/people/{id}`
+        accepts. A person is listed here only while something credits them,
+        and `credits` is how many library items — movies plus series — do,
+        counting a person listed twice on one title once. `query` matches the
+        name with accents, case and punctuation folded on both sides, so
+        "beatrice" finds "Béatrice".
+      tags: [people]
+      parameters:
+        - $ref: "#/components/parameters/PeopleQuery"
+        - $ref: "#/components/parameters/PeopleLimit"
+        - $ref: "#/components/parameters/PeopleOffset"
+      responses:
+        "200":
+          description: Paginated cast-member list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PersonList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /people/{id}:
+    parameters:
+      - $ref: "#/components/parameters/PersonID"
+    get:
+      operationId: getPerson
+      summary: Get a cast member's credits
+      description: |
+        Returns every movie and series in the library crediting the person,
+        each with the character they play there. The character belongs to the
+        pairing, not to the person, so the same person reads differently on
+        each credit.
+
+        `id` is the `persons` row id, as carried by every `Person` and by the
+        `person_id` on each `cast` entry of a movie or series — not a provider
+        id. Unknown row: 404.
+      tags: [people]
+      responses:
+        "200":
+          description: Cast member with their library credits
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PersonCredits"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":
@@ -3588,6 +3651,42 @@ components:
       schema:
         type: integer
         x-go-type: uint32
+    PersonID:
+      name: id
+      in: path
+      required: true
+      description: |
+        Row id of the person in the library's `persons` table. Not a provider
+        id: series cast comes from TVDB with no TMDB id at all, so keying on
+        `tmdb_id` merged every such actor into one.
+      schema:
+        type: integer
+        x-go-type: uint32
+    PeopleQuery:
+      name: query
+      in: query
+      description: Substring filter over the credited name, accent- and case-folded.
+      schema:
+        type: string
+    PeopleLimit:
+      name: limit
+      in: query
+      description: Max items per page (1..100).
+      schema:
+        type: integer
+        default: 20
+        minimum: 1
+        maximum: 100
+        x-go-type: uint16
+    PeopleOffset:
+      name: offset
+      in: query
+      description: Zero-based offset for pagination.
+      schema:
+        type: integer
+        default: 0
+        minimum: 0
+        x-go-type: uint32
     ResourceName:
       name: name
       in: path
@@ -5182,6 +5281,14 @@ components:
       type: object
       required: [name]
       properties:
+        person_id:
+          type: integer
+          x-go-type: uint32
+          description: |
+            Row id of the person in the library, for GET /people/{id}. Present
+            on the cast of a stored movie or series; absent on a provider
+            lookup of a title the library does not hold, which has no person
+            row behind it.
         tmdb_id:
           type: integer
           x-go-type: uint32
@@ -5342,6 +5449,112 @@ components:
           enum: [wanted, downloading, importing, available, failed]
         monitored:
           type: boolean
+
+    Person:
+      type: object
+      required: [id, tmdb_id, tvdb_id, name, credits]
+      properties:
+        id:
+          type: integer
+          description: |
+            Row id in the library's `persons` table — the identity, and the
+            only key GET /people/{id} accepts.
+          x-go-type: uint32
+        tmdb_id:
+          type: integer
+          description: |
+            TMDB person id, or 0 when TMDB never supplied one. Data the person
+            carries, not a key.
+          x-go-type: uint32
+        tvdb_id:
+          type: integer
+          description: |
+            TVDB person id, or 0 when TVDB never supplied one. Series cast
+            comes from TVDB, so these are the entries with no `tmdb_id`.
+          x-go-type: uint32
+        name:
+          type: string
+        profile_url:
+          type: string
+          description: |
+            Portrait URL as the provider gave it. Absent when no credit
+            carries one.
+        credits:
+          type: integer
+          description: |
+            Library items — movies plus series — the person is credited on. A
+            person listed twice on one title counts once.
+          x-go-type: uint32
+
+    PersonList:
+      type: object
+      required: [items, total, limit, offset]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Person"
+        total:
+          type: integer
+          description: Total number of people matching the filter.
+          x-go-type: uint32
+        limit:
+          type: integer
+          x-go-type: uint16
+        offset:
+          type: integer
+          x-go-type: uint32
+
+    PersonMovieCredit:
+      type: object
+      required: [movie, character]
+      properties:
+        movie:
+          $ref: "#/components/schemas/Movie"
+        character:
+          type: string
+          description: |
+            Character played in this movie. Empty when the provider gave none
+            — the character belongs to the pairing, not to the person.
+
+    PersonSeriesCredit:
+      type: object
+      required: [series, character]
+      properties:
+        series:
+          $ref: "#/components/schemas/TVShow"
+        character:
+          type: string
+          description: Character played in this series.
+
+    PersonCredits:
+      type: object
+      required: [id, tmdb_id, tvdb_id, name, movies, series]
+      properties:
+        id:
+          type: integer
+          description: Row id in the library's `persons` table.
+          x-go-type: uint32
+        tmdb_id:
+          type: integer
+          description: TMDB person id, or 0 when TMDB never supplied one.
+          x-go-type: uint32
+        tvdb_id:
+          type: integer
+          description: TVDB person id, or 0 when TVDB never supplied one.
+          x-go-type: uint32
+        name:
+          type: string
+        profile_url:
+          type: string
+        movies:
+          type: array
+          items:
+            $ref: "#/components/schemas/PersonMovieCredit"
+        series:
+          type: array
+          items:
+            $ref: "#/components/schemas/PersonSeriesCredit"
 
     PaginatedMovies:
       type: object

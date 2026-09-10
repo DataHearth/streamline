@@ -13,7 +13,6 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/datahearth/streamline/ent"
-	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/indexer"
@@ -153,15 +152,21 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 		})
 
 		// The strict TVDB mock carries no GetSeriesCast expectation in either
-		// spec: the detail view must serve cast from the stored row.
-		It("attaches the cast stored on the show", func() {
+		// spec: the detail view must serve cast from the stored credits.
+		It("attaches the cast credited on the show", func() {
 			app.tvshows.EXPECT().Get(mock.Anything, uint32(1)).
 				Return(&ent.TVShow{
 					ID: 1, Title: "Breaking Bad", Year: 2008, TvdbID: 81189,
-					Cast: []schema.CastMember{
-						{Name: "Bryan Cranston", Character: "Walter White"},
-					},
 				}, nil).
+				Once()
+			app.store.EXPECT().
+				TitleCast(mock.Anything, db.CastOwnerSeries, uint32(1)).
+				Return([]db.CastEntry{{
+					PersonID:  14,
+					TVDBID:    203697,
+					Name:      "Bryan Cranston",
+					Character: "Walter White",
+				}}, nil).
 				Once()
 
 			resp := app.do(
@@ -172,19 +177,32 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 
 			var body struct {
 				Cast []struct {
+					PersonID  uint32 `json:"person_id"`
 					Name      string `json:"name"`
 					Character string `json:"character"`
+					TmdbID    uint32 `json:"tmdb_id"`
+					PersonURL string `json:"person_url"`
 				} `json:"cast"`
 			}
 			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
 			Expect(body.Cast).To(HaveLen(1))
 			Expect(body.Cast[0].Name).To(Equal("Bryan Cranston"))
 			Expect(body.Cast[0].Character).To(Equal("Walter White"))
+			// A series actor comes from TVDB with no tmdb id, so person_id is
+			// the only thing on the entry that can address them.
+			Expect(body.Cast[0].PersonID).To(Equal(uint32(14)))
+			Expect(body.Cast[0].TmdbID).To(BeZero())
+			Expect(body.Cast[0].PersonURL).
+				To(Equal("https://www.thetvdb.com/dereferrer/people/203697"))
 		})
 
-		It("omits cast when the show has none stored", func() {
+		It("omits cast when nothing credits the show", func() {
 			app.tvshows.EXPECT().Get(mock.Anything, uint32(1)).
 				Return(&ent.TVShow{ID: 1, Title: "Breaking Bad", Year: 2008, TvdbID: 81189}, nil).
+				Once()
+			app.store.EXPECT().
+				TitleCast(mock.Anything, db.CastOwnerSeries, uint32(1)).
+				Return(nil, nil).
 				Once()
 
 			resp := app.do(
@@ -233,6 +251,10 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 			show.Edges.Seasons = []*ent.Season{season}
 			app.tvshows.EXPECT().Get(mock.Anything, uint32(1)).
 				Return(show, nil).Once()
+			app.store.EXPECT().
+				TitleCast(mock.Anything, db.CastOwnerSeries, uint32(1)).
+				Return(nil, nil).
+				Once()
 
 			resp := app.do(
 				app.req(http.MethodGet, "/api/v1/series/1", app.adminKey, nil),

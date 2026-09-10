@@ -12,9 +12,9 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/dialect/sql/sqljson"
 	"entgo.io/ent/schema/field"
+	"github.com/datahearth/streamline/ent/credit"
 	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/predicate"
-	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/ent/season"
 	"github.com/datahearth/streamline/ent/tvshow"
 )
@@ -329,24 +329,6 @@ func (_u *TVShowUpdate) ClearGenres() *TVShowUpdate {
 	return _u
 }
 
-// SetCast sets the "cast" field.
-func (_u *TVShowUpdate) SetCast(v []schema.CastMember) *TVShowUpdate {
-	_u.mutation.SetCast(v)
-	return _u
-}
-
-// AppendCast appends value to the "cast" field.
-func (_u *TVShowUpdate) AppendCast(v []schema.CastMember) *TVShowUpdate {
-	_u.mutation.AppendCast(v)
-	return _u
-}
-
-// ClearCast clears the value of the "cast" field.
-func (_u *TVShowUpdate) ClearCast() *TVShowUpdate {
-	_u.mutation.ClearCast()
-	return _u
-}
-
 // SetLastRefreshedAt sets the "last_refreshed_at" field.
 func (_u *TVShowUpdate) SetLastRefreshedAt(v time.Time) *TVShowUpdate {
 	_u.mutation.SetLastRefreshedAt(v)
@@ -417,6 +399,21 @@ func (_u *TVShowUpdate) AddEvents(v ...*MediaEvent) *TVShowUpdate {
 	return _u.AddEventIDs(ids...)
 }
 
+// AddCreditIDs adds the "credits" edge to the Credit entity by IDs.
+func (_u *TVShowUpdate) AddCreditIDs(ids ...uint32) *TVShowUpdate {
+	_u.mutation.AddCreditIDs(ids...)
+	return _u
+}
+
+// AddCredits adds the "credits" edges to the Credit entity.
+func (_u *TVShowUpdate) AddCredits(v ...*Credit) *TVShowUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddCreditIDs(ids...)
+}
+
 // Mutation returns the TVShowMutation object of the builder.
 func (_u *TVShowUpdate) Mutation() *TVShowMutation {
 	return _u.mutation
@@ -462,6 +459,27 @@ func (_u *TVShowUpdate) RemoveEvents(v ...*MediaEvent) *TVShowUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveEventIDs(ids...)
+}
+
+// ClearCredits clears all "credits" edges to the Credit entity.
+func (_u *TVShowUpdate) ClearCredits() *TVShowUpdate {
+	_u.mutation.ClearCredits()
+	return _u
+}
+
+// RemoveCreditIDs removes the "credits" edge to Credit entities by IDs.
+func (_u *TVShowUpdate) RemoveCreditIDs(ids ...uint32) *TVShowUpdate {
+	_u.mutation.RemoveCreditIDs(ids...)
+	return _u
+}
+
+// RemoveCredits removes "credits" edges to Credit entities.
+func (_u *TVShowUpdate) RemoveCredits(v ...*Credit) *TVShowUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveCreditIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -630,17 +648,6 @@ func (_u *TVShowUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.GenresCleared() {
 		_spec.ClearField(tvshow.FieldGenres, field.TypeJSON)
 	}
-	if value, ok := _u.mutation.Cast(); ok {
-		_spec.SetField(tvshow.FieldCast, field.TypeJSON, value)
-	}
-	if value, ok := _u.mutation.AppendedCast(); ok {
-		_spec.AddModifier(func(u *sql.UpdateBuilder) {
-			sqljson.Append(u, tvshow.FieldCast, value)
-		})
-	}
-	if _u.mutation.CastCleared() {
-		_spec.ClearField(tvshow.FieldCast, field.TypeJSON)
-	}
 	if value, ok := _u.mutation.LastRefreshedAt(); ok {
 		_spec.SetField(tvshow.FieldLastRefreshedAt, field.TypeTime, value)
 	}
@@ -736,6 +743,51 @@ func (_u *TVShowUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.CreditsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   tvshow.CreditsTable,
+			Columns: []string{tvshow.CreditsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(credit.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedCreditsIDs(); len(nodes) > 0 && !_u.mutation.CreditsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   tvshow.CreditsTable,
+			Columns: []string{tvshow.CreditsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(credit.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.CreditsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   tvshow.CreditsTable,
+			Columns: []string{tvshow.CreditsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(credit.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {
@@ -1061,24 +1113,6 @@ func (_u *TVShowUpdateOne) ClearGenres() *TVShowUpdateOne {
 	return _u
 }
 
-// SetCast sets the "cast" field.
-func (_u *TVShowUpdateOne) SetCast(v []schema.CastMember) *TVShowUpdateOne {
-	_u.mutation.SetCast(v)
-	return _u
-}
-
-// AppendCast appends value to the "cast" field.
-func (_u *TVShowUpdateOne) AppendCast(v []schema.CastMember) *TVShowUpdateOne {
-	_u.mutation.AppendCast(v)
-	return _u
-}
-
-// ClearCast clears the value of the "cast" field.
-func (_u *TVShowUpdateOne) ClearCast() *TVShowUpdateOne {
-	_u.mutation.ClearCast()
-	return _u
-}
-
 // SetLastRefreshedAt sets the "last_refreshed_at" field.
 func (_u *TVShowUpdateOne) SetLastRefreshedAt(v time.Time) *TVShowUpdateOne {
 	_u.mutation.SetLastRefreshedAt(v)
@@ -1149,6 +1183,21 @@ func (_u *TVShowUpdateOne) AddEvents(v ...*MediaEvent) *TVShowUpdateOne {
 	return _u.AddEventIDs(ids...)
 }
 
+// AddCreditIDs adds the "credits" edge to the Credit entity by IDs.
+func (_u *TVShowUpdateOne) AddCreditIDs(ids ...uint32) *TVShowUpdateOne {
+	_u.mutation.AddCreditIDs(ids...)
+	return _u
+}
+
+// AddCredits adds the "credits" edges to the Credit entity.
+func (_u *TVShowUpdateOne) AddCredits(v ...*Credit) *TVShowUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddCreditIDs(ids...)
+}
+
 // Mutation returns the TVShowMutation object of the builder.
 func (_u *TVShowUpdateOne) Mutation() *TVShowMutation {
 	return _u.mutation
@@ -1194,6 +1243,27 @@ func (_u *TVShowUpdateOne) RemoveEvents(v ...*MediaEvent) *TVShowUpdateOne {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveEventIDs(ids...)
+}
+
+// ClearCredits clears all "credits" edges to the Credit entity.
+func (_u *TVShowUpdateOne) ClearCredits() *TVShowUpdateOne {
+	_u.mutation.ClearCredits()
+	return _u
+}
+
+// RemoveCreditIDs removes the "credits" edge to Credit entities by IDs.
+func (_u *TVShowUpdateOne) RemoveCreditIDs(ids ...uint32) *TVShowUpdateOne {
+	_u.mutation.RemoveCreditIDs(ids...)
+	return _u
+}
+
+// RemoveCredits removes "credits" edges to Credit entities.
+func (_u *TVShowUpdateOne) RemoveCredits(v ...*Credit) *TVShowUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveCreditIDs(ids...)
 }
 
 // Where appends a list predicates to the TVShowUpdate builder.
@@ -1392,17 +1462,6 @@ func (_u *TVShowUpdateOne) sqlSave(ctx context.Context) (_node *TVShow, err erro
 	if _u.mutation.GenresCleared() {
 		_spec.ClearField(tvshow.FieldGenres, field.TypeJSON)
 	}
-	if value, ok := _u.mutation.Cast(); ok {
-		_spec.SetField(tvshow.FieldCast, field.TypeJSON, value)
-	}
-	if value, ok := _u.mutation.AppendedCast(); ok {
-		_spec.AddModifier(func(u *sql.UpdateBuilder) {
-			sqljson.Append(u, tvshow.FieldCast, value)
-		})
-	}
-	if _u.mutation.CastCleared() {
-		_spec.ClearField(tvshow.FieldCast, field.TypeJSON)
-	}
 	if value, ok := _u.mutation.LastRefreshedAt(); ok {
 		_spec.SetField(tvshow.FieldLastRefreshedAt, field.TypeTime, value)
 	}
@@ -1498,6 +1557,51 @@ func (_u *TVShowUpdateOne) sqlSave(ctx context.Context) (_node *TVShow, err erro
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.CreditsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   tvshow.CreditsTable,
+			Columns: []string{tvshow.CreditsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(credit.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedCreditsIDs(); len(nodes) > 0 && !_u.mutation.CreditsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   tvshow.CreditsTable,
+			Columns: []string{tvshow.CreditsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(credit.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.CreditsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   tvshow.CreditsTable,
+			Columns: []string{tvshow.CreditsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(credit.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

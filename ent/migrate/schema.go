@@ -45,6 +45,60 @@ var (
 			},
 		},
 	}
+	// CreditsColumns holds the columns for the "credits" table.
+	CreditsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUint32, Increment: true},
+		{Name: "create_time", Type: field.TypeTime},
+		{Name: "update_time", Type: field.TypeTime},
+		{Name: "character", Type: field.TypeString, Nullable: true},
+		{Name: "order", Type: field.TypeUint8, Nullable: true, Default: 0},
+		{Name: "movie_credits", Type: field.TypeUint32, Nullable: true},
+		{Name: "person_credits", Type: field.TypeUint32},
+		{Name: "tv_show_credits", Type: field.TypeUint32, Nullable: true},
+	}
+	// CreditsTable holds the schema information for the "credits" table.
+	CreditsTable = &schema.Table{
+		Name:       "credits",
+		Columns:    CreditsColumns,
+		PrimaryKey: []*schema.Column{CreditsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "credits_movies_credits",
+				Columns:    []*schema.Column{CreditsColumns[5]},
+				RefColumns: []*schema.Column{MoviesColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "credits_persons_credits",
+				Columns:    []*schema.Column{CreditsColumns[6]},
+				RefColumns: []*schema.Column{PersonsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "credits_tv_shows_credits",
+				Columns:    []*schema.Column{CreditsColumns[7]},
+				RefColumns: []*schema.Column{TvShowsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "credit_person_credits",
+				Unique:  false,
+				Columns: []*schema.Column{CreditsColumns[6]},
+			},
+			{
+				Name:    "credit_movie_credits",
+				Unique:  false,
+				Columns: []*schema.Column{CreditsColumns[5]},
+			},
+			{
+				Name:    "credit_tv_show_credits",
+				Unique:  false,
+				Columns: []*schema.Column{CreditsColumns[7]},
+			},
+		},
+	}
 	// DownloadRecordsColumns holds the columns for the "download_records" table.
 	DownloadRecordsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUint32, Increment: true},
@@ -519,7 +573,6 @@ var (
 		{Name: "quality_profile", Type: field.TypeString, Nullable: true},
 		{Name: "rating", Type: field.TypeFloat64, Nullable: true, Default: 0},
 		{Name: "genres", Type: field.TypeJSON, Nullable: true},
-		{Name: "cast", Type: field.TypeJSON, Nullable: true},
 		{Name: "last_refreshed_at", Type: field.TypeTime, Nullable: true},
 	}
 	// MoviesTable holds the schema information for the "movies" table.
@@ -578,6 +631,39 @@ var (
 				Name:    "oidcidentity_user_oidc_identities",
 				Unique:  false,
 				Columns: []*schema.Column{OidcIdentitiesColumns[6]},
+			},
+		},
+	}
+	// PersonsColumns holds the columns for the "persons" table.
+	PersonsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUint32, Increment: true},
+		{Name: "create_time", Type: field.TypeTime},
+		{Name: "update_time", Type: field.TypeTime},
+		{Name: "tmdb_id", Type: field.TypeUint32, Nullable: true, Default: 0},
+		{Name: "tvdb_id", Type: field.TypeUint32, Nullable: true, Default: 0},
+		{Name: "name", Type: field.TypeString},
+		{Name: "profile_url", Type: field.TypeString, Nullable: true},
+	}
+	// PersonsTable holds the schema information for the "persons" table.
+	PersonsTable = &schema.Table{
+		Name:       "persons",
+		Columns:    PersonsColumns,
+		PrimaryKey: []*schema.Column{PersonsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "person_tmdb_id",
+				Unique:  false,
+				Columns: []*schema.Column{PersonsColumns[3]},
+			},
+			{
+				Name:    "person_tvdb_id",
+				Unique:  false,
+				Columns: []*schema.Column{PersonsColumns[4]},
+			},
+			{
+				Name:    "person_name",
+				Unique:  false,
+				Columns: []*schema.Column{PersonsColumns[5]},
 			},
 		},
 	}
@@ -736,7 +822,6 @@ var (
 		{Name: "runtime", Type: field.TypeUint16, Nullable: true, Default: 0},
 		{Name: "rating", Type: field.TypeFloat64, Nullable: true, Default: 0},
 		{Name: "genres", Type: field.TypeJSON, Nullable: true},
-		{Name: "cast", Type: field.TypeJSON, Nullable: true},
 		{Name: "last_refreshed_at", Type: field.TypeTime, Nullable: true},
 		{Name: "quality_profile", Type: field.TypeString, Nullable: true},
 	}
@@ -844,6 +929,7 @@ var (
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		APIKeysTable,
+		CreditsTable,
 		DownloadRecordsTable,
 		EpisodesTable,
 		ImportScansTable,
@@ -854,6 +940,7 @@ var (
 		MediaFilesTable,
 		MoviesTable,
 		OidcIdentitiesTable,
+		PersonsTable,
 		RequestsTable,
 		ScheduledJobsTable,
 		SeasonsTable,
@@ -867,6 +954,9 @@ var (
 
 func init() {
 	APIKeysTable.ForeignKeys[0].RefTable = UsersTable
+	CreditsTable.ForeignKeys[0].RefTable = MoviesTable
+	CreditsTable.ForeignKeys[1].RefTable = PersonsTable
+	CreditsTable.ForeignKeys[2].RefTable = TvShowsTable
 	DownloadRecordsTable.ForeignKeys[0].RefTable = EpisodesTable
 	DownloadRecordsTable.ForeignKeys[1].RefTable = MoviesTable
 	EpisodesTable.ForeignKeys[0].RefTable = SeasonsTable

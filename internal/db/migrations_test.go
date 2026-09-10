@@ -121,3 +121,181 @@ var _ = Describe("runMigrations", Label("integration", "db"), func() {
 		Expect(ids()).To(Equal([]int{1, 2, 3}))
 	})
 })
+
+// backfillPersonCreditsVersion is the data migration that fills persons and
+// credits from the legacy JSON cast columns. It only ever runs against a
+// database that already holds cast, so the seeded state below is the subject:
+// a clean install has nothing for it to carry across.
+const backfillPersonCreditsVersion = 20260910102919
+
+var _ = Describe("person credits backfill", Label("integration", "db"), func() {
+	var sqlDB *sql.DB
+
+	BeforeEach(func() {
+		var err error
+		sqlDB, err = sql.Open(
+			"sqlite",
+			"file:"+filepath.Join(GinkgoT().TempDir(), "backfill.db"),
+		)
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() { Expect(sqlDB.Close()).To(Succeed()) })
+
+		src, err := iofs.New(migrationsFS, "migrations")
+		Expect(err).NotTo(HaveOccurred())
+		previous, err := src.Prev(backfillPersonCreditsVersion)
+		Expect(err).NotTo(HaveOccurred())
+		drv, err := sqlite.WithInstance(sqlDB, &sqlite.Config{})
+		Expect(err).NotTo(HaveOccurred())
+		m, err := migrate.NewWithInstance("iofs", src, "sqlite", drv)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(m.Migrate(previous)).To(Succeed())
+	})
+
+	seedMovie := func(id int, title string, tmdbID int, cast any) {
+		GinkgoHelper()
+		_, err := sqlDB.Exec(
+			"INSERT INTO movies (id, create_time, update_time, title,"+
+				" original_title, year, tmdb_id, `cast`)"+
+				" VALUES (?, datetime('now'), datetime('now'), ?, ?, 2020, ?, ?)",
+			id, title, title, tmdbID, cast,
+		)
+		Expect(err).NotTo(HaveOccurred())
+	}
+
+	seedShow := func(id int, title string, tvdbID int, cast any) {
+		GinkgoHelper()
+		_, err := sqlDB.Exec(
+			"INSERT INTO tv_shows (id, create_time, update_time, title, year,"+
+				" tvdb_id, `cast`)"+
+				" VALUES (?, datetime('now'), datetime('now'), ?, 2020, ?, ?)",
+			id, title, tvdbID, cast,
+		)
+		Expect(err).NotTo(HaveOccurred())
+	}
+
+	queryStrings := func(query string) []string {
+		GinkgoHelper()
+		rows, err := sqlDB.Query(query)
+		Expect(err).NotTo(HaveOccurred())
+		defer rows.Close()
+		var out []string
+		for rows.Next() {
+			var s string
+			Expect(rows.Scan(&s)).To(Succeed())
+			out = append(out, s)
+		}
+		Expect(rows.Err()).NotTo(HaveOccurred())
+		return out
+	}
+
+	people := func() []string {
+		GinkgoHelper()
+		return queryStrings(
+			"SELECT name || '/' || tmdb_id || '/' || tvdb_id ||" +
+				" '/' || profile_url FROM persons ORDER BY name",
+		)
+	}
+
+	credits := func() []string {
+		GinkgoHelper()
+		return queryStrings(
+			"SELECT p.name || '/' || c.`character` || '/' || c.`order` ||" +
+				" '/' || COALESCE(m.title, t.title)" +
+				" FROM credits c" +
+				" JOIN persons p ON p.id = c.person_credits" +
+				" LEFT JOIN movies m ON m.id = c.movie_credits" +
+				" LEFT JOIN tv_shows t ON t.id = c.tv_show_credits" +
+				" ORDER BY 1",
+		)
+	}
+
+	It("keeps two id-less series actors apart", func() {
+		// The shape TVDB cast is stored in: no tmdb_id worth anything and no
+		// tvdb_id key at all, since the field postdates these rows. Keying on
+		// tmdb_id collapsed every such actor in the library into one person.
+		seedShow(1, "Gamma", 3, `[{"tmdb_id":0,"name":"Zachary Chasseriaud",`+
+			`"character":"Léo","profile_url":""}]`)
+		seedShow(2, "Delta", 4, `[{"tmdb_id":0,"name":"Nina Meurisse",`+
+			`"character":"Claire","profile_url":""}]`)
+
+		Expect(runMigrations(context.Background(), sqlDB)).To(Succeed())
+
+		Expect(people()).To(ConsistOf(
+			"Nina Meurisse/0/0/",
+			"Zachary Chasseriaud/0/0/",
+		))
+		Expect(credits()).To(ConsistOf(
+			"Nina Meurisse/Claire/0/Delta",
+			"Zachary Chasseriaud/Léo/0/Gamma",
+		))
+	})
+
+	It("merges one person across movies and series and keeps billing order", func() {
+		seedMovie(1, "Alpha", 11, `[{"tmdb_id":10,"name":"Ada Lovelace",`+
+			`"character":"Herself","profile_url":""},`+
+			`{"tmdb_id":20,"name":"Bob Stone","character":"Bob",`+
+			`"profile_url":"https://img/bob.jpg"}]`)
+		seedMovie(2, "Beta", 12, `[{"tmdb_id":10,"name":"Ada Lovelace",`+
+			`"character":"Narrator","profile_url":"https://img/ada.jpg"}]`)
+		seedShow(3, "Gamma", 13, `[{"tmdb_id":0,"name":"Ada Lovelace",`+
+			`"character":"The Analyst","profile_url":""}]`)
+
+		Expect(runMigrations(context.Background(), sqlDB)).To(Succeed())
+
+		// The series entry carries no id, so it keys on the name and lands on
+		// the same person the tmdb-keyed movie entries did.
+		Expect(people()).To(ConsistOf(
+			"Ada Lovelace/10/0/https://img/ada.jpg",
+			"Bob Stone/20/0/https://img/bob.jpg",
+		))
+		Expect(credits()).To(ConsistOf(
+			"Ada Lovelace/Herself/0/Alpha",
+			"Ada Lovelace/Narrator/0/Beta",
+			"Ada Lovelace/The Analyst/0/Gamma",
+			"Bob Stone/Bob/1/Alpha",
+		))
+	})
+
+	It("folds case and punctuation when keying on the name", func() {
+		seedShow(1, "Gamma", 3, `[{"tmdb_id":0,"name":"Ada M. Lovelace",`+
+			`"character":"Herself","profile_url":""}]`)
+		seedShow(2, "Delta", 4, `[{"tmdb_id":0,"name":"ada m lovelace",`+
+			`"character":"The Analyst","profile_url":"https://img/ada.jpg"}]`)
+
+		Expect(runMigrations(context.Background(), sqlDB)).To(Succeed())
+
+		Expect(people()).To(HaveLen(1))
+		Expect(credits()).To(HaveLen(2))
+	})
+
+	It("skips a nameless entry and a title whose cast was never written", func() {
+		seedMovie(1, "Alpha", 11, nil)
+		seedMovie(2, "Beta", 12, `[]`)
+		seedShow(3, "Gamma", 3, `[{"tmdb_id":0,"name":"","character":"Extra"}]`)
+
+		Expect(runMigrations(context.Background(), sqlDB)).To(Succeed())
+
+		Expect(people()).To(BeEmpty())
+		Expect(credits()).To(BeEmpty())
+	})
+
+	It("empties both tables on the way down", func() {
+		seedMovie(1, "Alpha", 11, `[{"tmdb_id":10,"name":"Ada Lovelace",`+
+			`"character":"Herself","profile_url":""}]`)
+		Expect(runMigrations(context.Background(), sqlDB)).To(Succeed())
+		Expect(people()).To(HaveLen(1))
+
+		src, err := iofs.New(migrationsFS, "migrations")
+		Expect(err).NotTo(HaveOccurred())
+		drv, err := sqlite.WithInstance(sqlDB, &sqlite.Config{})
+		Expect(err).NotTo(HaveOccurred())
+		m, err := migrate.NewWithInstance("iofs", src, "sqlite", drv)
+		Expect(err).NotTo(HaveOccurred())
+		previous, err := src.Prev(backfillPersonCreditsVersion)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(m.Migrate(previous)).To(Succeed())
+
+		Expect(people()).To(BeEmpty())
+		Expect(credits()).To(BeEmpty())
+	})
+})

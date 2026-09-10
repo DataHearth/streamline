@@ -126,7 +126,7 @@ Everything database-backed (movies, series, requests, users, imports) uses numer
 
 ## Endpoint map
 
-115 paths, grouped below. **Auth** is `Authenticated` (any logged-in user or valid credential) or `🔒 Admin`; the Requests group is more granular and spells out the exact roles.
+117 paths, grouped below. **Auth** is `Authenticated` (any logged-in user or valid credential) or `🔒 Admin`; the Requests group is more granular and spells out the exact roles.
 
 ### Movies
 
@@ -159,6 +159,47 @@ Everything database-backed (movies, series, requests, users, imports) uses numer
 | `DELETE` | `/series/{id}/episodes/{episodeId}/file` | Delete the episode's file | Authenticated |
 
 Each of the three search scopes filters the indexer's answer to its own scope — an episode search returns that episode, a season search returns season packs of that season, a series search returns complete/multi-season packs. The episode search additionally carries `hidden_packs` (present only when non-zero): how many packs covering that episode it excluded, so an empty `items` can be told apart from "it only exists inside a pack".
+
+### People (cast)
+
+| Method | Path | What it does | Auth |
+| --- | --- | --- | --- |
+| `GET` | `/people` | List cast members credited anywhere in the library (`?query=`, `?limit=`, `?offset=`) | Authenticated |
+| `GET` | `/people/{id}` | One person's movie and series credits | Authenticated |
+
+People are rows of their own, related to titles through a `credits` table — one row per person-on-a-title, carrying the character and the billing order. **`id` is that person row, and the only key `/people/{id}` accepts.** It is not a provider id: series cast comes from TVDB and carries no TMDB id at all, so keying the endpoint on `tmdb_id` merged every such actor into a single fictitious person. `tmdb_id` and `tvdb_id` both ride along on the person as data — either is `0` when that provider never named them.
+
+A person is listed only while something credits them. `credits` counts library items — movies plus series — not credit rows, so a person listed twice on one title counts once. The list is ordered by `credits` descending, then by name; `query` folds accents, case and punctuation on both sides, so `?query=beatrice` finds "Béatrice Dalle".
+
+`/people` pages with `limit` (1..100, default 20) and a zero-based `offset` rather than `page`, and answers `{ "items": [...], "total": N, "limit": N, "offset": N }`. Each item:
+
+```jsonc
+{
+  "id": 42,                                                // persons row — link with this
+  "tmdb_id": 1234,                                          // 0 when TMDB never named them
+  "tvdb_id": 0,                                             // 0 when TVDB never named them
+  "name": "Béatrice Dalle",
+  "profile_url": "https://image.tmdb.org/t/p/w185/…jpg",    // omitted when empty
+  "credits": 3
+}
+```
+
+```jsonc
+// GET /api/v1/people/42
+{
+  "id": 42,
+  "tmdb_id": 1234,
+  "tvdb_id": 0,
+  "name": "Béatrice Dalle",
+  "profile_url": "https://image.tmdb.org/t/p/w185/…jpg",  // omitted when empty
+  "movies": [{ "movie": { /* Movie */ }, "character": "Betty" }],
+  "series": [{ "series": { /* TVShow */ }, "character": "Herself" }]
+}
+```
+
+`character` belongs to the pairing, not to the person: the same actor carries a different one per title. An `id` no person row occupies is a `404`; the series objects carry no season/episode tree.
+
+The `cast` array on a stored movie or series (`GET /movies/{id}`, `GET /series/{id}`) is served from the same credits, in billing order, and each entry carries `person_id` — the key to `/people/{id}`. A cast entry from a **provider lookup** of a title the library does not hold (`/movies/lookup/{tmdbId}`, `/series/lookup/{tvdbId}`, an expanded request row) has no person row behind it and so omits `person_id`; it still carries `person_url` to the provider's own page.
 
 ### Activity
 
