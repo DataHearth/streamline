@@ -1,9 +1,11 @@
 <script lang="ts">
 	import { ChevronRight, Film, Tv } from "@lucide/svelte";
 	import { cn } from "../../lib/cn";
+	import { initials } from "../../lib/people";
 	import { posterUrl, tvPosterUrl } from "../../lib/posters";
 	import Poster from "../movies/Poster.svelte";
 	import { itemKindLabel, type SearchItem } from "../../lib/search-model.svelte";
+	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	// One row for both touch surfaces: the phone screen at full size, the tablet
 	// panel dense. The palette keeps its own row — it carries a keyboard cursor
@@ -19,6 +21,9 @@
 	} = $props();
 
 	let isTitle = $derived(item.kind === "movie" || item.kind === "series");
+	// A person leads somewhere too, so the row ends in a chevron rather than a
+	// kind label — the same affordance the titles get.
+	let leadsAway = $derived(isTitle || item.kind === "person");
 </script>
 
 <button
@@ -48,6 +53,28 @@
 				class="relative h-full w-full object-cover"
 			/>
 		</div>
+	{:else if item.kind === "person"}
+		<div
+			class={cn(
+				"relative shrink-0 overflow-hidden rounded-full bg-surface-2 ring-1 ring-border",
+				dense ? "h-9 w-9" : "h-10 w-10",
+			)}
+		>
+			{#if item.profile_url}
+				<img
+					src={item.profile_url}
+					alt={item.label}
+					loading="lazy"
+					class="h-full w-full object-cover"
+				/>
+			{:else}
+				<span
+					class="grid h-full w-full place-items-center font-mono text-[11px] font-bold text-fg-muted"
+				>
+					{initials(item.label)}
+				</span>
+			{/if}
+		</div>
 	{:else if item.kind === "page" || item.kind === "action"}
 		{@const Icon = item.icon}
 		<div
@@ -73,10 +100,16 @@
 			<span class="mt-0.5 block truncate font-mono text-[10.5px] text-fg-subtle">
 				{item.year ? `${item.year} · ` : ""}{item.kind}
 			</span>
+		{:else if item.kind === "person"}
+			<span class="mt-0.5 block truncate font-mono text-[10.5px] text-fg-subtle">
+				{item.credits === 1
+					? i18n.person_credit_count_one({ count: item.credits })
+					: i18n.person_credit_count_other({ count: item.credits })}
+			</span>
 		{/if}
 	</span>
 
-	{#if isTitle}
+	{#if leadsAway}
 		<ChevronRight size={18} class="shrink-0 text-fg-faint" aria-hidden="true" />
 	{:else}
 		<span

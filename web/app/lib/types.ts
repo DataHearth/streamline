@@ -199,12 +199,51 @@ export type LookupDetail = {
 };
 
 export type CastMember = {
+	// The persons row id — what a cast tile links to. TVDB-sourced cast (all
+	// series cast) has tmdb_id 0, so tmdb_id cannot key the person; person_id
+	// is the only stable identity.
+	person_id?: number;
 	tmdb_id?: number;
 	name: string;
 	character?: string;
 	profile_url?: string;
 	// Link to the person's page on the source provider (TMDB or TVDB).
 	person_url?: string;
+};
+
+// A search hit from GET /people. `credits` counts the library titles the
+// person appears in — the reason they are in the index at all. `id` is the
+// persons row id and the only valid key; `tmdb_id` stays for provider links
+// but is 0 for TVDB-only (series) cast.
+export type Person = {
+	id: number;
+	tmdb_id: number;
+	tvdb_id: number;
+	name: string;
+	profile_url?: string;
+	credits: number;
+};
+
+export type PersonMovieCredit = {
+	movie: Movie;
+	character: string;
+};
+
+export type PersonSeriesCredit = {
+	series: TVShow;
+	character: string;
+};
+
+// GET /people/{id}, keyed by the persons row id. Credits are the library's,
+// not TMDB's: a person with none answers 404 rather than an empty page.
+export type PersonDetail = {
+	id: number;
+	tmdb_id: number;
+	tvdb_id: number;
+	name: string;
+	profile_url?: string;
+	movies: PersonMovieCredit[];
+	series: PersonSeriesCredit[];
 };
 
 export type Movie = {

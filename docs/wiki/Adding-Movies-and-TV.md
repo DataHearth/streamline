@@ -12,6 +12,7 @@ How a title gets from "I'd like to watch that" to a file on disk.
 - [What the statuses mean](#what-the-statuses-mean)
 - [How automatic grabbing works](#how-automatic-grabbing-works)
 - [Searching manually](#searching-manually)
+- [Browsing by cast member](#browsing-by-cast-member)
 - [Monitoring and unmonitoring](#monitoring-and-unmonitoring)
 - [Fixing a wrong match](#fixing-a-wrong-match)
 - [Renaming and deleting](#renaming-and-deleting)
@@ -141,6 +142,16 @@ An episode search also drops releases whose name carries no season and no episod
 The season and episode tabs both know the French spellings: `Saison 04` counts as a season token, and a `Complete` / `Complète` tag attached to a named season (`S05 Complete`, `Saison 04 Complète`) is read as that season's pack rather than as a whole-series pack.
 
 From the **Episodes** tab, the season header has its own **Search season** button, which opens the release search already scoped to the season you are looking at.
+
+---
+
+## Browsing by cast member
+
+Every name in a title's **Cast** tab is a link. Click one and you get that person's page: every movie and series in *your* library they are credited on, each poster labelled with the character they play there.
+
+Cast members also show up in search — the command palette (<kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>K</kbd>), the phone search screen and the tablet search panel all list matching people under the title hits, with the number of library titles each appears in.
+
+There is no people database: a person exists exactly as long as a title crediting them does. Someone who appears in nothing you have is not findable, and delete their only title and their page goes with it.
 
 ---
 

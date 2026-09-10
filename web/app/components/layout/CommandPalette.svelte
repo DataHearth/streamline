@@ -2,6 +2,7 @@
 	import { onMount, tick } from "svelte";
 	import { Search, Film, Tv, ArrowRight } from "@lucide/svelte";
 	import { cn } from "../../lib/cn";
+	import { initials } from "../../lib/people";
 	import { posterUrl, tvPosterUrl } from "../../lib/posters";
 	import Poster from "../movies/Poster.svelte";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
@@ -239,6 +240,25 @@
 										class="relative h-full w-full object-cover"
 									/>
 								</div>
+							{:else if item.kind === "person"}
+								<div
+									class="relative h-7 w-7 shrink-0 overflow-hidden rounded-full bg-surface-2"
+								>
+									{#if item.profile_url}
+										<img
+											src={item.profile_url}
+											alt={item.label}
+											loading="lazy"
+											class="h-full w-full object-cover"
+										/>
+									{:else}
+										<span
+											class="grid h-full w-full place-items-center font-mono text-[10px] font-bold text-fg-muted"
+										>
+											{initials(item.label)}
+										</span>
+									{/if}
+								</div>
 							{:else}
 								{@const Icon = item.icon}
 								<div
@@ -261,6 +281,14 @@
 										class="truncate font-mono text-[10.5px] text-fg-subtle"
 									>
 										{item.year}
+									</div>
+								{:else if item.kind === "person"}
+									<div
+										class="truncate font-mono text-[10.5px] text-fg-subtle"
+									>
+										{item.credits === 1
+											? i18n.person_credit_count_one({ count: item.credits })
+											: i18n.person_credit_count_other({ count: item.credits })}
 									</div>
 								{/if}
 							</div>

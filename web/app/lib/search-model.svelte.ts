@@ -28,7 +28,7 @@ import {
 import { api, type Paginated } from "./api";
 import { auth } from "./auth.svelte";
 import { fold } from "./text";
-import type { Movie, TVShow } from "./types";
+import type { Movie, Person, TVShow } from "./types";
 import { m as i18n } from "./paraglide/messages.js";
 
 export type PageItem = {
@@ -55,8 +55,26 @@ export type SeriesItem = {
 	label: string;
 	year?: number;
 };
-export type SearchItem = PageItem | ActionItem | MovieItem | SeriesItem;
-export type SectionId = "titles" | "movies" | "series" | "pages" | "actions";
+export type PersonItem = {
+	kind: "person";
+	id: number;
+	label: string;
+	profile_url?: string;
+	credits: number;
+};
+export type SearchItem =
+	| PageItem
+	| ActionItem
+	| MovieItem
+	| SeriesItem
+	| PersonItem;
+export type SectionId =
+	| "titles"
+	| "movies"
+	| "series"
+	| "people"
+	| "pages"
+	| "actions";
 export type SearchSection = {
 	id: SectionId;
 	label: string;
@@ -84,6 +102,7 @@ const PAGES: PageItem[] = [
 export function itemKindLabel(item: SearchItem): string {
 	if (item.kind === "page") return "Navigate";
 	if (item.kind === "action") return "Action";
+	if (item.kind === "person") return i18n.common_person();
 	return item.kind === "movie" ? i18n.common_movie() : i18n.settings_series();
 }
 
@@ -138,6 +157,7 @@ export function createSearchModel(
 
 	const moviesQuery = titleSearch<Movie>("/movies");
 	const seriesQuery = titleSearch<TVShow>("/series");
+	const peopleQuery = titleSearch<Person>("/people");
 
 	function pages(): PageItem[] {
 		const isAdmin = auth.user?.role === "admin";
@@ -182,9 +202,20 @@ export function createSearchModel(
 					year: s.year,
 				}))
 			: [];
+		const peopleHits: PersonItem[] = enabled
+			? (peopleQuery.data?.items ?? []).map((p) => ({
+					kind: "person",
+					id: p.id,
+					label: p.name,
+					profile_url: p.profile_url,
+					credits: p.credits,
+				}))
+			: [];
 		const matchedPages = pages().filter((p) => fold(p.label).includes(q));
 		const matchedActions = actions().filter((a) => fold(a.label).includes(q));
 
+		// People sit under the titles on every surface: a name typed into search
+		// is a title far more often than it is a cast member.
 		const titles: SearchSection[] = [];
 		if (opts.compact) {
 			const items = [...movieHits, ...seriesHits];
@@ -195,6 +226,8 @@ export function createSearchModel(
 			if (seriesHits.length)
 				titles.push({ id: "series", label: i18n.settings_series(), items: seriesHits });
 		}
+		if (peopleHits.length)
+			titles.push({ id: "people", label: i18n.people_label(), items: peopleHits });
 
 		const rest: SearchSection[] = [];
 		if (matchedPages.length)
@@ -254,6 +287,8 @@ export function searchNav() {
 		if (item.kind === "page") navigate(item.path);
 		else if (item.kind === "movie")
 			navigate("/movies/[id]", { id: String(item.id) });
+		else if (item.kind === "person")
+			navigate("/people/[id]", { id: String(item.id) });
 		else navigate("/series/[id]", { id: String(item.id) });
 	};
 }

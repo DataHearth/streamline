@@ -1,24 +1,25 @@
 <script lang="ts">
 	import { cn } from "../../lib/cn";
+	import { initials } from "../../lib/people";
 	import type { CastMember } from "../../lib/types";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 
 	let {
 		cast,
 		dense = false,
+		external = false,
 	}: {
 		cast: CastMember[];
 		dense?: boolean;
+		// The lookup panels describe a title that is not in the library yet, from
+		// inside a modal: their cast keeps the provider link rather than sending
+		// the click to a person page, which would tear down the add flow.
+		external?: boolean;
 	} = $props();
 
-	function initials(name: string): string {
-		return name
-			.split(/\s+/)
-			.filter(Boolean)
-			.map((p) => p[0])
-			.join("")
-			.slice(0, 2)
-			.toUpperCase();
+	function memberHref(m: CastMember): string | undefined {
+		if (external) return m.person_url;
+		return m.person_id ? `/people/${m.person_id}` : undefined;
 	}
 </script>
 
@@ -30,21 +31,21 @@
 		)}
 	>
 		{#each cast as member, i (i)}
+			{@const href = memberHref(member)}
 			<svelte:element
-				this={member.person_url ? "a" : "div"}
-				href={member.person_url}
-				target={member.person_url ? "_blank" : undefined}
-				rel={member.person_url ? "noopener noreferrer" : undefined}
+				this={href ? "a" : "div"}
+				{href}
+				target={href && external ? "_blank" : undefined}
+				rel={href && external ? "noopener noreferrer" : undefined}
 				class={cn(
 					"group block min-w-0 text-center",
-					member.person_url && "transition hover:opacity-90",
+					href && "transition hover:opacity-90",
 				)}
 			>
 				<div
 					class={cn(
 						"relative mb-2 aspect-square overflow-hidden rounded-md bg-bg-card",
-						member.person_url &&
-							"transition group-hover:ring-2 group-hover:ring-accent-ring",
+						href && "transition group-hover:ring-2 group-hover:ring-accent-ring",
 					)}
 				>
 					{#if member.profile_url}

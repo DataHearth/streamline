@@ -3,9 +3,9 @@
 	import { api, errorText } from "../../lib/api";
 	import { toast } from "../../lib/toast";
 	import { tvPosterUrl } from "../../lib/posters";
+	import { seriesStatus } from "../../lib/status";
 	import PosterCard from "../shared/PosterCard.svelte";
 	import SeriesActionsMenu from "./SeriesActionsMenu.svelte";
-	import type { StatusKind } from "../shared/StatusPill.svelte";
 	import type { TVShow } from "../../lib/types";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 
@@ -39,19 +39,6 @@
 		onError: (e) => toast.err(errorText(e, i18n.common_update_failed())),
 	}));
 
-	function cardStatus(s: TVShow): StatusKind {
-		// A grab in flight outranks the gaps behind it: the card's next change of
-		// state is the download landing, not the episode being wanted — and an
-		// in-flight episode is counted wanted until its file exists.
-		if ((s.downloading_episodes ?? 0) > 0) return "downloading";
-		// Past the grab, being written into the library.
-		if ((s.importing_episodes ?? 0) > 0) return "importing";
-		if ((s.wanted_episodes ?? 0) > 0) return "wanted";
-		// Unmonitored shows report zero wanted episodes, so "nothing wanted" alone
-		// would badge an empty library entry as available.
-		return (s.have_episodes ?? 0) > 0 ? "available" : "missing";
-	}
-
 	function episodeText(s: TVShow): string | undefined {
 		const seasons = s.total_seasons ?? 0;
 		const seasonText =
@@ -82,7 +69,7 @@
 	}
 
 	function enrich(s: TVShow) {
-		const status = cardStatus(s);
+		const status = seriesStatus(s);
 		const downloading = status === "downloading";
 		const inFlight = downloading || status === "importing";
 		return {

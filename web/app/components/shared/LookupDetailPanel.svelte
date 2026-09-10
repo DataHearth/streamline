@@ -285,7 +285,7 @@
 				>
 					{i18n.detail_top_billed()}
 				</h4>
-				<MovieDetailCast {cast} dense />
+				<MovieDetailCast {cast} dense external />
 			</section>
 		{/if}
 
