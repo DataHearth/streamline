@@ -358,6 +358,9 @@ func (t *TVDB) GetSeries(ctx context.Context, tvdbID uint32) (*TVDetails, error)
 					Type string `json:"type"`
 				} `json:"type"`
 			} `json:"seasons"`
+			Aliases []struct {
+				Name string `json:"name"`
+			} `json:"aliases"`
 			// Populated only when we request ?meta=translations.
 			Translations struct {
 				NameTranslations []struct {
@@ -401,6 +404,12 @@ func (t *TVDB) GetSeries(ctx context.Context, tvdbID uint32) (*TVDetails, error)
 	}
 	for _, g := range ext.Data.Genres {
 		d.Genres = append(d.Genres, g.Name)
+	}
+	for _, a := range ext.Data.Aliases {
+		d.Aliases = append(d.Aliases, a.Name)
+	}
+	for _, tr := range ext.Data.Translations.NameTranslations {
+		d.Aliases = append(d.Aliases, tr.Name)
 	}
 	if inferAnime(d.Genres, ext.Data.OriginalLanguage, ext.Data.OriginalCountry) {
 		d.Type = SeriesAnime

@@ -130,7 +130,9 @@ func classifyEpisodeAdoption(
 ) (adoptDecision, bool) {
 	var show *ent.TVShow
 	for _, s := range shows {
-		if library.TitleMatches(parsed.Title, s.Title) {
+		if library.TitleMatchesAny(
+			parsed.Title, s.Title, append(s.Aliases, s.OriginalTitle),
+		) {
 			show = s
 			break
 		}

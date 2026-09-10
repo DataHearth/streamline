@@ -43,6 +43,9 @@ func (TVShow) Fields() []ent.Field {
 		field.Uint16("runtime").Optional().Default(0),
 		field.Float("rating").Optional().Default(0),
 		field.Strings("genres").Optional(),
+		// TVDB's alternate names, every translation included: a release is as
+		// likely to carry the English or romaji title as the library's.
+		field.Strings("aliases").Optional(),
 		field.Time("last_refreshed_at").Optional().Nillable(),
 		field.String("quality_profile").Optional(),
 	}

@@ -945,6 +945,16 @@ func GenresNotNil() predicate.TVShow {
 	return predicate.TVShow(sql.FieldNotNull(FieldGenres))
 }
 
+// AliasesIsNil applies the IsNil predicate on the "aliases" field.
+func AliasesIsNil() predicate.TVShow {
+	return predicate.TVShow(sql.FieldIsNull(FieldAliases))
+}
+
+// AliasesNotNil applies the NotNil predicate on the "aliases" field.
+func AliasesNotNil() predicate.TVShow {
+	return predicate.TVShow(sql.FieldNotNull(FieldAliases))
+}
+
 // LastRefreshedAtEQ applies the EQ predicate on the "last_refreshed_at" field.
 func LastRefreshedAtEQ(v time.Time) predicate.TVShow {
 	return predicate.TVShow(sql.FieldEQ(FieldLastRefreshedAt, v))

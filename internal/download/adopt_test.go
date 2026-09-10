@@ -199,6 +199,16 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 			Expect(dec.episodeID).To(Equal(uint32(102)))
 		})
 
+		It("matches a release named by one of the show's aliases", func() {
+			show := buildShow(false, false)
+			show.Title = "L'Ours"
+			show.Aliases = []string{"The Bear", "Der Bär"}
+			parsed := library.Parse("The.Bear.S01E02.1080p.WEB-X")
+			dec, ok := classifyEpisodeAdoption(parsed, 0, []*ent.TVShow{show})
+			Expect(ok).To(BeTrue())
+			Expect(dec.episodeID).To(Equal(uint32(102)))
+		})
+
 		It("proposes when the matched episode already has a different file", func() {
 			shows := []*ent.TVShow{buildShow(false, true)}
 			parsed := library.Parse("The.Bear.S01E02.1080p.WEB-X")

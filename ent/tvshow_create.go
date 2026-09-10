@@ -229,6 +229,12 @@ func (_c *TVShowCreate) SetGenres(v []string) *TVShowCreate {
 	return _c
 }
 
+// SetAliases sets the "aliases" field.
+func (_c *TVShowCreate) SetAliases(v []string) *TVShowCreate {
+	_c.mutation.SetAliases(v)
+	return _c
+}
+
 // SetLastRefreshedAt sets the "last_refreshed_at" field.
 func (_c *TVShowCreate) SetLastRefreshedAt(v time.Time) *TVShowCreate {
 	_c.mutation.SetLastRefreshedAt(v)
@@ -513,6 +519,10 @@ func (_c *TVShowCreate) createSpec() (*TVShow, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Genres(); ok {
 		_spec.SetField(tvshow.FieldGenres, field.TypeJSON, value)
 		_node.Genres = value
+	}
+	if value, ok := _c.mutation.Aliases(); ok {
+		_spec.SetField(tvshow.FieldAliases, field.TypeJSON, value)
+		_node.Aliases = value
 	}
 	if value, ok := _c.mutation.LastRefreshedAt(); ok {
 		_spec.SetField(tvshow.FieldLastRefreshedAt, field.TypeTime, value)

@@ -49,6 +49,8 @@ const (
 	FieldRating = "rating"
 	// FieldGenres holds the string denoting the genres field in the database.
 	FieldGenres = "genres"
+	// FieldAliases holds the string denoting the aliases field in the database.
+	FieldAliases = "aliases"
 	// FieldLastRefreshedAt holds the string denoting the last_refreshed_at field in the database.
 	FieldLastRefreshedAt = "last_refreshed_at"
 	// FieldQualityProfile holds the string denoting the quality_profile field in the database.
@@ -104,6 +106,7 @@ var Columns = []string{
 	FieldRuntime,
 	FieldRating,
 	FieldGenres,
+	FieldAliases,
 	FieldLastRefreshedAt,
 	FieldQualityProfile,
 }

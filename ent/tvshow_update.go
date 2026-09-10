@@ -329,6 +329,24 @@ func (_u *TVShowUpdate) ClearGenres() *TVShowUpdate {
 	return _u
 }
 
+// SetAliases sets the "aliases" field.
+func (_u *TVShowUpdate) SetAliases(v []string) *TVShowUpdate {
+	_u.mutation.SetAliases(v)
+	return _u
+}
+
+// AppendAliases appends value to the "aliases" field.
+func (_u *TVShowUpdate) AppendAliases(v []string) *TVShowUpdate {
+	_u.mutation.AppendAliases(v)
+	return _u
+}
+
+// ClearAliases clears the value of the "aliases" field.
+func (_u *TVShowUpdate) ClearAliases() *TVShowUpdate {
+	_u.mutation.ClearAliases()
+	return _u
+}
+
 // SetLastRefreshedAt sets the "last_refreshed_at" field.
 func (_u *TVShowUpdate) SetLastRefreshedAt(v time.Time) *TVShowUpdate {
 	_u.mutation.SetLastRefreshedAt(v)
@@ -647,6 +665,17 @@ func (_u *TVShowUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.GenresCleared() {
 		_spec.ClearField(tvshow.FieldGenres, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.Aliases(); ok {
+		_spec.SetField(tvshow.FieldAliases, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedAliases(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, tvshow.FieldAliases, value)
+		})
+	}
+	if _u.mutation.AliasesCleared() {
+		_spec.ClearField(tvshow.FieldAliases, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.LastRefreshedAt(); ok {
 		_spec.SetField(tvshow.FieldLastRefreshedAt, field.TypeTime, value)
@@ -1113,6 +1142,24 @@ func (_u *TVShowUpdateOne) ClearGenres() *TVShowUpdateOne {
 	return _u
 }
 
+// SetAliases sets the "aliases" field.
+func (_u *TVShowUpdateOne) SetAliases(v []string) *TVShowUpdateOne {
+	_u.mutation.SetAliases(v)
+	return _u
+}
+
+// AppendAliases appends value to the "aliases" field.
+func (_u *TVShowUpdateOne) AppendAliases(v []string) *TVShowUpdateOne {
+	_u.mutation.AppendAliases(v)
+	return _u
+}
+
+// ClearAliases clears the value of the "aliases" field.
+func (_u *TVShowUpdateOne) ClearAliases() *TVShowUpdateOne {
+	_u.mutation.ClearAliases()
+	return _u
+}
+
 // SetLastRefreshedAt sets the "last_refreshed_at" field.
 func (_u *TVShowUpdateOne) SetLastRefreshedAt(v time.Time) *TVShowUpdateOne {
 	_u.mutation.SetLastRefreshedAt(v)
@@ -1461,6 +1508,17 @@ func (_u *TVShowUpdateOne) sqlSave(ctx context.Context) (_node *TVShow, err erro
 	}
 	if _u.mutation.GenresCleared() {
 		_spec.ClearField(tvshow.FieldGenres, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.Aliases(); ok {
+		_spec.SetField(tvshow.FieldAliases, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedAliases(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, tvshow.FieldAliases, value)
+		})
+	}
+	if _u.mutation.AliasesCleared() {
+		_spec.ClearField(tvshow.FieldAliases, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.LastRefreshedAt(); ok {
 		_spec.SetField(tvshow.FieldLastRefreshedAt, field.TypeTime, value)

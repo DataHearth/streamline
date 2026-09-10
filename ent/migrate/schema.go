@@ -831,6 +831,7 @@ var (
 		{Name: "runtime", Type: field.TypeUint16, Nullable: true, Default: 0},
 		{Name: "rating", Type: field.TypeFloat64, Nullable: true, Default: 0},
 		{Name: "genres", Type: field.TypeJSON, Nullable: true},
+		{Name: "aliases", Type: field.TypeJSON, Nullable: true},
 		{Name: "last_refreshed_at", Type: field.TypeTime, Nullable: true},
 		{Name: "quality_profile", Type: field.TypeString, Nullable: true},
 	}

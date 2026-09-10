@@ -20978,6 +20978,8 @@ type TVShowMutation struct {
 	addrating         *float64
 	genres            *[]string
 	appendgenres      []string
+	aliases           *[]string
+	appendaliases     []string
 	last_refreshed_at *time.Time
 	quality_profile   *string
 	clearedFields     map[string]struct{}
@@ -21926,6 +21928,71 @@ func (m *TVShowMutation) ResetGenres() {
 	delete(m.clearedFields, tvshow.FieldGenres)
 }
 
+// SetAliases sets the "aliases" field.
+func (m *TVShowMutation) SetAliases(s []string) {
+	m.aliases = &s
+	m.appendaliases = nil
+}
+
+// Aliases returns the value of the "aliases" field in the mutation.
+func (m *TVShowMutation) Aliases() (r []string, exists bool) {
+	v := m.aliases
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAliases returns the old "aliases" field's value of the TVShow entity.
+// If the TVShow object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TVShowMutation) OldAliases(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAliases is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAliases requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAliases: %w", err)
+	}
+	return oldValue.Aliases, nil
+}
+
+// AppendAliases adds s to the "aliases" field.
+func (m *TVShowMutation) AppendAliases(s []string) {
+	m.appendaliases = append(m.appendaliases, s...)
+}
+
+// AppendedAliases returns the list of values that were appended to the "aliases" field in this mutation.
+func (m *TVShowMutation) AppendedAliases() ([]string, bool) {
+	if len(m.appendaliases) == 0 {
+		return nil, false
+	}
+	return m.appendaliases, true
+}
+
+// ClearAliases clears the value of the "aliases" field.
+func (m *TVShowMutation) ClearAliases() {
+	m.aliases = nil
+	m.appendaliases = nil
+	m.clearedFields[tvshow.FieldAliases] = struct{}{}
+}
+
+// AliasesCleared returns if the "aliases" field was cleared in this mutation.
+func (m *TVShowMutation) AliasesCleared() bool {
+	_, ok := m.clearedFields[tvshow.FieldAliases]
+	return ok
+}
+
+// ResetAliases resets all changes to the "aliases" field.
+func (m *TVShowMutation) ResetAliases() {
+	m.aliases = nil
+	m.appendaliases = nil
+	delete(m.clearedFields, tvshow.FieldAliases)
+}
+
 // SetLastRefreshedAt sets the "last_refreshed_at" field.
 func (m *TVShowMutation) SetLastRefreshedAt(t time.Time) {
 	m.last_refreshed_at = &t
@@ -22220,7 +22287,7 @@ func (m *TVShowMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *TVShowMutation) Fields() []string {
-	fields := make([]string, 0, 19)
+	fields := make([]string, 0, 20)
 	if m.create_time != nil {
 		fields = append(fields, tvshow.FieldCreateTime)
 	}
@@ -22272,6 +22339,9 @@ func (m *TVShowMutation) Fields() []string {
 	if m.genres != nil {
 		fields = append(fields, tvshow.FieldGenres)
 	}
+	if m.aliases != nil {
+		fields = append(fields, tvshow.FieldAliases)
+	}
 	if m.last_refreshed_at != nil {
 		fields = append(fields, tvshow.FieldLastRefreshedAt)
 	}
@@ -22320,6 +22390,8 @@ func (m *TVShowMutation) Field(name string) (ent.Value, bool) {
 		return m.Rating()
 	case tvshow.FieldGenres:
 		return m.Genres()
+	case tvshow.FieldAliases:
+		return m.Aliases()
 	case tvshow.FieldLastRefreshedAt:
 		return m.LastRefreshedAt()
 	case tvshow.FieldQualityProfile:
@@ -22367,6 +22439,8 @@ func (m *TVShowMutation) OldField(ctx context.Context, name string) (ent.Value, 
 		return m.OldRating(ctx)
 	case tvshow.FieldGenres:
 		return m.OldGenres(ctx)
+	case tvshow.FieldAliases:
+		return m.OldAliases(ctx)
 	case tvshow.FieldLastRefreshedAt:
 		return m.OldLastRefreshedAt(ctx)
 	case tvshow.FieldQualityProfile:
@@ -22499,6 +22573,13 @@ func (m *TVShowMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetGenres(v)
 		return nil
+	case tvshow.FieldAliases:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAliases(v)
+		return nil
 	case tvshow.FieldLastRefreshedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -22621,6 +22702,9 @@ func (m *TVShowMutation) ClearedFields() []string {
 	if m.FieldCleared(tvshow.FieldGenres) {
 		fields = append(fields, tvshow.FieldGenres)
 	}
+	if m.FieldCleared(tvshow.FieldAliases) {
+		fields = append(fields, tvshow.FieldAliases)
+	}
 	if m.FieldCleared(tvshow.FieldLastRefreshedAt) {
 		fields = append(fields, tvshow.FieldLastRefreshedAt)
 	}
@@ -22667,6 +22751,9 @@ func (m *TVShowMutation) ClearField(name string) error {
 		return nil
 	case tvshow.FieldGenres:
 		m.ClearGenres()
+		return nil
+	case tvshow.FieldAliases:
+		m.ClearAliases()
 		return nil
 	case tvshow.FieldLastRefreshedAt:
 		m.ClearLastRefreshedAt()
@@ -22732,6 +22819,9 @@ func (m *TVShowMutation) ResetField(name string) error {
 		return nil
 	case tvshow.FieldGenres:
 		m.ResetGenres()
+		return nil
+	case tvshow.FieldAliases:
+		m.ResetAliases()
 		return nil
 	case tvshow.FieldLastRefreshedAt:
 		m.ResetLastRefreshedAt()

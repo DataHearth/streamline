@@ -54,6 +54,7 @@ type CreateTVShowParams struct {
 	Runtime        uint16
 	Rating         float64
 	Genres         []string
+	Aliases        []string
 	Cast           []metadata.CastMember
 	PosterPath     string
 	QualityProfile string
@@ -80,6 +81,7 @@ type UpdateTVShowMetadataParams struct {
 	Runtime       uint16
 	Rating        float64
 	Genres        []string
+	Aliases       []string
 	Cast          []metadata.CastMember
 	FirstAired    *time.Time
 }
@@ -105,6 +107,7 @@ func (db *DB) UpdateTVShowMetadata(
 		SetRuntime(p.Runtime).
 		SetRating(p.Rating).
 		SetGenres(p.Genres).
+		SetAliases(p.Aliases).
 		SetNillableFirstAired(p.FirstAired)
 	if p.SeriesStatus != "" {
 		u = u.SetSeriesStatus(tvshow.SeriesStatus(p.SeriesStatus))
@@ -318,6 +321,7 @@ func (db *DB) CreateTVShow(
 		SetRuntime(p.Runtime).
 		SetRating(p.Rating).
 		SetGenres(p.Genres).
+		SetAliases(p.Aliases).
 		SetPosterPath(p.PosterPath).
 		SetQualityProfile(p.QualityProfile).
 		SetNillableFirstAired(p.FirstAired).

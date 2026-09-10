@@ -45,7 +45,7 @@ var _ = Describe("TVDB provider", Label("unit", "metadata"), func() {
 				Expect(r.URL.Query().Get("meta")).To(Equal("translations"))
 				_, _ = w.Write(
 					[]byte(
-						`{"data":{"id":123,"name":"Kara Deniz","year":"2023","overview":"orig","status":{"name":"Continuing"},"averageRuntime":52,"score":84,"genres":[{"name":"Drama"},{"name":"Mystery"}],"latestNetwork":{"name":"Halcyon"},"seasons":[{"number":1,"type":{"type":"official"}}],"translations":{"nameTranslations":[{"language":"eng","name":"The Black Sea"}],"overviewTranslations":[{"language":"eng","overview":"O"}]}}}`,
+						`{"data":{"id":123,"name":"Kara Deniz","year":"2023","overview":"orig","status":{"name":"Continuing"},"averageRuntime":52,"score":84,"genres":[{"name":"Drama"},{"name":"Mystery"}],"latestNetwork":{"name":"Halcyon"},"seasons":[{"number":1,"type":{"type":"official"}}],"aliases":[{"language":"tur","name":"Karadeniz"}],"translations":{"nameTranslations":[{"language":"eng","name":"The Black Sea"}],"overviewTranslations":[{"language":"eng","overview":"O"}]}}}`,
 					),
 				)
 			},
@@ -94,6 +94,7 @@ var _ = Describe("TVDB provider", Label("unit", "metadata"), func() {
 		// TVDB v4 has no user rating; `score` is popularity, so Rating is unset.
 		Expect(d.Rating).To(BeZero())
 		Expect(d.Genres).To(ConsistOf("Drama", "Mystery"))
+		Expect(d.Aliases).To(ConsistOf("Karadeniz", "The Black Sea"))
 		Expect(d.Seasons).To(HaveLen(1))
 		Expect(d.Episodes).To(HaveLen(1))
 		Expect(d.Episodes[0].AbsoluteNumber).To(Equal(uint16(1)))

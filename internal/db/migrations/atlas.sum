@@ -1,4 +1,4 @@
-h1:j46ZbGyOsm4++gBTBdCNZFgAOFO1F9qAPWFjD2f8Q/Y=
+h1:npJwXJNbsbvJeRMzAMDuzKSYN0KA91vZign0T7zNJ10=
 20260711233411_init.up.sql h1:SnFgSovf1iYwGuugRm4tu95nCLy0xIAqSp751Vyr/kM=
 20260716225006_torrent_sessions.up.sql h1:dEzVx6y6gahJgd97oI2zsr0z1nGCk7XJA6iIK7gi7fM=
 20260729130131_movie_delete_cascade.up.sql h1:BJFbn+C5KacGtKGdTQizJ6ghjG66OvFTXEzGlSx4m3s=
@@ -31,3 +31,4 @@ h1:j46ZbGyOsm4++gBTBdCNZFgAOFO1F9qAPWFjD2f8Q/Y=
 20260910102919_backfill_person_credits.up.sql h1:tNZVeGB/G468wIlLeAunWcrsdglhSpnMjtOo4dgMDkQ=
 20260910104500_drop_cast_json.up.sql h1:ytBxRCyq3sEy0g8B1wvdnSoxjK48VXJ5XqjlPjtrSvQ=
 20260910110000_person_details.up.sql h1:/DY6wezb49zg1D2mFD+h0fr9n6aGEYeAeNp1HQXNd0w=
+20260910133742_tvshow_aliases.up.sql h1:vRWu+Zg3FDK3OIF4z2ZOGwxlMSTJaZo5aYj77iNGf8A=
