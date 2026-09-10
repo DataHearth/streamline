@@ -2,11 +2,15 @@ import {
 	Ban,
 	Check,
 	CircleAlert,
+	CircleCheck,
+	CircleX,
 	Download,
 	Eye,
+	FileX,
 	Film,
 	GitBranch,
 	ListPlus,
+	PackageCheck,
 	PenLine,
 	Plus,
 	Radar,
@@ -16,7 +20,7 @@ import {
 	ShieldX,
 	ThumbsUp,
 	Trash,
-	X,
+	VideoOff,
 } from "@lucide/svelte";
 import { m as i18n } from "./paraglide/messages.js";
 import type { ActivityEvent, ActivityType } from "./types";
@@ -85,13 +89,13 @@ export type Mark = {
 
 export const EVENT_MARKS: Record<ActivityType, Mark> = {
 	imported: {
-		icon: Check,
+		icon: PackageCheck,
 		bg: "bg-status-available/15",
 		fg: "text-status-available",
 		label: i18n.activity_imported(),
 	},
 	download_completed: {
-		icon: Check,
+		icon: CircleCheck,
 		bg: "bg-status-available/15",
 		fg: "text-status-available",
 		label: i18n.dash_evt_download_completed(),
@@ -103,13 +107,13 @@ export const EVENT_MARKS: Record<ActivityType, Mark> = {
 		label: i18n.dash_evt_grabbed(),
 	},
 	download_failed: {
-		icon: X,
+		icon: CircleX,
 		bg: "bg-status-failed/15",
 		fg: "text-status-failed",
 		label: i18n.dash_evt_download_failed(),
 	},
 	import_failed: {
-		icon: X,
+		icon: FileX,
 		bg: "bg-status-failed/15",
 		fg: "text-status-failed",
 		label: i18n.dash_evt_import_failed(),
@@ -199,7 +203,7 @@ export const EVENT_MARKS: Record<ActivityType, Mark> = {
 		label: i18n.dash_evt_transcode_completed(),
 	},
 	transcode_failed: {
-		icon: Film,
+		icon: VideoOff,
 		bg: "bg-status-failed/15",
 		fg: "text-status-failed",
 		label: i18n.dash_evt_transcode_failed(),
