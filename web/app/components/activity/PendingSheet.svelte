@@ -20,6 +20,7 @@
 		onImport,
 		onReplace,
 		onIgnore,
+		onForget,
 	}: {
 		open: boolean;
 		items: PendingItem[];
@@ -29,6 +30,7 @@
 		onImport: (id: number) => void;
 		onReplace: (id: number, removeOld: boolean) => void;
 		onIgnore: (id: number, removeTorrent: boolean) => void;
+		onForget: (id: number) => void;
 	} = $props();
 
 	$effect(() => {
@@ -113,6 +115,7 @@
 								onImport={() => onImport(item.id)}
 								onReplace={(removeOld) => onReplace(item.id, removeOld)}
 								onIgnore={(removeTorrent) => onIgnore(item.id, removeTorrent)}
+								onForget={() => onForget(item.id)}
 							/>
 						{/each}
 					</div>

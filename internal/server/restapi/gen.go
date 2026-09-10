@@ -6232,6 +6232,9 @@ type ServerInterface interface {
 	// ListPending Adopted-torrent proposals awaiting a decision.
 	// (GET /activity/pending)
 	ListPending(w http.ResponseWriter, r *http.Request)
+	// ForgetPending Delete a proposal so its torrent can be adopted again.
+	// (DELETE /activity/pending/{id})
+	ForgetPending(w http.ResponseWriter, r *http.Request, id ResourceID)
 	// IdentifyPending Name the title behind an unidentified proposal.
 	// (POST /activity/pending/{id}/identify)
 	IdentifyPending(w http.ResponseWriter, r *http.Request, id ResourceID)
@@ -6763,6 +6766,12 @@ func (_ Unimplemented) DeleteHistoryItem(w http.ResponseWriter, r *http.Request,
 // ListPending Adopted-torrent proposals awaiting a decision.
 // (GET /activity/pending)
 func (_ Unimplemented) ListPending(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ForgetPending Delete a proposal so its torrent can be adopted again.
+// (DELETE /activity/pending/{id})
+func (_ Unimplemented) ForgetPending(w http.ResponseWriter, r *http.Request, id ResourceID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -7963,6 +7972,32 @@ func (siw *ServerInterfaceWrapper) ListPending(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListPending(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ForgetPending operation middleware
+func (siw *ServerInterfaceWrapper) ForgetPending(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ForgetPending(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -12852,6 +12887,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/activity/pending/{id}/ignore", wrapper.IgnorePending)
 	})
 	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/activity/pending/{id}", wrapper.ForgetPending)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/calendar/upcoming", wrapper.ListUpcomingReleases)
 	})
 	r.Group(func(r chi.Router) {
@@ -13281,6 +13319,63 @@ func (response ListPending200JSONResponse) VisitListPendingResponse(w http.Respo
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ForgetPendingRequestObject struct {
+	Id ResourceID `json:"id"`
+}
+
+type ForgetPendingResponseObject interface {
+	VisitForgetPendingResponse(w http.ResponseWriter) error
+}
+
+type ForgetPending204Response = NoContentResponse
+
+func (response ForgetPending204Response) VisitForgetPendingResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type ForgetPending403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ForgetPending403JSONResponse) VisitForgetPendingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ForgetPending404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ForgetPending404JSONResponse) VisitForgetPendingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ForgetPending500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ForgetPending500JSONResponse) VisitForgetPendingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -23503,6 +23598,9 @@ type StrictServerInterface interface {
 	// ListPending Adopted-torrent proposals awaiting a decision.
 	// (GET /activity/pending)
 	ListPending(ctx context.Context, request ListPendingRequestObject) (ListPendingResponseObject, error)
+	// ForgetPending Delete a proposal so its torrent can be adopted again.
+	// (DELETE /activity/pending/{id})
+	ForgetPending(ctx context.Context, request ForgetPendingRequestObject) (ForgetPendingResponseObject, error)
 	// IdentifyPending Name the title behind an unidentified proposal.
 	// (POST /activity/pending/{id}/identify)
 	IdentifyPending(ctx context.Context, request IdentifyPendingRequestObject) (IdentifyPendingResponseObject, error)
@@ -24161,6 +24259,32 @@ func (sh *strictHandler) ListPending(w http.ResponseWriter, r *http.Request) {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ListPendingResponseObject); ok {
 		if err := validResponse.VisitListPendingResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ForgetPending operation middleware
+func (sh *strictHandler) ForgetPending(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request ForgetPendingRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ForgetPending(ctx, request.(ForgetPendingRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ForgetPending")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ForgetPendingResponseObject); ok {
+		if err := validResponse.VisitForgetPendingResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

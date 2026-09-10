@@ -192,6 +192,30 @@ func (db *DB) FindPendingDownloadRecordByID(
 		Only(ctx)
 }
 
+// DeletePendingDownloadRecord removes one status=pending record, reporting
+// whether a row was there to remove.
+//
+// Deleting rather than dismissing is the point: AllDownloadRecordHashes — what
+// the adoption sweep treats as "already tracked" — selects every record with a
+// hash and does not look at status, so a dismissed proposal keeps its torrent
+// out of every future sweep. The status guard keeps this off records that are
+// downloading, importing or done, where the row is the bookkeeping.
+func (db *DB) DeletePendingDownloadRecord(
+	ctx context.Context,
+	id uint32,
+) (bool, error) {
+	n, err := db.client.DownloadRecord.Delete().
+		Where(
+			downloadrecord.ID(id),
+			downloadrecord.StatusEQ(downloadrecord.StatusPending),
+		).
+		Exec(ctx)
+	if err != nil {
+		return false, fmt.Errorf("delete pending download record: %w", err)
+	}
+	return n > 0, nil
+}
+
 // LatestImportedRecordForMovie returns the most recent record for a movie that
 // carries a torrent hash (so file-delete can remove the source torrent). ent
 // NotFound when none.

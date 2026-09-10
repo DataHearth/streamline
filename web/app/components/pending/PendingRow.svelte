@@ -15,12 +15,14 @@
 		onImport,
 		onReplace,
 		onIgnore,
+		onForget,
 	}: {
 		item: PendingItem;
 		busy?: boolean;
 		onImport: () => void;
 		onReplace: (removeOld: boolean) => void;
 		onIgnore: (removeTorrent: boolean) => void;
+		onForget: () => void;
 	} = $props();
 
 	let replaceOpen = $state(false);
@@ -226,6 +228,19 @@
 				class="inline-flex h-8 items-center gap-1.5 rounded-md bg-accent px-3 text-xs font-semibold text-fg-on-accent transition hover:bg-accent-hover focus:outline-none focus:ring-2 focus:ring-accent-ring disabled:cursor-not-allowed disabled:opacity-60"
 			>
 				Identify
+			</button>
+			<!-- Only offered here: an unidentified proposal is the one shape a
+			     later library change can turn into a real match, and forgetting
+			     it is what lets the next adoption sweep try again. Nothing is
+			     asked of the download client, so there is no confirmation. -->
+			<button
+				type="button"
+				onclick={onForget}
+				disabled={busy}
+				title={i18n.imports_forget_help()}
+				class="inline-flex h-8 items-center rounded-md border border-border px-3 text-xs font-medium text-fg-muted transition hover:bg-bg-elevated hover:text-fg focus:outline-none focus:ring-2 focus:ring-accent-ring disabled:cursor-not-allowed disabled:opacity-60"
+			>
+				{i18n.imports_forget()}
 			</button>
 		{:else}
 			{#if showImport}

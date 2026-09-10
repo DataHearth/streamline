@@ -1023,6 +1023,37 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 		})
 	})
 
+	Describe("DeletePendingDownloadRecord", func() {
+		// The hash set is what the adoption sweep calls "already tracked", and
+		// it does not look at status. That is why forgetting a proposal has to
+		// delete the row: dismissing one leaves its hash in here, and the
+		// torrent is never looked at again.
+		It("frees the torrent's hash, which dismissing does not", func() {
+			kept := createRec("DISMISSED", downloadrecord.StatusPending)
+			gone := createRec("FORGOTTEN", downloadrecord.StatusPending)
+
+			Expect(store.UpdateDownloadRecordStatus(
+				ctx, kept.ID, downloadrecord.StatusDismissed,
+			)).To(Succeed())
+			Expect(store.DeletePendingDownloadRecord(ctx, gone.ID)).To(BeTrue())
+
+			set, err := store.AllDownloadRecordHashes(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(set).To(HaveKey("DISMISSED"))
+			Expect(set).NotTo(HaveKey("FORGOTTEN"))
+		})
+
+		It("leaves a record that is not pending alone", func() {
+			rec := createRec("BUSY", downloadrecord.StatusDownloading)
+
+			Expect(store.DeletePendingDownloadRecord(ctx, rec.ID)).To(BeFalse())
+
+			set, err := store.AllDownloadRecordHashes(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(set).To(HaveKey("BUSY"))
+		})
+	})
+
 	Describe("CreateDownloadRecord adoption fields", func() {
 		It("persists save_path, quality, and failure_reason when set", func() {
 			rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{

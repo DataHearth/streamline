@@ -387,6 +387,10 @@ type Store interface {
 		ctx context.Context,
 		id uint32,
 	) (*ent.DownloadRecord, error)
+	// DeletePendingDownloadRecord drops one pending proposal, reporting whether
+	// a row matched. Deleting frees the torrent's hash for the adoption sweep;
+	// dismissing it does not.
+	DeletePendingDownloadRecord(ctx context.Context, id uint32) (bool, error)
 	// LatestImportedRecordForMovie returns the newest hash-carrying record for
 	// a movie (file-delete uses it to remove the source torrent). NotFound when
 	// none. LatestImportedRecordForEpisode is the episode twin.

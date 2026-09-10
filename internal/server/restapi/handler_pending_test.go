@@ -454,6 +454,38 @@ var _ = Describe("Handler: Pending", Label("unit", "server", "activity"), func()
 		})
 	})
 
+	// Forget is the counterpart to Ignore, and the difference is the whole
+	// point: dismissing keeps the row, and the adoption sweep skips any hash it
+	// already holds a record for, so the torrent never comes back. Deleting the
+	// row is what lets the next sweep look at it again.
+	Describe("ForgetPending", func() {
+		It("deletes the record and asks nothing of the download client", func() {
+			app.store.EXPECT().
+				DeletePendingDownloadRecord(mock.Anything, uint32(1)).
+				Return(true, nil).Once()
+
+			resp := app.do(app.req(
+				http.MethodDelete, "/api/v1/activity/pending/1",
+				app.adminKey, nil,
+			))
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
+		})
+
+		It("404s when no pending record matched", func() {
+			app.store.EXPECT().
+				DeletePendingDownloadRecord(mock.Anything, uint32(9)).
+				Return(false, nil).Once()
+
+			resp := app.do(app.req(
+				http.MethodDelete, "/api/v1/activity/pending/9",
+				app.adminKey, nil,
+			))
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+		})
+	})
+
 	Describe("ReplacePending", func() {
 		// Nothing is deleted here any more. The handler used to clear the file
 		// itself, before anything had been probed — so a held import had

@@ -430,6 +430,31 @@ func (s *Server) removeOldTorrent(ctx context.Context, pending *ent.DownloadReco
 	}
 }
 
+// ForgetPending deletes a proposal instead of dismissing it, which is what
+// puts its torrent back in front of the adoption sweep. Nothing is asked of the
+// download client: the torrent keeps seeding, and the next tick re-matches it
+// against the library as it stands then.
+func (s *Server) ForgetPending(
+	ctx context.Context,
+	request ForgetPendingRequestObject,
+) (ForgetPendingResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return ForgetPending403JSONResponse{ForbiddenJSONResponse: notAdminResp}, nil
+	}
+	deleted, err := s.store.DeletePendingDownloadRecord(ctx, request.Id)
+	if err != nil {
+		return ForgetPending500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	if !deleted {
+		return ForgetPending404JSONResponse{
+			NotFoundJSONResponse: errNotFound("pending record not found"),
+		}, nil
+	}
+	return ForgetPending204Response{}, nil
+}
+
 func (s *Server) IgnorePending(
 	ctx context.Context,
 	request IgnorePendingRequestObject,

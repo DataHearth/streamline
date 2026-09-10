@@ -265,10 +265,44 @@
 		onError: (e) => toast.err(errorText(e)),
 	}));
 
+	// Forget deletes the record and leaves the torrent seeding, which is the
+	// only thing that puts the hash back in front of the adoption sweep —
+	// dismissing keeps the row, and the sweep skips any hash it already has one
+	// for. Worth offering on an unidentified proposal in particular: those are
+	// the ones a later library change would now match.
+	const forgetPending = createMutation<unknown, Error, number>(() => ({
+		mutationFn: (id) =>
+			api(`/activity/pending/${id}`, { method: "DELETE" }),
+		onSuccess: () => {
+			toast.ok(i18n.imports_forgot());
+			invalidatePending();
+		},
+		onError: (e) => toast.err(errorText(e)),
+	}));
+
+	let unidentified = $derived(pendingItems.filter((i) => !i.media));
+	let forgettingAll = $state(false);
+	async function forgetAllUnidentified() {
+		forgettingAll = true;
+		let failed = 0;
+		for (const item of unidentified) {
+			try {
+				await api(`/activity/pending/${item.id}`, { method: "DELETE" });
+			} catch {
+				failed++;
+			}
+		}
+		forgettingAll = false;
+		if (failed > 0) toast.err(i18n.imports_forget_all_failed({ count: failed }));
+		else toast.ok(i18n.imports_forgot());
+		invalidatePending();
+	}
+
 	let pendingBusyId = $derived.by<number | null>(() => {
 		if (importPending.isPending) return importPending.variables ?? null;
 		if (replacePending.isPending) return replacePending.variables?.id ?? null;
 		if (ignorePending.isPending) return ignorePending.variables?.id ?? null;
+		if (forgetPending.isPending) return forgetPending.variables ?? null;
 		return null;
 	});
 
@@ -436,6 +470,18 @@
 					{#if pendingQuery.isError}
 						<p class="text-sm text-status-failed">{i18n.torrent_proposals_failed()}</p>
 					{:else}
+						{#if unidentified.length > 1}
+							<div class="mb-2 flex justify-end">
+								<button
+									type="button"
+									onclick={forgetAllUnidentified}
+									disabled={forgettingAll}
+									class="inline-flex h-8 items-center rounded-md border border-border px-3 text-xs font-medium text-fg-muted transition hover:bg-bg-elevated hover:text-fg focus:outline-none focus:ring-2 focus:ring-accent-ring disabled:cursor-not-allowed disabled:opacity-60"
+								>
+									{i18n.imports_forget_all({ count: unidentified.length })}
+								</button>
+							</div>
+						{/if}
 						<div class="flex flex-col gap-2">
 							{#each pendingItems as item (item.id)}
 								<PendingRow
@@ -446,6 +492,7 @@
 										replacePending.mutate({ id: item.id, removeOld })}
 									onIgnore={(removeTorrent) =>
 										ignorePending.mutate({ id: item.id, removeTorrent })}
+									onForget={() => forgetPending.mutate(item.id)}
 								/>
 							{/each}
 						</div>
@@ -622,6 +669,7 @@
 	onImport={(id) => importPending.mutate(id)}
 	onReplace={(id, removeOld) => replacePending.mutate({ id, removeOld })}
 	onIgnore={(id, removeTorrent) => ignorePending.mutate({ id, removeTorrent })}
+	onForget={(id) => forgetPending.mutate(id)}
 />
 
 <ResolveDialog

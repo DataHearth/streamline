@@ -3308,6 +3308,29 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /activity/pending/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    delete:
+      operationId: forgetPending
+      summary: Delete a proposal so its torrent can be adopted again.
+      description: >-
+        Drops the download record and leaves the torrent alone. The adoption
+        sweep skips any hash it already holds a record for, whatever that
+        record's status, so dismissing a proposal blocks the hash for good;
+        forgetting it puts the torrent back in front of the next sweep, which
+        matches it against the library as it stands now.
+      tags: [activity]
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /calendar/upcoming:
     get:
       operationId: listUpcomingReleases

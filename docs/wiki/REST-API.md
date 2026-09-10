@@ -236,6 +236,7 @@ The `cast` array on a stored movie or series (`GET /movies/{id}`, `GET /series/{
 | `GET` | `/activity/pending/{id}/preview` | Preview a proposal | 🔒 Admin |
 | `POST` | `/activity/pending/{id}/import` · `/replace` · `/ignore` | Decide a proposal | 🔒 Admin |
 | `POST` | `/activity/pending/{id}/identify` | Identify a proposal against metadata | 🔒 Admin |
+| `DELETE` | `/activity/pending/{id}` | Forget a proposal so its torrent can be adopted again | 🔒 Admin |
 | `POST` | `/downloads/{id}/resolve` | Release a held download | 🔒 Admin |
 
 ### Requests

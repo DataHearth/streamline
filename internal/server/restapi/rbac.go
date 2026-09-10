@@ -34,6 +34,7 @@ var minRole = map[string]string{
 	"PreviewPending":        roleRequestOnly,
 	"IdentifyPending":       roleAdmin,
 	"IgnorePending":         roleAdmin,
+	"ForgetPending":         roleAdmin,
 	"ImportPending":         roleAdmin,
 	"ReplacePending":        roleAdmin,
 	"GetDownloadQueue":      roleRequestOnly,

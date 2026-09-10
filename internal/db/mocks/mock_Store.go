@@ -3751,6 +3751,72 @@ func (_c *MockStore_DeleteMovie_Call) RunAndReturn(run func(ctx context.Context,
 	return _c
 }
 
+// DeletePendingDownloadRecord provides a mock function for the type MockStore
+func (_mock *MockStore) DeletePendingDownloadRecord(ctx context.Context, id uint32) (bool, error) {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeletePendingDownloadRecord")
+	}
+
+	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (bool, error)); ok {
+		return returnFunc(ctx, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) bool); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+		r1 = returnFunc(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_DeletePendingDownloadRecord_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeletePendingDownloadRecord'
+type MockStore_DeletePendingDownloadRecord_Call struct {
+	*mock.Call
+}
+
+// DeletePendingDownloadRecord is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+func (_e *MockStore_Expecter) DeletePendingDownloadRecord(ctx any, id any) *MockStore_DeletePendingDownloadRecord_Call {
+	return &MockStore_DeletePendingDownloadRecord_Call{Call: _e.mock.On("DeletePendingDownloadRecord", ctx, id)}
+}
+
+func (_c *MockStore_DeletePendingDownloadRecord_Call) Run(run func(ctx context.Context, id uint32)) *MockStore_DeletePendingDownloadRecord_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_DeletePendingDownloadRecord_Call) Return(b bool, err error) *MockStore_DeletePendingDownloadRecord_Call {
+	_c.Call.Return(b, err)
+	return _c
+}
+
+func (_c *MockStore_DeletePendingDownloadRecord_Call) RunAndReturn(run func(ctx context.Context, id uint32) (bool, error)) *MockStore_DeletePendingDownloadRecord_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // DeleteStalePendingAdoptions provides a mock function for the type MockStore
 func (_mock *MockStore) DeleteStalePendingAdoptions(ctx context.Context, clientName string, liveHashes []string) (int, error) {
 	ret := _mock.Called(ctx, clientName, liveHashes)
