@@ -111,11 +111,14 @@ var _ = Describe(
 
 				placeEpisode("Breaking Bad", "Breaking Bad S01E01.mkv")
 				placeEpisode("Breaking Bad", "Breaking Bad S01E02.mkv")
-				// The layout an unsanitized slash in the episode title used to
-				// produce: the number is on the folder, the file says nothing.
+				// The layout unsanitized slashes in the episode title used to
+				// produce: one folder per slash, the number on the top one, the
+				// file says nothing.
 				placeEpisode(
 					"Breaking Bad",
-					filepath.Join("Breaking Bad - S01E04 - Cancer", "Man [].mkv"),
+					filepath.Join(
+						"Breaking Bad - S01E04 - Cancer", "Man", "Again [].mkv",
+					),
 				)
 
 				scan, err := store.CreateImportScan(ctx, db.CreateImportScanParams{

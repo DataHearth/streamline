@@ -263,24 +263,7 @@ func planEpisodes(show *ent.TVShow, files []string) ([]episodeMatch, int) {
 	var plan []episodeMatch
 	unmatched := 0
 	for _, f := range files {
-		season, target := library.MatchEpisodeInSeason(
-			library.Parse(filepath.Base(f)),
-			show.Edges.Seasons,
-			anime,
-		)
-		if target == nil {
-			// SanitizePath used to let a slash through, so an episode titled
-			// "White Hat/Black Hat" was written as a folder named for the
-			// episode with the title's tail as the only file in it. Those
-			// files are still on disk and their basename says nothing; the
-			// folder above them carries the episode number. Folder-per-episode
-			// releases have the same shape.
-			season, target = library.MatchEpisodeInSeason(
-				library.Parse(filepath.Base(filepath.Dir(f))),
-				show.Edges.Seasons,
-				anime,
-			)
-		}
+		season, target := matchEpisodePath(f, show.Edges.Seasons, anime)
 		if target == nil {
 			unmatched++
 			continue
@@ -288,6 +271,30 @@ func planEpisodes(show *ent.TVShow, files []string) ([]episodeMatch, int) {
 		plan = append(plan, episodeMatch{path: f, season: season, episode: target})
 	}
 	return plan, unmatched
+}
+
+// matchEpisodePath resolves a file to an episode from its basename, then from
+// each folder above it up to the season folder.
+//
+// SanitizePath used to let a slash through, so an episode titled "A / B / C"
+// was written as folder "… - S01E17 - A" holding folder "B" holding file
+// "C [].mkv". Those files are still on disk, their basename says nothing, and
+// the episode number sits one folder up per slash in the title — three on the
+// homelab. Folder-per-episode releases have the same shape one level deep.
+func matchEpisodePath(
+	f string, seasons []*ent.Season, anime bool,
+) (uint16, *ent.Episode) {
+	const maxDepth = 4
+	for range maxDepth {
+		season, target := library.MatchEpisodeInSeason(
+			library.Parse(filepath.Base(f)), seasons, anime,
+		)
+		if target != nil {
+			return season, target
+		}
+		f = filepath.Dir(f)
+	}
+	return 0, nil
 }
 
 // resolveShow returns the eager-loaded show to adopt into, creating it from TVDB
