@@ -17,6 +17,9 @@ exclude_dir = [
   "deploy",
   "node_modules",
   "migrations",
+  # config_test creates and removes ./data relative to the package dir, so
+  # every test run spams the watcher with "watching internal/config/data".
+  "internal/config/data",
 ]
 # Every build output under the watched `web` tree, or the build that writes
 # them retriggers the watcher: air then starts the binary from the previous
