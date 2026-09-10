@@ -335,10 +335,13 @@
 								rel="noopener noreferrer"
 								aria-label={link.label}
 								title={link.label}
-								class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-black/40 text-fg-muted backdrop-blur-sm transition hover:border-accent/40 hover:text-fg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ring"
+								class={cn(
+									"inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-black/40 text-fg-muted backdrop-blur-sm transition hover:border-accent/40 hover:text-fg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ring",
+									link.slug === "imdb" && "border-transparent bg-transparent backdrop-blur-none hover:border-transparent",
+								)}
 							>
 								<span
-									class="brand-mark"
+									class={cn("brand-mark", link.slug === "imdb" && "brand-mark-wide")}
 									style:--mark="url('/static/images/brand-logos/{link.slug}.svg')"
 									aria-hidden="true"
 								></span>
@@ -426,6 +429,15 @@
 		background-color: currentColor;
 		mask: var(--mark) center / contain no-repeat;
 		-webkit-mask: var(--mark) center / contain no-repeat;
+	}
+
+	/* IMDb is a wordmark in a box, not a glyph: at the 14px the single-letter
+	   marks are drawn at, its four letters merge into a featureless blob. 24px
+	   is the first size they resolve at, and the mark's own frame is why the
+	   chip drops its ring — two concentric boxes read as a rendering fault. */
+	.brand-mark-wide {
+		width: 24px;
+		height: 24px;
 	}
 
 	/* Clamped by height rather than by line-clamp: -webkit-box collapses the
