@@ -38,11 +38,13 @@ type adoptDecision struct {
 // media file the owner already holds. A byte-identical size for the same
 // title is one release, and that is the case a wiped records table leaves
 // behind: the library file *is* this torrent's payload, copied out at import.
-// The release facts both sides state are a veto on top: a stored group or
-// source that contradicts the torrent's name says two different encodes
+// The release facts both sides state are a veto on top: a stored resolution
+// or source that contradicts the torrent's name says two different encodes
 // happened to land on one byte count. A fact either side leaves blank is not
-// evidence. Codec is deliberately not compared: a row without a stored parse
-// reports the probe's "hevc", and the name says "x265" for the same stream.
+// evidence. Codec and group are deliberately not compared: a row without a
+// stored parse reports the probe's "hevc" where the name says "x265", and a
+// row the bulk import recreated from a template-named file carries whatever
+// followed the last hyphen of the episode title as its group ("Why-man").
 //
 // The torrent may be a folder: an .nfo or a subtitle beside the video adds
 // kilobytes to the total, so the torrent may exceed the file by up to
@@ -56,7 +58,6 @@ func sameFile(parsed library.ParseResult, size int64, files []*ent.MediaFile) bo
 	}
 	have := library.ParsedFromMediaFile(files[0])
 	for _, pair := range [][2]string{
-		{parsed.Group, have.Group},
 		{parsed.Resolution, have.Resolution},
 		{parsed.Source, have.Source},
 	} {

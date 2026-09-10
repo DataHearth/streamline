@@ -104,7 +104,7 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 						{
 							ID:               9,
 							Size:             4096,
-							ReleaseGroup:     "Y",
+							ParsedSource:     "WEB-DL",
 							ParsedResolution: "1080p",
 						},
 					}},
