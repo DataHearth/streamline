@@ -167,6 +167,16 @@
 				/>
 			</div>
 
+			<div class="mt-4">
+				<Checkbox
+					checked={transcoding.data.defer_seeding}
+					disabled={locked}
+					onChange={(v) => save.mutate({ defer_seeding: v })}
+					label={i18n.transcode_defer_seeding()}
+					description={i18n.transcode_defer_seeding_help()}
+				/>
+			</div>
+
 			{#if missing}
 				<div
 					class="mt-4 flex items-start gap-2.5 rounded-md border border-status-wanted/40 bg-status-wanted/10 p-3 text-xs leading-relaxed text-status-wanted"

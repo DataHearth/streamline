@@ -861,6 +861,9 @@ export type TranscodeConfig = {
 	// The probe's error text; present only when hw_status is "unavailable".
 	hw_reason?: string;
 	verify: TranscodeVerifyConfig;
+	// When on, a queued job whose torrent is still downloading or seeding in
+	// its client waits (re-checked hourly) rather than running immediately.
+	defer_seeding: boolean;
 };
 
 // PATCH body: every level optional. hw_status / hw_reason are the probe's
@@ -904,6 +907,9 @@ export type TranscodeJob = {
 	created_at: string;
 	started_at?: string;
 	finished_at?: string;
+	// Present only while the job is queued and waiting on `defer_seeding`
+	// for its torrent to stop seeding. Next re-check time, not a deadline.
+	deferred_until?: string;
 };
 
 export type OIDCProvider = {

@@ -107,7 +107,9 @@ export function jobFigure(j: TranscodeJob): JobFigure {
 		case "queued":
 			return {
 				value: formatBytes(j.size_before),
-				sub: i18n.transcode_queued_when({ when: formatRelative(j.created_at) }),
+				sub: j.deferred_until
+					? i18n.transcode_deferred_until({ when: formatRelative(j.deferred_until) })
+					: i18n.transcode_queued_when({ when: formatRelative(j.created_at) }),
 			};
 		case "succeeded": {
 			const took = elapsed(j);
