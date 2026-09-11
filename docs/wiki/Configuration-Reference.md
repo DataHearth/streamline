@@ -240,13 +240,13 @@ Independently of `auth.lockout`, login and registration are rate-limited per IP 
 | `library.download_path` | path | `/downloads` | Where Streamline reads finished torrents from. Combined with the torrent name: `<download_path>/<torrent.Name>` |
 | `library.movie_naming` | template | `{title} ({year}) {tmdb-{tmdb_id}}/{title} ({year}) [{quality}].{ext}` | See [Quality Profiles and Naming](Quality-Profiles-and-Naming#file-naming) |
 | `library.series_naming` | template | `{title} ({year})/Season {season}/{title} - S{season:2}E{episode:2} - {episode_title} [{quality}].{ext}` | |
-| `library.import_mode` | enum | `hardlink` | `hardlink` \| `copy` \| `move` |
+| `library.import_mode` | enum | `hardlink` | `hardlink` \| `copy` \| `move`. `move` also removes the torrent from its client once the import lands, since it can no longer seed |
 | `library.monitor_specials` | bool | `false` | Monitor season 0 on add/discovery. **Runtime-editable** |
 | `library.probe.always_ask` | bool | `false` | Hold every import for manual approval instead of importing straight away. Needs no ffprobe. **Runtime-editable** |
 | `library.probe.min_duration_ratio` | float | `0.5` | Hold an import when the probed duration falls below this share of the expected runtime — the check for sample clips and truncated remuxes. A ratio, not a percentage: `0.5` is half. Greater than 0, at most 1. **Runtime-editable** |
 | `library.no_match_cooldown` | duration | `6h` | Quiet period after a search finds nothing acceptable |
 | `library.max_grab_failures` | int | `3` | Consecutive failures before an item is marked failed |
-| `library.keep_torrent_seeding` | bool | `true` | Leave torrents seeding after import |
+| `library.keep_torrent_seeding` | bool | `true` | Leave torrents seeding after import. Ignored under `import_mode: move`: a moved torrent has nothing left to seed, so it is removed from the client, with any files the import left behind, as soon as its record imports |
 | `library.import_max_attempts` | int | `3` | Import retries before giving up |
 | `library.allowed_download_roots` | []path | `[]` | If non-empty, a torrent's save path must sit under one of these or import is refused. Security fence — empty disables the check |
 | `library.drift_grace_ticks` | int | `3` | Consecutive `drift_check` ticks a file may be missing before its record is deleted (1–20). At the default 15m interval, 3 ticks ≈ 45 minutes of tolerance for a flaky mount |

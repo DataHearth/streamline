@@ -20,6 +20,7 @@ import (
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	mockdb "github.com/datahearth/streamline/internal/db/mocks"
+	mockdl "github.com/datahearth/streamline/internal/download/mocks"
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/ffmpeg"
 	mockffmpeg "github.com/datahearth/streamline/internal/ffmpeg/mocks"
@@ -116,6 +117,56 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 
 		Expect(w.runImport(context.Background(), 1)).To(Succeed())
 	})
+
+	It(
+		"move mode drops the torrent and its leftovers even when seeding is kept",
+		func() {
+			configtest.Setup(map[string]any{
+				"library": map[string]any{
+					"movie_path":           libDir,
+					"import_mode":          "move",
+					"import_max_attempts":  3,
+					"keep_torrent_seeding": true,
+					"movie_naming":         "{title} ({year})/{title}.{ext}",
+					"series_path":          libDir,
+					"series_naming":        "{title}/{title} S{season}E{episode}.{ext}",
+				},
+			})
+			libSvc = library.NewImportService(&config.Get().Library)
+			dlMk := mockdl.NewMockDownloader(GinkgoT())
+			w = NewWorker(
+				Deps{
+					DB:          storeMk,
+					Library:     libSvc,
+					MediaServer: msMk,
+					Download:    dlMk,
+				},
+			)
+
+			src := filepath.Join(tmp, "dl")
+			Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+			seedMediaFile(src, "Flick.2024.1080p.mkv")
+			rec := fixtureRecord(1, 10, src, 0)
+
+			storeMk.EXPECT().
+				FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+				Return(rec, nil).
+				Once()
+			storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+				Return(nil, nil).Once()
+			storeMk.EXPECT().RecordImportSuccess(mock.Anything, mock.Anything).
+				Return(nil).Once()
+			storeMk.EXPECT().
+				MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
+				Return(nil).Once()
+			msMk.EXPECT().RefreshAll(mock.Anything, mock.Anything, libDir).
+				Return(nil).Once()
+			dlMk.EXPECT().RemoveTorrent(mock.Anything, "qbit", "hash", true).
+				Return(nil).Once()
+
+			Expect(w.runImport(context.Background(), 1)).To(Succeed())
+		},
+	)
 
 	It(
 		"queues a transcode job when the movie's profile is transcode-eligible",

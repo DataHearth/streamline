@@ -818,14 +818,22 @@ func (w *Worker) cleanupTorrent(
 	rec *ent.DownloadRecord,
 	libCfg config.LibraryConfig,
 ) {
-	if libCfg.KeepTorrentSeeding || rec.DownloadClientName == "" {
+	if rec.DownloadClientName == "" {
+		return
+	}
+	// A moved torrent has nothing left to seed from — its payload is now the
+	// library file and the client fails its next recheck — so it goes
+	// regardless of keep_torrent_seeding, and whatever it still holds goes
+	// with it: files the import did not take cannot be seeded either.
+	moved := libCfg.ImportMode == "move"
+	if libCfg.KeepTorrentSeeding && !moved {
 		return
 	}
 	if err := w.dl.RemoveTorrent(
 		ctx,
 		rec.DownloadClientName,
 		rec.TorrentHash,
-		false,
+		moved,
 	); err != nil {
 		slog.WarnContext(ctx, "remove torrent failed",
 			"hash", rec.TorrentHash, "error", err)
