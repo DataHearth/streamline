@@ -13,8 +13,9 @@ import (
 //
 // writeTimeout has to clear the slowest synchronous handler: those chain
 // outbound calls that otelx.HTTPClient already caps at 30s each, so two
-// minutes leaves room for a short chain. No endpoint streams a response
-// (no SSE, no WebSocket), so nothing legitimate is long-lived.
+// minutes leaves room for a short chain. The one streaming endpoint,
+// GET /api/v1/schedules/events, clears the deadline on its own connection
+// through http.ResponseController and is not bound by it.
 const (
 	readHeaderTimeout = 10 * time.Second
 	readTimeout       = time.Minute

@@ -4586,6 +4586,10 @@ type Schedule struct {
 	NextRunAt *time.Time `json:"next_run_at,omitempty"`
 	Paused    bool       `json:"paused"`
 
+	// Progress How far the run in flight has got. Null unless the job is running
+	// and has reported progress.
+	Progress *ScheduleProgress `json:"progress,omitempty"`
+
 	// Running Whether the job is currently executing.
 	Running bool           `json:"running"`
 	Status  ScheduleStatus `json:"status"`
@@ -4600,6 +4604,17 @@ type ScheduleStatus string
 // ScheduleList defines model for ScheduleList.
 type ScheduleList struct {
 	Items []Schedule `json:"items"`
+}
+
+// ScheduleProgress defines model for ScheduleProgress.
+type ScheduleProgress struct {
+	// Done Items the run has processed so far.
+	Done int `json:"done"`
+
+	// Total Items the run set out to process, or 0 when the job counts as it
+	// goes without knowing how many there are (a directory walk, a
+	// paged table sweep).
+	Total int `json:"total"`
 }
 
 // ScheduleUpdate defines model for ScheduleUpdate.
@@ -6712,6 +6727,9 @@ type ServerInterface interface {
 	// ListSchedules List all scheduled jobs with current state.
 	// (GET /schedules)
 	ListSchedules(w http.ResponseWriter, r *http.Request)
+	// StreamSchedules Stream the schedule list as it changes.
+	// (GET /schedules/events)
+	StreamSchedules(w http.ResponseWriter, r *http.Request)
 	// GetSchedule Get a single scheduled job by name.
 	// (GET /schedules/{name})
 	GetSchedule(w http.ResponseWriter, r *http.Request, name ScheduleName)
@@ -7581,6 +7599,12 @@ func (_ Unimplemented) ReopenRequest(w http.ResponseWriter, r *http.Request, id 
 // ListSchedules List all scheduled jobs with current state.
 // (GET /schedules)
 func (_ Unimplemented) ListSchedules(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// StreamSchedules Stream the schedule list as it changes.
+// (GET /schedules/events)
+func (_ Unimplemented) StreamSchedules(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -10912,6 +10936,20 @@ func (siw *ServerInterfaceWrapper) ListSchedules(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// StreamSchedules operation middleware
+func (siw *ServerInterfaceWrapper) StreamSchedules(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.StreamSchedules(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetSchedule operation middleware
 func (siw *ServerInterfaceWrapper) GetSchedule(w http.ResponseWriter, r *http.Request) {
 
@@ -13020,6 +13058,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/schedules", wrapper.ListSchedules)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/schedules/events", wrapper.StreamSchedules)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/schedules/{name}", wrapper.GetSchedule)
 	})
 	r.Group(func(r chi.Router) {
@@ -13294,6 +13335,12 @@ type RequestMediaDetailResponseJSONResponse RequestMediaDetails
 type RequestsListJSONResponse PaginatedRequests
 
 type ScheduleJSONResponse Schedule
+
+type ScheduleEventsTexteventStreamResponse struct {
+	Body io.Reader
+
+	ContentLength int64
+}
 
 type ScheduleListJSONResponse ScheduleList
 
@@ -20814,6 +20861,83 @@ func (response ListSchedules403JSONResponse) VisitListSchedulesResponse(w http.R
 	return err
 }
 
+type StreamSchedulesRequestObject struct {
+}
+
+type StreamSchedulesResponseObject interface {
+	VisitStreamSchedulesResponse(w http.ResponseWriter) error
+}
+
+type StreamSchedules200TexteventStreamResponse struct {
+	ScheduleEventsTexteventStreamResponse
+}
+
+func (response StreamSchedules200TexteventStreamResponse) VisitStreamSchedulesResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		// If w doesn't support flushing, fall back to io.Copy.
+		_, err := io.Copy(w, response.Body)
+		return err
+	}
+	// text/event-stream messages are typically small; use a
+	// modest buffer and flush after each chunk so clients see
+	// events immediately instead of waiting on OS buffering.
+	buf := make([]byte, 4096)
+	for {
+		n, err := response.Body.Read(buf)
+		if n > 0 {
+			if _, writeErr := w.Write(buf[:n]); writeErr != nil {
+				return writeErr
+			}
+			flusher.Flush()
+		}
+		if err != nil {
+			if err == io.EOF {
+				return nil
+			}
+			return err
+		}
+	}
+}
+
+type StreamSchedules401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response StreamSchedules401JSONResponse) VisitStreamSchedulesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type StreamSchedules403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response StreamSchedules403JSONResponse) VisitStreamSchedulesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetScheduleRequestObject struct {
 	Name ScheduleName `json:"name"`
 }
@@ -24183,6 +24307,9 @@ type StrictServerInterface interface {
 	// ListSchedules List all scheduled jobs with current state.
 	// (GET /schedules)
 	ListSchedules(ctx context.Context, request ListSchedulesRequestObject) (ListSchedulesResponseObject, error)
+	// StreamSchedules Stream the schedule list as it changes.
+	// (GET /schedules/events)
+	StreamSchedules(ctx context.Context, request StreamSchedulesRequestObject) (StreamSchedulesResponseObject, error)
 	// GetSchedule Get a single scheduled job by name.
 	// (GET /schedules/{name})
 	GetSchedule(ctx context.Context, request GetScheduleRequestObject) (GetScheduleResponseObject, error)
@@ -27740,6 +27867,30 @@ func (sh *strictHandler) ListSchedules(w http.ResponseWriter, r *http.Request) {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ListSchedulesResponseObject); ok {
 		if err := validResponse.VisitListSchedulesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// StreamSchedules operation middleware
+func (sh *strictHandler) StreamSchedules(w http.ResponseWriter, r *http.Request) {
+	var request StreamSchedulesRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.StreamSchedules(ctx, request.(StreamSchedulesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "StreamSchedules")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(StreamSchedulesResponseObject); ok {
+		if err := validResponse.VisitStreamSchedulesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

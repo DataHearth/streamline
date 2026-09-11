@@ -2663,6 +2663,24 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
 
+  /schedules/events:
+    get:
+      operationId: streamSchedules
+      summary: Stream the schedule list as it changes.
+      description: |
+        Long-lived `text/event-stream` response. Replaces polling
+        `GET /schedules` for a live view: a run starting, reporting
+        progress or ending, and a pause, resume or reschedule each push a
+        fresh list.
+      tags: [schedules]
+      responses:
+        "200":
+          $ref: "#/components/responses/ScheduleEvents"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
   /schedules/{name}:
     parameters:
       - $ref: "#/components/parameters/ScheduleName"
@@ -4891,6 +4909,17 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ScheduleList"
+
+    ScheduleEvents:
+      description: |
+        Server-sent events. Every `schedules` event carries a full
+        ScheduleList as its data; the first is sent on connect and one
+        follows each change, coalesced to at most four a second. A comment
+        line every 15 seconds keeps the connection alive.
+      content:
+        text/event-stream:
+          schema:
+            type: string
 
     ImportScan:
       description: A single import scan.
@@ -8223,6 +8252,29 @@ components:
         last_error:
           type: string
           nullable: true
+        progress:
+          nullable: true
+          description: |
+            How far the run in flight has got. Null unless the job is running
+            and has reported progress.
+          allOf:
+            - $ref: "#/components/schemas/ScheduleProgress"
+
+    ScheduleProgress:
+      type: object
+      required: [done, total]
+      properties:
+        done:
+          type: integer
+          minimum: 0
+          description: Items the run has processed so far.
+        total:
+          type: integer
+          minimum: 0
+          description: |
+            Items the run set out to process, or 0 when the job counts as it
+            goes without knowing how many there are (a directory walk, a
+            paged table sweep).
 
     ScheduleList:
       type: object

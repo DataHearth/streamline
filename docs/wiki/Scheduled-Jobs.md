@@ -106,6 +106,13 @@ Each job reports:
 | `next_run_at` | Next scheduled fire |
 | `last_duration_ms` | How long the last run took |
 | `last_error` | Failure message, when `status` is `error` |
+| `progress` | `{done, total}` while a run is in flight and the job counts its work; `null` otherwise |
+
+`progress` comes from the jobs that loop over a known list — both metadata refreshes, both missing searches, the series orphan scan and the media probe report `done` out of `total`. The movie orphan scan and `drift-check` walk without knowing the size up front, so they report `done` with `total: 0`. The Schedules page shows it as "Running 12/240" with a bar under the status, or a bare count where there is no total.
+
+### Live updates
+
+`GET /api/v1/schedules/events` is a `text/event-stream` that sends the full schedule list on connect and again whenever anything changes — a run starting, reporting progress or finishing, a pause, resume or interval change. Frames are coalesced to at most four a second and a comment line every 15 seconds keeps idle connections open. The Schedules page uses it instead of polling; it falls back to a 10-second poll while the stream is down.
 
 > [!IMPORTANT]
 > `skipped` is the status worth watching for. It means the job ran but bailed out because a precondition wasn't met — most often **no enabled download client**, which causes all three acquisition jobs (`*-rss-sync`, `*-missing-search`) to give up immediately. A library that never grabs anything, with jobs reporting `skipped`, is almost always this.

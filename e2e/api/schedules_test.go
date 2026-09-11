@@ -1,7 +1,10 @@
 package api
 
 import (
+	"bufio"
+	"encoding/json"
 	"net/http"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -27,6 +30,25 @@ func readSchedule(name string) scheduleView {
 }
 
 var _ = Describe("REST API schedules", Label("e2e"), func() {
+	It("streams the list as server-sent events", func() {
+		resp := get("/api/v1/schedules/events", adminAuth)
+		defer resp.Body.Close()
+		Expect(resp.StatusCode).To(Equal(http.StatusOK))
+		Expect(resp.Header.Get("Content-Type")).To(Equal("text/event-stream"))
+
+		lines := bufio.NewScanner(resp.Body)
+		Expect(lines.Scan()).To(BeTrue())
+		Expect(lines.Text()).To(Equal("event: schedules"))
+		Expect(lines.Scan()).To(BeTrue())
+		var list struct {
+			Items []scheduleView `json:"items"`
+		}
+		Expect(json.Unmarshal(
+			[]byte(strings.TrimPrefix(lines.Text(), "data: ")), &list,
+		)).To(Succeed())
+		Expect(list.Items).To(ContainElement(HaveField("Name", "movie-rss-sync")))
+	})
+
 	It("lists every registered job", func() {
 		resp := get("/api/v1/schedules", adminAuth)
 		defer resp.Body.Close()

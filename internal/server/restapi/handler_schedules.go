@@ -2,8 +2,11 @@ package restapi
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
 	"sort"
 	"time"
 
@@ -241,6 +244,112 @@ func (s *Server) RunSchedule(
 	}, nil
 }
 
+func (s *Server) StreamSchedules(
+	ctx context.Context,
+	_ StreamSchedulesRequestObject,
+) (StreamSchedulesResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return StreamSchedules403JSONResponse{
+			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
+	return scheduleStream{ctx: ctx, server: s}, nil
+}
+
+const (
+	// scheduleStreamCoalesce is the least time between two frames. A metadata
+	// refresh nudges once per title; without it every nudge would be a
+	// scheduled_jobs query and a frame.
+	scheduleStreamCoalesce  = 250 * time.Millisecond
+	scheduleStreamKeepalive = 15 * time.Second
+)
+
+// scheduleStream is the StreamSchedulesResponseObject that writes the event
+// stream itself. The generated 200 type copies an io.Reader, which would need
+// a pipe and a goroutine to say the same thing.
+type scheduleStream struct {
+	ctx    context.Context
+	server *Server
+}
+
+func (st scheduleStream) VisitStreamSchedulesResponse(w http.ResponseWriter) error {
+	rc := http.NewResponseController(w)
+	// The listener's WriteTimeout is sized for request/response handlers and
+	// would cut this connection off two minutes in.
+	if err := rc.SetWriteDeadline(time.Time{}); err != nil &&
+		!errors.Is(err, http.ErrNotSupported) {
+		return fmt.Errorf("clear write deadline: %w", err)
+	}
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.WriteHeader(http.StatusOK)
+
+	changes, unsubscribe := st.server.scheduler.Subscribe()
+	defer unsubscribe()
+	keepalive := time.NewTicker(scheduleStreamKeepalive)
+	defer keepalive.Stop()
+
+	for {
+		items, err := st.server.collectSchedules(st.ctx)
+		if err != nil {
+			return err
+		}
+		data, err := json.Marshal(ScheduleList{Items: items})
+		if err != nil {
+			return fmt.Errorf("encode schedules: %w", err)
+		}
+		if _, err := fmt.Fprintf(
+			w,
+			"event: schedules\ndata: %s\n\n",
+			data,
+		); err != nil {
+			return err
+		}
+		if err := rc.Flush(); err != nil {
+			return err
+		}
+
+		if err := st.wait(rc, w, changes, keepalive.C); err != nil {
+			return err
+		}
+	}
+}
+
+// wait blocks until the next frame is due: a change nudge, followed by the
+// coalesce window during which further nudges fold into the same frame.
+// Keepalives are written from here so a quiet stream still proves it is open.
+func (st scheduleStream) wait(
+	rc *http.ResponseController,
+	w http.ResponseWriter,
+	changes <-chan struct{},
+	keepalive <-chan time.Time,
+) error {
+	for {
+		select {
+		case <-st.ctx.Done():
+			return nil
+		case <-changes:
+			select {
+			case <-st.ctx.Done():
+				return nil
+			case <-time.After(scheduleStreamCoalesce):
+			}
+			select {
+			case <-changes:
+			default:
+			}
+			return nil
+		case <-keepalive:
+			if _, err := io.WriteString(w, ": keepalive\n\n"); err != nil {
+				return err
+			}
+			if err := rc.Flush(); err != nil {
+				return err
+			}
+		}
+	}
+}
+
 func (s *Server) collectSchedules(ctx context.Context) ([]Schedule, error) {
 	rows, err := s.ent.ScheduledJob.Query().All(ctx)
 	if err != nil {
@@ -289,6 +398,9 @@ func buildSchedule(info scheduler.JobInfo, row *ent.ScheduledJob) Schedule {
 			msg := row.LastError
 			out.LastError = &msg
 		}
+	}
+	if info.Running && (info.Done > 0 || info.Total > 0) {
+		out.Progress = &ScheduleProgress{Done: info.Done, Total: info.Total}
 	}
 	// last_started_at is derived rather than stored: persisting it cost an
 	// UPDATE per run of every job. A run in flight reports the scheduler's

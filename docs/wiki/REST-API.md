@@ -328,6 +328,7 @@ All four answer `409` while `transcoding.enabled` is false.
 | `GET` `POST` | `/config/oidc` | List / add an OIDC provider | 🔒 Admin |
 | `GET` `PATCH` `DELETE` | `/config/oidc/{name}` | Fetch / update / remove a provider | 🔒 Admin |
 | `GET` | `/schedules` · `/schedules/{name}` | List / fetch a schedule | 🔒 Admin |
+| `GET` | `/schedules/events` | Server-sent events: the full list on connect and on every change (see [Scheduled Jobs](Scheduled-Jobs#live-updates)) | 🔒 Admin |
 | `PATCH` | `/schedules/{name}` | Update a schedule | 🔒 Admin |
 | `POST` | `/schedules/{name}/pause` · `/resume` · `/run` | Pause, resume, or run a schedule now | 🔒 Admin |
 | `GET` | `/system/info` | Server info | 🔒 Admin |
