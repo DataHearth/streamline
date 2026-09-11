@@ -486,8 +486,10 @@ var _ = Describe("Scheduler", Label("unit", "scheduler"), func() {
 	Describe("RunNow", func() {
 		It("triggers a one-off execution", func() {
 			var calls atomic.Int32
+			var lastManual atomic.Bool
 			s := New()
-			s.Register("once", time.Hour, func(context.Context) error {
+			s.Register("once", time.Hour, func(ctx context.Context) error {
+				lastManual.Store(Manual(ctx))
 				calls.Add(1)
 				return nil
 			})
@@ -508,9 +510,11 @@ var _ = Describe("Scheduler", Label("unit", "scheduler"), func() {
 				return info.Running
 			}).WithTimeout(time.Second).Should(BeFalse())
 			before := calls.Load()
+			Expect(lastManual.Load()).To(BeFalse())
 
 			Expect(s.RunNow("once")).To(Succeed())
 			Eventually(calls.Load).WithTimeout(time.Second).Should(Equal(before + 1))
+			Expect(lastManual.Load()).To(BeTrue())
 
 			cancel()
 			<-done

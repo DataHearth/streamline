@@ -590,7 +590,10 @@ func (s *Service) RefreshStale(ctx context.Context) error {
 	ctx, span := tracer.Start(ctx, "movie.refresh_stale")
 	defer span.End()
 
-	cutoff := time.Now().Add(-metadataMinRefreshInterval)
+	cutoff := time.Now()
+	if !scheduler.Manual(ctx) {
+		cutoff = cutoff.Add(-metadataMinRefreshInterval)
+	}
 	movies, err := s.db.ListMoviesStaleSince(ctx, cutoff)
 	if err != nil {
 		return otelx.RecordSpanError(span, err)

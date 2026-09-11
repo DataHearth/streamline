@@ -2761,6 +2761,10 @@ paths:
     post:
       operationId: runSchedule
       summary: Trigger a one-off run of a job.
+      description: |
+        Runs the job once, outside its interval. A manual run skips the job's
+        own throttles: the missing searches ignore the no-match cooldown and
+        the grab-failure cap, and the metadata refreshes revisit every title.
       tags: [schedules]
       responses:
         "200":

@@ -144,9 +144,22 @@ func (j *registeredJob) snapshot() JobInfo {
 
 type runKey struct{}
 
+// manualKey marks a run started by RunNow rather than the ticker.
+type manualKey struct{}
+
 type run struct {
 	s   *Scheduler
 	job *registeredJob
+}
+
+// Manual reports whether the current run was started by RunNow. A job that
+// throttles its own work — a search cooldown, a refresh interval — waives it
+// on a manual run: the operator asked for the work now, and a run that walks
+// the list and touches nothing is indistinguishable from one that never
+// started. False on any ctx a job body did not receive from the scheduler.
+func Manual(ctx context.Context) bool {
+	manual, _ := ctx.Value(manualKey{}).(bool)
+	return manual
 }
 
 // Progress records how far the current run has got, for the API to show
@@ -606,7 +619,8 @@ func (s *Scheduler) Reschedule(name string, interval time.Duration) error {
 // RunNow triggers a one-off execution. Returns ErrJobBusy if the job is
 // already running, ErrJobSystem on system jobs, ErrNotStarted before Start
 // has run, ErrJobUnknown otherwise. Allowed while the job is paused — manual
-// override is the whole point.
+// override is the whole point. The run is marked for Manual, so a job that
+// throttles itself does the work it would otherwise defer.
 //
 // The job runs on a context derived from the scheduler's root context with
 // the caller's cancel signal detached, so a short HTTP request timeout
@@ -626,7 +640,7 @@ func (s *Scheduler) RunNow(name string) error {
 	if job.running.Load() {
 		return ErrJobBusy
 	}
-	runCtx := context.WithoutCancel(rootCtx)
+	runCtx := context.WithValue(context.WithoutCancel(rootCtx), manualKey{}, true)
 	slog.InfoContext(runCtx, "scheduler job run-now triggered", "job", name)
 	go s.executeJob(runCtx, job)
 	return nil

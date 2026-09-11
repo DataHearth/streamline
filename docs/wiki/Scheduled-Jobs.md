@@ -84,6 +84,8 @@ curl -X POST -H "X-API-Key: $KEY" .../api/v1/schedules/movie-rss-sync/resume
 curl -X POST -H "X-API-Key: $KEY" .../api/v1/schedules/movie-missing-search/run
 ```
 
+A manual run does the work the ticker would defer: the missing searches ignore `library.no_match_cooldown` and the grab-failure cap, and the metadata refreshes revisit every title instead of only those not refreshed in the last 24 hours.
+
 Intervals have a **10 second floor**. Pause state is persisted to the database, so a paused job stays paused across restarts.
 
 `purge-sessions` is flagged `system: true` and rejects PATCH, pause, resume and run.

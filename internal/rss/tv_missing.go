@@ -48,7 +48,7 @@ func (s *EpisodeMissingSearcher) Run(ctx context.Context) error {
 	ctx, span := tracer.Start(ctx, "rss.tv_missing_search")
 	defer span.End()
 
-	window, err := currentSearchWindow()
+	window, err := currentSearchWindow(ctx)
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
 	}

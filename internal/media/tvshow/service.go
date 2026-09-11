@@ -1195,7 +1195,10 @@ func (s *Service) reattachFiles(
 func (s *Service) RefreshStale(ctx context.Context) error {
 	ctx, span := tracer.Start(ctx, "tvshow.refresh_stale")
 	defer span.End()
-	cutoff := time.Now().Add(-metadataMinRefreshInterval)
+	cutoff := time.Now()
+	if !scheduler.Manual(ctx) {
+		cutoff = cutoff.Add(-metadataMinRefreshInterval)
+	}
 	rows, err := s.db.ListTVShowsStaleSince(ctx, cutoff)
 	if err != nil {
 		return otelx.RecordSpanError(span, err)

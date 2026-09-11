@@ -103,7 +103,10 @@ type searchWindow struct {
 	NotSearchedSince time.Time
 }
 
-func currentSearchWindow() (searchWindow, error) {
+func currentSearchWindow(ctx context.Context) (searchWindow, error) {
+	if scheduler.Manual(ctx) {
+		return unthrottledWindow(), nil
+	}
 	c := config.Get()
 	cooldown, err := time.ParseDuration(c.Library.NoMatchCooldown)
 	if err != nil {
@@ -133,7 +136,8 @@ func transportFailure(err error) bool {
 		errors.Is(err, indexer.ErrUnreachable)
 }
 
-// unthrottledWindow waives both throttles for user-triggered searches: a cap
+// unthrottledWindow waives both throttles for user-triggered searches and
+// manual runs of the sync job: a cap
 // no counter reaches and a cutoff every past search predates.
 func unthrottledWindow() searchWindow {
 	return searchWindow{
@@ -157,7 +161,7 @@ func (s *MissingSearcher) Run(ctx context.Context) error {
 		syncRuns.Add(ctx, 1, attrs)
 	}()
 
-	window, err := currentSearchWindow()
+	window, err := currentSearchWindow(ctx)
 	if err != nil {
 		outcome = "config_invalid"
 		return otelx.RecordSpanError(span, err)
