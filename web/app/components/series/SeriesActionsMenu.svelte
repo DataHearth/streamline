@@ -6,9 +6,10 @@
 	} from "@tanstack/svelte-query";
 	import { api, errorText } from "../../lib/api";
 	import { toast } from "../../lib/toast";
-	import type { TVShow, QualityProfile } from "../../lib/types";
+	import type { TVShow, QualityProfile, SeriesType } from "../../lib/types";
 	import SeriesKebabMenu, { type SeriesAction } from "./SeriesKebabMenu.svelte";
 	import QualityProfileModal from "../movies/QualityProfileModal.svelte";
+	import SeriesTypeModal from "./SeriesTypeModal.svelte";
 	import SeriesRenamePreviewModal from "./SeriesRenamePreviewModal.svelte";
 	import DeleteTitleDialog from "../shared/DeleteTitleDialog.svelte";
 	import ReidentifyDialog from "../shared/ReidentifyDialog.svelte";
@@ -20,6 +21,7 @@
 	let hasFiles = $derived((show.have_episodes ?? 0) > 0);
 
 	let qpOpen = $state(false);
+	let typeOpen = $state(false);
 	let renameOpen = $state(false);
 	let deleteOpen = $state(false);
 	let reidentifyOpen = $state(false);
@@ -45,6 +47,18 @@
 			qc.invalidateQueries({ queryKey: ["series"] });
 			toast.ok("Quality profile updated");
 			qpOpen = false;
+		},
+		onError: (e: Error) => toast.err(errorText(e, i18n.common_update_failed())),
+	}));
+
+	const saveType = createMutation<TVShow, Error, SeriesType>(() => ({
+		mutationFn: (t) =>
+			api<TVShow>(`/series/${show.id}`, { method: "PATCH", body: { type: t } }),
+		onSuccess: () => {
+			qc.invalidateQueries({ queryKey: ["series", show.id] });
+			qc.invalidateQueries({ queryKey: ["series"] });
+			toast.ok(i18n.series_type_updated());
+			typeOpen = false;
 		},
 		onError: (e: Error) => toast.err(errorText(e, i18n.common_update_failed())),
 	}));
@@ -78,13 +92,40 @@
 		onError: (e: Error) => toast.err(errorText(e, i18n.common_delete_failed())),
 	}));
 
+	// Exhaustive by construction — SeriesKebabMenu owns the item list, so an
+	// action this misses would render as a menu entry that does nothing.
+	// "delete-files" never reaches here: it needs the loaded episode list, so
+	// the card menu does not offer it (allowDeleteFiles defaults false).
 	function onPick(a: SeriesAction) {
-		if (a === "search") searchNow.mutate();
-		else if (a === "quality") qpOpen = true;
-		else if (a === "rename") renameOpen = true;
-		else if (a === "refresh") refresh.mutate();
-		else if (a === "reidentify") reidentifyOpen = true;
-		else if (a === "delete") deleteOpen = true;
+		switch (a) {
+			case "search":
+				searchNow.mutate();
+				break;
+			case "quality":
+				qpOpen = true;
+				break;
+			case "type":
+				typeOpen = true;
+				break;
+			case "rename":
+				renameOpen = true;
+				break;
+			case "refresh":
+				refresh.mutate();
+				break;
+			case "reidentify":
+				reidentifyOpen = true;
+				break;
+			case "delete":
+				deleteOpen = true;
+				break;
+			case "delete-files":
+				break;
+			default: {
+				const unhandled: never = a;
+				void unhandled;
+			}
+		}
 	}
 </script>
 
@@ -101,6 +142,14 @@
 	saving={saveProfile.isPending}
 	onClose={() => (qpOpen = false)}
 	onSave={(p) => saveProfile.mutate(p)}
+/>
+
+<SeriesTypeModal
+	open={typeOpen}
+	current={show.type}
+	saving={saveType.isPending}
+	onClose={() => (typeOpen = false)}
+	onSave={(t) => saveType.mutate(t)}
 />
 
 <SeriesRenamePreviewModal

@@ -175,6 +175,8 @@ Pick the correct title from the same TMDB/TVDB search the add flow uses, confirm
 
 Re-identifying a series also re-infers its **type** (standard/anime/daily). That is the one case where an override you set by hand is deliberately discarded: it was about the old show.
 
+**Change series type…** in the same menu sets that type by hand. It decides whether episode files match by season and episode or by absolute number, so a wrong inference mis-matches every file in the show — and anime released as a single continuous run is where it is usually wrong. The override survives a metadata refresh.
+
 There is no undo, because none is needed — changing the match back is the same action in reverse, files and all.
 
 > [!IMPORTANT]

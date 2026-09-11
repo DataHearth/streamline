@@ -2,6 +2,7 @@
 	export type SeriesAction =
 		| "search"
 		| "quality"
+		| "type"
 		| "rename"
 		| "refresh"
 		| "reidentify"
@@ -13,6 +14,7 @@
 	import {
 		Radar,
 		Gauge,
+		Clapperboard,
 		FileEdit,
 		RefreshCw,
 		Replace,
@@ -50,6 +52,12 @@
 			label: i18n.action_change_quality_profile_ellipsis(),
 			icon: Gauge,
 			onSelect: () => onPick("quality"),
+		},
+		{
+			key: "type",
+			label: i18n.action_change_series_type_ellipsis(),
+			icon: Clapperboard,
+			onSelect: () => onPick("type"),
 		},
 		{
 			key: "rename",

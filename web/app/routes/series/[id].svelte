@@ -32,6 +32,8 @@
 	import DeleteTitleDialog from "../../components/shared/DeleteTitleDialog.svelte";
 	import ReidentifyDialog from "../../components/shared/ReidentifyDialog.svelte";
 	import SeriesRenamePreviewModal from "../../components/series/SeriesRenamePreviewModal.svelte";
+	import QualityProfileModal from "../../components/movies/QualityProfileModal.svelte";
+	import SeriesTypeModal from "../../components/series/SeriesTypeModal.svelte";
 	import SeasonStrip from "../../components/series/SeasonStrip.svelte";
 	import SeasonAccordion from "../../components/series/SeasonAccordion.svelte";
 	import EpisodeTable from "../../components/series/EpisodeTable.svelte";
@@ -48,6 +50,7 @@
 		MonitoringPreset,
 		QualityProfile,
 		Season,
+		SeriesType,
 		TVShow,
 	} from "../../lib/types";
 
@@ -201,6 +204,8 @@
 	let deleteOpen = $state(false);
 	let reidentifyOpen = $state(false);
 	let renameOpen = $state(false);
+	let qpOpen = $state(false);
+	let typeOpen = $state(false);
 	let manualOpen = $state(false);
 	let manualEpisode = $state<Episode | null>(null);
 	let packSearchOpen = $state(false);
@@ -224,6 +229,8 @@
 		selectedSeason = null;
 		presetValue = "all";
 		deleteOpen = false;
+		qpOpen = false;
+		typeOpen = false;
 		manualOpen = false;
 		manualEpisode = null;
 		packSearchOpen = false;
@@ -288,6 +295,31 @@
 			toast.ok(i18n.monitor_set_to({ mode: label.toLowerCase() }));
 		},
 		onError: (e) => toast.err(errorText(e, i18n.common_update_failed())),
+	}));
+
+	const saveProfile = createMutation<TVShow, Error, string>(() => ({
+		mutationFn: (profile) =>
+			api<TVShow>(`/series/${seriesId}`, {
+				method: "PATCH",
+				body: { quality_profile: profile },
+			}),
+		onSuccess: () => {
+			invalidate();
+			toast.ok(i18n.quality_updated());
+			qpOpen = false;
+		},
+		onError: (e: Error) => toast.err(errorText(e, i18n.common_update_failed())),
+	}));
+
+	const saveType = createMutation<TVShow, Error, SeriesType>(() => ({
+		mutationFn: (t) =>
+			api<TVShow>(`/series/${seriesId}`, { method: "PATCH", body: { type: t } }),
+		onSuccess: () => {
+			invalidate();
+			toast.ok(i18n.series_type_updated());
+			typeOpen = false;
+		},
+		onError: (e: Error) => toast.err(errorText(e, i18n.common_update_failed())),
 	}));
 
 	const refresh = createMutation(() => ({
@@ -364,22 +396,52 @@
 		}),
 	);
 
+	// A switch with a `never` default, not an if-chain: the menu owns the item
+	// list, so a new SeriesAction that nothing here handles renders as a menu
+	// entry that silently does nothing. This makes that a compile error.
 	function onKebabPick(a: SeriesAction) {
-		if (a === "search") searchSeries.mutate();
-		else if (a === "refresh") refresh.mutate();
-		else if (a === "reidentify") reidentifyOpen = true;
-		else if (a === "rename") renameOpen = true;
-		else if (a === "delete") deleteOpen = true;
-		else if (a === "delete-files") openDeleteFiles("this series", seriesFileEpisodes);
+		switch (a) {
+			case "search":
+				searchSeries.mutate();
+				break;
+			case "quality":
+				qpOpen = true;
+				break;
+			case "type":
+				typeOpen = true;
+				break;
+			case "refresh":
+				refresh.mutate();
+				break;
+			case "reidentify":
+				reidentifyOpen = true;
+				break;
+			case "rename":
+				renameOpen = true;
+				break;
+			case "delete":
+				deleteOpen = true;
+				break;
+			case "delete-files":
+				openDeleteFiles("this series", seriesFileEpisodes);
+				break;
+			default: {
+				const unhandled: never = a;
+				void unhandled;
+			}
+		}
 	}
 
-	let hasFiles = $derived((show?.have_episodes ?? 0) > 0);
 	let seasonFileEpisodes = $derived(
 		currentEpisodes.filter((e) => (e.size ?? 0) > 0),
 	);
 	let seriesFileEpisodes = $derived(
 		seasons.flatMap((s) => s.episodes ?? []).filter((e) => (e.size ?? 0) > 0),
 	);
+	// Not have_episodes: that rollup excludes specials by design, so a
+	// specials-only show reported 0 and greyed out the two actions whose input
+	// set — seriesFileEpisodes, which spans every season — was non-empty.
+	let hasFiles = $derived(seriesFileEpisodes.length > 0);
 	const seasonLabel = "Season";
 	let searchSeasons = $derived(
 		seasons
@@ -978,6 +1040,23 @@
 		open={renameOpen}
 		seriesId={show.id}
 		onClose={() => (renameOpen = false)}
+	/>
+
+	<QualityProfileModal
+		open={qpOpen}
+		current={show.quality_profile}
+		profiles={qpQuery.data ?? []}
+		saving={saveProfile.isPending}
+		onClose={() => (qpOpen = false)}
+		onSave={(p) => saveProfile.mutate(p)}
+	/>
+
+	<SeriesTypeModal
+		open={typeOpen}
+		current={show.type}
+		saving={saveType.isPending}
+		onClose={() => (typeOpen = false)}
+		onSave={(t) => saveType.mutate(t)}
 	/>
 
 	<DeleteTitleDialog
