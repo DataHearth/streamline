@@ -460,7 +460,7 @@ Both answer `409` for a job in the wrong state, **and there is no `404`**: each 
 
 ```bash
 api "$SL/api/v1/config/transcoding"
-# {"enabled":false,"max_concurrent":1,"max_failures":3,"verify":{"max_size_percent":100,"min_size_percent":5,"health_check":false,"min_vmaf":0}}
+# {"enabled":false,"max_concurrent":1,"max_failures":3,"defer_seeding":false,"verify":{"max_size_percent":100,"min_size_percent":5,"health_check":false,"min_vmaf":0}}
 
 api -X PATCH -d '{"enabled":true,"max_concurrent":2}' "$SL/api/v1/config/transcoding"
 

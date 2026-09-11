@@ -162,7 +162,7 @@ Each row names the movie or episode, the file on disk, and where the job got to:
 
 | Status | Meaning |
 | --- | --- |
-| **Queued** | Waiting for a free slot. `max_concurrent` decides how many run at once |
+| **Queued** | Waiting for a free slot. `max_concurrent` decides how many run at once. A deferred job — waiting for seeding to end when `transcoding.defer_seeding` is on — shows the next re-check time as a hint |
 | **Running** | Encoding now, with a live percentage, speed and ETA |
 | **Succeeded** | The file on disk has been replaced. The row shows the size before and after |
 | **Failed** | Out of attempts, or failed once in a way no retry can fix. The row carries the tail of ffmpeg's own error output |

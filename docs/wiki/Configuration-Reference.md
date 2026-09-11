@@ -141,7 +141,7 @@ Some config is hot — changed through the UI or API, applied immediately, persi
 | `download.selective_files`, `download.selection_grace` | ✅ | Settings → Library |
 | `ffmpeg.enabled` | ✅ | Settings → Media probe |
 | `ffmpeg.path` | ⚠️ Accepted immediately, but only picked up by the process's prober on the next restart | Settings → Media probe |
-| `transcoding.{enabled,max_concurrent,max_failures,hw_accel,hw_device,verify.*}` | ✅ Read on every worker tick — no restart | Settings → Transcoding |
+| `transcoding.{enabled,max_concurrent,max_failures,defer_seeding,hw_accel,hw_device,verify.*}` | ✅ Read on every worker tick — no restart | Settings → Transcoding |
 | `quality_profiles[].transcode` | ⚠️ API and YAML only — the profile form does not edit it | — |
 | `events.retention` | ✅ Applies on the next cleanup run | Settings → General |
 | `metadata.*` | ⚠️ Accepted immediately, but the TMDB and TVDB clients are built at boot — restart required | Settings → Metadata |
@@ -333,6 +333,7 @@ Background re-encoding of imported media. The *rules* live on each quality profi
 | `transcoding.max_failures` | int | `3` | 1–10. Attempts a job gets before it parks as `failed`. A retry from the queue resets the counter. **Runtime-editable** |
 | `transcoding.hw_accel` | string | `auto` | `auto`, `none` or `vaapi`. `auto` probes `hw_device` once and uses VAAPI when the probe passes and the policy's `to.video_codec` has a VAAPI encoder, software otherwise, decided per job; `none` forces software; `vaapi` names the Linux backend explicitly (today it behaves as `auto`). Needs an ffmpeg built with libva: the default image has none, see [Hardware encoding](Installation#hardware-encoding-vaapi). Changing it re-probes on the next job. **Runtime-editable** |
 | `transcoding.hw_device` | string | `/dev/dri/renderD128` | The render node VAAPI opens. Must be passed into a container and be writable by the process (the host's `render` group). Changing it re-probes on the next job. **Runtime-editable** |
+| `transcoding.defer_seeding` | bool | `false` | Defer a transcoding job while the torrent that produced its file is still downloading or seeding in its download client. A file with no download record, or whose torrent has stopped seeding or left the client, is encoded right away. **Runtime-editable** |
 | `transcoding.verify.max_size_percent` | int | `100` | 0–200. Reject a transcode whose output exceeds this share of the source size. Remuxes are exempt. `0` disables. **Runtime-editable** |
 | `transcoding.verify.min_size_percent` | int | `5` | 0–100. Reject any output under this share of the source — a dropped stream or a truncated encode. `0` disables. Must stay below `max_size_percent`. **Runtime-editable** |
 | `transcoding.verify.health_check` | bool | `false` | Fully decode the output before the swap. One extra decode pass per job. **Runtime-editable** |
