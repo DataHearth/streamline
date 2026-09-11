@@ -319,6 +319,12 @@
 	let historyItems = $derived<HistoryEntry[]>(
 		(history.data?.pages ?? []).flatMap((p) => p.items),
 	);
+	// The badge counts the library, not what has been scrolled into view: the
+	// history is cursor-paginated, so historyItems.length is the page size
+	// until the last page loads and the count would sit at 50 forever.
+	let historyTotal = $derived(
+		history.data?.pages?.[0]?.total ?? historyItems.length,
+	);
 
 	let source = $derived<(QueueEntry | HistoryEntry)[]>(
 		view === "queue" ? queueItems : historyItems,
@@ -434,7 +440,7 @@
 			{#if view === "events"}
 				{i18n.activity_events_subtitle()}
 			{:else}
-				{queueItems.length} active · {historyItems.length} in history
+				{queueItems.length} active · {historyTotal} in history
 			{/if}
 		</p>
 	</header>
@@ -534,7 +540,7 @@
 		<div class="mt-2 flex items-center gap-2">
 			<ActivityViewSwitch
 				{view}
-				counts={{ queue: queueItems.length, history: historyItems.length }}
+				counts={{ queue: queueItems.length, history: historyTotal }}
 				onViewChange={switchView}
 			/>
 		</div>
@@ -585,7 +591,7 @@
 		{#snippet leading()}
 			<ActivityViewSwitch
 				{view}
-				counts={{ queue: queueItems.length, history: historyItems.length }}
+				counts={{ queue: queueItems.length, history: historyTotal }}
 				onViewChange={switchView}
 			/>
 		{/snippet}

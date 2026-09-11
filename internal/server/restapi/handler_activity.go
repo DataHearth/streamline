@@ -137,6 +137,7 @@ func (s *Server) ListDownloadHistory(
 	}
 	out := DownloadHistory{
 		Items: make([]HistoryEntry, 0, len(res.Records)),
+		Total: res.Total,
 	}
 	for _, r := range res.Records {
 		out.Items = append(out.Items, toHistoryEntry(r))

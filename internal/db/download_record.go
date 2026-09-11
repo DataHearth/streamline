@@ -946,6 +946,9 @@ func (db *DB) FindActiveDownloadRecordByID(
 type DownloadHistoryResult struct {
 	Records    []*ent.DownloadRecord
 	NextCursor string
+	// Total is every terminal record, not the page: the view switch badges
+	// History with it, and the page length caps at the limit.
+	Total int
 }
 
 // ListDownloadHistory returns terminal records (completed or failed) newest
@@ -959,11 +962,16 @@ func (db *DB) ListDownloadHistory(
 	if limit <= 0 {
 		limit = defaultActivityLimit
 	}
+	terminal := downloadrecord.StatusIn(
+		downloadrecord.StatusCompleted,
+		downloadrecord.StatusFailed,
+	)
+	total, err := db.client.DownloadRecord.Query().Where(terminal).Count(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("download history: count: %w", err)
+	}
 	q := db.client.DownloadRecord.Query().
-		Where(downloadrecord.StatusIn(
-			downloadrecord.StatusCompleted,
-			downloadrecord.StatusFailed,
-		)).
+		Where(terminal).
 		Order(
 			ent.Desc(downloadrecord.FieldUpdateTime),
 			ent.Desc(downloadrecord.FieldID),
@@ -991,7 +999,7 @@ func (db *DB) ListDownloadHistory(
 	if err != nil {
 		return nil, fmt.Errorf("download history: query: %w", err)
 	}
-	res := &DownloadHistoryResult{}
+	res := &DownloadHistoryResult{Total: total}
 	if len(rows) > limit {
 		res.Records = rows[:limit]
 		last := res.Records[limit-1]
