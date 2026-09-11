@@ -19,6 +19,7 @@ import (
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/library/bulkimport"
 	"github.com/datahearth/streamline/internal/otelx"
+	"github.com/datahearth/streamline/internal/scheduler"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 )
@@ -49,6 +50,7 @@ func (s *Service) RunOrphanScan(ctx context.Context) error {
 	}
 
 	var queue []queuedOrphan
+	candidates := 0
 	walkErr := filepath.WalkDir(
 		s.cfg.MoviePath,
 		func(p string, d fs.DirEntry, err error) error {
@@ -91,6 +93,8 @@ func (s *Service) RunOrphanScan(ctx context.Context) error {
 				)
 				return nil
 			}
+			candidates++
+			scheduler.Progress(ctx, candidates, 0)
 			cand, classified, classifyErr := s.classifyOrphan(ctx, p, info.Size())
 			if classifyErr != nil {
 				slog.WarnContext(

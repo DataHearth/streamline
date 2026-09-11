@@ -19,6 +19,7 @@ import (
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/quality"
+	"github.com/datahearth/streamline/internal/scheduler"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -201,7 +202,7 @@ func (s *MissingSearcher) Run(ctx context.Context) error {
 		return nil
 	}
 
-	var grabbed, noMatch, alreadyExists, errCount atomic.Int64
+	var grabbed, noMatch, alreadyExists, errCount, done atomic.Int64
 	sem := make(chan struct{}, s.workers)
 	var wg sync.WaitGroup
 
@@ -214,6 +215,7 @@ func (s *MissingSearcher) Run(ctx context.Context) error {
 		go func(m *ent.Movie) {
 			defer wg.Done()
 			defer func() { <-sem }()
+			defer func() { scheduler.Progress(ctx, int(done.Add(1)), len(movies)) }()
 			switch err := s.SearchOne(ctx, m); {
 			case err == nil:
 				grabbed.Add(1)

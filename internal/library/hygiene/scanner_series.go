@@ -13,6 +13,7 @@ import (
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/library/bulkimport"
 	"github.com/datahearth/streamline/internal/otelx"
+	"github.com/datahearth/streamline/internal/scheduler"
 )
 
 // RunSeriesOrphanScan walks series_path's top-level folders, classifies each
@@ -52,7 +53,8 @@ func (s *Service) RunSeriesOrphanScan(ctx context.Context) error {
 	}
 
 	var queue []db.CreateImportScanShowParams
-	for _, e := range entries {
+	for i, e := range entries {
+		scheduler.Progress(ctx, i, len(entries))
 		if !e.IsDir() {
 			continue
 		}

@@ -8,6 +8,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/otelx"
+	"github.com/datahearth/streamline/internal/scheduler"
 	"go.opentelemetry.io/otel/attribute"
 )
 
@@ -60,6 +61,7 @@ func (s *Service) RunMediaProbe(ctx context.Context) error {
 
 			if s.probeRow(ctx, row) {
 				attempted++
+				scheduler.Progress(ctx, attempted, probeBatchSize)
 				if attempted >= probeBatchSize {
 					break
 				}

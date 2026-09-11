@@ -21,6 +21,7 @@ import (
 	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/posters"
+	"github.com/datahearth/streamline/internal/scheduler"
 	"github.com/datahearth/streamline/internal/utils/numeric"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -1202,7 +1203,8 @@ func (s *Service) RefreshStale(ctx context.Context) error {
 	span.SetAttributes(attribute.Int("refresh.candidate_count", len(rows)))
 
 	refreshed, skipped := 0, 0
-	for _, sh := range rows {
+	for i, sh := range rows {
+		scheduler.Progress(ctx, i, len(rows))
 		if _, err := s.RefreshOne(ctx, sh.ID); err != nil {
 			slog.WarnContext(ctx, "tv refresh failed",
 				"tvshow.id", sh.ID, "error", err)

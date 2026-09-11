@@ -15,6 +15,7 @@ import (
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/quality"
 	"github.com/datahearth/streamline/internal/quality/qualityctx"
+	"github.com/datahearth/streamline/internal/scheduler"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -70,7 +71,8 @@ func (s *EpisodeMissingSearcher) Run(ctx context.Context) error {
 	// is currently a no-op; it is the authority for "already served", so a
 	// future multi-season producer cannot re-search what it already covered.
 	grabbed := make(map[uint32]struct{})
-	for _, show := range shows {
+	for i, show := range shows {
+		scheduler.Progress(ctx, i, len(shows))
 		s.searchShow(ctx, show, grabbed)
 	}
 	return nil

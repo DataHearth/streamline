@@ -14,6 +14,7 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/otelx"
+	"github.com/datahearth/streamline/internal/scheduler"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 )
@@ -60,6 +61,7 @@ func (s *Service) RunDriftCheck(ctx context.Context, interval time.Duration) err
 			}
 			afterID = row.ID
 		}
+		scheduler.Progress(ctx, total, 0)
 		// Flushed per page so the bump list cannot itself grow with the
 		// library — the batching that keeps these off the single SQLite
 		// connection one-by-one is inside BumpMediaFilesLastSeen.

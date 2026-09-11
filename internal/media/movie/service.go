@@ -18,6 +18,7 @@ import (
 	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/posters"
+	"github.com/datahearth/streamline/internal/scheduler"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -597,7 +598,8 @@ func (s *Service) RefreshStale(ctx context.Context) error {
 	span.SetAttributes(attribute.Int("refresh.candidate_count", len(movies)))
 
 	refreshed, skipped := 0, 0
-	for _, m := range movies {
+	for i, m := range movies {
+		scheduler.Progress(ctx, i, len(movies))
 		if err := s.refreshOne(ctx, m); err != nil {
 			slog.WarnContext(ctx, "metadata-refresh: skipping movie",
 				"movie.id", m.ID, "movie.tmdb_id", m.TmdbID, "error", err)
