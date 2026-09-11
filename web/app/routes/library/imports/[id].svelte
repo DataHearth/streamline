@@ -29,6 +29,7 @@
 	import type {
 		ImportFileClassification,
 		ImportFileDecision,
+		ImportBulkDecisionResult,
 		ImportScan,
 		ImportScanFile,
 		ImportScanShow,
@@ -282,78 +283,53 @@
 		onError: (err) => toast.err(err.message),
 	}));
 
-	// No bulk decision endpoint exists, so "Skip all unmatched" fans out
-	// sequential PATCHes. Sequential keeps server load gentle and lets us
-	// surface a partial-failure toast cleanly.
-	const skipAll = createMutation<{ ok: number; fail: number }, Error, void>(
-		() => ({
-			mutationFn: async () => {
-				let ok = 0;
-				let fail = 0;
-				for (const f of pendingFiles) {
-					try {
-						await api(
-							`/library/imports/${importId}/files/${f.id}`,
-							{ method: "PATCH", body: { decision: "skip" } },
-						);
-						ok++;
-					} catch {
-						fail++;
-					}
-				}
-				return { ok, fail };
-			},
-			onSuccess: ({ ok, fail }) => {
-				qc.invalidateQueries({
-					queryKey: ["import", importId, "files"],
-				});
-				qc.invalidateQueries({
-					queryKey: ["import", importId, "pending"],
-				});
-				if (fail === 0)
-					toast.ok(
-						ok === 1
-							? i18n.imports_skipped_file_one({ count: ok })
-							: i18n.imports_skipped_file_other({ count: ok }),
-					);
-				else toast.err(i18n.imports_skip_partial_files({ ok, fail }));
-			},
-			onError: (err) => toast.err(err.message),
-		}),
-	);
+	// "Skip all unmatched" goes through the bulk endpoint by explicit ids. The
+	// target set spans two classifications (ambiguous + unmatched), which the
+	// request's single `classification` filter cannot express, and `ids` is
+	// ANDed with it — so the ids carry the whole selection on their own.
+	const skipAll = createMutation<ImportBulkDecisionResult, Error, void>(() => ({
+		mutationFn: () =>
+			api<ImportBulkDecisionResult>(
+				`/library/imports/${importId}/decisions`,
+				{
+					method: "POST",
+					body: { decision: "skip", ids: pendingFiles.map((f) => f.id) },
+				},
+			),
+		onSuccess: ({ updated }) => {
+			qc.invalidateQueries({ queryKey: ["import", importId, "files"] });
+			qc.invalidateQueries({ queryKey: ["import", importId, "pending"] });
+			toast.ok(
+				updated === 1
+					? i18n.imports_skipped_file_one({ count: updated })
+					: i18n.imports_skipped_file_other({ count: updated }),
+			);
+		},
+		onError: (err) => toast.err(err.message),
+	}));
 
-	// Series edition of the bulk skip: fans out sequential PATCHes to the
-	// undecided (ambiguous/unmatched) show rows.
-	const skipAllShows = createMutation<{ ok: number; fail: number }, Error, void>(
+	// Series edition of the bulk skip. The same endpoint dispatches on the
+	// scan's kind, so the show rows need no separate route.
+	const skipAllShows = createMutation<ImportBulkDecisionResult, Error, void>(
 		() => ({
-			mutationFn: async () => {
-				let ok = 0;
-				let fail = 0;
-				for (const sh of pendingShows) {
-					try {
-						await api(
-							`/library/imports/${importId}/shows/${sh.id}`,
-							{ method: "PATCH", body: { decision: "skip" } },
-						);
-						ok++;
-					} catch {
-						fail++;
-					}
-				}
-				return { ok, fail };
-			},
-			onSuccess: ({ ok, fail }) => {
+			mutationFn: () =>
+				api<ImportBulkDecisionResult>(
+					`/library/imports/${importId}/decisions`,
+					{
+						method: "POST",
+						body: { decision: "skip", ids: pendingShows.map((sh) => sh.id) },
+					},
+				),
+			onSuccess: ({ updated }) => {
 				qc.invalidateQueries({ queryKey: ["import", importId, "shows"] });
 				qc.invalidateQueries({
 					queryKey: ["import", importId, "pending-shows"],
 				});
-				if (fail === 0)
-					toast.ok(
-						ok === 1
-							? i18n.imports_skipped_show_one({ count: ok })
-							: i18n.imports_skipped_show_other({ count: ok }),
-					);
-				else toast.err(i18n.imports_skip_partial_shows({ ok, fail }));
+				toast.ok(
+					updated === 1
+						? i18n.imports_skipped_show_one({ count: updated })
+						: i18n.imports_skipped_show_other({ count: updated }),
+				);
 			},
 			onError: (err) => toast.err(err.message),
 		}),
