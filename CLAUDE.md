@@ -10,7 +10,7 @@ Unified media management platform replacing the *arr stack (Radarr, Sonarr, Lida
 
 ## Frontend
 
-Svelte 5 SPA in `web/app/` (TypeScript everywhere), Routify v3 file-routing over `web/app/routes/`, TanStack Query + Form, valibot, TailwindCSS v4, bundled by esbuild and `//go:embed`-ed. A section's wrapping layout MUST be `_module.svelte` — `_layout.svelte` renders as a sibling route, not a wrapper. Both library lists paginate server-side; settings pages pick save-per-control **or** one TanStack form, never both on a page.
+Svelte 5 SPA in `web/app/` (TypeScript everywhere), Routify v3 file-routing over `web/app/routes/`, TanStack Query + Form, valibot, TailwindCSS v4, bundled by esbuild and `//go:embed`-ed. A section's wrapping layout MUST be `_module.svelte` — `_layout.svelte` renders as a sibling route, not a wrapper. Both library lists paginate server-side, and their toolbars read **faceted** counts — each facet counted against the *other* filters, each with its own `*_total` "all" row. Settings pages pick save-per-control **or** one TanStack form, never both on a page, and either way the page must call `markConfigForm()` or nothing on it locks on a read-only instance.
 
 **Conventions, the dropped facets, search folding, the PWA surface and the bundling pipeline: [`docs/agents/frontend.md`](docs/agents/frontend.md) — read it before touching `web/app/**` or `web/embed.go`.**
 ## Logging
@@ -84,7 +84,7 @@ Cast is written inside the title's transaction; the **person biography fetch is 
 **Probe semantics, the event hooks, cast ingest and person enrichment, re-identify ordering, the in-flight marking paths and the list push-down: [`docs/agents/media-lifecycle.md`](docs/agents/media-lifecycle.md) — read it before touching status transitions, `internal/events/`, or `internal/db` list queries.**
 ## Transcoding
 
-`transcoding: {enabled, max_concurrent, max_failures, hw_accel, hw_device, defer_seeding, verify}` is the global surface, all runtime-editable with no restart; the **policy** lives on the quality profile (`quality_profiles[].transcode`), not globally. A job is created in the same call as the `MediaFile` row. Encode → verify → atomic swap beside the original; a verified-worse output is `rejected` (terminal, retryable by hand), a failure retries to `max_failures`.
+`transcoding: {enabled, max_concurrent, max_failures, hw_accel, hw_device, defer_seeding, verify}` is the global surface, all runtime-editable with no restart; the **policy** lives on the quality profile (`quality_profiles[].transcode`), not globally — edited in the profile form, though only a profile that has none can be switched off there, since the API cannot remove one. A job is created in the same call as the `MediaFile` row. Encode → verify → atomic swap beside the original; a verified-worse output is `rejected` (terminal, retryable by hand), a failure retries to `max_failures`.
 
 **Job lifecycle, verification rules, boot recovery, VAAPI/hardware notes and the deliberate non-features: [`docs/agents/transcoding.md`](docs/agents/transcoding.md) — read it before touching `internal/transcoding/`, `internal/ffmpeg/`, or the `/transcoding/*` handlers.**
 

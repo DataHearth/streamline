@@ -15,6 +15,7 @@
 	import ConfigFormShell from "../../components/modals/ConfigFormShell.svelte";
 	import Dialog from "../../components/modals/Dialog.svelte";
 	import QualityProfileForm, {
+		TRANSCODE_DEFAULTS,
 		type QualityProfileValues as Values,
 	} from "../../components/settings/forms/QualityProfileForm.svelte";
 	import ReadOnlyFieldset from "../../components/settings/ReadOnlyFieldset.svelte";
@@ -31,7 +32,8 @@
 	let modalOpen = $state(false);
 
 	const save = createMutation<QualityProfileFull, Error, Values>(() => ({
-		mutationFn: (body) => {
+		mutationFn: (values) => {
+			const body = toRequest(values);
 			if (editing) {
 				return api<QualityProfileFull>(
 					`/quality-profiles/${encodeURIComponent(editing.name)}`,
@@ -87,7 +89,17 @@
 		formats: [],
 		min_score: 0,
 		upgrade_until_score: 0,
+		transcode_enabled: false,
+		transcode: structuredClone(TRANSCODE_DEFAULTS),
 	};
+
+	// transcode_enabled is the form's own gate, not an API field, and an
+	// unchecked policy must not reach the request at all: `transcode` is absent
+	// or whole. Empty `if` arrays and an empty bitrate are the API's "no rule",
+	// so they go over as-is.
+	function toRequest({ transcode_enabled, transcode, ...rest }: Values) {
+		return transcode_enabled ? { ...rest, transcode } : rest;
+	}
 
 	const form = createForm(() => ({
 		defaultValues: defaults,
@@ -116,6 +128,15 @@
 			})),
 			min_score: p.min_score ?? 0,
 			upgrade_until_score: p.upgrade_until_score ?? 0,
+			transcode_enabled: p.transcode != null,
+			transcode: {
+				if: {
+					video_codecs: p.transcode?.if?.video_codecs ?? [],
+					containers: p.transcode?.if?.containers ?? [],
+					max_video_bitrate: p.transcode?.if?.max_video_bitrate ?? "",
+				},
+				to: { ...TRANSCODE_DEFAULTS.to, ...(p.transcode?.to ?? {}) },
+			},
 		});
 		modalOpen = true;
 	}
@@ -304,7 +325,11 @@
 		}}
 	>
 		<ReadOnlyFieldset>
-			<QualityProfileForm {form} isCreate={editing === null} />
+			<QualityProfileForm
+				{form}
+				isCreate={editing === null}
+				policyPersisted={editing?.transcode != null}
+			/>
 		</ReadOnlyFieldset>
 	</form>
 

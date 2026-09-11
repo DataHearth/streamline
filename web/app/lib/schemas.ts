@@ -90,6 +90,48 @@ export const qualityProfileFormatScore = v.object({
 
 const score = v.pipe(v.number("Number required"), v.integer("Whole numbers only"));
 
+// ffmpeg-style rate: "8M", "4500k", or a bare bits-per-second count. Empty is
+// the valid "no bitrate rule" value, which is why this is not a minLength.
+export const transcodeBitrate = v.union([
+	v.literal(""),
+	v.pipe(
+		v.string(),
+		v.regex(/^\d+(\.\d+)?[kKmM]?$/, "Use a rate like 8M or 4500k"),
+	),
+]);
+
+export const transcodeTo = v.object({
+	container: v.picklist(["mkv", "mp4"]),
+	video_codec: v.picklist(["h264", "hevc", "av1"]),
+	// 0 means "leave -crf off", not a near-lossless encode, so it is a legal
+	// value rather than a missing one.
+	crf: v.pipe(
+		v.number("Number required"),
+		v.integer("Whole numbers only"),
+		v.minValue(0, "0–51"),
+		v.maxValue(51, "0–51"),
+	),
+	preset: v.picklist([
+		"ultrafast",
+		"superfast",
+		"veryfast",
+		"faster",
+		"fast",
+		"medium",
+		"slow",
+		"slower",
+		"veryslow",
+	]),
+	audio_codec: v.picklist(["aac", "opus", "ac3", "flac"]),
+	audio_passthrough: v.array(v.string()),
+});
+
+export const transcodeIf = v.object({
+	video_codecs: v.array(v.string()),
+	containers: v.array(v.string()),
+	max_video_bitrate: transcodeBitrate,
+});
+
 export const qualityProfile = v.object({
 	name: v.pipe(v.string(), v.minLength(1, "Required")),
 	preferred_resolution: resolution,
@@ -109,6 +151,11 @@ export const qualityProfile = v.object({
 	// grabs a release the junk formats scored down.
 	min_score: score,
 	upgrade_until_score: score,
+	// The form always carries a policy object plus the enable flag, and the
+	// page strips both before the request — the API's `transcode` is absent or
+	// whole, never half-filled.
+	transcode_enabled: v.boolean(),
+	transcode: v.object({ if: transcodeIf, to: transcodeTo }),
 });
 
 export const customFormatConditionType = v.picklist(

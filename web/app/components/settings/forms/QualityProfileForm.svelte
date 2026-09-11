@@ -2,7 +2,42 @@
 	import type {
 		QualityProfileFormatScore,
 		Resolution,
+		TranscodeAudioCodec,
+		TranscodePreset,
+		TranscodeTargetCodec,
+		TranscodeTargetContainer,
 	} from "../../../lib/types";
+
+	// The policy is flat and always present in the form, gated by
+	// transcode_enabled. The page assembles the API's optional `transcode` from
+	// the two — a half-filled policy is not a thing the API accepts.
+	export type TranscodeFormValues = {
+		if: {
+			video_codecs: string[];
+			containers: string[];
+			max_video_bitrate: string;
+		};
+		to: {
+			container: TranscodeTargetContainer;
+			video_codec: TranscodeTargetCodec;
+			crf: number;
+			preset: TranscodePreset;
+			audio_codec: TranscodeAudioCodec;
+			audio_passthrough: string[];
+		};
+	};
+
+	export const TRANSCODE_DEFAULTS: TranscodeFormValues = {
+		if: { video_codecs: [], containers: [], max_video_bitrate: "" },
+		to: {
+			container: "mkv",
+			video_codec: "hevc",
+			crf: 0,
+			preset: "medium",
+			audio_codec: "aac",
+			audio_passthrough: [],
+		},
+	};
 
 	export type QualityProfileValues = {
 		name: string;
@@ -13,6 +48,8 @@
 		formats: QualityProfileFormatScore[];
 		min_score: number;
 		upgrade_until_score: number;
+		transcode_enabled: boolean;
+		transcode: TranscodeFormValues;
 	};
 
 	export type ProfilePreset = {
@@ -88,24 +125,70 @@
 	import type { CustomFormat } from "../../../lib/types";
 	import type { AppForm } from "../../../lib/form";
 	import { m as i18n } from "../../../lib/paraglide/messages.js";
+	import { INPUT_CLASS } from "../../../lib/form";
 
 	type Props = {
 		form: AppForm<QualityProfileValues>;
 		// Presets prefill a profile that does not exist yet; on an edit they would
 		// silently discard scores the operator tuned.
 		isCreate?: boolean;
+		// True when the profile being edited already stores a transcode policy.
+		// The API has no way to remove one — omitting `transcode` on a PUT leaves
+		// the stored policy alone — so the enable toggle has to stay on rather
+		// than offer an off that would not persist.
+		policyPersisted?: boolean;
 	};
-	let { form, isCreate = false }: Props = $props();
+	let { form, isCreate = false, policyPersisted = false }: Props = $props();
 
 	const RESOLUTIONS: Resolution[] = ["720p", "1080p", "2160p"];
+
+	// The transcode enums are the policy's own, not the profile's allow-list:
+	// `if.video_codecs` covers seven source codecs (VIDEO_CODECS has the five
+	// worth grabbing), and `to.video_codec` only three the encoder can produce.
+	const SOURCE_CODECS = [
+		{ value: "h264", label: "H.264" },
+		{ value: "hevc", label: "HEVC" },
+		{ value: "av1", label: "AV1" },
+		{ value: "vp9", label: "VP9" },
+		{ value: "mpeg4", label: "MPEG-4" },
+		{ value: "mpeg2video", label: "MPEG-2" },
+		{ value: "vc1", label: "VC-1" },
+	];
+	const SOURCE_CONTAINERS = ["mkv", "mp4", "avi", "mov", "ts", "m2ts", "webm", "wmv"];
+	const TARGET_CONTAINERS: TranscodeTargetContainer[] = ["mkv", "mp4"];
+	const TARGET_CODECS: { value: TranscodeTargetCodec; label: string }[] = [
+		{ value: "hevc", label: "HEVC" },
+		{ value: "h264", label: "H.264" },
+		{ value: "av1", label: "AV1" },
+	];
+	const PRESETS: TranscodePreset[] = [
+		"ultrafast",
+		"superfast",
+		"veryfast",
+		"faster",
+		"fast",
+		"medium",
+		"slow",
+		"slower",
+		"veryslow",
+	];
+	const AUDIO_CODECS: TranscodeAudioCodec[] = ["aac", "opus", "ac3", "flac"];
+	// config.DefaultAudioPassthrough — what an empty list resolves to server-side.
+	const PASSTHROUGH_CODECS = [
+		"truehd",
+		"eac3",
+		"ac3",
+		"dts",
+		"aac",
+		"opus",
+		"flac",
+	];
 
 	// Labels are human, stored values are ffprobe's — mapped once, here, so the
 	// codec check on the backend needs no table of its own.
 	const lock = readOnlyLock();
 	let locked = $derived(lock());
 
-	const inputClass =
-		"w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-fg placeholder:text-fg-faint focus:outline-none focus-visible:ring-2 focus-visible:ring-accent read-only:cursor-not-allowed read-only:opacity-70";
 
 	const formats = createQuery<CustomFormat[]>(() => ({
 		queryKey: ["custom-formats"],
@@ -319,7 +402,7 @@
 											field.handleChange(
 												rows.map((r, k) => (k === i ? { ...r, score: n } : r)),
 											)}
-										class="{inputClass} text-right font-mono tabular"
+										class="{INPUT_CLASS} text-right font-mono tabular"
 									/>
 								</div>
 								<button
@@ -355,7 +438,7 @@
 						value={field.state.value ?? 0}
 						readonly={locked}
 						onChange={(n) => field.handleChange(n)}
-						class="{inputClass} font-mono tabular"
+						class="{INPUT_CLASS} font-mono tabular"
 					/>
 					<p class="mt-1 text-xs text-fg-muted">{i18n.quality_min_score_help()}</p>
 				</label>
@@ -376,7 +459,7 @@
 						value={field.state.value ?? 0}
 						readonly={locked}
 						onChange={(n) => field.handleChange(n)}
-						class="{inputClass} font-mono tabular"
+						class="{INPUT_CLASS} font-mono tabular"
 					/>
 					<p class="mt-1 text-xs text-fg-muted">
 						{i18n.quality_upgrade_until_help()}
@@ -397,4 +480,219 @@
 			/>
 		{/snippet}
 	</form.Field>
+
+	<div class="rounded-lg border border-border bg-bg-card p-3">
+		<form.Field name="transcode_enabled">
+			{#snippet children(field)}
+				<Checkbox
+					name={field.name}
+					checked={field.state.value}
+					disabled={locked || policyPersisted}
+					onChange={(v) => field.handleChange(v)}
+					label={i18n.quality_transcode_enable()}
+					description={i18n.quality_transcode_help()}
+				/>
+			{/snippet}
+		</form.Field>
+
+		{#if policyPersisted}
+			<p class="mt-2 text-xs leading-relaxed text-fg-muted">
+				{i18n.quality_transcode_locked()}
+			</p>
+		{/if}
+
+		<form.Subscribe selector={(s) => s.values.transcode_enabled}>
+			{#snippet children(enabled)}
+				{#if enabled}
+					<div class="mt-4 space-y-4 border-t border-border pt-4">
+						<div>
+							<h4
+								class="font-mono text-[11px] uppercase tracking-[0.14em] text-fg-faint"
+							>
+								{i18n.quality_transcode_if()}
+							</h4>
+							<p class="mt-1 text-xs leading-relaxed text-fg-muted">
+								{i18n.quality_transcode_hdr_note()}
+							</p>
+						</div>
+
+						<form.Field name="transcode.if.video_codecs">
+							{#snippet children(field)}
+								{@const picked = field.state.value ?? []}
+								{@render chips(
+									i18n.quality_transcode_codecs(),
+									SOURCE_CODECS,
+									picked,
+									(v) => field.handleChange(toggleCodec(picked, v)),
+									picked.length === 0
+										? i18n.quality_transcode_codecs_any()
+										: undefined,
+								)}
+							{/snippet}
+						</form.Field>
+
+						<form.Field name="transcode.if.containers">
+							{#snippet children(field)}
+								{@const picked = field.state.value ?? []}
+								{@render chips(
+									i18n.quality_transcode_containers(),
+									SOURCE_CONTAINERS.map((c) => ({ value: c, label: c })),
+									picked,
+									(v) => field.handleChange(toggleCodec(picked, v)),
+									picked.length === 0
+										? i18n.quality_transcode_containers_any()
+										: undefined,
+								)}
+							{/snippet}
+						</form.Field>
+
+						<form.Field name="transcode.if.max_video_bitrate">
+							{#snippet children(field)}
+								<TextField
+									{field}
+									label={i18n.quality_transcode_bitrate()}
+									placeholder="8M"
+									help={i18n.quality_transcode_bitrate_help()}
+								/>
+							{/snippet}
+						</form.Field>
+
+						<h4
+							class="border-t border-border pt-4 font-mono text-[11px] uppercase tracking-[0.14em] text-fg-faint"
+						>
+							{i18n.quality_transcode_to()}
+						</h4>
+
+						<div class="grid gap-3 sm:grid-cols-2">
+							<form.Field name="transcode.to.container">
+								{#snippet children(field)}
+									<Select
+										label={i18n.quality_transcode_container()}
+										value={field.state.value}
+										options={TARGET_CONTAINERS.map((c) => ({
+											value: c,
+											label: c,
+										}))}
+										onChange={(v) => field.handleChange(v)}
+										disabled={locked}
+									/>
+								{/snippet}
+							</form.Field>
+
+							<form.Field name="transcode.to.video_codec">
+								{#snippet children(field)}
+									<Select
+										label={i18n.quality_transcode_video_codec()}
+										value={field.state.value}
+										options={TARGET_CODECS}
+										onChange={(v) => field.handleChange(v)}
+										disabled={locked}
+									/>
+								{/snippet}
+							</form.Field>
+
+							<form.Field name="transcode.to.preset">
+								{#snippet children(field)}
+									<Select
+										label={i18n.quality_transcode_preset()}
+										value={field.state.value}
+										options={PRESETS.map((p) => ({ value: p, label: p }))}
+										onChange={(v) => field.handleChange(v)}
+										disabled={locked}
+									/>
+								{/snippet}
+							</form.Field>
+
+							<form.Field name="transcode.to.audio_codec">
+								{#snippet children(field)}
+									<Select
+										label={i18n.quality_transcode_audio_codec()}
+										value={field.state.value}
+										options={AUDIO_CODECS.map((c) => ({ value: c, label: c }))}
+										onChange={(v) => field.handleChange(v)}
+										disabled={locked}
+									/>
+								{/snippet}
+							</form.Field>
+						</div>
+
+						<form.Field name="transcode.to.crf">
+							{#snippet children(field)}
+								<label class="block">
+									<span
+										class="mb-1 flex items-center gap-1.5 text-sm font-medium text-fg"
+									>
+										{i18n.quality_transcode_crf()}
+										<FieldLock locked={locked} />
+									</span>
+									<ScoreInput
+										ariaLabel={i18n.quality_transcode_crf()}
+										value={field.state.value ?? 0}
+										readonly={locked}
+										onChange={(n) => field.handleChange(n)}
+										class="{INPUT_CLASS} font-mono tabular"
+									/>
+									<p class="mt-1 text-xs leading-relaxed text-fg-muted">
+										{i18n.quality_transcode_crf_help()}
+									</p>
+								</label>
+							{/snippet}
+						</form.Field>
+
+						<form.Field name="transcode.to.audio_passthrough">
+							{#snippet children(field)}
+								{@const picked = field.state.value ?? []}
+								{@render chips(
+									i18n.quality_transcode_passthrough(),
+									PASSTHROUGH_CODECS.map((c) => ({ value: c, label: c })),
+									picked,
+									(v) => field.handleChange(toggleCodec(picked, v)),
+									picked.length === 0
+										? i18n.quality_transcode_passthrough_any()
+										: undefined,
+								)}
+							{/snippet}
+						</form.Field>
+					</div>
+				{/if}
+			{/snippet}
+		</form.Subscribe>
+	</div>
 </div>
+
+{#snippet chips(
+	label: string,
+	options: { value: string; label: string }[],
+	picked: string[],
+	onToggle: (value: string) => void,
+	emptyHint?: string,
+)}
+	<div>
+		<span class="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-fg">
+			{label}
+			<FieldLock locked={locked} />
+		</span>
+		<div class="flex flex-wrap gap-2">
+			{#each options as opt (opt.value)}
+				{@const on = picked.includes(opt.value)}
+				<button
+					type="button"
+					disabled={locked}
+					aria-pressed={on}
+					onclick={() => onToggle(opt.value)}
+					class={cn(
+						"inline-flex h-11 lg:h-9 items-center rounded-full border px-4 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring",
+						on
+							? "border-accent-line bg-accent-soft text-accent-text"
+							: "border-border bg-bg-elevated text-fg-muted hover:border-border-strong",
+					)}
+				>
+					{opt.label}
+				</button>
+			{/each}
+		</div>
+		{#if emptyHint}
+			<p class="mt-1.5 text-xs text-fg-muted">{emptyHint}</p>
+		{/if}
+	</div>
+{/snippet}
