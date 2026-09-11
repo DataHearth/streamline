@@ -8,7 +8,7 @@
 	import { ArrowUpRight, LoaderCircle, Radar, TriangleAlert } from "@lucide/svelte";
 	import { api, errorText, ApiError } from "../../lib/api";
 	import { cn } from "../../lib/cn";
-	import { config } from "../../lib/config.svelte";
+	import { config, markConfigForm } from "../../lib/config.svelte";
 	import { toast } from "../../lib/toast";
 	import type {
 		FFmpegConfig,
@@ -21,6 +21,13 @@
 	import FieldLock from "../../components/forms/FieldLock.svelte";
 	import Select from "../../components/forms/Select.svelte";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { INPUT_CLASS } from "../../lib/form";
+
+	// Saves per control rather than through one form, so nothing else
+	// establishes the config-form context the field primitives read. Without
+	// it every Select on this page stayed live on a read-only instance, while
+	// the hand-rolled readonly={config.readOnly} on the text inputs held.
+	markConfigForm();
 
 	const qc = useQueryClient();
 
@@ -117,8 +124,6 @@
 		apply(clamped);
 	}
 
-	const inputClass =
-		"w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-fg placeholder:text-fg-faint focus:outline-none focus-visible:ring-2 focus-visible:ring-accent read-only:cursor-not-allowed read-only:opacity-70";
 
 	let pending = $derived(transcoding.isPending || ffmpeg.isPending);
 	let failed = $derived(transcoding.isError || ffmpeg.isError);
@@ -210,7 +215,7 @@
 						onkeydown={(e) => {
 							if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur();
 						}}
-						class="{inputClass} font-mono tabular-nums"
+						class="{INPUT_CLASS} font-mono tabular-nums"
 					/>
 					<p class="mt-1 text-xs text-fg-muted">{i18n.transcode_max_concurrent_help()}</p>
 				</label>
@@ -238,7 +243,7 @@
 						onkeydown={(e) => {
 							if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur();
 						}}
-						class="{inputClass} font-mono tabular-nums"
+						class="{INPUT_CLASS} font-mono tabular-nums"
 					/>
 					<p class="mt-1 text-xs text-fg-muted">{i18n.transcode_max_failures_help()}</p>
 				</label>
@@ -313,7 +318,7 @@
 						onkeydown={(e) => {
 							if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur();
 						}}
-						class="{inputClass} font-mono disabled:cursor-not-allowed disabled:opacity-70"
+						class="{INPUT_CLASS} font-mono disabled:cursor-not-allowed disabled:opacity-70"
 					/>
 					<p class="mt-1 text-xs text-fg-muted">{i18n.transcode_hw_device_help()}</p>
 				</label>
@@ -381,7 +386,7 @@
 						onkeydown={(e) => {
 							if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur();
 						}}
-						class="{inputClass} font-mono tabular-nums"
+						class="{INPUT_CLASS} font-mono tabular-nums"
 					/>
 					<p class="mt-1 text-xs text-fg-muted">{i18n.transcode_max_size_percent_help()}</p>
 				</label>
@@ -409,7 +414,7 @@
 						onkeydown={(e) => {
 							if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur();
 						}}
-						class="{inputClass} font-mono tabular-nums"
+						class="{INPUT_CLASS} font-mono tabular-nums"
 					/>
 					<p class="mt-1 text-xs text-fg-muted">{i18n.transcode_min_size_percent_help()}</p>
 				</label>
@@ -437,7 +442,7 @@
 						onkeydown={(e) => {
 							if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur();
 						}}
-						class="{inputClass} font-mono tabular-nums"
+						class="{INPUT_CLASS} font-mono tabular-nums"
 					/>
 					<p class="mt-1 text-xs text-fg-muted">{i18n.transcode_min_vmaf_help()}</p>
 				</label>

@@ -43,3 +43,16 @@ export type AppForm<TFormData> = FormApi<
 		any,
 		any
 	>;
+
+// The one text-input class for every settings control, whether the page uses
+// TanStack forms or saves per control. Read-only styling is part of it rather
+// than something each page remembers: a locked instance still has to be
+// readable and selectable, so the field keeps its colours, but it must stop
+// inviting the edit it will not accept — no I-beam, and no focus ring, which
+// on a field that cannot change reads as "type here".
+export const INPUT_CLASS =
+	"w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-fg " +
+	"placeholder:text-fg-faint focus:outline-none focus-visible:ring-2 " +
+	"focus-visible:ring-accent read-only:cursor-not-allowed read-only:opacity-70 " +
+	"read-only:focus-visible:ring-0 read-only:focus-visible:outline-none " +
+	"read-only:focus:border-border";

@@ -225,6 +225,7 @@
 	import Select from "../forms/Select.svelte";
 	import FieldLock from "../forms/FieldLock.svelte";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { INPUT_CLASS } from "../../lib/form";
 
 	type Props = {
 		// The page owns the draft; the editor mutates it in place, which is what
@@ -240,8 +241,6 @@
 	// Plain inputs rather than TextField: that primitive needs a TanStack field
 	// API, and a format is a variable-length list of heterogeneous rows — a form
 	// library's field paths would have to be rebuilt on every type switch.
-	const inputClass =
-		"w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-fg placeholder:text-fg-faint focus:outline-none focus-visible:ring-2 focus-visible:ring-accent read-only:cursor-not-allowed read-only:opacity-70";
 
 	let locked = $derived(config.readOnly);
 
@@ -451,7 +450,7 @@
 			value={draft.name}
 			placeholder="dolby-vision"
 			oninput={(e) => (draft.name = (e.currentTarget as HTMLInputElement).value)}
-			class={inputClass}
+			class={INPUT_CLASS}
 		/>
 		<p class="mt-1 text-xs text-fg-muted">
 			{isEdit ? i18n.cf_name_locked() : i18n.cf_name_help()}
@@ -470,7 +469,7 @@
 			placeholder={i18n.cf_description_placeholder()}
 			oninput={(e) =>
 				(draft.description = (e.currentTarget as HTMLInputElement).value)}
-			class={inputClass}
+			class={INPUT_CLASS}
 		/>
 		<p class="mt-1 text-xs text-fg-muted">{i18n.cf_description_help()}</p>
 	</label>
@@ -574,7 +573,7 @@
 								aria-label={i18n.cf_pattern()}
 								oninput={(e) =>
 									(c.pattern = (e.currentTarget as HTMLInputElement).value)}
-								class="{inputClass} min-w-48 flex-1 font-mono"
+								class="{INPUT_CLASS} min-w-48 flex-1 font-mono"
 							/>
 						{:else if c.type === "resolution"}
 							<div class="w-36 shrink-0">
@@ -601,7 +600,7 @@
 								aria-label={i18n.cf_value()}
 								oninput={(e) =>
 									(c.value = (e.currentTarget as HTMLInputElement).value)}
-								class="{inputClass} min-w-40 flex-1 font-mono"
+								class="{INPUT_CLASS} min-w-40 flex-1 font-mono"
 							/>
 						{:else if c.type === "size"}
 							<label class="w-28 shrink-0">
@@ -619,7 +618,7 @@
 										(c.min_gb = readNumber(
 											(e.currentTarget as HTMLInputElement).value,
 										))}
-									class="{inputClass} font-mono tabular"
+									class="{INPUT_CLASS} font-mono tabular"
 								/>
 							</label>
 							<label class="w-28 shrink-0">
@@ -637,7 +636,7 @@
 										(c.max_gb = readNumber(
 											(e.currentTarget as HTMLInputElement).value,
 										))}
-									class="{inputClass} font-mono tabular"
+									class="{INPUT_CLASS} font-mono tabular"
 								/>
 							</label>
 						{:else if c.type === "seeders" || c.type === "audio_tracks"}
@@ -657,7 +656,7 @@
 										(c.min = readNumber(
 											(e.currentTarget as HTMLInputElement).value,
 										))}
-									class="{inputClass} font-mono tabular"
+									class="{INPUT_CLASS} font-mono tabular"
 								/>
 							</label>
 						{:else if c.type === "audio_language" || c.type === "subtitle_language"}
@@ -670,7 +669,7 @@
 									readonly={locked}
 									placeholder="fra"
 									bind:value={c.value}
-									class="{inputClass} font-mono"
+									class="{INPUT_CLASS} font-mono"
 								/>
 							</label>
 						{/if}
@@ -803,7 +802,7 @@
 					oninput={(e) =>
 						(sampleTitle = (e.currentTarget as HTMLInputElement).value)}
 					placeholder="Movie.2024.2160p.BluRay.REMUX.HDR.x265-GRP"
-					class="{inputClass} font-mono"
+					class="{INPUT_CLASS} font-mono"
 				/>
 			</label>
 			<label class="w-28">
@@ -818,7 +817,7 @@
 					value={sampleSizeGB}
 					oninput={(e) =>
 						(sampleSizeGB = (e.currentTarget as HTMLInputElement).value)}
-					class="{inputClass} font-mono tabular"
+					class="{INPUT_CLASS} font-mono tabular"
 				/>
 			</label>
 			<label class="w-28">
@@ -832,7 +831,7 @@
 					value={sampleSeeders}
 					oninput={(e) =>
 						(sampleSeeders = (e.currentTarget as HTMLInputElement).value)}
-					class="{inputClass} font-mono tabular"
+					class="{INPUT_CLASS} font-mono tabular"
 				/>
 			</label>
 			<label class="w-28">
@@ -847,7 +846,7 @@
 					value={sampleEpisodes}
 					oninput={(e) =>
 						(sampleEpisodes = (e.currentTarget as HTMLInputElement).value)}
-					class="{inputClass} font-mono tabular"
+					class="{INPUT_CLASS} font-mono tabular"
 				/>
 			</label>
 		</div>

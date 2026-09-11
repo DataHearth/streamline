@@ -13,7 +13,7 @@
 		Loader,
 	} from "@lucide/svelte";
 	import { api, errorText } from "../../lib/api";
-	import { config } from "../../lib/config.svelte";
+	import { config, markConfigForm } from "../../lib/config.svelte";
 	import { toast } from "../../lib/toast";
 	import { cn } from "../../lib/cn";
 	import type {
@@ -27,6 +27,12 @@
 	import Checkbox from "../../components/forms/Checkbox.svelte";
 	import Dialog from "../../components/modals/Dialog.svelte";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
+
+	// Saves per control rather than through one form, so nothing else
+	// establishes the config-form context the field primitives read. Without
+	// it every Select on this page stayed live on a read-only instance, while
+	// the hand-rolled readonly={config.readOnly} on the text inputs held.
+	markConfigForm();
 
 	const ROOTS: { value: MigrationRoot; label: string }[] = [
 		{ value: "movies", label: i18n.migration_movie_library() },

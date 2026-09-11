@@ -14,7 +14,7 @@
 		TriangleAlert,
 	} from "@lucide/svelte";
 	import { api, errorText } from "../../lib/api";
-	import { config } from "../../lib/config.svelte";
+	import { config, markConfigForm } from "../../lib/config.svelte";
 	import { toast } from "../../lib/toast";
 	import type {
 		AppLogConfig,
@@ -28,6 +28,13 @@
 	import Select from "../../components/forms/Select.svelte";
 	import FieldLock from "../../components/forms/FieldLock.svelte";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { INPUT_CLASS } from "../../lib/form";
+
+	// Saves per control rather than through one form, so nothing else
+	// establishes the config-form context the field primitives read. Without
+	// it every Select on this page stayed live on a read-only instance, while
+	// the hand-rolled readonly={config.readOnly} on the text inputs held.
+	markConfigForm();
 
 	const qc = useQueryClient();
 
@@ -144,8 +151,6 @@
 		save(next);
 	}
 
-	const inputClass =
-		"w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-fg placeholder:text-fg-faint focus:outline-none focus-visible:ring-2 focus-visible:ring-accent read-only:cursor-not-allowed read-only:opacity-70";
 
 	let appLog = $derived(sys.data?.log?.app ?? {});
 	let httpLog = $derived(sys.data?.log?.http ?? {});
@@ -539,7 +544,7 @@
 				onkeydown={(e) => {
 					if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur();
 				}}
-				class="{inputClass} font-mono"
+				class="{INPUT_CLASS} font-mono"
 			/>
 		</span>
 		<p class="mt-1 max-w-xl text-xs leading-relaxed text-fg-muted">{help}</p>
@@ -616,7 +621,7 @@
 			onkeydown={(e) => {
 				if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur();
 			}}
-			class="{inputClass} font-mono"
+			class="{INPUT_CLASS} font-mono"
 		/>
 	</label>
 {/snippet}
