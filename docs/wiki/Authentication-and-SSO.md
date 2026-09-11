@@ -175,7 +175,7 @@ It is only ever a **fallback**. An invite carries its own role, chosen by the ad
 
 > **Upgrading:** this key was previously called `auth.oidc_default_role`, and the old name is **no longer read**. If your config still uses it, rename it — otherwise the key is ignored and new self-registered accounts fall back to `member`, with nothing in the logs to say so. The API is the same clean break: `GET /api/v1/config/auth` returns only `default_role`, and a `PATCH` naming `oidc_default_role` is ignored as an unknown field.
 
-Invites: `POST /api/v1/auth/invites` returns the raw token **once**. The SPA fetches `GET /auth/invite/{token}` to prefill the form; that lookup deliberately skips the email match so the page can render, while `RegisterWithInvite` enforces the binding atomically inside a transaction at submit time. Registration failures are mapped to user-safe messages — raw service errors are logged, never returned.
+Invites: `POST /api/v1/auth/invites` returns the raw token **once**. It takes a `ttl` as a Go duration string (default `168h`); the Invites card offers 1, 3, 7 and 30 days rather than a free-text field, since a typo there is a `422` on a form whose other two fields are fine. The SPA fetches `GET /auth/invite/{token}` to prefill the form; that lookup deliberately skips the email match so the page can render, while `RegisterWithInvite` enforces the binding atomically inside a transaction at submit time. Registration failures are mapped to user-safe messages — raw service errors are logged, never returned.
 
 ---
 

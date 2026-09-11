@@ -49,7 +49,7 @@
 	const create = createMutation<
 		InviteCreated,
 		Error,
-		{ email: string; role: UserRole }
+		{ email: string; role: UserRole; ttl: string }
 	>(() => ({
 		mutationFn: (body) =>
 			api<InviteCreated>("/auth/invites", { method: "POST", body }),
@@ -72,10 +72,22 @@
 		onError: (err) => toast.err(errorText(err)),
 	}));
 
+	// Go duration strings, matching the API's `ttl` pattern. Presets rather than
+	// free text: the server takes any Go duration, but a typo there is a 422 on
+	// a form whose other two fields are fine.
+	const TTL_OPTIONS = [
+		{ value: "24h", label: i18n.invites_ttl_1d() },
+		{ value: "72h", label: i18n.invites_ttl_3d() },
+		{ value: "168h", label: i18n.invites_ttl_7d() },
+		{ value: "720h", label: i18n.invites_ttl_30d() },
+	];
+
 	const form = createForm(() => ({
-		defaultValues: { email: "", role: "member" as UserRole },
+		// 168h is the API's own default; sending it explicitly keeps the control
+		// honest about what an untouched form will do.
+		defaultValues: { email: "", role: "member" as UserRole, ttl: "168h" },
 		validators: {
-			onChange: v.object({ email: inviteEmail, role: userRole }),
+			onChange: v.object({ email: inviteEmail, role: userRole, ttl: v.string() }),
 		},
 		onSubmit: ({ value }) => create.mutate(value),
 	}));
@@ -123,7 +135,7 @@
 	</header>
 
 	<form
-		class="mt-5 grid gap-3 sm:grid-cols-[1fr_200px_auto] sm:items-end"
+		class="mt-5 grid gap-3 sm:grid-cols-[1fr_200px_150px_auto] sm:items-end"
 		onsubmit={(e) => {
 			e.preventDefault();
 			form.handleSubmit();
@@ -152,6 +164,17 @@
 						{ value: "request_only", label: i18n.role_request_only() },
 						{ value: "admin", label: i18n.common_admin() },
 					]}
+					onChange={(v) => field.handleChange(v)}
+					disabled={registrationOff}
+				/>
+			{/snippet}
+		</form.Field>
+		<form.Field name="ttl">
+			{#snippet children(field)}
+				<Select
+					label={i18n.invites_ttl()}
+					value={field.state.value}
+					options={TTL_OPTIONS}
 					onChange={(v) => field.handleChange(v)}
 					disabled={registrationOff}
 				/>
