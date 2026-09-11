@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Check } from "@lucide/svelte";
+	import { Check, type LucideIcon } from "@lucide/svelte";
 	import { cn } from "../../lib/cn";
 
 	// One row of the one dropdown surface: a label, and any of a leading status
@@ -16,6 +16,10 @@
 		count?: number;
 		// Token class for the leading dot, e.g. "bg-status-wanted".
 		dot?: string;
+		// A leading glyph instead of the dot, for facets whose values are kinds
+		// rather than states — a screen for a standard show, an eye for
+		// monitored. Ignored when `dot` is set: one leading mark per row.
+		icon?: LucideIcon;
 		// Series types keep the mono lowercase they are drawn in elsewhere.
 		mono?: boolean;
 		title?: string;
@@ -28,6 +32,7 @@
 		hint,
 		count,
 		dot,
+		icon: Icon,
 		mono = false,
 		title,
 	}: Props = $props();
@@ -50,6 +55,14 @@
 				class={cn("mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full", dot)}
 				aria-hidden="true"
 			></span>
+		{:else if Icon}
+			<Icon
+				class={cn(
+					"mt-[3px] h-3.5 w-3.5 shrink-0",
+					selected ? "text-accent" : "text-fg-subtle",
+				)}
+				aria-hidden="true"
+			/>
 		{/if}
 		<span class="min-w-0 flex-1">
 			<span class={cn("block truncate", mono && "font-mono lowercase")}>
