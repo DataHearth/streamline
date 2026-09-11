@@ -1,5 +1,10 @@
 <script lang="ts">
-	import { createQuery, createMutation, useQueryClient } from "@tanstack/svelte-query";
+	import {
+		createQuery,
+		createMutation,
+		keepPreviousData,
+		useQueryClient,
+	} from "@tanstack/svelte-query";
 	import { slide } from "svelte/transition";
 	import {
 		Inbox,
@@ -78,9 +83,24 @@
 	}
 
 	const qc = useQueryClient();
+	// `kind` is the one filter both bands share, so it goes to the server and
+	// the rows never arrive. `status` deliberately does NOT: the lg tab bar and
+	// the touch list hold *different* tabs at the same time (`tab` vs
+	// `touchTab`) over this one array, so a server-side status filter would be
+	// right for whichever band asked and wrong for the other. `query` has no
+	// server param at all. Both stay in filterRequests.
 	const requestsQuery = createQuery<Paginated<MediaRequest>>(() => ({
-		queryKey: ["requests"],
-		queryFn: () => apiAllPages<MediaRequest>("/requests"),
+		queryKey: ["requests", kind] as const,
+		queryFn: () => {
+			const p = new URLSearchParams();
+			// The chips are plural ("movies"/"series"); the API's enum is the
+			// media_type stored on the row.
+			if (kind === "movies") p.set("media_type", "movie");
+			if (kind === "series") p.set("media_type", "tvshow");
+			const qs = p.toString();
+			return apiAllPages<MediaRequest>(`/requests${qs ? `?${qs}` : ""}`);
+		},
+		placeholderData: keepPreviousData,
 	}));
 	const countsQuery = createQuery<RequestCounts>(() => ({
 		queryKey: ["requests", "counts"],
