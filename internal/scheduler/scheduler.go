@@ -115,6 +115,10 @@ type JobInfo struct {
 	// Nothing persists it: a run that never finishes leaves no trace after a
 	// restart, which is the same thing a stale last_started_at column said.
 	StartedAt *time.Time
+	// Done and Total are the in-flight run's Progress, set only while Running
+	// and only for a job that reports one. A job that counts as it goes
+	// without knowing the size of the work reports Total 0.
+	Done, Total int
 }
 
 // snapshot builds a JobInfo. The caller must hold j.mu.
@@ -131,8 +135,61 @@ func (j *registeredJob) snapshot() JobInfo {
 			t := time.Unix(0, ns)
 			info.StartedAt = &t
 		}
+		if p := j.progress.Load(); p != nil {
+			info.Done, info.Total = p[0], p[1]
+		}
 	}
 	return info
+}
+
+type runKey struct{}
+
+type run struct {
+	s   *Scheduler
+	job *registeredJob
+}
+
+// Progress records how far the current run has got, for the API to show
+// alongside Running. It only does anything on the ctx a job body receives
+// from the scheduler; anywhere else it is a no-op, so a service method can
+// call it unconditionally whether a job or a request invoked it.
+func Progress(ctx context.Context, done, total int) {
+	r, ok := ctx.Value(runKey{}).(run)
+	if !ok {
+		return
+	}
+	r.job.progress.Store(&[2]int{done, total})
+	r.s.notify()
+}
+
+// Subscribe returns a channel that receives a nudge whenever any job's
+// observable state changes — a run starting, progressing or ending, a pause,
+// resume or reschedule. Nudges coalesce: a subscriber that has not drained
+// the last one is not sent another, so a slow reader sees "something
+// changed" rather than a backlog. The cancel func drops the subscription.
+func (s *Scheduler) Subscribe() (<-chan struct{}, func()) {
+	ch := make(chan struct{}, 1)
+	s.mu.Lock()
+	s.subs[ch] = struct{}{}
+	s.mu.Unlock()
+	return ch, func() {
+		s.mu.Lock()
+		delete(s.subs, ch)
+		s.mu.Unlock()
+	}
+}
+
+// notify nudges every subscriber. Takes s.mu, so never call it under job.mu:
+// List locks s.mu then job.mu, and the reverse order deadlocks.
+func (s *Scheduler) notify() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for ch := range s.subs {
+		select {
+		case ch <- struct{}{}:
+		default:
+		}
+	}
 }
 
 type registeredJob struct {
@@ -148,6 +205,9 @@ type registeredJob struct {
 	// 0 for a job that has not yet succeeded this process. Read by the
 	// last-success gauge; see registerJobGauge for why a counter is not enough.
 	lastSuccess atomic.Int64
+	// progress is the in-flight run's {done, total}, one pointer so a reader
+	// never pairs the done of one Progress call with the total of the next.
+	progress atomic.Pointer[[2]int]
 
 	// mu guards interval, paused, and stopCh.
 	mu     sync.Mutex
@@ -165,12 +225,16 @@ type registeredJob struct {
 type Scheduler struct {
 	mu      sync.Mutex
 	jobs    map[string]*registeredJob
+	subs    map[chan struct{}]struct{}
 	hook    StateHook
 	rootCtx context.Context
 }
 
 func New(opts ...SchedulerOption) *Scheduler {
-	s := &Scheduler{jobs: make(map[string]*registeredJob)}
+	s := &Scheduler{
+		jobs: make(map[string]*registeredJob),
+		subs: make(map[chan struct{}]struct{}),
+	}
 	for _, opt := range opts {
 		opt(s)
 	}
@@ -375,8 +439,11 @@ func (s *Scheduler) executeJob(ctx context.Context, job *registeredJob) {
 		if s.hook != nil {
 			s.hook.OnEnd(ctx, job.name, time.Now(), "skipped", nil, 0)
 		}
+		s.notify()
 		return
 	}
+	// Subscribers read the persisted row, so the end nudge waits for the hook.
+	defer s.notify()
 	defer job.running.Store(false)
 
 	ctx, span := tracer.Start(ctx, "scheduler.job",
@@ -386,6 +453,9 @@ func (s *Scheduler) executeJob(ctx context.Context, job *registeredJob) {
 
 	start := time.Now()
 	job.startedAt.Store(start.UnixNano())
+	job.progress.Store(nil)
+	s.notify()
+	ctx = context.WithValue(ctx, runKey{}, run{s: s, job: job})
 
 	outcome := "success"
 	runErr := runGuarded(ctx, job)
@@ -457,6 +527,7 @@ func (s *Scheduler) Pause(name string) error {
 		return ErrJobSystem
 	}
 	rootCtx, _ := s.root()
+	defer s.notify()
 	job.mu.Lock()
 	defer job.mu.Unlock()
 	if job.paused {
@@ -483,6 +554,7 @@ func (s *Scheduler) Resume(name string) error {
 		return ErrJobSystem
 	}
 	rootCtx, started := s.root()
+	defer s.notify()
 	job.mu.Lock()
 	defer job.mu.Unlock()
 	if !job.paused {
@@ -510,6 +582,7 @@ func (s *Scheduler) Reschedule(name string, interval time.Duration) error {
 		return ErrJobSystem
 	}
 	rootCtx, _ := s.root()
+	defer s.notify()
 	job.mu.Lock()
 	defer job.mu.Unlock()
 	job.interval = interval
@@ -563,6 +636,7 @@ func (s *Scheduler) RunNow(name string) error {
 // *Scheduler implements it.
 type Controller interface {
 	List() []JobInfo
+	Subscribe() (<-chan struct{}, func())
 	Get(name string) (JobInfo, error)
 	Pause(name string) error
 	Resume(name string) error

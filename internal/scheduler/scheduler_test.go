@@ -558,6 +558,82 @@ var _ = Describe("Scheduler", Label("unit", "scheduler"), func() {
 			Expect(s.RunNow("nope")).To(MatchError(ErrJobUnknown))
 		})
 
+		It("exposes Progress while the run is in flight and drops it after", func() {
+			s := New()
+			gate := make(chan struct{})
+			release := make(chan struct{})
+			s.Register("counting", time.Hour, func(ctx context.Context) error {
+				Progress(ctx, 3, 10)
+				close(gate)
+				<-release
+				return nil
+			})
+			ctx, cancel := context.WithCancel(context.Background())
+			done := make(chan struct{})
+			go func() { s.Start(ctx); close(done) }()
+
+			<-gate
+			info, err := s.Get("counting")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(info.Running).To(BeTrue())
+			Expect(info.Done).To(Equal(3))
+			Expect(info.Total).To(Equal(10))
+
+			close(release)
+			Eventually(func() JobInfo {
+				info, err := s.Get("counting")
+				Expect(err).NotTo(HaveOccurred())
+				return info
+			}).WithTimeout(time.Second).Should(SatisfyAll(
+				HaveField("Running", BeFalse()),
+				HaveField("Total", 0),
+			))
+
+			cancel()
+			<-done
+		})
+
+		It("ignores Progress on a ctx the scheduler did not hand out", func() {
+			Progress(context.Background(), 1, 2)
+		})
+
+		It(
+			"nudges subscribers on start, progress and end, and stops after cancel",
+			func() {
+				s := New()
+				release := make(chan struct{})
+				s.Register("noisy", time.Hour, func(ctx context.Context) error {
+					Progress(ctx, 1, 1)
+					<-release
+					return nil
+				})
+				ctx, cancel := context.WithCancel(context.Background())
+				done := make(chan struct{})
+				go func() { s.Start(ctx); close(done) }()
+				Eventually(func() bool { return s.List()[0].Running }).
+					WithTimeout(time.Second).Should(BeTrue())
+
+				ch, unsubscribe := s.Subscribe()
+				Consistently(
+					ch,
+				).WithTimeout(50 * time.Millisecond).
+					ShouldNot(Receive())
+
+				close(release)
+				Eventually(ch).WithTimeout(time.Second).Should(Receive())
+
+				unsubscribe()
+				Expect(s.Pause("noisy")).To(Succeed())
+				Consistently(
+					ch,
+				).WithTimeout(50 * time.Millisecond).
+					ShouldNot(Receive())
+
+				cancel()
+				<-done
+			},
+		)
+
 		It("is allowed even when the job is paused", func() {
 			var calls atomic.Int32
 			s := New()
