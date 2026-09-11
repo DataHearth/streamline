@@ -87,7 +87,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 
 		storeMk = mockdb.NewMockStore(GinkgoT())
 		msMk = mockimp.NewMockMediaServerDispatcher(GinkgoT())
-		libSvc = library.NewImportService(&config.Get().Library)
+		libSvc = library.NewImportService()
 		w = NewWorker(Deps{DB: storeMk, Library: libSvc, MediaServer: msMk})
 	})
 
@@ -132,7 +132,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 					"series_naming":        "{title}/{title} S{season}E{episode}.{ext}",
 				},
 			})
-			libSvc = library.NewImportService(&config.Get().Library)
+			libSvc = library.NewImportService()
 			dlMk := mockdl.NewMockDownloader(GinkgoT())
 			w = NewWorker(
 				Deps{

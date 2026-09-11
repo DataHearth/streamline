@@ -18,7 +18,6 @@ import (
 
 	entdr "github.com/datahearth/streamline/ent/downloadrecord"
 	entmovie "github.com/datahearth/streamline/ent/movie"
-	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/importer"
@@ -161,7 +160,7 @@ var _ = Describe("Import pipeline", Label("integration", "importer"), func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			dlManager := download.New(store, nil)
-			libSvc := library.NewImportService(&config.Get().Library)
+			libSvc := library.NewImportService()
 			dispatcher := mediaserver.NewDispatcher()
 			w := importer.NewWorker(importer.Deps{
 				DB:          store,
@@ -264,7 +263,7 @@ var _ = Describe("Import pipeline", Label("integration", "importer"), func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		dlManager := download.New(store, nil)
-		libSvc := library.NewImportService(&config.Get().Library)
+		libSvc := library.NewImportService()
 		dispatcher := mediaserver.NewDispatcher()
 		w := importer.NewWorker(importer.Deps{
 			DB: store, Library: libSvc, Download: dlManager, MediaServer: dispatcher,
@@ -351,7 +350,7 @@ var _ = Describe("Import pipeline", Label("integration", "importer"), func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			dlManager := download.New(store, nil)
-			libSvc := library.NewImportService(&config.Get().Library)
+			libSvc := library.NewImportService()
 			dispatcher := mediaserver.NewDispatcher()
 			w := importer.NewWorker(importer.Deps{
 				DB:          store,

@@ -15,7 +15,6 @@ import (
 	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/transcodejob"
-	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/library"
@@ -273,7 +272,6 @@ var _ = Describe(
 			"transfers episodes into the series library with the scan's mode",
 			func() {
 				ctx := context.Background()
-				configtest.Setup(map[string]any{})
 				root := GinkgoT().TempDir()
 				srcDir := filepath.Join(root, "downloads")
 				libDir := filepath.Join(root, "tv")
@@ -283,18 +281,21 @@ var _ = Describe(
 				Expect(
 					os.WriteFile(srcFile, make([]byte, 60*1024*1024), 0o644),
 				).To(Succeed())
+				configtest.Setup(map[string]any{
+					"library": map[string]any{
+						"series_path": libDir,
+						"series_naming": "{title}/Season {season:02}/" +
+							"{title} - S{season:02}E{episode:02}.{ext}",
+						"import_mode": "hardlink",
+					},
+				})
 
 				client := dbtest.SetupTestDB(ctx)
 				events.Register(client)
 				DeferCleanup(client.Close)
 				store := db.New(client)
 				tvmeta := metamocks.NewMockTVProvider(GinkgoT())
-				importSvc := library.NewImportService(&config.LibraryConfig{
-					SeriesPath: libDir,
-					SeriesNaming: "{title}/Season {season:02}/" +
-						"{title} - S{season:02}E{episode:02}.{ext}",
-					ImportMode: "hardlink",
-				})
+				importSvc := library.NewImportService()
 				svc := NewService(
 					store, nil, tvmeta, importSvc, nil,
 					tvshow.NewService(store, tvmeta, nil, nil), libDir, libDir,

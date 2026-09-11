@@ -46,12 +46,10 @@ func init() {
 	importDuration.Record(ctx, 0)
 }
 
-type ImportService struct {
-	config *config.LibraryConfig
-}
+type ImportService struct{}
 
-func NewImportService(cfg *config.LibraryConfig) *ImportService {
-	return &ImportService{config: cfg}
+func NewImportService() *ImportService {
+	return &ImportService{}
 }
 
 // ImportedFile describes a placed media file. Returned by ImportMovie so the
@@ -180,16 +178,17 @@ func (s *ImportService) ImportMovie(
 }
 
 // ImportMovieWithMode is ImportMovie with an explicit transfer-mode override.
-// Empty mode falls back to s.config.ImportMode. Valid values: hardlink, copy, move.
+// Empty mode falls back to the live config's ImportMode. Valid values: hardlink, copy, move.
 func (s *ImportService) ImportMovieWithMode(
 	ctx context.Context,
 	srcDir string,
 	m *ent.Movie,
 	modeOverride string,
 ) (ImportedFile, error) {
+	lib := config.Get().Library
 	mode := modeOverride
 	if mode == "" {
-		mode = s.config.ImportMode
+		mode = lib.ImportMode
 	}
 	ctx, span := tracer.Start(ctx, "library.import_movie",
 		trace.WithAttributes(
@@ -204,8 +203,8 @@ func (s *ImportService) ImportMovieWithMode(
 		kind:    "movie",
 		src:     srcDir,
 		minSize: MinMediaSize,
-		root:    s.config.MoviePath,
-		naming:  s.config.MovieNaming,
+		root:    lib.MoviePath,
+		naming:  lib.MovieNaming,
 		mode:    mode,
 		buildVars: func(parsed ParseResult) map[string]string {
 			return BuildMovieVars(m.Title, m.Year, m.TmdbID, parsed)
@@ -229,8 +228,8 @@ func (s *ImportService) ImportEpisode(
 }
 
 // ImportEpisodeWithMode is ImportEpisode with an explicit transfer-mode
-// override. Empty mode falls back to s.config.ImportMode. Valid values:
-// hardlink, copy, move.
+// override. Empty mode falls back to the live config's ImportMode. Valid
+// values: hardlink, copy, move.
 func (s *ImportService) ImportEpisodeWithMode(
 	ctx context.Context,
 	srcFile string,
@@ -239,9 +238,10 @@ func (s *ImportService) ImportEpisodeWithMode(
 	ep *ent.Episode,
 	modeOverride string,
 ) (ImportedFile, error) {
+	lib := config.Get().Library
 	mode := modeOverride
 	if mode == "" {
-		mode = s.config.ImportMode
+		mode = lib.ImportMode
 	}
 	ctx, span := tracer.Start(ctx, "library.import_episode",
 		trace.WithAttributes(
@@ -257,8 +257,8 @@ func (s *ImportService) ImportEpisodeWithMode(
 		kind:    "episode",
 		src:     srcFile,
 		minSize: MinEpisodeSize,
-		root:    s.config.SeriesPath,
-		naming:  s.config.SeriesNaming,
+		root:    lib.SeriesPath,
+		naming:  lib.SeriesNaming,
 		mode:    mode,
 		buildVars: func(parsed ParseResult) map[string]string {
 			return BuildEpisodeVars(

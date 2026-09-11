@@ -13,7 +13,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 
 	"github.com/datahearth/streamline/ent"
-	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
 
 var _ = Describe("ListVideoFilesRecursive", Label("unit", "library"), func() {
@@ -62,12 +62,14 @@ var _ = Describe("ImportService", Label("unit", "library"), func() {
 				)
 				writeSizedFile(downloadDir, filepath.Base(srcFile), 60<<20)
 
-				cfg := &config.LibraryConfig{
-					MoviePath:   libraryDir,
-					MovieNaming: "{title} ({year})/{title} ({year}) - {quality}.{ext}",
-					ImportMode:  "hardlink",
-				}
-				svc := NewImportService(cfg)
+				configtest.Setup(map[string]any{
+					"library": map[string]any{
+						"movie_path":   libraryDir,
+						"movie_naming": "{title} ({year})/{title} ({year}) - {quality}.{ext}",
+						"import_mode":  "hardlink",
+					},
+				})
+				svc := NewImportService()
 				m := &ent.Movie{
 					ID:     1,
 					Title:  "Interstellar",
@@ -104,12 +106,14 @@ var _ = Describe("ImportService", Label("unit", "library"), func() {
 					60<<20,
 				)
 
-				cfg := &config.LibraryConfig{
-					MoviePath:   libraryDir,
-					MovieNaming: "{title} ({year})/{title} ({year}) - {quality}.{ext}",
-					ImportMode:  "copy",
-				}
-				svc := NewImportService(cfg)
+				configtest.Setup(map[string]any{
+					"library": map[string]any{
+						"movie_path":   libraryDir,
+						"movie_naming": "{title} ({year})/{title} ({year}) - {quality}.{ext}",
+						"import_mode":  "copy",
+					},
+				})
+				svc := NewImportService()
 				m := &ent.Movie{ID: 1, Title: "Movie", Year: 2020, TmdbID: 999}
 
 				got, err := svc.ImportMovie(ctx, downloadDir, m)
@@ -137,11 +141,13 @@ var _ = Describe("ImportService", Label("unit", "library"), func() {
 			"returns ErrDestExists when a differing file blocks the destination",
 			func() {
 				writeSizedFile(downloadDir, "Flick.2024.1080p.mkv", 60<<20)
-				cfg := &config.LibraryConfig{
-					MoviePath:   libraryDir,
-					MovieNaming: "{title} ({year})/{title}.{ext}",
-					ImportMode:  "copy",
-				}
+				configtest.Setup(map[string]any{
+					"library": map[string]any{
+						"movie_path":   libraryDir,
+						"movie_naming": "{title} ({year})/{title}.{ext}",
+						"import_mode":  "copy",
+					},
+				})
 				destDir := filepath.Join(libraryDir, "Flick (2024)")
 				Expect(os.MkdirAll(destDir, 0o755)).To(Succeed())
 				Expect(
@@ -152,7 +158,7 @@ var _ = Describe("ImportService", Label("unit", "library"), func() {
 					),
 				).To(Succeed())
 
-				svc := NewImportService(cfg)
+				svc := NewImportService()
 				m := &ent.Movie{ID: 1, Title: "Flick", Year: 2024, TmdbID: 1}
 				_, err := svc.ImportMovie(ctx, downloadDir, m)
 				Expect(err).To(MatchError(ErrDestExists))
@@ -163,18 +169,20 @@ var _ = Describe("ImportService", Label("unit", "library"), func() {
 			"is idempotent when dest already points at the same inode (hardlink mode)",
 			func() {
 				src := writeSizedFile(downloadDir, "Flick.2024.1080p.mkv", 60<<20)
-				cfg := &config.LibraryConfig{
-					MoviePath:   libraryDir,
-					MovieNaming: "{title} ({year})/{title}.{ext}",
-					ImportMode:  "hardlink",
-				}
+				configtest.Setup(map[string]any{
+					"library": map[string]any{
+						"movie_path":   libraryDir,
+						"movie_naming": "{title} ({year})/{title}.{ext}",
+						"import_mode":  "hardlink",
+					},
+				})
 				destDir := filepath.Join(libraryDir, "Flick (2024)")
 				Expect(os.MkdirAll(destDir, 0o755)).To(Succeed())
 				Expect(
 					os.Link(src, filepath.Join(destDir, "Flick.mkv")),
 				).To(Succeed())
 
-				svc := NewImportService(cfg)
+				svc := NewImportService()
 				m := &ent.Movie{ID: 1, Title: "Flick", Year: 2024, TmdbID: 1}
 				got, err := svc.ImportMovie(ctx, downloadDir, m)
 				Expect(err).NotTo(HaveOccurred())
@@ -184,12 +192,14 @@ var _ = Describe("ImportService", Label("unit", "library"), func() {
 
 		It("returns ErrUnsafePath when template output escapes MoviePath", func() {
 			writeSizedFile(downloadDir, "Flick.2024.1080p.mkv", 60<<20)
-			cfg := &config.LibraryConfig{
-				MoviePath:   libraryDir,
-				MovieNaming: "../escape/{title}.{ext}",
-				ImportMode:  "copy",
-			}
-			svc := NewImportService(cfg)
+			configtest.Setup(map[string]any{
+				"library": map[string]any{
+					"movie_path":   libraryDir,
+					"movie_naming": "../escape/{title}.{ext}",
+					"import_mode":  "copy",
+				},
+			})
+			svc := NewImportService()
 			m := &ent.Movie{ID: 1, Title: "Flick", Year: 2024, TmdbID: 1}
 			_, err := svc.ImportMovie(ctx, downloadDir, m)
 			Expect(err).To(MatchError(ErrUnsafePath))
@@ -216,12 +226,15 @@ var _ = Describe("ImportService", Label("unit", "library"), func() {
 		})
 
 		newSvc := func(mode string) *ImportService {
-			return NewImportService(&config.LibraryConfig{
-				SeriesPath: seriesDir,
-				SeriesNaming: "{title}/Season {season:02}/" +
-					"{title} - S{season:02}E{episode:02}.{ext}",
-				ImportMode: mode,
+			configtest.Setup(map[string]any{
+				"library": map[string]any{
+					"series_path": seriesDir,
+					"series_naming": "{title}/Season {season:02}/" +
+						"{title} - S{season:02}E{episode:02}.{ext}",
+					"import_mode": mode,
+				},
 			})
+			return NewImportService()
 		}
 
 		It("renders the destination from SeriesNaming", func() {
@@ -280,11 +293,14 @@ var _ = Describe("ImportService", Label("unit", "library"), func() {
 
 		It("returns ErrUnsafePath when template output escapes SeriesPath", func() {
 			src := writeSizedFile(downloadDir, "Show.S01E01.mkv", 60<<20)
-			svc := NewImportService(&config.LibraryConfig{
-				SeriesPath:   seriesDir,
-				SeriesNaming: "../escape/{title}.{ext}",
-				ImportMode:   "copy",
+			configtest.Setup(map[string]any{
+				"library": map[string]any{
+					"series_path":   seriesDir,
+					"series_naming": "../escape/{title}.{ext}",
+					"import_mode":   "copy",
+				},
 			})
+			svc := NewImportService()
 
 			_, err := svc.ImportEpisode(ctx, src, show, 1, ep)
 			Expect(err).To(MatchError(ErrUnsafePath))
@@ -304,11 +320,14 @@ var _ = Describe("ImportService", Label("unit", "library"), func() {
 			Expect(os.MkdirAll(downloadDir, 0o755)).To(Succeed())
 			src := writeSizedFile(downloadDir, "Show.S01E01.1080p.mkv", 60<<20)
 
-			svc := NewImportService(&config.LibraryConfig{
-				SeriesPath:   filepath.Join(tmpDir, "tv"),
-				SeriesNaming: "{title}/S{season:02}E{episode:02}.{ext}",
-				ImportMode:   "copy",
+			configtest.Setup(map[string]any{
+				"library": map[string]any{
+					"series_path":   filepath.Join(tmpDir, "tv"),
+					"series_naming": "{title}/S{season:02}E{episode:02}.{ext}",
+					"import_mode":   "copy",
+				},
 			})
+			svc := NewImportService()
 			_, err := svc.ImportEpisode(
 				ctx,
 				src,

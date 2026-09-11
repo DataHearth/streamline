@@ -54,7 +54,7 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 		events.Register(entClient)
 		store = db.New(entClient)
 		meta = metamocks.NewMockProvider(GinkgoT())
-		imp = library.NewImportService(&cfg.Library)
+		imp = library.NewImportService()
 		svc = New(
 			store,
 			meta,
@@ -140,7 +140,7 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 				"drift_grace_ticks":   3,
 			},
 		})
-		imp = library.NewImportService(&cfg.Library)
+		imp = library.NewImportService()
 		svc = New(
 			store,
 			meta,
@@ -391,7 +391,7 @@ var _ = Describe(
 			store = db.New(entClient)
 			tvmeta = metamocks.NewMockTVProvider(GinkgoT())
 			svc = New(store, metamocks.NewMockProvider(GinkgoT()), tvmeta,
-				library.NewImportService(&cfg.Library), &cfg.Library)
+				library.NewImportService(), &cfg.Library)
 		})
 
 		placeShow := func(show, file string) {

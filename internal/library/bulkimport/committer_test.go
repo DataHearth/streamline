@@ -14,7 +14,6 @@ import (
 	entimportscanfile "github.com/datahearth/streamline/ent/importscanfile"
 	entmediafile "github.com/datahearth/streamline/ent/mediafile"
 	entmovie "github.com/datahearth/streamline/ent/movie"
-	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	"github.com/datahearth/streamline/internal/library"
@@ -257,13 +256,23 @@ var _ = Describe(
 			srcDir = filepath.Join(base, "src", "Fight Club (1999)")
 			Expect(os.MkdirAll(libDir, 0o755)).To(Succeed())
 			Expect(os.MkdirAll(srcDir, 0o755)).To(Succeed())
-			svc = NewService(store, nil, nil, library.NewImportService(
-				&config.LibraryConfig{
-					MoviePath:   libDir,
-					MovieNaming: "{title} ({year})/{title}.{ext}",
-					ImportMode:  "hardlink",
+			configtest.Setup(map[string]any{
+				"library": map[string]any{
+					"movie_path":   libDir,
+					"movie_naming": "{title} ({year})/{title}.{ext}",
+					"import_mode":  "hardlink",
 				},
-			), nil, nil, libDir, libDir)
+			})
+			svc = NewService(
+				store,
+				nil,
+				nil,
+				library.NewImportService(),
+				nil,
+				nil,
+				libDir,
+				libDir,
+			)
 		})
 
 		It(
@@ -499,6 +508,11 @@ var _ = Describe("Service.commitRename", Label("unit", "bulkimport"), func() {
 		"queues a transcode job when the created movie's profile is transcode-eligible",
 		func() {
 			configtest.Setup(map[string]any{
+				"library": map[string]any{
+					"movie_path":   libDir,
+					"movie_naming": "{title} ({year})/{title}.{ext}",
+					"import_mode":  "hardlink",
+				},
 				"transcoding": map[string]any{"enabled": true},
 				"metadata":    map[string]any{"tmdb_region": ""},
 				"quality_profiles": []map[string]any{{
@@ -513,13 +527,10 @@ var _ = Describe("Service.commitRename", Label("unit", "bulkimport"), func() {
 				}},
 				"quality_default_profile": "hd",
 			})
-			svc = NewService(store, meta, nil, library.NewImportService(
-				&config.LibraryConfig{
-					MoviePath:   libDir,
-					MovieNaming: "{title} ({year})/{title}.{ext}",
-					ImportMode:  "hardlink",
-				},
-			), movie.NewService(store, meta, nil, nil), nil, libDir, libDir)
+			svc = NewService(
+				store, meta, nil, library.NewImportService(),
+				movie.NewService(store, meta, nil, nil), nil, libDir, libDir,
+			)
 
 			src := filepath.Join(srcDir, "Fight Club - 1999.mkv")
 			Expect(

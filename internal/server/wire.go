@@ -190,7 +190,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 			return nil, fmt.Errorf("create library path %s: %w", p, err)
 		}
 	}
-	libSvc := library.NewImportService(&cfg.Library)
+	libSvc := library.NewImportService()
 	bulkImportSvc := bulkimport.NewService(
 		store,
 		tmdb,
