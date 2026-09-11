@@ -117,9 +117,23 @@ paths:
   /movies/counts:
     get:
       operationId: getMovieCounts
-      summary: Movie status counts
-      description: Returns total, wanted, downloading, available and failed counts for the library.
+      summary: Movie facet counts
+      description: |
+        Tallies the status and monitoring facets of the movie list.
+
+        Each facet is counted with the *other* facet's filter applied and its
+        own left out, so a toolbar can show how many movies each value would
+        leave without stranding the filter — counted against its own
+        selection, a facet zeroes every row but the chosen one. `query` is not
+        a facet and narrows both tallies, having no "all" row of its own.
+
+        Called with no parameters this is the whole library, which is what the
+        nav badge and the dashboard ask for.
       tags: [movies]
+      parameters:
+        - $ref: "#/components/parameters/MoviesStatus"
+        - $ref: "#/components/parameters/MoviesMonitored"
+        - $ref: "#/components/parameters/MoviesQuery"
       responses:
         "200":
           $ref: "#/components/responses/MovieCountsResponse"
@@ -481,9 +495,25 @@ paths:
   /series/counts:
     get:
       operationId: getSeriesCounts
-      summary: Series status counts
-      description: Returns total, continuing, ended, and wanted-episode counts.
+      summary: Series facet counts
+      description: |
+        Tallies every facet of the series list — status, type and monitoring.
+
+        Each facet is counted with the *other* facets' filters applied and its
+        own left out, which is what lets a toolbar show how many series each
+        value would leave without stranding the filter: counted against its
+        own selection, a facet zeroes every row but the chosen one and nothing
+        else can be picked. `query` is not a facet and narrows every tally,
+        including its own, since it has no "all" row to keep selectable.
+
+        Called with no parameters this is the whole library, which is what the
+        nav badge asks for.
       tags: [series]
+      parameters:
+        - $ref: "#/components/parameters/SeriesStatus"
+        - $ref: "#/components/parameters/SeriesMonitored"
+        - $ref: "#/components/parameters/SeriesType"
+        - $ref: "#/components/parameters/SeriesQuery"
       responses:
         "200":
           $ref: "#/components/responses/SeriesCountsResponse"
@@ -5640,14 +5670,22 @@ components:
 
     MovieCounts:
       type: object
+      description: |
+        The status and monitoring tallies are faceted: each is counted with
+        the request's other filter applied and its own facet's left out. Each
+        facet carries its own `*_total` "all" row — the two differ whenever
+        both facets are filtered, so read each from its own rather than
+        sharing `total`.
       required:
         [
           total,
+          status_total,
           wanted,
           downloading,
           importing,
           available,
           failed,
+          monitored_total,
           monitored,
           unmonitored,
           trend,
@@ -5656,6 +5694,19 @@ components:
         total:
           type: integer
           x-go-type: uint32
+          description: |
+            The library, filtered by nothing — the page header and the empty
+            state. Not either facet's "all" row.
+        status_total:
+          type: integer
+          x-go-type: uint32
+          description: |
+            The status facet's "all" row: what the monitoring and search
+            filters leave.
+        monitored_total:
+          type: integer
+          x-go-type: uint32
+          description: The monitoring facet's "all" row.
         wanted:
           type: integer
           x-go-type: uint32
@@ -5968,15 +6019,27 @@ components:
 
     TVShowCounts:
       type: object
+      description: |
+        Every field but `total` and the two episode tallies is faceted: it is
+        counted with the request's *other* filters applied and its own facet's
+        filter left out. Each facet also carries its own `*_total`, which is
+        that facet's "all" row — the three differ whenever more than one facet
+        is filtered, so a toolbar must read each from its own.
       required:
         [
           total,
+          status_total,
           continuing,
           ended,
           upcoming,
           missing,
           downloading,
           importing,
+          type_total,
+          standard,
+          anime,
+          daily,
+          monitored_total,
           monitored,
           unmonitored,
           wanted_episodes,
@@ -5985,6 +6048,14 @@ components:
       properties:
         total:
           type: integer
+          description: |
+            The library, filtered by nothing — the page header's "N series"
+            and the empty state. Not any facet's "all" row.
+        status_total:
+          type: integer
+          description: |
+            The status facet's "all" row: everything the type, monitoring and
+            search filters leave.
         continuing:
           type: integer
         ended:
@@ -6005,15 +6076,28 @@ components:
         importing:
           type: integer
           description: Shows with at least one episode importing.
+        type_total:
+          type: integer
+          description: The type facet's "all" row.
+        standard:
+          type: integer
+        anime:
+          type: integer
+        daily:
+          type: integer
+        monitored_total:
+          type: integer
+          description: The monitoring facet's "all" row.
         monitored:
           type: integer
-          description: |
-            Monitoring counted over the whole library rather than within the
-            current status — the toolbar shows both tallies at once.
         unmonitored:
           type: integer
         wanted_episodes:
           type: integer
+          description: |
+            Library-wide and unfiltered, like `downloading_episodes`: the nav
+            badge and the dashboard read both, and neither knows the list's
+            filters.
         downloading_episodes:
           type: integer
 
@@ -8802,12 +8886,18 @@ components:
 
     DownloadHistory:
       type: object
-      required: [items]
+      required: [items, total]
       properties:
         items:
           type: array
           items: { $ref: "#/components/schemas/HistoryEntry" }
         next_cursor: { type: string, nullable: true }
+        total:
+          description: |
+            Every terminal record, not this page. The cursor scheme has no
+            offset to derive it from, and a page that fills its limit is
+            indistinguishable from a library that holds exactly that many.
+          type: integer
 
     ClearCompletedResult:
       type: object

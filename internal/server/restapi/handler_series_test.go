@@ -1,6 +1,7 @@
 package restapi
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -279,7 +280,7 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 
 	Describe("GetSeriesCounts", func() {
 		It("maps the service counts", func() {
-			app.tvshows.EXPECT().Counts(mock.Anything).
+			app.tvshows.EXPECT().Counts(mock.Anything, mock.Anything).
 				Return(tvshow.Counts{Total: 5, Continuing: 3, Ended: 2, WantedEpisodes: 7}, nil).
 				Once()
 
@@ -301,6 +302,31 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 			Expect(body.Ended).To(Equal(2))
 			Expect(body.WantedEpisodes).To(Equal(7))
 		})
+
+		It(
+			"forwards the list's filters so each facet counts against the others",
+			func() {
+				var got tvshow.FilterParams
+				app.tvshows.EXPECT().Counts(mock.Anything, mock.Anything).
+					Run(func(_ context.Context, p tvshow.FilterParams) { got = p }).
+					Return(tvshow.Counts{}, nil).
+					Once()
+
+				resp := app.do(app.req(
+					http.MethodGet,
+					"/api/v1/series/counts?status=missing&type=anime&monitored=unmonitored&query=cowboy",
+					app.adminKey,
+					nil,
+				))
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				Expect(got.Status).To(Equal("missing"))
+				Expect(got.Type).To(Equal("anime"))
+				Expect(got.Query).To(Equal("cowboy"))
+				Expect(got.Monitored).To(HaveValue(BeFalse()))
+			},
+		)
 	})
 
 	Describe("LookupSeries", func() {

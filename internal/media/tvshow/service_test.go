@@ -180,38 +180,59 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 		Expect(items).To(HaveLen(3))
 	})
 
-	It("Counts aggregates show + wanted-episode totals", func() {
-		// Total is the group sum, so it needs no query of its own — a status
-		// the map omits reads back as 0.
-		storeMk.TVShowStatusCounts(mock.Anything).
-			Return(map[enttvshow.SeriesStatus]int{
-				enttvshow.SeriesStatusContinuing: 1,
-				enttvshow.SeriesStatusEnded:      1,
-			}, nil).Once()
-		storeMk.CountTVShowsMissing(mock.Anything, mock.Anything).
-			Return(4, nil).Once()
-		storeMk.CountWantedEpisodes(mock.Anything).Return(2, nil).Once()
-		storeMk.CountDownloadingEpisodes(mock.Anything).Return(3, nil).Once()
-		storeMk.CountTVShowsInFlight(mock.Anything, episode.StatusDownloading).
-			Return(1, nil).Once()
-		storeMk.CountTVShowsInFlight(mock.Anything, episode.StatusImporting).
-			Return(0, nil).Once()
-		storeMk.CountTVShowsMonitored(mock.Anything).Return(1, nil).Once()
-		c, err := svc.Counts(ctx)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(c.Total).To(Equal(2))
-		Expect(c.Continuing).To(Equal(1))
-		Expect(c.Ended).To(Equal(1))
-		Expect(c.Upcoming).To(BeZero())
-		Expect(c.Missing).To(Equal(4))
-		Expect(c.Downloading).To(Equal(1))
-		Expect(c.Importing).To(BeZero())
-		Expect(c.Monitored).To(Equal(1))
-		// Unmonitored is the library total minus monitored, never its own query.
-		Expect(c.Unmonitored).To(Equal(1))
-		Expect(c.WantedEpisodes).To(Equal(2))
-		Expect(c.DownloadingEpisodes).To(Equal(3))
-	})
+	It(
+		"Counts passes the list's filters through and adds the episode tallies",
+		func() {
+			mon := true
+			var got db.FilterTVShowsParams
+			storeMk.TVShowFacetCounts(mock.Anything, mock.Anything).
+				Run(func(_ context.Context, p db.FilterTVShowsParams) { got = p }).
+				Return(db.TVShowFacets{
+					Total:          9,
+					StatusTotal:    5,
+					Continuing:     1,
+					Ended:          1,
+					Missing:        4,
+					Downloading:    1,
+					TypeTotal:      6,
+					Anime:          2,
+					MonitoredTotal: 7,
+					Monitored:      1,
+					Unmonitored:    6,
+				}, nil).Once()
+			storeMk.CountWantedEpisodes(mock.Anything).Return(2, nil).Once()
+			storeMk.CountDownloadingEpisodes(mock.Anything).Return(3, nil).Once()
+
+			c, err := svc.Counts(ctx, FilterParams{
+				Status:    "missing",
+				Type:      "anime",
+				Query:     "  cowboy  ",
+				Monitored: &mon,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(got.Status).To(Equal("missing"))
+			Expect(got.Type).To(Equal("anime"))
+			Expect(got.Query).To(Equal("cowboy"))
+			Expect(got.Monitored).To(HaveValue(BeTrue()))
+			Expect(got.Now).NotTo(BeZero())
+
+			// Each facet keeps its own "all": they differ as soon as more than one
+			// facet is filtered, and reading one from another strands the filter.
+			Expect(c.Total).To(Equal(9))
+			Expect(c.StatusTotal).To(Equal(5))
+			Expect(c.TypeTotal).To(Equal(6))
+			Expect(c.MonitoredTotal).To(Equal(7))
+			Expect(c.Continuing).To(Equal(1))
+			Expect(c.Upcoming).To(BeZero())
+			Expect(c.Missing).To(Equal(4))
+			Expect(c.Anime).To(Equal(2))
+			Expect(c.Unmonitored).To(Equal(6))
+			// Both episode tallies stay library-wide, so no filter reaches them.
+			Expect(c.WantedEpisodes).To(Equal(2))
+			Expect(c.DownloadingEpisodes).To(Equal(3))
+		},
+	)
 
 	It("Update toggles show monitored and cascades to the tree", func() {
 		t := true

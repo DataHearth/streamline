@@ -130,8 +130,15 @@ export type SeriesAddition = {
 	count: number;
 };
 
+// Every field but `total` and the two episode tallies is faceted: counted with
+// the request's other filters applied and its own facet's filter left out, so
+// each dropdown says what picking a value would leave. Each facet carries its
+// own `*_total` "all" row — they differ as soon as two facets are filtered, so
+// read each from its own rather than sharing `total`.
 export type TVShowCounts = {
+	// The library, filtered by nothing: the page header and the empty state.
 	total: number;
+	status_total: number;
 	continuing: number;
 	ended: number;
 	upcoming: number;
@@ -144,12 +151,16 @@ export type TVShowCounts = {
 	// Shows with at least one episode importing — the phase after the grab, and
 	// the one a card reads as Importing.
 	importing: number;
-	wanted_episodes: number;
-	downloading_episodes: number;
-	// Monitoring, counted over the whole library — same facet the movies library
-	// carries, and the count a show's own `monitored` flag rolls up to.
+	type_total: number;
+	standard: number;
+	anime: number;
+	daily: number;
+	monitored_total: number;
 	monitored: number;
 	unmonitored: number;
+	// Library-wide and unfiltered — the nav badge and the dashboard read these.
+	wanted_episodes: number;
+	downloading_episodes: number;
 };
 
 export type SeriesLookupResult = {
@@ -460,15 +471,20 @@ export type RequestMediaDetails = LookupDetail & {
 	year?: number;
 };
 
+// The status and monitoring tallies are faceted: each is counted with the
+// request's other filter applied and its own left out, so each dropdown says
+// what picking a value would leave. Each facet has its own `*_total` "all"
+// row — they diverge once both facets are filtered.
 export type MovieCounts = {
+	// The library, filtered by nothing: the page header and the empty state.
 	total: number;
+	status_total: number;
 	wanted: number;
 	downloading: number;
 	importing: number;
 	available: number;
 	failed: number;
-	// Monitoring is a facet of its own, counted over the whole library rather
-	// than within the current status — the toolbar shows both tallies at once.
+	monitored_total: number;
 	monitored: number;
 	unmonitored: number;
 	// Cumulative library size per day over the last 30 days, oldest first;
@@ -653,6 +669,8 @@ export type HistoryEntry = {
 export type DownloadHistory = {
 	items: HistoryEntry[];
 	next_cursor: string | null;
+	// Every terminal record, not this page — what the view switch badges.
+	total: number;
 };
 
 export type UserRole = "admin" | "member" | "request_only";
@@ -947,6 +965,55 @@ export type QualityProfileFull = {
 	// no upgrade ceiling.
 	min_score?: number;
 	upgrade_until_score?: number;
+	transcode?: TranscodePolicy;
+};
+
+export type TranscodeSourceCodec =
+	| "h264"
+	| "hevc"
+	| "av1"
+	| "vp9"
+	| "mpeg4"
+	| "mpeg2video"
+	| "vc1";
+export type TranscodeContainer = "mkv" | "mp4" | "avi" | "mov" | "ts" | "m2ts" | "webm" | "wmv";
+export type TranscodeTargetContainer = "mkv" | "mp4";
+export type TranscodeTargetCodec = "h264" | "hevc" | "av1";
+export type TranscodePreset =
+	| "ultrafast"
+	| "superfast"
+	| "veryfast"
+	| "faster"
+	| "fast"
+	| "medium"
+	| "slow"
+	| "slower"
+	| "veryslow";
+export type TranscodeAudioCodec = "aac" | "opus" | "ac3" | "flac";
+
+export type TranscodeIf = {
+	// Empty (or absent) means the rule does not apply — any codec, any
+	// container, no bitrate ceiling.
+	video_codecs?: TranscodeSourceCodec[];
+	containers?: TranscodeContainer[];
+	max_video_bitrate?: string;
+};
+
+export type TranscodeTo = {
+	container: TranscodeTargetContainer;
+	video_codec: TranscodeTargetCodec;
+	// 0 or absent leaves -crf off the ffmpeg invocation entirely, so the
+	// encoder's own default applies. It is not a CRF of zero.
+	crf?: number;
+	preset: TranscodePreset;
+	audio_codec: TranscodeAudioCodec;
+	// Empty applies the built-in list, which keeps Atmos and DTS intact.
+	audio_passthrough?: string[];
+};
+
+export type TranscodePolicy = {
+	if?: TranscodeIf;
+	to: TranscodeTo;
 };
 
 export type CustomFormatConditionType =
@@ -1343,6 +1410,10 @@ export type ImportScanShow = {
 	created_tvshow_id?: number | null;
 	created_at: string;
 	updated_at: string;
+};
+
+export type ImportBulkDecisionResult = {
+	updated: number;
 };
 
 export type ImportStartRequest = {

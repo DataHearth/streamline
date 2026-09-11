@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"slices"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/movie"
+	"github.com/datahearth/streamline/ent/predicate"
 	"github.com/datahearth/streamline/internal/metadata"
 )
 
@@ -99,13 +101,6 @@ func (db *DB) CountMoviesByStatus(
 	return db.client.Movie.Query().Where(movie.StatusEQ(status)).Count(ctx)
 }
 
-// CountMoviesMonitored counts movies whose monitored flag is set. The
-// unmonitored tally is the library total minus this, so the toolbar's
-// monitoring facet costs one query rather than two.
-func (db *DB) CountMoviesMonitored(ctx context.Context) (int, error) {
-	return db.client.Movie.Query().Where(movie.MonitoredEQ(true)).Count(ctx)
-}
-
 // MovieTMDBIndex maps every tracked tmdb id to its movie row id. The bulk
 // importer needs exactly this to tell an already-tracked title from a new
 // one; it used to page the entire movie table *with media files attached* to
@@ -124,31 +119,6 @@ func (db *DB) MovieTMDBIndex(ctx context.Context) (map[uint32]uint32, error) {
 	out := make(map[uint32]uint32, len(rows))
 	for _, r := range rows {
 		out[r.TmdbID] = r.ID
-	}
-	return out, nil
-}
-
-// MovieStatusCounts returns the number of movies in each status, in one
-// GROUP BY pass. The counts endpoint wants five numbers off the same table;
-// asking for them one COUNT at a time was five full scans per nav mount.
-// A status with no rows is absent from the map, which reads back as 0.
-func (db *DB) MovieStatusCounts(
-	ctx context.Context,
-) (map[movie.Status]int, error) {
-	var rows []struct {
-		Status movie.Status `json:"status"`
-		Count  int          `json:"count"`
-	}
-	err := db.client.Movie.Query().
-		GroupBy(movie.FieldStatus).
-		Aggregate(ent.Count()).
-		Scan(ctx, &rows)
-	if err != nil {
-		return nil, err
-	}
-	out := make(map[movie.Status]int, len(rows))
-	for _, r := range rows {
-		out[r.Status] = r.Count
 	}
 	return out, nil
 }
@@ -330,25 +300,99 @@ type FilterMoviesParams struct {
 	Limit     uint32
 }
 
-func (db *DB) FilterMovies(
-	ctx context.Context,
-	p FilterMoviesParams,
-) ([]*ent.Movie, int, error) {
-	base := db.client.Movie.Query()
-	if p.Status != "" {
-		base = base.Where(movie.StatusEQ(p.Status))
+// movieFilters builds the list's predicates, leaving out the facet a caller
+// is about to count. See db.facet: a facet counted against its own selection
+// zeroes every other row, so its dropdown can never be changed back.
+func movieFilters(p FilterMoviesParams, skip facet) []predicate.Movie {
+	var out []predicate.Movie
+	if p.Status != "" && skip != facetStatus {
+		out = append(out, movie.StatusEQ(p.Status))
 	}
-	if p.Monitored != nil {
-		base = base.Where(movie.MonitoredEQ(*p.Monitored))
+	if p.Monitored != nil && skip != facetMonitored {
+		out = append(out, movie.MonitoredEQ(*p.Monitored))
 	}
+	// The search box is not a facet — it has no "all" row to keep selectable —
+	// so it narrows every tally.
 	if p.Query != "" {
-		base = base.Where(func(s *entsql.Selector) {
+		out = append(out, func(s *entsql.Selector) {
 			s.Where(entsql.Or(
 				foldContains(s, movie.FieldTitle, p.Query),
 				foldContains(s, movie.FieldOriginalTitle, p.Query),
 			))
 		})
 	}
+	return out
+}
+
+// MovieFacets is the movie counts endpoint's answer: a tally per status, a
+// tally per monitoring value, and each facet's own "all" row. Total is the
+// library, filtered by nothing.
+type MovieFacets struct {
+	Total int
+
+	StatusTotal int
+	ByStatus    map[movie.Status]int
+
+	MonitoredTotal int
+	Monitored      int
+	Unmonitored    int
+}
+
+// MovieFacetCounts tallies the status and monitoring facets, each against the
+// filters applied to the other.
+func (db *DB) MovieFacetCounts(
+	ctx context.Context,
+	p FilterMoviesParams,
+) (MovieFacets, error) {
+	var out MovieFacets
+
+	total, err := db.client.Movie.Query().Count(ctx)
+	if err != nil {
+		return out, fmt.Errorf("count movies: %w", err)
+	}
+	out.Total = total
+
+	var rows []struct {
+		Status movie.Status `json:"status"`
+		Count  int          `json:"count"`
+	}
+	err = db.client.Movie.Query().
+		Where(movieFilters(p, facetStatus)...).
+		GroupBy(movie.FieldStatus).
+		Aggregate(ent.Count()).
+		Scan(ctx, &rows)
+	if err != nil {
+		return out, fmt.Errorf("group movies by status: %w", err)
+	}
+	out.ByStatus = make(map[movie.Status]int, len(rows))
+	for _, r := range rows {
+		out.ByStatus[r.Status] = r.Count
+		out.StatusTotal += r.Count
+	}
+
+	monFilters := movieFilters(p, facetMonitored)
+	monTotal, err := db.client.Movie.Query().Where(monFilters...).Count(ctx)
+	if err != nil {
+		return out, fmt.Errorf("count movies for monitoring: %w", err)
+	}
+	monitored, err := db.client.Movie.Query().
+		Where(append(monFilters, movie.MonitoredEQ(true))...).
+		Count(ctx)
+	if err != nil {
+		return out, fmt.Errorf("count monitored movies: %w", err)
+	}
+	out.MonitoredTotal = monTotal
+	out.Monitored = monitored
+	out.Unmonitored = monTotal - monitored
+
+	return out, nil
+}
+
+func (db *DB) FilterMovies(
+	ctx context.Context,
+	p FilterMoviesParams,
+) ([]*ent.Movie, int, error) {
+	base := db.client.Movie.Query().Where(movieFilters(p, facetAll)...)
 
 	total, err := base.Clone().Count(ctx)
 	if err != nil {

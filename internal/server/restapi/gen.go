@@ -2412,6 +2412,24 @@ func (e ListMoviesParamsOrder) Valid() bool {
 	}
 }
 
+// Defines values for GetMovieCountsParamsMonitored.
+const (
+	GetMovieCountsParamsMonitoredMonitored   GetMovieCountsParamsMonitored = "monitored"
+	GetMovieCountsParamsMonitoredUnmonitored GetMovieCountsParamsMonitored = "unmonitored"
+)
+
+// Valid indicates whether the value is a known member of the GetMovieCountsParamsMonitored enum.
+func (e GetMovieCountsParamsMonitored) Valid() bool {
+	switch e {
+	case GetMovieCountsParamsMonitoredMonitored:
+		return true
+	case GetMovieCountsParamsMonitoredUnmonitored:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListRequestsParamsStatus.
 const (
 	ListRequestsParamsStatusApproved  ListRequestsParamsStatus = "approved"
@@ -2484,6 +2502,24 @@ func (e ListSeriesParamsOrder) Valid() bool {
 	case ListSeriesParamsOrderAsc:
 		return true
 	case ListSeriesParamsOrderDesc:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetSeriesCountsParamsMonitored.
+const (
+	GetSeriesCountsParamsMonitoredMonitored   GetSeriesCountsParamsMonitored = "monitored"
+	GetSeriesCountsParamsMonitoredUnmonitored GetSeriesCountsParamsMonitored = "unmonitored"
+)
+
+// Valid indicates whether the value is a known member of the GetSeriesCountsParamsMonitored enum.
+func (e GetSeriesCountsParamsMonitored) Valid() bool {
+	switch e {
+	case GetSeriesCountsParamsMonitoredMonitored:
+		return true
+	case GetSeriesCountsParamsMonitoredUnmonitored:
 		return true
 	default:
 		return false
@@ -2977,6 +3013,11 @@ type DownloadConfigView struct {
 type DownloadHistory struct {
 	Items      []HistoryEntry `json:"items"`
 	NextCursor *string        `json:"next_cursor,omitempty"`
+
+	// Total Every terminal record, not this page. The cursor scheme has no
+	// offset to derive it from, and a page that fills its limit is
+	// indistinguishable from a library that holds exactly that many.
+	Total int `json:"total"`
 }
 
 // DownloadQueue defines model for DownloadQueue.
@@ -3803,7 +3844,11 @@ type Movie struct {
 // MovieStatus defines model for Movie.Status.
 type MovieStatus string
 
-// MovieCounts defines model for MovieCounts.
+// MovieCounts The status and monitoring tallies are faceted: each is counted with
+// the request's other filter applied and its own facet's left out. Each
+// facet carries its own `*_total` "all" row — the two differ whenever
+// both facets are filtered, so read each from its own rather than
+// sharing `total`.
 type MovieCounts struct {
 	Available   uint32 `json:"available"`
 	Downloading uint32 `json:"downloading"`
@@ -3813,7 +3858,17 @@ type MovieCounts struct {
 	// Monitored Monitoring counted over the whole library rather than within the
 	// current status — the toolbar shows both tallies at once.
 	Monitored uint32 `json:"monitored"`
-	Total     uint32 `json:"total"`
+
+	// MonitoredTotal The monitoring facet's "all" row.
+	MonitoredTotal uint32 `json:"monitored_total"`
+
+	// StatusTotal The status facet's "all" row: what the monitoring and search
+	// filters leave.
+	StatusTotal uint32 `json:"status_total"`
+
+	// Total The library, filtered by nothing — the page header and the empty
+	// state. Not either facet's "all" row.
+	Total uint32 `json:"total"`
 
 	// Trend Cumulative library size at the end of each day over the last 30
 	// days, oldest first. The final element equals `total`. All zeros
@@ -4875,9 +4930,15 @@ type TVShowSeriesStatus string
 // TVShowType defines model for TVShow.Type.
 type TVShowType string
 
-// TVShowCounts defines model for TVShowCounts.
+// TVShowCounts Every field but `total` and the two episode tallies is faceted: it is
+// counted with the request's *other* filters applied and its own facet's
+// filter left out. Each facet also carries its own `*_total`, which is
+// that facet's "all" row — the three differ whenever more than one facet
+// is filtered, so a toolbar must read each from its own.
 type TVShowCounts struct {
+	Anime      int `json:"anime"`
 	Continuing int `json:"continuing"`
+	Daily      int `json:"daily"`
 
 	// Downloading Shows with at least one episode downloading — a per-show count like
 	// `missing`, and what the library list's "downloading" tab selects.
@@ -4891,14 +4952,29 @@ type TVShowCounts struct {
 	// Missing Shows with at least one aired, monitored episode that has no file.
 	// A per-show count, not an episode count — it labels the library
 	// list's "missing" tab, which selects shows.
-	Missing int `json:"missing"`
+	Missing   int `json:"missing"`
+	Monitored int `json:"monitored"`
 
-	// Monitored Monitoring counted over the whole library rather than within the
-	// current status — the toolbar shows both tallies at once.
-	Monitored      int `json:"monitored"`
-	Total          int `json:"total"`
-	Unmonitored    int `json:"unmonitored"`
-	Upcoming       int `json:"upcoming"`
+	// MonitoredTotal The monitoring facet's "all" row.
+	MonitoredTotal int `json:"monitored_total"`
+	Standard       int `json:"standard"`
+
+	// StatusTotal The status facet's "all" row: everything the type, monitoring and
+	// search filters leave.
+	StatusTotal int `json:"status_total"`
+
+	// Total The library, filtered by nothing — the page header's "N series"
+	// and the empty state. Not any facet's "all" row.
+	Total int `json:"total"`
+
+	// TypeTotal The type facet's "all" row.
+	TypeTotal   int `json:"type_total"`
+	Unmonitored int `json:"unmonitored"`
+	Upcoming    int `json:"upcoming"`
+
+	// WantedEpisodes Library-wide and unfiltered, like `downloading_episodes`: the nav
+	// badge and the dashboard read both, and neither knows the list's
+	// filters.
 	WantedEpisodes int `json:"wanted_episodes"`
 }
 
@@ -5599,7 +5675,11 @@ type MediaServerOK = MediaServer
 // MetadataConfig defines model for MetadataConfig.
 type MetadataConfig = MetadataConfigView
 
-// MovieCountsResponse defines model for MovieCountsResponse.
+// MovieCountsResponse The status and monitoring tallies are faceted: each is counted with
+// the request's other filter applied and its own facet's left out. Each
+// facet carries its own `*_total` "all" row — the two differ whenever
+// both facets are filtered, so read each from its own rather than
+// sharing `total`.
 type MovieCountsResponse = MovieCounts
 
 // MoviePlayOnLinks defines model for MoviePlayOnLinks.
@@ -5644,7 +5724,11 @@ type RequestsList = PaginatedRequests
 // SearchResults defines model for SearchResults.
 type SearchResults = SearchResultList
 
-// SeriesCountsResponse defines model for SeriesCountsResponse.
+// SeriesCountsResponse Every field but `total` and the two episode tallies is faceted: it is
+// counted with the request's *other* filters applied and its own facet's
+// filter left out. Each facet also carries its own `*_total`, which is
+// that facet's "all" row — the three differ whenever more than one facet
+// is filtered, so a toolbar must read each from its own.
 type SeriesCountsResponse = TVShowCounts
 
 // SeriesCreated defines model for SeriesCreated.
@@ -5898,6 +5982,22 @@ type ListMoviesParamsMonitored string
 // ListMoviesParamsOrder defines parameters for ListMovies.
 type ListMoviesParamsOrder string
 
+// GetMovieCountsParams defines parameters for GetMovieCounts.
+type GetMovieCountsParams struct {
+	// Status Filter by movie status (wanted/downloading/importing/available/failed).
+	Status *MoviesStatus `form:"status,omitempty" json:"status,omitempty"`
+
+	// Monitored Restrict to monitored or unmonitored titles. A facet of its own,
+	// combined with `status` rather than replacing it.
+	Monitored *GetMovieCountsParamsMonitored `form:"monitored,omitempty" json:"monitored,omitempty"`
+
+	// Query Case-insensitive substring filter over title and original title.
+	Query *MoviesQuery `form:"query,omitempty" json:"query,omitempty"`
+}
+
+// GetMovieCountsParamsMonitored defines parameters for GetMovieCounts.
+type GetMovieCountsParamsMonitored string
+
 // DeleteMovieParams defines parameters for DeleteMovie.
 type DeleteMovieParams struct {
 	// DeleteFiles When true, delete the attached media_files from disk too.
@@ -5981,6 +6081,27 @@ type ListSeriesParamsMonitored string
 
 // ListSeriesParamsOrder defines parameters for ListSeries.
 type ListSeriesParamsOrder string
+
+// GetSeriesCountsParams defines parameters for GetSeriesCounts.
+type GetSeriesCountsParams struct {
+	// Status Filter by series_status (continuing/ended/upcoming), "missing",
+	// "downloading" or "importing". The last three are per-show facts read
+	// off the episode tree, not series_status values.
+	Status *SeriesStatus `form:"status,omitempty" json:"status,omitempty"`
+
+	// Monitored Restrict to monitored or unmonitored shows, on the show's own flag. A
+	// facet of its own, combined with `status` rather than replacing it.
+	Monitored *GetSeriesCountsParamsMonitored `form:"monitored,omitempty" json:"monitored,omitempty"`
+
+	// Type Filter by series type (standard/anime/daily).
+	Type *SeriesType `form:"type,omitempty" json:"type,omitempty"`
+
+	// Query Case-insensitive title substring filter.
+	Query *SeriesQuery `form:"query,omitempty" json:"query,omitempty"`
+}
+
+// GetSeriesCountsParamsMonitored defines parameters for GetSeriesCounts.
+type GetSeriesCountsParamsMonitored string
 
 // LookupSeriesParams defines parameters for LookupSeries.
 type LookupSeriesParams struct {
@@ -6507,9 +6628,9 @@ type ServerInterface interface {
 	// AddMovie Add a movie to the library
 	// (POST /movies)
 	AddMovie(w http.ResponseWriter, r *http.Request)
-	// GetMovieCounts Movie status counts
+	// GetMovieCounts Movie facet counts
 	// (GET /movies/counts)
-	GetMovieCounts(w http.ResponseWriter, r *http.Request)
+	GetMovieCounts(w http.ResponseWriter, r *http.Request, params GetMovieCountsParams)
 	// DeleteMovie Remove a movie from the library
 	// (DELETE /movies/{id})
 	DeleteMovie(w http.ResponseWriter, r *http.Request, id ResourceID, params DeleteMovieParams)
@@ -6618,9 +6739,9 @@ type ServerInterface interface {
 	// AddSeries Add a series by TVDB id
 	// (POST /series)
 	AddSeries(w http.ResponseWriter, r *http.Request)
-	// GetSeriesCounts Series status counts
+	// GetSeriesCounts Series facet counts
 	// (GET /series/counts)
-	GetSeriesCounts(w http.ResponseWriter, r *http.Request)
+	GetSeriesCounts(w http.ResponseWriter, r *http.Request, params GetSeriesCountsParams)
 	// LookupSeries Search TVDB for series to add
 	// (GET /series/lookup)
 	LookupSeries(w http.ResponseWriter, r *http.Request, params LookupSeriesParams)
@@ -7295,9 +7416,9 @@ func (_ Unimplemented) AddMovie(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// GetMovieCounts Movie status counts
+// GetMovieCounts Movie facet counts
 // (GET /movies/counts)
-func (_ Unimplemented) GetMovieCounts(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) GetMovieCounts(w http.ResponseWriter, r *http.Request, params GetMovieCountsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -7517,9 +7638,9 @@ func (_ Unimplemented) AddSeries(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// GetSeriesCounts Series status counts
+// GetSeriesCounts Series facet counts
 // (GET /series/counts)
-func (_ Unimplemented) GetSeriesCounts(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) GetSeriesCounts(w http.ResponseWriter, r *http.Request, params GetSeriesCountsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -9973,8 +10094,53 @@ func (siw *ServerInterfaceWrapper) AddMovie(w http.ResponseWriter, r *http.Reque
 // GetMovieCounts operation middleware
 func (siw *ServerInterfaceWrapper) GetMovieCounts(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetMovieCountsParams
+
+	// ------------- Optional query parameter "status" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "status", r.URL.Query(), &params.Status, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "status"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "monitored" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "monitored", r.URL.Query(), &params.Monitored, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "monitored"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "monitored", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "query" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "query", r.URL.Query(), &params.Query, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "query"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "query", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetMovieCounts(w, r)
+		siw.Handler.GetMovieCounts(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -11089,8 +11255,66 @@ func (siw *ServerInterfaceWrapper) AddSeries(w http.ResponseWriter, r *http.Requ
 // GetSeriesCounts operation middleware
 func (siw *ServerInterfaceWrapper) GetSeriesCounts(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetSeriesCountsParams
+
+	// ------------- Optional query parameter "status" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "status", r.URL.Query(), &params.Status, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "status"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "monitored" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "monitored", r.URL.Query(), &params.Monitored, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "monitored"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "monitored", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "type" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "type", r.URL.Query(), &params.Type, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "type"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "type", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "query" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "query", r.URL.Query(), &params.Query, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "query"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "query", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetSeriesCounts(w, r)
+		siw.Handler.GetSeriesCounts(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -18841,6 +19065,7 @@ func (response AddMovie500JSONResponse) VisitAddMovieResponse(w http.ResponseWri
 }
 
 type GetMovieCountsRequestObject struct {
+	Params GetMovieCountsParams
 }
 
 type GetMovieCountsResponseObject interface {
@@ -21185,6 +21410,7 @@ func (response AddSeries500JSONResponse) VisitAddSeriesResponse(w http.ResponseW
 }
 
 type GetSeriesCountsRequestObject struct {
+	Params GetSeriesCountsParams
 }
 
 type GetSeriesCountsResponseObject interface {
@@ -23873,7 +24099,7 @@ type StrictServerInterface interface {
 	// AddMovie Add a movie to the library
 	// (POST /movies)
 	AddMovie(ctx context.Context, request AddMovieRequestObject) (AddMovieResponseObject, error)
-	// GetMovieCounts Movie status counts
+	// GetMovieCounts Movie facet counts
 	// (GET /movies/counts)
 	GetMovieCounts(ctx context.Context, request GetMovieCountsRequestObject) (GetMovieCountsResponseObject, error)
 	// DeleteMovie Remove a movie from the library
@@ -23984,7 +24210,7 @@ type StrictServerInterface interface {
 	// AddSeries Add a series by TVDB id
 	// (POST /series)
 	AddSeries(ctx context.Context, request AddSeriesRequestObject) (AddSeriesResponseObject, error)
-	// GetSeriesCounts Series status counts
+	// GetSeriesCounts Series facet counts
 	// (GET /series/counts)
 	GetSeriesCounts(ctx context.Context, request GetSeriesCountsRequestObject) (GetSeriesCountsResponseObject, error)
 	// LookupSeries Search TVDB for series to add
@@ -26732,8 +26958,10 @@ func (sh *strictHandler) AddMovie(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetMovieCounts operation middleware
-func (sh *strictHandler) GetMovieCounts(w http.ResponseWriter, r *http.Request) {
+func (sh *strictHandler) GetMovieCounts(w http.ResponseWriter, r *http.Request, params GetMovieCountsParams) {
 	var request GetMovieCountsRequestObject
+
+	request.Params = params
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 		return sh.ssi.GetMovieCounts(ctx, request.(GetMovieCountsRequestObject))
@@ -27766,8 +27994,10 @@ func (sh *strictHandler) AddSeries(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetSeriesCounts operation middleware
-func (sh *strictHandler) GetSeriesCounts(w http.ResponseWriter, r *http.Request) {
+func (sh *strictHandler) GetSeriesCounts(w http.ResponseWriter, r *http.Request, params GetSeriesCountsParams) {
 	var request GetSeriesCountsRequestObject
+
+	request.Params = params
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 		return sh.ssi.GetSeriesCounts(ctx, request.(GetSeriesCountsRequestObject))

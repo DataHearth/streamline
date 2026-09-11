@@ -20,7 +20,9 @@
 		SeriesTypeFilter,
 		SeriesMonFilter,
 		SeriesSort,
+		SeriesOrder,
 		SeriesTabCounts,
+		SeriesTypeCounts,
 		SeriesMonCounts,
 	} from "../../components/series/SeriesToolbar.svelte";
 	import SeriesGrid from "../../components/series/SeriesGrid.svelte";
@@ -56,8 +58,11 @@
 		"episodes",
 	]);
 
+	const VALID_ORDERS = new Set<SeriesOrder>(["asc", "desc"]);
+
 	// An explicit ?sort in the URL wins so shared links keep their ordering;
-	// otherwise fall back to the last sort this browser chose, then A→Z.
+	// otherwise fall back to the last sort this browser chose, then A→Z. The
+	// pref stores "<key>-<order>", matching the movies library.
 	const SORT_PREF = "streamline:series:sort";
 
 	function readParams(
@@ -65,12 +70,12 @@
 			typeof window === "undefined" ? "" : window.location.search,
 		),
 	) {
+		const stored = loadPref(SORT_PREF)?.split("-") ?? [];
 		const rawTab = (p.get("status") ?? "all") as SeriesTab;
 		const rawType = (p.get("type") ?? "all") as SeriesTypeFilter;
 		const rawMon = (p.get("monitored") ?? "all") as SeriesMonFilter;
-		const rawSort = (p.get("sort") ??
-			loadPref(SORT_PREF) ??
-			"title") as SeriesSort;
+		const rawSort = (p.get("sort") ?? stored[0] ?? "title") as SeriesSort;
+		const rawOrder = (p.get("order") ?? stored[1] ?? "asc") as SeriesOrder;
 		const rawView = p.get("view") ?? "grid";
 		return {
 			tab: VALID_TABS.has(rawTab) ? rawTab : "all",
@@ -78,6 +83,7 @@
 			mon: VALID_MON.has(rawMon) ? rawMon : "all",
 			query: p.get("q") ?? "",
 			sort: VALID_SORTS.has(rawSort) ? rawSort : "title",
+			order: VALID_ORDERS.has(rawOrder) ? rawOrder : "asc",
 			view: (rawView === "list" ? "list" : "grid") as View,
 		};
 	}
@@ -88,6 +94,7 @@
 	let mon = $state<SeriesMonFilter>(initial.mon);
 	let query = $state(initial.query);
 	let sort = $state<SeriesSort>(initial.sort);
+	let order = $state<SeriesOrder>(initial.order);
 	let view = $state<View>(initial.view);
 	// debouncedQuery is what the server query keys on. Typing must not fire a
 	// request per keystroke now that filtering is server-side.
@@ -120,13 +127,15 @@
 			query = v.query;
 			debouncedQuery = v.query;
 			sort = v.sort;
+			order = v.order;
 			view = v.view;
 		}),
 	);
 
-	function setSort(s: SeriesSort) {
+	function setSort(s: SeriesSort, o: SeriesOrder) {
 		sort = s;
-		savePref(SORT_PREF, s);
+		order = o;
+		savePref(SORT_PREF, `${s}-${o}`);
 	}
 
 	function openAddSeries() {
@@ -143,6 +152,7 @@
 		if (mon !== "all") p.set("monitored", mon);
 		if (query) p.set("q", query);
 		if (sort !== "title") p.set("sort", sort);
+		if (order !== "asc") p.set("order", order);
 		if (view !== "grid") p.set("view", view);
 		const search = p.toString();
 
@@ -178,15 +188,25 @@
 			SeriesMonFilter,
 			string,
 			SeriesSort,
+			SeriesOrder,
 		],
 		number
 	>(() => ({
-		queryKey: ["series", tab, typeFilter, mon, debouncedQuery, sort] as const,
+		queryKey: [
+			"series",
+			tab,
+			typeFilter,
+			mon,
+			debouncedQuery,
+			sort,
+			order,
+		] as const,
 		queryFn: ({ pageParam }) => {
 			const p = new URLSearchParams({
 				page: String(pageParam),
 				limit: String(PAGE),
 				sort,
+				order,
 			});
 			if (tab !== "all") p.set("status", tab);
 			if (typeFilter !== "all") p.set("type", typeFilter);
@@ -205,9 +225,21 @@
 		placeholderData: keepPreviousData,
 	}));
 
+	// The counts carry the same filters as the list: each facet is tallied with
+	// the *other* facets applied, so a dropdown says how many series picking a
+	// value would leave rather than how many the unfiltered library holds.
 	const countsQuery = createQuery<TVShowCounts>(() => ({
-		queryKey: ["series", "counts"],
-		queryFn: () => api<TVShowCounts>("/series/counts"),
+		queryKey: ["series", "counts", tab, typeFilter, mon, debouncedQuery] as const,
+		queryFn: () => {
+			const p = new URLSearchParams();
+			if (tab !== "all") p.set("status", tab);
+			if (typeFilter !== "all") p.set("type", typeFilter);
+			if (mon !== "all") p.set("monitored", mon);
+			if (debouncedQuery.trim()) p.set("query", debouncedQuery.trim());
+			const qs = p.toString();
+			return api<TVShowCounts>(`/series/counts${qs ? `?${qs}` : ""}`);
+		},
+		placeholderData: keepPreviousData,
 	}));
 
 	const schedulesQuery = createQuery<ScheduleList>(() => ({
@@ -215,8 +247,11 @@
 		queryFn: () => api<ScheduleList>("/schedules"),
 	}));
 
+	// Each facet reads its own "all": the three totals diverge as soon as two
+	// facets are filtered, and sharing `total` made a dropdown's "all" row
+	// claim a population it would not return.
 	let counts = $derived<SeriesTabCounts>({
-		all: countsQuery.data?.total ?? 0,
+		all: countsQuery.data?.status_total ?? 0,
 		continuing: countsQuery.data?.continuing ?? 0,
 		ended: countsQuery.data?.ended ?? 0,
 		upcoming: countsQuery.data?.upcoming ?? 0,
@@ -225,11 +260,22 @@
 		importing: countsQuery.data?.importing ?? 0,
 	});
 
+	let typeCounts = $derived<SeriesTypeCounts>({
+		all: countsQuery.data?.type_total ?? 0,
+		standard: countsQuery.data?.standard ?? 0,
+		anime: countsQuery.data?.anime ?? 0,
+		daily: countsQuery.data?.daily ?? 0,
+	});
+
 	let monCounts = $derived<SeriesMonCounts>({
-		all: countsQuery.data?.total ?? 0,
+		all: countsQuery.data?.monitored_total ?? 0,
 		monitored: countsQuery.data?.monitored ?? 0,
 		unmonitored: countsQuery.data?.unmonitored ?? 0,
 	});
+
+	// The library, unfiltered — the header line and the empty state, neither of
+	// which is a facet row.
+	let libraryTotal = $derived(countsQuery.data?.total ?? 0);
 
 	// Everything loaded so far. Bulk selection and the "N of M" line read this,
 	// so both mean "of what you have pulled in", not "of the whole library".
@@ -248,7 +294,7 @@
 	let filtering = $derived(
 		tab !== "all" || typeFilter !== "all" || mon !== "all" || !!debouncedQuery,
 	);
-	let libraryEmpty = $derived(!filtering && counts.all === 0);
+	let libraryEmpty = $derived(!filtering && libraryTotal === 0);
 
 	// Appending the next page as the sentinel comes into view replaces the old
 	// IncrementalList: a page is 50 cards, which mounts without blocking, and
@@ -296,8 +342,8 @@
 	let metaLine = $derived.by(() => {
 		const parts = [
 			filtering
-				? i18n.series_count_of({ visible: matchedTotal, total: counts.all })
-				: i18n.series_shows_count({ count: counts.all }),
+				? i18n.series_count_of({ visible: matchedTotal, total: libraryTotal })
+				: i18n.series_shows_count({ count: libraryTotal }),
 		];
 		if (libraryEpisodes > 0)
 			parts.push(
@@ -411,8 +457,10 @@
 			{mon}
 			{query}
 			{sort}
+			{order}
 			view={shownView}
 			{counts}
+			{typeCounts}
 			{monCounts}
 			{selectMode}
 			selectedCount={selected.size}

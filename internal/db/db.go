@@ -172,20 +172,24 @@ type Store interface {
 	FindMoviesByTMDBIDs(ctx context.Context, tmdbIDs []uint32) ([]*ent.Movie, error)
 	CountMovies(ctx context.Context) (int, error)
 	CountMoviesByStatus(ctx context.Context, status movie.Status) (int, error)
-	CountMoviesMonitored(ctx context.Context) (int, error)
-	MovieStatusCounts(ctx context.Context) (map[movie.Status]int, error)
+	// MovieFacetCounts tallies the status and monitoring facets of the movie
+	// list, each against the filter applied to the other.
+	MovieFacetCounts(
+		ctx context.Context,
+		p FilterMoviesParams,
+	) (MovieFacets, error)
 	MovieTMDBIndex(ctx context.Context) (map[uint32]uint32, error)
 	MovieFileSummaries(
 		ctx context.Context,
 		movieIDs []uint32,
 	) (map[uint32]MovieFileSummary, error)
 	MovieCreateTimesSince(ctx context.Context, since time.Time) ([]time.Time, error)
-	TVShowStatusCounts(ctx context.Context) (map[tvshow.SeriesStatus]int, error)
-	CountTVShowsMissing(ctx context.Context, now time.Time) (int, error)
-	// CountTVShowsInFlight counts shows holding at least one episode in the
-	// given state — the population behind the downloading and importing tabs.
-	CountTVShowsInFlight(ctx context.Context, status episode.Status) (int, error)
-	CountTVShowsMonitored(ctx context.Context) (int, error)
+	// TVShowFacetCounts tallies every facet of the series list — status, type
+	// and monitoring — each against the filters applied to the others.
+	TVShowFacetCounts(
+		ctx context.Context,
+		p FilterTVShowsParams,
+	) (TVShowFacets, error)
 	FilterMovies(
 		ctx context.Context,
 		p FilterMoviesParams,

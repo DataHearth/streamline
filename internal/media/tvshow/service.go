@@ -279,27 +279,32 @@ func (s *Service) Get(ctx context.Context, id uint32) (*ent.TVShow, error) {
 	return show, nil
 }
 
-func (s *Service) Counts(ctx context.Context) (Counts, error) {
-	ctx, span := tracer.Start(ctx, "tvshow.counts")
+// Counts tallies each facet of the series list against the filters applied to
+// the *other* facets, so every dropdown says how many shows a value would
+// leave — the "all" row included. p carries the filter state the list is
+// currently under; a zero value counts the whole library, which is what the
+// nav badge asks for.
+func (s *Service) Counts(ctx context.Context, p FilterParams) (Counts, error) {
+	ctx, span := tracer.Start(ctx, "tvshow.counts",
+		trace.WithAttributes(
+			attribute.String("filter.status", p.Status),
+			attribute.String("filter.type", p.Type),
+		))
 	defer span.End()
-	// One GROUP BY rather than a COUNT per status: the nav badge calls this on
-	// every page mount, and each separate count was its own scan.
-	byStatus, err := s.db.TVShowStatusCounts(ctx)
-	if err != nil {
-		return Counts{}, otelx.RecordSpanError(span, err)
-	}
-	total := 0
-	for _, n := range byStatus {
-		total += n
-	}
-	continuing := byStatus[enttvshow.SeriesStatusContinuing]
-	ended := byStatus[enttvshow.SeriesStatusEnded]
-	upcoming := byStatus[enttvshow.SeriesStatusUpcoming]
 
-	missing, err := s.db.CountTVShowsMissing(ctx, time.Now())
+	f, err := s.db.TVShowFacetCounts(ctx, db.FilterTVShowsParams{
+		Status:    p.Status,
+		Type:      p.Type,
+		Query:     strings.TrimSpace(p.Query),
+		Monitored: p.Monitored,
+		Now:       time.Now(),
+	})
 	if err != nil {
 		return Counts{}, otelx.RecordSpanError(span, err)
 	}
+
+	// The two episode tallies stay library-wide: they feed the nav badge and
+	// the dashboard, neither of which knows the list's filters.
 	wanted, err := s.db.CountWantedEpisodes(ctx)
 	if err != nil {
 		return Counts{}, otelx.RecordSpanError(span, err)
@@ -308,32 +313,23 @@ func (s *Service) Counts(ctx context.Context) (Counts, error) {
 	if err != nil {
 		return Counts{}, otelx.RecordSpanError(span, err)
 	}
-	downloadingShows, err := s.db.CountTVShowsInFlight(
-		ctx, episode.StatusDownloading,
-	)
-	if err != nil {
-		return Counts{}, otelx.RecordSpanError(span, err)
-	}
-	importingShows, err := s.db.CountTVShowsInFlight(
-		ctx, episode.StatusImporting,
-	)
-	if err != nil {
-		return Counts{}, otelx.RecordSpanError(span, err)
-	}
-	monitored, err := s.db.CountTVShowsMonitored(ctx)
-	if err != nil {
-		return Counts{}, otelx.RecordSpanError(span, err)
-	}
+
 	return Counts{
-		Total:               total,
-		Continuing:          continuing,
-		Ended:               ended,
-		Upcoming:            upcoming,
-		Missing:             missing,
-		Downloading:         downloadingShows,
-		Importing:           importingShows,
-		Monitored:           monitored,
-		Unmonitored:         total - monitored,
+		Total:               f.Total,
+		StatusTotal:         f.StatusTotal,
+		Continuing:          f.Continuing,
+		Ended:               f.Ended,
+		Upcoming:            f.Upcoming,
+		Missing:             f.Missing,
+		Downloading:         f.Downloading,
+		Importing:           f.Importing,
+		TypeTotal:           f.TypeTotal,
+		Standard:            f.Standard,
+		Anime:               f.Anime,
+		Daily:               f.Daily,
+		MonitoredTotal:      f.MonitoredTotal,
+		Monitored:           f.Monitored,
+		Unmonitored:         f.Unmonitored,
 		WantedEpisodes:      wanted,
 		DownloadingEpisodes: downloading,
 	}, nil
@@ -1258,7 +1254,7 @@ type Manager interface {
 		result indexer.SearchResult,
 		replaceExisting bool,
 	) error
-	Counts(ctx context.Context) (Counts, error)
+	Counts(ctx context.Context, p FilterParams) (Counts, error)
 	RefreshOne(ctx context.Context, id uint32) (*ent.TVShow, error)
 	Reidentify(
 		ctx context.Context,
@@ -1294,11 +1290,22 @@ type FilterParams struct {
 	Monitored *bool
 }
 
+// Counts is the series toolbar's whole model. Every facet is tallied with the
+// *other* facets' filters applied and its own left out, so each dropdown says
+// what picking a value would leave. Counting a facet against its own selection
+// would zero every row but the chosen one, stranding the filter.
+//
+// Total alone is unconditional: it is the library, which the page header and
+// the "no series yet" empty state ask for.
 type Counts struct {
-	Total      int
-	Continuing int
-	Ended      int
-	Upcoming   int
+	Total int
+
+	// StatusTotal is the status facet's "all" row: everything the type,
+	// monitoring and search filters leave.
+	StatusTotal int
+	Continuing  int
+	Ended       int
+	Upcoming    int
 	// Missing is how many shows have at least one aired, monitored episode
 	// with no file — the population behind the list's "missing" tab, which is
 	// a per-show fact and not derivable from WantedEpisodes.
@@ -1307,10 +1314,18 @@ type Counts struct {
 	// holding at least one episode in that state, not episode counts.
 	Downloading int
 	Importing   int
-	// Monitoring is a facet of its own, counted over the whole library rather
-	// than within the current status: the toolbar shows both tallies at once.
-	Monitored           int
-	Unmonitored         int
+
+	TypeTotal int
+	Standard  int
+	Anime     int
+	Daily     int
+
+	MonitoredTotal int
+	Monitored      int
+	Unmonitored    int
+
+	// Both episode tallies are library-wide and ignore every filter: the nav
+	// badge and the dashboard read them, and neither knows the list's state.
 	WantedEpisodes      int
 	DownloadingEpisodes int
 }

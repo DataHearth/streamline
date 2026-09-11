@@ -183,9 +183,20 @@
 		placeholderData: keepPreviousData,
 	}));
 
+	// Carries the same filters as the list: each facet is tallied with the
+	// *other* facet applied, so a dropdown says how many movies picking a value
+	// would leave rather than how many the unfiltered library holds.
 	const countsQuery = createQuery<MovieCounts>(() => ({
-		queryKey: ["movies", "counts"],
-		queryFn: () => api<MovieCounts>("/movies/counts"),
+		queryKey: ["movies", "counts", tab, mon, debouncedQuery] as const,
+		queryFn: () => {
+			const p = new URLSearchParams();
+			if (tab !== "all") p.set("status", tab);
+			if (mon !== "all") p.set("monitored", mon);
+			if (debouncedQuery.trim()) p.set("query", debouncedQuery.trim());
+			const qs = p.toString();
+			return api<MovieCounts>(`/movies/counts${qs ? `?${qs}` : ""}`);
+		},
+		placeholderData: keepPreviousData,
 	}));
 
 	const schedulesQuery = createQuery<ScheduleList>(() => ({
@@ -196,11 +207,13 @@
 	let counts = $derived(
 		countsQuery.data ?? {
 			total: 0,
+			status_total: 0,
 			wanted: 0,
 			downloading: 0,
 			importing: 0,
 			available: 0,
 			failed: 0,
+			monitored_total: 0,
 			monitored: 0,
 			unmonitored: 0,
 		},

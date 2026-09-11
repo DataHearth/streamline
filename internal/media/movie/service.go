@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/datahearth/streamline/ent"
@@ -86,7 +87,7 @@ type Manager interface {
 	) error
 	RefreshOne(ctx context.Context, id uint32) (*ent.Movie, error)
 	Reidentify(ctx context.Context, id, tmdbID uint32) (*ent.Movie, error)
-	Counts(ctx context.Context) (Counts, error)
+	Counts(ctx context.Context, p FilterParams) (Counts, error)
 	AnnotateTMDBResults(
 		ctx context.Context,
 		results []metadata.MovieResult,
@@ -112,17 +113,29 @@ type UpdateParams struct {
 	Monitored      *bool
 }
 
+// Counts is the movie toolbar's model. The status and monitoring tallies are
+// faceted: each is counted with the *other* facet's filter applied and its own
+// left out, so both dropdowns say what picking a value would leave. Counted
+// against its own selection, a facet zeroes every row but the chosen one.
+//
+// Total and Trend are unconditional — the library, which the page header, the
+// empty state and the dashboard sparkline ask for.
 type Counts struct {
-	Total       int
+	Total int
+
+	// StatusTotal is the status facet's "all" row: what the monitoring and
+	// search filters leave.
+	StatusTotal int
 	Wanted      int
 	Downloading int
 	Importing   int
 	Available   int
 	Failed      int
-	// Monitoring is a facet of its own, counted over the whole library rather
-	// than within the current status: the toolbar shows both tallies at once.
-	Monitored   int
-	Unmonitored int
+
+	MonitoredTotal int
+	Monitored      int
+	Unmonitored    int
+
 	// Trend holds the cumulative library size at the end of each of the last
 	// trendDays days, oldest first; the final element equals Total.
 	Trend []int
@@ -346,58 +359,58 @@ func (s *Service) GetByTMDBID(
 	return m, nil
 }
 
-func (s *Service) Counts(ctx context.Context) (Counts, error) {
-	ctx, span := tracer.Start(ctx, "movie.counts")
+// Counts tallies the status and monitoring facets, each against the filters
+// applied to the other, so both dropdowns say what picking a value would
+// leave. p carries the list's current filter state; a zero value counts the
+// whole library, which is what the nav badge and the dashboard ask for.
+func (s *Service) Counts(ctx context.Context, p FilterParams) (Counts, error) {
+	ctx, span := tracer.Start(ctx, "movie.counts",
+		trace.WithAttributes(attribute.String("filter.status", p.Status)))
 	defer span.End()
 
-	byStatus, err := s.db.MovieStatusCounts(ctx)
+	f, err := s.db.MovieFacetCounts(ctx, db.FilterMoviesParams{
+		Status:    entmovie.Status(p.Status),
+		Monitored: p.Monitored,
+		Query:     strings.TrimSpace(p.Query),
+	})
 	if err != nil {
 		return Counts{}, otelx.RecordSpanError(
 			span,
-			fmt.Errorf("count movies by status: %w", err),
+			fmt.Errorf("count movies by facet: %w", err),
 		)
 	}
-	// Every movie holds exactly one status, so the group sum is COUNT(*) and
-	// no separate total query is needed.
-	total := 0
-	for _, n := range byStatus {
-		total += n
-	}
-	wanted := byStatus[entmovie.StatusWanted]
-	downloading := byStatus[entmovie.StatusDownloading]
-	importing := byStatus[entmovie.StatusImporting]
-	available := byStatus[entmovie.StatusAvailable]
-	failed := byStatus[entmovie.StatusFailed]
+	wanted := f.ByStatus[entmovie.StatusWanted]
+	downloading := f.ByStatus[entmovie.StatusDownloading]
+	importing := f.ByStatus[entmovie.StatusImporting]
+	available := f.ByStatus[entmovie.StatusAvailable]
+	failed := f.ByStatus[entmovie.StatusFailed]
 	span.SetAttributes(
-		attribute.Int("counts.total", total),
+		attribute.Int("counts.total", f.Total),
 		attribute.Int("counts.wanted", wanted),
 		attribute.Int("counts.downloading", downloading),
 		attribute.Int("counts.importing", importing),
 		attribute.Int("counts.available", available),
 		attribute.Int("counts.failed", failed),
 	)
-	monitored, err := s.db.CountMoviesMonitored(ctx)
-	if err != nil {
-		return Counts{}, otelx.RecordSpanError(
-			span,
-			fmt.Errorf("count monitored movies: %w", err),
-		)
-	}
-	trend, err := s.movieTrend(ctx, total)
+	// The trend is the library's growth curve and ignores every filter: the
+	// dashboard sparkline is about the library, not the list's current view.
+	trend, err := s.movieTrend(ctx, f.Total)
 	if err != nil {
 		return Counts{}, err
 	}
 
 	return Counts{
-		Total:       total,
-		Wanted:      wanted,
-		Downloading: downloading,
-		Importing:   importing,
-		Available:   available,
-		Failed:      failed,
-		Monitored:   monitored,
-		Unmonitored: total - monitored,
-		Trend:       trend,
+		Total:          f.Total,
+		StatusTotal:    f.StatusTotal,
+		Wanted:         wanted,
+		Downloading:    downloading,
+		Importing:      importing,
+		Available:      available,
+		Failed:         failed,
+		MonitoredTotal: f.MonitoredTotal,
+		Monitored:      f.Monitored,
+		Unmonitored:    f.Unmonitored,
+		Trend:          trend,
 	}, nil
 }
 

@@ -1,6 +1,7 @@
 package restapi
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -180,14 +181,16 @@ var _ = Describe(
 
 		Describe("GetMovieCounts", func() {
 			It("exposes the per-status counts including failed", func() {
-				app.movies.EXPECT().Counts(mock.Anything).
+				app.movies.EXPECT().Counts(mock.Anything, mock.Anything).
 					Return(moviesvc.Counts{
-						Total:       10,
-						Wanted:      4,
-						Downloading: 2,
-						Available:   3,
-						Failed:      1,
-						Trend:       []int{9, 10},
+						Total:          10,
+						StatusTotal:    9,
+						Wanted:         4,
+						Downloading:    2,
+						Available:      3,
+						Failed:         1,
+						MonitoredTotal: 8,
+						Trend:          []int{9, 10},
 					}, nil).
 					Once()
 
@@ -204,6 +207,30 @@ var _ = Describe(
 				Expect(body.Available).To(Equal(uint32(3)))
 				Expect(body.Failed).To(Equal(uint32(1)))
 				Expect(body.Trend).To(Equal([]uint32{9, 10}))
+				// Each facet's "all" row travels separately from the library
+				// total: they diverge as soon as the other facet is filtered.
+				Expect(body.StatusTotal).To(Equal(uint32(9)))
+				Expect(body.MonitoredTotal).To(Equal(uint32(8)))
+			})
+
+			It("forwards the list's filters", func() {
+				var got moviesvc.FilterParams
+				app.movies.EXPECT().Counts(mock.Anything, mock.Anything).
+					Run(func(_ context.Context, p moviesvc.FilterParams) { got = p }).
+					Return(moviesvc.Counts{}, nil).
+					Once()
+
+				resp, err := http.Get(
+					app.srv.URL +
+						"/api/v1/movies/counts?status=wanted&monitored=monitored&query=dune",
+				)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				Expect(got.Status).To(Equal("wanted"))
+				Expect(got.Query).To(Equal("dune"))
+				Expect(got.Monitored).To(HaveValue(BeTrue()))
 			})
 		})
 

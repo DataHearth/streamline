@@ -7,9 +7,12 @@
 		Plus,
 		X,
 		Eye,
+		EyeOff,
+		Layers,
 		ListChecks,
 		CheckCheck,
 		SlidersHorizontal,
+		type LucideIcon,
 	} from "@lucide/svelte";
 	import { cn } from "../../lib/cn";
 	import { dragScroll } from "../../lib/drag-scroll";
@@ -110,11 +113,18 @@
 		{ key: "year-asc", label: i18n.sort_year_oldest() },
 	];
 
-	const allMon = { key: "all", label: i18n.common_all() };
-	const monOptions = [
+	// Icons rather than dots: monitoring is a kind, not a pipeline state, and a
+	// coloured dot reads as a status everywhere else in this toolbar.
+	type MonOption = { key: string; label: string; icon: LucideIcon };
+	const allMon: MonOption = {
+		key: "all",
+		label: i18n.common_all(),
+		icon: Layers,
+	};
+	const monOptions: MonOption[] = [
 		allMon,
-		{ key: "monitored", label: i18n.monitor_monitored() },
-		{ key: "unmonitored", label: i18n.monitor_unmonitored() },
+		{ key: "monitored", label: i18n.monitor_monitored(), icon: Eye },
+		{ key: "unmonitored", label: i18n.monitor_unmonitored(), icon: EyeOff },
 	];
 
 	// "status" | "mon" | null. Two booleans meant switching menus wrote to both
@@ -141,10 +151,12 @@
 		onMonChange(key);
 		facet = null;
 	}
+	// Each facet reads its own "all": `total` is the library and would overstate
+	// a dropdown whose other facet is filtered.
 	function monCount(key: string): number {
 		if (key === "monitored") return counts.monitored;
 		if (key === "unmonitored") return counts.unmonitored;
-		return counts.total;
+		return counts.monitored_total;
 	}
 
 	let currentSortKey = $derived(`${sort}-${order}` as const);
@@ -169,7 +181,7 @@
 	function tabCount(key: string): number {
 		switch (key) {
 			case "all":
-				return counts.total;
+				return counts.status_total;
 			case "wanted":
 				return counts.wanted;
 			case "downloading":
@@ -455,6 +467,7 @@
 			{#each monOptions as o (o.key)}
 				<DropdownOption
 					label={o.label}
+					icon={o.icon}
 					count={monCount(o.key)}
 					selected={mon === o.key}
 					onSelect={() => pickMon(o.key)}

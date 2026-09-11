@@ -99,6 +99,211 @@ func (c *EpisodeCounts) widen(seasonNo, number uint16, id uint32) {
 	}
 }
 
+// facet names the filter a caller wants left out of the predicate set. The
+// counts endpoint asks for each facet's tallies with every *other* filter
+// applied — the usual faceted-search rule, and the only one that keeps a
+// dropdown usable: counting a facet against its own selection zeroes every
+// row but the chosen one, so nothing else can ever be picked.
+type facet uint8
+
+const (
+	facetAll facet = iota
+	facetStatus
+	facetType
+	facetMonitored
+)
+
+func tvShowFilters(p FilterTVShowsParams, skip facet) []predicate.TVShow {
+	var out []predicate.TVShow
+	if p.Type != "" && skip != facetType {
+		out = append(out, tvshow.TypeEQ(tvshow.Type(p.Type)))
+	}
+	// The search box is not a facet: it narrows every tally, including its own
+	// row's, because there is no "all queries" option to keep selectable.
+	if p.Query != "" {
+		out = append(out, func(s *entsql.Selector) {
+			s.Where(entsql.Or(
+				foldContains(s, tvshow.FieldTitle, p.Query),
+				foldContains(s, tvshow.FieldOriginalTitle, p.Query),
+			))
+		})
+	}
+	if p.Monitored != nil && skip != facetMonitored {
+		out = append(out, tvshow.MonitoredEQ(*p.Monitored))
+	}
+	if skip != facetStatus {
+		if s := tvShowStatusFilter(p.Status, p.Now); s != nil {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
+// tvShowStatusFilter maps one status value to its predicate, or nil for the
+// values that mean "no status filter". Shared by the list and the counts so a
+// tab and its own tally can never disagree on what it selects.
+func tvShowStatusFilter(status string, now time.Time) predicate.TVShow {
+	switch status {
+	case "", "all":
+		return nil
+	case "missing":
+		return tvshow.HasSeasonsWith(season.HasEpisodesWith(missingEpisode(now)))
+	case statusDownloading, statusImporting:
+		return tvshow.HasSeasonsWith(
+			season.HasEpisodesWith(episode.StatusEQ(episode.Status(status))),
+		)
+	default:
+		return tvshow.SeriesStatusEQ(tvshow.SeriesStatus(status))
+	}
+}
+
+// TVShowFacets is the counts endpoint's whole answer: a tally per selectable
+// value of each facet, plus that facet's own "all" row. Total is the library,
+// filtered by nothing — the page header's "N shows".
+type TVShowFacets struct {
+	Total int
+
+	StatusTotal int
+	Continuing  int
+	Ended       int
+	Upcoming    int
+	Missing     int
+	Downloading int
+	Importing   int
+
+	TypeTotal int
+	Standard  int
+	Anime     int
+	Daily     int
+
+	MonitoredTotal int
+	Monitored      int
+	Unmonitored    int
+}
+
+// TVShowFacetCounts tallies every facet of the series list against the filters
+// currently applied to the other facets.
+func (db *DB) TVShowFacetCounts(
+	ctx context.Context,
+	p FilterTVShowsParams,
+) (TVShowFacets, error) {
+	var out TVShowFacets
+
+	count := func(skip facet, extra ...predicate.TVShow) (int, error) {
+		return db.client.TVShow.Query().
+			Where(append(tvShowFilters(p, skip), extra...)...).
+			Count(ctx)
+	}
+
+	total, err := db.client.TVShow.Query().Count(ctx)
+	if err != nil {
+		return out, fmt.Errorf("count tv shows: %w", err)
+	}
+	out.Total = total
+
+	// Status: one GROUP BY covers the three series_status values, and the
+	// three derived statuses each need their own predicate — they are facts
+	// about a show's episodes, not a column.
+	byStatus, err := db.tvShowSeriesStatusCounts(ctx, tvShowFilters(p, facetStatus))
+	if err != nil {
+		return out, err
+	}
+	out.Continuing = byStatus[tvshow.SeriesStatusContinuing]
+	out.Ended = byStatus[tvshow.SeriesStatusEnded]
+	out.Upcoming = byStatus[tvshow.SeriesStatusUpcoming]
+	for _, n := range byStatus {
+		out.StatusTotal += n
+	}
+	for _, d := range []struct {
+		status string
+		into   *int
+	}{
+		{"missing", &out.Missing},
+		{statusDownloading, &out.Downloading},
+		{statusImporting, &out.Importing},
+	} {
+		n, err := count(facetStatus, tvShowStatusFilter(d.status, p.Now))
+		if err != nil {
+			return out, fmt.Errorf("count tv shows %s: %w", d.status, err)
+		}
+		*d.into = n
+	}
+
+	byType, err := db.tvShowTypeCounts(ctx, tvShowFilters(p, facetType))
+	if err != nil {
+		return out, err
+	}
+	out.Standard = byType[tvshow.TypeStandard]
+	out.Anime = byType[tvshow.TypeAnime]
+	out.Daily = byType[tvshow.TypeDaily]
+	for _, n := range byType {
+		out.TypeTotal += n
+	}
+
+	monitored, err := count(facetMonitored, tvshow.MonitoredEQ(true))
+	if err != nil {
+		return out, fmt.Errorf("count monitored tv shows: %w", err)
+	}
+	monTotal, err := count(facetMonitored)
+	if err != nil {
+		return out, fmt.Errorf("count tv shows for monitoring: %w", err)
+	}
+	out.Monitored = monitored
+	out.MonitoredTotal = monTotal
+	out.Unmonitored = monTotal - monitored
+
+	return out, nil
+}
+
+// The two GROUP BY helpers are separate because ent binds a scanned column by
+// its json tag, which has to be the column name — there is no one struct that
+// reads both series_status and type.
+func (db *DB) tvShowSeriesStatusCounts(
+	ctx context.Context,
+	where []predicate.TVShow,
+) (map[tvshow.SeriesStatus]int, error) {
+	var rows []struct {
+		SeriesStatus tvshow.SeriesStatus `json:"series_status"`
+		Count        int                 `json:"count"`
+	}
+	err := db.client.TVShow.Query().
+		Where(where...).
+		GroupBy(tvshow.FieldSeriesStatus).
+		Aggregate(ent.Count()).
+		Scan(ctx, &rows)
+	if err != nil {
+		return nil, fmt.Errorf("group tv shows by series_status: %w", err)
+	}
+	out := make(map[tvshow.SeriesStatus]int, len(rows))
+	for _, r := range rows {
+		out[r.SeriesStatus] = r.Count
+	}
+	return out, nil
+}
+
+func (db *DB) tvShowTypeCounts(
+	ctx context.Context,
+	where []predicate.TVShow,
+) (map[tvshow.Type]int, error) {
+	var rows []struct {
+		Type  tvshow.Type `json:"type"`
+		Count int         `json:"count"`
+	}
+	err := db.client.TVShow.Query().
+		Where(where...).
+		GroupBy(tvshow.FieldType).
+		Aggregate(ent.Count()).
+		Scan(ctx, &rows)
+	if err != nil {
+		return nil, fmt.Errorf("group tv shows by type: %w", err)
+	}
+	out := make(map[tvshow.Type]int, len(rows))
+	for _, r := range rows {
+		out[r.Type] = r.Count
+	}
+	return out, nil
+}
+
 // FilterTVShows applies every filter, the sort and the page in SQL, and
 // returns the page's shows *without* their season/episode tree. The list view
 // wants three numbers per show, not the tree: eager-loading it cost ~121 KB
@@ -107,34 +312,7 @@ func (db *DB) FilterTVShows(
 	ctx context.Context,
 	p FilterTVShowsParams,
 ) ([]*ent.TVShow, map[uint32]EpisodeCounts, uint32, error) {
-	base := db.client.TVShow.Query()
-	if p.Type != "" {
-		base = base.Where(tvshow.TypeEQ(tvshow.Type(p.Type)))
-	}
-	if p.Query != "" {
-		base = base.Where(func(s *entsql.Selector) {
-			s.Where(entsql.Or(
-				foldContains(s, tvshow.FieldTitle, p.Query),
-				foldContains(s, tvshow.FieldOriginalTitle, p.Query),
-			))
-		})
-	}
-	if p.Monitored != nil {
-		base = base.Where(tvshow.MonitoredEQ(*p.Monitored))
-	}
-	switch p.Status {
-	case "", "all":
-	case "missing":
-		base = base.Where(tvshow.HasSeasonsWith(
-			season.HasEpisodesWith(missingEpisode(p.Now)),
-		))
-	case statusDownloading, statusImporting:
-		base = base.Where(tvshow.HasSeasonsWith(
-			season.HasEpisodesWith(episode.StatusEQ(episode.Status(p.Status))),
-		))
-	default:
-		base = base.Where(tvshow.SeriesStatusEQ(tvshow.SeriesStatus(p.Status)))
-	}
+	base := db.client.TVShow.Query().Where(tvShowFilters(p, facetAll)...)
 
 	total, err := base.Clone().Count(ctx)
 	if err != nil {
@@ -225,75 +403,6 @@ func missingEpisode(now time.Time) predicate.Episode {
 		episode.AirDateNotNil(),
 		episode.AirDateLTE(now),
 	)
-}
-
-// TVShowStatusCounts returns the number of shows in each series_status, in one
-// GROUP BY pass. A status with no rows is absent, which reads back as 0.
-func (db *DB) TVShowStatusCounts(
-	ctx context.Context,
-) (map[tvshow.SeriesStatus]int, error) {
-	var rows []struct {
-		SeriesStatus tvshow.SeriesStatus `json:"series_status"`
-		Count        int                 `json:"count"`
-	}
-	err := db.client.TVShow.Query().
-		GroupBy(tvshow.FieldSeriesStatus).
-		Aggregate(ent.Count()).
-		Scan(ctx, &rows)
-	if err != nil {
-		return nil, fmt.Errorf("tv show status counts: %w", err)
-	}
-	out := make(map[tvshow.SeriesStatus]int, len(rows))
-	for _, r := range rows {
-		out[r.SeriesStatus] = r.Count
-	}
-	return out, nil
-}
-
-// CountTVShowsMissing counts shows with at least one aired, monitored episode
-// that has no file — the population behind the list's "missing" filter, so it
-// uses the same predicate rather than a second definition that could drift.
-func (db *DB) CountTVShowsMissing(ctx context.Context, now time.Time) (int, error) {
-	n, err := db.client.TVShow.Query().
-		Where(tvshow.HasSeasonsWith(
-			season.HasEpisodesWith(missingEpisode(now)),
-		)).
-		Count(ctx)
-	if err != nil {
-		return 0, fmt.Errorf("count missing tv shows: %w", err)
-	}
-	return n, nil
-}
-
-// CountTVShowsInFlight counts shows holding at least one episode in the given
-// state — the per-show population behind the list's downloading and importing
-// tabs, matching what FilterTVShows selects for the same status.
-func (db *DB) CountTVShowsInFlight(
-	ctx context.Context,
-	status episode.Status,
-) (int, error) {
-	n, err := db.client.TVShow.Query().
-		Where(tvshow.HasSeasonsWith(
-			season.HasEpisodesWith(episode.StatusEQ(status)),
-		)).
-		Count(ctx)
-	if err != nil {
-		return 0, fmt.Errorf("count %s tv shows: %w", status, err)
-	}
-	return n, nil
-}
-
-// CountTVShowsMonitored counts shows whose own monitored flag is set. The
-// unmonitored tally is the library total minus this, so the facet costs one
-// query rather than two.
-func (db *DB) CountTVShowsMonitored(ctx context.Context) (int, error) {
-	n, err := db.client.TVShow.Query().
-		Where(tvshow.MonitoredEQ(true)).
-		Count(ctx)
-	if err != nil {
-		return 0, fmt.Errorf("count monitored tv shows: %w", err)
-	}
-	return n, nil
 }
 
 // orderByEpisodeCount sorts by the number of episodes without loading any. The

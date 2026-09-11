@@ -258,24 +258,61 @@ var _ = Describe("Movie filter + lookup", Label("integration", "db"), func() {
 		})
 	})
 
-	Describe("MovieStatusCounts", func() {
+	Describe("MovieFacetCounts", func() {
 		It("groups every status in one pass, omitting empty ones", func() {
 			seed("a", 2020, 962, entmovie.StatusWanted)
 			seed("b", 2020, 963, entmovie.StatusWanted)
 			seed("c", 2020, 964, entmovie.StatusAvailable)
 
-			got, err := store.MovieStatusCounts(ctx)
+			got, err := store.MovieFacetCounts(ctx, FilterMoviesParams{})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(got).To(Equal(map[entmovie.Status]int{
+			Expect(got.Total).To(Equal(3))
+			Expect(got.StatusTotal).To(Equal(3))
+			Expect(got.ByStatus).To(Equal(map[entmovie.Status]int{
 				entmovie.StatusWanted:    2,
 				entmovie.StatusAvailable: 1,
 			}))
 		})
 
-		It("returns an empty map for an empty library", func() {
-			got, err := store.MovieStatusCounts(ctx)
+		It("counts each facet against the other's filter, not its own", func() {
+			// Two wanted (one unmonitored), one available and monitored.
+			a := seed("a", 2020, 972, entmovie.StatusWanted)
+			seed("b", 2020, 973, entmovie.StatusWanted)
+			seed("c", 2020, 974, entmovie.StatusAvailable)
+			_, err := client.Movie.UpdateOneID(a.ID).SetMonitored(false).Save(ctx)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(got).To(BeEmpty())
+
+			on := true
+			got, err := store.MovieFacetCounts(ctx, FilterMoviesParams{
+				Status:    entmovie.StatusWanted,
+				Monitored: &on,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Status tallies drop their own filter but keep monitored=true, so
+			// the unmonitored wanted movie is out and the available one is in —
+			// which is what lets "available" still be selectable.
+			Expect(got.ByStatus).To(Equal(map[entmovie.Status]int{
+				entmovie.StatusWanted:    1,
+				entmovie.StatusAvailable: 1,
+			}))
+			Expect(got.StatusTotal).To(Equal(2))
+
+			// Monitoring tallies drop theirs but keep status=wanted: both wanted
+			// movies, one of each.
+			Expect(got.MonitoredTotal).To(Equal(2))
+			Expect(got.Monitored).To(Equal(1))
+			Expect(got.Unmonitored).To(Equal(1))
+
+			// Total ignores every filter.
+			Expect(got.Total).To(Equal(3))
+		})
+
+		It("returns an empty map for an empty library", func() {
+			got, err := store.MovieFacetCounts(ctx, FilterMoviesParams{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.ByStatus).To(BeEmpty())
+			Expect(got.Total).To(BeZero())
 		})
 	})
 

@@ -1559,66 +1559,6 @@ func (_c *MockStore_CountMoviesByStatus_Call) RunAndReturn(run func(ctx context.
 	return _c
 }
 
-// CountMoviesMonitored provides a mock function for the type MockStore
-func (_mock *MockStore) CountMoviesMonitored(ctx context.Context) (int, error) {
-	ret := _mock.Called(ctx)
-
-	if len(ret) == 0 {
-		panic("no return value specified for CountMoviesMonitored")
-	}
-
-	var r0 int
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context) (int, error)); ok {
-		return returnFunc(ctx)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context) int); ok {
-		r0 = returnFunc(ctx)
-	} else {
-		r0 = ret.Get(0).(int)
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = returnFunc(ctx)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// MockStore_CountMoviesMonitored_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CountMoviesMonitored'
-type MockStore_CountMoviesMonitored_Call struct {
-	*mock.Call
-}
-
-// CountMoviesMonitored is a helper method to define mock.On call
-//   - ctx context.Context
-func (_e *MockStore_Expecter) CountMoviesMonitored(ctx any) *MockStore_CountMoviesMonitored_Call {
-	return &MockStore_CountMoviesMonitored_Call{Call: _e.mock.On("CountMoviesMonitored", ctx)}
-}
-
-func (_c *MockStore_CountMoviesMonitored_Call) Run(run func(ctx context.Context)) *MockStore_CountMoviesMonitored_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		run(
-			arg0,
-		)
-	})
-	return _c
-}
-
-func (_c *MockStore_CountMoviesMonitored_Call) Return(n int, err error) *MockStore_CountMoviesMonitored_Call {
-	_c.Call.Return(n, err)
-	return _c
-}
-
-func (_c *MockStore_CountMoviesMonitored_Call) RunAndReturn(run func(ctx context.Context) (int, error)) *MockStore_CountMoviesMonitored_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // CountRequestsByStatus provides a mock function for the type MockStore
 func (_mock *MockStore) CountRequestsByStatus(ctx context.Context, status request.Status) (int, error) {
 	ret := _mock.Called(ctx, status)
@@ -1807,198 +1747,6 @@ func (_c *MockStore_CountTVShowsByStatus_Call) Return(n int, err error) *MockSto
 }
 
 func (_c *MockStore_CountTVShowsByStatus_Call) RunAndReturn(run func(ctx context.Context, status tvshow.SeriesStatus) (int, error)) *MockStore_CountTVShowsByStatus_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// CountTVShowsInFlight provides a mock function for the type MockStore
-func (_mock *MockStore) CountTVShowsInFlight(ctx context.Context, status episode.Status) (int, error) {
-	ret := _mock.Called(ctx, status)
-
-	if len(ret) == 0 {
-		panic("no return value specified for CountTVShowsInFlight")
-	}
-
-	var r0 int
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, episode.Status) (int, error)); ok {
-		return returnFunc(ctx, status)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, episode.Status) int); ok {
-		r0 = returnFunc(ctx, status)
-	} else {
-		r0 = ret.Get(0).(int)
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, episode.Status) error); ok {
-		r1 = returnFunc(ctx, status)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// MockStore_CountTVShowsInFlight_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CountTVShowsInFlight'
-type MockStore_CountTVShowsInFlight_Call struct {
-	*mock.Call
-}
-
-// CountTVShowsInFlight is a helper method to define mock.On call
-//   - ctx context.Context
-//   - status episode.Status
-func (_e *MockStore_Expecter) CountTVShowsInFlight(ctx any, status any) *MockStore_CountTVShowsInFlight_Call {
-	return &MockStore_CountTVShowsInFlight_Call{Call: _e.mock.On("CountTVShowsInFlight", ctx, status)}
-}
-
-func (_c *MockStore_CountTVShowsInFlight_Call) Run(run func(ctx context.Context, status episode.Status)) *MockStore_CountTVShowsInFlight_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 episode.Status
-		if args[1] != nil {
-			arg1 = args[1].(episode.Status)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *MockStore_CountTVShowsInFlight_Call) Return(n int, err error) *MockStore_CountTVShowsInFlight_Call {
-	_c.Call.Return(n, err)
-	return _c
-}
-
-func (_c *MockStore_CountTVShowsInFlight_Call) RunAndReturn(run func(ctx context.Context, status episode.Status) (int, error)) *MockStore_CountTVShowsInFlight_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// CountTVShowsMissing provides a mock function for the type MockStore
-func (_mock *MockStore) CountTVShowsMissing(ctx context.Context, now time.Time) (int, error) {
-	ret := _mock.Called(ctx, now)
-
-	if len(ret) == 0 {
-		panic("no return value specified for CountTVShowsMissing")
-	}
-
-	var r0 int
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, time.Time) (int, error)); ok {
-		return returnFunc(ctx, now)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, time.Time) int); ok {
-		r0 = returnFunc(ctx, now)
-	} else {
-		r0 = ret.Get(0).(int)
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, time.Time) error); ok {
-		r1 = returnFunc(ctx, now)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// MockStore_CountTVShowsMissing_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CountTVShowsMissing'
-type MockStore_CountTVShowsMissing_Call struct {
-	*mock.Call
-}
-
-// CountTVShowsMissing is a helper method to define mock.On call
-//   - ctx context.Context
-//   - now time.Time
-func (_e *MockStore_Expecter) CountTVShowsMissing(ctx any, now any) *MockStore_CountTVShowsMissing_Call {
-	return &MockStore_CountTVShowsMissing_Call{Call: _e.mock.On("CountTVShowsMissing", ctx, now)}
-}
-
-func (_c *MockStore_CountTVShowsMissing_Call) Run(run func(ctx context.Context, now time.Time)) *MockStore_CountTVShowsMissing_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 time.Time
-		if args[1] != nil {
-			arg1 = args[1].(time.Time)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *MockStore_CountTVShowsMissing_Call) Return(n int, err error) *MockStore_CountTVShowsMissing_Call {
-	_c.Call.Return(n, err)
-	return _c
-}
-
-func (_c *MockStore_CountTVShowsMissing_Call) RunAndReturn(run func(ctx context.Context, now time.Time) (int, error)) *MockStore_CountTVShowsMissing_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// CountTVShowsMonitored provides a mock function for the type MockStore
-func (_mock *MockStore) CountTVShowsMonitored(ctx context.Context) (int, error) {
-	ret := _mock.Called(ctx)
-
-	if len(ret) == 0 {
-		panic("no return value specified for CountTVShowsMonitored")
-	}
-
-	var r0 int
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context) (int, error)); ok {
-		return returnFunc(ctx)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context) int); ok {
-		r0 = returnFunc(ctx)
-	} else {
-		r0 = ret.Get(0).(int)
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = returnFunc(ctx)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// MockStore_CountTVShowsMonitored_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CountTVShowsMonitored'
-type MockStore_CountTVShowsMonitored_Call struct {
-	*mock.Call
-}
-
-// CountTVShowsMonitored is a helper method to define mock.On call
-//   - ctx context.Context
-func (_e *MockStore_Expecter) CountTVShowsMonitored(ctx any) *MockStore_CountTVShowsMonitored_Call {
-	return &MockStore_CountTVShowsMonitored_Call{Call: _e.mock.On("CountTVShowsMonitored", ctx)}
-}
-
-func (_c *MockStore_CountTVShowsMonitored_Call) Run(run func(ctx context.Context)) *MockStore_CountTVShowsMonitored_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		run(
-			arg0,
-		)
-	})
-	return _c
-}
-
-func (_c *MockStore_CountTVShowsMonitored_Call) Return(n int, err error) *MockStore_CountTVShowsMonitored_Call {
-	_c.Call.Return(n, err)
-	return _c
-}
-
-func (_c *MockStore_CountTVShowsMonitored_Call) RunAndReturn(run func(ctx context.Context) (int, error)) *MockStore_CountTVShowsMonitored_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -10289,6 +10037,72 @@ func (_c *MockStore_MovieCreateTimesSince_Call) RunAndReturn(run func(ctx contex
 	return _c
 }
 
+// MovieFacetCounts provides a mock function for the type MockStore
+func (_mock *MockStore) MovieFacetCounts(ctx context.Context, p db.FilterMoviesParams) (db.MovieFacets, error) {
+	ret := _mock.Called(ctx, p)
+
+	if len(ret) == 0 {
+		panic("no return value specified for MovieFacetCounts")
+	}
+
+	var r0 db.MovieFacets
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.FilterMoviesParams) (db.MovieFacets, error)); ok {
+		return returnFunc(ctx, p)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.FilterMoviesParams) db.MovieFacets); ok {
+		r0 = returnFunc(ctx, p)
+	} else {
+		r0 = ret.Get(0).(db.MovieFacets)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.FilterMoviesParams) error); ok {
+		r1 = returnFunc(ctx, p)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_MovieFacetCounts_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'MovieFacetCounts'
+type MockStore_MovieFacetCounts_Call struct {
+	*mock.Call
+}
+
+// MovieFacetCounts is a helper method to define mock.On call
+//   - ctx context.Context
+//   - p db.FilterMoviesParams
+func (_e *MockStore_Expecter) MovieFacetCounts(ctx any, p any) *MockStore_MovieFacetCounts_Call {
+	return &MockStore_MovieFacetCounts_Call{Call: _e.mock.On("MovieFacetCounts", ctx, p)}
+}
+
+func (_c *MockStore_MovieFacetCounts_Call) Run(run func(ctx context.Context, p db.FilterMoviesParams)) *MockStore_MovieFacetCounts_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.FilterMoviesParams
+		if args[1] != nil {
+			arg1 = args[1].(db.FilterMoviesParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_MovieFacetCounts_Call) Return(movieFacets db.MovieFacets, err error) *MockStore_MovieFacetCounts_Call {
+	_c.Call.Return(movieFacets, err)
+	return _c
+}
+
+func (_c *MockStore_MovieFacetCounts_Call) RunAndReturn(run func(ctx context.Context, p db.FilterMoviesParams) (db.MovieFacets, error)) *MockStore_MovieFacetCounts_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // MovieFileSummaries provides a mock function for the type MockStore
 func (_mock *MockStore) MovieFileSummaries(ctx context.Context, movieIDs []uint32) (map[uint32]db.MovieFileSummary, error) {
 	ret := _mock.Called(ctx, movieIDs)
@@ -10419,68 +10233,6 @@ func (_c *MockStore_MovieHasMediaFile_Call) Return(b bool, err error) *MockStore
 }
 
 func (_c *MockStore_MovieHasMediaFile_Call) RunAndReturn(run func(ctx context.Context, tmdbID uint32) (bool, error)) *MockStore_MovieHasMediaFile_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// MovieStatusCounts provides a mock function for the type MockStore
-func (_mock *MockStore) MovieStatusCounts(ctx context.Context) (map[movie.Status]int, error) {
-	ret := _mock.Called(ctx)
-
-	if len(ret) == 0 {
-		panic("no return value specified for MovieStatusCounts")
-	}
-
-	var r0 map[movie.Status]int
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context) (map[movie.Status]int, error)); ok {
-		return returnFunc(ctx)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context) map[movie.Status]int); ok {
-		r0 = returnFunc(ctx)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(map[movie.Status]int)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = returnFunc(ctx)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// MockStore_MovieStatusCounts_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'MovieStatusCounts'
-type MockStore_MovieStatusCounts_Call struct {
-	*mock.Call
-}
-
-// MovieStatusCounts is a helper method to define mock.On call
-//   - ctx context.Context
-func (_e *MockStore_Expecter) MovieStatusCounts(ctx any) *MockStore_MovieStatusCounts_Call {
-	return &MockStore_MovieStatusCounts_Call{Call: _e.mock.On("MovieStatusCounts", ctx)}
-}
-
-func (_c *MockStore_MovieStatusCounts_Call) Run(run func(ctx context.Context)) *MockStore_MovieStatusCounts_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		run(
-			arg0,
-		)
-	})
-	return _c
-}
-
-func (_c *MockStore_MovieStatusCounts_Call) Return(statusToInt map[movie.Status]int, err error) *MockStore_MovieStatusCounts_Call {
-	_c.Call.Return(statusToInt, err)
-	return _c
-}
-
-func (_c *MockStore_MovieStatusCounts_Call) RunAndReturn(run func(ctx context.Context) (map[movie.Status]int, error)) *MockStore_MovieStatusCounts_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -13734,6 +13486,72 @@ func (_c *MockStore_SyncSeasonDownloadStateForRecord_Call) RunAndReturn(run func
 	return _c
 }
 
+// TVShowFacetCounts provides a mock function for the type MockStore
+func (_mock *MockStore) TVShowFacetCounts(ctx context.Context, p db.FilterTVShowsParams) (db.TVShowFacets, error) {
+	ret := _mock.Called(ctx, p)
+
+	if len(ret) == 0 {
+		panic("no return value specified for TVShowFacetCounts")
+	}
+
+	var r0 db.TVShowFacets
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.FilterTVShowsParams) (db.TVShowFacets, error)); ok {
+		return returnFunc(ctx, p)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.FilterTVShowsParams) db.TVShowFacets); ok {
+		r0 = returnFunc(ctx, p)
+	} else {
+		r0 = ret.Get(0).(db.TVShowFacets)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.FilterTVShowsParams) error); ok {
+		r1 = returnFunc(ctx, p)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_TVShowFacetCounts_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'TVShowFacetCounts'
+type MockStore_TVShowFacetCounts_Call struct {
+	*mock.Call
+}
+
+// TVShowFacetCounts is a helper method to define mock.On call
+//   - ctx context.Context
+//   - p db.FilterTVShowsParams
+func (_e *MockStore_Expecter) TVShowFacetCounts(ctx any, p any) *MockStore_TVShowFacetCounts_Call {
+	return &MockStore_TVShowFacetCounts_Call{Call: _e.mock.On("TVShowFacetCounts", ctx, p)}
+}
+
+func (_c *MockStore_TVShowFacetCounts_Call) Run(run func(ctx context.Context, p db.FilterTVShowsParams)) *MockStore_TVShowFacetCounts_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.FilterTVShowsParams
+		if args[1] != nil {
+			arg1 = args[1].(db.FilterTVShowsParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_TVShowFacetCounts_Call) Return(tVShowFacets db.TVShowFacets, err error) *MockStore_TVShowFacetCounts_Call {
+	_c.Call.Return(tVShowFacets, err)
+	return _c
+}
+
+func (_c *MockStore_TVShowFacetCounts_Call) RunAndReturn(run func(ctx context.Context, p db.FilterTVShowsParams) (db.TVShowFacets, error)) *MockStore_TVShowFacetCounts_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // TVShowForEpisode provides a mock function for the type MockStore
 func (_mock *MockStore) TVShowForEpisode(ctx context.Context, episodeID uint32) (*ent.TVShow, error) {
 	ret := _mock.Called(ctx, episodeID)
@@ -13798,68 +13616,6 @@ func (_c *MockStore_TVShowForEpisode_Call) Return(tVShow *ent.TVShow, err error)
 }
 
 func (_c *MockStore_TVShowForEpisode_Call) RunAndReturn(run func(ctx context.Context, episodeID uint32) (*ent.TVShow, error)) *MockStore_TVShowForEpisode_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// TVShowStatusCounts provides a mock function for the type MockStore
-func (_mock *MockStore) TVShowStatusCounts(ctx context.Context) (map[tvshow.SeriesStatus]int, error) {
-	ret := _mock.Called(ctx)
-
-	if len(ret) == 0 {
-		panic("no return value specified for TVShowStatusCounts")
-	}
-
-	var r0 map[tvshow.SeriesStatus]int
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context) (map[tvshow.SeriesStatus]int, error)); ok {
-		return returnFunc(ctx)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context) map[tvshow.SeriesStatus]int); ok {
-		r0 = returnFunc(ctx)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(map[tvshow.SeriesStatus]int)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = returnFunc(ctx)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// MockStore_TVShowStatusCounts_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'TVShowStatusCounts'
-type MockStore_TVShowStatusCounts_Call struct {
-	*mock.Call
-}
-
-// TVShowStatusCounts is a helper method to define mock.On call
-//   - ctx context.Context
-func (_e *MockStore_Expecter) TVShowStatusCounts(ctx any) *MockStore_TVShowStatusCounts_Call {
-	return &MockStore_TVShowStatusCounts_Call{Call: _e.mock.On("TVShowStatusCounts", ctx)}
-}
-
-func (_c *MockStore_TVShowStatusCounts_Call) Run(run func(ctx context.Context)) *MockStore_TVShowStatusCounts_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		run(
-			arg0,
-		)
-	})
-	return _c
-}
-
-func (_c *MockStore_TVShowStatusCounts_Call) Return(seriesStatusToInt map[tvshow.SeriesStatus]int, err error) *MockStore_TVShowStatusCounts_Call {
-	_c.Call.Return(seriesStatusToInt, err)
-	return _c
-}
-
-func (_c *MockStore_TVShowStatusCounts_Call) RunAndReturn(run func(ctx context.Context) (map[tvshow.SeriesStatus]int, error)) *MockStore_TVShowStatusCounts_Call {
 	_c.Call.Return(run)
 	return _c
 }

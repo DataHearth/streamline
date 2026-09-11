@@ -314,18 +314,21 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 
 	Describe("Counts", func() {
 		It("aggregates total + per-status counts", func() {
-			storeMock.MovieStatusCounts(mock.Anything).
-				Return(map[entmovie.Status]int{
-					entmovie.StatusWanted:      4,
-					entmovie.StatusDownloading: 2,
-					entmovie.StatusAvailable:   3,
-					entmovie.StatusFailed:      1,
+			storeMock.MovieFacetCounts(mock.Anything, mock.Anything).
+				Return(db.MovieFacets{
+					Total:       10,
+					StatusTotal: 10,
+					ByStatus: map[entmovie.Status]int{
+						entmovie.StatusWanted:      4,
+						entmovie.StatusDownloading: 2,
+						entmovie.StatusAvailable:   3,
+						entmovie.StatusFailed:      1,
+					},
 				}, nil).Once()
-			storeMock.CountMoviesMonitored(mock.Anything).Return(0, nil).Once()
 			storeMock.MovieCreateTimesSince(mock.Anything, mock.Anything).
 				Return([]time.Time{}, nil).Once()
 
-			c, err := svc.Counts(ctx)
+			c, err := svc.Counts(ctx, FilterParams{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(c.Total).To(Equal(10))
 			Expect(c.Wanted).To(Equal(4))
@@ -338,16 +341,39 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 			Expect(c.Trend[trendDays-1]).To(Equal(c.Total))
 		})
 
+		It("passes the list's filters to the facet query", func() {
+			on := false
+			var got db.FilterMoviesParams
+			storeMock.MovieFacetCounts(mock.Anything, mock.Anything).
+				Run(func(_ context.Context, p db.FilterMoviesParams) { got = p }).
+				Return(db.MovieFacets{}, nil).Once()
+			storeMock.MovieCreateTimesSince(mock.Anything, mock.Anything).
+				Return([]time.Time{}, nil).Once()
+
+			_, err := svc.Counts(ctx, FilterParams{
+				Status:    "wanted",
+				Query:     "  dune  ",
+				Monitored: &on,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.Status).To(Equal(entmovie.StatusWanted))
+			Expect(got.Query).To(Equal("dune"))
+			Expect(got.Monitored).To(HaveValue(BeFalse()))
+		})
+
 		It("buckets recent additions into a rising trend ending at total", func() {
-			storeMock.MovieStatusCounts(mock.Anything).
-				Return(map[entmovie.Status]int{
-					entmovie.StatusWanted:      1,
-					entmovie.StatusDownloading: 1,
-					entmovie.StatusAvailable:   1,
+			storeMock.MovieFacetCounts(mock.Anything, mock.Anything).
+				Return(db.MovieFacets{
+					Total:       3,
+					StatusTotal: 3,
+					ByStatus: map[entmovie.Status]int{
+						entmovie.StatusWanted:      1,
+						entmovie.StatusDownloading: 1,
+						entmovie.StatusAvailable:   1,
+					},
 				}, nil).Once()
 			// Two added today, one yesterday; no prior baseline.
 			now := time.Now().UTC()
-			storeMock.CountMoviesMonitored(mock.Anything).Return(0, nil).Once()
 			storeMock.MovieCreateTimesSince(mock.Anything, mock.Anything).
 				Return([]time.Time{
 					now.Add(-24 * time.Hour),
@@ -355,7 +381,7 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 					now,
 				}, nil).Once()
 
-			c, err := svc.Counts(ctx)
+			c, err := svc.Counts(ctx, FilterParams{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(c.Trend).To(HaveLen(trendDays))
 			Expect(c.Trend[0]).To(Equal(0))           // baseline empty
@@ -371,15 +397,18 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 		})
 
 		It("reports a status with no rows as zero rather than missing", func() {
-			storeMock.MovieStatusCounts(mock.Anything).
-				Return(map[entmovie.Status]int{
-					entmovie.StatusAvailable: 7,
+			storeMock.MovieFacetCounts(mock.Anything, mock.Anything).
+				Return(db.MovieFacets{
+					Total:       7,
+					StatusTotal: 7,
+					ByStatus: map[entmovie.Status]int{
+						entmovie.StatusAvailable: 7,
+					},
 				}, nil).Once()
-			storeMock.CountMoviesMonitored(mock.Anything).Return(0, nil).Once()
 			storeMock.MovieCreateTimesSince(mock.Anything, mock.Anything).
 				Return([]time.Time{}, nil).Once()
 
-			c, err := svc.Counts(ctx)
+			c, err := svc.Counts(ctx, FilterParams{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(c.Total).To(Equal(7))
 			Expect(c.Wanted).To(BeZero())
@@ -388,10 +417,10 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 		})
 
 		It("wraps count errors", func() {
-			storeMock.MovieStatusCounts(mock.Anything).
-				Return(nil, errors.New("boom")).Once()
-			_, err := svc.Counts(ctx)
-			Expect(err).To(MatchError(ContainSubstring("count movies by status")))
+			storeMock.MovieFacetCounts(mock.Anything, mock.Anything).
+				Return(db.MovieFacets{}, errors.New("boom")).Once()
+			_, err := svc.Counts(ctx, FilterParams{})
+			Expect(err).To(MatchError(ContainSubstring("count movies by facet")))
 		})
 	})
 

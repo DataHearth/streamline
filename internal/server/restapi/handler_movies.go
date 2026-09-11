@@ -72,9 +72,21 @@ func (s *Server) ListMovies(
 
 func (s *Server) GetMovieCounts(
 	ctx context.Context,
-	_ GetMovieCountsRequestObject,
+	request GetMovieCountsRequestObject,
 ) (GetMovieCountsResponseObject, error) {
-	counts, err := s.movies.Counts(ctx)
+	// The list's filters, so each facet is counted against the other's.
+	p := moviesvc.FilterParams{}
+	if v := request.Params.Status; v != nil {
+		p.Status = *v
+	}
+	if v := request.Params.Query; v != nil {
+		p.Query = *v
+	}
+	if v := request.Params.Monitored; v != nil {
+		on := *v == GetMovieCountsParamsMonitoredMonitored
+		p.Monitored = &on
+	}
+	counts, err := s.movies.Counts(ctx, p)
 	if err != nil {
 		return GetMovieCounts500JSONResponse{
 			InternalErrorJSONResponse: errInternal(ctx, err),
@@ -88,15 +100,17 @@ func (s *Server) GetMovieCounts(
 	}
 	return GetMovieCounts200JSONResponse{
 		MovieCountsResponseJSONResponse: MovieCountsResponseJSONResponse{
-			Total:       numeric.SaturateU32(counts.Total),
-			Wanted:      numeric.SaturateU32(counts.Wanted),
-			Downloading: numeric.SaturateU32(counts.Downloading),
-			Importing:   numeric.SaturateU32(counts.Importing),
-			Available:   numeric.SaturateU32(counts.Available),
-			Failed:      numeric.SaturateU32(counts.Failed),
-			Monitored:   numeric.SaturateU32(counts.Monitored),
-			Unmonitored: numeric.SaturateU32(counts.Unmonitored),
-			Trend:       trend,
+			Total:          numeric.SaturateU32(counts.Total),
+			StatusTotal:    numeric.SaturateU32(counts.StatusTotal),
+			Wanted:         numeric.SaturateU32(counts.Wanted),
+			Downloading:    numeric.SaturateU32(counts.Downloading),
+			Importing:      numeric.SaturateU32(counts.Importing),
+			Available:      numeric.SaturateU32(counts.Available),
+			Failed:         numeric.SaturateU32(counts.Failed),
+			MonitoredTotal: numeric.SaturateU32(counts.MonitoredTotal),
+			Monitored:      numeric.SaturateU32(counts.Monitored),
+			Unmonitored:    numeric.SaturateU32(counts.Unmonitored),
+			Trend:          trend,
 		},
 	}, nil
 }

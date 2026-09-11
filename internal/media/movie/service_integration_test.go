@@ -257,7 +257,7 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			c, err := svc.Counts(ctx)
+			c, err := svc.Counts(ctx, FilterParams{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(c.Total).To(Equal(4))
 			Expect(c.Wanted).To(Equal(1))

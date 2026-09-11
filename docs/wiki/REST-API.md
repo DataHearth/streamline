@@ -118,7 +118,11 @@ Everything database-backed (movies, series, requests, users, imports) uses numer
 
 **Sort direction follows the key.** `GET /series?sort=` defaults to the direction the key implies — `title` ascending, `year`, `rating`, `episodes` and `recent` descending, so "most episodes" means most. Pass `?order=asc|desc` to override. `sort=episodes` ranks by the same episode count the list response reports in `total_episodes` (monitored, or already on disk), not by every row the provider lists.
 
-**Series counts leave the specials out.** `total_seasons`, `total_episodes`, `have_episodes` and `wanted_episodes` cover the numbered seasons only — season 0 is reported as its own entry in the detail response's `seasons` array, with its own counts, but never folded into the show's totals or into `status=missing`. `total_seasons` counts the seasons themselves, so a season the library follows no episode of still counts as one.
+**Series counts leave the specials out.** `total_seasons`, `total_episodes`, `have_episodes` and `wanted_episodes` cover the numbered seasons only — season 0 is reported as its own entry in the detail response's `seasons` array, with its own counts, but never folded into the show's totals or into `status=missing`. `total_seasons` counts the seasons themselves, so a season the library follows no episode of still counts as one. A show whose only files are specials therefore reports `have_episodes: 0`: to ask whether it has files on disk, read the `seasons` array, not the rollup.
+
+**The counts endpoints are faceted.** `GET /movies/counts` and `GET /series/counts` accept the same filter params as their list endpoints (`status`, `monitored`, `type`, `query`), and every tally comes back counted with the request's *other* filters applied and its own facet's filter left out. That is what lets a filter UI show how many titles each value would leave: counted against its own selection a facet zeroes every row but the chosen one, and nothing else can be picked. `query` is not a facet — it has no "all" row to keep selectable — so it narrows every tally.
+
+Each facet carries its own `*_total` "all" row (`status_total`, `type_total`, `monitored_total`); the three diverge as soon as two facets are filtered, so read each from its own. `total` is separate again: the library, filtered by nothing. So are `wanted_episodes`, `downloading_episodes` and the movie `trend`. Called with no parameters the whole response is the unfiltered library, which is the shape older clients already expected.
 
 **Errors** are `{"message": "..."}` with a conventional status: `400` bad request, `401` unauthenticated, `403` forbidden (usually not an admin), `404`, `409` conflict (already exists), `422` unprocessable, `500`. Some carry a stable `code` alongside the message when the caller needs to branch on the specific reason — `last_admin`, `email_exists`, `connection_failed` (a connection test's upstream diagnostic), `invalid_condition` (a custom-format condition that would not compile), `grab_rejected` (a grab the server refused — an untrusted download host, or a release whose files match no wanted episode). Those last three carry a message composed for display, which the web UI shows verbatim; a coded error's `message` is otherwise still advisory.
 
@@ -133,7 +137,7 @@ Everything database-backed (movies, series, requests, users, imports) uses numer
 | Method | Path | What it does | Auth |
 | --- | --- | --- | --- |
 | `GET` `POST` | `/movies` | List / add movies | Authenticated |
-| `GET` | `/movies/counts` | Counts by status | Authenticated |
+| `GET` | `/movies/counts` | Faceted counts (same filter params as the list) | Authenticated |
 | `GET` `PATCH` `DELETE` | `/movies/{id}` | Fetch / update / delete a movie | Authenticated |
 | `POST` | `/movies/{id}/search` · `/search-now` · `/grab` · `/refresh-metadata` · `/rename` · `/play-on` | Search, force a search, grab, refresh metadata, rename to the naming template, or play on a media server | Authenticated |
 | `POST` | `/movies/{id}/reidentify` | Point the entry at a different TMDB title | 🔒 Admin |
@@ -146,9 +150,9 @@ Everything database-backed (movies, series, requests, users, imports) uses numer
 | Method | Path | What it does | Auth |
 | --- | --- | --- | --- |
 | `GET` `POST` | `/series` | List (`?status=`, `?type=`, `?query=`, `?sort=`, `?order=`) / add a series | Authenticated |
-| `GET` | `/series/counts` · `/series/lookup` · `/series/lookup/{tvdb_id}` | Counts, TVDB lookup | Authenticated |
+| `GET` | `/series/counts` · `/series/lookup` · `/series/lookup/{tvdb_id}` | Faceted counts (same filter params as the list), TVDB lookup | Authenticated |
 | `POST` | `/series/specials/apply` | Apply the specials handling | Authenticated |
-| `GET` `PATCH` `DELETE` | `/series/{id}` | Fetch / update / delete a series | Authenticated |
+| `GET` `PATCH` `DELETE` | `/series/{id}` | Fetch / update (`monitored`, `quality_profile`, `preset`, `type`) / delete a series | Authenticated |
 | `GET` | `/series/{id}/browse` | Browse the season/episode tree | Authenticated |
 | `POST` | `/series/{id}/search` · `/grab` · `/refresh-metadata` · `/rename` · `/play-on` | Search, grab, refresh metadata, rename, or play on a media server | Authenticated |
 | `POST` | `/series/{id}/reidentify` | Point the entry at a different TVDB show | 🔒 Admin |
@@ -229,7 +233,7 @@ The `cast` array on a stored movie or series (`GET /movies/{id}`, `GET /series/{
 | Method | Path | What it does | Auth |
 | --- | --- | --- | --- |
 | `GET` | `/activity` | Event feed (movies, episodes and series; filter with `?movie_id=` or `?series_id=`) | Authenticated |
-| `GET` | `/activity/queue` · `/activity/history` | Queue and history views | Authenticated |
+| `GET` | `/activity/queue` · `/activity/history` | Queue and history views (history is cursor-paged and carries `total`, every terminal record) | Authenticated |
 | `DELETE` | `/activity/queue/{id}` · `/activity/history/{id}` | Remove a queue or history entry | Authenticated |
 | `POST` | `/activity/queue/{id}/pause` · `/resume` · `/activity/history/clear-completed` | Pause/resume a download, or clear completed history | Authenticated |
 | `GET` | `/activity/pending` | List adoption proposals | 🔒 Admin |

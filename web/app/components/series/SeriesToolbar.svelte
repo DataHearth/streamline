@@ -10,8 +10,13 @@
 	export type SeriesTypeFilter = "all" | "standard" | "anime" | "daily";
 	export type SeriesMonFilter = "all" | "monitored" | "unmonitored";
 	export type SeriesSort = "recent" | "title" | "year" | "rating" | "episodes";
+	export type SeriesOrder = "asc" | "desc";
 
+	// Each facet's "all" is its own count, never another's: with two facets
+	// filtered the three totals differ, and sharing one makes a dropdown claim
+	// a population its "all" row would not return.
 	export type SeriesTabCounts = Record<SeriesTab, number>;
+	export type SeriesTypeCounts = Record<SeriesTypeFilter, number>;
 	export type SeriesMonCounts = Record<SeriesMonFilter, number>;
 </script>
 
@@ -24,10 +29,15 @@
 		Plus,
 		X,
 		Eye,
+		EyeOff,
+		Layers,
+		Sparkles,
+		CalendarDays,
 		Tv,
 		ListChecks,
 		CheckCheck,
 		SlidersHorizontal,
+		type LucideIcon,
 	} from "@lucide/svelte";
 	import { cn } from "../../lib/cn";
 	import { dragScroll } from "../../lib/drag-scroll";
@@ -45,8 +55,10 @@
 		mon,
 		query,
 		sort,
+		order,
 		view,
 		counts,
+		typeCounts,
 		monCounts,
 		selectMode,
 		selectedCount,
@@ -67,8 +79,10 @@
 		mon: SeriesMonFilter;
 		query: string;
 		sort: SeriesSort;
+		order: SeriesOrder;
 		view: View;
 		counts: SeriesTabCounts;
+		typeCounts: SeriesTypeCounts;
 		monCounts: SeriesMonCounts;
 		selectMode: boolean;
 		selectedCount: number;
@@ -77,7 +91,7 @@
 		onTypeChange: (t: SeriesTypeFilter) => void;
 		onMonChange: (m: SeriesMonFilter) => void;
 		onQueryChange: (q: string) => void;
-		onSortChange: (s: SeriesSort) => void;
+		onSortChange: (s: SeriesSort, o: SeriesOrder) => void;
 		onViewChange: (v: View) => void;
 		onClearFilters: () => void;
 		onSelectModeChange: (v: boolean) => void;
@@ -133,33 +147,48 @@
 		},
 	];
 
-	const allType: { key: SeriesTypeFilter; label: string } = {
+	// Icons rather than dots on these two facets: their values are kinds, not
+	// pipeline states, and a coloured dot reads as a status everywhere else in
+	// this toolbar.
+	type TypeOption = { key: SeriesTypeFilter; label: string; icon: LucideIcon };
+	const allType: TypeOption = {
 		key: "all",
 		label: i18n.lc_all(),
+		icon: Layers,
 	};
-	const typePills: { key: SeriesTypeFilter; label: string }[] = [
+	const typePills: TypeOption[] = [
 		allType,
-		{ key: "standard", label: i18n.lc_standard() },
-		{ key: "anime", label: i18n.lc_anime() },
-		{ key: "daily", label: i18n.lc_daily() },
+		{ key: "standard", label: i18n.lc_standard(), icon: Tv },
+		{ key: "anime", label: i18n.lc_anime(), icon: Sparkles },
+		{ key: "daily", label: i18n.lc_daily(), icon: CalendarDays },
 	];
 
-	const allMon: { key: SeriesMonFilter; label: string } = {
+	type MonOption = { key: SeriesMonFilter; label: string; icon: LucideIcon };
+	const allMon: MonOption = {
 		key: "all",
 		label: i18n.common_all(),
+		icon: Layers,
 	};
-	const monOptions: { key: SeriesMonFilter; label: string }[] = [
+	const monOptions: MonOption[] = [
 		allMon,
-		{ key: "monitored", label: i18n.monitor_monitored() },
-		{ key: "unmonitored", label: i18n.monitor_unmonitored() },
+		{ key: "monitored", label: i18n.monitor_monitored(), icon: Eye },
+		{ key: "unmonitored", label: i18n.monitor_unmonitored(), icon: EyeOff },
 	];
 
-	const sortOptions: { key: SeriesSort; label: string }[] = [
-		{ key: "recent", label: i18n.dash_recently_added() },
-		{ key: "title", label: i18n.common_sort_title_az() },
-		{ key: "year", label: i18n.sort_year_newest() },
-		{ key: "rating", label: i18n.sort_rating_highest() },
-		{ key: "episodes", label: i18n.sort_most_episodes() },
+	// Direction is folded into the key, as in the movies toolbar: every sort but
+	// title reads naturally descending, so a separate asc/desc toggle would sit
+	// next to a menu whose labels already say which way they run.
+	const sortOptions: { key: `${SeriesSort}-${SeriesOrder}`; label: string }[] = [
+		{ key: "recent-desc", label: i18n.dash_recently_added() },
+		{ key: "recent-asc", label: i18n.sort_oldest_added() },
+		{ key: "title-asc", label: i18n.common_sort_title_az() },
+		{ key: "title-desc", label: i18n.sort_title_za() },
+		{ key: "year-desc", label: i18n.sort_year_newest() },
+		{ key: "year-asc", label: i18n.sort_year_oldest() },
+		{ key: "rating-desc", label: i18n.sort_rating_highest() },
+		{ key: "rating-asc", label: i18n.sort_rating_lowest() },
+		{ key: "episodes-desc", label: i18n.sort_most_episodes() },
+		{ key: "episodes-asc", label: i18n.sort_fewest_episodes() },
 	];
 
 	// Three facets and sort share one open-menu variable: two booleans meant
@@ -178,12 +207,15 @@
 		typePills.find((t) => t.key === typeFilter) ?? allType,
 	);
 	let currentMon = $derived(monOptions.find((o) => o.key === mon) ?? allMon);
+	let currentSortKey = $derived(`${sort}-${order}` as const);
 	let currentSortLabel = $derived(
-		sortOptions.find((o) => o.key === sort)?.label ?? i18n.common_sort_title_az(),
+		sortOptions.find((o) => o.key === currentSortKey)?.label ??
+			i18n.common_sort_title_az(),
 	);
 
-	function selectSort(key: SeriesSort) {
-		onSortChange(key);
+	function selectSort(key: string) {
+		const [s, o] = key.split("-") as [SeriesSort, SeriesOrder];
+		onSortChange(s, o);
 		facet = null;
 	}
 
@@ -321,7 +353,7 @@
 	{onQueryChange}
 	{sortOptions}
 	{sort}
-	onSortChange={(k) => selectSort(k as SeriesSort)}
+	onSortChange={selectSort}
 	{view}
 	{onViewChange}
 	onSelectMode={() => onSelectModeChange(true)}
@@ -491,6 +523,8 @@
 			{#each typePills as t (t.key)}
 				<DropdownOption
 					label={t.label}
+					icon={t.icon}
+					count={typeCounts[t.key]}
 					mono
 					selected={typeFilter === t.key}
 					onSelect={() => {
@@ -534,6 +568,7 @@
 			{#each monOptions as o (o.key)}
 				<DropdownOption
 					label={o.label}
+					icon={o.icon}
 					count={monCounts[o.key]}
 					selected={mon === o.key}
 					onSelect={() => {
@@ -606,7 +641,7 @@
 				{#each sortOptions as opt (opt.key)}
 					<DropdownOption
 						label={opt.label}
-						selected={sort === opt.key}
+						selected={currentSortKey === opt.key}
 						onSelect={() => selectSort(opt.key)}
 					/>
 				{/each}

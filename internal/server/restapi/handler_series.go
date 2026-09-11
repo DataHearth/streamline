@@ -165,7 +165,23 @@ func (s *Server) GetSeriesCounts(
 	ctx context.Context,
 	request GetSeriesCountsRequestObject,
 ) (GetSeriesCountsResponseObject, error) {
-	c, err := s.tvshows.Counts(ctx)
+	// Same filter params the list takes, so each facet's tallies are counted
+	// against what the other facets are currently filtered to.
+	p := tvshow.FilterParams{}
+	if v := request.Params.Status; v != nil {
+		p.Status = *v
+	}
+	if v := request.Params.Type; v != nil {
+		p.Type = *v
+	}
+	if v := request.Params.Query; v != nil {
+		p.Query = *v
+	}
+	if v := request.Params.Monitored; v != nil {
+		on := *v == GetSeriesCountsParamsMonitoredMonitored
+		p.Monitored = &on
+	}
+	c, err := s.tvshows.Counts(ctx, p)
 	if err != nil {
 		return GetSeriesCounts500JSONResponse{
 			InternalErrorJSONResponse: errInternal(ctx, err),
@@ -174,12 +190,18 @@ func (s *Server) GetSeriesCounts(
 	return GetSeriesCounts200JSONResponse{
 		SeriesCountsResponseJSONResponse: SeriesCountsResponseJSONResponse{
 			Total:               c.Total,
+			StatusTotal:         c.StatusTotal,
 			Continuing:          c.Continuing,
 			Ended:               c.Ended,
 			Upcoming:            c.Upcoming,
 			Missing:             c.Missing,
 			Downloading:         c.Downloading,
 			Importing:           c.Importing,
+			TypeTotal:           c.TypeTotal,
+			Standard:            c.Standard,
+			Anime:               c.Anime,
+			Daily:               c.Daily,
+			MonitoredTotal:      c.MonitoredTotal,
 			Monitored:           c.Monitored,
 			Unmonitored:         c.Unmonitored,
 			WantedEpisodes:      c.WantedEpisodes,

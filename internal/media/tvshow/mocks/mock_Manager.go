@@ -176,8 +176,8 @@ func (_c *MockManager_ApplySpecialsToExisting_Call) RunAndReturn(run func(ctx co
 }
 
 // Counts provides a mock function for the type MockManager
-func (_mock *MockManager) Counts(ctx context.Context) (tvshow.Counts, error) {
-	ret := _mock.Called(ctx)
+func (_mock *MockManager) Counts(ctx context.Context, p tvshow.FilterParams) (tvshow.Counts, error) {
+	ret := _mock.Called(ctx, p)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Counts")
@@ -185,16 +185,16 @@ func (_mock *MockManager) Counts(ctx context.Context) (tvshow.Counts, error) {
 
 	var r0 tvshow.Counts
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context) (tvshow.Counts, error)); ok {
-		return returnFunc(ctx)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, tvshow.FilterParams) (tvshow.Counts, error)); ok {
+		return returnFunc(ctx, p)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context) tvshow.Counts); ok {
-		r0 = returnFunc(ctx)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, tvshow.FilterParams) tvshow.Counts); ok {
+		r0 = returnFunc(ctx, p)
 	} else {
 		r0 = ret.Get(0).(tvshow.Counts)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = returnFunc(ctx)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, tvshow.FilterParams) error); ok {
+		r1 = returnFunc(ctx, p)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -208,18 +208,24 @@ type MockManager_Counts_Call struct {
 
 // Counts is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *MockManager_Expecter) Counts(ctx any) *MockManager_Counts_Call {
-	return &MockManager_Counts_Call{Call: _e.mock.On("Counts", ctx)}
+//   - p tvshow.FilterParams
+func (_e *MockManager_Expecter) Counts(ctx any, p any) *MockManager_Counts_Call {
+	return &MockManager_Counts_Call{Call: _e.mock.On("Counts", ctx, p)}
 }
 
-func (_c *MockManager_Counts_Call) Run(run func(ctx context.Context)) *MockManager_Counts_Call {
+func (_c *MockManager_Counts_Call) Run(run func(ctx context.Context, p tvshow.FilterParams)) *MockManager_Counts_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
+		var arg1 tvshow.FilterParams
+		if args[1] != nil {
+			arg1 = args[1].(tvshow.FilterParams)
+		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -230,7 +236,7 @@ func (_c *MockManager_Counts_Call) Return(counts tvshow.Counts, err error) *Mock
 	return _c
 }
 
-func (_c *MockManager_Counts_Call) RunAndReturn(run func(ctx context.Context) (tvshow.Counts, error)) *MockManager_Counts_Call {
+func (_c *MockManager_Counts_Call) RunAndReturn(run func(ctx context.Context, p tvshow.FilterParams) (tvshow.Counts, error)) *MockManager_Counts_Call {
 	_c.Call.Return(run)
 	return _c
 }
