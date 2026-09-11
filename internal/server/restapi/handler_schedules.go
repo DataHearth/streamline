@@ -292,7 +292,7 @@ func (st scheduleStream) VisitStreamSchedulesResponse(w http.ResponseWriter) err
 	for {
 		items, err := st.server.collectSchedules(st.ctx)
 		if err != nil {
-			return err
+			return st.clientGone(err)
 		}
 		data, err := json.Marshal(ScheduleList{Items: items})
 		if err != nil {
@@ -303,16 +303,26 @@ func (st scheduleStream) VisitStreamSchedulesResponse(w http.ResponseWriter) err
 			"event: schedules\ndata: %s\n\n",
 			data,
 		); err != nil {
-			return err
+			return st.clientGone(err)
 		}
 		if err := rc.Flush(); err != nil {
-			return err
+			return st.clientGone(err)
 		}
 
 		if err := st.wait(rc, w, changes, keepalive.C); err != nil {
-			return err
+			return st.clientGone(err)
 		}
 	}
+}
+
+// clientGone swallows err once the request context is cancelled. A browser
+// leaving the page is how every stream ends, and a query or write that fails
+// only because of that is not an error for the handler to report.
+func (st scheduleStream) clientGone(err error) error {
+	if st.ctx.Err() != nil {
+		return nil
+	}
+	return err
 }
 
 // wait blocks until the next frame is due: a change nudge, followed by the
