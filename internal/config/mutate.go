@@ -136,6 +136,7 @@ type TranscodingPatch struct {
 	MaxFailures   *uint8
 	HWAccel       *string
 	HWDevice      *string
+	DeferSeeding  *bool
 	Verify        TranscodeVerifyPatch
 }
 
@@ -347,6 +348,9 @@ func UpdateTranscoding(
 		}
 		if patch.HWDevice != nil {
 			c.Transcoding.HWDevice = *patch.HWDevice
+		}
+		if patch.DeferSeeding != nil {
+			c.Transcoding.DeferSeeding = *patch.DeferSeeding
 		}
 		v := &c.Transcoding.Verify
 		if patch.Verify.MaxSizePercent != nil {

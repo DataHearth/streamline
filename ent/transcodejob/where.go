@@ -95,6 +95,11 @@ func FinishedAt(v time.Time) predicate.TranscodeJob {
 	return predicate.TranscodeJob(sql.FieldEQ(FieldFinishedAt, v))
 }
 
+// DeferredUntil applies equality check predicate on the "deferred_until" field. It's identical to DeferredUntilEQ.
+func DeferredUntil(v time.Time) predicate.TranscodeJob {
+	return predicate.TranscodeJob(sql.FieldEQ(FieldDeferredUntil, v))
+}
+
 // CreateTimeEQ applies the EQ predicate on the "create_time" field.
 func CreateTimeEQ(v time.Time) predicate.TranscodeJob {
 	return predicate.TranscodeJob(sql.FieldEQ(FieldCreateTime, v))
@@ -508,6 +513,56 @@ func FinishedAtIsNil() predicate.TranscodeJob {
 // FinishedAtNotNil applies the NotNil predicate on the "finished_at" field.
 func FinishedAtNotNil() predicate.TranscodeJob {
 	return predicate.TranscodeJob(sql.FieldNotNull(FieldFinishedAt))
+}
+
+// DeferredUntilEQ applies the EQ predicate on the "deferred_until" field.
+func DeferredUntilEQ(v time.Time) predicate.TranscodeJob {
+	return predicate.TranscodeJob(sql.FieldEQ(FieldDeferredUntil, v))
+}
+
+// DeferredUntilNEQ applies the NEQ predicate on the "deferred_until" field.
+func DeferredUntilNEQ(v time.Time) predicate.TranscodeJob {
+	return predicate.TranscodeJob(sql.FieldNEQ(FieldDeferredUntil, v))
+}
+
+// DeferredUntilIn applies the In predicate on the "deferred_until" field.
+func DeferredUntilIn(vs ...time.Time) predicate.TranscodeJob {
+	return predicate.TranscodeJob(sql.FieldIn(FieldDeferredUntil, vs...))
+}
+
+// DeferredUntilNotIn applies the NotIn predicate on the "deferred_until" field.
+func DeferredUntilNotIn(vs ...time.Time) predicate.TranscodeJob {
+	return predicate.TranscodeJob(sql.FieldNotIn(FieldDeferredUntil, vs...))
+}
+
+// DeferredUntilGT applies the GT predicate on the "deferred_until" field.
+func DeferredUntilGT(v time.Time) predicate.TranscodeJob {
+	return predicate.TranscodeJob(sql.FieldGT(FieldDeferredUntil, v))
+}
+
+// DeferredUntilGTE applies the GTE predicate on the "deferred_until" field.
+func DeferredUntilGTE(v time.Time) predicate.TranscodeJob {
+	return predicate.TranscodeJob(sql.FieldGTE(FieldDeferredUntil, v))
+}
+
+// DeferredUntilLT applies the LT predicate on the "deferred_until" field.
+func DeferredUntilLT(v time.Time) predicate.TranscodeJob {
+	return predicate.TranscodeJob(sql.FieldLT(FieldDeferredUntil, v))
+}
+
+// DeferredUntilLTE applies the LTE predicate on the "deferred_until" field.
+func DeferredUntilLTE(v time.Time) predicate.TranscodeJob {
+	return predicate.TranscodeJob(sql.FieldLTE(FieldDeferredUntil, v))
+}
+
+// DeferredUntilIsNil applies the IsNil predicate on the "deferred_until" field.
+func DeferredUntilIsNil() predicate.TranscodeJob {
+	return predicate.TranscodeJob(sql.FieldIsNull(FieldDeferredUntil))
+}
+
+// DeferredUntilNotNil applies the NotNil predicate on the "deferred_until" field.
+func DeferredUntilNotNil() predicate.TranscodeJob {
+	return predicate.TranscodeJob(sql.FieldNotNull(FieldDeferredUntil))
 }
 
 // HasMediaFile applies the HasEdge predicate on the "media_file" edge.

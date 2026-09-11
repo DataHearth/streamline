@@ -245,6 +245,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		DB:          store,
 		Prober:      prober,
 		MediaServer: dispatcher,
+		Download:    dlManager,
 	})
 	// The worker is always constructed — the REST surface answers off it and
 	// off the config switch, not off whether it is running — but there is

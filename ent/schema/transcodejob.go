@@ -25,6 +25,7 @@ func (TranscodeJob) Fields() []ent.Field {
 		field.Int64("size_after").Optional(),
 		field.Time("started_at").Optional().Nillable(),
 		field.Time("finished_at").Optional().Nillable(),
+		field.Time("deferred_until").Optional().Nillable(),
 	}
 }
 

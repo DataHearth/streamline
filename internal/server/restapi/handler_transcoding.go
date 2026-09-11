@@ -170,6 +170,7 @@ func transcodeJobToAPI(j *ent.TranscodeJob, w *transcoding.Worker) TranscodeJob 
 	}
 	out.StartedAt = j.StartedAt
 	out.FinishedAt = j.FinishedAt
+	out.DeferredUntil = j.DeferredUntil
 
 	if mf := j.Edges.MediaFile; mf != nil {
 		out.FilePath = mf.Path

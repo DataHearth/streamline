@@ -111,6 +111,83 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 		})
 	})
 
+	Describe("FindSeedingDownloadRecord", func() {
+		It(
+			"returns the newest completed record for the movie, never an in-flight one",
+			func() {
+				old := time.Now().Add(-time.Hour)
+				now := time.Now()
+				_, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+					Title:              "t",
+					Size:               1,
+					TorrentHash:        "older",
+					MovieID:            movieID,
+					Status:             downloadrecord.StatusCompleted,
+					DownloadClientName: clientName,
+					ImportedAt:         &old,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				_, err = store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+					Title:              "t",
+					Size:               1,
+					TorrentHash:        "newer",
+					MovieID:            movieID,
+					Status:             downloadrecord.StatusCompleted,
+					DownloadClientName: clientName,
+					ImportedAt:         &now,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				createRec("upgrade-in-flight", downloadrecord.StatusDownloading)
+
+				rec, err := store.FindSeedingDownloadRecord(ctx, movieID, 0)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(rec).NotTo(BeNil())
+				Expect(rec.TorrentHash).To(Equal("newer"))
+			},
+		)
+
+		It(
+			"finds a season pack's record for an episode it only lists in wanted_episodes",
+			func() {
+				ad := time.Now()
+				show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+					Title: "The Black Sea", Year: 2024, TvdbID: 9001,
+					Seasons: []SeasonSeed{{
+						Number: 1,
+						Episodes: []EpisodeSeed{
+							{Number: 1, Title: "One", AirDate: &ad},
+							{Number: 2, Title: "Two", AirDate: &ad},
+						},
+					}},
+				})
+				Expect(err).NotTo(HaveOccurred())
+				eps := show.Edges.Seasons[0].Edges.Episodes
+				now := time.Now()
+				_, err = store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+					Title: "pack", Size: 1, TorrentHash: "pack",
+					Status:             downloadrecord.StatusCompleted,
+					EpisodeID:          eps[0].ID,
+					WantedEpisodes:     []uint32{eps[0].ID, eps[1].ID},
+					DownloadClientName: clientName,
+					ImportedAt:         &now,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				rec, err := store.FindSeedingDownloadRecord(ctx, 0, eps[1].ID)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(rec).NotTo(BeNil())
+				Expect(rec.TorrentHash).To(Equal("pack"))
+			},
+		)
+
+		It("is nil with nothing to ask about", func() {
+			createRec("no-import", downloadrecord.StatusDownloading)
+			rec, err := store.FindSeedingDownloadRecord(ctx, movieID, 0)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rec).To(BeNil())
+		})
+	})
+
 	Describe("SetDownloadRecordReplaceMode", func() {
 		It("raises none -> upgrades -> all and refuses to lower", func() {
 			rec := createRec("replace-mode", downloadrecord.StatusDownloading)

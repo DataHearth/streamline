@@ -207,6 +207,87 @@ var _ = Describe("TranscodeJob store", Label("integration", "db"), func() {
 		)
 	})
 
+	Describe("DeferTranscodeJob", func() {
+		It("returns the job to queued without spending the attempt", func() {
+			mf := createMovieFile()
+			job, err := store.CreateTranscodeJob(ctx, mf.ID)
+			Expect(err).NotTo(HaveOccurred())
+			claimed, err := store.ClaimNextTranscodeJob(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(claimed.Attempts).To(Equal(uint8(1)))
+
+			until := time.Now().Add(time.Hour)
+			Expect(store.DeferTranscodeJob(ctx, job.ID, until)).To(Succeed())
+
+			got, err := client.TranscodeJob.Get(ctx, job.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.Status).To(Equal(transcodejob.StatusQueued))
+			Expect(got.Attempts).To(Equal(uint8(0)))
+			Expect(got.StartedAt).To(BeNil())
+			Expect(got.DeferredUntil).NotTo(BeNil())
+			Expect(got.DeferredUntil.Unix()).To(Equal(until.Unix()))
+		})
+
+		It("is skipped by a claim until its deadline passes", func() {
+			mf := createMovieFile()
+			job, err := store.CreateTranscodeJob(ctx, mf.ID)
+			Expect(err).NotTo(HaveOccurred())
+			_, err = store.ClaimNextTranscodeJob(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(
+				store.DeferTranscodeJob(ctx, job.ID, time.Now().Add(time.Hour)),
+			).To(Succeed())
+
+			held, err := store.ClaimNextTranscodeJob(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(held).To(BeNil())
+		})
+
+		It(
+			"is claimable again once the deadline is in the past, and the stamp is cleared",
+			func() {
+				mf := createMovieFile()
+				job, err := store.CreateTranscodeJob(ctx, mf.ID)
+				Expect(err).NotTo(HaveOccurred())
+				_, err = store.ClaimNextTranscodeJob(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(
+					store.DeferTranscodeJob(
+						ctx,
+						job.ID,
+						time.Now().Add(-time.Minute),
+					),
+				).To(Succeed())
+
+				claimed, err := store.ClaimNextTranscodeJob(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(claimed).NotTo(BeNil())
+				Expect(claimed.ID).To(Equal(job.ID))
+				Expect(claimed.Status).To(Equal(transcodejob.StatusRunning))
+				Expect(claimed.DeferredUntil).To(BeNil())
+			},
+		)
+
+		It("lets a claimable job past a deferred one that was queued first", func() {
+			first := createMovieFile()
+			second := createMovieFile()
+			held, err := store.CreateTranscodeJob(ctx, first.ID)
+			Expect(err).NotTo(HaveOccurred())
+			open, err := store.CreateTranscodeJob(ctx, second.ID)
+			Expect(err).NotTo(HaveOccurred())
+			_, err = store.ClaimNextTranscodeJob(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(
+				store.DeferTranscodeJob(ctx, held.ID, time.Now().Add(time.Hour)),
+			).To(Succeed())
+
+			claimed, err := store.ClaimNextTranscodeJob(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(claimed).NotTo(BeNil())
+			Expect(claimed.ID).To(Equal(open.ID))
+		})
+	})
+
 	Describe("FailTranscodeJob", func() {
 		It(
 			"returns a non-terminal failure to queued with the error recorded",

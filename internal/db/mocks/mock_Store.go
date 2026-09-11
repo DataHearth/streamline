@@ -3067,6 +3067,69 @@ func (_c *MockStore_CreateUser_Call) RunAndReturn(run func(ctx context.Context, 
 	return _c
 }
 
+// DeferTranscodeJob provides a mock function for the type MockStore
+func (_mock *MockStore) DeferTranscodeJob(ctx context.Context, id uint32, until time.Time) error {
+	ret := _mock.Called(ctx, id, until)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeferTranscodeJob")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, time.Time) error); ok {
+		r0 = returnFunc(ctx, id, until)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStore_DeferTranscodeJob_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeferTranscodeJob'
+type MockStore_DeferTranscodeJob_Call struct {
+	*mock.Call
+}
+
+// DeferTranscodeJob is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - until time.Time
+func (_e *MockStore_Expecter) DeferTranscodeJob(ctx any, id any, until any) *MockStore_DeferTranscodeJob_Call {
+	return &MockStore_DeferTranscodeJob_Call{Call: _e.mock.On("DeferTranscodeJob", ctx, id, until)}
+}
+
+func (_c *MockStore_DeferTranscodeJob_Call) Run(run func(ctx context.Context, id uint32, until time.Time)) *MockStore_DeferTranscodeJob_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 time.Time
+		if args[2] != nil {
+			arg2 = args[2].(time.Time)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_DeferTranscodeJob_Call) Return(err error) *MockStore_DeferTranscodeJob_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStore_DeferTranscodeJob_Call) RunAndReturn(run func(ctx context.Context, id uint32, until time.Time) error) *MockStore_DeferTranscodeJob_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // DeleteAPIKeyByID provides a mock function for the type MockStore
 func (_mock *MockStore) DeleteAPIKeyByID(ctx context.Context, userID uint32, keyID uint32) (int, error) {
 	ret := _mock.Called(ctx, userID, keyID)
@@ -6074,6 +6137,80 @@ func (_c *MockStore_FindPendingDownloadRecordByID_Call) Return(downloadRecord *e
 }
 
 func (_c *MockStore_FindPendingDownloadRecordByID_Call) RunAndReturn(run func(ctx context.Context, id uint32) (*ent.DownloadRecord, error)) *MockStore_FindPendingDownloadRecordByID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// FindSeedingDownloadRecord provides a mock function for the type MockStore
+func (_mock *MockStore) FindSeedingDownloadRecord(ctx context.Context, movieID uint32, episodeID uint32) (*ent.DownloadRecord, error) {
+	ret := _mock.Called(ctx, movieID, episodeID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindSeedingDownloadRecord")
+	}
+
+	var r0 *ent.DownloadRecord
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32) (*ent.DownloadRecord, error)); ok {
+		return returnFunc(ctx, movieID, episodeID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32) *ent.DownloadRecord); ok {
+		r0 = returnFunc(ctx, movieID, episodeID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ent.DownloadRecord)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, uint32) error); ok {
+		r1 = returnFunc(ctx, movieID, episodeID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_FindSeedingDownloadRecord_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindSeedingDownloadRecord'
+type MockStore_FindSeedingDownloadRecord_Call struct {
+	*mock.Call
+}
+
+// FindSeedingDownloadRecord is a helper method to define mock.On call
+//   - ctx context.Context
+//   - movieID uint32
+//   - episodeID uint32
+func (_e *MockStore_Expecter) FindSeedingDownloadRecord(ctx any, movieID any, episodeID any) *MockStore_FindSeedingDownloadRecord_Call {
+	return &MockStore_FindSeedingDownloadRecord_Call{Call: _e.mock.On("FindSeedingDownloadRecord", ctx, movieID, episodeID)}
+}
+
+func (_c *MockStore_FindSeedingDownloadRecord_Call) Run(run func(ctx context.Context, movieID uint32, episodeID uint32)) *MockStore_FindSeedingDownloadRecord_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 uint32
+		if args[2] != nil {
+			arg2 = args[2].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_FindSeedingDownloadRecord_Call) Return(downloadRecord *ent.DownloadRecord, err error) *MockStore_FindSeedingDownloadRecord_Call {
+	_c.Call.Return(downloadRecord, err)
+	return _c
+}
+
+func (_c *MockStore_FindSeedingDownloadRecord_Call) RunAndReturn(run func(ctx context.Context, movieID uint32, episodeID uint32) (*ent.DownloadRecord, error)) *MockStore_FindSeedingDownloadRecord_Call {
 	_c.Call.Return(run)
 	return _c
 }

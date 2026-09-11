@@ -573,6 +573,10 @@
           "type": "string",
           "description": "DRM render node handed to ffmpeg as -vaapi_device."
         },
+        "defer_seeding": {
+          "type": "boolean",
+          "description": "Hold back a job while the torrent that produced its file is still downloading or seeding in its download client, re-checking hourly. Keeps disk from carrying the original and the encode at once during the seed window. A file with no imported download record, or whose torrent has left the client or stopped seeding, is encoded right away."
+        },
         "verify": {
           "type": "object",
           "additionalProperties": false,

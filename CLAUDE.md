@@ -84,7 +84,7 @@ Cast is written inside the title's transaction; the **person biography fetch is 
 **Probe semantics, the event hooks, cast ingest and person enrichment, re-identify ordering, the in-flight marking paths and the list push-down: [`docs/agents/media-lifecycle.md`](docs/agents/media-lifecycle.md) — read it before touching status transitions, `internal/events/`, or `internal/db` list queries.**
 ## Transcoding
 
-`transcoding: {enabled, max_concurrent, max_failures, hw_accel, hw_device, verify}` is the global surface, all runtime-editable with no restart; the **policy** lives on the quality profile (`quality_profiles[].transcode`), not globally. A job is created in the same call as the `MediaFile` row. Encode → verify → atomic swap beside the original; a verified-worse output is `rejected` (terminal, retryable by hand), a failure retries to `max_failures`.
+`transcoding: {enabled, max_concurrent, max_failures, hw_accel, hw_device, defer_seeding, verify}` is the global surface, all runtime-editable with no restart; the **policy** lives on the quality profile (`quality_profiles[].transcode`), not globally. A job is created in the same call as the `MediaFile` row. Encode → verify → atomic swap beside the original; a verified-worse output is `rejected` (terminal, retryable by hand), a failure retries to `max_failures`.
 
 **Job lifecycle, verification rules, boot recovery, VAAPI/hardware notes and the deliberate non-features: [`docs/agents/transcoding.md`](docs/agents/transcoding.md) — read it before touching `internal/transcoding/`, `internal/ffmpeg/`, or the `/transcoding/*` handlers.**
 

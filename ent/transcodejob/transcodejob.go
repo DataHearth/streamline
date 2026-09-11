@@ -33,6 +33,8 @@ const (
 	FieldStartedAt = "started_at"
 	// FieldFinishedAt holds the string denoting the finished_at field in the database.
 	FieldFinishedAt = "finished_at"
+	// FieldDeferredUntil holds the string denoting the deferred_until field in the database.
+	FieldDeferredUntil = "deferred_until"
 	// EdgeMediaFile holds the string denoting the media_file edge name in mutations.
 	EdgeMediaFile = "media_file"
 	// Table holds the table name of the transcodejob in the database.
@@ -58,6 +60,7 @@ var Columns = []string{
 	FieldSizeAfter,
 	FieldStartedAt,
 	FieldFinishedAt,
+	FieldDeferredUntil,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "transcode_jobs"
@@ -173,6 +176,11 @@ func ByStartedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByFinishedAt orders the results by the finished_at field.
 func ByFinishedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldFinishedAt, opts...).ToFunc()
+}
+
+// ByDeferredUntil orders the results by the deferred_until field.
+func ByDeferredUntil(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDeferredUntil, opts...).ToFunc()
 }
 
 // ByMediaFileField orders the results by media_file field.

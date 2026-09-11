@@ -5067,6 +5067,11 @@ type TranscodeJob struct {
 	Attempts  uint8     `json:"attempts"`
 	CreatedAt time.Time `json:"created_at"`
 
+	// DeferredUntil When a job held back by `transcoding.defer_seeding` becomes
+	// claimable again. Present only while the row carries it — the
+	// claim that finally takes the job clears it.
+	DeferredUntil *time.Time `json:"deferred_until,omitempty"`
+
 	// EpisodeId Set when the file belongs to an episode.
 	EpisodeId *uint32 `json:"episode_id,omitempty"`
 
@@ -5203,6 +5208,7 @@ type TranscodeVerifyConfigView struct {
 
 // TranscodingConfigPatch Only provided fields are applied.
 type TranscodingConfigPatch struct {
+	DeferSeeding  *bool                          `json:"defer_seeding,omitempty"`
 	Enabled       *bool                          `json:"enabled,omitempty"`
 	HwAccel       *TranscodingConfigPatchHwAccel `json:"hw_accel,omitempty"`
 	HwDevice      *string                        `json:"hw_device,omitempty"`
@@ -5218,6 +5224,14 @@ type TranscodingConfigPatchHwAccel string
 
 // TranscodingConfigView defines model for TranscodingConfigView.
 type TranscodingConfigView struct {
+	// DeferSeeding Hold back a job while the torrent that produced its file is
+	// still downloading or seeding in its download client, re-checking
+	// hourly. Keeps disk from carrying the original and the encode at
+	// once for the length of the seed window. A file with no imported
+	// download record, or whose torrent has left the client or stopped
+	// seeding, is encoded right away.
+	DeferSeeding bool `json:"defer_seeding"`
+
 	// Enabled Master switch. While false the worker claims nothing and the
 	// /transcoding/* endpoints answer 409.
 	Enabled bool `json:"enabled"`

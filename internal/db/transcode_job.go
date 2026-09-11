@@ -63,7 +63,9 @@ func (db *DB) CreateTranscodeJob(
 
 // ClaimNextTranscodeJob atomically moves the oldest queued job to running,
 // bumping attempts and stamping started_at, and returns it with its media
-// file's owner chain loaded. (nil, nil) when nothing is queued.
+// file's owner chain loaded. A row deferred past now is skipped until its
+// deadline; the claim that finally takes it clears the stamp. (nil, nil)
+// when nothing is claimable.
 func (db *DB) ClaimNextTranscodeJob(ctx context.Context) (*ent.TranscodeJob, error) {
 	tx, err := db.client.Tx(ctx)
 	if err != nil {
@@ -71,7 +73,13 @@ func (db *DB) ClaimNextTranscodeJob(ctx context.Context) (*ent.TranscodeJob, err
 	}
 
 	job, err := tx.TranscodeJob.Query().
-		Where(transcodejob.StatusEQ(transcodejob.StatusQueued)).
+		Where(
+			transcodejob.StatusEQ(transcodejob.StatusQueued),
+			transcodejob.Or(
+				transcodejob.DeferredUntilIsNil(),
+				transcodejob.DeferredUntilLTE(time.Now()),
+			),
+		).
 		Order(ent.Asc(transcodejob.FieldCreateTime), ent.Asc(transcodejob.FieldID)).
 		First(ctx)
 	if err != nil {
@@ -86,6 +94,7 @@ func (db *DB) ClaimNextTranscodeJob(ctx context.Context) (*ent.TranscodeJob, err
 		SetStatus(transcodejob.StatusRunning).
 		SetAttempts(job.Attempts + 1).
 		SetStartedAt(time.Now()).
+		ClearDeferredUntil().
 		Save(ctx)
 	if err != nil {
 		tx.Rollback()
@@ -146,6 +155,33 @@ func (db *DB) FailTranscodeJob(
 	}
 	if err := q.Exec(ctx); err != nil {
 		return fmt.Errorf("fail transcode job %d: %w", id, err)
+	}
+	return nil
+}
+
+// DeferTranscodeJob returns id to the queue with a deadline before which no
+// claim may take it. attempts is walked back by one and started_at cleared:
+// the claim that produced this job bumped both, and a deferral is not an
+// attempt — a file held for a long seed would otherwise exhaust max_failures
+// without ffmpeg ever running.
+func (db *DB) DeferTranscodeJob(
+	ctx context.Context,
+	id uint32,
+	until time.Time,
+) error {
+	job, err := db.client.TranscodeJob.Get(ctx, id)
+	if err != nil {
+		return fmt.Errorf("load transcode job %d: %w", id, err)
+	}
+	q := db.client.TranscodeJob.UpdateOneID(id).
+		SetStatus(transcodejob.StatusQueued).
+		SetDeferredUntil(until).
+		ClearStartedAt()
+	if job.Attempts > 0 {
+		q = q.SetAttempts(job.Attempts - 1)
+	}
+	if err := q.Exec(ctx); err != nil {
+		return fmt.Errorf("defer transcode job %d: %w", id, err)
 	}
 	return nil
 }

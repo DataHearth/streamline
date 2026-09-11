@@ -36,6 +36,8 @@ type TranscodeJob struct {
 	StartedAt *time.Time `json:"started_at,omitempty"`
 	// FinishedAt holds the value of the "finished_at" field.
 	FinishedAt *time.Time `json:"finished_at,omitempty"`
+	// DeferredUntil holds the value of the "deferred_until" field.
+	DeferredUntil *time.Time `json:"deferred_until,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the TranscodeJobQuery when eager-loading is set.
 	Edges                     TranscodeJobEdges `json:"edges"`
@@ -72,7 +74,7 @@ func (*TranscodeJob) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullInt64)
 		case transcodejob.FieldStatus, transcodejob.FieldError:
 			values[i] = new(sql.NullString)
-		case transcodejob.FieldCreateTime, transcodejob.FieldUpdateTime, transcodejob.FieldStartedAt, transcodejob.FieldFinishedAt:
+		case transcodejob.FieldCreateTime, transcodejob.FieldUpdateTime, transcodejob.FieldStartedAt, transcodejob.FieldFinishedAt, transcodejob.FieldDeferredUntil:
 			values[i] = new(sql.NullTime)
 		case transcodejob.ForeignKeys[0]: // media_file_transcode_jobs
 			values[i] = new(sql.NullInt64)
@@ -153,6 +155,13 @@ func (_m *TranscodeJob) assignValues(columns []string, values []any) error {
 				_m.FinishedAt = new(time.Time)
 				*_m.FinishedAt = value.Time
 			}
+		case transcodejob.FieldDeferredUntil:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field deferred_until", values[i])
+			} else if value.Valid {
+				_m.DeferredUntil = new(time.Time)
+				*_m.DeferredUntil = value.Time
+			}
 		case transcodejob.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for edge-field media_file_transcode_jobs", value)
@@ -229,6 +238,11 @@ func (_m *TranscodeJob) String() string {
 	builder.WriteString(", ")
 	if v := _m.FinishedAt; v != nil {
 		builder.WriteString("finished_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
+	if v := _m.DeferredUntil; v != nil {
+		builder.WriteString("deferred_until=")
 		builder.WriteString(v.Format(time.ANSIC))
 	}
 	builder.WriteByte(')')

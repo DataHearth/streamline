@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqljson"
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
@@ -873,6 +875,49 @@ func (db *DB) FindWidenableDownloadRecordByHash(
 		return nil, fmt.Errorf(
 			"find widenable download record by hash: %w", err,
 		)
+	}
+	return rec, nil
+}
+
+// FindSeedingDownloadRecord is the transcoding worker's route from a library
+// file back to the torrent that produced it. An episode matches through
+// wanted_episodes as well as its own edge: a season pack's record points its
+// edge at the first wanted episode only, and the other episodes' files came
+// out of the same torrent.
+func (db *DB) FindSeedingDownloadRecord(
+	ctx context.Context,
+	movieID, episodeID uint32,
+) (*ent.DownloadRecord, error) {
+	var owner predicate.DownloadRecord
+	switch {
+	case movieID != 0:
+		owner = downloadrecord.HasMovieWith(movie.ID(movieID))
+	case episodeID != 0:
+		owner = downloadrecord.Or(
+			downloadrecord.HasEpisodeWith(episode.ID(episodeID)),
+			func(s *sql.Selector) {
+				s.Where(sqljson.ValueContains(
+					downloadrecord.FieldWantedEpisodes, episodeID,
+				))
+			},
+		)
+	default:
+		return nil, nil
+	}
+	rec, err := db.client.DownloadRecord.Query().
+		Where(
+			owner,
+			downloadrecord.StatusEQ(downloadrecord.StatusCompleted),
+			downloadrecord.TorrentHashNEQ(""),
+			downloadrecord.DownloadClientNameNEQ(""),
+		).
+		Order(ent.Desc(downloadrecord.FieldImportedAt)).
+		First(ctx)
+	if ent.IsNotFound(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("find seeding download record: %w", err)
 	}
 	return rec, nil
 }

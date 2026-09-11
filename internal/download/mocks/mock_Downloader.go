@@ -851,3 +851,75 @@ func (_c *MockDownloader_TestByName_Call) RunAndReturn(run func(ctx context.Cont
 	_c.Call.Return(run)
 	return _c
 }
+
+// TorrentStatus provides a mock function for the type MockDownloader
+func (_mock *MockDownloader) TorrentStatus(ctx context.Context, downloadClientName string, torrentHash string) (download.TorrentStatus, error) {
+	ret := _mock.Called(ctx, downloadClientName, torrentHash)
+
+	if len(ret) == 0 {
+		panic("no return value specified for TorrentStatus")
+	}
+
+	var r0 download.TorrentStatus
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) (download.TorrentStatus, error)); ok {
+		return returnFunc(ctx, downloadClientName, torrentHash)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) download.TorrentStatus); ok {
+		r0 = returnFunc(ctx, downloadClientName, torrentHash)
+	} else {
+		r0 = ret.Get(0).(download.TorrentStatus)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+		r1 = returnFunc(ctx, downloadClientName, torrentHash)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockDownloader_TorrentStatus_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'TorrentStatus'
+type MockDownloader_TorrentStatus_Call struct {
+	*mock.Call
+}
+
+// TorrentStatus is a helper method to define mock.On call
+//   - ctx context.Context
+//   - downloadClientName string
+//   - torrentHash string
+func (_e *MockDownloader_Expecter) TorrentStatus(ctx any, downloadClientName any, torrentHash any) *MockDownloader_TorrentStatus_Call {
+	return &MockDownloader_TorrentStatus_Call{Call: _e.mock.On("TorrentStatus", ctx, downloadClientName, torrentHash)}
+}
+
+func (_c *MockDownloader_TorrentStatus_Call) Run(run func(ctx context.Context, downloadClientName string, torrentHash string)) *MockDownloader_TorrentStatus_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockDownloader_TorrentStatus_Call) Return(torrentStatus download.TorrentStatus, err error) *MockDownloader_TorrentStatus_Call {
+	_c.Call.Return(torrentStatus, err)
+	return _c
+}
+
+func (_c *MockDownloader_TorrentStatus_Call) RunAndReturn(run func(ctx context.Context, downloadClientName string, torrentHash string) (download.TorrentStatus, error)) *MockDownloader_TorrentStatus_Call {
+	_c.Call.Return(run)
+	return _c
+}

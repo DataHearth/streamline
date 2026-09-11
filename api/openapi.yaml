@@ -7600,6 +7600,7 @@ components:
           hw_accel,
           hw_device,
           hw_status,
+          defer_seeding,
           verify,
         ]
       properties:
@@ -7646,6 +7647,15 @@ components:
           description: |
             The probe's error text. Present only when hw_status is
             `unavailable`.
+        defer_seeding:
+          type: boolean
+          description: |
+            Hold back a job while the torrent that produced its file is
+            still downloading or seeding in its download client, re-checking
+            hourly. Keeps disk from carrying the original and the encode at
+            once for the length of the seed window. A file with no imported
+            download record, or whose torrent has left the client or stopped
+            seeding, is encoded right away.
         verify:
           $ref: "#/components/schemas/TranscodeVerifyConfigView"
 
@@ -7668,6 +7678,8 @@ components:
           enum: [auto, none, vaapi]
         hw_device:
           type: string
+        defer_seeding:
+          type: boolean
         verify:
           $ref: "#/components/schemas/TranscodeVerifyConfigPatch"
 
@@ -7817,6 +7829,13 @@ components:
         finished_at:
           type: string
           format: date-time
+        deferred_until:
+          type: string
+          format: date-time
+          description: |
+            When a job held back by `transcoding.defer_seeding` becomes
+            claimable again. Present only while the row carries it — the
+            claim that finally takes the job clears it.
 
     TranscodePolicy:
       type: object

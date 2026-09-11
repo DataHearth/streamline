@@ -888,6 +888,7 @@ var (
 		{Name: "size_after", Type: field.TypeInt64, Nullable: true},
 		{Name: "started_at", Type: field.TypeTime, Nullable: true},
 		{Name: "finished_at", Type: field.TypeTime, Nullable: true},
+		{Name: "deferred_until", Type: field.TypeTime, Nullable: true},
 		{Name: "media_file_transcode_jobs", Type: field.TypeUint32},
 	}
 	// TranscodeJobsTable holds the schema information for the "transcode_jobs" table.
@@ -898,7 +899,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "transcode_jobs_media_files_transcode_jobs",
-				Columns:    []*schema.Column{TranscodeJobsColumns[10]},
+				Columns:    []*schema.Column{TranscodeJobsColumns[11]},
 				RefColumns: []*schema.Column{MediaFilesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -912,7 +913,7 @@ var (
 			{
 				Name:    "transcodejob_media_file_transcode_jobs",
 				Unique:  false,
-				Columns: []*schema.Column{TranscodeJobsColumns[10]},
+				Columns: []*schema.Column{TranscodeJobsColumns[11]},
 			},
 		},
 	}

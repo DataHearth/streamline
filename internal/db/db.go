@@ -357,6 +357,14 @@ type Store interface {
 		ctx context.Context,
 		hash string,
 	) (*ent.DownloadRecord, error)
+	// FindSeedingDownloadRecord returns the newest completed record that
+	// carried a file for the movie, or for the episode — by its edge or
+	// through wanted_episodes — and still names a torrent hash and a
+	// download client. Nil when there is none.
+	FindSeedingDownloadRecord(
+		ctx context.Context,
+		movieID, episodeID uint32,
+	) (*ent.DownloadRecord, error)
 	ListDownloadHistory(
 		ctx context.Context,
 		limit int,
@@ -520,6 +528,10 @@ type Store interface {
 		reason string,
 		terminal bool,
 	) error
+	// DeferTranscodeJob returns id to the queue with a deadline before which
+	// no claim may take it, walking attempts back by one and clearing
+	// started_at — a deferral is not an attempt.
+	DeferTranscodeJob(ctx context.Context, id uint32, until time.Time) error
 	// RejectTranscodeJob parks id as rejected: the encode verified as worse
 	// than or broken relative to its source. Terminal like a failed job, but
 	// it also records both sizes.

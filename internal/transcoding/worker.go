@@ -17,6 +17,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/observability"
@@ -88,6 +89,10 @@ func init() {
 // copy) and is what recover sweeps after a crash.
 const tempMarker = ".streamline-tmp."
 
+// deferRecheck is how long a job held by defer_seeding waits before the
+// client is asked about its torrent again.
+const deferRecheck = time.Hour
+
 // pollInterval is how often an idle worker looks for queued work.
 const pollInterval = 5 * time.Second // ponytail: DB poll, no wake plumbing; add an enqueue signal if latency ever matters
 
@@ -102,12 +107,14 @@ type Deps struct {
 	DB          db.Store
 	Prober      ffmpeg.Prober
 	MediaServer MediaServerRefresher
+	Download    download.Downloader
 }
 
 type Worker struct {
 	db     db.Store
 	prober ffmpeg.Prober
 	ms     MediaServerRefresher
+	dl     download.Downloader
 
 	// wake carries "a slot freed" so a finished job claims the next one
 	// immediately instead of waiting out the poll interval. Buffered at one:
@@ -136,6 +143,7 @@ func NewWorker(deps Deps) *Worker {
 		db:       deps.DB,
 		prober:   deps.Prober,
 		ms:       deps.MediaServer,
+		dl:       deps.Download,
 		wake:     make(chan struct{}, 1),
 		progress: make(map[uint32]Snapshot),
 		cancels:  make(map[uint32]context.CancelFunc),
@@ -357,6 +365,10 @@ func (w *Worker) runJob(ctx context.Context, c *claimed) {
 	}
 	span.SetAttributes(attribute.Int64("media_file.id", int64(mf.ID)))
 
+	if w.deferred(wctx, job, mf) {
+		return
+	}
+
 	pol := policyFor(mf)
 	if pol == nil {
 		w.failTerminal(wctx, job, errNoPolicy)
@@ -551,6 +563,96 @@ func (w *Worker) runJob(ctx context.Context, c *claimed) {
 		"transcode.size_before", mf.Size,
 		"transcode.size_after", sizeAfter,
 	)
+}
+
+// deferred reports whether the job was put back on the queue instead of run,
+// because the torrent that produced its file is still downloading or seeding
+// in its download client — encoding now would put the original and the
+// encode on disk at once for the whole seed window. Read live, like every
+// other transcoding key, so an operator turning the flag off frees the held
+// jobs at the next re-check rather than at the next restart.
+func (w *Worker) deferred(
+	ctx context.Context,
+	job *ent.TranscodeJob,
+	mf *ent.MediaFile,
+) bool {
+	cfg := config.Get()
+	if cfg == nil || !cfg.Transcoding.DeferSeeding {
+		return false
+	}
+	status, live := w.seeding(ctx, mf)
+	if !live {
+		return false
+	}
+
+	until := time.Now().Add(deferRecheck)
+	if err := w.db.DeferTranscodeJob(ctx, job.ID, until); err != nil {
+		slog.ErrorContext(ctx, "could not defer a transcode job",
+			"transcode.job_id", job.ID, "error", err)
+		return false
+	}
+	trace.SpanFromContext(ctx).SetAttributes(
+		attribute.String("torrent.status", string(status)),
+		attribute.String("transcode.outcome", "deferred"),
+	)
+	slog.DebugContext(ctx, "deferred a transcode whose torrent is still seeding",
+		"transcode.job_id", job.ID,
+		"media_file.path", mf.Path,
+		"torrent.status", status,
+		"transcode.deferred_until", until,
+	)
+	return true
+}
+
+// seeding resolves the file back to its torrent and reports whether the
+// client still has it downloading or seeding. Anything short of that — no
+// record, a client the config no longer names, a torrent the client has
+// dropped, a lookup error — reads as not live: a job that cannot be tied to
+// a seeding torrent must not be held forever.
+func (w *Worker) seeding(
+	ctx context.Context,
+	mf *ent.MediaFile,
+) (download.TorrentStatus, bool) {
+	var movieID, episodeID uint32
+	if mf.Edges.Movie != nil {
+		movieID = mf.Edges.Movie.ID
+	}
+	if mf.Edges.Episode != nil {
+		episodeID = mf.Edges.Episode.ID
+	}
+	rec, err := w.db.FindSeedingDownloadRecord(ctx, movieID, episodeID)
+	if err != nil {
+		slog.WarnContext(
+			ctx,
+			"could not look up a transcode source's download record",
+			"media_file.path",
+			mf.Path,
+			"error",
+			err,
+		)
+		return "", false
+	}
+	if rec == nil {
+		return "", false
+	}
+	status, err := w.dl.TorrentStatus(ctx, rec.DownloadClientName, rec.TorrentHash)
+	if err != nil {
+		if !errors.Is(err, download.ErrTorrentNotFound) {
+			slog.WarnContext(
+				ctx,
+				"could not read a transcode source's torrent status",
+				"torrent.hash",
+				rec.TorrentHash,
+				"download_client.name",
+				rec.DownloadClientName,
+				"error",
+				err,
+			)
+		}
+		return "", false
+	}
+	live := status == download.StatusDownloading || status == download.StatusSeeding
+	return status, live
 }
 
 // verify judges the encode before anything is swapped. The probe it read is

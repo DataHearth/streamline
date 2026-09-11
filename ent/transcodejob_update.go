@@ -185,6 +185,26 @@ func (_u *TranscodeJobUpdate) ClearFinishedAt() *TranscodeJobUpdate {
 	return _u
 }
 
+// SetDeferredUntil sets the "deferred_until" field.
+func (_u *TranscodeJobUpdate) SetDeferredUntil(v time.Time) *TranscodeJobUpdate {
+	_u.mutation.SetDeferredUntil(v)
+	return _u
+}
+
+// SetNillableDeferredUntil sets the "deferred_until" field if the given value is not nil.
+func (_u *TranscodeJobUpdate) SetNillableDeferredUntil(v *time.Time) *TranscodeJobUpdate {
+	if v != nil {
+		_u.SetDeferredUntil(*v)
+	}
+	return _u
+}
+
+// ClearDeferredUntil clears the value of the "deferred_until" field.
+func (_u *TranscodeJobUpdate) ClearDeferredUntil() *TranscodeJobUpdate {
+	_u.mutation.ClearDeferredUntil()
+	return _u
+}
+
 // SetMediaFileID sets the "media_file" edge to the MediaFile entity by ID.
 func (_u *TranscodeJobUpdate) SetMediaFileID(id uint32) *TranscodeJobUpdate {
 	_u.mutation.SetMediaFileID(id)
@@ -321,6 +341,12 @@ func (_u *TranscodeJobUpdate) sqlSave(ctx context.Context) (_node int, err error
 	}
 	if _u.mutation.FinishedAtCleared() {
 		_spec.ClearField(transcodejob.FieldFinishedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.DeferredUntil(); ok {
+		_spec.SetField(transcodejob.FieldDeferredUntil, field.TypeTime, value)
+	}
+	if _u.mutation.DeferredUntilCleared() {
+		_spec.ClearField(transcodejob.FieldDeferredUntil, field.TypeTime)
 	}
 	if _u.mutation.MediaFileCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -528,6 +554,26 @@ func (_u *TranscodeJobUpdateOne) ClearFinishedAt() *TranscodeJobUpdateOne {
 	return _u
 }
 
+// SetDeferredUntil sets the "deferred_until" field.
+func (_u *TranscodeJobUpdateOne) SetDeferredUntil(v time.Time) *TranscodeJobUpdateOne {
+	_u.mutation.SetDeferredUntil(v)
+	return _u
+}
+
+// SetNillableDeferredUntil sets the "deferred_until" field if the given value is not nil.
+func (_u *TranscodeJobUpdateOne) SetNillableDeferredUntil(v *time.Time) *TranscodeJobUpdateOne {
+	if v != nil {
+		_u.SetDeferredUntil(*v)
+	}
+	return _u
+}
+
+// ClearDeferredUntil clears the value of the "deferred_until" field.
+func (_u *TranscodeJobUpdateOne) ClearDeferredUntil() *TranscodeJobUpdateOne {
+	_u.mutation.ClearDeferredUntil()
+	return _u
+}
+
 // SetMediaFileID sets the "media_file" edge to the MediaFile entity by ID.
 func (_u *TranscodeJobUpdateOne) SetMediaFileID(id uint32) *TranscodeJobUpdateOne {
 	_u.mutation.SetMediaFileID(id)
@@ -694,6 +740,12 @@ func (_u *TranscodeJobUpdateOne) sqlSave(ctx context.Context) (_node *TranscodeJ
 	}
 	if _u.mutation.FinishedAtCleared() {
 		_spec.ClearField(transcodejob.FieldFinishedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.DeferredUntil(); ok {
+		_spec.SetField(transcodejob.FieldDeferredUntil, field.TypeTime, value)
+	}
+	if _u.mutation.DeferredUntilCleared() {
+		_spec.ClearField(transcodejob.FieldDeferredUntil, field.TypeTime)
 	}
 	if _u.mutation.MediaFileCleared() {
 		edge := &sqlgraph.EdgeSpec{

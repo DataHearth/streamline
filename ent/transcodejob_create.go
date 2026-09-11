@@ -147,6 +147,20 @@ func (_c *TranscodeJobCreate) SetNillableFinishedAt(v *time.Time) *TranscodeJobC
 	return _c
 }
 
+// SetDeferredUntil sets the "deferred_until" field.
+func (_c *TranscodeJobCreate) SetDeferredUntil(v time.Time) *TranscodeJobCreate {
+	_c.mutation.SetDeferredUntil(v)
+	return _c
+}
+
+// SetNillableDeferredUntil sets the "deferred_until" field if the given value is not nil.
+func (_c *TranscodeJobCreate) SetNillableDeferredUntil(v *time.Time) *TranscodeJobCreate {
+	if v != nil {
+		_c.SetDeferredUntil(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *TranscodeJobCreate) SetID(v uint32) *TranscodeJobCreate {
 	_c.mutation.SetID(v)
@@ -306,6 +320,10 @@ func (_c *TranscodeJobCreate) createSpec() (*TranscodeJob, *sqlgraph.CreateSpec)
 	if value, ok := _c.mutation.FinishedAt(); ok {
 		_spec.SetField(transcodejob.FieldFinishedAt, field.TypeTime, value)
 		_node.FinishedAt = &value
+	}
+	if value, ok := _c.mutation.DeferredUntil(); ok {
+		_spec.SetField(transcodejob.FieldDeferredUntil, field.TypeTime, value)
+		_node.DeferredUntil = &value
 	}
 	if nodes := _c.mutation.MediaFileIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

@@ -326,12 +326,16 @@ func (c DownloadConfig) SelectionGraceDuration() time.Duration {
 // transcode worker. The binaries come from FFmpegConfig — one ffmpeg surface.
 // All keys are runtime-editable through config.Update.
 type TranscodingConfig struct {
-	Enabled       bool                  `koanf:"enabled"`
-	MaxConcurrent uint8                 `koanf:"max_concurrent" validate:"min=1,max=8"`
-	MaxFailures   uint8                 `koanf:"max_failures"   validate:"min=1,max=10"`
-	HWAccel       string                `koanf:"hw_accel"       validate:"required,oneof=auto none vaapi"`
-	HWDevice      string                `koanf:"hw_device"      validate:"required"`
-	Verify        TranscodeVerifyConfig `koanf:"verify"`
+	Enabled       bool   `koanf:"enabled"`
+	MaxConcurrent uint8  `koanf:"max_concurrent" validate:"min=1,max=8"`
+	MaxFailures   uint8  `koanf:"max_failures"   validate:"min=1,max=10"`
+	HWAccel       string `koanf:"hw_accel"       validate:"required,oneof=auto none vaapi"`
+	HWDevice      string `koanf:"hw_device"      validate:"required"`
+	// DeferSeeding holds back a job while the torrent that produced its
+	// file is still seeding in its download client, so disk never carries
+	// the original and the encode at once during the seed window.
+	DeferSeeding bool                  `koanf:"defer_seeding"`
+	Verify       TranscodeVerifyConfig `koanf:"verify"`
 }
 
 // TranscodeVerifyConfig gates the swap: an encode failing any of these is
@@ -776,6 +780,7 @@ func defaults() map[string]any {
 		"transcoding.max_failures":            3,
 		"transcoding.hw_accel":                "auto",
 		"transcoding.hw_device":               "/dev/dri/renderD128",
+		"transcoding.defer_seeding":           false,
 		"transcoding.verify.max_size_percent": 100,
 		"transcoding.verify.min_size_percent": 5,
 		"transcoding.verify.health_check":     false,

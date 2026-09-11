@@ -248,6 +248,13 @@ type Downloader interface {
 		downloadClientName string,
 		torrentHash string,
 	) ([]TorrentFile, error)
+	// TorrentStatus is what the named client currently reports for the
+	// torrent; ErrTorrentNotFound once the client no longer has it.
+	TorrentStatus(
+		ctx context.Context,
+		downloadClientName string,
+		torrentHash string,
+	) (TorrentStatus, error)
 	Queue(ctx context.Context) (QueueSnapshot, error)
 	CancelQueueItem(ctx context.Context, recordID uint32) error
 	PauseQueueItem(ctx context.Context, recordID uint32) error
@@ -1501,6 +1508,34 @@ func (d *download) ListTorrentFiles(
 		return nil, otelx.RecordSpanError(span, err)
 	}
 	return files, nil
+}
+
+func (d *download) TorrentStatus(
+	ctx context.Context,
+	clientName string,
+	hash string,
+) (TorrentStatus, error) {
+	ctx, span := tracer.Start(ctx, "download.torrent_status",
+		trace.WithAttributes(attribute.String("torrent.hash", hash)))
+	defer span.End()
+
+	dc, ok := config.FindDownloadClient(clientName)
+	if !ok {
+		return "", otelx.RecordSpanError(
+			span,
+			fmt.Errorf("download client %q not found", clientName),
+		)
+	}
+	client, err := d.buildClient(dc)
+	if err != nil {
+		return "", otelx.RecordSpanError(span, err)
+	}
+	t, err := client.GetTorrent(ctx, hash)
+	if err != nil {
+		return "", otelx.RecordSpanError(span, err)
+	}
+	span.SetAttributes(attribute.String("torrent.status", string(t.Status)))
+	return t.Status, nil
 }
 
 // buildBaseURL composes scheme://host:port for download client requests.

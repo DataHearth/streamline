@@ -310,6 +310,7 @@ func (s *Server) UpdateConfigTranscoding(
 		MaxFailures:   failures,
 		HWAccel:       hwAccel,
 		HWDevice:      req.Body.HwDevice,
+		DeferSeeding:  req.Body.DeferSeeding,
 		Verify:        verify,
 	})
 	if configLocked(err) {
@@ -328,6 +329,7 @@ func (s *Server) UpdateConfigTranscoding(
 		"max_failures", updated.MaxFailures,
 		"hw_accel", updated.HWAccel,
 		"hw_device", updated.HWDevice,
+		"defer_seeding", updated.DeferSeeding,
 		"verify_max_size_percent", updated.Verify.MaxSizePercent,
 		"verify_min_size_percent", updated.Verify.MinSizePercent,
 		"verify_health_check", updated.Verify.HealthCheck,
@@ -955,6 +957,7 @@ func transcodingConfigView(
 		HwAccel:       TranscodingConfigViewHwAccel(t.HWAccel),
 		HwDevice:      t.HWDevice,
 		HwStatus:      TranscodingConfigViewHwStatus(hwStatus),
+		DeferSeeding:  t.DeferSeeding,
 		Verify: TranscodeVerifyConfigView{
 			MaxSizePercent: int(t.Verify.MaxSizePercent),
 			MinSizePercent: int(t.Verify.MinSizePercent),

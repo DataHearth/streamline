@@ -24118,6 +24118,7 @@ type TranscodeJobMutation struct {
 	addsize_after     *int64
 	started_at        *time.Time
 	finished_at       *time.Time
+	deferred_until    *time.Time
 	clearedFields     map[string]struct{}
 	media_file        *uint32
 	clearedmedia_file bool
@@ -24681,6 +24682,55 @@ func (m *TranscodeJobMutation) ResetFinishedAt() {
 	delete(m.clearedFields, transcodejob.FieldFinishedAt)
 }
 
+// SetDeferredUntil sets the "deferred_until" field.
+func (m *TranscodeJobMutation) SetDeferredUntil(t time.Time) {
+	m.deferred_until = &t
+}
+
+// DeferredUntil returns the value of the "deferred_until" field in the mutation.
+func (m *TranscodeJobMutation) DeferredUntil() (r time.Time, exists bool) {
+	v := m.deferred_until
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDeferredUntil returns the old "deferred_until" field's value of the TranscodeJob entity.
+// If the TranscodeJob object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TranscodeJobMutation) OldDeferredUntil(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDeferredUntil is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDeferredUntil requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDeferredUntil: %w", err)
+	}
+	return oldValue.DeferredUntil, nil
+}
+
+// ClearDeferredUntil clears the value of the "deferred_until" field.
+func (m *TranscodeJobMutation) ClearDeferredUntil() {
+	m.deferred_until = nil
+	m.clearedFields[transcodejob.FieldDeferredUntil] = struct{}{}
+}
+
+// DeferredUntilCleared returns if the "deferred_until" field was cleared in this mutation.
+func (m *TranscodeJobMutation) DeferredUntilCleared() bool {
+	_, ok := m.clearedFields[transcodejob.FieldDeferredUntil]
+	return ok
+}
+
+// ResetDeferredUntil resets all changes to the "deferred_until" field.
+func (m *TranscodeJobMutation) ResetDeferredUntil() {
+	m.deferred_until = nil
+	delete(m.clearedFields, transcodejob.FieldDeferredUntil)
+}
+
 // SetMediaFileID sets the "media_file" edge to the MediaFile entity by id.
 func (m *TranscodeJobMutation) SetMediaFileID(id uint32) {
 	m.media_file = &id
@@ -24754,7 +24804,7 @@ func (m *TranscodeJobMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *TranscodeJobMutation) Fields() []string {
-	fields := make([]string, 0, 9)
+	fields := make([]string, 0, 10)
 	if m.create_time != nil {
 		fields = append(fields, transcodejob.FieldCreateTime)
 	}
@@ -24782,6 +24832,9 @@ func (m *TranscodeJobMutation) Fields() []string {
 	if m.finished_at != nil {
 		fields = append(fields, transcodejob.FieldFinishedAt)
 	}
+	if m.deferred_until != nil {
+		fields = append(fields, transcodejob.FieldDeferredUntil)
+	}
 	return fields
 }
 
@@ -24808,6 +24861,8 @@ func (m *TranscodeJobMutation) Field(name string) (ent.Value, bool) {
 		return m.StartedAt()
 	case transcodejob.FieldFinishedAt:
 		return m.FinishedAt()
+	case transcodejob.FieldDeferredUntil:
+		return m.DeferredUntil()
 	}
 	return nil, false
 }
@@ -24835,6 +24890,8 @@ func (m *TranscodeJobMutation) OldField(ctx context.Context, name string) (ent.V
 		return m.OldStartedAt(ctx)
 	case transcodejob.FieldFinishedAt:
 		return m.OldFinishedAt(ctx)
+	case transcodejob.FieldDeferredUntil:
+		return m.OldDeferredUntil(ctx)
 	}
 	return nil, fmt.Errorf("unknown TranscodeJob field %s", name)
 }
@@ -24906,6 +24963,13 @@ func (m *TranscodeJobMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetFinishedAt(v)
+		return nil
+	case transcodejob.FieldDeferredUntil:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDeferredUntil(v)
 		return nil
 	}
 	return fmt.Errorf("unknown TranscodeJob field %s", name)
@@ -24991,6 +25055,9 @@ func (m *TranscodeJobMutation) ClearedFields() []string {
 	if m.FieldCleared(transcodejob.FieldFinishedAt) {
 		fields = append(fields, transcodejob.FieldFinishedAt)
 	}
+	if m.FieldCleared(transcodejob.FieldDeferredUntil) {
+		fields = append(fields, transcodejob.FieldDeferredUntil)
+	}
 	return fields
 }
 
@@ -25019,6 +25086,9 @@ func (m *TranscodeJobMutation) ClearField(name string) error {
 		return nil
 	case transcodejob.FieldFinishedAt:
 		m.ClearFinishedAt()
+		return nil
+	case transcodejob.FieldDeferredUntil:
+		m.ClearDeferredUntil()
 		return nil
 	}
 	return fmt.Errorf("unknown TranscodeJob nullable field %s", name)
@@ -25054,6 +25124,9 @@ func (m *TranscodeJobMutation) ResetField(name string) error {
 		return nil
 	case transcodejob.FieldFinishedAt:
 		m.ResetFinishedAt()
+		return nil
+	case transcodejob.FieldDeferredUntil:
+		m.ResetDeferredUntil()
 		return nil
 	}
 	return fmt.Errorf("unknown TranscodeJob field %s", name)

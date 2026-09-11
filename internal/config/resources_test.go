@@ -495,6 +495,19 @@ var _ = Describe("Transcoding config", Label("unit", "config"), func() {
 		Expect(c.Transcoding.Enabled).To(BeFalse())
 		Expect(c.Transcoding.MaxConcurrent).To(Equal(uint8(1)))
 		Expect(c.Transcoding.MaxFailures).To(Equal(uint8(3)))
+		Expect(c.Transcoding.DeferSeeding).To(BeFalse())
+	})
+
+	It("round-trips defer_seeding through a patch", func() {
+		configtest.SetupFile()
+		on := true
+		got, err := config.UpdateTranscoding(
+			context.Background(),
+			config.TranscodingPatch{DeferSeeding: &on},
+		)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(got.DeferSeeding).To(BeTrue())
+		Expect(config.Get().Transcoding.DeferSeeding).To(BeTrue())
 	})
 
 	It(

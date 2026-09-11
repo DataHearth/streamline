@@ -3,6 +3,7 @@ package transcoding
 import (
 	"context"
 	"errors"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,11 +14,14 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/downloadrecord"
 	entmovie "github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/transcodejob"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
+	"github.com/datahearth/streamline/internal/download"
+	dlmocks "github.com/datahearth/streamline/internal/download/mocks"
 	"github.com/datahearth/streamline/internal/ffmpeg"
 	mockffmpeg "github.com/datahearth/streamline/internal/ffmpeg/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
@@ -41,6 +45,7 @@ var _ = Describe("Worker", Label("integration", "transcoding"), func() {
 		client    *ent.Client
 		store     *db.DB
 		ms        *mocks.MockMediaServerRefresher
+		dl        *dlmocks.MockDownloader
 		worker    *Worker
 		root      string
 		movieRoot string
@@ -66,18 +71,15 @@ var _ = Describe("Worker", Label("integration", "transcoding"), func() {
 		}
 	}
 
-	// setup applies the standard worker config, overriding transcoding.verify
-	// when verify is non-nil — the rejection specs only need to name what
-	// they're testing, not repeat the whole map.
-	setup := func(verify map[string]any) {
+	// setupTranscoding applies the standard worker config with extra merged
+	// into its transcoding block, so a spec names only the key it is about.
+	setupTranscoding := func(extra map[string]any) {
 		transcoding := map[string]any{
 			"enabled":        true,
 			"max_concurrent": 1,
 			"max_failures":   3,
 		}
-		if verify != nil {
-			transcoding["verify"] = verify
-		}
+		maps.Copy(transcoding, extra)
 		configtest.Setup(map[string]any{
 			"ffmpeg": map[string]any{"enabled": true, "path": bin},
 			"library": map[string]any{
@@ -101,6 +103,16 @@ var _ = Describe("Worker", Label("integration", "transcoding"), func() {
 			},
 			"quality_default_profile": "hevc",
 		})
+	}
+
+	// setup is setupTranscoding for the rejection specs, which only need to
+	// name the verify keys they're testing.
+	setup := func(verify map[string]any) {
+		if verify == nil {
+			setupTranscoding(nil)
+			return
+		}
+		setupTranscoding(map[string]any{"verify": verify})
 	}
 
 	BeforeEach(func() {
@@ -131,10 +143,12 @@ var _ = Describe("Worker", Label("integration", "transcoding"), func() {
 		tmdbSeq = 0
 
 		ms = mocks.NewMockMediaServerRefresher(GinkgoT())
+		dl = dlmocks.NewMockDownloader(GinkgoT())
 		worker = NewWorker(Deps{
 			DB:          store,
 			Prober:      ffmpeg.NewCLI(bin),
 			MediaServer: ms,
+			Download:    dl,
 		})
 	})
 
@@ -410,6 +424,114 @@ var _ = Describe("Worker", Label("integration", "transcoding"), func() {
 		Expect(done.SizeBefore).To(Equal(mf.Size))
 		Expect(done.SizeAfter).To(Equal(mf.Size))
 	})
+
+	// seedTorrent files the completed download record that imported mf, the
+	// row the worker walks back to the torrent still sitting in its client.
+	seedTorrent := func(mf *ent.MediaFile, hash string) {
+		GinkgoHelper()
+		movieID, err := mf.QueryMovie().OnlyID(ctx)
+		Expect(err).NotTo(HaveOccurred())
+		now := time.Now()
+		_, err = store.CreateDownloadRecord(ctx, db.CreateDownloadRecordParams{
+			Title: "Dune", Size: mf.Size, TorrentHash: hash,
+			Status: downloadrecord.StatusCompleted, MovieID: movieID,
+			DownloadClientName: "qb", ImportedAt: &now,
+		})
+		Expect(err).NotTo(HaveOccurred())
+	}
+
+	expectTranscoded := func(job *ent.TranscodeJob, mf *ent.MediaFile) {
+		GinkgoHelper()
+		Expect(os.ReadFile(mf.Path)).To(Equal([]byte("transcoded")))
+		done := reload(job)
+		Expect(done.Status).To(Equal(transcodejob.StatusSucceeded))
+		Expect(done.DeferredUntil).To(BeNil())
+	}
+
+	It("defers a job whose torrent is still seeding, encoding nothing", func() {
+		setupTranscoding(map[string]any{"defer_seeding": true})
+		mf := seedMovieFile("hevc")
+		seedTorrent(mf, "abc")
+		job := queueJob(mf)
+		dl.EXPECT().
+			TorrentStatus(mock.Anything, "qb", "abc").
+			Return(download.StatusSeeding, nil).
+			Once()
+
+		Expect(worker.tick(ctx)).To(BeTrue())
+
+		Expect(os.ReadFile(mf.Path)).To(Equal([]byte("original-bytes")))
+		Expect(tempFiles()).To(BeEmpty())
+
+		held := reload(job)
+		Expect(held.Status).To(Equal(transcodejob.StatusQueued))
+		Expect(held.DeferredUntil).NotTo(BeNil())
+		Expect(held.DeferredUntil.After(time.Now())).To(BeTrue())
+		// The claim bumped attempts to 1; a deferral is not an attempt.
+		Expect(held.Attempts).To(Equal(uint8(0)))
+		Expect(held.StartedAt).To(BeNil())
+	})
+
+	It("never asks the client while defer_seeding is off", func() {
+		mf := seedMovieFile("hevc")
+		seedTorrent(mf, "abc")
+		job := queueJob(mf)
+		ms.EXPECT().
+			RefreshAll(mock.Anything, "movie", movieRoot).
+			Return(nil).
+			Once()
+
+		Expect(worker.tick(ctx)).To(BeTrue())
+
+		expectTranscoded(job, mf)
+	})
+
+	It("transcodes a file with no download record with defer_seeding on", func() {
+		setupTranscoding(map[string]any{"defer_seeding": true})
+		mf := seedMovieFile("hevc")
+		job := queueJob(mf)
+		ms.EXPECT().
+			RefreshAll(mock.Anything, "movie", movieRoot).
+			Return(nil).
+			Once()
+
+		Expect(worker.tick(ctx)).To(BeTrue())
+
+		expectTranscoded(job, mf)
+	})
+
+	DescribeTable(
+		"transcodes once the torrent is no longer live in its client",
+		func(status download.TorrentStatus, lookupErr error) {
+			setupTranscoding(map[string]any{"defer_seeding": true})
+			mf := seedMovieFile("hevc")
+			seedTorrent(mf, "abc")
+			job := queueJob(mf)
+			dl.EXPECT().
+				TorrentStatus(mock.Anything, "qb", "abc").
+				Return(status, lookupErr).
+				Once()
+			ms.EXPECT().
+				RefreshAll(mock.Anything, "movie", movieRoot).
+				Return(nil).
+				Once()
+
+			Expect(worker.tick(ctx)).To(BeTrue())
+
+			expectTranscoded(job, mf)
+		},
+		Entry("seeding stopped", download.StatusCompleted, nil),
+		Entry(
+			"torrent removed",
+			download.TorrentStatus(""),
+			download.ErrTorrentNotFound,
+		),
+		Entry(
+			"client unreachable",
+			download.TorrentStatus(""),
+			errors.New("connect: refused"),
+		),
+	)
 
 	It("leaves an HDR file alone under a profile it otherwise fails", func() {
 		dv, err := filepath.Abs("testdata/ffprobe_hevc_dv.json")
