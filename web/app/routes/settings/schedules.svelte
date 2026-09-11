@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from "svelte";
 	import SkeletonList from "../../components/shared/SkeletonList.svelte";
 	import {
 		createQuery,
@@ -41,15 +42,34 @@
 		"purge-sessions": i18n.schedule_purge_sessions(),
 		"drift-check":
 			i18n.schedule_verify_files(),
+		"file-selection": i18n.schedule_file_selection(),
 	};
 
 	const qc = useQueryClient();
 
+	// The event stream writes every frame into the same cache entry the poll
+	// fills, so nothing downstream knows which one delivered it. The poll only
+	// ticks while the stream is down: the first paint before it connects, and
+	// the gap while EventSource reconnects after a drop.
+	let streaming = $state(false);
+
 	const list = createQuery<ScheduleList>(() => ({
 		queryKey: ["schedules"],
 		queryFn: () => api<ScheduleList>("/schedules"),
-		refetchInterval: 10_000,
+		refetchInterval: streaming ? false : 10_000,
 	}));
+
+	onMount(() => {
+		const events = new EventSource("/api/v1/schedules/events");
+		events.addEventListener("schedules", (e) => {
+			streaming = true;
+			qc.setQueryData(["schedules"], JSON.parse(e.data) as ScheduleList);
+		});
+		events.onerror = () => {
+			streaming = false;
+		};
+		return () => events.close();
+	});
 
 	let editing = $state<Schedule | null>(null);
 	let modalOpen = $state(false);

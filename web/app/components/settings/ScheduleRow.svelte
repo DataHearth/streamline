@@ -6,6 +6,7 @@
 	import { config, READONLY_HINT } from "../../lib/config.svelte";
 	import { toast } from "../../lib/toast";
 	import { createScheduleActions } from "../../lib/schedule-actions.svelte";
+	import { runningLabel } from "../../lib/schedules-touch";
 	import { formatRelative, formatDateTime } from "../../lib/dates";
 	import type { Schedule, ScheduleList } from "../../lib/types";
 	import { m as i18n } from "../../lib/paraglide/messages.js";
@@ -43,7 +44,7 @@
 
 	function statusBadge(s: Schedule) {
 		if (s.running)
-			return { cls: "bg-accent/15 text-accent", label: i18n.common_running_ellipsis() };
+			return { cls: "bg-accent/15 text-accent", label: runningLabel(s) };
 		if (s.paused)
 			return { cls: "bg-surface text-fg-muted", label: i18n.status_paused() };
 		switch (s.status) {
@@ -71,6 +72,17 @@
 	}
 
 	const sb = $derived(statusBadge(row));
+	// Only a known total draws a bar; a bare count has nothing to fill against.
+	const percent = $derived(
+		row.running && row.progress && row.progress.total > 0
+			? Math.min(100, (100 * row.progress.done) / row.progress.total)
+			: null,
+	);
+	const badgeTitle = $derived(
+		row.running && row.last_started_at
+			? i18n.schedule_started({ when: formatRelative(row.last_started_at) })
+			: (row.last_error ?? undefined),
+	);
 </script>
 
 <tr class={row.paused ? "bg-surface/40" : ""}>
@@ -98,10 +110,21 @@
 	<td class="px-4 py-3 align-middle">
 		<span
 			class="inline-flex min-w-[4.75rem] items-center justify-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide {sb.cls}"
-			title={row.last_error ?? undefined}
+			title={badgeTitle}
 		>
 			{sb.label}
 		</span>
+		{#if percent !== null}
+			<div
+				class="mt-1 h-0.5 max-w-[7rem] overflow-hidden rounded-full bg-accent/20"
+				role="progressbar"
+				aria-valuemin="0"
+				aria-valuemax="100"
+				aria-valuenow={Math.round(percent)}
+			>
+				<div class="progress-fill h-full bg-accent" style:--progress="{percent}%"></div>
+			</div>
+		{/if}
 	</td>
 	<td class="px-4 py-3 align-middle text-fg">
 		{#if row.paused || row.running}
@@ -166,3 +189,10 @@
 		</div>
 	</td>
 </tr>
+
+<style>
+	.progress-fill {
+		width: var(--progress);
+		transition: width 300ms ease-out;
+	}
+</style>

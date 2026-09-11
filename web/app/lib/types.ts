@@ -1237,6 +1237,7 @@ export type Schedule = {
 	next_run_at: string | null;
 	last_duration_ms: number;
 	last_error: string | null;
+	progress?: { done: number; total: number } | null;
 };
 
 export type ScheduleList = {
