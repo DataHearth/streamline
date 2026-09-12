@@ -124,7 +124,7 @@ Open <http://localhost:8080>.
 
 ### Hardware encoding (VAAPI)
 
-The [transcoder](Quality-Profiles-and-Custom-Formats#transcoding-a-profiles-files) can encode on an Intel or AMD GPU through VAAPI instead of the CPU. **The default image cannot do this**: its `ffmpeg` is a static build with no libva, and passing a GPU into it changes nothing. Every release also publishes a second image with a `-vaapi` tag suffix, built on Debian with Debian's ffmpeg and the Mesa and Intel VAAPI drivers, for exactly this case.
+The [transcoder](Quality-Profiles-and-Custom-Formats#transcoding-a-profiles-files) can encode on an Intel or AMD GPU through VAAPI instead of the CPU. **The default image cannot do this**: its `ffmpeg` is a static build with no libva, and passing a GPU into it changes nothing. Every release also publishes a second image with a `-vaapi` tag suffix, built on [linuxserver's ffmpeg image](https://github.com/linuxserver/docker-ffmpeg) (ffmpeg 9, ~1.2 GB), for exactly this case — no Debian, Ubuntu or Alpine ffmpeg package is built with `libvmaf`, so this is also the only image where [`transcoding.verify.min_vmaf`](Configuration-Reference#transcoding) is actually enforced rather than silently skipped, and it carries `av1_vaapi` alongside the h264/hevc encoders.
 
 <details>
 <summary>Enabling VAAPI in a container, on Kubernetes, or bare metal</summary>

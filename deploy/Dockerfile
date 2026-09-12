@@ -103,34 +103,43 @@ RUN mkdir -p /out/data
 # --- Runtime, VAAPI variant (`--target vaapi`, published as `<tag>-vaapi`) ---
 # The default image below cannot hardware-encode: static-ffmpeg is built without
 # libva (`-vaapi_device` is an unrecognized option in it), and even with it the
-# VAAPI drivers are shared objects libva dlopen()s from a glibc install. So this
-# stage is Debian's own ffmpeg plus the Mesa (AMD) and Intel drivers, and it
-# does NOT copy the static ffmpeg in. The Intel driver only exists for amd64;
-# arm64 gets Mesa alone rather than a failed apt run.
+# VAAPI drivers are shared objects libva dlopen()s from a glibc install.
+#
+# No distro's packaged ffmpeg builds libvmaf in — checked Debian bookworm and
+# trixie, Ubuntu noble, Alpine 3.22, and jellyfin-ffmpeg, none of which carry
+# it (Debian doesn't package libvmaf at all: it's absent from main, contrib,
+# non-free and non-free-firmware alike). The old Debian-bookworm base for this
+# stage was therefore silently a no-op on `transcoding.verify.min_vmaf`: the
+# key parsed and stored fine, the check just never ran. `linuxserver/ffmpeg`
+# builds ffmpeg from source with libvmaf and VAAPI both compiled in, and
+# bundles the VA drivers (Mesa, Intel iHD/i965, radeonsi) as shared objects
+# under `LIBVA_DRIVERS_PATH`/`LD_LIBRARY_PATH`, already set in its env — so
+# this stage stops installing anything and just builds on top of it. The
+# trade is a ~780 MB Ubuntu base instead of a Debian install stripped to the
+# render deps, and one more upstream (linuxserver) in the trust chain.
 #
 # The render node is root:render 0660 on most hosts. Nothing in the image can
 # grant that group: pass it at run time with `--group-add <render gid>` (compose
 # `group_add`, the chart's hwAccel.supplementalGroups), gid from
 # `stat -c %g /dev/dri/renderD128`. This is why the stage sits ABOVE the
 # distroless one: a plain `docker build` must still produce the hardened image.
-FROM debian:bookworm-slim@sha256:88200866dfff7ea7f5cbcb6ec7c8a701889efe6fe859fe64d6990e4b07ea4171 AS vaapi
+FROM lscr.io/linuxserver/ffmpeg:9.0-cli-ls81@sha256:ec8ac72754e6c115d330ec37aa18b2ae1ba86a25b89ef46a4efd4f3e57d2e6c5 AS vaapi
 
+# linuxserver's own ENTRYPOINT is an s6 wrapper (`/ffmpegwrapper.sh`) built for
+# running ffmpeg as the container's job; streamline is a long-running server,
+# so ENTRYPOINT/CMD below replace it entirely rather than layering on top.
+# LIBVA_DRIVERS_PATH/LD_LIBRARY_PATH are inherited from the base image — do
+# NOT unset them, ffmpeg resolves the VAAPI drivers through them.
+#
 # The digest pin holds the base layer steady; it does not hold back security
-# updates. Debian rebuilds the image days after publishing one, so a package
-# already in the base (libpcre2, zlib, …) stays vulnerable through an install
-# that never names it — apt leaves a satisfied dependency alone. Grype fails the
-# build on exactly that, so the upgrade runs before anything is added.
-RUN sed -i 's/^Components: main$/Components: main non-free/' /etc/apt/sources.list.d/debian.sources && \
-    apt-get update && \
+# updates. Grype scanning still runs against this image in CI, same as every
+# other stage — the upgrade step below covers only what apt itself tracks
+# (ca-certificates, tzdata), the rest of the base is linuxserver's to patch.
+RUN apt-get update && \
     apt-get upgrade -y --no-install-recommends && \
     apt-get install -y --no-install-recommends \
       ca-certificates \
-      tzdata \
-      ffmpeg \
-      libva2 \
-      libva-drm2 \
-      mesa-va-drivers \
-      $([ "$(dpkg --print-architecture)" = amd64 ] && echo intel-media-va-driver-non-free) && \
+      tzdata && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /
