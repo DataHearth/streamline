@@ -67,7 +67,8 @@ func transcodePolicyToAPI(p *config.TranscodePolicy) *TranscodePolicy {
 	}
 	if len(p.If.VideoCodecs) > 0 ||
 		len(p.If.Containers) > 0 ||
-		p.If.MaxVideoBitrate != "" {
+		p.If.MaxVideoBitrate != "" ||
+		p.If.MinVideoBitrate != "" {
 		cond := &TranscodeIf{}
 		if len(p.If.VideoCodecs) > 0 {
 			codecs := make([]TranscodeIfVideoCodecs, len(p.If.VideoCodecs))
@@ -86,6 +87,10 @@ func transcodePolicyToAPI(p *config.TranscodePolicy) *TranscodePolicy {
 		if p.If.MaxVideoBitrate != "" {
 			b := p.If.MaxVideoBitrate
 			cond.MaxVideoBitrate = &b
+		}
+		if p.If.MinVideoBitrate != "" {
+			b := p.If.MinVideoBitrate
+			cond.MinVideoBitrate = &b
 		}
 		out.If = cond
 	}
@@ -130,6 +135,9 @@ func transcodePolicyFromAPI(p *TranscodePolicy) *config.TranscodePolicy {
 	}
 	if p.If.MaxVideoBitrate != nil {
 		out.If.MaxVideoBitrate = *p.If.MaxVideoBitrate
+	}
+	if p.If.MinVideoBitrate != nil {
+		out.If.MinVideoBitrate = *p.If.MinVideoBitrate
 	}
 	return out
 }

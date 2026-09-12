@@ -130,6 +130,7 @@ export const transcodeIf = v.object({
 	video_codecs: v.array(v.string()),
 	containers: v.array(v.string()),
 	max_video_bitrate: transcodeBitrate,
+	min_video_bitrate: transcodeBitrate,
 });
 
 export const qualityProfile = v.object({

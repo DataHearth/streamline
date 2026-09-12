@@ -23,7 +23,8 @@ const (
 
 // Evaluate decides what a job must do for the probed file to comply with pol.
 // HDR/DV video is never re-encoded (v1): codec and bitrate rules are suspended
-// for it, container remux still applies.
+// for it, container remux still applies. A source under
+// pol.If.MinVideoBitrate is exempt from the codec rule alone.
 func Evaluate(
 	path string,
 	info *ffmpeg.Info,
@@ -33,7 +34,8 @@ func Evaluate(
 
 	if !info.HDR {
 		if len(pol.If.VideoCodecs) > 0 &&
-			!slices.Contains(pol.If.VideoCodecs, info.VideoCodec) {
+			!slices.Contains(pol.If.VideoCodecs, info.VideoCodec) &&
+			!belowMinBitrate(info, pol.If.MinVideoBitrate) {
 			return ActionTranscode, fmt.Sprintf(
 				"video codec %q not in %v",
 				info.VideoCodec,
@@ -61,4 +63,19 @@ func Evaluate(
 	}
 
 	return ActionNone, ""
+}
+
+// belowMinBitrate reports whether the source is too lean for a re-encode to be
+// worth it. Constant-quality encoding is bitrate-blind — VAAPI's CQP most of
+// all — so an already-small h264 source comes back out larger than it went in.
+// An unparseable floor is no floor; checkInvariants refuses one at load.
+func belowMinBitrate(info *ffmpeg.Info, min string) bool {
+	if min == "" {
+		return false
+	}
+	rate, err := config.ParseBitrate(min)
+	if err != nil {
+		return false
+	}
+	return int64(info.VideoBitrateBPS) < rate
 }

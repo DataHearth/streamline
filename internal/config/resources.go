@@ -98,6 +98,7 @@ type TranscodeIf struct {
 	VideoCodecs     []string `koanf:"video_codecs"      validate:"dive,oneof=h264 hevc av1 vp9 mpeg4 mpeg2video vc1"`
 	Containers      []string `koanf:"containers"        validate:"dive,oneof=mkv mp4 avi mov ts m2ts webm wmv"`
 	MaxVideoBitrate string   `koanf:"max_video_bitrate"`
+	MinVideoBitrate string   `koanf:"min_video_bitrate"`
 }
 
 type TranscodeTo struct {

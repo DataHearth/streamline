@@ -290,6 +290,7 @@ quality_profiles:
         video_codecs: [hevc, av1]    # h264 gets re-encoded
         containers: [mkv]            # anything else gets remuxed to mkv
         max_video_bitrate: 12M       # above this, re-encode even if the codec is fine
+        min_video_bitrate: 2M        # below this, leave the codec alone
       to:
         container: mkv
         video_codec: hevc
@@ -302,6 +303,8 @@ quality_profiles:
 **`if` is the compliance test, `to` is the destination.** Each new import on this profile is probed, checked against `if`, and queued when it fails. Files that were already in the library when you wrote the rules aren't reached automatically — **Scan library** on [Activity → Transcoding](Activity-and-Calendar#transcoding) is the pass that catches them up.
 
 **Failing only the container is a remux, not a re-encode.** The streams are copied into the new container untouched: seconds instead of hours, and no quality lost. Only a codec or bitrate failure re-encodes.
+
+**`min_video_bitrate` leaves lean sources alone.** A source below it skips the codec rule — the ceiling and the container rule still apply, so it is still remuxed if it's in the wrong container. Re-encoding at a constant quality doesn't look at the source's bitrate, so a small h264 file usually comes back *larger* than it went in; the floor is how you tell Streamline not to bother. It reads the same figure as the ceiling, which on mkv is the container's total, so leave it headroom as well. It has to be below `max_video_bitrate` when you set both, or the config is refused.
 
 **HDR and Dolby Vision are never re-encoded.** The codec and bitrate rules are suspended for them, so a 60 Mbit/s HDR remux stays exactly as it is even under `max_video_bitrate: 12M`. Re-encoding HDR without carrying its metadata through produces grey, washed-out video, and that's worse than a large file. The container rule still applies — an HDR file in the wrong container is remuxed, which is lossless anyway.
 

@@ -175,6 +175,10 @@
                 "max_video_bitrate": {
                   "type": "string",
                   "description": "e.g. \"12M\", \"8000k\", \"500000\" bits/sec. Must parse via config.ParseBitrate."
+                },
+                "min_video_bitrate": {
+                  "type": "string",
+                  "description": "Sources below this are exempt from the codec rule. e.g. \"2M\", \"1500k\". Must parse via config.ParseBitrate and stay below max_video_bitrate when both are set."
                 }
               }
             },

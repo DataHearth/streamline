@@ -134,6 +134,7 @@
 					video_codecs: p.transcode?.if?.video_codecs ?? [],
 					containers: p.transcode?.if?.containers ?? [],
 					max_video_bitrate: p.transcode?.if?.max_video_bitrate ?? "",
+					min_video_bitrate: p.transcode?.if?.min_video_bitrate ?? "",
 				},
 				to: { ...TRANSCODE_DEFAULTS.to, ...(p.transcode?.to ?? {}) },
 			},

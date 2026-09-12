@@ -16,6 +16,7 @@
 			video_codecs: string[];
 			containers: string[];
 			max_video_bitrate: string;
+			min_video_bitrate: string;
 		};
 		to: {
 			container: TranscodeTargetContainer;
@@ -28,7 +29,12 @@
 	};
 
 	export const TRANSCODE_DEFAULTS: TranscodeFormValues = {
-		if: { video_codecs: [], containers: [], max_video_bitrate: "" },
+		if: {
+			video_codecs: [],
+			containers: [],
+			max_video_bitrate: "",
+			min_video_bitrate: "",
+		},
 		to: {
 			container: "mkv",
 			video_codec: "hevc",
@@ -553,6 +559,17 @@
 									label={i18n.quality_transcode_bitrate()}
 									placeholder="8M"
 									help={i18n.quality_transcode_bitrate_help()}
+								/>
+							{/snippet}
+						</form.Field>
+
+						<form.Field name="transcode.if.min_video_bitrate">
+							{#snippet children(field)}
+								<TextField
+									{field}
+									label={i18n.quality_transcode_min_bitrate()}
+									placeholder="2M"
+									help={i18n.quality_transcode_min_bitrate_help()}
 								/>
 							{/snippet}
 						</form.Field>

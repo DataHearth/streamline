@@ -997,6 +997,9 @@ export type TranscodeIf = {
 	video_codecs?: TranscodeSourceCodec[];
 	containers?: TranscodeContainer[];
 	max_video_bitrate?: string;
+	// Exempts a source from the codec rule alone; the ceiling and the
+	// container rule still apply below it.
+	min_video_bitrate?: string;
 };
 
 export type TranscodeTo = {

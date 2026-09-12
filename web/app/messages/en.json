@@ -1157,6 +1157,8 @@
 	"quality_transcode_audio_codec": "Audio codec",
 	"quality_transcode_bitrate": "Maximum video bitrate",
 	"quality_transcode_bitrate_help": "ffmpeg-style rate, e.g. 8M or 4500k. Empty means no bitrate rule.",
+	"quality_transcode_min_bitrate": "Min video bitrate",
+	"quality_transcode_min_bitrate_help": "Sources below this are left alone.",
 	"quality_transcode_codecs": "Compliant video codecs",
 	"quality_transcode_codecs_any": "Any codec is compliant — no codec rule.",
 	"quality_transcode_container": "Container",

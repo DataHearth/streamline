@@ -86,6 +86,49 @@ var _ = Describe("Evaluate", Label("unit", "transcoding"), func() {
 			ActionRemux,
 			"container",
 		),
+		Entry("h264 below min_video_bitrate keeps its codec",
+			"/x.mkv",
+			&ffmpeg.Info{VideoCodec: "h264", VideoBitrateBPS: 1_500_000},
+			config.TranscodePolicy{If: config.TranscodeIf{
+				VideoCodecs:     []string{"hevc", "av1"},
+				Containers:      []string{"mkv"},
+				MaxVideoBitrate: "12M",
+				MinVideoBitrate: "2M",
+			}},
+			ActionNone, "",
+		),
+		Entry("h264 at min_video_bitrate is transcoded",
+			"/x.mkv",
+			&ffmpeg.Info{VideoCodec: "h264", VideoBitrateBPS: 2_000_000},
+			config.TranscodePolicy{If: config.TranscodeIf{
+				VideoCodecs:     []string{"hevc", "av1"},
+				Containers:      []string{"mkv"},
+				MaxVideoBitrate: "12M",
+				MinVideoBitrate: "2M",
+			}},
+			ActionTranscode, "codec",
+		),
+		Entry("h264 above min_video_bitrate is transcoded",
+			"/x.mkv",
+			&ffmpeg.Info{VideoCodec: "h264", VideoBitrateBPS: 9_000_000},
+			config.TranscodePolicy{If: config.TranscodeIf{
+				VideoCodecs:     []string{"hevc", "av1"},
+				Containers:      []string{"mkv"},
+				MaxVideoBitrate: "12M",
+				MinVideoBitrate: "2M",
+			}},
+			ActionTranscode, "codec",
+		),
+		Entry("the container rule still fires below min_video_bitrate",
+			"/x.mp4",
+			&ffmpeg.Info{VideoCodec: "h264", VideoBitrateBPS: 1_500_000},
+			config.TranscodePolicy{If: config.TranscodeIf{
+				VideoCodecs:     []string{"hevc", "av1"},
+				Containers:      []string{"mkv"},
+				MinVideoBitrate: "2M",
+			}},
+			ActionRemux, "container",
+		),
 		Entry("empty if never triggers a rule",
 			"/x.avi",
 			&ffmpeg.Info{VideoCodec: "mpeg4", VideoBitrateBPS: 999_000_000},
@@ -103,5 +146,19 @@ var _ = Describe("Evaluate", Label("unit", "transcoding"), func() {
 			},
 		)
 		Expect(action).To(Equal(ActionNone))
+	})
+
+	It("treats an unparseable min_video_bitrate as no exemption", func() {
+		action, _ := Evaluate(
+			"/x.mkv",
+			&ffmpeg.Info{VideoCodec: "h264", VideoBitrateBPS: 1_000},
+			config.TranscodePolicy{
+				If: config.TranscodeIf{
+					VideoCodecs:     []string{"hevc"},
+					MinVideoBitrate: "not-a-bitrate",
+				},
+			},
+		)
+		Expect(action).To(Equal(ActionTranscode))
 	})
 })

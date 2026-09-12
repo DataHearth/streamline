@@ -7993,6 +7993,14 @@ components:
           description: |
             Ceiling as an ffmpeg-style rate ("8M", "4500k"). Empty means no
             bitrate rule.
+        min_video_bitrate:
+          type: string
+          description: |
+            Floor as an ffmpeg-style rate ("2M", "1500k"). A source below it
+            is exempt from the codec rule — constant-quality encoding is
+            bitrate-blind, so re-encoding an already-lean file grows it. The
+            ceiling and the container rule still apply. Empty means no floor,
+            and it must be below max_video_bitrate when both are set.
 
     TranscodeTo:
       type: object

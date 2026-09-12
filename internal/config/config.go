@@ -632,13 +632,40 @@ func (c *Config) checkInvariants() error {
 		if p.Transcode == nil {
 			continue
 		}
+		var maxRate, minRate int64
 		if p.Transcode.If.MaxVideoBitrate != "" {
-			if _, err := ParseBitrate(p.Transcode.If.MaxVideoBitrate); err != nil {
+			n, err := ParseBitrate(p.Transcode.If.MaxVideoBitrate)
+			if err != nil {
 				errs = append(errs, fmt.Errorf(
 					"quality profile %q: transcode.if.max_video_bitrate %w",
 					p.Name, err,
 				))
 			}
+			maxRate = n
+		}
+		if p.Transcode.If.MinVideoBitrate != "" {
+			n, err := ParseBitrate(p.Transcode.If.MinVideoBitrate)
+			if err != nil {
+				errs = append(errs, fmt.Errorf(
+					"quality profile %q: transcode.if.min_video_bitrate %w",
+					p.Name, err,
+				))
+			}
+			minRate = n
+		}
+		// The floor exempts a source from the codec rule and the ceiling
+		// queues it; a floor at or above the ceiling leaves the codec rule
+		// firing only on files the ceiling already queues, so it never
+		// decides anything on its own.
+		if minRate > 0 && maxRate > 0 && minRate >= maxRate {
+			errs = append(errs, fmt.Errorf(
+				"quality profile %q: transcode.if.min_video_bitrate %q is at or "+
+					"above max_video_bitrate %q — every source the codec rule "+
+					"could still queue is one the ceiling queues anyway",
+				p.Name,
+				p.Transcode.If.MinVideoBitrate,
+				p.Transcode.If.MaxVideoBitrate,
+			))
 		}
 		// A destination its own `if` rejects is a loop: the encode lands,
 		// the next pass reads the result as non-compliant, and the file is

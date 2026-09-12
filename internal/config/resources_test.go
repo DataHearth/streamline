@@ -620,6 +620,59 @@ var _ = Describe("Transcoding config", Label("unit", "config"), func() {
 		Expect(err.Error()).To(ContainSubstring("max_video_bitrate"))
 	})
 
+	It("rejects a min_video_bitrate value ParseBitrate cannot read", func() {
+		c := configtest.Setup()
+		c.QualityProfiles[0].Transcode = &config.TranscodePolicy{
+			If: config.TranscodeIf{MinVideoBitrate: "nope"},
+			To: config.TranscodeTo{
+				Container:  "mkv",
+				VideoCodec: "hevc",
+				Preset:     "medium",
+				AudioCodec: "aac",
+			},
+		}
+		err := c.Validate()
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("min_video_bitrate"))
+	})
+
+	It("rejects a min_video_bitrate at or above max_video_bitrate", func() {
+		c := configtest.Setup()
+		c.QualityProfiles[0].Transcode = &config.TranscodePolicy{
+			If: config.TranscodeIf{
+				MaxVideoBitrate: "8M",
+				MinVideoBitrate: "8M",
+			},
+			To: config.TranscodeTo{
+				Container:  "mkv",
+				VideoCodec: "hevc",
+				Preset:     "medium",
+				AudioCodec: "aac",
+			},
+		}
+		err := c.Validate()
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("min_video_bitrate"))
+		Expect(err.Error()).To(ContainSubstring("max_video_bitrate"))
+	})
+
+	It("accepts a min_video_bitrate below max_video_bitrate", func() {
+		c := configtest.Setup()
+		c.QualityProfiles[0].Transcode = &config.TranscodePolicy{
+			If: config.TranscodeIf{
+				MaxVideoBitrate: "12M",
+				MinVideoBitrate: "2M",
+			},
+			To: config.TranscodeTo{
+				Container:  "mkv",
+				VideoCodec: "hevc",
+				Preset:     "medium",
+				AudioCodec: "aac",
+			},
+		}
+		Expect(c.Validate()).To(Succeed())
+	})
+
 	It("rejects a to.video_codec its own if.video_codecs rejects", func() {
 		c := configtest.Setup()
 		c.QualityProfiles[0].Transcode = &config.TranscodePolicy{

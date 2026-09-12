@@ -1157,6 +1157,8 @@
 	"quality_transcode_audio_codec": "Codec audio",
 	"quality_transcode_bitrate": "Débit vidéo maximal",
 	"quality_transcode_bitrate_help": "Débit au format ffmpeg, par ex. 8M ou 4500k. Vide signifie aucune règle de débit.",
+	"quality_transcode_min_bitrate": "Débit vidéo minimal",
+	"quality_transcode_min_bitrate_help": "Les sources en dessous sont laissées telles quelles.",
 	"quality_transcode_codecs": "Codecs vidéo conformes",
 	"quality_transcode_codecs_any": "Tous les codecs sont conformes — aucune règle de codec.",
 	"quality_transcode_container": "Conteneur",

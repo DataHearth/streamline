@@ -5139,6 +5139,13 @@ type TranscodeIf struct {
 	// bitrate rule.
 	MaxVideoBitrate *string `json:"max_video_bitrate,omitempty"`
 
+	// MinVideoBitrate Floor as an ffmpeg-style rate ("2M", "1500k"). A source below it
+	// is exempt from the codec rule — constant-quality encoding is
+	// bitrate-blind, so re-encoding an already-lean file grows it. The
+	// ceiling and the container rule still apply. Empty means no floor,
+	// and it must be below max_video_bitrate when both are set.
+	MinVideoBitrate *string `json:"min_video_bitrate,omitempty"`
+
 	// VideoCodecs Codecs considered compliant. Empty means any codec.
 	VideoCodecs *[]TranscodeIfVideoCodecs `json:"video_codecs,omitempty"`
 }
@@ -5330,7 +5337,10 @@ type TranscodingConfigView struct {
 	// HwAccel Hardware encoding policy. `auto` probes hw_device once and
 	// falls back to software per job when the probe failed or the
 	// policy's codec has no hardware encoder; `none` forces
-	// software. The probe is re-run when this or hw_device changes,
+	// software; `vaapi` requires the hardware — the same two cases
+	// defer the job for an hour instead of encoding it in
+	// software, spending no attempt, and re-probe on the next
+	// claim. The probe is re-run when this or hw_device changes,
 	// no restart.
 	HwAccel TranscodingConfigViewHwAccel `json:"hw_accel"`
 
@@ -5363,7 +5373,10 @@ type TranscodingConfigView struct {
 // TranscodingConfigViewHwAccel Hardware encoding policy. `auto` probes hw_device once and
 // falls back to software per job when the probe failed or the
 // policy's codec has no hardware encoder; `none` forces
-// software. The probe is re-run when this or hw_device changes,
+// software; `vaapi` requires the hardware — the same two cases
+// defer the job for an hour instead of encoding it in
+// software, spending no attempt, and re-probe on the next
+// claim. The probe is re-run when this or hw_device changes,
 // no restart.
 type TranscodingConfigViewHwAccel string
 
