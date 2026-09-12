@@ -843,6 +843,31 @@ func (db *DB) FindLiveDownloadRecordByHash(
 	return rec, nil
 }
 
+// FindImportedDownloadRecordByHash fetches the record tracking hash that the
+// importer finished — status completed — or a nil row with a nil error when
+// none matches. The seed-complete sweep uses it as its permission to delete a
+// torrent's files: held, pending, downloading, importing and failed records
+// all still have someone (the resolve flow, the adoption queue, the importer)
+// waiting on those exact bytes, and an untracked torrent is not ours to reap.
+func (db *DB) FindImportedDownloadRecordByHash(
+	ctx context.Context,
+	hash string,
+) (*ent.DownloadRecord, error) {
+	rec, err := db.client.DownloadRecord.Query().
+		Where(
+			downloadrecord.TorrentHashEQ(hash),
+			downloadrecord.StatusEQ(downloadrecord.StatusCompleted),
+		).
+		First(ctx)
+	if ent.IsNotFound(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("find imported download record by hash: %w", err)
+	}
+	return rec, nil
+}
+
 // FindWidenableDownloadRecordByHash is FindLiveDownloadRecordByHash plus
 // StatusCompleted: a completed record's torrent commonly still sits in the
 // client seeding, and a re-grab landing on that hash (spec §4.6) needs to find

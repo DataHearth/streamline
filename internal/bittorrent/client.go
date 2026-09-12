@@ -640,14 +640,15 @@ func (e *Engine) live(t *antorrent.Torrent) liveStats {
 func (e *Engine) view(t *antorrent.Torrent) download.Torrent {
 	l := e.live(t)
 	return download.Torrent{
-		Hash:          l.hash,
-		Name:          l.name,
-		Status:        l.status,
-		Progress:      l.progress,
-		Size:          l.size,
-		SavePath:      e.downloadDir,
-		DownloadSpeed: l.downloadSpeed,
-		ETA:           l.eta,
+		Hash:           l.hash,
+		Name:           l.name,
+		Status:         l.status,
+		Progress:       l.progress,
+		Size:           l.size,
+		SavePath:       e.downloadDir,
+		DownloadSpeed:  l.downloadSpeed,
+		ETA:            l.eta,
+		SeedingStopped: l.seedingStopped,
 	}
 }
 

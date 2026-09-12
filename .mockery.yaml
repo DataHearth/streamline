@@ -25,6 +25,7 @@ packages:
       Cleaner: {}
       Client: {}
       Downloader: {}
+      SeedReaper: {}
   github.com/datahearth/streamline/internal/ffmpeg:
     interfaces:
       Prober: {}

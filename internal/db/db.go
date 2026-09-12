@@ -361,6 +361,10 @@ type Store interface {
 		ctx context.Context,
 		hash string,
 	) (*ent.DownloadRecord, error)
+	FindImportedDownloadRecordByHash(
+		ctx context.Context,
+		hash string,
+	) (*ent.DownloadRecord, error)
 	// FindSeedingDownloadRecord returns the newest completed record that
 	// carried a file for the movie, or for the episode — by its edge or
 	// through wanted_episodes — and still names a torrent hash and a

@@ -10,11 +10,13 @@ import (
 )
 
 // DownloadMonitor returns a scheduler.JobFunc that polls the download manager
-// and forwards each completion to the importer, then runs the manual-torrent
-// adoption pass and enqueues anything it auto-imported. Intended to run on a
-// short interval (default 30s).
+// and forwards each completion to the importer, then reaps the builtin
+// torrents that have finished seeding, runs the manual-torrent adoption pass
+// and enqueues anything it auto-imported. Intended to run on a short interval
+// (default 30s).
 func DownloadMonitor(
 	c download.Checker,
+	r download.SeedReaper,
 	a download.Adopter,
 	imp importer.Enqueuer,
 ) scheduler.JobFunc {
@@ -36,6 +38,12 @@ func DownloadMonitor(
 				cd.Record.ID,
 			)
 			imp.Enqueue(cd.Record.ID)
+		}
+		// Reclaiming disk is never worth failing the tick over: the sweep is
+		// idempotent and the same torrents are still there next time.
+		if err := r.RemoveSeedCompleteTorrents(ctx); err != nil {
+			slog.WarnContext(ctx, "remove seed-complete torrents failed",
+				"error", err)
 		}
 		adopted, err := a.AdoptManualTorrents(ctx)
 		if err != nil {

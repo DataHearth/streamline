@@ -328,6 +328,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 			func(time.Duration) scheduler.JobFunc {
 				return jobs.DownloadMonitor(
 					dlManager,
+					dlManager.(download.SeedReaper),
 					dlManager.(download.Adopter),
 					imp,
 				)

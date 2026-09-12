@@ -176,6 +176,7 @@ var _ = Describe("Import pipeline", Label("integration", "importer"), func() {
 			Expect(
 				jobs.DownloadMonitor(
 					dlManager,
+					dlManager.(download.SeedReaper),
 					dlManager.(download.Adopter),
 					w,
 				)(

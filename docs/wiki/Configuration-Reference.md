@@ -441,6 +441,8 @@ Built-in engine only (ignored for external clients):
 | `disable_dht` | | Turns off the distributed hash table. **Recommended on a small machine.** DHT keeps a routing table warm and answers queries from the wider network continuously, whether or not you are downloading — none of which an indexer-driven setup needs, since every torrent here arrives from a tracker that already knows its peers. Left on it costs memory and a steady trickle of background traffic for nothing. Turn it off unless you add magnets by hand and rely on public swarms to find them |
 | `bind_interface` | | Bind to one interface — useful for a VPN tunnel |
 
+Once `seed_ratio` or `seed_time` is reached, the built-in engine stops uploading and streamline then removes that torrent **and deletes its files** — but only when the download was already imported into your library, which is the point at which the download copy is a second copy of a file you already have. A torrent still waiting on you (a held import, an adoption proposal) or one streamline never grabbed is left alone, and external clients keep their own ratio handling and their own files.
+
 ### indexers
 
 | Field | Required | Notes |

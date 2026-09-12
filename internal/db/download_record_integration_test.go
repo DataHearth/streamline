@@ -71,6 +71,37 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 		})
 	})
 
+	Describe("FindImportedDownloadRecordByHash", func() {
+		It("returns the completed record for the hash", func() {
+			rec := createRec("done", downloadrecord.StatusCompleted)
+
+			got, err := store.FindImportedDownloadRecordByHash(ctx, "done")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got).NotTo(BeNil())
+			Expect(got.ID).To(Equal(rec.ID))
+		})
+
+		It("reports every unfinished state as no row", func() {
+			createRec("dl", downloadrecord.StatusDownloading)
+			createRec("imp", downloadrecord.StatusImporting)
+			createRec("held", downloadrecord.StatusHeld)
+			createRec("pend", downloadrecord.StatusPending)
+			createRec("fail", downloadrecord.StatusFailed)
+
+			for _, hash := range []string{"dl", "imp", "held", "pend", "fail"} {
+				got, err := store.FindImportedDownloadRecordByHash(ctx, hash)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(got).To(BeNil(), hash)
+			}
+		})
+
+		It("reports an unknown hash as no row and no error", func() {
+			got, err := store.FindImportedDownloadRecordByHash(ctx, "nope")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got).To(BeNil())
+		})
+	})
+
 	Describe("CreateDownloadRecord", func() {
 		It("persists with the given edges", func() {
 			rec := createRec("abc", downloadrecord.StatusDownloading)

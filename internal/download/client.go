@@ -29,6 +29,12 @@ type Torrent struct {
 	// completion; the qBittorrent ∞ sentinel (8640000) is normalized to 0.
 	DownloadSpeed int64
 	ETA           int64
+	// SeedingStopped reports that the client has stopped seeding this torrent
+	// because a configured seed_ratio/seed_time limit was reached. Only the
+	// builtin engine sets it — the external clients enforce their own ratio
+	// rules and expose no equivalent, so they always report false and the
+	// seed-complete sweep never acts on them.
+	SeedingStopped bool
 }
 
 // TorrentSource is what the manager hands to Client.AddTorrent.

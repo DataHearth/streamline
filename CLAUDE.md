@@ -60,7 +60,7 @@ Seven sections are readable and patchable at runtime (`/config/{auth,library,ffm
 
 ## Downloads, imports & adoption
 
-The builtin engine owns its own peer sockets and caps its peer pool with constants (not config keys). The importer verifies a probed source against the release claim before any transfer and parks a failing record `held` rather than counting an attempt. Untracked torrents the clients report are matched against the library each monitor tick and either auto-imported or filed as a `pending` proposal. Every successful import dispatches a media-server refresh.
+The builtin engine owns its own peer sockets and caps its peer pool with constants (not config keys). Its limit enforcer only stops uploading; removing a seed-complete torrent **with its files** is the download manager's call on the monitor tick, and only for a builtin torrent whose record the importer already completed. The importer verifies a probed source against the release claim before any transfer and parks a failing record `held` rather than counting an attempt. Untracked torrents the clients report are matched against the library each monitor tick and either auto-imported or filed as a `pending` proposal. Every successful import dispatches a media-server refresh.
 
 **Engine internals, port rebinding, hold/resolve semantics, the adoption proposal lifecycle and Plex section discovery: [`docs/agents/downloads-and-imports.md`](docs/agents/downloads-and-imports.md) — read it before touching `internal/bittorrent/`, `internal/importer/`, `adopt.go`, or `internal/mediaserver/`.**
 ## Selective file download

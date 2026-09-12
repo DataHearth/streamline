@@ -1549,3 +1549,148 @@ var _ = Describe(
 		)
 	},
 )
+
+// seedReapClient serves the seed-complete sweep one canned listing and
+// records what it was asked to remove.
+type seedReapClient struct {
+	stubClient
+
+	torrents []Torrent
+	failHash string
+	removed  []string
+	deleted  []bool
+}
+
+func (c *seedReapClient) ListTorrents(context.Context) ([]Torrent, error) {
+	return c.torrents, nil
+}
+
+func (c *seedReapClient) RemoveTorrent(
+	_ context.Context,
+	hash string,
+	deleteFiles bool,
+) error {
+	if hash == c.failHash {
+		return errors.New("client boom")
+	}
+	c.removed = append(c.removed, hash)
+	c.deleted = append(c.deleted, deleteFiles)
+	return nil
+}
+
+var _ = Describe(
+	"RemoveSeedCompleteTorrents",
+	Label("unit", "downloads"),
+	func() {
+		var (
+			ctx    context.Context
+			store  *dbmocks.MockStore
+			client *seedReapClient
+		)
+
+		BeforeEach(func() {
+			ctx = context.Background()
+			store = dbmocks.NewMockStore(GinkgoT())
+		})
+
+		// reaper wires the injected engine behind the named client entry. The
+		// engine is handed over as the builtin either way, so a qbittorrent
+		// entry is how a non-builtin client reporting the same listing is
+		// spelled.
+		reaper := func(clientType string, torrents ...Torrent) SeedReaper {
+			GinkgoHelper()
+			client = &seedReapClient{torrents: torrents}
+			entry := map[string]any{
+				"name": "embedded", "client_type": clientType,
+				"download_dir": "/downloads", "enabled": true,
+			}
+			if clientType != "builtin" {
+				entry["host"] = "localhost"
+				entry["port"] = 8080
+				entry["auth_method"] = "password"
+			}
+			configtest.Setup(map[string]any{
+				"download_clients": []map[string]any{entry},
+			})
+			return New(store, client).(SeedReaper)
+		}
+
+		seedStopped := Torrent{
+			Hash: "h1", Name: "The.Batman.2022.1080p.BluRay-X",
+			Status: StatusCompleted, SeedingStopped: true,
+		}
+
+		It("removes an imported torrent with its files", func() {
+			mgr := reaper("builtin", seedStopped)
+			store.EXPECT().
+				FindImportedDownloadRecordByHash(mock.Anything, "h1").
+				Return(&ent.DownloadRecord{ID: 7}, nil).
+				Once()
+
+			Expect(mgr.RemoveSeedCompleteTorrents(ctx)).To(Succeed())
+			Expect(client.removed).To(Equal([]string{"h1"}))
+			Expect(client.deleted).To(Equal([]bool{true}))
+		})
+
+		It("leaves a torrent whose record is held", func() {
+			mgr := reaper("builtin", seedStopped)
+			// The query answers for a completed record only, so a held one
+			// reads as no row here — its files are what resolve still needs.
+			store.EXPECT().
+				FindImportedDownloadRecordByHash(mock.Anything, "h1").
+				Return(nil, nil).
+				Once()
+
+			Expect(mgr.RemoveSeedCompleteTorrents(ctx)).To(Succeed())
+			Expect(client.removed).To(BeEmpty())
+		})
+
+		It("leaves an untracked torrent alone", func() {
+			mgr := reaper("builtin", seedStopped)
+			store.EXPECT().
+				FindImportedDownloadRecordByHash(mock.Anything, "h1").
+				Return(nil, nil).
+				Once()
+
+			Expect(mgr.RemoveSeedCompleteTorrents(ctx)).To(Succeed())
+			Expect(client.removed).To(BeEmpty())
+		})
+
+		It("leaves a torrent that is still seeding", func() {
+			mgr := reaper("builtin", Torrent{
+				Hash: "h1", Name: "x", Status: StatusSeeding,
+			})
+			// No EXPECT: a torrent still inside its limits must not even be
+			// looked up. The mock fails the spec on any call.
+
+			Expect(mgr.RemoveSeedCompleteTorrents(ctx)).To(Succeed())
+			Expect(client.removed).To(BeEmpty())
+		})
+
+		It("ignores a non-builtin client reporting the same shape", func() {
+			mgr := reaper("qbittorrent", seedStopped)
+
+			Expect(mgr.RemoveSeedCompleteTorrents(ctx)).To(Succeed())
+			Expect(client.removed).To(BeEmpty())
+		})
+
+		It("logs a removal failure and keeps sweeping", func() {
+			mgr := reaper("builtin", seedStopped, Torrent{
+				Hash: "h2", Name: "Dune.2021.1080p.BluRay-X",
+				Status: StatusCompleted, SeedingStopped: true,
+			})
+			client.failHash = "h1"
+			store.EXPECT().
+				FindImportedDownloadRecordByHash(mock.Anything, "h1").
+				Return(&ent.DownloadRecord{ID: 7}, nil).
+				Once()
+			store.EXPECT().
+				FindImportedDownloadRecordByHash(mock.Anything, "h2").
+				Return(&ent.DownloadRecord{ID: 8}, nil).
+				Once()
+
+			Expect(mgr.RemoveSeedCompleteTorrents(ctx)).To(Succeed())
+			Expect(client.removed).To(Equal([]string{"h2"}))
+		})
+	},
+)

@@ -132,6 +132,7 @@ var (
 	adoptCounter     metric.Int64Counter
 	adoptPruned      metric.Int64Counter
 	selectionCounter metric.Int64Counter
+	seedReapCounter  metric.Int64Counter
 )
 
 func init() {
@@ -180,6 +181,13 @@ func init() {
 			"Deferred file-selection resolutions by outcome",
 		),
 	))
+	seedReapCounter = otelx.Must(meter.Int64Counter(
+		"streamline.download.seed_complete_removals",
+		metric.WithDescription(
+			"Imported builtin torrents removed with their files "+
+				"once their seed limit was reached",
+		),
+	))
 
 	// Prime instruments with 0 so series appear in the backend before the
 	// first real event.
@@ -189,6 +197,7 @@ func init() {
 	completedCount.Add(ctx, 0)
 	testCounter.Add(ctx, 0)
 	orphanCounter.Add(ctx, 0)
+	seedReapCounter.Add(ctx, 0)
 	grabDuration.Record(ctx, 0)
 }
 
@@ -283,6 +292,13 @@ const (
 type Cleaner interface {
 	PurgeOldRecords(ctx context.Context) error
 	PurgeOrphanedTorrents(ctx context.Context) error
+}
+
+// SeedReaper removes builtin-engine torrents whose seed limit has been
+// reached and whose download the importer already finished. Driven by the
+// download monitor tick alongside the completion and adoption passes.
+type SeedReaper interface {
+	RemoveSeedCompleteTorrents(ctx context.Context) error
 }
 
 // Adopter scans enabled download clients for untracked managed-category
@@ -1450,6 +1466,80 @@ func (d *download) PurgeOrphanedTorrents(ctx context.Context) error {
 		orphanCounter.Add(ctx, int64(purged))
 		slog.InfoContext(ctx, "orphan scan purged records",
 			"count", purged)
+	}
+	return nil
+}
+
+// RemoveSeedCompleteTorrents removes, with their files, the builtin engine's
+// torrents that have finished seeding and whose download the importer already
+// completed. The engine's limit enforcer only stops uploading — it holds no
+// library state and cannot tell an imported torrent from one nothing was ever
+// taken from — so under the default library.import_mode: hardlink plus
+// keep_torrent_seeding: true the download copy would otherwise sit beside the
+// library's copy for good.
+//
+// A record in any other state is left alone: held and pending have their own
+// resolve and adoption flows waiting on those exact bytes, and a torrent with
+// no record at all is not ours to reap.
+//
+// Builtin only by construction — seed limits are the engine's own feature, and
+// an external client owns its ratio handling and the files under it. A
+// per-torrent failure is logged and comes back on the next tick; only failing
+// to reach the engine at all is returned.
+func (d *download) RemoveSeedCompleteTorrents(ctx context.Context) error {
+	ctx, span := tracer.Start(ctx, "download.remove_seed_complete_torrents")
+	defer span.End()
+
+	dc, ok := config.BuiltinDownloadClient()
+	if !ok {
+		return nil
+	}
+	client, err := d.buildClient(dc)
+	if err != nil {
+		return otelx.RecordSpanError(
+			span, fmt.Errorf("build builtin client: %w", err),
+		)
+	}
+	torrents, err := client.ListTorrents(ctx)
+	if err != nil {
+		return otelx.RecordSpanError(
+			span, fmt.Errorf("list builtin torrents: %w", err),
+		)
+	}
+
+	removed := 0
+	for _, t := range torrents {
+		if !t.SeedingStopped {
+			continue
+		}
+		rec, err := d.db.FindImportedDownloadRecordByHash(ctx, t.Hash)
+		if err != nil {
+			slog.WarnContext(ctx,
+				"looking up the record behind a finished torrent failed",
+				"hash", t.Hash, "error", err)
+			continue
+		}
+		if rec == nil {
+			continue
+		}
+		if err := client.RemoveTorrent(ctx, t.Hash, true); err != nil {
+			slog.WarnContext(ctx,
+				"removing a torrent that finished seeding failed",
+				"hash", t.Hash, "record.id", rec.ID, "error", err)
+			continue
+		}
+		removed++
+		slog.InfoContext(ctx,
+			"seeding finished, removed the torrent and its files",
+			"hash", t.Hash, "torrent", t.Name,
+			"record.id", rec.ID, "client", dc.Name)
+	}
+
+	span.SetAttributes(attribute.Int("torrents.removed", removed))
+	if removed > 0 {
+		seedReapCounter.Add(ctx, int64(removed), metric.WithAttributes(
+			attribute.String("download_client.name", dc.Name),
+		))
 	}
 	return nil
 }
