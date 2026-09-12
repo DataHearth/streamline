@@ -184,3 +184,23 @@ func (w *Worker) HWStatus(ctx context.Context) (string, string) {
 	}
 	return "off", ""
 }
+
+// hwProbeError reports the memoised probe failure, or nil when the last probe
+// succeeded or none has run.
+func (w *Worker) hwProbeError() error {
+	w.hwMu.Lock()
+	defer w.hwMu.Unlock()
+	return w.hw.err
+}
+
+// forgetHardware drops the memo so the next job probes again. Only the
+// hardware-only path calls it: there a failed probe holds every job instead of
+// falling back, so keeping the memo until the config key changes would turn
+// one driver hiccup — a render node busy, a container that lost its device on
+// a restart — into a hold nothing but an operator could lift. Under auto the
+// memo costs a software encode, not a stall, so it stays.
+func (w *Worker) forgetHardware() {
+	w.hwMu.Lock()
+	defer w.hwMu.Unlock()
+	w.hw = hwProbe{}
+}

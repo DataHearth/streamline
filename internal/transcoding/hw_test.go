@@ -46,4 +46,19 @@ var _ = Describe("hardware encoding", Label("unit", "transcoding"), func() {
 		Expect(status).To(Equal("unavailable"))
 		Expect(reason).To(ContainSubstring("list encoders"))
 	})
+
+	It("probes again once the hardware-only path has dropped the memo", func() {
+		configtest.Setup(map[string]any{
+			"transcoding": map[string]any{"hw_accel": "vaapi"},
+		})
+		prober := mockffmpeg.NewMockProber(GinkgoT())
+		prober.EXPECT().FFmpegPath().Return("/nonexistent/ffmpeg").Twice()
+		w := NewWorker(Deps{Prober: prober})
+		Expect(w.hardware(context.Background())).To(BeNil())
+		Expect(w.hwProbeError()).To(HaveOccurred())
+
+		w.forgetHardware()
+
+		Expect(w.hardware(context.Background())).To(BeNil())
+	})
 })

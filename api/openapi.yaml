@@ -7745,7 +7745,10 @@ components:
             Hardware encoding policy. `auto` probes hw_device once and
             falls back to software per job when the probe failed or the
             policy's codec has no hardware encoder; `none` forces
-            software. The probe is re-run when this or hw_device changes,
+            software; `vaapi` requires the hardware — the same two cases
+            defer the job for an hour instead of encoding it in
+            software, spending no attempt, and re-probe on the next
+            claim. The probe is re-run when this or hw_device changes,
             no restart.
         hw_device:
           type: string

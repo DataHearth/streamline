@@ -412,6 +412,11 @@ func (w *Worker) runJob(ctx context.Context, c *claimed) {
 		return
 	}
 
+	hw := w.hardware(jctx)
+	if action == ActionTranscode && w.deferredForHardware(wctx, job, pol, hw) {
+		return
+	}
+
 	outPath := swapPath(mf.Path, pol.To.Container)
 	defer func() {
 		if err := os.Remove(outPath); err != nil && !errors.Is(err, fs.ErrNotExist) {
@@ -421,7 +426,7 @@ func (w *Worker) runJob(ctx context.Context, c *claimed) {
 	}()
 
 	started := time.Now()
-	args := BuildArgs(mf.Path, outPath, info, *pol, action, w.hardware(jctx))
+	args := BuildArgs(mf.Path, outPath, info, *pol, action, hw)
 	_, err = run(
 		jctx,
 		w.prober.FFmpegPath(),
@@ -599,6 +604,56 @@ func (w *Worker) deferred(
 		"transcode.job_id", job.ID,
 		"media_file.path", mf.Path,
 		"torrent.status", status,
+		"transcode.deferred_until", until,
+	)
+	return true
+}
+
+// deferredForHardware reports whether the job was put back on the queue
+// because hw_accel names vaapi and the device cannot serve the encode. Where
+// auto falls back to libx265 per job, vaapi is a statement that the GPU is the
+// budget: the software encoder needs roughly a gigabyte more RSS than the
+// hardware path, enough for a 1 Gi pod sized for VAAPI to be OOM-killed by the
+// fallback. An hour back on the queue is recoverable; the kill is not.
+func (w *Worker) deferredForHardware(
+	ctx context.Context,
+	job *ent.TranscodeJob,
+	pol *config.TranscodePolicy,
+	hw *HW,
+) bool {
+	cfg := config.Get()
+	if cfg == nil || cfg.Transcoding.HWAccel != "vaapi" {
+		return false
+	}
+	var reason string
+	switch {
+	case hw == nil:
+		reason = "hardware probe failed"
+		if err := w.hwProbeError(); err != nil {
+			reason = err.Error()
+		}
+	case hw.Encoders[pol.To.VideoCodec] == "":
+		reason = "no " + pol.To.VideoCodec + " encoder on device"
+	default:
+		return false
+	}
+
+	until := time.Now().Add(deferRecheck)
+	if err := w.db.DeferTranscodeJob(ctx, job.ID, until); err != nil {
+		slog.ErrorContext(ctx, "could not defer a transcode job",
+			"transcode.job_id", job.ID, "error", err)
+		return false
+	}
+	w.forgetHardware()
+	trace.SpanFromContext(ctx).SetAttributes(
+		attribute.String("transcode.outcome", "deferred"),
+	)
+	slog.WarnContext(
+		ctx,
+		"deferred a transcode: hw_accel is vaapi and the device cannot encode it",
+		"transcode.job_id", job.ID,
+		"transcode.hw_reason", reason,
+		"transcoding.hw_device", cfg.Transcoding.HWDevice,
 		"transcode.deferred_until", until,
 	)
 	return true

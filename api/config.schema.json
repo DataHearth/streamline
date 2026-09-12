@@ -571,7 +571,7 @@
         "hw_accel": {
           "type": "string",
           "enum": ["auto", "none", "vaapi"],
-          "description": "Hardware encoder backend. auto probes hw_device once and falls back to software when the probe fails or the target codec has no hardware encoder; none forces software."
+          "description": "Hardware encoder backend. auto probes hw_device once and falls back to software when the probe fails or the target codec has no hardware encoder; none forces software; vaapi requires the hardware and defers such a job for an hour instead of encoding it in software, spending no attempt and re-probing on the next claim."
         },
         "hw_device": {
           "type": "string",

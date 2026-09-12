@@ -154,7 +154,7 @@ services:
 
 With the Helm chart, set `hwAccel.enabled: true` and pick the `-vaapi` image tag. The chart requests the GPU through a device plugin rather than a hostPath or a privileged pod, so the cluster needs one installed: `hwAccel.resourceName` defaults to `gpu.intel.com/i915` and is `amd.com/gpu` for AMD's plugin. `hwAccel.device` is the node inside the pod (default `/dev/dri/renderD128`), and `hwAccel.supplementalGroups` is the list of `video`/`render` gids to grant, which depends on the host distribution.
 
-Then set `transcoding.hw_accel` (default `auto`, so usually nothing to do) and `transcoding.hw_device` if your node is not `renderD128`. Settings → Transcoding reports whether the device answered. A bare-metal install needs no image at all: any ffmpeg with VAAPI on `$PATH` or in `ffmpeg.path` will do. See [Configuration Reference](Configuration-Reference#transcoding) for the two keys.
+Then set `transcoding.hw_accel` (default `auto`, so usually nothing to do) and `transcoding.hw_device` if your node is not `renderD128`. Settings → Transcoding reports whether the device answered. Set it to `vaapi` instead of `auto` when the CPU is not an acceptable fallback — on a memory-capped container, say: jobs then wait an hour and re-probe rather than encoding in software. A bare-metal install needs no image at all: any ffmpeg with VAAPI on `$PATH` or in `ffmpeg.path` will do. See [Configuration Reference](Configuration-Reference#transcoding) for the two keys.
 
 </details>
 

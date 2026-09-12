@@ -533,6 +533,57 @@ var _ = Describe("Worker", Label("integration", "transcoding"), func() {
 		),
 	)
 
+	expectHeldForHardware := func(job *ent.TranscodeJob, mf *ent.MediaFile) {
+		GinkgoHelper()
+		Expect(os.ReadFile(mf.Path)).To(Equal([]byte("original-bytes")))
+		Expect(tempFiles()).To(BeEmpty())
+
+		held := reload(job)
+		Expect(held.Status).To(Equal(transcodejob.StatusQueued))
+		Expect(held.DeferredUntil).NotTo(BeNil())
+		Expect(held.DeferredUntil.After(time.Now())).To(BeTrue())
+		Expect(held.Attempts).To(Equal(uint8(0)))
+		Expect(held.StartedAt).To(BeNil())
+	}
+
+	It("defers a job when hw_accel is vaapi and the probe fails", func() {
+		setupTranscoding(map[string]any{"hw_accel": "vaapi"})
+		mf := seedMovieFile("hevc")
+		job := queueJob(mf)
+
+		Expect(worker.tick(ctx)).To(BeTrue())
+
+		expectHeldForHardware(job, mf)
+		// Dropped, so the next claim probes the device again rather than
+		// holding every job on one bad answer.
+		Expect(worker.hw).To(Equal(hwProbe{}))
+	})
+
+	It("defers a job when the device has no encoder for the policy codec", func() {
+		GinkgoT().Setenv("FAKE_VAAPI_ENCODERS", "av1_vaapi")
+		setupTranscoding(map[string]any{"hw_accel": "vaapi"})
+		mf := seedMovieFile("hevc")
+		job := queueJob(mf)
+
+		Expect(worker.tick(ctx)).To(BeTrue())
+
+		expectHeldForHardware(job, mf)
+	})
+
+	It("falls back to software under hw_accel auto when the probe fails", func() {
+		setupTranscoding(map[string]any{"hw_accel": "auto"})
+		mf := seedMovieFile("hevc")
+		job := queueJob(mf)
+		ms.EXPECT().
+			RefreshAll(mock.Anything, "movie", movieRoot).
+			Return(nil).
+			Once()
+
+		Expect(worker.tick(ctx)).To(BeTrue())
+
+		expectTranscoded(job, mf)
+	})
+
 	It("leaves an HDR file alone under a profile it otherwise fails", func() {
 		dv, err := filepath.Abs("testdata/ffprobe_hevc_dv.json")
 		Expect(err).NotTo(HaveOccurred())

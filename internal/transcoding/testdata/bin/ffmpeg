@@ -1,5 +1,8 @@
 #!/bin/sh
-# Fake ffmpeg. "-version" prints a version line. A "-lavfi" run is a VMAF
+# Fake ffmpeg. "-version" prints a version line. "-encoders" prints the VAAPI
+# encoders named in $FAKE_VAAPI_ENCODERS (space-separated, empty by default —
+# a static build with no libva, which is what the hardware probe refuses on).
+# A "-lavfi" run is a VMAF
 # window: it prints a score line on stderr ($FAKE_VMAF, default 95) unless
 # $FAKE_VMAF_MISSING=1, which fails like a build without libvmaf.
 # $FAKE_VMAF_MARKER/$FAKE_VMAF_SLEEP park a window the same way
@@ -16,6 +19,10 @@
 # pipes: a cancelled run kills this shell, and an inheriting child would hold
 # the read end open for the rest of its sleep, stalling the reader.
 if [ "$1" = "-version" ]; then echo "ffmpeg version 7.1.1-fake"; exit 0; fi
+if [ "$2" = "-encoders" ]; then
+	for e in $FAKE_VAAPI_ENCODERS; do echo " V....D $e  fake (VAAPI)"; done
+	exit 0
+fi
 for a in "$@"; do
 	if [ "$a" = "-lavfi" ]; then
 		if [ "$FAKE_VMAF_MISSING" = "1" ]; then

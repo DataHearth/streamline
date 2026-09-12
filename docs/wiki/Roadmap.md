@@ -45,7 +45,7 @@ Transcoding rewrites files on disk after import, to shrink a library or normalis
 
 Every encode is verified against its source before it replaces the file — duration, resolution, audio and subtitle tracks, a size band, and optionally a full decode pass and a VMAF score — and one that fails is rejected rather than swapped in.
 
-Hardware encoding through VAAPI is shipped on Linux (`transcoding.hw_accel`, with the [`-vaapi` image variant](Installation) or any ffmpeg built with VAAPI); it falls back to the CPU per job when the GPU cannot take the codec. VideoToolbox on macOS remains planned.
+Hardware encoding through VAAPI is shipped on Linux (`transcoding.hw_accel`, with the [`-vaapi` image variant](Installation) or any ffmpeg built with VAAPI); under `auto` it falls back to the CPU per job when the GPU cannot take the codec, while `vaapi` holds the job instead. VideoToolbox on macOS remains planned.
 
 ## Playback
 
