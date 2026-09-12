@@ -264,16 +264,36 @@ func (db *DB) RetryTranscodeJob(ctx context.Context, id uint32) error {
 
 // ResetRunningTranscodeJobs bulk-reverts every running job back to queued —
 // restart-safety for a worker that died mid-transcode, mirroring
-// ListImportingDownloadRecords' role for the import path.
+// ListImportingDownloadRecords' role for the import path. Refunds the
+// attempt ClaimNextTranscodeJob spent and clears started_at, same as
+// DeferTranscodeJob: a restart mid-encode is not a failed attempt, and
+// without the refund a deploy during a long encode silently spent one of
+// the job's max_failures tries.
 func (db *DB) ResetRunningTranscodeJobs(ctx context.Context) (int, error) {
-	n, err := db.client.TranscodeJob.Update().
-		Where(transcodejob.StatusEQ(transcodejob.StatusRunning)).
+	refunded, err := db.client.TranscodeJob.Update().
+		Where(
+			transcodejob.StatusEQ(transcodejob.StatusRunning),
+			transcodejob.AttemptsGT(0),
+		).
 		SetStatus(transcodejob.StatusQueued).
+		AddAttempts(-1).
+		ClearStartedAt().
 		Save(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("reset running transcode jobs: %w", err)
 	}
-	return n, nil
+	// A running row at attempts 0 is unreachable through a claim, but a bulk
+	// decrement would wrap the counter, so it is requeued without the refund
+	// rather than left running for nothing to ever drain.
+	rest, err := db.client.TranscodeJob.Update().
+		Where(transcodejob.StatusEQ(transcodejob.StatusRunning)).
+		SetStatus(transcodejob.StatusQueued).
+		ClearStartedAt().
+		Save(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("reset running transcode jobs: %w", err)
+	}
+	return refunded + rest, nil
 }
 
 // ListTranscodeJobs returns the newest limit jobs of every status other than
