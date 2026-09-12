@@ -135,12 +135,18 @@ FROM lscr.io/linuxserver/ffmpeg:9.0-cli-ls81@sha256:ec8ac72754e6c115d330ec37aa18
 # updates. Grype scanning still runs against this image in CI, same as every
 # other stage — the upgrade step below covers only what apt itself tracks
 # (ca-certificates, tzdata), the rest of the base is linuxserver's to patch.
+#
+# /usr/bin/pebble is a Go binary the Ubuntu base drops in outside dpkg. Nothing
+# here runs it, but grype reports the stdlib it was built with as if it were
+# ours — a lagging Go toolchain there failed the scan as `stdlib go1.26.5` while
+# streamline itself was built by the pinned 1.26.6 image. Deleting the file is
+# the only way to take it off the report; no package owns it to purge.
 RUN apt-get update && \
     apt-get upgrade -y --no-install-recommends && \
     apt-get install -y --no-install-recommends \
       ca-certificates \
       tzdata && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* /usr/bin/pebble
 
 WORKDIR /
 
