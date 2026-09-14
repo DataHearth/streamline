@@ -12,7 +12,7 @@ dependencies:
     condition: alloy.enabled
   - name: victoria-metrics-single
     alias: victoriametrics
-    version: 0.45.0
+    version: 0.46.0
     repository: https://victoriametrics.github.io/helm-charts/
     condition: victoriametrics.enabled
   - name: victoria-logs-single
