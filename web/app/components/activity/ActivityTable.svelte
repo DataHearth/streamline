@@ -23,6 +23,7 @@
 		onPause,
 		onResume,
 		onRemove,
+		onRetry,
 		onResolve,
 	}: {
 		view: "queue" | "history";
@@ -38,6 +39,7 @@
 		onPause: (id: number) => void;
 		onResume: (id: number) => void;
 		onRemove: (id: number) => void;
+		onRetry: (id: number) => void;
 		onResolve?: (item: QueueEntry) => void;
 	} = $props();
 
@@ -303,6 +305,7 @@
 							{onPause}
 							{onResume}
 							{onRemove}
+							{onRetry}
 						/>
 					{/if}
 				{/each}

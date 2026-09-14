@@ -30,7 +30,7 @@ func (TVShow) Fields() []ent.Field {
 		field.Time("first_aired").Optional().Nillable(),
 		field.String("overview").Optional(),
 		field.Enum("series_status").
-			Values("continuing", "ended", "upcoming").
+			Values("continuing", "ended").
 			Default("continuing"),
 		field.Enum("type").
 			Values("standard", "anime", "daily").

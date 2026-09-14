@@ -1615,7 +1615,6 @@ func (e SystemInfoSeedAdminSecret) Valid() bool {
 const (
 	TVShowSeriesStatusContinuing TVShowSeriesStatus = "continuing"
 	TVShowSeriesStatusEnded      TVShowSeriesStatus = "ended"
-	TVShowSeriesStatusUpcoming   TVShowSeriesStatus = "upcoming"
 )
 
 // Valid indicates whether the value is a known member of the TVShowSeriesStatus enum.
@@ -1624,8 +1623,6 @@ func (e TVShowSeriesStatus) Valid() bool {
 	case TVShowSeriesStatusContinuing:
 		return true
 	case TVShowSeriesStatusEnded:
-		return true
-	case TVShowSeriesStatusUpcoming:
 		return true
 	default:
 		return false
@@ -2996,12 +2993,17 @@ type DownloadClientCreateClientType string
 
 // DownloadConfigPatch Only provided fields are applied.
 type DownloadConfigPatch struct {
-	SelectionGrace *string `json:"selection_grace,omitempty"`
-	SelectiveFiles *bool   `json:"selective_files,omitempty"`
+	// PathMappings Replaces the whole list; there is no per-entry patch.
+	PathMappings   *[]PathMapping `json:"path_mappings,omitempty"`
+	SelectionGrace *string        `json:"selection_grace,omitempty"`
+	SelectiveFiles *bool          `json:"selective_files,omitempty"`
 }
 
 // DownloadConfigView defines model for DownloadConfigView.
 type DownloadConfigView struct {
+	// PathMappings Translates a save path a download client reports into one streamline can open, for deployments where the two mount the same volume at different roots. First matching prefix wins; empty means they already agree.
+	PathMappings []PathMapping `json:"path_mappings"`
+
 	// SelectionGrace Go duration string. How long a magnet-sourced selection may sit pending before giving up and downloading whole.
 	SelectionGrace string `json:"selection_grace"`
 
@@ -3986,6 +3988,15 @@ type PatchSeriesRequestPreset string
 // number, so a wrong inference mis-matches every file. Set here it
 // survives a metadata refresh.
 type PatchSeriesRequestType string
+
+// PathMapping defines model for PathMapping.
+type PathMapping struct {
+	// From Absolute prefix as the download client reports it.
+	From string `json:"from"`
+
+	// To Absolute prefix streamline reads the same files at.
+	To string `json:"to"`
+}
 
 // PathMigration defines model for PathMigration.
 type PathMigration struct {
@@ -4985,7 +4996,6 @@ type TVShowCounts struct {
 	// TypeTotal The type facet's "all" row.
 	TypeTotal   int `json:"type_total"`
 	Unmonitored int `json:"unmonitored"`
-	Upcoming    int `json:"upcoming"`
 
 	// WantedEpisodes Library-wide and unfiltered, like `downloading_episodes`: the nav
 	// badge and the dashboard read both, and neither knows the list's
@@ -6081,9 +6091,9 @@ type ListSeriesParams struct {
 	Page  *SeriesPage  `form:"page,omitempty" json:"page,omitempty"`
 	Limit *SeriesLimit `form:"limit,omitempty" json:"limit,omitempty"`
 
-	// Status Filter by series_status (continuing/ended/upcoming), "missing",
-	// "downloading" or "importing". The last three are per-show facts read
-	// off the episode tree, not series_status values.
+	// Status Filter by series_status (continuing/ended), "missing", "downloading"
+	// or "importing". The last three are per-show facts read off the episode
+	// tree, not series_status values.
 	Status *SeriesStatus `form:"status,omitempty" json:"status,omitempty"`
 
 	// Monitored Restrict to monitored or unmonitored shows, on the show's own flag. A
@@ -6112,9 +6122,9 @@ type ListSeriesParamsOrder string
 
 // GetSeriesCountsParams defines parameters for GetSeriesCounts.
 type GetSeriesCountsParams struct {
-	// Status Filter by series_status (continuing/ended/upcoming), "missing",
-	// "downloading" or "importing". The last three are per-show facts read
-	// off the episode tree, not series_status values.
+	// Status Filter by series_status (continuing/ended), "missing", "downloading"
+	// or "importing". The last three are per-show facts read off the episode
+	// tree, not series_status values.
 	Status *SeriesStatus `form:"status,omitempty" json:"status,omitempty"`
 
 	// Monitored Restrict to monitored or unmonitored shows, on the show's own flag. A
@@ -6392,6 +6402,9 @@ type ServerInterface interface {
 	// DeleteHistoryItem Delete one history record.
 	// (DELETE /activity/history/{id})
 	DeleteHistoryItem(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// RetryFailedImport Re-run the import for a failed download record.
+	// (POST /activity/history/{id}/retry)
+	RetryFailedImport(w http.ResponseWriter, r *http.Request, id ResourceID)
 	// ListPending Adopted-torrent proposals awaiting a decision.
 	// (GET /activity/pending)
 	ListPending(w http.ResponseWriter, r *http.Request)
@@ -6926,6 +6939,12 @@ func (_ Unimplemented) ClearCompletedHistory(w http.ResponseWriter, r *http.Requ
 // DeleteHistoryItem Delete one history record.
 // (DELETE /activity/history/{id})
 func (_ Unimplemented) DeleteHistoryItem(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// RetryFailedImport Re-run the import for a failed download record.
+// (POST /activity/history/{id}/retry)
+func (_ Unimplemented) RetryFailedImport(w http.ResponseWriter, r *http.Request, id ResourceID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -8130,6 +8149,32 @@ func (siw *ServerInterfaceWrapper) DeleteHistoryItem(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DeleteHistoryItem(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RetryFailedImport operation middleware
+func (siw *ServerInterfaceWrapper) RetryFailedImport(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RetryFailedImport(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -13158,6 +13203,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Delete(options.BaseURL+"/activity/history/{id}", wrapper.DeleteHistoryItem)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/activity/history/{id}/retry", wrapper.RetryFailedImport)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/activity/history/clear-completed", wrapper.ClearCompletedHistory)
 	})
 	r.Group(func(r chi.Router) {
@@ -13589,6 +13637,77 @@ func (response DeleteHistoryItem404JSONResponse) VisitDeleteHistoryItemResponse(
 type DeleteHistoryItem500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response DeleteHistoryItem500JSONResponse) VisitDeleteHistoryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RetryFailedImportRequestObject struct {
+	Id ResourceID `json:"id"`
+}
+
+type RetryFailedImportResponseObject interface {
+	VisitRetryFailedImportResponse(w http.ResponseWriter) error
+}
+
+type RetryFailedImport204Response = NoContentResponse
+
+func (response RetryFailedImport204Response) VisitRetryFailedImportResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type RetryFailedImport403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response RetryFailedImport403JSONResponse) VisitRetryFailedImportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RetryFailedImport404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response RetryFailedImport404JSONResponse) VisitRetryFailedImportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RetryFailedImport409JSONResponse struct{ ConflictJSONResponse }
+
+func (response RetryFailedImport409JSONResponse) VisitRetryFailedImportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RetryFailedImport500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response RetryFailedImport500JSONResponse) VisitRetryFailedImportResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -23972,6 +24091,9 @@ type StrictServerInterface interface {
 	// DeleteHistoryItem Delete one history record.
 	// (DELETE /activity/history/{id})
 	DeleteHistoryItem(ctx context.Context, request DeleteHistoryItemRequestObject) (DeleteHistoryItemResponseObject, error)
+	// RetryFailedImport Re-run the import for a failed download record.
+	// (POST /activity/history/{id}/retry)
+	RetryFailedImport(ctx context.Context, request RetryFailedImportRequestObject) (RetryFailedImportResponseObject, error)
 	// ListPending Adopted-torrent proposals awaiting a decision.
 	// (GET /activity/pending)
 	ListPending(ctx context.Context, request ListPendingRequestObject) (ListPendingResponseObject, error)
@@ -24615,6 +24737,32 @@ func (sh *strictHandler) DeleteHistoryItem(w http.ResponseWriter, r *http.Reques
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(DeleteHistoryItemResponseObject); ok {
 		if err := validResponse.VisitDeleteHistoryItemResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RetryFailedImport operation middleware
+func (sh *strictHandler) RetryFailedImport(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request RetryFailedImportRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RetryFailedImport(ctx, request.(RetryFailedImportRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RetryFailedImport")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RetryFailedImportResponseObject); ok {
+		if err := validResponse.VisitRetryFailedImportResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

@@ -714,6 +714,105 @@ func (db *DB) RecordImportFailure(
 	return tx.Commit()
 }
 
+// recordEpisodesWanted selects the episodes a record links that are still
+// "wanted" — the rows an import is about to take over.
+//
+// Record-scoped, not season-scoped, and that is the difference from
+// MarkRecordEpisodesImporting: that one walks the whole season and skips
+// "wanted" on purpose, because a wanted episode in the season of a running
+// grab is usually not part of it. Both callers here are the case where the
+// opposite holds — the record's own linked episodes are wanted precisely
+// because this record is what is going to fill them.
+func recordEpisodesWanted(recordID uint32) predicate.Episode {
+	return episode.And(
+		episode.HasDownloadRecordsWith(downloadrecord.ID(recordID)),
+		episode.StatusEQ(episode.StatusWanted),
+	)
+}
+
+// MarkWantedRecordEpisodesImporting moves a record's own linked episodes from
+// "wanted" to "importing".
+//
+// Adoption needs this and the normal completion sweep does not: a grab
+// streamline issued left its episodes "downloading", which is what
+// MarkRecordEpisodesImporting moves. An adopted torrent was never grabbed
+// here, so its episodes sit at "wanted" and no path moved them at all — the
+// record read "importing" while every episode behind it still read "wanted",
+// so the series list's importing facet (which counts shows by episode status)
+// reported nothing while an import was running.
+//
+// Episodes that already hold a file are left alone: an adopted upgrade is not
+// a gap being filled, and RecordImportFailure would have no way to walk an
+// "available" episode back.
+func (db *DB) MarkWantedRecordEpisodesImporting(
+	ctx context.Context,
+	recordID uint32,
+) error {
+	if _, err := db.client.Episode.Update().
+		Where(recordEpisodesWanted(recordID)).
+		SetStatus(episode.StatusImporting).
+		Save(ctx); err != nil {
+		return fmt.Errorf("mark wanted record episodes importing: %w", err)
+	}
+	return nil
+}
+
+// RetryFailedDownloadRecord puts a terminally-failed record back in front of
+// the importer: importing, attempt counter cleared, failure reason dropped.
+//
+// The media it owns is walked back with it, because the terminal failure moved
+// that too — RecordImportFailure flips the movie to failed and the linked
+// episode to wanted. Leaving either behind would have the retry importing into
+// rows that claim nothing is coming, and the missing-search would grab a
+// second release for an episode already being imported.
+//
+// Only rows this record owns are touched: the episode edge, not the season.
+// MarkRecordEpisodesImporting deliberately leaves "wanted" alone because a
+// wanted episode is usually none of a running grab's business — here "wanted"
+// is precisely what this record's own failure wrote.
+func (db *DB) RetryFailedDownloadRecord(ctx context.Context, id uint32) error {
+	rec, err := db.client.DownloadRecord.Query().
+		Where(
+			downloadrecord.ID(id),
+			downloadrecord.StatusEQ(downloadrecord.StatusFailed),
+		).
+		WithMovie().
+		Only(ctx)
+	if err != nil {
+		return err
+	}
+
+	tx, err := db.client.Tx(ctx)
+	if err != nil {
+		return err
+	}
+	if err := tx.DownloadRecord.UpdateOneID(id).
+		SetStatus(downloadrecord.StatusImporting).
+		SetImportAttempts(0).
+		SetFailureReason("").
+		Exec(ctx); err != nil {
+		tx.Rollback()
+		return fmt.Errorf("update download record: %w", err)
+	}
+	if rec.Edges.Movie != nil {
+		if err := tx.Movie.UpdateOneID(rec.Edges.Movie.ID).
+			SetStatus(movie.StatusImporting).
+			SetFailureReason("").
+			Exec(ctx); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("update movie: %w", err)
+		}
+	}
+	if _, err := tx.Episode.Update().
+		Where(recordEpisodesWanted(id)).
+		SetStatus(episode.StatusImporting).
+		Save(ctx); err != nil {
+		tx.Rollback()
+		return fmt.Errorf("update episodes: %w", err)
+	}
+	return tx.Commit()
+}
+
 // DeleteCompletedDownloadRecordsBefore deletes records whose status is
 // completed and whose imported_at is older than cutoff. Returns the number of
 // rows deleted.

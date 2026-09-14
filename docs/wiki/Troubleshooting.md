@@ -97,6 +97,25 @@ Fix the mounts (one parent mount, per [the folder rule](Installation#before-you-
 
 **An import scan entry fails with `only N of M files matched an episode`.** The folder is refused rather than adopted into the wrong show. Two things cause it. Either the folder really is a different show — accept a different match in the review list. Or the filenames carry numbering the show doesn't have: `S02E23` for a season with 22 episodes is a re-numbered DVD rip, and the guard is right to refuse it. Check the season and episode numbers on the series page against the filenames before treating it as a bug.
 
+**A failed import is not a dead end any more.** Expand the row in **Activity → History** and use **Retry import** once you've fixed the cause. It clears the attempt counter and hands the record back to the importer. It reads the *same* files as before, so fixing the cause first is the whole point — retrying an unchanged failure just fails again.
+
+---
+
+## An adopted torrent says "files not found"
+
+You added a torrent in your download client yourself, tagged it `streamline` so Streamline would pick it up, and it shows in **Activity → Needs attention** as a proposal reading `files not found — client reports /some/path`.
+
+**qBittorrent only moves files to a category's save path under Automatic Torrent Management.** A torrent added in Manual mode keeps whatever save path it was added with, forever. Setting its category changes the label and nothing else — so Streamline adopts it, looks under `library.download_path/<torrent name>`, and finds nothing.
+
+The proposal names both paths so you can compare them. Two fixes:
+
+- **Move the files.** Right-click the torrent → **Automatic Torrent Management**, and qBittorrent relocates it to the category's save path immediately. (**Set location** does the same thing for a one-off.) To stop it recurring: Options → Downloads → **Default Torrent Management Mode: Automatic**.
+- **Teach Streamline the other path.** If the files are somewhere it should be reading from anyway, add a [path mapping](Configuration-Reference#path-mappings) — particularly when your client and Streamline mount the same volume at different roots.
+
+Either way, the proposal re-resolves on the next monitor tick.
+
+> Before this check existed, an unlocatable torrent was auto-imported anyway, failed three times on a path that never existed, and landed in History as permanently failed.
+
 ---
 
 ## Permission denied on import

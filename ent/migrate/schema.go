@@ -821,7 +821,7 @@ var (
 		{Name: "year", Type: field.TypeUint16},
 		{Name: "first_aired", Type: field.TypeTime, Nullable: true},
 		{Name: "overview", Type: field.TypeString, Nullable: true},
-		{Name: "series_status", Type: field.TypeEnum, Enums: []string{"continuing", "ended", "upcoming"}, Default: "continuing"},
+		{Name: "series_status", Type: field.TypeEnum, Enums: []string{"continuing", "ended"}, Default: "continuing"},
 		{Name: "type", Type: field.TypeEnum, Enums: []string{"standard", "anime", "daily"}, Default: "standard"},
 		{Name: "monitored", Type: field.TypeBool, Default: true},
 		{Name: "tvdb_id", Type: field.TypeUint32, Unique: true},

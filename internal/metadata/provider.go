@@ -142,7 +142,7 @@ const (
 // TVDetails is the full TVDB record used to seed a show + its seasons/episodes.
 type TVDetails struct {
 	TVResult
-	Status     string // "continuing" | "ended" | "upcoming"
+	Status     string // "continuing" | "ended"
 	Type       SeriesType
 	Creator    string
 	Runtime    uint16

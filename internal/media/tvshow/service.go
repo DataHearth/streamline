@@ -320,7 +320,6 @@ func (s *Service) Counts(ctx context.Context, p FilterParams) (Counts, error) {
 		StatusTotal:         f.StatusTotal,
 		Continuing:          f.Continuing,
 		Ended:               f.Ended,
-		Upcoming:            f.Upcoming,
 		Missing:             f.Missing,
 		Downloading:         f.Downloading,
 		Importing:           f.Importing,
@@ -1310,7 +1309,6 @@ type Counts struct {
 	StatusTotal int
 	Continuing  int
 	Ended       int
-	Upcoming    int
 	// Missing is how many shows have at least one aired, monitored episode
 	// with no file — the population behind the list's "missing" tab, which is
 	// a per-show fact and not derivable from WantedEpisodes.

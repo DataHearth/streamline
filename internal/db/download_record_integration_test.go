@@ -573,6 +573,127 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 		})
 	})
 
+	Describe("MarkWantedRecordEpisodesImporting", func() {
+		It("moves a record's own wanted episodes, leaving the season alone", func() {
+			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "The Black Sea", Year: 2024, TvdbID: 9204,
+				Seasons: []SeasonSeed{{
+					Number: 1,
+					Episodes: []EpisodeSeed{
+						{Number: 1, Title: "Pilot"},
+						{Number: 2, Title: "Second"},
+					},
+				}},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			eps := show.Edges.Seasons[0].Edges.Episodes
+			rec, err := store.CreateDownloadRecord(
+				ctx, CreateDownloadRecordParams{
+					Title: "t", Size: 1, TorrentHash: "adopt-mark",
+					Status:             downloadrecord.StatusImporting,
+					EpisodeID:          eps[0].ID,
+					DownloadClientName: clientName,
+				},
+			)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(store.MarkWantedRecordEpisodesImporting(ctx, rec.ID)).
+				To(Succeed())
+
+			linked, _ := client.Episode.Get(ctx, eps[0].ID)
+			Expect(linked.Status).To(Equal(episode.StatusImporting))
+			other, _ := client.Episode.Get(ctx, eps[1].ID)
+			Expect(other.Status).To(Equal(episode.StatusWanted),
+				"an episode this record does not link is not its business")
+		})
+
+		It("leaves an episode that already holds a file alone", func() {
+			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "The Black Sea", Year: 2024, TvdbID: 9205,
+				Seasons: []SeasonSeed{{
+					Number:   1,
+					Episodes: []EpisodeSeed{{Number: 1, Title: "Pilot"}},
+				}},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			episodeID := show.Edges.Seasons[0].Edges.Episodes[0].ID
+			_, err = client.Episode.UpdateOneID(episodeID).
+				SetStatus(episode.StatusAvailable).Save(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			rec, err := store.CreateDownloadRecord(
+				ctx, CreateDownloadRecordParams{
+					Title: "t", Size: 1, TorrentHash: "adopt-upgrade",
+					Status:             downloadrecord.StatusImporting,
+					EpisodeID:          episodeID,
+					DownloadClientName: clientName,
+				},
+			)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(store.MarkWantedRecordEpisodesImporting(ctx, rec.ID)).
+				To(Succeed())
+
+			e, _ := client.Episode.Get(ctx, episodeID)
+			Expect(e.Status).To(Equal(episode.StatusAvailable),
+				"an upgrade has nothing to walk back to on failure")
+		})
+	})
+
+	Describe("RetryFailedDownloadRecord", func() {
+		It("walks a terminal failure back to importing, media included", func() {
+			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "The Black Sea", Year: 2024, TvdbID: 9203,
+				Seasons: []SeasonSeed{{
+					Number:   1,
+					Episodes: []EpisodeSeed{{Number: 1, Title: "Pilot"}},
+				}},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			episodeID := show.Edges.Seasons[0].Edges.Episodes[0].ID
+			_, err = client.Episode.UpdateOneID(episodeID).
+				SetStatus(episode.StatusDownloading).Save(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			rec, err := store.CreateDownloadRecord(
+				ctx, CreateDownloadRecordParams{
+					Title: "t", Size: 1, TorrentHash: "tv-retry",
+					Status:             downloadrecord.StatusImporting,
+					EpisodeID:          episodeID,
+					DownloadClientName: clientName,
+				},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(store.RecordImportFailure(ctx, RecordImportFailureParams{
+				RecordID: rec.ID, EpisodeID: episodeID,
+				Terminal: true, Reason: "stat save path", Attempts: 3,
+			})).To(Succeed())
+
+			Expect(store.RetryFailedDownloadRecord(ctx, rec.ID)).To(Succeed())
+
+			got, _ := client.DownloadRecord.Get(ctx, rec.ID)
+			Expect(got.Status).To(Equal(downloadrecord.StatusImporting))
+			Expect(got.ImportAttempts).To(BeZero(),
+				"a retry that inherited the count would fail on its first run")
+			Expect(got.FailureReason).To(BeEmpty())
+
+			e, _ := client.Episode.Get(ctx, episodeID)
+			Expect(e.Status).To(Equal(episode.StatusImporting),
+				"leaving it wanted lets the missing search grab a duplicate")
+		})
+
+		It("refuses a record that has not failed", func() {
+			rec, err := store.CreateDownloadRecord(
+				ctx, CreateDownloadRecordParams{
+					Title: "t", Size: 1, TorrentHash: "retry-live",
+					Status:             downloadrecord.StatusDownloading,
+					DownloadClientName: clientName,
+				},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ent.IsNotFound(store.RetryFailedDownloadRecord(ctx, rec.ID))).
+				To(BeTrue(), "the status guard has to be in the query")
+		})
+	})
+
 	Describe("MarkEpisodeDownloading", func() {
 		newEpisode := func(tvdb uint32) uint32 {
 			GinkgoHelper()

@@ -3,7 +3,6 @@
 		| "all"
 		| "continuing"
 		| "ended"
-		| "upcoming"
 		| "missing"
 		| "downloading"
 		| "importing";
@@ -118,12 +117,6 @@
 			label: i18n.series_ended(),
 			tint: "text-status-completed",
 			dot: "bg-status-completed",
-		},
-		{
-			key: "upcoming",
-			label: i18n.series_upcoming(),
-			tint: "text-status-fetching",
-			dot: "bg-status-fetching",
 		},
 		{
 			key: "missing",

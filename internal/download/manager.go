@@ -114,6 +114,27 @@ func downloadSavePath(name string) (string, error) {
 	return path, nil
 }
 
+// MapClientPath rewrites a path as a download client reported it into this
+// process's view, per download.path_mappings. First matching prefix wins, and
+// an unmatched path is returned unchanged — with no mappings configured (the
+// single-host default) this is the identity.
+func MapClientPath(p string) string {
+	if p == "" {
+		return p
+	}
+	for _, m := range config.Get().Download.PathMappings {
+		if m.From == "" || m.To == "" || !PathUnderRoot(p, m.From) {
+			continue
+		}
+		rel, err := filepath.Rel(m.From, p)
+		if err != nil {
+			continue
+		}
+		return filepath.Join(m.To, rel)
+	}
+	return p
+}
+
 var (
 	tracer = otel.Tracer("github.com/datahearth/streamline/internal/download")
 	meter  = otel.Meter("github.com/datahearth/streamline/internal/download")

@@ -171,6 +171,43 @@ func (s *Server) DeleteHistoryItem(
 	return DeleteHistoryItem204Response{}, nil
 }
 
+// RetryFailedImport hands a terminally-failed record back to the importer.
+// Nothing else can: resolve only accepts a held record and the importer's scan
+// only picks up records already importing, so before this a record that
+// exhausted library.import_max_attempts was unreachable — including after the
+// operator fixed whatever caused it.
+func (s *Server) RetryFailedImport(
+	ctx context.Context,
+	request RetryFailedImportRequestObject,
+) (RetryFailedImportResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return RetryFailedImport403JSONResponse{
+			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
+	rec, err := s.store.FindDownloadRecordByID(ctx, request.Id)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return RetryFailedImport404JSONResponse{
+				NotFoundJSONResponse: errNotFound("download record not found"),
+			}, nil
+		}
+		return nil, err
+	}
+	if rec.Status != downloadrecord.StatusFailed {
+		return RetryFailedImport409JSONResponse{
+			ConflictJSONResponse: errConflict("download record has not failed"),
+		}, nil
+	}
+	if err := s.store.RetryFailedDownloadRecord(ctx, rec.ID); err != nil {
+		return nil, err
+	}
+	s.importer.Enqueue(rec.ID)
+	slog.InfoContext(ctx, "retrying a failed import",
+		"record.id", rec.ID, "save_path", rec.SavePath)
+	return RetryFailedImport204Response{}, nil
+}
+
 func (s *Server) ClearCompletedHistory(
 	ctx context.Context,
 	_ ClearCompletedHistoryRequestObject,

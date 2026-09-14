@@ -706,9 +706,14 @@ func normalizeStatus(s string) string {
 		return "continuing"
 	case "ended", "canceled", "cancelled":
 		return "ended"
-	case "upcoming", "planned", "in production":
-		return "upcoming"
 	default:
+		// "Upcoming", "Planned" and "In Production" land here with everything
+		// else TVDB might send. A series that has not premiered is still a
+		// series that is coming, which is what "continuing" has to mean once
+		// the third value is gone — and the library only ever holds shows
+		// someone chose to follow, so the distinction bought nothing: the
+		// facet it fed read 0 forever while staying clickable, which is
+		// indistinguishable from a filter that does not work.
 		return "continuing"
 	}
 }

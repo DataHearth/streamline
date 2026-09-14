@@ -768,9 +768,14 @@ func libraryConfigView(l config.LibraryConfig) LibraryConfigJSONResponse {
 
 // downloadConfigView maps config.DownloadConfig into the generated view.
 func downloadConfigView(d config.DownloadConfig) DownloadConfigJSONResponse {
+	mappings := make([]PathMapping, 0, len(d.PathMappings))
+	for _, m := range d.PathMappings {
+		mappings = append(mappings, PathMapping{From: m.From, To: m.To})
+	}
 	return DownloadConfigJSONResponse{
 		SelectiveFiles: d.SelectiveFiles,
 		SelectionGrace: d.SelectionGrace,
+		PathMappings:   mappings,
 	}
 }
 
@@ -830,9 +835,21 @@ func (s *Server) UpdateConfigDownload(
 		}, nil
 	}
 
+	var mappings *[]config.PathMapping
+	if req.Body.PathMappings != nil {
+		converted := make([]config.PathMapping, 0, len(*req.Body.PathMappings))
+		for _, m := range *req.Body.PathMappings {
+			converted = append(converted, config.PathMapping{
+				From: m.From,
+				To:   m.To,
+			})
+		}
+		mappings = &converted
+	}
 	updated, err := config.UpdateDownload(ctx, config.DownloadPatch{
 		SelectiveFiles: req.Body.SelectiveFiles,
 		SelectionGrace: req.Body.SelectionGrace,
+		PathMappings:   mappings,
 	})
 	if configLocked(err) {
 		return UpdateConfigDownload403JSONResponse{

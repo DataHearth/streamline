@@ -242,6 +242,7 @@ The `cast` array on a stored movie or series (`GET /movies/{id}`, `GET /series/{
 | `POST` | `/activity/pending/{id}/identify` | Identify a proposal against metadata | 🔒 Admin |
 | `DELETE` | `/activity/pending/{id}` | Forget a proposal so its torrent can be adopted again | 🔒 Admin |
 | `POST` | `/downloads/{id}/resolve` | Release a held download | 🔒 Admin |
+| `POST` | `/activity/history/{id}/retry` | Re-run a failed import — clears the attempt counter and re-queues the record (409 unless it failed) | 🔒 Admin |
 
 ### Requests
 

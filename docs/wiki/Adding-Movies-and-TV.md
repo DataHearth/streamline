@@ -76,7 +76,7 @@ Once added, the show page shows every season and episode, what's on disk, what's
 
 A series card in the library shows the same states, read from its episodes: **Downloading** while any episode has a grab in flight, then **Importing**. Instead of the usual `have/total eps`, the card names what is landing — `S03E04` for a single episode, `S03 pack` for a season, `Full series` for a complete pack — and shows a progress bar underneath. An import has no percentage to report, so its bar runs indeterminate.
 
-Both library toolbars filter on **Status** and **Monitoring** independently — "wanted *and* unmonitored" is one view, not two. The series Status menu adds Downloading and Importing alongside Continuing/Ended/Upcoming/Missing; those three are read off the show's episodes rather than being series statuses of their own.
+Both library toolbars filter on **Status** and **Monitoring** independently — "wanted *and* unmonitored" is one view, not two. The series Status menu adds Missing, Downloading and Importing alongside Continuing/Ended; those three are read off the show's episodes rather than being series statuses of their own. A series is **Continuing** whenever it is still running — including one announced but not yet premiered — or **Ended**.
 
 Cards and detail pages name a **release day** rather than a year once one is known (`2 Feb 2024`) — a film's theatrical release, a show's first air date. An existing library fills these in gradually: the value arrives with the next metadata refresh of each title, and until then the year is shown as before.
 

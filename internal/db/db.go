@@ -332,6 +332,7 @@ type Store interface {
 		p RecordEpisodeImportSuccessParams,
 	) error
 	RecordImportFailure(ctx context.Context, p RecordImportFailureParams) error
+	RetryFailedDownloadRecord(ctx context.Context, id uint32) error
 	SetDownloadRecordSavePath(ctx context.Context, id uint32, path string) error
 	CountLiveDownloadRecords(ctx context.Context) (int, error)
 	// ListDownloadRecordsByPathPrefix returns records whose save_path sits
@@ -775,6 +776,7 @@ type Store interface {
 	SetEpisodeStatus(ctx context.Context, id uint32, status episode.Status) error
 	MarkEpisodeDownloading(ctx context.Context, id uint32) (bool, error)
 	MarkRecordEpisodesImporting(ctx context.Context, recordID uint32) error
+	MarkWantedRecordEpisodesImporting(ctx context.Context, recordID uint32) error
 	SetEpisodeLastSearchAt(ctx context.Context, id uint32, when time.Time) error
 	IncrementEpisodeGrabFailures(ctx context.Context, id uint32) error
 	ResetEpisodeGrabFailures(ctx context.Context, id uint32) error
