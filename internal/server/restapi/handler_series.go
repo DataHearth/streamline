@@ -193,7 +193,6 @@ func (s *Server) GetSeriesCounts(
 			StatusTotal:         c.StatusTotal,
 			Continuing:          c.Continuing,
 			Ended:               c.Ended,
-			Upcoming:            c.Upcoming,
 			Missing:             c.Missing,
 			Downloading:         c.Downloading,
 			Importing:           c.Importing,

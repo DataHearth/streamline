@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { fade, fly } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
-	import { Ban, LoaderCircle, Pause, Play, Trash2, X } from "@lucide/svelte";
+	import { Ban, LoaderCircle, Pause, Play, RotateCw, Trash2, X } from "@lucide/svelte";
 	import Dialog from "../modals/Dialog.svelte";
 	import ProgressRing from "./ProgressRing.svelte";
 	import StatusPill from "../shared/StatusPill.svelte";
@@ -27,6 +27,7 @@
 		onPause,
 		onResume,
 		onRemove,
+		onRetry,
 	}: {
 		item: QueueEntry | HistoryEntry | null;
 		view: "queue" | "history";
@@ -37,10 +38,12 @@
 		onPause: (id: number) => void;
 		onResume: (id: number) => void;
 		onRemove: (id: number) => void;
+		onRetry: (id: number) => void;
 	} = $props();
 
 	let confirmCancel = $state(false);
 	let confirmRemove = $state(false);
+	let confirmRetry = $state(false);
 
 	$effect(() => {
 		if (!item) return;
@@ -62,6 +65,9 @@
 	// client for a torrent that is already done, and the backend refuses them.
 	// Resolve is the only move, and it lives on the row this sheet opened from.
 	let isHeld = $derived(view === "queue" && item?.status === "held");
+	// Only a failed record can be retried — the backend 409s anything else, and
+	// a failure is the only history state that stopped short of importing.
+	let canRetry = $derived(view === "history" && item?.status === "failed");
 	let progress = $derived(
 		view === "history" ? 1 : queue?.status === "importing" ? 1 : (queue?.progress ?? 0),
 	);
@@ -255,6 +261,19 @@
 							{i18n.common_cancel()}
 						</button>
 					{:else}
+						{#if canRetry}
+							<button
+								type="button"
+								disabled={busy}
+								onclick={() => (confirmRetry = true)}
+								class={cn(
+									"inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-accent/15 text-[14px] font-semibold text-accent transition active:bg-accent/25 disabled:opacity-50",
+								)}
+							>
+								<RotateCw size={16} aria-hidden="true" />
+								{i18n.activity_retry_import()}
+							</button>
+						{/if}
 						<button
 							type="button"
 							disabled={busy}
@@ -301,6 +320,30 @@
 			{i18n.activity_cancel_help()}
 			<span class="font-medium text-fg">{item.title}</span> from the queue. The movie
 			returns to <em>wanted</em> if it has no file yet.
+		</p>
+	</Dialog>
+
+	<Dialog
+		open={confirmRetry}
+		title={i18n.activity_retry_import_confirm()}
+		inlineActions
+		onClose={() => (confirmRetry = false)}
+		actions={[
+			{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },
+			{
+				label: i18n.activity_retry_import(),
+				variant: "primary",
+				onClick: () => {
+					onRetry(item.id);
+					onClose();
+				},
+			},
+		]}
+	>
+		<p class="text-sm text-fg-muted">
+			{i18n.activity_retry_help()}
+			<span class="font-medium text-fg">{item.title}</span>. It reads the same
+			files as before, so fix what made it fail first or it just fails again.
 		</p>
 	</Dialog>
 

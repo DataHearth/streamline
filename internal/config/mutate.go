@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -63,6 +64,9 @@ type LibraryPatch struct {
 type DownloadPatch struct {
 	SelectiveFiles *bool
 	SelectionGrace *string
+	// PathMappings replaces the whole list when non-nil. A pointer to an empty
+	// slice is how the list is cleared; nil leaves it alone.
+	PathMappings *[]PathMapping
 }
 
 // SystemPatch carries optional field updates to the server's own bookkeeping:
@@ -184,6 +188,32 @@ func checkDuration(key string, v *string) error {
 	}
 	if _, err := time.ParseDuration(*v); err != nil {
 		return fmt.Errorf("%s: %w", key, err)
+	}
+	return nil
+}
+
+// checkPathMappings rejects a mapping list before it is stored. Both sides
+// must be absolute: the translation is a prefix containment test resolved
+// against this process's working directory, so a relative prefix would match
+// whatever the daemon happened to be started from.
+func checkPathMappings(v *[]PathMapping) error {
+	if v == nil {
+		return nil
+	}
+	for i, m := range *v {
+		for key, val := range map[string]string{"from": m.From, "to": m.To} {
+			if strings.TrimSpace(val) == "" {
+				return fmt.Errorf(
+					"path_mappings[%d].%s: must not be empty", i, key,
+				)
+			}
+			if !filepath.IsAbs(val) {
+				return fmt.Errorf(
+					"path_mappings[%d].%s: must be an absolute path, got %q",
+					i, key, val,
+				)
+			}
+		}
 	}
 	return nil
 }
@@ -385,6 +415,9 @@ func UpdateDownload(
 	); err != nil {
 		return DownloadConfig{}, err
 	}
+	if err := checkPathMappings(patch.PathMappings); err != nil {
+		return DownloadConfig{}, err
+	}
 
 	var out DownloadConfig
 	err := Update(ctx, func(c *Config) error {
@@ -393,6 +426,9 @@ func UpdateDownload(
 		}
 		if patch.SelectionGrace != nil {
 			c.Download.SelectionGrace = *patch.SelectionGrace
+		}
+		if patch.PathMappings != nil {
+			c.Download.PathMappings = *patch.PathMappings
 		}
 		out = c.Download
 		return nil

@@ -224,7 +224,6 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 			Expect(c.TypeTotal).To(Equal(6))
 			Expect(c.MonitoredTotal).To(Equal(7))
 			Expect(c.Continuing).To(Equal(1))
-			Expect(c.Upcoming).To(BeZero())
 			Expect(c.Missing).To(Equal(4))
 			Expect(c.Anime).To(Equal(2))
 			Expect(c.Unmonitored).To(Equal(6))

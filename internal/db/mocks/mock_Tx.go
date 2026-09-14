@@ -10081,6 +10081,63 @@ func (_c *MockTx_MarkTranscodeJobCanceled_Call) RunAndReturn(run func(ctx contex
 	return _c
 }
 
+// MarkWantedRecordEpisodesImporting provides a mock function for the type MockTx
+func (_mock *MockTx) MarkWantedRecordEpisodesImporting(ctx context.Context, recordID uint32) error {
+	ret := _mock.Called(ctx, recordID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for MarkWantedRecordEpisodesImporting")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) error); ok {
+		r0 = returnFunc(ctx, recordID)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTx_MarkWantedRecordEpisodesImporting_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'MarkWantedRecordEpisodesImporting'
+type MockTx_MarkWantedRecordEpisodesImporting_Call struct {
+	*mock.Call
+}
+
+// MarkWantedRecordEpisodesImporting is a helper method to define mock.On call
+//   - ctx context.Context
+//   - recordID uint32
+func (_e *MockTx_Expecter) MarkWantedRecordEpisodesImporting(ctx any, recordID any) *MockTx_MarkWantedRecordEpisodesImporting_Call {
+	return &MockTx_MarkWantedRecordEpisodesImporting_Call{Call: _e.mock.On("MarkWantedRecordEpisodesImporting", ctx, recordID)}
+}
+
+func (_c *MockTx_MarkWantedRecordEpisodesImporting_Call) Run(run func(ctx context.Context, recordID uint32)) *MockTx_MarkWantedRecordEpisodesImporting_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_MarkWantedRecordEpisodesImporting_Call) Return(err error) *MockTx_MarkWantedRecordEpisodesImporting_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTx_MarkWantedRecordEpisodesImporting_Call) RunAndReturn(run func(ctx context.Context, recordID uint32) error) *MockTx_MarkWantedRecordEpisodesImporting_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // MovieCreateTimesSince provides a mock function for the type MockTx
 func (_mock *MockTx) MovieCreateTimesSince(ctx context.Context, since time.Time) ([]time.Time, error) {
 	ret := _mock.Called(ctx, since)
@@ -11360,6 +11417,63 @@ func (_c *MockTx_ResetRunningTranscodeJobs_Call) Return(n int, err error) *MockT
 }
 
 func (_c *MockTx_ResetRunningTranscodeJobs_Call) RunAndReturn(run func(ctx context.Context) (int, error)) *MockTx_ResetRunningTranscodeJobs_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RetryFailedDownloadRecord provides a mock function for the type MockTx
+func (_mock *MockTx) RetryFailedDownloadRecord(ctx context.Context, id uint32) error {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RetryFailedDownloadRecord")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) error); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTx_RetryFailedDownloadRecord_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RetryFailedDownloadRecord'
+type MockTx_RetryFailedDownloadRecord_Call struct {
+	*mock.Call
+}
+
+// RetryFailedDownloadRecord is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+func (_e *MockTx_Expecter) RetryFailedDownloadRecord(ctx any, id any) *MockTx_RetryFailedDownloadRecord_Call {
+	return &MockTx_RetryFailedDownloadRecord_Call{Call: _e.mock.On("RetryFailedDownloadRecord", ctx, id)}
+}
+
+func (_c *MockTx_RetryFailedDownloadRecord_Call) Run(run func(ctx context.Context, id uint32)) *MockTx_RetryFailedDownloadRecord_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_RetryFailedDownloadRecord_Call) Return(err error) *MockTx_RetryFailedDownloadRecord_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTx_RetryFailedDownloadRecord_Call) RunAndReturn(run func(ctx context.Context, id uint32) error) *MockTx_RetryFailedDownloadRecord_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -166,7 +166,6 @@ type TVShowFacets struct {
 	StatusTotal int
 	Continuing  int
 	Ended       int
-	Upcoming    int
 	Missing     int
 	Downloading int
 	Importing   int
@@ -201,16 +200,15 @@ func (db *DB) TVShowFacetCounts(
 	}
 	out.Total = total
 
-	// Status: one GROUP BY covers the three series_status values, and the
-	// three derived statuses each need their own predicate — they are facts
-	// about a show's episodes, not a column.
+	// Status: one GROUP BY covers both series_status values, and the three
+	// derived statuses each need their own predicate — they are facts about a
+	// show's episodes, not a column.
 	byStatus, err := db.tvShowSeriesStatusCounts(ctx, tvShowFilters(p, facetStatus))
 	if err != nil {
 		return out, err
 	}
 	out.Continuing = byStatus[tvshow.SeriesStatusContinuing]
 	out.Ended = byStatus[tvshow.SeriesStatusEnded]
-	out.Upcoming = byStatus[tvshow.SeriesStatusUpcoming]
 	for _, n := range byStatus {
 		out.StatusTotal += n
 	}

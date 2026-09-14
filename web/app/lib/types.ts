@@ -5,7 +5,7 @@ export type MovieStatus =
 	| "available"
 	| "failed";
 
-export type SeriesStatus = "continuing" | "ended" | "upcoming";
+export type SeriesStatus = "continuing" | "ended";
 // What an in-flight grab covers, which is what a library card has to say: one
 // episode, a season pack, or a complete-series pack.
 export type SeriesDownloadScope = "episode" | "season" | "series";
@@ -141,7 +141,6 @@ export type TVShowCounts = {
 	status_total: number;
 	continuing: number;
 	ended: number;
-	upcoming: number;
 	// Shows with at least one aired, monitored episode and no file — a
 	// per-show count, not an episode count. Labels the library's "missing" tab.
 	missing: number;

@@ -3210,6 +3210,34 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /activity/history/{id}/retry:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: retryFailedImport
+      summary: Re-run the import for a failed download record.
+      description: |
+        Clears the attempt counter and puts the record back in front of the
+        importer, along with the media it owns: a terminal failure flips the
+        movie to failed and the linked episode to wanted, and both come back
+        to importing. 409 when the record exists but is not failed.
+
+        The re-run reads the record's stored save_path, so a retry that does
+        not follow a fix for whatever made it fail just spends the attempts
+        again.
+      tags: [activity]
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /activity/history/clear-completed:
     post:
       operationId: clearCompletedHistory
@@ -4081,9 +4109,9 @@ components:
       name: status
       in: query
       description: |
-        Filter by series_status (continuing/ended/upcoming), "missing",
-        "downloading" or "importing". The last three are per-show facts read
-        off the episode tree, not series_status values.
+        Filter by series_status (continuing/ended), "missing", "downloading"
+        or "importing". The last three are per-show facts read off the episode
+        tree, not series_status values.
       schema:
         type: string
 
@@ -5811,7 +5839,7 @@ components:
           type: string
         series_status:
           type: string
-          enum: [continuing, ended, upcoming]
+          enum: [continuing, ended]
         type:
           type: string
           enum: [standard, anime, daily]
@@ -6064,7 +6092,6 @@ components:
           status_total,
           continuing,
           ended,
-          upcoming,
           missing,
           downloading,
           importing,
@@ -6092,8 +6119,6 @@ components:
         continuing:
           type: integer
         ended:
-          type: integer
-        upcoming:
           type: integer
         missing:
           type: integer
@@ -7475,7 +7500,7 @@ components:
 
     DownloadConfigView:
       type: object
-      required: [selective_files, selection_grace]
+      required: [selective_files, selection_grace, path_mappings]
       properties:
         selective_files:
           type: boolean
@@ -7487,6 +7512,15 @@ components:
           description: >-
             Go duration string. How long a magnet-sourced selection may sit
             pending before giving up and downloading whole.
+        path_mappings:
+          type: array
+          items:
+            $ref: "#/components/schemas/PathMapping"
+          description: >-
+            Translates a save path a download client reports into one
+            streamline can open, for deployments where the two mount the same
+            volume at different roots. First matching prefix wins; empty means
+            they already agree.
 
     DownloadConfigPatch:
       type: object
@@ -7496,6 +7530,22 @@ components:
           type: boolean
         selection_grace:
           type: string
+        path_mappings:
+          type: array
+          items:
+            $ref: "#/components/schemas/PathMapping"
+          description: Replaces the whole list; there is no per-entry patch.
+
+    PathMapping:
+      type: object
+      required: [from, to]
+      properties:
+        from:
+          type: string
+          description: Absolute prefix as the download client reports it.
+        to:
+          type: string
+          description: Absolute prefix streamline reads the same files at.
 
     MetadataConfigView:
       type: object

@@ -310,6 +310,22 @@ type FFmpegConfig struct {
 type DownloadConfig struct {
 	SelectiveFiles bool   `koanf:"selective_files"`
 	SelectionGrace string `koanf:"selection_grace" validate:"required"`
+	// PathMappings translate a save path a download client reports into one
+	// streamline can open. Empty means both processes see the same paths,
+	// which is the single-host case.
+	PathMappings []PathMapping `koanf:"path_mappings" validate:"dive"`
+}
+
+// PathMapping rewrites one prefix of a download client's view of the
+// filesystem into streamline's. The two commonly disagree: a qBittorrent
+// container mounting a volume at /data reports /data/streamline/downloads for
+// what streamline, mounting that same volume at /srv, opens as
+// /srv/streamline/downloads. Until it is translated, a path the client reports
+// is not one this process can stat.
+type PathMapping struct {
+	// From is the prefix as the client reports it, To the local equivalent.
+	From string `koanf:"from" validate:"required"`
+	To   string `koanf:"to"   validate:"required"`
 }
 
 // SelectionGraceDuration parses SelectionGrace, falling back to 10 minutes
@@ -802,6 +818,7 @@ func defaults() map[string]any {
 		"ffmpeg.path":                         "",
 		"download.selective_files":            false,
 		"download.selection_grace":            "10m",
+		"download.path_mappings":              []PathMapping{},
 		"transcoding.enabled":                 false,
 		"transcoding.max_concurrent":          1,
 		"transcoding.max_failures":            3,

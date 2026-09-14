@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { slide } from "svelte/transition";
-	import { Pause, Play, Ban, Trash2, LoaderCircle } from "@lucide/svelte";
+	import { Pause, Play, Ban, Trash2, RotateCw, LoaderCircle } from "@lucide/svelte";
 	import Dialog from "../modals/Dialog.svelte";
 	import { cn } from "../../lib/cn";
 	import { formatBytes } from "../../lib/format";
@@ -18,6 +18,7 @@
 		onPause,
 		onResume,
 		onRemove,
+		onRetry,
 	}: {
 		item: QueueEntry | HistoryEntry;
 		view: "queue" | "history";
@@ -28,10 +29,16 @@
 		onPause: (id: number) => void;
 		onResume: (id: number) => void;
 		onRemove: (id: number) => void;
+		onRetry: (id: number) => void;
 	} = $props();
 
 	let confirmCancel = $state(false);
 	let confirmRemove = $state(false);
+	let confirmRetry = $state(false);
+
+	// Only a failed record can be retried — the backend 409s anything else, and
+	// a failure is the only history state that stopped short of importing.
+	let canRetry = $derived(view === "history" && item.status === "failed");
 
 	let isPaused = $derived(view === "queue" && item.status === "paused");
 	// A held record is off the network — pause and cancel reach the download
@@ -166,6 +173,20 @@
 						{i18n.common_cancel()}
 					</button>
 				{:else}
+					{#if canRetry}
+						<button
+							type="button"
+							disabled={busy}
+							onclick={() => (confirmRetry = true)}
+							class={cn(
+								btn,
+								"bg-accent/15 text-accent hover:bg-accent/25",
+							)}
+						>
+							<RotateCw size={13} aria-hidden="true" />
+							{i18n.activity_retry_import()}
+						</button>
+					{/if}
 					<button
 						type="button"
 						disabled={busy}
@@ -201,6 +222,26 @@
 	<p class="text-sm text-fg-muted">
 		{i18n.activity_cancel_help()} <span class="font-medium text-fg">{item.title}</span> from the
 		queue. The movie returns to <em>wanted</em> if it has no file yet.
+	</p>
+</Dialog>
+
+<Dialog
+	open={confirmRetry}
+	title={i18n.activity_retry_import_confirm()}
+	onClose={() => (confirmRetry = false)}
+	actions={[
+		{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },
+		{
+			label: i18n.activity_retry_import(),
+			variant: "primary",
+			onClick: () => onRetry(item.id),
+		},
+	]}
+>
+	<p class="text-sm text-fg-muted">
+		{i18n.activity_retry_help()}
+		<span class="font-medium text-fg">{item.title}</span>. It reads the same
+		files as before, so fix what made it fail first or it just fails again.
 	</p>
 </Dialog>
 

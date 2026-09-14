@@ -30,6 +30,7 @@ var minRole = map[string]string{
 	"ListDownloadHistory":   roleRequestOnly,
 	"ClearCompletedHistory": roleAdmin,
 	"DeleteHistoryItem":     roleAdmin,
+	"RetryFailedImport":     roleAdmin,
 	"ListPending":           roleRequestOnly,
 	"PreviewPending":        roleRequestOnly,
 	"IdentifyPending":       roleAdmin,

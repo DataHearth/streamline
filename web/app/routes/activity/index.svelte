@@ -187,6 +187,15 @@
 		},
 		onError: (e) => toast.err(errorText(e)),
 	}));
+	const retryImport = createMutation<unknown, Error, number>(() => ({
+		mutationFn: (id) =>
+			api(`/activity/history/${id}/retry`, { method: "POST" }),
+		onSuccess: () => {
+			toast.ok("Retrying import");
+			invalidate();
+		},
+		onError: (e) => toast.err(errorText(e)),
+	}));
 	const clearCompleted = createMutation<unknown, Error, void>(() => ({
 		mutationFn: () =>
 			api("/activity/history/clear-completed", { method: "POST" }),
@@ -350,6 +359,7 @@
 		if (pause.isPending) return pause.variables ?? null;
 		if (resume.isPending) return resume.variables ?? null;
 		if (removeHistory.isPending) return removeHistory.variables ?? null;
+		if (retryImport.isPending) return retryImport.variables ?? null;
 		return null;
 	});
 
@@ -639,6 +649,7 @@
 		onPause={(id) => pause.mutate(id)}
 		onResume={(id) => resume.mutate(id)}
 		onRemove={(id) => removeHistory.mutate(id)}
+		onRetry={(id) => retryImport.mutate(id)}
 		onResolve={auth.isAdmin ? (item) => (resolveId = item.id) : undefined}
 	/>
 
@@ -696,4 +707,5 @@
 	onPause={(id) => pause.mutate(id)}
 	onResume={(id) => resume.mutate(id)}
 	onRemove={(id) => removeHistory.mutate(id)}
+	onRetry={(id) => retryImport.mutate(id)}
 />

@@ -97,6 +97,8 @@ See [Configuration Reference](Configuration-Reference#import-verification) for t
 
 Filter by event type or by title, and page back through time. This is where you find *why* something failed — an import error records the actual reason (permission denied, cross-device link, destination exists), which is far more useful than the status word on the queue.
 
+**Retry import** is on any failed entry: expand the row and it hands the record back to the importer with a clean attempt counter. Use it once you've fixed whatever the failure reason names — it reads the same files as before, so retrying an unchanged failure just fails again. The movie or episode comes back to *importing* with it.
+
 **Clear completed** tidies out successful entries and leaves the failures. Events also age out on their own after `events.retention` (default 90 days).
 
 ---
@@ -117,6 +119,7 @@ Proposals come up when:
 - A different file already exists for that title
 - The match is ambiguous
 - It's a season pack that doesn't map cleanly onto what you're missing
+- **Streamline can't find the files** — the reason reads `files not found — client reports <path>`. The torrent is in the `streamline` category but its data is somewhere else, which is what tagging a qBittorrent torrent without Automatic Torrent Management does. See [Troubleshooting](Troubleshooting#an-adopted-torrent-says-files-not-found)
 
 Three actions per proposal:
 

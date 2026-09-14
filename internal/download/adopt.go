@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"time"
@@ -72,6 +74,17 @@ func sameFile(parsed library.ParseResult, size int64, files []*ent.MediaFile) bo
 // library. It is the one proposal reason carrying no media edge, so the SPA
 // keys the Identify action off the absent media rather than off this string.
 const reasonUnidentified = "unidentified — pick a title"
+
+// missingFilesReason labels a proposal whose payload is at neither path
+// adoptionPath tried. Naming the client's own save path is the whole value of
+// the message: the usual cause is a torrent tagged with the managed category
+// rather than moved into it, and the two paths side by side are what says so.
+func missingFilesReason(clientPath string) string {
+	if clientPath == "" {
+		return "files not found under the download path"
+	}
+	return fmt.Sprintf("files not found — client reports %s", clientPath)
+}
 
 // untrackedTorrent pairs a torrent with the client it came from, so the
 // adoption record records the originating download client.
@@ -393,7 +406,39 @@ func (d *download) AdoptManualTorrents(ctx context.Context) ([]uint32, error) {
 				quality: parsed.Resolution,
 			}
 		}
-		id, err := d.persistAdoption(ctx, u, dec)
+		savePath, found := adoptionPath(u.t)
+		if savePath == "" {
+			slog.WarnContext(ctx, "refusing to adopt a torrent with an unsafe name",
+				"hash", u.t.Hash, "torrent", u.t.Name)
+			adoptCounter.Add(ctx, 1, metric.WithAttributes(
+				attribute.String("outcome", "unsafe_name"),
+			))
+			continue
+		}
+		if !found {
+			// An auto-import here would be a record pointing at nothing: the
+			// importer stats this path first thing, and a missing directory is
+			// a *retryable* error, so it would burn every import attempt and
+			// land terminal with an ENOENT naming a path nobody chose. A
+			// proposal says the same thing on the first tick, and says it
+			// where both paths can be compared.
+			slog.WarnContext(
+				ctx,
+				"adopted torrent's files are not where streamline expects",
+				"hash",
+				u.t.Hash,
+				"torrent",
+				u.t.Name,
+				"expected",
+				savePath,
+				"client_save_path",
+				u.t.SavePath,
+			)
+			dec.autoImport = false
+			dec.completed = false
+			dec.reason = missingFilesReason(u.t.SavePath)
+		}
+		id, err := d.persistAdoption(ctx, u, dec, savePath)
 		if err != nil {
 			slog.WarnContext(ctx, "adopt: persist failed",
 				"hash", u.t.Hash, "error", err)
@@ -422,12 +467,51 @@ func (d *download) AdoptManualTorrents(ctx context.Context) ([]uint32, error) {
 	return enqueue, nil
 }
 
+// adoptionPath locates an adopted torrent's payload on disk, and reports
+// whether it found it.
+//
+// The convention path — <library.download_path>/<torrent name> — wins, because
+// it is what every streamline-grabbed record uses and what the importer's
+// allowed_download_roots fence is configured around. The client's own reported
+// save path, translated through download.path_mappings, is the fallback: a
+// torrent the operator added by hand keeps whatever save path it was added
+// with, and qBittorrent only relocates it to its category's path under
+// Automatic Torrent Management. Merely tagging such a torrent with the managed
+// category makes streamline adopt it while its files stay where they were.
+//
+// When neither exists the convention path comes back anyway, with false — the
+// caller files a proposal rather than a record it cannot import, and the path
+// is what its reason names.
+func adoptionPath(t Torrent) (string, bool) {
+	conventional, err := downloadSavePath(t.Name)
+	if err != nil {
+		return "", false
+	}
+	if _, err := os.Stat(conventional); err == nil {
+		return conventional, true
+	}
+	if t.SavePath != "" {
+		// downloadSavePath has already rejected any name that could climb out
+		// of a root, so joining that same name onto a second root is safe.
+		if alt := filepath.Join(
+			MapClientPath(t.SavePath), t.Name,
+		); alt != conventional {
+			if _, err := os.Stat(alt); err == nil {
+				return alt, true
+			}
+		}
+	}
+	return conventional, false
+}
+
 // persistAdoption writes the adoption record (importing for auto-import,
 // completed for a file the library already holds, pending for a proposal) and
-// returns its ID. SavePath mirrors CheckStatus: the download path joined with
-// the torrent name.
+// returns its ID. savePath comes from adoptionPath.
 func (d *download) persistAdoption(
-	ctx context.Context, u untrackedTorrent, dec adoptDecision,
+	ctx context.Context,
+	u untrackedTorrent,
+	dec adoptDecision,
+	savePath string,
 ) (uint32, error) {
 	status := downloadrecord.StatusPending
 	var importedAt *time.Time
@@ -440,10 +524,6 @@ func (d *download) persistAdoption(
 		status = downloadrecord.StatusCompleted
 		now := time.Now()
 		importedAt = &now
-	}
-	savePath, err := downloadSavePath(u.t.Name)
-	if err != nil {
-		return 0, err
 	}
 	rec, err := d.db.CreateDownloadRecord(ctx, db.CreateDownloadRecordParams{
 		Title:              u.t.Name,
@@ -460,6 +540,19 @@ func (d *download) persistAdoption(
 	})
 	if err != nil {
 		return 0, err
+	}
+	// The record says "importing"; without this its episodes still say
+	// "wanted", because nothing grabbed them here and the completion sweep's
+	// MarkRecordEpisodesImporting only moves rows out of downloading/paused.
+	// The series list counts a show as importing off its *episodes*, so an
+	// adopted import was invisible there for its whole run. Logged rather than
+	// returned: the record exists and the import will run either way, and a
+	// badge is not worth failing an adoption over.
+	if status == downloadrecord.StatusImporting {
+		if err := d.db.MarkWantedRecordEpisodesImporting(ctx, rec.ID); err != nil {
+			slog.WarnContext(ctx, "adopt: mark episodes importing failed",
+				"record.id", rec.ID, "error", err)
+		}
 	}
 	return rec.ID, nil
 }

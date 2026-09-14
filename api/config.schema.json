@@ -549,6 +549,25 @@
         "selection_grace": {
           "$ref": "#/definitions/duration",
           "description": "How long file selection stays open after grab."
+        },
+        "path_mappings": {
+          "type": "array",
+          "description": "Rewrites a save path a download client reports into one streamline can open, for deployments where the two mount the same volume at different roots. First matching prefix wins; empty means the paths already agree.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["from", "to"],
+            "properties": {
+              "from": {
+                "type": "string",
+                "description": "Absolute prefix as the download client reports it."
+              },
+              "to": {
+                "type": "string",
+                "description": "Absolute prefix streamline reads the same files at."
+              }
+            }
+          }
         }
       }
     },

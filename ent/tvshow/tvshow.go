@@ -148,7 +148,6 @@ const DefaultSeriesStatus = SeriesStatusContinuing
 const (
 	SeriesStatusContinuing SeriesStatus = "continuing"
 	SeriesStatusEnded      SeriesStatus = "ended"
-	SeriesStatusUpcoming   SeriesStatus = "upcoming"
 )
 
 func (ss SeriesStatus) String() string {
@@ -158,7 +157,7 @@ func (ss SeriesStatus) String() string {
 // SeriesStatusValidator is a validator for the "series_status" field enum values. It is called by the builders before save.
 func SeriesStatusValidator(ss SeriesStatus) error {
 	switch ss {
-	case SeriesStatusContinuing, SeriesStatusEnded, SeriesStatusUpcoming:
+	case SeriesStatusContinuing, SeriesStatusEnded:
 		return nil
 	default:
 		return fmt.Errorf("tvshow: invalid enum value for series_status field: %q", ss)
