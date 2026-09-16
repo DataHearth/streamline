@@ -40,11 +40,13 @@ tasks:
     cmds:
       - go tool golangci-lint fmt ./...
       - biome format --write web/static/js web/static/css
+      - nixfmt flake.nix nix/*.nix
 
   fmt:check:
     desc: Check formatting without writing
     cmds:
       - biome format web/static/js web/static/css
+      - nixfmt --check flake.nix nix/*.nix
 
   migrate:diff:
     desc: Generate a new versioned migration from the ent schema (usage - task migrate:diff -- NAME)
