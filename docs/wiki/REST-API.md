@@ -226,7 +226,9 @@ The fetch happens **once per person, ever**. An actor credited on thirty titles 
 }
 ```
 
-`character` belongs to the pairing, not to the person: the same actor carries a different one per title. An `id` no person row occupies is a `404`; the series objects carry no season/episode tree.
+`character` belongs to the pairing, not to the person: the same actor carries a different one per title. An `id` no person row occupies is a `404`.
+
+The series objects carry no `seasons` array — the credit query leaves the episode tree unloaded — but they do carry the same pre-aggregated rollup the series list sends (`total_seasons`, `have_episodes`, `total_episodes`, `wanted_episodes`, `downloading_episodes`, `importing_episodes`). Those counts are what a client badges a credit with, and sending the show without them is not the same as sending zeros: a client reading an absent count as zero labels a complete show as missing, which is exactly what the credits page did before they were added.
 
 The `cast` array on a stored movie or series (`GET /movies/{id}`, `GET /series/{id}`) is served from the same credits, in billing order, and each entry carries `person_id` — the key to `/people/{id}`. A cast entry from a **provider lookup** of a title the library does not hold (`/movies/lookup/{tmdbId}`, `/series/lookup/{tvdbId}`, an expanded request row) has no person row behind it and so omits `person_id`; it still carries `person_url` to the provider's own page.
 

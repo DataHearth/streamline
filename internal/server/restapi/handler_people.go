@@ -84,13 +84,16 @@ func (s *Server) GetPerson(
 			Character: c.Character,
 		})
 	}
-	// tvShowBaseToAPI, not tvShowToAPI: the credit query leaves the
+	// tvShowListToAPI, not tvShowToAPI: the credit query leaves the
 	// season/episode tree unloaded, and the full converter would render its
 	// absence as a show with zero seasons rather than as a show not asked for.
+	// The list converter takes the same pre-aggregated rollup the series list
+	// uses, so a credited show badges exactly as it does in the library.
+	// Progress is nil — the credit card draws a pill, not a bar.
 	series := make([]PersonSeriesCredit, 0, len(credits.Series))
 	for _, c := range credits.Series {
 		series = append(series, PersonSeriesCredit{
-			Series:    tvShowBaseToAPI(c.Series),
+			Series:    tvShowListToAPI(c.Series, credits.Counts[c.Series.ID], nil),
 			Character: c.Character,
 		})
 	}

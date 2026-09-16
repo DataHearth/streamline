@@ -295,6 +295,49 @@ var _ = Describe(
 				Expect(body.TwitterId).To(BeNil())
 			})
 
+			It(
+				"carries the episode rollup so a complete show reads available",
+				func() {
+					// Without counts the SPA's shared status rollup defaults every
+					// absent field to 0 and badges a full show "missing", which is
+					// what the person page did while the show's own detail page
+					// read 32/32.
+					app.store.EXPECT().
+						PersonCredits(mock.Anything, uint32(7)).
+						Return(&db.PersonCredits{
+							ID:   7,
+							Name: "Ada Lovelace",
+							Series: []db.SeriesCredit{{
+								Series:    &ent.TVShow{ID: 2, Title: "Gamma"},
+								Character: "The Analyst",
+							}},
+							Counts: map[uint32]db.EpisodeCounts{
+								2: {Seasons: 4, Total: 32, Have: 32},
+							},
+						}, nil).
+						Once()
+
+					resp := app.do(app.req(
+						http.MethodGet,
+						"/api/v1/people/7",
+						app.adminKey,
+						nil,
+					))
+					defer resp.Body.Close()
+					Expect(resp.StatusCode).To(Equal(http.StatusOK))
+					var body PersonCredits
+					Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+					Expect(body.Series).To(HaveLen(1))
+					s := body.Series[0].Series
+					Expect(s.HaveEpisodes).To(HaveValue(Equal(uint32(32))))
+					Expect(s.TotalEpisodes).To(HaveValue(Equal(uint32(32))))
+					Expect(s.WantedEpisodes).To(HaveValue(Equal(uint32(0))))
+					Expect(s.TotalSeasons).To(HaveValue(Equal(uint32(4))))
+					// Detail-only: the credit query leaves the tree unloaded.
+					Expect(s.Seasons).To(BeNil())
+				},
+			)
+
 			It("404s a row id no person occupies", func() {
 				app.store.EXPECT().
 					PersonCredits(mock.Anything, uint32(999)).

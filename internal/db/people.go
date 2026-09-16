@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"time"
 
 	entsql "entgo.io/ent/dialect/sql"
 
@@ -107,6 +108,11 @@ type PersonCredits struct {
 	PersonBio
 	Movies []MovieCredit
 	Series []SeriesCredit
+	// Counts is the same rollup the series list renders, keyed by show id.
+	// The credit query leaves the season/episode tree unloaded, so a credited
+	// show carries no counts of its own — and the SPA's status rollup reads an
+	// absent count as zero, badging a complete show "missing".
+	Counts map[uint32]EpisodeCounts
 }
 
 // creditItemKey counts a person's credits by library item rather than by
@@ -289,5 +295,14 @@ func (db *DB) PersonCredits(
 	slices.SortFunc(out.Series, func(a, b SeriesCredit) int {
 		return strings.Compare(a.Series.Title, b.Series.Title)
 	})
+
+	showIDs := make([]uint32, 0, len(out.Series))
+	for _, c := range out.Series {
+		showIDs = append(showIDs, c.Series.ID)
+	}
+	out.Counts, err = db.episodeCounts(ctx, showIDs, time.Now())
+	if err != nil {
+		return nil, fmt.Errorf("person credits: %w", err)
+	}
 	return out, nil
 }
