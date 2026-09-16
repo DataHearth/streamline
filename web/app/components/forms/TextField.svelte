@@ -70,7 +70,7 @@
 			field.handleChange(raw === "" ? undefined : Number(raw));
 		}}
 		onblur={() => field.handleBlur()}
-		class="w-full rounded-md border bg-bg px-3 py-2 text-sm text-fg placeholder:text-fg-faint focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60 read-only:opacity-70 read-only:cursor-not-allowed"
+		class="w-full rounded-md border bg-bg px-3 py-2 text-sm text-fg placeholder:text-fg-faint focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60 read-only:cursor-not-allowed read-only:opacity-70 read-only:caret-transparent read-only:focus-visible:ring-0 read-only:focus-visible:outline-none"
 		class:border-status-failed={errorMessages.length > 0}
 		class:border-border={errorMessages.length === 0}
 	/>

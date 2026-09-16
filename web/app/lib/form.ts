@@ -54,5 +54,5 @@ export const INPUT_CLASS =
 	"w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-fg " +
 	"placeholder:text-fg-faint focus:outline-none focus-visible:ring-2 " +
 	"focus-visible:ring-accent read-only:cursor-not-allowed read-only:opacity-70 " +
-	"read-only:focus-visible:ring-0 read-only:focus-visible:outline-none " +
-	"read-only:focus:border-border";
+	"read-only:caret-transparent read-only:focus-visible:ring-0 " +
+	"read-only:focus-visible:outline-none read-only:focus:border-border";

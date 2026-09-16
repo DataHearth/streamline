@@ -424,6 +424,16 @@ input[type="checkbox"]:not(.native):disabled {
 	border-radius: 4px;
 }
 
+/* A locked field still takes focus so its value can be read and copied, but the
+   accent outline says "type here" on the one control that will refuse. This
+   lives here rather than as a `read-only:focus-visible:outline-none` utility on
+   each input: the rule above is unlayered, and unlayered CSS outranks every
+   Tailwind utility no matter how specific, so the utility never applied. */
+input:read-only:focus-visible,
+textarea:read-only:focus-visible {
+	outline: none;
+}
+
 /* Screen-reader-only + focus reveal (skip link) */
 .sr-only {
 	position: absolute;
