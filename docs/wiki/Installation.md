@@ -12,12 +12,14 @@ A couple of features are gated behind the `ffmpeg`/`ffprobe` binaries, but they 
 | [Plain binary](#plain-binary) | You'd rather not run a container, or your hardware doesn't suit one |
 | [Unraid, Synology, TrueNAS](#unraid-synology-truenas) | You run one of these NAS OSes and prefer its own Docker UI |
 | [Kubernetes / Helm](#kubernetes--helm) | You already run Kubernetes and want a GitOps-style, declarative deploy |
+| [NixOS / Nix](NixOS) | You run NixOS, or want the service declared in a flake |
 
 - [Before you start: the folder rule](#before-you-start-the-folder-rule)
 - [Docker Compose](#docker-compose) — recommended for most people
 - [Plain binary](#plain-binary)
 - [Unraid, Synology, TrueNAS](#unraid-synology-truenas)
 - [Kubernetes / Helm](#kubernetes--helm)
+- [NixOS / Nix](NixOS) — package, NixOS module and home-manager module
 - [Optional: ffmpeg](#optional-ffmpeg)
 - [Verifying what you downloaded](#verifying-what-you-downloaded)
 

@@ -115,6 +115,30 @@ Pin a version with `--version X.Y.Z`; omit it to pull the latest release.
 
 The chart is versioned independently of Streamline itself — a chart fix ships without an app release, and an app release ships without a chart bump. `--version` selects the *chart*; the app version it deploys is the chart's `appVersion` (override with `--set image.tag=X.Y.Z`). App releases are tagged `vX.Y.Z`, chart releases `chart-vX.Y.Z`.
 
+### NixOS / Nix
+
+The flake ships a package, a NixOS module, a home-manager module and a VM test that boots the service for real.
+
+```nix
+inputs.streamline.url = "github:DataHearth/streamline";
+
+# then, in your nixosSystem modules:
+imports = [ inputs.streamline.nixosModules.default ];
+nixpkgs.overlays = [ inputs.streamline.overlays.default ];
+
+services.streamline = {
+  enable = true;
+  openFirewall = true;
+  settings.library = {
+    movie_path = "/srv/media/movies";
+    series_path = "/srv/media/series";
+    download_path = "/srv/downloads";
+  };
+};
+```
+
+`settings` is freeform YAML, so every key in the configuration reference works under its own name. By default the declaration seeds `/var/lib/streamline/config.yaml` on first start and the web UI stays editable; set `mutableSettings = false` for a fully declarative, read-only instance. See [the NixOS wiki page](https://github.com/DataHearth/streamline/wiki/NixOS) for secrets, hardware transcoding and the sandbox's writable paths.
+
 ### Binary (from GitHub releases)
 
 Download from [Releases](https://github.com/datahearth/streamline/releases/latest). Binaries available for:

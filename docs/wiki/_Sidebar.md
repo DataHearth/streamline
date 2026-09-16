@@ -8,6 +8,7 @@
 - [Importing an Existing Library](Importing-an-Existing-Library)
 - [Activity and Calendar](Activity-and-Calendar)
 - [Requests and Users](Requests-and-Users)
+- [NixOS and Nix](NixOS)
 - [Troubleshooting](Troubleshooting)
 - [Roadmap](Roadmap)
 

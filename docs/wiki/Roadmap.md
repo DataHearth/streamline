@@ -63,6 +63,7 @@ Hardware encoding through VAAPI is shipped on Linux (`transcoding.hw_accel`, wit
 | REST API (OpenAPI 3.0) | ✅ Shipped |
 | OpenTelemetry traces, metrics, logs | ✅ Shipped |
 | Docker images, Helm chart, single binary | ✅ Shipped |
+| Nix flake — package, NixOS module, home-manager module | ✅ Shipped |
 | Import an existing library (scan, match, review, rename) | ✅ Shipped |
 | Library path migration (re-root a moved library) | ✅ Shipped |
 | Installable web app (home-screen manifest) | ✅ Shipped |
