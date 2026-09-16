@@ -1,8 +1,10 @@
 package db
 
 import (
+	"cmp"
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	entsql "entgo.io/ent/dialect/sql"
@@ -73,7 +75,33 @@ type EpisodeCounts struct {
 	// InFlightEpisodes are the ids behind those counts, so a caller holding
 	// the live queue can find this show's entries without a second query.
 	InFlightEpisodes []uint32
+	// LastAdded is the show's most recent import, nil until one has landed.
+	// The show's own create_time says when it was followed, not when files
+	// arrived, and an arrivals rail needs the latter.
+	LastAdded *Addition
 }
+
+// Addition summarises one import batch: every file that landed within
+// additionWindow of the show's newest one. Files carry no import id, so the
+// window is what tells a season pack from a lone episode.
+type Addition struct {
+	At time.Time
+	// Seasons the batch landed in, ascending — one entry in the ordinary case.
+	Seasons []uint16
+	// Episode numbers within Seasons[0], ascending; empty for a multi-season
+	// batch, where per-season numbering has nothing to say.
+	Episodes []uint16
+	// EpisodeTitle is set only when the batch is a single episode.
+	EpisodeTitle string
+	// WholeSeason is set when a single-season batch filled that season.
+	WholeSeason bool
+	// Count is the episodes imported across every season the batch touched.
+	Count uint32
+}
+
+// ponytail: one-hour batch window; a per-import id on media_files if two
+// imports an hour apart ever need telling apart.
+const additionWindow = time.Hour
 
 // In-flight scopes, mirroring the API's SeriesDownloadScope.
 const (
@@ -455,6 +483,7 @@ func (db *DB) episodeCounts(
 		AirDate   time.Time `sql:"air_date"`
 		Status    string    `sql:"status"`
 		HasFile   bool      `sql:"has_file"`
+		Title     string    `sql:"title"`
 		// The show's own flag, joined in rather than derived from the episode:
 		// it gates the buckets the same way monitoredEpisode() gates the
 		// queries, so the card and the filter cannot disagree.
@@ -483,6 +512,7 @@ func (db *DB) episodeCounts(
 				s.C(episode.FieldAirDate),
 				s.C(episode.FieldStatus),
 				entsql.As(hasFile, "has_file"),
+				s.C(episode.FieldTitle),
 				entsql.As(sh.C(tvshow.FieldMonitored), "show_monitored"),
 			)
 		}).
@@ -546,6 +576,87 @@ func (db *DB) episodeCounts(
 		c := out[r.ShowID]
 		c.Seasons = r.N
 		out[r.ShowID] = c
+	}
+
+	// Arrival times come from their own projection rather than a MAX() on the
+	// episode scan: an expression column has no declared type, so the driver
+	// hands back text where a time.Time is expected.
+	var fileRows []struct {
+		EpisodeID uint32    `sql:"episode_id"`
+		AddedAt   time.Time `sql:"create_time"`
+	}
+	err = db.client.MediaFile.Query().
+		Where(mediafile.HasEpisodeWith(
+			episode.HasSeasonWith(season.HasTvShowWith(tvshow.IDIn(showIDs...))),
+		)).
+		Modify(func(s *entsql.Selector) {
+			s.Select(
+				entsql.As(s.C(mediafile.EpisodeColumn), "episode_id"),
+				s.C(mediafile.FieldCreateTime),
+			)
+		}).
+		Scan(ctx, &fileRows)
+	if err != nil {
+		return nil, fmt.Errorf("file arrival times: %w", err)
+	}
+	type arrival struct {
+		season, number uint16
+		title          string
+		at             time.Time
+	}
+	byEpisode := make(map[uint32]int, len(rows))
+	seasonSize := make(map[uint32]map[uint16]uint32, len(showIDs))
+	for i, r := range rows {
+		byEpisode[r.EpisodeID] = i
+		if seasonSize[r.ShowID] == nil {
+			seasonSize[r.ShowID] = make(map[uint16]uint32)
+		}
+		seasonSize[r.ShowID][r.Season]++
+	}
+	arrivals := make(map[uint32][]arrival, len(showIDs))
+	for _, f := range fileRows {
+		i, ok := byEpisode[f.EpisodeID]
+		if !ok {
+			continue
+		}
+		r := rows[i]
+		arrivals[r.ShowID] = append(arrivals[r.ShowID], arrival{
+			season: r.Season, number: r.Number, title: r.Title, at: f.AddedAt,
+		})
+	}
+	for showID, all := range arrivals {
+		newest := slices.MaxFunc(all, func(a, b arrival) int {
+			return a.at.Compare(b.at)
+		})
+		batch := slices.DeleteFunc(all, func(a arrival) bool {
+			return newest.at.Sub(a.at) > additionWindow
+		})
+		slices.SortFunc(batch, func(a, b arrival) int {
+			return cmp.Or(
+				cmp.Compare(a.season, b.season),
+				cmp.Compare(a.number, b.number),
+			)
+		})
+		add := &Addition{At: newest.at, Count: numeric.SaturateU32(len(batch))}
+		for _, a := range batch {
+			if n := len(add.Seasons); n == 0 || add.Seasons[n-1] != a.season {
+				add.Seasons = append(add.Seasons, a.season)
+			}
+			if a.season == batch[0].season {
+				add.Episodes = append(add.Episodes, a.number)
+			}
+		}
+		if len(add.Seasons) > 1 {
+			add.Episodes = nil
+		} else {
+			add.WholeSeason = add.Count == seasonSize[showID][batch[0].season]
+		}
+		if add.Count == 1 {
+			add.EpisodeTitle = batch[0].title
+		}
+		c := out[showID]
+		c.LastAdded = add
+		out[showID] = c
 	}
 	return out, nil
 }

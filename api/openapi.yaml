@@ -5940,6 +5940,44 @@ components:
           type: string
           format: date-time
           description: When the series was added to the library.
+        last_added:
+          $ref: "#/components/schemas/SeriesAddition"
+
+    SeriesAddition:
+      type: object
+      required: [at, seasons, count]
+      description: |
+        The show's most recent import, summarised for a list row. `added_at`
+        is when the show record was created, which says nothing about when
+        files arrived: a show followed since March can take an episode this
+        morning. Absent until one has. A batch is every file that landed
+        within an hour of the newest one.
+      properties:
+        at:
+          type: string
+          format: date-time
+        seasons:
+          type: array
+          description: Seasons the import landed in, ascending — one entry in the ordinary case.
+          items:
+            type: integer
+            x-go-type: uint16
+        episodes:
+          type: array
+          description: Episode numbers within `seasons[0]`, ascending; omitted for a multi-season pack.
+          items:
+            type: integer
+            x-go-type: uint16
+        episode_title:
+          type: string
+          description: The episode's own title, set only when the import was a single episode.
+        whole_season:
+          type: boolean
+          description: Set when the batch filled its season, so it reads as a pack, not a run.
+        count:
+          type: integer
+          description: Episodes imported across every season the batch touched.
+          x-go-type: uint32
 
     Season:
       type: object

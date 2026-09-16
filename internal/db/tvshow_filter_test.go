@@ -5,22 +5,27 @@ import (
 	"fmt"
 	"time"
 
+	entsql "entgo.io/ent/dialect/sql"
+
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/episode"
+	"github.com/datahearth/streamline/ent/mediafile"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("FilterTVShows", Label("unit", "db"), func() {
 	var (
-		store Store
-		ctx   context.Context
-		now   time.Time
+		store  Store
+		client *ent.Client
+		ctx    context.Context
+		now    time.Time
 	)
 
 	BeforeEach(func() {
 		ctx = context.Background()
-		client, err := Open(ctx, ":memory:")
+		var err error
+		client, err = Open(ctx, ":memory:")
 		Expect(err).NotTo(HaveOccurred())
 		DeferCleanup(func() { Expect(client.Close()).To(Succeed()) })
 		store = New(client)
@@ -262,6 +267,62 @@ var _ = Describe("FilterTVShows", Label("unit", "db"), func() {
 			// The importing episode has no file yet, so it is still wanted.
 			Expect(c.Wanted).To(Equal(uint32(2)))
 			Expect(c.Have).To(BeZero())
+		})
+
+		It("names the newest import batch, not the show's own add date", func() {
+			aired := now.Add(-24 * time.Hour)
+			show := seedShow("Arrivals", 9, []EpisodeSeed{
+				{Number: 1, Title: "old", AirDate: &aired},
+				{Number: 2, Title: "new a", AirDate: &aired},
+				{Number: 3, Title: "new b", AirDate: &aired},
+			}, true)
+			eps := show.Edges.Seasons[0].Edges.Episodes
+			for _, e := range eps {
+				attachFile(e.ID, fmt.Sprintf("/tv/a/%d.mkv", e.ID))
+			}
+			// The first episode's file predates the batch by a day.
+			Expect(client.MediaFile.Update().
+				Where(mediafile.HasEpisodeWith(episode.ID(eps[0].ID))).
+				Modify(func(u *entsql.UpdateBuilder) {
+					u.Set(mediafile.FieldCreateTime, now.Add(-24*time.Hour))
+				}).
+				Exec(ctx)).To(Succeed())
+			empty := seedShow("Nothing yet", 10, []EpisodeSeed{
+				{Number: 1, Title: "wanted", AirDate: &aired},
+			}, true)
+
+			_, counts, _, err := store.FilterTVShows(ctx, FilterTVShowsParams{
+				Limit: 20, Now: now,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			add := counts[show.ID].LastAdded
+			Expect(add).NotTo(BeNil())
+			Expect(add.Seasons).To(Equal([]uint16{1}))
+			Expect(add.Episodes).To(Equal([]uint16{2, 3}))
+			Expect(add.Count).To(Equal(uint32(2)))
+			Expect(add.WholeSeason).To(BeFalse())
+			Expect(add.EpisodeTitle).To(BeEmpty())
+			Expect(add.At).To(BeTemporally("~", now, time.Minute))
+			Expect(counts[empty.ID].LastAdded).To(BeNil())
+		})
+
+		It("titles a single-episode import", func() {
+			aired := now.Add(-24 * time.Hour)
+			show := seedShow("Solo", 11, []EpisodeSeed{
+				{Number: 1, Title: "Pilot", AirDate: &aired},
+				{Number: 2, Title: "wanted", AirDate: &aired},
+			}, true)
+			attachFile(show.Edges.Seasons[0].Edges.Episodes[0].ID, "/tv/s/1.mkv")
+
+			_, counts, _, err := store.FilterTVShows(ctx, FilterTVShowsParams{
+				Limit: 20, Now: now,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			add := counts[show.ID].LastAdded
+			Expect(add).NotTo(BeNil())
+			Expect(add.Episodes).To(Equal([]uint16{1}))
+			Expect(add.EpisodeTitle).To(Equal("Pilot"))
+			Expect(add.WholeSeason).To(BeFalse())
 		})
 
 		DescribeTable(

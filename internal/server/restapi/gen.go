@@ -4692,6 +4692,30 @@ type Season struct {
 	Unaired *int `json:"unaired,omitempty"`
 }
 
+// SeriesAddition The show's most recent import, summarised for a list row. `added_at`
+// is when the show record was created, which says nothing about when
+// files arrived: a show followed since March can take an episode this
+// morning. Absent until one has. A batch is every file that landed
+// within an hour of the newest one.
+type SeriesAddition struct {
+	At time.Time `json:"at"`
+
+	// Count Episodes imported across every season the batch touched.
+	Count uint32 `json:"count"`
+
+	// EpisodeTitle The episode's own title, set only when the import was a single episode.
+	EpisodeTitle *string `json:"episode_title,omitempty"`
+
+	// Episodes Episode numbers within `seasons[0]`, ascending; omitted for a multi-season pack.
+	Episodes *[]uint16 `json:"episodes,omitempty"`
+
+	// Seasons Seasons the import landed in, ascending — one entry in the ordinary case.
+	Seasons []uint16 `json:"seasons"`
+
+	// WholeSeason Set when the batch filled its season, so it reads as a pack, not a run.
+	WholeSeason *bool `json:"whole_season,omitempty"`
+}
+
 // SeriesDownloadScope What a show's in-flight grab covers, derived from the episodes
 // actually in flight rather than from the release title: one episode, one
 // season's worth, or spanning seasons.
@@ -4917,8 +4941,15 @@ type TVShow struct {
 	// ImportingEpisodes Episodes past the grab and being written into the library. Cuts
 	// across the counts above the same way.
 	ImportingEpisodes *uint32 `json:"importing_episodes,omitempty"`
-	Monitored         bool    `json:"monitored"`
-	Network           *string `json:"network,omitempty"`
+
+	// LastAdded The show's most recent import, summarised for a list row. `added_at`
+	// is when the show record was created, which says nothing about when
+	// files arrived: a show followed since March can take an episode this
+	// morning. Absent until one has. A batch is every file that landed
+	// within an hour of the newest one.
+	LastAdded *SeriesAddition `json:"last_added,omitempty"`
+	Monitored bool            `json:"monitored"`
+	Network   *string         `json:"network,omitempty"`
 
 	// OriginalTitle Untranslated TVDB name. Equals title when the localized title
 	// matches the original; UI hides it in that case.
