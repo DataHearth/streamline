@@ -506,14 +506,12 @@
 				<Gauge size={16} class="text-fg-muted" aria-hidden="true" />
 				{canAdd ? i18n.quality_profile() : i18n.quality_preferred()}
 			</label>
-			<div class="w-48">
-				<Select
-					id="add-movie-qp"
-					value={qpSelected}
-					options={qpOptions}
-					onChange={onQpChange}
-				/>
-			</div>
+			<Select
+				id="add-movie-qp"
+				value={qpSelected}
+				options={qpOptions}
+				onChange={onQpChange}
+			/>
 		</div>
 	{/if}
 

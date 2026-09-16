@@ -4,18 +4,19 @@
 		createMutation,
 		useQueryClient,
 	} from "@tanstack/svelte-query";
-	import { Film, LoaderCircle, Plus } from "@lucide/svelte";
+	import { Gauge, LoaderCircle, Plus } from "@lucide/svelte";
 	import { api, errorText } from "@lib/api";
 	import { toast } from "@lib/toast";
 	import type {
 		AddMovieRequest,
+		LookupDetail,
 		Movie,
 		QualityProfile,
 		TMDBMovieResult,
 	} from "@lib/types";
 	import Modal from "@components/modals/Modal.svelte";
 	import Select from "@components/forms/Select.svelte";
-	import Poster from "@components/shared/Poster.svelte";
+	import LookupDetailPanel from "@components/shared/LookupDetailPanel.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	type Props = {
@@ -45,6 +46,31 @@
 		})),
 	]);
 
+	// Same lazy fetch the add modal makes: the recommendation carries a title
+	// and a truncated overview, and the decision to add wants the rest.
+	const detailQuery = createQuery<LookupDetail>(() => ({
+		queryKey: ["tmdb-detail", rec?.tmdb_id ?? null],
+		queryFn: () => api<LookupDetail>(`/search/movie/${rec?.tmdb_id}`),
+		enabled: open && !!rec,
+		staleTime: 5 * 60_000,
+	}));
+
+	let panelItem = $derived(
+		rec
+			? {
+					title: rec.title,
+					year: rec.year,
+					poster_url: rec.poster_url,
+					overview: rec.overview,
+					subtitle:
+						rec.original_title.trim() &&
+						rec.original_title.trim() !== rec.title.trim()
+							? rec.original_title
+							: undefined,
+				}
+			: undefined,
+	);
+
 	const qc = useQueryClient();
 	const addMutation = createMutation<Movie, Error, TMDBMovieResult>(() => ({
 		mutationFn: (m) => {
@@ -64,60 +90,38 @@
 	}));
 </script>
 
-<Modal {open} title={i18n.action_add_to_library()} size="md" {onClose}>
+<Modal {open} title={i18n.action_add_to_library()} size="2xl" {onClose}>
 	{#snippet children()}
 		{#if rec}
-			<div class="flex gap-4">
-				<div
-					class="relative aspect-[2/3] w-24 shrink-0 overflow-hidden rounded-md bg-bg-card ring-1 ring-border"
-				>
-					<div
-						class="absolute inset-0 grid place-items-center text-fg-faint"
-					>
-						<Film class="h-7 w-7" aria-hidden="true" />
-					</div>
-					{#if rec.poster_url}
-						<Poster
-							src={rec.poster_url}
-							alt="{rec.title} poster"
-							class="relative h-full w-full object-cover"
-						/>
-					{/if}
-				</div>
-				<div class="min-w-0 flex-1">
-					<h3 class="text-base font-semibold text-fg">
-						{rec.title}
-					</h3>
-					{#if rec.original_title.trim() && rec.original_title.trim() !== rec.title.trim()}
-						<p class="mt-0.5 truncate text-xs italic text-fg-faint">
-							{rec.original_title}
-						</p>
-					{/if}
-					{#if rec.year}
-						<p class="mt-0.5 font-mono text-xs text-fg-faint">
-							{rec.year}
-						</p>
-					{/if}
-					{#if rec.overview}
-						<p class="mt-2 line-clamp-4 text-sm text-fg-muted">
-							{rec.overview}
-						</p>
-					{/if}
-				</div>
-			</div>
-
-			<div class="mt-5">
-				<Select
-					label={i18n.quality_profile()}
-					value={qualityProfileName}
-					options={qpOptions}
-					onChange={(v) => (qualityProfileName = v)}
-				/>
-			</div>
+			<LookupDetailPanel
+				kind="movie"
+				item={panelItem}
+				detail={detailQuery.data}
+				loading={detailQuery.isLoading}
+				error={detailQuery.isError
+					? errorText(detailQuery.error, i18n.torrent_details_failed())
+					: undefined}
+				compact
+			/>
 		{/if}
 	{/snippet}
 
 	{#snippet footer()}
+		<div class="mr-auto flex items-center gap-2">
+			<label
+				for="add-rec-qp"
+				class="inline-flex shrink-0 items-center gap-1.5 text-sm font-medium text-fg"
+			>
+				<Gauge size={16} class="text-fg-muted" aria-hidden="true" />
+				{i18n.quality_profile()}
+			</label>
+			<Select
+				id="add-rec-qp"
+				value={qualityProfileName}
+				options={qpOptions}
+				onChange={(v) => (qualityProfileName = v)}
+			/>
+		</div>
 		<button
 			type="button"
 			onclick={onClose}
