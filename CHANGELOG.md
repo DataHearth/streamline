@@ -5,6 +5,102 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.0] - 2026-09-16
+
+### Added
+
+- ci: Publish a chart release with Claude-written notes
+- observability: Recover job panics and close the transcode/scheduler metric gaps
+- auth: Observe registrations, denials and the rate-limiter lapse
+- download: Count adoption, selection and reachability outcomes
+- indexer: Classify query failures and instrument the metadata providers
+- library: Log destructive file operations and count import runs
+- db: Log lifecycle transitions, migrations and the request workflow
+- events: Add library, file, transcode and request event types
+- events: Record adds, removals and monitoring changes from mutation hooks
+- media: Record renames, re-identifies and metadata refreshes
+- transcoding: Record terminal job outcomes in the activity feed
+- download: Record cancellations and widened grabs
+- request: Record approvals against the title they added
+- series: Record one monitoring event with an episode count, not one per episode
+- web: Show loading skeletons instead of bare text while lists and panels load
+- web: Narrate the wait for release search and scans, and lift the grab modifier into the modal footer
+- series: Count seasons on the card and keep specials out of show totals
+- cast: Normalize cast into persons and credits with real provider ids
+- web: Add a cast member page and search people from the palette
+- cast: Fetch person details from TMDB and TVDB at ingest
+- web: Show biography, life facts and brand links on the cast page
+- activity: Forget a proposal so its torrent can be adopted again
+- events: Record bulk episode events once per series
+- download: Adopt a torrent whose file is already in the library as completed
+- tvshow: Keep TVDB aliases on the show and adopt torrents named by them
+- transcoding: Defer an encode while its torrent is still seeding
+- web: Surface defer_seeding and the deferred re-check on queued jobs
+- web: Make every series detail kebab action work
+- web: Edit a quality profile's transcode policy
+- auth: Choose an invite's lifetime when creating it
+- web: Icon the type and monitoring dropdown items
+- api: Count list facets against the other filters
+- scheduler: Report run progress and broadcast state changes
+- jobs: Report progress from every per-item loop
+- api: Stream schedules as server-sent events with run progress
+- web: Live schedules page with run progress
+- scheduler: Let a manual run waive job throttles
+- transcoding: Leave lean sources alone with if.min_video_bitrate
+- transcoding: Make hw_accel vaapi hardware-only
+- download: Remove a builtin torrent with its files once seeding ends
+- series: Surface per-series grab and import history
+- series: Name what each history event touched
+- movies: Give the recommendation add its full detail panel
+
+### Changed
+
+- release: One _changelog task for both changelogs
+- release: Tag and push with jj instead of git
+- web: Share one event mark table across both activity feeds
+- web: Apply bulk import decisions in one request
+- requests: Filter by media type server-side
+- web: Share detail components and alias @components/@lib imports
+- settings: Drop the App name card
+
+### Fixed
+
+- release: Ignore chart-v* tags in git-cliff and goreleaser
+- ci: Stop the oldest changelog section swallowing the link block
+- ci: Pin the release-notes model instead of drifting with the CLI
+- release: Keep helm-scoped commits out of the app changelog
+- observability: Stop log.app.enabled from disabling the whole pipeline
+- events: Stop a failed event write from failing the mutation it records
+- web: Portal the global activity bar to body so it paints above modals
+- web: Give each activity event mark its own icon
+- calendar: Fall back to the theatrical date when TMDB has no digital release
+- web: Scroll long activity lists inside the list, not the page
+- web: Give the transcoding page the app's own dropdown and a right-aligned chevron
+- web: Tint rejected slate rather than red
+- search: Fold punctuation so a title's commas need not be typed
+- db: Keep foreign keys off across a migration run
+- web: Open the rename modal from the series page kebab
+- series: Make a show's monitored flag gate its episodes
+- web: Size the IMDb wordmark so it resolves at chip size
+- bulkimport: Match an episode file on its parent folder when the basename is bare
+- bulkimport: Walk every folder above a bare episode file, not just one
+- download: Let a folder torrent's sidecar files pad the size match
+- download: Stop vetoing a same-size adoption on a template-parsed group
+- importer: Drop a moved torrent from its client once its record imports
+- library: Read the library config live in the import service
+- activity: Badge History with the total, not the page
+- settings: Lock every control on a read-only instance
+- api: Stop logging a closed schedule stream as an error
+- transcoding: Refund the attempt when boot recovery requeues a job
+- docker: Drop pebble from the vaapi image so grype scans only our binary
+- download: Adopt, locate and recover imports without stranding episodes
+- bittorrent: Fence test fixtures on piece marks after verify
+- series: Report a show's last import so arrivals surface new episodes
+- people: Carry the episode rollup on series credits
+- web: Hold the person backdrop still when the biography expands
+- web: Stop read-only fields inviting an edit
+- imports: Scroll the scan list inside its card
+
 ## [3.0.0] - 2026-09-08
 
 ### Added
@@ -493,6 +589,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - sysinfo: Make disk-usage probe cross-platform for releases (#1)
 
+[3.1.0]: https://github.com/datahearth/streamline/compare/v3.0.0..v3.1.0
 [3.0.0]: https://github.com/datahearth/streamline/compare/v2.0.0..v3.0.0
 [2.0.0]: https://github.com/datahearth/streamline/compare/v1.3.0..v2.0.0
 [1.3.0]: https://github.com/datahearth/streamline/compare/v1.2.0..v1.3.0
