@@ -89,23 +89,34 @@ runs:
         Rewrite it as the GitHub release notes an operator reads before deciding
         whether to upgrade. Reply with the notes markdown and nothing else.
 
-        - Open with one or two sentences saying what this release is about. If the
-          release is a handful of unrelated fixes, say that plainly rather than
-          inventing a theme.
-        - Then the changes, grouped under the same headings the section already
-          uses (Added / Changed / Fixed / Removed). Drop a heading that would be
-          empty.
-        - Rewrite each entry as a full sentence describing the effect on someone
-          running this, not the commit subject reworded. Keep the scope prefix's
-          meaning but drop the `scope:` syntax.
+        - The first line is prose, never a heading: one short paragraph saying what
+          the release is about — its character, naming the two or three subsystems
+          it turns on, not a list of everything in it. A handful of unrelated fixes
+          is said plainly rather than given an invented theme. End the paragraph
+          with "N changes are breaking." when any entry is marked BREAKING.
+        - Consolidate. The changelog section carries one entry per commit; the
+          notes do not. Fold every entry belonging to one feature or one subsystem
+          into a single bullet saying what the operator now has, and join small
+          unrelated items into one bullet with semicolons. Twenty bullets under a
+          heading means the folding was not done — a long section lands near five
+          bullets and never above ten.
+        - Lead a substantial bullet with its subject in bold — "**Quality
+          scoring.**", "**Performance:**" — then the detail in that same bullet. A
+          small bullet needs no bold.
         - Anything marked **BREAKING** goes first, under its own `### Breaking
-          changes` heading, and says what an upgrade will do to a running install.
+          changes` heading: a bolded sentence naming the change, then what an
+          upgrade does to a running install.
+        - Keep the section's own headings (Added / Changed / Fixed / Removed) at
+          the same `###` level it uses, dropping one that would be empty. Write the
+          effect on someone running this, in present tense — not the commit subject
+          reworded. Keep what the scope prefix meant and drop the `scope:` syntax.
         - Never invent a change, a version number, a migration step or a
           justification that is not in the section. You have no other context and
-          must not go looking for any — do not read files, and if an entry is too
-          terse to expand honestly, keep it terse.
+          must not go looking for any — do not read files. Folding entries together
+          is required; inventing what they did is not, so keep an entry terse when
+          it is too terse to expand honestly.
         - No preamble, no sign-off, no heading naming the version — the release
-          page already shows it. Start with the summary sentence.
+          page already shows it. Start with the summary paragraph.
         PROMPT
         printf '\n--- changelog section ---\n\n'
         cat raw-notes.md
