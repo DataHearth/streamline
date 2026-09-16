@@ -60,12 +60,19 @@
 	});
 </script>
 
-<div class="flex flex-col px-4 py-6 md:px-6">
+<div
+	class="flex flex-col px-4 py-6 md:px-6 lg:h-[calc(100dvh-4rem)] lg:min-h-0 lg:overflow-hidden"
+>
 	<ImportsHeader {counts} onNewScan={() => (modalOpen = true)} />
 
-	<section class="mt-6 rounded-lg border border-border bg-bg-elevated">
+	<!-- The card owns the scroll, not the page: its header and pager are the
+	     controls for the list, and scrolling them off the top to reach the next
+	     page button is the wrong way round. -->
+	<section
+		class="mt-6 flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border bg-bg-elevated"
+	>
 		<header
-			class="flex items-center justify-between border-b border-border px-5 py-3.5 md:px-6"
+			class="flex shrink-0 items-center justify-between border-b border-border px-5 py-3.5 md:px-6"
 		>
 			<h2 class="text-base font-semibold text-fg">{i18n.imports_recent_scans()}</h2>
 			{#if total > 0}
@@ -75,35 +82,37 @@
 			{/if}
 		</header>
 
-		{#if list.isPending}
-			<SkeletonList variant="divided" count={4} />
-		{:else if list.isError}
-			<p class="px-5 py-10 text-center text-sm text-status-failed">
-				{i18n.err_load_failed_detail({ reason: errorText(list.error) })}
-			</p>
-		{:else if items.length === 0}
-			<div class="flex flex-col items-center gap-2 px-5 py-12 text-center">
-				<Inbox size={32} class="text-fg-faint" aria-hidden="true" />
-				<p class="text-sm text-fg-muted">{i18n.imports_no_scans()}</p>
-				<p class="text-xs text-fg-subtle">
-					{i18n.imports_click_prefix()}
-					<span class="font-medium text-fg-muted">{i18n.imports_new_scan()}</span>
-					{i18n.imports_click_suffix()}
+		<div class="min-h-0 flex-1 overflow-y-auto">
+			{#if list.isPending}
+				<SkeletonList variant="divided" count={4} />
+			{:else if list.isError}
+				<p class="px-5 py-10 text-center text-sm text-status-failed">
+					{i18n.err_load_failed_detail({ reason: errorText(list.error) })}
 				</p>
-			</div>
-		{:else}
-			<ul class="divide-y divide-border">
-				{#each items as s (s.id)}
-					<li>
-						<ScanRow scan={s} />
-					</li>
-				{/each}
-			</ul>
-		{/if}
+			{:else if items.length === 0}
+				<div class="flex flex-col items-center gap-2 px-5 py-12 text-center">
+					<Inbox size={32} class="text-fg-faint" aria-hidden="true" />
+					<p class="text-sm text-fg-muted">{i18n.imports_no_scans()}</p>
+					<p class="text-xs text-fg-subtle">
+						{i18n.imports_click_prefix()}
+						<span class="font-medium text-fg-muted">{i18n.imports_new_scan()}</span>
+						{i18n.imports_click_suffix()}
+					</p>
+				</div>
+			{:else}
+				<ul class="divide-y divide-border">
+					{#each items as s (s.id)}
+						<li>
+							<ScanRow scan={s} />
+						</li>
+					{/each}
+				</ul>
+			{/if}
+		</div>
 
 		{#if total > LIMIT}
 			<div
-				class="flex h-12 items-center justify-between border-t border-border px-5 text-sm text-fg-muted md:px-6"
+				class="flex h-12 shrink-0 items-center justify-between border-t border-border px-5 text-sm text-fg-muted md:px-6"
 			>
 				<span class="font-mono tabular-nums">
 					Page {page} · {total} total
