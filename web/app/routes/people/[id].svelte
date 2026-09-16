@@ -265,15 +265,22 @@
 {:else if person}
 	<section class="relative" aria-labelledby="person-name">
 		<div class="absolute inset-0 z-0 overflow-hidden bg-bg-deep">
-			{#if person.profile_url}
-				<img
-					src={person.profile_url}
-					alt=""
-					aria-hidden="true"
-					class="h-full w-full scale-110 object-cover opacity-70 blur-md"
-				/>
-			{/if}
-			<div class="absolute inset-0 hero-overlay"></div>
+			<!-- Fixed height, not inset-0: the biography expands in place, and a
+			     backdrop that tracked the section's height re-ran object-cover on
+			     every toggle — the blurred portrait visibly jumped. The gradient
+			     ends at bg-deep, which is what the container paints below it, so
+			     stopping short of the section's full height is seamless. -->
+			<div class="absolute inset-x-0 top-0 h-[520px] overflow-hidden">
+				{#if person.profile_url}
+					<img
+						src={person.profile_url}
+						alt=""
+						aria-hidden="true"
+						class="h-full w-full scale-110 object-cover opacity-70 blur-md"
+					/>
+				{/if}
+				<div class="absolute inset-0 hero-overlay"></div>
+			</div>
 		</div>
 
 		<div
@@ -352,7 +359,12 @@
 
 				{#if bioParagraphs.length > 0}
 					<div class="mt-4 max-w-[680px]">
-						<h2 class={headingClass}>{i18n.person_biography()}</h2>
+						<!-- fg-faint reads on the page's flat background, which is where
+						     the other two headings sit. This one is over the blurred
+						     portrait and needs the lighter step to stay legible. -->
+						<h2 class={cn(headingClass, "text-fg-subtle")}>
+							{i18n.person_biography()}
+						</h2>
 						<div
 							bind:this={bioEl}
 							class={cn("bio text-sm text-fg-muted", !bioExpanded && "bio-clamped")}
