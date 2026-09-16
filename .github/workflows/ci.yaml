@@ -259,3 +259,50 @@ jobs:
           else
             echo "❌ Helm validation failed" >> "$GITHUB_STEP_SUMMARY"
           fi
+
+  nix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # `nix flake check` builds the package, both NixOS VM tests and the
+      # home-manager activation — twenty minutes of runner when it has to run.
+      # The filter is every input those outputs hash over: a pnpm-lock or go.sum
+      # change moves pnpmDeps/vendorHash, and a stale hash only ever shows up
+      # here.
+      - name: Detect nix-relevant changes
+        id: filter
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        with:
+          filters: |
+            nix:
+              - 'nix/**'
+              - 'flake.nix'
+              - 'flake.lock'
+              - 'go.mod'
+              - 'go.sum'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - '.github/workflows/ci.yaml'
+
+      - name: Install Nix
+        if: steps.filter.outputs.nix == 'true'
+        uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+
+      - name: Flake check
+        if: steps.filter.outputs.nix == 'true'
+        run: nix flake check --print-build-logs
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Nix" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ steps.filter.outputs.nix }}" != "true" ]; then
+            echo "⏭️ No nix-relevant changes — skipped" >> "$GITHUB_STEP_SUMMARY"
+          elif [ "${{ job.status }}" = "success" ]; then
+            echo "✅ Package, NixOS VM test and home-manager module all built" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "❌ nix flake check failed" >> "$GITHUB_STEP_SUMMARY"
+          fi
