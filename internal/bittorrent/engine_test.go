@@ -37,6 +37,21 @@ func newTestClient(dir string) *antorrent.Client {
 	return client
 }
 
+// verifyData hash-checks every piece and waits for the results to land.
+// Piece.VerifyDataContext returns as soon as the hasher bumps the verify
+// count (torrent.go:2622-2623), but the hasher commits the verdict to the
+// completion bitmap only after MarkComplete/MarkNotComplete ran with the
+// client lock released (:2651-2663). A BytesMissing read in that window sees
+// the pre-check state — every piece complete, since the part-file scan at
+// open marked each full-length file so — which is how the corrupted-piece
+// fixture intermittently read 0 missing bytes on CI. PieceState.Marking is
+// raised in the same critical section as the count bump, so it is the fence.
+func verifyData(t *antorrent.Torrent) {
+	GinkgoHelper()
+	Expect(t.VerifyDataContext(context.Background())).To(Succeed())
+	waitPieceMarks([]*antorrent.Torrent{t})
+}
+
 // newTestTorrent builds a real single-piece, three-file torrent whose data
 // already sits in the client's own DataDir, so it never needs a peer or a
 // seeder: applyFilePriorities only reads/writes Torrent.Files(), and a
@@ -65,7 +80,7 @@ func newTestTorrent() *antorrent.Torrent {
 	// something requests a check, so BytesCompleted reads 0 even though the
 	// data is already on disk. Callers that read completion (not just
 	// priority) need it verified up front.
-	Expect(t.VerifyDataContext(context.Background())).To(Succeed())
+	verifyData(t)
 	return t
 }
 
@@ -98,7 +113,7 @@ func newPartialTorrent() *antorrent.Torrent {
 	t, err := newTestClient(dir).AddTorrent(&mi)
 	Expect(err).NotTo(HaveOccurred())
 	<-t.GotInfo()
-	Expect(t.VerifyDataContext(context.Background())).To(Succeed())
+	verifyData(t)
 	return t
 }
 

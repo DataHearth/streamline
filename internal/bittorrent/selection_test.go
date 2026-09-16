@@ -42,7 +42,7 @@ func newSelectionTestTorrent() (*antorrent.Client, *antorrent.Torrent) {
 	t, err := client.AddTorrent(&mi)
 	Expect(err).NotTo(HaveOccurred())
 	<-t.GotInfo()
-	Expect(t.VerifyDataContext(context.Background())).To(Succeed())
+	verifyData(t)
 	return client, t
 }
 
@@ -410,6 +410,6 @@ func newPartialSelectionTestTorrent() (*antorrent.Client, *antorrent.Torrent) {
 	t, err := client.AddTorrent(&mi)
 	Expect(err).NotTo(HaveOccurred())
 	<-t.GotInfo()
-	Expect(t.VerifyDataContext(context.Background())).To(Succeed())
+	verifyData(t)
 	return client, t
 }
