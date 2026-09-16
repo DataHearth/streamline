@@ -9127,7 +9127,6 @@ components:
     SystemInfo:
       type: object
       required:
-        - app_name
         - public_url
         - https_warn
         - auth_mode
@@ -9137,8 +9136,6 @@ components:
         - go_version
         - go_os_arch
       properties:
-        app_name:
-          type: string
         public_url:
           type: string
         https_warn:

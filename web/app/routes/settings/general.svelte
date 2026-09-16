@@ -6,7 +6,6 @@
 		useQueryClient,
 	} from "@tanstack/svelte-query";
 	import {
-		Play,
 		Globe,
 		Folder,
 		Database,
@@ -197,7 +196,6 @@
 {:else if info.data}
 	{@const d = info.data}
 	<div class="mt-6 grid grid-cols-1 gap-3 md:grid-cols-2">
-		{@render card(Play, "App name", d.app_name, false, null)}
 		{@render card(
 			Globe,
 			"Public URL",
@@ -627,7 +625,7 @@
 {/snippet}
 
 {#snippet card(
-	Icon: typeof Play,
+	Icon: typeof Globe,
 	label: string,
 	value: string,
 	mono: boolean,

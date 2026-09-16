@@ -20,7 +20,6 @@ import (
 // Snapshot is the read-only environment view. Pointer fields are nil when
 // the underlying probe fails (statfs error, missing DB file, etc.).
 type Snapshot struct {
-	AppName   string
 	PublicURL string
 	HTTPSWarn bool
 	AuthMode  string
@@ -120,7 +119,6 @@ func Collect() Snapshot {
 	cfg := config.Get()
 	publicURL := config.PublicURL()
 	snap := Snapshot{
-		AppName:      "Streamline",
 		PublicURL:    publicURL,
 		HTTPSWarn:    !strings.HasPrefix(strings.ToLower(publicURL), "https://"),
 		AuthMode:     cfg.Auth.Mode,

@@ -1256,7 +1256,6 @@ export type DiskUsage = {
 };
 
 export type SystemInfo = {
-	app_name: string;
 	public_url: string;
 	https_warn: boolean;
 	ffmpeg_warn?: boolean;

@@ -32,7 +32,6 @@ func (s *Server) GetSystemInfo(
 
 func snapshotToAPI(s sysinfo.Snapshot) SystemInfo {
 	out := SystemInfo{
-		AppName:   s.AppName,
 		PublicUrl: s.PublicURL,
 		HttpsWarn: s.HTTPSWarn,
 		AuthMode:  s.AuthMode,

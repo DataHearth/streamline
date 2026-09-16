@@ -4800,7 +4800,6 @@ type SystemConfigView struct {
 
 // SystemInfo defines model for SystemInfo.
 type SystemInfo struct {
-	AppName   string     `json:"app_name"`
 	AuthMode  string     `json:"auth_mode"`
 	BuiltAt   *string    `json:"built_at,omitempty"`
 	Commit    *string    `json:"commit,omitempty"`
