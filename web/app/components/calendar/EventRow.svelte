@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { Film, Tv } from "@lucide/svelte";
-	import { cn } from "../../lib/cn";
-	import Poster from "../movies/Poster.svelte";
+	import { cn } from "@lib/cn";
+	import Poster from "@components/shared/Poster.svelte";
 	import EventDot from "./EventDot.svelte";
-	import { dotToken, type CalendarEvent } from "../../lib/calendar";
+	import { dotToken, type CalendarEvent } from "@lib/calendar";
 
 	let {
 		event,

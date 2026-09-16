@@ -10,13 +10,13 @@
 		postLogin,
 		type AuthConfig,
 		type LoginInput,
-	} from "../lib/auth_api";
-	import { ApiError, errorText } from "../lib/api";
-	import { m as i18n } from "../lib/paraglide/messages.js";
-	import { email as emailSchema } from "../lib/schemas";
-	import TextField from "../components/forms/TextField.svelte";
-	import AuthCard from "../components/auth/AuthCard.svelte";
-	import BrandLogo from "../components/settings/BrandLogo.svelte";
+	} from "@lib/auth_api";
+	import { ApiError, errorText } from "@lib/api";
+	import { m as i18n } from "@lib/paraglide/messages.js";
+	import { email as emailSchema } from "@lib/schemas";
+	import TextField from "@components/forms/TextField.svelte";
+	import AuthCard from "@components/auth/AuthCard.svelte";
+	import BrandLogo from "@components/settings/BrandLogo.svelte";
 
 	let nextParam = $state("/");
 	let oidcError = $state("");

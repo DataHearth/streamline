@@ -16,7 +16,7 @@
 <script lang="ts">
 	import type { Snippet } from "svelte";
 	import Modal from "./Modal.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	type Props = {
 		open: boolean;

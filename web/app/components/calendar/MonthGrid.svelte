@@ -2,8 +2,8 @@
 	import { onDestroy, tick } from "svelte";
 	import { fly } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
-	import { cn } from "../../lib/cn";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { cn } from "@lib/cn";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 	import {
 		buildMonthGrid,
 		dotToken,
@@ -12,7 +12,7 @@
 		resolveWeekStart,
 		weekdayLabels,
 		type CalendarEvent,
-	} from "../../lib/calendar";
+	} from "@lib/calendar";
 	import EventDot from "./EventDot.svelte";
 
 	let {

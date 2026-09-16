@@ -1,17 +1,17 @@
 <script lang="ts">
-	import SkeletonList from "../shared/SkeletonList.svelte";
+	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import {
 		createQuery,
 		createMutation,
 		useQueryClient,
 	} from "@tanstack/svelte-query";
 	import { Key, Plus, Clipboard, X, ShieldAlert } from "@lucide/svelte";
-	import { api, errorText } from "../../lib/api";
-	import { toast } from "../../lib/toast";
-	import type { ApiKey } from "../../lib/types";
-	import Dialog from "../modals/Dialog.svelte";
-	import ApiKeyRow from "../shared/ApiKeyRow.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { api, errorText } from "@lib/api";
+	import { toast } from "@lib/toast";
+	import type { ApiKey } from "@lib/types";
+	import Dialog from "@components/modals/Dialog.svelte";
+	import ApiKeyRow from "@components/shared/ApiKeyRow.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	type ApiKeyCreated = ApiKey & { raw_token: string };
 

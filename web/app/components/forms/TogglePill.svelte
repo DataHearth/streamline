@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Component } from "svelte";
-	import { cn } from "../../lib/cn";
-	import { readOnlyLock } from "../../lib/config.svelte";
+	import { cn } from "@lib/cn";
+	import { readOnlyLock } from "@lib/config.svelte";
 
 	type Props = {
 		checked: boolean;

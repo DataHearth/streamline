@@ -2,22 +2,22 @@
 	import { untrack } from "svelte";
 	import { Search } from "@lucide/svelte";
 	import { createMutation } from "@tanstack/svelte-query";
-	import TextField from "../../forms/TextField.svelte";
-	import TogglePill from "../../forms/TogglePill.svelte";
-	import Select from "../../forms/Select.svelte";
-	import TypePicker from "../../forms/TypePicker.svelte";
-	import BrandLogo from "../BrandLogo.svelte";
-	import PlexPINFlow from "../PlexPINFlow.svelte";
-	import PlexSectionsModal from "../PlexSectionsModal.svelte";
-	import { api, errorText } from "../../../lib/api";
-	import { readOnlyLock } from "../../../lib/config.svelte";
-	import { toast } from "../../../lib/toast";
-	import type { AppForm } from "../../../lib/form";
-	import { m as i18n } from "../../../lib/paraglide/messages.js";
+	import TextField from "@components/forms/TextField.svelte";
+	import TogglePill from "@components/forms/TogglePill.svelte";
+	import Select from "@components/forms/Select.svelte";
+	import TypePicker from "@components/forms/TypePicker.svelte";
+	import BrandLogo from "@components/settings/BrandLogo.svelte";
+	import PlexPINFlow from "@components/settings/PlexPINFlow.svelte";
+	import PlexSectionsModal from "@components/settings/PlexSectionsModal.svelte";
+	import { api, errorText } from "@lib/api";
+	import { readOnlyLock } from "@lib/config.svelte";
+	import { toast } from "@lib/toast";
+	import type { AppForm } from "@lib/form";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 	import type {
 		MediaServerType,
 		MediaServerSection,
-	} from "../../../lib/types";
+	} from "@lib/types";
 
 	type Values = {
 		name: string;

@@ -4,20 +4,20 @@
 	import { goto } from "@roxi/routify";
 	import { onMount } from "svelte";
 	import { Play } from "@lucide/svelte";
-	import { api, errorText } from "../../lib/api";
-	import { toast } from "../../lib/toast";
-	import { importStartForm } from "../../lib/schemas";
+	import { api, errorText } from "@lib/api";
+	import { toast } from "@lib/toast";
+	import { importStartForm } from "@lib/schemas";
 	import type {
 		ImportMode,
 		ImportScan,
 		ImportScanKind,
 		ImportStartRequest,
 		ImportTransferMode,
-	} from "../../lib/types";
-	import TextField from "../forms/TextField.svelte";
-	import Select from "../forms/Select.svelte";
-	import RadioCards from "../forms/RadioCards.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	} from "@lib/types";
+	import TextField from "@components/forms/TextField.svelte";
+	import Select from "@components/forms/Select.svelte";
+	import RadioCards from "@components/forms/RadioCards.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	type Values = {
 		source_path: string;

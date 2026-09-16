@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { Inbox } from "@lucide/svelte";
-	import { groupReview } from "../../lib/requests-touch";
-	import type { MediaRequest } from "../../lib/types";
+	import { groupReview } from "@lib/requests-touch";
+	import type { MediaRequest } from "@lib/types";
 	import RequestTouchRow from "./RequestTouchRow.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// The touch band has no status control on screen — search took that space — so
 	// the list shows everything and states the split itself. Landing on a

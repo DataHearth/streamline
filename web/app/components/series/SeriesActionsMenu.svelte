@@ -4,16 +4,16 @@
 		createMutation,
 		useQueryClient,
 	} from "@tanstack/svelte-query";
-	import { api, errorText } from "../../lib/api";
-	import { toast } from "../../lib/toast";
-	import type { TVShow, QualityProfile, SeriesType } from "../../lib/types";
+	import { api, errorText } from "@lib/api";
+	import { toast } from "@lib/toast";
+	import type { TVShow, QualityProfile, SeriesType } from "@lib/types";
 	import SeriesKebabMenu, { type SeriesAction } from "./SeriesKebabMenu.svelte";
-	import QualityProfileModal from "../movies/QualityProfileModal.svelte";
+	import QualityProfileModal from "@components/shared/QualityProfileModal.svelte";
 	import SeriesTypeModal from "./SeriesTypeModal.svelte";
 	import SeriesRenamePreviewModal from "./SeriesRenamePreviewModal.svelte";
-	import DeleteTitleDialog from "../shared/DeleteTitleDialog.svelte";
-	import ReidentifyDialog from "../shared/ReidentifyDialog.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import DeleteTitleDialog from "@components/shared/DeleteTitleDialog.svelte";
+	import ReidentifyDialog from "@components/shared/ReidentifyDialog.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let { show, variant = "card" }: { show: TVShow; variant?: "card" | "toolbar" } =
 		$props();

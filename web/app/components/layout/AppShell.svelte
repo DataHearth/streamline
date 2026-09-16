@@ -7,10 +7,10 @@
 	import TopBar from "./TopBar.svelte";
 	import CommandPalette from "./CommandPalette.svelte";
 	import SearchScreen from "./SearchScreen.svelte";
-	import AddMovieModal from "../movies/AddMovieModal.svelte";
-	import AddSeriesModal from "../series/AddSeriesModal.svelte";
-	import MediaLookupScreen from "../shared/MediaLookupScreen.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import AddMovieModal from "@components/movies/AddMovieModal.svelte";
+	import AddSeriesModal from "@components/series/AddSeriesModal.svelte";
+	import MediaLookupScreen from "@components/shared/MediaLookupScreen.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let { children }: { children: Snippet } = $props();
 

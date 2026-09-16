@@ -20,11 +20,11 @@
 	import { fly, fade } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { Ellipsis, X } from "@lucide/svelte";
-	import { cn } from "../../lib/cn";
-	import { plural } from "../../lib/bulk";
-	import { bulkMode } from "../../lib/bulk-mode.svelte";
-	import { sheetSwipe } from "../../lib/sheet-swipe";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { cn } from "@lib/cn";
+	import { plural } from "@lib/bulk";
+	import { bulkMode } from "@lib/bulk-mode.svelte";
+	import { sheetSwipe } from "@lib/sheet-swipe";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// The phone half of bulk actions. It takes the bottom bar's place instead of
 	// stacking above it, and everything rare or destructive goes in the sheet

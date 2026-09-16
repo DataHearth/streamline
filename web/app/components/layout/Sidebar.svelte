@@ -15,26 +15,26 @@
 	} from "@lucide/svelte";
 	import { isActive as routifyIsActive } from "@roxi/routify";
 	import { createQuery } from "@tanstack/svelte-query";
-	import { api } from "../../lib/api";
-	import { NAV_POLL_MS, SILENT } from "../../lib/query";
-	import { auth } from "../../lib/auth.svelte";
-	import { cn } from "../../lib/cn";
+	import { api } from "@lib/api";
+	import { NAV_POLL_MS, SILENT } from "@lib/query";
+	import { auth } from "@lib/auth.svelte";
+	import { cn } from "@lib/cn";
 	import {
 		torrentCountsQuery,
 		transcodeCountsQuery,
 		activityCurrent,
 		type IsActiveFn,
-	} from "../../lib/activity-nav";
-	import { navCountsQuery, type NavDot } from "../../lib/nav-counts";
+	} from "@lib/activity-nav";
+	import { navCountsQuery, type NavDot } from "@lib/nav-counts";
 	import type {
 		MovieCounts,
 		TVShowCounts,
 		RequestCounts,
 		PendingList,
 		SystemInfo,
-	} from "../../lib/types";
+	} from "@lib/types";
 	import Avatar from "./Avatar.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	const systemQuery = createQuery<SystemInfo>(() => ({
 		queryKey: ["system", "info"],

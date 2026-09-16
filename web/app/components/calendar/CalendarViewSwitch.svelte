@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { cn } from "../../lib/cn";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { cn } from "@lib/cn";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Phone only. The tablet stacks the month grid and the agenda in one scroll
 	// (there is room); a 390px viewport has to pick one, so it picks per tap.

@@ -2,17 +2,17 @@
 	import { fly, fade } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { X } from "@lucide/svelte";
-	import { cn } from "../../lib/cn";
-	import { lockScroll, unlockScroll } from "../../lib/scrollLock";
-	import { sheetSwipe } from "../../lib/sheet-swipe";
+	import { cn } from "@lib/cn";
+	import { lockScroll, unlockScroll } from "@lib/scrollLock";
+	import { sheetSwipe } from "@lib/sheet-swipe";
 	import {
 		KIND_CHIPS,
 		statusChips,
 		type RequestKind,
 		type RequestTab,
-	} from "../../lib/requests-touch";
-	import type { RequestCounts } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	} from "@lib/requests-touch";
+	import type { RequestCounts } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Everything the line above can no longer afford to keep on screen: the four
 	// status tabs that overflowed their box at 358px, and the media-type group

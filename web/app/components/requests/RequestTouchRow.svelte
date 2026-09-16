@@ -1,16 +1,16 @@
 <script lang="ts">
 	import { ChevronRight } from "@lucide/svelte";
-	import { cn } from "../../lib/cn";
-	import { formatRelative } from "../../lib/dates";
+	import { cn } from "@lib/cn";
+	import { formatRelative } from "@lib/dates";
 	import {
 		STATUS_META,
 		TONE_CLASS,
 		kindToken,
 		outcomeWord,
 		requesterName,
-	} from "../../lib/requests-touch";
-	import type { MediaRequest } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	} from "@lib/requests-touch";
+	import type { MediaRequest } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// A2: the row says which request this is and what it wants from you. Every
 	// action lives in the sheet below md, so the list stays a list.

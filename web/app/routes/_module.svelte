@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { onMount } from "svelte";
 	import { isActive as routifyIsActive } from "@roxi/routify";
-	import { auth } from "../lib/auth.svelte.js";
-	import { config } from "../lib/config.svelte.js";
-	import AppShell from "../components/layout/AppShell.svelte";
+	import { auth } from "@lib/auth.svelte.js";
+	import { config } from "@lib/config.svelte.js";
+	import AppShell from "@components/layout/AppShell.svelte";
 
 	// Auth + error pages are full-bleed: no sidebar, no nav, no user hydration.
 	// Anything else gets the shell.

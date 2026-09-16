@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Check, LoaderCircle } from "@lucide/svelte";
-	import type { ImportStatus } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import type { ImportStatus } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let { status, series = false }: { status: ImportStatus; series?: boolean } =
 		$props();

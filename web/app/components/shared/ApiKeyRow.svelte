@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { Key, Trash2 } from "@lucide/svelte";
-	import { formatDateTime, formatRelative } from "../../lib/dates";
-	import type { ApiKey } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { formatDateTime, formatRelative } from "@lib/dates";
+	import type { ApiKey } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let {
 		apiKey,

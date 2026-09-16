@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { slide } from "svelte/transition";
 	import { Pause, Play, Ban, Trash2, RotateCw, LoaderCircle } from "@lucide/svelte";
-	import Dialog from "../modals/Dialog.svelte";
-	import { cn } from "../../lib/cn";
-	import { formatBytes } from "../../lib/format";
-	import { formatDateTime } from "../../lib/dates";
-	import type { QueueEntry, HistoryEntry } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import Dialog from "@components/modals/Dialog.svelte";
+	import { cn } from "@lib/cn";
+	import { formatBytes } from "@lib/format";
+	import { formatDateTime } from "@lib/dates";
+	import type { QueueEntry, HistoryEntry } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let {
 		item,

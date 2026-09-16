@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Plus } from "@lucide/svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	type Counts = { running: number; review: number };
 

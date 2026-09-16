@@ -19,12 +19,12 @@
 	} from "@lucide/svelte";
 	import { fly } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
-	import { api, apiAllPages, errorText, type Paginated } from "../../lib/api";
-	import { toast } from "../../lib/toast";
-	import { auth } from "../../lib/auth.svelte";
-	import { formatBytes } from "../../lib/format";
-	import { movieStatus } from "../../lib/status";
-	import { lockScroll, unlockScroll } from "../../lib/scrollLock";
+	import { api, apiAllPages, errorText, type Paginated } from "@lib/api";
+	import { toast } from "@lib/toast";
+	import { auth } from "@lib/auth.svelte";
+	import { formatBytes } from "@lib/format";
+	import { movieStatus } from "@lib/status";
+	import { lockScroll, unlockScroll } from "@lib/scrollLock";
 	import type {
 		AddMovieRequest,
 		AddSeriesRequest,
@@ -34,12 +34,12 @@
 		SeriesLookupResultList,
 		TMDBMovieResult,
 		TVShow,
-	} from "../../lib/types";
+	} from "@lib/types";
 	import LookupDetailPanel from "./LookupDetailPanel.svelte";
 	import LookupSheet from "./LookupSheet.svelte";
 	import StatusPill from "./StatusPill.svelte";
-	import Select from "../forms/Select.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import Select from "@components/forms/Select.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// The touch add/request flow. Where the desktop modal is a split panel with
 	// a commit button in its footer, this takes over the screen: the library's

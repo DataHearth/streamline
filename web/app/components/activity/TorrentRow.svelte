@@ -1,16 +1,16 @@
 <script lang="ts">
 	import { ChevronRight } from "@lucide/svelte";
-	import StatusPill from "../shared/StatusPill.svelte";
-	import ProgressBar from "../shared/ProgressBar.svelte";
-	import { cn } from "../../lib/cn";
+	import StatusPill from "@components/shared/StatusPill.svelte";
+	import ProgressBar from "@components/shared/ProgressBar.svelte";
+	import { cn } from "@lib/cn";
 	import {
 		formatBytes,
 		formatSpeed,
 		formatEta,
 		formatRatio,
-	} from "../../lib/format";
-	import type { Torrent } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	} from "@lib/format";
+	import type { Torrent } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let {
 		torrent,

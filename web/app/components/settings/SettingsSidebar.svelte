@@ -2,9 +2,9 @@
 	import { onMount } from "svelte";
 	import { SlidersHorizontal } from "@lucide/svelte";
 	import { isActive as routifyIsActive } from "@roxi/routify";
-	import { cn } from "../../lib/cn";
-	import { createSettingsNav } from "../../lib/settings-nav.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { cn } from "@lib/cn";
+	import { createSettingsNav } from "@lib/settings-nav.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Desktop only, from lg. Below that the section list is a page of its own
 	// (SettingsIndex at /settings) rather than a column competing with the

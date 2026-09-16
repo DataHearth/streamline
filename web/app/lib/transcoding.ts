@@ -6,7 +6,7 @@
 // chips in the filter sheet below lg and the select in the header from lg both
 // write the same key here. See routes/activity/transcoding.svelte.
 
-import type { StatusKind } from "../components/shared/StatusPill.svelte";
+import type { StatusKind } from "@components/shared/StatusPill.svelte";
 import { ApiError } from "./api";
 import { formatBytes, formatEta } from "./format";
 import { formatRelative } from "./dates";

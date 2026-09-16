@@ -1,15 +1,15 @@
 <script lang="ts">
 	import { createMutation, useQueryClient } from "@tanstack/svelte-query";
 	import { Pause, Play, Zap, Pencil, Lock } from "@lucide/svelte";
-	import { api, errorText } from "../../lib/api";
-	import { cn } from "../../lib/cn";
-	import { config, READONLY_HINT } from "../../lib/config.svelte";
-	import { toast } from "../../lib/toast";
-	import { createScheduleActions } from "../../lib/schedule-actions.svelte";
-	import { runningLabel } from "../../lib/schedules-touch";
-	import { formatRelative, formatDateTime } from "../../lib/dates";
-	import type { Schedule, ScheduleList } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { api, errorText } from "@lib/api";
+	import { cn } from "@lib/cn";
+	import { config, READONLY_HINT } from "@lib/config.svelte";
+	import { toast } from "@lib/toast";
+	import { createScheduleActions } from "@lib/schedule-actions.svelte";
+	import { runningLabel } from "@lib/schedules-touch";
+	import { formatRelative, formatDateTime } from "@lib/dates";
+	import type { Schedule, ScheduleList } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	type Props = {
 		row: Schedule;

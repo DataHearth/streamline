@@ -1,8 +1,8 @@
 <script lang="ts">
-	import Modal from "../modals/Modal.svelte";
-	import ReleasesTable from "../shared/ReleasesTable.svelte";
-	import ReplaceExistingToggle from "../shared/ReplaceExistingToggle.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import Modal from "@components/modals/Modal.svelte";
+	import ReleasesTable from "@components/shared/ReleasesTable.svelte";
+	import ReplaceExistingToggle from "@components/shared/ReplaceExistingToggle.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let {
 		open,

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Check, type LucideIcon } from "@lucide/svelte";
-	import { cn } from "../../lib/cn";
+	import { cn } from "@lib/cn";
 
 	// One row of the one dropdown surface: a label, and any of a leading status
 	// dot, a trailing count, a muted second line, and the check that marks the

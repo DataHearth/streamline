@@ -4,15 +4,15 @@
 		createMutation,
 		useQueryClient,
 	} from "@tanstack/svelte-query";
-	import { api, errorText } from "../../lib/api";
-	import { toast } from "../../lib/toast";
-	import type { Movie, QualityProfile } from "../../lib/types";
+	import { api, errorText } from "@lib/api";
+	import { toast } from "@lib/toast";
+	import type { Movie, QualityProfile } from "@lib/types";
 	import MovieKebabMenu from "./MovieKebabMenu.svelte";
-	import QualityProfileModal from "./QualityProfileModal.svelte";
+	import QualityProfileModal from "@components/shared/QualityProfileModal.svelte";
 	import RenameMoviePreviewModal from "./RenameMoviePreviewModal.svelte";
-	import DeleteTitleDialog from "../shared/DeleteTitleDialog.svelte";
-	import ReidentifyDialog from "../shared/ReidentifyDialog.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import DeleteTitleDialog from "@components/shared/DeleteTitleDialog.svelte";
+	import ReidentifyDialog from "@components/shared/ReidentifyDialog.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let { movie, variant = "card" }: { movie: Movie; variant?: "card" | "toolbar" } =
 		$props();

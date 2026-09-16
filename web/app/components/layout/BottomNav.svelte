@@ -22,22 +22,22 @@
 	} from "@lucide/svelte";
 	import { isActive as routifyIsActive } from "@roxi/routify";
 	import { createQuery } from "@tanstack/svelte-query";
-	import { api } from "../../lib/api";
-	import { NAV_POLL_MS, SILENT } from "../../lib/query";
-	import type { PendingList, RequestCounts, SystemInfo } from "../../lib/types";
-	import { auth } from "../../lib/auth.svelte";
-	import { cn } from "../../lib/cn";
+	import { api } from "@lib/api";
+	import { NAV_POLL_MS, SILENT } from "@lib/query";
+	import type { PendingList, RequestCounts, SystemInfo } from "@lib/types";
+	import { auth } from "@lib/auth.svelte";
+	import { cn } from "@lib/cn";
 	import {
 		TORRENT_PILLS,
 		torrentCountsQuery,
 		transcodeCountsQuery,
 		activityCurrent,
 		type IsActiveFn,
-	} from "../../lib/activity-nav";
-	import { navCountsQuery, type NavDot } from "../../lib/nav-counts";
-	import { bulkMode } from "../../lib/bulk-mode.svelte";
+	} from "@lib/activity-nav";
+	import { navCountsQuery, type NavDot } from "@lib/nav-counts";
+	import { bulkMode } from "@lib/bulk-mode.svelte";
 	import Avatar from "./Avatar.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Phone only. From md up the rail takes over (SidebarRail), and from lg the
 	// full sidebar does.

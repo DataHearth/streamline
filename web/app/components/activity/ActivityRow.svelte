@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { ChevronRight } from "@lucide/svelte";
-	import StatusPill from "../shared/StatusPill.svelte";
-	import ProgressBar from "../shared/ProgressBar.svelte";
-	import { cn } from "../../lib/cn";
-	import { entryHeading, holdSummary } from "../../lib/activity-touch";
-	import { pillStatus, formatBytes, formatSpeed, formatEta } from "../../lib/format";
-	import { formatRelative, formatDateTime } from "../../lib/dates";
-	import type { QueueEntry, HistoryEntry } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import StatusPill from "@components/shared/StatusPill.svelte";
+	import ProgressBar from "@components/shared/ProgressBar.svelte";
+	import { cn } from "@lib/cn";
+	import { entryHeading, holdSummary } from "@lib/activity-touch";
+	import { pillStatus, formatBytes, formatSpeed, formatEta } from "@lib/format";
+	import { formatRelative, formatDateTime } from "@lib/dates";
+	import type { QueueEntry, HistoryEntry } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let {
 		item,

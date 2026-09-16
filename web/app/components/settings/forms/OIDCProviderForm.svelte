@@ -1,7 +1,7 @@
 <script lang="ts">
-	import TextField from "../../forms/TextField.svelte";
-	import type { AppForm } from "../../../lib/form";
-	import { m as i18n } from "../../../lib/paraglide/messages.js";
+	import TextField from "@components/forms/TextField.svelte";
+	import type { AppForm } from "@lib/form";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	type Values = {
 		name: string;

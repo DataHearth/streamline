@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { AnyFormApi } from "@tanstack/form-core";
-	import { readOnlyLock } from "../../lib/config.svelte";
+	import { readOnlyLock } from "@lib/config.svelte";
 
 	type Props = {
 		form: AnyFormApi;

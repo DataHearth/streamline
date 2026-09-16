@@ -1,15 +1,15 @@
 <script lang="ts">
 	import { createQuery } from "@tanstack/svelte-query";
 	import { Film, ChevronLeft, ChevronRight } from "@lucide/svelte";
-	import { api, apiAllPages, type Paginated } from "../../lib/api";
-	import Poster from "./Poster.svelte";
+	import { api, apiAllPages, type Paginated } from "@lib/api";
+	import Poster from "@components/shared/Poster.svelte";
 	import AddRecommendationModal from "./AddRecommendationModal.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 	import type {
 		Movie,
 		MovieRecommendations,
 		TMDBMovieResult,
-	} from "../../lib/types";
+	} from "@lib/types";
 
 	let { movieId }: { movieId: number } = $props();
 

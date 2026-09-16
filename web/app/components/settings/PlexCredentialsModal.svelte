@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { Check, Copy, TriangleAlert } from "@lucide/svelte";
-	import { toast } from "../../lib/toast";
-	import Modal from "../modals/Modal.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { toast } from "@lib/toast";
+	import Modal from "@components/modals/Modal.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	type Props = {
 		open: boolean;

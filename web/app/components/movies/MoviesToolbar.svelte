@@ -14,14 +14,14 @@
 		SlidersHorizontal,
 		type LucideIcon,
 	} from "@lucide/svelte";
-	import { cn } from "../../lib/cn";
-	import { dragScroll } from "../../lib/drag-scroll";
-	import SelectionTopBar from "../shared/SelectionTopBar.svelte";
-	import MediaFilterSheet from "../shared/MediaFilterSheet.svelte";
-	import DropdownMenu from "../shared/DropdownMenu.svelte";
-	import DropdownOption from "../shared/DropdownOption.svelte";
-	import type { MovieCounts } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { cn } from "@lib/cn";
+	import { dragScroll } from "@lib/drag-scroll";
+	import SelectionTopBar from "@components/shared/SelectionTopBar.svelte";
+	import MediaFilterSheet from "@components/shared/MediaFilterSheet.svelte";
+	import DropdownMenu from "@components/shared/DropdownMenu.svelte";
+	import DropdownOption from "@components/shared/DropdownOption.svelte";
+	import type { MovieCounts } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	type View = "grid" | "list";
 	type SortKey = "title" | "year";

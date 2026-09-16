@@ -1,4 +1,4 @@
-import type { StatusKind } from "../components/shared/StatusPill.svelte";
+import type { StatusKind } from "@components/shared/StatusPill.svelte";
 import type { Episode, EpisodeStatus, Movie, TVShow } from "./types";
 
 // The backend keeps a fileless movie in "wanted" whether or not anyone is

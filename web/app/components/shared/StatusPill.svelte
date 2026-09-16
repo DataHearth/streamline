@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 	export type StatusKind =
 		| "downloading"
 		| "grabbing"
@@ -51,7 +51,7 @@
 </script>
 
 <script lang="ts">
-	import { cn } from "../../lib/cn";
+	import { cn } from "@lib/cn";
 
 	let {
 		status,

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import SkeletonList from "../../../components/shared/SkeletonList.svelte";
+	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import { ArrowDown, ArrowUp, ArrowUpDown } from "@lucide/svelte";
 	import {
 		createQuery,
@@ -9,21 +9,21 @@
 	import { createForm } from "@tanstack/svelte-form";
 	import * as v from "valibot";
 	import { Users, Search, UserPlus, SlidersHorizontal } from "@lucide/svelte";
-	import { api, errorText } from "../../../lib/api";
-	import { auth } from "../../../lib/auth.svelte";
-	import { toast } from "../../../lib/toast";
-	import { requireAdmin } from "../../../lib/guards";
-	import { cn } from "../../../lib/cn";
-	import { email, password, displayName, userRole } from "../../../lib/schemas";
-	import type { User, UserList, UserRole } from "../../../lib/types";
-	import UserRow from "../../../components/users/UserRow.svelte";
-	import UserTouchList from "../../../components/users/UserTouchList.svelte";
-	import UserFilterSheet from "../../../components/users/UserFilterSheet.svelte";
-	import InvitesCard from "../../../components/users/InvitesCard.svelte";
-	import TextField from "../../../components/forms/TextField.svelte";
-	import Select from "../../../components/forms/Select.svelte";
-	import Dialog from "../../../components/modals/Dialog.svelte";
-	import { m as i18n } from "../../../lib/paraglide/messages.js";
+	import { api, errorText } from "@lib/api";
+	import { auth } from "@lib/auth.svelte";
+	import { toast } from "@lib/toast";
+	import { requireAdmin } from "@lib/guards";
+	import { cn } from "@lib/cn";
+	import { email, password, displayName, userRole } from "@lib/schemas";
+	import type { User, UserList, UserRole } from "@lib/types";
+	import UserRow from "@components/users/UserRow.svelte";
+	import UserTouchList from "@components/users/UserTouchList.svelte";
+	import UserFilterSheet from "@components/users/UserFilterSheet.svelte";
+	import InvitesCard from "@components/users/InvitesCard.svelte";
+	import TextField from "@components/forms/TextField.svelte";
+	import Select from "@components/forms/Select.svelte";
+	import Dialog from "@components/modals/Dialog.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	const LIMIT = 25;
 

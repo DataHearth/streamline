@@ -1,27 +1,27 @@
 <script lang="ts">
-	import SkeletonList from "../../components/shared/SkeletonList.svelte";
+	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import {
 		createQuery,
 		createMutation,
 		useQueryClient,
 	} from "@tanstack/svelte-query";
 	import { ArrowUpRight, LoaderCircle, Radar, TriangleAlert } from "@lucide/svelte";
-	import { api, errorText, ApiError } from "../../lib/api";
-	import { cn } from "../../lib/cn";
-	import { config, markConfigForm } from "../../lib/config.svelte";
-	import { toast } from "../../lib/toast";
+	import { api, errorText, ApiError } from "@lib/api";
+	import { cn } from "@lib/cn";
+	import { config, markConfigForm } from "@lib/config.svelte";
+	import { toast } from "@lib/toast";
 	import type {
 		FFmpegConfig,
 		TranscodeConfig,
 		TranscodeConfigPatch,
 		TranscodeHwAccel,
-	} from "../../lib/types";
-	import { scanWorkerUnavailable } from "../../lib/transcoding";
-	import Checkbox from "../../components/forms/Checkbox.svelte";
-	import FieldLock from "../../components/forms/FieldLock.svelte";
-	import Select from "../../components/forms/Select.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
-	import { INPUT_CLASS } from "../../lib/form";
+	} from "@lib/types";
+	import { scanWorkerUnavailable } from "@lib/transcoding";
+	import Checkbox from "@components/forms/Checkbox.svelte";
+	import FieldLock from "@components/forms/FieldLock.svelte";
+	import Select from "@components/forms/Select.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
+	import { INPUT_CLASS } from "@lib/form";
 
 	// Saves per control rather than through one form, so nothing else
 	// establishes the config-form context the field primitives read. Without

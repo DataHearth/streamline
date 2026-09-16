@@ -8,8 +8,8 @@
 		TriangleAlert,
 		X,
 	} from "@lucide/svelte";
-	import { ringReading } from "../../lib/activity-touch";
-	import type { StatusKind } from "../shared/StatusPill.svelte";
+	import { ringReading } from "@lib/activity-touch";
+	import type { StatusKind } from "@components/shared/StatusPill.svelte";
 
 	// The leading mark of every touch row: an arc for progress, the status colour
 	// for state, and a number only where a percentage is true. See ringReading.

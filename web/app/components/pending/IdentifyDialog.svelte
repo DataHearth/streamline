@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { createMutation, useQueryClient } from "@tanstack/svelte-query";
-	import { api, errorText } from "../../lib/api";
-	import { toast } from "../../lib/toast";
-	import type { SeriesLookupResult, TMDBMovieResult } from "../../lib/types";
-	import AddMovieModal from "../movies/AddMovieModal.svelte";
-	import AddSeriesModal from "../series/AddSeriesModal.svelte";
-	import Dialog from "../modals/Dialog.svelte";
+	import { api, errorText } from "@lib/api";
+	import { toast } from "@lib/toast";
+	import type { SeriesLookupResult, TMDBMovieResult } from "@lib/types";
+	import AddMovieModal from "@components/movies/AddMovieModal.svelte";
+	import AddSeriesModal from "@components/series/AddSeriesModal.svelte";
+	import Dialog from "@components/modals/Dialog.svelte";
 
 	type Props = {
 		open: boolean;

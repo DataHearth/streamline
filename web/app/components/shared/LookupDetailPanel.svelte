@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { ChevronLeft, ExternalLink, Film, Star, Tv } from "@lucide/svelte";
-	import MovieDetailCast from "../movies/MovieDetailCast.svelte";
-	import type { LookupDetail } from "../../lib/types";
-	import { formatDate } from "../../lib/dates";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import DetailCast from "./DetailCast.svelte";
+	import type { LookupDetail } from "@lib/types";
+	import { formatDate } from "@lib/dates";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// The right-hand pane of the add/request modals: everything TMDB/TVDB knows
 	// about the highlighted result, so the choice can be made without leaving
@@ -285,7 +285,7 @@
 				>
 					{i18n.detail_top_billed()}
 				</h4>
-				<MovieDetailCast {cast} dense external />
+				<DetailCast {cast} dense external />
 			</section>
 		{/if}
 

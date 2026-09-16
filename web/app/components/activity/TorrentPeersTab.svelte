@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { ChevronDown, ChevronUp, Users } from "@lucide/svelte";
-	import { cn } from "../../lib/cn";
-	import { formatSpeed } from "../../lib/format";
-	import type { TorrentPeer, TorrentStatus } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { cn } from "@lib/cn";
+	import { formatSpeed } from "@lib/format";
+	import type { TorrentPeer, TorrentStatus } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let {
 		peers,

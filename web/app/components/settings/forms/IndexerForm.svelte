@@ -1,15 +1,15 @@
 <script lang="ts">
 	import { untrack } from "svelte";
 	import { Lock, Rss } from "@lucide/svelte";
-	import TextField from "../../forms/TextField.svelte";
-	import { fieldErrorMessages } from "../../../lib/fieldErrors";
-	import TogglePill from "../../forms/TogglePill.svelte";
-	import BrandLogo from "../BrandLogo.svelte";
-	import { cn } from "../../../lib/cn";
-	import { readOnlyLock } from "../../../lib/config.svelte";
-	import type { AppForm } from "../../../lib/form";
-	import type { IndexerProtocol } from "../../../lib/types";
-	import { m as i18n } from "../../../lib/paraglide/messages.js";
+	import TextField from "@components/forms/TextField.svelte";
+	import { fieldErrorMessages } from "@lib/fieldErrors";
+	import TogglePill from "@components/forms/TogglePill.svelte";
+	import BrandLogo from "@components/settings/BrandLogo.svelte";
+	import { cn } from "@lib/cn";
+	import { readOnlyLock } from "@lib/config.svelte";
+	import type { AppForm } from "@lib/form";
+	import type { IndexerProtocol } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	type Values = {
 		name: string;

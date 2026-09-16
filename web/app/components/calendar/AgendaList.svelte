@@ -5,9 +5,9 @@
 		groupByDay,
 		isToday,
 		type CalendarEvent,
-	} from "../../lib/calendar";
+	} from "@lib/calendar";
 	import EventRow from "./EventRow.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let {
 		events,

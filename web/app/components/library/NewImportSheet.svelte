@@ -2,10 +2,10 @@
 	import { fly, fade } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { X } from "@lucide/svelte";
-	import { lockScroll, unlockScroll } from "../../lib/scrollLock";
-	import { sheetSwipe } from "../../lib/sheet-swipe";
+	import { lockScroll, unlockScroll } from "@lib/scrollLock";
+	import { sheetSwipe } from "@lib/sheet-swipe";
 	import NewImportForm from "./NewImportForm.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Below md the new-scan form is a sheet, not a modal: it is the same
 	// vocabulary every other surface a phone opens in this app uses, and a

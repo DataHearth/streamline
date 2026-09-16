@@ -6,7 +6,7 @@
 		TranscodePreset,
 		TranscodeTargetCodec,
 		TranscodeTargetContainer,
-	} from "../../../lib/types";
+	} from "@lib/types";
 
 	// The policy is flat and always present in the form, gated by
 	// transcode_enabled. The page assembles the API's optional `transcode` from
@@ -119,19 +119,19 @@
 <script lang="ts">
 	import { createQuery } from "@tanstack/svelte-query";
 	import { Plus, Trash2, WandSparkles } from "@lucide/svelte";
-	import TextField from "../../forms/TextField.svelte";
-	import Select from "../../forms/Select.svelte";
-	import Checkbox from "../../forms/Checkbox.svelte";
-	import ScoreInput from "../../forms/ScoreInput.svelte";
-	import { cn } from "../../../lib/cn";
-	import { api } from "../../../lib/api";
-	import { readOnlyLock } from "../../../lib/config.svelte";
-	import FieldLock from "../../forms/FieldLock.svelte";
-	import { VIDEO_CODECS } from "../../../lib/media-info";
-	import type { CustomFormat } from "../../../lib/types";
-	import type { AppForm } from "../../../lib/form";
-	import { m as i18n } from "../../../lib/paraglide/messages.js";
-	import { INPUT_CLASS } from "../../../lib/form";
+	import TextField from "@components/forms/TextField.svelte";
+	import Select from "@components/forms/Select.svelte";
+	import Checkbox from "@components/forms/Checkbox.svelte";
+	import ScoreInput from "@components/forms/ScoreInput.svelte";
+	import { cn } from "@lib/cn";
+	import { api } from "@lib/api";
+	import { readOnlyLock } from "@lib/config.svelte";
+	import FieldLock from "@components/forms/FieldLock.svelte";
+	import { VIDEO_CODECS } from "@lib/media-info";
+	import type { CustomFormat } from "@lib/types";
+	import type { AppForm } from "@lib/form";
+	import { m as i18n } from "@lib/paraglide/messages.js";
+	import { INPUT_CLASS } from "@lib/form";
 
 	type Props = {
 		form: AppForm<QualityProfileValues>;

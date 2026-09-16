@@ -5,14 +5,14 @@
 		useQueryClient,
 	} from "@tanstack/svelte-query";
 	import { LoaderCircle, Radar } from "@lucide/svelte";
-	import { api, errorText, ApiError } from "../../lib/api";
-	import { auth } from "../../lib/auth.svelte";
-	import { toast } from "../../lib/toast";
-	import { cn } from "../../lib/cn";
-	import { fold } from "../../lib/text";
-	import { pullRefresh } from "../../lib/pull-refresh";
-	import { SILENT } from "../../lib/query";
-	import { formatBytes } from "../../lib/format";
+	import { api, errorText, ApiError } from "@lib/api";
+	import { auth } from "@lib/auth.svelte";
+	import { toast } from "@lib/toast";
+	import { cn } from "@lib/cn";
+	import { fold } from "@lib/text";
+	import { pullRefresh } from "@lib/pull-refresh";
+	import { SILENT } from "@lib/query";
+	import { formatBytes } from "@lib/format";
 	import {
 		TRANSCODE_SORT_CHIPS,
 		anyLive,
@@ -22,15 +22,15 @@
 		scanWorkerUnavailable,
 		transcodingDisabled,
 		type TranscodeSortKey,
-	} from "../../lib/transcoding";
-	import type { FFmpegConfig, TranscodeJob } from "../../lib/types";
-	import ActivityToolbar from "../../components/activity/ActivityToolbar.svelte";
-	import ActivityFilterSheet from "../../components/activity/ActivityFilterSheet.svelte";
-	import TouchStatLine from "../../components/activity/TouchStatLine.svelte";
-	import TranscodeList from "../../components/activity/TranscodeList.svelte";
-	import Dialog from "../../components/modals/Dialog.svelte";
-	import Select from "../../components/forms/Select.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	} from "@lib/transcoding";
+	import type { FFmpegConfig, TranscodeJob } from "@lib/types";
+	import ActivityToolbar from "@components/activity/ActivityToolbar.svelte";
+	import ActivityFilterSheet from "@components/activity/ActivityFilterSheet.svelte";
+	import TouchStatLine from "@components/activity/TouchStatLine.svelte";
+	import TranscodeList from "@components/activity/TranscodeList.svelte";
+	import Dialog from "@components/modals/Dialog.svelte";
+	import Select from "@components/forms/Select.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let statusFilter = $state<string[]>([]);
 	let search = $state("");

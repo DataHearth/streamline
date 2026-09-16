@@ -10,12 +10,12 @@
 	import { createQuery } from "@tanstack/svelte-query";
 	import { fly, fade } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
-	import { api } from "../../lib/api";
-	import { lockScroll, unlockScroll } from "../../lib/scrollLock";
-	import { sheetSwipe } from "../../lib/sheet-swipe";
-	import BrandLogo from "../settings/BrandLogo.svelte";
-	import type { PlayOnLink, PlayOnLinkList } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { api } from "@lib/api";
+	import { lockScroll, unlockScroll } from "@lib/scrollLock";
+	import { sheetSwipe } from "@lib/sheet-swipe";
+	import BrandLogo from "@components/settings/BrandLogo.svelte";
+	import type { PlayOnLink, PlayOnLinkList } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	type Props = {
 		// Play-on endpoint (movie or series) returning a PlayOnLinkList.

@@ -8,7 +8,7 @@
 // Those get a glyph instead of the number, and an arc that either spins or
 // completes.
 
-import type { StatusKind } from "../components/shared/StatusPill.svelte";
+import type { StatusKind } from "@components/shared/StatusPill.svelte";
 import { formatBytes, formatEta, formatRatio, formatSpeed } from "./format";
 import { formatRelative } from "./dates";
 import type { HistoryEntry, HoldReason, QueueEntry, Torrent } from "./types";

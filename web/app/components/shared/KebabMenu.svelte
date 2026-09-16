@@ -21,8 +21,8 @@
 	import { fly } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { Ellipsis, EllipsisVertical } from "@lucide/svelte";
-	import { cn } from "../../lib/cn";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { cn } from "@lib/cn";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let {
 		items,

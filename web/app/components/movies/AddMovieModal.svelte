@@ -15,20 +15,20 @@
 		Gauge,
 	} from "@lucide/svelte";
 	import { fade } from "svelte/transition";
-	import { api, apiAllPages, errorText, type Paginated } from "../../lib/api";
-	import { toast } from "../../lib/toast";
-	import { auth } from "../../lib/auth.svelte";
+	import { api, apiAllPages, errorText, type Paginated } from "@lib/api";
+	import { toast } from "@lib/toast";
+	import { auth } from "@lib/auth.svelte";
 	import type {
 		AddMovieRequest,
 		LookupDetail,
 		Movie,
 		QualityProfile,
 		TMDBMovieResult,
-	} from "../../lib/types";
-	import Modal from "../modals/Modal.svelte";
-	import Select from "../forms/Select.svelte";
-	import LookupDetailPanel from "../shared/LookupDetailPanel.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	} from "@lib/types";
+	import Modal from "@components/modals/Modal.svelte";
+	import Select from "@components/forms/Select.svelte";
+	import LookupDetailPanel from "@components/shared/LookupDetailPanel.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	type Props = {
 		open: boolean;

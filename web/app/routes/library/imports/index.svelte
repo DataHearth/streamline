@@ -1,16 +1,16 @@
 <script lang="ts">
-	import SkeletonList from "../../../components/shared/SkeletonList.svelte";
+	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { onMount } from "svelte";
 	import { Inbox } from "@lucide/svelte";
-	import { api, errorText } from "../../../lib/api";
-	import type { ImportScanList } from "../../../lib/types";
-	import Modal from "../../../components/modals/Modal.svelte";
-	import ImportsHeader from "../../../components/library/ImportsHeader.svelte";
-	import ScanRow from "../../../components/library/ScanRow.svelte";
-	import NewImportForm from "../../../components/library/NewImportForm.svelte";
-	import NewImportSheet from "../../../components/library/NewImportSheet.svelte";
-	import { m as i18n } from "../../../lib/paraglide/messages.js";
+	import { api, errorText } from "@lib/api";
+	import type { ImportScanList } from "@lib/types";
+	import Modal from "@components/modals/Modal.svelte";
+	import ImportsHeader from "@components/library/ImportsHeader.svelte";
+	import ScanRow from "@components/library/ScanRow.svelte";
+	import NewImportForm from "@components/library/NewImportForm.svelte";
+	import NewImportSheet from "@components/library/NewImportSheet.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Which container the form gets. Rendered as an either/or rather than two
 	// breakpoint-hidden copies, so only one NewImportForm — and one createForm —

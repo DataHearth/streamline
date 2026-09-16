@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { createMutation, useQueryClient } from "@tanstack/svelte-query";
-	import { api, errorText } from "../../lib/api";
-	import { toast } from "../../lib/toast";
-	import { tvPosterUrl } from "../../lib/posters";
-	import { seriesStatus } from "../../lib/status";
-	import PosterCard from "../shared/PosterCard.svelte";
+	import { api, errorText } from "@lib/api";
+	import { toast } from "@lib/toast";
+	import { tvPosterUrl } from "@lib/posters";
+	import { seriesStatus } from "@lib/status";
+	import PosterCard from "@components/shared/PosterCard.svelte";
 	import SeriesActionsMenu from "./SeriesActionsMenu.svelte";
-	import type { TVShow } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import type { TVShow } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let {
 		series,

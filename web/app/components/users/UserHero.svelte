@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { Shield, KeyRound, Monitor, LockKeyhole, ShieldCheck } from "@lucide/svelte";
-	import { formatDateTime, formatRelative } from "../../lib/dates";
-	import type { ApiKey, Session, User } from "../../lib/types";
-	import Avatar from "../layout/Avatar.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { formatDateTime, formatRelative } from "@lib/dates";
+	import type { ApiKey, Session, User } from "@lib/types";
+	import Avatar from "@components/layout/Avatar.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let {
 		user,

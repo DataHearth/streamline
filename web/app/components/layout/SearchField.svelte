@@ -6,9 +6,9 @@
 		createSearchModel,
 		searchNav,
 		type SearchItem,
-	} from "../../lib/search-model.svelte";
+	} from "@lib/search-model.svelte";
 	import SearchResultRow from "./SearchResultRow.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Tablet band (md → lg). The width is there for a real field, so the bar gets
 	// one instead of an icon, and the results drop as a panel under it — the one

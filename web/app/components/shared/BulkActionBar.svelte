@@ -3,8 +3,8 @@
 	import { X } from "@lucide/svelte";
 	import { fly } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
-	import { plural } from "../../lib/bulk";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { plural } from "@lib/bulk";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let {
 		count,

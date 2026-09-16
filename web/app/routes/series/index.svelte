@@ -1,7 +1,7 @@
 <script lang="ts">
-	import SkeletonToolbar from "../../components/shared/SkeletonToolbar.svelte";
-	import SkeletonList from "../../components/shared/SkeletonList.svelte";
-	import Skeleton from "../../components/shared/Skeleton.svelte";
+	import SkeletonToolbar from "@components/shared/SkeletonToolbar.svelte";
+	import SkeletonList from "@components/shared/SkeletonList.svelte";
+	import Skeleton from "@components/shared/Skeleton.svelte";
 	import { untrack } from "svelte";
 	import { onMount } from "svelte";
 	import {
@@ -9,12 +9,12 @@
 		createQuery,
 		keepPreviousData,
 	} from "@tanstack/svelte-query";
-	import { api, errorText, type Paginated } from "../../lib/api";
-	import { formatRelative } from "../../lib/dates";
-	import { loadPref, savePref, SERIES_SEARCH } from "../../lib/prefs";
-	import { onRouteQuery } from "../../lib/route-query";
-	import { pageMeta } from "../../lib/page-meta.svelte";
-	import SeriesToolbar from "../../components/series/SeriesToolbar.svelte";
+	import { api, errorText, type Paginated } from "@lib/api";
+	import { formatRelative } from "@lib/dates";
+	import { loadPref, savePref, SERIES_SEARCH } from "@lib/prefs";
+	import { onRouteQuery } from "@lib/route-query";
+	import { pageMeta } from "@lib/page-meta.svelte";
+	import SeriesToolbar from "@components/series/SeriesToolbar.svelte";
 	import type {
 		SeriesTab,
 		SeriesTypeFilter,
@@ -24,13 +24,13 @@
 		SeriesTabCounts,
 		SeriesTypeCounts,
 		SeriesMonCounts,
-	} from "../../components/series/SeriesToolbar.svelte";
-	import SeriesGrid from "../../components/series/SeriesGrid.svelte";
-	import SeriesList from "../../components/series/SeriesList.svelte";
-	import SeriesEmpty from "../../components/series/SeriesEmpty.svelte";
-	import SeriesBulkActions from "../../components/series/SeriesBulkActions.svelte";
-	import type { ScheduleList, TVShow, TVShowCounts } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	} from "@components/series/SeriesToolbar.svelte";
+	import SeriesGrid from "@components/series/SeriesGrid.svelte";
+	import SeriesList from "@components/series/SeriesList.svelte";
+	import SeriesEmpty from "@components/series/SeriesEmpty.svelte";
+	import SeriesBulkActions from "@components/series/SeriesBulkActions.svelte";
+	import type { ScheduleList, TVShow, TVShowCounts } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	type View = "grid" | "list";
 

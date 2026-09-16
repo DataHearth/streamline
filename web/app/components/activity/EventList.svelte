@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { Activity } from "@lucide/svelte";
-	import { formatRelative, formatDateTime } from "../../lib/dates";
+	import { formatRelative, formatDateTime } from "@lib/dates";
 	import {
 		eventSubject,
 		EVENT_MARKS,
 		monitoringDetail,
-	} from "../../lib/activity-event";
-	import type { ActivityEvent } from "../../lib/types";
+	} from "@lib/activity-event";
+	import type { ActivityEvent } from "@lib/types";
 
 	let { events }: { events: ActivityEvent[] } = $props();
 

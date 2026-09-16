@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { ChevronRight, LockKeyhole } from "@lucide/svelte";
-	import Avatar from "../layout/Avatar.svelte";
-	import type { User } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import Avatar from "@components/layout/Avatar.svelte";
+	import type { User } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// The trailing word is the auth method, not the created date: on a household
 	// instance "who signs in through SSO" is the column you scan for, and the

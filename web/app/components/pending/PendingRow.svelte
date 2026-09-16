@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { ChevronRight, LoaderCircle } from "@lucide/svelte";
 	import { createQuery } from "@tanstack/svelte-query";
-	import Dialog from "../modals/Dialog.svelte";
-	import Checkbox from "../forms/Checkbox.svelte";
+	import Dialog from "@components/modals/Dialog.svelte";
+	import Checkbox from "@components/forms/Checkbox.svelte";
 	import IdentifyDialog from "./IdentifyDialog.svelte";
-	import { api } from "../../lib/api";
-	import { cn } from "../../lib/cn";
-	import type { PendingItem, PendingPreview } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { api } from "@lib/api";
+	import { cn } from "@lib/cn";
+	import type { PendingItem, PendingPreview } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let {
 		item,

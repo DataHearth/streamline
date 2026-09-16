@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { createQuery } from "@tanstack/svelte-query";
 	import { ChevronLeft, ChevronRight, TriangleAlert } from "@lucide/svelte";
-	import { api } from "../../lib/api";
-	import type { UpcomingList } from "../../lib/types";
+	import { api } from "@lib/api";
+	import type { UpcomingList } from "@lib/types";
 	import {
 		dayLabel,
 		eventsForDay,
@@ -13,18 +13,18 @@
 		resolveWeekStart,
 		upcomingEvents,
 		type CalendarFilter,
-	} from "../../lib/calendar";
-	import { monthSwipe } from "../../lib/calendar-swipe";
-	import type { CalendarView } from "../../components/calendar/CalendarViewSwitch.svelte";
-	import MonthGrid from "../../components/calendar/MonthGrid.svelte";
-	import DotGrid from "../../components/calendar/DotGrid.svelte";
-	import AgendaList from "../../components/calendar/AgendaList.svelte";
-	import EventRow from "../../components/calendar/EventRow.svelte";
-	import Next30Panel from "../../components/calendar/Next30Panel.svelte";
-	import CalendarFilterSwitch from "../../components/calendar/CalendarFilter.svelte";
-	import CalendarViewSwitch from "../../components/calendar/CalendarViewSwitch.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
-	import { getLocale } from "../../lib/paraglide/runtime.js";
+	} from "@lib/calendar";
+	import { monthSwipe } from "@lib/calendar-swipe";
+	import type { CalendarView } from "@components/calendar/CalendarViewSwitch.svelte";
+	import MonthGrid from "@components/calendar/MonthGrid.svelte";
+	import DotGrid from "@components/calendar/DotGrid.svelte";
+	import AgendaList from "@components/calendar/AgendaList.svelte";
+	import EventRow from "@components/calendar/EventRow.svelte";
+	import Next30Panel from "@components/calendar/Next30Panel.svelte";
+	import CalendarFilterSwitch from "@components/calendar/CalendarFilter.svelte";
+	import CalendarViewSwitch from "@components/calendar/CalendarViewSwitch.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
+	import { getLocale } from "@lib/paraglide/runtime.js";
 
 	const today = new Date();
 	let year = $state(today.getFullYear());

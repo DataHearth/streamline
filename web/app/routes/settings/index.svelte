@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { onMount } from "svelte";
 	import { goto } from "@roxi/routify";
-	import { createSettingsDesktop } from "../../lib/viewport.svelte";
-	import SettingsIndex from "../../components/settings/SettingsIndex.svelte";
+	import { createSettingsDesktop } from "@lib/viewport.svelte";
+	import SettingsIndex from "@components/settings/SettingsIndex.svelte";
 
 	// /settings is two things now. From lg the sidebar owns the section list, so
 	// landing here with no section chosen is meaningless and it redirects to

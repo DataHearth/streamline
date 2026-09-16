@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Search, SlidersHorizontal, X } from "@lucide/svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// C2, with the status control removed: the segmented Pending / Decided / All
 	// went into the sheet with everything else, and the line that replaces it

@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { Magnet, Upload, Info, FileText } from "@lucide/svelte";
-	import Modal from "../modals/Modal.svelte";
-	import { cn } from "../../lib/cn";
-	import { isMagnet, readTorrentFile } from "../../lib/torrent-file";
-	import type { AddTorrentRequest } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
-	import { errorText } from "../../lib/api";
+	import Modal from "@components/modals/Modal.svelte";
+	import { cn } from "@lib/cn";
+	import { isMagnet, readTorrentFile } from "@lib/torrent-file";
+	import type { AddTorrentRequest } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
+	import { errorText } from "@lib/api";
 
 	let {
 		open,

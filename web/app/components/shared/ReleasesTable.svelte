@@ -8,15 +8,15 @@
 		Info,
 		LoaderCircle,
 	} from "@lucide/svelte";
-	import { cn } from "../../lib/cn";
-	import { api, errorText } from "../../lib/api";
-	import { auth } from "../../lib/auth.svelte";
-	import { toast } from "../../lib/toast";
-	import { formatBytes } from "../../lib/format";
-	import type { Indexer, SearchResult } from "../../lib/types";
-	import Select from "../forms/Select.svelte";
+	import { cn } from "@lib/cn";
+	import { api, errorText } from "@lib/api";
+	import { auth } from "@lib/auth.svelte";
+	import { toast } from "@lib/toast";
+	import { formatBytes } from "@lib/format";
+	import type { Indexer, SearchResult } from "@lib/types";
+	import Select from "@components/forms/Select.svelte";
 	import SearchNarration from "./SearchNarration.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	type Field =
 		| "title"

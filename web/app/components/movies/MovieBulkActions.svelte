@@ -9,23 +9,23 @@
 		RefreshCw,
 		Trash2,
 	} from "@lucide/svelte";
-	import { api } from "../../lib/api";
-	import { toast } from "../../lib/toast";
-	import { runBulk, plural } from "../../lib/bulk";
-	import { formatBytes } from "../../lib/format";
-	import BulkActionBar from "../shared/BulkActionBar.svelte";
-	import BulkTouchBar from "../shared/BulkTouchBar.svelte";
+	import { api } from "@lib/api";
+	import { toast } from "@lib/toast";
+	import { runBulk, plural } from "@lib/bulk";
+	import { formatBytes } from "@lib/format";
+	import BulkActionBar from "@components/shared/BulkActionBar.svelte";
+	import BulkTouchBar from "@components/shared/BulkTouchBar.svelte";
 	import type {
 		TouchAction,
 		TouchMenuRow,
-	} from "../shared/BulkTouchBar.svelte";
-	import KebabMenu from "../shared/KebabMenu.svelte";
-	import type { KebabItem } from "../shared/KebabMenu.svelte";
-	import QualityProfileModal from "./QualityProfileModal.svelte";
-	import DeleteTitleDialog from "../shared/DeleteTitleDialog.svelte";
-	import Dialog from "../modals/Dialog.svelte";
-	import type { Movie, QualityProfile } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	} from "@components/shared/BulkTouchBar.svelte";
+	import KebabMenu from "@components/shared/KebabMenu.svelte";
+	import type { KebabItem } from "@components/shared/KebabMenu.svelte";
+	import QualityProfileModal from "@components/shared/QualityProfileModal.svelte";
+	import DeleteTitleDialog from "@components/shared/DeleteTitleDialog.svelte";
+	import Dialog from "@components/modals/Dialog.svelte";
+	import type { Movie, QualityProfile } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let {
 		movies,

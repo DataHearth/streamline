@@ -2,10 +2,10 @@
 	import { onMount } from "svelte";
 	import { Film, FolderInput, Plus, Tv } from "@lucide/svelte";
 	import { activeRoute } from "@roxi/routify";
-	import { auth } from "../../lib/auth.svelte";
-	import { cn } from "../../lib/cn";
-	import { bulkMode } from "../../lib/bulk-mode.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { auth } from "@lib/auth.svelte";
+	import { cn } from "@lib/cn";
+	import { bulkMode } from "@lib/bulk-mode.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Phone only. Adding is a repeated one-handed action, and the top-right
 	// corner is the furthest point on the screen from a thumb — so the plus

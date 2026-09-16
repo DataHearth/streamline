@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { Cast, CircleCheck, RefreshCw } from "@lucide/svelte";
-	import { toast } from "../../lib/toast";
-	import { startPlexPin } from "../../lib/plex_pin";
+	import { toast } from "@lib/toast";
+	import { startPlexPin } from "@lib/plex_pin";
 	import PlexCredentialsModal from "./PlexCredentialsModal.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	type Props = {
 		token: string;

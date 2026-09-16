@@ -2,14 +2,14 @@
 	import { fly, fade } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { X, Zap, Pause, Play, Pencil, TriangleAlert } from "@lucide/svelte";
-	import { cn } from "../../lib/cn";
-	import { lockScroll, unlockScroll } from "../../lib/scrollLock";
-	import { sheetSwipe } from "../../lib/sheet-swipe";
-	import { config, READONLY_HINT } from "../../lib/config.svelte";
-	import { createScheduleActions } from "../../lib/schedule-actions.svelte";
-	import { scheduleState } from "../../lib/schedules-touch";
-	import type { Schedule } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { cn } from "@lib/cn";
+	import { lockScroll, unlockScroll } from "@lib/scrollLock";
+	import { sheetSwipe } from "@lib/sheet-swipe";
+	import { config, READONLY_HINT } from "@lib/config.svelte";
+	import { createScheduleActions } from "@lib/schedule-actions.svelte";
+	import { scheduleState } from "@lib/schedules-touch";
+	import type { Schedule } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// The three 28px icon buttons the desktop row carries, as words. Pause vs
 	// Resume gets to be a label instead of a glyph you decode, and each target

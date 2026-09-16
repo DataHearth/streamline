@@ -1,7 +1,7 @@
 <script lang="ts">
 	import RecentScroller from "./RecentScroller.svelte";
 	import type { ScrollerItem } from "./RecentScroller.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let { movies }: { movies: ScrollerItem[] } = $props();
 

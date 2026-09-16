@@ -11,13 +11,13 @@
 		Tv,
 		FolderInput,
 	} from "@lucide/svelte";
-	import { api } from "../../lib/api";
-	import { auth } from "../../lib/auth.svelte";
-	import { pageMeta } from "../../lib/page-meta.svelte";
+	import { api } from "@lib/api";
+	import { auth } from "@lib/auth.svelte";
+	import { pageMeta } from "@lib/page-meta.svelte";
 	import SearchField from "./SearchField.svelte";
-	import type { SystemInfo } from "../../lib/types";
-	import { toast } from "../../lib/toast";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import type { SystemInfo } from "@lib/types";
+	import { toast } from "@lib/toast";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Routify's `activeRoute` only emits once a navigation has resolved, so
 	// its `.url` is always the page we're actually on. Reading

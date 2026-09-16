@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from "svelte";
-	import SkeletonList from "../../components/shared/SkeletonList.svelte";
+	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import {
 		createQuery,
 		createMutation,
@@ -8,18 +8,18 @@
 	} from "@tanstack/svelte-query";
 	import { createForm } from "@tanstack/svelte-form";
 	import * as v from "valibot";
-	import { api, errorText } from "../../lib/api";
-	import { config } from "../../lib/config.svelte";
-	import { toast } from "../../lib/toast";
-	import { scheduleInterval } from "../../lib/schemas";
-	import type { Schedule, ScheduleList } from "../../lib/types";
-	import Modal from "../../components/modals/Modal.svelte";
-	import ScheduleRow from "../../components/settings/ScheduleRow.svelte";
-	import ScheduleTouchList from "../../components/settings/ScheduleTouchList.svelte";
-	import ScheduleActionSheet from "../../components/settings/ScheduleActionSheet.svelte";
-	import TextField from "../../components/forms/TextField.svelte";
-	import ReadOnlyFieldset from "../../components/settings/ReadOnlyFieldset.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { api, errorText } from "@lib/api";
+	import { config } from "@lib/config.svelte";
+	import { toast } from "@lib/toast";
+	import { scheduleInterval } from "@lib/schemas";
+	import type { Schedule, ScheduleList } from "@lib/types";
+	import Modal from "@components/modals/Modal.svelte";
+	import ScheduleRow from "@components/settings/ScheduleRow.svelte";
+	import ScheduleTouchList from "@components/settings/ScheduleTouchList.svelte";
+	import ScheduleActionSheet from "@components/settings/ScheduleActionSheet.svelte";
+	import TextField from "@components/forms/TextField.svelte";
+	import ReadOnlyFieldset from "@components/settings/ReadOnlyFieldset.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	const JOB_DESCRIPTIONS: Record<string, string> = {
 		"movie-rss-sync": i18n.schedule_rss_movies(),

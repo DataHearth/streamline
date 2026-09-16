@@ -15,37 +15,37 @@
 		ExternalLink,
 		Trash2,
 	} from "@lucide/svelte";
-	import { api, errorText } from "../../lib/api";
-	import { toast } from "../../lib/toast";
-	import { cn } from "../../lib/cn";
-	import { missingEpisodes } from "../../lib/status";
-	import { tvPosterUrl } from "../../lib/posters";
-	import { listHref, SERIES_SEARCH } from "../../lib/prefs";
-	import { formatDate } from "../../lib/dates";
-	import Poster from "../../components/movies/Poster.svelte";
-	import StatusPill from "../../components/shared/StatusPill.svelte";
-	import type { StatusKind } from "../../components/shared/StatusPill.svelte";
-	import ProgressBar from "../../components/shared/ProgressBar.svelte";
-	import Select from "../../components/forms/Select.svelte";
-	import Checkbox from "../../components/forms/Checkbox.svelte";
-	import Dialog from "../../components/modals/Dialog.svelte";
-	import DeleteTitleDialog from "../../components/shared/DeleteTitleDialog.svelte";
-	import ReidentifyDialog from "../../components/shared/ReidentifyDialog.svelte";
-	import SeriesRenamePreviewModal from "../../components/series/SeriesRenamePreviewModal.svelte";
-	import QualityProfileModal from "../../components/movies/QualityProfileModal.svelte";
-	import SeriesTypeModal from "../../components/series/SeriesTypeModal.svelte";
-	import SeasonStrip from "../../components/series/SeasonStrip.svelte";
-	import SeasonAccordion from "../../components/series/SeasonAccordion.svelte";
-	import EpisodeTable from "../../components/series/EpisodeTable.svelte";
-	import SeriesManualSearchModal from "../../components/series/SeriesManualSearchModal.svelte";
-	import SeriesReleaseSearchModal from "../../components/series/SeriesReleaseSearchModal.svelte";
-	import SeriesKebabMenu from "../../components/series/SeriesKebabMenu.svelte";
-	import MovieDetailCast from "../../components/movies/MovieDetailCast.svelte";
-	import DetailHistory from "../../components/shared/DetailHistory.svelte";
-	import DetailAbout from "../../components/shared/DetailAbout.svelte";
-	import PlayOnMenu from "../../components/movies/PlayOnMenu.svelte";
-	import type { SeriesAction } from "../../components/series/SeriesKebabMenu.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { api, errorText } from "@lib/api";
+	import { toast } from "@lib/toast";
+	import { cn } from "@lib/cn";
+	import { missingEpisodes } from "@lib/status";
+	import { tvPosterUrl } from "@lib/posters";
+	import { listHref, SERIES_SEARCH } from "@lib/prefs";
+	import { formatDate } from "@lib/dates";
+	import Poster from "@components/shared/Poster.svelte";
+	import StatusPill from "@components/shared/StatusPill.svelte";
+	import type { StatusKind } from "@components/shared/StatusPill.svelte";
+	import ProgressBar from "@components/shared/ProgressBar.svelte";
+	import Select from "@components/forms/Select.svelte";
+	import Checkbox from "@components/forms/Checkbox.svelte";
+	import Dialog from "@components/modals/Dialog.svelte";
+	import DeleteTitleDialog from "@components/shared/DeleteTitleDialog.svelte";
+	import ReidentifyDialog from "@components/shared/ReidentifyDialog.svelte";
+	import SeriesRenamePreviewModal from "@components/series/SeriesRenamePreviewModal.svelte";
+	import QualityProfileModal from "@components/shared/QualityProfileModal.svelte";
+	import SeriesTypeModal from "@components/series/SeriesTypeModal.svelte";
+	import SeasonStrip from "@components/series/SeasonStrip.svelte";
+	import SeasonAccordion from "@components/series/SeasonAccordion.svelte";
+	import EpisodeTable from "@components/series/EpisodeTable.svelte";
+	import SeriesManualSearchModal from "@components/series/SeriesManualSearchModal.svelte";
+	import SeriesReleaseSearchModal from "@components/series/SeriesReleaseSearchModal.svelte";
+	import SeriesKebabMenu from "@components/series/SeriesKebabMenu.svelte";
+	import DetailCast from "@components/shared/DetailCast.svelte";
+	import DetailHistory from "@components/shared/DetailHistory.svelte";
+	import DetailAbout from "@components/shared/DetailAbout.svelte";
+	import PlayOnMenu from "@components/shared/PlayOnMenu.svelte";
+	import type { SeriesAction } from "@components/series/SeriesKebabMenu.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 	import type {
 		Episode,
 		MonitoringPreset,
@@ -53,7 +53,7 @@
 		Season,
 		SeriesType,
 		TVShow,
-	} from "../../lib/types";
+	} from "@lib/types";
 
 	type Tab = "overview" | "episodes" | "history" | "cast";
 	const TABS: { key: Tab; label: string }[] = [
@@ -1018,7 +1018,7 @@
 		{:else if tab === "history"}
 			<DetailHistory seriesId={show.id} />
 		{:else if tab === "cast"}
-			<MovieDetailCast cast={show.cast ?? []} />
+			<DetailCast cast={show.cast ?? []} />
 		{/if}
 	</div>
 

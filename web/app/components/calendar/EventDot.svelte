@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { cn } from "../../lib/cn";
-	import type { CalendarKind } from "../../lib/calendar";
+	import { cn } from "@lib/cn";
+	import type { CalendarKind } from "@lib/calendar";
 
 	// The dot encodes kind, never state — see dotToken. Its colours live in
 	// `--kind-*` so they can't be mistaken for a status.

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { cn } from "../../lib/cn";
+	import { cn } from "@lib/cn";
 	import {
 		buildMonthGrid,
 		dayLabel,
@@ -9,7 +9,7 @@
 		resolveWeekStart,
 		weekdayLabels,
 		type CalendarEvent,
-	} from "../../lib/calendar";
+	} from "@lib/calendar";
 	import EventDot from "./EventDot.svelte";
 
 	// The phone's month view. Below md a cell is ~48px wide, which is enough for

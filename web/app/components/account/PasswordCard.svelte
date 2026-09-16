@@ -2,12 +2,12 @@
 	import { createForm } from "@tanstack/svelte-form";
 	import { createMutation } from "@tanstack/svelte-query";
 	import * as v from "valibot";
-	import { api, errorText } from "../../lib/api";
-	import { toast } from "../../lib/toast";
-	import { password } from "../../lib/schemas";
-	import TextField from "../forms/TextField.svelte";
-	import Modal from "../modals/Modal.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { api, errorText } from "@lib/api";
+	import { toast } from "@lib/toast";
+	import { password } from "@lib/schemas";
+	import TextField from "@components/forms/TextField.svelte";
+	import Modal from "@components/modals/Modal.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	type Body = { current_password: string; new_password: string };
 

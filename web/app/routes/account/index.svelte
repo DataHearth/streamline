@@ -1,14 +1,14 @@
 <script lang="ts">
-	import IdentityHero from "../../components/account/IdentityHero.svelte";
-	import AccountIndex from "../../components/account/AccountIndex.svelte";
-	import ProfileCard from "../../components/account/ProfileCard.svelte";
-	import PasswordCard from "../../components/account/PasswordCard.svelte";
-	import APIKeysCard from "../../components/account/APIKeysCard.svelte";
-	import SessionsCard from "../../components/account/SessionsCard.svelte";
-	import JWTRotateCard from "../../components/account/JWTRotateCard.svelte";
-	import LanguageCard from "../../components/account/LanguageCard.svelte";
-	import { auth } from "../../lib/auth.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import IdentityHero from "@components/account/IdentityHero.svelte";
+	import AccountIndex from "@components/account/AccountIndex.svelte";
+	import ProfileCard from "@components/account/ProfileCard.svelte";
+	import PasswordCard from "@components/account/PasswordCard.svelte";
+	import APIKeysCard from "@components/account/APIKeysCard.svelte";
+	import SessionsCard from "@components/account/SessionsCard.svelte";
+	import JWTRotateCard from "@components/account/JWTRotateCard.svelte";
+	import LanguageCard from "@components/account/LanguageCard.svelte";
+	import { auth } from "@lib/auth.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let isAdmin = $derived(auth.user?.role === "admin");
 </script>

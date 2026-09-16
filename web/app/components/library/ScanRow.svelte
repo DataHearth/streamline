@@ -7,11 +7,11 @@
 		LoaderCircle,
 		TriangleAlert,
 	} from "@lucide/svelte";
-	import { formatDateTime, formatRelative } from "../../lib/dates";
-	import { importModeLabel, importStatusMeta } from "../../lib/imports";
-	import type { ImportScan } from "../../lib/types";
-	import ProgressBar from "../shared/ProgressBar.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { formatDateTime, formatRelative } from "@lib/dates";
+	import { importModeLabel, importStatusMeta } from "@lib/imports";
+	import type { ImportScan } from "@lib/types";
+	import ProgressBar from "@components/shared/ProgressBar.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let { scan }: { scan: ImportScan } = $props();
 

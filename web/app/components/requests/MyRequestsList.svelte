@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { Inbox } from "@lucide/svelte";
-	import { groupMine } from "../../lib/requests-touch";
-	import type { MediaRequest } from "../../lib/types";
+	import { groupMine } from "@lib/requests-touch";
+	import type { MediaRequest } from "@lib/types";
 	import RequestTouchRow from "./RequestTouchRow.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// E2: a request_only member is not triaging, they are checking on something.
 	// Two groups answer that, so the four status tabs and the stat strip both go

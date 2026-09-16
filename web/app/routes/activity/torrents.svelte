@@ -5,19 +5,19 @@
 		createMutation,
 		useQueryClient,
 	} from "@tanstack/svelte-query";
-	import { api, errorText } from "../../lib/api";
-	import { engineDisabled } from "../../lib/activity-nav";
-	import { auth } from "../../lib/auth.svelte";
-	import { toast } from "../../lib/toast";
-	import { pullRefresh } from "../../lib/pull-refresh";
-	import { fold } from "../../lib/text";
+	import { api, errorText } from "@lib/api";
+	import { engineDisabled } from "@lib/activity-nav";
+	import { auth } from "@lib/auth.svelte";
+	import { toast } from "@lib/toast";
+	import { pullRefresh } from "@lib/pull-refresh";
+	import { fold } from "@lib/text";
 	import {
 		TORRENT_SORT_CHIPS,
 		sortTorrents,
 		torrentSortChipKey,
 		type SortOrder,
 		type TorrentSortKey,
-	} from "../../lib/activity-touch";
+	} from "@lib/activity-touch";
 	import type {
 		Torrent,
 		TorrentList,
@@ -25,7 +25,7 @@
 		TorrentAddResult,
 		TorrentFilePriority,
 		AddTorrentRequest,
-	} from "../../lib/types";
+	} from "@lib/types";
 	import {
 		Zap,
 		ArrowUpRight,
@@ -35,16 +35,16 @@
 	} from "@lucide/svelte";
 	import ActivityToolbar, {
 		ACTIVITY_CHIPS,
-	} from "../../components/activity/ActivityToolbar.svelte";
-	import ActivityFilterSheet from "../../components/activity/ActivityFilterSheet.svelte";
-	import TouchStatLine from "../../components/activity/TouchStatLine.svelte";
-	import TorrentTable from "../../components/activity/TorrentTable.svelte";
-	import TorrentTouchList from "../../components/activity/TorrentTouchList.svelte";
-	import TorrentDrawer from "../../components/activity/TorrentDrawer.svelte";
-	import AddTorrentModal from "../../components/activity/AddTorrentModal.svelte";
-	import AddTorrentSheet from "../../components/activity/AddTorrentSheet.svelte";
-	import { formatSpeed } from "../../lib/format";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	} from "@components/activity/ActivityToolbar.svelte";
+	import ActivityFilterSheet from "@components/activity/ActivityFilterSheet.svelte";
+	import TouchStatLine from "@components/activity/TouchStatLine.svelte";
+	import TorrentTable from "@components/activity/TorrentTable.svelte";
+	import TorrentTouchList from "@components/activity/TorrentTouchList.svelte";
+	import TorrentDrawer from "@components/activity/TorrentDrawer.svelte";
+	import AddTorrentModal from "@components/activity/AddTorrentModal.svelte";
+	import AddTorrentSheet from "@components/activity/AddTorrentSheet.svelte";
+	import { formatSpeed } from "@lib/format";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Moving the peer port is normally gluetun's VPN_PORT_FORWARDING_UP_COMMAND
 	// calling this endpoint on every rotation. It has no retry of its own and a

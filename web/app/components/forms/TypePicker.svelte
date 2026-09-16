@@ -1,7 +1,7 @@
 <script lang="ts" generics="T extends string">
 	import type { Snippet } from "svelte";
-	import { cn } from "../../lib/cn";
-	import { readOnlyLock } from "../../lib/config.svelte";
+	import { cn } from "@lib/cn";
+	import { readOnlyLock } from "@lib/config.svelte";
 
 	type Option = { value: T; label: string };
 

@@ -3,8 +3,8 @@
 		CustomFormat,
 		CustomFormatCondition,
 		CustomFormatConditionType,
-	} from "../../lib/types";
-	import { m as messages } from "../../lib/paraglide/messages.js";
+	} from "@lib/types";
+	import { m as messages } from "@lib/paraglide/messages.js";
 
 	export const CONDITION_TYPES: CustomFormatConditionType[] = [
 		"release_title",
@@ -217,15 +217,15 @@
 	import { createQuery } from "@tanstack/svelte-query";
 	import * as v from "valibot";
 	import { Check, Plus, Trash2, X, Ban, Asterisk } from "@lucide/svelte";
-	import { api, errorText } from "../../lib/api";
-	import { cn } from "../../lib/cn";
-	import { config } from "../../lib/config.svelte";
-	import { customFormatCondition } from "../../lib/schemas";
-	import type { CustomFormatTestResult, Resolution } from "../../lib/types";
-	import Select from "../forms/Select.svelte";
-	import FieldLock from "../forms/FieldLock.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
-	import { INPUT_CLASS } from "../../lib/form";
+	import { api, errorText } from "@lib/api";
+	import { cn } from "@lib/cn";
+	import { config } from "@lib/config.svelte";
+	import { customFormatCondition } from "@lib/schemas";
+	import type { CustomFormatTestResult, Resolution } from "@lib/types";
+	import Select from "@components/forms/Select.svelte";
+	import FieldLock from "@components/forms/FieldLock.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
+	import { INPUT_CLASS } from "@lib/form";
 
 	type Props = {
 		// The page owns the draft; the editor mutates it in place, which is what

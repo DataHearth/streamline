@@ -1,16 +1,16 @@
 <script lang="ts">
 	import { createMutation, useQueryClient } from "@tanstack/svelte-query";
 	import { Bookmark, Tv } from "@lucide/svelte";
-	import { cn } from "../../lib/cn";
-	import { dragScroll } from "../../lib/drag-scroll";
-	import { api, errorText } from "../../lib/api";
-	import { toast } from "../../lib/toast";
-	import { tvPosterUrl } from "../../lib/posters";
-	import Poster from "../movies/Poster.svelte";
-	import SelectBox from "../shared/SelectBox.svelte";
+	import { cn } from "@lib/cn";
+	import { dragScroll } from "@lib/drag-scroll";
+	import { api, errorText } from "@lib/api";
+	import { toast } from "@lib/toast";
+	import { tvPosterUrl } from "@lib/posters";
+	import Poster from "@components/shared/Poster.svelte";
+	import SelectBox from "@components/shared/SelectBox.svelte";
 	import SeriesActionsMenu from "./SeriesActionsMenu.svelte";
-	import type { TVShow } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import type { TVShow } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let {
 		series,

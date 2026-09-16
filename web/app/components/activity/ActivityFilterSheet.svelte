@@ -2,10 +2,10 @@
 	import { fade, fly } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { Search, Trash2, X } from "@lucide/svelte";
-	import { cn } from "../../lib/cn";
-	import { lockScroll, unlockScroll } from "../../lib/scrollLock";
-	import { sheetSwipe } from "../../lib/sheet-swipe";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { cn } from "@lib/cn";
+	import { lockScroll, unlockScroll } from "@lib/scrollLock";
+	import { sheetSwipe } from "@lib/sheet-swipe";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Everything the activity toolbars can't afford to keep on screen below lg:
 	// the release filter, the sort the torrent table's headers used to own, and

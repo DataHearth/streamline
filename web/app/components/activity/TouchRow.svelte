@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { ChevronRight } from "@lucide/svelte";
 	import ProgressRing from "./ProgressRing.svelte";
-	import { cn } from "../../lib/cn";
-	import type { MetaLine } from "../../lib/activity-touch";
-	import type { StatusKind } from "../shared/StatusPill.svelte";
+	import { cn } from "@lib/cn";
+	import type { MetaLine } from "@lib/activity-touch";
+	import type { StatusKind } from "@components/shared/StatusPill.svelte";
 
 	// One row shape for all three touch views. Only the third line differs
 	// between Queue, History and Torrents — the ring, title and release line are

@@ -18,20 +18,20 @@
 	} from "@lucide/svelte";
 	import { isActive as routifyIsActive } from "@roxi/routify";
 	import { createQuery } from "@tanstack/svelte-query";
-	import { api } from "../../lib/api";
-	import { SILENT } from "../../lib/query";
-	import type { RequestCounts } from "../../lib/types";
-	import { auth } from "../../lib/auth.svelte";
-	import { cn } from "../../lib/cn";
+	import { api } from "@lib/api";
+	import { SILENT } from "@lib/query";
+	import type { RequestCounts } from "@lib/types";
+	import { auth } from "@lib/auth.svelte";
+	import { cn } from "@lib/cn";
 	import {
 		TORRENT_PILLS,
 		torrentCountsQuery,
 		activityCurrent,
 		type IsActiveFn,
-	} from "../../lib/activity-nav";
-	import { navCountsQuery } from "../../lib/nav-counts";
+	} from "@lib/activity-nav";
+	import { navCountsQuery } from "@lib/nav-counts";
 	import Avatar from "./Avatar.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Tablet band (md → lg): the desktop sidebar collapsed to icons, rather than
 	// the phone's four-cell bar. Every top-level destination is on screen, so

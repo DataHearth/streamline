@@ -2,12 +2,12 @@
 	import { fade, fly } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { FileText, Info, LoaderCircle, Upload, X } from "@lucide/svelte";
-	import { lockScroll, unlockScroll } from "../../lib/scrollLock";
-	import { sheetSwipe } from "../../lib/sheet-swipe";
-	import { isMagnet, readTorrentFile } from "../../lib/torrent-file";
-	import type { AddTorrentRequest } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
-	import { errorText } from "../../lib/api";
+	import { lockScroll, unlockScroll } from "@lib/scrollLock";
+	import { sheetSwipe } from "@lib/sheet-swipe";
+	import { isMagnet, readTorrentFile } from "@lib/torrent-file";
+	import type { AddTorrentRequest } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
+	import { errorText } from "@lib/api";
 
 	// The add-torrent modal below md. Both inputs are on screen at once rather
 	// than behind a source switcher — on a phone the magnet almost always comes

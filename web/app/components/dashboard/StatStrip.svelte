@@ -3,16 +3,16 @@
 	import { scale } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { Info, TriangleAlert } from "@lucide/svelte";
-	import ProgressBar from "../shared/ProgressBar.svelte";
-	import { cn } from "../../lib/cn";
-	import { formatBytes, formatSpeed } from "../../lib/format";
+	import ProgressBar from "@components/shared/ProgressBar.svelte";
+	import { cn } from "@lib/cn";
+	import { formatBytes, formatSpeed } from "@lib/format";
 	import type {
 		MovieCounts,
 		TVShowCounts,
 		QueueEntry,
 		DiskUsage,
-	} from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	} from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	const movieCount = (n: number) =>
 		n === 1

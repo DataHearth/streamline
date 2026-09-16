@@ -1,5 +1,5 @@
 <script lang="ts">
-	import SkeletonList from "../../components/shared/SkeletonList.svelte";
+	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import { slide } from "svelte/transition";
 	import { ChevronDown, ChevronRight, LoaderCircle } from "@lucide/svelte";
 	import {
@@ -8,12 +8,12 @@
 		createMutation,
 		useQueryClient,
 	} from "@tanstack/svelte-query";
-	import { api, errorText } from "../../lib/api";
-	import { auth } from "../../lib/auth.svelte";
-	import { toast } from "../../lib/toast";
-	import { pullRefresh } from "../../lib/pull-refresh";
-	import { formatEta, formatSpeed } from "../../lib/format";
-	import { fold } from "../../lib/text";
+	import { api, errorText } from "@lib/api";
+	import { auth } from "@lib/auth.svelte";
+	import { toast } from "@lib/toast";
+	import { pullRefresh } from "@lib/pull-refresh";
+	import { formatEta, formatSpeed } from "@lib/format";
+	import { fold } from "@lib/text";
 	import type {
 		ActivityList,
 		DownloadQueue,
@@ -22,22 +22,22 @@
 		HistoryEntry,
 		PendingList,
 		PendingItem,
-	} from "../../lib/types";
+	} from "@lib/types";
 	import ActivityToolbar, {
 		ACTIVITY_CHIPS,
-	} from "../../components/activity/ActivityToolbar.svelte";
-	import ActivityViewSwitch from "../../components/activity/ActivityViewSwitch.svelte";
-	import ActivityTable from "../../components/activity/ActivityTable.svelte";
-	import ActivityTouchList from "../../components/activity/ActivityTouchList.svelte";
-	import ActivityDetailSheet from "../../components/activity/ActivityDetailSheet.svelte";
-	import ActivityFilterSheet from "../../components/activity/ActivityFilterSheet.svelte";
-	import PendingSheet from "../../components/activity/PendingSheet.svelte";
-	import ResolveDialog from "../../components/activity/ResolveDialog.svelte";
-	import TouchStatLine from "../../components/activity/TouchStatLine.svelte";
-	import LiveStrip from "../../components/activity/LiveStrip.svelte";
-	import PendingRow from "../../components/pending/PendingRow.svelte";
-	import EventList from "../../components/activity/EventList.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	} from "@components/activity/ActivityToolbar.svelte";
+	import ActivityViewSwitch from "@components/activity/ActivityViewSwitch.svelte";
+	import ActivityTable from "@components/activity/ActivityTable.svelte";
+	import ActivityTouchList from "@components/activity/ActivityTouchList.svelte";
+	import ActivityDetailSheet from "@components/activity/ActivityDetailSheet.svelte";
+	import ActivityFilterSheet from "@components/activity/ActivityFilterSheet.svelte";
+	import PendingSheet from "@components/activity/PendingSheet.svelte";
+	import ResolveDialog from "@components/activity/ResolveDialog.svelte";
+	import TouchStatLine from "@components/activity/TouchStatLine.svelte";
+	import LiveStrip from "@components/activity/LiveStrip.svelte";
+	import PendingRow from "@components/pending/PendingRow.svelte";
+	import EventList from "@components/activity/EventList.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Torrents live on their own route (/activity/torrents); this page is the
 	// queue/history/events trio the switch above the toolbar swaps between.

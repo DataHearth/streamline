@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Globe, Info } from "@lucide/svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let { trackers }: { trackers: string[] } = $props();
 </script>

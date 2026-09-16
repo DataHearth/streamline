@@ -1,7 +1,7 @@
 <script lang="ts">
-	import type { ImportScan } from "../../lib/types";
-	import ProgressBar from "../shared/ProgressBar.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import type { ImportScan } from "@lib/types";
+	import ProgressBar from "@components/shared/ProgressBar.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	type Props = { scan: ImportScan };
 	let { scan }: Props = $props();

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { ChevronRight } from "@lucide/svelte";
-	import { cn } from "../../lib/cn";
-	import { outcomeWord, type TouchEntry } from "../../lib/imports-touch";
+	import { cn } from "@lib/cn";
+	import { outcomeWord, type TouchEntry } from "@lib/imports-touch";
 
 	let {
 		entry,

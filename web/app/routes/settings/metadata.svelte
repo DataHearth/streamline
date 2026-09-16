@@ -1,5 +1,5 @@
 <script lang="ts">
-	import SkeletonList from "../../components/shared/SkeletonList.svelte";
+	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import {
 		createQuery,
 		createMutation,
@@ -7,15 +7,15 @@
 	} from "@tanstack/svelte-query";
 	import { createForm } from "@tanstack/svelte-form";
 	import { TriangleAlert, Check } from "@lucide/svelte";
-	import { api, errorText } from "../../lib/api";
-	import { config, READONLY_HINT } from "../../lib/config.svelte";
-	import { toast } from "../../lib/toast";
-	import { metadataConfigPatch } from "../../lib/schemas";
-	import type { MetadataConfig, MetadataConfigPatch } from "../../lib/types";
-	import TextField from "../../components/forms/TextField.svelte";
-	import SubmitButton from "../../components/forms/SubmitButton.svelte";
-	import ReadOnlyFieldset from "../../components/settings/ReadOnlyFieldset.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { api, errorText } from "@lib/api";
+	import { config, READONLY_HINT } from "@lib/config.svelte";
+	import { toast } from "@lib/toast";
+	import { metadataConfigPatch } from "@lib/schemas";
+	import type { MetadataConfig, MetadataConfigPatch } from "@lib/types";
+	import TextField from "@components/forms/TextField.svelte";
+	import SubmitButton from "@components/forms/SubmitButton.svelte";
+	import ReadOnlyFieldset from "@components/settings/ReadOnlyFieldset.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	const qc = useQueryClient();
 

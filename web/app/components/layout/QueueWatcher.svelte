@@ -9,10 +9,10 @@
 	// ponytail: polls the queue the nav already polls (same key, deduped). Swap
 	// for SSE/websockets if a live library view ever needs sub-30s freshness.
 	import { createQuery, useQueryClient } from "@tanstack/svelte-query";
-	import { api } from "../../lib/api";
-	import { NAV_POLL_MS, SILENT } from "../../lib/query";
-	import { auth } from "../../lib/auth.svelte";
-	import type { DownloadQueue } from "../../lib/types";
+	import { api } from "@lib/api";
+	import { NAV_POLL_MS, SILENT } from "@lib/query";
+	import { auth } from "@lib/auth.svelte";
+	import type { DownloadQueue } from "@lib/types";
 
 	const qc = useQueryClient();
 

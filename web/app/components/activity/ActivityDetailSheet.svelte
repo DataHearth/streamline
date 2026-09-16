@@ -2,17 +2,17 @@
 	import { fade, fly } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { Ban, LoaderCircle, Pause, Play, RotateCw, Trash2, X } from "@lucide/svelte";
-	import Dialog from "../modals/Dialog.svelte";
+	import Dialog from "@components/modals/Dialog.svelte";
 	import ProgressRing from "./ProgressRing.svelte";
-	import StatusPill from "../shared/StatusPill.svelte";
-	import { cn } from "../../lib/cn";
-	import { lockScroll, unlockScroll } from "../../lib/scrollLock";
-	import { sheetSwipe } from "../../lib/sheet-swipe";
-	import { entryHeading, historyMeta, queueMeta } from "../../lib/activity-touch";
-	import { formatBytes, pillStatus } from "../../lib/format";
-	import { formatDateTime } from "../../lib/dates";
-	import type { HistoryEntry, QueueEntry } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import StatusPill from "@components/shared/StatusPill.svelte";
+	import { cn } from "@lib/cn";
+	import { lockScroll, unlockScroll } from "@lib/scrollLock";
+	import { sheetSwipe } from "@lib/sheet-swipe";
+	import { entryHeading, historyMeta, queueMeta } from "@lib/activity-touch";
+	import { formatBytes, pillStatus } from "@lib/format";
+	import { formatDateTime } from "@lib/dates";
+	import type { HistoryEntry, QueueEntry } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Where a queue or history row opens below md, and the only place pause,
 	// resume, cancel and remove exist on touch — no swipe, no per-row kebab, so

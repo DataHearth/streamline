@@ -3,8 +3,8 @@
 	import { fade, fly } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { ChevronUp } from "@lucide/svelte";
-	import { lockScroll, unlockScroll } from "../../lib/scrollLock";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { lockScroll, unlockScroll } from "@lib/scrollLock";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// A bottom sheet with two detents, used by the touch add/request flow. The
 	// peek is content-sized and only has to confirm you picked the right title;

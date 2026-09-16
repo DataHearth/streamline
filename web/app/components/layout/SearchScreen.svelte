@@ -7,9 +7,9 @@
 		createSearchModel,
 		searchNav,
 		type SearchItem,
-	} from "../../lib/search-model.svelte";
+	} from "@lib/search-model.svelte";
 	import SearchResultRow from "./SearchResultRow.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Phone only — AppShell renders this in place of CommandPalette below md,
 	// off the same matchMedia switch it already runs for the add flow. Both

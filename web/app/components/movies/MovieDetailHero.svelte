@@ -1,14 +1,14 @@
 <script lang="ts">
 	import type { Snippet } from "svelte";
 	import { Film, ArrowLeft } from "@lucide/svelte";
-	import { posterUrl } from "../../lib/posters";
-	import { listHref, MOVIES_SEARCH } from "../../lib/prefs";
-	import { movieStatus } from "../../lib/status";
-	import { formatDate } from "../../lib/dates";
-	import Poster from "./Poster.svelte";
-	import StatusPill from "../shared/StatusPill.svelte";
-	import type { Movie, MediaFile } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { posterUrl } from "@lib/posters";
+	import { listHref, MOVIES_SEARCH } from "@lib/prefs";
+	import { movieStatus } from "@lib/status";
+	import { formatDate } from "@lib/dates";
+	import Poster from "@components/shared/Poster.svelte";
+	import StatusPill from "@components/shared/StatusPill.svelte";
+	import type { Movie, MediaFile } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let {
 		movie,

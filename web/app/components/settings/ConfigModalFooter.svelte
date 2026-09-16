@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from "svelte";
-	import { config } from "../../lib/config.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { config } from "@lib/config.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let {
 		formId,

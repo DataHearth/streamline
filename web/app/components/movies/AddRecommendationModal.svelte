@@ -5,18 +5,18 @@
 		useQueryClient,
 	} from "@tanstack/svelte-query";
 	import { Film, LoaderCircle, Plus } from "@lucide/svelte";
-	import { api, errorText } from "../../lib/api";
-	import { toast } from "../../lib/toast";
+	import { api, errorText } from "@lib/api";
+	import { toast } from "@lib/toast";
 	import type {
 		AddMovieRequest,
 		Movie,
 		QualityProfile,
 		TMDBMovieResult,
-	} from "../../lib/types";
-	import Modal from "../modals/Modal.svelte";
-	import Select from "../forms/Select.svelte";
-	import Poster from "./Poster.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	} from "@lib/types";
+	import Modal from "@components/modals/Modal.svelte";
+	import Select from "@components/forms/Select.svelte";
+	import Poster from "@components/shared/Poster.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	type Props = {
 		open: boolean;

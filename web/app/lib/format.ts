@@ -1,4 +1,4 @@
-import type { StatusKind } from "../components/shared/StatusPill.svelte";
+import type { StatusKind } from "@components/shared/StatusPill.svelte";
 
 // formatBytes renders a byte count as a compact human string ("4.1 GB").
 // Defaults to an em dash when unknown so table columns stay aligned; callers

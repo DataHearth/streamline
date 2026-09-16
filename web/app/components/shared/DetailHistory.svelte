@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { createQuery } from "@tanstack/svelte-query";
 	import { Activity } from "@lucide/svelte";
-	import { api, errorText } from "../../lib/api";
-	import { EVENT_MARKS, monitoringDetail } from "../../lib/activity-event";
-	import { formatRelative, formatDateTime } from "../../lib/dates";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
-	import type { ActivityEvent, ActivityList } from "../../lib/types";
+	import { api, errorText } from "@lib/api";
+	import { EVENT_MARKS, monitoringDetail } from "@lib/activity-event";
+	import { formatRelative, formatDateTime } from "@lib/dates";
+	import { m as i18n } from "@lib/paraglide/messages.js";
+	import type { ActivityEvent, ActivityList } from "@lib/types";
 
 	let { movieId, seriesId }: { movieId?: number; seriesId?: number } =
 		$props();

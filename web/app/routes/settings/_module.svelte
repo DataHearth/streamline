@@ -2,12 +2,12 @@
 	import { onMount } from "svelte";
 	import { activeRoute } from "@roxi/routify";
 	import { ChevronLeft } from "@lucide/svelte";
-	import { auth } from "../../lib/auth.svelte";
-	import { requireAdmin } from "../../lib/guards";
-	import { SETTINGS_TITLES } from "../../lib/settings-nav.svelte";
-	import SettingsSidebar from "../../components/settings/SettingsSidebar.svelte";
-	import ReadOnlyStrip from "../../components/settings/ReadOnlyStrip.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { auth } from "@lib/auth.svelte";
+	import { requireAdmin } from "@lib/guards";
+	import { SETTINGS_TITLES } from "@lib/settings-nav.svelte";
+	import SettingsSidebar from "@components/settings/SettingsSidebar.svelte";
+	import ReadOnlyStrip from "@components/settings/ReadOnlyStrip.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	$effect(() => {
 		if (!auth.loading) requireAdmin();

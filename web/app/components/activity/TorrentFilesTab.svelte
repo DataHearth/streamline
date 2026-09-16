@@ -5,15 +5,15 @@
 		FolderOpen,
 		FileText,
 	} from "@lucide/svelte";
-	import ProgressBar from "../shared/ProgressBar.svelte";
-	import { cn } from "../../lib/cn";
-	import { formatBytes } from "../../lib/format";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import ProgressBar from "@components/shared/ProgressBar.svelte";
+	import { cn } from "@lib/cn";
+	import { formatBytes } from "@lib/format";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 	import type {
 		TorrentFile,
 		TorrentFilePriority,
 		TorrentStatus,
-	} from "../../lib/types";
+	} from "@lib/types";
 
 	let {
 		files,

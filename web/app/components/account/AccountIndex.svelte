@@ -9,19 +9,19 @@
 		RefreshCw,
 	} from "@lucide/svelte";
 	import { createQuery } from "@tanstack/svelte-query";
-	import { api } from "../../lib/api";
-	import { auth } from "../../lib/auth.svelte";
-	import { cn } from "../../lib/cn";
-	import type { ApiKey, Session } from "../../lib/types";
-	import { getLocale, locales } from "../../lib/paraglide/runtime.js";
-	import FullScreenPanel from "../layout/FullScreenPanel.svelte";
+	import { api } from "@lib/api";
+	import { auth } from "@lib/auth.svelte";
+	import { cn } from "@lib/cn";
+	import type { ApiKey, Session } from "@lib/types";
+	import { getLocale, locales } from "@lib/paraglide/runtime.js";
+	import FullScreenPanel from "@components/layout/FullScreenPanel.svelte";
 	import ProfileCard from "./ProfileCard.svelte";
 	import PasswordCard from "./PasswordCard.svelte";
 	import LanguageCard from "./LanguageCard.svelte";
 	import APIKeysCard from "./APIKeysCard.svelte";
 	import SessionsCard from "./SessionsCard.svelte";
 	import JWTRotateCard from "./JWTRotateCard.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Touch account: the same four sections, but as rows that state their
 	// current value — Antoine Langlois, Français, 2 keys, 3 sessions — instead

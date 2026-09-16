@@ -1,9 +1,9 @@
 <script lang="ts" generics="T extends string">
 	import { ChevronDown } from "@lucide/svelte";
-	import { cn } from "../../lib/cn";
-	import { readOnlyLock } from "../../lib/config.svelte";
-	import DropdownMenu from "../shared/DropdownMenu.svelte";
-	import DropdownOption from "../shared/DropdownOption.svelte";
+	import { cn } from "@lib/cn";
+	import { readOnlyLock } from "@lib/config.svelte";
+	import DropdownMenu from "@components/shared/DropdownMenu.svelte";
+	import DropdownOption from "@components/shared/DropdownOption.svelte";
 	import FieldLock from "./FieldLock.svelte";
 
 	// hint renders as a muted second line under the option's label in the

@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { Ellipsis, Lock } from "@lucide/svelte";
-	import { cn } from "../../lib/cn";
-	import { formatRelative, formatDateTime } from "../../lib/dates";
-	import { scheduleState } from "../../lib/schedules-touch";
-	import type { Schedule } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { cn } from "@lib/cn";
+	import { formatRelative, formatDateTime } from "@lib/dates";
+	import { scheduleState } from "@lib/schedules-touch";
+	import type { Schedule } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// The touch row. Six table columns become two lines and one trailing word:
 	// the job's name and what it does, then interval and last run underneath,

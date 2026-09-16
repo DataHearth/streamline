@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { cn } from "../../lib/cn";
-	import { initials } from "../../lib/people";
-	import type { CastMember } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { cn } from "@lib/cn";
+	import { initials } from "@lib/people";
+	import type { CastMember } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let {
 		cast,

@@ -1,9 +1,9 @@
 <script lang="ts">
-	import Dialog from "../modals/Dialog.svelte";
-	import Checkbox from "../forms/Checkbox.svelte";
-	import { entryHeading, holdFileCount } from "../../lib/activity-touch";
-	import type { HoldCheck, HoldReason, QueueEntry } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import Dialog from "@components/modals/Dialog.svelte";
+	import Checkbox from "@components/forms/Checkbox.svelte";
+	import { entryHeading, holdFileCount } from "@lib/activity-touch";
+	import type { HoldCheck, HoldReason, QueueEntry } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// The decision a held download is waiting for. Three outcomes, two buttons:
 	// the two destructive ones are one button whose label follows a checkbox,

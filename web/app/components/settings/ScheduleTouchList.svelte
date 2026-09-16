@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { groupSchedules } from "../../lib/schedules-touch";
-	import type { Schedule } from "../../lib/types";
+	import { groupSchedules } from "@lib/schedules-touch";
+	import type { Schedule } from "@lib/types";
 	import ScheduleTouchRow from "./ScheduleTouchRow.svelte";
 
 	let {

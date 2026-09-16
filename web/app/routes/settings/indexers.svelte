@@ -1,5 +1,5 @@
 <script lang="ts">
-	import SkeletonList from "../../components/shared/SkeletonList.svelte";
+	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import {
 		createQuery,
 		createMutation,
@@ -7,18 +7,18 @@
 	} from "@tanstack/svelte-query";
 	import { createForm } from "@tanstack/svelte-form";
 	import { Plus, Trash2, Search, Pencil, Eye } from "@lucide/svelte";
-	import { api, errorText } from "../../lib/api";
-	import { config, READONLY_HINT } from "../../lib/config.svelte";
-	import { toast } from "../../lib/toast";
-	import { indexerForm } from "../../lib/schemas";
-	import type { Indexer, IndexerProtocol } from "../../lib/types";
-	import ConfigFormShell from "../../components/modals/ConfigFormShell.svelte";
-	import Dialog from "../../components/modals/Dialog.svelte";
-	import IndexerForm from "../../components/settings/forms/IndexerForm.svelte";
-	import BrandLogo from "../../components/settings/BrandLogo.svelte";
-	import TestConnectionButton from "../../components/settings/TestConnectionButton.svelte";
-	import ReadOnlyFieldset from "../../components/settings/ReadOnlyFieldset.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { api, errorText } from "@lib/api";
+	import { config, READONLY_HINT } from "@lib/config.svelte";
+	import { toast } from "@lib/toast";
+	import { indexerForm } from "@lib/schemas";
+	import type { Indexer, IndexerProtocol } from "@lib/types";
+	import ConfigFormShell from "@components/modals/ConfigFormShell.svelte";
+	import Dialog from "@components/modals/Dialog.svelte";
+	import IndexerForm from "@components/settings/forms/IndexerForm.svelte";
+	import BrandLogo from "@components/settings/BrandLogo.svelte";
+	import TestConnectionButton from "@components/settings/TestConnectionButton.svelte";
+	import ReadOnlyFieldset from "@components/settings/ReadOnlyFieldset.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	type Values = {
 		name: string;

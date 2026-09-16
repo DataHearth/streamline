@@ -1,13 +1,13 @@
 <script lang="ts">
-	import SkeletonList from "../shared/SkeletonList.svelte";
+	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import { Activity, LoaderCircle, ChevronUp, ChevronDown } from "@lucide/svelte";
 	import ActivityRow from "./ActivityRow.svelte";
 	import ExpandedRowDetail from "./ExpandedRowDetail.svelte";
-	import { cn } from "../../lib/cn";
-	import { entryHeading } from "../../lib/activity-touch";
-	import type { QueueEntry, HistoryEntry } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
-	import { errorText } from "../../lib/api";
+	import { cn } from "@lib/cn";
+	import { entryHeading } from "@lib/activity-touch";
+	import type { QueueEntry, HistoryEntry } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
+	import { errorText } from "@lib/api";
 
 	let {
 		view,

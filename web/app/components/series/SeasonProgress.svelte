@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { episodeStatus } from "../../lib/status";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
-	import type { EpisodeDisplayStatus } from "../../lib/status";
-	import type { Season } from "../../lib/types";
+	import { episodeStatus } from "@lib/status";
+	import { m as i18n } from "@lib/paraglide/messages.js";
+	import type { EpisodeDisplayStatus } from "@lib/status";
+	import type { Season } from "@lib/types";
 
 	let {
 		season,

@@ -2,16 +2,16 @@
 	import { fly, fade } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { Check, Search, X } from "@lucide/svelte";
-	import { cn } from "../../lib/cn";
-	import { lockScroll, unlockScroll } from "../../lib/scrollLock";
-	import { sheetSwipe } from "../../lib/sheet-swipe";
+	import { cn } from "@lib/cn";
+	import { lockScroll, unlockScroll } from "@lib/scrollLock";
+	import { sheetSwipe } from "@lib/sheet-swipe";
 	import {
 		CLASS_META,
 		isActionable,
 		outcomeWord,
 		type TouchEntry,
-	} from "../../lib/imports-touch";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	} from "@lib/imports-touch";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// The decision surface for one file / show folder below lg. The row's job is
 	// to say which entry this is and whether it needs you; every action lives

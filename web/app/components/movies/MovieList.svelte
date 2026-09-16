@@ -1,18 +1,18 @@
 <script lang="ts">
 	import { createMutation, useQueryClient } from "@tanstack/svelte-query";
 	import { Film, ChevronUp, ChevronDown, Bookmark } from "@lucide/svelte";
-	import { cn } from "../../lib/cn";
-	import { dragScroll } from "../../lib/drag-scroll";
-	import { api, errorText } from "../../lib/api";
-	import { toast } from "../../lib/toast";
-	import { formatBytes } from "../../lib/format";
-	import { movieStatus } from "../../lib/status";
-	import Poster from "./Poster.svelte";
-	import StatusPill from "../shared/StatusPill.svelte";
-	import SelectBox from "../shared/SelectBox.svelte";
+	import { cn } from "@lib/cn";
+	import { dragScroll } from "@lib/drag-scroll";
+	import { api, errorText } from "@lib/api";
+	import { toast } from "@lib/toast";
+	import { formatBytes } from "@lib/format";
+	import { movieStatus } from "@lib/status";
+	import Poster from "@components/shared/Poster.svelte";
+	import StatusPill from "@components/shared/StatusPill.svelte";
+	import SelectBox from "@components/shared/SelectBox.svelte";
 	import MovieActionsMenu from "./MovieActionsMenu.svelte";
-	import type { Movie, MovieFileSummary } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import type { Movie, MovieFileSummary } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	type SortKey = "title" | "year";
 	type SortOrder = "asc" | "desc";

@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { Monitor, Trash2 } from "@lucide/svelte";
-	import { formatDateTime, formatRelative } from "../../lib/dates";
-	import { parseUA } from "../../lib/ua";
-	import type { Session } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { formatDateTime, formatRelative } from "@lib/dates";
+	import { parseUA } from "@lib/ua";
+	import type { Session } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let {
 		session,

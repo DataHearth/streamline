@@ -1,5 +1,5 @@
 <script lang="ts">
-	import SkeletonList from "../shared/SkeletonList.svelte";
+	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import { onMount } from "svelte";
 	import { fly, fade } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
@@ -15,29 +15,29 @@
 		Users,
 		Globe,
 	} from "@lucide/svelte";
-	import StatusPill from "../shared/StatusPill.svelte";
+	import StatusPill from "@components/shared/StatusPill.svelte";
 	import ProgressRing from "./ProgressRing.svelte";
-	import Dialog from "../modals/Dialog.svelte";
-	import Checkbox from "../forms/Checkbox.svelte";
+	import Dialog from "@components/modals/Dialog.svelte";
+	import Checkbox from "@components/forms/Checkbox.svelte";
 	import TorrentFilesTab from "./TorrentFilesTab.svelte";
 	import TorrentPeersTab from "./TorrentPeersTab.svelte";
 	import TorrentTrackersTab from "./TorrentTrackersTab.svelte";
-	import { cn } from "../../lib/cn";
-	import { lockScroll, unlockScroll } from "../../lib/scrollLock";
-	import { sheetSwipe } from "../../lib/sheet-swipe";
+	import { cn } from "@lib/cn";
+	import { lockScroll, unlockScroll } from "@lib/scrollLock";
+	import { sheetSwipe } from "@lib/sheet-swipe";
 	import {
 		formatBytes,
 		formatSpeed,
 		formatEta,
 		formatRatio,
-	} from "../../lib/format";
-	import { formatRelative, formatDateTime } from "../../lib/dates";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	} from "@lib/format";
+	import { formatRelative, formatDateTime } from "@lib/dates";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 	import type {
 		Torrent,
 		TorrentDetails,
 		TorrentFilePriority,
-	} from "../../lib/types";
+	} from "@lib/types";
 
 	let {
 		open,

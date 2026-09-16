@@ -11,15 +11,15 @@
 		Pencil,
 		TriangleAlert,
 	} from "@lucide/svelte";
-	import { api, errorText } from "../../lib/api";
-	import { cn } from "../../lib/cn";
-	import { formatBytes } from "../../lib/format";
-	import { toast } from "../../lib/toast";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { api, errorText } from "@lib/api";
+	import { cn } from "@lib/cn";
+	import { formatBytes } from "@lib/format";
+	import { toast } from "@lib/toast";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 	import type {
 		ImportFileDecision,
 		ImportScanFile,
-	} from "../../lib/types";
+	} from "@lib/types";
 
 	type Props = {
 		file: ImportScanFile;

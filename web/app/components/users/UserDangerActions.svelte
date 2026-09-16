@@ -5,12 +5,12 @@
 	import { onMount } from "svelte";
 	import { KeyRound, Unlock, Trash2 } from "@lucide/svelte";
 	import * as v from "valibot";
-	import { api, errorText } from "../../lib/api";
-	import { toast } from "../../lib/toast";
-	import { password } from "../../lib/schemas";
-	import type { User } from "../../lib/types";
-	import Dialog from "../modals/Dialog.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { api, errorText } from "@lib/api";
+	import { toast } from "@lib/toast";
+	import { password } from "@lib/schemas";
+	import type { User } from "@lib/types";
+	import Dialog from "@components/modals/Dialog.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let { user, isSelf }: { user: User; isSelf: boolean } = $props();
 

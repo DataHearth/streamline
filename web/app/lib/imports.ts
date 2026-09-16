@@ -1,4 +1,4 @@
-import type { StatusKind } from "../components/shared/StatusPill.svelte";
+import type { StatusKind } from "@components/shared/StatusPill.svelte";
 import type { ImportMode, ImportStatus, ImportTransferMode } from "./types";
 import { m as i18n } from "./paraglide/messages.js";
 

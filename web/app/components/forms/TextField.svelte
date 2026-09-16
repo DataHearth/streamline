@@ -1,9 +1,9 @@
 <script lang="ts">
 	import type { AnyFieldApi } from "@tanstack/form-core";
 	import type { HTMLInputAttributes } from "svelte/elements";
-	import { cn } from "../../lib/cn";
-	import { fieldErrorMessages } from "../../lib/fieldErrors";
-	import { readOnlyLock } from "../../lib/config.svelte";
+	import { cn } from "@lib/cn";
+	import { fieldErrorMessages } from "@lib/fieldErrors";
+	import { readOnlyLock } from "@lib/config.svelte";
 	import FieldLock from "./FieldLock.svelte";
 
 	type Props = {

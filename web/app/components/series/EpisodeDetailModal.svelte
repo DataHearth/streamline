@@ -1,6 +1,6 @@
 <script lang="ts" module>
-	import type { EpisodeDisplayStatus } from "../../lib/status";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import type { EpisodeDisplayStatus } from "@lib/status";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Episode statuses map onto the shared status color tokens. "unaired" and
 	// "skipped" have no dedicated status pill, so they borrow neutral tones.
@@ -24,11 +24,11 @@
 
 <script lang="ts">
 	import { Search, Trash2 } from "@lucide/svelte";
-	import { cn } from "../../lib/cn";
-	import { episodeStatus } from "../../lib/status";
-	import Modal from "../modals/Modal.svelte";
-	import { formatDateTime, formatRelative } from "../../lib/dates";
-	import { formatBytes } from "../../lib/format";
+	import { cn } from "@lib/cn";
+	import { episodeStatus } from "@lib/status";
+	import Modal from "@components/modals/Modal.svelte";
+	import { formatDateTime, formatRelative } from "@lib/dates";
+	import { formatBytes } from "@lib/format";
 	import {
 		audioLabel,
 		audioLanguages,
@@ -40,8 +40,8 @@
 		probeOf,
 		resolutionBucket,
 		subtitleLanguages,
-	} from "../../lib/media-info";
-	import type { Episode } from "../../lib/types";
+	} from "@lib/media-info";
+	import type { Episode } from "@lib/types";
 
 	// Lifted out of EpisodeTable so the phone accordion opens the same sheet the
 	// desktop table does — the two can't drift into two ideas of "episode info".

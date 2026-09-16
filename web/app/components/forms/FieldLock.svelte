@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Lock } from "@lucide/svelte";
-	import { READONLY_HINT } from "../../lib/config.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { READONLY_HINT } from "@lib/config.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// The marker that says *this control* is the locked one. Before it, a locked
 	// field was cursor-not-allowed plus reduced opacity: a cursor state a touch

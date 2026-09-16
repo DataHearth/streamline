@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { untrack } from "svelte";
-	import Modal from "../modals/Modal.svelte";
-	import Select from "../forms/Select.svelte";
-	import type { SeriesType } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import Modal from "@components/modals/Modal.svelte";
+	import Select from "@components/forms/Select.svelte";
+	import type { SeriesType } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	type Props = {
 		open: boolean;

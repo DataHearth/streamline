@@ -19,7 +19,12 @@
 		"skipLibCheck": true,
 		"noEmit": true,
 
-		"types": ["svelte"]
+		"types": ["svelte"],
+
+		"paths": {
+			"@components/*": ["./components/*"],
+			"@lib/*": ["./lib/*"]
+		}
 	},
 	"include": ["**/*.ts", "**/*.svelte", "**/*.svelte.ts"],
 	"exclude": [".routify", "../static/dist"]

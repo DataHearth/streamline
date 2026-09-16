@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { cn } from "../../lib/cn";
-	import { missingEpisodes } from "../../lib/status";
+	import { cn } from "@lib/cn";
+	import { missingEpisodes } from "@lib/status";
 	import SeasonProgress from "./SeasonProgress.svelte";
-	import type { Season } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import type { Season } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let {
 		seasons,

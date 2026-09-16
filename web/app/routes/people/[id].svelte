@@ -3,16 +3,16 @@
 	import { params } from "@roxi/routify";
 	import { onMount } from "svelte";
 	import { UserRound } from "@lucide/svelte";
-	import { api, ApiError, errorText } from "../../lib/api";
-	import { cn } from "../../lib/cn";
-	import { formatDate } from "../../lib/dates";
-	import { formatBytes } from "../../lib/format";
-	import { initials } from "../../lib/people";
-	import { tvPosterUrl } from "../../lib/posters";
-	import { movieStatus, seriesStatus } from "../../lib/status";
-	import PosterCard from "../../components/shared/PosterCard.svelte";
-	import type { Movie, PersonDetail, TVShow } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { api, ApiError, errorText } from "@lib/api";
+	import { cn } from "@lib/cn";
+	import { formatDate } from "@lib/dates";
+	import { formatBytes } from "@lib/format";
+	import { initials } from "@lib/people";
+	import { tvPosterUrl } from "@lib/posters";
+	import { movieStatus, seriesStatus } from "@lib/status";
+	import PosterCard from "@components/shared/PosterCard.svelte";
+	import type { Movie, PersonDetail, TVShow } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let routeParams = $state<Record<string, string>>({});
 	onMount(() => params.subscribe((p) => (routeParams = p)));

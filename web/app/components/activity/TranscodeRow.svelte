@@ -1,14 +1,14 @@
 <script lang="ts">
 	import { slide } from "svelte/transition";
 	import { ArrowUpRight, Ban, ChevronDown, LoaderCircle, RotateCcw } from "@lucide/svelte";
-	import StatusPill from "../shared/StatusPill.svelte";
-	import ProgressBar from "../shared/ProgressBar.svelte";
-	import { cn } from "../../lib/cn";
-	import { formatBytes } from "../../lib/format";
-	import { formatDateTime } from "../../lib/dates";
-	import { basename, jobFigure, jobHref, transcodeKind } from "../../lib/transcoding";
-	import type { TranscodeJob } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import StatusPill from "@components/shared/StatusPill.svelte";
+	import ProgressBar from "@components/shared/ProgressBar.svelte";
+	import { cn } from "@lib/cn";
+	import { formatBytes } from "@lib/format";
+	import { formatDateTime } from "@lib/dates";
+	import { basename, jobFigure, jobHref, transcodeKind } from "@lib/transcoding";
+	import type { TranscodeJob } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// One row for every width. There is no column grid, so each status brings
 	// only the lines it has: running grows a bar, failed grows an error, canceled

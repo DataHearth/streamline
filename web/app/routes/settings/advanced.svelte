@@ -12,21 +12,21 @@
 		Info,
 		Loader,
 	} from "@lucide/svelte";
-	import { api, errorText } from "../../lib/api";
-	import { config, markConfigForm } from "../../lib/config.svelte";
-	import { toast } from "../../lib/toast";
-	import { cn } from "../../lib/cn";
+	import { api, errorText } from "@lib/api";
+	import { config, markConfigForm } from "@lib/config.svelte";
+	import { toast } from "@lib/toast";
+	import { cn } from "@lib/cn";
 	import type {
 		MigrationRoot,
 		PathMigration,
 		PathMigrationPreview,
 		PathMigrationRequest,
 		PathMigrationRootList,
-	} from "../../lib/types";
-	import Select from "../../components/forms/Select.svelte";
-	import Checkbox from "../../components/forms/Checkbox.svelte";
-	import Dialog from "../../components/modals/Dialog.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	} from "@lib/types";
+	import Select from "@components/forms/Select.svelte";
+	import Checkbox from "@components/forms/Checkbox.svelte";
+	import Dialog from "@components/modals/Dialog.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Saves per control rather than through one form, so nothing else
 	// establishes the config-form context the field primitives read. Without

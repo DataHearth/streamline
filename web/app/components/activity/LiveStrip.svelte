@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { untrack } from "svelte";
-	import type { QueueEntry } from "../../lib/types";
-	import { formatSpeed, formatEta } from "../../lib/format";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import type { QueueEntry } from "@lib/types";
+	import { formatSpeed, formatEta } from "@lib/format";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let { items }: { items: QueueEntry[] } = $props();
 

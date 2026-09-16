@@ -20,9 +20,9 @@
 		Replace,
 		Trash2,
 	} from "@lucide/svelte";
-	import KebabMenu, { type KebabItem } from "../shared/KebabMenu.svelte";
-	import { auth } from "../../lib/auth.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import KebabMenu, { type KebabItem } from "@components/shared/KebabMenu.svelte";
+	import { auth } from "@lib/auth.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let {
 		onPick,

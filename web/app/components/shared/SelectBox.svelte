@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Check, Minus } from "@lucide/svelte";
-	import { cn } from "../../lib/cn";
+	import { cn } from "@lib/cn";
 
 	let {
 		checked,

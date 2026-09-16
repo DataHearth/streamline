@@ -3,16 +3,16 @@
 	import { params } from "@roxi/routify";
 	import { onMount } from "svelte";
 	import { ArrowLeft } from "@lucide/svelte";
-	import { api, errorText } from "../../../lib/api";
-	import { auth } from "../../../lib/auth.svelte";
-	import { requireAdmin } from "../../../lib/guards";
-	import type { UserDetail } from "../../../lib/types";
-	import UserHero from "../../../components/users/UserHero.svelte";
-	import UserDetailHeader from "../../../components/users/UserDetailHeader.svelte";
-	import UserDangerActions from "../../../components/users/UserDangerActions.svelte";
-	import UserSessionsCard from "../../../components/users/UserSessionsCard.svelte";
-	import UserAPIKeysCard from "../../../components/users/UserAPIKeysCard.svelte";
-	import { m as i18n } from "../../../lib/paraglide/messages.js";
+	import { api, errorText } from "@lib/api";
+	import { auth } from "@lib/auth.svelte";
+	import { requireAdmin } from "@lib/guards";
+	import type { UserDetail } from "@lib/types";
+	import UserHero from "@components/users/UserHero.svelte";
+	import UserDetailHeader from "@components/users/UserDetailHeader.svelte";
+	import UserDangerActions from "@components/users/UserDangerActions.svelte";
+	import UserSessionsCard from "@components/users/UserSessionsCard.svelte";
+	import UserAPIKeysCard from "@components/users/UserAPIKeysCard.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let routeParams = $state<Record<string, string>>({});
 	onMount(() => {

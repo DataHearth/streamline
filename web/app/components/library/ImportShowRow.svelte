@@ -10,11 +10,11 @@
 		Pencil,
 		TriangleAlert,
 	} from "@lucide/svelte";
-	import { api, errorText } from "../../lib/api";
-	import { cn } from "../../lib/cn";
-	import { toast } from "../../lib/toast";
-	import type { ImportFileDecision, ImportScanShow } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { api, errorText } from "@lib/api";
+	import { cn } from "@lib/cn";
+	import { toast } from "@lib/toast";
+	import type { ImportFileDecision, ImportScanShow } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	type Props = {
 		show: ImportScanShow;

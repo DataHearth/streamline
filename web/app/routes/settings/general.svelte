@@ -1,5 +1,5 @@
 <script lang="ts">
-	import SkeletonList from "../../components/shared/SkeletonList.svelte";
+	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import {
 		createQuery,
 		createMutation,
@@ -13,9 +13,9 @@
 		Lock,
 		TriangleAlert,
 	} from "@lucide/svelte";
-	import { api, errorText } from "../../lib/api";
-	import { config, markConfigForm } from "../../lib/config.svelte";
-	import { toast } from "../../lib/toast";
+	import { api, errorText } from "@lib/api";
+	import { config, markConfigForm } from "@lib/config.svelte";
+	import { toast } from "@lib/toast";
 	import type {
 		AppLogConfig,
 		DiskUsage,
@@ -23,12 +23,12 @@
 		LogRotateConfig,
 		SystemConfig,
 		SystemInfo,
-	} from "../../lib/types";
-	import Checkbox from "../../components/forms/Checkbox.svelte";
-	import Select from "../../components/forms/Select.svelte";
-	import FieldLock from "../../components/forms/FieldLock.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
-	import { INPUT_CLASS } from "../../lib/form";
+	} from "@lib/types";
+	import Checkbox from "@components/forms/Checkbox.svelte";
+	import Select from "@components/forms/Select.svelte";
+	import FieldLock from "@components/forms/FieldLock.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
+	import { INPUT_CLASS } from "@lib/form";
 
 	// Saves per control rather than through one form, so nothing else
 	// establishes the config-form context the field primitives read. Without

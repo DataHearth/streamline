@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { X } from "@lucide/svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Phone header for an active selection: it replaces the filter line rather
 	// than sitting on top of it, so entering selection mode costs no height. The

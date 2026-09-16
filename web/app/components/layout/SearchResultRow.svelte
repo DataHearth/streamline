@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { ChevronRight, Film, Tv } from "@lucide/svelte";
-	import { cn } from "../../lib/cn";
-	import { initials } from "../../lib/people";
-	import { posterUrl, tvPosterUrl } from "../../lib/posters";
-	import Poster from "../movies/Poster.svelte";
-	import { itemKindLabel, type SearchItem } from "../../lib/search-model.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { cn } from "@lib/cn";
+	import { initials } from "@lib/people";
+	import { posterUrl, tvPosterUrl } from "@lib/posters";
+	import Poster from "@components/shared/Poster.svelte";
+	import { itemKindLabel, type SearchItem } from "@lib/search-model.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// One row for both touch surfaces: the phone screen at full size, the tablet
 	// panel dense. The palette keeps its own row — it carries a keyboard cursor

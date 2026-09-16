@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { CircleCheckBig } from "@lucide/svelte";
-	import Dialog from "../modals/Dialog.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import Dialog from "@components/modals/Dialog.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// B1: commit lives on a bar that stays with you through a long review list,
 	// instead of a banner at the top of it. Sticky inside #main, so it settles

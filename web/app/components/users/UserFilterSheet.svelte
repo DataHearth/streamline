@@ -2,11 +2,11 @@
 	import { fly, fade } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { X, ArrowUp, ArrowDown } from "@lucide/svelte";
-	import { cn } from "../../lib/cn";
-	import { lockScroll, unlockScroll } from "../../lib/scrollLock";
-	import { sheetSwipe } from "../../lib/sheet-swipe";
-	import type { UserRole } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { cn } from "@lib/cn";
+	import { lockScroll, unlockScroll } from "@lib/scrollLock";
+	import { sheetSwipe } from "@lib/sheet-swipe";
+	import type { UserRole } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Sorting used to BE the table header, so it died with the table. This is
 	// where it lives on touch: role filter and sort key in one sheet behind a

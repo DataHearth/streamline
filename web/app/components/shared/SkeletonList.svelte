@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Skeleton from "./Skeleton.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let {
 		variant = "row",

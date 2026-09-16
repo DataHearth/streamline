@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { cn } from "../../lib/cn";
-	import type { CalendarFilter } from "../../lib/calendar";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { cn } from "@lib/cn";
+	import type { CalendarFilter } from "@lib/calendar";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Replaces the two independent Movies / Episodes toggles. Two toggles have
 	// four states, two of which say the same thing, and seeing only episodes

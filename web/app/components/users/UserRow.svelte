@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { Pencil, Trash2, LockKeyhole } from "@lucide/svelte";
-	import Avatar from "../layout/Avatar.svelte";
-	import type { User } from "../../lib/types";
-	import { formatDateTime } from "../../lib/dates";
+	import Avatar from "@components/layout/Avatar.svelte";
+	import type { User } from "@lib/types";
+	import { formatDateTime } from "@lib/dates";
 
 	let {
 		user,

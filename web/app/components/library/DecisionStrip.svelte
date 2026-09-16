@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { CircleCheckBig, TriangleAlert } from "@lucide/svelte";
-	import Dialog from "../modals/Dialog.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import Dialog from "@components/modals/Dialog.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let {
 		pendingCount,

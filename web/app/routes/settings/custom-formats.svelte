@@ -1,5 +1,5 @@
 <script lang="ts">
-	import SkeletonList from "../../components/shared/SkeletonList.svelte";
+	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import {
 		createQuery,
 		createMutation,
@@ -7,21 +7,21 @@
 	} from "@tanstack/svelte-query";
 	import * as v from "valibot";
 	import { Plus, Trash2, Tags, Pencil, Eye, Lock } from "@lucide/svelte";
-	import { api, errorText } from "../../lib/api";
-	import { config, READONLY_HINT } from "../../lib/config.svelte";
-	import { toast } from "../../lib/toast";
-	import { customFormat } from "../../lib/schemas";
-	import type { CustomFormat } from "../../lib/types";
-	import ConfigFormShell from "../../components/modals/ConfigFormShell.svelte";
-	import Dialog from "../../components/modals/Dialog.svelte";
-	import ReadOnlyFieldset from "../../components/settings/ReadOnlyFieldset.svelte";
+	import { api, errorText } from "@lib/api";
+	import { config, READONLY_HINT } from "@lib/config.svelte";
+	import { toast } from "@lib/toast";
+	import { customFormat } from "@lib/schemas";
+	import type { CustomFormat } from "@lib/types";
+	import ConfigFormShell from "@components/modals/ConfigFormShell.svelte";
+	import Dialog from "@components/modals/Dialog.svelte";
+	import ReadOnlyFieldset from "@components/settings/ReadOnlyFieldset.svelte";
 	import CustomFormatEditor, {
 		type CustomFormatDraft,
 		conditionTypeLabel,
 		draftFrom,
 		toConditions,
-	} from "../../components/settings/CustomFormatEditor.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	} from "@components/settings/CustomFormatEditor.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	const qc = useQueryClient();
 

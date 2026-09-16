@@ -1,7 +1,7 @@
 <script lang="ts">
-	import UpcomingList from "../shared/UpcomingList.svelte";
-	import type { CalendarEvent } from "../../lib/calendar";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import UpcomingList from "@components/shared/UpcomingList.svelte";
+	import type { CalendarEvent } from "@lib/calendar";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let { events }: { events: CalendarEvent[] } = $props();
 </script>

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { ChevronRight, SlidersHorizontal } from "@lucide/svelte";
-	import { createSettingsNav } from "../../lib/settings-nav.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { createSettingsNav } from "@lib/settings-nav.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// The touch settings navigation: /settings is a destination below lg instead
 	// of a redirect to General. Five group headings, eleven rows, each carrying

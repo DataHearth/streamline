@@ -1,15 +1,15 @@
 <script lang="ts">
 	import { Bookmark, Info, Search, Trash2 } from "@lucide/svelte";
-	import { cn } from "../../lib/cn";
-	import { dragScroll } from "../../lib/drag-scroll";
-	import { episodeStatus } from "../../lib/status";
+	import { cn } from "@lib/cn";
+	import { dragScroll } from "@lib/drag-scroll";
+	import { episodeStatus } from "@lib/status";
 	import EpisodeDetailModal, {
 		STATUS_META,
 	} from "./EpisodeDetailModal.svelte";
-	import { formatDateShort, formatRelative } from "../../lib/dates";
-	import { formatBytes } from "../../lib/format";
-	import type { Episode, SeriesType } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { formatDateShort, formatRelative } from "@lib/dates";
+	import { formatBytes } from "@lib/format";
+	import type { Episode, SeriesType } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let {
 		episodes,

@@ -1,18 +1,18 @@
 <script lang="ts">
-	import SkeletonList from "../shared/SkeletonList.svelte";
+	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import {
 		createQuery,
 		createMutation,
 		useQueryClient,
 	} from "@tanstack/svelte-query";
 	import { MonitorOff } from "@lucide/svelte";
-	import { api, errorText } from "../../lib/api";
-	import { toast } from "../../lib/toast";
-	import { parseUA } from "../../lib/ua";
-	import type { Session } from "../../lib/types";
-	import Dialog from "../modals/Dialog.svelte";
-	import SessionRow from "../shared/SessionRow.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { api, errorText } from "@lib/api";
+	import { toast } from "@lib/toast";
+	import { parseUA } from "@lib/ua";
+	import type { Session } from "@lib/types";
+	import Dialog from "@components/modals/Dialog.svelte";
+	import SessionRow from "@components/shared/SessionRow.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	const qc = useQueryClient();
 

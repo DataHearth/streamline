@@ -1,5 +1,5 @@
 <script lang="ts">
-	import SkeletonList from "../../components/shared/SkeletonList.svelte";
+	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import {
 		createQuery,
 		createMutation,
@@ -7,17 +7,17 @@
 	} from "@tanstack/svelte-query";
 	import { createForm } from "@tanstack/svelte-form";
 	import { Plus, Trash2, KeyRound, AlertTriangle } from "@lucide/svelte";
-	import { api, errorText } from "../../lib/api";
-	import { config, READONLY_HINT } from "../../lib/config.svelte";
-	import { toast } from "../../lib/toast";
-	import { oidcProviderCreate } from "../../lib/schemas";
-	import type { OIDCProvider, OIDCProviderList } from "../../lib/types";
-	import ConfigFormShell from "../../components/modals/ConfigFormShell.svelte";
-	import Dialog from "../../components/modals/Dialog.svelte";
-	import OIDCProviderForm from "../../components/settings/forms/OIDCProviderForm.svelte";
-	import BrandLogo from "../../components/settings/BrandLogo.svelte";
-	import ReadOnlyFieldset from "../../components/settings/ReadOnlyFieldset.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { api, errorText } from "@lib/api";
+	import { config, READONLY_HINT } from "@lib/config.svelte";
+	import { toast } from "@lib/toast";
+	import { oidcProviderCreate } from "@lib/schemas";
+	import type { OIDCProvider, OIDCProviderList } from "@lib/types";
+	import ConfigFormShell from "@components/modals/ConfigFormShell.svelte";
+	import Dialog from "@components/modals/Dialog.svelte";
+	import OIDCProviderForm from "@components/settings/forms/OIDCProviderForm.svelte";
+	import BrandLogo from "@components/settings/BrandLogo.svelte";
+	import ReadOnlyFieldset from "@components/settings/ReadOnlyFieldset.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	const qc = useQueryClient();
 

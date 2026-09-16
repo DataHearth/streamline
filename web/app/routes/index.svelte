@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { createQuery } from "@tanstack/svelte-query";
-	import { api, apiAllPages, type Paginated } from "../lib/api";
-	import { SILENT } from "../lib/query";
-	import { posterUrl, tvPosterUrl } from "../lib/posters";
-	import { formatBytes } from "../lib/format";
+	import { api, apiAllPages, type Paginated } from "@lib/api";
+	import { SILENT } from "@lib/query";
+	import { posterUrl, tvPosterUrl } from "@lib/posters";
+	import { formatBytes } from "@lib/format";
 	import type {
 		ActivityList,
 		DiskUsage,
@@ -14,20 +14,20 @@
 		TVShow,
 		TVShowCounts,
 		UpcomingList as UpcomingResponse,
-	} from "../lib/types";
-	import Hero, { type HeroItem } from "../components/dashboard/Hero.svelte";
-	import StatStrip from "../components/dashboard/StatStrip.svelte";
+	} from "@lib/types";
+	import Hero, { type HeroItem } from "@components/dashboard/Hero.svelte";
+	import StatStrip from "@components/dashboard/StatStrip.svelte";
 	import RecentScroller, {
 		type ScrollerItem,
-	} from "../components/dashboard/RecentScroller.svelte";
-	import type { StatusKind } from "../components/shared/StatusPill.svelte";
-	import LiveQueuePanel from "../components/dashboard/LiveQueuePanel.svelte";
-	import RecentActivityPanel from "../components/dashboard/RecentActivityPanel.svelte";
-	import WantedScroller from "../components/dashboard/WantedScroller.svelte";
-	import UpcomingList from "../components/shared/UpcomingList.svelte";
-	import { upcomingEvents } from "../lib/calendar";
-	import { additionLabel } from "../lib/additions";
-	import { m as i18n } from "../lib/paraglide/messages.js";
+	} from "@components/dashboard/RecentScroller.svelte";
+	import type { StatusKind } from "@components/shared/StatusPill.svelte";
+	import LiveQueuePanel from "@components/dashboard/LiveQueuePanel.svelte";
+	import RecentActivityPanel from "@components/dashboard/RecentActivityPanel.svelte";
+	import WantedScroller from "@components/dashboard/WantedScroller.svelte";
+	import UpcomingList from "@components/shared/UpcomingList.svelte";
+	import { upcomingEvents } from "@lib/calendar";
+	import { additionLabel } from "@lib/additions";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Nothing on the dashboard raises the global loading bar (`meta.silent`):
 	// it is a glance, every panel has its own skeleton, and the queue below

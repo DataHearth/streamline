@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { Magnet } from "@lucide/svelte";
 	import TouchRow from "./TouchRow.svelte";
-	import { torrentMeta } from "../../lib/activity-touch";
-	import type { Torrent } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
-	import { errorText } from "../../lib/api";
+	import { torrentMeta } from "@lib/activity-touch";
+	import type { Torrent } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
+	import { errorText } from "@lib/api";
 
 	// The torrent table below md. Nine columns don't survive 390px, so the name
 	// takes the title line, the infohash the release line, and ↓ / ↑ / ratio /

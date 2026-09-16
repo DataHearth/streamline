@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { RequestCounts } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import type { RequestCounts } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// D2: the four figures as one hairline-split line below md, the shape the
 	// activity page uses when its tiles don't fit. The tiles return from md up.

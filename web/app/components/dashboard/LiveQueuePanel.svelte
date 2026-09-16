@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { Activity } from "@lucide/svelte";
-	import ProgressBar from "../shared/ProgressBar.svelte";
-	import TouchRow from "../activity/TouchRow.svelte";
-	import { entryHeading, queueMeta } from "../../lib/activity-touch";
-	import { formatEta, formatSpeed, pillStatus } from "../../lib/format";
-	import type { QueueEntry } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import ProgressBar from "@components/shared/ProgressBar.svelte";
+	import TouchRow from "@components/activity/TouchRow.svelte";
+	import { entryHeading, queueMeta } from "@lib/activity-touch";
+	import { formatEta, formatSpeed, pillStatus } from "@lib/format";
+	import type { QueueEntry } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let { queue }: { queue: QueueEntry[] } = $props();
 

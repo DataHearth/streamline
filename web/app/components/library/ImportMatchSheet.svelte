@@ -3,15 +3,15 @@
 	import { fly, fade } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { Check, LoaderCircle, Search, X } from "@lucide/svelte";
-	import { api, errorText } from "../../lib/api";
-	import { cn } from "../../lib/cn";
-	import { lockScroll, unlockScroll } from "../../lib/scrollLock";
-	import { sheetSwipe } from "../../lib/sheet-swipe";
+	import { api, errorText } from "@lib/api";
+	import { cn } from "@lib/cn";
+	import { lockScroll, unlockScroll } from "@lib/scrollLock";
+	import { sheetSwipe } from "@lib/sheet-swipe";
 	import type {
 		SeriesLookupResultList,
 		TMDBMovieResult,
-	} from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	} from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// The match picker below md. Deliberately NOT AddMovieModal/AddSeriesModal —
 	// those add to the library; picking here only PATCHes the scan row, so the

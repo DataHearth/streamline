@@ -1,14 +1,14 @@
 <script lang="ts">
 	import { Search, X } from "@lucide/svelte";
-	import { cn } from "../../lib/cn";
-	import { dragScroll } from "../../lib/drag-scroll";
+	import { cn } from "@lib/cn";
+	import { dragScroll } from "@lib/drag-scroll";
 	import {
 		CLASS_CHIPS,
 		type TouchEntry,
-	} from "../../lib/imports-touch";
-	import type { ImportFileClassification } from "../../lib/types";
+	} from "@lib/imports-touch";
+	import type { ImportFileClassification } from "@lib/types";
 	import ImportTouchRow from "./ImportTouchRow.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// E2: search stays in the open and classification is a chip scroller rather
 	// than a sheet — five options with a colour each are already chips elsewhere

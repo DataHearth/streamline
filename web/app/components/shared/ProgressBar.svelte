@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { cn } from "../../lib/cn";
+	import { cn } from "@lib/cn";
 	import type { StatusKind } from "./StatusPill.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let {
 		value,

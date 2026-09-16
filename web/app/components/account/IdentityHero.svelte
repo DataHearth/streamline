@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { createQuery } from "@tanstack/svelte-query";
 	import { Shield, KeyRound, Monitor, ShieldCheck } from "@lucide/svelte";
-	import { api } from "../../lib/api";
-	import { auth } from "../../lib/auth.svelte";
-	import { formatDateTime, formatRelative } from "../../lib/dates";
-	import type { ApiKey, Session } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { api } from "@lib/api";
+	import { auth } from "@lib/auth.svelte";
+	import { formatDateTime, formatRelative } from "@lib/dates";
+	import type { ApiKey, Session } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	const sessions = createQuery<Session[]>(() => ({
 		queryKey: ["auth", "me", "sessions"],

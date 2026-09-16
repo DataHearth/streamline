@@ -7,24 +7,24 @@
 	import { params, goto } from "@roxi/routify";
 	import { Search, LoaderCircle, Bookmark } from "@lucide/svelte";
 	import { onMount } from "svelte";
-	import { api, errorText } from "../../lib/api";
-	import { toast } from "../../lib/toast";
-	import { cn } from "../../lib/cn";
-	import type { Movie, QualityProfile } from "../../lib/types";
-	import MovieDetailHero from "../../components/movies/MovieDetailHero.svelte";
-	import DetailAbout from "../../components/shared/DetailAbout.svelte";
-	import MovieDetailInfo from "../../components/movies/MovieDetailInfo.svelte";
-	import DetailHistory from "../../components/shared/DetailHistory.svelte";
-	import MovieDetailCast from "../../components/movies/MovieDetailCast.svelte";
-	import MovieDetailSimilar from "../../components/movies/MovieDetailSimilar.svelte";
-	import PlayOnMenu from "../../components/movies/PlayOnMenu.svelte";
-	import MovieKebabMenu from "../../components/movies/MovieKebabMenu.svelte";
-	import ManualSearchModal from "../../components/movies/ManualSearchModal.svelte";
-	import QualityProfileModal from "../../components/movies/QualityProfileModal.svelte";
-	import RenameMoviePreviewModal from "../../components/movies/RenameMoviePreviewModal.svelte";
-	import DeleteTitleDialog from "../../components/shared/DeleteTitleDialog.svelte";
-	import ReidentifyDialog from "../../components/shared/ReidentifyDialog.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { api, errorText } from "@lib/api";
+	import { toast } from "@lib/toast";
+	import { cn } from "@lib/cn";
+	import type { Movie, QualityProfile } from "@lib/types";
+	import MovieDetailHero from "@components/movies/MovieDetailHero.svelte";
+	import DetailAbout from "@components/shared/DetailAbout.svelte";
+	import MovieDetailInfo from "@components/movies/MovieDetailInfo.svelte";
+	import DetailHistory from "@components/shared/DetailHistory.svelte";
+	import DetailCast from "@components/shared/DetailCast.svelte";
+	import MovieDetailSimilar from "@components/movies/MovieDetailSimilar.svelte";
+	import PlayOnMenu from "@components/shared/PlayOnMenu.svelte";
+	import MovieKebabMenu from "@components/movies/MovieKebabMenu.svelte";
+	import ManualSearchModal from "@components/movies/ManualSearchModal.svelte";
+	import QualityProfileModal from "@components/shared/QualityProfileModal.svelte";
+	import RenameMoviePreviewModal from "@components/movies/RenameMoviePreviewModal.svelte";
+	import DeleteTitleDialog from "@components/shared/DeleteTitleDialog.svelte";
+	import ReidentifyDialog from "@components/shared/ReidentifyDialog.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	type Tab = "overview" | "history" | "cast";
 	const TABS: { key: Tab; label: string }[] = [
@@ -294,7 +294,7 @@
 		{:else if tab === "history"}
 			<DetailHistory movieId={movie.id} />
 		{:else if tab === "cast"}
-			<MovieDetailCast cast={movie.cast ?? []} />
+			<DetailCast cast={movie.cast ?? []} />
 		{/if}
 	</div>
 

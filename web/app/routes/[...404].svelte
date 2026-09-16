@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { onMount } from "svelte";
 	import { Compass, House, Film } from "@lucide/svelte";
-	import AuthCard from "../components/auth/AuthCard.svelte";
-	import { m as i18n } from "../lib/paraglide/messages.js";
+	import AuthCard from "@components/auth/AuthCard.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let path = $state("");
 	onMount(() => {

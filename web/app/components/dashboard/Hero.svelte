@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import type { StatusKind } from "../shared/StatusPill.svelte";
+	import type { StatusKind } from "@components/shared/StatusPill.svelte";
 
 	// A movie or series normalized for the hero. The dashboard builds it so the
 	// hero itself stays media-agnostic.
@@ -23,10 +23,10 @@
 
 <script lang="ts">
 	import { ArrowRight, Film } from "@lucide/svelte";
-	import Poster from "../movies/Poster.svelte";
-	import StatusPill from "../shared/StatusPill.svelte";
-	import { formatDate } from "../../lib/dates";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import Poster from "@components/shared/Poster.svelte";
+	import StatusPill from "@components/shared/StatusPill.svelte";
+	import { formatDate } from "@lib/dates";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let { item, loading = false }: { item?: HeroItem; loading?: boolean } =
 		$props();

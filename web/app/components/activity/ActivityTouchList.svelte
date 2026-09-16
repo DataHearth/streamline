@@ -1,12 +1,12 @@
 <script lang="ts">
-	import SkeletonList from "../shared/SkeletonList.svelte";
+	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import { Activity, LoaderCircle } from "@lucide/svelte";
 	import TouchRow from "./TouchRow.svelte";
-	import { entryHeading, historyMeta, queueMeta } from "../../lib/activity-touch";
-	import { pillStatus } from "../../lib/format";
-	import type { HistoryEntry, QueueEntry } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
-	import { errorText } from "../../lib/api";
+	import { entryHeading, historyMeta, queueMeta } from "@lib/activity-touch";
+	import { pillStatus } from "@lib/format";
+	import type { HistoryEntry, QueueEntry } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
+	import { errorText } from "@lib/api";
 
 	// The table's replacement below md: one surface, hairline rows, and the ring
 	// carrying what the Status and Progress columns used to. Everything else the

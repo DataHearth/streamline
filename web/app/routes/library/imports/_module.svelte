@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { auth } from "../../../lib/auth.svelte";
-	import { requireAdmin } from "../../../lib/guards";
+	import { auth } from "@lib/auth.svelte";
+	import { requireAdmin } from "@lib/guards";
 
 	// Imports is admin-only; non-admins who reach the URL directly get
 	// redirected to /forbidden once auth resolves. Mirrors settings/_module.

@@ -41,9 +41,9 @@
 <script lang="ts">
 	import type { Snippet } from "svelte";
 	import { Magnet, Search, Trash2, X } from "@lucide/svelte";
-	import { cn } from "../../lib/cn";
-	import { dragScroll } from "../../lib/drag-scroll";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { cn } from "@lib/cn";
+	import { dragScroll } from "@lib/drag-scroll";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	type View = ActivityView;
 

@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { Magnet, ChevronUp, ChevronDown } from "@lucide/svelte";
-	import { cn } from "../../lib/cn";
+	import { cn } from "@lib/cn";
 	import TorrentRow from "./TorrentRow.svelte";
-	import type { SortOrder, TorrentSortKey } from "../../lib/activity-touch";
-	import type { Torrent } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
-	import { errorText } from "../../lib/api";
+	import type { SortOrder, TorrentSortKey } from "@lib/activity-touch";
+	import type { Torrent } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
+	import { errorText } from "@lib/api";
 
 	// The md-and-up reading of the torrent list; below that TorrentTouchList takes
 	// over. Sorting is the route's state, not this component's: the headers set it

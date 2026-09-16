@@ -2,11 +2,11 @@
 	import { fade, fly } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { X } from "@lucide/svelte";
-	import PendingRow from "../pending/PendingRow.svelte";
-	import { lockScroll, unlockScroll } from "../../lib/scrollLock";
-	import { sheetSwipe } from "../../lib/sheet-swipe";
-	import type { PendingItem } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import PendingRow from "@components/pending/PendingRow.svelte";
+	import { lockScroll, unlockScroll } from "@lib/scrollLock";
+	import { sheetSwipe } from "@lib/sheet-swipe";
+	import type { PendingItem } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Below md the "needs attention" section is one banner line on the page; the
 	// proposals themselves open here, where each one gets the full width its three

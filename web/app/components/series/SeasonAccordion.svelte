@@ -1,16 +1,16 @@
 <script lang="ts">
 	import { Bookmark, ChevronRight, Info, Search, Trash2 } from "@lucide/svelte";
-	import KebabMenu, { type KebabItem } from "../shared/KebabMenu.svelte";
+	import KebabMenu, { type KebabItem } from "@components/shared/KebabMenu.svelte";
 	import EpisodeDetailModal from "./EpisodeDetailModal.svelte";
 	import { slide } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
-	import { cn } from "../../lib/cn";
-	import { episodeStatus, missingEpisodes } from "../../lib/status";
-	import { formatBytes } from "../../lib/format";
-	import { episodeMedia } from "../../lib/media-info";
-	import { formatDateShort } from "../../lib/dates";
-	import type { Episode, Season, SeriesType } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { cn } from "@lib/cn";
+	import { episodeStatus, missingEpisodes } from "@lib/status";
+	import { formatBytes } from "@lib/format";
+	import { episodeMedia } from "@lib/media-info";
+	import { formatDateShort } from "@lib/dates";
+	import type { Episode, Season, SeriesType } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Phone shape for the episodes tab. The desktop pair — a horizontal season
 	// strip above a seven-column table — needs width this viewport doesn't have,

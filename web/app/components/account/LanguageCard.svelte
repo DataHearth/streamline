@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { cn } from "../../lib/cn";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
-	import { getLocale, locales, setLocale } from "../../lib/paraglide/runtime.js";
+	import { cn } from "@lib/cn";
+	import { m as i18n } from "@lib/paraglide/messages.js";
+	import { getLocale, locales, setLocale } from "@lib/paraglide/runtime.js";
 
 	// Endonyms — a locale is always named in its own language, so "Français"
 	// reads the same whichever locale the UI is currently in. Derived rather

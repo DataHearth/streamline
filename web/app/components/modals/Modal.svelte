@@ -4,13 +4,13 @@
 	import { fade } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { X } from "@lucide/svelte";
-	import { lockScroll, unlockScroll } from "../../lib/scrollLock";
+	import { lockScroll, unlockScroll } from "@lib/scrollLock";
 	import {
 		initialFocusTarget,
 		portal,
 		trapFocus,
-	} from "../../lib/focus-trap";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	} from "@lib/focus-trap";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	type Props = {
 		open: boolean;

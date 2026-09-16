@@ -4,11 +4,11 @@
 		createMutation,
 		useQueryClient,
 	} from "@tanstack/svelte-query";
-	import Modal from "../modals/Modal.svelte";
-	import { api, errorText } from "../../lib/api";
-	import { toast } from "../../lib/toast";
-	import type { RenamePlan } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import Modal from "@components/modals/Modal.svelte";
+	import { api, errorText } from "@lib/api";
+	import { toast } from "@lib/toast";
+	import type { RenamePlan } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	type Props = {
 		open: boolean;

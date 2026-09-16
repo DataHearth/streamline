@@ -1,17 +1,17 @@
 <script lang="ts">
 	import { onMount, tick } from "svelte";
 	import { Search, Film, Tv, ArrowRight } from "@lucide/svelte";
-	import { cn } from "../../lib/cn";
-	import { initials } from "../../lib/people";
-	import { posterUrl, tvPosterUrl } from "../../lib/posters";
-	import Poster from "../movies/Poster.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { cn } from "@lib/cn";
+	import { initials } from "@lib/people";
+	import { posterUrl, tvPosterUrl } from "@lib/posters";
+	import Poster from "@components/shared/Poster.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 	import {
 		createSearchModel,
 		itemKindLabel,
 		searchNav,
 		type SearchItem,
-	} from "../../lib/search-model.svelte";
+	} from "@lib/search-model.svelte";
 
 	let open = $state(false);
 	let closing = $state(false);

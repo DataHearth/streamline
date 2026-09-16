@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { CircleX, Replace, TriangleAlert } from "@lucide/svelte";
 	import TranscodeRow from "./TranscodeRow.svelte";
-	import { errorText } from "../../lib/api";
-	import type { TranscodeJob } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { errorText } from "@lib/api";
+	import type { TranscodeJob } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// The list and everything it can be instead of a list. The three empty
 	// flavours are separate states, not one message with a variable in it: an

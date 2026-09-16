@@ -15,20 +15,20 @@
 		Film,
 		Tv,
 	} from "@lucide/svelte";
-	import { api, apiAllPages, type Paginated } from "../../lib/api";
-	import { toast } from "../../lib/toast";
-	import { cn } from "../../lib/cn";
-	import { formatRelative } from "../../lib/dates";
-	import { auth } from "../../lib/auth.svelte";
-	import Dialog from "../../components/modals/Dialog.svelte";
-	import Select from "../../components/forms/Select.svelte";
-	import LookupDetailPanel from "../../components/shared/LookupDetailPanel.svelte";
-	import RequestStatLine from "../../components/requests/RequestStatLine.svelte";
-	import RequestFilterLine from "../../components/requests/RequestFilterLine.svelte";
-	import RequestFilterSheet from "../../components/requests/RequestFilterSheet.svelte";
-	import RequestTouchList from "../../components/requests/RequestTouchList.svelte";
-	import RequestDecisionSheet from "../../components/requests/RequestDecisionSheet.svelte";
-	import MyRequestsList from "../../components/requests/MyRequestsList.svelte";
+	import { api, apiAllPages, type Paginated } from "@lib/api";
+	import { toast } from "@lib/toast";
+	import { cn } from "@lib/cn";
+	import { formatRelative } from "@lib/dates";
+	import { auth } from "@lib/auth.svelte";
+	import Dialog from "@components/modals/Dialog.svelte";
+	import Select from "@components/forms/Select.svelte";
+	import LookupDetailPanel from "@components/shared/LookupDetailPanel.svelte";
+	import RequestStatLine from "@components/requests/RequestStatLine.svelte";
+	import RequestFilterLine from "@components/requests/RequestFilterLine.svelte";
+	import RequestFilterSheet from "@components/requests/RequestFilterSheet.svelte";
+	import RequestTouchList from "@components/requests/RequestTouchList.svelte";
+	import RequestDecisionSheet from "@components/requests/RequestDecisionSheet.svelte";
+	import MyRequestsList from "@components/requests/MyRequestsList.svelte";
 	import {
 		STATUS_META,
 		activeFilterCount,
@@ -37,14 +37,14 @@
 		statusChips,
 		type RequestKind,
 		type RequestTab,
-	} from "../../lib/requests-touch";
+	} from "@lib/requests-touch";
 	import type {
 		MediaRequest,
 		RequestCounts,
 		RequestMediaDetails,
 		QualityProfile,
-	} from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	} from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let tab = $state<RequestTab>("pending");
 	// The two bands land on different states, so they cannot share one value. The

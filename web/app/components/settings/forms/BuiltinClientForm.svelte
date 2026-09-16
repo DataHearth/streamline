@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { Zap, Folder, Gauge, Globe, TriangleAlert } from "@lucide/svelte";
-	import TextField from "../../forms/TextField.svelte";
-	import Select from "../../forms/Select.svelte";
-	import TogglePill from "../../forms/TogglePill.svelte";
-	import type { AppForm } from "../../../lib/form";
-	import { m as i18n } from "../../../lib/paraglide/messages.js";
+	import TextField from "@components/forms/TextField.svelte";
+	import Select from "@components/forms/Select.svelte";
+	import TogglePill from "@components/forms/TogglePill.svelte";
+	import type { AppForm } from "@lib/form";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	type Values = {
 		download_dir: string;

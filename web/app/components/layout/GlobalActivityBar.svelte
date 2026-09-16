@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { useIsFetching, useIsMutating } from "@tanstack/svelte-query";
-	import { portal } from "../../lib/focus-trap";
-	import ProgressBar from "../shared/ProgressBar.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { portal } from "@lib/focus-trap";
+	import ProgressBar from "@components/shared/ProgressBar.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Queries tagged `meta: { silent: true }` don't raise the bar: chrome that
 	// refreshes itself on a timer (the sidebar badges) and the dashboard, which

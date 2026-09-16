@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { Activity } from "@lucide/svelte";
-	import EventList from "../activity/EventList.svelte";
-	import type { ActivityEvent } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import EventList from "@components/activity/EventList.svelte";
+	import type { ActivityEvent } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let { events }: { events: ActivityEvent[] } = $props();
 </script>

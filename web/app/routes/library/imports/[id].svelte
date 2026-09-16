@@ -5,7 +5,7 @@
 		useQueryClient,
 	} from "@tanstack/svelte-query";
 	import { goto, params } from "@roxi/routify";
-	import SkeletonList from "../../../components/shared/SkeletonList.svelte";
+	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import { onMount } from "svelte";
 	import {
 		ArrowDown,
@@ -16,16 +16,16 @@
 		Trash2,
 		TriangleAlert,
 	} from "@lucide/svelte";
-	import { api, apiAllPages, errorText, type Paginated } from "../../../lib/api";
-	import { cn } from "../../../lib/cn";
-	import { formatDateTime, formatRelative } from "../../../lib/dates";
+	import { api, apiAllPages, errorText, type Paginated } from "@lib/api";
+	import { cn } from "@lib/cn";
+	import { formatDateTime, formatRelative } from "@lib/dates";
 	import {
 		commitNote,
 		commitSummary,
 		importModeLabel,
 		importStatusMeta,
-	} from "../../../lib/imports";
-	import { toast } from "../../../lib/toast";
+	} from "@lib/imports";
+	import { toast } from "@lib/toast";
 	import type {
 		ImportFileClassification,
 		ImportFileDecision,
@@ -35,26 +35,26 @@
 		ImportScanShow,
 		SeriesLookupResult,
 		TMDBMovieResult,
-	} from "../../../lib/types";
-	import AddMovieModal from "../../../components/movies/AddMovieModal.svelte";
-	import AddSeriesModal from "../../../components/series/AddSeriesModal.svelte";
-	import Select from "../../../components/forms/Select.svelte";
-	import Dialog from "../../../components/modals/Dialog.svelte";
-	import DecisionStrip from "../../../components/library/DecisionStrip.svelte";
-	import ImportFileRow from "../../../components/library/ImportFileRow.svelte";
-	import ImportShowRow from "../../../components/library/ImportShowRow.svelte";
-	import ImportProgress from "../../../components/library/ImportProgress.svelte";
-	import ImportSteps from "../../../components/library/ImportSteps.svelte";
-	import ImportTouchList from "../../../components/library/ImportTouchList.svelte";
-	import ImportDecisionSheet from "../../../components/library/ImportDecisionSheet.svelte";
-	import ImportCommitBar from "../../../components/library/ImportCommitBar.svelte";
-	import ImportMatchSheet from "../../../components/library/ImportMatchSheet.svelte";
+	} from "@lib/types";
+	import AddMovieModal from "@components/movies/AddMovieModal.svelte";
+	import AddSeriesModal from "@components/series/AddSeriesModal.svelte";
+	import Select from "@components/forms/Select.svelte";
+	import Dialog from "@components/modals/Dialog.svelte";
+	import DecisionStrip from "@components/library/DecisionStrip.svelte";
+	import ImportFileRow from "@components/library/ImportFileRow.svelte";
+	import ImportShowRow from "@components/library/ImportShowRow.svelte";
+	import ImportProgress from "@components/library/ImportProgress.svelte";
+	import ImportSteps from "@components/library/ImportSteps.svelte";
+	import ImportTouchList from "@components/library/ImportTouchList.svelte";
+	import ImportDecisionSheet from "@components/library/ImportDecisionSheet.svelte";
+	import ImportCommitBar from "@components/library/ImportCommitBar.svelte";
+	import ImportMatchSheet from "@components/library/ImportMatchSheet.svelte";
 	import {
 		fileEntry,
 		showEntry,
 		type TouchEntry,
-	} from "../../../lib/imports-touch";
-	import { m as i18n } from "../../../lib/paraglide/messages.js";
+	} from "@lib/imports-touch";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let routeParams = $state<Record<string, string>>({});
 	// goto is a derived store layered over the current fragment; calling

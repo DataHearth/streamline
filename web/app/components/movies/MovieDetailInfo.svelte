@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { ChevronDown, ExternalLink, Trash2, ArrowUpRight } from "@lucide/svelte";
 	import { createMutation, useQueryClient } from "@tanstack/svelte-query";
-	import { auth } from "../../lib/auth.svelte";
-	import { api, errorText } from "../../lib/api";
-	import { toast } from "../../lib/toast";
-	import { formatBytes } from "../../lib/format";
-	import { formatDate, formatRelative } from "../../lib/dates";
-	import { cn } from "../../lib/cn";
+	import { auth } from "@lib/auth.svelte";
+	import { api, errorText } from "@lib/api";
+	import { toast } from "@lib/toast";
+	import { formatBytes } from "@lib/format";
+	import { formatDate, formatRelative } from "@lib/dates";
+	import { cn } from "@lib/cn";
 	import {
 		audioSummary,
 		audioLanguages,
@@ -19,11 +19,11 @@
 		subtitleSummary,
 		subtitleLanguages,
 		type TrackSummary,
-	} from "../../lib/media-info";
-	import Dialog from "../modals/Dialog.svelte";
-	import Checkbox from "../forms/Checkbox.svelte";
-	import type { Movie } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	} from "@lib/media-info";
+	import Dialog from "@components/modals/Dialog.svelte";
+	import Checkbox from "@components/forms/Checkbox.svelte";
+	import type { Movie } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let {
 		movie,

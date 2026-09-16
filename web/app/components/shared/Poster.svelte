@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onDestroy } from "svelte";
-	import { isPosterMissing, markPosterMissing } from "../../lib/posters";
+	import { isPosterMissing, markPosterMissing } from "@lib/posters";
 
 	let {
 		src,

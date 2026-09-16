@@ -13,11 +13,11 @@
 		List,
 		ListChecks,
 	} from "@lucide/svelte";
-	import { cn } from "../../lib/cn";
-	import { dragScroll } from "../../lib/drag-scroll";
-	import { lockScroll, unlockScroll } from "../../lib/scrollLock";
-	import { sheetSwipe } from "../../lib/sheet-swipe";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { cn } from "@lib/cn";
+	import { dragScroll } from "@lib/drag-scroll";
+	import { lockScroll, unlockScroll } from "@lib/scrollLock";
+	import { sheetSwipe } from "@lib/sheet-swipe";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Everything the library toolbars can no longer afford to keep on screen at
 	// phone width: the filter query, sort, view and the way into

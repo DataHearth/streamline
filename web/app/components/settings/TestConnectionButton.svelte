@@ -2,10 +2,10 @@
 	import type { Snippet } from "svelte";
 	import { createMutation } from "@tanstack/svelte-query";
 	import { Plug, CircleCheck, CircleX, TriangleAlert } from "@lucide/svelte";
-	import { api, errorText } from "../../lib/api";
-	import { cn } from "../../lib/cn";
-	import { toast } from "../../lib/toast";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { api, errorText } from "@lib/api";
+	import { cn } from "@lib/cn";
+	import { toast } from "@lib/toast";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	type Props = {
 		endpoint: string;

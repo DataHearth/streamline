@@ -2,8 +2,8 @@
 	import { slide } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { Lock } from "@lucide/svelte";
-	import { config } from "../../lib/config.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { config } from "@lib/config.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Read-only is a property of the instance, not news about this page. The
 	// two-line banner it replaces sat above all twelve settings pages and said

@@ -1,7 +1,7 @@
 <script lang="ts">
-	import SkeletonToolbar from "../../components/shared/SkeletonToolbar.svelte";
-	import SkeletonList from "../../components/shared/SkeletonList.svelte";
-	import Skeleton from "../../components/shared/Skeleton.svelte";
+	import SkeletonToolbar from "@components/shared/SkeletonToolbar.svelte";
+	import SkeletonList from "@components/shared/SkeletonList.svelte";
+	import Skeleton from "@components/shared/Skeleton.svelte";
 	import { untrack } from "svelte";
 	import { onMount } from "svelte";
 	import {
@@ -9,22 +9,22 @@
 		createQuery,
 		keepPreviousData,
 	} from "@tanstack/svelte-query";
-	import { api, errorText, type Paginated } from "../../lib/api";
-	import { formatRelative } from "../../lib/dates";
-	import { loadPref, savePref, MOVIES_SEARCH } from "../../lib/prefs";
-	import { onRouteQuery } from "../../lib/route-query";
-	import { pageMeta } from "../../lib/page-meta.svelte";
-	import MoviesToolbar from "../../components/movies/MoviesToolbar.svelte";
-	import MovieGrid from "../../components/movies/MovieGrid.svelte";
-	import MovieList from "../../components/movies/MovieList.svelte";
-	import MoviesEmpty from "../../components/movies/MoviesEmpty.svelte";
-	import MovieBulkActions from "../../components/movies/MovieBulkActions.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { api, errorText, type Paginated } from "@lib/api";
+	import { formatRelative } from "@lib/dates";
+	import { loadPref, savePref, MOVIES_SEARCH } from "@lib/prefs";
+	import { onRouteQuery } from "@lib/route-query";
+	import { pageMeta } from "@lib/page-meta.svelte";
+	import MoviesToolbar from "@components/movies/MoviesToolbar.svelte";
+	import MovieGrid from "@components/movies/MovieGrid.svelte";
+	import MovieList from "@components/movies/MovieList.svelte";
+	import MoviesEmpty from "@components/movies/MoviesEmpty.svelte";
+	import MovieBulkActions from "@components/movies/MovieBulkActions.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 	import type {
 		Movie,
 		MovieCounts,
 		ScheduleList,
-	} from "../../lib/types";
+	} from "@lib/types";
 
 	type View = "grid" | "list";
 	type SortKey = "title" | "year";

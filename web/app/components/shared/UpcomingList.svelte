@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { Calendar } from "@lucide/svelte";
-	import { cn } from "../../lib/cn";
-	import { dotToken, type CalendarEvent } from "../../lib/calendar";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
-	import { getLocale } from "../../lib/paraglide/runtime.js";
+	import { cn } from "@lib/cn";
+	import { dotToken, type CalendarEvent } from "@lib/calendar";
+	import { m as i18n } from "@lib/paraglide/messages.js";
+	import { getLocale } from "@lib/paraglide/runtime.js";
 
 	let {
 		events,

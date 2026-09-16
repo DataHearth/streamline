@@ -2,14 +2,14 @@
 	import { createForm } from "@tanstack/svelte-form";
 	import { createMutation, useQueryClient } from "@tanstack/svelte-query";
 	import * as v from "valibot";
-	import { api, errorText } from "../../lib/api";
-	import { toast } from "../../lib/toast";
-	import { displayName, email as emailSchema } from "../../lib/schemas";
-	import type { AuthMethod, User, UserRole } from "../../lib/types";
-	import TextField from "../forms/TextField.svelte";
-	import SubmitButton from "../forms/SubmitButton.svelte";
-	import Select from "../forms/Select.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { api, errorText } from "@lib/api";
+	import { toast } from "@lib/toast";
+	import { displayName, email as emailSchema } from "@lib/schemas";
+	import type { AuthMethod, User, UserRole } from "@lib/types";
+	import TextField from "@components/forms/TextField.svelte";
+	import SubmitButton from "@components/forms/SubmitButton.svelte";
+	import Select from "@components/forms/Select.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	const ROLE_OPTIONS: { value: UserRole; label: string }[] = [
 		{ value: "member", label: i18n.role_member() },

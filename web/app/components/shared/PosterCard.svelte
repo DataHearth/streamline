@@ -1,15 +1,15 @@
 <script lang="ts">
 	import type { Snippet } from "svelte";
 	import { Film, Search, Bookmark } from "@lucide/svelte";
-	import { cn } from "../../lib/cn";
-	import { posterUrl } from "../../lib/posters";
-	import Poster from "../movies/Poster.svelte";
+	import { cn } from "@lib/cn";
+	import { posterUrl } from "@lib/posters";
+	import Poster from "./Poster.svelte";
 	import StatusPill from "./StatusPill.svelte";
 	import ProgressBar from "./ProgressBar.svelte";
 	import SelectBox from "./SelectBox.svelte";
 	import type { StatusKind } from "./StatusPill.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
-	import { formatDate } from "../../lib/dates";
+	import { m as i18n } from "@lib/paraglide/messages.js";
+	import { formatDate } from "@lib/dates";
 
 	type PosterMovie = {
 		id: number;

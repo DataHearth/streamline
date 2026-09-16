@@ -2,22 +2,22 @@
 	import { fly, fade } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { Check, RotateCcw, X } from "@lucide/svelte";
-	import { formatRelative } from "../../lib/dates";
+	import { formatRelative } from "@lib/dates";
 	import {
 		STATUS_META,
 		kindLabel,
 		requesterName,
-	} from "../../lib/requests-touch";
-	import { lockScroll, unlockScroll } from "../../lib/scrollLock";
-	import { sheetSwipe } from "../../lib/sheet-swipe";
-	import Select from "../forms/Select.svelte";
-	import LookupDetailPanel from "../shared/LookupDetailPanel.svelte";
+	} from "@lib/requests-touch";
+	import { lockScroll, unlockScroll } from "@lib/scrollLock";
+	import { sheetSwipe } from "@lib/sheet-swipe";
+	import Select from "@components/forms/Select.svelte";
+	import LookupDetailPanel from "@components/shared/LookupDetailPanel.svelte";
 	import type {
 		MediaRequest,
 		QualityProfile,
 		RequestMediaDetails,
-	} from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	} from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// B1: one surface can change a request. The row says what needs deciding;
 	// this says everything you need to decide it and holds both decisions, so

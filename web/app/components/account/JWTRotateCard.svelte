@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { createMutation } from "@tanstack/svelte-query";
 	import { ShieldAlert, RotateCcw } from "@lucide/svelte";
-	import { api, errorText } from "../../lib/api";
-	import { auth } from "../../lib/auth.svelte";
-	import { toast } from "../../lib/toast";
-	import Dialog from "../modals/Dialog.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { api, errorText } from "@lib/api";
+	import { auth } from "@lib/auth.svelte";
+	import { toast } from "@lib/toast";
+	import Dialog from "@components/modals/Dialog.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	const rotate = createMutation<{ token: string }, Error, void>(() => ({
 		mutationFn: () =>

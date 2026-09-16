@@ -2,8 +2,8 @@
 	import type { Snippet } from "svelte";
 	import { fade } from "svelte/transition";
 	import { ChevronLeft } from "@lucide/svelte";
-	import { lockScroll, unlockScroll } from "../../lib/scrollLock";
-	import { initialFocusTarget, portal, trapFocus } from "../../lib/focus-trap";
+	import { lockScroll, unlockScroll } from "@lib/scrollLock";
+	import { initialFocusTarget, portal, trapFocus } from "@lib/focus-trap";
 
 	// A drilled-in screen on touch: back chevron, title, and the content at full
 	// width. Used where a phone should get a page rather than a card in a box —

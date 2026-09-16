@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { House, LogOut, ShieldX } from "@lucide/svelte";
-	import AuthCard from "../components/auth/AuthCard.svelte";
-	import { m as i18n } from "../lib/paraglide/messages.js";
+	import AuthCard from "@components/auth/AuthCard.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	async function signOut() {
 		try {

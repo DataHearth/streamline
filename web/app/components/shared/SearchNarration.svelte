@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let {
 		indexerCount,

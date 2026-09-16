@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import type { StatusKind } from "../shared/StatusPill.svelte";
+	import type { StatusKind } from "@components/shared/StatusPill.svelte";
 
 	// Movies satisfy this as-is; series pass their own poster + detail route.
 	export type ScrollerItem = {
@@ -17,8 +17,8 @@
 
 <script lang="ts">
 	import { Film, ChevronLeft, ChevronRight } from "@lucide/svelte";
-	import PosterCard from "../shared/PosterCard.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import PosterCard from "@components/shared/PosterCard.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let {
 		title,

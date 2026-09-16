@@ -1,7 +1,7 @@
 <script lang="ts">
-	import MovieDetailCast from "../movies/MovieDetailCast.svelte";
-	import type { CastMember } from "../../lib/types";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import DetailCast from "./DetailCast.svelte";
+	import type { CastMember } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let {
 		overview,
@@ -51,6 +51,6 @@
 				</button>
 			{/if}
 		</div>
-		<MovieDetailCast cast={topCast} dense />
+		<DetailCast cast={topCast} dense />
 	{/if}
 </section>

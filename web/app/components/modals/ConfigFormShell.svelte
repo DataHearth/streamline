@@ -1,13 +1,13 @@
 <script lang="ts">
 	import type { Snippet } from "svelte";
 	import { fade } from "svelte/transition";
-	import { config } from "../../lib/config.svelte";
-	import { lockScroll, unlockScroll } from "../../lib/scrollLock";
-	import { initialFocusTarget, portal, trapFocus } from "../../lib/focus-trap";
-	import { createSettingsDesktop } from "../../lib/viewport.svelte";
+	import { config } from "@lib/config.svelte";
+	import { lockScroll, unlockScroll } from "@lib/scrollLock";
+	import { initialFocusTarget, portal, trapFocus } from "@lib/focus-trap";
+	import { createSettingsDesktop } from "@lib/viewport.svelte";
 	import Modal from "./Modal.svelte";
-	import ConfigModalFooter from "../settings/ConfigModalFooter.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import ConfigModalFooter from "@components/settings/ConfigModalFooter.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// The five config forms — indexer, download client, media server, quality
 	// profile, SSO — are nine to twelve fields plus a connection test. As a

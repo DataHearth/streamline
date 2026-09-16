@@ -1,8 +1,8 @@
 <script lang="ts">
 	import type { Snippet } from "svelte";
 	import { Check } from "@lucide/svelte";
-	import { cn } from "../../lib/cn";
-	import { readOnlyLock } from "../../lib/config.svelte";
+	import { cn } from "@lib/cn";
+	import { readOnlyLock } from "@lib/config.svelte";
 	import FieldLock from "./FieldLock.svelte";
 
 	type Props = {

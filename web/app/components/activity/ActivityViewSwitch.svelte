@@ -3,8 +3,8 @@
 </script>
 
 <script lang="ts">
-	import { cn } from "../../lib/cn";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { cn } from "@lib/cn";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Queue, History and Events are three readings of one page, so this switches
 	// between them in place. Torrents is NOT a fourth cell: it's a separate route,

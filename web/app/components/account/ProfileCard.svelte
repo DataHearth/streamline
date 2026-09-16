@@ -2,14 +2,14 @@
 	import { createForm } from "@tanstack/svelte-form";
 	import { createMutation, useQueryClient } from "@tanstack/svelte-query";
 	import * as v from "valibot";
-	import { api, errorText } from "../../lib/api";
-	import { auth } from "../../lib/auth.svelte";
-	import { toast } from "../../lib/toast";
-	import { displayName } from "../../lib/schemas";
-	import type { User } from "../../lib/types";
-	import TextField from "../forms/TextField.svelte";
-	import Modal from "../modals/Modal.svelte";
-	import { m as i18n } from "../../lib/paraglide/messages.js";
+	import { api, errorText } from "@lib/api";
+	import { auth } from "@lib/auth.svelte";
+	import { toast } from "@lib/toast";
+	import { displayName } from "@lib/schemas";
+	import type { User } from "@lib/types";
+	import TextField from "@components/forms/TextField.svelte";
+	import Modal from "@components/modals/Modal.svelte";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	const qc = useQueryClient();
 
