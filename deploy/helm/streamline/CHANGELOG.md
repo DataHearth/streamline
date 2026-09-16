@@ -5,11 +5,15 @@ All notable changes to the Streamline Helm chart are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this chart adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [2.2.0] - 2026-09-16
 
 ### Added
 
 - helm: Expose priorityClassName
+
+### Changed
+
+- deps: Update helm release victoria-metrics-single to v0.46.0 (#60)
 
 ## [2.1.0] - 2026-09-08
 
@@ -44,7 +48,7 @@ and this chart adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 
 - Initial commit
 
-[unreleased]: https://github.com/datahearth/streamline/compare/chart-v2.1.0..HEAD
+[2.2.0]: https://github.com/datahearth/streamline/compare/chart-v2.1.0..chart-v2.2.0
 [2.1.0]: https://github.com/datahearth/streamline/compare/chart-v2.0.0..chart-v2.1.0
 [2.0.0]: https://github.com/datahearth/streamline/compare/chart-v1.0.1..chart-v2.0.0
 [1.0.1]: https://github.com/datahearth/streamline/tree/chart-v1.0.1
