@@ -2,7 +2,11 @@
 	import { createQuery } from "@tanstack/svelte-query";
 	import { Activity } from "@lucide/svelte";
 	import { api, errorText } from "@lib/api";
-	import { EVENT_MARKS, monitoringDetail } from "@lib/activity-event";
+	import {
+		EVENT_MARKS,
+		eventSubject,
+		monitoringDetail,
+	} from "@lib/activity-event";
 	import { formatRelative, formatDateTime } from "@lib/dates";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import type { ActivityEvent, ActivityList } from "@lib/types";
@@ -78,6 +82,11 @@
 			}}
 			{@const rel = release(event) || monitoringDetail(event)}
 			{@const sz = size(event)}
+			<!-- The subject's title is the page we are already on, so only its
+			     qualifier carries anything here: which episode, which season, how
+			     many. Without it every scan, import and completion on a show read
+			     as a bare event name repeated down the list. -->
+			{@const scope = eventSubject(event).detail}
 			<li
 				class="grid grid-cols-[28px_1fr_auto_auto] items-center gap-4 border-b border-border px-4 py-3 last:border-b-0"
 			>
@@ -90,6 +99,11 @@
 					<div class="font-mono text-[10px] tracking-[0.1em] text-fg-faint">
 						{mark.label}
 					</div>
+					{#if scope}
+						<div class="mt-0.5 truncate font-mono text-[11.5px] text-fg">
+							{scope}
+						</div>
+					{/if}
 					{#if rel}
 						<div class="mt-0.5 truncate font-mono text-[11.5px] text-fg-muted">
 							{rel}
