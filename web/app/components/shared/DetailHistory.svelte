@@ -7,12 +7,16 @@
 	import { m as i18n } from "../../lib/paraglide/messages.js";
 	import type { ActivityEvent, ActivityList } from "../../lib/types";
 
-	let { movieId }: { movieId: number } = $props();
+	let { movieId, seriesId }: { movieId?: number; seriesId?: number } =
+		$props();
+
+	let filter = $derived(
+		movieId !== undefined ? `movie_id=${movieId}` : `series_id=${seriesId}`,
+	);
 
 	const q = createQuery<ActivityList>(() => ({
-		queryKey: ["movie", movieId, "history"],
-		queryFn: () =>
-			api<ActivityList>(`/activity?movie_id=${movieId}&limit=50`),
+		queryKey: ["detail-history", filter],
+		queryFn: () => api<ActivityList>(`/activity?${filter}&limit=50`),
 	}));
 
 
@@ -44,7 +48,7 @@
 		role="alert"
 		class="rounded-lg border border-dashed border-status-failed/40 bg-status-failed/5 py-10 text-center text-sm text-status-failed"
 	>
-		{errorText(q.error, i18n.movies_history_failed())}
+		{errorText(q.error, i18n.detail_history_failed())}
 	</div>
 {:else if events.length === 0}
 	<div

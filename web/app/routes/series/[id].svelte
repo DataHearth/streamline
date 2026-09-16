@@ -41,6 +41,7 @@
 	import SeriesReleaseSearchModal from "../../components/series/SeriesReleaseSearchModal.svelte";
 	import SeriesKebabMenu from "../../components/series/SeriesKebabMenu.svelte";
 	import MovieDetailCast from "../../components/movies/MovieDetailCast.svelte";
+	import DetailHistory from "../../components/shared/DetailHistory.svelte";
 	import DetailAbout from "../../components/shared/DetailAbout.svelte";
 	import PlayOnMenu from "../../components/movies/PlayOnMenu.svelte";
 	import type { SeriesAction } from "../../components/series/SeriesKebabMenu.svelte";
@@ -1015,14 +1016,7 @@
 				</div>
 			{/if}
 		{:else if tab === "history"}
-			<div
-				class="rounded-lg border border-dashed border-border bg-bg-card/40 py-14 text-center"
-			>
-				<p class="text-sm font-medium text-fg-muted">{i18n.common_no_history()}</p>
-				<p class="mt-1 text-xs text-fg-subtle">
-					{i18n.series_history_not_surfaced()}
-				</p>
-			</div>
+			<DetailHistory seriesId={show.id} />
 		{:else if tab === "cast"}
 			<MovieDetailCast cast={show.cast ?? []} />
 		{/if}

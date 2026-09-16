@@ -14,7 +14,7 @@
 	import MovieDetailHero from "../../components/movies/MovieDetailHero.svelte";
 	import DetailAbout from "../../components/shared/DetailAbout.svelte";
 	import MovieDetailInfo from "../../components/movies/MovieDetailInfo.svelte";
-	import MovieDetailHistory from "../../components/movies/MovieDetailHistory.svelte";
+	import DetailHistory from "../../components/shared/DetailHistory.svelte";
 	import MovieDetailCast from "../../components/movies/MovieDetailCast.svelte";
 	import MovieDetailSimilar from "../../components/movies/MovieDetailSimilar.svelte";
 	import PlayOnMenu from "../../components/movies/PlayOnMenu.svelte";
@@ -292,7 +292,7 @@
 				</div>
 			</div>
 		{:else if tab === "history"}
-			<MovieDetailHistory movieId={movie.id} />
+			<DetailHistory movieId={movie.id} />
 		{:else if tab === "cast"}
 			<MovieDetailCast cast={movie.cast ?? []} />
 		{/if}
