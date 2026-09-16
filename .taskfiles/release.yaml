@@ -93,6 +93,11 @@ tasks:
       - task: _changelog
         vars:
           MESSAGE: 'docs(changelog): v{{.V}}'
+          # nix/package.nix carries the version goreleaser takes from the tag —
+          # `nix build` has no tag to read, so a nix install would otherwise
+          # report the previous release forever.
+          PRE: 'sed -i ''s/^  version ? ".*",$/  version ? "{{.V}}",/'' nix/package.nix'
+          FILE: 'CHANGELOG.md nix/package.nix'
           TAG: 'v{{.V}}'
           SCOPE: "--exclude-path '{{.CHART_PATHS}}'"
           OUT: CHANGELOG.md
@@ -111,6 +116,8 @@ tasks:
       # release once it is committed, and an uncommitted one must not pass.
       - sh: 'git show main:CHANGELOG.md 2>/dev/null | grep -q "^## \[{{.V}}\]"'
         msg: "main has no CHANGELOG.md section for v{{.V}} — run: task release:app:changelog VERSION={{.V}}"
+      - sh: 'git show main:nix/package.nix 2>/dev/null | grep -q ''^  version ? "{{.V}}",$'''
+        msg: "main's nix/package.nix is not at {{.V}} — run: task release:app:changelog VERSION={{.V}}"
     # The chart is NOT released here — it versions independently. Operators
     # deploy this image by setting image.tag in their values; the chart has
     # no appVersion and never picks a tag for them.
