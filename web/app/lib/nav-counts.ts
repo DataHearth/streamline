@@ -22,10 +22,20 @@ import type {
 const n = (v: number) => v.toLocaleString();
 
 // Messages come in _one/_other pairs: the raw count picks the form, the
-// formatted number is what the message prints.
+// formatted number is what the message prints. Totals reuse the dashboard
+// phrasing (`dash_*_count`), which the people page already treats as the
+// app-wide "N titles / N series"; only the wanted variants are nav-specific.
 type Counted = (inputs: { n: string }) => string;
 const plural = (count: number, one: Counted, other: Counted) =>
 	(count === 1 ? one : other)({ n: n(count) });
+const titleCount = (count: number) =>
+	(count === 1 ? i18n.dash_title_count_one : i18n.dash_title_count_other)({
+		count: n(count),
+	});
+const seriesCount = (count: number) =>
+	(count === 1 ? i18n.dash_series_count_one : i18n.dash_series_count_other)({
+		count: n(count),
+	});
 
 // There is no counts endpoint for imports, so the queue is derived from the
 // list. ListImports orders by create_time descending and caps limit at 100;
@@ -115,11 +125,7 @@ export function navCountsQuery() {
 		get moviesLine(): string {
 			const d = movies.data;
 			if (!d) return "";
-			const titles = plural(
-				d.total,
-				i18n.nav_count_titles_one,
-				i18n.nav_count_titles_other,
-			);
+			const titles = titleCount(d.total);
 			const wanted = d.wanted
 				? ` · ${plural(d.wanted, i18n.nav_count_wanted_one, i18n.nav_count_wanted_other)}`
 				: "";
@@ -128,11 +134,7 @@ export function navCountsQuery() {
 		get seriesLine(): string {
 			const d = series.data;
 			if (!d) return "";
-			const shows = plural(
-				d.total,
-				i18n.nav_count_shows_one,
-				i18n.nav_count_shows_other,
-			);
+			const shows = seriesCount(d.total);
 			const wanted = d.wanted_episodes
 				? ` · ${plural(d.wanted_episodes, i18n.nav_count_episodes_wanted_one, i18n.nav_count_episodes_wanted_other)}`
 				: "";
