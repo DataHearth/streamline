@@ -21,6 +21,12 @@ import type {
 
 const n = (v: number) => v.toLocaleString();
 
+// Messages come in _one/_other pairs: the raw count picks the form, the
+// formatted number is what the message prints.
+type Counted = (inputs: { n: string }) => string;
+const plural = (count: number, one: Counted, other: Counted) =>
+	(count === 1 ? one : other)({ n: n(count) });
+
 // There is no counts endpoint for imports, so the queue is derived from the
 // list. ListImports orders by create_time descending and caps limit at 100;
 // running and awaiting_review are by definition the newest rows, so they are
@@ -41,6 +47,14 @@ const QUEUE_DOTS = [
 ] as const;
 
 export type NavDot = { key: string; label: string; count: number; dot: string };
+
+function queueCounts(items: DownloadQueue["items"]): NavDot[] {
+	const by: Record<string, number> = {};
+	for (const i of items) by[i.status] = (by[i.status] ?? 0) + 1;
+	return QUEUE_DOTS.map((s) => ({ ...s, count: by[s.key] ?? 0 })).filter(
+		(s) => s.count > 0,
+	);
+}
 
 function countImports(list: ImportScanList): ImportCounts {
 	let running = 0;
@@ -101,45 +115,50 @@ export function navCountsQuery() {
 		get moviesLine(): string {
 			const d = movies.data;
 			if (!d) return "";
-			return `${n(d.total)} titles${d.wanted ? ` · ${n(d.wanted)} wanted` : ""}`;
+			const titles = plural(
+				d.total,
+				i18n.nav_count_titles_one,
+				i18n.nav_count_titles_other,
+			);
+			const wanted = d.wanted
+				? ` · ${plural(d.wanted, i18n.nav_count_wanted_one, i18n.nav_count_wanted_other)}`
+				: "";
+			return titles + wanted;
 		},
 		get seriesLine(): string {
 			const d = series.data;
 			if (!d) return "";
+			const shows = plural(
+				d.total,
+				i18n.nav_count_shows_one,
+				i18n.nav_count_shows_other,
+			);
 			const wanted = d.wanted_episodes
-				? ` · ${n(d.wanted_episodes)} episodes wanted`
+				? ` · ${plural(d.wanted_episodes, i18n.nav_count_episodes_wanted_one, i18n.nav_count_episodes_wanted_other)}`
 				: "";
-			return `${n(d.total)} shows${wanted}`;
+			return shows + wanted;
 		},
 		get queueLine(): string {
 			const items = queue.data?.items;
 			if (!items) return "";
-			if (!items.length) return "Nothing in the queue";
-			const by: Record<string, number> = {};
-			for (const i of items) by[i.status] = (by[i.status] ?? 0) + 1;
-			return (["downloading", "importing", "held", "paused", "error"] as const)
-				.map((s) => ({ s, count: by[s] ?? 0 }))
-				.filter(({ count }) => count > 0)
-				.map(({ s, count }) => `${n(count)} ${s === "error" ? "failed" : s}`)
+			if (!items.length) return i18n.queue_nothing_in_queue();
+			return queueCounts(items)
+				.map((s) => `${n(s.count)} ${s.label}`)
 				.join(" · ");
 		},
 		get queueDots(): NavDot[] {
 			const items = queue.data?.items;
 			if (!items?.length) return [];
-			const by: Record<string, number> = {};
-			for (const i of items) by[i.status] = (by[i.status] ?? 0) + 1;
-			return QUEUE_DOTS.map((s) => ({ ...s, count: by[s.key] ?? 0 })).filter(
-				(s) => s.count > 0,
-			);
+			return queueCounts(items);
 		},
 		get importsLine(): string {
 			const d = imports.data;
 			if (!d) return "";
 			const parts: string[] = [];
-			if (d.running) parts.push(`${n(d.running)} running`);
+			if (d.running) parts.push(i18n.imports_n_running({ n: n(d.running) }));
 			if (d.awaiting_review)
-				parts.push(`${n(d.awaiting_review)} awaiting review`);
-			return parts.join(" · ") || "Nothing in flight";
+				parts.push(i18n.nav_count_awaiting_review({ n: n(d.awaiting_review) }));
+			return parts.join(" · ") || i18n.imports_nothing_in_flight();
 		},
 		// Rail badge: review first — it is the state that needs a person.
 		get importsDot(): string | null {
