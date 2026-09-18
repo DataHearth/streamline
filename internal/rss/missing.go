@@ -292,6 +292,7 @@ func (s *MissingSearcher) SearchOne(ctx context.Context, m *ent.Movie) error {
 	results, err := s.indexers.SearchMovie(
 		ctx,
 		[]string{m.Title, m.OriginalTitle},
+		m.Aliases,
 		m.TmdbID,
 	)
 	if err != nil {

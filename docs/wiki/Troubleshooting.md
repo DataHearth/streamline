@@ -50,7 +50,10 @@ Titles sit at **Wanted** forever. Work down this list in order.
 
 **2. Is there an enabled download client that passes its test?** Settings → Download clients → Test.
 
-**3. Does a manual search return results?** Open the title → **Search**. If this comes back empty, the problem is upstream of Streamline: your indexers genuinely have nothing.
+**3. Does a manual search return results?** Open the title → **Search**. An empty result usually means your indexers have nothing, but two other causes look identical:
+
+- **Your indexer proxy is down.** Prowlarr answers a failed search with `200 OK` and an empty list — not an error — so Streamline cannot tell a search that found nothing from one that crashed. If a Prowlarr search works in Prowlarr's own UI but not here, check Prowlarr's log for `SearchController: Search failed`. A search that dies in Prowlarr's capability lookup leaves no `Searching indexer(s):` line for the term at all, and one unreachable indexer proxy is enough to empty every categorised search.
+- **The title is held in a different language from its releases.** Streamline matches results against the title, the original title, and the provider's translated and alternative titles. A film or show whose provider record carries no alias in the language its releases are named in will have those releases filtered out. A metadata refresh re-harvests the alias list.
 
 **4. Does a manual search return results that are never auto-grabbed?** Then your quality profile is rejecting them. Two rules do most of the rejecting:
 

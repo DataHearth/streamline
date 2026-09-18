@@ -269,7 +269,9 @@ func (s *EpisodeMissingSearcher) grabSeasonPack(
 	)
 	defer span.End()
 
-	packs, err := s.indexers.SearchSeason(ctx, titles, show.TvdbID, se.Number)
+	packs, err := s.indexers.SearchSeason(
+		ctx, titles, show.Aliases, show.TvdbID, se.Number,
+	)
 	if err != nil {
 		slog.WarnContext(ctx, "tv missing-search: season-pack search failed",
 			"show", show.Title, "season", se.Number, "error", err)
@@ -399,7 +401,7 @@ func (s *EpisodeMissingSearcher) grabEpisode(
 	defer span.End()
 
 	results, _, err := s.indexers.SearchEpisode(
-		ctx, titles, show.TvdbID, se.Number, e.Number,
+		ctx, titles, show.Aliases, show.TvdbID, se.Number, e.Number,
 	)
 	if err != nil {
 		slog.WarnContext(ctx, "tv missing-search: episode search failed",

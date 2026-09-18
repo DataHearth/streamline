@@ -282,6 +282,7 @@ func (s *Server) SearchMovie(
 	results, err := s.indexers.SearchMovie(
 		ctx,
 		[]string{m.Title, m.OriginalTitle},
+		m.Aliases,
 		m.TmdbID,
 	)
 	if err != nil {

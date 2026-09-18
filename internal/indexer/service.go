@@ -113,20 +113,27 @@ func init() {
 // Manager is the consumer-facing surface used by HTTP handlers and rss.
 // CRUD over indexers lives in the YAML config (config.AddIndexer etc.); this
 // surface keeps the behavioral operations that act on the configured entries.
+// Every search takes two name sets. titles is queried — one request per title
+// per indexer — and aliases is not: it only widens what the results are matched
+// against. Passing an alias list as titles multiplies every search by its
+// length against rate-limited trackers, which is the whole reason the two are
+// separate parameters rather than one slice.
 type Manager interface {
 	Test(ctx context.Context, p TestParams) error
 	TestByName(ctx context.Context, name string) error
 	SearchMovie(
 		ctx context.Context,
-		titles []string,
+		titles, aliases []string,
 		tmdbID uint32,
 	) ([]SearchResult, error)
 	SearchSeason(
 		ctx context.Context,
-		titles []string,
+		titles, aliases []string,
 		tvdbID uint32,
 		season uint16,
 	) ([]SearchResult, error)
+	// SearchSeries takes no alias set: it keeps only whole-series packs and
+	// never runs the title filter the aliases would widen.
 	SearchSeries(
 		ctx context.Context,
 		titles []string,
@@ -137,7 +144,7 @@ type Manager interface {
 	// empty and point at the season scope.
 	SearchEpisode(
 		ctx context.Context,
-		titles []string,
+		titles, aliases []string,
 		tvdbID uint32,
 		season, episode uint16,
 	) ([]SearchResult, int, error)
@@ -184,6 +191,27 @@ func dedupTitles(in []string) []string {
 	return out
 }
 
+// matchTitles is the set preferTitleMatches compares against: the queried
+// titles plus every alias the library holds for the same work, deduped.
+//
+// Kept apart from the queried set because the two are asked for different
+// things. A release names its work in one language, and which one is the
+// uploader's choice — so the library's own two titles match only the releases
+// that happen to share its language, and on a mixed tracker set that is a
+// minority of them. Matching against the aliases as well is what stops the
+// rest being discarded; querying for them would multiply every search by the
+// alias count against rate-limited trackers, for results the id and title
+// filters already cover.
+func matchTitles(titles, aliases []string) []string {
+	if len(aliases) == 0 {
+		return titles
+	}
+	all := make([]string, 0, len(titles)+len(aliases))
+	all = append(all, titles...)
+	all = append(all, aliases...)
+	return dedupTitles(all)
+}
+
 // dedupResults collapses the same release appearing more than once in a merged
 // result set, preserving first-seen order.
 //
@@ -217,10 +245,11 @@ func dedupResults(in []SearchResult) []SearchResult {
 // fanned out in parallel.
 func (i *indexer) SearchMovie(
 	ctx context.Context,
-	titles []string,
+	titles, aliases []string,
 	tmdbID uint32,
 ) ([]SearchResult, error) {
 	titles = dedupTitles(titles)
+	match := matchTitles(titles, aliases)
 	ctx, span := tracer.Start(ctx, "indexer.search_movie",
 		trace.WithAttributes(
 			attribute.Int("movie.titles.count", len(titles)),
@@ -250,7 +279,7 @@ func (i *indexer) SearchMovie(
 	// Same keyword-search noise the TV scopes filter: an indexer ignoring the
 	// tmdbid answers with every film it holds, and a profile cannot tell one
 	// film from another.
-	filtered := preferTitleMatches(results, titles)
+	filtered := preferTitleMatches(results, match)
 	span.SetAttributes(
 		attribute.Int("results.pre_title_filter", len(results)),
 		attribute.Int("results.total", len(filtered)),
@@ -263,11 +292,12 @@ func (i *indexer) SearchMovie(
 // aggregated, deduped, and sorted exactly like SearchMovie.
 func (i *indexer) SearchSeason(
 	ctx context.Context,
-	titles []string,
+	titles, aliases []string,
 	tvdbID uint32,
 	season uint16,
 ) ([]SearchResult, error) {
 	titles = dedupTitles(titles)
+	match := matchTitles(titles, aliases)
 	ctx, span := tracer.Start(ctx, "indexer.search_season",
 		trace.WithAttributes(
 			attribute.Int("series.titles.count", len(titles)),
@@ -297,7 +327,7 @@ func (i *indexer) SearchSeason(
 		titles,
 		SearchParams{Kind: KindTV, TVDBID: tvdbID, Season: season},
 	)
-	filtered := preferTitleMatches(filterToSeason(results, season), titles)
+	filtered := preferTitleMatches(filterToSeason(results, season), match)
 	span.SetAttributes(
 		attribute.Int("results.pre_season_filter", len(results)),
 		attribute.Int("results.total", len(filtered)),
@@ -479,11 +509,12 @@ func (i *indexer) SearchSeries(
 // sorted exactly like SearchMovie.
 func (i *indexer) SearchEpisode(
 	ctx context.Context,
-	titles []string,
+	titles, aliases []string,
 	tvdbID uint32,
 	season, episode uint16,
 ) ([]SearchResult, int, error) {
 	titles = dedupTitles(titles)
+	match := matchTitles(titles, aliases)
 	ctx, span := tracer.Start(ctx, "indexer.search_episode",
 		trace.WithAttributes(
 			attribute.Int("series.titles.count", len(titles)),
@@ -519,7 +550,7 @@ func (i *indexer) SearchEpisode(
 		},
 	)
 	filtered, hiddenPacks := filterToEpisode(results, season, episode)
-	filtered = preferTitleMatches(filtered, titles)
+	filtered = preferTitleMatches(filtered, match)
 	span.SetAttributes(
 		attribute.Int("results.pre_episode_filter", len(results)),
 		attribute.Int("results.hidden_packs", hiddenPacks),

@@ -30,6 +30,7 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 					results, err := svc.SearchMovie(
 						ctx,
 						[]string{"Interstellar"},
+						nil,
 						157336,
 					)
 					Expect(err).NotTo(HaveOccurred())
@@ -41,7 +42,8 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 		When("the titles slice is empty after dedup", func() {
 			It("returns nil without contacting any indexer", func() {
 				configtest.Setup()
-				results, err := svc.SearchMovie(ctx, []string{"", ""}, 0)
+				results, err := svc.SearchMovie(ctx, []string{"", ""},
+					nil, 0)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(results).To(BeNil())
 			})
@@ -57,6 +59,7 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 					results, err := svc.SearchSeason(
 						ctx,
 						[]string{"The Black Sea"},
+						nil,
 						12345,
 						3,
 					)
@@ -69,7 +72,8 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 		When("the titles slice is empty after dedup", func() {
 			It("returns nil without contacting any indexer", func() {
 				configtest.Setup()
-				results, err := svc.SearchSeason(ctx, []string{"", ""}, 0, 0)
+				results, err := svc.SearchSeason(ctx, []string{"", ""},
+					nil, 0, 0)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(results).To(BeNil())
 			})
@@ -85,6 +89,7 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 					results, hidden, err := svc.SearchEpisode(
 						ctx,
 						[]string{"The Black Sea"},
+						nil,
 						12345,
 						3,
 						5,
@@ -102,6 +107,7 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 				results, hidden, err := svc.SearchEpisode(
 					ctx,
 					[]string{"", ""},
+					nil,
 					0,
 					0,
 					0,
@@ -341,6 +347,51 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 				))
 			},
 		)
+
+		// The real shape of the homelab case, with the real strings: TMDB's
+		// primary French title carries no "Le film" and the US titles no
+		// "Forteresse", so the library's own two titles match three of the five
+		// releases a tracker holds. The alias set is what reaches the rest, and
+		// the English ones match a *longer* alias rather than a shorter one —
+		// prefix tolerance runs in both directions on purpose.
+		It("reaches releases named in another language through an alias", func() {
+			in := []SearchResult{
+				{
+					Title: "Demon.Slayer.Kimetsu.no.Yaiba.La.Forteresse.Infinie.2025.HYBRID.MULTi.VFF.1080p.Bluray.Remux",
+				},
+				{
+					Title: "Demon.Slayer.Kimetsu.No.Yaiba.Le.Film.La.Forteresse.Infinie.2025.AD.MULTI.VFF.1080p.BLURAY",
+				},
+				{
+					Title: "Demon.Slayer.Kimetsu.no.Yaiba.Infinity.Castle.2025.MULTi.1080p.Bluray.10bits.AAC.2.0.x265-KAF",
+				},
+				{
+					Title: "Gekijouban.Kimetsu.no.Yaiba.Mugenjou-hen.2025.1080p.BluRay.x264",
+				},
+				{Title: "Nonnas.2025.AD.MULTI.VFF.1080p.WEB.EAC3.5.1.x264-FW"},
+			}
+			out := preferTitleMatches(in, matchTitles(
+				[]string{
+					"Demon Slayer : Kimetsu no Yaiba La Forteresse Infinie",
+					"劇場版「鬼滅の刃」無限城編 第一章 猗窩座再来",
+				},
+				[]string{
+					"Demon Slayer Kimetsu no Yaiba - Le film La Forteresse infinie",
+					"Demon Slayer: Kimetsu no Yaiba Infinity Castle Chapter 1: The Return of Akaza",
+					"Gekijouban Kimetsu no Yaiba Mugenjou-hen",
+				},
+			))
+			titles := make([]string, len(out))
+			for i, r := range out {
+				titles[i] = r.Title
+			}
+			Expect(titles).To(ConsistOf(
+				"Demon.Slayer.Kimetsu.no.Yaiba.La.Forteresse.Infinie.2025.HYBRID.MULTi.VFF.1080p.Bluray.Remux",
+				"Demon.Slayer.Kimetsu.No.Yaiba.Le.Film.La.Forteresse.Infinie.2025.AD.MULTI.VFF.1080p.BLURAY",
+				"Demon.Slayer.Kimetsu.no.Yaiba.Infinity.Castle.2025.MULTi.1080p.Bluray.10bits.AAC.2.0.x265-KAF",
+				"Gekijouban.Kimetsu.no.Yaiba.Mugenjou-hen.2025.1080p.BluRay.x264",
+			))
+		})
 
 		It("keeps everything when no release names the show", func() {
 			// A library holding a show under a translated title matches none of

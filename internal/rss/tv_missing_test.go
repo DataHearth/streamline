@@ -128,7 +128,7 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 				expectEligible([]*ent.TVShow{showWith(ep1, ep2)}, nil)
 
 				indexerM.EXPECT().
-					SearchSeason(mock.Anything, []string{"The Black Sea", "Karadeniz"}, uint32(9001), uint16(3)).
+					SearchSeason(mock.Anything, []string{"The Black Sea", "Karadeniz"}, mock.Anything, uint32(9001), uint16(3)).
 					Return([]indexer.SearchResult{{Title: acceptablePack, Seeders: 10}}, nil).
 					Once()
 				expectNoUpgradeCandidates()
@@ -166,7 +166,7 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 			expectEligible([]*ent.TVShow{showWith(ep1)}, nil)
 
 			indexerM.EXPECT().
-				SearchEpisode(mock.Anything, []string{"The Black Sea", "Karadeniz"}, uint32(9001), uint16(3), uint16(1)).
+				SearchEpisode(mock.Anything, []string{"The Black Sea", "Karadeniz"}, mock.Anything, uint32(9001), uint16(3), uint16(1)).
 				Return([]indexer.SearchResult{{Title: acceptableEp, Seeders: 10}}, 0, nil).
 				Once()
 			dlM.EXPECT().
@@ -197,7 +197,7 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 			expectEligible([]*ent.TVShow{showWith(ep1)}, nil)
 
 			indexerM.EXPECT().
-				SearchEpisode(mock.Anything, []string{"The Black Sea", "Karadeniz"}, uint32(9001), uint16(3), uint16(1)).
+				SearchEpisode(mock.Anything, []string{"The Black Sea", "Karadeniz"}, mock.Anything, uint32(9001), uint16(3), uint16(1)).
 				Return([]indexer.SearchResult{{Title: acceptableEp, Seeders: 10}}, 0, nil).
 				Once()
 			dlM.EXPECT().
@@ -222,7 +222,7 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 
 			// No resolution token → rejected by the quality filter.
 			indexerM.EXPECT().
-				SearchEpisode(mock.Anything, []string{"The Black Sea", "Karadeniz"}, uint32(9001), uint16(3), uint16(1)).
+				SearchEpisode(mock.Anything, []string{"The Black Sea", "Karadeniz"}, mock.Anything, uint32(9001), uint16(3), uint16(1)).
 				Return([]indexer.SearchResult{{Title: "The.Black.Sea.S03E01.DVDRip-GRP"}}, 0, nil).
 				Once()
 			store.EXPECT().
@@ -240,12 +240,12 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 			expectEligible([]*ent.TVShow{showWith(ep1, ep2)}, nil)
 
 			indexerM.EXPECT().
-				SearchSeason(mock.Anything, []string{"The Black Sea", "Karadeniz"}, uint32(9001), uint16(3)).
+				SearchSeason(mock.Anything, []string{"The Black Sea", "Karadeniz"}, mock.Anything, uint32(9001), uint16(3)).
 				Return(nil, nil).Once()
 
 			for _, n := range []uint16{1, 2} {
 				indexerM.EXPECT().
-					SearchEpisode(mock.Anything, []string{"The Black Sea", "Karadeniz"}, uint32(9001), uint16(3), n).
+					SearchEpisode(mock.Anything, []string{"The Black Sea", "Karadeniz"}, mock.Anything, uint32(9001), uint16(3), n).
 					Return([]indexer.SearchResult{{Title: acceptableEp, Seeders: 10}}, 0, nil).
 					Once()
 			}
@@ -279,7 +279,7 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 			expectEligible([]*ent.TVShow{showWith(ep1, ep2)}, nil)
 
 			indexerM.EXPECT().
-				SearchSeason(mock.Anything, []string{"The Black Sea", "Karadeniz"}, uint32(9001), uint16(3)).
+				SearchSeason(mock.Anything, []string{"The Black Sea", "Karadeniz"}, mock.Anything, uint32(9001), uint16(3)).
 				Return([]indexer.SearchResult{{Title: acceptablePack, Seeders: 10}}, nil).
 				Once()
 			expectNoUpgradeCandidates()
@@ -295,7 +295,7 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 			// per-episode search for both episodes.
 			for _, n := range []uint16{1, 2} {
 				indexerM.EXPECT().
-					SearchEpisode(mock.Anything, []string{"The Black Sea", "Karadeniz"}, uint32(9001), uint16(3), n).
+					SearchEpisode(mock.Anything, []string{"The Black Sea", "Karadeniz"}, mock.Anything, uint32(9001), uint16(3), n).
 					Return(nil, 0, nil).Once()
 			}
 			for _, id := range []uint32{11, 12} {
@@ -317,7 +317,7 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 			expectEligible([]*ent.TVShow{showWith(ep1, ep2)}, nil)
 
 			indexerM.EXPECT().
-				SearchSeason(mock.Anything, []string{"The Black Sea", "Karadeniz"}, uint32(9001), uint16(3)).
+				SearchSeason(mock.Anything, []string{"The Black Sea", "Karadeniz"}, mock.Anything, uint32(9001), uint16(3)).
 				Return([]indexer.SearchResult{{Title: acceptablePack, Seeders: 10}}, nil).
 				Once()
 			expectNoUpgradeCandidates()
@@ -328,7 +328,7 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 
 			for _, n := range []uint16{1, 2} {
 				indexerM.EXPECT().
-					SearchEpisode(mock.Anything, []string{"The Black Sea", "Karadeniz"}, uint32(9001), uint16(3), n).
+					SearchEpisode(mock.Anything, []string{"The Black Sea", "Karadeniz"}, mock.Anything, uint32(9001), uint16(3), n).
 					Return(nil, 0, nil).Once()
 			}
 			for _, id := range []uint32{11, 12} {
@@ -413,7 +413,7 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 				Seeders: 2,
 			}
 			indexerM.EXPECT().
-				SearchSeason(mock.Anything, []string{"The Black Sea", "Karadeniz"}, uint32(9001), uint16(3)).
+				SearchSeason(mock.Anything, []string{"The Black Sea", "Karadeniz"}, mock.Anything, uint32(9001), uint16(3)).
 				Return([]indexer.SearchResult{
 					{Title: acceptablePack, Seeders: 500},
 					multiPack,
@@ -448,7 +448,7 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 			}
 			runnerUp := indexer.SearchResult{Title: acceptablePack, Seeders: 500}
 			indexerM.EXPECT().
-				SearchSeason(mock.Anything, []string{"The Black Sea", "Karadeniz"}, uint32(9001), uint16(3)).
+				SearchSeason(mock.Anything, []string{"The Black Sea", "Karadeniz"}, mock.Anything, uint32(9001), uint16(3)).
 				Return([]indexer.SearchResult{runnerUp, multiPack}, nil).Once()
 			// One lookup for the whole attempt: the fall-through to the
 			// runner-up re-scores the beat-set, it does not re-query.
@@ -485,7 +485,7 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 				Seeders: 2,
 			}
 			indexerM.EXPECT().
-				SearchEpisode(mock.Anything, []string{"The Black Sea", "Karadeniz"}, uint32(9001), uint16(3), uint16(1)).
+				SearchEpisode(mock.Anything, []string{"The Black Sea", "Karadeniz"}, mock.Anything, uint32(9001), uint16(3), uint16(1)).
 				Return([]indexer.SearchResult{
 					{Title: acceptableEp, Seeders: 500},
 					remuxEp,
@@ -516,7 +516,7 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 
 			// 1080p clears the default profile but not the show's 2160p floor.
 			indexerM.EXPECT().
-				SearchEpisode(mock.Anything, []string{"The Black Sea", "Karadeniz"}, uint32(9001), uint16(3), uint16(1)).
+				SearchEpisode(mock.Anything, []string{"The Black Sea", "Karadeniz"}, mock.Anything, uint32(9001), uint16(3), uint16(1)).
 				Return([]indexer.SearchResult{{Title: acceptableEp, Seeders: 10}}, 0, nil).
 				Once()
 			store.EXPECT().
@@ -538,7 +538,7 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 				Seeders: 10,
 			}
 			indexerM.EXPECT().
-				SearchSeason(mock.Anything, []string{"The Black Sea", "Karadeniz"}, uint32(9001), uint16(3)).
+				SearchSeason(mock.Anything, []string{"The Black Sea", "Karadeniz"}, mock.Anything, uint32(9001), uint16(3)).
 				Return([]indexer.SearchResult{
 					{Title: acceptablePack, Seeders: 30},
 					uhdPack,
@@ -589,7 +589,7 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 
 		expectPackSearch := func() {
 			indexerM.EXPECT().
-				SearchSeason(mock.Anything, []string{"The Black Sea", "Karadeniz"}, uint32(9001), uint16(3)).
+				SearchSeason(mock.Anything, []string{"The Black Sea", "Karadeniz"}, mock.Anything, uint32(9001), uint16(3)).
 				Return([]indexer.SearchResult{{Title: multiPack, Seeders: 10}}, nil).
 				Once()
 		}
@@ -724,7 +724,7 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 			expectEligible([]*ent.TVShow{show}, nil)
 
 			indexerM.EXPECT().
-				SearchSeason(mock.Anything, []string{"The Black Sea", "Karadeniz"}, uint32(9001), uint16(2)).
+				SearchSeason(mock.Anything, []string{"The Black Sea", "Karadeniz"}, mock.Anything, uint32(9001), uint16(2)).
 				Return([]indexer.SearchResult{{Title: "The.Black.Sea.S02.1080p.WEB-DL.x265-GRP", Seeders: 10}}, nil).
 				Once()
 			expectNoUpgradeCandidates()
@@ -766,7 +766,7 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 			expectEligible([]*ent.TVShow{show}, nil)
 
 			indexerM.EXPECT().
-				SearchEpisode(mock.Anything, []string{"The Black Sea", "Karadeniz"}, uint32(9001), uint16(1), uint16(1)).
+				SearchEpisode(mock.Anything, []string{"The Black Sea", "Karadeniz"}, mock.Anything, uint32(9001), uint16(1), uint16(1)).
 				Return([]indexer.SearchResult{{Title: acceptableEp, Seeders: 10}}, 0, nil).
 				Once()
 			dlM.EXPECT().
