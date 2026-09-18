@@ -253,6 +253,12 @@ func (i *indexer) SearchMovie(
 	ctx, span := tracer.Start(ctx, "indexer.search_movie",
 		trace.WithAttributes(
 			attribute.Int("movie.titles.count", len(titles)),
+			// How far past the queried titles the result filter reached. A
+			// release kept on an alias is not stamped a title mismatch, so an
+			// automatic grab acts on it; when one turns out wrong, the width of
+			// that net is otherwise only readable from a library row a later
+			// refresh may already have rewritten.
+			attribute.Int("movie.aliases.count", len(aliases)),
 			attribute.Int64("movie.tmdb_id", int64(tmdbID)),
 		),
 	)
@@ -301,6 +307,7 @@ func (i *indexer) SearchSeason(
 	ctx, span := tracer.Start(ctx, "indexer.search_season",
 		trace.WithAttributes(
 			attribute.Int("series.titles.count", len(titles)),
+			attribute.Int("series.aliases.count", len(aliases)),
 			attribute.Int64("series.tvdb_id", int64(tvdbID)),
 			attribute.Int("series.season", int(season)),
 		),
@@ -518,6 +525,7 @@ func (i *indexer) SearchEpisode(
 	ctx, span := tracer.Start(ctx, "indexer.search_episode",
 		trace.WithAttributes(
 			attribute.Int("series.titles.count", len(titles)),
+			attribute.Int("series.aliases.count", len(aliases)),
 			attribute.Int64("series.tvdb_id", int64(tvdbID)),
 			attribute.Int("series.season", int(season)),
 			attribute.Int("series.episode", int(episode)),
