@@ -410,6 +410,58 @@ var _ = Describe("TMDB Client", Label("unit", "metadata"), func() {
 				To(Equal("https://image.tmdb.org/t/p/h632/mc.jpg"))
 		})
 
+		Context("with translated and alternative titles", func() {
+			BeforeEach(func() {
+				ts.Close()
+				ts = httptest.NewServer(
+					http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						w.Header().Set("Content-Type", "application/json")
+						_, _ = w.Write(jsonBytes(map[string]any{
+							"id":             1311031,
+							"title":          "Demon Slayer : Kimetsu no Yaiba La Forteresse Infinie",
+							"original_title": "劇場版「鬼滅の刃」無限城編 第一章 猗窩座再来",
+							"release_date":   "2025-07-18",
+							"translations": map[string]any{
+								"translations": []map[string]any{
+									{"iso_639_1": "en", "data": map[string]any{
+										"title": "Demon Slayer: Kimetsu no Yaiba Infinity Castle",
+									}},
+									{"iso_639_1": "de", "data": map[string]any{
+										"title": "Demon Slayer: Kimetsu no Yaiba - Infinity Castle",
+									}},
+									{"iso_639_1": "fr", "data": map[string]any{
+										"title": "Demon Slayer : Kimetsu no Yaiba La Forteresse Infinie",
+									}},
+								},
+							},
+							"alternative_titles": map[string]any{
+								"titles": []map[string]any{
+									{
+										"iso_3166_1": "US",
+										"title":      "Kimetsu no Yaiba Mugen Jou Hen",
+									},
+									{"iso_3166_1": "JP", "title": ""},
+								},
+							},
+						}))
+					}),
+				)
+				client = newTestTMDB(ts.URL)
+			})
+
+			It(
+				"harvests both sources, deduped, minus the two primary titles",
+				func() {
+					details, err := client.GetMovie(context.Background(), 1311031)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(details.Aliases).To(ConsistOf(
+						"Demon Slayer: Kimetsu no Yaiba Infinity Castle",
+						"Kimetsu no Yaiba Mugen Jou Hen",
+					))
+				},
+			)
+		})
+
 		Context("with a non-default language", func() {
 			BeforeEach(func() {
 				configtest.Setup(map[string]any{
@@ -425,7 +477,7 @@ var _ = Describe("TMDB Client", Label("unit", "metadata"), func() {
 						Expect(r.URL.Query().Get("language")).To(Equal("fr"))
 						Expect(
 							r.URL.Query().Get("append_to_response"),
-						).To(Equal("translations,credits"))
+						).To(Equal("translations,alternative_titles,credits"))
 
 						w.Header().Set("Content-Type", "application/json")
 						_, _ = w.Write(jsonBytes(map[string]any{

@@ -26,6 +26,7 @@ type CreateMovieParams struct {
 	QualityProfile string
 	Rating         float64
 	Genres         []string
+	Aliases        []string
 	Cast           []metadata.CastMember
 	ReleaseDate    *time.Time
 }
@@ -473,6 +474,7 @@ type UpdateMovieMetadataParams struct {
 	Runtime       uint16
 	Rating        float64
 	Genres        []string
+	Aliases       []string
 	Cast          []metadata.CastMember
 	ReleaseDate   *time.Time
 }
@@ -497,6 +499,7 @@ func (db *DB) UpdateMovieMetadata(
 		SetRuntime(p.Runtime).
 		SetRating(p.Rating).
 		SetGenres(p.Genres).
+		SetAliases(p.Aliases).
 		SetNillableReleaseDate(p.ReleaseDate).
 		SetLastRefreshedAt(time.Now()).
 		Exec(ctx); err != nil {

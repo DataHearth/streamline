@@ -227,6 +227,7 @@ func (s *Service) Add(
 		QualityProfile: qualityProfile,
 		Rating:         float64(details.Rating),
 		Genres:         details.Genres,
+		Aliases:        details.Aliases,
 		Cast:           details.Cast,
 		ReleaseDate:    metadata.ParseISODate(details.ReleaseDate),
 	})
@@ -694,6 +695,7 @@ func (s *Service) updateMetadata(
 		Runtime:       details.Runtime,
 		Rating:        float64(details.Rating),
 		Genres:        details.Genres,
+		Aliases:       details.Aliases,
 		Cast:          details.Cast,
 		ReleaseDate:   metadata.ParseISODate(details.ReleaseDate),
 	})

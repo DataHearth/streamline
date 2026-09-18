@@ -236,6 +236,12 @@ func (_c *MovieCreate) SetGenres(v []string) *MovieCreate {
 	return _c
 }
 
+// SetAliases sets the "aliases" field.
+func (_c *MovieCreate) SetAliases(v []string) *MovieCreate {
+	_c.mutation.SetAliases(v)
+	return _c
+}
+
 // SetLastRefreshedAt sets the "last_refreshed_at" field.
 func (_c *MovieCreate) SetLastRefreshedAt(v time.Time) *MovieCreate {
 	_c.mutation.SetLastRefreshedAt(v)
@@ -528,6 +534,10 @@ func (_c *MovieCreate) createSpec() (*Movie, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Genres(); ok {
 		_spec.SetField(movie.FieldGenres, field.TypeJSON, value)
 		_node.Genres = value
+	}
+	if value, ok := _c.mutation.Aliases(); ok {
+		_spec.SetField(movie.FieldAliases, field.TypeJSON, value)
+		_node.Aliases = value
 	}
 	if value, ok := _c.mutation.LastRefreshedAt(); ok {
 		_spec.SetField(movie.FieldLastRefreshedAt, field.TypeTime, value)

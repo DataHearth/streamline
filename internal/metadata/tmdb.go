@@ -162,7 +162,9 @@ func (t *TMDB) GetMovie(ctx context.Context, tmdbID uint32) (*MovieDetails, erro
 		))
 	}()
 
-	params := url.Values{"append_to_response": {"translations,credits"}}
+	params := url.Values{
+		"append_to_response": {"translations,alternative_titles,credits"},
+	}
 	params = t.withLang(params, t.language)
 
 	var resp tmdbMovieResponse
@@ -224,6 +226,18 @@ func (t *TMDB) GetMovie(ctx context.Context, tmdbID uint32) (*MovieDetails, erro
 		originalTitle = title
 	}
 
+	candidates := make(
+		[]string,
+		0,
+		len(resp.Translations.Translations)+len(resp.AltTitles.Titles),
+	)
+	for _, tr := range resp.Translations.Translations {
+		candidates = append(candidates, tr.Data.Title)
+	}
+	for _, at := range resp.AltTitles.Titles {
+		candidates = append(candidates, at.Title)
+	}
+
 	return &MovieDetails{
 		MovieResult: MovieResult{
 			TMDBID:        resp.ID,
@@ -241,6 +255,7 @@ func (t *TMDB) GetMovie(ctx context.Context, tmdbID uint32) (*MovieDetails, erro
 		Tagline:          resp.Tagline,
 		ReleaseDate:      resp.ReleaseDate,
 		OriginalLanguage: resp.OriginalLanguage,
+		Aliases:          collectAliases([]string{title, originalTitle}, candidates),
 	}, nil
 }
 
@@ -547,7 +562,20 @@ type tmdbMovieResponse struct {
 	VoteAverage      float32            `json:"vote_average"`
 	VoteCount        uint32             `json:"vote_count"`
 	Translations     tmdbTranslationBag `json:"translations"`
+	AltTitles        tmdbAltTitleBag    `json:"alternative_titles"`
 	Credits          tmdbCredits        `json:"credits"`
+}
+
+// tmdbAltTitleBag is append_to_response=alternative_titles. These are the
+// region-tagged AKAs — romaji, a distributor's retitling, an abbreviation a
+// tracker favours — which the per-language translations do not carry.
+type tmdbAltTitleBag struct {
+	Titles []tmdbAltTitle `json:"titles"`
+}
+
+type tmdbAltTitle struct {
+	ISO3166_1 string `json:"iso_3166_1"`
+	Title     string `json:"title"`
 }
 
 // tmdbPersonResponse is /3/person/{id} with append_to_response=external_ids.

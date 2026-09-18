@@ -985,6 +985,16 @@ func GenresNotNil() predicate.Movie {
 	return predicate.Movie(sql.FieldNotNull(FieldGenres))
 }
 
+// AliasesIsNil applies the IsNil predicate on the "aliases" field.
+func AliasesIsNil() predicate.Movie {
+	return predicate.Movie(sql.FieldIsNull(FieldAliases))
+}
+
+// AliasesNotNil applies the NotNil predicate on the "aliases" field.
+func AliasesNotNil() predicate.Movie {
+	return predicate.Movie(sql.FieldNotNull(FieldAliases))
+}
+
 // LastRefreshedAtEQ applies the EQ predicate on the "last_refreshed_at" field.
 func LastRefreshedAtEQ(v time.Time) predicate.Movie {
 	return predicate.Movie(sql.FieldEQ(FieldLastRefreshedAt, v))

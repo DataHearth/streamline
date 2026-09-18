@@ -40,6 +40,11 @@ type MovieDetails struct {
 	Tagline          string
 	ReleaseDate      string // ISO yyyy-mm-dd, as TMDB returns it
 	OriginalLanguage string // ISO 639-1
+	// Aliases are TMDB's translated and alternative titles, excluding Title and
+	// OriginalTitle. A film held under its localized title equals none of the
+	// releases named in another language, so matchers compare against these as
+	// well — the movie counterpart of TVResult.Aliases.
+	Aliases []string
 }
 
 // PersonDetails is one person's biographical record, as either provider
