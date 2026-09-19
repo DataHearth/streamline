@@ -104,7 +104,16 @@ func classifyMovieAdoption(
 ) (adoptDecision, bool) {
 	var matches []*ent.Movie
 	for _, m := range candidates {
-		if library.TitleMatches(parsed.Title, m.Title) && parsed.Year == m.Year {
+		// Aliases, not just the stored title: with metadata.language set to
+		// anything but English the library holds the localized title while the
+		// release is named in the original, so "Hellboy II : Les Légions d'or
+		// maudites" matched nothing in Hellboy.II.The.Golden.Army.2008 and a
+		// film already on disk was proposed as "unidentified — pick a title".
+		// Every other matcher in the tree already takes the alias set; this was
+		// the one that did not.
+		if library.TitleMatchesAny(
+			parsed.Title, m.Title, append(m.Aliases, m.OriginalTitle),
+		) && parsed.Year == m.Year {
 			matches = append(matches, m)
 		}
 	}

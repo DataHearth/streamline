@@ -71,6 +71,23 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 			Expect(dec.reason).To(BeEmpty())
 		})
 
+		It("matches a localized title through its aliases", func() {
+			localized := []*ent.Movie{{
+				ID: 7, Title: "Hellboy II : Les Légions d'or maudites",
+				OriginalTitle: "Hellboy II: The Golden Army", Year: 2008,
+				Aliases: []string{"Hellboy: The Golden Army", "Hellboy 2"},
+			}}
+			parsed := library.Parse(
+				"Hellboy.II.The.Golden.Army.2008.MULTi.1080p.BluRay.x264-X",
+			)
+
+			dec, ok := classifyMovieAdoption(parsed, 0, localized)
+
+			Expect(ok).To(BeTrue())
+			Expect(dec.movieID).To(Equal(uint32(7)))
+			Expect(dec.reason).To(BeEmpty())
+		})
+
 		withFile := []*ent.Movie{{
 			ID: 3, Title: "The Batman", Year: 2022, TmdbID: 414906,
 			Edges: ent.MovieEdges{MediaFiles: []*ent.MediaFile{{ID: 9, Size: 4096}}},
