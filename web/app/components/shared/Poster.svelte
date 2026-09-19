@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onDestroy } from "svelte";
+	import Img from "@components/shared/Img.svelte";
 	import { isPosterMissing, markPosterMissing } from "@lib/posters";
 
 	let {
@@ -44,12 +45,8 @@
 </script>
 
 {#if visible && !isPosterMissing(src)}
-	<img
-		src={url}
-		{alt}
-		class={klass}
-		{loading}
-		onerror={handleError}
-		{...rest}
-	/>
+	<!-- `visible` flips false on every failure, so each attempt mounts a fresh
+	`Img` whose reveal state starts over — a retry shown before it has decoded is
+	exactly what a persisted one would cause. -->
+	<Img src={url} {alt} class={klass} {loading} onerror={handleError} {...rest} />
 {/if}
