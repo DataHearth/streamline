@@ -774,12 +774,28 @@ func (s *Service) Delete(
 				fmt.Errorf("list media_files: %w", err))
 		}
 		root := config.Get().Library.MoviePath
+		var kept int
 		for _, f := range files {
 			if err := library.RemoveMediaFile(ctx, f.Path, root); err != nil {
-				slog.WarnContext(ctx, "delete movie file failed",
+				kept++
+				// Error, not warn: the operator asked for the files and is
+				// about to be told the title was removed. A file that outlived
+				// the row it was reachable through is only findable from here,
+				// and a warn on a quiet instance was indistinguishable from
+				// the deletion having worked.
+				slog.ErrorContext(ctx, "movie file was not deleted from disk",
 					"movie.id", id, "path", f.Path, "error", err)
 			}
 		}
+		span.SetAttributes(
+			attribute.Int("files.requested", len(files)),
+			attribute.Int("files.kept", kept),
+		)
+		// Before DeleteMovie: the download_records edge cascades, so after the
+		// row goes there is nothing left to say which torrent produced this
+		// movie, and a still-seeding torrent comes back as an untracked
+		// adoption proposal on the next monitor tick.
+		s.removeSourceTorrent(ctx, id)
 	}
 	if err := s.db.DeleteMovie(ctx, id); err != nil {
 		if ent.IsNotFound(err) {

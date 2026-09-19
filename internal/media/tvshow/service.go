@@ -628,17 +628,24 @@ func (s *Service) Delete(ctx context.Context, id uint32, opts DeleteOptions) err
 			return otelx.RecordSpanError(span, err)
 		}
 		root := config.Get().Library.SeriesPath
+		var requested, kept int
 		for _, se := range show.Edges.Seasons {
 			for _, e := range se.Edges.Episodes {
 				for _, f := range e.Edges.MediaFiles {
+					requested++
 					if err := library.RemoveMediaFile(
 						ctx,
 						f.Path,
 						root,
 					); err != nil {
-						slog.WarnContext(
+						kept++
+						// Error, not warn: the operator asked for the files and
+						// is about to be told the show was removed. A file that
+						// outlived the row it was reachable through is only
+						// findable from here.
+						slog.ErrorContext(
 							ctx,
-							"delete tv file failed",
+							"tv file was not deleted from disk",
 							"tvshow.id",
 							id,
 							"path",
@@ -650,6 +657,10 @@ func (s *Service) Delete(ctx context.Context, id uint32, opts DeleteOptions) err
 				}
 			}
 		}
+		span.SetAttributes(
+			attribute.Int("files.requested", requested),
+			attribute.Int("files.kept", kept),
+		)
 	}
 	if err := s.db.DeleteTVShow(ctx, id); err != nil {
 		if ent.IsNotFound(err) {
