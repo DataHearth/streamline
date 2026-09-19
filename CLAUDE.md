@@ -75,6 +75,8 @@ The builtin engine owns its own peer sockets and caps its peer pool with constan
 
 `internal/quality` is the pure scoring engine (no config/db imports); context builders live in `internal/quality/qualityctx`. A release is gated by resolution **band** first (`preferred_resolution` is a hard ceiling), then by summed custom-format score against `min_score`. `quality.ReplacesFile` is the single predicate deciding whether one release replaces one file. Builtins describe a release and never judge one — opinionated rules belong in `custom_formats`.
 
+Every `indexer.Manager` search takes **two name sets**: `titles` is queried (one request per title per indexer) and `aliases` is only matched against. `Movie.aliases`/`TVShow.aliases` hold the providers' translated and alternative titles, which is what stops a library holding a work under its localized title from discarding every release named in another language. **Never pass an alias list as `titles`** — that multiplies every search by its length against rate-limited trackers.
+
 **Condition semantics, the release-vs-file evidence asymmetry, indexer result filtering, profile assembly and the upgrade paths: [`docs/agents/quality-scoring.md`](docs/agents/quality-scoring.md) — read it before touching `internal/quality/**`, the RSS scanners, or the profile/custom-format handlers.**
 
 ## Media lifecycle & library queries

@@ -29,6 +29,7 @@
 	import Select from "@components/forms/Select.svelte";
 	import LookupDetailPanel from "@components/shared/LookupDetailPanel.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
+	import Img from "@components/shared/Img.svelte";
 
 	type Props = {
 		open: boolean;
@@ -436,8 +437,8 @@
 										<!-- Never loading="lazy" here: the list lives in a portaled
 										modal, and Chrome never fires the deferred load for it, so
 										every poster stays blank forever. -->
-										<img
-											src={r.poster_url}
+										<Img
+											src={r.poster_url ?? ""}
 											alt=""
 											onerror={() => markPosterFailed(r.tmdb_id)}
 											class="relative h-full w-full object-cover"

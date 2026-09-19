@@ -40,6 +40,7 @@
 	import StatusPill from "./StatusPill.svelte";
 	import Select from "@components/forms/Select.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
+	import Img from "@components/shared/Img.svelte";
 
 	// The touch add/request flow. Where the desktop modal is a split panel with
 	// a commit button in its footer, this takes over the screen: the library's
@@ -439,7 +440,7 @@
 										<!-- Never loading="lazy" here: the list lives in a portaled
 										modal, and Chrome never fires the deferred load for it, so
 										every poster stays blank forever. -->
-										<img
+										<Img
 											src={r.poster_url}
 											alt=""
 											onerror={() => markPosterFailed(r.id)}
@@ -494,7 +495,7 @@
 							{/if}
 						</div>
 						{#if selected.poster_url && !failedPosters.has(selected.id)}
-							<img
+							<Img
 								src={selected.poster_url}
 								alt=""
 								class="relative h-full w-full object-cover"

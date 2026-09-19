@@ -13628,6 +13628,8 @@ type MovieMutation struct {
 	addrating               *float64
 	genres                  *[]string
 	appendgenres            []string
+	aliases                 *[]string
+	appendaliases           []string
 	last_refreshed_at       *time.Time
 	clearedFields           map[string]struct{}
 	download_records        map[uint32]struct{}
@@ -14634,6 +14636,71 @@ func (m *MovieMutation) ResetGenres() {
 	delete(m.clearedFields, movie.FieldGenres)
 }
 
+// SetAliases sets the "aliases" field.
+func (m *MovieMutation) SetAliases(s []string) {
+	m.aliases = &s
+	m.appendaliases = nil
+}
+
+// Aliases returns the value of the "aliases" field in the mutation.
+func (m *MovieMutation) Aliases() (r []string, exists bool) {
+	v := m.aliases
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAliases returns the old "aliases" field's value of the Movie entity.
+// If the Movie object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MovieMutation) OldAliases(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAliases is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAliases requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAliases: %w", err)
+	}
+	return oldValue.Aliases, nil
+}
+
+// AppendAliases adds s to the "aliases" field.
+func (m *MovieMutation) AppendAliases(s []string) {
+	m.appendaliases = append(m.appendaliases, s...)
+}
+
+// AppendedAliases returns the list of values that were appended to the "aliases" field in this mutation.
+func (m *MovieMutation) AppendedAliases() ([]string, bool) {
+	if len(m.appendaliases) == 0 {
+		return nil, false
+	}
+	return m.appendaliases, true
+}
+
+// ClearAliases clears the value of the "aliases" field.
+func (m *MovieMutation) ClearAliases() {
+	m.aliases = nil
+	m.appendaliases = nil
+	m.clearedFields[movie.FieldAliases] = struct{}{}
+}
+
+// AliasesCleared returns if the "aliases" field was cleared in this mutation.
+func (m *MovieMutation) AliasesCleared() bool {
+	_, ok := m.clearedFields[movie.FieldAliases]
+	return ok
+}
+
+// ResetAliases resets all changes to the "aliases" field.
+func (m *MovieMutation) ResetAliases() {
+	m.aliases = nil
+	m.appendaliases = nil
+	delete(m.clearedFields, movie.FieldAliases)
+}
+
 // SetLastRefreshedAt sets the "last_refreshed_at" field.
 func (m *MovieMutation) SetLastRefreshedAt(t time.Time) {
 	m.last_refreshed_at = &t
@@ -14933,7 +15000,7 @@ func (m *MovieMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *MovieMutation) Fields() []string {
-	fields := make([]string, 0, 19)
+	fields := make([]string, 0, 20)
 	if m.create_time != nil {
 		fields = append(fields, movie.FieldCreateTime)
 	}
@@ -14988,6 +15055,9 @@ func (m *MovieMutation) Fields() []string {
 	if m.genres != nil {
 		fields = append(fields, movie.FieldGenres)
 	}
+	if m.aliases != nil {
+		fields = append(fields, movie.FieldAliases)
+	}
 	if m.last_refreshed_at != nil {
 		fields = append(fields, movie.FieldLastRefreshedAt)
 	}
@@ -15035,6 +15105,8 @@ func (m *MovieMutation) Field(name string) (ent.Value, bool) {
 		return m.Rating()
 	case movie.FieldGenres:
 		return m.Genres()
+	case movie.FieldAliases:
+		return m.Aliases()
 	case movie.FieldLastRefreshedAt:
 		return m.LastRefreshedAt()
 	}
@@ -15082,6 +15154,8 @@ func (m *MovieMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldRating(ctx)
 	case movie.FieldGenres:
 		return m.OldGenres(ctx)
+	case movie.FieldAliases:
+		return m.OldAliases(ctx)
 	case movie.FieldLastRefreshedAt:
 		return m.OldLastRefreshedAt(ctx)
 	}
@@ -15219,6 +15293,13 @@ func (m *MovieMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetGenres(v)
 		return nil
+	case movie.FieldAliases:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAliases(v)
+		return nil
 	case movie.FieldLastRefreshedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -15346,6 +15427,9 @@ func (m *MovieMutation) ClearedFields() []string {
 	if m.FieldCleared(movie.FieldGenres) {
 		fields = append(fields, movie.FieldGenres)
 	}
+	if m.FieldCleared(movie.FieldAliases) {
+		fields = append(fields, movie.FieldAliases)
+	}
 	if m.FieldCleared(movie.FieldLastRefreshedAt) {
 		fields = append(fields, movie.FieldLastRefreshedAt)
 	}
@@ -15389,6 +15473,9 @@ func (m *MovieMutation) ClearField(name string) error {
 		return nil
 	case movie.FieldGenres:
 		m.ClearGenres()
+		return nil
+	case movie.FieldAliases:
+		m.ClearAliases()
 		return nil
 	case movie.FieldLastRefreshedAt:
 		m.ClearLastRefreshedAt()
@@ -15454,6 +15541,9 @@ func (m *MovieMutation) ResetField(name string) error {
 		return nil
 	case movie.FieldGenres:
 		m.ResetGenres()
+		return nil
+	case movie.FieldAliases:
+		m.ResetAliases()
 		return nil
 	case movie.FieldLastRefreshedAt:
 		m.ResetLastRefreshedAt()

@@ -9,6 +9,7 @@
 	import StatusPill from "@components/shared/StatusPill.svelte";
 	import type { Movie, MediaFile } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
+	import Img from "@components/shared/Img.svelte";
 
 	let {
 		movie,
@@ -52,7 +53,7 @@
 	aria-labelledby="movie-title"
 >
 	<div class="absolute inset-0 z-0 overflow-hidden bg-bg-deep">
-		<img
+		<Img
 			src={backdropSrc}
 			alt=""
 			aria-hidden="true"

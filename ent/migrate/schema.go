@@ -573,6 +573,7 @@ var (
 		{Name: "quality_profile", Type: field.TypeString, Nullable: true},
 		{Name: "rating", Type: field.TypeFloat64, Nullable: true, Default: 0},
 		{Name: "genres", Type: field.TypeJSON, Nullable: true},
+		{Name: "aliases", Type: field.TypeJSON, Nullable: true},
 		{Name: "last_refreshed_at", Type: field.TypeTime, Nullable: true},
 	}
 	// MoviesTable holds the schema information for the "movies" table.

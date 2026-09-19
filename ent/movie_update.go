@@ -351,6 +351,24 @@ func (_u *MovieUpdate) ClearGenres() *MovieUpdate {
 	return _u
 }
 
+// SetAliases sets the "aliases" field.
+func (_u *MovieUpdate) SetAliases(v []string) *MovieUpdate {
+	_u.mutation.SetAliases(v)
+	return _u
+}
+
+// AppendAliases appends value to the "aliases" field.
+func (_u *MovieUpdate) AppendAliases(v []string) *MovieUpdate {
+	_u.mutation.AppendAliases(v)
+	return _u
+}
+
+// ClearAliases clears the value of the "aliases" field.
+func (_u *MovieUpdate) ClearAliases() *MovieUpdate {
+	_u.mutation.ClearAliases()
+	return _u
+}
+
 // SetLastRefreshedAt sets the "last_refreshed_at" field.
 func (_u *MovieUpdate) SetLastRefreshedAt(v time.Time) *MovieUpdate {
 	_u.mutation.SetLastRefreshedAt(v)
@@ -691,6 +709,17 @@ func (_u *MovieUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.GenresCleared() {
 		_spec.ClearField(movie.FieldGenres, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.Aliases(); ok {
+		_spec.SetField(movie.FieldAliases, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedAliases(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, movie.FieldAliases, value)
+		})
+	}
+	if _u.mutation.AliasesCleared() {
+		_spec.ClearField(movie.FieldAliases, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.LastRefreshedAt(); ok {
 		_spec.SetField(movie.FieldLastRefreshedAt, field.TypeTime, value)
@@ -1217,6 +1246,24 @@ func (_u *MovieUpdateOne) ClearGenres() *MovieUpdateOne {
 	return _u
 }
 
+// SetAliases sets the "aliases" field.
+func (_u *MovieUpdateOne) SetAliases(v []string) *MovieUpdateOne {
+	_u.mutation.SetAliases(v)
+	return _u
+}
+
+// AppendAliases appends value to the "aliases" field.
+func (_u *MovieUpdateOne) AppendAliases(v []string) *MovieUpdateOne {
+	_u.mutation.AppendAliases(v)
+	return _u
+}
+
+// ClearAliases clears the value of the "aliases" field.
+func (_u *MovieUpdateOne) ClearAliases() *MovieUpdateOne {
+	_u.mutation.ClearAliases()
+	return _u
+}
+
 // SetLastRefreshedAt sets the "last_refreshed_at" field.
 func (_u *MovieUpdateOne) SetLastRefreshedAt(v time.Time) *MovieUpdateOne {
 	_u.mutation.SetLastRefreshedAt(v)
@@ -1587,6 +1634,17 @@ func (_u *MovieUpdateOne) sqlSave(ctx context.Context) (_node *Movie, err error)
 	}
 	if _u.mutation.GenresCleared() {
 		_spec.ClearField(movie.FieldGenres, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.Aliases(); ok {
+		_spec.SetField(movie.FieldAliases, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedAliases(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, movie.FieldAliases, value)
+		})
+	}
+	if _u.mutation.AliasesCleared() {
+		_spec.ClearField(movie.FieldAliases, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.LastRefreshedAt(); ok {
 		_spec.SetField(movie.FieldLastRefreshedAt, field.TypeTime, value)

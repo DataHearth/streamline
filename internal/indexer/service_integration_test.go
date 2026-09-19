@@ -122,6 +122,7 @@ var _ = Describe("Service", Label("integration", "indexers"), func() {
 				results, err := svc.SearchMovie(
 					ctx,
 					[]string{"Interstellar"},
+					nil,
 					157336,
 				)
 				Expect(err).NotTo(HaveOccurred())
@@ -131,6 +132,74 @@ var _ = Describe("Service", Label("integration", "indexers"), func() {
 				Expect(results[1].Seeders).To(Equal(uint32(50)))
 			},
 		)
+
+		It("matches on an alias without ever querying one", func() {
+			ctx := context.Background()
+
+			var (
+				mu      sync.Mutex
+				queried []string
+			)
+			ts := httptest.NewServer(
+				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					mu.Lock()
+					queried = append(queried, r.URL.Query().Get("q"))
+					mu.Unlock()
+
+					w.Header().Set("Content-Type", "application/xml")
+					w.WriteHeader(http.StatusOK)
+					_, err := w.Write(torznabXML([]testRSSItem{
+						{
+							Title: "Demon.Slayer.Infinity.Castle.2025.1080p.BluRay-GRP",
+							GUID:  "https://idx.com/1",
+							Link:  "https://idx.com/dl/1",
+							Size:  5000000000,
+							Enclosure: testEnclosure{
+								URL:    "https://idx.com/dl/1",
+								Length: 5000000000,
+								Type:   "application/x-bittorrent",
+							},
+							ExtraXML: torznabAttrs(
+								map[string]string{"seeders": "50", "peers": "10"},
+							),
+						},
+					}))
+					Expect(err).NotTo(HaveOccurred())
+				}),
+			)
+			defer ts.Close()
+
+			host, port := splitHostPort(ts.URL)
+			configtest.Setup(map[string]any{
+				"indexers": []map[string]any{
+					{
+						"name":     "Indexer1",
+						"host":     host,
+						"port":     int(port),
+						"api_key":  "key1",
+						"protocol": "torznab",
+						"enabled":  true,
+					},
+				},
+			})
+
+			results, err := New().SearchMovie(
+				ctx,
+				[]string{"Demon Slayer La Forteresse Infinie"},
+				[]string{"Demon Slayer Infinity Castle"},
+				1311031,
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(results).To(HaveLen(1))
+			// The point of the alias: without it the release matches no title,
+			// preferTitleMatches falls back to the whole set, and the flag tells
+			// the automatic grabbers to refuse what only a human should see.
+			Expect(results[0].TitleMismatch).To(BeFalse())
+			// Aliases widen what is matched, never what is asked for — one query
+			// per title, or a show's alias list multiplies every search by its
+			// length against rate-limited trackers.
+			Expect(queried).To(ConsistOf("Demon Slayer La Forteresse Infinie"))
+		})
 
 		It("drops the other films an indexer answers a keyword search with",
 			func() {
@@ -192,6 +261,7 @@ var _ = Describe("Service", Label("integration", "indexers"), func() {
 				results, err := New().SearchMovie(
 					ctx,
 					[]string{"Comme un chef"},
+					nil,
 					127585,
 				)
 				Expect(err).NotTo(HaveOccurred())
@@ -216,7 +286,8 @@ var _ = Describe("Service", Label("integration", "indexers"), func() {
 			configtest.Setup(prowlarrIndexerConfig(rec.URL()))
 
 			results, _, err := New().
-				SearchEpisode(context.Background(), []string{"Show"}, 111, 2, 3)
+				SearchEpisode(context.Background(), []string{"Show"},
+					nil, 111, 2, 3)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(results).To(HaveLen(1))
 
@@ -242,7 +313,8 @@ var _ = Describe("Service", Label("integration", "indexers"), func() {
 			DeferCleanup(rec.Close)
 			configtest.Setup(prowlarrIndexerConfig(rec.URL()))
 
-			_, err := New().SearchMovie(context.Background(), []string{"Dune"}, 0)
+			_, err := New().SearchMovie(context.Background(), []string{"Dune"},
+				nil, 0)
 			Expect(err).NotTo(HaveOccurred())
 
 			queries := rec.Queries()
@@ -265,7 +337,8 @@ var _ = Describe("Service", Label("integration", "indexers"), func() {
 			configtest.Setup(prowlarrIndexerConfig(rec.URL()))
 
 			results, _, err := New().
-				SearchEpisode(context.Background(), []string{"Show"}, 111, 2, 3)
+				SearchEpisode(context.Background(), []string{"Show"},
+					nil, 111, 2, 3)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(results).To(HaveLen(1))
 			// The wrong show had 900 seeders and would have won on score.

@@ -4,6 +4,7 @@
 	import type { LookupDetail } from "@lib/types";
 	import { formatDate } from "@lib/dates";
 	import { m as i18n } from "@lib/paraglide/messages.js";
+	import Img from "@components/shared/Img.svelte";
 
 	// The right-hand pane of the add/request modals: everything TMDB/TVDB knows
 	// about the highlighted result, so the choice can be made without leaving
@@ -163,7 +164,7 @@
 					<!-- Never loading="lazy" here: this panel lives in a portaled modal,
 					and Chrome never fires the deferred load for it, so the poster stays
 					blank forever. -->
-					<img
+					<Img
 						src={item.poster_url}
 						alt=""
 						class="relative h-full w-full object-cover"

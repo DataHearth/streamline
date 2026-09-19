@@ -54,6 +54,8 @@ type Movie struct {
 	Rating float64 `json:"rating,omitempty"`
 	// Genres holds the value of the "genres" field.
 	Genres []string `json:"genres,omitempty"`
+	// Aliases holds the value of the "aliases" field.
+	Aliases []string `json:"aliases,omitempty"`
 	// LastRefreshedAt holds the value of the "last_refreshed_at" field.
 	LastRefreshedAt *time.Time `json:"last_refreshed_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -118,7 +120,7 @@ func (*Movie) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case movie.FieldGenres:
+		case movie.FieldGenres, movie.FieldAliases:
 			values[i] = new([]byte)
 		case movie.FieldMonitored:
 			values[i] = new(sql.NullBool)
@@ -264,6 +266,14 @@ func (_m *Movie) assignValues(columns []string, values []any) error {
 					return fmt.Errorf("unmarshal field genres: %w", err)
 				}
 			}
+		case movie.FieldAliases:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field aliases", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.Aliases); err != nil {
+					return fmt.Errorf("unmarshal field aliases: %w", err)
+				}
+			}
 		case movie.FieldLastRefreshedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field last_refreshed_at", values[i])
@@ -386,6 +396,9 @@ func (_m *Movie) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("genres=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Genres))
+	builder.WriteString(", ")
+	builder.WriteString("aliases=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Aliases))
 	builder.WriteString(", ")
 	if v := _m.LastRefreshedAt; v != nil {
 		builder.WriteString("last_refreshed_at=")

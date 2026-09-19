@@ -488,6 +488,7 @@ func (s *Server) BrowseEpisodeReleases(
 	results, hiddenPacks, err := s.indexers.SearchEpisode(
 		ctx,
 		[]string{show.Title, show.OriginalTitle},
+		show.Aliases,
 		show.TvdbID,
 		season,
 		episode,
@@ -576,6 +577,7 @@ func (s *Server) BrowseSeasonReleases(
 	results, err := s.indexers.SearchSeason(
 		ctx,
 		[]string{show.Title, show.OriginalTitle},
+		show.Aliases,
 		show.TvdbID,
 		request.Number,
 	)

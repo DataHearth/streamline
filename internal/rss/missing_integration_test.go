@@ -58,7 +58,7 @@ var _ = Describe("MissingSearcher.Run", Label("integration", "rss"), func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			indexerM.EXPECT().
-				SearchMovie(mock.Anything, []string{"Fight Club", "Fight Club"}, uint32(550)).
+				SearchMovie(mock.Anything, []string{"Fight Club", "Fight Club"}, mock.Anything, uint32(550)).
 				Return([]indexer.SearchResult{
 					{
 						Title:    "Fight.Club.1999.1080p.BluRay.x264-GROUP",
@@ -102,7 +102,7 @@ var _ = Describe("MissingSearcher.Run", Label("integration", "rss"), func() {
 			syncer = newTestSearcher(dbClient, indexerM, dlM)
 
 			indexerM.EXPECT().
-				SearchMovie(mock.Anything, []string{"Fight Club", "Fight Club"}, uint32(550)).
+				SearchMovie(mock.Anything, []string{"Fight Club", "Fight Club"}, mock.Anything, uint32(550)).
 				Return([]indexer.SearchResult{
 					{Title: "Fight.Club.1999.720p.BluRay.x264-GROUP", Seeders: 100},
 				}, nil)
@@ -165,7 +165,7 @@ var _ = Describe("MissingSearcher.Run", Label("integration", "rss"), func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			indexerM.EXPECT().
-				SearchMovie(mock.Anything, []string{"Fight Club", "Fight Club"}, uint32(550)).
+				SearchMovie(mock.Anything, []string{"Fight Club", "Fight Club"}, mock.Anything, uint32(550)).
 				Return([]indexer.SearchResult{
 					{Title: "Fight.Club.1999.1080p.BluRay.x264-GROUP", Seeders: 50},
 				}, nil)
@@ -205,8 +205,14 @@ var _ = Describe("MissingSearcher.Run", Label("integration", "rss"), func() {
 				)
 
 				indexerM.EXPECT().
-					SearchMovie(mock.Anything, mock.Anything, mock.Anything).
-					Run(func(ctx context.Context, titles []string, tmdbID uint32) {
+					SearchMovie(
+						mock.Anything, mock.Anything, mock.Anything, mock.Anything,
+					).
+					Run(func(
+						ctx context.Context,
+						titles, aliases []string,
+						tmdbID uint32,
+					) {
 						mu.Lock()
 						active++
 						if active > maxSeen {

@@ -6,6 +6,7 @@
 	import { posterUrl, tvPosterUrl } from "@lib/posters";
 	import Poster from "@components/shared/Poster.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
+	import Img from "@components/shared/Img.svelte";
 	import {
 		createSearchModel,
 		itemKindLabel,
@@ -245,7 +246,7 @@
 									class="relative h-7 w-7 shrink-0 overflow-hidden rounded-full bg-surface-2"
 								>
 									{#if item.profile_url}
-										<img
+										<Img
 											src={item.profile_url}
 											alt={item.label}
 											loading="lazy"

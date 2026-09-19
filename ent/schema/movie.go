@@ -42,6 +42,10 @@ func (Movie) Fields() []ent.Field {
 		field.String("quality_profile").Optional(),
 		field.Float("rating").Optional().Default(0),
 		field.Strings("genres").Optional(),
+		// TMDB's translated and alternative titles. A film held under its
+		// localized title matches none of the releases named in any other
+		// language, which on a mixed tracker set is most of them.
+		field.Strings("aliases").Optional(),
 		field.Time("last_refreshed_at").Optional().Nillable(),
 	}
 }

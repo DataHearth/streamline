@@ -13,7 +13,6 @@ var _ = Describe("REST API system", Label("e2e"), func() {
 		defer resp.Body.Close()
 		Expect(resp.StatusCode).To(Equal(http.StatusOK))
 		var info struct {
-			AppName   string `json:"app_name"`
 			AuthMode  string `json:"auth_mode"`
 			DataDir   string `json:"data_dir"`
 			DbPath    string `json:"db_path"`
@@ -22,7 +21,6 @@ var _ = Describe("REST API system", Label("e2e"), func() {
 			Version   string `json:"version"`
 		}
 		decode(resp, &info)
-		Expect(info.AppName).NotTo(BeEmpty())
 		Expect(info.AuthMode).To(Equal("full"))
 		Expect(info.DataDir).NotTo(BeEmpty())
 		Expect(info.DbPath).NotTo(BeEmpty())

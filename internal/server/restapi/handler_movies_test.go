@@ -306,7 +306,7 @@ var _ = Describe(
 					}, nil).
 					Once()
 				app.indexers.EXPECT().
-					SearchMovie(mock.Anything, []string{"Fight Club", ""}, uint32(550)).
+					SearchMovie(mock.Anything, []string{"Fight Club", ""}, mock.Anything, uint32(550)).
 					Return([]indexer.SearchResult{
 						{
 							Title:    "Fight.Club.1999.1080p.BluRay.x264",
@@ -370,7 +370,7 @@ var _ = Describe(
 					}, nil).
 					Once()
 				app.indexers.EXPECT().
-					SearchMovie(mock.Anything, []string{"Fight Club", ""}, uint32(550)).
+					SearchMovie(mock.Anything, []string{"Fight Club", ""}, mock.Anything, uint32(550)).
 					Return([]indexer.SearchResult{
 						{
 							Title:    "Fight.Club.1999.1080p.WEB-DL.x264",
