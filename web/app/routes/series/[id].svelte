@@ -46,6 +46,7 @@
 	import PlayOnMenu from "@components/shared/PlayOnMenu.svelte";
 	import type { SeriesAction } from "@components/series/SeriesKebabMenu.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
+	import Img from "@components/shared/Img.svelte";
 	import type {
 		Episode,
 		MonitoringPreset,
@@ -494,7 +495,7 @@
 {:else if show}
 	<section class="hero relative" aria-labelledby="series-title">
 		<div class="absolute inset-0 z-0 overflow-hidden bg-bg-deep">
-			<img
+			<Img
 				src={tvPosterUrl(show.id)}
 				alt=""
 				aria-hidden="true"

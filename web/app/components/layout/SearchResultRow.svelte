@@ -6,6 +6,7 @@
 	import Poster from "@components/shared/Poster.svelte";
 	import { itemKindLabel, type SearchItem } from "@lib/search-model.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
+	import Img from "@components/shared/Img.svelte";
 
 	// One row for both touch surfaces: the phone screen at full size, the tablet
 	// panel dense. The palette keeps its own row — it carries a keyboard cursor
@@ -61,7 +62,7 @@
 			)}
 		>
 			{#if item.profile_url}
-				<img
+				<Img
 					src={item.profile_url}
 					alt={item.label}
 					loading="lazy"

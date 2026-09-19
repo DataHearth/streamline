@@ -27,6 +27,7 @@
 	import StatusPill from "@components/shared/StatusPill.svelte";
 	import { formatDate } from "@lib/dates";
 	import { m as i18n } from "@lib/paraglide/messages.js";
+	import Img from "@components/shared/Img.svelte";
 
 	let { item, loading = false }: { item?: HeroItem; loading?: boolean } =
 		$props();
@@ -41,7 +42,7 @@
 {#if item}
 	<section class="hero relative isolate overflow-hidden">
 		<div class="absolute inset-0 -z-10 bg-bg-deep">
-			<img
+			<Img
 				src={item.posterSrc}
 				alt=""
 				aria-hidden="true"

@@ -3,6 +3,7 @@
 	import { initials } from "@lib/people";
 	import type { CastMember } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
+	import Img from "@components/shared/Img.svelte";
 
 	let {
 		cast,
@@ -49,7 +50,7 @@
 					)}
 				>
 					{#if member.profile_url}
-						<img
+						<Img
 							src={member.profile_url}
 							alt={member.name}
 							loading="lazy"

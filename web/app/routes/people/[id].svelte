@@ -13,6 +13,7 @@
 	import PosterCard from "@components/shared/PosterCard.svelte";
 	import type { Movie, PersonDetail, TVShow } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
+	import Img from "@components/shared/Img.svelte";
 
 	let routeParams = $state<Record<string, string>>({});
 	onMount(() => params.subscribe((p) => (routeParams = p)));
@@ -272,7 +273,7 @@
 			     stopping short of the section's full height is seamless. -->
 			<div class="absolute inset-x-0 top-0 h-[520px] overflow-hidden">
 				{#if person.profile_url}
-					<img
+					<Img
 						src={person.profile_url}
 						alt=""
 						aria-hidden="true"
@@ -290,7 +291,7 @@
 				class="relative mx-auto aspect-square w-44 overflow-hidden rounded-lg bg-bg-card shadow-[0_24px_48px_rgb(0_0_0_/0.5)] md:mx-0 md:w-auto"
 			>
 				{#if person.profile_url}
-					<img
+					<Img
 						src={person.profile_url}
 						alt={person.name}
 						class="h-full w-full object-cover"
