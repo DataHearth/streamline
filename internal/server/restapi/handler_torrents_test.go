@@ -93,7 +93,7 @@ var _ = Describe("Handler: Torrents", Label("unit", "server", "torrents"), func(
 	It("reports wanted per file from its priority", func() {
 		app.torrents.EXPECT().Details(mock.Anything, testHash).
 			Return(bittorrent.TorrentDetails{
-				TorrentView: bittorrent.TorrentView{Hash: testHash, Name: "Test"},
+				Hash: testHash, Name: "Test",
 				Files: []bittorrent.FileView{
 					{Index: 0, Path: "a", Priority: "normal"},
 					{Index: 1, Path: "b", Priority: "skip"},

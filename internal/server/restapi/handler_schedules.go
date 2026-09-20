@@ -32,7 +32,7 @@ func (s *Server) ListSchedules(
 		return nil, err
 	}
 	return ListSchedules200JSONResponse{
-		ScheduleListJSONResponse: ScheduleListJSONResponse{Items: out},
+		Items: out,
 	}, nil
 }
 

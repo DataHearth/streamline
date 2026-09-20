@@ -65,12 +65,12 @@ func (s *Server) ListSeries(
 	for _, r := range rows {
 		items = append(items, tvShowListToAPI(r, counts[r.ID], progress[r.ID]))
 	}
-	return ListSeries200JSONResponse{SeriesListJSONResponse: SeriesListJSONResponse{
+	return ListSeries200JSONResponse{
 		Items: items,
 		Total: total,
 		Page:  uint32(p.Page),
 		Limit: p.Limit,
-	}}, nil
+	}, nil
 }
 
 // seriesDownloadProgress returns the mean live progress per show over the
@@ -188,24 +188,22 @@ func (s *Server) GetSeriesCounts(
 		}, nil
 	}
 	return GetSeriesCounts200JSONResponse{
-		SeriesCountsResponseJSONResponse: SeriesCountsResponseJSONResponse{
-			Total:               c.Total,
-			StatusTotal:         c.StatusTotal,
-			Continuing:          c.Continuing,
-			Ended:               c.Ended,
-			Missing:             c.Missing,
-			Downloading:         c.Downloading,
-			Importing:           c.Importing,
-			TypeTotal:           c.TypeTotal,
-			Standard:            c.Standard,
-			Anime:               c.Anime,
-			Daily:               c.Daily,
-			MonitoredTotal:      c.MonitoredTotal,
-			Monitored:           c.Monitored,
-			Unmonitored:         c.Unmonitored,
-			WantedEpisodes:      c.WantedEpisodes,
-			DownloadingEpisodes: c.DownloadingEpisodes,
-		},
+		Total:               c.Total,
+		StatusTotal:         c.StatusTotal,
+		Continuing:          c.Continuing,
+		Ended:               c.Ended,
+		Missing:             c.Missing,
+		Downloading:         c.Downloading,
+		Importing:           c.Importing,
+		TypeTotal:           c.TypeTotal,
+		Standard:            c.Standard,
+		Anime:               c.Anime,
+		Daily:               c.Daily,
+		MonitoredTotal:      c.MonitoredTotal,
+		Monitored:           c.Monitored,
+		Unmonitored:         c.Unmonitored,
+		WantedEpisodes:      c.WantedEpisodes,
+		DownloadingEpisodes: c.DownloadingEpisodes,
 	}, nil
 }
 
@@ -243,7 +241,7 @@ func (s *Server) LookupSeries(
 		out = append(out, item)
 	}
 	return LookupSeries200JSONResponse{
-		SeriesLookupResultsJSONResponse: SeriesLookupResultsJSONResponse{Items: out},
+		Items: out,
 	}, nil
 }
 
@@ -596,7 +594,7 @@ func (s *Server) BrowseSeasonReleases(
 		spanEpisodes(s.seasonLengths(ctx, show.ID)),
 	)
 	return BrowseSeasonReleases200JSONResponse{
-		SearchResultsJSONResponse: SearchResultsJSONResponse{Items: items},
+		Items: items,
 	}, nil
 }
 
@@ -716,7 +714,7 @@ func (s *Server) BrowseSeriesReleases(
 		spanEpisodes(s.seasonLengths(ctx, show.ID)),
 	)
 	return BrowseSeriesReleases200JSONResponse{
-		SearchResultsJSONResponse: SearchResultsJSONResponse{Items: items},
+		Items: items,
 	}, nil
 }
 
@@ -780,7 +778,7 @@ func (s *Server) GetSeriesPlayOnLinks(
 		items = append(items, playOnToAPI(r))
 	}
 	return GetSeriesPlayOnLinks200JSONResponse{
-		SeriesPlayOnLinksJSONResponse: SeriesPlayOnLinksJSONResponse{Items: items},
+		Items: items,
 	}, nil
 }
 
@@ -803,10 +801,8 @@ func (s *Server) ApplySpecialsToExisting(
 		}, nil
 	}
 	return ApplySpecialsToExisting200JSONResponse{
-		SpecialsMonitoredJSONResponse: SpecialsMonitoredJSONResponse{
-			SeasonsUpdated: n,
-			Monitored:      config.Get().Library.MonitorSpecials,
-		},
+		SeasonsUpdated: n,
+		Monitored:      config.Get().Library.MonitorSpecials,
 	}, nil
 }
 

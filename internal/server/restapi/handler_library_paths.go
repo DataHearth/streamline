@@ -46,9 +46,7 @@ func (s *Server) GetPathMigrationRoots(
 		})
 	}
 	return GetPathMigrationRoots200JSONResponse{
-		PathMigrationRootListJSONResponse: PathMigrationRootListJSONResponse{
-			Items: items,
-		},
+		Items: items,
 	}, nil
 }
 
@@ -109,15 +107,13 @@ func (s *Server) PreviewPathMigration(
 		samples = append(samples, PathRewrite{From: e.From, To: e.To})
 	}
 	return PreviewPathMigration200JSONResponse{
-		PathMigrationPreviewJSONResponse: PathMigrationPreviewJSONResponse{
-			Root:    PathMigrationPreviewRoot(preview.Root),
-			From:    preview.From,
-			To:      preview.To,
-			Total:   preview.Total,
-			Skipped: preview.Skipped,
-			CanMove: preview.CanMove,
-			Samples: samples,
-		},
+		Root:    PathMigrationPreviewRoot(preview.Root),
+		From:    preview.From,
+		To:      preview.To,
+		Total:   preview.Total,
+		Skipped: preview.Skipped,
+		CanMove: preview.CanMove,
+		Samples: samples,
 	}, nil
 }
 

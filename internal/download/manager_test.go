@@ -1041,7 +1041,7 @@ var _ = Describe("GrabEpisode magnet prefetch", Label("unit", "downloads"), func
 		ctx = context.Background()
 		store = dbmocks.NewMockStore(GinkgoT())
 		client = &fakePrefetchClient{
-			fakeSelectiveClient: fakeSelectiveClient{addHash: "abc123"},
+			addHash: "abc123",
 		}
 		mgr = New(store, client)
 		// The §4.6 hash pre-check runs before Flow A on every grab.

@@ -519,10 +519,8 @@ func (s *Server) ListOIDCProviders(
 		items = append(items, oidcProviderView(p))
 	}
 	return ListOIDCProviders200JSONResponse{
-		OIDCProviderListJSONResponse: OIDCProviderListJSONResponse{
-			Providers:       items,
-			RestartRequired: restart.Pending(),
-		},
+		Providers:       items,
+		RestartRequired: restart.Pending(),
 	}, nil
 }
 

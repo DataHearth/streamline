@@ -346,9 +346,7 @@ var _ = Describe("Service.addOrFindMovie", Label("unit", "bulkimport"), func() {
 	It("returns the existing row when another scan added the movie first", func() {
 		meta.EXPECT().GetMovie(mock.Anything, tmdbID).
 			Return(&metadata.MovieDetails{
-				MovieResult: metadata.MovieResult{
-					TMDBID: tmdbID, Title: "Fantasia 2000", Year: 2000,
-				},
+				TMDBID: tmdbID, Title: "Fantasia 2000", Year: 2000,
 			}, nil).Once()
 		store.EXPECT().CreateMovie(mock.Anything, mock.Anything).
 			Return(nil, &ent.ConstraintError{}).Once()
@@ -410,9 +408,7 @@ var _ = Describe("Service.commitAdoptInPlace", Label("unit", "bulkimport"), func
 
 			meta.EXPECT().GetMovie(mock.Anything, tmdbID).
 				Return(&metadata.MovieDetails{
-					MovieResult: metadata.MovieResult{
-						TMDBID: tmdbID, Title: "Fantasia 2000", Year: 2000,
-					},
+					TMDBID: tmdbID, Title: "Fantasia 2000", Year: 2000,
 				}, nil).Once()
 			// Add is called with an empty quality profile (resolved later at
 			// read time), so the created row's QualityProfile is empty here too
@@ -454,9 +450,7 @@ var _ = Describe("Service.commitAdoptInPlace", Label("unit", "bulkimport"), func
 
 		meta.EXPECT().GetMovie(mock.Anything, tmdbID).
 			Return(&metadata.MovieDetails{
-				MovieResult: metadata.MovieResult{
-					TMDBID: tmdbID, Title: "Fantasia 2000", Year: 2000,
-				},
+				TMDBID: tmdbID, Title: "Fantasia 2000", Year: 2000,
 			}, nil).Once()
 		store.EXPECT().CreateMovie(mock.Anything, mock.Anything).
 			Return(&ent.Movie{ID: 43}, nil).Once()
@@ -545,9 +539,7 @@ var _ = Describe("Service.commitRename", Label("unit", "bulkimport"), func() {
 
 			meta.EXPECT().GetMovie(mock.Anything, tmdbID).
 				Return(&metadata.MovieDetails{
-					MovieResult: metadata.MovieResult{
-						TMDBID: tmdbID, Title: "Fight Club", Year: 1999,
-					},
+					TMDBID: tmdbID, Title: "Fight Club", Year: 1999,
 				}, nil).Once()
 			store.EXPECT().CreateMovie(mock.Anything, mock.Anything).
 				Return(&ent.Movie{ID: 42, Title: "Fight Club", Year: 1999}, nil).

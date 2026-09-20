@@ -60,12 +60,10 @@ func (s *Server) ListRequests(
 		items = append(items, requestToAPI(r))
 	}
 	return ListRequests200JSONResponse{
-		RequestsListJSONResponse: RequestsListJSONResponse{
-			Items: items,
-			Total: numeric.SaturateU32(total),
-			Page:  uint32(page),
-			Limit: p.Limit,
-		},
+		Items: items,
+		Total: numeric.SaturateU32(total),
+		Page:  uint32(page),
+		Limit: p.Limit,
 	}, nil
 }
 
@@ -127,12 +125,10 @@ func (s *Server) GetRequestCounts(
 		return n
 	}
 	return GetRequestCounts200JSONResponse{
-		RequestCountsResponseJSONResponse: RequestCountsResponseJSONResponse{
-			Pending:   count(request.StatusPending),
-			Approved:  count(request.StatusApproved),
-			Denied:    count(request.StatusDenied),
-			Available: count(request.StatusAvailable),
-		},
+		Pending:   count(request.StatusPending),
+		Approved:  count(request.StatusApproved),
+		Denied:    count(request.StatusDenied),
+		Available: count(request.StatusAvailable),
 	}, nil
 }
 

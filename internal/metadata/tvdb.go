@@ -386,19 +386,17 @@ func (t *TVDB) GetSeries(ctx context.Context, tvdbID uint32) (*TVDetails, error)
 	}
 
 	d := &TVDetails{
-		TVResult: TVResult{
-			TVDBID:        ext.Data.ID,
-			Title:         ext.Data.Name,
-			OriginalTitle: ext.Data.Name, // preserved before the language override below
-			Year:          atou16(ext.Data.Year),
-			Network:       ext.Data.LatestNetwork.Name,
-			Overview:      ext.Data.Overview,
-			PosterPath:    ext.Data.Image,
-		},
-		Status:     normalizeStatus(ext.Data.Status.Name),
-		Type:       SeriesStandard, // refined below if a genre marks it anime
-		Runtime:    ext.Data.AverageRuntime,
-		FirstAired: ext.Data.FirstAired,
+		TVDBID:        ext.Data.ID,
+		Title:         ext.Data.Name,
+		OriginalTitle: ext.Data.Name, // preserved before the language override below
+		Year:          atou16(ext.Data.Year),
+		Network:       ext.Data.LatestNetwork.Name,
+		Overview:      ext.Data.Overview,
+		PosterPath:    ext.Data.Image,
+		Status:        normalizeStatus(ext.Data.Status.Name),
+		Type:          SeriesStandard, // refined below if a genre marks it anime
+		Runtime:       ext.Data.AverageRuntime,
+		FirstAired:    ext.Data.FirstAired,
 		// TVDB v4 removed user ratings; `score` is an arbitrary popularity
 		// metric (not a 0-10 rating), so Rating is left unset (0 = unknown).
 	}

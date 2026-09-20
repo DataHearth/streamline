@@ -155,20 +155,18 @@ var _ = Describe(
 				app.store.EXPECT().
 					ListPeople(mock.Anything, mock.Anything).
 					Return([]db.Person{{
-						ID:      7,
-						TMDBID:  10,
-						Name:    "Ada Lovelace",
-						Credits: 1,
-						PersonBio: db.PersonBio{
-							Biography:    "A mathematician.",
-							KnownFor:     "Acting",
-							Birthday:     "1815-12-10",
-							Deathday:     "1852-11-27",
-							PlaceOfBirth: "London, England",
-							IMDbID:       "nm0000001",
-							InstagramID:  "ada",
-							TwitterID:    "adalovelace",
-						},
+						ID:           7,
+						TMDBID:       10,
+						Name:         "Ada Lovelace",
+						Credits:      1,
+						Biography:    "A mathematician.",
+						KnownFor:     "Acting",
+						Birthday:     "1815-12-10",
+						Deathday:     "1852-11-27",
+						PlaceOfBirth: "London, England",
+						IMDbID:       "nm0000001",
+						InstagramID:  "ada",
+						TwitterID:    "adalovelace",
 					}}, 1, nil).
 					Once()
 
@@ -201,14 +199,12 @@ var _ = Describe(
 				app.store.EXPECT().
 					ListPeople(mock.Anything, mock.Anything).
 					Return([]db.Person{{
-						ID:      3,
-						TVDBID:  511,
-						Name:    "Nina Meurisse",
-						Credits: 1,
-						PersonBio: db.PersonBio{
-							Biography: "A performer.",
-							Birthday:  "1988-01-01",
-						},
+						ID:        3,
+						TVDBID:    511,
+						Name:      "Nina Meurisse",
+						Credits:   1,
+						Biography: "A performer.",
+						Birthday:  "1988-01-01",
 					}}, 1, nil).
 					Once()
 
@@ -246,11 +242,9 @@ var _ = Describe(
 						TVDBID:     511,
 						Name:       "Ada Lovelace",
 						ProfileURL: "https://img/ada.jpg",
-						PersonBio: db.PersonBio{
-							Biography: "A mathematician.",
-							KnownFor:  "Acting",
-							Birthday:  "1815-12-10",
-						},
+						Biography:  "A mathematician.",
+						KnownFor:   "Acting",
+						Birthday:   "1815-12-10",
 						Movies: []db.MovieCredit{{
 							Movie: &ent.Movie{
 								ID: 1, Title: "Alpha", Year: 2020,

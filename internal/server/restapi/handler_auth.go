@@ -18,18 +18,14 @@ func (s *Server) AuthMe(
 	claims := auth.ClaimsFromContext(ctx)
 	if claims == nil || claims.UserID == 0 {
 		return AuthMe401JSONResponse{
-			UnauthorizedJSONResponse: UnauthorizedJSONResponse{
-				Message: "unauthorized",
-			},
+			Message: "unauthorized",
 		}, nil
 	}
 	u, err := s.auth.GetUserByID(ctx, claims.UserID)
 	if err != nil {
 		if errors.Is(err, auth.ErrUserNotFound) {
 			return AuthMe401JSONResponse{
-				UnauthorizedJSONResponse: UnauthorizedJSONResponse{
-					Message: "unauthorized",
-				},
+				Message: "unauthorized",
 			}, nil
 		}
 		return nil, err
@@ -142,7 +138,7 @@ func (s *Server) RotateJWTSecret(
 		return nil, err
 	}
 	return RotateJWTSecret200JSONResponse{
-		JWTRotatedJSONResponse: JWTRotatedJSONResponse{Token: &tok},
+		Token: &tok,
 	}, nil
 }
 
@@ -160,10 +156,8 @@ func (s *Server) rotateJWTReadOnly(
 		}
 		pending := true
 		return RotateJWTSecret200JSONResponse{
-			JWTRotatedJSONResponse: JWTRotatedJSONResponse{
-				Pending: &pending,
-				Secret:  &secret,
-			},
+			Pending: &pending,
+			Secret:  &secret,
 		}, nil
 	}
 	tok, err := s.auth.ConfirmJWTRotation(ctx, callerID)
@@ -176,7 +170,7 @@ func (s *Server) rotateJWTReadOnly(
 		return nil, err
 	}
 	return RotateJWTSecret200JSONResponse{
-		JWTRotatedJSONResponse: JWTRotatedJSONResponse{Token: &tok},
+		Token: &tok,
 	}, nil
 }
 
@@ -195,7 +189,7 @@ func (s *Server) RevokeInvite(
 	if err := s.auth.RevokeInvite(ctx, req.Id); err != nil {
 		if ent.IsNotFound(err) {
 			return RevokeInvite404JSONResponse{
-				NotFoundJSONResponse: NotFoundJSONResponse{Message: "not found"},
+				Message: "not found",
 			}, nil
 		}
 		return nil, err

@@ -23,9 +23,7 @@ func (s *Server) ListMediaServers(
 		items = append(items, mediaServerToAPI(ms))
 	}
 	return ListMediaServers200JSONResponse{
-		MediaServerListJSONResponse: MediaServerListJSONResponse{
-			Items: items,
-		},
+		Items: items,
 	}, nil
 }
 
@@ -252,9 +250,7 @@ func (s *Server) DiscoverMediaServerSections(
 	}
 
 	return DiscoverMediaServerSections200JSONResponse{
-		MediaServerDiscoveredJSONResponse: MediaServerDiscoveredJSONResponse{
-			Sections: sectionsToAPI(sections),
-		},
+		Sections: sectionsToAPI(sections),
 	}, nil
 }
 
@@ -286,9 +282,7 @@ func (s *Server) DiscoverSavedMediaServerSections(
 	}
 
 	return DiscoverSavedMediaServerSections200JSONResponse{
-		MediaServerDiscoveredJSONResponse: MediaServerDiscoveredJSONResponse{
-			Sections: sectionsToAPI(sections),
-		},
+		Sections: sectionsToAPI(sections),
 	}, nil
 }
 

@@ -239,14 +239,12 @@ func (t *TMDB) GetMovie(ctx context.Context, tmdbID uint32) (*MovieDetails, erro
 	}
 
 	return &MovieDetails{
-		MovieResult: MovieResult{
-			TMDBID:        resp.ID,
-			Title:         title,
-			OriginalTitle: originalTitle,
-			Year:          extractYear(resp.ReleaseDate),
-			Overview:      overview,
-			PosterPath:    resp.PosterPath,
-		},
+		TMDBID:           resp.ID,
+		Title:            title,
+		OriginalTitle:    originalTitle,
+		Year:             extractYear(resp.ReleaseDate),
+		Overview:         overview,
+		PosterPath:       resp.PosterPath,
 		Genres:           genres,
 		Runtime:          numeric.SaturateU16(resp.Runtime),
 		Rating:           resp.VoteAverage,

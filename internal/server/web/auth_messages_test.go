@@ -38,9 +38,16 @@ var _ = Describe("userFacingRegisterError", Label("unit", "server"), func() {
 	})
 
 	It("never says whether the email is registered", func() {
+		// Held as an error rather than wrapped inline: ent's generated creates
+		// raise &ConstraintError and ent.IsConstraintError matches it with
+		// errors.As against a *ConstraintError target, so the pointer is the
+		// shape production raises. Error() has a value receiver, so vet reads a
+		// *ConstraintError operand of %w as defeating errors.Is and rejects it
+		// at compile time — inlining this back breaks the build.
+		var constraintErr error = &ent.ConstraintError{}
 		for _, err := range []error{
 			&ent.ConstraintError{},
-			fmt.Errorf("create user: %w", &ent.ConstraintError{}),
+			fmt.Errorf("create user: %w", constraintErr),
 			errors.New("db blew up"),
 		} {
 			msg := userFacingRegisterError(err)

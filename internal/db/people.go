@@ -211,22 +211,20 @@ func (db *DB) ListPeople(
 	out := make([]Person, 0, len(rows))
 	for _, r := range rows {
 		out = append(out, Person{
-			ID:         r.ID,
-			TMDBID:     r.TMDBID,
-			TVDBID:     r.TVDBID,
-			Name:       r.Name,
-			ProfileURL: r.ProfileURL,
-			PersonBio: PersonBio{
-				Biography:    r.Biography,
-				KnownFor:     r.KnownFor,
-				Birthday:     r.Birthday,
-				Deathday:     r.Deathday,
-				PlaceOfBirth: r.PlaceOfBirth,
-				IMDbID:       r.IMDbID,
-				InstagramID:  r.InstagramID,
-				TwitterID:    r.TwitterID,
-			},
-			Credits: r.Credits,
+			ID:           r.ID,
+			TMDBID:       r.TMDBID,
+			TVDBID:       r.TVDBID,
+			Name:         r.Name,
+			ProfileURL:   r.ProfileURL,
+			Biography:    r.Biography,
+			KnownFor:     r.KnownFor,
+			Birthday:     r.Birthday,
+			Deathday:     r.Deathday,
+			PlaceOfBirth: r.PlaceOfBirth,
+			IMDbID:       r.IMDbID,
+			InstagramID:  r.InstagramID,
+			TwitterID:    r.TwitterID,
+			Credits:      r.Credits,
 		})
 	}
 	return out, total, nil

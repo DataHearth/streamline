@@ -99,19 +99,17 @@ func (s *Server) GetMovieCounts(
 		trend = append(trend, numeric.SaturateU32(v))
 	}
 	return GetMovieCounts200JSONResponse{
-		MovieCountsResponseJSONResponse: MovieCountsResponseJSONResponse{
-			Total:          numeric.SaturateU32(counts.Total),
-			StatusTotal:    numeric.SaturateU32(counts.StatusTotal),
-			Wanted:         numeric.SaturateU32(counts.Wanted),
-			Downloading:    numeric.SaturateU32(counts.Downloading),
-			Importing:      numeric.SaturateU32(counts.Importing),
-			Available:      numeric.SaturateU32(counts.Available),
-			Failed:         numeric.SaturateU32(counts.Failed),
-			MonitoredTotal: numeric.SaturateU32(counts.MonitoredTotal),
-			Monitored:      numeric.SaturateU32(counts.Monitored),
-			Unmonitored:    numeric.SaturateU32(counts.Unmonitored),
-			Trend:          trend,
-		},
+		Total:          numeric.SaturateU32(counts.Total),
+		StatusTotal:    numeric.SaturateU32(counts.StatusTotal),
+		Wanted:         numeric.SaturateU32(counts.Wanted),
+		Downloading:    numeric.SaturateU32(counts.Downloading),
+		Importing:      numeric.SaturateU32(counts.Importing),
+		Available:      numeric.SaturateU32(counts.Available),
+		Failed:         numeric.SaturateU32(counts.Failed),
+		MonitoredTotal: numeric.SaturateU32(counts.MonitoredTotal),
+		Monitored:      numeric.SaturateU32(counts.Monitored),
+		Unmonitored:    numeric.SaturateU32(counts.Unmonitored),
+		Trend:          trend,
 	}, nil
 }
 
@@ -261,10 +259,8 @@ func (s *Server) SearchMovieNow(
 		}, nil
 	}
 	return SearchMovieNow202JSONResponse{
-		MovieSearchAcceptedJSONResponse: MovieSearchAcceptedJSONResponse{
-			MovieId:      request.Id,
-			DispatchedAt: time.Now().UTC(),
-		},
+		MovieId:      request.Id,
+		DispatchedAt: time.Now().UTC(),
 	}, nil
 }
 
@@ -326,7 +322,7 @@ func (s *Server) GetMoviePlayOnLinks(
 		items = append(items, playOnToAPI(r))
 	}
 	return GetMoviePlayOnLinks200JSONResponse{
-		MoviePlayOnLinksJSONResponse: MoviePlayOnLinksJSONResponse{Items: items},
+		Items: items,
 	}, nil
 }
 
@@ -370,10 +366,8 @@ func (s *Server) GrabMovieRelease(
 		}
 	}
 	return GrabMovieRelease202JSONResponse{
-		MovieSearchAcceptedJSONResponse: MovieSearchAcceptedJSONResponse{
-			MovieId:      request.Id,
-			DispatchedAt: time.Now().UTC(),
-		},
+		MovieId:      request.Id,
+		DispatchedAt: time.Now().UTC(),
 	}, nil
 }
 
@@ -524,9 +518,7 @@ func (s *Server) GetMovieRecommendations(
 	}
 
 	return GetMovieRecommendations200JSONResponse{
-		MovieRecommendationsJSONResponse: MovieRecommendationsJSONResponse{
-			Items: items,
-		},
+		Items: items,
 	}, nil
 }
 

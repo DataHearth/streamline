@@ -62,14 +62,12 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 			func() {
 				meta.EXPECT().GetMovie(mock.Anything, uint32(157336)).
 					Return(&metadata.MovieDetails{
-						MovieResult: metadata.MovieResult{
-							TMDBID:        157336,
-							Title:         "Interstellar",
-							OriginalTitle: "Interstellar",
-							Year:          2014,
-							Overview:      "A team travels through a wormhole.",
-							PosterPath:    "/abc.jpg",
-						},
+						TMDBID:        157336,
+						Title:         "Interstellar",
+						OriginalTitle: "Interstellar",
+						Year:          2014,
+						Overview:      "A team travels through a wormhole.",
+						PosterPath:    "/abc.jpg",
 					}, nil).Once()
 
 				done := make(chan struct{})
@@ -109,12 +107,10 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 		It("rejects a duplicate add for the same TMDB id", func() {
 			meta.EXPECT().GetMovie(mock.Anything, uint32(157336)).
 				Return(&metadata.MovieDetails{
-					MovieResult: metadata.MovieResult{
-						TMDBID:        157336,
-						Title:         "Interstellar",
-						OriginalTitle: "Interstellar",
-						Year:          2014,
-					},
+					TMDBID:        157336,
+					Title:         "Interstellar",
+					OriginalTitle: "Interstellar",
+					Year:          2014,
 				}, nil).Twice()
 
 			_, _, err := svc.Add(ctx, 157336, profileName)
@@ -130,12 +126,10 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 				const concurrency = 4
 				meta.EXPECT().GetMovie(mock.Anything, uint32(99)).
 					Return(&metadata.MovieDetails{
-						MovieResult: metadata.MovieResult{
-							TMDBID:        99,
-							Title:         "Solo",
-							OriginalTitle: "Solo",
-							Year:          2018,
-						},
+						TMDBID:        99,
+						Title:         "Solo",
+						OriginalTitle: "Solo",
+						Year:          2018,
 					}, nil).Times(concurrency)
 
 				start := make(chan struct{})
@@ -300,12 +294,10 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 			drd := time.Date(2025, 1, 15, 0, 0, 0, 0, time.UTC)
 			meta.EXPECT().GetMovie(mock.Anything, uint32(555)).
 				Return(&metadata.MovieDetails{
-					MovieResult: metadata.MovieResult{
-						TMDBID:        555,
-						Title:         "New Title",
-						OriginalTitle: "New Title",
-						Year:          2020,
-					},
+					TMDBID:        555,
+					Title:         "New Title",
+					OriginalTitle: "New Title",
+					Year:          2020,
 				}, nil).Once()
 			meta.EXPECT().
 				FetchDigitalRelease(mock.Anything, uint32(555), "US").
@@ -336,12 +328,10 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 
 				meta.EXPECT().GetMovie(mock.Anything, uint32(777)).
 					Return(&metadata.MovieDetails{
-						MovieResult: metadata.MovieResult{
-							TMDBID:        777,
-							Title:         "Stable",
-							OriginalTitle: "Stable",
-							Year:          2021,
-						},
+						TMDBID:        777,
+						Title:         "Stable",
+						OriginalTitle: "Stable",
+						Year:          2021,
 					}, nil).Once()
 				meta.EXPECT().
 					FetchDigitalRelease(mock.Anything, uint32(777), "US").

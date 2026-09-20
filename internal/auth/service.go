@@ -695,12 +695,10 @@ func (s *auth) issueToken(
 		DisplayName: u.DisplayName,
 		Role:        string(u.Role),
 		JTI:         jti,
-		RegisteredClaims: jwt.RegisteredClaims{
-			IssuedAt:  jwt.NewNumericDate(now),
-			ExpiresAt: jwt.NewNumericDate(now.Add(ttl)),
-			Issuer:    "streamline",
-			ID:        jti,
-		},
+		IssuedAt:    jwt.NewNumericDate(now),
+		ExpiresAt:   jwt.NewNumericDate(now.Add(ttl)),
+		Issuer:      "streamline",
+		ID:          jti,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

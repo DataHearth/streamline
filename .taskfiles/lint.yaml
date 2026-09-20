@@ -13,7 +13,7 @@ tasks:
     # Frontend assets must exist before the Go typechecker resolves the
     # //go:embed paths in web/embed.go.
     deps: [":build:js", ":build:css"]
-    cmd: go tool golangci-lint run ./...
+    cmd: go tool golangci-lint run ./... {{.CLI_ARGS}}
 
   frontend:
     desc: Lint JS/CSS (biome)

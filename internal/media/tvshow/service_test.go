@@ -55,17 +55,15 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 	It("fetches TVDB metadata and creates the show with a poster fetch", func() {
 		air := time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)
 		metaMk.GetSeries(mock.Anything, uint32(123)).Return(&metadata.TVDetails{
-			TVResult: metadata.TVResult{
-				TVDBID:     123,
-				Title:      "The Black Sea",
-				Year:       2023,
-				Network:    "Halcyon",
-				PosterPath: "/p.jpg",
-			},
-			Status:  "continuing",
-			Type:    metadata.SeriesStandard,
-			Genres:  []string{"Drama"},
-			Seasons: []metadata.SeasonInfo{{Number: 1}},
+			TVDBID:     123,
+			Title:      "The Black Sea",
+			Year:       2023,
+			Network:    "Halcyon",
+			PosterPath: "/p.jpg",
+			Status:     "continuing",
+			Type:       metadata.SeriesStandard,
+			Genres:     []string{"Drama"},
+			Seasons:    []metadata.SeasonInfo{{Number: 1}},
 			Episodes: []metadata.EpisodeInfo{
 				{SeasonNumber: 1, Number: 1, Title: "Pilot", AirDate: &air},
 			},
@@ -96,9 +94,9 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 
 	It("adds the show anyway when the cast fetch fails", func() {
 		metaMk.GetSeries(mock.Anything, uint32(123)).Return(&metadata.TVDetails{
-			TVResult: metadata.TVResult{TVDBID: 123, Title: "The Black Sea"},
-			Status:   "continuing",
-			Type:     metadata.SeriesStandard,
+			TVDBID: 123, Title: "The Black Sea",
+			Status: "continuing",
+			Type:   metadata.SeriesStandard,
 		}, nil).Once()
 		metaMk.GetSeriesCast(mock.Anything, uint32(123)).
 			Return(nil, errors.New("tvdb down")).
@@ -323,7 +321,7 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 		storeMk.FindTVShowByID(mock.Anything, uint32(7)).
 			Return(&ent.TVShow{ID: 7, TvdbID: 123}, nil).Twice()
 		metaMk.GetSeries(mock.Anything, uint32(123)).
-			Return(&metadata.TVDetails{TVResult: metadata.TVResult{TVDBID: 123, Title: "X"}}, nil).
+			Return(&metadata.TVDetails{TVDBID: 123, Title: "X"}, nil).
 			Once()
 		metaMk.GetSeriesCast(mock.Anything, uint32(123)).Return(nil, nil).Once()
 		storeMk.UpdateTVShowMetadata(mock.Anything, uint32(7), mock.Anything).
@@ -763,9 +761,7 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 	Describe("Reidentify", func() {
 		newShow := func() *metadata.TVDetails {
 			return &metadata.TVDetails{
-				TVResult: metadata.TVResult{
-					TVDBID: 999, Title: "Right Show", Year: 2019,
-				},
+				TVDBID: 999, Title: "Right Show", Year: 2019,
 				Status:  "continuing",
 				Type:    metadata.SeriesStandard,
 				Seasons: []metadata.SeasonInfo{{Number: 1, Name: "Season 1"}},

@@ -100,10 +100,8 @@ func (s *Server) ListImports(
 		apiItems = append(apiItems, toAPIImportScan(it))
 	}
 	return ListImports200JSONResponse{
-		ImportScanListJSONResponse: ImportScanListJSONResponse{
-			Items: apiItems,
-			Total: total,
-		},
+		Items: apiItems,
+		Total: total,
 	}, nil
 }
 
@@ -230,10 +228,8 @@ func (s *Server) ListImportFiles(
 		apiItems = append(apiItems, toAPIImportScanFile(it))
 	}
 	return ListImportFiles200JSONResponse{
-		ImportScanFileListJSONResponse: ImportScanFileListJSONResponse{
-			Items: apiItems,
-			Total: total,
-		},
+		Items: apiItems,
+		Total: total,
 	}, nil
 }
 
@@ -330,10 +326,8 @@ func (s *Server) ListImportShows(
 		apiItems = append(apiItems, toAPIImportScanShow(it))
 	}
 	return ListImportShows200JSONResponse{
-		ImportScanShowListJSONResponse: ImportScanShowListJSONResponse{
-			Items: apiItems,
-			Total: total,
-		},
+		Items: apiItems,
+		Total: total,
 	}, nil
 }
 
@@ -416,8 +410,6 @@ func (s *Server) BulkUpdateImportDecisions(
 		}
 	}
 	return BulkUpdateImportDecisions200JSONResponse{
-		ImportBulkDecisionResultJSONResponse: ImportBulkDecisionResultJSONResponse{
-			Updated: n,
-		},
+		Updated: n,
 	}, nil
 }

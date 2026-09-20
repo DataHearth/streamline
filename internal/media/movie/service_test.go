@@ -81,9 +81,7 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 			It("returns an already-exists error on constraint violation", func() {
 				metaMock.GetMovie(mock.Anything, uint32(157336)).
 					Return(&metadata.MovieDetails{
-						MovieResult: metadata.MovieResult{
-							TMDBID: 157336, Title: "Interstellar", Year: 2014,
-						},
+						TMDBID: 157336, Title: "Interstellar", Year: 2014,
 					}, nil).Once()
 				storeMock.CreateMovie(mock.Anything, mock.AnythingOfType("db.CreateMovieParams")).
 					Return(nil, &ent.ConstraintError{}).
@@ -96,7 +94,7 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 			It("wraps generic create errors", func() {
 				metaMock.GetMovie(mock.Anything, uint32(1)).
 					Return(&metadata.MovieDetails{
-						MovieResult: metadata.MovieResult{TMDBID: 1, Title: "X"},
+						TMDBID: 1, Title: "X",
 					}, nil).Once()
 				createErr := errors.New("insert blew up")
 				storeMock.CreateMovie(mock.Anything, mock.AnythingOfType("db.CreateMovieParams")).
@@ -111,10 +109,8 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 			It("dispatches poster fetch when TMDB returns a poster path", func() {
 				metaMock.GetMovie(mock.Anything, uint32(157336)).
 					Return(&metadata.MovieDetails{
-						MovieResult: metadata.MovieResult{
-							TMDBID: 157336, Title: "Interstellar", Year: 2014,
-							PosterPath: "/abc.jpg",
-						},
+						TMDBID: 157336, Title: "Interstellar", Year: 2014,
+						PosterPath: "/abc.jpg",
 					}, nil).Once()
 				storeMock.CreateMovie(mock.Anything, mock.MatchedBy(func(p db.CreateMovieParams) bool {
 					return p.TmdbID == 157336 &&
@@ -147,10 +143,8 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 				func() {
 					metaMock.GetMovie(mock.Anything, uint32(157336)).
 						Return(&metadata.MovieDetails{
-							MovieResult: metadata.MovieResult{
-								TMDBID: 157336, Title: "Interstellar", Year: 2014,
-								PosterPath: "/abc.jpg",
-							},
+							TMDBID: 157336, Title: "Interstellar", Year: 2014,
+							PosterPath: "/abc.jpg",
 						}, nil).Once()
 					storeMock.CreateMovie(mock.Anything, mock.AnythingOfType("db.CreateMovieParams")).
 						Return(&ent.Movie{ID: 11, Title: "Interstellar", TmdbID: 157336}, nil).
@@ -174,7 +168,7 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 			It("skips poster fetch when TMDB has no poster path", func() {
 				metaMock.GetMovie(mock.Anything, uint32(2)).
 					Return(&metadata.MovieDetails{
-						MovieResult: metadata.MovieResult{TMDBID: 2, Title: "NoArt"},
+						TMDBID: 2, Title: "NoArt",
 					}, nil).Once()
 				storeMock.CreateMovie(mock.Anything, mock.AnythingOfType("db.CreateMovieParams")).
 					Return(&ent.Movie{ID: 3, Title: "NoArt"}, nil).
@@ -559,13 +553,11 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 				Once()
 			metaMock.GetMovie(mock.Anything, uint32(42)).
 				Return(&metadata.MovieDetails{
-					MovieResult: metadata.MovieResult{
-						TMDBID:        42,
-						Title:         "New",
-						OriginalTitle: "Nouveau",
-						Year:          2024,
-						Overview:      "fresh",
-					},
+					TMDBID:        42,
+					Title:         "New",
+					OriginalTitle: "Nouveau",
+					Year:          2024,
+					Overview:      "fresh",
 				}, nil).
 				Once()
 			storeMock.UpdateMovieMetadata(
@@ -589,12 +581,10 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 				Return(nil, errors.New("tmdb 404")).Once()
 			metaMock.GetMovie(mock.Anything, uint32(2)).
 				Return(&metadata.MovieDetails{
-					MovieResult: metadata.MovieResult{
-						TMDBID:        2,
-						Title:         "B",
-						OriginalTitle: "B",
-						Year:          2024,
-					},
+					TMDBID:        2,
+					Title:         "B",
+					OriginalTitle: "B",
+					Year:          2024,
 				}, nil).
 				Once()
 			storeMock.UpdateMovieMetadata(
@@ -652,12 +642,10 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 			// loaded with — the whole point of the swap.
 			metaMock.GetMovie(mock.Anything, uint32(604)).
 				Return(&metadata.MovieDetails{
-					MovieResult: metadata.MovieResult{
-						TMDBID:        604,
-						Title:         "The Matrix Reloaded",
-						OriginalTitle: "The Matrix Reloaded",
-						Year:          2003,
-					},
+					TMDBID:        604,
+					Title:         "The Matrix Reloaded",
+					OriginalTitle: "The Matrix Reloaded",
+					Year:          2003,
 				}, nil).Once()
 			storeMock.UpdateMovieMetadata(
 				mock.Anything, uint32(7), db.UpdateMovieMetadataParams{
@@ -724,12 +712,10 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 				Once()
 			metaMock.GetMovie(mock.Anything, uint32(42)).
 				Return(&metadata.MovieDetails{
-					MovieResult: metadata.MovieResult{
-						TMDBID:        42,
-						Title:         "New",
-						OriginalTitle: "Nouveau",
-						Year:          2024,
-					},
+					TMDBID:        42,
+					Title:         "New",
+					OriginalTitle: "Nouveau",
+					Year:          2024,
 				}, nil).
 				Once()
 			storeMock.UpdateMovieMetadata(

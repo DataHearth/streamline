@@ -60,10 +60,8 @@ func (s *Server) ListUsers(
 		out = append(out, toAPIUser(u))
 	}
 	return ListUsers200JSONResponse{
-		UsersListJSONResponse: UsersListJSONResponse{
-			Items: out,
-			Total: numeric.SaturateU32(total),
-		},
+		Items: out,
+		Total: numeric.SaturateU32(total),
 	}, nil
 }
 
@@ -142,11 +140,9 @@ func (s *Server) GetUser(
 		apiSessions = append(apiSessions, toAPISession(sess, claims.JTI))
 	}
 	return GetUser200JSONResponse{
-		UserDetailJSONResponse: UserDetailJSONResponse{
-			User:     toAPIUser(u),
-			ApiKeys:  apiKeys,
-			Sessions: apiSessions,
-		},
+		User:     toAPIUser(u),
+		ApiKeys:  apiKeys,
+		Sessions: apiSessions,
 	}, nil
 }
 

@@ -75,11 +75,9 @@ var _ = Describe(
 				tvmeta.EXPECT().
 					GetSeries(mock.Anything, tvdbID).
 					Return(&metadata.TVDetails{
-						TVResult: metadata.TVResult{
-							TVDBID: tvdbID,
-							Title:  "Breaking Bad",
-							Year:   2008,
-						},
+						TVDBID: tvdbID,
+						Title:  "Breaking Bad",
+						Year:   2008,
 						Status: "ended",
 						Type:   metadata.SeriesStandard,
 						Seasons: []metadata.SeasonInfo{
@@ -304,9 +302,7 @@ var _ = Describe(
 				const tvdbID = uint32(81189)
 				tvmeta.EXPECT().GetSeries(mock.Anything, tvdbID).
 					Return(&metadata.TVDetails{
-						TVResult: metadata.TVResult{
-							TVDBID: tvdbID, Title: "Breaking Bad", Year: 2008,
-						},
+						TVDBID: tvdbID, Title: "Breaking Bad", Year: 2008,
 						Status: "ended",
 						Type:   metadata.SeriesStandard,
 						Seasons: []metadata.SeasonInfo{
@@ -411,9 +407,7 @@ var _ = Describe(
 				tvmeta.EXPECT().
 					GetSeries(mock.Anything, tvdbID).
 					Return(&metadata.TVDetails{
-						TVResult: metadata.TVResult{
-							TVDBID: tvdbID, Title: "Better Call Saul", Year: 2015,
-						},
+						TVDBID: tvdbID, Title: "Better Call Saul", Year: 2015,
 						Status: "ended",
 						Type:   metadata.SeriesStandard,
 						Seasons: []metadata.SeasonInfo{
