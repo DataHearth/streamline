@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"math"
 	"net"
+	"net/url"
 	"os"
 	"path/filepath"
 	"time"
@@ -26,6 +27,37 @@ import (
 )
 
 var _ download.Client = (*Engine)(nil)
+
+// dropUnusableTrackers removes announce URLs anacrolix would assert on, and
+// reports how many went.
+//
+// A tracker URL that does not survive url.Parse + String() unchanged trips a
+// panicif.NotEq inside the announcer — on the request goroutine for the add
+// itself, and again on the background announce goroutine. Both are recovered,
+// so the process lives, but the grab answers 500 and the half-added torrent
+// stays registered. A tracker is a peer-discovery hint, not the torrent's
+// identity, so a malformed one is dropped rather than made a reason to refuse
+// the content: DHT and the remaining trackers still find peers. What was
+// dropped is logged, since a magnet whose *only* tracker was unusable will
+// look slow for no visible reason.
+func dropUnusableTrackers(tiers [][]string) ([][]string, int) {
+	dropped := 0
+	out := make([][]string, 0, len(tiers))
+	for _, tier := range tiers {
+		kept := make([]string, 0, len(tier))
+		for _, tr := range tier {
+			if u, err := url.Parse(tr); err == nil && u.String() == tr {
+				kept = append(kept, tr)
+				continue
+			}
+			dropped++
+		}
+		if len(kept) > 0 {
+			out = append(out, kept)
+		}
+	}
+	return out, dropped
+}
 
 // specFromSource builds a torrent spec plus the persistable source fields.
 // Exactly one of Magnet/Bytes must be set (mirrors download.TorrentSource).
@@ -80,6 +112,12 @@ func (e *Engine) AddTorrent(
 		return "", otelx.RecordSpanError(span, err)
 	}
 	hash := spec.InfoHash.HexString()
+	if trackers, dropped := dropUnusableTrackers(spec.Trackers); dropped > 0 {
+		spec.Trackers = trackers
+		span.SetAttributes(attribute.Int("trackers.dropped", dropped))
+		slog.WarnContext(ctx, "ignoring unusable announce URLs",
+			"hash", hash, "dropped", dropped, "remaining", len(trackers))
+	}
 
 	// Decided at add time, before AddTorrentSpec below can ever start pulling
 	// pieces (spec §4.4 builtin). A selective magnet has no keep-set yet —
@@ -116,6 +154,14 @@ func (e *Engine) AddTorrent(
 	}
 	t, _, err := e.client.AddTorrentSpec(spec)
 	if err != nil {
+		// The session row is written first so a crash between the two cannot
+		// lose the torrent, which means a *failed* add has to take it back
+		// out: AddTorrentSpec registers the torrent before it can fail, so
+		// what is left behind is a torrent the caller was told does not
+		// exist. It survives a restart (boot re-adds every session row),
+		// shows up in the queue, and re-adding the same hash hits the same
+		// failure again — the only way out was deleting it by hand.
+		e.rollbackAdd(ctx, hash)
 		return "", otelx.RecordSpanError(span, fmt.Errorf("add torrent: %w", err))
 	}
 	// Gated on freshness like addedAt: a duplicate-hash add (the
@@ -156,6 +202,27 @@ func (e *Engine) ListTorrents(ctx context.Context) ([]download.Torrent, error) {
 		out = append(out, e.view(t))
 	}
 	return out, nil
+}
+
+// rollbackAdd undoes a partial AddTorrent: the session row it wrote up front,
+// the torrent anacrolix may already have registered, and the in-memory state.
+// Never deletes files — an add that failed transferred none, and the only
+// thing on disk under that name would be a previous torrent's.
+//
+// Every step is best-effort and logged rather than returned: the caller is
+// already failing the add, and the error it reports is the one worth seeing.
+func (e *Engine) rollbackAdd(ctx context.Context, hash string) {
+	if t, err := e.torrent(hash); err == nil {
+		t.Drop()
+	}
+	if err := e.store.DeleteTorrentSessionByHash(ctx, hash); err != nil {
+		slog.WarnContext(ctx, "could not drop the session of a failed add",
+			"hash", hash, "error", err)
+	}
+	e.mu.Lock()
+	delete(e.state, hash)
+	delete(e.sample, hash)
+	e.mu.Unlock()
 }
 
 func (e *Engine) RemoveTorrent(

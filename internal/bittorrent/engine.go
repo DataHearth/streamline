@@ -507,6 +507,16 @@ func (e *Engine) restore(ctx context.Context) error {
 				"info_hash", s.InfoHash, "error", err)
 			continue
 		}
+		// Same guard as the add path, and it matters more here: the panic an
+		// unusable announce URL triggers would land on the boot goroutine,
+		// and a magnet stored before that guard existed is replayed on every
+		// start.
+		if trackers, dropped := dropUnusableTrackers(spec.Trackers); dropped > 0 {
+			spec.Trackers = trackers
+			slog.WarnContext(ctx, "ignoring unusable announce URLs",
+				"info_hash", s.InfoHash, "dropped", dropped,
+				"remaining", len(trackers))
+		}
 		t, _, err := e.client.AddTorrentSpec(spec)
 		if err != nil {
 			slog.WarnContext(ctx, "failed to re-add torrent",

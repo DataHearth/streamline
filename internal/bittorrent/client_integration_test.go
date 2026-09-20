@@ -344,6 +344,43 @@ var _ = Describe("Engine download flow", Label("integration", "bittorrent"), fun
 		engine, stopEngine = newEngine(ctx, dlDir, store)
 	})
 
+	// A magnet whose tr= param carried trailing junk used to panic inside
+	// AddTorrentSpec — on this goroutine and on the announcer's — leaving the
+	// caller a 500 and the torrent registered anyway.
+	It("adds a magnet whose announce URL is malformed, minus that tracker",
+		func() {
+			hash, err := engine.AddTorrent(ctx, download.TorrentSource{
+				Magnet: "magnet:?xt=urn:btih:" +
+					"aabbccddeeff00112233445566778899aabbccdd" +
+					"&dn=busted&tr=http%3A%2F%2F127.0.0.1%3A9117%2Fannounce%3C%2Flink%3E",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(hash).To(Equal("aabbccddeeff00112233445566778899aabbccdd"))
+
+			t, err := engine.GetTorrent(ctx, hash)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(t.Hash).To(Equal(hash))
+		},
+	)
+
+	It("leaves nothing behind when an add fails", func() {
+		// rollbackAdd is what AddTorrent runs when AddTorrentSpec fails, and
+		// the session row it has to take back out was written before the add
+		// could fail.
+		hash := "00112233445566778899aabbccddeeff00112233"
+		Expect(store.CreateTorrentSession(ctx, db.CreateTorrentSessionParams{
+			InfoHash: hash, Name: "half-added", SavePath: dlDir,
+		})).Error().NotTo(HaveOccurred())
+
+		engine.rollbackAdd(ctx, hash)
+
+		sessions, err := store.ListTorrentSessions(ctx)
+		Expect(err).NotTo(HaveOccurred())
+		for _, s := range sessions {
+			Expect(s.InfoHash).NotTo(Equal(hash))
+		}
+	})
+
 	It("downloads a torrent to completion and reports status", func() {
 		hash, err := engine.AddTorrent(ctx, download.TorrentSource{
 			Bytes: torrentBytes,

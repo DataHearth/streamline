@@ -55,6 +55,40 @@ var _ = Describe("specFromSource", Label("unit", "bittorrent"), func() {
 	})
 })
 
+var _ = Describe("dropUnusableTrackers", Label("unit", "bittorrent"), func() {
+	It("keeps announce URLs that survive a parse round-trip", func() {
+		in := [][]string{{
+			"http://127.0.0.1:9117/announce",
+			"udp://tracker.example:1337/announce",
+		}}
+		out, dropped := dropUnusableTrackers(in)
+		Expect(dropped).To(Equal(0))
+		Expect(out).To(Equal(in))
+	})
+
+	// The real shape: a magnet whose tr= param swallowed the XML tag that
+	// followed it in the feed. url.Parse accepts it and re-escapes on
+	// String(), which is exactly the inequality anacrolix asserts on — the
+	// panic reached both the request goroutine and the announcer's.
+	It("drops an announce URL that does not round-trip", func() {
+		out, dropped := dropUnusableTrackers([][]string{{
+			"http://127.0.0.1:9117/announce</link>",
+			"http://127.0.0.1:9117/announce",
+		}})
+		Expect(dropped).To(Equal(1))
+		Expect(out).To(Equal([][]string{{"http://127.0.0.1:9117/announce"}}))
+	})
+
+	It("drops a tier that loses every URL, rather than leaving it empty", func() {
+		out, dropped := dropUnusableTrackers([][]string{
+			{"http://ok.example/announce"},
+			{"http://bad.example/announce</link>"},
+		})
+		Expect(dropped).To(Equal(1))
+		Expect(out).To(Equal([][]string{{"http://ok.example/announce"}}))
+	})
+})
+
 var _ = Describe("Engine.status", Label("unit", "bittorrent"), func() {
 	// A partial selection must never block completion: BytesMissing counts
 	// the skipped file's pieces forever, which is exactly what wantedMissing
