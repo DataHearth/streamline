@@ -2,14 +2,16 @@
   lib,
   stdenvNoCC,
   buildGoModule,
+  callPackage,
   fetchPnpmDeps,
   pnpmConfigHook,
   pnpm,
-  nodejs,
   nix-update-script,
   version ? "3.1.0",
 }:
 let
+  go = callPackage ./go.nix { };
+  nodejs = callPackage ./node.nix { };
   # The build tree, minus everything the frontend build regenerates. Those
   # outputs are gitignored, so they are absent in CI and present on a
   # developer's machine — including them would make the source hash depend on
@@ -102,7 +104,7 @@ let
     '';
   });
 in
-buildGoModule {
+(buildGoModule.override { inherit go; }) {
   pname = "streamline";
   inherit version src;
 

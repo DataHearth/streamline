@@ -36,6 +36,10 @@
       ];
       perSystem =
         { pkgs, self', ... }:
+        let
+          go = pkgs.callPackage ./nix/go.nix { };
+          nodejs = pkgs.callPackage ./nix/node.nix { };
+        in
         {
           packages = {
             streamline = pkgs.callPackage ./nix/package.nix { };
@@ -108,6 +112,15 @@
                 name = "CGO_ENABLED";
                 value = 0;
               }
+              # buildGoModule sets this for `nix build`, nothing sets it for
+              # `nix develop` — and the default, `auto`, downloads whatever
+              # toolchain go.mod asks for. That would paper over exactly the
+              # mismatch nix/go.nix exists to refuse, in the one shell that is
+              # supposed to be the reproduction.
+              {
+                name = "GOTOOLCHAIN";
+                value = "local";
+              }
               {
                 name = "CHROME_PATH";
                 value = "${pkgs.chromium}/bin/chromium";
@@ -122,7 +135,7 @@
               }
               {
                 name = "PLAYWRIGHT_NODEJS_PATH";
-                value = "${pkgs.nodejs}/bin/node";
+                value = "${nodejs}/bin/node";
               }
               {
                 name = "KUBECONFIG";
@@ -132,8 +145,14 @@
             packages = with pkgs; [
               act
               git-cliff
+              # The let-bound pins from nix/{go,node}.nix, not `pkgs.go` and
+              # `pkgs.nodejs` — a `let` binding wins over `with pkgs`. The
+              # devshell must be on the same compiler and runtime as CI.
               go
               gopls
+              # The let-bound pin from nix/node.nix, not `pkgs.nodejs` — a
+              # `let` binding wins over `with pkgs`. The devshell and the
+              # package build must agree with what CI installs.
               nodejs
               # package.json pins pnpm@12, which nixpkgs does not carry yet.
               # The lockfile is v9, which 11 reads and writes identically, so

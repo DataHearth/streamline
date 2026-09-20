@@ -1,6 +1,9 @@
 {
   "private": true,
   "packageManager": "pnpm@12.3.4",
+  "engines": {
+    "node": ">=24.20.0"
+  },
   "devDependencies": {
     "@inlang/paraglide-js": "^2.23.1",
     "@inlang/plugin-message-format": "^4.4.1",

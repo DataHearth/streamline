@@ -1,0 +1,128 @@
+name: Renovate pins
+
+# flake.lock's nixpkgs decides both toolchain versions; go.mod, package.json,
+# deploy/Dockerfile and the workflows only record what it decided. Renovate
+# moves the lock and can derive none of the rest, so this job derives it, on
+# renovate's own branch, before CI reads any of it:
+#
+#   1. the two toolchain versions, read back out of the locked nixpkgs
+#   2. the two base-image digests, which follow the tags step 1 just wrote
+#      — the digest is what resolves, so a tag moved without it silently keeps
+#        building the old image
+#   3. vendorHash and pnpmDeps.hash, which follow go.sum and pnpm-lock.yaml
+#
+# nix/{go,node}.nix refuse to evaluate when a declaration and the locked package
+# disagree, so step 1 is not a convenience: without it every lock bump lands as a
+# red PR. Doing it here rather than through a renovate manager is what keeps the
+# two numbers from ever being sourced separately.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - flake.lock
+      - go.mod
+      - go.sum
+      - pnpm-lock.yaml
+      - deploy/Dockerfile
+      - nix/package.nix
+
+permissions:
+  contents: write
+
+jobs:
+  pins:
+    # Only renovate's own branches: on any other PR a stale pin is a mistake
+    # worth seeing, not something to paper over with a commit the author did
+    # not write. A human moving the lock gets the same repair by hand — the
+    # throw from nix/{go,node}.nix names both versions.
+    if: startsWith(github.head_ref, 'renovate/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+
+      # Runs before anything writes to the tree: `builtins.getFlake` on a dirty
+      # working copy ingests the whole checkout before it evaluates anything.
+      - name: Toolchain declarations
+        id: toolchains
+        run: |
+          set -euo pipefail
+
+          # Only the patch is ever synced. The minor and the major are a
+          # deliberate choice and are read back out of the files, so moving to a
+          # new Go minor or Node major stays a human edit.
+          attr_go="go_$(sed -n 's/^go \([0-9]\+\)\.\([0-9]\+\).*/\1_\2/p' go.mod)"
+          attr_node="nodejs_$(jq -r '.engines.node' package.json | sed 's/^>=//' | cut -d. -f1)"
+
+          locked() {
+            nix eval --raw --impure --expr \
+              "(builtins.getFlake (toString ./.)).inputs.nixpkgs.legacyPackages.\${builtins.currentSystem}.$1.version"
+          }
+
+          go_version=$(locked "$attr_go")
+          node_version=$(locked "$attr_node")
+          echo "Locked nixpkgs: $attr_go = $go_version, $attr_node = $node_version"
+
+          sed -i "s/^go .*/go ${go_version}/" go.mod
+          sed -i "s/^ARG GO_VERSION=.*/ARG GO_VERSION=${go_version}/" deploy/Dockerfile
+
+          # `>=` is the floor for anyone building without the devshell; the
+          # devshell itself is held to the exact value by nix/node.nix.
+          sed -i "s|\"node\": \">=.*\"|\"node\": \">=${node_version}\"|" package.json
+          sed -i "s|FROM node:[^-]*-alpine|FROM node:${node_version}-alpine|" deploy/Dockerfile
+          sed -i "s/^\( *node-version: \).*/\1${node_version}/" .github/workflows/*.yaml
+
+      - name: Base image digests
+        run: |
+          set -euo pipefail
+
+          redigest() {
+            local image=$1 have=$2 want
+            want=$(docker buildx imagetools inspect "$image" --format '{{.Manifest.Digest}}')
+            [ "$want" = "$have" ] || sed -i "s|$have|$want|" deploy/Dockerfile
+          }
+
+          go_tag=$(sed -n 's/^ARG GO_VERSION=//p' deploy/Dockerfile)-alpine
+          redigest "golang:${go_tag}" "$(sed -n 's/^ARG GO_DIGEST=//p' deploy/Dockerfile)"
+
+          # Read as one string so the digest is always the one written next to
+          # that exact tag, whatever order the two were rewritten in.
+          node_ref=$(grep -oP 'FROM node:\K\S+' deploy/Dockerfile)
+          redigest "node:${node_ref%@*}" "${node_ref#*@}"
+
+      # vendorHash and pnpmDeps.hash are ordinary fixed-output derivations, so
+      # nix-update rewrites both in place from a real build. --version=skip
+      # keeps it off the `version ?` default, which release:app:changelog owns.
+      - name: Package hashes
+        run: nix run nixpkgs#nix-update -- --flake --version=skip streamline
+
+      - name: Commit
+        id: commit
+        run: |
+          if git diff --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          git diff --name-only | sed 's/^/  /' >> "$GITHUB_STEP_SUMMARY"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "chore(deps): derive the pins renovate cannot compute"
+          git push
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Renovate pins" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ steps.commit.outputs.changed }}" = "true" ]; then
+            echo "✅ Derived — see the files above" >> "$GITHUB_STEP_SUMMARY"
+          elif [ "${{ job.status }}" = "success" ]; then
+            echo "⏭️ All pins already current" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "❌ Could not derive the pins" >> "$GITHUB_STEP_SUMMARY"
+          fi

@@ -31,8 +31,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          # renovate: datasource=node-version depName=node versioning=node
-          node-version: 24
+          node-version: 24.20.0
           cache: pnpm
       - name: Install Task
         uses: arduino/setup-task@c0bc642852239c2689f73f4ea6459c29405f3c52 # v3.0.0
@@ -67,8 +66,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          # renovate: datasource=node-version depName=node versioning=node
-          node-version: 24
+          node-version: 24.20.0
           cache: pnpm
       - name: Install Task
         uses: arduino/setup-task@c0bc642852239c2689f73f4ea6459c29405f3c52 # v3.0.0
@@ -128,8 +126,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          # renovate: datasource=node-version depName=node versioning=node
-          node-version: 24
+          node-version: 24.20.0
           cache: pnpm
       - name: Install Task
         uses: arduino/setup-task@c0bc642852239c2689f73f4ea6459c29405f3c52 # v3.0.0
@@ -166,8 +163,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          # renovate: datasource=node-version depName=node versioning=node
-          node-version: 24
+          node-version: 24.20.0
           cache: pnpm
       - name: Install Task
         uses: arduino/setup-task@c0bc642852239c2689f73f4ea6459c29405f3c52 # v3.0.0

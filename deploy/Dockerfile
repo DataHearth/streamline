@@ -10,8 +10,8 @@
 # Pinned, not floating `1.26-alpine`: a moving tag made grype's stdlib findings
 # drift between builds independently of our code. The cost is that stdlib CVE
 # fixes now require bumping this by hand — grype failing on `stdlib` is the signal.
-ARG GO_VERSION=1.26.6
-ARG GO_DIGEST=sha256:af8d6740070b8906d12eae1c3e3ea0957fb63f492051ea05e354c38ef9fe88df
+ARG GO_VERSION=1.27.1
+ARG GO_DIGEST=sha256:4cb7ac979db5fcc41cae44b2227ba5ab8a51e8807f40d9ba4dee20a0ad960b5b
 
 # static-ffmpeg publishes hardened static PIE builds with no external deps,
 # which is what lets a bare COPY of the binaries into distroless (no package
@@ -20,7 +20,7 @@ ARG FFMPEG_VERSION=9.0
 ARG FFMPEG_DIGEST=sha256:b90574a4e2ae62b763c39c384526689e7eb435da6398f4fb3f6c3f1c6a14ce33
 
 # --- Frontend assets (esbuild + TailwindCSS) ---
-FROM node:24-alpine@sha256:e67514e5d0f6c46656005e1b693b2ec9d52e80b641307de684d4a015ba7a4eaf AS frontend
+FROM node:24.20.0-alpine@sha256:e67514e5d0f6c46656005e1b693b2ec9d52e80b641307de684d4a015ba7a4eaf AS frontend
 WORKDIR /app
 
 RUN corepack enable

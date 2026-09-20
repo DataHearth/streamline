@@ -10,17 +10,7 @@
 	"minimumReleaseAge": "3 days",
 	"labels": ["dependencies"],
 	"reviewers": ["DataHearth"],
-	"customManagers": [
-		{
-			"description": "Renovate has no built-in support for actions/setup-node, so a workflow's node-version is read from the annotation comment above it. Without this the Node runtime moves in the Dockerfile and stays pinned in CI.",
-			"customType": "regex",
-			"managerFilePatterns": ["/^\\.github/workflows/[^/]+\\.ya?ml$/"],
-			"matchStrings": [
-				"# renovate: datasource=(?<datasource>[a-z-]+?) depName=(?<depName>[^\\s]+?)(?: versioning=(?<versioning>[a-z-]+?))?\\s+[\\w-]+?-version: (?<currentValue>.+?)\\n"
-			],
-			"versioningTemplate": "{{#if versioning}}{{{versioning}}}{{else}}semver{{/if}}"
-		}
-	],
+	"postUpdateOptions": ["gomodTidy"],
 	"packageRules": [
 		{
 			"matchManagers": ["gomod"],
@@ -56,25 +46,20 @@
 			"dependencyDashboardApproval": true
 		},
 		{
-			"description": "A toolchain version is declared in several files at once, so each one is bundled into a single PR. These rules come last on purpose: the later rule wins, so they override both the per-manager groupName above and the major-update dashboard gate.",
+			"description": "Neither toolchain version is renovate's to choose: flake.lock's nixpkgs decides both, and go.mod, package.json, deploy/Dockerfile and the workflows only record what it decided. Left on, these managers would each offer upstream's newest release instead — the one version nix cannot use. nix/{go,node}.nix refuse to evaluate when a declaration and the locked package disagree, so an offer like that cannot merge anyway; it would just be a permanently red PR.",
 			"matchManagers": ["gomod"],
 			"matchDepTypes": ["golang", "toolchain"],
-			"rangeStrategy": "bump",
-			"groupName": "go runtime",
-			"dependencyDashboardApproval": false
+			"enabled": false
 		},
 		{
-			"description": "The rest of the Go runtime: the golang base image's version ARG and its digest, plus any go-version a workflow pins directly (CI reads go.mod today, so this only matters if that changes).",
-			"matchManagers": ["dockerfile", "github-actions"],
-			"matchDepNames": ["golang", "go"],
-			"groupName": "go runtime",
-			"dependencyDashboardApproval": false
+			"matchManagers": ["npm", "dockerfile"],
+			"matchDepNames": ["node", "golang"],
+			"enabled": false
 		},
 		{
-			"description": "The Node runtime: the node base image and the node-version each workflow installs, the latter via the custom manager above.",
-			"matchManagers": ["dockerfile", "github-actions", "custom.regex"],
-			"matchDepNames": ["node"],
-			"groupName": "node runtime",
+			"description": "The PR that does move both toolchains. .github/workflows/renovate-pins.yaml rewrites every declaration from the newly locked package on this branch, before CI reads them, so the bump and the four files that record it land together. Last on purpose — the later rule wins, so this overrides the major-update dashboard gate above, which a nixpkgs revision would otherwise sit behind forever.",
+			"matchManagers": ["nix"],
+			"groupName": "nix inputs",
 			"dependencyDashboardApproval": false
 		},
 		{
