@@ -313,7 +313,7 @@ func (e *Engine) ResumeTorrent(ctx context.Context, hash string) error {
 			s.wantedFiles = nil
 		})
 		if t.Info() != nil {
-			applyFilePriorities(t, "all", nil)
+			e.prioritize(t, "all", nil)
 		}
 	}
 	e.setState(hash, func(st *torrentState) { st.paused = false })
@@ -382,7 +382,7 @@ func (e *Engine) SetWantedFiles(
 	st := e.getState(hash)
 	newlyWanted := newlyWantedIndexes(st.selectionMode, st.wantedFiles, wanted)
 
-	applyFilePriorities(t, "explicit", wanted)
+	e.prioritize(t, "explicit", wanted)
 	if err := e.store.SetTorrentSessionSelection(
 		ctx, hash, "explicit", wanted,
 	); err != nil {
@@ -736,6 +736,17 @@ func (e *Engine) status(
 	// monitor reads as "ready to import". It is still fetching, just fetching
 	// the answer to which files it wants rather than the metainfo.
 	if st.selectionMode == "pending" {
+		return download.StatusFetching
+	}
+	// The same zero, one step earlier: priorities are applied off the
+	// caller's goroutine (startWhenReady), so every mode — not just pending
+	// — has a window where the torrent is registered with the client and no
+	// file has left PiecePriorityNone yet. A magnet is covered by the Info
+	// check above, but a .torrent resolves its info synchronously and lands
+	// here with wantedMissing already 0. Ratio and progress divide by that
+	// same zero, which is what made this visible: a restored torrent read
+	// back as seeding at 0% with ratio 0.
+	if !st.prioritized {
 		return download.StatusFetching
 	}
 	if wantedMissing(t) == 0 {

@@ -58,6 +58,15 @@ type torrentState struct {
 	// restart can't erase a skip the way the old unconditional bump did.
 	selectionMode string
 	wantedFiles   []int
+	// prioritized records that the selection's priorities have been applied
+	// at least once, and is what status reports StatusFetching against until
+	// then. Every file starts at anacrolix's PiecePriorityNone, so before
+	// that pass wantedBytes is 0 and so is wantedMissing — which the
+	// completed branch reads as "nothing left to fetch". Raised only by
+	// prioritize, and never persisted: a restart re-applies priorities from
+	// the session row, so carrying it across one would claim a pass that has
+	// not run yet.
+	prioritized bool
 }
 
 type speedSample struct {
@@ -567,7 +576,7 @@ func (e *Engine) startWhenReady(t *antorrent.Torrent, seedStopped bool) {
 		}
 		hash := t.InfoHash().HexString()
 		st := e.getState(hash)
-		applyFilePriorities(t, st.selectionMode, st.wantedFiles)
+		e.prioritize(t, st.selectionMode, st.wantedFiles)
 		if err := e.store.SetTorrentSessionName(
 			context.Background(), hash, t.Name(),
 		); err != nil {
@@ -575,6 +584,19 @@ func (e *Engine) startWhenReady(t *antorrent.Torrent, seedStopped bool) {
 				"persisting resolved torrent name failed",
 				"info_hash", hash, "error", err)
 		}
+	})
+}
+
+// prioritize is the only way file priorities are ever applied. It runs
+// applyFilePriorities and then raises the state's prioritized flag, so the
+// window between a torrent being registered with the client and its
+// selection taking effect has exactly one closing point — the window status
+// reports as StatusFetching rather than letting an all-None torrent read as
+// seeding.
+func (e *Engine) prioritize(t *antorrent.Torrent, mode string, wanted []int) {
+	applyFilePriorities(t, mode, wanted)
+	e.setState(t.InfoHash().HexString(), func(st *torrentState) {
+		st.prioritized = true
 	})
 }
 

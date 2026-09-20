@@ -167,7 +167,7 @@ var _ = Describe("Engine file selection", Label("unit", "bittorrent"), func() {
 			eng.setState(hash, func(s *torrentState) {
 				s.selectionMode = "all"
 			})
-			applyFilePriorities(t, "all", nil)
+			eng.prioritize(t, "all", nil)
 			Expect(eng.status(t, hash)).To(Equal(download.StatusSeeding))
 		},
 	)

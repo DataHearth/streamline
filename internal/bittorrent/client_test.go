@@ -97,17 +97,39 @@ var _ = Describe("Engine.status", Label("unit", "bittorrent"), func() {
 		"reports seeding, not downloading, when a skipped file is the only gap",
 		func() {
 			t := newPartialTorrent()
-			applyFilePriorities(t, "all", nil)
+			e := &Engine{state: map[string]*torrentState{}}
+			e.prioritize(t, "all", nil)
 			t.Files()[0].SetPriority(types.PiecePriorityNone)
 			Expect(t.BytesMissing()).NotTo(BeZero(),
 				"fixture invariant: the skipped file's corrupted piece must still read as missing")
 
-			e := &Engine{}
 			Expect(
 				e.status(t, t.InfoHash().HexString()),
 			).To(Equal(download.StatusSeeding))
 		},
 	)
+
+	// The window between AddTorrentSpec and startWhenReady's priority pass:
+	// every file is still at PiecePriorityNone, so the wanted-file totals
+	// the completed branch divides by are 0. Reporting seeding there hands
+	// the download monitor an import-ready torrent that holds nothing, and
+	// ratio and progress both come back 0 for the same reason.
+	It("reports fetching until file priorities have been applied", func() {
+		t := newTestTorrent()
+		e := &Engine{state: map[string]*torrentState{}}
+		hash := t.InfoHash().HexString()
+
+		Expect(wantedBytes(t)).To(BeZero(),
+			"fixture invariant: an unprioritized torrent wants no bytes")
+		Expect(wantedMissing(t)).To(BeZero(),
+			"fixture invariant: which leaves the completed branch nothing to miss")
+		Expect(e.status(t, hash)).To(Equal(download.StatusFetching))
+
+		e.prioritize(t, "all", nil)
+
+		Expect(e.status(t, hash)).To(Equal(download.StatusSeeding))
+		Expect(ratio(4096, wantedBytes(t))).To(BeNumerically(">", 0))
+	})
 })
 
 var _ = Describe("Engine.SetListenPort", Label("unit", "bittorrent"), func() {
