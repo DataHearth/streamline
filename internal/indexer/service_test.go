@@ -393,6 +393,40 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 			))
 		})
 
+		// The homelab case: a "Narcos" season-2 search came back holding only
+		// Narcos Mexico, whose name starts with the show's. Prefix tolerance
+		// read all eight as matches and the missing-search grabbed them.
+		It("refuses a longer show built on this one's name", func() {
+			in := []SearchResult{
+				{Title: "Narcos Mexico S02E03 German DL 1080p BluRay x264-AWARDS"},
+				{Title: "Narcos Mexico S02E04 German DL 1080p BluRay x264-AWARDS"},
+			}
+			out := preferTitleMatches(in, []string{"Narcos", "Narcos"})
+			Expect(out).To(HaveLen(2))
+			for _, r := range out {
+				Expect(r.TitleMismatch).To(BeTrue())
+			}
+		})
+
+		// The whole-series scope: "COMPLETE"/"INTEGRALE" is a tag every show's
+		// packs carry, so IsWholeSeriesPack separates nothing by show and this
+		// filter is the only thing between a Narcos browse and Narcos Mexico's
+		// integral. The kept release is the one the homelab actually grabbed.
+		It("keeps this show's integral and drops the other show's", func() {
+			in := []SearchResult{
+				{Title: "Narcos.INTEGRALE.FRENCH.1080p.WEB.10bits.EAC3.5.1.H265-FW"},
+				{Title: "Narcos.Mexico.COMPLETE.S01-S03.MULTi.1080p.WEB.x265-GRP"},
+			}
+			out := preferTitleMatches(in, []string{"Narcos", "Narcos"})
+			titles := make([]string, len(out))
+			for i, r := range out {
+				titles[i] = r.Title
+			}
+			Expect(titles).To(ConsistOf(
+				"Narcos.INTEGRALE.FRENCH.1080p.WEB.10bits.EAC3.5.1.H265-FW",
+			))
+		})
+
 		It("keeps everything when no release names the show", func() {
 			// A library holding a show under a translated title matches none of
 			// its English releases, and dropping them leaves nothing to grab.

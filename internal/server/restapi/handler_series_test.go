@@ -583,7 +583,8 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 				}, nil).
 				Once()
 			app.indexers.EXPECT().
-				SearchSeries(mock.Anything, []string{"Breaking Bad", "Breaking Bad (US)"}, uint32(81189)).
+				SearchSeries(mock.Anything, []string{"Breaking Bad", "Breaking Bad (US)"},
+					mock.Anything, uint32(81189)).
 				Return([]indexer.SearchResult{
 					{Title: "BB Complete 1080p", Download: "magnet:y", Seeders: 42},
 				}, nil).Once()
@@ -673,7 +674,7 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 				Return(show, nil).Once()
 			app.indexers.EXPECT().
 				SearchSeries(mock.Anything, []string{"Breaking Bad", "Breaking Bad (US)"},
-					uint32(81189)).
+					mock.Anything, uint32(81189)).
 				Return(results, nil).Once()
 			app.store.EXPECT().
 				SeasonEpisodeCounts(mock.Anything, []uint32{3}).

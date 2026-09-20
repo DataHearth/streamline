@@ -25,6 +25,29 @@ var _ = Describe("TitleMatches", Label("unit", "library"), func() {
 	})
 })
 
+var _ = Describe("TitleNamesSameWork", Label("unit", "library"), func() {
+	It("accepts an exact match", func() {
+		Expect(TitleNamesSameWork("Narcos", "Narcos")).To(BeTrue())
+	})
+	It("accepts release tags the parser could not cut", func() {
+		Expect(TitleNamesSameWork("Narcos INTEGRALE FRENCH", "Narcos")).
+			To(BeTrue())
+		Expect(TitleNamesSameWork("Breaking Bad COMPLETE", "Breaking Bad")).
+			To(BeTrue())
+	})
+	It("refuses a longer work built on the same name", func() {
+		Expect(TitleNamesSameWork("Narcos Mexico", "Narcos")).To(BeFalse())
+		Expect(TitleNamesSameWork("The Matrix Reloaded", "The Matrix")).
+			To(BeFalse())
+	})
+	It("reaches a title held under the provider's fuller name", func() {
+		Expect(TitleNamesSameWork(
+			"Demon Slayer Kimetsu no Yaiba Infinity Castle",
+			"Demon Slayer: Kimetsu no Yaiba Infinity Castle Chapter 1",
+		)).To(BeTrue())
+	})
+})
+
 var _ = Describe("MatchEpisode", Label("unit", "library"), func() {
 	seasons := []*ent.Season{
 		{Number: 1, Edges: ent.SeasonEdges{Episodes: []*ent.Episode{

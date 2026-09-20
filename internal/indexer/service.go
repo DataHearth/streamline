@@ -132,11 +132,9 @@ type Manager interface {
 		tvdbID uint32,
 		season uint16,
 	) ([]SearchResult, error)
-	// SearchSeries takes no alias set: it keeps only whole-series packs and
-	// never runs the title filter the aliases would widen.
 	SearchSeries(
 		ctx context.Context,
-		titles []string,
+		titles, aliases []string,
 		tvdbID uint32,
 	) ([]SearchResult, error)
 	// SearchEpisode also reports how many season/whole-series packs covering
@@ -349,6 +347,13 @@ func (i *indexer) SearchSeason(
 // rss.fansubTagRe, which normalizes the same names for the feed scanner.
 var fansubTagRe = regexp.MustCompile(`^\[?[^\]]*\]\s*`)
 
+// An anime absolute number survives extractTitle in its " - 05" shape, and a
+// title comparison that cannot spell it out as a tag reads it as part of the
+// name. Only the dash-separated form goes: a number a title merely ends with
+// is part of that title, and dropping it would make every "Taxi" release name
+// "Taxi 5".
+var absoluteTailRe = regexp.MustCompile(`\s*-\s*\d{1,4}\s*$`)
+
 // filterProviderIDs drops releases whose own provider id contradicts the
 // search, and is the one filter here that does not guess.
 //
@@ -411,22 +416,27 @@ func filterProviderIDs(results []SearchResult, base SearchParams) []SearchResult
 // browse and the wrong one for a pass that grabs the highest score unattended.
 //
 // A release whose title the parser could not read counts as a match: an empty
-// title is no evidence of the wrong show. Matching is prefix-tolerant in both
-// directions because a parsed title keeps what extractTitle could not cut —
-// `Breaking Bad COMPLETE`, a fansub tag, a translated suffix.
+// title is no evidence of the wrong show. A release may carry more than the
+// show's name because a parsed title keeps what extractTitle could not cut —
+// `Breaking Bad COMPLETE`, a fansub tag, a translated suffix — but only the
+// release tags TitleNamesSameWork knows, never a word that distinguishes one
+// work from another. Bare prefix tolerance did the latter, and every
+// `Narcos Mexico` episode read as a match for `Narcos`.
 func preferTitleMatches(results []SearchResult, titles []string) []SearchResult {
 	if len(titles) == 0 {
 		return results
 	}
 	matched := make([]SearchResult, 0, len(results))
 	for _, r := range results {
-		name := fansubTagRe.ReplaceAllString(library.Parse(r.Title).Title, "")
+		name := absoluteTailRe.ReplaceAllString(
+			fansubTagRe.ReplaceAllString(library.Parse(r.Title).Title, ""), "",
+		)
 		if name == "" {
 			matched = append(matched, r)
 			continue
 		}
 		for _, t := range titles {
-			if library.TitlePrefixMatches(name, t) {
+			if library.TitleNamesSameWork(name, t) {
 				matched = append(matched, r)
 				break
 			}
@@ -463,15 +473,22 @@ func filterToSeason(results []SearchResult, season uint16) []SearchResult {
 // SearchSeries queries all enabled indexers for whole-series releases (a
 // tvsearch keyed by tvdbid with no season, catching integral / multi-season
 // packs). Results are aggregated, deduped, and sorted exactly like SearchMovie.
+//
+// The whole-series scope is the widest one here — a grab takes every season
+// the release holds — and "COMPLETE" is a tag any show's packs carry, so the
+// scope filter alone separates nothing by show. preferTitleMatches is what
+// keeps a longer show built on this one's name out of the list.
 func (i *indexer) SearchSeries(
 	ctx context.Context,
-	titles []string,
+	titles, aliases []string,
 	tvdbID uint32,
 ) ([]SearchResult, error) {
 	titles = dedupTitles(titles)
+	match := matchTitles(titles, aliases)
 	ctx, span := tracer.Start(ctx, "indexer.search_series",
 		trace.WithAttributes(
 			attribute.Int("series.titles.count", len(titles)),
+			attribute.Int("series.aliases.count", len(aliases)),
 			attribute.Int64("series.tvdb_id", int64(tvdbID)),
 		),
 	)
@@ -495,15 +512,16 @@ func (i *indexer) SearchSeries(
 		titles,
 		SearchParams{Kind: KindTV, TVDBID: tvdbID},
 	)
-	filtered := make([]SearchResult, 0, len(results))
+	packs := make([]SearchResult, 0, len(results))
 	for _, r := range results {
 		// A tvsearch with no season is a plain series query, so single episodes
 		// and single-season packs come back alongside the integrals. This scope
 		// grabs a release as covering every season, so only those qualify.
 		if library.IsWholeSeriesPack(r.Title) {
-			filtered = append(filtered, r)
+			packs = append(packs, r)
 		}
 	}
+	filtered := preferTitleMatches(packs, match)
 	span.SetAttributes(
 		attribute.Int("results.pre_series_filter", len(results)),
 		attribute.Int("results.total", len(filtered)),

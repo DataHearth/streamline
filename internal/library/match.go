@@ -66,6 +66,47 @@ func TitlePrefixMatches(a, b string) bool {
 	return strings.HasPrefix(na, nb) || strings.HasPrefix(nb, na)
 }
 
+// titleTagSuffix matches what may sit between a release's parsed title and the
+// show it names while still leaving it the same show: the tags extractTitle
+// could not cut. Normalization has already stripped the separators, hence the
+// repetition — "Breaking Bad COMPLETE MULTI" leaves "completemulti".
+//
+// The list is deliberately short. A word that is not on it is treated as part
+// of the title, so a release naming a longer work is refused; adding a word
+// that can distinguish two works is what reopens the bug this guards.
+var titleTagSuffix = regexp.MustCompile(
+	`^(?:complet|complete|integral|integrale|multi|french|truefrench|` +
+		`vostfr|vff|vf|vo|uncut|extended|remastered|repack|proper)+$`,
+)
+
+// TitleNamesSameWork reports whether a release title names the same work as
+// title. It is the confirming counterpart to TitlePrefixMatches, which a
+// caller that grabs unattended cannot use: a prefix is shared by every longer
+// work built on the same name, and bare prefix tolerance handed eight
+// "Narcos Mexico" episodes to Narcos' season 2.
+//
+// The two directions are not the same question, so they get different answers.
+// What a *release* carries beyond the title is either a tag the parser could
+// not cut ("Breaking Bad COMPLETE") or the rest of another work's name
+// ("Narcos Mexico"), and only the first is allowed. What a *library entry*
+// carries beyond the release is the provider's disambiguating subtitle, which
+// releases routinely drop — TMDB's "… Infinity Castle Chapter 1: The Return of
+// Akaza" against a tracker's "… Infinity Castle" — so that direction stays as
+// tolerant as it was. It leaves a release named for the shorter work matching
+// the longer one, which is the pre-existing reading and the only one that
+// reaches a title held under a fuller name.
+func TitleNamesSameWork(release, title string) bool {
+	nr, nt := normalizeTitle(release), normalizeTitle(title)
+	if nr == "" || nt == "" {
+		return false
+	}
+	if strings.HasPrefix(nt, nr) {
+		return true
+	}
+	rest, found := strings.CutPrefix(nr, nt)
+	return found && titleTagSuffix.MatchString(rest)
+}
+
 // MatchEpisode resolves a parsed release to an episode within the show's
 // seasons. Anime packs match on absolute number; everything else on
 // season+episode number. Returns nil when nothing matches.

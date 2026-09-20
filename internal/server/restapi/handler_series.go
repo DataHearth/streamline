@@ -698,6 +698,7 @@ func (s *Server) BrowseSeriesReleases(
 	results, err := s.indexers.SearchSeries(
 		ctx,
 		[]string{show.Title, show.OriginalTitle},
+		show.Aliases,
 		show.TvdbID,
 	)
 	if err != nil {
