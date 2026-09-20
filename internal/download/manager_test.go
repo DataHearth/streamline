@@ -365,7 +365,7 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 							SelectionState:     downloadrecord.SelectionStatePending,
 						}}, nil).Once()
 					store.EXPECT().
-						SyncSeasonDownloadStateForRecord(mock.Anything, uint32(7), false).
+						SyncDownloadStateForRecord(mock.Anything, uint32(7), false).
 						Return(nil).Once()
 
 					completed, err := pendingMgr.CheckStatus(ctx)
@@ -404,7 +404,7 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 							SelectionState:     downloadrecord.SelectionStatePending,
 						}}, nil).Once()
 					store.EXPECT().
-						SyncSeasonDownloadStateForRecord(mock.Anything, uint32(9), false).
+						SyncDownloadStateForRecord(mock.Anything, uint32(9), false).
 						Return(nil).Once()
 
 					completed, err := pendingMgr.CheckStatus(ctx)
@@ -445,7 +445,7 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 							SelectionState:     downloadrecord.SelectionStateApplied,
 						}}, nil).Once()
 					store.EXPECT().
-						SyncSeasonDownloadStateForRecord(mock.Anything, uint32(8), true).
+						SyncDownloadStateForRecord(mock.Anything, uint32(8), true).
 						Return(nil).Once()
 
 					completed, err := pendingMgr.CheckStatus(ctx)

@@ -383,7 +383,7 @@ type Store interface {
 	DeleteAllCompletedDownloadRecords(ctx context.Context) (int, error)
 	RevertMovieToWantedIfNoFile(ctx context.Context, movieID uint32) error
 	RevertOrphanedDownloadingEpisodes(ctx context.Context) (int, error)
-	SyncSeasonDownloadStateForRecord(
+	SyncDownloadStateForRecord(
 		ctx context.Context,
 		recordID uint32,
 		paused bool,

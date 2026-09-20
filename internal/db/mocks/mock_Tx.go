@@ -13693,12 +13693,12 @@ func (_c *MockTx_StartMediaFileGraceClock_Call) RunAndReturn(run func(ctx contex
 	return _c
 }
 
-// SyncSeasonDownloadStateForRecord provides a mock function for the type MockTx
-func (_mock *MockTx) SyncSeasonDownloadStateForRecord(ctx context.Context, recordID uint32, paused bool) error {
+// SyncDownloadStateForRecord provides a mock function for the type MockTx
+func (_mock *MockTx) SyncDownloadStateForRecord(ctx context.Context, recordID uint32, paused bool) error {
 	ret := _mock.Called(ctx, recordID, paused)
 
 	if len(ret) == 0 {
-		panic("no return value specified for SyncSeasonDownloadStateForRecord")
+		panic("no return value specified for SyncDownloadStateForRecord")
 	}
 
 	var r0 error
@@ -13710,20 +13710,20 @@ func (_mock *MockTx) SyncSeasonDownloadStateForRecord(ctx context.Context, recor
 	return r0
 }
 
-// MockTx_SyncSeasonDownloadStateForRecord_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SyncSeasonDownloadStateForRecord'
-type MockTx_SyncSeasonDownloadStateForRecord_Call struct {
+// MockTx_SyncDownloadStateForRecord_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SyncDownloadStateForRecord'
+type MockTx_SyncDownloadStateForRecord_Call struct {
 	*mock.Call
 }
 
-// SyncSeasonDownloadStateForRecord is a helper method to define mock.On call
+// SyncDownloadStateForRecord is a helper method to define mock.On call
 //   - ctx context.Context
 //   - recordID uint32
 //   - paused bool
-func (_e *MockTx_Expecter) SyncSeasonDownloadStateForRecord(ctx any, recordID any, paused any) *MockTx_SyncSeasonDownloadStateForRecord_Call {
-	return &MockTx_SyncSeasonDownloadStateForRecord_Call{Call: _e.mock.On("SyncSeasonDownloadStateForRecord", ctx, recordID, paused)}
+func (_e *MockTx_Expecter) SyncDownloadStateForRecord(ctx any, recordID any, paused any) *MockTx_SyncDownloadStateForRecord_Call {
+	return &MockTx_SyncDownloadStateForRecord_Call{Call: _e.mock.On("SyncDownloadStateForRecord", ctx, recordID, paused)}
 }
 
-func (_c *MockTx_SyncSeasonDownloadStateForRecord_Call) Run(run func(ctx context.Context, recordID uint32, paused bool)) *MockTx_SyncSeasonDownloadStateForRecord_Call {
+func (_c *MockTx_SyncDownloadStateForRecord_Call) Run(run func(ctx context.Context, recordID uint32, paused bool)) *MockTx_SyncDownloadStateForRecord_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -13746,12 +13746,12 @@ func (_c *MockTx_SyncSeasonDownloadStateForRecord_Call) Run(run func(ctx context
 	return _c
 }
 
-func (_c *MockTx_SyncSeasonDownloadStateForRecord_Call) Return(err error) *MockTx_SyncSeasonDownloadStateForRecord_Call {
+func (_c *MockTx_SyncDownloadStateForRecord_Call) Return(err error) *MockTx_SyncDownloadStateForRecord_Call {
 	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *MockTx_SyncSeasonDownloadStateForRecord_Call) RunAndReturn(run func(ctx context.Context, recordID uint32, paused bool) error) *MockTx_SyncSeasonDownloadStateForRecord_Call {
+func (_c *MockTx_SyncDownloadStateForRecord_Call) RunAndReturn(run func(ctx context.Context, recordID uint32, paused bool) error) *MockTx_SyncDownloadStateForRecord_Call {
 	_c.Call.Return(run)
 	return _c
 }

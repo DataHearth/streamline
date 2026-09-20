@@ -1248,7 +1248,7 @@ func (d *download) CheckStatus(ctx context.Context) ([]CompletedDownload, error)
 				// RunSelectionPass's window to resolve, not a state the user
 				// paused.
 				paused := torrent.Status == StatusPaused && !pending
-				if serr := d.db.SyncSeasonDownloadStateForRecord(
+				if serr := d.db.SyncDownloadStateForRecord(
 					ctx, record.ID, paused,
 				); serr != nil {
 					slog.WarnContext(ctx, "sync paused episode state failed",

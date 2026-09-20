@@ -1170,6 +1170,30 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 		)
 
 		It(
+			"reverts an episode left paused by a record that has since gone",
+			func() {
+				// The homelab shape: a duplicate grab in season 2 was paused by
+				// hand, the season-scoped pause sync flipped the season's
+				// episodes with it, then the record was purged. Nothing resumes
+				// them, so the sweep is the only way out.
+				ids := seedDownloadingSeason(7007, 3)
+				for _, id := range ids {
+					_, err := client.Episode.UpdateOneID(id).
+						SetStatus(episode.StatusPaused).Save(ctx)
+					Expect(err).NotTo(HaveOccurred())
+				}
+
+				n, err := store.RevertOrphanedDownloadingEpisodes(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(n).To(Equal(3))
+				for _, id := range ids {
+					e, _ := client.Episode.Get(ctx, id)
+					Expect(e.Status).To(Equal(episode.StatusWanted))
+				}
+			},
+		)
+
+		It(
 			"spares the seasons a multi-season pack claims in wanted_episodes",
 			func() {
 				eps := []EpisodeSeed{
@@ -1238,7 +1262,7 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 		)
 	})
 
-	Describe("SyncSeasonDownloadStateForRecord", func() {
+	Describe("SyncDownloadStateForRecord", func() {
 		It("pauses then resumes a whole season's downloading episodes", func() {
 			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
 				Title: "S", Year: 2020, TvdbID: 8001,
@@ -1254,23 +1278,25 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 				Expect(err).NotTo(HaveOccurred())
 				epIDs = append(epIDs, e.ID)
 			}
-			// One record links only the first episode (season-pack shape).
+			// The season-pack shape: the edge links the first episode, the
+			// claim names them all. Every grab path records the claim.
 			rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
 				Title: "pack", Size: 1, TorrentHash: "h",
 				Status:             downloadrecord.StatusDownloading,
 				EpisodeID:          epIDs[0],
+				WantedEpisodes:     epIDs,
 				DownloadClientName: clientName,
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(store.SyncSeasonDownloadStateForRecord(ctx, rec.ID, true)).
+			Expect(store.SyncDownloadStateForRecord(ctx, rec.ID, true)).
 				To(Succeed())
 			for _, id := range epIDs {
 				e, _ := client.Episode.Get(ctx, id)
 				Expect(e.Status).To(Equal(episode.StatusPaused))
 			}
 
-			Expect(store.SyncSeasonDownloadStateForRecord(ctx, rec.ID, false)).
+			Expect(store.SyncDownloadStateForRecord(ctx, rec.ID, false)).
 				To(Succeed())
 			for _, id := range epIDs {
 				e, _ := client.Episode.Get(ctx, id)
@@ -1278,9 +1304,60 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 			}
 		})
 
+		It("leaves another record's episodes in the same season alone", func() {
+			// The homelab shape: a whole-series pack anchored in season 1
+			// claims season 2 as well, and a duplicate grab of one season-2
+			// episode is paused by hand. Season scope flipped the pack's eight
+			// other season-2 episodes with it and the resume — scoped to the
+			// pack's own anchor season — never reached them again.
+			eps := []EpisodeSeed{{Number: 1, Title: "E1"}, {Number: 2, Title: "E2"}}
+			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "Integrale", Year: 2015, TvdbID: 8002,
+				Seasons: []SeasonSeed{
+					{Number: 1, Episodes: eps}, {Number: 2, Episodes: eps},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			var all []uint32
+			for _, se := range show.Edges.Seasons {
+				for _, e := range se.Edges.Episodes {
+					_, err := client.Episode.UpdateOneID(e.ID).
+						SetStatus(episode.StatusDownloading).Save(ctx)
+					Expect(err).NotTo(HaveOccurred())
+					all = append(all, e.ID)
+				}
+			}
+			_, err = store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "integrale", Size: 1, TorrentHash: "ih",
+				Status:             downloadrecord.StatusDownloading,
+				EpisodeID:          all[0],
+				WantedEpisodes:     all,
+				DownloadClientName: clientName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			// A second, unrelated grab of one season-2 episode.
+			dup, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "dupe", Size: 1, TorrentHash: "dh",
+				Status:             downloadrecord.StatusDownloading,
+				EpisodeID:          all[2],
+				WantedEpisodes:     []uint32{all[2]},
+				DownloadClientName: clientName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(store.SyncDownloadStateForRecord(ctx, dup.ID, true)).
+				To(Succeed())
+			paused, _ := client.Episode.Get(ctx, all[2])
+			Expect(paused.Status).To(Equal(episode.StatusPaused))
+			for _, id := range []uint32{all[0], all[1], all[3]} {
+				e, _ := client.Episode.Get(ctx, id)
+				Expect(e.Status).To(Equal(episode.StatusDownloading))
+			}
+		})
+
 		It("is a no-op for a movie record", func() {
 			rec := createRec("mh", downloadrecord.StatusDownloading)
-			Expect(store.SyncSeasonDownloadStateForRecord(ctx, rec.ID, true)).
+			Expect(store.SyncDownloadStateForRecord(ctx, rec.ID, true)).
 				To(Succeed())
 		})
 	})

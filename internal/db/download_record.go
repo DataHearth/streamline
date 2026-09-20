@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -1208,6 +1209,35 @@ func noActiveSeasonRecord() predicate.Episode {
 // multi-season pack names the seasons past its anchor's. Read into Go rather
 // than joined against the column: it is JSON, and the set is bounded by what
 // is in flight right now.
+// recordClaimedEpisodes returns the episodes one record's download is for: the
+// set it recorded at grab time, plus its anchor, which is all a record that
+// recorded no set has. Empty for a movie record.
+//
+// This is what "the episodes behind this download" means anywhere it is asked.
+// The season the anchor happens to sit in is not: a pack spanning seasons
+// anchors in one of them, and two records can hold different episodes of the
+// same season at the same time.
+func (db *DB) recordClaimedEpisodes(
+	ctx context.Context,
+	recordID uint32,
+) ([]uint32, error) {
+	rec, err := db.client.DownloadRecord.Query().
+		Where(downloadrecord.ID(recordID)).
+		WithEpisode().
+		Only(ctx)
+	if ent.IsNotFound(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("load download record %d: %w", recordID, err)
+	}
+	ids := slices.Clone(rec.WantedEpisodes)
+	if rec.Edges.Episode != nil && !slices.Contains(ids, rec.Edges.Episode.ID) {
+		ids = append(ids, rec.Edges.Episode.ID)
+	}
+	return ids, nil
+}
+
 func (db *DB) claimedEpisodes(ctx context.Context) ([]uint32, error) {
 	recs, err := db.client.DownloadRecord.Query().
 		Where(downloadrecord.StatusIn(inFlightRecordStatuses...)).
@@ -1299,29 +1329,29 @@ func (db *DB) MarkEpisodeDownloading(
 }
 
 // MarkRecordEpisodesImporting moves a record's in-flight episodes to
-// "importing" as the download hands off to the importer. Season-scoped like
-// SyncSeasonDownloadStateForRecord, since a pack imports the whole season
-// behind its single episode link, and it only moves rows already in
+// "importing" as the download hands off to the importer. Record-scoped like
+// SyncDownloadStateForRecord, and it only moves rows already in
 // downloading/paused — an episode that is available (a replace target) or
 // wanted (never part of this grab) is none of this record's business.
+//
+// The season it used to walk instead is the anchor's, which for a pack
+// spanning seasons is one of several: the other seasons' episodes were left
+// "downloading" with the import already past them, and no later path moves a
+// row the importer is no longer working on.
 func (db *DB) MarkRecordEpisodesImporting(
 	ctx context.Context,
 	recordID uint32,
 ) error {
-	seasonID, err := db.client.Season.Query().
-		Where(season.HasEpisodesWith(
-			episode.HasDownloadRecordsWith(downloadrecord.ID(recordID)),
-		)).
-		FirstID(ctx)
-	if ent.IsNotFound(err) {
-		return nil // movie record or no episode link
-	}
+	claimed, err := db.recordClaimedEpisodes(ctx, recordID)
 	if err != nil {
-		return fmt.Errorf("find record season: %w", err)
+		return err
+	}
+	if len(claimed) == 0 {
+		return nil // movie record, or nothing linked
 	}
 	if _, err := db.client.Episode.Update().
 		Where(
-			episode.HasSeasonWith(season.ID(seasonID)),
+			episode.IDIn(claimed...),
 			episode.StatusIn(
 				episode.StatusDownloading,
 				episode.StatusPaused,
@@ -1334,26 +1364,31 @@ func (db *DB) MarkRecordEpisodesImporting(
 	return nil
 }
 
-// SyncSeasonDownloadStateForRecord reflects a download's live torrent state onto
-// its episode badges: when paused, the record's-season episodes still in
-// "downloading" flip to "paused"; when active again they flip back. Season-level
-// so a paused season pack pauses all its episodes, not just the linked one.
-// A no-op for movie records (no episode/season behind them).
-func (db *DB) SyncSeasonDownloadStateForRecord(
+// SyncDownloadStateForRecord reflects a download's live torrent state onto its
+// episode badges: when paused, the episodes this record is for that are still
+// "downloading" flip to "paused"; when active again they flip back. A no-op
+// for movie records, and for a record that claims no episode.
+//
+// Scoped to the record's own claim, not to the season its anchor sits in.
+// Season scope crossed records: pausing a duplicate grab of season 2 also
+// paused the eight episodes of that season a whole-series pack was fetching,
+// and the resume never reached them — the pack's own anchor is in season 1,
+// so its every-tick resume swept a season those episodes were not in. They sat
+// "paused" against a torrent that was never paused, with the orphan sweep
+// rightly declining to touch episodes an in-flight record still claims
+// (Narcos INTEGRALE, 2026-09-20). Record scope makes the resume reach them on
+// the next tick.
+func (db *DB) SyncDownloadStateForRecord(
 	ctx context.Context,
 	recordID uint32,
 	paused bool,
 ) error {
-	seasonID, err := db.client.Season.Query().
-		Where(season.HasEpisodesWith(
-			episode.HasDownloadRecordsWith(downloadrecord.ID(recordID)),
-		)).
-		FirstID(ctx)
-	if ent.IsNotFound(err) {
-		return nil // movie record or no episode link
-	}
+	claimed, err := db.recordClaimedEpisodes(ctx, recordID)
 	if err != nil {
-		return fmt.Errorf("find record season: %w", err)
+		return err
+	}
+	if len(claimed) == 0 {
+		return nil // movie record, or nothing linked
 	}
 
 	from, to := episode.StatusDownloading, episode.StatusPaused
@@ -1362,12 +1397,12 @@ func (db *DB) SyncSeasonDownloadStateForRecord(
 	}
 	if _, err := db.client.Episode.Update().
 		Where(
-			episode.HasSeasonWith(season.ID(seasonID)),
+			episode.IDIn(claimed...),
 			episode.StatusEQ(from),
 		).
 		SetStatus(to).
 		Save(ctx); err != nil {
-		return fmt.Errorf("sync season download state: %w", err)
+		return fmt.Errorf("sync download state: %w", err)
 	}
 	return nil
 }
