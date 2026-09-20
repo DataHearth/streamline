@@ -110,6 +110,10 @@ var _ = Describe("Handler: Pending", Label("unit", "server", "activity"), func()
 			app.tvshows.EXPECT().
 				Get(mock.Anything, uint32(40)).Return(goodOmens(), nil).Once()
 			app.store.EXPECT().
+				SetDownloadRecordWantedEpisodes(
+					mock.Anything, uint32(1), mock.Anything,
+				).Return(nil).Once()
+			app.store.EXPECT().
 				IdentifyDownloadRecord(
 					mock.Anything, uint32(1), uint32(0), uint32(501),
 					mock.AnythingOfType("string"),
@@ -131,6 +135,10 @@ var _ = Describe("Handler: Pending", Label("unit", "server", "activity"), func()
 				Return(&ent.TVShow{ID: 40}, nil).Once()
 			app.tvshows.EXPECT().
 				Get(mock.Anything, uint32(40)).Return(goodOmens(), nil).Once()
+			app.store.EXPECT().
+				SetDownloadRecordWantedEpisodes(
+					mock.Anything, uint32(1), mock.Anything,
+				).Return(nil).Once()
 			app.store.EXPECT().
 				IdentifyDownloadRecord(
 					mock.Anything, uint32(1), uint32(0), uint32(501),
@@ -157,6 +165,12 @@ var _ = Describe("Handler: Pending", Label("unit", "server", "activity"), func()
 			app.movies.EXPECT().
 				Add(mock.Anything, uint32(414906), "").
 				Return(&ent.Movie{ID: 3}, "", nil).Once()
+			// A movie proposal carries no episode claim, and one left over from
+			// a previous series identify would outlive its episodes.
+			app.store.EXPECT().
+				SetDownloadRecordWantedEpisodes(
+					mock.Anything, uint32(1), []uint32(nil),
+				).Return(nil).Once()
 			app.store.EXPECT().
 				IdentifyDownloadRecord(
 					mock.Anything, uint32(1), uint32(3), uint32(0),

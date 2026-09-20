@@ -25,6 +25,10 @@ import (
 // adoptDecision is what to do with one untracked managed torrent.
 type adoptDecision struct {
 	movieID, episodeID uint32
+	// episodeIDs is every episode the torrent is for — the record's claim.
+	// Holds episodeID for a single-episode release and the pack's whole scope
+	// otherwise; empty for a movie.
+	episodeIDs []uint32
 	// autoImport true → an importing record the caller enqueues; false → a
 	// pending proposal carrying reason.
 	autoImport bool
@@ -167,15 +171,19 @@ func classifyEpisodeAdoption(
 	if ep == nil {
 		return adoptDecision{}, false
 	}
+	claim := AdoptionEpisodes(parsed, show)
 	if !singleEpisodeRelease(parsed) {
 		// Season pack / multi-file: propose, never auto-fan.
 		return adoptDecision{
-			episodeID: ep.ID,
-			quality:   parsed.Resolution,
-			reason:    "season pack, review manually",
+			episodeID:  ep.ID,
+			episodeIDs: claim,
+			quality:    parsed.Resolution,
+			reason:     "season pack, review manually",
 		}, true
 	}
-	d := adoptDecision{episodeID: ep.ID, quality: parsed.Resolution}
+	d := adoptDecision{
+		episodeID: ep.ID, episodeIDs: claim, quality: parsed.Resolution,
+	}
 	switch {
 	case sameFile(parsed, size, ep.Edges.MediaFiles):
 		d.completed = true
@@ -204,22 +212,64 @@ func classifyEpisodeAdoption(
 func AdoptionEpisode(
 	parsed library.ParseResult, show *ent.TVShow,
 ) *ent.Episode {
-	switch {
-	case singleEpisodeRelease(parsed):
+	if singleEpisodeRelease(parsed) {
 		return library.MatchEpisode(
 			parsed,
 			show.Edges.Seasons,
 			show.Type == tvshow.TypeAnime,
 		)
-	case parsed.SeasonPack:
-		return packAnchor(seasonNumbered(show, parsed.Season))
-	default:
-		// A whole-series pack ("INTEGRALE", "COMPLETE") names no season, so
-		// parsed.Season is 0 — which is the *specials* season, not "unknown".
-		// Anchoring there filed a six-season Kaamelott integrale against
-		// S00E01 and pointed its import at the specials.
-		return packAnchor(numberedSeasonsFirst(show))
 	}
+	return packAnchor(adoptionScope(parsed, show))
+}
+
+// adoptionScope is the seasons a pack covers within one show — the set its
+// anchor is picked from, and the set its claim is drawn from, so the two can
+// never disagree about what the release is for.
+func adoptionScope(
+	parsed library.ParseResult, show *ent.TVShow,
+) []*ent.Season {
+	if parsed.SeasonPack {
+		return seasonNumbered(show, parsed.Season)
+	}
+	// A whole-series pack ("INTEGRALE", "COMPLETE") names no season, so
+	// parsed.Season is 0 — which is the *specials* season, not "unknown".
+	// Anchoring there filed a six-season Kaamelott integrale against
+	// S00E01 and pointed its import at the specials.
+	return numberedSeasonsFirst(show)
+}
+
+// AdoptionEpisodes is every episode an adopted release is for: the one it
+// matches, or a pack's whole scope. It is what the record stores as its claim,
+// and the reason a record needs one is that its episode edge holds a single id
+// — every state write scoped to "this record's episodes" reads the claim, and
+// without one an adopted pack could only ever speak for its anchor.
+//
+// Episodes already holding a file stay in: the importer decides per file
+// whether a pack replaces one, and a claim that dropped them would describe
+// the release as smaller than it is. No writer acts on them regardless —
+// pause/resume and the importing move both touch in-flight rows only.
+//
+// Exported alongside AdoptionEpisode because identifying a proposal by hand
+// re-resolves both against the show the operator names.
+func AdoptionEpisodes(
+	parsed library.ParseResult, show *ent.TVShow,
+) []uint32 {
+	if singleEpisodeRelease(parsed) {
+		ep := library.MatchEpisode(
+			parsed, show.Edges.Seasons, show.Type == tvshow.TypeAnime,
+		)
+		if ep == nil {
+			return nil
+		}
+		return []uint32{ep.ID}
+	}
+	var ids []uint32
+	for _, se := range adoptionScope(parsed, show) {
+		for _, e := range se.Edges.Episodes {
+			ids = append(ids, e.ID)
+		}
+	}
+	return ids
 }
 
 // packAnchor picks the episode a pack is filed against: the first one holding
@@ -541,6 +591,7 @@ func (d *download) persistAdoption(
 		Status:             status,
 		MovieID:            dec.movieID,
 		EpisodeID:          dec.episodeID,
+		WantedEpisodes:     dec.episodeIDs,
 		DownloadClientName: u.clientName,
 		SavePath:           savePath,
 		Quality:            dec.quality,

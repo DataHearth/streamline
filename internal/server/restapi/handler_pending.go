@@ -79,6 +79,15 @@ func (s *Server) IdentifyPending(
 			return resp, nil
 		}
 		movieID = m
+		// A proposal re-identified from a series to a movie keeps its row, so
+		// an episode claim left behind would outlive the episodes it names.
+		if err := s.store.SetDownloadRecordWantedEpisodes(
+			ctx, request.Id, nil,
+		); err != nil {
+			return IdentifyPending500JSONResponse{
+				InternalErrorJSONResponse: errInternal(ctx, err),
+			}, nil
+		}
 	}
 
 	if err := s.store.IdentifyDownloadRecord(
@@ -136,6 +145,17 @@ func (s *Server) identifySeries(
 				"%s has no season %d to file this release against",
 				show.Title, parsed.Season,
 			)),
+		}
+	}
+	// The claim is re-resolved with the anchor, never carried over: the
+	// operator may have named a different show than the one adoption guessed,
+	// and episode ids from that show would send every record-scoped write to
+	// another series' rows.
+	if err := s.store.SetDownloadRecordWantedEpisodes(
+		ctx, rec.ID, download.AdoptionEpisodes(parsed, show),
+	); err != nil {
+		return 0, IdentifyPending500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
 		}
 	}
 	return ep.ID, nil

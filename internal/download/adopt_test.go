@@ -231,6 +231,34 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 			Expect(dec.episodeID).To(Equal(uint32(102)))
 		})
 
+		It("claims only the matched episode for a single-episode release", func() {
+			shows := []*ent.TVShow{buildShow(false, false)}
+			parsed := library.Parse("The.Bear.S01E02.1080p.WEB-X")
+			dec, ok := classifyEpisodeAdoption(parsed, 0, shows)
+			Expect(ok).To(BeTrue())
+			Expect(dec.episodeIDs).To(Equal([]uint32{102}))
+		})
+
+		It("claims a season pack's whole season, not just its anchor", func() {
+			// Without a claim the record speaks for one episode, and every
+			// write scoped to "this record's episodes" — the pause mirror, the
+			// move to importing — reaches only that one.
+			shows := []*ent.TVShow{buildShow(false, false)}
+			parsed := library.Parse("The.Bear.S01.1080p.WEB-X")
+			dec, ok := classifyEpisodeAdoption(parsed, 0, shows)
+			Expect(ok).To(BeTrue())
+			Expect(dec.episodeID).To(Equal(uint32(101)))
+			Expect(dec.episodeIDs).To(ConsistOf(uint32(101), uint32(102)))
+		})
+
+		It("keeps an episode that already has a file in a pack's claim", func() {
+			shows := []*ent.TVShow{buildShow(false, true)}
+			parsed := library.Parse("The.Bear.S01.1080p.WEB-X")
+			dec, ok := classifyEpisodeAdoption(parsed, 0, shows)
+			Expect(ok).To(BeTrue())
+			Expect(dec.episodeIDs).To(ConsistOf(uint32(101), uint32(102)))
+		})
+
 		It("matches a release named by one of the show's aliases", func() {
 			show := buildShow(false, false)
 			show.Title = "L'Ours"
