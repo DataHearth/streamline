@@ -1180,32 +1180,63 @@ var inFlightEpisodeStatuses = []episode.Status{
 	episode.StatusPaused,
 }
 
+// inFlightRecordStatuses are the states a download record holds while its
+// torrent is still ours to finish. "held" is one of them: a held record awaits
+// a decision, so reverting its episodes would let the missing-search grab a
+// duplicate release while it pends.
+var inFlightRecordStatuses = []downloadrecord.Status{
+	downloadrecord.StatusDownloading,
+	downloadrecord.StatusImporting,
+	downloadrecord.StatusHeld,
+}
+
 // noActiveSeasonRecord excludes an episode whose season has a download record
-// still in flight. Shared by both RevertOrphanedDownloadingEpisodes arms — the
-// held-record case applies equally to both: a held record awaits a decision,
-// so reverting its episodes would let the missing-search grab a duplicate
-// release while it pends.
+// still in flight. Shared by both RevertOrphanedDownloadingEpisodes arms.
 func noActiveSeasonRecord() predicate.Episode {
 	return episode.Not(episode.HasSeasonWith(
 		season.HasEpisodesWith(
 			episode.HasDownloadRecordsWith(
-				downloadrecord.StatusIn(
-					downloadrecord.StatusDownloading,
-					downloadrecord.StatusImporting,
-					downloadrecord.StatusHeld,
-				),
+				downloadrecord.StatusIn(inFlightRecordStatuses...),
 			),
 		),
 	))
+}
+
+// claimedEpisodes collects every episode an in-flight record says its download
+// is for. The Episode edge holds one id — a pack's anchor — while
+// wanted_episodes holds the whole set, and that set is the only place a
+// multi-season pack names the seasons past its anchor's. Read into Go rather
+// than joined against the column: it is JSON, and the set is bounded by what
+// is in flight right now.
+func (db *DB) claimedEpisodes(ctx context.Context) ([]uint32, error) {
+	recs, err := db.client.DownloadRecord.Query().
+		Where(downloadrecord.StatusIn(inFlightRecordStatuses...)).
+		Select(downloadrecord.FieldWantedEpisodes).
+		All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list in-flight download records: %w", err)
+	}
+	var ids []uint32
+	for _, r := range recs {
+		ids = append(ids, r.WantedEpisodes...)
+	}
+	return ids, nil
 }
 
 // RevertOrphanedDownloadingEpisodes reconciles episodes stuck in "downloading"
 // with no active download record behind them — the season-pack fan-out marks
 // every episode in a pack downloading but links only one record, so cancelling
 // or losing that record (or, historically, an upgrade grab that never
-// resolved) leaves the rest stranded. Granularity is the season — an episode
-// is spared while any download in its season is still active, so it
-// self-heals once that download settles.
+// resolved) leaves the rest stranded.
+//
+// An episode is spared two ways, and it takes both. Its season holding an
+// active download covers the episodes a pack fans out over without naming
+// them. Being named in an in-flight record's wanted_episodes covers the rest:
+// a whole-series pack claims every season at once but anchors its record to
+// one episode of one season, so the season rule alone declared every *other*
+// season stranded 20 seconds after the grab — and the missing-search then
+// grabbed duplicates of episodes already downloading (Narcos INTEGRALE, S02
+// and S03, 2026-09-20).
 //
 // Two arms, not one query: an episode with no media file has never had
 // anything, so it goes back to "wanted"; an episode that already has a file
@@ -1215,11 +1246,21 @@ func noActiveSeasonRecord() predicate.Episode {
 func (db *DB) RevertOrphanedDownloadingEpisodes(
 	ctx context.Context,
 ) (int, error) {
+	claimed, err := db.claimedEpisodes(ctx)
+	if err != nil {
+		return 0, err
+	}
+	stranded := []predicate.Episode{
+		episode.StatusIn(inFlightEpisodeStatuses...),
+		noActiveSeasonRecord(),
+	}
+	if len(claimed) > 0 {
+		stranded = append(stranded, episode.IDNotIn(claimed...))
+	}
 	toWanted, err := db.client.Episode.Update().
 		Where(
-			episode.StatusIn(inFlightEpisodeStatuses...),
+			episode.And(stranded...),
 			episode.Not(episode.HasMediaFiles()),
-			noActiveSeasonRecord(),
 		).
 		SetStatus(episode.StatusWanted).
 		Save(ctx)
@@ -1228,9 +1269,8 @@ func (db *DB) RevertOrphanedDownloadingEpisodes(
 	}
 	toAvailable, err := db.client.Episode.Update().
 		Where(
-			episode.StatusIn(inFlightEpisodeStatuses...),
+			episode.And(stranded...),
 			episode.HasMediaFiles(),
-			noActiveSeasonRecord(),
 		).
 		SetStatus(episode.StatusAvailable).
 		Save(ctx)

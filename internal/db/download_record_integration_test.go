@@ -1170,6 +1170,53 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 		)
 
 		It(
+			"spares the seasons a multi-season pack claims in wanted_episodes",
+			func() {
+				eps := []EpisodeSeed{
+					{Number: 1, Title: "E1"}, {Number: 2, Title: "E2"},
+				}
+				show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+					Title: "Integrale", Year: 2015, TvdbID: 7006,
+					Seasons: []SeasonSeed{
+						{Number: 1, Episodes: eps},
+						{Number: 2, Episodes: eps},
+					},
+				})
+				Expect(err).NotTo(HaveOccurred())
+				var all []uint32
+				for _, se := range show.Edges.Seasons {
+					for _, e := range se.Edges.Episodes {
+						_, err := client.Episode.UpdateOneID(e.ID).
+							SetStatus(episode.StatusDownloading).Save(ctx)
+						Expect(err).NotTo(HaveOccurred())
+						all = append(all, e.ID)
+					}
+				}
+				// The record anchors to season 1 and claims both seasons —
+				// what a whole-series grab writes.
+				_, err = store.CreateDownloadRecord(
+					ctx,
+					CreateDownloadRecordParams{
+						Title: "pack", Size: 1, TorrentHash: "integrale-h",
+						Status:             downloadrecord.StatusDownloading,
+						EpisodeID:          all[0],
+						WantedEpisodes:     all,
+						DownloadClientName: clientName,
+					},
+				)
+				Expect(err).NotTo(HaveOccurred())
+
+				n, err := store.RevertOrphanedDownloadingEpisodes(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(n).To(Equal(0))
+				for _, id := range all {
+					e, _ := client.Episode.Get(ctx, id)
+					Expect(e.Status).To(Equal(episode.StatusDownloading))
+				}
+			},
+		)
+
+		It(
 			"reverts a stranded episode with a media file to available, not wanted",
 			func() {
 				// A stranded upgrade target: it has a file, so "wanted" would
