@@ -52,7 +52,7 @@
 			"enabled": false
 		},
 		{
-			"matchManagers": ["npm", "dockerfile"],
+			"matchManagers": ["npm", "dockerfile", "github-actions"],
 			"matchDepNames": ["node", "golang"],
 			"enabled": false
 		},
