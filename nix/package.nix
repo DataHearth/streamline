@@ -66,7 +66,7 @@ let
     pnpmDeps = fetchPnpmDeps {
       inherit (finalAttrs) pname version src;
       fetcherVersion = 4;
-      hash = "sha256-Y9Cr1VWAnng2j4hvcGP/siVINI3mVFAAX7x7ACZMbFY=";
+      hash = "sha256-0Hv/nmdcQx7nFkMnTnpgAAahvONhmOgL+ffh/RFqKzM=";
     };
 
     # Mirrors `task build:js` + `task build:css`. Keep the two in step: the Go
