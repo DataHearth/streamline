@@ -76,6 +76,14 @@ type Worker struct {
 	mu       sync.Mutex
 	inFlight map[uint32]struct{}
 
+	// requeue holds IDs enqueued while their own import was still in flight.
+	// An import publishes its outcome — a hold, a failure — to the DB and only
+	// unwinds to the inFlight delete afterwards, so a caller that reacts to
+	// that outcome by flipping the record back to importing and enqueueing it
+	// lands in the gap. Dropping it as a duplicate strands the record until
+	// the import_scan tick, which is a minute away by default.
+	requeue map[uint32]struct{}
+
 	// entityLocks holds one *sync.Mutex per import target. Queue dedup is by
 	// download-record ID, but two records can target one movie or show, and a
 	// destination path is derived from the target alone — concurrent consumers
@@ -95,6 +103,7 @@ func NewWorker(d Deps) *Worker {
 		ch:       make(chan uint32, channelCap),
 		stop:     make(chan struct{}),
 		inFlight: make(map[uint32]struct{}),
+		requeue:  make(map[uint32]struct{}),
 	}
 }
 
@@ -119,8 +128,9 @@ func (w *Worker) Start(ctx context.Context) {
 
 // Enqueue pushes a record ID into the import queue. Non-blocking: when the
 // queue is full the ID is dropped (import_scan will pick it up on the next
-// tick). Dedupe: IDs already in-flight are dropped. After shutdown every
-// enqueue is dropped — nothing is left to consume the queue.
+// tick). Dedupe: an ID already in-flight is coalesced into a single requeue
+// that the consumer issues once the running import finishes. After shutdown
+// every enqueue is dropped — nothing is left to consume the queue.
 func (w *Worker) Enqueue(recordID uint32) {
 	select {
 	case <-w.stop:
@@ -135,6 +145,9 @@ func (w *Worker) Enqueue(recordID uint32) {
 
 	w.mu.Lock()
 	_, inFlight := w.inFlight[recordID]
+	if inFlight {
+		w.requeue[recordID] = struct{}{}
+	}
 	w.mu.Unlock()
 	if inFlight {
 		return
@@ -183,7 +196,12 @@ func (w *Worker) consume(ctx context.Context) {
 
 			w.mu.Lock()
 			delete(w.inFlight, id)
+			_, again := w.requeue[id]
+			delete(w.requeue, id)
 			w.mu.Unlock()
+			if again {
+				w.Enqueue(id)
+			}
 		}
 	}
 }

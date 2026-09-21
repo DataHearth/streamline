@@ -108,7 +108,7 @@ in
   pname = "streamline";
   inherit version src;
 
-  vendorHash = "sha256-Y9Cr1VWAnng2j4hvcGP/siVINI3mVFAAX7x7ACZMbFY=";
+  vendorHash = "sha256-ivY+UgCqGsWAIz2BMCpefZSnLSvYiFS3PSH3k95JcFw=";
 
   subPackages = [ "cmd" ];
 
