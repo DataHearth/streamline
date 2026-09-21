@@ -575,12 +575,80 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 			To(MatchError(ErrPathNotAllowed))
 	})
 
-	It("Enqueue dedupe: in-flight IDs are dropped", func() {
+	It("Enqueue dedupe: an in-flight ID is coalesced, not queued twice", func() {
 		w.mu.Lock()
 		w.inFlight[7] = struct{}{}
 		w.mu.Unlock()
 		w.Enqueue(7)
 		Expect(w.ch).To(BeEmpty())
+
+		w.mu.Lock()
+		_, pending := w.requeue[7]
+		w.mu.Unlock()
+		Expect(pending).To(BeTrue())
+	})
+
+	// A hold writes status=held and only then unwinds to the delete that
+	// clears inFlight. A resolve landing in that gap reads the record as held,
+	// flips it back to importing and enqueues — and used to be dropped as a
+	// duplicate, parking the record at importing until the import_scan tick.
+	It("Enqueue during the tail of an import still runs an import", func() {
+		configtest.Setup(map[string]any{
+			"library": map[string]any{
+				"movie_path":           libDir,
+				"import_mode":          "copy",
+				"import_max_attempts":  3,
+				"keep_torrent_seeding": true,
+				"movie_naming":         "{title} ({year})/{title}.{ext}",
+				"series_path":          libDir,
+				"series_naming":        "{title}/{title} S{season}E{episode}.{ext}",
+				"probe":                map[string]any{"always_ask": true},
+			},
+		})
+
+		src := filepath.Join(tmp, "dl")
+		Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+		seedMediaFile(src, "Flick.2024.1080p.mkv")
+
+		bypassed := fixtureRecord(5, 15, src, 0)
+		bypassed.VerificationBypassed = true
+
+		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(5)).
+			Return(fixtureRecord(5, 15, src, 0), nil).Once()
+		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(5)).
+			Return(bypassed, nil).Once()
+		storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(15)).
+			Return(nil, nil).Times(2)
+		storeMk.EXPECT().
+			HoldDownloadRecord(mock.Anything, uint32(5), mock.Anything).
+			RunAndReturn(func(context.Context, uint32, []schema.HoldReason) error {
+				w.Enqueue(5)
+				return nil
+			}).Once()
+
+		imported := make(chan struct{})
+		storeMk.EXPECT().
+			RecordImportSuccess(mock.Anything, mock.Anything).
+			RunAndReturn(func(context.Context, db.RecordImportSuccessParams) error {
+				close(imported)
+				return nil
+			}).Once()
+		storeMk.EXPECT().
+			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
+			Return(nil).Once()
+		msMk.EXPECT().RefreshAll(mock.Anything, mock.Anything, libDir).
+			Return(nil).Once()
+
+		ctx, cancel := context.WithCancel(context.Background())
+		stopped := make(chan struct{})
+		go func() { w.Start(ctx); close(stopped) }()
+		DeferCleanup(func() {
+			cancel()
+			Eventually(stopped).WithTimeout(time.Second).Should(BeClosed())
+		})
+
+		w.Enqueue(5)
+		Eventually(imported).WithTimeout(5 * time.Second).Should(BeClosed())
 	})
 
 	It("Start returns once ctx is canceled", func() {
