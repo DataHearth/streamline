@@ -96,30 +96,51 @@ jobs:
           redigest "node:${node_ref%@*}" "${node_ref#*@}"
 
       # vendorHash and pnpmDeps.hash are ordinary fixed-output derivations, so
-      # nix-update rewrites both in place from a real build. --version=skip
-      # keeps it off the `version ?` default, which release:app:changelog owns.
+      # each is derived from a build that is made to fail against a placeholder
+      # and report the real hash.
       - name: Package hashes
         run: |
           set -euo pipefail
 
-          # nix-update rewrites a hash by replacing its literal text everywhere
-          # in the file, so it addresses an attribute only for as long as the
-          # two hashes differ. Once they hold the same string one build's hash
-          # is written into both, the next run writes the other build's hash
-          # into both, and the pair flip-flops forever — each PR landing with
-          # whichever field lost that round wrong and the `nix` job red.
-          # Seeding two distinct sentinels keeps every replacement unambiguous.
-          pnpm_fake=sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
-          go_fake=sha256-BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=
-          sed -i "s|^\( *\)hash = \"sha256-[^\"]*\";|\1hash = \"${pnpm_fake}\";|" nix/package.nix
-          sed -i "s|^\( *\)vendorHash = \"sha256-[^\"]*\";|\1vendorHash = \"${go_fake}\";|" nix/package.nix
+          # nix-update is deliberately not used here. It derives vendorHash and
+          # nothing else — it knows buildGoModule's `goModules` and has no idea
+          # the frontend derivation contains a pnpm store — yet it rewrote
+          # pnpmDeps.hash all the same, because it replaces a hash by
+          # substituting its literal text across the whole file. While the two
+          # fields held the same string that put one build's hash into both,
+          # and the next run put the other one into both: a two-cycle that
+          # never converged, landing every renovate PR with one field wrong and
+          # the `nix` job red. Deriving each from its own attribute and writing
+          # it to its own line is what keeps the two independent.
+          fake="sha256-$(printf 'A%.0s' $(seq 43))="
 
-          nix run nixpkgs#nix-update -- --flake --version=skip streamline
+          derive() {
+            local attr=$1 anchor=$2 log got
+            sed -i "s|^\( *\)${anchor} = \"sha256-[^\"]*\";|\1${anchor} = \"${fake}\";|" nix/package.nix
 
-          if grep -qE "${pnpm_fake}|${go_fake}" nix/package.nix; then
-            echo "nix-update left a sentinel hash in nix/package.nix" >&2
-            exit 1
-          fi
+            if log=$(nix build --no-link ".#streamline.${attr}" 2>&1); then
+              echo "::error::${attr} built against the placeholder hash — nothing to derive"
+              exit 1
+            fi
+
+            # `|| true` is load-bearing: a build that failed for any other
+            # reason has no `got:` line, and under `set -e -o pipefail` the
+            # empty grep would abort here — failing the job with the build log
+            # still in $log and never printed, which reads like the step itself
+            # is broken.
+            got=$(printf '%s\n' "$log" | grep -oE 'got: +sha256-[A-Za-z0-9+/=]+' | tail -1 | grep -oE 'sha256-[A-Za-z0-9+/=]+' || true)
+            if [ -z "$got" ]; then
+              printf '%s\n' "$log" >&2
+              echo "::error::${attr} failed for a reason other than a hash mismatch"
+              exit 1
+            fi
+
+            sed -i "s|^\( *\)${anchor} = \"${fake}\";|\1${anchor} = \"${got}\";|" nix/package.nix
+            echo "${anchor} = ${got}"
+          }
+
+          derive frontend.pnpmDeps hash
+          derive goModules vendorHash
 
       - name: Commit
         id: commit
