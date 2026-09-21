@@ -99,7 +99,27 @@ jobs:
       # nix-update rewrites both in place from a real build. --version=skip
       # keeps it off the `version ?` default, which release:app:changelog owns.
       - name: Package hashes
-        run: nix run nixpkgs#nix-update -- --flake --version=skip streamline
+        run: |
+          set -euo pipefail
+
+          # nix-update rewrites a hash by replacing its literal text everywhere
+          # in the file, so it addresses an attribute only for as long as the
+          # two hashes differ. Once they hold the same string one build's hash
+          # is written into both, the next run writes the other build's hash
+          # into both, and the pair flip-flops forever — each PR landing with
+          # whichever field lost that round wrong and the `nix` job red.
+          # Seeding two distinct sentinels keeps every replacement unambiguous.
+          pnpm_fake=sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          go_fake=sha256-BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=
+          sed -i "s|^\( *\)hash = \"sha256-[^\"]*\";|\1hash = \"${pnpm_fake}\";|" nix/package.nix
+          sed -i "s|^\( *\)vendorHash = \"sha256-[^\"]*\";|\1vendorHash = \"${go_fake}\";|" nix/package.nix
+
+          nix run nixpkgs#nix-update -- --flake --version=skip streamline
+
+          if grep -qE "${pnpm_fake}|${go_fake}" nix/package.nix; then
+            echo "nix-update left a sentinel hash in nix/package.nix" >&2
+            exit 1
+          fi
 
       - name: Commit
         id: commit
