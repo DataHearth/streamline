@@ -197,6 +197,6 @@ Convention for landing a batch of independent fixes (audit findings, review comm
 - `nix/` — package, NixOS + home-manager modules, VM test (see **Nix** above)
 
 ## Helm Gotchas
-- VM/VL/VT charts (pinned 0.45.0/0.13.9/0.1.11): at v0.35/0.12/0.0.7 the selector used `app: server` but the template labels dropped it, so `server.podLabels.app: server` is set in each subchart's values. The pinned charts derive pod labels from the selector labels, so the workaround is likely removable — verify against a rendered template before dropping it.
+- VM/VL/VT charts: at v0.35/0.12/0.0.7 the selector used `app: server` but the template labels dropped it, so `server.podLabels.app: server` is set in each subchart's values. The charts pinned in `charts/observability/Chart.yaml` derive pod labels from the selector labels, so the workaround is likely removable — verify against a rendered template before dropping it.
 - Cross-namespace k8s DNS requires FQDN: `<svc>.<ns>.svc.cluster.local`. Streamline→alloy uses `alloy.observability.svc.cluster.local:4318`.
 - OTel SDK defaults to HTTPS. Set `OTEL_EXPORTER_OTLP_INSECURE=true` env when endpoint is HTTP (alloy is HTTP).

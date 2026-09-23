@@ -111,16 +111,15 @@ runs:
           effect on someone running this, in present tense — not the commit subject
           reworded. Keep what the scope prefix meant and drop the `scope:` syntax.
         - Never invent a change, a version number, a migration step or a
-          justification that is not in the section. You have no other context and
-          must not go looking for any — do not read files. Folding entries together
-          is required; inventing what they did is not, so keep an entry terse when
-          it is too terse to expand honestly.
+          justification that is not in the section. You have no other context.
+          Folding entries together is required; inventing what they did is not,
+          so keep an entry terse when it is too terse to expand honestly.
         - No preamble, no sign-off, no heading naming the version — the release
           page already shows it. Start with the summary paragraph.
         PROMPT
         printf '\n--- changelog section ---\n\n'
         cat raw-notes.md
-        } | claude --print --model claude-sonnet-5 > claude-notes.md
+        } | claude --print --model claude-sonnet-5 --tools "" > claude-notes.md
 
     - id: assemble
       shell: bash
