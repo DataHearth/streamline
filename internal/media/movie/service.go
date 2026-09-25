@@ -848,6 +848,12 @@ func (s *Service) DeleteFile(
 	if err := library.RemoveMediaFile(ctx,
 		mf.Path, config.Get().Library.MoviePath,
 	); err != nil {
+		// Refused outright rather than logged and carried on: dropping the
+		// row would leave the file where it is with nothing tracking it, and
+		// the caller told the deletion happened.
+		if errors.Is(err, library.ErrOutsideRoot) {
+			return otelx.RecordSpanError(span, err)
+		}
 		slog.WarnContext(ctx, "delete media file from disk failed",
 			"path", mf.Path, "error", err)
 	}

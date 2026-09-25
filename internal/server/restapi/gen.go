@@ -19548,6 +19548,20 @@ func (response DeleteMovieFile404JSONResponse) VisitDeleteMovieFileResponse(w ht
 	return err
 }
 
+type DeleteMovieFile409JSONResponse struct{ ConflictJSONResponse }
+
+func (response DeleteMovieFile409JSONResponse) VisitDeleteMovieFileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type DeleteMovieFile413JSONResponse struct{ PayloadTooLargeJSONResponse }
 
 func (response DeleteMovieFile413JSONResponse) VisitDeleteMovieFileResponse(w http.ResponseWriter) error {
@@ -22355,6 +22369,20 @@ func (response DeleteEpisodeFile404JSONResponse) VisitDeleteEpisodeFileResponse(
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteEpisodeFile409JSONResponse struct{ ConflictJSONResponse }
+
+func (response DeleteEpisodeFile409JSONResponse) VisitDeleteEpisodeFileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
 	_, err := buf.WriteTo(w)
 	return err
 }

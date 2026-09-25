@@ -400,7 +400,8 @@ paths:
         Removes one media file from disk and DB and reverts the movie to
         "wanted" so the next monitored search re-grabs it. When
         remove_torrent=true, also removes the source torrent from its
-        download client (best-effort).
+        download client (best-effort). 409 when the file's stored path is
+        outside the movie library root: nothing is deleted, row included.
       tags: [movies]
       requestBody:
         $ref: "#/components/requestBodies/DeleteFile"
@@ -411,6 +412,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
         "413":
           $ref: "#/components/responses/PayloadTooLarge"
         "500":
@@ -897,7 +900,8 @@ paths:
         Removes the episode's media file from disk and DB and reverts the
         episode to "wanted" so the next monitored search re-grabs it. When
         remove_torrent=true, also removes the source torrent from its
-        download client (best-effort).
+        download client (best-effort). 409 when the file's stored path is
+        outside the series library root: nothing is deleted, row included.
       tags: [series]
       requestBody:
         $ref: "#/components/requestBodies/DeleteFile"
@@ -908,6 +912,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
         "413":
           $ref: "#/components/responses/PayloadTooLarge"
         "500":

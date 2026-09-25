@@ -147,7 +147,7 @@ Each facet carries its own `*_total` "all" row (`status_total`, `type_total`, `m
 | `GET` | `/movies/{id}/play-on` | Links to play the movie on a media server | Member |
 | `POST` | `/movies/{id}/reidentify` | Point the entry at a different TMDB title | 🔒 Admin |
 | `GET` | `/movies/{id}/recommendations` | TMDB recommendations | Authenticated |
-| `DELETE` | `/movies/{id}/files/{fileId}` | Delete a file | Member |
+| `DELETE` | `/movies/{id}/files/{fileId}` | Delete a file (`409` `outside_library` when its stored path is outside the library root: nothing is deleted) | Member |
 | `GET` | `/search/movie` · `/search/movie/{tmdb_id}` | TMDB title lookup | Authenticated |
 
 ### Series
@@ -168,7 +168,7 @@ Each facet carries its own `*_total` "all" row (`status_total`, `type_total`, `m
 | `POST` | `/series/{id}/seasons/{number}/search` · `/grab` | Search or grab a season | Member |
 | `PATCH` | `/series/{id}/episodes/{episodeId}` | Update an episode | Member |
 | `POST` | `/series/{id}/episodes/{episodeId}/search` · `/grab` | Search or grab an episode | Member |
-| `DELETE` | `/series/{id}/episodes/{episodeId}/file` | Delete the episode's file | Member |
+| `DELETE` | `/series/{id}/episodes/{episodeId}/file` | Delete the episode's file (`409` `outside_library` as for movies) | Member |
 
 Each of the three search scopes filters the indexer's answer to its own scope — an episode search returns that episode, a season search returns season packs of that season, a series search returns complete/multi-season packs. The episode search additionally carries `hidden_packs` (present only when non-zero): how many packs covering that episode it excluded, so an empty `items` can be told apart from "it only exists inside a pack".
 

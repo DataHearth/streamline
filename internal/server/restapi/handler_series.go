@@ -390,8 +390,14 @@ func (s *Server) DeleteEpisodeFile(
 	remove := request.Body != nil &&
 		request.Body.RemoveTorrent != nil &&
 		*request.Body.RemoveTorrent
-	if err := s.tvshows.DeleteEpisodeFile(ctx, request.EpisodeId,
-		tvshow.DeleteFileOptions{RemoveTorrent: remove}); err != nil {
+	err := s.tvshows.DeleteEpisodeFile(ctx, request.EpisodeId,
+		tvshow.DeleteFileOptions{RemoveTorrent: remove})
+	if errors.Is(err, library.ErrOutsideRoot) {
+		return DeleteEpisodeFile409JSONResponse{
+			ConflictJSONResponse: conflictResp("outside_library", err.Error()),
+		}, nil
+	}
+	if err != nil {
 		return DeleteEpisodeFile404JSONResponse{
 			NotFoundJSONResponse: errNotFound(err.Error()),
 		}, nil

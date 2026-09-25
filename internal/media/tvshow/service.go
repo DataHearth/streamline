@@ -720,6 +720,10 @@ func (s *Service) DeleteEpisodeFile(
 	if err := library.RemoveMediaFile(ctx,
 		mf.Path, config.Get().Library.SeriesPath,
 	); err != nil {
+		// See movie.DeleteFile: a file outside the root is refused, row kept.
+		if errors.Is(err, library.ErrOutsideRoot) {
+			return otelx.RecordSpanError(span, err)
+		}
 		slog.WarnContext(ctx, "delete episode file from disk failed",
 			"path", mf.Path, "error", err)
 	}

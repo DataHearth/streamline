@@ -3,6 +3,7 @@ package movie
 import (
 	"context"
 	"errors"
+	"path/filepath"
 	"sort"
 	"time"
 
@@ -12,9 +13,11 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	entmovie "github.com/datahearth/streamline/ent/movie"
+	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	mockdownload "github.com/datahearth/streamline/internal/download/mocks"
+	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/metadata"
 	mockmeta "github.com/datahearth/streamline/internal/metadata/mocks"
 	mockposters "github.com/datahearth/streamline/internal/posters/mocks"
@@ -737,11 +740,24 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 	})
 
 	Describe("DeleteFile", func() {
+		underMovieRoot := func(name string) string {
+			return filepath.Join(config.Get().Library.MoviePath, name)
+		}
+
+		It("refuses a file outside the library root and keeps its row", func() {
+			storeMock.FindMediaFileByID(mock.Anything, uint32(7)).
+				Return(&ent.MediaFile{ID: 7, Path: "/elsewhere/escaped.mkv"}, nil).
+				Once()
+
+			err := svc.DeleteFile(ctx, 3, 7, DeleteFileOptions{})
+			Expect(err).To(MatchError(library.ErrOutsideRoot))
+		})
+
 		It(
 			"deletes the file, reverts the movie, and removes the torrent when asked",
 			func() {
 				storeMock.FindMediaFileByID(mock.Anything, uint32(7)).
-					Return(&ent.MediaFile{ID: 7, Path: "/lib/does-not-exist.mkv"}, nil).
+					Return(&ent.MediaFile{ID: 7, Path: underMovieRoot("does-not-exist.mkv")}, nil).
 					Once()
 				storeMock.DeleteMediaFileAndRevertMovie(mock.Anything, uint32(7), uint32(3)).
 					Return(nil).
@@ -765,7 +781,7 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 
 		It("skips torrent removal when not requested", func() {
 			storeMock.FindMediaFileByID(mock.Anything, uint32(7)).
-				Return(&ent.MediaFile{ID: 7, Path: "/lib/does-not-exist.mkv"}, nil).
+				Return(&ent.MediaFile{ID: 7, Path: underMovieRoot("does-not-exist.mkv")}, nil).
 				Once()
 			storeMock.DeleteMediaFileAndRevertMovie(mock.Anything, uint32(7), uint32(3)).
 				Return(nil).

@@ -242,8 +242,14 @@ func (s *Server) DeleteMovieFile(
 	remove := request.Body != nil &&
 		request.Body.RemoveTorrent != nil &&
 		*request.Body.RemoveTorrent
-	if err := s.movies.DeleteFile(ctx, request.Id, request.FileId,
-		moviesvc.DeleteFileOptions{RemoveTorrent: remove}); err != nil {
+	err := s.movies.DeleteFile(ctx, request.Id, request.FileId,
+		moviesvc.DeleteFileOptions{RemoveTorrent: remove})
+	if errors.Is(err, library.ErrOutsideRoot) {
+		return DeleteMovieFile409JSONResponse{
+			ConflictJSONResponse: conflictResp("outside_library", err.Error()),
+		}, nil
+	}
+	if err != nil {
 		return DeleteMovieFile404JSONResponse{
 			NotFoundJSONResponse: errNotFound(err.Error()),
 		}, nil

@@ -11,10 +11,12 @@ import (
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
 	enttvshow "github.com/datahearth/streamline/ent/tvshow"
+	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	mockdownload "github.com/datahearth/streamline/internal/download/mocks"
 	"github.com/datahearth/streamline/internal/indexer"
+	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/metadata"
 	mockmeta "github.com/datahearth/streamline/internal/metadata/mocks"
 	mockposters "github.com/datahearth/streamline/internal/posters/mocks"
@@ -538,11 +540,24 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 	})
 
 	Describe("DeleteEpisodeFile", func() {
+		underSeriesRoot := func(name string) string {
+			return filepath.Join(config.Get().Library.SeriesPath, name)
+		}
+
+		It("refuses a file outside the library root and keeps its row", func() {
+			storeMk.FindMediaFileByEpisodeID(mock.Anything, uint32(9)).
+				Return(&ent.MediaFile{ID: 4, Path: "/elsewhere/escaped.mkv"}, nil).
+				Once()
+
+			err := svc.DeleteEpisodeFile(ctx, 9, DeleteFileOptions{})
+			Expect(err).To(MatchError(library.ErrOutsideRoot))
+		})
+
 		It(
 			"deletes the file, reverts the episode, removes the torrent when asked",
 			func() {
 				storeMk.FindMediaFileByEpisodeID(mock.Anything, uint32(9)).
-					Return(&ent.MediaFile{ID: 4, Path: "/lib/does-not-exist.mkv"}, nil).
+					Return(&ent.MediaFile{ID: 4, Path: underSeriesRoot("does-not-exist.mkv")}, nil).
 					Once()
 				storeMk.DeleteMediaFileAndRevertEpisode(mock.Anything, uint32(4), uint32(9)).
 					Return(nil).
@@ -565,7 +580,7 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 
 		It("skips torrent removal when not requested", func() {
 			storeMk.FindMediaFileByEpisodeID(mock.Anything, uint32(9)).
-				Return(&ent.MediaFile{ID: 4, Path: "/lib/does-not-exist.mkv"}, nil).
+				Return(&ent.MediaFile{ID: 4, Path: underSeriesRoot("does-not-exist.mkv")}, nil).
 				Once()
 			storeMk.DeleteMediaFileAndRevertEpisode(mock.Anything, uint32(4), uint32(9)).
 				Return(nil).

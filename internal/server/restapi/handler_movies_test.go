@@ -1107,6 +1107,20 @@ var _ = Describe(
 					Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 				},
 			)
+
+			It("answers 409 for a file outside the library root", func() {
+				app.movies.EXPECT().
+					DeleteFile(mock.Anything, uint32(3), uint32(9),
+						moviesvc.DeleteFileOptions{RemoveTorrent: false}).
+					Return(fmt.Errorf("remove /x: %w", library.ErrOutsideRoot)).
+					Once()
+
+				req := app.req(http.MethodDelete, "/api/v1/movies/3/files/9",
+					app.adminKey, nil)
+				resp := app.do(req)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusConflict))
+			})
 		})
 	},
 )
