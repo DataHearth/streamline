@@ -261,7 +261,7 @@
 			{monitoredMovies}
 			{monitoredSeries}
 			{queue}
-			disks={libraryDisks}
+			disks={auth.isAdmin ? libraryDisks : undefined}
 		/>
 
 		<RecentScroller

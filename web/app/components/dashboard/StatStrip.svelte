@@ -37,7 +37,8 @@
 		monitoredMovies?: number;
 		monitoredSeries?: number;
 		queue: QueueEntry[];
-		disks: { label: string; path: string; usage?: DiskUsage }[];
+		// Undefined hides the tile: disk usage is admin-only.
+		disks?: { label: string; path: string; usage?: DiskUsage }[];
 	} = $props();
 
 	// Bytes/sec across everything actually moving. Paused and importing entries
@@ -63,7 +64,7 @@
 		queue.filter((q) => q.status === "downloading").length,
 	);
 
-	let probed = $derived(disks.filter((d) => d.usage));
+	let probed = $derived((disks ?? []).filter((d) => d.usage));
 
 	// Movie and series paths usually share one mount, so summing their free bytes
 	// would report the same space twice. Two probes reporting an identical
@@ -199,7 +200,7 @@
      and too narrow for the movie/series sub-line. -->
 <section
 	aria-label={i18n.dash_library_stats()}
-	class="grid grid-cols-2 gap-3 lg:grid-cols-4"
+	class={cn("grid grid-cols-2 gap-3", disks ? "lg:grid-cols-4" : "lg:grid-cols-3")}
 >
 	<div
 		class="relative overflow-hidden rounded-lg border border-border bg-bg-elevated px-4 py-[18px] md:px-5"
@@ -243,7 +244,10 @@
 	     mobile) and a fifth tile would orphan onto a second row at every
 	     breakpoint. Hidden at zero so a healthy library carries no noise. -->
 	<div
-		class="relative overflow-hidden rounded-lg border border-border bg-bg-elevated px-4 py-[18px] md:px-5"
+		class={cn(
+			"relative overflow-hidden rounded-lg border border-border bg-bg-elevated px-4 py-[18px] md:px-5",
+			!disks && "col-span-2 lg:col-span-1",
+		)}
 	>
 		<div class="font-mono text-[28px] font-bold tabular leading-none tracking-tight">
 			{monitoredTotal ?? "—"}
@@ -269,86 +273,88 @@
 		</div>
 	</div>
 
-	<div
-		class="relative rounded-lg border border-border bg-bg-elevated px-4 py-[18px] md:px-5"
-	>
-		{#if volumes.length > 0}
-			<button
-				bind:this={diskBtnEl}
-				type="button"
-				aria-label={i18n.dash_free_space()}
-				aria-expanded={diskOpen}
-				onclick={() => (diskPinned = !diskPinned)}
-				onpointerenter={diskEnter}
-				onpointerleave={diskLeave}
-				onfocus={diskEnter}
-				onblur={diskLeave}
-				class={cn(
-					"absolute right-1.5 top-1.5 z-20 grid h-10 w-10 lg:h-7 lg:w-7 place-items-center rounded-md transition hover:bg-surface hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring",
-					diskOpen ? "bg-surface text-fg" : "text-fg-subtle",
-				)}
-			>
-				<Info size={13} aria-hidden="true" />
-			</button>
-			{#if diskOpen}
-				<dl
-					bind:this={diskPanelEl}
-					in:scale={{ duration: 140, start: 0.94, opacity: 0, easing: cubicOut }}
-					out:scale={{ duration: 100, start: 0.96, opacity: 0, easing: cubicOut }}
-					style:transform-origin={diskAbove ? "bottom right" : "top right"}
+	{#if disks}
+		<div
+			class="relative rounded-lg border border-border bg-bg-elevated px-4 py-[18px] md:px-5"
+		>
+			{#if volumes.length > 0}
+				<button
+					bind:this={diskBtnEl}
+					type="button"
+					aria-label={i18n.dash_free_space()}
+					aria-expanded={diskOpen}
+					onclick={() => (diskPinned = !diskPinned)}
 					onpointerenter={diskEnter}
 					onpointerleave={diskLeave}
+					onfocus={diskEnter}
+					onblur={diskLeave}
 					class={cn(
-						"absolute right-2 z-30 w-60 space-y-2.5 rounded-md border border-border-strong bg-bg-elevated p-3 shadow-4",
-						diskAbove ? "bottom-full mb-1.5" : "top-full mt-1.5",
+						"absolute right-1.5 top-1.5 z-20 grid h-10 w-10 lg:h-7 lg:w-7 place-items-center rounded-md transition hover:bg-surface hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring",
+						diskOpen ? "bg-surface text-fg" : "text-fg-subtle",
 					)}
 				>
-					{#each probed as d (d.label)}
-						<div class="min-w-0">
-							<div class="flex items-baseline justify-between gap-3">
-								<dt
-									class="shrink-0 text-[11px] uppercase tracking-[0.1em] text-fg-subtle"
-								>
-									{d.label}
-								</dt>
+					<Info size={13} aria-hidden="true" />
+				</button>
+				{#if diskOpen}
+					<dl
+						bind:this={diskPanelEl}
+						in:scale={{ duration: 140, start: 0.94, opacity: 0, easing: cubicOut }}
+						out:scale={{ duration: 100, start: 0.96, opacity: 0, easing: cubicOut }}
+						style:transform-origin={diskAbove ? "bottom right" : "top right"}
+						onpointerenter={diskEnter}
+						onpointerleave={diskLeave}
+						class={cn(
+							"absolute right-2 z-30 w-60 space-y-2.5 rounded-md border border-border-strong bg-bg-elevated p-3 shadow-4",
+							diskAbove ? "bottom-full mb-1.5" : "top-full mt-1.5",
+						)}
+					>
+						{#each probed as d (d.label)}
+							<div class="min-w-0">
+								<div class="flex items-baseline justify-between gap-3">
+									<dt
+										class="shrink-0 text-[11px] uppercase tracking-[0.1em] text-fg-subtle"
+									>
+										{d.label}
+									</dt>
+									<dd
+										class="shrink-0 whitespace-nowrap font-mono text-[11.5px] text-fg"
+									>
+										{d.usage?.free} free
+									</dd>
+								</div>
 								<dd
-									class="shrink-0 whitespace-nowrap font-mono text-[11.5px] text-fg"
+									class="mt-0.5 truncate font-mono text-[10px] text-fg-faint"
+									title={d.path}
 								>
-									{d.usage?.free} free
+									{d.path}
 								</dd>
 							</div>
-							<dd
-								class="mt-0.5 truncate font-mono text-[10px] text-fg-faint"
-								title={d.path}
-							>
-								{d.path}
-							</dd>
-						</div>
-					{/each}
-				</dl>
+						{/each}
+					</dl>
+				{/if}
 			{/if}
-		{/if}
-		<div
-			class="flex items-baseline gap-1 pr-7 font-mono text-[28px] font-bold tabular leading-none tracking-tight"
-		>
-			{#if volumes.length === 0}
-				—
-			{:else if freeParts}
-				<span class="truncate">{freeParts[1]}</span>
-				<span class="shrink-0 text-[13px] font-semibold text-fg-muted">
-					{freeParts[2]}
-				</span>
-			{:else}
-				<span class="truncate">{freeText}</span>
-			{/if}
-		</div>
-		<div class="mt-2 text-[11px] uppercase tracking-[0.1em] text-fg-subtle">
-			{i18n.dash_free()}
-		</div>
-		{#if volumes.length > 0}
-			<div class="mt-2.5">
-				<ProgressBar value={diskPct} status="available" height={2} />
+			<div
+				class="flex items-baseline gap-1 pr-7 font-mono text-[28px] font-bold tabular leading-none tracking-tight"
+			>
+				{#if volumes.length === 0}
+					—
+				{:else if freeParts}
+					<span class="truncate">{freeParts[1]}</span>
+					<span class="shrink-0 text-[13px] font-semibold text-fg-muted">
+						{freeParts[2]}
+					</span>
+				{:else}
+					<span class="truncate">{freeText}</span>
+				{/if}
 			</div>
-		{/if}
-	</div>
+			<div class="mt-2 text-[11px] uppercase tracking-[0.1em] text-fg-subtle">
+				{i18n.dash_free()}
+			</div>
+			{#if volumes.length > 0}
+				<div class="mt-2.5">
+					<ProgressBar value={diskPct} status="available" height={2} />
+				</div>
+			{/if}
+		</div>
+	{/if}
 </section>
