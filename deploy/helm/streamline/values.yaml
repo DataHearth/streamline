@@ -253,8 +253,29 @@ config:
   log:
     app:
       format: json # binary default text; deploy wants structured logs
+  # OTLP over HTTP (not gRPC) — traces, metrics and logs to one collector.
+  # Overridden with the subchart's Alloy when observability.enabled=true.
+  #
+  # For your own collector give its OTLP/HTTP port, usually 4318, as host:port
+  # or as a URL: http:// also sets insecure: true (the SDK defaults to TLS, and
+  # a plaintext collector reached without it receives nothing, with no error
+  # anywhere), https:// sets it false. A URL with a path is refused — the app
+  # posts to /v1/{traces,metrics,logs} under host:port and cannot take a prefix.
+  # A bare host:port leaves insecure to you.
+  #
+  # The dashboard (grafanaDashboard below) reads PROMETHEUS names —
+  # streamline_movies_total, http_server_request_duration_seconds_bucket — which
+  # is what a collector converting OTLP through the Prometheus translator
+  # produces (Alloy's otelcol.exporter.prometheus, the collector's
+  # prometheusremotewrite exporter). VictoriaMetrics' own OTLP endpoint needs
+  # -opentelemetry.usePrometheusNaming for the same names; without it the HTTP
+  # histogram lands under its dotted OTLP name and those panels stay empty.
+  #
+  # With networkPolicy.egress on, an in-cluster collector outside the
+  # observability subchart needs its own rule in networkPolicy.egress.to.
   otel:
-    endpoint: "" # auto-set to the subchart alloy service when observability.enabled=true
+    endpoint: ""
+    # insecure: true
   # Single sign-on. How far a provider is trusted is two separate questions,
   # one key each, both defaulting closed.
   #
@@ -377,5 +398,40 @@ library:
     accessMode: ReadWriteOnce
 
 # Optional local subchart: Alloy + VictoriaMetrics/Logs/Traces + Grafana.
+# Provisions the dashboard into its own Grafana; grafanaDashboard below is not
+# needed for that.
 observability:
   enabled: false
+
+# The Streamline dashboard as a ConfigMap, for a Grafana you already run whose
+# dashboard sidecar picks ConfigMaps up by label (the grafana chart's
+# sidecar.dashboards, kube-prometheus-stack). Independent of observability.
+#
+# Grafana needs metrics before it has anything to show: set config.otel.endpoint
+# to a collector that lands them in a Prometheus-compatible store under
+# Prometheus names — see the note on config.otel above.
+#
+# Dashboard uid is `streamline`. A copy imported by hand under the same uid
+# blocks the provisioned one; delete it first.
+grafanaDashboard:
+  enabled: false
+  # Empty = the release namespace. Set it when the sidecar only watches its own.
+  namespace: ""
+  # Must match the sidecar's label/labelValue.
+  labels:
+    grafana_dashboard: "1"
+  # e.g. the sidecar's folderAnnotation: { grafana_folder: Media }
+  annotations: {}
+  # The metric panels need no setting: they go through a datasource variable
+  # that defaults to Grafana's default prometheus-type datasource and can be
+  # switched from the dashboard. The logs panel has to pick its backend here,
+  # because the query language comes with it.
+  logs:
+    # loki — container stdout shipped by Alloy/Promtail (log.app.format: json,
+    # the chart's default, is what the default query parses).
+    # victorialogs — OTLP logs, as the observability subchart ships them.
+    type: loki
+    # Empty = a default per type. For loki:
+    #   {namespace="<release namespace>", container="streamline"} | json | level=~"ERROR|WARN|CRITICAL"
+    # which assumes your shipper labels streams `namespace` and `container`.
+    query: ""

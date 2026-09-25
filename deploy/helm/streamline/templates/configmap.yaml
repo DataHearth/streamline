@@ -8,9 +8,7 @@ metadata:
 data:
   config.yaml: |
 {{- $cfg := deepCopy .Values.config }}
-{{- $otel := $cfg.otel | default dict }}
-{{- $_ := set $otel "endpoint" (include "streamline.otelEndpoint" .) }}
-{{- $_ = set $cfg "otel" $otel }}
+{{- $_ := set $cfg "otel" (include "streamline.otelConfig" . | fromYaml) }}
 {{- if .Values.library.shared.enabled }}
 {{- $mount := .Values.library.shared.mountPath }}
 {{- $lib := $cfg.library | default dict }}

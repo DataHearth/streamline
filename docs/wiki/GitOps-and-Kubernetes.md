@@ -105,7 +105,7 @@ config:
     app:
       format: json
   otel:
-    endpoint: ""           # auto-set when observability.enabled
+    endpoint: ""           # auto-set when observability.enabled; http:// also sets insecure
 ```
 
 Add any other key and koanf merges it over the defaults. Check your result before rolling it out:

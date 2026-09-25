@@ -57,10 +57,6 @@ spec:
               containerPort: {{ .Values.service.port }}
               protocol: TCP
           env:
-            {{- if .Values.observability.enabled }}
-            - name: OTEL_EXPORTER_OTLP_INSECURE
-              value: "true"
-            {{- end }}
             {{- if .Values.hwAccel.enabled }}
             - name: STREAMLINE_TRANSCODING__HW_DEVICE
               value: {{ .Values.hwAccel.device | quote }}

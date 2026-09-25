@@ -171,10 +171,35 @@ observability:
   enabled: true
 ```
 
-It installs into the `observability` namespace and auto-sets `otel.endpoint` to the in-cluster Alloy service. Two gotchas are already handled in the chart, but worth knowing if you're adapting it:
+It installs into the `observability` namespace, auto-sets `otel.endpoint` to the in-cluster Alloy service with `otel.insecure: true`, and provisions the Streamline dashboard into its Grafana. Two gotchas are already handled in the chart, but worth knowing if you're adapting it:
 
 - **Cross-namespace DNS needs an FQDN.** `alloy:4318` won't resolve from the `streamline` namespace; `alloy.observability.svc.cluster.local:4318` will.
 - **The VictoriaMetrics/Logs/Traces charts** (v0.35 / 0.12 / 0.0.7) have a selector/label mismatch — the selector uses `app: server` but templates drop it. The workaround is `server.podLabels.app: server` in each subchart's values.
+
+### Using your own Grafana and collector
+
+Already running Grafana and a collector? Leave the subchart off and have the chart ship only the dashboard and the OTLP wiring:
+
+```yaml
+config:
+  otel:
+    endpoint: http://alloy.monitoring.svc.cluster.local:4318
+grafanaDashboard:
+  enabled: true
+  labels:
+    grafana_dashboard: "1"        # your sidecar's label / labelValue
+  annotations:
+    grafana_folder: Media         # your sidecar's folderAnnotation, if any
+  logs:
+    type: loki                    # or victorialogs
+```
+
+- **The endpoint is OTLP over HTTP**, usually port `4318`. Not gRPC. The chart accepts `host:port` or a URL. With `http://`, the chart also sets `otel.insecure: true`. With `https://`, it sets it to `false`. A URL with a path is refused: the app posts to `/v1/traces`, `/v1/metrics` and `/v1/logs` under `host:port` and can't take a prefix.
+- **The dashboard reads Prometheus-style names**: `streamline_movies_total`, `http_server_request_duration_seconds_bucket` with `http_route` and `http_response_status_code` labels. You get these when the collector converts OTLP through the Prometheus translator, for example Alloy's `otelcol.exporter.prometheus` into `prometheus.remote_write`, as the subchart does. VictoriaMetrics' own OTLP endpoint needs `-opentelemetry.usePrometheusNaming` to produce the same names. Without that flag the HTTP histogram keeps its dotted OTLP name and the request panels stay empty.
+- **Metric panels don't need a datasource setting.** They use a `$datasource` variable that defaults to Grafana's default Prometheus-type datasource, and you can switch it from the dashboard.
+- **The logs panel does need one**, because its backend decides the query language. With `loki`, it reads container stdout: `{namespace="<release namespace>", container="streamline"} | json | level=~"ERROR|WARN|CRITICAL"`. That query assumes your log shipper labels streams `namespace` and `container`, and that `log.app.format` is `json` (the chart's default). If your labels differ, set your own query in `grafanaDashboard.logs.query`. With `victorialogs`, it reads OTLP logs, the same way the subchart does.
+- **The dashboard uid is `streamline`.** If you imported a copy by hand, delete it first, or it keeps the provisioned one from loading.
+- With `networkPolicy.egress` on, a collector in another namespace needs its own rule in `networkPolicy.egress.to`.
 
 ---
 

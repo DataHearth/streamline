@@ -84,6 +84,29 @@
         "enabled": { "type": "boolean" }
       }
     },
+    "grafanaDashboard": {
+      "type": "object",
+      "description": "Render the Streamline dashboard as a ConfigMap for an existing Grafana's dashboard sidecar.",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "namespace": { "type": "string" },
+        "labels": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "annotations": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "logs": {
+          "type": "object",
+          "properties": {
+            "type": { "enum": ["loki", "victorialogs"] },
+            "query": { "type": "string" }
+          }
+        }
+      }
+    },
     "secrets": {
       "type": "object",
       "description": "STREAMLINE_*-prefixed env vars rendered into a Secret (scalar config overrides).",

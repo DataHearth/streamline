@@ -10,16 +10,19 @@ tasks:
       - deploy/helm/streamline/charts/observability/Chart.lock
 
   prep:
-    desc: Copy dashboard JSON into observability subchart
+    desc: Copy dashboard JSON into the chart
     deps: [deps]
+    # Into the parent chart, not the observability subchart: templates/grafana-dashboard.yaml
+    # renders it for both the subchart's Grafana and grafanaDashboard.enabled, and a
+    # subchart cannot read its parent's files.
     cmds:
-      - mkdir -p deploy/helm/streamline/charts/observability/dashboards
+      - mkdir -p deploy/helm/streamline/dashboards
       - cp deploy/grafana/dashboards/streamline.json
-        deploy/helm/streamline/charts/observability/dashboards/streamline.json
+        deploy/helm/streamline/dashboards/streamline.json
     sources:
       - deploy/grafana/dashboards/streamline.json
     generates:
-      - deploy/helm/streamline/charts/observability/dashboards/streamline.json
+      - deploy/helm/streamline/dashboards/streamline.json
 
   lint:
     desc: Lint the Helm chart

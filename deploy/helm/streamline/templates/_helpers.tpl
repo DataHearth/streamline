@@ -138,10 +138,66 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
 {{- end -}}
 
-{{- define "streamline.otelEndpoint" -}}
+{{- /* The otel block as the app should see it. The exporters are OTLP/HTTP and
+       take the endpoint through WithEndpoint, i.e. host:port with no scheme and
+       no path — a URL there builds a request URL the collector never answers.
+       So a scheme is accepted here and turned into what the app means by it:
+       http:// sets insecure (the SDK defaults to TLS, and a plaintext collector
+       reached without it receives nothing, silently), https:// clears it. */ -}}
+{{- define "streamline.otelConfig" -}}
+{{- $otel := deepCopy (.Values.config.otel | default dict) -}}
 {{- if .Values.observability.enabled -}}
-alloy.{{ .Values.observability.namespace | default "observability" }}.svc.cluster.local:4318
+{{- $_ := set $otel "endpoint" (printf "alloy.%s.svc.cluster.local:4318" (.Values.observability.namespace | default "observability")) -}}
+{{- $_ = set $otel "insecure" true -}}
 {{- else -}}
-{{ (.Values.config.otel | default dict).endpoint }}
+{{- $ep := $otel.endpoint | default "" -}}
+{{- if hasPrefix "http://" $ep -}}
+{{- $_ := set $otel "insecure" true -}}
+{{- else if hasPrefix "https://" $ep -}}
+{{- $_ := set $otel "insecure" false -}}
 {{- end -}}
+{{- $hostPort := $ep | trimPrefix "http://" | trimPrefix "https://" | trimSuffix "/" -}}
+{{- if contains "/" $hostPort -}}
+{{- fail (printf "config.otel.endpoint=%s carries a path. The app sends OTLP/HTTP to the standard /v1/{traces,metrics,logs} paths under host:port and cannot take a prefix; point it at the collector's OTLP/HTTP port (usually 4318) directly." $ep) -}}
+{{- end -}}
+{{- $_ := set $otel "endpoint" $hostPort -}}
+{{- end -}}
+{{- toYaml $otel -}}
+{{- end -}}
+
+{{- /* The dashboard JSON with the logs panel pointed at the backend in
+       .logs.type. Metrics need nothing here — every metric panel goes through
+       the $datasource variable, which Grafana resolves to the default
+       prometheus-type datasource. The logs panel cannot work that way: a
+       datasource variable is bound to ONE plugin type, and the query language
+       differs between them, so both have to be chosen at render time. */ -}}
+{{- define "streamline.dashboardJSON" -}}
+{{- $raw := .root.Files.Get "dashboards/streamline.json" -}}
+{{- if not $raw -}}
+{{- fail "dashboards/streamline.json is missing from the chart — it is copied in from deploy/grafana/dashboards by `task helm:prep`, which every packaging path runs; render through it rather than from a bare checkout" -}}
+{{- end -}}
+{{- $d := fromJson $raw -}}
+{{- $logs := .logs | default dict -}}
+{{- $plugins := dict "loki" "loki" "victorialogs" "victoriametrics-logs-datasource" -}}
+{{- $kind := $logs.type | default "loki" -}}
+{{- if not (hasKey $plugins $kind) -}}
+{{- fail (printf "grafanaDashboard.logs.type=%s is not one of: loki, victorialogs" $kind) -}}
+{{- end -}}
+{{- $plugin := get $plugins $kind -}}
+{{- $query := $logs.query | default "" -}}
+{{- if and (not $query) (eq $kind "loki") -}}
+{{- $query = printf "{namespace=%q, container=\"streamline\"} | json | level=~\"ERROR|WARN|CRITICAL\"" .root.Release.Namespace -}}
+{{- end -}}
+{{- range $v := $d.templating.list -}}
+{{- if eq $v.name "logs" -}}{{- $_ := set $v "query" $plugin -}}{{- end -}}
+{{- end -}}
+{{- range $p := $d.panels -}}
+{{- if eq $p.type "logs" -}}
+{{- $_ := set $p.datasource "type" $plugin -}}
+{{- if $query -}}
+{{- range $t := $p.targets -}}{{- $_ := set $t "expr" $query -}}{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- toPrettyJson $d -}}
 {{- end -}}

@@ -176,7 +176,8 @@ grafana:
           allowUiUpdates: false
           options:
             path: /var/lib/grafana/dashboards/streamline
-  # dashboards mounted from a ConfigMap created by this subchart (dashboard-streamline.yaml).
+  # dashboards mounted from a ConfigMap the parent chart renders into this namespace
+  # (streamline/templates/grafana-dashboard.yaml) — a subchart can't read the parent's files.
   dashboardsConfigMaps:
     streamline: streamline-dashboard
   ingress:

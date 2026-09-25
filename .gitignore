@@ -29,7 +29,7 @@
 *.test
 
 /deploy/helm/streamline/kubeconfig.yaml
-/deploy/helm/streamline/charts/observability/dashboards/
+/deploy/helm/streamline/dashboards/
 /deploy/helm/streamline/charts/observability/charts/
 /deploy/config/
 /deploy/data/
