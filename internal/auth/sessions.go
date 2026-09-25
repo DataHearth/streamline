@@ -225,7 +225,7 @@ func (s *auth) RevokeAllUserSessions(ctx context.Context, userID uint32) error {
 			fmt.Errorf("revoke all user sessions: %w", err),
 		)
 	}
-	slog.InfoContext(ctx, "all user sessions revoked", "user.id", userID)
+	slog.InfoContext(ctx, "all user sessions revoked", "target.user.id", userID)
 	return nil
 }
 

@@ -145,7 +145,9 @@ func (s *auth) CreateUserDirect(
 	}
 	span.SetAttributes(semconv.UserID(fmt.Sprint(u.ID)))
 	slog.InfoContext(ctx, "admin_user_created",
-		"user.id", u.ID, "user.email", u.Email, "user.role", role)
+		"target.user.id", u.ID,
+		"target.user.email", u.Email,
+		"target.user.role", role)
 	return u, nil
 }
 
@@ -263,10 +265,10 @@ func (s *auth) UpdateUser(
 			// failure is surfaced in the log instead. The manual out is the
 			// per-session revoke on the admin user-detail page.
 			slog.ErrorContext(ctx, "role_change_session_revoke_failed",
-				"user.id", id, "error", err)
+				"target.user.id", id, "error", err)
 		}
 		slog.InfoContext(ctx, "user_role_changed",
-			"user.id", id,
+			"target.user.id", id,
 			"old_role", string(current.Role),
 			"new_role", *p.Role,
 		)
@@ -315,7 +317,7 @@ func (s *auth) DeleteUser(
 		return otelx.RecordSpanError(span, fmt.Errorf("delete user: %w", err))
 	}
 	slog.InfoContext(ctx, "user_deleted",
-		"user.id", id, "actor.user.id", requesterID)
+		"target.user.id", id)
 	return nil
 }
 
@@ -353,7 +355,7 @@ func (s *auth) AdminResetPassword(
 		// Best-effort: the password is already rotated. Log and carry on so
 		// the admin flow succeeds even if the session revoke fails.
 		slog.WarnContext(ctx, "revoke_all_sessions_failed",
-			"user.id", id, "error", err)
+			"target.user.id", id, "error", err)
 	}
 	revoked, err := s.db.DeleteAPIKeysByUser(ctx, id)
 	if err != nil {
@@ -361,10 +363,10 @@ func (s *auth) AdminResetPassword(
 		// survives the reset is a standing credential the reset was meant to
 		// cut.
 		slog.ErrorContext(ctx, "failed to revoke api keys",
-			"user.id", id, "error", err)
+			"target.user.id", id, "error", err)
 	}
 	slog.InfoContext(ctx, "admin_password_reset",
-		"user.id", id, "api_keys_revoked", revoked)
+		"target.user.id", id, "api_keys_revoked", revoked)
 	return nil
 }
 

@@ -18,6 +18,7 @@ Svelte 5 SPA in `web/app/` (TypeScript everywhere), Routify v3 file-routing over
 - `observability.Setup` returns one `slog.Handler` = `contextEnrichingHandler(multiHandler{stderr, otelslog.Handler})`. stderr is pretty text/json from `log.app.{level,format}`; otelslog bridges to the OTLP logs pipeline (traces/metrics/logs all batch-exported to `otel.endpoint`).
 - **`log.app.enabled` gates the stderr sink only**; the OTel pipeline is gated on `otel.endpoint` alone. It used to return early with a `DiscardHandler`, so quieting local logs silently stopped traces and metrics as well — an instance exporting nothing, for a reason nowhere near the OTel config.
 - `contextEnrichingHandler` auto-attaches `request_id` (chi), `user.id`/`user.email`/`user.roles` (auth claims, OTel semconv v1.40.0), `http.route` (chi route pattern). Trace/span IDs come from otelslog. Use `slog.XContext` so ctx flows through.
+- On an authenticated request `user.*` is therefore the **caller**. A log line about another account (admin CRUD, unlock, session revoke) names it `target.user.*` — writing `user.id` there emits the key twice, target and actor, and a filter on `user.id` matches both people.
 - `observability.LevelCritical` (= `slog.LevelError + 4`, rendered `CRITICAL`) for panics, invariant violations, unrecoverable conditions. Call via `slog.LogAttrs(ctx, observability.LevelCritical, ...)`.
 - OTel semconv pinned at v1.40.0 — use `semconv.<Key>Key` constants (e.g. `semconv.HTTPRouteKey`) over string literals; keep versions aligned across files.
 
