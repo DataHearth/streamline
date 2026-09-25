@@ -248,7 +248,9 @@ var _ = Describe("REST API indexers", Label("e2e"), func() {
 		Expect(results).To(HaveLen(1))
 		Expect(results[0].Title).To(Equal(fakes.ReleaseTitle))
 		Expect(results[0].InfoUrl).To(Equal(fakes.ReleaseGUID))
-		Expect(results[0].DownloadUrl).To(Equal(tz.URL + fakes.DownloadPath))
+		// A sealed handle, never the indexer's link: that one carries its key.
+		Expect(results[0].DownloadUrl).To(HavePrefix("slr1."))
+		Expect(results[0].DownloadUrl).NotTo(ContainSubstring(tz.URL))
 		Expect(results[0].Size).To(BeEquivalentTo(fakes.ReleaseSize))
 		Expect(results[0].Seeders).To(BeEquivalentTo(fakes.ReleaseSeeders))
 		Expect(results[0].Leechers).To(BeEquivalentTo(fakes.ReleasePeers))

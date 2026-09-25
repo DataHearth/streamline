@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -20,6 +21,7 @@ import (
 	"github.com/datahearth/streamline/internal/media/tvshow"
 	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/metadata"
+	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/quality"
 	"github.com/datahearth/streamline/internal/quality/qualityctx"
 	"github.com/datahearth/streamline/internal/utils/numeric"
@@ -1131,13 +1133,18 @@ func requestToAPI(r *ent.Request) Request {
 func toSearchResult(r indexer.SearchResult) SearchResult {
 	item := SearchResult{
 		Title:       r.Title,
-		DownloadUrl: r.Download,
+		DownloadUrl: sealReleaseLink(r.Download),
 		Size:        r.Size,
 		Seeders:     r.Seeders,
 	}
 	parsed := library.Parse(filepath.Base(r.Title))
 	if r.InfoURL != "" {
-		item.InfoUrl = &r.InfoURL
+		// A details page, for a human to open: the host and path are the
+		// point, and a query can carry the same key the download link does.
+		if u, err := url.Parse(r.InfoURL); err == nil {
+			info := otelx.RedactURL(u)
+			item.InfoUrl = &info
+		}
 	}
 	if r.Leechers > 0 {
 		item.Leechers = &r.Leechers
@@ -1266,9 +1273,13 @@ func toIndexerResult(body *SearchResult) (indexer.SearchResult, bool) {
 	if body == nil || body.DownloadUrl == "" || body.Title == "" {
 		return indexer.SearchResult{}, false
 	}
+	link, err := openReleaseLink(body.DownloadUrl)
+	if err != nil {
+		return indexer.SearchResult{}, false
+	}
 	sr := indexer.SearchResult{
 		Title:    body.Title,
-		Download: body.DownloadUrl,
+		Download: link,
 		Size:     body.Size,
 		Seeders:  body.Seeders,
 	}

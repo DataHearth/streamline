@@ -6376,8 +6376,18 @@ components:
           type: string
         info_url:
           type: string
+          description: >-
+            The indexer's details page, with any query string, fragment and
+            userinfo removed — they can carry the indexer's API key.
         download_url:
           type: string
+          description: >-
+            In a search or browse response, an opaque handle (prefixed
+            `slr1.`) standing in for the indexer's download link, which
+            authenticates with the indexer's API key. Post it back unchanged
+            in a grab body. Handles stop opening when the session secret
+            rotates; search again. A grab body may also carry a plain magnet
+            or a link to a configured indexer.
         size:
           type: integer
           format: int64

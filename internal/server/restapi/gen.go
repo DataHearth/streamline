@@ -4638,11 +4638,15 @@ type ScheduleUpdate struct {
 
 // SearchResult defines model for SearchResult.
 type SearchResult struct {
-	Codec       *string `json:"codec,omitempty"`
+	Codec *string `json:"codec,omitempty"`
+
+	// DownloadUrl In a search or browse response, an opaque handle (prefixed `slr1.`) standing in for the indexer's download link, which authenticates with the indexer's API key. Post it back unchanged in a grab body. Handles stop opening when the session secret rotates; search again. A grab body may also carry a plain magnet or a link to a configured indexer.
 	DownloadUrl string  `json:"download_url"`
 	Indexer     *string `json:"indexer,omitempty"`
-	InfoUrl     *string `json:"info_url,omitempty"`
-	Leechers    *uint32 `json:"leechers,omitempty"`
+
+	// InfoUrl The indexer's details page, with any query string, fragment and userinfo removed — they can carry the indexer's API key.
+	InfoUrl  *string `json:"info_url,omitempty"`
+	Leechers *uint32 `json:"leechers,omitempty"`
 
 	// MatchedFormats Names of the custom formats that matched, relative to the queried item's quality profile. Ignored on grab request bodies.
 	MatchedFormats *[]string  `json:"matched_formats,omitempty"`
