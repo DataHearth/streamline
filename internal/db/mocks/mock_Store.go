@@ -31,10 +31,19 @@ func NewMockStore(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *MockStore {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &MockStore{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -1560,8 +1569,8 @@ func (_c *MockStore_CountMoviesByStatus_Call) RunAndReturn(run func(ctx context.
 }
 
 // CountRequestsByStatus provides a mock function for the type MockStore
-func (_mock *MockStore) CountRequestsByStatus(ctx context.Context, status request.Status) (int, error) {
-	ret := _mock.Called(ctx, status)
+func (_mock *MockStore) CountRequestsByStatus(ctx context.Context, status request.Status, requesterID uint32) (int, error) {
+	ret := _mock.Called(ctx, status, requesterID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CountRequestsByStatus")
@@ -1569,16 +1578,16 @@ func (_mock *MockStore) CountRequestsByStatus(ctx context.Context, status reques
 
 	var r0 int
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, request.Status) (int, error)); ok {
-		return returnFunc(ctx, status)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, request.Status, uint32) (int, error)); ok {
+		return returnFunc(ctx, status, requesterID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, request.Status) int); ok {
-		r0 = returnFunc(ctx, status)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, request.Status, uint32) int); ok {
+		r0 = returnFunc(ctx, status, requesterID)
 	} else {
 		r0 = ret.Get(0).(int)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, request.Status) error); ok {
-		r1 = returnFunc(ctx, status)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, request.Status, uint32) error); ok {
+		r1 = returnFunc(ctx, status, requesterID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -1593,11 +1602,12 @@ type MockStore_CountRequestsByStatus_Call struct {
 // CountRequestsByStatus is a helper method to define mock.On call
 //   - ctx context.Context
 //   - status request.Status
-func (_e *MockStore_Expecter) CountRequestsByStatus(ctx any, status any) *MockStore_CountRequestsByStatus_Call {
-	return &MockStore_CountRequestsByStatus_Call{Call: _e.mock.On("CountRequestsByStatus", ctx, status)}
+//   - requesterID uint32
+func (_e *MockStore_Expecter) CountRequestsByStatus(ctx any, status any, requesterID any) *MockStore_CountRequestsByStatus_Call {
+	return &MockStore_CountRequestsByStatus_Call{Call: _e.mock.On("CountRequestsByStatus", ctx, status, requesterID)}
 }
 
-func (_c *MockStore_CountRequestsByStatus_Call) Run(run func(ctx context.Context, status request.Status)) *MockStore_CountRequestsByStatus_Call {
+func (_c *MockStore_CountRequestsByStatus_Call) Run(run func(ctx context.Context, status request.Status, requesterID uint32)) *MockStore_CountRequestsByStatus_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -1607,9 +1617,14 @@ func (_c *MockStore_CountRequestsByStatus_Call) Run(run func(ctx context.Context
 		if args[1] != nil {
 			arg1 = args[1].(request.Status)
 		}
+		var arg2 uint32
+		if args[2] != nil {
+			arg2 = args[2].(uint32)
+		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -1620,7 +1635,7 @@ func (_c *MockStore_CountRequestsByStatus_Call) Return(n int, err error) *MockSt
 	return _c
 }
 
-func (_c *MockStore_CountRequestsByStatus_Call) RunAndReturn(run func(ctx context.Context, status request.Status) (int, error)) *MockStore_CountRequestsByStatus_Call {
+func (_c *MockStore_CountRequestsByStatus_Call) RunAndReturn(run func(ctx context.Context, status request.Status, requesterID uint32) (int, error)) *MockStore_CountRequestsByStatus_Call {
 	_c.Call.Return(run)
 	return _c
 }

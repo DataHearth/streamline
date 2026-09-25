@@ -162,8 +162,12 @@ var _ = Describe("Request store", Label("unit", "db"), func() {
 		Expect(total).To(Equal(1))
 		Expect(mine).To(HaveLen(1))
 
-		n, err := store.CountRequestsByStatus(ctx, request.StatusPending)
+		n, err := store.CountRequestsByStatus(ctx, request.StatusPending, 0)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(n).To(Equal(2))
+
+		n, err = store.CountRequestsByStatus(ctx, request.StatusPending, userID)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(n).To(Equal(1))
 	})
 })

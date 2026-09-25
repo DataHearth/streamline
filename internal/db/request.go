@@ -136,7 +136,11 @@ func (db *DB) MarkRequestsAvailable(
 func (db *DB) CountRequestsByStatus(
 	ctx context.Context,
 	status request.Status,
+	requesterID uint32,
 ) (int, error) {
-	return db.client.Request.Query().
-		Where(request.StatusEQ(status)).Count(ctx)
+	q := db.client.Request.Query().Where(request.StatusEQ(status))
+	if requesterID != 0 {
+		q = q.Where(request.HasRequesterWith(user.IDEQ(requesterID)))
+	}
+	return q.Count(ctx)
 }

@@ -3603,6 +3603,9 @@ paths:
     get:
       operationId: getRequestCounts
       summary: Request counts by status
+      description: |
+        Admins and members count every request; a request_only caller counts
+        only their own, matching what `GET /requests` lists for them.
       tags: [requests]
       responses:
         "200":

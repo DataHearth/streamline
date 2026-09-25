@@ -865,9 +865,11 @@ type Store interface {
 		mediaType string,
 		mediaID uint32,
 	) error
+	// CountRequestsByStatus counts every requester's rows when requesterID is 0.
 	CountRequestsByStatus(
 		ctx context.Context,
 		status request.Status,
+		requesterID uint32,
 	) (int, error)
 }
 

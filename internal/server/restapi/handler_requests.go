@@ -111,14 +111,19 @@ func (s *Server) GetRequestCounts(
 	ctx context.Context,
 	_ GetRequestCountsRequestObject,
 ) (GetRequestCountsResponseObject, error) {
-	if claims := auth.ClaimsFromContext(ctx); claims == nil ||
-		claims.UserID == 0 {
+	claims := auth.ClaimsFromContext(ctx)
+	if claims == nil || claims.UserID == 0 {
 		return GetRequestCounts401JSONResponse{
 			UnauthorizedJSONResponse: unauthorizedResp("login required"),
 		}, nil
 	}
+	// Scoped like ListRequests, or the badges count rows the list never shows.
+	var requesterID uint32
+	if claims.Role == "request_only" {
+		requesterID = claims.UserID
+	}
 	count := func(st request.Status) int {
-		n, err := s.store.CountRequestsByStatus(ctx, st)
+		n, err := s.store.CountRequestsByStatus(ctx, st, requesterID)
 		if err != nil {
 			return 0
 		}
