@@ -224,9 +224,15 @@ func (s *Server) PreviewPending(
 		ctx, rec.DownloadClientName, rec.TorrentHash,
 	)
 	if err != nil {
+		// The client's error names its URL, and this route is open to
+		// request_only users, who are never shown a download client's address.
+		// The detail goes to the log for the admin instead.
+		slog.WarnContext(ctx, "could not list a pending torrent's files",
+			"download_client", rec.DownloadClientName,
+			"torrent.hash", rec.TorrentHash, "error", err)
 		return PreviewPending422JSONResponse{
 			UnprocessableEntityJSONResponse: errConnectionFailed(
-				fmt.Sprintf("could not list the torrent's files: %v", err),
+				"could not list the torrent's files from its download client",
 			),
 		}, nil
 	}

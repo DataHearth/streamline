@@ -3,6 +3,7 @@ package restapi
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"strings"
 
@@ -321,6 +322,30 @@ var _ = Describe("Handler: Pending", Label("unit", "server", "activity"), func()
 			Expect(body.Upgrades[0].Episode).To(Equal(uint16(1)))
 			Expect(body.Keeps).To(BeEmpty())
 			Expect(body.Unmatched).To(Equal(1))
+		})
+
+		It("never echoes the download client's error to the caller", func() {
+			app.store.EXPECT().
+				FindPendingDownloadRecordByID(mock.Anything, uint32(1)).
+				Return(pendingPack(), nil).Once()
+			app.store.EXPECT().
+				FindTVShowByID(mock.Anything, uint32(5)).
+				Return(show(), nil).Once()
+			app.downloads.EXPECT().
+				ListTorrentFiles(mock.Anything, "qbit", "abc").
+				Return(nil, errors.New(
+					`Get "http://10.0.0.5:8081/api/v2/torrents/files": connection refused`,
+				)).Once()
+
+			resp := app.do(app.req(
+				http.MethodGet, "/api/v1/activity/pending/1/preview",
+				app.adminKey, nil,
+			))
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+			raw, err := io.ReadAll(resp.Body)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(raw)).NotTo(ContainSubstring("10.0.0.5"))
 		})
 
 		It("keeps an episode whose file the release does not beat", func() {
