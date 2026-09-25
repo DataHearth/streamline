@@ -14,6 +14,7 @@ import (
 	"time"
 
 	antorrent "github.com/anacrolix/torrent"
+	"github.com/anacrolix/torrent/bencode"
 	"github.com/anacrolix/torrent/metainfo"
 	"github.com/anacrolix/torrent/types"
 
@@ -120,6 +121,20 @@ func (e *Engine) AddTorrent(
 	if _, held := e.client.Torrent(spec.InfoHash); !held &&
 		len(e.client.Torrents()) >= maxTorrents {
 		return "", otelx.RecordSpanError(span, download.ErrClientFull)
+	}
+	// A .torrent carries its info, so the storage guard's verdict can be had
+	// here, as a refusal the grab reports, rather than as an OpenTorrent
+	// failure deep in the add. A magnet's info arrives later, and the guard
+	// refuses it then.
+	if len(spec.InfoBytes) > 0 {
+		var info metainfo.Info
+		if err := bencode.Unmarshal(spec.InfoBytes, &info); err == nil &&
+			!e.paths.admits(e.downloadDir, &info, spec.InfoHash) {
+			return "", otelx.RecordSpanError(span, fmt.Errorf(
+				"%w: %q is taken or unsafe", download.ErrUnsafeTorrentName,
+				info.BestName(),
+			))
+		}
 	}
 	if trackers, dropped := dropUnusableTrackers(spec.Trackers); dropped > 0 {
 		spec.Trackers = trackers

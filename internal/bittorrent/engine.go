@@ -557,6 +557,7 @@ func (e *Engine) restore(ctx context.Context) error {
 				"info_hash", s.InfoHash, "dropped", dropped,
 				"remaining", len(trackers))
 		}
+		e.paths.trust(spec.InfoHash)
 		t, _, err := e.client.AddTorrentSpec(spec)
 		if err != nil {
 			slog.WarnContext(ctx, "failed to re-add torrent",

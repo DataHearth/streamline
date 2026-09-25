@@ -463,7 +463,7 @@ The built-in engine treats what a release names as untrusted:
 
 - It holds at most **500 torrents**. A grab past that is refused with a message saying so; remove finished torrents to make room.
 - It won't announce to a tracker, fetch a webseed or pull metadata from an address on the machine itself (loopback), on its link (link-local, which includes the `169.254.169.254` cloud metadata endpoint), or a multicast one. Private LAN addresses are fine, so a tracker on your homelab still works. Peer addresses and DHT nodes embedded in a magnet are ignored; the trackers and DHT find the swarm.
-- It refuses a torrent whose name is empty, `.`, `..`, `.streamline-session`, contains a path separator, or is already used by another torrent it holds. Any of those would land on data that isn't the torrent's.
+- It refuses a torrent whose name is empty, `.`, `..`, `.streamline-session`, contains a path separator, or is already used by another torrent it holds. Any of those would land on data that isn't the torrent's. It also refuses a torrent whose name is already on disk with files of different sizes, or with a half-finished `.part` download it doesn't own: that is another release's data. Re-adding the same torrent over its own complete files is fine.
 
 ### indexers
 

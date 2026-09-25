@@ -582,7 +582,8 @@ func (s *Server) GrabEpisodeRelease(
 	switch {
 	case errors.Is(err, download.ErrUntrustedSource),
 		errors.Is(err, download.ErrNoWantedFiles),
-		errors.Is(err, download.ErrClientFull):
+		errors.Is(err, download.ErrClientFull),
+		errors.Is(err, download.ErrUnsafeTorrentName):
 		return GrabEpisodeRelease422JSONResponse{
 			UnprocessableEntityJSONResponse: errGrabRejected(err.Error()),
 		}, nil
@@ -684,7 +685,8 @@ func (s *Server) GrabSeasonRelease(
 	switch {
 	case errors.Is(err, download.ErrUntrustedSource),
 		errors.Is(err, download.ErrNoWantedFiles),
-		errors.Is(err, download.ErrClientFull):
+		errors.Is(err, download.ErrClientFull),
+		errors.Is(err, download.ErrUnsafeTorrentName):
 		return GrabSeasonRelease422JSONResponse{
 			UnprocessableEntityJSONResponse: errGrabRejected(err.Error()),
 		}, nil
@@ -818,7 +820,8 @@ func (s *Server) GrabSeriesRelease(
 	switch {
 	case errors.Is(err, download.ErrUntrustedSource),
 		errors.Is(err, download.ErrNoWantedFiles),
-		errors.Is(err, download.ErrClientFull):
+		errors.Is(err, download.ErrClientFull),
+		errors.Is(err, download.ErrUnsafeTorrentName):
 		return GrabSeriesRelease422JSONResponse{
 			UnprocessableEntityJSONResponse: errGrabRejected(err.Error()),
 		}, nil

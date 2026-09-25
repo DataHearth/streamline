@@ -1,6 +1,9 @@
 package bittorrent
 
 import (
+	"os"
+	"path/filepath"
+
 	"github.com/anacrolix/torrent/metainfo"
 	"github.com/anacrolix/torrent/storage"
 	. "github.com/onsi/ginkgo/v2"
@@ -72,5 +75,42 @@ var _ = Describe("contentPaths", Label("unit", "bittorrent"), func() {
 		Expect(
 			place(p, &metainfo.Info{Name: "Release"}, hashB, nil),
 		).To(Equal("Release"))
+	})
+
+	Context("with data already on disk under the name", func() {
+		var dir string
+		single := &metainfo.Info{Name: "Film.mkv", Length: 4}
+
+		BeforeEach(func() { dir = GinkgoT().TempDir() })
+
+		write := func(name string, size int) {
+			GinkgoHelper()
+			Expect(
+				os.WriteFile(filepath.Join(dir, name), make([]byte, size), 0o644),
+			).
+				To(Succeed())
+		}
+
+		It("refuses data of another size", func() {
+			write("Film.mkv", 9)
+			Expect(newContentPaths().admits(dir, single, hashA)).To(BeFalse())
+		})
+
+		It("refuses a partial download it does not own", func() {
+			write("Film.mkv.part", 2)
+			Expect(newContentPaths().admits(dir, single, hashA)).To(BeFalse())
+		})
+
+		It("resumes data that is already its own size", func() {
+			write("Film.mkv", 4)
+			Expect(newContentPaths().admits(dir, single, hashA)).To(BeTrue())
+		})
+
+		It("trusts a restored torrent with its own partial data", func() {
+			write("Film.mkv.part", 2)
+			p := newContentPaths()
+			p.trust(hashA)
+			Expect(p.admits(dir, single, hashA)).To(BeTrue())
+		})
 	})
 })

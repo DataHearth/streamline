@@ -65,6 +65,7 @@ var _ = Describe("Engine file selection", Label("unit", "bittorrent"), func() {
 			client: client,
 			store:  store,
 			state:  map[string]*torrentState{},
+			paths:  newContentPaths(),
 		}
 	})
 
@@ -200,6 +201,7 @@ var _ = Describe("Engine file selection", Label("unit", "bittorrent"), func() {
 				client: pClient,
 				store:  pStore,
 				state:  map[string]*torrentState{},
+				paths:  newContentPaths(),
 			}
 			// a.bin (index 0) was skipped under the prior explicit selection and
 			// is the file with missing bytes; widening to include it re-arms.
@@ -249,6 +251,7 @@ var _ = Describe("Engine.AddTorrent selection", Label("unit", "bittorrent"), fun
 				client: client,
 				store:  store,
 				state:  map[string]*torrentState{},
+				paths:  newContentPaths(),
 			}
 
 			var captured db.CreateTorrentSessionParams
@@ -309,6 +312,7 @@ var _ = Describe("Engine.AddTorrent selection", Label("unit", "bittorrent"), fun
 				client: client,
 				store:  store,
 				state:  map[string]*torrentState{},
+				paths:  newContentPaths(),
 			}
 
 			var captured db.CreateTorrentSessionParams
@@ -348,6 +352,7 @@ var _ = Describe("Engine.AddTorrent selection", Label("unit", "bittorrent"), fun
 				client: client,
 				store:  store,
 				state:  map[string]*torrentState{},
+				paths:  newContentPaths(),
 			}
 
 			// First add: a genuinely fresh selective grab.

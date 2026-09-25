@@ -48,7 +48,11 @@ var _ = Describe("persistUploaded", Label("unit", "bittorrent"), func() {
 
 	BeforeEach(func() {
 		store = dbmocks.NewMockStore(GinkgoT())
-		e = &Engine{store: store, state: map[string]*torrentState{}}
+		e = &Engine{
+			store: store,
+			state: map[string]*torrentState{},
+			paths: newContentPaths(),
+		}
 	})
 
 	It("writes and records the new total when it moved", func() {

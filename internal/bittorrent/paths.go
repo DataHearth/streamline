@@ -1,6 +1,7 @@
 package bittorrent
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -25,13 +26,18 @@ import (
 // path". torrentDir decides (it alone sees the infohash); filePath carries
 // the verdict out, keyed on the *metainfo.Info pointer OpenTorrent hands both.
 //
-// ponytail: only live torrents are known. A name matching data on disk that
-// no live torrent owns (a finished torrent removed without its files) is not
-// refused, since a re-add of that same torrent resuming its data looks alike.
+// Data on disk that no live torrent owns — one removed without its files — is
+// told apart from a torrent resuming its own by size: a torrent the engine
+// does not already hold may only open where each of its files is absent or
+// already the length it declares, with no ".part" leftover beside it. The
+// torrents restore re-adds are trusted outright, since the partial data there
+// is theirs. A different release of identical sizes still passes; anacrolix
+// then re-verifies it piece by piece.
 type contentPaths struct {
 	mu      sync.Mutex
 	owners  map[string]metainfo.Hash
 	refused map[*metainfo.Info]bool
+	trusted map[metainfo.Hash]bool
 }
 
 // newContentStorage is the engine's file storage, placed by a fresh
@@ -53,7 +59,41 @@ func newContentPaths() *contentPaths {
 	return &contentPaths{
 		owners:  map[string]metainfo.Hash{},
 		refused: map[*metainfo.Info]bool{},
+		trusted: map[metainfo.Hash]bool{},
 	}
+}
+
+// trust marks ih as the owner of whatever its name holds on disk.
+func (p *contentPaths) trust(ih metainfo.Hash) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.trusted[ih] = true
+}
+
+// admits reports whether a torrent may be placed, without claiming its name.
+func (p *contentPaths) admits(
+	base string,
+	info *metainfo.Info,
+	ih metainfo.Hash,
+) bool {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.admitsLocked(base, info, ih)
+}
+
+func (p *contentPaths) admitsLocked(
+	base string,
+	info *metainfo.Info,
+	ih metainfo.Hash,
+) bool {
+	name := info.BestName()
+	if !safeContentName(name) {
+		return false
+	}
+	if owner, taken := p.owners[name]; taken {
+		return owner == ih
+	}
+	return p.trusted[ih] || fitsOnDisk(base, info)
 }
 
 func (p *contentPaths) torrentDir(
@@ -61,16 +101,31 @@ func (p *contentPaths) torrentDir(
 	info *metainfo.Info,
 	ih metainfo.Hash,
 ) string {
-	name := info.BestName()
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	if owner, taken := p.owners[name]; !safeContentName(name) ||
-		(taken && owner != ih) {
+	if !p.admitsLocked(base, info, ih) {
 		p.refused[info] = true
 		return base
 	}
-	p.owners[name] = ih
+	p.owners[info.BestName()] = ih
 	return base
+}
+
+// fitsOnDisk reports whether nothing on disk under the torrent's name would
+// be overwritten or renamed away by it.
+func fitsOnDisk(base string, info *metainfo.Info) bool {
+	for _, fi := range info.UpvertedFiles() {
+		path := filepath.Join(append(
+			[]string{base, info.BestName()}, fi.BestPath()...,
+		)...)
+		if st, err := os.Stat(path); err == nil && st.Size() != fi.Length {
+			return false
+		}
+		if _, err := os.Stat(path + ".part"); err == nil {
+			return false
+		}
+	}
+	return true
 }
 
 func (p *contentPaths) filePath(opts storage.FilePathMakerOpts) string {
@@ -98,6 +153,7 @@ func (p *contentPaths) release(ih metainfo.Hash) {
 			delete(p.owners, name)
 		}
 	}
+	delete(p.trusted, ih)
 }
 
 func safeContentName(name string) bool {
