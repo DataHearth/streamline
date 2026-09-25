@@ -1,7 +1,10 @@
 package otelx_test
 
 import (
+	"bytes"
+	"compress/gzip"
 	"context"
+	"io"
 	"net/http"
 	"net/http/httptest"
 
@@ -168,5 +171,48 @@ var _ = Describe("HTTPClient", Label("unit", "otelx"), func() {
 
 			expectNoKey(spans)
 		})
+	})
+})
+
+var _ = Describe("HTTPClient body cap", Label("unit", "otelx"), func() {
+	// A body served gzip-encoded is inflated by the transport before anyone
+	// reads it, so the cap has to count inflated bytes: MaxResponseBody+1 zero
+	// bytes are a few dozen KiB on the wire.
+	serveGzipped := func(size int) *httptest.Server {
+		GinkgoHelper()
+		var wire bytes.Buffer
+		zw := gzip.NewWriter(&wire)
+		_, err := zw.Write(make([]byte, size))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(zw.Close()).To(Succeed())
+		srv := httptest.NewServer(http.HandlerFunc(
+			func(w http.ResponseWriter, _ *http.Request) {
+				defer GinkgoRecover()
+				w.Header().Set("Content-Encoding", "gzip")
+				_, err := w.Write(wire.Bytes())
+				Expect(err).NotTo(HaveOccurred())
+			}))
+		DeferCleanup(srv.Close)
+		return srv
+	}
+
+	read := func(url string) (int, error) {
+		GinkgoHelper()
+		resp, err := otelx.HTTPClient.Get(url)
+		Expect(err).NotTo(HaveOccurred())
+		defer resp.Body.Close()
+		n, err := io.Copy(io.Discard, resp.Body)
+		return int(n), err
+	}
+
+	It("refuses an inflated body past the limit", func() {
+		_, err := read(serveGzipped(otelx.MaxResponseBody + 1).URL)
+		Expect(err).To(MatchError(otelx.ErrResponseTooLarge))
+	})
+
+	It("delivers a body exactly at the limit", func() {
+		n, err := read(serveGzipped(otelx.MaxResponseBody).URL)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(n).To(Equal(otelx.MaxResponseBody))
 	})
 })

@@ -5,6 +5,8 @@
 package otelx
 
 import (
+	"errors"
+	"io"
 	"net/http"
 	"net/url"
 	"time"
@@ -67,7 +69,48 @@ func (t spanURLRedactor) RoundTrip(req *http.Request) (*http.Response, error) {
 		trace.SpanFromContext(req.Context()).
 			SetAttributes(semconv.URLFull(RedactURL(req.URL)))
 	}
-	return t.base.RoundTrip(req)
+	resp, err := t.base.RoundTrip(req)
+	if resp != nil && resp.Body != nil {
+		resp.Body = &cappedBody{ReadCloser: resp.Body, left: MaxResponseBody}
+	}
+	return resp, err
+}
+
+// MaxResponseBody bounds how many bytes any HTTPClient response body yields,
+// counted after the transport's transparent gzip inflation. Every caller
+// decodes the body into memory, and a hostile configured remote — an indexer,
+// a download client, a media server — can answer a few KB of gzip that
+// inflates without limit; json.Decoder buffers a whole top-level value, so that
+// ended in a process-fatal heap. The bound is a backstop sized for the largest
+// honest body, a big seeder's qBittorrent torrents/info (no field projection,
+// tens of MiB), not a per-endpoint limit; callers that know their own ceiling
+// (posters, .torrent files, torznab feeds) still apply a tighter one.
+const MaxResponseBody = 64 << 20
+
+// ErrResponseTooLarge is what reading past MaxResponseBody returns.
+var ErrResponseTooLarge = errors.New("response body exceeds the size limit")
+
+type cappedBody struct {
+	io.ReadCloser
+	left int64
+}
+
+func (b *cappedBody) Read(p []byte) (int, error) {
+	if b.left <= 0 {
+		// Exactly at the limit is fine; one byte more is not.
+		var probe [1]byte
+		n, err := b.ReadCloser.Read(probe[:])
+		if n > 0 {
+			return 0, ErrResponseTooLarge
+		}
+		return 0, err
+	}
+	if int64(len(p)) > b.left {
+		p = p[:b.left]
+	}
+	n, err := b.ReadCloser.Read(p)
+	b.left -= int64(n)
+	return n, err
 }
 
 // RedactURL renders u with everything that can carry a credential removed,
