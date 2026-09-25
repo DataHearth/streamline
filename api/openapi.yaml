@@ -3306,11 +3306,17 @@ paths:
       description: |
         Manually-added managed-category torrents streamline could not safely
         auto-import (resolution too low, file already exists, ambiguous or
-        season-pack match). Each is a status=pending DownloadRecord.
+        season-pack match). Each is a status=pending DownloadRecord. Paged,
+        newest first; `total` counts every proposal.
       tags: [activity]
+      parameters:
+        - $ref: "#/components/parameters/RequestPage"
+        - $ref: "#/components/parameters/RequestLimit"
       responses:
         "200":
           $ref: "#/components/responses/PendingList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
 
   /activity/pending/{id}/preview:
     parameters:
@@ -5291,12 +5297,15 @@ components:
 
     PendingList:
       type: object
-      required: [items]
+      required: [items, total]
       properties:
         items:
           type: array
           items:
             $ref: "#/components/schemas/PendingItem"
+        total:
+          type: integer
+          x-go-type: uint32
 
     ReplacePendingRequest:
       type: object

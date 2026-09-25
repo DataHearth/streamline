@@ -20,13 +20,27 @@ import (
 
 func (s *Server) ListPending(
 	ctx context.Context,
-	_ ListPendingRequestObject,
+	req ListPendingRequestObject,
 ) (ListPendingResponseObject, error) {
-	records, err := s.store.ListPendingDownloadRecords(ctx)
+	page, ok := positiveOr(req.Params.Page, uint16(1))
+	if !ok {
+		return ListPending400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(msgZeroPage),
+		}, nil
+	}
+	limit, ok := limitOr(req.Params.Limit, 50, pendingMaxLimit)
+	if !ok {
+		return ListPending400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(limitRangeMsg(pendingMaxLimit)),
+		}, nil
+	}
+	records, total, err := s.store.ListPendingDownloadRecords(
+		ctx, limit, uint32(page-1)*limit,
+	)
 	if err != nil {
 		return nil, err
 	}
-	out := PendingList{Items: make([]PendingItem, 0, len(records))}
+	out := PendingList{Items: make([]PendingItem, 0, len(records)), Total: total}
 	for _, r := range records {
 		out.Items = append(out.Items, toPendingItem(r))
 	}

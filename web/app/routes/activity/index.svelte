@@ -8,7 +8,7 @@
 		createMutation,
 		useQueryClient,
 	} from "@tanstack/svelte-query";
-	import { api, errorText } from "@lib/api";
+	import { api, apiAllPages, errorText } from "@lib/api";
 	import { auth } from "@lib/auth.svelte";
 	import { toast } from "@lib/toast";
 	import { pullRefresh } from "@lib/pull-refresh";
@@ -209,7 +209,7 @@
 	// "Needs attention": adopted-torrent proposals awaiting a decision (admin).
 	const pendingQuery = createQuery<PendingList>(() => ({
 		queryKey: ["activity", "pending"],
-		queryFn: () => api<PendingList>("/activity/pending"),
+		queryFn: () => apiAllPages<PendingItem>("/activity/pending"),
 		enabled: auth.isAdmin,
 		refetchInterval: 30000,
 	}));

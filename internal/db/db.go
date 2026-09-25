@@ -392,7 +392,10 @@ type Store interface {
 	// across every record. The adoption pass uses it to skip already-tracked
 	// torrents.
 	AllDownloadRecordHashes(ctx context.Context) (map[string]struct{}, error)
-	ListPendingDownloadRecords(ctx context.Context) ([]*ent.DownloadRecord, error)
+	ListPendingDownloadRecords(
+		ctx context.Context,
+		limit, offset uint32,
+	) ([]*ent.DownloadRecord, uint32, error)
 	// DeleteStalePendingAdoptions prunes pending proposals for a client whose
 	// torrent_hash is absent from its current managed torrents (liveHashes).
 	DeleteStalePendingAdoptions(

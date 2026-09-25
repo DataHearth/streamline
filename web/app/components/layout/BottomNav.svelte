@@ -64,14 +64,17 @@
 	});
 
 	const pendingQuery = createQuery<PendingList>(() => ({
-		queryKey: ["activity", "pending"],
-		queryFn: () => api<PendingList>("/activity/pending"),
+		// One row is enough: the badge reads `total`. Its own key under the
+		// activity page's prefix, so invalidating ["activity", "pending"] still
+		// refreshes it while the two shapes never share a cache entry.
+		queryKey: ["activity", "pending", "count"],
+		queryFn: () => api<PendingList>("/activity/pending?limit=1"),
 		meta: SILENT,
 		enabled: auth.isAdmin,
 		retry: false,
 		refetchInterval: NAV_POLL_MS,
 	}));
-	let pendingAdoptions = $derived(pendingQuery.data?.items.length ?? 0);
+	let pendingAdoptions = $derived(pendingQuery.data?.total ?? 0);
 
 	const systemQuery = createQuery<SystemInfo>(() => ({
 		queryKey: ["system", "info"],

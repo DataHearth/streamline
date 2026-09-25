@@ -8542,31 +8542,37 @@ func (_c *MockStore_ListMoviesStaleSince_Call) RunAndReturn(run func(ctx context
 }
 
 // ListPendingDownloadRecords provides a mock function for the type MockStore
-func (_mock *MockStore) ListPendingDownloadRecords(ctx context.Context) ([]*ent.DownloadRecord, error) {
-	ret := _mock.Called(ctx)
+func (_mock *MockStore) ListPendingDownloadRecords(ctx context.Context, limit uint32, offset uint32) ([]*ent.DownloadRecord, uint32, error) {
+	ret := _mock.Called(ctx, limit, offset)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListPendingDownloadRecords")
 	}
 
 	var r0 []*ent.DownloadRecord
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context) ([]*ent.DownloadRecord, error)); ok {
-		return returnFunc(ctx)
+	var r1 uint32
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32) ([]*ent.DownloadRecord, uint32, error)); ok {
+		return returnFunc(ctx, limit, offset)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context) []*ent.DownloadRecord); ok {
-		r0 = returnFunc(ctx)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32) []*ent.DownloadRecord); ok {
+		r0 = returnFunc(ctx, limit, offset)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*ent.DownloadRecord)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = returnFunc(ctx)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, uint32) uint32); ok {
+		r1 = returnFunc(ctx, limit, offset)
 	} else {
-		r1 = ret.Error(1)
+		r1 = ret.Get(1).(uint32)
 	}
-	return r0, r1
+	if returnFunc, ok := ret.Get(2).(func(context.Context, uint32, uint32) error); ok {
+		r2 = returnFunc(ctx, limit, offset)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
 }
 
 // MockStore_ListPendingDownloadRecords_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListPendingDownloadRecords'
@@ -8576,29 +8582,41 @@ type MockStore_ListPendingDownloadRecords_Call struct {
 
 // ListPendingDownloadRecords is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *MockStore_Expecter) ListPendingDownloadRecords(ctx any) *MockStore_ListPendingDownloadRecords_Call {
-	return &MockStore_ListPendingDownloadRecords_Call{Call: _e.mock.On("ListPendingDownloadRecords", ctx)}
+//   - limit uint32
+//   - offset uint32
+func (_e *MockStore_Expecter) ListPendingDownloadRecords(ctx any, limit any, offset any) *MockStore_ListPendingDownloadRecords_Call {
+	return &MockStore_ListPendingDownloadRecords_Call{Call: _e.mock.On("ListPendingDownloadRecords", ctx, limit, offset)}
 }
 
-func (_c *MockStore_ListPendingDownloadRecords_Call) Run(run func(ctx context.Context)) *MockStore_ListPendingDownloadRecords_Call {
+func (_c *MockStore_ListPendingDownloadRecords_Call) Run(run func(ctx context.Context, limit uint32, offset uint32)) *MockStore_ListPendingDownloadRecords_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 uint32
+		if args[2] != nil {
+			arg2 = args[2].(uint32)
+		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
 }
 
-func (_c *MockStore_ListPendingDownloadRecords_Call) Return(downloadRecords []*ent.DownloadRecord, err error) *MockStore_ListPendingDownloadRecords_Call {
-	_c.Call.Return(downloadRecords, err)
+func (_c *MockStore_ListPendingDownloadRecords_Call) Return(downloadRecords []*ent.DownloadRecord, v uint32, err error) *MockStore_ListPendingDownloadRecords_Call {
+	_c.Call.Return(downloadRecords, v, err)
 	return _c
 }
 
-func (_c *MockStore_ListPendingDownloadRecords_Call) RunAndReturn(run func(ctx context.Context) ([]*ent.DownloadRecord, error)) *MockStore_ListPendingDownloadRecords_Call {
+func (_c *MockStore_ListPendingDownloadRecords_Call) RunAndReturn(run func(ctx context.Context, limit uint32, offset uint32) ([]*ent.DownloadRecord, uint32, error)) *MockStore_ListPendingDownloadRecords_Call {
 	_c.Call.Return(run)
 	return _c
 }

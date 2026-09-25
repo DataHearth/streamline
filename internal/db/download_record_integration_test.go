@@ -1647,8 +1647,9 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 			pending := createRec("p", downloadrecord.StatusPending)
 			createRec("d", downloadrecord.StatusDownloading)
 
-			list, err := store.ListPendingDownloadRecords(ctx)
+			list, total, err := store.ListPendingDownloadRecords(ctx, 50, 0)
 			Expect(err).NotTo(HaveOccurred())
+			Expect(total).To(BeEquivalentTo(1))
 			Expect(list).To(HaveLen(1))
 			Expect(list[0].ID).To(Equal(pending.ID))
 			Expect(list[0].Edges.Movie).NotTo(BeNil())
@@ -1660,6 +1661,23 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 			_, err = store.FindPendingDownloadRecordByID(ctx, 99999)
 			Expect(ent.IsNotFound(err)).To(BeTrue())
 		})
+	})
+
+	It("pages pending records and counts them all", func() {
+		createRec("first", downloadrecord.StatusPending)
+		createRec("second", downloadrecord.StatusPending)
+		createRec("third", downloadrecord.StatusPending)
+
+		page, total, err := store.ListPendingDownloadRecords(ctx, 2, 0)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(total).To(BeEquivalentTo(3))
+		Expect(page).To(HaveLen(2))
+
+		last, total, err := store.ListPendingDownloadRecords(ctx, 2, 2)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(total).To(BeEquivalentTo(3))
+		Expect(last).To(HaveLen(1))
+		Expect(last[0].ID).NotTo(BeElementOf(page[0].ID, page[1].ID))
 	})
 
 	Describe("selection fields", func() {

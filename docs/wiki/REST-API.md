@@ -246,7 +246,7 @@ The `cast` array on a stored movie or series (`GET /movies/{id}`, `GET /series/{
 | `GET` | `/activity/queue` · `/activity/history` | Queue and history views (history is cursor-paged and carries `total`, every terminal record) | Authenticated |
 | `DELETE` | `/activity/queue/{id}` · `/activity/history/{id}` | Remove a queue or history entry | 🔒 Admin |
 | `POST` | `/activity/queue/{id}/pause` · `/resume` · `/activity/history/clear-completed` | Pause/resume a download, or clear completed history | 🔒 Admin |
-| `GET` | `/activity/pending` | List adoption proposals | Authenticated |
+| `GET` | `/activity/pending` | List adoption proposals (`page`, `limit` 1–100, default 50; `total` counts them all) | Authenticated |
 | `GET` | `/activity/pending/{id}/preview` | Preview a proposal | Authenticated |
 | `POST` | `/activity/pending/{id}/import` · `/replace` · `/ignore` | Decide a proposal | 🔒 Admin |
 | `POST` | `/activity/pending/{id}/identify` | Identify a proposal against metadata | 🔒 Admin |

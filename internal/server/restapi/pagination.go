@@ -14,6 +14,7 @@ const (
 	seriesMaxLimit   = 100
 	requestsMaxLimit = 100
 	peopleMaxLimit   = 100
+	pendingMaxLimit  = 100
 )
 
 const msgZeroPage = "page must be >= 1"

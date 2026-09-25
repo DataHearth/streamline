@@ -635,7 +635,7 @@ export type PendingItem = {
 	parsed_title?: string;
 	media?: PendingMedia;
 };
-export type PendingList = { items: PendingItem[] };
+export type PendingList = { items: PendingItem[]; total: number };
 
 export type PendingPreviewEpisode = {
 	season: number;

@@ -24,8 +24,20 @@ var _ = Describe("Handler: Pending", Label("unit", "server", "activity"), func()
 	BeforeEach(func() { app = newAPIKeyApp() })
 
 	Describe("ListPending", func() {
+		It("refuses a limit past the documented ceiling", func() {
+			resp := app.do(app.req(
+				http.MethodGet,
+				"/api/v1/activity/pending?limit=101",
+				app.adminKey,
+				nil,
+			))
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+		})
+
 		It("returns pending items with mapped media", func() {
-			app.store.EXPECT().ListPendingDownloadRecords(mock.Anything).
+			app.store.EXPECT().
+				ListPendingDownloadRecords(mock.Anything, uint32(50), uint32(0)).
 				Return([]*ent.DownloadRecord{
 					{
 						ID: 1, Title: "The Batman 2022 720p", Quality: "720p",
@@ -48,7 +60,7 @@ var _ = Describe("Handler: Pending", Label("unit", "server", "activity"), func()
 							}, // has a media file -> has_file true
 						},
 					},
-				}, nil).Once()
+				}, uint32(2), nil).Once()
 
 			resp := app.do(app.req(
 				http.MethodGet, "/api/v1/activity/pending", app.adminKey, nil,

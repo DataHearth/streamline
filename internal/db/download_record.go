@@ -18,6 +18,7 @@ import (
 	"github.com/datahearth/streamline/ent/season"
 	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/utils/numeric"
 )
 
 // withEpisodeContext eager-loads the Episode edge of an importing record along
@@ -124,21 +125,30 @@ func (db *DB) AllDownloadRecordHashes(
 	return set, nil
 }
 
-// ListPendingDownloadRecords returns all status=pending records with Movie and
-// Episode (+ its season and show) edges eager-loaded for the needs-attention
-// queue, newest first.
+// ListPendingDownloadRecords returns one page of status=pending records with
+// Movie and Episode (+ its season and show) edges eager-loaded for the
+// needs-attention queue, newest first, and the count of all of them.
 func (db *DB) ListPendingDownloadRecords(
 	ctx context.Context,
-) ([]*ent.DownloadRecord, error) {
-	return db.client.DownloadRecord.Query().
-		Where(downloadrecord.StatusEQ(downloadrecord.StatusPending)).
+	limit, offset uint32,
+) ([]*ent.DownloadRecord, uint32, error) {
+	pending := db.client.DownloadRecord.Query().
+		Where(downloadrecord.StatusEQ(downloadrecord.StatusPending))
+	total, err := pending.Clone().Count(ctx)
+	if err != nil {
+		return nil, 0, err
+	}
+	rows, err := pending.
 		WithMovie(func(mq *ent.MovieQuery) { mq.WithMediaFiles() }).
 		WithEpisode(func(q *ent.EpisodeQuery) {
 			q.WithMediaFiles()
 			q.WithSeason(func(sq *ent.SeasonQuery) { sq.WithTvShow() })
 		}).
 		Order(ent.Desc(downloadrecord.FieldCreateTime)).
+		Limit(int(limit)).
+		Offset(int(offset)).
 		All(ctx)
+	return rows, numeric.SaturateU32(total), err
 }
 
 func (db *DB) IdentifyDownloadRecord(

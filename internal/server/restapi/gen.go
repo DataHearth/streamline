@@ -4099,6 +4099,7 @@ type PendingItem struct {
 // PendingList defines model for PendingList.
 type PendingList struct {
 	Items []PendingItem `json:"items"`
+	Total uint32        `json:"total"`
 }
 
 // PendingMedia defines model for PendingMedia.
@@ -5991,6 +5992,12 @@ type ListDownloadHistoryParams struct {
 	Cursor *ActivityCursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
+// ListPendingParams defines parameters for ListPending.
+type ListPendingParams struct {
+	Page  *RequestPage  `form:"page,omitempty" json:"page,omitempty"`
+	Limit *RequestLimit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // ListUpcomingReleasesParams defines parameters for ListUpcomingReleases.
 type ListUpcomingReleasesParams struct {
 	From CalendarFrom `form:"from" json:"from"`
@@ -6441,7 +6448,7 @@ type ServerInterface interface {
 	RetryFailedImport(w http.ResponseWriter, r *http.Request, id ResourceID)
 	// ListPending Adopted-torrent proposals awaiting a decision.
 	// (GET /activity/pending)
-	ListPending(w http.ResponseWriter, r *http.Request)
+	ListPending(w http.ResponseWriter, r *http.Request, params ListPendingParams)
 	// ForgetPending Delete a proposal so its torrent can be adopted again.
 	// (DELETE /activity/pending/{id})
 	ForgetPending(w http.ResponseWriter, r *http.Request, id ResourceID)
@@ -6984,7 +6991,7 @@ func (_ Unimplemented) RetryFailedImport(w http.ResponseWriter, r *http.Request,
 
 // ListPending Adopted-torrent proposals awaiting a decision.
 // (GET /activity/pending)
-func (_ Unimplemented) ListPending(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) ListPending(w http.ResponseWriter, r *http.Request, params ListPendingParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -8221,8 +8228,40 @@ func (siw *ServerInterfaceWrapper) RetryFailedImport(w http.ResponseWriter, r *h
 // ListPending operation middleware
 func (siw *ServerInterfaceWrapper) ListPending(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListPendingParams
+
+	// ------------- Optional query parameter "page" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "page", r.URL.Query(), &params.Page, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "page"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "page", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListPending(w, r)
+		siw.Handler.ListPending(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -13754,6 +13793,7 @@ func (response RetryFailedImport500JSONResponse) VisitRetryFailedImportResponse(
 }
 
 type ListPendingRequestObject struct {
+	Params ListPendingParams
 }
 
 type ListPendingResponseObject interface {
@@ -13770,6 +13810,20 @@ func (response ListPending200JSONResponse) VisitListPendingResponse(w http.Respo
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListPending400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListPending400JSONResponse) VisitListPendingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -25141,8 +25195,10 @@ func (sh *strictHandler) RetryFailedImport(w http.ResponseWriter, r *http.Reques
 }
 
 // ListPending operation middleware
-func (sh *strictHandler) ListPending(w http.ResponseWriter, r *http.Request) {
+func (sh *strictHandler) ListPending(w http.ResponseWriter, r *http.Request, params ListPendingParams) {
 	var request ListPendingRequestObject
+
+	request.Params = params
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 		return sh.ssi.ListPending(ctx, request.(ListPendingRequestObject))
