@@ -10,6 +10,7 @@
 		Activity,
 		ListVideo,
 		Magnet,
+		Replace,
 		CalendarDays,
 		Inbox,
 		FolderInput,
@@ -53,16 +54,21 @@
 
 	type Link = { label: string; href: string; icon: typeof Tv };
 
-	const MENUS: Record<string, Link[]> = {
+	let MENUS = $derived<Record<string, Link[]>>({
 		Library: [
 			{ label: i18n.movies_label(), href: "/movies", icon: Film },
 			{ label: i18n.settings_series(), href: "/series", icon: Tv },
 		],
 		Activity: [
 			{ label: i18n.activity_queue_history(), href: "/activity", icon: ListVideo },
-			{ label: i18n.torrent_label(), href: "/activity/torrents", icon: Magnet },
+			...(auth.isAdmin
+				? [
+						{ label: i18n.torrent_label(), href: "/activity/torrents", icon: Magnet },
+						{ label: i18n.transcode_label(), href: "/activity/transcoding", icon: Replace },
+					]
+				: []),
 		],
-	};
+	});
 
 	let flyout = $state("");
 	function closeFlyout() {

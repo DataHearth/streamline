@@ -1498,7 +1498,6 @@
 	"torrent_agg_up": "Agr. ↑",
 	"torrent_aggregate_down": "Agrégé ↓",
 	"torrent_also_delete_files": "Supprimer aussi les fichiers téléchargés",
-	"torrent_ask_admin": "Demandez à un administrateur de l'activer dans les paramètres.",
 	"torrent_builtin_disabled": "Le client intégré n'est pas activé",
 	"torrent_choose_file": "Choisir un fichier .torrent",
 	"torrent_click_change_file": "Cliquez pour choisir un autre fichier",

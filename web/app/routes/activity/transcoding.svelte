@@ -7,6 +7,7 @@
 	import { LoaderCircle, Radar } from "@lucide/svelte";
 	import { api, errorText, ApiError } from "@lib/api";
 	import { auth } from "@lib/auth.svelte";
+	import { requireAdmin } from "@lib/guards";
 	import { toast } from "@lib/toast";
 	import { cn } from "@lib/cn";
 	import { fold } from "@lib/text";
@@ -40,6 +41,10 @@
 	let confirmCancel = $state<TranscodeJob | null>(null);
 	const qc = useQueryClient();
 
+	$effect(() => {
+		if (!auth.loading) requireAdmin();
+	});
+
 	// The whole list, filtered in the browser. The endpoint takes no status
 	// filter: the chips are multi-select and the counts above them need every
 	// state anyway — the torrents page fetches whole and filters locally for
@@ -47,6 +52,7 @@
 	const jobs = createQuery<TranscodeJob[]>(() => ({
 		queryKey: ["transcoding", "queue", ""],
 		queryFn: () => api<TranscodeJob[]>("/transcoding/queue"),
+		enabled: auth.isAdmin,
 		retry: (count, e) => !transcodingDisabled(e) && count < 1,
 		// Poll only while something can still change. A restart requeues a
 		// running job, so nothing is lost by stopping once everything is terminal.

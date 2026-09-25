@@ -11,6 +11,7 @@
 	import { fly, fade } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { api } from "@lib/api";
+	import { auth } from "@lib/auth.svelte";
 	import { lockScroll, unlockScroll } from "@lib/scrollLock";
 	import { sheetSwipe } from "@lib/sheet-swipe";
 	import BrandLogo from "@components/settings/BrandLogo.svelte";
@@ -144,12 +145,14 @@
 			<p class="text-fg-muted {big ? 'text-sm' : 'text-xs'}">
 				{i18n.mediaserver_none()}
 			</p>
-			<a
-				href="/settings/media-servers"
-				class="text-accent hover:underline {big ? 'text-sm' : 'text-xs'}"
-			>
-				{i18n.playon_configure_servers()}
-			</a>
+			{#if auth.isAdmin}
+				<a
+					href="/settings/media-servers"
+					class="text-accent hover:underline {big ? 'text-sm' : 'text-xs'}"
+				>
+					{i18n.playon_configure_servers()}
+				</a>
+			{/if}
 		</div>
 	{:else}
 		<ul>

@@ -2,6 +2,7 @@
 	import { createQuery } from "@tanstack/svelte-query";
 	import { api, apiAllPages, type Paginated } from "@lib/api";
 	import { SILENT } from "@lib/query";
+	import { auth } from "@lib/auth.svelte";
 	import { posterUrl, tvPosterUrl } from "@lib/posters";
 	import { formatBytes } from "@lib/format";
 	import type {
@@ -85,6 +86,7 @@
 	const systemQuery = createQuery<SystemInfo>(() => ({
 		queryKey: ["system", "info"],
 		queryFn: () => api<SystemInfo>("/system/info"),
+		enabled: auth.isAdmin,
 		meta: SILENT,
 	}));
 

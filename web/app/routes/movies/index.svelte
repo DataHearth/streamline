@@ -10,6 +10,7 @@
 		keepPreviousData,
 	} from "@tanstack/svelte-query";
 	import { api, errorText, type Paginated } from "@lib/api";
+	import { auth } from "@lib/auth.svelte";
 	import { formatRelative } from "@lib/dates";
 	import { loadPref, savePref, MOVIES_SEARCH } from "@lib/prefs";
 	import { onRouteQuery } from "@lib/route-query";
@@ -202,6 +203,7 @@
 	const schedulesQuery = createQuery<ScheduleList>(() => ({
 		queryKey: ["schedules"],
 		queryFn: () => api<ScheduleList>("/schedules"),
+		enabled: auth.isAdmin,
 	}));
 
 	let counts = $derived(

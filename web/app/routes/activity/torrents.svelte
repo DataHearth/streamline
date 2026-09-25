@@ -8,6 +8,7 @@
 	import { api, errorText } from "@lib/api";
 	import { engineDisabled } from "@lib/activity-nav";
 	import { auth } from "@lib/auth.svelte";
+	import { requireAdmin } from "@lib/guards";
 	import { toast } from "@lib/toast";
 	import { pullRefresh } from "@lib/pull-refresh";
 	import { fold } from "@lib/text";
@@ -45,6 +46,10 @@
 	import AddTorrentSheet from "@components/activity/AddTorrentSheet.svelte";
 	import { formatSpeed } from "@lib/format";
 	import { m as i18n } from "@lib/paraglide/messages.js";
+
+	$effect(() => {
+		if (!auth.loading) requireAdmin();
+	});
 
 	// Moving the peer port is normally gluetun's VPN_PORT_FORWARDING_UP_COMMAND
 	// calling this endpoint on every rotation. It has no retry of its own and a
@@ -100,6 +105,7 @@
 	const torrents = createQuery<TorrentList>(() => ({
 		queryKey: ["activity", "torrents"],
 		queryFn: () => api<TorrentList>("/torrents"),
+		enabled: auth.isAdmin,
 		retry: (count, e) => !engineDisabled(e) && count < 1,
 		refetchInterval: (q) => (engineDisabled(q.state.error) ? false : 2000),
 		refetchOnWindowFocus: (q) => !engineDisabled(q.state.error),
@@ -256,7 +262,7 @@
 	// list like any corner action: `main`'s pb-16 keeps content clear of the bar,
 	// and reserving a second band for the pill on top of that left a visibly empty
 	// strip at the bottom of every scroll.
-	let showAddPill = $derived(compact && !torrentsNotConfigured && auth.isAdmin);
+	let showAddPill = $derived(compact && !torrentsNotConfigured);
 </script>
 
 <div
@@ -291,7 +297,7 @@
 				{/if}
 			</p>
 		</div>
-		{#if !torrentsNotConfigured && auth.isAdmin}
+		{#if !torrentsNotConfigured}
 			<div class="flex items-center gap-2">
 				{#if portOpen}
 					<input
@@ -354,17 +360,13 @@
 					{i18n.torrents_empty_help()}
 				</p>
 			</div>
-			{#if auth.isAdmin}
-				<a
-					href="/settings/download-clients"
-					class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md bg-accent px-3.5 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover"
-				>
-					{i18n.torrent_enable_in_settings()}
-					<ArrowUpRight size={15} aria-hidden="true" />
-				</a>
-			{:else}
-				<p class="text-xs text-fg-subtle">{i18n.torrent_ask_admin()}</p>
-			{/if}
+			<a
+				href="/settings/download-clients"
+				class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md bg-accent px-3.5 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover"
+			>
+				{i18n.torrent_enable_in_settings()}
+				<ArrowUpRight size={15} aria-hidden="true" />
+			</a>
 		</div>
 	{:else}
 		<TouchStatLine

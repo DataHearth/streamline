@@ -18,6 +18,7 @@ import {
 	Inbox,
 	Activity,
 	Magnet,
+	Replace,
 	FolderInput,
 	CalendarDays,
 	Settings,
@@ -86,6 +87,13 @@ export type SearchSection = {
 const TITLE_MIN = 2;
 const TITLE_LIMIT = 5;
 
+const ADMIN_PAGES = new Set([
+	"/activity/torrents",
+	"/activity/transcoding",
+	"/library/imports",
+	"/settings",
+]);
+
 const PAGES: PageItem[] = [
 	{ kind: "page", label: i18n.nav_dashboard(), path: "/", icon: LayoutDashboard },
 	{ kind: "page", label: i18n.movies_label(), path: "/movies", icon: Film },
@@ -93,6 +101,7 @@ const PAGES: PageItem[] = [
 	{ kind: "page", label: i18n.requests_label(), path: "/requests", icon: Inbox },
 	{ kind: "page", label: i18n.nav_activity(), path: "/activity", icon: Activity },
 	{ kind: "page", label: i18n.torrent_label(), path: "/activity/torrents", icon: Magnet },
+	{ kind: "page", label: i18n.transcode_label(), path: "/activity/transcoding", icon: Replace },
 	{ kind: "page", label: i18n.imports_label(), path: "/library/imports", icon: FolderInput },
 	{ kind: "page", label: i18n.common_calendar(), path: "/calendar", icon: CalendarDays },
 	{ kind: "page", label: i18n.nav_settings(), path: "/settings", icon: Settings },
@@ -161,8 +170,7 @@ export function createSearchModel(
 
 	function pages(): PageItem[] {
 		const isAdmin = auth.user?.role === "admin";
-		// Imports is admin-only.
-		const base = PAGES.filter((p) => isAdmin || p.path !== "/library/imports");
+		const base = PAGES.filter((p) => isAdmin || !ADMIN_PAGES.has(p.path));
 		if (isAdmin) {
 			base.push({
 				kind: "page",

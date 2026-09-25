@@ -76,6 +76,7 @@
 	const systemQuery = createQuery<SystemInfo>(() => ({
 		queryKey: ["system", "info"],
 		queryFn: () => api<SystemInfo>("/system/info"),
+		enabled: auth.isAdmin,
 		meta: SILENT,
 		retry: false,
 	}));
@@ -123,14 +124,14 @@
 			line: counts.queueLine,
 			badge: pendingAdoptions,
 		},
-		{
-			label: i18n.torrent_label(),
-			href: "/activity/torrents",
-			icon: Magnet,
-			torrents: true,
-		},
 		...(auth.isAdmin
 			? [
+					{
+						label: i18n.torrent_label(),
+						href: "/activity/torrents",
+						icon: Magnet,
+						torrents: true,
+					},
 					{
 						label: i18n.transcode_label(),
 						href: "/activity/transcoding",

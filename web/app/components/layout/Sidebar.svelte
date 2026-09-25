@@ -39,6 +39,7 @@
 	const systemQuery = createQuery<SystemInfo>(() => ({
 		queryKey: ["system", "info"],
 		queryFn: () => api<SystemInfo>("/system/info"),
+		enabled: auth.isAdmin,
 		meta: SILENT,
 		retry: false,
 	}));
@@ -97,13 +98,14 @@
 	]);
 
 	// Activity's three routes each sit as their own top-level row — no parent to
-	// fold, so the destination is always one click away. Transcoding is
-	// admin-only, which is why this list is derived rather than constant.
+	// fold, so the destination is always one click away. Torrents and
+	// transcoding are admin-only, which is why this list is derived rather than
+	// constant.
 	let activityLinks = $derived([
 		{ label: i18n.activity_queue_history(), href: "/activity", icon: ListVideo },
-		{ label: i18n.torrent_label(), href: "/activity/torrents", icon: Magnet },
 		...(auth.isAdmin
 			? [
+					{ label: i18n.torrent_label(), href: "/activity/torrents", icon: Magnet },
 					{
 						label: i18n.transcode_label(),
 						href: "/activity/transcoding",

@@ -35,33 +35,37 @@
 	let sectionTitle = $derived(SETTINGS_TITLES[pathname]?.() ?? "");
 </script>
 
-{#if bare}
-	<!-- Routify renders the active route via Svelte-4 slot semantics; see routes/_module.svelte -->
-	<!-- svelte-ignore slot_element_deprecated -->
-	<slot />
-{:else}
-	<ReadOnlyStrip />
-	<div
-		class="mx-auto w-full max-w-7xl px-4 pb-0 pt-6 md:px-8 md:pt-7 lg:pb-7"
-	>
-		{#if !isIndex}
-			<a
-				href="/settings"
-				class="touch-hit mb-3 inline-flex items-center gap-1.5 rounded-md py-1 pr-2 text-[13px] text-fg-muted transition hover:text-fg lg:hidden"
-			>
-				<ChevronLeft size={15} aria-hidden="true" />
-				{i18n.nav_settings()}
-				{#if sectionTitle}
-					<span class="sr-only">— {sectionTitle}</span>
-				{/if}
-			</a>
-		{/if}
-		<div class="grid gap-5 lg:grid-cols-[220px_1fr] lg:gap-8">
-			<SettingsSidebar />
-			<section class="min-w-0">
-				<!-- svelte-ignore slot_element_deprecated -->
-				<slot />
-			</section>
+<!-- Children mount only for admins: the guard redirects after auth resolves, and
+     rendering first would fire every child page's admin-only queries. -->
+{#if auth.isAdmin}
+	{#if bare}
+		<!-- Routify renders the active route via Svelte-4 slot semantics; see routes/_module.svelte -->
+		<!-- svelte-ignore slot_element_deprecated -->
+		<slot />
+	{:else}
+		<ReadOnlyStrip />
+		<div
+			class="mx-auto w-full max-w-7xl px-4 pb-0 pt-6 md:px-8 md:pt-7 lg:pb-7"
+		>
+			{#if !isIndex}
+				<a
+					href="/settings"
+					class="touch-hit mb-3 inline-flex items-center gap-1.5 rounded-md py-1 pr-2 text-[13px] text-fg-muted transition hover:text-fg lg:hidden"
+				>
+					<ChevronLeft size={15} aria-hidden="true" />
+					{i18n.nav_settings()}
+					{#if sectionTitle}
+						<span class="sr-only">— {sectionTitle}</span>
+					{/if}
+				</a>
+			{/if}
+			<div class="grid gap-5 lg:grid-cols-[220px_1fr] lg:gap-8">
+				<SettingsSidebar />
+				<section class="min-w-0">
+					<!-- svelte-ignore slot_element_deprecated -->
+					<slot />
+				</section>
+			</div>
 		</div>
-	</div>
+	{/if}
 {/if}

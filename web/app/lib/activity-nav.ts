@@ -40,6 +40,7 @@ export function torrentCountsQuery() {
 		queryKey: ["download-clients"],
 		queryFn: () => api<DownloadClient[]>("/download-clients"),
 		meta: SILENT,
+		enabled: auth.isAdmin,
 		retry: false,
 		staleTime: 300000,
 	}));

@@ -96,6 +96,7 @@
 	const systemQuery = createQuery<SystemInfo>(() => ({
 		queryKey: ["system", "info"],
 		queryFn: () => api<SystemInfo>("/system/info"),
+		enabled: auth.isAdmin,
 		retry: false,
 	}));
 
@@ -359,13 +360,15 @@
 			<Plus size={18} aria-hidden="true" />
 		</button>
 
-		<div
-			class={`health-pill health-${health} hidden items-center gap-2 rounded-full px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.08em] md:inline-flex`}
-			title={i18n.health_system({ state: healthLabel })}
-		>
-			<span aria-hidden="true" class="health-dot h-1.5 w-1.5 rounded-full"></span>
-			<span>{healthLabel}</span>
-		</div>
+		{#if auth.isAdmin}
+			<div
+				class={`health-pill health-${health} hidden items-center gap-2 rounded-full px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.08em] md:inline-flex`}
+				title={i18n.health_system({ state: healthLabel })}
+			>
+				<span aria-hidden="true" class="health-dot h-1.5 w-1.5 rounded-full"></span>
+				<span>{healthLabel}</span>
+			</div>
+		{/if}
 	</div>
 </header>
 

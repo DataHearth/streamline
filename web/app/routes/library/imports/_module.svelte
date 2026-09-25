@@ -9,5 +9,7 @@
 	});
 </script>
 
-<!-- svelte-ignore slot_element_deprecated -->
-<slot />
+{#if auth.isAdmin}
+	<!-- svelte-ignore slot_element_deprecated -->
+	<slot />
+{/if}

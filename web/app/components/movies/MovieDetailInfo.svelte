@@ -297,17 +297,24 @@
 					     to it and links to the job that did it. -->
 					<dt class="text-fg-subtle">{i18n.file_transcoded()}</dt>
 					<dd class="min-w-0 text-right">
-						<a
-							href="/activity/transcoding"
-							class="touch-hit inline-flex items-center gap-1.5 rounded font-mono text-status-succeeded transition-colors hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
-						>
+						{#snippet transcodedText()}
 							{#if primary.size_before}
 								{formatBytes(primary.size_before)} → {formatBytes(primary.size)}
 							{:else}
 								{formatRelative(primary.transcoded_at)}
 							{/if}
-							<ArrowUpRight size={12} aria-hidden="true" />
-						</a>
+						{/snippet}
+						{#if auth.isAdmin}
+							<a
+								href="/activity/transcoding"
+								class="touch-hit inline-flex items-center gap-1.5 rounded font-mono text-status-succeeded transition-colors hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
+							>
+								{@render transcodedText()}
+								<ArrowUpRight size={12} aria-hidden="true" />
+							</a>
+						{:else}
+							<span class="font-mono text-status-succeeded">{@render transcodedText()}</span>
+						{/if}
 					</dd>
 				{/if}
 				<dt class="text-fg-subtle">{i18n.field_path()}</dt>

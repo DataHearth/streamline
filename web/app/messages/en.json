@@ -1498,7 +1498,6 @@
 	"torrent_agg_up": "Agg ↑",
 	"torrent_aggregate_down": "Aggregate ↓",
 	"torrent_also_delete_files": "Also delete downloaded files",
-	"torrent_ask_admin": "Ask an admin to enable it in Settings.",
 	"torrent_builtin_disabled": "The built-in client isn’t enabled",
 	"torrent_choose_file": "Choose a .torrent file",
 	"torrent_click_change_file": "Click to choose a different file",
