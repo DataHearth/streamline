@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -1499,6 +1500,25 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 				Expect(err).NotTo(HaveOccurred())
 			},
 		)
+
+		It("prunes against a listing longer than SQLite's bind limit", func() {
+			live := createRec("live", downloadrecord.StatusPending)
+			stale := createRec("stale", downloadrecord.StatusPending)
+			hashes := make([]string, 0, 40_001)
+			for i := range 40_000 {
+				hashes = append(hashes, fmt.Sprintf("h%d", i))
+			}
+			hashes = append(hashes, "live")
+
+			n, err := store.DeleteStalePendingAdoptions(ctx, clientName, hashes)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(1))
+
+			_, err = client.DownloadRecord.Get(ctx, stale.ID)
+			Expect(ent.IsNotFound(err)).To(BeTrue())
+			_, err = client.DownloadRecord.Get(ctx, live.ID)
+			Expect(err).NotTo(HaveOccurred())
+		})
 	})
 
 	Describe("the hold lifecycle", func() {

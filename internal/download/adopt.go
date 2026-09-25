@@ -90,6 +90,19 @@ func missingFilesReason(clientPath string) string {
 	return fmt.Sprintf("files not found — client reports %s", clientPath)
 }
 
+// maxAdoptionsPerTick bounds how many untracked torrents one pass evaluates.
+const maxAdoptionsPerTick = 200
+
+// maxListingField bounds the name and save path a proposal row stores
+// verbatim from the client.
+const maxListingField = 4096
+
+// plausibleListing reports whether a client-reported torrent's name and save
+// path are short enough to store as a proposal.
+func plausibleListing(t Torrent) bool {
+	return len(t.Name) <= maxListingField && len(t.SavePath) <= maxListingField
+}
+
 // untrackedTorrent pairs a torrent with the client it came from, so the
 // adoption record records the originating download client.
 type untrackedTorrent struct {
@@ -404,12 +417,29 @@ func (d *download) AdoptManualTorrents(ctx context.Context) ([]uint32, error) {
 			if _, ok := known[t.Hash]; ok {
 				continue
 			}
+			if !plausibleListing(t) {
+				slog.DebugContext(
+					ctx,
+					"adopt: skipping a malformed client listing entry",
+					"client",
+					dc.Name,
+					"torrent.hash",
+					t.Hash,
+				)
+				continue
+			}
 			untracked = append(
 				untracked,
 				untrackedTorrent{t: t, clientName: dc.Name},
 			)
 		}
 		liveByClient[dc.Name] = live
+	}
+	// Each untracked torrent costs a parse, a scan of the library and a row.
+	// The listing is the client's to write, so what one tick turns into work
+	// is bounded; the rest are still untracked on the next tick.
+	if len(untracked) > maxAdoptionsPerTick {
+		untracked = untracked[:maxAdoptionsPerTick]
 	}
 
 	// Prune proposals whose torrent vanished from its originating client (the

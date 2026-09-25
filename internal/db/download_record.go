@@ -162,20 +162,51 @@ func (db *DB) IdentifyDownloadRecord(
 // torrents, so every pending proposal for it is stale. Returns the count
 // removed. Call only with a client that listed successfully — otherwise a
 // transient outage would purge valid proposals.
+//
+// The live set is diffed in memory rather than bound as NOT IN: it is as long
+// as the client's listing, and past SQLite's bind-variable limit (32766) the
+// statement was refused outright — every tick, so the proposals it existed to
+// reclaim were never reclaimed again.
 func (db *DB) DeleteStalePendingAdoptions(
 	ctx context.Context,
 	clientName string,
 	liveHashes []string,
 ) (int, error) {
-	q := db.client.DownloadRecord.Delete().Where(
-		downloadrecord.StatusEQ(downloadrecord.StatusPending),
-		downloadrecord.DownloadClientNameEQ(clientName),
-	)
-	if len(liveHashes) > 0 {
-		q = q.Where(downloadrecord.TorrentHashNotIn(liveHashes...))
+	pending, err := db.client.DownloadRecord.Query().
+		Where(
+			downloadrecord.StatusEQ(downloadrecord.StatusPending),
+			downloadrecord.DownloadClientNameEQ(clientName),
+		).
+		Select(downloadrecord.FieldID, downloadrecord.FieldTorrentHash).
+		All(ctx)
+	if err != nil {
+		return 0, err
 	}
-	return q.Exec(ctx)
+	live := make(map[string]struct{}, len(liveHashes))
+	for _, h := range liveHashes {
+		live[h] = struct{}{}
+	}
+	var stale []uint32
+	for _, r := range pending {
+		if _, ok := live[r.TorrentHash]; !ok {
+			stale = append(stale, r.ID)
+		}
+	}
+	var deleted int
+	for chunk := range slices.Chunk(stale, deleteChunk) {
+		n, err := db.client.DownloadRecord.Delete().
+			Where(downloadrecord.IDIn(chunk...)).
+			Exec(ctx)
+		deleted += n
+		if err != nil {
+			return deleted, err
+		}
+	}
+	return deleted, nil
 }
+
+// deleteChunk keeps each id-list DELETE far below SQLite's bind-variable limit.
+const deleteChunk = 500
 
 // FindPendingDownloadRecordByID returns a single status=pending record with its
 // media edges, or ent NotFound.
