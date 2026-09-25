@@ -270,7 +270,7 @@ On callback, in order:
 
 ### Role mapping
 
-With `role_claim` and `role_mapping` both set, the claim is **authoritative** — the mapped role is applied on every login, so demotions in your IdP take effect. The claim value may be a string or an array; every value is checked and the **highest-privilege match wins** (`admin` 3 > `member` 2 > `request_only` 1).
+With `role_claim` and `role_mapping` both set, the claim is **authoritative** — the mapped role is applied on every login, so demotions in your IdP take effect. A login that changes the role also signs the user out of every other session, which would otherwise keep the old role until it expired. The claim value may be a string or an array; every value is checked and the **highest-privilege match wins** (`admin` 3 > `member` 2 > `request_only` 1).
 
 With no mapping configured, new users get `auth.default_role` and existing users keep whatever role they have.
 

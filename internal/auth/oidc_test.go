@@ -1103,6 +1103,54 @@ var _ = Describe("LoginOIDC unit", Label("unit", "auth"), func() {
 			Expect(tok).NotTo(BeEmpty())
 		})
 
+		It(
+			"revokes the user's other sessions when the claims change the role",
+			func() {
+				setupNamedProvider("open", config.OIDCEmailLinkingDisabled, false,
+					map[string]any{
+						"role_claim":   "groups",
+						"role_mapping": map[string]any{"streamline-staff": "member"},
+					})
+				owner := &ent.User{
+					ID:         1,
+					Email:      "boss@x.com",
+					Role:       entuser.RoleAdmin,
+					AuthMethod: entuser.AuthMethodBoth,
+				}
+				demoted := *owner
+				demoted.Role = entuser.RoleMember
+				storeMock.FindOIDCIdentity(mock.AnythingOfType(ctxType), "google", "sub-1").
+					Return(&ent.OIDCIdentity{
+						ID:    1,
+						Edges: ent.OIDCIdentityEdges{Owner: owner},
+					}, nil).
+					Once()
+				storeMock.UpdateUserRole(mock.AnythingOfType(ctxType), uint32(1),
+					mock.Anything).
+					Return(&demoted, nil).Once()
+				storeMock.RevokeAllUserSessions(mock.AnythingOfType(ctxType), uint32(1),
+					mock.AnythingOfType("time.Time")).
+					Return(nil).
+					Once()
+				storeMock.CreateSession(mock.AnythingOfType(ctxType), mock.AnythingOfType("db.CreateSessionParams")).
+					Return(&ent.Session{ID: 1}, nil).
+					Once()
+
+				u, _, err := svc.LoginOIDC(
+					ctx,
+					"google",
+					"sub-1",
+					"boss@x.com",
+					"",
+					true,
+					map[string]any{"groups": []any{"streamline-staff"}},
+					SessionMeta{},
+				)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(u.Role).To(Equal(entuser.RoleMember))
+			},
+		)
+
 		It("syncs display_name when the claim differs and reloads the user", func() {
 			owner := &ent.User{
 				ID:          1,

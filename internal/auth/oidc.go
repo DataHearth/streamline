@@ -555,6 +555,15 @@ func (s *auth) syncOIDCRole(
 			"user.id", u.ID, "role", mapped.String(), "error", err)
 		return u
 	}
+	// Same reason as UpdateUser: a session JWT carries the role it was issued
+	// with, so the user's other browsers would keep the old one until
+	// session_ttl. This runs before the login in flight issues its token, so
+	// that session is minted at the new role.
+	if err := s.RevokeAllUserSessions(ctx, u.ID); err != nil {
+		slog.ErrorContext(ctx,
+			"oidc role changed but the user's other sessions could not be revoked",
+			"user.id", u.ID, "error", err)
+	}
 	slog.InfoContext(ctx, "oidc role synced from claims",
 		"user.id", u.ID, "role", mapped.String())
 	return updated
