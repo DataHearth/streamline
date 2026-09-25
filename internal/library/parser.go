@@ -270,19 +270,27 @@ func cleanGroup(s string) string {
 // one: "…x264-tsundere-raws" is the group "tsundere-raws", not "raws". A word
 // holding a dot or a space is a separate token rather than part of the name
 // (".WEB-DL.x264-GRP", "Blu-Ray x264-GRP"), and a technical tag ends the walk.
+//
+// The walk only moves a cut index and builds the group once at the end: an
+// indexer title is attacker-authored, and prepending word by word copied the
+// growing group on every dash — quadratic in a long dash chain.
 func expandHyphenatedGroup(group, rest string) (string, string) {
+	cut := len(rest)
 	for {
-		i := strings.LastIndex(rest, "-")
+		i := strings.LastIndex(rest[:cut], "-")
 		if i < 0 {
-			return group, rest
+			break
 		}
-		w := rest[i+1:]
+		w := rest[i+1 : cut]
 		if strings.ContainsAny(w, ". ") || isNonGroupTag(w) {
-			return group, rest
+			break
 		}
-		group = w + "-" + group
-		rest = rest[:i]
+		cut = i
 	}
+	if cut == len(rest) {
+		return group, rest
+	}
+	return rest[cut+1:] + "-" + group, rest[:cut]
 }
 
 // looksLikeRelease reports whether s carries at least one release token,

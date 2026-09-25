@@ -1,6 +1,9 @@
 package library
 
 import (
+	"strings"
+	"time"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -153,6 +156,16 @@ var _ = Describe("Filename Parser", Label("unit", "library"), func() {
 			"Tsundere-Raws",
 		),
 	)
+
+	It("widens a dash-chained group in one pass", func(_ SpecContext) {
+		chain := strings.Repeat("ab-", 100_000)
+		group, rest := expandHyphenatedGroup(
+			"grp",
+			"Show.1080p.x264-"+chain[:len(chain)-1],
+		)
+		Expect(group).To(Equal(chain + "grp"))
+		Expect(rest).To(Equal("Show.1080p.x264"))
+	}, SpecTimeout(2*time.Second))
 
 	It("keeps a bracketed year the group was appended after", func() {
 		r := Parse("Hellboy (2019) 1080p WEB-DL x264-Slay3R (FR)")
