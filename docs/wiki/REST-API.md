@@ -132,37 +132,43 @@ Each facet carries its own `*_total` "all" row (`status_total`, `type_total`, `m
 
 ## Endpoint map
 
-117 paths, grouped below. **Auth** is `Authenticated` (any logged-in user or valid credential) or `🔒 Admin`; the Requests group is more granular and spells out the exact roles.
+117 paths, grouped below. **Auth** is `Authenticated` (any logged-in user or valid credential, `request_only` included), `Member` (`admin` or `member` — a `request_only` caller gets 403) or `🔒 Admin`; the Requests group spells out the exact roles.
 
 ### Movies
 
 | Method | Path | What it does | Auth |
 | --- | --- | --- | --- |
-| `GET` `POST` | `/movies` | List / add movies | Authenticated |
+| `GET` | `/movies` | List movies | Authenticated |
+| `POST` | `/movies` | Add a movie | Member |
 | `GET` | `/movies/counts` | Faceted counts (same filter params as the list) | Authenticated |
-| `GET` `PATCH` `DELETE` | `/movies/{id}` | Fetch / update / delete a movie | Authenticated |
-| `POST` | `/movies/{id}/search` · `/search-now` · `/grab` · `/refresh-metadata` · `/rename` · `/play-on` | Search, force a search, grab, refresh metadata, rename to the naming template, or play on a media server | Authenticated |
+| `GET` | `/movies/{id}` | Fetch a movie | Authenticated |
+| `PATCH` `DELETE` | `/movies/{id}` | Update / delete a movie | Member |
+| `POST` | `/movies/{id}/search` · `/search-now` · `/grab` · `/refresh-metadata` · `/rename` | Search, force a search, grab, refresh metadata, or rename to the naming template | Member |
+| `GET` | `/movies/{id}/play-on` | Links to play the movie on a media server | Member |
 | `POST` | `/movies/{id}/reidentify` | Point the entry at a different TMDB title | 🔒 Admin |
 | `GET` | `/movies/{id}/recommendations` | TMDB recommendations | Authenticated |
-| `DELETE` | `/movies/{id}/files/{fileId}` | Delete a file | Authenticated |
+| `DELETE` | `/movies/{id}/files/{fileId}` | Delete a file | Member |
 | `GET` | `/search/movie` · `/search/movie/{tmdb_id}` | TMDB title lookup | Authenticated |
 
 ### Series
 
 | Method | Path | What it does | Auth |
 | --- | --- | --- | --- |
-| `GET` `POST` | `/series` | List (`?status=`, `?type=`, `?query=`, `?sort=`, `?order=`) / add a series | Authenticated |
+| `GET` | `/series` | List (`?status=`, `?type=`, `?query=`, `?sort=`, `?order=`) | Authenticated |
+| `POST` | `/series` | Add a series | Member |
 | `GET` | `/series/counts` · `/series/lookup` · `/series/lookup/{tvdb_id}` | Faceted counts (same filter params as the list), TVDB lookup | Authenticated |
-| `POST` | `/series/specials/apply` | Apply the specials handling | Authenticated |
-| `GET` `PATCH` `DELETE` | `/series/{id}` | Fetch / update (`monitored`, `quality_profile`, `preset`, `type`) / delete a series | Authenticated |
-| `GET` | `/series/{id}/browse` | Browse the season/episode tree | Authenticated |
-| `POST` | `/series/{id}/search` · `/grab` · `/refresh-metadata` · `/rename` · `/play-on` | Search, grab, refresh metadata, rename, or play on a media server | Authenticated |
+| `POST` | `/series/specials/apply` | Apply the specials handling | 🔒 Admin |
+| `GET` | `/series/{id}` | Fetch a series | Authenticated |
+| `PATCH` `DELETE` | `/series/{id}` | Update (`monitored`, `quality_profile`, `preset`, `type`) / delete a series | Member |
+| `POST` | `/series/{id}/browse` · `/grab` | Search for complete/multi-season packs, or grab one | Member |
+| `POST` | `/series/{id}/search` · `/refresh-metadata` · `/rename` | Search, refresh metadata, or rename | Member |
+| `GET` | `/series/{id}/play-on` | Links to play the series on a media server | Member |
 | `POST` | `/series/{id}/reidentify` | Point the entry at a different TVDB show | 🔒 Admin |
-| `PATCH` | `/series/{id}/seasons/{number}` | Update a season | Authenticated |
-| `POST` | `/series/{id}/seasons/{number}/search` · `/grab` | Search or grab a season | Authenticated |
-| `GET` `PATCH` | `/series/{id}/episodes/{episodeId}` | Fetch / update an episode | Authenticated |
-| `POST` | `/series/{id}/episodes/{episodeId}/search` · `/grab` | Search or grab an episode | Authenticated |
-| `DELETE` | `/series/{id}/episodes/{episodeId}/file` | Delete the episode's file | Authenticated |
+| `PATCH` | `/series/{id}/seasons/{number}` | Update a season | Member |
+| `POST` | `/series/{id}/seasons/{number}/search` · `/grab` | Search or grab a season | Member |
+| `PATCH` | `/series/{id}/episodes/{episodeId}` | Update an episode | Member |
+| `POST` | `/series/{id}/episodes/{episodeId}/search` · `/grab` | Search or grab an episode | Member |
+| `DELETE` | `/series/{id}/episodes/{episodeId}/file` | Delete the episode's file | Member |
 
 Each of the three search scopes filters the indexer's answer to its own scope — an episode search returns that episode, a season search returns season packs of that season, a series search returns complete/multi-season packs. The episode search additionally carries `hidden_packs` (present only when non-zero): how many packs covering that episode it excluded, so an empty `items` can be told apart from "it only exists inside a pack".
 
@@ -238,10 +244,10 @@ The `cast` array on a stored movie or series (`GET /movies/{id}`, `GET /series/{
 | --- | --- | --- | --- |
 | `GET` | `/activity` | Event feed (movies, episodes and series; filter with `?movie_id=` or `?series_id=`) | Authenticated |
 | `GET` | `/activity/queue` · `/activity/history` | Queue and history views (history is cursor-paged and carries `total`, every terminal record) | Authenticated |
-| `DELETE` | `/activity/queue/{id}` · `/activity/history/{id}` | Remove a queue or history entry | Authenticated |
-| `POST` | `/activity/queue/{id}/pause` · `/resume` · `/activity/history/clear-completed` | Pause/resume a download, or clear completed history | Authenticated |
-| `GET` | `/activity/pending` | List adoption proposals | 🔒 Admin |
-| `GET` | `/activity/pending/{id}/preview` | Preview a proposal | 🔒 Admin |
+| `DELETE` | `/activity/queue/{id}` · `/activity/history/{id}` | Remove a queue or history entry | 🔒 Admin |
+| `POST` | `/activity/queue/{id}/pause` · `/resume` · `/activity/history/clear-completed` | Pause/resume a download, or clear completed history | 🔒 Admin |
+| `GET` | `/activity/pending` | List adoption proposals | Authenticated |
+| `GET` | `/activity/pending/{id}/preview` | Preview a proposal | Authenticated |
 | `POST` | `/activity/pending/{id}/import` · `/replace` · `/ignore` | Decide a proposal | 🔒 Admin |
 | `POST` | `/activity/pending/{id}/identify` | Identify a proposal against metadata | 🔒 Admin |
 | `DELETE` | `/activity/pending/{id}` | Forget a proposal so its torrent can be adopted again | 🔒 Admin |
@@ -253,9 +259,9 @@ The `cast` array on a stored movie or series (`GET /movies/{id}`, `GET /series/{
 | Method | Path | What it does | Auth |
 | --- | --- | --- | --- |
 | `GET` `POST` | `/requests` | List / create requests | Any (scoped for `request_only`) |
-| `GET` | `/requests/counts` · `/requests/{id}/metadata` | Counts, request metadata | Any |
+| `GET` | `/requests/counts` · `/requests/{id}/metadata` | Counts, request metadata | Any (scoped for `request_only`) |
 | `POST` | `/requests/{id}/approve` | Approve a request | admin, member |
-| `POST` | `/requests/{id}/deny` · `/reopen` | Deny or reopen a request | admin |
+| `POST` | `/requests/{id}/deny` · `/reopen` | Deny or reopen a request | admin, member |
 
 ### Config-backed resources
 

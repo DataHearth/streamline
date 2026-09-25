@@ -89,11 +89,12 @@ Three roles, ranked `admin` (3) > `member` (2) > `request_only` (1):
 | List requests | ✅ (all) | ✅ (all) | ✅ (own only) |
 | Approve a request | ✅ | ✅ | ❌ |
 | Deny / reopen a request | ✅ | ✅ | ❌ |
-| Browse the library, trigger searches and grabs | ✅ | ✅ | ❌ |
+| Browse the library, the calendar and the download queue | ✅ | ✅ | ✅ |
+| Add, edit and delete titles, trigger searches and grabs | ✅ | ✅ | ❌ |
 | Manage own API keys, sessions, password | ✅ | ✅ | ✅ |
-| Settings, users, indexers, download clients, media servers, quality profiles, schedules, library admin, torrents, adoption review | ✅ | ❌ | ❌ |
+| Settings, users, indexers, download clients, media servers, quality profiles, schedules, library admin, torrents, transcoding, queue control, adoption review | ✅ | ❌ | ❌ |
 
-That last row is roughly 76 API operations, all admin-gated: `/config/*`, `/users/*`, `/indexers/*`, `/download-clients/*`, `/media-servers/*`, `/quality-profiles/*`, `/schedules/*`, `/library/*`, `/torrents/*`, `/activity/pending/*`, plus invites and system info.
+That last row is admin-gated end to end: `/config/*`, `/users/*`, `/indexers/*`, `/download-clients/*`, `/media-servers/*`, `/schedules/*`, `/library/*`, `/torrents/*`, `/transcoding/*`, every write under `/quality-profiles/*` and `/activity/*` (pausing, cancelling, clearing, retrying and deciding adoption proposals), plus invites and system info. The reads under `/quality-profiles` and `/activity` stay open to every role.
 
 > [!IMPORTANT]
 > Streamline refuses to delete or demote the **last remaining admin** — regardless of who's asking.
