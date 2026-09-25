@@ -19328,6 +19328,20 @@ func (response DeleteMovie204Response) VisitDeleteMovieResponse(w http.ResponseW
 	return nil
 }
 
+type DeleteMovie403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DeleteMovie403JSONResponse) VisitDeleteMovieResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type DeleteMovie404JSONResponse struct{ NotFoundJSONResponse }
 
 func (response DeleteMovie404JSONResponse) VisitDeleteMovieResponse(w http.ResponseWriter) error {
@@ -19429,6 +19443,20 @@ func (response PatchMovie200JSONResponse) VisitPatchMovieResponse(w http.Respons
 	return err
 }
 
+type PatchMovie403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response PatchMovie403JSONResponse) VisitPatchMovieResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type PatchMovie404JSONResponse struct{ NotFoundJSONResponse }
 
 func (response PatchMovie404JSONResponse) VisitPatchMovieResponse(w http.ResponseWriter) error {
@@ -19486,6 +19514,20 @@ type DeleteMovieFile204Response = FileDeletedResponse
 func (response DeleteMovieFile204Response) VisitDeleteMovieFileResponse(w http.ResponseWriter) error {
 	w.WriteHeader(204)
 	return nil
+}
+
+type DeleteMovieFile403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DeleteMovieFile403JSONResponse) VisitDeleteMovieFileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
 }
 
 type DeleteMovieFile404JSONResponse struct{ NotFoundJSONResponse }
@@ -19551,6 +19593,20 @@ func (response GrabMovieRelease202JSONResponse) VisitGrabMovieReleaseResponse(w 
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(202)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GrabMovieRelease403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GrabMovieRelease403JSONResponse) VisitGrabMovieReleaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -19751,6 +19807,20 @@ func (response RefreshMovieMetadata200JSONResponse) VisitRefreshMovieMetadataRes
 	return err
 }
 
+type RefreshMovieMetadata403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response RefreshMovieMetadata403JSONResponse) VisitRefreshMovieMetadataResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type RefreshMovieMetadata404JSONResponse struct{ NotFoundJSONResponse }
 
 func (response RefreshMovieMetadata404JSONResponse) VisitRefreshMovieMetadataResponse(w http.ResponseWriter) error {
@@ -19895,6 +19965,20 @@ func (response RenameMovieFiles200JSONResponse) VisitRenameMovieFilesResponse(w 
 	return err
 }
 
+type RenameMovieFiles403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response RenameMovieFiles403JSONResponse) VisitRenameMovieFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type RenameMovieFiles404JSONResponse struct{ NotFoundJSONResponse }
 
 func (response RenameMovieFiles404JSONResponse) VisitRenameMovieFilesResponse(w http.ResponseWriter) error {
@@ -19941,6 +20025,20 @@ func (response SearchMovie200JSONResponse) VisitSearchMovieResponse(w http.Respo
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchMovie403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response SearchMovie403JSONResponse) VisitSearchMovieResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -19993,6 +20091,20 @@ func (response SearchMovieNow202JSONResponse) VisitSearchMovieNowResponse(w http
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(202)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchMovieNow403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response SearchMovieNow403JSONResponse) VisitSearchMovieNowResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -21874,6 +21986,20 @@ func (response DeleteSeries204Response) VisitDeleteSeriesResponse(w http.Respons
 	return nil
 }
 
+type DeleteSeries403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DeleteSeries403JSONResponse) VisitDeleteSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type DeleteSeries404JSONResponse struct{ NotFoundJSONResponse }
 
 func (response DeleteSeries404JSONResponse) VisitDeleteSeriesResponse(w http.ResponseWriter) error {
@@ -21975,6 +22101,20 @@ func (response PatchSeries200JSONResponse) VisitPatchSeriesResponse(w http.Respo
 	return err
 }
 
+type PatchSeries403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response PatchSeries403JSONResponse) VisitPatchSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type PatchSeries404JSONResponse struct{ NotFoundJSONResponse }
 
 func (response PatchSeries404JSONResponse) VisitPatchSeriesResponse(w http.ResponseWriter) error {
@@ -22055,6 +22195,20 @@ func (response BrowseSeriesReleases200JSONResponse) VisitBrowseSeriesReleasesRes
 	return err
 }
 
+type BrowseSeriesReleases403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response BrowseSeriesReleases403JSONResponse) VisitBrowseSeriesReleasesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type BrowseSeriesReleases404JSONResponse struct{ NotFoundJSONResponse }
 
 func (response BrowseSeriesReleases404JSONResponse) VisitBrowseSeriesReleasesResponse(w http.ResponseWriter) error {
@@ -22098,6 +22252,20 @@ type PatchEpisode204Response = EpisodeUpdatedResponse
 func (response PatchEpisode204Response) VisitPatchEpisodeResponse(w http.ResponseWriter) error {
 	w.WriteHeader(204)
 	return nil
+}
+
+type PatchEpisode403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response PatchEpisode403JSONResponse) VisitPatchEpisodeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
 }
 
 type PatchEpisode404JSONResponse struct{ NotFoundJSONResponse }
@@ -22159,6 +22327,20 @@ func (response DeleteEpisodeFile204Response) VisitDeleteEpisodeFileResponse(w ht
 	return nil
 }
 
+type DeleteEpisodeFile403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DeleteEpisodeFile403JSONResponse) VisitDeleteEpisodeFileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type DeleteEpisodeFile404JSONResponse struct{ NotFoundJSONResponse }
 
 func (response DeleteEpisodeFile404JSONResponse) VisitDeleteEpisodeFileResponse(w http.ResponseWriter) error {
@@ -22216,6 +22398,20 @@ type GrabEpisodeRelease202Response = SeriesGrabAcceptedResponse
 func (response GrabEpisodeRelease202Response) VisitGrabEpisodeReleaseResponse(w http.ResponseWriter) error {
 	w.WriteHeader(202)
 	return nil
+}
+
+type GrabEpisodeRelease403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GrabEpisodeRelease403JSONResponse) VisitGrabEpisodeReleaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
 }
 
 type GrabEpisodeRelease404JSONResponse struct{ NotFoundJSONResponse }
@@ -22299,6 +22495,20 @@ func (response BrowseEpisodeReleases200JSONResponse) VisitBrowseEpisodeReleasesR
 	return err
 }
 
+type BrowseEpisodeReleases403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response BrowseEpisodeReleases403JSONResponse) VisitBrowseEpisodeReleasesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type BrowseEpisodeReleases404JSONResponse struct{ NotFoundJSONResponse }
 
 func (response BrowseEpisodeReleases404JSONResponse) VisitBrowseEpisodeReleasesResponse(w http.ResponseWriter) error {
@@ -22341,6 +22551,20 @@ type GrabSeriesRelease202Response = SeriesGrabAcceptedResponse
 func (response GrabSeriesRelease202Response) VisitGrabSeriesReleaseResponse(w http.ResponseWriter) error {
 	w.WriteHeader(202)
 	return nil
+}
+
+type GrabSeriesRelease403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GrabSeriesRelease403JSONResponse) VisitGrabSeriesReleaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
 }
 
 type GrabSeriesRelease404JSONResponse struct{ NotFoundJSONResponse }
@@ -22483,6 +22707,20 @@ func (response RefreshSeriesMetadata200JSONResponse) VisitRefreshSeriesMetadataR
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RefreshSeriesMetadata403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response RefreshSeriesMetadata403JSONResponse) VisitRefreshSeriesMetadataResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -22631,6 +22869,20 @@ func (response RenameSeriesFiles200JSONResponse) VisitRenameSeriesFilesResponse(
 	return err
 }
 
+type RenameSeriesFiles403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response RenameSeriesFiles403JSONResponse) VisitRenameSeriesFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type RenameSeriesFiles404JSONResponse struct{ NotFoundJSONResponse }
 
 func (response RenameSeriesFiles404JSONResponse) VisitRenameSeriesFilesResponse(w http.ResponseWriter) error {
@@ -22672,6 +22924,20 @@ type SearchSeries202Response = SeriesSearchAcceptedResponse
 func (response SearchSeries202Response) VisitSearchSeriesResponse(w http.ResponseWriter) error {
 	w.WriteHeader(202)
 	return nil
+}
+
+type SearchSeries403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response SearchSeries403JSONResponse) VisitSearchSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
 }
 
 type SearchSeries404JSONResponse struct{ NotFoundJSONResponse }
@@ -22717,6 +22983,20 @@ type PatchSeason204Response = SeasonUpdatedResponse
 func (response PatchSeason204Response) VisitPatchSeasonResponse(w http.ResponseWriter) error {
 	w.WriteHeader(204)
 	return nil
+}
+
+type PatchSeason403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response PatchSeason403JSONResponse) VisitPatchSeasonResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
 }
 
 type PatchSeason404JSONResponse struct{ NotFoundJSONResponse }
@@ -22776,6 +23056,20 @@ type GrabSeasonRelease202Response = SeriesGrabAcceptedResponse
 func (response GrabSeasonRelease202Response) VisitGrabSeasonReleaseResponse(w http.ResponseWriter) error {
 	w.WriteHeader(202)
 	return nil
+}
+
+type GrabSeasonRelease403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GrabSeasonRelease403JSONResponse) VisitGrabSeasonReleaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
 }
 
 type GrabSeasonRelease404JSONResponse struct{ NotFoundJSONResponse }
@@ -22855,6 +23149,20 @@ func (response BrowseSeasonReleases200JSONResponse) VisitBrowseSeasonReleasesRes
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BrowseSeasonReleases403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response BrowseSeasonReleases403JSONResponse) VisitBrowseSeasonReleasesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
 	_, err := buf.WriteTo(w)
 	return err
 }

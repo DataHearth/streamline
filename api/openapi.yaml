@@ -173,6 +173,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Movie"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "413":
@@ -191,6 +193,8 @@ paths:
       responses:
         "204":
           description: Movie deleted
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":
@@ -216,6 +220,8 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/SearchResult"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":
@@ -235,6 +241,8 @@ paths:
       responses:
         "202":
           $ref: "#/components/responses/MovieSearchAccepted"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":
@@ -334,6 +342,8 @@ paths:
       responses:
         "202":
           $ref: "#/components/responses/MovieSearchAccepted"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "413":
@@ -353,6 +363,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/MovieRefreshed"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":
@@ -370,6 +382,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/MovieRenamePlan"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":
@@ -393,6 +407,8 @@ paths:
       responses:
         "204":
           $ref: "#/components/responses/FileDeleted"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "413":
@@ -605,6 +621,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/SeriesDetail"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "413":
@@ -625,6 +643,8 @@ paths:
       responses:
         "204":
           $ref: "#/components/responses/SeriesDeleted"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":
@@ -643,6 +663,8 @@ paths:
       responses:
         "204":
           $ref: "#/components/responses/SeasonUpdated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "413":
@@ -670,6 +692,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/SearchResults"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":
@@ -692,6 +716,8 @@ paths:
       responses:
         "202":
           $ref: "#/components/responses/SeriesGrabAccepted"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "413":
@@ -714,6 +740,8 @@ paths:
       responses:
         "204":
           $ref: "#/components/responses/EpisodeUpdated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "413":
@@ -734,6 +762,8 @@ paths:
       responses:
         "202":
           $ref: "#/components/responses/SeriesSearchAccepted"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":
@@ -795,6 +825,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/SearchResults"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":
@@ -816,6 +848,8 @@ paths:
       responses:
         "202":
           $ref: "#/components/responses/SeriesGrabAccepted"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "413":
@@ -841,6 +875,8 @@ paths:
       responses:
         "202":
           $ref: "#/components/responses/SeriesGrabAccepted"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "413":
@@ -868,6 +904,8 @@ paths:
       responses:
         "204":
           $ref: "#/components/responses/FileDeleted"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "413":
@@ -890,6 +928,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/SearchResults"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":
@@ -905,6 +945,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/SeriesDetail"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":
@@ -922,6 +964,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/SeriesRenamePlan"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":

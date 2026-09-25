@@ -188,6 +188,9 @@ func (s *Server) PatchMovie(
 	ctx context.Context,
 	request PatchMovieRequestObject,
 ) (PatchMovieResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return PatchMovie403JSONResponse{ForbiddenJSONResponse: requestOnlyResp}, nil
+	}
 	var params moviesvc.UpdateParams
 	if request.Body.Status != nil {
 		st := entmovie.Status(*request.Body.Status)
@@ -210,6 +213,11 @@ func (s *Server) DeleteMovie(
 	ctx context.Context,
 	request DeleteMovieRequestObject,
 ) (DeleteMovieResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return DeleteMovie403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
 	opts := moviesvc.DeleteOptions{}
 	if request.Params.DeleteFiles != nil {
 		opts.DeleteFiles = *request.Params.DeleteFiles
@@ -226,6 +234,11 @@ func (s *Server) DeleteMovieFile(
 	ctx context.Context,
 	request DeleteMovieFileRequestObject,
 ) (DeleteMovieFileResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return DeleteMovieFile403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
 	remove := request.Body != nil &&
 		request.Body.RemoveTorrent != nil &&
 		*request.Body.RemoveTorrent
@@ -242,6 +255,11 @@ func (s *Server) SearchMovieNow(
 	ctx context.Context,
 	request SearchMovieNowRequestObject,
 ) (SearchMovieNowResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return SearchMovieNow403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
 	m, err := s.movies.Get(ctx, request.Id)
 	if err != nil {
 		return SearchMovieNow404JSONResponse{
@@ -268,6 +286,11 @@ func (s *Server) SearchMovie(
 	ctx context.Context,
 	request SearchMovieRequestObject,
 ) (SearchMovieResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return SearchMovie403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
 	m, err := s.movies.Get(ctx, request.Id)
 	if err != nil {
 		return SearchMovie404JSONResponse{
@@ -330,6 +353,11 @@ func (s *Server) GrabMovieRelease(
 	ctx context.Context,
 	request GrabMovieReleaseRequestObject,
 ) (GrabMovieReleaseResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return GrabMovieRelease403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
 	m, err := s.movies.Get(ctx, request.Id)
 	if err != nil {
 		return GrabMovieRelease404JSONResponse{
@@ -375,6 +403,11 @@ func (s *Server) RefreshMovieMetadata(
 	ctx context.Context,
 	request RefreshMovieMetadataRequestObject,
 ) (RefreshMovieMetadataResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return RefreshMovieMetadata403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
 	m, err := s.movies.RefreshOne(ctx, request.Id)
 	switch {
 	case errors.Is(err, moviesvc.ErrMovieNotFound):
@@ -395,6 +428,11 @@ func (s *Server) RenameMovieFiles(
 	ctx context.Context,
 	request RenameMovieFilesRequestObject,
 ) (RenameMovieFilesResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return RenameMovieFiles403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
 	if s.renamer == nil {
 		return RenameMovieFiles500JSONResponse{
 			InternalErrorJSONResponse: errInternal(ctx, errRenamerNotConfigured),

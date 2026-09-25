@@ -314,6 +314,11 @@ func (s *Server) PatchSeries(
 	ctx context.Context,
 	request PatchSeriesRequestObject,
 ) (PatchSeriesResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return PatchSeries403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
 	if _, err := s.tvshows.Get(ctx, request.Id); err != nil {
 		return PatchSeries404JSONResponse{
 			NotFoundJSONResponse: errNotFound(err.Error()),
@@ -350,6 +355,11 @@ func (s *Server) DeleteSeries(
 	ctx context.Context,
 	request DeleteSeriesRequestObject,
 ) (DeleteSeriesResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return DeleteSeries403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
 	if _, err := s.tvshows.Get(ctx, request.Id); err != nil {
 		return DeleteSeries404JSONResponse{
 			NotFoundJSONResponse: errNotFound(err.Error()),
@@ -372,6 +382,11 @@ func (s *Server) DeleteEpisodeFile(
 	ctx context.Context,
 	request DeleteEpisodeFileRequestObject,
 ) (DeleteEpisodeFileResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return DeleteEpisodeFile403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
 	remove := request.Body != nil &&
 		request.Body.RemoveTorrent != nil &&
 		*request.Body.RemoveTorrent
@@ -388,6 +403,11 @@ func (s *Server) PatchSeason(
 	ctx context.Context,
 	request PatchSeasonRequestObject,
 ) (PatchSeasonResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return PatchSeason403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
 	show, err := s.tvshows.Get(ctx, request.Id)
 	if err != nil {
 		return PatchSeason404JSONResponse{
@@ -418,6 +438,11 @@ func (s *Server) PatchEpisode(
 	ctx context.Context,
 	request PatchEpisodeRequestObject,
 ) (PatchEpisodeResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return PatchEpisode403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
 	if _, err := s.tvshows.Get(ctx, request.Id); err != nil {
 		return PatchEpisode404JSONResponse{
 			NotFoundJSONResponse: errNotFound(err.Error()),
@@ -439,6 +464,11 @@ func (s *Server) SearchSeries(
 	ctx context.Context,
 	request SearchSeriesRequestObject,
 ) (SearchSeriesResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return SearchSeries403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
 	if _, err := s.tvshows.Get(ctx, request.Id); err != nil {
 		return SearchSeries404JSONResponse{
 			NotFoundJSONResponse: errNotFound(err.Error()),
@@ -461,6 +491,11 @@ func (s *Server) BrowseEpisodeReleases(
 	ctx context.Context,
 	request BrowseEpisodeReleasesRequestObject,
 ) (BrowseEpisodeReleasesResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return BrowseEpisodeReleases403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
 	show, err := s.tvshows.Get(ctx, request.Id)
 	if err != nil {
 		return BrowseEpisodeReleases404JSONResponse{
@@ -514,6 +549,11 @@ func (s *Server) GrabEpisodeRelease(
 	ctx context.Context,
 	request GrabEpisodeReleaseRequestObject,
 ) (GrabEpisodeReleaseResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return GrabEpisodeRelease403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
 	if _, err := s.tvshows.Get(ctx, request.Id); err != nil {
 		return GrabEpisodeRelease404JSONResponse{
 			NotFoundJSONResponse: errNotFound(err.Error()),
@@ -566,6 +606,11 @@ func (s *Server) BrowseSeasonReleases(
 	ctx context.Context,
 	request BrowseSeasonReleasesRequestObject,
 ) (BrowseSeasonReleasesResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return BrowseSeasonReleases403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
 	show, err := s.tvshows.Get(ctx, request.Id)
 	if err != nil {
 		return BrowseSeasonReleases404JSONResponse{
@@ -602,6 +647,11 @@ func (s *Server) GrabSeasonRelease(
 	ctx context.Context,
 	request GrabSeasonReleaseRequestObject,
 ) (GrabSeasonReleaseResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return GrabSeasonRelease403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
 	if _, err := s.tvshows.Get(ctx, request.Id); err != nil {
 		return GrabSeasonRelease404JSONResponse{
 			NotFoundJSONResponse: errNotFound(err.Error()),
@@ -687,6 +737,11 @@ func (s *Server) BrowseSeriesReleases(
 	ctx context.Context,
 	request BrowseSeriesReleasesRequestObject,
 ) (BrowseSeriesReleasesResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return BrowseSeriesReleases403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
 	show, err := s.tvshows.Get(ctx, request.Id)
 	if err != nil {
 		return BrowseSeriesReleases404JSONResponse{
@@ -722,6 +777,11 @@ func (s *Server) GrabSeriesRelease(
 	ctx context.Context,
 	request GrabSeriesReleaseRequestObject,
 ) (GrabSeriesReleaseResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return GrabSeriesRelease403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
 	if _, err := s.tvshows.Get(ctx, request.Id); err != nil {
 		return GrabSeriesRelease404JSONResponse{
 			NotFoundJSONResponse: errNotFound(err.Error()),
@@ -810,6 +870,11 @@ func (s *Server) RefreshSeriesMetadata(
 	ctx context.Context,
 	request RefreshSeriesMetadataRequestObject,
 ) (RefreshSeriesMetadataResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return RefreshSeriesMetadata403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
 	if _, err := s.tvshows.Get(ctx, request.Id); err != nil {
 		return RefreshSeriesMetadata404JSONResponse{
 			NotFoundJSONResponse: errNotFound(err.Error()),
@@ -830,6 +895,11 @@ func (s *Server) RenameSeriesFiles(
 	ctx context.Context,
 	request RenameSeriesFilesRequestObject,
 ) (RenameSeriesFilesResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return RenameSeriesFiles403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
 	if s.seriesRenamer == nil {
 		return RenameSeriesFiles500JSONResponse{
 			InternalErrorJSONResponse: errInternal(ctx, errRenamerNotConfigured),
