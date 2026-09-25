@@ -355,17 +355,6 @@ func newClientConfig(
 		} else {
 			cc.DisableIPv4 = true
 		}
-		// Peer sockets are pinned above, but tracker announces (HTTP + UDP) and
-		// webseed/metainfo HTTP egress dial through anacrolix's own dialers,
-		// which are unbound by default and would leave via the host default
-		// route — leaking the real IP to trackers and webseeds. Source-bind them
-		// to the same interface so the binding is fail-closed.
-		srcDialer := &net.Dialer{LocalAddr: &net.TCPAddr{IP: bindIP}}
-		cc.TrackerDialContext = srcDialer.DialContext
-		cc.HTTPDialContext = srcDialer.DialContext
-		cc.TrackerListenPacket = func(network, _ string) (net.PacketConn, error) {
-			return net.ListenUDP(network, &net.UDPAddr{IP: bindIP})
-		}
 		// UPnP discovery ignores every binding above: anacrolix multicasts an
 		// SSDP M-SEARCH out of *each* multicast-capable interface and then asks
 		// whichever IGD answers to open an inbound mapping for the host's real
@@ -374,6 +363,24 @@ func newClientConfig(
 		// being fail-closed. Peers reach a bound engine through the tunnel's own
 		// forwarding, not the LAN router's.
 		cc.NoDefaultPortForwarding = true
+	}
+	// Tracker announces (HTTP + UDP) and webseed/metainfo HTTP go through
+	// these, never through the peer sockets. With bind_interface set they are
+	// source-bound to it too — anacrolix's own dialers are unbound and would
+	// leave via the host default route, leaking the real IP to trackers and
+	// webseeds. Bound or not, they refuse internal addresses (egress.go).
+	srcDialer := &net.Dialer{Control: refuseInternalDial}
+	if bindIP != nil {
+		srcDialer.LocalAddr = &net.TCPAddr{IP: bindIP}
+	}
+	cc.TrackerDialContext = srcDialer.DialContext
+	cc.HTTPDialContext = srcDialer.DialContext
+	cc.TrackerListenPacket = func(network, _ string) (net.PacketConn, error) {
+		pc, err := net.ListenUDP(network, &net.UDPAddr{IP: bindIP})
+		if err != nil {
+			return nil, err
+		}
+		return egressPacketConn{pc}, nil
 	}
 	return cc
 }

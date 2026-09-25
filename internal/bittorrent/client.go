@@ -70,6 +70,11 @@ func specFromSource(
 		if err != nil {
 			return nil, "", nil, fmt.Errorf("parse magnet: %w", err)
 		}
+		// Peer and DHT-node hints are addresses the magnet's author picked
+		// for the engine to connect to, and peer dials are deliberately not
+		// filtered. Trackers and DHT find the swarm without them.
+		spec.PeerAddrs = nil
+		spec.DhtNodes = nil
 		return spec, src.Magnet, nil, nil
 	case len(src.Bytes) > 0:
 		// The same ceiling download.Manager applies to a .torrent it fetches
