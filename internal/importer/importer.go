@@ -242,7 +242,7 @@ func (w *Worker) runImport(ctx context.Context, recordID uint32) error {
 	if len(libCfg.AllowedDownloadRoots) > 0 {
 		allowed := false
 		for _, root := range libCfg.AllowedDownloadRoots {
-			if download.PathUnderRoot(rec.SavePath, root) {
+			if library.PathUnderRoot(rec.SavePath, root) {
 				allowed = true
 				break
 			}

@@ -62,7 +62,15 @@ func renderToken(vars map[string]string, key, fmtSpec string) string {
 			return fmt.Sprintf("%0*d", width, n)
 		}
 	}
-	return SanitizePath(val)
+	// A value is provider data, so one rendering to "." or ".." must not
+	// survive as a path segment of its own: a title of ".." under a "{title}/"
+	// template walks the rename out of the library root. Literal dots in the
+	// template are the admin's and are left for the importer's containment
+	// check to refuse.
+	if v := SanitizePath(val); v != "." && v != ".." {
+		return v
+	}
+	return "_"
 }
 
 // bracketPair reports whether the two delimiters around a token open and close

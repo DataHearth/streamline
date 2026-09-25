@@ -28,6 +28,7 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/indexer"
+	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/otelx"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -79,23 +80,6 @@ var (
 	ErrNoWantedFiles = errors.New("release contains no wanted episode file")
 )
 
-// PathUnderRoot reports whether path resolves inside root, or is root itself.
-// The trailing separator is what makes it a containment test rather than a
-// string prefix: without it a root of "/downloads" also matches
-// "/downloads-evil".
-func PathUnderRoot(path, root string) bool {
-	absRoot, err := filepath.Abs(root)
-	if err != nil {
-		return false
-	}
-	absPath, err := filepath.Abs(path)
-	if err != nil {
-		return false
-	}
-	return absPath == absRoot ||
-		strings.HasPrefix(absPath, absRoot+string(filepath.Separator))
-}
-
 // downloadSavePath joins a client-supplied torrent name onto the configured
 // download path. The name is attacker-controlled all the way from the tracker
 // and the result is later used as an import *source*, so both the name and the
@@ -108,7 +92,7 @@ func downloadSavePath(name string) (string, error) {
 	}
 	root := config.Get().Library.DownloadPath
 	path := filepath.Join(root, name)
-	if !PathUnderRoot(path, root) {
+	if !library.PathUnderRoot(path, root) {
 		return "", fmt.Errorf("%w: %q", ErrUnsafeTorrentName, name)
 	}
 	return path, nil
@@ -123,7 +107,7 @@ func MapClientPath(p string) string {
 		return p
 	}
 	for _, m := range config.Get().Download.PathMappings {
-		if m.From == "" || m.To == "" || !PathUnderRoot(p, m.From) {
+		if m.From == "" || m.To == "" || !library.PathUnderRoot(p, m.From) {
 			continue
 		}
 		rel, err := filepath.Rel(m.From, p)

@@ -8,4 +8,5 @@ var (
 	ErrSampleOnly    = errors.New("only sample files present")
 	ErrDestExists    = errors.New("destination already exists")
 	ErrUnsafePath    = errors.New("template output escapes library root")
+	ErrOutsideRoot   = errors.New("path is outside the library root")
 )

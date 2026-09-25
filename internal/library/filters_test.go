@@ -19,3 +19,18 @@ var _ = Describe("IsVideoPath", Label("unit", "library"), func() {
 		Entry("no extension", "README", false),
 	)
 })
+
+var _ = Describe("PathUnderRoot", Label("unit", "library"), func() {
+	It("accepts the root itself and its children", func() {
+		Expect(PathUnderRoot("/downloads", "/downloads")).To(BeTrue())
+		Expect(PathUnderRoot("/downloads/a/b", "/downloads")).To(BeTrue())
+	})
+
+	It("rejects a sibling sharing the root's prefix", func() {
+		Expect(PathUnderRoot("/downloads-evil/a", "/downloads")).To(BeFalse())
+	})
+
+	It("rejects a path that climbs out through dot-dot", func() {
+		Expect(PathUnderRoot("/downloads/../etc/passwd", "/downloads")).To(BeFalse())
+	})
+})

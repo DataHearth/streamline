@@ -135,17 +135,6 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 		})
 	})
 
-	Describe("PathUnderRoot", func() {
-		It("accepts the root itself and its children", func() {
-			Expect(PathUnderRoot("/downloads", "/downloads")).To(BeTrue())
-			Expect(PathUnderRoot("/downloads/a/b", "/downloads")).To(BeTrue())
-		})
-
-		It("rejects a sibling sharing the root's prefix", func() {
-			Expect(PathUnderRoot("/downloads-evil/a", "/downloads")).To(BeFalse())
-		})
-	})
-
 	Describe("resolveTorrentSource", func() {
 		// One enabled indexer on the default HTTPS port plus one on an explicit
 		// port, so both the implied-port and explicit-port paths are covered.

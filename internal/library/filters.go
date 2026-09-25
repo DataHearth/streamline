@@ -34,3 +34,20 @@ const MinEpisodeSize = 5 * 1024 * 1024
 func IsVideoPath(p string) bool {
 	return MediaExts[strings.ToLower(filepath.Ext(p))]
 }
+
+// PathUnderRoot reports whether path resolves inside root, or is root itself.
+// The trailing separator is what makes it a containment test rather than a
+// string prefix: without it a root of "/downloads" also matches
+// "/downloads-evil".
+func PathUnderRoot(path, root string) bool {
+	absRoot, err := filepath.Abs(root)
+	if err != nil {
+		return false
+	}
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return false
+	}
+	return absPath == absRoot ||
+		strings.HasPrefix(absPath, absRoot+string(filepath.Separator))
+}

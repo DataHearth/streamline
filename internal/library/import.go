@@ -74,7 +74,7 @@ func findMediaFile(dir string, minSize int64) (string, error) {
 		return "", err
 	}
 	if !info.IsDir() {
-		if !MediaExts[filepath.Ext(dir)] || info.Size() < minSize ||
+		if !IsVideoPath(dir) || info.Size() < minSize ||
 			SampleRe.MatchString(filepath.Base(dir)) {
 			return "", ErrNoMedia
 		}
@@ -93,7 +93,7 @@ func findMediaFile(dir string, minSize int64) (string, error) {
 			continue
 		}
 		name := e.Name()
-		if !MediaExts[filepath.Ext(name)] {
+		if !IsVideoPath(name) {
 			continue
 		}
 		info, err := e.Info()
@@ -323,10 +323,7 @@ func placeFile(
 	}
 	destPath := filepath.Join(p.root, filepath.Join(segments...))
 
-	absRoot, _ := filepath.Abs(p.root)
-	absDest, _ := filepath.Abs(destPath)
-	if !strings.HasPrefix(absDest, absRoot+string(filepath.Separator)) &&
-		absDest != absRoot {
+	if !PathUnderRoot(destPath, p.root) {
 		outcome = "unsafe_path"
 		return ImportedFile{}, otelx.RecordSpanError(span, ErrUnsafePath)
 	}

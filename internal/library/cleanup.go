@@ -26,7 +26,14 @@ import (
 // delete. Sidecars and the prune still run in that case; the error is how a
 // caller that promised the operator a file would go can tell that it did not,
 // instead of reporting a deletion that never happened.
+//
+// Returns ErrOutsideRoot, deleting nothing, when path does not resolve strictly
+// below root. The path comes from a media_file row, and a row can hold a path
+// a provider title or a naming template walked out of the library with.
 func RemoveMediaFile(ctx context.Context, path, root string) error {
+	if !PathUnderRoot(path, root) || filepath.Clean(path) == filepath.Clean(root) {
+		return fmt.Errorf("remove %s: %w", path, ErrOutsideRoot)
+	}
 	dir := filepath.Dir(path)
 	base := filepath.Base(path)
 	stem := strings.TrimSuffix(base, filepath.Ext(base))
@@ -80,7 +87,7 @@ func RemoveMediaFile(ctx context.Context, path, root string) error {
 // "S01E01 - Title - Part 2.mkv", and deleting one episode must never take
 // another episode's video with it.
 func isSidecar(name, stem string) bool {
-	if MediaExts[filepath.Ext(name)] {
+	if IsVideoPath(name) {
 		return false
 	}
 	rest, ok := strings.CutPrefix(name, stem)

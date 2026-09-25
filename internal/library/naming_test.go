@@ -25,6 +25,16 @@ var _ = Describe("Naming Templates", Label("unit", "library"), func() {
 			).To(Equal("Interstellar (2014)/Interstellar (2014) - 1080p.mkv"))
 		})
 
+		It("never lets a value render as a dot segment of its own", func() {
+			vars := map[string]string{"title": "..", "ep": ".", "ext": "mkv"}
+			Expect(
+				ApplyTemplate("{title}/{ep}/x.{ext}", vars),
+			).To(Equal("_/_/x.mkv"))
+			Expect(ApplyTemplate("{title}.{ext}", map[string]string{
+				"title": "...", "ext": "mkv",
+			})).To(Equal("....mkv"))
+		})
+
 		It("should zero-pad season and episode numbers", func() {
 			tpl := "Season {season:02}/S{season:02}E{episode:02} - {episode_title}.{ext}"
 			result := ApplyTemplate(tpl, map[string]string{

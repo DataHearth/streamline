@@ -355,7 +355,13 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			file := filepath.Join(GinkgoT().TempDir(), "Doomed.mkv")
+			// Under the library root: RemoveMediaFile refuses a path outside it.
+			root := GinkgoT().TempDir()
+			configtest.Setup(map[string]any{
+				"library": map[string]any{"movie_path": root},
+			})
+			file := filepath.Join(root, "Doomed (2019)", "Doomed.mkv")
+			Expect(os.MkdirAll(filepath.Dir(file), 0o755)).To(Succeed())
 			Expect(os.WriteFile(file, []byte("payload"), 0o644)).To(Succeed())
 			_, err = store.CreateMediaFile(ctx, db.CreateMediaFileParams{
 				MovieID: m.ID, Path: file, Size: 7,

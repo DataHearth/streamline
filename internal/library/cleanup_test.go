@@ -37,6 +37,33 @@ var _ = Describe("RemoveMediaFile", Label("unit", "library"), func() {
 		Expect(root).To(BeADirectory())
 	})
 
+	It("refuses a path outside the root and deletes nothing", func() {
+		outside := GinkgoT().TempDir()
+		media := touch(filepath.Join(outside, "Escaped.mkv"))
+		sidecar := touch(filepath.Join(outside, "Escaped.nfo"))
+
+		err := RemoveMediaFile(context.Background(), media, root)
+
+		Expect(err).To(MatchError(ErrOutsideRoot))
+		Expect(media).To(BeAnExistingFile())
+		Expect(sidecar).To(BeAnExistingFile())
+	})
+
+	It("refuses a path that climbs out of the root through dot-dot", func() {
+		outside := filepath.Join(filepath.Dir(root), "sibling")
+		media := touch(filepath.Join(outside, "Escaped.mkv"))
+		DeferCleanup(os.RemoveAll, outside)
+
+		err := RemoveMediaFile(
+			context.Background(),
+			filepath.Join(root, "..", "sibling", "Escaped.mkv"),
+			root,
+		)
+
+		Expect(err).To(MatchError(ErrOutsideRoot))
+		Expect(media).To(BeAnExistingFile())
+	})
+
 	It("keeps unrelated files and the folder holding them", func() {
 		dir := filepath.Join(root, "Mixed")
 		media := touch(filepath.Join(dir, "Movie [1080p].mkv"))
@@ -76,11 +103,13 @@ var _ = Describe("RemoveMediaFile", Label("unit", "library"), func() {
 		dir := filepath.Join(root, "Show", "Season 01")
 		media := touch(filepath.Join(dir, "Show - S01E01 - Pilot.mkv"))
 		other := touch(filepath.Join(dir, "Show - S01E01 - Pilot - Part 2.mkv"))
+		upper := touch(filepath.Join(dir, "Show - S01E01 - Pilot - Part 3.MKV"))
 
 		Expect(RemoveMediaFile(context.Background(), media, root)).To(Succeed())
 
 		Expect(media).NotTo(BeAnExistingFile())
 		Expect(other).To(BeAnExistingFile())
+		Expect(upper).To(BeAnExistingFile())
 	})
 
 	It("prunes season and show folders but stops at the library root", func() {
