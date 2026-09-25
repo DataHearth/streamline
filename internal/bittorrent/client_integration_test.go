@@ -712,7 +712,7 @@ func newUnboundEngineNoPortForwarding(
 	Expect(os.MkdirAll(sessionDir, 0o755)).To(Succeed())
 	pc, err := storage.NewBoltPieceCompletion(sessionDir)
 	Expect(err).NotTo(HaveOccurred())
-	st := newDrainingStorage(storage.NewFileWithCompletion(entry.DownloadDir, pc))
+	st, paths := newContentStorage(entry.DownloadDir, pc)
 
 	packetConn, listener, err := newPeerSockets(ctx, nil, entry.ListenPort)
 	Expect(err).NotTo(HaveOccurred())
@@ -729,6 +729,7 @@ func newUnboundEngineNoPortForwarding(
 	e := &Engine{
 		client:      client,
 		storageImpl: st,
+		paths:       paths,
 		store:       store,
 		downloadDir: entry.DownloadDir,
 		listener:    listener,

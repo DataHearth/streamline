@@ -219,10 +219,7 @@ func (e *Engine) rollbackAdd(ctx context.Context, hash string) {
 		slog.WarnContext(ctx, "could not drop the session of a failed add",
 			"hash", hash, "error", err)
 	}
-	e.mu.Lock()
-	delete(e.state, hash)
-	delete(e.sample, hash)
-	e.mu.Unlock()
+	e.forget(hash)
 }
 
 func (e *Engine) RemoveTorrent(
@@ -239,13 +236,23 @@ func (e *Engine) RemoveTorrent(
 	}
 	var contentPath string
 	if info := t.Info(); info != nil {
-		// Guard against deleting the whole download dir when the torrent
-		// has no usable name.
-		if name := info.BestName(); name != "" && name != "." && name != ".." {
+		// The same rule storage placed it by: a name it would have refused
+		// is never a path to delete.
+		if name := info.BestName(); safeContentName(name) {
 			contentPath = filepath.Join(e.downloadDir, name)
 		}
 	}
+	// The row goes first. Dropped first, a failed row delete left a torrent
+	// no API could reach any more (every call looks it up live) whose row the
+	// next boot restored — an admin's removal undone by a restart. This way
+	// round a failure leaves the torrent live, and the removal retryable.
+	if err := e.store.DeleteTorrentSessionByHash(ctx, hash); err != nil {
+		return otelx.RecordSpanError(
+			span, fmt.Errorf("delete torrent session: %w", err),
+		)
+	}
 	t.Drop()
+	e.forget(hash)
 	if deleteFiles && contentPath != "" {
 		// An incomplete single-file torrent stores its partial data at
 		// "<name>.part" (anacrolix UsePartFiles), a sibling of contentPath that
@@ -259,16 +266,19 @@ func (e *Engine) RemoveTorrent(
 			}
 		}
 	}
-	if err := e.store.DeleteTorrentSessionByHash(ctx, hash); err != nil {
-		return otelx.RecordSpanError(
-			span, fmt.Errorf("delete torrent session: %w", err),
-		)
-	}
+	return nil
+}
+
+// forget drops everything the engine holds for a torrent that is gone.
+func (e *Engine) forget(hash string) {
 	e.mu.Lock()
 	delete(e.state, hash)
 	delete(e.sample, hash)
 	e.mu.Unlock()
-	return nil
+	var ih metainfo.Hash
+	if err := ih.FromHexString(hash); err == nil {
+		e.paths.release(ih)
+	}
 }
 
 func (e *Engine) PauseTorrent(ctx context.Context, hash string) error {

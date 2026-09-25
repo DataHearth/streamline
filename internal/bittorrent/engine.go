@@ -80,6 +80,7 @@ type speedSample struct {
 type Engine struct {
 	client      *antorrent.Client
 	storageImpl storage.ClientImplCloser
+	paths       *contentPaths
 	store       db.Store
 	downloadDir string
 	seedRatio   float64
@@ -130,9 +131,7 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 	if err != nil {
 		return nil, fmt.Errorf("open piece completion: %w", err)
 	}
-	st := newDrainingStorage(
-		storage.NewFileWithCompletion(entry.DownloadDir, pc),
-	)
+	st, paths := newContentStorage(entry.DownloadDir, pc)
 
 	packetConn, listener, err := newPeerSockets(ctx, bindIP, entry.ListenPort)
 	if err != nil {
@@ -179,6 +178,7 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 	e := &Engine{
 		client:      client,
 		storageImpl: st,
+		paths:       paths,
 		store:       store,
 		downloadDir: entry.DownloadDir,
 		seedRatio:   entry.SeedRatio,
@@ -501,6 +501,11 @@ func pieceMarkInFlight(t *antorrent.Torrent) bool {
 
 // restore re-adds every persisted torrent session. Unrestorable rows are
 // skipped with a warning rather than failing boot.
+//
+// A row whose stored source no longer parses is deleted: it fails the same way
+// on every boot, and no API can reach a torrent that never goes live. A failed
+// re-add keeps its row — that can be transient, a download mount not ready
+// yet, and deleting on it would lose the torrent for good.
 func (e *Engine) restore(ctx context.Context) error {
 	sessions, err := e.store.ListTorrentSessions(ctx)
 	if err != nil {
@@ -512,8 +517,27 @@ func (e *Engine) restore(ctx context.Context) error {
 			Bytes:  s.SourceTorrent,
 		})
 		if err != nil {
-			slog.WarnContext(ctx, "skipping unrestorable torrent session",
-				"info_hash", s.InfoHash, "error", err)
+			slog.WarnContext(
+				ctx,
+				"dropping a torrent session whose source no longer parses",
+				"info_hash",
+				s.InfoHash,
+				"error",
+				err,
+			)
+			if err := e.store.DeleteTorrentSessionByHash(
+				ctx,
+				s.InfoHash,
+			); err != nil {
+				slog.WarnContext(
+					ctx,
+					"could not drop the unrestorable torrent session",
+					"info_hash",
+					s.InfoHash,
+					"error",
+					err,
+				)
+			}
 			continue
 		}
 		// Same guard as the add path, and it matters more here: the panic an
