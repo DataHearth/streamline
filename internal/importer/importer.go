@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -390,15 +391,21 @@ func (w *Worker) importMovieRecord(
 			return w.hold(ctx, span, rec, reasons)
 		}
 	}
-	if len(existing) > 0 {
-		if err := w.replaceMovieFiles(ctx, m.ID, existing); err != nil {
-			return otelx.RecordSpanError(span, err)
-		}
-	}
-
-	imported, err := w.lib.ImportMovie(ctx, rec.SavePath, m)
+	aside, err := setAside(ctx, existing)
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
+	}
+	imported, err := w.lib.ImportMovie(ctx, rec.SavePath, m)
+	if err != nil {
+		putBack(ctx, aside)
+		return otelx.RecordSpanError(span, err)
+	}
+	for _, mf := range existing {
+		if err := w.db.DeleteMediaFileAndRevertMovie(ctx, mf.ID, m.ID); err != nil {
+			return otelx.RecordSpanError(
+				span, fmt.Errorf("delete replaced movie media file: %w", err),
+			)
+		}
 	}
 
 	if err := w.db.RecordImportSuccess(ctx, db.RecordImportSuccessParams{
@@ -420,6 +427,7 @@ func (w *Worker) importMovieRecord(
 			fmt.Errorf("record import success: %w", err),
 		)
 	}
+	dropAside(ctx, aside)
 	slog.InfoContext(ctx, "imported file",
 		"media_file.path", imported.Path,
 		"movie.id", m.ID,
@@ -432,41 +440,55 @@ func (w *Worker) importMovieRecord(
 	return nil
 }
 
-// replaceMovieFiles deletes a movie's current media file(s) from disk and DB so
-// a replace-flagged grab can re-import over them.
-func (w *Worker) replaceMovieFiles(
-	ctx context.Context,
-	movieID uint32,
-	files []*ent.MediaFile,
-) error {
+// replacedSuffix names an existing library file set aside while the release
+// replacing it is placed.
+const replacedSuffix = ".streamline-replaced"
+
+// setAside renames each existing file out of the way beside itself and
+// returns the paths it moved. The replacement is placed before anything is
+// deleted: removing first cost the library its only copy whenever the new
+// import then failed — a release whose content was not what it claimed, a
+// destination the template refused, a cross-device transfer error. Renaming
+// rather than leaving the file where it is frees the destination when old and
+// new render to the same path. Same directory, so the rename is atomic; a
+// file already gone has nothing to protect and is skipped. A failed rename
+// puts back what had moved.
+func setAside(ctx context.Context, files []*ent.MediaFile) ([]string, error) {
+	var moved []string
 	for _, mf := range files {
-		if err := os.Remove(mf.Path); err != nil && !os.IsNotExist(err) {
-			slog.WarnContext(ctx, "replace: remove existing movie file failed",
-				"path", mf.Path, "error", err)
+		err := os.Rename(mf.Path, mf.Path+replacedSuffix)
+		if errors.Is(err, fs.ErrNotExist) {
+			continue
 		}
-		if err := w.db.DeleteMediaFileAndRevertMovie(
-			ctx,
-			mf.ID,
-			movieID,
-		); err != nil {
-			return fmt.Errorf("delete movie media file: %w", err)
+		if err != nil {
+			putBack(ctx, moved)
+			return nil, fmt.Errorf("set aside %s: %w", mf.Path, err)
 		}
+		moved = append(moved, mf.Path)
 	}
-	return nil
+	return moved, nil
 }
 
-// replaceEpisodeFile deletes an episode's current media file (disk + DB) so a
-// replace-flagged grab can re-import over it.
-func (w *Worker) replaceEpisodeFile(
-	ctx context.Context,
-	episodeID uint32,
-	mf *ent.MediaFile,
-) error {
-	if err := os.Remove(mf.Path); err != nil && !os.IsNotExist(err) {
-		slog.WarnContext(ctx, "replace: remove existing episode file failed",
-			"path", mf.Path, "error", err)
+// putBack restores files setAside moved, after the replacement failed.
+func putBack(ctx context.Context, moved []string) {
+	for _, p := range moved {
+		if err := os.Rename(p+replacedSuffix, p); err != nil {
+			slog.ErrorContext(ctx,
+				"a library file set aside for a replacement could not be put back",
+				"path", p, "set_aside_as", p+replacedSuffix, "error", err)
+		}
 	}
-	return w.db.DeleteMediaFileAndRevertEpisode(ctx, mf.ID, episodeID)
+}
+
+// dropAside deletes files setAside moved, once the replacement is recorded.
+func dropAside(ctx context.Context, moved []string) {
+	for _, p := range moved {
+		if err := os.Remove(p + replacedSuffix); err != nil &&
+			!errors.Is(err, fs.ErrNotExist) {
+			slog.WarnContext(ctx, "replace: remove the replaced file failed",
+				"path", p+replacedSuffix, "error", err)
+		}
+	}
 }
 
 // packFile is one pack member resolved against the library: which episode it
@@ -649,16 +671,15 @@ func (w *Worker) importEpisodeRecord(
 				"episode.id", pf.episode.ID, "file", filepath.Base(pf.path))
 			continue
 		}
+		var replaced []*ent.MediaFile
 		if pf.existing != nil {
-			if rErr := w.replaceEpisodeFile(
-				ctx,
-				pf.episode.ID,
-				pf.existing,
-			); rErr != nil {
-				slog.WarnContext(ctx, "season pack replace: clear existing failed",
-					"episode.id", pf.episode.ID, "error", rErr)
-				continue
-			}
+			replaced = []*ent.MediaFile{pf.existing}
+		}
+		aside, err := setAside(ctx, replaced)
+		if err != nil {
+			slog.WarnContext(ctx, "season pack replace: set existing aside failed",
+				"episode.id", pf.episode.ID, "error", err)
+			continue
 		}
 		imported, err := w.lib.ImportEpisode(
 			ctx,
@@ -668,9 +689,19 @@ func (w *Worker) importEpisodeRecord(
 			pf.episode,
 		)
 		if err != nil {
+			putBack(ctx, aside)
 			slog.WarnContext(ctx, "season pack file import failed",
 				"file", filepath.Base(pf.path), "error", err)
 			continue
+		}
+		if pf.existing != nil {
+			if err := w.db.DeleteMediaFileAndRevertEpisode(
+				ctx, pf.existing.ID, pf.episode.ID,
+			); err != nil {
+				return otelx.RecordSpanError(span, fmt.Errorf(
+					"delete replaced episode media file: %w", err,
+				))
+			}
 		}
 		if err := w.db.RecordEpisodeImportSuccess(
 			ctx,
@@ -694,6 +725,7 @@ func (w *Worker) importEpisodeRecord(
 				fmt.Errorf("record episode import success: %w", err),
 			)
 		}
+		dropAside(ctx, aside)
 		touched[pf.season] = struct{}{}
 		matched++
 	}
@@ -777,15 +809,29 @@ func (w *Worker) importSingleEpisode(
 			return w.hold(ctx, span, rec, reasons)
 		}
 	}
+	var replaced []*ent.MediaFile
 	if mf != nil {
-		if rErr := w.replaceEpisodeFile(ctx, ep.ID, mf); rErr != nil {
-			return otelx.RecordSpanError(span, rErr)
-		}
+		replaced = []*ent.MediaFile{mf}
 	}
-
-	imported, err := w.lib.ImportEpisode(ctx, rec.SavePath, show, seasonNumber, ep)
+	aside, err := setAside(ctx, replaced)
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
+	}
+	imported, err := w.lib.ImportEpisode(ctx, rec.SavePath, show, seasonNumber, ep)
+	if err != nil {
+		putBack(ctx, aside)
+		return otelx.RecordSpanError(span, err)
+	}
+	if mf != nil {
+		if err := w.db.DeleteMediaFileAndRevertEpisode(
+			ctx,
+			mf.ID,
+			ep.ID,
+		); err != nil {
+			return otelx.RecordSpanError(
+				span, fmt.Errorf("delete replaced episode media file: %w", err),
+			)
+		}
 	}
 	if err := w.db.RecordEpisodeImportSuccess(
 		ctx,
@@ -809,6 +855,7 @@ func (w *Worker) importSingleEpisode(
 			fmt.Errorf("record episode import success: %w", err),
 		)
 	}
+	dropAside(ctx, aside)
 	slog.InfoContext(ctx, "imported episode file",
 		"media_file.path", imported.Path,
 		"tvshow.id", show.ID, "episode.id", ep.ID)

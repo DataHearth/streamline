@@ -380,6 +380,74 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 		Expect(old).NotTo(BeAnExistingFile())
 	})
 
+	It("replaces a file that sits at the replacement's own path", func() {
+		src := filepath.Join(tmp, "dl")
+		Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+		seedMediaFile(src, "Flick.2024.1080p.mkv")
+		old := filepath.Join(libDir, "Flick (2024)", "Flick.mkv")
+		Expect(os.MkdirAll(filepath.Dir(old), 0o755)).To(Succeed())
+		Expect(os.WriteFile(old, []byte("old"), 0o644)).To(Succeed())
+		rec := fixtureRecord(1, 10, src, 0)
+		rec.ReplaceMode = downloadrecord.ReplaceModeAll
+
+		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+			Return(rec, nil).Once()
+		storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+			Return([]*ent.MediaFile{{ID: 5, Path: old}}, nil).Once()
+		storeMk.EXPECT().
+			DeleteMediaFileAndRevertMovie(mock.Anything, uint32(5), uint32(10)).
+			Return(nil).Once()
+		storeMk.EXPECT().
+			RecordImportSuccess(mock.Anything, mock.Anything).
+			Return(nil).Once()
+		storeMk.EXPECT().
+			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
+			Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, mock.Anything, libDir).
+			Return(nil).
+			Once()
+
+		Expect(w.runImport(context.Background(), 1)).To(Succeed())
+		got, err := os.ReadFile(old)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(string(got)).NotTo(Equal("old"))
+		Expect(old + replacedSuffix).NotTo(BeAnExistingFile())
+	})
+
+	It("keeps the existing file when placing its replacement fails", func() {
+		configtest.Setup(map[string]any{
+			"library": map[string]any{
+				"movie_path":   libDir,
+				"import_mode":  "copy",
+				"movie_naming": "../escape/{title}.{ext}",
+				"series_path":  libDir,
+			},
+		})
+		w = NewWorker(Deps{
+			DB: storeMk, Library: library.NewImportService(), MediaServer: msMk,
+		})
+		src := filepath.Join(tmp, "dl")
+		Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+		seedMediaFile(src, "Flick.2024.1080p.mkv")
+		old := filepath.Join(libDir, "old.mkv")
+		Expect(os.WriteFile(old, []byte("old"), 0o644)).To(Succeed())
+		rec := fixtureRecord(1, 10, src, 0)
+		rec.ReplaceMode = downloadrecord.ReplaceModeAll
+
+		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+			Return(rec, nil).Once()
+		storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+			Return([]*ent.MediaFile{{ID: 5, Path: old}}, nil).Once()
+
+		Expect(w.runImport(context.Background(), 1)).
+			To(MatchError(library.ErrUnsafePath))
+		got, err := os.ReadFile(old)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(string(got)).To(Equal("old"))
+		Expect(old + replacedSuffix).NotTo(BeAnExistingFile())
+	})
+
 	It("existing file without replace flag: terminal ErrMovieHasFile", func() {
 		src := filepath.Join(tmp, "dl")
 		Expect(os.MkdirAll(src, 0o755)).To(Succeed())
