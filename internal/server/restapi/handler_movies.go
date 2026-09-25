@@ -364,12 +364,15 @@ func (s *Server) GrabMovieRelease(
 			NotFoundJSONResponse: errNotFound(err.Error()),
 		}, nil
 	}
-	sr, ok := toIndexerResult(request.Body)
-	if !ok {
+	sr, err := toIndexerResult(request.Body)
+	switch {
+	case errors.Is(err, errBadReleaseHandle):
 		return GrabMovieRelease422JSONResponse{
-			UnprocessableEntityJSONResponse: unprocessableResp(
-				"release title and download_url are required",
-			),
+			UnprocessableEntityJSONResponse: errGrabRejected(err.Error()),
+		}, nil
+	case err != nil:
+		return GrabMovieRelease422JSONResponse{
+			UnprocessableEntityJSONResponse: unprocessableResp(err.Error()),
 		}, nil
 	}
 	rec, err := s.downloads.Grab(ctx, sr, m.ID)

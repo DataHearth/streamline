@@ -1266,16 +1266,21 @@ func mediaFileScore(profileName string, f *ent.MediaFile) *int {
 	return &res.Score
 }
 
+var errReleaseBodyIncomplete = errors.New(
+	"release title and download_url are required",
+)
+
 // toIndexerResult validates a grab request body (title + download_url required)
-// and maps it to an indexer.SearchResult. The bool reports whether the body was
-// acceptable; the caller emits the operation-specific 422 on false.
-func toIndexerResult(body *SearchResult) (indexer.SearchResult, bool) {
+// and maps it to an indexer.SearchResult. It fails with
+// errReleaseBodyIncomplete or errBadReleaseHandle; the caller emits the
+// operation-specific 422.
+func toIndexerResult(body *SearchResult) (indexer.SearchResult, error) {
 	if body == nil || body.DownloadUrl == "" || body.Title == "" {
-		return indexer.SearchResult{}, false
+		return indexer.SearchResult{}, errReleaseBodyIncomplete
 	}
 	link, err := openReleaseLink(body.DownloadUrl)
 	if err != nil {
-		return indexer.SearchResult{}, false
+		return indexer.SearchResult{}, err
 	}
 	sr := indexer.SearchResult{
 		Title:    body.Title,
@@ -1292,7 +1297,7 @@ func toIndexerResult(body *SearchResult) (indexer.SearchResult, bool) {
 	if body.Indexer != nil {
 		sr.Indexer = *body.Indexer
 	}
-	return sr, true
+	return sr, nil
 }
 
 // replaceExisting reports whether a manual-grab body asked to overwrite

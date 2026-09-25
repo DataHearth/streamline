@@ -559,12 +559,15 @@ func (s *Server) GrabEpisodeRelease(
 			NotFoundJSONResponse: errNotFound(err.Error()),
 		}, nil
 	}
-	sr, ok := toIndexerResult(request.Body)
-	if !ok {
+	sr, err := toIndexerResult(request.Body)
+	switch {
+	case errors.Is(err, errBadReleaseHandle):
 		return GrabEpisodeRelease422JSONResponse{
-			UnprocessableEntityJSONResponse: unprocessableResp(
-				"release title and download_url are required",
-			),
+			UnprocessableEntityJSONResponse: errGrabRejected(err.Error()),
+		}, nil
+	case err != nil:
+		return GrabEpisodeRelease422JSONResponse{
+			UnprocessableEntityJSONResponse: unprocessableResp(err.Error()),
 		}, nil
 	}
 	rec, err := s.downloads.GrabEpisode(
@@ -658,15 +661,18 @@ func (s *Server) GrabSeasonRelease(
 			NotFoundJSONResponse: errNotFound(err.Error()),
 		}, nil
 	}
-	sr, ok := toIndexerResult(request.Body)
-	if !ok {
+	sr, err := toIndexerResult(request.Body)
+	switch {
+	case errors.Is(err, errBadReleaseHandle):
 		return GrabSeasonRelease422JSONResponse{
-			UnprocessableEntityJSONResponse: unprocessableResp(
-				"release title and download_url are required",
-			),
+			UnprocessableEntityJSONResponse: errGrabRejected(err.Error()),
+		}, nil
+	case err != nil:
+		return GrabSeasonRelease422JSONResponse{
+			UnprocessableEntityJSONResponse: unprocessableResp(err.Error()),
 		}, nil
 	}
-	err := s.tvshows.GrabSeasonRelease(
+	err = s.tvshows.GrabSeasonRelease(
 		ctx, request.Id, request.Number, sr, replaceExisting(request.Body),
 	)
 	switch {
@@ -789,15 +795,18 @@ func (s *Server) GrabSeriesRelease(
 			NotFoundJSONResponse: errNotFound(err.Error()),
 		}, nil
 	}
-	sr, ok := toIndexerResult(request.Body)
-	if !ok {
+	sr, err := toIndexerResult(request.Body)
+	switch {
+	case errors.Is(err, errBadReleaseHandle):
 		return GrabSeriesRelease422JSONResponse{
-			UnprocessableEntityJSONResponse: unprocessableResp(
-				"release title and download_url are required",
-			),
+			UnprocessableEntityJSONResponse: errGrabRejected(err.Error()),
+		}, nil
+	case err != nil:
+		return GrabSeriesRelease422JSONResponse{
+			UnprocessableEntityJSONResponse: unprocessableResp(err.Error()),
 		}, nil
 	}
-	err := s.tvshows.GrabSeriesRelease(
+	err = s.tvshows.GrabSeriesRelease(
 		ctx, request.Id, sr, replaceExisting(request.Body),
 	)
 	switch {

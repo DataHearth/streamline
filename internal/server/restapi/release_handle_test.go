@@ -71,8 +71,8 @@ var _ = Describe("release handles", Label("unit", "server"), func() {
 		Expect(strings.HasPrefix(*out.InfoUrl, "http://10.0.0.4:9117/details/1")).
 			To(BeTrue())
 
-		back, ok := toIndexerResult(&out)
-		Expect(ok).To(BeTrue())
+		back, err := toIndexerResult(&out)
+		Expect(err).NotTo(HaveOccurred())
 		Expect(back.Download).To(Equal(link))
 	})
 })

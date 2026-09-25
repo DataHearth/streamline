@@ -18,7 +18,11 @@ import (
 // unaffected.
 const releaseHandlePrefix = "slr1."
 
-var errBadReleaseHandle = errors.New("release handle does not open")
+// errBadReleaseHandle is what a grab gets for a handle that no longer opens,
+// in practice one from a search made before the session secret rotated.
+var errBadReleaseHandle = errors.New(
+	"this search result has expired; search again to grab it",
+)
 
 // sealReleaseLink turns an indexer's download link into an opaque handle.
 //
