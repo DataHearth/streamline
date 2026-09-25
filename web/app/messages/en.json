@@ -168,7 +168,7 @@
 	"auth_mode_closed": "Closed",
 	"auth_mode_closed_help": "Registration is turned off, for passwords and SSO alike.",
 	"auth_mode_invite": "Invite-only",
-	"auth_mode_invite_help": "Only invited emails can register, by invite link or SSO.",
+	"auth_mode_invite_help": "Registration needs an invite, by link or through SSO. An SSO provider with auto_provision creates accounts on first login.",
 	"auth_mode_open_help": "Anyone with the URL can register, by password or SSO.",
 	"auth_no_account": "No account?",
 	"auth_default_role": "Default role",

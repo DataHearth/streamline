@@ -147,7 +147,7 @@ Admins can revoke any user's keys from Settings → Users.
 | Mode | Behaviour |
 | --- | --- |
 | `disabled` | No self-registration, by password or through SSO. Default |
-| `invite` | A valid invite is required, by password or through SSO |
+| `invite` | A valid invite is required, by password or through SSO — unless the provider sets `auto_provision` |
 | `open` | Anyone can register, by password or through SSO |
 
 **The mode covers both doors onto a new account** — the registration form *and* a first-time SSO login — and it covers **only new accounts**. An existing user signs in whatever the mode is, and so does an existing local account that a provider adopts by email under `email_linking`: adoption links an identity to an account that already exists, so it is governed by that key, not by `registration_mode`.
@@ -162,6 +162,8 @@ Under `invite` mode the same invite can arrive through either door:
 - **Through SSO** — the invited person never sees the token. On their first login the earliest unused, unexpired invite bound to the email the IdP asserts is consumed automatically; no match rejects the login with `oidc_no_invite`. A provider that reports `email_verified: false` is rejected one step earlier, so an IdP whose users can self-assert an address cannot claim someone else's invite.
 
 So inviting an SSO user is just: issue an invite for their email, tell them to sign in with the provider. There is no link for them to click.
+
+To skip the invite for SSO entirely, set `auto_provision: true` on the provider (`auth.oidc[]`, file-only like `allow_admin`). A first login through it then creates the account on `auth.default_role`, while the registration form still needs an invite. An invite bound to the email is still consumed and its role applied, and `registration_mode: disabled` still refuses. The provider becomes the gate: turn this on only for an IdP whose own sign-up you control.
 
 ### Which role a new account gets
 
@@ -263,7 +265,7 @@ On callback, in order:
 3. **Existing user with that (lowercased) email** → link the identity and promote `auth_method` from `local` to `both`.
 4. **New user** → apply `registration_mode`:
    - `open` → create with `auth.default_role`
-   - `invite` → consume the earliest unused, unexpired invite bound to that email; no match → `oidc_no_invite`
+   - `invite` → consume the earliest unused, unexpired invite bound to that email; no match → `oidc_no_invite`, or `auth.default_role` when the provider sets `auto_provision`
    - `disabled` → `oidc_registration_disabled`
 
 ### Role mapping
@@ -281,7 +283,7 @@ Callback failures redirect to `/login?error=<code>`:
 | `oidc_state_missing`, `oidc_state_mismatch`, `oidc_nonce_mismatch` | Flow cookies expired or were tampered with — usually just a stale tab |
 | `oidc_email_unverified` | IdP reported the email as unverified |
 | `oidc_registration_disabled` | New user, `registration_mode: disabled` |
-| `oidc_no_invite` | New user, `invite` mode, no matching invite |
+| `oidc_no_invite` | New user, `invite` mode, no matching invite, provider without `auto_provision` |
 | `oidc_provider_error` | The IdP returned an error |
 
 ### Restart requirement

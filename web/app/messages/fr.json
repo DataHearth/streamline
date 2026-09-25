@@ -168,7 +168,7 @@
 	"auth_mode_closed": "Fermé",
 	"auth_mode_closed_help": "Les inscriptions sont désactivées, par mot de passe comme par SSO.",
 	"auth_mode_invite": "Sur invitation",
-	"auth_mode_invite_help": "Seuls les e-mails invités peuvent s'inscrire, par lien d'invitation ou SSO.",
+	"auth_mode_invite_help": "L'inscription nécessite une invitation, par lien ou via SSO. Un fournisseur SSO avec auto_provision crée le compte à la première connexion.",
 	"auth_mode_open_help": "Toute personne disposant de l'URL peut s'inscrire, par mot de passe ou SSO.",
 	"auth_no_account": "Pas de compte ?",
 	"auth_default_role": "Rôle par défaut",

@@ -1747,6 +1747,80 @@ var _ = Describe("LoginOIDC unit", Label("unit", "auth"), func() {
 			Expect(err).To(MatchError(ErrOIDCNoInvite))
 		})
 
+		// No ConsumeInvite expectation: mockery fails the spec if one is made.
+		It(
+			"provisions on default_role without an invite under auto_provision",
+			func() {
+				setupNamedProvider("invite", config.OIDCEmailLinkingDisabled, false,
+					map[string]any{"auto_provision": true})
+				storeMock.FindOIDCIdentity(mock.AnythingOfType(ctxType), "google", "sub-1").
+					Return(nil, &ent.NotFoundError{}).
+					Once()
+				storeMock.FindUserByEmail(mock.AnythingOfType(ctxType), "u@x.com").
+					Return(nil, &ent.NotFoundError{}).Once()
+				storeMock.FindUnusedInviteForEmail(mock.AnythingOfType(ctxType), "u@x.com", mock.AnythingOfType("time.Time")).
+					Return(nil, &ent.NotFoundError{}).
+					Once()
+				tx := newUserTx()
+				tx.EXPECT().
+					CreateUser(mock.AnythingOfType(ctxType), mock.MatchedBy(func(p db.CreateUserParams) bool {
+						return p.Role.String() == string(entuser.RoleMember)
+					})).
+					Return(&ent.User{ID: 1, Role: entuser.RoleMember}, nil).
+					Once()
+				tx.EXPECT().
+					CreateOIDCIdentity(mock.AnythingOfType(ctxType), mock.AnythingOfType("db.CreateOIDCIdentityParams")).
+					Return(&ent.OIDCIdentity{ID: 1}, nil).
+					Once()
+				tx.EXPECT().Commit().Return(nil).Once()
+				storeMock.CreateSession(mock.AnythingOfType(ctxType), mock.AnythingOfType("db.CreateSessionParams")).
+					Return(&ent.Session{ID: 1}, nil).
+					Once()
+
+				u, _, err := svc.LoginOIDC(
+					ctx,
+					"google",
+					"sub-1",
+					"u@x.com",
+					"U",
+					true,
+					nil,
+					SessionMeta{},
+				)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(u.Role).To(Equal(entuser.RoleMember))
+			},
+		)
+
+		It(
+			"still refuses under registration_mode: disabled with auto_provision",
+			func() {
+				setupNamedProvider(
+					"disabled",
+					config.OIDCEmailLinkingDisabled,
+					false,
+					map[string]any{"auto_provision": true},
+				)
+				storeMock.FindOIDCIdentity(mock.AnythingOfType(ctxType), "google", "sub-1").
+					Return(nil, &ent.NotFoundError{}).
+					Once()
+				storeMock.FindUserByEmail(mock.AnythingOfType(ctxType), "u@x.com").
+					Return(nil, &ent.NotFoundError{}).Once()
+
+				_, _, err := svc.LoginOIDC(
+					ctx,
+					"google",
+					"sub-1",
+					"u@x.com",
+					"U",
+					true,
+					nil,
+					SessionMeta{},
+				)
+				Expect(err).To(MatchError(ErrOIDCRegDisabled))
+			},
+		)
+
 		// inviteTx wires the whole invite-consuming provisioning transaction and
 		// asserts the role the user is created with.
 		inviteTx := func(inviteRole invite.Role, want entuser.Role) {

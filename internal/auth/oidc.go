@@ -119,7 +119,8 @@ func (m *oidcManager) Get(name string) (*OIDCProvider, bool) {
 //     never changes the role. Otherwise ErrOIDCLinkNotAllowed: matching an
 //     address is not proof the same human holds both accounts.
 //  4. New user → respect registration_mode (disabled rejects; invite needs a
-//     matching invite; open falls back to default_role). User, identity
+//     matching invite unless the provider sets auto_provision; open falls
+//     back to default_role). User, identity
 //     and invite consumption commit as one transaction, so a failed
 //     provisioning never burns the invite.
 //
@@ -299,12 +300,30 @@ func (s *auth) LoginOIDC(
 		return nil, "", otelx.RecordSpanError(span, ErrOIDCRegDisabled)
 	case "invite":
 		found, err := s.db.FindUnusedInviteForEmail(ctx, email, time.Now())
-		if err != nil {
+		switch {
+		case err == nil:
+			inv = found
+			fallbackRole = inv.Role.String()
+		case ent.IsNotFound(err) && pc.AutoProvision:
+		case ent.IsNotFound(err):
 			outcome = "no_invite"
+			slog.InfoContext(
+				ctx,
+				"oidc login refused: no invite for new user",
+				"oidc.provider",
+				provider,
+				"oidc.subject",
+				subject,
+				"user.email",
+				email,
+			)
 			return nil, "", otelx.RecordSpanError(span, ErrOIDCNoInvite)
+		default:
+			return nil, "", otelx.RecordSpanError(
+				span,
+				fmt.Errorf("find invite: %w", err),
+			)
 		}
-		inv = found
-		fallbackRole = inv.Role.String()
 	}
 	// The invite-carried role goes through the ceiling like every other: it
 	// arrives over a channel the provider controls the far end of, and the

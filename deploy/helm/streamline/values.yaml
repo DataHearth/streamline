@@ -278,6 +278,12 @@ config:
   #     after the link exists.
   #   true — the provider decides who administers Streamline.
   #
+  # auth.oidc[].auto_provision — under registration_mode: invite, a first login
+  #   through this provider creates the account on auth.default_role without
+  #   an invite. false (default) — SSO needs an invite bound to the email, like
+  #   the registration form. Only turn it on for an IdP whose sign-up you
+  #   control: it becomes the gate.
+  #
   # The keys are independent on purpose. While one key meant both, tightening
   # the adoption tier could RAISE the role ceiling — an account of federated
   # origin adopted at non_admin became promotable the moment the operator set
@@ -303,6 +309,7 @@ config:
   #       client_secret_file: /etc/streamline/secrets/oidc-client-secret
   #       email_linking: disabled
   #       allow_admin: false
+  #       auto_provision: false
   #       # role_claim takes a dotted path into nested claims.
   #       role_claim: realm_access.roles
   #       role_mapping:

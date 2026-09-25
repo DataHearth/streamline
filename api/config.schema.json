@@ -392,6 +392,10 @@
               "allow_admin": {
                 "type": "boolean",
                 "description": "Whether this provider may put an account on the admin role. Default false, in which case no role it confers is ever admin — not the claim-mapped role, not the auth.default_role a provisioning login falls back to, and not the role carried by an invite consumed through SSO. Independent of email_linking, so no change to either setting can raise capability on the other axis."
+              },
+              "auto_provision": {
+                "type": "boolean",
+                "description": "Under registration_mode: invite, let a first login through this provider create the account without an invite, on auth.default_role. An invite bound to the email is still consumed and its role applied. The IdP becomes the gate, so this is only as closed as its own sign-up. registration_mode: disabled still refuses. Default false."
               }
             }
           }

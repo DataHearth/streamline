@@ -186,6 +186,13 @@ type OIDCConfig struct {
 	// that moved with the claims would be beaten by presenting the harmless set
 	// first and the admin group one request later, once the link exists.
 	AllowAdmin bool `koanf:"allow_admin"`
+	// AutoProvision lets a first login through this provider create the
+	// account without an invite while auth.registration_mode is invite, landing
+	// on auth.default_role — the IdP is then the gate, so it is only as closed
+	// as the IdP's own sign-up. An invite bound to the email is still consumed
+	// and its role applied. registration_mode: disabled still refuses. Off by
+	// default and not exposed through the REST API, like AllowAdmin.
+	AutoProvision bool `koanf:"auto_provision"`
 }
 
 // Accepted OIDCConfig.EmailLinking values. Disabled is the zero value, so a
