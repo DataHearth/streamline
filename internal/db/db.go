@@ -400,6 +400,12 @@ type Store interface {
 		clientName string,
 		liveHashes []string,
 	) (int, error)
+	// DeleteOrphanedPendingAdoptions prunes pending proposals whose client is
+	// not among clientNames (the enabled download clients).
+	DeleteOrphanedPendingAdoptions(
+		ctx context.Context,
+		clientNames []string,
+	) (int, error)
 	FindPendingDownloadRecordByID(
 		ctx context.Context,
 		id uint32,

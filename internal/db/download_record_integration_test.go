@@ -1501,6 +1501,23 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 			},
 		)
 
+		It("prunes the pendings of a client that is no longer enabled", func() {
+			kept := createRec("kept", downloadrecord.StatusPending)
+			orphan := otherPending("orphan")
+			active := createRec("active", downloadrecord.StatusDownloading)
+
+			n, err := store.DeleteOrphanedPendingAdoptions(ctx, []string{clientName})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(1))
+
+			_, err = client.DownloadRecord.Get(ctx, orphan.ID)
+			Expect(ent.IsNotFound(err)).To(BeTrue())
+			for _, keep := range []*ent.DownloadRecord{kept, active} {
+				_, err := client.DownloadRecord.Get(ctx, keep.ID)
+				Expect(err).NotTo(HaveOccurred())
+			}
+		})
+
 		It("prunes against a listing longer than SQLite's bind limit", func() {
 			live := createRec("live", downloadrecord.StatusPending)
 			stale := createRec("stale", downloadrecord.StatusPending)

@@ -159,7 +159,7 @@ var _ = Describe("Manual torrent adoption", Label("e2e", "api"), func() {
 			},
 		)
 		qb := fakes.NewQBittorrent(fakes.QBTorrent{
-			Hash: "e2eadopt0000000000000000000000000000abcd",
+			Hash: "e2eadd000000000000000000000000000000abcd",
 			Name: integraleName, Files: files,
 		})
 		registerClient(qb.URL)

@@ -205,6 +205,25 @@ func (db *DB) DeleteStalePendingAdoptions(
 	return deleted, nil
 }
 
+// DeleteOrphanedPendingAdoptions removes pending adoption proposals whose
+// download client is not among clientNames. A proposal is derived from its
+// client's listing, and only an enabled client is ever listed, so one whose
+// client was disabled or removed is never pruned by the per-client pass — it
+// sat in every user's pending list for good. Disabling a client that comes
+// back re-proposes whatever it still holds on the next tick.
+func (db *DB) DeleteOrphanedPendingAdoptions(
+	ctx context.Context,
+	clientNames []string,
+) (int, error) {
+	q := db.client.DownloadRecord.Delete().Where(
+		downloadrecord.StatusEQ(downloadrecord.StatusPending),
+	)
+	if len(clientNames) > 0 {
+		q = q.Where(downloadrecord.DownloadClientNameNotIn(clientNames...))
+	}
+	return q.Exec(ctx)
+}
+
 // deleteChunk keeps each id-list DELETE far below SQLite's bind-variable limit.
 const deleteChunk = 500
 

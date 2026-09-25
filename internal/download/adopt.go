@@ -3,6 +3,7 @@ package download
 import (
 	"cmp"
 	"context"
+	"encoding/hex"
 	"fmt"
 	"log/slog"
 	"os"
@@ -97,9 +98,17 @@ const maxAdoptionsPerTick = 200
 // verbatim from the client.
 const maxListingField = 4096
 
-// plausibleListing reports whether a client-reported torrent's name and save
-// path are short enough to store as a proposal.
+// plausibleListing reports whether a client-reported torrent looks like one:
+// an infohash (v1 or v2, hex in either case — checked, never rewritten, since
+// records match the client's own spelling) and a name and save path short
+// enough to store as a proposal.
 func plausibleListing(t Torrent) bool {
+	if len(t.Hash) != 40 && len(t.Hash) != 64 {
+		return false
+	}
+	if _, err := hex.DecodeString(t.Hash); err != nil {
+		return false
+	}
 	return len(t.Name) <= maxListingField && len(t.SavePath) <= maxListingField
 }
 
@@ -453,6 +462,16 @@ func (d *download) AdoptManualTorrents(ctx context.Context) ([]uint32, error) {
 				"client", clientName, "error", err)
 			continue
 		}
+		pruned += n
+	}
+	enabled := make([]string, 0, len(liveByClient))
+	for _, dc := range config.EnabledDownloadClients() {
+		enabled = append(enabled, dc.Name)
+	}
+	if n, err := d.db.DeleteOrphanedPendingAdoptions(ctx, enabled); err != nil {
+		slog.WarnContext(ctx, "adopt: prune proposals of disabled clients failed",
+			"error", err)
+	} else {
 		pruned += n
 	}
 	span.SetAttributes(attribute.Int("adopt.pruned", pruned))

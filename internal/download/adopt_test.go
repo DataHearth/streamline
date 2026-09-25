@@ -43,6 +43,9 @@ func adoptRoot(names ...string) string {
 	return root
 }
 
+// adoptHash is a well-formed infohash; the pass skips anything that is not.
+const adoptHash = "0123456789abcdef0123456789abcdef01234567"
+
 var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 	Describe("classifyMovieAdoption", func() {
 		candidates := []*ent.Movie{
@@ -412,6 +415,39 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 			Expect(ids).To(BeEmpty())
 		})
 
+		It("skips a listing entry whose hash is not an infohash", func() {
+			root := adoptRoot("The.Batman.2022.1080p.BluRay-X")
+			configtest.Setup(map[string]any{
+				"library": map[string]any{"download_path": root},
+				"download_clients": []map[string]any{{
+					"name": "embedded", "client_type": "builtin",
+					"download_dir": root, "enabled": true,
+				}},
+			})
+			client := &adoptClient{torrents: []Torrent{{
+				Hash:   "a-0",
+				Name:   "The.Batman.2022.1080p.BluRay-X",
+				Status: StatusSeeding,
+				Size:   4096,
+			}}}
+			mgr = New(store, client).(Adopter)
+
+			store.EXPECT().AllDownloadRecordHashes(mock.Anything).
+				Return(map[string]struct{}{}, nil).Once()
+			store.EXPECT().
+				DeleteStalePendingAdoptions(mock.Anything, "embedded", []string{"a-0"}).
+				Return(0, nil).Once()
+			store.EXPECT().
+				DeleteOrphanedPendingAdoptions(mock.Anything, []string{"embedded"}).
+				Return(0, nil).Once()
+
+			// Nothing is untracked once the entry is dropped, so the pass
+			// exits before loading the library; any further call fails.
+			ids, err := mgr.AdoptManualTorrents(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ids).To(BeEmpty())
+		})
+
 		It("files a torrent that is the library's own file as completed", func() {
 			root := adoptRoot("The.Batman.2022.1080p.BluRay-X")
 			configtest.Setup(map[string]any{
@@ -422,7 +458,7 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 				}},
 			})
 			client := &adoptClient{torrents: []Torrent{{
-				Hash:   "h1",
+				Hash:   adoptHash,
 				Name:   "The.Batman.2022.1080p.BluRay-X",
 				Status: StatusSeeding,
 				Size:   4096,
@@ -432,7 +468,10 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 			store.EXPECT().AllDownloadRecordHashes(mock.Anything).
 				Return(map[string]struct{}{}, nil).Once()
 			store.EXPECT().
-				DeleteStalePendingAdoptions(mock.Anything, "embedded", []string{"h1"}).
+				DeleteStalePendingAdoptions(mock.Anything, "embedded", []string{adoptHash}).
+				Return(0, nil).Once()
+			store.EXPECT().
+				DeleteOrphanedPendingAdoptions(mock.Anything, []string{"embedded"}).
 				Return(0, nil).Once()
 			store.EXPECT().ListMoviesForAdoption(mock.Anything).
 				Return([]*ent.Movie{{
@@ -473,7 +512,7 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 					}},
 				})
 				client := &adoptClient{torrents: []Torrent{{
-					Hash:   "h1",
+					Hash:   adoptHash,
 					Name:   "Good.Omens.S03.MULTi.VF2.1080p.WEB.H264-FW",
 					Status: StatusSeeding,
 					Size:   100,
@@ -483,7 +522,10 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 				store.EXPECT().AllDownloadRecordHashes(mock.Anything).
 					Return(map[string]struct{}{}, nil).Once()
 				store.EXPECT().
-					DeleteStalePendingAdoptions(mock.Anything, "embedded", []string{"h1"}).
+					DeleteStalePendingAdoptions(mock.Anything, "embedded", []string{adoptHash}).
+					Return(0, nil).Once()
+				store.EXPECT().
+					DeleteOrphanedPendingAdoptions(mock.Anything, []string{"embedded"}).
 					Return(0, nil).Once()
 				store.EXPECT().
 					ListMoviesForAdoption(mock.Anything).
@@ -530,7 +572,7 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 					}},
 				})
 				client := &adoptClient{torrents: []Torrent{{
-					Hash:     "h1",
+					Hash:     adoptHash,
 					Name:     "The.Batman.2022.1080p.BluRay-X",
 					Status:   StatusSeeding,
 					Size:     4096,
@@ -541,7 +583,10 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 				store.EXPECT().AllDownloadRecordHashes(mock.Anything).
 					Return(map[string]struct{}{}, nil).Once()
 				store.EXPECT().
-					DeleteStalePendingAdoptions(mock.Anything, "embedded", []string{"h1"}).
+					DeleteStalePendingAdoptions(mock.Anything, "embedded", []string{adoptHash}).
+					Return(0, nil).Once()
+				store.EXPECT().
+					DeleteOrphanedPendingAdoptions(mock.Anything, []string{"embedded"}).
 					Return(0, nil).Once()
 				store.EXPECT().ListMoviesForAdoption(mock.Anything).
 					Return([]*ent.Movie{{
@@ -591,7 +636,7 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 				}},
 			})
 			client := &adoptClient{torrents: []Torrent{{
-				Hash:   "h1",
+				Hash:   adoptHash,
 				Name:   "The.Bear.S01E02.1080p.WEB-X",
 				Status: StatusSeeding,
 			}}}
@@ -600,7 +645,10 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 			store.EXPECT().AllDownloadRecordHashes(mock.Anything).
 				Return(map[string]struct{}{}, nil).Once()
 			store.EXPECT().
-				DeleteStalePendingAdoptions(mock.Anything, "embedded", []string{"h1"}).
+				DeleteStalePendingAdoptions(mock.Anything, "embedded", []string{adoptHash}).
+				Return(0, nil).Once()
+			store.EXPECT().
+				DeleteOrphanedPendingAdoptions(mock.Anything, []string{"embedded"}).
 				Return(0, nil).Once()
 			store.EXPECT().ListMoviesForAdoption(mock.Anything).
 				Return(nil, nil).Once()
@@ -651,7 +699,7 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 				}},
 			})
 			client := &adoptClient{torrents: []Torrent{{
-				Hash:     "h1",
+				Hash:     adoptHash,
 				Name:     "The.Batman.2022.1080p.BluRay-X",
 				Status:   StatusSeeding,
 				Size:     4096,
@@ -662,7 +710,10 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 			store.EXPECT().AllDownloadRecordHashes(mock.Anything).
 				Return(map[string]struct{}{}, nil).Once()
 			store.EXPECT().
-				DeleteStalePendingAdoptions(mock.Anything, "embedded", []string{"h1"}).
+				DeleteStalePendingAdoptions(mock.Anything, "embedded", []string{adoptHash}).
+				Return(0, nil).Once()
+			store.EXPECT().
+				DeleteOrphanedPendingAdoptions(mock.Anything, []string{"embedded"}).
 				Return(0, nil).Once()
 			store.EXPECT().ListMoviesForAdoption(mock.Anything).
 				Return([]*ent.Movie{{
