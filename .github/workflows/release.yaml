@@ -5,14 +5,56 @@ on:
   push:
     tags: ["v*.*.*"]
 
-permissions:
-  contents: write
-  id-token: write
-  packages: write
+permissions: {}
 
 jobs:
-  goreleaser:
+  # Its own job, holding nothing: the notes step installs the Claude CLI by
+  # piping an unpinned script into bash, and in the signing job that script
+  # would run beside the checkout's persisted token, the OIDC token cosign
+  # signs with, and the workspace GoReleaser builds from. Here the worst it
+  # can reach is a read-only token and the release notes text.
+  notes:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Version
+        id: v
+        run: echo "v=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Build release notes
+        id: notes
+        uses: ./.github/actions/release-notes
+        with:
+          changelog: CHANGELOG.md
+          version: ${{ steps.v.outputs.v }}
+          subject: Streamline
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          footer: |
+
+            ---
+            Image: `ghcr.io/datahearth/streamline:${{ steps.v.outputs.v }}`
+            Verify: `cosign verify ghcr.io/datahearth/streamline:${{ steps.v.outputs.v }} --certificate-identity-regexp="https://github.com/datahearth/streamline/.github/workflows/image.yaml@.*" --certificate-oidc-issuer=https://token.actions.githubusercontent.com`
+
+      - name: Upload release notes
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-notes
+          path: ${{ steps.notes.outputs.file }}
+          if-no-files-found: error
+
+  goreleaser:
+    needs: notes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      packages: write
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -45,33 +87,22 @@ jobs:
       - name: Install syft
         uses: anchore/sbom-action/download-syft@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
 
-      - name: Version
-        id: v
-        run: echo "v=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
-
       # --release-notes makes GoReleaser skip changelog generation *and* the
-      # release header/footer, so the whole body is assembled here. Written to
-      # RUNNER_TEMP, not the workspace: GoReleaser fails on a dirty git tree.
-      - name: Build release notes
-        id: notes
-        uses: ./.github/actions/release-notes
+      # release header/footer, so the whole body is assembled by the notes job.
+      # Downloaded to RUNNER_TEMP, not the workspace: GoReleaser fails on a
+      # dirty git tree.
+      - name: Download release notes
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          changelog: CHANGELOG.md
-          version: ${{ steps.v.outputs.v }}
-          subject: Streamline
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          footer: |
-
-            ---
-            Image: `ghcr.io/datahearth/streamline:${{ steps.v.outputs.v }}`
-            Verify: `cosign verify ghcr.io/datahearth/streamline:${{ steps.v.outputs.v }} --certificate-identity-regexp="https://github.com/datahearth/streamline/.github/workflows/image.yaml@.*" --certificate-oidc-issuer=https://token.actions.githubusercontent.com`
+          name: release-notes
+          path: ${{ runner.temp }}/notes
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
         with:
           distribution: goreleaser
           version: "~> v2"
-          args: release --clean --release-notes=${{ steps.notes.outputs.file }}
+          args: release --clean --release-notes=${{ runner.temp }}/notes/release-notes.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
