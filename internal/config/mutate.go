@@ -175,6 +175,14 @@ var (
 	ErrSecretFileManaged = errors.New(
 		"secret is file-managed; edit the file, not the UI",
 	)
+
+	// ErrOIDCTrustFileManaged refuses an issuer change on a provider the
+	// config file trusts. allow_admin and email_linking are file-only, but
+	// they belong to the provider entry, not to the issuer: re-pointing the
+	// entry would hand that file-granted trust to an IdP the file never named.
+	ErrOIDCTrustFileManaged = errors.New(
+		"this provider's trust is set in the config file; change its issuer there, not through the API",
+	)
 )
 
 // checkDuration rejects a patched Go duration string before it reaches the
@@ -656,7 +664,11 @@ func UpdateOIDCProvider(
 			strings.TrimSpace(*patch.ClientSecret) != "" {
 			return ErrSecretFileManaged
 		}
-		if patch.Issuer != nil {
+		if patch.Issuer != nil && *patch.Issuer != p.Issuer {
+			if p.AllowAdmin ||
+				(p.EmailLinking != "" && p.EmailLinking != OIDCEmailLinkingDisabled) {
+				return ErrOIDCTrustFileManaged
+			}
 			p.Issuer = *patch.Issuer
 		}
 		if patch.ClientID != nil {

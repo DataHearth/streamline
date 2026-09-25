@@ -218,6 +218,11 @@ var identityPrefixes = []string{
 	// would bootstrap the very session credential this list denies it.
 	"/api/v1/auth/jwt",
 	"/api/v1/users",
+	// Registration mode and the OIDC providers decide who can get an account
+	// at all: a key opening registration, or re-pointing a provider, mints
+	// accounts that outlive the key's revocation just as a created user would.
+	"/api/v1/config/auth",
+	"/api/v1/config/oidc",
 }
 
 func identityMutationForAPIKey(r *http.Request) bool {

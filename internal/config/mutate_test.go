@@ -338,6 +338,47 @@ var _ = Describe("Config mutate", Label("unit", "config"), func() {
 			Expect(errors.Is(err, config.ErrOIDCProviderNotFound)).To(BeTrue())
 		})
 
+		DescribeTable("refuses to re-point a provider the file trusts",
+			func(linking string, allowAdmin bool) {
+				Expect(
+					config.Update(
+						context.Background(),
+						func(c *config.Config) error {
+							c.Auth.OIDC[0].EmailLinking = linking
+							c.Auth.OIDC[0].AllowAdmin = allowAdmin
+							return nil
+						},
+					),
+				).To(Succeed())
+				other := startDiscoveryServer()
+				DeferCleanup(other.Close)
+
+				err := config.UpdateOIDCProvider(
+					context.Background(),
+					"acme",
+					config.OIDCProviderPatch{Issuer: &other.URL},
+				)
+
+				Expect(err).To(MatchError(config.ErrOIDCTrustFileManaged))
+				Expect(config.Get().Auth.OIDC[0].Issuer).To(Equal(srv.URL))
+			},
+			Entry("allow_admin", config.OIDCEmailLinkingDisabled, true),
+			Entry("email linking", config.OIDCEmailLinkingNonAdmin, false),
+		)
+
+		It("re-points an untrusted provider", func() {
+			other := startDiscoveryServer()
+			DeferCleanup(other.Close)
+
+			Expect(config.UpdateOIDCProvider(
+				context.Background(),
+				"acme",
+				config.OIDCProviderPatch{Issuer: &other.URL},
+			)).To(Succeed())
+
+			Expect(config.Get().Auth.OIDC[0].Issuer).To(Equal(other.URL))
+		})
+
 		It("probes new issuer when patched", func() {
 			bad := "http://127.0.0.1:1"
 			err := config.UpdateOIDCProvider(

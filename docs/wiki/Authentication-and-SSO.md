@@ -134,7 +134,7 @@ curl -H "X-API-Key: $KEY" https://streamline.example.com/api/v1/movies
 An API key inherits the full permissions of its owning user — an admin's key is an admin key. Scripts that only need read access should use a key on a member account.
 
 > [!WARNING]
-> Keys are **read-only on the identity surface**. Any non-GET request under `/api/v1/auth/me`, `/auth/password`, `/auth/invites`, `/auth/jwt`, or `/users` returns `403` when authenticated with a key — creating or revoking keys, changing passwords, managing sessions, administering users, and rotating the JWT secret all require a logged-in session (Bearer JWT or the browser cookie). A leaked key therefore can't mint replacement credentials or reshape accounts; it grabs and browses, nothing more. Media and settings endpoints are unaffected.
+> Keys are **read-only on the identity surface**. Any non-GET request under `/api/v1/auth/me`, `/auth/password`, `/auth/invites`, `/auth/jwt`, `/users`, `/config/auth` or `/config/oidc` returns `403` when authenticated with a key — creating or revoking keys, changing passwords, managing sessions, administering users, and rotating the JWT secret, changing the registration mode and editing OIDC providers all require a logged-in session (Bearer JWT or the browser cookie). A leaked key therefore can't mint replacement credentials or reshape accounts; it grabs and browses, nothing more. Media endpoints and the other settings sections are unaffected.
 
 Admins can revoke any user's keys from Settings → Users.
 
@@ -289,6 +289,8 @@ Callback failures redirect to `/login?error=<code>`:
 ### Restart requirement
 
 **OIDC providers are only loaded at process start.** UI edits persist but don't take effect until you restart. The Settings → SSO page says so; it's the most common OIDC support question.
+
+A provider whose config entry sets `allow_admin: true` or an `email_linking` other than `disabled` can't have its issuer changed from the UI or the API (`403`). That trust was granted to the issuer you named in the file, so move it there.
 
 ### OIDC from an installed app
 

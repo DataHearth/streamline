@@ -287,15 +287,29 @@ var _ = g.Describe("authenticateAPI", g.Label("unit"), func() {
 			g.Entry("invite create", http.MethodPost, "/api/v1/auth/invites"),
 			g.Entry("user admin", http.MethodPatch, "/api/v1/users/2"),
 			g.Entry("jwt rotate", http.MethodPost, "/api/v1/auth/jwt/rotate"),
+			g.Entry("registration mode", http.MethodPatch, "/api/v1/config/auth"),
+			g.Entry("oidc provider add", http.MethodPost, "/api/v1/config/oidc"),
+			g.Entry(
+				"oidc provider repoint",
+				http.MethodPatch,
+				"/api/v1/config/oidc/acme",
+			),
 		)
 
-		g.DescribeTable("reads and non-identity mutations pass through",
+		g.DescribeTable(
+			"reads and non-identity mutations pass through",
 			func(method, path string) {
 				Expect(keyed(method, path)).To(Equal(http.StatusOK))
 			},
 			g.Entry("whoami", http.MethodGet, "/api/v1/auth/me"),
 			g.Entry("key list", http.MethodGet, "/api/v1/auth/me/api-keys"),
 			g.Entry("user list", http.MethodGet, "/api/v1/users"),
+			g.Entry("auth config read", http.MethodGet, "/api/v1/config/auth"),
+			g.Entry(
+				"library config patch",
+				http.MethodPatch,
+				"/api/v1/config/library",
+			),
 			g.Entry("media mutation", http.MethodPost, "/api/v1/movies"),
 			g.Entry("prefix boundary", http.MethodPost, "/api/v1/userstats"),
 		)

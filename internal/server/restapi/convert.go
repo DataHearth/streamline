@@ -62,11 +62,12 @@ func forbiddenResp(msg string) ForbiddenJSONResponse {
 }
 
 // configLocked reports whether err means the configuration can't be mutated
-// through the API: the instance runs read-only, or the targeted secret is
-// file-managed. Both map to 403.
+// through the API: the instance runs read-only, or the targeted secret or
+// trust setting is file-managed. All map to 403.
 func configLocked(err error) bool {
 	return errors.Is(err, config.ErrReadOnly) ||
-		errors.Is(err, config.ErrSecretFileManaged)
+		errors.Is(err, config.ErrSecretFileManaged) ||
+		errors.Is(err, config.ErrOIDCTrustFileManaged)
 }
 
 func conflictResp(code, msg string) ConflictJSONResponse {
