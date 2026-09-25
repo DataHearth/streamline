@@ -28,6 +28,8 @@ Every request authenticates. This is the only mode appropriate for anything reac
 
 Requests originating from a CIDR in `auth.trusted_networks` are **automatically granted `auth.trusted_role`** without credentials. Everything else authenticates normally.
 
+A write (anything but `GET`/`HEAD`/`OPTIONS`) that a browser marks as coming from another site gets no grant: otherwise any web page opened on a trusted machine could post to Streamline with `trusted_role`. It falls back to ordinary authentication, so a script with a real token still works.
+
 ```yaml
 auth:
   mode: trusted-network

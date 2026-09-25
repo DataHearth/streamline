@@ -86,7 +86,13 @@ func NewAuth(
 				return
 			}
 
-			if mode == "trusted-network" && isTrusted(r, trustedNets) {
+			// The grant rides on the client's address alone, which a browser on
+			// the trusted network carries into any page it visits: a cross-site
+			// form post would otherwise execute with trusted_role. Refused
+			// requests fall through to ordinary authentication, so a real
+			// credential still works from anywhere.
+			if mode == "trusted-network" && isTrusted(r, trustedNets) &&
+				(safeMethod(r.Method) || !httputil.CrossSiteRequest(r)) {
 				ctx := auth.ContextWithClaims(r.Context(), &auth.Claims{
 					Role: trustedRole,
 				})
@@ -415,4 +421,8 @@ func hostMatchesRequest(r *http.Request, rawURL string) bool {
 		return false
 	}
 	return strings.EqualFold(u.Host, r.Host)
+}
+
+func safeMethod(m string) bool {
+	return m == http.MethodGet || m == http.MethodHead || m == http.MethodOptions
 }

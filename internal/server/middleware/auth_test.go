@@ -432,7 +432,7 @@ var _ = g.Describe("NewAuth in trusted-network mode", g.Label("unit"), func() {
 
 	// serve wires the client-IP resolver ahead of the auth middleware, exactly
 	// as the server does, and reports the role the request was granted.
-	serve := func(trustedProxies []string, remoteAddr, xff string) (int, string) {
+	serveReq := func(trustedProxies []string, req *http.Request) (int, string) {
 		g.GinkgoHelper()
 		configtest.Setup(map[string]any{
 			"server": map[string]any{"trusted_proxies": trustedProxies},
@@ -453,15 +453,55 @@ var _ = g.Describe("NewAuth in trusted-network mode", g.Label("unit"), func() {
 			NewAuth(mocks.NewMockAuthenticator(g.GinkgoT()), nil, nil)(inner),
 		)
 
+		rr := httptest.NewRecorder()
+		h.ServeHTTP(rr, req)
+		return rr.Code, rr.Header().Get(roleHeader)
+	}
+
+	serve := func(trustedProxies []string, remoteAddr, xff string) (int, string) {
+		g.GinkgoHelper()
 		req := httptest.NewRequest(http.MethodGet, "/movies", nil)
 		req.RemoteAddr = remoteAddr
 		if xff != "" {
 			req.Header.Set("X-Forwarded-For", xff)
 		}
-		rr := httptest.NewRecorder()
-		h.ServeHTTP(rr, req)
-		return rr.Code, rr.Header().Get(roleHeader)
+		return serveReq(trustedProxies, req)
 	}
+
+	post := func(header, value string) (int, string) {
+		g.GinkgoHelper()
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/movies",
+			strings.NewReader("{}"))
+		req.Host = "streamline.lan:8080"
+		req.RemoteAddr = "192.168.50.7:4000"
+		if header != "" {
+			req.Header.Set(header, value)
+		}
+		return serveReq(nil, req)
+	}
+
+	g.DescribeTable("withholds the trusted role from a cross-site write",
+		func(header, value string) {
+			code, role := post(header, value)
+			Expect(code).To(Equal(http.StatusUnauthorized))
+			Expect(role).To(BeEmpty())
+		},
+		g.Entry("foreign Origin", "Origin", "http://evil.example"),
+		g.Entry("opaque Origin", "Origin", "null"),
+		g.Entry("cross-site fetch metadata", "Sec-Fetch-Site", "cross-site"),
+		g.Entry("same-site fetch metadata", "Sec-Fetch-Site", "same-site"),
+	)
+
+	g.DescribeTable("grants the trusted role to a same-origin or non-browser write",
+		func(header, value string) {
+			code, role := post(header, value)
+			Expect(code).To(Equal(http.StatusOK))
+			Expect(role).To(Equal("admin"))
+		},
+		g.Entry("matching Origin", "Origin", "http://streamline.lan:8080"),
+		g.Entry("same-origin fetch metadata", "Sec-Fetch-Site", "same-origin"),
+		g.Entry("no browser headers", "", ""),
+	)
 
 	g.It("grants the trusted role to a peer inside the network", func() {
 		code, role := serve(nil, "192.168.50.7:4000", "")
