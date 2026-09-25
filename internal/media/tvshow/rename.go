@@ -134,6 +134,21 @@ func (r *RenameService) buildPlan(
 				if target == f.Path {
 					continue
 				}
+				// See the movie twin: the template is the admin's, and a
+				// literal ".." in it would walk the file out of the root.
+				if !library.PathUnderRoot(target, r.libraryRoot) {
+					slog.WarnContext(
+						ctx,
+						"rename skipped: the naming template puts this file outside the library",
+						"episode.id",
+						ep.ID,
+						"path",
+						f.Path,
+						"target",
+						target,
+					)
+					continue
+				}
 				plan.Operations = append(plan.Operations, library.RenameOperation{
 					MediaFileID: f.ID,
 					From:        f.Path,

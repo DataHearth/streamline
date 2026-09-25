@@ -69,6 +69,21 @@ var _ = Describe("RenameService", Label("unit", "movies"), func() {
 		)
 	})
 
+	It("leaves out a file the template would put outside the library", func() {
+		store := dbmocks.NewMockStore(GinkgoT())
+		svc := NewRenameService(store, "/library/movies", "../escaped/{title}.{ext}")
+		movie := &ent.Movie{ID: 1, Title: "Dune", Year: 2021, TmdbID: 438631}
+		files := []*ent.MediaFile{{ID: 10, Path: "/library/movies/Dune/Dune.mkv"}}
+		store.EXPECT().FindMovieByID(mock.Anything, uint32(1)).
+			Return(movie, nil).Once()
+		store.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(1)).
+			Return(files, nil).Once()
+
+		plan, err := svc.Preview(ctx, 1)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(plan.Operations).To(BeEmpty())
+	})
+
 	// The shipped template, which keeps only {quality} — so a file renamed
 	// once no longer carries anything else in its name and re-parsing it can
 	// only lose more. The row is the authority for both specs below.
