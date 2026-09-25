@@ -461,6 +461,7 @@ var _ = g.Describe("NewAuth in trusted-network mode", g.Label("unit"), func() {
 	serve := func(trustedProxies []string, remoteAddr, xff string) (int, string) {
 		g.GinkgoHelper()
 		req := httptest.NewRequest(http.MethodGet, "/movies", nil)
+		req.Host = "streamline.lan"
 		req.RemoteAddr = remoteAddr
 		if xff != "" {
 			req.Header.Set("X-Forwarded-For", xff)
@@ -479,6 +480,39 @@ var _ = g.Describe("NewAuth in trusted-network mode", g.Label("unit"), func() {
 		}
 		return serveReq(nil, req)
 	}
+
+	g.DescribeTable("grants the trusted role only on a host rebinding cannot forge",
+		func(host string, granted bool) {
+			req := httptest.NewRequest(http.MethodGet, "/api/v1/movies", nil)
+			req.Host = host
+			req.RemoteAddr = "192.168.50.7:4000"
+			code, role := serveReq(nil, req)
+			if granted {
+				Expect(code).To(Equal(http.StatusOK))
+				Expect(role).To(Equal("admin"))
+				return
+			}
+			Expect(code).To(Equal(http.StatusUnauthorized))
+			Expect(role).To(BeEmpty())
+		},
+		g.Entry("an IPv4 literal", "192.168.50.2:8080", true),
+		g.Entry("an IPv6 literal", "[fd00::2]:8080", true),
+		g.Entry("localhost", "localhost:8080", true),
+		g.Entry("a single-label LAN name", "nas:8080", true),
+		g.Entry("a private suffix", "streamline.home.arpa", true),
+		g.Entry("a public domain", "rebind.attacker.example:8080", false),
+		g.Entry("no host at all", "", false),
+	)
+
+	g.It("grants the trusted role on the operator's public_url host", func() {
+		g.GinkgoT().Setenv("STREAMLINE_PUBLIC_URL", "https://media.example.com")
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/movies", nil)
+		req.Host = "media.example.com"
+		req.RemoteAddr = "192.168.50.7:4000"
+		code, role := serveReq(nil, req)
+		Expect(code).To(Equal(http.StatusOK))
+		Expect(role).To(Equal("admin"))
+	})
 
 	g.DescribeTable("withholds the trusted role from a cross-site write",
 		func(header, value string) {

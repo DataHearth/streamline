@@ -30,6 +30,8 @@ Requests originating from a CIDR in `auth.trusted_networks` are **automatically 
 
 A write (anything but `GET`/`HEAD`/`OPTIONS`) that a browser marks as coming from another site gets no grant: otherwise any web page opened on a trusted machine could post to Streamline with `trusted_role`. It falls back to ordinary authentication, so a script with a real token still works.
 
+The grant also depends on the address you typed into the browser. It applies when you reach Streamline by IP address, `localhost`, a bare machine name (`http://nas:8080`), a name under `.lan`, `.local`, `.home.arpa`, `.internal` or `.localdomain`, or the host in `STREAMLINE_PUBLIC_URL`. Any other domain name gets a login page instead. This blocks *DNS rebinding*, where a malicious site points its own domain at your server's LAN address to drive it from your browser. If you reach Streamline through a public domain, set `STREAMLINE_PUBLIC_URL` to it.
+
 ```yaml
 auth:
   mode: trusted-network

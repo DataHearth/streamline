@@ -88,10 +88,13 @@ func NewAuth(
 
 			// The grant rides on the client's address alone, which a browser on
 			// the trusted network carries into any page it visits: a cross-site
-			// form post would otherwise execute with trusted_role. Refused
-			// requests fall through to ordinary authentication, so a real
-			// credential still works from anywhere.
+			// form post would otherwise execute with trusted_role, and a
+			// DNS-rebound page — same-origin in the browser's eyes, so it passes
+			// the cross-site check and can read responses too — would drive the
+			// API outright. Refused requests fall through to ordinary
+			// authentication, so a real credential still works from anywhere.
 			if mode == "trusted-network" && isTrusted(r, trustedNets) &&
+				unrebindableHost(r.Host) &&
 				(safeMethod(r.Method) || !httputil.CrossSiteRequest(r)) {
 				ctx := auth.ContextWithClaims(r.Context(), &auth.Claims{
 					Role: trustedRole,
@@ -425,4 +428,35 @@ func hostMatchesRequest(r *http.Request, rawURL string) bool {
 
 func safeMethod(m string) bool {
 	return m == http.MethodGet || m == http.MethodHead || m == http.MethodOptions
+}
+
+// privateNameSuffixes are DNS suffixes no one can register publicly.
+var privateNameSuffixes = []string{
+	".lan", ".local", ".home.arpa", ".internal", ".localdomain", ".localhost",
+}
+
+// unrebindableHost reports whether host is a name an attacker cannot point at
+// this server by DNS rebinding. Rebinding needs a domain the attacker controls
+// resolving, for a moment, to a trusted-network address; the browser then
+// sends that domain as Host. So what is trusted is what nobody else can own:
+// an IP literal, localhost, a single-label LAN name, a reserved private
+// suffix, or the operator's own public_url host.
+func unrebindableHost(host string) bool {
+	if h, _, err := net.SplitHostPort(host); err == nil {
+		host = h
+	}
+	host = strings.TrimSuffix(strings.ToLower(strings.Trim(host, "[]")), ".")
+	switch {
+	case host == "":
+		return false
+	case net.ParseIP(host) != nil, host == "localhost", !strings.Contains(host, "."):
+		return true
+	}
+	for _, suffix := range privateNameSuffixes {
+		if strings.HasSuffix(host, suffix) {
+			return true
+		}
+	}
+	pub, err := url.Parse(config.PublicURL())
+	return err == nil && strings.EqualFold(pub.Hostname(), host)
 }
