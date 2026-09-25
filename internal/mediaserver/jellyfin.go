@@ -2,7 +2,6 @@ package mediaserver
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -238,7 +237,7 @@ func (j *Jellyfin) fetchItems(
 		return nil, fmt.Errorf("jellyfin items: status %d", resp.StatusCode)
 	}
 	var body jellyfinItemsResponse
-	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+	if err := otelx.DecodeJSON(resp.Body, maxLibraryResponse, &body); err != nil {
 		return nil, fmt.Errorf("jellyfin items decode: %w", err)
 	}
 	return body.Items, nil

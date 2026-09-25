@@ -5,7 +5,9 @@
 package otelx
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -126,4 +128,21 @@ func RedactURL(u *url.URL) string {
 	redacted.Fragment = ""
 	redacted.RawFragment = ""
 	return redacted.String()
+}
+
+// DecodeJSON decodes one JSON value from r, refusing a body larger than max
+// with ErrResponseTooLarge. MaxResponseBody bounds every body; this is for a
+// call that knows its answer is small. json.Decoder holds the whole top-level
+// value in memory, several times its wire size, so a limit sized to the
+// endpoint is what keeps one hostile answer from costing a small host its
+// heap.
+func DecodeJSON(r io.Reader, max int64, v any) error {
+	lr := &io.LimitedReader{R: r, N: max + 1}
+	if err := json.NewDecoder(lr).Decode(v); err != nil {
+		if lr.N <= 0 {
+			return fmt.Errorf("%w: over %d bytes", ErrResponseTooLarge, max)
+		}
+		return err
+	}
+	return nil
 }

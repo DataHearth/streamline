@@ -2,7 +2,6 @@ package mediaserver
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -12,6 +11,14 @@ import (
 	"strings"
 
 	"github.com/datahearth/streamline/internal/otelx"
+)
+
+// Response ceilings for Plex and Jellyfin answers. The small replies (identity,
+// the section list, a PIN) are a few KiB; a library query answers one title
+// and its matches.
+const (
+	maxSmallResponse   = 1 << 20
+	maxLibraryResponse = 16 << 20
 )
 
 type Plex struct {
@@ -145,7 +152,7 @@ func (p *Plex) findSection(ctx context.Context, libraryPath string) (string, err
 	}
 
 	var sections plexSectionsResponse
-	if err := json.NewDecoder(resp.Body).Decode(&sections); err != nil {
+	if err := otelx.DecodeJSON(resp.Body, maxSmallResponse, &sections); err != nil {
 		return "", fmt.Errorf("plex sections decode: %w", err)
 	}
 
@@ -197,7 +204,7 @@ func (p *Plex) ListSections(ctx context.Context) ([]Section, error) {
 	}
 
 	var raw plexSectionsResponse
-	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
+	if err := otelx.DecodeJSON(resp.Body, maxSmallResponse, &raw); err != nil {
 		return nil, fmt.Errorf("plex sections decode: %w", err)
 	}
 
@@ -271,7 +278,7 @@ func (p *Plex) identity(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("plex identity: unexpected status %d", resp.StatusCode)
 	}
 	var body plexIdentityResponse
-	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+	if err := otelx.DecodeJSON(resp.Body, maxSmallResponse, &body); err != nil {
 		return "", fmt.Errorf("plex identity decode: %w", err)
 	}
 	if body.MediaContainer.MachineIdentifier == "" {
@@ -488,7 +495,7 @@ func (p *Plex) querySection(
 		return "", fmt.Errorf("plex section lookup: status %d", resp.StatusCode)
 	}
 	var body plexMetadataResponse
-	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+	if err := otelx.DecodeJSON(resp.Body, maxLibraryResponse, &body); err != nil {
 		return "", fmt.Errorf("plex section decode: %w", err)
 	}
 	for _, m := range body.MediaContainer.Metadata {

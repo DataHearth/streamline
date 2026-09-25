@@ -22,6 +22,9 @@ import (
 	"golang.org/x/text/language"
 )
 
+// maxTokenResponse bounds TVDB's login reply, which carries one token.
+const maxTokenResponse = 1 << 20
+
 const tvdbBaseURL = "https://api4.thetvdb.com/v4"
 
 type TVDB struct {
@@ -129,7 +132,7 @@ func (t *TVDB) fetchToken(ctx context.Context) (string, error) {
 			Token string `json:"token"`
 		} `json:"data"`
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+	if err := otelx.DecodeJSON(resp.Body, maxTokenResponse, &out); err != nil {
 		return "", err
 	}
 	t.mu.Lock()
@@ -193,7 +196,7 @@ func (t *TVDB) get(ctx context.Context, path string, out any) error {
 		)
 		return fmt.Errorf("tvdb: unexpected status %d", resp.StatusCode)
 	}
-	return json.NewDecoder(resp.Body).Decode(out)
+	return otelx.DecodeJSON(resp.Body, maxProviderResponse, out)
 }
 
 func (t *TVDB) do(

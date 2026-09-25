@@ -2,7 +2,6 @@ package metadata
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -20,6 +19,10 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 )
+
+// maxProviderResponse bounds one TMDB or TVDB answer: a title's details, or
+// one page of its episodes.
+const maxProviderResponse = 16 << 20
 
 const tmdbBaseURL = "https://api.themoviedb.org"
 
@@ -499,7 +502,7 @@ func (t *TMDB) get(
 		return fmt.Errorf("unexpected status %d", resp.StatusCode)
 	}
 
-	return json.NewDecoder(resp.Body).Decode(out)
+	return otelx.DecodeJSON(resp.Body, maxProviderResponse, out)
 }
 
 func (t *TMDB) withLang(p url.Values, lang string) url.Values {

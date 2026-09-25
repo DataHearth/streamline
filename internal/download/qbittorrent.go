@@ -18,6 +18,11 @@ import (
 	"github.com/datahearth/streamline/internal/otelx"
 )
 
+// maxFileListResponse bounds qBittorrent's file list for one torrent. The
+// torrent list itself stays under otelx.MaxResponseBody alone: a large
+// seeder's honestly runs to tens of MiB.
+const maxFileListResponse = 16 << 20
+
 type qbAuthMode uint8
 
 const (
@@ -610,7 +615,11 @@ func (q *QBittorrent) ListFiles(
 	}
 
 	var qbFiles []qbFile
-	if err := json.NewDecoder(resp.Body).Decode(&qbFiles); err != nil {
+	if err := otelx.DecodeJSON(
+		resp.Body,
+		maxFileListResponse,
+		&qbFiles,
+	); err != nil {
 		return nil, fmt.Errorf("qbittorrent files decode: %w", err)
 	}
 

@@ -11,6 +11,10 @@ import (
 	"github.com/datahearth/streamline/internal/otelx"
 )
 
+// maxProwlarrResponse bounds one Prowlarr answer: a search's results or the
+// indexer list.
+const maxProwlarrResponse = 16 << 20
+
 // Prowlarr queries a Prowlarr instance's native search API
 // (GET /api/v1/search), which aggregates across every indexer Prowlarr
 // manages in one call. Unlike Jackett, Prowlarr exposes no combined Torznab
@@ -228,7 +232,7 @@ func (p *Prowlarr) get(
 	case resp.StatusCode != http.StatusOK:
 		return fmt.Errorf("%w: status %d", ErrUnexpectedStatus, resp.StatusCode)
 	}
-	if err := json.NewDecoder(resp.Body).Decode(out); err != nil {
+	if err := otelx.DecodeJSON(resp.Body, maxProwlarrResponse, out); err != nil {
 		return fmt.Errorf("%w: %w", ErrBadResponse, err)
 	}
 	return nil

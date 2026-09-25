@@ -2,7 +2,6 @@ package mediaserver
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -86,7 +85,7 @@ func beginPlexPin(
 		ID   uint64 `json:"id"`
 		Code string `json:"code"`
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
+	if err := otelx.DecodeJSON(resp.Body, maxSmallResponse, &raw); err != nil {
 		return PlexPin{}, fmt.Errorf("plex pin decode: %w", err)
 	}
 
@@ -136,7 +135,7 @@ func pollPlexPin(
 	var raw struct {
 		AuthToken *string `json:"authToken"`
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
+	if err := otelx.DecodeJSON(resp.Body, maxSmallResponse, &raw); err != nil {
 		return PlexPinResult{}, fmt.Errorf("plex pin poll decode: %w", err)
 	}
 

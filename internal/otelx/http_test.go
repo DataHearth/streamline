@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -214,5 +215,27 @@ var _ = Describe("HTTPClient body cap", Label("unit", "otelx"), func() {
 		n, err := read(serveGzipped(otelx.MaxResponseBody).URL)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(n).To(Equal(otelx.MaxResponseBody))
+	})
+})
+
+var _ = Describe("DecodeJSON", Label("unit", "otelx"), func() {
+	It("decodes a value within the limit", func() {
+		var v map[string]int
+		Expect(otelx.DecodeJSON(strings.NewReader(`{"a":1}`), 64, &v)).To(Succeed())
+		Expect(v).To(HaveKeyWithValue("a", 1))
+	})
+
+	It("refuses a value past the limit", func() {
+		var v []int
+		body := "[" + strings.Repeat("1,", 100) + "1]"
+		Expect(otelx.DecodeJSON(strings.NewReader(body), 64, &v)).
+			To(MatchError(otelx.ErrResponseTooLarge))
+	})
+
+	It("reports a malformed value as itself, not as too large", func() {
+		var v map[string]int
+		err := otelx.DecodeJSON(strings.NewReader(`{"a":`), 64, &v)
+		Expect(err).To(HaveOccurred())
+		Expect(err).NotTo(MatchError(otelx.ErrResponseTooLarge))
 	})
 })
