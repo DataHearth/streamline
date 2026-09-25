@@ -189,6 +189,31 @@ var _ = Describe("Singleton", Label("unit", "config"), func() {
 		Expect(reloaded.Auth.Mode).To(Equal("trusted-network"))
 	})
 
+	It("Update narrows a world-readable file it overwrites in place", func() {
+		dir := GinkgoT().TempDir()
+		cfgPath := filepath.Join(dir, "cfg.yaml")
+		dataDir := filepath.Join(dir, "data")
+		Expect(os.MkdirAll(dataDir, 0o755)).To(Succeed())
+		Expect(
+			os.WriteFile(cfgPath, []byte(minimalYAML(dataDir)), 0o600),
+		).To(Succeed())
+		Expect(os.Chmod(cfgPath, 0o644)).To(Succeed())
+		_, err := Load(cfgPath)
+		Expect(err).ToNot(HaveOccurred())
+
+		Expect(os.Chmod(dir, 0o500)).To(Succeed())
+		DeferCleanup(os.Chmod, dir, os.FileMode(0o700))
+
+		Expect(Update(context.Background(), func(c *Config) error {
+			c.Auth.Mode = "trusted-network"
+			return nil
+		})).To(Succeed())
+
+		info, err := os.Stat(cfgPath)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(info.Mode().Perm()).To(Equal(os.FileMode(0o600)))
+	})
+
 	It("Update with file-backed config persists across re-Load", func() {
 		dir := GinkgoT().TempDir()
 		cfgPath := filepath.Join(dir, "cfg.yaml")

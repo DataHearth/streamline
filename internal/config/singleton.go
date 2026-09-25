@@ -304,7 +304,7 @@ func Update(ctx context.Context, fn func(*Config) error) error {
 	if err := reportLoadableLocked(ctx, next); err != nil {
 		return err
 	}
-	if err := writeYAMLAtomic(cfgPath, next); err != nil {
+	if err := writeYAMLAtomic(ctx, cfgPath, next); err != nil {
 		slog.ErrorContext(
 			ctx,
 			"failed to save config",
@@ -645,7 +645,7 @@ func reportLoadableLocked(ctx context.Context, next *koanf.Koanf) error {
 // still be updated.
 // Does not fsync — config writes are admin-driven and infrequent; a torn write
 // on power loss is acceptable.
-func writeYAMLAtomic(dest string, k *koanf.Koanf) error {
+func writeYAMLAtomic(ctx context.Context, dest string, k *koanf.Koanf) error {
 	data, err := k.Marshal(yaml.Parser())
 	if err != nil {
 		return err
@@ -666,10 +666,27 @@ func writeYAMLAtomic(dest string, k *koanf.Koanf) error {
 	if err := os.Rename(tmpName, dest); err != nil {
 		// Different filesystem (EXDEV) or single-file bind mount (EBUSY):
 		// the rename cannot land, so overwrite dest in place.
-		return errors.Join(
+		if err := errors.Join(
 			os.WriteFile(dest, data, 0o600),
 			os.Remove(tmpName),
-		)
+		); err != nil {
+			return err
+		}
+		// WriteFile's mode only applies to a file it creates, and dest already
+		// exists here — a 0644 file from `config init` stayed world-readable
+		// while it gained the session secret. The rename path gets 0600 from
+		// CreateTemp. A chmod refused on a bind mount the process does not own
+		// must not report a write that landed as failed.
+		if err := os.Chmod(dest, 0o600); err != nil {
+			slog.WarnContext(
+				ctx,
+				"config file written but its permissions could not be narrowed to owner-only",
+				"path",
+				dest,
+				"error",
+				err,
+			)
+		}
 	}
 	return nil
 }

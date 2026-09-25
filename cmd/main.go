@@ -149,8 +149,10 @@ func configInit(_ context.Context, cmd *cli.Command) error {
 	if out == "" {
 		return config.DumpDefaults(os.Stdout)
 	}
+	// Owner-only: the file goes on to hold the session secret and every
+	// integration's credentials, and a write-back keeps whatever mode it has.
 	//nolint:gosec // out is the operator's own --output flag
-	f, err := os.Create(out)
+	f, err := os.OpenFile(out, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
 		return fmt.Errorf("create %s: %w", out, err)
 	}
