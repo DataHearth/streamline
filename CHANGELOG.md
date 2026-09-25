@@ -5,6 +5,70 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.0] - 2026-09-25
+
+### Added
+
+- nix: Package, NixOS and home-manager modules, VM test
+- metadata: Store TMDB translated and alternative titles
+- indexer: Match releases against the provider alias set
+- indexer: Record the alias count on search spans
+- web: Fade images in once fully decoded
+- web: Fade backdrops, cast and lookup images in too
+- auth: Let an OIDC provider auto-provision accounts under invite mode
+- api: Page the pending adoption list
+
+### Fixed
+
+- ci: Drive the Claude CLI directly for release notes
+- ci: Give the release-notes prompt the house style
+- web: Translate the nav count lines instead of hard-coding English (#61)
+- download: Match adopted movie torrents against aliases too
+- media: Report files a delete did not remove and prune orphaned metadata
+- download: Spare the seasons a multi-season pack claims
+- indexer: Refuse a longer show built on this one's name
+- download: Scope a record's episode-state writes to the episodes it claims
+- download: Record what an adopted torrent's episodes are
+- bittorrent: Survive an unusable announce URL and clean up a failed add
+- bittorrent: Report fetching until file priorities are applied
+- ci: Give each derived hash its own sentinel so the pins stop flip-flopping
+- ci: Derive each package hash from its own attribute
+- deps: Update go modules (#66)
+- importer: Coalesce an enqueue that lands while its import is in flight
+- ci: Enforce the release-notes no-tools rule in the CLI call
+- requests: Count only the caller's own requests for request_only
+- web: Gate admin-only pages, links and queries by role
+- web: Hide the free-space tile from non-admins
+- restapi: Answer the spec 403 on member-only movie and series verbs
+- auth: Log the account an admin acts on as target.user.*
+- web: Hide library controls from request_only users
+- library: Keep deletes and renames inside the library root
+- library: Widen a dash-chained release group in linear time
+- importer: Fail a replacement with no usable media before removing the old file
+- tvshow: Leave a pruned episode's file on disk on metadata refresh
+- config: Redact secrets held inside list entries in the audit line
+- config: Keep the config file owner-only on every write
+- auth: Revoke a user's other sessions when OIDC claims change their role
+- auth: Keep API keys and re-pointed issuers away from account-granting config
+- auth: Withhold the trusted-network grant from cross-site writes
+- api: Keep the download client's address out of the pending preview error
+- otelx: Cap every outbound response body after gzip inflation
+- download: Hold every release redirect hop to the indexer allowlist
+- download: Bound adoption work per tick and prune stale proposals past the bind limit
+- bittorrent: Refuse torrent names that land on other data and make removal survive a restart
+- bittorrent: Cap how many torrents the builtin engine holds
+- bittorrent: Keep release-named trackers and webseeds off internal addresses
+- ci: Build release notes in a job that holds no publishing credentials
+- api: Hand members a sealed release handle instead of the indexer's keyed link
+- auth: Withhold the trusted-network grant from hosts DNS rebinding can forge
+- api: Tell a grab with an expired release handle to search again
+- media: Leave a file in place when the naming template would rename it out of the library
+- media: Refuse a single-file delete outside the library root with 409
+- download: Reject malformed listing hashes and prune proposals of disabled clients
+- bittorrent: Refuse a torrent whose name holds another release's data on disk
+- importer: Place a replacement before removing the file it replaces
+- otelx: Bound each small JSON answer to its own ceiling
+
 ## [3.1.0] - 2026-09-16
 
 ### Added
@@ -589,6 +653,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - sysinfo: Make disk-usage probe cross-platform for releases (#1)
 
+[3.2.0]: https://github.com/datahearth/streamline/compare/v3.1.0..v3.2.0
 [3.1.0]: https://github.com/datahearth/streamline/compare/v3.0.0..v3.1.0
 [3.0.0]: https://github.com/datahearth/streamline/compare/v2.0.0..v3.0.0
 [2.0.0]: https://github.com/datahearth/streamline/compare/v1.3.0..v2.0.0

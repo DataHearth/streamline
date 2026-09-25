@@ -7,7 +7,7 @@
   pnpmConfigHook,
   pnpm,
   nix-update-script,
-  version ? "3.1.0",
+  version ? "3.2.0",
 }:
 let
   go = callPackage ./go.nix { };
