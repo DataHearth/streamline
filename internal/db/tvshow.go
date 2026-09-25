@@ -138,8 +138,8 @@ func (db *DB) UpdateTVShowMetadata(
 // title/air date refreshed, seasons/episodes the provider now reports but we
 // don't have yet are inserted, and seasons/episodes the provider no longer
 // reports are deleted (their media_file/download_record rows cascade). It
-// returns the on-disk paths of files whose episodes were removed so the caller
-// can delete them from disk — the DB layer never touches the filesystem.
+// returns the on-disk paths of files whose episodes were removed; the files
+// themselves are left where they are.
 // User-owned state (monitored, status, grab counters) on surviving rows is
 // preserved, except that a TBA episode gaining a title or air date is promoted
 // back to monitored when its season is monitored; new episodes inherit their
@@ -495,8 +495,8 @@ func (db *DB) SetTVShowTVDBID(ctx context.Context, id, tvdbID uint32) error {
 // DetachEpisodeMediaFiles clears the episode edge on every media file under
 // show, returning the detached rows. Used by re-identify to lift the files out
 // of the way before the episode tree is replaced: ReconcileEpisodes deletes
-// episodes the new provider entry does not report and hands back their paths
-// for deletion from disk, which for a *different* show is every file there is.
+// episodes the new provider entry does not report and cascades their
+// media_file rows away, which for a *different* show is every file there is.
 func (db *DB) DetachEpisodeMediaFiles(
 	ctx context.Context,
 	showID uint32,

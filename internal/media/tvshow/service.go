@@ -960,18 +960,26 @@ func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.TVShow, error
 	s.enrichPeople(ctx, id)
 	// Re-sync the season/episode tree so refreshed titles (e.g. a language
 	// change) surface, an ongoing series picks up newly-aired episodes, and
-	// provider-removed episodes/seasons are pruned. Their files are removed
-	// from disk here (the DB layer only returns the paths).
+	// provider-removed episodes/seasons are pruned.
+	//
+	// The pruned episodes' files stay on disk, untracked. The listing is
+	// third-party data that a member can trigger a refresh against, and a
+	// valid-but-short one — a provider mid-edit, a renumbered season — is not
+	// evidence the media is unwanted; Reidentify keeps unmatched files for the
+	// same reason. A bulk-import scan picks them back up.
 	removed, err := s.db.ReconcileEpisodes(ctx, id, seedSeasons(d))
 	if err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
-	seriesRoot := config.Get().Library.SeriesPath
-	for _, path := range removed {
-		if err := library.RemoveMediaFile(ctx, path, seriesRoot); err != nil {
-			slog.WarnContext(ctx, "remove pruned episode file failed",
-				"tvshow.id", id, "path", path, "error", err)
-		}
+	if len(removed) > 0 {
+		slog.WarnContext(
+			ctx,
+			"provider no longer lists these episodes; their files were left on disk, untracked",
+			"tvshow.id",
+			id,
+			"paths",
+			removed,
+		)
 	}
 	if err := s.db.SetTVShowRefreshedAt(ctx, id, time.Now()); err != nil {
 		return nil, otelx.RecordSpanError(span, err)
@@ -1010,9 +1018,9 @@ func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.TVShow, error
 //
 // The files are detached *before* the tree is replaced, and that ordering is
 // the whole point. ReconcileEpisodes deletes seasons and episodes the provider
-// no longer reports and hands their paths back for deletion from disk — with a
+// no longer reports, and their media_file rows cascade with them — with a
 // swapped tvdb id that is every episode of the old show, so refreshing in place
-// would wipe the library it was asked to repair.
+// would untrack the library it was asked to repair.
 func (s *Service) Reidentify(
 	ctx context.Context,
 	id, tvdbID uint32,

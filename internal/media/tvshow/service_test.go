@@ -3,6 +3,8 @@ package tvshow
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/datahearth/streamline/ent"
@@ -335,6 +337,31 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 			Once()
 		_, err := svc.RefreshOne(ctx, 7)
 		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("RefreshOne leaves a pruned episode's file on disk", func() {
+		pruned := filepath.Join(GinkgoT().TempDir(), "Show - S01E09.mkv")
+		Expect(os.WriteFile(pruned, []byte("x"), 0o644)).To(Succeed())
+		storeMk.FindTVShowByID(mock.Anything, uint32(7)).
+			Return(&ent.TVShow{ID: 7, TvdbID: 123}, nil).Twice()
+		metaMk.GetSeries(mock.Anything, uint32(123)).
+			Return(&metadata.TVDetails{TVDBID: 123, Title: "X"}, nil).
+			Once()
+		metaMk.GetSeriesCast(mock.Anything, uint32(123)).Return(nil, nil).Once()
+		storeMk.UpdateTVShowMetadata(mock.Anything, uint32(7), mock.Anything).
+			Return(nil).
+			Once()
+		storeMk.ReconcileEpisodes(mock.Anything, uint32(7), mock.Anything).
+			Return([]string{pruned}, nil).
+			Once()
+		storeMk.SetTVShowRefreshedAt(mock.Anything, uint32(7), mock.Anything).
+			Return(nil).
+			Once()
+
+		_, err := svc.RefreshOne(ctx, 7)
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(pruned).To(BeAnExistingFile())
 	})
 
 	Describe("DeriveSeasonViews", func() {
