@@ -1249,6 +1249,52 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 				To(MatchError(library.ErrNoMedia))
 		})
 
+		It(
+			"keeps the existing movie file when the replacement has no media",
+			func() {
+				src := filepath.Join(tmp, "dl-replace-empty")
+				Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+				old := filepath.Join(libDir, "old.mkv")
+				Expect(os.WriteFile(old, []byte("old"), 0o644)).To(Succeed())
+				rec := fixtureRecord(1, 10, src, 0)
+				rec.ReplaceMode = downloadrecord.ReplaceModeAll
+
+				storeMk.EXPECT().
+					FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+					Return(rec, nil).Once()
+				storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+					Return([]*ent.MediaFile{{ID: 5, Path: old}}, nil).Once()
+
+				Expect(w.runImport(context.Background(), 1)).
+					To(MatchError(library.ErrNoMedia))
+				Expect(old).To(BeAnExistingFile())
+			},
+		)
+
+		It(
+			"keeps the existing episode file when the replacement has no media",
+			func() {
+				season, eps := buildShow()
+				src := filepath.Join(tmp, "ep-replace-empty")
+				Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+				old := filepath.Join(libDir, "old-ep.mkv")
+				Expect(os.WriteFile(old, []byte("old"), 0o644)).To(Succeed())
+				rec := episodeRecord(1, src, season, eps[0])
+				rec.ReplaceMode = downloadrecord.ReplaceModeAll
+
+				storeMk.EXPECT().
+					FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+					Return(rec, nil).Once()
+				storeMk.EXPECT().
+					FindMediaFileByEpisodeID(mock.Anything, eps[0].ID).
+					Return(&ent.MediaFile{ID: 8, Path: old}, nil).Once()
+
+				Expect(w.runImport(context.Background(), 1)).
+					To(MatchError(library.ErrNoMedia))
+				Expect(old).To(BeAnExistingFile())
+			},
+		)
+
 		It("holds a whole season pack when one file fails", func() {
 			season, eps := buildShow()
 			src := filepath.Join(tmp, "pack-held")

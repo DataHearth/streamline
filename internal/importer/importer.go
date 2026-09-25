@@ -374,10 +374,15 @@ func (w *Worker) importMovieRecord(
 	}
 	// Verified before the existing file is replaced, mirroring the season-pack
 	// path: a hold that ran after the replace would already have destroyed the
-	// only copy on disk while the new release sits unimported. srcErr means
-	// there is nothing to verify at all, so the import call below reports the
-	// real ErrNoMedia as a counted failure instead of a blank-file hold.
-	if srcErr == nil && !rec.VerificationBypassed {
+	// only copy on disk while the new release sits unimported. For the same
+	// reason an unresolvable source fails here, as the counted failure the
+	// import call would have reported, rather than after the replace: the
+	// release's content decides srcErr, and a release with no usable media
+	// must not cost the library the file it was meant to upgrade.
+	if srcErr != nil {
+		return otelx.RecordSpanError(span, srcErr)
+	}
+	if !rec.VerificationBypassed {
 		reasons := w.verdict(
 			src, rec.Title, probeInfo, probeErr, m.Runtime, m.QualityProfile,
 		)
@@ -756,10 +761,15 @@ func (w *Worker) importSingleEpisode(
 	}
 	// Verified before the existing file is replaced, mirroring the season-pack
 	// path: a hold that ran after the replace would already have destroyed the
-	// only copy on disk while the new release sits unimported. srcErr means
-	// there is nothing to verify at all, so the import call below reports the
-	// real ErrNoMedia as a counted failure instead of a blank-file hold.
-	if srcErr == nil && !rec.VerificationBypassed {
+	// only copy on disk while the new release sits unimported. For the same
+	// reason an unresolvable source fails here, as the counted failure the
+	// import call would have reported, rather than after the replace: the
+	// release's content decides srcErr, and a release with no usable media
+	// must not cost the library the file it was meant to upgrade.
+	if srcErr != nil {
+		return otelx.RecordSpanError(span, srcErr)
+	}
+	if !rec.VerificationBypassed {
 		reasons := w.verdict(
 			src, rec.Title, probeInfo, probeErr, show.Runtime, show.QualityProfile,
 		)
