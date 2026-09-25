@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { auth } from "@lib/auth.svelte";
 	import {
 		Search,
 		LayoutGrid,
@@ -323,7 +324,7 @@
 	onSortChange={selectSort}
 	{view}
 	{onViewChange}
-	onSelectMode={() => onSelectModeChange(true)}
+	onSelectMode={auth.canAddDirectly ? () => onSelectModeChange(true) : undefined}
 	onReset={onClearFilters}
 	activeCount={activeFilters}
 >
@@ -582,7 +583,7 @@
 		     something has been picked, which left the empty selection with no way to
 		     take everything. It follows the active filters, so it takes what is
 		     loaded under them rather than the library. -->
-		{#if view === "grid"}
+		{#if view === "grid" && auth.canAddDirectly}
 			{#if selectMode}
 				<button
 					type="button"
@@ -625,8 +626,12 @@
 			class="hidden h-11 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md bg-accent px-3.5 text-[12.5px] font-semibold text-fg-on-accent transition hover:bg-accent-hover hover:shadow-glow md:inline-flex lg:h-9"
 		>
 			<Plus size={14} aria-hidden="true" />
-			<span class="add-long hidden">{i18n.action_add_movie()}</span>
-			<span class="add-short">{i18n.common_add()}</span>
+			<span class="add-long hidden">
+				{auth.canAddDirectly ? i18n.action_add_movie() : i18n.action_request_movie()}
+			</span>
+			<span class="add-short">
+				{auth.canAddDirectly ? i18n.common_add() : i18n.action_request()}
+			</span>
 		</button>
 	</div>
 </div>

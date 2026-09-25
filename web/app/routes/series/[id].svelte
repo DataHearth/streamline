@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { auth } from "@lib/auth.svelte";
 	import {
 		createQuery,
 		useQueryClient,
@@ -615,143 +616,145 @@
 					/>
 				</div>
 
-				<!-- Phone: one row of the actions that matter, then the monitoring
-				     preset on its own line. The md row below carries all of it inline. -->
-				<div class="mt-4 flex flex-col gap-2.5 md:hidden">
-					<div class="flex items-center gap-2">
-						<button
-							type="button"
-							onclick={() => openPackSearch("series")}
-							class="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-semibold text-fg-on-accent transition active:bg-accent-pressed"
-						>
-							<Search size={15} aria-hidden="true" />
-							{(show.wanted_episodes ?? 0) > 0
-								? i18n.series_search_wanted({ count: show.wanted_episodes ?? 0 })
-								: i18n.action_manual_search()}
-						</button>
+				{#if auth.canAddDirectly}
+					<!-- Phone: one row of the actions that matter, then the monitoring
+					     preset on its own line. The md row below carries all of it inline. -->
+					<div class="mt-4 flex flex-col gap-2.5 md:hidden">
+						<div class="flex items-center gap-2">
+							<button
+								type="button"
+								onclick={() => openPackSearch("series")}
+								class="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-semibold text-fg-on-accent transition active:bg-accent-pressed"
+							>
+								<Search size={15} aria-hidden="true" />
+								{(show.wanted_episodes ?? 0) > 0
+									? i18n.series_search_wanted({ count: show.wanted_episodes ?? 0 })
+									: i18n.action_manual_search()}
+							</button>
+							<PlayOnMenu
+								compact
+								path={`/series/${show.id}/play-on`}
+								queryKey={["series", show.id, "play-on"]}
+								disabled={!hasFiles}
+								disabledTitle="Available once episodes are imported"
+							/>
+							<button
+								type="button"
+								onclick={() => monitor.mutate(!(show.monitored ?? false))}
+								disabled={monitor.isPending}
+								aria-pressed={show.monitored ?? false}
+								aria-label={show.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
+								class={cn(
+									"grid h-11 w-11 shrink-0 place-items-center rounded-lg border transition disabled:opacity-60",
+									show.monitored
+										? "border-accent-line bg-accent-soft text-accent-text"
+										: "border-border-strong bg-white/[0.08] text-fg",
+								)}
+							>
+								<Bookmark
+									size={17}
+									fill={show.monitored ? "currentColor" : "none"}
+									aria-hidden="true"
+								/>
+							</button>
+							<SeriesKebabMenu
+								onPick={onKebabPick}
+								allowDeleteFiles
+								disabledActions={hasFiles ? [] : ["rename", "delete-files"]}
+							/>
+						</div>
+						<div class="flex items-center gap-2">
+							<label
+								for="series-monitor-preset-phone"
+								class="inline-flex shrink-0 items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-fg-subtle"
+							>
+								<Eye size={14} aria-hidden="true" />
+								{i18n.action_monitor()}
+							</label>
+							<div class="min-w-0 flex-1">
+								<Select
+									id="series-monitor-preset-phone"
+									value={presetValue}
+									options={presetOptions}
+									onChange={(v) => {
+										presetValue = v;
+										applyPreset.mutate(v);
+									}}
+								/>
+							</div>
+						</div>
+					</div>
+
+					<div
+						class="mt-5 hidden flex-wrap items-center gap-2.5 md:flex"
+						aria-label={i18n.series_actions()}
+					>
 						<PlayOnMenu
-							compact
 							path={`/series/${show.id}/play-on`}
 							queryKey={["series", show.id, "play-on"]}
 							disabled={!hasFiles}
 							disabledTitle="Available once episodes are imported"
 						/>
+
 						<button
 							type="button"
-							onclick={() => monitor.mutate(!(show.monitored ?? false))}
-							disabled={monitor.isPending}
-							aria-pressed={show.monitored ?? false}
-							aria-label={show.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
-							class={cn(
-								"grid h-11 w-11 shrink-0 place-items-center rounded-lg border transition disabled:opacity-60",
-								show.monitored
-									? "border-accent-line bg-accent-soft text-accent-text"
-									: "border-border-strong bg-white/[0.08] text-fg",
-							)}
+							onclick={() => openPackSearch("series")}
+							class="inline-flex h-10 items-center gap-2 rounded-md bg-accent px-4 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover hover:shadow-glow"
 						>
-							<Bookmark
-								size={17}
-								fill={show.monitored ? "currentColor" : "none"}
-								aria-hidden="true"
-							/>
+							<Search size={14} aria-hidden="true" />
+							{i18n.action_manual_search()}
 						</button>
-						<SeriesKebabMenu
-							onPick={onKebabPick}
-							allowDeleteFiles
-							disabledActions={hasFiles ? [] : ["rename", "delete-files"]}
-						/>
-					</div>
-					<div class="flex items-center gap-2">
-						<label
-							for="series-monitor-preset-phone"
-							class="inline-flex shrink-0 items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-fg-subtle"
-						>
-							<Eye size={14} aria-hidden="true" />
-							{i18n.action_monitor()}
-						</label>
-						<div class="min-w-0 flex-1">
-							<Select
-								id="series-monitor-preset-phone"
-								value={presetValue}
-								options={presetOptions}
-								onChange={(v) => {
-									presetValue = v;
-									applyPreset.mutate(v);
-								}}
+
+						<div class="flex items-center gap-2">
+							<label
+								for="series-monitor-preset"
+								class="inline-flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-fg-subtle"
+							>
+								<Eye size={14} aria-hidden="true" />
+								{i18n.action_monitor()}
+							</label>
+							<div class="w-40">
+								<Select
+									id="series-monitor-preset"
+									value={presetValue}
+									options={presetOptions}
+									onChange={(v) => {
+										presetValue = v;
+										applyPreset.mutate(v);
+									}}
+								/>
+							</div>
+						</div>
+
+						<!-- Grouped so the kebab never orphans onto a line of its own when the
+						     row wraps — the two icon buttons move together. -->
+						<div class="flex shrink-0 items-center gap-2.5">
+							<button
+								type="button"
+								onclick={() => monitor.mutate(!(show.monitored ?? false))}
+								disabled={monitor.isPending}
+								aria-pressed={show.monitored ?? false}
+								title={show.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
+								class="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border-strong bg-white/[0.08] text-fg backdrop-blur-sm transition hover:bg-white/[0.14] disabled:cursor-not-allowed disabled:opacity-60"
+							>
+								<Bookmark
+									size={16}
+									fill={show.monitored ? "currentColor" : "none"}
+									aria-hidden="true"
+								/>
+								<span class="sr-only">
+									{show.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
+								</span>
+							</button>
+
+							<SeriesKebabMenu
+								onPick={onKebabPick}
+								allowDeleteFiles
+								disabledActions={hasFiles ? [] : ["rename", "delete-files"]}
 							/>
 						</div>
 					</div>
-				</div>
-
-				<div
-					class="mt-5 hidden flex-wrap items-center gap-2.5 md:flex"
-					aria-label={i18n.series_actions()}
-				>
-					<PlayOnMenu
-						path={`/series/${show.id}/play-on`}
-						queryKey={["series", show.id, "play-on"]}
-						disabled={!hasFiles}
-						disabledTitle="Available once episodes are imported"
-					/>
-
-					<button
-						type="button"
-						onclick={() => openPackSearch("series")}
-						class="inline-flex h-10 items-center gap-2 rounded-md bg-accent px-4 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover hover:shadow-glow"
-					>
-						<Search size={14} aria-hidden="true" />
-						{i18n.action_manual_search()}
-					</button>
-
-					<div class="flex items-center gap-2">
-						<label
-							for="series-monitor-preset"
-							class="inline-flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-fg-subtle"
-						>
-							<Eye size={14} aria-hidden="true" />
-							{i18n.action_monitor()}
-						</label>
-						<div class="w-40">
-							<Select
-								id="series-monitor-preset"
-								value={presetValue}
-								options={presetOptions}
-								onChange={(v) => {
-									presetValue = v;
-									applyPreset.mutate(v);
-								}}
-							/>
-						</div>
-					</div>
-
-					<!-- Grouped so the kebab never orphans onto a line of its own when the
-					     row wraps — the two icon buttons move together. -->
-					<div class="flex shrink-0 items-center gap-2.5">
-						<button
-							type="button"
-							onclick={() => monitor.mutate(!(show.monitored ?? false))}
-							disabled={monitor.isPending}
-							aria-pressed={show.monitored ?? false}
-							title={show.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
-							class="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border-strong bg-white/[0.08] text-fg backdrop-blur-sm transition hover:bg-white/[0.14] disabled:cursor-not-allowed disabled:opacity-60"
-						>
-							<Bookmark
-								size={16}
-								fill={show.monitored ? "currentColor" : "none"}
-								aria-hidden="true"
-							/>
-							<span class="sr-only">
-								{show.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
-							</span>
-						</button>
-
-						<SeriesKebabMenu
-							onPick={onKebabPick}
-							allowDeleteFiles
-							disabledActions={hasFiles ? [] : ["rename", "delete-files"]}
-						/>
-					</div>
-				</div>
+				{/if}
 			</div>
 		</div>
 	</section>
@@ -917,32 +920,34 @@
 					{#if currentSeason}
 						<div class="flex flex-wrap items-center justify-between gap-3">
 							<div class="flex items-center gap-3">
-								<button
-									type="button"
-									onclick={() =>
-										currentSeason && monitorSeason.mutate(currentSeason)}
-									aria-pressed={currentSeason?.monitored}
-									title={currentSeason?.monitored
-										? i18n.action_stop_monitoring_season()
-										: i18n.action_monitor_season()}
-									class={cn(
-										"grid h-11 w-11 lg:h-9 lg:w-9 shrink-0 place-items-center rounded-md border border-border bg-bg-elevated transition hover:border-border-strong",
-										currentSeason.monitored
-											? "text-accent-text"
-											: "text-fg-subtle hover:text-fg",
-									)}
-								>
-									<Bookmark
-										size={15}
-										fill={currentSeason.monitored ? "currentColor" : "none"}
-										aria-hidden="true"
-									/>
-									<span class="sr-only">
-										{currentSeason.monitored
+								{#if auth.canAddDirectly}
+									<button
+										type="button"
+										onclick={() =>
+											currentSeason && monitorSeason.mutate(currentSeason)}
+										aria-pressed={currentSeason?.monitored}
+										title={currentSeason?.monitored
 											? i18n.action_stop_monitoring_season()
 											: i18n.action_monitor_season()}
-									</span>
-								</button>
+										class={cn(
+											"grid h-11 w-11 lg:h-9 lg:w-9 shrink-0 place-items-center rounded-md border border-border bg-bg-elevated transition hover:border-border-strong",
+											currentSeason.monitored
+												? "text-accent-text"
+												: "text-fg-subtle hover:text-fg",
+										)}
+									>
+										<Bookmark
+											size={15}
+											fill={currentSeason.monitored ? "currentColor" : "none"}
+											aria-hidden="true"
+										/>
+										<span class="sr-only">
+											{currentSeason.monitored
+												? i18n.action_stop_monitoring_season()
+												: i18n.action_monitor_season()}
+										</span>
+									</button>
+								{/if}
 								<div>
 									<h2 class="text-lg font-semibold text-fg">
 										{currentSeason.number === 0
@@ -973,34 +978,36 @@
 									</p>
 								</div>
 							</div>
-							<div class="flex items-center gap-2">
-								<button
-									type="button"
-									onclick={() =>
-										currentSeason && openPackSearch(String(currentSeason.number))}
-									class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-3 text-sm text-fg-muted transition hover:border-border-strong hover:text-fg"
-								>
-									<Search size={15} aria-hidden="true" />
-									{i18n.series_search_season()}
-								</button>
-								{#if seasonFileEpisodes.length > 0}
+							{#if auth.canAddDirectly}
+								<div class="flex items-center gap-2">
 									<button
 										type="button"
 										onclick={() =>
-											currentSeason &&
-											openDeleteFiles(
-												currentSeason.number === 0
-													? i18n.series_specials()
-													: `${seasonLabel} ${currentSeason.number}`,
-												seasonFileEpisodes,
-											)}
-										class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-3 text-sm text-fg-muted transition hover:border-status-failed/40 hover:bg-status-failed/10 hover:text-status-failed"
+											currentSeason && openPackSearch(String(currentSeason.number))}
+										class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-3 text-sm text-fg-muted transition hover:border-border-strong hover:text-fg"
 									>
-										<Trash2 size={15} aria-hidden="true" />
-										{i18n.action_delete_files()}
+										<Search size={15} aria-hidden="true" />
+										{i18n.series_search_season()}
 									</button>
-								{/if}
-							</div>
+									{#if seasonFileEpisodes.length > 0}
+										<button
+											type="button"
+											onclick={() =>
+												currentSeason &&
+												openDeleteFiles(
+													currentSeason.number === 0
+														? i18n.series_specials()
+														: `${seasonLabel} ${currentSeason.number}`,
+													seasonFileEpisodes,
+												)}
+											class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-3 text-sm text-fg-muted transition hover:border-status-failed/40 hover:bg-status-failed/10 hover:text-status-failed"
+										>
+											<Trash2 size={15} aria-hidden="true" />
+											{i18n.action_delete_files()}
+										</button>
+									{/if}
+								</div>
+							{/if}
 						</div>
 
 						<EpisodeTable

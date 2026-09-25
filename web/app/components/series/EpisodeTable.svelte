@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { auth } from "@lib/auth.svelte";
 	import { Bookmark, Info, Search, Trash2 } from "@lucide/svelte";
 	import { cn } from "@lib/cn";
 	import { dragScroll } from "@lib/drag-scroll";
@@ -92,7 +93,7 @@
 					<td class="px-2 py-2.5">
 						<button
 							type="button"
-							disabled={monitorDisabled}
+							disabled={monitorDisabled || !auth.canAddDirectly}
 							onclick={() => onMonitorEpisode(ep)}
 							aria-pressed={ep.monitored}
 							aria-label={ep.monitored ? i18n.action_stop_monitoring_episode() : i18n.action_monitor_episode()}
@@ -172,7 +173,7 @@
 							>
 								<Info size={14} aria-hidden="true" />
 							</button>
-							{#if ep.status !== "unaired"}
+							{#if ep.status !== "unaired" && auth.canAddDirectly}
 								<button
 									type="button"
 									onclick={() => onManualSearch(ep)}
@@ -183,7 +184,7 @@
 									<Search size={14} aria-hidden="true" />
 								</button>
 							{/if}
-							{#if (ep.size ?? 0) > 0}
+							{#if (ep.size ?? 0) > 0 && auth.canAddDirectly}
 								<button
 									type="button"
 									onclick={() => onDeleteFile(ep)}

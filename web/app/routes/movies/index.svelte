@@ -469,12 +469,14 @@
 			{/if}
 		</div>
 
-		<MovieBulkActions
-			movies={visibleMovies}
-			{selected}
-			total={visibleMovies.length}
-			onSelectAll={() => toggleAll(true)}
-			onClear={clearSelection}
-		/>
+		{#if auth.canAddDirectly}
+			<MovieBulkActions
+				movies={visibleMovies}
+				{selected}
+				total={visibleMovies.length}
+				onSelectAll={() => toggleAll(true)}
+				onClear={clearSelection}
+			/>
+		{/if}
 	{/if}
 </div>

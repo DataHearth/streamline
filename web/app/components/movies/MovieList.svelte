@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { auth } from "@lib/auth.svelte";
 	import { createMutation, useQueryClient } from "@tanstack/svelte-query";
 	import { Film, ChevronUp, ChevronDown, Bookmark } from "@lucide/svelte";
 	import { cn } from "@lib/cn";
@@ -93,14 +94,16 @@
 			class="bg-bg-elevated/95 text-[10px] uppercase tracking-[0.12em] text-fg-faint"
 		>
 			<tr class="border-b border-border">
-				<th scope="col" class="w-10 pl-3 pr-0 py-2.5">
-					<SelectBox
-						checked={allSelected}
-						indeterminate={pageSelected > 0 && !allSelected}
-						onChange={(v) => onToggleAll(v)}
-						label={allSelected ? i18n.common_deselect_all() : i18n.common_select_all()}
-					/>
-				</th>
+				{#if auth.canAddDirectly}
+					<th scope="col" class="w-10 pl-3 pr-0 py-2.5">
+						<SelectBox
+							checked={allSelected}
+							indeterminate={pageSelected > 0 && !allSelected}
+							onChange={(v) => onToggleAll(v)}
+							label={allSelected ? i18n.common_deselect_all() : i18n.common_select_all()}
+						/>
+					</th>
+				{/if}
 				<th scope="col" class="w-12 px-3 py-2.5" aria-hidden="true"></th>
 				<th
 					scope="col"
@@ -167,13 +170,15 @@
 						isSel ? "bg-accent-soft" : "hover:bg-surface",
 					)}
 				>
-					<td class="pl-3 pr-0 py-2">
-						<SelectBox
-							checked={isSel}
-							onChange={(v) => onToggle(movie.id, v)}
-							label={isSel ? `Deselect ${movie.title}` : i18n.a11y_select_item({ title: movie.title })}
-						/>
-					</td>
+					{#if auth.canAddDirectly}
+						<td class="pl-3 pr-0 py-2">
+							<SelectBox
+								checked={isSel}
+								onChange={(v) => onToggle(movie.id, v)}
+								label={isSel ? `Deselect ${movie.title}` : i18n.a11y_select_item({ title: movie.title })}
+							/>
+						</td>
+					{/if}
 					<td class="px-3 py-2">
 						<a
 							href="/movies/{movie.id}"
@@ -232,26 +237,28 @@
 					</td>
 					<td class="px-3 py-2">
 						<div class="flex items-center justify-end gap-1">
-							<button
-								type="button"
-								onclick={() => monitor.mutate(movie)}
-								aria-label={movie.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
-								aria-pressed={movie.monitored}
-								title={movie.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
-								class={cn(
-									"grid h-11 w-11 lg:h-8 lg:w-8 place-items-center rounded-md transition hover:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring",
-									movie.monitored
-										? "text-accent-text"
-										: "text-fg-muted hover:text-fg",
-								)}
-							>
-								<Bookmark
-									size={15}
-									fill={movie.monitored ? "currentColor" : "none"}
-									aria-hidden="true"
-								/>
-							</button>
-							<MovieActionsMenu {movie} variant="toolbar" />
+							{#if auth.canAddDirectly}
+								<button
+									type="button"
+									onclick={() => monitor.mutate(movie)}
+									aria-label={movie.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
+									aria-pressed={movie.monitored}
+									title={movie.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
+									class={cn(
+										"grid h-11 w-11 lg:h-8 lg:w-8 place-items-center rounded-md transition hover:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring",
+										movie.monitored
+											? "text-accent-text"
+											: "text-fg-muted hover:text-fg",
+									)}
+								>
+									<Bookmark
+										size={15}
+										fill={movie.monitored ? "currentColor" : "none"}
+										aria-hidden="true"
+									/>
+								</button>
+								<MovieActionsMenu {movie} variant="toolbar" />
+							{/if}
 						</div>
 					</td>
 				</tr>

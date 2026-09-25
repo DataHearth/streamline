@@ -547,12 +547,14 @@
 			{/if}
 		</div>
 
-		<SeriesBulkActions
-			series={visibleSeries}
-			{selected}
-			total={visibleSeries.length}
-			onSelectAll={() => toggleAll(true)}
-			onClear={clearSelection}
-		/>
+		{#if auth.canAddDirectly}
+			<SeriesBulkActions
+				series={visibleSeries}
+				{selected}
+				total={visibleSeries.length}
+				onSelectAll={() => toggleAll(true)}
+				onClear={clearSelection}
+			/>
+		{/if}
 	{/if}
 </div>

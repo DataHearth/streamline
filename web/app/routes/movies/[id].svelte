@@ -8,6 +8,7 @@
 	import { Search, LoaderCircle, Bookmark } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { api, errorText } from "@lib/api";
+	import { auth } from "@lib/auth.svelte";
 	import { toast } from "@lib/toast";
 	import { cn } from "@lib/cn";
 	import type { Movie, QualityProfile } from "@lib/types";
@@ -205,41 +206,43 @@
 				</span>
 			{/if}
 
-			<PlayOnMenu
-				path={`/movies/${movie.id}/play-on`}
-				queryKey={["movie", movie.id, "play-on"]}
-				disabled={!hasFiles}
-				disabledTitle="Available after the movie has been imported"
-			/>
-
-			<button
-				type="button"
-				onclick={() => (searchOpen = true)}
-				class="inline-flex h-10 items-center gap-2 rounded-md bg-accent px-4 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover hover:shadow-glow"
-			>
-				<Search size={14} aria-hidden="true" />
-				{i18n.action_manual_search()}
-			</button>
-
-			<button
-				type="button"
-				onclick={() => monitor.mutate(!(movie.monitored ?? false))}
-				disabled={monitor.isPending}
-				aria-pressed={movie.monitored ?? false}
-				title={movie.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
-				class="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border-strong bg-white/[0.08] text-fg backdrop-blur-sm transition hover:bg-white/[0.14] disabled:cursor-not-allowed disabled:opacity-60"
-			>
-				<Bookmark
-					size={16}
-					fill={movie.monitored ? "currentColor" : "none"}
-					aria-hidden="true"
+			{#if auth.canAddDirectly}
+				<PlayOnMenu
+					path={`/movies/${movie.id}/play-on`}
+					queryKey={["movie", movie.id, "play-on"]}
+					disabled={!hasFiles}
+					disabledTitle="Available after the movie has been imported"
 				/>
-				<span class="sr-only">
-					{movie.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
-				</span>
-			</button>
 
-			<MovieKebabMenu onPick={onKebabPick} disabledActions={hasFiles ? [] : ["rename"]} />
+				<button
+					type="button"
+					onclick={() => (searchOpen = true)}
+					class="inline-flex h-10 items-center gap-2 rounded-md bg-accent px-4 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover hover:shadow-glow"
+				>
+					<Search size={14} aria-hidden="true" />
+					{i18n.action_manual_search()}
+				</button>
+
+				<button
+					type="button"
+					onclick={() => monitor.mutate(!(movie.monitored ?? false))}
+					disabled={monitor.isPending}
+					aria-pressed={movie.monitored ?? false}
+					title={movie.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
+					class="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border-strong bg-white/[0.08] text-fg backdrop-blur-sm transition hover:bg-white/[0.14] disabled:cursor-not-allowed disabled:opacity-60"
+				>
+					<Bookmark
+						size={16}
+						fill={movie.monitored ? "currentColor" : "none"}
+						aria-hidden="true"
+					/>
+					<span class="sr-only">
+						{movie.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
+					</span>
+				</button>
+
+				<MovieKebabMenu onPick={onKebabPick} disabledActions={hasFiles ? [] : ["rename"]} />
+			{/if}
 		{/snippet}
 	</MovieDetailHero>
 
@@ -271,7 +274,12 @@
 		</div>
 	</nav>
 
-	<div class="w-full px-4 pb-24 pt-6 md:px-8 md:pb-6">
+	<div
+		class={cn(
+			"w-full px-4 pt-6 md:px-8 md:pb-6",
+			auth.canAddDirectly ? "pb-24" : "pb-6",
+		)}
+	>
 		{#if tab === "overview"}
 			<div
 				class="grid grid-cols-1 gap-6 md:grid-cols-[1fr_260px] md:grid-rows-[auto_1fr] md:items-start md:gap-7 lg:grid-cols-[1fr_320px] lg:gap-10"
@@ -298,56 +306,58 @@
 		{/if}
 	</div>
 
-	<!-- Phone: the action row the hero gives up, pinned above the bottom nav so
-	     playing and searching are in reach from anywhere in the page. -->
-	<div
-		class="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+3.5rem)] z-30 flex items-center gap-2 border-t border-border bg-bg-elevated/95 px-3 pb-4 pt-2.5 backdrop-blur-md md:hidden"
-		aria-label={i18n.movies_actions()}
-	>
-		<PlayOnMenu
-			primary
-			path={`/movies/${movie.id}/play-on`}
-			queryKey={["movie", movie.id, "play-on"]}
-			disabled={!hasFiles}
-			disabledTitle="Available after the movie has been imported"
-		/>
-
-		<button
-			type="button"
-			onclick={() => (searchOpen = true)}
-			aria-label={i18n.action_manual_search()}
-			title={i18n.action_manual_search()}
-			class="grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-border-strong bg-bg-elevated text-fg-muted transition active:bg-surface"
+	{#if auth.canAddDirectly}
+		<!-- Phone: the action row the hero gives up, pinned above the bottom nav so
+		     playing and searching are in reach from anywhere in the page. -->
+		<div
+			class="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+3.5rem)] z-30 flex items-center gap-2 border-t border-border bg-bg-elevated/95 px-3 pb-4 pt-2.5 backdrop-blur-md md:hidden"
+			aria-label={i18n.movies_actions()}
 		>
-			{#if movie.status === "downloading"}
-				<LoaderCircle size={18} class="animate-spin" aria-hidden="true" />
-			{:else}
-				<Search size={18} aria-hidden="true" />
-			{/if}
-		</button>
-
-		<button
-			type="button"
-			onclick={() => monitor.mutate(!(movie.monitored ?? false))}
-			disabled={monitor.isPending}
-			aria-pressed={movie.monitored ?? false}
-			aria-label={movie.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
-			class={cn(
-				"grid h-11 w-11 shrink-0 place-items-center rounded-lg border transition disabled:opacity-60",
-				movie.monitored
-					? "border-accent-line bg-accent-soft text-accent-text"
-					: "border-border-strong bg-bg-elevated text-fg-muted",
-			)}
-		>
-			<Bookmark
-				size={18}
-				fill={movie.monitored ? "currentColor" : "none"}
-				aria-hidden="true"
+			<PlayOnMenu
+				primary
+				path={`/movies/${movie.id}/play-on`}
+				queryKey={["movie", movie.id, "play-on"]}
+				disabled={!hasFiles}
+				disabledTitle="Available after the movie has been imported"
 			/>
-		</button>
 
-		<MovieKebabMenu onPick={onKebabPick} disabledActions={hasFiles ? [] : ["rename"]} />
-	</div>
+			<button
+				type="button"
+				onclick={() => (searchOpen = true)}
+				aria-label={i18n.action_manual_search()}
+				title={i18n.action_manual_search()}
+				class="grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-border-strong bg-bg-elevated text-fg-muted transition active:bg-surface"
+			>
+				{#if movie.status === "downloading"}
+					<LoaderCircle size={18} class="animate-spin" aria-hidden="true" />
+				{:else}
+					<Search size={18} aria-hidden="true" />
+				{/if}
+			</button>
+
+			<button
+				type="button"
+				onclick={() => monitor.mutate(!(movie.monitored ?? false))}
+				disabled={monitor.isPending}
+				aria-pressed={movie.monitored ?? false}
+				aria-label={movie.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
+				class={cn(
+					"grid h-11 w-11 shrink-0 place-items-center rounded-lg border transition disabled:opacity-60",
+					movie.monitored
+						? "border-accent-line bg-accent-soft text-accent-text"
+						: "border-border-strong bg-bg-elevated text-fg-muted",
+				)}
+			>
+				<Bookmark
+					size={18}
+					fill={movie.monitored ? "currentColor" : "none"}
+					aria-hidden="true"
+				/>
+			</button>
+
+			<MovieKebabMenu onPick={onKebabPick} disabledActions={hasFiles ? [] : ["rename"]} />
+		</div>
+	{/if}
 
 	<ManualSearchModal
 		open={searchOpen}

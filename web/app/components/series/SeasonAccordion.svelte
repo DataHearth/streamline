@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { auth } from "@lib/auth.svelte";
 	import { Bookmark, ChevronRight, Info, Search, Trash2 } from "@lucide/svelte";
 	import KebabMenu, { type KebabItem } from "@components/shared/KebabMenu.svelte";
 	import EpisodeDetailModal from "./EpisodeDetailModal.svelte";
@@ -74,13 +75,15 @@
 	function epMenu(s: Season, ep: Episode): KebabItem[] {
 		const st = episodeStatus(ep, showMonitored);
 		const hasFile = (ep.size ?? 0) > 0;
+		const info = {
+			key: "info",
+			label: i18n.series_episode_details(),
+			icon: Info,
+			onSelect: () => openDetail(s, ep),
+		};
+		if (!auth.canAddDirectly) return [info];
 		return [
-			{
-				key: "info",
-				label: i18n.series_episode_details(),
-				icon: Info,
-				onSelect: () => openDetail(s, ep),
-			},
+			info,
 			{
 				key: "search",
 				label: i18n.action_manual_search_ellipsis(),
@@ -208,45 +211,47 @@
 					</span>
 				</button>
 
-				<button
-					type="button"
-					onclick={() => onMonitorSeason(s)}
-					aria-pressed={s.monitored}
-					aria-label={s.monitored
-						? i18n.a11y_stop_monitoring_season({ season: seasonName(s) })
-						: i18n.a11y_monitor_season({ season: seasonName(s) })}
-					class={cn(
-						"grid h-11 w-11 lg:h-9 lg:w-9 shrink-0 place-items-center rounded-lg border transition",
-						s.monitored
-							? "border-accent-line bg-accent-soft text-accent-text"
-							: "border-border bg-bg-elevated text-fg-subtle",
-					)}
-				>
-					<Bookmark
-						size={16}
-						fill={s.monitored ? "currentColor" : "none"}
-						aria-hidden="true"
-					/>
-				</button>
+				{#if auth.canAddDirectly}
+					<button
+						type="button"
+						onclick={() => onMonitorSeason(s)}
+						aria-pressed={s.monitored}
+						aria-label={s.monitored
+							? i18n.a11y_stop_monitoring_season({ season: seasonName(s) })
+							: i18n.a11y_monitor_season({ season: seasonName(s) })}
+						class={cn(
+							"grid h-11 w-11 lg:h-9 lg:w-9 shrink-0 place-items-center rounded-lg border transition",
+							s.monitored
+								? "border-accent-line bg-accent-soft text-accent-text"
+								: "border-border bg-bg-elevated text-fg-subtle",
+						)}
+					>
+						<Bookmark
+							size={16}
+							fill={s.monitored ? "currentColor" : "none"}
+							aria-hidden="true"
+						/>
+					</button>
 
-				<button
-					type="button"
-					onclick={() => onSearchSeason(s)}
-					aria-label="Search releases for {seasonName(s)}"
-					class="grid h-11 w-11 lg:h-9 lg:w-9 shrink-0 place-items-center rounded-lg border border-border bg-bg-elevated text-fg-subtle transition active:bg-accent-soft active:text-accent-text"
-				>
-					<Search size={15} aria-hidden="true" />
-				</button>
+					<button
+						type="button"
+						onclick={() => onSearchSeason(s)}
+						aria-label="Search releases for {seasonName(s)}"
+						class="grid h-11 w-11 lg:h-9 lg:w-9 shrink-0 place-items-center rounded-lg border border-border bg-bg-elevated text-fg-subtle transition active:bg-accent-soft active:text-accent-text"
+					>
+						<Search size={15} aria-hidden="true" />
+					</button>
 
-				<button
-					type="button"
-					disabled={seasonFiles(s).length === 0}
-					onclick={() => onDeleteSeasonFiles(s)}
-					aria-label="Delete all files in {seasonName(s)}"
-					class="grid h-11 w-11 lg:h-9 lg:w-9 shrink-0 place-items-center rounded-lg border border-border bg-bg-elevated text-fg-subtle transition active:bg-status-failed/10 active:text-status-failed disabled:opacity-35"
-				>
-					<Trash2 size={15} aria-hidden="true" />
-				</button>
+					<button
+						type="button"
+						disabled={seasonFiles(s).length === 0}
+						onclick={() => onDeleteSeasonFiles(s)}
+						aria-label="Delete all files in {seasonName(s)}"
+						class="grid h-11 w-11 lg:h-9 lg:w-9 shrink-0 place-items-center rounded-lg border border-border bg-bg-elevated text-fg-subtle transition active:bg-status-failed/10 active:text-status-failed disabled:opacity-35"
+					>
+						<Trash2 size={15} aria-hidden="true" />
+					</button>
+				{/if}
 
 				<button
 					type="button"
@@ -275,7 +280,7 @@
 						>
 							<button
 								type="button"
-								disabled={ep.status === "unaired" && !s.monitored}
+								disabled={(ep.status === "unaired" && !s.monitored) || !auth.canAddDirectly}
 								onclick={() => onMonitorEpisode(ep)}
 								aria-pressed={ep.monitored}
 								aria-label={ep.monitored

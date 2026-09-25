@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { auth } from "@lib/auth.svelte";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { Film, ChevronLeft, ChevronRight } from "@lucide/svelte";
 	import { api, apiAllPages, type Paginated } from "@lib/api";
@@ -177,7 +178,7 @@
 						type="button"
 						onclick={() => openAdd(rec)}
 						class="snap-start group relative block w-full overflow-hidden rounded-lg text-left ring-1 ring-border transition duration-200 hover:ring-border-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-accent motion-reduce:transition-none"
-						title="Add {rec.title} to your library"
+						title={auth.canAddDirectly ? `Add ${rec.title} to your library` : `Request ${rec.title}`}
 					>
 						{@render poster()}
 					</button>

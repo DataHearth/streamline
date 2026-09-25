@@ -48,7 +48,7 @@
 		onSortChange: (key: string) => void;
 		view: "grid" | "list";
 		onViewChange: (v: "grid" | "list") => void;
-		onSelectMode: () => void;
+		onSelectMode?: () => void;
 		onReset: () => void;
 		activeCount?: number;
 		// Filters only one media type has — the series type pills.
@@ -201,7 +201,7 @@
 			>
 				<!-- List rows have their own checkboxes; only the poster grid needs a way
 				     into selection. -->
-				{#if view === "grid"}
+				{#if view === "grid" && onSelectMode}
 					<button
 						type="button"
 						onclick={() => {

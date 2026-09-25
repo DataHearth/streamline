@@ -23,6 +23,7 @@
 </script>
 
 <script lang="ts">
+	import { auth } from "@lib/auth.svelte";
 	import { Search, Trash2 } from "@lucide/svelte";
 	import { cn } from "@lib/cn";
 	import { episodeStatus } from "@lib/status";
@@ -236,7 +237,7 @@
 		{/if}
 
 		{#snippet footer()}
-			{#if (episode?.size ?? 0) > 0}
+			{#if (episode?.size ?? 0) > 0 && auth.canAddDirectly}
 				<button
 					type="button"
 					onclick={() => {
@@ -250,7 +251,7 @@
 					{i18n.action_delete_file()}
 				</button>
 			{/if}
-			{#if episode && episode.status !== "unaired"}
+			{#if episode && episode.status !== "unaired" && auth.canAddDirectly}
 				<button
 					type="button"
 					onclick={() => {

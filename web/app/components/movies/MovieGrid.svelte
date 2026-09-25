@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { auth } from "@lib/auth.svelte";
 	import { createMutation, useQueryClient } from "@tanstack/svelte-query";
 	import { api, errorText } from "@lib/api";
 	import { toast } from "@lib/toast";
@@ -63,14 +64,16 @@
 	{#each movies as movie (movie.id)}
 		<PosterCard
 			movie={enrich(movie)}
-			onMonitor={() => monitor.mutate(movie)}
+			onMonitor={auth.canAddDirectly ? () => monitor.mutate(movie) : undefined}
 			selected={selected.has(movie.id)}
 			{selectionActive}
-			onSelect={(v) => onToggle(movie.id, v)}
-			onLongPress={onLongPress ? () => onLongPress(movie.id) : undefined}
+			onSelect={auth.canAddDirectly ? (v) => onToggle(movie.id, v) : undefined}
+			onLongPress={auth.canAddDirectly && onLongPress ? () => onLongPress(movie.id) : undefined}
 		>
 			{#snippet kebab()}
-				<MovieActionsMenu {movie} />
+				{#if auth.canAddDirectly}
+					<MovieActionsMenu {movie} />
+				{/if}
 			{/snippet}
 		</PosterCard>
 	{/each}

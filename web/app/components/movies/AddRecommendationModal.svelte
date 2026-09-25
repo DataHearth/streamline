@@ -6,6 +6,7 @@
 	} from "@tanstack/svelte-query";
 	import { Gauge, LoaderCircle, Plus } from "@lucide/svelte";
 	import { api, errorText } from "@lib/api";
+	import { auth } from "@lib/auth.svelte";
 	import { toast } from "@lib/toast";
 	import type {
 		AddMovieRequest,
@@ -39,7 +40,12 @@
 	}));
 
 	let qpOptions = $derived([
-		{ value: "", label: i18n.quality_server_default() },
+		{
+			value: "",
+			label: auth.canAddDirectly
+				? i18n.quality_server_default()
+				: i18n.quality_no_preference(),
+		},
 		...(qpQuery.data ?? []).map((p) => ({
 			value: p.name,
 			label: p.name,
@@ -72,25 +78,42 @@
 	);
 
 	const qc = useQueryClient();
-	const addMutation = createMutation<Movie, Error, TMDBMovieResult>(() => ({
-		mutationFn: (m) => {
+	const addMutation = createMutation<Movie | null, Error, TMDBMovieResult>(() => ({
+		mutationFn: async (m) => {
+			if (!auth.canAddDirectly) {
+				await api("/requests", {
+					method: "POST",
+					body: {
+						media_type: "movie",
+						media_id: m.tmdb_id,
+						title: m.title,
+						quality_profile: qualityProfileName || undefined,
+					},
+				});
+				return null;
+			}
 			const body: AddMovieRequest = { tmdb_id: m.tmdb_id };
 			if (qualityProfileName !== "") {
 				body.quality_profile = qualityProfileName;
 			}
 			return api<Movie>("/movies", { method: "POST", body });
 		},
-		onSuccess: (_movie, m) => {
-			qc.invalidateQueries({ queryKey: ["movies"] });
-			qc.invalidateQueries({ queryKey: ["movies", "counts"] });
-			toast.ok(i18n.toast_added({ title: m.title }));
+		onSuccess: (movie, m) => {
+			if (movie) {
+				qc.invalidateQueries({ queryKey: ["movies"] });
+				qc.invalidateQueries({ queryKey: ["movies", "counts"] });
+				toast.ok(i18n.toast_added({ title: m.title }));
+			} else {
+				qc.invalidateQueries({ queryKey: ["requests"] });
+				toast.ok(i18n.toast_requested({ title: m.title }));
+			}
 			onClose();
 		},
 		onError: (e) => toast.err(errorText(e, i18n.common_add_failed())),
 	}));
 </script>
 
-<Modal {open} title={i18n.action_add_to_library()} size="2xl" {onClose}>
+<Modal {open} title={auth.canAddDirectly ? i18n.action_add_to_library() : i18n.action_request()} size="2xl" {onClose}>
 	{#snippet children()}
 		{#if rec}
 			<LookupDetailPanel
@@ -137,10 +160,10 @@
 		>
 			{#if addMutation.isPending}
 				<LoaderCircle size={14} class="animate-spin" aria-hidden="true" />
-				Adding…
+				{auth.canAddDirectly ? "Adding…" : i18n.action_requesting()}
 			{:else}
 				<Plus size={14} aria-hidden="true" />
-				Add to library
+				{auth.canAddDirectly ? "Add to library" : i18n.action_request()}
 			{/if}
 		</button>
 	{/snippet}
