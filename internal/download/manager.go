@@ -78,6 +78,11 @@ var (
 	// bandwidth on a torrent that can never fill the gap. Raised before the
 	// download client is contacted.
 	ErrNoWantedFiles = errors.New("release contains no wanted episode file")
+	// ErrClientFull is returned by a download client that holds as many
+	// torrents as it will take. The builtin engine is the one that says so.
+	ErrClientFull = errors.New(
+		"download client holds its maximum number of torrents",
+	)
 )
 
 // downloadSavePath joins a client-supplied torrent name onto the configured

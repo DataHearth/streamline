@@ -31,6 +31,12 @@ const (
 	// (default 64 MiB — a quarter of the whole target machine, and the one
 	// default here that can be exceeded in a single burst).
 	maxUnverifiedBytes = 16 << 20
+	// maxTorrents caps how many torrents the engine holds at once. Every grab
+	// is open to members and adds one, and nothing else ever counts them:
+	// each costs resident state, a goroutine until its metadata resolves, and
+	// a re-add on every boot, and only an admin can remove one. A re-add of a
+	// torrent already held is never refused.
+	maxTorrents = 500
 )
 
 // applyMemoryBounds caps the anacrolix client's per-peer and buffer growth.

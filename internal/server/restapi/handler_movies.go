@@ -374,7 +374,8 @@ func (s *Server) GrabMovieRelease(
 	}
 	rec, err := s.downloads.Grab(ctx, sr, m.ID)
 	switch {
-	case errors.Is(err, download.ErrUntrustedSource):
+	case errors.Is(err, download.ErrUntrustedSource),
+		errors.Is(err, download.ErrClientFull):
 		return GrabMovieRelease422JSONResponse{
 			UnprocessableEntityJSONResponse: errGrabRejected(err.Error()),
 		}, nil

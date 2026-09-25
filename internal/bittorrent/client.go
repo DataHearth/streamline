@@ -112,6 +112,10 @@ func (e *Engine) AddTorrent(
 		return "", otelx.RecordSpanError(span, err)
 	}
 	hash := spec.InfoHash.HexString()
+	if _, held := e.client.Torrent(spec.InfoHash); !held &&
+		len(e.client.Torrents()) >= maxTorrents {
+		return "", otelx.RecordSpanError(span, download.ErrClientFull)
+	}
 	if trackers, dropped := dropUnusableTrackers(spec.Trackers); dropped > 0 {
 		spec.Trackers = trackers
 		span.SetAttributes(attribute.Int("trackers.dropped", dropped))

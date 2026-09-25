@@ -572,6 +572,35 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 				Expect(body.Code).To(Equal("grab_rejected"))
 			},
 		)
+
+		It("maps a full download client to a grab_rejected 422", func() {
+			app.tvshows.EXPECT().Get(mock.Anything, uint32(3)).
+				Return(&ent.TVShow{ID: 3}, nil).Once()
+			app.downloads.EXPECT().
+				GrabEpisode(mock.Anything, mock.AnythingOfType("indexer.SearchResult"),
+					uint32(5), mock.Anything).
+				Return(nil, fmt.Errorf("add torrent: %w", download.ErrClientFull)).
+				Once()
+
+			req := app.req(
+				http.MethodPost,
+				"/api/v1/series/3/episodes/5/grab",
+				app.memberKey,
+				strings.NewReader(
+					`{"title":"BB S01E01","download_url":"magnet:x","size":1,"seeders":1}`,
+				),
+			)
+			req.Header.Set("Content-Type", "application/json")
+			resp := app.do(req)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+
+			var body struct {
+				Code string `json:"code"`
+			}
+			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+			Expect(body.Code).To(Equal("grab_rejected"))
+		})
 	})
 
 	Describe("BrowseSeriesReleases", func() {
