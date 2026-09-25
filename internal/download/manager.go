@@ -1693,6 +1693,13 @@ func fromConfiguredIndexer(u *url.URL) bool {
 	return false
 }
 
+// maxReleaseRedirects matches net/http's own default ceiling.
+const maxReleaseRedirects = 10
+
+func isRedirect(code int) bool {
+	return code >= 300 && code < 400
+}
+
 // resolveTorrentSource turns an indexer download link into the payload
 // Client.AddTorrent expects. magnet: links pass through; http(s) URLs are
 // fetched in-process so download clients that can't reach the indexer
@@ -1716,13 +1723,37 @@ func resolveTorrentSource(ctx context.Context, dl string) (TorrentSource, error)
 	if err != nil {
 		return TorrentSource{}, otelx.RedactTransportError(err)
 	}
-	resp, err := otelx.HTTPClient.Do(req)
+	// Every redirect hop is held to the same allowlist as the first: an
+	// allowlisted indexer answering 302 to an arbitrary host otherwise turns
+	// the fetch into a GET against anything the server can reach. A copy of
+	// the shared client, per call, so a test swapping its transport still
+	// reaches this one.
+	client := *otelx.HTTPClient
+	client.CheckRedirect = func(next *http.Request, via []*http.Request) error {
+		if next.URL.Scheme == "magnet" {
+			return http.ErrUseLastResponse
+		}
+		if len(via) >= maxReleaseRedirects {
+			return fmt.Errorf("stopped after %d redirects", maxReleaseRedirects)
+		}
+		return checkReleaseSource(next.URL.String())
+	}
+	resp, err := client.Do(req)
 	if err != nil {
+		if errors.Is(err, ErrUntrustedSource) {
+			return TorrentSource{}, otelx.RedactTransportError(err)
+		}
 		return TorrentSource{}, fmt.Errorf(
 			"%w: %w", ErrUnreachable, otelx.RedactTransportError(err),
 		)
 	}
 	defer resp.Body.Close()
+	// Magnet-only indexers answer the download link with a redirect to the
+	// magnet itself, which a transport cannot follow.
+	if loc := resp.Header.Get("Location"); isRedirect(resp.StatusCode) &&
+		strings.HasPrefix(loc, "magnet:") {
+		return TorrentSource{Magnet: loc}, nil
+	}
 	if resp.StatusCode != http.StatusOK {
 		return TorrentSource{}, fmt.Errorf(
 			"indexer returned status %d", resp.StatusCode,

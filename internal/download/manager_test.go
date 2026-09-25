@@ -200,6 +200,47 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 			_, err := resolveTorrentSource(ctx, "https://tracker.example/dl?id=1")
 			Expect(err).NotTo(MatchError(ErrUntrustedSource))
 		})
+
+		Context("when the indexer redirects", func() {
+			indexerRedirectingTo := func(location string) string {
+				GinkgoHelper()
+				ts := httptest.NewServer(http.HandlerFunc(
+					func(w http.ResponseWriter, r *http.Request) {
+						http.Redirect(w, r, location, http.StatusFound)
+					}))
+				DeferCleanup(ts.Close)
+				endpoint, err := url.Parse(ts.URL)
+				Expect(err).NotTo(HaveOccurred())
+				port, err := strconv.Atoi(endpoint.Port())
+				Expect(err).NotTo(HaveOccurred())
+				configtest.Setup(map[string]any{
+					"indexers": []map[string]any{{
+						"name":     "lan",
+						"host":     endpoint.Hostname(),
+						"port":     port,
+						"api_key":  "k",
+						"protocol": "torznab",
+						"enabled":  true,
+					}},
+				})
+				return ts.URL + "/dl"
+			}
+
+			It("refuses a hop to a host outside the configured indexers", func() {
+				dl := indexerRedirectingTo(
+					"http://169.254.169.254/latest/meta-data/",
+				)
+				_, err := resolveTorrentSource(ctx, dl)
+				Expect(err).To(MatchError(ErrUntrustedSource))
+			})
+
+			It("takes a redirect to a magnet as the magnet", func() {
+				const magnet = "magnet:?xt=urn:btih:abc"
+				src, err := resolveTorrentSource(ctx, indexerRedirectingTo(magnet))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(src.Magnet).To(Equal(magnet))
+			})
+		})
 	})
 
 	// Indexer release links authenticate through the query string — Jackett
