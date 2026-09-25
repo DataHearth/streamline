@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -30,7 +31,15 @@ func isSecretKey(key string) bool {
 // was then recoverable only from version control on a file that is typically
 // not in version control — so "who turned selective downloads on last Tuesday,
 // and what was it before" had no answer anywhere.
+//
+// Both views are expanded to scalar leaves first. flatten keeps a list whole,
+// and a list of indexers, download clients, media servers or OIDC providers
+// carries each entry's api_key, password or client_secret inside it — keyed
+// "indexers", which no secret part matches, so the whole list printed in clear.
+// Expanded, each secret sits under its own "indexers.0.api_key" and is redacted
+// like any other.
 func changedKeys(prev, next map[string]any) []string {
+	prev, next = leaves(prev), leaves(next)
 	out := make([]string, 0, 8)
 	for k, pv := range prev {
 		nv, ok := next[k]
@@ -57,4 +66,27 @@ func describeChange(key string, prev, next any) string {
 		return key + ": changed"
 	}
 	return fmt.Sprintf("%s: %v → %v", key, prev, next)
+}
+
+func leaves(m map[string]any) map[string]any {
+	out := make(map[string]any, len(m))
+	for k, v := range m {
+		addLeaves(out, k, v)
+	}
+	return out
+}
+
+func addLeaves(out map[string]any, key string, v any) {
+	switch t := v.(type) {
+	case []any:
+		for i, e := range t {
+			addLeaves(out, key+"."+strconv.Itoa(i), e)
+		}
+	case map[string]any:
+		for k, e := range t {
+			addLeaves(out, key+"."+k, e)
+		}
+	default:
+		out[key] = v
+	}
 }
