@@ -21,7 +21,7 @@
 	import { cubicOut } from "svelte/easing";
 	import { Ellipsis, X } from "@lucide/svelte";
 	import { cn } from "@lib/cn";
-	import { plural } from "@lib/bulk";
+	import { NOUN_TITLE, type Noun } from "@lib/nouns";
 	import { bulkMode } from "@lib/bulk-mode.svelte";
 	import { sheetSwipe } from "@lib/sheet-swipe";
 	import { m as i18n } from "@lib/paraglide/messages.js";
@@ -33,15 +33,13 @@
 	// SelectionTopBar rather than being repeated down here.
 	let {
 		count,
-		noun = "title",
-		nounPlural,
+		noun = NOUN_TITLE,
 		busy = false,
 		actions,
 		menu,
 	}: {
 		count: number;
-		noun?: string;
-		nounPlural?: string;
+		noun?: Noun;
 		busy?: boolean;
 		// Three at most: the bar keeps a last cell for More.
 		actions: TouchAction[];
@@ -138,7 +136,7 @@
 					class="absolute left-1/2 top-2 h-1 w-9 -translate-x-1/2 rounded-full bg-border-strong"
 				></span>
 				<h2 class="text-[17px] font-semibold tracking-tight text-fg">
-					{plural(count, noun, nounPlural)}
+					{noun.count(count)}
 				</h2>
 				<button
 					type="button"

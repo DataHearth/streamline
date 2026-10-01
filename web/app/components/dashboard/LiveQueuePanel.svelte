@@ -52,7 +52,7 @@
 			></span>
 			<h3 class="text-sm font-semibold text-fg">{i18n.dash_live_queue()}</h3>
 			<span class="font-mono text-[11px] text-fg-subtle">
-				{active} active
+				{i18n.dash_active_count({ count: active })}
 			</span>
 		</div>
 		<a
@@ -163,7 +163,7 @@
 				href="/activity"
 				class="border-t border-border px-5 py-2.5 text-center font-mono text-[11px] text-fg-subtle transition hover:text-accent-text"
 			>
-				+{more} more in Activity
+				{i18n.dash_more_in_activity({ count: more })}
 			</a>
 		{/if}
 	{/if}

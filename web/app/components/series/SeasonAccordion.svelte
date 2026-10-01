@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { countMissing, countWanted } from "@lib/nouns";
 	import { auth } from "@lib/auth.svelte";
 	import { Bookmark, ChevronRight, Info, Search, Trash2 } from "@lucide/svelte";
 	import KebabMenu, { type KebabItem } from "@components/shared/KebabMenu.svelte";
@@ -22,7 +23,6 @@
 		selected,
 		onSelect,
 		seriesType,
-		seasonLabel = "Season",
 		onMonitorSeason,
 		onMonitorEpisode,
 		onManualSearch,
@@ -35,7 +35,6 @@
 		selected: number;
 		onSelect: (n: number) => void;
 		seriesType: SeriesType;
-		seasonLabel?: string;
 		onMonitorSeason: (s: Season) => void;
 		onMonitorEpisode: (ep: Episode) => void;
 		onManualSearch: (ep: Episode) => void;
@@ -112,7 +111,9 @@
 		return String(n).padStart(2, "0");
 	}
 	function seasonName(s: Season): string {
-		return s.number === 0 ? i18n.series_specials() : `${seasonLabel} ${pad(s.number)}`;
+		return s.number === 0
+			? i18n.series_specials()
+			: i18n.series_season_n({ n: pad(s.number) });
 	}
 	function epCode(s: Season, ep: Episode): string {
 		if (seriesType === "daily") return `#${ep.number}`;
@@ -134,16 +135,20 @@
 		const st = episodeStatus(ep, showMonitored);
 		if (st === "available") {
 			const parts = [episodeMedia(ep), formatBytes(ep.size, "")].filter(Boolean);
-			return parts.join(" · ") || "available";
+			return parts.join(" · ") || i18n.ep_state_available();
 		}
-		if (st === "downloading") return "downloading";
-		if (st === "importing") return "importing";
+		if (st === "downloading") return i18n.ep_state_downloading();
+		if (st === "importing") return i18n.ep_state_importing();
 		if (st === "unaired")
-			return ep.air_date ? `airs ${formatDateShort(ep.air_date)}` : "unaired";
-		if (st === "skipped") return "not monitored";
-		if (st === "paused") return "paused";
-		if (st === "missing") return "missing on disk";
-		return ep.air_date ? `wanted · aired ${formatDateShort(ep.air_date)}` : "wanted";
+			return ep.air_date
+				? i18n.ep_airs_on({ date: formatDateShort(ep.air_date) })
+				: i18n.ep_state_unaired();
+		if (st === "skipped") return i18n.ep_state_not_monitored();
+		if (st === "paused") return i18n.ep_state_paused();
+		if (st === "missing") return i18n.ep_state_missing();
+		return ep.air_date
+			? i18n.ep_wanted_aired({ date: formatDateShort(ep.air_date) })
+			: i18n.ep_state_wanted();
 	}
 	const DOT: Record<string, string> = {
 		available: "bg-status-available",
@@ -190,10 +195,10 @@
 								· {formatBytes(seasonBytes(s), "")}
 							{/if}
 							{#if wanted > 0}
-								· <span class="text-status-wanted">{wanted} wanted</span>
+								· <span class="text-status-wanted">{countWanted(wanted)}</span>
 							{/if}
 							{#if missing > 0}
-								· <span class="text-status-missing">{missing} missing</span>
+								· <span class="text-status-missing">{countMissing(missing)}</span>
 							{/if}
 						</span>
 						<span
@@ -236,7 +241,7 @@
 					<button
 						type="button"
 						onclick={() => onSearchSeason(s)}
-						aria-label="Search releases for {seasonName(s)}"
+						aria-label={i18n.series_search_releases_for({ season: seasonName(s) })}
 						class="grid h-11 w-11 lg:h-9 lg:w-9 shrink-0 place-items-center rounded-lg border border-border bg-bg-elevated text-fg-subtle transition active:bg-accent-soft active:text-accent-text"
 					>
 						<Search size={15} aria-hidden="true" />
@@ -246,7 +251,7 @@
 						type="button"
 						disabled={seasonFiles(s).length === 0}
 						onclick={() => onDeleteSeasonFiles(s)}
-						aria-label="Delete all files in {seasonName(s)}"
+						aria-label={i18n.series_delete_all_in({ season: seasonName(s) })}
 						class="grid h-11 w-11 lg:h-9 lg:w-9 shrink-0 place-items-center rounded-lg border border-border bg-bg-elevated text-fg-subtle transition active:bg-status-failed/10 active:text-status-failed disabled:opacity-35"
 					>
 						<Trash2 size={15} aria-hidden="true" />
@@ -257,7 +262,9 @@
 					type="button"
 					onclick={() => toggle(s.number)}
 					aria-expanded={open}
-					aria-label="{open ? 'Collapse' : 'Expand'} {seasonName(s)}"
+					aria-label={open
+						? i18n.series_collapse_season({ season: seasonName(s) })
+						: i18n.series_expand_season({ season: seasonName(s) })}
 					class="grid h-9 w-6 shrink-0 place-items-center"
 				>
 					<ChevronRight

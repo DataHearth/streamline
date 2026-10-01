@@ -24,7 +24,7 @@ export async function startPlexPin({
 	onToken,
 	onDone,
 }: StartPlexPinOptions) {
-	toast.info("Starting Plex sign-in…");
+	toast.info(i18n.plex_signin_starting());
 	let flowID = "";
 	let authURL = "";
 	let clientID = "";
@@ -47,18 +47,16 @@ export async function startPlexPin({
 
 	const popup = window.open(authURL, "plex-auth", "width=600,height=700");
 	if (!popup) {
-		toast.err(
-			"Popup blocked — allow pop-ups for this site and click Connect again.",
-		);
+		toast.err(i18n.plex_popup_blocked());
 		onDone?.();
 		return;
 	}
-	toast.info("Waiting for Plex sign-in — finish in the popup window.");
+	toast.info(i18n.plex_signin_waiting());
 
 	const startedAt = Date.now();
 	const tick = async () => {
 		if (Date.now() - startedAt > TIMEOUT_MS) {
-			toast.err("Plex sign-in timed out — click Connect to retry.");
+			toast.err(i18n.plex_signin_timeout());
 			closePopup(popup);
 			onDone?.();
 			return;
@@ -70,7 +68,7 @@ export async function startPlexPin({
 			if (res.ok) {
 				const body = (await res.json()) as PlexPinPoll;
 				if (body.expired) {
-					toast.err("Plex PIN expired — click Connect to retry.");
+					toast.err(i18n.plex_pin_expired());
 					closePopup(popup);
 					onDone?.();
 					return;

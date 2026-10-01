@@ -20,6 +20,7 @@
 </script>
 
 <script lang="ts">
+	import { NOUN_SERIES } from "@lib/nouns";
 	import { auth } from "@lib/auth.svelte";
 	import {
 		Search,
@@ -244,8 +245,7 @@
 		<SelectionTopBar
 			count={selectedCount}
 			total={visibleCount}
-			noun="series"
-			nounPlural="series"
+			noun={NOUN_SERIES}
 			onClear={() => onSelectModeChange(false)}
 			{onSelectAll}
 		/>
@@ -342,7 +342,7 @@
 <MediaFilterSheet
 	open={sheetOpen}
 	onClose={() => (sheetOpen = false)}
-	noun="series"
+	noun={NOUN_SERIES}
 	{query}
 	{onQueryChange}
 	{sortOptions}

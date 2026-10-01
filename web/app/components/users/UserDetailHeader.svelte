@@ -39,7 +39,7 @@
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: ["user", user.id] });
 			qc.invalidateQueries({ queryKey: ["users"] });
-			toast.ok("Saved");
+			toast.ok(i18n.common_saved());
 		},
 		onError: (err) => toast.err(errorText(err)),
 	}));

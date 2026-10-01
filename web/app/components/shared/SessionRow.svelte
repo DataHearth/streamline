@@ -48,14 +48,14 @@
 			{/if}
 			{#if session.last_seen_at}
 				<div class="flex items-center gap-1">
-					<dt class="text-fg-subtle">last seen</dt>
+					<dt class="text-fg-subtle">{i18n.session_last_seen()}</dt>
 					<dd title={formatDateTime(session.last_seen_at)}
 						>{formatRelative(session.last_seen_at)}</dd
 					>
 				</div>
 			{/if}
 			<div class="flex items-center gap-1">
-				<dt class="text-fg-subtle">expires</dt>
+				<dt class="text-fg-subtle">{i18n.session_expires()}</dt>
 				<dd title={formatDateTime(session.expires_at)}
 					>{formatRelative(session.expires_at)}</dd
 				>

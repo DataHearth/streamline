@@ -237,7 +237,7 @@
 									</div>
 									<Poster
 										src={poster}
-										alt="{item.label} poster"
+										alt={i18n.common_poster_alt({ title: item.label })}
 										class="relative h-full w-full object-cover"
 									/>
 								</div>
@@ -311,7 +311,7 @@
 
 				{#if flat.length === 0}
 					<div class="px-3 py-8 text-center text-[12.5px] text-fg-subtle">
-						No matches for "{query}"
+						{i18n.search_no_matches_for({ query: query.trim() })}
 					</div>
 				{/if}
 			</div>
@@ -326,19 +326,19 @@
 					><kbd
 						class="mr-1 rounded border border-border bg-surface px-1 py-px text-fg-subtle"
 						>↓</kbd
-					> navigate
+					> {i18n.palette_hint_navigate()}
 				</span>
 				<span>
 					<kbd
 						class="mr-1 rounded border border-border bg-surface px-1 py-px text-fg-subtle"
 						>↵</kbd
-					> select
+					> {i18n.palette_hint_select()}
 				</span>
 				<span>
 					<kbd
 						class="mr-1 rounded border border-border bg-surface px-1 py-px text-fg-subtle"
 						>{i18n.palette_esc()}</kbd
-					> close
+					> {i18n.palette_hint_close()}
 				</span>
 			</footer>
 		</div>

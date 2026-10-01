@@ -231,7 +231,7 @@
 						<span
 							class="inline-flex h-6 items-center rounded-full border border-border bg-surface px-2.5 font-mono text-[11px] text-fg-faint"
 						>
-							loading…
+							{i18n.lc_loading()}
 						</span>
 					{/if}
 				</div>

@@ -64,7 +64,7 @@
 				</div>
 				<Poster
 					src={item.posterSrc}
-					alt="{item.title} poster"
+					alt={i18n.common_poster_alt({ title: item.title })}
 					loading="eager"
 					class="relative h-full w-full object-cover"
 				/>

@@ -45,7 +45,7 @@
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: ["series", show.id] });
 			qc.invalidateQueries({ queryKey: ["series"] });
-			toast.ok("Quality profile updated");
+			toast.ok(i18n.series_quality_updated());
 			qpOpen = false;
 		},
 		onError: (e: Error) => toast.err(errorText(e, i18n.common_update_failed())),
@@ -65,7 +65,7 @@
 
 	const searchNow = createMutation(() => ({
 		mutationFn: () => api(`/series/${show.id}/search`, { method: "POST" }),
-		onSuccess: () => toast.ok("Search dispatched for wanted episodes"),
+		onSuccess: () => toast.ok(i18n.series_search_dispatched_wanted()),
 		onError: (e: Error) => toast.err(errorText(e, i18n.common_search_failed())),
 	}));
 
@@ -74,7 +74,7 @@
 			api(`/series/${show.id}/refresh-metadata`, { method: "POST" }),
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: ["series", show.id] });
-			toast.ok("Metadata refresh requested");
+			toast.ok(i18n.series_refresh_requested());
 		},
 		onError: (e: Error) => toast.err(errorText(e, i18n.common_refresh_failed())),
 	}));
@@ -87,7 +87,7 @@
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: ["series"] });
 			deleteOpen = false;
-			toast.ok("Series deleted");
+			toast.ok(i18n.series_deleted());
 		},
 		onError: (e: Error) => toast.err(errorText(e, i18n.common_delete_failed())),
 	}));
@@ -168,10 +168,10 @@
 
 <DeleteTitleDialog
 	open={deleteOpen}
-	title="Remove '{show.title}' from your library?"
-	body="The series leaves your library. Files on disk are kept unless you say otherwise."
-	filesLabel="Also delete every downloaded episode from disk"
-	filesNote="This cannot be undone."
+	title={i18n.series_remove_title({ title: show.title })}
+	body={i18n.series_remove_body()}
+	filesLabel={i18n.series_delete_files_label()}
+	filesNote={i18n.common_cannot_undo()}
 	canDeleteFiles={hasFiles}
 	pending={del.isPending}
 	onClose={() => (deleteOpen = false)}

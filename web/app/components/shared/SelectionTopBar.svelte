@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { X } from "@lucide/svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
+	import { NOUN_TITLE, type Noun } from "@lib/nouns";
 
 	// Phone header for an active selection: it replaces the filter line rather
 	// than sitting on top of it, so entering selection mode costs no height. The
@@ -8,15 +9,13 @@
 	let {
 		count,
 		total,
-		noun = "title",
-		nounPlural,
+		noun = NOUN_TITLE,
 		onClear,
 		onSelectAll,
 	}: {
 		count: number;
 		total: number;
-		noun?: string;
-		nounPlural?: string;
+		noun?: Noun;
 		onClear: () => void;
 		onSelectAll: () => void;
 	} = $props();
@@ -39,7 +38,11 @@
 		class="min-w-0 flex-1 truncate text-[15px] font-semibold tracking-tight text-accent-text"
 		aria-live="polite"
 	>
-		{count === 0 ? i18n.a11y_select_all_of({ items: nounPlural ?? noun + "s" }) : `${count} selected`}
+		{count === 0
+			? i18n.a11y_select_all_of({ items: noun.items })
+			: (count === 1 ? i18n.common_n_selected_one : i18n.common_n_selected_other)({
+					count: count.toLocaleString(),
+				})}
 	</span>
 	{#if count < total}
 		<button
@@ -47,7 +50,7 @@
 			onclick={onSelectAll}
 			class="shrink-0 rounded-full px-3 py-2 text-[13px] font-medium text-accent-text transition active:bg-white/[0.06]"
 		>
-			Select all {total}
+			{i18n.bulk_select_all_n({ total })}
 		</button>
 	{:else}
 		<button

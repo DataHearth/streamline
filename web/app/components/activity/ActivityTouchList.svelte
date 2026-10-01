@@ -64,7 +64,9 @@
 			class="rounded-xl border border-status-failed/25 bg-bg-elevated px-5 py-9 text-center"
 		>
 			<p class="text-sm font-semibold text-status-failed">
-				Failed to load {view}
+				{view === "queue"
+					? i18n.activity_load_failed_queue()
+					: i18n.activity_load_failed_history()}
 			</p>
 			<p class="mt-1 font-mono text-[11px] text-fg-subtle">
 				{errorText(error)}

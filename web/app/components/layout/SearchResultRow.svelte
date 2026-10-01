@@ -50,7 +50,7 @@
 			</div>
 			<Poster
 				src={poster}
-				alt="{item.label} poster"
+				alt={i18n.common_poster_alt({ title: item.label })}
 				class="relative h-full w-full object-cover"
 			/>
 		</div>

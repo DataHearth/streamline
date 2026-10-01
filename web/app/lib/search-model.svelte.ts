@@ -109,8 +109,8 @@ const PAGES: PageItem[] = [
 ];
 
 export function itemKindLabel(item: SearchItem): string {
-	if (item.kind === "page") return "Navigate";
-	if (item.kind === "action") return "Action";
+	if (item.kind === "page") return i18n.search_kind_navigate();
+	if (item.kind === "action") return i18n.common_action();
 	if (item.kind === "person") return i18n.common_person();
 	return item.kind === "movie" ? i18n.common_movie() : i18n.settings_series();
 }
@@ -184,10 +184,20 @@ export function createSearchModel(
 
 	// request_only users request rather than add, so the labels adapt.
 	function actions(): ActionItem[] {
-		const verb = auth.canAddDirectly ? i18n.common_add() : i18n.action_request();
+		const direct = auth.canAddDirectly;
 		return [
-			{ kind: "action", label: `${verb} movie…`, icon: Film, run: openAddMovie },
-			{ kind: "action", label: `${verb} series…`, icon: Tv, run: openAddSeries },
+			{
+				kind: "action",
+				label: direct ? i18n.search_add_movie() : i18n.search_request_movie(),
+				icon: Film,
+				run: openAddMovie,
+			},
+			{
+				kind: "action",
+				label: direct ? i18n.search_add_series() : i18n.search_request_series(),
+				icon: Tv,
+				run: openAddSeries,
+			},
 			{ kind: "action", label: i18n.common_sign_out(), icon: LogOut, run: signOut },
 		];
 	}

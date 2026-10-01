@@ -26,20 +26,20 @@
 		<p class="truncate text-sm font-semibold text-fg">{apiKey.name}</p>
 		<dl class="mt-1 flex flex-wrap gap-x-3.5 gap-y-0.5 text-xs text-fg-muted">
 			<div class="flex items-center gap-1">
-				<dt class="text-fg-subtle">created</dt>
+				<dt class="text-fg-subtle">{i18n.apikey_created()}</dt>
 				<dd title={formatDateTime(apiKey.created_at)}
 					>{formatRelative(apiKey.created_at)}</dd
 				>
 			</div>
 			<div class="flex items-center gap-1">
-				<dt class="text-fg-subtle">last used</dt>
+				<dt class="text-fg-subtle">{i18n.apikey_last_used()}</dt>
 				<dd
 					class:text-fg-subtle={!apiKey.last_used_at}
 					title={apiKey.last_used_at
 						? formatDateTime(apiKey.last_used_at)
 						: undefined}
 				>
-					{apiKey.last_used_at ? formatRelative(apiKey.last_used_at) : "never"}
+					{apiKey.last_used_at ? formatRelative(apiKey.last_used_at) : i18n.lc_never()}
 				</dd>
 			</div>
 		</dl>

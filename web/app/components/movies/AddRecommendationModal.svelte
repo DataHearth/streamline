@@ -160,10 +160,10 @@
 		>
 			{#if addMutation.isPending}
 				<LoaderCircle size={14} class="animate-spin" aria-hidden="true" />
-				{auth.canAddDirectly ? "Adding…" : i18n.action_requesting()}
+				{auth.canAddDirectly ? i18n.action_adding() : i18n.action_requesting()}
 			{:else}
 				<Plus size={14} aria-hidden="true" />
-				{auth.canAddDirectly ? "Add to library" : i18n.action_request()}
+				{auth.canAddDirectly ? i18n.action_add_to_library() : i18n.action_request()}
 			{/if}
 		</button>
 	{/snippet}

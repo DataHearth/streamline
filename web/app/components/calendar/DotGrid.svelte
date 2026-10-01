@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m as i18n } from "@lib/paraglide/messages.js";
 	import { cn } from "@lib/cn";
 	import {
 		buildMonthGrid,
@@ -58,10 +59,9 @@
 					type="button"
 					onclick={() => onSelect(cell.date)}
 					aria-pressed={isSelected}
-					aria-label="{dayLabel(cell.date)}, {evs.length} release{evs.length ===
-					1
-						? ''
-						: 's'}"
+					aria-label="{dayLabel(cell.date)}, {evs.length === 1
+						? i18n.calendar_release_count_one({ count: evs.length })
+						: i18n.calendar_release_count_other({ count: evs.length })}"
 					class={cn(
 						"relative flex min-h-[46px] flex-col items-center gap-1.5 rounded-md py-[7px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring",
 						isSelected ? "bg-accent-soft" : "hover:bg-surface",

@@ -38,7 +38,7 @@
 		onSuccess: () => {
 			form.reset();
 			qc.invalidateQueries({ queryKey: ["user", user.id] });
-			toast.ok("Password reset; sessions revoked");
+			toast.ok(i18n.users_password_reset());
 		},
 		onError: (err) => toast.err(errorText(err)),
 	}));
@@ -48,7 +48,7 @@
 			api<null>(`/users/${user.id}/unlock`, { method: "POST" }),
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: ["user", user.id] });
-			toast.ok("Lockout cleared");
+			toast.ok(i18n.users_lockout_cleared());
 		},
 		onError: (err) => toast.err(errorText(err)),
 	}));
@@ -57,7 +57,7 @@
 		mutationFn: () => api<null>(`/users/${user.id}`, { method: "DELETE" }),
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: ["users"] });
-			toast.ok("User deleted");
+			toast.ok(i18n.users_deleted());
 			navigate("/settings/users");
 		},
 		onError: (err) => toast.err(errorText(err)),
@@ -193,8 +193,8 @@
 
 <Dialog
 	open={confirmDelete}
-	title="Delete {user.display_name || user.email}?"
-	body="This permanently erases the account and every resource they own."
+	title={i18n.users_delete_title({ name: user.display_name || user.email })}
+	body={i18n.users_delete_body_account()}
 	onClose={() => (confirmDelete = false)}
 	actions={[
 		{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },

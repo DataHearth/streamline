@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { parts } from "@lib/message-parts";
 	import { fade, fly } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { FileText, Info, LoaderCircle, Upload, X } from "@lucide/svelte";
@@ -8,6 +9,8 @@
 	import type { AddTorrentRequest } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import { errorText } from "@lib/api";
+
+	const notLinkedBody = parts(i18n.torrent_not_linked_body, ["place"]);
 
 	// The add-torrent modal below md. Both inputs are on screen at once rather
 	// than behind a source switcher — on a phone the magnet almost always comes
@@ -178,7 +181,7 @@
 					{:else}
 						<Upload size={20} class="text-fg-faint" aria-hidden="true" />
 						<span class="text-[13px] font-semibold text-fg">{i18n.torrent_choose_file()}</span>
-						<span class="text-[11px] text-fg-subtle">or drop it here</span>
+						<span class="text-[11px] text-fg-subtle">{i18n.torrent_or_drop()}</span>
 					{/if}
 				</label>
 				{#if fileErr}
@@ -190,8 +193,7 @@
 				>
 					<Info size={14} class="mt-0.5 shrink-0" aria-hidden="true" />
 					<span>
-						{i18n.torrent_not_linked_straight()}
-						<span class="font-semibold">{i18n.common_needs_attention()}</span> once it finishes.
+						{#each notLinkedBody as p}{#if p.slot === "place"}<span class="font-semibold">{i18n.common_needs_attention()}</span>{:else}{p.text}{/if}{/each}
 					</span>
 				</div>
 			</div>

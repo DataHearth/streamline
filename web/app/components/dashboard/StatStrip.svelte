@@ -267,7 +267,7 @@
 					class="inline-flex shrink-0 items-center gap-1 text-status-failed underline-offset-2 transition hover:underline"
 				>
 					<TriangleAlert size={12} aria-hidden="true" />
-					{failedCount} failed
+					{i18n.dash_failed_count({ count: failedCount })}
 				</a>
 			{/if}
 		</div>
@@ -319,7 +319,7 @@
 									<dd
 										class="shrink-0 whitespace-nowrap font-mono text-[11.5px] text-fg"
 									>
-										{d.usage?.free} free
+										{i18n.dash_disk_free({ size: d.usage?.free ?? "" })}
 									</dd>
 								</div>
 								<dd

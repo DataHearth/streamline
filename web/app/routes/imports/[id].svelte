@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { NOUN_FILE, NOUN_SHOW } from "@lib/nouns";
 	import {
 		createMutation,
 		createQuery,
@@ -15,6 +16,7 @@
 		Square,
 		Trash2,
 		TriangleAlert,
+		X,
 	} from "@lucide/svelte";
 	import { api, apiAllPages, errorText, type Paginated } from "@lib/api";
 	import { cn } from "@lib/cn";
@@ -682,7 +684,7 @@
 				<DecisionStrip
 					pendingCount={stripPendingCount}
 					commitableCount={stripCommitableCount}
-					noun={isSeries ? "show" : "file"}
+					noun={isSeries ? NOUN_SHOW : NOUN_FILE}
 					commitNote={commitNote(scan.mode, scan.import_mode)}
 					skipBusy={isSeries ? skipAllShows.isPending : skipAll.isPending}
 					commitBusy={commit.isPending}
@@ -721,8 +723,18 @@
 							type="search"
 							bind:value={q}
 							placeholder={i18n.imports_search_folder_title()}
-							class="w-full rounded-md border border-border bg-bg-card px-3 py-1.5 text-sm text-fg placeholder:text-fg-faint focus:outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent-ring"
+							class="w-full rounded-md border border-border bg-bg-card py-1.5 pl-3 pr-9 text-sm text-fg placeholder:text-fg-faint focus:outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent-ring"
 						/>
+						{#if q}
+							<button
+								type="button"
+								onclick={() => (q = "")}
+								aria-label={i18n.common_clear_search()}
+								class="absolute right-1 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full text-fg-faint transition hover:text-fg active:bg-surface"
+							>
+								<X size={14} aria-hidden="true" />
+							</button>
+						{/if}
 					</label>
 					<div class="w-52 shrink-0">
 						<Select
@@ -745,7 +757,7 @@
 						<p class="px-5 py-8 text-sm text-fg-subtle">{i18n.common_loading_shows()}</p>
 					{:else if showsQuery.isError}
 						<p class="px-5 py-8 text-sm text-status-failed">
-							Failed: {showsQuery.error?.message}
+							{i18n.common_failed_with({ error: showsQuery.error?.message ?? "" })}
 						</p>
 					{:else if showItems.length === 0}
 						<p class="px-5 py-8 text-sm text-fg-muted">
@@ -808,8 +820,18 @@
 							type="search"
 							bind:value={q}
 							placeholder={i18n.imports_search_filename()}
-							class="w-full rounded-md border border-border bg-bg-card px-3 py-1.5 text-sm text-fg placeholder:text-fg-faint focus:outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent-ring"
+							class="w-full rounded-md border border-border bg-bg-card py-1.5 pl-3 pr-9 text-sm text-fg placeholder:text-fg-faint focus:outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent-ring"
 						/>
+						{#if q}
+							<button
+								type="button"
+								onclick={() => (q = "")}
+								aria-label={i18n.common_clear_search()}
+								class="absolute right-1 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full text-fg-faint transition hover:text-fg active:bg-surface"
+							>
+								<X size={14} aria-hidden="true" />
+							</button>
+						{/if}
 					</label>
 					<div class="w-52 shrink-0">
 						<Select
@@ -834,7 +856,7 @@
 						</p>
 					{:else if filesQuery.isError}
 						<p class="px-5 py-8 text-sm text-status-failed">
-							Failed: {filesQuery.error?.message}
+							{i18n.common_failed_with({ error: filesQuery.error?.message ?? "" })}
 						</p>
 					{:else if items.length === 0}
 						<p class="px-5 py-8 text-sm text-fg-muted">

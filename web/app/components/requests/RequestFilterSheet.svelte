@@ -171,7 +171,7 @@
 					onclick={onClose}
 					class="inline-flex h-11 flex-1 items-center justify-center rounded-xl bg-accent text-[14px] font-semibold text-fg-on-accent transition active:bg-accent-pressed"
 				>
-					Show {resultCount}
+					{i18n.common_show_n({ n: resultCount })}
 				</button>
 			</div>
 		</div>

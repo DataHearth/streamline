@@ -35,9 +35,7 @@
 			onToken: (t, cid) => {
 				credsToken = t;
 				onToken(t, cid);
-				toast.ok(
-					"Plex connected — you can now Test the connection or Discover sections.",
-				);
+				toast.ok(i18n.plex_connected());
 			},
 			onDone: () => (busy = false),
 		});
@@ -55,10 +53,10 @@
 	>
 		{#if token}
 			<RefreshCw size={14} aria-hidden="true" />
-			Reconnect
+			{i18n.plex_reconnect()}
 		{:else}
 			<Cast size={14} aria-hidden="true" />
-			Connect with Plex
+			{i18n.plex_connect()}
 		{/if}
 	</button>
 	<span class="min-w-0 flex-1 text-[11px] text-fg-muted">

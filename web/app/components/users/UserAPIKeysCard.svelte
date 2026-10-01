@@ -25,7 +25,7 @@
 			api<null>(`/users/${userId}/api-keys/${id}`, { method: "DELETE" }),
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: ["user", userId] });
-			toast.ok("Key revoked");
+			toast.ok(i18n.apikey_revoked());
 		},
 		onError: (err) => toast.err(errorText(err)),
 	}));
@@ -38,8 +38,9 @@
 		<div>
 			<h3 class="text-base font-semibold text-fg">{i18n.account_api_keys()}</h3>
 			<p class="mt-0.5 text-xs text-fg-muted">
-				{apiKeys.length}
-				{apiKeys.length === 1 ? "key" : "keys"} on record
+				{(apiKeys.length === 1
+					? i18n.apikeys_on_record_one
+					: i18n.apikeys_on_record_other)({ count: apiKeys.length })}
 			</p>
 		</div>
 	</header>
@@ -64,8 +65,8 @@
 
 <Dialog
 	open={revoking !== null}
-	title="Revoke '{revoking?.name ?? ''}'?"
-	body="Anything using this key will immediately lose access."
+	title={i18n.apikey_revoke_title({ name: revoking?.name ?? "" })}
+	body={i18n.apikey_revoke_body()}
 	onClose={() => (revoking = null)}
 	actions={[
 		{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },

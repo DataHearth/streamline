@@ -99,7 +99,7 @@
 			}),
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: ["movie", movieId] });
-			toast.ok("Metadata refresh requested");
+			toast.ok(i18n.movie_refresh_requested());
 		},
 		onError: (e: Error) => toast.err(errorText(e, i18n.common_refresh_failed())),
 	}));
@@ -107,7 +107,7 @@
 	const searchNow = createMutation(() => ({
 		mutationFn: () =>
 			api(`/movies/${movieId}/search-now`, { method: "POST" }),
-		onSuccess: () => toast.ok("Search dispatched"),
+		onSuccess: () => toast.ok(i18n.movie_search_dispatched()),
 		onError: (e: Error) => toast.err(errorText(e, i18n.common_search_failed())),
 	}));
 
@@ -133,7 +133,7 @@
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: ["movie", movieId] });
 			qc.invalidateQueries({ queryKey: ["movies"] });
-			toast.ok("Quality profile updated");
+			toast.ok(i18n.movie_quality_updated());
 			qpOpen = false;
 		},
 		onError: (e: Error) => toast.err(errorText(e, i18n.common_update_failed())),
@@ -146,7 +146,7 @@
 			}),
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: ["movies"] });
-			toast.ok("Movie deleted");
+			toast.ok(i18n.movie_deleted());
 			navigate("/movies");
 		},
 		onError: (e: Error) => toast.err(errorText(e, i18n.common_delete_failed())),
@@ -211,7 +211,7 @@
 					path={`/movies/${movie.id}/play-on`}
 					queryKey={["movie", movie.id, "play-on"]}
 					disabled={!hasFiles}
-					disabledTitle="Available after the movie has been imported"
+					disabledTitle={i18n.movies_available_after_import()}
 				/>
 
 				<button
@@ -318,7 +318,7 @@
 				path={`/movies/${movie.id}/play-on`}
 				queryKey={["movie", movie.id, "play-on"]}
 				disabled={!hasFiles}
-				disabledTitle="Available after the movie has been imported"
+				disabledTitle={i18n.movies_available_after_import()}
 			/>
 
 			<button
@@ -388,10 +388,10 @@
 
 	<DeleteTitleDialog
 		open={deleteOpen}
-		title="Remove '{movie.title}' from your library?"
-		body="The movie leaves your library. Files on disk are kept unless you say otherwise."
-		filesLabel="Also delete the movie's files from disk"
-		filesNote="This cannot be undone."
+		title={i18n.movie_remove_title({ title: movie.title })}
+		body={i18n.movie_remove_body()}
+		filesLabel={i18n.movie_delete_files_label()}
+		filesNote={i18n.common_cannot_undo()}
 		canDeleteFiles={hasFiles}
 		pending={del.isPending}
 		onClose={() => (deleteOpen = false)}

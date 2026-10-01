@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { roleLabel } from "@lib/roles";
 	import { onMount } from "svelte";
 	import { fly, fade } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
@@ -61,7 +62,10 @@
 		const d = requestCountsQuery.data;
 		if (!d) return "";
 		if (!d.pending) return i18n.nothing_waiting();
-		return `${d.approved.toLocaleString()} approved · ${d.denied.toLocaleString()} denied`;
+		return i18n.nav_requests_decided({
+			approved: d.approved.toLocaleString(),
+			denied: d.denied.toLocaleString(),
+		});
 	});
 
 	const pendingQuery = createQuery<PendingList>(() => ({
@@ -176,6 +180,12 @@
 
 	const SECTIONS = ["Library", "Activity", "More"] as const;
 	type Section = (typeof SECTIONS)[number];
+	// Section ids are internal keys; this is what the sheet shows as its title.
+	const SECTION_LABELS: Record<Section, string> = {
+		Library: i18n.nav_library(),
+		Activity: i18n.nav_activity(),
+		More: i18n.common_more(),
+	};
 
 	let sheet = $state<Section | "">("");
 	let sheetRows = $derived<Row[]>(
@@ -367,12 +377,7 @@
 		};
 	}
 
-	let roleLabel = $derived.by(() => {
-		const r = auth.user?.role;
-		if (r === "admin") return "admin";
-		if (r === "request_only") return "request";
-		return "member";
-	});
+	let role = $derived(roleLabel(auth.user?.role ?? "member"));
 
 	const cellBase =
 		"relative flex flex-col items-center justify-center gap-1 px-2 pt-2.5 pb-3 text-[10.5px] transition-colors";
@@ -450,7 +455,7 @@
 		class="fixed inset-0 z-[60] md:hidden"
 		role="dialog"
 		aria-modal="true"
-		aria-label={sheet}
+		aria-label={SECTION_LABELS[sheet]}
 	>
 		<button
 			type="button"
@@ -473,7 +478,7 @@
 					aria-hidden="true"
 					class="absolute left-1/2 top-2 h-1 w-9 -translate-x-1/2 rounded-full bg-border-strong"
 				></span>
-				<h2 class="text-[17px] font-semibold tracking-tight text-fg">{sheet}</h2>
+				<h2 class="text-[17px] font-semibold tracking-tight text-fg">{SECTION_LABELS[sheet]}</h2>
 				<button
 					type="button"
 					onclick={closeSheet}
@@ -610,7 +615,7 @@
 									{auth.user.display_name || auth.user.email}
 								</div>
 								<div class="mt-0.5 truncate font-mono text-[11px] text-fg-faint">
-									{roleLabel}{version ? ` · ${version}` : ""}
+									{role}{version ? ` · ${version}` : ""}
 								</div>
 							</div>
 						</a>

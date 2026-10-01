@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { countWanted } from "@lib/nouns";
 	import { auth } from "@lib/auth.svelte";
 	import { createMutation, useQueryClient } from "@tanstack/svelte-query";
 	import { Bookmark, Tv } from "@lucide/svelte";
@@ -119,7 +120,9 @@
 							<SelectBox
 								checked={isSel}
 								onChange={(v) => onToggle(show.id, v)}
-								label={isSel ? `Deselect ${show.title}` : i18n.a11y_select_item({ title: show.title })}
+								label={isSel
+					? i18n.a11y_deselect_item({ title: show.title })
+					: i18n.a11y_select_item({ title: show.title })}
 							/>
 						</td>
 					{/if}
@@ -190,7 +193,7 @@
 						>
 						{#if (show.wanted_episodes ?? 0) > 0}
 							<span class="ml-1.5 text-status-wanted"
-								>· {show.wanted_episodes} wanted</span
+								>· {countWanted(show.wanted_episodes ?? 0)}</span
 							>
 						{/if}
 						{#if (show.downloading_episodes ?? 0) > 0}

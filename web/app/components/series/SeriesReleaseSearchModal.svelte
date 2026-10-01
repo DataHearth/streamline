@@ -1,10 +1,15 @@
 <script lang="ts">
+	import { around } from "@lib/message-parts";
 	import { Info } from "@lucide/svelte";
 	import Modal from "@components/modals/Modal.svelte";
 	import ReleasesTable from "@components/shared/ReleasesTable.svelte";
 	import ReplaceExistingToggle from "@components/shared/ReplaceExistingToggle.svelte";
 	import Select from "@components/forms/Select.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
+
+	const [packsPre, packsPost] = around((scope) =>
+		i18n.series_packs_hidden_switch({ scope }),
+	);
 
 	let {
 		open,
@@ -89,7 +94,7 @@
 			<Select
 				value={scope}
 				{options}
-				ariaLabel="Search scope"
+				ariaLabel={i18n.series_search_scope()}
 				onChange={(v) => (scope = v)}
 			/>
 		</div>
@@ -98,8 +103,8 @@
 		<p class="mb-4 -mt-1 flex items-start gap-1.5 text-xs text-fg-subtle">
 			<Info size={13} class="mt-px shrink-0" aria-hidden="true" />
 			<span>
-				{i18n.series_packs_hidden()} <span class="font-medium text-fg-muted">{i18n.series_whole_series()}</span>
-				to grab those.
+				{packsPre}<span class="font-medium text-fg-muted">{i18n.series_whole_series()}</span
+				>{packsPost}
 			</span>
 		</p>
 	{/if}

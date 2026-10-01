@@ -14,6 +14,7 @@
 	import { api } from "@lib/api";
 	import { auth } from "@lib/auth.svelte";
 	import { pageMeta } from "@lib/page-meta.svelte";
+	import { SETTINGS_TITLES } from "@lib/settings-nav.svelte";
 	import SearchField from "./SearchField.svelte";
 	import type { SystemInfo } from "@lib/types";
 	import { toast } from "@lib/toast";
@@ -64,20 +65,19 @@
 		{ prefix: "/settings", label: i18n.nav_settings() },
 	];
 
-	// Sub-page segments name themselves — "media-servers" becomes "Media
-	// servers", matching the h1 that page renders. Only slugs whose page title
-	// isn't a transform of the slug need an entry here.
-	const SEGMENT_LABELS: Record<string, string> = {
-		auth: i18n.settings_authentication(),
-		oidc: i18n.settings_sso(),
-	};
+	// Sub-pages are named by their full path, from the same titles their own
+	// page heading uses. Deriving the crumb from the slug ("media-servers" →
+	// "Media servers") only ever produced English. Settings is the only section
+	// with named sub-pages; every other sub-route is a numeric id.
+	const PAGE_LABELS: Record<string, () => string> = SETTINGS_TITLES;
 
-	function segmentLabel(segment: string): string {
+	function segmentLabel(segment: string, href: string): string {
 		// Every dynamic route under these sections keys off a numeric id, which
 		// carries no name until its record loads.
-		if (/^\d+$/.test(segment)) return "Details";
-		const known = SEGMENT_LABELS[segment];
-		if (known) return known;
+		if (/^\d+$/.test(segment)) return i18n.common_details();
+		const known = PAGE_LABELS[href];
+		if (known) return known();
+		// A path no list names yet: the slug is better than nothing.
 		return segment
 			.split("-")
 			.map((w, i) => (i === 0 ? w.charAt(0).toUpperCase() + w.slice(1) : w))
@@ -101,7 +101,7 @@
 		let href = root.prefix;
 		segments.forEach((seg, i) => {
 			href += `/${seg}`;
-			const label = segmentLabel(seg);
+			const label = segmentLabel(seg, href);
 			trail.push(i === segments.length - 1 ? { label } : { label, href });
 		});
 		return trail;
@@ -243,7 +243,7 @@
 	function pickAdd(item: AddItem) {
 		closeAdd();
 		if (item.soon) {
-			toast.info(`${item.label}: not yet implemented`);
+			toast.info(i18n.common_not_implemented({ label: item.label }));
 			return;
 		}
 		if (item.id === "movie") openAddMovie();
@@ -441,7 +441,7 @@
 					<span
 						class="rounded-sm border border-border px-1.5 py-px font-mono text-[9px] uppercase tracking-[0.1em] text-fg-faint"
 					>
-						soon
+						{i18n.common_soon()}
 					</span>
 				{/if}
 			</button>

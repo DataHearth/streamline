@@ -369,9 +369,10 @@
 
 		{#if debounced.length >= 2 && !searchQuery.isLoading && !searchQuery.isError && results.length > 0}
 			<p class="flex-none px-5 pt-3 pb-1 text-[11.5px] text-fg-faint">
-				{results.length}
-				{results.length === 1 ? "match" : "matches"}{heldCount > 0
-					? ` · ${heldCount} already in your library`
+				{(results.length === 1
+					? i18n.lookup_match_count_one
+					: i18n.lookup_match_count_other)({ count: results.length })}{heldCount > 0
+					? ` · ${i18n.lookup_held_in_library({ count: heldCount })}`
 					: ""}
 			</p>
 		{/if}
@@ -381,10 +382,10 @@
 				<div class="flex flex-col items-center justify-center px-8 py-20 text-center">
 					<Search class="mb-3 h-8 w-8 text-fg-faint" aria-hidden="true" />
 					<p class="text-sm font-medium text-fg-muted">
-						Search {isMovie ? "TMDB" : "TVDB"}
+						{isMovie ? i18n.movies_search_tmdb() : i18n.series_search_tvdb()}
 					</p>
 					<p class="mt-1 text-xs text-fg-faint">
-						Type at least 2 characters to find a {isMovie ? "movie" : "series"}.
+						{isMovie ? i18n.movies_type_2_chars() : i18n.series_type_2_chars()}
 					</p>
 				</div>
 			{:else if searchQuery.isLoading}
@@ -412,7 +413,9 @@
 					{/if}
 					<p class="text-sm font-medium text-fg-muted">{i18n.common_no_matches()}</p>
 					<p class="mt-1 text-xs text-fg-faint">
-						Nothing on {isMovie ? "TMDB" : "TVDB"} for &ldquo;{debounced}&rdquo;.
+						{isMovie
+							? i18n.lookup_nothing_on_tmdb({ query: debounced })
+							: i18n.lookup_nothing_on_tvdb({ query: debounced })}
 					</p>
 				</div>
 			{:else}

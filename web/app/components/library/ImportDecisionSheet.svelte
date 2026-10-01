@@ -226,7 +226,7 @@
 							class="inline-flex h-11 flex-[1.4] items-center justify-center gap-2 rounded-xl bg-accent text-[14px] font-semibold text-fg-on-accent transition active:bg-accent-pressed"
 						>
 							<Check size={15} aria-hidden="true" />
-							<span class="truncate">Use {entry.chosenLabel}</span>
+							<span class="truncate">{i18n.common_use_label({ label: entry.chosenLabel ?? "" })}</span>
 						</button>
 					{/if}
 				</div>

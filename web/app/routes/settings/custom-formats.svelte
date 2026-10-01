@@ -276,8 +276,8 @@
 
 <Dialog
 	open={deleting !== null}
-	title="Delete custom format '{deleting?.name ?? ''}'?"
-	body="Quality profiles scoring it must drop it first — Streamline refuses the delete while one still references it."
+	title={i18n.cf_delete_title({ name: deleting?.name ?? "" })}
+	body={i18n.cf_delete_body()}
 	onClose={() => (deleting = null)}
 	actions={[
 		{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },

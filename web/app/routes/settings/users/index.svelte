@@ -8,7 +8,7 @@
 	} from "@tanstack/svelte-query";
 	import { createForm } from "@tanstack/svelte-form";
 	import * as v from "valibot";
-	import { Users, Search, UserPlus, SlidersHorizontal } from "@lucide/svelte";
+	import { Users, Search, UserPlus, SlidersHorizontal, X } from "@lucide/svelte";
 	import { api, errorText } from "@lib/api";
 	import { auth } from "@lib/auth.svelte";
 	import { toast } from "@lib/toast";
@@ -103,7 +103,7 @@
 		mutationFn: (id) => api<null>(`/users/${id}`, { method: "DELETE" }),
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: ["users"] });
-			toast.ok("User deleted");
+			toast.ok(i18n.users_deleted());
 		},
 		onError: (err) => toast.err(errorText(err)),
 	}));
@@ -126,7 +126,7 @@
 		mutationFn: (body) => api<User>("/users", { method: "POST", body }),
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: ["users"] });
-			toast.ok("User created");
+			toast.ok(i18n.users_created());
 			closeCreate();
 		},
 		onError: (err) => toast.err(errorText(err)),
@@ -193,7 +193,7 @@
 		<div>
 			<h1 class="text-2xl font-bold tracking-tight text-fg">{i18n.settings_users()}</h1>
 			<p class="mt-0.5 text-sm text-fg-muted">
-				{total} total — admins, members, and request-only accounts.
+				{i18n.users_total_summary({ total })}
 			</p>
 		</div>
 	</div>
@@ -232,8 +232,18 @@
 						bind:value={q}
 						placeholder={i18n.field_email_or_name()}
 						autocomplete="off"
-						class="w-full rounded-md bg-transparent py-2 pl-9 pr-3 text-sm text-fg placeholder:text-fg-faint focus:outline-none"
+						class="w-full rounded-md bg-transparent py-2 pl-9 pr-9 text-sm text-fg placeholder:text-fg-faint focus:outline-none"
 					/>
+					{#if q}
+						<button
+							type="button"
+							onclick={() => (q = "")}
+							aria-label={i18n.common_clear_search()}
+							class="absolute right-1 grid h-7 w-7 place-items-center rounded-full text-fg-faint transition hover:text-fg active:bg-surface"
+						>
+							<X size={14} aria-hidden="true" />
+						</button>
+					{/if}
 				</span>
 			</label>
 			<button
@@ -257,7 +267,7 @@
 				>{i18n.common_role()}</span
 			>
 			<Select
-				ariaLabel="Filter by role"
+				ariaLabel={i18n.users_filter_role()}
 				value={role}
 				options={[
 					{ value: "", label: i18n.role_all() },
@@ -306,10 +316,10 @@
 						class="bg-surface text-left text-xs uppercase tracking-wider text-fg-muted"
 					>
 						<tr>
-							{@render sortHeader("name", "User")}
-							{@render sortHeader("role", "Role")}
-							{@render sortHeader("auth", "Auth")}
-							{@render sortHeader("created", "Created")}
+							{@render sortHeader("name", i18n.users_col_user())}
+							{@render sortHeader("role", i18n.common_role())}
+							{@render sortHeader("auth", i18n.users_sort_auth())}
+							{@render sortHeader("created", i18n.common_created())}
 							<th class="px-4 py-2.5"></th>
 						</tr>
 					</thead>
@@ -330,7 +340,9 @@
 			class="mt-4 flex h-9 items-center justify-between text-sm text-fg-muted"
 		>
 			<span>
-				{items.length ? `${from}–${to} of ${total}` : `0 of ${total}`}
+				{items.length
+					? i18n.users_page_range({ from, to, total })
+					: i18n.users_page_empty({ total })}
 			</span>
 			<div class="flex gap-2">
 				<button
@@ -475,8 +487,10 @@
 
 <Dialog
 	open={deleting !== null}
-	title="Delete {deleting?.display_name || deleting?.email || ''}?"
-	body="This permanently erases every resource they own."
+	title={i18n.users_delete_title({
+		name: deleting?.display_name || deleting?.email || "",
+	})}
+	body={i18n.users_delete_body()}
 	onClose={() => (deleting = null)}
 	actions={[
 		{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },

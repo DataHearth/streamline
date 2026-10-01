@@ -32,7 +32,7 @@
 				api<LibraryConfig>("/config/library", { method: "PATCH", body }),
 			onSuccess: (resp) => {
 				qc.setQueryData(["config", "library"], resp);
-				toast.ok("Series settings saved");
+				toast.ok(i18n.series_settings_saved());
 			},
 			onError: (err) => toast.err(errorText(err)),
 		}),

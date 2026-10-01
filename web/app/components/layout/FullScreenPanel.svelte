@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m as i18n } from "@lib/paraglide/messages.js";
 	import type { Snippet } from "svelte";
 	import { fade } from "svelte/transition";
 	import { ChevronLeft } from "@lucide/svelte";
@@ -68,7 +69,7 @@
 					type="button"
 					onclick={onClose}
 					class="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-fg-muted transition active:bg-bg-hover"
-					aria-label="Back"
+					aria-label={i18n.common_back()}
 				>
 					<ChevronLeft size={20} aria-hidden="true" />
 				</button>

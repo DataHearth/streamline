@@ -115,7 +115,7 @@
 						onclick={() => toggle("title")}
 						class="inline-flex items-center gap-1 uppercase tracking-[0.12em] transition hover:text-fg"
 					>
-						Title
+						{i18n.common_title()}
 						{#if sort === "title"}
 							{#if order === "asc"}
 								<ChevronUp size={12} aria-hidden="true" />
@@ -135,7 +135,7 @@
 						onclick={() => toggle("year")}
 						class="inline-flex items-center gap-1 uppercase tracking-[0.12em] transition hover:text-fg"
 					>
-						Year
+						{i18n.common_year()}
 						{#if sort === "year"}
 							{#if order === "asc"}
 								<ChevronUp size={12} aria-hidden="true" />
@@ -175,7 +175,9 @@
 							<SelectBox
 								checked={isSel}
 								onChange={(v) => onToggle(movie.id, v)}
-								label={isSel ? `Deselect ${movie.title}` : i18n.a11y_select_item({ title: movie.title })}
+								label={isSel
+					? i18n.a11y_deselect_item({ title: movie.title })
+					: i18n.a11y_select_item({ title: movie.title })}
 							/>
 						</td>
 					{/if}

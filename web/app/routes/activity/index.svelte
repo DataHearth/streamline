@@ -137,7 +137,7 @@
 	const cancel = createMutation<unknown, Error, number>(() => ({
 		mutationFn: (id) => api(`/activity/queue/${id}`, { method: "DELETE" }),
 		onSuccess: () => {
-			toast.ok("Download cancelled");
+			toast.ok(i18n.activity_download_cancelled());
 			invalidate();
 		},
 		onError: (e) => toast.err(errorText(e)),
@@ -182,7 +182,7 @@
 	const removeHistory = createMutation<unknown, Error, number>(() => ({
 		mutationFn: (id) => api(`/activity/history/${id}`, { method: "DELETE" }),
 		onSuccess: () => {
-			toast.ok("Removed");
+			toast.ok(i18n.activity_removed());
 			invalidate();
 		},
 		onError: (e) => toast.err(errorText(e)),
@@ -191,7 +191,7 @@
 		mutationFn: (id) =>
 			api(`/activity/history/${id}/retry`, { method: "POST" }),
 		onSuccess: () => {
-			toast.ok("Retrying import");
+			toast.ok(i18n.activity_retrying_import());
 			invalidate();
 		},
 		onError: (e) => toast.err(errorText(e)),
@@ -200,7 +200,7 @@
 		mutationFn: () =>
 			api("/activity/history/clear-completed", { method: "POST" }),
 		onSuccess: () => {
-			toast.ok("Cleared completed");
+			toast.ok(i18n.activity_cleared_completed());
 			invalidate();
 		},
 		onError: (e) => toast.err(errorText(e)),
@@ -234,7 +234,7 @@
 		mutationFn: (id) =>
 			api(`/activity/pending/${id}/import`, { method: "POST" }),
 		onSuccess: () => {
-			toast.ok("Importing");
+			toast.ok(i18n.pending_importing());
 			invalidatePending();
 			invalidate();
 		},
@@ -251,7 +251,7 @@
 				body: { remove_old_torrent: removeOld },
 			}),
 		onSuccess: () => {
-			toast.ok("Replacing");
+			toast.ok(i18n.pending_replacing());
 			invalidatePending();
 			invalidate();
 		},
@@ -268,7 +268,7 @@
 				body: { remove_torrent: removeTorrent },
 			}),
 		onSuccess: () => {
-			toast.ok("Ignored");
+			toast.ok(i18n.pending_ignored());
 			invalidatePending();
 		},
 		onError: (e) => toast.err(errorText(e)),
@@ -450,7 +450,7 @@
 			{#if view === "events"}
 				{i18n.activity_events_subtitle()}
 			{:else}
-				{queueItems.length} active · {historyTotal} in history
+				{i18n.activity_queue_summary({ active: queueItems.length, history: historyTotal })}
 			{/if}
 		</p>
 	</header>
@@ -622,10 +622,11 @@
 			></span>
 			<span class="min-w-0 flex-1 truncate text-[12.5px] font-medium text-fg">
 				{#if pendingQuery.isError}
-					Couldn't load proposals
+					{i18n.pending_load_failed()}
 				{:else}
-					{pendingItems.length}
-					{pendingItems.length === 1 ? "proposal needs" : "proposals need"} a decision
+					{(pendingItems.length === 1
+						? i18n.pending_need_decision_one
+						: i18n.pending_need_decision_other)({ count: pendingItems.length })}
 				{/if}
 			</span>
 			<span class="shrink-0 text-[12.5px] font-semibold text-status-wanted">
@@ -672,7 +673,7 @@
 	onClose={() => (filtersOpen = false)}
 	{search}
 	onSearchChange={(q) => (search = q)}
-	searchPlaceholder="Filter title or movie…"
+	searchPlaceholder={i18n.activity_filter_title_or_movie()}
 	onReset={resetFilters}
 	activeCount={activeFilters}
 />

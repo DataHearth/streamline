@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { around } from "@lib/message-parts";
 	import { ChevronDown, ExternalLink, Trash2, ArrowUpRight } from "@lucide/svelte";
 	import { createMutation, useQueryClient } from "@tanstack/svelte-query";
 	import { auth } from "@lib/auth.svelte";
@@ -77,9 +78,9 @@
 		if (!primary?.path) return;
 		try {
 			await navigator.clipboard.writeText(primary.path);
-			toast.ok("Path copied");
+			toast.ok(i18n.common_path_copied());
 		} catch {
-			toast.err("Clipboard unavailable");
+			toast.err(i18n.common_clipboard_unavailable());
 		}
 	}
 	function cancelHold() {
@@ -125,6 +126,10 @@
 
 	const qc = useQueryClient();
 	let deleteOpen = $state(false);
+	// The delete confirm highlights the status word inside one whole sentence.
+	const [revertsPre, revertsPost] = around((status) =>
+		i18n.movie_file_delete_body({ status }),
+	);
 	let removeTorrent = $state(false);
 
 	const del = createMutation<unknown, Error, { fileId: number; remove: boolean }>(
@@ -136,7 +141,7 @@
 				}),
 			onSuccess: () => {
 				qc.invalidateQueries({ queryKey: ["movie", movie.id] });
-				toast.ok("File deleted");
+				toast.ok(i18n.file_deleted());
 				deleteOpen = false;
 			},
 			onError: (e) => toast.err(errorText(e, i18n.common_delete_failed())),
@@ -339,9 +344,9 @@
 			</dl>
 		{:else}
 			<p class="mt-3 text-[12px] text-fg-subtle">
-				No file yet.{movie.status === "wanted"
-					? " Searching nightly."
-					: ""}
+				{movie.status === "wanted"
+					? i18n.movie_no_file_searching()
+					: i18n.movie_no_file_yet()}
 			</p>
 		{/if}
 	</section>
@@ -456,9 +461,8 @@
 	]}
 >
 	<p class="text-sm leading-relaxed text-fg-muted">
-		{i18n.file_removed_reverts()} <span
-			class="font-medium text-fg">wanted</span
-		>, so the next monitored search re-grabs it.
+		{revertsPre}<span class="font-medium text-fg">{i18n.lc_wanted()}</span
+		>{revertsPost}
 	</p>
 	<Checkbox
 		checked={removeTorrent}

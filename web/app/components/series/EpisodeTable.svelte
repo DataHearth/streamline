@@ -167,7 +167,7 @@
 							<button
 								type="button"
 								onclick={() => (detail = ep)}
-								aria-label="Details for {epCode(ep)}"
+								aria-label={i18n.series_details_for({ code: epCode(ep) })}
 								title={i18n.common_details()}
 								class="grid h-11 w-11 place-items-center rounded-md text-fg-subtle transition hover:bg-surface hover:text-fg focus-visible:ring-2 focus-visible:ring-accent-ring lg:h-7 lg:w-7"
 							>
@@ -177,7 +177,7 @@
 								<button
 									type="button"
 									onclick={() => onManualSearch(ep)}
-									aria-label="Manual search for {epCode(ep)}"
+									aria-label={i18n.series_manual_search_for({ code: epCode(ep) })}
 									title={i18n.action_manual_search()}
 									class="grid h-11 w-11 place-items-center rounded-md text-fg-subtle transition hover:bg-surface hover:text-fg focus-visible:ring-2 focus-visible:ring-accent-ring lg:h-7 lg:w-7"
 								>
@@ -188,7 +188,7 @@
 								<button
 									type="button"
 									onclick={() => onDeleteFile(ep)}
-									aria-label="Delete file for {epCode(ep)}"
+									aria-label={i18n.series_delete_file_for({ code: epCode(ep) })}
 									title={i18n.action_delete_file()}
 									class="grid h-11 w-11 place-items-center rounded-md text-fg-subtle transition hover:bg-status-failed/10 hover:text-status-failed focus-visible:ring-2 focus-visible:ring-accent-ring lg:h-7 lg:w-7"
 								>

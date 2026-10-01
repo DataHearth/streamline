@@ -1,4 +1,12 @@
 <script lang="ts">
+	import { around } from "@lib/message-parts";
+	import {
+		NOUN_EPISODE,
+		countAvailable,
+		countMissing,
+		countUnaired,
+		countWanted,
+	} from "@lib/nouns";
 	import { auth } from "@lib/auth.svelte";
 	import {
 		createQuery,
@@ -248,6 +256,13 @@
 		manualEpisode = ep;
 		manualOpen = true;
 	}
+	// The delete-files confirm highlights the status word inside one sentence.
+	const [filesRevertOnePre, filesRevertOnePost] = around((status) =>
+		i18n.series_files_delete_body_one({ status }),
+	);
+	const [filesRevertManyPre, filesRevertManyPost] = around((status) =>
+		i18n.series_files_delete_body_other({ status }),
+	);
 	function openDeleteFiles(label: string, episodes: Episode[]) {
 		if (episodes.length === 0) return;
 		deleteFiles = { label, episodes };
@@ -330,14 +345,14 @@
 			api<TVShow>(`/series/${seriesId}/refresh-metadata`, { method: "POST" }),
 		onSuccess: () => {
 			invalidate();
-			toast.ok("Metadata refresh requested");
+			toast.ok(i18n.series_refresh_requested());
 		},
 		onError: (e: Error) => toast.err(errorText(e, i18n.common_refresh_failed())),
 	}));
 
 	const searchSeries = createMutation(() => ({
 		mutationFn: () => api(`/series/${seriesId}/search`, { method: "POST" }),
-		onSuccess: () => toast.ok("Search dispatched for wanted episodes"),
+		onSuccess: () => toast.ok(i18n.series_search_dispatched_wanted()),
 		onError: (e: Error) => toast.err(errorText(e, i18n.common_search_failed())),
 	}));
 
@@ -348,7 +363,7 @@
 			}),
 		onSuccess: () => {
 			invalidate();
-			toast.ok("Series deleted");
+			toast.ok(i18n.series_deleted());
 			navigate("/series");
 		},
 		onError: (e: Error) => toast.err(errorText(e, i18n.common_delete_failed())),
@@ -426,7 +441,7 @@
 				deleteOpen = true;
 				break;
 			case "delete-files":
-				openDeleteFiles("this series", seriesFileEpisodes);
+				openDeleteFiles(i18n.series_this_series(), seriesFileEpisodes);
 				break;
 			default: {
 				const unhandled: never = a;
@@ -445,13 +460,13 @@
 	// specials-only show reported 0 and greyed out the two actions whose input
 	// set — seriesFileEpisodes, which spans every season — was non-empty.
 	let hasFiles = $derived(seriesFileEpisodes.length > 0);
-	const seasonLabel = "Season";
+	const seasonTitle = (n: number | string) => i18n.series_season_n({ n });
 	let searchSeasons = $derived(
 		seasons
 			.filter((s) => (s.total ?? 0) > 0)
 			.map((s) => ({
 				number: s.number,
-				label: s.number === 0 ? i18n.series_specials() : `${seasonLabel} ${s.number}`,
+				label: s.number === 0 ? i18n.series_specials() : seasonTitle(s.number),
 			})),
 	);
 	const qpQuery = createQuery<QualityProfile[]>(() => ({
@@ -527,7 +542,7 @@
 				</div>
 				<Poster
 					src={tvPosterUrl(show.id)}
-					alt="{show.title} poster"
+					alt={i18n.common_poster_alt({ title: show.title })}
 					loading="eager"
 					class="relative h-full w-full object-cover"
 				/>
@@ -597,15 +612,15 @@
 						<span class="text-fg">{show.have_episodes ?? 0}</span>
 						<span class="text-fg-faint">/</span>
 						<span>{show.total_episodes ?? 0}</span>
-						<span class="text-fg-subtle">episodes</span>
+						<span class="text-fg-subtle">{i18n.lc_episodes()}</span>
 						{#if (show.wanted_episodes ?? 0) > 0}
-							<span class="text-status-wanted">· {show.wanted_episodes} wanted</span>
+							<span class="text-status-wanted">· {countWanted(show.wanted_episodes ?? 0)}</span>
 						{/if}
 						{#if showMissing > 0}
-							<span class="text-status-missing">· {showMissing} missing</span>
+							<span class="text-status-missing">· {countMissing(showMissing)}</span>
 						{/if}
 						{#if unairedTotal > 0}
-							<span class="text-fg-faint">· {unairedTotal} unaired</span>
+							<span class="text-fg-faint">· {countUnaired(unairedTotal)}</span>
 						{/if}
 					</div>
 					<ProgressBar
@@ -636,7 +651,7 @@
 								path={`/series/${show.id}/play-on`}
 								queryKey={["series", show.id, "play-on"]}
 								disabled={!hasFiles}
-								disabledTitle="Available once episodes are imported"
+								disabledTitle={i18n.series_available_after_import()}
 							/>
 							<button
 								type="button"
@@ -693,7 +708,7 @@
 							path={`/series/${show.id}/play-on`}
 							queryKey={["series", show.id, "play-on"]}
 							disabled={!hasFiles}
-							disabledTitle="Available once episodes are imported"
+							disabledTitle={i18n.series_available_after_import()}
 						/>
 
 						<button
@@ -890,7 +905,6 @@
 						onSelect={(n) => (selectedSeason = n)}
 						{showMonitored}
 						seriesType={show.type}
-						{seasonLabel}
 						onMonitorSeason={(s) => monitorSeason.mutate(s)}
 						onMonitorEpisode={(ep) => monitorEpisode.mutate(ep)}
 						onManualSearch={openManualSearch}
@@ -898,7 +912,9 @@
 						onDeleteFile={(ep) => openDeleteFiles(episodeCode(ep), [ep])}
 						onDeleteSeasonFiles={(s) =>
 							openDeleteFiles(
-								s.number === 0 ? i18n.series_specials() : `${seasonLabel} ${String(s.number).padStart(2, "0")}`,
+								s.number === 0
+									? i18n.series_specials()
+									: seasonTitle(String(s.number).padStart(2, "0")),
 								(s.episodes ?? []).filter((e) => (e.size ?? 0) > 0),
 							)}
 					/>
@@ -952,28 +968,28 @@
 									<h2 class="text-lg font-semibold text-fg">
 										{currentSeason.number === 0
 											? i18n.series_specials()
-											: `${seasonLabel} ${currentSeason.number}`}
+											: seasonTitle(currentSeason.number)}
 										{#if currentSeason.name && currentSeason.number !== 0}
 											<span class="text-fg-subtle">· {currentSeason.name}</span>
 										{/if}
 									</h2>
 									<p class="mt-0.5 font-mono text-xs text-fg-muted">
-										{currentSeason.total ?? 0} episodes
+										{NOUN_EPISODE.count(currentSeason.total ?? 0)}
 										<span class="text-fg-faint">·</span>
-										{currentSeason.available ?? 0} available
+										{countAvailable(currentSeason.available ?? 0)}
 										{#if (currentSeason.missing ?? 0) > 0}
 											<span class="text-fg-faint">·</span>
 											<span class="text-status-wanted"
-												>{currentSeason.missing} wanted</span
+												>{countWanted(currentSeason.missing ?? 0)}</span
 											>
 										{/if}
 										{#if seasonMissing > 0}
 											<span class="text-fg-faint">·</span>
-											<span class="text-status-missing">{seasonMissing} missing</span>
+											<span class="text-status-missing">{countMissing(seasonMissing)}</span>
 										{/if}
 										{#if (currentSeason.unaired ?? 0) > 0}
 											<span class="text-fg-faint">·</span>
-											<span class="text-fg-faint">{currentSeason.unaired} unaired</span>
+											<span class="text-fg-faint">{countUnaired(currentSeason.unaired ?? 0)}</span>
 										{/if}
 									</p>
 								</div>
@@ -997,7 +1013,7 @@
 												openDeleteFiles(
 													currentSeason.number === 0
 														? i18n.series_specials()
-														: `${seasonLabel} ${currentSeason.number}`,
+														: seasonTitle(currentSeason.number),
 													seasonFileEpisodes,
 												)}
 											class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-3 text-sm text-fg-muted transition hover:border-status-failed/40 hover:bg-status-failed/10 hover:text-status-failed"
@@ -1063,10 +1079,10 @@
 
 	<DeleteTitleDialog
 		open={deleteOpen}
-		title="Remove '{show.title}' from your library?"
-		body="The series leaves your library. Files on disk are kept unless you say otherwise."
-		filesLabel="Also delete every downloaded episode from disk"
-		filesNote="This cannot be undone."
+		title={i18n.series_remove_title({ title: show.title })}
+		body={i18n.series_remove_body()}
+		filesLabel={i18n.series_delete_files_label()}
+		filesNote={i18n.common_cannot_undo()}
 		canDeleteFiles={hasFiles}
 		pending={del.isPending}
 		onClose={() => (deleteOpen = false)}
@@ -1090,7 +1106,10 @@
 	<Dialog
 		open={deleteFiles !== null}
 		title={deleteFiles && deleteFiles.episodes.length > 1
-			? `Delete all ${deleteFiles.episodes.length} files in ${deleteFiles.label}?`
+			? i18n.series_delete_all_files({
+					count: deleteFiles.episodes.length,
+					label: deleteFiles.label,
+				})
 			: i18n.series_delete_episode_confirm()}
 		onClose={() => (deleteFiles = null)}
 		actions={[
@@ -1114,13 +1133,11 @@
 	>
 		<p class="text-sm leading-relaxed text-fg-muted">
 			{#if deleteFiles && deleteFiles.episodes.length > 1}
-				The files are removed from disk and their episodes revert to <span
-					class="font-medium text-fg">wanted</span
-				>, so the next monitored search re-grabs them.
+				{filesRevertManyPre}<span class="font-medium text-fg">{i18n.lc_wanted()}</span
+				>{filesRevertManyPost}
 			{:else}
-				The file is removed from disk and the episode reverts to <span
-					class="font-medium text-fg">wanted</span
-				>, so the next monitored search re-grabs it.
+				{filesRevertOnePre}<span class="font-medium text-fg">{i18n.lc_wanted()}</span
+				>{filesRevertOnePost}
 			{/if}
 		</p>
 		<Checkbox
@@ -1128,9 +1145,9 @@
 			onChange={(v) => (removeFilesTorrent = v)}
 			class="mt-4 text-sm text-fg"
 		>
-			Also remove the torrent{deleteFiles && deleteFiles.episodes.length > 1
-				? "s"
-				: ""} from the download client
+			{deleteFiles && deleteFiles.episodes.length > 1
+				? i18n.series_remove_torrents()
+				: i18n.file_also_remove_torrent()}
 		</Checkbox>
 	</Dialog>
 {/if}

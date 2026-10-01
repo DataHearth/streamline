@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { m as i18n } from "@lib/paraglide/messages.js";
+	import { roleLabel } from "@lib/roles";
 	import { Pencil, Trash2, LockKeyhole } from "@lucide/svelte";
 	import Avatar from "@components/layout/Avatar.svelte";
 	import type { User } from "@lib/types";
@@ -30,9 +32,7 @@
 		}
 	});
 
-	let roleLabel = $derived(
-		user.role === "request_only" ? "request only" : user.role,
-	);
+	let role = $derived(roleLabel(user.role));
 </script>
 
 <tr class="hover:bg-bg-card">
@@ -51,7 +51,7 @@
 						<span
 							class="inline-flex items-center rounded-full bg-status-available/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-status-available"
 						>
-							you
+							{i18n.users_you()}
 						</span>
 					{/if}
 					{#if locked}
@@ -59,7 +59,7 @@
 							class="inline-flex items-center gap-1 rounded-full bg-status-failed/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-status-failed"
 						>
 							<LockKeyhole size={10} aria-hidden="true" />
-							locked
+							{i18n.users_locked()}
 						</span>
 					{/if}
 				</div>
@@ -73,7 +73,7 @@
 		<span
 			class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {rolePillClass}"
 		>
-			{roleLabel}
+			{role}
 		</span>
 	</td>
 	<td class="px-4 py-3 text-xs text-fg-muted">{user.auth_method}</td>
@@ -85,7 +85,7 @@
 			<a
 				href="/settings/users/{user.id}"
 				class="inline-flex items-center justify-center rounded-md p-1.5 text-fg-muted hover:bg-surface hover:text-fg"
-				aria-label="Edit {user.display_name || user.email}"
+				aria-label={i18n.users_edit_name({ name: user.display_name || user.email })}
 			>
 				<Pencil size={16} aria-hidden="true" />
 			</a>
@@ -94,7 +94,7 @@
 					type="button"
 					onclick={() => onDelete(user)}
 					class="inline-flex items-center justify-center rounded-md p-1.5 text-fg-muted hover:bg-status-failed/10 hover:text-status-failed"
-					aria-label="Delete {user.display_name || user.email}"
+					aria-label={i18n.users_delete_name({ name: user.display_name || user.email })}
 				>
 					<Trash2 size={16} aria-hidden="true" />
 				</button>

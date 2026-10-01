@@ -18,7 +18,7 @@
 			api<null>("/auth/password", { method: "POST", body }),
 		onSuccess: () => {
 			form.reset();
-			toast.ok("Password changed");
+			toast.ok(i18n.account_password_changed());
 			open = false;
 		},
 		onError: (err) => toast.err(errorText(err)),
@@ -32,14 +32,14 @@
 		},
 		validators: {
 			onChange: v.object({
-				current_password: v.pipe(v.string(), v.minLength(1, "Required")),
+				current_password: v.pipe(v.string(), v.minLength(1, i18n.validation_required())),
 				new_password: password,
 				confirm_password: v.string(),
 			}),
 		},
 		onSubmit: ({ value }) => {
 			if (value.new_password !== value.confirm_password) {
-				toast.err("Passwords don't match");
+				toast.err(i18n.validation_passwords_mismatch());
 				return;
 			}
 			mutation.mutate({

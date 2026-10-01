@@ -134,7 +134,7 @@
 						</div>
 						<Poster
 							src={rec.poster_url ?? ""}
-							alt="{rec.title} poster"
+							alt={i18n.common_poster_alt({ title: rec.title })}
 							class="relative h-full w-full object-cover transition duration-300 group-hover:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
 						/>
 						<div
@@ -178,7 +178,9 @@
 						type="button"
 						onclick={() => openAdd(rec)}
 						class="snap-start group relative block w-full overflow-hidden rounded-lg text-left ring-1 ring-border transition duration-200 hover:ring-border-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-accent motion-reduce:transition-none"
-						title={auth.canAddDirectly ? `Add ${rec.title} to your library` : `Request ${rec.title}`}
+						title={auth.canAddDirectly
+							? i18n.add_title_to_library({ title: rec.title })
+							: i18n.request_title({ title: rec.title })}
 					>
 						{@render poster()}
 					</button>

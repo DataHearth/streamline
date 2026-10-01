@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { parts } from "@lib/message-parts";
 	import { fade, fly } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { Ban, LoaderCircle, Pause, Play, RotateCw, Trash2, X } from "@lucide/svelte";
@@ -13,6 +14,11 @@
 	import { formatDateTime } from "@lib/dates";
 	import type { HistoryEntry, QueueEntry } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
+
+	// Confirm bodies: whole sentences with the title (and status) marked up.
+	const cancelBody = parts(i18n.activity_cancel_body, ["title", "status"]);
+	const retryBody = parts(i18n.activity_retry_body, ["title"]);
+	const deleteEntryBody = parts(i18n.activity_delete_entry_body, ["title"]);
 
 	// Where a queue or history row opens below md, and the only place pause,
 	// resume, cancel and remove exist on touch — no swipe, no per-row kebab, so
@@ -317,9 +323,7 @@
 		]}
 	>
 		<p class="text-sm text-fg-muted">
-			{i18n.activity_cancel_help()}
-			<span class="font-medium text-fg">{item.title}</span> from the queue. The movie
-			returns to <em>wanted</em> if it has no file yet.
+			{#each cancelBody as p}{#if p.slot === "title"}<span class="font-medium text-fg">{item.title}</span>{:else if p.slot === "status"}<em>{i18n.lc_wanted()}</em>{:else}{p.text}{/if}{/each}
 		</p>
 	</Dialog>
 
@@ -341,9 +345,7 @@
 		]}
 	>
 		<p class="text-sm text-fg-muted">
-			{i18n.activity_retry_help()}
-			<span class="font-medium text-fg">{item.title}</span>. It reads the same
-			files as before, so fix what made it fail first or it just fails again.
+			{#each retryBody as p}{#if p.slot === "title"}<span class="font-medium text-fg">{item.title}</span>{:else}{p.text}{/if}{/each}
 		</p>
 	</Dialog>
 
@@ -365,9 +367,7 @@
 		]}
 	>
 		<p class="text-sm text-fg-muted">
-			{i18n.activity_deletes_entry_for()}
-			<span class="font-medium text-fg">{item.title}</span>. The movie and its files
-			are not affected.
+			{#each deleteEntryBody as p}{#if p.slot === "title"}<span class="font-medium text-fg">{item.title}</span>{:else}{p.text}{/if}{/each}
 		</p>
 	</Dialog>
 {/if}

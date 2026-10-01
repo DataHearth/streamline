@@ -26,7 +26,7 @@
 			api<null>(`/auth/me/sessions/${id}`, { method: "DELETE" }),
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: ["auth", "me", "sessions"] });
-			toast.ok("Session revoked");
+			toast.ok(i18n.session_revoked());
 			pending = null;
 		},
 		onError: (err) => {
@@ -52,8 +52,9 @@
 		<div>
 			<h3 class="text-base font-semibold text-fg">{i18n.account_active_sessions()}</h3>
 			<p class="mt-0.5 text-xs text-fg-muted">
-				{items.length}
-				{items.length === 1 ? "device" : "devices"} signed in
+				{(items.length === 1
+					? i18n.sessions_devices_one
+					: i18n.sessions_devices_other)({ count: items.length })}
 			</p>
 		</div>
 	</header>
@@ -88,7 +89,7 @@
 	open={pending !== null}
 	title={i18n.account_signout_device()}
 	body={pendingLabel
-		? `Sign out ${pendingLabel}? It will need to log in again to access your account.`
+		? i18n.session_signout_named({ device: pendingLabel })
 		: i18n.action_signout_session()}
 	onClose={() => {
 		if (!revoke.isPending) pending = null;

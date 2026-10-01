@@ -148,6 +148,6 @@
 	</table>
 	</div>
 	<p class="mt-3 text-[11px] text-fg-faint">
-		{peers.length} connected · {peerCount} peers in swarm
+		{i18n.torrent_peers_summary({ connected: peers.length, swarm: peerCount })}
 	</p>
 {/if}

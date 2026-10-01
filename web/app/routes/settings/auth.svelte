@@ -38,7 +38,7 @@
 			// Re-seed from the response so the form goes clean again; otherwise it
 			// stays dirty and seedFrom would never accept a later refetch.
 			seedFrom(resp);
-			toast.ok("Auth settings saved");
+			toast.ok(i18n.auth_saved());
 		},
 		onError: (err) => toast.err(errorText(err)),
 	}));
@@ -62,7 +62,7 @@
 				return;
 			}
 			pendingSecret = null;
-			toast.ok("JWT secret rotated — other sessions invalidated");
+			toast.ok(i18n.auth_jwt_rotated_others());
 		},
 		onError: (err) => toast.err(errorText(err)),
 	}));
@@ -70,9 +70,9 @@
 	async function copySecret() {
 		try {
 			await navigator.clipboard.writeText(pendingSecret ?? "");
-			toast.ok("Copied");
+			toast.ok(i18n.common_copied());
 		} catch {
-			toast.err("Clipboard unavailable");
+			toast.err(i18n.common_clipboard_unavailable());
 		}
 	}
 
@@ -258,7 +258,7 @@
 				<SubmitButton
 				{form}
 				label={i18n.common_save_changes()}
-				pendingLabel="Saving…"
+				pendingLabel={i18n.common_saving()}
 				disabled={config.readOnly}
 				title={config.readOnly ? READONLY_HINT : undefined}
 			/>
@@ -286,10 +286,8 @@
 				<div class="min-w-0 flex-1">
 					<h3 class="text-sm font-semibold text-fg">{i18n.auth_jwt_secret()}</h3>
 					<p class="mt-0.5 text-xs text-fg-muted">
-						Rotate the HMAC secret used to sign session tokens. Every
-						active session is invalidated immediately — including those of
-						other admins. You will stay signed in.{config.readOnly
-							? " This instance is read-only, so you get the new secret to save into your config before it takes effect."
+						{i18n.auth_rotate_help()}{config.readOnly
+							? ` ${i18n.auth_rotate_readonly_note()}`
 							: ""}
 					</p>
 				</div>
@@ -315,7 +313,7 @@
 <Dialog
 	open={confirmRotate}
 	title={i18n.auth_rotate_confirm()}
-	body="This signs everyone else out. You will stay signed in."
+	body={i18n.auth_rotate_body()}
 	onClose={() => (confirmRotate = false)}
 	actions={[
 		{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },

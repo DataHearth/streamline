@@ -208,8 +208,10 @@
 							type="button"
 							aria-haspopup="dialog"
 							aria-expanded={openKey === key}
-							aria-label="Show the {evs.length -
-								vis} remaining releases on {longDate.format(cell.date)}"
+							aria-label={i18n.calendar_show_remaining({
+								count: evs.length - vis,
+								date: longDate.format(cell.date),
+							})}
 							onclick={(ev) =>
 								open(
 									key,

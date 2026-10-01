@@ -174,7 +174,7 @@
 		</div>
 		<Poster
 			src={cardPoster}
-			alt="{movie.title} poster"
+			alt={i18n.common_poster_alt({ title: movie.title })}
 			class="relative h-full w-full object-cover"
 		/>
 
@@ -263,7 +263,9 @@
 				variant="card"
 				checked={selected}
 				onChange={(v) => onSelect(v)}
-				label={selected ? `Deselect ${movie.title}` : i18n.a11y_select_item({ title: movie.title })}
+				label={selected
+					? i18n.a11y_deselect_item({ title: movie.title })
+					: i18n.a11y_select_item({ title: movie.title })}
 			/>
 		</div>
 	{/if}

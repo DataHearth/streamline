@@ -24,9 +24,9 @@
 		title,
 		movies,
 		seeAllHref,
-		seeAllLabel = "See all",
+		seeAllLabel = i18n.dash_see_all(),
 		countText,
-		emptyText = "No movies yet.",
+		emptyText = i18n.dash_scroller_empty(),
 	}: {
 		title: string;
 		movies: ScrollerItem[];
@@ -96,7 +96,7 @@
 				<div
 					class="hidden items-center gap-1 md:flex"
 					role="group"
-					aria-label="Scroll {title} row"
+					aria-label={i18n.dash_scroll_row({ title })}
 				>
 					<button
 						type="button"

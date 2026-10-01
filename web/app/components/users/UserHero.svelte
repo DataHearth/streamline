@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { roleLabel } from "@lib/roles";
 	import { Shield, KeyRound, Monitor, LockKeyhole, ShieldCheck } from "@lucide/svelte";
 	import { formatDateTime, formatRelative } from "@lib/dates";
 	import type { ApiKey, Session, User } from "@lib/types";
@@ -26,9 +27,7 @@
 		return ts[0] ?? null;
 	});
 
-	let roleLabel = $derived(
-		user.role === "request_only" ? "request only" : user.role,
-	);
+	let role = $derived(roleLabel(user.role));
 </script>
 
 <section
@@ -62,7 +61,7 @@
 						<span
 							class="inline-flex items-center rounded-full bg-surface px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fg-muted"
 						>
-							{roleLabel}
+							{role}
 						</span>
 					{/if}
 					{#if locked}
@@ -70,7 +69,7 @@
 							class="inline-flex items-center gap-1 rounded-full bg-status-failed/12 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-status-failed"
 						>
 							<LockKeyhole size={10} aria-hidden="true" />
-							locked
+							{i18n.users_locked()}
 						</span>
 					{/if}
 				</div>
@@ -78,9 +77,11 @@
 					{user.email}
 				</p>
 				<p class="mt-1 text-xs text-fg-subtle">
-					Member since {formatDateTime(user.created_at)}
+					{i18n.users_member_since({ date: formatDateTime(user.created_at) })}
 					{#if user.failed_login_count && user.failed_login_count > 0}
-						· {user.failed_login_count} failed sign-in{user.failed_login_count === 1 ? "" : "s"}
+						· {(user.failed_login_count === 1
+							? i18n.users_failed_signins_one
+							: i18n.users_failed_signins_other)({ count: user.failed_login_count })}
 					{/if}
 				</p>
 			</div>
@@ -89,11 +90,11 @@
 		<dl
 			class="grid grid-cols-3 gap-px overflow-hidden rounded-lg border border-border bg-border md:max-w-md"
 		>
-			{@render stat(Monitor, "Sessions", String(sessions.length))}
-			{@render stat(KeyRound, "API keys", String(apiKeys.length))}
+			{@render stat(Monitor, i18n.account_stat_sessions(), String(sessions.length))}
+			{@render stat(KeyRound, i18n.account_stat_api_keys(), String(apiKeys.length))}
 			{@render stat(
 				Shield,
-				"Last seen",
+				i18n.account_stat_last_seen(),
 				lastSeen ? formatRelative(lastSeen) : "—",
 			)}
 		</dl>

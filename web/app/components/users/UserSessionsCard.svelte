@@ -25,7 +25,7 @@
 			api<null>(`/users/${userId}/sessions/${id}`, { method: "DELETE" }),
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: ["user", userId] });
-			toast.ok("Session revoked");
+			toast.ok(i18n.session_revoked());
 			pending = null;
 		},
 		onError: (err) => {
@@ -42,8 +42,9 @@
 		<div>
 			<h3 class="text-base font-semibold text-fg">{i18n.account_active_sessions()}</h3>
 			<p class="mt-0.5 text-xs text-fg-muted">
-				{sessions.length}
-				{sessions.length === 1 ? "device" : "devices"} signed in
+				{(sessions.length === 1
+					? i18n.sessions_devices_one
+					: i18n.sessions_devices_other)({ count: sessions.length })}
 			</p>
 		</div>
 	</header>
@@ -69,7 +70,7 @@
 <Dialog
 	open={pending !== null}
 	title={i18n.users_revoke_session_confirm()}
-	body="The device will be signed out and must log in again."
+	body={i18n.sessions_revoke_body()}
 	onClose={() => {
 		if (!revoke.isPending) pending = null;
 	}}

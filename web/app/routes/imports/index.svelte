@@ -115,7 +115,7 @@
 				class="flex h-12 shrink-0 items-center justify-between border-t border-border px-5 text-sm text-fg-muted md:px-6"
 			>
 				<span class="font-mono tabular-nums">
-					Page {page} · {total} total
+					{i18n.common_page_total({ page, total })}
 				</span>
 				<div class="flex gap-2">
 					<button

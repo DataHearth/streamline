@@ -2,12 +2,17 @@
 	import { CircleCheckBig, TriangleAlert } from "@lucide/svelte";
 	import Dialog from "@components/modals/Dialog.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
+	import { parts } from "@lib/message-parts";
+	import { NOUN_FILE, type Noun } from "@lib/nouns";
+
+	const skipBodyOne = parts(i18n.imports_skip_all_body_one, ["items", "skip"]);
+	const skipBodyOther = parts(i18n.imports_skip_all_body_other, ["items", "skip"]);
 
 	let {
 		pendingCount,
 		commitableCount,
 		commitNote,
-		noun = "file",
+		noun = NOUN_FILE,
 		skipBusy = false,
 		commitBusy = false,
 		onSkipAll,
@@ -16,8 +21,8 @@
 		pendingCount: number;
 		commitableCount: number;
 		commitNote: string;
-		// Row noun for a movie ("file") vs series ("show") scan.
-		noun?: string;
+		// Row noun for a movie (files) vs series (shows) scan.
+		noun?: Noun;
 		skipBusy?: boolean;
 		commitBusy?: boolean;
 		onSkipAll: () => void;
@@ -74,14 +79,14 @@
 			<CircleCheckBig size={14} aria-hidden="true" />
 			{commitBusy
 				? i18n.common_starting()
-				: commitableCount === 1 ? i18n.imports_commit_count_one({ count: commitableCount, noun }) : i18n.imports_commit_count_other({ count: commitableCount, noun })}
+				: i18n.imports_commit_items({ items: noun.count(commitableCount) })}
 		</button>
 	</div>
 </div>
 
 <Dialog
 	open={confirmSkipOpen}
-	title="Skip all unmatched {noun}s?"
+	title={i18n.imports_skip_all_title({ items: noun.items })}
 	onClose={() => (confirmSkipOpen = false)}
 	actions={[
 		{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },
@@ -89,8 +94,6 @@
 	]}
 >
 	<p class="text-sm text-fg-muted">
-		The {pendingCount} {noun}{pendingCount === 1 ? "" : "s"} still awaiting a decision
-		will be marked <span class="font-medium text-fg">skip</span> and left out of
-		the import. You can still change individual files afterward.
+		{#each pendingCount === 1 ? skipBodyOne : skipBodyOther as p}{#if p.slot === "items"}{noun.count(pendingCount)}{:else if p.slot === "skip"}<span class="font-medium text-fg">{i18n.lc_skip()}</span>{:else}{p.text}{/if}{/each}
 	</p>
 </Dialog>

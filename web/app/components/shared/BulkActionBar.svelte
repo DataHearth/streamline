@@ -3,14 +3,13 @@
 	import { X } from "@lucide/svelte";
 	import { fly } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
-	import { plural } from "@lib/bulk";
+	import { NOUN_TITLE, type Noun } from "@lib/nouns";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let {
 		count,
 		total,
-		noun = "title",
-		nounPlural,
+		noun = NOUN_TITLE,
 		busy = false,
 		onSelectAll,
 		onClear,
@@ -18,9 +17,7 @@
 	}: {
 		count: number;
 		total: number;
-		noun?: string;
-		// Nouns whose plural isn't noun + "s" — "series" pluralises to itself.
-		nounPlural?: string;
+		noun?: Noun;
 		busy?: boolean;
 		onSelectAll: () => void;
 		onClear: () => void;
@@ -42,7 +39,7 @@
 	>
 		<div class="flex shrink-0 items-center gap-2.5 pl-1 pr-1">
 			<span class="whitespace-nowrap text-[13px] font-semibold text-fg">
-				{plural(count, noun, nounPlural)}
+				{noun.count(count)}
 			</span>
 			{#if count < total}
 				<button
@@ -50,7 +47,7 @@
 					onclick={onSelectAll}
 					class="whitespace-nowrap font-mono text-[11px] text-accent-text underline-offset-2 transition hover:underline"
 				>
-					select all {total}
+					{i18n.bulk_select_all_n_lc({ total })}
 				</button>
 			{/if}
 		</div>
