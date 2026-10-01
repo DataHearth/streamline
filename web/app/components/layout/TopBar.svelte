@@ -37,7 +37,19 @@
 	type Crumb = { label: string; href?: string };
 	// Sections that own their page heading (h1) and therefore want no title in
 	// the topbar — only breadcrumbs appear when the user is on a detail page.
-	const TITLELESS_PREFIXES = new Set(["/account", "/settings"]);
+	// The operations pages each render a heading of their own ("Torrents",
+	// "Queue & History", "Requests"…), so a topbar title there printed the same
+	// word twice, one above the other. Calendar is not one of them: its heading
+	// is the month, which the topbar's "Calendar" does not repeat.
+	const TITLELESS_PREFIXES = new Set([
+		"/account",
+		"/settings",
+		"/activity",
+		"/torrents",
+		"/transcoding",
+		"/requests",
+		"/imports",
+	]);
 	const SECTIONS: { prefix: string; label: string }[] = [
 		{ prefix: "/", label: i18n.nav_dashboard() },
 		{ prefix: "/movies", label: i18n.movies_label() },
@@ -284,42 +296,50 @@
 <header
 	class="sticky top-0 z-30 flex min-h-16 items-center gap-2 border-b border-border bg-bg-deep/70 pl-4 pr-2 pt-[env(safe-area-inset-top)] backdrop-blur-md saturate-150 md:gap-4 md:px-8"
 >
+	<!-- Two fixed rows, whatever the page hands over: the title row, and below md
+	     the count line's row, rendered empty when there is no line. The header
+	     centres this block, so a block that grew a second row only on Movies and
+	     Series pushed the title up there and let it drop back on every other tab
+	     (#73). The breadcrumb sits in the same 22px row so entering a detail page
+	     does not move it either. -->
 	<div class="min-w-0 flex-1">
-		{#if crumbs.length === 1}
-			<h1 class="text-[22px] font-semibold leading-none tracking-tight text-fg">
-				{crumbs[0]?.label}
-			</h1>
-			{#if pageMeta.line}
-				<!-- Phone only: below md the page's own count line costs 30px of a
-				     774px viewport, so it rides here instead. -->
-				<p
-					class="mt-1.5 truncate font-mono text-[10.5px] text-fg-subtle md:hidden"
+		<div class="flex h-[22px] min-w-0 items-center">
+			{#if crumbs.length === 1}
+				<h1
+					class="whitespace-nowrap text-[22px] font-semibold leading-none tracking-tight text-fg"
 				>
-					{pageMeta.line}
-				</p>
+					{crumbs[0]?.label}
+				</h1>
+			{:else if crumbs.length > 1}
+				<nav
+					aria-label={i18n.nav_breadcrumb()}
+					class="flex min-w-0 items-center gap-2 text-sm text-fg-muted"
+				>
+					{#each crumbs as c, i (i)}
+						{#if c.href}
+							<a
+								href={c.href}
+								class="touch-hit shrink-0 transition hover:text-fg"
+							>
+								{c.label}
+							</a>
+						{:else}
+							<span aria-current="page" class="truncate text-fg">{c.label}</span>
+						{/if}
+						{#if i < crumbs.length - 1}
+							<span class="text-fg-faint" aria-hidden="true">/</span>
+						{/if}
+					{/each}
+				</nav>
 			{/if}
-		{:else if crumbs.length > 1}
-			<nav
-				aria-label={i18n.nav_breadcrumb()}
-				class="flex items-center gap-2 text-sm text-fg-muted"
-			>
-				{#each crumbs as c, i (i)}
-					{#if c.href}
-						<a
-							href={c.href}
-							class="touch-hit transition hover:text-fg"
-						>
-							{c.label}
-						</a>
-					{:else}
-						<span aria-current="page" class="text-fg">{c.label}</span>
-					{/if}
-					{#if i < crumbs.length - 1}
-						<span class="text-fg-faint" aria-hidden="true">/</span>
-					{/if}
-				{/each}
-			</nav>
-		{/if}
+		</div>
+		<!-- Phone only: below md the page's own count line costs 30px of a 774px
+		     viewport, so it rides here instead. -->
+		<p
+			class="mt-1.5 h-[15px] truncate font-mono text-[10.5px] leading-[15px] text-fg-subtle md:hidden"
+		>
+			{crumbs.length === 1 ? pageMeta.line : ""}
+		</p>
 	</div>
 
 	<button
