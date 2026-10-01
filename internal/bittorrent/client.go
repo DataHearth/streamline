@@ -783,7 +783,10 @@ func (e *Engine) status(
 	if !st.prioritized {
 		return download.StatusFetching
 	}
-	if wantedMissing(t) == 0 {
+	// wantedMissing alone would call a torrent done while its last pieces are
+	// still being hashed (see wantedVerified). The download monitor imports
+	// on seeding, and a restart in that window loses those pieces' completion.
+	if wantedMissing(t) == 0 && wantedVerified(t) {
 		if st.seedStopped {
 			return download.StatusCompleted
 		}
